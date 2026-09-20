@@ -1,16 +1,11 @@
 import { CARD_TAG, CARD_VERSION, EDITOR_TAG } from "./weather-constants";
 import { DEFAULT_CONFIG, normalizeConfig } from "./weather-config";
-import { NodaliaWeatherCard } from "./weather-card";
-import { NodaliaWeatherCardEditor } from "./weather-editor";
+import { loadNodaliaWeatherCard } from "./weather-card";
+import { loadNodaliaWeatherCardEditor } from "./weather-editor";
 import type { WeatherPublicApi } from "./weather-types";
 
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaWeatherCard);
-}
-
-if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaWeatherCardEditor);
-}
+window.NodaliaUtils.defineLazyCustomElement(CARD_TAG, loadNodaliaWeatherCard, { editorTag: EDITOR_TAG });
+window.NodaliaUtils.defineLazyCustomElement(EDITOR_TAG, loadNodaliaWeatherCardEditor);
 
 try {
   window.NodaliaUtils?.registerCustomCard?.({

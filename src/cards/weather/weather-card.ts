@@ -41,7 +41,12 @@ import {
   translateMeteoalarmValue,
 } from "./weather-helpers";
 
-export class NodaliaWeatherCard extends HTMLElement {
+let _lazyNodaliaWeatherCard;
+export function loadNodaliaWeatherCard() {
+  if (_lazyNodaliaWeatherCard) {
+    return _lazyNodaliaWeatherCard;
+  }
+class NodaliaWeatherCard extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
@@ -56,7 +61,10 @@ export class NodaliaWeatherCard extends HTMLElement {
 
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    this._nodaliaConstruct();
+  }
+
+  _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._lastRenderSignature = "";
@@ -86,7 +94,7 @@ export class NodaliaWeatherCard extends HTMLElement {
     };
     this._detachHostHold = () => {};
     this._suppressNextWeatherTap = false;
-  }
+    }
 
   connectedCallback() {
     this._detachHostHold?.();
@@ -2700,4 +2708,7 @@ export class NodaliaWeatherCard extends HTMLElement {
 
     this._lastRenderSignature = this._getRenderSignature();
   }
+}
+  _lazyNodaliaWeatherCard = NodaliaWeatherCard;
+  return NodaliaWeatherCard;
 }

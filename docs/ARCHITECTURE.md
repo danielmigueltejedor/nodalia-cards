@@ -5,12 +5,14 @@ The public Lovelace/HACS contract is unchanged: custom element tags, YAML keys,
 defaults, editors, translations, and the single-file `nodalia-cards.js` install
 path stay the same.
 
-## Current architecture map (2.3.0-alpha.19b)
+## Current architecture map (2.3.0-alpha.20)
 
 The project is a Home Assistant Lovelace plugin. Handwritten cards historically
 lived as root `nodalia-*.js` files that were both source and published artifacts.
-Climate, Media Player, Light, Fan, Humidifier, Cover, Alarm Panel, Vacuum, Entity, Fav, Person, Camera, Circular Gauge, Insignia, Scenes, News, Weather and Graph canonical source now lives under
+Climate, Media Player, Light, Fan, Humidifier, Cover, Alarm Panel, Vacuum, Entity, Fav, Person, Camera, Circular Gauge, Insignia, Scenes, News, Weather, Graph, Calendar, Power Flow, Notifications, Navigation, Room Summary and Advance Vacuum canonical source now lives under
 `src/cards/` and is compiled to the existing HACS `nodalia-*-card.js` artifacts.
+Dashboard boot registers a tiny host per tag and compiles the real card or editor
+class only when that custom element is first created.
 
 ```text
 src/
@@ -33,6 +35,12 @@ src/
   cards/news/                 News TypeScript split
   cards/weather/              Weather TypeScript split
   cards/graph/                Graph TypeScript split
+  cards/calendar/             Calendar TypeScript split
+  cards/power-flow/           Power Flow TypeScript split
+  cards/notifications/        Notifications TypeScript split
+  cards/navigation/           Navigation TypeScript split
+  cards/room-summary/         Room Summary TypeScript split
+  cards/advance-vacuum/       Advance Vacuum TypeScript split
 
 nodalia-utils.js              Shared runtime helpers (window.NodaliaUtils), including compact density
 nodalia-backend.js            Optional Nodalia Engine client
@@ -46,8 +54,9 @@ scripts/build-src-cards.mjs   TypeScript → standalone JS
 scripts/build-bundle.mjs      HACS bundle (imports migrated cards from src/)
 ```
 
-Unmigrated cards still live as root `nodalia-*.js` files. Those files remain
-both source and published artifacts until their turn in the migration.
+All Lovelace cards now live under `src/cards/` and emit root `nodalia-*.js`
+artifacts. Support files such as `nodalia-utils.js` and the camera/notifications
+models remain handwritten until their own migration.
 
 ## Largest source files
 
@@ -55,7 +64,8 @@ Approximate sizes on this preview (handwritten unless noted):
 
 | File | Size | Responsibilities |
 |---|---|---|
-| `nodalia-advance-vacuum-card.js` | ~341 KB | Map, rooms, dock, sessions, editor |
+| `nodalia-advance-vacuum-card.js` | generated | Compiled Advance Vacuum artifact |
+| `src/cards/advance-vacuum/advance-vacuum-card.ts` | ~7520 lines | Map, rooms, dock, sessions |
 | `nodalia-climate-card.js` | generated ~338 KB | Compiled Climate artifact |
 | `src/cards/climate/climate-card.ts` | ~6470 lines | Climate HTMLElement / render / interactions |
 | `nodalia-entity-card.js` | generated | Compiled Entity artifact |
@@ -144,6 +154,12 @@ These globals remain part of the public/standalone contract:
 | `window.__NODALIA_NEWS__` | News public helpers for tests/tools |
 | `window.__NODALIA_WEATHER__` | Weather public helpers for tests/tools |
 | `window.__NODALIA_GRAPH__` | Graph public helpers for tests/tools |
+| `window.__NODALIA_CALENDAR__` | Calendar public helpers for tests/tools |
+| `window.__NODALIA_POWER_FLOW__` | Power Flow public helpers for tests/tools |
+| `window.__NODALIA_NOTIFICATIONS__` | Notifications public helpers for tests/tools |
+| `window.__NODALIA_NAVIGATION__` | Navigation public helpers for tests/tools |
+| `window.__NODALIA_ROOM_SUMMARY__` | Room Summary public helpers for tests/tools |
+| `window.__NODALIA_ADVANCE_VACUUM__` | Advance Vacuum public helpers for tests/tools |
 | `customElements` tags | `nodalia-climate-card`, `nodalia-climate-card-editor`, etc. |
 
 Internally, migrated modules import ES modules. Globals stay at distribution
@@ -172,13 +188,18 @@ boundaries so standalone `<script>` loading still works.
 | `nodalia-news-card.js` | Generated from `src/cards/news/standalone.ts` (unminified IIFE) |
 | `nodalia-weather-card.js` | Generated from `src/cards/weather/standalone.ts` (unminified IIFE) |
 | `nodalia-graph-card.js` | Generated from `src/cards/graph/standalone.ts` (unminified IIFE) |
-| Other `nodalia-*.js` cards | Still handwritten until migrated |
+| `nodalia-calendar-card.js` | Generated from `src/cards/calendar/standalone.ts` (unminified IIFE) |
+| `nodalia-power-flow-card.js` | Generated from `src/cards/power-flow/standalone.ts` (unminified IIFE) |
+| `nodalia-notifications-card.js` | Generated from `src/cards/notifications/standalone.ts` (unminified IIFE) |
+| `nodalia-navigation-bar.js` | Generated from `src/cards/navigation/standalone.ts` (unminified IIFE) |
+| `nodalia-room-summary-card.js` | Generated from `src/cards/room-summary/standalone.ts` (unminified IIFE) |
+| `nodalia-advance-vacuum-card.js` | Generated from `src/cards/advance-vacuum/standalone.ts` (unminified IIFE) |
 | `nodalia-cards.manifest.js` | Version/hash metadata |
 | `nodalia-i18n.js` / `nodalia-editor-ui.js` | Generated from `i18n/` JSON |
 
-Do not edit generated Climate, Media Player, Light, Fan, Humidifier, Cover, Alarm Panel, Vacuum, Entity, Fav, Person, Camera, Circular Gauge, Insignia, Scenes, News, Weather, or Graph JS by hand. Change
+Do not edit generated Climate, Media Player, Light, Fan, Humidifier, Cover, Alarm Panel, Vacuum, Entity, Fav, Person, Camera, Circular Gauge, Insignia, Scenes, News, Weather, Graph, Calendar, Power Flow, Notifications, Navigation, Room Summary, or Advance Vacuum JS by hand. Change
 `src/cards/climate`, `src/cards/media-player`, `src/cards/light`, `src/cards/fan`,
-`src/cards/humidifier`, `src/cards/cover`, `src/cards/alarm-panel`, `src/cards/vacuum`, `src/cards/entity`, `src/cards/fav`, `src/cards/person`, `src/cards/camera`, `src/cards/circular-gauge`, `src/cards/insignia`, `src/cards/scenes`, `src/cards/news`, `src/cards/weather`, or `src/cards/graph` and run `pnpm run bundle`. The HACS bundle compiles those cards from `index.ts` so the
+`src/cards/humidifier`, `src/cards/cover`, `src/cards/alarm-panel`, `src/cards/vacuum`, `src/cards/entity`, `src/cards/fav`, `src/cards/person`, `src/cards/camera`, `src/cards/circular-gauge`, `src/cards/insignia`, `src/cards/scenes`, `src/cards/news`, `src/cards/weather`, `src/cards/graph`, `src/cards/calendar`, `src/cards/power-flow`, `src/cards/notifications`, `src/cards/navigation`, `src/cards/room-summary`, or `src/cards/advance-vacuum` and run `pnpm run bundle`. The HACS bundle compiles those cards from `index.ts` so the
 unused legacy editor class is tree-shaken there (same as `2.3.0-alpha.3`).
 The standalone Climate artifact keeps that class because source-contract tests still
 assert both editor implementations.
@@ -229,10 +250,8 @@ when a file is large *and* mixed.
 2. **Shared core** — move utils/backend/render-signature/bubble-contrast into
    `src/core/` with window adapters at the bundle edge.
 3. **Climate pilot (this preview)** — split Climate; keep Lovelace behavior.
-4. **Remaining large cards** — Advanced Vacuum, Notifications, Entity, Power
-   Flow, Calendar, Navigation. Media Player, Light, Fan and Humidifier already
-   live under `src/cards/`.
-5. **Smaller cards** — migrate without over-splitting.
+4. **Remaining large cards** — complete.
+5. **Smaller cards** — complete.
 6. **Cleanup** — drop obsolete internals, reduce globals, type remaining
    `@ts-nocheck` files, replace regex tests with behavioral tests where safe.
 
@@ -323,8 +342,7 @@ transition). Do not centralize look-alike code with different semantics.
 ## Remaining migration
 
 1. Shared core → `src/core/`
-2. Remaining large cards in the documented order (Advanced Vacuum first after Climate)
-3. Smaller cards
-4. Remove obsolete globals once every consumer imports modules
+2. Type remaining `@ts-nocheck` files and replace regex tests with behavioral tests where safe
+3. Remove obsolete globals once every consumer imports modules
 
 See `docs/REFACTOR_ALPHA47.md` for the earlier JS-layer helper centralization.

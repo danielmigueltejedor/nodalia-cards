@@ -28,7 +28,7 @@ function loadWeatherApi() {
 
 test("weather card registers custom element and bundle entry", () => {
   const source = read("nodalia-weather-card.js");
-  assert.match(source, /customElements\.define\(CARD_TAG, NodaliaWeatherCard\)/);
+  assert.match(source, /defineLazyCustomElement\(CARD_TAG, loadNodaliaWeatherCard/);
   assert.match(source, /window\.__NODALIA_WEATHER__/);
   assert.match(read("scripts/build-bundle.mjs"), /src\/cards\/weather\/index\.ts/);
   assert.match(read("scripts/build-src-cards.mjs"), /src\/cards\/weather\/standalone\.ts/);

@@ -32,17 +32,12 @@ import {
   buildGo2rtcWebSocketEndpoint,
   isMixedContentUrl,
 } from "./camera-runtime";
-import { NodaliaCameraCard } from "./camera-card";
-import { NodaliaCameraCardEditor } from "./camera-editor";
+import { loadNodaliaCameraCard } from "./camera-card";
+import { loadNodaliaCameraCardEditor } from "./camera-editor";
 import type { CameraPublicApi } from "./camera-types";
 
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaCameraCard);
-}
-
-if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaCameraCardEditor);
-}
+window.NodaliaUtils.defineLazyCustomElement(CARD_TAG, loadNodaliaCameraCard, { editorTag: EDITOR_TAG });
+window.NodaliaUtils.defineLazyCustomElement(EDITOR_TAG, loadNodaliaCameraCardEditor);
 
 (function registerNodaliaCameraCardPicker() {
   try {

@@ -20,10 +20,18 @@ import {
   getEditorColorModel,
 } from "./cover-helpers";
 
-export class NodaliaCoverCardEditor extends HTMLElement {
+let _lazyNodaliaCoverCardEditor;
+export function loadNodaliaCoverCardEditor() {
+  if (_lazyNodaliaCoverCardEditor) {
+    return _lazyNodaliaCoverCardEditor;
+  }
+class NodaliaCoverCardEditor extends HTMLElement {
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    this._nodaliaConstruct();
+  }
+
+  _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._entityOptionsSignature = "";
@@ -34,7 +42,7 @@ export class NodaliaCoverCardEditor extends HTMLElement {
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
-  }
+    }
 
   _attachEditorShadowListeners() {
     window.NodaliaUtils.bindShadowListeners(this, [
@@ -909,4 +917,7 @@ export class NodaliaCoverCardEditor extends HTMLElement {
     this._ensureEditorControlsReady();
     window.NodaliaUtils?.clampEditorDialogScroll?.(this);
   }
+}
+  _lazyNodaliaCoverCardEditor = NodaliaCoverCardEditor;
+  return NodaliaCoverCardEditor;
 }

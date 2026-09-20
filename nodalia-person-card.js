@@ -4,7 +4,7 @@
   // src/cards/person/person-constants.ts
   var CARD_TAG = "nodalia-person-card";
   var EDITOR_TAG = "nodalia-person-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.19b";
+  var CARD_VERSION = "2.3.0-alpha.20";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
@@ -240,764 +240,772 @@
   }
 
   // src/cards/person/person-card.ts
-  var NodaliaPersonCard = class extends HTMLElement {
-    static async getConfigElement() {
-      return document.createElement(EDITOR_TAG);
+  var _lazyNodaliaPersonCard;
+  function loadNodaliaPersonCard() {
+    if (_lazyNodaliaPersonCard) {
+      return _lazyNodaliaPersonCard;
     }
-    static getStubConfig(hass, entities = [], entitiesFallback = []) {
-      return applyStubEntity(deepClone(STUB_CONFIG), hass, ["person"], entities, entitiesFallback);
-    }
-    static getEntitySuggestion(hass, entityId) {
-      return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, { domains: ["person"] });
-    }
-    constructor() {
-      super();
-      this.attachShadow({ mode: "open" });
-      this._config = normalizeConfig(STUB_CONFIG);
-      this._hass = null;
-      window.NodaliaUtils?.clearDeferTimers?.(this);
-      this._lastRenderSignature = "";
-      this._animateContentOnNextRender = true;
-      this._entranceAnimationResetTimer = 0;
-      this._readyImageUrls = /* @__PURE__ */ new Set();
-      this._failedImageUrls = /* @__PURE__ */ new Set();
-      this._pendingImagePreloads = /* @__PURE__ */ new Map();
-      this._displayPictureUrl = "";
-      this._onShadowClick = this._onShadowClick.bind(this);
-      this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
-      this._detachHostHold = () => {
-      };
-      this._suppressNextPersonTap = false;
-    }
-    connectedCallback() {
-      this._detachHostHold?.();
-      this._detachHostHold = typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function" ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
-        resolveZone: (event) => event.composedPath().some(
-          (node) => node instanceof HTMLElement && node.dataset?.personAction === "primary"
-        ) ? "body" : null,
-        shouldBeginHold: () => this._canRunPersonAction("hold"),
-        onHold: () => {
-          this._triggerPrimaryPressAnimation();
-          this._performPersonAction("hold");
-        },
-        markHoldConsumedClick: () => {
-          this._suppressNextPersonTap = true;
-          window.NodaliaUtils?.cancelCardZoneTap?.(this);
-        }
-      }) : () => {
-      };
-      this.shadowRoot?.addEventListener("click", this._onShadowClick);
-      this.shadowRoot?.addEventListener("keydown", this._onShadowKeyDown);
-      this._animateContentOnNextRender = true;
-      if (this._hass && this._config) {
+    class NodaliaPersonCard extends HTMLElement {
+      static async getConfigElement() {
+        return document.createElement(EDITOR_TAG);
+      }
+      static getStubConfig(hass, entities = [], entitiesFallback = []) {
+        return applyStubEntity(deepClone(STUB_CONFIG), hass, ["person"], entities, entitiesFallback);
+      }
+      static getEntitySuggestion(hass, entityId) {
+        return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, { domains: ["person"] });
+      }
+      constructor() {
+        super();
+        this._nodaliaConstruct();
+      }
+      _nodaliaConstruct() {
+        this.attachShadow({ mode: "open" });
+        this._config = normalizeConfig(STUB_CONFIG);
+        this._hass = null;
+        window.NodaliaUtils?.clearDeferTimers?.(this);
         this._lastRenderSignature = "";
+        this._animateContentOnNextRender = true;
+        this._entranceAnimationResetTimer = 0;
+        this._readyImageUrls = /* @__PURE__ */ new Set();
+        this._failedImageUrls = /* @__PURE__ */ new Set();
+        this._pendingImagePreloads = /* @__PURE__ */ new Map();
+        this._displayPictureUrl = "";
+        this._onShadowClick = this._onShadowClick.bind(this);
+        this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
+        this._detachHostHold = () => {
+        };
+        this._suppressNextPersonTap = false;
+      }
+      connectedCallback() {
+        this._detachHostHold?.();
+        this._detachHostHold = typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function" ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
+          resolveZone: (event) => event.composedPath().some(
+            (node) => node instanceof HTMLElement && node.dataset?.personAction === "primary"
+          ) ? "body" : null,
+          shouldBeginHold: () => this._canRunPersonAction("hold"),
+          onHold: () => {
+            this._triggerPrimaryPressAnimation();
+            this._performPersonAction("hold");
+          },
+          markHoldConsumedClick: () => {
+            this._suppressNextPersonTap = true;
+            window.NodaliaUtils?.cancelCardZoneTap?.(this);
+          }
+        }) : () => {
+        };
+        this.shadowRoot?.addEventListener("click", this._onShadowClick);
+        this.shadowRoot?.addEventListener("keydown", this._onShadowKeyDown);
+        this._animateContentOnNextRender = true;
+        if (this._hass && this._config) {
+          this._lastRenderSignature = "";
+          this._render();
+        }
+      }
+      disconnectedCallback() {
+        this._detachHostHold?.();
+        this._detachHostHold = () => {
+        };
+        window.NodaliaUtils?.cancelCardZoneTap?.(this);
+        this._suppressNextPersonTap = false;
+        this.shadowRoot?.removeEventListener("click", this._onShadowClick);
+        this.shadowRoot?.removeEventListener("keydown", this._onShadowKeyDown);
+        if (this._entranceAnimationResetTimer) {
+          window.clearTimeout(this._entranceAnimationResetTimer);
+          this._entranceAnimationResetTimer = 0;
+        }
+        window.NodaliaUtils?.clearDeferTimers?.(this);
+        this._animateContentOnNextRender = true;
+        this._lastRenderSignature = "";
+      }
+      setConfig(config) {
+        this._config = normalizeConfig(config || {});
+        window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
+        this._cachedZoneTarget = "";
+        this._cachedZoneEntityId = "";
+        this._lastRenderSignature = "";
+        this._animateContentOnNextRender = true;
         this._render();
       }
-    }
-    disconnectedCallback() {
-      this._detachHostHold?.();
-      this._detachHostHold = () => {
-      };
-      window.NodaliaUtils?.cancelCardZoneTap?.(this);
-      this._suppressNextPersonTap = false;
-      this.shadowRoot?.removeEventListener("click", this._onShadowClick);
-      this.shadowRoot?.removeEventListener("keydown", this._onShadowKeyDown);
-      if (this._entranceAnimationResetTimer) {
-        window.clearTimeout(this._entranceAnimationResetTimer);
-        this._entranceAnimationResetTimer = 0;
-      }
-      window.NodaliaUtils?.clearDeferTimers?.(this);
-      this._animateContentOnNextRender = true;
-      this._lastRenderSignature = "";
-    }
-    setConfig(config) {
-      this._config = normalizeConfig(config || {});
-      window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
-      this._cachedZoneTarget = "";
-      this._cachedZoneEntityId = "";
-      this._lastRenderSignature = "";
-      this._animateContentOnNextRender = true;
-      this._render();
-    }
-    set hass(hass) {
-      this._hass = hass;
-      const nextSignature = this._getRenderSignature(hass);
-      if (nextSignature && nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
-        return;
-      }
-      this._lastRenderSignature = nextSignature;
-      this._render();
-    }
-    getCardSize() {
-      return 3;
-    }
-    getGridOptions() {
-      return {
-        rows: "auto",
-        columns: "full",
-        min_rows: 2,
-        min_columns: 2
-      };
-    }
-    _getState() {
-      return this._hass?.states?.[this._config?.entity] || null;
-    }
-    _getTitle(state) {
-      const fallback = this._personUiCopy().defaultName;
-      return this._config?.name || state?.attributes?.friendly_name || this._config?.entity || fallback;
-    }
-    _getPersonPicture(state) {
-      if (this._config?.use_entity_picture === false) {
-        return "";
-      }
-      return String(
-        state?.attributes?.entity_picture_local || state?.attributes?.entity_picture || ""
-      ).trim();
-    }
-    _isImageUrlReady(url) {
-      return Boolean(url) && this._readyImageUrls.has(url);
-    }
-    _isImageUrlFailed(url) {
-      return Boolean(url) && this._failedImageUrls.has(url);
-    }
-    _preloadImageUrl(url, onSettled = null) {
-      if (!url) {
-        return Promise.resolve(false);
-      }
-      if (this._isImageUrlReady(url)) {
-        onSettled?.(true);
-        return Promise.resolve(true);
-      }
-      if (this._isImageUrlFailed(url)) {
-        onSettled?.(false);
-        return Promise.resolve(false);
-      }
-      const existing = this._pendingImagePreloads.get(url);
-      if (existing) {
-        if (onSettled) {
-          existing.then(onSettled);
-        }
-        return existing;
-      }
-      if (typeof Image === "undefined") {
-        this._readyImageUrls.add(url);
-        onSettled?.(true);
-        return Promise.resolve(true);
-      }
-      const preloadPromise = new Promise((resolve) => {
-        const image = new Image();
-        image.decoding = "async";
-        const settle = (loaded) => {
-          this._pendingImagePreloads.delete(url);
-          if (loaded) {
-            this._readyImageUrls.add(url);
-            this._failedImageUrls.delete(url);
-          } else {
-            this._failedImageUrls.add(url);
-          }
-          resolve(loaded);
-          onSettled?.(loaded);
-        };
-        image.onload = () => settle(true);
-        image.onerror = () => settle(false);
-        image.src = url;
-      });
-      this._pendingImagePreloads.set(url, preloadPromise);
-      return preloadPromise;
-    }
-    _ensurePersonPictureReady(url) {
-      if (!url) {
-        this._displayPictureUrl = "";
-        return true;
-      }
-      if (this._isImageUrlReady(url)) {
-        this._displayPictureUrl = url;
-        return true;
-      }
-      if (this._isImageUrlFailed(url)) {
-        this._displayPictureUrl = "";
-        return true;
-      }
-      this._preloadImageUrl(url, () => {
-        const currentPicture = this._getPersonPicture(this._getState());
-        if (currentPicture !== url) {
+      set hass(hass) {
+        this._hass = hass;
+        const nextSignature = this._getRenderSignature(hass);
+        if (nextSignature && nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
           return;
         }
-        this._displayPictureUrl = this._isImageUrlReady(url) ? url : "";
-        this._lastRenderSignature = "";
+        this._lastRenderSignature = nextSignature;
         this._render();
-      });
-      return false;
-    }
-    _getRenderablePersonPicture(state) {
-      const desiredPicture = this._getPersonPicture(state);
-      if (!desiredPicture) {
-        this._displayPictureUrl = "";
-        return "";
       }
-      if (this._isImageUrlReady(desiredPicture)) {
-        this._displayPictureUrl = desiredPicture;
-        return desiredPicture;
+      getCardSize() {
+        return 3;
       }
-      if (this._isImageUrlFailed(desiredPicture)) {
-        this._displayPictureUrl = "";
-        return "";
-      }
-      return this._displayPictureUrl || "";
-    }
-    _getFallbackIcon(state) {
-      return this._config?.icon || state?.attributes?.icon || "mdi:account";
-    }
-    _personStrings() {
-      const NI = window.NodaliaI18n;
-      if (!NI?.strings || !NI.resolveLanguage) {
+      getGridOptions() {
         return {
-          home: "Home",
-          notHome: "Away",
-          work: "Work",
-          school: "School",
-          unavailable: "Unavailable",
-          unknown: "Unknown",
-          locationUnknown: "Unknown location"
+          rows: "auto",
+          columns: "full",
+          min_rows: 2,
+          min_columns: 2
         };
       }
-      const hass = NI.resolveHass?.(this._hass) ?? this._hass;
-      const lang = NI.resolveLanguage(hass, this._config?.language ?? "auto");
-      return NI.strings(lang).person || NI.strings("en").person || {};
-    }
-    _translateState(state) {
-      const person = this._personStrings();
-      const raw = String(state?.state || "").trim();
-      const key = normalizeTextKey(raw);
-      const NI = window.NodaliaI18n;
-      if (NI?.translateEntityState && state && this._config?.entity) {
-        const hass = NI.resolveHass?.(this._hass) ?? this._hass;
-        const lang = NI.resolveLanguage(hass, this._config?.language ?? "auto");
-        const translated = NI.translateEntityState(
-          lang,
-          { ...state, entity_id: state.entity_id || this._config.entity },
-          2,
-          (v, u, d) => `${v}${u}`,
-          (v) => String(v),
-          () => null
-        );
-        if (translated && translated !== raw) {
-          return translated;
-        }
+      _getState() {
+        return this._hass?.states?.[this._config?.entity] || null;
       }
-      switch (key) {
-        case "home":
-        case "casa":
-        case "en_casa":
-          return person.home || "Home";
-        case "not_home":
-        case "away":
-        case "fuera":
-          return person.notHome || "Away";
-        case "work":
-        case "trabajo":
-        case "office":
-        case "oficina":
-          return person.work || "Work";
-        case "school":
-        case "colegio":
-        case "escuela":
-          return person.school || "School";
-        case "unavailable":
-          return person.unavailable || "Unavailable";
-        case "unknown":
-          return person.unknown || "Unknown";
-        default: {
-          const zoneState = this._getMatchingZoneState(state);
-          const zoneName = String(zoneState?.attributes?.friendly_name || "").trim();
-          if (zoneName) {
-            return zoneName;
+      _getTitle(state) {
+        const fallback = this._personUiCopy().defaultName;
+        return this._config?.name || state?.attributes?.friendly_name || this._config?.entity || fallback;
+      }
+      _getPersonPicture(state) {
+        if (this._config?.use_entity_picture === false) {
+          return "";
+        }
+        return String(
+          state?.attributes?.entity_picture_local || state?.attributes?.entity_picture || ""
+        ).trim();
+      }
+      _isImageUrlReady(url) {
+        return Boolean(url) && this._readyImageUrls.has(url);
+      }
+      _isImageUrlFailed(url) {
+        return Boolean(url) && this._failedImageUrls.has(url);
+      }
+      _preloadImageUrl(url, onSettled = null) {
+        if (!url) {
+          return Promise.resolve(false);
+        }
+        if (this._isImageUrlReady(url)) {
+          onSettled?.(true);
+          return Promise.resolve(true);
+        }
+        if (this._isImageUrlFailed(url)) {
+          onSettled?.(false);
+          return Promise.resolve(false);
+        }
+        const existing = this._pendingImagePreloads.get(url);
+        if (existing) {
+          if (onSettled) {
+            existing.then(onSettled);
           }
-          return raw || person.locationUnknown || "Unknown location";
+          return existing;
         }
+        if (typeof Image === "undefined") {
+          this._readyImageUrls.add(url);
+          onSettled?.(true);
+          return Promise.resolve(true);
+        }
+        const preloadPromise = new Promise((resolve) => {
+          const image = new Image();
+          image.decoding = "async";
+          const settle = (loaded) => {
+            this._pendingImagePreloads.delete(url);
+            if (loaded) {
+              this._readyImageUrls.add(url);
+              this._failedImageUrls.delete(url);
+            } else {
+              this._failedImageUrls.add(url);
+            }
+            resolve(loaded);
+            onSettled?.(loaded);
+          };
+          image.onload = () => settle(true);
+          image.onerror = () => settle(false);
+          image.src = url;
+        });
+        this._pendingImagePreloads.set(url, preloadPromise);
+        return preloadPromise;
       }
-    }
-    _getMatchingZoneState(state) {
-      const target = normalizeTextKey(state?.state);
-      if (!target || !this._hass?.states) {
-        return null;
-      }
-      if (this._cachedZoneTarget === target) {
-        if (this._cachedZoneEntityId) {
-          const cachedZone = this._hass.states[this._cachedZoneEntityId] || null;
-          if (cachedZone) {
-            return cachedZone;
+      _ensurePersonPictureReady(url) {
+        if (!url) {
+          this._displayPictureUrl = "";
+          return true;
+        }
+        if (this._isImageUrlReady(url)) {
+          this._displayPictureUrl = url;
+          return true;
+        }
+        if (this._isImageUrlFailed(url)) {
+          this._displayPictureUrl = "";
+          return true;
+        }
+        this._preloadImageUrl(url, () => {
+          const currentPicture = this._getPersonPicture(this._getState());
+          if (currentPicture !== url) {
+            return;
           }
-        }
-      }
-      const zoneEntry = Object.entries(this._hass.states).find(([entityId, entityState]) => {
-        if (!entityId.startsWith("zone.")) {
-          return false;
-        }
-        const objectId = entityId.split(".")[1] || "";
-        const friendlyName = String(entityState?.attributes?.friendly_name || "").trim();
-        return normalizeTextKey(objectId) === target || normalizeTextKey(friendlyName) === target;
-      });
-      this._cachedZoneTarget = target;
-      this._cachedZoneEntityId = zoneEntry ? zoneEntry[0] : "";
-      return zoneEntry?.[1] || null;
-    }
-    _getBadgeDescriptor(state) {
-      if (this._config?.show_zone_badge === false) {
-        return null;
-      }
-      if (isUnavailableState(state)) {
-        return {
-          icon: "mdi:help",
-          color: "#ff9b4a"
-        };
-      }
-      const key = normalizeTextKey(state?.state);
-      switch (key) {
-        case "home":
-        case "casa":
-        case "en_casa":
-          return { icon: "mdi:home", color: "#67d26f" };
-        case "not_home":
-        case "away":
-        case "fuera":
-          return { icon: "mdi:home-export-outline", color: "#ff6b6b" };
-        case "work":
-        case "trabajo":
-        case "office":
-        case "oficina":
-          return { icon: "mdi:briefcase", color: "#4dabf7" };
-        case "school":
-        case "colegio":
-        case "escuela":
-          return { icon: "mdi:school", color: "#8c7bff" };
-        default:
-          break;
-      }
-      const zoneState = this._getMatchingZoneState(state);
-      if (this._config?.use_zone_icon !== false && zoneState?.attributes?.icon) {
-        return {
-          icon: zoneState.attributes.icon,
-          color: "var(--info-color, #71c0ff)"
-        };
-      }
-      if (String(state?.state || "").trim()) {
-        return {
-          icon: "mdi:map-marker",
-          color: "var(--info-color, #71c0ff)"
-        };
-      }
-      return null;
-    }
-    _getAccentColor(state) {
-      return this._getBadgeDescriptor(state)?.color || "var(--info-color, #71c0ff)";
-    }
-    _getRenderSignature(hass = this._hass) {
-      const entityId = this._config?.entity || "";
-      const state = entityId ? hass?.states?.[entityId] || null : null;
-      if (!entityId || !state) {
-        return `empty:${this._config?.entity || ""}`;
-      }
-      const attrs = state.attributes || {};
-      const zoneState = this._getMatchingZoneState(state);
-      const joinParts = window.NodaliaRenderSignature?.joinParts;
-      const values = [
-        entityId,
-        String(state.state || ""),
-        String(attrs.friendly_name || this._config.name || ""),
-        this._config.show_state !== false ? String(state.state || "") : "",
-        String(attrs.entity_picture_local || ""),
-        String(attrs.entity_picture || ""),
-        String(attrs.icon || this._config.icon || ""),
-        String(state.state || ""),
-        zoneState?.entity_id || "",
-        zoneState?.attributes?.friendly_name || "",
-        zoneState?.attributes?.icon || "",
-        String(window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") || "en"),
-        this._config.show_state !== false,
-        this._config.show_name !== false,
-        this._config.show_zone_badge !== false,
-        this._config.use_entity_picture !== false,
-        this._config.use_zone_icon !== false,
-        this._config.name || "",
-        this._config.icon || "",
-        this._config.tap_action || "",
-        this._config.hold_action || "",
-        this._config.double_tap_action || "",
-        this._config.tap_service || "",
-        this._config.hold_service || "",
-        this._config.double_tap_service || "",
-        this._config.navigation_path || "",
-        this._config.hold_navigation_path || "",
-        this._config.double_tap_navigation_path || ""
-      ];
-      if (typeof joinParts === "function") {
-        return joinParts([{ prefix: "person:", values }]);
-      }
-      return values.join("::");
-    }
-    _personActionPrefix(kind = "tap") {
-      return kind === "double" || kind === "double_tap" ? "double_tap" : kind === "hold" ? "hold" : "tap";
-    }
-    _personActionNavigationKey(prefix) {
-      return prefix === "tap" ? "navigation_path" : `${prefix}_navigation_path`;
-    }
-    _personActionEntity(prefix) {
-      return String(this._config?.[`${prefix}_action_entity`] || this._config?.entity || "").trim();
-    }
-    _canRunPersonAction(kind = "tap") {
-      const prefix = this._personActionPrefix(kind);
-      const fallback = prefix === "tap" ? "more-info" : "none";
-      const action = String(this._config?.[`${prefix}_action`] || fallback).trim().toLowerCase();
-      if (action === "none") {
+          this._displayPictureUrl = this._isImageUrlReady(url) ? url : "";
+          this._lastRenderSignature = "";
+          this._render();
+        });
         return false;
       }
-      if (action === "service") {
-        return Boolean(String(this._config?.[`${prefix}_service`] || "").trim());
+      _getRenderablePersonPicture(state) {
+        const desiredPicture = this._getPersonPicture(state);
+        if (!desiredPicture) {
+          this._displayPictureUrl = "";
+          return "";
+        }
+        if (this._isImageUrlReady(desiredPicture)) {
+          this._displayPictureUrl = desiredPicture;
+          return desiredPicture;
+        }
+        if (this._isImageUrlFailed(desiredPicture)) {
+          this._displayPictureUrl = "";
+          return "";
+        }
+        return this._displayPictureUrl || "";
       }
-      if (action === "navigate") {
-        return Boolean(String(this._config?.[this._personActionNavigationKey(prefix)] || "").trim());
+      _getFallbackIcon(state) {
+        return this._config?.icon || state?.attributes?.icon || "mdi:account";
       }
-      if (action === "url") {
-        return Boolean(String(this._config?.[`${prefix}_url`] || "").trim());
+      _personStrings() {
+        const NI = window.NodaliaI18n;
+        if (!NI?.strings || !NI.resolveLanguage) {
+          return {
+            home: "Home",
+            notHome: "Away",
+            work: "Work",
+            school: "School",
+            unavailable: "Unavailable",
+            unknown: "Unknown",
+            locationUnknown: "Unknown location"
+          };
+        }
+        const hass = NI.resolveHass?.(this._hass) ?? this._hass;
+        const lang = NI.resolveLanguage(hass, this._config?.language ?? "auto");
+        return NI.strings(lang).person || NI.strings("en").person || {};
       }
-      return Boolean(this._personActionEntity(prefix));
-    }
-    _canRunTapAction() {
-      return this._canRunPersonAction("tap");
-    }
-    _canRunAnyPersonAction() {
-      return ["tap", "hold", "double_tap"].some((kind) => this._canRunPersonAction(kind));
-    }
-    _triggerHaptic(styleOverride = null) {
-      const haptics = this._config?.haptics || {};
-      if (haptics.enabled !== true) {
-        return;
+      _translateState(state) {
+        const person = this._personStrings();
+        const raw = String(state?.state || "").trim();
+        const key = normalizeTextKey(raw);
+        const NI = window.NodaliaI18n;
+        if (NI?.translateEntityState && state && this._config?.entity) {
+          const hass = NI.resolveHass?.(this._hass) ?? this._hass;
+          const lang = NI.resolveLanguage(hass, this._config?.language ?? "auto");
+          const translated = NI.translateEntityState(
+            lang,
+            { ...state, entity_id: state.entity_id || this._config.entity },
+            2,
+            (v, u, d) => `${v}${u}`,
+            (v) => String(v),
+            () => null
+          );
+          if (translated && translated !== raw) {
+            return translated;
+          }
+        }
+        switch (key) {
+          case "home":
+          case "casa":
+          case "en_casa":
+            return person.home || "Home";
+          case "not_home":
+          case "away":
+          case "fuera":
+            return person.notHome || "Away";
+          case "work":
+          case "trabajo":
+          case "office":
+          case "oficina":
+            return person.work || "Work";
+          case "school":
+          case "colegio":
+          case "escuela":
+            return person.school || "School";
+          case "unavailable":
+            return person.unavailable || "Unavailable";
+          case "unknown":
+            return person.unknown || "Unknown";
+          default: {
+            const zoneState = this._getMatchingZoneState(state);
+            const zoneName = String(zoneState?.attributes?.friendly_name || "").trim();
+            if (zoneName) {
+              return zoneName;
+            }
+            return raw || person.locationUnknown || "Unknown location";
+          }
+        }
       }
-      const style = styleOverride || haptics.style || "medium";
-      fireEvent(this, "haptic", style, {
-        bubbles: true,
-        cancelable: false,
-        composed: true
-      });
-      if (haptics.fallback_vibrate && typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
-        navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
+      _getMatchingZoneState(state) {
+        const target = normalizeTextKey(state?.state);
+        if (!target || !this._hass?.states) {
+          return null;
+        }
+        if (this._cachedZoneTarget === target) {
+          if (this._cachedZoneEntityId) {
+            const cachedZone = this._hass.states[this._cachedZoneEntityId] || null;
+            if (cachedZone) {
+              return cachedZone;
+            }
+          }
+        }
+        const zoneEntry = Object.entries(this._hass.states).find(([entityId, entityState]) => {
+          if (!entityId.startsWith("zone.")) {
+            return false;
+          }
+          const objectId = entityId.split(".")[1] || "";
+          const friendlyName = String(entityState?.attributes?.friendly_name || "").trim();
+          return normalizeTextKey(objectId) === target || normalizeTextKey(friendlyName) === target;
+        });
+        this._cachedZoneTarget = target;
+        this._cachedZoneEntityId = zoneEntry ? zoneEntry[0] : "";
+        return zoneEntry?.[1] || null;
       }
-    }
-    _getAnimationSettings() {
-      const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
-      return {
-        enabled: configuredAnimations.enabled !== false,
-        buttonBounceDuration: clamp(
-          Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration,
-          120,
-          1200
-        ),
-        contentDuration: clamp(
-          Number(configuredAnimations.content_duration) || DEFAULT_CONFIG.animations.content_duration,
-          140,
-          1800
-        )
-      };
-    }
-    _triggerPressAnimation(element, className = "is-pressing") {
-      if (!(element instanceof HTMLElement)) {
-        return;
+      _getBadgeDescriptor(state) {
+        if (this._config?.show_zone_badge === false) {
+          return null;
+        }
+        if (isUnavailableState(state)) {
+          return {
+            icon: "mdi:help",
+            color: "#ff9b4a"
+          };
+        }
+        const key = normalizeTextKey(state?.state);
+        switch (key) {
+          case "home":
+          case "casa":
+          case "en_casa":
+            return { icon: "mdi:home", color: "#67d26f" };
+          case "not_home":
+          case "away":
+          case "fuera":
+            return { icon: "mdi:home-export-outline", color: "#ff6b6b" };
+          case "work":
+          case "trabajo":
+          case "office":
+          case "oficina":
+            return { icon: "mdi:briefcase", color: "#4dabf7" };
+          case "school":
+          case "colegio":
+          case "escuela":
+            return { icon: "mdi:school", color: "#8c7bff" };
+          default:
+            break;
+        }
+        const zoneState = this._getMatchingZoneState(state);
+        if (this._config?.use_zone_icon !== false && zoneState?.attributes?.icon) {
+          return {
+            icon: zoneState.attributes.icon,
+            color: "var(--info-color, #71c0ff)"
+          };
+        }
+        if (String(state?.state || "").trim()) {
+          return {
+            icon: "mdi:map-marker",
+            color: "var(--info-color, #71c0ff)"
+          };
+        }
+        return null;
       }
-      const animations = this._getAnimationSettings();
-      if (!animations.enabled) {
-        return;
+      _getAccentColor(state) {
+        return this._getBadgeDescriptor(state)?.color || "var(--info-color, #71c0ff)";
       }
-      element.classList.remove(className);
-      element.getBoundingClientRect();
-      element.classList.add(className);
-      const schedule = window.NodaliaUtils?.scheduleDeferTimer;
-      const done = () => {
-        if (!element.isConnected) {
+      _getRenderSignature(hass = this._hass) {
+        const entityId = this._config?.entity || "";
+        const state = entityId ? hass?.states?.[entityId] || null : null;
+        if (!entityId || !state) {
+          return `empty:${this._config?.entity || ""}`;
+        }
+        const attrs = state.attributes || {};
+        const zoneState = this._getMatchingZoneState(state);
+        const joinParts = window.NodaliaRenderSignature?.joinParts;
+        const values = [
+          entityId,
+          String(state.state || ""),
+          String(attrs.friendly_name || this._config.name || ""),
+          this._config.show_state !== false ? String(state.state || "") : "",
+          String(attrs.entity_picture_local || ""),
+          String(attrs.entity_picture || ""),
+          String(attrs.icon || this._config.icon || ""),
+          String(state.state || ""),
+          zoneState?.entity_id || "",
+          zoneState?.attributes?.friendly_name || "",
+          zoneState?.attributes?.icon || "",
+          String(window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") || "en"),
+          this._config.show_state !== false,
+          this._config.show_name !== false,
+          this._config.show_zone_badge !== false,
+          this._config.use_entity_picture !== false,
+          this._config.use_zone_icon !== false,
+          this._config.name || "",
+          this._config.icon || "",
+          this._config.tap_action || "",
+          this._config.hold_action || "",
+          this._config.double_tap_action || "",
+          this._config.tap_service || "",
+          this._config.hold_service || "",
+          this._config.double_tap_service || "",
+          this._config.navigation_path || "",
+          this._config.hold_navigation_path || "",
+          this._config.double_tap_navigation_path || ""
+        ];
+        if (typeof joinParts === "function") {
+          return joinParts([{ prefix: "person:", values }]);
+        }
+        return values.join("::");
+      }
+      _personActionPrefix(kind = "tap") {
+        return kind === "double" || kind === "double_tap" ? "double_tap" : kind === "hold" ? "hold" : "tap";
+      }
+      _personActionNavigationKey(prefix) {
+        return prefix === "tap" ? "navigation_path" : `${prefix}_navigation_path`;
+      }
+      _personActionEntity(prefix) {
+        return String(this._config?.[`${prefix}_action_entity`] || this._config?.entity || "").trim();
+      }
+      _canRunPersonAction(kind = "tap") {
+        const prefix = this._personActionPrefix(kind);
+        const fallback = prefix === "tap" ? "more-info" : "none";
+        const action = String(this._config?.[`${prefix}_action`] || fallback).trim().toLowerCase();
+        if (action === "none") {
+          return false;
+        }
+        if (action === "service") {
+          return Boolean(String(this._config?.[`${prefix}_service`] || "").trim());
+        }
+        if (action === "navigate") {
+          return Boolean(String(this._config?.[this._personActionNavigationKey(prefix)] || "").trim());
+        }
+        if (action === "url") {
+          return Boolean(String(this._config?.[`${prefix}_url`] || "").trim());
+        }
+        return Boolean(this._personActionEntity(prefix));
+      }
+      _canRunTapAction() {
+        return this._canRunPersonAction("tap");
+      }
+      _canRunAnyPersonAction() {
+        return ["tap", "hold", "double_tap"].some((kind) => this._canRunPersonAction(kind));
+      }
+      _triggerHaptic(styleOverride = null) {
+        const haptics = this._config?.haptics || {};
+        if (haptics.enabled !== true) {
+          return;
+        }
+        const style = styleOverride || haptics.style || "medium";
+        fireEvent(this, "haptic", style, {
+          bubbles: true,
+          cancelable: false,
+          composed: true
+        });
+        if (haptics.fallback_vibrate && typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+          navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
+        }
+      }
+      _getAnimationSettings() {
+        const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+        return {
+          enabled: configuredAnimations.enabled !== false,
+          buttonBounceDuration: clamp(
+            Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration,
+            120,
+            1200
+          ),
+          contentDuration: clamp(
+            Number(configuredAnimations.content_duration) || DEFAULT_CONFIG.animations.content_duration,
+            140,
+            1800
+          )
+        };
+      }
+      _triggerPressAnimation(element, className = "is-pressing") {
+        if (!(element instanceof HTMLElement)) {
+          return;
+        }
+        const animations = this._getAnimationSettings();
+        if (!animations.enabled) {
           return;
         }
         element.classList.remove(className);
-      };
-      if (typeof schedule === "function") {
-        schedule(this, done, animations.buttonBounceDuration + 40);
-      } else {
-        window.setTimeout(done, animations.buttonBounceDuration + 40);
+        element.getBoundingClientRect();
+        element.classList.add(className);
+        const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+        const done = () => {
+          if (!element.isConnected) {
+            return;
+          }
+          element.classList.remove(className);
+        };
+        if (typeof schedule === "function") {
+          schedule(this, done, animations.buttonBounceDuration + 40);
+        } else {
+          window.setTimeout(done, animations.buttonBounceDuration + 40);
+        }
       }
-    }
-    _scheduleEntranceAnimationReset(delay) {
-      if (this._entranceAnimationResetTimer) {
-        window.clearTimeout(this._entranceAnimationResetTimer);
-        this._entranceAnimationResetTimer = 0;
-      }
-      const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3e3);
-      if (!safeDelay || typeof window === "undefined") {
-        this._animateContentOnNextRender = false;
-        return;
-      }
-      this._entranceAnimationResetTimer = window.setTimeout(() => {
-        this._entranceAnimationResetTimer = 0;
-        if (!this.isConnected) {
+      _scheduleEntranceAnimationReset(delay) {
+        if (this._entranceAnimationResetTimer) {
+          window.clearTimeout(this._entranceAnimationResetTimer);
+          this._entranceAnimationResetTimer = 0;
+        }
+        const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3e3);
+        if (!safeDelay || typeof window === "undefined") {
+          this._animateContentOnNextRender = false;
           return;
         }
-        this._animateContentOnNextRender = false;
-      }, safeDelay);
-    }
-    _parsePersonActionObject(value) {
-      if (isObject(value)) {
-        return deepClone(value);
+        this._entranceAnimationResetTimer = window.setTimeout(() => {
+          this._entranceAnimationResetTimer = 0;
+          if (!this.isConnected) {
+            return;
+          }
+          this._animateContentOnNextRender = false;
+        }, safeDelay);
       }
-      const source = String(value || "").trim();
-      if (!source) {
-        return {};
+      _parsePersonActionObject(value) {
+        if (isObject(value)) {
+          return deepClone(value);
+        }
+        const source = String(value || "").trim();
+        if (!source) {
+          return {};
+        }
+        try {
+          const parsed = JSON.parse(source);
+          return isObject(parsed) ? parsed : {};
+        } catch (_error) {
+          return {};
+        }
       }
-      try {
-        const parsed = JSON.parse(source);
-        return isObject(parsed) ? parsed : {};
-      } catch (_error) {
-        return {};
+      _isConfiguredPersonServiceAllowed(serviceValue) {
+        const security = this._config?.security || DEFAULT_CONFIG.security;
+        if (security.strict_service_actions === false) {
+          return true;
+        }
+        const normalizedService = String(serviceValue || "").trim().toLowerCase();
+        const separator = normalizedService.indexOf(".");
+        if (separator <= 0 || separator >= normalizedService.length - 1) {
+          return false;
+        }
+        const domain = normalizedService.slice(0, separator);
+        const allowedServices = Array.isArray(security.allowed_services) ? security.allowed_services.map((item) => String(item || "").trim().toLowerCase()).filter(Boolean) : [];
+        const allowedDomains = Array.isArray(security.allowed_service_domains) ? security.allowed_service_domains.map((item) => String(item || "").trim().toLowerCase()).filter(Boolean) : [];
+        return allowedServices.includes(normalizedService) || allowedDomains.includes(domain);
       }
-    }
-    _isConfiguredPersonServiceAllowed(serviceValue) {
-      const security = this._config?.security || DEFAULT_CONFIG.security;
-      if (security.strict_service_actions === false) {
-        return true;
+      _invokePersonService(domain, service, data = {}, target = null) {
+        const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils);
+        if (typeof invoke === "function") {
+          return invoke(this, this._hass, domain, service, data, target);
+        }
+        return Promise.resolve(this._hass?.callService?.(domain, service, data, target || void 0));
       }
-      const normalizedService = String(serviceValue || "").trim().toLowerCase();
-      const separator = normalizedService.indexOf(".");
-      if (separator <= 0 || separator >= normalizedService.length - 1) {
-        return false;
-      }
-      const domain = normalizedService.slice(0, separator);
-      const allowedServices = Array.isArray(security.allowed_services) ? security.allowed_services.map((item) => String(item || "").trim().toLowerCase()).filter(Boolean) : [];
-      const allowedDomains = Array.isArray(security.allowed_service_domains) ? security.allowed_service_domains.map((item) => String(item || "").trim().toLowerCase()).filter(Boolean) : [];
-      return allowedServices.includes(normalizedService) || allowedDomains.includes(domain);
-    }
-    _invokePersonService(domain, service, data = {}, target = null) {
-      const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils);
-      if (typeof invoke === "function") {
-        return invoke(this, this._hass, domain, service, data, target);
-      }
-      return Promise.resolve(this._hass?.callService?.(domain, service, data, target || void 0));
-    }
-    _runConfiguredPersonService(prefix) {
-      const serviceValue = String(this._config?.[`${prefix}_service`] || "").trim();
-      const separator = serviceValue.indexOf(".");
-      if (separator <= 0 || separator >= serviceValue.length - 1) {
-        return;
-      }
-      if (!this._isConfiguredPersonServiceAllowed(serviceValue)) {
-        window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Person Card", serviceValue);
-        return;
-      }
-      const data = this._parsePersonActionObject(this._config?.[`${prefix}_service_data`]);
-      const target = this._parsePersonActionObject(this._config?.[`${prefix}_service_target`]);
-      void this._invokePersonService(
-        serviceValue.slice(0, separator),
-        serviceValue.slice(separator + 1),
-        data,
-        Object.keys(target).length ? target : null
-      );
-    }
-    _openPersonNavigation(value) {
-      const path = window.NodaliaUtils?.sanitizeActionUrl?.(value, { allowRelative: true, allowHash: true }) || "";
-      if (!path || path.includes("://")) {
-        return;
-      }
-      if (this._hass?.navigate) {
-        this._hass.navigate(path);
-        return;
-      }
-      if (window?.history?.pushState) {
-        window.history.pushState(null, "", path);
-        window.dispatchEvent(new CustomEvent("location-changed", {
-          detail: { replace: false }
-        }));
-        return;
-      }
-      fireEvent(this, "hass-navigate", { path });
-    }
-    _openPersonUrl(value, newTab = false) {
-      const url = window.NodaliaUtils?.sanitizeActionUrl?.(value, { allowRelative: true, allowHash: true }) || "";
-      if (!url) {
-        return;
-      }
-      window.open(url, newTab ? "_blank" : "_self", "noopener,noreferrer");
-    }
-    _performPersonAction(kind = "tap") {
-      const prefix = this._personActionPrefix(kind);
-      if (!this._canRunPersonAction(prefix)) {
-        return;
-      }
-      const fallback = prefix === "tap" ? "more-info" : "none";
-      const action = String(this._config?.[`${prefix}_action`] || fallback).trim().toLowerCase();
-      this._triggerHaptic();
-      if (action === "more-info") {
-        fireEvent(this, "hass-more-info", {
-          entityId: this._personActionEntity(prefix)
-        });
-        return;
-      }
-      if (action === "toggle") {
-        void this._invokePersonService("homeassistant", "toggle", {
-          entity_id: this._personActionEntity(prefix)
-        });
-        return;
-      }
-      if (action === "service") {
-        this._runConfiguredPersonService(prefix);
-        return;
-      }
-      if (action === "navigate") {
-        this._openPersonNavigation(this._config?.[this._personActionNavigationKey(prefix)]);
-        return;
-      }
-      if (action === "url") {
-        this._openPersonUrl(
-          this._config?.[`${prefix}_url`],
-          this._config?.[`${prefix}_new_tab`] === true
+      _runConfiguredPersonService(prefix) {
+        const serviceValue = String(this._config?.[`${prefix}_service`] || "").trim();
+        const separator = serviceValue.indexOf(".");
+        if (separator <= 0 || separator >= serviceValue.length - 1) {
+          return;
+        }
+        if (!this._isConfiguredPersonServiceAllowed(serviceValue)) {
+          window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Person Card", serviceValue);
+          return;
+        }
+        const data = this._parsePersonActionObject(this._config?.[`${prefix}_service_data`]);
+        const target = this._parsePersonActionObject(this._config?.[`${prefix}_service_target`]);
+        void this._invokePersonService(
+          serviceValue.slice(0, separator),
+          serviceValue.slice(separator + 1),
+          data,
+          Object.keys(target).length ? target : null
         );
       }
-    }
-    _performTapAction() {
-      this._performPersonAction("tap");
-    }
-    _triggerPrimaryPressAnimation() {
-      this._triggerPressAnimation(this.shadowRoot?.querySelector(".person-card__content"));
-      this._triggerPressAnimation(this.shadowRoot?.querySelector(".person-card__avatar"));
-    }
-    _onShadowClick(event) {
-      const card = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.personAction === "primary");
-      if (!card) {
-        return;
-      }
-      event.preventDefault();
-      event.stopPropagation();
-      if (this._suppressNextPersonTap) {
-        this._suppressNextPersonTap = false;
-        return;
-      }
-      const runTap = () => {
-        if (!this._canRunPersonAction("tap")) {
+      _openPersonNavigation(value) {
+        const path = window.NodaliaUtils?.sanitizeActionUrl?.(value, { allowRelative: true, allowHash: true }) || "";
+        if (!path || path.includes("://")) {
           return;
         }
-        this._triggerPrimaryPressAnimation();
-        this._performPersonAction("tap");
-      };
-      const runDoubleTap = () => {
-        if (!this._canRunPersonAction("double_tap")) {
+        if (this._hass?.navigate) {
+          this._hass.navigate(path);
           return;
         }
-        this._triggerPrimaryPressAnimation();
-        this._performPersonAction("double_tap");
-      };
-      if (this._canRunPersonAction("double_tap") && typeof window.NodaliaUtils?.scheduleCardZoneTap === "function") {
-        window.NodaliaUtils.scheduleCardZoneTap(this, {
-          zone: "body",
-          onSingle: runTap,
-          onDouble: runDoubleTap
-        });
-        return;
+        if (window?.history?.pushState) {
+          window.history.pushState(null, "", path);
+          window.dispatchEvent(new CustomEvent("location-changed", {
+            detail: { replace: false }
+          }));
+          return;
+        }
+        fireEvent(this, "hass-navigate", { path });
       }
-      runTap();
-    }
-    _onShadowKeyDown(event) {
-      if (window.NodaliaUtils?.isKeyboardActivationEvent?.(event) !== true) {
-        return;
+      _openPersonUrl(value, newTab = false) {
+        const url = window.NodaliaUtils?.sanitizeActionUrl?.(value, { allowRelative: true, allowHash: true }) || "";
+        if (!url) {
+          return;
+        }
+        window.open(url, newTab ? "_blank" : "_self", "noopener,noreferrer");
       }
-      event.preventDefault();
-      event.stopPropagation();
-      window.NodaliaUtils?.cancelCardZoneTap?.(this);
-      if (this._canRunPersonAction("tap")) {
-        this._triggerPrimaryPressAnimation();
+      _performPersonAction(kind = "tap") {
+        const prefix = this._personActionPrefix(kind);
+        if (!this._canRunPersonAction(prefix)) {
+          return;
+        }
+        const fallback = prefix === "tap" ? "more-info" : "none";
+        const action = String(this._config?.[`${prefix}_action`] || fallback).trim().toLowerCase();
+        this._triggerHaptic();
+        if (action === "more-info") {
+          fireEvent(this, "hass-more-info", {
+            entityId: this._personActionEntity(prefix)
+          });
+          return;
+        }
+        if (action === "toggle") {
+          void this._invokePersonService("homeassistant", "toggle", {
+            entity_id: this._personActionEntity(prefix)
+          });
+          return;
+        }
+        if (action === "service") {
+          this._runConfiguredPersonService(prefix);
+          return;
+        }
+        if (action === "navigate") {
+          this._openPersonNavigation(this._config?.[this._personActionNavigationKey(prefix)]);
+          return;
+        }
+        if (action === "url") {
+          this._openPersonUrl(
+            this._config?.[`${prefix}_url`],
+            this._config?.[`${prefix}_new_tab`] === true
+          );
+        }
+      }
+      _performTapAction() {
         this._performPersonAction("tap");
       }
-    }
-    _personUiCopy() {
-      const person = this._personStrings();
-      if (!person.emptyTitle && !person.emptyBody) {
+      _triggerPrimaryPressAnimation() {
+        this._triggerPressAnimation(this.shadowRoot?.querySelector(".person-card__content"));
+        this._triggerPressAnimation(this.shadowRoot?.querySelector(".person-card__avatar"));
+      }
+      _onShadowClick(event) {
+        const card = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.personAction === "primary");
+        if (!card) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        if (this._suppressNextPersonTap) {
+          this._suppressNextPersonTap = false;
+          return;
+        }
+        const runTap = () => {
+          if (!this._canRunPersonAction("tap")) {
+            return;
+          }
+          this._triggerPrimaryPressAnimation();
+          this._performPersonAction("tap");
+        };
+        const runDoubleTap = () => {
+          if (!this._canRunPersonAction("double_tap")) {
+            return;
+          }
+          this._triggerPrimaryPressAnimation();
+          this._performPersonAction("double_tap");
+        };
+        if (this._canRunPersonAction("double_tap") && typeof window.NodaliaUtils?.scheduleCardZoneTap === "function") {
+          window.NodaliaUtils.scheduleCardZoneTap(this, {
+            zone: "body",
+            onSingle: runTap,
+            onDouble: runDoubleTap
+          });
+          return;
+        }
+        runTap();
+      }
+      _onShadowKeyDown(event) {
+        if (window.NodaliaUtils?.isKeyboardActivationEvent?.(event) !== true) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        window.NodaliaUtils?.cancelCardZoneTap?.(this);
+        if (this._canRunPersonAction("tap")) {
+          this._triggerPrimaryPressAnimation();
+          this._performPersonAction("tap");
+        }
+      }
+      _personUiCopy() {
+        const person = this._personStrings();
+        if (!person.emptyTitle && !person.emptyBody) {
+          return {
+            emptyTitle: "Nodalia Person Card",
+            emptyBody: "Configure `entity` to show the card.",
+            defaultName: person.defaultName || "Person"
+          };
+        }
         return {
-          emptyTitle: "Nodalia Person Card",
-          emptyBody: "Configure `entity` to show the card.",
+          emptyTitle: person.emptyTitle || "Nodalia Person Card",
+          emptyBody: person.emptyBody || "Configure `entity` to show the card.",
           defaultName: person.defaultName || "Person"
         };
       }
-      return {
-        emptyTitle: person.emptyTitle || "Nodalia Person Card",
-        emptyBody: person.emptyBody || "Configure `entity` to show the card.",
-        defaultName: person.defaultName || "Person"
-      };
-    }
-    _renderEmptyState() {
-      const ui = this._personUiCopy();
-      return `
+      _renderEmptyState() {
+        const ui = this._personUiCopy();
+        return `
       <ha-card class="person-card person-card--empty">
         <div class="person-card__empty-title">${escapeHtml(ui.emptyTitle)}</div>
         <div class="person-card__empty-text">${escapeHtml(ui.emptyBody)}</div>
       </ha-card>
     `;
-    }
-    _render() {
-      if (!this.shadowRoot) {
-        return;
       }
-      const config = this._config || {};
-      const entityGuard = window.NodaliaUtils?.renderLovelaceEntityGuardCardHtml?.(
-        this._hass,
-        config.entity,
-        { cardClass: "person-card" }
-      );
-      if (entityGuard) {
-        this._lastRenderSignature = `guard:${config.entity || ""}`;
-        this.shadowRoot.innerHTML = entityGuard;
-        return;
-      }
-      const state = this._getState();
-      if (!state) {
-        this._lastRenderSignature = `empty:${config.entity || ""}`;
-        this.shadowRoot.innerHTML = window.NodaliaUtils?.renderCardEmptyStateDocument?.(
-          this._renderEmptyState(),
-          { card: (config || DEFAULT_CONFIG).styles?.card }
-        ) ?? this._renderEmptyState();
-        return;
-      }
-      const styles = config.styles || DEFAULT_CONFIG.styles;
-      const configuredRows = Number(this._config?.grid_options?.rows);
-      const singleRowLayout = Number.isFinite(configuredRows) && configuredRows <= 1;
-      const title = this._getTitle(state);
-      const showName = config.show_name !== false;
-      const subtitle = config.show_state !== false ? this._translateState(state) : "";
-      const desiredPicture = this._getPersonPicture(state);
-      const pictureReady = !desiredPicture || this._ensurePersonPictureReady(desiredPicture);
-      const picture = this._getRenderablePersonPicture(state);
-      const fallbackIcon = this._getFallbackIcon(state);
-      const badge = this._getBadgeDescriptor(state);
-      const accentColor = this._getAccentColor(state);
-      const canRunPrimaryAction = this._canRunAnyPersonAction();
-      const singleRowPaddingY = singleRowLayout ? 4 : 12;
-      const singleRowPaddingX = singleRowLayout ? 9 : 12;
-      const avatarSizePx = Math.max(34, Math.min(parseSizeToPixels(styles.avatar.size, 38), singleRowLayout ? 38 : 68));
-      const avatarSize = `${avatarSizePx}px`;
-      const avatarTrackSize = `${avatarSizePx + (singleRowLayout ? 7 : 12)}px`;
-      const badgeSize = `${Math.max(16, Math.min(parseSizeToPixels(styles.badge.size, 22), singleRowLayout ? 18 : 26))}px`;
-      const effectiveTitleSize = `${Math.max(10, Math.min(parseSizeToPixels(styles.title_size, 12), singleRowLayout ? 10.5 : 14))}px`;
-      const effectiveSubtitleSize = `${Math.max(9, Math.min(parseSizeToPixels(styles.subtitle_size, 9), singleRowLayout ? 9.5 : 13))}px`;
-      const effectiveStateChipHeight = `${singleRowLayout ? 18 : 22}px`;
-      const effectiveStateChipPadding = singleRowLayout ? "0 8px" : "0 10px";
-      const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
-      const effectiveGap = singleRowLayout ? "6px" : styles.card.gap;
-      const effectivePadding = singleRowLayout ? `${singleRowPaddingY}px ${singleRowPaddingX}px` : styles.card.padding;
-      const effectiveCardHeightPx = singleRowLayout ? Math.max(54, avatarSizePx + singleRowPaddingY * 2) : avatarSizePx + singleRowPaddingY * 2;
-      const effectiveContentMinHeight = `${Math.max(avatarSizePx, effectiveCardHeightPx - singleRowPaddingY * 2)}px`;
-      const isUnavailable = isUnavailableState(state);
-      const cardBackground = isUnavailable ? styles.card.background : `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 7%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`;
-      const cardBorder = isUnavailable ? styles.card.border : `1px solid color-mix(in srgb, ${accentColor} 24%, var(--divider-color))`;
-      const cardShadow = isUnavailable ? styles.card.box_shadow : `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`;
-      const animations = this._getAnimationSettings();
-      const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
-      const animateWithPicture = shouldAnimateEntrance && pictureReady;
-      const avatarCentered = !showName;
-      const showCopyBlock = showName || Boolean(subtitle);
-      this.shadowRoot.innerHTML = `
+      _render() {
+        if (!this.shadowRoot) {
+          return;
+        }
+        const config = this._config || {};
+        const entityGuard = window.NodaliaUtils?.renderLovelaceEntityGuardCardHtml?.(
+          this._hass,
+          config.entity,
+          { cardClass: "person-card" }
+        );
+        if (entityGuard) {
+          this._lastRenderSignature = `guard:${config.entity || ""}`;
+          this.shadowRoot.innerHTML = entityGuard;
+          return;
+        }
+        const state = this._getState();
+        if (!state) {
+          this._lastRenderSignature = `empty:${config.entity || ""}`;
+          this.shadowRoot.innerHTML = window.NodaliaUtils?.renderCardEmptyStateDocument?.(
+            this._renderEmptyState(),
+            { card: (config || DEFAULT_CONFIG).styles?.card }
+          ) ?? this._renderEmptyState();
+          return;
+        }
+        const styles = config.styles || DEFAULT_CONFIG.styles;
+        const configuredRows = Number(this._config?.grid_options?.rows);
+        const singleRowLayout = Number.isFinite(configuredRows) && configuredRows <= 1;
+        const title = this._getTitle(state);
+        const showName = config.show_name !== false;
+        const subtitle = config.show_state !== false ? this._translateState(state) : "";
+        const desiredPicture = this._getPersonPicture(state);
+        const pictureReady = !desiredPicture || this._ensurePersonPictureReady(desiredPicture);
+        const picture = this._getRenderablePersonPicture(state);
+        const fallbackIcon = this._getFallbackIcon(state);
+        const badge = this._getBadgeDescriptor(state);
+        const accentColor = this._getAccentColor(state);
+        const canRunPrimaryAction = this._canRunAnyPersonAction();
+        const singleRowPaddingY = singleRowLayout ? 4 : 12;
+        const singleRowPaddingX = singleRowLayout ? 9 : 12;
+        const avatarSizePx = Math.max(34, Math.min(parseSizeToPixels(styles.avatar.size, 38), singleRowLayout ? 38 : 68));
+        const avatarSize = `${avatarSizePx}px`;
+        const avatarTrackSize = `${avatarSizePx + (singleRowLayout ? 7 : 12)}px`;
+        const badgeSize = `${Math.max(16, Math.min(parseSizeToPixels(styles.badge.size, 22), singleRowLayout ? 18 : 26))}px`;
+        const effectiveTitleSize = `${Math.max(10, Math.min(parseSizeToPixels(styles.title_size, 12), singleRowLayout ? 10.5 : 14))}px`;
+        const effectiveSubtitleSize = `${Math.max(9, Math.min(parseSizeToPixels(styles.subtitle_size, 9), singleRowLayout ? 9.5 : 13))}px`;
+        const effectiveStateChipHeight = `${singleRowLayout ? 18 : 22}px`;
+        const effectiveStateChipPadding = singleRowLayout ? "0 8px" : "0 10px";
+        const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
+        const effectiveGap = singleRowLayout ? "6px" : styles.card.gap;
+        const effectivePadding = singleRowLayout ? `${singleRowPaddingY}px ${singleRowPaddingX}px` : styles.card.padding;
+        const effectiveCardHeightPx = singleRowLayout ? Math.max(54, avatarSizePx + singleRowPaddingY * 2) : avatarSizePx + singleRowPaddingY * 2;
+        const effectiveContentMinHeight = `${Math.max(avatarSizePx, effectiveCardHeightPx - singleRowPaddingY * 2)}px`;
+        const isUnavailable = isUnavailableState(state);
+        const cardBackground = isUnavailable ? styles.card.background : `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 7%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`;
+        const cardBorder = isUnavailable ? styles.card.border : `1px solid color-mix(in srgb, ${accentColor} 24%, var(--divider-color))`;
+        const cardShadow = isUnavailable ? styles.card.box_shadow : `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`;
+        const animations = this._getAnimationSettings();
+        const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
+        const animateWithPicture = shouldAnimateEntrance && pictureReady;
+        const avatarCentered = !showName;
+        const showCopyBlock = showName || Boolean(subtitle);
+        this.shadowRoot.innerHTML = `
       <style>
         :host {
           --person-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
@@ -1341,224 +1349,235 @@
         </div>
       </ha-card>
     `;
-      if (animateWithPicture) {
-        this._scheduleEntranceAnimationReset(animations.contentDuration + 120);
+        if (animateWithPicture) {
+          this._scheduleEntranceAnimationReset(animations.contentDuration + 120);
+        }
+        this._lastRenderSignature = this._getRenderSignature();
       }
-      this._lastRenderSignature = this._getRenderSignature();
     }
-  };
+    _lazyNodaliaPersonCard = NodaliaPersonCard;
+    return NodaliaPersonCard;
+  }
 
   // src/cards/person/person-editor.ts
-  var NodaliaPersonCardEditor = class extends HTMLElement {
-    constructor() {
-      super();
-      this.attachShadow({ mode: "open" });
-      this._config = normalizeConfig(STUB_CONFIG);
-      this._hass = null;
-      this._entityOptionsSignature = "";
-      this._showAnimationSection = false;
-      this._showStyleSection = false;
-      this._showTapActionsSection = false;
-      this._pendingEditorControlTags = /* @__PURE__ */ new Set();
-      this._onShadowInput = this._onShadowInput.bind(this);
-      this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
-      this._onShadowClick = this._onShadowClick.bind(this);
+  var _lazyNodaliaPersonCardEditor;
+  function loadNodaliaPersonCardEditor() {
+    if (_lazyNodaliaPersonCardEditor) {
+      return _lazyNodaliaPersonCardEditor;
     }
-    _attachEditorShadowListeners() {
-      window.NodaliaUtils.bindShadowListeners(this, [
-        ["input", this._onShadowInput],
-        ["change", this._onShadowInput],
-        ["value-changed", this._onShadowValueChanged],
-        ["click", this._onShadowClick]
-      ], "editor");
-    }
-    _detachEditorShadowListeners() {
-      window.NodaliaUtils.releaseShadowListeners(this, "editor");
-    }
-    connectedCallback() {
-      this._attachEditorShadowListeners();
-      window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
-    }
-    disconnectedCallback() {
-      this._detachEditorShadowListeners();
-      window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
-    }
-    set hass(hass) {
-      const nextSignature = this._getEntityOptionsSignature(hass);
-      const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
-      this._hass = hass;
-      this._entityOptionsSignature = nextSignature;
-      if (!shouldRender) {
-        return;
+    class NodaliaPersonCardEditor extends HTMLElement {
+      constructor() {
+        super();
+        this._nodaliaConstruct();
       }
-      const focusState = this._captureFocusState();
-      this._render();
-      this._restoreFocusState(focusState);
-    }
-    setConfig(config) {
-      const focusState = this._captureFocusState();
-      this._config = normalizeConfig(config || {});
-      window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
-      this._render();
-      this._restoreFocusState(focusState);
-    }
-    _getEntityOptionsSignature(hass = this._hass) {
-      return window.NodaliaUtils.editorFilteredStatesSignature(
-        hass,
-        this._config?.language,
-        (id) => id.startsWith("person.") || id.startsWith("device_tracker.")
-      );
-    }
-    _watchEditorControlTag(tagName) {
-      if (!tagName || this._pendingEditorControlTags.has(tagName)) {
-        return;
+      _nodaliaConstruct() {
+        this.attachShadow({ mode: "open" });
+        this._config = normalizeConfig(STUB_CONFIG);
+        this._hass = null;
+        this._entityOptionsSignature = "";
+        this._showAnimationSection = false;
+        this._showStyleSection = false;
+        this._showTapActionsSection = false;
+        this._pendingEditorControlTags = /* @__PURE__ */ new Set();
+        this._onShadowInput = this._onShadowInput.bind(this);
+        this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
+        this._onShadowClick = this._onShadowClick.bind(this);
       }
-      if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
-        return;
+      _attachEditorShadowListeners() {
+        window.NodaliaUtils.bindShadowListeners(this, [
+          ["input", this._onShadowInput],
+          ["change", this._onShadowInput],
+          ["value-changed", this._onShadowValueChanged],
+          ["click", this._onShadowClick]
+        ], "editor");
       }
-      this._pendingEditorControlTags.add(tagName);
-      customElements.whenDefined(tagName).then(() => {
-        this._pendingEditorControlTags.delete(tagName);
-        if (!this.isConnected || !this._hass || !this.shadowRoot) {
+      _detachEditorShadowListeners() {
+        window.NodaliaUtils.releaseShadowListeners(this, "editor");
+      }
+      connectedCallback() {
+        this._attachEditorShadowListeners();
+        window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
+      }
+      disconnectedCallback() {
+        this._detachEditorShadowListeners();
+        window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
+      }
+      set hass(hass) {
+        const nextSignature = this._getEntityOptionsSignature(hass);
+        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+        this._hass = hass;
+        this._entityOptionsSignature = nextSignature;
+        if (!shouldRender) {
           return;
         }
         const focusState = this._captureFocusState();
         this._render();
         this._restoreFocusState(focusState);
-      }).catch(() => {
-        this._pendingEditorControlTags.delete(tagName);
-      });
-    }
-    _ensureEditorControlsReady() {
-      this._watchEditorControlTag("ha-entity-picker");
-      this._watchEditorControlTag("ha-selector");
-      this._watchEditorControlTag("ha-icon-picker");
-    }
-    _getDomainEntityOptions(domains = [], path = "entity") {
-      const normalizedDomains = Array.isArray(domains) ? domains.filter(Boolean) : String(domains || "").split(",").map((domain) => domain.trim()).filter(Boolean);
-      const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
-      const options = Object.entries(this._hass?.states || {}).filter(([entityId]) => normalizedDomains.some((domain) => entityId.startsWith(`${domain}.`))).map(([entityId, state]) => {
-        const friendlyName = String(state?.attributes?.friendly_name || "").trim();
-        return {
-          value: entityId,
-          label: friendlyName || entityId,
-          displayLabel: friendlyName && friendlyName !== entityId ? `${friendlyName} (${entityId})` : entityId
-        };
-      }).sort((left, right) => left.label.localeCompare(right.label, sortLoc, { sensitivity: "base" }) || left.value.localeCompare(right.value, sortLoc, { sensitivity: "base" }));
-      const currentValue = String(getByPath(this._config, path) || "").trim();
-      if (currentValue && !options.some((option) => option.value === currentValue)) {
-        options.unshift({
-          value: currentValue,
-          label: currentValue,
-          displayLabel: currentValue
+      }
+      setConfig(config) {
+        const focusState = this._captureFocusState();
+        this._config = normalizeConfig(config || {});
+        window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
+        this._render();
+        this._restoreFocusState(focusState);
+      }
+      _getEntityOptionsSignature(hass = this._hass) {
+        return window.NodaliaUtils.editorFilteredStatesSignature(
+          hass,
+          this._config?.language,
+          (id) => id.startsWith("person.") || id.startsWith("device_tracker.")
+        );
+      }
+      _watchEditorControlTag(tagName) {
+        if (!tagName || this._pendingEditorControlTags.has(tagName)) {
+          return;
+        }
+        if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
+          return;
+        }
+        this._pendingEditorControlTags.add(tagName);
+        customElements.whenDefined(tagName).then(() => {
+          this._pendingEditorControlTags.delete(tagName);
+          if (!this.isConnected || !this._hass || !this.shadowRoot) {
+            return;
+          }
+          const focusState = this._captureFocusState();
+          this._render();
+          this._restoreFocusState(focusState);
+        }).catch(() => {
+          this._pendingEditorControlTags.delete(tagName);
         });
       }
-      return options;
-    }
-    _captureFocusState() {
-      return window.NodaliaUtils.captureEditorFocusState(this);
-    }
-    _restoreFocusState(focusState) {
-      window.NodaliaUtils.restoreEditorFocusState(this, focusState);
-    }
-    _emitConfig() {
-      const focusState = this._captureFocusState();
-      const nextConfig = deepClone(this._config);
-      this._config = normalizeConfig(compactConfig(nextConfig));
-      this._render();
-      this._restoreFocusState(focusState);
-      fireEvent(this, "config-changed", {
-        config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {})
-      });
-    }
-    _setEditorConfig() {
-      this._config = normalizeConfig(compactConfig(this._config));
-    }
-    _setFieldValue(path, value) {
-      if (value === void 0 || value === null || value === "") {
-        deleteByPath(this._config, path);
-        return;
+      _ensureEditorControlsReady() {
+        this._watchEditorControlTag("ha-entity-picker");
+        this._watchEditorControlTag("ha-selector");
+        this._watchEditorControlTag("ha-icon-picker");
       }
-      setByPath(this._config, path, value);
-    }
-    _readFieldValue(input) {
-      const valueType = input.dataset.valueType || "string";
-      switch (valueType) {
-        case "boolean":
-          return Boolean(input.checked);
-        case "color":
-          return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
-        case "csv": {
-          const values = String(input.value || "").split(",").map((item) => item.trim().toLowerCase()).filter(Boolean);
-          return values.length ? values : "";
+      _getDomainEntityOptions(domains = [], path = "entity") {
+        const normalizedDomains = Array.isArray(domains) ? domains.filter(Boolean) : String(domains || "").split(",").map((domain) => domain.trim()).filter(Boolean);
+        const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
+        const options = Object.entries(this._hass?.states || {}).filter(([entityId]) => normalizedDomains.some((domain) => entityId.startsWith(`${domain}.`))).map(([entityId, state]) => {
+          const friendlyName = String(state?.attributes?.friendly_name || "").trim();
+          return {
+            value: entityId,
+            label: friendlyName || entityId,
+            displayLabel: friendlyName && friendlyName !== entityId ? `${friendlyName} (${entityId})` : entityId
+          };
+        }).sort((left, right) => left.label.localeCompare(right.label, sortLoc, { sensitivity: "base" }) || left.value.localeCompare(right.value, sortLoc, { sensitivity: "base" }));
+        const currentValue = String(getByPath(this._config, path) || "").trim();
+        if (currentValue && !options.some((option) => option.value === currentValue)) {
+          options.unshift({
+            value: currentValue,
+            label: currentValue,
+            displayLabel: currentValue
+          });
         }
-        default:
-          return input.value;
+        return options;
       }
-    }
-    _onShadowInput(event) {
-      const input = event.composedPath().find((node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
-      if (!input?.dataset?.field) {
-        return;
+      _captureFocusState() {
+        return window.NodaliaUtils.captureEditorFocusState(this);
       }
-      event.stopPropagation();
-      const nextValue = this._readFieldValue(input);
-      this._setFieldValue(input.dataset.field, nextValue);
-      this._setEditorConfig();
-      if (event.type === "change") {
+      _restoreFocusState(focusState) {
+        window.NodaliaUtils.restoreEditorFocusState(this, focusState);
+      }
+      _emitConfig() {
+        const focusState = this._captureFocusState();
+        const nextConfig = deepClone(this._config);
+        this._config = normalizeConfig(compactConfig(nextConfig));
+        this._render();
+        this._restoreFocusState(focusState);
+        fireEvent(this, "config-changed", {
+          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {})
+        });
+      }
+      _setEditorConfig() {
+        this._config = normalizeConfig(compactConfig(this._config));
+      }
+      _setFieldValue(path, value) {
+        if (value === void 0 || value === null || value === "") {
+          deleteByPath(this._config, path);
+          return;
+        }
+        setByPath(this._config, path, value);
+      }
+      _readFieldValue(input) {
+        const valueType = input.dataset.valueType || "string";
+        switch (valueType) {
+          case "boolean":
+            return Boolean(input.checked);
+          case "color":
+            return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
+          case "csv": {
+            const values = String(input.value || "").split(",").map((item) => item.trim().toLowerCase()).filter(Boolean);
+            return values.length ? values : "";
+          }
+          default:
+            return input.value;
+        }
+      }
+      _onShadowInput(event) {
+        const input = event.composedPath().find((node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+        if (!input?.dataset?.field) {
+          return;
+        }
+        event.stopPropagation();
+        const nextValue = this._readFieldValue(input);
+        this._setFieldValue(input.dataset.field, nextValue);
+        this._setEditorConfig();
+        if (event.type === "change") {
+          this._emitConfig();
+        }
+      }
+      _onShadowValueChanged(event) {
+        const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+        if (!control?.dataset?.field) {
+          return;
+        }
+        event.stopPropagation();
+        const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+        if (typeof control.dataset?.value === "string") {
+          control.dataset.value = String(nextValue || "");
+        }
+        const field = control.dataset.field;
+        const previousEntity = field === "entity" ? String(this._config?.entity || "").trim() : "";
+        this._setFieldValue(field, nextValue);
+        if (field === "entity") {
+          window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass, { previousEntity });
+        }
+        this._setEditorConfig();
         this._emitConfig();
       }
-    }
-    _onShadowValueChanged(event) {
-      const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
-      if (!control?.dataset?.field) {
-        return;
+      _onShadowClick(event) {
+        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
+        if (!toggleButton) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        const focusState = this._captureFocusState();
+        if (toggleButton.dataset.editorToggle === "styles") {
+          this._showStyleSection = !this._showStyleSection;
+        } else if (toggleButton.dataset.editorToggle === "animations") {
+          this._showAnimationSection = !this._showAnimationSection;
+        } else if (toggleButton.dataset.editorToggle === "tap_actions") {
+          this._showTapActionsSection = !this._showTapActionsSection;
+        }
+        this._render();
+        this._restoreFocusState(focusState);
       }
-      event.stopPropagation();
-      const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
-      if (typeof control.dataset?.value === "string") {
-        control.dataset.value = String(nextValue || "");
+      _editorLabel(s) {
+        if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+          return s;
+        }
+        const hass = this._hass ?? this.hass;
+        return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
       }
-      const field = control.dataset.field;
-      const previousEntity = field === "entity" ? String(this._config?.entity || "").trim() : "";
-      this._setFieldValue(field, nextValue);
-      if (field === "entity") {
-        window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass, { previousEntity });
-      }
-      this._setEditorConfig();
-      this._emitConfig();
-    }
-    _onShadowClick(event) {
-      const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
-      if (!toggleButton) {
-        return;
-      }
-      event.preventDefault();
-      event.stopPropagation();
-      const focusState = this._captureFocusState();
-      if (toggleButton.dataset.editorToggle === "styles") {
-        this._showStyleSection = !this._showStyleSection;
-      } else if (toggleButton.dataset.editorToggle === "animations") {
-        this._showAnimationSection = !this._showAnimationSection;
-      } else if (toggleButton.dataset.editorToggle === "tap_actions") {
-        this._showTapActionsSection = !this._showTapActionsSection;
-      }
-      this._render();
-      this._restoreFocusState(focusState);
-    }
-    _editorLabel(s) {
-      if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
-        return s;
-      }
-      const hass = this._hass ?? this.hass;
-      return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
-    }
-    _renderTextField(label, field, value, options = {}) {
-      const tLabel = this._editorLabel(label);
-      const inputValue = value === void 0 || value === null ? "" : String(value);
-      const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
-      const valueType = options.valueType || "string";
-      return `
+      _renderTextField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const inputValue = value === void 0 || value === null ? "" : String(value);
+        const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+        const valueType = options.valueType || "string";
+        return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <input
@@ -1570,25 +1589,25 @@
         />
       </label>
     `;
-    }
-    _renderTextareaField(label, field, value, options = {}) {
-      const tLabel = this._editorLabel(label);
-      const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
-      const inputValue = value === void 0 || value === null ? "" : String(value);
-      return `
+      }
+      _renderTextareaField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+        const inputValue = value === void 0 || value === null ? "" : String(value);
+        return `
       <label class="editor-field editor-field--full">
         <span>${escapeHtml(tLabel)}</span>
         <textarea data-field="${escapeHtml(field)}" ${placeholder}>${escapeHtml(inputValue)}</textarea>
       </label>
     `;
-    }
-    _renderColorField(label, field, value, options = {}) {
-      const tLabel = this._editorLabel(label);
-      const tColorCustom = this._editorLabel("ed.person.custom_color");
-      const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
-      const currentValue = value === void 0 || value === null || value === "" ? fallbackValue : String(value);
-      const colorModel = getEditorColorModel(currentValue, fallbackValue);
-      return `
+      }
+      _renderColorField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const tColorCustom = this._editorLabel("ed.person.custom_color");
+        const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
+        const currentValue = value === void 0 || value === null || value === "" ? fallbackValue : String(value);
+        const colorModel = getEditorColorModel(currentValue, fallbackValue);
+        return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
@@ -1606,10 +1625,10 @@
         </div>
       </div>
     `;
-    }
-    _renderCheckboxField(label, field, checked) {
-      const tLabel = this._editorLabel(label);
-      return `
+      }
+      _renderCheckboxField(label, field, checked) {
+        const tLabel = this._editorLabel(label);
+        return `
       <label class="editor-toggle">
         <input
           type="checkbox"
@@ -1621,10 +1640,10 @@
         <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
-    }
-    _renderSelectField(label, field, value, options, renderOptions = {}) {
-      const tLabel = this._editorLabel(label);
-      return `
+      }
+      _renderSelectField(label, field, value, options, renderOptions = {}) {
+        const tLabel = this._editorLabel(label);
+        return `
       <label class="editor-field ${renderOptions.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
@@ -1636,13 +1655,13 @@
         </select>
       </label>
     `;
-    }
-    _renderEntityPickerField(label, field, value, options = {}) {
-      const tLabel = this._editorLabel(label);
-      const inputValue = value === void 0 || value === null ? "" : String(value);
-      const placeholder = options.placeholder || "";
-      const domains = Array.isArray(options.domains) ? options.domains.join(",") : String(options.domains || "");
-      return `
+      }
+      _renderEntityPickerField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const inputValue = value === void 0 || value === null ? "" : String(value);
+        const placeholder = options.placeholder || "";
+        const domains = Array.isArray(options.domains) ? options.domains.join(",") : String(options.domains || "");
+        return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <div
@@ -1655,12 +1674,12 @@
         ></div>
       </div>
     `;
-    }
-    _renderIconPickerField(label, field, value, options = {}) {
-      const tLabel = this._editorLabel(label);
-      const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
-      const inputValue = value === void 0 || value === null ? "" : String(value);
-      return `
+      }
+      _renderIconPickerField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+        const inputValue = value === void 0 || value === null ? "" : String(value);
+        return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <ha-icon-picker
@@ -1671,72 +1690,72 @@
         ></ha-icon-picker>
       </div>
     `;
-    }
-    _mountEntityPicker(host) {
-      if (!(host instanceof HTMLElement)) {
-        return;
       }
-      const field = host.dataset.field || "entity";
-      const nextValue = host.dataset.value || "";
-      const placeholder = host.dataset.placeholder || "";
-      const domains = String(host.dataset.domains || "").split(",").map((domain) => domain.trim()).filter(Boolean);
-      let control = null;
-      if (customElements.get("ha-entity-picker")) {
-        control = document.createElement("ha-entity-picker");
-        control.includeDomains = domains;
-        control.allowCustomEntity = true;
-        control.entityFilter = (stateObj) => domains.some((domain) => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
-        if (placeholder) {
-          control.setAttribute("placeholder", placeholder);
+      _mountEntityPicker(host) {
+        if (!(host instanceof HTMLElement)) {
+          return;
         }
-      } else if (customElements.get("ha-selector")) {
-        control = document.createElement("ha-selector");
-        control.selector = {
-          entity: domains.length === 1 ? { domain: domains[0] } : {}
-        };
-      } else {
-        control = document.createElement("select");
-        const emptyOption = document.createElement("option");
-        emptyOption.value = "";
-        emptyOption.textContent = placeholder || this._editorLabel("ed.person.select_entity");
-        control.appendChild(emptyOption);
-        this._getDomainEntityOptions(domains, field).forEach((option) => {
-          const optionElement = document.createElement("option");
-          optionElement.value = option.value;
-          optionElement.textContent = option.displayLabel;
-          control.appendChild(optionElement);
-        });
+        const field = host.dataset.field || "entity";
+        const nextValue = host.dataset.value || "";
+        const placeholder = host.dataset.placeholder || "";
+        const domains = String(host.dataset.domains || "").split(",").map((domain) => domain.trim()).filter(Boolean);
+        let control = null;
+        if (customElements.get("ha-entity-picker")) {
+          control = document.createElement("ha-entity-picker");
+          control.includeDomains = domains;
+          control.allowCustomEntity = true;
+          control.entityFilter = (stateObj) => domains.some((domain) => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+          if (placeholder) {
+            control.setAttribute("placeholder", placeholder);
+          }
+        } else if (customElements.get("ha-selector")) {
+          control = document.createElement("ha-selector");
+          control.selector = {
+            entity: domains.length === 1 ? { domain: domains[0] } : {}
+          };
+        } else {
+          control = document.createElement("select");
+          const emptyOption = document.createElement("option");
+          emptyOption.value = "";
+          emptyOption.textContent = placeholder || this._editorLabel("ed.person.select_entity");
+          control.appendChild(emptyOption);
+          this._getDomainEntityOptions(domains, field).forEach((option) => {
+            const optionElement = document.createElement("option");
+            optionElement.value = option.value;
+            optionElement.textContent = option.displayLabel;
+            control.appendChild(optionElement);
+          });
+        }
+        control.dataset.field = field;
+        control.dataset.value = nextValue;
+        if ("hass" in control) {
+          control.hass = this._hass;
+        }
+        if ("value" in control) {
+          control.value = nextValue;
+        }
+        host.replaceChildren(control);
       }
-      control.dataset.field = field;
-      control.dataset.value = nextValue;
-      if ("hass" in control) {
-        control.hass = this._hass;
-      }
-      if ("value" in control) {
-        control.value = nextValue;
-      }
-      host.replaceChildren(control);
-    }
-    _render() {
-      if (!this.shadowRoot) {
-        return;
-      }
-      const config = this._config || normalizeConfig({});
-      const hapticStyle = config.haptics?.style || "medium";
-      const tapAction = config.tap_action || "more-info";
-      const holdAction = config.hold_action || "none";
-      const doubleTapAction = config.double_tap_action || "none";
-      const actionOptions = [
-        { value: "more-info", label: "ed.entity.tap_more_info" },
-        { value: "toggle", label: "ed.entity.tap_toggle" },
-        { value: "navigate", label: "ed.entity.tap_navigate" },
-        { value: "url", label: "ed.entity.tap_open_url" },
-        { value: "service", label: "ed.entity.tap_service" },
-        { value: "none", label: "ed.entity.tap_none" }
-      ];
-      const showServiceSecurity = [tapAction, holdAction, doubleTapAction].includes("service");
-      const animations = config.animations || DEFAULT_CONFIG.animations;
-      this.shadowRoot.innerHTML = `
+      _render() {
+        if (!this.shadowRoot) {
+          return;
+        }
+        const config = this._config || normalizeConfig({});
+        const hapticStyle = config.haptics?.style || "medium";
+        const tapAction = config.tap_action || "more-info";
+        const holdAction = config.hold_action || "none";
+        const doubleTapAction = config.double_tap_action || "none";
+        const actionOptions = [
+          { value: "more-info", label: "ed.entity.tap_more_info" },
+          { value: "toggle", label: "ed.entity.tap_toggle" },
+          { value: "navigate", label: "ed.entity.tap_navigate" },
+          { value: "url", label: "ed.entity.tap_open_url" },
+          { value: "service", label: "ed.entity.tap_service" },
+          { value: "none", label: "ed.entity.tap_none" }
+        ];
+        const showServiceSecurity = [tapAction, holdAction, doubleTapAction].includes("service");
+        const animations = config.animations || DEFAULT_CONFIG.animations;
+        this.shadowRoot.innerHTML = `
       <style>
         :host {
           display: block;
@@ -2041,18 +2060,18 @@
           </div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderEntityPickerField("ed.entity.entity_main", "entity", config.entity, {
-        domains: ["person", "device_tracker"],
-        placeholder: "person.ana",
-        fullWidth: true
-      })}
+          domains: ["person", "device_tracker"],
+          placeholder: "person.ana",
+          fullWidth: true
+        })}
             ${this._renderIconPickerField("ed.person.fallback_icon", "icon", config.icon, {
-        placeholder: "mdi:account",
-        fullWidth: true
-      })}
+          placeholder: "mdi:account",
+          fullWidth: true
+        })}
             ${this._renderTextField("ed.entity.name", "name", config.name, {
-        placeholder: this._editorLabel("ed.person.name_placeholder"),
-        fullWidth: true
-      })}
+          placeholder: this._editorLabel("ed.person.name_placeholder"),
+          fullWidth: true
+        })}
             ${this._renderCheckboxField("ed.person.show_name", "show_name", config.show_name !== false)}
             ${this._renderCheckboxField("ed.person.show_location", "show_state", config.show_state !== false)}
             ${this._renderCheckboxField("ed.person.show_zone_badge", "show_zone_badge", config.show_zone_badge !== false)}
@@ -2063,120 +2082,120 @@
 
         <section class="editor-section">
           ${window.NodaliaUtils.renderEditorCollapsibleSectionHeaderHtml({
-        escapeHtml,
-        editorLabel: (key) => this._editorLabel(key),
-        titleKey: "ed.light.tap_actions_section_title",
-        hintKey: "ed.light.tap_actions_section_hint",
-        toggleId: "tap_actions",
-        expanded: this._showTapActionsSection === true
-      })}
+          escapeHtml,
+          editorLabel: (key) => this._editorLabel(key),
+          titleKey: "ed.light.tap_actions_section_title",
+          hintKey: "ed.light.tap_actions_section_hint",
+          toggleId: "tap_actions",
+          expanded: this._showTapActionsSection === true
+        })}
           ${this._showTapActionsSection ? `
           <div class="editor-grid editor-grid--stacked">
             ${this._renderSelectField(
-        "ed.entity.tap_action",
-        "tap_action",
-        tapAction,
-        actionOptions,
-        { fullWidth: true }
-      )}
+          "ed.entity.tap_action",
+          "tap_action",
+          tapAction,
+          actionOptions,
+          { fullWidth: true }
+        )}
             ${tapAction === "service" ? `
                 ${this._renderTextField("ed.entity.tap_service_field", "tap_service", config.tap_service, {
-        placeholder: "light.turn_on",
-        fullWidth: true
-      })}
+          placeholder: "light.turn_on",
+          fullWidth: true
+        })}
                 ${this._renderTextareaField("ed.entity.tap_service_data_json", "tap_service_data", config.tap_service_data, {
-        placeholder: '{"entity_id":"light.salon"}'
-      })}
+          placeholder: '{"entity_id":"light.salon"}'
+        })}
               ` : ""}
             ${tapAction === "navigate" ? this._renderTextField("ed.entity.navigation_path", "navigation_path", config.navigation_path, {
-        placeholder: "#bubblecard_john",
-        fullWidth: true
-      }) : ""}
+          placeholder: "#bubblecard_john",
+          fullWidth: true
+        }) : ""}
             ${tapAction === "url" ? `
                 ${this._renderTextField("ed.entity.tap_url_field", "tap_url", config.tap_url, {
-        placeholder: "https://example.com",
-        fullWidth: true
-      })}
+          placeholder: "https://example.com",
+          fullWidth: true
+        })}
                 ${this._renderCheckboxField("ed.entity.tap_new_tab", "tap_new_tab", config.tap_new_tab === true)}
               ` : ""}
 
             <div class="editor-section__hint editor-field--full" style="margin-top: 8px;">${escapeHtml(this._editorLabel("ed.light.hold_actions_section_hint"))}</div>
             ${this._renderSelectField(
-        "ed.weather.hold_action",
-        "hold_action",
-        holdAction,
-        actionOptions,
-        { fullWidth: true }
-      )}
+          "ed.weather.hold_action",
+          "hold_action",
+          holdAction,
+          actionOptions,
+          { fullWidth: true }
+        )}
             ${holdAction === "service" ? `
                 ${this._renderTextField("ed.entity.hold_service_field", "hold_service", config.hold_service, {
-        placeholder: "script.person_hold",
-        fullWidth: true
-      })}
+          placeholder: "script.person_hold",
+          fullWidth: true
+        })}
                 ${this._renderTextareaField("ed.entity.hold_service_data_json", "hold_service_data", config.hold_service_data, {
-        placeholder: '{"entity_id":"person.john"}'
-      })}
+          placeholder: '{"entity_id":"person.john"}'
+        })}
               ` : ""}
             ${holdAction === "navigate" ? this._renderTextField("ed.entity.hold_navigation_path", "hold_navigation_path", config.hold_navigation_path, {
-        placeholder: "/lovelace/people",
-        fullWidth: true
-      }) : ""}
+          placeholder: "/lovelace/people",
+          fullWidth: true
+        }) : ""}
             ${holdAction === "url" ? `
                 ${this._renderTextField("ed.entity.hold_url_field", "hold_url", config.hold_url, {
-        placeholder: "https://example.com",
-        fullWidth: true
-      })}
+          placeholder: "https://example.com",
+          fullWidth: true
+        })}
                 ${this._renderCheckboxField("ed.entity.hold_new_tab", "hold_new_tab", config.hold_new_tab === true)}
               ` : ""}
 
             <div class="editor-section__hint editor-field--full" style="margin-top: 8px;">${escapeHtml(this._editorLabel("ed.light.double_tap_actions_section_hint"))}</div>
             ${this._renderSelectField(
-        "ed.weather.double_tap_action",
-        "double_tap_action",
-        doubleTapAction,
-        actionOptions,
-        { fullWidth: true }
-      )}
+          "ed.weather.double_tap_action",
+          "double_tap_action",
+          doubleTapAction,
+          actionOptions,
+          { fullWidth: true }
+        )}
             ${doubleTapAction === "service" ? `
                 ${this._renderTextField("ed.entity.tap_service_field", "double_tap_service", config.double_tap_service, {
-        placeholder: "script.person_double_tap",
-        fullWidth: true
-      })}
+          placeholder: "script.person_double_tap",
+          fullWidth: true
+        })}
                 ${this._renderTextareaField("ed.entity.tap_service_data_json", "double_tap_service_data", config.double_tap_service_data, {
-        placeholder: '{"entity_id":"person.john"}'
-      })}
+          placeholder: '{"entity_id":"person.john"}'
+        })}
               ` : ""}
             ${doubleTapAction === "navigate" ? this._renderTextField("ed.entity.double_tap_navigation_path", "double_tap_navigation_path", config.double_tap_navigation_path, {
-        placeholder: "/lovelace/map",
-        fullWidth: true
-      }) : ""}
+          placeholder: "/lovelace/map",
+          fullWidth: true
+        }) : ""}
             ${doubleTapAction === "url" ? `
                 ${this._renderTextField("ed.entity.tap_url_field", "double_tap_url", config.double_tap_url, {
-        placeholder: "https://example.com",
-        fullWidth: true
-      })}
+          placeholder: "https://example.com",
+          fullWidth: true
+        })}
                 ${this._renderCheckboxField("ed.entity.tap_new_tab", "double_tap_new_tab", config.double_tap_new_tab === true)}
               ` : ""}
 
             ${showServiceSecurity ? `
                 ${this._renderCheckboxField(
-        "ed.entity.security_strict",
-        "security.strict_service_actions",
-        config.security?.strict_service_actions !== false
-      )}
+          "ed.entity.security_strict",
+          "security.strict_service_actions",
+          config.security?.strict_service_actions !== false
+        )}
                 ${config.security?.strict_service_actions !== false ? `
                     ${this._renderTextField(
-        "ed.entity.allowed_services_csv",
-        "security.allowed_services",
-        Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
-        { placeholder: "light.turn_on, script.person_action", valueType: "csv", fullWidth: true }
-      )}
+          "ed.entity.allowed_services_csv",
+          "security.allowed_services",
+          Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
+          { placeholder: "light.turn_on, script.person_action", valueType: "csv", fullWidth: true }
+        )}
                     ${this._renderTextField(
-        "ed.notifications.security_allowed_domains",
-        "security.allowed_service_domains",
-        Array.isArray(config.security?.allowed_service_domains) ? config.security.allowed_service_domains.join(", ") : "",
-        { placeholder: "light, script", valueType: "csv", fullWidth: true }
-      )}
+          "ed.notifications.security_allowed_domains",
+          "security.allowed_service_domains",
+          Array.isArray(config.security?.allowed_service_domains) ? config.security.allowed_service_domains.join(", ") : "",
+          { placeholder: "light, script", valueType: "csv", fullWidth: true }
+        )}
                   ` : ""}
               ` : ""}
           </div>
@@ -2203,11 +2222,11 @@
                 <div class="editor-grid">
                   ${this._renderCheckboxField("ed.weather.enable_animations", "animations.enabled", animations.enabled !== false)}
                   ${this._renderTextField("ed.weather.content_entrance_ms", "animations.content_duration", animations.content_duration, {
-        type: "number"
-      })}
+          type: "number"
+        })}
                   ${this._renderTextField("ed.weather.button_bounce_ms", "animations.button_bounce_duration", animations.button_bounce_duration, {
-        type: "number"
-      })}
+          type: "number"
+        })}
                 </div>
               ` : ""}
         </section>
@@ -2221,19 +2240,19 @@
             ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
             ${this._renderCheckboxField("ed.person.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
-        "ed.person.haptic_style",
-        "haptics.style",
-        hapticStyle,
-        [
-          { value: "selection", label: "ed.weather.haptic_selection" },
-          { value: "light", label: "ed.weather.haptic_light" },
-          { value: "medium", label: "ed.weather.haptic_medium" },
-          { value: "heavy", label: "ed.weather.haptic_heavy" },
-          { value: "success", label: "ed.weather.haptic_success" },
-          { value: "warning", label: "ed.weather.haptic_warning" },
-          { value: "failure", label: "ed.weather.haptic_failure" }
-        ]
-      )}
+          "ed.person.haptic_style",
+          "haptics.style",
+          hapticStyle,
+          [
+            { value: "selection", label: "ed.weather.haptic_selection" },
+            { value: "light", label: "ed.weather.haptic_light" },
+            { value: "medium", label: "ed.weather.haptic_medium" },
+            { value: "heavy", label: "ed.weather.haptic_heavy" },
+            { value: "success", label: "ed.weather.haptic_success" },
+            { value: "warning", label: "ed.weather.haptic_warning" },
+            { value: "failure", label: "ed.weather.haptic_failure" }
+          ]
+        )}
           </div>
         </section>
 
@@ -2258,65 +2277,64 @@
                   ${this._renderColorField("ed.person.style_card_bg", "styles.card.background", config.styles.card.background)}
                   ${this._renderTextField("ed.person.style_card_border", "styles.card.border", config.styles.card.border)}
                   ${window.NodaliaUtils.renderEditorCardBorderRadiusHtml({
-        escapeHtml,
-        field: "styles.card.border_radius",
-        value: config.styles?.card?.border_radius,
-        tHeading: this._editorLabel("ed.entity.style_card_radius_presets"),
-        labels: {
-          pill: this._editorLabel("ed.entity.chip_radius_pill"),
-          soft: this._editorLabel("ed.entity.chip_radius_soft"),
-          round: this._editorLabel("ed.entity.chip_radius_round"),
-          square: this._editorLabel("ed.entity.chip_radius_square")
-        }
-      })}
+          escapeHtml,
+          field: "styles.card.border_radius",
+          value: config.styles?.card?.border_radius,
+          tHeading: this._editorLabel("ed.entity.style_card_radius_presets"),
+          labels: {
+            pill: this._editorLabel("ed.entity.chip_radius_pill"),
+            soft: this._editorLabel("ed.entity.chip_radius_soft"),
+            round: this._editorLabel("ed.entity.chip_radius_round"),
+            square: this._editorLabel("ed.entity.chip_radius_square")
+          }
+        })}
                   <div class="editor-section__hint editor-field--full" style="margin-top: -6px;">${escapeHtml(this._editorLabel("ed.entity.style_card_radius_yaml_hint"))}</div>
                   ${this._renderTextField("ed.person.style_card_shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
                   ${this._renderTextField("ed.person.style_card_padding", "styles.card.padding", config.styles.card.padding)}
                   ${this._renderTextField("ed.person.style_card_gap", "styles.card.gap", config.styles.card.gap)}
                   ${this._renderTextField("ed.person.style_avatar_size", "styles.avatar.size", config.styles.avatar.size)}
                   ${this._renderColorField("ed.person.style_avatar_bg", "styles.avatar.background", config.styles.avatar.background, {
-        fallbackValue: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)"
-      })}
+          fallbackValue: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)"
+        })}
                   ${this._renderColorField("ed.person.style_avatar_color", "styles.avatar.color", config.styles.avatar.color, {
-        fallbackValue: "var(--primary-text-color)"
-      })}
+          fallbackValue: "var(--primary-text-color)"
+        })}
                   ${this._renderTextField("ed.person.style_badge_size", "styles.badge.size", config.styles.badge.size)}
                   ${this._renderTextField("ed.person.style_title_size", "styles.title_size", config.styles.title_size)}
                   ${this._renderTextField("ed.person.style_subtitle_size", "styles.subtitle_size", config.styles.subtitle_size)}
                   ${window.NodaliaUtils.renderEditorChipBorderRadiusHtml({
-        escapeHtml,
-        field: "styles.chip_border_radius",
-        value: config.styles?.chip_border_radius,
-        tHeading: this._editorLabel("ed.entity.style_chip_radius"),
-        labels: {
-          pill: this._editorLabel("ed.entity.chip_radius_pill"),
-          soft: this._editorLabel("ed.entity.chip_radius_soft"),
-          round: this._editorLabel("ed.entity.chip_radius_round"),
-          square: this._editorLabel("ed.entity.chip_radius_square")
-        }
-      })}
+          escapeHtml,
+          field: "styles.chip_border_radius",
+          value: config.styles?.chip_border_radius,
+          tHeading: this._editorLabel("ed.entity.style_chip_radius"),
+          labels: {
+            pill: this._editorLabel("ed.entity.chip_radius_pill"),
+            soft: this._editorLabel("ed.entity.chip_radius_soft"),
+            round: this._editorLabel("ed.entity.chip_radius_round"),
+            square: this._editorLabel("ed.entity.chip_radius_square")
+          }
+        })}
                 </div>
               ` : ""}
         </section>
       </div>
     `;
-      this.shadowRoot.querySelectorAll('.editor-control-host[data-mounted-control="entity"]').forEach((host) => this._mountEntityPicker(host));
-      this.shadowRoot.querySelectorAll("ha-icon-picker[data-field]").forEach((control) => {
-        control.hass = this._hass;
-        control.value = control.dataset.value || "";
-      });
-      this._ensureEditorControlsReady();
-      window.NodaliaUtils?.clampEditorDialogScroll?.(this);
+        this.shadowRoot.querySelectorAll('.editor-control-host[data-mounted-control="entity"]').forEach((host) => this._mountEntityPicker(host));
+        this.shadowRoot.querySelectorAll("ha-icon-picker[data-field]").forEach((control) => {
+          control.hass = this._hass;
+          control.value = control.dataset.value || "";
+        });
+        this._ensureEditorControlsReady();
+        window.NodaliaUtils?.clampEditorDialogScroll?.(this);
+      }
     }
-  };
+    _lazyNodaliaPersonCardEditor = NodaliaPersonCardEditor;
+    return NodaliaPersonCardEditor;
+  }
 
   // src/cards/person/index.ts
-  if (!customElements.get(CARD_TAG)) {
-    customElements.define(CARD_TAG, NodaliaPersonCard);
-  }
-  if (!customElements.get(EDITOR_TAG)) {
-    customElements.define(EDITOR_TAG, NodaliaPersonCardEditor);
-  }
+  window.NodaliaUtils.defineLazyCustomElement(CARD_TAG, loadNodaliaPersonCard, { editorTag: EDITOR_TAG });
+  window.NodaliaUtils.defineLazyCustomElement(EDITOR_TAG, loadNodaliaPersonCardEditor);
   window.NodaliaUtils.registerCustomCard({
     type: CARD_TAG,
     name: "Nodalia Person Card",

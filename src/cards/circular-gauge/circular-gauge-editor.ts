@@ -20,10 +20,18 @@ import {
   getEditorColorModel,
 } from "./circular-gauge-helpers";
 
-export class NodaliaCircularGaugeCardEditor extends HTMLElement {
+let _lazyNodaliaCircularGaugeCardEditor;
+export function loadNodaliaCircularGaugeCardEditor() {
+  if (_lazyNodaliaCircularGaugeCardEditor) {
+    return _lazyNodaliaCircularGaugeCardEditor;
+  }
+class NodaliaCircularGaugeCardEditor extends HTMLElement {
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    this._nodaliaConstruct();
+  }
+
+  _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._entityOptionsSignature = "";
@@ -34,7 +42,7 @@ export class NodaliaCircularGaugeCardEditor extends HTMLElement {
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
-  }
+    }
 
   _attachEditorShadowListeners() {
     window.NodaliaUtils.bindShadowListeners(this, [
@@ -1106,4 +1114,7 @@ export class NodaliaCircularGaugeCardEditor extends HTMLElement {
     this._ensureEditorControlsReady();
     window.NodaliaUtils?.clampEditorDialogScroll?.(this);
   }
+}
+  _lazyNodaliaCircularGaugeCardEditor = NodaliaCircularGaugeCardEditor;
+  return NodaliaCircularGaugeCardEditor;
 }

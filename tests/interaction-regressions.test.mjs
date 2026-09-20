@@ -170,6 +170,43 @@ function loadCardNormalizeConfig(file, className) {
     assert.ok(typeof api?.normalizeConfig === "function", "graph public API should expose normalizeConfig");
     return api.normalizeConfig;
   }
+  if (file === "nodalia-calendar-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_CALENDAR__ || sandbox.__NODALIA_CALENDAR__;
+    assert.ok(typeof api?.normalizeConfig === "function", "calendar public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-power-flow-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_POWER_FLOW__ || sandbox.__NODALIA_POWER_FLOW__;
+    assert.ok(typeof api?.normalizeConfig === "function", "power flow public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-notifications-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_NOTIFICATIONS__ || sandbox.__NODALIA_NOTIFICATIONS__;
+    assert.ok(typeof api?.normalizeConfig === "function", "notifications public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-navigation-bar.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_NAVIGATION__ || sandbox.__NODALIA_NAVIGATION__;
+    assert.ok(typeof api?.normalizeConfig === "function", "navigation public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-room-summary-card.js") {
+    vm.runInContext(read("nodalia-room-summary-model.js"), sandbox);
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_ROOM_SUMMARY__ || sandbox.__NODALIA_ROOM_SUMMARY__;
+    assert.ok(typeof api?.normalizeConfig === "function", "room summary public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
+  if (file === "nodalia-advance-vacuum-card.js") {
+    vm.runInContext(source, sandbox);
+    const api = sandbox.window.__NODALIA_ADVANCE_VACUUM__ || sandbox.__NODALIA_ADVANCE_VACUUM__;
+    assert.ok(typeof api?.normalizeConfig === "function", "advance vacuum public API should expose normalizeConfig");
+    return api.normalizeConfig;
+  }
   vm.runInContext(`${source.slice(0, classStart)}\nglobalThis.__normalizeConfig = normalizeConfig;`, sandbox);
   return sandbox.__normalizeConfig;
 }
@@ -396,7 +433,7 @@ function loadNavigationBarCardClass() {
 test("navigation media player selection follows the entity when visibility changes", () => {
   const source = read("nodalia-navigation-bar.js");
   assert.match(source, /_resolveActiveMediaPlayerIndex\(players\)/);
-  assert.match(source, /players\.findIndex\(player => player\?\.entity === this\._activeMediaPlayerEntity\)/);
+  assert.match(source, /players\.findIndex\(\(?player\)? => player\?\.entity === this\._activeMediaPlayerEntity\)/);
   assert.match(
     source,
     /this\._activeMediaPlayerEntity = String\(visiblePlayers\[this\._activeMediaPlayerIndex\]\?\.entity \|\| ""\)/,
@@ -583,14 +620,14 @@ test("media player custom power actions work by default and player selection fol
 
 test("navigation editor persists secondary media-player picker changes", () => {
   const source = read("nodalia-navigation-bar.js");
-  const inputStart = source.indexOf("  _onShadowInput(event)", source.indexOf("class NodaliaNavigationBarEditor"));
+  const inputStart = source.indexOf("  _onShadowInput(event)", source.search(/(?:class NodaliaNavigationBarEditor|NodaliaNavigationBarEditor = class)/));
   const inputBlock = source.slice(inputStart, source.indexOf("\n  _onShadowClick(event)", inputStart));
   const playerBranch = inputBlock.indexOf("const playerField");
   const genericBranch = inputBlock.indexOf("const field");
 
   assert.ok(playerBranch >= 0 && genericBranch > playerBranch, "player picker metadata must win over the generic field added by the HA picker");
   assert.match(inputBlock, /_isHomeAssistantPicker\(playerField\) && event\.type !== "value-changed"/);
-  assert.match(inputBlock, /event\.type === "value-changed" && eventValue !== undefined/);
+  assert.match(inputBlock, /event\.type === "value-changed" && eventValue !== (?:undefined|void 0)/);
   assert.match(inputBlock, /playerField\.value = eventValue \?\? ""/);
   assert.match(inputBlock, /this\._applyFieldValue\(player, playerField\.dataset\.playerField, playerField\)/);
   assert.match(source, /`media_player\.players\.\$\{playerIndex\}\.\$\{playerField\}`/);
@@ -608,7 +645,7 @@ test("navigation media player toggle keeps theme fallbacks after sanitized value
 
 test("notifications mobile sent state only marks successful deliveries", () => {
   const source = read("nodalia-notifications-card.js");
-  assert.match(source, /Promise\.all\(\[[\s\S]*\]\)\.then\(results => \{/);
+  assert.match(source, /Promise\.all\(\[[\s\S]*\]\)\.then\(\(?results\)? => \{/);
   assert.match(source, /const delivered = results\.some\(Boolean\)/);
   assert.match(source, /if \(delivered\) \{\s*this\._mobileSent\.add\(hash\);/);
 });
@@ -1385,7 +1422,10 @@ test("power flow card supports home device popup and consumption chips", () => {
 
 test("power flow visual editor individual actions keep energy branch entities", () => {
   const source = read("nodalia-power-flow-card.js");
-  const editorStart = source.indexOf("class NodaliaPowerFlowCardVisualEditor");
+  const editorStart = Math.max(
+    source.indexOf("class NodaliaPowerFlowCardVisualEditor"),
+    source.indexOf("NodaliaPowerFlowCardVisualEditor = class"),
+  );
   assert.ok(editorStart >= 0, "visual editor class should exist");
   const clickStart = source.indexOf("_onShadowClick(event)", editorStart);
   assert.ok(clickStart > editorStart, "visual editor click handler should exist");
@@ -2130,7 +2170,7 @@ test("calendar card reuses date/time formatters during render", () => {
 test("power flow flow dots avoid origin flash before motion starts", () => {
   const source = read("nodalia-power-flow-card.js");
   assert.match(source, /function getSvgPathMotionStart\(pathD\)/);
-  assert.match(source, /const SVG_PATH_TOKEN_RE = \/\[AaCcHhLlMmQqSsTtVvZz\]/);
+  assert.match(source, /(?:const|var) SVG_PATH_TOKEN_RE = \/\[AaCcHhLlMmQqSsTtVvZz\]/);
   assert.match(source, /function tokenizeSvgPath\(pathD\)/);
   assert.match(source, /readFlag\(\)/);
   assert.match(source, /function getSvgRelativeMotionPath\(pathD\)/);
@@ -2369,7 +2409,7 @@ test("alpha.5 lifecycle guards on notifications media climate scenes calendar gr
   assert.match(read("nodalia-media-player.js"), /scheduleDeferTimer/);
   assert.match(read("nodalia-climate-card.js"), /scheduleDeferTimer/);
   assert.match(read("nodalia-scenes-card.js"), /scheduleDeferTimer/);
-  assert.match(read("nodalia-calendar-card.js"), /subscribeMessage\(event => \{[\s\S]*if \(!this\.isConnected\)/);
+  assert.match(read("nodalia-calendar-card.js"), /subscribeMessage\(\(?event\)? => \{[\s\S]*if \(!this\.isConnected\)/);
   assert.match(read("nodalia-graph-card.js"), /requestAnimationFrame\(\(\) => \{[\s\S]*if \(!this\.isConnected\)/);
   assert.match(read("nodalia-navigation-bar.js"), /_dockEntranceResetFrame/);
   assert.match(read("nodalia-calendar-card.js"), /_calendarEntrancePlayFrame/);
@@ -2416,7 +2456,7 @@ test("notifications entrance animation does not rearm on list refreshes", () => 
   assert.match(source, /this\._replayEntranceAnimation\(\{ force: true \}\)/);
   assert.match(
     source,
-    /\/\/ Match entity\/weather cards: do not render \(or consume entrance\) before hass/,
+    /this\._animateContentOnNextRender = true;\s*this\._lastRenderSignature = "";\s*if \(this\._hass\) \{\s*this\._renderIfChanged\(true\);/,
   );
   assert.match(source, /this\._renderPendingAfterEntrance = true/);
   assert.match(source, /this\.shadowRoot\?\.querySelector\?\.\("\.notifications-card--enter"\)/);
@@ -2583,7 +2623,7 @@ test("notifications card drains pending foreground mobile queue in batches", () 
   assert.match(source, /_enqueueMobileNotifications/);
   assert.match(source, /_scheduleMobileNotifyDrain/);
   assert.match(source, /this\._mobileNotifyQueue\.splice\(0, 4\)/);
-  assert.match(source, /Promise\.resolve\(\)[\s\S]*\.then\(\(\) => this\._flushMobileNotifications\(batch\)\)[\s\S]*\.catch\(error =>/);
+  assert.match(source, /Promise\.resolve\(\)[\s\S]*\.then\(\(\) => this\._flushMobileNotifications\(batch\)\)[\s\S]*\.catch\(\(?error\)? =>/);
   assert.match(source, /if \(this\._mobileNotifyQueue\.length\) \{[\s\S]*_scheduleMobileNotifyDrain/);
 });
 

@@ -1,16 +1,11 @@
 import { CARD_TAG, CARD_VERSION, EDITOR_TAG } from "./graph-constants";
 import { DEFAULT_CONFIG, normalizeConfig, normalizeEditorConfig } from "./graph-config";
-import { NodaliaGraphCard } from "./graph-card";
-import { NodaliaGraphCardEditor } from "./graph-editor";
+import { loadNodaliaGraphCard } from "./graph-card";
+import { loadNodaliaGraphCardEditor } from "./graph-editor";
 import type { GraphPublicApi } from "./graph-types";
 
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaGraphCard);
-}
-
-if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaGraphCardEditor);
-}
+window.NodaliaUtils.defineLazyCustomElement(CARD_TAG, loadNodaliaGraphCard, { editorTag: EDITOR_TAG });
+window.NodaliaUtils.defineLazyCustomElement(EDITOR_TAG, loadNodaliaGraphCardEditor);
 
 try {
   window.NodaliaUtils?.registerCustomCard?.({

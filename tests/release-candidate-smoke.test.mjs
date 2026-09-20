@@ -149,8 +149,8 @@ test("the single HACS runtime contains cards and visual editors", () => {
   const runtime = runtimeBuffer.toString("utf8");
 
   assert.ok(
-    runtimeBuffer.length < 4 * 1024 * 1024 + 64 * 1024,
-    "self-contained HACS bundle should stay below 4 MiB + 64 KiB",
+    runtimeBuffer.length < 4 * 1024 * 1024 + 128 * 1024,
+    "self-contained HACS bundle should stay below 4 MiB + 128 KiB",
   );
   assert.ok(gzipSync(runtimeBuffer).length < 950 * 1024, "self-contained HACS bundle should stay below 950 KiB gzip");
   assert.match(runtime, /\.editorStr=function/);
@@ -507,7 +507,7 @@ test("calendar native event webhook sends sanitized service data", () => {
   assert.match(source, /type: "calendar\/event\/create"/);
   assert.match(source, /ha_action: \{/);
   assert.match(source, /action: "calendar\.create_event"/);
-  assert.match(source, /value !== "" && value !== null && value !== undefined/);
+  assert.match(source, /value !== "" && value !== null && value !== (?:undefined|void 0)/);
   assert.match(source, /_buildNativeCalendarCreateEventWebhookBody\(payload, "all_day", calendarEventPayload\)/);
   assert.match(source, /_buildNativeCalendarCreateEventWebhookBody\(payload, "timed", calendarEventPayload\)/);
   assert.match(example, /event_kind == 'all_day'/);
@@ -601,7 +601,7 @@ test("calendar editor signature only scans relevant entity domains", () => {
 test("calendar supports haptics and external popup open requests", () => {
   const source = read("nodalia-calendar-card.js");
   assert.match(source, /haptics: \{/);
-  assert.match(source, /const HAPTIC_PATTERNS/);
+  assert.match(source, /(?:const|var) HAPTIC_PATTERNS/);
   assert.match(source, /_triggerHaptic\(styleOverride = null\)/);
   assert.match(source, /data-editor-toggle="haptics"/);
   assert.match(source, /window\.addEventListener\("nodalia-calendar-card-open"/);
@@ -723,7 +723,7 @@ test("Norwegian language aliases resolve to official no locale", () => {
   const source = read("nodalia-i18n.js");
   assert.match(source, /const alias = \{ nb: "no", nn: "no" \}\[two\]/);
   assert.match(source, /no: "nb-NO"/);
-  assert.match(source, /no:\s*\{[\s\S]*vacuumErrorLabels:/);
+  assert.match(source, /no:\s*function \(\) \{\s*return \{[\s\S]*vacuumErrorLabels:/);
 });
 
 test("shared visual editor ROWS map covers all supported editor languages", () => {
@@ -826,7 +826,7 @@ test("climate card is registered and shipped in the HACS bundle", () => {
   const readme = read("README.md");
   const bundle = read("nodalia-cards.js");
   assert.match(source, /(?:const|let|var) CARD_TAG = "nodalia-climate-card"/);
-  assert.match(source, /customElements\.define\(CARD_TAG, NodaliaClimateCard\)/);
+  assert.match(source, /defineLazyCustomElement\(CARD_TAG, loadNodaliaClimateCard/);
   assert.match(build, /nodalia-climate-card\.js/);
   assert.ok(pkg.files.includes("nodalia-climate-card.js"), "nodalia-climate-card.js should be published");
   assert.match(readme, /custom:nodalia-climate-card/);
@@ -847,7 +847,7 @@ test("scenes card is registered and shipped in the HACS bundle", () => {
   const readme = read("README.md");
   const bundle = read("nodalia-cards.js");
   assert.match(source, /(?:const|let|var) CARD_TAG = "nodalia-scenes-card"/);
-  assert.match(source, /customElements\.define\(CARD_TAG, NodaliaScenesCard\)/);
+  assert.match(source, /defineLazyCustomElement\(CARD_TAG, loadNodaliaScenesCard/);
   assert.match(source, /callService\("scene", "turn_on"/);
   assert.match(source, /_triggerLaunchAnimation/);
   assert.match(build, /nodalia-scenes-card\.js/);
@@ -863,7 +863,7 @@ test("news card is registered and shipped in the HACS bundle", () => {
   const pkg = JSON.parse(read("package.json"));
   const bundle = read("nodalia-cards.js");
   assert.match(source, /(?:const|let|var) CARD_TAG = "nodalia-news-card"/);
-  assert.match(source, /customElements\.define\(CARD_TAG, NodaliaNewsCard\)/);
+  assert.match(source, /defineLazyCustomElement\(CARD_TAG, loadNodaliaNewsCard/);
   assert.match(source, /registerCustomCard\?\.\(\{/);
   assert.match(source, /function isSafeHttpUrl\(/);
   assert.match(build, /nodalia-news-card\.js/);
@@ -878,7 +878,7 @@ test("camera card is registered and shipped in the HACS bundle", () => {
   const readme = read("README.md");
   const bundle = read("nodalia-cards.js");
   assert.match(source, /(?:const|let|var) CARD_TAG = "nodalia-camera-card"/);
-  assert.match(source, /customElements\.define\(CARD_TAG, NodaliaCameraCard\)/);
+  assert.match(source, /defineLazyCustomElement\(CARD_TAG, loadNodaliaCameraCard/);
   assert.match(source, /camera_proxy/);
   assert.match(source, /camera-card__expanded/);
   assert.match(build, /nodalia-camera-card\.js/);
@@ -896,7 +896,7 @@ test("cover card is registered and shipped in the HACS bundle", () => {
   assert.match(source, /(?:const|let|var) CARD_TAG = "nodalia-cover-card"/);
   assert.match(source, /set_cover_position/);
   assert.match(source, /set_cover_tilt_position/);
-  assert.match(source, /customElements\.define\(CARD_TAG, NodaliaCoverCard\)/);
+  assert.match(source, /defineLazyCustomElement\(CARD_TAG, loadNodaliaCoverCard/);
   assert.match(build, /nodalia-cover-card\.js/);
   assert.match(sync, /nodalia-cover-card\.js/);
   assert.match(pkg, /"nodalia-cover-card\.js"/);
@@ -919,7 +919,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   const build = read("scripts/build-bundle.mjs");
   const pkg = read("package.json");
   const readme = read("README.md");
-  assert.match(source, /customElements\.define\(CARD_TAG, NodaliaNotificationsCard\)/);
+  assert.match(source, /defineLazyCustomElement\(CARD_TAG, loadNodaliaNotificationsCard/);
   assert.match(source, /custom_notifications/);
   assert.match(source, /normalizeCustomNotifications\(value, options = \{\}\)/);
   assert.match(source, /keepDrafts && item\._draft === true \? true : hasContent && !isPlaceholder/);
@@ -937,7 +937,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /mobilePolicy: item\.mobile \|\| "auto"/);
   assert.match(source, /_smartMobilePolicyForKind\(group\.kind, entityId\)/);
   assert.match(source, /smart: Object\.fromEntries/);
-  assert.match(source, /findIndex\(item => item\?\.entity === entity\)/);
+  assert.match(source, /findIndex\(\(?item\)? => item\?\.entity === entity\)/);
   assert.doesNotMatch(source, /this\._config\.smart_entity_overrides\[index\]\.entity = entity/);
   assert.match(source, /mobileDeliveryState/);
   assert.match(source, /deliveryState !== "allowed"/);
@@ -1040,7 +1040,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /_getFanTargetForSource/);
   assert.match(source, /_getPresenceSensorForSource\(sourceEntityId\)/);
   assert.match(source, /_presenceAllowsComfortNotification\(sourceEntityId\)/);
-  assert.match(source, /\.filter\(item => this\._presenceAllowsComfortNotification\(item\.entityId\)\)/);
+  assert.match(source, /\.filter\(\(?item\)? => this\._presenceAllowsComfortNotification\(item\.entityId\)\)/);
   assert.doesNotMatch(source, /\.\.\.this\._config\.weather_entities\.map\(entityId => \(\{[\s\S]*?numericState\(this\._hass\.states\?\.\[entityId\], "temperature"\)/);
   assert.match(source, /_buildWeatherNotifications/);
   assert.match(source, /_buildLevelNotifications/);
@@ -1179,9 +1179,9 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /sanitizeCssRuntimeValue/);
   assert.match(i18n, /notificationsCard/);
   assert.match(i18n, /<nodalia-runtime-i18n-pack>/);
-  assert.match(i18n, /\bde:\s*\{[\s\S]*?fallbackEvent:\s*"Termin"/);
-  assert.match(i18n, /\bfr:\s*\{[\s\S]*?fallbackEvent:\s*"Événement"/);
-  assert.match(i18n, /\bzh:\s*\{[\s\S]*?fallbackEvent:\s*"事件"/);
+  assert.match(i18n, /\bde:\s*function \(\) \{[\s\S]*?fallbackEvent:\s*"Termin"/);
+  assert.match(i18n, /\bfr:\s*function \(\) \{[\s\S]*?fallbackEvent:\s*"Événement"/);
+  assert.match(i18n, /\bzh:\s*function \(\) \{[\s\S]*?fallbackEvent:\s*"事件"/);
   assert.match(i18n, /mediaLeftOn: "Multimedia ohne Anwesenheit eingeschaltet"/);
   assert.match(i18n, /hotClimate: "\{source\} zeigt \{value\}\. Du kannst Kühlung auf \{climate\} einschalten\."/);
   assert.match(i18n, /Borrar notificación/);

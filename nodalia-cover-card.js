@@ -4,7 +4,7 @@
   // src/cards/cover/cover-constants.ts
   var CARD_TAG = "nodalia-cover-card";
   var EDITOR_TAG = "nodalia-cover-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.19b";
+  var CARD_VERSION = "2.3.0-alpha.20";
   var COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS = 6;
   var COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH = 620;
   var HAPTIC_PATTERNS = {
@@ -426,822 +426,843 @@
   }
 
   // src/cards/cover/cover-card.ts
-  var NodaliaCoverCard = class extends HTMLElement {
-    static async getConfigElement() {
-      return document.createElement(EDITOR_TAG);
+  var _lazyNodaliaCoverCard;
+  function loadNodaliaCoverCard() {
+    if (_lazyNodaliaCoverCard) {
+      return _lazyNodaliaCoverCard;
     }
-    static getStubConfig(hass, entities = [], entitiesFallback = []) {
-      return applyStubEntity(deepClone(STUB_CONFIG), hass, ["cover"], entities, entitiesFallback);
-    }
-    static getEntitySuggestion(hass, entityId) {
-      return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, { domains: ["cover"] });
-    }
-    constructor() {
-      super();
-      this.attachShadow({ mode: "open" });
-      this._config = normalizeConfig(STUB_CONFIG);
-      this._hass = null;
-      this._lastRenderSignature = "";
-      this._lastRenderedIsActive = null;
-      this._controlsTransition = null;
-      this._powerTransition = null;
-      this._animationCleanupTimer = 0;
-      this._activeSliderDrag = null;
-      this._skipNextSliderChange = null;
-      this._dragWindowListenersAttached = false;
-      this._pendingRenderAfterDrag = false;
-      this._suppressNextCoverTap = false;
-      this._cardWidth = 0;
-      this._resizeObserver = typeof ResizeObserver === "function" ? new ResizeObserver((entries) => {
-        const entry = entries[0];
-        if (!entry) {
-          return;
+    class NodaliaCoverCard extends HTMLElement {
+      static async getConfigElement() {
+        return document.createElement(EDITOR_TAG);
+      }
+      static getStubConfig(hass, entities = [], entitiesFallback = []) {
+        return applyStubEntity(deepClone(STUB_CONFIG), hass, ["cover"], entities, entitiesFallback);
+      }
+      static getEntitySuggestion(hass, entityId) {
+        return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, { domains: ["cover"] });
+      }
+      constructor() {
+        super();
+        this._nodaliaConstruct();
+      }
+      _nodaliaConstruct() {
+        this.attachShadow({ mode: "open" });
+        this._config = normalizeConfig(STUB_CONFIG);
+        this._hass = null;
+        this._lastRenderSignature = "";
+        this._lastRenderedIsActive = null;
+        this._controlsTransition = null;
+        this._powerTransition = null;
+        this._animationCleanupTimer = 0;
+        this._activeSliderDrag = null;
+        this._skipNextSliderChange = null;
+        this._dragWindowListenersAttached = false;
+        this._pendingRenderAfterDrag = false;
+        this._suppressNextCoverTap = false;
+        this._cardWidth = 0;
+        this._resizeObserver = typeof ResizeObserver === "function" ? new ResizeObserver((entries) => {
+          const entry = entries[0];
+          if (!entry) {
+            return;
+          }
+          const nextWidth = Math.round(entry.contentRect?.width || this.clientWidth || 0);
+          if (nextWidth === this._cardWidth) {
+            return;
+          }
+          this._cardWidth = nextWidth;
+          if (this._activeSliderDrag) {
+            this._pendingRenderAfterDrag = true;
+            return;
+          }
+          const signature = this._getRenderSignature(this._hass);
+          if (signature === this._lastRenderSignature) {
+            this._syncCoverControlsToggleLaneDom();
+            return;
+          }
+          this._lastRenderSignature = signature;
+          this._render();
+        }) : null;
+        this._coverControlsViewMode = "slider";
+        this._onShadowClick = this._onShadowClick.bind(this);
+        this._onShadowInput = this._onShadowInput.bind(this);
+        this._onShadowChange = this._onShadowChange.bind(this);
+        this._onPointerDown = this._onPointerDown.bind(this);
+        this._onMouseDown = this._onMouseDown.bind(this);
+        this._onTouchStart = this._onTouchStart.bind(this);
+        this._onWindowPointerMove = this._onWindowPointerMove.bind(this);
+        this._onWindowPointerUp = this._onWindowPointerUp.bind(this);
+        this._onWindowMouseMove = this._onWindowMouseMove.bind(this);
+        this._onWindowMouseUp = this._onWindowMouseUp.bind(this);
+        this._onWindowTouchStartCapture = this._onWindowTouchStartCapture.bind(this);
+        this._onWindowTouchMove = this._onWindowTouchMove.bind(this);
+        this._onWindowTouchEnd = this._onWindowTouchEnd.bind(this);
+        this.shadowRoot.addEventListener("click", this._onShadowClick);
+        this.shadowRoot.addEventListener("input", this._onShadowInput);
+        this.shadowRoot.addEventListener("change", this._onShadowChange);
+        this.shadowRoot.addEventListener("pointerdown", this._onPointerDown);
+        this.shadowRoot.addEventListener("mousedown", this._onMouseDown);
+        if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+          this.shadowRoot.addEventListener("touchstart", this._onTouchStart, { passive: false });
         }
-        const nextWidth = Math.round(entry.contentRect?.width || this.clientWidth || 0);
-        if (nextWidth === this._cardWidth) {
-          return;
-        }
-        this._cardWidth = nextWidth;
+        this._detachHostHold = typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function" ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
+          resolveZone: (event) => {
+            const path = event.composedPath();
+            if (path.some((node) => node instanceof HTMLInputElement && node.dataset?.coverControl)) {
+              return null;
+            }
+            if (window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
+              return null;
+            }
+            const actionButton = path.find((node) => node instanceof HTMLElement && node.dataset?.coverAction);
+            const zone = actionButton?.dataset?.coverAction;
+            return zone === "body" || zone === "icon" ? zone : null;
+          },
+          shouldBeginHold: (zone) => this._resolveHoldAction(zone) !== "none",
+          onHold: (zone) => {
+            const action = this._resolveHoldAction(zone);
+            if (action === "none") {
+              return;
+            }
+            this._triggerHaptic();
+            this._runAction(zone, "hold", action);
+          },
+          markHoldConsumedClick: () => {
+            this._suppressNextCoverTap = true;
+          }
+        }) : () => {
+        };
+      }
+      connectedCallback() {
+        this._detachHostHold?.reconnect?.();
+        this._resizeObserver?.observe(this);
+        this._cardWidth = Math.round(this.clientWidth || 0);
+        this._render();
+      }
+      disconnectedCallback() {
+        this._resizeObserver?.disconnect();
+        this._detachHostHold?.();
         if (this._activeSliderDrag) {
+          this._activeSliderDrag.dial?.classList?.remove("is-dragging");
+          this._activeSliderDrag = null;
+        }
+        this._detachWindowDragListeners();
+        if (this._animationCleanupTimer) {
+          window.clearTimeout(this._animationCleanupTimer);
+          this._animationCleanupTimer = 0;
+        }
+        window.NodaliaUtils?.clearDeferTimers?.(this);
+      }
+      setConfig(config) {
+        this._config = normalizeConfig(config || {});
+        window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
+        this._coverControlsViewMode = "slider";
+        this._lastRenderSignature = "";
+        this._render();
+      }
+      set hass(hass) {
+        const signature = this._getRenderSignature(hass);
+        this._hass = hass;
+        if (this._activeSliderDrag) {
+          this._lastRenderSignature = signature;
           this._pendingRenderAfterDrag = true;
           return;
         }
-        const signature = this._getRenderSignature(this._hass);
-        if (signature === this._lastRenderSignature) {
-          this._syncCoverControlsToggleLaneDom();
+        if (this.shadowRoot?.innerHTML && signature === this._lastRenderSignature) {
           return;
         }
         this._lastRenderSignature = signature;
         this._render();
-      }) : null;
-      this._coverControlsViewMode = "slider";
-      this._onShadowClick = this._onShadowClick.bind(this);
-      this._onShadowInput = this._onShadowInput.bind(this);
-      this._onShadowChange = this._onShadowChange.bind(this);
-      this._onPointerDown = this._onPointerDown.bind(this);
-      this._onMouseDown = this._onMouseDown.bind(this);
-      this._onTouchStart = this._onTouchStart.bind(this);
-      this._onWindowPointerMove = this._onWindowPointerMove.bind(this);
-      this._onWindowPointerUp = this._onWindowPointerUp.bind(this);
-      this._onWindowMouseMove = this._onWindowMouseMove.bind(this);
-      this._onWindowMouseUp = this._onWindowMouseUp.bind(this);
-      this._onWindowTouchStartCapture = this._onWindowTouchStartCapture.bind(this);
-      this._onWindowTouchMove = this._onWindowTouchMove.bind(this);
-      this._onWindowTouchEnd = this._onWindowTouchEnd.bind(this);
-      this.shadowRoot.addEventListener("click", this._onShadowClick);
-      this.shadowRoot.addEventListener("input", this._onShadowInput);
-      this.shadowRoot.addEventListener("change", this._onShadowChange);
-      this.shadowRoot.addEventListener("pointerdown", this._onPointerDown);
-      this.shadowRoot.addEventListener("mousedown", this._onMouseDown);
-      if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
-        this.shadowRoot.addEventListener("touchstart", this._onTouchStart, { passive: false });
       }
-      this._detachHostHold = typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function" ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
-        resolveZone: (event) => {
-          const path = event.composedPath();
-          if (path.some((node) => node instanceof HTMLInputElement && node.dataset?.coverControl)) {
-            return null;
-          }
-          if (window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
-            return null;
-          }
-          const actionButton = path.find((node) => node instanceof HTMLElement && node.dataset?.coverAction);
-          const zone = actionButton?.dataset?.coverAction;
-          return zone === "body" || zone === "icon" ? zone : null;
-        },
-        shouldBeginHold: (zone) => this._resolveHoldAction(zone) !== "none",
-        onHold: (zone) => {
-          const action = this._resolveHoldAction(zone);
-          if (action === "none") {
-            return;
-          }
-          this._triggerHaptic();
-          this._runAction(zone, "hold", action);
-        },
-        markHoldConsumedClick: () => {
-          this._suppressNextCoverTap = true;
+      getCardSize() {
+        return this._config?.layout === "circular" ? 5 : 3;
+      }
+      getGridOptions() {
+        if (this._config?.layout === "circular") {
+          return {
+            rows: "auto",
+            columns: "full",
+            min_rows: 5,
+            min_columns: 7
+          };
         }
-      }) : () => {
-      };
-    }
-    connectedCallback() {
-      this._detachHostHold?.reconnect?.();
-      this._resizeObserver?.observe(this);
-      this._cardWidth = Math.round(this.clientWidth || 0);
-      this._render();
-    }
-    disconnectedCallback() {
-      this._resizeObserver?.disconnect();
-      this._detachHostHold?.();
-      if (this._activeSliderDrag) {
-        this._activeSliderDrag.dial?.classList?.remove("is-dragging");
-        this._activeSliderDrag = null;
-      }
-      this._detachWindowDragListeners();
-      if (this._animationCleanupTimer) {
-        window.clearTimeout(this._animationCleanupTimer);
-        this._animationCleanupTimer = 0;
-      }
-      window.NodaliaUtils?.clearDeferTimers?.(this);
-    }
-    setConfig(config) {
-      this._config = normalizeConfig(config || {});
-      window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
-      this._coverControlsViewMode = "slider";
-      this._lastRenderSignature = "";
-      this._render();
-    }
-    set hass(hass) {
-      const signature = this._getRenderSignature(hass);
-      this._hass = hass;
-      if (this._activeSliderDrag) {
-        this._lastRenderSignature = signature;
-        this._pendingRenderAfterDrag = true;
-        return;
-      }
-      if (this.shadowRoot?.innerHTML && signature === this._lastRenderSignature) {
-        return;
-      }
-      this._lastRenderSignature = signature;
-      this._render();
-    }
-    getCardSize() {
-      return this._config?.layout === "circular" ? 5 : 3;
-    }
-    getGridOptions() {
-      if (this._config?.layout === "circular") {
         return {
           rows: "auto",
           columns: "full",
-          min_rows: 5,
-          min_columns: 7
+          min_rows: 2,
+          min_columns: 6
         };
       }
-      return {
-        rows: "auto",
-        columns: "full",
-        min_rows: 2,
-        min_columns: 6
-      };
-    }
-    _getConfiguredGridColumns() {
-      const numericColumns = Number(this._config?.grid_options?.columns);
-      return Number.isFinite(numericColumns) && numericColumns > 0 ? numericColumns : null;
-    }
-    _shouldReserveCoverToggleLane(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
-      const gridColumns = this._getConfiguredGridColumns();
-      if (gridColumns !== null) {
-        return gridColumns <= COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS;
+      _getConfiguredGridColumns() {
+        const numericColumns = Number(this._config?.grid_options?.columns);
+        return Number.isFinite(numericColumns) && numericColumns > 0 ? numericColumns : null;
       }
-      return width > 0 && width <= COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH;
-    }
-    _getState(hass = this._hass) {
-      return hass?.states?.[this._config?.entity] || null;
-    }
-    _getRenderSignature(hass = this._hass) {
-      const state = this._getState(hass);
-      const attrs = state?.attributes || {};
-      const joinParts = window.NodaliaRenderSignature?.joinParts;
-      const values = [
-        this._config?.entity || "",
-        this._coverControlsViewMode,
-        state?.state || "",
-        attrs.friendly_name || "",
-        attrs.icon || "",
-        attrs.device_class || "",
-        attrs.current_position ?? "",
-        attrs.current_tilt_position ?? "",
-        attrs.supported_features ?? "",
-        String(this._config?.layout || "compact"),
-        this._config?.show_state === true ? 1 : 0,
-        this._config?.show_name !== false ? 1 : 0,
-        String(this._config?.name || ""),
-        String(this._config?.tap_action || ""),
-        String(this._config?.hold_action || "")
-      ];
-      if (typeof joinParts === "function") {
-        return joinParts([{ prefix: "cover:", values }]);
+      _shouldReserveCoverToggleLane(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
+        const gridColumns = this._getConfiguredGridColumns();
+        if (gridColumns !== null) {
+          return gridColumns <= COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS;
+        }
+        return width > 0 && width <= COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH;
       }
-      return values.join("::");
-    }
-    _features(state = this._getState()) {
-      return Number(state?.attributes?.supported_features) || 0;
-    }
-    _supports(feature, state = this._getState()) {
-      return Boolean(this._features(state) & feature);
-    }
-    _isActive(state = this._getState()) {
-      const key = normalizeTextKey(state?.state);
-      return ["open", "opening", "closing"].includes(key);
-    }
-    _getSettledPositionFallback(state = this._getState()) {
-      const key = normalizeTextKey(state?.state);
-      if (key === "open") {
-        return 100;
+      _getState(hass = this._hass) {
+        return hass?.states?.[this._config?.entity] || null;
       }
-      if (key === "closed") {
-        return 0;
+      _getRenderSignature(hass = this._hass) {
+        const state = this._getState(hass);
+        const attrs = state?.attributes || {};
+        const joinParts = window.NodaliaRenderSignature?.joinParts;
+        const values = [
+          this._config?.entity || "",
+          this._coverControlsViewMode,
+          state?.state || "",
+          attrs.friendly_name || "",
+          attrs.icon || "",
+          attrs.device_class || "",
+          attrs.current_position ?? "",
+          attrs.current_tilt_position ?? "",
+          attrs.supported_features ?? "",
+          String(this._config?.layout || "compact"),
+          this._config?.show_state === true ? 1 : 0,
+          this._config?.show_name !== false ? 1 : 0,
+          String(this._config?.name || ""),
+          String(this._config?.tap_action || ""),
+          String(this._config?.hold_action || "")
+        ];
+        if (typeof joinParts === "function") {
+          return joinParts([{ prefix: "cover:", values }]);
+        }
+        return values.join("::");
       }
-      return null;
-    }
-    _getCommandablePosition(state = this._getState()) {
-      const position = parseNumber(state?.attributes?.current_position);
-      if (position !== null) {
-        return position;
+      _features(state = this._getState()) {
+        return Number(state?.attributes?.supported_features) || 0;
       }
-      return this._getSettledPositionFallback(state);
-    }
-    _coverCardUi(key, fallback = "") {
-      const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-      const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-      const pack = window.NodaliaI18n?.strings?.(lang)?.coverCard;
-      const enPack = window.NodaliaI18n?.strings?.("en")?.coverCard;
-      const raw = pack?.[key] ?? enPack?.[key];
-      return String(raw != null && raw !== "" ? raw : fallback);
-    }
-    _coverTiltChipText(tiltValue) {
-      const tpl = this._coverCardUi("tiltChip", "Tilt {value}%");
-      return tpl.replace(/\{value\}/g, String(Math.round(Number(tiltValue) || 0)));
-    }
-    _stateLabel(state = this._getState()) {
-      const key = normalizeTextKey(state?.state);
-      const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-      const lang = this._config?.language ?? "auto";
-      const translated = window.NodaliaI18n?.translateEntityStateChip?.(hass, lang, key);
-      if (translated) {
-        return translated;
+      _supports(feature, state = this._getState()) {
+        return Boolean(this._features(state) & feature);
       }
-      return String(state?.state || window.NodaliaI18n?.translateEntityStateChip?.(hass, lang, "unknown") || "Unknown");
-    }
-    _getName(state = this._getState()) {
-      return this._config?.name || state?.attributes?.friendly_name || this._config?.entity || "Cover";
-    }
-    _getIcon(state = this._getState()) {
-      return this._config?.icon || state?.attributes?.icon || coverDeviceIcon(state);
-    }
-    _getAccentColor(state = this._getState()) {
-      const styles = this._config?.styles || DEFAULT_CONFIG.styles;
-      return this._isActive(state) ? styles.icon.on_color || DEFAULT_CONFIG.styles.icon.on_color : styles.icon.off_color || DEFAULT_CONFIG.styles.icon.off_color;
-    }
-    _getAnimationSettings() {
-      const animations = this._config?.animations || DEFAULT_CONFIG.animations;
-      return {
-        enabled: animations.enabled !== false,
-        iconAnimation: animations.icon_animation !== false,
-        powerDuration: clamp(Number(animations.power_duration) || DEFAULT_CONFIG.animations.power_duration, 120, 4e3),
-        controlsDuration: clamp(Number(animations.controls_duration) || DEFAULT_CONFIG.animations.controls_duration, 120, 2400),
-        buttonBounceDuration: clamp(Number(animations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration, 120, 1200)
-      };
-    }
-    _isCompactLayout() {
-      return window.NodaliaUtils.shouldUseCompactCardLayout({
-        mode: this._config?.compact_layout_mode,
-        width: Math.round(this._cardWidth || this.clientWidth || 0),
-        gridColumns: this._getConfiguredGridColumns()
-      });
-    }
-    _shouldShowCompactTitle() {
-      return window.NodaliaUtils.shouldShowCompactCardTitle({
-        width: Math.round(this._cardWidth || this.clientWidth || 0)
-      });
-    }
-    _renderEmptyState() {
-      const title = escapeHtml(this._coverCardUi("emptyTitle", "Nodalia Cover Card"));
-      const body = escapeHtml(this._coverCardUi("emptyBody", "Set `entity` to a `cover.*` entity to show this card."));
-      return `
+      _isActive(state = this._getState()) {
+        const key = normalizeTextKey(state?.state);
+        return ["open", "opening", "closing"].includes(key);
+      }
+      _getSettledPositionFallback(state = this._getState()) {
+        const key = normalizeTextKey(state?.state);
+        if (key === "open") {
+          return 100;
+        }
+        if (key === "closed") {
+          return 0;
+        }
+        return null;
+      }
+      _getCommandablePosition(state = this._getState()) {
+        const position = parseNumber(state?.attributes?.current_position);
+        if (position !== null) {
+          return position;
+        }
+        return this._getSettledPositionFallback(state);
+      }
+      _coverCardUi(key, fallback = "") {
+        const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+        const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+        const pack = window.NodaliaI18n?.strings?.(lang)?.coverCard;
+        const enPack = window.NodaliaI18n?.strings?.("en")?.coverCard;
+        const raw = pack?.[key] ?? enPack?.[key];
+        return String(raw != null && raw !== "" ? raw : fallback);
+      }
+      _coverTiltChipText(tiltValue) {
+        const tpl = this._coverCardUi("tiltChip", "Tilt {value}%");
+        return tpl.replace(/\{value\}/g, String(Math.round(Number(tiltValue) || 0)));
+      }
+      _stateLabel(state = this._getState()) {
+        const key = normalizeTextKey(state?.state);
+        const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+        const lang = this._config?.language ?? "auto";
+        const translated = window.NodaliaI18n?.translateEntityStateChip?.(hass, lang, key);
+        if (translated) {
+          return translated;
+        }
+        return String(state?.state || window.NodaliaI18n?.translateEntityStateChip?.(hass, lang, "unknown") || "Unknown");
+      }
+      _getName(state = this._getState()) {
+        return this._config?.name || state?.attributes?.friendly_name || this._config?.entity || "Cover";
+      }
+      _getIcon(state = this._getState()) {
+        return this._config?.icon || state?.attributes?.icon || coverDeviceIcon(state);
+      }
+      _getAccentColor(state = this._getState()) {
+        const styles = this._config?.styles || DEFAULT_CONFIG.styles;
+        return this._isActive(state) ? styles.icon.on_color || DEFAULT_CONFIG.styles.icon.on_color : styles.icon.off_color || DEFAULT_CONFIG.styles.icon.off_color;
+      }
+      _getAnimationSettings() {
+        const animations = this._config?.animations || DEFAULT_CONFIG.animations;
+        return {
+          enabled: animations.enabled !== false,
+          iconAnimation: animations.icon_animation !== false,
+          powerDuration: clamp(Number(animations.power_duration) || DEFAULT_CONFIG.animations.power_duration, 120, 4e3),
+          controlsDuration: clamp(Number(animations.controls_duration) || DEFAULT_CONFIG.animations.controls_duration, 120, 2400),
+          buttonBounceDuration: clamp(Number(animations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration, 120, 1200)
+        };
+      }
+      _isCompactLayout() {
+        return window.NodaliaUtils.shouldUseCompactCardLayout({
+          mode: this._config?.compact_layout_mode,
+          width: Math.round(this._cardWidth || this.clientWidth || 0),
+          gridColumns: this._getConfiguredGridColumns()
+        });
+      }
+      _shouldShowCompactTitle() {
+        return window.NodaliaUtils.shouldShowCompactCardTitle({
+          width: Math.round(this._cardWidth || this.clientWidth || 0)
+        });
+      }
+      _renderEmptyState() {
+        const title = escapeHtml(this._coverCardUi("emptyTitle", "Nodalia Cover Card"));
+        const body = escapeHtml(this._coverCardUi("emptyBody", "Set `entity` to a `cover.*` entity to show this card."));
+        return `
       <ha-card class="cover-card cover-card--empty">
         <div class="cover-card__empty-title">${title}</div>
         <div class="cover-card__empty-text">${body}</div>
       </ha-card>
     `;
-    }
-    _triggerHaptic(styleOverride = null) {
-      const haptics = this._config?.haptics || {};
-      if (haptics.enabled !== true) return;
-      const style = styleOverride || haptics.style || "medium";
-      fireEvent(this, "haptic", style);
-      if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
-        navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
       }
-    }
-    _triggerButtonBounce(element) {
-      if (!(element instanceof HTMLElement)) return;
-      const animations = this._getAnimationSettings();
-      if (!animations.enabled) return;
-      element.classList.remove("is-pressing");
-      element.getBoundingClientRect();
-      element.classList.add("is-pressing");
-      const schedule = window.NodaliaUtils?.scheduleDeferTimer;
-      const done = () => {
-        if (!element.isConnected) {
-          return;
+      _triggerHaptic(styleOverride = null) {
+        const haptics = this._config?.haptics || {};
+        if (haptics.enabled !== true) return;
+        const style = styleOverride || haptics.style || "medium";
+        fireEvent(this, "haptic", style);
+        if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
+          navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
         }
+      }
+      _triggerButtonBounce(element) {
+        if (!(element instanceof HTMLElement)) return;
+        const animations = this._getAnimationSettings();
+        if (!animations.enabled) return;
         element.classList.remove("is-pressing");
-      };
-      if (typeof schedule === "function") {
-        schedule(this, done, animations.buttonBounceDuration + 40);
-      } else {
-        window.setTimeout(done, animations.buttonBounceDuration + 40);
-      }
-    }
-    _isServiceAllowed(serviceValue) {
-      const security = this._config?.security || {};
-      if (security.strict_service_actions === false) {
-        return true;
-      }
-      const normalizedService = String(serviceValue || "").trim().toLowerCase();
-      if (!normalizedService || !normalizedService.includes(".")) {
-        return false;
-      }
-      const [domain] = normalizedService.split(".");
-      const domains = Array.isArray(security.allowed_service_domains) ? security.allowed_service_domains.map((item) => String(item || "").trim().toLowerCase()).filter(Boolean) : [];
-      const services = Array.isArray(security.allowed_services) ? security.allowed_services.map((item) => String(item || "").trim().toLowerCase()).filter(Boolean) : [];
-      if (!domains.length && !services.length) {
-        return false;
-      }
-      return services.includes(normalizedService) || domains.includes(domain);
-    }
-    _callNamedService(service, data = {}, target = null) {
-      if (!this._hass || !service) return;
-      if (!this._isServiceAllowed(service)) {
-        window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Cover Card", service);
-        return;
-      }
-      const [domain, serviceName] = String(service || "").split(".");
-      if (!domain || !serviceName) return;
-      const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils) || ((host, hass, svcDomain, svc, payload, svcTarget) => Promise.resolve(
-        svcTarget != null ? hass?.callService?.(svcDomain, svc, payload, svcTarget) : hass?.callService?.(svcDomain, svc, payload)
-      ));
-      invoke(this, this._hass, domain, serviceName, data, target);
-    }
-    _callCover(service, data = {}) {
-      if (!this._hass || !this._config?.entity) return;
-      this._hass.callService("cover", service, { entity_id: this._config.entity, ...data });
-    }
-    _openMoreInfo(entityId = this._config?.entity) {
-      if (entityId) fireEvent(this, "hass-more-info", { entityId });
-    }
-    _navigate(url, newTab = false) {
-      const safeUrl = window.NodaliaUtils?.sanitizeActionUrl?.(url, { allowRelative: true }) || "";
-      if (!safeUrl) return;
-      if (newTab) {
-        window.open(safeUrl, "_blank", "noopener,noreferrer");
-        return;
-      }
-      if (/^(?:https?:)?\/\//i.test(safeUrl)) {
-        window.open(safeUrl, "_self", "noopener,noreferrer");
-        return;
-      }
-      window.history.pushState(null, "", safeUrl);
-      window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } }));
-    }
-    _toggleCover(state = this._getState()) {
-      const key = normalizeTextKey(state?.state);
-      if (["open", "opening"].includes(key)) {
-        this._callCover("close_cover");
-        return;
-      }
-      this._callCover("open_cover");
-    }
-    _resolveTapAction(zone) {
-      const bodyRaw = this._config?.tap_action ?? "toggle";
-      const iconRaw = this._config?.icon_tap_action;
-      const raw = zone === "icon" && String(iconRaw ?? "").trim() ? iconRaw : bodyRaw;
-      let action = String(raw || "toggle").trim().toLowerCase();
-      const allowed = /* @__PURE__ */ new Set(["auto", "toggle", "more-info", "service", "url", "navigate", "none"]);
-      if (!allowed.has(action)) {
-        action = "toggle";
-      }
-      if (action === "auto") {
-        const isIcon = zone === "icon";
-        const service = isIcon ? this._config?.icon_tap_service : this._config?.tap_service;
-        const navigationPath = isIcon ? this._config?.icon_navigation_path : this._config?.navigation_path;
-        const url = isIcon ? this._config?.icon_tap_url : this._config?.tap_url;
-        if (String(service || "").trim()) {
-          return "service";
-        }
-        if (String(navigationPath || "").trim()) {
-          return "navigate";
-        }
-        if (String(url || "").trim()) {
-          return "url";
-        }
-        return "toggle";
-      }
-      return action;
-    }
-    _resolveHoldAction(zone) {
-      const bodyRaw = this._config?.hold_action ?? "none";
-      const iconRaw = this._config?.icon_hold_action;
-      const raw = zone === "icon" && String(iconRaw ?? "").trim() ? iconRaw : bodyRaw;
-      let action = String(raw || "none").trim().toLowerCase();
-      const allowed = /* @__PURE__ */ new Set(["auto", "toggle", "more-info", "service", "url", "navigate", "none"]);
-      if (!allowed.has(action)) {
-        action = "none";
-      }
-      if (action === "auto") {
-        const isIcon = zone === "icon";
-        const service = isIcon ? this._config?.icon_hold_service : this._config?.hold_service;
-        const navigationPath = isIcon ? this._config?.icon_hold_navigation_path : this._config?.hold_navigation_path;
-        const url = isIcon ? this._config?.icon_hold_url : this._config?.hold_url;
-        if (String(service || "").trim()) {
-          return "service";
-        }
-        if (String(navigationPath || "").trim()) {
-          return "navigate";
-        }
-        if (String(url || "").trim()) {
-          return "url";
-        }
-        return "more-info";
-      }
-      return action;
-    }
-    _runAction(zone, interaction = "tap", resolvedAction = null) {
-      const isIcon = zone === "icon";
-      const isHold = interaction === "hold";
-      const action = resolvedAction || (isHold ? this._resolveHoldAction(zone) : this._resolveTapAction(zone));
-      if (action === "none") return;
-      if (action === "more_info" || action === "more-info") {
-        this._openMoreInfo();
-        return;
-      }
-      if (action === "url") {
-        let url = isHold ? isIcon ? this._config?.icon_hold_url : this._config?.hold_url : isIcon ? this._config?.icon_tap_url : this._config?.tap_url;
-        let newTab = isHold ? isIcon ? this._config?.icon_hold_new_tab === true : this._config?.hold_new_tab === true : isIcon ? this._config?.icon_tap_new_tab === true : this._config?.tap_new_tab === true;
-        if (isHold && isIcon && !String(url || "").trim()) {
-          url = this._config?.hold_url;
-          newTab = this._config?.hold_new_tab === true;
-        }
-        this._navigate(url, newTab);
-        return;
-      }
-      if (action === "navigate") {
-        let path = isHold ? isIcon ? this._config?.icon_hold_navigation_path : this._config?.hold_navigation_path : isIcon ? this._config?.icon_navigation_path : this._config?.navigation_path;
-        if (isHold && isIcon && !String(path || "").trim()) {
-          path = this._config?.hold_navigation_path;
-        }
-        this._navigate(path, false);
-        return;
-      }
-      if (action === "service") {
-        let service = isHold ? isIcon ? this._config?.icon_hold_service : this._config?.hold_service : isIcon ? this._config?.icon_tap_service : this._config?.tap_service;
-        let dataRaw = isHold ? isIcon ? this._config?.icon_hold_service_data : this._config?.hold_service_data : isIcon ? this._config?.icon_tap_service_data : this._config?.tap_service_data;
-        let targetRaw = isHold ? isIcon ? this._config?.icon_hold_service_target : this._config?.hold_service_target : isIcon ? this._config?.icon_tap_service_target : this._config?.tap_service_target;
-        if (isHold && isIcon && !String(service || "").trim()) {
-          service = this._config?.hold_service;
-          dataRaw = this._config?.hold_service_data;
-          targetRaw = this._config?.hold_service_target;
-        }
-        const data = parseServiceData(dataRaw);
-        const target = parseServiceData(targetRaw);
-        const hasExplicitTarget = Object.keys(target).length > 0;
-        if (this._config?.entity && data.entity_id === void 0 && !hasExplicitTarget) {
-          data.entity_id = this._config.entity;
-        }
-        this._callNamedService(service, data, hasExplicitTarget ? target : null);
-        return;
-      }
-      this._toggleCover();
-    }
-    _onShadowClick(event) {
-      const path = event.composedPath();
-      const slider = path.find((node) => node instanceof HTMLInputElement && node.dataset?.coverControl);
-      if (slider) return;
-      const button = path.find((node) => node instanceof HTMLElement && node.dataset?.coverAction);
-      if (!button) return;
-      event.preventDefault();
-      event.stopPropagation();
-      const coverAction = button.dataset.coverAction;
-      if (this._isCardTapAction(coverAction)) {
-        if (coverAction === "body" || coverAction === "icon") {
-          if (coverAction === "body" && window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
+        element.getBoundingClientRect();
+        element.classList.add("is-pressing");
+        const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+        const done = () => {
+          if (!element.isConnected) {
             return;
           }
-          if (this._suppressNextCoverTap) {
-            this._suppressNextCoverTap = false;
-            return;
-          }
-          this._triggerHaptic();
-          this._runAction(coverAction);
-        }
-        return;
-      }
-      this._triggerHaptic();
-      this._triggerButtonBounce(button);
-      switch (coverAction) {
-        case "toggle_controls_view":
-          this._coverControlsViewMode = this._coverControlsViewMode === "arrows" ? "slider" : "arrows";
-          this._syncCoverControlsViewDom();
-          break;
-        case "open":
-          this._callCover("open_cover");
-          break;
-        case "close":
-          this._callCover("close_cover");
-          break;
-        case "stop":
-          this._callCover("stop_cover");
-          break;
-        default:
-          break;
-      }
-    }
-    _isCardTapAction(action) {
-      return action === "body" || action === "icon";
-    }
-    _syncCoverControlsViewDom() {
-      const root = this.shadowRoot;
-      if (!root) {
-        return;
-      }
-      const card = root.querySelector("ha-card.fan-card");
-      const toggleButton = root.querySelector('[data-cover-action="toggle_controls_view"]');
-      if (!card || !toggleButton) {
-        return;
-      }
-      const isArrows = this._coverControlsViewMode === "arrows";
-      card.classList.remove("fan-card--cover-ui-arrows", "fan-card--cover-ui-slider");
-      card.classList.add(isArrows ? "fan-card--cover-ui-arrows" : "fan-card--cover-ui-slider");
-      const slidersView = root.querySelector(".fan-card__view--sliders");
-      const arrowsView = root.querySelector(".fan-card__view--arrows");
-      if (slidersView) {
-        if (isArrows) {
-          slidersView.setAttribute("aria-hidden", "true");
+          element.classList.remove("is-pressing");
+        };
+        if (typeof schedule === "function") {
+          schedule(this, done, animations.buttonBounceDuration + 40);
         } else {
-          slidersView.removeAttribute("aria-hidden");
+          window.setTimeout(done, animations.buttonBounceDuration + 40);
         }
       }
-      if (arrowsView) {
-        if (isArrows) {
-          arrowsView.removeAttribute("aria-hidden");
-        } else {
-          arrowsView.setAttribute("aria-hidden", "true");
+      _isServiceAllowed(serviceValue) {
+        const security = this._config?.security || {};
+        if (security.strict_service_actions === false) {
+          return true;
         }
-      }
-      const tToggleToArrows = this._coverCardUi("toggleShowButtons", "Show open, stop, and close");
-      const tToggleToSliders = this._coverCardUi("toggleShowSliders", "Show sliders");
-      const toggleLabel = isArrows ? tToggleToSliders : tToggleToArrows;
-      toggleButton.classList.toggle("fan-card__control--active", isArrows);
-      toggleButton.setAttribute("aria-label", toggleLabel);
-      toggleButton.setAttribute("title", toggleLabel);
-      const toggleIcon = toggleButton.querySelector("ha-icon");
-      if (toggleIcon) {
-        toggleIcon.setAttribute("icon", isArrows ? "mdi:pan-horizontal" : "mdi:tune-variant");
-      }
-      this._syncCoverControlsToggleLaneDom();
-    }
-    _syncCoverControlsToggleLaneDom() {
-      const root = this.shadowRoot;
-      if (!root) {
-        return;
-      }
-      const card = root.querySelector("ha-card.fan-card");
-      if (!card) {
-        return;
-      }
-      const reserveToggleLane = this._shouldReserveCoverToggleLane();
-      card.classList.toggle(
-        "fan-card--cover-ui-toggle-lane",
-        this._coverControlsViewMode === "arrows" && reserveToggleLane
-      );
-    }
-    _onPointerDown(event) {
-      const path = event.composedPath();
-      const slider = path.find(
-        (node) => node instanceof HTMLInputElement && node.type === "range" && node.dataset?.coverControl
-      );
-      if (!this._activeSliderDrag && slider && (typeof event.button !== "number" || event.button === 0)) {
-        this._startSliderDrag(slider, event.clientX, event, event.pointerId);
-        return;
-      }
-      if (this._activeSliderDrag || typeof event.button === "number" && event.button !== 0) {
-        return;
-      }
-      const controlAction = path.find(
-        (node) => node instanceof HTMLElement && node.dataset?.coverAction && node.dataset.coverAction !== "body"
-      );
-      if (controlAction) {
-        return;
-      }
-      const dial = path.find((node) => node instanceof HTMLElement && node.classList?.contains("fan-card__circular-dial"));
-      if (!dial || !this._canSetPosition(this._getState())) {
-        return;
-      }
-      this._startCircularDialDrag(dial, event.clientX, event.clientY, event, event.pointerId);
-    }
-    _onMouseDown(event) {
-      const path = event.composedPath();
-      const slider = path.find(
-        (node) => node instanceof HTMLInputElement && node.type === "range" && node.dataset?.coverControl
-      );
-      if (!this._activeSliderDrag && slider && event.button === 0) {
-        this._startSliderDrag(slider, event.clientX, event);
-        return;
-      }
-      if (this._activeSliderDrag || event.button !== 0) {
-        return;
-      }
-      const controlAction = path.find(
-        (node) => node instanceof HTMLElement && node.dataset?.coverAction && node.dataset.coverAction !== "body"
-      );
-      if (controlAction) {
-        return;
-      }
-      const dial = path.find((node) => node instanceof HTMLElement && node.classList?.contains("fan-card__circular-dial"));
-      if (!dial || !this._canSetPosition(this._getState())) {
-        return;
-      }
-      this._startCircularDialDrag(dial, event.clientX, event.clientY, event);
-    }
-    _onTouchStart(event) {
-      const path = event.composedPath();
-      const slider = path.find(
-        (node) => node instanceof HTMLInputElement && node.type === "range" && node.dataset?.coverControl
-      );
-      if (!this._activeSliderDrag && slider && event.touches?.length) {
-        this._startSliderDrag(slider, event.touches[0].clientX, event);
-        return;
-      }
-      if (this._activeSliderDrag || !event.touches?.length) {
-        return;
-      }
-      const controlAction = path.find(
-        (node) => node instanceof HTMLElement && node.dataset?.coverAction && node.dataset.coverAction !== "body"
-      );
-      if (controlAction) {
-        return;
-      }
-      const dial = path.find((node) => node instanceof HTMLElement && node.classList?.contains("fan-card__circular-dial"));
-      if (!dial || !this._canSetPosition(this._getState())) {
-        return;
-      }
-      this._startCircularDialDrag(dial, event.touches[0].clientX, event.touches[0].clientY, event);
-    }
-    _canSetPosition(state = this._getState()) {
-      return this._config?.show_position_slider !== false && this._supports(COVER_FEATURES.SET_POSITION, state);
-    }
-    _getDisplayPosition(state = this._getState()) {
-      return this._getCommandablePosition(state) ?? 0;
-    }
-    _updatePositionPreview(value) {
-      const nextValue = clamp(Math.round(Number(value)), 0, 100);
-      if (!Number.isFinite(nextValue)) {
-        return;
-      }
-      const slider = this.shadowRoot?.querySelector('.fan-card__slider[data-cover-control="position"]');
-      if (slider instanceof HTMLInputElement) {
-        slider.value = String(nextValue);
-        slider.style.setProperty("--percentage", String(nextValue));
-        slider.closest(".fan-card__slider-shell")?.style.setProperty("--percentage", String(nextValue));
-      }
-      const dial = this.shadowRoot?.querySelector(".fan-card__circular-dial");
-      if (dial instanceof HTMLElement) {
-        const model = getCircularLayoutDialModel(nextValue, 0, 100);
-        dial.style.setProperty("--circular-progress", String(model.progress));
-        dial.style.setProperty("--circular-marker-left", `${model.markerLeft}%`);
-        dial.style.setProperty("--circular-marker-top", `${model.markerTop}%`);
-      }
-      this.shadowRoot?.querySelectorAll('[data-cover-chip="position"]').forEach((chip) => {
-        if (chip instanceof HTMLElement) {
-          chip.textContent = `${nextValue}%`;
+        const normalizedService = String(serviceValue || "").trim().toLowerCase();
+        if (!normalizedService || !normalizedService.includes(".")) {
+          return false;
         }
-      });
-    }
-    _getCircularDialStep() {
-      return 5;
-    }
-    _hapticOnPositionStep(steppedValue, { commit = false } = {}) {
-      if (this._config?.haptics?.scrolls?.position === false) {
-        return;
+        const [domain] = normalizedService.split(".");
+        const domains = Array.isArray(security.allowed_service_domains) ? security.allowed_service_domains.map((item) => String(item || "").trim().toLowerCase()).filter(Boolean) : [];
+        const services = Array.isArray(security.allowed_services) ? security.allowed_services.map((item) => String(item || "").trim().toLowerCase()).filter(Boolean) : [];
+        if (!domains.length && !services.length) {
+          return false;
+        }
+        return services.includes(normalizedService) || domains.includes(domain);
       }
-      const next = Number(steppedValue);
-      if (!Number.isFinite(next)) {
-        return;
-      }
-      const drag = this._activeSliderDrag;
-      if (drag) {
-        if (drag.lastHapticValue === next) {
+      _callNamedService(service, data = {}, target = null) {
+        if (!this._hass || !service) return;
+        if (!this._isServiceAllowed(service)) {
+          window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Cover Card", service);
           return;
         }
-        drag.lastHapticValue = next;
-        this._triggerHaptic("selection");
-        return;
+        const [domain, serviceName] = String(service || "").split(".");
+        if (!domain || !serviceName) return;
+        const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils) || ((host, hass, svcDomain, svc, payload, svcTarget) => Promise.resolve(
+          svcTarget != null ? hass?.callService?.(svcDomain, svc, payload, svcTarget) : hass?.callService?.(svcDomain, svc, payload)
+        ));
+        invoke(this, this._hass, domain, serviceName, data, target);
       }
-      if (commit) {
-        this._triggerHaptic("selection");
+      _callCover(service, data = {}) {
+        if (!this._hass || !this._config?.entity) return;
+        this._hass.callService("cover", service, { entity_id: this._config.entity, ...data });
       }
-    }
-    _applyCircularDialValue(value, options = {}) {
-      const commit = options.commit === true;
-      const nextValue = clamp(Math.round(Number(value)), 0, 100);
-      if (!Number.isFinite(nextValue)) {
-        return;
+      _openMoreInfo(entityId = this._config?.entity) {
+        if (entityId) fireEvent(this, "hass-more-info", { entityId });
       }
-      this._updatePositionPreview(nextValue);
-      this._hapticOnPositionStep(nextValue, { commit });
-      if (commit) {
-        this._callCover("set_cover_position", { position: nextValue });
+      _navigate(url, newTab = false) {
+        const safeUrl = window.NodaliaUtils?.sanitizeActionUrl?.(url, { allowRelative: true }) || "";
+        if (!safeUrl) return;
+        if (newTab) {
+          window.open(safeUrl, "_blank", "noopener,noreferrer");
+          return;
+        }
+        if (/^(?:https?:)?\/\//i.test(safeUrl)) {
+          window.open(safeUrl, "_self", "noopener,noreferrer");
+          return;
+        }
+        window.history.pushState(null, "", safeUrl);
+        window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } }));
       }
-    }
-    _startCircularDialDrag(dial, clientX, clientY, event = null, pointerId = null) {
-      if (!(dial instanceof HTMLElement)) {
-        return;
+      _toggleCover(state = this._getState()) {
+        const key = normalizeTextKey(state?.state);
+        if (["open", "opening"].includes(key)) {
+          this._callCover("close_cover");
+          return;
+        }
+        this._callCover("open_cover");
       }
-      const state = this._getState();
-      if (!state || !this._canSetPosition(state)) {
-        return;
+      _resolveTapAction(zone) {
+        const bodyRaw = this._config?.tap_action ?? "toggle";
+        const iconRaw = this._config?.icon_tap_action;
+        const raw = zone === "icon" && String(iconRaw ?? "").trim() ? iconRaw : bodyRaw;
+        let action = String(raw || "toggle").trim().toLowerCase();
+        const allowed = /* @__PURE__ */ new Set(["auto", "toggle", "more-info", "service", "url", "navigate", "none"]);
+        if (!allowed.has(action)) {
+          action = "toggle";
+        }
+        if (action === "auto") {
+          const isIcon = zone === "icon";
+          const service = isIcon ? this._config?.icon_tap_service : this._config?.tap_service;
+          const navigationPath = isIcon ? this._config?.icon_navigation_path : this._config?.navigation_path;
+          const url = isIcon ? this._config?.icon_tap_url : this._config?.tap_url;
+          if (String(service || "").trim()) {
+            return "service";
+          }
+          if (String(navigationPath || "").trim()) {
+            return "navigate";
+          }
+          if (String(url || "").trim()) {
+            return "url";
+          }
+          return "toggle";
+        }
+        return action;
       }
-      const seedValue = this._getCommandablePosition(state);
-      if (seedValue === null) {
-        return;
+      _resolveHoldAction(zone) {
+        const bodyRaw = this._config?.hold_action ?? "none";
+        const iconRaw = this._config?.icon_hold_action;
+        const raw = zone === "icon" && String(iconRaw ?? "").trim() ? iconRaw : bodyRaw;
+        let action = String(raw || "none").trim().toLowerCase();
+        const allowed = /* @__PURE__ */ new Set(["auto", "toggle", "more-info", "service", "url", "navigate", "none"]);
+        if (!allowed.has(action)) {
+          action = "none";
+        }
+        if (action === "auto") {
+          const isIcon = zone === "icon";
+          const service = isIcon ? this._config?.icon_hold_service : this._config?.hold_service;
+          const navigationPath = isIcon ? this._config?.icon_hold_navigation_path : this._config?.hold_navigation_path;
+          const url = isIcon ? this._config?.icon_hold_url : this._config?.hold_url;
+          if (String(service || "").trim()) {
+            return "service";
+          }
+          if (String(navigationPath || "").trim()) {
+            return "navigate";
+          }
+          if (String(url || "").trim()) {
+            return "url";
+          }
+          return "more-info";
+        }
+        return action;
       }
-      const step = this._getCircularDialStep();
-      this._activeSliderDrag = {
-        kind: "circular",
-        dial,
-        geometry: dial.getBoundingClientRect(),
-        range: { min: 0, max: 100 },
-        step,
-        pointerId,
-        lastValue: seedValue,
-        lastClientY: clientY,
-        lastHapticValue: Math.round(seedValue)
-      };
-      dial.classList.add("is-dragging");
-      this._attachWindowDragListeners();
-      if (event) {
+      _runAction(zone, interaction = "tap", resolvedAction = null) {
+        const isIcon = zone === "icon";
+        const isHold = interaction === "hold";
+        const action = resolvedAction || (isHold ? this._resolveHoldAction(zone) : this._resolveTapAction(zone));
+        if (action === "none") return;
+        if (action === "more_info" || action === "more-info") {
+          this._openMoreInfo();
+          return;
+        }
+        if (action === "url") {
+          let url = isHold ? isIcon ? this._config?.icon_hold_url : this._config?.hold_url : isIcon ? this._config?.icon_tap_url : this._config?.tap_url;
+          let newTab = isHold ? isIcon ? this._config?.icon_hold_new_tab === true : this._config?.hold_new_tab === true : isIcon ? this._config?.icon_tap_new_tab === true : this._config?.tap_new_tab === true;
+          if (isHold && isIcon && !String(url || "").trim()) {
+            url = this._config?.hold_url;
+            newTab = this._config?.hold_new_tab === true;
+          }
+          this._navigate(url, newTab);
+          return;
+        }
+        if (action === "navigate") {
+          let path = isHold ? isIcon ? this._config?.icon_hold_navigation_path : this._config?.hold_navigation_path : isIcon ? this._config?.icon_navigation_path : this._config?.navigation_path;
+          if (isHold && isIcon && !String(path || "").trim()) {
+            path = this._config?.hold_navigation_path;
+          }
+          this._navigate(path, false);
+          return;
+        }
+        if (action === "service") {
+          let service = isHold ? isIcon ? this._config?.icon_hold_service : this._config?.hold_service : isIcon ? this._config?.icon_tap_service : this._config?.tap_service;
+          let dataRaw = isHold ? isIcon ? this._config?.icon_hold_service_data : this._config?.hold_service_data : isIcon ? this._config?.icon_tap_service_data : this._config?.tap_service_data;
+          let targetRaw = isHold ? isIcon ? this._config?.icon_hold_service_target : this._config?.hold_service_target : isIcon ? this._config?.icon_tap_service_target : this._config?.tap_service_target;
+          if (isHold && isIcon && !String(service || "").trim()) {
+            service = this._config?.hold_service;
+            dataRaw = this._config?.hold_service_data;
+            targetRaw = this._config?.hold_service_target;
+          }
+          const data = parseServiceData(dataRaw);
+          const target = parseServiceData(targetRaw);
+          const hasExplicitTarget = Object.keys(target).length > 0;
+          if (this._config?.entity && data.entity_id === void 0 && !hasExplicitTarget) {
+            data.entity_id = this._config.entity;
+          }
+          this._callNamedService(service, data, hasExplicitTarget ? target : null);
+          return;
+        }
+        this._toggleCover();
+      }
+      _onShadowClick(event) {
+        const path = event.composedPath();
+        const slider = path.find((node) => node instanceof HTMLInputElement && node.dataset?.coverControl);
+        if (slider) return;
+        const button = path.find((node) => node instanceof HTMLElement && node.dataset?.coverAction);
+        if (!button) return;
         event.preventDefault();
         event.stopPropagation();
+        const coverAction = button.dataset.coverAction;
+        if (this._isCardTapAction(coverAction)) {
+          if (coverAction === "body" || coverAction === "icon") {
+            if (coverAction === "body" && window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
+              return;
+            }
+            if (this._suppressNextCoverTap) {
+              this._suppressNextCoverTap = false;
+              return;
+            }
+            this._triggerHaptic();
+            this._runAction(coverAction);
+          }
+          return;
+        }
+        this._triggerHaptic();
+        this._triggerButtonBounce(button);
+        switch (coverAction) {
+          case "toggle_controls_view":
+            this._coverControlsViewMode = this._coverControlsViewMode === "arrows" ? "slider" : "arrows";
+            this._syncCoverControlsViewDom();
+            break;
+          case "open":
+            this._callCover("open_cover");
+            break;
+          case "close":
+            this._callCover("close_cover");
+            break;
+          case "stop":
+            this._callCover("stop_cover");
+            break;
+          default:
+            break;
+        }
       }
-      const nextValue = getCircularLayoutDialValueFromPoint(
-        dial,
-        clientX,
-        clientY,
-        this._activeSliderDrag.range,
-        step,
-        seedValue,
-        this._activeSliderDrag.geometry
-      );
-      this._activeSliderDrag.lastValue = nextValue;
-      this._applyCircularDialValue(nextValue, { commit: false });
-    }
-    _startSliderDrag(slider, clientX, event = null, pointerId = null) {
-      if (!slider) return;
-      this._activeSliderDrag = {
-        kind: "linear",
-        pointerId,
-        slider,
-        geometry: getSliderDragGeometry(slider)
-      };
-      this._attachWindowDragListeners();
-      if (event) {
-        event.preventDefault();
-        event.stopPropagation();
+      _isCardTapAction(action) {
+        return action === "body" || action === "icon";
       }
-      const nextValue = getRangeValueFromGeometry(this._activeSliderDrag.geometry, slider.value, clientX);
-      slider.value = String(nextValue);
-      this._applySliderValue(slider, nextValue, { commit: false });
-    }
-    _queueSliderDragUpdate(slider, clientX, clientY = null) {
-      const drag = this._activeSliderDrag;
-      if (drag?.kind === "circular") {
-        const nextValue2 = getCircularLayoutDialValueFromPoint(
-          drag.dial,
-          clientX,
-          clientY ?? drag.lastClientY,
-          drag.range,
-          drag.step,
-          drag.lastValue,
-          drag.geometry
+      _syncCoverControlsViewDom() {
+        const root = this.shadowRoot;
+        if (!root) {
+          return;
+        }
+        const card = root.querySelector("ha-card.fan-card");
+        const toggleButton = root.querySelector('[data-cover-action="toggle_controls_view"]');
+        if (!card || !toggleButton) {
+          return;
+        }
+        const isArrows = this._coverControlsViewMode === "arrows";
+        card.classList.remove("fan-card--cover-ui-arrows", "fan-card--cover-ui-slider");
+        card.classList.add(isArrows ? "fan-card--cover-ui-arrows" : "fan-card--cover-ui-slider");
+        const slidersView = root.querySelector(".fan-card__view--sliders");
+        const arrowsView = root.querySelector(".fan-card__view--arrows");
+        if (slidersView) {
+          if (isArrows) {
+            slidersView.setAttribute("aria-hidden", "true");
+          } else {
+            slidersView.removeAttribute("aria-hidden");
+          }
+        }
+        if (arrowsView) {
+          if (isArrows) {
+            arrowsView.removeAttribute("aria-hidden");
+          } else {
+            arrowsView.setAttribute("aria-hidden", "true");
+          }
+        }
+        const tToggleToArrows = this._coverCardUi("toggleShowButtons", "Show open, stop, and close");
+        const tToggleToSliders = this._coverCardUi("toggleShowSliders", "Show sliders");
+        const toggleLabel = isArrows ? tToggleToSliders : tToggleToArrows;
+        toggleButton.classList.toggle("fan-card__control--active", isArrows);
+        toggleButton.setAttribute("aria-label", toggleLabel);
+        toggleButton.setAttribute("title", toggleLabel);
+        const toggleIcon = toggleButton.querySelector("ha-icon");
+        if (toggleIcon) {
+          toggleIcon.setAttribute("icon", isArrows ? "mdi:pan-horizontal" : "mdi:tune-variant");
+        }
+        this._syncCoverControlsToggleLaneDom();
+      }
+      _syncCoverControlsToggleLaneDom() {
+        const root = this.shadowRoot;
+        if (!root) {
+          return;
+        }
+        const card = root.querySelector("ha-card.fan-card");
+        if (!card) {
+          return;
+        }
+        const reserveToggleLane = this._shouldReserveCoverToggleLane();
+        card.classList.toggle(
+          "fan-card--cover-ui-toggle-lane",
+          this._coverControlsViewMode === "arrows" && reserveToggleLane
         );
-        drag.lastValue = nextValue2;
-        drag.lastClientY = clientY ?? drag.lastClientY;
-        this._applyCircularDialValue(nextValue2, { commit: false });
-        return;
       }
-      const nextValue = getRangeValueFromGeometry(drag?.geometry, slider.value, clientX);
-      slider.value = String(nextValue);
-      this._applySliderValue(slider, nextValue, { commit: false });
-    }
-    _commitSliderDrag(clientX, event = null, pointerId = null, clientY = null) {
-      const drag = this._activeSliderDrag;
-      if (!drag || pointerId !== null && drag.pointerId !== pointerId) return;
-      if (event) {
-        event.preventDefault();
-      }
-      if (drag.kind === "circular") {
-        const nextValue2 = getCircularLayoutDialValueFromPoint(
-          drag.dial,
-          clientX,
-          clientY ?? drag.lastClientY,
-          drag.range,
-          drag.step,
-          drag.lastValue,
-          drag.geometry
+      _onPointerDown(event) {
+        const path = event.composedPath();
+        const slider = path.find(
+          (node) => node instanceof HTMLInputElement && node.type === "range" && node.dataset?.coverControl
         );
-        drag.dial?.classList?.remove("is-dragging");
-        this._applyCircularDialValue(nextValue2, { commit: true });
+        if (!this._activeSliderDrag && slider && (typeof event.button !== "number" || event.button === 0)) {
+          this._startSliderDrag(slider, event.clientX, event, event.pointerId);
+          return;
+        }
+        if (this._activeSliderDrag || typeof event.button === "number" && event.button !== 0) {
+          return;
+        }
+        const controlAction = path.find(
+          (node) => node instanceof HTMLElement && node.dataset?.coverAction && node.dataset.coverAction !== "body"
+        );
+        if (controlAction) {
+          return;
+        }
+        const dial = path.find((node) => node instanceof HTMLElement && node.classList?.contains("fan-card__circular-dial"));
+        if (!dial || !this._canSetPosition(this._getState())) {
+          return;
+        }
+        this._startCircularDialDrag(dial, event.clientX, event.clientY, event, event.pointerId);
+      }
+      _onMouseDown(event) {
+        const path = event.composedPath();
+        const slider = path.find(
+          (node) => node instanceof HTMLInputElement && node.type === "range" && node.dataset?.coverControl
+        );
+        if (!this._activeSliderDrag && slider && event.button === 0) {
+          this._startSliderDrag(slider, event.clientX, event);
+          return;
+        }
+        if (this._activeSliderDrag || event.button !== 0) {
+          return;
+        }
+        const controlAction = path.find(
+          (node) => node instanceof HTMLElement && node.dataset?.coverAction && node.dataset.coverAction !== "body"
+        );
+        if (controlAction) {
+          return;
+        }
+        const dial = path.find((node) => node instanceof HTMLElement && node.classList?.contains("fan-card__circular-dial"));
+        if (!dial || !this._canSetPosition(this._getState())) {
+          return;
+        }
+        this._startCircularDialDrag(dial, event.clientX, event.clientY, event);
+      }
+      _onTouchStart(event) {
+        const path = event.composedPath();
+        const slider = path.find(
+          (node) => node instanceof HTMLInputElement && node.type === "range" && node.dataset?.coverControl
+        );
+        if (!this._activeSliderDrag && slider && event.touches?.length) {
+          this._startSliderDrag(slider, event.touches[0].clientX, event);
+          return;
+        }
+        if (this._activeSliderDrag || !event.touches?.length) {
+          return;
+        }
+        const controlAction = path.find(
+          (node) => node instanceof HTMLElement && node.dataset?.coverAction && node.dataset.coverAction !== "body"
+        );
+        if (controlAction) {
+          return;
+        }
+        const dial = path.find((node) => node instanceof HTMLElement && node.classList?.contains("fan-card__circular-dial"));
+        if (!dial || !this._canSetPosition(this._getState())) {
+          return;
+        }
+        this._startCircularDialDrag(dial, event.touches[0].clientX, event.touches[0].clientY, event);
+      }
+      _canSetPosition(state = this._getState()) {
+        return this._config?.show_position_slider !== false && this._supports(COVER_FEATURES.SET_POSITION, state);
+      }
+      _getDisplayPosition(state = this._getState()) {
+        return this._getCommandablePosition(state) ?? 0;
+      }
+      _updatePositionPreview(value) {
+        const nextValue = clamp(Math.round(Number(value)), 0, 100);
+        if (!Number.isFinite(nextValue)) {
+          return;
+        }
+        const slider = this.shadowRoot?.querySelector('.fan-card__slider[data-cover-control="position"]');
+        if (slider instanceof HTMLInputElement) {
+          slider.value = String(nextValue);
+          slider.style.setProperty("--percentage", String(nextValue));
+          slider.closest(".fan-card__slider-shell")?.style.setProperty("--percentage", String(nextValue));
+        }
+        const dial = this.shadowRoot?.querySelector(".fan-card__circular-dial");
+        if (dial instanceof HTMLElement) {
+          const model = getCircularLayoutDialModel(nextValue, 0, 100);
+          dial.style.setProperty("--circular-progress", String(model.progress));
+          dial.style.setProperty("--circular-marker-left", `${model.markerLeft}%`);
+          dial.style.setProperty("--circular-marker-top", `${model.markerTop}%`);
+        }
+        this.shadowRoot?.querySelectorAll('[data-cover-chip="position"]').forEach((chip) => {
+          if (chip instanceof HTMLElement) {
+            chip.textContent = `${nextValue}%`;
+          }
+        });
+      }
+      _getCircularDialStep() {
+        return 5;
+      }
+      _hapticOnPositionStep(steppedValue, { commit = false } = {}) {
+        if (this._config?.haptics?.scrolls?.position === false) {
+          return;
+        }
+        const next = Number(steppedValue);
+        if (!Number.isFinite(next)) {
+          return;
+        }
+        const drag = this._activeSliderDrag;
+        if (drag) {
+          if (drag.lastHapticValue === next) {
+            return;
+          }
+          drag.lastHapticValue = next;
+          this._triggerHaptic("selection");
+          return;
+        }
+        if (commit) {
+          this._triggerHaptic("selection");
+        }
+      }
+      _applyCircularDialValue(value, options = {}) {
+        const commit = options.commit === true;
+        const nextValue = clamp(Math.round(Number(value)), 0, 100);
+        if (!Number.isFinite(nextValue)) {
+          return;
+        }
+        this._updatePositionPreview(nextValue);
+        this._hapticOnPositionStep(nextValue, { commit });
+        if (commit) {
+          this._callCover("set_cover_position", { position: nextValue });
+        }
+      }
+      _startCircularDialDrag(dial, clientX, clientY, event = null, pointerId = null) {
+        if (!(dial instanceof HTMLElement)) {
+          return;
+        }
+        const state = this._getState();
+        if (!state || !this._canSetPosition(state)) {
+          return;
+        }
+        const seedValue = this._getCommandablePosition(state);
+        if (seedValue === null) {
+          return;
+        }
+        const step = this._getCircularDialStep();
+        this._activeSliderDrag = {
+          kind: "circular",
+          dial,
+          geometry: dial.getBoundingClientRect(),
+          range: { min: 0, max: 100 },
+          step,
+          pointerId,
+          lastValue: seedValue,
+          lastClientY: clientY,
+          lastHapticValue: Math.round(seedValue)
+        };
+        dial.classList.add("is-dragging");
+        this._attachWindowDragListeners();
+        if (event) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        const nextValue = getCircularLayoutDialValueFromPoint(
+          dial,
+          clientX,
+          clientY,
+          this._activeSliderDrag.range,
+          step,
+          seedValue,
+          this._activeSliderDrag.geometry
+        );
+        this._activeSliderDrag.lastValue = nextValue;
+        this._applyCircularDialValue(nextValue, { commit: false });
+      }
+      _startSliderDrag(slider, clientX, event = null, pointerId = null) {
+        if (!slider) return;
+        this._activeSliderDrag = {
+          kind: "linear",
+          pointerId,
+          slider,
+          geometry: getSliderDragGeometry(slider)
+        };
+        this._attachWindowDragListeners();
+        if (event) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        const nextValue = getRangeValueFromGeometry(this._activeSliderDrag.geometry, slider.value, clientX);
+        slider.value = String(nextValue);
+        this._applySliderValue(slider, nextValue, { commit: false });
+      }
+      _queueSliderDragUpdate(slider, clientX, clientY = null) {
+        const drag = this._activeSliderDrag;
+        if (drag?.kind === "circular") {
+          const nextValue2 = getCircularLayoutDialValueFromPoint(
+            drag.dial,
+            clientX,
+            clientY ?? drag.lastClientY,
+            drag.range,
+            drag.step,
+            drag.lastValue,
+            drag.geometry
+          );
+          drag.lastValue = nextValue2;
+          drag.lastClientY = clientY ?? drag.lastClientY;
+          this._applyCircularDialValue(nextValue2, { commit: false });
+          return;
+        }
+        const nextValue = getRangeValueFromGeometry(drag?.geometry, slider.value, clientX);
+        slider.value = String(nextValue);
+        this._applySliderValue(slider, nextValue, { commit: false });
+      }
+      _commitSliderDrag(clientX, event = null, pointerId = null, clientY = null) {
+        const drag = this._activeSliderDrag;
+        if (!drag || pointerId !== null && drag.pointerId !== pointerId) return;
+        if (event) {
+          event.preventDefault();
+        }
+        if (drag.kind === "circular") {
+          const nextValue2 = getCircularLayoutDialValueFromPoint(
+            drag.dial,
+            clientX,
+            clientY ?? drag.lastClientY,
+            drag.range,
+            drag.step,
+            drag.lastValue,
+            drag.geometry
+          );
+          drag.dial?.classList?.remove("is-dragging");
+          this._applyCircularDialValue(nextValue2, { commit: true });
+          this._activeSliderDrag = null;
+          this._detachWindowDragListeners();
+          this._suppressNextCoverTap = true;
+          if (this._pendingRenderAfterDrag) {
+            this._pendingRenderAfterDrag = false;
+            this._render();
+          }
+          return;
+        }
+        const nextValue = getRangeValueFromGeometry(drag.geometry, drag.slider.value, clientX);
+        drag.slider.value = String(nextValue);
+        this._skipNextSliderChange = drag.slider;
+        this._applySliderValue(drag.slider, nextValue, { commit: true });
         this._activeSliderDrag = null;
         this._detachWindowDragListeners();
         this._suppressNextCoverTap = true;
@@ -1249,158 +1270,145 @@
           this._pendingRenderAfterDrag = false;
           this._render();
         }
-        return;
       }
-      const nextValue = getRangeValueFromGeometry(drag.geometry, drag.slider.value, clientX);
-      drag.slider.value = String(nextValue);
-      this._skipNextSliderChange = drag.slider;
-      this._applySliderValue(drag.slider, nextValue, { commit: true });
-      this._activeSliderDrag = null;
-      this._detachWindowDragListeners();
-      this._suppressNextCoverTap = true;
-      if (this._pendingRenderAfterDrag) {
-        this._pendingRenderAfterDrag = false;
-        this._render();
+      _onWindowPointerMove(event) {
+        const drag = this._activeSliderDrag;
+        if (!drag || drag.pointerId !== event.pointerId) return;
+        event.preventDefault();
+        this._queueSliderDragUpdate(drag.slider, event.clientX, event.clientY);
       }
-    }
-    _onWindowPointerMove(event) {
-      const drag = this._activeSliderDrag;
-      if (!drag || drag.pointerId !== event.pointerId) return;
-      event.preventDefault();
-      this._queueSliderDragUpdate(drag.slider, event.clientX, event.clientY);
-    }
-    _onWindowPointerUp(event) {
-      const drag = this._activeSliderDrag;
-      if (!drag || drag.pointerId !== event.pointerId) return;
-      this._commitSliderDrag(event.clientX, event, event.pointerId, event.clientY);
-    }
-    _onWindowMouseMove(event) {
-      if (!this._activeSliderDrag || typeof event.buttons === "number" && (event.buttons & 1) === 0) return;
-      event.preventDefault();
-      this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.clientX, event.clientY);
-    }
-    _onWindowMouseUp(event) {
-      if (!this._activeSliderDrag) return;
-      this._commitSliderDrag(event.clientX, event, null, event.clientY);
-    }
-    _onWindowTouchMove(event) {
-      if (!this._activeSliderDrag || !event.touches?.length) return;
-      event.preventDefault();
-      this._queueSliderDragUpdate(
-        this._activeSliderDrag.slider,
-        event.touches[0].clientX,
-        event.touches[0].clientY
-      );
-    }
-    _onWindowTouchStartCapture(event) {
-      const drag = this._activeSliderDrag;
-      if (!drag) {
-        return;
+      _onWindowPointerUp(event) {
+        const drag = this._activeSliderDrag;
+        if (!drag || drag.pointerId !== event.pointerId) return;
+        this._commitSliderDrag(event.clientX, event, event.pointerId, event.clientY);
       }
-      const path = typeof event.composedPath === "function" ? event.composedPath() : [];
-      if (drag.kind === "circular" ? path.includes(drag.dial) : path.includes(drag.slider)) {
-        return;
+      _onWindowMouseMove(event) {
+        if (!this._activeSliderDrag || typeof event.buttons === "number" && (event.buttons & 1) === 0) return;
+        event.preventDefault();
+        this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.clientX, event.clientY);
       }
-      drag.dial?.classList?.remove("is-dragging");
-      this._activeSliderDrag = null;
-      this._detachWindowDragListeners();
-      if (this._pendingRenderAfterDrag) {
-        this._pendingRenderAfterDrag = false;
-        this._render();
+      _onWindowMouseUp(event) {
+        if (!this._activeSliderDrag) return;
+        this._commitSliderDrag(event.clientX, event, null, event.clientY);
       }
-    }
-    _onWindowTouchEnd(event) {
-      if (!this._activeSliderDrag) return;
-      const touch = event.changedTouches?.[0];
-      const clientX = touch?.clientX;
-      if (!Number.isFinite(clientX)) {
-        this._activeSliderDrag.dial?.classList?.remove("is-dragging");
+      _onWindowTouchMove(event) {
+        if (!this._activeSliderDrag || !event.touches?.length) return;
+        event.preventDefault();
+        this._queueSliderDragUpdate(
+          this._activeSliderDrag.slider,
+          event.touches[0].clientX,
+          event.touches[0].clientY
+        );
+      }
+      _onWindowTouchStartCapture(event) {
+        const drag = this._activeSliderDrag;
+        if (!drag) {
+          return;
+        }
+        const path = typeof event.composedPath === "function" ? event.composedPath() : [];
+        if (drag.kind === "circular" ? path.includes(drag.dial) : path.includes(drag.slider)) {
+          return;
+        }
+        drag.dial?.classList?.remove("is-dragging");
         this._activeSliderDrag = null;
         this._detachWindowDragListeners();
         if (this._pendingRenderAfterDrag) {
           this._pendingRenderAfterDrag = false;
           this._render();
         }
-        return;
       }
-      this._commitSliderDrag(clientX, event, null, touch?.clientY);
-    }
-    _attachWindowDragListeners() {
-      if (this._dragWindowListenersAttached) return;
-      this._dragWindowListenersAttached = true;
-      window.addEventListener("pointermove", this._onWindowPointerMove);
-      window.addEventListener("pointerup", this._onWindowPointerUp);
-      window.addEventListener("pointercancel", this._onWindowPointerUp);
-      if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
-        window.addEventListener("mousemove", this._onWindowMouseMove);
-        window.addEventListener("mouseup", this._onWindowMouseUp);
-        window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
-        window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
-        window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
-        window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
+      _onWindowTouchEnd(event) {
+        if (!this._activeSliderDrag) return;
+        const touch = event.changedTouches?.[0];
+        const clientX = touch?.clientX;
+        if (!Number.isFinite(clientX)) {
+          this._activeSliderDrag.dial?.classList?.remove("is-dragging");
+          this._activeSliderDrag = null;
+          this._detachWindowDragListeners();
+          if (this._pendingRenderAfterDrag) {
+            this._pendingRenderAfterDrag = false;
+            this._render();
+          }
+          return;
+        }
+        this._commitSliderDrag(clientX, event, null, touch?.clientY);
       }
-    }
-    _detachWindowDragListeners() {
-      if (!this._dragWindowListenersAttached) return;
-      this._dragWindowListenersAttached = false;
-      window.removeEventListener("pointermove", this._onWindowPointerMove);
-      window.removeEventListener("pointerup", this._onWindowPointerUp);
-      window.removeEventListener("pointercancel", this._onWindowPointerUp);
-      if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
-        window.removeEventListener("mousemove", this._onWindowMouseMove);
-        window.removeEventListener("mouseup", this._onWindowMouseUp);
-        window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
-        window.removeEventListener("touchmove", this._onWindowTouchMove);
-        window.removeEventListener("touchend", this._onWindowTouchEnd);
-        window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+      _attachWindowDragListeners() {
+        if (this._dragWindowListenersAttached) return;
+        this._dragWindowListenersAttached = true;
+        window.addEventListener("pointermove", this._onWindowPointerMove);
+        window.addEventListener("pointerup", this._onWindowPointerUp);
+        window.addEventListener("pointercancel", this._onWindowPointerUp);
+        if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+          window.addEventListener("mousemove", this._onWindowMouseMove);
+          window.addEventListener("mouseup", this._onWindowMouseUp);
+          window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
+          window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
+          window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
+          window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
+        }
       }
-    }
-    _onShadowInput(event) {
-      const slider = event.composedPath().find((node) => node instanceof HTMLInputElement && node.dataset?.coverControl);
-      if (!slider) return;
-      event.stopPropagation();
-      if (this._activeSliderDrag?.slider === slider) {
-        return;
+      _detachWindowDragListeners() {
+        if (!this._dragWindowListenersAttached) return;
+        this._dragWindowListenersAttached = false;
+        window.removeEventListener("pointermove", this._onWindowPointerMove);
+        window.removeEventListener("pointerup", this._onWindowPointerUp);
+        window.removeEventListener("pointercancel", this._onWindowPointerUp);
+        if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+          window.removeEventListener("mousemove", this._onWindowMouseMove);
+          window.removeEventListener("mouseup", this._onWindowMouseUp);
+          window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
+          window.removeEventListener("touchmove", this._onWindowTouchMove);
+          window.removeEventListener("touchend", this._onWindowTouchEnd);
+          window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+        }
       }
-      this._applySliderValue(slider, slider.value, { commit: false });
-    }
-    _onShadowChange(event) {
-      const slider = event.composedPath().find((node) => node instanceof HTMLInputElement && node.dataset?.coverControl);
-      if (!slider) return;
-      event.stopPropagation();
-      if (this._skipNextSliderChange === slider) {
-        this._skipNextSliderChange = null;
-        return;
+      _onShadowInput(event) {
+        const slider = event.composedPath().find((node) => node instanceof HTMLInputElement && node.dataset?.coverControl);
+        if (!slider) return;
+        event.stopPropagation();
+        if (this._activeSliderDrag?.slider === slider) {
+          return;
+        }
+        this._applySliderValue(slider, slider.value, { commit: false });
       }
-      this._applySliderValue(slider, slider.value, { commit: true });
-      this._activeSliderDrag = null;
-      this._detachWindowDragListeners?.();
-    }
-    _applySliderValue(slider, rawValue, options = {}) {
-      const nextValue = clamp(Math.round(Number(rawValue)), 0, 100);
-      if (!Number.isFinite(nextValue)) return;
-      const sliderKind = String(slider.dataset.coverControl || "").trim();
-      slider.style.setProperty("--percentage", String(nextValue));
-      slider.closest(".fan-card__slider-shell")?.style.setProperty("--percentage", String(nextValue));
-      const chip = this.shadowRoot?.querySelector(`[data-cover-chip="${escapeSelectorValue(sliderKind)}"]`);
-      if (chip instanceof HTMLElement) {
-        chip.textContent = sliderKind === "tilt" ? this._coverTiltChipText(nextValue) : `${nextValue}%`;
+      _onShadowChange(event) {
+        const slider = event.composedPath().find((node) => node instanceof HTMLInputElement && node.dataset?.coverControl);
+        if (!slider) return;
+        event.stopPropagation();
+        if (this._skipNextSliderChange === slider) {
+          this._skipNextSliderChange = null;
+          return;
+        }
+        this._applySliderValue(slider, slider.value, { commit: true });
+        this._activeSliderDrag = null;
+        this._detachWindowDragListeners?.();
       }
-      if (options.commit !== true) return;
-      if (this._config?.haptics?.scrolls?.[sliderKind] !== false) {
-        this._triggerHaptic("selection");
+      _applySliderValue(slider, rawValue, options = {}) {
+        const nextValue = clamp(Math.round(Number(rawValue)), 0, 100);
+        if (!Number.isFinite(nextValue)) return;
+        const sliderKind = String(slider.dataset.coverControl || "").trim();
+        slider.style.setProperty("--percentage", String(nextValue));
+        slider.closest(".fan-card__slider-shell")?.style.setProperty("--percentage", String(nextValue));
+        const chip = this.shadowRoot?.querySelector(`[data-cover-chip="${escapeSelectorValue(sliderKind)}"]`);
+        if (chip instanceof HTMLElement) {
+          chip.textContent = sliderKind === "tilt" ? this._coverTiltChipText(nextValue) : `${nextValue}%`;
+        }
+        if (options.commit !== true) return;
+        if (this._config?.haptics?.scrolls?.[sliderKind] !== false) {
+          this._triggerHaptic("selection");
+        }
+        if (sliderKind === "position") {
+          this._callCover("set_cover_position", { position: nextValue });
+        } else if (sliderKind === "tilt") {
+          this._callCover("set_cover_tilt_position", { tilt_position: nextValue });
+        }
       }
-      if (sliderKind === "position") {
-        this._callCover("set_cover_position", { position: nextValue });
-      } else if (sliderKind === "tilt") {
-        this._callCover("set_cover_tilt_position", { tilt_position: nextValue });
-      }
-    }
-    _renderSlider(kind, label, value, options = {}) {
-      const styles = this._config.styles;
-      const percentage = clamp(Math.round(Number(value) || 0), 0, 100);
-      const rowClass = options.variant === "stack" ? "fan-card__slider-row fan-card__slider-row--stack" : "fan-card__slider-row fan-card__slider-row--solo";
-      return `
+      _renderSlider(kind, label, value, options = {}) {
+        const styles = this._config.styles;
+        const percentage = clamp(Math.round(Number(value) || 0), 0, 100);
+        const rowClass = options.variant === "stack" ? "fan-card__slider-row fan-card__slider-row--stack" : "fan-card__slider-row fan-card__slider-row--solo";
+        return `
       <div class="${rowClass}">
         <div class="fan-card__slider-wrap">
           <div class="fan-card__slider-shell" style="--percentage:${percentage};">
@@ -1420,75 +1428,75 @@
         </div>
       </div>
     `;
-    }
-    _render() {
-      if (!this.shadowRoot) return;
-      const config = this._config || normalizeConfig({});
-      const styles = config.styles;
-      const entityGuard = window.NodaliaUtils?.renderLovelaceEntityGuardCardHtml?.(
-        this._hass,
-        config.entity,
-        { cardClass: "cover-card" }
-      );
-      if (entityGuard) {
-        this.shadowRoot.innerHTML = entityGuard;
-        return;
       }
-      const state = this._getState();
-      if (!state) {
-        this.shadowRoot.innerHTML = window.NodaliaUtils?.renderCardEmptyStateDocument?.(
-          this._renderEmptyState(),
-          { card: (config || DEFAULT_CONFIG).styles?.card }
-        ) ?? this._renderEmptyState();
-        return;
-      }
-      const isActive = this._isActive(state);
-      const isCircularLayout = config.layout === "circular";
-      const isMoving = ["opening", "closing"].includes(normalizeTextKey(state.state));
-      const title = this._getName(state);
-      const icon = this._getIcon(state);
-      const accentColor = this._getAccentColor(state);
-      const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
-      const animations = this._getAnimationSettings();
-      const position = parseNumber(state.attributes?.current_position);
-      const tilt = parseNumber(state.attributes?.current_tilt_position);
-      const canSetPosition = this._canSetPosition(state);
-      const supportsPosition = canSetPosition && position !== null;
-      const supportsTilt = config.show_tilt_slider !== false && this._supports(COVER_FEATURES.SET_TILT_POSITION, state) && tilt !== null;
-      const supportsStop = config.show_stop !== false && this._supports(COVER_FEATURES.STOP, state);
-      const showTitle = isCircularLayout || !this._isCompactLayout() || this._shouldShowCompactTitle();
-      const showCopyBlock = showTitle || config.show_state === true || config.show_position_chip !== false || config.show_tilt_chip !== false;
-      const tOpen = this._coverCardUi("open", "Open");
-      const tClose = this._coverCardUi("close", "Close");
-      const tStop = this._coverCardUi("stop", "Stop");
-      const tPosSlider = this._coverCardUi("positionSlider", "Position");
-      const tTiltSlider = this._coverCardUi("tiltSlider", "Tilt");
-      const tToggleCover = this._coverCardUi("toggleCover", "Toggle cover");
-      const openCloseIcons = resolveOpenCloseControlIcons(config.open_close_icons, state.attributes?.device_class);
-      const chips = [];
-      if (config.show_state === true) chips.push(`<span class="fan-card__chip fan-card__chip--state">${escapeHtml(this._stateLabel(state))}</span>`);
-      if (config.show_position_chip !== false && position !== null) chips.push(`<span class="fan-card__chip" data-cover-chip="position">${Math.round(position)}%</span>`);
-      if (config.show_tilt_chip !== false && tilt !== null) chips.push(`<span class="fan-card__chip" data-cover-chip="tilt">${escapeHtml(this._coverTiltChipText(tilt))}</span>`);
-      const coverUiMode = this._coverControlsViewMode === "arrows" ? "arrows" : "slider";
-      const tToggleToArrows = this._coverCardUi("toggleShowButtons", "Show open, stop, and close");
-      const tToggleToSliders = this._coverCardUi("toggleShowSliders", "Show sliders");
-      const toggleIcon = coverUiMode === "slider" ? "mdi:tune-variant" : "mdi:pan-horizontal";
-      const toggleAria = coverUiMode === "slider" ? tToggleToArrows : tToggleToSliders;
-      const hasSliders = supportsPosition || supportsTilt;
-      const coverUiClass = hasSliders ? coverUiMode === "arrows" ? "fan-card--cover-ui-arrows" : "fan-card--cover-ui-slider" : "";
-      const coverToggleLaneClass = hasSliders && coverUiMode === "arrows" && this._shouldReserveCoverToggleLane() ? " fan-card--cover-ui-toggle-lane" : "";
-      const arrowButtonsHtml = `
+      _render() {
+        if (!this.shadowRoot) return;
+        const config = this._config || normalizeConfig({});
+        const styles = config.styles;
+        const entityGuard = window.NodaliaUtils?.renderLovelaceEntityGuardCardHtml?.(
+          this._hass,
+          config.entity,
+          { cardClass: "cover-card" }
+        );
+        if (entityGuard) {
+          this.shadowRoot.innerHTML = entityGuard;
+          return;
+        }
+        const state = this._getState();
+        if (!state) {
+          this.shadowRoot.innerHTML = window.NodaliaUtils?.renderCardEmptyStateDocument?.(
+            this._renderEmptyState(),
+            { card: (config || DEFAULT_CONFIG).styles?.card }
+          ) ?? this._renderEmptyState();
+          return;
+        }
+        const isActive = this._isActive(state);
+        const isCircularLayout = config.layout === "circular";
+        const isMoving = ["opening", "closing"].includes(normalizeTextKey(state.state));
+        const title = this._getName(state);
+        const icon = this._getIcon(state);
+        const accentColor = this._getAccentColor(state);
+        const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
+        const animations = this._getAnimationSettings();
+        const position = parseNumber(state.attributes?.current_position);
+        const tilt = parseNumber(state.attributes?.current_tilt_position);
+        const canSetPosition = this._canSetPosition(state);
+        const supportsPosition = canSetPosition && position !== null;
+        const supportsTilt = config.show_tilt_slider !== false && this._supports(COVER_FEATURES.SET_TILT_POSITION, state) && tilt !== null;
+        const supportsStop = config.show_stop !== false && this._supports(COVER_FEATURES.STOP, state);
+        const showTitle = isCircularLayout || !this._isCompactLayout() || this._shouldShowCompactTitle();
+        const showCopyBlock = showTitle || config.show_state === true || config.show_position_chip !== false || config.show_tilt_chip !== false;
+        const tOpen = this._coverCardUi("open", "Open");
+        const tClose = this._coverCardUi("close", "Close");
+        const tStop = this._coverCardUi("stop", "Stop");
+        const tPosSlider = this._coverCardUi("positionSlider", "Position");
+        const tTiltSlider = this._coverCardUi("tiltSlider", "Tilt");
+        const tToggleCover = this._coverCardUi("toggleCover", "Toggle cover");
+        const openCloseIcons = resolveOpenCloseControlIcons(config.open_close_icons, state.attributes?.device_class);
+        const chips = [];
+        if (config.show_state === true) chips.push(`<span class="fan-card__chip fan-card__chip--state">${escapeHtml(this._stateLabel(state))}</span>`);
+        if (config.show_position_chip !== false && position !== null) chips.push(`<span class="fan-card__chip" data-cover-chip="position">${Math.round(position)}%</span>`);
+        if (config.show_tilt_chip !== false && tilt !== null) chips.push(`<span class="fan-card__chip" data-cover-chip="tilt">${escapeHtml(this._coverTiltChipText(tilt))}</span>`);
+        const coverUiMode = this._coverControlsViewMode === "arrows" ? "arrows" : "slider";
+        const tToggleToArrows = this._coverCardUi("toggleShowButtons", "Show open, stop, and close");
+        const tToggleToSliders = this._coverCardUi("toggleShowSliders", "Show sliders");
+        const toggleIcon = coverUiMode === "slider" ? "mdi:tune-variant" : "mdi:pan-horizontal";
+        const toggleAria = coverUiMode === "slider" ? tToggleToArrows : tToggleToSliders;
+        const hasSliders = supportsPosition || supportsTilt;
+        const coverUiClass = hasSliders ? coverUiMode === "arrows" ? "fan-card--cover-ui-arrows" : "fan-card--cover-ui-slider" : "";
+        const coverToggleLaneClass = hasSliders && coverUiMode === "arrows" && this._shouldReserveCoverToggleLane() ? " fan-card--cover-ui-toggle-lane" : "";
+        const arrowButtonsHtml = `
         <button type="button" class="fan-card__control fan-card__control--in-transport" data-cover-action="open" aria-label="${escapeHtml(tOpen)}"><ha-icon icon="${escapeHtml(openCloseIcons.open)}"></ha-icon></button>
         ${supportsStop ? `<button type="button" class="fan-card__control fan-card__control--in-transport" data-cover-action="stop" aria-label="${escapeHtml(tStop)}"><ha-icon icon="mdi:stop"></ha-icon></button>` : ""}
         <button type="button" class="fan-card__control fan-card__control--in-transport" data-cover-action="close" aria-label="${escapeHtml(tClose)}"><ha-icon icon="${escapeHtml(openCloseIcons.close)}"></ha-icon></button>
       `;
-      const arrowTransportHtml = `<div class="fan-card__transport">${arrowButtonsHtml}</div>`;
-      const circularCommandButtonsHtml = `
+        const arrowTransportHtml = `<div class="fan-card__transport">${arrowButtonsHtml}</div>`;
+        const circularCommandButtonsHtml = `
       <button type="button" class="fan-card__circular-command" data-nodalia-tap-shield="true" data-cover-action="open" aria-label="${escapeHtml(tOpen)}"><ha-icon icon="${escapeHtml(openCloseIcons.open)}"></ha-icon></button>
       ${supportsStop ? `<button type="button" class="fan-card__circular-command fan-card__circular-command--stop${isMoving ? " is-active" : ""}" data-nodalia-tap-shield="true" data-cover-action="stop" aria-label="${escapeHtml(tStop)}"><ha-icon icon="mdi:stop"></ha-icon></button>` : ""}
       <button type="button" class="fan-card__circular-command" data-nodalia-tap-shield="true" data-cover-action="close" aria-label="${escapeHtml(tClose)}"><ha-icon icon="${escapeHtml(openCloseIcons.close)}"></ha-icon></button>
     `;
-      const controlsMarkup = hasSliders ? `
+        const controlsMarkup = hasSliders ? `
         <div class="fan-card__slider-row">
           <div class="fan-card__cover-controls-pane">
             <div class="fan-card__view fan-card__view--sliders"${coverUiMode === "arrows" ? ' aria-hidden="true"' : ""}>
@@ -1504,9 +1512,9 @@
           </div>
         </div>
       ` : `<div class="fan-card__controls">${arrowTransportHtml}</div>`;
-      const circularPosition = position ?? this._getSettledPositionFallback(state);
-      const circularDial = getCircularLayoutDialModel(circularPosition ?? 0, 0, 100);
-      const circularControlsMarkup = `
+        const circularPosition = position ?? this._getSettledPositionFallback(state);
+        const circularDial = getCircularLayoutDialModel(circularPosition ?? 0, 0, 100);
+        const circularControlsMarkup = `
       <div class="fan-card__circular-layout">
         <div class="fan-card__circular-dial" data-nodalia-tap-shield="true" style="--circular-progress:${circularDial.progress};--circular-marker-left:${circularDial.markerLeft}%;--circular-marker-top:${circularDial.markerTop}%;">
           <svg viewBox="0 0 240 240" aria-hidden="true">
@@ -1525,10 +1533,10 @@
         ${supportsTilt ? `<div class="fan-card__circular-secondary">${this._renderSlider("tilt", tTiltSlider, tilt, { variant: "stack" })}</div>` : ""}
       </div>
     `;
-      const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 54%, ${styles.card.background} 100%)`;
-      const onCardBorder = `color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`;
-      const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.18))`;
-      this.shadowRoot.innerHTML = `
+        const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 54%, ${styles.card.background} 100%)`;
+        const onCardBorder = `color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`;
+        const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.18))`;
+        this.shadowRoot.innerHTML = `
       <style>
         :host {
           container-name: cover-card;
@@ -2161,192 +2169,203 @@
         </div>
       </ha-card>
     `;
-      this._lastRenderedIsActive = isActive;
+        this._lastRenderedIsActive = isActive;
+      }
     }
-  };
+    _lazyNodaliaCoverCard = NodaliaCoverCard;
+    return NodaliaCoverCard;
+  }
 
   // src/cards/cover/cover-editor.ts
-  var NodaliaCoverCardEditor = class extends HTMLElement {
-    constructor() {
-      super();
-      this.attachShadow({ mode: "open" });
-      this._config = normalizeConfig(STUB_CONFIG);
-      this._hass = null;
-      this._entityOptionsSignature = "";
-      this._showStyleSection = false;
-      this._showAnimationSection = false;
-      this._showTapActionsSection = false;
-      this._pendingEditorControlTags = /* @__PURE__ */ new Set();
-      this._onShadowInput = this._onShadowInput.bind(this);
-      this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
-      this._onShadowClick = this._onShadowClick.bind(this);
+  var _lazyNodaliaCoverCardEditor;
+  function loadNodaliaCoverCardEditor() {
+    if (_lazyNodaliaCoverCardEditor) {
+      return _lazyNodaliaCoverCardEditor;
     }
-    _attachEditorShadowListeners() {
-      window.NodaliaUtils.bindShadowListeners(this, [
-        ["input", this._onShadowInput],
-        ["change", this._onShadowInput],
-        ["value-changed", this._onShadowValueChanged],
-        ["click", this._onShadowClick]
-      ], "editor");
-    }
-    _detachEditorShadowListeners() {
-      window.NodaliaUtils.releaseShadowListeners(this, "editor");
-    }
-    connectedCallback() {
-      this._attachEditorShadowListeners();
-      window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
-    }
-    disconnectedCallback() {
-      this._detachEditorShadowListeners();
-      window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
-    }
-    set hass(hass) {
-      const nextSignature = this._getEntityOptionsSignature(hass);
-      const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
-      this._hass = hass;
-      this._entityOptionsSignature = nextSignature;
-      if (!shouldRender) return;
-      const focusState = this._captureFocusState();
-      this._render();
-      this._restoreFocusState(focusState);
-    }
-    setConfig(config) {
-      const focusState = this._captureFocusState();
-      this._config = normalizeConfig(config || {});
-      window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
-      this._render();
-      this._restoreFocusState(focusState);
-    }
-    _watchEditorControlTag(tagName) {
-      if (!tagName || this._pendingEditorControlTags.has(tagName)) return;
-      if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) return;
-      this._pendingEditorControlTags.add(tagName);
-      customElements.whenDefined(tagName).then(() => {
-        this._pendingEditorControlTags.delete(tagName);
-        if (!this.isConnected || !this._hass || !this.shadowRoot) return;
+    class NodaliaCoverCardEditor extends HTMLElement {
+      constructor() {
+        super();
+        this._nodaliaConstruct();
+      }
+      _nodaliaConstruct() {
+        this.attachShadow({ mode: "open" });
+        this._config = normalizeConfig(STUB_CONFIG);
+        this._hass = null;
+        this._entityOptionsSignature = "";
+        this._showStyleSection = false;
+        this._showAnimationSection = false;
+        this._showTapActionsSection = false;
+        this._pendingEditorControlTags = /* @__PURE__ */ new Set();
+        this._onShadowInput = this._onShadowInput.bind(this);
+        this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
+        this._onShadowClick = this._onShadowClick.bind(this);
+      }
+      _attachEditorShadowListeners() {
+        window.NodaliaUtils.bindShadowListeners(this, [
+          ["input", this._onShadowInput],
+          ["change", this._onShadowInput],
+          ["value-changed", this._onShadowValueChanged],
+          ["click", this._onShadowClick]
+        ], "editor");
+      }
+      _detachEditorShadowListeners() {
+        window.NodaliaUtils.releaseShadowListeners(this, "editor");
+      }
+      connectedCallback() {
+        this._attachEditorShadowListeners();
+        window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
+      }
+      disconnectedCallback() {
+        this._detachEditorShadowListeners();
+        window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
+      }
+      set hass(hass) {
+        const nextSignature = this._getEntityOptionsSignature(hass);
+        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+        this._hass = hass;
+        this._entityOptionsSignature = nextSignature;
+        if (!shouldRender) return;
         const focusState = this._captureFocusState();
         this._render();
         this._restoreFocusState(focusState);
-      }).catch(() => this._pendingEditorControlTags.delete(tagName));
-    }
-    _ensureEditorControlsReady() {
-      this._watchEditorControlTag("ha-entity-picker");
-      this._watchEditorControlTag("ha-selector");
-      this._watchEditorControlTag("ha-icon-picker");
-    }
-    _getEntityOptionsSignature(hass = this._hass) {
-      return window.NodaliaUtils.editorFilteredStatesSignature(hass, this._config?.language, (id) => id.startsWith("cover."));
-    }
-    _getCoverEntityOptions() {
-      const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
-      const options = Object.entries(this._hass?.states || {}).filter(([entityId]) => entityId.startsWith("cover.")).map(([entityId, state]) => {
-        const friendlyName = String(state?.attributes?.friendly_name || "").trim();
-        return {
-          value: entityId,
-          label: friendlyName || entityId,
-          displayLabel: friendlyName && friendlyName !== entityId ? `${friendlyName} (${entityId})` : entityId
-        };
-      }).sort((left, right) => left.label.localeCompare(right.label, sortLoc, { sensitivity: "base" }) || left.value.localeCompare(right.value, sortLoc, { sensitivity: "base" }));
-      const currentValue = String(this._config?.entity || "").trim();
-      if (currentValue && !options.some((option) => option.value === currentValue)) {
-        options.unshift({
-          value: currentValue,
-          label: currentValue,
-          displayLabel: currentValue
+      }
+      setConfig(config) {
+        const focusState = this._captureFocusState();
+        this._config = normalizeConfig(config || {});
+        window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
+        this._render();
+        this._restoreFocusState(focusState);
+      }
+      _watchEditorControlTag(tagName) {
+        if (!tagName || this._pendingEditorControlTags.has(tagName)) return;
+        if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) return;
+        this._pendingEditorControlTags.add(tagName);
+        customElements.whenDefined(tagName).then(() => {
+          this._pendingEditorControlTags.delete(tagName);
+          if (!this.isConnected || !this._hass || !this.shadowRoot) return;
+          const focusState = this._captureFocusState();
+          this._render();
+          this._restoreFocusState(focusState);
+        }).catch(() => this._pendingEditorControlTags.delete(tagName));
+      }
+      _ensureEditorControlsReady() {
+        this._watchEditorControlTag("ha-entity-picker");
+        this._watchEditorControlTag("ha-selector");
+        this._watchEditorControlTag("ha-icon-picker");
+      }
+      _getEntityOptionsSignature(hass = this._hass) {
+        return window.NodaliaUtils.editorFilteredStatesSignature(hass, this._config?.language, (id) => id.startsWith("cover."));
+      }
+      _getCoverEntityOptions() {
+        const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
+        const options = Object.entries(this._hass?.states || {}).filter(([entityId]) => entityId.startsWith("cover.")).map(([entityId, state]) => {
+          const friendlyName = String(state?.attributes?.friendly_name || "").trim();
+          return {
+            value: entityId,
+            label: friendlyName || entityId,
+            displayLabel: friendlyName && friendlyName !== entityId ? `${friendlyName} (${entityId})` : entityId
+          };
+        }).sort((left, right) => left.label.localeCompare(right.label, sortLoc, { sensitivity: "base" }) || left.value.localeCompare(right.value, sortLoc, { sensitivity: "base" }));
+        const currentValue = String(this._config?.entity || "").trim();
+        if (currentValue && !options.some((option) => option.value === currentValue)) {
+          options.unshift({
+            value: currentValue,
+            label: currentValue,
+            displayLabel: currentValue
+          });
+        }
+        return options;
+      }
+      _captureFocusState() {
+        return window.NodaliaUtils.captureEditorFocusState(this);
+      }
+      _restoreFocusState(focusState) {
+        window.NodaliaUtils.restoreEditorFocusState(this, focusState);
+      }
+      _emitConfig() {
+        const focusState = this._captureFocusState();
+        const nextConfig = deepClone(this._config);
+        this._config = normalizeConfig(compactConfig(nextConfig));
+        this._render();
+        this._restoreFocusState(focusState);
+        fireEvent(this, "config-changed", {
+          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {})
         });
       }
-      return options;
-    }
-    _captureFocusState() {
-      return window.NodaliaUtils.captureEditorFocusState(this);
-    }
-    _restoreFocusState(focusState) {
-      window.NodaliaUtils.restoreEditorFocusState(this, focusState);
-    }
-    _emitConfig() {
-      const focusState = this._captureFocusState();
-      const nextConfig = deepClone(this._config);
-      this._config = normalizeConfig(compactConfig(nextConfig));
-      this._render();
-      this._restoreFocusState(focusState);
-      fireEvent(this, "config-changed", {
-        config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {})
-      });
-    }
-    _setEditorConfig() {
-      this._config = normalizeConfig(compactConfig(this._config));
-    }
-    _setFieldValue(path, value) {
-      if (value === void 0 || value === null || value === "") {
-        deleteByPath(this._config, path);
-        return;
+      _setEditorConfig() {
+        this._config = normalizeConfig(compactConfig(this._config));
       }
-      setByPath(this._config, path, value);
-    }
-    _readFieldValue(input) {
-      switch (input.dataset.valueType || "string") {
-        case "boolean":
-          return Boolean(input.checked);
-        case "number": {
-          if (input.value === "") {
-            return "";
-          }
-          const numericValue = Number(input.value);
-          return Number.isFinite(numericValue) ? numericValue : "";
+      _setFieldValue(path, value) {
+        if (value === void 0 || value === null || value === "") {
+          deleteByPath(this._config, path);
+          return;
         }
-        case "csv":
-          return normalizeList(input.value);
-        case "color":
-          return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
-        default:
-          return input.value;
+        setByPath(this._config, path, value);
       }
-    }
-    _onShadowInput(event) {
-      const input = event.composedPath().find((node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
-      if (!input?.dataset?.field) return;
-      event.stopPropagation();
-      this._setFieldValue(input.dataset.field, this._readFieldValue(input));
-      this._setEditorConfig();
-      if (event.type === "change") this._emitConfig();
-    }
-    _onShadowValueChanged(event) {
-      const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
-      if (!control?.dataset?.field) return;
-      event.stopPropagation();
-      const field = control.dataset.field;
-      const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
-      if (typeof control.dataset?.value === "string") control.dataset.value = String(nextValue || "");
-      const previousEntity = field === "entity" ? String(this._config?.entity || "").trim() : "";
-      this._setFieldValue(field, nextValue);
-      if (field === "entity") {
-        window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass, { previousEntity });
+      _readFieldValue(input) {
+        switch (input.dataset.valueType || "string") {
+          case "boolean":
+            return Boolean(input.checked);
+          case "number": {
+            if (input.value === "") {
+              return "";
+            }
+            const numericValue = Number(input.value);
+            return Number.isFinite(numericValue) ? numericValue : "";
+          }
+          case "csv":
+            return normalizeList(input.value);
+          case "color":
+            return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
+          default:
+            return input.value;
+        }
       }
-      this._setEditorConfig();
-      this._emitConfig();
-    }
-    _onShadowClick(event) {
-      const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
-      if (!toggleButton) return;
-      event.preventDefault();
-      event.stopPropagation();
-      if (toggleButton.dataset.editorToggle === "tap_actions") this._showTapActionsSection = !this._showTapActionsSection;
-      if (toggleButton.dataset.editorToggle === "styles") this._showStyleSection = !this._showStyleSection;
-      if (toggleButton.dataset.editorToggle === "animations") this._showAnimationSection = !this._showAnimationSection;
-      this._render();
-    }
-    _editorLabel(value) {
-      if (typeof value !== "string" || !window.NodaliaI18n?.editorStr) return value;
-      return window.NodaliaI18n.editorStr(this._hass, this._config?.language ?? "auto", value);
-    }
-    _renderTextField(label, field, value, options = {}) {
-      const tLabel = this._editorLabel(label);
-      const inputValue = value === void 0 || value === null ? "" : String(value);
-      const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
-      const min = options.min !== void 0 ? `min="${escapeHtml(String(options.min))}"` : "";
-      const max = options.max !== void 0 ? `max="${escapeHtml(String(options.max))}"` : "";
-      const step = options.step !== void 0 ? `step="${escapeHtml(String(options.step))}"` : "";
-      return `
+      _onShadowInput(event) {
+        const input = event.composedPath().find((node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+        if (!input?.dataset?.field) return;
+        event.stopPropagation();
+        this._setFieldValue(input.dataset.field, this._readFieldValue(input));
+        this._setEditorConfig();
+        if (event.type === "change") this._emitConfig();
+      }
+      _onShadowValueChanged(event) {
+        const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+        if (!control?.dataset?.field) return;
+        event.stopPropagation();
+        const field = control.dataset.field;
+        const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+        if (typeof control.dataset?.value === "string") control.dataset.value = String(nextValue || "");
+        const previousEntity = field === "entity" ? String(this._config?.entity || "").trim() : "";
+        this._setFieldValue(field, nextValue);
+        if (field === "entity") {
+          window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass, { previousEntity });
+        }
+        this._setEditorConfig();
+        this._emitConfig();
+      }
+      _onShadowClick(event) {
+        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
+        if (!toggleButton) return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (toggleButton.dataset.editorToggle === "tap_actions") this._showTapActionsSection = !this._showTapActionsSection;
+        if (toggleButton.dataset.editorToggle === "styles") this._showStyleSection = !this._showStyleSection;
+        if (toggleButton.dataset.editorToggle === "animations") this._showAnimationSection = !this._showAnimationSection;
+        this._render();
+      }
+      _editorLabel(value) {
+        if (typeof value !== "string" || !window.NodaliaI18n?.editorStr) return value;
+        return window.NodaliaI18n.editorStr(this._hass, this._config?.language ?? "auto", value);
+      }
+      _renderTextField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const inputValue = value === void 0 || value === null ? "" : String(value);
+        const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+        const min = options.min !== void 0 ? `min="${escapeHtml(String(options.min))}"` : "";
+        const max = options.max !== void 0 ? `max="${escapeHtml(String(options.max))}"` : "";
+        const step = options.step !== void 0 ? `step="${escapeHtml(String(options.step))}"` : "";
+        return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <input
@@ -2361,17 +2380,17 @@
         />
       </label>
     `;
-    }
-    _renderTextareaField(label, field, value, options = {}) {
-      return `
+      }
+      _renderTextareaField(label, field, value, options = {}) {
+        return `
       <label class="editor-field editor-field--full">
         <span>${escapeHtml(this._editorLabel(label))}</span>
         <textarea data-field="${escapeHtml(field)}" ${options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : ""}>${escapeHtml(value || "")}</textarea>
       </label>
     `;
-    }
-    _renderSelectField(label, field, value, options, fieldOptions = {}) {
-      return `
+      }
+      _renderSelectField(label, field, value, options, fieldOptions = {}) {
+        return `
       <label class="editor-field ${fieldOptions.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(this._editorLabel(label))}</span>
         <select data-field="${escapeHtml(field)}">
@@ -2379,23 +2398,23 @@
         </select>
       </label>
     `;
-    }
-    _renderCheckboxField(label, field, checked) {
-      return `
+      }
+      _renderCheckboxField(label, field, checked) {
+        return `
       <label class="editor-toggle">
         <input type="checkbox" data-field="${escapeHtml(field)}" data-value-type="boolean" ${checked ? "checked" : ""} />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
         <span class="editor-toggle__label">${escapeHtml(this._editorLabel(label))}</span>
       </label>
     `;
-    }
-    _renderColorField(label, field, value, options = {}) {
-      const tLabel = this._editorLabel(label);
-      const tColorCustom = this._editorLabel("ed.weather.custom_color");
-      const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
-      const currentValue = value === void 0 || value === null || value === "" ? fallbackValue : String(value);
-      const colorModel = getEditorColorModel(currentValue, fallbackValue);
-      return `
+      }
+      _renderColorField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const tColorCustom = this._editorLabel("ed.weather.custom_color");
+        const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
+        const currentValue = value === void 0 || value === null || value === "" ? fallbackValue : String(value);
+        const colorModel = getEditorColorModel(currentValue, fallbackValue);
+        return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
@@ -2413,11 +2432,11 @@
         </div>
       </div>
     `;
-    }
-    _renderCoverEntityField(label, field, value, options = {}) {
-      const tLabel = this._editorLabel(label);
-      const inputValue = value === void 0 || value === null ? "" : String(value);
-      return `
+      }
+      _renderCoverEntityField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const inputValue = value === void 0 || value === null ? "" : String(value);
+        return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <div
@@ -2428,12 +2447,12 @@
         ></div>
       </div>
     `;
-    }
-    _renderIconPickerField(label, field, value, options = {}) {
-      const tLabel = this._editorLabel(label);
-      const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
-      const inputValue = value === void 0 || value === null ? "" : String(value);
-      return `
+      }
+      _renderIconPickerField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+        const inputValue = value === void 0 || value === null ? "" : String(value);
+        return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <ha-icon-picker
@@ -2444,61 +2463,61 @@
         ></ha-icon-picker>
       </div>
     `;
-    }
-    _mountCoverEntityPicker(host) {
-      if (!(host instanceof HTMLElement)) {
-        return;
       }
-      const field = host.dataset.field || "entity";
-      const nextValue = host.dataset.value || "";
-      let control = null;
-      if (customElements.get("ha-entity-picker")) {
-        control = document.createElement("ha-entity-picker");
-        control.includeDomains = ["cover"];
-        control.allowCustomEntity = true;
-        control.entityFilter = (stateObj) => String(stateObj?.entity_id || "").startsWith("cover.");
-      } else if (customElements.get("ha-selector")) {
-        control = document.createElement("ha-selector");
-        control.selector = {
-          entity: {
-            domain: "cover"
-          }
-        };
-      } else {
-        control = document.createElement("select");
-        this._getCoverEntityOptions().forEach((option) => {
-          const optionElement = document.createElement("option");
-          optionElement.value = option.value;
-          optionElement.textContent = option.displayLabel;
-          control.appendChild(optionElement);
-        });
-        control.addEventListener("change", this._onShadowInput);
+      _mountCoverEntityPicker(host) {
+        if (!(host instanceof HTMLElement)) {
+          return;
+        }
+        const field = host.dataset.field || "entity";
+        const nextValue = host.dataset.value || "";
+        let control = null;
+        if (customElements.get("ha-entity-picker")) {
+          control = document.createElement("ha-entity-picker");
+          control.includeDomains = ["cover"];
+          control.allowCustomEntity = true;
+          control.entityFilter = (stateObj) => String(stateObj?.entity_id || "").startsWith("cover.");
+        } else if (customElements.get("ha-selector")) {
+          control = document.createElement("ha-selector");
+          control.selector = {
+            entity: {
+              domain: "cover"
+            }
+          };
+        } else {
+          control = document.createElement("select");
+          this._getCoverEntityOptions().forEach((option) => {
+            const optionElement = document.createElement("option");
+            optionElement.value = option.value;
+            optionElement.textContent = option.displayLabel;
+            control.appendChild(optionElement);
+          });
+          control.addEventListener("change", this._onShadowInput);
+        }
+        control.dataset.field = field;
+        control.dataset.value = nextValue;
+        if ("hass" in control) {
+          control.hass = this._hass;
+        }
+        if ("value" in control) {
+          control.value = nextValue;
+        }
+        if (control.tagName !== "SELECT") {
+          control.addEventListener("value-changed", this._onShadowValueChanged);
+        }
+        host.replaceChildren(control);
       }
-      control.dataset.field = field;
-      control.dataset.value = nextValue;
-      if ("hass" in control) {
-        control.hass = this._hass;
-      }
-      if ("value" in control) {
-        control.value = nextValue;
-      }
-      if (control.tagName !== "SELECT") {
-        control.addEventListener("value-changed", this._onShadowValueChanged);
-      }
-      host.replaceChildren(control);
-    }
-    _render() {
-      if (!this.shadowRoot) return;
-      const config = normalizeConfig(this._config || {});
-      const iconTap = String(config.icon_tap_action || "");
-      const tapAction = String(config.tap_action || "toggle");
-      const iconHold = String(config.icon_hold_action || "");
-      const holdAction = String(config.hold_action || "none");
-      const hapticStyle = config.haptics?.style || "medium";
-      const showTapServiceSecurity = iconTap === "service" || tapAction === "service" || iconHold === "service" || holdAction === "service";
-      const showIconHoldService = iconHold === "service" || iconHold === "" && holdAction === "service";
-      const showIconHoldUrl = iconHold === "url" || iconHold === "" && holdAction === "url";
-      this.shadowRoot.innerHTML = `
+      _render() {
+        if (!this.shadowRoot) return;
+        const config = normalizeConfig(this._config || {});
+        const iconTap = String(config.icon_tap_action || "");
+        const tapAction = String(config.tap_action || "toggle");
+        const iconHold = String(config.icon_hold_action || "");
+        const holdAction = String(config.hold_action || "none");
+        const hapticStyle = config.haptics?.style || "medium";
+        const showTapServiceSecurity = iconTap === "service" || tapAction === "service" || iconHold === "service" || holdAction === "service";
+        const showIconHoldService = iconHold === "service" || iconHold === "" && holdAction === "service";
+        const showIconHoldUrl = iconHold === "url" || iconHold === "" && holdAction === "url";
+        this.shadowRoot.innerHTML = `
       <style>
         :host {
           display: block;
@@ -2794,9 +2813,9 @@
           <div class="editor-grid editor-grid--stacked">
             ${this._renderCoverEntityField("ed.cover.entity", "entity", config.entity, { placeholder: "cover.salon", fullWidth: true })}
             ${this._renderSelectField("ed.entity.layout", "layout", config.layout || "compact", [
-        { value: "compact", label: "ed.shared.layout_compact" },
-        { value: "circular", label: "ed.shared.layout_circular" }
-      ])}
+          { value: "compact", label: "ed.shared.layout_compact" },
+          { value: "circular", label: "ed.shared.layout_circular" }
+        ])}
             ${this._renderIconPickerField("ed.entity.icon", "icon", config.icon, { placeholder: "mdi:blinds", fullWidth: true })}
             ${this._renderTextField("ed.entity.name", "name", config.name, { placeholder: "Salon", fullWidth: true })}
           </div>
@@ -2809,33 +2828,33 @@
             </div>
             <div class="editor-section__actions">
               ${window.NodaliaUtils.renderEditorCollapsibleToggleHtml({
-        toggleId: "tap_actions",
-        expanded: this._showTapActionsSection === true,
-        showLabel: this._editorLabel("ed.shared.show_tap_action_settings"),
-        hideLabel: this._editorLabel("ed.shared.hide_tap_action_settings"),
-        escapeHtml
-      })}
+          toggleId: "tap_actions",
+          expanded: this._showTapActionsSection === true,
+          showLabel: this._editorLabel("ed.shared.show_tap_action_settings"),
+          hideLabel: this._editorLabel("ed.shared.hide_tap_action_settings"),
+          escapeHtml
+        })}
             </div>
           </div>
           ${this._showTapActionsSection ? `
           <div class="editor-grid editor-grid--stacked">
             ${this._renderSelectField("ed.light.icon_tap_action", "icon_tap_action", iconTap, [
-        { value: "", label: "ed.entity.icon_tap_inherit" },
-        { value: "auto", label: "ed.entity.tap_auto" },
-        { value: "toggle", label: "ed.entity.tap_toggle" },
-        { value: "more-info", label: "ed.entity.tap_more_info" },
-        { value: "url", label: "ed.entity.tap_open_url" },
-        { value: "service", label: "ed.entity.tap_service" },
-        { value: "none", label: "ed.entity.tap_none" }
-      ], { fullWidth: true })}
+          { value: "", label: "ed.entity.icon_tap_inherit" },
+          { value: "auto", label: "ed.entity.tap_auto" },
+          { value: "toggle", label: "ed.entity.tap_toggle" },
+          { value: "more-info", label: "ed.entity.tap_more_info" },
+          { value: "url", label: "ed.entity.tap_open_url" },
+          { value: "service", label: "ed.entity.tap_service" },
+          { value: "none", label: "ed.entity.tap_none" }
+        ], { fullWidth: true })}
             ${this._renderSelectField("ed.light.card_tap_action", "tap_action", tapAction, [
-        { value: "auto", label: "ed.entity.tap_auto" },
-        { value: "toggle", label: "ed.entity.tap_toggle" },
-        { value: "more-info", label: "ed.entity.tap_more_info" },
-        { value: "url", label: "ed.entity.tap_open_url" },
-        { value: "service", label: "ed.entity.tap_service" },
-        { value: "none", label: "ed.entity.tap_none" }
-      ], { fullWidth: true })}
+          { value: "auto", label: "ed.entity.tap_auto" },
+          { value: "toggle", label: "ed.entity.tap_toggle" },
+          { value: "more-info", label: "ed.entity.tap_more_info" },
+          { value: "url", label: "ed.entity.tap_open_url" },
+          { value: "service", label: "ed.entity.tap_service" },
+          { value: "none", label: "ed.entity.tap_none" }
+        ], { fullWidth: true })}
             ${showTapServiceSecurity ? this._renderCheckboxField("ed.entity.security_strict", "security.strict_service_actions", config.security?.strict_service_actions !== false) : ""}
             ${config.security?.strict_service_actions !== false && showTapServiceSecurity ? this._renderTextField("ed.entity.allowed_services_csv", "security.allowed_services", Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "", { placeholder: "cover.open_cover, cover.close_cover", valueType: "csv", fullWidth: true }) : ""}
             ${iconTap === "service" ? this._renderTextField("ed.entity.tap_service_field", "icon_tap_service", config.icon_tap_service, { placeholder: "cover.open_cover", fullWidth: true }) + this._renderTextareaField("ed.entity.tap_service_data_json", "icon_tap_service_data", config.icon_tap_service_data, { placeholder: '{"entity_id":"cover.salon"}' }) : ""}
@@ -2844,22 +2863,22 @@
             ${tapAction === "url" ? this._renderTextField("ed.entity.tap_url_field", "tap_url", config.tap_url, { placeholder: "https://example.com", fullWidth: true }) + this._renderCheckboxField("ed.entity.tap_new_tab", "tap_new_tab", config.tap_new_tab === true) : ""}
             <div class="editor-section__hint editor-field--full">${escapeHtml(this._editorLabel("ed.light.hold_actions_section_hint"))}</div>
             ${this._renderSelectField("ed.light.icon_hold_action", "icon_hold_action", iconHold, [
-        { value: "", label: "ed.entity.icon_hold_inherit" },
-        { value: "auto", label: "ed.entity.tap_auto" },
-        { value: "toggle", label: "ed.entity.tap_toggle" },
-        { value: "more-info", label: "ed.entity.tap_more_info" },
-        { value: "url", label: "ed.entity.tap_open_url" },
-        { value: "service", label: "ed.entity.tap_service" },
-        { value: "none", label: "ed.entity.tap_none" }
-      ], { fullWidth: true })}
+          { value: "", label: "ed.entity.icon_hold_inherit" },
+          { value: "auto", label: "ed.entity.tap_auto" },
+          { value: "toggle", label: "ed.entity.tap_toggle" },
+          { value: "more-info", label: "ed.entity.tap_more_info" },
+          { value: "url", label: "ed.entity.tap_open_url" },
+          { value: "service", label: "ed.entity.tap_service" },
+          { value: "none", label: "ed.entity.tap_none" }
+        ], { fullWidth: true })}
             ${this._renderSelectField("ed.light.card_hold_action", "hold_action", holdAction, [
-        { value: "auto", label: "ed.entity.tap_auto" },
-        { value: "toggle", label: "ed.entity.tap_toggle" },
-        { value: "more-info", label: "ed.entity.tap_more_info" },
-        { value: "url", label: "ed.entity.tap_open_url" },
-        { value: "service", label: "ed.entity.tap_service" },
-        { value: "none", label: "ed.entity.tap_none" }
-      ], { fullWidth: true })}
+          { value: "auto", label: "ed.entity.tap_auto" },
+          { value: "toggle", label: "ed.entity.tap_toggle" },
+          { value: "more-info", label: "ed.entity.tap_more_info" },
+          { value: "url", label: "ed.entity.tap_open_url" },
+          { value: "service", label: "ed.entity.tap_service" },
+          { value: "none", label: "ed.entity.tap_none" }
+        ], { fullWidth: true })}
             ${showIconHoldService ? this._renderTextField("ed.entity.hold_service_field", "icon_hold_service", config.icon_hold_service, { placeholder: "cover.stop_cover", fullWidth: true }) + this._renderTextareaField("ed.entity.hold_service_data_json", "icon_hold_service_data", config.icon_hold_service_data, { placeholder: '{"entity_id":"cover.salon"}' }) : ""}
             ${holdAction === "service" ? this._renderTextField("ed.entity.hold_service_field", "hold_service", config.hold_service, { placeholder: "cover.stop_cover", fullWidth: true }) + this._renderTextareaField("ed.entity.hold_service_data_json", "hold_service_data", config.hold_service_data, { placeholder: '{"entity_id":"cover.salon"}' }) : ""}
             ${showIconHoldUrl ? this._renderTextField("ed.entity.hold_url_field", "icon_hold_url", config.icon_hold_url, { placeholder: "https://example.com", fullWidth: true }) + this._renderCheckboxField("ed.entity.hold_new_tab", "icon_hold_new_tab", config.icon_hold_new_tab === true) : ""}
@@ -2876,15 +2895,15 @@
           </div>
           <div class="editor-grid">
             ${this._renderSelectField("ed.vacuum.layout_narrow", "compact_layout_mode", config.compact_layout_mode || "auto", [
-        { value: "auto", label: "ed.vacuum.layout_auto" },
-        { value: "always", label: "ed.vacuum.layout_always" },
-        { value: "never", label: "ed.vacuum.layout_never" }
-      ])}
+          { value: "auto", label: "ed.vacuum.layout_auto" },
+          { value: "always", label: "ed.vacuum.layout_always" },
+          { value: "never", label: "ed.vacuum.layout_never" }
+        ])}
             ${this._renderSelectField("ed.cover.open_close_icons", "open_close_icons", config.open_close_icons || "auto", [
-        { value: "auto", label: "ed.cover.open_close_icons_auto" },
-        { value: "vertical", label: "ed.cover.open_close_icons_vertical" },
-        { value: "horizontal", label: "ed.cover.open_close_icons_horizontal" }
-      ])}
+          { value: "auto", label: "ed.cover.open_close_icons_auto" },
+          { value: "vertical", label: "ed.cover.open_close_icons_vertical" },
+          { value: "horizontal", label: "ed.cover.open_close_icons_horizontal" }
+        ])}
             ${this._renderCheckboxField("ed.fan.show_state_bubble", "show_state", config.show_state === true)}
             ${this._renderCheckboxField("ed.cover.show_position_chip", "show_position_chip", config.show_position_chip !== false)}
             ${this._renderCheckboxField("ed.cover.show_tilt_chip", "show_tilt_chip", config.show_tilt_chip !== false)}
@@ -2906,14 +2925,14 @@
             ${this._renderCheckboxField("ed.haptics.slider_position", "haptics.scrolls.position", config.haptics.scrolls?.position !== false)}
             ${this._renderCheckboxField("ed.haptics.slider_tilt", "haptics.scrolls.tilt", config.haptics.scrolls?.tilt !== false)}
             ${this._renderSelectField("ed.vacuum.haptic_style", "haptics.style", hapticStyle, [
-        { value: "selection", label: "ed.weather.haptic_selection" },
-        { value: "light", label: "ed.weather.haptic_light" },
-        { value: "medium", label: "ed.weather.haptic_medium" },
-        { value: "heavy", label: "ed.weather.haptic_heavy" },
-        { value: "success", label: "ed.weather.haptic_success" },
-        { value: "warning", label: "ed.weather.haptic_warning" },
-        { value: "failure", label: "ed.weather.haptic_failure" }
-      ])}
+          { value: "selection", label: "ed.weather.haptic_selection" },
+          { value: "light", label: "ed.weather.haptic_light" },
+          { value: "medium", label: "ed.weather.haptic_medium" },
+          { value: "heavy", label: "ed.weather.haptic_heavy" },
+          { value: "success", label: "ed.weather.haptic_success" },
+          { value: "warning", label: "ed.weather.haptic_warning" },
+          { value: "failure", label: "ed.weather.haptic_failure" }
+        ])}
           </div>
         </section>
         <section class="editor-section">
@@ -2953,17 +2972,17 @@
               ${this._renderColorField("ed.entity.style_card_bg", "styles.card.background", config.styles.card.background)}
               ${this._renderTextField("ed.entity.style_card_border", "styles.card.border", config.styles.card.border)}
               ${window.NodaliaUtils.renderEditorCardBorderRadiusHtml({
-        escapeHtml,
-        field: "styles.card.border_radius",
-        value: config.styles?.card?.border_radius,
-        tHeading: this._editorLabel("ed.entity.style_card_radius_presets"),
-        labels: {
-          pill: this._editorLabel("ed.entity.chip_radius_pill"),
-          soft: this._editorLabel("ed.entity.chip_radius_soft"),
-          round: this._editorLabel("ed.entity.chip_radius_round"),
-          square: this._editorLabel("ed.entity.chip_radius_square")
-        }
-      })}
+          escapeHtml,
+          field: "styles.card.border_radius",
+          value: config.styles?.card?.border_radius,
+          tHeading: this._editorLabel("ed.entity.style_card_radius_presets"),
+          labels: {
+            pill: this._editorLabel("ed.entity.chip_radius_pill"),
+            soft: this._editorLabel("ed.entity.chip_radius_soft"),
+            round: this._editorLabel("ed.entity.chip_radius_round"),
+            square: this._editorLabel("ed.entity.chip_radius_square")
+          }
+        })}
               <div class="editor-section__hint editor-field--full" style="margin-top: -6px;">${escapeHtml(this._editorLabel("ed.entity.style_card_radius_yaml_hint"))}</div>
               ${this._renderTextField("ed.entity.style_card_shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
               ${this._renderTextField("ed.entity.style_card_padding", "styles.card.padding", config.styles.card.padding)}
@@ -2981,41 +3000,40 @@
               ${this._renderTextField("ed.entity.style_chip_font", "styles.chip_font_size", config.styles.chip_font_size)}
               ${this._renderTextField("ed.entity.style_chip_padding", "styles.chip_padding", config.styles.chip_padding)}
               ${window.NodaliaUtils.renderEditorChipBorderRadiusHtml({
-        escapeHtml,
-        field: "styles.chip_border_radius",
-        value: config.styles?.chip_border_radius,
-        tHeading: this._editorLabel("ed.entity.style_chip_radius"),
-        labels: {
-          pill: this._editorLabel("ed.entity.chip_radius_pill"),
-          soft: this._editorLabel("ed.entity.chip_radius_soft"),
-          round: this._editorLabel("ed.entity.chip_radius_round"),
-          square: this._editorLabel("ed.entity.chip_radius_square")
-        }
-      })}
+          escapeHtml,
+          field: "styles.chip_border_radius",
+          value: config.styles?.chip_border_radius,
+          tHeading: this._editorLabel("ed.entity.style_chip_radius"),
+          labels: {
+            pill: this._editorLabel("ed.entity.chip_radius_pill"),
+            soft: this._editorLabel("ed.entity.chip_radius_soft"),
+            round: this._editorLabel("ed.entity.chip_radius_round"),
+            square: this._editorLabel("ed.entity.chip_radius_square")
+          }
+        })}
               ${this._renderTextField("ed.entity.style_title_size", "styles.title_size", config.styles.title_size)}
             </div>
           ` : ""}
         </section>
       </div>
     `;
-      this.shadowRoot.querySelectorAll('[data-mounted-control="cover-entity"]').forEach((host) => this._mountCoverEntityPicker(host));
-      this.shadowRoot.querySelectorAll("ha-icon-picker[data-field]").forEach((control) => {
-        control.hass = this._hass;
-        control.value = control.dataset.value || "";
-        control.addEventListener("value-changed", this._onShadowValueChanged);
-      });
-      this._ensureEditorControlsReady();
-      window.NodaliaUtils?.clampEditorDialogScroll?.(this);
+        this.shadowRoot.querySelectorAll('[data-mounted-control="cover-entity"]').forEach((host) => this._mountCoverEntityPicker(host));
+        this.shadowRoot.querySelectorAll("ha-icon-picker[data-field]").forEach((control) => {
+          control.hass = this._hass;
+          control.value = control.dataset.value || "";
+          control.addEventListener("value-changed", this._onShadowValueChanged);
+        });
+        this._ensureEditorControlsReady();
+        window.NodaliaUtils?.clampEditorDialogScroll?.(this);
+      }
     }
-  };
+    _lazyNodaliaCoverCardEditor = NodaliaCoverCardEditor;
+    return NodaliaCoverCardEditor;
+  }
 
   // src/cards/cover/index.ts
-  if (!customElements.get(CARD_TAG)) {
-    customElements.define(CARD_TAG, NodaliaCoverCard);
-  }
-  if (!customElements.get(EDITOR_TAG)) {
-    customElements.define(EDITOR_TAG, NodaliaCoverCardEditor);
-  }
+  window.NodaliaUtils.defineLazyCustomElement(CARD_TAG, loadNodaliaCoverCard, { editorTag: EDITOR_TAG });
+  window.NodaliaUtils.defineLazyCustomElement(EDITOR_TAG, loadNodaliaCoverCardEditor);
   (function registerNodaliaCoverCardPicker() {
     const hass = window.NodaliaI18n?.resolveHass?.(null);
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, "auto") ?? "en";

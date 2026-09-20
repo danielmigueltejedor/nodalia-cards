@@ -77,6 +77,30 @@ export const SRC_CARD_ENTRIES = [
     entry: "src/cards/graph/standalone.ts",
     outfile: "nodalia-graph-card.js",
   },
+  {
+    entry: "src/cards/calendar/standalone.ts",
+    outfile: "nodalia-calendar-card.js",
+  },
+  {
+    entry: "src/cards/power-flow/standalone.ts",
+    outfile: "nodalia-power-flow-card.js",
+  },
+  {
+    entry: "src/cards/notifications/standalone.ts",
+    outfile: "nodalia-notifications-card.js",
+  },
+  {
+    entry: "src/cards/navigation/standalone.ts",
+    outfile: "nodalia-navigation-bar.js",
+  },
+  {
+    entry: "src/cards/room-summary/standalone.ts",
+    outfile: "nodalia-room-summary-card.js",
+  },
+  {
+    entry: "src/cards/advance-vacuum/standalone.ts",
+    outfile: "nodalia-advance-vacuum-card.js",
+  },
 ];
 
 export async function buildSrcCards() {

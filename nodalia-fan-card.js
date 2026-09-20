@@ -4,7 +4,7 @@
   // src/cards/fan/fan-constants.ts
   var CARD_TAG = "nodalia-fan-card";
   var EDITOR_TAG = "nodalia-fan-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.19b";
+  var CARD_VERSION = "2.3.0-alpha.20";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
@@ -433,1110 +433,1118 @@
   }
 
   // src/cards/fan/fan-card.ts
-  var NodaliaFanCard = class extends HTMLElement {
-    static async getConfigElement() {
-      return document.createElement(EDITOR_TAG);
+  var _lazyNodaliaFanCard;
+  function loadNodaliaFanCard() {
+    if (_lazyNodaliaFanCard) {
+      return _lazyNodaliaFanCard;
     }
-    static getStubConfig(hass, entities = [], entitiesFallback = []) {
-      return applyStubEntity(deepClone(STUB_CONFIG), hass, ["fan"], entities, entitiesFallback);
-    }
-    static getEntitySuggestion(hass, entityId) {
-      return [
-        window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
-          domains: ["fan"],
-          label: "Fan — Standard",
-          buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, compact_layout_mode: "auto" })
-        }),
-        window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
-          domains: ["fan"],
-          label: "Fan — Compact",
-          buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, compact_layout_mode: "always" })
-        })
-      ].filter(Boolean);
-    }
-    constructor() {
-      super();
-      this.attachShadow({ mode: "open" });
-      this._config = null;
-      this._hass = null;
-      this._optimisticToggle = null;
-      this._optimisticToggleTimer = 0;
-      this._optimisticVisualSettle = null;
-      this._optimisticVisualSettleTimer = 0;
-      this._lastKnownOnState = /* @__PURE__ */ new Map();
-      this._draftPercentage = /* @__PURE__ */ new Map();
-      this._presetPanelOpen = false;
-      this._cardWidth = 0;
-      this._isCompactLayout = false;
-      this._activeSliderDrag = null;
-      this._pendingRenderAfterDrag = false;
-      this._skipNextSliderChange = null;
-      this._dragFrame = 0;
-      window.NodaliaUtils?.clearDeferTimers?.(this);
-      this._pendingDragUpdate = null;
-      this._dragWindowListenersAttached = false;
-      this._lastRenderSignature = "";
-      this._lastEntityRevision = "";
-      this._lastRenderedIsOn = null;
-      this._lastRenderedPresetPanelVisible = false;
-      this._lastControlsMarkup = "";
-      this._lastPresetPanelMarkup = "";
-      this._animationCleanupTimer = 0;
-      this._powerTransition = null;
-      this._controlsTransition = null;
-      this._presetPanelTransition = null;
-      this._suppressNextFanTap = false;
-      this._resizeObserver = new ResizeObserver((entries) => {
-        const entry = entries[0];
-        if (!entry) {
-          return;
-        }
-        const nextWidth = Math.round(entry.contentRect?.width || this.clientWidth || 0);
-        const nextCompact = this._shouldUseCompactLayout(nextWidth);
-        if (nextWidth === this._cardWidth && nextCompact === this._isCompactLayout) {
-          return;
-        }
-        this._cardWidth = nextWidth;
-        this._isCompactLayout = nextCompact;
-        if (this._activeSliderDrag) {
-          this._pendingRenderAfterDrag = true;
-          return;
-        }
-        const signature = this._getRenderSignature();
-        if (signature === this._lastRenderSignature) {
-          return;
-        }
-        this._lastRenderSignature = signature;
-        this._render();
-      });
-      this._onShadowClick = this._onShadowClick.bind(this);
-      this._onShadowInput = this._onShadowInput.bind(this);
-      this._onShadowChange = this._onShadowChange.bind(this);
-      this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
-      this._onShadowMouseDown = this._onShadowMouseDown.bind(this);
-      this._onShadowTouchStart = this._onShadowTouchStart.bind(this);
-      this._onWindowPointerMove = this._onWindowPointerMove.bind(this);
-      this._onWindowPointerUp = this._onWindowPointerUp.bind(this);
-      this._onWindowMouseMove = this._onWindowMouseMove.bind(this);
-      this._onWindowMouseUp = this._onWindowMouseUp.bind(this);
-      this._onWindowTouchStartCapture = this._onWindowTouchStartCapture.bind(this);
-      this._onWindowTouchMove = this._onWindowTouchMove.bind(this);
-      this._onWindowTouchEnd = this._onWindowTouchEnd.bind(this);
-      this.shadowRoot.addEventListener("click", this._onShadowClick);
-      this.shadowRoot.addEventListener("input", this._onShadowInput);
-      this.shadowRoot.addEventListener("change", this._onShadowChange);
-      this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
-      this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown);
-      if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
-        this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
+    class NodaliaFanCard extends HTMLElement {
+      static async getConfigElement() {
+        return document.createElement(EDITOR_TAG);
       }
-      this._detachHostHold = typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function" ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
-        resolveZone: (event) => {
-          const path = event.composedPath();
-          if (path.some((node) => node instanceof HTMLInputElement && node.dataset?.fanControl)) {
-            return null;
-          }
-          if (window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
-            return null;
-          }
-          const actionButton = path.find((node) => node instanceof HTMLElement && node.dataset?.fanAction);
-          const zone = actionButton?.dataset?.fanAction;
-          return zone === "body" || zone === "icon" ? zone : null;
-        },
-        shouldBeginHold: (zone) => this._resolveFanHoldEffect(zone) !== "none",
-        onHold: (zone) => {
-          const effect = this._resolveFanHoldEffect(zone);
-          if (effect === "none") {
-            return;
-          }
-          this._triggerHaptic();
-          this._executeFanHoldEffect(zone, effect);
-        },
-        markHoldConsumedClick: () => {
-          this._suppressNextFanTap = true;
-          window.NodaliaUtils?.cancelCardZoneTap?.(this);
-        }
-      }) : () => {
-      };
-    }
-    connectedCallback() {
-      this._detachHostHold?.reconnect?.();
-      this._resizeObserver?.observe(this);
-      this._scheduleOptimisticToggleTimeout();
-      this._scheduleOptimisticVisualSettleTimeout();
-    }
-    disconnectedCallback() {
-      this._detachHostHold?.();
-      this._resizeObserver?.disconnect();
-      if (this._activeSliderDrag) {
-        this._activeSliderDrag.dial?.classList?.remove("is-dragging");
+      static getStubConfig(hass, entities = [], entitiesFallback = []) {
+        return applyStubEntity(deepClone(STUB_CONFIG), hass, ["fan"], entities, entitiesFallback);
+      }
+      static getEntitySuggestion(hass, entityId) {
+        return [
+          window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+            domains: ["fan"],
+            label: "Fan — Standard",
+            buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, compact_layout_mode: "auto" })
+          }),
+          window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+            domains: ["fan"],
+            label: "Fan — Compact",
+            buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, compact_layout_mode: "always" })
+          })
+        ].filter(Boolean);
+      }
+      constructor() {
+        super();
+        this._nodaliaConstruct();
+      }
+      _nodaliaConstruct() {
+        this.attachShadow({ mode: "open" });
+        this._config = null;
+        this._hass = null;
+        this._optimisticToggle = null;
+        this._optimisticToggleTimer = 0;
+        this._optimisticVisualSettle = null;
+        this._optimisticVisualSettleTimer = 0;
+        this._lastKnownOnState = /* @__PURE__ */ new Map();
+        this._draftPercentage = /* @__PURE__ */ new Map();
+        this._presetPanelOpen = false;
+        this._cardWidth = 0;
+        this._isCompactLayout = false;
         this._activeSliderDrag = null;
-      }
-      this._detachWindowDragListeners();
-      if (this._dragFrame) {
-        window.cancelAnimationFrame(this._dragFrame);
+        this._pendingRenderAfterDrag = false;
+        this._skipNextSliderChange = null;
         this._dragFrame = 0;
-      }
-      if (this._animationCleanupTimer) {
-        window.clearTimeout(this._animationCleanupTimer);
-        this._animationCleanupTimer = 0;
-      }
-      this._powerTransition = null;
-      this._controlsTransition = null;
-      this._presetPanelTransition = null;
-      this._pendingDragUpdate = null;
-      this._clearOptimisticToggleTimer();
-      this._clearOptimisticVisualSettleTimer();
-      window.NodaliaUtils?.clearDeferTimers?.(this);
-    }
-    setConfig(config) {
-      const previousEntity = this._config?.entity || "";
-      this._config = normalizeConfig(config || {});
-      window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
-      if (previousEntity && previousEntity !== this._config.entity) {
-        this._draftPercentage.delete(previousEntity);
-        this._lastKnownOnState.delete(previousEntity);
-        this._clearOptimisticVisualSettle();
-        this._clearOptimisticToggleState();
-      }
-      this._isCompactLayout = this._shouldUseCompactLayout(
-        Math.round(this._cardWidth || this.clientWidth || 0)
-      );
-      this._lastRenderSignature = "";
-      this._render();
-    }
-    set hass(hass) {
-      this._hass = hass;
-      const entityId = this._config?.entity || "";
-      if (entityId && this._draftPercentage.has(entityId) && !this._activeSliderDrag) {
-        this._syncDraftWithState();
-      }
-      const actualState = this._getActualState();
-      const entityRevision = entityId && actualState ? `${entityId}:${actualState.state}:${actualState.last_updated || actualState.last_changed || ""}` : "";
-      const revisionUnchanged = Boolean(entityRevision && entityRevision === this._lastEntityRevision);
-      if (entityRevision) {
-        this._lastEntityRevision = entityRevision;
-      }
-      const hasPendingOptimistic = Boolean(this._optimisticToggle || this._optimisticVisualSettle);
-      let nextSignature = this._getRenderSignature();
-      const signatureUnchanged = Boolean(
-        this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature
-      );
-      if (signatureUnchanged && !hasPendingOptimistic) {
-        return;
-      }
-      let visualSettleChanged = false;
-      if (!revisionUnchanged || hasPendingOptimistic) {
-        visualSettleChanged = this._syncOptimisticVisualSettle(actualState);
-      }
-      const hadOptimisticToggle = Boolean(this._optimisticToggle);
-      if (!revisionUnchanged || hasPendingOptimistic) {
-        this._syncLastKnownOnState(actualState);
-        this._syncOptimisticToggleState(actualState);
-      }
-      nextSignature = this._getRenderSignature();
-      const optimisticJustConfirmed = hadOptimisticToggle && !this._optimisticToggle;
-      if (signatureUnchanged && !optimisticJustConfirmed && !visualSettleChanged && this._shouldSkipRenderForUnchangedSignature()) {
-        return;
-      }
-      if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !optimisticJustConfirmed && !this._optimisticToggle && !visualSettleChanged) {
-        return;
-      }
-      this._lastRenderSignature = nextSignature;
-      if (this._activeSliderDrag) {
-        this._pendingRenderAfterDrag = true;
-        return;
-      }
-      this._render();
-    }
-    getCardSize() {
-      return this._config?.layout === "circular" ? 5 : 3;
-    }
-    getGridOptions() {
-      return {
-        rows: "auto",
-        columns: "full",
-        min_rows: this._config?.layout === "circular" ? 5 : 2,
-        min_columns: this._config?.layout === "circular" ? 7 : 2
-      };
-    }
-    _getRenderSignature(hass = this._hass) {
-      const entityId = this._config?.entity || "";
-      const actualState = entityId ? hass?.states?.[entityId] || null : null;
-      const state = hass === this._hass ? this._buildOptimisticToggleState(actualState) : actualState;
-      const attrs = state?.attributes || {};
-      const joinParts = window.NodaliaRenderSignature?.joinParts;
-      const values = [
-        entityId,
-        String(state?.state || ""),
-        String(attrs._nodalia_optimistic_toggle || ""),
-        String(attrs.friendly_name || ""),
-        String(attrs.icon || ""),
-        this._config?.show_entity_picture === true,
-        String(this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || ""),
-        Number(attrs.percentage ?? -1),
-        Number(attrs.percentage_step ?? -1),
-        String(attrs.preset_mode || ""),
-        Array.isArray(attrs.preset_modes) ? attrs.preset_modes.join("|") : "",
-        String(attrs.oscillating ?? ""),
-        String(attrs.direction || ""),
-        String(this._config?.layout || "compact"),
-        Boolean(this._isCompactLayout),
-        Boolean(this._presetPanelOpen),
-        `${String(this._config?.tap_action || "")}|${String(this._config?.icon_tap_action ?? "")}|${String(this._config?.tap_service || "")}|${String(this._config?.icon_tap_service || "")}`,
-        `${String(this._config?.hold_action || "")}|${String(this._config?.icon_hold_action ?? "")}|${String(this._config?.hold_service || "")}|${String(this._config?.icon_hold_service || "")}`,
-        `${String(this._config?.double_tap_action || "")}|${String(this._config?.icon_double_tap_action ?? "")}|${String(this._config?.double_tap_service || "")}|${String(this._config?.icon_double_tap_service || "")}`
-      ];
-      if (typeof joinParts === "function") {
-        return joinParts([{ prefix: "fan:", values }]);
-      }
-      return values.join("::");
-    }
-    _getConfiguredGridColumns() {
-      const numericColumns = Number(this._config?.grid_options?.columns);
-      return Number.isFinite(numericColumns) && numericColumns > 0 ? numericColumns : null;
-    }
-    _getCompactLayoutThreshold() {
-      const styles = getSafeStyles(this._config?.styles);
-      const iconSize = parseSizeToPixels(styles?.icon?.size, 58);
-      const cardPadding = parseSizeToPixels(styles?.card?.padding, 14);
-      const cardGap = parseSizeToPixels(styles?.card?.gap, 12);
-      return Math.max(
-        COMPACT_LAYOUT_THRESHOLD,
-        Math.round(iconSize + cardPadding * 2 + cardGap + 24)
-      );
-    }
-    _shouldUseCompactLayout(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
-      return window.NodaliaUtils.shouldUseCompactCardLayout({
-        mode: this._config?.compact_layout_mode,
-        width,
-        gridColumns: this._getConfiguredGridColumns()
-      });
-    }
-    _shouldShowCompactTitle(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
-      return window.NodaliaUtils.shouldShowCompactCardTitle({ width });
-    }
-    _triggerHaptic(style = this._config?.haptics?.style) {
-      if (!this._config?.haptics?.enabled) {
-        return;
-      }
-      this.dispatchEvent(new CustomEvent("haptic", {
-        bubbles: true,
-        composed: true,
-        detail: style || "medium"
-      }));
-      if (!this._config?.haptics?.fallback_vibrate || !navigator?.vibrate) {
-        return;
-      }
-      const vibration = HAPTIC_PATTERNS[style || "medium"];
-      if (vibration) {
-        navigator.vibrate(vibration);
-      }
-    }
-    _getState() {
-      const actualState = this._getActualState();
-      const optimisticState = this._buildOptimisticToggleState(actualState);
-      if (this._shouldUseOptimisticVisualSettle(actualState)) {
-        return this._buildOptimisticVisualSettleState(actualState);
-      }
-      return optimisticState;
-    }
-    _getActualState(hass = this._hass) {
-      return this._config?.entity ? hass?.states?.[this._config.entity] || null : null;
-    }
-    _createStateSnapshot(state) {
-      if (!state) {
-        return null;
-      }
-      return {
-        ...state,
-        attributes: { ...state.attributes || {} }
-      };
-    }
-    _getStoredFanMemory() {
-      if (typeof window === "undefined" || !window.localStorage) {
-        return {};
-      }
-      try {
-        return JSON.parse(window.localStorage.getItem(FAN_MEMORY_STORAGE_KEY) || "{}");
-      } catch {
-        return {};
-      }
-    }
-    _storeFanMemory(entityId, snapshot) {
-      if (!entityId || !snapshot || typeof window === "undefined" || !window.localStorage) {
-        return;
-      }
-      try {
-        const memory = this._getStoredFanMemory();
-        memory[entityId] = {
-          attributes: { ...snapshot.attributes || {} },
-          last_changed: snapshot.last_changed || (/* @__PURE__ */ new Date()).toISOString()
-        };
-        window.localStorage.setItem(FAN_MEMORY_STORAGE_KEY, JSON.stringify(memory));
-      } catch {
-      }
-    }
-    _getStoredFanSnapshot(entityId) {
-      const stored = this._getStoredFanMemory()[entityId];
-      if (!stored?.attributes || typeof stored.attributes !== "object") {
-        return null;
-      }
-      return {
-        entity_id: entityId,
-        state: "on",
-        attributes: { ...stored.attributes || {} },
-        last_changed: stored.last_changed || (/* @__PURE__ */ new Date()).toISOString(),
-        last_updated: stored.last_changed || (/* @__PURE__ */ new Date()).toISOString()
-      };
-    }
-    _syncLastKnownOnState(actualState) {
-      const entityId = this._config?.entity || "";
-      if (!entityId || !actualState) {
-        return;
-      }
-      const snapshot = this._createStateSnapshot(actualState);
-      if (actualState.state === "on") {
-        this._lastKnownOnState.set(entityId, snapshot);
-        this._storeFanMemory(entityId, snapshot);
-        return;
-      }
-      const rememberedPercentage = Number(actualState.attributes?.percentage);
-      if (Number.isFinite(rememberedPercentage) && rememberedPercentage > 0) {
-        this._lastKnownOnState.set(entityId, {
-          ...snapshot,
-          state: "on"
-        });
-        this._storeFanMemory(entityId, snapshot);
-      }
-    }
-    _getLastKnownOnState(entityId = this._config?.entity || "") {
-      if (!entityId) {
-        return null;
-      }
-      const cached = this._lastKnownOnState.get(entityId);
-      if (cached) {
-        return cached;
-      }
-      const stored = this._getStoredFanSnapshot(entityId);
-      if (stored) {
-        this._lastKnownOnState.set(entityId, this._createStateSnapshot(stored));
-      }
-      return stored;
-    }
-    _startOptimisticVisualSettle(actualState, optimisticState) {
-      const entityId = this._config?.entity || "";
-      if (!entityId || !actualState || actualState.state !== "on" || !optimisticState) {
-        this._clearOptimisticVisualSettle();
-        return;
-      }
-      this._optimisticVisualSettle = {
-        entityId,
-        expiresAt: Date.now() + OPTIMISTIC_VISUAL_SETTLE_MS,
-        stateSnapshot: this._createStateSnapshot(optimisticState)
-      };
-      this._scheduleOptimisticVisualSettleTimeout();
-    }
-    _hasPublishedPercentage(actualState) {
-      const percentage = Number(actualState?.attributes?.percentage);
-      return Number.isFinite(percentage) && percentage > 0;
-    }
-    _shouldUseOptimisticVisualSettle(actualState = this._getActualState()) {
-      if (!this._optimisticVisualSettle) {
-        return false;
-      }
-      if (this._optimisticVisualSettle.entityId !== (this._config?.entity || "")) {
-        this._clearOptimisticVisualSettle();
-        return false;
-      }
-      if (actualState?.state !== "on" || Date.now() >= this._optimisticVisualSettle.expiresAt) {
-        this._clearOptimisticVisualSettle();
-        return false;
-      }
-      if (this._hasPublishedPercentage(actualState)) {
-        this._clearOptimisticVisualSettle();
-        return false;
-      }
-      return true;
-    }
-    _buildOptimisticVisualSettleState(actualState = this._getActualState()) {
-      const snapshot = this._optimisticVisualSettle?.stateSnapshot;
-      if (!actualState || !snapshot) {
-        return actualState;
-      }
-      const entityId = this._config?.entity || "";
-      const attrs = {
-        ...actualState.attributes || {},
-        ...snapshot.attributes || {}
-      };
-      if (entityId && this._draftPercentage.has(entityId)) {
-        attrs.percentage = clamp(Math.round(Number(this._draftPercentage.get(entityId))), 0, 100);
-      }
-      return {
-        ...actualState,
-        attributes: attrs
-      };
-    }
-    _clearOptimisticToggleTimer() {
-      if (this._optimisticToggleTimer) {
-        window.clearTimeout(this._optimisticToggleTimer);
-        this._optimisticToggleTimer = 0;
-      }
-    }
-    _clearOptimisticVisualSettleTimer() {
-      if (this._optimisticVisualSettleTimer) {
-        window.clearTimeout(this._optimisticVisualSettleTimer);
-        this._optimisticVisualSettleTimer = 0;
-      }
-    }
-    _clearOptimisticVisualSettle() {
-      this._clearOptimisticVisualSettleTimer();
-      this._optimisticVisualSettle = null;
-    }
-    _syncOptimisticVisualSettle(actualState = this._getActualState()) {
-      const hadSettle = Boolean(this._optimisticVisualSettle);
-      this._shouldUseOptimisticVisualSettle(actualState);
-      const hasSettle = Boolean(this._optimisticVisualSettle);
-      if (hasSettle) {
-        this._scheduleOptimisticVisualSettleTimeout();
-      } else {
-        this._clearOptimisticVisualSettleTimer();
-      }
-      return hadSettle !== hasSettle;
-    }
-    _scheduleOptimisticVisualSettleTimeout() {
-      this._clearOptimisticVisualSettleTimer();
-      if (!this._optimisticVisualSettle || !this.isConnected || typeof window === "undefined") {
-        return;
-      }
-      const remaining = Math.max(0, this._optimisticVisualSettle.expiresAt - Date.now());
-      this._optimisticVisualSettleTimer = window.setTimeout(() => {
-        this._optimisticVisualSettleTimer = 0;
-        if (!this.isConnected) {
-          return;
-        }
-        const nextActualState = this._getActualState();
-        if (this._shouldUseOptimisticVisualSettle(nextActualState)) {
-          this._scheduleOptimisticVisualSettleTimeout();
-          return;
-        }
+        window.NodaliaUtils?.clearDeferTimers?.(this);
+        this._pendingDragUpdate = null;
+        this._dragWindowListenersAttached = false;
         this._lastRenderSignature = "";
-        if (this._activeSliderDrag) {
-          this._pendingRenderAfterDrag = true;
-          return;
-        }
-        this._render();
-      }, remaining);
-    }
-    _clearOptimisticToggleState() {
-      this._clearOptimisticToggleTimer();
-      this._optimisticToggle = null;
-    }
-    _isOptimisticTogglePending(actualState = this._getActualState()) {
-      const entityId = this._config?.entity || "";
-      if (!entityId || !this._optimisticToggle || this._optimisticToggle.entityId !== entityId) {
-        this._optimisticToggle = null;
-        return false;
-      }
-      const actualKey = normalizeTextKey(actualState?.state);
-      const expectedKey = normalizeTextKey(this._optimisticToggle.expectedState);
-      if (!actualState || !this._isFanToggleableState(actualState) || actualKey === expectedKey) {
-        this._optimisticToggle = null;
-        return false;
-      }
-      if (Date.now() >= this._optimisticToggle.expiresAt) {
-        this._optimisticToggle = null;
-        return false;
-      }
-      return true;
-    }
-    _scheduleOptimisticToggleTimeout() {
-      this._clearOptimisticToggleTimer();
-      if (!this._optimisticToggle || !this.isConnected || typeof window === "undefined") {
-        return;
-      }
-      const remaining = Math.max(0, this._optimisticToggle.expiresAt - Date.now());
-      this._optimisticToggleTimer = window.setTimeout(() => {
-        this._optimisticToggleTimer = 0;
-        if (!this.isConnected) {
-          return;
-        }
-        if (!this._isOptimisticTogglePending(this._getActualState())) {
-          this._lastRenderSignature = "";
-          this._render();
-          return;
-        }
-        this._scheduleOptimisticToggleTimeout();
-      }, remaining);
-    }
-    _startOptimisticToggle(expectedState, actualState = this._getActualState()) {
-      const entityId = this._config?.entity || "";
-      if (!entityId || !this._isFanToggleableState(actualState)) {
-        return;
-      }
-      const turningOn = normalizeTextKey(expectedState) === "on";
-      const snapshotSource = turningOn ? this._getLastKnownOnState(entityId) || actualState : actualState;
-      this._clearOptimisticToggleState();
-      this._clearOptimisticVisualSettle();
-      this._optimisticToggle = {
-        entityId,
-        expectedState,
-        expiresAt: Date.now() + OPTIMISTIC_TOGGLE_TIMEOUT,
-        stateSnapshot: this._createStateSnapshot(snapshotSource)
-      };
-      this._scheduleOptimisticToggleTimeout();
-    }
-    _composeOptimisticToggleState(actualState, toggle = this._optimisticToggle) {
-      if (!toggle) {
-        return actualState;
-      }
-      const turningOn = normalizeTextKey(toggle.expectedState) === "on";
-      const snapshot = (turningOn ? this._getLastKnownOnState(toggle.entityId) || toggle.stateSnapshot : toggle.stateSnapshot) || actualState;
-      if (!snapshot) {
-        return actualState;
-      }
-      const entityId = toggle.entityId || this._config?.entity || "";
-      const attrs = turningOn ? { ...actualState?.attributes || {}, ...snapshot.attributes || {} } : { ...snapshot.attributes || {}, ...actualState?.attributes || {} };
-      if (entityId && this._draftPercentage.has(entityId)) {
-        attrs.percentage = clamp(Math.round(Number(this._draftPercentage.get(entityId))), 0, 100);
-      }
-      return {
-        ...snapshot,
-        entity_id: snapshot.entity_id || actualState?.entity_id || entityId,
-        state: toggle.expectedState,
-        attributes: {
-          ...attrs,
-          _nodalia_optimistic_toggle: toggle.expectedState
-        }
-      };
-    }
-    _buildOptimisticToggleState(actualState = this._getActualState()) {
-      if (!this._isOptimisticTogglePending(actualState)) {
-        return actualState;
-      }
-      return this._composeOptimisticToggleState(actualState);
-    }
-    _syncOptimisticToggleState(actualState = this._getActualState()) {
-      const toggle = this._optimisticToggle;
-      if (!toggle) {
-        return;
-      }
-      const optimisticDisplay = this._composeOptimisticToggleState(actualState, toggle);
-      const stillPending = this._isOptimisticTogglePending(actualState);
-      if (!stillPending) {
-        if (actualState?.state === "on" && normalizeTextKey(toggle.expectedState) === "on") {
-          this._startOptimisticVisualSettle(actualState, optimisticDisplay);
-        }
-        this._clearOptimisticToggleTimer();
-        return;
-      }
-      this._scheduleOptimisticToggleTimeout();
-    }
-    _isOn(state = this._getState()) {
-      const stateValue = String(state?.state || "").toLowerCase();
-      return Boolean(state) && !["off", "unavailable", "unknown"].includes(stateValue);
-    }
-    _getFanName(state) {
-      if (this._config?.name) {
-        return this._config.name;
-      }
-      if (state?.attributes?.friendly_name) {
-        return state.attributes.friendly_name;
-      }
-      const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-      const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-      return this._config?.entity || window.NodaliaI18n?.strings?.(lang)?.fan?.fallbackName || "Fan";
-    }
-    _getFanIcon(state) {
-      if (this._config?.icon) {
-        return this._config.icon;
-      }
-      if (state?.attributes?.icon) {
-        return state.attributes.icon;
-      }
-      return "mdi:fan";
-    }
-    _getEntityPicture(state) {
-      if (this._config?.show_entity_picture !== true) {
-        return "";
-      }
-      return String(
-        this._config?.entity_picture || state?.attributes?.entity_picture_local || state?.attributes?.entity_picture || ""
-      ).trim();
-    }
-    _getStateLabel(state) {
-      const stateValue = normalizeTextKey(state?.state);
-      const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-      const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-      const fanStrings = window.NodaliaI18n?.strings?.(lang)?.fan;
-      if (fanStrings?.[stateValue]) {
-        return fanStrings[stateValue];
-      }
-      switch (stateValue) {
-        case "off":
-          return fanStrings?.off || "Off";
-        case "on":
-          return fanStrings?.on || "On";
-        case "unavailable":
-          return fanStrings?.unavailable || "Unavailable";
-        case "unknown":
-          return fanStrings?.unknown || "Unknown";
-        default:
-          return state?.state ? String(state.state) : fanStrings?.noState || "No state";
-      }
-    }
-    _supportsPercentage(state) {
-      return Number.isFinite(Number(state?.attributes?.percentage)) || Number.isFinite(Number(state?.attributes?.percentage_step));
-    }
-    _getPercentage(state) {
-      const draft = this._draftPercentage.get(this._config?.entity);
-      if (Number.isFinite(draft)) {
-        return clamp(Number(draft), 0, 100);
-      }
-      const rawPercentage = Number(state?.attributes?.percentage);
-      if (Number.isFinite(rawPercentage)) {
-        return clamp(Math.round(rawPercentage), 0, 100);
-      }
-      return this._isOn(state) ? 100 : 0;
-    }
-    _syncDraftWithState() {
-      const state = this._getActualState();
-      const entityId = this._config?.entity;
-      if (!entityId || !state || !this._draftPercentage.has(entityId)) {
-        return;
-      }
-      const actualPercentage = Number(state.attributes?.percentage);
-      const draftPercentage = Number(this._draftPercentage.get(entityId));
-      const configuredStep = Number(state.attributes?.percentage_step);
-      const step = Number.isFinite(configuredStep) && configuredStep > 0 ? configuredStep : 1;
-      const tolerance = Math.max(1, step / 2);
-      if (Number.isFinite(actualPercentage) && Number.isFinite(draftPercentage) && Math.abs(actualPercentage - draftPercentage) <= tolerance) {
-        this._draftPercentage.delete(entityId);
-      }
-    }
-    _supportsOscillation(state) {
-      return typeof state?.attributes?.oscillating === "boolean";
-    }
-    _isOscillating(state) {
-      return state?.attributes?.oscillating === true;
-    }
-    _getPresetModes(state) {
-      return Array.isArray(state?.attributes?.preset_modes) ? state.attributes.preset_modes.map((item) => String(item || "").trim()).filter(Boolean).filter((mode) => !this._isPresetModeHidden(mode)) : [];
-    }
-    _isPresetModeHidden(value) {
-      const hiddenModes = Array.isArray(this._config?.hidden_preset_modes) ? this._config.hidden_preset_modes : [];
-      const expectedKey = normalizeTextKey(value);
-      return hiddenModes.some((item) => normalizeTextKey(item) === expectedKey);
-    }
-    _getCurrentPresetMode(state) {
-      return state?.attributes?.preset_mode ? String(state.attributes.preset_mode) : "";
-    }
-    _getAccentColor(state) {
-      const styles = getSafeStyles(this._config?.styles);
-      return this._isOn(state) ? styles?.icon?.on_color || DEFAULT_CONFIG.styles.icon.on_color : styles?.icon?.off_color || DEFAULT_CONFIG.styles.icon.off_color;
-    }
-    _getAnimationSettings() {
-      const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
-      return {
-        enabled: configuredAnimations.enabled !== false,
-        iconAnimation: configuredAnimations.icon_animation !== false,
-        powerDuration: clamp(Number(configuredAnimations.power_duration) || DEFAULT_CONFIG.animations.power_duration, 120, 4e3),
-        controlsDuration: clamp(Number(configuredAnimations.controls_duration) || DEFAULT_CONFIG.animations.controls_duration, 120, 2400),
-        presetDuration: clamp(Number(configuredAnimations.preset_duration) || DEFAULT_CONFIG.animations.preset_duration, 120, 2400),
-        buttonBounceDuration: clamp(Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration, 120, 1200)
-      };
-    }
-    _isTransitionAnimationActive(now = Date.now()) {
-      return Boolean(
-        this._powerTransition?.endsAt > now || this._controlsTransition?.endsAt > now || this._presetPanelTransition?.endsAt > now
-      );
-    }
-    _shouldSkipRenderForUnchangedSignature() {
-      if (!this.shadowRoot?.innerHTML) {
-        return false;
-      }
-      if (this._activeSliderDrag) {
-        this._pendingRenderAfterDrag = true;
-        return true;
-      }
-      return Boolean(this._optimisticToggle && this._isTransitionAnimationActive());
-    }
-    _scheduleAnimationCleanup(delay) {
-      if (this._animationCleanupTimer) {
-        window.clearTimeout(this._animationCleanupTimer);
+        this._lastEntityRevision = "";
+        this._lastRenderedIsOn = null;
+        this._lastRenderedPresetPanelVisible = false;
+        this._lastControlsMarkup = "";
+        this._lastPresetPanelMarkup = "";
         this._animationCleanupTimer = 0;
-      }
-      const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 5e3);
-      if (!safeDelay || typeof window === "undefined") {
-        return;
-      }
-      this._animationCleanupTimer = window.setTimeout(() => {
-        this._animationCleanupTimer = 0;
-        const shouldFinalizeRender = Boolean(
-          this._powerTransition || this._controlsTransition || this._presetPanelTransition
-        );
         this._powerTransition = null;
         this._controlsTransition = null;
         this._presetPanelTransition = null;
-        if (!shouldFinalizeRender || !this.isConnected) {
+        this._suppressNextFanTap = false;
+        this._resizeObserver = new ResizeObserver((entries) => {
+          const entry = entries[0];
+          if (!entry) {
+            return;
+          }
+          const nextWidth = Math.round(entry.contentRect?.width || this.clientWidth || 0);
+          const nextCompact = this._shouldUseCompactLayout(nextWidth);
+          if (nextWidth === this._cardWidth && nextCompact === this._isCompactLayout) {
+            return;
+          }
+          this._cardWidth = nextWidth;
+          this._isCompactLayout = nextCompact;
+          if (this._activeSliderDrag) {
+            this._pendingRenderAfterDrag = true;
+            return;
+          }
+          const signature = this._getRenderSignature();
+          if (signature === this._lastRenderSignature) {
+            return;
+          }
+          this._lastRenderSignature = signature;
+          this._render();
+        });
+        this._onShadowClick = this._onShadowClick.bind(this);
+        this._onShadowInput = this._onShadowInput.bind(this);
+        this._onShadowChange = this._onShadowChange.bind(this);
+        this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
+        this._onShadowMouseDown = this._onShadowMouseDown.bind(this);
+        this._onShadowTouchStart = this._onShadowTouchStart.bind(this);
+        this._onWindowPointerMove = this._onWindowPointerMove.bind(this);
+        this._onWindowPointerUp = this._onWindowPointerUp.bind(this);
+        this._onWindowMouseMove = this._onWindowMouseMove.bind(this);
+        this._onWindowMouseUp = this._onWindowMouseUp.bind(this);
+        this._onWindowTouchStartCapture = this._onWindowTouchStartCapture.bind(this);
+        this._onWindowTouchMove = this._onWindowTouchMove.bind(this);
+        this._onWindowTouchEnd = this._onWindowTouchEnd.bind(this);
+        this.shadowRoot.addEventListener("click", this._onShadowClick);
+        this.shadowRoot.addEventListener("input", this._onShadowInput);
+        this.shadowRoot.addEventListener("change", this._onShadowChange);
+        this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
+        this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown);
+        if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+          this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
+        }
+        this._detachHostHold = typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function" ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
+          resolveZone: (event) => {
+            const path = event.composedPath();
+            if (path.some((node) => node instanceof HTMLInputElement && node.dataset?.fanControl)) {
+              return null;
+            }
+            if (window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
+              return null;
+            }
+            const actionButton = path.find((node) => node instanceof HTMLElement && node.dataset?.fanAction);
+            const zone = actionButton?.dataset?.fanAction;
+            return zone === "body" || zone === "icon" ? zone : null;
+          },
+          shouldBeginHold: (zone) => this._resolveFanHoldEffect(zone) !== "none",
+          onHold: (zone) => {
+            const effect = this._resolveFanHoldEffect(zone);
+            if (effect === "none") {
+              return;
+            }
+            this._triggerHaptic();
+            this._executeFanHoldEffect(zone, effect);
+          },
+          markHoldConsumedClick: () => {
+            this._suppressNextFanTap = true;
+            window.NodaliaUtils?.cancelCardZoneTap?.(this);
+          }
+        }) : () => {
+        };
+      }
+      connectedCallback() {
+        this._detachHostHold?.reconnect?.();
+        this._resizeObserver?.observe(this);
+        this._scheduleOptimisticToggleTimeout();
+        this._scheduleOptimisticVisualSettleTimeout();
+      }
+      disconnectedCallback() {
+        this._detachHostHold?.();
+        this._resizeObserver?.disconnect();
+        if (this._activeSliderDrag) {
+          this._activeSliderDrag.dial?.classList?.remove("is-dragging");
+          this._activeSliderDrag = null;
+        }
+        this._detachWindowDragListeners();
+        if (this._dragFrame) {
+          window.cancelAnimationFrame(this._dragFrame);
+          this._dragFrame = 0;
+        }
+        if (this._animationCleanupTimer) {
+          window.clearTimeout(this._animationCleanupTimer);
+          this._animationCleanupTimer = 0;
+        }
+        this._powerTransition = null;
+        this._controlsTransition = null;
+        this._presetPanelTransition = null;
+        this._pendingDragUpdate = null;
+        this._clearOptimisticToggleTimer();
+        this._clearOptimisticVisualSettleTimer();
+        window.NodaliaUtils?.clearDeferTimers?.(this);
+      }
+      setConfig(config) {
+        const previousEntity = this._config?.entity || "";
+        this._config = normalizeConfig(config || {});
+        window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
+        if (previousEntity && previousEntity !== this._config.entity) {
+          this._draftPercentage.delete(previousEntity);
+          this._lastKnownOnState.delete(previousEntity);
+          this._clearOptimisticVisualSettle();
+          this._clearOptimisticToggleState();
+        }
+        this._isCompactLayout = this._shouldUseCompactLayout(
+          Math.round(this._cardWidth || this.clientWidth || 0)
+        );
+        this._lastRenderSignature = "";
+        this._render();
+      }
+      set hass(hass) {
+        this._hass = hass;
+        const entityId = this._config?.entity || "";
+        if (entityId && this._draftPercentage.has(entityId) && !this._activeSliderDrag) {
+          this._syncDraftWithState();
+        }
+        const actualState = this._getActualState();
+        const entityRevision = entityId && actualState ? `${entityId}:${actualState.state}:${actualState.last_updated || actualState.last_changed || ""}` : "";
+        const revisionUnchanged = Boolean(entityRevision && entityRevision === this._lastEntityRevision);
+        if (entityRevision) {
+          this._lastEntityRevision = entityRevision;
+        }
+        const hasPendingOptimistic = Boolean(this._optimisticToggle || this._optimisticVisualSettle);
+        let nextSignature = this._getRenderSignature();
+        const signatureUnchanged = Boolean(
+          this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature
+        );
+        if (signatureUnchanged && !hasPendingOptimistic) {
           return;
         }
+        let visualSettleChanged = false;
+        if (!revisionUnchanged || hasPendingOptimistic) {
+          visualSettleChanged = this._syncOptimisticVisualSettle(actualState);
+        }
+        const hadOptimisticToggle = Boolean(this._optimisticToggle);
+        if (!revisionUnchanged || hasPendingOptimistic) {
+          this._syncLastKnownOnState(actualState);
+          this._syncOptimisticToggleState(actualState);
+        }
+        nextSignature = this._getRenderSignature();
+        const optimisticJustConfirmed = hadOptimisticToggle && !this._optimisticToggle;
+        if (signatureUnchanged && !optimisticJustConfirmed && !visualSettleChanged && this._shouldSkipRenderForUnchangedSignature()) {
+          return;
+        }
+        if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !optimisticJustConfirmed && !this._optimisticToggle && !visualSettleChanged) {
+          return;
+        }
+        this._lastRenderSignature = nextSignature;
         if (this._activeSliderDrag) {
           this._pendingRenderAfterDrag = true;
           return;
         }
-        this._lastRenderSignature = "";
         this._render();
-      }, safeDelay);
-    }
-    _triggerButtonBounce(button) {
-      if (!(button instanceof HTMLElement)) {
-        return;
       }
-      const animations = this._getAnimationSettings();
-      if (!animations.enabled) {
-        return;
+      getCardSize() {
+        return this._config?.layout === "circular" ? 5 : 3;
       }
-      button.classList.remove("is-pressing");
-      button.getBoundingClientRect();
-      button.classList.add("is-pressing");
-      const schedule = window.NodaliaUtils?.scheduleDeferTimer;
-      const done = () => {
-        if (!button.isConnected) {
+      getGridOptions() {
+        return {
+          rows: "auto",
+          columns: "full",
+          min_rows: this._config?.layout === "circular" ? 5 : 2,
+          min_columns: this._config?.layout === "circular" ? 7 : 2
+        };
+      }
+      _getRenderSignature(hass = this._hass) {
+        const entityId = this._config?.entity || "";
+        const actualState = entityId ? hass?.states?.[entityId] || null : null;
+        const state = hass === this._hass ? this._buildOptimisticToggleState(actualState) : actualState;
+        const attrs = state?.attributes || {};
+        const joinParts = window.NodaliaRenderSignature?.joinParts;
+        const values = [
+          entityId,
+          String(state?.state || ""),
+          String(attrs._nodalia_optimistic_toggle || ""),
+          String(attrs.friendly_name || ""),
+          String(attrs.icon || ""),
+          this._config?.show_entity_picture === true,
+          String(this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || ""),
+          Number(attrs.percentage ?? -1),
+          Number(attrs.percentage_step ?? -1),
+          String(attrs.preset_mode || ""),
+          Array.isArray(attrs.preset_modes) ? attrs.preset_modes.join("|") : "",
+          String(attrs.oscillating ?? ""),
+          String(attrs.direction || ""),
+          String(this._config?.layout || "compact"),
+          Boolean(this._isCompactLayout),
+          Boolean(this._presetPanelOpen),
+          `${String(this._config?.tap_action || "")}|${String(this._config?.icon_tap_action ?? "")}|${String(this._config?.tap_service || "")}|${String(this._config?.icon_tap_service || "")}`,
+          `${String(this._config?.hold_action || "")}|${String(this._config?.icon_hold_action ?? "")}|${String(this._config?.hold_service || "")}|${String(this._config?.icon_hold_service || "")}`,
+          `${String(this._config?.double_tap_action || "")}|${String(this._config?.icon_double_tap_action ?? "")}|${String(this._config?.double_tap_service || "")}|${String(this._config?.icon_double_tap_service || "")}`
+        ];
+        if (typeof joinParts === "function") {
+          return joinParts([{ prefix: "fan:", values }]);
+        }
+        return values.join("::");
+      }
+      _getConfiguredGridColumns() {
+        const numericColumns = Number(this._config?.grid_options?.columns);
+        return Number.isFinite(numericColumns) && numericColumns > 0 ? numericColumns : null;
+      }
+      _getCompactLayoutThreshold() {
+        const styles = getSafeStyles(this._config?.styles);
+        const iconSize = parseSizeToPixels(styles?.icon?.size, 58);
+        const cardPadding = parseSizeToPixels(styles?.card?.padding, 14);
+        const cardGap = parseSizeToPixels(styles?.card?.gap, 12);
+        return Math.max(
+          COMPACT_LAYOUT_THRESHOLD,
+          Math.round(iconSize + cardPadding * 2 + cardGap + 24)
+        );
+      }
+      _shouldUseCompactLayout(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
+        return window.NodaliaUtils.shouldUseCompactCardLayout({
+          mode: this._config?.compact_layout_mode,
+          width,
+          gridColumns: this._getConfiguredGridColumns()
+        });
+      }
+      _shouldShowCompactTitle(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
+        return window.NodaliaUtils.shouldShowCompactCardTitle({ width });
+      }
+      _triggerHaptic(style = this._config?.haptics?.style) {
+        if (!this._config?.haptics?.enabled) {
           return;
         }
-        button.classList.remove("is-pressing");
-      };
-      if (typeof schedule === "function") {
-        schedule(this, done, animations.buttonBounceDuration + 40);
-      } else {
-        window.setTimeout(done, animations.buttonBounceDuration + 40);
+        this.dispatchEvent(new CustomEvent("haptic", {
+          bubbles: true,
+          composed: true,
+          detail: style || "medium"
+        }));
+        if (!this._config?.haptics?.fallback_vibrate || !navigator?.vibrate) {
+          return;
+        }
+        const vibration = HAPTIC_PATTERNS[style || "medium"];
+        if (vibration) {
+          navigator.vibrate(vibration);
+        }
       }
-    }
-    _triggerRenderedButtonBounce(selector) {
-      if (!selector || !this.shadowRoot || typeof window === "undefined") {
-        return;
+      _getState() {
+        const actualState = this._getActualState();
+        const optimisticState = this._buildOptimisticToggleState(actualState);
+        if (this._shouldUseOptimisticVisualSettle(actualState)) {
+          return this._buildOptimisticVisualSettleState(actualState);
+        }
+        return optimisticState;
       }
-      window.requestAnimationFrame(() => {
-        const button = this.shadowRoot?.querySelector(selector);
+      _getActualState(hass = this._hass) {
+        return this._config?.entity ? hass?.states?.[this._config.entity] || null : null;
+      }
+      _createStateSnapshot(state) {
+        if (!state) {
+          return null;
+        }
+        return {
+          ...state,
+          attributes: { ...state.attributes || {} }
+        };
+      }
+      _getStoredFanMemory() {
+        if (typeof window === "undefined" || !window.localStorage) {
+          return {};
+        }
+        try {
+          return JSON.parse(window.localStorage.getItem(FAN_MEMORY_STORAGE_KEY) || "{}");
+        } catch {
+          return {};
+        }
+      }
+      _storeFanMemory(entityId, snapshot) {
+        if (!entityId || !snapshot || typeof window === "undefined" || !window.localStorage) {
+          return;
+        }
+        try {
+          const memory = this._getStoredFanMemory();
+          memory[entityId] = {
+            attributes: { ...snapshot.attributes || {} },
+            last_changed: snapshot.last_changed || (/* @__PURE__ */ new Date()).toISOString()
+          };
+          window.localStorage.setItem(FAN_MEMORY_STORAGE_KEY, JSON.stringify(memory));
+        } catch {
+        }
+      }
+      _getStoredFanSnapshot(entityId) {
+        const stored = this._getStoredFanMemory()[entityId];
+        if (!stored?.attributes || typeof stored.attributes !== "object") {
+          return null;
+        }
+        return {
+          entity_id: entityId,
+          state: "on",
+          attributes: { ...stored.attributes || {} },
+          last_changed: stored.last_changed || (/* @__PURE__ */ new Date()).toISOString(),
+          last_updated: stored.last_changed || (/* @__PURE__ */ new Date()).toISOString()
+        };
+      }
+      _syncLastKnownOnState(actualState) {
+        const entityId = this._config?.entity || "";
+        if (!entityId || !actualState) {
+          return;
+        }
+        const snapshot = this._createStateSnapshot(actualState);
+        if (actualState.state === "on") {
+          this._lastKnownOnState.set(entityId, snapshot);
+          this._storeFanMemory(entityId, snapshot);
+          return;
+        }
+        const rememberedPercentage = Number(actualState.attributes?.percentage);
+        if (Number.isFinite(rememberedPercentage) && rememberedPercentage > 0) {
+          this._lastKnownOnState.set(entityId, {
+            ...snapshot,
+            state: "on"
+          });
+          this._storeFanMemory(entityId, snapshot);
+        }
+      }
+      _getLastKnownOnState(entityId = this._config?.entity || "") {
+        if (!entityId) {
+          return null;
+        }
+        const cached = this._lastKnownOnState.get(entityId);
+        if (cached) {
+          return cached;
+        }
+        const stored = this._getStoredFanSnapshot(entityId);
+        if (stored) {
+          this._lastKnownOnState.set(entityId, this._createStateSnapshot(stored));
+        }
+        return stored;
+      }
+      _startOptimisticVisualSettle(actualState, optimisticState) {
+        const entityId = this._config?.entity || "";
+        if (!entityId || !actualState || actualState.state !== "on" || !optimisticState) {
+          this._clearOptimisticVisualSettle();
+          return;
+        }
+        this._optimisticVisualSettle = {
+          entityId,
+          expiresAt: Date.now() + OPTIMISTIC_VISUAL_SETTLE_MS,
+          stateSnapshot: this._createStateSnapshot(optimisticState)
+        };
+        this._scheduleOptimisticVisualSettleTimeout();
+      }
+      _hasPublishedPercentage(actualState) {
+        const percentage = Number(actualState?.attributes?.percentage);
+        return Number.isFinite(percentage) && percentage > 0;
+      }
+      _shouldUseOptimisticVisualSettle(actualState = this._getActualState()) {
+        if (!this._optimisticVisualSettle) {
+          return false;
+        }
+        if (this._optimisticVisualSettle.entityId !== (this._config?.entity || "")) {
+          this._clearOptimisticVisualSettle();
+          return false;
+        }
+        if (actualState?.state !== "on" || Date.now() >= this._optimisticVisualSettle.expiresAt) {
+          this._clearOptimisticVisualSettle();
+          return false;
+        }
+        if (this._hasPublishedPercentage(actualState)) {
+          this._clearOptimisticVisualSettle();
+          return false;
+        }
+        return true;
+      }
+      _buildOptimisticVisualSettleState(actualState = this._getActualState()) {
+        const snapshot = this._optimisticVisualSettle?.stateSnapshot;
+        if (!actualState || !snapshot) {
+          return actualState;
+        }
+        const entityId = this._config?.entity || "";
+        const attrs = {
+          ...actualState.attributes || {},
+          ...snapshot.attributes || {}
+        };
+        if (entityId && this._draftPercentage.has(entityId)) {
+          attrs.percentage = clamp(Math.round(Number(this._draftPercentage.get(entityId))), 0, 100);
+        }
+        return {
+          ...actualState,
+          attributes: attrs
+        };
+      }
+      _clearOptimisticToggleTimer() {
+        if (this._optimisticToggleTimer) {
+          window.clearTimeout(this._optimisticToggleTimer);
+          this._optimisticToggleTimer = 0;
+        }
+      }
+      _clearOptimisticVisualSettleTimer() {
+        if (this._optimisticVisualSettleTimer) {
+          window.clearTimeout(this._optimisticVisualSettleTimer);
+          this._optimisticVisualSettleTimer = 0;
+        }
+      }
+      _clearOptimisticVisualSettle() {
+        this._clearOptimisticVisualSettleTimer();
+        this._optimisticVisualSettle = null;
+      }
+      _syncOptimisticVisualSettle(actualState = this._getActualState()) {
+        const hadSettle = Boolean(this._optimisticVisualSettle);
+        this._shouldUseOptimisticVisualSettle(actualState);
+        const hasSettle = Boolean(this._optimisticVisualSettle);
+        if (hasSettle) {
+          this._scheduleOptimisticVisualSettleTimeout();
+        } else {
+          this._clearOptimisticVisualSettleTimer();
+        }
+        return hadSettle !== hasSettle;
+      }
+      _scheduleOptimisticVisualSettleTimeout() {
+        this._clearOptimisticVisualSettleTimer();
+        if (!this._optimisticVisualSettle || !this.isConnected || typeof window === "undefined") {
+          return;
+        }
+        const remaining = Math.max(0, this._optimisticVisualSettle.expiresAt - Date.now());
+        this._optimisticVisualSettleTimer = window.setTimeout(() => {
+          this._optimisticVisualSettleTimer = 0;
+          if (!this.isConnected) {
+            return;
+          }
+          const nextActualState = this._getActualState();
+          if (this._shouldUseOptimisticVisualSettle(nextActualState)) {
+            this._scheduleOptimisticVisualSettleTimeout();
+            return;
+          }
+          this._lastRenderSignature = "";
+          if (this._activeSliderDrag) {
+            this._pendingRenderAfterDrag = true;
+            return;
+          }
+          this._render();
+        }, remaining);
+      }
+      _clearOptimisticToggleState() {
+        this._clearOptimisticToggleTimer();
+        this._optimisticToggle = null;
+      }
+      _isOptimisticTogglePending(actualState = this._getActualState()) {
+        const entityId = this._config?.entity || "";
+        if (!entityId || !this._optimisticToggle || this._optimisticToggle.entityId !== entityId) {
+          this._optimisticToggle = null;
+          return false;
+        }
+        const actualKey = normalizeTextKey(actualState?.state);
+        const expectedKey = normalizeTextKey(this._optimisticToggle.expectedState);
+        if (!actualState || !this._isFanToggleableState(actualState) || actualKey === expectedKey) {
+          this._optimisticToggle = null;
+          return false;
+        }
+        if (Date.now() >= this._optimisticToggle.expiresAt) {
+          this._optimisticToggle = null;
+          return false;
+        }
+        return true;
+      }
+      _scheduleOptimisticToggleTimeout() {
+        this._clearOptimisticToggleTimer();
+        if (!this._optimisticToggle || !this.isConnected || typeof window === "undefined") {
+          return;
+        }
+        const remaining = Math.max(0, this._optimisticToggle.expiresAt - Date.now());
+        this._optimisticToggleTimer = window.setTimeout(() => {
+          this._optimisticToggleTimer = 0;
+          if (!this.isConnected) {
+            return;
+          }
+          if (!this._isOptimisticTogglePending(this._getActualState())) {
+            this._lastRenderSignature = "";
+            this._render();
+            return;
+          }
+          this._scheduleOptimisticToggleTimeout();
+        }, remaining);
+      }
+      _startOptimisticToggle(expectedState, actualState = this._getActualState()) {
+        const entityId = this._config?.entity || "";
+        if (!entityId || !this._isFanToggleableState(actualState)) {
+          return;
+        }
+        const turningOn = normalizeTextKey(expectedState) === "on";
+        const snapshotSource = turningOn ? this._getLastKnownOnState(entityId) || actualState : actualState;
+        this._clearOptimisticToggleState();
+        this._clearOptimisticVisualSettle();
+        this._optimisticToggle = {
+          entityId,
+          expectedState,
+          expiresAt: Date.now() + OPTIMISTIC_TOGGLE_TIMEOUT,
+          stateSnapshot: this._createStateSnapshot(snapshotSource)
+        };
+        this._scheduleOptimisticToggleTimeout();
+      }
+      _composeOptimisticToggleState(actualState, toggle = this._optimisticToggle) {
+        if (!toggle) {
+          return actualState;
+        }
+        const turningOn = normalizeTextKey(toggle.expectedState) === "on";
+        const snapshot = (turningOn ? this._getLastKnownOnState(toggle.entityId) || toggle.stateSnapshot : toggle.stateSnapshot) || actualState;
+        if (!snapshot) {
+          return actualState;
+        }
+        const entityId = toggle.entityId || this._config?.entity || "";
+        const attrs = turningOn ? { ...actualState?.attributes || {}, ...snapshot.attributes || {} } : { ...snapshot.attributes || {}, ...actualState?.attributes || {} };
+        if (entityId && this._draftPercentage.has(entityId)) {
+          attrs.percentage = clamp(Math.round(Number(this._draftPercentage.get(entityId))), 0, 100);
+        }
+        return {
+          ...snapshot,
+          entity_id: snapshot.entity_id || actualState?.entity_id || entityId,
+          state: toggle.expectedState,
+          attributes: {
+            ...attrs,
+            _nodalia_optimistic_toggle: toggle.expectedState
+          }
+        };
+      }
+      _buildOptimisticToggleState(actualState = this._getActualState()) {
+        if (!this._isOptimisticTogglePending(actualState)) {
+          return actualState;
+        }
+        return this._composeOptimisticToggleState(actualState);
+      }
+      _syncOptimisticToggleState(actualState = this._getActualState()) {
+        const toggle = this._optimisticToggle;
+        if (!toggle) {
+          return;
+        }
+        const optimisticDisplay = this._composeOptimisticToggleState(actualState, toggle);
+        const stillPending = this._isOptimisticTogglePending(actualState);
+        if (!stillPending) {
+          if (actualState?.state === "on" && normalizeTextKey(toggle.expectedState) === "on") {
+            this._startOptimisticVisualSettle(actualState, optimisticDisplay);
+          }
+          this._clearOptimisticToggleTimer();
+          return;
+        }
+        this._scheduleOptimisticToggleTimeout();
+      }
+      _isOn(state = this._getState()) {
+        const stateValue = String(state?.state || "").toLowerCase();
+        return Boolean(state) && !["off", "unavailable", "unknown"].includes(stateValue);
+      }
+      _getFanName(state) {
+        if (this._config?.name) {
+          return this._config.name;
+        }
+        if (state?.attributes?.friendly_name) {
+          return state.attributes.friendly_name;
+        }
+        const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+        const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+        return this._config?.entity || window.NodaliaI18n?.strings?.(lang)?.fan?.fallbackName || "Fan";
+      }
+      _getFanIcon(state) {
+        if (this._config?.icon) {
+          return this._config.icon;
+        }
+        if (state?.attributes?.icon) {
+          return state.attributes.icon;
+        }
+        return "mdi:fan";
+      }
+      _getEntityPicture(state) {
+        if (this._config?.show_entity_picture !== true) {
+          return "";
+        }
+        return String(
+          this._config?.entity_picture || state?.attributes?.entity_picture_local || state?.attributes?.entity_picture || ""
+        ).trim();
+      }
+      _getStateLabel(state) {
+        const stateValue = normalizeTextKey(state?.state);
+        const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+        const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+        const fanStrings = window.NodaliaI18n?.strings?.(lang)?.fan;
+        if (fanStrings?.[stateValue]) {
+          return fanStrings[stateValue];
+        }
+        switch (stateValue) {
+          case "off":
+            return fanStrings?.off || "Off";
+          case "on":
+            return fanStrings?.on || "On";
+          case "unavailable":
+            return fanStrings?.unavailable || "Unavailable";
+          case "unknown":
+            return fanStrings?.unknown || "Unknown";
+          default:
+            return state?.state ? String(state.state) : fanStrings?.noState || "No state";
+        }
+      }
+      _supportsPercentage(state) {
+        return Number.isFinite(Number(state?.attributes?.percentage)) || Number.isFinite(Number(state?.attributes?.percentage_step));
+      }
+      _getPercentage(state) {
+        const draft = this._draftPercentage.get(this._config?.entity);
+        if (Number.isFinite(draft)) {
+          return clamp(Number(draft), 0, 100);
+        }
+        const rawPercentage = Number(state?.attributes?.percentage);
+        if (Number.isFinite(rawPercentage)) {
+          return clamp(Math.round(rawPercentage), 0, 100);
+        }
+        return this._isOn(state) ? 100 : 0;
+      }
+      _syncDraftWithState() {
+        const state = this._getActualState();
+        const entityId = this._config?.entity;
+        if (!entityId || !state || !this._draftPercentage.has(entityId)) {
+          return;
+        }
+        const actualPercentage = Number(state.attributes?.percentage);
+        const draftPercentage = Number(this._draftPercentage.get(entityId));
+        const configuredStep = Number(state.attributes?.percentage_step);
+        const step = Number.isFinite(configuredStep) && configuredStep > 0 ? configuredStep : 1;
+        const tolerance = Math.max(1, step / 2);
+        if (Number.isFinite(actualPercentage) && Number.isFinite(draftPercentage) && Math.abs(actualPercentage - draftPercentage) <= tolerance) {
+          this._draftPercentage.delete(entityId);
+        }
+      }
+      _supportsOscillation(state) {
+        return typeof state?.attributes?.oscillating === "boolean";
+      }
+      _isOscillating(state) {
+        return state?.attributes?.oscillating === true;
+      }
+      _getPresetModes(state) {
+        return Array.isArray(state?.attributes?.preset_modes) ? state.attributes.preset_modes.map((item) => String(item || "").trim()).filter(Boolean).filter((mode) => !this._isPresetModeHidden(mode)) : [];
+      }
+      _isPresetModeHidden(value) {
+        const hiddenModes = Array.isArray(this._config?.hidden_preset_modes) ? this._config.hidden_preset_modes : [];
+        const expectedKey = normalizeTextKey(value);
+        return hiddenModes.some((item) => normalizeTextKey(item) === expectedKey);
+      }
+      _getCurrentPresetMode(state) {
+        return state?.attributes?.preset_mode ? String(state.attributes.preset_mode) : "";
+      }
+      _getAccentColor(state) {
+        const styles = getSafeStyles(this._config?.styles);
+        return this._isOn(state) ? styles?.icon?.on_color || DEFAULT_CONFIG.styles.icon.on_color : styles?.icon?.off_color || DEFAULT_CONFIG.styles.icon.off_color;
+      }
+      _getAnimationSettings() {
+        const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+        return {
+          enabled: configuredAnimations.enabled !== false,
+          iconAnimation: configuredAnimations.icon_animation !== false,
+          powerDuration: clamp(Number(configuredAnimations.power_duration) || DEFAULT_CONFIG.animations.power_duration, 120, 4e3),
+          controlsDuration: clamp(Number(configuredAnimations.controls_duration) || DEFAULT_CONFIG.animations.controls_duration, 120, 2400),
+          presetDuration: clamp(Number(configuredAnimations.preset_duration) || DEFAULT_CONFIG.animations.preset_duration, 120, 2400),
+          buttonBounceDuration: clamp(Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration, 120, 1200)
+        };
+      }
+      _isTransitionAnimationActive(now = Date.now()) {
+        return Boolean(
+          this._powerTransition?.endsAt > now || this._controlsTransition?.endsAt > now || this._presetPanelTransition?.endsAt > now
+        );
+      }
+      _shouldSkipRenderForUnchangedSignature() {
+        if (!this.shadowRoot?.innerHTML) {
+          return false;
+        }
+        if (this._activeSliderDrag) {
+          this._pendingRenderAfterDrag = true;
+          return true;
+        }
+        return Boolean(this._optimisticToggle && this._isTransitionAnimationActive());
+      }
+      _scheduleAnimationCleanup(delay) {
+        if (this._animationCleanupTimer) {
+          window.clearTimeout(this._animationCleanupTimer);
+          this._animationCleanupTimer = 0;
+        }
+        const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 5e3);
+        if (!safeDelay || typeof window === "undefined") {
+          return;
+        }
+        this._animationCleanupTimer = window.setTimeout(() => {
+          this._animationCleanupTimer = 0;
+          const shouldFinalizeRender = Boolean(
+            this._powerTransition || this._controlsTransition || this._presetPanelTransition
+          );
+          this._powerTransition = null;
+          this._controlsTransition = null;
+          this._presetPanelTransition = null;
+          if (!shouldFinalizeRender || !this.isConnected) {
+            return;
+          }
+          if (this._activeSliderDrag) {
+            this._pendingRenderAfterDrag = true;
+            return;
+          }
+          this._lastRenderSignature = "";
+          this._render();
+        }, safeDelay);
+      }
+      _triggerButtonBounce(button) {
         if (!(button instanceof HTMLElement)) {
           return;
         }
-        this._triggerButtonBounce(button);
-      });
-    }
-    _setFanState(service, data = {}) {
-      if (!this._hass || !this._config?.entity) {
-        return;
+        const animations = this._getAnimationSettings();
+        if (!animations.enabled) {
+          return;
+        }
+        button.classList.remove("is-pressing");
+        button.getBoundingClientRect();
+        button.classList.add("is-pressing");
+        const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+        const done = () => {
+          if (!button.isConnected) {
+            return;
+          }
+          button.classList.remove("is-pressing");
+        };
+        if (typeof schedule === "function") {
+          schedule(this, done, animations.buttonBounceDuration + 40);
+        } else {
+          window.setTimeout(done, animations.buttonBounceDuration + 40);
+        }
       }
-      this._hass.callService("fan", service, {
-        entity_id: this._config.entity,
-        ...data
-      });
-    }
-    _toggleFan(state) {
-      const actualState = this._getActualState();
-      const effectiveState = state || this._getState();
-      const turnOff = this._isOn(effectiveState);
-      this._startOptimisticToggle(turnOff ? "off" : "on", actualState);
-      if (turnOff) {
-        this._setFanState("turn_off");
+      _triggerRenderedButtonBounce(selector) {
+        if (!selector || !this.shadowRoot || typeof window === "undefined") {
+          return;
+        }
+        window.requestAnimationFrame(() => {
+          const button = this.shadowRoot?.querySelector(selector);
+          if (!(button instanceof HTMLElement)) {
+            return;
+          }
+          this._triggerButtonBounce(button);
+        });
+      }
+      _setFanState(service, data = {}) {
+        if (!this._hass || !this._config?.entity) {
+          return;
+        }
+        this._hass.callService("fan", service, {
+          entity_id: this._config.entity,
+          ...data
+        });
+      }
+      _toggleFan(state) {
+        const actualState = this._getActualState();
+        const effectiveState = state || this._getState();
+        const turnOff = this._isOn(effectiveState);
+        this._startOptimisticToggle(turnOff ? "off" : "on", actualState);
+        if (turnOff) {
+          this._setFanState("turn_off");
+          this._render();
+          return;
+        }
+        this._setFanState("turn_on");
         this._render();
-        return;
       }
-      this._setFanState("turn_on");
-      this._render();
-    }
-    _isFanToggleableState(state) {
-      const key = String(state?.state || "").trim().toLowerCase();
-      return key === "on" || key === "off";
-    }
-    _resolveFanTapEffect(zone) {
-      const bodyRaw = this._config?.tap_action ?? "toggle";
-      const iconRaw = this._config?.icon_tap_action;
-      const raw = zone === "icon" ? iconRaw === void 0 || iconRaw === null || String(iconRaw).trim() === "" ? bodyRaw : iconRaw : bodyRaw;
-      let effect = String(raw || "toggle").trim().toLowerCase();
-      const allowed = /* @__PURE__ */ new Set(["auto", "toggle", "more-info", "service", "navigate", "url", "none"]);
-      if (!allowed.has(effect)) {
-        effect = "toggle";
+      _isFanToggleableState(state) {
+        const key = String(state?.state || "").trim().toLowerCase();
+        return key === "on" || key === "off";
       }
-      if (effect === "auto") {
-        const state = this._getState();
-        return this._isFanToggleableState(state) ? "toggle" : "more-info";
-      }
-      return effect;
-    }
-    _openMoreInfo(entityId = this._config?.entity) {
-      const id = String(entityId || "").trim();
-      if (!id) {
-        return;
-      }
-      fireEvent(this, "hass-more-info", {
-        entityId: id
-      });
-    }
-    _parseServiceData(rawValue) {
-      if (!rawValue) {
-        return {};
-      }
-      if (isObject(rawValue)) {
-        return deepClone(rawValue);
-      }
-      try {
-        const parsed = JSON.parse(rawValue);
-        return isObject(parsed) ? parsed : {};
-      } catch (_error) {
-        return {};
-      }
-    }
-    _isServiceAllowed(serviceValue) {
-      const security = this._config?.security || {};
-      if (security.strict_service_actions === false) {
-        return true;
-      }
-      const normalizedService = String(serviceValue || "").trim().toLowerCase();
-      if (!normalizedService || !normalizedService.includes(".")) {
-        return false;
-      }
-      const [domain] = normalizedService.split(".");
-      const domains = Array.isArray(security.allowed_service_domains) ? security.allowed_service_domains.map((item) => String(item || "").trim().toLowerCase()).filter(Boolean) : [];
-      const services = Array.isArray(security.allowed_services) ? security.allowed_services.map((item) => String(item || "").trim().toLowerCase()).filter(Boolean) : [];
-      if (!domains.length && !services.length) {
-        return false;
-      }
-      return services.includes(normalizedService) || domains.includes(domain);
-    }
-    _callConfiguredService(serviceValue, entityId = this._config?.entity, rawData = "", rawTarget = "") {
-      if (!this._hass || !serviceValue) {
-        return;
-      }
-      if (!this._isServiceAllowed(serviceValue)) {
-        window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Fan Card", serviceValue);
-        return;
-      }
-      const [domain, service] = String(serviceValue).split(".");
-      if (!domain || !service) {
-        return;
-      }
-      const payload = this._parseServiceData(rawData);
-      const target = this._parseServiceData(rawTarget);
-      const hasTarget = Object.keys(target).length > 0;
-      if (!hasTarget && entityId && payload.entity_id === void 0) {
-        payload.entity_id = entityId;
-      }
-      this._hass.callService(domain, service, payload, hasTarget ? target : void 0);
-    }
-    _openConfiguredUrl(urlValue, newTab = false) {
-      const url = window.NodaliaUtils?.sanitizeActionUrl(urlValue, { allowRelative: true }) || "";
-      if (!url) {
-        return;
-      }
-      if (newTab) {
-        window.open(url, "_blank", "noopener,noreferrer");
-        return;
-      }
-      window.location.href = url;
-    }
-    _openConfiguredNavigation(pathValue) {
-      const path = window.NodaliaUtils?.sanitizeActionUrl?.(pathValue, { allowRelative: true }) || "";
-      if (!path || path.includes("://")) {
-        return;
-      }
-      fireEvent(this, "hass-navigate", { path });
-    }
-    _executeFanTapEffect(zone, effect) {
-      const isIcon = zone === "icon";
-      switch (effect) {
-        case "toggle":
-          this._toggleFan(this._getState());
-          break;
-        case "more-info":
-          this._openMoreInfo(this._config?.entity);
-          break;
-        case "service": {
-          const service = isIcon ? this._config?.icon_tap_service : this._config?.tap_service;
-          const data = isIcon ? this._config?.icon_tap_service_data : this._config?.tap_service_data;
-          const target = isIcon ? this._config?.icon_tap_service_target : this._config?.tap_service_target;
-          this._callConfiguredService(service, this._config?.entity, data, target);
-          break;
+      _resolveFanTapEffect(zone) {
+        const bodyRaw = this._config?.tap_action ?? "toggle";
+        const iconRaw = this._config?.icon_tap_action;
+        const raw = zone === "icon" ? iconRaw === void 0 || iconRaw === null || String(iconRaw).trim() === "" ? bodyRaw : iconRaw : bodyRaw;
+        let effect = String(raw || "toggle").trim().toLowerCase();
+        const allowed = /* @__PURE__ */ new Set(["auto", "toggle", "more-info", "service", "navigate", "url", "none"]);
+        if (!allowed.has(effect)) {
+          effect = "toggle";
         }
-        case "navigate":
-          this._openConfiguredNavigation(
-            isIcon ? this._config?.icon_navigation_path : this._config?.navigation_path
-          );
-          break;
-        case "url":
-          this._openConfiguredUrl(
-            isIcon ? this._config?.icon_tap_url : this._config?.tap_url,
-            isIcon ? this._config?.icon_tap_new_tab === true : this._config?.tap_new_tab === true
-          );
-          break;
-        case "none":
-        default:
-          break;
+        if (effect === "auto") {
+          const state = this._getState();
+          return this._isFanToggleableState(state) ? "toggle" : "more-info";
+        }
+        return effect;
       }
-    }
-    _resolveFanHoldEffect(zone) {
-      const bodyRaw = this._config?.hold_action ?? "none";
-      const iconRaw = this._config?.icon_hold_action;
-      const raw = zone === "icon" ? iconRaw === void 0 || iconRaw === null || String(iconRaw).trim() === "" ? bodyRaw : iconRaw : bodyRaw;
-      let effect = String(raw || "none").trim().toLowerCase();
-      const allowed = /* @__PURE__ */ new Set(["auto", "toggle", "more-info", "service", "navigate", "url", "none"]);
-      if (!allowed.has(effect)) {
-        effect = "none";
+      _openMoreInfo(entityId = this._config?.entity) {
+        const id = String(entityId || "").trim();
+        if (!id) {
+          return;
+        }
+        fireEvent(this, "hass-more-info", {
+          entityId: id
+        });
       }
-      if (effect === "auto") {
-        const state = this._getState();
-        return this._isFanToggleableState(state) ? "toggle" : "more-info";
+      _parseServiceData(rawValue) {
+        if (!rawValue) {
+          return {};
+        }
+        if (isObject(rawValue)) {
+          return deepClone(rawValue);
+        }
+        try {
+          const parsed = JSON.parse(rawValue);
+          return isObject(parsed) ? parsed : {};
+        } catch (_error) {
+          return {};
+        }
       }
-      return effect;
-    }
-    _executeFanHoldEffect(zone, effect) {
-      const isIcon = zone === "icon";
-      switch (effect) {
-        case "toggle":
-          this._toggleFan(this._getState());
-          break;
-        case "more-info":
-          this._openMoreInfo(this._config?.entity);
-          break;
-        case "service": {
-          let service = isIcon ? this._config?.icon_hold_service : this._config?.hold_service;
-          let data = isIcon ? this._config?.icon_hold_service_data : this._config?.hold_service_data;
-          let target = isIcon ? this._config?.icon_hold_service_target : this._config?.hold_service_target;
-          if (isIcon && !String(service || "").trim()) {
-            service = this._config?.hold_service;
-            data = this._config?.hold_service_data;
-            target = this._config?.hold_service_target;
+      _isServiceAllowed(serviceValue) {
+        const security = this._config?.security || {};
+        if (security.strict_service_actions === false) {
+          return true;
+        }
+        const normalizedService = String(serviceValue || "").trim().toLowerCase();
+        if (!normalizedService || !normalizedService.includes(".")) {
+          return false;
+        }
+        const [domain] = normalizedService.split(".");
+        const domains = Array.isArray(security.allowed_service_domains) ? security.allowed_service_domains.map((item) => String(item || "").trim().toLowerCase()).filter(Boolean) : [];
+        const services = Array.isArray(security.allowed_services) ? security.allowed_services.map((item) => String(item || "").trim().toLowerCase()).filter(Boolean) : [];
+        if (!domains.length && !services.length) {
+          return false;
+        }
+        return services.includes(normalizedService) || domains.includes(domain);
+      }
+      _callConfiguredService(serviceValue, entityId = this._config?.entity, rawData = "", rawTarget = "") {
+        if (!this._hass || !serviceValue) {
+          return;
+        }
+        if (!this._isServiceAllowed(serviceValue)) {
+          window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Fan Card", serviceValue);
+          return;
+        }
+        const [domain, service] = String(serviceValue).split(".");
+        if (!domain || !service) {
+          return;
+        }
+        const payload = this._parseServiceData(rawData);
+        const target = this._parseServiceData(rawTarget);
+        const hasTarget = Object.keys(target).length > 0;
+        if (!hasTarget && entityId && payload.entity_id === void 0) {
+          payload.entity_id = entityId;
+        }
+        this._hass.callService(domain, service, payload, hasTarget ? target : void 0);
+      }
+      _openConfiguredUrl(urlValue, newTab = false) {
+        const url = window.NodaliaUtils?.sanitizeActionUrl(urlValue, { allowRelative: true }) || "";
+        if (!url) {
+          return;
+        }
+        if (newTab) {
+          window.open(url, "_blank", "noopener,noreferrer");
+          return;
+        }
+        window.location.href = url;
+      }
+      _openConfiguredNavigation(pathValue) {
+        const path = window.NodaliaUtils?.sanitizeActionUrl?.(pathValue, { allowRelative: true }) || "";
+        if (!path || path.includes("://")) {
+          return;
+        }
+        fireEvent(this, "hass-navigate", { path });
+      }
+      _executeFanTapEffect(zone, effect) {
+        const isIcon = zone === "icon";
+        switch (effect) {
+          case "toggle":
+            this._toggleFan(this._getState());
+            break;
+          case "more-info":
+            this._openMoreInfo(this._config?.entity);
+            break;
+          case "service": {
+            const service = isIcon ? this._config?.icon_tap_service : this._config?.tap_service;
+            const data = isIcon ? this._config?.icon_tap_service_data : this._config?.tap_service_data;
+            const target = isIcon ? this._config?.icon_tap_service_target : this._config?.tap_service_target;
+            this._callConfiguredService(service, this._config?.entity, data, target);
+            break;
           }
-          this._callConfiguredService(service, this._config?.entity, data, target);
-          break;
+          case "navigate":
+            this._openConfiguredNavigation(
+              isIcon ? this._config?.icon_navigation_path : this._config?.navigation_path
+            );
+            break;
+          case "url":
+            this._openConfiguredUrl(
+              isIcon ? this._config?.icon_tap_url : this._config?.tap_url,
+              isIcon ? this._config?.icon_tap_new_tab === true : this._config?.tap_new_tab === true
+            );
+            break;
+          case "none":
+          default:
+            break;
         }
-        case "navigate": {
-          let path = isIcon ? this._config?.icon_hold_navigation_path : this._config?.hold_navigation_path;
-          if (isIcon && !String(path || "").trim()) {
-            path = this._config?.hold_navigation_path;
+      }
+      _resolveFanHoldEffect(zone) {
+        const bodyRaw = this._config?.hold_action ?? "none";
+        const iconRaw = this._config?.icon_hold_action;
+        const raw = zone === "icon" ? iconRaw === void 0 || iconRaw === null || String(iconRaw).trim() === "" ? bodyRaw : iconRaw : bodyRaw;
+        let effect = String(raw || "none").trim().toLowerCase();
+        const allowed = /* @__PURE__ */ new Set(["auto", "toggle", "more-info", "service", "navigate", "url", "none"]);
+        if (!allowed.has(effect)) {
+          effect = "none";
+        }
+        if (effect === "auto") {
+          const state = this._getState();
+          return this._isFanToggleableState(state) ? "toggle" : "more-info";
+        }
+        return effect;
+      }
+      _executeFanHoldEffect(zone, effect) {
+        const isIcon = zone === "icon";
+        switch (effect) {
+          case "toggle":
+            this._toggleFan(this._getState());
+            break;
+          case "more-info":
+            this._openMoreInfo(this._config?.entity);
+            break;
+          case "service": {
+            let service = isIcon ? this._config?.icon_hold_service : this._config?.hold_service;
+            let data = isIcon ? this._config?.icon_hold_service_data : this._config?.hold_service_data;
+            let target = isIcon ? this._config?.icon_hold_service_target : this._config?.hold_service_target;
+            if (isIcon && !String(service || "").trim()) {
+              service = this._config?.hold_service;
+              data = this._config?.hold_service_data;
+              target = this._config?.hold_service_target;
+            }
+            this._callConfiguredService(service, this._config?.entity, data, target);
+            break;
           }
-          this._openConfiguredNavigation(path);
-          break;
-        }
-        case "url": {
-          let url = isIcon ? this._config?.icon_hold_url : this._config?.hold_url;
-          let tab = isIcon ? this._config?.icon_hold_new_tab === true : this._config?.hold_new_tab === true;
-          if (isIcon && !String(url || "").trim()) {
-            url = this._config?.hold_url;
-            tab = this._config?.hold_new_tab === true;
+          case "navigate": {
+            let path = isIcon ? this._config?.icon_hold_navigation_path : this._config?.hold_navigation_path;
+            if (isIcon && !String(path || "").trim()) {
+              path = this._config?.hold_navigation_path;
+            }
+            this._openConfiguredNavigation(path);
+            break;
           }
-          this._openConfiguredUrl(url, tab);
-          break;
-        }
-        case "none":
-        default:
-          break;
-      }
-    }
-    _resolveFanDoubleTapEffect(zone) {
-      const bodyRaw = this._config?.double_tap_action ?? "none";
-      const iconRaw = this._config?.icon_double_tap_action;
-      const raw = zone === "icon" ? iconRaw === void 0 || iconRaw === null || String(iconRaw).trim() === "" ? bodyRaw : iconRaw : bodyRaw;
-      let effect = String(raw || "none").trim().toLowerCase();
-      if (!ALLOWED_DOUBLE_TAP_ACTIONS.has(effect)) {
-        effect = "none";
-      }
-      if (effect === "auto") {
-        const state = this._getState();
-        return this._isFanToggleableState(state) ? "toggle" : "more-info";
-      }
-      return effect;
-    }
-    _executeFanDoubleTapEffect(zone, effect) {
-      const isIcon = zone === "icon";
-      switch (effect) {
-        case "toggle":
-          this._toggleFan(this._getState());
-          break;
-        case "more-info":
-          this._openMoreInfo(this._config?.entity);
-          break;
-        case "service": {
-          let service = isIcon ? this._config?.icon_double_tap_service : this._config?.double_tap_service;
-          let data = isIcon ? this._config?.icon_double_tap_service_data : this._config?.double_tap_service_data;
-          let target = isIcon ? this._config?.icon_double_tap_service_target : this._config?.double_tap_service_target;
-          if (isIcon && !String(service || "").trim()) {
-            service = this._config?.double_tap_service;
-            data = this._config?.double_tap_service_data;
-            target = this._config?.double_tap_service_target;
+          case "url": {
+            let url = isIcon ? this._config?.icon_hold_url : this._config?.hold_url;
+            let tab = isIcon ? this._config?.icon_hold_new_tab === true : this._config?.hold_new_tab === true;
+            if (isIcon && !String(url || "").trim()) {
+              url = this._config?.hold_url;
+              tab = this._config?.hold_new_tab === true;
+            }
+            this._openConfiguredUrl(url, tab);
+            break;
           }
-          this._callConfiguredService(service, this._config?.entity, data, target);
-          break;
+          case "none":
+          default:
+            break;
         }
-        case "navigate": {
-          let path = isIcon ? this._config?.icon_double_tap_navigation_path : this._config?.double_tap_navigation_path;
-          if (isIcon && !String(path || "").trim()) {
-            path = this._config?.double_tap_navigation_path;
+      }
+      _resolveFanDoubleTapEffect(zone) {
+        const bodyRaw = this._config?.double_tap_action ?? "none";
+        const iconRaw = this._config?.icon_double_tap_action;
+        const raw = zone === "icon" ? iconRaw === void 0 || iconRaw === null || String(iconRaw).trim() === "" ? bodyRaw : iconRaw : bodyRaw;
+        let effect = String(raw || "none").trim().toLowerCase();
+        if (!ALLOWED_DOUBLE_TAP_ACTIONS.has(effect)) {
+          effect = "none";
+        }
+        if (effect === "auto") {
+          const state = this._getState();
+          return this._isFanToggleableState(state) ? "toggle" : "more-info";
+        }
+        return effect;
+      }
+      _executeFanDoubleTapEffect(zone, effect) {
+        const isIcon = zone === "icon";
+        switch (effect) {
+          case "toggle":
+            this._toggleFan(this._getState());
+            break;
+          case "more-info":
+            this._openMoreInfo(this._config?.entity);
+            break;
+          case "service": {
+            let service = isIcon ? this._config?.icon_double_tap_service : this._config?.double_tap_service;
+            let data = isIcon ? this._config?.icon_double_tap_service_data : this._config?.double_tap_service_data;
+            let target = isIcon ? this._config?.icon_double_tap_service_target : this._config?.double_tap_service_target;
+            if (isIcon && !String(service || "").trim()) {
+              service = this._config?.double_tap_service;
+              data = this._config?.double_tap_service_data;
+              target = this._config?.double_tap_service_target;
+            }
+            this._callConfiguredService(service, this._config?.entity, data, target);
+            break;
           }
-          this._openConfiguredNavigation(path);
-          break;
-        }
-        case "url": {
-          let url = isIcon ? this._config?.icon_double_tap_url : this._config?.double_tap_url;
-          let tab = isIcon ? this._config?.icon_double_tap_new_tab === true : this._config?.double_tap_new_tab === true;
-          if (isIcon && !String(url || "").trim()) {
-            url = this._config?.double_tap_url;
-            tab = this._config?.double_tap_new_tab === true;
+          case "navigate": {
+            let path = isIcon ? this._config?.icon_double_tap_navigation_path : this._config?.double_tap_navigation_path;
+            if (isIcon && !String(path || "").trim()) {
+              path = this._config?.double_tap_navigation_path;
+            }
+            this._openConfiguredNavigation(path);
+            break;
           }
-          this._openConfiguredUrl(url, tab);
-          break;
+          case "url": {
+            let url = isIcon ? this._config?.icon_double_tap_url : this._config?.double_tap_url;
+            let tab = isIcon ? this._config?.icon_double_tap_new_tab === true : this._config?.double_tap_new_tab === true;
+            if (isIcon && !String(url || "").trim()) {
+              url = this._config?.double_tap_url;
+              tab = this._config?.double_tap_new_tab === true;
+            }
+            this._openConfiguredUrl(url, tab);
+            break;
+          }
+          case "none":
+          default:
+            break;
         }
-        case "none":
-        default:
-          break;
       }
-    }
-    _commitPercentage(percent) {
-      const nextValue = clamp(Math.round(Number(percent)), 0, 100);
-      if (!Number.isFinite(nextValue)) {
-        return;
+      _commitPercentage(percent) {
+        const nextValue = clamp(Math.round(Number(percent)), 0, 100);
+        if (!Number.isFinite(nextValue)) {
+          return;
+        }
+        this._setFanState("set_percentage", {
+          percentage: nextValue
+        });
       }
-      this._setFanState("set_percentage", {
-        percentage: nextValue
-      });
-    }
-    _changePercentageBy(direction, state = this._getState()) {
-      if (!state || !this._supportsPercentage(state)) {
-        return;
+      _changePercentageBy(direction, state = this._getState()) {
+        if (!state || !this._supportsPercentage(state)) {
+          return;
+        }
+        const configuredStep = Number(state.attributes?.percentage_step);
+        const step = Number.isFinite(configuredStep) && configuredStep > 0 ? configuredStep : 5;
+        const current = this._getPercentage(state);
+        const nextValue = clamp(current + Number(direction) * step, 0, 100);
+        this._draftPercentage.set(this._config.entity, nextValue);
+        this._updatePercentagePreview(nextValue);
+        this._commitPercentage(nextValue);
       }
-      const configuredStep = Number(state.attributes?.percentage_step);
-      const step = Number.isFinite(configuredStep) && configuredStep > 0 ? configuredStep : 5;
-      const current = this._getPercentage(state);
-      const nextValue = clamp(current + Number(direction) * step, 0, 100);
-      this._draftPercentage.set(this._config.entity, nextValue);
-      this._updatePercentagePreview(nextValue);
-      this._commitPercentage(nextValue);
-    }
-    _toggleOscillation(state) {
-      if (!this._supportsOscillation(state)) {
-        return;
+      _toggleOscillation(state) {
+        if (!this._supportsOscillation(state)) {
+          return;
+        }
+        this._setFanState("oscillate", {
+          oscillating: !this._isOscillating(state)
+        });
       }
-      this._setFanState("oscillate", {
-        oscillating: !this._isOscillating(state)
-      });
-    }
-    _commitPresetMode(mode) {
-      if (!mode) {
-        return;
+      _commitPresetMode(mode) {
+        if (!mode) {
+          return;
+        }
+        this._setFanState("set_preset_mode", {
+          preset_mode: mode
+        });
       }
-      this._setFanState("set_preset_mode", {
-        preset_mode: mode
-      });
-    }
-    _getPresetPanelMarkup(state = this._getState()) {
-      const presetModes = this._config?.show_preset_modes !== false ? this._getPresetModes(state) : [];
-      const currentPresetMode = this._getCurrentPresetMode(state);
-      if (!presetModes.length) {
-        return "";
-      }
-      return `
+      _getPresetPanelMarkup(state = this._getState()) {
+        const presetModes = this._config?.show_preset_modes !== false ? this._getPresetModes(state) : [];
+        const currentPresetMode = this._getCurrentPresetMode(state);
+        if (!presetModes.length) {
+          return "";
+        }
+        return `
       <div class="fan-card__preset-panel">
         ${presetModes.map((mode) => `
             <button
@@ -1550,334 +1558,347 @@
           `).join("")}
       </div>
     `;
-    }
-    _setPresetToggleButtonsState(isOpen) {
-      this.shadowRoot?.querySelectorAll('[data-fan-action="toggle-preset-panel"]').forEach((button) => {
-        if (button instanceof HTMLElement) {
-          button.classList.toggle("fan-card__control--active", isOpen === true);
+      }
+      _setPresetToggleButtonsState(isOpen) {
+        this.shadowRoot?.querySelectorAll('[data-fan-action="toggle-preset-panel"]').forEach((button) => {
+          if (button instanceof HTMLElement) {
+            button.classList.toggle("fan-card__control--active", isOpen === true);
+          }
+        });
+      }
+      _createMarkupNode(markup) {
+        if (!markup || typeof document === "undefined") {
+          return null;
         }
-      });
-    }
-    _createMarkupNode(markup) {
-      if (!markup || typeof document === "undefined") {
-        return null;
+        const template = document.createElement("template");
+        template.innerHTML = String(markup).trim();
+        const node = template.content.firstElementChild;
+        return node instanceof HTMLElement ? node : null;
       }
-      const template = document.createElement("template");
-      template.innerHTML = String(markup).trim();
-      const node = template.content.firstElementChild;
-      return node instanceof HTMLElement ? node : null;
-    }
-    _setPresetPanelVisibility(isOpen, state = this._getState()) {
-      this._presetPanelOpen = isOpen === true;
-      this._lastRenderedPresetPanelVisible = this._presetPanelOpen;
-      this._setPresetToggleButtonsState(this._presetPanelOpen);
-      const controlsInner = this.shadowRoot?.querySelector(".fan-card__controls-inner");
-      const animations = this._getAnimationSettings();
-      const panelMarkup = this._presetPanelOpen ? this._getPresetPanelMarkup(state) : "";
-      if (panelMarkup) {
-        this._lastPresetPanelMarkup = panelMarkup;
-      }
-      if (!controlsInner || !(controlsInner instanceof HTMLElement) || !state || !this._isOn(state)) {
-        this._render();
-        return;
-      }
-      const existingPanel = controlsInner.querySelector(".fan-card__preset-panel-shell");
-      if (!animations.enabled) {
-        if (existingPanel instanceof HTMLElement) {
-          existingPanel.remove();
-        }
+      _setPresetPanelVisibility(isOpen, state = this._getState()) {
+        this._presetPanelOpen = isOpen === true;
+        this._lastRenderedPresetPanelVisible = this._presetPanelOpen;
+        this._setPresetToggleButtonsState(this._presetPanelOpen);
+        const controlsInner = this.shadowRoot?.querySelector(".fan-card__controls-inner");
+        const animations = this._getAnimationSettings();
+        const panelMarkup = this._presetPanelOpen ? this._getPresetPanelMarkup(state) : "";
         if (panelMarkup) {
-          const panelNode = this._createMarkupNode(`
+          this._lastPresetPanelMarkup = panelMarkup;
+        }
+        if (!controlsInner || !(controlsInner instanceof HTMLElement) || !state || !this._isOn(state)) {
+          this._render();
+          return;
+        }
+        const existingPanel = controlsInner.querySelector(".fan-card__preset-panel-shell");
+        if (!animations.enabled) {
+          if (existingPanel instanceof HTMLElement) {
+            existingPanel.remove();
+          }
+          if (panelMarkup) {
+            const panelNode = this._createMarkupNode(`
           <div class="fan-card__preset-panel-shell" data-panel-key="preset">
             <div class="fan-card__preset-panel-inner">
               ${panelMarkup}
             </div>
           </div>
         `);
-          if (panelNode instanceof HTMLElement) {
-            controlsInner.appendChild(panelNode);
+            if (panelNode instanceof HTMLElement) {
+              controlsInner.appendChild(panelNode);
+              return;
+            }
+          }
+          this._render();
+          return;
+        }
+        const removePanel = (panel) => {
+          if (!(panel instanceof HTMLElement)) {
             return;
           }
-        }
-        this._render();
-        return;
-      }
-      const removePanel = (panel) => {
-        if (!(panel instanceof HTMLElement)) {
-          return;
-        }
-        panel.classList.remove("fan-card__preset-panel-shell--entering");
-        panel.classList.add("fan-card__preset-panel-shell--leaving");
-        const finalizeRemoval = () => {
-          if (panel.isConnected) {
-            panel.remove();
+          panel.classList.remove("fan-card__preset-panel-shell--entering");
+          panel.classList.add("fan-card__preset-panel-shell--leaving");
+          const finalizeRemoval = () => {
+            if (panel.isConnected) {
+              panel.remove();
+            }
+          };
+          panel.addEventListener("animationend", finalizeRemoval, { once: true });
+          const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+          if (typeof schedule === "function") {
+            schedule(this, finalizeRemoval, animations.presetDuration + 80);
+          } else {
+            window.setTimeout(finalizeRemoval, animations.presetDuration + 80);
           }
         };
-        panel.addEventListener("animationend", finalizeRemoval, { once: true });
-        const schedule = window.NodaliaUtils?.scheduleDeferTimer;
-        if (typeof schedule === "function") {
-          schedule(this, finalizeRemoval, animations.presetDuration + 80);
-        } else {
-          window.setTimeout(finalizeRemoval, animations.presetDuration + 80);
-        }
-      };
-      const appendPanel = () => {
-        if (!panelMarkup) {
-          return;
-        }
-        const panelNode = this._createMarkupNode(`
+        const appendPanel = () => {
+          if (!panelMarkup) {
+            return;
+          }
+          const panelNode = this._createMarkupNode(`
         <div class="fan-card__preset-panel-shell fan-card__preset-panel-shell--entering" data-panel-key="preset">
           <div class="fan-card__preset-panel-inner">
             ${panelMarkup}
           </div>
         </div>
       `);
-        if (!(panelNode instanceof HTMLElement)) {
-          this._render();
-          return;
-        }
-        controlsInner.appendChild(panelNode);
-        const schedule = window.NodaliaUtils?.scheduleDeferTimer;
-        const finalizeEnter = () => {
-          if (panelNode.isConnected) {
-            panelNode.classList.remove("fan-card__preset-panel-shell--entering");
+          if (!(panelNode instanceof HTMLElement)) {
+            this._render();
+            return;
+          }
+          controlsInner.appendChild(panelNode);
+          const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+          const finalizeEnter = () => {
+            if (panelNode.isConnected) {
+              panelNode.classList.remove("fan-card__preset-panel-shell--entering");
+            }
+          };
+          if (typeof schedule === "function") {
+            schedule(this, finalizeEnter, animations.presetDuration + 80);
+          } else {
+            window.setTimeout(finalizeEnter, animations.presetDuration + 80);
           }
         };
-        if (typeof schedule === "function") {
-          schedule(this, finalizeEnter, animations.presetDuration + 80);
-        } else {
-          window.setTimeout(finalizeEnter, animations.presetDuration + 80);
-        }
-      };
-      if (!this._presetPanelOpen) {
-        if (existingPanel instanceof HTMLElement) {
-          removePanel(existingPanel);
-        }
-        return;
-      }
-      if (!panelMarkup) {
-        if (existingPanel instanceof HTMLElement) {
-          removePanel(existingPanel);
-        }
-        return;
-      }
-      if (existingPanel instanceof HTMLElement) {
-        existingPanel.remove();
-      }
-      appendPanel();
-    }
-    _updatePercentagePreview(value) {
-      const nextValue = clamp(Number(value), 0, 100);
-      const slider = this.shadowRoot?.querySelector('.fan-card__slider[data-fan-control="percentage"]');
-      if (slider instanceof HTMLInputElement) {
-        slider.style.setProperty("--percentage", String(nextValue));
-        slider.closest(".fan-card__slider-shell")?.style.setProperty("--percentage", String(nextValue));
-      }
-      const dial = this.shadowRoot?.querySelector(".fan-card__circular-dial");
-      if (dial instanceof HTMLElement) {
-        const model = getCircularLayoutDialModel(nextValue, 0, 100);
-        dial.style.setProperty("--circular-progress", String(model.progress));
-        dial.style.setProperty("--circular-marker-left", `${model.markerLeft}%`);
-        dial.style.setProperty("--circular-marker-top", `${model.markerTop}%`);
-      }
-      const chip = this.shadowRoot?.querySelector('[data-fan-chip="percentage"]');
-      if (chip instanceof HTMLElement) {
-        chip.textContent = `${Math.round(nextValue)}%`;
-      }
-    }
-    _hapticOnSliderStep(steppedValue, { commit = false } = {}) {
-      if (this._config?.haptics?.scrolls?.percentage === false) {
-        return;
-      }
-      const next = Number(steppedValue);
-      if (!Number.isFinite(next)) {
-        return;
-      }
-      const drag = this._activeSliderDrag;
-      if (drag) {
-        if (drag.lastHapticValue === next) {
+        if (!this._presetPanelOpen) {
+          if (existingPanel instanceof HTMLElement) {
+            removePanel(existingPanel);
+          }
           return;
         }
-        drag.lastHapticValue = next;
+        if (!panelMarkup) {
+          if (existingPanel instanceof HTMLElement) {
+            removePanel(existingPanel);
+          }
+          return;
+        }
+        if (existingPanel instanceof HTMLElement) {
+          existingPanel.remove();
+        }
+        appendPanel();
+      }
+      _updatePercentagePreview(value) {
+        const nextValue = clamp(Number(value), 0, 100);
+        const slider = this.shadowRoot?.querySelector('.fan-card__slider[data-fan-control="percentage"]');
+        if (slider instanceof HTMLInputElement) {
+          slider.style.setProperty("--percentage", String(nextValue));
+          slider.closest(".fan-card__slider-shell")?.style.setProperty("--percentage", String(nextValue));
+        }
+        const dial = this.shadowRoot?.querySelector(".fan-card__circular-dial");
+        if (dial instanceof HTMLElement) {
+          const model = getCircularLayoutDialModel(nextValue, 0, 100);
+          dial.style.setProperty("--circular-progress", String(model.progress));
+          dial.style.setProperty("--circular-marker-left", `${model.markerLeft}%`);
+          dial.style.setProperty("--circular-marker-top", `${model.markerTop}%`);
+        }
+        const chip = this.shadowRoot?.querySelector('[data-fan-chip="percentage"]');
+        if (chip instanceof HTMLElement) {
+          chip.textContent = `${Math.round(nextValue)}%`;
+        }
+      }
+      _hapticOnSliderStep(steppedValue, { commit = false } = {}) {
+        if (this._config?.haptics?.scrolls?.percentage === false) {
+          return;
+        }
+        const next = Number(steppedValue);
+        if (!Number.isFinite(next)) {
+          return;
+        }
+        const drag = this._activeSliderDrag;
+        if (drag) {
+          if (drag.lastHapticValue === next) {
+            return;
+          }
+          drag.lastHapticValue = next;
+          this._triggerHaptic("selection");
+          return;
+        }
+        if (commit) {
+          this._triggerHaptic("selection");
+          this._lastIdleSliderHapticValue = void 0;
+          return;
+        }
+        if (this._lastIdleSliderHapticValue === next) {
+          return;
+        }
+        this._lastIdleSliderHapticValue = next;
         this._triggerHaptic("selection");
-        return;
       }
-      if (commit) {
-        this._triggerHaptic("selection");
-        this._lastIdleSliderHapticValue = void 0;
-        return;
+      _applySliderValue(slider, value, options = {}) {
+        const commit = options.commit === true;
+        const nextValue = clamp(Number(value), 0, 100);
+        const stepped = Math.round(nextValue);
+        this._draftPercentage.set(this._config.entity, nextValue);
+        this._updatePercentagePreview(nextValue);
+        this._hapticOnSliderStep(stepped, { commit });
+        if (commit) {
+          this._commitPercentage(nextValue);
+        }
       }
-      if (this._lastIdleSliderHapticValue === next) {
-        return;
+      _getCircularDialStep(state = this._getState()) {
+        const configuredStep = Number(state?.attributes?.percentage_step);
+        return Number.isFinite(configuredStep) && configuredStep > 0 ? configuredStep : 5;
       }
-      this._lastIdleSliderHapticValue = next;
-      this._triggerHaptic("selection");
-    }
-    _applySliderValue(slider, value, options = {}) {
-      const commit = options.commit === true;
-      const nextValue = clamp(Number(value), 0, 100);
-      const stepped = Math.round(nextValue);
-      this._draftPercentage.set(this._config.entity, nextValue);
-      this._updatePercentagePreview(nextValue);
-      this._hapticOnSliderStep(stepped, { commit });
-      if (commit) {
-        this._commitPercentage(nextValue);
+      _applyCircularDialValue(value, options = {}) {
+        const commit = options.commit === true;
+        const nextValue = clamp(Number(value), 0, 100);
+        const stepped = Math.round(nextValue);
+        this._draftPercentage.set(this._config.entity, nextValue);
+        this._updatePercentagePreview(nextValue);
+        this._hapticOnSliderStep(stepped, { commit });
+        if (commit) {
+          this._commitPercentage(nextValue);
+        }
       }
-    }
-    _getCircularDialStep(state = this._getState()) {
-      const configuredStep = Number(state?.attributes?.percentage_step);
-      return Number.isFinite(configuredStep) && configuredStep > 0 ? configuredStep : 5;
-    }
-    _applyCircularDialValue(value, options = {}) {
-      const commit = options.commit === true;
-      const nextValue = clamp(Number(value), 0, 100);
-      const stepped = Math.round(nextValue);
-      this._draftPercentage.set(this._config.entity, nextValue);
-      this._updatePercentagePreview(nextValue);
-      this._hapticOnSliderStep(stepped, { commit });
-      if (commit) {
-        this._commitPercentage(nextValue);
-      }
-    }
-    _onShadowPointerDown(event) {
-      const path = event.composedPath();
-      const slider = path.find(
-        (node) => node instanceof HTMLInputElement && node.type === "range" && node.dataset?.fanControl
-      );
-      if (!this._activeSliderDrag && slider && (typeof event.button !== "number" || event.button === 0)) {
-        this._startSliderDrag(slider, event.clientX, event, event.pointerId);
-        return;
-      }
-      if (this._activeSliderDrag || typeof event.button === "number" && event.button !== 0) {
-        return;
-      }
-      const controlAction = path.find(
-        (node) => node instanceof HTMLElement && node.dataset?.fanAction && node.dataset.fanAction !== "body"
-      );
-      if (controlAction) {
-        return;
-      }
-      const dial = path.find((node) => node instanceof HTMLElement && node.classList?.contains("fan-card__circular-dial"));
-      if (!dial || !this._supportsPercentage(this._getState())) {
-        return;
-      }
-      this._startCircularDialDrag(dial, event.clientX, event.clientY, event, event.pointerId);
-    }
-    _queueSliderDragUpdate(slider, clientX, clientY = null) {
-      const drag = this._activeSliderDrag;
-      if (drag?.kind === "circular") {
-        const nextValue2 = getCircularLayoutDialValueFromPoint(
-          drag.dial,
-          clientX,
-          clientY ?? drag.lastClientY,
-          drag.range,
-          drag.step,
-          drag.lastValue,
-          drag.geometry
+      _onShadowPointerDown(event) {
+        const path = event.composedPath();
+        const slider = path.find(
+          (node) => node instanceof HTMLInputElement && node.type === "range" && node.dataset?.fanControl
         );
-        drag.lastValue = nextValue2;
-        drag.lastClientY = clientY ?? drag.lastClientY;
-        this._applyCircularDialValue(nextValue2, { commit: false });
-        return;
-      }
-      const nextValue = getRangeValueFromGeometry(drag?.geometry, slider.value, clientX);
-      slider.value = String(nextValue);
-      this._applySliderValue(slider, nextValue, { commit: false });
-    }
-    _startCircularDialDrag(dial, clientX, clientY, event = null, pointerId = null) {
-      if (!(dial instanceof HTMLElement)) {
-        return;
-      }
-      const state = this._getState();
-      if (!state || !this._supportsPercentage(state)) {
-        return;
-      }
-      const step = this._getCircularDialStep(state);
-      const seedValue = this._getPercentage(state);
-      this._activeSliderDrag = {
-        kind: "circular",
-        dial,
-        geometry: dial.getBoundingClientRect(),
-        range: { min: 0, max: 100 },
-        step,
-        pointerId,
-        lastValue: seedValue,
-        lastClientY: clientY,
-        lastHapticValue: Math.round(seedValue)
-      };
-      dial.classList.add("is-dragging");
-      this._attachWindowDragListeners();
-      if (event) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-      this._pendingDragUpdate = null;
-      if (this._dragFrame) {
-        window.cancelAnimationFrame(this._dragFrame);
-        this._dragFrame = 0;
-      }
-      const nextValue = getCircularLayoutDialValueFromPoint(
-        dial,
-        clientX,
-        clientY,
-        this._activeSliderDrag.range,
-        step,
-        seedValue,
-        this._activeSliderDrag.geometry
-      );
-      this._activeSliderDrag.lastValue = nextValue;
-      this._applyCircularDialValue(nextValue, { commit: false });
-    }
-    _startSliderDrag(slider, clientX, event = null, pointerId = null) {
-      if (!slider) {
-        return;
-      }
-      this._activeSliderDrag = {
-        kind: "linear",
-        pointerId,
-        slider,
-        geometry: getSliderDragGeometry(slider),
-        lastHapticValue: Math.round(Number(slider.value))
-      };
-      this._attachWindowDragListeners();
-      if (event) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-      this._pendingDragUpdate = null;
-      if (this._dragFrame) {
-        window.cancelAnimationFrame(this._dragFrame);
-        this._dragFrame = 0;
-      }
-      const nextValue = getRangeValueFromGeometry(this._activeSliderDrag.geometry, slider.value, clientX);
-      slider.value = String(nextValue);
-      this._applySliderValue(slider, nextValue, { commit: false });
-    }
-    _commitSliderDrag(clientX, event = null, pointerId = null, clientY = null) {
-      const drag = this._activeSliderDrag;
-      if (!drag) {
-        return;
-      }
-      if (event) {
-        event.preventDefault();
-      }
-      this._pendingDragUpdate = null;
-      if (this._dragFrame) {
-        window.cancelAnimationFrame(this._dragFrame);
-        this._dragFrame = 0;
-      }
-      if (drag.kind === "circular") {
-        const nextValue2 = getCircularLayoutDialValueFromPoint(
-          drag.dial,
-          clientX,
-          clientY ?? drag.lastClientY,
-          drag.range,
-          drag.step,
-          drag.lastValue,
-          drag.geometry
+        if (!this._activeSliderDrag && slider && (typeof event.button !== "number" || event.button === 0)) {
+          this._startSliderDrag(slider, event.clientX, event, event.pointerId);
+          return;
+        }
+        if (this._activeSliderDrag || typeof event.button === "number" && event.button !== 0) {
+          return;
+        }
+        const controlAction = path.find(
+          (node) => node instanceof HTMLElement && node.dataset?.fanAction && node.dataset.fanAction !== "body"
         );
-        drag.dial?.classList?.remove("is-dragging");
-        this._applyCircularDialValue(nextValue2, { commit: true });
+        if (controlAction) {
+          return;
+        }
+        const dial = path.find((node) => node instanceof HTMLElement && node.classList?.contains("fan-card__circular-dial"));
+        if (!dial || !this._supportsPercentage(this._getState())) {
+          return;
+        }
+        this._startCircularDialDrag(dial, event.clientX, event.clientY, event, event.pointerId);
+      }
+      _queueSliderDragUpdate(slider, clientX, clientY = null) {
+        const drag = this._activeSliderDrag;
+        if (drag?.kind === "circular") {
+          const nextValue2 = getCircularLayoutDialValueFromPoint(
+            drag.dial,
+            clientX,
+            clientY ?? drag.lastClientY,
+            drag.range,
+            drag.step,
+            drag.lastValue,
+            drag.geometry
+          );
+          drag.lastValue = nextValue2;
+          drag.lastClientY = clientY ?? drag.lastClientY;
+          this._applyCircularDialValue(nextValue2, { commit: false });
+          return;
+        }
+        const nextValue = getRangeValueFromGeometry(drag?.geometry, slider.value, clientX);
+        slider.value = String(nextValue);
+        this._applySliderValue(slider, nextValue, { commit: false });
+      }
+      _startCircularDialDrag(dial, clientX, clientY, event = null, pointerId = null) {
+        if (!(dial instanceof HTMLElement)) {
+          return;
+        }
+        const state = this._getState();
+        if (!state || !this._supportsPercentage(state)) {
+          return;
+        }
+        const step = this._getCircularDialStep(state);
+        const seedValue = this._getPercentage(state);
+        this._activeSliderDrag = {
+          kind: "circular",
+          dial,
+          geometry: dial.getBoundingClientRect(),
+          range: { min: 0, max: 100 },
+          step,
+          pointerId,
+          lastValue: seedValue,
+          lastClientY: clientY,
+          lastHapticValue: Math.round(seedValue)
+        };
+        dial.classList.add("is-dragging");
+        this._attachWindowDragListeners();
+        if (event) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        this._pendingDragUpdate = null;
+        if (this._dragFrame) {
+          window.cancelAnimationFrame(this._dragFrame);
+          this._dragFrame = 0;
+        }
+        const nextValue = getCircularLayoutDialValueFromPoint(
+          dial,
+          clientX,
+          clientY,
+          this._activeSliderDrag.range,
+          step,
+          seedValue,
+          this._activeSliderDrag.geometry
+        );
+        this._activeSliderDrag.lastValue = nextValue;
+        this._applyCircularDialValue(nextValue, { commit: false });
+      }
+      _startSliderDrag(slider, clientX, event = null, pointerId = null) {
+        if (!slider) {
+          return;
+        }
+        this._activeSliderDrag = {
+          kind: "linear",
+          pointerId,
+          slider,
+          geometry: getSliderDragGeometry(slider),
+          lastHapticValue: Math.round(Number(slider.value))
+        };
+        this._attachWindowDragListeners();
+        if (event) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        this._pendingDragUpdate = null;
+        if (this._dragFrame) {
+          window.cancelAnimationFrame(this._dragFrame);
+          this._dragFrame = 0;
+        }
+        const nextValue = getRangeValueFromGeometry(this._activeSliderDrag.geometry, slider.value, clientX);
+        slider.value = String(nextValue);
+        this._applySliderValue(slider, nextValue, { commit: false });
+      }
+      _commitSliderDrag(clientX, event = null, pointerId = null, clientY = null) {
+        const drag = this._activeSliderDrag;
+        if (!drag) {
+          return;
+        }
+        if (event) {
+          event.preventDefault();
+        }
+        this._pendingDragUpdate = null;
+        if (this._dragFrame) {
+          window.cancelAnimationFrame(this._dragFrame);
+          this._dragFrame = 0;
+        }
+        if (drag.kind === "circular") {
+          const nextValue2 = getCircularLayoutDialValueFromPoint(
+            drag.dial,
+            clientX,
+            clientY ?? drag.lastClientY,
+            drag.range,
+            drag.step,
+            drag.lastValue,
+            drag.geometry
+          );
+          drag.dial?.classList?.remove("is-dragging");
+          this._applyCircularDialValue(nextValue2, { commit: true });
+          this._activeSliderDrag = null;
+          this._detachWindowDragListeners();
+          this._suppressNextFanTap = true;
+          if (this._pendingRenderAfterDrag) {
+            this._pendingRenderAfterDrag = false;
+            this._render();
+          }
+          return;
+        }
+        const nextValue = getRangeValueFromGeometry(drag.geometry, drag.slider.value, clientX);
+        drag.slider.value = String(nextValue);
+        this._skipNextSliderChange = drag.slider;
+        this._applySliderValue(drag.slider, nextValue, { commit: true });
         this._activeSliderDrag = null;
         this._detachWindowDragListeners();
         this._suppressNextFanTap = true;
@@ -1885,434 +1906,421 @@
           this._pendingRenderAfterDrag = false;
           this._render();
         }
-        return;
       }
-      const nextValue = getRangeValueFromGeometry(drag.geometry, drag.slider.value, clientX);
-      drag.slider.value = String(nextValue);
-      this._skipNextSliderChange = drag.slider;
-      this._applySliderValue(drag.slider, nextValue, { commit: true });
-      this._activeSliderDrag = null;
-      this._detachWindowDragListeners();
-      this._suppressNextFanTap = true;
-      if (this._pendingRenderAfterDrag) {
-        this._pendingRenderAfterDrag = false;
-        this._render();
+      _onShadowMouseDown(event) {
+        const path = event.composedPath();
+        const slider = path.find(
+          (node) => node instanceof HTMLInputElement && node.type === "range" && node.dataset?.fanControl
+        );
+        if (!this._activeSliderDrag && slider && event.button === 0) {
+          this._startSliderDrag(slider, event.clientX, event);
+          return;
+        }
+        if (this._activeSliderDrag || event.button !== 0) {
+          return;
+        }
+        const controlAction = path.find(
+          (node) => node instanceof HTMLElement && node.dataset?.fanAction && node.dataset.fanAction !== "body"
+        );
+        if (controlAction) {
+          return;
+        }
+        const dial = path.find((node) => node instanceof HTMLElement && node.classList?.contains("fan-card__circular-dial"));
+        if (!dial || !this._supportsPercentage(this._getState())) {
+          return;
+        }
+        this._startCircularDialDrag(dial, event.clientX, event.clientY, event);
       }
-    }
-    _onShadowMouseDown(event) {
-      const path = event.composedPath();
-      const slider = path.find(
-        (node) => node instanceof HTMLInputElement && node.type === "range" && node.dataset?.fanControl
-      );
-      if (!this._activeSliderDrag && slider && event.button === 0) {
-        this._startSliderDrag(slider, event.clientX, event);
-        return;
+      _onShadowTouchStart(event) {
+        const path = event.composedPath();
+        const slider = path.find(
+          (node) => node instanceof HTMLInputElement && node.type === "range" && node.dataset?.fanControl
+        );
+        if (!this._activeSliderDrag && slider && event.touches?.length) {
+          this._startSliderDrag(slider, event.touches[0].clientX, event);
+          return;
+        }
+        if (this._activeSliderDrag || !event.touches?.length) {
+          return;
+        }
+        const controlAction = path.find(
+          (node) => node instanceof HTMLElement && node.dataset?.fanAction && node.dataset.fanAction !== "body"
+        );
+        if (controlAction) {
+          return;
+        }
+        const dial = path.find((node) => node instanceof HTMLElement && node.classList?.contains("fan-card__circular-dial"));
+        if (!dial || !this._supportsPercentage(this._getState())) {
+          return;
+        }
+        this._startCircularDialDrag(dial, event.touches[0].clientX, event.touches[0].clientY, event);
       }
-      if (this._activeSliderDrag || event.button !== 0) {
-        return;
+      _onWindowPointerMove(event) {
+        const drag = this._activeSliderDrag;
+        if (!drag || drag.pointerId !== event.pointerId) {
+          return;
+        }
+        event.preventDefault();
+        this._queueSliderDragUpdate(drag.slider, event.clientX, event.clientY);
       }
-      const controlAction = path.find(
-        (node) => node instanceof HTMLElement && node.dataset?.fanAction && node.dataset.fanAction !== "body"
-      );
-      if (controlAction) {
-        return;
+      _onWindowPointerUp(event) {
+        const drag = this._activeSliderDrag;
+        if (!drag || drag.pointerId !== event.pointerId) {
+          return;
+        }
+        this._commitSliderDrag(event.clientX, event, event.pointerId, event.clientY);
       }
-      const dial = path.find((node) => node instanceof HTMLElement && node.classList?.contains("fan-card__circular-dial"));
-      if (!dial || !this._supportsPercentage(this._getState())) {
-        return;
+      _onWindowMouseMove(event) {
+        if (!this._activeSliderDrag || typeof event.buttons === "number" && (event.buttons & 1) === 0) {
+          return;
+        }
+        event.preventDefault();
+        this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.clientX, event.clientY);
       }
-      this._startCircularDialDrag(dial, event.clientX, event.clientY, event);
-    }
-    _onShadowTouchStart(event) {
-      const path = event.composedPath();
-      const slider = path.find(
-        (node) => node instanceof HTMLInputElement && node.type === "range" && node.dataset?.fanControl
-      );
-      if (!this._activeSliderDrag && slider && event.touches?.length) {
-        this._startSliderDrag(slider, event.touches[0].clientX, event);
-        return;
+      _onWindowMouseUp(event) {
+        if (!this._activeSliderDrag) {
+          return;
+        }
+        this._commitSliderDrag(event.clientX, event, null, event.clientY);
       }
-      if (this._activeSliderDrag || !event.touches?.length) {
-        return;
+      _onWindowTouchMove(event) {
+        if (!this._activeSliderDrag || !event.touches?.length) {
+          return;
+        }
+        event.preventDefault();
+        this._queueSliderDragUpdate(
+          this._activeSliderDrag.slider,
+          event.touches[0].clientX,
+          event.touches[0].clientY
+        );
       }
-      const controlAction = path.find(
-        (node) => node instanceof HTMLElement && node.dataset?.fanAction && node.dataset.fanAction !== "body"
-      );
-      if (controlAction) {
-        return;
-      }
-      const dial = path.find((node) => node instanceof HTMLElement && node.classList?.contains("fan-card__circular-dial"));
-      if (!dial || !this._supportsPercentage(this._getState())) {
-        return;
-      }
-      this._startCircularDialDrag(dial, event.touches[0].clientX, event.touches[0].clientY, event);
-    }
-    _onWindowPointerMove(event) {
-      const drag = this._activeSliderDrag;
-      if (!drag || drag.pointerId !== event.pointerId) {
-        return;
-      }
-      event.preventDefault();
-      this._queueSliderDragUpdate(drag.slider, event.clientX, event.clientY);
-    }
-    _onWindowPointerUp(event) {
-      const drag = this._activeSliderDrag;
-      if (!drag || drag.pointerId !== event.pointerId) {
-        return;
-      }
-      this._commitSliderDrag(event.clientX, event, event.pointerId, event.clientY);
-    }
-    _onWindowMouseMove(event) {
-      if (!this._activeSliderDrag || typeof event.buttons === "number" && (event.buttons & 1) === 0) {
-        return;
-      }
-      event.preventDefault();
-      this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.clientX, event.clientY);
-    }
-    _onWindowMouseUp(event) {
-      if (!this._activeSliderDrag) {
-        return;
-      }
-      this._commitSliderDrag(event.clientX, event, null, event.clientY);
-    }
-    _onWindowTouchMove(event) {
-      if (!this._activeSliderDrag || !event.touches?.length) {
-        return;
-      }
-      event.preventDefault();
-      this._queueSliderDragUpdate(
-        this._activeSliderDrag.slider,
-        event.touches[0].clientX,
-        event.touches[0].clientY
-      );
-    }
-    _onWindowTouchStartCapture(event) {
-      const drag = this._activeSliderDrag;
-      if (!drag) {
-        return;
-      }
-      const path = typeof event.composedPath === "function" ? event.composedPath() : [];
-      if (drag.kind === "circular" ? path.includes(drag.dial) : path.includes(drag.slider)) {
-        return;
-      }
-      drag.dial?.classList?.remove("is-dragging");
-      this._activeSliderDrag = null;
-      this._detachWindowDragListeners();
-      this._pendingDragUpdate = null;
-      if (this._dragFrame) {
-        window.cancelAnimationFrame(this._dragFrame);
-        this._dragFrame = 0;
-      }
-      if (this._pendingRenderAfterDrag) {
-        this._pendingRenderAfterDrag = false;
-        this._render();
-      }
-    }
-    _onWindowTouchEnd(event) {
-      if (!this._activeSliderDrag) {
-        return;
-      }
-      const touch = event.changedTouches?.[0];
-      const clientX = touch?.clientX;
-      if (!Number.isFinite(clientX)) {
-        this._activeSliderDrag.dial?.classList?.remove("is-dragging");
+      _onWindowTouchStartCapture(event) {
+        const drag = this._activeSliderDrag;
+        if (!drag) {
+          return;
+        }
+        const path = typeof event.composedPath === "function" ? event.composedPath() : [];
+        if (drag.kind === "circular" ? path.includes(drag.dial) : path.includes(drag.slider)) {
+          return;
+        }
+        drag.dial?.classList?.remove("is-dragging");
         this._activeSliderDrag = null;
         this._detachWindowDragListeners();
+        this._pendingDragUpdate = null;
+        if (this._dragFrame) {
+          window.cancelAnimationFrame(this._dragFrame);
+          this._dragFrame = 0;
+        }
         if (this._pendingRenderAfterDrag) {
           this._pendingRenderAfterDrag = false;
           this._render();
         }
-        return;
       }
-      this._commitSliderDrag(clientX, event, null, touch?.clientY);
-    }
-    _attachWindowDragListeners() {
-      if (this._dragWindowListenersAttached) {
-        return;
-      }
-      this._dragWindowListenersAttached = true;
-      window.addEventListener("pointermove", this._onWindowPointerMove);
-      window.addEventListener("pointerup", this._onWindowPointerUp);
-      window.addEventListener("pointercancel", this._onWindowPointerUp);
-      if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
-        window.addEventListener("mousemove", this._onWindowMouseMove);
-        window.addEventListener("mouseup", this._onWindowMouseUp);
-        window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
-        window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
-        window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
-        window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
-      }
-    }
-    _detachWindowDragListeners() {
-      if (!this._dragWindowListenersAttached) {
-        return;
-      }
-      this._dragWindowListenersAttached = false;
-      window.removeEventListener("pointermove", this._onWindowPointerMove);
-      window.removeEventListener("pointerup", this._onWindowPointerUp);
-      window.removeEventListener("pointercancel", this._onWindowPointerUp);
-      if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
-        window.removeEventListener("mousemove", this._onWindowMouseMove);
-        window.removeEventListener("mouseup", this._onWindowMouseUp);
-        window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
-        window.removeEventListener("touchmove", this._onWindowTouchMove);
-        window.removeEventListener("touchend", this._onWindowTouchEnd);
-        window.removeEventListener("touchcancel", this._onWindowTouchEnd);
-      }
-    }
-    _onShadowInput(event) {
-      const slider = event.composedPath().find((node) => node instanceof HTMLInputElement && node.dataset?.fanControl);
-      if (!slider) {
-        return;
-      }
-      event.stopPropagation();
-      if (this._activeSliderDrag?.slider === slider) {
-        return;
-      }
-      this._applySliderValue(slider, slider.value, { commit: false });
-    }
-    _onShadowChange(event) {
-      const slider = event.composedPath().find((node) => node instanceof HTMLInputElement && node.dataset?.fanControl);
-      if (!slider) {
-        return;
-      }
-      event.stopPropagation();
-      if (this._skipNextSliderChange === slider) {
-        this._skipNextSliderChange = null;
-        return;
-      }
-      this._applySliderValue(slider, slider.value, { commit: true });
-    }
-    _onShadowClick(event) {
-      const path = event.composedPath();
-      const slider = path.find(
-        (node) => node instanceof HTMLInputElement && node.dataset?.fanControl
-      );
-      if (slider) {
-        return;
-      }
-      const actionButton = path.find((node) => node instanceof HTMLElement && node.dataset?.fanAction);
-      if (!actionButton) {
-        return;
-      }
-      event.preventDefault();
-      event.stopPropagation();
-      const state = this._getState();
-      const fanAction = actionButton.dataset.fanAction;
-      if (fanAction === "body" || fanAction === "icon") {
-        const zone = fanAction;
-        if (zone === "body" && window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
+      _onWindowTouchEnd(event) {
+        if (!this._activeSliderDrag) {
           return;
         }
-        if (this._suppressNextFanTap) {
-          this._suppressNextFanTap = false;
+        const touch = event.changedTouches?.[0];
+        const clientX = touch?.clientX;
+        if (!Number.isFinite(clientX)) {
+          this._activeSliderDrag.dial?.classList?.remove("is-dragging");
+          this._activeSliderDrag = null;
+          this._detachWindowDragListeners();
+          if (this._pendingRenderAfterDrag) {
+            this._pendingRenderAfterDrag = false;
+            this._render();
+          }
           return;
         }
-        const tapEffect = this._resolveFanTapEffect(zone);
-        const doubleEffect = this._resolveFanDoubleTapEffect(zone);
-        const runTap = () => {
-          if (tapEffect === "none") {
+        this._commitSliderDrag(clientX, event, null, touch?.clientY);
+      }
+      _attachWindowDragListeners() {
+        if (this._dragWindowListenersAttached) {
+          return;
+        }
+        this._dragWindowListenersAttached = true;
+        window.addEventListener("pointermove", this._onWindowPointerMove);
+        window.addEventListener("pointerup", this._onWindowPointerUp);
+        window.addEventListener("pointercancel", this._onWindowPointerUp);
+        if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+          window.addEventListener("mousemove", this._onWindowMouseMove);
+          window.addEventListener("mouseup", this._onWindowMouseUp);
+          window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
+          window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
+          window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
+          window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
+        }
+      }
+      _detachWindowDragListeners() {
+        if (!this._dragWindowListenersAttached) {
+          return;
+        }
+        this._dragWindowListenersAttached = false;
+        window.removeEventListener("pointermove", this._onWindowPointerMove);
+        window.removeEventListener("pointerup", this._onWindowPointerUp);
+        window.removeEventListener("pointercancel", this._onWindowPointerUp);
+        if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+          window.removeEventListener("mousemove", this._onWindowMouseMove);
+          window.removeEventListener("mouseup", this._onWindowMouseUp);
+          window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
+          window.removeEventListener("touchmove", this._onWindowTouchMove);
+          window.removeEventListener("touchend", this._onWindowTouchEnd);
+          window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+        }
+      }
+      _onShadowInput(event) {
+        const slider = event.composedPath().find((node) => node instanceof HTMLInputElement && node.dataset?.fanControl);
+        if (!slider) {
+          return;
+        }
+        event.stopPropagation();
+        if (this._activeSliderDrag?.slider === slider) {
+          return;
+        }
+        this._applySliderValue(slider, slider.value, { commit: false });
+      }
+      _onShadowChange(event) {
+        const slider = event.composedPath().find((node) => node instanceof HTMLInputElement && node.dataset?.fanControl);
+        if (!slider) {
+          return;
+        }
+        event.stopPropagation();
+        if (this._skipNextSliderChange === slider) {
+          this._skipNextSliderChange = null;
+          return;
+        }
+        this._applySliderValue(slider, slider.value, { commit: true });
+      }
+      _onShadowClick(event) {
+        const path = event.composedPath();
+        const slider = path.find(
+          (node) => node instanceof HTMLInputElement && node.dataset?.fanControl
+        );
+        if (slider) {
+          return;
+        }
+        const actionButton = path.find((node) => node instanceof HTMLElement && node.dataset?.fanAction);
+        if (!actionButton) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        const state = this._getState();
+        const fanAction = actionButton.dataset.fanAction;
+        if (fanAction === "body" || fanAction === "icon") {
+          const zone = fanAction;
+          if (zone === "body" && window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
             return;
           }
-          this._triggerHaptic();
-          this._executeFanTapEffect(zone, tapEffect);
-        };
-        const runDouble = () => {
-          if (doubleEffect === "none") {
+          if (this._suppressNextFanTap) {
+            this._suppressNextFanTap = false;
             return;
           }
-          this._triggerHaptic();
-          this._executeFanDoubleTapEffect(zone, doubleEffect);
-        };
-        if (doubleEffect !== "none" && typeof window.NodaliaUtils?.scheduleCardZoneTap === "function") {
-          window.NodaliaUtils.scheduleCardZoneTap(this, { zone, onSingle: runTap, onDouble: runDouble });
+          const tapEffect = this._resolveFanTapEffect(zone);
+          const doubleEffect = this._resolveFanDoubleTapEffect(zone);
+          const runTap = () => {
+            if (tapEffect === "none") {
+              return;
+            }
+            this._triggerHaptic();
+            this._executeFanTapEffect(zone, tapEffect);
+          };
+          const runDouble = () => {
+            if (doubleEffect === "none") {
+              return;
+            }
+            this._triggerHaptic();
+            this._executeFanDoubleTapEffect(zone, doubleEffect);
+          };
+          if (doubleEffect !== "none" && typeof window.NodaliaUtils?.scheduleCardZoneTap === "function") {
+            window.NodaliaUtils.scheduleCardZoneTap(this, { zone, onSingle: runTap, onDouble: runDouble });
+            return;
+          }
+          runTap();
           return;
         }
-        runTap();
-        return;
+        this._triggerHaptic();
+        switch (fanAction) {
+          case "decrease-percentage":
+            this._triggerButtonBounce(actionButton);
+            this._changePercentageBy(-1, state);
+            break;
+          case "increase-percentage":
+            this._triggerButtonBounce(actionButton);
+            this._changePercentageBy(1, state);
+            break;
+          case "oscillate":
+            this._triggerButtonBounce(actionButton);
+            this._toggleOscillation(state);
+            break;
+          case "toggle-preset-panel":
+            this._triggerButtonBounce(actionButton);
+            this._setPresetPanelVisibility(!this._presetPanelOpen, state);
+            break;
+          case "preset":
+            this._triggerButtonBounce(actionButton);
+            if (actionButton.dataset.mode) {
+              this._commitPresetMode(actionButton.dataset.mode);
+            }
+            break;
+          default:
+            break;
+        }
       }
-      this._triggerHaptic();
-      switch (fanAction) {
-        case "decrease-percentage":
-          this._triggerButtonBounce(actionButton);
-          this._changePercentageBy(-1, state);
-          break;
-        case "increase-percentage":
-          this._triggerButtonBounce(actionButton);
-          this._changePercentageBy(1, state);
-          break;
-        case "oscillate":
-          this._triggerButtonBounce(actionButton);
-          this._toggleOscillation(state);
-          break;
-        case "toggle-preset-panel":
-          this._triggerButtonBounce(actionButton);
-          this._setPresetPanelVisibility(!this._presetPanelOpen, state);
-          break;
-        case "preset":
-          this._triggerButtonBounce(actionButton);
-          if (actionButton.dataset.mode) {
-            this._commitPresetMode(actionButton.dataset.mode);
-          }
-          break;
-        default:
-          break;
+      _fanCardUi(key, fallback = "") {
+        const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+        const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+        const pack = window.NodaliaI18n?.strings?.(lang)?.fan;
+        const enPack = window.NodaliaI18n?.strings?.("en")?.fan;
+        const raw = pack?.[key] ?? enPack?.[key];
+        return String(raw != null && raw !== "" ? raw : fallback);
       }
-    }
-    _fanCardUi(key, fallback = "") {
-      const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-      const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-      const pack = window.NodaliaI18n?.strings?.(lang)?.fan;
-      const enPack = window.NodaliaI18n?.strings?.("en")?.fan;
-      const raw = pack?.[key] ?? enPack?.[key];
-      return String(raw != null && raw !== "" ? raw : fallback);
-    }
-    _fanAria(key, fallback = "") {
-      return window.NodaliaI18n?.translateFanAria?.(this._hass, this._config?.language ?? "auto", key, fallback) || fallback;
-    }
-    _renderEmptyState() {
-      const title = escapeHtml(this._fanCardUi("emptyTitle", "Nodalia Fan Card"));
-      const body = escapeHtml(
-        this._fanCardUi("emptyBody", "Set `entity` to a `fan.*` entity to show this card.")
-      );
-      return `
+      _fanAria(key, fallback = "") {
+        return window.NodaliaI18n?.translateFanAria?.(this._hass, this._config?.language ?? "auto", key, fallback) || fallback;
+      }
+      _renderEmptyState() {
+        const title = escapeHtml(this._fanCardUi("emptyTitle", "Nodalia Fan Card"));
+        const body = escapeHtml(
+          this._fanCardUi("emptyBody", "Set `entity` to a `fan.*` entity to show this card.")
+        );
+        return `
       <ha-card class="fan-card fan-card--empty">
         <div class="fan-card__empty-title">${title}</div>
         <div class="fan-card__empty-text">${body}</div>
       </ha-card>
     `;
-    }
-    _render() {
-      if (!this.shadowRoot) {
-        return;
       }
-      const config = this._config || normalizeConfig({});
-      const styles = config.styles;
-      const entityGuard = window.NodaliaUtils?.renderLovelaceEntityGuardCardHtml?.(
-        this._hass,
-        config.entity,
-        { cardClass: "fan-card" }
-      );
-      if (entityGuard) {
-        this.shadowRoot.innerHTML = entityGuard;
-        return;
-      }
-      const state = this._getState();
-      if (!state) {
-        this.shadowRoot.innerHTML = window.NodaliaUtils?.renderCardEmptyStateDocument?.(
-          this._renderEmptyState(),
-          { card: (config || DEFAULT_CONFIG).styles?.card }
-        ) ?? this._renderEmptyState();
-        return;
-      }
-      const isOn = this._isOn(state);
-      const isCircularLayout = config.layout === "circular";
-      const title = this._getFanName(state);
-      const icon = this._getFanIcon(state);
-      const entityPicture = this._getEntityPicture(state);
-      const accentColor = this._getAccentColor(state);
-      const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
-      const darkenBubbleIconGlyph = isOn && Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(state, accentColor));
-      const showUnavailableBadge = isUnavailableState(state);
-      const currentPercentage = this._getPercentage(state);
-      const supportsPercentage = config.show_slider !== false && this._supportsPercentage(state);
-      const supportsOscillation = config.show_oscillation !== false && this._supportsOscillation(state);
-      const presetModes = config.show_preset_modes !== false ? this._getPresetModes(state) : [];
-      const currentPresetMode = this._getCurrentPresetMode(state);
-      const translatedPresetMode = currentPresetMode ? translatePresetLabel(currentPresetMode) : "";
-      const isCompactLayout = this._isCompactLayout;
-      const hasSecondaryControls = isOn && (supportsOscillation || presetModes.length);
-      const chips = [];
-      const showTitle = isCircularLayout || !isCompactLayout || this._shouldShowCompactTitle();
-      const showCopyBlock = showTitle || config.show_state === true || isOn && (config.show_percentage_chip !== false && supportsPercentage || config.show_mode_chip !== false && translatedPresetMode);
-      if (config.show_state === true) {
-        chips.push(`<span class="fan-card__chip fan-card__chip--state">${escapeHtml(this._getStateLabel(state))}</span>`);
-      }
-      if (isOn && config.show_percentage_chip !== false && supportsPercentage) {
-        chips.push(`<span class="fan-card__chip" data-fan-chip="percentage">${escapeHtml(`${Math.round(currentPercentage)}%`)}</span>`);
-      }
-      if (isOn && config.show_mode_chip !== false && translatedPresetMode) {
-        chips.push(`<span class="fan-card__chip">${escapeHtml(translatedPresetMode)}</span>`);
-      }
-      if (!presetModes.length) {
-        this._presetPanelOpen = false;
-      }
-      const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 54%, ${styles.card.background} 100%)`;
-      const onCardBorder = `color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`;
-      const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.18))`;
-      const animations = this._getAnimationSettings();
-      const now = Date.now();
-      const wasOn = this._lastRenderedIsOn;
-      const isPresetPanelVisible = Boolean(isOn && this._presetPanelOpen && presetModes.length);
-      let powerAnimationState = "";
-      let controlsAnimationState = "";
-      let presetPanelAnimationState = "";
-      if (!animations.enabled) {
-        this._powerTransition = null;
-        this._controlsTransition = null;
-        this._presetPanelTransition = null;
-      } else if (wasOn !== null && wasOn !== isOn) {
-        powerAnimationState = isOn ? "powering-up" : "powering-down";
-        this._powerTransition = {
-          endsAt: now + animations.powerDuration,
-          startedAt: now,
-          state: powerAnimationState
-        };
-        if (supportsPercentage || hasSecondaryControls || this._lastControlsMarkup) {
-          controlsAnimationState = isOn ? "entering" : "leaving";
-          this._controlsTransition = {
-            endsAt: now + animations.controlsDuration,
-            startedAt: now,
-            state: controlsAnimationState
-          };
-        } else {
-          this._controlsTransition = null;
+      _render() {
+        if (!this.shadowRoot) {
+          return;
         }
-        this._presetPanelTransition = null;
-      } else {
-        if (this._powerTransition?.endsAt > now) {
-          powerAnimationState = this._powerTransition.state;
-        } else {
+        const config = this._config || normalizeConfig({});
+        const styles = config.styles;
+        const entityGuard = window.NodaliaUtils?.renderLovelaceEntityGuardCardHtml?.(
+          this._hass,
+          config.entity,
+          { cardClass: "fan-card" }
+        );
+        if (entityGuard) {
+          this.shadowRoot.innerHTML = entityGuard;
+          return;
+        }
+        const state = this._getState();
+        if (!state) {
+          this.shadowRoot.innerHTML = window.NodaliaUtils?.renderCardEmptyStateDocument?.(
+            this._renderEmptyState(),
+            { card: (config || DEFAULT_CONFIG).styles?.card }
+          ) ?? this._renderEmptyState();
+          return;
+        }
+        const isOn = this._isOn(state);
+        const isCircularLayout = config.layout === "circular";
+        const title = this._getFanName(state);
+        const icon = this._getFanIcon(state);
+        const entityPicture = this._getEntityPicture(state);
+        const accentColor = this._getAccentColor(state);
+        const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
+        const darkenBubbleIconGlyph = isOn && Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(state, accentColor));
+        const showUnavailableBadge = isUnavailableState(state);
+        const currentPercentage = this._getPercentage(state);
+        const supportsPercentage = config.show_slider !== false && this._supportsPercentage(state);
+        const supportsOscillation = config.show_oscillation !== false && this._supportsOscillation(state);
+        const presetModes = config.show_preset_modes !== false ? this._getPresetModes(state) : [];
+        const currentPresetMode = this._getCurrentPresetMode(state);
+        const translatedPresetMode = currentPresetMode ? translatePresetLabel(currentPresetMode) : "";
+        const isCompactLayout = this._isCompactLayout;
+        const hasSecondaryControls = isOn && (supportsOscillation || presetModes.length);
+        const chips = [];
+        const showTitle = isCircularLayout || !isCompactLayout || this._shouldShowCompactTitle();
+        const showCopyBlock = showTitle || config.show_state === true || isOn && (config.show_percentage_chip !== false && supportsPercentage || config.show_mode_chip !== false && translatedPresetMode);
+        if (config.show_state === true) {
+          chips.push(`<span class="fan-card__chip fan-card__chip--state">${escapeHtml(this._getStateLabel(state))}</span>`);
+        }
+        if (isOn && config.show_percentage_chip !== false && supportsPercentage) {
+          chips.push(`<span class="fan-card__chip" data-fan-chip="percentage">${escapeHtml(`${Math.round(currentPercentage)}%`)}</span>`);
+        }
+        if (isOn && config.show_mode_chip !== false && translatedPresetMode) {
+          chips.push(`<span class="fan-card__chip">${escapeHtml(translatedPresetMode)}</span>`);
+        }
+        if (!presetModes.length) {
+          this._presetPanelOpen = false;
+        }
+        const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 54%, ${styles.card.background} 100%)`;
+        const onCardBorder = `color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`;
+        const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.18))`;
+        const animations = this._getAnimationSettings();
+        const now = Date.now();
+        const wasOn = this._lastRenderedIsOn;
+        const isPresetPanelVisible = Boolean(isOn && this._presetPanelOpen && presetModes.length);
+        let powerAnimationState = "";
+        let controlsAnimationState = "";
+        let presetPanelAnimationState = "";
+        if (!animations.enabled) {
           this._powerTransition = null;
-        }
-        if (this._controlsTransition?.endsAt > now) {
-          controlsAnimationState = this._controlsTransition.state;
-        } else {
           this._controlsTransition = null;
-        }
-        if (isOn && wasOn === isOn && this._lastRenderedPresetPanelVisible !== isPresetPanelVisible) {
-          presetPanelAnimationState = isPresetPanelVisible ? "entering" : "leaving";
-          this._presetPanelTransition = {
-            endsAt: now + animations.presetDuration,
+          this._presetPanelTransition = null;
+        } else if (wasOn !== null && wasOn !== isOn) {
+          powerAnimationState = isOn ? "powering-up" : "powering-down";
+          this._powerTransition = {
+            endsAt: now + animations.powerDuration,
             startedAt: now,
-            state: presetPanelAnimationState
+            state: powerAnimationState
           };
-        } else if (this._presetPanelTransition?.endsAt > now) {
-          presetPanelAnimationState = this._presetPanelTransition.state;
+          if (supportsPercentage || hasSecondaryControls || this._lastControlsMarkup) {
+            controlsAnimationState = isOn ? "entering" : "leaving";
+            this._controlsTransition = {
+              endsAt: now + animations.controlsDuration,
+              startedAt: now,
+              state: controlsAnimationState
+            };
+          } else {
+            this._controlsTransition = null;
+          }
+          this._presetPanelTransition = null;
         } else {
-          this._presetPanelTransition = null;
+          if (this._powerTransition?.endsAt > now) {
+            powerAnimationState = this._powerTransition.state;
+          } else {
+            this._powerTransition = null;
+          }
+          if (this._controlsTransition?.endsAt > now) {
+            controlsAnimationState = this._controlsTransition.state;
+          } else {
+            this._controlsTransition = null;
+          }
+          if (isOn && wasOn === isOn && this._lastRenderedPresetPanelVisible !== isPresetPanelVisible) {
+            presetPanelAnimationState = isPresetPanelVisible ? "entering" : "leaving";
+            this._presetPanelTransition = {
+              endsAt: now + animations.presetDuration,
+              startedAt: now,
+              state: presetPanelAnimationState
+            };
+          } else if (this._presetPanelTransition?.endsAt > now) {
+            presetPanelAnimationState = this._presetPanelTransition.state;
+          } else {
+            this._presetPanelTransition = null;
+          }
+          if (!isOn) {
+            this._presetPanelTransition = null;
+          }
         }
-        if (!isOn) {
-          this._presetPanelTransition = null;
+        const shouldAnimatePercentageFill = animations.enabled && powerAnimationState === "powering-up" && isOn && supportsPercentage;
+        const percentageFillDuration = shouldAnimatePercentageFill ? clamp(Math.round(animations.controlsDuration * 0.82), 220, 1100) : 0;
+        let percentageFillDelay = 0;
+        if (shouldAnimatePercentageFill && this._powerTransition?.startedAt != null) {
+          const fillElapsed = now - Number(this._powerTransition.startedAt);
+          if (fillElapsed > 0) {
+            percentageFillDelay = -clamp(fillElapsed, 0, percentageFillDuration);
+          }
         }
-      }
-      const shouldAnimatePercentageFill = animations.enabled && powerAnimationState === "powering-up" && isOn && supportsPercentage;
-      const percentageFillDuration = shouldAnimatePercentageFill ? clamp(Math.round(animations.controlsDuration * 0.82), 220, 1100) : 0;
-      let percentageFillDelay = 0;
-      if (shouldAnimatePercentageFill && this._powerTransition?.startedAt != null) {
-        const fillElapsed = now - Number(this._powerTransition.startedAt);
-        if (fillElapsed > 0) {
-          percentageFillDelay = -clamp(fillElapsed, 0, percentageFillDuration);
+        const percentageSliderShellClass = shouldAnimatePercentageFill ? " fan-card__slider-shell--percentage-fill" : "";
+        const shouldAnimatePercentageEmpty = animations.enabled && controlsAnimationState === "leaving";
+        const percentageEmptyDuration = shouldAnimatePercentageEmpty ? clamp(Math.round(animations.controlsDuration * 0.72), 180, 900) : 0;
+        let percentageEmptyDelay = 0;
+        if (shouldAnimatePercentageEmpty && this._controlsTransition?.startedAt != null) {
+          percentageEmptyDelay = -clamp(now - Number(this._controlsTransition.startedAt), 0, percentageEmptyDuration);
         }
-      }
-      const percentageSliderShellClass = shouldAnimatePercentageFill ? " fan-card__slider-shell--percentage-fill" : "";
-      const shouldAnimatePercentageEmpty = animations.enabled && controlsAnimationState === "leaving";
-      const percentageEmptyDuration = shouldAnimatePercentageEmpty ? clamp(Math.round(animations.controlsDuration * 0.72), 180, 900) : 0;
-      let percentageEmptyDelay = 0;
-      if (shouldAnimatePercentageEmpty && this._controlsTransition?.startedAt != null) {
-        percentageEmptyDelay = -clamp(now - Number(this._controlsTransition.startedAt), 0, percentageEmptyDuration);
-      }
-      const mainControlsMarkup = isOn && supportsPercentage ? `
+        const mainControlsMarkup = isOn && supportsPercentage ? `
         <div class="fan-card__slider-row ${hasSecondaryControls ? "" : "fan-card__slider-row--solo"}">
           <div class="fan-card__slider-wrap">
             <div class="fan-card__slider-shell${percentageSliderShellClass}" style="--percentage:${currentPercentage}; --percentage-target:${currentPercentage};">
@@ -2379,7 +2387,7 @@
                 ` : ""}
           </div>
         ` : "";
-      const currentPresetPanelMarkup = isPresetPanelVisible ? `
+        const currentPresetPanelMarkup = isPresetPanelVisible ? `
         <div class="fan-card__preset-panel">
           ${presetModes.map((mode) => `
               <button
@@ -2393,38 +2401,38 @@
             `).join("")}
         </div>
       ` : "";
-      const presetPanelContentMarkup = currentPresetPanelMarkup || (presetPanelAnimationState === "leaving" ? this._lastPresetPanelMarkup : "");
-      const presetPanelShellMarkup = presetPanelContentMarkup ? `
+        const presetPanelContentMarkup = currentPresetPanelMarkup || (presetPanelAnimationState === "leaving" ? this._lastPresetPanelMarkup : "");
+        const presetPanelShellMarkup = presetPanelContentMarkup ? `
         <div class="fan-card__preset-panel-shell ${presetPanelAnimationState ? `fan-card__preset-panel-shell--${presetPanelAnimationState}` : ""}" data-panel-key="preset">
           <div class="fan-card__preset-panel-inner">
             ${presetPanelContentMarkup}
           </div>
         </div>
       ` : "";
-      const currentControlsAnimatedMarkup = [
-        mainControlsMarkup,
-        presetPanelShellMarkup
-      ].filter(Boolean).join("");
-      const currentControlsStaticMarkup = [
-        mainControlsMarkup,
-        currentPresetPanelMarkup ? `
+        const currentControlsAnimatedMarkup = [
+          mainControlsMarkup,
+          presetPanelShellMarkup
+        ].filter(Boolean).join("");
+        const currentControlsStaticMarkup = [
+          mainControlsMarkup,
+          currentPresetPanelMarkup ? `
           <div class="fan-card__preset-panel-shell" data-panel-key="preset">
             <div class="fan-card__preset-panel-inner">
               ${currentPresetPanelMarkup}
             </div>
           </div>
         ` : ""
-      ].filter(Boolean).join("");
-      const controlsContentMarkup = isOn ? currentControlsAnimatedMarkup : controlsAnimationState === "leaving" ? this._lastControlsMarkup : "";
-      const controlsShellMarkup = controlsContentMarkup ? `
+        ].filter(Boolean).join("");
+        const controlsContentMarkup = isOn ? currentControlsAnimatedMarkup : controlsAnimationState === "leaving" ? this._lastControlsMarkup : "";
+        const controlsShellMarkup = controlsContentMarkup ? `
         <div class="fan-card__controls-shell ${controlsAnimationState ? `fan-card__controls-shell--${controlsAnimationState}` : ""}" data-nodalia-tap-shield="true">
           <div class="fan-card__controls-inner">
             ${controlsContentMarkup}
           </div>
         </div>
       ` : "";
-      const circularDial = getCircularLayoutDialModel(currentPercentage, 0, 100);
-      const circularControlsMarkup = `
+        const circularDial = getCircularLayoutDialModel(currentPercentage, 0, 100);
+        const circularControlsMarkup = `
       <div class="fan-card__circular-layout">
         <div class="fan-card__circular-dial" data-nodalia-tap-shield="true" style="--circular-progress:${circularDial.progress};--circular-marker-left:${circularDial.markerLeft}%;--circular-marker-top:${circularDial.markerTop}%;">
           <svg viewBox="0 0 240 240" aria-hidden="true">
@@ -2451,31 +2459,31 @@
         <div class="fan-card__controls-inner">${presetPanelShellMarkup}</div>
       </div>
     `;
-      const powerAnimationRemaining = powerAnimationState && this._powerTransition ? Math.max(0, this._powerTransition.endsAt - now) : 0;
-      const powerAnimationDelay = powerAnimationState && this._powerTransition ? -clamp(now - Number(this._powerTransition.startedAt || now), 0, animations.powerDuration) : 0;
-      const controlsAnimationRemaining = controlsAnimationState && this._controlsTransition ? Math.max(0, this._controlsTransition.endsAt - now) : 0;
-      const controlsAnimationDelay = controlsAnimationState && this._controlsTransition ? -clamp(now - Number(this._controlsTransition.startedAt || now), 0, animations.controlsDuration) : 0;
-      const presetAnimationRemaining = presetPanelAnimationState && this._presetPanelTransition ? Math.max(0, this._presetPanelTransition.endsAt - now) : 0;
-      const presetAnimationDelay = presetPanelAnimationState && this._presetPanelTransition ? -clamp(now - Number(this._presetPanelTransition.startedAt || now), 0, animations.presetDuration) : 0;
-      const percentageFillAnimationRemaining = shouldAnimatePercentageFill && this._powerTransition ? Math.max(0, Number(this._powerTransition.startedAt) + percentageFillDuration - now) : 0;
-      const percentageEmptyAnimationRemaining = shouldAnimatePercentageEmpty && this._controlsTransition ? Math.max(0, Number(this._controlsTransition.startedAt) + percentageEmptyDuration - now) : 0;
-      const shouldCleanupAfterAnimation = Boolean(
-        powerAnimationRemaining || controlsAnimationRemaining || presetAnimationRemaining || percentageFillAnimationRemaining || percentageEmptyAnimationRemaining
-      );
-      const cleanupDelay = shouldCleanupAfterAnimation ? Math.max(
-        powerAnimationRemaining,
-        controlsAnimationRemaining,
-        presetAnimationRemaining,
-        percentageFillAnimationRemaining,
-        percentageEmptyAnimationRemaining
-      ) + 40 : 0;
-      if (currentPresetPanelMarkup) {
-        this._lastPresetPanelMarkup = currentPresetPanelMarkup;
-      }
-      if (isOn && currentControlsStaticMarkup && presetPanelAnimationState !== "leaving") {
-        this._lastControlsMarkup = currentControlsStaticMarkup;
-      }
-      this.shadowRoot.innerHTML = `
+        const powerAnimationRemaining = powerAnimationState && this._powerTransition ? Math.max(0, this._powerTransition.endsAt - now) : 0;
+        const powerAnimationDelay = powerAnimationState && this._powerTransition ? -clamp(now - Number(this._powerTransition.startedAt || now), 0, animations.powerDuration) : 0;
+        const controlsAnimationRemaining = controlsAnimationState && this._controlsTransition ? Math.max(0, this._controlsTransition.endsAt - now) : 0;
+        const controlsAnimationDelay = controlsAnimationState && this._controlsTransition ? -clamp(now - Number(this._controlsTransition.startedAt || now), 0, animations.controlsDuration) : 0;
+        const presetAnimationRemaining = presetPanelAnimationState && this._presetPanelTransition ? Math.max(0, this._presetPanelTransition.endsAt - now) : 0;
+        const presetAnimationDelay = presetPanelAnimationState && this._presetPanelTransition ? -clamp(now - Number(this._presetPanelTransition.startedAt || now), 0, animations.presetDuration) : 0;
+        const percentageFillAnimationRemaining = shouldAnimatePercentageFill && this._powerTransition ? Math.max(0, Number(this._powerTransition.startedAt) + percentageFillDuration - now) : 0;
+        const percentageEmptyAnimationRemaining = shouldAnimatePercentageEmpty && this._controlsTransition ? Math.max(0, Number(this._controlsTransition.startedAt) + percentageEmptyDuration - now) : 0;
+        const shouldCleanupAfterAnimation = Boolean(
+          powerAnimationRemaining || controlsAnimationRemaining || presetAnimationRemaining || percentageFillAnimationRemaining || percentageEmptyAnimationRemaining
+        );
+        const cleanupDelay = shouldCleanupAfterAnimation ? Math.max(
+          powerAnimationRemaining,
+          controlsAnimationRemaining,
+          presetAnimationRemaining,
+          percentageFillAnimationRemaining,
+          percentageEmptyAnimationRemaining
+        ) + 40 : 0;
+        if (currentPresetPanelMarkup) {
+          this._lastPresetPanelMarkup = currentPresetPanelMarkup;
+        }
+        if (isOn && currentControlsStaticMarkup && presetPanelAnimationState !== "leaving") {
+          this._lastControlsMarkup = currentControlsStaticMarkup;
+        }
+        this.shadowRoot.innerHTML = `
       <style>
         :host {
           display: block;
@@ -3603,242 +3611,253 @@
         </div>
       </ha-card>
     `;
-      this._lastRenderedIsOn = isOn;
-      this._lastRenderedPresetPanelVisible = isPresetPanelVisible;
-      if (shouldCleanupAfterAnimation) {
-        this._scheduleAnimationCleanup(cleanupDelay);
-      } else if (this._animationCleanupTimer) {
-        window.clearTimeout(this._animationCleanupTimer);
-        this._animationCleanupTimer = 0;
+        this._lastRenderedIsOn = isOn;
+        this._lastRenderedPresetPanelVisible = isPresetPanelVisible;
+        if (shouldCleanupAfterAnimation) {
+          this._scheduleAnimationCleanup(cleanupDelay);
+        } else if (this._animationCleanupTimer) {
+          window.clearTimeout(this._animationCleanupTimer);
+          this._animationCleanupTimer = 0;
+        }
       }
     }
-  };
+    _lazyNodaliaFanCard = NodaliaFanCard;
+    return NodaliaFanCard;
+  }
 
   // src/cards/fan/fan-editor.ts
-  var NodaliaFanCardEditor = class extends HTMLElement {
-    constructor() {
-      super();
-      this.attachShadow({ mode: "open" });
-      this._config = normalizeConfig(STUB_CONFIG);
-      this._hass = null;
-      this._entityOptionsSignature = "";
-      this._showStyleSection = false;
-      this._showAnimationSection = false;
-      this._showTapActionsSection = false;
-      this._pendingEditorControlTags = /* @__PURE__ */ new Set();
-      this._onShadowInput = this._onShadowInput.bind(this);
-      this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
-      this._onShadowClick = this._onShadowClick.bind(this);
+  var _lazyNodaliaFanCardEditor;
+  function loadNodaliaFanCardEditor() {
+    if (_lazyNodaliaFanCardEditor) {
+      return _lazyNodaliaFanCardEditor;
     }
-    _attachEditorShadowListeners() {
-      window.NodaliaUtils.bindShadowListeners(this, [
-        ["input", this._onShadowInput],
-        ["change", this._onShadowInput],
-        ["value-changed", this._onShadowValueChanged],
-        ["click", this._onShadowClick]
-      ], "editor");
-    }
-    _detachEditorShadowListeners() {
-      window.NodaliaUtils.releaseShadowListeners(this, "editor");
-    }
-    connectedCallback() {
-      this._attachEditorShadowListeners();
-      window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
-    }
-    disconnectedCallback() {
-      this._detachEditorShadowListeners();
-      window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
-    }
-    set hass(hass) {
-      const nextSignature = this._getEntityOptionsSignature(hass);
-      const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
-      this._hass = hass;
-      this._entityOptionsSignature = nextSignature;
-      if (!shouldRender) {
-        return;
+    class NodaliaFanCardEditor extends HTMLElement {
+      constructor() {
+        super();
+        this._nodaliaConstruct();
       }
-      const focusState = this._captureFocusState();
-      this._render();
-      this._restoreFocusState(focusState);
-    }
-    setConfig(config) {
-      const focusState = this._captureFocusState();
-      this._config = normalizeConfig(config || {});
-      window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
-      this._render();
-      this._restoreFocusState(focusState);
-    }
-    _watchEditorControlTag(tagName) {
-      if (!tagName || this._pendingEditorControlTags.has(tagName)) {
-        return;
+      _nodaliaConstruct() {
+        this.attachShadow({ mode: "open" });
+        this._config = normalizeConfig(STUB_CONFIG);
+        this._hass = null;
+        this._entityOptionsSignature = "";
+        this._showStyleSection = false;
+        this._showAnimationSection = false;
+        this._showTapActionsSection = false;
+        this._pendingEditorControlTags = /* @__PURE__ */ new Set();
+        this._onShadowInput = this._onShadowInput.bind(this);
+        this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
+        this._onShadowClick = this._onShadowClick.bind(this);
       }
-      if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
-        return;
+      _attachEditorShadowListeners() {
+        window.NodaliaUtils.bindShadowListeners(this, [
+          ["input", this._onShadowInput],
+          ["change", this._onShadowInput],
+          ["value-changed", this._onShadowValueChanged],
+          ["click", this._onShadowClick]
+        ], "editor");
       }
-      this._pendingEditorControlTags.add(tagName);
-      customElements.whenDefined(tagName).then(() => {
-        this._pendingEditorControlTags.delete(tagName);
-        if (!this.isConnected || !this._hass || !this.shadowRoot) {
+      _detachEditorShadowListeners() {
+        window.NodaliaUtils.releaseShadowListeners(this, "editor");
+      }
+      connectedCallback() {
+        this._attachEditorShadowListeners();
+        window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
+      }
+      disconnectedCallback() {
+        this._detachEditorShadowListeners();
+        window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
+      }
+      set hass(hass) {
+        const nextSignature = this._getEntityOptionsSignature(hass);
+        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+        this._hass = hass;
+        this._entityOptionsSignature = nextSignature;
+        if (!shouldRender) {
           return;
         }
         const focusState = this._captureFocusState();
         this._render();
         this._restoreFocusState(focusState);
-      }).catch(() => {
-        this._pendingEditorControlTags.delete(tagName);
-      });
-    }
-    _ensureEditorControlsReady() {
-      this._watchEditorControlTag("ha-entity-picker");
-      this._watchEditorControlTag("ha-selector");
-      this._watchEditorControlTag("ha-icon-picker");
-    }
-    _getEntityOptionsSignature(hass = this._hass) {
-      return window.NodaliaUtils.editorFilteredStatesSignature(hass, this._config?.language, (id) => id.startsWith("fan."));
-    }
-    _getFanEntityOptions() {
-      const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
-      const options = Object.entries(this._hass?.states || {}).filter(([entityId]) => entityId.startsWith("fan.")).map(([entityId, state]) => {
-        const friendlyName = String(state?.attributes?.friendly_name || "").trim();
-        return {
-          value: entityId,
-          label: friendlyName || entityId,
-          displayLabel: friendlyName && friendlyName !== entityId ? `${friendlyName} (${entityId})` : entityId
-        };
-      }).sort((left, right) => left.label.localeCompare(right.label, sortLoc, { sensitivity: "base" }) || left.value.localeCompare(right.value, sortLoc, { sensitivity: "base" }));
-      const currentValue = String(this._config?.entity || "").trim();
-      if (currentValue && !options.some((option) => option.value === currentValue)) {
-        options.unshift({
-          value: currentValue,
-          label: currentValue,
-          displayLabel: currentValue
+      }
+      setConfig(config) {
+        const focusState = this._captureFocusState();
+        this._config = normalizeConfig(config || {});
+        window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
+        this._render();
+        this._restoreFocusState(focusState);
+      }
+      _watchEditorControlTag(tagName) {
+        if (!tagName || this._pendingEditorControlTags.has(tagName)) {
+          return;
+        }
+        if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
+          return;
+        }
+        this._pendingEditorControlTags.add(tagName);
+        customElements.whenDefined(tagName).then(() => {
+          this._pendingEditorControlTags.delete(tagName);
+          if (!this.isConnected || !this._hass || !this.shadowRoot) {
+            return;
+          }
+          const focusState = this._captureFocusState();
+          this._render();
+          this._restoreFocusState(focusState);
+        }).catch(() => {
+          this._pendingEditorControlTags.delete(tagName);
         });
       }
-      return options;
-    }
-    _captureFocusState() {
-      return window.NodaliaUtils.captureEditorFocusState(this);
-    }
-    _restoreFocusState(focusState) {
-      window.NodaliaUtils.restoreEditorFocusState(this, focusState);
-    }
-    _emitConfig() {
-      const focusState = this._captureFocusState();
-      const nextConfig = deepClone(this._config);
-      this._config = normalizeConfig(compactConfig(nextConfig));
-      this._render();
-      this._restoreFocusState(focusState);
-      fireEvent(this, "config-changed", {
-        config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {})
-      });
-    }
-    _setEditorConfig() {
-      this._config = normalizeConfig(compactConfig(this._config));
-    }
-    _setFieldValue(path, value) {
-      if (value === void 0 || value === null || value === "") {
-        deleteByPath(this._config, path);
-        return;
+      _ensureEditorControlsReady() {
+        this._watchEditorControlTag("ha-entity-picker");
+        this._watchEditorControlTag("ha-selector");
+        this._watchEditorControlTag("ha-icon-picker");
       }
-      setByPath(this._config, path, value);
-    }
-    _readFieldValue(input) {
-      const valueType = input.dataset.valueType || "string";
-      switch (valueType) {
-        case "boolean":
-          return Boolean(input.checked);
-        case "number": {
-          if (input.value === "") {
-            return "";
-          }
-          const numericValue = Number(input.value);
-          return Number.isFinite(numericValue) ? numericValue : "";
+      _getEntityOptionsSignature(hass = this._hass) {
+        return window.NodaliaUtils.editorFilteredStatesSignature(hass, this._config?.language, (id) => id.startsWith("fan."));
+      }
+      _getFanEntityOptions() {
+        const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
+        const options = Object.entries(this._hass?.states || {}).filter(([entityId]) => entityId.startsWith("fan.")).map(([entityId, state]) => {
+          const friendlyName = String(state?.attributes?.friendly_name || "").trim();
+          return {
+            value: entityId,
+            label: friendlyName || entityId,
+            displayLabel: friendlyName && friendlyName !== entityId ? `${friendlyName} (${entityId})` : entityId
+          };
+        }).sort((left, right) => left.label.localeCompare(right.label, sortLoc, { sensitivity: "base" }) || left.value.localeCompare(right.value, sortLoc, { sensitivity: "base" }));
+        const currentValue = String(this._config?.entity || "").trim();
+        if (currentValue && !options.some((option) => option.value === currentValue)) {
+          options.unshift({
+            value: currentValue,
+            label: currentValue,
+            displayLabel: currentValue
+          });
         }
-        case "color":
-          return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
-        default:
-          return input.value;
+        return options;
       }
-    }
-    _onShadowInput(event) {
-      const input = event.composedPath().find((node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
-      if (!input?.dataset?.field) {
-        if (input?.dataset?.modeListField && input.dataset.modeValue !== void 0) {
-          event.stopPropagation();
-          this._setPresetModeVisibility(input.dataset.modeValue, input.checked);
-          this._setEditorConfig();
-          if (event.type === "change") {
-            this._emitConfig();
-          }
+      _captureFocusState() {
+        return window.NodaliaUtils.captureEditorFocusState(this);
+      }
+      _restoreFocusState(focusState) {
+        window.NodaliaUtils.restoreEditorFocusState(this, focusState);
+      }
+      _emitConfig() {
+        const focusState = this._captureFocusState();
+        const nextConfig = deepClone(this._config);
+        this._config = normalizeConfig(compactConfig(nextConfig));
+        this._render();
+        this._restoreFocusState(focusState);
+        fireEvent(this, "config-changed", {
+          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {})
+        });
+      }
+      _setEditorConfig() {
+        this._config = normalizeConfig(compactConfig(this._config));
+      }
+      _setFieldValue(path, value) {
+        if (value === void 0 || value === null || value === "") {
+          deleteByPath(this._config, path);
+          return;
         }
-        return;
+        setByPath(this._config, path, value);
       }
-      event.stopPropagation();
-      const nextValue = this._readFieldValue(input);
-      this._setFieldValue(input.dataset.field, nextValue);
-      this._setEditorConfig();
-      if (event.type === "change") {
+      _readFieldValue(input) {
+        const valueType = input.dataset.valueType || "string";
+        switch (valueType) {
+          case "boolean":
+            return Boolean(input.checked);
+          case "number": {
+            if (input.value === "") {
+              return "";
+            }
+            const numericValue = Number(input.value);
+            return Number.isFinite(numericValue) ? numericValue : "";
+          }
+          case "color":
+            return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
+          default:
+            return input.value;
+        }
+      }
+      _onShadowInput(event) {
+        const input = event.composedPath().find((node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+        if (!input?.dataset?.field) {
+          if (input?.dataset?.modeListField && input.dataset.modeValue !== void 0) {
+            event.stopPropagation();
+            this._setPresetModeVisibility(input.dataset.modeValue, input.checked);
+            this._setEditorConfig();
+            if (event.type === "change") {
+              this._emitConfig();
+            }
+          }
+          return;
+        }
+        event.stopPropagation();
+        const nextValue = this._readFieldValue(input);
+        this._setFieldValue(input.dataset.field, nextValue);
+        this._setEditorConfig();
+        if (event.type === "change") {
+          this._emitConfig();
+        }
+      }
+      _onShadowValueChanged(event) {
+        const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+        if (!control?.dataset?.field) {
+          return;
+        }
+        event.stopPropagation();
+        const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+        if (typeof control.dataset?.value === "string") {
+          control.dataset.value = String(nextValue || "");
+        }
+        const field = control.dataset.field;
+        const previousEntity = field === "entity" ? String(this._config?.entity || "").trim() : "";
+        this._setFieldValue(field, nextValue);
+        if (field === "entity") {
+          window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass, { previousEntity });
+        }
+        this._setEditorConfig();
         this._emitConfig();
       }
-    }
-    _onShadowValueChanged(event) {
-      const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
-      if (!control?.dataset?.field) {
-        return;
+      _onShadowClick(event) {
+        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
+        if (!toggleButton) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        if (toggleButton.dataset.editorToggle === "styles") {
+          this._showStyleSection = !this._showStyleSection;
+          this._render();
+          return;
+        }
+        if (toggleButton.dataset.editorToggle === "animations") {
+          this._showAnimationSection = !this._showAnimationSection;
+          this._render();
+          return;
+        }
+        if (toggleButton.dataset.editorToggle === "tap_actions") {
+          this._showTapActionsSection = !this._showTapActionsSection;
+          this._render();
+        }
       }
-      event.stopPropagation();
-      const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
-      if (typeof control.dataset?.value === "string") {
-        control.dataset.value = String(nextValue || "");
+      _editorLabel(s) {
+        if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+          return s;
+        }
+        const hass = this._hass ?? this.hass;
+        return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
       }
-      const field = control.dataset.field;
-      const previousEntity = field === "entity" ? String(this._config?.entity || "").trim() : "";
-      this._setFieldValue(field, nextValue);
-      if (field === "entity") {
-        window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass, { previousEntity });
-      }
-      this._setEditorConfig();
-      this._emitConfig();
-    }
-    _onShadowClick(event) {
-      const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
-      if (!toggleButton) {
-        return;
-      }
-      event.preventDefault();
-      event.stopPropagation();
-      if (toggleButton.dataset.editorToggle === "styles") {
-        this._showStyleSection = !this._showStyleSection;
-        this._render();
-        return;
-      }
-      if (toggleButton.dataset.editorToggle === "animations") {
-        this._showAnimationSection = !this._showAnimationSection;
-        this._render();
-        return;
-      }
-      if (toggleButton.dataset.editorToggle === "tap_actions") {
-        this._showTapActionsSection = !this._showTapActionsSection;
-        this._render();
-      }
-    }
-    _editorLabel(s) {
-      if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
-        return s;
-      }
-      const hass = this._hass ?? this.hass;
-      return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
-    }
-    _renderTextField(label, field, value, options = {}) {
-      const tLabel = this._editorLabel(label);
-      const inputType = options.type || "text";
-      const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
-      const min = options.min !== void 0 ? `min="${escapeHtml(String(options.min))}"` : "";
-      const max = options.max !== void 0 ? `max="${escapeHtml(String(options.max))}"` : "";
-      const step = options.step !== void 0 ? `step="${escapeHtml(String(options.step))}"` : "";
-      const valueType = options.valueType || "string";
-      const inputValue = value === void 0 || value === null ? "" : String(value);
-      return `
+      _renderTextField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const inputType = options.type || "text";
+        const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+        const min = options.min !== void 0 ? `min="${escapeHtml(String(options.min))}"` : "";
+        const max = options.max !== void 0 ? `max="${escapeHtml(String(options.max))}"` : "";
+        const step = options.step !== void 0 ? `step="${escapeHtml(String(options.step))}"` : "";
+        const valueType = options.valueType || "string";
+        const inputValue = value === void 0 || value === null ? "" : String(value);
+        return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <input
@@ -3853,14 +3872,14 @@
         />
       </label>
     `;
-    }
-    _renderColorField(label, field, value, options = {}) {
-      const tLabel = this._editorLabel(label);
-      const tColorCustom = this._editorLabel("ed.weather.custom_color");
-      const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
-      const currentValue = value === void 0 || value === null || value === "" ? fallbackValue : String(value);
-      const colorModel = getEditorColorModel(currentValue, fallbackValue);
-      return `
+      }
+      _renderColorField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const tColorCustom = this._editorLabel("ed.weather.custom_color");
+        const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
+        const currentValue = value === void 0 || value === null || value === "" ? fallbackValue : String(value);
+        const colorModel = getEditorColorModel(currentValue, fallbackValue);
+        return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
@@ -3878,10 +3897,10 @@
         </div>
       </div>
     `;
-    }
-    _renderCheckboxField(label, field, checked) {
-      const tLabel = this._editorLabel(label);
-      return `
+      }
+      _renderCheckboxField(label, field, checked) {
+        const tLabel = this._editorLabel(label);
+        return `
       <label class="editor-toggle">
         <input
           type="checkbox"
@@ -3893,41 +3912,41 @@
         <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
-    }
-    _getFanState() {
-      return this._config?.entity ? this._hass?.states?.[this._config.entity] || null : null;
-    }
-    _getPresetModeVisibilityOptions() {
-      const fanState = this._getFanState();
-      return Array.isArray(fanState?.attributes?.preset_modes) ? fanState.attributes.preset_modes.map((item) => String(item || "").trim()).filter(Boolean) : [];
-    }
-    _getHiddenPresetModes() {
-      return Array.isArray(this._config?.hidden_preset_modes) ? this._config.hidden_preset_modes.map((item) => String(item || "").trim()).filter(Boolean) : [];
-    }
-    _isPresetModeVisible(value) {
-      const expectedKey = normalizeTextKey(value);
-      return !this._getHiddenPresetModes().some((item) => normalizeTextKey(item) === expectedKey);
-    }
-    _setPresetModeVisibility(value, visible) {
-      const rawValue = String(value || "").trim();
-      if (!rawValue) {
-        return;
       }
-      const nextValues = this._getHiddenPresetModes().filter((item) => normalizeTextKey(item) !== normalizeTextKey(rawValue));
-      if (!visible) {
-        nextValues.push(rawValue);
+      _getFanState() {
+        return this._config?.entity ? this._hass?.states?.[this._config.entity] || null : null;
       }
-      if (nextValues.length) {
-        setByPath(this._config, "hidden_preset_modes", nextValues);
-        return;
+      _getPresetModeVisibilityOptions() {
+        const fanState = this._getFanState();
+        return Array.isArray(fanState?.attributes?.preset_modes) ? fanState.attributes.preset_modes.map((item) => String(item || "").trim()).filter(Boolean) : [];
       }
-      deleteByPath(this._config, "hidden_preset_modes");
-    }
-    _renderPresetModeVisibilityField(modeValue) {
-      const translatedLabel = translatePresetLabel(modeValue);
-      const showRawValue = normalizeTextKey(translatedLabel) !== normalizeTextKey(modeValue);
-      const label = showRawValue ? `${translatedLabel} (${modeValue})` : translatedLabel;
-      return `
+      _getHiddenPresetModes() {
+        return Array.isArray(this._config?.hidden_preset_modes) ? this._config.hidden_preset_modes.map((item) => String(item || "").trim()).filter(Boolean) : [];
+      }
+      _isPresetModeVisible(value) {
+        const expectedKey = normalizeTextKey(value);
+        return !this._getHiddenPresetModes().some((item) => normalizeTextKey(item) === expectedKey);
+      }
+      _setPresetModeVisibility(value, visible) {
+        const rawValue = String(value || "").trim();
+        if (!rawValue) {
+          return;
+        }
+        const nextValues = this._getHiddenPresetModes().filter((item) => normalizeTextKey(item) !== normalizeTextKey(rawValue));
+        if (!visible) {
+          nextValues.push(rawValue);
+        }
+        if (nextValues.length) {
+          setByPath(this._config, "hidden_preset_modes", nextValues);
+          return;
+        }
+        deleteByPath(this._config, "hidden_preset_modes");
+      }
+      _renderPresetModeVisibilityField(modeValue) {
+        const translatedLabel = translatePresetLabel(modeValue);
+        const showRawValue = normalizeTextKey(translatedLabel) !== normalizeTextKey(modeValue);
+        const label = showRawValue ? `${translatedLabel} (${modeValue})` : translatedLabel;
+        return `
       <label class="editor-toggle">
         <input
           type="checkbox"
@@ -3939,10 +3958,10 @@
         <span class="editor-toggle__label">${escapeHtml(label)}</span>
       </label>
     `;
-    }
-    _renderSelectField(label, field, value, options) {
-      const tLabel = this._editorLabel(label);
-      return `
+      }
+      _renderSelectField(label, field, value, options) {
+        const tLabel = this._editorLabel(label);
+        return `
       <label class="editor-field">
         <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
@@ -3954,11 +3973,11 @@
         </select>
       </label>
     `;
-    }
-    _renderFanEntityField(label, field, value, options = {}) {
-      const tLabel = this._editorLabel(label);
-      const inputValue = value === void 0 || value === null ? "" : String(value);
-      return `
+      }
+      _renderFanEntityField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const inputValue = value === void 0 || value === null ? "" : String(value);
+        return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <div
@@ -3969,12 +3988,12 @@
         ></div>
       </div>
     `;
-    }
-    _renderIconPickerField(label, field, value, options = {}) {
-      const tLabel = this._editorLabel(label);
-      const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
-      const inputValue = value === void 0 || value === null ? "" : String(value);
-      return `
+      }
+      _renderIconPickerField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+        const inputValue = value === void 0 || value === null ? "" : String(value);
+        return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <ha-icon-picker
@@ -3985,68 +4004,68 @@
         ></ha-icon-picker>
       </div>
     `;
-    }
-    _mountFanEntityPicker(host) {
-      if (!(host instanceof HTMLElement)) {
-        return;
       }
-      const field = host.dataset.field || "entity";
-      const nextValue = host.dataset.value || "";
-      let control = null;
-      if (customElements.get("ha-entity-picker")) {
-        control = document.createElement("ha-entity-picker");
-        control.includeDomains = ["fan"];
-        control.allowCustomEntity = true;
-        control.entityFilter = (stateObj) => String(stateObj?.entity_id || "").startsWith("fan.");
-      } else if (customElements.get("ha-selector")) {
-        control = document.createElement("ha-selector");
-        control.selector = {
-          entity: {
-            domain: "fan"
-          }
-        };
-      } else {
-        control = document.createElement("select");
-        this._getFanEntityOptions().forEach((option) => {
-          const optionElement = document.createElement("option");
-          optionElement.value = option.value;
-          optionElement.textContent = option.displayLabel;
-          control.appendChild(optionElement);
-        });
-        control.addEventListener("change", this._onShadowInput);
+      _mountFanEntityPicker(host) {
+        if (!(host instanceof HTMLElement)) {
+          return;
+        }
+        const field = host.dataset.field || "entity";
+        const nextValue = host.dataset.value || "";
+        let control = null;
+        if (customElements.get("ha-entity-picker")) {
+          control = document.createElement("ha-entity-picker");
+          control.includeDomains = ["fan"];
+          control.allowCustomEntity = true;
+          control.entityFilter = (stateObj) => String(stateObj?.entity_id || "").startsWith("fan.");
+        } else if (customElements.get("ha-selector")) {
+          control = document.createElement("ha-selector");
+          control.selector = {
+            entity: {
+              domain: "fan"
+            }
+          };
+        } else {
+          control = document.createElement("select");
+          this._getFanEntityOptions().forEach((option) => {
+            const optionElement = document.createElement("option");
+            optionElement.value = option.value;
+            optionElement.textContent = option.displayLabel;
+            control.appendChild(optionElement);
+          });
+          control.addEventListener("change", this._onShadowInput);
+        }
+        control.dataset.field = field;
+        control.dataset.value = nextValue;
+        if ("hass" in control) {
+          control.hass = this._hass;
+        }
+        if ("value" in control) {
+          control.value = nextValue;
+        }
+        if (control.tagName !== "SELECT") {
+          control.addEventListener("value-changed", this._onShadowValueChanged);
+        }
+        host.replaceChildren(control);
       }
-      control.dataset.field = field;
-      control.dataset.value = nextValue;
-      if ("hass" in control) {
-        control.hass = this._hass;
-      }
-      if ("value" in control) {
-        control.value = nextValue;
-      }
-      if (control.tagName !== "SELECT") {
-        control.addEventListener("value-changed", this._onShadowValueChanged);
-      }
-      host.replaceChildren(control);
-    }
-    _render() {
-      if (!this.shadowRoot) {
-        return;
-      }
-      const config = this._config || normalizeConfig({});
-      const hapticStyle = config.haptics?.style || "medium";
-      const presetModeVisibilityOptions = this._getPresetModeVisibilityOptions();
-      const phFanName = this._editorLabel("ed.light.name_placeholder");
-      const tapAction = config.tap_action || "toggle";
-      const iconTapActionRaw = String(config.icon_tap_action ?? "").trim();
-      const iconTapSelectValue = iconTapActionRaw;
-      const showIconTapService = iconTapSelectValue === "service";
-      const showCardTapService = tapAction === "service";
-      const holdAction = config.hold_action || "none";
-      const iconHoldSelect = String(config.icon_hold_action ?? "").trim();
-      const showCardHoldService = holdAction === "service";
-      const showIconHoldService = iconHoldSelect === "service" || iconHoldSelect === "" && holdAction === "service";
-      const showTapServiceSecurity = showIconTapService || showCardTapService || showCardHoldService || showIconHoldService;
-      this.shadowRoot.innerHTML = `
+      _render() {
+        if (!this.shadowRoot) {
+          return;
+        }
+        const config = this._config || normalizeConfig({});
+        const hapticStyle = config.haptics?.style || "medium";
+        const presetModeVisibilityOptions = this._getPresetModeVisibilityOptions();
+        const phFanName = this._editorLabel("ed.light.name_placeholder");
+        const tapAction = config.tap_action || "toggle";
+        const iconTapActionRaw = String(config.icon_tap_action ?? "").trim();
+        const iconTapSelectValue = iconTapActionRaw;
+        const showIconTapService = iconTapSelectValue === "service";
+        const showCardTapService = tapAction === "service";
+        const holdAction = config.hold_action || "none";
+        const iconHoldSelect = String(config.icon_hold_action ?? "").trim();
+        const showCardHoldService = holdAction === "service";
+        const showIconHoldService = iconHoldSelect === "service" || iconHoldSelect === "" && holdAction === "service";
+        const showTapServiceSecurity = showIconTapService || showCardTapService || showCardHoldService || showIconHoldService;
+        this.shadowRoot.innerHTML = `
       <style>
         :host {
           display: block;
@@ -4381,26 +4400,26 @@
           </div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderFanEntityField("ed.fan.fan_entity", "entity", config.entity, {
-        placeholder: "fan.salon",
-        fullWidth: true
-      })}
+          placeholder: "fan.salon",
+          fullWidth: true
+        })}
             ${this._renderSelectField("ed.entity.layout", "layout", config.layout || "compact", [
-        { value: "compact", label: "ed.shared.layout_compact" },
-        { value: "circular", label: "ed.shared.layout_circular" }
-      ])}
+          { value: "compact", label: "ed.shared.layout_compact" },
+          { value: "circular", label: "ed.shared.layout_circular" }
+        ])}
             ${this._renderIconPickerField("ed.entity.icon", "icon", config.icon, {
-        placeholder: "mdi:fan",
-        fullWidth: true
-      })}
+          placeholder: "mdi:fan",
+          fullWidth: true
+        })}
             ${this._renderTextField("ed.entity.name", "name", config.name, {
-        placeholder: phFanName,
-        fullWidth: true
-      })}
+          placeholder: phFanName,
+          fullWidth: true
+        })}
             ${this._renderCheckboxField("ed.entity.show_entity_picture", "show_entity_picture", config.show_entity_picture === true)}
             ${this._renderTextField("ed.entity.entity_picture", "entity_picture", config.entity_picture, {
-        placeholder: "/local/fan.png",
-        fullWidth: true
-      })}
+          placeholder: "/local/fan.png",
+          fullWidth: true
+        })}
           </div>
         </section>
 
@@ -4410,154 +4429,154 @@
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.light.tap_actions_section_hint"))}</div>
             <div class="editor-section__actions">
               ${window.NodaliaUtils.renderEditorCollapsibleToggleHtml({
-        toggleId: "tap_actions",
-        expanded: this._showTapActionsSection === true,
-        showLabel: this._editorLabel("ed.shared.show_tap_action_settings"),
-        hideLabel: this._editorLabel("ed.shared.hide_tap_action_settings"),
-        escapeHtml
-      })}
+          toggleId: "tap_actions",
+          expanded: this._showTapActionsSection === true,
+          showLabel: this._editorLabel("ed.shared.show_tap_action_settings"),
+          hideLabel: this._editorLabel("ed.shared.hide_tap_action_settings"),
+          escapeHtml
+        })}
             </div>
           </div>
           ${this._showTapActionsSection ? `
           <div class="editor-grid editor-grid--stacked">
             ${this._renderSelectField(
-        "ed.light.icon_tap_action",
-        "icon_tap_action",
-        iconTapSelectValue,
-        [
-          { value: "", label: "ed.entity.icon_tap_inherit" },
-          { value: "auto", label: "ed.entity.tap_auto" },
-          { value: "toggle", label: "ed.entity.tap_toggle" },
-          { value: "more-info", label: "ed.entity.tap_more_info" },
-          { value: "url", label: "ed.entity.tap_open_url" },
-          { value: "service", label: "ed.entity.tap_service" },
-          { value: "none", label: "ed.entity.tap_none" }
-        ],
-        { fullWidth: true }
-      )}
+          "ed.light.icon_tap_action",
+          "icon_tap_action",
+          iconTapSelectValue,
+          [
+            { value: "", label: "ed.entity.icon_tap_inherit" },
+            { value: "auto", label: "ed.entity.tap_auto" },
+            { value: "toggle", label: "ed.entity.tap_toggle" },
+            { value: "more-info", label: "ed.entity.tap_more_info" },
+            { value: "url", label: "ed.entity.tap_open_url" },
+            { value: "service", label: "ed.entity.tap_service" },
+            { value: "none", label: "ed.entity.tap_none" }
+          ],
+          { fullWidth: true }
+        )}
             ${this._renderSelectField(
-        "ed.light.card_tap_action",
-        "tap_action",
-        tapAction,
-        [
-          { value: "auto", label: "ed.entity.tap_auto" },
-          { value: "toggle", label: "ed.entity.tap_toggle" },
-          { value: "more-info", label: "ed.entity.tap_more_info" },
-          { value: "url", label: "ed.entity.tap_open_url" },
-          { value: "service", label: "ed.entity.tap_service" },
-          { value: "none", label: "ed.entity.tap_none" }
-        ],
-        { fullWidth: true }
-      )}
+          "ed.light.card_tap_action",
+          "tap_action",
+          tapAction,
+          [
+            { value: "auto", label: "ed.entity.tap_auto" },
+            { value: "toggle", label: "ed.entity.tap_toggle" },
+            { value: "more-info", label: "ed.entity.tap_more_info" },
+            { value: "url", label: "ed.entity.tap_open_url" },
+            { value: "service", label: "ed.entity.tap_service" },
+            { value: "none", label: "ed.entity.tap_none" }
+          ],
+          { fullWidth: true }
+        )}
             ${showIconTapService ? `
                   ${this._renderTextField("ed.entity.tap_service_field", "icon_tap_service", config.icon_tap_service, {
-        placeholder: "light.turn_on",
-        fullWidth: true
-      })}
+          placeholder: "light.turn_on",
+          fullWidth: true
+        })}
                   ${this._renderTextareaField("ed.entity.tap_service_data_json", "icon_tap_service_data", config.icon_tap_service_data, {
-        placeholder: '{"brightness_pct": 50}'
-      })}
+          placeholder: '{"brightness_pct": 50}'
+        })}
                 ` : ""}
             ${showCardTapService ? `
                   ${this._renderTextField("ed.entity.tap_service_field", "tap_service", config.tap_service, {
-        placeholder: "light.turn_on",
-        fullWidth: true
-      })}
+          placeholder: "light.turn_on",
+          fullWidth: true
+        })}
                   ${this._renderTextareaField("ed.entity.tap_service_data_json", "tap_service_data", config.tap_service_data, {
-        placeholder: '{"brightness_pct": 70}'
-      })}
+          placeholder: '{"brightness_pct": 70}'
+        })}
                 ` : ""}
             ${showTapServiceSecurity ? `
                   ${this._renderCheckboxField(
-        "ed.entity.security_strict",
-        "security.strict_service_actions",
-        config.security?.strict_service_actions !== false
-      )}
+          "ed.entity.security_strict",
+          "security.strict_service_actions",
+          config.security?.strict_service_actions !== false
+        )}
                   ${config.security?.strict_service_actions !== false ? this._renderTextField(
-        "ed.entity.allowed_services_csv",
-        "security.allowed_services",
-        Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
-        {
-          placeholder: "browser_mod.javascript, light.turn_on",
-          valueType: "csv",
-          fullWidth: true
-        }
-      ) : ""}
+          "ed.entity.allowed_services_csv",
+          "security.allowed_services",
+          Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
+          {
+            placeholder: "browser_mod.javascript, light.turn_on",
+            valueType: "csv",
+            fullWidth: true
+          }
+        ) : ""}
                 ` : ""}
             ${iconTapSelectValue === "url" ? `
                   ${this._renderTextField("ed.entity.tap_url_field", "icon_tap_url", config.icon_tap_url, {
-        placeholder: "https://example.com",
-        fullWidth: true
-      })}
+          placeholder: "https://example.com",
+          fullWidth: true
+        })}
                   ${this._renderCheckboxField("ed.entity.tap_new_tab", "icon_tap_new_tab", config.icon_tap_new_tab === true)}
                 ` : ""}
             ${tapAction === "url" ? `
                   ${this._renderTextField("ed.entity.tap_url_field", "tap_url", config.tap_url, {
-        placeholder: "https://example.com",
-        fullWidth: true
-      })}
+          placeholder: "https://example.com",
+          fullWidth: true
+        })}
                   ${this._renderCheckboxField("ed.entity.tap_new_tab", "tap_new_tab", config.tap_new_tab === true)}
                 ` : ""}
             <div class="editor-section__hint editor-field--full" style="margin-top: 8px;">${escapeHtml(this._editorLabel("ed.light.hold_actions_section_hint"))}</div>
             ${this._renderSelectField(
-        "ed.light.icon_hold_action",
-        "icon_hold_action",
-        iconHoldSelect,
-        [
-          { value: "", label: "ed.entity.icon_hold_inherit" },
-          { value: "auto", label: "ed.entity.tap_auto" },
-          { value: "toggle", label: "ed.entity.tap_toggle" },
-          { value: "more-info", label: "ed.entity.tap_more_info" },
-          { value: "url", label: "ed.entity.tap_open_url" },
-          { value: "service", label: "ed.entity.tap_service" },
-          { value: "none", label: "ed.entity.tap_none" }
-        ],
-        { fullWidth: true }
-      )}
+          "ed.light.icon_hold_action",
+          "icon_hold_action",
+          iconHoldSelect,
+          [
+            { value: "", label: "ed.entity.icon_hold_inherit" },
+            { value: "auto", label: "ed.entity.tap_auto" },
+            { value: "toggle", label: "ed.entity.tap_toggle" },
+            { value: "more-info", label: "ed.entity.tap_more_info" },
+            { value: "url", label: "ed.entity.tap_open_url" },
+            { value: "service", label: "ed.entity.tap_service" },
+            { value: "none", label: "ed.entity.tap_none" }
+          ],
+          { fullWidth: true }
+        )}
             ${this._renderSelectField(
-        "ed.light.card_hold_action",
-        "hold_action",
-        holdAction,
-        [
-          { value: "auto", label: "ed.entity.tap_auto" },
-          { value: "toggle", label: "ed.entity.tap_toggle" },
-          { value: "more-info", label: "ed.entity.tap_more_info" },
-          { value: "url", label: "ed.entity.tap_open_url" },
-          { value: "service", label: "ed.entity.tap_service" },
-          { value: "none", label: "ed.entity.tap_none" }
-        ],
-        { fullWidth: true }
-      )}
+          "ed.light.card_hold_action",
+          "hold_action",
+          holdAction,
+          [
+            { value: "auto", label: "ed.entity.tap_auto" },
+            { value: "toggle", label: "ed.entity.tap_toggle" },
+            { value: "more-info", label: "ed.entity.tap_more_info" },
+            { value: "url", label: "ed.entity.tap_open_url" },
+            { value: "service", label: "ed.entity.tap_service" },
+            { value: "none", label: "ed.entity.tap_none" }
+          ],
+          { fullWidth: true }
+        )}
             ${showIconHoldService ? `
                   ${this._renderTextField("ed.entity.hold_service_field", "icon_hold_service", config.icon_hold_service, {
-        placeholder: "light.turn_on",
-        fullWidth: true
-      })}
+          placeholder: "light.turn_on",
+          fullWidth: true
+        })}
                   ${this._renderTextareaField("ed.entity.hold_service_data_json", "icon_hold_service_data", config.icon_hold_service_data, {
-        placeholder: '{"brightness_pct": 50}'
-      })}
+          placeholder: '{"brightness_pct": 50}'
+        })}
                 ` : ""}
             ${showCardHoldService ? `
                   ${this._renderTextField("ed.entity.hold_service_field", "hold_service", config.hold_service, {
-        placeholder: "light.turn_on",
-        fullWidth: true
-      })}
+          placeholder: "light.turn_on",
+          fullWidth: true
+        })}
                   ${this._renderTextareaField("ed.entity.hold_service_data_json", "hold_service_data", config.hold_service_data, {
-        placeholder: '{"brightness_pct": 70}'
-      })}
+          placeholder: '{"brightness_pct": 70}'
+        })}
                 ` : ""}
             ${iconHoldSelect === "url" || iconHoldSelect === "" && holdAction === "url" ? `
                   ${this._renderTextField("ed.entity.hold_url_field", "icon_hold_url", config.icon_hold_url, {
-        placeholder: "https://example.com",
-        fullWidth: true
-      })}
+          placeholder: "https://example.com",
+          fullWidth: true
+        })}
                   ${this._renderCheckboxField("ed.entity.hold_new_tab", "icon_hold_new_tab", config.icon_hold_new_tab === true)}
                 ` : ""}
             ${holdAction === "url" ? `
                   ${this._renderTextField("ed.entity.hold_url_field", "hold_url", config.hold_url, {
-        placeholder: "https://example.com",
-        fullWidth: true
-      })}
+          placeholder: "https://example.com",
+          fullWidth: true
+        })}
                   ${this._renderCheckboxField("ed.entity.hold_new_tab", "hold_new_tab", config.hold_new_tab === true)}
                 ` : ""}
           </div>
@@ -4572,15 +4591,15 @@
           </div>
           <div class="editor-grid">
             ${this._renderSelectField(
-        "ed.vacuum.layout_narrow",
-        "compact_layout_mode",
-        config.compact_layout_mode || "auto",
-        [
-          { value: "auto", label: "ed.vacuum.layout_auto" },
-          { value: "always", label: "ed.vacuum.layout_always" },
-          { value: "never", label: "ed.vacuum.layout_never" }
-        ]
-      )}
+          "ed.vacuum.layout_narrow",
+          "compact_layout_mode",
+          config.compact_layout_mode || "auto",
+          [
+            { value: "auto", label: "ed.vacuum.layout_auto" },
+            { value: "always", label: "ed.vacuum.layout_always" },
+            { value: "never", label: "ed.vacuum.layout_never" }
+          ]
+        )}
             ${this._renderCheckboxField("ed.fan.show_state_bubble", "show_state", config.show_state === true)}
             ${this._renderCheckboxField("ed.fan.speed_chip", "show_percentage_chip", config.show_percentage_chip !== false)}
             ${this._renderCheckboxField("ed.fan.mode_chip", "show_mode_chip", config.show_mode_chip !== false)}
@@ -4609,19 +4628,19 @@
             ${this._renderCheckboxField("ed.vacuum.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
             ${this._renderCheckboxField("ed.haptics.slider_percentage", "haptics.scrolls.percentage", config.haptics.scrolls?.percentage !== false)}
             ${this._renderSelectField(
-        "ed.vacuum.haptic_style",
-        "haptics.style",
-        hapticStyle,
-        [
-          { value: "selection", label: "ed.weather.haptic_selection" },
-          { value: "light", label: "ed.weather.haptic_light" },
-          { value: "medium", label: "ed.weather.haptic_medium" },
-          { value: "heavy", label: "ed.weather.haptic_heavy" },
-          { value: "success", label: "ed.weather.haptic_success" },
-          { value: "warning", label: "ed.weather.haptic_warning" },
-          { value: "failure", label: "ed.weather.haptic_failure" }
-        ]
-      )}
+          "ed.vacuum.haptic_style",
+          "haptics.style",
+          hapticStyle,
+          [
+            { value: "selection", label: "ed.weather.haptic_selection" },
+            { value: "light", label: "ed.weather.haptic_light" },
+            { value: "medium", label: "ed.weather.haptic_medium" },
+            { value: "heavy", label: "ed.weather.haptic_heavy" },
+            { value: "success", label: "ed.weather.haptic_success" },
+            { value: "warning", label: "ed.weather.haptic_warning" },
+            { value: "failure", label: "ed.weather.haptic_failure" }
+          ]
+        )}
           </div>
         </section>
 
@@ -4646,33 +4665,33 @@
                   ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", config.animations.enabled !== false)}
                   ${this._renderCheckboxField("ed.vacuum.icon_animation_active", "animations.icon_animation", config.animations.icon_animation !== false)}
                   ${this._renderTextField("ed.light.anim_power_ms", "animations.power_duration", config.animations.power_duration, {
-        type: "number",
-        valueType: "number",
-        min: 120,
-        max: 4e3,
-        step: 10
-      })}
+          type: "number",
+          valueType: "number",
+          min: 120,
+          max: 4e3,
+          step: 10
+        })}
                   ${this._renderTextField("ed.light.anim_controls_ms", "animations.controls_duration", config.animations.controls_duration, {
-        type: "number",
-        valueType: "number",
-        min: 120,
-        max: 2400,
-        step: 10
-      })}
+          type: "number",
+          valueType: "number",
+          min: 120,
+          max: 2400,
+          step: 10
+        })}
                   ${this._renderTextField("ed.fan.anim_preset_ms", "animations.preset_duration", config.animations.preset_duration, {
-        type: "number",
-        valueType: "number",
-        min: 120,
-        max: 2400,
-        step: 10
-      })}
+          type: "number",
+          valueType: "number",
+          min: 120,
+          max: 2400,
+          step: 10
+        })}
                   ${this._renderTextField("ed.vacuum.button_bounce_ms", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
-        type: "number",
-        valueType: "number",
-        min: 120,
-        max: 1200,
-        step: 10
-      })}
+          type: "number",
+          valueType: "number",
+          min: 120,
+          max: 1200,
+          step: 10
+        })}
                 </div>
               ` : ""}
         </section>
@@ -4698,17 +4717,17 @@
                   ${this._renderColorField("ed.entity.style_card_bg", "styles.card.background", config.styles.card.background)}
                   ${this._renderTextField("ed.entity.style_card_border", "styles.card.border", config.styles.card.border)}
                   ${window.NodaliaUtils.renderEditorCardBorderRadiusHtml({
-        escapeHtml,
-        field: "styles.card.border_radius",
-        value: config.styles?.card?.border_radius,
-        tHeading: this._editorLabel("ed.entity.style_card_radius_presets"),
-        labels: {
-          pill: this._editorLabel("ed.entity.chip_radius_pill"),
-          soft: this._editorLabel("ed.entity.chip_radius_soft"),
-          round: this._editorLabel("ed.entity.chip_radius_round"),
-          square: this._editorLabel("ed.entity.chip_radius_square")
-        }
-      })}
+          escapeHtml,
+          field: "styles.card.border_radius",
+          value: config.styles?.card?.border_radius,
+          tHeading: this._editorLabel("ed.entity.style_card_radius_presets"),
+          labels: {
+            pill: this._editorLabel("ed.entity.chip_radius_pill"),
+            soft: this._editorLabel("ed.entity.chip_radius_soft"),
+            round: this._editorLabel("ed.entity.chip_radius_round"),
+            square: this._editorLabel("ed.entity.chip_radius_square")
+          }
+        })}
                   <div class="editor-section__hint editor-field--full" style="margin-top: -6px;">${escapeHtml(this._editorLabel("ed.entity.style_card_radius_yaml_hint"))}</div>
                   ${this._renderTextField("ed.entity.style_card_shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
                   ${this._renderTextField("ed.entity.style_card_padding", "styles.card.padding", config.styles.card.padding)}
@@ -4723,17 +4742,17 @@
                   ${this._renderTextField("ed.entity.style_chip_font", "styles.chip_font_size", config.styles.chip_font_size)}
                   ${this._renderTextField("ed.entity.style_chip_padding", "styles.chip_padding", config.styles.chip_padding)}
                   ${window.NodaliaUtils.renderEditorChipBorderRadiusHtml({
-        escapeHtml,
-        field: "styles.chip_border_radius",
-        value: config.styles?.chip_border_radius,
-        tHeading: this._editorLabel("ed.entity.style_chip_radius"),
-        labels: {
-          pill: this._editorLabel("ed.entity.chip_radius_pill"),
-          soft: this._editorLabel("ed.entity.chip_radius_soft"),
-          round: this._editorLabel("ed.entity.chip_radius_round"),
-          square: this._editorLabel("ed.entity.chip_radius_square")
-        }
-      })}
+          escapeHtml,
+          field: "styles.chip_border_radius",
+          value: config.styles?.chip_border_radius,
+          tHeading: this._editorLabel("ed.entity.style_chip_radius"),
+          labels: {
+            pill: this._editorLabel("ed.entity.chip_radius_pill"),
+            soft: this._editorLabel("ed.entity.chip_radius_soft"),
+            round: this._editorLabel("ed.entity.chip_radius_round"),
+            square: this._editorLabel("ed.entity.chip_radius_square")
+          }
+        })}
                   ${this._renderTextField("ed.entity.style_title_size", "styles.title_size", config.styles.title_size)}
                   ${this._renderTextField("ed.light.slider_wrap_height", "styles.slider_wrap_height", config.styles.slider_wrap_height)}
                   ${this._renderTextField("ed.light.slider_height", "styles.slider_height", config.styles.slider_height)}
@@ -4743,24 +4762,23 @@
         </section>
       </div>
     `;
-      this.shadowRoot.querySelectorAll('[data-mounted-control="fan-entity"]').forEach((host) => this._mountFanEntityPicker(host));
-      this.shadowRoot.querySelectorAll("ha-icon-picker[data-field]").forEach((control) => {
-        control.hass = this._hass;
-        control.value = control.dataset.value || "";
-        control.addEventListener("value-changed", this._onShadowValueChanged);
-      });
-      this._ensureEditorControlsReady();
-      window.NodaliaUtils?.clampEditorDialogScroll?.(this);
+        this.shadowRoot.querySelectorAll('[data-mounted-control="fan-entity"]').forEach((host) => this._mountFanEntityPicker(host));
+        this.shadowRoot.querySelectorAll("ha-icon-picker[data-field]").forEach((control) => {
+          control.hass = this._hass;
+          control.value = control.dataset.value || "";
+          control.addEventListener("value-changed", this._onShadowValueChanged);
+        });
+        this._ensureEditorControlsReady();
+        window.NodaliaUtils?.clampEditorDialogScroll?.(this);
+      }
     }
-  };
+    _lazyNodaliaFanCardEditor = NodaliaFanCardEditor;
+    return NodaliaFanCardEditor;
+  }
 
   // src/cards/fan/index.ts
-  if (!customElements.get(CARD_TAG)) {
-    customElements.define(CARD_TAG, NodaliaFanCard);
-  }
-  if (!customElements.get(EDITOR_TAG)) {
-    customElements.define(EDITOR_TAG, NodaliaFanCardEditor);
-  }
+  window.NodaliaUtils.defineLazyCustomElement(CARD_TAG, loadNodaliaFanCard, { editorTag: EDITOR_TAG });
+  window.NodaliaUtils.defineLazyCustomElement(EDITOR_TAG, loadNodaliaFanCardEditor);
   window.NodaliaUtils.registerCustomCard({
     type: CARD_TAG,
     name: "Nodalia Fan Card",

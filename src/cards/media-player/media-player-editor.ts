@@ -6,8 +6,8 @@ import {
   INVALID_EDITOR_VALUE,
 } from "./media-player-constants";
 import { DEFAULT_CONFIG, normalizeConfig } from "./media-player-config";
-import { NodaliaMediaPlayer } from "./media-player-card";
-import { clamp, deepClone, escapeHtml, fireEvent, isObject, setByPath } from "./media-player-runtime";
+import { loadNodaliaMediaPlayer } from "./media-player-card";
+import { clamp, deepClone, deleteByPath, escapeHtml, fireEvent, isObject, setByPath } from "./media-player-runtime";
 import {
   getStubEntityId,
   getStubFriendlyName,
@@ -38,11 +38,19 @@ import {
   isUnavailableState,
 } from "./media-player-helpers";
 
-export class NodaliaMediaPlayerEditor extends HTMLElement {
+let _lazyNodaliaMediaPlayerEditor;
+export function loadNodaliaMediaPlayerEditor() {
+  if (_lazyNodaliaMediaPlayerEditor) {
+    return _lazyNodaliaMediaPlayerEditor;
+  }
+class NodaliaMediaPlayerEditor extends HTMLElement {
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(NodaliaMediaPlayer.getStubConfig());
+    this._nodaliaConstruct();
+  }
+
+  _nodaliaConstruct() {this.attachShadow({ mode: "open" });
+    this._config = normalizeConfig(loadNodaliaMediaPlayer().getStubConfig());
     this._hass = null;
     this._entityOptionsSignature = "";
     this._showStyleSection = false;
@@ -52,7 +60,7 @@ export class NodaliaMediaPlayerEditor extends HTMLElement {
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
-  }
+    }
 
   _attachEditorShadowListeners() {
     window.NodaliaUtils.bindShadowListeners(this, [
@@ -1439,4 +1447,7 @@ export class NodaliaMediaPlayerEditor extends HTMLElement {
     this._ensureEditorControlsReady();
     window.NodaliaUtils?.clampEditorDialogScroll?.(this);
   }
+}
+  _lazyNodaliaMediaPlayerEditor = NodaliaMediaPlayerEditor;
+  return NodaliaMediaPlayerEditor;
 }

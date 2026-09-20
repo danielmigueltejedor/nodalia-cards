@@ -4,7 +4,7 @@
   // src/cards/news/news-constants.ts
   var CARD_TAG = "nodalia-news-card";
   var EDITOR_TAG = "nodalia-news-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.19b";
+  var CARD_VERSION = "2.3.0-alpha.20";
   var MAGAZINE_SWIPE_THRESHOLD_PX = 48;
   var MAGAZINE_SWIPE_LOCK_PX = 10;
   var NEWS_HISTORY_STORAGE_PREFIX = "nodalia-news-card:history:";
@@ -742,631 +742,639 @@
   }
 
   // src/cards/news/news-card.ts
-  var NodaliaNewsCard = class extends HTMLElement {
-    static async getConfigElement() {
-      return document.createElement(EDITOR_TAG);
+  var _lazyNodaliaNewsCard;
+  function loadNodaliaNewsCard() {
+    if (_lazyNodaliaNewsCard) {
+      return _lazyNodaliaNewsCard;
     }
-    static getStubConfig(hass, entities = [], entitiesFallback = []) {
-      const config = deepClone(STUB_CONFIG);
-      const entityId = window.NodaliaUtils.findStubEntityIds(
-        hass,
-        entities,
-        entitiesFallback,
-        ["sensor"],
-        Object.keys(hass?.states || {}).length
-      ).find((id) => Array.isArray(hass.states[id]?.attributes?.items) && hass.states[id].attributes.items.length);
-      if (entityId) {
-        config.sources = [{ entity: entityId, name: "News" }];
+    class NodaliaNewsCard extends HTMLElement {
+      static async getConfigElement() {
+        return document.createElement(EDITOR_TAG);
       }
-      return config;
-    }
-    static getEntitySuggestion(hass, entityId) {
-      return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
-        domains: ["sensor"],
-        isSupported: (_hass, selectedEntityId) => Array.isArray(hass?.states?.[selectedEntityId]?.attributes?.items),
-        buildConfig: (_hass, selectedEntityId) => ({
-          sources: [{ entity: selectedEntityId, name: "News" }]
-        })
-      });
-    }
-    constructor() {
-      super();
-      this.attachShadow({ mode: "open" });
-      this._config = normalizeConfig(STUB_CONFIG);
-      this._hass = null;
-      this._lastRenderSignature = "";
-      this._animateContentOnNextRender = true;
-      this._entranceAnimationResetTimer = 0;
-      this._magazineIndex = 0;
-      this._magazineItemsStamp = "";
-      this._magazineSwipeState = null;
-      this._magazineSwipeWindowAttached = false;
-      this._suppressArticleTap = false;
-      this._newsHistory = [];
-      this._historyStorageKey = "";
-      this._historyHelperEntityId = "";
-      this._historyHelperSignature = "";
-      this._historyHelperWriteTimer = 0;
-      this._magazineSlideResetTimer = 0;
-      this._onShadowClick = this._onShadowClick.bind(this);
-      this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
-      this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
-      this._onWindowMagazinePointerMove = this._onWindowMagazinePointerMove.bind(this);
-      this._onWindowMagazinePointerUp = this._onWindowMagazinePointerUp.bind(this);
-      this.shadowRoot.addEventListener("click", this._onShadowClick);
-      this.shadowRoot.addEventListener("keydown", this._onShadowKeyDown);
-      this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown, true);
-    }
-    connectedCallback() {
-      this._animateContentOnNextRender = true;
-      if (this._hass && this._config) {
-        this._lastRenderSignature = "";
-        this._render();
-      }
-    }
-    disconnectedCallback() {
-      if (this._entranceAnimationResetTimer) {
-        window.clearTimeout(this._entranceAnimationResetTimer);
-        this._entranceAnimationResetTimer = 0;
-      }
-      if (this._historyHelperWriteTimer) {
-        window.clearTimeout(this._historyHelperWriteTimer);
-        this._historyHelperWriteTimer = 0;
-      }
-      if (this._magazineSlideResetTimer) {
-        window.clearTimeout(this._magazineSlideResetTimer);
-        this._magazineSlideResetTimer = 0;
-      }
-      this._cancelMagazineSwipe();
-      window.NodaliaUtils?.clearDeferTimers?.(this);
-      this._animateContentOnNextRender = true;
-      this._lastRenderSignature = "";
-    }
-    setConfig(config) {
-      this._config = normalizeConfig(config || {});
-      this._lastRenderSignature = "";
-      this._magazineItemsStamp = "";
-      this._magazineIndex = 0;
-      this._historyStorageKey = "";
-      this._historyHelperEntityId = "";
-      this._historyHelperSignature = "";
-      this._newsHistory = [];
-      this._animateContentOnNextRender = true;
-      this._render();
-    }
-    set hass(hass) {
-      this._hass = hass;
-      const nextSignature = this._getRenderSignature(hass);
-      if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
-        return;
-      }
-      this._lastRenderSignature = nextSignature;
-      this._render();
-    }
-    getCardSize() {
-      const mode = this._config?.layout?.mode || "magazine";
-      if (mode === "compact") {
-        return 3;
-      }
-      if (mode === "list") {
-        return 4;
-      }
-      return 5;
-    }
-    getGridOptions() {
-      return {
-        rows: "auto",
-        columns: "full",
-        min_rows: 3,
-        min_columns: 6
-      };
-    }
-    _ui(key, fallback = "", values = {}) {
-      if (window.NodaliaI18n?.translateNewsUi) {
-        return window.NodaliaI18n.translateNewsUi(
-          this._hass,
-          this._config?.language ?? "auto",
-          key,
-          fallback,
-          values
-        );
-      }
-      let text = fallback;
-      Object.entries(values).forEach(([name, value]) => {
-        text = text.replace(`{${name}}`, String(value));
-      });
-      return text;
-    }
-    _getSourceEntries() {
-      return resolveSourceEntries(this._config);
-    }
-    _getSourceHealth(hass = this._hass) {
-      return getNewsSourceHealth(hass, this._config);
-    }
-    _ensureNewsHistory(incoming) {
-      const config = this._config || DEFAULT_CONFIG;
-      const helperEntityId = String(config.history_helper || "").trim();
-      const storageKey = getNewsHistoryStorageKey(config);
-      const helperSignature = helperEntityId ? getNewsHistoryHelperSignature(this._hass, helperEntityId) : "";
-      if (helperEntityId && this._hass) {
-        if (helperEntityId !== this._historyHelperEntityId || helperSignature !== this._historyHelperSignature) {
-          this._historyHelperEntityId = helperEntityId;
-          this._historyHelperSignature = helperSignature;
-          this._newsHistory = loadNewsHistoryFromHelper(this._hass, helperEntityId);
+      static getStubConfig(hass, entities = [], entitiesFallback = []) {
+        const config = deepClone(STUB_CONFIG);
+        const entityId = window.NodaliaUtils.findStubEntityIds(
+          hass,
+          entities,
+          entitiesFallback,
+          ["sensor"],
+          Object.keys(hass?.states || {}).length
+        ).find((id) => Array.isArray(hass.states[id]?.attributes?.items) && hass.states[id].attributes.items.length);
+        if (entityId) {
+          config.sources = [{ entity: entityId, name: "News" }];
         }
-      } else if (storageKey !== this._historyStorageKey) {
-        this._historyStorageKey = storageKey;
+        return config;
+      }
+      static getEntitySuggestion(hass, entityId) {
+        return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+          domains: ["sensor"],
+          isSupported: (_hass, selectedEntityId) => Array.isArray(hass?.states?.[selectedEntityId]?.attributes?.items),
+          buildConfig: (_hass, selectedEntityId) => ({
+            sources: [{ entity: selectedEntityId, name: "News" }]
+          })
+        });
+      }
+      constructor() {
+        super();
+        this._nodaliaConstruct();
+      }
+      _nodaliaConstruct() {
+        this.attachShadow({ mode: "open" });
+        this._config = normalizeConfig(STUB_CONFIG);
+        this._hass = null;
+        this._lastRenderSignature = "";
+        this._animateContentOnNextRender = true;
+        this._entranceAnimationResetTimer = 0;
+        this._magazineIndex = 0;
+        this._magazineItemsStamp = "";
+        this._magazineSwipeState = null;
+        this._magazineSwipeWindowAttached = false;
+        this._suppressArticleTap = false;
+        this._newsHistory = [];
+        this._historyStorageKey = "";
         this._historyHelperEntityId = "";
         this._historyHelperSignature = "";
-        this._newsHistory = loadNewsHistoryFromStorage(storageKey);
-      }
-      const merged = mergeNewsItemHistory(this._newsHistory, incoming, config.max_items);
-      const previousStamp = buildNewsRenderStamp(this._newsHistory);
-      const nextStamp = buildNewsRenderStamp(merged);
-      if (previousStamp !== nextStamp) {
-        this._newsHistory = merged;
-        if (helperEntityId && this._hass) {
-          this._scheduleNewsHistoryHelperWrite(merged, helperEntityId);
-        }
-        if (!helperEntityId || config.mirror_history_local !== false) {
-          if (!this._historyStorageKey) {
-            this._historyStorageKey = storageKey;
-          }
-          saveNewsHistoryToStorage(this._historyStorageKey, merged);
-        }
-      }
-      return merged;
-    }
-    _scheduleNewsHistoryHelperWrite(items, helperEntityId) {
-      if (this._historyHelperWriteTimer) {
-        window.clearTimeout(this._historyHelperWriteTimer);
-      }
-      const entityId = String(helperEntityId || this._config?.history_helper || "").trim();
-      if (!entityId) {
-        return;
-      }
-      this._historyHelperWriteTimer = window.setTimeout(() => {
         this._historyHelperWriteTimer = 0;
-        if (!this.isConnected || !this._hass) {
+        this._magazineSlideResetTimer = 0;
+        this._onShadowClick = this._onShadowClick.bind(this);
+        this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
+        this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
+        this._onWindowMagazinePointerMove = this._onWindowMagazinePointerMove.bind(this);
+        this._onWindowMagazinePointerUp = this._onWindowMagazinePointerUp.bind(this);
+        this.shadowRoot.addEventListener("click", this._onShadowClick);
+        this.shadowRoot.addEventListener("keydown", this._onShadowKeyDown);
+        this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown, true);
+      }
+      connectedCallback() {
+        this._animateContentOnNextRender = true;
+        if (this._hass && this._config) {
+          this._lastRenderSignature = "";
+          this._render();
+        }
+      }
+      disconnectedCallback() {
+        if (this._entranceAnimationResetTimer) {
+          window.clearTimeout(this._entranceAnimationResetTimer);
+          this._entranceAnimationResetTimer = 0;
+        }
+        if (this._historyHelperWriteTimer) {
+          window.clearTimeout(this._historyHelperWriteTimer);
+          this._historyHelperWriteTimer = 0;
+        }
+        if (this._magazineSlideResetTimer) {
+          window.clearTimeout(this._magazineSlideResetTimer);
+          this._magazineSlideResetTimer = 0;
+        }
+        this._cancelMagazineSwipe();
+        window.NodaliaUtils?.clearDeferTimers?.(this);
+        this._animateContentOnNextRender = true;
+        this._lastRenderSignature = "";
+      }
+      setConfig(config) {
+        this._config = normalizeConfig(config || {});
+        this._lastRenderSignature = "";
+        this._magazineItemsStamp = "";
+        this._magazineIndex = 0;
+        this._historyStorageKey = "";
+        this._historyHelperEntityId = "";
+        this._historyHelperSignature = "";
+        this._newsHistory = [];
+        this._animateContentOnNextRender = true;
+        this._render();
+      }
+      set hass(hass) {
+        this._hass = hass;
+        const nextSignature = this._getRenderSignature(hass);
+        if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
           return;
         }
-        if (writeNewsHistoryToHelper(this._hass, entityId, items)) {
-          this._historyHelperSignature = getNewsHistoryHelperSignature(this._hass, entityId);
+        this._lastRenderSignature = nextSignature;
+        this._render();
+      }
+      getCardSize() {
+        const mode = this._config?.layout?.mode || "magazine";
+        if (mode === "compact") {
+          return 3;
         }
-      }, NEWS_HISTORY_HELPER_WRITE_MS);
-    }
-    _getDisplayItems(hass = this._hass) {
-      if (!hass) {
-        return [];
-      }
-      const config = this._config || DEFAULT_CONFIG;
-      const collected = collectNormalizedItems(hass, config);
-      const pool = config.remember_items !== false ? this._ensureNewsHistory(collected) : collected;
-      return applyNewsFilters(pool, config);
-    }
-    _getRenderSignature(hass = this._hass) {
-      const config = this._config || DEFAULT_CONFIG;
-      const layout = config.layout || DEFAULT_CONFIG.layout;
-      const items = this._getDisplayItems(hass);
-      const health = getNewsSourceHealth(hass, config);
-      const joinParts = window.NodaliaRenderSignature?.joinParts;
-      const values = [
-        String(config.title || ""),
-        config.max_items,
-        config.remember_items === false ? 0 : 1,
-        String(config.storage_key || ""),
-        String(config.history_helper || ""),
-        config.mirror_history_local === false ? 0 : 1,
-        getNewsHistoryHelperSignature(hass, config.history_helper),
-        layout.mode,
-        layout.density,
-        layout.show_images ? 1 : 0,
-        layout.show_summary ? 1 : 0,
-        layout.show_source ? 1 : 0,
-        layout.show_time ? 1 : 0,
-        layout.show_category ? 1 : 0,
-        config.appearance?.preset || "glass",
-        config.filters?.hide_older_than || "",
-        config.filters?.max_per_source || 0,
-        (config.filters?.include_keywords || []).join(","),
-        (config.filters?.exclude_keywords || []).join(","),
-        resolveSourceEntries(config).map((entry) => entry.entity).join(","),
-        health.loading ? 1 : 0,
-        health.unavailable ? 1 : 0,
-        buildNewsRenderStamp(items),
-        window.NodaliaI18n?.resolveLanguage?.(hass, config.language) || ""
-      ];
-      if (typeof joinParts === "function") {
-        return joinParts([{ prefix: "news:", values }]);
-      }
-      return values.join("::");
-    }
-    _getCardTitle() {
-      return this._config?.title || this._ui("title", "News");
-    }
-    _getCardBackground(styles, preset) {
-      if (preset === "glass") {
-        return `linear-gradient(180deg, color-mix(in srgb, var(--primary-color) 5%, transparent) 0%, ${styles.card.background} 100%)`;
-      }
-      return styles.card.background;
-    }
-    _openArticleUrl(url) {
-      if (!isSafeHttpUrl(url)) {
-        return;
-      }
-      window.open(url, "_blank", "noopener,noreferrer");
-    }
-    _onShadowClick(event) {
-      const path = event.composedPath();
-      const actionTarget = path.find((node) => node instanceof HTMLElement && node.dataset?.newsAction);
-      if (!(actionTarget instanceof HTMLElement)) {
-        return;
-      }
-      const action = actionTarget.dataset.newsAction || "";
-      if (action === "prev") {
-        event.preventDefault();
-        event.stopPropagation();
-        this._navigateMagazine(-1);
-        return;
-      }
-      if (action === "next") {
-        event.preventDefault();
-        event.stopPropagation();
-        this._navigateMagazine(1);
-        return;
-      }
-      if (action === "goto") {
-        event.preventDefault();
-        event.stopPropagation();
-        const index = Number.parseInt(actionTarget.dataset.newsIndex || "", 10);
-        if (Number.isFinite(index)) {
-          this._goToMagazineIndex(index);
+        if (mode === "list") {
+          return 4;
         }
-        return;
+        return 5;
       }
-      if (action !== "open") {
-        return;
+      getGridOptions() {
+        return {
+          rows: "auto",
+          columns: "full",
+          min_rows: 3,
+          min_columns: 6
+        };
       }
-      if (this._suppressArticleTap) {
-        event.preventDefault();
-        event.stopPropagation();
-        return;
+      _ui(key, fallback = "", values = {}) {
+        if (window.NodaliaI18n?.translateNewsUi) {
+          return window.NodaliaI18n.translateNewsUi(
+            this._hass,
+            this._config?.language ?? "auto",
+            key,
+            fallback,
+            values
+          );
+        }
+        let text = fallback;
+        Object.entries(values).forEach(([name, value]) => {
+          text = text.replace(`{${name}}`, String(value));
+        });
+        return text;
       }
-      const url = actionTarget.dataset.newsUrl || "";
-      if (!url) {
-        return;
+      _getSourceEntries() {
+        return resolveSourceEntries(this._config);
       }
-      event.preventDefault();
-      event.stopPropagation();
-      this._openArticleUrl(url);
-    }
-    _onShadowKeyDown(event) {
-      const carousel = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.newsCarousel !== void 0);
-      if (carousel instanceof HTMLElement) {
-        if (event.key === "ArrowLeft") {
+      _getSourceHealth(hass = this._hass) {
+        return getNewsSourceHealth(hass, this._config);
+      }
+      _ensureNewsHistory(incoming) {
+        const config = this._config || DEFAULT_CONFIG;
+        const helperEntityId = String(config.history_helper || "").trim();
+        const storageKey = getNewsHistoryStorageKey(config);
+        const helperSignature = helperEntityId ? getNewsHistoryHelperSignature(this._hass, helperEntityId) : "";
+        if (helperEntityId && this._hass) {
+          if (helperEntityId !== this._historyHelperEntityId || helperSignature !== this._historyHelperSignature) {
+            this._historyHelperEntityId = helperEntityId;
+            this._historyHelperSignature = helperSignature;
+            this._newsHistory = loadNewsHistoryFromHelper(this._hass, helperEntityId);
+          }
+        } else if (storageKey !== this._historyStorageKey) {
+          this._historyStorageKey = storageKey;
+          this._historyHelperEntityId = "";
+          this._historyHelperSignature = "";
+          this._newsHistory = loadNewsHistoryFromStorage(storageKey);
+        }
+        const merged = mergeNewsItemHistory(this._newsHistory, incoming, config.max_items);
+        const previousStamp = buildNewsRenderStamp(this._newsHistory);
+        const nextStamp = buildNewsRenderStamp(merged);
+        if (previousStamp !== nextStamp) {
+          this._newsHistory = merged;
+          if (helperEntityId && this._hass) {
+            this._scheduleNewsHistoryHelperWrite(merged, helperEntityId);
+          }
+          if (!helperEntityId || config.mirror_history_local !== false) {
+            if (!this._historyStorageKey) {
+              this._historyStorageKey = storageKey;
+            }
+            saveNewsHistoryToStorage(this._historyStorageKey, merged);
+          }
+        }
+        return merged;
+      }
+      _scheduleNewsHistoryHelperWrite(items, helperEntityId) {
+        if (this._historyHelperWriteTimer) {
+          window.clearTimeout(this._historyHelperWriteTimer);
+        }
+        const entityId = String(helperEntityId || this._config?.history_helper || "").trim();
+        if (!entityId) {
+          return;
+        }
+        this._historyHelperWriteTimer = window.setTimeout(() => {
+          this._historyHelperWriteTimer = 0;
+          if (!this.isConnected || !this._hass) {
+            return;
+          }
+          if (writeNewsHistoryToHelper(this._hass, entityId, items)) {
+            this._historyHelperSignature = getNewsHistoryHelperSignature(this._hass, entityId);
+          }
+        }, NEWS_HISTORY_HELPER_WRITE_MS);
+      }
+      _getDisplayItems(hass = this._hass) {
+        if (!hass) {
+          return [];
+        }
+        const config = this._config || DEFAULT_CONFIG;
+        const collected = collectNormalizedItems(hass, config);
+        const pool = config.remember_items !== false ? this._ensureNewsHistory(collected) : collected;
+        return applyNewsFilters(pool, config);
+      }
+      _getRenderSignature(hass = this._hass) {
+        const config = this._config || DEFAULT_CONFIG;
+        const layout = config.layout || DEFAULT_CONFIG.layout;
+        const items = this._getDisplayItems(hass);
+        const health = getNewsSourceHealth(hass, config);
+        const joinParts = window.NodaliaRenderSignature?.joinParts;
+        const values = [
+          String(config.title || ""),
+          config.max_items,
+          config.remember_items === false ? 0 : 1,
+          String(config.storage_key || ""),
+          String(config.history_helper || ""),
+          config.mirror_history_local === false ? 0 : 1,
+          getNewsHistoryHelperSignature(hass, config.history_helper),
+          layout.mode,
+          layout.density,
+          layout.show_images ? 1 : 0,
+          layout.show_summary ? 1 : 0,
+          layout.show_source ? 1 : 0,
+          layout.show_time ? 1 : 0,
+          layout.show_category ? 1 : 0,
+          config.appearance?.preset || "glass",
+          config.filters?.hide_older_than || "",
+          config.filters?.max_per_source || 0,
+          (config.filters?.include_keywords || []).join(","),
+          (config.filters?.exclude_keywords || []).join(","),
+          resolveSourceEntries(config).map((entry) => entry.entity).join(","),
+          health.loading ? 1 : 0,
+          health.unavailable ? 1 : 0,
+          buildNewsRenderStamp(items),
+          window.NodaliaI18n?.resolveLanguage?.(hass, config.language) || ""
+        ];
+        if (typeof joinParts === "function") {
+          return joinParts([{ prefix: "news:", values }]);
+        }
+        return values.join("::");
+      }
+      _getCardTitle() {
+        return this._config?.title || this._ui("title", "News");
+      }
+      _getCardBackground(styles, preset) {
+        if (preset === "glass") {
+          return `linear-gradient(180deg, color-mix(in srgb, var(--primary-color) 5%, transparent) 0%, ${styles.card.background} 100%)`;
+        }
+        return styles.card.background;
+      }
+      _openArticleUrl(url) {
+        if (!isSafeHttpUrl(url)) {
+          return;
+        }
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+      _onShadowClick(event) {
+        const path = event.composedPath();
+        const actionTarget = path.find((node) => node instanceof HTMLElement && node.dataset?.newsAction);
+        if (!(actionTarget instanceof HTMLElement)) {
+          return;
+        }
+        const action = actionTarget.dataset.newsAction || "";
+        if (action === "prev") {
           event.preventDefault();
+          event.stopPropagation();
           this._navigateMagazine(-1);
           return;
         }
-        if (event.key === "ArrowRight") {
+        if (action === "next") {
           event.preventDefault();
+          event.stopPropagation();
           this._navigateMagazine(1);
           return;
         }
+        if (action === "goto") {
+          event.preventDefault();
+          event.stopPropagation();
+          const index = Number.parseInt(actionTarget.dataset.newsIndex || "", 10);
+          if (Number.isFinite(index)) {
+            this._goToMagazineIndex(index);
+          }
+          return;
+        }
+        if (action !== "open") {
+          return;
+        }
+        if (this._suppressArticleTap) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+        const url = actionTarget.dataset.newsUrl || "";
+        if (!url) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        this._openArticleUrl(url);
       }
-      if (event.key !== "Enter" && event.key !== " ") {
-        return;
+      _onShadowKeyDown(event) {
+        const carousel = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.newsCarousel !== void 0);
+        if (carousel instanceof HTMLElement) {
+          if (event.key === "ArrowLeft") {
+            event.preventDefault();
+            this._navigateMagazine(-1);
+            return;
+          }
+          if (event.key === "ArrowRight") {
+            event.preventDefault();
+            this._navigateMagazine(1);
+            return;
+          }
+        }
+        if (event.key !== "Enter" && event.key !== " ") {
+          return;
+        }
+        const target = event.target;
+        if (!(target instanceof HTMLElement) || target.dataset?.newsAction !== "open") {
+          return;
+        }
+        if (!target.dataset.newsUrl) {
+          return;
+        }
+        event.preventDefault();
+        this._openArticleUrl(target.dataset.newsUrl);
       }
-      const target = event.target;
-      if (!(target instanceof HTMLElement) || target.dataset?.newsAction !== "open") {
-        return;
+      _syncMagazineIndex(items) {
+        const stamp = buildNewsRenderStamp(items);
+        if (stamp !== this._magazineItemsStamp) {
+          this._magazineItemsStamp = stamp;
+          this._magazineIndex = 0;
+          return;
+        }
+        const maxIndex = Math.max(0, items.length - 1);
+        if (this._magazineIndex > maxIndex) {
+          this._magazineIndex = maxIndex;
+        }
       }
-      if (!target.dataset.newsUrl) {
-        return;
-      }
-      event.preventDefault();
-      this._openArticleUrl(target.dataset.newsUrl);
-    }
-    _syncMagazineIndex(items) {
-      const stamp = buildNewsRenderStamp(items);
-      if (stamp !== this._magazineItemsStamp) {
-        this._magazineItemsStamp = stamp;
-        this._magazineIndex = 0;
-        return;
-      }
-      const maxIndex = Math.max(0, items.length - 1);
-      if (this._magazineIndex > maxIndex) {
-        this._magazineIndex = maxIndex;
-      }
-    }
-    _goToMagazineIndex(index) {
-      const items = this._getDisplayItems();
-      if (!items.length) {
-        return;
-      }
-      this._syncMagazineIndex(items);
-      const maxIndex = items.length - 1;
-      const nextIndex = Math.max(0, Math.min(index, maxIndex));
-      if (nextIndex === this._magazineIndex) {
-        return;
-      }
-      if (this._canPatchMagazineCarousel(items)) {
-        this._commitMagazineSlide(nextIndex);
-        return;
-      }
-      this._magazineIndex = nextIndex;
-      this._render();
-    }
-    _navigateMagazine(delta) {
-      const items = this._getDisplayItems();
-      if (items.length <= 1) {
-        return;
-      }
-      this._syncMagazineIndex(items);
-      const nextIndex = this._magazineIndex + delta;
-      if (nextIndex < 0 || nextIndex >= items.length) {
-        return;
-      }
-      if (this._canPatchMagazineCarousel(items)) {
-        this._commitMagazineSlide(nextIndex);
-        return;
-      }
-      this._magazineIndex = nextIndex;
-      this._render();
-    }
-    _canPatchMagazineCarousel(items) {
-      if (!this.shadowRoot?.querySelector("[data-news-track]")) {
-        return false;
-      }
-      const stamp = buildNewsRenderStamp(items);
-      return stamp === this._magazineItemsStamp && (this._config?.layout?.mode || "magazine") === "magazine";
-    }
-    _commitMagazineSlide(nextIndex) {
-      const items = this._getDisplayItems();
-      const track = this.shadowRoot?.querySelector("[data-news-track]");
-      if (!(track instanceof HTMLElement) || !items.length) {
+      _goToMagazineIndex(index) {
+        const items = this._getDisplayItems();
+        if (!items.length) {
+          return;
+        }
+        this._syncMagazineIndex(items);
+        const maxIndex = items.length - 1;
+        const nextIndex = Math.max(0, Math.min(index, maxIndex));
+        if (nextIndex === this._magazineIndex) {
+          return;
+        }
+        if (this._canPatchMagazineCarousel(items)) {
+          this._commitMagazineSlide(nextIndex);
+          return;
+        }
         this._magazineIndex = nextIndex;
         this._render();
-        return;
       }
-      const maxIndex = Math.max(0, items.length - 1);
-      const safeIndex = Math.max(0, Math.min(nextIndex, maxIndex));
-      this._magazineIndex = safeIndex;
-      this._cancelMagazineSwipe();
-      track.classList.remove("news-card__carousel-track--dragging");
-      track.style.setProperty("--news-drag-offset", "0px");
-      track.style.setProperty("--news-slide-index", String(safeIndex));
-      track.classList.add("news-card__carousel-track--animating");
-      track.querySelectorAll(".news-card__carousel-slide").forEach((slide, slideIndex) => {
-        slide.classList.toggle("is-active", slideIndex === safeIndex);
-      });
-      this._updateMagazineChrome(safeIndex, items.length);
-      if (this._magazineSlideResetTimer) {
-        window.clearTimeout(this._magazineSlideResetTimer);
-      }
-      this._magazineSlideResetTimer = window.setTimeout(() => {
-        this._magazineSlideResetTimer = 0;
-        track.classList.remove("news-card__carousel-track--animating");
-      }, MAGAZINE_SLIDE_TRANSITION_MS + 40);
-    }
-    _updateMagazineChrome(index, total) {
-      const carousel = this.shadowRoot?.querySelector("[data-news-carousel]");
-      if (!(carousel instanceof HTMLElement)) {
-        return;
-      }
-      const positionLabel = this._ui("articlePosition", "Article {current} of {total}", {
-        current: index + 1,
-        total
-      });
-      carousel.setAttribute("aria-label", positionLabel);
-      carousel.querySelectorAll('[data-news-action="goto"]').forEach((button) => {
-        if (!(button instanceof HTMLElement)) {
+      _navigateMagazine(delta) {
+        const items = this._getDisplayItems();
+        if (items.length <= 1) {
           return;
         }
-        const dotIndex = Number.parseInt(button.dataset.newsIndex || "", 10);
-        const isActive = dotIndex === index;
-        button.classList.toggle("is-active", isActive);
-        button.setAttribute("aria-current", isActive ? "true" : "false");
-      });
-      const prevButton = carousel.querySelector('[data-news-action="prev"]');
-      const nextButton = carousel.querySelector('[data-news-action="next"]');
-      if (prevButton instanceof HTMLButtonElement) {
-        prevButton.disabled = index <= 0;
-        prevButton.classList.toggle("is-disabled", index <= 0);
-      }
-      if (nextButton instanceof HTMLButtonElement) {
-        nextButton.disabled = index >= total - 1;
-        nextButton.classList.toggle("is-disabled", index >= total - 1);
-      }
-    }
-    _attachMagazineSwipeWindowListeners() {
-      if (this._magazineSwipeWindowAttached || typeof window === "undefined") {
-        return;
-      }
-      this._magazineSwipeWindowAttached = true;
-      window.addEventListener("pointermove", this._onWindowMagazinePointerMove, { passive: false });
-      window.addEventListener("pointerup", this._onWindowMagazinePointerUp);
-      window.addEventListener("pointercancel", this._onWindowMagazinePointerUp);
-    }
-    _detachMagazineSwipeWindowListeners() {
-      if (!this._magazineSwipeWindowAttached || typeof window === "undefined") {
-        return;
-      }
-      this._magazineSwipeWindowAttached = false;
-      window.removeEventListener("pointermove", this._onWindowMagazinePointerMove);
-      window.removeEventListener("pointerup", this._onWindowMagazinePointerUp);
-      window.removeEventListener("pointercancel", this._onWindowMagazinePointerUp);
-    }
-    _cancelMagazineSwipe() {
-      this._magazineSwipeState = null;
-      this._detachMagazineSwipeWindowListeners();
-      const track = this.shadowRoot?.querySelector("[data-news-track]");
-      if (track instanceof HTMLElement) {
-        track.classList.remove("news-card__carousel-track--dragging");
-        track.style.removeProperty("--news-drag-offset");
-      }
-    }
-    _getMagazineCarouselViewport(event) {
-      return event.composedPath().find((node) => node instanceof HTMLElement && node.classList?.contains("news-card__carousel-viewport")) || null;
-    }
-    _updateMagazineTrackTransform(track, index, dragOffsetPx = 0, animate = true) {
-      if (!(track instanceof HTMLElement)) {
-        return;
-      }
-      track.style.setProperty("--news-slide-index", String(index));
-      track.style.setProperty("--news-drag-offset", `${dragOffsetPx}px`);
-      track.classList.toggle("news-card__carousel-track--dragging", !animate);
-    }
-    _onShadowPointerDown(event) {
-      if (event.button !== void 0 && event.button !== 0) {
-        return;
-      }
-      const viewport = this._getMagazineCarouselViewport(event);
-      if (!(viewport instanceof HTMLElement)) {
-        return;
-      }
-      const carousel = viewport.closest("[data-news-carousel]");
-      const count = Number.parseInt(carousel?.dataset?.newsCount || "0", 10);
-      if (!carousel || count <= 1) {
-        return;
-      }
-      const navTarget = event.composedPath().find((node) => node instanceof HTMLElement && node !== viewport && node.dataset?.newsAction && node.dataset.newsAction !== "open");
-      if (navTarget instanceof HTMLElement) {
-        return;
-      }
-      this._cancelMagazineSwipe();
-      this._magazineSwipeState = {
-        pointerId: event.pointerId,
-        startX: event.clientX,
-        startY: event.clientY,
-        locked: false,
-        dragging: false,
-        viewport,
-        track: viewport.querySelector("[data-news-track]"),
-        width: viewport.getBoundingClientRect().width || 1,
-        startIndex: this._magazineIndex
-      };
-      this._attachMagazineSwipeWindowListeners();
-      if (typeof viewport.setPointerCapture === "function") {
-        try {
-          viewport.setPointerCapture(event.pointerId);
-        } catch (_err) {
-        }
-      }
-    }
-    _onWindowMagazinePointerMove(event) {
-      const swipe = this._magazineSwipeState;
-      if (!swipe || event.pointerId !== swipe.pointerId) {
-        return;
-      }
-      const deltaX = event.clientX - swipe.startX;
-      const deltaY = event.clientY - swipe.startY;
-      if (!swipe.locked) {
-        if (Math.hypot(deltaX, deltaY) < MAGAZINE_SWIPE_LOCK_PX) {
+        this._syncMagazineIndex(items);
+        const nextIndex = this._magazineIndex + delta;
+        if (nextIndex < 0 || nextIndex >= items.length) {
           return;
         }
-        swipe.locked = true;
-        swipe.dragging = Math.abs(deltaX) >= Math.abs(deltaY);
-        if (!swipe.dragging) {
-          this._cancelMagazineSwipe();
-          return;
-        }
-      }
-      if (!swipe.dragging) {
-        return;
-      }
-      event.preventDefault();
-      event.stopPropagation();
-      const atStart = swipe.startIndex <= 0 && deltaX > 0;
-      const items = this._getDisplayItems();
-      const atEnd = swipe.startIndex >= items.length - 1 && deltaX < 0;
-      let offset = deltaX;
-      if (atStart || atEnd) {
-        offset = deltaX * 0.35;
-      }
-      this._updateMagazineTrackTransform(swipe.track, swipe.startIndex, offset, false);
-    }
-    _onWindowMagazinePointerUp(event) {
-      const swipe = this._magazineSwipeState;
-      if (!swipe || event.pointerId !== swipe.pointerId) {
-        return;
-      }
-      const deltaX = event.clientX - swipe.startX;
-      const items = this._getDisplayItems();
-      let navigated = false;
-      if (swipe.dragging && Math.abs(deltaX) >= MAGAZINE_SWIPE_THRESHOLD_PX) {
-        if (deltaX < 0 && swipe.startIndex < items.length - 1) {
-          this._magazineIndex = swipe.startIndex + 1;
-          navigated = true;
-        } else if (deltaX > 0 && swipe.startIndex > 0) {
-          this._magazineIndex = swipe.startIndex - 1;
-          navigated = true;
-        }
-        this._suppressArticleTap = true;
-        window.setTimeout(() => {
-          this._suppressArticleTap = false;
-        }, 320);
-      }
-      this._cancelMagazineSwipe();
-      if (navigated) {
         if (this._canPatchMagazineCarousel(items)) {
-          this._commitMagazineSlide(this._magazineIndex);
-        } else {
+          this._commitMagazineSlide(nextIndex);
+          return;
+        }
+        this._magazineIndex = nextIndex;
+        this._render();
+      }
+      _canPatchMagazineCarousel(items) {
+        if (!this.shadowRoot?.querySelector("[data-news-track]")) {
+          return false;
+        }
+        const stamp = buildNewsRenderStamp(items);
+        return stamp === this._magazineItemsStamp && (this._config?.layout?.mode || "magazine") === "magazine";
+      }
+      _commitMagazineSlide(nextIndex) {
+        const items = this._getDisplayItems();
+        const track = this.shadowRoot?.querySelector("[data-news-track]");
+        if (!(track instanceof HTMLElement) || !items.length) {
+          this._magazineIndex = nextIndex;
           this._render();
+          return;
         }
-        return;
+        const maxIndex = Math.max(0, items.length - 1);
+        const safeIndex = Math.max(0, Math.min(nextIndex, maxIndex));
+        this._magazineIndex = safeIndex;
+        this._cancelMagazineSwipe();
+        track.classList.remove("news-card__carousel-track--dragging");
+        track.style.setProperty("--news-drag-offset", "0px");
+        track.style.setProperty("--news-slide-index", String(safeIndex));
+        track.classList.add("news-card__carousel-track--animating");
+        track.querySelectorAll(".news-card__carousel-slide").forEach((slide, slideIndex) => {
+          slide.classList.toggle("is-active", slideIndex === safeIndex);
+        });
+        this._updateMagazineChrome(safeIndex, items.length);
+        if (this._magazineSlideResetTimer) {
+          window.clearTimeout(this._magazineSlideResetTimer);
+        }
+        this._magazineSlideResetTimer = window.setTimeout(() => {
+          this._magazineSlideResetTimer = 0;
+          track.classList.remove("news-card__carousel-track--animating");
+        }, MAGAZINE_SLIDE_TRANSITION_MS + 40);
       }
-      this._updateMagazineTrackTransform(
-        this.shadowRoot?.querySelector("[data-news-track]"),
-        this._magazineIndex,
-        0,
-        true
-      );
-    }
-    _renderMetaLine(item, layout, locale) {
-      const parts = [];
-      if (layout.show_source !== false) {
-        parts.push(escapeHtml(item.source || this._ui("sourceUnknown", "Unknown source")));
-      }
-      if (layout.show_time !== false) {
-        const timeLabel = formatRelativePublished(item.publishedMs, (key, fb, vals) => this._ui(key, fb, vals), locale);
-        if (timeLabel) {
-          parts.push(escapeHtml(timeLabel));
+      _updateMagazineChrome(index, total) {
+        const carousel = this.shadowRoot?.querySelector("[data-news-carousel]");
+        if (!(carousel instanceof HTMLElement)) {
+          return;
+        }
+        const positionLabel = this._ui("articlePosition", "Article {current} of {total}", {
+          current: index + 1,
+          total
+        });
+        carousel.setAttribute("aria-label", positionLabel);
+        carousel.querySelectorAll('[data-news-action="goto"]').forEach((button) => {
+          if (!(button instanceof HTMLElement)) {
+            return;
+          }
+          const dotIndex = Number.parseInt(button.dataset.newsIndex || "", 10);
+          const isActive = dotIndex === index;
+          button.classList.toggle("is-active", isActive);
+          button.setAttribute("aria-current", isActive ? "true" : "false");
+        });
+        const prevButton = carousel.querySelector('[data-news-action="prev"]');
+        const nextButton = carousel.querySelector('[data-news-action="next"]');
+        if (prevButton instanceof HTMLButtonElement) {
+          prevButton.disabled = index <= 0;
+          prevButton.classList.toggle("is-disabled", index <= 0);
+        }
+        if (nextButton instanceof HTMLButtonElement) {
+          nextButton.disabled = index >= total - 1;
+          nextButton.classList.toggle("is-disabled", index >= total - 1);
         }
       }
-      if (layout.show_category !== false && item.category) {
-        parts.push(`<span class="news-card__category">${escapeHtml(item.category)}</span>`);
+      _attachMagazineSwipeWindowListeners() {
+        if (this._magazineSwipeWindowAttached || typeof window === "undefined") {
+          return;
+        }
+        this._magazineSwipeWindowAttached = true;
+        window.addEventListener("pointermove", this._onWindowMagazinePointerMove, { passive: false });
+        window.addEventListener("pointerup", this._onWindowMagazinePointerUp);
+        window.addEventListener("pointercancel", this._onWindowMagazinePointerUp);
       }
-      if (!parts.length) {
-        return "";
+      _detachMagazineSwipeWindowListeners() {
+        if (!this._magazineSwipeWindowAttached || typeof window === "undefined") {
+          return;
+        }
+        this._magazineSwipeWindowAttached = false;
+        window.removeEventListener("pointermove", this._onWindowMagazinePointerMove);
+        window.removeEventListener("pointerup", this._onWindowMagazinePointerUp);
+        window.removeEventListener("pointercancel", this._onWindowMagazinePointerUp);
       }
-      return `<div class="news-card__meta">${parts.join('<span class="news-card__meta-sep" aria-hidden="true">·</span>')}</div>`;
-    }
-    _renderImage(item, className, layout) {
-      if (layout.show_images === false || !item.image) {
-        return "";
+      _cancelMagazineSwipe() {
+        this._magazineSwipeState = null;
+        this._detachMagazineSwipeWindowListeners();
+        const track = this.shadowRoot?.querySelector("[data-news-track]");
+        if (track instanceof HTMLElement) {
+          track.classList.remove("news-card__carousel-track--dragging");
+          track.style.removeProperty("--news-drag-offset");
+        }
       }
-      return `
+      _getMagazineCarouselViewport(event) {
+        return event.composedPath().find((node) => node instanceof HTMLElement && node.classList?.contains("news-card__carousel-viewport")) || null;
+      }
+      _updateMagazineTrackTransform(track, index, dragOffsetPx = 0, animate = true) {
+        if (!(track instanceof HTMLElement)) {
+          return;
+        }
+        track.style.setProperty("--news-slide-index", String(index));
+        track.style.setProperty("--news-drag-offset", `${dragOffsetPx}px`);
+        track.classList.toggle("news-card__carousel-track--dragging", !animate);
+      }
+      _onShadowPointerDown(event) {
+        if (event.button !== void 0 && event.button !== 0) {
+          return;
+        }
+        const viewport = this._getMagazineCarouselViewport(event);
+        if (!(viewport instanceof HTMLElement)) {
+          return;
+        }
+        const carousel = viewport.closest("[data-news-carousel]");
+        const count = Number.parseInt(carousel?.dataset?.newsCount || "0", 10);
+        if (!carousel || count <= 1) {
+          return;
+        }
+        const navTarget = event.composedPath().find((node) => node instanceof HTMLElement && node !== viewport && node.dataset?.newsAction && node.dataset.newsAction !== "open");
+        if (navTarget instanceof HTMLElement) {
+          return;
+        }
+        this._cancelMagazineSwipe();
+        this._magazineSwipeState = {
+          pointerId: event.pointerId,
+          startX: event.clientX,
+          startY: event.clientY,
+          locked: false,
+          dragging: false,
+          viewport,
+          track: viewport.querySelector("[data-news-track]"),
+          width: viewport.getBoundingClientRect().width || 1,
+          startIndex: this._magazineIndex
+        };
+        this._attachMagazineSwipeWindowListeners();
+        if (typeof viewport.setPointerCapture === "function") {
+          try {
+            viewport.setPointerCapture(event.pointerId);
+          } catch (_err) {
+          }
+        }
+      }
+      _onWindowMagazinePointerMove(event) {
+        const swipe = this._magazineSwipeState;
+        if (!swipe || event.pointerId !== swipe.pointerId) {
+          return;
+        }
+        const deltaX = event.clientX - swipe.startX;
+        const deltaY = event.clientY - swipe.startY;
+        if (!swipe.locked) {
+          if (Math.hypot(deltaX, deltaY) < MAGAZINE_SWIPE_LOCK_PX) {
+            return;
+          }
+          swipe.locked = true;
+          swipe.dragging = Math.abs(deltaX) >= Math.abs(deltaY);
+          if (!swipe.dragging) {
+            this._cancelMagazineSwipe();
+            return;
+          }
+        }
+        if (!swipe.dragging) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        const atStart = swipe.startIndex <= 0 && deltaX > 0;
+        const items = this._getDisplayItems();
+        const atEnd = swipe.startIndex >= items.length - 1 && deltaX < 0;
+        let offset = deltaX;
+        if (atStart || atEnd) {
+          offset = deltaX * 0.35;
+        }
+        this._updateMagazineTrackTransform(swipe.track, swipe.startIndex, offset, false);
+      }
+      _onWindowMagazinePointerUp(event) {
+        const swipe = this._magazineSwipeState;
+        if (!swipe || event.pointerId !== swipe.pointerId) {
+          return;
+        }
+        const deltaX = event.clientX - swipe.startX;
+        const items = this._getDisplayItems();
+        let navigated = false;
+        if (swipe.dragging && Math.abs(deltaX) >= MAGAZINE_SWIPE_THRESHOLD_PX) {
+          if (deltaX < 0 && swipe.startIndex < items.length - 1) {
+            this._magazineIndex = swipe.startIndex + 1;
+            navigated = true;
+          } else if (deltaX > 0 && swipe.startIndex > 0) {
+            this._magazineIndex = swipe.startIndex - 1;
+            navigated = true;
+          }
+          this._suppressArticleTap = true;
+          window.setTimeout(() => {
+            this._suppressArticleTap = false;
+          }, 320);
+        }
+        this._cancelMagazineSwipe();
+        if (navigated) {
+          if (this._canPatchMagazineCarousel(items)) {
+            this._commitMagazineSlide(this._magazineIndex);
+          } else {
+            this._render();
+          }
+          return;
+        }
+        this._updateMagazineTrackTransform(
+          this.shadowRoot?.querySelector("[data-news-track]"),
+          this._magazineIndex,
+          0,
+          true
+        );
+      }
+      _renderMetaLine(item, layout, locale) {
+        const parts = [];
+        if (layout.show_source !== false) {
+          parts.push(escapeHtml(item.source || this._ui("sourceUnknown", "Unknown source")));
+        }
+        if (layout.show_time !== false) {
+          const timeLabel = formatRelativePublished(item.publishedMs, (key, fb, vals) => this._ui(key, fb, vals), locale);
+          if (timeLabel) {
+            parts.push(escapeHtml(timeLabel));
+          }
+        }
+        if (layout.show_category !== false && item.category) {
+          parts.push(`<span class="news-card__category">${escapeHtml(item.category)}</span>`);
+        }
+        if (!parts.length) {
+          return "";
+        }
+        return `<div class="news-card__meta">${parts.join('<span class="news-card__meta-sep" aria-hidden="true">·</span>')}</div>`;
+      }
+      _renderImage(item, className, layout) {
+        if (layout.show_images === false || !item.image) {
+          return "";
+        }
+        return `
       <div class="${className}">
         <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.title)}" loading="lazy" decoding="async" />
       </div>
     `;
-    }
-    _renderArticleItem(item, options = {}) {
-      const layout = this._config?.layout || DEFAULT_CONFIG.layout;
-      const locale = getLocaleTag(this._hass, this._config?.language);
-      const variant = options.variant || "list";
-      const interactive = item.hasUrl;
-      const tag = interactive ? "button" : "article";
-      const typeAttr = interactive ? ' type="button"' : "";
-      const tabindexAttr = interactive ? "" : ' tabindex="-1"';
-      const actionAttrs = interactive ? ` data-news-action="open" data-news-url="${escapeHtml(item.url)}"` : "";
-      const ariaLabel = interactive ? ` aria-label="${escapeHtml(`${item.title}. ${this._ui("readMore", "Read more")}`)}"` : "";
-      const disabledClass = interactive ? "" : " news-card__article--static";
-      const summary = layout.show_summary !== false && item.summary ? `<p class="news-card__summary">${escapeHtml(item.summary)}</p>` : "";
-      const readMore = interactive ? `<span class="news-card__read-more">${escapeHtml(this._ui("readMore", "Read more"))}</span>` : "";
-      const headlineClass = variant === "hero" ? "news-card__headline news-card__headline--hero" : "news-card__headline";
-      const copyMarkup = `
+      }
+      _renderArticleItem(item, options = {}) {
+        const layout = this._config?.layout || DEFAULT_CONFIG.layout;
+        const locale = getLocaleTag(this._hass, this._config?.language);
+        const variant = options.variant || "list";
+        const interactive = item.hasUrl;
+        const tag = interactive ? "button" : "article";
+        const typeAttr = interactive ? ' type="button"' : "";
+        const tabindexAttr = interactive ? "" : ' tabindex="-1"';
+        const actionAttrs = interactive ? ` data-news-action="open" data-news-url="${escapeHtml(item.url)}"` : "";
+        const ariaLabel = interactive ? ` aria-label="${escapeHtml(`${item.title}. ${this._ui("readMore", "Read more")}`)}"` : "";
+        const disabledClass = interactive ? "" : " news-card__article--static";
+        const summary = layout.show_summary !== false && item.summary ? `<p class="news-card__summary">${escapeHtml(item.summary)}</p>` : "";
+        const readMore = interactive ? `<span class="news-card__read-more">${escapeHtml(this._ui("readMore", "Read more"))}</span>` : "";
+        const headlineClass = variant === "hero" ? "news-card__headline news-card__headline--hero" : "news-card__headline";
+        const copyMarkup = `
         <div class="news-card__copy">
           <h3 class="${headlineClass}">${escapeHtml(item.title)}</h3>
           ${this._renderMetaLine(item, layout, locale)}
@@ -1374,8 +1382,8 @@
           ${readMore}
         </div>
     `;
-      const imageMarkup = this._renderImage(item, `news-card__media news-card__media--${variant}`, layout);
-      return `
+        const imageMarkup = this._renderImage(item, `news-card__media news-card__media--${variant}`, layout);
+        return `
       <${tag}
         class="news-card__article news-card__article--${variant}${disabledClass}"
         ${typeAttr}${tabindexAttr}${actionAttrs}${ariaLabel}
@@ -1383,19 +1391,19 @@
         ${variant === "hero" ? `${copyMarkup}${imageMarkup}` : `${imageMarkup}${copyMarkup}`}
       </${tag}>
     `;
-    }
-    _renderMagazineCarousel(items) {
-      this._syncMagazineIndex(items);
-      const index = this._magazineIndex;
-      const count = items.length;
-      const positionLabel = this._ui("articlePosition", "Article {current} of {total}", {
-        current: index + 1,
-        total: count
-      });
-      const dots = count > 1 ? items.map((_, dotIndex) => {
-        const activeClass = dotIndex === index ? " is-active" : "";
-        const dotLabel = this._ui("goToArticle", "Go to article {index}", { index: dotIndex + 1 });
-        return `
+      }
+      _renderMagazineCarousel(items) {
+        this._syncMagazineIndex(items);
+        const index = this._magazineIndex;
+        const count = items.length;
+        const positionLabel = this._ui("articlePosition", "Article {current} of {total}", {
+          current: index + 1,
+          total: count
+        });
+        const dots = count > 1 ? items.map((_, dotIndex) => {
+          const activeClass = dotIndex === index ? " is-active" : "";
+          const dotLabel = this._ui("goToArticle", "Go to article {index}", { index: dotIndex + 1 });
+          return `
           <button
             type="button"
             class="news-card__dot${activeClass}"
@@ -1405,10 +1413,10 @@
             aria-current="${dotIndex === index ? "true" : "false"}"
           ></button>
         `;
-      }).join("") : "";
-      const prevDisabled = index <= 0 ? " is-disabled" : "";
-      const nextDisabled = index >= count - 1 ? " is-disabled" : "";
-      return `
+        }).join("") : "";
+        const prevDisabled = index <= 0 ? " is-disabled" : "";
+        const nextDisabled = index >= count - 1 ? " is-disabled" : "";
+        return `
       <div
         class="news-card__magazine"
         data-news-carousel
@@ -1457,53 +1465,53 @@
         ` : ""}
       </div>
     `;
-    }
-    _renderArticles(items) {
-      const mode = this._config?.layout?.mode || "magazine";
-      if (!items.length) {
-        return "";
       }
-      if (mode === "magazine") {
-        return this._renderMagazineCarousel(items);
+      _renderArticles(items) {
+        const mode = this._config?.layout?.mode || "magazine";
+        if (!items.length) {
+          return "";
+        }
+        if (mode === "magazine") {
+          return this._renderMagazineCarousel(items);
+        }
+        if (mode === "compact") {
+          return `<div class="news-card__stack news-card__stack--compact">${items.map((item) => this._renderArticleItem(item, { variant: "compact" })).join("")}</div>`;
+        }
+        return `<div class="news-card__stack news-card__stack--list">${items.map((item) => this._renderArticleItem(item, { variant: "list" })).join("")}</div>`;
       }
-      if (mode === "compact") {
-        return `<div class="news-card__stack news-card__stack--compact">${items.map((item) => this._renderArticleItem(item, { variant: "compact" })).join("")}</div>`;
-      }
-      return `<div class="news-card__stack news-card__stack--list">${items.map((item) => this._renderArticleItem(item, { variant: "list" })).join("")}</div>`;
-    }
-    _renderEmptyState(kind = "empty") {
-      const styles = this._config?.styles || DEFAULT_CONFIG.styles;
-      const isError = kind === "error";
-      const isLoading = kind === "loading";
-      const title = isError ? this._ui("errorTitle", "News source unavailable") : isLoading ? this._ui("loading", "Loading news…") : this._ui("emptyTitle", "No news available");
-      const body = isError ? this._ui("errorBody", "Check your configured entity or source attributes.") : isLoading ? "" : this._ui("emptyBody", "Add a news entity or check your feed source.");
-      return window.NodaliaUtils?.renderCardEmptyStateDocument?.(
-        `
+      _renderEmptyState(kind = "empty") {
+        const styles = this._config?.styles || DEFAULT_CONFIG.styles;
+        const isError = kind === "error";
+        const isLoading = kind === "loading";
+        const title = isError ? this._ui("errorTitle", "News source unavailable") : isLoading ? this._ui("loading", "Loading news…") : this._ui("emptyTitle", "No news available");
+        const body = isError ? this._ui("errorBody", "Check your configured entity or source attributes.") : isLoading ? "" : this._ui("emptyBody", "Add a news entity or check your feed source.");
+        return window.NodaliaUtils?.renderCardEmptyStateDocument?.(
+          `
         <ha-card class="news-card news-card--${kind}">
           <div class="news-card__empty-title">${escapeHtml(title)}</div>
           ${body ? `<div class="news-card__empty-text">${escapeHtml(body)}</div>` : ""}
         </ha-card>
       `,
-        { card: styles.card }
-      ) || "";
-    }
-    _render() {
-      if (!this.shadowRoot) {
-        return;
+          { card: styles.card }
+        ) || "";
       }
-      const config = this._config || DEFAULT_CONFIG;
-      const styles = config.styles || DEFAULT_CONFIG.styles;
-      const layout = config.layout || DEFAULT_CONFIG.layout;
-      const preset = config.appearance?.preset || "glass";
-      const density = layout.density || "normal";
-      const health = this._getSourceHealth();
-      const items = this._getDisplayItems();
-      const cardTitle = this._getCardTitle();
-      const cardBackground = this._getCardBackground(styles, preset);
-      const animateClass = this._animateContentOnNextRender ? " news-card--enter" : "";
-      let bodyMarkup = "";
-      if (items.length > 0) {
-        bodyMarkup = `
+      _render() {
+        if (!this.shadowRoot) {
+          return;
+        }
+        const config = this._config || DEFAULT_CONFIG;
+        const styles = config.styles || DEFAULT_CONFIG.styles;
+        const layout = config.layout || DEFAULT_CONFIG.layout;
+        const preset = config.appearance?.preset || "glass";
+        const density = layout.density || "normal";
+        const health = this._getSourceHealth();
+        const items = this._getDisplayItems();
+        const cardTitle = this._getCardTitle();
+        const cardBackground = this._getCardBackground(styles, preset);
+        const animateClass = this._animateContentOnNextRender ? " news-card--enter" : "";
+        let bodyMarkup = "";
+        if (items.length > 0) {
+          bodyMarkup = `
         <ha-card class="news-card news-card--ready news-card--${layout.mode} news-card--density-${density}${animateClass}">
           <header class="news-card__header">
             <div class="news-card__kicker">${escapeHtml(this._ui("title", "News"))}</div>
@@ -1512,40 +1520,40 @@
           ${this._renderArticles(items)}
         </ha-card>
       `;
-      } else if (!health.hasSources) {
-        bodyMarkup = this._renderEmptyState("empty");
-      } else if (health.loading) {
-        bodyMarkup = this._renderEmptyState("loading");
-      } else if (health.unavailable) {
-        bodyMarkup = this._renderEmptyState("error");
-      } else {
-        bodyMarkup = this._renderEmptyState("empty");
-      }
-      try {
-        this._renderShell(bodyMarkup, styles, cardBackground, density, layout);
-      } catch (error) {
-        console.error("Nodalia News Card render failed:", error);
-        this._renderShell(this._renderEmptyState("error"), styles, cardBackground, density, layout);
-      }
-      if (this._animateContentOnNextRender) {
-        this._animateContentOnNextRender = false;
-        if (this._entranceAnimationResetTimer) {
-          window.clearTimeout(this._entranceAnimationResetTimer);
+        } else if (!health.hasSources) {
+          bodyMarkup = this._renderEmptyState("empty");
+        } else if (health.loading) {
+          bodyMarkup = this._renderEmptyState("loading");
+        } else if (health.unavailable) {
+          bodyMarkup = this._renderEmptyState("error");
+        } else {
+          bodyMarkup = this._renderEmptyState("empty");
         }
-        this._entranceAnimationResetTimer = window.NodaliaUtils?.scheduleDeferTimer?.(
-          this,
-          () => {
-            this._entranceAnimationResetTimer = 0;
-          },
-          480
-        ) || 0;
+        try {
+          this._renderShell(bodyMarkup, styles, cardBackground, density, layout);
+        } catch (error) {
+          console.error("Nodalia News Card render failed:", error);
+          this._renderShell(this._renderEmptyState("error"), styles, cardBackground, density, layout);
+        }
+        if (this._animateContentOnNextRender) {
+          this._animateContentOnNextRender = false;
+          if (this._entranceAnimationResetTimer) {
+            window.clearTimeout(this._entranceAnimationResetTimer);
+          }
+          this._entranceAnimationResetTimer = window.NodaliaUtils?.scheduleDeferTimer?.(
+            this,
+            () => {
+              this._entranceAnimationResetTimer = 0;
+            },
+            480
+          ) || 0;
+        }
       }
-    }
-    _renderShell(bodyMarkup, styles, cardBackground, density = "normal", layout = DEFAULT_CONFIG.layout) {
-      if (!this.shadowRoot) {
-        return;
-      }
-      this.shadowRoot.innerHTML = `
+      _renderShell(bodyMarkup, styles, cardBackground, density = "normal", layout = DEFAULT_CONFIG.layout) {
+        if (!this.shadowRoot) {
+          return;
+        }
+        this.shadowRoot.innerHTML = `
       <style>
         :host {
           display: block;
@@ -1890,157 +1898,168 @@
       </style>
       ${bodyMarkup}
     `;
+      }
     }
-  };
+    _lazyNodaliaNewsCard = NodaliaNewsCard;
+    return NodaliaNewsCard;
+  }
 
   // src/cards/news/news-editor.ts
-  var NodaliaNewsCardEditor = class extends HTMLElement {
-    constructor() {
-      super();
-      this.attachShadow({ mode: "open" });
-      this._config = normalizeConfig(STUB_CONFIG);
-      this._hass = null;
-      this._entityOptionsSignature = "";
-      this._pendingEditorControlTags = /* @__PURE__ */ new Set();
-      this._onShadowInput = this._onShadowInput.bind(this);
-      this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
+  var _lazyNodaliaNewsCardEditor;
+  function loadNodaliaNewsCardEditor() {
+    if (_lazyNodaliaNewsCardEditor) {
+      return _lazyNodaliaNewsCardEditor;
     }
-    _attachEditorShadowListeners() {
-      window.NodaliaUtils.bindShadowListeners(this, [
-        ["input", this._onShadowInput],
-        ["change", this._onShadowInput],
-        ["value-changed", this._onShadowValueChanged]
-      ], "editor");
-    }
-    _detachEditorShadowListeners() {
-      window.NodaliaUtils.releaseShadowListeners(this, "editor");
-    }
-    connectedCallback() {
-      this._attachEditorShadowListeners();
-      window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
-    }
-    disconnectedCallback() {
-      this._detachEditorShadowListeners();
-      window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
-    }
-    setConfig(config) {
-      const focusState = this._captureFocusState();
-      this._config = normalizeConfig(config || {});
-      this._render();
-      this._restoreFocusState(focusState);
-    }
-    set hass(hass) {
-      const nextSignature = window.NodaliaUtils?.editorFilteredStatesSignature?.(
-        hass,
-        this._config?.language,
-        (id) => id.startsWith("sensor.")
-      ) || "";
-      const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
-      this._hass = hass;
-      this._entityOptionsSignature = nextSignature;
-      if (!shouldRender) {
-        return;
+    class NodaliaNewsCardEditor extends HTMLElement {
+      constructor() {
+        super();
+        this._nodaliaConstruct();
       }
-      const focusState = this._captureFocusState();
-      this._render();
-      this._restoreFocusState(focusState);
-    }
-    _watchEditorControlTag(tagName) {
-      if (!tagName || this._pendingEditorControlTags.has(tagName)) {
-        return;
+      _nodaliaConstruct() {
+        this.attachShadow({ mode: "open" });
+        this._config = normalizeConfig(STUB_CONFIG);
+        this._hass = null;
+        this._entityOptionsSignature = "";
+        this._pendingEditorControlTags = /* @__PURE__ */ new Set();
+        this._onShadowInput = this._onShadowInput.bind(this);
+        this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
       }
-      if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
-        return;
+      _attachEditorShadowListeners() {
+        window.NodaliaUtils.bindShadowListeners(this, [
+          ["input", this._onShadowInput],
+          ["change", this._onShadowInput],
+          ["value-changed", this._onShadowValueChanged]
+        ], "editor");
       }
-      this._pendingEditorControlTags.add(tagName);
-      customElements.whenDefined(tagName).then(() => {
-        this._pendingEditorControlTags.delete(tagName);
-        if (!this.isConnected || !this._hass || !this.shadowRoot) {
+      _detachEditorShadowListeners() {
+        window.NodaliaUtils.releaseShadowListeners(this, "editor");
+      }
+      connectedCallback() {
+        this._attachEditorShadowListeners();
+        window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
+      }
+      disconnectedCallback() {
+        this._detachEditorShadowListeners();
+        window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
+      }
+      setConfig(config) {
+        const focusState = this._captureFocusState();
+        this._config = normalizeConfig(config || {});
+        this._render();
+        this._restoreFocusState(focusState);
+      }
+      set hass(hass) {
+        const nextSignature = window.NodaliaUtils?.editorFilteredStatesSignature?.(
+          hass,
+          this._config?.language,
+          (id) => id.startsWith("sensor.")
+        ) || "";
+        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+        this._hass = hass;
+        this._entityOptionsSignature = nextSignature;
+        if (!shouldRender) {
           return;
         }
         const focusState = this._captureFocusState();
         this._render();
         this._restoreFocusState(focusState);
-      }).catch(() => {
-        this._pendingEditorControlTags.delete(tagName);
-      });
-    }
-    _ensureEditorControlsReady() {
-      this._watchEditorControlTag("ha-entity-picker");
-      this._watchEditorControlTag("ha-selector");
-    }
-    _captureFocusState() {
-      return window.NodaliaUtils.captureEditorFocusState(this);
-    }
-    _restoreFocusState(focusState) {
-      window.NodaliaUtils.restoreEditorFocusState(this, focusState);
-    }
-    _emitConfig() {
-      const focusState = this._captureFocusState();
-      const nextConfig = deepClone(this._config);
-      this._config = normalizeConfig(compactConfig(nextConfig));
-      this._render();
-      this._restoreFocusState(focusState);
-      fireEvent(this, "config-changed", {
-        config: compactConfig(window.NodaliaUtils?.stripEqualToDefaults?.(nextConfig, DEFAULT_CONFIG) ?? nextConfig)
-      });
-    }
-    _setFieldValue(path, value) {
-      if (value === void 0 || value === null || value === "") {
-        deleteByPath(this._config, path);
-        return;
       }
-      setByPath(this._config, path, value);
-    }
-    _readFieldValue(input) {
-      const valueType = input.dataset.valueType || "string";
-      if (valueType === "boolean") {
-        return Boolean(input.checked);
+      _watchEditorControlTag(tagName) {
+        if (!tagName || this._pendingEditorControlTags.has(tagName)) {
+          return;
+        }
+        if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
+          return;
+        }
+        this._pendingEditorControlTags.add(tagName);
+        customElements.whenDefined(tagName).then(() => {
+          this._pendingEditorControlTags.delete(tagName);
+          if (!this.isConnected || !this._hass || !this.shadowRoot) {
+            return;
+          }
+          const focusState = this._captureFocusState();
+          this._render();
+          this._restoreFocusState(focusState);
+        }).catch(() => {
+          this._pendingEditorControlTags.delete(tagName);
+        });
       }
-      if (valueType === "number") {
-        const numeric = Number(input.value);
-        return Number.isFinite(numeric) ? numeric : input.value;
+      _ensureEditorControlsReady() {
+        this._watchEditorControlTag("ha-entity-picker");
+        this._watchEditorControlTag("ha-selector");
       }
-      return input.value;
-    }
-    _onShadowInput(event) {
-      const input = event.composedPath().find((node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
-      if (!input?.dataset?.field) {
-        return;
+      _captureFocusState() {
+        return window.NodaliaUtils.captureEditorFocusState(this);
       }
-      event.stopPropagation();
-      this._setFieldValue(input.dataset.field, this._readFieldValue(input));
-      this._config = normalizeConfig(this._config);
-      if (event.type === "change") {
+      _restoreFocusState(focusState) {
+        window.NodaliaUtils.restoreEditorFocusState(this, focusState);
+      }
+      _emitConfig() {
+        const focusState = this._captureFocusState();
+        const nextConfig = deepClone(this._config);
+        this._config = normalizeConfig(compactConfig(nextConfig));
+        this._render();
+        this._restoreFocusState(focusState);
+        fireEvent(this, "config-changed", {
+          config: compactConfig(window.NodaliaUtils?.stripEqualToDefaults?.(nextConfig, DEFAULT_CONFIG) ?? nextConfig)
+        });
+      }
+      _setFieldValue(path, value) {
+        if (value === void 0 || value === null || value === "") {
+          deleteByPath(this._config, path);
+          return;
+        }
+        setByPath(this._config, path, value);
+      }
+      _readFieldValue(input) {
+        const valueType = input.dataset.valueType || "string";
+        if (valueType === "boolean") {
+          return Boolean(input.checked);
+        }
+        if (valueType === "number") {
+          const numeric = Number(input.value);
+          return Number.isFinite(numeric) ? numeric : input.value;
+        }
+        return input.value;
+      }
+      _onShadowInput(event) {
+        const input = event.composedPath().find((node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+        if (!input?.dataset?.field) {
+          return;
+        }
+        event.stopPropagation();
+        this._setFieldValue(input.dataset.field, this._readFieldValue(input));
+        this._config = normalizeConfig(this._config);
+        if (event.type === "change") {
+          this._emitConfig();
+        }
+      }
+      _onShadowValueChanged(event) {
+        const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+        if (!control?.dataset?.field) {
+          return;
+        }
+        event.stopPropagation();
+        const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+        if (typeof control.dataset?.value === "string") {
+          control.dataset.value = String(nextValue || "");
+        }
+        this._setFieldValue(control.dataset.field, nextValue);
+        this._config = normalizeConfig(this._config);
         this._emitConfig();
       }
-    }
-    _onShadowValueChanged(event) {
-      const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
-      if (!control?.dataset?.field) {
-        return;
+      _editorLabel(key) {
+        if (typeof key !== "string" || !window.NodaliaI18n?.editorStr) {
+          return key;
+        }
+        return window.NodaliaI18n.editorStr(this._hass, this._config?.language ?? "auto", key);
       }
-      event.stopPropagation();
-      const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
-      if (typeof control.dataset?.value === "string") {
-        control.dataset.value = String(nextValue || "");
-      }
-      this._setFieldValue(control.dataset.field, nextValue);
-      this._config = normalizeConfig(this._config);
-      this._emitConfig();
-    }
-    _editorLabel(key) {
-      if (typeof key !== "string" || !window.NodaliaI18n?.editorStr) {
-        return key;
-      }
-      return window.NodaliaI18n.editorStr(this._hass, this._config?.language ?? "auto", key);
-    }
-    _renderTextField(label, field, value, options = {}) {
-      const tLabel = this._editorLabel(label);
-      const inputType = options.type || "text";
-      const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
-      const valueType = options.valueType || "string";
-      return `
+      _renderTextField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const inputType = options.type || "text";
+        const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+        const valueType = options.valueType || "string";
+        return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <input
@@ -2052,21 +2071,21 @@
         />
       </label>
     `;
-    }
-    _renderCheckboxField(label, field, checked) {
-      const tLabel = this._editorLabel(label);
-      return `
+      }
+      _renderCheckboxField(label, field, checked) {
+        const tLabel = this._editorLabel(label);
+        return `
       <label class="editor-toggle">
         <input type="checkbox" data-field="${escapeHtml(field)}" data-value-type="boolean" ${checked ? "checked" : ""} />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
         <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
-    }
-    _renderSelectField(label, field, value, options, renderOptions = {}) {
-      const tLabel = this._editorLabel(label);
-      const strValue = String(value ?? "");
-      return `
+      }
+      _renderSelectField(label, field, value, options, renderOptions = {}) {
+        const tLabel = this._editorLabel(label);
+        const strValue = String(value ?? "");
+        return `
       <label class="editor-field ${renderOptions.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
@@ -2078,11 +2097,11 @@
         </select>
       </label>
     `;
-    }
-    _renderEntityPickerField(label, field, value) {
-      const tLabel = this._editorLabel(label);
-      const inputValue = value === void 0 || value === null ? "" : String(value);
-      return `
+      }
+      _renderEntityPickerField(label, field, value) {
+        const tLabel = this._editorLabel(label);
+        const inputValue = value === void 0 || value === null ? "" : String(value);
+        return `
       <div class="editor-field editor-field--full">
         <span>${escapeHtml(tLabel)}</span>
         <div
@@ -2093,25 +2112,25 @@
         ></div>
       </div>
     `;
-    }
-    _mountEntityPicker(host) {
-      window.NodaliaUtils?.mountEntityPickerHost?.(host, {
-        hass: this._hass,
-        field: host.dataset.field || "entity",
-        value: host.dataset.value || "",
-        onShadowInput: this._onShadowInput,
-        onShadowValueChanged: this._onShadowValueChanged,
-        copyDatasetFromHost: true
-      });
-    }
-    _render() {
-      if (!this.shadowRoot) {
-        return;
       }
-      const config = this._config || DEFAULT_CONFIG;
-      const layout = config.layout || DEFAULT_CONFIG.layout;
-      const appearance = config.appearance || DEFAULT_CONFIG.appearance;
-      this.shadowRoot.innerHTML = `
+      _mountEntityPicker(host) {
+        window.NodaliaUtils?.mountEntityPickerHost?.(host, {
+          hass: this._hass,
+          field: host.dataset.field || "entity",
+          value: host.dataset.value || "",
+          onShadowInput: this._onShadowInput,
+          onShadowValueChanged: this._onShadowValueChanged,
+          copyDatasetFromHost: true
+        });
+      }
+      _render() {
+        if (!this.shadowRoot) {
+          return;
+        }
+        const config = this._config || DEFAULT_CONFIG;
+        const layout = config.layout || DEFAULT_CONFIG.layout;
+        const appearance = config.appearance || DEFAULT_CONFIG.appearance;
+        this.shadowRoot.innerHTML = `
       <style>
         :host { display: block; }
         * { box-sizing: border-box; }
@@ -2221,9 +2240,9 @@
             ${this._renderTextField("ed.news.max_items", "max_items", config.max_items, { type: "number", valueType: "number" })}
             ${this._renderCheckboxField("ed.news.remember_items", "remember_items", config.remember_items !== false)}
             ${this._renderTextField("ed.news.history_helper", "history_helper", config.history_helper || "", {
-        fullWidth: true,
-        placeholder: "input_text.nodalia_news_history"
-      })}
+          fullWidth: true,
+          placeholder: "input_text.nodalia_news_history"
+        })}
             ${this._renderCheckboxField("ed.news.mirror_history_local", "mirror_history_local", config.mirror_history_local !== false)}
           </div>
         </section>
@@ -2234,15 +2253,15 @@
           </div>
           <div class="editor-grid">
             ${this._renderSelectField("ed.news.layout_mode", "layout.mode", layout.mode, [
-        { value: "magazine", label: "ed.news.layout_mode_magazine" },
-        { value: "compact", label: "ed.news.layout_mode_compact" },
-        { value: "list", label: "ed.news.layout_mode_list" }
-      ])}
+          { value: "magazine", label: "ed.news.layout_mode_magazine" },
+          { value: "compact", label: "ed.news.layout_mode_compact" },
+          { value: "list", label: "ed.news.layout_mode_list" }
+        ])}
             ${this._renderSelectField("ed.news.density", "layout.density", layout.density || "normal", [
-        { value: "compact", label: "ed.news.density_compact" },
-        { value: "normal", label: "ed.news.density_normal" },
-        { value: "relaxed", label: "ed.news.density_relaxed" }
-      ])}
+          { value: "compact", label: "ed.news.density_compact" },
+          { value: "normal", label: "ed.news.density_normal" },
+          { value: "relaxed", label: "ed.news.density_relaxed" }
+        ])}
             ${this._renderCheckboxField("ed.news.show_images", "layout.show_images", layout.show_images !== false)}
             ${this._renderCheckboxField("ed.news.show_summary", "layout.show_summary", layout.show_summary !== false)}
             ${this._renderCheckboxField("ed.news.show_source", "layout.show_source", layout.show_source !== false)}
@@ -2257,28 +2276,27 @@
           </div>
           <div class="editor-grid">
             ${this._renderSelectField("ed.news.appearance_preset", "appearance.preset", appearance.preset || "glass", [
-        { value: "glass", label: "ed.news.appearance_glass" },
-        { value: "default", label: "ed.news.appearance_default" }
-      ], { fullWidth: true })}
+          { value: "glass", label: "ed.news.appearance_glass" },
+          { value: "default", label: "ed.news.appearance_default" }
+        ], { fullWidth: true })}
           </div>
         </section>
       </div>
     `;
-      this.shadowRoot.querySelectorAll('[data-mounted-control="entity"]').forEach((host) => {
-        this._mountEntityPicker(host);
-      });
-      this._ensureEditorControlsReady();
-      window.NodaliaUtils?.clampEditorDialogScroll?.(this);
+        this.shadowRoot.querySelectorAll('[data-mounted-control="entity"]').forEach((host) => {
+          this._mountEntityPicker(host);
+        });
+        this._ensureEditorControlsReady();
+        window.NodaliaUtils?.clampEditorDialogScroll?.(this);
+      }
     }
-  };
+    _lazyNodaliaNewsCardEditor = NodaliaNewsCardEditor;
+    return NodaliaNewsCardEditor;
+  }
 
   // src/cards/news/index.ts
-  if (!customElements.get(CARD_TAG)) {
-    customElements.define(CARD_TAG, NodaliaNewsCard);
-  }
-  if (!customElements.get(EDITOR_TAG)) {
-    customElements.define(EDITOR_TAG, NodaliaNewsCardEditor);
-  }
+  window.NodaliaUtils.defineLazyCustomElement(CARD_TAG, loadNodaliaNewsCard, { editorTag: EDITOR_TAG });
+  window.NodaliaUtils.defineLazyCustomElement(EDITOR_TAG, loadNodaliaNewsCardEditor);
   window.NodaliaUtils?.registerCustomCard?.({
     type: CARD_TAG,
     name: "Nodalia News Card",

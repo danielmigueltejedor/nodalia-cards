@@ -66,7 +66,12 @@ import {
   worseAirQualityLevel,
 } from "./entity-helpers";
 
-export class NodaliaEntityCard extends HTMLElement {
+let _lazyNodaliaEntityCard;
+export function loadNodaliaEntityCard() {
+  if (_lazyNodaliaEntityCard) {
+    return _lazyNodaliaEntityCard;
+  }
+class NodaliaEntityCard extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
@@ -91,7 +96,10 @@ export class NodaliaEntityCard extends HTMLElement {
 
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    this._nodaliaConstruct();
+  }
+
+  _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = null;
     this._hass = null;
     this._optimisticToggle = null;
@@ -180,7 +188,7 @@ export class NodaliaEntityCard extends HTMLElement {
             },
           })
         : () => {};
-  }
+    }
 
   connectedCallback() {
     this._detachHostHold?.reconnect?.();
@@ -4256,4 +4264,7 @@ export class NodaliaEntityCard extends HTMLElement {
       }
     }
   }
+}
+  _lazyNodaliaEntityCard = NodaliaEntityCard;
+  return NodaliaEntityCard;
 }

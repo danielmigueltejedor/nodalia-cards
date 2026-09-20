@@ -20,17 +20,12 @@ import {
   resolveMetricGuidelineBands,
   worseAirQualityLevel,
 } from "./entity-helpers";
-import { NodaliaEntityCard } from "./entity-card";
-import { NodaliaEntityCardEditor } from "./entity-editor";
+import { loadNodaliaEntityCard } from "./entity-card";
+import { loadNodaliaEntityCardEditor } from "./entity-editor";
 import type { EntityAirQualityPublicApi, EntityPublicApi } from "./entity-types";
 
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaEntityCard);
-}
-
-if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaEntityCardEditor);
-}
+window.NodaliaUtils.defineLazyCustomElement(CARD_TAG, loadNodaliaEntityCard, { editorTag: EDITOR_TAG });
+window.NodaliaUtils.defineLazyCustomElement(EDITOR_TAG, loadNodaliaEntityCardEditor);
 
 window.NodaliaUtils.registerCustomCard({
   type: CARD_TAG,

@@ -9,17 +9,12 @@ import {
 import { interpolatePlaybackProgress, supportsMediaSeek } from "./media-player-progress";
 import { resolvePresentationMode } from "./media-player-layout";
 import { formatEditorJsonValue, parseEditorJsonObject } from "./media-player-helpers";
-import { NodaliaMediaPlayer } from "./media-player-card";
-import { NodaliaMediaPlayerEditor } from "./media-player-editor";
+import { loadNodaliaMediaPlayer } from "./media-player-card";
+import { loadNodaliaMediaPlayerEditor } from "./media-player-editor";
 import type { MediaPlayerPublicApi } from "./media-player-types";
 
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaMediaPlayer);
-}
-
-if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaMediaPlayerEditor);
-}
+window.NodaliaUtils.defineLazyCustomElement(CARD_TAG, loadNodaliaMediaPlayer, { editorTag: EDITOR_TAG });
+window.NodaliaUtils.defineLazyCustomElement(EDITOR_TAG, loadNodaliaMediaPlayerEditor);
 
 window.NodaliaUtils.registerCustomCard({
   type: CARD_TAG,

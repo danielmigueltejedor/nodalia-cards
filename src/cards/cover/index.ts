@@ -1,16 +1,11 @@
 import { CARD_TAG, CARD_VERSION, EDITOR_TAG } from "./cover-constants";
 import { DEFAULT_CONFIG, normalizeConfig } from "./cover-config";
-import { NodaliaCoverCard } from "./cover-card";
-import { NodaliaCoverCardEditor } from "./cover-editor";
+import { loadNodaliaCoverCard } from "./cover-card";
+import { loadNodaliaCoverCardEditor } from "./cover-editor";
 import type { CoverPublicApi } from "./cover-types";
 
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaCoverCard);
-}
-
-if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaCoverCardEditor);
-}
+window.NodaliaUtils.defineLazyCustomElement(CARD_TAG, loadNodaliaCoverCard, { editorTag: EDITOR_TAG });
+window.NodaliaUtils.defineLazyCustomElement(EDITOR_TAG, loadNodaliaCoverCardEditor);
 
 (function registerNodaliaCoverCardPicker() {
   const hass = window.NodaliaI18n?.resolveHass?.(null);

@@ -1,16 +1,11 @@
 import { CARD_TAG, CARD_VERSION, EDITOR_TAG } from "./light-constants";
 import { DEFAULT_CONFIG, normalizeConfig } from "./light-config";
-import { NodaliaLightCard } from "./light-card";
-import { NodaliaLightCardEditor } from "./light-editor";
+import { loadNodaliaLightCard } from "./light-card";
+import { loadNodaliaLightCardEditor } from "./light-editor";
 import type { LightPublicApi } from "./light-types";
 
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaLightCard);
-}
-
-if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaLightCardEditor);
-}
+window.NodaliaUtils.defineLazyCustomElement(CARD_TAG, loadNodaliaLightCard, { editorTag: EDITOR_TAG });
+window.NodaliaUtils.defineLazyCustomElement(EDITOR_TAG, loadNodaliaLightCardEditor);
 
 window.NodaliaUtils.registerCustomCard({
   type: CARD_TAG,

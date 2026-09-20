@@ -39,7 +39,12 @@ import {
   rgbToHs,
 } from "./light-helpers";
 
-export class NodaliaLightCard extends HTMLElement {
+let _lazyNodaliaLightCard;
+export function loadNodaliaLightCard() {
+  if (_lazyNodaliaLightCard) {
+    return _lazyNodaliaLightCard;
+  }
+class NodaliaLightCard extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
@@ -65,7 +70,10 @@ export class NodaliaLightCard extends HTMLElement {
 
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    this._nodaliaConstruct();
+  }
+
+  _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = null;
     this._hass = null;
     this._draftBrightness = new Map();
@@ -183,7 +191,7 @@ export class NodaliaLightCard extends HTMLElement {
             },
           })
         : () => {};
-  }
+    }
 
   connectedCallback() {
     this._detachHostHold?.reconnect?.();
@@ -3979,4 +3987,7 @@ export class NodaliaLightCard extends HTMLElement {
       this._scheduleEntranceAnimationReset(contentEntranceDuration + 120);
     }
   }
+}
+  _lazyNodaliaLightCard = NodaliaLightCard;
+  return NodaliaLightCard;
 }

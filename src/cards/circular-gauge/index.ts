@@ -1,16 +1,11 @@
 import { CARD_TAG, CARD_VERSION, EDITOR_TAG } from "./circular-gauge-constants";
 import { DEFAULT_CONFIG, normalizeConfig } from "./circular-gauge-config";
-import { NodaliaCircularGaugeCard } from "./circular-gauge-card";
-import { NodaliaCircularGaugeCardEditor } from "./circular-gauge-editor";
+import { loadNodaliaCircularGaugeCard } from "./circular-gauge-card";
+import { loadNodaliaCircularGaugeCardEditor } from "./circular-gauge-editor";
 import type { CircularGaugePublicApi } from "./circular-gauge-types";
 
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaCircularGaugeCard);
-}
-
-if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaCircularGaugeCardEditor);
-}
+window.NodaliaUtils.defineLazyCustomElement(CARD_TAG, loadNodaliaCircularGaugeCard, { editorTag: EDITOR_TAG });
+window.NodaliaUtils.defineLazyCustomElement(EDITOR_TAG, loadNodaliaCircularGaugeCardEditor);
 
 window.NodaliaUtils.registerCustomCard({
   type: CARD_TAG,

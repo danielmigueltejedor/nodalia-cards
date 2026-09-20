@@ -17,10 +17,18 @@ import {
   getEditorColorModel,
 } from "./light-helpers";
 
-export class NodaliaLightCardEditor extends HTMLElement {
+let _lazyNodaliaLightCardEditor;
+export function loadNodaliaLightCardEditor() {
+  if (_lazyNodaliaLightCardEditor) {
+    return _lazyNodaliaLightCardEditor;
+  }
+class NodaliaLightCardEditor extends HTMLElement {
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    this._nodaliaConstruct();
+  }
+
+  _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._entityOptionsSignature = "";
@@ -31,7 +39,7 @@ export class NodaliaLightCardEditor extends HTMLElement {
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
-  }
+    }
 
   _attachEditorShadowListeners() {
     window.NodaliaUtils.bindShadowListeners(this, [
@@ -1318,4 +1326,7 @@ export class NodaliaLightCardEditor extends HTMLElement {
     this._ensureEditorControlsReady();
     window.NodaliaUtils?.clampEditorDialogScroll?.(this);
   }
+}
+  _lazyNodaliaLightCardEditor = NodaliaLightCardEditor;
+  return NodaliaLightCardEditor;
 }

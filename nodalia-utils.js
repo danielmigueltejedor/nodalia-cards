@@ -29,6 +29,7 @@
     "postHomeAssistantWebhook",
     "warnStrictServiceDenied",
     "registerCustomCard",
+    "defineLazyCustomElement",
     "findStubEntityIds",
     "createEntitySuggestion",
     "renderEditorChipBorderRadiusHtml",
@@ -760,6 +761,65 @@
       }
     }
     cards.push(entry);
+  }
+
+  /**
+   * Register a tiny host now and compile the real HTMLElement class on first use.
+   * Unused card types stay nested functions so old phones skip their parse/compile cost.
+   */
+  function defineLazyCustomElement(tag, loadClass, options = {}) {
+    if (typeof customElements === "undefined" || !tag || typeof loadClass !== "function") {
+      return;
+    }
+    if (customElements.get(tag)) {
+      return;
+    }
+
+    let realClass = null;
+    const getReal = () => {
+      if (!realClass) {
+        realClass = loadClass();
+      }
+      return realClass;
+    };
+
+    class NodaliaLazyHost extends HTMLElement {
+      constructor() {
+        super();
+        const Real = getReal();
+        Object.setPrototypeOf(this, Real.prototype);
+        if (typeof this._nodaliaConstruct === "function") {
+          this._nodaliaConstruct();
+        }
+      }
+    }
+
+    const editorTag = String(options.editorTag || "").trim();
+    Object.defineProperty(NodaliaLazyHost, "getConfigElement", {
+      configurable: true,
+      value: async function getConfigElement() {
+        if (editorTag) {
+          return document.createElement(editorTag);
+        }
+        const Real = getReal();
+        if (typeof Real.getConfigElement === "function") {
+          return Real.getConfigElement();
+        }
+        return undefined;
+      },
+    });
+    for (const name of ["getStubConfig", "getEntitySuggestion"]) {
+      Object.defineProperty(NodaliaLazyHost, name, {
+        configurable: true,
+        value: function lazyStaticForward(...args) {
+          const Real = getReal();
+          const fn = Real[name];
+          return typeof fn === "function" ? fn.apply(Real, args) : undefined;
+        },
+      });
+    }
+
+    customElements.define(tag, NodaliaLazyHost);
   }
 
   /**
@@ -2503,6 +2563,7 @@
     scheduleDeferTimer,
     clearDeferTimers,
     normalizeSecurityConfig,
+    defineLazyCustomElement,
   };
 
   if (typeof window !== "undefined") {

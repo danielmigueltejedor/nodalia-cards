@@ -55,8 +55,8 @@ function loadRuntime(lang) {
 const parts = [];
 for (const lang of RUNTIME_LANGS) {
   const data = loadRuntime(lang);
-  const body = embedPackBody(data, 6);
-  parts.push(`    ${lang}: {\n${body}\n    }`);
+  const body = embedPackBody(data, 8);
+  parts.push(`    ${lang}: function () {\n      return {\n${body}\n      };\n    }`);
 }
 const packLiteral = `  const PACK = {\n${parts.join(",\n")}\n  };`;
 

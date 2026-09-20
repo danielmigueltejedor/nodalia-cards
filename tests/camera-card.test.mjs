@@ -106,7 +106,7 @@ test("camera card registers custom element and bundle entry", () => {
   const pkg = JSON.parse(read("package.json"));
 
   assert.match(source, /(?:const|let|var) CARD_TAG = "nodalia-camera-card"/);
-  assert.match(source, /customElements\.define\(CARD_TAG, NodaliaCameraCard\)/);
+  assert.match(source, /defineLazyCustomElement\(CARD_TAG, loadNodaliaCameraCard/);
   assert.match(source, /registerCustomCard/);
   assert.match(build, /nodalia-camera-card\.js/);
   assert.ok(pkg.files.includes("nodalia-camera-card.js"));
@@ -172,6 +172,53 @@ test("camera card loads and accepts setConfig without a preloaded stream model",
     },
   };
   assert.match(String(card.shadowRoot?.innerHTML || ""), /camera-card/);
+});
+
+test("camera editor setConfig syncs tap actions without throwing", () => {
+  const registry = new Map();
+  class FakeHTMLElement {
+    constructor() {
+      this.isConnected = true;
+    }
+    attachShadow() {
+      this.shadowRoot = {
+        innerHTML: "",
+        addEventListener() {},
+        removeEventListener() {},
+        querySelector() { return null; },
+        querySelectorAll() { return []; },
+      };
+      return this.shadowRoot;
+    }
+    dispatchEvent() { return true; }
+  }
+  const sandbox = {
+    URL,
+    location: { protocol: "https:", href: "https://home-assistant.example/lovelace/cameras" },
+    window: null,
+    globalThis: null,
+    customElements: {
+      define(name, ctor) { registry.set(name, ctor); },
+      get(name) { return registry.get(name) || null; },
+    },
+    HTMLElement: FakeHTMLElement,
+    requestAnimationFrame: () => 0,
+    cancelAnimationFrame() {},
+    setTimeout: (fn, ms) => globalThis.setTimeout(fn, ms),
+    clearTimeout: id => globalThis.clearTimeout(id),
+    btoa: value => Buffer.from(value, "binary").toString("base64"),
+    atob: value => Buffer.from(value, "base64").toString("binary"),
+  };
+  sandbox.window = sandbox;
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(read("nodalia-utils.js"), sandbox);
+  vm.runInContext(read("nodalia-camera-card.js"), sandbox);
+  const Editor = registry.get("nodalia-camera-card-editor");
+  assert.equal(typeof Editor, "function");
+  const editor = new Editor();
+  assert.doesNotThrow(() => editor.setConfig({ entity: "camera.entrada" }));
+  assert.equal(editor._config.entity, "camera.entrada");
 });
 
 test("camera normalizeConfig forces mosaic feed and accepts tap action objects", () => {

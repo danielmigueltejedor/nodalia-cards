@@ -1,16 +1,11 @@
 import { CARD_TAG, CARD_VERSION, EDITOR_TAG } from "./alarm-panel-constants";
 import { DEFAULT_CONFIG, normalizeConfig } from "./alarm-panel-config";
-import { NodaliaAlarmPanelCard } from "./alarm-panel-card";
-import { NodaliaAlarmPanelCardEditor } from "./alarm-panel-editor";
+import { loadNodaliaAlarmPanelCard } from "./alarm-panel-card";
+import { loadNodaliaAlarmPanelCardEditor } from "./alarm-panel-editor";
 import type { AlarmPanelPublicApi } from "./alarm-panel-types";
 
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaAlarmPanelCard);
-}
-
-if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaAlarmPanelCardEditor);
-}
+window.NodaliaUtils.defineLazyCustomElement(CARD_TAG, loadNodaliaAlarmPanelCard, { editorTag: EDITOR_TAG });
+window.NodaliaUtils.defineLazyCustomElement(EDITOR_TAG, loadNodaliaAlarmPanelCardEditor);
 
 window.NodaliaUtils.registerCustomCard({
   type: CARD_TAG,

@@ -142,10 +142,18 @@ export function renderClimateEditorScheduleSectionHtml(editor, config) {
   `;
 }
 
-export class NodaliaClimateCardEditorLegacy extends HTMLElement {
+let _lazyNodaliaClimateCardEditorLegacy;
+export function loadNodaliaClimateCardEditorLegacy() {
+  if (_lazyNodaliaClimateCardEditorLegacy) {
+    return _lazyNodaliaClimateCardEditorLegacy;
+  }
+class NodaliaClimateCardEditorLegacy extends HTMLElement {
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    this._nodaliaConstruct();
+  }
+
+  _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._entityOptionsSignature = "";
@@ -155,7 +163,7 @@ export class NodaliaClimateCardEditorLegacy extends HTMLElement {
     this._engineStatusInFlight = false;
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
-  }
+    }
 
   _attachEditorShadowListeners() {
     if (this._editorShadowListenersAttached || !this.shadowRoot) {
@@ -890,11 +898,22 @@ export class NodaliaClimateCardEditorLegacy extends HTMLElement {
       .forEach(input => input.setAttribute("list", "climate-card-entities"));
   }
 }
+  _lazyNodaliaClimateCardEditorLegacy = NodaliaClimateCardEditorLegacy;
+  return NodaliaClimateCardEditorLegacy;
+}
 
-export class NodaliaClimateCardEditor extends HTMLElement {
+let _lazyNodaliaClimateCardEditor;
+export function loadNodaliaClimateCardEditor() {
+  if (_lazyNodaliaClimateCardEditor) {
+    return _lazyNodaliaClimateCardEditor;
+  }
+class NodaliaClimateCardEditor extends HTMLElement {
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    this._nodaliaConstruct();
+  }
+
+  _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._entityOptionsSignature = "";
@@ -908,7 +927,7 @@ export class NodaliaClimateCardEditor extends HTMLElement {
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
-  }
+    }
 
   _attachEditorShadowListeners() {
     window.NodaliaUtils.bindShadowListeners(this, [
@@ -2034,4 +2053,7 @@ export class NodaliaClimateCardEditor extends HTMLElement {
     this._ensureEditorControlsReady();
     window.NodaliaUtils?.clampEditorDialogScroll?.(this);
   }
+}
+  _lazyNodaliaClimateCardEditor = NodaliaClimateCardEditor;
+  return NodaliaClimateCardEditor;
 }

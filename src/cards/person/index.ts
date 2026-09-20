@@ -1,16 +1,11 @@
 import { CARD_TAG, CARD_VERSION, EDITOR_TAG } from "./person-constants";
 import { DEFAULT_CONFIG, normalizeConfig } from "./person-config";
-import { NodaliaPersonCard } from "./person-card";
-import { NodaliaPersonCardEditor } from "./person-editor";
+import { loadNodaliaPersonCard } from "./person-card";
+import { loadNodaliaPersonCardEditor } from "./person-editor";
 import type { PersonPublicApi } from "./person-types";
 
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaPersonCard);
-}
-
-if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaPersonCardEditor);
-}
+window.NodaliaUtils.defineLazyCustomElement(CARD_TAG, loadNodaliaPersonCard, { editorTag: EDITOR_TAG });
+window.NodaliaUtils.defineLazyCustomElement(EDITOR_TAG, loadNodaliaPersonCardEditor);
 
 window.NodaliaUtils.registerCustomCard({
   type: CARD_TAG,

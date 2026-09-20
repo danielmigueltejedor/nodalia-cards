@@ -576,61 +576,145 @@ test("TypeScript climate, media player, light, fan and humidifier sources are ca
   graphFiles.forEach(file => {
     assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
   });
+  const calendarFiles = [
+    "src/cards/calendar/index.ts",
+    "src/cards/calendar/calendar-card.ts",
+    "src/cards/calendar/calendar-config.ts",
+    "src/cards/calendar/calendar-types.ts",
+    "src/cards/calendar/calendar-helpers.ts",
+    "src/cards/calendar/calendar-editor.ts",
+  ];
+  calendarFiles.forEach(file => {
+    assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
+  });
+  const powerFlowFiles = [
+    "src/cards/power-flow/index.ts",
+    "src/cards/power-flow/power-flow-card.ts",
+    "src/cards/power-flow/power-flow-config.ts",
+    "src/cards/power-flow/power-flow-types.ts",
+    "src/cards/power-flow/power-flow-helpers.ts",
+    "src/cards/power-flow/power-flow-editor.ts",
+  ];
+  powerFlowFiles.forEach(file => {
+    assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
+  });
+  const notificationsFiles = [
+    "src/cards/notifications/index.ts",
+    "src/cards/notifications/notifications-card.ts",
+    "src/cards/notifications/notifications-config.ts",
+    "src/cards/notifications/notifications-types.ts",
+    "src/cards/notifications/notifications-helpers.ts",
+    "src/cards/notifications/notifications-editor.ts",
+  ];
+  notificationsFiles.forEach(file => {
+    assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
+  });
+  const navigationFiles = [
+    "src/cards/navigation/index.ts",
+    "src/cards/navigation/navigation-card.ts",
+    "src/cards/navigation/navigation-config.ts",
+    "src/cards/navigation/navigation-types.ts",
+    "src/cards/navigation/navigation-helpers.ts",
+    "src/cards/navigation/navigation-editor.ts",
+  ];
+  navigationFiles.forEach(file => {
+    assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
+  });
+  const roomSummaryFiles = [
+    "src/cards/room-summary/index.ts",
+    "src/cards/room-summary/room-summary-card.ts",
+    "src/cards/room-summary/room-summary-config.ts",
+    "src/cards/room-summary/room-summary-types.ts",
+    "src/cards/room-summary/room-summary-helpers.ts",
+    "src/cards/room-summary/room-summary-editor.ts",
+  ];
+  roomSummaryFiles.forEach(file => {
+    assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
+  });
+  const advanceVacuumFiles = [
+    "src/cards/advance-vacuum/index.ts",
+    "src/cards/advance-vacuum/advance-vacuum-card.ts",
+    "src/cards/advance-vacuum/advance-vacuum-config.ts",
+    "src/cards/advance-vacuum/advance-vacuum-types.ts",
+    "src/cards/advance-vacuum/advance-vacuum-helpers.ts",
+    "src/cards/advance-vacuum/advance-vacuum-editor.ts",
+  ];
+  advanceVacuumFiles.forEach(file => {
+    assert.equal(fs.existsSync(path.join(root, file)), true, `${file} should exist`);
+  });
   const generatedClimate = read("nodalia-climate-card.js");
   assert.match(generatedClimate, /window\.__NODALIA_CLIMATE__/);
-  assert.match(generatedClimate, /customElements\.define\(CARD_TAG, NodaliaClimateCard\)/);
+  assert.match(generatedClimate, /defineLazyCustomElement\(CARD_TAG, loadNodaliaClimateCard/);
   const generatedMedia = read("nodalia-media-player.js");
   assert.match(generatedMedia, /window\.__NODALIA_MEDIA_PLAYER__/);
-  assert.match(generatedMedia, /customElements\.define\(CARD_TAG, NodaliaMediaPlayer\)/);
+  assert.match(generatedMedia, /defineLazyCustomElement\(CARD_TAG, loadNodaliaMediaPlayer/);
   const generatedLight = read("nodalia-light-card.js");
   assert.match(generatedLight, /window\.__NODALIA_LIGHT__/);
-  assert.match(generatedLight, /customElements\.define\(CARD_TAG, NodaliaLightCard\)/);
+  assert.match(generatedLight, /defineLazyCustomElement\(CARD_TAG, loadNodaliaLightCard/);
   const generatedFan = read("nodalia-fan-card.js");
   assert.match(generatedFan, /window\.__NODALIA_FAN__/);
-  assert.match(generatedFan, /customElements\.define\(CARD_TAG, NodaliaFanCard\)/);
+  assert.match(generatedFan, /defineLazyCustomElement\(CARD_TAG, loadNodaliaFanCard/);
   const generatedHumidifier = read("nodalia-humidifier-card.js");
   assert.match(generatedHumidifier, /window\.__NODALIA_HUMIDIFIER__/);
-  assert.match(generatedHumidifier, /customElements\.define\(CARD_TAG, NodaliaHumidifierCard\)/);
+  assert.match(generatedHumidifier, /defineLazyCustomElement\(CARD_TAG, loadNodaliaHumidifierCard/);
   const generatedCover = read("nodalia-cover-card.js");
   assert.match(generatedCover, /window\.__NODALIA_COVER__/);
-  assert.match(generatedCover, /customElements\.define\(CARD_TAG, NodaliaCoverCard\)/);
+  assert.match(generatedCover, /defineLazyCustomElement\(CARD_TAG, loadNodaliaCoverCard/);
   const generatedAlarm = read("nodalia-alarm-panel-card.js");
   assert.match(generatedAlarm, /window\.__NODALIA_ALARM_PANEL__/);
-  assert.match(generatedAlarm, /customElements\.define\(CARD_TAG, NodaliaAlarmPanelCard\)/);
+  assert.match(generatedAlarm, /defineLazyCustomElement\(CARD_TAG, loadNodaliaAlarmPanelCard/);
   const generatedVacuum = read("nodalia-vacuum-card.js");
   assert.match(generatedVacuum, /window\.__NODALIA_VACUUM__/);
-  assert.match(generatedVacuum, /customElements\.define\(CARD_TAG, NodaliaVacuumCard\)/);
+  assert.match(generatedVacuum, /defineLazyCustomElement\(CARD_TAG, loadNodaliaVacuumCard/);
   const generatedEntity = read("nodalia-entity-card.js");
   assert.match(generatedEntity, /window\.__NODALIA_ENTITY__/);
   assert.match(generatedEntity, /window\.__NODALIA_ENTITY_AIR_QUALITY__/);
-  assert.match(generatedEntity, /customElements\.define\(CARD_TAG, NodaliaEntityCard\)/);
+  assert.match(generatedEntity, /defineLazyCustomElement\(CARD_TAG, loadNodaliaEntityCard/);
   const generatedFav = read("nodalia-fav-card.js");
   assert.match(generatedFav, /window\.__NODALIA_FAV__/);
-  assert.match(generatedFav, /customElements\.define\(CARD_TAG, NodaliaFavCard\)/);
+  assert.match(generatedFav, /defineLazyCustomElement\(CARD_TAG, loadNodaliaFavCard/);
   const generatedPerson = read("nodalia-person-card.js");
   assert.match(generatedPerson, /window\.__NODALIA_PERSON__/);
-  assert.match(generatedPerson, /customElements\.define\(CARD_TAG, NodaliaPersonCard\)/);
+  assert.match(generatedPerson, /defineLazyCustomElement\(CARD_TAG, loadNodaliaPersonCard/);
   const generatedCamera = read("nodalia-camera-card.js");
   assert.match(generatedCamera, /window\.__NODALIA_CAMERA__/);
-  assert.match(generatedCamera, /customElements\.define\(CARD_TAG, NodaliaCameraCard\)/);
+  assert.match(generatedCamera, /defineLazyCustomElement\(CARD_TAG, loadNodaliaCameraCard/);
   const generatedGauge = read("nodalia-circular-gauge-card.js");
   assert.match(generatedGauge, /window\.__NODALIA_CIRCULAR_GAUGE__/);
-  assert.match(generatedGauge, /customElements\.define\(CARD_TAG, NodaliaCircularGaugeCard\)/);
+  assert.match(generatedGauge, /defineLazyCustomElement\(CARD_TAG, loadNodaliaCircularGaugeCard/);
   const generatedInsignia = read("nodalia-insignia-card.js");
   assert.match(generatedInsignia, /window\.__NODALIA_INSIGNIA__/);
-  assert.match(generatedInsignia, /customElements\.define\(CARD_TAG, NodaliaInsigniaCard\)/);
+  assert.match(generatedInsignia, /defineLazyCustomElement\(CARD_TAG, loadNodaliaInsigniaCard/);
   const generatedScenes = read("nodalia-scenes-card.js");
   assert.match(generatedScenes, /window\.__NODALIA_SCENES__/);
-  assert.match(generatedScenes, /customElements\.define\(CARD_TAG, NodaliaScenesCard\)/);
+  assert.match(generatedScenes, /defineLazyCustomElement\(CARD_TAG, loadNodaliaScenesCard/);
   const generatedNews = read("nodalia-news-card.js");
   assert.match(generatedNews, /window\.__NODALIA_NEWS__/);
-  assert.match(generatedNews, /customElements\.define\(CARD_TAG, NodaliaNewsCard\)/);
+  assert.match(generatedNews, /defineLazyCustomElement\(CARD_TAG, loadNodaliaNewsCard/);
   const generatedWeather = read("nodalia-weather-card.js");
   assert.match(generatedWeather, /window\.__NODALIA_WEATHER__/);
-  assert.match(generatedWeather, /customElements\.define\(CARD_TAG, NodaliaWeatherCard\)/);
+  assert.match(generatedWeather, /defineLazyCustomElement\(CARD_TAG, loadNodaliaWeatherCard/);
   const generatedGraph = read("nodalia-graph-card.js");
   assert.match(generatedGraph, /window\.__NODALIA_GRAPH__/);
-  assert.match(generatedGraph, /customElements\.define\(CARD_TAG, NodaliaGraphCard\)/);
+  assert.match(generatedGraph, /defineLazyCustomElement\(CARD_TAG, loadNodaliaGraphCard/);
+  const generatedCalendar = read("nodalia-calendar-card.js");
+  assert.match(generatedCalendar, /window\.__NODALIA_CALENDAR__/);
+  assert.match(generatedCalendar, /defineLazyCustomElement\(CARD_TAG, loadNodaliaCalendarCard/);
+  const generatedPowerFlow = read("nodalia-power-flow-card.js");
+  assert.match(generatedPowerFlow, /window\.__NODALIA_POWER_FLOW__/);
+  assert.match(generatedPowerFlow, /defineLazyCustomElement\(CARD_TAG, loadNodaliaPowerFlowCard/);
+  const generatedNotifications = read("nodalia-notifications-card.js");
+  assert.match(generatedNotifications, /window\.__NODALIA_NOTIFICATIONS__/);
+  assert.match(generatedNotifications, /defineLazyCustomElement\(CARD_TAG, loadNodaliaNotificationsCard/);
+  const generatedNavigation = read("nodalia-navigation-bar.js");
+  assert.match(generatedNavigation, /window\.__NODALIA_NAVIGATION__/);
+  assert.match(generatedNavigation, /defineLazyCustomElement\(CARD_TAG, loadNodaliaNavigationBarCard/);
+  const generatedRoomSummary = read("nodalia-room-summary-card.js");
+  assert.match(generatedRoomSummary, /window\.__NODALIA_ROOM_SUMMARY__/);
+  assert.match(generatedRoomSummary, /defineLazyCustomElement\(CARD_TAG, loadNodaliaRoomSummaryCard/);
+  const generatedAdvanceVacuum = read("nodalia-advance-vacuum-card.js");
+  assert.match(generatedAdvanceVacuum, /window\.__NODALIA_ADVANCE_VACUUM__/);
+  assert.match(generatedAdvanceVacuum, /defineLazyCustomElement\(CARD_TAG, loadNodaliaAdvanceVacuumCard/);
   const standaloneBuild = read("scripts/build-src-cards.mjs");
   const hacsBuild = read("scripts/build-bundle.mjs");
   assert.match(standaloneBuild, /src\/cards\/climate\/standalone\.ts/);
@@ -651,6 +735,12 @@ test("TypeScript climate, media player, light, fan and humidifier sources are ca
   assert.match(standaloneBuild, /src\/cards\/news\/standalone\.ts/);
   assert.match(standaloneBuild, /src\/cards\/weather\/standalone\.ts/);
   assert.match(standaloneBuild, /src\/cards\/graph\/standalone\.ts/);
+  assert.match(standaloneBuild, /src\/cards\/calendar\/standalone\.ts/);
+  assert.match(standaloneBuild, /src\/cards\/power-flow\/standalone\.ts/);
+  assert.match(standaloneBuild, /src\/cards\/notifications\/standalone\.ts/);
+  assert.match(standaloneBuild, /src\/cards\/navigation\/standalone\.ts/);
+  assert.match(standaloneBuild, /src\/cards\/room-summary\/standalone\.ts/);
+  assert.match(standaloneBuild, /src\/cards\/advance-vacuum\/standalone\.ts/);
   assert.match(hacsBuild, /src\/cards\/climate\/index\.ts/);
   assert.match(hacsBuild, /src\/cards\/media-player\/index\.ts/);
   assert.match(hacsBuild, /src\/cards\/light\/index\.ts/);
@@ -669,4 +759,10 @@ test("TypeScript climate, media player, light, fan and humidifier sources are ca
   assert.match(hacsBuild, /src\/cards\/news\/index\.ts/);
   assert.match(hacsBuild, /src\/cards\/weather\/index\.ts/);
   assert.match(hacsBuild, /src\/cards\/graph\/index\.ts/);
+  assert.match(hacsBuild, /src\/cards\/calendar\/index\.ts/);
+  assert.match(hacsBuild, /src\/cards\/power-flow\/index\.ts/);
+  assert.match(hacsBuild, /src\/cards\/notifications\/index\.ts/);
+  assert.match(hacsBuild, /src\/cards\/navigation\/index\.ts/);
+  assert.match(hacsBuild, /src\/cards\/room-summary\/index\.ts/);
+  assert.match(hacsBuild, /src\/cards\/advance-vacuum\/index\.ts/);
 });

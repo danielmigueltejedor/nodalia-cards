@@ -35,7 +35,12 @@ import {
   resolveOpenCloseControlIcons,
 } from "./cover-helpers";
 
-export class NodaliaCoverCard extends HTMLElement {
+let _lazyNodaliaCoverCard;
+export function loadNodaliaCoverCard() {
+  if (_lazyNodaliaCoverCard) {
+    return _lazyNodaliaCoverCard;
+  }
+class NodaliaCoverCard extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
@@ -50,7 +55,10 @@ export class NodaliaCoverCard extends HTMLElement {
 
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    this._nodaliaConstruct();
+  }
+
+  _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._lastRenderSignature = "";
@@ -141,7 +149,7 @@ export class NodaliaCoverCard extends HTMLElement {
             },
           })
         : () => {};
-  }
+    }
 
   connectedCallback() {
     this._detachHostHold?.reconnect?.();
@@ -1929,4 +1937,7 @@ export class NodaliaCoverCard extends HTMLElement {
     `;
     this._lastRenderedIsActive = isActive;
   }
+}
+  _lazyNodaliaCoverCard = NodaliaCoverCard;
+  return NodaliaCoverCard;
 }

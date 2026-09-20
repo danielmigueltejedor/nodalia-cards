@@ -94,7 +94,12 @@ import {
   createSetpointScheduleSlotId,
 } from "./climate-schedule";
 
-export class NodaliaClimateCard extends HTMLElement {
+let _lazyNodaliaClimateCard;
+export function loadNodaliaClimateCard() {
+  if (_lazyNodaliaClimateCard) {
+    return _lazyNodaliaClimateCard;
+  }
+class NodaliaClimateCard extends HTMLElement {
   static async getConfigElement() {
     if (!customElements.get(EDITOR_TAG) && typeof customElements?.whenDefined === "function") {
       await customElements.whenDefined(EDITOR_TAG);
@@ -124,7 +129,10 @@ export class NodaliaClimateCard extends HTMLElement {
 
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    this._nodaliaConstruct();
+  }
+
+  _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._draftTemperature = new Map();
@@ -195,7 +203,7 @@ export class NodaliaClimateCard extends HTMLElement {
     if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
       this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
     }
-  }
+    }
 
   connectedCallback() {
     this._detachHostHold?.();
@@ -6478,4 +6486,7 @@ export class NodaliaClimateCard extends HTMLElement {
     this._syncRenderSignature();
     this._restoreScheduleAgendaScrollState(savedScheduleAgendaScrollTop);
   }
+}
+  _lazyNodaliaClimateCard = NodaliaClimateCard;
+  return NodaliaClimateCard;
 }

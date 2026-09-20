@@ -19,7 +19,12 @@ import {
   scheduleDashboardScrollRestore,
 } from "./scenes-helpers";
 
-export class NodaliaScenesCard extends HTMLElement {
+let _lazyNodaliaScenesCard;
+export function loadNodaliaScenesCard() {
+  if (_lazyNodaliaScenesCard) {
+    return _lazyNodaliaScenesCard;
+  }
+class NodaliaScenesCard extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
@@ -40,7 +45,10 @@ export class NodaliaScenesCard extends HTMLElement {
 
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    this._nodaliaConstruct();
+  }
+
+  _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._lastRenderSignature = "";
@@ -78,7 +86,7 @@ export class NodaliaScenesCard extends HTMLElement {
             },
           })
         : () => {};
-  }
+    }
 
   connectedCallback() {
     this._detachHostHold?.reconnect?.();
@@ -1057,4 +1065,7 @@ export class NodaliaScenesCard extends HTMLElement {
 
     this.style.setProperty("--scenes-accent", accentColor);
   }
+}
+  _lazyNodaliaScenesCard = NodaliaScenesCard;
+  return NodaliaScenesCard;
 }

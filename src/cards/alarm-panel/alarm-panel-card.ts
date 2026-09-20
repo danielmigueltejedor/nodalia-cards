@@ -32,7 +32,12 @@ import {
   parseSizeToPixels,
 } from "./alarm-panel-helpers";
 
-export class NodaliaAlarmPanelCard extends HTMLElement {
+let _lazyNodaliaAlarmPanelCard;
+export function loadNodaliaAlarmPanelCard() {
+  if (_lazyNodaliaAlarmPanelCard) {
+    return _lazyNodaliaAlarmPanelCard;
+  }
+class NodaliaAlarmPanelCard extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
@@ -47,7 +52,10 @@ export class NodaliaAlarmPanelCard extends HTMLElement {
 
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    this._nodaliaConstruct();
+  }
+
+  _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._animateContentOnNextRender = true;
@@ -68,7 +76,7 @@ export class NodaliaAlarmPanelCard extends HTMLElement {
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowFocusIn = this._onShadowFocusIn.bind(this);
     this._onShadowFocusOut = this._onShadowFocusOut.bind(this);
-  }
+    }
 
   _captureCodeFocusState() {
     const activeElement = this.shadowRoot?.activeElement;
@@ -1505,4 +1513,7 @@ export class NodaliaAlarmPanelCard extends HTMLElement {
       this._scheduleEntranceAnimationReset(animations.contentDuration + 120);
     }
   }
+}
+  _lazyNodaliaAlarmPanelCard = NodaliaAlarmPanelCard;
+  return NodaliaAlarmPanelCard;
 }

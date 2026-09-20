@@ -35,7 +35,12 @@ import {
   translatePresetLabel,
 } from "./fan-helpers";
 
-export class NodaliaFanCard extends HTMLElement {
+let _lazyNodaliaFanCard;
+export function loadNodaliaFanCard() {
+  if (_lazyNodaliaFanCard) {
+    return _lazyNodaliaFanCard;
+  }
+class NodaliaFanCard extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
@@ -61,7 +66,10 @@ export class NodaliaFanCard extends HTMLElement {
 
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    this._nodaliaConstruct();
+  }
+
+  _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = null;
     this._hass = null;
     this._optimisticToggle = null;
@@ -171,7 +179,7 @@ export class NodaliaFanCard extends HTMLElement {
             },
           })
         : () => {};
-  }
+    }
 
   connectedCallback() {
     this._detachHostHold?.reconnect?.();
@@ -3649,4 +3657,7 @@ export class NodaliaFanCard extends HTMLElement {
       this._animationCleanupTimer = 0;
     }
   }
+}
+  _lazyNodaliaFanCard = NodaliaFanCard;
+  return NodaliaFanCard;
 }

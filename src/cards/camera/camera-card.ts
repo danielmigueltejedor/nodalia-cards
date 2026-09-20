@@ -31,7 +31,12 @@ import {
   resolveGo2rtcPlayerSource,
 } from "./camera-helpers";
 
-export class NodaliaCameraCard extends HTMLElement {
+let _lazyNodaliaCameraCard;
+export function loadNodaliaCameraCard() {
+  if (_lazyNodaliaCameraCard) {
+    return _lazyNodaliaCameraCard;
+  }
+class NodaliaCameraCard extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
@@ -46,7 +51,10 @@ export class NodaliaCameraCard extends HTMLElement {
 
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    this._nodaliaConstruct();
+  }
+
+  _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._lastRenderSignature = "";
@@ -70,7 +78,7 @@ export class NodaliaCameraCard extends HTMLElement {
     this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
     this._onWindowKeyDown = this._onWindowKeyDown.bind(this);
     window.NodaliaUtils?.clearDeferTimers?.(this);
-  }
+    }
 
   connectedCallback() {
     this.shadowRoot?.addEventListener("click", this._onShadowClick);
@@ -1911,4 +1919,7 @@ export class NodaliaCameraCard extends HTMLElement {
     }
     this._schedulePreviewAgeRefresh();
   }
+}
+  _lazyNodaliaCameraCard = NodaliaCameraCard;
+  return NodaliaCameraCard;
 }

@@ -18,6 +18,16 @@ import type { ScenesPublicApi } from "../../cards/scenes/scenes-types";
 import type { NewsPublicApi } from "../../cards/news/news-types";
 import type { WeatherPublicApi } from "../../cards/weather/weather-types";
 import type { GraphPublicApi } from "../../cards/graph/graph-types";
+import type { CalendarPublicApi } from "../../cards/calendar/calendar-types";
+import type { PowerFlowPublicApi } from "../../cards/power-flow/power-flow-types";
+import type {
+  NotificationsMobilePublicApi,
+  NotificationsPublicApi,
+  NotificationsTemplatesPublicApi,
+} from "../../cards/notifications/notifications-types";
+import type { NavigationPublicApi } from "../../cards/navigation/navigation-types";
+import type { RoomSummaryPublicApi } from "../../cards/room-summary/room-summary-types";
+import type { AdvanceVacuumPublicApi } from "../../cards/advance-vacuum/advance-vacuum-types";
 
 interface NodaliaI18nApi {
   resolveHass?: (hass: unknown) => unknown;
@@ -33,6 +43,42 @@ interface NodaliaBubbleContrastApi {
 
 interface NodaliaRenderSignatureApi {
   joinParts?: (...parts: unknown[]) => string;
+}
+
+interface NodaliaNotificationsMobilePolicyApi {
+  BACKGROUND_MOBILE_MAX_CHUNKS: number;
+  MOBILE_COOLDOWN_STORAGE_KEY: string;
+  MOBILE_DELIVERY_STATES: ReadonlySet<string>;
+  normalizeMobilePolicy: (value?: unknown) => string;
+  resolveSmartEntityMobilePolicy: (...args: unknown[]) => unknown;
+  backgroundMobilePayloadOverLimit: (...args: unknown[]) => boolean;
+  normalizeSmartEntityMobile: (...args: unknown[]) => unknown;
+  normalizeSmartEntityOverrideMobile: (...args: unknown[]) => unknown;
+  isExplicitSmartEntityMobile: (...args: unknown[]) => boolean;
+  isWithinQuietHours: (...args: unknown[]) => boolean;
+  getNextQuietHoursBoundaryDelay: (...args: unknown[]) => number;
+  normalizeQuietHours: (...args: unknown[]) => unknown;
+  normalizeMobileContext: (...args: unknown[]) => unknown;
+  resolvePresenceOccupancy: (...args: unknown[]) => unknown;
+  passesPresenceContext: (...args: unknown[]) => boolean;
+  buildMobileAlertIdentity: (...args: unknown[]) => string;
+  buildMobileGroupIdentity: (...args: unknown[]) => string;
+  resolveMobileDeliveryState: (...args: unknown[]) => unknown;
+  legacyMobilePolicyLabel: (...args: unknown[]) => string;
+}
+
+interface NodaliaRoomSummaryModelApi {
+  normalizeEntityField: (...args: unknown[]) => unknown;
+  hubMediaPlayerIds: (...args: unknown[]) => unknown;
+  finiteNumber: (...args: unknown[]) => unknown;
+  isUnavailable: (...args: unknown[]) => boolean;
+  stateIsOn: (...args: unknown[]) => boolean;
+  stateIsOpen: (...args: unknown[]) => boolean;
+  stateIsUnlocked: (...args: unknown[]) => boolean;
+  formatMetric: (...args: unknown[]) => unknown;
+  getState: (...args: unknown[]) => unknown;
+  hasRoomContent: (...args: unknown[]) => boolean;
+  buildRoomSummary: (...args: unknown[]) => unknown;
 }
 
 interface NodaliaCameraStreamModelApi {
@@ -51,6 +97,8 @@ declare global {
     NodaliaBubbleContrast?: NodaliaBubbleContrastApi;
     NodaliaRenderSignature?: NodaliaRenderSignatureApi;
     NodaliaCameraStreamModel: NodaliaCameraStreamModelApi;
+    NodaliaNotificationsMobilePolicy: NodaliaNotificationsMobilePolicyApi;
+    NodaliaRoomSummaryModel: NodaliaRoomSummaryModelApi;
     __NODALIA_CLIMATE__?: ClimatePublicApi;
     __NODALIA_MEDIA_PLAYER__?: MediaPlayerPublicApi;
     __NODALIA_LIGHT__?: LightPublicApi;
@@ -70,6 +118,14 @@ declare global {
     __NODALIA_NEWS__?: NewsPublicApi;
     __NODALIA_WEATHER__?: WeatherPublicApi;
     __NODALIA_GRAPH__?: GraphPublicApi;
+    __NODALIA_CALENDAR__?: CalendarPublicApi;
+    __NODALIA_POWER_FLOW__?: PowerFlowPublicApi;
+    __NODALIA_NOTIFICATIONS__?: NotificationsPublicApi;
+    __NODALIA_NOTIFICATIONS_TEMPLATES__?: NotificationsTemplatesPublicApi;
+    __NODALIA_NOTIFICATIONS_MOBILE__?: NotificationsMobilePublicApi;
+    __NODALIA_NAVIGATION__?: NavigationPublicApi;
+    __NODALIA_ROOM_SUMMARY__?: RoomSummaryPublicApi;
+    __NODALIA_ADVANCE_VACUUM__?: AdvanceVacuumPublicApi;
     customCards?: Array<{ type?: string; [key: string]: unknown }>;
     customBadges?: Array<{
       type?: string;

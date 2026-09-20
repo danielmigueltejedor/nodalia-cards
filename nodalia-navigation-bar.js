@@ -1,2511 +1,2072 @@
-const CARD_TAG = "nodalia-navigation-bar";
-const EDITOR_TAG = "nodalia-navigation-bar-editor";
-const CARD_VERSION = "2.3.0-alpha.19b";
-const HAPTIC_PATTERNS = {
-  selection: 8,
-  light: 10,
-  medium: 16,
-  heavy: 24,
-  success: [10, 40, 10],
-  warning: [20, 50, 12],
-  failure: [12, 40, 12, 40, 18],
-};
-const MUSIC_ASSISTANT_BROWSER_EXCLUDE_PATTERNS = [
-  "ai generated",
-  "ai-generated",
-  "image",
-  "image upload",
-  "generated images",
-  "camera",
-  "cameras",
-  "dlna",
-  "dlna server",
-  "dlna servers",
-  "frigate",
-  "my media",
-  "text to speech",
-  "tts",
-  "xbox game media",
-  "xbox",
-  "imagenes generadas",
-  "images",
-  "imagenes",
-];
-const MUSIC_ASSISTANT_DIRECTORY_ICON_RULES = [
-  {
-    patterns: [
-      "artists",
-      "artistas",
-      "artistes",
-      "артисты",
-      "artiști",
-      "艺术家",
-      "καλλιτέχνες",
-    ],
-    icon: "mdi:account-music",
-  },
-  {
-    patterns: [
-      "albums",
-      "albumes",
-      "álbumes",
-      "álbums",
-      "albuns",
-      "альбомы",
-      "专辑",
-      "άλμπουμ",
-    ],
-    icon: "mdi:album",
-  },
-  {
-    patterns: [
-      "tracks",
-      "songs",
-      "canciones",
-      "temas",
-      "pistas",
-      "faixas",
-      "músicas",
-      "треки",
-      "曲目",
-      "κομμάτια",
-      "piese",
-    ],
-    icon: "mdi:music-note",
-  },
-  {
-    patterns: [
-      "playlists",
-      "listas",
-      "listas de reproduccion",
-      "listas de reproducción",
-      "listas de reprodução",
-      "плейлисты",
-      "播放列表",
-      "liste de redare",
-      "λίστες αναπαραγωγής",
-    ],
-    icon: "mdi:playlist-music",
-  },
-  {
-    patterns: [
-      "radio stations",
-      "radios",
-      "emisoras",
-      "stations",
-      "estações",
-      "радио",
-      "радиостанции",
-      "广播电台",
-      "stații radio",
-      "ραδιοφωνικοί",
-    ],
-    icon: "mdi:radio",
-  },
-  { patterns: ["podcasts", "подкасты", "播客", "podcasturi"], icon: "mdi:podcast" },
-  {
-    patterns: ["audiobooks", "audiolibros", "audiolivros", "аудиокниги", "有声书", "cărți audio", "ακουστικά βιβλία"],
-    icon: "mdi:book-music",
-  },
-  {
-    patterns: ["genres", "generos", "géneros", "жанры", "流派", "genuri", "είδη"],
-    icon: "mdi:shape",
-  },
-  {
-    patterns: [
-      "favorites",
-      "favourites",
-      "favoritos",
-      "избранное",
-      "收藏",
-      "favorite",
-      "αγαπημένα",
-    ],
-    icon: "mdi:heart",
-  },
-  {
-    patterns: [
-      "recent",
-      "recently",
-      "recientes",
-      "recentemente",
-      "недавно",
-      "最近",
-      "πρόσφατα",
-      "redări recente",
-    ],
-    icon: "mdi:history",
-  },
-  {
-    patterns: [
-      "search",
-      "buscar",
-      "busqueda",
-      "búsqueda",
-      "pesquisar",
-      "поиск",
-      "搜索",
-      "căutare",
-      "αναζήτηση",
-    ],
-    icon: "mdi:magnify",
-  },
-];
+/* Generated from src/cards/navigation. Do not edit. */
+"use strict";
+(() => {
+  // src/cards/navigation/navigation-constants.ts
+  var CARD_TAG = "nodalia-navigation-bar";
+  var EDITOR_TAG = "nodalia-navigation-bar-editor";
+  var CARD_VERSION = "2.3.0-alpha.20";
+  var HAPTIC_PATTERNS = {
+    selection: 8,
+    light: 10,
+    medium: 16,
+    heavy: 24,
+    success: [10, 40, 10],
+    warning: [20, 50, 12],
+    failure: [12, 40, 12, 40, 18]
+  };
+  var MUSIC_ASSISTANT_BROWSER_EXCLUDE_PATTERNS = [
+    "ai generated",
+    "ai-generated",
+    "image",
+    "image upload",
+    "generated images",
+    "camera",
+    "cameras",
+    "dlna",
+    "dlna server",
+    "dlna servers",
+    "frigate",
+    "my media",
+    "text to speech",
+    "tts",
+    "xbox game media",
+    "xbox",
+    "imagenes generadas",
+    "images",
+    "imagenes"
+  ];
+  var MUSIC_ASSISTANT_DIRECTORY_ICON_RULES = [
+    {
+      patterns: [
+        "artists",
+        "artistas",
+        "artistes",
+        "артисты",
+        "artiști",
+        "艺术家",
+        "καλλιτέχνες"
+      ],
+      icon: "mdi:account-music"
+    },
+    {
+      patterns: [
+        "albums",
+        "albumes",
+        "álbumes",
+        "álbums",
+        "albuns",
+        "альбомы",
+        "专辑",
+        "άλμπουμ"
+      ],
+      icon: "mdi:album"
+    },
+    {
+      patterns: [
+        "tracks",
+        "songs",
+        "canciones",
+        "temas",
+        "pistas",
+        "faixas",
+        "músicas",
+        "треки",
+        "曲目",
+        "κομμάτια",
+        "piese"
+      ],
+      icon: "mdi:music-note"
+    },
+    {
+      patterns: [
+        "playlists",
+        "listas",
+        "listas de reproduccion",
+        "listas de reproducción",
+        "listas de reprodução",
+        "плейлисты",
+        "播放列表",
+        "liste de redare",
+        "λίστες αναπαραγωγής"
+      ],
+      icon: "mdi:playlist-music"
+    },
+    {
+      patterns: [
+        "radio stations",
+        "radios",
+        "emisoras",
+        "stations",
+        "estações",
+        "радио",
+        "радиостанции",
+        "广播电台",
+        "stații radio",
+        "ραδιοφωνικοί"
+      ],
+      icon: "mdi:radio"
+    },
+    { patterns: ["podcasts", "подкасты", "播客", "podcasturi"], icon: "mdi:podcast" },
+    {
+      patterns: ["audiobooks", "audiolibros", "audiolivros", "аудиокниги", "有声书", "cărți audio", "ακουστικά βιβλία"],
+      icon: "mdi:book-music"
+    },
+    {
+      patterns: ["genres", "generos", "géneros", "жанры", "流派", "genuri", "είδη"],
+      icon: "mdi:shape"
+    },
+    {
+      patterns: [
+        "favorites",
+        "favourites",
+        "favoritos",
+        "избранное",
+        "收藏",
+        "favorite",
+        "αγαπημένα"
+      ],
+      icon: "mdi:heart"
+    },
+    {
+      patterns: [
+        "recent",
+        "recently",
+        "recientes",
+        "recentemente",
+        "недавно",
+        "最近",
+        "πρόσφατα",
+        "redări recente"
+      ],
+      icon: "mdi:history"
+    },
+    {
+      patterns: [
+        "search",
+        "buscar",
+        "busqueda",
+        "búsqueda",
+        "pesquisar",
+        "поиск",
+        "搜索",
+        "căutare",
+        "αναζήτηση"
+      ],
+      icon: "mdi:magnify"
+    }
+  ];
 
-const DEFAULT_CONFIG = {
-  title: "",
-  show_labels: false,
-  animations: {
-    enabled: true,
-    bar_duration: 160,
-    popup_duration: 220,
-    media_duration: 240,
-    button_bounce_duration: 220,
-    dock_entrance_duration: 420,
-  },
-  haptics: {
-    enabled: true,
-    style: "medium",
-    fallback_vibrate: false,
-  },
-  security: {
-    strict_service_actions: true,
-    allowed_services: [],
-    allowed_service_domains: [],
-  },
-  layout: {
-    fixed: true,
-    reserve_space: true,
-    reserve_height: "calc(90px + env(safe-area-inset-bottom, 0px))",
-    position: "bottom",
-    stack_gap: "12px",
-    show_desktop: false,
-    mobile_breakpoint: 1279,
-    z_index: 2,
-    side_margin: "0px",
-    offset: "0px",
-    full_width: false,
-  },
-  styles: {
-    bar: {
-      background: "var(--ha-card-background, var(--card-background-color, rgba(32, 34, 42, 0.94)))",
-      border: "1px solid var(--divider-color)",
-      border_radius: "var(--nodalia-card-border-radius, 28px)",
-      box_shadow: "var(--ha-card-box-shadow)",
-      padding: "12px 16px calc(12px + env(safe-area-inset-bottom, 0px)) 16px",
-      min_height: "90px",
-      gap: "20px",
-      justify_content: "space-evenly",
-      max_width: "100%",
-      backdrop_filter: "none",
+  // src/cards/navigation/navigation-runtime.ts
+  var utils = window.NodaliaUtils;
+  var isObject = utils.isObject.bind(utils);
+  var deepClone = utils.deepClone.bind(utils);
+  var mergeConfig = utils.mergeDeep.bind(utils);
+  var compactConfig = utils.compactConfig.bind(utils);
+  var isUnsafeConfigPathKey = utils.isUnsafeConfigPathKey.bind(utils);
+  var fireEvent = utils.fireEvent.bind(utils);
+  var escapeHtml = utils.escapeHtml.bind(utils);
+  var clamp = utils.clamp.bind(utils);
+
+  // src/cards/navigation/navigation-config.ts
+  var DEFAULT_CONFIG = {
+    title: "",
+    show_labels: false,
+    animations: {
+      enabled: true,
+      bar_duration: 160,
+      popup_duration: 220,
+      media_duration: 240,
+      button_bounce_duration: 220,
+      dock_entrance_duration: 420
     },
-    button: {
-      size: "54px",
-      border_radius: "999px",
-      background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
-      color: "var(--primary-text-color)",
-      active_color: "var(--primary-text-color)",
-      active_background: "color-mix(in srgb, var(--primary-text-color) 8%, transparent)",
-      icon_size: "28px",
-      icon_offset_x: "0px",
-      icon_offset_y: "-1px",
-      label_color: "var(--secondary-text-color)",
-      active_label_color: "var(--primary-text-color)",
-      label_size: "12px",
-      label_gap: "6px",
+    haptics: {
+      enabled: true,
+      style: "medium",
+      fallback_vibrate: false
     },
-    badge: {
-      background: "var(--error-color)",
-      color: "var(--text-primary-color, #fff)",
-      min_size: "18px",
-      font_size: "11px",
+    security: {
+      strict_service_actions: true,
+      allowed_services: [],
+      allowed_service_domains: []
     },
-    popup: {
-      background: "var(--ha-card-background)",
-      border: "1px solid var(--divider-color)",
-      border_radius: "24px",
-      box_shadow: "0 18px 40px rgba(0, 0, 0, 0.22)",
-      layout: "auto",
-      label_size: "13px",
-      padding: "12px",
-      min_width: "220px",
-      max_width: "380px",
-      item_gap: "12px",
-      item_size: "48px",
-      backdrop: "rgba(0, 0, 0, 0.18)",
+    layout: {
+      fixed: true,
+      reserve_space: true,
+      reserve_height: "calc(90px + env(safe-area-inset-bottom, 0px))",
+      position: "bottom",
+      stack_gap: "12px",
+      show_desktop: false,
+      mobile_breakpoint: 1279,
+      z_index: 2,
+      side_margin: "0px",
+      offset: "0px",
+      full_width: false
+    },
+    styles: {
+      bar: {
+        background: "var(--ha-card-background, var(--card-background-color, rgba(32, 34, 42, 0.94)))",
+        border: "1px solid var(--divider-color)",
+        border_radius: "var(--nodalia-card-border-radius, 28px)",
+        box_shadow: "var(--ha-card-box-shadow)",
+        padding: "12px 16px calc(12px + env(safe-area-inset-bottom, 0px)) 16px",
+        min_height: "90px",
+        gap: "20px",
+        justify_content: "space-evenly",
+        max_width: "100%",
+        backdrop_filter: "none"
+      },
+      button: {
+        size: "54px",
+        border_radius: "999px",
+        background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
+        color: "var(--primary-text-color)",
+        active_color: "var(--primary-text-color)",
+        active_background: "color-mix(in srgb, var(--primary-text-color) 8%, transparent)",
+        icon_size: "28px",
+        icon_offset_x: "0px",
+        icon_offset_y: "-1px",
+        label_color: "var(--secondary-text-color)",
+        active_label_color: "var(--primary-text-color)",
+        label_size: "12px",
+        label_gap: "6px"
+      },
+      badge: {
+        background: "var(--error-color)",
+        color: "var(--text-primary-color, #fff)",
+        min_size: "18px",
+        font_size: "11px"
+      },
+      popup: {
+        background: "var(--ha-card-background)",
+        border: "1px solid var(--divider-color)",
+        border_radius: "24px",
+        box_shadow: "0 18px 40px rgba(0, 0, 0, 0.22)",
+        layout: "auto",
+        label_size: "13px",
+        padding: "12px",
+        min_width: "220px",
+        max_width: "380px",
+        item_gap: "12px",
+        item_size: "48px",
+        backdrop: "rgba(0, 0, 0, 0.18)"
+      },
+      media_player: {
+        background: "var(--ha-card-background)",
+        border: "1px solid var(--divider-color)",
+        border_radius: "var(--nodalia-card-border-radius, 28px)",
+        box_shadow: "var(--ha-card-box-shadow)",
+        padding: "14px",
+        min_height: "104px",
+        artwork_size: "64px",
+        control_size: "40px",
+        title_size: "12px",
+        subtitle_size: "10px",
+        progress_color: "var(--primary-color)",
+        progress_background: "rgba(var(--rgb-primary-color), 0.14)",
+        overlay_color: "rgba(0, 0, 0, 0.32)",
+        dot_size: "8px"
+      }
     },
     media_player: {
-      background: "var(--ha-card-background)",
-      border: "1px solid var(--divider-color)",
-      border_radius: "var(--nodalia-card-border-radius, 28px)",
-      box_shadow: "var(--ha-card-box-shadow)",
-      padding: "14px",
-      min_height: "104px",
-      artwork_size: "64px",
-      control_size: "40px",
-      title_size: "12px",
-      subtitle_size: "10px",
-      progress_color: "var(--primary-color)",
-      progress_background: "rgba(var(--rgb-primary-color), 0.14)",
-      overlay_color: "rgba(0, 0, 0, 0.32)",
-      dot_size: "8px",
+      show: void 0,
+      show_desktop: false,
+      album_cover_background: true,
+      gap: "0px",
+      reserve_height: "116px",
+      players: []
     },
-  },
-  media_player: {
-    show: undefined,
-    show_desktop: false,
-    album_cover_background: true,
-    gap: "0px",
-    reserve_height: "116px",
-    players: [],
-  },
-  routes: [],
-};
-
-const STUB_CONFIG = {
-  show_labels: false,
-  layout: {
-    show_desktop: true,
-  },
-  styles: {
-    bar: {
-      border_radius: "32px",
-      padding: "12px 16px",
+    routes: []
+  };
+  var STUB_CONFIG = {
+    show_labels: false,
+    layout: {
+      show_desktop: true
     },
-    button: {
-      size: "60px",
-      label_size: "8px",
+    styles: {
+      bar: {
+        border_radius: "32px",
+        padding: "12px 16px"
+      },
+      button: {
+        size: "60px",
+        label_size: "8px"
+      },
+      popup: {
+        max_width: "320px",
+        item_size: "32px"
+      },
+      media_player: {
+        border_radius: "24px",
+        padding: "10px",
+        artwork_size: "92px"
+      }
     },
-    popup: {
-      max_width: "320px",
-      item_size: "32px",
-    },
-    media_player: {
-      border_radius: "24px",
-      padding: "10px",
-      artwork_size: "92px",
-    },
-  },
-  routes: [
-    { icon: "mdi:view-dashboard", label: "Home", path: "/lovelace/home" },
-    { icon: "mdi:devices", label: "Devices", path: "/config/devices/dashboard" },
-    { icon: "mdi:creation", label: "Automations", path: "/config/automation/dashboard" },
-    { icon: "mdi:cog", label: "Settings", path: "/config/dashboard" },
-    { icon: "mdi:account", label: "Profile", path: "/profile" },
-    { icon: "mdi:dots-horizontal", label: "More", path: "/config/dashboard" },
-  ],
-};
-
-// Shared primitives are loaded by nodalia-cards core and inlined for standalone resources.
-const {
-  isObject,
-  deepClone,
-  mergeDeep: mergeConfig,
-  compactConfig,
-  isUnsafeConfigPathKey,
-  fireEvent,
-  escapeHtml,
-  clamp,
-} = window.NodaliaUtils;
-
-
-
-
-
-
-
-function setByPath(target, path, value) {
-  const parts = path.split(".");
-  if (parts.some(isUnsafeConfigPathKey)) {
-    return;
+    routes: [
+      { icon: "mdi:view-dashboard", label: "Home", path: "/lovelace/home" },
+      { icon: "mdi:devices", label: "Devices", path: "/config/devices/dashboard" },
+      { icon: "mdi:creation", label: "Automations", path: "/config/automation/dashboard" },
+      { icon: "mdi:cog", label: "Settings", path: "/config/dashboard" },
+      { icon: "mdi:account", label: "Profile", path: "/profile" },
+      { icon: "mdi:dots-horizontal", label: "More", path: "/config/dashboard" }
+    ]
+  };
+  function normalizeConfig(config) {
+    const baseConfig = { ...config };
+    if (!Array.isArray(baseConfig.routes) && Array.isArray(baseConfig.items)) {
+      baseConfig.routes = baseConfig.items;
+      delete baseConfig.items;
+    }
+    if (!Array.isArray(baseConfig.routes)) {
+      throw new Error('"routes" is required and must be an array');
+    }
+    const mergedConfig = mergeConfig(DEFAULT_CONFIG, baseConfig);
+    mergedConfig.security = window.NodaliaUtils?.normalizeSecurityConfig?.(mergedConfig.security, DEFAULT_CONFIG.security) ?? {
+      ...DEFAULT_CONFIG.security,
+      ...isObject(mergedConfig.security) ? mergedConfig.security : {}
+    };
+    return mergedConfig;
   }
-  let cursor = target;
 
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (key === "__proto__" || key === "constructor" || key === "prototype") {
+  // src/cards/navigation/navigation-helpers.ts
+  function setByPath(target, path, value) {
+    const parts = path.split(".");
+    if (parts.some(isUnsafeConfigPathKey)) {
       return;
     }
-    const current = Object.hasOwn(cursor, key) ? cursor[key] : undefined;
-    if (!isObject(current)) {
-      Object.defineProperty(cursor, key, {
-        configurable: true,
-        enumerable: true,
-        value: {},
-        writable: true,
-      });
+    let cursor = target;
+    for (let index = 0; index < parts.length - 1; index += 1) {
+      const key = parts[index];
+      if (key === "__proto__" || key === "constructor" || key === "prototype") {
+        return;
+      }
+      const current = Object.hasOwn(cursor, key) ? cursor[key] : void 0;
+      if (!isObject(current)) {
+        Object.defineProperty(cursor, key, {
+          configurable: true,
+          enumerable: true,
+          value: {},
+          writable: true
+        });
+      }
+      cursor = cursor[key];
     }
-    cursor = cursor[key];
-  }
-  const finalKey = parts[parts.length - 1];
-  if (finalKey === "__proto__" || finalKey === "constructor" || finalKey === "prototype") {
-    return;
-  }
-  Object.defineProperty(cursor, finalKey, {
-    configurable: true,
-    enumerable: true,
-    value,
-    writable: true,
-  });
-}
-
-function deleteByPath(target, path) {
-  const parts = path.split(".");
-  if (parts.some(isUnsafeConfigPathKey)) {
-    return;
-  }
-  let cursor = target;
-
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key])) {
+    const finalKey = parts[parts.length - 1];
+    if (finalKey === "__proto__" || finalKey === "constructor" || finalKey === "prototype") {
       return;
     }
-    cursor = cursor[key];
+    Object.defineProperty(cursor, finalKey, {
+      configurable: true,
+      enumerable: true,
+      value,
+      writable: true
+    });
   }
-
-  delete cursor[parts[parts.length - 1]];
-}
-
-
-
-function appendQueryParam(url, key, value) {
-  const rawUrl = String(url || "").trim();
-  if (!rawUrl || value === null || value === undefined || value === "") {
-    return rawUrl;
+  function deleteByPath(target, path) {
+    const parts = path.split(".");
+    if (parts.some(isUnsafeConfigPathKey)) {
+      return;
+    }
+    let cursor = target;
+    for (let index = 0; index < parts.length - 1; index += 1) {
+      const key = parts[index];
+      if (!isObject(cursor[key])) {
+        return;
+      }
+      cursor = cursor[key];
+    }
+    delete cursor[parts[parts.length - 1]];
   }
-
-  const encodedKey = encodeURIComponent(String(key));
-  const encodedValue = encodeURIComponent(String(value));
-  const existingPattern = new RegExp(`([?&])${encodedKey}=[^&]*`);
-  if (existingPattern.test(rawUrl)) {
-    return rawUrl.replace(existingPattern, `$1${encodedKey}=${encodedValue}`);
+  function appendQueryParam(url, key, value) {
+    const rawUrl = String(url || "").trim();
+    if (!rawUrl || value === null || value === void 0 || value === "") {
+      return rawUrl;
+    }
+    const encodedKey = encodeURIComponent(String(key));
+    const encodedValue = encodeURIComponent(String(value));
+    const existingPattern = new RegExp(`([?&])${encodedKey}=[^&]*`);
+    if (existingPattern.test(rawUrl)) {
+      return rawUrl.replace(existingPattern, `$1${encodedKey}=${encodedValue}`);
+    }
+    return `${rawUrl}${rawUrl.includes("?") ? "&" : "?"}${encodedKey}=${encodedValue}`;
   }
-
-  return `${rawUrl}${rawUrl.includes("?") ? "&" : "?"}${encodedKey}=${encodedValue}`;
-}
-
-function arrayFromCsv(value) {
-  return String(value || "")
-    .split(",")
-    .map(item => item.trim())
-    .filter(Boolean);
-}
-
-
-function moveItem(array, fromIndex, toIndex) {
-  if (!Array.isArray(array)) {
+  function arrayFromCsv(value) {
+    return String(value || "").split(",").map((item) => item.trim()).filter(Boolean);
+  }
+  function moveItem(array, fromIndex, toIndex) {
+    if (!Array.isArray(array)) {
+      return array;
+    }
+    if (fromIndex < 0 || toIndex < 0 || fromIndex >= array.length || toIndex >= array.length || fromIndex === toIndex) {
+      return array;
+    }
+    const [item] = array.splice(fromIndex, 1);
+    array.splice(toIndex, 0, item);
     return array;
   }
-
-  if (
-    fromIndex < 0 ||
-    toIndex < 0 ||
-    fromIndex >= array.length ||
-    toIndex >= array.length ||
-    fromIndex === toIndex
-  ) {
-    return array;
+  function formatDuration(totalSeconds) {
+    const safeSeconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+    const hours = Math.floor(safeSeconds / 3600);
+    const minutes = Math.floor(safeSeconds % 3600 / 60);
+    const seconds = safeSeconds % 60;
+    if (hours > 0) {
+      return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    }
+    return `${minutes}:${String(seconds).padStart(2, "0")}`;
   }
-
-  const [item] = array.splice(fromIndex, 1);
-  array.splice(toIndex, 0, item);
-  return array;
-}
-
-function formatDuration(totalSeconds) {
-  const safeSeconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
-  const hours = Math.floor(safeSeconds / 3600);
-  const minutes = Math.floor((safeSeconds % 3600) / 60);
-  const seconds = safeSeconds % 60;
-
-  if (hours > 0) {
-    return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  function normalizeTextKey(value) {
+    return String(value || "").trim().toLowerCase();
   }
-
-  return `${minutes}:${String(seconds).padStart(2, "0")}`;
-}
-
-function normalizeTextKey(value) {
-  return String(value || "").trim().toLowerCase();
-}
-
-function sanitizeCssRuntimeValue(value) {
-  const raw = String(value ?? "").trim();
-  if (!raw) {
-    return "";
+  function sanitizeCssRuntimeValue(value) {
+    const raw = String(value ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+    if (/[<>{};"']/.test(raw) || raw.includes("/*") || raw.includes("*/") || /\burl\s*\(/i.test(raw) || /\b@import\b/i.test(raw)) {
+      return "";
+    }
+    return raw;
   }
-  if (
-    /[<>{};"']/.test(raw)
-    || raw.includes("/*")
-    || raw.includes("*/")
-    || /\burl\s*\(/i.test(raw)
-    || /\b@import\b/i.test(raw)
-  ) {
-    return "";
-  }
-  return raw;
-}
-
-function sanitizeMediaArtworkUrl(value, hass) {
-  const raw = String(value || "").trim();
-  if (!raw) {
-    return "";
-  }
-  const safe = window.NodaliaUtils?.sanitizeActionUrl?.(raw, { allowRelative: true }) || "";
-  if (!safe) {
-    return "";
-  }
-  if (/^(?:https?:)?\/\//i.test(safe)) {
+  function sanitizeMediaArtworkUrl(value, hass) {
+    const raw = String(value || "").trim();
+    if (!raw) {
+      return "";
+    }
+    const safe = window.NodaliaUtils?.sanitizeActionUrl?.(raw, { allowRelative: true }) || "";
+    if (!safe) {
+      return "";
+    }
+    if (/^(?:https?:)?\/\//i.test(safe)) {
+      return safe;
+    }
+    if (typeof hass?.hassUrl === "function" && safe.startsWith("/")) {
+      return hass.hassUrl(safe);
+    }
     return safe;
   }
-  if (typeof hass?.hassUrl === "function" && safe.startsWith("/")) {
-    return hass.hassUrl(safe);
-  }
-  return safe;
-}
-
-function getRenderSignatureRuntime() {
-  return window.NodaliaRenderSignature || {
-    toKey(value) {
-      if (value === null || value === undefined) {
-        return "";
-      }
-      if (typeof value === "number") {
-        return Number.isFinite(value) ? String(value) : "";
-      }
-      return String(value);
-    },
-    joinParts(parts, sectionSeparator = "||", valueSeparator = "::") {
-      return (Array.isArray(parts) ? parts : [])
-        .map(part => {
+  function getRenderSignatureRuntime() {
+    return window.NodaliaRenderSignature || {
+      toKey(value) {
+        if (value === null || value === void 0) {
+          return "";
+        }
+        if (typeof value === "number") {
+          return Number.isFinite(value) ? String(value) : "";
+        }
+        return String(value);
+      },
+      joinParts(parts, sectionSeparator = "||", valueSeparator = "::") {
+        return (Array.isArray(parts) ? parts : []).map((part) => {
           if (!part || !Array.isArray(part.values)) {
             return "";
           }
           const prefix = String(part.prefix || "");
-          const body = part.values.map(value => this.toKey(value)).join(valueSeparator);
+          const body = part.values.map((value) => this.toKey(value)).join(valueSeparator);
           return `${prefix}${body}`;
-        })
-        .filter(Boolean)
-        .join(sectionSeparator);
-    },
-  };
-}
-
-function parsePrimitiveValue(value) {
-  if (value === "true") {
-    return true;
-  }
-
-  if (value === "false") {
-    return false;
-  }
-
-  if (typeof value === "string" && /^-?\d+(\.\d+)?$/.test(value)) {
-    return Number(value);
-  }
-
-  return value;
-}
-
-function escapeSelectorValue(value) {
-  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
-    return CSS.escape(String(value));
-  }
-
-  return String(value).replaceAll('"', '\\"');
-}
-
-function normalizePath(value) {
-  if (!value || typeof value !== "string") {
-    return null;
-  }
-
-  if (/^[a-z]+:\/\//i.test(value)) {
-    return null;
-  }
-
-  try {
-    const url = new URL(value, window.location.origin);
-    return (url.pathname || "/").replace(/\/+$/, "") || "/";
-  } catch (_error) {
-    return (value.split(/[?#]/)[0] || "/").replace(/\/+$/, "") || "/";
-  }
-}
-
-function matchPath(currentPath, candidatePath, mode) {
-  if (!candidatePath) {
-    return false;
-  }
-
-  if (mode === "prefix") {
-    return currentPath === candidatePath || currentPath.startsWith(`${candidatePath}/`);
-  }
-
-  return currentPath === candidatePath;
-}
-
-function normalizeConfig(config) {
-  const baseConfig = { ...config };
-
-  if (!Array.isArray(baseConfig.routes) && Array.isArray(baseConfig.items)) {
-    baseConfig.routes = baseConfig.items;
-    delete baseConfig.items;
-  }
-
-  if (!Array.isArray(baseConfig.routes)) {
-    throw new Error('"routes" is required and must be an array');
-  }
-
-  const mergedConfig = mergeConfig(DEFAULT_CONFIG, baseConfig);
-  mergedConfig.security = window.NodaliaUtils?.normalizeSecurityConfig?.(mergedConfig.security, DEFAULT_CONFIG.security)
-    ?? {
-      ...DEFAULT_CONFIG.security,
-      ...(isObject(mergedConfig.security) ? mergedConfig.security : {}),
+        }).filter(Boolean).join(sectionSeparator);
+      }
     };
-  return mergedConfig;
-}
-
-class NodaliaNavigationBarCard extends HTMLElement {
-  static getStubConfig(hass, entities = [], entitiesFallback = []) {
-    const config = deepClone(STUB_CONFIG);
-    const entityId = window.NodaliaUtils?.findStubEntityIds?.(hass, entities, entitiesFallback, ["media_player"], 1)[0] || "";
-    if (entityId) {
-      config.media_player = {
-        players: [{
-          entity: entityId,
-          label: hass?.states?.[entityId]?.attributes?.friendly_name || "",
-        }],
-      };
+  }
+  function parsePrimitiveValue(value) {
+    if (value === "true") {
+      return true;
     }
-    return config;
+    if (value === "false") {
+      return false;
+    }
+    if (typeof value === "string" && /^-?\d+(\.\d+)?$/.test(value)) {
+      return Number(value);
+    }
+    return value;
+  }
+  function escapeSelectorValue(value) {
+    if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+      return CSS.escape(String(value));
+    }
+    return String(value).replaceAll('"', '\\"');
+  }
+  function normalizePath(value) {
+    if (!value || typeof value !== "string") {
+      return null;
+    }
+    if (/^[a-z]+:\/\//i.test(value)) {
+      return null;
+    }
+    try {
+      const url = new URL(value, window.location.origin);
+      return (url.pathname || "/").replace(/\/+$/, "") || "/";
+    } catch (_error) {
+      return (value.split(/[?#]/)[0] || "/").replace(/\/+$/, "") || "/";
+    }
+  }
+  function matchPath(currentPath, candidatePath, mode) {
+    if (!candidatePath) {
+      return false;
+    }
+    if (mode === "prefix") {
+      return currentPath === candidatePath || currentPath.startsWith(`${candidatePath}/`);
+    }
+    return currentPath === candidatePath;
   }
 
-  static async getConfigElement() {
-    return document.createElement(EDITOR_TAG);
-  }
-
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = null;
-    this._hass = null;
-    this._renderedRoutes = [];
-    this._popupState = null;
-    this._mediaBrowserState = null;
-    this._mediaBrowserRequestToken = 0;
-    this._popupPositionFrame = null;
-    this._activeMediaPlayerIndex = 0;
-    this._activeMediaPlayerEntity = "";
-    this._mediaPlayerExpanded = false;
-    this._mediaTicker = null;
-    this._lastRenderSignature = "";
-    this._animateDockEntranceNext = true;
-    this._dockEntrancePlayed = false;
-    this._dockEntranceResetFrame = 0;
-    this._lastShouldHide = false;
-    this._playDockEntrance = false;
-    this._lastMediaToggleVisible = false;
-    this._playPopupEntrance = false;
-    this._lastMediaPlayerCardVisible = false;
-    this._onResize = () => {
-      this._closePopup(false);
-      this._closeMediaBrowser(false);
-      this._render();
-    };
-    this._onLocationChange = () => {
-      this._closePopup(false);
-      this._closeMediaBrowser(false);
-      this._render();
-    };
-    this._onWindowKeyDown = event => {
-      if (event.key === "Escape" && this._mediaBrowserState) {
-        event.preventDefault();
-        this._closeMediaBrowser();
-        return;
+  // src/cards/navigation/navigation-card.ts
+  var _lazyNodaliaNavigationBarCard;
+  function loadNodaliaNavigationBarCard() {
+    if (_lazyNodaliaNavigationBarCard) {
+      return _lazyNodaliaNavigationBarCard;
+    }
+    class NodaliaNavigationBarCard extends HTMLElement {
+      static getStubConfig(hass, entities = [], entitiesFallback = []) {
+        const config = deepClone(STUB_CONFIG);
+        const entityId = window.NodaliaUtils?.findStubEntityIds?.(hass, entities, entitiesFallback, ["media_player"], 1)[0] || "";
+        if (entityId) {
+          config.media_player = {
+            players: [{
+              entity: entityId,
+              label: hass?.states?.[entityId]?.attributes?.friendly_name || ""
+            }]
+          };
+        }
+        return config;
       }
-
-      if (event.key === "Escape" && this._popupState) {
-        event.preventDefault();
-        this._closePopup();
+      static async getConfigElement() {
+        return document.createElement(EDITOR_TAG);
       }
-    };
-    this._onVisibilityChange = () => {
-      if (typeof document !== "undefined" && document.hidden) {
+      constructor() {
+        super();
+        this._nodaliaConstruct();
+      }
+      _nodaliaConstruct() {
+        this.attachShadow({ mode: "open" });
+        this._config = null;
+        this._hass = null;
+        this._renderedRoutes = [];
+        this._popupState = null;
+        this._mediaBrowserState = null;
+        this._mediaBrowserRequestToken = 0;
+        this._popupPositionFrame = null;
+        this._activeMediaPlayerIndex = 0;
+        this._activeMediaPlayerEntity = "";
+        this._mediaPlayerExpanded = false;
+        this._mediaTicker = null;
+        this._lastRenderSignature = "";
+        this._animateDockEntranceNext = true;
+        this._dockEntrancePlayed = false;
+        this._dockEntranceResetFrame = 0;
+        this._lastShouldHide = false;
+        this._playDockEntrance = false;
+        this._lastMediaToggleVisible = false;
+        this._playPopupEntrance = false;
+        this._lastMediaPlayerCardVisible = false;
+        this._onResize = () => {
+          this._closePopup(false);
+          this._closeMediaBrowser(false);
+          this._render();
+        };
+        this._onLocationChange = () => {
+          this._closePopup(false);
+          this._closeMediaBrowser(false);
+          this._render();
+        };
+        this._onWindowKeyDown = (event) => {
+          if (event.key === "Escape" && this._mediaBrowserState) {
+            event.preventDefault();
+            this._closeMediaBrowser();
+            return;
+          }
+          if (event.key === "Escape" && this._popupState) {
+            event.preventDefault();
+            this._closePopup();
+          }
+        };
+        this._onVisibilityChange = () => {
+          if (typeof document !== "undefined" && document.hidden) {
+            if (this._mediaTicker) {
+              window.clearInterval(this._mediaTicker);
+              this._mediaTicker = null;
+            }
+            return;
+          }
+          this._render();
+        };
+        this._onShadowClick = this._onShadowClick.bind(this);
+        this.shadowRoot.addEventListener("click", this._onShadowClick);
+      }
+      connectedCallback() {
+        window.addEventListener("resize", this._onResize);
+        window.addEventListener("popstate", this._onLocationChange);
+        window.addEventListener("location-changed", this._onLocationChange);
+        window.addEventListener("keydown", this._onWindowKeyDown);
+        document.addEventListener("visibilitychange", this._onVisibilityChange);
+        this._render();
+      }
+      disconnectedCallback() {
+        window.removeEventListener("resize", this._onResize);
+        window.removeEventListener("popstate", this._onLocationChange);
+        window.removeEventListener("location-changed", this._onLocationChange);
+        window.removeEventListener("keydown", this._onWindowKeyDown);
+        document.removeEventListener("visibilitychange", this._onVisibilityChange);
+        this._mediaBrowserRequestToken += 1;
+        this._mediaBrowserState = null;
+        if (this._popupPositionFrame) {
+          cancelAnimationFrame(this._popupPositionFrame);
+          this._popupPositionFrame = null;
+        }
         if (this._mediaTicker) {
           window.clearInterval(this._mediaTicker);
           this._mediaTicker = null;
         }
-        return;
-      }
-
-      this._render();
-    };
-    this._onShadowClick = this._onShadowClick.bind(this);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-  }
-
-  connectedCallback() {
-    window.addEventListener("resize", this._onResize);
-    window.addEventListener("popstate", this._onLocationChange);
-    window.addEventListener("location-changed", this._onLocationChange);
-    window.addEventListener("keydown", this._onWindowKeyDown);
-    document.addEventListener("visibilitychange", this._onVisibilityChange);
-    this._render();
-  }
-
-  disconnectedCallback() {
-    window.removeEventListener("resize", this._onResize);
-    window.removeEventListener("popstate", this._onLocationChange);
-    window.removeEventListener("location-changed", this._onLocationChange);
-    window.removeEventListener("keydown", this._onWindowKeyDown);
-    document.removeEventListener("visibilitychange", this._onVisibilityChange);
-    this._mediaBrowserRequestToken += 1;
-    this._mediaBrowserState = null;
-    if (this._popupPositionFrame) {
-      cancelAnimationFrame(this._popupPositionFrame);
-      this._popupPositionFrame = null;
-    }
-    if (this._mediaTicker) {
-      window.clearInterval(this._mediaTicker);
-      this._mediaTicker = null;
-    }
-    if (this._dockEntranceResetFrame) {
-      window.cancelAnimationFrame(this._dockEntranceResetFrame);
-      this._dockEntranceResetFrame = 0;
-    }
-    window.NodaliaUtils?.clearDeferTimers?.(this);
-  }
-
-  setConfig(config) {
-    this._config = normalizeConfig(config);
-    this._lastRenderSignature = "";
-    this._render();
-  }
-
-  set hass(hass) {
-    const nextSignature = this._getRenderSignature(hass);
-    this._hass = hass;
-    if (!this.isConnected) {
-      return;
-    }
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
-      this._patchMediaVolumeControls();
-      return;
-    }
-    this._lastRenderSignature = nextSignature;
-    this._render();
-  }
-
-  getCardSize() {
-    return 1;
-  }
-
-  getGridOptions() {
-    return {
-      rows: "auto",
-      columns: "full",
-      min_rows: 1,
-      min_columns: 4,
-    };
-  }
-
-  _getTrackedEntityIds() {
-    const entityIds = new Set();
-
-    (this._config?.routes || []).forEach(route => {
-      if (route?.badge?.entity) {
-        entityIds.add(route.badge.entity);
-      }
-      (route?.popup || []).forEach(item => {
-        if (item?.badge?.entity) {
-          entityIds.add(item.badge.entity);
+        if (this._dockEntranceResetFrame) {
+          window.cancelAnimationFrame(this._dockEntranceResetFrame);
+          this._dockEntranceResetFrame = 0;
         }
-      });
-    });
-
-    (this._config?.media_player?.players || []).forEach(player => {
-      if (player?.entity) {
-        entityIds.add(player.entity);
+        window.NodaliaUtils?.clearDeferTimers?.(this);
       }
-    });
-
-    const tag = window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(this._hass, this._config?.language));
-    return [...entityIds].sort((left, right) => left.localeCompare(right, tag));
-  }
-
-  _getRenderSignature(hass = this._hass) {
-    const runtime = getRenderSignatureRuntime();
-    const routeBadgeStates = this._getRouteBadgeSignatureRows(hass, runtime);
-    const mediaPlayerStates = this._getMediaPlayerSignatureRows(hass, runtime);
-
-    return runtime.joinParts([
-      {
-        prefix: "l:",
-        values: [window.NodaliaI18n.resolveLanguage(hass, this._config?.language)],
-      },
-      { prefix: "u:", values: [hass?.user?.id || ""] },
-      { prefix: "r:", values: [routeBadgeStates.join("|")] },
-      { prefix: "m:", values: [mediaPlayerStates.join("|")] },
-      { prefix: "mx:", values: [this._mediaPlayerExpanded ? 1 : 0] },
-      { prefix: "mi:", values: [Number(this._activeMediaPlayerIndex || 0)] },
-      { prefix: "po:", values: [this._popupState ? 1 : 0] },
-      { prefix: "mb:", values: [this._mediaBrowserState ? 1 : 0] },
-    ]);
-  }
-
-  _getRouteBadgeSignatureRows(hass, runtime) {
-    return (this._config?.routes || []).flatMap((route, routeIndex) => {
-      const items = [{ badge: route?.badge, scope: `route:${routeIndex}` }];
-      (route?.popup || []).forEach((item, popupIndex) => {
-        items.push({ badge: item?.badge, scope: `popup:${routeIndex}:${popupIndex}` });
-      });
-
-      return items
-        .filter(item => item?.badge?.entity)
-        .map(item => {
-          const state = hass?.states?.[item.badge.entity] || null;
-          const attribute = String(item.badge.attribute || "");
+      setConfig(config) {
+        this._config = normalizeConfig(config);
+        this._lastRenderSignature = "";
+        this._render();
+      }
+      set hass(hass) {
+        const nextSignature = this._getRenderSignature(hass);
+        this._hass = hass;
+        if (!this.isConnected) {
+          return;
+        }
+        if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+          this._patchMediaVolumeControls();
+          return;
+        }
+        this._lastRenderSignature = nextSignature;
+        this._render();
+      }
+      getCardSize() {
+        return 1;
+      }
+      getGridOptions() {
+        return {
+          rows: "auto",
+          columns: "full",
+          min_rows: 1,
+          min_columns: 4
+        };
+      }
+      _getTrackedEntityIds() {
+        const entityIds = /* @__PURE__ */ new Set();
+        (this._config?.routes || []).forEach((route) => {
+          if (route?.badge?.entity) {
+            entityIds.add(route.badge.entity);
+          }
+          (route?.popup || []).forEach((item) => {
+            if (item?.badge?.entity) {
+              entityIds.add(item.badge.entity);
+            }
+          });
+        });
+        (this._config?.media_player?.players || []).forEach((player) => {
+          if (player?.entity) {
+            entityIds.add(player.entity);
+          }
+        });
+        const tag = window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(this._hass, this._config?.language));
+        return [...entityIds].sort((left, right) => left.localeCompare(right, tag));
+      }
+      _getRenderSignature(hass = this._hass) {
+        const runtime = getRenderSignatureRuntime();
+        const routeBadgeStates = this._getRouteBadgeSignatureRows(hass, runtime);
+        const mediaPlayerStates = this._getMediaPlayerSignatureRows(hass, runtime);
+        return runtime.joinParts([
+          {
+            prefix: "l:",
+            values: [window.NodaliaI18n.resolveLanguage(hass, this._config?.language)]
+          },
+          { prefix: "u:", values: [hass?.user?.id || ""] },
+          { prefix: "r:", values: [routeBadgeStates.join("|")] },
+          { prefix: "m:", values: [mediaPlayerStates.join("|")] },
+          { prefix: "mx:", values: [this._mediaPlayerExpanded ? 1 : 0] },
+          { prefix: "mi:", values: [Number(this._activeMediaPlayerIndex || 0)] },
+          { prefix: "po:", values: [this._popupState ? 1 : 0] },
+          { prefix: "mb:", values: [this._mediaBrowserState ? 1 : 0] }
+        ]);
+      }
+      _getRouteBadgeSignatureRows(hass, runtime) {
+        return (this._config?.routes || []).flatMap((route, routeIndex) => {
+          const items = [{ badge: route?.badge, scope: `route:${routeIndex}` }];
+          (route?.popup || []).forEach((item, popupIndex) => {
+            items.push({ badge: item?.badge, scope: `popup:${routeIndex}:${popupIndex}` });
+          });
+          return items.filter((item) => item?.badge?.entity).map((item) => {
+            const state = hass?.states?.[item.badge.entity] || null;
+            const attribute = String(item.badge.attribute || "");
+            return runtime.joinParts([
+              {
+                values: [
+                  item.scope,
+                  item.badge.entity || "",
+                  state?.state || "",
+                  attribute,
+                  attribute ? state?.attributes?.[attribute] ?? "" : state?.state || ""
+                ]
+              }
+            ], "", "::");
+          });
+        });
+      }
+      _getMediaPlayerSignatureRows(hass, runtime) {
+        return (this._config?.media_player?.players || []).filter((player) => player?.entity).map((player) => {
+          const state = hass?.states?.[player.entity] || null;
+          const attrs = state?.attributes || {};
           return runtime.joinParts([
             {
               values: [
-                item.scope,
-                item.badge.entity || "",
+                player.entity || "",
                 state?.state || "",
-                attribute,
-                attribute ? state?.attributes?.[attribute] ?? "" : state?.state || "",
-              ],
-            },
+                attrs.friendly_name || "",
+                attrs.entity_picture || "",
+                attrs.media_title || "",
+                attrs.media_artist || "",
+                attrs.media_series_title || "",
+                attrs.media_album_name || "",
+                attrs.app_name || "",
+                attrs.source || "",
+                attrs.media_channel || "",
+                typeof attrs.volume_level === "number" ? 1 : 0,
+                Number(attrs.media_duration ?? -1),
+                Number(attrs.supported_features ?? 0),
+                Array.isArray(attrs.source_list) ? attrs.source_list.join("|") : ""
+              ]
+            }
           ], "", "::");
         });
-    });
-  }
-
-  _getMediaPlayerSignatureRows(hass, runtime) {
-    return (this._config?.media_player?.players || [])
-      .filter(player => player?.entity)
-      .map(player => {
-        const state = hass?.states?.[player.entity] || null;
-        const attrs = state?.attributes || {};
-        return runtime.joinParts([
-          {
-            values: [
-              player.entity || "",
-              state?.state || "",
-              attrs.friendly_name || "",
-              attrs.entity_picture || "",
-              attrs.media_title || "",
-              attrs.media_artist || "",
-              attrs.media_series_title || "",
-              attrs.media_album_name || "",
-              attrs.app_name || "",
-              attrs.source || "",
-              attrs.media_channel || "",
-              typeof attrs.volume_level === "number" ? 1 : 0,
-              Number(attrs.media_duration ?? -1),
-              Number(attrs.supported_features ?? 0),
-              Array.isArray(attrs.source_list) ? attrs.source_list.join("|") : "",
-            ],
-          },
-        ], "", "::");
-      });
-  }
-
-  _triggerHaptic(style = this._config?.haptics?.style) {
-    if (!this._config?.haptics?.enabled) {
-      return;
-    }
-
-    const hapticStyle = String(style || "medium");
-
-    try {
-      fireEvent(this, "haptic", hapticStyle);
-    } catch (_error) {
-      // Ignore event dispatch issues and try browser vibration fallback below.
-    }
-
-    if (
-      !this._config.haptics.fallback_vibrate ||
-      typeof navigator === "undefined" ||
-      typeof navigator.vibrate !== "function"
-    ) {
-      return;
-    }
-
-    navigator.vibrate(HAPTIC_PATTERNS[hapticStyle] || HAPTIC_PATTERNS.selection);
-  }
-
-  _onShadowClick(event) {
-    const popupCloseTrigger = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.popupClose === "true");
-
-    if (popupCloseTrigger) {
-      event.preventDefault();
-      event.stopPropagation();
-      this._closePopup();
-      return;
-    }
-
-    const mediaControlButton = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.mediaControl);
-
-    if (mediaControlButton) {
-      event.preventDefault();
-      event.stopPropagation();
-      this._triggerHaptic();
-      this._handleMediaControl(
-        mediaControlButton.dataset.mediaControl,
-        mediaControlButton.dataset.entity,
-        {
-          muted: mediaControlButton.dataset.mediaMuted === "true",
-          path: mediaControlButton.dataset.mediaPath,
-          volume: Number(mediaControlButton.dataset.mediaVolume),
-        },
-      );
-      return;
-    }
-
-    const mediaToggleButton = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.mediaToggle);
-
-    if (mediaToggleButton) {
-      event.preventDefault();
-      event.stopPropagation();
-      this._triggerHaptic();
-      this._mediaPlayerExpanded = mediaToggleButton.dataset.mediaToggle === "expand";
-      this._render();
-      return;
-    }
-
-    const mediaDotButton = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.mediaIndex !== undefined);
-
-    if (mediaDotButton) {
-      event.preventDefault();
-      event.stopPropagation();
-      this._triggerHaptic();
-      const visiblePlayers = this._getVisibleMediaPlayers();
-      this._activeMediaPlayerIndex = clamp(
-        Number(mediaDotButton.dataset.mediaIndex),
-        0,
-        Math.max(0, visiblePlayers.length - 1),
-      );
-      this._activeMediaPlayerEntity = String(visiblePlayers[this._activeMediaPlayerIndex]?.entity || "");
-      this._render();
-      return;
-    }
-
-    const mediaBrowserCloseButton = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.mediaBrowserClose === "true");
-
-    if (mediaBrowserCloseButton) {
-      event.preventDefault();
-      event.stopPropagation();
-      this._closeMediaBrowser();
-      return;
-    }
-
-    const mediaBrowserBackButton = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.mediaBrowserBack === "true");
-
-    if (mediaBrowserBackButton) {
-      event.preventDefault();
-      event.stopPropagation();
-      this._goBackMediaBrowser();
-      return;
-    }
-
-    const mediaBrowserActionButton = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.mediaBrowserAction);
-
-    if (mediaBrowserActionButton) {
-      event.preventDefault();
-      event.stopPropagation();
-      this._triggerHaptic();
-      const action = mediaBrowserActionButton.dataset.mediaBrowserAction;
-      const mediaContentType = mediaBrowserActionButton.dataset.mediaContentType || "";
-      const mediaContentId = mediaBrowserActionButton.dataset.mediaContentId || "";
-
-      if (action === "browse") {
-        this._browseMediaBrowserItem(mediaContentType, mediaContentId);
-        return;
       }
-
-      if (action === "play") {
-        this._playMediaBrowserItem(mediaContentType, mediaContentId);
-        return;
-      }
-    }
-
-    const mediaCard = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.mediaCardIndex !== undefined);
-
-    if (mediaCard) {
-      const visiblePlayers = this._getVisibleMediaPlayers();
-      const player = visiblePlayers[Number(mediaCard.dataset.mediaCardIndex)];
-
-      if (player) {
-        event.preventDefault();
-        event.stopPropagation();
-        this._triggerHaptic();
-        this._runAction(player, {
-          closePopup: false,
-          defaultAction: {
-            action: "more-info",
-            entity: player.entity,
-          },
-        });
-      }
-      return;
-    }
-
-    const popupButton = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.popupItemIndex !== undefined);
-
-    if (popupButton) {
-      const routeIndex = Number(popupButton.dataset.popupRouteIndex);
-      const popupItemIndex = Number(popupButton.dataset.popupItemIndex);
-      const route = this._renderedRoutes[routeIndex];
-      const popupItems = this._getPopupItems(route);
-      const popupItem = popupItems[popupItemIndex];
-
-      if (popupItem) {
-        event.preventDefault();
-        event.stopPropagation();
-        this._triggerHaptic();
-        this._runAction(popupItem, {
-          closePopup: true,
-        });
-      }
-      return;
-    }
-
-    const routeButton = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.routeIndex !== undefined);
-
-    if (!routeButton) {
-      return;
-    }
-
-    const index = Number(routeButton.dataset.routeIndex);
-    const route = this._renderedRoutes[index];
-
-    if (!route) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    this._triggerHaptic();
-    this._runAction(route, {
-      anchorElement: routeButton,
-    });
-  }
-
-  _isInEditMode() {
-    const homeAssistantRoot = document.querySelector("body > home-assistant");
-
-    const inEditDashboardMode = this.closest("hui-card-edit-mode") !== null;
-    const inPreviewMode = this.closest("hui-card-preview") !== null || this.closest(".card > .preview") !== null;
-    const inEditCardMode = Boolean(
-      homeAssistantRoot?.shadowRoot
-        ?.querySelector("hui-dialog-edit-card")
-        ?.shadowRoot?.querySelector("ha-dialog"),
-    );
-
-    return inEditDashboardMode || inPreviewMode || inEditCardMode;
-  }
-
-  _shouldHideForScreen(config) {
-    if (this._isInEditMode()) {
-      return false;
-    }
-
-    if (config.layout.show_desktop) {
-      return false;
-    }
-
-    return window.innerWidth > Number(config.layout.mobile_breakpoint || 1279);
-  }
-
-  _isItemVisible(item) {
-    if (!item || item.hidden === true || item.show === false) {
-      return false;
-    }
-
-    if (this._isInEditMode()) {
-      return true;
-    }
-
-    const currentUserId = this._hass?.user?.id;
-    if (Array.isArray(item.users) && item.users.length > 0) {
-      return item.users.includes(currentUserId);
-    }
-
-    return true;
-  }
-
-  _getVisibleRoutes() {
-    if (!this._config) {
-      return [];
-    }
-
-    return this._config.routes.filter(route => this._isItemVisible(route));
-  }
-
-  _getPopupItems(route) {
-    if (!route || !Array.isArray(route.popup)) {
-      return [];
-    }
-
-    return route.popup.filter(item => this._isItemVisible(item));
-  }
-
-  _getRoutePath(route) {
-    if (typeof route.path === "string" && route.path) {
-      return route.path;
-    }
-
-    if (route.tap_action?.action === "navigate" && route.tap_action.navigation_path) {
-      return route.tap_action.navigation_path;
-    }
-
-    return null;
-  }
-
-  _isNavItemActive(item, currentPath) {
-    if (!item) {
-      return false;
-    }
-
-    if (item.selected === true) {
-      return true;
-    }
-
-    const candidates = [];
-    const mainPath = normalizePath(this._getRoutePath(item));
-    if (mainPath) {
-      candidates.push(mainPath);
-    }
-
-    if (Array.isArray(item.active_paths)) {
-      item.active_paths.forEach(path => {
-        const normalized = normalizePath(path);
-        if (normalized) {
-          candidates.push(normalized);
+      _triggerHaptic(style = this._config?.haptics?.style) {
+        if (!this._config?.haptics?.enabled) {
+          return;
         }
-      });
-    }
-
-    return candidates.some(path => matchPath(currentPath, path, item.match || "exact"));
-  }
-
-  _isRouteActive(route, currentPath) {
-    if (this._isNavItemActive(route, currentPath)) {
-      return true;
-    }
-
-    return this._getPopupItems(route).some(item => this._isNavItemActive(item, currentPath));
-  }
-
-  _getBadge(route) {
-    const badge = route.badge;
-
-    if (badge === undefined || badge === null || badge === false) {
-      return null;
-    }
-
-    if (typeof badge === "string" || typeof badge === "number") {
-      return {
-        content: String(badge),
-        background: this._config.styles.badge.background,
-        color: this._config.styles.badge.color,
-      };
-    }
-
-    if (badge.show === false) {
-      return null;
-    }
-
-    let content = badge.content;
-
-    if (content === undefined && badge.entity && this._hass?.states?.[badge.entity]) {
-      const stateObject = this._hass.states[badge.entity];
-      content = badge.attribute ? stateObject.attributes?.[badge.attribute] : stateObject.state;
-    }
-
-    if (content === undefined || content === null || content === "") {
-      return null;
-    }
-
-    if (!badge.show_unavailable && ["unknown", "unavailable", "none"].includes(String(content).toLowerCase())) {
-      return null;
-    }
-
-    if (!badge.show_zero && Number(content) === 0) {
-      return null;
-    }
-
-    if (!Number.isNaN(Number(content)) && Number(content) > Number(badge.max || 99)) {
-      content = `${badge.max || 99}+`;
-    }
-
-    return {
-      content: String(content),
-      background: badge.background || this._config.styles.badge.background,
-      color: badge.color || this._config.styles.badge.color,
-    };
-  }
-
-  _getRouteLabel(route) {
-    return route?.label || route?.name || route?.title || "";
-  }
-
-  _shouldShowRouteLabels(routes) {
-    if (!this._config?.show_labels) {
-      return false;
-    }
-
-    return routes.some(route => Boolean(this._getRouteLabel(route)));
-  }
-
-  _getPopupLayout(route) {
-    const layout = route?.popup_layout || this._config?.styles?.popup?.layout || "auto";
-    return ["auto", "vertical", "horizontal"].includes(layout) ? layout : "auto";
-  }
-
-  _getPopupMetrics(route, items) {
-    const popupStyles = this._config?.styles?.popup || {};
-    const popupMinWidth = Number.parseFloat(popupStyles.min_width || "220") || 220;
-    const popupMaxWidth =
-      Number.parseFloat(popupStyles.max_width || popupStyles.min_width || "380") ||
-      Math.max(popupMinWidth, 380);
-    const itemSize = Number.parseFloat(popupStyles.item_size || "48") || 48;
-    const itemGap = Number.parseFloat(popupStyles.item_gap || "12") || 12;
-    const panelPadding = Number.parseFloat(popupStyles.padding || "12") || 12;
-    const viewportWidth = Math.max(240, (window.innerWidth || popupMaxWidth) - 24);
-    const maxWidth = Math.max(Math.min(popupMaxWidth, viewportWidth), Math.min(popupMinWidth, viewportWidth));
-    const minWidth = Math.min(popupMinWidth, maxWidth);
-    const hasText = items.some(item => Boolean(this._getRouteLabel(item) || item.description));
-    const itemMinWidth = itemSize + (hasText ? 42 : 20);
-    const maxColumnsThatFit = Math.max(
-      1,
-      Math.min(
-        items.length || 1,
-        Math.floor((maxWidth - panelPadding * 2 + itemGap) / (itemMinWidth + itemGap)),
-      ),
-    );
-
-    let columns = 1;
-    const layout = this._getPopupLayout(route);
-    if (layout === "horizontal") {
-      columns = maxColumnsThatFit;
-    } else if (layout === "auto") {
-      columns = items.length <= 2 ? 1 : maxColumnsThatFit;
-    }
-
-    columns = Math.max(1, Math.min(columns, items.length || 1));
-
-    const rows = Math.max(1, Math.ceil((items.length || 1) / columns));
-    const widthFromColumns =
-      columns * itemMinWidth + Math.max(0, columns - 1) * itemGap + panelPadding * 2;
-    const minimumWidth = Math.min(
-      maxWidth,
-      !hasText && columns === 1 ? Math.max(itemSize + panelPadding * 2 + 20, 88) : minWidth,
-    );
-    const width = clamp(widthFromColumns, minimumWidth, maxWidth);
-    const rowHeight = itemSize + (hasText ? 56 : 26);
-    const viewportHeight = Math.max(160, (window.innerHeight || 320) - 48);
-    const estimatedHeight = Math.min(
-      Math.max(120, rows * rowHeight + panelPadding * 2),
-      viewportHeight,
-    );
-
-    return {
-      columns,
-      estimatedHeight,
-      hasText,
-      itemMinWidth,
-      layout,
-      width,
-    };
-  }
-
-  _renderIcon(route, isActive) {
-    const image = isActive ? route.image_active || route.image : route.image || route.image_active;
-
-    if (image) {
-      return `<img class="nav-image" src="${escapeHtml(image)}" alt="${escapeHtml(this._getRouteLabel(route) || "navigation item")}" />`;
-    }
-
-    const icon = isActive ? route.icon_active || route.icon : route.icon || route.icon_active;
-    if (!icon) {
-      return `<span class="nav-icon nav-icon--placeholder"></span>`;
-    }
-
-    return `<ha-icon class="nav-icon" icon="${escapeHtml(icon)}"></ha-icon>`;
-  }
-
-  _getRouteAction(route, defaultAction = null) {
-    if (!route) {
-      return defaultAction;
-    }
-
-    if (route.tap_action) {
-      return route.tap_action;
-    }
-
-    if (Array.isArray(route.popup) && route.popup.length > 0) {
-      return {
-        action: "open-popup",
-      };
-    }
-
-    if (route.path) {
-      return {
-        action: "navigate",
-        navigation_path: route.path,
-      };
-    }
-
-    return defaultAction;
-  }
-
-  _navigate(path) {
-    if (!path) {
-      return;
-    }
-
-    window.history.pushState(null, "", path);
-    window.dispatchEvent(new Event("location-changed"));
-  }
-
-  _callService(action) {
-    if (!this._hass || !action?.service) {
-      return;
-    }
-
-    if (!this._isServiceAllowed(action.service)) {
-      window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Navigation Bar", action.service);
-      return;
-    }
-
-    const [domain, service] = String(action.service).split(".");
-    if (!domain || !service) {
-      return;
-    }
-
-    this._hass.callService(domain, service, action.service_data || {}, action.target);
-  }
-
-  _isServiceAllowed(serviceValue) {
-    const security = this._config?.security || {};
-    if (security.strict_service_actions === false) {
-      return true;
-    }
-    const normalizedService = String(serviceValue || "").trim().toLowerCase();
-    if (!normalizedService || !normalizedService.includes(".")) {
-      return false;
-    }
-    const [domain] = normalizedService.split(".");
-    const domains = Array.isArray(security.allowed_service_domains)
-      ? security.allowed_service_domains.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
-      : [];
-    const services = Array.isArray(security.allowed_services)
-      ? security.allowed_services.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
-      : [];
-    if (!domains.length && !services.length) {
-      return false;
-    }
-    return services.includes(normalizedService) || domains.includes(domain);
-  }
-
-  _applyRouteRuntimeStyles(visibleRoutes, playDockEntrance) {
-    if (!this.shadowRoot) {
-      return;
-    }
-    visibleRoutes.forEach((route, index) => {
-      const node = this.shadowRoot.querySelector(`.nav-item[data-route-index="${index}"]`);
-      if (!(node instanceof HTMLElement)) {
-        return;
+        const hapticStyle = String(style || "medium");
+        try {
+          fireEvent(this, "haptic", hapticStyle);
+        } catch (_error) {
+        }
+        if (!this._config.haptics.fallback_vibrate || typeof navigator === "undefined" || typeof navigator.vibrate !== "function") {
+          return;
+        }
+        navigator.vibrate(HAPTIC_PATTERNS[hapticStyle] || HAPTIC_PATTERNS.selection);
       }
-      if (playDockEntrance) {
-        node.style.setProperty("--nav-enter-delay", `${Math.min(index * 38, 520)}ms`);
+      _onShadowClick(event) {
+        const popupCloseTrigger = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.popupClose === "true");
+        if (popupCloseTrigger) {
+          event.preventDefault();
+          event.stopPropagation();
+          this._closePopup();
+          return;
+        }
+        const mediaControlButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.mediaControl);
+        if (mediaControlButton) {
+          event.preventDefault();
+          event.stopPropagation();
+          this._triggerHaptic();
+          this._handleMediaControl(
+            mediaControlButton.dataset.mediaControl,
+            mediaControlButton.dataset.entity,
+            {
+              muted: mediaControlButton.dataset.mediaMuted === "true",
+              path: mediaControlButton.dataset.mediaPath,
+              volume: Number(mediaControlButton.dataset.mediaVolume)
+            }
+          );
+          return;
+        }
+        const mediaToggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.mediaToggle);
+        if (mediaToggleButton) {
+          event.preventDefault();
+          event.stopPropagation();
+          this._triggerHaptic();
+          this._mediaPlayerExpanded = mediaToggleButton.dataset.mediaToggle === "expand";
+          this._render();
+          return;
+        }
+        const mediaDotButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.mediaIndex !== void 0);
+        if (mediaDotButton) {
+          event.preventDefault();
+          event.stopPropagation();
+          this._triggerHaptic();
+          const visiblePlayers = this._getVisibleMediaPlayers();
+          this._activeMediaPlayerIndex = clamp(
+            Number(mediaDotButton.dataset.mediaIndex),
+            0,
+            Math.max(0, visiblePlayers.length - 1)
+          );
+          this._activeMediaPlayerEntity = String(visiblePlayers[this._activeMediaPlayerIndex]?.entity || "");
+          this._render();
+          return;
+        }
+        const mediaBrowserCloseButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.mediaBrowserClose === "true");
+        if (mediaBrowserCloseButton) {
+          event.preventDefault();
+          event.stopPropagation();
+          this._closeMediaBrowser();
+          return;
+        }
+        const mediaBrowserBackButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.mediaBrowserBack === "true");
+        if (mediaBrowserBackButton) {
+          event.preventDefault();
+          event.stopPropagation();
+          this._goBackMediaBrowser();
+          return;
+        }
+        const mediaBrowserActionButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.mediaBrowserAction);
+        if (mediaBrowserActionButton) {
+          event.preventDefault();
+          event.stopPropagation();
+          this._triggerHaptic();
+          const action = mediaBrowserActionButton.dataset.mediaBrowserAction;
+          const mediaContentType = mediaBrowserActionButton.dataset.mediaContentType || "";
+          const mediaContentId = mediaBrowserActionButton.dataset.mediaContentId || "";
+          if (action === "browse") {
+            this._browseMediaBrowserItem(mediaContentType, mediaContentId);
+            return;
+          }
+          if (action === "play") {
+            this._playMediaBrowserItem(mediaContentType, mediaContentId);
+            return;
+          }
+        }
+        const mediaCard = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.mediaCardIndex !== void 0);
+        if (mediaCard) {
+          const visiblePlayers = this._getVisibleMediaPlayers();
+          const player = visiblePlayers[Number(mediaCard.dataset.mediaCardIndex)];
+          if (player) {
+            event.preventDefault();
+            event.stopPropagation();
+            this._triggerHaptic();
+            this._runAction(player, {
+              closePopup: false,
+              defaultAction: {
+                action: "more-info",
+                entity: player.entity
+              }
+            });
+          }
+          return;
+        }
+        const popupButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.popupItemIndex !== void 0);
+        if (popupButton) {
+          const routeIndex = Number(popupButton.dataset.popupRouteIndex);
+          const popupItemIndex = Number(popupButton.dataset.popupItemIndex);
+          const route2 = this._renderedRoutes[routeIndex];
+          const popupItems = this._getPopupItems(route2);
+          const popupItem = popupItems[popupItemIndex];
+          if (popupItem) {
+            event.preventDefault();
+            event.stopPropagation();
+            this._triggerHaptic();
+            this._runAction(popupItem, {
+              closePopup: true
+            });
+          }
+          return;
+        }
+        const routeButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.routeIndex !== void 0);
+        if (!routeButton) {
+          return;
+        }
+        const index = Number(routeButton.dataset.routeIndex);
+        const route = this._renderedRoutes[index];
+        if (!route) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        this._triggerHaptic();
+        this._runAction(route, {
+          anchorElement: routeButton
+        });
       }
-      const routeBackground = sanitizeCssRuntimeValue(route.background);
-      const routeColor = sanitizeCssRuntimeValue(route.color);
-      const routeActiveColor = sanitizeCssRuntimeValue(route.active_color);
-      const routeActiveBackground = sanitizeCssRuntimeValue(route.active_background);
-      if (routeBackground) node.style.setProperty("--route-background", routeBackground);
-      if (routeColor) node.style.setProperty("--route-color", routeColor);
-      if (routeActiveColor) node.style.setProperty("--route-active-color", routeActiveColor);
-      if (routeActiveBackground) node.style.setProperty("--route-active-background", routeActiveBackground);
-      const badge = this._getBadge(route);
-      const badgeNode = node.querySelector(".nav-badge");
-      if (badgeNode instanceof HTMLElement) {
-        const badgeBackground = sanitizeCssRuntimeValue(badge.background);
-        const badgeColor = sanitizeCssRuntimeValue(badge.color);
-        if (badgeBackground) badgeNode.style.setProperty("--badge-background", badgeBackground);
-        if (badgeColor) badgeNode.style.setProperty("--badge-color", badgeColor);
+      _isInEditMode() {
+        const homeAssistantRoot = document.querySelector("body > home-assistant");
+        const inEditDashboardMode = this.closest("hui-card-edit-mode") !== null;
+        const inPreviewMode = this.closest("hui-card-preview") !== null || this.closest(".card > .preview") !== null;
+        const inEditCardMode = Boolean(
+          homeAssistantRoot?.shadowRoot?.querySelector("hui-dialog-edit-card")?.shadowRoot?.querySelector("ha-dialog")
+        );
+        return inEditDashboardMode || inPreviewMode || inEditCardMode;
       }
-    });
-  }
-
-  _applyPopupRuntimeStyles() {
-    if (!this.shadowRoot || !this._popupState?.route) {
-      return;
-    }
-    const panel = this.shadowRoot.querySelector(".popup-panel");
-    if (panel instanceof HTMLElement) {
-      const popupItems = this._getPopupItems(this._popupState.route);
-      const popupHasText = popupItems.some(item => Boolean(this._getRouteLabel(item) || item.description));
-      const isCompactPopup = !popupHasText && Number(this._popupState.columns || 1) === 1;
-      panel.style.left = this._popupState.left;
-      panel.style.top = this._popupState.top;
-      panel.style.width = isCompactPopup ? "fit-content" : this._popupState.width;
-      panel.style.setProperty("--popup-columns", String(this._popupState.columns || 1));
-      panel.style.setProperty(
-        "--popup-item-min",
-        this._popupState.itemMinWidth || `calc(${this._config.styles.popup.item_size} + 24px)`,
-      );
-    }
-    const popupItems = this._getPopupItems(this._popupState.route);
-    popupItems.forEach((item, popupIndex) => {
-      const node = this.shadowRoot.querySelector(`.popup-item[data-popup-item-index="${popupIndex}"]`);
-      if (!(node instanceof HTMLElement)) {
-        return;
+      _shouldHideForScreen(config) {
+        if (this._isInEditMode()) {
+          return false;
+        }
+        if (config.layout.show_desktop) {
+          return false;
+        }
+        return window.innerWidth > Number(config.layout.mobile_breakpoint || 1279);
       }
-      const itemBackground = sanitizeCssRuntimeValue(item.background);
-      const itemColor = sanitizeCssRuntimeValue(item.color);
-      const itemActiveColor = sanitizeCssRuntimeValue(item.active_color);
-      const itemActiveBackground = sanitizeCssRuntimeValue(item.active_background);
-      if (itemBackground) node.style.setProperty("--popup-route-background", itemBackground);
-      if (itemColor) node.style.setProperty("--popup-route-color", itemColor);
-      if (itemActiveColor) node.style.setProperty("--popup-route-active-color", itemActiveColor);
-      if (itemActiveBackground) node.style.setProperty("--popup-route-active-background", itemActiveBackground);
-      const badge = this._getBadge(item);
-      const badgeNode = node.querySelector(".nav-badge");
-      if (badgeNode instanceof HTMLElement) {
-        const badgeBackground = sanitizeCssRuntimeValue(badge.background);
-        const badgeColor = sanitizeCssRuntimeValue(badge.color);
-        if (badgeBackground) badgeNode.style.setProperty("--badge-background", badgeBackground);
-        if (badgeColor) badgeNode.style.setProperty("--badge-color", badgeColor);
-      }
-    });
-  }
-
-  _closePopup(shouldRender = true) {
-    if (!this._popupState) {
-      return;
-    }
-
-    if (this._popupPositionFrame) {
-      cancelAnimationFrame(this._popupPositionFrame);
-      this._popupPositionFrame = null;
-    }
-
-    this._popupState = null;
-    if (shouldRender) {
-      this._render();
-    }
-  }
-
-  _schedulePopupPositionSync() {
-    if (!this._popupState || !this.shadowRoot) {
-      return;
-    }
-
-    if (this._popupPositionFrame) {
-      cancelAnimationFrame(this._popupPositionFrame);
-    }
-
-    this._popupPositionFrame = requestAnimationFrame(() => {
-      this._popupPositionFrame = null;
-      this._syncPopupPosition();
-    });
-  }
-
-  _syncPopupPosition() {
-    if (!this._popupState || !this.shadowRoot) {
-      return;
-    }
-
-    const panel = this.shadowRoot.querySelector(".popup-panel");
-    const anchor = this.shadowRoot.querySelector(
-      `[data-route-index="${escapeSelectorValue(this._popupState.routeIndex)}"]`,
-    );
-
-    if (!(panel instanceof HTMLElement) || !(anchor instanceof HTMLElement)) {
-      return;
-    }
-
-    const panelRect = panel.getBoundingClientRect();
-    const anchorRect = anchor.getBoundingClientRect();
-    const preferredGap = this._popupState.layout === "horizontal" ? 4 : 6;
-    const previousDirection = this._popupState.direction;
-    let direction = previousDirection;
-    let left = anchorRect.left + anchorRect.width / 2 - panelRect.width / 2;
-
-    left = clamp(left, 12, Math.max(12, window.innerWidth - panelRect.width - 12));
-
-    let top = direction === "up"
-      ? anchorRect.top - panelRect.height - preferredGap
-      : anchorRect.bottom + preferredGap;
-
-    if (direction === "up" && top < 12) {
-      direction = "down";
-      top = anchorRect.bottom + preferredGap;
-    }
-
-    if (direction === "down" && top + panelRect.height > window.innerHeight - 12) {
-      direction = "up";
-      top = anchorRect.top - panelRect.height - preferredGap;
-    }
-
-    top = clamp(top, 12, Math.max(12, window.innerHeight - panelRect.height - 12));
-
-    const nextLeft = `${left}px`;
-    const nextTop = `${top}px`;
-
-    this._popupState = {
-      ...this._popupState,
-      direction,
-      left: nextLeft,
-      top: nextTop,
-      width: `${panelRect.width}px`,
-    };
-
-    if (direction !== previousDirection) {
-      this._render();
-      return;
-    }
-
-    panel.style.left = nextLeft;
-    panel.style.top = nextTop;
-  }
-
-  _openPopup(route, anchorElement) {
-    const items = this._getPopupItems(route);
-    if (!items.length || !anchorElement) {
-      return;
-    }
-
-    // Avoid replaying dock entrance classes on the same frame the popup opens.
-    this._animateDockEntranceNext = false;
-    this._playDockEntrance = false;
-
-    const anchorRect = anchorElement.getBoundingClientRect();
-    const popupMetrics = this._getPopupMetrics(route, items);
-    const popupWidth = popupMetrics.width;
-    const estimatedHeight = popupMetrics.estimatedHeight;
-    const preferredGap = popupMetrics.layout === "horizontal" ? 4 : 6;
-    let direction = this._config.layout.position === "top" ? "down" : "up";
-    let left = anchorRect.left + anchorRect.width / 2 - popupWidth / 2;
-
-    left = clamp(left, 12, window.innerWidth - popupWidth - 12);
-
-    let top = direction === "up"
-      ? anchorRect.top - estimatedHeight - preferredGap
-      : anchorRect.bottom + preferredGap;
-
-    if (direction === "up" && top < 12) {
-      direction = "down";
-      top = anchorRect.bottom + preferredGap;
-    }
-
-    if (direction === "down" && top + estimatedHeight > window.innerHeight - 12) {
-      direction = "up";
-      top = anchorRect.top - estimatedHeight - preferredGap;
-    }
-
-    top = clamp(top, 12, Math.max(12, window.innerHeight - estimatedHeight - 12));
-
-    const routeIndex = this._renderedRoutes.indexOf(route);
-    if (routeIndex < 0) {
-      return;
-    }
-
-    this._popupState = {
-      columns: popupMetrics.columns,
-      direction,
-      itemMinWidth: `${popupMetrics.itemMinWidth}px`,
-      layout: popupMetrics.layout,
-      left: `${left}px`,
-      top: `${top}px`,
-      route,
-      routeIndex,
-      width: `${popupWidth}px`,
-    };
-    this._playPopupEntrance = true;
-    this._render();
-  }
-
-  _getReservedHeight(showMediaPlayer, showMediaPlayerToggle = false) {
-    const baseHeight = this._config.layout.reserve_height;
-    const mediaGap = this._config.media_player.gap || "0px";
-
-    if (!showMediaPlayer) {
-      if (showMediaPlayerToggle) {
-        return `calc(${baseHeight} + ${mediaGap} + 48px)`;
-      }
-
-      return baseHeight;
-    }
-
-    const mediaHeight =
-      this._config.media_player.reserve_height ||
-      this._config.styles.media_player.min_height;
-
-    return `calc(${baseHeight} + ${mediaGap} + ${mediaHeight})`;
-  }
-
-  _shouldShowMediaPlayerOnCurrentScreen() {
-    if (this._isInEditMode()) {
-      return true;
-    }
-
-    const isDesktop = window.innerWidth > Number(this._config.layout.mobile_breakpoint || 1279);
-    return !isDesktop || this._config.media_player.show_desktop;
-  }
-
-  _getVisibleMediaPlayers() {
-    if (!this._config?.media_player || !Array.isArray(this._config.media_player.players)) {
-      return [];
-    }
-
-    if (this._config.media_player.show === false) {
-      return [];
-    }
-
-    if (!this._shouldShowMediaPlayerOnCurrentScreen()) {
-      return [];
-    }
-
-    return this._config.media_player.players.filter(player => {
-      if (!player || !player.entity) {
-        return false;
-      }
-
-      if (player.show === false) {
-        return false;
-      }
-
-      const state = this._hass?.states?.[player.entity];
-      if (!state) {
-        return false;
-      }
-
-      if (this._config.media_player.show === true || player.show === true || this._isInEditMode()) {
+      _isItemVisible(item) {
+        if (!item || item.hidden === true || item.show === false) {
+          return false;
+        }
+        if (this._isInEditMode()) {
+          return true;
+        }
+        const currentUserId = this._hass?.user?.id;
+        if (Array.isArray(item.users) && item.users.length > 0) {
+          return item.users.includes(currentUserId);
+        }
         return true;
       }
-
-      const visibleStates = Array.isArray(player.show_states) && player.show_states.length > 0
-        ? player.show_states
-        : ["playing", "paused"];
-
-      return visibleStates.includes(state.state);
-    });
-  }
-
-  _resolveActiveMediaPlayerIndex(players) {
-    if (!Array.isArray(players) || players.length === 0) {
-      this._activeMediaPlayerIndex = 0;
-      this._activeMediaPlayerEntity = "";
-      return 0;
-    }
-
-    const entityIndex = this._activeMediaPlayerEntity
-      ? players.findIndex(player => player?.entity === this._activeMediaPlayerEntity)
-      : -1;
-    const nextIndex = entityIndex >= 0
-      ? entityIndex
-      : clamp(this._activeMediaPlayerIndex ?? 0, 0, players.length - 1);
-
-    this._activeMediaPlayerIndex = nextIndex;
-    this._activeMediaPlayerEntity = String(players[nextIndex]?.entity || "");
-    return nextIndex;
-  }
-
-  _getMediaPlayerTitle(player, state) {
-    if (player.title) {
-      return player.title;
-    }
-
-    return state.attributes.media_title || state.attributes.friendly_name || player.entity;
-  }
-
-  _getMediaPlayerPlayerLabel(player, state) {
-    return (
-      player.label ||
-      player.name ||
-      state.attributes.friendly_name ||
-      player.entity
-    );
-  }
-
-  _getMediaPlayerSubtitle(player, state) {
-    if (player.subtitle) {
-      return player.subtitle;
-    }
-
-    return (
-      state.attributes.media_artist ||
-      state.attributes.media_series_title ||
-      state.attributes.media_album_name ||
-      state.attributes.app_name ||
-      this._getMediaPlayerStateLabel(state.state)
-    );
-  }
-
-  _resolveMediaUrl(value, options = {}) {
-    const baseUrl = sanitizeMediaArtworkUrl(value, this._hass);
-    if (!baseUrl) {
-      return "";
-    }
-    return appendQueryParam(baseUrl, "nodalia_ts", options.cacheToken);
-  }
-
-  _getArtworkCacheToken(state) {
-    if (!state) {
-      return "";
-    }
-
-    return [
-      String(state.last_updated || state.last_changed || ""),
-      String(state.attributes?.entity_picture || state.attributes?.entity_picture_local || ""),
-      String(state.attributes?.media_title || ""),
-      String(state.attributes?.media_artist || ""),
-      String(state.attributes?.media_album_name || ""),
-      String(state.attributes?.app_name || ""),
-    ].filter(Boolean).join("|");
-  }
-
-  _isAppleTvPlayer(player, state) {
-    const candidates = [
-      player?.entity,
-      player?.label,
-      player?.name,
-      player?.title,
-      state?.attributes?.friendly_name,
-      state?.attributes?.app_name,
-      state?.attributes?.source,
-      state?.attributes?.device_class,
-    ];
-
-    return candidates.some(candidate => normalizeTextKey(candidate).includes("apple tv"));
-  }
-
-  _getPlayerDeviceType(player, state) {
-    if (player?.tv_mode === true) {
-      return "tv";
-    }
-
-    if (player?.tv_mode === false) {
-      return "music";
-    }
-
-    if (player?.device_type === "music" || player?.device_type === "tv") {
-      return player.device_type;
-    }
-
-    const deviceClass = normalizeTextKey(state?.attributes?.device_class);
-    if (["tv", "receiver", "set_top_box"].includes(deviceClass)) {
-      return "tv";
-    }
-
-    const haystack = normalizeTextKey([
-      player?.entity,
-      player?.label,
-      player?.name,
-      player?.title,
-      player?.icon,
-      state?.attributes?.friendly_name,
-      state?.attributes?.app_name,
-      state?.attributes?.source,
-      state?.attributes?.media_content_type,
-    ].filter(Boolean).join(" "));
-
-    if (
-      this._isAppleTvPlayer(player, state) ||
-      haystack.includes("google tv") ||
-      haystack.includes("android tv") ||
-      haystack.includes("chromecast") ||
-      haystack.includes("television") ||
-      haystack.includes("televisor") ||
-      /\btv\b/.test(haystack)
-    ) {
-      return "tv";
-    }
-
-    return "music";
-  }
-
-  _shouldShowTvArtwork(player, state) {
-    const deviceType = this._getPlayerDeviceType(player, state);
-    if (deviceType !== "tv") {
-      return true;
-    }
-
-    const plexSignals = [
-      state?.attributes?.source,
-      state?.attributes?.app_name,
-      state?.attributes?.media_channel,
-      state?.attributes?.media_content_type,
-    ]
-      .filter(Boolean)
-      .map(value => normalizeTextKey(value));
-
-    return plexSignals.some(value => value.includes("plex"));
-  }
-
-  _getMediaPlayerArtwork(player, state) {
-    if (player.image) {
-      return this._resolveMediaUrl(player.image);
-    }
-
-    if (!this._shouldShowTvArtwork(player, state)) {
-      return null;
-    }
-
-    const artwork =
-      state.attributes.entity_picture_local ||
-      state.attributes.entity_picture ||
-      "";
-
-    return artwork
-      ? this._resolveMediaUrl(artwork, {
-          cacheToken: this._getArtworkCacheToken(state),
-        })
-      : null;
-  }
-
-  _getMediaPlayerStateLabel(stateValue) {
-    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-    const langCfg = this._config?.language ?? "auto";
-    if (window.NodaliaI18n?.translateMediaPlayerState) {
-      return window.NodaliaI18n.translateMediaPlayerState(hass, langCfg, stateValue);
-    }
-    switch (stateValue) {
-      case "playing":
-        return "Playing";
-      case "paused":
-        return "Paused";
-      case "buffering":
-        return "Loading";
-      case "idle":
-        return "Idle";
-      case "off":
-        return "Off";
-      case "standby":
-        return "Standby";
-      case "unavailable":
-        return "No disponible";
-      default:
-        return stateValue || "Desconocido";
-    }
-  }
-
-  _getMediaPlayerProgress(state) {
-    const duration = Number(state?.attributes?.media_duration || 0);
-
-    if (!(duration > 0)) {
-      return null;
-    }
-
-    let position = Number(state.attributes.media_position || 0);
-    const updatedAt = state.attributes.media_position_updated_at;
-
-    if (state.state === "playing" && updatedAt) {
-      const updatedAtTime = new Date(updatedAt).getTime();
-
-      if (!Number.isNaN(updatedAtTime)) {
-        position += Math.max(0, (Date.now() - updatedAtTime) / 1000);
+      _getVisibleRoutes() {
+        if (!this._config) {
+          return [];
+        }
+        return this._config.routes.filter((route) => this._isItemVisible(route));
       }
-    }
-
-    position = clamp(position, 0, duration);
-
-    return {
-      duration,
-      percent: clamp((position / duration) * 100, 0, 100),
-      position,
-    };
-  }
-
-  _getMediaPlayerSourceLabel(state) {
-    const sourceLabel =
-      state.attributes.source ||
-      state.attributes.app_name ||
-      state.attributes.media_album_name ||
-      state.attributes.media_channel;
-
-    const sourceKey = normalizeTextKey(sourceLabel);
-
-    if (
-      !sourceKey ||
-      sourceKey.includes("music assistant") ||
-      sourceKey === "airmusic" ||
-      sourceKey.startsWith("airmusic ")
-    ) {
-      return null;
-    }
-
-    return sourceLabel;
-  }
-
-  _isMusicAssistantPlayer(player, state) {
-    const candidates = [
-      player?.entity,
-      player?.label,
-      player?.name,
-      player?.title,
-      state?.attributes?.friendly_name,
-      state?.attributes?.source,
-      state?.attributes?.app_name,
-      state?.attributes?.media_channel,
-      state?.attributes?.media_content_id,
-    ];
-
-    return candidates.some(candidate => normalizeTextKey(candidate).includes("music assistant"));
-  }
-
-  _getMediaPlayerBrowsePath(player, state) {
-    if (player?.browse_path) {
-      return player.browse_path;
-    }
-
-    if (player?.media_browser_path) {
-      return player.media_browser_path;
-    }
-
-    return this._isMusicAssistantPlayer(player, state) ? "/media-browser/browser" : "";
-  }
-
-  _supportsVolumeControl(state) {
-    return typeof state?.attributes?.volume_level === "number";
-  }
-
-  _playPickedMedia(entityId, pickedMedia) {
-    const mediaContentId = pickedMedia?.item?.media_content_id;
-    const mediaContentType = pickedMedia?.item?.media_content_type;
-
-    if (!this._hass || !entityId || !mediaContentId || !mediaContentType) {
-      return;
-    }
-
-    this._hass.callService("media_player", "play_media", {
-      entity_id: entityId,
-      media_content_id: mediaContentId,
-      media_content_type: mediaContentType,
-    });
-  }
-
-  _getMediaBrowserClient() {
-    if (typeof this._hass?.callWS === "function") {
-      return this._hass.callWS.bind(this._hass);
-    }
-
-    if (typeof this._hass?.connection?.sendMessagePromise === "function") {
-      return this._hass.connection.sendMessagePromise.bind(this._hass.connection);
-    }
-
-    return null;
-  }
-
-  _normalizeMediaBrowserItem(item) {
-    if (!item || typeof item !== "object") {
-      return null;
-    }
-
-    return {
-      title: item.title || item.name || "Elemento",
-      media_class: item.media_class || "",
-      media_content_id: item.media_content_id || "",
-      media_content_type: item.media_content_type || "",
-      can_play: item.can_play === true,
-      can_expand: item.can_expand === true,
-      thumbnail: item.thumbnail || item.thumbnail_url || "",
-      children: Array.isArray(item.children)
-        ? item.children.map(child => this._normalizeMediaBrowserItem(child)).filter(Boolean)
-        : [],
-    };
-  }
-
-  _normalizeMediaBrowserNode(result, entityId) {
-    let node = result;
-
-    if (node?.result && typeof node.result === "object") {
-      node = node.result;
-    }
-
-    if (node && entityId && typeof node[entityId] === "object") {
-      node = node[entityId];
-    }
-
-    const normalized = this._normalizeMediaBrowserItem(node);
-    if (!normalized) {
-      return null;
-    }
-
-    return {
-      ...normalized,
-      title: normalized.title || "Media",
-    };
-  }
-
-  async _fetchMediaBrowserNode(entityId, mediaContentType = "", mediaContentId = "") {
-    const client = this._getMediaBrowserClient();
-    if (!client || !entityId) {
-      return null;
-    }
-
-    const payload = {
-      type: "media_player/browse_media",
-      entity_id: entityId,
-    };
-
-    if (mediaContentType) {
-      payload.media_content_type = mediaContentType;
-    }
-
-    if (mediaContentId) {
-      payload.media_content_id = mediaContentId;
-    }
-
-    const result = await client(payload);
-    return this._normalizeMediaBrowserNode(result, entityId);
-  }
-
-  _showEntityMediaBrowser(entityId, fallbackPath = "") {
-    this._openMediaBrowser(entityId, fallbackPath);
-    return true;
-  }
-
-  _closeMediaBrowser(shouldRender = true) {
-    if (!this._mediaBrowserState) {
-      return;
-    }
-
-    this._mediaBrowserState = null;
-    this._mediaBrowserRequestToken += 1;
-
-    if (shouldRender) {
-      this._render();
-    }
-  }
-
-  async _openMediaBrowser(entityId, fallbackPath = "") {
-    if (!entityId) {
-      return;
-    }
-
-    this._closePopup(false);
-    const token = this._mediaBrowserRequestToken + 1;
-    this._mediaBrowserRequestToken = token;
-    this._mediaBrowserState = {
-      entityId,
-      fallbackPath,
-      isMusicAssistant: this._isMusicAssistantPlayer(
-        { entity: entityId },
-        this._hass?.states?.[entityId],
-      ),
-      loading: true,
-      error: "",
-      stack: [],
-    };
-    this._render();
-
-    try {
-      const rootNode = await this._fetchMediaBrowserNode(entityId);
-
-      if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
-        return;
+      _getPopupItems(route) {
+        if (!route || !Array.isArray(route.popup)) {
+          return [];
+        }
+        return route.popup.filter((item) => this._isItemVisible(item));
       }
-
-      if (!rootNode) {
-        throw new Error("Empty media browser response");
+      _getRoutePath(route) {
+        if (typeof route.path === "string" && route.path) {
+          return route.path;
+        }
+        if (route.tap_action?.action === "navigate" && route.tap_action.navigation_path) {
+          return route.tap_action.navigation_path;
+        }
+        return null;
       }
-
-      this._mediaBrowserState = {
-        entityId,
-        fallbackPath,
-        isMusicAssistant: this._isMusicAssistantPlayer(
-          { entity: entityId },
-          this._hass?.states?.[entityId],
-        ),
-        loading: false,
-        error: "",
-        stack: [rootNode],
-      };
-      this._render();
-    } catch (_error) {
-      if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
-        return;
+      _isNavItemActive(item, currentPath) {
+        if (!item) {
+          return false;
+        }
+        if (item.selected === true) {
+          return true;
+        }
+        const candidates = [];
+        const mainPath = normalizePath(this._getRoutePath(item));
+        if (mainPath) {
+          candidates.push(mainPath);
+        }
+        if (Array.isArray(item.active_paths)) {
+          item.active_paths.forEach((path) => {
+            const normalized = normalizePath(path);
+            if (normalized) {
+              candidates.push(normalized);
+            }
+          });
+        }
+        return candidates.some((path) => matchPath(currentPath, path, item.match || "exact"));
       }
-
-      if (fallbackPath) {
+      _isRouteActive(route, currentPath) {
+        if (this._isNavItemActive(route, currentPath)) {
+          return true;
+        }
+        return this._getPopupItems(route).some((item) => this._isNavItemActive(item, currentPath));
+      }
+      _getBadge(route) {
+        const badge = route.badge;
+        if (badge === void 0 || badge === null || badge === false) {
+          return null;
+        }
+        if (typeof badge === "string" || typeof badge === "number") {
+          return {
+            content: String(badge),
+            background: this._config.styles.badge.background,
+            color: this._config.styles.badge.color
+          };
+        }
+        if (badge.show === false) {
+          return null;
+        }
+        let content = badge.content;
+        if (content === void 0 && badge.entity && this._hass?.states?.[badge.entity]) {
+          const stateObject = this._hass.states[badge.entity];
+          content = badge.attribute ? stateObject.attributes?.[badge.attribute] : stateObject.state;
+        }
+        if (content === void 0 || content === null || content === "") {
+          return null;
+        }
+        if (!badge.show_unavailable && ["unknown", "unavailable", "none"].includes(String(content).toLowerCase())) {
+          return null;
+        }
+        if (!badge.show_zero && Number(content) === 0) {
+          return null;
+        }
+        if (!Number.isNaN(Number(content)) && Number(content) > Number(badge.max || 99)) {
+          content = `${badge.max || 99}+`;
+        }
+        return {
+          content: String(content),
+          background: badge.background || this._config.styles.badge.background,
+          color: badge.color || this._config.styles.badge.color
+        };
+      }
+      _getRouteLabel(route) {
+        return route?.label || route?.name || route?.title || "";
+      }
+      _shouldShowRouteLabels(routes) {
+        if (!this._config?.show_labels) {
+          return false;
+        }
+        return routes.some((route) => Boolean(this._getRouteLabel(route)));
+      }
+      _getPopupLayout(route) {
+        const layout = route?.popup_layout || this._config?.styles?.popup?.layout || "auto";
+        return ["auto", "vertical", "horizontal"].includes(layout) ? layout : "auto";
+      }
+      _getPopupMetrics(route, items) {
+        const popupStyles = this._config?.styles?.popup || {};
+        const popupMinWidth = Number.parseFloat(popupStyles.min_width || "220") || 220;
+        const popupMaxWidth = Number.parseFloat(popupStyles.max_width || popupStyles.min_width || "380") || Math.max(popupMinWidth, 380);
+        const itemSize = Number.parseFloat(popupStyles.item_size || "48") || 48;
+        const itemGap = Number.parseFloat(popupStyles.item_gap || "12") || 12;
+        const panelPadding = Number.parseFloat(popupStyles.padding || "12") || 12;
+        const viewportWidth = Math.max(240, (window.innerWidth || popupMaxWidth) - 24);
+        const maxWidth = Math.max(Math.min(popupMaxWidth, viewportWidth), Math.min(popupMinWidth, viewportWidth));
+        const minWidth = Math.min(popupMinWidth, maxWidth);
+        const hasText = items.some((item) => Boolean(this._getRouteLabel(item) || item.description));
+        const itemMinWidth = itemSize + (hasText ? 42 : 20);
+        const maxColumnsThatFit = Math.max(
+          1,
+          Math.min(
+            items.length || 1,
+            Math.floor((maxWidth - panelPadding * 2 + itemGap) / (itemMinWidth + itemGap))
+          )
+        );
+        let columns = 1;
+        const layout = this._getPopupLayout(route);
+        if (layout === "horizontal") {
+          columns = maxColumnsThatFit;
+        } else if (layout === "auto") {
+          columns = items.length <= 2 ? 1 : maxColumnsThatFit;
+        }
+        columns = Math.max(1, Math.min(columns, items.length || 1));
+        const rows = Math.max(1, Math.ceil((items.length || 1) / columns));
+        const widthFromColumns = columns * itemMinWidth + Math.max(0, columns - 1) * itemGap + panelPadding * 2;
+        const minimumWidth = Math.min(
+          maxWidth,
+          !hasText && columns === 1 ? Math.max(itemSize + panelPadding * 2 + 20, 88) : minWidth
+        );
+        const width = clamp(widthFromColumns, minimumWidth, maxWidth);
+        const rowHeight = itemSize + (hasText ? 56 : 26);
+        const viewportHeight = Math.max(160, (window.innerHeight || 320) - 48);
+        const estimatedHeight = Math.min(
+          Math.max(120, rows * rowHeight + panelPadding * 2),
+          viewportHeight
+        );
+        return {
+          columns,
+          estimatedHeight,
+          hasText,
+          itemMinWidth,
+          layout,
+          width
+        };
+      }
+      _renderIcon(route, isActive) {
+        const image = isActive ? route.image_active || route.image : route.image || route.image_active;
+        if (image) {
+          return `<img class="nav-image" src="${escapeHtml(image)}" alt="${escapeHtml(this._getRouteLabel(route) || "navigation item")}" />`;
+        }
+        const icon = isActive ? route.icon_active || route.icon : route.icon || route.icon_active;
+        if (!icon) {
+          return `<span class="nav-icon nav-icon--placeholder"></span>`;
+        }
+        return `<ha-icon class="nav-icon" icon="${escapeHtml(icon)}"></ha-icon>`;
+      }
+      _getRouteAction(route, defaultAction = null) {
+        if (!route) {
+          return defaultAction;
+        }
+        if (route.tap_action) {
+          return route.tap_action;
+        }
+        if (Array.isArray(route.popup) && route.popup.length > 0) {
+          return {
+            action: "open-popup"
+          };
+        }
+        if (route.path) {
+          return {
+            action: "navigate",
+            navigation_path: route.path
+          };
+        }
+        return defaultAction;
+      }
+      _navigate(path) {
+        if (!path) {
+          return;
+        }
+        window.history.pushState(null, "", path);
+        window.dispatchEvent(new Event("location-changed"));
+      }
+      _callService(action) {
+        if (!this._hass || !action?.service) {
+          return;
+        }
+        if (!this._isServiceAllowed(action.service)) {
+          window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Navigation Bar", action.service);
+          return;
+        }
+        const [domain, service] = String(action.service).split(".");
+        if (!domain || !service) {
+          return;
+        }
+        this._hass.callService(domain, service, action.service_data || {}, action.target);
+      }
+      _isServiceAllowed(serviceValue) {
+        const security = this._config?.security || {};
+        if (security.strict_service_actions === false) {
+          return true;
+        }
+        const normalizedService = String(serviceValue || "").trim().toLowerCase();
+        if (!normalizedService || !normalizedService.includes(".")) {
+          return false;
+        }
+        const [domain] = normalizedService.split(".");
+        const domains = Array.isArray(security.allowed_service_domains) ? security.allowed_service_domains.map((item) => String(item || "").trim().toLowerCase()).filter(Boolean) : [];
+        const services = Array.isArray(security.allowed_services) ? security.allowed_services.map((item) => String(item || "").trim().toLowerCase()).filter(Boolean) : [];
+        if (!domains.length && !services.length) {
+          return false;
+        }
+        return services.includes(normalizedService) || domains.includes(domain);
+      }
+      _applyRouteRuntimeStyles(visibleRoutes, playDockEntrance) {
+        if (!this.shadowRoot) {
+          return;
+        }
+        visibleRoutes.forEach((route, index) => {
+          const node = this.shadowRoot.querySelector(`.nav-item[data-route-index="${index}"]`);
+          if (!(node instanceof HTMLElement)) {
+            return;
+          }
+          if (playDockEntrance) {
+            node.style.setProperty("--nav-enter-delay", `${Math.min(index * 38, 520)}ms`);
+          }
+          const routeBackground = sanitizeCssRuntimeValue(route.background);
+          const routeColor = sanitizeCssRuntimeValue(route.color);
+          const routeActiveColor = sanitizeCssRuntimeValue(route.active_color);
+          const routeActiveBackground = sanitizeCssRuntimeValue(route.active_background);
+          if (routeBackground) node.style.setProperty("--route-background", routeBackground);
+          if (routeColor) node.style.setProperty("--route-color", routeColor);
+          if (routeActiveColor) node.style.setProperty("--route-active-color", routeActiveColor);
+          if (routeActiveBackground) node.style.setProperty("--route-active-background", routeActiveBackground);
+          const badge = this._getBadge(route);
+          const badgeNode = node.querySelector(".nav-badge");
+          if (badgeNode instanceof HTMLElement) {
+            const badgeBackground = sanitizeCssRuntimeValue(badge.background);
+            const badgeColor = sanitizeCssRuntimeValue(badge.color);
+            if (badgeBackground) badgeNode.style.setProperty("--badge-background", badgeBackground);
+            if (badgeColor) badgeNode.style.setProperty("--badge-color", badgeColor);
+          }
+        });
+      }
+      _applyPopupRuntimeStyles() {
+        if (!this.shadowRoot || !this._popupState?.route) {
+          return;
+        }
+        const panel = this.shadowRoot.querySelector(".popup-panel");
+        if (panel instanceof HTMLElement) {
+          const popupItems2 = this._getPopupItems(this._popupState.route);
+          const popupHasText = popupItems2.some((item) => Boolean(this._getRouteLabel(item) || item.description));
+          const isCompactPopup = !popupHasText && Number(this._popupState.columns || 1) === 1;
+          panel.style.left = this._popupState.left;
+          panel.style.top = this._popupState.top;
+          panel.style.width = isCompactPopup ? "fit-content" : this._popupState.width;
+          panel.style.setProperty("--popup-columns", String(this._popupState.columns || 1));
+          panel.style.setProperty(
+            "--popup-item-min",
+            this._popupState.itemMinWidth || `calc(${this._config.styles.popup.item_size} + 24px)`
+          );
+        }
+        const popupItems = this._getPopupItems(this._popupState.route);
+        popupItems.forEach((item, popupIndex) => {
+          const node = this.shadowRoot.querySelector(`.popup-item[data-popup-item-index="${popupIndex}"]`);
+          if (!(node instanceof HTMLElement)) {
+            return;
+          }
+          const itemBackground = sanitizeCssRuntimeValue(item.background);
+          const itemColor = sanitizeCssRuntimeValue(item.color);
+          const itemActiveColor = sanitizeCssRuntimeValue(item.active_color);
+          const itemActiveBackground = sanitizeCssRuntimeValue(item.active_background);
+          if (itemBackground) node.style.setProperty("--popup-route-background", itemBackground);
+          if (itemColor) node.style.setProperty("--popup-route-color", itemColor);
+          if (itemActiveColor) node.style.setProperty("--popup-route-active-color", itemActiveColor);
+          if (itemActiveBackground) node.style.setProperty("--popup-route-active-background", itemActiveBackground);
+          const badge = this._getBadge(item);
+          const badgeNode = node.querySelector(".nav-badge");
+          if (badgeNode instanceof HTMLElement) {
+            const badgeBackground = sanitizeCssRuntimeValue(badge.background);
+            const badgeColor = sanitizeCssRuntimeValue(badge.color);
+            if (badgeBackground) badgeNode.style.setProperty("--badge-background", badgeBackground);
+            if (badgeColor) badgeNode.style.setProperty("--badge-color", badgeColor);
+          }
+        });
+      }
+      _closePopup(shouldRender = true) {
+        if (!this._popupState) {
+          return;
+        }
+        if (this._popupPositionFrame) {
+          cancelAnimationFrame(this._popupPositionFrame);
+          this._popupPositionFrame = null;
+        }
+        this._popupState = null;
+        if (shouldRender) {
+          this._render();
+        }
+      }
+      _schedulePopupPositionSync() {
+        if (!this._popupState || !this.shadowRoot) {
+          return;
+        }
+        if (this._popupPositionFrame) {
+          cancelAnimationFrame(this._popupPositionFrame);
+        }
+        this._popupPositionFrame = requestAnimationFrame(() => {
+          this._popupPositionFrame = null;
+          this._syncPopupPosition();
+        });
+      }
+      _syncPopupPosition() {
+        if (!this._popupState || !this.shadowRoot) {
+          return;
+        }
+        const panel = this.shadowRoot.querySelector(".popup-panel");
+        const anchor = this.shadowRoot.querySelector(
+          `[data-route-index="${escapeSelectorValue(this._popupState.routeIndex)}"]`
+        );
+        if (!(panel instanceof HTMLElement) || !(anchor instanceof HTMLElement)) {
+          return;
+        }
+        const panelRect = panel.getBoundingClientRect();
+        const anchorRect = anchor.getBoundingClientRect();
+        const preferredGap = this._popupState.layout === "horizontal" ? 4 : 6;
+        const previousDirection = this._popupState.direction;
+        let direction = previousDirection;
+        let left = anchorRect.left + anchorRect.width / 2 - panelRect.width / 2;
+        left = clamp(left, 12, Math.max(12, window.innerWidth - panelRect.width - 12));
+        let top = direction === "up" ? anchorRect.top - panelRect.height - preferredGap : anchorRect.bottom + preferredGap;
+        if (direction === "up" && top < 12) {
+          direction = "down";
+          top = anchorRect.bottom + preferredGap;
+        }
+        if (direction === "down" && top + panelRect.height > window.innerHeight - 12) {
+          direction = "up";
+          top = anchorRect.top - panelRect.height - preferredGap;
+        }
+        top = clamp(top, 12, Math.max(12, window.innerHeight - panelRect.height - 12));
+        const nextLeft = `${left}px`;
+        const nextTop = `${top}px`;
+        this._popupState = {
+          ...this._popupState,
+          direction,
+          left: nextLeft,
+          top: nextTop,
+          width: `${panelRect.width}px`
+        };
+        if (direction !== previousDirection) {
+          this._render();
+          return;
+        }
+        panel.style.left = nextLeft;
+        panel.style.top = nextTop;
+      }
+      _openPopup(route, anchorElement) {
+        const items = this._getPopupItems(route);
+        if (!items.length || !anchorElement) {
+          return;
+        }
+        this._animateDockEntranceNext = false;
+        this._playDockEntrance = false;
+        const anchorRect = anchorElement.getBoundingClientRect();
+        const popupMetrics = this._getPopupMetrics(route, items);
+        const popupWidth = popupMetrics.width;
+        const estimatedHeight = popupMetrics.estimatedHeight;
+        const preferredGap = popupMetrics.layout === "horizontal" ? 4 : 6;
+        let direction = this._config.layout.position === "top" ? "down" : "up";
+        let left = anchorRect.left + anchorRect.width / 2 - popupWidth / 2;
+        left = clamp(left, 12, window.innerWidth - popupWidth - 12);
+        let top = direction === "up" ? anchorRect.top - estimatedHeight - preferredGap : anchorRect.bottom + preferredGap;
+        if (direction === "up" && top < 12) {
+          direction = "down";
+          top = anchorRect.bottom + preferredGap;
+        }
+        if (direction === "down" && top + estimatedHeight > window.innerHeight - 12) {
+          direction = "up";
+          top = anchorRect.top - estimatedHeight - preferredGap;
+        }
+        top = clamp(top, 12, Math.max(12, window.innerHeight - estimatedHeight - 12));
+        const routeIndex = this._renderedRoutes.indexOf(route);
+        if (routeIndex < 0) {
+          return;
+        }
+        this._popupState = {
+          columns: popupMetrics.columns,
+          direction,
+          itemMinWidth: `${popupMetrics.itemMinWidth}px`,
+          layout: popupMetrics.layout,
+          left: `${left}px`,
+          top: `${top}px`,
+          route,
+          routeIndex,
+          width: `${popupWidth}px`
+        };
+        this._playPopupEntrance = true;
+        this._render();
+      }
+      _getReservedHeight(showMediaPlayer, showMediaPlayerToggle = false) {
+        const baseHeight = this._config.layout.reserve_height;
+        const mediaGap = this._config.media_player.gap || "0px";
+        if (!showMediaPlayer) {
+          if (showMediaPlayerToggle) {
+            return `calc(${baseHeight} + ${mediaGap} + 48px)`;
+          }
+          return baseHeight;
+        }
+        const mediaHeight = this._config.media_player.reserve_height || this._config.styles.media_player.min_height;
+        return `calc(${baseHeight} + ${mediaGap} + ${mediaHeight})`;
+      }
+      _shouldShowMediaPlayerOnCurrentScreen() {
+        if (this._isInEditMode()) {
+          return true;
+        }
+        const isDesktop = window.innerWidth > Number(this._config.layout.mobile_breakpoint || 1279);
+        return !isDesktop || this._config.media_player.show_desktop;
+      }
+      _getVisibleMediaPlayers() {
+        if (!this._config?.media_player || !Array.isArray(this._config.media_player.players)) {
+          return [];
+        }
+        if (this._config.media_player.show === false) {
+          return [];
+        }
+        if (!this._shouldShowMediaPlayerOnCurrentScreen()) {
+          return [];
+        }
+        return this._config.media_player.players.filter((player) => {
+          if (!player || !player.entity) {
+            return false;
+          }
+          if (player.show === false) {
+            return false;
+          }
+          const state = this._hass?.states?.[player.entity];
+          if (!state) {
+            return false;
+          }
+          if (this._config.media_player.show === true || player.show === true || this._isInEditMode()) {
+            return true;
+          }
+          const visibleStates = Array.isArray(player.show_states) && player.show_states.length > 0 ? player.show_states : ["playing", "paused"];
+          return visibleStates.includes(state.state);
+        });
+      }
+      _resolveActiveMediaPlayerIndex(players) {
+        if (!Array.isArray(players) || players.length === 0) {
+          this._activeMediaPlayerIndex = 0;
+          this._activeMediaPlayerEntity = "";
+          return 0;
+        }
+        const entityIndex = this._activeMediaPlayerEntity ? players.findIndex((player) => player?.entity === this._activeMediaPlayerEntity) : -1;
+        const nextIndex = entityIndex >= 0 ? entityIndex : clamp(this._activeMediaPlayerIndex ?? 0, 0, players.length - 1);
+        this._activeMediaPlayerIndex = nextIndex;
+        this._activeMediaPlayerEntity = String(players[nextIndex]?.entity || "");
+        return nextIndex;
+      }
+      _getMediaPlayerTitle(player, state) {
+        if (player.title) {
+          return player.title;
+        }
+        return state.attributes.media_title || state.attributes.friendly_name || player.entity;
+      }
+      _getMediaPlayerPlayerLabel(player, state) {
+        return player.label || player.name || state.attributes.friendly_name || player.entity;
+      }
+      _getMediaPlayerSubtitle(player, state) {
+        if (player.subtitle) {
+          return player.subtitle;
+        }
+        return state.attributes.media_artist || state.attributes.media_series_title || state.attributes.media_album_name || state.attributes.app_name || this._getMediaPlayerStateLabel(state.state);
+      }
+      _resolveMediaUrl(value, options = {}) {
+        const baseUrl = sanitizeMediaArtworkUrl(value, this._hass);
+        if (!baseUrl) {
+          return "";
+        }
+        return appendQueryParam(baseUrl, "nodalia_ts", options.cacheToken);
+      }
+      _getArtworkCacheToken(state) {
+        if (!state) {
+          return "";
+        }
+        return [
+          String(state.last_updated || state.last_changed || ""),
+          String(state.attributes?.entity_picture || state.attributes?.entity_picture_local || ""),
+          String(state.attributes?.media_title || ""),
+          String(state.attributes?.media_artist || ""),
+          String(state.attributes?.media_album_name || ""),
+          String(state.attributes?.app_name || "")
+        ].filter(Boolean).join("|");
+      }
+      _isAppleTvPlayer(player, state) {
+        const candidates = [
+          player?.entity,
+          player?.label,
+          player?.name,
+          player?.title,
+          state?.attributes?.friendly_name,
+          state?.attributes?.app_name,
+          state?.attributes?.source,
+          state?.attributes?.device_class
+        ];
+        return candidates.some((candidate) => normalizeTextKey(candidate).includes("apple tv"));
+      }
+      _getPlayerDeviceType(player, state) {
+        if (player?.tv_mode === true) {
+          return "tv";
+        }
+        if (player?.tv_mode === false) {
+          return "music";
+        }
+        if (player?.device_type === "music" || player?.device_type === "tv") {
+          return player.device_type;
+        }
+        const deviceClass = normalizeTextKey(state?.attributes?.device_class);
+        if (["tv", "receiver", "set_top_box"].includes(deviceClass)) {
+          return "tv";
+        }
+        const haystack = normalizeTextKey([
+          player?.entity,
+          player?.label,
+          player?.name,
+          player?.title,
+          player?.icon,
+          state?.attributes?.friendly_name,
+          state?.attributes?.app_name,
+          state?.attributes?.source,
+          state?.attributes?.media_content_type
+        ].filter(Boolean).join(" "));
+        if (this._isAppleTvPlayer(player, state) || haystack.includes("google tv") || haystack.includes("android tv") || haystack.includes("chromecast") || haystack.includes("television") || haystack.includes("televisor") || /\btv\b/.test(haystack)) {
+          return "tv";
+        }
+        return "music";
+      }
+      _shouldShowTvArtwork(player, state) {
+        const deviceType = this._getPlayerDeviceType(player, state);
+        if (deviceType !== "tv") {
+          return true;
+        }
+        const plexSignals = [
+          state?.attributes?.source,
+          state?.attributes?.app_name,
+          state?.attributes?.media_channel,
+          state?.attributes?.media_content_type
+        ].filter(Boolean).map((value) => normalizeTextKey(value));
+        return plexSignals.some((value) => value.includes("plex"));
+      }
+      _getMediaPlayerArtwork(player, state) {
+        if (player.image) {
+          return this._resolveMediaUrl(player.image);
+        }
+        if (!this._shouldShowTvArtwork(player, state)) {
+          return null;
+        }
+        const artwork = state.attributes.entity_picture_local || state.attributes.entity_picture || "";
+        return artwork ? this._resolveMediaUrl(artwork, {
+          cacheToken: this._getArtworkCacheToken(state)
+        }) : null;
+      }
+      _getMediaPlayerStateLabel(stateValue) {
+        const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+        const langCfg = this._config?.language ?? "auto";
+        if (window.NodaliaI18n?.translateMediaPlayerState) {
+          return window.NodaliaI18n.translateMediaPlayerState(hass, langCfg, stateValue);
+        }
+        switch (stateValue) {
+          case "playing":
+            return "Playing";
+          case "paused":
+            return "Paused";
+          case "buffering":
+            return "Loading";
+          case "idle":
+            return "Idle";
+          case "off":
+            return "Off";
+          case "standby":
+            return "Standby";
+          case "unavailable":
+            return "No disponible";
+          default:
+            return stateValue || "Desconocido";
+        }
+      }
+      _getMediaPlayerProgress(state) {
+        const duration = Number(state?.attributes?.media_duration || 0);
+        if (!(duration > 0)) {
+          return null;
+        }
+        let position = Number(state.attributes.media_position || 0);
+        const updatedAt = state.attributes.media_position_updated_at;
+        if (state.state === "playing" && updatedAt) {
+          const updatedAtTime = new Date(updatedAt).getTime();
+          if (!Number.isNaN(updatedAtTime)) {
+            position += Math.max(0, (Date.now() - updatedAtTime) / 1e3);
+          }
+        }
+        position = clamp(position, 0, duration);
+        return {
+          duration,
+          percent: clamp(position / duration * 100, 0, 100),
+          position
+        };
+      }
+      _getMediaPlayerSourceLabel(state) {
+        const sourceLabel = state.attributes.source || state.attributes.app_name || state.attributes.media_album_name || state.attributes.media_channel;
+        const sourceKey = normalizeTextKey(sourceLabel);
+        if (!sourceKey || sourceKey.includes("music assistant") || sourceKey === "airmusic" || sourceKey.startsWith("airmusic ")) {
+          return null;
+        }
+        return sourceLabel;
+      }
+      _isMusicAssistantPlayer(player, state) {
+        const candidates = [
+          player?.entity,
+          player?.label,
+          player?.name,
+          player?.title,
+          state?.attributes?.friendly_name,
+          state?.attributes?.source,
+          state?.attributes?.app_name,
+          state?.attributes?.media_channel,
+          state?.attributes?.media_content_id
+        ];
+        return candidates.some((candidate) => normalizeTextKey(candidate).includes("music assistant"));
+      }
+      _getMediaPlayerBrowsePath(player, state) {
+        if (player?.browse_path) {
+          return player.browse_path;
+        }
+        if (player?.media_browser_path) {
+          return player.media_browser_path;
+        }
+        return this._isMusicAssistantPlayer(player, state) ? "/media-browser/browser" : "";
+      }
+      _supportsVolumeControl(state) {
+        return typeof state?.attributes?.volume_level === "number";
+      }
+      _playPickedMedia(entityId, pickedMedia) {
+        const mediaContentId = pickedMedia?.item?.media_content_id;
+        const mediaContentType = pickedMedia?.item?.media_content_type;
+        if (!this._hass || !entityId || !mediaContentId || !mediaContentType) {
+          return;
+        }
+        this._hass.callService("media_player", "play_media", {
+          entity_id: entityId,
+          media_content_id: mediaContentId,
+          media_content_type: mediaContentType
+        });
+      }
+      _getMediaBrowserClient() {
+        if (typeof this._hass?.callWS === "function") {
+          return this._hass.callWS.bind(this._hass);
+        }
+        if (typeof this._hass?.connection?.sendMessagePromise === "function") {
+          return this._hass.connection.sendMessagePromise.bind(this._hass.connection);
+        }
+        return null;
+      }
+      _normalizeMediaBrowserItem(item) {
+        if (!item || typeof item !== "object") {
+          return null;
+        }
+        return {
+          title: item.title || item.name || "Elemento",
+          media_class: item.media_class || "",
+          media_content_id: item.media_content_id || "",
+          media_content_type: item.media_content_type || "",
+          can_play: item.can_play === true,
+          can_expand: item.can_expand === true,
+          thumbnail: item.thumbnail || item.thumbnail_url || "",
+          children: Array.isArray(item.children) ? item.children.map((child) => this._normalizeMediaBrowserItem(child)).filter(Boolean) : []
+        };
+      }
+      _normalizeMediaBrowserNode(result, entityId) {
+        let node = result;
+        if (node?.result && typeof node.result === "object") {
+          node = node.result;
+        }
+        if (node && entityId && typeof node[entityId] === "object") {
+          node = node[entityId];
+        }
+        const normalized = this._normalizeMediaBrowserItem(node);
+        if (!normalized) {
+          return null;
+        }
+        return {
+          ...normalized,
+          title: normalized.title || "Media"
+        };
+      }
+      async _fetchMediaBrowserNode(entityId, mediaContentType = "", mediaContentId = "") {
+        const client = this._getMediaBrowserClient();
+        if (!client || !entityId) {
+          return null;
+        }
+        const payload = {
+          type: "media_player/browse_media",
+          entity_id: entityId
+        };
+        if (mediaContentType) {
+          payload.media_content_type = mediaContentType;
+        }
+        if (mediaContentId) {
+          payload.media_content_id = mediaContentId;
+        }
+        const result = await client(payload);
+        return this._normalizeMediaBrowserNode(result, entityId);
+      }
+      _showEntityMediaBrowser(entityId, fallbackPath = "") {
+        this._openMediaBrowser(entityId, fallbackPath);
+        return true;
+      }
+      _closeMediaBrowser(shouldRender = true) {
+        if (!this._mediaBrowserState) {
+          return;
+        }
         this._mediaBrowserState = null;
-        this._navigate(fallbackPath);
-        return;
-      }
-
-      this._mediaBrowserState = {
-        entityId,
-        fallbackPath,
-        isMusicAssistant: this._isMusicAssistantPlayer(
-          { entity: entityId },
-          this._hass?.states?.[entityId],
-        ),
-        loading: false,
-        error: "No se pudieron cargar los medios.",
-        stack: [],
-      };
-      this._render();
-    }
-  }
-
-  async _browseMediaBrowserItem(mediaContentType, mediaContentId) {
-    if (!this._mediaBrowserState?.entityId) {
-      return;
-    }
-
-    const previousState = this._mediaBrowserState;
-    const token = this._mediaBrowserRequestToken + 1;
-    this._mediaBrowserRequestToken = token;
-    this._mediaBrowserState = {
-      ...previousState,
-      loading: true,
-      error: "",
-    };
-    this._render();
-
-    try {
-      const nextNode = await this._fetchMediaBrowserNode(
-        previousState.entityId,
-        mediaContentType,
-        mediaContentId,
-      );
-
-      if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
-        return;
-      }
-
-      if (!nextNode) {
-        throw new Error("Empty media browser response");
-      }
-
-      this._mediaBrowserState = {
-        ...previousState,
-        loading: false,
-        error: "",
-        stack: [...previousState.stack, nextNode],
-      };
-      this._render();
-    } catch (_error) {
-      if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
-        return;
-      }
-
-      this._mediaBrowserState = {
-        ...previousState,
-        loading: false,
-        error: "No se pudo abrir este elemento.",
-      };
-      this._render();
-    }
-  }
-
-  _goBackMediaBrowser() {
-    if (!this._mediaBrowserState) {
-      return;
-    }
-
-    if (this._mediaBrowserState.stack.length <= 1) {
-      this._closeMediaBrowser();
-      return;
-    }
-
-    this._mediaBrowserState = {
-      ...this._mediaBrowserState,
-      error: "",
-      loading: false,
-      stack: this._mediaBrowserState.stack.slice(0, -1),
-    };
-    this._render();
-  }
-
-  _playMediaBrowserItem(mediaContentType, mediaContentId) {
-    const entityId = this._mediaBrowserState?.entityId;
-
-    if (!this._hass || !entityId || !mediaContentType || !mediaContentId) {
-      return;
-    }
-
-    this._hass.callService("media_player", "play_media", {
-      entity_id: entityId,
-      media_content_id: mediaContentId,
-      media_content_type: mediaContentType,
-    });
-    this._closeMediaBrowser();
-  }
-
-  _getMusicAssistantDirectoryIcon(item) {
-    const haystack = normalizeTextKey([
-      item?.title,
-      item?.media_content_type,
-      item?.media_content_id,
-    ].filter(Boolean).join(" "));
-
-    const match = MUSIC_ASSISTANT_DIRECTORY_ICON_RULES.find(rule =>
-      rule.patterns.some(pattern => haystack.includes(pattern)),
-    );
-
-    return match?.icon || "";
-  }
-
-  _commonAria(key, fallback = "") {
-    return window.NodaliaI18n?.translateCommonAria?.(this._hass, this._config?.language ?? "auto", key, fallback) || fallback;
-  }
-
-  _mediaBrowserUi(key, fallback = "", values = {}) {
-    return window.NodaliaI18n?.translateMediaBrowserUi?.(this._hass, this._config?.language ?? "auto", key, fallback, values) || fallback;
-  }
-
-  _mediaPlayerAria(key, fallback = "", values = {}) {
-    return window.NodaliaI18n?.translateMediaPlayerAria?.(this._hass, this._config?.language ?? "auto", key, fallback, values) || fallback;
-  }
-
-  _getMediaBrowserDisplayTitle(value) {
-    const label = typeof value === "string" ? value : value?.title;
-    const fallback = String(label || "").trim();
-    const lang = window.NodaliaI18n.resolveLanguage(this._hass, this._config?.language ?? "auto");
-    const dict = window.NodaliaI18n.strings(lang).navigationMusicAssist || {};
-    const enDict = window.NodaliaI18n.strings("en").navigationMusicAssist || {};
-
-    if (!fallback) {
-      return dict.browseFallback || enDict.browseFallback || "Item";
-    }
-
-    if (!this._mediaBrowserState?.isMusicAssistant) {
-      return fallback;
-    }
-
-    const key = normalizeTextKey(fallback);
-    return dict[key] || enDict[key] || fallback;
-  }
-
-  _getMediaBrowserIcon(item) {
-    const musicAssistantDirectoryIcon =
-      item?.media_class === "directory" ? this._getMusicAssistantDirectoryIcon(item) : "";
-
-    if (musicAssistantDirectoryIcon) {
-      return musicAssistantDirectoryIcon;
-    }
-
-    switch (item?.media_class) {
-      case "directory":
-        return "mdi:folder";
-      case "album":
-        return "mdi:album";
-      case "artist":
-        return "mdi:account-music";
-      case "playlist":
-        return "mdi:playlist-music";
-      case "track":
-      case "music":
-        return "mdi:music-note";
-      case "podcast":
-        return "mdi:podcast";
-      case "radio":
-        return "mdi:radio";
-      case "tv_show":
-        return "mdi:television";
-      case "video":
-      case "movie":
-        return "mdi:movie";
-      default:
-        return item?.can_expand ? "mdi:folder-outline" : "mdi:music-box";
-    }
-  }
-
-  _shouldFilterMusicAssistantBrowserItems() {
-    return Boolean(
-      this._mediaBrowserState?.isMusicAssistant &&
-      Array.isArray(this._mediaBrowserState?.stack) &&
-      this._mediaBrowserState.stack.length <= 1,
-    );
-  }
-
-  _shouldHideMediaBrowserItem(item) {
-    if (!this._shouldFilterMusicAssistantBrowserItems() || !item) {
-      return false;
-    }
-
-    const haystack = normalizeTextKey([
-      item.title,
-      item.media_class,
-      item.media_content_type,
-      item.media_content_id,
-    ].filter(Boolean).join(" "));
-
-    return MUSIC_ASSISTANT_BROWSER_EXCLUDE_PATTERNS.some(pattern => haystack.includes(pattern));
-  }
-
-  _getMediaPlayerChips(player, state, progress, title, subtitle) {
-    const chips = [];
-    const seen = new Set();
-    const subtitleKey = normalizeTextKey(subtitle);
-    const titleKey = normalizeTextKey(title);
-
-    const addChip = (label, tone = "default") => {
-      const text = String(label || "").trim();
-
-      if (!text) {
-        return;
-      }
-
-      const key = normalizeTextKey(text);
-      if (!key || key === titleKey || key === subtitleKey || seen.has(key)) {
-        return;
-      }
-
-      seen.add(key);
-      chips.push({ label: text, tone });
-    };
-
-    addChip(this._getMediaPlayerSourceLabel(state), "source");
-
-    if (progress) {
-      addChip(`${formatDuration(progress.position)} / ${formatDuration(progress.duration)}`, "time");
-    }
-
-    return chips.slice(0, 4);
-  }
-
-  _syncMediaTicker(visiblePlayers) {
-    if (typeof document !== "undefined" && document.hidden) {
-      if (this._mediaTicker) {
-        window.clearInterval(this._mediaTicker);
-        this._mediaTicker = null;
-      }
-      return;
-    }
-
-    const shouldTick = visiblePlayers.some(player => {
-      const state = this._hass?.states?.[player.entity];
-      const progress = state ? this._getMediaPlayerProgress(state) : null;
-      return state?.state === "playing" && progress;
-    });
-
-    if (shouldTick && !this._mediaTicker) {
-      this._mediaTicker = window.setInterval(() => {
-        if (typeof document !== "undefined" && document.hidden) {
-          return;
+        this._mediaBrowserRequestToken += 1;
+        if (shouldRender) {
+          this._render();
         }
-
-        this._refreshMediaProgress();
-      }, 1000);
-      return;
-    }
-
-    if (!shouldTick && this._mediaTicker) {
-      window.clearInterval(this._mediaTicker);
-      this._mediaTicker = null;
-    }
-  }
-
-  _refreshMediaProgress() {
-    if (!this.shadowRoot || !this._mediaPlayerExpanded) {
-      return;
-    }
-
-    const visiblePlayers = this._getVisibleMediaPlayers();
-    if (!visiblePlayers.length) {
-      return;
-    }
-
-    const player = visiblePlayers[this._resolveActiveMediaPlayerIndex(visiblePlayers)];
-    const state = this._hass?.states?.[player.entity];
-    const progress = state ? this._getMediaPlayerProgress(state) : null;
-    if (!progress) {
-      return;
-    }
-
-    const progressFill = this.shadowRoot.querySelector(".media-player__progress-fill");
-    if (progressFill) {
-      progressFill.style.width = `${progress.percent}%`;
-    }
-
-    const timeChip = this.shadowRoot.querySelector('[data-media-chip="time"]');
-    if (timeChip) {
-      timeChip.textContent = `${formatDuration(progress.position)} / ${formatDuration(progress.duration)}`;
-    }
-  }
-
-  _patchMediaVolumeControls(entityId = "", volumeLevel = NaN) {
-    if (!this.shadowRoot) {
-      return;
-    }
-    let targetEntityId = String(entityId || "").trim();
-    let nextVolume = Number(volumeLevel);
-    if (!targetEntityId || !Number.isFinite(nextVolume)) {
-      const visiblePlayers = this._getVisibleMediaPlayers();
-      const player = visiblePlayers[this._resolveActiveMediaPlayerIndex(visiblePlayers)];
-      targetEntityId = String(player?.entity || "").trim();
-      nextVolume = Number(this._hass?.states?.[targetEntityId]?.attributes?.volume_level);
-    }
-    if (!targetEntityId || !Number.isFinite(nextVolume)) {
-      return;
-    }
-    const normalizedVolume = String(clamp(nextVolume, 0, 1));
-    this.shadowRoot
-      .querySelectorAll('[data-media-control="volume-down"], [data-media-control="volume-up"]')
-      .forEach(button => {
-        if (button instanceof HTMLElement && button.dataset.entity === targetEntityId) {
-          button.dataset.mediaVolume = normalizedVolume;
-        }
-      });
-  }
-
-  _handleMediaControl(control, entityId, options = {}) {
-    if (!this._hass || !entityId) {
-      return;
-    }
-
-    switch (control) {
-      case "previous":
-        this._hass.callService("media_player", "media_previous_track", { entity_id: entityId });
-        break;
-      case "next":
-        this._hass.callService("media_player", "media_next_track", { entity_id: entityId });
-        break;
-      case "play-pause":
-        this._hass.callService("media_player", "media_play_pause", { entity_id: entityId });
-        break;
-      case "volume-down": {
-        const currentVolume = Number.isFinite(options.volume) ? options.volume : 0;
-        const nextVolume = clamp(currentVolume - 0.08, 0, 1);
-        this._patchMediaVolumeControls(entityId, nextVolume);
-        this._hass.callService("media_player", "volume_set", {
-          entity_id: entityId,
-          volume_level: nextVolume,
-        });
-        break;
       }
-      case "volume-up": {
-        const currentVolume = Number.isFinite(options.volume) ? options.volume : 0;
-        const nextVolume = clamp(currentVolume + 0.08, 0, 1);
-        this._patchMediaVolumeControls(entityId, nextVolume);
-        this._hass.callService("media_player", "volume_set", {
-          entity_id: entityId,
-          volume_level: nextVolume,
-        });
-        break;
-      }
-      case "browse-media":
-        this._showEntityMediaBrowser(entityId, options.path || "/media-browser/browser");
-        break;
-      default:
-        break;
-    }
-  }
-
-  _runAction(route, options = {}) {
-    const action = this._getRouteAction(route, options.defaultAction || null);
-
-    if (!action || action.action === "none") {
-      return;
-    }
-
-    switch (action.action) {
-      case "navigate":
-        this._navigate(action.navigation_path || route.path);
-        break;
-      case "open-popup":
-        this._openPopup(route, options.anchorElement);
-        return;
-      case "url": {
-        const url = window.NodaliaUtils?.sanitizeActionUrl(action.url_path || action.url || route.url || route.path, { allowRelative: true }) || "";
-        if (!url) {
-          return;
-        }
-
-        if (action.new_tab) {
-          window.open(url, "_blank", "noopener,noreferrer");
-        } else {
-          window.location.assign(url);
-        }
-        break;
-      }
-      case "call-service":
-        this._callService(action);
-        break;
-      case "toggle": {
-        const entityId = action.entity || route.entity;
-        if (!entityId || !this._hass) {
-          return;
-        }
-
-        this._hass.callService("homeassistant", "toggle", { entity_id: entityId });
-        break;
-      }
-      case "more-info": {
-        const entityId = action.entity || route.entity;
+      async _openMediaBrowser(entityId, fallbackPath = "") {
         if (!entityId) {
           return;
         }
-
-        fireEvent(this, "hass-more-info", { entityId });
-        break;
+        this._closePopup(false);
+        const token = this._mediaBrowserRequestToken + 1;
+        this._mediaBrowserRequestToken = token;
+        this._mediaBrowserState = {
+          entityId,
+          fallbackPath,
+          isMusicAssistant: this._isMusicAssistantPlayer(
+            { entity: entityId },
+            this._hass?.states?.[entityId]
+          ),
+          loading: true,
+          error: "",
+          stack: []
+        };
+        this._render();
+        try {
+          const rootNode = await this._fetchMediaBrowserNode(entityId);
+          if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
+            return;
+          }
+          if (!rootNode) {
+            throw new Error("Empty media browser response");
+          }
+          this._mediaBrowserState = {
+            entityId,
+            fallbackPath,
+            isMusicAssistant: this._isMusicAssistantPlayer(
+              { entity: entityId },
+              this._hass?.states?.[entityId]
+            ),
+            loading: false,
+            error: "",
+            stack: [rootNode]
+          };
+          this._render();
+        } catch (_error) {
+          if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
+            return;
+          }
+          if (fallbackPath) {
+            this._mediaBrowserState = null;
+            this._navigate(fallbackPath);
+            return;
+          }
+          this._mediaBrowserState = {
+            entityId,
+            fallbackPath,
+            isMusicAssistant: this._isMusicAssistantPlayer(
+              { entity: entityId },
+              this._hass?.states?.[entityId]
+            ),
+            loading: false,
+            error: "No se pudieron cargar los medios.",
+            stack: []
+          };
+          this._render();
+        }
       }
-      default:
-        // Unsupported actions are ignored so the card stays safe to use.
-        break;
-    }
-
-    if (options.closePopup) {
-      this._closePopup();
-    }
-  }
-
-  _renderPopup(currentPath, playPopupEntrance = false) {
-    if (!this._popupState?.route) {
-      return "";
-    }
-
-    if (this._popupState.routeIndex < 0 || !this._renderedRoutes[this._popupState.routeIndex]) {
-      this._popupState = null;
-      return "";
-    }
-
-    const popupItems = this._getPopupItems(this._popupState.route);
-    if (!popupItems.length) {
-      this._popupState = null;
-      return "";
-    }
-    const popupHasText = popupItems.some(item => Boolean(this._getRouteLabel(item) || item.description));
-    const isCompactPopup = !popupHasText && Number(this._popupState.columns || 1) === 1;
-
-    const popupMarkup = popupItems
-      .map((item, popupIndex) => {
-        const isActive = this._isNavItemActive(item, currentPath);
-        const badge = this._getBadge(item);
-        const label = this._getRouteLabel(item);
-        const hasLabel = Boolean(label);
-        const hasDescription = Boolean(item.description);
-        const isIconOnly = !hasLabel && !hasDescription;
-        const ariaLabel = label || item.description || item.path || `Popup ${popupIndex + 1}`;
-        return `
+      async _browseMediaBrowserItem(mediaContentType, mediaContentId) {
+        if (!this._mediaBrowserState?.entityId) {
+          return;
+        }
+        const previousState = this._mediaBrowserState;
+        const token = this._mediaBrowserRequestToken + 1;
+        this._mediaBrowserRequestToken = token;
+        this._mediaBrowserState = {
+          ...previousState,
+          loading: true,
+          error: ""
+        };
+        this._render();
+        try {
+          const nextNode = await this._fetchMediaBrowserNode(
+            previousState.entityId,
+            mediaContentType,
+            mediaContentId
+          );
+          if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
+            return;
+          }
+          if (!nextNode) {
+            throw new Error("Empty media browser response");
+          }
+          this._mediaBrowserState = {
+            ...previousState,
+            loading: false,
+            error: "",
+            stack: [...previousState.stack, nextNode]
+          };
+          this._render();
+        } catch (_error) {
+          if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
+            return;
+          }
+          this._mediaBrowserState = {
+            ...previousState,
+            loading: false,
+            error: "No se pudo abrir este elemento."
+          };
+          this._render();
+        }
+      }
+      _goBackMediaBrowser() {
+        if (!this._mediaBrowserState) {
+          return;
+        }
+        if (this._mediaBrowserState.stack.length <= 1) {
+          this._closeMediaBrowser();
+          return;
+        }
+        this._mediaBrowserState = {
+          ...this._mediaBrowserState,
+          error: "",
+          loading: false,
+          stack: this._mediaBrowserState.stack.slice(0, -1)
+        };
+        this._render();
+      }
+      _playMediaBrowserItem(mediaContentType, mediaContentId) {
+        const entityId = this._mediaBrowserState?.entityId;
+        if (!this._hass || !entityId || !mediaContentType || !mediaContentId) {
+          return;
+        }
+        this._hass.callService("media_player", "play_media", {
+          entity_id: entityId,
+          media_content_id: mediaContentId,
+          media_content_type: mediaContentType
+        });
+        this._closeMediaBrowser();
+      }
+      _getMusicAssistantDirectoryIcon(item) {
+        const haystack = normalizeTextKey([
+          item?.title,
+          item?.media_content_type,
+          item?.media_content_id
+        ].filter(Boolean).join(" "));
+        const match = MUSIC_ASSISTANT_DIRECTORY_ICON_RULES.find(
+          (rule) => rule.patterns.some((pattern) => haystack.includes(pattern))
+        );
+        return match?.icon || "";
+      }
+      _commonAria(key, fallback = "") {
+        return window.NodaliaI18n?.translateCommonAria?.(this._hass, this._config?.language ?? "auto", key, fallback) || fallback;
+      }
+      _mediaBrowserUi(key, fallback = "", values = {}) {
+        return window.NodaliaI18n?.translateMediaBrowserUi?.(this._hass, this._config?.language ?? "auto", key, fallback, values) || fallback;
+      }
+      _mediaPlayerAria(key, fallback = "", values = {}) {
+        return window.NodaliaI18n?.translateMediaPlayerAria?.(this._hass, this._config?.language ?? "auto", key, fallback, values) || fallback;
+      }
+      _getMediaBrowserDisplayTitle(value) {
+        const label = typeof value === "string" ? value : value?.title;
+        const fallback = String(label || "").trim();
+        const lang = window.NodaliaI18n.resolveLanguage(this._hass, this._config?.language ?? "auto");
+        const dict = window.NodaliaI18n.strings(lang).navigationMusicAssist || {};
+        const enDict = window.NodaliaI18n.strings("en").navigationMusicAssist || {};
+        if (!fallback) {
+          return dict.browseFallback || enDict.browseFallback || "Item";
+        }
+        if (!this._mediaBrowserState?.isMusicAssistant) {
+          return fallback;
+        }
+        const key = normalizeTextKey(fallback);
+        return dict[key] || enDict[key] || fallback;
+      }
+      _getMediaBrowserIcon(item) {
+        const musicAssistantDirectoryIcon = item?.media_class === "directory" ? this._getMusicAssistantDirectoryIcon(item) : "";
+        if (musicAssistantDirectoryIcon) {
+          return musicAssistantDirectoryIcon;
+        }
+        switch (item?.media_class) {
+          case "directory":
+            return "mdi:folder";
+          case "album":
+            return "mdi:album";
+          case "artist":
+            return "mdi:account-music";
+          case "playlist":
+            return "mdi:playlist-music";
+          case "track":
+          case "music":
+            return "mdi:music-note";
+          case "podcast":
+            return "mdi:podcast";
+          case "radio":
+            return "mdi:radio";
+          case "tv_show":
+            return "mdi:television";
+          case "video":
+          case "movie":
+            return "mdi:movie";
+          default:
+            return item?.can_expand ? "mdi:folder-outline" : "mdi:music-box";
+        }
+      }
+      _shouldFilterMusicAssistantBrowserItems() {
+        return Boolean(
+          this._mediaBrowserState?.isMusicAssistant && Array.isArray(this._mediaBrowserState?.stack) && this._mediaBrowserState.stack.length <= 1
+        );
+      }
+      _shouldHideMediaBrowserItem(item) {
+        if (!this._shouldFilterMusicAssistantBrowserItems() || !item) {
+          return false;
+        }
+        const haystack = normalizeTextKey([
+          item.title,
+          item.media_class,
+          item.media_content_type,
+          item.media_content_id
+        ].filter(Boolean).join(" "));
+        return MUSIC_ASSISTANT_BROWSER_EXCLUDE_PATTERNS.some((pattern) => haystack.includes(pattern));
+      }
+      _getMediaPlayerChips(player, state, progress, title, subtitle) {
+        const chips = [];
+        const seen = /* @__PURE__ */ new Set();
+        const subtitleKey = normalizeTextKey(subtitle);
+        const titleKey = normalizeTextKey(title);
+        const addChip = (label, tone = "default") => {
+          const text = String(label || "").trim();
+          if (!text) {
+            return;
+          }
+          const key = normalizeTextKey(text);
+          if (!key || key === titleKey || key === subtitleKey || seen.has(key)) {
+            return;
+          }
+          seen.add(key);
+          chips.push({ label: text, tone });
+        };
+        addChip(this._getMediaPlayerSourceLabel(state), "source");
+        if (progress) {
+          addChip(`${formatDuration(progress.position)} / ${formatDuration(progress.duration)}`, "time");
+        }
+        return chips.slice(0, 4);
+      }
+      _syncMediaTicker(visiblePlayers) {
+        if (typeof document !== "undefined" && document.hidden) {
+          if (this._mediaTicker) {
+            window.clearInterval(this._mediaTicker);
+            this._mediaTicker = null;
+          }
+          return;
+        }
+        const shouldTick = visiblePlayers.some((player) => {
+          const state = this._hass?.states?.[player.entity];
+          const progress = state ? this._getMediaPlayerProgress(state) : null;
+          return state?.state === "playing" && progress;
+        });
+        if (shouldTick && !this._mediaTicker) {
+          this._mediaTicker = window.setInterval(() => {
+            if (typeof document !== "undefined" && document.hidden) {
+              return;
+            }
+            this._refreshMediaProgress();
+          }, 1e3);
+          return;
+        }
+        if (!shouldTick && this._mediaTicker) {
+          window.clearInterval(this._mediaTicker);
+          this._mediaTicker = null;
+        }
+      }
+      _refreshMediaProgress() {
+        if (!this.shadowRoot || !this._mediaPlayerExpanded) {
+          return;
+        }
+        const visiblePlayers = this._getVisibleMediaPlayers();
+        if (!visiblePlayers.length) {
+          return;
+        }
+        const player = visiblePlayers[this._resolveActiveMediaPlayerIndex(visiblePlayers)];
+        const state = this._hass?.states?.[player.entity];
+        const progress = state ? this._getMediaPlayerProgress(state) : null;
+        if (!progress) {
+          return;
+        }
+        const progressFill = this.shadowRoot.querySelector(".media-player__progress-fill");
+        if (progressFill) {
+          progressFill.style.width = `${progress.percent}%`;
+        }
+        const timeChip = this.shadowRoot.querySelector('[data-media-chip="time"]');
+        if (timeChip) {
+          timeChip.textContent = `${formatDuration(progress.position)} / ${formatDuration(progress.duration)}`;
+        }
+      }
+      _patchMediaVolumeControls(entityId = "", volumeLevel = NaN) {
+        if (!this.shadowRoot) {
+          return;
+        }
+        let targetEntityId = String(entityId || "").trim();
+        let nextVolume = Number(volumeLevel);
+        if (!targetEntityId || !Number.isFinite(nextVolume)) {
+          const visiblePlayers = this._getVisibleMediaPlayers();
+          const player = visiblePlayers[this._resolveActiveMediaPlayerIndex(visiblePlayers)];
+          targetEntityId = String(player?.entity || "").trim();
+          nextVolume = Number(this._hass?.states?.[targetEntityId]?.attributes?.volume_level);
+        }
+        if (!targetEntityId || !Number.isFinite(nextVolume)) {
+          return;
+        }
+        const normalizedVolume = String(clamp(nextVolume, 0, 1));
+        this.shadowRoot.querySelectorAll('[data-media-control="volume-down"], [data-media-control="volume-up"]').forEach((button) => {
+          if (button instanceof HTMLElement && button.dataset.entity === targetEntityId) {
+            button.dataset.mediaVolume = normalizedVolume;
+          }
+        });
+      }
+      _handleMediaControl(control, entityId, options = {}) {
+        if (!this._hass || !entityId) {
+          return;
+        }
+        switch (control) {
+          case "previous":
+            this._hass.callService("media_player", "media_previous_track", { entity_id: entityId });
+            break;
+          case "next":
+            this._hass.callService("media_player", "media_next_track", { entity_id: entityId });
+            break;
+          case "play-pause":
+            this._hass.callService("media_player", "media_play_pause", { entity_id: entityId });
+            break;
+          case "volume-down": {
+            const currentVolume = Number.isFinite(options.volume) ? options.volume : 0;
+            const nextVolume = clamp(currentVolume - 0.08, 0, 1);
+            this._patchMediaVolumeControls(entityId, nextVolume);
+            this._hass.callService("media_player", "volume_set", {
+              entity_id: entityId,
+              volume_level: nextVolume
+            });
+            break;
+          }
+          case "volume-up": {
+            const currentVolume = Number.isFinite(options.volume) ? options.volume : 0;
+            const nextVolume = clamp(currentVolume + 0.08, 0, 1);
+            this._patchMediaVolumeControls(entityId, nextVolume);
+            this._hass.callService("media_player", "volume_set", {
+              entity_id: entityId,
+              volume_level: nextVolume
+            });
+            break;
+          }
+          case "browse-media":
+            this._showEntityMediaBrowser(entityId, options.path || "/media-browser/browser");
+            break;
+          default:
+            break;
+        }
+      }
+      _runAction(route, options = {}) {
+        const action = this._getRouteAction(route, options.defaultAction || null);
+        if (!action || action.action === "none") {
+          return;
+        }
+        switch (action.action) {
+          case "navigate":
+            this._navigate(action.navigation_path || route.path);
+            break;
+          case "open-popup":
+            this._openPopup(route, options.anchorElement);
+            return;
+          case "url": {
+            const url = window.NodaliaUtils?.sanitizeActionUrl(action.url_path || action.url || route.url || route.path, { allowRelative: true }) || "";
+            if (!url) {
+              return;
+            }
+            if (action.new_tab) {
+              window.open(url, "_blank", "noopener,noreferrer");
+            } else {
+              window.location.assign(url);
+            }
+            break;
+          }
+          case "call-service":
+            this._callService(action);
+            break;
+          case "toggle": {
+            const entityId = action.entity || route.entity;
+            if (!entityId || !this._hass) {
+              return;
+            }
+            this._hass.callService("homeassistant", "toggle", { entity_id: entityId });
+            break;
+          }
+          case "more-info": {
+            const entityId = action.entity || route.entity;
+            if (!entityId) {
+              return;
+            }
+            fireEvent(this, "hass-more-info", { entityId });
+            break;
+          }
+          default:
+            break;
+        }
+        if (options.closePopup) {
+          this._closePopup();
+        }
+      }
+      _renderPopup(currentPath, playPopupEntrance = false) {
+        if (!this._popupState?.route) {
+          return "";
+        }
+        if (this._popupState.routeIndex < 0 || !this._renderedRoutes[this._popupState.routeIndex]) {
+          this._popupState = null;
+          return "";
+        }
+        const popupItems = this._getPopupItems(this._popupState.route);
+        if (!popupItems.length) {
+          this._popupState = null;
+          return "";
+        }
+        const popupHasText = popupItems.some((item) => Boolean(this._getRouteLabel(item) || item.description));
+        const isCompactPopup = !popupHasText && Number(this._popupState.columns || 1) === 1;
+        const popupMarkup = popupItems.map((item, popupIndex) => {
+          const isActive = this._isNavItemActive(item, currentPath);
+          const badge = this._getBadge(item);
+          const label = this._getRouteLabel(item);
+          const hasLabel = Boolean(label);
+          const hasDescription = Boolean(item.description);
+          const isIconOnly = !hasLabel && !hasDescription;
+          const ariaLabel = label || item.description || item.path || `Popup ${popupIndex + 1}`;
+          return `
           <button
             class="popup-item ${isActive ? "active" : ""} ${isIconOnly ? "icon-only" : ""}"
             type="button"
@@ -2515,38 +2076,20 @@ class NodaliaNavigationBarCard extends HTMLElement {
           >
             <span class="popup-item__icon-wrap">
               ${this._renderIcon(item, isActive)}
-              ${
-                badge
-                  ? `<span
+              ${badge ? `<span
                       class="nav-badge"
-                    >${escapeHtml(badge.content)}</span>`
-                  : ""
-              }
+                    >${escapeHtml(badge.content)}</span>` : ""}
             </span>
-            ${
-              hasLabel || hasDescription
-                ? `
+            ${hasLabel || hasDescription ? `
                   <span class="popup-item__content">
-                    ${
-                      hasLabel
-                        ? `<span class="popup-item__label">${escapeHtml(label)}</span>`
-                        : ""
-                    }
-                    ${
-                      hasDescription
-                        ? `<span class="popup-item__description">${escapeHtml(item.description)}</span>`
-                        : ""
-                    }
+                    ${hasLabel ? `<span class="popup-item__label">${escapeHtml(label)}</span>` : ""}
+                    ${hasDescription ? `<span class="popup-item__description">${escapeHtml(item.description)}</span>` : ""}
                   </span>
-                `
-                : ""
-            }
+                ` : ""}
           </button>
         `;
-      })
-      .join("");
-
-    return `
+        }).join("");
+        return `
       <div class="popup-backdrop" data-popup-close="true"></div>
       <div
         class="popup-panel popup-panel--${this._popupState.direction} popup-panel--layout-${this._popupState.layout || "auto"} ${popupHasText ? "popup-panel--with-text" : "popup-panel--icon-only"} ${isCompactPopup ? "popup-panel--compact" : ""}${playPopupEntrance ? " popup-panel--entering" : ""}"
@@ -2556,36 +2099,24 @@ class NodaliaNavigationBarCard extends HTMLElement {
         </div>
       </div>
     `;
-  }
-
-  _renderMediaBrowser() {
-    if (!this._mediaBrowserState) {
-      return "";
-    }
-
-    const currentNode =
-      this._mediaBrowserState.stack[this._mediaBrowserState.stack.length - 1] || null;
-    const items = (Array.isArray(currentNode?.children) ? currentNode.children : []).filter(
-      item => !this._shouldHideMediaBrowserItem(item),
-    );
-
-    const bodyMarkup = this._mediaBrowserState.loading
-      ? `<div class="media-browser__empty">${escapeHtml(this._mediaBrowserUi("loading", "Loading media..."))}</div>`
-      : this._mediaBrowserState.error
-        ? `<div class="media-browser__empty">${escapeHtml(this._mediaBrowserState.error)}</div>`
-        : items.length === 0
-          ? `<div class="media-browser__empty">${escapeHtml(this._mediaBrowserUi("empty", "No items available here."))}</div>`
-          : `
+      }
+      _renderMediaBrowser() {
+        if (!this._mediaBrowserState) {
+          return "";
+        }
+        const currentNode = this._mediaBrowserState.stack[this._mediaBrowserState.stack.length - 1] || null;
+        const items = (Array.isArray(currentNode?.children) ? currentNode.children : []).filter(
+          (item) => !this._shouldHideMediaBrowserItem(item)
+        );
+        const bodyMarkup = this._mediaBrowserState.loading ? `<div class="media-browser__empty">${escapeHtml(this._mediaBrowserUi("loading", "Loading media..."))}</div>` : this._mediaBrowserState.error ? `<div class="media-browser__empty">${escapeHtml(this._mediaBrowserState.error)}</div>` : items.length === 0 ? `<div class="media-browser__empty">${escapeHtml(this._mediaBrowserUi("empty", "No items available here."))}</div>` : `
             <div class="media-browser__list">
-              ${items
-                .map(item => {
-                  const canExpand = item.can_expand === true;
-                  const canPlay = item.can_play === true;
-                  const defaultAction = canExpand ? "browse" : canPlay ? "play" : "";
-                  const itemIcon = this._getMediaBrowserIcon(item);
-                  const itemTitle = this._getMediaBrowserDisplayTitle(item);
-
-                  return `
+              ${items.map((item) => {
+          const canExpand = item.can_expand === true;
+          const canPlay = item.can_play === true;
+          const defaultAction = canExpand ? "browse" : canPlay ? "play" : "";
+          const itemIcon = this._getMediaBrowserIcon(item);
+          const itemTitle = this._getMediaBrowserDisplayTitle(item);
+          return `
                     <div class="media-browser__item">
                       <button
                         type="button"
@@ -2595,24 +2126,14 @@ class NodaliaNavigationBarCard extends HTMLElement {
                         data-media-content-id="${escapeHtml(item.media_content_id || "")}"
                       >
                         <span class="media-browser__item-artwork">
-                          ${
-                            item.thumbnail
-                              ? `<img src="${escapeHtml(item.thumbnail)}" alt="${escapeHtml(itemTitle)}" />`
-                              : `<ha-icon icon="${escapeHtml(itemIcon)}"></ha-icon>`
-                          }
+                          ${item.thumbnail ? `<img src="${escapeHtml(item.thumbnail)}" alt="${escapeHtml(itemTitle)}" />` : `<ha-icon icon="${escapeHtml(itemIcon)}"></ha-icon>`}
                         </span>
                         <span class="media-browser__item-copy">
                           <span class="media-browser__item-title">${escapeHtml(itemTitle)}</span>
                         </span>
-                        ${
-                          canExpand
-                            ? `<ha-icon class="media-browser__item-chevron" icon="mdi:chevron-right"></ha-icon>`
-                            : ""
-                        }
+                        ${canExpand ? `<ha-icon class="media-browser__item-chevron" icon="mdi:chevron-right"></ha-icon>` : ""}
                       </button>
-                      ${
-                        canPlay && canExpand
-                          ? `
+                      ${canPlay && canExpand ? `
                             <button
                               type="button"
                               class="media-browser__item-play"
@@ -2623,17 +2144,13 @@ class NodaliaNavigationBarCard extends HTMLElement {
                             >
                               <ha-icon icon="mdi:play"></ha-icon>
                             </button>
-                          `
-                          : ""
-                      }
+                          ` : ""}
                     </div>
                   `;
-                })
-                .join("")}
+        }).join("")}
             </div>
           `;
-
-    return `
+        return `
       <div class="media-browser-backdrop" data-media-browser-close="true"></div>
       <div class="media-browser-panel" role="dialog" aria-modal="true" aria-label="${escapeHtml(this._mediaBrowserUi("dialog", "Media browser"))}">
         <div class="media-browser__header">
@@ -2661,36 +2178,29 @@ class NodaliaNavigationBarCard extends HTMLElement {
         ${bodyMarkup}
       </div>
     `;
-  }
-
-  _renderMediaPlayer(visiblePlayers, animateCardEntrance = false) {
-    if (!visiblePlayers.length) {
-      return "";
-    }
-
-    const player = visiblePlayers[this._resolveActiveMediaPlayerIndex(visiblePlayers)];
-    const state = this._hass?.states?.[player.entity];
-
-    if (!state) {
-      return "";
-    }
-
-    const artwork = this._getMediaPlayerArtwork(player, state);
-    const title = this._getMediaPlayerTitle(player, state);
-    const subtitle = this._getMediaPlayerSubtitle(player, state);
-    const subtitleMarkup = subtitle && normalizeTextKey(subtitle) !== normalizeTextKey(title)
-      ? `<div class="media-player__subtitle">${escapeHtml(subtitle)}</div>`
-      : "";
-    const progress = this._getMediaPlayerProgress(state);
-    const albumCoverBackground = this._config.media_player.album_cover_background && artwork;
-    const chips = this._getMediaPlayerChips(player, state, progress, title, subtitle);
-    const playerName = this._getMediaPlayerPlayerLabel(player, state);
-    const statusLabel = this._getMediaPlayerStateLabel(state.state);
-    const browsePath = this._getMediaPlayerBrowsePath(player, state);
-    const volumeLevel = Number(state.attributes.volume_level ?? 0);
-    const volumeSupported = this._supportsVolumeControl(state);
-    const volumeDownMarkup = volumeSupported
-      ? `
+      }
+      _renderMediaPlayer(visiblePlayers, animateCardEntrance = false) {
+        if (!visiblePlayers.length) {
+          return "";
+        }
+        const player = visiblePlayers[this._resolveActiveMediaPlayerIndex(visiblePlayers)];
+        const state = this._hass?.states?.[player.entity];
+        if (!state) {
+          return "";
+        }
+        const artwork = this._getMediaPlayerArtwork(player, state);
+        const title = this._getMediaPlayerTitle(player, state);
+        const subtitle = this._getMediaPlayerSubtitle(player, state);
+        const subtitleMarkup = subtitle && normalizeTextKey(subtitle) !== normalizeTextKey(title) ? `<div class="media-player__subtitle">${escapeHtml(subtitle)}</div>` : "";
+        const progress = this._getMediaPlayerProgress(state);
+        const albumCoverBackground = this._config.media_player.album_cover_background && artwork;
+        const chips = this._getMediaPlayerChips(player, state, progress, title, subtitle);
+        const playerName = this._getMediaPlayerPlayerLabel(player, state);
+        const statusLabel = this._getMediaPlayerStateLabel(state.state);
+        const browsePath = this._getMediaPlayerBrowsePath(player, state);
+        const volumeLevel = Number(state.attributes.volume_level ?? 0);
+        const volumeSupported = this._supportsVolumeControl(state);
+        const volumeDownMarkup = volumeSupported ? `
         <button
           type="button"
           class="media-player__volume-button"
@@ -2701,10 +2211,8 @@ class NodaliaNavigationBarCard extends HTMLElement {
         >
           <ha-icon icon="mdi:minus"></ha-icon>
         </button>
-      `
-      : "";
-    const volumeUpMarkup = volumeSupported
-      ? `
+      ` : "";
+        const volumeUpMarkup = volumeSupported ? `
         <button
           type="button"
           class="media-player__volume-button"
@@ -2715,10 +2223,8 @@ class NodaliaNavigationBarCard extends HTMLElement {
         >
           <ha-icon icon="mdi:plus"></ha-icon>
         </button>
-      `
-      : "";
-    const browseMediaMarkup = browsePath
-      ? `
+      ` : "";
+        const browseMediaMarkup = browsePath ? `
         <div class="media-player__transport-addon">
           <button
             type="button"
@@ -2731,69 +2237,53 @@ class NodaliaNavigationBarCard extends HTMLElement {
             <ha-icon icon="mdi:music-box-multiple-outline"></ha-icon>
           </button>
         </div>
-      `
-      : "";
-    const dotsMarkup =
-      visiblePlayers.length > 1
-        ? `
+      ` : "";
+        const dotsMarkup = visiblePlayers.length > 1 ? `
           <div class="media-player__dots" aria-label="${escapeHtml(this._commonAria("mediaPlayers", "Media players"))}">
-            ${visiblePlayers
-              .map(
-                (_item, index) => `
+            ${visiblePlayers.map(
+          (_item, index) => `
                   <button
                     type="button"
                     class="media-player__dot ${index === this._activeMediaPlayerIndex ? "active" : ""}"
                     data-media-index="${index}"
                     aria-label="${escapeHtml(this._mediaPlayerAria("selectPlayer", "Select player {index}", { index: index + 1 }))}"
                   ></button>
-                `,
-              )
-              .join("")}
+                `
+        ).join("")}
           </div>
-        `
-        : "";
-    const switcherMarkup = dotsMarkup
-      ? `<div class="media-player__switcher">${dotsMarkup}</div>`
-      : "";
-    const topPlayerNameMarkup = playerName
-      ? `
+        ` : "";
+        const switcherMarkup = dotsMarkup ? `<div class="media-player__switcher">${dotsMarkup}</div>` : "";
+        const topPlayerNameMarkup = playerName ? `
         <div class="media-player__topline">
           <span class="media-player__chip media-player__chip--device media-player__chip--top">
             ${escapeHtml(playerName)}
           </span>
         </div>
-      `
-      : "";
-    const statusMarkup = statusLabel
-      ? `
+      ` : "";
+        const statusMarkup = statusLabel ? `
         <div class="media-player__status-wrap">
           <span class="media-player__chip media-player__chip--${escapeHtml(state.state || "default")} media-player__chip--status">
             ${escapeHtml(statusLabel)}
           </span>
         </div>
-      `
-      : "";
-    const chipsMarkup = chips.length
-      ? `
+      ` : "";
+        const chipsMarkup = chips.length ? `
         <div class="media-player__chips-wrap">
           <div class="media-player__chips">
-          ${chips
-            .map(
-              chip => `
+          ${chips.map(
+          (chip) => `
                 <span
                   class="media-player__chip media-player__chip--${escapeHtml(chip.tone)}"
                   ${chip.tone === "time" ? 'data-media-chip="time"' : ""}
                 >
                   ${escapeHtml(chip.label)}
                 </span>
-              `,
-            )
-            .join("")}
+              `
+        ).join("")}
           </div>
         </div>
-      `
-      : "";
-    const collapseMarkup = `
+      ` : "";
+        const collapseMarkup = `
       <button
         type="button"
         class="media-player__collapse"
@@ -2803,36 +2293,23 @@ class NodaliaNavigationBarCard extends HTMLElement {
         <ha-icon icon="mdi:chevron-down"></ha-icon>
       </button>
     `;
-
-    return `
+        return `
       <div
         class="media-player-card ${albumCoverBackground ? "has-album-background" : ""}${animateCardEntrance ? " media-player-card--entering" : ""}"
         data-media-card-index="${this._activeMediaPlayerIndex}"
       >
-        ${
-          albumCoverBackground
-            ? `<div class="media-player__album-bg" style="background-image:url('${escapeHtml(artwork)}');"></div>`
-            : ""
-        }
-        ${
-          progress !== null
-            ? `
+        ${albumCoverBackground ? `<div class="media-player__album-bg" style="background-image:url('${escapeHtml(artwork)}');"></div>` : ""}
+        ${progress !== null ? `
               <div class="media-player__progress">
                 <span class="media-player__progress-fill" style="width:${progress.percent}%"></span>
               </div>
-            `
-            : ""
-        }
+            ` : ""}
         ${collapseMarkup}
         <div class="media-player__content">
           ${topPlayerNameMarkup}
           <div class="media-player__hero">
             <div class="media-player__artwork">
-              ${
-                artwork
-                  ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(title)}" />`
-                  : `<ha-icon icon="${escapeHtml(player.icon || "mdi:music")}"></ha-icon>`
-              }
+              ${artwork ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(title)}" />` : `<ha-icon icon="${escapeHtml(player.icon || "mdi:music")}"></ha-icon>`}
             </div>
             <div class="media-player__meta">
               <div class="media-player__title-row">
@@ -2889,25 +2366,20 @@ class NodaliaNavigationBarCard extends HTMLElement {
         </div>
       </div>
     `;
-  }
-
-  _renderMediaPlayerToggle(visiblePlayers, playToggleEntrance = false) {
-    if (!visiblePlayers.length) {
-      return "";
-    }
-
-    const player = visiblePlayers[this._resolveActiveMediaPlayerIndex(visiblePlayers)];
-    const state = this._hass?.states?.[player.entity];
-
-    if (!state) {
-      return "";
-    }
-
-    const artwork = this._getMediaPlayerArtwork(player, state);
-    const title = this._getMediaPlayerTitle(player, state);
-    const subtitle = this._getMediaPlayerStateLabel(state.state);
-
-    return `
+      }
+      _renderMediaPlayerToggle(visiblePlayers, playToggleEntrance = false) {
+        if (!visiblePlayers.length) {
+          return "";
+        }
+        const player = visiblePlayers[this._resolveActiveMediaPlayerIndex(visiblePlayers)];
+        const state = this._hass?.states?.[player.entity];
+        if (!state) {
+          return "";
+        }
+        const artwork = this._getMediaPlayerArtwork(player, state);
+        const title = this._getMediaPlayerTitle(player, state);
+        const subtitle = this._getMediaPlayerStateLabel(state.state);
+        return `
       <div class="media-player-toggle-wrap${this._playDockEntrance ? " media-player-toggle-wrap--entering" : ""}">
         <button
           type="button"
@@ -2916,11 +2388,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
           aria-label="${escapeHtml(this._mediaPlayerAria("showPlayer", "Show player"))}"
         >
           <span class="media-player-toggle__artwork">
-            ${
-              artwork
-                ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(title)}" />`
-                : `<ha-icon icon="${escapeHtml(player.icon || "mdi:music")}"></ha-icon>`
-            }
+            ${artwork ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(title)}" />` : `<ha-icon icon="${escapeHtml(player.icon || "mdi:music")}"></ha-icon>`}
           </span>
           <span class="media-player-toggle__meta">
             <span class="media-player-toggle__eyebrow">${escapeHtml(subtitle)}</span>
@@ -2930,160 +2398,110 @@ class NodaliaNavigationBarCard extends HTMLElement {
         </button>
       </div>
     `;
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
-    }
-
-    if (!this._config) {
-      this.shadowRoot.innerHTML = "";
-      return;
-    }
-
-    const config = this._config;
-    const mediaToggleBackgroundBase = sanitizeCssRuntimeValue(config.styles.media_player.background)
-      || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.background)
-      || "var(--ha-card-background, var(--card-background-color))";
-    const mediaToggleBorder = sanitizeCssRuntimeValue(config.styles.media_player.border)
-      || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.border)
-      || "1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent)";
-    const mediaToggleBorderRadius = sanitizeCssRuntimeValue(config.styles.media_player.border_radius)
-      || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.border_radius)
-      || "18px";
-    const mediaToggleBoxShadow = sanitizeCssRuntimeValue(config.styles.media_player.box_shadow)
-      || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.box_shadow)
-      || "inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent), 0 10px 24px rgba(0, 0, 0, 0.16)";
-    const animations = {
-      enabled: config.animations?.enabled !== false,
-      barDuration: clamp(Number(config.animations?.bar_duration) || DEFAULT_CONFIG.animations.bar_duration, 120, 1600),
-      popupDuration: clamp(Number(config.animations?.popup_duration) || DEFAULT_CONFIG.animations.popup_duration, 120, 2400),
-      mediaDuration: clamp(Number(config.animations?.media_duration) || DEFAULT_CONFIG.animations.media_duration, 120, 2400),
-      buttonBounceDuration: clamp(Number(config.animations?.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration, 120, 1600),
-      dockEntranceDuration: clamp(
-        Number(config.animations?.dock_entrance_duration) || DEFAULT_CONFIG.animations.dock_entrance_duration,
-        180,
-        1400,
-      ),
-    };
-    const inEditMode = this._isInEditMode();
-    const shouldHide = this._shouldHideForScreen(config);
-
-    if (shouldHide && !inEditMode) {
-      this._renderedRoutes = [];
-      this.shadowRoot.innerHTML = "";
-      this._lastShouldHide = true;
-      return;
-    }
-
-    if (this._lastShouldHide && !shouldHide) {
-      this._animateDockEntranceNext = true;
-    }
-    this._lastShouldHide = false;
-
-    const hasActiveOverlay = Boolean(this._popupState || this._mediaBrowserState);
-    const playDockEntrance = animations.enabled
-      && !inEditMode
-      && this._animateDockEntranceNext
-      && !hasActiveOverlay
-      && !this._dockEntrancePlayed;
-    if (playDockEntrance) {
-      this._dockEntrancePlayed = true;
-    }
-    // Lovelace typically calls setConfig then set(hass) in the same turn; clearing the flag
-    // synchronously made the second _render strip entrance classes before paint. Defer reset
-    // one frame so follow-up renders still emit --entering until the browser composites.
-    if (this._animateDockEntranceNext) {
-      if (animations.enabled) {
-        if (this._dockEntranceResetFrame) {
-          window.cancelAnimationFrame(this._dockEntranceResetFrame);
-        }
-        this._dockEntranceResetFrame = window.requestAnimationFrame(() => {
-          this._dockEntranceResetFrame = 0;
-          if (!this.isConnected) {
-            return;
-          }
-          this._animateDockEntranceNext = false;
-        });
-      } else {
-        this._animateDockEntranceNext = false;
       }
-    }
-    this._playDockEntrance = playDockEntrance;
-
-    const visibleRoutes = this._getVisibleRoutes();
-    const showRouteLabels = this._shouldShowRouteLabels(visibleRoutes);
-    const visiblePlayers = this._getVisibleMediaPlayers();
-    const hasVisiblePlayers = visiblePlayers.length > 0;
-
-    if (!hasVisiblePlayers) {
-      this._mediaPlayerExpanded = false;
-    }
-
-    const showMediaPlayerCard = hasVisiblePlayers && (inEditMode || this._mediaPlayerExpanded === true);
-    const showMediaPlayerToggle = hasVisiblePlayers && !showMediaPlayerCard;
-    const playMediaToggleEntrance = animations.enabled && showMediaPlayerToggle && !this._lastMediaToggleVisible;
-    this._lastMediaToggleVisible = showMediaPlayerToggle;
-    const playMediaCardEntrance = animations.enabled && showMediaPlayerCard && !this._lastMediaPlayerCardVisible;
-    this._lastMediaPlayerCardVisible = showMediaPlayerCard;
-    const mediaStackGap = hasVisiblePlayers ? config.media_player.gap || "0px" : "0px";
-    const currentPath = normalizePath(window.location.pathname) || "/";
-    const isFixed = config.layout.fixed && !inEditMode;
-    const spacerHeight = isFixed && config.layout.reserve_space
-      ? this._getReservedHeight(showMediaPlayerCard, showMediaPlayerToggle)
-      : "0px";
-    const titleMarkup = config.title
-      ? `<div class="navbar-title${playDockEntrance ? " navbar-title--entering" : ""}">${escapeHtml(config.title)}</div>`
-      : "";
-
-    this._renderedRoutes = visibleRoutes;
-    this._syncMediaTicker(showMediaPlayerCard ? visiblePlayers : []);
-
-    const mediaPlayerMarkup = showMediaPlayerCard
-      ? this._renderMediaPlayer(visiblePlayers, playMediaCardEntrance)
-      : "";
-    const mediaPlayerToggleMarkup = showMediaPlayerToggle
-      ? this._renderMediaPlayerToggle(visiblePlayers, playMediaToggleEntrance)
-      : "";
-    const fullWidthBar = config.layout.full_width === true;
-    const barRadiusToken = String(config.styles.bar.border_radius || "28px")
-      .trim()
-      .split(/\s+/)[0] || "28px";
-    const navbarCardBorderRadius = fullWidthBar
-      ? "0"
-      : isFixed && config.layout.position === "bottom"
-        ? `${barRadiusToken} ${barRadiusToken} 0 0`
-        : isFixed && config.layout.position === "top"
-          ? `0 0 ${barRadiusToken} ${barRadiusToken}`
-          : config.styles.bar.border_radius;
-    const barPadding = isFixed
-      ? config.styles.bar.padding
-      : String(config.styles.bar.padding || "12px 16px").replace(
-        /calc\(\s*12px\s*\+\s*env\(safe-area-inset-bottom\s*,\s*0px\)\s*\)/gi,
-        "12px",
-      );
-    const navbarSurfaceBase =
-      "linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)), var(--nodalia-user-bar-bg, var(--nodalia-surface-soft))";
-    const navbarSurfaceBackground = window.NodaliaUtils?.composeCardSurfaceBackground?.({
-      base: navbarSurfaceBase,
-      glazeMode: "neutral",
-      glazeNeutralStrength: 5,
-      ambient: false,
-    }) || `linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0)), ${navbarSurfaceBase}`;
-    const popupMarkup = this._renderPopup(currentPath, Boolean(this._popupState) && this._playPopupEntrance);
-    const mediaBrowserMarkup = this._renderMediaBrowser();
-
-    const routesMarkup =
-      visibleRoutes.length > 0
-        ? visibleRoutes
-            .map((route, index) => {
-              const isActive = this._isRouteActive(route, currentPath);
-              const badge = this._getBadge(route);
-              const label = this._getRouteLabel(route);
-              const hasPopup = this._getPopupItems(route).length > 0;
-
-              return `
+      _render() {
+        if (!this.shadowRoot) {
+          return;
+        }
+        if (!this._config) {
+          this.shadowRoot.innerHTML = "";
+          return;
+        }
+        const config = this._config;
+        const mediaToggleBackgroundBase = sanitizeCssRuntimeValue(config.styles.media_player.background) || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.background) || "var(--ha-card-background, var(--card-background-color))";
+        const mediaToggleBorder = sanitizeCssRuntimeValue(config.styles.media_player.border) || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.border) || "1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent)";
+        const mediaToggleBorderRadius = sanitizeCssRuntimeValue(config.styles.media_player.border_radius) || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.border_radius) || "18px";
+        const mediaToggleBoxShadow = sanitizeCssRuntimeValue(config.styles.media_player.box_shadow) || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.box_shadow) || "inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent), 0 10px 24px rgba(0, 0, 0, 0.16)";
+        const animations = {
+          enabled: config.animations?.enabled !== false,
+          barDuration: clamp(Number(config.animations?.bar_duration) || DEFAULT_CONFIG.animations.bar_duration, 120, 1600),
+          popupDuration: clamp(Number(config.animations?.popup_duration) || DEFAULT_CONFIG.animations.popup_duration, 120, 2400),
+          mediaDuration: clamp(Number(config.animations?.media_duration) || DEFAULT_CONFIG.animations.media_duration, 120, 2400),
+          buttonBounceDuration: clamp(Number(config.animations?.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration, 120, 1600),
+          dockEntranceDuration: clamp(
+            Number(config.animations?.dock_entrance_duration) || DEFAULT_CONFIG.animations.dock_entrance_duration,
+            180,
+            1400
+          )
+        };
+        const inEditMode = this._isInEditMode();
+        const shouldHide = this._shouldHideForScreen(config);
+        if (shouldHide && !inEditMode) {
+          this._renderedRoutes = [];
+          this.shadowRoot.innerHTML = "";
+          this._lastShouldHide = true;
+          return;
+        }
+        if (this._lastShouldHide && !shouldHide) {
+          this._animateDockEntranceNext = true;
+        }
+        this._lastShouldHide = false;
+        const hasActiveOverlay = Boolean(this._popupState || this._mediaBrowserState);
+        const playDockEntrance = animations.enabled && !inEditMode && this._animateDockEntranceNext && !hasActiveOverlay && !this._dockEntrancePlayed;
+        if (playDockEntrance) {
+          this._dockEntrancePlayed = true;
+        }
+        if (this._animateDockEntranceNext) {
+          if (animations.enabled) {
+            if (this._dockEntranceResetFrame) {
+              window.cancelAnimationFrame(this._dockEntranceResetFrame);
+            }
+            this._dockEntranceResetFrame = window.requestAnimationFrame(() => {
+              this._dockEntranceResetFrame = 0;
+              if (!this.isConnected) {
+                return;
+              }
+              this._animateDockEntranceNext = false;
+            });
+          } else {
+            this._animateDockEntranceNext = false;
+          }
+        }
+        this._playDockEntrance = playDockEntrance;
+        const visibleRoutes = this._getVisibleRoutes();
+        const showRouteLabels = this._shouldShowRouteLabels(visibleRoutes);
+        const visiblePlayers = this._getVisibleMediaPlayers();
+        const hasVisiblePlayers = visiblePlayers.length > 0;
+        if (!hasVisiblePlayers) {
+          this._mediaPlayerExpanded = false;
+        }
+        const showMediaPlayerCard = hasVisiblePlayers && (inEditMode || this._mediaPlayerExpanded === true);
+        const showMediaPlayerToggle = hasVisiblePlayers && !showMediaPlayerCard;
+        const playMediaToggleEntrance = animations.enabled && showMediaPlayerToggle && !this._lastMediaToggleVisible;
+        this._lastMediaToggleVisible = showMediaPlayerToggle;
+        const playMediaCardEntrance = animations.enabled && showMediaPlayerCard && !this._lastMediaPlayerCardVisible;
+        this._lastMediaPlayerCardVisible = showMediaPlayerCard;
+        const mediaStackGap = hasVisiblePlayers ? config.media_player.gap || "0px" : "0px";
+        const currentPath = normalizePath(window.location.pathname) || "/";
+        const isFixed = config.layout.fixed && !inEditMode;
+        const spacerHeight = isFixed && config.layout.reserve_space ? this._getReservedHeight(showMediaPlayerCard, showMediaPlayerToggle) : "0px";
+        const titleMarkup = config.title ? `<div class="navbar-title${playDockEntrance ? " navbar-title--entering" : ""}">${escapeHtml(config.title)}</div>` : "";
+        this._renderedRoutes = visibleRoutes;
+        this._syncMediaTicker(showMediaPlayerCard ? visiblePlayers : []);
+        const mediaPlayerMarkup = showMediaPlayerCard ? this._renderMediaPlayer(visiblePlayers, playMediaCardEntrance) : "";
+        const mediaPlayerToggleMarkup = showMediaPlayerToggle ? this._renderMediaPlayerToggle(visiblePlayers, playMediaToggleEntrance) : "";
+        const fullWidthBar = config.layout.full_width === true;
+        const barRadiusToken = String(config.styles.bar.border_radius || "28px").trim().split(/\s+/)[0] || "28px";
+        const navbarCardBorderRadius = fullWidthBar ? "0" : isFixed && config.layout.position === "bottom" ? `${barRadiusToken} ${barRadiusToken} 0 0` : isFixed && config.layout.position === "top" ? `0 0 ${barRadiusToken} ${barRadiusToken}` : config.styles.bar.border_radius;
+        const barPadding = isFixed ? config.styles.bar.padding : String(config.styles.bar.padding || "12px 16px").replace(
+          /calc\(\s*12px\s*\+\s*env\(safe-area-inset-bottom\s*,\s*0px\)\s*\)/gi,
+          "12px"
+        );
+        const navbarSurfaceBase = "linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)), var(--nodalia-user-bar-bg, var(--nodalia-surface-soft))";
+        const navbarSurfaceBackground = window.NodaliaUtils?.composeCardSurfaceBackground?.({
+          base: navbarSurfaceBase,
+          glazeMode: "neutral",
+          glazeNeutralStrength: 5,
+          ambient: false
+        }) || `linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0)), ${navbarSurfaceBase}`;
+        const popupMarkup = this._renderPopup(currentPath, Boolean(this._popupState) && this._playPopupEntrance);
+        const mediaBrowserMarkup = this._renderMediaBrowser();
+        const routesMarkup = visibleRoutes.length > 0 ? visibleRoutes.map((route, index) => {
+          const isActive = this._isRouteActive(route, currentPath);
+          const badge = this._getBadge(route);
+          const label = this._getRouteLabel(route);
+          const hasPopup = this._getPopupItems(route).length > 0;
+          return `
                 <button
                   class="nav-item ${isActive ? "active" : ""} ${hasPopup ? "has-popup" : ""}${playDockEntrance ? " nav-item--entering" : ""}"
                   data-route-index="${index}"
@@ -3092,37 +2510,20 @@ class NodaliaNavigationBarCard extends HTMLElement {
                 >
                   <span class="nav-icon-wrap">
                     ${this._renderIcon(route, isActive)}
-                    ${
-                      badge
-                        ? `<span
+                    ${badge ? `<span
                             class="nav-badge"
-                          >${escapeHtml(badge.content)}</span>`
-                        : ""
-                    }
-                    ${
-                      hasPopup
-                        ? `<span class="nav-popup-indicator" aria-hidden="true"></span>`
-                        : ""
-                    }
+                          >${escapeHtml(badge.content)}</span>` : ""}
+                    ${hasPopup ? `<span class="nav-popup-indicator" aria-hidden="true"></span>` : ""}
                   </span>
-                  ${
-                    showRouteLabels
-                      ? label
-                        ? `<span class="nav-label">${escapeHtml(label)}</span>`
-                        : '<span class="nav-label nav-label--placeholder" aria-hidden="true">&nbsp;</span>'
-                      : ""
-                  }
+                  ${showRouteLabels ? label ? `<span class="nav-label">${escapeHtml(label)}</span>` : '<span class="nav-label nav-label--placeholder" aria-hidden="true">&nbsp;</span>' : ""}
                 </button>
               `;
-            })
-            .join("")
-        : `
+        }).join("") : `
           <div class="empty-state">
             No visible routes. Check user IDs or add entries to "routes".
           </div>
         `;
-
-    this.shadowRoot.innerHTML = `
+        this.shadowRoot.innerHTML = `
       <style>
         :host {
           --navbar-dock-entrance-ms: ${animations.dockEntranceDuration};
@@ -3151,9 +2552,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
           position: ${isFixed ? "fixed" : inEditMode ? "absolute" : "relative"};
           left: ${inEditMode ? "12px" : fullWidthBar ? "0" : config.layout.side_margin};
           right: ${inEditMode ? "12px" : fullWidthBar ? "0" : config.layout.side_margin};
-          ${inEditMode
-            ? (config.layout.position === "top" ? "top: 12px;" : "bottom: 12px;")
-            : (config.layout.position === "top" ? `top: ${config.layout.offset};` : `bottom: ${config.layout.offset};`)}
+          ${inEditMode ? config.layout.position === "top" ? "top: 12px;" : "bottom: 12px;" : config.layout.position === "top" ? `top: ${config.layout.offset};` : `bottom: ${config.layout.offset};`}
           z-index: ${config.layout.z_index};
           pointer-events: none;
         }
@@ -4385,87 +3784,85 @@ class NodaliaNavigationBarCard extends HTMLElement {
       ${popupMarkup}
       ${mediaBrowserMarkup}
     `;
-
-    this._applyRouteRuntimeStyles(visibleRoutes, playDockEntrance);
-    this._applyPopupRuntimeStyles();
-    this._playPopupEntrance = false;
-
-    if (this._popupState) {
-      this._schedulePopupPositionSync();
-    }
-    this._lastRenderSignature = this._getRenderSignature(this._hass);
-  }
-}
-
-class NodaliaNavigationBarEditor extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = deepClone(STUB_CONFIG);
-    this._hass = null;
-    this._showStyleSection = false;
-    this._showAnimationSection = false;
-    this._onShadowInput = this._onShadowInput.bind(this);
-    this._onShadowClick = this._onShadowClick.bind(this);
-  }
-
-  _attachEditorShadowListeners() {
-    window.NodaliaUtils.bindShadowListeners(this, [
-      ["input", this._onShadowInput],
-      ["change", this._onShadowInput],
-      ["click", this._onShadowClick],
-    ], "editor");
-  }
-
-  _detachEditorShadowListeners() {
-    window.NodaliaUtils.releaseShadowListeners(this, "editor");
-  }
-
-  connectedCallback() {
-    this._attachEditorShadowListeners();
-    window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
-  }
-
-  disconnectedCallback() {
-    this._detachEditorShadowListeners();
-    window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
-  }
-
-  set hass(hass) {
-    this._hass = hass;
-    this.shadowRoot?.querySelectorAll("ha-entity-picker, ha-selector, ha-icon-picker").forEach(el => {
-      if ("hass" in el) {
-        el.hass = hass;
+        this._applyRouteRuntimeStyles(visibleRoutes, playDockEntrance);
+        this._applyPopupRuntimeStyles();
+        this._playPopupEntrance = false;
+        if (this._popupState) {
+          this._schedulePopupPositionSync();
+        }
+        this._lastRenderSignature = this._getRenderSignature(this._hass);
       }
-    });
-  }
-
-  _editorLabel(s) {
-    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
-      return s;
     }
-    const hass = this._hass ?? this.hass;
-    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+    _lazyNodaliaNavigationBarCard = NodaliaNavigationBarCard;
+    return NodaliaNavigationBarCard;
   }
 
-  _L(s) {
-    return escapeHtml(this._editorLabel(s));
-  }
-
-  _renderControlDatasetAttributes(dataset = {}) {
-    return Object.entries(dataset)
-      .filter(([, value]) => value !== undefined && value !== null)
-      .map(([key, value]) => {
-        const attr = String(key).replace(/[A-Z]/g, match => `-${match.toLowerCase()}`);
-        return `data-${attr}="${escapeHtml(String(value))}"`;
-      })
-      .join(" ");
-  }
-
-  _renderEntityPickerField(label, dataset = {}, value = "", options = {}) {
-    const datasetAttrs = this._renderControlDatasetAttributes(dataset);
-    const placeholderAttr = options.placeholder ? `data-placeholder="${escapeHtml(options.placeholder)}"` : "";
-    return `
+  // src/cards/navigation/navigation-editor.ts
+  var _lazyNodaliaNavigationBarEditor;
+  function loadNodaliaNavigationBarEditor() {
+    if (_lazyNodaliaNavigationBarEditor) {
+      return _lazyNodaliaNavigationBarEditor;
+    }
+    class NodaliaNavigationBarEditor extends HTMLElement {
+      constructor() {
+        super();
+        this._nodaliaConstruct();
+      }
+      _nodaliaConstruct() {
+        this.attachShadow({ mode: "open" });
+        this._config = deepClone(STUB_CONFIG);
+        this._hass = null;
+        this._showStyleSection = false;
+        this._showAnimationSection = false;
+        this._onShadowInput = this._onShadowInput.bind(this);
+        this._onShadowClick = this._onShadowClick.bind(this);
+      }
+      _attachEditorShadowListeners() {
+        window.NodaliaUtils.bindShadowListeners(this, [
+          ["input", this._onShadowInput],
+          ["change", this._onShadowInput],
+          ["click", this._onShadowClick]
+        ], "editor");
+      }
+      _detachEditorShadowListeners() {
+        window.NodaliaUtils.releaseShadowListeners(this, "editor");
+      }
+      connectedCallback() {
+        this._attachEditorShadowListeners();
+        window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
+      }
+      disconnectedCallback() {
+        this._detachEditorShadowListeners();
+        window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
+      }
+      set hass(hass) {
+        this._hass = hass;
+        this.shadowRoot?.querySelectorAll("ha-entity-picker, ha-selector, ha-icon-picker").forEach((el) => {
+          if ("hass" in el) {
+            el.hass = hass;
+          }
+        });
+      }
+      _editorLabel(s) {
+        if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+          return s;
+        }
+        const hass = this._hass ?? this.hass;
+        return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+      }
+      _L(s) {
+        return escapeHtml(this._editorLabel(s));
+      }
+      _renderControlDatasetAttributes(dataset = {}) {
+        return Object.entries(dataset).filter(([, value]) => value !== void 0 && value !== null).map(([key, value]) => {
+          const attr = String(key).replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`);
+          return `data-${attr}="${escapeHtml(String(value))}"`;
+        }).join(" ");
+      }
+      _renderEntityPickerField(label, dataset = {}, value = "", options = {}) {
+        const datasetAttrs = this._renderControlDatasetAttributes(dataset);
+        const placeholderAttr = options.placeholder ? `data-placeholder="${escapeHtml(options.placeholder)}"` : "";
+        return `
       <label>
         <span>${this._L(label)}</span>
         <div
@@ -4477,12 +3874,11 @@ class NodaliaNavigationBarEditor extends HTMLElement {
         ></div>
       </label>
     `;
-  }
-
-  _renderIconPickerField(label, dataset = {}, value = "", options = {}) {
-    const datasetAttrs = this._renderControlDatasetAttributes(dataset);
-    const placeholderAttr = options.placeholder ? `data-placeholder="${escapeHtml(options.placeholder)}"` : "";
-    return `
+      }
+      _renderIconPickerField(label, dataset = {}, value = "", options = {}) {
+        const datasetAttrs = this._renderControlDatasetAttributes(dataset);
+        const placeholderAttr = options.placeholder ? `data-placeholder="${escapeHtml(options.placeholder)}"` : "";
+        return `
       <label>
         <span>${this._L(label)}</span>
         <div
@@ -4494,511 +3890,374 @@ class NodaliaNavigationBarEditor extends HTMLElement {
         ></div>
       </label>
     `;
-  }
-
-  _mountEntityPicker(host) {
-    const playerField = host.dataset.playerField;
-    const playerIndex = host.dataset.playerIndex;
-    const field = host.dataset.field
-      || (playerField && playerIndex !== undefined
-        ? `media_player.players.${playerIndex}.${playerField}`
-        : "entity");
-    window.NodaliaUtils.mountEntityPickerHost(host, {
-      hass: this._hass,
-      field,
-      value: host.dataset.value || "",
-      placeholder: host.dataset.placeholder || "",
-      onShadowInput: this._onShadowInput,
-      onShadowValueChanged: this._onShadowInput,
-      copyDatasetFromHost: true,
-    });
-  }
-
-  _mountIconPicker(host) {
-    window.NodaliaUtils.mountIconPickerHost(host, {
-      hass: this._hass,
-      value: host.dataset.value || "",
-      placeholder: host.dataset.placeholder || "",
-      onShadowInput: this._onShadowInput,
-      onShadowValueChanged: this._onShadowInput,
-      copyDatasetFromHost: true,
-    });
-  }
-
-  _prepareEditorConfig(config) {
-    if (!Array.isArray(config.routes)) {
-      config.routes = [];
-    }
-
-    if (!isObject(config.layout)) {
-      config.layout = {};
-    }
-
-    if (!isObject(config.haptics)) {
-      config.haptics = {};
-    }
-
-    if (!isObject(config.animations)) {
-      config.animations = {};
-    }
-
-    if (!isObject(config.media_player)) {
-      config.media_player = {};
-    }
-
-    if (!Array.isArray(config.media_player.players)) {
-      config.media_player.players = [];
-    }
-
-    return config;
-  }
-
-  setConfig(config) {
-    const nextConfig = deepClone(config || STUB_CONFIG);
-    if (!Array.isArray(nextConfig.routes) && Array.isArray(nextConfig.items)) {
-      nextConfig.routes = nextConfig.items;
-      delete nextConfig.items;
-    }
-    this._config = this._prepareEditorConfig(nextConfig);
-    this._render();
-  }
-
-  _captureFocusState() {
-    const activeElement = this.shadowRoot?.activeElement;
-
-    if (
-      !(
-        activeElement instanceof HTMLInputElement ||
-        activeElement instanceof HTMLTextAreaElement ||
-        activeElement instanceof HTMLSelectElement
-      )
-    ) {
-      return null;
-    }
-
-    const dataset = activeElement.dataset || {};
-    let selector = null;
-
-    if (dataset.field) {
-      selector = `[data-field="${escapeSelectorValue(dataset.field)}"]`;
-    } else if (dataset.playerField && dataset.playerIndex !== undefined) {
-      selector =
-        `[data-player-index="${escapeSelectorValue(dataset.playerIndex)}"]` +
-        `[data-player-field="${escapeSelectorValue(dataset.playerField)}"]`;
-    } else if (
-      dataset.popupField &&
-      dataset.routeIndex !== undefined &&
-      dataset.popupIndex !== undefined
-    ) {
-      selector =
-        `[data-route-index="${escapeSelectorValue(dataset.routeIndex)}"]` +
-        `[data-popup-index="${escapeSelectorValue(dataset.popupIndex)}"]` +
-        `[data-popup-field="${escapeSelectorValue(dataset.popupField)}"]`;
-    } else if (dataset.routeField && dataset.routeIndex !== undefined) {
-      selector =
-        `[data-route-index="${escapeSelectorValue(dataset.routeIndex)}"]` +
-        `[data-route-field="${escapeSelectorValue(dataset.routeField)}"]`;
-    }
-
-    if (!selector) {
-      return null;
-    }
-
-    const supportsSelection =
-      typeof activeElement.selectionStart === "number" &&
-      typeof activeElement.selectionEnd === "number";
-
-    return {
-      selector,
-      selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
-      selectionStart: supportsSelection ? activeElement.selectionStart : null,
-      type: activeElement.type,
-    };
-  }
-
-  _restoreFocusState(focusState) {
-    if (!focusState?.selector || !this.shadowRoot) {
-      return;
-    }
-
-    const target = this.shadowRoot.querySelector(focusState.selector);
-    if (
-      !(
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target instanceof HTMLSelectElement
-      )
-    ) {
-      return;
-    }
-
-    try {
-      target.focus({ preventScroll: true });
-    } catch (_error) {
-      target.focus();
-    }
-
-    const canRestoreSelection =
-      focusState.type !== "checkbox" &&
-      typeof focusState.selectionStart === "number" &&
-      typeof focusState.selectionEnd === "number" &&
-      typeof target.setSelectionRange === "function";
-
-    if (!canRestoreSelection) {
-      return;
-    }
-
-    try {
-      target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
-    } catch (_error) {
-      // Ignore inputs that do not support selection ranges.
-    }
-  }
-
-  _emitConfig(nextConfig) {
-    const focusState = this._captureFocusState();
-    const prepared = this._prepareEditorConfig(deepClone(nextConfig));
-    this._config = compactConfig(prepared);
-    this._render();
-    this._restoreFocusState(focusState);
-    const merged = mergeConfig(DEFAULT_CONFIG, prepared);
-    fireEvent(this, "config-changed", {
-      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(merged, DEFAULT_CONFIG) ?? {}),
-    });
-  }
-
-  _setEditorConfig(nextConfig) {
-    this._config = compactConfig(this._prepareEditorConfig(nextConfig));
-  }
-
-  _commitEditorConfig(nextConfig, shouldEmit) {
-    if (shouldEmit) {
-      this._emitConfig(nextConfig);
-      return;
-    }
-
-    this._setEditorConfig(nextConfig);
-  }
-
-  _applyFieldValue(target, key, field) {
-    if (!target || !key) {
-      return;
-    }
-    if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
-      return;
-    }
-
-    if (field.type === "checkbox" && field.dataset.checkedValue !== undefined) {
-      if (field.checked) {
-        target[key] = parsePrimitiveValue(field.dataset.checkedValue);
-      } else if (field.dataset.uncheckedDelete === "true") {
-        delete target[key];
-      } else if (field.dataset.uncheckedValue !== undefined) {
-        target[key] = parsePrimitiveValue(field.dataset.uncheckedValue);
-      } else {
-        target[key] = false;
       }
-      return;
-    }
-
-    if (field.dataset.csv === "true") {
-      const values = arrayFromCsv(field.value);
-      if (values.length > 0) {
-        target[key] = values;
-      } else {
-        delete target[key];
+      _mountEntityPicker(host) {
+        const playerField = host.dataset.playerField;
+        const playerIndex = host.dataset.playerIndex;
+        const field = host.dataset.field || (playerField && playerIndex !== void 0 ? `media_player.players.${playerIndex}.${playerField}` : "entity");
+        window.NodaliaUtils.mountEntityPickerHost(host, {
+          hass: this._hass,
+          field,
+          value: host.dataset.value || "",
+          placeholder: host.dataset.placeholder || "",
+          onShadowInput: this._onShadowInput,
+          onShadowValueChanged: this._onShadowInput,
+          copyDatasetFromHost: true
+        });
       }
-      return;
-    }
-
-    if (field.type === "checkbox") {
-      target[key] = field.checked;
-      return;
-    }
-
-    if (field.value === "" && field.dataset.optional === "true") {
-      delete target[key];
-      return;
-    }
-
-    if (field.type === "number") {
-      target[key] = Number(field.value);
-      return;
-    }
-
-    target[key] = field.value;
-  }
-
-  _isHomeAssistantPicker(node) {
-    const tag = String(node?.tagName || "").toUpperCase();
-    return tag === "HA-ENTITY-PICKER" || tag === "HA-SELECTOR" || tag === "HA-ICON-PICKER";
-  }
-
-  _onShadowInput(event) {
-    const shouldEmit = event.type === "change" || event.type === "value-changed";
-    const playerField = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.playerField);
-
-    if (playerField) {
-      // Ignore picker blur/input; only value-changed has the committed entity.
-      if (this._isHomeAssistantPicker(playerField) && event.type !== "value-changed") {
-        return;
+      _mountIconPicker(host) {
+        window.NodaliaUtils.mountIconPickerHost(host, {
+          hass: this._hass,
+          value: host.dataset.value || "",
+          placeholder: host.dataset.placeholder || "",
+          onShadowInput: this._onShadowInput,
+          onShadowValueChanged: this._onShadowInput,
+          copyDatasetFromHost: true
+        });
       }
-
-      event.stopPropagation();
-      const nextConfig = deepClone(this._config);
-      this._prepareEditorConfig(nextConfig);
-      const playerIndex = Number(playerField.dataset.playerIndex);
-      const player = nextConfig.media_player.players[playerIndex];
-
-      if (!player) {
-        return;
+      _prepareEditorConfig(config) {
+        if (!Array.isArray(config.routes)) {
+          config.routes = [];
+        }
+        if (!isObject(config.layout)) {
+          config.layout = {};
+        }
+        if (!isObject(config.haptics)) {
+          config.haptics = {};
+        }
+        if (!isObject(config.animations)) {
+          config.animations = {};
+        }
+        if (!isObject(config.media_player)) {
+          config.media_player = {};
+        }
+        if (!Array.isArray(config.media_player.players)) {
+          config.media_player.players = [];
+        }
+        return config;
       }
-
-      if (playerField.dataset.playerField === "label") {
-        delete player.name;
-      }
-
-      if (playerField.dataset.playerField === "browse_path") {
-        delete player.media_browser_path;
-      }
-
-      const eventValue = event.detail?.value;
-      if (event.type === "value-changed" && eventValue !== undefined) {
-        playerField.value = eventValue ?? "";
-        playerField.dataset.value = String(eventValue ?? "");
-      }
-      this._applyFieldValue(player, playerField.dataset.playerField, playerField);
-      this._commitEditorConfig(nextConfig, shouldEmit);
-      return;
-    }
-
-    const field = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.field);
-
-    if (field) {
-      const nextConfig = deepClone(this._config);
-      const eventValue = event.detail?.value;
-      const value = field.type === "checkbox"
-        ? field.checked
-        : event.type === "value-changed" && eventValue !== undefined
-          ? eventValue ?? ""
-          : field.value;
-
-      if (value === "" && field.dataset.optional === "true") {
-        deleteByPath(nextConfig, field.dataset.field);
-      } else if (field.type === "number") {
-        setByPath(nextConfig, field.dataset.field, Number(value));
-      } else {
-        setByPath(nextConfig, field.dataset.field, value);
-      }
-
-      this._commitEditorConfig(nextConfig, shouldEmit);
-      return;
-    }
-
-    const routeField = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.routeField);
-
-    if (routeField) {
-      const routeIndex = Number(routeField.dataset.routeIndex);
-      const nextConfig = deepClone(this._config);
-      this._prepareEditorConfig(nextConfig);
-      const route = nextConfig.routes[routeIndex];
-
-      if (!route) {
-        return;
-      }
-
-      this._applyFieldValue(route, routeField.dataset.routeField, routeField);
-      this._commitEditorConfig(nextConfig, shouldEmit);
-      return;
-    }
-
-    const popupField = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.popupField);
-
-    if (!popupField) {
-      return;
-    }
-
-    const nextConfig = deepClone(this._config);
-    this._prepareEditorConfig(nextConfig);
-    const routeIndex = Number(popupField.dataset.routeIndex);
-    const popupIndex = Number(popupField.dataset.popupIndex);
-    const route = nextConfig.routes[routeIndex];
-
-    if (!route || !Array.isArray(route.popup)) {
-      return;
-    }
-
-    const popupItem = route.popup[popupIndex];
-    if (!popupItem) {
-      return;
-    }
-
-    this._applyFieldValue(popupItem, popupField.dataset.popupField, popupField);
-    this._commitEditorConfig(nextConfig, shouldEmit);
-  }
-
-  _onShadowClick(event) {
-    const toggleButton = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
-
-    if (toggleButton) {
-      if (toggleButton.dataset.editorToggle === "styles") {
-        this._showStyleSection = !this._showStyleSection;
-        this._render();
-        return;
-      }
-
-      if (toggleButton.dataset.editorToggle === "animations") {
-        this._showAnimationSection = !this._showAnimationSection;
+      setConfig(config) {
+        const nextConfig = deepClone(config || STUB_CONFIG);
+        if (!Array.isArray(nextConfig.routes) && Array.isArray(nextConfig.items)) {
+          nextConfig.routes = nextConfig.items;
+          delete nextConfig.items;
+        }
+        this._config = this._prepareEditorConfig(nextConfig);
         this._render();
       }
-
-      return;
-    }
-
-    const actionButton = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.editorAction);
-
-    if (!actionButton) {
-      return;
-    }
-
-    const nextConfig = deepClone(this._config);
-    this._prepareEditorConfig(nextConfig);
-
-    if (actionButton.dataset.editorAction === "add-route") {
-      nextConfig.routes.push({
-        icon: "mdi:circle-outline",
-        label: `Ruta ${nextConfig.routes.length + 1}`,
-        path: "/lovelace/nueva-ruta",
-      });
-      this._emitConfig(nextConfig);
-      return;
-    }
-
-    if (actionButton.dataset.editorAction === "remove-route") {
-      const index = Number(actionButton.dataset.routeIndex);
-      nextConfig.routes.splice(index, 1);
-      this._emitConfig(nextConfig);
-      return;
-    }
-
-    if (actionButton.dataset.editorAction === "move-route-up") {
-      const index = Number(actionButton.dataset.routeIndex);
-
-      if (index <= 0 || index >= nextConfig.routes.length) {
-        return;
+      _captureFocusState() {
+        const activeElement = this.shadowRoot?.activeElement;
+        if (!(activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement || activeElement instanceof HTMLSelectElement)) {
+          return null;
+        }
+        const dataset = activeElement.dataset || {};
+        let selector = null;
+        if (dataset.field) {
+          selector = `[data-field="${escapeSelectorValue(dataset.field)}"]`;
+        } else if (dataset.playerField && dataset.playerIndex !== void 0) {
+          selector = `[data-player-index="${escapeSelectorValue(dataset.playerIndex)}"][data-player-field="${escapeSelectorValue(dataset.playerField)}"]`;
+        } else if (dataset.popupField && dataset.routeIndex !== void 0 && dataset.popupIndex !== void 0) {
+          selector = `[data-route-index="${escapeSelectorValue(dataset.routeIndex)}"][data-popup-index="${escapeSelectorValue(dataset.popupIndex)}"][data-popup-field="${escapeSelectorValue(dataset.popupField)}"]`;
+        } else if (dataset.routeField && dataset.routeIndex !== void 0) {
+          selector = `[data-route-index="${escapeSelectorValue(dataset.routeIndex)}"][data-route-field="${escapeSelectorValue(dataset.routeField)}"]`;
+        }
+        if (!selector) {
+          return null;
+        }
+        const supportsSelection = typeof activeElement.selectionStart === "number" && typeof activeElement.selectionEnd === "number";
+        return {
+          selector,
+          selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
+          selectionStart: supportsSelection ? activeElement.selectionStart : null,
+          type: activeElement.type
+        };
       }
-
-      nextConfig.routes = moveItem(nextConfig.routes, index, index - 1);
-      this._emitConfig(nextConfig);
-      return;
-    }
-
-    if (actionButton.dataset.editorAction === "move-route-down") {
-      const index = Number(actionButton.dataset.routeIndex);
-
-      if (index < 0 || index >= nextConfig.routes.length - 1) {
-        return;
+      _restoreFocusState(focusState) {
+        if (!focusState?.selector || !this.shadowRoot) {
+          return;
+        }
+        const target = this.shadowRoot.querySelector(focusState.selector);
+        if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement)) {
+          return;
+        }
+        try {
+          target.focus({ preventScroll: true });
+        } catch (_error) {
+          target.focus();
+        }
+        const canRestoreSelection = focusState.type !== "checkbox" && typeof focusState.selectionStart === "number" && typeof focusState.selectionEnd === "number" && typeof target.setSelectionRange === "function";
+        if (!canRestoreSelection) {
+          return;
+        }
+        try {
+          target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
+        } catch (_error) {
+        }
       }
-
-      nextConfig.routes = moveItem(nextConfig.routes, index, index + 1);
-      this._emitConfig(nextConfig);
-      return;
-    }
-
-    if (actionButton.dataset.editorAction === "add-popup-item") {
-      const routeIndex = Number(actionButton.dataset.routeIndex);
-      const route = nextConfig.routes[routeIndex];
-
-      if (!route) {
-        return;
+      _emitConfig(nextConfig) {
+        const focusState = this._captureFocusState();
+        const prepared = this._prepareEditorConfig(deepClone(nextConfig));
+        this._config = compactConfig(prepared);
+        this._render();
+        this._restoreFocusState(focusState);
+        const merged = mergeConfig(DEFAULT_CONFIG, prepared);
+        fireEvent(this, "config-changed", {
+          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(merged, DEFAULT_CONFIG) ?? {})
+        });
       }
-
-      if (!Array.isArray(route.popup)) {
-        route.popup = [];
+      _setEditorConfig(nextConfig) {
+        this._config = compactConfig(this._prepareEditorConfig(nextConfig));
       }
-
-      route.popup.push({
-        icon: "mdi:dots-circle",
-        path: "/lovelace/nueva-ruta",
-      });
-      this._emitConfig(nextConfig);
-      return;
-    }
-
-    if (actionButton.dataset.editorAction === "remove-popup-item") {
-      const routeIndex = Number(actionButton.dataset.routeIndex);
-      const popupIndex = Number(actionButton.dataset.popupIndex);
-      const route = nextConfig.routes[routeIndex];
-
-      if (!route || !Array.isArray(route.popup)) {
-        return;
+      _commitEditorConfig(nextConfig, shouldEmit) {
+        if (shouldEmit) {
+          this._emitConfig(nextConfig);
+          return;
+        }
+        this._setEditorConfig(nextConfig);
       }
-
-      route.popup.splice(popupIndex, 1);
-      if (route.popup.length === 0) {
-        delete route.popup;
+      _applyFieldValue(target, key, field) {
+        if (!target || !key) {
+          return;
+        }
+        if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
+          return;
+        }
+        if (field.type === "checkbox" && field.dataset.checkedValue !== void 0) {
+          if (field.checked) {
+            target[key] = parsePrimitiveValue(field.dataset.checkedValue);
+          } else if (field.dataset.uncheckedDelete === "true") {
+            delete target[key];
+          } else if (field.dataset.uncheckedValue !== void 0) {
+            target[key] = parsePrimitiveValue(field.dataset.uncheckedValue);
+          } else {
+            target[key] = false;
+          }
+          return;
+        }
+        if (field.dataset.csv === "true") {
+          const values = arrayFromCsv(field.value);
+          if (values.length > 0) {
+            target[key] = values;
+          } else {
+            delete target[key];
+          }
+          return;
+        }
+        if (field.type === "checkbox") {
+          target[key] = field.checked;
+          return;
+        }
+        if (field.value === "" && field.dataset.optional === "true") {
+          delete target[key];
+          return;
+        }
+        if (field.type === "number") {
+          target[key] = Number(field.value);
+          return;
+        }
+        target[key] = field.value;
       }
-      this._emitConfig(nextConfig);
-      return;
-    }
-
-    if (actionButton.dataset.editorAction === "move-popup-item-up") {
-      const routeIndex = Number(actionButton.dataset.routeIndex);
-      const popupIndex = Number(actionButton.dataset.popupIndex);
-      const route = nextConfig.routes[routeIndex];
-
-      if (!route || !Array.isArray(route.popup) || popupIndex <= 0 || popupIndex >= route.popup.length) {
-        return;
+      _isHomeAssistantPicker(node) {
+        const tag = String(node?.tagName || "").toUpperCase();
+        return tag === "HA-ENTITY-PICKER" || tag === "HA-SELECTOR" || tag === "HA-ICON-PICKER";
       }
-
-      route.popup = moveItem(route.popup, popupIndex, popupIndex - 1);
-      this._emitConfig(nextConfig);
-      return;
-    }
-
-    if (actionButton.dataset.editorAction === "move-popup-item-down") {
-      const routeIndex = Number(actionButton.dataset.routeIndex);
-      const popupIndex = Number(actionButton.dataset.popupIndex);
-      const route = nextConfig.routes[routeIndex];
-
-      if (!route || !Array.isArray(route.popup) || popupIndex < 0 || popupIndex >= route.popup.length - 1) {
-        return;
+      _onShadowInput(event) {
+        const shouldEmit = event.type === "change" || event.type === "value-changed";
+        const playerField = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.playerField);
+        if (playerField) {
+          if (this._isHomeAssistantPicker(playerField) && event.type !== "value-changed") {
+            return;
+          }
+          event.stopPropagation();
+          const nextConfig2 = deepClone(this._config);
+          this._prepareEditorConfig(nextConfig2);
+          const playerIndex = Number(playerField.dataset.playerIndex);
+          const player = nextConfig2.media_player.players[playerIndex];
+          if (!player) {
+            return;
+          }
+          if (playerField.dataset.playerField === "label") {
+            delete player.name;
+          }
+          if (playerField.dataset.playerField === "browse_path") {
+            delete player.media_browser_path;
+          }
+          const eventValue = event.detail?.value;
+          if (event.type === "value-changed" && eventValue !== void 0) {
+            playerField.value = eventValue ?? "";
+            playerField.dataset.value = String(eventValue ?? "");
+          }
+          this._applyFieldValue(player, playerField.dataset.playerField, playerField);
+          this._commitEditorConfig(nextConfig2, shouldEmit);
+          return;
+        }
+        const field = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+        if (field) {
+          const nextConfig2 = deepClone(this._config);
+          const eventValue = event.detail?.value;
+          const value = field.type === "checkbox" ? field.checked : event.type === "value-changed" && eventValue !== void 0 ? eventValue ?? "" : field.value;
+          if (value === "" && field.dataset.optional === "true") {
+            deleteByPath(nextConfig2, field.dataset.field);
+          } else if (field.type === "number") {
+            setByPath(nextConfig2, field.dataset.field, Number(value));
+          } else {
+            setByPath(nextConfig2, field.dataset.field, value);
+          }
+          this._commitEditorConfig(nextConfig2, shouldEmit);
+          return;
+        }
+        const routeField = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.routeField);
+        if (routeField) {
+          const routeIndex2 = Number(routeField.dataset.routeIndex);
+          const nextConfig2 = deepClone(this._config);
+          this._prepareEditorConfig(nextConfig2);
+          const route2 = nextConfig2.routes[routeIndex2];
+          if (!route2) {
+            return;
+          }
+          this._applyFieldValue(route2, routeField.dataset.routeField, routeField);
+          this._commitEditorConfig(nextConfig2, shouldEmit);
+          return;
+        }
+        const popupField = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.popupField);
+        if (!popupField) {
+          return;
+        }
+        const nextConfig = deepClone(this._config);
+        this._prepareEditorConfig(nextConfig);
+        const routeIndex = Number(popupField.dataset.routeIndex);
+        const popupIndex = Number(popupField.dataset.popupIndex);
+        const route = nextConfig.routes[routeIndex];
+        if (!route || !Array.isArray(route.popup)) {
+          return;
+        }
+        const popupItem = route.popup[popupIndex];
+        if (!popupItem) {
+          return;
+        }
+        this._applyFieldValue(popupItem, popupField.dataset.popupField, popupField);
+        this._commitEditorConfig(nextConfig, shouldEmit);
       }
-
-      route.popup = moveItem(route.popup, popupIndex, popupIndex + 1);
-      this._emitConfig(nextConfig);
-      return;
-    }
-
-    if (actionButton.dataset.editorAction === "add-player") {
-      nextConfig.media_player.players.push({
-        entity: "",
-      });
-      this._emitConfig(nextConfig);
-      return;
-    }
-
-    if (actionButton.dataset.editorAction === "remove-player") {
-      const playerIndex = Number(actionButton.dataset.playerIndex);
-      nextConfig.media_player.players.splice(playerIndex, 1);
-      this._emitConfig(nextConfig);
-    }
-  }
-
-  _renderPopupItem(routeIndex, popupItem, popupIndex, popupTotal) {
-    return `
+      _onShadowClick(event) {
+        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
+        if (toggleButton) {
+          if (toggleButton.dataset.editorToggle === "styles") {
+            this._showStyleSection = !this._showStyleSection;
+            this._render();
+            return;
+          }
+          if (toggleButton.dataset.editorToggle === "animations") {
+            this._showAnimationSection = !this._showAnimationSection;
+            this._render();
+          }
+          return;
+        }
+        const actionButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorAction);
+        if (!actionButton) {
+          return;
+        }
+        const nextConfig = deepClone(this._config);
+        this._prepareEditorConfig(nextConfig);
+        if (actionButton.dataset.editorAction === "add-route") {
+          nextConfig.routes.push({
+            icon: "mdi:circle-outline",
+            label: `Ruta ${nextConfig.routes.length + 1}`,
+            path: "/lovelace/nueva-ruta"
+          });
+          this._emitConfig(nextConfig);
+          return;
+        }
+        if (actionButton.dataset.editorAction === "remove-route") {
+          const index = Number(actionButton.dataset.routeIndex);
+          nextConfig.routes.splice(index, 1);
+          this._emitConfig(nextConfig);
+          return;
+        }
+        if (actionButton.dataset.editorAction === "move-route-up") {
+          const index = Number(actionButton.dataset.routeIndex);
+          if (index <= 0 || index >= nextConfig.routes.length) {
+            return;
+          }
+          nextConfig.routes = moveItem(nextConfig.routes, index, index - 1);
+          this._emitConfig(nextConfig);
+          return;
+        }
+        if (actionButton.dataset.editorAction === "move-route-down") {
+          const index = Number(actionButton.dataset.routeIndex);
+          if (index < 0 || index >= nextConfig.routes.length - 1) {
+            return;
+          }
+          nextConfig.routes = moveItem(nextConfig.routes, index, index + 1);
+          this._emitConfig(nextConfig);
+          return;
+        }
+        if (actionButton.dataset.editorAction === "add-popup-item") {
+          const routeIndex = Number(actionButton.dataset.routeIndex);
+          const route = nextConfig.routes[routeIndex];
+          if (!route) {
+            return;
+          }
+          if (!Array.isArray(route.popup)) {
+            route.popup = [];
+          }
+          route.popup.push({
+            icon: "mdi:dots-circle",
+            path: "/lovelace/nueva-ruta"
+          });
+          this._emitConfig(nextConfig);
+          return;
+        }
+        if (actionButton.dataset.editorAction === "remove-popup-item") {
+          const routeIndex = Number(actionButton.dataset.routeIndex);
+          const popupIndex = Number(actionButton.dataset.popupIndex);
+          const route = nextConfig.routes[routeIndex];
+          if (!route || !Array.isArray(route.popup)) {
+            return;
+          }
+          route.popup.splice(popupIndex, 1);
+          if (route.popup.length === 0) {
+            delete route.popup;
+          }
+          this._emitConfig(nextConfig);
+          return;
+        }
+        if (actionButton.dataset.editorAction === "move-popup-item-up") {
+          const routeIndex = Number(actionButton.dataset.routeIndex);
+          const popupIndex = Number(actionButton.dataset.popupIndex);
+          const route = nextConfig.routes[routeIndex];
+          if (!route || !Array.isArray(route.popup) || popupIndex <= 0 || popupIndex >= route.popup.length) {
+            return;
+          }
+          route.popup = moveItem(route.popup, popupIndex, popupIndex - 1);
+          this._emitConfig(nextConfig);
+          return;
+        }
+        if (actionButton.dataset.editorAction === "move-popup-item-down") {
+          const routeIndex = Number(actionButton.dataset.routeIndex);
+          const popupIndex = Number(actionButton.dataset.popupIndex);
+          const route = nextConfig.routes[routeIndex];
+          if (!route || !Array.isArray(route.popup) || popupIndex < 0 || popupIndex >= route.popup.length - 1) {
+            return;
+          }
+          route.popup = moveItem(route.popup, popupIndex, popupIndex + 1);
+          this._emitConfig(nextConfig);
+          return;
+        }
+        if (actionButton.dataset.editorAction === "add-player") {
+          nextConfig.media_player.players.push({
+            entity: ""
+          });
+          this._emitConfig(nextConfig);
+          return;
+        }
+        if (actionButton.dataset.editorAction === "remove-player") {
+          const playerIndex = Number(actionButton.dataset.playerIndex);
+          nextConfig.media_player.players.splice(playerIndex, 1);
+          this._emitConfig(nextConfig);
+        }
+      }
+      _renderPopupItem(routeIndex, popupItem, popupIndex, popupTotal) {
+        return `
       <div class="sub-card">
         <div class="route-head route-head--sub">
           <strong>${this._L("ed.nav.popup_word")} ${popupIndex + 1}</strong>
@@ -5048,14 +4307,14 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             />
           </label>
           ${this._renderIconPickerField(
-            "ed.entity.icon",
-            {
-              routeIndex,
-              popupIndex,
-              popupField: "icon",
-            },
-            popupItem.icon || "",
-          )}
+          "ed.entity.icon",
+          {
+            routeIndex,
+            popupIndex,
+            popupField: "icon"
+          },
+          popupItem.icon || ""
+        )}
           <label>
             <span>${this._L("ed.nav.path")}</span>
             <input
@@ -5119,10 +4378,9 @@ class NodaliaNavigationBarEditor extends HTMLElement {
         </div>
       </div>
     `;
-  }
-
-  _renderMediaPlayerPlayer(player, index) {
-    return `
+      }
+      _renderMediaPlayerPlayer(player, index) {
+        return `
       <div class="route-card">
         <div class="route-head">
           <strong>${this._L("ed.nav.player_word")} ${index + 1}</strong>
@@ -5132,14 +4390,14 @@ class NodaliaNavigationBarEditor extends HTMLElement {
         </div>
         <div class="grid">
           ${this._renderEntityPickerField(
-            "ed.entity.entity_main",
-            {
-              playerIndex: index,
-              playerField: "entity",
-            },
-            player.entity || "",
-            { placeholder: "media_player.spotify" },
-          )}
+          "ed.entity.entity_main",
+          {
+            playerIndex: index,
+            playerField: "entity"
+          },
+          player.entity || "",
+          { placeholder: "media_player.spotify" }
+        )}
           <label>
             <span>${this._L("ed.nav.player_name")}</span>
             <input
@@ -5183,15 +4441,15 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             />
           </label>
           ${this._renderIconPickerField(
-            "ed.person.fallback_icon",
-            {
-              playerIndex: index,
-              playerField: "icon",
-              optional: "true",
-            },
-            player.icon || "",
-            { placeholder: "mdi:speaker" },
-          )}
+          "ed.person.fallback_icon",
+          {
+            playerIndex: index,
+            playerField: "icon",
+            optional: "true"
+          },
+          player.icon || "",
+          { placeholder: "mdi:speaker" }
+        )}
           <label>
             <span>${this._L("ed.nav.static_image")}</span>
             <input
@@ -5229,14 +4487,10 @@ class NodaliaNavigationBarEditor extends HTMLElement {
         </div>
       </div>
     `;
-  }
-
-  _renderRoute(route, index, totalRoutes) {
-    const popupMarkup = Array.isArray(route.popup) && route.popup.length > 0
-      ? route.popup.map((popupItem, popupIndex) => this._renderPopupItem(index, popupItem, popupIndex, route.popup.length)).join("")
-      : `<p class="hint">${this._L("ed.nav.no_route_popup")}</p>`;
-
-    return `
+      }
+      _renderRoute(route, index, totalRoutes) {
+        const popupMarkup = Array.isArray(route.popup) && route.popup.length > 0 ? route.popup.map((popupItem, popupIndex) => this._renderPopupItem(index, popupItem, popupIndex, route.popup.length)).join("") : `<p class="hint">${this._L("ed.nav.no_route_popup")}</p>`;
+        return `
       <div class="route-card">
         <div class="route-head">
           <strong>${this._L("ed.nav.route_word")} ${index + 1}</strong>
@@ -5270,13 +4524,13 @@ class NodaliaNavigationBarEditor extends HTMLElement {
             <input type="text" data-route-index="${index}" data-route-field="label" value="${escapeHtml(route.label || "")}" />
           </label>
           ${this._renderIconPickerField(
-            "ed.entity.icon",
-            {
-              routeIndex: index,
-              routeField: "icon",
-            },
-            route.icon || "",
-          )}
+          "ed.entity.icon",
+          {
+            routeIndex: index,
+            routeField: "icon"
+          },
+          route.icon || ""
+        )}
           <label>
             <span>${this._L("ed.nav.path")}</span>
             <input type="text" data-route-index="${index}" data-route-field="path" value="${escapeHtml(route.path || "")}" />
@@ -5337,17 +4591,13 @@ class NodaliaNavigationBarEditor extends HTMLElement {
         </div>
       </div>
     `;
-  }
-
-  _render() {
-    const config = normalizeConfig(this._config || STUB_CONFIG);
-    const routesMarkup = config.routes.map((route, index) => this._renderRoute(route, index, config.routes.length)).join("");
-    const playersMarkup = (config.media_player?.players || [])
-      .map((player, index) => this._renderMediaPlayerPlayer(player, index))
-      .join("");
-    const animationEnabled = config.animations?.enabled !== false;
-
-    this.shadowRoot.innerHTML = `
+      }
+      _render() {
+        const config = normalizeConfig(this._config || STUB_CONFIG);
+        const routesMarkup = config.routes.map((route, index) => this._renderRoute(route, index, config.routes.length)).join("");
+        const playersMarkup = (config.media_player?.players || []).map((player, index) => this._renderMediaPlayerPlayer(player, index)).join("");
+        const animationEnabled = config.animations?.enabled !== false;
+        this.shadowRoot.innerHTML = `
       <style>
         :host {
           display: block;
@@ -5707,9 +4957,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               </button>
             </div>
           </div>
-          ${
-            this._showAnimationSection
-              ? `
+          ${this._showAnimationSection ? `
                 <div class="editor-grid">
                   <label class="checkbox">
                     <input type="checkbox" data-field="animations.enabled" ${animationEnabled ? "checked" : ""} />
@@ -5737,9 +4985,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
                     <input type="number" data-field="animations.button_bounce_duration" value="${escapeHtml(config.animations.button_bounce_duration || DEFAULT_CONFIG.animations.button_bounce_duration)}" />
                   </label>
                 </div>
-              `
-              : ""
-          }
+              ` : ""}
         </section>
 
         <section class="editor-section">
@@ -5758,9 +5004,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               </button>
             </div>
           </div>
-          ${
-            this._showStyleSection
-              ? `
+          ${this._showStyleSection ? `
                 <div class="editor-grid">
                   <label><span>${this._L("ed.nav.style_bar_bg")}</span><input type="text" data-field="styles.bar.background" value="${escapeHtml(config.styles.bar.background || "")}" /></label>
                   <label><span>${this._L("ed.nav.style_bar_border")}</span><input type="text" data-field="styles.bar.border" value="${escapeHtml(config.styles.bar.border || "")}" /></label>
@@ -5823,9 +5067,7 @@ class NodaliaNavigationBarEditor extends HTMLElement {
                   <label><span>${this._L("ed.nav.style_media_overlay")}</span><input type="text" data-field="styles.media_player.overlay_color" value="${escapeHtml(config.styles.media_player.overlay_color || "")}" /></label>
                   <label><span>${this._L("ed.nav.style_media_dot")}</span><input type="text" data-field="styles.media_player.dot_size" value="${escapeHtml(config.styles.media_player.dot_size || "")}" /></label>
                 </div>
-              `
-              : ""
-          }
+              ` : ""}
         </section>
 
         <section class="editor-section">
@@ -5888,34 +5130,33 @@ class NodaliaNavigationBarEditor extends HTMLElement {
         </section>
       </div>
     `;
-
-    this.shadowRoot
-      .querySelectorAll('[data-mounted-control="entity-picker"]')
-      .forEach(host => this._mountEntityPicker(host));
-
-    this.shadowRoot
-      .querySelectorAll('[data-mounted-control="icon-picker"]')
-      .forEach(host => this._mountIconPicker(host));
+        this.shadowRoot.querySelectorAll('[data-mounted-control="entity-picker"]').forEach((host) => this._mountEntityPicker(host));
+        this.shadowRoot.querySelectorAll('[data-mounted-control="icon-picker"]').forEach((host) => this._mountIconPicker(host));
+      }
+    }
+    _lazyNodaliaNavigationBarEditor = NodaliaNavigationBarEditor;
+    return NodaliaNavigationBarEditor;
   }
-}
 
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaNavigationBarCard);
-}
-
-if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaNavigationBarEditor);
-}
-
-window.NodaliaUtils.registerCustomCard({
-  type: CARD_TAG,
-  name: "Nodalia Navigation Bar",
-  description: "Barra de navegacion fija y configurable para Home Assistant.",
-  preview: true,
-});
-
-console.info(
-  `%c ${CARD_TAG} %c v${CARD_VERSION} `,
-  "background:#2f4858;color:#fff;padding:4px 8px;border-radius:999px 0 0 999px;font-weight:700;",
-  "background:#4f7c82;color:#fff;padding:4px 8px;border-radius:0 999px 999px 0;font-weight:700;",
-);
+  // src/cards/navigation/index.ts
+  window.NodaliaUtils.defineLazyCustomElement(CARD_TAG, loadNodaliaNavigationBarCard, { editorTag: EDITOR_TAG });
+  window.NodaliaUtils.defineLazyCustomElement(EDITOR_TAG, loadNodaliaNavigationBarEditor);
+  try {
+    window.NodaliaUtils?.registerCustomCard?.({
+      type: CARD_TAG,
+      name: "Nodalia Navigation Bar",
+      description: "Barra de navegacion fija y configurable para Home Assistant.",
+      preview: true
+    });
+  } catch {
+  }
+  var publicApi = {
+    CARD_TAG,
+    EDITOR_TAG,
+    CARD_VERSION,
+    DEFAULT_CONFIG,
+    STUB_CONFIG,
+    normalizeConfig
+  };
+  window.__NODALIA_NAVIGATION__ = publicApi;
+})();

@@ -8,6 +8,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.20] - 2026-09-20
+
+TypeScript architecture preview without the parallel `b` suffix. Every Lovelace
+card now compiles from `src/cards/`, and the HACS bundle defers unused card and
+editor classes plus unused locale packs so old phones and modest hubs can keep
+many Nodalia cards on one view.
+
+### Changed
+
+- Canonical TypeScript source now covers the remaining cards, including
+  Advanced Vacuum, still compiled to the existing HACS `nodalia-*-card.js`
+  artifacts.
+- Dashboard boot registers tiny hosts and compiles a card or visual editor only
+  when that type is actually created.
+- Runtime i18n keeps unused languages as factories until `strings()` needs them.
+
+### Validation
+
+- Node regressions for lazy custom-element hosts, locale factories, and Advanced
+  Vacuum `window.__NODALIA_ADVANCE_VACUUM__`. Full suite **525** tests.
+
 ## [2.3.0-alpha.19b] - 2026-09-19
 
 Nineteenth experimental TypeScript architecture preview on the parallel `b` line.

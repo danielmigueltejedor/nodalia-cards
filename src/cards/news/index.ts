@@ -23,17 +23,12 @@ import {
   restoreNewsHistoryItem,
   writeNewsHistoryToHelper,
 } from "./news-helpers";
-import { NodaliaNewsCard } from "./news-card";
-import { NodaliaNewsCardEditor } from "./news-editor";
+import { loadNodaliaNewsCard } from "./news-card";
+import { loadNodaliaNewsCardEditor } from "./news-editor";
 import type { NewsPublicApi } from "./news-types";
 
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaNewsCard);
-}
-
-if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaNewsCardEditor);
-}
+window.NodaliaUtils.defineLazyCustomElement(CARD_TAG, loadNodaliaNewsCard, { editorTag: EDITOR_TAG });
+window.NodaliaUtils.defineLazyCustomElement(EDITOR_TAG, loadNodaliaNewsCardEditor);
 
 window.NodaliaUtils?.registerCustomCard?.({
   type: CARD_TAG,

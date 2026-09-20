@@ -32,7 +32,12 @@ import {
   parseSizeToPixels,
 } from "./vacuum-helpers";
 
-export class NodaliaVacuumCard extends HTMLElement {
+let _lazyNodaliaVacuumCard;
+export function loadNodaliaVacuumCard() {
+  if (_lazyNodaliaVacuumCard) {
+    return _lazyNodaliaVacuumCard;
+  }
+class NodaliaVacuumCard extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
@@ -58,7 +63,10 @@ export class NodaliaVacuumCard extends HTMLElement {
 
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    this._nodaliaConstruct();
+  }
+
+  _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = null;
     this._hass = null;
     this._cardWidth = 0;
@@ -139,7 +147,7 @@ export class NodaliaVacuumCard extends HTMLElement {
             },
           })
         : () => {};
-  }
+    }
 
   connectedCallback() {
     this._detachHostHold?.reconnect?.();
@@ -3102,4 +3110,7 @@ export class NodaliaVacuumCard extends HTMLElement {
       this._scheduleEntranceAnimationReset(clamp(Math.round(animations.panelDuration * 0.9), 180, 900) + 120);
     }
   }
+}
+  _lazyNodaliaVacuumCard = NodaliaVacuumCard;
+  return NodaliaVacuumCard;
 }

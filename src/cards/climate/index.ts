@@ -1,7 +1,7 @@
 import { CARD_TAG, CARD_VERSION, EDITOR_TAG } from "./climate-constants";
 import { DEFAULT_CONFIG, normalizeConfig } from "./climate-config";
-import { NodaliaClimateCard } from "./climate-card";
-import { NodaliaClimateCardEditor } from "./climate-editor";
+import { loadNodaliaClimateCard } from "./climate-card";
+import { loadNodaliaClimateCardEditor } from "./climate-editor";
 import {
   decodeSetpointScheduleStorageState,
   encodeSetpointScheduleStorageState,
@@ -10,13 +10,8 @@ import {
 } from "./climate-schedule";
 import type { ClimatePublicApi } from "./climate-types";
 
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaClimateCard);
-}
-
-if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaClimateCardEditor);
-}
+window.NodaliaUtils.defineLazyCustomElement(CARD_TAG, loadNodaliaClimateCard, { editorTag: EDITOR_TAG });
+window.NodaliaUtils.defineLazyCustomElement(EDITOR_TAG, loadNodaliaClimateCardEditor);
 
 window.NodaliaUtils.registerCustomCard({
   type: CARD_TAG,

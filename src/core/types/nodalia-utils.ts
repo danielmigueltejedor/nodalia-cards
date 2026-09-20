@@ -49,6 +49,11 @@ export interface NodaliaUtilsApi {
     preview?: boolean;
     documentationURL?: string;
   }) => void;
+  defineLazyCustomElement: (
+    tag: string,
+    loadClass: () => CustomElementConstructor,
+    options?: { editorTag?: string },
+  ) => void;
   renderLovelaceEntityGuardCardHtml?: (
     hass: unknown,
     entityId: unknown,

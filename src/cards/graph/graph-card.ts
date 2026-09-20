@@ -41,7 +41,12 @@ import {
   resolveEntityEntries,
 } from "./graph-helpers";
 
-export class NodaliaGraphCard extends HTMLElement {
+let _lazyNodaliaGraphCard;
+export function loadNodaliaGraphCard() {
+  if (_lazyNodaliaGraphCard) {
+    return _lazyNodaliaGraphCard;
+  }
+class NodaliaGraphCard extends HTMLElement {
   static async getConfigElement() {
     if (!customElements.get(EDITOR_TAG) && typeof customElements?.whenDefined === "function") {
       await customElements.whenDefined(EDITOR_TAG);
@@ -85,7 +90,10 @@ export class NodaliaGraphCard extends HTMLElement {
 
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    this._nodaliaConstruct();
+  }
+
+  _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._historySeries = [];
@@ -147,7 +155,7 @@ export class NodaliaGraphCard extends HTMLElement {
     if (this._hoverMediaQuery && typeof this._hoverMediaQuery.addEventListener === "function") {
       this._hoverMediaQuery.addEventListener("change", this._onHoverMediaChange);
     }
-  }
+    }
 
   disconnectedCallback() {
     window.clearTimeout(this._historyRefreshTimer);
@@ -2709,4 +2717,7 @@ export class NodaliaGraphCard extends HTMLElement {
       this._animateChartOnNextRender = false;
     }
   }
+}
+  _lazyNodaliaGraphCard = NodaliaGraphCard;
+  return NodaliaGraphCard;
 }

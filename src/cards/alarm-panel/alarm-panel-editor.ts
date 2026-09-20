@@ -22,10 +22,18 @@ import {
   getEditorColorModel,
 } from "./alarm-panel-helpers";
 
-export class NodaliaAlarmPanelCardEditor extends HTMLElement {
+let _lazyNodaliaAlarmPanelCardEditor;
+export function loadNodaliaAlarmPanelCardEditor() {
+  if (_lazyNodaliaAlarmPanelCardEditor) {
+    return _lazyNodaliaAlarmPanelCardEditor;
+  }
+class NodaliaAlarmPanelCardEditor extends HTMLElement {
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    this._nodaliaConstruct();
+  }
+
+  _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._entityOptionsSignature = "";
@@ -39,7 +47,7 @@ export class NodaliaAlarmPanelCardEditor extends HTMLElement {
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
     this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
-  }
+    }
 
   _attachEditorShadowListeners() {
     window.NodaliaUtils.bindShadowListeners(this, [
@@ -1116,4 +1124,7 @@ export class NodaliaAlarmPanelCardEditor extends HTMLElement {
     this._ensureEditorControlsReady();
     window.NodaliaUtils?.clampEditorDialogScroll?.(this);
   }
+}
+  _lazyNodaliaAlarmPanelCardEditor = NodaliaAlarmPanelCardEditor;
+  return NodaliaAlarmPanelCardEditor;
 }

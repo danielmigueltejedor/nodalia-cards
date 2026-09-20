@@ -1,16 +1,11 @@
 import { CARD_TAG, CARD_VERSION, EDITOR_TAG } from "./insignia-constants";
 import { DEFAULT_CONFIG, normalizeConfig } from "./insignia-config";
-import { NodaliaInsigniaCard } from "./insignia-card";
-import { NodaliaInsigniaCardEditor } from "./insignia-editor";
+import { loadNodaliaInsigniaCard } from "./insignia-card";
+import { loadNodaliaInsigniaCardEditor } from "./insignia-editor";
 import type { InsigniaPublicApi } from "./insignia-types";
 
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaInsigniaCard);
-}
-
-if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaInsigniaCardEditor);
-}
+window.NodaliaUtils.defineLazyCustomElement(CARD_TAG, loadNodaliaInsigniaCard, { editorTag: EDITOR_TAG });
+window.NodaliaUtils.defineLazyCustomElement(EDITOR_TAG, loadNodaliaInsigniaCardEditor);
 
 if (Array.isArray(window.customCards)) {
   for (let index = window.customCards.length - 1; index >= 0; index -= 1) {

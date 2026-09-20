@@ -44,7 +44,12 @@ import {
   shouldDarkenFavBubbleIconGlyph,
 } from "./fav-helpers";
 
-export class NodaliaFavCard extends HTMLElement {
+let _lazyNodaliaFavCard;
+export function loadNodaliaFavCard() {
+  if (_lazyNodaliaFavCard) {
+    return _lazyNodaliaFavCard;
+  }
+class NodaliaFavCard extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
@@ -61,7 +66,10 @@ export class NodaliaFavCard extends HTMLElement {
 
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    this._nodaliaConstruct();
+  }
+
+  _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = null;
     this._hass = null;
     this._cardWidth = 0;
@@ -99,7 +107,7 @@ export class NodaliaFavCard extends HTMLElement {
     this._onShadowInput = this._onShadowInput.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("input", this._onShadowInput);
-  }
+    }
 
   connectedCallback() {
     this._resizeObserver?.observe(this);
@@ -1718,4 +1726,7 @@ export class NodaliaFavCard extends HTMLElement {
       this._lastAlarmPanelRenderedOpen = false;
     }
   }
+}
+  _lazyNodaliaFavCard = NodaliaFavCard;
+  return NodaliaFavCard;
 }

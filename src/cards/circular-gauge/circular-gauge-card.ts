@@ -48,7 +48,12 @@ import {
   sanitizeCssValue,
 } from "./circular-gauge-helpers";
 
-export class NodaliaCircularGaugeCard extends HTMLElement {
+let _lazyNodaliaCircularGaugeCard;
+export function loadNodaliaCircularGaugeCard() {
+  if (_lazyNodaliaCircularGaugeCard) {
+    return _lazyNodaliaCircularGaugeCard;
+  }
+class NodaliaCircularGaugeCard extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
@@ -71,7 +76,10 @@ export class NodaliaCircularGaugeCard extends HTMLElement {
 
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    this._nodaliaConstruct();
+  }
+
+  _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     window.NodaliaUtils?.clearDeferTimers?.(this);
@@ -84,7 +92,7 @@ export class NodaliaCircularGaugeCard extends HTMLElement {
     this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("keydown", this._onShadowKeyDown);
-  }
+    }
 
   connectedCallback() {
     this._animateContentOnNextRender = true;
@@ -1416,4 +1424,7 @@ export class NodaliaCircularGaugeCard extends HTMLElement {
       this._scheduleEntranceAnimationReset(animations.contentDuration + 120);
     }
   }
+}
+  _lazyNodaliaCircularGaugeCard = NodaliaCircularGaugeCard;
+  return NodaliaCircularGaugeCard;
 }

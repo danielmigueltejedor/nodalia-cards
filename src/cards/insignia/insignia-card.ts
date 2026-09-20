@@ -20,7 +20,12 @@ import {
   sanitizeCssValue,
 } from "./insignia-helpers";
 
-export class NodaliaInsigniaCard extends HTMLElement {
+let _lazyNodaliaInsigniaCard;
+export function loadNodaliaInsigniaCard() {
+  if (_lazyNodaliaInsigniaCard) {
+    return _lazyNodaliaInsigniaCard;
+  }
+class NodaliaInsigniaCard extends HTMLElement {
   static getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
@@ -37,14 +42,17 @@ export class NodaliaInsigniaCard extends HTMLElement {
 
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    this._nodaliaConstruct();
+  }
+
+  _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._lastRenderSignature = "";
     this._suppressNextInsigniaTap = false;
     this._onClick = this._onClick.bind(this);
     this._onKeyDown = this._onKeyDown.bind(this);
-  }
+    }
 
   connectedCallback() {
     this.shadowRoot.addEventListener("click", this._onClick);
@@ -890,4 +898,7 @@ export class NodaliaInsigniaCard extends HTMLElement {
       </div>
     `;
   }
+}
+  _lazyNodaliaInsigniaCard = NodaliaInsigniaCard;
+  return NodaliaInsigniaCard;
 }

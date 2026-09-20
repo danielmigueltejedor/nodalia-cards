@@ -16,10 +16,18 @@ import {
   setByPath,
 } from "./insignia-helpers";
 
-export class NodaliaInsigniaCardEditor extends HTMLElement {
+let _lazyNodaliaInsigniaCardEditor;
+export function loadNodaliaInsigniaCardEditor() {
+  if (_lazyNodaliaInsigniaCardEditor) {
+    return _lazyNodaliaInsigniaCardEditor;
+  }
+class NodaliaInsigniaCardEditor extends HTMLElement {
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    this._nodaliaConstruct();
+  }
+
+  _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig({});
     this._hass = null;
     this._entityOptionsSignature = "";
@@ -29,7 +37,7 @@ export class NodaliaInsigniaCardEditor extends HTMLElement {
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
-  }
+    }
 
   _attachEditorShadowListeners() {
     window.NodaliaUtils.bindShadowListeners(this, [
@@ -922,4 +930,7 @@ export class NodaliaInsigniaCardEditor extends HTMLElement {
     this._ensureEditorControlsReady();
     window.NodaliaUtils?.clampEditorDialogScroll?.(this);
   }
+}
+  _lazyNodaliaInsigniaCardEditor = NodaliaInsigniaCardEditor;
+  return NodaliaInsigniaCardEditor;
 }

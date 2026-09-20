@@ -52,7 +52,12 @@ import {
   isUnavailableState,
 } from "./media-player-helpers";
 
-export class NodaliaMediaPlayer extends HTMLElement {
+let _lazyNodaliaMediaPlayer;
+export function loadNodaliaMediaPlayer() {
+  if (_lazyNodaliaMediaPlayer) {
+    return _lazyNodaliaMediaPlayer;
+  }
+class NodaliaMediaPlayer extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
@@ -100,7 +105,10 @@ export class NodaliaMediaPlayer extends HTMLElement {
 
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    this._nodaliaConstruct();
+  }
+
+  _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = null;
     this._hass = null;
     this._mediaBrowserState = null;
@@ -171,7 +179,7 @@ export class NodaliaMediaPlayer extends HTMLElement {
     if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
       this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
     }
-  }
+    }
 
   connectedCallback() {
     window.addEventListener("resize", this._onResize);
@@ -5237,4 +5245,7 @@ export class NodaliaMediaPlayer extends HTMLElement {
       this._render();
     }
   }
+}
+  _lazyNodaliaMediaPlayer = NodaliaMediaPlayer;
+  return NodaliaMediaPlayer;
 }

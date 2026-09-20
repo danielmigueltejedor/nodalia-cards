@@ -66,7 +66,7 @@ const sampleHass = {
 
 test("news card registers custom element and bundle entry", () => {
   const source = read("nodalia-news-card.js");
-  assert.match(source, /customElements\.define\(CARD_TAG, NodaliaNewsCard\)/);
+  assert.match(source, /defineLazyCustomElement\(CARD_TAG, loadNodaliaNewsCard/);
   assert.match(source, /registerCustomCard\?\.\(\{[\s\S]*type: CARD_TAG/);
   assert.match(source, /if \(items\.length > 0\) \{[\s\S]*health\.unavailable/);
   assert.match(source, /_renderShell\(bodyMarkup, styles, cardBackground, density, layout\)/);

@@ -1,16 +1,11 @@
 import { CARD_TAG, CARD_VERSION, EDITOR_TAG } from "./fan-constants";
 import { DEFAULT_CONFIG, normalizeConfig } from "./fan-config";
-import { NodaliaFanCard } from "./fan-card";
-import { NodaliaFanCardEditor } from "./fan-editor";
+import { loadNodaliaFanCard } from "./fan-card";
+import { loadNodaliaFanCardEditor } from "./fan-editor";
 import type { FanPublicApi } from "./fan-types";
 
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaFanCard);
-}
-
-if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaFanCardEditor);
-}
+window.NodaliaUtils.defineLazyCustomElement(CARD_TAG, loadNodaliaFanCard, { editorTag: EDITOR_TAG });
+window.NodaliaUtils.defineLazyCustomElement(EDITOR_TAG, loadNodaliaFanCardEditor);
 
 window.NodaliaUtils.registerCustomCard({
   type: CARD_TAG,

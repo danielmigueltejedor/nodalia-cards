@@ -35,7 +35,12 @@ import {
   translateModeLabel,
 } from "./humidifier-helpers";
 
-export class NodaliaHumidifierCard extends HTMLElement {
+let _lazyNodaliaHumidifierCard;
+export function loadNodaliaHumidifierCard() {
+  if (_lazyNodaliaHumidifierCard) {
+    return _lazyNodaliaHumidifierCard;
+  }
+class NodaliaHumidifierCard extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
@@ -50,7 +55,10 @@ export class NodaliaHumidifierCard extends HTMLElement {
 
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    this._nodaliaConstruct();
+  }
+
+  _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = null;
     this._hass = null;
     this._optimisticToggle = null;
@@ -162,7 +170,7 @@ export class NodaliaHumidifierCard extends HTMLElement {
             },
           })
         : () => {};
-  }
+    }
 
   connectedCallback() {
     this._detachHostHold?.reconnect?.();
@@ -3889,4 +3897,7 @@ export class NodaliaHumidifierCard extends HTMLElement {
       this._scheduleEntranceAnimationReset(contentEntranceDuration + 120);
     }
   }
+}
+  _lazyNodaliaHumidifierCard = NodaliaHumidifierCard;
+  return NodaliaHumidifierCard;
 }

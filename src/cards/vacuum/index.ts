@@ -1,16 +1,11 @@
 import { CARD_TAG, CARD_VERSION, EDITOR_TAG } from "./vacuum-constants";
 import { DEFAULT_CONFIG, normalizeConfig } from "./vacuum-config";
-import { NodaliaVacuumCard } from "./vacuum-card";
-import { NodaliaVacuumCardEditor } from "./vacuum-editor";
+import { loadNodaliaVacuumCard } from "./vacuum-card";
+import { loadNodaliaVacuumCardEditor } from "./vacuum-editor";
 import type { VacuumPublicApi } from "./vacuum-types";
 
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaVacuumCard);
-}
-
-if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaVacuumCardEditor);
-}
+window.NodaliaUtils.defineLazyCustomElement(CARD_TAG, loadNodaliaVacuumCard, { editorTag: EDITOR_TAG });
+window.NodaliaUtils.defineLazyCustomElement(EDITOR_TAG, loadNodaliaVacuumCardEditor);
 
 window.NodaliaUtils.registerCustomCard({
   type: CARD_TAG,

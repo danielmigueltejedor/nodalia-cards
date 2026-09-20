@@ -29,7 +29,12 @@ import {
   writeNewsHistoryToHelper,
 } from "./news-helpers";
 
-export class NodaliaNewsCard extends HTMLElement {
+let _lazyNodaliaNewsCard;
+export function loadNodaliaNewsCard() {
+  if (_lazyNodaliaNewsCard) {
+    return _lazyNodaliaNewsCard;
+  }
+class NodaliaNewsCard extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
@@ -68,7 +73,10 @@ export class NodaliaNewsCard extends HTMLElement {
 
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    this._nodaliaConstruct();
+  }
+
+  _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._lastRenderSignature = "";
@@ -93,7 +101,7 @@ export class NodaliaNewsCard extends HTMLElement {
     this.shadowRoot.addEventListener("click", this._onShadowClick);
     this.shadowRoot.addEventListener("keydown", this._onShadowKeyDown);
     this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown, true);
-  }
+    }
 
   connectedCallback() {
     this._animateContentOnNextRender = true;
@@ -1287,4 +1295,7 @@ export class NodaliaNewsCard extends HTMLElement {
       ${bodyMarkup}
     `;
   }
+}
+  _lazyNodaliaNewsCard = NodaliaNewsCard;
+  return NodaliaNewsCard;
 }

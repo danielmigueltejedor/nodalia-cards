@@ -26,7 +26,12 @@ import {
   parseSizeToPixels,
 } from "./person-helpers";
 
-export class NodaliaPersonCard extends HTMLElement {
+let _lazyNodaliaPersonCard;
+export function loadNodaliaPersonCard() {
+  if (_lazyNodaliaPersonCard) {
+    return _lazyNodaliaPersonCard;
+  }
+class NodaliaPersonCard extends HTMLElement {
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
@@ -41,7 +46,10 @@ export class NodaliaPersonCard extends HTMLElement {
 
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    this._nodaliaConstruct();
+  }
+
+  _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     window.NodaliaUtils?.clearDeferTimers?.(this);
@@ -56,7 +64,7 @@ export class NodaliaPersonCard extends HTMLElement {
     this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
     this._detachHostHold = () => {};
     this._suppressNextPersonTap = false;
-  }
+    }
 
   connectedCallback() {
     this._detachHostHold?.();
@@ -1261,4 +1269,7 @@ export class NodaliaPersonCard extends HTMLElement {
 
     this._lastRenderSignature = this._getRenderSignature();
   }
+}
+  _lazyNodaliaPersonCard = NodaliaPersonCard;
+  return NodaliaPersonCard;
 }

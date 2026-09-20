@@ -28,7 +28,7 @@ function loadGraphApi() {
 
 test("graph card registers custom element and bundle entry", () => {
   const source = read("nodalia-graph-card.js");
-  assert.match(source, /customElements\.define\(CARD_TAG, NodaliaGraphCard\)/);
+  assert.match(source, /defineLazyCustomElement\(CARD_TAG, loadNodaliaGraphCard/);
   assert.match(source, /window\.__NODALIA_GRAPH__/);
   assert.match(read("scripts/build-bundle.mjs"), /src\/cards\/graph\/index\.ts/);
   assert.match(read("scripts/build-src-cards.mjs"), /src\/cards\/graph\/standalone\.ts/);

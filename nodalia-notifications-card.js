@@ -1,218 +1,108 @@
-const CARD_TAG = "nodalia-notifications-card";
-const EDITOR_TAG = "nodalia-notifications-card-editor";
-const CARD_VERSION = "2.3.0-alpha.19b";
-const STORAGE_KEY = "nodalia_notifications_dismissed_v1";
-const BACKGROUND_MOBILE_NATIVE_HEALTH_TTL_MS = 30_000;
-const LEGACY_BACKGROUND_MOBILE_TOGGLE = "input_boolean.nodalia_background_mobile_notifications";
-const HAPTIC_PATTERNS = {
-  selection: 8,
-  light: 10,
-  medium: 16,
-  heavy: 24,
-  success: [10, 40, 10],
-  warning: [20, 50, 12],
-  failure: [12, 40, 12, 40, 18],
-};
+/* Generated from src/cards/notifications. Do not edit. */
+"use strict";
+(() => {
+  // src/cards/notifications/notifications-constants.ts
+  var CARD_TAG = "nodalia-notifications-card";
+  var EDITOR_TAG = "nodalia-notifications-card-editor";
+  var CARD_VERSION = "2.3.0-alpha.20";
+  var STORAGE_KEY = "nodalia_notifications_dismissed_v1";
+  var BACKGROUND_MOBILE_NATIVE_HEALTH_TTL_MS = 3e4;
+  var LEGACY_BACKGROUND_MOBILE_TOGGLE = "input_boolean.nodalia_background_mobile_notifications";
+  var HAPTIC_PATTERNS = {
+    selection: 8,
+    light: 10,
+    medium: 16,
+    heavy: 24,
+    success: [10, 40, 10],
+    warning: [20, 50, 12],
+    failure: [12, 40, 12, 40, 18]
+  };
 
-const DEFAULT_CONFIG = {
-  title: "Notifications",
-  language: "auto",
-  icon: "mdi:bell-badge-outline",
-  empty_title: "All quiet",
-  empty_message: "You have no current alerts",
-  max_visible: 1,
-  refresh_interval: 300,
-  storage_key: STORAGE_KEY,
-  dismissed_entity: "",
-  calendar_entities: [],
-  vacuum_entities: [],
-  vacuum_error_entities: [],
-  fan_entities: [],
-  climate_entities: [],
-  humidifier_entities: [],
-  media_player_entities: [],
-  weather_entities: [],
-  motion_entities: [],
-  door_entities: [],
-  window_entities: [],
-  temperature_entities: [],
-  humidity_entities: [],
-  outdoor_temperature_entities: [],
-  outdoor_humidity_entities: [],
-  battery_entities: [],
-  humidifier_fill_entities: [],
-  humidifier_full_entities: [],
-  ink_entities: [],
-  custom_notifications: [],
-  smart_entity_overrides: [],
-  presence_entity: "",
-  mobile_context: {
-    only_when_away: false,
-    only_when_home: false,
-    quiet_hours: {
-      enabled: false,
-      start: "23:00",
-      end: "08:00",
-      allow_critical: true,
-    },
-  },
-  external_alerts: [],
-  thresholds: {
-    hot_temperature: 27,
-    cold_temperature: 17,
-    humidity_high: 70,
-    humidity_low: 30,
-    rain_probability: 50,
-    rain_lookahead_hours: 6,
-    media_absence_minutes: 10,
-    battery_low: 20,
-    humidifier_fill_low: 20,
-    humidifier_fill_full: 90,
-    ink_low: 15,
-  },
-  smart_recommendations: true,
-  smart_notifications: {
-    hot: { title: "", message: "", tint_color: "", url: "", action_label: "", tap_action: { action: "none" } },
-    cold: { title: "", message: "", tint_color: "", url: "", action_label: "", tap_action: { action: "none" } },
-    humidity_high: { title: "", message: "", tint_color: "", url: "", action_label: "", tap_action: { action: "none" } },
-    humidity_low: { title: "", message: "", tint_color: "", url: "", action_label: "", tap_action: { action: "none" } },
-    rain: { title: "", message: "", tint_color: "", url: "", action_label: "", tap_action: { action: "none" } },
-    media_left_on: { title: "", message: "", tint_color: "", url: "", action_label: "", tap_action: { action: "none" } },
-    battery_low: { title: "", message: "", tint_color: "", url: "", action_label: "", tap_action: { action: "none" } },
-    humidifier_fill_low: { title: "", message: "", tint_color: "", url: "", action_label: "", tap_action: { action: "none" } },
-    humidifier_fill_full: { title: "", message: "", tint_color: "", url: "", action_label: "", tap_action: { action: "none" } },
-    ink_low: { title: "", message: "", tint_color: "", url: "", action_label: "", tap_action: { action: "none" } },
-  },
-  mobile_notifications: {
-    enabled: false,
-    entities: [],
-    services: [],
-    min_severity: "warning",
-    critical_alerts: false,
-    default_policy: "auto",
-    cooldown_minutes: 30,
-    group_similar: true,
-  },
-  background_mobile: {
-    enabled: false,
-    profile_id: "default",
-    webhook: "",
-    chunk_size: 240,
-  },
-  security: {
-    strict_service_actions: true,
-    allowed_services: [],
-    allowed_service_domains: [],
-    allow_webhooks_for_non_admin: false,
-  },
-  haptics: {
-    enabled: true,
-    style: "medium",
-    fallback_vibrate: false,
-  },
-  animations: {
-    enabled: true,
-    content_duration: 420,
-    button_bounce_duration: 320,
-  },
-  styles: {
-    card: {
-      background: "var(--ha-card-background, var(--card-background-color, rgba(32, 34, 42, 0.94)))",
-      border: "1px solid var(--divider-color)",
-      border_radius: "var(--nodalia-card-border-radius, 28px)",
-      box_shadow: "var(--ha-card-box-shadow)",
-      padding: "18px",
-      gap: "14px",
-    },
-    icon: {
-      background: "color-mix(in srgb, var(--primary-color) 18%, transparent)",
-      color: "var(--primary-color)",
-      size: "54px",
-    },
-    title_size: "22px",
-    item_radius: "var(--nodalia-card-border-radius, 28px)",
-    accent: "var(--primary-color)",
-  },
-};
+  // src/cards/notifications/notifications-runtime.ts
+  var utils = window.NodaliaUtils;
+  var deepClone = utils.deepClone.bind(utils);
+  var isObject = utils.isObject.bind(utils);
+  var clamp = utils.clamp.bind(utils);
+  var isUnsafeConfigPathKey = utils.isUnsafeConfigPathKey.bind(utils);
+  var mobile = window.NodaliaNotificationsMobilePolicy;
+  var BACKGROUND_MOBILE_MAX_CHUNKS = mobile.BACKGROUND_MOBILE_MAX_CHUNKS;
+  var MOBILE_COOLDOWN_STORAGE_KEY = mobile.MOBILE_COOLDOWN_STORAGE_KEY;
+  var MOBILE_DELIVERY_STATES = mobile.MOBILE_DELIVERY_STATES;
+  var normalizeMobilePolicy = mobile.normalizeMobilePolicy;
+  var resolveSmartEntityMobilePolicy = mobile.resolveSmartEntityMobilePolicy;
+  var backgroundMobilePayloadOverLimit = mobile.backgroundMobilePayloadOverLimit;
+  var normalizeSmartEntityMobile = mobile.normalizeSmartEntityMobile;
+  var normalizeSmartEntityOverrideMobile = mobile.normalizeSmartEntityOverrideMobile;
+  var isExplicitSmartEntityMobile = mobile.isExplicitSmartEntityMobile;
+  var isWithinQuietHours = mobile.isWithinQuietHours;
+  var getNextQuietHoursBoundaryDelay = mobile.getNextQuietHoursBoundaryDelay;
+  var normalizeQuietHours = mobile.normalizeQuietHours;
+  var normalizeMobileContext = mobile.normalizeMobileContext;
+  var resolvePresenceOccupancy = mobile.resolvePresenceOccupancy;
+  var passesPresenceContext = mobile.passesPresenceContext;
+  var buildMobileAlertIdentity = mobile.buildMobileAlertIdentity;
+  var buildMobileGroupIdentity = mobile.buildMobileGroupIdentity;
+  var resolveMobileDeliveryState = mobile.resolveMobileDeliveryState;
+  var legacyMobilePolicyLabel = mobile.legacyMobilePolicyLabel;
 
-// Shared primitives are loaded by nodalia-cards core and inlined for standalone resources.
-const {
-  deepClone,
-  isObject,
-  clamp,
-  isUnsafeConfigPathKey,
-} = window.NodaliaUtils;
-
-
-
-function mergeDeep(base, override) {
-  const out = deepClone(base);
-  if (!isObject(override)) {
+  // src/cards/notifications/notifications-helpers.ts
+  function mergeDeep(base, override) {
+    const out = deepClone(base);
+    if (!isObject(override)) {
+      return out;
+    }
+    Object.entries(override).forEach(([key, value]) => {
+      if (isUnsafeConfigPathKey(key)) {
+        return;
+      }
+      if (isObject(value) && isObject(out[key])) {
+        out[key] = mergeDeep(out[key], value);
+      } else if (value !== void 0) {
+        out[key] = deepClone(value);
+      }
+    });
     return out;
   }
-  Object.entries(override).forEach(([key, value]) => {
-    if (isUnsafeConfigPathKey(key)) {
-      return;
-    }
-    if (isObject(value) && isObject(out[key])) {
-      out[key] = mergeDeep(out[key], value);
-    } else if (value !== undefined) {
-      out[key] = deepClone(value);
-    }
-  });
-  return out;
-}
-
-function compactConfig(value) {
-  if (Array.isArray(value)) {
-    const rows = value
-      .map(item => compactConfig(item))
-      .filter(item => {
-        if (item === undefined || item === null || item === "") {
+  function compactConfig(value) {
+    if (Array.isArray(value)) {
+      const rows = value.map((item) => compactConfig(item)).filter((item) => {
+        if (item === void 0 || item === null || item === "") {
           return false;
         }
         return !(isObject(item) && !Object.keys(item).length);
       });
-    return rows.length ? rows : undefined;
+      return rows.length ? rows : void 0;
+    }
+    if (isObject(value)) {
+      const out = {};
+      Object.entries(value).forEach(([key, child]) => {
+        if (isUnsafeConfigPathKey(key)) {
+          return;
+        }
+        const next = compactConfig(child);
+        if (next !== void 0 && next !== "") {
+          out[key] = next;
+        }
+      });
+      return Object.keys(out).length ? out : void 0;
+    }
+    return value;
   }
-  if (isObject(value)) {
-    const out = {};
-    Object.entries(value).forEach(([key, child]) => {
-      if (isUnsafeConfigPathKey(key)) {
-        return;
-      }
-      const next = compactConfig(child);
-      if (next !== undefined && next !== "") {
-        out[key] = next;
-      }
-    });
-    return Object.keys(out).length ? out : undefined;
+  function entityDomain(entityId) {
+    const raw = String(entityId || "").trim();
+    const dot = raw.indexOf(".");
+    return dot > 0 ? raw.slice(0, dot) : "";
   }
-  return value;
-}
-
-function entityDomain(entityId) {
-  const raw = String(entityId || "").trim();
-  const dot = raw.indexOf(".");
-  return dot > 0 ? raw.slice(0, dot) : "";
-}
-
-function normalizeEntityList(value, domains = []) {
-  const allowed = new Set(domains);
-  const rows = Array.isArray(value)
-    ? value
-    : String(value || "")
-        .split(/[\n,]/)
-        .map(item => item.trim());
-  const seen = new Set();
-  return rows
-    .map(item => {
+  function normalizeEntityList(value, domains = []) {
+    const allowed = new Set(domains);
+    const rows = Array.isArray(value) ? value : String(value || "").split(/[\n,]/).map((item) => item.trim());
+    const seen = /* @__PURE__ */ new Set();
+    return rows.map((item) => {
       if (isObject(item)) {
         return String(item.entity || item.entity_id || "").trim();
       }
       return String(item || "").trim();
-    })
-    .filter(entityId => {
+    }).filter((entityId) => {
       if (!entityId || seen.has(entityId)) {
         return false;
       }
@@ -222,144 +112,96 @@ function normalizeEntityList(value, domains = []) {
       seen.add(entityId);
       return true;
     });
-}
-
-function normalizeStringList(value) {
-  const rows = Array.isArray(value)
-    ? value
-    : String(value || "")
-        .split(/[\n,]/)
-        .map(item => item.trim());
-  const seen = new Set();
-  return rows
-    .map(item => String(item || "").trim().toLowerCase())
-    .filter(item => {
+  }
+  function normalizeStringList(value) {
+    const rows = Array.isArray(value) ? value : String(value || "").split(/[\n,]/).map((item) => item.trim());
+    const seen = /* @__PURE__ */ new Set();
+    return rows.map((item) => String(item || "").trim().toLowerCase()).filter((item) => {
       if (!item || seen.has(item)) {
         return false;
       }
       seen.add(item);
       return true;
     });
-}
-
-function normalizeNotifyServices(value) {
-  return normalizeStringList(value)
-    .map(item => (item.includes(".") ? item : `notify.${item}`))
-    .filter(item => item.startsWith("notify.") && item.length > "notify.".length);
-}
-
-function normalizeBoolean(value) {
-  if (value === true || value === false) {
-    return value;
   }
-  const normalized = String(value ?? "").trim().toLowerCase();
-  if (["true", "on", "yes", "1"].includes(normalized)) {
-    return true;
+  function normalizeNotifyServices(value) {
+    return normalizeStringList(value).map((item) => item.includes(".") ? item : `notify.${item}`).filter((item) => item.startsWith("notify.") && item.length > "notify.".length);
   }
-  if (["false", "off", "no", "0"].includes(normalized)) {
+  function normalizeBoolean(value) {
+    if (value === true || value === false) {
+      return value;
+    }
+    const normalized = String(value ?? "").trim().toLowerCase();
+    if (["true", "on", "yes", "1"].includes(normalized)) {
+      return true;
+    }
+    if (["false", "off", "no", "0"].includes(normalized)) {
+      return false;
+    }
     return false;
   }
-  return false;
-}
-
-function normalizeNotificationTapAction(value) {
-  const row = isObject(value) ? value : {};
-  let action = String(row.action || "none").trim().toLowerCase().replaceAll("_", "-");
-  if (action === "more-info-dialog") {
-    action = "more-info";
+  function normalizeNotificationTapAction(value) {
+    const row = isObject(value) ? value : {};
+    let action = String(row.action || "none").trim().toLowerCase().replaceAll("_", "-");
+    if (action === "more-info-dialog") {
+      action = "more-info";
+    }
+    if (action === "open-url") {
+      action = "url";
+    }
+    const allowed = /* @__PURE__ */ new Set(["none", "more-info", "navigate", "url", "toggle"]);
+    if (!allowed.has(action)) {
+      action = "none";
+    }
+    const out = { action };
+    const entity = String(row.entity || row.entity_id || "").trim();
+    const navigationPath = String(row.navigation_path || row.path || "").trim();
+    const urlPath = String(row.url_path || row.url || "").trim();
+    if ((action === "more-info" || action === "toggle") && entity) {
+      out.entity = entity;
+    }
+    if (action === "navigate" && navigationPath) {
+      out.navigation_path = navigationPath;
+    }
+    if (action === "url" && urlPath) {
+      out.url_path = urlPath;
+    }
+    if (action === "url" && row.new_tab !== void 0) {
+      out.new_tab = normalizeBoolean(row.new_tab);
+    }
+    return out;
   }
-  if (action === "open-url") {
-    action = "url";
+  function hasNotificationTapAction(value) {
+    const action = normalizeNotificationTapAction(value);
+    switch (action.action) {
+      case "more-info":
+      case "toggle":
+        return true;
+      case "navigate":
+        return Boolean(action.navigation_path);
+      case "url":
+        return Boolean(action.url_path);
+      default:
+        return false;
+    }
   }
-  const allowed = new Set(["none", "more-info", "navigate", "url", "toggle"]);
-  if (!allowed.has(action)) {
-    action = "none";
+  function normalizeSmartNotificationOptions(value) {
+    const row = isObject(value) ? value : {};
+    return {
+      title: String(row.title || "").trim(),
+      message: String(row.message || "").trim(),
+      tint_color: String(row.tint_color || "").trim(),
+      url: String(row.url || "").trim(),
+      action_label: String(row.action_label || "").trim(),
+      tap_action: normalizeNotificationTapAction(row.tap_action),
+      mobile: normalizeSmartEntityMobile(row.mobile ?? row.mobile_notifications ?? row.mobile_enabled)
+    };
   }
-  const out = { action };
-  const entity = String(row.entity || row.entity_id || "").trim();
-  const navigationPath = String(row.navigation_path || row.path || "").trim();
-  const urlPath = String(row.url_path || row.url || "").trim();
-  if ((action === "more-info" || action === "toggle") && entity) {
-    out.entity = entity;
-  }
-  if (action === "navigate" && navigationPath) {
-    out.navigation_path = navigationPath;
-  }
-  if (action === "url" && urlPath) {
-    out.url_path = urlPath;
-  }
-  if (action === "url" && row.new_tab !== undefined) {
-    out.new_tab = normalizeBoolean(row.new_tab);
-  }
-  return out;
-}
-
-function hasNotificationTapAction(value) {
-  const action = normalizeNotificationTapAction(value);
-  switch (action.action) {
-    case "more-info":
-    case "toggle":
-      return true;
-    case "navigate":
-      return Boolean(action.navigation_path);
-    case "url":
-      return Boolean(action.url_path);
-    default:
-      return false;
-  }
-}
-
-function normalizeSmartNotificationOptions(value) {
-  const row = isObject(value) ? value : {};
-  return {
-    title: String(row.title || "").trim(),
-    message: String(row.message || "").trim(),
-    tint_color: String(row.tint_color || "").trim(),
-    url: String(row.url || "").trim(),
-    action_label: String(row.action_label || "").trim(),
-    tap_action: normalizeNotificationTapAction(row.tap_action),
-    mobile: normalizeSmartEntityMobile(row.mobile ?? row.mobile_notifications ?? row.mobile_enabled),
-  };
-}
-
-const {
-  BACKGROUND_MOBILE_MAX_CHUNKS,
-  MOBILE_COOLDOWN_STORAGE_KEY,
-  MOBILE_DELIVERY_STATES,
-  normalizeMobilePolicy,
-  resolveSmartEntityMobilePolicy,
-  backgroundMobilePayloadOverLimit,
-  normalizeSmartEntityMobile,
-  normalizeSmartEntityOverrideMobile,
-  isExplicitSmartEntityMobile,
-  isWithinQuietHours,
-  getNextQuietHoursBoundaryDelay,
-  normalizeQuietHours,
-  normalizeMobileContext,
-  resolvePresenceOccupancy,
-  passesPresenceContext,
-  buildMobileAlertIdentity,
-  buildMobileGroupIdentity,
-  resolveMobileDeliveryState,
-  legacyMobilePolicyLabel,
-} = window.NodaliaNotificationsMobilePolicy;
-
-
-
-
-
-
-
-
-
-
-
-function normalizeExternalAlerts(value, options = {}) {
-  const rows = Array.isArray(value) ? value : [];
-  const keepDrafts = options.keepDrafts === true;
-  const seen = new Set();
-  return rows
-    .map(item => {
+  function normalizeExternalAlerts(value, options = {}) {
+    const rows = Array.isArray(value) ? value : [];
+    const keepDrafts = options.keepDrafts === true;
+    const seen = /* @__PURE__ */ new Set();
+    return rows.map((item) => {
       const row = isObject(item) ? item : {};
       const id = String(row.id || "").trim();
       const type = String(row.type || "external_alert").trim().toLowerCase() || "external_alert";
@@ -377,14 +219,13 @@ function normalizeExternalAlerts(value, options = {}) {
         mobile: normalizeMobilePolicy(mobileRaw),
         tap_action: normalizeNotificationTapAction(row.tap_action),
         url: String(row.url || "").trim(),
-        action_label: String(row.action_label || "").trim(),
+        action_label: String(row.action_label || "").trim()
       };
       if (keepDrafts && row._draft === true) {
         normalized._draft = true;
       }
       return normalized;
-    })
-    .filter(item => {
+    }).filter((item) => {
       if (keepDrafts && item._draft === true) {
         return true;
       }
@@ -394,16 +235,11 @@ function normalizeExternalAlerts(value, options = {}) {
       seen.add(item.id);
       return true;
     });
-}
-function normalizeSmartEntityOverrides(value) {
-  const rows = Array.isArray(value)
-    ? value
-    : isObject(value)
-      ? Object.entries(value).map(([entity, row]) => ({ ...(isObject(row) ? row : {}), entity }))
-      : [];
-  const seen = new Set();
-  return rows
-    .map(item => {
+  }
+  function normalizeSmartEntityOverrides(value) {
+    const rows = Array.isArray(value) ? value : isObject(value) ? Object.entries(value).map(([entity, row]) => ({ ...isObject(row) ? row : {}, entity })) : [];
+    const seen = /* @__PURE__ */ new Set();
+    return rows.map((item) => {
       const row = isObject(item) ? item : {};
       return {
         entity: String(row.entity || row.entity_id || "").trim(),
@@ -413,31 +249,27 @@ function normalizeSmartEntityOverrides(value) {
         url: String(row.url || "").trim(),
         action_label: String(row.action_label || "").trim(),
         tap_action: normalizeNotificationTapAction(row.tap_action),
-        mobile: normalizeSmartEntityOverrideMobile(row.mobile ?? row.mobile_notifications ?? row.mobile_enabled),
+        mobile: normalizeSmartEntityOverrideMobile(row.mobile ?? row.mobile_notifications ?? row.mobile_enabled)
       };
-    })
-    .filter(item => {
+    }).filter((item) => {
       if (!item.entity || seen.has(item.entity)) {
         return false;
       }
       seen.add(item.entity);
       return Boolean(item.title || item.message || item.tint_color || item.url || item.action_label || hasNotificationTapAction(item.tap_action) || isExplicitSmartEntityMobile(item.mobile));
     });
-}
-
-function normalizeSmartNotifications(value) {
-  const rows = isObject(value) ? value : {};
-  const out = {};
-  Object.keys(DEFAULT_CONFIG.smart_notifications).forEach(key => {
-    out[key] = normalizeSmartNotificationOptions(rows[key]);
-  });
-  return out;
-}
-
-function normalizeCustomNotifications(value, options = {}) {
-  const keepDrafts = options.keepDrafts === true;
-  return (Array.isArray(value) ? value : [])
-    .map(item => {
+  }
+  function normalizeSmartNotifications(value) {
+    const rows = isObject(value) ? value : {};
+    const out = {};
+    Object.keys(DEFAULT_CONFIG.smart_notifications).forEach((key) => {
+      out[key] = normalizeSmartNotificationOptions(rows[key]);
+    });
+    return out;
+  }
+  function normalizeCustomNotifications(value, options = {}) {
+    const keepDrafts = options.keepDrafts === true;
+    return (Array.isArray(value) ? value : []).map((item) => {
       const row = isObject(item) ? item : {};
       const normalized = {
         title: String(row.title || "").trim(),
@@ -452,3485 +284,3235 @@ function normalizeCustomNotifications(value, options = {}) {
         action_label: String(row.action_label || "").trim(),
         action_type: String(row.action_type || "none").trim(),
         service: String(row.service || "").trim(),
-        service_data: typeof row.service_data === "string"
-          ? row.service_data
-          : row.service_data
-            ? JSON.stringify(row.service_data)
-            : "",
+        service_data: typeof row.service_data === "string" ? row.service_data : row.service_data ? JSON.stringify(row.service_data) : "",
         url: String(row.url || "").trim(),
         tap_action: normalizeNotificationTapAction(row.tap_action),
-        mobile: normalizeSmartEntityMobile(row.mobile ?? row.mobile_notifications ?? row.mobile_enabled),
+        mobile: normalizeSmartEntityMobile(row.mobile ?? row.mobile_notifications ?? row.mobile_enabled)
       };
       if (keepDrafts && row._draft === true) {
         normalized._draft = true;
       }
       return normalized;
-    })
-    .filter(item => {
+    }).filter((item) => {
       const hasContent = item.title || item.message || item.entity;
       const placeholderTitle = normalizeMatchText(item.title) === normalizeMatchText("New notification");
       const isPlaceholder = placeholderTitle && !item.message && !item.entity;
       return keepDrafts && item._draft === true ? true : hasContent && !isPlaceholder;
     });
-}
-
-function normalizeConfig(rawConfig = {}, options = {}) {
-  const config = mergeDeep(DEFAULT_CONFIG, rawConfig);
-  config.calendar_entities = normalizeEntityList(config.calendar_entities, ["calendar"]);
-  config.vacuum_entities = normalizeEntityList(config.vacuum_entities, ["vacuum"]);
-  config.vacuum_error_entities = normalizeEntityList(config.vacuum_error_entities, ["sensor"]);
-  config.fan_entities = normalizeEntityList(config.fan_entities, ["fan"]);
-  config.climate_entities = normalizeEntityList(config.climate_entities, ["climate"]);
-  config.humidifier_entities = normalizeEntityList(config.humidifier_entities, ["humidifier"]);
-  config.media_player_entities = normalizeEntityList(config.media_player_entities, ["media_player"]);
-  config.weather_entities = normalizeEntityList(config.weather_entities, ["weather"]);
-  config.motion_entities = normalizeEntityList(config.motion_entities, ["binary_sensor"]);
-  config.door_entities = normalizeEntityList(config.door_entities, ["binary_sensor"]);
-  config.window_entities = normalizeEntityList(config.window_entities, ["binary_sensor"]);
-  config.temperature_entities = normalizeEntityList(config.temperature_entities, ["sensor"]);
-  config.humidity_entities = normalizeEntityList(config.humidity_entities, ["sensor"]);
-  config.outdoor_temperature_entities = normalizeEntityList(config.outdoor_temperature_entities, ["sensor"]);
-  config.outdoor_humidity_entities = normalizeEntityList(config.outdoor_humidity_entities, ["sensor"]);
-  config.battery_entities = normalizeEntityList(config.battery_entities, ["sensor"]);
-  config.humidifier_fill_entities = normalizeEntityList(config.humidifier_fill_entities, ["sensor"]);
-  config.humidifier_full_entities = normalizeEntityList(config.humidifier_full_entities, ["sensor"]);
-  config.ink_entities = normalizeEntityList(config.ink_entities, ["sensor"]);
-  config.custom_notifications = normalizeCustomNotifications(config.custom_notifications, {
-    keepDrafts: options.keepDrafts === true,
-  });
-  config.max_visible = Math.max(1, Math.min(8, Number(config.max_visible) || 1));
-  config.refresh_interval = Math.max(30, Math.min(3600, Number(config.refresh_interval) || 300));
-  config.storage_key = String(config.storage_key || STORAGE_KEY).trim() || STORAGE_KEY;
-  config.dismissed_entity = entityDomain(config.dismissed_entity) === "input_text" ? String(config.dismissed_entity).trim() : "";
-  config.smart_recommendations = config.smart_recommendations !== false;
-  config.language = String(config.language || "auto").trim() || "auto";
-  config.thresholds = {
-    hot_temperature: finiteNumber(config.thresholds?.hot_temperature, DEFAULT_CONFIG.thresholds.hot_temperature),
-    cold_temperature: finiteNumber(config.thresholds?.cold_temperature, DEFAULT_CONFIG.thresholds.cold_temperature),
-    humidity_high: finiteNumber(config.thresholds?.humidity_high, DEFAULT_CONFIG.thresholds.humidity_high),
-    humidity_low: finiteNumber(config.thresholds?.humidity_low, DEFAULT_CONFIG.thresholds.humidity_low),
-    rain_probability: Math.max(0, Math.min(100, finiteNumber(config.thresholds?.rain_probability, DEFAULT_CONFIG.thresholds.rain_probability))),
-    rain_lookahead_hours: Math.max(1, Math.min(24, finiteNumber(config.thresholds?.rain_lookahead_hours, DEFAULT_CONFIG.thresholds.rain_lookahead_hours))),
-    media_absence_minutes: Math.max(1, Math.min(240, finiteNumber(config.thresholds?.media_absence_minutes, DEFAULT_CONFIG.thresholds.media_absence_minutes))),
-    battery_low: Math.max(0, Math.min(100, finiteNumber(config.thresholds?.battery_low, DEFAULT_CONFIG.thresholds.battery_low))),
-    humidifier_fill_low: Math.max(0, Math.min(100, finiteNumber(config.thresholds?.humidifier_fill_low, DEFAULT_CONFIG.thresholds.humidifier_fill_low))),
-    humidifier_fill_full: Math.max(0, Math.min(100, finiteNumber(config.thresholds?.humidifier_fill_full, DEFAULT_CONFIG.thresholds.humidifier_fill_full))),
-    ink_low: Math.max(0, Math.min(100, finiteNumber(config.thresholds?.ink_low, DEFAULT_CONFIG.thresholds.ink_low))),
-  };
-  config.smart_notifications = normalizeSmartNotifications(config.smart_notifications);
-  config.smart_entity_overrides = normalizeSmartEntityOverrides(config.smart_entity_overrides);
-  config.presence_entity = String(config.presence_entity || "").trim();
-  config.mobile_context = normalizeMobileContext(config.mobile_context);
-  config.external_alerts = normalizeExternalAlerts(config.external_alerts, {
-    keepDrafts: options.keepDrafts === true,
-  });
-  config.mobile_notifications = mergeDeep(DEFAULT_CONFIG.mobile_notifications, config.mobile_notifications || {});
-  config.mobile_notifications.enabled = config.mobile_notifications.enabled === true;
-  config.mobile_notifications.entities = normalizeEntityList(config.mobile_notifications.entities, ["notify"]);
-  config.mobile_notifications.services = normalizeNotifyServices(config.mobile_notifications.services);
-  config.mobile_notifications.critical_alerts = config.mobile_notifications.critical_alerts === true;
-  config.mobile_notifications.default_policy = normalizeMobilePolicy(
-    config.mobile_notifications.default_policy ?? "auto",
-  );
-  config.mobile_notifications.cooldown_minutes = Math.max(
-    0,
-    Math.min(1440, Number(config.mobile_notifications.cooldown_minutes) || DEFAULT_CONFIG.mobile_notifications.cooldown_minutes),
-  );
-  config.mobile_notifications.group_similar = config.mobile_notifications.group_similar !== false;
-  config.mobile_notifications.min_severity = ["info", "success", "warning", "critical"].includes(String(config.mobile_notifications.min_severity || "").toLowerCase())
-    ? String(config.mobile_notifications.min_severity).toLowerCase()
-    : DEFAULT_CONFIG.mobile_notifications.min_severity;
-  config.background_mobile = mergeDeep(DEFAULT_CONFIG.background_mobile, config.background_mobile || {});
-  config.background_mobile.enabled = config.background_mobile.enabled === true;
-  config.background_mobile.profile_id = String(config.background_mobile.profile_id || "default").trim() || "default";
-  config.background_mobile.webhook = String(config.background_mobile.webhook || "").trim();
-  config.background_mobile.chunk_size = Math.max(
-    120,
-    Math.min(240, Number(config.background_mobile.chunk_size) || DEFAULT_CONFIG.background_mobile.chunk_size),
-  );
-  config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
-    ?? mergeDeep(DEFAULT_CONFIG.security, config.security || {});
-  if (config.security.allow_webhooks_for_non_admin === undefined) {
-    config.security.allow_webhooks_for_non_admin = DEFAULT_CONFIG.security.allow_webhooks_for_non_admin;
   }
-  config.security.allow_webhooks_for_non_admin = config.security.allow_webhooks_for_non_admin === true;
-  config.haptics = mergeDeep(DEFAULT_CONFIG.haptics, config.haptics || {});
-  config.animations = mergeDeep(DEFAULT_CONFIG.animations, config.animations || {});
-  config.animations.enabled = config.animations.enabled !== false;
-  config.animations.content_duration = Math.max(120, Math.min(1800, Number(config.animations.content_duration) || DEFAULT_CONFIG.animations.content_duration));
-  config.animations.button_bounce_duration = Math.max(120, Math.min(1200, Number(config.animations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration));
-  config.styles = mergeDeep(DEFAULT_CONFIG.styles, config.styles || {});
-  // Older defaults used a tighter notification chip radius (18px) and a bare 28px
-  // card radius. Promote them to the shared Nodalia card radius token so list
-  // items match the empty state and the rest of the suite.
-  const familyRadius = DEFAULT_CONFIG.styles.card.border_radius;
-  if (String(config.styles?.card?.border_radius ?? "").trim() === "28px") {
-    config.styles.card.border_radius = familyRadius;
+  function finiteNumber(value, fallback) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : fallback;
   }
-  const itemRadius = String(config.styles?.item_radius ?? "").trim();
-  if (itemRadius === "18px" || itemRadius === "28px") {
-    config.styles.item_radius = familyRadius;
+  function normalizeMatchText(value) {
+    return String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ");
   }
-  return config;
-}
-
-function finiteNumber(value, fallback) {
-  const number = Number(value);
-  return Number.isFinite(number) ? number : fallback;
-}
-
-
-function normalizeMatchText(value) {
-  return String(value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim()
-    .replace(/\s+/g, " ");
-}
-
-function matchTextIncludes(haystack, needle) {
-  const normalizedHaystack = normalizeMatchText(haystack);
-  const normalizedNeedle = normalizeMatchText(needle);
-  return Boolean(normalizedHaystack && normalizedNeedle && normalizedHaystack.includes(normalizedNeedle));
-}
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-function escapeSelectorValue(value) {
-  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
-    return CSS.escape(String(value));
+  function escapeHtml(value) {
+    return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
   }
-  return String(value).replace(/["\\]/g, "\\$&");
-}
-
-function sanitizeCssRuntimeValue(value, fallback) {
-  const raw = String(value ?? "").trim();
-  if (!raw) {
-    return fallback;
-  }
-  if (
-    /[<>{};"']/.test(raw)
-    || raw.includes("/*")
-    || raw.includes("*/")
-    || /\burl\s*\(/i.test(raw)
-    || /\b@import\b/i.test(raw)
-  ) {
-    return fallback;
-  }
-  return raw;
-}
-
-function formatEditorHexChannel(value) {
-  return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
-}
-
-function formatEditorColorFromHex(hex, alpha = 1) {
-  const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
-  if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
-    return String(hex ?? "");
-  }
-  const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
-  const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
-  const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
-  const safeAlpha = clamp(Number(alpha), 0, 1);
-  if (safeAlpha >= 0.999) {
-    return `#${normalizedHex}`;
-  }
-  return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
-}
-
-function parseEditorColorChannels(value) {
-  const raw = String(value ?? "").trim();
-  const hexMatch = raw.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
-  if (hexMatch) {
-    const hex = hexMatch[1].length === 3
-      ? hexMatch[1].split("").map(channel => `${channel}${channel}`).join("")
-      : hexMatch[1];
-    return {
-      alpha: 1,
-      blue: Number.parseInt(hex.slice(4, 6), 16),
-      green: Number.parseInt(hex.slice(2, 4), 16),
-      red: Number.parseInt(hex.slice(0, 2), 16),
-    };
-  }
-  const rgbMatch = raw.match(/^rgba?\(([^)]+)\)$/i);
-  if (!rgbMatch) {
-    return null;
-  }
-  const channels = rgbMatch[1]
-    .split(",")
-    .map(channel => Number(String(channel).trim().replace("%", "")));
-  if (channels.length < 3 || channels.slice(0, 3).some(channel => !Number.isFinite(channel))) {
-    return null;
-  }
-  return {
-    alpha: channels.length > 3 && Number.isFinite(channels[3]) ? clamp(channels[3], 0, 1) : 1,
-    blue: clamp(channels[2], 0, 255),
-    green: clamp(channels[1], 0, 255),
-    red: clamp(channels[0], 0, 255),
-  };
-}
-
-function resolveEditorColorValue(value) {
-  const resolver = typeof window !== "undefined" ? window.NodaliaBubbleContrast?.resolveEditorColorValue : null;
-  return typeof resolver === "function" ? resolver(value) : String(value ?? "").trim();
-}
-
-function getEditorColorModel(value, fallbackValue = "#71c0ff") {
-  const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
-  const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
-  const parsed = parseEditorColorChannels(resolvedValue)
-    || parseEditorColorChannels(sourceValue)
-    || parseEditorColorChannels(resolveEditorColorValue(fallbackValue))
-    || { alpha: 1, blue: 255, green: 192, red: 113 };
-  const red = clamp(Math.round(parsed.red), 0, 255);
-  const green = clamp(Math.round(parsed.green), 0, 255);
-  const blue = clamp(Math.round(parsed.blue), 0, 255);
-  const alpha = clamp(Number(parsed.alpha), 0, 1);
-  const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
-  return {
-    alpha,
-    hex,
-    label: sourceValue,
-    resolved: resolvedValue,
-    source: sourceValue,
-    value: formatEditorColorFromHex(hex, alpha),
-  };
-}
-
-function getEditorColorFallbackValue(field) {
-  const normalizedField = String(field ?? "");
-  if (normalizedField.endsWith("background")) {
-    return normalizedField.includes(".card.") ? "var(--ha-card-background)" : "color-mix(in srgb, var(--primary-color) 18%, transparent)";
-  }
-  if (normalizedField.endsWith("icon.color") || normalizedField.endsWith("accent") || normalizedField.endsWith("tint_color")) {
-    return "var(--primary-color)";
-  }
-  return "#71c0ff";
-}
-
-function shouldDarkenNotificationIconGlyph(state, accentColor) {
-  const contrast = typeof window !== "undefined" ? window.NodaliaBubbleContrast : null;
-  if (contrast?.shouldDarkenBubbleIconGlyph?.(state, accentColor)) {
-    return true;
-  }
-  const hue = contrast?.parseCssColorHue?.(accentColor);
-  if (hue === null || hue === undefined || Number.isNaN(hue)) {
-    return false;
-  }
-  return (hue >= 35 && hue <= 165) || (hue >= 300 || hue <= 20);
-}
-
-function fireEvent(node, type, detail = {}, options = {}) {
-  node.dispatchEvent(new CustomEvent(type, {
-    bubbles: options.bubbles !== false,
-    cancelable: Boolean(options.cancelable),
-    composed: options.composed !== false,
-    detail,
-  }));
-}
-
-
-function setByPath(target, path, value) {
-  const parts = String(path || "").split(".").filter(Boolean);
-  if (parts.some(isUnsafeConfigPathKey)) {
-    return;
-  }
-  let cursor = target;
-  parts.forEach((part, index) => {
-    if (index === parts.length - 1) {
-      cursor[part] = value;
-      return;
+  function sanitizeCssRuntimeValue(value, fallback) {
+    const raw = String(value ?? "").trim();
+    if (!raw) {
+      return fallback;
     }
-    if (!isObject(cursor[part]) && !Array.isArray(cursor[part])) {
-      cursor[part] = /^\d+$/.test(parts[index + 1]) ? [] : {};
+    if (/[<>{};"']/.test(raw) || raw.includes("/*") || raw.includes("*/") || /\burl\s*\(/i.test(raw) || /\b@import\b/i.test(raw)) {
+      return fallback;
     }
-    cursor = cursor[part];
-  });
-}
-
-function deleteByPath(target, path) {
-  const parts = String(path || "").split(".").filter(Boolean);
-  if (parts.some(isUnsafeConfigPathKey)) {
-    return;
-  }
-  let cursor = target;
-  for (let i = 0; i < parts.length - 1; i += 1) {
-    cursor = cursor?.[parts[i]];
-    if (!cursor) {
-      return;
-    }
-  }
-  if (cursor) {
-    delete cursor[parts[parts.length - 1]];
-  }
-}
-
-function getByPath(target, path) {
-  return String(path || "")
-    .split(".")
-    .filter(Boolean)
-    .reduce((cursor, part) => cursor?.[part], target);
-}
-
-function parseServiceData(value) {
-  if (!value) {
-    return {};
-  }
-  if (isObject(value)) {
-    return deepClone(value);
-  }
-  try {
-    const parsed = JSON.parse(String(value));
-    return isObject(parsed) ? parsed : {};
-  } catch (_error) {
-    return {};
-  }
-}
-
-function normalizeSeverity(value) {
-  const key = String(value || "info").trim().toLowerCase();
-  return ["info", "success", "warning", "critical"].includes(key) ? key : "info";
-}
-
-function friendlyName(hass, entityId) {
-  const state = hass?.states?.[entityId];
-  return String(state?.attributes?.friendly_name || entityId || "").trim();
-}
-
-function areaRecordName(hass, areaId) {
-  const rawId = String(areaId || "").trim();
-  if (!rawId) {
-    return "";
-  }
-  const areas = hass?.areas;
-  if (Array.isArray(areas)) {
-    const area = areas.find(item => String(item?.area_id || item?.id || "") === rawId);
-    return String(area?.name || rawId).trim();
-  }
-  const area = areas?.[rawId];
-  return String(area?.name || rawId).trim();
-}
-
-function entityRegistryEntry(hass, entityId) {
-  return hass?.entities?.[entityId] || hass?.entityRegistry?.[entityId] || hass?.entity_registry?.[entityId] || null;
-}
-
-function deviceRegistryEntry(hass, deviceId) {
-  const rawId = String(deviceId || "").trim();
-  if (!rawId) {
-    return null;
-  }
-  const devices = hass?.devices;
-  if (Array.isArray(devices)) {
-    return devices.find(item => String(item?.id || item?.device_id || "") === rawId) || null;
-  }
-  return devices?.[rawId] || null;
-}
-
-function entityAreaName(hass, entityId) {
-  const state = hass?.states?.[entityId];
-  const entity = entityRegistryEntry(hass, entityId);
-  const device = deviceRegistryEntry(hass, entity?.device_id || state?.attributes?.device_id);
-  const areaId = entity?.area_id || device?.area_id || state?.attributes?.area_id;
-  const areaName = areaRecordName(hass, areaId);
-  if (areaName) {
-    return areaName;
-  }
-  const attrArea = state?.attributes?.area || state?.attributes?.area_name || state?.attributes?.room || state?.attributes?.room_name;
-  if (attrArea) {
-    return String(attrArea).trim();
-  }
-  const searchable = normalizeMatchText(`${entityId} ${friendlyName(hass, entityId)}`);
-  const areas = hass?.areas;
-  const areaList = Array.isArray(areas) ? areas : Object.values(areas || {});
-  const matched = areaList.find(area => {
-    const name = normalizeMatchText(area?.name || area?.area_id || area?.id || "");
-    return name && searchable.includes(name);
-  });
-  return String(matched?.name || matched?.area_id || matched?.id || "").trim();
-}
-
-function entityAreaKey(hass, entityId) {
-  return normalizeMatchText(entityAreaName(hass, entityId));
-}
-
-function entityMatchTokens(hass, entityId) {
-  const stopWords = new Set(["sensor", "temperatura", "temperature", "humidity", "humedad", "fan", "ventilador", "weather", "clima"]);
-  return normalizeMatchText(`${entityId} ${friendlyName(hass, entityId)}`)
-    .split(" ")
-    .filter(token => token.length > 2 && !stopWords.has(token));
-}
-
-function stateValue(stateObj, attribute = "") {
-  if (!stateObj) {
-    return "";
-  }
-  if (attribute) {
-    return stateObj.attributes?.[attribute];
-  }
-  return stateObj.state;
-}
-
-const NOTIFICATION_TEMPLATE_TOKEN_PATTERN = /\{([^{}]+)\}/g;
-const NOTIFICATION_TEMPLATE_ENTITY_PATTERN = /^([a-zA-Z0-9_]+\.[a-zA-Z0-9_]+)(?:\.([a-zA-Z0-9_]+))?$/;
-
-function stringifyNotificationTemplateValue(value) {
-  if (value === undefined || value === null) {
-    return "";
-  }
-  if (Array.isArray(value)) {
-    return value.map(item => stringifyNotificationTemplateValue(item)).filter(Boolean).join(", ");
-  }
-  if (isObject(value)) {
-    try {
-      return JSON.stringify(value);
-    } catch (_error) {
-      return String(value);
-    }
-  }
-  return String(value);
-}
-
-function notificationTemplateMeasurement(value, unit = "") {
-  const text = stringifyNotificationTemplateValue(value);
-  return text ? `${text}${unit || ""}` : "";
-}
-
-function referencedNotificationTemplateEntities(template) {
-  const entities = new Set();
-  for (const match of String(template || "").matchAll(NOTIFICATION_TEMPLATE_TOKEN_PATTERN)) {
-    const entityMatch = String(match[1] || "").trim().match(NOTIFICATION_TEMPLATE_ENTITY_PATTERN);
-    if (entityMatch) {
-      entities.add(entityMatch[1]);
-    }
-  }
-  return [...entities];
-}
-
-function entityNotificationTemplateValue(hass, token) {
-  const match = String(token || "").trim().match(NOTIFICATION_TEMPLATE_ENTITY_PATTERN);
-  if (!match) {
-    return undefined;
-  }
-  const [, entityId, attribute] = match;
-  const stateObj = hass?.states?.[entityId];
-  if (!stateObj) {
-    return "";
-  }
-  if (attribute === "state") {
-    return stateObj.state;
-  }
-  if (attribute) {
-    return stateObj.attributes?.[attribute];
-  }
-  const domain = entityId.split(".")[0];
-  if (domain === "media_player") {
-    return stateObj.attributes?.friendly_name || entityId;
-  }
-  if (domain === "calendar") {
-    return stateObj.attributes?.message
-      || stateObj.attributes?.summary
-      || stateObj.attributes?.friendly_name
-      || stateObj.state;
-  }
-  const rawValue = stateObj.state;
-  const unit = stateObj.attributes?.unit_of_measurement || "";
-  return Number.isFinite(Number(rawValue)) ? notificationTemplateMeasurement(rawValue, unit) : rawValue;
-}
-
-function formatNotificationTemplate(template, hass, values = {}) {
-  return String(template || "").replace(NOTIFICATION_TEMPLATE_TOKEN_PATTERN, (_match, rawKey) => {
-    const key = String(rawKey || "").trim();
-    if (Object.prototype.hasOwnProperty.call(values, key)) {
-      return stringifyNotificationTemplateValue(values[key]);
-    }
-    return stringifyNotificationTemplateValue(entityNotificationTemplateValue(hass, key));
-  });
-}
-
-function customNotificationTemplateValues(hass, item = {}, fanEntityId = "") {
-  const entityId = String(item?.entity || "").trim();
-  const stateObj = hass?.states?.[entityId];
-  const rawValue = stateValue(stateObj, item?.attribute);
-  const unit = stateObj?.attributes?.unit_of_measurement || "";
-  const value = Number.isFinite(Number(rawValue))
-    ? notificationTemplateMeasurement(rawValue, unit)
-    : stringifyNotificationTemplateValue(rawValue);
-  const threshold = Number.isFinite(Number(item?.value))
-    ? notificationTemplateMeasurement(item.value, unit)
-    : String(item?.value || "");
-  const changedAt = new Date(stateObj?.last_changed || stateObj?.last_updated || "");
-  return {
-    ...(stateObj?.attributes || {}),
-    source: entityId ? friendlyName(hass, entityId) : "",
-    entity: entityId,
-    state: stateObj?.state || "",
-    value,
-    threshold,
-    fan: fanEntityId ? friendlyName(hass, fanEntityId) : "",
-    time: formatTime(changedAt),
-  };
-}
-
-function numericState(stateObj, attribute = "") {
-  const raw = stateValue(stateObj, attribute);
-  const number = Number(raw);
-  return Number.isFinite(number) ? number : null;
-}
-
-function stateIsOn(stateObj) {
-  const state = String(stateObj?.state || "").toLowerCase();
-  return ["on", "open", "opening", "detected", "motion", "home"].includes(state);
-}
-
-function stateIsOff(stateObj) {
-  const state = String(stateObj?.state || "").toLowerCase();
-  return ["off", "closed", "clear", "idle", "docked"].includes(state);
-}
-
-function stateLooksActive(stateObj) {
-  const state = String(stateObj?.state || "").toLowerCase();
-  return Boolean(state && !["off", "closed", "clear", "idle", "docked", "unavailable", "unknown"].includes(state));
-}
-
-function stateIsVacant(stateObj) {
-  const state = String(stateObj?.state || "").toLowerCase();
-  return ["off", "clear", "not_home", "closed", "0"].includes(state);
-}
-
-function minutesSinceChanged(stateObj) {
-  const changed = Date.parse(stateObj?.last_changed || stateObj?.last_updated || "");
-  return Number.isFinite(changed) ? (Date.now() - changed) / 60000 : 0;
-}
-
-function formatNumber(value, unit = "") {
-  const number = Number(value);
-  if (!Number.isFinite(number)) {
-    return "";
-  }
-  const formatted = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(number);
-  return `${formatted}${unit || ""}`;
-}
-
-function calendarEventDate(value) {
-  if (!value) {
-    return null;
-  }
-  if (typeof value === "string") {
-    const date = new Date(value.length <= 10 ? `${value}T00:00:00` : value);
-    return Number.isNaN(date.getTime()) ? null : date;
-  }
-  if (isObject(value)) {
-    return calendarEventDate(value.dateTime || value.date || value.datetime);
-  }
-  return null;
-}
-
-function isSameLocalDay(a, b) {
-  return (
-    a &&
-    b &&
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
-
-function formatTime(date) {
-  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
-    return "";
-  }
-  return new Intl.DateTimeFormat(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-}
-
-function normalizeCalendarFetchResult(raw) {
-  if (Array.isArray(raw)) {
     return raw;
   }
-  if (Array.isArray(raw?.events)) {
-    return raw.events;
+  function formatEditorHexChannel(value) {
+    return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
   }
-  if (Array.isArray(raw?.calendar_events)) {
-    return raw.calendar_events;
-  }
-  return [];
-}
-
-function normalizeWeatherForecastResult(raw, entityId) {
-  if (Array.isArray(raw)) {
-    return raw;
-  }
-  if (Array.isArray(raw?.forecast)) {
-    return raw.forecast;
-  }
-  if (Array.isArray(raw?.[entityId]?.forecast)) {
-    return raw[entityId].forecast;
-  }
-  return [];
-}
-
-function forecastDate(value) {
-  return calendarEventDate(value?.datetime || value?.dateTime || value?.date || value?.time || value?.start);
-}
-
-function forecastNumber(value, fields) {
-  for (const field of fields) {
-    const raw = value?.[field];
-    const number = Number(raw);
-    if (Number.isFinite(number)) {
-      return number;
+  function formatEditorColorFromHex(hex, alpha = 1) {
+    const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
+    if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
+      return String(hex ?? "");
     }
-  }
-  return null;
-}
-
-function forecastLooksRainy(row) {
-  const condition = normalizeMatchText(row?.condition || row?.state || row?.weather || "");
-  if (condition.includes("rain") || condition.includes("lluv") || condition.includes("pouring") || condition.includes("storm")) {
-    return true;
-  }
-  const precipitation = forecastNumber(row, ["precipitation", "rain", "precipitation_amount", "native_precipitation"]);
-  return precipitation !== null && precipitation > 0.2;
-}
-
-function notificationHash(value) {
-  const input = String(value || "");
-  let hash = 2166136261;
-  for (let i = 0; i < input.length; i += 1) {
-    hash ^= input.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
-  return (hash >>> 0).toString(36);
-}
-
-function resolveBackgroundMobileLanguage(config, hass = null) {
-  const configured = String(config?.language || "auto").trim();
-  const translated = typeof window !== "undefined"
-    ? window.NodaliaI18n?.resolveLanguage?.(hass, configured)
-    : "";
-  const candidates = [
-    translated,
-    configured.toLowerCase() !== "auto" ? configured : "",
-    hass?.locale?.language,
-    hass?.language,
-    hass?.config?.language,
-  ];
-  for (const candidate of candidates) {
-    const language = String(candidate || "")
-      .trim()
-      .toLowerCase()
-      .replace("_", "-")
-      .split("-", 1)[0];
-    if (language) {
-      return language;
+    const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
+    const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
+    const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
+    const safeAlpha = clamp(Number(alpha), 0, 1);
+    if (safeAlpha >= 0.999) {
+      return `#${normalizedHex}`;
     }
+    return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
   }
-  return "en";
-}
-
-function getBackgroundMobileConfigPayload(rawConfig, hass = null) {
-  const config = normalizeConfig(rawConfig || {});
-  const overrides = {};
-  (config.smart_entity_overrides || []).forEach(item => {
-    const entity = String(item?.entity || "").trim();
-    if (!entity) {
-      return;
-    }
-    overrides[entity] = {
-      title: String(item.title || ""),
-      message: String(item.message || ""),
-      tint_color: String(item.tint_color || ""),
-      url: String(item.url || ""),
-      action_label: String(item.action_label || ""),
-      tap_action: normalizeNotificationTapAction(item.tap_action),
-      ...(isExplicitSmartEntityMobile(item.mobile) ? { mobile: normalizeMobilePolicy(item.mobile) } : {}),
-    };
-  });
-  return {
-    version: 2,
-    card_version: CARD_VERSION,
-    source: CARD_TAG,
-    language: resolveBackgroundMobileLanguage(config, hass),
-    enabled: config.background_mobile?.enabled === true,
-    smart_recommendations: config.smart_recommendations !== false,
-    notify: {
-      enabled: config.mobile_notifications?.enabled === true,
-      entities: config.mobile_notifications?.entities || [],
-      services: config.mobile_notifications?.services || [],
-      min_severity: config.mobile_notifications?.min_severity || "warning",
-      critical_alerts: config.mobile_notifications?.critical_alerts === true,
-      default_policy: normalizeMobilePolicy(config.mobile_notifications?.default_policy ?? "auto"),
-      cooldown_minutes: config.mobile_notifications?.cooldown_minutes ?? 30,
-      group_similar: config.mobile_notifications?.group_similar !== false,
-    },
-    context: {
-      presence_entity: config.presence_entity || "",
-      only_when_away: config.mobile_context?.only_when_away === true,
-      only_when_home: config.mobile_context?.only_when_home === true,
-      quiet_hours: normalizeQuietHours(config.mobile_context?.quiet_hours),
-    },
-    smart: Object.fromEntries(
-      Object.entries(config.smart_notifications || {}).map(([key, item]) => [
-        key,
-        {
-          title: String(item?.title || ""),
-          message: String(item?.message || ""),
-          mobile: normalizeMobilePolicy(item?.mobile),
-          url: String(item?.url || ""),
-          action_label: String(item?.action_label || ""),
-          tap_action: normalizeNotificationTapAction(item?.tap_action),
-        },
-      ]),
-    ),
-    custom: (config.custom_notifications || []).map(item => ({
-      id: notificationHash(`${item.title}|${item.message}|${item.entity}|${item.attribute}|${item.condition}|${item.value}|${item.url}|${JSON.stringify(item.tap_action || {})}`),
-      title: String(item.title || ""),
-      message: String(item.message || ""),
-      severity: normalizeSeverity(item.severity || "info"),
-      entity: String(item.entity || ""),
-      attribute: String(item.attribute || ""),
-      condition: String(item.condition || "always"),
-      value: String(item.value || ""),
-      mobile: normalizeMobilePolicy(item.mobile),
-      url: String(item.url || ""),
-      action_label: String(item.action_label || ""),
-      tap_action: normalizeNotificationTapAction(item.tap_action),
-    })),
-    external_alerts: (config.external_alerts || []).map(item => ({
-      id: item.id,
-      type: item.type,
-      title: item.title,
-      message: item.message,
-      severity: item.severity,
-      entity: item.entity,
-      source: item.source,
-      mobile: normalizeMobilePolicy(item.mobile),
-      url: String(item.url || ""),
-      action_label: String(item.action_label || ""),
-      tap_action: normalizeNotificationTapAction(item.tap_action),
-    })),
-    thresholds: {
-      hot_temperature: config.thresholds?.hot_temperature,
-      cold_temperature: config.thresholds?.cold_temperature,
-      humidity_high: config.thresholds?.humidity_high,
-      humidity_low: config.thresholds?.humidity_low,
-      battery_low: config.thresholds?.battery_low,
-      humidifier_fill_low: config.thresholds?.humidifier_fill_low,
-      humidifier_fill_full: config.thresholds?.humidifier_fill_full,
-      ink_low: config.thresholds?.ink_low,
-      rain_probability: config.thresholds?.rain_probability,
-      rain_lookahead_hours: config.thresholds?.rain_lookahead_hours,
-      media_absence_minutes: config.thresholds?.media_absence_minutes,
-    },
-    entities: {
-      calendar: config.calendar_entities || [],
-      vacuum: config.vacuum_entities || [],
-      vacuum_error: config.vacuum_error_entities || [],
-      door: config.door_entities || [],
-      window: config.window_entities || [],
-      motion: config.motion_entities || [],
-      fan: config.fan_entities || [],
-      climate: config.climate_entities || [],
-      humidifier: config.humidifier_entities || [],
-      media_player: config.media_player_entities || [],
-      weather: config.weather_entities || [],
-      temperature: config.temperature_entities || [],
-      humidity: config.humidity_entities || [],
-      outdoor_temperature: config.outdoor_temperature_entities || [],
-      outdoor_humidity: config.outdoor_humidity_entities || [],
-      battery: config.battery_entities || [],
-      humidifier_fill: config.humidifier_fill_entities || [],
-      humidifier_full: config.humidifier_full_entities || [],
-      ink: config.ink_entities || [],
-    },
-    overrides,
-  };
-}
-
-function buildBackgroundMobileWebhookPayload(rawConfig, hass = null, options = {}) {
-  const config = normalizeConfig(rawConfig || {});
-  const background = config.background_mobile || {};
-  const chunkSize = Math.max(120, Math.min(240, Number(background.chunk_size) || 240));
-  const profile = getBackgroundMobileConfigPayload(config, hass);
-  if (typeof options.enabled === "boolean") {
-    profile.enabled = options.enabled;
-  }
-  const json = JSON.stringify(profile);
-  const chunks = [];
-  for (let index = 0; index < json.length; index += chunkSize) {
-    chunks.push(json.slice(index, index + chunkSize));
-  }
-  return {
-    version: 2,
-    card_version: CARD_VERSION,
-    source: CARD_TAG,
-    chunk_count: chunks.length,
-    max_chunks: BACKGROUND_MOBILE_MAX_CHUNKS,
-    over_limit: chunks.length > BACKGROUND_MOBILE_MAX_CHUNKS,
-    config_hash: notificationHash(json),
-    chunks,
-  };
-}
-
-function getBackgroundMobileNativeSignature(rawConfig, hass = null) {
-  const config = normalizeConfig(rawConfig || {});
-  const profileId = String(config.background_mobile?.profile_id || "default").trim() || "default";
-  const profile = getBackgroundMobileConfigPayload(config, hass);
-  return {
-    profile,
-    profileId,
-    signature: `${profileId}:${notificationHash(JSON.stringify(profile))}`,
-  };
-}
-
-async function syncBackgroundMobileNative(hass, rawConfig) {
-  const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
-  if (!backend || !hass) {
-    return { available: false, synced: false, signature: "", transient: false };
-  }
-  const status = await backend.status(hass, { silent: true });
-  if (!status?.available || !status.capabilities?.includes("notifications_background")) {
-    return {
-      available: false,
-      synced: false,
-      signature: "",
-      transient: status?.transient === true,
-    };
-  }
-  const { profile, profileId, signature } = getBackgroundMobileNativeSignature(rawConfig, hass);
-  try {
-    if (hass.user?.is_admin) {
-      const current = await backend.setNotificationProfile(hass, profile, profileId);
+  function parseEditorColorChannels(value) {
+    const raw = String(value ?? "").trim();
+    const hexMatch = raw.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+    if (hexMatch) {
+      const hex = hexMatch[1].length === 3 ? hexMatch[1].split("").map((channel) => `${channel}${channel}`).join("") : hexMatch[1];
       return {
-        available: true,
-        synced: true,
-        signature,
-        dismissed: Array.isArray(current?.dismissed) ? current.dismissed : [],
+        alpha: 1,
+        blue: Number.parseInt(hex.slice(4, 6), 16),
+        green: Number.parseInt(hex.slice(2, 4), 16),
+        red: Number.parseInt(hex.slice(0, 2), 16)
       };
     }
-    const current = await backend.getNotificationProfile(hass, profileId);
-    const active = current?.profile?.enabled === true && current?.profile?.notify?.enabled === true;
-    return {
-      available: true,
-      synced: active,
-      signature: active ? `active:${profileId}` : "",
-      dismissed: Array.isArray(current?.dismissed) ? current.dismissed : [],
-    };
-  } catch (error) {
-    if (typeof console !== "undefined" && typeof console.warn === "function") {
-      console.warn("Nodalia Notifications Card: native background synchronization failed; keeping Engine ownership.", error);
+    const rgbMatch = raw.match(/^rgba?\(([^)]+)\)$/i);
+    if (!rgbMatch) {
+      return null;
     }
-    // Engine is loaded; a profile read/write failure is not proof that its
-    // server-side notification delivery stopped.
-    return { available: true, synced: false, signature: "", transient: true };
-  }
-}
-
-async function setLegacyBackgroundMobileFallback(hass, enabled) {
-  const state = hass?.states?.[LEGACY_BACKGROUND_MOBILE_TOGGLE];
-  if (!state) {
-    return true;
-  }
-  if (typeof hass?.callService !== "function") {
-    return false;
-  }
-  const desiredState = enabled ? "on" : "off";
-  if (String(state.state || "").toLowerCase() === desiredState) {
-    return true;
-  }
-  try {
-    await hass.callService(
-      "input_boolean",
-      enabled ? "turn_on" : "turn_off",
-      { entity_id: LEGACY_BACKGROUND_MOBILE_TOGGLE },
-    );
-    return true;
-  } catch (error) {
-    if (typeof console !== "undefined" && typeof console.warn === "function") {
-      console.warn(
-        `Nodalia Notifications Card: could not ${enabled ? "activate" : "pause"} the legacy background package.`,
-        error,
-      );
+    const channels = rgbMatch[1].split(",").map((channel) => Number(String(channel).trim().replace("%", "")));
+    if (channels.length < 3 || channels.slice(0, 3).some((channel) => !Number.isFinite(channel))) {
+      return null;
     }
-    return false;
-  }
-}
-
-class NodaliaNotificationsCard extends HTMLElement {
-  static getStubConfig(hass) {
-    const first = prefix => Object.keys(hass?.states || {}).find(entityId => entityId.startsWith(`${prefix}.`)) || "";
     return {
-      title: "Notifications",
-      calendar_entities: normalizeEntityList([first("calendar")], ["calendar"]),
-      weather_entities: normalizeEntityList([first("weather")], ["weather"]),
-      fan_entities: normalizeEntityList([first("fan")], ["fan"]),
-      vacuum_entities: normalizeEntityList([first("vacuum")], ["vacuum"]),
+      alpha: channels.length > 3 && Number.isFinite(channels[3]) ? clamp(channels[3], 0, 1) : 1,
+      blue: clamp(channels[2], 0, 255),
+      green: clamp(channels[1], 0, 255),
+      red: clamp(channels[0], 0, 255)
     };
   }
-
-  static getConfigElement() {
-    return document.createElement(EDITOR_TAG);
+  function resolveEditorColorValue(value) {
+    const resolver = typeof window !== "undefined" ? window.NodaliaBubbleContrast?.resolveEditorColorValue : null;
+    return typeof resolver === "function" ? resolver(value) : String(value ?? "").trim();
   }
-
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig({});
-    this._hass = null;
-    this._expanded = false;
-    this._dismissed = new Set();
-    this._calendarEvents = [];
-    this._calendarLoading = false;
-    this._calendarError = "";
-    this._calendarRefreshTimer = 0;
-    this._calendarRefreshInFlight = false;
-    this._lastCalendarRefresh = 0;
-    this._calendarEventsSignature = "";
-    this._weatherForecasts = {};
-    this._weatherForecastsSignature = "";
-    this._weatherRefreshTimer = 0;
-    this._weatherRefreshInFlight = false;
-    this._lastWeatherRefresh = 0;
-    this._lastDismissedHelperState = "";
-    this._mobileSent = new Set();
-    this._mobileCooldownMap = {};
-    this._runtimeExternalAlerts = [];
-    this._mobileNotifyTimer = 0;
-    this._mobileNotifyQueue = [];
-    this._quietHoursWakeTimer = 0;
-    this._lastRenderSignature = "";
-    this._trackedEntityIdsCache = null;
-    this._trackedEntityRevision = null;
-    this._trackedEntitiesStamp = "";
-    this._trackedEntityIdsLength = 0;
-    this._lastNotificationIdsSignature = "";
-    this._lastNotifications = [];
-    this._backgroundMobileSyncTimer = 0;
-    this._pendingBackgroundMobileSync = false;
-    this._forceNextBackgroundMobileSync = false;
-    this._lastBackgroundMobileSyncSignature = "";
-    this._lastBackgroundMobileNativeSignature = "";
-    this._lastBackgroundMobileNativeCheckAt = 0;
-    this._engineInbox = [];
-    this._animateContentOnNextRender = true;
-    this._entranceAnimationTimer = 0;
-    this._renderPendingAfterEntrance = false;
-    this._stackTransition = "";
-    this._stackCollapseTimer = 0;
-    this._collapsingStack = false;
-    this._viewportResizeTimer = 0;
-    this._viewVisibilityObserver = null;
-    this._hasObservedViewport = false;
-    this._wasInViewport = false;
-    this._wasHiddenByLayout = false;
-    this._lastEntranceReplayAt = 0;
-    this._lastRouteKey = "";
-    this._onDocVisibility = this._onDocVisibility.bind(this);
-    this._onClick = this._onClick.bind(this);
-    this._onViewportResize = this._onViewportResize.bind(this);
-    this.shadowRoot.addEventListener("click", this._onClick);
+  function getEditorColorModel(value, fallbackValue = "#71c0ff") {
+    const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
+    const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
+    const parsed = parseEditorColorChannels(resolvedValue) || parseEditorColorChannels(sourceValue) || parseEditorColorChannels(resolveEditorColorValue(fallbackValue)) || { alpha: 1, blue: 255, green: 192, red: 113 };
+    const red = clamp(Math.round(parsed.red), 0, 255);
+    const green = clamp(Math.round(parsed.green), 0, 255);
+    const blue = clamp(Math.round(parsed.blue), 0, 255);
+    const alpha = clamp(Number(parsed.alpha), 0, 1);
+    const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
+    return {
+      alpha,
+      hex,
+      label: sourceValue,
+      resolved: resolvedValue,
+      source: sourceValue,
+      value: formatEditorColorFromHex(hex, alpha)
+    };
   }
-
-  connectedCallback() {
-    if (typeof document !== "undefined") {
-      document.addEventListener("visibilitychange", this._onDocVisibility);
+  function getEditorColorFallbackValue(field) {
+    const normalizedField = String(field ?? "");
+    if (normalizedField.endsWith("background")) {
+      return normalizedField.includes(".card.") ? "var(--ha-card-background)" : "color-mix(in srgb, var(--primary-color) 18%, transparent)";
     }
-    this._attachViewVisibilityObserver();
-    this._loadDismissed();
-    this._loadMobileSent();
-    this._loadMobileCooldown();
-    this._syncSharedDismissedFromHass(true);
-    this._lastRouteKey = this._getRouteKey();
-    // Match entity/weather cards: do not render (or consume entrance) before hass — Lovelace
-    // typically attaches the element before the first set(hass), and a pre-hass render would
-    // clear _animateContentOnNextRender so the real first paint never gets --enter.
-    this._animateContentOnNextRender = true;
-    this._lastRenderSignature = "";
-    if (this._hass) {
-      this._renderIfChanged(true);
+    if (normalizedField.endsWith("icon.color") || normalizedField.endsWith("accent") || normalizedField.endsWith("tint_color")) {
+      return "var(--primary-color)";
     }
-    this._scheduleBackgroundMobileSync(this._pendingBackgroundMobileSync ? 0 : 320);
-    this._refreshCalendarEventsSoon(0);
-    this._refreshWeatherForecastsSoon(0);
-    this._scheduleQuietHoursWake();
-    window.addEventListener("resize", this._onViewportResize, { passive: true });
-    window.addEventListener("orientationchange", this._onViewportResize, { passive: true });
+    return "#71c0ff";
   }
-
-  disconnectedCallback() {
-    if (typeof document !== "undefined") {
-      document.removeEventListener("visibilitychange", this._onDocVisibility);
+  function shouldDarkenNotificationIconGlyph(state, accentColor) {
+    const contrast = typeof window !== "undefined" ? window.NodaliaBubbleContrast : null;
+    if (contrast?.shouldDarkenBubbleIconGlyph?.(state, accentColor)) {
+      return true;
     }
-    this._detachViewVisibilityObserver();
-    window.removeEventListener("resize", this._onViewportResize);
-    window.removeEventListener("orientationchange", this._onViewportResize);
-    if (this._stackCollapseTimer) {
-      window.clearTimeout(this._stackCollapseTimer);
-      this._stackCollapseTimer = 0;
+    const hue = contrast?.parseCssColorHue?.(accentColor);
+    if (hue === null || hue === void 0 || Number.isNaN(hue)) {
+      return false;
     }
-    if (this._viewportResizeTimer) {
-      window.clearTimeout(this._viewportResizeTimer);
-      this._viewportResizeTimer = 0;
-    }
-    if (this._calendarRefreshTimer) {
-      window.clearTimeout(this._calendarRefreshTimer);
-      this._calendarRefreshTimer = 0;
-    }
-    if (this._weatherRefreshTimer) {
-      window.clearTimeout(this._weatherRefreshTimer);
-      this._weatherRefreshTimer = 0;
-    }
-    if (this._mobileNotifyTimer) {
-      window.clearTimeout(this._mobileNotifyTimer);
-      this._mobileNotifyTimer = 0;
-    }
-    this._mobileNotifyQueue = [];
-    if (this._quietHoursWakeTimer) {
-      window.clearTimeout(this._quietHoursWakeTimer);
-      this._quietHoursWakeTimer = 0;
-    }
-    if (this._backgroundMobileSyncTimer) {
-      window.clearTimeout(this._backgroundMobileSyncTimer);
-      this._backgroundMobileSyncTimer = 0;
-    }
-    if (this._entranceAnimationTimer) {
-      window.clearTimeout(this._entranceAnimationTimer);
-      this._entranceAnimationTimer = 0;
-    }
-    this._renderPendingAfterEntrance = false;
-    this._calendarRefreshInFlight = false;
-    this._weatherRefreshInFlight = false;
-    window.NodaliaUtils?.clearDeferTimers?.(this);
+    return hue >= 35 && hue <= 165 || (hue >= 300 || hue <= 20);
   }
-
-  _scheduleEntranceAnimationReset(delay) {
-    if (this._entranceAnimationTimer) {
-      window.clearTimeout(this._entranceAnimationTimer);
-      this._entranceAnimationTimer = 0;
-    }
-
-    const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3000);
-    if (!safeDelay || typeof window === "undefined") {
-      this._animateContentOnNextRender = false;
+  function fireEvent(node, type, detail = {}, options = {}) {
+    node.dispatchEvent(new CustomEvent(type, {
+      bubbles: options.bubbles !== false,
+      cancelable: Boolean(options.cancelable),
+      composed: options.composed !== false,
+      detail
+    }));
+  }
+  function setByPath(target, path, value) {
+    const parts = String(path || "").split(".").filter(Boolean);
+    if (parts.some(isUnsafeConfigPathKey)) {
       return;
     }
-
-    this._entranceAnimationTimer = window.setTimeout(() => {
-      this._entranceAnimationTimer = 0;
-      if (!this.isConnected) {
+    let cursor = target;
+    parts.forEach((part, index) => {
+      if (index === parts.length - 1) {
+        cursor[part] = value;
         return;
       }
-      this._animateContentOnNextRender = false;
-      if (this._renderPendingAfterEntrance) {
-        this._renderPendingAfterEntrance = false;
-        this._renderIfChanged(true);
+      if (!isObject(cursor[part]) && !Array.isArray(cursor[part])) {
+        cursor[part] = /^\d+$/.test(parts[index + 1]) ? [] : {};
       }
-    }, safeDelay);
+      cursor = cursor[part];
+    });
   }
-
-  _replayEntranceAnimation(options = {}) {
-    const force = options?.force === true;
-    const now = Date.now();
-    if (!force && now - this._lastEntranceReplayAt < 260) {
+  function deleteByPath(target, path) {
+    const parts = String(path || "").split(".").filter(Boolean);
+    if (parts.some(isUnsafeConfigPathKey)) {
       return;
     }
-    this._lastEntranceReplayAt = now;
-    if (this._entranceAnimationTimer) {
-      window.clearTimeout(this._entranceAnimationTimer);
-      this._entranceAnimationTimer = 0;
+    let cursor = target;
+    for (let i = 0; i < parts.length - 1; i += 1) {
+      cursor = cursor?.[parts[i]];
+      if (!cursor) {
+        return;
+      }
     }
-    this._renderPendingAfterEntrance = false;
-    this._animateContentOnNextRender = true;
-    this._lastNotificationIdsSignature = "";
-    this._lastRenderSignature = "";
-    if (this._hass) {
-      this._renderIfChanged(true);
+    if (cursor) {
+      delete cursor[parts[parts.length - 1]];
     }
   }
-
-  _getRouteKey() {
-    if (typeof window === "undefined" || !window.location) {
+  function getByPath(target, path) {
+    return String(path || "").split(".").filter(Boolean).reduce((cursor, part) => cursor?.[part], target);
+  }
+  function parseServiceData(value) {
+    if (!value) {
+      return {};
+    }
+    if (isObject(value)) {
+      return deepClone(value);
+    }
+    try {
+      const parsed = JSON.parse(String(value));
+      return isObject(parsed) ? parsed : {};
+    } catch (_error) {
+      return {};
+    }
+  }
+  function normalizeSeverity(value) {
+    const key = String(value || "info").trim().toLowerCase();
+    return ["info", "success", "warning", "critical"].includes(key) ? key : "info";
+  }
+  function friendlyName(hass, entityId) {
+    const state = hass?.states?.[entityId];
+    return String(state?.attributes?.friendly_name || entityId || "").trim();
+  }
+  function areaRecordName(hass, areaId) {
+    const rawId = String(areaId || "").trim();
+    if (!rawId) {
       return "";
     }
-    const { pathname = "", search = "", hash = "" } = window.location;
-    return `${pathname}${search}${hash}`;
+    const areas = hass?.areas;
+    if (Array.isArray(areas)) {
+      const area2 = areas.find((item) => String(item?.area_id || item?.id || "") === rawId);
+      return String(area2?.name || rawId).trim();
+    }
+    const area = areas?.[rawId];
+    return String(area?.name || rawId).trim();
+  }
+  function entityRegistryEntry(hass, entityId) {
+    return hass?.entities?.[entityId] || hass?.entityRegistry?.[entityId] || hass?.entity_registry?.[entityId] || null;
+  }
+  function deviceRegistryEntry(hass, deviceId) {
+    const rawId = String(deviceId || "").trim();
+    if (!rawId) {
+      return null;
+    }
+    const devices = hass?.devices;
+    if (Array.isArray(devices)) {
+      return devices.find((item) => String(item?.id || item?.device_id || "") === rawId) || null;
+    }
+    return devices?.[rawId] || null;
+  }
+  function entityAreaName(hass, entityId) {
+    const state = hass?.states?.[entityId];
+    const entity = entityRegistryEntry(hass, entityId);
+    const device = deviceRegistryEntry(hass, entity?.device_id || state?.attributes?.device_id);
+    const areaId = entity?.area_id || device?.area_id || state?.attributes?.area_id;
+    const areaName = areaRecordName(hass, areaId);
+    if (areaName) {
+      return areaName;
+    }
+    const attrArea = state?.attributes?.area || state?.attributes?.area_name || state?.attributes?.room || state?.attributes?.room_name;
+    if (attrArea) {
+      return String(attrArea).trim();
+    }
+    const searchable = normalizeMatchText(`${entityId} ${friendlyName(hass, entityId)}`);
+    const areas = hass?.areas;
+    const areaList = Array.isArray(areas) ? areas : Object.values(areas || {});
+    const matched = areaList.find((area) => {
+      const name = normalizeMatchText(area?.name || area?.area_id || area?.id || "");
+      return name && searchable.includes(name);
+    });
+    return String(matched?.name || matched?.area_id || matched?.id || "").trim();
+  }
+  function entityAreaKey(hass, entityId) {
+    return normalizeMatchText(entityAreaName(hass, entityId));
+  }
+  function entityMatchTokens(hass, entityId) {
+    const stopWords = /* @__PURE__ */ new Set(["sensor", "temperatura", "temperature", "humidity", "humedad", "fan", "ventilador", "weather", "clima"]);
+    return normalizeMatchText(`${entityId} ${friendlyName(hass, entityId)}`).split(" ").filter((token) => token.length > 2 && !stopWords.has(token));
+  }
+  function stateValue(stateObj, attribute = "") {
+    if (!stateObj) {
+      return "";
+    }
+    if (attribute) {
+      return stateObj.attributes?.[attribute];
+    }
+    return stateObj.state;
+  }
+  var NOTIFICATION_TEMPLATE_TOKEN_PATTERN = /\{([^{}]+)\}/g;
+  var NOTIFICATION_TEMPLATE_ENTITY_PATTERN = /^([a-zA-Z0-9_]+\.[a-zA-Z0-9_]+)(?:\.([a-zA-Z0-9_]+))?$/;
+  function stringifyNotificationTemplateValue(value) {
+    if (value === void 0 || value === null) {
+      return "";
+    }
+    if (Array.isArray(value)) {
+      return value.map((item) => stringifyNotificationTemplateValue(item)).filter(Boolean).join(", ");
+    }
+    if (isObject(value)) {
+      try {
+        return JSON.stringify(value);
+      } catch (_error) {
+        return String(value);
+      }
+    }
+    return String(value);
+  }
+  function notificationTemplateMeasurement(value, unit = "") {
+    const text = stringifyNotificationTemplateValue(value);
+    return text ? `${text}${unit || ""}` : "";
+  }
+  function referencedNotificationTemplateEntities(template) {
+    const entities = /* @__PURE__ */ new Set();
+    for (const match of String(template || "").matchAll(NOTIFICATION_TEMPLATE_TOKEN_PATTERN)) {
+      const entityMatch = String(match[1] || "").trim().match(NOTIFICATION_TEMPLATE_ENTITY_PATTERN);
+      if (entityMatch) {
+        entities.add(entityMatch[1]);
+      }
+    }
+    return [...entities];
+  }
+  function entityNotificationTemplateValue(hass, token) {
+    const match = String(token || "").trim().match(NOTIFICATION_TEMPLATE_ENTITY_PATTERN);
+    if (!match) {
+      return void 0;
+    }
+    const [, entityId, attribute] = match;
+    const stateObj = hass?.states?.[entityId];
+    if (!stateObj) {
+      return "";
+    }
+    if (attribute === "state") {
+      return stateObj.state;
+    }
+    if (attribute) {
+      return stateObj.attributes?.[attribute];
+    }
+    const domain = entityId.split(".")[0];
+    if (domain === "media_player") {
+      return stateObj.attributes?.friendly_name || entityId;
+    }
+    if (domain === "calendar") {
+      return stateObj.attributes?.message || stateObj.attributes?.summary || stateObj.attributes?.friendly_name || stateObj.state;
+    }
+    const rawValue = stateObj.state;
+    const unit = stateObj.attributes?.unit_of_measurement || "";
+    return Number.isFinite(Number(rawValue)) ? notificationTemplateMeasurement(rawValue, unit) : rawValue;
+  }
+  function formatNotificationTemplate(template, hass, values = {}) {
+    return String(template || "").replace(NOTIFICATION_TEMPLATE_TOKEN_PATTERN, (_match, rawKey) => {
+      const key = String(rawKey || "").trim();
+      if (Object.prototype.hasOwnProperty.call(values, key)) {
+        return stringifyNotificationTemplateValue(values[key]);
+      }
+      return stringifyNotificationTemplateValue(entityNotificationTemplateValue(hass, key));
+    });
+  }
+  function customNotificationTemplateValues(hass, item = {}, fanEntityId = "") {
+    const entityId = String(item?.entity || "").trim();
+    const stateObj = hass?.states?.[entityId];
+    const rawValue = stateValue(stateObj, item?.attribute);
+    const unit = stateObj?.attributes?.unit_of_measurement || "";
+    const value = Number.isFinite(Number(rawValue)) ? notificationTemplateMeasurement(rawValue, unit) : stringifyNotificationTemplateValue(rawValue);
+    const threshold = Number.isFinite(Number(item?.value)) ? notificationTemplateMeasurement(item.value, unit) : String(item?.value || "");
+    const changedAt = new Date(stateObj?.last_changed || stateObj?.last_updated || "");
+    return {
+      ...stateObj?.attributes || {},
+      source: entityId ? friendlyName(hass, entityId) : "",
+      entity: entityId,
+      state: stateObj?.state || "",
+      value,
+      threshold,
+      fan: fanEntityId ? friendlyName(hass, fanEntityId) : "",
+      time: formatTime(changedAt)
+    };
+  }
+  function numericState(stateObj, attribute = "") {
+    const raw = stateValue(stateObj, attribute);
+    const number = Number(raw);
+    return Number.isFinite(number) ? number : null;
+  }
+  function stateIsOn(stateObj) {
+    const state = String(stateObj?.state || "").toLowerCase();
+    return ["on", "open", "opening", "detected", "motion", "home"].includes(state);
+  }
+  function stateIsOff(stateObj) {
+    const state = String(stateObj?.state || "").toLowerCase();
+    return ["off", "closed", "clear", "idle", "docked"].includes(state);
+  }
+  function stateIsVacant(stateObj) {
+    const state = String(stateObj?.state || "").toLowerCase();
+    return ["off", "clear", "not_home", "closed", "0"].includes(state);
+  }
+  function minutesSinceChanged(stateObj) {
+    const changed = Date.parse(stateObj?.last_changed || stateObj?.last_updated || "");
+    return Number.isFinite(changed) ? (Date.now() - changed) / 6e4 : 0;
+  }
+  function formatNumber(value, unit = "") {
+    const number = Number(value);
+    if (!Number.isFinite(number)) {
+      return "";
+    }
+    const formatted = new Intl.NumberFormat(void 0, { maximumFractionDigits: 1 }).format(number);
+    return `${formatted}${unit || ""}`;
+  }
+  function calendarEventDate(value) {
+    if (!value) {
+      return null;
+    }
+    if (typeof value === "string") {
+      const date = new Date(value.length <= 10 ? `${value}T00:00:00` : value);
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+    if (isObject(value)) {
+      return calendarEventDate(value.dateTime || value.date || value.datetime);
+    }
+    return null;
+  }
+  function isSameLocalDay(a, b) {
+    return a && b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  }
+  function formatTime(date) {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+      return "";
+    }
+    return new Intl.DateTimeFormat(void 0, {
+      hour: "2-digit",
+      minute: "2-digit"
+    }).format(date);
+  }
+  function normalizeCalendarFetchResult(raw) {
+    if (Array.isArray(raw)) {
+      return raw;
+    }
+    if (Array.isArray(raw?.events)) {
+      return raw.events;
+    }
+    if (Array.isArray(raw?.calendar_events)) {
+      return raw.calendar_events;
+    }
+    return [];
+  }
+  function normalizeWeatherForecastResult(raw, entityId) {
+    if (Array.isArray(raw)) {
+      return raw;
+    }
+    if (Array.isArray(raw?.forecast)) {
+      return raw.forecast;
+    }
+    if (Array.isArray(raw?.[entityId]?.forecast)) {
+      return raw[entityId].forecast;
+    }
+    return [];
+  }
+  function forecastDate(value) {
+    return calendarEventDate(value?.datetime || value?.dateTime || value?.date || value?.time || value?.start);
+  }
+  function forecastNumber(value, fields) {
+    for (const field of fields) {
+      const raw = value?.[field];
+      const number = Number(raw);
+      if (Number.isFinite(number)) {
+        return number;
+      }
+    }
+    return null;
+  }
+  function forecastLooksRainy(row) {
+    const condition = normalizeMatchText(row?.condition || row?.state || row?.weather || "");
+    if (condition.includes("rain") || condition.includes("lluv") || condition.includes("pouring") || condition.includes("storm")) {
+      return true;
+    }
+    const precipitation = forecastNumber(row, ["precipitation", "rain", "precipitation_amount", "native_precipitation"]);
+    return precipitation !== null && precipitation > 0.2;
+  }
+  function notificationHash(value) {
+    const input = String(value || "");
+    let hash = 2166136261;
+    for (let i = 0; i < input.length; i += 1) {
+      hash ^= input.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+    return (hash >>> 0).toString(36);
+  }
+  function resolveBackgroundMobileLanguage(config, hass = null) {
+    const configured = String(config?.language || "auto").trim();
+    const translated = typeof window !== "undefined" ? window.NodaliaI18n?.resolveLanguage?.(hass, configured) : "";
+    const candidates = [
+      translated,
+      configured.toLowerCase() !== "auto" ? configured : "",
+      hass?.locale?.language,
+      hass?.language,
+      hass?.config?.language
+    ];
+    for (const candidate of candidates) {
+      const language = String(candidate || "").trim().toLowerCase().replace("_", "-").split("-", 1)[0];
+      if (language) {
+        return language;
+      }
+    }
+    return "en";
+  }
+  function getBackgroundMobileConfigPayload(rawConfig, hass = null) {
+    const config = normalizeConfig(rawConfig || {});
+    const overrides = {};
+    (config.smart_entity_overrides || []).forEach((item) => {
+      const entity = String(item?.entity || "").trim();
+      if (!entity) {
+        return;
+      }
+      overrides[entity] = {
+        title: String(item.title || ""),
+        message: String(item.message || ""),
+        tint_color: String(item.tint_color || ""),
+        url: String(item.url || ""),
+        action_label: String(item.action_label || ""),
+        tap_action: normalizeNotificationTapAction(item.tap_action),
+        ...isExplicitSmartEntityMobile(item.mobile) ? { mobile: normalizeMobilePolicy(item.mobile) } : {}
+      };
+    });
+    return {
+      version: 2,
+      card_version: CARD_VERSION,
+      source: CARD_TAG,
+      language: resolveBackgroundMobileLanguage(config, hass),
+      enabled: config.background_mobile?.enabled === true,
+      smart_recommendations: config.smart_recommendations !== false,
+      notify: {
+        enabled: config.mobile_notifications?.enabled === true,
+        entities: config.mobile_notifications?.entities || [],
+        services: config.mobile_notifications?.services || [],
+        min_severity: config.mobile_notifications?.min_severity || "warning",
+        critical_alerts: config.mobile_notifications?.critical_alerts === true,
+        default_policy: normalizeMobilePolicy(config.mobile_notifications?.default_policy ?? "auto"),
+        cooldown_minutes: config.mobile_notifications?.cooldown_minutes ?? 30,
+        group_similar: config.mobile_notifications?.group_similar !== false
+      },
+      context: {
+        presence_entity: config.presence_entity || "",
+        only_when_away: config.mobile_context?.only_when_away === true,
+        only_when_home: config.mobile_context?.only_when_home === true,
+        quiet_hours: normalizeQuietHours(config.mobile_context?.quiet_hours)
+      },
+      smart: Object.fromEntries(
+        Object.entries(config.smart_notifications || {}).map(([key, item]) => [
+          key,
+          {
+            title: String(item?.title || ""),
+            message: String(item?.message || ""),
+            mobile: normalizeMobilePolicy(item?.mobile),
+            url: String(item?.url || ""),
+            action_label: String(item?.action_label || ""),
+            tap_action: normalizeNotificationTapAction(item?.tap_action)
+          }
+        ])
+      ),
+      custom: (config.custom_notifications || []).map((item) => ({
+        id: notificationHash(`${item.title}|${item.message}|${item.entity}|${item.attribute}|${item.condition}|${item.value}|${item.url}|${JSON.stringify(item.tap_action || {})}`),
+        title: String(item.title || ""),
+        message: String(item.message || ""),
+        severity: normalizeSeverity(item.severity || "info"),
+        entity: String(item.entity || ""),
+        attribute: String(item.attribute || ""),
+        condition: String(item.condition || "always"),
+        value: String(item.value || ""),
+        mobile: normalizeMobilePolicy(item.mobile),
+        url: String(item.url || ""),
+        action_label: String(item.action_label || ""),
+        tap_action: normalizeNotificationTapAction(item.tap_action)
+      })),
+      external_alerts: (config.external_alerts || []).map((item) => ({
+        id: item.id,
+        type: item.type,
+        title: item.title,
+        message: item.message,
+        severity: item.severity,
+        entity: item.entity,
+        source: item.source,
+        mobile: normalizeMobilePolicy(item.mobile),
+        url: String(item.url || ""),
+        action_label: String(item.action_label || ""),
+        tap_action: normalizeNotificationTapAction(item.tap_action)
+      })),
+      thresholds: {
+        hot_temperature: config.thresholds?.hot_temperature,
+        cold_temperature: config.thresholds?.cold_temperature,
+        humidity_high: config.thresholds?.humidity_high,
+        humidity_low: config.thresholds?.humidity_low,
+        battery_low: config.thresholds?.battery_low,
+        humidifier_fill_low: config.thresholds?.humidifier_fill_low,
+        humidifier_fill_full: config.thresholds?.humidifier_fill_full,
+        ink_low: config.thresholds?.ink_low,
+        rain_probability: config.thresholds?.rain_probability,
+        rain_lookahead_hours: config.thresholds?.rain_lookahead_hours,
+        media_absence_minutes: config.thresholds?.media_absence_minutes
+      },
+      entities: {
+        calendar: config.calendar_entities || [],
+        vacuum: config.vacuum_entities || [],
+        vacuum_error: config.vacuum_error_entities || [],
+        door: config.door_entities || [],
+        window: config.window_entities || [],
+        motion: config.motion_entities || [],
+        fan: config.fan_entities || [],
+        climate: config.climate_entities || [],
+        humidifier: config.humidifier_entities || [],
+        media_player: config.media_player_entities || [],
+        weather: config.weather_entities || [],
+        temperature: config.temperature_entities || [],
+        humidity: config.humidity_entities || [],
+        outdoor_temperature: config.outdoor_temperature_entities || [],
+        outdoor_humidity: config.outdoor_humidity_entities || [],
+        battery: config.battery_entities || [],
+        humidifier_fill: config.humidifier_fill_entities || [],
+        humidifier_full: config.humidifier_full_entities || [],
+        ink: config.ink_entities || []
+      },
+      overrides
+    };
+  }
+  function buildBackgroundMobileWebhookPayload(rawConfig, hass = null, options = {}) {
+    const config = normalizeConfig(rawConfig || {});
+    const background = config.background_mobile || {};
+    const chunkSize = Math.max(120, Math.min(240, Number(background.chunk_size) || 240));
+    const profile = getBackgroundMobileConfigPayload(config, hass);
+    if (typeof options.enabled === "boolean") {
+      profile.enabled = options.enabled;
+    }
+    const json = JSON.stringify(profile);
+    const chunks = [];
+    for (let index = 0; index < json.length; index += chunkSize) {
+      chunks.push(json.slice(index, index + chunkSize));
+    }
+    return {
+      version: 2,
+      card_version: CARD_VERSION,
+      source: CARD_TAG,
+      chunk_count: chunks.length,
+      max_chunks: BACKGROUND_MOBILE_MAX_CHUNKS,
+      over_limit: chunks.length > BACKGROUND_MOBILE_MAX_CHUNKS,
+      config_hash: notificationHash(json),
+      chunks
+    };
+  }
+  function getBackgroundMobileNativeSignature(rawConfig, hass = null) {
+    const config = normalizeConfig(rawConfig || {});
+    const profileId = String(config.background_mobile?.profile_id || "default").trim() || "default";
+    const profile = getBackgroundMobileConfigPayload(config, hass);
+    return {
+      profile,
+      profileId,
+      signature: `${profileId}:${notificationHash(JSON.stringify(profile))}`
+    };
+  }
+  async function syncBackgroundMobileNative(hass, rawConfig) {
+    const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
+    if (!backend || !hass) {
+      return { available: false, synced: false, signature: "", transient: false };
+    }
+    const status = await backend.status(hass, { silent: true });
+    if (!status?.available || !status.capabilities?.includes("notifications_background")) {
+      return {
+        available: false,
+        synced: false,
+        signature: "",
+        transient: status?.transient === true
+      };
+    }
+    const { profile, profileId, signature } = getBackgroundMobileNativeSignature(rawConfig, hass);
+    try {
+      if (hass.user?.is_admin) {
+        const current2 = await backend.setNotificationProfile(hass, profile, profileId);
+        return {
+          available: true,
+          synced: true,
+          signature,
+          dismissed: Array.isArray(current2?.dismissed) ? current2.dismissed : []
+        };
+      }
+      const current = await backend.getNotificationProfile(hass, profileId);
+      const active = current?.profile?.enabled === true && current?.profile?.notify?.enabled === true;
+      return {
+        available: true,
+        synced: active,
+        signature: active ? `active:${profileId}` : "",
+        dismissed: Array.isArray(current?.dismissed) ? current.dismissed : []
+      };
+    } catch (error) {
+      if (typeof console !== "undefined" && typeof console.warn === "function") {
+        console.warn("Nodalia Notifications Card: native background synchronization failed; keeping Engine ownership.", error);
+      }
+      return { available: true, synced: false, signature: "", transient: true };
+    }
+  }
+  async function setLegacyBackgroundMobileFallback(hass, enabled) {
+    const state = hass?.states?.[LEGACY_BACKGROUND_MOBILE_TOGGLE];
+    if (!state) {
+      return true;
+    }
+    if (typeof hass?.callService !== "function") {
+      return false;
+    }
+    const desiredState = enabled ? "on" : "off";
+    if (String(state.state || "").toLowerCase() === desiredState) {
+      return true;
+    }
+    try {
+      await hass.callService(
+        "input_boolean",
+        enabled ? "turn_on" : "turn_off",
+        { entity_id: LEGACY_BACKGROUND_MOBILE_TOGGLE }
+      );
+      return true;
+    } catch (error) {
+      if (typeof console !== "undefined" && typeof console.warn === "function") {
+        console.warn(
+          `Nodalia Notifications Card: could not ${enabled ? "activate" : "pause"} the legacy background package.`,
+          error
+        );
+      }
+      return false;
+    }
   }
 
-  _onDocVisibility() {
-    if (typeof document === "undefined" || document.visibilityState !== "visible") {
-      return;
+  // src/cards/notifications/notifications-config.ts
+  var DEFAULT_CONFIG = {
+    title: "Notifications",
+    language: "auto",
+    icon: "mdi:bell-badge-outline",
+    empty_title: "All quiet",
+    empty_message: "You have no current alerts",
+    max_visible: 1,
+    refresh_interval: 300,
+    storage_key: STORAGE_KEY,
+    dismissed_entity: "",
+    calendar_entities: [],
+    vacuum_entities: [],
+    vacuum_error_entities: [],
+    fan_entities: [],
+    climate_entities: [],
+    humidifier_entities: [],
+    media_player_entities: [],
+    weather_entities: [],
+    motion_entities: [],
+    door_entities: [],
+    window_entities: [],
+    temperature_entities: [],
+    humidity_entities: [],
+    outdoor_temperature_entities: [],
+    outdoor_humidity_entities: [],
+    battery_entities: [],
+    humidifier_fill_entities: [],
+    humidifier_full_entities: [],
+    ink_entities: [],
+    custom_notifications: [],
+    smart_entity_overrides: [],
+    presence_entity: "",
+    mobile_context: {
+      only_when_away: false,
+      only_when_home: false,
+      quiet_hours: {
+        enabled: false,
+        start: "23:00",
+        end: "08:00",
+        allow_critical: true
+      }
+    },
+    external_alerts: [],
+    thresholds: {
+      hot_temperature: 27,
+      cold_temperature: 17,
+      humidity_high: 70,
+      humidity_low: 30,
+      rain_probability: 50,
+      rain_lookahead_hours: 6,
+      media_absence_minutes: 10,
+      battery_low: 20,
+      humidifier_fill_low: 20,
+      humidifier_fill_full: 90,
+      ink_low: 15
+    },
+    smart_recommendations: true,
+    smart_notifications: {
+      hot: { title: "", message: "", tint_color: "", url: "", action_label: "", tap_action: { action: "none" } },
+      cold: { title: "", message: "", tint_color: "", url: "", action_label: "", tap_action: { action: "none" } },
+      humidity_high: { title: "", message: "", tint_color: "", url: "", action_label: "", tap_action: { action: "none" } },
+      humidity_low: { title: "", message: "", tint_color: "", url: "", action_label: "", tap_action: { action: "none" } },
+      rain: { title: "", message: "", tint_color: "", url: "", action_label: "", tap_action: { action: "none" } },
+      media_left_on: { title: "", message: "", tint_color: "", url: "", action_label: "", tap_action: { action: "none" } },
+      battery_low: { title: "", message: "", tint_color: "", url: "", action_label: "", tap_action: { action: "none" } },
+      humidifier_fill_low: { title: "", message: "", tint_color: "", url: "", action_label: "", tap_action: { action: "none" } },
+      humidifier_fill_full: { title: "", message: "", tint_color: "", url: "", action_label: "", tap_action: { action: "none" } },
+      ink_low: { title: "", message: "", tint_color: "", url: "", action_label: "", tap_action: { action: "none" } }
+    },
+    mobile_notifications: {
+      enabled: false,
+      entities: [],
+      services: [],
+      min_severity: "warning",
+      critical_alerts: false,
+      default_policy: "auto",
+      cooldown_minutes: 30,
+      group_similar: true
+    },
+    background_mobile: {
+      enabled: false,
+      profile_id: "default",
+      webhook: "",
+      chunk_size: 240
+    },
+    security: {
+      strict_service_actions: true,
+      allowed_services: [],
+      allowed_service_domains: [],
+      allow_webhooks_for_non_admin: false
+    },
+    haptics: {
+      enabled: true,
+      style: "medium",
+      fallback_vibrate: false
+    },
+    animations: {
+      enabled: true,
+      content_duration: 420,
+      button_bounce_duration: 320
+    },
+    styles: {
+      card: {
+        background: "var(--ha-card-background, var(--card-background-color, rgba(32, 34, 42, 0.94)))",
+        border: "1px solid var(--divider-color)",
+        border_radius: "var(--nodalia-card-border-radius, 28px)",
+        box_shadow: "var(--ha-card-box-shadow)",
+        padding: "18px",
+        gap: "14px"
+      },
+      icon: {
+        background: "color-mix(in srgb, var(--primary-color) 18%, transparent)",
+        color: "var(--primary-color)",
+        size: "54px"
+      },
+      title_size: "22px",
+      item_radius: "var(--nodalia-card-border-radius, 28px)",
+      accent: "var(--primary-color)"
     }
-    this._replayEntranceAnimation();
+  };
+  function normalizeConfig(rawConfig = {}, options = {}) {
+    const config = mergeDeep(DEFAULT_CONFIG, rawConfig);
+    config.calendar_entities = normalizeEntityList(config.calendar_entities, ["calendar"]);
+    config.vacuum_entities = normalizeEntityList(config.vacuum_entities, ["vacuum"]);
+    config.vacuum_error_entities = normalizeEntityList(config.vacuum_error_entities, ["sensor"]);
+    config.fan_entities = normalizeEntityList(config.fan_entities, ["fan"]);
+    config.climate_entities = normalizeEntityList(config.climate_entities, ["climate"]);
+    config.humidifier_entities = normalizeEntityList(config.humidifier_entities, ["humidifier"]);
+    config.media_player_entities = normalizeEntityList(config.media_player_entities, ["media_player"]);
+    config.weather_entities = normalizeEntityList(config.weather_entities, ["weather"]);
+    config.motion_entities = normalizeEntityList(config.motion_entities, ["binary_sensor"]);
+    config.door_entities = normalizeEntityList(config.door_entities, ["binary_sensor"]);
+    config.window_entities = normalizeEntityList(config.window_entities, ["binary_sensor"]);
+    config.temperature_entities = normalizeEntityList(config.temperature_entities, ["sensor"]);
+    config.humidity_entities = normalizeEntityList(config.humidity_entities, ["sensor"]);
+    config.outdoor_temperature_entities = normalizeEntityList(config.outdoor_temperature_entities, ["sensor"]);
+    config.outdoor_humidity_entities = normalizeEntityList(config.outdoor_humidity_entities, ["sensor"]);
+    config.battery_entities = normalizeEntityList(config.battery_entities, ["sensor"]);
+    config.humidifier_fill_entities = normalizeEntityList(config.humidifier_fill_entities, ["sensor"]);
+    config.humidifier_full_entities = normalizeEntityList(config.humidifier_full_entities, ["sensor"]);
+    config.ink_entities = normalizeEntityList(config.ink_entities, ["sensor"]);
+    config.custom_notifications = normalizeCustomNotifications(config.custom_notifications, {
+      keepDrafts: options.keepDrafts === true
+    });
+    config.max_visible = Math.max(1, Math.min(8, Number(config.max_visible) || 1));
+    config.refresh_interval = Math.max(30, Math.min(3600, Number(config.refresh_interval) || 300));
+    config.storage_key = String(config.storage_key || STORAGE_KEY).trim() || STORAGE_KEY;
+    config.dismissed_entity = entityDomain(config.dismissed_entity) === "input_text" ? String(config.dismissed_entity).trim() : "";
+    config.smart_recommendations = config.smart_recommendations !== false;
+    config.language = String(config.language || "auto").trim() || "auto";
+    config.thresholds = {
+      hot_temperature: finiteNumber(config.thresholds?.hot_temperature, DEFAULT_CONFIG.thresholds.hot_temperature),
+      cold_temperature: finiteNumber(config.thresholds?.cold_temperature, DEFAULT_CONFIG.thresholds.cold_temperature),
+      humidity_high: finiteNumber(config.thresholds?.humidity_high, DEFAULT_CONFIG.thresholds.humidity_high),
+      humidity_low: finiteNumber(config.thresholds?.humidity_low, DEFAULT_CONFIG.thresholds.humidity_low),
+      rain_probability: Math.max(0, Math.min(100, finiteNumber(config.thresholds?.rain_probability, DEFAULT_CONFIG.thresholds.rain_probability))),
+      rain_lookahead_hours: Math.max(1, Math.min(24, finiteNumber(config.thresholds?.rain_lookahead_hours, DEFAULT_CONFIG.thresholds.rain_lookahead_hours))),
+      media_absence_minutes: Math.max(1, Math.min(240, finiteNumber(config.thresholds?.media_absence_minutes, DEFAULT_CONFIG.thresholds.media_absence_minutes))),
+      battery_low: Math.max(0, Math.min(100, finiteNumber(config.thresholds?.battery_low, DEFAULT_CONFIG.thresholds.battery_low))),
+      humidifier_fill_low: Math.max(0, Math.min(100, finiteNumber(config.thresholds?.humidifier_fill_low, DEFAULT_CONFIG.thresholds.humidifier_fill_low))),
+      humidifier_fill_full: Math.max(0, Math.min(100, finiteNumber(config.thresholds?.humidifier_fill_full, DEFAULT_CONFIG.thresholds.humidifier_fill_full))),
+      ink_low: Math.max(0, Math.min(100, finiteNumber(config.thresholds?.ink_low, DEFAULT_CONFIG.thresholds.ink_low)))
+    };
+    config.smart_notifications = normalizeSmartNotifications(config.smart_notifications);
+    config.smart_entity_overrides = normalizeSmartEntityOverrides(config.smart_entity_overrides);
+    config.presence_entity = String(config.presence_entity || "").trim();
+    config.mobile_context = normalizeMobileContext(config.mobile_context);
+    config.external_alerts = normalizeExternalAlerts(config.external_alerts, {
+      keepDrafts: options.keepDrafts === true
+    });
+    config.mobile_notifications = mergeDeep(DEFAULT_CONFIG.mobile_notifications, config.mobile_notifications || {});
+    config.mobile_notifications.enabled = config.mobile_notifications.enabled === true;
+    config.mobile_notifications.entities = normalizeEntityList(config.mobile_notifications.entities, ["notify"]);
+    config.mobile_notifications.services = normalizeNotifyServices(config.mobile_notifications.services);
+    config.mobile_notifications.critical_alerts = config.mobile_notifications.critical_alerts === true;
+    config.mobile_notifications.default_policy = normalizeMobilePolicy(
+      config.mobile_notifications.default_policy ?? "auto"
+    );
+    config.mobile_notifications.cooldown_minutes = Math.max(
+      0,
+      Math.min(1440, Number(config.mobile_notifications.cooldown_minutes) || DEFAULT_CONFIG.mobile_notifications.cooldown_minutes)
+    );
+    config.mobile_notifications.group_similar = config.mobile_notifications.group_similar !== false;
+    config.mobile_notifications.min_severity = ["info", "success", "warning", "critical"].includes(String(config.mobile_notifications.min_severity || "").toLowerCase()) ? String(config.mobile_notifications.min_severity).toLowerCase() : DEFAULT_CONFIG.mobile_notifications.min_severity;
+    config.background_mobile = mergeDeep(DEFAULT_CONFIG.background_mobile, config.background_mobile || {});
+    config.background_mobile.enabled = config.background_mobile.enabled === true;
+    config.background_mobile.profile_id = String(config.background_mobile.profile_id || "default").trim() || "default";
+    config.background_mobile.webhook = String(config.background_mobile.webhook || "").trim();
+    config.background_mobile.chunk_size = Math.max(
+      120,
+      Math.min(240, Number(config.background_mobile.chunk_size) || DEFAULT_CONFIG.background_mobile.chunk_size)
+    );
+    config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? mergeDeep(DEFAULT_CONFIG.security, config.security || {});
+    if (config.security.allow_webhooks_for_non_admin === void 0) {
+      config.security.allow_webhooks_for_non_admin = DEFAULT_CONFIG.security.allow_webhooks_for_non_admin;
+    }
+    config.security.allow_webhooks_for_non_admin = config.security.allow_webhooks_for_non_admin === true;
+    config.haptics = mergeDeep(DEFAULT_CONFIG.haptics, config.haptics || {});
+    config.animations = mergeDeep(DEFAULT_CONFIG.animations, config.animations || {});
+    config.animations.enabled = config.animations.enabled !== false;
+    config.animations.content_duration = Math.max(120, Math.min(1800, Number(config.animations.content_duration) || DEFAULT_CONFIG.animations.content_duration));
+    config.animations.button_bounce_duration = Math.max(120, Math.min(1200, Number(config.animations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration));
+    config.styles = mergeDeep(DEFAULT_CONFIG.styles, config.styles || {});
+    const familyRadius = DEFAULT_CONFIG.styles.card.border_radius;
+    if (String(config.styles?.card?.border_radius ?? "").trim() === "28px") {
+      config.styles.card.border_radius = familyRadius;
+    }
+    const itemRadius = String(config.styles?.item_radius ?? "").trim();
+    if (itemRadius === "18px" || itemRadius === "28px") {
+      config.styles.item_radius = familyRadius;
+    }
+    return config;
   }
 
-  _attachViewVisibilityObserver() {
-    if (this._viewVisibilityObserver || typeof IntersectionObserver !== "function") {
-      return;
+  // src/cards/notifications/notifications-card.ts
+  var _lazyNodaliaNotificationsCard;
+  function loadNodaliaNotificationsCard() {
+    if (_lazyNodaliaNotificationsCard) {
+      return _lazyNodaliaNotificationsCard;
     }
-    this._viewVisibilityObserver = new IntersectionObserver(
-      entries => {
-        if (!this.isConnected) {
-          return;
-        }
-        const visible = entries.some(entry => entry.isIntersecting && entry.intersectionRatio > 0);
-        const hadViewportObservation = this._hasObservedViewport;
-        this._hasObservedViewport = true;
-        if (visible === this._wasInViewport) {
-          return;
-        }
-        this._wasInViewport = visible;
-        if (!visible) {
-          this._wasHiddenByLayout = entries.some(entry => {
-            const rect = entry.boundingClientRect;
-            return rect && rect.width === 0 && rect.height === 0;
-          });
-          return;
-        }
+    class NodaliaNotificationsCard extends HTMLElement {
+      static getStubConfig(hass) {
+        const first = (prefix) => Object.keys(hass?.states || {}).find((entityId) => entityId.startsWith(`${prefix}.`)) || "";
+        return {
+          title: "Notifications",
+          calendar_entities: normalizeEntityList([first("calendar")], ["calendar"]),
+          weather_entities: normalizeEntityList([first("weather")], ["weather"]),
+          fan_entities: normalizeEntityList([first("fan")], ["fan"]),
+          vacuum_entities: normalizeEntityList([first("vacuum")], ["vacuum"])
+        };
+      }
+      static getConfigElement() {
+        return document.createElement(EDITOR_TAG);
+      }
+      constructor() {
+        super();
+        this._nodaliaConstruct();
+      }
+      _nodaliaConstruct() {
+        this.attachShadow({ mode: "open" });
+        this._config = normalizeConfig({});
+        this._hass = null;
+        this._expanded = false;
+        this._dismissed = /* @__PURE__ */ new Set();
+        this._calendarEvents = [];
+        this._calendarLoading = false;
+        this._calendarError = "";
+        this._calendarRefreshTimer = 0;
+        this._calendarRefreshInFlight = false;
+        this._lastCalendarRefresh = 0;
+        this._calendarEventsSignature = "";
+        this._weatherForecasts = {};
+        this._weatherForecastsSignature = "";
+        this._weatherRefreshTimer = 0;
+        this._weatherRefreshInFlight = false;
+        this._lastWeatherRefresh = 0;
+        this._lastDismissedHelperState = "";
+        this._mobileSent = /* @__PURE__ */ new Set();
+        this._mobileCooldownMap = {};
+        this._runtimeExternalAlerts = [];
+        this._mobileNotifyTimer = 0;
+        this._mobileNotifyQueue = [];
+        this._quietHoursWakeTimer = 0;
+        this._lastRenderSignature = "";
+        this._trackedEntityIdsCache = null;
+        this._trackedEntityRevision = null;
+        this._trackedEntitiesStamp = "";
+        this._trackedEntityIdsLength = 0;
+        this._lastNotificationIdsSignature = "";
+        this._lastNotifications = [];
+        this._backgroundMobileSyncTimer = 0;
+        this._pendingBackgroundMobileSync = false;
+        this._forceNextBackgroundMobileSync = false;
+        this._lastBackgroundMobileSyncSignature = "";
+        this._lastBackgroundMobileNativeSignature = "";
+        this._lastBackgroundMobileNativeCheckAt = 0;
+        this._engineInbox = [];
+        this._animateContentOnNextRender = true;
+        this._entranceAnimationTimer = 0;
+        this._renderPendingAfterEntrance = false;
+        this._stackTransition = "";
+        this._stackCollapseTimer = 0;
+        this._collapsingStack = false;
+        this._viewportResizeTimer = 0;
+        this._viewVisibilityObserver = null;
+        this._hasObservedViewport = false;
+        this._wasInViewport = false;
         this._wasHiddenByLayout = false;
-        // The first visible observation belongs to the normal initial paint, which
-        // already carries the entrance class. Replaying here restarts that animation.
-        if (!hadViewportObservation) {
+        this._lastEntranceReplayAt = 0;
+        this._lastRouteKey = "";
+        this._onDocVisibility = this._onDocVisibility.bind(this);
+        this._onClick = this._onClick.bind(this);
+        this._onViewportResize = this._onViewportResize.bind(this);
+        this.shadowRoot.addEventListener("click", this._onClick);
+      }
+      connectedCallback() {
+        if (typeof document !== "undefined") {
+          document.addEventListener("visibilitychange", this._onDocVisibility);
+        }
+        this._attachViewVisibilityObserver();
+        this._loadDismissed();
+        this._loadMobileSent();
+        this._loadMobileCooldown();
+        this._syncSharedDismissedFromHass(true);
+        this._lastRouteKey = this._getRouteKey();
+        this._animateContentOnNextRender = true;
+        this._lastRenderSignature = "";
+        if (this._hass) {
+          this._renderIfChanged(true);
+        }
+        this._scheduleBackgroundMobileSync(this._pendingBackgroundMobileSync ? 0 : 320);
+        this._refreshCalendarEventsSoon(0);
+        this._refreshWeatherForecastsSoon(0);
+        this._scheduleQuietHoursWake();
+        window.addEventListener("resize", this._onViewportResize, { passive: true });
+        window.addEventListener("orientationchange", this._onViewportResize, { passive: true });
+      }
+      disconnectedCallback() {
+        if (typeof document !== "undefined") {
+          document.removeEventListener("visibilitychange", this._onDocVisibility);
+        }
+        this._detachViewVisibilityObserver();
+        window.removeEventListener("resize", this._onViewportResize);
+        window.removeEventListener("orientationchange", this._onViewportResize);
+        if (this._stackCollapseTimer) {
+          window.clearTimeout(this._stackCollapseTimer);
+          this._stackCollapseTimer = 0;
+        }
+        if (this._viewportResizeTimer) {
+          window.clearTimeout(this._viewportResizeTimer);
+          this._viewportResizeTimer = 0;
+        }
+        if (this._calendarRefreshTimer) {
+          window.clearTimeout(this._calendarRefreshTimer);
+          this._calendarRefreshTimer = 0;
+        }
+        if (this._weatherRefreshTimer) {
+          window.clearTimeout(this._weatherRefreshTimer);
+          this._weatherRefreshTimer = 0;
+        }
+        if (this._mobileNotifyTimer) {
+          window.clearTimeout(this._mobileNotifyTimer);
+          this._mobileNotifyTimer = 0;
+        }
+        this._mobileNotifyQueue = [];
+        if (this._quietHoursWakeTimer) {
+          window.clearTimeout(this._quietHoursWakeTimer);
+          this._quietHoursWakeTimer = 0;
+        }
+        if (this._backgroundMobileSyncTimer) {
+          window.clearTimeout(this._backgroundMobileSyncTimer);
+          this._backgroundMobileSyncTimer = 0;
+        }
+        if (this._entranceAnimationTimer) {
+          window.clearTimeout(this._entranceAnimationTimer);
+          this._entranceAnimationTimer = 0;
+        }
+        this._renderPendingAfterEntrance = false;
+        this._calendarRefreshInFlight = false;
+        this._weatherRefreshInFlight = false;
+        window.NodaliaUtils?.clearDeferTimers?.(this);
+      }
+      _scheduleEntranceAnimationReset(delay) {
+        if (this._entranceAnimationTimer) {
+          window.clearTimeout(this._entranceAnimationTimer);
+          this._entranceAnimationTimer = 0;
+        }
+        const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3e3);
+        if (!safeDelay || typeof window === "undefined") {
+          this._animateContentOnNextRender = false;
+          return;
+        }
+        this._entranceAnimationTimer = window.setTimeout(() => {
+          this._entranceAnimationTimer = 0;
+          if (!this.isConnected) {
+            return;
+          }
+          this._animateContentOnNextRender = false;
+          if (this._renderPendingAfterEntrance) {
+            this._renderPendingAfterEntrance = false;
+            this._renderIfChanged(true);
+          }
+        }, safeDelay);
+      }
+      _replayEntranceAnimation(options = {}) {
+        const force = options?.force === true;
+        const now = Date.now();
+        if (!force && now - this._lastEntranceReplayAt < 260) {
+          return;
+        }
+        this._lastEntranceReplayAt = now;
+        if (this._entranceAnimationTimer) {
+          window.clearTimeout(this._entranceAnimationTimer);
+          this._entranceAnimationTimer = 0;
+        }
+        this._renderPendingAfterEntrance = false;
+        this._animateContentOnNextRender = true;
+        this._lastNotificationIdsSignature = "";
+        this._lastRenderSignature = "";
+        if (this._hass) {
+          this._renderIfChanged(true);
+        }
+      }
+      _getRouteKey() {
+        if (typeof window === "undefined" || !window.location) {
+          return "";
+        }
+        const { pathname = "", search = "", hash = "" } = window.location;
+        return `${pathname}${search}${hash}`;
+      }
+      _onDocVisibility() {
+        if (typeof document === "undefined" || document.visibilityState !== "visible") {
           return;
         }
         this._replayEntranceAnimation();
-      },
-      { threshold: [0, 0.01] },
-    );
-    this._viewVisibilityObserver.observe(this);
-  }
-
-  _detachViewVisibilityObserver() {
-    if (!this._viewVisibilityObserver) {
-      return;
-    }
-    this._viewVisibilityObserver.disconnect();
-    this._viewVisibilityObserver = null;
-    this._hasObservedViewport = false;
-    this._wasInViewport = false;
-    this._wasHiddenByLayout = false;
-  }
-
-  _onViewportResize() {
-    if (this._viewportResizeTimer) {
-      window.clearTimeout(this._viewportResizeTimer);
-    }
-    this._viewportResizeTimer = window.setTimeout(() => {
-      this._viewportResizeTimer = 0;
-      if (!this.isConnected) {
-        return;
       }
-      const nextSignature = this._getRenderSignature();
-      if (nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
-        fireEvent(this, "iron-resize", {});
-        return;
-      }
-      this._lastRenderSignature = "";
-      this._renderIfChanged(true);
-      fireEvent(this, "iron-resize", {});
-    }, 160);
-  }
-
-  setConfig(config) {
-    this._config = normalizeConfig(config || {});
-    window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
-    this._expanded = false;
-    this._animateContentOnNextRender = true;
-    this._loadDismissed();
-    this._loadMobileSent();
-    this._loadMobileCooldown();
-    this._syncSharedDismissedFromHass(true);
-    this._invalidateTrackedEntityStampCache();
-    this._lastRenderSignature = "";
-    if (this._hass) {
-      this._renderIfChanged(true);
-    }
-    this._scheduleBackgroundMobileSync(320, { force: true });
-    this._refreshCalendarEventsSoon(0);
-    this._refreshWeatherForecastsSoon(0);
-    this._scheduleQuietHoursWake();
-  }
-
-  set hass(hass) {
-    this._hass = hass;
-    if (!this.isConnected) {
-      return;
-    }
-    const nextRouteKey = this._getRouteKey();
-    if (nextRouteKey && nextRouteKey !== this._lastRouteKey) {
-      this._lastRouteKey = nextRouteKey;
-      this._replayEntranceAnimation({ force: true });
-    }
-    this._syncTrackedEntitiesStamp(hass);
-    this._syncSharedDismissedFromHass();
-    const nextSignature = this._getRenderSignature(hass);
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
-      this._scheduleBackgroundMobileSync(this._pendingBackgroundMobileSync ? 0 : 320);
-      return;
-    }
-    this._refreshCalendarEventsSoon();
-    this._refreshWeatherForecastsSoon();
-    this._lastRenderSignature = nextSignature;
-    this._renderIfChanged(true);
-    this._scheduleBackgroundMobileSync();
-  }
-
-  getCardSize() {
-    const count = this._getNotifications().length;
-    const hiddenCount = Math.max(0, count - (this._config?.max_visible || 1));
-    const collapsedStackDepth = this._expanded ? 0 : Math.min(4, hiddenCount);
-    return Math.max(3, Math.min(10, 2 + Math.ceil(Math.min(count, this._expanded ? 5 : 2) * 1.2) + collapsedStackDepth));
-  }
-
-  getGridOptions() {
-    return {
-      columns: "full",
-      min_columns: 2,
-      min_rows: 2,
-      rows: "auto",
-    };
-  }
-
-  _getBackgroundMobileConfigPayload() {
-    return getBackgroundMobileConfigPayload(this._config, this._hass);
-  }
-
-  _buildBackgroundMobileWebhookPayload(options = {}) {
-    return buildBackgroundMobileWebhookPayload(this._config, this._hass, options);
-  }
-
-  _scheduleBackgroundMobileSync(delay = 320, options = {}) {
-    const config = this._config?.background_mobile || {};
-    if (options.force === true) {
-      this._forceNextBackgroundMobileSync = true;
-    }
-    if (config.enabled !== true || !this._hass || !this.isConnected) {
-      this._pendingBackgroundMobileSync = config.enabled === true;
-      return;
-    }
-    this._pendingBackgroundMobileSync = false;
-    if (this._backgroundMobileSyncTimer) {
-      window.clearTimeout(this._backgroundMobileSyncTimer);
-    }
-    this._backgroundMobileSyncTimer = window.setTimeout(() => {
-      this._backgroundMobileSyncTimer = 0;
-      void this._syncBackgroundMobileConfig();
-    }, Math.max(0, Math.min(3000, Number(delay) || 0)));
-  }
-
-  async _syncBackgroundMobileConfig() {
-    const webhookId = String(this._config?.background_mobile?.webhook || "").trim();
-    if (this._config?.background_mobile?.enabled !== true || !this.isConnected) {
-      return false;
-    }
-    const expectedNative = getBackgroundMobileNativeSignature(this._config, this._hass);
-    const previousNative = String(this._lastBackgroundMobileNativeSignature || "");
-    const force = this._forceNextBackgroundMobileSync === true;
-    this._forceNextBackgroundMobileSync = false;
-    const nativeRecentlyChecked = Date.now() - this._lastBackgroundMobileNativeCheckAt < BACKGROUND_MOBILE_NATIVE_HEALTH_TTL_MS;
-    if (
-      !force
-      && nativeRecentlyChecked
-      && (previousNative === expectedNative.signature || previousNative === `active:${expectedNative.profileId}`)
-    ) {
-      const helperStandby = await setLegacyBackgroundMobileFallback(this._hass, false);
-      const webhookStandby = webhookId
-        ? await this._syncLegacyBackgroundMobileFallback(webhookId, false)
-        : true;
-      const legacyStandby = helperStandby && webhookStandby;
-      this._pendingBackgroundMobileSync = !legacyStandby;
-      return true;
-    }
-    this._lastBackgroundMobileNativeCheckAt = Date.now();
-    const native = await syncBackgroundMobileNative(this._hass, this._config);
-    if (native.synced) {
-      const dismissalsChanged = this._mergeNativeDismissed(native.dismissed);
-      this._lastBackgroundMobileNativeSignature = native.signature;
-      const helperStandby = await setLegacyBackgroundMobileFallback(this._hass, false);
-      const webhookStandby = webhookId
-        ? await this._syncLegacyBackgroundMobileFallback(webhookId, false, force)
-        : true;
-      const legacyStandby = helperStandby && webhookStandby;
-      this._pendingBackgroundMobileSync = !legacyStandby;
-      void this._loadEngineInbox();
-      if (dismissalsChanged) {
-        this._renderIfChanged(true);
-      }
-      return true;
-    }
-    // A websocket timeout or profile write error is not Engine-down. Waking a
-    // leftover package here would duplicate every notification Engine delivers.
-    if (native.transient === true || native.available === true) {
-      this._pendingBackgroundMobileSync = true;
-      return false;
-    }
-    this._lastBackgroundMobileNativeSignature = "";
-    if (!webhookId) {
-      await setLegacyBackgroundMobileFallback(this._hass, true);
-      this._pendingBackgroundMobileSync = true;
-      return false;
-    }
-    if (
-      this._config?.security?.allow_webhooks_for_non_admin === false &&
-      !this._hass?.user?.is_admin
-    ) {
-      if (typeof console !== "undefined" && typeof console.warn === "function") {
-        console.warn("Nodalia Notifications Card: background mobile sync webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false).");
-      }
-      await setLegacyBackgroundMobileFallback(this._hass, true);
-      return false;
-    }
-    const payload = this._buildBackgroundMobileWebhookPayload({ enabled: true });
-    if (backgroundMobilePayloadOverLimit(payload)) {
-      if (typeof console !== "undefined" && typeof console.warn === "function") {
-        console.warn(
-          `Nodalia Notifications Card: background mobile config exceeds ${BACKGROUND_MOBILE_MAX_CHUNKS} chunks (${payload.chunk_count}); sync skipped.`,
+      _attachViewVisibilityObserver() {
+        if (this._viewVisibilityObserver || typeof IntersectionObserver !== "function") {
+          return;
+        }
+        this._viewVisibilityObserver = new IntersectionObserver(
+          (entries) => {
+            if (!this.isConnected) {
+              return;
+            }
+            const visible = entries.some((entry) => entry.isIntersecting && entry.intersectionRatio > 0);
+            const hadViewportObservation = this._hasObservedViewport;
+            this._hasObservedViewport = true;
+            if (visible === this._wasInViewport) {
+              return;
+            }
+            this._wasInViewport = visible;
+            if (!visible) {
+              this._wasHiddenByLayout = entries.some((entry) => {
+                const rect = entry.boundingClientRect;
+                return rect && rect.width === 0 && rect.height === 0;
+              });
+              return;
+            }
+            this._wasHiddenByLayout = false;
+            if (!hadViewportObservation) {
+              return;
+            }
+            this._replayEntranceAnimation();
+          },
+          { threshold: [0, 0.01] }
         );
+        this._viewVisibilityObserver.observe(this);
       }
-      this._lastBackgroundMobileSyncSignature = "";
-      this._pendingBackgroundMobileSync = true;
-      await setLegacyBackgroundMobileFallback(this._hass, true);
-      return false;
-    }
-    const signature = `${webhookId}:${payload.config_hash}:${payload.chunk_count}`;
-    if (!force && signature === this._lastBackgroundMobileSyncSignature) {
-      await setLegacyBackgroundMobileFallback(this._hass, true);
-      return true;
-    }
-    const post = typeof window !== "undefined" && window.NodaliaUtils?.postHomeAssistantWebhook;
-    if (typeof post !== "function") {
-      this._pendingBackgroundMobileSync = true;
-      return false;
-    }
-    try {
-      const ok = Boolean(await post(webhookId, payload, this._hass));
-      if (ok) {
-        this._lastBackgroundMobileSyncSignature = signature;
-        this._pendingBackgroundMobileSync = false;
-        await setLegacyBackgroundMobileFallback(this._hass, true);
-      } else {
-        this._pendingBackgroundMobileSync = true;
+      _detachViewVisibilityObserver() {
+        if (!this._viewVisibilityObserver) {
+          return;
+        }
+        this._viewVisibilityObserver.disconnect();
+        this._viewVisibilityObserver = null;
+        this._hasObservedViewport = false;
+        this._wasInViewport = false;
+        this._wasHiddenByLayout = false;
       }
-      return ok;
-    } catch (_error) {
-      this._pendingBackgroundMobileSync = true;
-      return false;
-    }
-  }
-
-  async _syncLegacyBackgroundMobileFallback(webhookId, enabled, force = false) {
-    if (
-      this._config?.security?.allow_webhooks_for_non_admin === false
-      && !this._hass?.user?.is_admin
-    ) {
-      return false;
-    }
-    const payload = this._buildBackgroundMobileWebhookPayload({ enabled });
-    if (backgroundMobilePayloadOverLimit(payload)) {
-      return false;
-    }
-    const signature = `${webhookId}:${payload.config_hash}:${payload.chunk_count}`;
-    if (!force && signature === this._lastBackgroundMobileSyncSignature) {
-      return true;
-    }
-    const post = typeof window !== "undefined" && window.NodaliaUtils?.postHomeAssistantWebhook;
-    if (typeof post !== "function") {
-      return false;
-    }
-    try {
-      const ok = Boolean(await post(webhookId, payload, this._hass));
-      if (ok) {
-        this._lastBackgroundMobileSyncSignature = signature;
+      _onViewportResize() {
+        if (this._viewportResizeTimer) {
+          window.clearTimeout(this._viewportResizeTimer);
+        }
+        this._viewportResizeTimer = window.setTimeout(() => {
+          this._viewportResizeTimer = 0;
+          if (!this.isConnected) {
+            return;
+          }
+          const nextSignature = this._getRenderSignature();
+          if (nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
+            fireEvent(this, "iron-resize", {});
+            return;
+          }
+          this._lastRenderSignature = "";
+          this._renderIfChanged(true);
+          fireEvent(this, "iron-resize", {});
+        }, 160);
       }
-      return ok;
-    } catch (_error) {
-      return false;
-    }
-  }
-
-  /**
-   * Pulls the Engine inbox after a successful background sync so dismissals recorded on other
-   * devices are reflected here. The Engine remains the authority for delivered-alert history.
-   */
-  async _loadEngineInbox() {
-    const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
-    if (!backend || typeof backend.listNotificationInbox !== "function" || !this._hass) {
-      return false;
-    }
-    try {
-      const status = await backend.status(this._hass, { silent: true });
-      if (!backend.hasCapability(status, "notifications_inbox")) {
-        return false;
+      setConfig(config) {
+        this._config = normalizeConfig(config || {});
+        window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
+        this._expanded = false;
+        this._animateContentOnNextRender = true;
+        this._loadDismissed();
+        this._loadMobileSent();
+        this._loadMobileCooldown();
+        this._syncSharedDismissedFromHass(true);
+        this._invalidateTrackedEntityStampCache();
+        this._lastRenderSignature = "";
+        if (this._hass) {
+          this._renderIfChanged(true);
+        }
+        this._scheduleBackgroundMobileSync(320, { force: true });
+        this._refreshCalendarEventsSoon(0);
+        this._refreshWeatherForecastsSoon(0);
+        this._scheduleQuietHoursWake();
       }
-      const result = await backend.listNotificationInbox(this._hass, backend.notificationProfileId(this._config));
-      const inbox = Array.isArray(result?.inbox) ? result.inbox : [];
-      this._engineInbox = inbox;
-      const dismissed = inbox
-        .filter(entry => entry?.dismissed === true)
-        .map(entry => String(entry?.alert_id || entry?.id || ""))
-        .filter(Boolean);
-      if (this._mergeNativeDismissed(dismissed)) {
+      set hass(hass) {
+        this._hass = hass;
+        if (!this.isConnected) {
+          return;
+        }
+        const nextRouteKey = this._getRouteKey();
+        if (nextRouteKey && nextRouteKey !== this._lastRouteKey) {
+          this._lastRouteKey = nextRouteKey;
+          this._replayEntranceAnimation({ force: true });
+        }
+        this._syncTrackedEntitiesStamp(hass);
+        this._syncSharedDismissedFromHass();
+        const nextSignature = this._getRenderSignature(hass);
+        if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+          this._scheduleBackgroundMobileSync(this._pendingBackgroundMobileSync ? 0 : 320);
+          return;
+        }
+        this._refreshCalendarEventsSoon();
+        this._refreshWeatherForecastsSoon();
+        this._lastRenderSignature = nextSignature;
         this._renderIfChanged(true);
+        this._scheduleBackgroundMobileSync();
       }
-      return true;
-    } catch (_error) {
-      return false;
-    }
-  }
-
-  _getStorageKey() {
-    return this._config.storage_key || STORAGE_KEY;
-  }
-
-  _getMobileStorageKey() {
-    return `${this._getStorageKey()}:mobile_sent`;
-  }
-
-  _dismissKey(id) {
-    return notificationHash(id);
-  }
-
-  _nativeDismissalIds(id) {
-    const raw = String(id || "").trim();
-    if (!raw) {
-      return [];
-    }
-    const result = [raw];
-    const comfort = raw.match(/^comfort:(hot|cold):(?:climate:)?([^:]+)/);
-    if (comfort) {
-      result.push(`${comfort[1]}:${comfort[2]}`);
-    }
-    const humidity = raw.match(/^humidity:([^:]+):(high|low)(?:$|:)/);
-    if (humidity) {
-      result.push(`humidity_${humidity[2]}:${humidity[1]}`);
-    }
-    const match = raw.match(
-      /^(hot|cold|humidity_high|humidity_low|battery_low|humidifier_fill_low|humidifier_fill_full|ink_low|door|window|motion|vacuum|rain|media_absence|outdoor_hot|outdoor_cold):([^:]+)(?::|$)/,
-    );
-    if (match) {
-      result.push(`${match[1]}:${match[2]}`);
-    }
-    return [...new Set(result)];
-  }
-
-  _mergeNativeDismissed(tokens) {
-    if (!Array.isArray(tokens) || !tokens.length) {
-      return false;
-    }
-    let changed = false;
-    tokens.forEach(token => {
-      const value = String(token || "").trim();
-      if (value && !this._dismissed.has(value)) {
-        this._dismissed.add(value);
-        changed = true;
+      getCardSize() {
+        const count = this._getNotifications().length;
+        const hiddenCount = Math.max(0, count - (this._config?.max_visible || 1));
+        const collapsedStackDepth = this._expanded ? 0 : Math.min(4, hiddenCount);
+        return Math.max(3, Math.min(10, 2 + Math.ceil(Math.min(count, this._expanded ? 5 : 2) * 1.2) + collapsedStackDepth));
       }
-    });
-    if (changed && typeof localStorage !== "undefined") {
-      try {
-        localStorage.setItem(this._getStorageKey(), JSON.stringify([...this._dismissed].slice(-250)));
-      } catch (_error) {
-        // Native storage remains authoritative if browser storage is unavailable.
+      getGridOptions() {
+        return {
+          columns: "full",
+          min_columns: 2,
+          min_rows: 2,
+          rows: "auto"
+        };
       }
-    }
-    return changed;
-  }
-
-  _saveNativeDismissed(ids) {
-    const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
-    if (!backend || !this._hass) {
-      return;
-    }
-    const profileId = backend.notificationProfileId(this._config);
-    [...new Set((Array.isArray(ids) ? ids : [ids]).flatMap(id => this._nativeDismissalIds(id)))]
-      .forEach(id => {
-        void backend.status(this._hass, { silent: true })
-          .then(status => {
+      _getBackgroundMobileConfigPayload() {
+        return getBackgroundMobileConfigPayload(this._config, this._hass);
+      }
+      _buildBackgroundMobileWebhookPayload(options = {}) {
+        return buildBackgroundMobileWebhookPayload(this._config, this._hass, options);
+      }
+      _scheduleBackgroundMobileSync(delay = 320, options = {}) {
+        const config = this._config?.background_mobile || {};
+        if (options.force === true) {
+          this._forceNextBackgroundMobileSync = true;
+        }
+        if (config.enabled !== true || !this._hass || !this.isConnected) {
+          this._pendingBackgroundMobileSync = config.enabled === true;
+          return;
+        }
+        this._pendingBackgroundMobileSync = false;
+        if (this._backgroundMobileSyncTimer) {
+          window.clearTimeout(this._backgroundMobileSyncTimer);
+        }
+        this._backgroundMobileSyncTimer = window.setTimeout(() => {
+          this._backgroundMobileSyncTimer = 0;
+          void this._syncBackgroundMobileConfig();
+        }, Math.max(0, Math.min(3e3, Number(delay) || 0)));
+      }
+      async _syncBackgroundMobileConfig() {
+        const webhookId = String(this._config?.background_mobile?.webhook || "").trim();
+        if (this._config?.background_mobile?.enabled !== true || !this.isConnected) {
+          return false;
+        }
+        const expectedNative = getBackgroundMobileNativeSignature(this._config, this._hass);
+        const previousNative = String(this._lastBackgroundMobileNativeSignature || "");
+        const force = this._forceNextBackgroundMobileSync === true;
+        this._forceNextBackgroundMobileSync = false;
+        const nativeRecentlyChecked = Date.now() - this._lastBackgroundMobileNativeCheckAt < BACKGROUND_MOBILE_NATIVE_HEALTH_TTL_MS;
+        if (!force && nativeRecentlyChecked && (previousNative === expectedNative.signature || previousNative === `active:${expectedNative.profileId}`)) {
+          const helperStandby = await setLegacyBackgroundMobileFallback(this._hass, false);
+          const webhookStandby = webhookId ? await this._syncLegacyBackgroundMobileFallback(webhookId, false) : true;
+          const legacyStandby = helperStandby && webhookStandby;
+          this._pendingBackgroundMobileSync = !legacyStandby;
+          return true;
+        }
+        this._lastBackgroundMobileNativeCheckAt = Date.now();
+        const native = await syncBackgroundMobileNative(this._hass, this._config);
+        if (native.synced) {
+          const dismissalsChanged = this._mergeNativeDismissed(native.dismissed);
+          this._lastBackgroundMobileNativeSignature = native.signature;
+          const helperStandby = await setLegacyBackgroundMobileFallback(this._hass, false);
+          const webhookStandby = webhookId ? await this._syncLegacyBackgroundMobileFallback(webhookId, false, force) : true;
+          const legacyStandby = helperStandby && webhookStandby;
+          this._pendingBackgroundMobileSync = !legacyStandby;
+          void this._loadEngineInbox();
+          if (dismissalsChanged) {
+            this._renderIfChanged(true);
+          }
+          return true;
+        }
+        if (native.transient === true || native.available === true) {
+          this._pendingBackgroundMobileSync = true;
+          return false;
+        }
+        this._lastBackgroundMobileNativeSignature = "";
+        if (!webhookId) {
+          await setLegacyBackgroundMobileFallback(this._hass, true);
+          this._pendingBackgroundMobileSync = true;
+          return false;
+        }
+        if (this._config?.security?.allow_webhooks_for_non_admin === false && !this._hass?.user?.is_admin) {
+          if (typeof console !== "undefined" && typeof console.warn === "function") {
+            console.warn("Nodalia Notifications Card: background mobile sync webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false).");
+          }
+          await setLegacyBackgroundMobileFallback(this._hass, true);
+          return false;
+        }
+        const payload = this._buildBackgroundMobileWebhookPayload({ enabled: true });
+        if (backgroundMobilePayloadOverLimit(payload)) {
+          if (typeof console !== "undefined" && typeof console.warn === "function") {
+            console.warn(
+              `Nodalia Notifications Card: background mobile config exceeds ${BACKGROUND_MOBILE_MAX_CHUNKS} chunks (${payload.chunk_count}); sync skipped.`
+            );
+          }
+          this._lastBackgroundMobileSyncSignature = "";
+          this._pendingBackgroundMobileSync = true;
+          await setLegacyBackgroundMobileFallback(this._hass, true);
+          return false;
+        }
+        const signature = `${webhookId}:${payload.config_hash}:${payload.chunk_count}`;
+        if (!force && signature === this._lastBackgroundMobileSyncSignature) {
+          await setLegacyBackgroundMobileFallback(this._hass, true);
+          return true;
+        }
+        const post = typeof window !== "undefined" && window.NodaliaUtils?.postHomeAssistantWebhook;
+        if (typeof post !== "function") {
+          this._pendingBackgroundMobileSync = true;
+          return false;
+        }
+        try {
+          const ok = Boolean(await post(webhookId, payload, this._hass));
+          if (ok) {
+            this._lastBackgroundMobileSyncSignature = signature;
+            this._pendingBackgroundMobileSync = false;
+            await setLegacyBackgroundMobileFallback(this._hass, true);
+          } else {
+            this._pendingBackgroundMobileSync = true;
+          }
+          return ok;
+        } catch (_error) {
+          this._pendingBackgroundMobileSync = true;
+          return false;
+        }
+      }
+      async _syncLegacyBackgroundMobileFallback(webhookId, enabled, force = false) {
+        if (this._config?.security?.allow_webhooks_for_non_admin === false && !this._hass?.user?.is_admin) {
+          return false;
+        }
+        const payload = this._buildBackgroundMobileWebhookPayload({ enabled });
+        if (backgroundMobilePayloadOverLimit(payload)) {
+          return false;
+        }
+        const signature = `${webhookId}:${payload.config_hash}:${payload.chunk_count}`;
+        if (!force && signature === this._lastBackgroundMobileSyncSignature) {
+          return true;
+        }
+        const post = typeof window !== "undefined" && window.NodaliaUtils?.postHomeAssistantWebhook;
+        if (typeof post !== "function") {
+          return false;
+        }
+        try {
+          const ok = Boolean(await post(webhookId, payload, this._hass));
+          if (ok) {
+            this._lastBackgroundMobileSyncSignature = signature;
+          }
+          return ok;
+        } catch (_error) {
+          return false;
+        }
+      }
+      /**
+       * Pulls the Engine inbox after a successful background sync so dismissals recorded on other
+       * devices are reflected here. The Engine remains the authority for delivered-alert history.
+       */
+      async _loadEngineInbox() {
+        const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
+        if (!backend || typeof backend.listNotificationInbox !== "function" || !this._hass) {
+          return false;
+        }
+        try {
+          const status = await backend.status(this._hass, { silent: true });
+          if (!backend.hasCapability(status, "notifications_inbox")) {
+            return false;
+          }
+          const result = await backend.listNotificationInbox(this._hass, backend.notificationProfileId(this._config));
+          const inbox = Array.isArray(result?.inbox) ? result.inbox : [];
+          this._engineInbox = inbox;
+          const dismissed = inbox.filter((entry) => entry?.dismissed === true).map((entry) => String(entry?.alert_id || entry?.id || "")).filter(Boolean);
+          if (this._mergeNativeDismissed(dismissed)) {
+            this._renderIfChanged(true);
+          }
+          return true;
+        } catch (_error) {
+          return false;
+        }
+      }
+      _getStorageKey() {
+        return this._config.storage_key || STORAGE_KEY;
+      }
+      _getMobileStorageKey() {
+        return `${this._getStorageKey()}:mobile_sent`;
+      }
+      _dismissKey(id) {
+        return notificationHash(id);
+      }
+      _nativeDismissalIds(id) {
+        const raw = String(id || "").trim();
+        if (!raw) {
+          return [];
+        }
+        const result = [raw];
+        const comfort = raw.match(/^comfort:(hot|cold):(?:climate:)?([^:]+)/);
+        if (comfort) {
+          result.push(`${comfort[1]}:${comfort[2]}`);
+        }
+        const humidity = raw.match(/^humidity:([^:]+):(high|low)(?:$|:)/);
+        if (humidity) {
+          result.push(`humidity_${humidity[2]}:${humidity[1]}`);
+        }
+        const match = raw.match(
+          /^(hot|cold|humidity_high|humidity_low|battery_low|humidifier_fill_low|humidifier_fill_full|ink_low|door|window|motion|vacuum|rain|media_absence|outdoor_hot|outdoor_cold):([^:]+)(?::|$)/
+        );
+        if (match) {
+          result.push(`${match[1]}:${match[2]}`);
+        }
+        return [...new Set(result)];
+      }
+      _mergeNativeDismissed(tokens) {
+        if (!Array.isArray(tokens) || !tokens.length) {
+          return false;
+        }
+        let changed = false;
+        tokens.forEach((token) => {
+          const value = String(token || "").trim();
+          if (value && !this._dismissed.has(value)) {
+            this._dismissed.add(value);
+            changed = true;
+          }
+        });
+        if (changed && typeof localStorage !== "undefined") {
+          try {
+            localStorage.setItem(this._getStorageKey(), JSON.stringify([...this._dismissed].slice(-250)));
+          } catch (_error) {
+          }
+        }
+        return changed;
+      }
+      _saveNativeDismissed(ids) {
+        const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
+        if (!backend || !this._hass) {
+          return;
+        }
+        const profileId = backend.notificationProfileId(this._config);
+        [...new Set((Array.isArray(ids) ? ids : [ids]).flatMap((id) => this._nativeDismissalIds(id)))].forEach((id) => {
+          void backend.status(this._hass, { silent: true }).then((status) => {
             if (status?.available && status.capabilities?.includes("notifications_shared_dismissals")) {
               return backend.dismissNotification(this._hass, id, profileId);
             }
             return null;
-          })
-          .catch(() => {});
-      });
-  }
-
-  _parseDismissedTokens(value) {
-    const raw = String(value || "").trim();
-    if (!raw) {
-      return [];
-    }
-    try {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        return parsed.map(item => String(item || "").trim()).filter(Boolean);
-      }
-    } catch (_error) {
-      // Not JSON, continue with compact helper formats.
-    }
-    const body = raw.startsWith("v1:") ? raw.slice(3) : raw;
-    return body
-      .split(/[|,\n]/)
-      .map(item => String(item || "").trim())
-      .filter(Boolean);
-  }
-
-  _loadDismissed() {
-    if (typeof localStorage === "undefined") {
-      this._dismissed = new Set();
-      return;
-    }
-    try {
-      const raw = JSON.parse(localStorage.getItem(this._getStorageKey()) || "[]");
-      this._dismissed = new Set(Array.isArray(raw) ? raw.map(String) : []);
-    } catch (_error) {
-      this._dismissed = new Set();
-    }
-  }
-
-  _loadMobileSent() {
-    if (typeof localStorage === "undefined") {
-      this._mobileSent = new Set();
-      return;
-    }
-    try {
-      const raw = JSON.parse(localStorage.getItem(this._getMobileStorageKey()) || "[]");
-      this._mobileSent = new Set(Array.isArray(raw) ? raw.map(String) : []);
-    } catch (_error) {
-      this._mobileSent = new Set();
-    }
-  }
-
-  _saveDismissed() {
-    if (typeof localStorage === "undefined") {
-      this._saveSharedDismissed();
-      return;
-    }
-    try {
-      localStorage.setItem(this._getStorageKey(), JSON.stringify([...this._dismissed].slice(-250)));
-    } catch (_error) {
-      // Ignore storage quota/private mode errors.
-    }
-    this._saveSharedDismissed();
-  }
-
-  _saveMobileSent() {
-    if (typeof localStorage === "undefined") {
-      return;
-    }
-    try {
-      localStorage.setItem(this._getMobileStorageKey(), JSON.stringify([...this._mobileSent].slice(-180)));
-    } catch (_error) {
-      // Ignore storage quota/private mode errors.
-    }
-  }
-
-  _getMobileCooldownStorageKey() {
-    return `${this._getStorageKey()}:${MOBILE_COOLDOWN_STORAGE_KEY}`;
-  }
-
-  _loadMobileCooldown() {
-    if (typeof localStorage === "undefined") {
-      this._mobileCooldownMap = {};
-      return;
-    }
-    try {
-      const raw = JSON.parse(localStorage.getItem(this._getMobileCooldownStorageKey()) || "{}");
-      this._mobileCooldownMap = isObject(raw) ? raw : {};
-    } catch (_error) {
-      this._mobileCooldownMap = {};
-    }
-  }
-
-  _saveMobileCooldown() {
-    if (typeof localStorage === "undefined") {
-      return;
-    }
-    try {
-      const entries = Object.entries(this._mobileCooldownMap || {})
-        .sort((left, right) => Number(right[1]) - Number(left[1]))
-        .slice(0, 240);
-      this._mobileCooldownMap = Object.fromEntries(entries);
-      localStorage.setItem(this._getMobileCooldownStorageKey(), JSON.stringify(this._mobileCooldownMap));
-    } catch (_error) {
-      // Ignore storage quota/private mode errors.
-    }
-  }
-
-  _isMobileCooldownActive(item) {
-    const mobileCfg = this._config?.mobile_notifications || {};
-    const cooldownMinutes = Math.max(0, Number(mobileCfg.cooldown_minutes) || 0);
-    if (!cooldownMinutes) {
-      return false;
-    }
-    const windowMs = cooldownMinutes * 60 * 1000;
-    const now = Date.now();
-    const keys = [buildMobileAlertIdentity(item)];
-    if (mobileCfg.group_similar === true) {
-      keys.push(buildMobileGroupIdentity(item));
-    }
-    return keys.some(key => {
-      const timestamp = Number(this._mobileCooldownMap?.[key]);
-      return Number.isFinite(timestamp) && now - timestamp < windowMs;
-    });
-  }
-
-  _recordMobileCooldown(item) {
-    const mobileCfg = this._config?.mobile_notifications || {};
-    const cooldownMinutes = Math.max(0, Number(mobileCfg.cooldown_minutes) || 0);
-    if (!cooldownMinutes || !item) {
-      return;
-    }
-    const now = Date.now();
-    const keys = [buildMobileAlertIdentity(item)];
-    if (mobileCfg.group_similar === true) {
-      keys.push(buildMobileGroupIdentity(item));
-    }
-    keys.forEach(key => {
-      if (key) {
-        this._mobileCooldownMap[key] = now;
-      }
-    });
-    this._saveMobileCooldown();
-  }
-
-  _resolveMobileDeliveryForItem(item) {
-    const mobileCfg = this._config?.mobile_notifications || {};
-    const targets = [
-      ...(Array.isArray(mobileCfg.entities) ? mobileCfg.entities : []),
-      ...(Array.isArray(mobileCfg.services) ? mobileCfg.services : []),
-    ];
-    return resolveMobileDeliveryState({
-      alertPolicy: item?.mobilePolicy,
-      defaultPolicy: mobileCfg.default_policy,
-      globalMobileEnabled: mobileCfg.enabled === true,
-      minSeverity: mobileCfg.min_severity,
-      alertSeverity: item?.severity,
-      backgroundMobileEnabled: this._config?.background_mobile?.enabled === true,
-      notifyTargetsConfigured: targets.length > 0,
-      mobileContext: this._config?.mobile_context,
-      quietHours: this._config?.mobile_context?.quiet_hours,
-      presenceOccupancy: resolvePresenceOccupancy(this._hass, this._config?.presence_entity),
-      cooldownActive: this._isMobileCooldownActive(item),
-      now: new Date(),
-    });
-  }
-
-  _enrichMobileDelivery(item) {
-    const mobileDeliveryState = this._resolveMobileDeliveryForItem(item);
-    return {
-      ...item,
-      mobileDeliveryState,
-      mobilePolicy: normalizeMobilePolicy(item?.mobilePolicy ?? "auto"),
-    };
-  }
-
-  static pushExternalAlerts(target, alerts = []) {
-    if (!target || typeof target._ingestRuntimeExternalAlerts !== "function") {
-      return false;
-    }
-    target._ingestRuntimeExternalAlerts(alerts);
-    return true;
-  }
-
-  _ingestRuntimeExternalAlerts(alerts = []) {
-    this._runtimeExternalAlerts = normalizeExternalAlerts(alerts);
-    this._renderIfChanged(true);
-  }
-
-  _syncSharedDismissedFromHass(force = false) {
-    const entityId = this._config.dismissed_entity;
-    if (!entityId || !this._hass) {
-      return false;
-    }
-    const rawState = String(this._hass.states?.[entityId]?.state || "").trim();
-    if (!force && rawState === this._lastDismissedHelperState) {
-      return false;
-    }
-    this._lastDismissedHelperState = rawState;
-    const tokens = this._parseDismissedTokens(rawState);
-    if (!tokens.length) {
-      return false;
-    }
-    let changed = false;
-    tokens.forEach(token => {
-      if (!this._dismissed.has(token)) {
-        this._dismissed.add(token);
-        changed = true;
-      }
-    });
-    if (changed && typeof localStorage !== "undefined") {
-      try {
-        localStorage.setItem(this._getStorageKey(), JSON.stringify([...this._dismissed].slice(-250)));
-      } catch (_error) {
-        // Ignore storage quota/private mode errors.
-      }
-    }
-    return changed;
-  }
-
-  _saveSharedDismissed() {
-    const entityId = this._config.dismissed_entity;
-    if (!entityId || !this._hass || typeof this._hass.callService !== "function") {
-      return;
-    }
-    const hashes = [...new Set([...this._dismissed]
-      .map(id => (String(id).includes(":") ? this._dismissKey(id) : String(id)))
-      .filter(Boolean))]
-      .slice(-30);
-    const value = hashes.length ? `v1:${hashes.join("|")}` : "";
-    if (value === this._lastDismissedHelperState) {
-      return;
-    }
-    this._lastDismissedHelperState = value;
-    Promise.resolve().then(() => this._hass.callService("input_text", "set_value", {
-      entity_id: entityId,
-      value,
-    })).catch(() => {
-      // Helper sync is best-effort; the local dismiss state still applies.
-    });
-  }
-
-  _calendarDismissalsHydrated() {
-    return !this._config.calendar_entities.length || this._lastCalendarRefresh > 0;
-  }
-
-  _weatherDismissalsHydrated() {
-    return !this._config.weather_entities.length || this._lastWeatherRefresh > 0;
-  }
-
-  _canPruneDismissedToken(id) {
-    const text = String(id || "");
-    if (!text) {
-      return true;
-    }
-    if (!text.includes(":")) {
-      return this._calendarDismissalsHydrated() && this._weatherDismissalsHydrated();
-    }
-    if (text.startsWith("calendar:")) {
-      return this._calendarDismissalsHydrated();
-    }
-    if (text.startsWith("weather:")) {
-      return this._weatherDismissalsHydrated();
-    }
-    return true;
-  }
-
-  _pruneDismissed(currentIds) {
-    const keep = new Set(currentIds);
-    currentIds.forEach(id => {
-      keep.add(this._dismissKey(id));
-      this._nativeDismissalIds(id).forEach(nativeId => keep.add(nativeId));
-    });
-    let changed = false;
-    this._dismissed.forEach(id => {
-      if (!this._canPruneDismissedToken(id)) {
-        return;
-      }
-      if (!keep.has(id)) {
-        this._dismissed.delete(id);
-        changed = true;
-      }
-    });
-    if (changed) {
-      this._saveDismissed();
-    }
-  }
-
-  _isDismissed(item) {
-    if (!item?.id) {
-      return false;
-    }
-    return this._dismissed.has(item.id)
-      || this._dismissed.has(this._dismissKey(item.id))
-      || this._nativeDismissalIds(item.id).some(id => this._dismissed.has(id));
-  }
-
-  _refreshCalendarEventsSoon(delay = null) {
-    if (!this.isConnected || !this._hass || !this._config.calendar_entities.length) {
-      return;
-    }
-    if (this._calendarRefreshTimer && delay === null) {
-      return;
-    }
-    const intervalMs = this._config.refresh_interval * 1000;
-    const elapsed = Date.now() - this._lastCalendarRefresh;
-    const nextDelay = delay === null ? Math.max(0, intervalMs - elapsed) : Math.max(0, delay);
-    if (this._calendarRefreshTimer) {
-      window.clearTimeout(this._calendarRefreshTimer);
-    }
-    this._calendarRefreshTimer = window.setTimeout(() => {
-      this._calendarRefreshTimer = 0;
-      this._refreshCalendarEvents();
-    }, nextDelay);
-  }
-
-  async _refreshCalendarEvents() {
-    if (!this._hass || !this._config.calendar_entities.length || this._calendarRefreshInFlight) {
-      return;
-    }
-    if (typeof this._hass.callApi !== "function") {
-      this._calendarEvents = [];
-      this._calendarError = this._text("messages.calendarQueryFailed", "Could not query calendars.");
-      this._renderIfChanged(true);
-      return;
-    }
-    this._calendarRefreshInFlight = true;
-    this._calendarLoading = true;
-    this._renderIfChanged(true);
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
-    const events = [];
-    try {
-      for (const entityId of this._config.calendar_entities) {
-        if (!this.isConnected) {
-          return;
-        }
-        const path = `calendars/${encodeURIComponent(entityId)}?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`;
-        const raw = await this._hass.callApi("GET", path);
-        if (!this.isConnected) {
-          return;
-        }
-        normalizeCalendarFetchResult(raw).forEach(event => {
-          events.push({ ...event, _entity: entityId });
+          }).catch(() => {
+          });
         });
       }
-      events.sort((left, right) => {
-        const a = calendarEventDate(left.start)?.getTime() || 0;
-        const b = calendarEventDate(right.start)?.getTime() || 0;
-        return a - b;
-      });
-      this._calendarEvents = events;
-      this._calendarError = "";
-      this._lastCalendarRefresh = Date.now();
-      this._rebuildCalendarEventsSignature();
-    } catch (_error) {
-      this._calendarEvents = [];
-      this._calendarError = this._text("messages.calendarTodayLoadFailed", "Could not load today's calendar events.");
-    } finally {
-      this._calendarLoading = false;
-      this._calendarRefreshInFlight = false;
-      if (!this.isConnected) {
-        return;
-      }
-      this._renderIfChanged(true);
-      this._refreshCalendarEventsSoon();
-    }
-  }
-
-  _refreshWeatherForecastsSoon(delay = null) {
-    if (!this.isConnected || !this._hass || !this._config.weather_entities.length) {
-      return;
-    }
-    if (this._weatherRefreshTimer && delay === null) {
-      return;
-    }
-    const intervalMs = Math.max(this._config.refresh_interval * 1000, 10 * 60 * 1000);
-    const elapsed = Date.now() - this._lastWeatherRefresh;
-    const nextDelay = delay === null ? Math.max(0, intervalMs - elapsed) : Math.max(0, delay);
-    if (this._weatherRefreshTimer) {
-      window.clearTimeout(this._weatherRefreshTimer);
-    }
-    this._weatherRefreshTimer = window.setTimeout(() => {
-      this._weatherRefreshTimer = 0;
-      this._refreshWeatherForecasts();
-    }, nextDelay);
-  }
-
-  async _refreshWeatherForecasts() {
-    if (!this._hass || !this._config.weather_entities.length || this._weatherRefreshInFlight) {
-      return;
-    }
-    this._weatherRefreshInFlight = true;
-    const next = {};
-    const legacyForecasts = () => {
-      this._config.weather_entities.forEach(entityId => {
-        const rows = normalizeWeatherForecastResult(this._hass.states?.[entityId]?.attributes?.forecast, entityId);
-        if (rows.length && !next[entityId]?.length) {
-          next[entityId] = rows;
+      _parseDismissedTokens(value) {
+        const raw = String(value || "").trim();
+        if (!raw) {
+          return [];
         }
-      });
-    };
-    try {
-      if (typeof this._hass.callWS === "function") {
-        for (const forecastType of ["hourly", "daily"]) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            return parsed.map((item) => String(item || "").trim()).filter(Boolean);
+          }
+        } catch (_error) {
+        }
+        const body = raw.startsWith("v1:") ? raw.slice(3) : raw;
+        return body.split(/[|,\n]/).map((item) => String(item || "").trim()).filter(Boolean);
+      }
+      _loadDismissed() {
+        if (typeof localStorage === "undefined") {
+          this._dismissed = /* @__PURE__ */ new Set();
+          return;
+        }
+        try {
+          const raw = JSON.parse(localStorage.getItem(this._getStorageKey()) || "[]");
+          this._dismissed = new Set(Array.isArray(raw) ? raw.map(String) : []);
+        } catch (_error) {
+          this._dismissed = /* @__PURE__ */ new Set();
+        }
+      }
+      _loadMobileSent() {
+        if (typeof localStorage === "undefined") {
+          this._mobileSent = /* @__PURE__ */ new Set();
+          return;
+        }
+        try {
+          const raw = JSON.parse(localStorage.getItem(this._getMobileStorageKey()) || "[]");
+          this._mobileSent = new Set(Array.isArray(raw) ? raw.map(String) : []);
+        } catch (_error) {
+          this._mobileSent = /* @__PURE__ */ new Set();
+        }
+      }
+      _saveDismissed() {
+        if (typeof localStorage === "undefined") {
+          this._saveSharedDismissed();
+          return;
+        }
+        try {
+          localStorage.setItem(this._getStorageKey(), JSON.stringify([...this._dismissed].slice(-250)));
+        } catch (_error) {
+        }
+        this._saveSharedDismissed();
+      }
+      _saveMobileSent() {
+        if (typeof localStorage === "undefined") {
+          return;
+        }
+        try {
+          localStorage.setItem(this._getMobileStorageKey(), JSON.stringify([...this._mobileSent].slice(-180)));
+        } catch (_error) {
+        }
+      }
+      _getMobileCooldownStorageKey() {
+        return `${this._getStorageKey()}:${MOBILE_COOLDOWN_STORAGE_KEY}`;
+      }
+      _loadMobileCooldown() {
+        if (typeof localStorage === "undefined") {
+          this._mobileCooldownMap = {};
+          return;
+        }
+        try {
+          const raw = JSON.parse(localStorage.getItem(this._getMobileCooldownStorageKey()) || "{}");
+          this._mobileCooldownMap = isObject(raw) ? raw : {};
+        } catch (_error) {
+          this._mobileCooldownMap = {};
+        }
+      }
+      _saveMobileCooldown() {
+        if (typeof localStorage === "undefined") {
+          return;
+        }
+        try {
+          const entries = Object.entries(this._mobileCooldownMap || {}).sort((left, right) => Number(right[1]) - Number(left[1])).slice(0, 240);
+          this._mobileCooldownMap = Object.fromEntries(entries);
+          localStorage.setItem(this._getMobileCooldownStorageKey(), JSON.stringify(this._mobileCooldownMap));
+        } catch (_error) {
+        }
+      }
+      _isMobileCooldownActive(item) {
+        const mobileCfg = this._config?.mobile_notifications || {};
+        const cooldownMinutes = Math.max(0, Number(mobileCfg.cooldown_minutes) || 0);
+        if (!cooldownMinutes) {
+          return false;
+        }
+        const windowMs = cooldownMinutes * 60 * 1e3;
+        const now = Date.now();
+        const keys = [buildMobileAlertIdentity(item)];
+        if (mobileCfg.group_similar === true) {
+          keys.push(buildMobileGroupIdentity(item));
+        }
+        return keys.some((key) => {
+          const timestamp = Number(this._mobileCooldownMap?.[key]);
+          return Number.isFinite(timestamp) && now - timestamp < windowMs;
+        });
+      }
+      _recordMobileCooldown(item) {
+        const mobileCfg = this._config?.mobile_notifications || {};
+        const cooldownMinutes = Math.max(0, Number(mobileCfg.cooldown_minutes) || 0);
+        if (!cooldownMinutes || !item) {
+          return;
+        }
+        const now = Date.now();
+        const keys = [buildMobileAlertIdentity(item)];
+        if (mobileCfg.group_similar === true) {
+          keys.push(buildMobileGroupIdentity(item));
+        }
+        keys.forEach((key) => {
+          if (key) {
+            this._mobileCooldownMap[key] = now;
+          }
+        });
+        this._saveMobileCooldown();
+      }
+      _resolveMobileDeliveryForItem(item) {
+        const mobileCfg = this._config?.mobile_notifications || {};
+        const targets = [
+          ...Array.isArray(mobileCfg.entities) ? mobileCfg.entities : [],
+          ...Array.isArray(mobileCfg.services) ? mobileCfg.services : []
+        ];
+        return resolveMobileDeliveryState({
+          alertPolicy: item?.mobilePolicy,
+          defaultPolicy: mobileCfg.default_policy,
+          globalMobileEnabled: mobileCfg.enabled === true,
+          minSeverity: mobileCfg.min_severity,
+          alertSeverity: item?.severity,
+          backgroundMobileEnabled: this._config?.background_mobile?.enabled === true,
+          notifyTargetsConfigured: targets.length > 0,
+          mobileContext: this._config?.mobile_context,
+          quietHours: this._config?.mobile_context?.quiet_hours,
+          presenceOccupancy: resolvePresenceOccupancy(this._hass, this._config?.presence_entity),
+          cooldownActive: this._isMobileCooldownActive(item),
+          now: /* @__PURE__ */ new Date()
+        });
+      }
+      _enrichMobileDelivery(item) {
+        const mobileDeliveryState = this._resolveMobileDeliveryForItem(item);
+        return {
+          ...item,
+          mobileDeliveryState,
+          mobilePolicy: normalizeMobilePolicy(item?.mobilePolicy ?? "auto")
+        };
+      }
+      static pushExternalAlerts(target, alerts = []) {
+        if (!target || typeof target._ingestRuntimeExternalAlerts !== "function") {
+          return false;
+        }
+        target._ingestRuntimeExternalAlerts(alerts);
+        return true;
+      }
+      _ingestRuntimeExternalAlerts(alerts = []) {
+        this._runtimeExternalAlerts = normalizeExternalAlerts(alerts);
+        this._renderIfChanged(true);
+      }
+      _syncSharedDismissedFromHass(force = false) {
+        const entityId = this._config.dismissed_entity;
+        if (!entityId || !this._hass) {
+          return false;
+        }
+        const rawState = String(this._hass.states?.[entityId]?.state || "").trim();
+        if (!force && rawState === this._lastDismissedHelperState) {
+          return false;
+        }
+        this._lastDismissedHelperState = rawState;
+        const tokens = this._parseDismissedTokens(rawState);
+        if (!tokens.length) {
+          return false;
+        }
+        let changed = false;
+        tokens.forEach((token) => {
+          if (!this._dismissed.has(token)) {
+            this._dismissed.add(token);
+            changed = true;
+          }
+        });
+        if (changed && typeof localStorage !== "undefined") {
+          try {
+            localStorage.setItem(this._getStorageKey(), JSON.stringify([...this._dismissed].slice(-250)));
+          } catch (_error) {
+          }
+        }
+        return changed;
+      }
+      _saveSharedDismissed() {
+        const entityId = this._config.dismissed_entity;
+        if (!entityId || !this._hass || typeof this._hass.callService !== "function") {
+          return;
+        }
+        const hashes = [...new Set([...this._dismissed].map((id) => String(id).includes(":") ? this._dismissKey(id) : String(id)).filter(Boolean))].slice(-30);
+        const value = hashes.length ? `v1:${hashes.join("|")}` : "";
+        if (value === this._lastDismissedHelperState) {
+          return;
+        }
+        this._lastDismissedHelperState = value;
+        Promise.resolve().then(() => this._hass.callService("input_text", "set_value", {
+          entity_id: entityId,
+          value
+        })).catch(() => {
+        });
+      }
+      _calendarDismissalsHydrated() {
+        return !this._config.calendar_entities.length || this._lastCalendarRefresh > 0;
+      }
+      _weatherDismissalsHydrated() {
+        return !this._config.weather_entities.length || this._lastWeatherRefresh > 0;
+      }
+      _canPruneDismissedToken(id) {
+        const text = String(id || "");
+        if (!text) {
+          return true;
+        }
+        if (!text.includes(":")) {
+          return this._calendarDismissalsHydrated() && this._weatherDismissalsHydrated();
+        }
+        if (text.startsWith("calendar:")) {
+          return this._calendarDismissalsHydrated();
+        }
+        if (text.startsWith("weather:")) {
+          return this._weatherDismissalsHydrated();
+        }
+        return true;
+      }
+      _pruneDismissed(currentIds) {
+        const keep = new Set(currentIds);
+        currentIds.forEach((id) => {
+          keep.add(this._dismissKey(id));
+          this._nativeDismissalIds(id).forEach((nativeId) => keep.add(nativeId));
+        });
+        let changed = false;
+        this._dismissed.forEach((id) => {
+          if (!this._canPruneDismissedToken(id)) {
+            return;
+          }
+          if (!keep.has(id)) {
+            this._dismissed.delete(id);
+            changed = true;
+          }
+        });
+        if (changed) {
+          this._saveDismissed();
+        }
+      }
+      _isDismissed(item) {
+        if (!item?.id) {
+          return false;
+        }
+        return this._dismissed.has(item.id) || this._dismissed.has(this._dismissKey(item.id)) || this._nativeDismissalIds(item.id).some((id) => this._dismissed.has(id));
+      }
+      _refreshCalendarEventsSoon(delay = null) {
+        if (!this.isConnected || !this._hass || !this._config.calendar_entities.length) {
+          return;
+        }
+        if (this._calendarRefreshTimer && delay === null) {
+          return;
+        }
+        const intervalMs = this._config.refresh_interval * 1e3;
+        const elapsed = Date.now() - this._lastCalendarRefresh;
+        const nextDelay = delay === null ? Math.max(0, intervalMs - elapsed) : Math.max(0, delay);
+        if (this._calendarRefreshTimer) {
+          window.clearTimeout(this._calendarRefreshTimer);
+        }
+        this._calendarRefreshTimer = window.setTimeout(() => {
+          this._calendarRefreshTimer = 0;
+          this._refreshCalendarEvents();
+        }, nextDelay);
+      }
+      async _refreshCalendarEvents() {
+        if (!this._hass || !this._config.calendar_entities.length || this._calendarRefreshInFlight) {
+          return;
+        }
+        if (typeof this._hass.callApi !== "function") {
+          this._calendarEvents = [];
+          this._calendarError = this._text("messages.calendarQueryFailed", "Could not query calendars.");
+          this._renderIfChanged(true);
+          return;
+        }
+        this._calendarRefreshInFlight = true;
+        this._calendarLoading = true;
+        this._renderIfChanged(true);
+        const now = /* @__PURE__ */ new Date();
+        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+        const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+        const events = [];
+        try {
+          for (const entityId of this._config.calendar_entities) {
+            if (!this.isConnected) {
+              return;
+            }
+            const path = `calendars/${encodeURIComponent(entityId)}?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`;
+            const raw = await this._hass.callApi("GET", path);
+            if (!this.isConnected) {
+              return;
+            }
+            normalizeCalendarFetchResult(raw).forEach((event) => {
+              events.push({ ...event, _entity: entityId });
+            });
+          }
+          events.sort((left, right) => {
+            const a = calendarEventDate(left.start)?.getTime() || 0;
+            const b = calendarEventDate(right.start)?.getTime() || 0;
+            return a - b;
+          });
+          this._calendarEvents = events;
+          this._calendarError = "";
+          this._lastCalendarRefresh = Date.now();
+          this._rebuildCalendarEventsSignature();
+        } catch (_error) {
+          this._calendarEvents = [];
+          this._calendarError = this._text("messages.calendarTodayLoadFailed", "Could not load today's calendar events.");
+        } finally {
+          this._calendarLoading = false;
+          this._calendarRefreshInFlight = false;
           if (!this.isConnected) {
             return;
           }
-          try {
-            const response = await this._hass.callWS({
-              type: "weather/get_forecasts",
-              entity_ids: this._config.weather_entities,
-              forecast_type: forecastType,
-            });
-            this._config.weather_entities.forEach(entityId => {
-              const rows = normalizeWeatherForecastResult(response, entityId);
-              if (rows.length && !next[entityId]?.length) {
-                next[entityId] = rows;
-              }
-            });
-            if (this._config.weather_entities.every(entityId => next[entityId]?.length)) {
-              break;
-            }
-          } catch (_error) {
-            // Some weather integrations expose daily but not hourly forecasts.
-          }
+          this._renderIfChanged(true);
+          this._refreshCalendarEventsSoon();
         }
       }
-      legacyForecasts();
-      this._weatherForecasts = next;
-      this._lastWeatherRefresh = Date.now();
-      this._rebuildWeatherForecastsSignature();
-    } catch (_error) {
-      legacyForecasts();
-      this._weatherForecasts = next;
-      this._lastWeatherRefresh = Date.now();
-      this._rebuildWeatherForecastsSignature();
-    } finally {
-      this._weatherRefreshInFlight = false;
-      if (!this.isConnected) {
-        return;
+      _refreshWeatherForecastsSoon(delay = null) {
+        if (!this.isConnected || !this._hass || !this._config.weather_entities.length) {
+          return;
+        }
+        if (this._weatherRefreshTimer && delay === null) {
+          return;
+        }
+        const intervalMs = Math.max(this._config.refresh_interval * 1e3, 10 * 60 * 1e3);
+        const elapsed = Date.now() - this._lastWeatherRefresh;
+        const nextDelay = delay === null ? Math.max(0, intervalMs - elapsed) : Math.max(0, delay);
+        if (this._weatherRefreshTimer) {
+          window.clearTimeout(this._weatherRefreshTimer);
+        }
+        this._weatherRefreshTimer = window.setTimeout(() => {
+          this._weatherRefreshTimer = 0;
+          this._refreshWeatherForecasts();
+        }, nextDelay);
       }
-      this._renderIfChanged(true);
-      this._refreshWeatherForecastsSoon();
-    }
-  }
-
-  _getRawNotifications() {
-    const items = [];
-    const hass = this._hass;
-    const now = new Date();
-    const add = item => {
-      if (!item?.id || !item.title) {
-        return;
+      async _refreshWeatherForecasts() {
+        if (!this._hass || !this._config.weather_entities.length || this._weatherRefreshInFlight) {
+          return;
+        }
+        this._weatherRefreshInFlight = true;
+        const next = {};
+        const legacyForecasts = () => {
+          this._config.weather_entities.forEach((entityId) => {
+            const rows = normalizeWeatherForecastResult(this._hass.states?.[entityId]?.attributes?.forecast, entityId);
+            if (rows.length && !next[entityId]?.length) {
+              next[entityId] = rows;
+            }
+          });
+        };
+        try {
+          if (typeof this._hass.callWS === "function") {
+            for (const forecastType of ["hourly", "daily"]) {
+              if (!this.isConnected) {
+                return;
+              }
+              try {
+                const response = await this._hass.callWS({
+                  type: "weather/get_forecasts",
+                  entity_ids: this._config.weather_entities,
+                  forecast_type: forecastType
+                });
+                this._config.weather_entities.forEach((entityId) => {
+                  const rows = normalizeWeatherForecastResult(response, entityId);
+                  if (rows.length && !next[entityId]?.length) {
+                    next[entityId] = rows;
+                  }
+                });
+                if (this._config.weather_entities.every((entityId) => next[entityId]?.length)) {
+                  break;
+                }
+              } catch (_error) {
+              }
+            }
+          }
+          legacyForecasts();
+          this._weatherForecasts = next;
+          this._lastWeatherRefresh = Date.now();
+          this._rebuildWeatherForecastsSignature();
+        } catch (_error) {
+          legacyForecasts();
+          this._weatherForecasts = next;
+          this._lastWeatherRefresh = Date.now();
+          this._rebuildWeatherForecastsSignature();
+        } finally {
+          this._weatherRefreshInFlight = false;
+          if (!this.isConnected) {
+            return;
+          }
+          this._renderIfChanged(true);
+          this._refreshWeatherForecastsSoon();
+        }
       }
-      const severity = normalizeSeverity(item.severity || "info");
-      items.push({
-        action: null,
-        createdAt: Date.now(),
-        icon: "mdi:bell-outline",
-        message: "",
-        source: "",
-        ...item,
-        severity,
-      });
-    };
-
-    this._calendarEvents.forEach(event => {
-      const start = calendarEventDate(event.start);
-      const end = calendarEventDate(event.end) || start;
-      if (!start || !isSameLocalDay(start, now) || (end && end.getTime() < now.getTime())) {
-        return;
-      }
-      const summary = String(event.summary || event.title || this._text("fallbackEvent", "Event")).trim();
-      const allDay = String(event.start?.date || "").length > 0 || (typeof event.start === "string" && event.start.length <= 10);
-      const timeText = allDay ? this._text("allDay", "All day") : formatTime(start);
-      const startsSoon = !allDay && start.getTime() - now.getTime() <= 90 * 60 * 1000 && start.getTime() >= now.getTime();
-      const eventKey = `${event._entity || ""}|${event.uid || event.id || ""}|${start.toISOString()}|${summary}`;
-      add({
-        id: `calendar:${event._entity}:${notificationHash(`${summary}|${start.toISOString()}`)}`,
-        title: startsSoon
-          ? this._smartTitle("calendar", "titles.calendarSoon", "Event soon", { source: friendlyName(hass, event._entity), time: timeText, value: summary }, event._entity)
-          : this._smartTitle("calendar", "titles.calendarToday", "Event due today", { source: friendlyName(hass, event._entity), time: timeText, value: summary }, event._entity),
-        message: this._smartMessage("calendar", "", `${timeText} · ${summary}`, { source: friendlyName(hass, event._entity), time: timeText, value: summary }, event._entity),
-        icon: "mdi:calendar-clock",
-        severity: startsSoon ? "warning" : "info",
-        source: friendlyName(hass, event._entity),
-        entity: event._entity,
-        tintColor: this._smartTint("calendar", event._entity),
-        mobilePolicy: this._smartMobilePolicyForKind("calendar", event._entity),
-        createdAt: start.getTime(),
-        action: this._smartAction("calendar", {
-          label: this._text("actions.openCalendar", "Open calendar"),
-          type: "calendar-popup",
-          entity: event._entity,
-          date: start.toISOString(),
-          eventKey,
-        }, "", event._entity),
-      });
-    });
-
-    if (this._calendarError) {
-      add({
-        id: `calendar:error:${notificationHash(this._calendarError)}`,
-        title: this._text("titles.calendarUnavailable", "Calendar unavailable"),
-        message: this._calendarError,
-        icon: "mdi:calendar-alert",
-        severity: "warning",
-        createdAt: Date.now(),
-      });
-    }
-
-    this._config.vacuum_entities.forEach(entityId => {
-      const state = hass?.states?.[entityId];
-      const value = String(state?.state || "").toLowerCase();
-      if (!state) {
-        return;
-      }
-      const name = friendlyName(hass, entityId);
-      const errorState = this._getVacuumErrorState(entityId);
-      const errorValue = this._getVacuumErrorValue(errorState);
-      const errorLabel = this._translateVacuumError(errorValue);
-      if (errorLabel || ["error", "unavailable"].includes(value)) {
-        const displayState = errorLabel || this._translateVacuumState(value, state.state);
-        add({
-          id: `vacuum:${entityId}:${errorValue || value}`,
-          title: this._smartTitle("vacuum", "titles.vacuumAttention", "Robot needs attention", { source: name, name, state: displayState }, entityId),
-          message: this._smartMessage("vacuum", "messages.vacuumAttention", "{name} is in state {state}.", { source: name, name, state: displayState }, entityId),
-          icon: "mdi:robot-vacuum-alert",
-          severity: "critical",
-          source: name,
-          entity: entityId,
-          tintColor: this._smartTint("vacuum", entityId),
-          mobilePolicy: this._smartMobilePolicyForKind("vacuum", entityId),
-          createdAt: Date.parse(state.last_changed || "") || Date.now(),
-          action: this._smartAction("vacuum", { label: this._text("actions.viewRobot", "View robot"), type: "more-info", entity: entityId }, "", entityId),
-        });
-      } else if (["paused", "idle"].includes(value)) {
-        const stateLabel = this._translateVacuumState(value, state.state);
-        add({
-          id: `vacuum:${entityId}:${value}`,
-          title: this._smartTitle("vacuum", "titles.vacuumPaused", "Robot paused", { source: name, name, state: stateLabel }, entityId),
-          message: this._smartMessage("vacuum", "messages.vacuumPaused", "{name} is paused or waiting.", { source: name, name, state: stateLabel }, entityId),
-          icon: "mdi:pause-circle-outline",
-          severity: "warning",
-          source: name,
-          entity: entityId,
-          tintColor: this._smartTint("vacuum", entityId),
-          mobilePolicy: this._smartMobilePolicyForKind("vacuum", entityId),
-          createdAt: Date.parse(state.last_changed || "") || Date.now(),
-          action: this._smartAction("vacuum", { label: this._text("actions.continue", "Continue"), type: "service", service: "vacuum.start", entity: entityId, internal: true }, "", entityId),
-        });
-      } else if (["cleaning", "returning"].includes(value)) {
-        const stateLabel = this._translateVacuumState(value, state.state);
-        add({
-          id: `vacuum:${entityId}:${value}`,
-          title: value === "cleaning"
-            ? this._smartTitle("vacuum", "titles.cleaningStarted", "Cleaning started", { source: name, name, state: stateLabel }, entityId)
-            : this._smartTitle("vacuum", "titles.returningDock", "Robot returning to dock", { source: name, name, state: stateLabel }, entityId),
-          message: this._smartMessage("vacuum", "messages.vacuumState", "{name}: {state}.", { source: name, name, state: stateLabel }, entityId),
-          icon: value === "cleaning" ? "mdi:robot-vacuum" : "mdi:home-import-outline",
-          severity: "info",
-          source: name,
-          entity: entityId,
-          tintColor: this._smartTint("vacuum", entityId),
-          mobilePolicy: this._smartMobilePolicyForKind("vacuum", entityId),
-          createdAt: Date.parse(state.last_changed || "") || Date.now(),
-          action: this._smartAction("vacuum", { label: this._text("actions.viewRobot", "View robot"), type: "more-info", entity: entityId }, "", entityId),
-        });
-      }
-    });
-
-    this._config.motion_entities.forEach(entityId => {
-      const state = hass?.states?.[entityId];
-      if (stateIsOn(state)) {
-        const sourceName = friendlyName(hass, entityId);
-        add({
-          id: `motion:${entityId}:${state.state}`,
-          title: this._smartTitle("motion", "titles.motionDetected", "Motion detected", { source: sourceName }, entityId),
-          message: this._smartMessage("motion", "", sourceName, { source: sourceName }, entityId),
-          icon: "mdi:motion-sensor",
-          severity: "info",
-          source: sourceName,
-          entity: entityId,
-          tintColor: this._smartTint("motion", entityId),
-          mobilePolicy: this._smartMobilePolicyForKind("motion", entityId),
-          createdAt: Date.parse(state.last_changed || "") || Date.now(),
-          action: this._smartAction("motion", { label: this._text("actions.viewSensor", "View sensor"), type: "more-info", entity: entityId }, "", entityId),
-        });
-      }
-    });
-
-    [
-      ["door", this._config.door_entities, "titles.doorOpen", "Door open", "mdi:door-open"],
-      ["window", this._config.window_entities, "titles.windowOpen", "Window open", "mdi:window-open-variant"],
-    ].forEach(([kind, entities, titleKey, fallbackTitle, icon]) => {
-      entities.forEach(entityId => {
-        const state = hass?.states?.[entityId];
-        if (stateIsOn(state)) {
-          const sourceName = friendlyName(hass, entityId);
+      _getRawNotifications() {
+        const items = [];
+        const hass = this._hass;
+        const now = /* @__PURE__ */ new Date();
+        const add = (item) => {
+          if (!item?.id || !item.title) {
+            return;
+          }
+          const severity = normalizeSeverity(item.severity || "info");
+          items.push({
+            action: null,
+            createdAt: Date.now(),
+            icon: "mdi:bell-outline",
+            message: "",
+            source: "",
+            ...item,
+            severity
+          });
+        };
+        this._calendarEvents.forEach((event) => {
+          const start = calendarEventDate(event.start);
+          const end = calendarEventDate(event.end) || start;
+          if (!start || !isSameLocalDay(start, now) || end && end.getTime() < now.getTime()) {
+            return;
+          }
+          const summary = String(event.summary || event.title || this._text("fallbackEvent", "Event")).trim();
+          const allDay = String(event.start?.date || "").length > 0 || typeof event.start === "string" && event.start.length <= 10;
+          const timeText = allDay ? this._text("allDay", "All day") : formatTime(start);
+          const startsSoon = !allDay && start.getTime() - now.getTime() <= 90 * 60 * 1e3 && start.getTime() >= now.getTime();
+          const eventKey = `${event._entity || ""}|${event.uid || event.id || ""}|${start.toISOString()}|${summary}`;
           add({
-            id: `${kind}:${entityId}:${state.state}`,
-            title: this._smartTitle(kind, titleKey, fallbackTitle, { source: sourceName }, entityId),
-            message: this._smartMessage(kind, "", sourceName, { source: sourceName }, entityId),
+            id: `calendar:${event._entity}:${notificationHash(`${summary}|${start.toISOString()}`)}`,
+            title: startsSoon ? this._smartTitle("calendar", "titles.calendarSoon", "Event soon", { source: friendlyName(hass, event._entity), time: timeText, value: summary }, event._entity) : this._smartTitle("calendar", "titles.calendarToday", "Event due today", { source: friendlyName(hass, event._entity), time: timeText, value: summary }, event._entity),
+            message: this._smartMessage("calendar", "", `${timeText} · ${summary}`, { source: friendlyName(hass, event._entity), time: timeText, value: summary }, event._entity),
+            icon: "mdi:calendar-clock",
+            severity: startsSoon ? "warning" : "info",
+            source: friendlyName(hass, event._entity),
+            entity: event._entity,
+            tintColor: this._smartTint("calendar", event._entity),
+            mobilePolicy: this._smartMobilePolicyForKind("calendar", event._entity),
+            createdAt: start.getTime(),
+            action: this._smartAction("calendar", {
+              label: this._text("actions.openCalendar", "Open calendar"),
+              type: "calendar-popup",
+              entity: event._entity,
+              date: start.toISOString(),
+              eventKey
+            }, "", event._entity)
+          });
+        });
+        if (this._calendarError) {
+          add({
+            id: `calendar:error:${notificationHash(this._calendarError)}`,
+            title: this._text("titles.calendarUnavailable", "Calendar unavailable"),
+            message: this._calendarError,
+            icon: "mdi:calendar-alert",
+            severity: "warning",
+            createdAt: Date.now()
+          });
+        }
+        this._config.vacuum_entities.forEach((entityId) => {
+          const state = hass?.states?.[entityId];
+          const value = String(state?.state || "").toLowerCase();
+          if (!state) {
+            return;
+          }
+          const name = friendlyName(hass, entityId);
+          const errorState = this._getVacuumErrorState(entityId);
+          const errorValue = this._getVacuumErrorValue(errorState);
+          const errorLabel = this._translateVacuumError(errorValue);
+          if (errorLabel || ["error", "unavailable"].includes(value)) {
+            const displayState = errorLabel || this._translateVacuumState(value, state.state);
+            add({
+              id: `vacuum:${entityId}:${errorValue || value}`,
+              title: this._smartTitle("vacuum", "titles.vacuumAttention", "Robot needs attention", { source: name, name, state: displayState }, entityId),
+              message: this._smartMessage("vacuum", "messages.vacuumAttention", "{name} is in state {state}.", { source: name, name, state: displayState }, entityId),
+              icon: "mdi:robot-vacuum-alert",
+              severity: "critical",
+              source: name,
+              entity: entityId,
+              tintColor: this._smartTint("vacuum", entityId),
+              mobilePolicy: this._smartMobilePolicyForKind("vacuum", entityId),
+              createdAt: Date.parse(state.last_changed || "") || Date.now(),
+              action: this._smartAction("vacuum", { label: this._text("actions.viewRobot", "View robot"), type: "more-info", entity: entityId }, "", entityId)
+            });
+          } else if (["paused", "idle"].includes(value)) {
+            const stateLabel = this._translateVacuumState(value, state.state);
+            add({
+              id: `vacuum:${entityId}:${value}`,
+              title: this._smartTitle("vacuum", "titles.vacuumPaused", "Robot paused", { source: name, name, state: stateLabel }, entityId),
+              message: this._smartMessage("vacuum", "messages.vacuumPaused", "{name} is paused or waiting.", { source: name, name, state: stateLabel }, entityId),
+              icon: "mdi:pause-circle-outline",
+              severity: "warning",
+              source: name,
+              entity: entityId,
+              tintColor: this._smartTint("vacuum", entityId),
+              mobilePolicy: this._smartMobilePolicyForKind("vacuum", entityId),
+              createdAt: Date.parse(state.last_changed || "") || Date.now(),
+              action: this._smartAction("vacuum", { label: this._text("actions.continue", "Continue"), type: "service", service: "vacuum.start", entity: entityId, internal: true }, "", entityId)
+            });
+          } else if (["cleaning", "returning"].includes(value)) {
+            const stateLabel = this._translateVacuumState(value, state.state);
+            add({
+              id: `vacuum:${entityId}:${value}`,
+              title: value === "cleaning" ? this._smartTitle("vacuum", "titles.cleaningStarted", "Cleaning started", { source: name, name, state: stateLabel }, entityId) : this._smartTitle("vacuum", "titles.returningDock", "Robot returning to dock", { source: name, name, state: stateLabel }, entityId),
+              message: this._smartMessage("vacuum", "messages.vacuumState", "{name}: {state}.", { source: name, name, state: stateLabel }, entityId),
+              icon: value === "cleaning" ? "mdi:robot-vacuum" : "mdi:home-import-outline",
+              severity: "info",
+              source: name,
+              entity: entityId,
+              tintColor: this._smartTint("vacuum", entityId),
+              mobilePolicy: this._smartMobilePolicyForKind("vacuum", entityId),
+              createdAt: Date.parse(state.last_changed || "") || Date.now(),
+              action: this._smartAction("vacuum", { label: this._text("actions.viewRobot", "View robot"), type: "more-info", entity: entityId }, "", entityId)
+            });
+          }
+        });
+        this._config.motion_entities.forEach((entityId) => {
+          const state = hass?.states?.[entityId];
+          if (stateIsOn(state)) {
+            const sourceName = friendlyName(hass, entityId);
+            add({
+              id: `motion:${entityId}:${state.state}`,
+              title: this._smartTitle("motion", "titles.motionDetected", "Motion detected", { source: sourceName }, entityId),
+              message: this._smartMessage("motion", "", sourceName, { source: sourceName }, entityId),
+              icon: "mdi:motion-sensor",
+              severity: "info",
+              source: sourceName,
+              entity: entityId,
+              tintColor: this._smartTint("motion", entityId),
+              mobilePolicy: this._smartMobilePolicyForKind("motion", entityId),
+              createdAt: Date.parse(state.last_changed || "") || Date.now(),
+              action: this._smartAction("motion", { label: this._text("actions.viewSensor", "View sensor"), type: "more-info", entity: entityId }, "", entityId)
+            });
+          }
+        });
+        [
+          ["door", this._config.door_entities, "titles.doorOpen", "Door open", "mdi:door-open"],
+          ["window", this._config.window_entities, "titles.windowOpen", "Window open", "mdi:window-open-variant"]
+        ].forEach(([kind, entities, titleKey, fallbackTitle, icon]) => {
+          entities.forEach((entityId) => {
+            const state = hass?.states?.[entityId];
+            if (stateIsOn(state)) {
+              const sourceName = friendlyName(hass, entityId);
+              add({
+                id: `${kind}:${entityId}:${state.state}`,
+                title: this._smartTitle(kind, titleKey, fallbackTitle, { source: sourceName }, entityId),
+                message: this._smartMessage(kind, "", sourceName, { source: sourceName }, entityId),
+                icon,
+                severity: "warning",
+                source: sourceName,
+                entity: entityId,
+                tintColor: this._smartTint(kind, entityId),
+                mobilePolicy: this._smartMobilePolicyForKind(kind, entityId),
+                createdAt: Date.parse(state.last_changed || "") || Date.now(),
+                action: this._smartAction(kind, { label: this._text("actions.viewSensor", "View sensor"), type: "more-info", entity: entityId }, "", entityId)
+              });
+            }
+          });
+        });
+        this._buildComfortNotifications(add);
+        this._buildMediaPlayerPresenceNotifications(add);
+        this._buildWeatherNotifications(add);
+        this._buildLevelNotifications(add);
+        this._buildCustomNotifications(add);
+        this._buildExternalNotifications(add);
+        return items.map((item) => this._enrichMobileDelivery(item)).sort((left, right) => {
+          const severityScore = { critical: 4, warning: 3, success: 2, info: 1 };
+          return (Number(right.createdAt) || 0) - (Number(left.createdAt) || 0) || (severityScore[right.severity] || 0) - (severityScore[left.severity] || 0) || String(right.id).localeCompare(String(left.id));
+        });
+      }
+      _buildComfortNotifications(add) {
+        if (!this._config.smart_recommendations || !this._hass) {
+          return;
+        }
+        const tempSources = [
+          ...this._config.temperature_entities.map((entityId) => ({
+            entityId,
+            state: this._hass.states?.[entityId],
+            value: numericState(this._hass.states?.[entityId]),
+            unit: this._hass.states?.[entityId]?.attributes?.unit_of_measurement || "°"
+          }))
+        ].filter((item) => item.state && item.value !== null);
+        const hotCandidates = tempSources.filter((item) => item.value >= this._config.thresholds.hot_temperature).filter((item) => this._presenceAllowsComfortNotification(item.entityId)).map((item) => ({ ...item, fanTarget: this._getFanTargetForSource(item.entityId) })).filter((item) => item.fanTarget).sort((left, right) => right.value - left.value);
+        const hottest = hotCandidates[0] || [...tempSources].filter((item) => item.value >= this._config.thresholds.hot_temperature).filter((item) => this._presenceAllowsComfortNotification(item.entityId)).sort((left, right) => right.value - left.value)[0];
+        const coolingClimateTarget = hottest?.value >= this._config.thresholds.hot_temperature ? this._getClimateTargetForSource(hottest.entityId, "cool") : null;
+        const coldest = [...tempSources].sort((left, right) => left.value - right.value)[0];
+        const heatingClimateTarget = coldest?.value <= this._config.thresholds.cold_temperature ? this._getClimateTargetForSource(coldest.entityId, "heat") : null;
+        if (hottest && hottest.value >= this._config.thresholds.hot_temperature && hottest.fanTarget) {
+          const sourceName = friendlyName(this._hass, hottest.entityId);
+          const fanName = friendlyName(this._hass, hottest.fanTarget);
+          add({
+            id: `comfort:hot:${hottest.entityId}:${hottest.fanTarget}:${Math.floor(hottest.value)}`,
+            title: this._smartTitle("hot", "titles.hot", "Hot inside", { source: sourceName, value: formatNumber(hottest.value, hottest.unit), fan: fanName }, hottest.entityId),
+            message: this._smartMessage("hot", "messages.hot", "{source} reads {value}. You can turn on {fan}.", {
+              source: sourceName,
+              value: formatNumber(hottest.value, hottest.unit),
+              fan: fanName
+            }, hottest.entityId),
+            icon: "mdi:fan",
+            severity: "warning",
+            source: sourceName,
+            entity: hottest.entityId,
+            tintColor: this._smartTint("hot", hottest.entityId),
+            mobilePolicy: this._smartMobilePolicyForKind("hot", hottest.entityId),
+            createdAt: Date.parse(hottest.state.last_changed || "") || Date.now(),
+            action: this._smartAction("hot", { label: this._text("actions.turnOnFan", "Turn on fan"), type: "service", service: "fan.turn_on", entity: hottest.fanTarget, internal: true }, "", hottest.entityId)
+          });
+        } else if (hottest && hottest.value >= this._config.thresholds.hot_temperature && coolingClimateTarget) {
+          const sourceName = friendlyName(this._hass, hottest.entityId);
+          const climateName = friendlyName(this._hass, coolingClimateTarget);
+          add({
+            id: `comfort:hot:climate:${hottest.entityId}:${coolingClimateTarget}:${Math.floor(hottest.value)}`,
+            title: this._smartTitle("hot", "titles.hot", "Hot inside", { source: sourceName, value: formatNumber(hottest.value, hottest.unit), climate: climateName, fan: climateName }, hottest.entityId),
+            message: this._smartMessage("hot", "messages.hotClimate", "{source} reads {value}. You can enable cooling on {climate}.", {
+              source: sourceName,
+              value: formatNumber(hottest.value, hottest.unit),
+              climate: climateName,
+              fan: climateName
+            }, hottest.entityId),
+            icon: "mdi:snowflake",
+            severity: "warning",
+            source: sourceName,
+            entity: hottest.entityId,
+            tintColor: this._smartTint("hot", hottest.entityId),
+            mobilePolicy: this._smartMobilePolicyForKind("hot", hottest.entityId),
+            createdAt: Date.parse(hottest.state.last_changed || "") || Date.now(),
+            action: this._smartAction("hot", { label: this._text("actions.turnOnCooling", "Enable cooling"), type: "service", service: "climate.set_hvac_mode", entity: coolingClimateTarget, serviceData: { hvac_mode: "cool" }, internal: true }, "", hottest.entityId)
+          });
+        } else if (coldest && coldest.value <= this._config.thresholds.cold_temperature) {
+          const sourceName = friendlyName(this._hass, coldest.entityId);
+          add({
+            id: `comfort:cold:${coldest.entityId}:${Math.floor(coldest.value)}`,
+            title: this._smartTitle("cold", "titles.cold", "Low temperature", { source: sourceName, value: formatNumber(coldest.value, coldest.unit) }, coldest.entityId),
+            message: this._smartMessage("cold", "messages.sensorValue", "{source} reads {value}.", {
+              source: sourceName,
+              value: formatNumber(coldest.value, coldest.unit)
+            }, coldest.entityId),
+            icon: "mdi:thermometer-low",
+            severity: "info",
+            source: sourceName,
+            entity: coldest.entityId,
+            tintColor: this._smartTint("cold", coldest.entityId),
+            mobilePolicy: this._smartMobilePolicyForKind("cold", coldest.entityId),
+            createdAt: Date.parse(coldest.state.last_changed || "") || Date.now(),
+            action: this._smartAction("cold", heatingClimateTarget ? { label: this._text("actions.turnOnHeat", "Enable heating"), type: "service", service: "climate.set_hvac_mode", entity: heatingClimateTarget, serviceData: { hvac_mode: "heat" }, internal: true } : null, "", coldest.entityId)
+          });
+        }
+        this._config.humidity_entities.forEach((entityId) => {
+          const state = this._hass.states?.[entityId];
+          const value = numericState(state);
+          if (value === null) {
+            return;
+          }
+          if (value >= this._config.thresholds.humidity_high || value <= this._config.thresholds.humidity_low) {
+            const high = value >= this._config.thresholds.humidity_high;
+            const sourceName = friendlyName(this._hass, entityId);
+            const smartKind = high ? "humidity_high" : "humidity_low";
+            const dehumidifierTarget = high ? this._getHumidifierTargetForSource(entityId, "dehumidifier") : null;
+            add({
+              id: `humidity:${entityId}:${high ? "high" : "low"}:${Math.round(value)}`,
+              title: high ? this._smartTitle(smartKind, "titles.humidityHigh", "High humidity", { source: sourceName, value: formatNumber(value, state.attributes?.unit_of_measurement || "%") }, entityId) : this._smartTitle(smartKind, "titles.humidityLow", "Low humidity", { source: sourceName, value: formatNumber(value, state.attributes?.unit_of_measurement || "%") }, entityId),
+              message: this._smartMessage(smartKind, "messages.sensorValue", "{source} reads {value}.", {
+                source: sourceName,
+                value: formatNumber(value, state.attributes?.unit_of_measurement || "%")
+              }, entityId),
+              icon: high ? "mdi:water-percent-alert" : "mdi:water-percent",
+              severity: high ? "warning" : "info",
+              source: sourceName,
+              entity: entityId,
+              tintColor: this._smartTint(smartKind, entityId),
+              mobilePolicy: this._smartMobilePolicyForKind(smartKind, entityId),
+              createdAt: Date.parse(state.last_changed || "") || Date.now(),
+              action: this._smartAction(
+                smartKind,
+                dehumidifierTarget ? { label: this._text("actions.turnOnDehumidifier", "Turn on dehumidifier"), type: "service", service: "humidifier.turn_on", entity: dehumidifierTarget, internal: true } : { label: this._text("actions.viewSensor", "View sensor"), type: "more-info", entity: entityId },
+                "",
+                entityId
+              )
+            });
+          }
+        });
+      }
+      _translateVacuumState(stateKey, fallback = "") {
+        return window.NodaliaI18n?.translateAdvanceVacuumReportedState ? window.NodaliaI18n.translateAdvanceVacuumReportedState(this._hass, this._config?.language ?? "auto", stateKey, fallback) : fallback;
+      }
+      _translateVacuumError(errorValue) {
+        return window.NodaliaI18n?.translateVacuumErrorState ? window.NodaliaI18n.translateVacuumErrorState(this._hass, this._config?.language ?? "auto", errorValue, "") : "";
+      }
+      _getVacuumErrorValue(stateObj) {
+        const raw = String(stateObj?.state || "").trim();
+        if (!raw || !window.NodaliaI18n?.isVacuumErrorState?.(raw)) {
+          return "";
+        }
+        return raw;
+      }
+      _getVacuumErrorState(vacuumEntityId) {
+        const explicit = this._config.vacuum_error_entities.map((entityId) => this._hass?.states?.[entityId]).find((stateObj) => this._getVacuumErrorValue(stateObj));
+        if (explicit) {
+          return explicit;
+        }
+        const vacuumObject = String(vacuumEntityId || "").split(".")[1] || "";
+        if (!vacuumObject || !this._hass?.states) {
+          return null;
+        }
+        const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
+        const candidates = Object.keys(this._hass.states).filter((entityId) => entityId.startsWith("sensor.")).filter((entityId) => entityId.includes(vacuumObject) || entityId.includes("roborock")).filter((entityId) => ["error", "fault", "fallo", "erro"].some((token) => entityId.includes(token))).sort((left, right) => left.localeCompare(right, sortLoc));
+        return candidates.map((entityId) => this._hass.states[entityId]).find((stateObj) => this._getVacuumErrorValue(stateObj)) || null;
+      }
+      _getPresenceSensorForSource(sourceEntityId) {
+        const sensors = this._config.motion_entities.filter((entityId) => this._hass?.states?.[entityId]);
+        if (!sensors.length) {
+          return null;
+        }
+        const sourceArea = entityAreaKey(this._hass, sourceEntityId);
+        if (sourceArea) {
+          const sameArea = sensors.find((entityId) => entityAreaKey(this._hass, entityId) === sourceArea);
+          if (sameArea) {
+            return sameArea;
+          }
+        }
+        const sourceTokens = new Set(entityMatchTokens(this._hass, sourceEntityId));
+        return sensors.find((entityId) => entityMatchTokens(this._hass, entityId).some((token) => sourceTokens.has(token))) || null;
+      }
+      _presenceAllowsComfortNotification(sourceEntityId) {
+        const presenceEntityId = this._getPresenceSensorForSource(sourceEntityId);
+        if (!presenceEntityId) {
+          return true;
+        }
+        return stateIsOn(this._hass?.states?.[presenceEntityId]);
+      }
+      _getFanTargetForSource(sourceEntityId) {
+        const offFans = this._config.fan_entities.filter((entityId) => stateIsOff(this._hass?.states?.[entityId]));
+        if (!offFans.length) {
+          return null;
+        }
+        const sourceArea = entityAreaKey(this._hass, sourceEntityId);
+        if (sourceArea) {
+          const sameArea = offFans.find((entityId) => entityAreaKey(this._hass, entityId) === sourceArea);
+          return sameArea || null;
+        }
+        const sourceTokens = new Set(entityMatchTokens(this._hass, sourceEntityId));
+        const tokenMatch = offFans.find((entityId) => entityMatchTokens(this._hass, entityId).some((token) => sourceTokens.has(token)));
+        if (tokenMatch) {
+          return tokenMatch;
+        }
+        return offFans.length === 1 ? offFans[0] : null;
+      }
+      _sameAreaTarget(sourceEntityId, entities, predicate = () => true) {
+        const candidates = entities.filter((entityId) => predicate(entityId, this._hass?.states?.[entityId]));
+        if (!candidates.length) {
+          return null;
+        }
+        const sourceArea = entityAreaKey(this._hass, sourceEntityId);
+        if (sourceArea) {
+          const sameArea = candidates.find((entityId) => entityAreaKey(this._hass, entityId) === sourceArea);
+          return sameArea || null;
+        }
+        const sourceTokens = new Set(entityMatchTokens(this._hass, sourceEntityId));
+        const tokenMatch = candidates.find((entityId) => entityMatchTokens(this._hass, entityId).some((token) => sourceTokens.has(token)));
+        return tokenMatch || (candidates.length === 1 ? candidates[0] : null);
+      }
+      _getClimateTargetForSource(sourceEntityId, mode) {
+        return this._sameAreaTarget(sourceEntityId, this._config.climate_entities, (_entityId, stateObj) => {
+          const modes = Array.isArray(stateObj?.attributes?.hvac_modes) ? stateObj.attributes.hvac_modes.map((item) => String(item).toLowerCase()) : [];
+          return modes.includes(mode) && ["off", "idle", "unknown", "unavailable"].includes(String(stateObj?.state || "").toLowerCase());
+        });
+      }
+      _getHumidifierTargetForSource(sourceEntityId, deviceClass = "dehumidifier") {
+        return this._sameAreaTarget(sourceEntityId, this._config.humidifier_entities, (_entityId, stateObj) => {
+          const klass = normalizeMatchText(stateObj?.attributes?.device_class || "");
+          return klass === deviceClass && stateIsOff(stateObj);
+        });
+      }
+      _buildMediaPlayerPresenceNotifications(add) {
+        if (!this._config.smart_recommendations || !this._hass || !this._config.media_player_entities.length || !this._config.motion_entities.length) {
+          return;
+        }
+        const vacantSensors = this._config.motion_entities.map((entityId) => ({ entityId, state: this._hass.states?.[entityId] })).filter((item) => stateIsVacant(item.state) && minutesSinceChanged(item.state) >= this._config.thresholds.media_absence_minutes);
+        vacantSensors.forEach((sensor) => {
+          const mediaTarget = this._sameAreaTarget(sensor.entityId, this._config.media_player_entities, (_entityId, stateObj) => {
+            const state = String(stateObj?.state || "").toLowerCase();
+            return ["on", "playing", "paused", "idle", "standby"].includes(state);
+          });
+          if (!mediaTarget) {
+            return;
+          }
+          const sourceName = friendlyName(this._hass, sensor.entityId);
+          const mediaName = friendlyName(this._hass, mediaTarget);
+          add({
+            id: `media-left-on:${sensor.entityId}:${mediaTarget}:${String(this._hass.states?.[mediaTarget]?.state || "")}`,
+            title: this._smartTitle("media_left_on", "titles.mediaLeftOn", "Media on with no presence", { source: sourceName, media: mediaName }, mediaTarget),
+            message: this._smartMessage("media_left_on", "messages.mediaLeftOn", "{media} is still on and {source} shows no presence.", { source: sourceName, media: mediaName }, mediaTarget),
+            icon: "mdi:television-off",
+            severity: "warning",
+            source: mediaName,
+            entity: mediaTarget,
+            tintColor: this._smartTint("media_left_on", mediaTarget),
+            mobilePolicy: this._smartMobilePolicyForKind("media_left_on", mediaTarget),
+            createdAt: Date.now(),
+            action: this._smartAction("media_left_on", { label: this._text("actions.turnOff", "Turn off"), type: "service", service: "media_player.turn_off", entity: mediaTarget, internal: true }, "", mediaTarget)
+          });
+        });
+      }
+      _formatTemplate(template, values = {}) {
+        return formatNotificationTemplate(template, this._hass, values);
+      }
+      _smartEntityOverride(entityId) {
+        const target = String(entityId || "").trim();
+        if (!target) {
+          return null;
+        }
+        return (this._config.smart_entity_overrides || []).find((item) => item.entity === target) || null;
+      }
+      _smartConfig(kind, entityId = "") {
+        const base = this._config.smart_notifications?.[kind] || {};
+        const override = this._smartEntityOverride(entityId);
+        if (!override) {
+          return base;
+        }
+        return {
+          ...base,
+          ...Object.fromEntries(
+            ["title", "message", "tint_color", "url", "action_label"].map((key) => [key, override[key]]).filter(([, value]) => String(value || "").trim())
+          ),
+          ...hasNotificationTapAction(override.tap_action) ? { tap_action: override.tap_action } : {},
+          mobile: resolveSmartEntityMobilePolicy(override?.mobile, base.mobile ?? "auto")
+        };
+      }
+      _smartTitle(kind, path, fallback, values = {}, entityId = "") {
+        const configured = this._smartConfig(kind, entityId).title;
+        return configured ? this._formatTemplate(configured, values) : this._text(path, fallback, values);
+      }
+      _smartMessage(kind, path, fallback, values = {}, entityId = "") {
+        const configured = this._smartConfig(kind, entityId).message;
+        return configured ? this._formatTemplate(configured, values) : this._text(path, fallback, values);
+      }
+      _smartTint(kind, entityId = "") {
+        return this._smartConfig(kind, entityId).tint_color || "";
+      }
+      _smartAction(kind, fallbackAction = null, fallbackUrlLabel = "", entityId = "") {
+        const config = this._smartConfig(kind, entityId);
+        const tapAction = this._buildNativeNotificationAction(config.tap_action, {
+          entityId,
+          label: config.action_label || fallbackUrlLabel || this._text("actions.open", "Open")
+        });
+        if (tapAction) {
+          return tapAction;
+        }
+        const url = window.NodaliaUtils?.sanitizeActionUrl?.(config.url, { allowRelative: true }) || "";
+        if (url) {
+          return {
+            label: config.action_label || fallbackUrlLabel || this._text("actions.open", "Open"),
+            type: "url",
+            url,
+            newTab: true
+          };
+        }
+        return fallbackAction;
+      }
+      _buildNativeNotificationAction(tapAction, options = {}) {
+        const action = normalizeNotificationTapAction(tapAction);
+        const label = options.label || this._text("actions.open", "Open");
+        const fallbackEntity = String(options.entityId || "").trim();
+        if (!hasNotificationTapAction(action)) {
+          return null;
+        }
+        if (action.action === "more-info") {
+          const entity = action.entity || fallbackEntity;
+          return entity ? { label, type: "more-info", entity } : null;
+        }
+        if (action.action === "toggle") {
+          const entity = action.entity || fallbackEntity;
+          return entity ? { label: options.label || this._text("actions.toggle", "Toggle"), type: "toggle", entity } : null;
+        }
+        if (action.action === "navigate") {
+          return {
+            label,
+            type: "navigate",
+            navigationPath: action.navigation_path
+          };
+        }
+        if (action.action === "url") {
+          return {
+            label,
+            type: "url",
+            url: action.url_path,
+            newTab: action.new_tab === true
+          };
+        }
+        return null;
+      }
+      _smartMobilePolicy(entityId) {
+        const override = this._smartEntityOverride(entityId);
+        return normalizeMobilePolicy(override?.mobile ?? "auto");
+      }
+      _smartMobilePolicyForKind(kind, entityId = "") {
+        return normalizeMobilePolicy(this._smartConfig(kind, entityId).mobile ?? "auto");
+      }
+      _buildExternalNotifications(add) {
+        const configured = this._config.external_alerts || [];
+        const runtime = this._runtimeExternalAlerts || [];
+        const alerts = normalizeExternalAlerts([...configured, ...runtime]);
+        alerts.forEach((alert) => {
+          const sourceName = alert.source || (alert.entity ? friendlyName(this._hass, alert.entity) : "");
+          const icon = alert.icon || (alert.type === "camera_event" ? "mdi:cctv" : alert.type === "security_event" ? "mdi:shield-alert" : "mdi:bell-alert-outline");
+          const nativeAction = this._buildNativeNotificationAction(alert.tap_action, {
+            entityId: alert.entity,
+            label: alert.action_label || this._text("actions.open", "Open")
+          });
+          const url = window.NodaliaUtils?.sanitizeActionUrl?.(alert.url, { allowRelative: true }) || "";
+          add({
+            id: `external:${alert.id}`,
+            alertType: alert.type,
+            type: alert.type,
+            title: alert.title,
+            message: alert.message || sourceName,
             icon,
+            severity: alert.severity,
+            source: sourceName,
+            entity: alert.entity,
+            tintColor: alert.tint_color,
+            mobilePolicy: alert.mobile,
+            createdAt: Date.now(),
+            action: nativeAction || (url ? {
+              label: alert.action_label || this._text("actions.open", "Open"),
+              type: "url",
+              url,
+              newTab: true
+            } : null)
+          });
+        });
+      }
+      _buildWeatherNotifications(add) {
+        if (!this._config.smart_recommendations || !this._hass || !this._config.weather_entities.length) {
+          return;
+        }
+        const now = Date.now();
+        const lookaheadMs = this._config.thresholds.rain_lookahead_hours * 60 * 60 * 1e3;
+        this._config.weather_entities.forEach((entityId) => {
+          const rows = (this._weatherForecasts?.[entityId] || normalizeWeatherForecastResult(this._hass.states?.[entityId]?.attributes?.forecast, entityId)).map((row) => ({ row, date: forecastDate(row) })).filter((item) => item.date && item.date.getTime() >= now && item.date.getTime() <= now + lookaheadMs).sort((left, right) => left.date.getTime() - right.date.getTime());
+          const rainy = rows.find(({ row }) => {
+            const probability = forecastNumber(row, [
+              "precipitation_probability",
+              "precipitationProbability",
+              "probability_of_precipitation",
+              "rain_probability"
+            ]);
+            return forecastLooksRainy(row) || probability !== null && probability >= this._config.thresholds.rain_probability;
+          });
+          if (!rainy) {
+            return;
+          }
+          const sourceName = friendlyName(this._hass, entityId);
+          add({
+            id: `weather:rain:${entityId}:${rainy.date.toISOString().slice(0, 13)}`,
+            title: this._smartTitle("rain", "titles.rainSoon", "Rain soon", { source: sourceName, time: formatTime(rainy.date) }, entityId),
+            message: this._smartMessage("rain", "messages.rainSoon", "{source} expects rain around {time}. If laundry is outside, it is worth checking.", {
+              source: sourceName,
+              time: formatTime(rainy.date)
+            }, entityId),
+            icon: "mdi:weather-pouring",
             severity: "warning",
             source: sourceName,
             entity: entityId,
-            tintColor: this._smartTint(kind, entityId),
-            mobilePolicy: this._smartMobilePolicyForKind(kind, entityId),
-            createdAt: Date.parse(state.last_changed || "") || Date.now(),
-            action: this._smartAction(kind, { label: this._text("actions.viewSensor", "View sensor"), type: "more-info", entity: entityId }, "", entityId),
+            tintColor: this._smartTint("rain", entityId),
+            mobilePolicy: this._smartMobilePolicyForKind("rain", entityId),
+            createdAt: rainy.date.getTime(),
+            action: this._smartAction("rain", { label: this._text("actions.viewWeather", "View weather"), type: "more-info", entity: entityId }, "", entityId)
           });
-        }
-      });
-    });
-
-    this._buildComfortNotifications(add);
-    this._buildMediaPlayerPresenceNotifications(add);
-    this._buildWeatherNotifications(add);
-    this._buildLevelNotifications(add);
-    this._buildCustomNotifications(add);
-    this._buildExternalNotifications(add);
-
-    return items
-      .map(item => this._enrichMobileDelivery(item))
-      .sort((left, right) => {
-      const severityScore = { critical: 4, warning: 3, success: 2, info: 1 };
-      return (
-        (Number(right.createdAt) || 0) - (Number(left.createdAt) || 0) ||
-        (severityScore[right.severity] || 0) - (severityScore[left.severity] || 0) ||
-        String(right.id).localeCompare(String(left.id))
-      );
-    });
-  }
-
-  _buildComfortNotifications(add) {
-    if (!this._config.smart_recommendations || !this._hass) {
-      return;
-    }
-    const tempSources = [
-      ...this._config.temperature_entities.map(entityId => ({
-        entityId,
-        state: this._hass.states?.[entityId],
-        value: numericState(this._hass.states?.[entityId]),
-        unit: this._hass.states?.[entityId]?.attributes?.unit_of_measurement || "°",
-      })),
-    ].filter(item => item.state && item.value !== null);
-    const hotCandidates = tempSources
-      .filter(item => item.value >= this._config.thresholds.hot_temperature)
-      .filter(item => this._presenceAllowsComfortNotification(item.entityId))
-      .map(item => ({ ...item, fanTarget: this._getFanTargetForSource(item.entityId) }))
-      .filter(item => item.fanTarget)
-      .sort((left, right) => right.value - left.value);
-    const hottest = hotCandidates[0] || [...tempSources]
-      .filter(item => item.value >= this._config.thresholds.hot_temperature)
-      .filter(item => this._presenceAllowsComfortNotification(item.entityId))
-      .sort((left, right) => right.value - left.value)[0];
-    const coolingClimateTarget = hottest?.value >= this._config.thresholds.hot_temperature
-      ? this._getClimateTargetForSource(hottest.entityId, "cool")
-      : null;
-    const coldest = [...tempSources].sort((left, right) => left.value - right.value)[0];
-    const heatingClimateTarget = coldest?.value <= this._config.thresholds.cold_temperature
-      ? this._getClimateTargetForSource(coldest.entityId, "heat")
-      : null;
-    if (hottest && hottest.value >= this._config.thresholds.hot_temperature && hottest.fanTarget) {
-      const sourceName = friendlyName(this._hass, hottest.entityId);
-      const fanName = friendlyName(this._hass, hottest.fanTarget);
-      add({
-        id: `comfort:hot:${hottest.entityId}:${hottest.fanTarget}:${Math.floor(hottest.value)}`,
-        title: this._smartTitle("hot", "titles.hot", "Hot inside", { source: sourceName, value: formatNumber(hottest.value, hottest.unit), fan: fanName }, hottest.entityId),
-        message: this._smartMessage("hot", "messages.hot", "{source} reads {value}. You can turn on {fan}.", {
-          source: sourceName,
-          value: formatNumber(hottest.value, hottest.unit),
-          fan: fanName,
-        }, hottest.entityId),
-        icon: "mdi:fan",
-        severity: "warning",
-        source: sourceName,
-        entity: hottest.entityId,
-        tintColor: this._smartTint("hot", hottest.entityId),
-        mobilePolicy: this._smartMobilePolicyForKind("hot", hottest.entityId),
-        createdAt: Date.parse(hottest.state.last_changed || "") || Date.now(),
-        action: this._smartAction("hot", { label: this._text("actions.turnOnFan", "Turn on fan"), type: "service", service: "fan.turn_on", entity: hottest.fanTarget, internal: true }, "", hottest.entityId),
-      });
-    } else if (hottest && hottest.value >= this._config.thresholds.hot_temperature && coolingClimateTarget) {
-      const sourceName = friendlyName(this._hass, hottest.entityId);
-      const climateName = friendlyName(this._hass, coolingClimateTarget);
-      add({
-        id: `comfort:hot:climate:${hottest.entityId}:${coolingClimateTarget}:${Math.floor(hottest.value)}`,
-        title: this._smartTitle("hot", "titles.hot", "Hot inside", { source: sourceName, value: formatNumber(hottest.value, hottest.unit), climate: climateName, fan: climateName }, hottest.entityId),
-        message: this._smartMessage("hot", "messages.hotClimate", "{source} reads {value}. You can enable cooling on {climate}.", {
-          source: sourceName,
-          value: formatNumber(hottest.value, hottest.unit),
-          climate: climateName,
-          fan: climateName,
-        }, hottest.entityId),
-        icon: "mdi:snowflake",
-        severity: "warning",
-        source: sourceName,
-        entity: hottest.entityId,
-        tintColor: this._smartTint("hot", hottest.entityId),
-        mobilePolicy: this._smartMobilePolicyForKind("hot", hottest.entityId),
-        createdAt: Date.parse(hottest.state.last_changed || "") || Date.now(),
-        action: this._smartAction("hot", { label: this._text("actions.turnOnCooling", "Enable cooling"), type: "service", service: "climate.set_hvac_mode", entity: coolingClimateTarget, serviceData: { hvac_mode: "cool" }, internal: true }, "", hottest.entityId),
-      });
-    } else if (coldest && coldest.value <= this._config.thresholds.cold_temperature) {
-      const sourceName = friendlyName(this._hass, coldest.entityId);
-      add({
-        id: `comfort:cold:${coldest.entityId}:${Math.floor(coldest.value)}`,
-        title: this._smartTitle("cold", "titles.cold", "Low temperature", { source: sourceName, value: formatNumber(coldest.value, coldest.unit) }, coldest.entityId),
-        message: this._smartMessage("cold", "messages.sensorValue", "{source} reads {value}.", {
-          source: sourceName,
-          value: formatNumber(coldest.value, coldest.unit),
-        }, coldest.entityId),
-        icon: "mdi:thermometer-low",
-        severity: "info",
-        source: sourceName,
-        entity: coldest.entityId,
-        tintColor: this._smartTint("cold", coldest.entityId),
-        mobilePolicy: this._smartMobilePolicyForKind("cold", coldest.entityId),
-        createdAt: Date.parse(coldest.state.last_changed || "") || Date.now(),
-        action: this._smartAction("cold", heatingClimateTarget ? { label: this._text("actions.turnOnHeat", "Enable heating"), type: "service", service: "climate.set_hvac_mode", entity: heatingClimateTarget, serviceData: { hvac_mode: "heat" }, internal: true } : null, "", coldest.entityId),
-      });
-    }
-
-    this._config.humidity_entities.forEach(entityId => {
-      const state = this._hass.states?.[entityId];
-      const value = numericState(state);
-      if (value === null) {
-        return;
-      }
-      if (value >= this._config.thresholds.humidity_high || value <= this._config.thresholds.humidity_low) {
-        const high = value >= this._config.thresholds.humidity_high;
-        const sourceName = friendlyName(this._hass, entityId);
-        const smartKind = high ? "humidity_high" : "humidity_low";
-        const dehumidifierTarget = high ? this._getHumidifierTargetForSource(entityId, "dehumidifier") : null;
-        add({
-          id: `humidity:${entityId}:${high ? "high" : "low"}:${Math.round(value)}`,
-          title: high
-            ? this._smartTitle(smartKind, "titles.humidityHigh", "High humidity", { source: sourceName, value: formatNumber(value, state.attributes?.unit_of_measurement || "%") }, entityId)
-            : this._smartTitle(smartKind, "titles.humidityLow", "Low humidity", { source: sourceName, value: formatNumber(value, state.attributes?.unit_of_measurement || "%") }, entityId),
-          message: this._smartMessage(smartKind, "messages.sensorValue", "{source} reads {value}.", {
-            source: sourceName,
-            value: formatNumber(value, state.attributes?.unit_of_measurement || "%"),
-          }, entityId),
-          icon: high ? "mdi:water-percent-alert" : "mdi:water-percent",
-          severity: high ? "warning" : "info",
-          source: sourceName,
-          entity: entityId,
-          tintColor: this._smartTint(smartKind, entityId),
-          mobilePolicy: this._smartMobilePolicyForKind(smartKind, entityId),
-          createdAt: Date.parse(state.last_changed || "") || Date.now(),
-          action: this._smartAction(
-            smartKind,
-            dehumidifierTarget
-              ? { label: this._text("actions.turnOnDehumidifier", "Turn on dehumidifier"), type: "service", service: "humidifier.turn_on", entity: dehumidifierTarget, internal: true }
-              : { label: this._text("actions.viewSensor", "View sensor"), type: "more-info", entity: entityId },
-            "",
-            entityId,
-          ),
         });
       }
-    });
-  }
-
-  _translateVacuumState(stateKey, fallback = "") {
-    return window.NodaliaI18n?.translateAdvanceVacuumReportedState
-      ? window.NodaliaI18n.translateAdvanceVacuumReportedState(this._hass, this._config?.language ?? "auto", stateKey, fallback)
-      : fallback;
-  }
-
-  _translateVacuumError(errorValue) {
-    return window.NodaliaI18n?.translateVacuumErrorState
-      ? window.NodaliaI18n.translateVacuumErrorState(this._hass, this._config?.language ?? "auto", errorValue, "")
-      : "";
-  }
-
-  _getVacuumErrorValue(stateObj) {
-    const raw = String(stateObj?.state || "").trim();
-    if (!raw || !window.NodaliaI18n?.isVacuumErrorState?.(raw)) {
-      return "";
-    }
-    return raw;
-  }
-
-  _getVacuumErrorState(vacuumEntityId) {
-    const explicit = this._config.vacuum_error_entities
-      .map(entityId => this._hass?.states?.[entityId])
-      .find(stateObj => this._getVacuumErrorValue(stateObj));
-    if (explicit) {
-      return explicit;
-    }
-    const vacuumObject = String(vacuumEntityId || "").split(".")[1] || "";
-    if (!vacuumObject || !this._hass?.states) {
-      return null;
-    }
-    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
-    const candidates = Object.keys(this._hass.states)
-      .filter(entityId => entityId.startsWith("sensor."))
-      .filter(entityId => entityId.includes(vacuumObject) || entityId.includes("roborock"))
-      .filter(entityId => ["error", "fault", "fallo", "erro"].some(token => entityId.includes(token)))
-      .sort((left, right) => left.localeCompare(right, sortLoc));
-    return candidates.map(entityId => this._hass.states[entityId]).find(stateObj => this._getVacuumErrorValue(stateObj)) || null;
-  }
-
-  _getPresenceSensorForSource(sourceEntityId) {
-    const sensors = this._config.motion_entities.filter(entityId => this._hass?.states?.[entityId]);
-    if (!sensors.length) {
-      return null;
-    }
-    const sourceArea = entityAreaKey(this._hass, sourceEntityId);
-    if (sourceArea) {
-      const sameArea = sensors.find(entityId => entityAreaKey(this._hass, entityId) === sourceArea);
-      if (sameArea) {
-        return sameArea;
-      }
-    }
-    const sourceTokens = new Set(entityMatchTokens(this._hass, sourceEntityId));
-    return sensors.find(entityId => entityMatchTokens(this._hass, entityId).some(token => sourceTokens.has(token))) || null;
-  }
-
-  _presenceAllowsComfortNotification(sourceEntityId) {
-    const presenceEntityId = this._getPresenceSensorForSource(sourceEntityId);
-    if (!presenceEntityId) {
-      return true;
-    }
-    return stateIsOn(this._hass?.states?.[presenceEntityId]);
-  }
-
-  _getFanTargetForSource(sourceEntityId) {
-    const offFans = this._config.fan_entities.filter(entityId => stateIsOff(this._hass?.states?.[entityId]));
-    if (!offFans.length) {
-      return null;
-    }
-    const sourceArea = entityAreaKey(this._hass, sourceEntityId);
-    if (sourceArea) {
-      const sameArea = offFans.find(entityId => entityAreaKey(this._hass, entityId) === sourceArea);
-      return sameArea || null;
-    }
-    const sourceTokens = new Set(entityMatchTokens(this._hass, sourceEntityId));
-    const tokenMatch = offFans.find(entityId => entityMatchTokens(this._hass, entityId).some(token => sourceTokens.has(token)));
-    if (tokenMatch) {
-      return tokenMatch;
-    }
-    return offFans.length === 1 ? offFans[0] : null;
-  }
-
-  _sameAreaTarget(sourceEntityId, entities, predicate = () => true) {
-    const candidates = entities.filter(entityId => predicate(entityId, this._hass?.states?.[entityId]));
-    if (!candidates.length) {
-      return null;
-    }
-    const sourceArea = entityAreaKey(this._hass, sourceEntityId);
-    if (sourceArea) {
-      const sameArea = candidates.find(entityId => entityAreaKey(this._hass, entityId) === sourceArea);
-      return sameArea || null;
-    }
-    const sourceTokens = new Set(entityMatchTokens(this._hass, sourceEntityId));
-    const tokenMatch = candidates.find(entityId => entityMatchTokens(this._hass, entityId).some(token => sourceTokens.has(token)));
-    return tokenMatch || (candidates.length === 1 ? candidates[0] : null);
-  }
-
-  _getClimateTargetForSource(sourceEntityId, mode) {
-    return this._sameAreaTarget(sourceEntityId, this._config.climate_entities, (_entityId, stateObj) => {
-      const modes = Array.isArray(stateObj?.attributes?.hvac_modes) ? stateObj.attributes.hvac_modes.map(item => String(item).toLowerCase()) : [];
-      return modes.includes(mode) && ["off", "idle", "unknown", "unavailable"].includes(String(stateObj?.state || "").toLowerCase());
-    });
-  }
-
-  _getHumidifierTargetForSource(sourceEntityId, deviceClass = "dehumidifier") {
-    return this._sameAreaTarget(sourceEntityId, this._config.humidifier_entities, (_entityId, stateObj) => {
-      const klass = normalizeMatchText(stateObj?.attributes?.device_class || "");
-      return klass === deviceClass && stateIsOff(stateObj);
-    });
-  }
-
-  _buildMediaPlayerPresenceNotifications(add) {
-    if (!this._config.smart_recommendations || !this._hass || !this._config.media_player_entities.length || !this._config.motion_entities.length) {
-      return;
-    }
-    const vacantSensors = this._config.motion_entities
-      .map(entityId => ({ entityId, state: this._hass.states?.[entityId] }))
-      .filter(item => stateIsVacant(item.state) && minutesSinceChanged(item.state) >= this._config.thresholds.media_absence_minutes);
-    vacantSensors.forEach(sensor => {
-      const mediaTarget = this._sameAreaTarget(sensor.entityId, this._config.media_player_entities, (_entityId, stateObj) => {
-        const state = String(stateObj?.state || "").toLowerCase();
-        return ["on", "playing", "paused", "idle", "standby"].includes(state);
-      });
-      if (!mediaTarget) {
-        return;
-      }
-      const sourceName = friendlyName(this._hass, sensor.entityId);
-      const mediaName = friendlyName(this._hass, mediaTarget);
-      add({
-        id: `media-left-on:${sensor.entityId}:${mediaTarget}:${String(this._hass.states?.[mediaTarget]?.state || "")}`,
-        title: this._smartTitle("media_left_on", "titles.mediaLeftOn", "Media on with no presence", { source: sourceName, media: mediaName }, mediaTarget),
-        message: this._smartMessage("media_left_on", "messages.mediaLeftOn", "{media} is still on and {source} shows no presence.", { source: sourceName, media: mediaName }, mediaTarget),
-        icon: "mdi:television-off",
-        severity: "warning",
-        source: mediaName,
-        entity: mediaTarget,
-        tintColor: this._smartTint("media_left_on", mediaTarget),
-        mobilePolicy: this._smartMobilePolicyForKind("media_left_on", mediaTarget),
-        createdAt: Date.now(),
-        action: this._smartAction("media_left_on", { label: this._text("actions.turnOff", "Turn off"), type: "service", service: "media_player.turn_off", entity: mediaTarget, internal: true }, "", mediaTarget),
-      });
-    });
-  }
-
-  _formatTemplate(template, values = {}) {
-    return formatNotificationTemplate(template, this._hass, values);
-  }
-
-  _smartEntityOverride(entityId) {
-    const target = String(entityId || "").trim();
-    if (!target) {
-      return null;
-    }
-    return (this._config.smart_entity_overrides || []).find(item => item.entity === target) || null;
-  }
-
-  _smartConfig(kind, entityId = "") {
-    const base = this._config.smart_notifications?.[kind] || {};
-    const override = this._smartEntityOverride(entityId);
-    if (!override) {
-      return base;
-    }
-    return {
-      ...base,
-      ...Object.fromEntries(
-        ["title", "message", "tint_color", "url", "action_label"]
-          .map(key => [key, override[key]])
-          .filter(([, value]) => String(value || "").trim()),
-      ),
-      ...(hasNotificationTapAction(override.tap_action) ? { tap_action: override.tap_action } : {}),
-      mobile: resolveSmartEntityMobilePolicy(override?.mobile, base.mobile ?? "auto"),
-    };
-  }
-
-  _smartTitle(kind, path, fallback, values = {}, entityId = "") {
-    const configured = this._smartConfig(kind, entityId).title;
-    return configured ? this._formatTemplate(configured, values) : this._text(path, fallback, values);
-  }
-
-  _smartMessage(kind, path, fallback, values = {}, entityId = "") {
-    const configured = this._smartConfig(kind, entityId).message;
-    return configured ? this._formatTemplate(configured, values) : this._text(path, fallback, values);
-  }
-
-  _smartTint(kind, entityId = "") {
-    return this._smartConfig(kind, entityId).tint_color || "";
-  }
-
-  _smartAction(kind, fallbackAction = null, fallbackUrlLabel = "", entityId = "") {
-    const config = this._smartConfig(kind, entityId);
-    const tapAction = this._buildNativeNotificationAction(config.tap_action, {
-      entityId,
-      label: config.action_label || fallbackUrlLabel || this._text("actions.open", "Open"),
-    });
-    if (tapAction) {
-      return tapAction;
-    }
-    const url = window.NodaliaUtils?.sanitizeActionUrl?.(config.url, { allowRelative: true }) || "";
-    if (url) {
-      return {
-        label: config.action_label || fallbackUrlLabel || this._text("actions.open", "Open"),
-        type: "url",
-        url,
-        newTab: true,
-      };
-    }
-    return fallbackAction;
-  }
-
-  _buildNativeNotificationAction(tapAction, options = {}) {
-    const action = normalizeNotificationTapAction(tapAction);
-    const label = options.label || this._text("actions.open", "Open");
-    const fallbackEntity = String(options.entityId || "").trim();
-    if (!hasNotificationTapAction(action)) {
-      return null;
-    }
-    if (action.action === "more-info") {
-      const entity = action.entity || fallbackEntity;
-      return entity ? { label, type: "more-info", entity } : null;
-    }
-    if (action.action === "toggle") {
-      const entity = action.entity || fallbackEntity;
-      return entity ? { label: options.label || this._text("actions.toggle", "Toggle"), type: "toggle", entity } : null;
-    }
-    if (action.action === "navigate") {
-      return {
-        label,
-        type: "navigate",
-        navigationPath: action.navigation_path,
-      };
-    }
-    if (action.action === "url") {
-      return {
-        label,
-        type: "url",
-        url: action.url_path,
-        newTab: action.new_tab === true,
-      };
-    }
-    return null;
-  }
-
-  _smartMobilePolicy(entityId) {
-    const override = this._smartEntityOverride(entityId);
-    return normalizeMobilePolicy(override?.mobile ?? "auto");
-  }
-
-  _smartMobilePolicyForKind(kind, entityId = "") {
-    return normalizeMobilePolicy(this._smartConfig(kind, entityId).mobile ?? "auto");
-  }
-
-  _buildExternalNotifications(add) {
-    const configured = this._config.external_alerts || [];
-    const runtime = this._runtimeExternalAlerts || [];
-    const alerts = normalizeExternalAlerts([...configured, ...runtime]);
-    alerts.forEach(alert => {
-      const sourceName = alert.source || (alert.entity ? friendlyName(this._hass, alert.entity) : "");
-      const icon = alert.icon
-        || (alert.type === "camera_event" ? "mdi:cctv" : alert.type === "security_event" ? "mdi:shield-alert" : "mdi:bell-alert-outline");
-      const nativeAction = this._buildNativeNotificationAction(alert.tap_action, {
-        entityId: alert.entity,
-        label: alert.action_label || this._text("actions.open", "Open"),
-      });
-      const url = window.NodaliaUtils?.sanitizeActionUrl?.(alert.url, { allowRelative: true }) || "";
-      add({
-        id: `external:${alert.id}`,
-        alertType: alert.type,
-        type: alert.type,
-        title: alert.title,
-        message: alert.message || sourceName,
-        icon,
-        severity: alert.severity,
-        source: sourceName,
-        entity: alert.entity,
-        tintColor: alert.tint_color,
-        mobilePolicy: alert.mobile,
-        createdAt: Date.now(),
-        action: nativeAction || (url ? {
-          label: alert.action_label || this._text("actions.open", "Open"),
-          type: "url",
-          url,
-          newTab: true,
-        } : null),
-      });
-    });
-  }
-
-  _buildWeatherNotifications(add) {
-    if (!this._config.smart_recommendations || !this._hass || !this._config.weather_entities.length) {
-      return;
-    }
-    const now = Date.now();
-    const lookaheadMs = this._config.thresholds.rain_lookahead_hours * 60 * 60 * 1000;
-    this._config.weather_entities.forEach(entityId => {
-      const rows = (this._weatherForecasts?.[entityId] || normalizeWeatherForecastResult(this._hass.states?.[entityId]?.attributes?.forecast, entityId))
-        .map(row => ({ row, date: forecastDate(row) }))
-        .filter(item => item.date && item.date.getTime() >= now && item.date.getTime() <= now + lookaheadMs)
-        .sort((left, right) => left.date.getTime() - right.date.getTime());
-      const rainy = rows.find(({ row }) => {
-        const probability = forecastNumber(row, [
-          "precipitation_probability",
-          "precipitationProbability",
-          "probability_of_precipitation",
-          "rain_probability",
-        ]);
-        return forecastLooksRainy(row) || (probability !== null && probability >= this._config.thresholds.rain_probability);
-      });
-      if (!rainy) {
-        return;
-      }
-      const sourceName = friendlyName(this._hass, entityId);
-      add({
-        id: `weather:rain:${entityId}:${rainy.date.toISOString().slice(0, 13)}`,
-        title: this._smartTitle("rain", "titles.rainSoon", "Rain soon", { source: sourceName, time: formatTime(rainy.date) }, entityId),
-        message: this._smartMessage("rain", "messages.rainSoon", "{source} expects rain around {time}. If laundry is outside, it is worth checking.", {
-          source: sourceName,
-          time: formatTime(rainy.date),
-        }, entityId),
-        icon: "mdi:weather-pouring",
-        severity: "warning",
-        source: sourceName,
-        entity: entityId,
-        tintColor: this._smartTint("rain", entityId),
-        mobilePolicy: this._smartMobilePolicyForKind("rain", entityId),
-        createdAt: rainy.date.getTime(),
-        action: this._smartAction("rain", { label: this._text("actions.viewWeather", "View weather"), type: "more-info", entity: entityId }, "", entityId),
-      });
-    });
-  }
-
-  _buildLevelNotifications(add) {
-    if (!this._config.smart_recommendations || !this._hass) {
-      return;
-    }
-    const groups = [
-      {
-        entities: this._config.battery_entities,
-        icon: "mdi:battery-alert-variant-outline",
-        kind: "battery_low",
-        titleKey: "titles.batteryLow",
-        titleFallback: "Low battery",
-        messageKey: "messages.lowLevel",
-        messageFallback: "{source} is at {value}.",
-        threshold: this._config.thresholds.battery_low,
-        urlLabel: this._text("actions.buyBattery", "Buy batteries"),
-      },
-      {
-        entities: this._config.humidifier_fill_entities,
-        icon: "mdi:air-humidifier",
-        kind: "humidifier_fill_low",
-        titleKey: "titles.humidifierFillLow",
-        titleFallback: "Low tank",
-        messageKey: "messages.lowLevel",
-        messageFallback: "{source} is at {value}.",
-        threshold: this._config.thresholds.humidifier_fill_low,
-        urlLabel: this._text("actions.open", "Open"),
-      },
-      {
-        entities: this._config.humidifier_full_entities,
-        icon: "mdi:cup-water",
-        kind: "humidifier_fill_full",
-        titleKey: "titles.humidifierFillFull",
-        titleFallback: "Tank full",
-        messageKey: "messages.highLevel",
-        messageFallback: "{source} is at {value}.",
-        threshold: this._config.thresholds.humidifier_fill_full,
-        mode: "above",
-        urlLabel: this._text("actions.open", "Open"),
-      },
-      {
-        entities: this._config.ink_entities,
-        icon: "mdi:printer-alert",
-        kind: "ink_low",
-        titleKey: "titles.inkLow",
-        titleFallback: "Low ink",
-        messageKey: "messages.lowLevel",
-        messageFallback: "{source} is at {value}.",
-        threshold: this._config.thresholds.ink_low,
-        urlLabel: this._text("actions.buyInk", "Buy ink"),
-      },
-    ];
-    groups.forEach(group => {
-      group.entities.forEach(entityId => {
-        const state = this._hass.states?.[entityId];
-        const value = numericState(state);
-        const matchesThreshold = group.mode === "above"
-          ? value >= group.threshold
-          : value <= group.threshold;
-        if (!state || value === null || !matchesThreshold) {
+      _buildLevelNotifications(add) {
+        if (!this._config.smart_recommendations || !this._hass) {
           return;
         }
-        const sourceName = friendlyName(this._hass, entityId);
-        const unit = state.attributes?.unit_of_measurement || "%";
-        const formattedValue = formatNumber(value, unit);
-        add({
-          id: `${group.kind}:${entityId}:${Math.round(value)}`,
-          title: this._smartTitle(group.kind, group.titleKey, group.titleFallback, {
-            source: sourceName,
-            threshold: formatNumber(group.threshold, unit),
-            value: formattedValue,
-          }, entityId),
-          message: this._smartMessage(group.kind, group.messageKey, group.messageFallback, {
-            source: sourceName,
-            threshold: formatNumber(group.threshold, unit),
-            value: formattedValue,
-          }, entityId),
-          icon: group.icon,
-          severity: "warning",
-          source: sourceName,
-          entity: entityId,
-          tintColor: this._smartTint(group.kind, entityId),
-          mobilePolicy: this._smartMobilePolicyForKind(group.kind, entityId),
-          createdAt: Date.parse(state.last_changed || "") || Date.now(),
-          action: this._smartAction(group.kind, { label: this._text("actions.viewSensor", "View sensor"), type: "more-info", entity: entityId }, group.urlLabel, entityId),
-        });
-      });
-    });
-  }
-
-  _buildCustomNotifications(add) {
-    this._config.custom_notifications.forEach(item => {
-      if (!item.title && !item.message && !item.entity) {
-        return;
-      }
-      if (!this._customNotificationMatches(item)) {
-        return;
-      }
-      const entityName = item.entity ? friendlyName(this._hass, item.entity) : "";
-      const templateValues = this._customNotificationTemplateValues(item);
-      const resolvedItem = {
-        ...item,
-        title: this._formatTemplate(item.title, templateValues),
-        message: this._formatTemplate(item.message, templateValues),
-        action_label: this._formatTemplate(item.action_label, templateValues),
-        url: this._formatTemplate(item.url, templateValues),
-      };
-      add({
-        id: `custom:${notificationHash(`${item.title}|${item.message}|${item.entity}|${item.attribute}|${item.condition}|${item.value}|${item.url}|${JSON.stringify(item.tap_action || {})}`)}`,
-        title: resolvedItem.title || entityName || this._text("titles.customFallback", "Notification"),
-        message: resolvedItem.message || entityName,
-        icon: item.icon || "mdi:bell-outline",
-        tintColor: item.tint_color || "",
-        severity: item.severity || "info",
-        source: entityName,
-        mobilePolicy: item.mobile || "auto",
-        createdAt: item.entity ? Date.parse(this._hass?.states?.[item.entity]?.last_changed || "") || Date.now() : Date.now(),
-        action: this._buildCustomAction(resolvedItem),
-      });
-    });
-  }
-
-  _customNotificationTemplateValues(item) {
-    const entityId = String(item?.entity || "").trim();
-    const fanEntity = entityId
-      ? this._getFanTargetForSource(entityId) || this._config.fan_entities[0]
-      : this._config.fan_entities[0];
-    return customNotificationTemplateValues(this._hass, item, fanEntity);
-  }
-
-  _customNotificationMatches(item) {
-    const condition = String(item.condition || "always").toLowerCase();
-    if (condition === "always") {
-      return true;
-    }
-    const state = this._hass?.states?.[item.entity];
-    if (!state) {
-      return condition === "missing";
-    }
-    const raw = stateValue(state, item.attribute);
-    const text = String(raw ?? "").trim().toLowerCase();
-    const expected = String(item.value || "").trim().toLowerCase();
-    const num = Number(raw);
-    const expectedNum = Number(item.value);
-    switch (condition) {
-      case "on":
-        return stateIsOn(state);
-      case "off":
-        return stateIsOff(state);
-      case "unavailable":
-        return ["unavailable", "unknown"].includes(String(state.state).toLowerCase());
-      case "equals":
-        return text === expected;
-      case "not_equals":
-        return text !== expected;
-      case "above":
-        return Number.isFinite(num) && Number.isFinite(expectedNum) && num > expectedNum;
-      case "below":
-        return Number.isFinite(num) && Number.isFinite(expectedNum) && num < expectedNum;
-      default:
-        return false;
-    }
-  }
-
-  _buildCustomAction(item) {
-    const nativeAction = this._buildNativeNotificationAction(item.tap_action, {
-      entityId: item.entity,
-      label: item.action_label || this._text("actions.open", "Open"),
-    });
-    if (nativeAction) {
-      return nativeAction;
-    }
-    const type = String(item.action_type || "none").trim();
-    if (type === "none") {
-      return null;
-    }
-    return {
-      label: item.action_label || (type === "service" ? this._text("actions.run", "Run") : type === "toggle" ? this._text("actions.toggle", "Toggle") : this._text("actions.open", "Open")),
-      type,
-      entity: item.entity,
-      service: item.service,
-      serviceData: parseServiceData(item.service_data),
-      url: item.url,
-      newTab: true,
-    };
-  }
-
-  _severityScore(severity) {
-    return { critical: 4, warning: 3, success: 2, info: 1 }[normalizeSeverity(severity)] || 1;
-  }
-
-  _backgroundMobileSuppressesForeground() {
-    const background = this._config?.background_mobile || {};
-    if (background.enabled !== true) {
-      return false;
-    }
-    const nativeSignature = String(this._lastBackgroundMobileNativeSignature || "");
-    const currentNative = getBackgroundMobileNativeSignature(this._config, this._hass);
-    if (nativeSignature === currentNative.signature || nativeSignature === `active:${currentNative.profileId}`) {
-      return true;
-    }
-    const lastSignature = String(this._lastBackgroundMobileSyncSignature || "");
-    const webhookId = String(background.webhook || "").trim();
-    if (!lastSignature || !webhookId) {
-      return false;
-    }
-    const payload = this._buildBackgroundMobileWebhookPayload();
-    if (backgroundMobilePayloadOverLimit(payload)) {
-      return false;
-    }
-    const currentSignature = `${webhookId}:${payload.config_hash}:${payload.chunk_count}`;
-    return currentSignature === lastSignature;
-  }
-
-  _shouldSendMobileNotification(item) {
-    if (this._backgroundMobileSuppressesForeground()) {
-      return false;
-    }
-    if (!item?.id) {
-      return false;
-    }
-    // Delivery context is time- and state-sensitive. Never trust the value captured
-    // when the visual notification was built or first queued.
-    const deliveryState = this._resolveMobileDeliveryForItem(item);
-    if (deliveryState !== "allowed") {
-      return false;
-    }
-    return !this._mobileSent.has(this._dismissKey(item.id));
-  }
-
-  _enqueueMobileNotifications(items) {
-    const queue = this._mobileNotifyQueue || (this._mobileNotifyQueue = []);
-    for (const item of items) {
-      if (!item?.id) {
-        continue;
-      }
-      const key = this._dismissKey(item.id);
-      if (queue.some(entry => this._dismissKey(entry.id) === key)) {
-        continue;
-      }
-      queue.push(item);
-    }
-  }
-
-  _scheduleMobileNotifyDrain() {
-    if (this._mobileNotifyTimer || !this._mobileNotifyQueue?.length) {
-      return;
-    }
-    this._mobileNotifyTimer = window.setTimeout(() => {
-      this._mobileNotifyTimer = 0;
-      const batch = this._mobileNotifyQueue.splice(0, 4);
-      if (!batch.length) {
-        return;
-      }
-      Promise.resolve()
-        .then(() => this._flushMobileNotifications(batch))
-        .catch(error => {
-          console.warn("Nodalia Notifications Card: mobile notification batch failed.", error);
-        })
-        .finally(() => {
-          if (this._mobileNotifyQueue.length) {
-            this._scheduleMobileNotifyDrain();
-          }
-        });
-    }, 450);
-  }
-
-  _queueMobileNotifications(items) {
-    const pending = items.filter(item => this._shouldSendMobileNotification(item));
-    if (!pending.length) {
-      return;
-    }
-    this._enqueueMobileNotifications(pending);
-    this._scheduleMobileNotifyDrain();
-  }
-
-  _buildLegacyMobilePayload(item, hash) {
-    const payload = {
-      title: item.title,
-      message: item.message || item.source || item.title,
-      data: {
-        group: "nodalia_notifications",
-        tag: hash,
-      },
-    };
-    if (this._config.mobile_notifications?.critical_alerts === true && item?.severity === "critical") {
-      payload.data = {
-        ...payload.data,
-        ttl: 0,
-        priority: "high",
-        channel: "alarm_stream",
-        push: {
-          sound: {
-            name: "default",
-            critical: 1,
-            volume: 1,
+        const groups = [
+          {
+            entities: this._config.battery_entities,
+            icon: "mdi:battery-alert-variant-outline",
+            kind: "battery_low",
+            titleKey: "titles.batteryLow",
+            titleFallback: "Low battery",
+            messageKey: "messages.lowLevel",
+            messageFallback: "{source} is at {value}.",
+            threshold: this._config.thresholds.battery_low,
+            urlLabel: this._text("actions.buyBattery", "Buy batteries")
           },
-        },
-      };
-    }
-    return payload;
-  }
-
-  async _flushMobileNotifications(items) {
-    if (!this._hass || typeof this._hass.callService !== "function" || !this.isConnected) {
-      return;
-    }
-    for (const item of items) {
-      if (!this.isConnected) {
-        return;
+          {
+            entities: this._config.humidifier_fill_entities,
+            icon: "mdi:air-humidifier",
+            kind: "humidifier_fill_low",
+            titleKey: "titles.humidifierFillLow",
+            titleFallback: "Low tank",
+            messageKey: "messages.lowLevel",
+            messageFallback: "{source} is at {value}.",
+            threshold: this._config.thresholds.humidifier_fill_low,
+            urlLabel: this._text("actions.open", "Open")
+          },
+          {
+            entities: this._config.humidifier_full_entities,
+            icon: "mdi:cup-water",
+            kind: "humidifier_fill_full",
+            titleKey: "titles.humidifierFillFull",
+            titleFallback: "Tank full",
+            messageKey: "messages.highLevel",
+            messageFallback: "{source} is at {value}.",
+            threshold: this._config.thresholds.humidifier_fill_full,
+            mode: "above",
+            urlLabel: this._text("actions.open", "Open")
+          },
+          {
+            entities: this._config.ink_entities,
+            icon: "mdi:printer-alert",
+            kind: "ink_low",
+            titleKey: "titles.inkLow",
+            titleFallback: "Low ink",
+            messageKey: "messages.lowLevel",
+            messageFallback: "{source} is at {value}.",
+            threshold: this._config.thresholds.ink_low,
+            urlLabel: this._text("actions.buyInk", "Buy ink")
+          }
+        ];
+        groups.forEach((group) => {
+          group.entities.forEach((entityId) => {
+            const state = this._hass.states?.[entityId];
+            const value = numericState(state);
+            const matchesThreshold = group.mode === "above" ? value >= group.threshold : value <= group.threshold;
+            if (!state || value === null || !matchesThreshold) {
+              return;
+            }
+            const sourceName = friendlyName(this._hass, entityId);
+            const unit = state.attributes?.unit_of_measurement || "%";
+            const formattedValue = formatNumber(value, unit);
+            add({
+              id: `${group.kind}:${entityId}:${Math.round(value)}`,
+              title: this._smartTitle(group.kind, group.titleKey, group.titleFallback, {
+                source: sourceName,
+                threshold: formatNumber(group.threshold, unit),
+                value: formattedValue
+              }, entityId),
+              message: this._smartMessage(group.kind, group.messageKey, group.messageFallback, {
+                source: sourceName,
+                threshold: formatNumber(group.threshold, unit),
+                value: formattedValue
+              }, entityId),
+              icon: group.icon,
+              severity: "warning",
+              source: sourceName,
+              entity: entityId,
+              tintColor: this._smartTint(group.kind, entityId),
+              mobilePolicy: this._smartMobilePolicyForKind(group.kind, entityId),
+              createdAt: Date.parse(state.last_changed || "") || Date.now(),
+              action: this._smartAction(group.kind, { label: this._text("actions.viewSensor", "View sensor"), type: "more-info", entity: entityId }, group.urlLabel, entityId)
+            });
+          });
+        });
       }
-      if (!this._shouldSendMobileNotification(item)) {
-        continue;
+      _buildCustomNotifications(add) {
+        this._config.custom_notifications.forEach((item) => {
+          if (!item.title && !item.message && !item.entity) {
+            return;
+          }
+          if (!this._customNotificationMatches(item)) {
+            return;
+          }
+          const entityName = item.entity ? friendlyName(this._hass, item.entity) : "";
+          const templateValues = this._customNotificationTemplateValues(item);
+          const resolvedItem = {
+            ...item,
+            title: this._formatTemplate(item.title, templateValues),
+            message: this._formatTemplate(item.message, templateValues),
+            action_label: this._formatTemplate(item.action_label, templateValues),
+            url: this._formatTemplate(item.url, templateValues)
+          };
+          add({
+            id: `custom:${notificationHash(`${item.title}|${item.message}|${item.entity}|${item.attribute}|${item.condition}|${item.value}|${item.url}|${JSON.stringify(item.tap_action || {})}`)}`,
+            title: resolvedItem.title || entityName || this._text("titles.customFallback", "Notification"),
+            message: resolvedItem.message || entityName,
+            icon: item.icon || "mdi:bell-outline",
+            tintColor: item.tint_color || "",
+            severity: item.severity || "info",
+            source: entityName,
+            mobilePolicy: item.mobile || "auto",
+            createdAt: item.entity ? Date.parse(this._hass?.states?.[item.entity]?.last_changed || "") || Date.now() : Date.now(),
+            action: this._buildCustomAction(resolvedItem)
+          });
+        });
       }
-      const hash = this._dismissKey(item.id);
-      if (this._mobileSent.has(hash) || this._isDismissed(item)) {
-        continue;
+      _customNotificationTemplateValues(item) {
+        const entityId = String(item?.entity || "").trim();
+        const fanEntity = entityId ? this._getFanTargetForSource(entityId) || this._config.fan_entities[0] : this._config.fan_entities[0];
+        return customNotificationTemplateValues(this._hass, item, fanEntity);
       }
-      const legacyPayload = this._buildLegacyMobilePayload(item, hash);
-      const notifyEntities = Array.isArray(this._config.mobile_notifications.entities)
-        ? this._config.mobile_notifications.entities
-        : [];
-      const legacyServices = Array.isArray(this._config.mobile_notifications.services)
-        ? this._config.mobile_notifications.services
-        : [];
-      const entityPayload = {
-        entity_id: notifyEntities,
-        title: legacyPayload.title,
-        message: legacyPayload.message,
-      };
-      await Promise.all([
-        notifyEntities.length
-          ? Promise.resolve().then(() => (
-            this._hass.callService("notify", "send_message", entityPayload)
-          )).then(() => true, () => false)
-          : Promise.resolve(false),
-        ...legacyServices.map(service => (
-          Promise.resolve().then(() => (
-            this._callInternalService(service, legacyPayload)
-          )).then(() => true, () => false)
-        )),
-      ]).then(results => {
-        const delivered = results.some(Boolean);
-        if (delivered) {
-          this._mobileSent.add(hash);
-          this._recordMobileCooldown(item);
+      _customNotificationMatches(item) {
+        const condition = String(item.condition || "always").toLowerCase();
+        if (condition === "always") {
+          return true;
         }
-      });
-    }
-    this._saveMobileSent();
-  }
-
-  _getNotifications(options = {}) {
-    const raw = this._getRawNotifications();
-    this._pruneDismissed(raw.map(item => item.id));
-    const visible = raw.filter(item => !this._isDismissed(item));
-    this._lastNotifications = visible;
-    if (options.notifyMobile === true) {
-      this._queueMobileNotifications(visible);
-    }
-    return visible;
-  }
-
-  _invalidateTrackedEntityStampCache() {
-    this._trackedEntityIdsCache = null;
-    this._trackedEntityRevision = null;
-    this._trackedEntitiesStamp = "";
-    this._trackedEntityIdsLength = 0;
-  }
-
-  _getTrackedEntityIds() {
-    if (this._trackedEntityIdsCache) {
-      return this._trackedEntityIdsCache;
-    }
-    const configuredEntities = [
-      ...this._config.vacuum_entities,
-      ...this._config.vacuum_error_entities,
-      ...this._config.fan_entities,
-      ...this._config.climate_entities,
-      ...this._config.humidifier_entities,
-      ...this._config.media_player_entities,
-      ...this._config.weather_entities,
-      ...this._config.motion_entities,
-      ...this._config.door_entities,
-      ...this._config.window_entities,
-      ...this._config.temperature_entities,
-      ...this._config.humidity_entities,
-      ...this._config.outdoor_temperature_entities,
-      ...this._config.outdoor_humidity_entities,
-      ...this._config.battery_entities,
-      ...this._config.humidifier_fill_entities,
-      ...this._config.humidifier_full_entities,
-      ...this._config.ink_entities,
-      this._config.presence_entity,
-      this._config.dismissed_entity,
-      ...this._config.custom_notifications.map(item => item.entity).filter(Boolean),
-      ...this._config.external_alerts.map(item => item.entity).filter(Boolean),
-    ];
-    const templateEntities = this._config.custom_notifications.flatMap(item => [
-      item.title,
-      item.message,
-      item.action_label,
-      item.url,
-    ].flatMap(referencedNotificationTemplateEntities));
-    this._trackedEntityIdsCache = [...new Set([...configuredEntities, ...templateEntities].filter(Boolean))];
-    return this._trackedEntityIdsCache;
-  }
-
-  _buildTrackedEntitiesStamp(hass = this._hass) {
-    if (!hass || !this._config) {
-      return "";
-    }
-    const chunks = [];
-    for (const entityId of this._getTrackedEntityIds()) {
-      const state = hass.states?.[entityId];
-      chunks.push(`${entityId}:${state?.state ?? ""}:${state?.last_updated ?? state?.last_changed ?? ""}`);
-    }
-    for (const entityId of this._config.vacuum_entities) {
-      const errorState = this._getVacuumErrorState(entityId);
-      chunks.push(`vacuum-error:${entityId}:${errorState?.entity_id || ""}:${errorState?.state || ""}:${errorState?.last_changed || ""}`);
-    }
-    return chunks.join("|");
-  }
-
-  _syncTrackedEntitiesStamp(hass = this._hass) {
-    if (!hass || !this._config) {
-      this._trackedEntitiesStamp = "";
-      return;
-    }
-
-    if (!this._trackedEntityRevision) {
-      this._trackedEntityRevision = new Map();
-    }
-
-    const ids = this._getTrackedEntityIds();
-    let dirty = ids.length !== this._trackedEntityIdsLength;
-    if (!dirty) {
-      for (const entityId of ids) {
-        const state = hass.states?.[entityId];
-        const revision = `${state?.state ?? ""}:${state?.last_updated ?? state?.last_changed ?? ""}`;
-        if (this._trackedEntityRevision.get(entityId) !== revision) {
-          this._trackedEntityRevision.set(entityId, revision);
-          dirty = true;
+        const state = this._hass?.states?.[item.entity];
+        if (!state) {
+          return condition === "missing";
+        }
+        const raw = stateValue(state, item.attribute);
+        const text = String(raw ?? "").trim().toLowerCase();
+        const expected = String(item.value || "").trim().toLowerCase();
+        const num = Number(raw);
+        const expectedNum = Number(item.value);
+        switch (condition) {
+          case "on":
+            return stateIsOn(state);
+          case "off":
+            return stateIsOff(state);
+          case "unavailable":
+            return ["unavailable", "unknown"].includes(String(state.state).toLowerCase());
+          case "equals":
+            return text === expected;
+          case "not_equals":
+            return text !== expected;
+          case "above":
+            return Number.isFinite(num) && Number.isFinite(expectedNum) && num > expectedNum;
+          case "below":
+            return Number.isFinite(num) && Number.isFinite(expectedNum) && num < expectedNum;
+          default:
+            return false;
         }
       }
-      if (!dirty) {
+      _buildCustomAction(item) {
+        const nativeAction = this._buildNativeNotificationAction(item.tap_action, {
+          entityId: item.entity,
+          label: item.action_label || this._text("actions.open", "Open")
+        });
+        if (nativeAction) {
+          return nativeAction;
+        }
+        const type = String(item.action_type || "none").trim();
+        if (type === "none") {
+          return null;
+        }
+        return {
+          label: item.action_label || (type === "service" ? this._text("actions.run", "Run") : type === "toggle" ? this._text("actions.toggle", "Toggle") : this._text("actions.open", "Open")),
+          type,
+          entity: item.entity,
+          service: item.service,
+          serviceData: parseServiceData(item.service_data),
+          url: item.url,
+          newTab: true
+        };
+      }
+      _severityScore(severity) {
+        return { critical: 4, warning: 3, success: 2, info: 1 }[normalizeSeverity(severity)] || 1;
+      }
+      _backgroundMobileSuppressesForeground() {
+        const background = this._config?.background_mobile || {};
+        if (background.enabled !== true) {
+          return false;
+        }
+        const nativeSignature = String(this._lastBackgroundMobileNativeSignature || "");
+        const currentNative = getBackgroundMobileNativeSignature(this._config, this._hass);
+        if (nativeSignature === currentNative.signature || nativeSignature === `active:${currentNative.profileId}`) {
+          return true;
+        }
+        const lastSignature = String(this._lastBackgroundMobileSyncSignature || "");
+        const webhookId = String(background.webhook || "").trim();
+        if (!lastSignature || !webhookId) {
+          return false;
+        }
+        const payload = this._buildBackgroundMobileWebhookPayload();
+        if (backgroundMobilePayloadOverLimit(payload)) {
+          return false;
+        }
+        const currentSignature = `${webhookId}:${payload.config_hash}:${payload.chunk_count}`;
+        return currentSignature === lastSignature;
+      }
+      _shouldSendMobileNotification(item) {
+        if (this._backgroundMobileSuppressesForeground()) {
+          return false;
+        }
+        if (!item?.id) {
+          return false;
+        }
+        const deliveryState = this._resolveMobileDeliveryForItem(item);
+        if (deliveryState !== "allowed") {
+          return false;
+        }
+        return !this._mobileSent.has(this._dismissKey(item.id));
+      }
+      _enqueueMobileNotifications(items) {
+        const queue = this._mobileNotifyQueue || (this._mobileNotifyQueue = []);
+        for (const item of items) {
+          if (!item?.id) {
+            continue;
+          }
+          const key = this._dismissKey(item.id);
+          if (queue.some((entry) => this._dismissKey(entry.id) === key)) {
+            continue;
+          }
+          queue.push(item);
+        }
+      }
+      _scheduleMobileNotifyDrain() {
+        if (this._mobileNotifyTimer || !this._mobileNotifyQueue?.length) {
+          return;
+        }
+        this._mobileNotifyTimer = window.setTimeout(() => {
+          this._mobileNotifyTimer = 0;
+          const batch = this._mobileNotifyQueue.splice(0, 4);
+          if (!batch.length) {
+            return;
+          }
+          Promise.resolve().then(() => this._flushMobileNotifications(batch)).catch((error) => {
+            console.warn("Nodalia Notifications Card: mobile notification batch failed.", error);
+          }).finally(() => {
+            if (this._mobileNotifyQueue.length) {
+              this._scheduleMobileNotifyDrain();
+            }
+          });
+        }, 450);
+      }
+      _queueMobileNotifications(items) {
+        const pending = items.filter((item) => this._shouldSendMobileNotification(item));
+        if (!pending.length) {
+          return;
+        }
+        this._enqueueMobileNotifications(pending);
+        this._scheduleMobileNotifyDrain();
+      }
+      _buildLegacyMobilePayload(item, hash) {
+        const payload = {
+          title: item.title,
+          message: item.message || item.source || item.title,
+          data: {
+            group: "nodalia_notifications",
+            tag: hash
+          }
+        };
+        if (this._config.mobile_notifications?.critical_alerts === true && item?.severity === "critical") {
+          payload.data = {
+            ...payload.data,
+            ttl: 0,
+            priority: "high",
+            channel: "alarm_stream",
+            push: {
+              sound: {
+                name: "default",
+                critical: 1,
+                volume: 1
+              }
+            }
+          };
+        }
+        return payload;
+      }
+      async _flushMobileNotifications(items) {
+        if (!this._hass || typeof this._hass.callService !== "function" || !this.isConnected) {
+          return;
+        }
+        for (const item of items) {
+          if (!this.isConnected) {
+            return;
+          }
+          if (!this._shouldSendMobileNotification(item)) {
+            continue;
+          }
+          const hash = this._dismissKey(item.id);
+          if (this._mobileSent.has(hash) || this._isDismissed(item)) {
+            continue;
+          }
+          const legacyPayload = this._buildLegacyMobilePayload(item, hash);
+          const notifyEntities = Array.isArray(this._config.mobile_notifications.entities) ? this._config.mobile_notifications.entities : [];
+          const legacyServices = Array.isArray(this._config.mobile_notifications.services) ? this._config.mobile_notifications.services : [];
+          const entityPayload = {
+            entity_id: notifyEntities,
+            title: legacyPayload.title,
+            message: legacyPayload.message
+          };
+          await Promise.all([
+            notifyEntities.length ? Promise.resolve().then(() => this._hass.callService("notify", "send_message", entityPayload)).then(() => true, () => false) : Promise.resolve(false),
+            ...legacyServices.map((service) => Promise.resolve().then(() => this._callInternalService(service, legacyPayload)).then(() => true, () => false))
+          ]).then((results) => {
+            const delivered = results.some(Boolean);
+            if (delivered) {
+              this._mobileSent.add(hash);
+              this._recordMobileCooldown(item);
+            }
+          });
+        }
+        this._saveMobileSent();
+      }
+      _getNotifications(options = {}) {
+        const raw = this._getRawNotifications();
+        this._pruneDismissed(raw.map((item) => item.id));
+        const visible = raw.filter((item) => !this._isDismissed(item));
+        this._lastNotifications = visible;
+        if (options.notifyMobile === true) {
+          this._queueMobileNotifications(visible);
+        }
+        return visible;
+      }
+      _invalidateTrackedEntityStampCache() {
+        this._trackedEntityIdsCache = null;
+        this._trackedEntityRevision = null;
+        this._trackedEntitiesStamp = "";
+        this._trackedEntityIdsLength = 0;
+      }
+      _getTrackedEntityIds() {
+        if (this._trackedEntityIdsCache) {
+          return this._trackedEntityIdsCache;
+        }
+        const configuredEntities = [
+          ...this._config.vacuum_entities,
+          ...this._config.vacuum_error_entities,
+          ...this._config.fan_entities,
+          ...this._config.climate_entities,
+          ...this._config.humidifier_entities,
+          ...this._config.media_player_entities,
+          ...this._config.weather_entities,
+          ...this._config.motion_entities,
+          ...this._config.door_entities,
+          ...this._config.window_entities,
+          ...this._config.temperature_entities,
+          ...this._config.humidity_entities,
+          ...this._config.outdoor_temperature_entities,
+          ...this._config.outdoor_humidity_entities,
+          ...this._config.battery_entities,
+          ...this._config.humidifier_fill_entities,
+          ...this._config.humidifier_full_entities,
+          ...this._config.ink_entities,
+          this._config.presence_entity,
+          this._config.dismissed_entity,
+          ...this._config.custom_notifications.map((item) => item.entity).filter(Boolean),
+          ...this._config.external_alerts.map((item) => item.entity).filter(Boolean)
+        ];
+        const templateEntities = this._config.custom_notifications.flatMap((item) => [
+          item.title,
+          item.message,
+          item.action_label,
+          item.url
+        ].flatMap(referencedNotificationTemplateEntities));
+        this._trackedEntityIdsCache = [...new Set([...configuredEntities, ...templateEntities].filter(Boolean))];
+        return this._trackedEntityIdsCache;
+      }
+      _buildTrackedEntitiesStamp(hass = this._hass) {
+        if (!hass || !this._config) {
+          return "";
+        }
+        const chunks = [];
+        for (const entityId of this._getTrackedEntityIds()) {
+          const state = hass.states?.[entityId];
+          chunks.push(`${entityId}:${state?.state ?? ""}:${state?.last_updated ?? state?.last_changed ?? ""}`);
+        }
         for (const entityId of this._config.vacuum_entities) {
           const errorState = this._getVacuumErrorState(entityId);
-          const key = `vacuum-error:${entityId}`;
-          const revision = `${errorState?.entity_id || ""}:${errorState?.state || ""}:${errorState?.last_changed || ""}`;
-          if (this._trackedEntityRevision.get(key) !== revision) {
-            this._trackedEntityRevision.set(key, revision);
-            dirty = true;
+          chunks.push(`vacuum-error:${entityId}:${errorState?.entity_id || ""}:${errorState?.state || ""}:${errorState?.last_changed || ""}`);
+        }
+        return chunks.join("|");
+      }
+      _syncTrackedEntitiesStamp(hass = this._hass) {
+        if (!hass || !this._config) {
+          this._trackedEntitiesStamp = "";
+          return;
+        }
+        if (!this._trackedEntityRevision) {
+          this._trackedEntityRevision = /* @__PURE__ */ new Map();
+        }
+        const ids = this._getTrackedEntityIds();
+        let dirty = ids.length !== this._trackedEntityIdsLength;
+        if (!dirty) {
+          for (const entityId of ids) {
+            const state = hass.states?.[entityId];
+            const revision = `${state?.state ?? ""}:${state?.last_updated ?? state?.last_changed ?? ""}`;
+            if (this._trackedEntityRevision.get(entityId) !== revision) {
+              this._trackedEntityRevision.set(entityId, revision);
+              dirty = true;
+            }
+          }
+          if (!dirty) {
+            for (const entityId of this._config.vacuum_entities) {
+              const errorState = this._getVacuumErrorState(entityId);
+              const key = `vacuum-error:${entityId}`;
+              const revision = `${errorState?.entity_id || ""}:${errorState?.state || ""}:${errorState?.last_changed || ""}`;
+              if (this._trackedEntityRevision.get(key) !== revision) {
+                this._trackedEntityRevision.set(key, revision);
+                dirty = true;
+              }
+            }
+          }
+        } else {
+          this._trackedEntityRevision.clear();
+          for (const entityId of ids) {
+            const state = hass.states?.[entityId];
+            this._trackedEntityRevision.set(
+              entityId,
+              `${state?.state ?? ""}:${state?.last_updated ?? state?.last_changed ?? ""}`
+            );
+          }
+          for (const entityId of this._config.vacuum_entities) {
+            const errorState = this._getVacuumErrorState(entityId);
+            const key = `vacuum-error:${entityId}`;
+            this._trackedEntityRevision.set(
+              key,
+              `${errorState?.entity_id || ""}:${errorState?.state || ""}:${errorState?.last_changed || ""}`
+            );
+          }
+          this._trackedEntityIdsLength = ids.length;
+          dirty = true;
+        }
+        if (dirty || !this._trackedEntitiesStamp) {
+          this._trackedEntitiesStamp = this._buildTrackedEntitiesStamp(hass);
+        }
+      }
+      _rebuildCalendarEventsSignature() {
+        this._calendarEventsSignature = this._calendarEvents.map((event) => {
+          const start = calendarEventDate(event.start);
+          const startMs = start && !Number.isNaN(start.getTime()) ? start.getTime() : "";
+          const uid = String(event.uid ?? event.id ?? "");
+          const recurrence = String(event.recurrence_id ?? event.recurrenceId ?? "");
+          return `${event._entity}:${String(event.summary || event.title || "")}:${startMs}:${uid}:${recurrence}`;
+        }).join("|");
+      }
+      _rebuildWeatherForecastsSignature() {
+        this._weatherForecastsSignature = Object.entries(this._weatherForecasts || {}).map(([entityId, rows]) => `${entityId}:${(rows || []).slice(0, 12).map((row) => `${row?.datetime || row?.dateTime || row?.date || ""}:${row?.condition || ""}:${row?.precipitation_probability ?? row?.precipitationProbability ?? ""}`).join(",")}`).join("|");
+      }
+      _getRenderSignature(hass = this._hass) {
+        const parts = [
+          CARD_VERSION,
+          this._expanded ? "expanded" : "collapsed",
+          [...this._dismissed].join(","),
+          this._calendarLoading ? "loading" : "",
+          this._calendarError,
+          this._calendarEventsSignature || "",
+          this._weatherForecastsSignature || "",
+          isWithinQuietHours(this._config?.mobile_context?.quiet_hours, /* @__PURE__ */ new Date()) ? "quiet" : "awake"
+        ];
+        parts.push(this._config.language || "auto");
+        parts.push(
+          typeof window !== "undefined" && window.NodaliaI18n?.resolveLanguage?.(hass, this._config.language || "auto") || ""
+        );
+        if (!this._trackedEntitiesStamp && hass) {
+          this._syncTrackedEntitiesStamp(hass);
+        }
+        parts.push(this._trackedEntitiesStamp);
+        return parts.join("||");
+      }
+      _scheduleQuietHoursWake(now = /* @__PURE__ */ new Date()) {
+        if (this._quietHoursWakeTimer) {
+          window.clearTimeout(this._quietHoursWakeTimer);
+          this._quietHoursWakeTimer = 0;
+        }
+        const delay = getNextQuietHoursBoundaryDelay(this._config?.mobile_context?.quiet_hours, now);
+        if (!Number.isFinite(delay) || delay === null || !this.isConnected) {
+          return;
+        }
+        this._quietHoursWakeTimer = window.setTimeout(() => {
+          this._quietHoursWakeTimer = 0;
+          if (!this.isConnected) {
+            return;
+          }
+          this._lastRenderSignature = "";
+          this._renderIfChanged(true);
+          this._scheduleQuietHoursWake();
+        }, Math.max(250, delay + 50));
+      }
+      _renderIfChanged(force = false) {
+        if (!this.isConnected) {
+          return;
+        }
+        const next = this._getRenderSignature();
+        if (!force && next === this._lastRenderSignature) {
+          return;
+        }
+        if (this._entranceAnimationTimer && this.shadowRoot?.querySelector?.(".notifications-card--enter")) {
+          this._renderPendingAfterEntrance = true;
+          return;
+        }
+        this._lastRenderSignature = next;
+        this._render();
+      }
+      _triggerHaptic(kind = this._config.haptics?.style) {
+        if (!this._config.haptics?.enabled) {
+          return;
+        }
+        const style = String(kind || "medium");
+        try {
+          fireEvent(this, "haptic", style);
+        } catch (_error) {
+        }
+        if (this._config.haptics?.fallback_vibrate && typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+          navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.medium);
+        }
+      }
+      _getAnimationSettings() {
+        const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+        return {
+          enabled: configuredAnimations.enabled !== false,
+          contentDuration: clamp(
+            Number(configuredAnimations.content_duration) || DEFAULT_CONFIG.animations.content_duration,
+            120,
+            1800
+          ),
+          buttonBounceDuration: clamp(
+            Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration,
+            120,
+            1200
+          )
+        };
+      }
+      _triggerPressAnimation(element) {
+        if (!(element instanceof HTMLElement)) {
+          return;
+        }
+        const animations = this._getAnimationSettings();
+        if (!animations.enabled) {
+          return;
+        }
+        element.classList.remove("is-pressing");
+        element.getBoundingClientRect();
+        element.classList.add("is-pressing");
+        const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+        const done = () => {
+          if (!element.isConnected) {
+            return;
+          }
+          element.classList.remove("is-pressing");
+        };
+        if (typeof schedule === "function") {
+          schedule(this, done, animations.buttonBounceDuration + 40);
+        } else {
+          window.setTimeout(done, animations.buttonBounceDuration + 40);
+        }
+      }
+      _text(path, fallback = "", values = {}) {
+        const i18n = typeof window !== "undefined" ? window.NodaliaI18n : null;
+        if (typeof i18n?.translateNotificationsUi === "function") {
+          return i18n.translateNotificationsUi(this._hass, this._config?.language ?? "auto", path, fallback, values);
+        }
+        return String(fallback || "").replace(/\{([a-zA-Z0-9_]+)\}/g, (_match, key) => {
+          const value = values?.[key];
+          return value === void 0 || value === null ? "" : String(value);
+        });
+      }
+      _onClick(event) {
+        const button = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.action);
+        if (!button) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        this._triggerPressAnimation(button);
+        const action = button.dataset.action;
+        if (action === "toggle-stack") {
+          if (this._stackCollapseTimer) {
+            window.clearTimeout(this._stackCollapseTimer);
+            this._stackCollapseTimer = 0;
+          }
+          const animations = this._getAnimationSettings();
+          if (this._expanded && animations.enabled) {
+            this._collapsingStack = true;
+            this._stackTransition = "collapse";
+            this._triggerHaptic("selection");
+            this._renderIfChanged(true);
+            const collapseMs = Math.max(140, Math.round(animations.contentDuration * 0.68));
+            this._stackCollapseTimer = window.setTimeout(() => {
+              this._stackCollapseTimer = 0;
+              this._expanded = false;
+              this._collapsingStack = false;
+              this._stackTransition = "collapse-final";
+              this._renderIfChanged(true);
+            }, collapseMs);
+            return;
+          }
+          this._collapsingStack = false;
+          this._expanded = !this._expanded;
+          this._stackTransition = this._expanded ? "expand" : "collapse-final";
+          this._triggerHaptic("selection");
+          this._renderIfChanged(true);
+          return;
+        }
+        if (action === "dismiss") {
+          const id = button.dataset.id;
+          if (id) {
+            this._dismissed.add(id);
+            this._saveDismissed();
+            this._saveNativeDismissed(id);
+            this._triggerHaptic("light");
+            this._renderIfChanged(true);
+          }
+          return;
+        }
+        if (action === "clear-all") {
+          const ids = this._getRawNotifications().map((item) => item.id);
+          ids.forEach((id) => this._dismissed.add(id));
+          this._saveDismissed();
+          this._saveNativeDismissed(ids);
+          this._triggerHaptic("success");
+          this._renderIfChanged(true);
+          return;
+        }
+        if (action === "run-notification") {
+          const notification = this._lastNotifications.find((item) => item.id === button.dataset.id);
+          this._runNotificationAction(notification);
+        }
+      }
+      async _runNotificationAction(notification) {
+        const action = notification?.action;
+        if (!action || !this._hass) {
+          return;
+        }
+        this._triggerHaptic("medium");
+        if (action.type === "more-info" && action.entity) {
+          fireEvent(this, "hass-more-info", { entityId: action.entity });
+          return;
+        }
+        if (action.type === "calendar-popup") {
+          const detail = {
+            entity_id: action.entity || "",
+            date: action.date || "",
+            event_key: action.eventKey || "",
+            source: CARD_TAG
+          };
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("nodalia-calendar-card-open", {
+              bubbles: false,
+              cancelable: true,
+              composed: false,
+              detail
+            }));
+          }
+          return;
+        }
+        if (action.type === "navigate" && action.navigationPath) {
+          const path = window.NodaliaUtils?.sanitizeActionUrl?.(action.navigationPath, { allowRelative: true, allowHash: true }) || "";
+          if (path && typeof window !== "undefined" && !/^(?:https?:)?\/\//i.test(path)) {
+            window.history.pushState(null, "", path);
+            window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } }));
+          }
+          return;
+        }
+        if (action.type === "url" && action.url) {
+          const url = window.NodaliaUtils?.sanitizeActionUrl?.(action.url, { allowRelative: true, allowHash: true }) || "";
+          if (url && typeof window !== "undefined") {
+            if (action.newTab === false) {
+              window.location.assign(url);
+            } else {
+              window.open(url, "_blank", "noopener,noreferrer");
+            }
+          }
+          return;
+        }
+        if (action.type === "toggle" && action.entity && typeof this._hass.callService === "function") {
+          const data = { entity_id: action.entity };
+          if (action.internal === true) {
+            await this._callInternalService("homeassistant.toggle", data);
+          } else {
+            await this._callNamedService("homeassistant.toggle", data);
+          }
+          if (!this.isConnected) {
+            return;
+          }
+          return;
+        }
+        if (action.type === "service" && action.service && typeof this._hass.callService === "function") {
+          const data = {
+            ...action.serviceData || {},
+            ...action.entity ? { entity_id: action.entity } : {}
+          };
+          if (action.internal === true) {
+            await this._callInternalService(action.service, data);
+          } else {
+            await this._callNamedService(action.service, data);
+          }
+          if (!this.isConnected) {
+            return;
           }
         }
       }
-    } else {
-      this._trackedEntityRevision.clear();
-      for (const entityId of ids) {
-        const state = hass.states?.[entityId];
-        this._trackedEntityRevision.set(
-          entityId,
-          `${state?.state ?? ""}:${state?.last_updated ?? state?.last_changed ?? ""}`,
-        );
+      _isServiceAllowed(serviceValue) {
+        const security = this._config?.security || {};
+        if (security.strict_service_actions !== true) {
+          return true;
+        }
+        const normalizedService = String(serviceValue || "").trim().toLowerCase();
+        if (!normalizedService || !normalizedService.includes(".")) {
+          return false;
+        }
+        const [domain] = normalizedService.split(".");
+        const domains = security.allowed_service_domains || [];
+        const services = security.allowed_services || [];
+        if (!domains.length && !services.length) {
+          return false;
+        }
+        return services.includes(normalizedService) || domains.includes(domain);
       }
-      for (const entityId of this._config.vacuum_entities) {
-        const errorState = this._getVacuumErrorState(entityId);
-        const key = `vacuum-error:${entityId}`;
-        this._trackedEntityRevision.set(
-          key,
-          `${errorState?.entity_id || ""}:${errorState?.state || ""}:${errorState?.last_changed || ""}`,
-        );
+      _callNamedService(serviceValue, data = {}, target = null) {
+        if (!this._hass || typeof this._hass.callService !== "function") {
+          return Promise.resolve();
+        }
+        if (!this._isServiceAllowed(serviceValue)) {
+          window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Notifications Card", serviceValue);
+          return Promise.resolve();
+        }
+        const [domain, service] = String(serviceValue || "").split(".");
+        if (!domain || !service) {
+          return Promise.resolve();
+        }
+        return this._hass.callService(domain, service, data, target || void 0);
       }
-      this._trackedEntityIdsLength = ids.length;
-      dirty = true;
-    }
-
-    if (dirty || !this._trackedEntitiesStamp) {
-      this._trackedEntitiesStamp = this._buildTrackedEntitiesStamp(hass);
-    }
-  }
-
-  _rebuildCalendarEventsSignature() {
-    this._calendarEventsSignature = this._calendarEvents
-      .map(event => {
-        const start = calendarEventDate(event.start);
-        const startMs = start && !Number.isNaN(start.getTime()) ? start.getTime() : "";
-        const uid = String(event.uid ?? event.id ?? "");
-        const recurrence = String(event.recurrence_id ?? event.recurrenceId ?? "");
-        return `${event._entity}:${String(event.summary || event.title || "")}:${startMs}:${uid}:${recurrence}`;
-      })
-      .join("|");
-  }
-
-  _rebuildWeatherForecastsSignature() {
-    this._weatherForecastsSignature = Object.entries(this._weatherForecasts || {})
-      .map(([entityId, rows]) => `${entityId}:${(rows || []).slice(0, 12).map(row => `${row?.datetime || row?.dateTime || row?.date || ""}:${row?.condition || ""}:${row?.precipitation_probability ?? row?.precipitationProbability ?? ""}`).join(",")}`)
-      .join("|");
-  }
-
-  _getRenderSignature(hass = this._hass) {
-    const parts = [
-      CARD_VERSION,
-      this._expanded ? "expanded" : "collapsed",
-      [...this._dismissed].join(","),
-      this._calendarLoading ? "loading" : "",
-      this._calendarError,
-      this._calendarEventsSignature || "",
-      this._weatherForecastsSignature || "",
-      isWithinQuietHours(this._config?.mobile_context?.quiet_hours, new Date()) ? "quiet" : "awake",
-    ];
-    parts.push(this._config.language || "auto");
-    parts.push(
-      (typeof window !== "undefined" && window.NodaliaI18n?.resolveLanguage?.(hass, this._config.language || "auto")) || "",
-    );
-    if (!this._trackedEntitiesStamp && hass) {
-      this._syncTrackedEntitiesStamp(hass);
-    }
-    parts.push(this._trackedEntitiesStamp);
-    return parts.join("||");
-  }
-
-  _scheduleQuietHoursWake(now = new Date()) {
-    if (this._quietHoursWakeTimer) {
-      window.clearTimeout(this._quietHoursWakeTimer);
-      this._quietHoursWakeTimer = 0;
-    }
-    const delay = getNextQuietHoursBoundaryDelay(this._config?.mobile_context?.quiet_hours, now);
-    if (!Number.isFinite(delay) || delay === null || !this.isConnected) {
-      return;
-    }
-    this._quietHoursWakeTimer = window.setTimeout(() => {
-      this._quietHoursWakeTimer = 0;
-      if (!this.isConnected) {
-        return;
+      _callInternalService(serviceValue, data = {}, target = null) {
+        if (!this._hass || typeof this._hass.callService !== "function") {
+          return Promise.resolve();
+        }
+        const [domain, service] = String(serviceValue || "").split(".");
+        if (!domain || !service) {
+          return Promise.resolve();
+        }
+        return this._hass.callService(domain, service, data, target || void 0);
       }
-      this._lastRenderSignature = "";
-      this._renderIfChanged(true);
-      this._scheduleQuietHoursWake();
-    }, Math.max(250, delay + 50));
-  }
-
-  _renderIfChanged(force = false) {
-    if (!this.isConnected) {
-      return;
-    }
-    const next = this._getRenderSignature();
-    if (!force && next === this._lastRenderSignature) {
-      return;
-    }
-    // Calendar/weather hydration can finish while the entrance animation is still
-    // running. Replacing shadow DOM during that window restarts the same CSS
-    // animation, so coalesce those rapid updates into one post-entrance render.
-    if (
-      this._entranceAnimationTimer
-      && this.shadowRoot?.querySelector?.(".notifications-card--enter")
-    ) {
-      this._renderPendingAfterEntrance = true;
-      return;
-    }
-    this._lastRenderSignature = next;
-    this._render();
-  }
-
-  _triggerHaptic(kind = this._config.haptics?.style) {
-    if (!this._config.haptics?.enabled) {
-      return;
-    }
-    const style = String(kind || "medium");
-    try {
-      fireEvent(this, "haptic", style);
-    } catch (_error) {
-      // Ignore unsupported HA haptic event.
-    }
-    if (this._config.haptics?.fallback_vibrate && typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
-      navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.medium);
-    }
-  }
-
-  _getAnimationSettings() {
-    const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
-    return {
-      enabled: configuredAnimations.enabled !== false,
-      contentDuration: clamp(
-        Number(configuredAnimations.content_duration) || DEFAULT_CONFIG.animations.content_duration,
-        120,
-        1800,
-      ),
-      buttonBounceDuration: clamp(
-        Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration,
-        120,
-        1200,
-      ),
-    };
-  }
-
-  _triggerPressAnimation(element) {
-    if (!(element instanceof HTMLElement)) {
-      return;
-    }
-    const animations = this._getAnimationSettings();
-    if (!animations.enabled) {
-      return;
-    }
-    element.classList.remove("is-pressing");
-    element.getBoundingClientRect();
-    element.classList.add("is-pressing");
-    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
-    const done = () => {
-      if (!element.isConnected) {
-        return;
+      _mobileDeliveryHint(item) {
+        const state = String(item?.mobileDeliveryState || "");
+        const policy = normalizeMobilePolicy(item?.mobilePolicy);
+        if (state === "allowed") {
+          return { icon: "mdi:cellphone", title: this._text("mobile.pushEnabled", "Push enabled") };
+        }
+        if (state === "card_only" || policy === "card_only") {
+          return { icon: "mdi:cellphone-off", title: this._text("mobile.cardOnly", "Visible in card only") };
+        }
+        if (state === "blocked_by_quiet_hours") {
+          return { icon: "mdi:bell-sleep", title: this._text("mobile.silencedQuietHours", "Silenced by quiet hours") };
+        }
+        if (state === "blocked_by_cooldown") {
+          return { icon: "mdi:bell-off", title: this._text("mobile.silencedCooldown", "Silenced by cooldown") };
+        }
+        if (state === "blocked_by_severity") {
+          return { icon: "mdi:volume-off", title: this._text("mobile.blockedSeverity", "Blocked by severity") };
+        }
+        if (state === "blocked_by_context") {
+          return { icon: "mdi:home-account", title: this._text("mobile.blockedContext", "Blocked by context") };
+        }
+        if (policy === "off" || state === "off") {
+          return { icon: "mdi:bell-off-outline", title: this._text("mobile.off", "Off") };
+        }
+        return null;
       }
-      element.classList.remove("is-pressing");
-    };
-    if (typeof schedule === "function") {
-      schedule(this, done, animations.buttonBounceDuration + 40);
-    } else {
-      window.setTimeout(done, animations.buttonBounceDuration + 40);
-    }
-  }
-
-  _text(path, fallback = "", values = {}) {
-    const i18n = typeof window !== "undefined" ? window.NodaliaI18n : null;
-    if (typeof i18n?.translateNotificationsUi === "function") {
-      return i18n.translateNotificationsUi(this._hass, this._config?.language ?? "auto", path, fallback, values);
-    }
-    return String(fallback || "").replace(/\{([a-zA-Z0-9_]+)\}/g, (_match, key) => {
-      const value = values?.[key];
-      return value === undefined || value === null ? "" : String(value);
-    });
-  }
-
-  _onClick(event) {
-    const button = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.action);
-    if (!button) {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    this._triggerPressAnimation(button);
-    const action = button.dataset.action;
-    if (action === "toggle-stack") {
-      if (this._stackCollapseTimer) {
-        window.clearTimeout(this._stackCollapseTimer);
-        this._stackCollapseTimer = 0;
+      _notificationChips(item) {
+        const chips = [];
+        if (item?.severity && item.severity !== "info") {
+          chips.push({ kind: "state", label: this._severityLabel(item.severity) });
+        }
+        return chips;
       }
-      const animations = this._getAnimationSettings();
-      if (this._expanded && animations.enabled) {
-        this._collapsingStack = true;
-        this._stackTransition = "collapse";
-        this._triggerHaptic("selection");
-        this._renderIfChanged(true);
-        const collapseMs = Math.max(140, Math.round(animations.contentDuration * 0.68));
-        this._stackCollapseTimer = window.setTimeout(() => {
-          this._stackCollapseTimer = 0;
-          this._expanded = false;
-          this._collapsingStack = false;
-          this._stackTransition = "collapse-final";
-          this._renderIfChanged(true);
-        }, collapseMs);
-        return;
-      }
-      this._collapsingStack = false;
-      this._expanded = !this._expanded;
-      this._stackTransition = this._expanded ? "expand" : "collapse-final";
-      this._triggerHaptic("selection");
-      this._renderIfChanged(true);
-      return;
-    }
-    if (action === "dismiss") {
-      const id = button.dataset.id;
-      if (id) {
-        this._dismissed.add(id);
-        this._saveDismissed();
-        this._saveNativeDismissed(id);
-        this._triggerHaptic("light");
-        this._renderIfChanged(true);
-      }
-      return;
-    }
-    if (action === "clear-all") {
-      const ids = this._getRawNotifications().map(item => item.id);
-      ids.forEach(id => this._dismissed.add(id));
-      this._saveDismissed();
-      this._saveNativeDismissed(ids);
-      this._triggerHaptic("success");
-      this._renderIfChanged(true);
-      return;
-    }
-    if (action === "run-notification") {
-      const notification = this._lastNotifications.find(item => item.id === button.dataset.id);
-      this._runNotificationAction(notification);
-    }
-  }
-
-  async _runNotificationAction(notification) {
-    const action = notification?.action;
-    if (!action || !this._hass) {
-      return;
-    }
-    this._triggerHaptic("medium");
-    if (action.type === "more-info" && action.entity) {
-      fireEvent(this, "hass-more-info", { entityId: action.entity });
-      return;
-    }
-    if (action.type === "calendar-popup") {
-      const detail = {
-        entity_id: action.entity || "",
-        date: action.date || "",
-        event_key: action.eventKey || "",
-        source: CARD_TAG,
-      };
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("nodalia-calendar-card-open", {
-          bubbles: false,
-          cancelable: true,
-          composed: false,
-          detail,
-        }));
-      }
-      return;
-    }
-    if (action.type === "navigate" && action.navigationPath) {
-      const path = window.NodaliaUtils?.sanitizeActionUrl?.(action.navigationPath, { allowRelative: true, allowHash: true }) || "";
-      if (path && typeof window !== "undefined" && !/^(?:https?:)?\/\//i.test(path)) {
-        window.history.pushState(null, "", path);
-        window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } }));
-      }
-      return;
-    }
-    if (action.type === "url" && action.url) {
-      const url = window.NodaliaUtils?.sanitizeActionUrl?.(action.url, { allowRelative: true, allowHash: true }) || "";
-      if (url && typeof window !== "undefined") {
-        if (action.newTab === false) {
-          window.location.assign(url);
-        } else {
-          window.open(url, "_blank", "noopener,noreferrer");
+      _severityAccent(severity) {
+        switch (severity) {
+          case "critical":
+            return "var(--error-color, #db4437)";
+          case "warning":
+            return "var(--warning-color, #f59e0b)";
+          case "success":
+            return "var(--success-color, #43a047)";
+          default:
+            return sanitizeCssRuntimeValue(this._config.styles.accent, DEFAULT_CONFIG.styles.accent);
         }
       }
-      return;
-    }
-    if (action.type === "toggle" && action.entity && typeof this._hass.callService === "function") {
-      const data = { entity_id: action.entity };
-      if (action.internal === true) {
-        await this._callInternalService("homeassistant.toggle", data);
-      } else {
-        await this._callNamedService("homeassistant.toggle", data);
-      }
-      if (!this.isConnected) {
-        return;
-      }
-      return;
-    }
-    if (action.type === "service" && action.service && typeof this._hass.callService === "function") {
-      const data = {
-        ...(action.serviceData || {}),
-        ...(action.entity ? { entity_id: action.entity } : {}),
-      };
-      if (action.internal === true) {
-        await this._callInternalService(action.service, data);
-      } else {
-        await this._callNamedService(action.service, data);
-      }
-      if (!this.isConnected) {
-        return;
-      }
-    }
-  }
-
-  _isServiceAllowed(serviceValue) {
-    const security = this._config?.security || {};
-    if (security.strict_service_actions !== true) {
-      return true;
-    }
-    const normalizedService = String(serviceValue || "").trim().toLowerCase();
-    if (!normalizedService || !normalizedService.includes(".")) {
-      return false;
-    }
-    const [domain] = normalizedService.split(".");
-    const domains = security.allowed_service_domains || [];
-    const services = security.allowed_services || [];
-    if (!domains.length && !services.length) {
-      return false;
-    }
-    return services.includes(normalizedService) || domains.includes(domain);
-  }
-
-  _callNamedService(serviceValue, data = {}, target = null) {
-    if (!this._hass || typeof this._hass.callService !== "function") {
-      return Promise.resolve();
-    }
-    if (!this._isServiceAllowed(serviceValue)) {
-      window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Notifications Card", serviceValue);
-      return Promise.resolve();
-    }
-    const [domain, service] = String(serviceValue || "").split(".");
-    if (!domain || !service) {
-      return Promise.resolve();
-    }
-    return this._hass.callService(domain, service, data, target || undefined);
-  }
-
-  _callInternalService(serviceValue, data = {}, target = null) {
-    if (!this._hass || typeof this._hass.callService !== "function") {
-      return Promise.resolve();
-    }
-    const [domain, service] = String(serviceValue || "").split(".");
-    if (!domain || !service) {
-      return Promise.resolve();
-    }
-    return this._hass.callService(domain, service, data, target || undefined);
-  }
-
-  _mobileDeliveryHint(item) {
-    const state = String(item?.mobileDeliveryState || "");
-    const policy = normalizeMobilePolicy(item?.mobilePolicy);
-    if (state === "allowed") {
-      return { icon: "mdi:cellphone", title: this._text("mobile.pushEnabled", "Push enabled") };
-    }
-    if (state === "card_only" || policy === "card_only") {
-      return { icon: "mdi:cellphone-off", title: this._text("mobile.cardOnly", "Visible in card only") };
-    }
-    if (state === "blocked_by_quiet_hours") {
-      return { icon: "mdi:bell-sleep", title: this._text("mobile.silencedQuietHours", "Silenced by quiet hours") };
-    }
-    if (state === "blocked_by_cooldown") {
-      return { icon: "mdi:bell-off", title: this._text("mobile.silencedCooldown", "Silenced by cooldown") };
-    }
-    if (state === "blocked_by_severity") {
-      return { icon: "mdi:volume-off", title: this._text("mobile.blockedSeverity", "Blocked by severity") };
-    }
-    if (state === "blocked_by_context") {
-      return { icon: "mdi:home-account", title: this._text("mobile.blockedContext", "Blocked by context") };
-    }
-    if (policy === "off" || state === "off") {
-      return { icon: "mdi:bell-off-outline", title: this._text("mobile.off", "Off") };
-    }
-    return null;
-  }
-
-  _notificationChips(item) {
-    const chips = [];
-    if (item?.severity && item.severity !== "info") {
-      chips.push({ kind: "state", label: this._severityLabel(item.severity) });
-    }
-    return chips;
-  }
-
-  _severityAccent(severity) {
-    switch (severity) {
-      case "critical":
-        return "var(--error-color, #db4437)";
-      case "warning":
-        return "var(--warning-color, #f59e0b)";
-      case "success":
-        return "var(--success-color, #43a047)";
-      default:
-        return sanitizeCssRuntimeValue(this._config.styles.accent, DEFAULT_CONFIG.styles.accent);
-    }
-  }
-
-  _renderNotification(item, options = {}) {
-    const action = item.action;
-    const primary = options.primary === true;
-    const tint = item.tintColor ? sanitizeCssRuntimeValue(item.tintColor, "") : "";
-    const chips = this._notificationChips(item);
-    const mobileHint = this._mobileDeliveryHint(item);
-    const accent = tint || this._severityAccent(item.severity);
-    const stateForIcon = this._hass?.states?.[item.entity || action?.entity];
-    const darkenIcon = shouldDarkenNotificationIconGlyph(stateForIcon, accent);
-    const iconColor = darkenIcon ? `color-mix(in srgb, var(--primary-text-color) 60%, ${accent})` : "var(--notification-accent)";
-    const index = Math.max(0, Number(options.index) || 0);
-    const exiting = options.exiting === true;
-    const exitIndex = Math.max(0, Number(options.exitIndex) || 0);
-    return `
+      _renderNotification(item, options = {}) {
+        const action = item.action;
+        const primary = options.primary === true;
+        const tint = item.tintColor ? sanitizeCssRuntimeValue(item.tintColor, "") : "";
+        const chips = this._notificationChips(item);
+        const mobileHint = this._mobileDeliveryHint(item);
+        const accent = tint || this._severityAccent(item.severity);
+        const stateForIcon = this._hass?.states?.[item.entity || action?.entity];
+        const darkenIcon = shouldDarkenNotificationIconGlyph(stateForIcon, accent);
+        const iconColor = darkenIcon ? `color-mix(in srgb, var(--primary-text-color) 60%, ${accent})` : "var(--notification-accent)";
+        const index = Math.max(0, Number(options.index) || 0);
+        const exiting = options.exiting === true;
+        const exitIndex = Math.max(0, Number(options.exitIndex) || 0);
+        return `
       <article class="notification-item notification-item--${escapeHtml(item.severity)} ${primary ? "notification-item--primary" : ""} ${exiting ? "notification-item--collapsing-tail" : ""}" style="${tint ? `--notification-accent:${escapeHtml(tint)};` : ""}--notification-icon-color:${escapeHtml(iconColor)}; --notification-index:${index}; --notification-exit-index:${exitIndex};">
         <div class="notification-item__icon">
           <ha-icon icon="${escapeHtml(item.icon)}"></ha-icon>
@@ -3940,115 +3522,97 @@ class NodaliaNotificationsCard extends HTMLElement {
             <div class="notification-item__title">${escapeHtml(item.title)}</div>
             ${mobileHint ? `<span class="notification-item__mobile-hint" title="${escapeHtml(mobileHint.title)}"><ha-icon icon="${escapeHtml(mobileHint.icon)}"></ha-icon></span>` : ""}
             ${chips.length ? `<div class="notification-item__chips notification-item__chips--top">
-              ${chips.map(chip => `<span class="notification-item__chip notification-item__chip--${escapeHtml(chip.kind)}">${escapeHtml(chip.label)}</span>`).join("")}
+              ${chips.map((chip) => `<span class="notification-item__chip notification-item__chip--${escapeHtml(chip.kind)}">${escapeHtml(chip.label)}</span>`).join("")}
             </div>` : ""}
             <button type="button" class="notification-item__dismiss" data-action="dismiss" data-id="${escapeHtml(item.id)}" aria-label="${escapeHtml(this._text("aria.dismiss", "Dismiss notification"))}">
               <ha-icon icon="mdi:close"></ha-icon>
             </button>
           </div>
           ${item.message ? `<div class="notification-item__message">${escapeHtml(item.message)}</div>` : ""}
-          ${
-            action
-              ? `
+          ${action ? `
                 <div class="notification-item__actions">
                   <button type="button" class="notification-item__action" data-action="run-notification" data-id="${escapeHtml(item.id)}">
                     ${escapeHtml(action.label || this._text("actions.open", "Open"))}
                   </button>
                 </div>
-              `
-              : ""
-          }
+              ` : ""}
         </div>
       </article>
     `;
-  }
-
-  _stackCardStyle(item, index) {
-    const stackIndex = Math.max(1, Number(index) || 1);
-    const accent = item?.tintColor
-      ? sanitizeCssRuntimeValue(item.tintColor, "")
-      : this._severityAccent(item?.severity);
-    const clampedIndex = Math.min(4, stackIndex);
-    const stackPeek = 9;
-    const firstLayerPeekCorrection = clampedIndex === 1 ? 1 : 0;
-    const inset = 5 + (clampedIndex - 1) * 5;
-    const offset = clampedIndex * stackPeek + firstLayerPeekCorrection;
-    const opacity = Math.max(0.38, 0.64 - (clampedIndex - 1) * 0.08);
-    const zIndex = 4 - clampedIndex;
-    return [
-      `--stack-index:${clampedIndex}`,
-      `--stack-accent:${escapeHtml(accent || "var(--primary-color)")}`,
-      `--stack-inset:${inset}px`,
-      `--stack-offset:${offset}px`,
-      `--stack-opacity:${opacity}`,
-      `--stack-z:${zIndex}`,
-    ].join(";");
-  }
-
-  _renderCollapsedStackCards(notifications, startIndex) {
-    return notifications
-      .slice(startIndex, startIndex + 4)
-      .map((item, index) => (
-        `<div class="notification-stack-card" style="${this._stackCardStyle(item, index + 1)}" aria-hidden="true"></div>`
-      ))
-      .join("");
-  }
-
-  _severityLabel(severity) {
-    switch (severity) {
-      case "critical":
-        return this._text("severity.critical", "Critical");
-      case "warning":
-        return this._text("severity.warning", "Warning");
-      case "success":
-        return this._text("severity.success", "OK");
-      default:
-        return this._text("severity.info", "Info");
-    }
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
-    }
-    const config = this._config;
-    const styles = {
-      card: {
-        background: sanitizeCssRuntimeValue(config.styles.card.background, DEFAULT_CONFIG.styles.card.background),
-        border: sanitizeCssRuntimeValue(config.styles.card.border, DEFAULT_CONFIG.styles.card.border),
-        border_radius: sanitizeCssRuntimeValue(config.styles.card.border_radius, DEFAULT_CONFIG.styles.card.border_radius),
-        box_shadow: sanitizeCssRuntimeValue(config.styles.card.box_shadow, DEFAULT_CONFIG.styles.card.box_shadow),
-        padding: sanitizeCssRuntimeValue(config.styles.card.padding, DEFAULT_CONFIG.styles.card.padding),
-        gap: sanitizeCssRuntimeValue(config.styles.card.gap, DEFAULT_CONFIG.styles.card.gap),
-      },
-      icon: {
-        background: sanitizeCssRuntimeValue(config.styles.icon.background, DEFAULT_CONFIG.styles.icon.background),
-        color: sanitizeCssRuntimeValue(config.styles.icon.color, DEFAULT_CONFIG.styles.icon.color),
-        size: sanitizeCssRuntimeValue(config.styles.icon.size, DEFAULT_CONFIG.styles.icon.size),
-      },
-      title_size: sanitizeCssRuntimeValue(config.styles.title_size, DEFAULT_CONFIG.styles.title_size),
-      item_radius: sanitizeCssRuntimeValue(config.styles.item_radius, DEFAULT_CONFIG.styles.item_radius),
-      accent: sanitizeCssRuntimeValue(config.styles.accent, DEFAULT_CONFIG.styles.accent),
-    };
-    const notifications = this._getNotifications({ notifyMobile: true });
-    const hiddenCount = Math.max(0, notifications.length - config.max_visible);
-    const shouldStack = notifications.length > config.max_visible;
-    const collapsedStackDepth = shouldStack && !this._expanded ? Math.min(4, hiddenCount) : 0;
-    const collapsedStackReserve = collapsedStackDepth ? 4 + collapsedStackDepth * 5 : 0;
-    const isCollapsingStack = this._collapsingStack && this._expanded;
-    const visible = this._expanded || isCollapsingStack ? notifications : notifications.slice(0, config.max_visible);
-    const hasNotifications = notifications.length > 0;
-    const customEmptyMessage = String(config.empty_message ?? "").trim();
-    const emptyText =
-      customEmptyMessage ||
-      this._text("empty.message", "");
-    const animations = this._getAnimationSettings();
-    const nextNotificationIdsSignature = notifications.map(item => item.id).join("|");
-    const animateEntrance = animations.enabled && this._animateContentOnNextRender;
-    const stackTransition = animations.enabled ? this._stackTransition : "";
-    this._lastNotificationIdsSignature = nextNotificationIdsSignature;
-
-    this.shadowRoot.innerHTML = `
+      }
+      _stackCardStyle(item, index) {
+        const stackIndex = Math.max(1, Number(index) || 1);
+        const accent = item?.tintColor ? sanitizeCssRuntimeValue(item.tintColor, "") : this._severityAccent(item?.severity);
+        const clampedIndex = Math.min(4, stackIndex);
+        const stackPeek = 9;
+        const firstLayerPeekCorrection = clampedIndex === 1 ? 1 : 0;
+        const inset = 5 + (clampedIndex - 1) * 5;
+        const offset = clampedIndex * stackPeek + firstLayerPeekCorrection;
+        const opacity = Math.max(0.38, 0.64 - (clampedIndex - 1) * 0.08);
+        const zIndex = 4 - clampedIndex;
+        return [
+          `--stack-index:${clampedIndex}`,
+          `--stack-accent:${escapeHtml(accent || "var(--primary-color)")}`,
+          `--stack-inset:${inset}px`,
+          `--stack-offset:${offset}px`,
+          `--stack-opacity:${opacity}`,
+          `--stack-z:${zIndex}`
+        ].join(";");
+      }
+      _renderCollapsedStackCards(notifications, startIndex) {
+        return notifications.slice(startIndex, startIndex + 4).map((item, index) => `<div class="notification-stack-card" style="${this._stackCardStyle(item, index + 1)}" aria-hidden="true"></div>`).join("");
+      }
+      _severityLabel(severity) {
+        switch (severity) {
+          case "critical":
+            return this._text("severity.critical", "Critical");
+          case "warning":
+            return this._text("severity.warning", "Warning");
+          case "success":
+            return this._text("severity.success", "OK");
+          default:
+            return this._text("severity.info", "Info");
+        }
+      }
+      _render() {
+        if (!this.shadowRoot) {
+          return;
+        }
+        const config = this._config;
+        const styles = {
+          card: {
+            background: sanitizeCssRuntimeValue(config.styles.card.background, DEFAULT_CONFIG.styles.card.background),
+            border: sanitizeCssRuntimeValue(config.styles.card.border, DEFAULT_CONFIG.styles.card.border),
+            border_radius: sanitizeCssRuntimeValue(config.styles.card.border_radius, DEFAULT_CONFIG.styles.card.border_radius),
+            box_shadow: sanitizeCssRuntimeValue(config.styles.card.box_shadow, DEFAULT_CONFIG.styles.card.box_shadow),
+            padding: sanitizeCssRuntimeValue(config.styles.card.padding, DEFAULT_CONFIG.styles.card.padding),
+            gap: sanitizeCssRuntimeValue(config.styles.card.gap, DEFAULT_CONFIG.styles.card.gap)
+          },
+          icon: {
+            background: sanitizeCssRuntimeValue(config.styles.icon.background, DEFAULT_CONFIG.styles.icon.background),
+            color: sanitizeCssRuntimeValue(config.styles.icon.color, DEFAULT_CONFIG.styles.icon.color),
+            size: sanitizeCssRuntimeValue(config.styles.icon.size, DEFAULT_CONFIG.styles.icon.size)
+          },
+          title_size: sanitizeCssRuntimeValue(config.styles.title_size, DEFAULT_CONFIG.styles.title_size),
+          item_radius: sanitizeCssRuntimeValue(config.styles.item_radius, DEFAULT_CONFIG.styles.item_radius),
+          accent: sanitizeCssRuntimeValue(config.styles.accent, DEFAULT_CONFIG.styles.accent)
+        };
+        const notifications = this._getNotifications({ notifyMobile: true });
+        const hiddenCount = Math.max(0, notifications.length - config.max_visible);
+        const shouldStack = notifications.length > config.max_visible;
+        const collapsedStackDepth = shouldStack && !this._expanded ? Math.min(4, hiddenCount) : 0;
+        const collapsedStackReserve = collapsedStackDepth ? 4 + collapsedStackDepth * 5 : 0;
+        const isCollapsingStack = this._collapsingStack && this._expanded;
+        const visible = this._expanded || isCollapsingStack ? notifications : notifications.slice(0, config.max_visible);
+        const hasNotifications = notifications.length > 0;
+        const customEmptyMessage = String(config.empty_message ?? "").trim();
+        const emptyText = customEmptyMessage || this._text("empty.message", "");
+        const animations = this._getAnimationSettings();
+        const nextNotificationIdsSignature = notifications.map((item) => item.id).join("|");
+        const animateEntrance = animations.enabled && this._animateContentOnNextRender;
+        const stackTransition = animations.enabled ? this._stackTransition : "";
+        this._lastNotificationIdsSignature = nextNotificationIdsSignature;
+        this.shadowRoot.innerHTML = `
       <style>
         :host {
           --nodalia-surface: var(--card-background-color, rgba(32, 34, 42, 0.92));
@@ -4537,665 +4101,573 @@ class NodaliaNotificationsCard extends HTMLElement {
         class="notifications-card ${hasNotifications ? "notifications-card--list" : "notifications-card--empty"} ${animations.enabled ? "notifications-card--animated" : ""} ${animateEntrance ? "notifications-card--enter" : ""} ${stackTransition ? `notifications-card--stack-${stackTransition}` : ""}"
         style="--notifications-content-duration:${animations.enabled ? animations.contentDuration : 0}ms; --notifications-button-bounce-duration:${animations.enabled ? animations.buttonBounceDuration : 0}ms;"
       >
-          ${
-            hasNotifications
-              ? `
+          ${hasNotifications ? `
                 <div class="notifications-stack">
                   <div class="notifications-list">
-                    ${
-                      shouldStack && !this._expanded
-                        ? this._renderCollapsedStackCards(notifications, config.max_visible)
-                        : ""
-                    }
+                    ${shouldStack && !this._expanded ? this._renderCollapsedStackCards(notifications, config.max_visible) : ""}
                     ${visible.map((item, index) => this._renderNotification(item, {
-                      primary: index === 0,
-                      index,
-                      exiting: isCollapsingStack && index >= config.max_visible,
-                      exitIndex: Math.max(0, index - config.max_visible),
-                    })).join("")}
+          primary: index === 0,
+          index,
+          exiting: isCollapsingStack && index >= config.max_visible,
+          exitIndex: Math.max(0, index - config.max_visible)
+        })).join("")}
                   </div>
-                  ${
-                    shouldStack
-                      ? `
+                  ${shouldStack ? `
                         <div class="notifications-footer">
                           <button type="button" class="notifications-stack-toggle" data-action="toggle-stack" aria-expanded="${this._expanded ? "true" : "false"}" aria-label="${escapeHtml(this._expanded ? this._text("aria.showLess", "Show less") : this._text("aria.showAll", "Show all notifications"))}">
                             <ha-icon icon="${this._expanded ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon>
                             <span>${this._expanded ? escapeHtml(this._text("actions.less", "Menos")) : hiddenCount}</span>
                           </button>
                         </div>
-                      `
-                      : ""
-                  }
+                      ` : ""}
                 </div>
-              `
-              : `
+              ` : `
                 <div class="notifications-empty-inline">
                   <div class="notifications-empty-inline__icon">
                     <ha-icon icon="mdi:check"></ha-icon>
                   </div>
                   <div class="notifications-empty-inline__text">${escapeHtml(emptyText)}</div>
                 </div>
-              `
-          }
+              `}
       </ha-card>
     `;
-    if (animateEntrance) {
-      this._scheduleEntranceAnimationReset(animations.contentDuration + 120);
-    }
-    this._stackTransition = "";
-  }
-}
-
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaNotificationsCard);
-}
-
-if (typeof globalThis !== "undefined") {
-  globalThis.__NODALIA_NOTIFICATIONS_TEMPLATES__ = {
-    customNotificationTemplateValues,
-    formatNotificationTemplate,
-    referencedNotificationTemplateEntities,
-  };
-  globalThis.__NODALIA_NOTIFICATIONS_MOBILE__ = {
-    MOBILE_DELIVERY_STATES,
-    normalizeMobilePolicy,
-    normalizeMobileContext,
-    normalizeExternalAlerts,
-    normalizeQuietHours,
-    isWithinQuietHours,
-    resolvePresenceOccupancy,
-    passesPresenceContext,
-    buildMobileAlertIdentity,
-    buildMobileGroupIdentity,
-    resolveMobileDeliveryState,
-    getBackgroundMobileConfigPayload,
-    buildBackgroundMobileWebhookPayload,
-    backgroundMobilePayloadOverLimit,
-    getNextQuietHoursBoundaryDelay,
-    BACKGROUND_MOBILE_MAX_CHUNKS,
-    resolveSmartEntityMobilePolicy,
-    isExplicitSmartEntityMobile,
-    pushExternalAlerts: NodaliaNotificationsCard.pushExternalAlerts,
-  };
-}
-
-class NodaliaNotificationsCardEditor extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig({});
-    this._hass = null;
-    this._showStyleSection = false;
-    this._showConnectionsSection = false;
-    this._showSmartSection = false;
-    this._showCustomSection = true;
-    this._showContextSection = false;
-    this._showExternalAlertsSection = false;
-    this._showAnimationSection = false;
-    this._pendingEditorControlTags = new Set();
-    this._backgroundMobileSyncTimer = 0;
-    this._lastBackgroundMobileSyncSignature = "";
-    this._lastBackgroundMobileNativeSignature = "";
-    this._engineStatus = null;
-    this._engineStatusSignature = "";
-    this._engineStatusInFlight = false;
-    this._onShadowInput = this._onShadowInput.bind(this);
-    this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
-    this._onShadowClick = this._onShadowClick.bind(this);
-  }
-
-  _attachEditorShadowListeners() {
-    window.NodaliaUtils.bindShadowListeners(this, [
-      ["input", this._onShadowInput],
-      ["change", this._onShadowInput],
-      ["value-changed", this._onShadowValueChanged],
-      ["click", this._onShadowClick],
-    ], "editor");
-  }
-
-  _detachEditorShadowListeners() {
-    window.NodaliaUtils.releaseShadowListeners(this, "editor");
-  }
-
-  connectedCallback() {
-    this._attachEditorShadowListeners();
-    window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
-    void this._refreshEngineStatus();
-  }
-
-  disconnectedCallback() {
-    this._detachEditorShadowListeners();
-    window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
-    if (this._backgroundMobileSyncTimer) {
-      window.clearTimeout(this._backgroundMobileSyncTimer);
-      this._backgroundMobileSyncTimer = 0;
-    }
-  }
-
-  set hass(hass) {
-    const nextSignature = this._getEntityOptionsSignature(hass);
-    const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
-    this._hass = hass;
-    this._entityOptionsSignature = nextSignature;
-    if (shouldRender) {
-      const focus = this._captureFocusState();
-      this._render();
-      this._restoreFocusState(focus);
-    }
-    void this._refreshEngineStatus();
-  }
-
-  setConfig(config) {
-    const focus = this._captureFocusState();
-    this._config = normalizeConfig(config || {});
-    window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
-    this._render();
-    this._restoreFocusState(focus);
-    void this._refreshEngineStatus();
-  }
-
-  /** Engine status drives which delivery fields the editor exposes; the bridge caches it for 30s. */
-  async _refreshEngineStatus() {
-    const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
-    if (!backend || typeof backend.getEditorEngineStatus !== "function" || !this._hass || this._engineStatusInFlight) {
-      return;
-    }
-    this._engineStatusInFlight = true;
-    try {
-      const engine = await backend.getEditorEngineStatus(this._hass);
-      const signature = window.NodaliaUtils?.engineStatusSignature?.(engine) ?? "";
-      if (signature === this._engineStatusSignature) {
-        return;
+        if (animateEntrance) {
+          this._scheduleEntranceAnimationReset(animations.contentDuration + 120);
+        }
+        this._stackTransition = "";
       }
-      this._engineStatus = engine;
-      this._engineStatusSignature = signature;
-      if (this.isConnected && this.shadowRoot) {
-        const focus = this._captureFocusState();
-        this._render();
-        this._restoreFocusState(focus);
+    }
+    _lazyNodaliaNotificationsCard = NodaliaNotificationsCard;
+    return NodaliaNotificationsCard;
+  }
+
+  // src/cards/notifications/notifications-editor.ts
+  var _lazyNodaliaNotificationsCardEditor;
+  function loadNodaliaNotificationsCardEditor() {
+    if (_lazyNodaliaNotificationsCardEditor) {
+      return _lazyNodaliaNotificationsCardEditor;
+    }
+    class NodaliaNotificationsCardEditor extends HTMLElement {
+      constructor() {
+        super();
+        this._nodaliaConstruct();
       }
-    } catch (_error) {
-      // A missing or unreachable Engine simply keeps the legacy webhook fields visible.
-    } finally {
-      this._engineStatusInFlight = false;
-    }
-  }
-
-  _engineBackgroundActive() {
-    return this._engineStatus?.available === true && this._engineStatus?.caps?.notificationsBackground === true;
-  }
-
-  _renderEngineBannerHtml() {
-    return window.NodaliaUtils?.renderEditorEngineBannerHtml?.({
-      engine: this._engineStatus,
-      label: key => this._editorLabel(key),
-      extraRows: this._engineStatus?.caps?.notificationsInbox === true
-        ? [this._editorLabel("ed.engine.inbox_synced")]
-        : [],
-    }) || "";
-  }
-
-  _getEntityOptionsSignature(hass = this._hass) {
-    return window.NodaliaUtils?.editorFilteredStatesSignature
-      ? window.NodaliaUtils.editorFilteredStatesSignature(hass, this._config?.language, id => (
-          id.startsWith("calendar.")
-          || id.startsWith("vacuum.")
-          || id.startsWith("fan.")
-          || id.startsWith("weather.")
-          || id.startsWith("binary_sensor.")
-          || id.startsWith("sensor.")
-          || id.startsWith("input_text.")
-          || id.startsWith("notify.")
-        ))
-      : Object.keys(hass?.states || {}).join("|");
-  }
-
-  _watchEditorControlTag(tagName) {
-    if (!tagName || this._pendingEditorControlTags.has(tagName)) {
-      return;
-    }
-    if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
-      return;
-    }
-    this._pendingEditorControlTags.add(tagName);
-    customElements.whenDefined(tagName)
-      .then(() => {
-        this._pendingEditorControlTags.delete(tagName);
-        if (this.isConnected && this._hass && this.shadowRoot) {
+      _nodaliaConstruct() {
+        this.attachShadow({ mode: "open" });
+        this._config = normalizeConfig({});
+        this._hass = null;
+        this._showStyleSection = false;
+        this._showConnectionsSection = false;
+        this._showSmartSection = false;
+        this._showCustomSection = true;
+        this._showContextSection = false;
+        this._showExternalAlertsSection = false;
+        this._showAnimationSection = false;
+        this._pendingEditorControlTags = /* @__PURE__ */ new Set();
+        this._backgroundMobileSyncTimer = 0;
+        this._lastBackgroundMobileSyncSignature = "";
+        this._lastBackgroundMobileNativeSignature = "";
+        this._engineStatus = null;
+        this._engineStatusSignature = "";
+        this._engineStatusInFlight = false;
+        this._onShadowInput = this._onShadowInput.bind(this);
+        this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
+        this._onShadowClick = this._onShadowClick.bind(this);
+      }
+      _attachEditorShadowListeners() {
+        window.NodaliaUtils.bindShadowListeners(this, [
+          ["input", this._onShadowInput],
+          ["change", this._onShadowInput],
+          ["value-changed", this._onShadowValueChanged],
+          ["click", this._onShadowClick]
+        ], "editor");
+      }
+      _detachEditorShadowListeners() {
+        window.NodaliaUtils.releaseShadowListeners(this, "editor");
+      }
+      connectedCallback() {
+        this._attachEditorShadowListeners();
+        window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
+        void this._refreshEngineStatus();
+      }
+      disconnectedCallback() {
+        this._detachEditorShadowListeners();
+        window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
+        if (this._backgroundMobileSyncTimer) {
+          window.clearTimeout(this._backgroundMobileSyncTimer);
+          this._backgroundMobileSyncTimer = 0;
+        }
+      }
+      set hass(hass) {
+        const nextSignature = this._getEntityOptionsSignature(hass);
+        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+        this._hass = hass;
+        this._entityOptionsSignature = nextSignature;
+        if (shouldRender) {
           const focus = this._captureFocusState();
           this._render();
           this._restoreFocusState(focus);
         }
-      })
-      .catch(() => this._pendingEditorControlTags.delete(tagName));
-  }
-
-  _ensureEditorControlsReady() {
-    this._watchEditorControlTag("ha-entity-picker");
-    this._watchEditorControlTag("ha-selector");
-    this._watchEditorControlTag("ha-icon-picker");
-  }
-
-  _captureFocusState() {
-    return window.NodaliaUtils.captureEditorFocusState(this);
-  }
-
-  _restoreFocusState(focusState) {
-    window.NodaliaUtils.restoreEditorFocusState(this, focusState);
-  }
-
-  _emitConfig() {
-    const focus = this._captureFocusState();
-    const next = normalizeConfig(this._config, { keepDrafts: true });
-    const emitted = normalizeConfig(next);
-    this._config = next;
-    this._render();
-    this._restoreFocusState(focus);
-    const stripped = window.NodaliaUtils?.stripEqualToDefaults
-      ? window.NodaliaUtils.stripEqualToDefaults(emitted, DEFAULT_CONFIG)
-      : emitted;
-    fireEvent(this, "config-changed", { config: compactConfig(stripped) || {} });
-    this._scheduleBackgroundMobileSyncFromEditor(emitted);
-  }
-
-  _scheduleBackgroundMobileSyncFromEditor(config = this._config, delay = 700) {
-    const normalized = normalizeConfig(config || {});
-    if (!this._hass || !this.isConnected) {
-      return;
-    }
-    if (this._backgroundMobileSyncTimer) {
-      window.clearTimeout(this._backgroundMobileSyncTimer);
-    }
-    this._backgroundMobileSyncTimer = window.setTimeout(() => {
-      this._backgroundMobileSyncTimer = 0;
-      void this._syncBackgroundMobileConfigFromEditor(normalized);
-    }, Math.max(0, Math.min(3000, Number(delay) || 0)));
-  }
-
-  async _syncBackgroundMobileConfigFromEditor(config = this._config) {
-    const normalized = normalizeConfig(config || {});
-    const background = normalized.background_mobile || {};
-    const webhookId = String(background.webhook || "").trim();
-    if (!this.isConnected) {
-      return false;
-    }
-    const expectedNative = getBackgroundMobileNativeSignature(normalized, this._hass);
-    const previousNative = String(this._lastBackgroundMobileNativeSignature || "");
-    if (previousNative === expectedNative.signature || previousNative === `active:${expectedNative.profileId}`) {
-      return webhookId
-        ? this._syncLegacyBackgroundMobileFallbackFromEditor(normalized, webhookId, false)
-        : true;
-    }
-    const native = await syncBackgroundMobileNative(this._hass, normalized);
-    if (native.synced) {
-      this._lastBackgroundMobileNativeSignature = native.signature;
-      if (webhookId) {
-        await this._syncLegacyBackgroundMobileFallbackFromEditor(normalized, webhookId, false);
+        void this._refreshEngineStatus();
       }
-      return true;
-    }
-    if (native.transient === true || native.available === true) {
-      return false;
-    }
-    this._lastBackgroundMobileNativeSignature = "";
-    if (background.enabled !== true) {
-      return false;
-    }
-    if (!webhookId) {
-      return false;
-    }
-    if (
-      normalized.security?.allow_webhooks_for_non_admin === false &&
-      !this._hass?.user?.is_admin
-    ) {
-      if (typeof console !== "undefined" && typeof console.warn === "function") {
-        console.warn("Nodalia Notifications Card editor: background mobile sync webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false).");
+      setConfig(config) {
+        const focus = this._captureFocusState();
+        this._config = normalizeConfig(config || {});
+        window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
+        this._render();
+        this._restoreFocusState(focus);
+        void this._refreshEngineStatus();
       }
-      return false;
-    }
-    const payload = buildBackgroundMobileWebhookPayload(normalized, this._hass, { enabled: true });
-    if (backgroundMobilePayloadOverLimit(payload)) {
-      if (typeof console !== "undefined" && typeof console.warn === "function") {
-        console.warn(
-          `Nodalia Notifications Card editor: background mobile config exceeds ${BACKGROUND_MOBILE_MAX_CHUNKS} chunks (${payload.chunk_count}); sync skipped.`,
-        );
+      /** Engine status drives which delivery fields the editor exposes; the bridge caches it for 30s. */
+      async _refreshEngineStatus() {
+        const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
+        if (!backend || typeof backend.getEditorEngineStatus !== "function" || !this._hass || this._engineStatusInFlight) {
+          return;
+        }
+        this._engineStatusInFlight = true;
+        try {
+          const engine = await backend.getEditorEngineStatus(this._hass);
+          const signature = window.NodaliaUtils?.engineStatusSignature?.(engine) ?? "";
+          if (signature === this._engineStatusSignature) {
+            return;
+          }
+          this._engineStatus = engine;
+          this._engineStatusSignature = signature;
+          if (this.isConnected && this.shadowRoot) {
+            const focus = this._captureFocusState();
+            this._render();
+            this._restoreFocusState(focus);
+          }
+        } catch (_error) {
+        } finally {
+          this._engineStatusInFlight = false;
+        }
       }
-      this._lastBackgroundMobileSyncSignature = "";
-      return false;
-    }
-    const signature = `${webhookId}:${payload.config_hash}:${payload.chunk_count}`;
-    if (signature === this._lastBackgroundMobileSyncSignature) {
-      return true;
-    }
-    const post = typeof window !== "undefined" && window.NodaliaUtils?.postHomeAssistantWebhook;
-    if (typeof post !== "function") {
-      return false;
-    }
-    try {
-      const ok = Boolean(await post(webhookId, payload, this._hass));
-      if (ok) {
-        this._lastBackgroundMobileSyncSignature = signature;
+      _engineBackgroundActive() {
+        return this._engineStatus?.available === true && this._engineStatus?.caps?.notificationsBackground === true;
       }
-      return ok;
-    } catch (_error) {
-      return false;
-    }
-  }
-
-  async _syncLegacyBackgroundMobileFallbackFromEditor(config, webhookId, enabled) {
-    if (
-      config.security?.allow_webhooks_for_non_admin === false
-      && !this._hass?.user?.is_admin
-    ) {
-      return false;
-    }
-    const payload = buildBackgroundMobileWebhookPayload(config, this._hass, { enabled });
-    if (backgroundMobilePayloadOverLimit(payload)) {
-      return false;
-    }
-    const signature = `${webhookId}:${payload.config_hash}:${payload.chunk_count}`;
-    if (signature === this._lastBackgroundMobileSyncSignature) {
-      return true;
-    }
-    const post = typeof window !== "undefined" && window.NodaliaUtils?.postHomeAssistantWebhook;
-    if (typeof post !== "function") {
-      return false;
-    }
-    try {
-      const ok = Boolean(await post(webhookId, payload, this._hass));
-      if (ok) {
-        this._lastBackgroundMobileSyncSignature = signature;
+      _renderEngineBannerHtml() {
+        return window.NodaliaUtils?.renderEditorEngineBannerHtml?.({
+          engine: this._engineStatus,
+          label: (key) => this._editorLabel(key),
+          extraRows: this._engineStatus?.caps?.notificationsInbox === true ? [this._editorLabel("ed.engine.inbox_synced")] : []
+        }) || "";
       }
-      return ok;
-    } catch (_error) {
-      return false;
-    }
-  }
-
-  _editorLabel(s) {
-    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
-      return s;
-    }
-    return window.NodaliaI18n.editorStr(this._hass, this._config?.language ?? "auto", s);
-  }
-
-  _readFieldValue(input) {
-    const type = input.dataset.valueType || "string";
-    if (type === "boolean") {
-      return Boolean(input.checked);
-    }
-    if (type === "number") {
-      return input.value === "" ? "" : Number(input.value);
-    }
-    if (type === "color") {
-      return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
-    }
-    if (type === "entity-list") {
-      return normalizeEntityList(input.value);
-    }
-    if (type === "csv") {
-      return normalizeStringList(input.value);
-    }
-    return input.value;
-  }
-
-  _entityDomainsForListField(field) {
-    switch (String(field || "")) {
-      case "calendar_entities":
-        return ["calendar"];
-      case "vacuum_entities":
-        return ["vacuum"];
-      case "vacuum_error_entities":
-        return ["sensor"];
-      case "fan_entities":
-        return ["fan"];
-      case "climate_entities":
-        return ["climate"];
-      case "humidifier_entities":
-        return ["humidifier"];
-      case "media_player_entities":
-        return ["media_player"];
-      case "weather_entities":
-        return ["weather"];
-      case "motion_entities":
-      case "door_entities":
-      case "window_entities":
-        return ["binary_sensor"];
-      case "temperature_entities":
-      case "humidity_entities":
-      case "outdoor_temperature_entities":
-      case "outdoor_humidity_entities":
-      case "battery_entities":
-      case "humidifier_fill_entities":
-      case "humidifier_full_entities":
-      case "ink_entities":
-        return ["sensor"];
-      case "mobile_notifications.entities":
-        return ["notify"];
-      default:
-        return [];
-    }
-  }
-
-  _setFieldValue(path, value) {
-    const smartEntityMatch = String(path || "").match(/^smart_entity_overrides\.(\d+)\./);
-    if (smartEntityMatch) {
-      const index = Number(smartEntityMatch[1]);
-      const entity = this._smartEntityEditorEntities?.[index] || "";
-      const relativePath = String(path || "").split(".").slice(2).join(".");
-      if (!entity || !relativePath) {
-        return;
+      _getEntityOptionsSignature(hass = this._hass) {
+        return window.NodaliaUtils?.editorFilteredStatesSignature ? window.NodaliaUtils.editorFilteredStatesSignature(hass, this._config?.language, (id) => id.startsWith("calendar.") || id.startsWith("vacuum.") || id.startsWith("fan.") || id.startsWith("weather.") || id.startsWith("binary_sensor.") || id.startsWith("sensor.") || id.startsWith("input_text.") || id.startsWith("notify.")) : Object.keys(hass?.states || {}).join("|");
       }
-      if (!Array.isArray(this._config.smart_entity_overrides)) {
-        this._config.smart_entity_overrides = [];
+      _watchEditorControlTag(tagName) {
+        if (!tagName || this._pendingEditorControlTags.has(tagName)) {
+          return;
+        }
+        if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
+          return;
+        }
+        this._pendingEditorControlTags.add(tagName);
+        customElements.whenDefined(tagName).then(() => {
+          this._pendingEditorControlTags.delete(tagName);
+          if (this.isConnected && this._hass && this.shadowRoot) {
+            const focus = this._captureFocusState();
+            this._render();
+            this._restoreFocusState(focus);
+          }
+        }).catch(() => this._pendingEditorControlTags.delete(tagName));
       }
-      let overrideIndex = this._config.smart_entity_overrides.findIndex(item => item?.entity === entity);
-      if (overrideIndex < 0) {
-        overrideIndex = this._config.smart_entity_overrides.length;
-        this._config.smart_entity_overrides.push({ entity });
+      _ensureEditorControlsReady() {
+        this._watchEditorControlTag("ha-entity-picker");
+        this._watchEditorControlTag("ha-selector");
+        this._watchEditorControlTag("ha-icon-picker");
       }
-      if (value === "" || value === undefined || value === null) {
-        deleteByPath(this._config.smart_entity_overrides[overrideIndex], relativePath);
-      } else {
-        setByPath(this._config.smart_entity_overrides[overrideIndex], relativePath, value);
+      _captureFocusState() {
+        return window.NodaliaUtils.captureEditorFocusState(this);
       }
-      return;
-    }
-    if (value === "" || value === undefined || value === null || (Array.isArray(value) && !value.length)) {
-      deleteByPath(this._config, path);
-      return;
-    }
-    setByPath(this._config, path, value);
-  }
-
-  _setEntityListItem(field, index, value) {
-    const key = String(field || "");
-    if (!key) {
-      return;
-    }
-    const current = normalizeEntityList(getByPath(this._config, key));
-    const nextValue = String(value || "").trim();
-    const safeIndex = Math.max(0, Number(index) || 0);
-    if (nextValue) {
-      current[safeIndex] = nextValue;
-    } else {
-      current.splice(safeIndex, 1);
-    }
-    const filtered = normalizeEntityList(current, this._entityDomainsForListField(key));
-    this._setFieldValue(key, filtered);
-  }
-
-  _addEntityListItem(field) {
-    const key = String(field || "");
-    if (!key) {
-      return;
-    }
-    const current = normalizeEntityList(getByPath(this._config, key), this._entityDomainsForListField(key));
-    current.push("");
-    setByPath(this._config, key, current);
-    this._emitConfig();
-  }
-
-  _removeEntityListItem(field, index) {
-    const key = String(field || "");
-    if (!key) {
-      return;
-    }
-    const current = normalizeEntityList(getByPath(this._config, key), this._entityDomainsForListField(key));
-    const safeIndex = Number(index);
-    if (Number.isInteger(safeIndex) && safeIndex >= 0) {
-      current.splice(safeIndex, 1);
-    }
-    this._setFieldValue(key, current);
-    this._emitConfig();
-  }
-
-  _onShadowInput(event) {
-    const input = event.composedPath().find(node => (
-      node instanceof HTMLInputElement ||
-      node instanceof HTMLTextAreaElement ||
-      node instanceof HTMLSelectElement
-    ));
-    if (input?.dataset?.listField) {
-      event.stopPropagation();
-      this._setEntityListItem(input.dataset.listField, Number(input.dataset.index), input.value);
-      if (event.type === "change") {
+      _restoreFocusState(focusState) {
+        window.NodaliaUtils.restoreEditorFocusState(this, focusState);
+      }
+      _emitConfig() {
+        const focus = this._captureFocusState();
+        const next = normalizeConfig(this._config, { keepDrafts: true });
+        const emitted = normalizeConfig(next);
+        this._config = next;
+        this._render();
+        this._restoreFocusState(focus);
+        const stripped = window.NodaliaUtils?.stripEqualToDefaults ? window.NodaliaUtils.stripEqualToDefaults(emitted, DEFAULT_CONFIG) : emitted;
+        fireEvent(this, "config-changed", { config: compactConfig(stripped) || {} });
+        this._scheduleBackgroundMobileSyncFromEditor(emitted);
+      }
+      _scheduleBackgroundMobileSyncFromEditor(config = this._config, delay = 700) {
+        const normalized = normalizeConfig(config || {});
+        if (!this._hass || !this.isConnected) {
+          return;
+        }
+        if (this._backgroundMobileSyncTimer) {
+          window.clearTimeout(this._backgroundMobileSyncTimer);
+        }
+        this._backgroundMobileSyncTimer = window.setTimeout(() => {
+          this._backgroundMobileSyncTimer = 0;
+          void this._syncBackgroundMobileConfigFromEditor(normalized);
+        }, Math.max(0, Math.min(3e3, Number(delay) || 0)));
+      }
+      async _syncBackgroundMobileConfigFromEditor(config = this._config) {
+        const normalized = normalizeConfig(config || {});
+        const background = normalized.background_mobile || {};
+        const webhookId = String(background.webhook || "").trim();
+        if (!this.isConnected) {
+          return false;
+        }
+        const expectedNative = getBackgroundMobileNativeSignature(normalized, this._hass);
+        const previousNative = String(this._lastBackgroundMobileNativeSignature || "");
+        if (previousNative === expectedNative.signature || previousNative === `active:${expectedNative.profileId}`) {
+          return webhookId ? this._syncLegacyBackgroundMobileFallbackFromEditor(normalized, webhookId, false) : true;
+        }
+        const native = await syncBackgroundMobileNative(this._hass, normalized);
+        if (native.synced) {
+          this._lastBackgroundMobileNativeSignature = native.signature;
+          if (webhookId) {
+            await this._syncLegacyBackgroundMobileFallbackFromEditor(normalized, webhookId, false);
+          }
+          return true;
+        }
+        if (native.transient === true || native.available === true) {
+          return false;
+        }
+        this._lastBackgroundMobileNativeSignature = "";
+        if (background.enabled !== true) {
+          return false;
+        }
+        if (!webhookId) {
+          return false;
+        }
+        if (normalized.security?.allow_webhooks_for_non_admin === false && !this._hass?.user?.is_admin) {
+          if (typeof console !== "undefined" && typeof console.warn === "function") {
+            console.warn("Nodalia Notifications Card editor: background mobile sync webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false).");
+          }
+          return false;
+        }
+        const payload = buildBackgroundMobileWebhookPayload(normalized, this._hass, { enabled: true });
+        if (backgroundMobilePayloadOverLimit(payload)) {
+          if (typeof console !== "undefined" && typeof console.warn === "function") {
+            console.warn(
+              `Nodalia Notifications Card editor: background mobile config exceeds ${BACKGROUND_MOBILE_MAX_CHUNKS} chunks (${payload.chunk_count}); sync skipped.`
+            );
+          }
+          this._lastBackgroundMobileSyncSignature = "";
+          return false;
+        }
+        const signature = `${webhookId}:${payload.config_hash}:${payload.chunk_count}`;
+        if (signature === this._lastBackgroundMobileSyncSignature) {
+          return true;
+        }
+        const post = typeof window !== "undefined" && window.NodaliaUtils?.postHomeAssistantWebhook;
+        if (typeof post !== "function") {
+          return false;
+        }
+        try {
+          const ok = Boolean(await post(webhookId, payload, this._hass));
+          if (ok) {
+            this._lastBackgroundMobileSyncSignature = signature;
+          }
+          return ok;
+        } catch (_error) {
+          return false;
+        }
+      }
+      async _syncLegacyBackgroundMobileFallbackFromEditor(config, webhookId, enabled) {
+        if (config.security?.allow_webhooks_for_non_admin === false && !this._hass?.user?.is_admin) {
+          return false;
+        }
+        const payload = buildBackgroundMobileWebhookPayload(config, this._hass, { enabled });
+        if (backgroundMobilePayloadOverLimit(payload)) {
+          return false;
+        }
+        const signature = `${webhookId}:${payload.config_hash}:${payload.chunk_count}`;
+        if (signature === this._lastBackgroundMobileSyncSignature) {
+          return true;
+        }
+        const post = typeof window !== "undefined" && window.NodaliaUtils?.postHomeAssistantWebhook;
+        if (typeof post !== "function") {
+          return false;
+        }
+        try {
+          const ok = Boolean(await post(webhookId, payload, this._hass));
+          if (ok) {
+            this._lastBackgroundMobileSyncSignature = signature;
+          }
+          return ok;
+        } catch (_error) {
+          return false;
+        }
+      }
+      _editorLabel(s) {
+        if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+          return s;
+        }
+        return window.NodaliaI18n.editorStr(this._hass, this._config?.language ?? "auto", s);
+      }
+      _readFieldValue(input) {
+        const type = input.dataset.valueType || "string";
+        if (type === "boolean") {
+          return Boolean(input.checked);
+        }
+        if (type === "number") {
+          return input.value === "" ? "" : Number(input.value);
+        }
+        if (type === "color") {
+          return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
+        }
+        if (type === "entity-list") {
+          return normalizeEntityList(input.value);
+        }
+        if (type === "csv") {
+          return normalizeStringList(input.value);
+        }
+        return input.value;
+      }
+      _entityDomainsForListField(field) {
+        switch (String(field || "")) {
+          case "calendar_entities":
+            return ["calendar"];
+          case "vacuum_entities":
+            return ["vacuum"];
+          case "vacuum_error_entities":
+            return ["sensor"];
+          case "fan_entities":
+            return ["fan"];
+          case "climate_entities":
+            return ["climate"];
+          case "humidifier_entities":
+            return ["humidifier"];
+          case "media_player_entities":
+            return ["media_player"];
+          case "weather_entities":
+            return ["weather"];
+          case "motion_entities":
+          case "door_entities":
+          case "window_entities":
+            return ["binary_sensor"];
+          case "temperature_entities":
+          case "humidity_entities":
+          case "outdoor_temperature_entities":
+          case "outdoor_humidity_entities":
+          case "battery_entities":
+          case "humidifier_fill_entities":
+          case "humidifier_full_entities":
+          case "ink_entities":
+            return ["sensor"];
+          case "mobile_notifications.entities":
+            return ["notify"];
+          default:
+            return [];
+        }
+      }
+      _setFieldValue(path, value) {
+        const smartEntityMatch = String(path || "").match(/^smart_entity_overrides\.(\d+)\./);
+        if (smartEntityMatch) {
+          const index = Number(smartEntityMatch[1]);
+          const entity = this._smartEntityEditorEntities?.[index] || "";
+          const relativePath = String(path || "").split(".").slice(2).join(".");
+          if (!entity || !relativePath) {
+            return;
+          }
+          if (!Array.isArray(this._config.smart_entity_overrides)) {
+            this._config.smart_entity_overrides = [];
+          }
+          let overrideIndex = this._config.smart_entity_overrides.findIndex((item) => item?.entity === entity);
+          if (overrideIndex < 0) {
+            overrideIndex = this._config.smart_entity_overrides.length;
+            this._config.smart_entity_overrides.push({ entity });
+          }
+          if (value === "" || value === void 0 || value === null) {
+            deleteByPath(this._config.smart_entity_overrides[overrideIndex], relativePath);
+          } else {
+            setByPath(this._config.smart_entity_overrides[overrideIndex], relativePath, value);
+          }
+          return;
+        }
+        if (value === "" || value === void 0 || value === null || Array.isArray(value) && !value.length) {
+          deleteByPath(this._config, path);
+          return;
+        }
+        setByPath(this._config, path, value);
+      }
+      _setEntityListItem(field, index, value) {
+        const key = String(field || "");
+        if (!key) {
+          return;
+        }
+        const current = normalizeEntityList(getByPath(this._config, key));
+        const nextValue = String(value || "").trim();
+        const safeIndex = Math.max(0, Number(index) || 0);
+        if (nextValue) {
+          current[safeIndex] = nextValue;
+        } else {
+          current.splice(safeIndex, 1);
+        }
+        const filtered = normalizeEntityList(current, this._entityDomainsForListField(key));
+        this._setFieldValue(key, filtered);
+      }
+      _addEntityListItem(field) {
+        const key = String(field || "");
+        if (!key) {
+          return;
+        }
+        const current = normalizeEntityList(getByPath(this._config, key), this._entityDomainsForListField(key));
+        current.push("");
+        setByPath(this._config, key, current);
         this._emitConfig();
       }
-      return;
-    }
-    if (!input?.dataset?.field) {
-      return;
-    }
-    event.stopPropagation();
-    this._setFieldValue(input.dataset.field, this._readFieldValue(input));
-    if (event.type === "change") {
-      this._emitConfig();
-    }
-  }
-
-  _onShadowValueChanged(event) {
-    const control = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.field);
-    if (!control?.dataset?.field) {
-      return;
-    }
-    event.stopPropagation();
-    const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
-    if (typeof control.dataset.value === "string") {
-      control.dataset.value = String(nextValue || "");
-    }
-    if (control.dataset.listField) {
-      this._setEntityListItem(control.dataset.listField, Number(control.dataset.index), nextValue);
-      this._emitConfig();
-      return;
-    }
-    this._setFieldValue(control.dataset.field, nextValue);
-    this._emitConfig();
-  }
-
-  _onShadowClick(event) {
-    const toggle = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
-    if (toggle) {
-      event.preventDefault();
-      event.stopPropagation();
-      if (toggle.dataset.editorToggle === "styles") {
-        this._showStyleSection = !this._showStyleSection;
-      } else if (toggle.dataset.editorToggle === "connections") {
-        this._showConnectionsSection = !this._showConnectionsSection;
-      } else if (toggle.dataset.editorToggle === "smart") {
-        this._showSmartSection = !this._showSmartSection;
-      } else if (toggle.dataset.editorToggle === "custom") {
-        this._showCustomSection = !this._showCustomSection;
-      } else if (toggle.dataset.editorToggle === "context") {
-        this._showContextSection = !this._showContextSection;
-      } else if (toggle.dataset.editorToggle === "external") {
-        this._showExternalAlertsSection = !this._showExternalAlertsSection;
-      } else if (toggle.dataset.editorToggle === "animations") {
-        this._showAnimationSection = !this._showAnimationSection;
+      _removeEntityListItem(field, index) {
+        const key = String(field || "");
+        if (!key) {
+          return;
+        }
+        const current = normalizeEntityList(getByPath(this._config, key), this._entityDomainsForListField(key));
+        const safeIndex = Number(index);
+        if (Number.isInteger(safeIndex) && safeIndex >= 0) {
+          current.splice(safeIndex, 1);
+        }
+        this._setFieldValue(key, current);
+        this._emitConfig();
       }
-      this._render();
-      return;
-    }
-    const button = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.editorAction);
-    if (!button) {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    const index = Number(button.dataset.index);
-    if (!Array.isArray(this._config.custom_notifications)) {
-      this._config.custom_notifications = [];
-    }
-    switch (button.dataset.editorAction) {
-      case "add-entity-list-item":
-        this._addEntityListItem(button.dataset.field || "");
-        break;
-      case "remove-entity-list-item":
-        this._removeEntityListItem(button.dataset.field || "", index);
-        break;
-      case "add-custom":
-        this._config.custom_notifications.push({
-          _draft: true,
-          title: "",
-          message: "",
-          icon: "mdi:bell-outline",
-          severity: "info",
-          condition: "always",
-          action_type: "none",
-        });
+      _onShadowInput(event) {
+        const input = event.composedPath().find((node) => node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement || node instanceof HTMLSelectElement);
+        if (input?.dataset?.listField) {
+          event.stopPropagation();
+          this._setEntityListItem(input.dataset.listField, Number(input.dataset.index), input.value);
+          if (event.type === "change") {
+            this._emitConfig();
+          }
+          return;
+        }
+        if (!input?.dataset?.field) {
+          return;
+        }
+        event.stopPropagation();
+        this._setFieldValue(input.dataset.field, this._readFieldValue(input));
+        if (event.type === "change") {
+          this._emitConfig();
+        }
+      }
+      _onShadowValueChanged(event) {
+        const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+        if (!control?.dataset?.field) {
+          return;
+        }
+        event.stopPropagation();
+        const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+        if (typeof control.dataset.value === "string") {
+          control.dataset.value = String(nextValue || "");
+        }
+        if (control.dataset.listField) {
+          this._setEntityListItem(control.dataset.listField, Number(control.dataset.index), nextValue);
+          this._emitConfig();
+          return;
+        }
+        this._setFieldValue(control.dataset.field, nextValue);
         this._emitConfig();
-        break;
-      case "remove-custom":
-        if (Number.isInteger(index)) {
-          this._config.custom_notifications.splice(index, 1);
-          this._emitConfig();
+      }
+      _onShadowClick(event) {
+        const toggle = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
+        if (toggle) {
+          event.preventDefault();
+          event.stopPropagation();
+          if (toggle.dataset.editorToggle === "styles") {
+            this._showStyleSection = !this._showStyleSection;
+          } else if (toggle.dataset.editorToggle === "connections") {
+            this._showConnectionsSection = !this._showConnectionsSection;
+          } else if (toggle.dataset.editorToggle === "smart") {
+            this._showSmartSection = !this._showSmartSection;
+          } else if (toggle.dataset.editorToggle === "custom") {
+            this._showCustomSection = !this._showCustomSection;
+          } else if (toggle.dataset.editorToggle === "context") {
+            this._showContextSection = !this._showContextSection;
+          } else if (toggle.dataset.editorToggle === "external") {
+            this._showExternalAlertsSection = !this._showExternalAlertsSection;
+          } else if (toggle.dataset.editorToggle === "animations") {
+            this._showAnimationSection = !this._showAnimationSection;
+          }
+          this._render();
+          return;
         }
-        break;
-      case "move-custom-up":
-        if (Number.isInteger(index) && index > 0) {
-          const [item] = this._config.custom_notifications.splice(index, 1);
-          this._config.custom_notifications.splice(index - 1, 0, item);
-          this._emitConfig();
+        const button = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorAction);
+        if (!button) {
+          return;
         }
-        break;
-      case "move-custom-down":
-        if (Number.isInteger(index) && index < this._config.custom_notifications.length - 1) {
-          const [item] = this._config.custom_notifications.splice(index, 1);
-          this._config.custom_notifications.splice(index + 1, 0, item);
-          this._emitConfig();
+        event.preventDefault();
+        event.stopPropagation();
+        const index = Number(button.dataset.index);
+        if (!Array.isArray(this._config.custom_notifications)) {
+          this._config.custom_notifications = [];
         }
-        break;
-      case "add-external-alert":
-        if (!Array.isArray(this._config.external_alerts)) {
-          this._config.external_alerts = [];
+        switch (button.dataset.editorAction) {
+          case "add-entity-list-item":
+            this._addEntityListItem(button.dataset.field || "");
+            break;
+          case "remove-entity-list-item":
+            this._removeEntityListItem(button.dataset.field || "", index);
+            break;
+          case "add-custom":
+            this._config.custom_notifications.push({
+              _draft: true,
+              title: "",
+              message: "",
+              icon: "mdi:bell-outline",
+              severity: "info",
+              condition: "always",
+              action_type: "none"
+            });
+            this._emitConfig();
+            break;
+          case "remove-custom":
+            if (Number.isInteger(index)) {
+              this._config.custom_notifications.splice(index, 1);
+              this._emitConfig();
+            }
+            break;
+          case "move-custom-up":
+            if (Number.isInteger(index) && index > 0) {
+              const [item] = this._config.custom_notifications.splice(index, 1);
+              this._config.custom_notifications.splice(index - 1, 0, item);
+              this._emitConfig();
+            }
+            break;
+          case "move-custom-down":
+            if (Number.isInteger(index) && index < this._config.custom_notifications.length - 1) {
+              const [item] = this._config.custom_notifications.splice(index, 1);
+              this._config.custom_notifications.splice(index + 1, 0, item);
+              this._emitConfig();
+            }
+            break;
+          case "add-external-alert":
+            if (!Array.isArray(this._config.external_alerts)) {
+              this._config.external_alerts = [];
+            }
+            this._config.external_alerts.push({
+              _draft: true,
+              id: "",
+              type: "camera_event",
+              title: "",
+              message: "",
+              severity: "warning",
+              mobile: "auto"
+            });
+            this._showExternalAlertsSection = true;
+            this._emitConfig();
+            break;
+          case "remove-external-alert":
+            if (Number.isInteger(index) && Array.isArray(this._config.external_alerts)) {
+              this._config.external_alerts.splice(index, 1);
+              this._emitConfig();
+            }
+            break;
+          default:
+            break;
         }
-        this._config.external_alerts.push({
-          _draft: true,
-          id: "",
-          type: "camera_event",
-          title: "",
-          message: "",
-          severity: "warning",
-          mobile: "auto",
-        });
-        this._showExternalAlertsSection = true;
-        this._emitConfig();
-        break;
-      case "remove-external-alert":
-        if (Number.isInteger(index) && Array.isArray(this._config.external_alerts)) {
-          this._config.external_alerts.splice(index, 1);
-          this._emitConfig();
-        }
-        break;
-      default:
-        break;
-    }
-  }
-
-  _renderTextField(label, field, value, options = {}) {
-    const tLabel = this._editorLabel(label);
-    const tPlaceholder = options.placeholder ? this._editorLabel(options.placeholder) : "";
-    return `
+      }
+      _renderTextField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const tPlaceholder = options.placeholder ? this._editorLabel(options.placeholder) : "";
+        return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <input
@@ -5207,12 +4679,11 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
         />
       </label>
     `;
-  }
-
-  _renderTextareaField(label, field, value, options = {}) {
-    const tLabel = this._editorLabel(label);
-    const tPlaceholder = options.placeholder ? this._editorLabel(options.placeholder) : "";
-    return `
+      }
+      _renderTextareaField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const tPlaceholder = options.placeholder ? this._editorLabel(options.placeholder) : "";
+        return `
       <label class="editor-field editor-field--full">
         <span>${escapeHtml(tLabel)}</span>
         <textarea
@@ -5222,15 +4693,14 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
         >${escapeHtml(value ?? "")}</textarea>
       </label>
     `;
-  }
-
-  _renderSelectField(label, field, value, options, renderOptions = {}) {
-    const tLabel = this._editorLabel(label);
-    return `
+      }
+      _renderSelectField(label, field, value, options, renderOptions = {}) {
+        const tLabel = this._editorLabel(label);
+        return `
       <label class="editor-field ${renderOptions.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
-          ${options.map(option => `
+          ${options.map((option) => `
             <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
               ${escapeHtml(this._editorLabel(option.label))}
             </option>
@@ -5238,23 +4708,21 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
         </select>
       </label>
     `;
-  }
-
-  _renderCheckboxField(label, field, checked) {
-    const tLabel = this._editorLabel(label);
-    return `
+      }
+      _renderCheckboxField(label, field, checked) {
+        const tLabel = this._editorLabel(label);
+        return `
       <label class="editor-toggle">
         <input type="checkbox" data-field="${escapeHtml(field)}" data-value-type="boolean" ${checked ? "checked" : ""} />
         <span class="editor-toggle__switch" aria-hidden="true"></span>
         <span>${escapeHtml(tLabel)}</span>
       </label>
     `;
-  }
-
-  _renderIconPickerField(label, field, value, options = {}) {
-    const fullWidth = options.fullWidth !== false;
-    const tLabel = this._editorLabel(label);
-    return `
+      }
+      _renderIconPickerField(label, field, value, options = {}) {
+        const fullWidth = options.fullWidth !== false;
+        const tLabel = this._editorLabel(label);
+        return `
       <div class="editor-field ${fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <div
@@ -5266,17 +4734,14 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
         ></div>
       </div>
     `;
-  }
-
-  _renderColorField(label, field, value, options = {}) {
-    const tLabel = this._editorLabel(label);
-    const tColorCustom = this._editorLabel("ed.notifications.custom_color");
-    const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
-    const currentValue = value === undefined || value === null || value === ""
-      ? fallbackValue
-      : String(value);
-    const color = getEditorColorModel(currentValue, fallbackValue);
-    return `
+      }
+      _renderColorField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const tColorCustom = this._editorLabel("ed.notifications.custom_color");
+        const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
+        const currentValue = value === void 0 || value === null || value === "" ? fallbackValue : String(value);
+        const color = getEditorColorModel(currentValue, fallbackValue);
+        return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
@@ -5294,12 +4759,11 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
         </div>
       </div>
     `;
-  }
-
-  _renderEntityPickerField(label, field, value, options = {}) {
-    const tLabel = this._editorLabel(label);
-    const tPlaceholder = options.placeholder ? this._editorLabel(options.placeholder) : "";
-    return `
+      }
+      _renderEntityPickerField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const tPlaceholder = options.placeholder ? this._editorLabel(options.placeholder) : "";
+        return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <div
@@ -5312,21 +4776,20 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
         ></div>
       </div>
     `;
-  }
-
-  _renderEntityListField(label, field, value, options = {}) {
-    const tLabel = this._editorLabel(label);
-    const tPlaceholder = options.placeholder ? this._editorLabel(options.placeholder) : "";
-    const domains = options.domains || this._entityDomainsForListField(field).join(",");
-    const items = normalizeEntityList(value, this._entityDomainsForListField(field));
-    const rows = [...items, ""];
-    return `
+      }
+      _renderEntityListField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const tPlaceholder = options.placeholder ? this._editorLabel(options.placeholder) : "";
+        const domains = options.domains || this._entityDomainsForListField(field).join(",");
+        const items = normalizeEntityList(value, this._entityDomainsForListField(field));
+        const rows = [...items, ""];
+        return `
       <div class="editor-field editor-field--full editor-field--entity-list">
         <span>${escapeHtml(tLabel)}</span>
         <div class="editor-entity-list">
           ${rows.map((entityId, index) => {
-            const isNewRow = index >= items.length;
-            return `
+          const isNewRow = index >= items.length;
+          return `
               <div class="editor-entity-list__row">
                 <div
                   class="editor-control-host"
@@ -5338,185 +4801,159 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
                   data-domains="${escapeHtml(domains)}"
                   data-placeholder="${escapeHtml(tPlaceholder)}"
                 ></div>
-                ${
-                  isNewRow
-                    ? `<span class="editor-entity-list__spacer" aria-hidden="true"></span>`
-                    : `<button type="button" class="editor-entity-list__remove" data-editor-action="remove-entity-list-item" data-field="${escapeHtml(field)}" data-index="${index}" aria-label="${escapeHtml(`${this._editorLabel("ed.notifications.remove_entity_row")} ${tLabel}`)}">
+                ${isNewRow ? `<span class="editor-entity-list__spacer" aria-hidden="true"></span>` : `<button type="button" class="editor-entity-list__remove" data-editor-action="remove-entity-list-item" data-field="${escapeHtml(field)}" data-index="${index}" aria-label="${escapeHtml(`${this._editorLabel("ed.notifications.remove_entity_row")} ${tLabel}`)}">
                         <ha-icon icon="mdi:close"></ha-icon>
-                      </button>`
-                }
+                      </button>`}
               </div>
             `;
-          }).join("")}
+        }).join("")}
         </div>
       </div>
     `;
-  }
-
-  _mountEntityPicker(host) {
-    if (window.NodaliaUtils?.mountEntityPickerHost) {
-      window.NodaliaUtils.mountEntityPickerHost(host, {
-        hass: this._hass,
-        field: host.dataset.field,
-        value: host.dataset.value || "",
-        placeholder: host.dataset.placeholder || "",
-        onShadowInput: this._onShadowInput,
-        onShadowValueChanged: this._onShadowValueChanged,
-        copyDatasetFromHost: true,
-      });
-    }
-    const control = host.firstElementChild;
-    if (!(control instanceof HTMLElement)) {
-      return;
-    }
-    const allowedDomains = String(host.dataset.domains || "")
-      .split(",")
-      .map(domain => domain.trim())
-      .filter(Boolean);
-    if (!allowedDomains.length) {
-      return;
-    }
-    if (control.tagName === "HA-ENTITY-PICKER") {
-      control.includeDomains = allowedDomains;
-      control.entityFilter = stateObj =>
-        allowedDomains.some(domain => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
-      return;
-    }
-    if (control.tagName === "HA-SELECTOR") {
-      control.selector = {
-        entity: allowedDomains.length === 1 ? { domain: allowedDomains[0] } : { domain: allowedDomains },
-      };
-    }
-  }
-
-  _mountIconPicker(host) {
-    if (window.NodaliaUtils?.mountIconPickerHost) {
-      window.NodaliaUtils.mountIconPickerHost(host, {
-        hass: this._hass,
-        value: host.dataset.value || "",
-        placeholder: host.dataset.placeholder || "mdi:bell-outline",
-        onShadowInput: this._onShadowInput,
-        onShadowValueChanged: this._onShadowValueChanged,
-        copyDatasetFromHost: true,
-      });
-      const control = host.firstElementChild;
-      if (control instanceof HTMLElement) {
-        control.dataset.field = host.dataset.field || "";
       }
-    }
-  }
-
-  _smartEntityEditorRows(config) {
-    const labels = [
-      ["calendar_entities", "ed.notifications.conn_label_calendar"],
-      ["vacuum_entities", "ed.notifications.conn_label_vacuum"],
-      ["vacuum_error_entities", "ed.notifications.conn_label_vacuum_error"],
-      ["weather_entities", "ed.notifications.conn_label_weather"],
-      ["media_player_entities", "ed.notifications.conn_label_media"],
-      ["motion_entities", "ed.notifications.conn_label_motion"],
-      ["door_entities", "ed.notifications.conn_label_door"],
-      ["window_entities", "ed.notifications.conn_label_window"],
-      ["temperature_entities", "ed.notifications.conn_label_temperature"],
-      ["humidity_entities", "ed.notifications.conn_label_humidity"],
-      ["outdoor_temperature_entities", "ed.notifications.conn_label_outdoor_temperature"],
-      ["outdoor_humidity_entities", "ed.notifications.conn_label_outdoor_humidity"],
-      ["climate_entities", "ed.notifications.conn_label_climate"],
-      ["humidifier_entities", "ed.notifications.conn_label_humidifier"],
-      ["battery_entities", "ed.notifications.conn_label_battery"],
-      ["humidifier_fill_entities", "ed.notifications.conn_label_tank"],
-      ["ink_entities", "ed.notifications.conn_label_ink"],
-    ];
-    const byEntity = new Map((config.smart_entity_overrides || []).map(item => [item.entity, item]));
-    const seen = new Set();
-    const rows = [];
-    labels.forEach(([field, label]) => {
-      (config[field] || []).forEach(entity => {
-        if (!entity || seen.has(entity)) {
+      _mountEntityPicker(host) {
+        if (window.NodaliaUtils?.mountEntityPickerHost) {
+          window.NodaliaUtils.mountEntityPickerHost(host, {
+            hass: this._hass,
+            field: host.dataset.field,
+            value: host.dataset.value || "",
+            placeholder: host.dataset.placeholder || "",
+            onShadowInput: this._onShadowInput,
+            onShadowValueChanged: this._onShadowValueChanged,
+            copyDatasetFromHost: true
+          });
+        }
+        const control = host.firstElementChild;
+        if (!(control instanceof HTMLElement)) {
           return;
         }
-        seen.add(entity);
-        rows.push({
-          entity,
-          label,
-          ...(byEntity.get(entity) || {}),
+        const allowedDomains = String(host.dataset.domains || "").split(",").map((domain) => domain.trim()).filter(Boolean);
+        if (!allowedDomains.length) {
+          return;
+        }
+        if (control.tagName === "HA-ENTITY-PICKER") {
+          control.includeDomains = allowedDomains;
+          control.entityFilter = (stateObj) => allowedDomains.some((domain) => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+          return;
+        }
+        if (control.tagName === "HA-SELECTOR") {
+          control.selector = {
+            entity: allowedDomains.length === 1 ? { domain: allowedDomains[0] } : { domain: allowedDomains }
+          };
+        }
+      }
+      _mountIconPicker(host) {
+        if (window.NodaliaUtils?.mountIconPickerHost) {
+          window.NodaliaUtils.mountIconPickerHost(host, {
+            hass: this._hass,
+            value: host.dataset.value || "",
+            placeholder: host.dataset.placeholder || "mdi:bell-outline",
+            onShadowInput: this._onShadowInput,
+            onShadowValueChanged: this._onShadowValueChanged,
+            copyDatasetFromHost: true
+          });
+          const control = host.firstElementChild;
+          if (control instanceof HTMLElement) {
+            control.dataset.field = host.dataset.field || "";
+          }
+        }
+      }
+      _smartEntityEditorRows(config) {
+        const labels = [
+          ["calendar_entities", "ed.notifications.conn_label_calendar"],
+          ["vacuum_entities", "ed.notifications.conn_label_vacuum"],
+          ["vacuum_error_entities", "ed.notifications.conn_label_vacuum_error"],
+          ["weather_entities", "ed.notifications.conn_label_weather"],
+          ["media_player_entities", "ed.notifications.conn_label_media"],
+          ["motion_entities", "ed.notifications.conn_label_motion"],
+          ["door_entities", "ed.notifications.conn_label_door"],
+          ["window_entities", "ed.notifications.conn_label_window"],
+          ["temperature_entities", "ed.notifications.conn_label_temperature"],
+          ["humidity_entities", "ed.notifications.conn_label_humidity"],
+          ["outdoor_temperature_entities", "ed.notifications.conn_label_outdoor_temperature"],
+          ["outdoor_humidity_entities", "ed.notifications.conn_label_outdoor_humidity"],
+          ["climate_entities", "ed.notifications.conn_label_climate"],
+          ["humidifier_entities", "ed.notifications.conn_label_humidifier"],
+          ["battery_entities", "ed.notifications.conn_label_battery"],
+          ["humidifier_fill_entities", "ed.notifications.conn_label_tank"],
+          ["ink_entities", "ed.notifications.conn_label_ink"]
+        ];
+        const byEntity = new Map((config.smart_entity_overrides || []).map((item) => [item.entity, item]));
+        const seen = /* @__PURE__ */ new Set();
+        const rows = [];
+        labels.forEach(([field, label]) => {
+          (config[field] || []).forEach((entity) => {
+            if (!entity || seen.has(entity)) {
+              return;
+            }
+            seen.add(entity);
+            rows.push({
+              entity,
+              label,
+              ...byEntity.get(entity) || {}
+            });
+          });
         });
-      });
-    });
-    (config.smart_entity_overrides || []).forEach(item => {
-      if (item.entity && !seen.has(item.entity)) {
-        seen.add(item.entity);
-        rows.push({ label: "ed.notifications.conn_label_manual", ...item });
+        (config.smart_entity_overrides || []).forEach((item) => {
+          if (item.entity && !seen.has(item.entity)) {
+            seen.add(item.entity);
+            rows.push({ label: "ed.notifications.conn_label_manual", ...item });
+          }
+        });
+        return rows.map((item) => ({
+          entity: item.entity,
+          label: item.label || "ed.notifications.conn_label_entity",
+          title: item.title || "",
+          message: item.message || "",
+          tint_color: item.tint_color || "",
+          url: item.url || "",
+          action_label: item.action_label || "",
+          tap_action: normalizeNotificationTapAction(item.tap_action),
+          mobile: normalizeSmartEntityMobile(item.mobile)
+        }));
       }
-    });
-    return rows.map(item => ({
-      entity: item.entity,
-      label: item.label || "ed.notifications.conn_label_entity",
-      title: item.title || "",
-      message: item.message || "",
-      tint_color: item.tint_color || "",
-      url: item.url || "",
-      action_label: item.action_label || "",
-      tap_action: normalizeNotificationTapAction(item.tap_action),
-      mobile: normalizeSmartEntityMobile(item.mobile),
-    }));
-  }
-
-  _renderNotificationTapActionFields(fieldBase, tapAction, options = {}) {
-    const action = normalizeNotificationTapAction(tapAction);
-    const actionOptions = [
-      { value: "none", label: "ed.notifications.action_none" },
-      { value: "more-info", label: "ed.notifications.action_more_info" },
-      { value: "navigate", label: "ed.notifications.action_navigate" },
-      { value: "url", label: "ed.notifications.action_url" },
-      { value: "toggle", label: "ed.notifications.action_toggle" },
-    ];
-    return `
+      _renderNotificationTapActionFields(fieldBase, tapAction, options = {}) {
+        const action = normalizeNotificationTapAction(tapAction);
+        const actionOptions = [
+          { value: "none", label: "ed.notifications.action_none" },
+          { value: "more-info", label: "ed.notifications.action_more_info" },
+          { value: "navigate", label: "ed.notifications.action_navigate" },
+          { value: "url", label: "ed.notifications.action_url" },
+          { value: "toggle", label: "ed.notifications.action_toggle" }
+        ];
+        return `
       ${this._renderSelectField(options.label || "ed.notifications.field_tap_action", `${fieldBase}.action`, action.action, actionOptions, { fullWidth: true })}
-      ${
-        action.action === "navigate"
-          ? this._renderTextField("ed.notifications.field_navigation_path", `${fieldBase}.navigation_path`, action.navigation_path, {
-              placeholder: "#camera",
-              fullWidth: true,
-            })
-          : ""
-      }
-      ${
-        action.action === "url"
-          ? `
+      ${action.action === "navigate" ? this._renderTextField("ed.notifications.field_navigation_path", `${fieldBase}.navigation_path`, action.navigation_path, {
+          placeholder: "#camera",
+          fullWidth: true
+        }) : ""}
+      ${action.action === "url" ? `
             ${this._renderTextField("ed.notifications.field_url_path", `${fieldBase}.url_path`, action.url_path, {
-              placeholder: "https://...",
-              fullWidth: true,
-            })}
+          placeholder: "https://...",
+          fullWidth: true
+        })}
             ${this._renderCheckboxField("ed.notifications.field_new_tab", `${fieldBase}.new_tab`, action.new_tab === true)}
-          `
-          : ""
-      }
-      ${
-        action.action === "more-info" || action.action === "toggle"
-          ? this._renderEntityPickerField("ed.notifications.field_action_entity", `${fieldBase}.entity`, action.entity, {
-              placeholder: options.entityPlaceholder || "ed.notifications.placeholder_action_entity",
-              fullWidth: true,
-            })
-          : ""
-      }
+          ` : ""}
+      ${action.action === "more-info" || action.action === "toggle" ? this._renderEntityPickerField("ed.notifications.field_action_entity", `${fieldBase}.entity`, action.entity, {
+          placeholder: options.entityPlaceholder || "ed.notifications.placeholder_action_entity",
+          fullWidth: true
+        }) : ""}
     `;
-  }
-
-  _renderMobilePolicyField(field, value, options = {}) {
-    return this._renderSelectField(options.label || "ed.notifications.field_mobile", field, normalizeMobilePolicy(value), [
-      { value: "auto", label: "ed.notifications.mobile_policy_auto" },
-      { value: "push", label: "ed.notifications.mobile_policy_push" },
-      { value: "card_only", label: "ed.notifications.mobile_policy_card_only" },
-      { value: "off", label: "ed.notifications.mobile_policy_off" },
-    ], { fullWidth: options.fullWidth !== false });
-  }
-
-  _renderExternalAlerts(config) {
-    const rows = config.external_alerts || [];
-    if (!rows.length) {
-      return `<div class="editor-empty">${escapeHtml(this._editorLabel("ed.notifications.external_alerts_empty"))}</div>`;
-    }
-    return rows.map((item, index) => `
+      }
+      _renderMobilePolicyField(field, value, options = {}) {
+        return this._renderSelectField(options.label || "ed.notifications.field_mobile", field, normalizeMobilePolicy(value), [
+          { value: "auto", label: "ed.notifications.mobile_policy_auto" },
+          { value: "push", label: "ed.notifications.mobile_policy_push" },
+          { value: "card_only", label: "ed.notifications.mobile_policy_card_only" },
+          { value: "off", label: "ed.notifications.mobile_policy_off" }
+        ], { fullWidth: options.fullWidth !== false });
+      }
+      _renderExternalAlerts(config) {
+        const rows = config.external_alerts || [];
+        if (!rows.length) {
+          return `<div class="editor-empty">${escapeHtml(this._editorLabel("ed.notifications.external_alerts_empty"))}</div>`;
+        }
+        return rows.map((item, index) => `
       <div class="editor-action">
         <div class="editor-action__header">
           <div class="editor-action__title">${escapeHtml(this._editorLabel("ed.notifications.external_alert_n"))} ${index + 1}</div>
@@ -5527,41 +4964,40 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
         <div class="editor-grid">
           ${this._renderTextField("ed.notifications.external_alert_id", `external_alerts.${index}.id`, item.id, { placeholder: "entrance_person" })}
           ${this._renderSelectField("ed.notifications.external_alert_type", `external_alerts.${index}.type`, item.type || "external_alert", [
-            { value: "camera_event", label: "ed.notifications.external_alert_camera" },
-            { value: "security_event", label: "ed.notifications.external_alert_security" },
-            { value: "external_alert", label: "ed.notifications.external_alert_generic" },
-          ])}
+          { value: "camera_event", label: "ed.notifications.external_alert_camera" },
+          { value: "security_event", label: "ed.notifications.external_alert_security" },
+          { value: "external_alert", label: "ed.notifications.external_alert_generic" }
+        ])}
           ${this._renderTextField("ed.notifications.field_title", `external_alerts.${index}.title`, item.title)}
           ${this._renderTextareaField("ed.notifications.field_message", `external_alerts.${index}.message`, item.message)}
           ${this._renderSelectField("ed.notifications.field_severity", `external_alerts.${index}.severity`, item.severity, [
-            { value: "info", label: "ed.notifications.severity_info" },
-            { value: "success", label: "ed.notifications.severity_ok" },
-            { value: "warning", label: "ed.notifications.severity_warning" },
-            { value: "critical", label: "ed.notifications.severity_critical" },
-          ])}
+          { value: "info", label: "ed.notifications.severity_info" },
+          { value: "success", label: "ed.notifications.severity_ok" },
+          { value: "warning", label: "ed.notifications.severity_warning" },
+          { value: "critical", label: "ed.notifications.severity_critical" }
+        ])}
           ${this._renderEntityPickerField("ed.notifications.field_optional_entity", `external_alerts.${index}.entity`, item.entity, { fullWidth: true })}
           ${this._renderMobilePolicyField(`external_alerts.${index}.mobile`, item.mobile)}
         </div>
       </div>
     `).join("");
-  }
-
-  _renderSmartNotificationOptions(config) {
-    const rows = [
-      ["hot", "ed.notifications.smart_hot", "ed.notifications.smart_ph_hot_title", "ed.notifications.smart_ph_hot_message"],
-      ["cold", "ed.notifications.smart_cold", "ed.notifications.smart_ph_cold_title", "ed.notifications.smart_ph_cold_message"],
-      ["humidity_high", "ed.notifications.smart_humidity_high", "ed.notifications.smart_ph_humidity_high_title", "ed.notifications.smart_ph_humidity_high_message"],
-      ["humidity_low", "ed.notifications.smart_humidity_low", "ed.notifications.smart_ph_humidity_low_title", "ed.notifications.smart_ph_humidity_low_message"],
-      ["rain", "ed.notifications.smart_rain", "ed.notifications.smart_ph_rain_title", "ed.notifications.smart_ph_rain_message"],
-      ["media_left_on", "ed.notifications.smart_media_left_on", "ed.notifications.smart_ph_media_title", "ed.notifications.smart_ph_media_message"],
-      ["battery_low", "ed.notifications.smart_battery_low", "ed.notifications.smart_ph_battery_title", "ed.notifications.smart_ph_battery_message"],
-      ["humidifier_fill_low", "ed.notifications.smart_tank_low", "ed.notifications.smart_ph_tank_title", "ed.notifications.smart_ph_tank_message"],
-      ["humidifier_fill_full", "ed.notifications.smart_tank_full", "ed.notifications.smart_ph_tank_full_title", "ed.notifications.smart_ph_tank_full_message"],
-      ["ink_low", "ed.notifications.smart_ink_low", "ed.notifications.smart_ph_ink_title", "ed.notifications.smart_ph_ink_message"],
-    ];
-    return rows.map(([key, label, titlePlaceholder, messagePlaceholder]) => {
-      const item = config.smart_notifications?.[key] || {};
-      return `
+      }
+      _renderSmartNotificationOptions(config) {
+        const rows = [
+          ["hot", "ed.notifications.smart_hot", "ed.notifications.smart_ph_hot_title", "ed.notifications.smart_ph_hot_message"],
+          ["cold", "ed.notifications.smart_cold", "ed.notifications.smart_ph_cold_title", "ed.notifications.smart_ph_cold_message"],
+          ["humidity_high", "ed.notifications.smart_humidity_high", "ed.notifications.smart_ph_humidity_high_title", "ed.notifications.smart_ph_humidity_high_message"],
+          ["humidity_low", "ed.notifications.smart_humidity_low", "ed.notifications.smart_ph_humidity_low_title", "ed.notifications.smart_ph_humidity_low_message"],
+          ["rain", "ed.notifications.smart_rain", "ed.notifications.smart_ph_rain_title", "ed.notifications.smart_ph_rain_message"],
+          ["media_left_on", "ed.notifications.smart_media_left_on", "ed.notifications.smart_ph_media_title", "ed.notifications.smart_ph_media_message"],
+          ["battery_low", "ed.notifications.smart_battery_low", "ed.notifications.smart_ph_battery_title", "ed.notifications.smart_ph_battery_message"],
+          ["humidifier_fill_low", "ed.notifications.smart_tank_low", "ed.notifications.smart_ph_tank_title", "ed.notifications.smart_ph_tank_message"],
+          ["humidifier_fill_full", "ed.notifications.smart_tank_full", "ed.notifications.smart_ph_tank_full_title", "ed.notifications.smart_ph_tank_full_message"],
+          ["ink_low", "ed.notifications.smart_ink_low", "ed.notifications.smart_ph_ink_title", "ed.notifications.smart_ph_ink_message"]
+        ];
+        return rows.map(([key, label, titlePlaceholder, messagePlaceholder]) => {
+          const item = config.smart_notifications?.[key] || {};
+          return `
         <div class="editor-action">
           <div class="editor-action__header">
             <div class="editor-action__title">${escapeHtml(this._editorLabel(label))}</div>
@@ -5577,16 +5013,15 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
           </div>
         </div>
       `;
-    }).join("");
-  }
-
-  _renderSmartEntityOverrides(config) {
-    const rows = this._smartEntityEditorRows(config);
-    this._smartEntityEditorEntities = rows.map(item => item.entity);
-    if (!rows.length) {
-      return `<div class="editor-empty">${escapeHtml(this._editorLabel("ed.notifications.smart_empty_connections"))}</div>`;
-    }
-    return rows.map((item, index) => `
+        }).join("");
+      }
+      _renderSmartEntityOverrides(config) {
+        const rows = this._smartEntityEditorRows(config);
+        this._smartEntityEditorEntities = rows.map((item) => item.entity);
+        if (!rows.length) {
+          return `<div class="editor-empty">${escapeHtml(this._editorLabel("ed.notifications.smart_empty_connections"))}</div>`;
+        }
+        return rows.map((item, index) => `
       <div class="editor-action">
         <div class="editor-action__header">
           <div>
@@ -5605,13 +5040,12 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
         </div>
       </div>
     `).join("");
-  }
-
-  _renderCustomNotifications(config) {
-    if (!config.custom_notifications.length) {
-      return `<div class="editor-empty">${escapeHtml(this._editorLabel("ed.notifications.custom_empty"))}</div>`;
-    }
-    return config.custom_notifications.map((item, index) => `
+      }
+      _renderCustomNotifications(config) {
+        if (!config.custom_notifications.length) {
+          return `<div class="editor-empty">${escapeHtml(this._editorLabel("ed.notifications.custom_empty"))}</div>`;
+        }
+        return config.custom_notifications.map((item, index) => `
       <div class="editor-action">
         <div class="editor-action__header">
           <div class="editor-action__title">${escapeHtml(this._editorLabel("ed.notifications.custom_notification_n"))} ${index + 1}</div>
@@ -5626,69 +5060,60 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
           ${this._renderIconPickerField("ed.notifications.field_icon", `custom_notifications.${index}.icon`, item.icon)}
           ${this._renderTextareaField("ed.notifications.field_message", `custom_notifications.${index}.message`, item.message, { placeholder: "ed.notifications.placeholder_visible_text" })}
           ${this._renderSelectField("ed.notifications.field_severity", `custom_notifications.${index}.severity`, item.severity, [
-            { value: "info", label: "ed.notifications.severity_info" },
-            { value: "success", label: "ed.notifications.severity_ok" },
-            { value: "warning", label: "ed.notifications.severity_warning" },
-            { value: "critical", label: "ed.notifications.severity_critical" },
-          ])}
+          { value: "info", label: "ed.notifications.severity_info" },
+          { value: "success", label: "ed.notifications.severity_ok" },
+          { value: "warning", label: "ed.notifications.severity_warning" },
+          { value: "critical", label: "ed.notifications.severity_critical" }
+        ])}
           ${this._renderColorField("ed.notifications.field_custom_tint", `custom_notifications.${index}.tint_color`, item.tint_color, { fullWidth: true })}
           ${this._renderMobilePolicyField(`custom_notifications.${index}.mobile`, item.mobile)}
           ${this._renderEntityPickerField("ed.notifications.field_optional_entity", `custom_notifications.${index}.entity`, item.entity, { fullWidth: true })}
           ${this._renderTextField("ed.notifications.field_optional_attribute", `custom_notifications.${index}.attribute`, item.attribute, { placeholder: "temperature" })}
           ${this._renderSelectField("ed.notifications.field_condition", `custom_notifications.${index}.condition`, item.condition, [
-            { value: "always", label: "ed.notifications.cond_always" },
-            { value: "on", label: "ed.notifications.cond_on" },
-            { value: "off", label: "ed.notifications.cond_off" },
-            { value: "unavailable", label: "ed.notifications.cond_unavailable" },
-            { value: "equals", label: "ed.notifications.cond_equals" },
-            { value: "not_equals", label: "ed.notifications.cond_not_equals" },
-            { value: "above", label: "ed.notifications.cond_above" },
-            { value: "below", label: "ed.notifications.cond_below" },
-            { value: "missing", label: "ed.notifications.cond_missing" },
-          ])}
+          { value: "always", label: "ed.notifications.cond_always" },
+          { value: "on", label: "ed.notifications.cond_on" },
+          { value: "off", label: "ed.notifications.cond_off" },
+          { value: "unavailable", label: "ed.notifications.cond_unavailable" },
+          { value: "equals", label: "ed.notifications.cond_equals" },
+          { value: "not_equals", label: "ed.notifications.cond_not_equals" },
+          { value: "above", label: "ed.notifications.cond_above" },
+          { value: "below", label: "ed.notifications.cond_below" },
+          { value: "missing", label: "ed.notifications.cond_missing" }
+        ])}
           ${this._renderTextField("ed.notifications.field_condition_value", `custom_notifications.${index}.value`, item.value, { placeholder: "27" })}
           ${this._renderSelectField("ed.notifications.field_action", `custom_notifications.${index}.action_type`, item.action_type, [
-            { value: "none", label: "ed.notifications.action_none" },
-            { value: "more-info", label: "ed.notifications.action_more_info" },
-            { value: "url", label: "ed.notifications.action_url" },
-            { value: "toggle", label: "ed.notifications.action_toggle" },
-            { value: "service", label: "ed.notifications.action_service" },
-          ])}
+          { value: "none", label: "ed.notifications.action_none" },
+          { value: "more-info", label: "ed.notifications.action_more_info" },
+          { value: "url", label: "ed.notifications.action_url" },
+          { value: "toggle", label: "ed.notifications.action_toggle" },
+          { value: "service", label: "ed.notifications.action_service" }
+        ])}
           ${this._renderTextField("ed.notifications.field_action_label", `custom_notifications.${index}.action_label`, item.action_label, { placeholder: "ed.notifications.placeholder_run" })}
           ${this._renderNotificationTapActionFields(`custom_notifications.${index}.tap_action`, item.tap_action)}
-          ${
-            item.action_type === "url"
-              ? this._renderTextField("ed.notifications.field_url_plain", `custom_notifications.${index}.url`, item.url, {
-                  placeholder: "https://...",
-                  fullWidth: true,
-                })
-              : ""
-          }
-          ${
-            item.action_type === "service"
-              ? `
+          ${item.action_type === "url" ? this._renderTextField("ed.notifications.field_url_plain", `custom_notifications.${index}.url`, item.url, {
+          placeholder: "https://...",
+          fullWidth: true
+        }) : ""}
+          ${item.action_type === "service" ? `
                 ${this._renderTextField("ed.notifications.field_service", `custom_notifications.${index}.service`, item.service, {
-                  placeholder: "light.turn_on",
-                  fullWidth: true,
-                })}
+          placeholder: "light.turn_on",
+          fullWidth: true
+        })}
                 ${this._renderTextareaField("ed.notifications.field_service_data_json", `custom_notifications.${index}.service_data`, item.service_data, {
-                  placeholder: '{"brightness_pct": 80}',
-                })}
-              `
-              : ""
-          }
+          placeholder: '{"brightness_pct": 80}'
+        })}
+              ` : ""}
         </div>
       </div>
     `).join("");
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
-    }
-    const config = this._config || normalizeConfig({});
-    const engineBackgroundActive = this._engineBackgroundActive();
-    this.shadowRoot.innerHTML = `
+      }
+      _render() {
+        if (!this.shadowRoot) {
+          return;
+        }
+        const config = this._config || normalizeConfig({});
+        const engineBackgroundActive = this._engineBackgroundActive();
+        this.shadowRoot.innerHTML = `
       <style>
         :host {
           display: block;
@@ -6016,9 +5441,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
               </button>
             </div>
           </div>
-          ${
-            this._showConnectionsSection
-              ? `
+          ${this._showConnectionsSection ? `
                 <div class="editor-grid">
                   ${this._renderEntityListField("ed.notifications.entity_calendars", "calendar_entities", config.calendar_entities, { placeholder: "calendar.casa" })}
                   ${this._renderEntityListField("ed.notifications.entity_vacuums", "vacuum_entities", config.vacuum_entities, { placeholder: "vacuum.robot" })}
@@ -6040,9 +5463,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
                   ${this._renderEntityListField("ed.notifications.entity_tank_full", "humidifier_full_entities", config.humidifier_full_entities, { placeholder: "sensor.deposito_sucio" })}
                   ${this._renderEntityListField("ed.notifications.entity_ink", "ink_entities", config.ink_entities, { placeholder: "sensor.impresora_tinta_negra" })}
                 </div>
-              `
-              : ""
-          }
+              ` : ""}
         </section>
         <section class="editor-section">
           <div class="editor-section__header">
@@ -6070,10 +5491,10 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
           </div>
           <div class="editor-grid">
             ${this._renderEntityPickerField("ed.notifications.dismissed_helper", "dismissed_entity", config.dismissed_entity, {
-              domains: "input_text",
-              fullWidth: true,
-              placeholder: "input_text.nodalia_notifications_dismissed",
-            })}
+          domains: "input_text",
+          fullWidth: true,
+          placeholder: "input_text.nodalia_notifications_dismissed"
+        })}
             <div class="editor-action editor-field--full">
               <div class="editor-action__header">
                 <div class="editor-action__title">${escapeHtml(this._editorLabel("ed.notifications.mobile_delivery_section_title"))}</div>
@@ -6081,41 +5502,37 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
               </div>
               <div class="editor-grid">
                 ${this._renderCheckboxField("ed.notifications.mobile_send", "mobile_notifications.enabled", config.mobile_notifications?.enabled === true)}
-                ${
-                  config.mobile_notifications?.enabled === true
-                    ? `
+                ${config.mobile_notifications?.enabled === true ? `
                       ${this._renderEntityListField(
-                        "ed.notifications.mobile_notify_entities",
-                        "mobile_notifications.entities",
-                        config.mobile_notifications?.entities,
-                        { placeholder: "notify.mobile_app_iphone" },
-                      )}
+          "ed.notifications.mobile_notify_entities",
+          "mobile_notifications.entities",
+          config.mobile_notifications?.entities,
+          { placeholder: "notify.mobile_app_iphone" }
+        )}
                       ${this._renderTextField(
-                        "ed.notifications.mobile_notify_legacy",
-                        "mobile_notifications.services",
-                        Array.isArray(config.mobile_notifications?.services) ? config.mobile_notifications.services.join(", ") : "",
-                        { placeholder: "notify.mobile_app_iphone", valueType: "csv", fullWidth: true },
-                      )}
+          "ed.notifications.mobile_notify_legacy",
+          "mobile_notifications.services",
+          Array.isArray(config.mobile_notifications?.services) ? config.mobile_notifications.services.join(", ") : "",
+          { placeholder: "notify.mobile_app_iphone", valueType: "csv", fullWidth: true }
+        )}
                       ${this._renderCheckboxField(
-                        "ed.notifications.mobile_critical_legacy",
-                        "mobile_notifications.critical_alerts",
-                        config.mobile_notifications?.critical_alerts === true,
-                      )}
-                    `
-                    : ""
-                }
+          "ed.notifications.mobile_critical_legacy",
+          "mobile_notifications.critical_alerts",
+          config.mobile_notifications?.critical_alerts === true
+        )}
+                    ` : ""}
                 ${this._renderSelectField("ed.notifications.mobile_min_severity", "mobile_notifications.min_severity", config.mobile_notifications?.min_severity, [
-                  { value: "info", label: "ed.notifications.mobile_severity_all_info" },
-                  { value: "success", label: "ed.notifications.severity_ok" },
-                  { value: "warning", label: "ed.notifications.severity_warning" },
-                  { value: "critical", label: "ed.notifications.severity_critical" },
-                ])}
+          { value: "info", label: "ed.notifications.mobile_severity_all_info" },
+          { value: "success", label: "ed.notifications.severity_ok" },
+          { value: "warning", label: "ed.notifications.severity_warning" },
+          { value: "critical", label: "ed.notifications.severity_critical" }
+        ])}
                 ${this._renderSelectField("ed.notifications.mobile_default_policy", "mobile_notifications.default_policy", config.mobile_notifications?.default_policy, [
-                  { value: "auto", label: "ed.notifications.mobile_policy_auto" },
-                  { value: "push", label: "ed.notifications.mobile_policy_push" },
-                  { value: "card_only", label: "ed.notifications.mobile_policy_card_only" },
-                  { value: "off", label: "ed.notifications.mobile_policy_off" },
-                ])}
+          { value: "auto", label: "ed.notifications.mobile_policy_auto" },
+          { value: "push", label: "ed.notifications.mobile_policy_push" },
+          { value: "card_only", label: "ed.notifications.mobile_policy_card_only" },
+          { value: "off", label: "ed.notifications.mobile_policy_off" }
+        ])}
                 ${this._renderTextField("ed.notifications.mobile_cooldown_minutes", "mobile_notifications.cooldown_minutes", config.mobile_notifications?.cooldown_minutes, { type: "number", valueType: "number" })}
                 ${this._renderCheckboxField("ed.notifications.mobile_group_similar", "mobile_notifications.group_similar", config.mobile_notifications?.group_similar !== false)}
               </div>
@@ -6125,47 +5542,37 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
                 <div>
                   <div class="editor-action__title">${escapeHtml(this._editorLabel("ed.notifications.background_mobile_title"))}</div>
                   <div class="editor-action__subtitle">${escapeHtml(
-                    engineBackgroundActive
-                      ? this._editorLabel("ed.engine.managed_hint")
-                      : this._editorLabel("ed.notifications.background_mobile_hint"),
-                  )}</div>
+          engineBackgroundActive ? this._editorLabel("ed.engine.managed_hint") : this._editorLabel("ed.notifications.background_mobile_hint")
+        )}</div>
                 </div>
               </div>
               <div class="editor-grid">
                 ${engineBackgroundActive ? this._renderEngineBannerHtml() : ""}
                 ${this._renderCheckboxField(
-                  "ed.notifications.background_mobile_enabled",
-                  "background_mobile.enabled",
-                  config.background_mobile?.enabled === true,
-                )}
-                ${
-                  config.background_mobile?.enabled === true
-                    ? `
+          "ed.notifications.background_mobile_enabled",
+          "background_mobile.enabled",
+          config.background_mobile?.enabled === true
+        )}
+                ${config.background_mobile?.enabled === true ? `
                       ${this._renderTextField(
-                        "ed.notifications.background_mobile_profile",
-                        "background_mobile.profile_id",
-                        config.background_mobile?.profile_id,
-                        { placeholder: "default", fullWidth: true },
-                      )}
-                      ${
-                        engineBackgroundActive
-                          ? ""
-                          : `
+          "ed.notifications.background_mobile_profile",
+          "background_mobile.profile_id",
+          config.background_mobile?.profile_id,
+          { placeholder: "default", fullWidth: true }
+        )}
+                      ${engineBackgroundActive ? "" : `
                             ${this._renderTextField(
-                              "ed.notifications.background_mobile_webhook",
-                              "background_mobile.webhook",
-                              config.background_mobile?.webhook,
-                              {
-                                placeholder: "nodalia_notifications_background_sync",
-                                fullWidth: true,
-                              },
-                            )}
+          "ed.notifications.background_mobile_webhook",
+          "background_mobile.webhook",
+          config.background_mobile?.webhook,
+          {
+            placeholder: "nodalia_notifications_background_sync",
+            fullWidth: true
+          }
+        )}
                             <div class="editor-engine-note editor-field--full">${escapeHtml(this._editorLabel("ed.engine.offline_hint"))}</div>
-                          `
-                      }
-                    `
-                    : ""
-                }
+                          `}
+                    ` : ""}
               </div>
             </div>
           </div>
@@ -6186,9 +5593,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
               </button>
             </div>
           </div>
-          ${
-            this._showContextSection
-              ? `
+          ${this._showContextSection ? `
                 <div class="editor-grid">
                   ${this._renderEntityPickerField("ed.notifications.presence_entity", "presence_entity", config.presence_entity, { fullWidth: true, placeholder: "binary_sensor.home_occupied" })}
                   ${this._renderCheckboxField("ed.notifications.only_when_away", "mobile_context.only_when_away", config.mobile_context?.only_when_away === true)}
@@ -6198,9 +5603,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
                   ${this._renderTextField("ed.notifications.quiet_hours_end", "mobile_context.quiet_hours.end", config.mobile_context?.quiet_hours?.end, { placeholder: "08:00" })}
                   ${this._renderCheckboxField("ed.notifications.quiet_hours_allow_critical", "mobile_context.quiet_hours.allow_critical", config.mobile_context?.quiet_hours?.allow_critical !== false)}
                 </div>
-              `
-              : ""
-          }
+              ` : ""}
         </section>
         <section class="editor-section">
           <div class="editor-section__header">
@@ -6218,9 +5621,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
               </button>
             </div>
           </div>
-          ${
-            this._showSmartSection
-              ? `
+          ${this._showSmartSection ? `
                 <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.notifications.smart_alerts_subhint"))}</div>
                 ${this._renderSmartNotificationOptions(config)}
                 <div class="editor-section__header">
@@ -6228,9 +5629,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
                   <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.notifications.per_entity_section_hint"))}</div>
                 </div>
                 ${this._renderSmartEntityOverrides(config)}
-              `
-              : ""
-          }
+              ` : ""}
         </section>
         <section class="editor-section">
           <div class="editor-section__header">
@@ -6286,17 +5685,13 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
               </button>
             </div>
           </div>
-          ${
-            this._showAnimationSection
-              ? `
+          ${this._showAnimationSection ? `
                 <div class="editor-grid">
                   ${this._renderCheckboxField("ed.notifications.enable_animations", "animations.enabled", config.animations?.enabled !== false)}
                   ${this._renderTextField("ed.notifications.content_entrance_ms", "animations.content_duration", config.animations?.content_duration, { type: "number", valueType: "number" })}
                   ${this._renderTextField("ed.notifications.button_bounce_ms", "animations.button_bounce_duration", config.animations?.button_bounce_duration, { type: "number", valueType: "number" })}
                 </div>
-              `
-              : ""
-          }
+              ` : ""}
         </section>
         <section class="editor-section">
           <div class="editor-section__header">
@@ -6305,30 +5700,22 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField(
-              "ed.notifications.security_strict",
-              "security.strict_service_actions",
-              config.security?.strict_service_actions === true,
-            )}
-            ${
-              config.security?.strict_service_actions === true
-                ? this._renderTextField(
-                    "ed.notifications.security_allowed_services",
-                    "security.allowed_services",
-                    Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
-                    { placeholder: "light.turn_on, script.turn_on", valueType: "csv", fullWidth: true },
-                  )
-                : ""
-            }
-            ${
-              config.security?.strict_service_actions === true
-                ? this._renderTextField(
-                    "ed.notifications.security_allowed_domains",
-                    "security.allowed_service_domains",
-                    Array.isArray(config.security?.allowed_service_domains) ? config.security.allowed_service_domains.join(", ") : "",
-                    { placeholder: "light, script", valueType: "csv", fullWidth: true },
-                  )
-                : ""
-            }
+          "ed.notifications.security_strict",
+          "security.strict_service_actions",
+          config.security?.strict_service_actions === true
+        )}
+            ${config.security?.strict_service_actions === true ? this._renderTextField(
+          "ed.notifications.security_allowed_services",
+          "security.allowed_services",
+          Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
+          { placeholder: "light.turn_on, script.turn_on", valueType: "csv", fullWidth: true }
+        ) : ""}
+            ${config.security?.strict_service_actions === true ? this._renderTextField(
+          "ed.notifications.security_allowed_domains",
+          "security.allowed_service_domains",
+          Array.isArray(config.security?.allowed_service_domains) ? config.security.allowed_service_domains.join(", ") : "",
+          { placeholder: "light, script", valueType: "csv", fullWidth: true }
+        ) : ""}
           </div>
         </section>
         <section class="editor-section">
@@ -6347,24 +5734,22 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
               </button>
             </div>
           </div>
-          ${
-            this._showStyleSection
-              ? `
+          ${this._showStyleSection ? `
                 <div class="editor-grid">
                   ${this._renderColorField("ed.notifications.card_background", "styles.card.background", config.styles.card.background)}
                   ${this._renderTextField("ed.notifications.card_border", "styles.card.border", config.styles.card.border)}
                   ${window.NodaliaUtils?.renderEditorCardBorderRadiusHtml?.({
-                    escapeHtml,
-                    field: "styles.card.border_radius",
-                    value: config.styles?.card?.border_radius,
-                    tHeading: this._editorLabel("ed.notifications.card_radius_presets"),
-                    labels: {
-                      pill: this._editorLabel("ed.entity.chip_radius_pill"),
-                      soft: this._editorLabel("ed.entity.chip_radius_soft"),
-                      round: this._editorLabel("ed.entity.chip_radius_round"),
-                      square: this._editorLabel("ed.entity.chip_radius_square"),
-                    },
-                  }) || this._renderTextField("ed.notifications.card_radius", "styles.card.border_radius", config.styles.card.border_radius)}
+          escapeHtml,
+          field: "styles.card.border_radius",
+          value: config.styles?.card?.border_radius,
+          tHeading: this._editorLabel("ed.notifications.card_radius_presets"),
+          labels: {
+            pill: this._editorLabel("ed.entity.chip_radius_pill"),
+            soft: this._editorLabel("ed.entity.chip_radius_soft"),
+            round: this._editorLabel("ed.entity.chip_radius_round"),
+            square: this._editorLabel("ed.entity.chip_radius_square")
+          }
+        }) || this._renderTextField("ed.notifications.card_radius", "styles.card.border_radius", config.styles.card.border_radius)}
                   <div class="editor-section__hint editor-field--full" style="margin-top: -6px;">${escapeHtml(this._editorLabel("ed.notifications.card_radius_yaml_hint"))}</div>
                   ${this._renderTextField("ed.notifications.box_shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
                   ${this._renderTextField("ed.notifications.padding", "styles.card.padding", config.styles.card.padding)}
@@ -6374,41 +5759,84 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
                   ${this._renderTextField("ed.notifications.icon_size", "styles.icon.size", config.styles.icon.size)}
                   ${this._renderTextField("ed.notifications.title_size", "styles.title_size", config.styles.title_size)}
                   ${window.NodaliaUtils?.renderEditorCardBorderRadiusHtml?.({
-                    escapeHtml,
-                    field: "styles.item_radius",
-                    value: config.styles?.item_radius,
-                    tHeading: this._editorLabel("ed.notifications.item_radius_presets"),
-                    labels: {
-                      pill: this._editorLabel("ed.entity.chip_radius_pill"),
-                      soft: this._editorLabel("ed.entity.chip_radius_soft"),
-                      round: this._editorLabel("ed.entity.chip_radius_round"),
-                      square: this._editorLabel("ed.entity.chip_radius_square"),
-                    },
-                  }) || this._renderTextField("ed.notifications.item_radius", "styles.item_radius", config.styles.item_radius)}
+          escapeHtml,
+          field: "styles.item_radius",
+          value: config.styles?.item_radius,
+          tHeading: this._editorLabel("ed.notifications.item_radius_presets"),
+          labels: {
+            pill: this._editorLabel("ed.entity.chip_radius_pill"),
+            soft: this._editorLabel("ed.entity.chip_radius_soft"),
+            round: this._editorLabel("ed.entity.chip_radius_round"),
+            square: this._editorLabel("ed.entity.chip_radius_square")
+          }
+        }) || this._renderTextField("ed.notifications.item_radius", "styles.item_radius", config.styles.item_radius)}
                   <div class="editor-section__hint editor-field--full" style="margin-top: -6px;">${escapeHtml(this._editorLabel("ed.notifications.item_radius_yaml_hint"))}</div>
                   ${this._renderColorField("ed.notifications.visual_tint", "styles.accent", config.styles.accent, { fullWidth: true })}
                 </div>
-              `
-              : ""
-          }
+              ` : ""}
         </section>
       </div>
     `;
-
-    this.shadowRoot.querySelectorAll('[data-mounted-control="entity"]').forEach(host => this._mountEntityPicker(host));
-    this.shadowRoot.querySelectorAll('[data-mounted-control="icon"]').forEach(host => this._mountIconPicker(host));
-    this._ensureEditorControlsReady();
-    window.NodaliaUtils?.clampEditorDialogScroll?.(this);
+        this.shadowRoot.querySelectorAll('[data-mounted-control="entity"]').forEach((host) => this._mountEntityPicker(host));
+        this.shadowRoot.querySelectorAll('[data-mounted-control="icon"]').forEach((host) => this._mountIconPicker(host));
+        this._ensureEditorControlsReady();
+        window.NodaliaUtils?.clampEditorDialogScroll?.(this);
+      }
+    }
+    _lazyNodaliaNotificationsCardEditor = NodaliaNotificationsCardEditor;
+    return NodaliaNotificationsCardEditor;
   }
-}
 
-if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaNotificationsCardEditor);
-}
-
-window.NodaliaUtils.registerCustomCard({
-  type: CARD_TAG,
-  name: "Nodalia Notifications Card",
-  description: "Centro inteligente de notificaciones, recomendaciones y acciones.",
-  preview: true,
-});
+  // src/cards/notifications/index.ts
+  window.NodaliaUtils.defineLazyCustomElement(CARD_TAG, loadNodaliaNotificationsCard, { editorTag: EDITOR_TAG });
+  window.NodaliaUtils.defineLazyCustomElement(EDITOR_TAG, loadNodaliaNotificationsCardEditor);
+  try {
+    window.NodaliaUtils?.registerCustomCard?.({
+      type: CARD_TAG,
+      name: "Nodalia Notifications Card",
+      description: "Centro inteligente de notificaciones, recomendaciones y acciones.",
+      preview: true
+    });
+  } catch {
+  }
+  var templatesApi = {
+    customNotificationTemplateValues,
+    formatNotificationTemplate,
+    referencedNotificationTemplateEntities
+  };
+  var mobileApi = {
+    MOBILE_DELIVERY_STATES,
+    normalizeMobilePolicy,
+    normalizeMobileContext,
+    normalizeExternalAlerts,
+    normalizeQuietHours,
+    isWithinQuietHours,
+    resolvePresenceOccupancy,
+    passesPresenceContext,
+    buildMobileAlertIdentity,
+    buildMobileGroupIdentity,
+    resolveMobileDeliveryState,
+    getBackgroundMobileConfigPayload,
+    buildBackgroundMobileWebhookPayload,
+    backgroundMobilePayloadOverLimit,
+    getNextQuietHoursBoundaryDelay,
+    BACKGROUND_MOBILE_MAX_CHUNKS,
+    resolveSmartEntityMobilePolicy,
+    isExplicitSmartEntityMobile,
+    pushExternalAlerts: (...args) => loadNodaliaNotificationsCard().pushExternalAlerts(...args)
+  };
+  var publicApi = {
+    CARD_TAG,
+    EDITOR_TAG,
+    CARD_VERSION,
+    DEFAULT_CONFIG,
+    normalizeConfig
+  };
+  var globalScope = globalThis;
+  globalScope.__NODALIA_NOTIFICATIONS_TEMPLATES__ = templatesApi;
+  globalScope.__NODALIA_NOTIFICATIONS_MOBILE__ = mobileApi;
+  globalScope.__NODALIA_NOTIFICATIONS__ = publicApi;
+  window.__NODALIA_NOTIFICATIONS_TEMPLATES__ = templatesApi;
+  window.__NODALIA_NOTIFICATIONS_MOBILE__ = mobileApi;
+  window.__NODALIA_NOTIFICATIONS__ = publicApi;
+})();

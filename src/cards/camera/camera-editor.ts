@@ -10,14 +10,23 @@ import {
   fireEvent,
   mergeConfig,
   normalizeCameraEntityId,
+  normalizeCameraTapActions,
   setByPath,
   stripEqualToDefaults,
 } from "./camera-helpers";
 
-export class NodaliaCameraCardEditor extends HTMLElement {
+let _lazyNodaliaCameraCardEditor;
+export function loadNodaliaCameraCardEditor() {
+  if (_lazyNodaliaCameraCardEditor) {
+    return _lazyNodaliaCameraCardEditor;
+  }
+class NodaliaCameraCardEditor extends HTMLElement {
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    this._nodaliaConstruct();
+  }
+
+  _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._entityOptionsSignature = "";
@@ -26,7 +35,7 @@ export class NodaliaCameraCardEditor extends HTMLElement {
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
-  }
+    }
 
   _attachEditorShadowListeners() {
     window.NodaliaUtils.bindShadowListeners(this, [
@@ -827,4 +836,7 @@ export class NodaliaCameraCardEditor extends HTMLElement {
     });
     window.NodaliaUtils?.clampEditorDialogScroll?.(this);
   }
+}
+  _lazyNodaliaCameraCardEditor = NodaliaCameraCardEditor;
+  return NodaliaCameraCardEditor;
 }
