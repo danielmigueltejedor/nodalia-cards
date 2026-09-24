@@ -182,10 +182,22 @@ test("media player idle compact keeps name and power on one row", () => {
   const source = read("src/cards/media-player/media-player-card.ts");
   assert.match(source, /media-player__idle-name/);
   assert.match(source, /media-player__idle-hero--tv-off/);
-  assert.match(source, /\.media-player-card--idle \{[\s\S]*?min-height: 0;/);
+  assert.match(source, /\.media-player-card--idle \{[\s\S]*?min-height: 68px;/);
   assert.match(source, /\.media-player-card--tv\.media-player-card--idle \.media-player__idle-hero--tv-off \{[\s\S]*?grid-template-columns: 38px minmax\(0, 1fr\) auto;/);
   assert.match(source, /\.media-player-card--tv\.media-player-card--idle \.media-player__artwork--idle \{[\s\S]*?height: 38px;/);
   assert.doesNotMatch(source, /idle-tv-off-bar/);
+});
+
+test("compact and square media player hide the device chip beside browse", () => {
+  const source = read("src/cards/media-player/media-player-card.ts");
+  assert.match(
+    source,
+    /\.media-player-card--compact \.media-player__info-rail,[\s\S]*?\.media-player-card--compact \.media-player__chip--device \{[\s\S]*?display: none;/,
+  );
+  assert.match(
+    source,
+    /\.media-player-card--square \.media-player__chip--device,[\s\S]*?\.media-player-card--artwork \.media-player__chip--device \{[\s\S]*?display: none;/,
+  );
 });
 
 test("square media player overlay keeps the name chip off the transport row", () => {

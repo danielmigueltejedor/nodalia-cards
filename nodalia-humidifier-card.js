@@ -4,7 +4,7 @@
   // src/cards/humidifier/humidifier-constants.ts
   var CARD_TAG = "nodalia-humidifier-card";
   var EDITOR_TAG = "nodalia-humidifier-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.29";
+  var CARD_VERSION = "2.3.0-alpha.30";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,

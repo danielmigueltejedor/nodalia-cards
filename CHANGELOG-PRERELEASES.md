@@ -8,6 +8,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.30] - 2026-09-24
+
+Idle Media Player height matches Fav/Light row tiles; vacuum control icons
+center cleanly; compact/square device chips no longer cover Browse.
+
+### Fixed
+
+- Idle/off Media Player tiles use the same 68px Fav row height and 14px padding
+  so Apple TV / Televisión align with Comedor-style cards.
+- Vacuum dense/control `ha-icon` glyphs use flex centering (no absolute offset)
+  so play/locate icons sit in the middle of the circle.
+- Compact and square Media Player hide the device-name chip next to Browse so
+  HomePod tiles no longer stack chip + browse on the same corner.
+
+### Validation
+
+- Media redesign and vacuum interaction regression tests updated for the new
+  idle height, chip hide rules, and centered control icons.
+
 ## [2.3.0-alpha.29] - 2026-09-24
 
 Media Player layout polish: idle tiles match Fav/Light, no section gap under

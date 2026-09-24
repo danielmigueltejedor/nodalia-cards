@@ -1,6 +1,6 @@
 export const CARD_TAG = "nodalia-cover-card";
 export const EDITOR_TAG = "nodalia-cover-card-editor";
-export const CARD_VERSION = "2.3.0-alpha.29";
+export const CARD_VERSION = "2.3.0-alpha.30";
 export const COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS = 6;
 export const COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH = 620;
 export const COMPACT_LAYOUT_THRESHOLD = 150;

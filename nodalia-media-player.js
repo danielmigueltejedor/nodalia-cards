@@ -4,7 +4,7 @@
   // src/cards/media-player/media-player-constants.ts
   var CARD_TAG = "nodalia-media-player";
   var EDITOR_TAG = "nodalia-media-player-editor";
-  var CARD_VERSION = "2.3.0-alpha.29";
+  var CARD_VERSION = "2.3.0-alpha.30";
   var INVALID_EDITOR_VALUE = /* @__PURE__ */ Symbol("invalid-editor-value");
   var MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
   var HAPTIC_PATTERNS = {
@@ -3839,9 +3839,9 @@
         :host([data-idle-compact="true"]) {
           align-self: stretch;
           aspect-ratio: auto;
-          height: auto;
+          height: 100%;
           max-height: none;
-          min-height: 0;
+          min-height: 68px;
           overflow: visible;
         }
 
@@ -3924,15 +3924,19 @@
         }
 
         .media-player-card--compact.media-player-card--idle {
-          height: auto;
+          align-items: center;
+          height: 100%;
           justify-content: center;
-          min-height: 0;
-          padding: 10px 12px;
+          min-height: 68px;
+          padding: 14px 12px;
         }
 
         .media-player-card--compact .media-player__volume-button:not(.media-player__volume-button--browse),
         .media-player-card--compact .media-player__chips-wrap,
-        .media-player-card--compact .media-player__subtitle {
+        .media-player-card--compact .media-player__subtitle,
+        .media-player-card--compact .media-player__info-rail,
+        .media-player-card--compact .media-player__chip--top,
+        .media-player-card--compact .media-player__chip--device {
           display: none;
         }
 
@@ -3972,9 +3976,13 @@
           z-index: 4;
         }
 
+        .media-player-card--compact .media-player__hero-copy,
+        .media-player-card--compact .media-player__title {
+          padding-inline-end: 36px;
+        }
+
         .media-player-card--compact .media-player__title {
           font-size: 13px;
-          padding-inline-end: 34px;
         }
 
         .media-player-card--active {
@@ -4114,8 +4122,10 @@
         }
 
         .media-player-card--idle {
-          min-height: 0;
-          padding: 10px 12px;
+          align-items: center;
+          display: flex;
+          min-height: 68px;
+          padding: 14px 12px;
         }
 
         .media-player__hero {
@@ -4572,15 +4582,15 @@
         }
 
         .media-player-card--idle .media-player__control {
-          height: 36px;
-          min-width: 36px;
-          width: 36px;
+          height: 38px;
+          min-width: 38px;
+          width: 38px;
         }
 
         .media-player-card--idle .media-player__control ha-icon {
-          --mdc-icon-size: 16px;
-          height: 16px;
-          width: 16px;
+          --mdc-icon-size: 18px;
+          height: 18px;
+          width: 18px;
         }
 
         .media-player-card--tv.media-player-card--idle .media-player__idle-hero {
@@ -5494,6 +5504,15 @@
           top: 10px;
           width: 32px;
           z-index: 4;
+        }
+
+        .media-player-card--square .media-player__info-rail,
+        .media-player-card--artwork .media-player__info-rail,
+        .media-player-card--square .media-player__chip--top,
+        .media-player-card--artwork .media-player__chip--top,
+        .media-player-card--square .media-player__chip--device,
+        .media-player-card--artwork .media-player__chip--device {
+          display: none;
         }
 
         .media-player-card--chip {

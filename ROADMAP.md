@@ -11,12 +11,12 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.29
+2.3.0-alpha.30
 ```
 
-Preview **`2.3.0-alpha.29`** aligns idle Media Player tiles with Fav/Light height,
-drops the empty section gap under playing media (`min_rows: 2`), and keeps
-compact transport buttons inside the card on mobile.
+Preview **`2.3.0-alpha.30`** matches idle Media Player height to Fav/Light row
+tiles (68px), centers vacuum control icons, and hides the device chip beside
+Browse on compact/square media so HomePod no longer overlaps on mobile.
 Stable **`2.2.10`** remains the recommended daily-driver release.
 
 ## Current stable release

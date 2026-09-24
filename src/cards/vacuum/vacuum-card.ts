@@ -2846,6 +2846,12 @@ class NodaliaVacuumCard extends HTMLElement {
 
         .vacuum-card--dense .vacuum-card__control ha-icon {
           --mdc-icon-size: 16px;
+          height: 16px;
+          left: auto;
+          position: static;
+          top: auto;
+          transform: none;
+          width: 16px;
         }
 
         .vacuum-card--dense .vacuum-card__chip {
@@ -2878,6 +2884,8 @@ class NodaliaVacuumCard extends HTMLElement {
           margin: 0;
           outline: none;
           padding: 0;
+          place-content: center;
+          place-items: center;
           position: relative;
           width: ${styles.control.size};
         }
@@ -2890,13 +2898,31 @@ class NodaliaVacuumCard extends HTMLElement {
 
         .vacuum-card__control ha-icon {
           --mdc-icon-size: calc(${styles.control.size} * 0.46);
+          align-items: center;
           display: inline-flex;
+          flex: 0 0 auto;
           height: calc(${styles.control.size} * 0.46);
-          left: 50%;
-          position: absolute;
-          top: 50%;
-          transform: translate(-50%, -50%);
+          justify-content: center;
+          line-height: 0;
+          margin: 0;
+          padding: 0;
+          pointer-events: none;
           width: calc(${styles.control.size} * 0.46);
+        }
+
+        .vacuum-card__control ha-svg-icon {
+          align-items: center;
+          display: inline-flex;
+          height: 100%;
+          justify-content: center;
+          line-height: 0;
+          width: 100%;
+        }
+
+        .vacuum-card__control ha-icon svg,
+        .vacuum-card__control ha-svg-icon svg {
+          display: block;
+          margin: 0 auto;
         }
 
         .vacuum-card__presets {

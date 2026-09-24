@@ -2553,6 +2553,8 @@ test("compact vacuum keeps the name full-width and moves battery into the chip r
   assert.match(source, /denseCompact && batteryChipMarkup/);
   assert.match(source, /\.vacuum-card--dense \.vacuum-card__headline \{[^}]*grid-template-columns: minmax\(0, 1fr\);/);
   assert.match(source, /\.vacuum-card--dense \.vacuum-card__control \{[^}]*height: 36px;/);
+  assert.match(source, /\.vacuum-card__control ha-svg-icon \{/);
+  assert.match(source, /\.vacuum-card--dense \.vacuum-card__control ha-icon \{[\s\S]*?position: static;/);
   assert.doesNotMatch(source, /\.vacuum-card__header-meta \{[^}]*position:\s*absolute;/);
   assert.doesNotMatch(source, /padding-right: \$\{batteryChipMarkup \? "88px"/);
 });
