@@ -72,6 +72,7 @@ class NodaliaCameraCard extends HTMLElement {
     this._expandedCardConfigSignatures = new WeakMap();
     this._expandedStreamMountId = 0;
     this._expandedStreamNode = null;
+    this._expandedPortal = null;
     this._go2rtcPrefetchOwner = null;
     this._go2rtcPrefetchSignature = "";
     this._onShadowClick = this._onShadowClick.bind(this);
@@ -97,6 +98,8 @@ class NodaliaCameraCard extends HTMLElement {
     this.shadowRoot?.removeEventListener("click", this._onShadowClick);
     this.shadowRoot?.removeEventListener("keydown", this._onShadowKeyDown);
     window.removeEventListener("keydown", this._onWindowKeyDown);
+    this._teardownExpandedPortal();
+    this._emitOverlayChange(false);
     this._expandedOpen = false;
     this._expandedEntityId = "";
     this._expandedReturnFocus = null;
@@ -668,6 +671,7 @@ class NodaliaCameraCard extends HTMLElement {
     this._expandedOpen = true;
     this._lastRenderSignature = "";
     this._render();
+    this._emitOverlayChange(true);
   }
 
   _closeExpanded() {
@@ -678,8 +682,72 @@ class NodaliaCameraCard extends HTMLElement {
     this._expandedEntityId = "";
     this._expandedStreamMountId += 1;
     this._disposeExpandedStream();
+    this._teardownExpandedPortal();
     this._lastRenderSignature = "";
     this._render();
+    this._emitOverlayChange(false);
+  }
+
+  _emitOverlayChange(open) {
+    this.dispatchEvent(new CustomEvent("nodalia-overlay-change", {
+      bubbles: true,
+      composed: true,
+      detail: { open: Boolean(open), source: "camera" },
+    }));
+  }
+
+  _teardownExpandedPortal() {
+    const portal = this._expandedPortal;
+    this._expandedPortal = null;
+    if (!(portal instanceof HTMLElement)) {
+      return;
+    }
+    portal.removeEventListener("click", this._onShadowClick);
+    portal.removeEventListener("keydown", this._onShadowKeyDown);
+    portal.remove();
+  }
+
+  _syncExpandedPortal() {
+    if (!this._expandedOpen || !this.shadowRoot) {
+      this._teardownExpandedPortal();
+      return;
+    }
+    const dialog = this.shadowRoot.querySelector(".camera-card__expanded.is-open");
+    if (!(dialog instanceof HTMLElement)) {
+      return;
+    }
+    if (!(this._expandedPortal instanceof HTMLElement)) {
+      const host = document.createElement("div");
+      host.setAttribute("data-nodalia-overlay-portal", "camera");
+      host.style.cssText = "all:initial;position:fixed;inset:0;z-index:2147483646;";
+      const shadow = host.attachShadow({ mode: "open" });
+      shadow.addEventListener("click", this._onShadowClick);
+      shadow.addEventListener("keydown", this._onShadowKeyDown);
+      document.body.appendChild(host);
+      this._expandedPortal = host;
+    }
+    const root = this._expandedPortal.shadowRoot;
+    if (!root) {
+      return;
+    }
+    let style = root.querySelector("style[data-camera-expanded-style]");
+    const sourceStyle = this.shadowRoot.querySelector("style");
+    if (!(style instanceof HTMLStyleElement)) {
+      style = document.createElement("style");
+      style.setAttribute("data-camera-expanded-style", "");
+      root.prepend(style);
+    }
+    if (sourceStyle && style.textContent !== sourceStyle.textContent) {
+      style.textContent = sourceStyle.textContent;
+    }
+    root.querySelectorAll(".camera-card__expanded").forEach(node => {
+      if (node !== dialog) {
+        node.remove();
+      }
+    });
+    if (dialog.parentNode !== root) {
+      root.appendChild(dialog);
+    }
   }
 
   _performExpandedAction(actionConfig) {
@@ -837,6 +905,13 @@ class NodaliaCameraCard extends HTMLElement {
     return `<div class="camera-card__mosaic ${mosaicClass}">${cells}</div>`;
   }
 
+  _expandedRoot() {
+    if (this._expandedPortal?.shadowRoot) {
+      return this._expandedPortal.shadowRoot;
+    }
+    return this.shadowRoot;
+  }
+
   _getExpandedActionsForCamera(entityId = this._expandedEntityId || this._config?.entity) {
     const cameraActions = Array.isArray(this._config?.camera_actions) ? this._config.camera_actions : [];
     const actions = cameraActions.filter(action => action.camera === entityId);
@@ -908,11 +983,12 @@ class NodaliaCameraCard extends HTMLElement {
   }
 
   _setExpandedStreamStatus(state, detail = "") {
-    if (!this.shadowRoot) {
+    const root = this._expandedRoot();
+    if (!root) {
       return;
     }
-    const status = this.shadowRoot.querySelector("[data-camera-stream-status]");
-    const host = this.shadowRoot.querySelector("[data-camera-expanded-stream]");
+    const status = root.querySelector("[data-camera-stream-status]");
+    const host = root.querySelector("[data-camera-expanded-stream]");
     if (!(status instanceof HTMLElement) || !(host instanceof HTMLElement)) {
       return;
     }
@@ -934,10 +1010,11 @@ class NodaliaCameraCard extends HTMLElement {
   }
 
   async _mountExpandedStream() {
-    if (!this.shadowRoot || !this._expandedOpen) {
+    const root = this._expandedRoot();
+    if (!root || !this._expandedOpen) {
       return;
     }
-    const host = this.shadowRoot.querySelector("[data-camera-expanded-stream]");
+    const host = root.querySelector("[data-camera-expanded-stream]");
     if (!(host instanceof HTMLElement)) {
       return;
     }
@@ -1186,13 +1263,14 @@ class NodaliaCameraCard extends HTMLElement {
   }
 
   _mountExpandedCards() {
-    if (!this.shadowRoot || !this._expandedOpen) {
+    const root = this._expandedRoot();
+    if (!root || !this._expandedOpen) {
       return;
     }
     const entityId = this._expandedEntityId || this._config?.entity;
     const actions = this._getExpandedActionsForCamera(entityId);
     const validKeys = new Set();
-    this.shadowRoot.querySelectorAll("[data-camera-expanded-card]").forEach(host => {
+    root.querySelectorAll("[data-camera-expanded-card]").forEach(host => {
       if (!(host instanceof HTMLElement)) {
         return;
       }
@@ -1901,7 +1979,9 @@ class NodaliaCameraCard extends HTMLElement {
 
     this._mountExpandedCards();
     this._mountExpandedStream();
-    const expandedDialog = this.shadowRoot.querySelector('.camera-card__expanded[role="dialog"]');
+    this._syncExpandedPortal();
+    const expandedDialog = (this._expandedPortal?.shadowRoot || this.shadowRoot)
+      ?.querySelector('.camera-card__expanded[role="dialog"]');
     if (expandedDialog instanceof HTMLElement) {
       window.NodaliaUtils?.bindModalFocus?.(this, expandedDialog, {
         initialFocusSelector: ".camera-card__expanded-close",

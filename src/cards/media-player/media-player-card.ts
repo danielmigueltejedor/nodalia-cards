@@ -240,13 +240,13 @@ class NodaliaMediaPlayer extends HTMLElement {
       return;
     }
 
+    if (!this._activeSliderDrag && !this._activeProgressDrag) {
+      this._syncVolumeControlsFromHass(hass);
+    }
+
     const nextSignature = this._getRenderSignature(hass);
     if (previousHass && nextSignature === this._lastRenderSignature) {
       return;
-    }
-
-    if (!this._activeSliderDrag && !this._activeProgressDrag) {
-      this._syncVolumeControlsFromHass(hass);
     }
 
     this._lastRenderSignature = nextSignature;
@@ -5070,6 +5070,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     if (animations.enabled && playerCardRender.animateEntranceApplied) {
       this._scheduleEntranceAnimationReset(clamp(Math.round(animations.panelDuration * 0.9), 180, 900) + 120);
     }
+    this._lastRenderSignature = this._getRenderSignature(this._hass);
   }
 
   _commitPersistentMediaShadow(markup, artOptions = {}) {
@@ -5085,16 +5086,21 @@ class NodaliaMediaPlayer extends HTMLElement {
     const css = markup.slice(styleStart + 7, styleEnd);
     const body = markup.slice(styleEnd + 8);
     const previousArt = this.shadowRoot.querySelector("[data-media-art-stage]");
-    if (previousArt instanceof HTMLElement) {
-      previousArt.remove();
+    // Park outside chrome before wiping so identity survives the commit.
+    if (previousArt instanceof HTMLElement && previousArt.parentElement !== this.shadowRoot) {
+      this.shadowRoot.appendChild(previousArt);
     }
 
     let styleEl = this.shadowRoot.querySelector("[data-media-style]");
     let chrome = this.shadowRoot.querySelector("[data-media-chrome]");
     if (!(styleEl instanceof HTMLStyleElement) || !(chrome instanceof HTMLElement)) {
+      const keptArt = previousArt instanceof HTMLElement ? previousArt : null;
       this.shadowRoot.innerHTML = `<style data-media-style></style><div data-media-chrome></div>`;
       styleEl = this.shadowRoot.querySelector("[data-media-style]");
       chrome = this.shadowRoot.querySelector("[data-media-chrome]");
+      if (keptArt) {
+        this.shadowRoot.appendChild(keptArt);
+      }
     }
     if (styleEl.textContent !== css) {
       styleEl.textContent = css;
@@ -5106,9 +5112,14 @@ class NodaliaMediaPlayer extends HTMLElement {
       const stage = previousArt instanceof HTMLElement
         ? previousArt
         : this._createArtworkStage();
-      card.insertBefore(stage, card.firstChild);
+      if (stage.parentElement !== card || card.firstChild !== stage) {
+        card.insertBefore(stage, card.firstChild);
+      }
       this._syncArtworkLayer(stage, artOptions);
     } else if (this._artworkController) {
+      if (previousArt instanceof HTMLElement) {
+        previousArt.remove();
+      }
       this._artworkController.clear();
       this._artworkController.detach();
     }

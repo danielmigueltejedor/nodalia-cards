@@ -8,6 +8,37 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.23] - 2026-09-24
+
+Faster Room Summary Hub, a true fullscreen Camera expand from inside the Hub,
+and Media Player artwork that no longer remounts on unrelated state updates.
+
+### Fixed
+
+- Camera expand from Room Summary no longer leaves the Hub header and rail
+  floating over the live stream. The expanded dialog portals to `document.body`
+  (escaping parent `transform` containing blocks), and the Hub hides chrome
+  while the overlay is open.
+- Room Summary hub panel transitions no longer keep a lingering `transform`
+  after the slide animation (`animation-fill-mode: both` + `translateX(0)`),
+  which had trapped every nested `position: fixed` overlay.
+- Media Player keeps the same artwork stage DOM node across volume-only and
+  other signature-stable hass updates, and syncs volume without a full remount.
+
+### Changed
+
+- Room Summary parks inactive Hub embeds in a `DocumentFragment` so their
+  `disconnectedCallback` runs (camera streams, timers and listeners release)
+  instead of keeping hidden-but-connected cards alive in the shadow root.
+- Only the active Hub panel stays in the DOM (already true); parked cards now
+  truly disconnect until their panel is selected again.
+
+### Validation
+
+- Node regressions cover the Camera overlay portal, Room Summary fragment
+  parking / no lingering hub transform, and Media Player persistent artwork
+  commits.
+
 ## [2.3.0-alpha.22] - 2026-09-24
 
 Safari popup/more-info recovery after lazy custom-element boot, plus the newer

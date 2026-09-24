@@ -4,7 +4,7 @@
   // src/cards/fan/fan-constants.ts
   var CARD_TAG = "nodalia-fan-card";
   var EDITOR_TAG = "nodalia-fan-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.22";
+  var CARD_VERSION = "2.3.0-alpha.23";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,

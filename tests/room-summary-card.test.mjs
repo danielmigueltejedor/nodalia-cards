@@ -415,6 +415,11 @@ test("room summary hub layout uses embedded nodalia cards and flat home header",
   assert.match(source, /data-hub-slot="group"/);
   assert.match(source, /data-hub-slot="live"/);
   assert.match(source, /_parkHubEmbeddedCards/);
+  assert.match(source, /createDocumentFragment/);
+  assert.match(source, /room-hub--camera-expanded/);
+  assert.match(source, /nodalia-overlay-change/);
+  assert.match(source, /transform:none/);
+  assert.doesNotMatch(source, /room-hub-slide[^\n]* both/);
   assert.match(source, /animations: \{ \.\.\.deepClone\(base\.animations\), content_duration: 0 \}/);
   assert.match(source, /panel_duration: 0/);
   assert.match(source, /nodalia-media-player-editor/);

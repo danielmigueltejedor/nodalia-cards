@@ -4,7 +4,7 @@
   // src/cards/room-summary/room-summary-constants.ts
   var CARD_TAG = "nodalia-room-summary-card";
   var EDITOR_TAG = "nodalia-room-summary-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.22";
+  var CARD_VERSION = "2.3.0-alpha.23";
   var HUB_PANELS = /* @__PURE__ */ new Set(["home", "lights", "covers", "climate", "vacuum", "fans", "humidifiers", "media", "camera", "security", "others"]);
   var COMFORT = { hot: 27, cold: 17, humid: 70, dry: 30 };
   var CUSTOMIZABLE_EMBED_LISTS = /* @__PURE__ */ new Set(["lights", "vacuums", "fans", "humidifiers", "others"]);
@@ -433,16 +433,21 @@
         this._hubExpanded = false;
         this._hubEmbedCache = /* @__PURE__ */ new Map();
         this._hubEmbedConfigSignatures = /* @__PURE__ */ new WeakMap();
+        this._hubEmbedStash = null;
         this._hubShellConfigSignature = "";
         this._suppressNextPrimaryClick = false;
         this._detachPrimaryHold = () => {
         };
         this._onShadowClick = this._onShadowClick.bind(this);
         this._onShadowInput = this._onShadowInput.bind(this);
+        this._onEmbeddedOverlayChange = this._onEmbeddedOverlayChange.bind(this);
+        this._onHubBodyAnimationEnd = this._onHubBodyAnimationEnd.bind(this);
       }
       connectedCallback() {
         this.shadowRoot?.addEventListener("click", this._onShadowClick);
         this.shadowRoot?.addEventListener("input", this._onShadowInput);
+        this.shadowRoot?.addEventListener("animationend", this._onHubBodyAnimationEnd);
+        this.addEventListener("nodalia-overlay-change", this._onEmbeddedOverlayChange);
         this._detachPrimaryHold?.();
         this._detachPrimaryHold = typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function" ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
           resolveZone: (event) => {
@@ -468,6 +473,8 @@
       disconnectedCallback() {
         this.shadowRoot?.removeEventListener("click", this._onShadowClick);
         this.shadowRoot?.removeEventListener("input", this._onShadowInput);
+        this.shadowRoot?.removeEventListener("animationend", this._onHubBodyAnimationEnd);
+        this.removeEventListener("nodalia-overlay-change", this._onEmbeddedOverlayChange);
         this._detachPrimaryHold?.();
         this._detachPrimaryHold = () => {
         };
@@ -476,6 +483,20 @@
         this._hubShellConfigSignature = "";
         this._hubEmbedCache?.clear();
         this._hubEmbedConfigSignatures = /* @__PURE__ */ new WeakMap();
+        this._hubEmbedStash = null;
+      }
+      _onHubBodyAnimationEnd(event) {
+        const body = event.target;
+        if (!(body instanceof HTMLElement) || !body.classList.contains("room-hub__body--enter")) return;
+        if (event.animationName && event.animationName !== "room-hub-slide") return;
+        body.classList.remove("room-hub__body--enter");
+        body.style.removeProperty("transform");
+      }
+      _onEmbeddedOverlayChange(event) {
+        const hub = this.shadowRoot?.querySelector(".room-hub");
+        if (!(hub instanceof HTMLElement)) return;
+        const open = Boolean(event?.detail?.open);
+        hub.classList.toggle("room-hub--camera-expanded", open);
       }
       setConfig(config) {
         this._config = normalizeConfig(config || {});
@@ -736,21 +757,22 @@
         if (!this._activateHubPanel(next)) this._render();
       }
       _ensureHubEmbedStash() {
-        let stash = this.shadowRoot?.querySelector("[data-hub-embed-stash]");
-        if (stash) return stash;
-        stash = document.createElement("div");
-        stash.hidden = true;
-        stash.setAttribute("data-hub-embed-stash", "");
-        stash.setAttribute("aria-hidden", "true");
-        stash.style.display = "none";
-        this.shadowRoot?.appendChild(stash);
-        return stash;
+        if (!(this._hubEmbedStash instanceof DocumentFragment)) {
+          this._hubEmbedStash = document.createDocumentFragment();
+        }
+        return this._hubEmbedStash;
       }
       _parkHubEmbeddedCards() {
-        if (!this.shadowRoot || !this._hubEmbedCache?.size) return;
+        if (!this._hubEmbedCache?.size) return;
         const stash = this._ensureHubEmbedStash();
         for (const card of this._hubEmbedCache.values()) {
-          if (card instanceof HTMLElement && card.parentElement !== stash) {
+          if (card instanceof HTMLElement && card.parentNode !== stash) {
+            if (typeof card._closeExpanded === "function") {
+              try {
+                card._closeExpanded();
+              } catch (_error) {
+              }
+            }
             stash.appendChild(card);
           }
         }
@@ -1649,6 +1671,7 @@
         :host { display:block; --room-hub-duration:${config.animations?.enabled ? config.animations.content_duration : 0}ms; }
         * { box-sizing:border-box; }
         ha-card.room-summary-card--hub {
+          isolation: auto;
           overflow: visible;
         }
         ha-card {
@@ -1675,10 +1698,15 @@
         .room-hub { align-items:start; display:grid; gap:12px; grid-template-columns:minmax(0,1fr) auto; min-height:${collapsed ? "0" : "220px"}; overflow:visible; padding:${styles.card.padding}; position:relative; z-index:1; }
         .room-hub__stage { align-content:start; display:grid; gap:12px; grid-template-rows:auto auto; min-width:0; overflow:visible; }
         .room-hub__body { align-self:start; min-width:0; overflow:visible; }
-        .room-hub__body--enter { animation:room-hub-slide calc(var(--room-hub-duration) * 0.9) cubic-bezier(.22,.84,.26,1) both; }
+        /* No animation-fill-mode / lingering transform: transform creates a
+           containing block that traps position:fixed overlays (camera expand). */
+        .room-hub__body--enter { animation:room-hub-slide calc(var(--room-hub-duration) * 0.9) cubic-bezier(.22,.84,.26,1); }
         .room-hub__view { align-content:start; display:grid; min-width:0; overflow:visible; }
         .room-hub__view[hidden] { display:none !important; }
         .room-hub__rail { align-items:center; display:flex; flex-direction:column; gap:8px; justify-content:flex-start; }
+        .room-hub--camera-expanded .room-hub__header,
+        .room-hub--camera-expanded .room-hub__rail,
+        .room-hub--camera-expanded .room-hub__context-actions { visibility: hidden; pointer-events: none; }
         .room-hub__bubble {
           align-items:center; appearance:none; background:color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border:1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent); border-radius:999px;
@@ -1843,7 +1871,7 @@
           cursor:pointer; display:inline-flex; height:34px; justify-content:center; width:34px;
         }
         .room-hub__mini-control--primary { background:color-mix(in srgb, ${accentColor} 18%, transparent); border-color:color-mix(in srgb, ${accentColor} 24%, transparent); color:${accentColor}; height:40px; width:40px; }
-        @keyframes room-hub-slide { from { opacity:0.94; transform:translateX(-4px); } to { opacity:1; transform:translateX(0); } }
+        @keyframes room-hub-slide { from { opacity:0.94; transform:translateX(-4px); } to { opacity:1; transform:none; } }
         @media (max-width:420px) { .room-hub { grid-template-columns:minmax(0,1fr) auto; } .room-hub__bubble { height:38px; width:38px; } }
         @media (prefers-reduced-motion:reduce) { .room-hub__body--enter { animation:none; } }
       </style>

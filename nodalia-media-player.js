@@ -4,7 +4,7 @@
   // src/cards/media-player/media-player-constants.ts
   var CARD_TAG = "nodalia-media-player";
   var EDITOR_TAG = "nodalia-media-player-editor";
-  var CARD_VERSION = "2.3.0-alpha.22";
+  var CARD_VERSION = "2.3.0-alpha.23";
   var INVALID_EDITOR_VALUE = /* @__PURE__ */ Symbol("invalid-editor-value");
   var MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
   var HAPTIC_PATTERNS = {
@@ -1304,12 +1304,12 @@
         if (!this.isConnected) {
           return;
         }
+        if (!this._activeSliderDrag && !this._activeProgressDrag) {
+          this._syncVolumeControlsFromHass(hass);
+        }
         const nextSignature = this._getRenderSignature(hass);
         if (previousHass && nextSignature === this._lastRenderSignature) {
           return;
-        }
-        if (!this._activeSliderDrag && !this._activeProgressDrag) {
-          this._syncVolumeControlsFromHass(hass);
         }
         this._lastRenderSignature = nextSignature;
         if (this._activeSliderDrag || this._activeProgressDrag) {
@@ -5476,6 +5476,7 @@
         if (animations.enabled && playerCardRender.animateEntranceApplied) {
           this._scheduleEntranceAnimationReset(clamp(Math.round(animations.panelDuration * 0.9), 180, 900) + 120);
         }
+        this._lastRenderSignature = this._getRenderSignature(this._hass);
       }
       _commitPersistentMediaShadow(markup, artOptions = {}) {
         if (!this.shadowRoot) {
@@ -5490,15 +5491,19 @@
         const css = markup.slice(styleStart + 7, styleEnd);
         const body = markup.slice(styleEnd + 8);
         const previousArt = this.shadowRoot.querySelector("[data-media-art-stage]");
-        if (previousArt instanceof HTMLElement) {
-          previousArt.remove();
+        if (previousArt instanceof HTMLElement && previousArt.parentElement !== this.shadowRoot) {
+          this.shadowRoot.appendChild(previousArt);
         }
         let styleEl = this.shadowRoot.querySelector("[data-media-style]");
         let chrome = this.shadowRoot.querySelector("[data-media-chrome]");
         if (!(styleEl instanceof HTMLStyleElement) || !(chrome instanceof HTMLElement)) {
+          const keptArt = previousArt instanceof HTMLElement ? previousArt : null;
           this.shadowRoot.innerHTML = `<style data-media-style></style><div data-media-chrome></div>`;
           styleEl = this.shadowRoot.querySelector("[data-media-style]");
           chrome = this.shadowRoot.querySelector("[data-media-chrome]");
+          if (keptArt) {
+            this.shadowRoot.appendChild(keptArt);
+          }
         }
         if (styleEl.textContent !== css) {
           styleEl.textContent = css;
@@ -5507,9 +5512,14 @@
         const card = this.shadowRoot.querySelector(".media-player-card");
         if (card instanceof HTMLElement && artOptions.hasAlbumBackground) {
           const stage = previousArt instanceof HTMLElement ? previousArt : this._createArtworkStage();
-          card.insertBefore(stage, card.firstChild);
+          if (stage.parentElement !== card || card.firstChild !== stage) {
+            card.insertBefore(stage, card.firstChild);
+          }
           this._syncArtworkLayer(stage, artOptions);
         } else if (this._artworkController) {
+          if (previousArt instanceof HTMLElement) {
+            previousArt.remove();
+          }
           this._artworkController.clear();
           this._artworkController.detach();
         }
