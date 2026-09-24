@@ -222,7 +222,18 @@ for (const filePath of files) {
 }
 
 function patchIndex(filePath) {
-  let source = fs.readFileSync(filePath, "utf8");
+  let source;
+  try {
+    source = fs.readFileSync(filePath, "utf8");
+  } catch (error) {
+    if (error && error.code === "ENOENT") {
+      return;
+    }
+    throw error;
+  }
+  if (source.includes("defineLazyCustomElement(CARD_TAG")) {
+    return;
+  }
   const cardImport = source.match(/import \{ (Nodalia\w+) \} from "(\.\/(?:[\w-]+-card))";/);
   const editorImport = source.match(/import \{ (Nodalia\w+) \} from "(\.\/(?:[\w-]+-editor))";/);
   if (!cardImport || !editorImport) {
@@ -245,17 +256,19 @@ window.NodaliaUtils.defineLazyCustomElement(EDITOR_TAG, load${editorClass});`,
 }
 
 for (const name of fs.readdirSync(cardsDir)) {
-  const indexPath = path.join(cardsDir, name, "index.ts");
-  if (fs.existsSync(indexPath)) {
-    patchIndex(indexPath);
-  }
+  patchIndex(path.join(cardsDir, name, "index.ts"));
 }
 
 function patchStandalone(filePath, importName) {
-  if (!fs.existsSync(filePath)) {
-    return;
+  let source;
+  try {
+    source = fs.readFileSync(filePath, "utf8");
+  } catch (error) {
+    if (error && error.code === "ENOENT") {
+      return;
+    }
+    throw error;
   }
-  let source = fs.readFileSync(filePath, "utf8");
   const loaderName = `load${importName}`;
   const hadDirectImport = source.includes(`import { ${importName} } from`);
   const hadLoaderImport = source.includes(`import { ${loaderName} } from`);
