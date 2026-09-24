@@ -670,21 +670,25 @@ class NodaliaMediaPlayer extends HTMLElement {
         this._displayArtworkByEntity.delete(entityId);
       }
 
-      if (rerenderOnReady) {
-        const existingStage = this.shadowRoot?.querySelector("[data-media-art-stage]");
-        if (existingStage instanceof HTMLElement && this._config?.album_cover_background !== false) {
-          this._activeArtworkUrl = url;
-          this._syncArtworkLayer(existingStage, {
-            artworkUrl: url,
-            idle: false,
-            entityId,
-            hasAlbumBackground: true,
-          });
-          return;
-        }
-        this._lastRenderSignature = "";
-        this._render();
+      if (!rerenderOnReady || !this.isConnected) {
+        return;
       }
+
+      // Keep the album stage in sync immediately, but always re-render chrome too.
+      // Skipping _render when a stage already exists left the hero thumb on the
+      // fallback icon while the background already showed the cover.
+      const existingStage = this.shadowRoot?.querySelector("[data-media-art-stage]");
+      if (existingStage instanceof HTMLElement && this._config?.album_cover_background !== false) {
+        this._activeArtworkUrl = url;
+        this._syncArtworkLayer(existingStage, {
+          artworkUrl: url,
+          idle: false,
+          entityId,
+          hasAlbumBackground: true,
+        });
+      }
+      this._lastRenderSignature = "";
+      this._render();
     });
 
     return false;

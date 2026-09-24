@@ -253,3 +253,14 @@ test("media player keeps a persistent artwork stage and vacuum keeps a persisten
   assert.match(vacuum, /_commitPersistentVacuumShadow\(/);
   assert.match(vacuum, /data-vacuum-surface/);
 });
+
+test("media player re-renders chrome when artwork preload finishes with an existing stage", () => {
+  const media = read("src/cards/media-player/media-player-card.ts");
+  const ensureReady = media.match(/_ensureArtworkReady\([\s\S]*?return false;\n  \}/)?.[0] || "";
+  assert.match(ensureReady, /_lastRenderSignature = "";\n\s*this\._render\(\);/);
+  // Must not early-return after syncing only the album stage (left the hero thumb on the icon).
+  assert.doesNotMatch(
+    ensureReady,
+    /_syncArtworkLayer\([\s\S]*?\}\);\n\s*return;\n\s*\}\n\s*this\._lastRenderSignature/,
+  );
+});

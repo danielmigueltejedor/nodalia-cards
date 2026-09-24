@@ -8,6 +8,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.36] - 2026-09-24
+
+Media Player hero thumb now swaps to the album cover as soon as preload
+finishes, instead of staying on the fallback icon until a full reload.
+
+### Fixed
+
+- When album-cover background already painted from the desired URL, finishing
+  the artwork preload no longer syncs only the background stage and skips
+  chrome re-render; the hero thumb updates to the cover without a refresh.
+
+### Validation
+
+- Media redesign regression asserts `_ensureArtworkReady` always re-renders
+  after preload when `rerenderOnReady` is set.
+
 ## [2.3.0-alpha.35] - 2026-09-24
 
 Room Summary hub Media Player embeds default to standard layout so they are

@@ -11,11 +11,12 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.35
+2.3.0-alpha.36
 ```
 
-Preview **`2.3.0-alpha.35`** stops Room Summary hub Media Players from being
-forced into a square tile; embeds default to standard layout.
+Preview **`2.3.0-alpha.36`** makes Media Player hero artwork update as soon as
+preload finishes, so the thumb no longer stays on the fallback icon while the
+background already shows the cover.
 Stable **`2.2.10`** remains the recommended daily-driver release.
 
 ## Current stable release

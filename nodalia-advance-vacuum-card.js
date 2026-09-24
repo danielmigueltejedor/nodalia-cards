@@ -4,7 +4,7 @@
   // src/cards/advance-vacuum/advance-vacuum-constants.ts
   var CARD_TAG = "nodalia-advance-vacuum-card";
   var EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.35";
+  var CARD_VERSION = "2.3.0-alpha.36";
   var SHARED_CLEANING_SESSION_OVERFLOW_SENTINEL = "__NODALIA_SHARED_SESSION_OVERFLOW__";
   var HAPTIC_PATTERNS = {
     selection: 8,

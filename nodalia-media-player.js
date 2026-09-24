@@ -4,7 +4,7 @@
   // src/cards/media-player/media-player-constants.ts
   var CARD_TAG = "nodalia-media-player";
   var EDITOR_TAG = "nodalia-media-player-editor";
-  var CARD_VERSION = "2.3.0-alpha.35";
+  var CARD_VERSION = "2.3.0-alpha.36";
   var INVALID_EDITOR_VALUE = /* @__PURE__ */ Symbol("invalid-editor-value");
   var MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
   var HAPTIC_PATTERNS = {
@@ -1671,21 +1671,21 @@
           } else {
             this._displayArtworkByEntity.delete(entityId);
           }
-          if (rerenderOnReady) {
-            const existingStage = this.shadowRoot?.querySelector("[data-media-art-stage]");
-            if (existingStage instanceof HTMLElement && this._config?.album_cover_background !== false) {
-              this._activeArtworkUrl = url;
-              this._syncArtworkLayer(existingStage, {
-                artworkUrl: url,
-                idle: false,
-                entityId,
-                hasAlbumBackground: true
-              });
-              return;
-            }
-            this._lastRenderSignature = "";
-            this._render();
+          if (!rerenderOnReady || !this.isConnected) {
+            return;
           }
+          const existingStage = this.shadowRoot?.querySelector("[data-media-art-stage]");
+          if (existingStage instanceof HTMLElement && this._config?.album_cover_background !== false) {
+            this._activeArtworkUrl = url;
+            this._syncArtworkLayer(existingStage, {
+              artworkUrl: url,
+              idle: false,
+              entityId,
+              hasAlbumBackground: true
+            });
+          }
+          this._lastRenderSignature = "";
+          this._render();
         });
         return false;
       }
