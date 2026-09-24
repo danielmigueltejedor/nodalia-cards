@@ -2549,8 +2549,13 @@ test("compact tiles show the name when the row is wide enough", () => {
 test("vacuum dense compact reports a 2-row section footprint", () => {
   const source = read("src/cards/vacuum/vacuum-card.ts");
   assert.match(source, /if \(this\._isCompactLayout\) \{\s*return 2;/);
+  assert.match(source, /_getSectionMinRows\(/);
+  assert.match(source, /halfWidthTile[\s\S]*return 2;/);
   assert.match(source, /getGridOptions\(\) \{[\s\S]*min_rows: rows/);
   assert.match(source, /let size = 2;/);
+  // Collapse glitches must not flip dense tiles out of compact.
+  assert.match(source, /if \(nextWidth < 48\) \{\s*return;/);
+  assert.doesNotMatch(source, /window\.dispatchEvent\(new Event\("resize"\)\)/);
 });
 
 test("compact fan and humidifier keep configured mode controls beside the slider", () => {

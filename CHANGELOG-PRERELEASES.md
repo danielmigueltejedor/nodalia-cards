@@ -8,6 +8,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.39] - 2026-09-24
+
+Stop the empty band that reappeared under compact Vacuum/media pairs after the
+dashboard stayed open — ignore 0-width reflow glitches and keep half-width
+tiles on a stable 2-row section footprint.
+
+### Fixed
+
+- Vacuum ResizeObserver ignores sub-48px width glitches that briefly left dense
+  mode, let sections lock a taller footprint, then left a gap after collapsing.
+- Half-width Vacuum tiles (`grid_options.columns` ≤ 6) always report `min_rows: 2`.
+- Compact helper prefers configured column span before raw width, so a transient
+  0px measure still keeps 4/6-col tiles dense.
+- Vacuum layout notify uses `iron-resize` only (no global `window.resize`).
+
+### Validation
+
+- Architecture contracts cover width-0 + 6-col compact.
+- Interaction regression asserts the 48px guard and half-width min-rows path.
+
 ## [2.3.0-alpha.38] - 2026-09-24
 
 Restore compact Climate/Fan title parity at 12px (removing the densified 13px

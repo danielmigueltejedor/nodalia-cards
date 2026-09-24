@@ -254,7 +254,8 @@ test("repository workflows pin audited external actions by immutable commit", ()
     }
   }
 
-  assert.match(read(".github/workflows/codeql.yml"), /^\s+- beta$/m);
+  assert.match(read(".github/workflows/codeql.yml"), /^\s+- main$/m);
+  assert.doesNotMatch(read(".github/workflows/codeql.yml"), /^\s+- (?:alpha|beta)$/m);
   const releaseLabels = read(".github/workflows/issue-release-labels.yml");
   assert.match(releaseLabels, /^\s+contents: read$/m);
   assert.ok(releaseLabels.includes("(?:alpha|beta|rc)"), "release guidance should resolve every preview maturity");

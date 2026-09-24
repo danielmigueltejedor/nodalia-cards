@@ -11,11 +11,11 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.38
+2.3.0-alpha.39
 ```
 
-Preview **`2.3.0-alpha.38`** restores compact Climate/Fan title parity at 12px
-and keeps browser CI green on WebKit iPhone.
+Preview **`2.3.0-alpha.39`** stops the empty band under compact Vacuum/media
+pairs that came back after leaving the dashboard open.
 Stable **`2.2.10`** remains the recommended daily-driver release.
 
 ## Current stable release

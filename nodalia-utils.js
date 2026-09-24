@@ -311,13 +311,15 @@
       return false;
     }
 
-    const measured = Number(width);
-    if (Number.isFinite(measured) && measured > 0 && measured < COMPACT_CARD_MAX_WIDTH) {
+    const columns = Number(gridColumns);
+    if (Number.isFinite(columns) && columns > 0 && columns <= COMPACT_CARD_MAX_COLUMNS) {
       return true;
     }
 
-    const columns = Number(gridColumns);
-    if (Number.isFinite(columns) && columns > 0 && columns <= COMPACT_CARD_MAX_COLUMNS) {
+    const measured = Number(width);
+    // Prefer configured half-width spans before raw width — a transient 0px
+    // measure must not flip half-column tiles out of compact density.
+    if (Number.isFinite(measured) && measured > 0 && measured < COMPACT_CARD_MAX_WIDTH) {
       return true;
     }
 

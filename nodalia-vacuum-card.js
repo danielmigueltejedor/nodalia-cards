@@ -4,7 +4,7 @@
   // src/cards/vacuum/vacuum-constants.ts
   var CARD_TAG = "nodalia-vacuum-card";
   var EDITOR_TAG = "nodalia-vacuum-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.38";
+  var CARD_VERSION = "2.3.0-alpha.39";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
@@ -420,6 +420,9 @@
             return;
           }
           const nextWidth = Math.round(entry.contentRect?.width || this.clientWidth || 0);
+          if (nextWidth < 48) {
+            return;
+          }
           const nextCompact = this._shouldUseCompactLayout(nextWidth);
           const compactChanged = nextCompact !== this._isCompactLayout;
           if (nextWidth === this._cardWidth && !compactChanged) {
@@ -516,7 +519,7 @@
         return this._getEstimatedCardSize();
       }
       getGridOptions() {
-        const rows = this._getEstimatedCardSize();
+        const rows = this._getSectionMinRows();
         return {
           rows: "auto",
           columns: "full",
@@ -524,19 +527,19 @@
           min_columns: 2
         };
       }
+      _getSectionMinRows(state = this._getState()) {
+        const columns = this._getConfiguredGridColumns();
+        const halfWidthTile = columns !== null && columns <= 6;
+        if (this._isCompactLayout || halfWidthTile) {
+          return 2;
+        }
+        return this._getEstimatedCardSize(state);
+      }
       _notifyLayoutChange() {
         if (!this.isConnected) {
           return;
         }
         fireEvent(this, "iron-resize", {});
-        if (typeof window !== "undefined") {
-          requestAnimationFrame(() => {
-            if (!this.isConnected) {
-              return;
-            }
-            window.dispatchEvent(new Event("resize"));
-          });
-        }
       }
       _scheduleLayoutRefresh(delay = 0) {
         if (typeof window === "undefined") {

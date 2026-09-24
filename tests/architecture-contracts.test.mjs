@@ -216,6 +216,9 @@ test("shared compact layout helper treats 4/6-col tiles and phone widths as comp
   assert.equal(utils.shouldUseCompactCardLayout({ mode: "auto", width: 720, gridColumns: 12 }), false);
   assert.equal(utils.shouldUseCompactCardLayout({ mode: "auto", width: 520, parentWidth: 1100 }), true);
   assert.equal(utils.shouldUseCompactCardLayout({ mode: "auto", width: 900, parentWidth: 1100 }), false);
+  // Transient 0-width must still honor half-column spans (avoids vacuum gap).
+  assert.equal(utils.shouldUseCompactCardLayout({ mode: "auto", width: 0, gridColumns: 6 }), true);
+  assert.equal(utils.shouldUseCompactCardLayout({ mode: "auto", width: 0, gridColumns: 12 }), false);
   assert.equal(utils.resolveCompactLayoutParentWidth(null), 0);
   assert.equal(utils.shouldShowCompactCardTitle({ width: 220 }), true);
   assert.equal(utils.shouldShowCompactCardTitle({ width: 148 }), true);

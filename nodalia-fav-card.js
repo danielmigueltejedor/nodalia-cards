@@ -4,7 +4,7 @@
   // src/cards/fav/fav-constants.ts
   var CARD_TAG = "nodalia-fav-card";
   var EDITOR_TAG = "nodalia-fav-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.38";
+  var CARD_VERSION = "2.3.0-alpha.39";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,

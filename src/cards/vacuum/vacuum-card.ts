@@ -100,6 +100,13 @@ class NodaliaVacuumCard extends HTMLElement {
       }
 
       const nextWidth = Math.round(entry.contentRect?.width || this.clientWidth || 0);
+      // Ignore collapse glitches (display:none, mid-reflow 0-width). Treating those
+      // as "not compact" expands the card, sections lock a taller footprint, and
+      // returning to dense leaves an empty band under vacuum/media pairs.
+      if (nextWidth < 48) {
+        return;
+      }
+
       const nextCompact = this._shouldUseCompactLayout(nextWidth);
       const compactChanged = nextCompact !== this._isCompactLayout;
 
@@ -214,7 +221,11 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   getGridOptions() {
-    const rows = this._getEstimatedCardSize();
+    // Half-width section tiles (≤ 6 cols) always share Light/Fan's 2-row rhythm.
+    // Using the expandable estimate here let transient non-compact measures (or an
+    // open panel) reserve 3–5 rows; after collapsing back to dense, HA kept the
+    // empty band until a full reload.
+    const rows = this._getSectionMinRows();
     return {
       rows: "auto",
       columns: "full",
@@ -223,21 +234,23 @@ class NodaliaVacuumCard extends HTMLElement {
     };
   }
 
+  _getSectionMinRows(state = this._getState()) {
+    const columns = this._getConfiguredGridColumns();
+    const halfWidthTile = columns !== null && columns <= 6;
+    if (this._isCompactLayout || halfWidthTile) {
+      return 2;
+    }
+    return this._getEstimatedCardSize(state);
+  }
+
   _notifyLayoutChange() {
     if (!this.isConnected) {
       return;
     }
 
+    // Prefer the sections-local iron-resize signal. A global window resize made
+    // sibling cards remeasure mid-layout and could reintroduce stale footprints.
     fireEvent(this, "iron-resize", {});
-
-    if (typeof window !== "undefined") {
-      requestAnimationFrame(() => {
-        if (!this.isConnected) {
-          return;
-        }
-        window.dispatchEvent(new Event("resize"));
-      });
-    }
   }
 
   _scheduleLayoutRefresh(delay = 0) {
