@@ -4,7 +4,7 @@
   // src/cards/alarm-panel/alarm-panel-constants.ts
   var CARD_TAG = "nodalia-alarm-panel-card";
   var EDITOR_TAG = "nodalia-alarm-panel-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.30";
+  var CARD_VERSION = "2.3.0-alpha.31";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,

@@ -4,7 +4,7 @@
   // src/cards/climate/climate-constants.ts
   var CARD_TAG = "nodalia-climate-card";
   var EDITOR_TAG = "nodalia-climate-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.30";
+  var CARD_VERSION = "2.3.0-alpha.31";
   var SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
   var SETPOINT_SCHEDULE_MINUTES_PER_DAY = 24 * 60;
   var SCHEDULE_TIMELINE_SNAP_MINUTES = 5;

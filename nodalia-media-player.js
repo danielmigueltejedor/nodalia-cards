@@ -4,7 +4,7 @@
   // src/cards/media-player/media-player-constants.ts
   var CARD_TAG = "nodalia-media-player";
   var EDITOR_TAG = "nodalia-media-player-editor";
-  var CARD_VERSION = "2.3.0-alpha.30";
+  var CARD_VERSION = "2.3.0-alpha.31";
   var INVALID_EDITOR_VALUE = /* @__PURE__ */ Symbol("invalid-editor-value");
   var MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
   var HAPTIC_PATTERNS = {
@@ -3924,7 +3924,7 @@
         }
 
         .media-player-card--compact.media-player-card--idle {
-          align-items: center;
+          align-items: stretch;
           height: 100%;
           justify-content: center;
           min-height: 68px;
@@ -4122,8 +4122,10 @@
         }
 
         .media-player-card--idle {
-          align-items: center;
+          align-items: stretch;
           display: flex;
+          flex-direction: column;
+          justify-content: center;
           min-height: 68px;
           padding: 14px 12px;
         }
@@ -4138,8 +4140,8 @@
         .media-player__idle-hero {
           align-items: center;
           display: grid;
-          gap: 10px;
-          grid-template-columns: 38px minmax(0, 1fr);
+          gap: 12px;
+          grid-template-columns: 38px minmax(0, 1fr) auto;
           min-width: 0;
           width: 100%;
         }
@@ -4152,10 +4154,13 @@
           color: var(--primary-text-color);
           font-size: 13px;
           font-weight: 700;
+          justify-self: start;
           min-width: 0;
           overflow: hidden;
+          text-align: start;
           text-overflow: ellipsis;
           white-space: nowrap;
+          width: 100%;
         }
 
         .media-player__idle-main {
@@ -4164,6 +4169,7 @@
           gap: 10px;
           grid-template-columns: minmax(0, 1fr) auto;
           min-width: 0;
+          width: 100%;
         }
 
         .media-player__idle-hero--tv-off .media-player__idle-actions--tv-off {
@@ -4559,26 +4565,30 @@
         }
 
         .media-player-card--tv.media-player-card--idle .media-player__idle-main {
-          align-items: start;
-          gap: 20px;
-          grid-template-columns: minmax(0, 1fr);
-          padding-top: 6px;
+          align-items: center;
+          gap: 10px;
+          grid-template-columns: minmax(0, 1fr) auto;
+          padding-top: 0;
+          width: 100%;
         }
 
         .media-player-card--tv.media-player-card--idle .media-player__idle-tv-stack {
           gap: 10px;
-          padding-top: 6px;
+          padding-top: 0;
+          width: auto;
         }
 
         .media-player-card--tv.media-player-card--idle .media-player__idle-hero--tv-off {
           align-items: center;
-          gap: 8px;
+          gap: 12px;
           grid-template-columns: 38px minmax(0, 1fr) auto;
+          width: 100%;
         }
 
         .media-player-card--tv.media-player-card--idle .media-player__idle-actions--tv-off {
           justify-content: flex-end;
-          width: fit-content;
+          justify-self: end;
+          width: auto;
         }
 
         .media-player-card--idle .media-player__control {
@@ -5287,6 +5297,49 @@
           .media-player-card:not(.media-player-card--square):not(.media-player-card--artwork) .media-player__hero {
             grid-template-columns: ${playerStyles.artwork_size} minmax(0, 1fr);
           }
+
+          /* Match Light/Fan mobile icon growth (50px) so idle tiles keep the same row height. */
+          :host([data-idle-compact="true"]) {
+            min-height: 78px;
+          }
+
+          .media-player-card--idle,
+          .media-player-card--compact.media-player-card--idle {
+            min-height: 78px;
+            padding: 14px 12px;
+          }
+
+          .media-player__idle-hero,
+          .media-player__idle-hero--tv-off,
+          .media-player-card--tv.media-player-card--idle .media-player__idle-hero--tv-off {
+            gap: 12px;
+            grid-template-columns: 50px minmax(0, 1fr) auto;
+          }
+
+          .media-player__artwork--idle,
+          .media-player-card--tv.media-player-card--idle .media-player__artwork--idle {
+            height: 50px;
+            width: 50px;
+          }
+
+          .media-player-card--tv.media-player-card--idle .media-player__artwork ha-icon,
+          .media-player__artwork--idle ha-icon {
+            --mdc-icon-size: 23px;
+            height: 23px;
+            width: 23px;
+          }
+
+          .media-player-card--idle .media-player__control {
+            height: 44px;
+            min-width: 44px;
+            width: 44px;
+          }
+
+          .media-player-card--idle .media-player__control ha-icon {
+            --mdc-icon-size: 20px;
+            height: 20px;
+            width: 20px;
+          }
         }
 
         .media-player-card--square,
@@ -5585,9 +5638,16 @@
         }
 
         .media-player-card--compact.media-player-card--idle .media-player__content {
-          flex: 0 0 auto;
+          align-items: center;
+          flex: 1 1 auto;
           gap: 0;
           justify-content: center;
+          min-height: 0;
+          width: 100%;
+        }
+
+        .media-player-card--compact.media-player-card--idle .media-player__content--idle {
+          width: 100%;
         }
 
         .media-player-card--compact .media-player__transport-cluster {

@@ -11,12 +11,11 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.30
+2.3.0-alpha.31
 ```
 
-Preview **`2.3.0-alpha.30`** matches idle Media Player height to Fav/Light row
-tiles (68px), centers vacuum control icons, and hides the device chip beside
-Browse on compact/square media so HomePod no longer overlaps on mobile.
+Preview **`2.3.0-alpha.31`** left-aligns idle Media Player icon/name with power
+on the right, and grows idle icons to 50px under 420px like Light/Fan.
 Stable **`2.2.10`** remains the recommended daily-driver release.
 
 ## Current stable release

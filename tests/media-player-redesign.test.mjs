@@ -185,6 +185,8 @@ test("media player idle compact keeps name and power on one row", () => {
   assert.match(source, /\.media-player-card--idle \{[\s\S]*?min-height: 68px;/);
   assert.match(source, /\.media-player-card--tv\.media-player-card--idle \.media-player__idle-hero--tv-off \{[\s\S]*?grid-template-columns: 38px minmax\(0, 1fr\) auto;/);
   assert.match(source, /\.media-player-card--tv\.media-player-card--idle \.media-player__artwork--idle \{[\s\S]*?height: 38px;/);
+  assert.match(source, /@media \(max-width: 420px\) \{[\s\S]*?\.media-player__artwork--idle[\s\S]*?height: 50px;/);
+  assert.match(source, /\.media-player-card--compact\.media-player-card--idle \{[\s\S]*?align-items: stretch;/);
   assert.doesNotMatch(source, /idle-tv-off-bar/);
 });
 

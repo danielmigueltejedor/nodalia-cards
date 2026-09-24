@@ -8,6 +8,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.31] - 2026-09-24
+
+Idle Media Player tiles: left-aligned icon/name with power on the right, and
+50px mobile icons matching Light/Fan.
+
+### Fixed
+
+- Idle/off Media Player content stretches full width again (icon + name left,
+  power right) instead of clustering centered in the card.
+- Below 420px, idle artwork/controls grow to the same 50px rhythm as Light/Fan
+  so mobile row height stays consistent.
+
+### Validation
+
+- Media redesign tests cover stretch alignment and the 420px idle icon size.
+
 ## [2.3.0-alpha.30] - 2026-09-24
 
 Idle Media Player height matches Fav/Light row tiles; vacuum control icons
