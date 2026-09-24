@@ -1,6 +1,6 @@
 export const CARD_TAG = "nodalia-climate-card";
 export const EDITOR_TAG = "nodalia-climate-card-editor";
-export const CARD_VERSION = "2.3.0-alpha.39";
+export const CARD_VERSION = "2.3.0-alpha.40";
 export const SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 export const SETPOINT_SCHEDULE_DAY_TO_JS = {
   sun: 0,

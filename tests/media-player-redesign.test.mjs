@@ -233,6 +233,20 @@ test("square media player overlay stays a tile instead of collapsing to a chip",
   assert.match(source, /has-album-background \.media-player__artwork/);
 });
 
+test("media player keeps track text readable on album backgrounds", () => {
+  const source = read("src/cards/media-player/media-player-card.ts");
+  assert.match(
+    source,
+    /\.media-player-card\.has-album-background \.media-player__title,[\s\S]*?color: #fff;[\s\S]*?text-shadow:/,
+  );
+  assert.match(
+    source,
+    /\.media-player-card\.has-album-background \.media-player__subtitle \{[\s\S]*?color: rgba\(255, 255, 255, 0\.94\);/,
+  );
+  assert.match(source, /rgba\(0, 0, 0, 0\.28\)/);
+  assert.match(source, /rgba\(0, 0, 0, 0\.42\)/);
+});
+
 test("media player artwork containers share one border radius", () => {
   const source = read("src/cards/media-player/media-player-card.ts");
   assert.match(source, /\.media-player__artwork \{[\s\S]*?border-radius: 22px;/);

@@ -8,6 +8,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.40] - 2026-09-24
+
+Keep Media Player track title and artist readable on any album cover.
+
+### Fixed
+
+- With album-cover background, title/artist use solid white (not theme
+  secondary grey) plus a stronger dark text halo.
+- Dark-theme album overlay wash is deeper so light covers no longer wash out
+  white type.
+
+### Validation
+
+- Media redesign regression asserts album-background title/subtitle colors and
+  the stronger overlay wash.
+
 ## [2.3.0-alpha.39] - 2026-09-24
 
 Stop the empty band that reappeared under compact Vacuum/media pairs after the

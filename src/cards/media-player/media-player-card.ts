@@ -3359,10 +3359,10 @@ class NodaliaMediaPlayer extends HTMLElement {
       : playerStyles.overlay_color;
     const albumOverlayTop = isLightThemeSurface
       ? `color-mix(in srgb, ${albumOverlayColor} 72%, transparent)`
-      : `color-mix(in srgb, ${albumOverlayColor} 64%, rgba(0, 0, 0, 0.08))`;
+      : `color-mix(in srgb, ${albumOverlayColor} 58%, rgba(0, 0, 0, 0.28))`;
     const albumOverlayBottom = isLightThemeSurface
       ? `color-mix(in srgb, ${albumOverlayColor} 88%, color-mix(in srgb, var(--ha-card-background) 92%, transparent))`
-      : `color-mix(in srgb, ${albumOverlayColor} 86%, rgba(0, 0, 0, 0.16))`;
+      : `color-mix(in srgb, ${albumOverlayColor} 72%, rgba(0, 0, 0, 0.42))`;
     const artworkVisuals = getArtworkVisuals(
       config.artwork,
       config.album_cover_background !== false,
@@ -3919,11 +3919,6 @@ class NodaliaMediaPlayer extends HTMLElement {
           white-space: nowrap;
         }
 
-        .media-player-card.has-album-background .media-player__title,
-        .media-player-card.has-album-background .media-player__subtitle {
-          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.32), 0 6px 18px rgba(0, 0, 0, 0.28);
-        }
-
         .media-player__title {
           color: var(--primary-text-color);
           font-size: ${playerStyles.title_size};
@@ -3933,6 +3928,22 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player__subtitle {
           color: var(--secondary-text-color);
           font-size: ${playerStyles.subtitle_size};
+        }
+
+        /* Album art can be light or busy — keep track/artist readable on any cover. */
+        .media-player-card.has-album-background .media-player__title,
+        .media-player-card.has-album-background .media-player__subtitle {
+          color: #fff;
+          text-shadow:
+            0 0 1px rgba(0, 0, 0, 0.95),
+            0 1px 2px rgba(0, 0, 0, 0.85),
+            0 2px 6px rgba(0, 0, 0, 0.65),
+            0 6px 18px rgba(0, 0, 0, 0.5);
+        }
+
+        .media-player-card.has-album-background .media-player__subtitle {
+          color: rgba(255, 255, 255, 0.94);
+          font-weight: 600;
         }
 
         .media-player__subtitle--tv {
@@ -5002,7 +5013,17 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player-card--artwork.has-album-background .media-player__title,
         .media-player-card--artwork.has-album-background .media-player__subtitle {
           color: #fff;
-          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 8px 24px rgba(0, 0, 0, 0.42);
+          text-shadow:
+            0 0 1px rgba(0, 0, 0, 0.95),
+            0 1px 2px rgba(0, 0, 0, 0.85),
+            0 2px 6px rgba(0, 0, 0, 0.65),
+            0 8px 24px rgba(0, 0, 0, 0.5);
+        }
+
+        .media-player-card--square.has-album-background .media-player__subtitle,
+        .media-player-card--artwork.has-album-background .media-player__subtitle {
+          color: rgba(255, 255, 255, 0.94);
+          font-weight: 600;
         }
 
         .media-player-card--square .media-player__content,

@@ -4,7 +4,7 @@
   // src/cards/media-player/media-player-constants.ts
   var CARD_TAG = "nodalia-media-player";
   var EDITOR_TAG = "nodalia-media-player-editor";
-  var CARD_VERSION = "2.3.0-alpha.39";
+  var CARD_VERSION = "2.3.0-alpha.40";
   var INVALID_EDITOR_VALUE = /* @__PURE__ */ Symbol("invalid-editor-value");
   var MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
   var HAPTIC_PATTERNS = {
@@ -3783,8 +3783,8 @@
         const activeTintColor = playerStyles.active_tint_color || "var(--info-color, #71c0ff)";
         const isLightThemeSurface = this._isLightThemeSurface();
         const albumOverlayColor = isLightThemeSurface ? `color-mix(in srgb, ${playerStyles.overlay_color} 24%, var(--ha-card-background))` : playerStyles.overlay_color;
-        const albumOverlayTop = isLightThemeSurface ? `color-mix(in srgb, ${albumOverlayColor} 72%, transparent)` : `color-mix(in srgb, ${albumOverlayColor} 64%, rgba(0, 0, 0, 0.08))`;
-        const albumOverlayBottom = isLightThemeSurface ? `color-mix(in srgb, ${albumOverlayColor} 88%, color-mix(in srgb, var(--ha-card-background) 92%, transparent))` : `color-mix(in srgb, ${albumOverlayColor} 86%, rgba(0, 0, 0, 0.16))`;
+        const albumOverlayTop = isLightThemeSurface ? `color-mix(in srgb, ${albumOverlayColor} 72%, transparent)` : `color-mix(in srgb, ${albumOverlayColor} 58%, rgba(0, 0, 0, 0.28))`;
+        const albumOverlayBottom = isLightThemeSurface ? `color-mix(in srgb, ${albumOverlayColor} 88%, color-mix(in srgb, var(--ha-card-background) 92%, transparent))` : `color-mix(in srgb, ${albumOverlayColor} 72%, rgba(0, 0, 0, 0.42))`;
         const artworkVisuals = getArtworkVisuals(
           config.artwork,
           config.album_cover_background !== false,
@@ -4334,11 +4334,6 @@
           white-space: nowrap;
         }
 
-        .media-player-card.has-album-background .media-player__title,
-        .media-player-card.has-album-background .media-player__subtitle {
-          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.32), 0 6px 18px rgba(0, 0, 0, 0.28);
-        }
-
         .media-player__title {
           color: var(--primary-text-color);
           font-size: ${playerStyles.title_size};
@@ -4348,6 +4343,22 @@
         .media-player__subtitle {
           color: var(--secondary-text-color);
           font-size: ${playerStyles.subtitle_size};
+        }
+
+        /* Album art can be light or busy — keep track/artist readable on any cover. */
+        .media-player-card.has-album-background .media-player__title,
+        .media-player-card.has-album-background .media-player__subtitle {
+          color: #fff;
+          text-shadow:
+            0 0 1px rgba(0, 0, 0, 0.95),
+            0 1px 2px rgba(0, 0, 0, 0.85),
+            0 2px 6px rgba(0, 0, 0, 0.65),
+            0 6px 18px rgba(0, 0, 0, 0.5);
+        }
+
+        .media-player-card.has-album-background .media-player__subtitle {
+          color: rgba(255, 255, 255, 0.94);
+          font-weight: 600;
         }
 
         .media-player__subtitle--tv {
@@ -5417,7 +5428,17 @@
         .media-player-card--artwork.has-album-background .media-player__title,
         .media-player-card--artwork.has-album-background .media-player__subtitle {
           color: #fff;
-          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 8px 24px rgba(0, 0, 0, 0.42);
+          text-shadow:
+            0 0 1px rgba(0, 0, 0, 0.95),
+            0 1px 2px rgba(0, 0, 0, 0.85),
+            0 2px 6px rgba(0, 0, 0, 0.65),
+            0 8px 24px rgba(0, 0, 0, 0.5);
+        }
+
+        .media-player-card--square.has-album-background .media-player__subtitle,
+        .media-player-card--artwork.has-album-background .media-player__subtitle {
+          color: rgba(255, 255, 255, 0.94);
+          font-weight: 600;
         }
 
         .media-player-card--square .media-player__content,
