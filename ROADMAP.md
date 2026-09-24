@@ -11,12 +11,11 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.36
+2.3.0-alpha.37
 ```
 
-Preview **`2.3.0-alpha.36`** makes Media Player hero artwork update as soon as
-preload finishes, so the thumb no longer stays on the fallback icon while the
-background already shows the cover.
+Preview **`2.3.0-alpha.37`** aligns compact Climate title metrics with Fan so
+WebKit iPhone browser CI stays green.
 Stable **`2.2.10`** remains the recommended daily-driver release.
 
 ## Current stable release

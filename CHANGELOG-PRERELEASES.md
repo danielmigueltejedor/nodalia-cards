@@ -8,6 +8,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.37] - 2026-09-24
+
+Align compact Climate title metrics with Fan/Humidifier so WebKit iPhone
+browser CI no longer fails on a 1px title height mismatch.
+
+### Fixed
+
+- Compact Climate title uses 13px / line-height 1.15 (and matching letter-spacing)
+  like Fan, restoring the shared compact header height parity check.
+
+### Validation
+
+- Interaction regression asserts compact Climate and Fan title sizes stay aligned.
+
 ## [2.3.0-alpha.36] - 2026-09-24
 
 Media Player hero thumb now swaps to the album cover as soon as preload
