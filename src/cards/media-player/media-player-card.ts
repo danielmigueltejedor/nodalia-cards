@@ -262,6 +262,13 @@ class NodaliaMediaPlayer extends HTMLElement {
   }
 
   getCardSize() {
+    const mode = this._getPresentationMode();
+    if (mode === "chip") {
+      return 1;
+    }
+    if (mode === "compact") {
+      return 2;
+    }
     return 3;
   }
 
@@ -3372,18 +3379,20 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         :host([data-presentation="compact"]) {
-          align-self: start;
+          align-self: stretch;
           aspect-ratio: auto;
-          height: fit-content;
+          height: 100%;
           max-width: 100%;
+          min-height: 88px;
           width: 100%;
         }
 
         :host([data-idle-compact="true"]) {
-          align-self: start;
+          align-self: stretch;
           aspect-ratio: auto;
-          height: auto;
+          height: 100%;
           max-height: none;
+          min-height: 88px;
           overflow: visible;
         }
 
@@ -3460,9 +3469,12 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card--compact {
-          container-type: inline-size;
-          min-height: 0;
-          padding: 10px 10px 10px;
+          display: flex;
+          flex-direction: column;
+          height: 100%;
+          justify-content: space-between;
+          min-height: 88px;
+          padding: 12px;
         }
 
         .media-player-card--compact .media-player__volume-button:not(.media-player__volume-button--browse),
@@ -3482,15 +3494,15 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player-card--compact .media-player__control {
           flex: 0 0 auto;
-          height: 36px;
-          min-width: 36px;
-          width: 36px;
-        }
-
-        .media-player-card--compact .media-player__control--primary {
           height: 40px;
           min-width: 40px;
           width: 40px;
+        }
+
+        .media-player-card--compact .media-player__control--primary {
+          height: 44px;
+          min-width: 44px;
+          width: 44px;
         }
 
         .media-player-card--compact .media-player__title {
@@ -5073,12 +5085,22 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card--compact .media-player__content {
-          gap: 8px;
-          padding-bottom: 4px;
+          display: flex;
+          flex: 1 1 auto;
+          flex-direction: column;
+          gap: 10px;
+          justify-content: space-between;
+          min-height: 0;
+          padding-bottom: 0;
         }
 
         .media-player-card--compact .media-player__transport-cluster {
           gap: 10px;
+          margin-top: auto;
+        }
+
+        .media-player-card--compact .media-player__transport-row {
+          margin-top: auto;
         }
 
         .media-player-card--chip .media-player__footer,

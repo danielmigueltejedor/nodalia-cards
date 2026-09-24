@@ -11,14 +11,13 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.27
+2.3.0-alpha.28
 ```
 
-Preview **`2.3.0-alpha.27`** tightens compact Vacuum / Media / Fan / Humidifier
-tiles: content-height cards (no empty stretch), 36px controls, full-width names
-with battery in the chip row, and Media prefers compact under 300px instead of
-tall 1:1 squares. Stable **`2.2.10`** remains the recommended daily-driver
-release.
+Preview **`2.3.0-alpha.28`** raises compact Media Player tiles to the same
+section rhythm as Light/Fan (`min_rows: 2`, ~88px min height, stretch to fill
+the grid cell) so narrow media cards stop collapsing shorter than siblings.
+Stable **`2.2.10`** remains the recommended daily-driver release.
 
 ## Current stable release
 

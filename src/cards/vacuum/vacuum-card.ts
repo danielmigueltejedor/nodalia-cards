@@ -208,11 +208,10 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   getGridOptions() {
-    const compact = this._isCompactLayout;
     return {
       rows: "auto",
       columns: "full",
-      min_rows: compact ? 1 : 2,
+      min_rows: 2,
       min_columns: 2,
     };
   }

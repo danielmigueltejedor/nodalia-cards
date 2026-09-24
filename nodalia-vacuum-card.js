@@ -4,7 +4,7 @@
   // src/cards/vacuum/vacuum-constants.ts
   var CARD_TAG = "nodalia-vacuum-card";
   var EDITOR_TAG = "nodalia-vacuum-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.27";
+  var CARD_VERSION = "2.3.0-alpha.28";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
@@ -512,11 +512,10 @@
         return this._getEstimatedCardSize();
       }
       getGridOptions() {
-        const compact = this._isCompactLayout;
         return {
           rows: "auto",
           columns: "full",
-          min_rows: compact ? 1 : 2,
+          min_rows: 2,
           min_columns: 2
         };
       }

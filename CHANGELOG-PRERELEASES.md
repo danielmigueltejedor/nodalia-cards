@@ -8,6 +8,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.28] - 2026-09-24
+
+Compact Media Player tiles match Light/Fan section height instead of collapsing.
+
+### Changed
+
+- Compact Media Player uses `min_rows: 2`, `min-height: 88px`, and stretches to
+  fill the grid cell so narrow tiles align with Light/Fan rhythm and no longer
+  sit shorter than a Vacuum sibling with a dead gap under the transport.
+- Compact transport buttons settle at 40px (44px primary) with spaced content.
+
+### Validation
+
+- Full unit suite green after compact host/card height changes.
+
 ## [2.3.0-alpha.27] - 2026-09-24
 
 Elegant compact tiles: no empty stretch, proportional controls, readable names.

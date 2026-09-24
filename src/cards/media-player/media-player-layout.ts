@@ -139,6 +139,8 @@ export function presentationGridOptions(mode: Exclude<MediaPlayerPresentationMod
     case "chip":
       return { rows: "auto", columns: "full", min_rows: 1, min_columns: 6 };
     case "compact":
+      // Match Light/Fan section footprint (min_rows: 2) so narrow tiles stay
+      // the same rhythm instead of collapsing shorter than sibling Nodalia cards.
       return { rows: "auto", columns: 6, min_rows: 2, min_columns: 2 };
     default:
       return { rows: "auto", columns: "full", min_rows: 2, min_columns: 3 };
