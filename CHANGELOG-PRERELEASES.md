@@ -8,6 +8,31 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.43] - 2026-09-24
+
+Smoother weather/humidifier icon motion, Media Player no-fill surface fix, and
+Navigation Bar album cover immersive vs blur.
+
+### Fixed
+
+- Media Player with `artwork.mode: off` (no cover fill) keeps the normal Nodalia
+  `--ha-card-background` instead of a transparent card under black scrims.
+- Navigation Bar media player album background sits above the card surface
+  (was hidden behind opaque fill via `z-index: -1`).
+
+### Changed
+
+- Weather rain/snow particles fade through the loop; sun/wind/storm motion is
+  softer; reduced-motion is honored while animations stay enabled.
+- Humidifier mist uses two staggered puffs and a gentler breathe.
+- Navigation Bar media player adds the same **Blurred gradient cover** toggle
+  (`media_player.artwork.mode` immersive ↔ blur); default is sharp cover.
+
+### Validation
+
+- Media redesign asserts `isAlbumCoverFillEnabled`; navigation tests cover
+  immersive/blur album modes.
+
 ## [2.3.0-alpha.42] - 2026-09-24
 
 Media Player visual editor toggle for sharp album cover vs blurred gradient fill.

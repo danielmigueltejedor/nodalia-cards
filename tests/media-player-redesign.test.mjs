@@ -253,6 +253,20 @@ test("media player keeps track text readable on album backgrounds", () => {
   assert.match(source, /albumCardShadow = "0 1px 2px rgba\(0, 0, 0, 0\.08\), 0 12px 28px rgba\(0, 0, 0, 0\.16\)"/);
 });
 
+test("media player skips album fill when artwork mode is off", () => {
+  const artwork = read("src/cards/media-player/media-player-artwork.ts");
+  assert.match(artwork, /export function isAlbumCoverFillEnabled/);
+  assert.match(artwork, /album_cover_background === false/);
+  assert.match(artwork, /mode \|\| ""\)\.trim\(\)\.toLowerCase\(\) !== "off"/);
+  const source = read("src/cards/media-player/media-player-card.ts");
+  assert.match(source, /isAlbumCoverFillEnabled\(this\._config\)/);
+  assert.match(source, /isAlbumCoverFillEnabled\(config\)/);
+  assert.doesNotMatch(
+    source,
+    /const hasAlbumBackground = this\._config\.album_cover_background !== false && Boolean\(backgroundArtwork\)/,
+  );
+});
+
 test("media player artwork containers share one border radius", () => {
   const source = read("src/cards/media-player/media-player-card.ts");
   assert.match(source, /\.media-player__artwork \{[\s\S]*?border-radius: 22px;/);

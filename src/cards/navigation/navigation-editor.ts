@@ -410,6 +410,13 @@ class NodaliaNavigationBarEditor extends HTMLElement {
     if (field) {
       const nextConfig = deepClone(this._config);
       const eventValue = event.detail?.value;
+
+      if (field.dataset.field === "media_player.artwork.blur_gradient") {
+        setByPath(nextConfig, "media_player.artwork.mode", field.checked ? "blur" : "immersive");
+        this._commitEditorConfig(nextConfig, shouldEmit);
+        return;
+      }
+
       const value = field.type === "checkbox"
         ? field.checked
         : event.type === "value-changed" && eventValue !== undefined
@@ -1472,10 +1479,17 @@ class NodaliaNavigationBarEditor extends HTMLElement {
               <span>${this._L("ed.nav.show_desktop")}</span>
             </label>
             <label class="checkbox">
-              <input type="checkbox" data-field="media_player.album_cover_background" ${config.media_player.album_cover_background ? "checked" : ""} />
+              <input type="checkbox" data-field="media_player.album_cover_background" ${config.media_player.album_cover_background !== false ? "checked" : ""} />
               <span class="toggle-switch" aria-hidden="true"></span>
               <span>${this._L("ed.nav.cover_art_background")}</span>
             </label>
+            ${config.media_player.album_cover_background !== false ? `
+            <label class="checkbox">
+              <input type="checkbox" data-field="media_player.artwork.blur_gradient" ${config.media_player.artwork?.mode === "blur" ? "checked" : ""} />
+              <span class="toggle-switch" aria-hidden="true"></span>
+              <span>${this._L("ed.media_player.artwork_blur_gradient")}</span>
+            </label>
+            ` : ""}
             <label>
               <span>${this._L("ed.nav.reserve_height")}</span>
               <input type="text" data-field="media_player.reserve_height" value="${escapeHtml(config.media_player.reserve_height || "")}" />

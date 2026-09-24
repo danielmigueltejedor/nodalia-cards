@@ -4,7 +4,7 @@
   // src/cards/navigation/navigation-constants.ts
   var CARD_TAG = "nodalia-navigation-bar";
   var EDITOR_TAG = "nodalia-navigation-bar-editor";
-  var CARD_VERSION = "2.3.0-alpha.42";
+  var CARD_VERSION = "2.3.0-alpha.43";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
@@ -271,6 +271,9 @@
       show: void 0,
       show_desktop: false,
       album_cover_background: true,
+      artwork: {
+        mode: "immersive"
+      },
       gap: "0px",
       reserve_height: "116px",
       players: []
@@ -320,6 +323,13 @@
       throw new Error('"routes" is required and must be an array');
     }
     const mergedConfig = mergeConfig(DEFAULT_CONFIG, baseConfig);
+    const artworkMode = String(mergedConfig.media_player?.artwork?.mode || "").trim().toLowerCase();
+    mergedConfig.media_player = {
+      ...mergedConfig.media_player,
+      artwork: {
+        mode: artworkMode === "blur" ? "blur" : "immersive"
+      }
+    };
     mergedConfig.security = window.NodaliaUtils?.normalizeSecurityConfig?.(mergedConfig.security, DEFAULT_CONFIG.security) ?? {
       ...DEFAULT_CONFIG.security,
       ...isObject(mergedConfig.security) ? mergedConfig.security : {}
@@ -2193,7 +2203,8 @@
         const subtitle = this._getMediaPlayerSubtitle(player, state);
         const subtitleMarkup = subtitle && normalizeTextKey(subtitle) !== normalizeTextKey(title) ? `<div class="media-player__subtitle">${escapeHtml(subtitle)}</div>` : "";
         const progress = this._getMediaPlayerProgress(state);
-        const albumCoverBackground = this._config.media_player.album_cover_background && artwork;
+        const albumCoverBackground = this._config.media_player.album_cover_background !== false && Boolean(artwork);
+        const albumCoverBlur = albumCoverBackground && this._config.media_player.artwork?.mode === "blur";
         const chips = this._getMediaPlayerChips(player, state, progress, title, subtitle);
         const playerName = this._getMediaPlayerPlayerLabel(player, state);
         const statusLabel = this._getMediaPlayerStateLabel(state.state);
@@ -2295,7 +2306,7 @@
     `;
         return `
       <div
-        class="media-player-card ${albumCoverBackground ? "has-album-background" : ""}${animateCardEntrance ? " media-player-card--entering" : ""}"
+        class="media-player-card ${albumCoverBackground ? "has-album-background" : ""}${albumCoverBlur ? " has-album-background--blur" : albumCoverBackground ? " has-album-background--immersive" : ""}${animateCardEntrance ? " media-player-card--entering" : ""}"
         data-media-card-index="${this._activeMediaPlayerIndex}"
       >
         ${albumCoverBackground ? `<div class="media-player__album-bg" style="background-image:url('${escapeHtml(artwork)}');"></div>` : ""}
@@ -3245,31 +3256,60 @@
           inset: 0;
           pointer-events: none;
           position: absolute;
-          z-index: 0;
+          z-index: 1;
+        }
+
+        .media-player-card.has-album-background {
+          background: transparent;
+          border-color: color-mix(in srgb, var(--divider-color) 55%, transparent);
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 12px 28px rgba(0, 0, 0, 0.16);
+        }
+
+        .media-player-card.has-album-background::before {
+          background: linear-gradient(180deg, rgba(0, 0, 0, 0.14), transparent 46%);
         }
 
         .media-player-card.has-album-background::after {
           background: linear-gradient(
             180deg,
-            rgba(0, 0, 0, 0.08),
-            ${config.styles.media_player.overlay_color},
-            rgba(0, 0, 0, 0.16)
+            color-mix(in srgb, ${config.styles.media_player.overlay_color} 58%, rgba(0, 0, 0, 0.22)),
+            color-mix(in srgb, ${config.styles.media_player.overlay_color} 42%, transparent),
+            color-mix(in srgb, ${config.styles.media_player.overlay_color} 72%, rgba(0, 0, 0, 0.36))
           );
           content: "";
           inset: 0;
           position: absolute;
-          z-index: 0;
+          z-index: 2;
         }
 
         .media-player__album-bg {
           background-position: center;
           background-size: cover;
-          filter: blur(30px) saturate(0.82);
-          inset: -24px;
-          opacity: 0.38;
+          filter: saturate(1.05) brightness(0.96);
+          inset: -6px;
+          opacity: 1;
           position: absolute;
+          transform: scale(1.04);
+          z-index: 0;
+        }
+
+        .media-player-card.has-album-background--blur .media-player__album-bg {
+          filter: blur(18px) saturate(1.05);
+          inset: -24px;
+          opacity: 0.92;
           transform: scale(1.14);
-          z-index: -1;
+        }
+
+        .media-player-card.has-album-background .media-player__title,
+        .media-player-card.has-album-background .media-player__subtitle {
+          color: #fff;
+          text-shadow:
+            0 1px 2px rgba(0, 0, 0, 0.55),
+            0 0 12px rgba(0, 0, 0, 0.35);
+        }
+
+        .media-player-card.has-album-background .media-player__subtitle {
+          color: rgba(255, 255, 255, 0.94);
         }
 
         .media-player__progress {
@@ -4095,6 +4135,11 @@
         if (field) {
           const nextConfig2 = deepClone(this._config);
           const eventValue = event.detail?.value;
+          if (field.dataset.field === "media_player.artwork.blur_gradient") {
+            setByPath(nextConfig2, "media_player.artwork.mode", field.checked ? "blur" : "immersive");
+            this._commitEditorConfig(nextConfig2, shouldEmit);
+            return;
+          }
           const value = field.type === "checkbox" ? field.checked : event.type === "value-changed" && eventValue !== void 0 ? eventValue ?? "" : field.value;
           if (value === "" && field.dataset.optional === "true") {
             deleteByPath(nextConfig2, field.dataset.field);
@@ -5085,10 +5130,17 @@
               <span>${this._L("ed.nav.show_desktop")}</span>
             </label>
             <label class="checkbox">
-              <input type="checkbox" data-field="media_player.album_cover_background" ${config.media_player.album_cover_background ? "checked" : ""} />
+              <input type="checkbox" data-field="media_player.album_cover_background" ${config.media_player.album_cover_background !== false ? "checked" : ""} />
               <span class="toggle-switch" aria-hidden="true"></span>
               <span>${this._L("ed.nav.cover_art_background")}</span>
             </label>
+            ${config.media_player.album_cover_background !== false ? `
+            <label class="checkbox">
+              <input type="checkbox" data-field="media_player.artwork.blur_gradient" ${config.media_player.artwork?.mode === "blur" ? "checked" : ""} />
+              <span class="toggle-switch" aria-hidden="true"></span>
+              <span>${this._L("ed.media_player.artwork_blur_gradient")}</span>
+            </label>
+            ` : ""}
             <label>
               <span>${this._L("ed.nav.reserve_height")}</span>
               <input type="text" data-field="media_player.reserve_height" value="${escapeHtml(config.media_player.reserve_height || "")}" />

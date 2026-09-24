@@ -11,11 +11,11 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.42
+2.3.0-alpha.43
 ```
 
-Preview **`2.3.0-alpha.42`** adds a Media Player editor toggle for sharp album
-cover vs blurred gradient fill.
+Preview **`2.3.0-alpha.43`** smooths weather/humidifier icon motion, fixes
+Media Player no-fill backgrounds, and adds Navigation Bar immersive/blur cover.
 Stable **`2.2.10`** remains the recommended daily-driver release.
 
 ## Current stable release

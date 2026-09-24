@@ -2859,26 +2859,37 @@ class NodaliaHumidifierCard extends HTMLElement {
           transform: translate3d(-50%, -50%, 0);
           transform-origin: 50% 50%;
           width: calc(${styles.icon.size} * 0.46);
-          will-change: transform;
         }
 
         .humidifier-card__icon--active-motion ha-icon {
-          animation: humidifier-card-icon-breathe 1.8s ease-in-out infinite;
+          animation: humidifier-card-icon-breathe 2.4s ease-in-out infinite;
           transform: translate3d(-50%, -50%, 0);
         }
 
+        .humidifier-card__icon--active-motion::before,
         .humidifier-card__icon--active-motion::after {
-          animation: humidifier-card-icon-mist 1.65s ease-in-out infinite;
-          background: radial-gradient(circle, currentColor 0 34%, transparent 38%);
+          background: radial-gradient(circle, currentColor 0 42%, transparent 72%);
+          border-radius: 999px;
           content: "";
-          height: 5px;
+          height: 7px;
           left: 50%;
-          opacity: 0.42;
+          opacity: 0;
+          pointer-events: none;
           position: absolute;
-          top: 26%;
-          transform: translate3d(-50%, 0, 0);
-          width: 5px;
-          will-change: transform, opacity;
+          top: 28%;
+          transform: translate3d(-50%, 6px, 0) scale(0.65);
+          width: 7px;
+        }
+
+        .humidifier-card__icon--active-motion::before {
+          animation: humidifier-card-icon-mist 2.1s ease-out infinite;
+          margin-left: -7px;
+        }
+
+        .humidifier-card__icon--active-motion::after {
+          animation: humidifier-card-icon-mist 2.1s ease-out infinite;
+          animation-delay: 1.05s;
+          margin-left: 6px;
         }
 
         .humidifier-card__picture {
@@ -3767,21 +3778,24 @@ class NodaliaHumidifierCard extends HTMLElement {
             transform: translate3d(-50%, -50%, 0) scale(1);
           }
           50% {
-            transform: translate3d(-50%, -54%, 0) scale(1.08);
+            transform: translate3d(-50%, -52%, 0) scale(1.04);
           }
         }
 
         @keyframes humidifier-card-icon-mist {
           0% {
             opacity: 0;
-            transform: translate(-50%, 8px) scale(0.7);
+            transform: translate3d(-50%, 8px, 0) scale(0.55);
           }
-          42% {
-            opacity: 0.5;
+          22% {
+            opacity: 0.45;
+          }
+          70% {
+            opacity: 0.28;
           }
           100% {
             opacity: 0;
-            transform: translate(-50%, -14px) scale(1.35);
+            transform: translate3d(-50%, -16px, 0) scale(1.45);
           }
         }
 
@@ -3846,6 +3860,7 @@ class NodaliaHumidifierCard extends HTMLElement {
           }
 
           .humidifier-card__icon--active-motion ha-icon,
+          .humidifier-card__icon--active-motion::before,
           .humidifier-card__icon--active-motion::after {
             animation: none !important;
           }

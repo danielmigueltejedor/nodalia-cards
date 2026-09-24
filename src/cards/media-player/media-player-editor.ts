@@ -220,6 +220,16 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
       return;
     }
 
+    if (normalizedPath === "album_cover_background") {
+      setByPath(this._config, normalizedPath, Boolean(value));
+      // Legacy "artwork.mode: off" left a transparent card with black scrims;
+      // re-enabling the cover restores a visible fill mode.
+      if (value && this._config?.artwork?.mode === "off") {
+        setByPath(this._config, "artwork.mode", "immersive");
+      }
+      return;
+    }
+
     if (isEntityField && (value === undefined || value === null || value === "")) {
       setByPath(this._config, normalizedPath, "");
       return;

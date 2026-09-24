@@ -11,6 +11,7 @@ import {
 import { DEFAULT_CONFIG, normalizeConfig } from "./media-player-config";
 import {
   getArtworkVisuals,
+  isAlbumCoverFillEnabled,
   MediaPlayerArtworkController,
   sampleArtworkPalette,
 } from "./media-player-artwork";
@@ -678,7 +679,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       // Skipping _render when a stage already exists left the hero thumb on the
       // fallback icon while the background already showed the cover.
       const existingStage = this.shadowRoot?.querySelector("[data-media-art-stage]");
-      if (existingStage instanceof HTMLElement && this._config?.album_cover_background !== false) {
+      if (existingStage instanceof HTMLElement && isAlbumCoverFillEnabled(this._config)) {
         this._activeArtworkUrl = url;
         this._syncArtworkLayer(existingStage, {
           artworkUrl: url,
@@ -2847,7 +2848,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     const currentVolumePercent = this._getPlayerVolumePercent(player.entity, state);
     const volumeSupported = this._supportsVolumeControl(state);
     const playerStyles = this._config.styles.player;
-    const hasAlbumBackground = this._config.album_cover_background !== false && Boolean(backgroundArtwork);
+    const hasAlbumBackground = isAlbumCoverFillEnabled(this._config) && Boolean(backgroundArtwork);
     const useActiveTint = isTvPlayer && this._isPlayerActive(state) && !hasAlbumBackground;
     const showUnavailableBadge = this._config.show_unavailable_badge !== false && isUnavailableState(state);
     const playerCardClasses = [
@@ -3365,7 +3366,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       : `color-mix(in srgb, ${albumOverlayColor} 72%, rgba(0, 0, 0, 0.42))`;
     const artworkVisuals = getArtworkVisuals(
       config.artwork,
-      config.album_cover_background !== false,
+      isAlbumCoverFillEnabled(config),
       isLightThemeSurface,
     );
     const albumBackgroundFilter = artworkVisuals.filter;
@@ -5365,7 +5366,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       idle: Boolean(this._activeArtworkIdle),
       entityId: artworkEntityId,
       hasAlbumBackground: Boolean(contentMarkup)
-        && this._config.album_cover_background !== false
+        && isAlbumCoverFillEnabled(this._config)
         && Boolean(this._activeArtworkUrl || keepIdleArtwork),
     });
 

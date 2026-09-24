@@ -31,6 +31,17 @@ export function getArtworkVisuals(
   };
 }
 
+/** Album art fills the card only when the cover toggle is on and mode is not "off". */
+export function isAlbumCoverFillEnabled(config: {
+  album_cover_background?: boolean;
+  artwork?: { mode?: string };
+} | null | undefined = {}): boolean {
+  if (!config || config.album_cover_background === false) {
+    return false;
+  }
+  return String(config.artwork?.mode || "").trim().toLowerCase() !== "off";
+}
+
 export function prefersReducedMotion(): boolean {
   return typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 }

@@ -104,6 +104,9 @@ export const DEFAULT_CONFIG = {
     show: undefined,
     show_desktop: false,
     album_cover_background: true,
+    artwork: {
+      mode: "immersive",
+    },
     gap: "0px",
     reserve_height: "116px",
     players: [],
@@ -158,6 +161,13 @@ export function normalizeConfig(config) {
   }
 
   const mergedConfig = mergeConfig(DEFAULT_CONFIG, baseConfig);
+  const artworkMode = String(mergedConfig.media_player?.artwork?.mode || "").trim().toLowerCase();
+  mergedConfig.media_player = {
+    ...mergedConfig.media_player,
+    artwork: {
+      mode: artworkMode === "blur" ? "blur" : "immersive",
+    },
+  };
   mergedConfig.security = window.NodaliaUtils?.normalizeSecurityConfig?.(mergedConfig.security, DEFAULT_CONFIG.security)
     ?? {
       ...DEFAULT_CONFIG.security,

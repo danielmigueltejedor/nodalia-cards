@@ -4,7 +4,7 @@
   // src/cards/weather/weather-constants.ts
   var CARD_TAG = "nodalia-weather-card";
   var EDITOR_TAG = "nodalia-weather-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.42";
+  var CARD_VERSION = "2.3.0-alpha.43";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
@@ -1895,34 +1895,43 @@
 
         .weather-card__icon--rain-motion::after,
         .weather-card__icon--snow-motion::after {
-          animation: weather-card-icon-fall 0.95s linear infinite;
+          animation: weather-card-icon-rain 1.05s linear infinite;
           background:
-            radial-gradient(circle at 22% 18%, currentColor 0 1.3px, transparent 1.8px),
-            radial-gradient(circle at 58% 44%, currentColor 0 1.2px, transparent 1.8px),
-            radial-gradient(circle at 78% 6%, currentColor 0 1.1px, transparent 1.7px);
+            radial-gradient(ellipse 1.1px 2.4px at 24% 12%, currentColor 0 70%, transparent 72%),
+            radial-gradient(ellipse 1px 2.2px at 48% 0%, currentColor 0 70%, transparent 72%),
+            radial-gradient(ellipse 1.15px 2.6px at 72% 18%, currentColor 0 70%, transparent 72%),
+            radial-gradient(ellipse 0.95px 2px at 36% 36%, currentColor 0 70%, transparent 72%),
+            radial-gradient(ellipse 1px 2.3px at 62% 42%, currentColor 0 70%, transparent 72%);
           content: "";
-          inset: 18% 18% 12%;
-          opacity: 0.42;
+          inset: 14% 16% 8%;
+          opacity: 0;
           pointer-events: none;
           position: absolute;
+          transform: translate3d(-1px, -8px, 0);
         }
 
         .weather-card__icon--snow-motion::after {
-          animation-duration: 1.35s;
-          opacity: 0.5;
+          animation: weather-card-icon-snow 1.8s ease-in-out infinite;
+          background:
+            radial-gradient(circle at 22% 10%, currentColor 0 1.35px, transparent 1.7px),
+            radial-gradient(circle at 54% 0%, currentColor 0 1.2px, transparent 1.55px),
+            radial-gradient(circle at 78% 16%, currentColor 0 1.1px, transparent 1.45px),
+            radial-gradient(circle at 38% 34%, currentColor 0 1.25px, transparent 1.6px),
+            radial-gradient(circle at 66% 40%, currentColor 0 1.05px, transparent 1.4px);
+          transform: translate3d(0, -6px, 0);
         }
 
         .weather-card__icon--sun-motion ha-icon {
-          animation: weather-card-icon-pulse 2.1s ease-in-out infinite;
+          animation: weather-card-icon-pulse 2.4s ease-in-out infinite;
         }
 
         .weather-card__icon--wind-motion ha-icon,
         .weather-card__icon--cloud-motion ha-icon {
-          animation: weather-card-icon-drift 2.2s ease-in-out infinite;
+          animation: weather-card-icon-drift 2.8s ease-in-out infinite;
         }
 
         .weather-card__icon--storm-motion ha-icon {
-          animation: weather-card-icon-flash 1.3s steps(2, end) infinite;
+          animation: weather-card-icon-flash 1.6s ease-in-out infinite;
         }
 
         .weather-card__unavailable-badge {
@@ -2959,12 +2968,40 @@
           }
         }
 
-        @keyframes weather-card-icon-fall {
-          from {
-            transform: translateY(-6px);
+        @keyframes weather-card-icon-rain {
+          0% {
+            opacity: 0;
+            transform: translate3d(-1px, -8px, 0);
           }
-          to {
-            transform: translateY(10px);
+          12% {
+            opacity: 0.55;
+          }
+          78% {
+            opacity: 0.4;
+          }
+          100% {
+            opacity: 0;
+            transform: translate3d(2px, 14px, 0);
+          }
+        }
+
+        @keyframes weather-card-icon-snow {
+          0% {
+            opacity: 0;
+            transform: translate3d(-2px, -6px, 0);
+          }
+          18% {
+            opacity: 0.52;
+          }
+          50% {
+            transform: translate3d(2px, 4px, 0);
+          }
+          82% {
+            opacity: 0.38;
+          }
+          100% {
+            opacity: 0;
+            transform: translate3d(-1px, 12px, 0);
           }
         }
 
@@ -2973,16 +3010,16 @@
             transform: scale(1);
           }
           50% {
-            transform: scale(1.12);
+            transform: scale(1.06);
           }
         }
 
         @keyframes weather-card-icon-drift {
           0%, 100% {
-            transform: translateX(-2px);
+            transform: translateX(-1.5px);
           }
           50% {
-            transform: translateX(3px);
+            transform: translateX(2px);
           }
         }
 
@@ -2991,27 +3028,41 @@
             opacity: 1;
             transform: translateZ(0) scale(1);
           }
-          50% {
-            opacity: 0.72;
-            transform: translateZ(0) scale(1.04);
+          18% {
+            opacity: 0.55;
+            transform: translateZ(0) scale(0.97);
+          }
+          32% {
+            opacity: 1;
+            transform: translateZ(0) scale(1.05);
+          }
+          48% {
+            opacity: 0.7;
+            transform: translateZ(0) scale(1);
+          }
+          64%, 100% {
+            opacity: 1;
+            transform: translateZ(0) scale(1);
           }
         }
 
-        ${animations.enabled ? "" : `
+        ${animations.enabled ? `
+        @media (prefers-reduced-motion: reduce) {
+          .weather-card__icon--rain-motion::after,
+          .weather-card__icon--snow-motion::after,
+          .weather-card__icon--sun-motion ha-icon,
+          .weather-card__icon--wind-motion ha-icon,
+          .weather-card__icon--cloud-motion ha-icon,
+          .weather-card__icon--storm-motion ha-icon {
+            animation: none !important;
+          }
+        }
+        ` : `
         ha-card,
         .weather-card,
         .weather-card * {
           animation: none !important;
           transition: none !important;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .weather-card__icon,
-          .weather-card__icon::after,
-          .weather-card__icon ha-icon {
-            animation: none !important;
-            transition: none !important;
-          }
         }
         `}
       </style>

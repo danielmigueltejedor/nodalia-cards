@@ -4,7 +4,7 @@
   // src/cards/media-player/media-player-constants.ts
   var CARD_TAG = "nodalia-media-player";
   var EDITOR_TAG = "nodalia-media-player-editor";
-  var CARD_VERSION = "2.3.0-alpha.42";
+  var CARD_VERSION = "2.3.0-alpha.43";
   var INVALID_EDITOR_VALUE = /* @__PURE__ */ Symbol("invalid-editor-value");
   var MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
   var HAPTIC_PATTERNS = {
@@ -511,6 +511,12 @@
       opacity: String(Math.min(1, Math.max(0.15, opacity))),
       dim: Math.min(0.85, Math.max(0, Number(artwork.dim) || 0))
     };
+  }
+  function isAlbumCoverFillEnabled(config = {}) {
+    if (!config || config.album_cover_background === false) {
+      return false;
+    }
+    return String(config.artwork?.mode || "").trim().toLowerCase() !== "off";
   }
   function prefersReducedMotion() {
     return typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1675,7 +1681,7 @@
             return;
           }
           const existingStage = this.shadowRoot?.querySelector("[data-media-art-stage]");
-          if (existingStage instanceof HTMLElement && this._config?.album_cover_background !== false) {
+          if (existingStage instanceof HTMLElement && isAlbumCoverFillEnabled(this._config)) {
             this._activeArtworkUrl = url;
             this._syncArtworkLayer(existingStage, {
               artworkUrl: url,
@@ -3370,7 +3376,7 @@
         const currentVolumePercent = this._getPlayerVolumePercent(player.entity, state);
         const volumeSupported = this._supportsVolumeControl(state);
         const playerStyles = this._config.styles.player;
-        const hasAlbumBackground = this._config.album_cover_background !== false && Boolean(backgroundArtwork);
+        const hasAlbumBackground = isAlbumCoverFillEnabled(this._config) && Boolean(backgroundArtwork);
         const useActiveTint = isTvPlayer && this._isPlayerActive(state) && !hasAlbumBackground;
         const showUnavailableBadge = this._config.show_unavailable_badge !== false && isUnavailableState(state);
         const playerCardClasses = [
@@ -3787,7 +3793,7 @@
         const albumOverlayBottom = isLightThemeSurface ? `color-mix(in srgb, ${albumOverlayColor} 58%, rgba(0, 0, 0, 0.28))` : `color-mix(in srgb, ${albumOverlayColor} 72%, rgba(0, 0, 0, 0.42))`;
         const artworkVisuals = getArtworkVisuals(
           config.artwork,
-          config.album_cover_background !== false,
+          isAlbumCoverFillEnabled(config),
           isLightThemeSurface
         );
         const albumBackgroundFilter = artworkVisuals.filter;
@@ -5775,7 +5781,7 @@
           artworkUrl: this._activeArtworkUrl || "",
           idle: Boolean(this._activeArtworkIdle),
           entityId: artworkEntityId,
-          hasAlbumBackground: Boolean(contentMarkup) && this._config.album_cover_background !== false && Boolean(this._activeArtworkUrl || keepIdleArtwork)
+          hasAlbumBackground: Boolean(contentMarkup) && isAlbumCoverFillEnabled(this._config) && Boolean(this._activeArtworkUrl || keepIdleArtwork)
         });
         this._restoreMediaBrowserScrollState();
         this._restoreTvPanelScrollState();
@@ -6128,6 +6134,13 @@
         const isEntityField = normalizedPath === "entity" || normalizedPath.endsWith(".entity");
         if (normalizedPath === "artwork.blur_gradient") {
           setByPath(this._config, "artwork.mode", value ? "blur" : "immersive");
+          return;
+        }
+        if (normalizedPath === "album_cover_background") {
+          setByPath(this._config, normalizedPath, Boolean(value));
+          if (value && this._config?.artwork?.mode === "off") {
+            setByPath(this._config, "artwork.mode", "immersive");
+          }
           return;
         }
         if (isEntityField && (value === void 0 || value === null || value === "")) {

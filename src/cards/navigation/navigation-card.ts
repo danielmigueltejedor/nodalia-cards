@@ -2152,7 +2152,8 @@ class NodaliaNavigationBarCard extends HTMLElement {
       ? `<div class="media-player__subtitle">${escapeHtml(subtitle)}</div>`
       : "";
     const progress = this._getMediaPlayerProgress(state);
-    const albumCoverBackground = this._config.media_player.album_cover_background && artwork;
+    const albumCoverBackground = this._config.media_player.album_cover_background !== false && Boolean(artwork);
+    const albumCoverBlur = albumCoverBackground && this._config.media_player.artwork?.mode === "blur";
     const chips = this._getMediaPlayerChips(player, state, progress, title, subtitle);
     const playerName = this._getMediaPlayerPlayerLabel(player, state);
     const statusLabel = this._getMediaPlayerStateLabel(state.state);
@@ -2276,7 +2277,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
     return `
       <div
-        class="media-player-card ${albumCoverBackground ? "has-album-background" : ""}${animateCardEntrance ? " media-player-card--entering" : ""}"
+        class="media-player-card ${albumCoverBackground ? "has-album-background" : ""}${albumCoverBlur ? " has-album-background--blur" : albumCoverBackground ? " has-album-background--immersive" : ""}${animateCardEntrance ? " media-player-card--entering" : ""}"
         data-media-card-index="${this._activeMediaPlayerIndex}"
       >
         ${
@@ -3316,31 +3317,60 @@ class NodaliaNavigationBarCard extends HTMLElement {
           inset: 0;
           pointer-events: none;
           position: absolute;
-          z-index: 0;
+          z-index: 1;
+        }
+
+        .media-player-card.has-album-background {
+          background: transparent;
+          border-color: color-mix(in srgb, var(--divider-color) 55%, transparent);
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 12px 28px rgba(0, 0, 0, 0.16);
+        }
+
+        .media-player-card.has-album-background::before {
+          background: linear-gradient(180deg, rgba(0, 0, 0, 0.14), transparent 46%);
         }
 
         .media-player-card.has-album-background::after {
           background: linear-gradient(
             180deg,
-            rgba(0, 0, 0, 0.08),
-            ${config.styles.media_player.overlay_color},
-            rgba(0, 0, 0, 0.16)
+            color-mix(in srgb, ${config.styles.media_player.overlay_color} 58%, rgba(0, 0, 0, 0.22)),
+            color-mix(in srgb, ${config.styles.media_player.overlay_color} 42%, transparent),
+            color-mix(in srgb, ${config.styles.media_player.overlay_color} 72%, rgba(0, 0, 0, 0.36))
           );
           content: "";
           inset: 0;
           position: absolute;
-          z-index: 0;
+          z-index: 2;
         }
 
         .media-player__album-bg {
           background-position: center;
           background-size: cover;
-          filter: blur(30px) saturate(0.82);
-          inset: -24px;
-          opacity: 0.38;
+          filter: saturate(1.05) brightness(0.96);
+          inset: -6px;
+          opacity: 1;
           position: absolute;
+          transform: scale(1.04);
+          z-index: 0;
+        }
+
+        .media-player-card.has-album-background--blur .media-player__album-bg {
+          filter: blur(18px) saturate(1.05);
+          inset: -24px;
+          opacity: 0.92;
           transform: scale(1.14);
-          z-index: -1;
+        }
+
+        .media-player-card.has-album-background .media-player__title,
+        .media-player-card.has-album-background .media-player__subtitle {
+          color: #fff;
+          text-shadow:
+            0 1px 2px rgba(0, 0, 0, 0.55),
+            0 0 12px rgba(0, 0, 0, 0.35);
+        }
+
+        .media-player-card.has-album-background .media-player__subtitle {
+          color: rgba(255, 255, 255, 0.94);
         }
 
         .media-player__progress {
