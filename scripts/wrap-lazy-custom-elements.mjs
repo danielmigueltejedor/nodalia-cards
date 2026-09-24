@@ -256,18 +256,33 @@ function patchStandalone(filePath, importName) {
     return;
   }
   let source = fs.readFileSync(filePath, "utf8");
-  if (!source.includes(`import { ${importName} }`)) {
+  const loaderName = `load${importName}`;
+  const hadDirectImport = source.includes(`import { ${importName} } from`);
+  const hadLoaderImport = source.includes(`import { ${loaderName} } from`);
+
+  if (!hadDirectImport && !hadLoaderImport) {
     return;
   }
-  source = source.replace(`import { ${importName} } from`, `import { load${importName} } from`);
-  source = source.replaceAll(importName, (value, offset, original) => {
-    if (original.slice(Math.max(0, offset - 4), offset) === "load") {
-      return value;
-    }
-    return `load${importName}()`;
-  });
-  source = source.replace(`import { loadload${importName} } from`, `import { load${importName} } from`);
-  fs.writeFileSync(filePath, source);
+
+  if (hadDirectImport) {
+    source = source.replace(
+      `import { ${importName} } from`,
+      `import { ${loaderName} } from`,
+    );
+  }
+
+  // Rewrite bare class references to loader calls. The lookbehind skips the
+  // import binding itself (`loadNodalia…`) so we never emit `loadload…`.
+  const next = source.replace(
+    new RegExp(`(?<!\\w)(?<!load)${importName}(?!\\w)`, "g"),
+    `${loaderName}()`,
+  );
+
+  if (next === source && hadLoaderImport) {
+    return;
+  }
+
+  fs.writeFileSync(filePath, next);
   console.log("patched standalone", path.relative(root, filePath));
 }
 

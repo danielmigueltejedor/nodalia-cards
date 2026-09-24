@@ -59,7 +59,9 @@ jobs:
         run: |
           mapfile -t assets < release/release-assets.txt
           release_title="${GITHUB_REF_NAME#v}"
-          if [[ "$GITHUB_REF_NAME" == *-* ]]; then
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "${assets[@]}" --clobber
+          elif [[ "$GITHUB_REF_NAME" == *-* ]]; then
             gh release create "$GITHUB_REF_NAME" "${assets[@]}" \
               --verify-tag \
               --generate-notes \
