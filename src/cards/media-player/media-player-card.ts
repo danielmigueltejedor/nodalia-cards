@@ -139,6 +139,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._tvVolumePanelAnimatingEntity = null;
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
+    this._resizeSyncTimer = 0;
     this._readyArtworkUrls = new Set();
     this._failedArtworkUrls = new Set();
     this._pendingArtworkPreloads = new Map();
@@ -155,7 +156,21 @@ class NodaliaMediaPlayer extends HTMLElement {
         this._pendingRenderAfterDrag = true;
         return;
       }
-      this._syncPresentationMode();
+      // Debounce: layout refresh may dispatch window resize; avoid a render storm
+      // across every media player on the dashboard.
+      if (this._resizeSyncTimer) {
+        window.clearTimeout(this._resizeSyncTimer);
+      }
+      this._resizeSyncTimer = window.setTimeout(() => {
+        this._resizeSyncTimer = 0;
+        if (!this.isConnected || this._activeSliderDrag || this._activeProgressDrag) {
+          if (this._activeSliderDrag || this._activeProgressDrag) {
+            this._pendingRenderAfterDrag = true;
+          }
+          return;
+        }
+        this._syncPresentationMode();
+      }, 80);
     };
     this._onWindowKeyDown = event => {
       if (event.key === "Escape" && this._mediaBrowserState) {
@@ -217,6 +232,10 @@ class NodaliaMediaPlayer extends HTMLElement {
     if (this._entranceAnimationResetTimer) {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
+    }
+    if (this._resizeSyncTimer) {
+      window.clearTimeout(this._resizeSyncTimer);
+      this._resizeSyncTimer = 0;
     }
     this._mediaBrowserRequestToken += 1;
     this._animateContentOnNextRender = true;
@@ -3430,15 +3449,10 @@ class NodaliaMediaPlayer extends HTMLElement {
     } else {
       this.removeAttribute("data-idle-compact");
     }
-    if (wasIdleCompact !== nextIdleCompact) {
-      this._notifySectionLayoutChange({ forceWindowResize: nextIdleCompact });
-      // After on→off the host must shrink with content; deferred nudges let
-      // sections remeasure once height:auto has painted (and again after paint).
-      this._scheduleSectionLayoutRefresh(80, { forceWindowResize: nextIdleCompact });
-      if (nextIdleCompact) {
-        this._scheduleSectionLayoutRefresh(220, { forceWindowResize: true });
-      }
-    }
+    // Remeasure AFTER chrome commit — firing here measured the previous tall
+    // on-state DOM and could re-lock the sections footprint.
+    const idleCompactChanged = wasIdleCompact !== nextIdleCompact;
+    const collapsedToIdle = idleCompactChanged && nextIdleCompact;
     const cardTopHighlight = isLightThemeSurface
       ? "linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background) 34%, transparent), rgba(255, 255, 255, 0))"
       : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent), rgba(255, 255, 255, 0))";
@@ -5423,6 +5437,13 @@ class NodaliaMediaPlayer extends HTMLElement {
         && isAlbumCoverFillEnabled(this._config)
         && Boolean(this._activeArtworkUrl || keepIdleArtwork),
     });
+
+    if (idleCompactChanged) {
+      // iron-resize after paint; one deferred window resize only when collapsing
+      // (Fav-style) so sections drops the tall on-state span without a resize storm.
+      this._scheduleSectionLayoutRefresh(0);
+      this._scheduleSectionLayoutRefresh(100, { forceWindowResize: collapsedToIdle });
+    }
 
     this._restoreMediaBrowserScrollState();
     this._restoreTvPanelScrollState();

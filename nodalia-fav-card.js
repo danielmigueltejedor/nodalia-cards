@@ -4,7 +4,7 @@
   // src/cards/fav/fav-constants.ts
   var CARD_TAG = "nodalia-fav-card";
   var EDITOR_TAG = "nodalia-fav-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.45";
+  var CARD_VERSION = "2.3.0-alpha.46";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
@@ -487,6 +487,9 @@
             return;
           }
           const nextWidth = Math.round(entry.contentRect?.width || this.clientWidth || 0);
+          if (nextWidth < 48) {
+            return;
+          }
           const nextLayout = this._getResolvedLayout(nextWidth);
           if (nextWidth === this._cardWidth && nextLayout === this._layout) {
             return;
@@ -522,8 +525,11 @@
         this._render();
       }
       set hass(hass) {
-        const nextSignature = this._getRenderSignature(hass);
         this._hass = hass;
+        if (!this.isConnected) {
+          return;
+        }
+        const nextSignature = this._getRenderSignature(hass);
         if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
           return;
         }
@@ -1142,6 +1148,7 @@
         this._applyHostGridSpan(false);
         this._render();
         this._notifyLayoutChange();
+        this._scheduleLayoutRefresh(80);
       }
       _openMoreInfo(entityId = this._config?.entity) {
         if (!entityId) {
@@ -1221,13 +1228,23 @@
           return;
         }
         fireEvent(this, "iron-resize", {});
-        if (typeof window !== "undefined") {
-          requestAnimationFrame(() => {
-            if (!this.isConnected) {
-              return;
-            }
-            window.dispatchEvent(new Event("resize"));
-          });
+      }
+      _scheduleLayoutRefresh(delay = 0) {
+        if (typeof window === "undefined") {
+          return;
+        }
+        const safeDelay = Math.max(0, Number(delay) || 0);
+        const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+        const done = () => {
+          if (!this.isConnected) {
+            return;
+          }
+          this._notifyLayoutChange();
+        };
+        if (typeof schedule === "function") {
+          schedule(this, done, safeDelay);
+        } else {
+          window.setTimeout(done, safeDelay);
         }
       }
       _getAlarmGridSpan() {
@@ -1280,6 +1297,9 @@
           this._applyHostGridSpan(this._alarmMenuOpen);
           this._render();
           this._notifyLayoutChange();
+          if (!this._alarmMenuOpen) {
+            this._scheduleLayoutRefresh(80);
+          }
           return;
         }
         const tapAction = String(this._config?.tap_action || "auto").trim().toLowerCase();
@@ -1882,6 +1902,9 @@
             }
             this._applyHostGridSpan(showAlarmPanel);
             this._notifyLayoutChange();
+            if (!showAlarmPanel) {
+              this._scheduleLayoutRefresh(80);
+            }
           });
         } else if (!isAlarmPanel) {
           this._lastAlarmPanelRenderedOpen = false;

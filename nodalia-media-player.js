@@ -4,7 +4,7 @@
   // src/cards/media-player/media-player-constants.ts
   var CARD_TAG = "nodalia-media-player";
   var EDITOR_TAG = "nodalia-media-player-editor";
-  var CARD_VERSION = "2.3.0-alpha.45";
+  var CARD_VERSION = "2.3.0-alpha.46";
   var INVALID_EDITOR_VALUE = /* @__PURE__ */ Symbol("invalid-editor-value");
   var MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
   var HAPTIC_PATTERNS = {
@@ -1239,6 +1239,7 @@
         this._tvVolumePanelAnimatingEntity = null;
         this._animateContentOnNextRender = true;
         this._entranceAnimationResetTimer = 0;
+        this._resizeSyncTimer = 0;
         this._readyArtworkUrls = /* @__PURE__ */ new Set();
         this._failedArtworkUrls = /* @__PURE__ */ new Set();
         this._pendingArtworkPreloads = /* @__PURE__ */ new Map();
@@ -1255,7 +1256,19 @@
             this._pendingRenderAfterDrag = true;
             return;
           }
-          this._syncPresentationMode();
+          if (this._resizeSyncTimer) {
+            window.clearTimeout(this._resizeSyncTimer);
+          }
+          this._resizeSyncTimer = window.setTimeout(() => {
+            this._resizeSyncTimer = 0;
+            if (!this.isConnected || this._activeSliderDrag || this._activeProgressDrag) {
+              if (this._activeSliderDrag || this._activeProgressDrag) {
+                this._pendingRenderAfterDrag = true;
+              }
+              return;
+            }
+            this._syncPresentationMode();
+          }, 80);
         };
         this._onWindowKeyDown = (event) => {
           if (event.key === "Escape" && this._mediaBrowserState) {
@@ -1315,6 +1328,10 @@
         if (this._entranceAnimationResetTimer) {
           window.clearTimeout(this._entranceAnimationResetTimer);
           this._entranceAnimationResetTimer = 0;
+        }
+        if (this._resizeSyncTimer) {
+          window.clearTimeout(this._resizeSyncTimer);
+          this._resizeSyncTimer = 0;
         }
         this._mediaBrowserRequestToken += 1;
         this._animateContentOnNextRender = true;
@@ -3852,13 +3869,8 @@
         } else {
           this.removeAttribute("data-idle-compact");
         }
-        if (wasIdleCompact !== nextIdleCompact) {
-          this._notifySectionLayoutChange({ forceWindowResize: nextIdleCompact });
-          this._scheduleSectionLayoutRefresh(80, { forceWindowResize: nextIdleCompact });
-          if (nextIdleCompact) {
-            this._scheduleSectionLayoutRefresh(220, { forceWindowResize: true });
-          }
-        }
+        const idleCompactChanged = wasIdleCompact !== nextIdleCompact;
+        const collapsedToIdle = idleCompactChanged && nextIdleCompact;
         const cardTopHighlight = isLightThemeSurface ? "linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background) 34%, transparent), rgba(255, 255, 255, 0))" : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent), rgba(255, 255, 255, 0))";
         const albumCardShadow = "0 1px 2px rgba(0, 0, 0, 0.08), 0 12px 28px rgba(0, 0, 0, 0.16)";
         const activeTintPrimaryStrength = isLightThemeSurface ? 52 : 46;
@@ -5830,6 +5842,10 @@
           entityId: artworkEntityId,
           hasAlbumBackground: Boolean(contentMarkup) && isAlbumCoverFillEnabled(this._config) && Boolean(this._activeArtworkUrl || keepIdleArtwork)
         });
+        if (idleCompactChanged) {
+          this._scheduleSectionLayoutRefresh(0);
+          this._scheduleSectionLayoutRefresh(100, { forceWindowResize: collapsedToIdle });
+        }
         this._restoreMediaBrowserScrollState();
         this._restoreTvPanelScrollState();
         const mediaBrowserDialog = this.shadowRoot.querySelector('.media-browser-panel[role="dialog"]');

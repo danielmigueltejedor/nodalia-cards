@@ -101,11 +101,13 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     this._detachPrimaryHold?.();
     this._detachPrimaryHold = () => {};
     this._suppressNextPrimaryClick = false;
-    this._lastRenderSignature = "";
-    this._hubShellConfigSignature = "";
+    this._parkHubEmbeddedCards();
     this._hubEmbedCache?.clear();
     this._hubEmbedConfigSignatures = new WeakMap();
     this._hubEmbedStash = null;
+    this._lastRenderSignature = "";
+    this._hubShellConfigSignature = "";
+    window.NodaliaUtils?.clearDeferTimers?.(this);
   }
 
   _onHubBodyAnimationEnd(event) {

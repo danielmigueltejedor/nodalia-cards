@@ -8,6 +8,33 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.46] - 2026-09-25
+
+Bundle-wide layout and performance pass: safer ResizeObservers, less global
+resize thrash, and Media Player reflow after idle chrome paints.
+
+### Fixed
+
+- Media Player schedules section reflow **after** idle chrome commits (was
+  measuring the previous tall on-state DOM).
+- Light, Fan, Humidifier, Cover, Entity, Fav and Alarm ignore sub-48px resize
+  glitches (same as Vacuum) so sections do not lock an expanded footprint.
+- Fav no longer dispatches a global `window.resize` on alarm panel changes
+  (was forcing every Media Player to remeasure/re-render).
+- Fav and Navigation debounce layout work; Fav skips `hass` renders while
+  disconnected; Room Summary parks embedded cards and clears defer timers on
+  disconnect so streams/listeners release cleanly.
+
+### Changed
+
+- Media Player collapses with one deferred window resize instead of a triple
+  pulse; Navigation resize handling is debounced to 100ms.
+
+### Validation
+
+- Interaction regressions assert compact cards skip `< 48` width measures; Fav
+  has no global resize dispatch; Media Player asserts post-commit remeasure.
+
 ## [2.3.0-alpha.45] - 2026-09-25
 
 Collapse Media Player to idle height when a TV powers off, even if stale

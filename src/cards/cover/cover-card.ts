@@ -80,6 +80,10 @@ class NodaliaCoverCard extends HTMLElement {
               return;
             }
             const nextWidth = Math.round(entry.contentRect?.width || this.clientWidth || 0);
+            // Ignore collapse glitches (display:none, mid-reflow 0-width).
+            if (nextWidth < 48) {
+              return;
+            }
             if (nextWidth === this._cardWidth) {
               return;
             }

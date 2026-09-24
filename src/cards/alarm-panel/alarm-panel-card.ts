@@ -168,7 +168,11 @@ class NodaliaAlarmPanelCard extends HTMLElement {
           return;
         }
 
-        const nextWidth = entry.contentRect.width;
+        const nextWidth = Math.round(entry.contentRect?.width || this.clientWidth || 0);
+        // Ignore collapse glitches (display:none, mid-reflow 0-width).
+        if (nextWidth < 48) {
+          return;
+        }
         const nextCompact = this._shouldUseCompactLayout(nextWidth);
         if (nextWidth === this._cardWidth && nextCompact === this._isCompactLayout) {
           return;

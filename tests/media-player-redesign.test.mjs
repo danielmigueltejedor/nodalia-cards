@@ -289,7 +289,9 @@ test("media player idle compact sizes to content instead of stretching section c
     /:host\(\[data-idle-compact="true"\]\) \{[\s\S]*?align-self: stretch;[\s\S]*?height: 100%;/,
   );
   assert.match(source, /_scheduleSectionLayoutRefresh\(/);
-  assert.match(source, /forceWindowResize: nextIdleCompact/);
+  assert.match(source, /collapsedToIdle/);
+  assert.match(source, /Remeasure AFTER chrome commit/);
+  assert.match(source, /Debounce: layout refresh may dispatch window resize/);
   assert.match(
     source,
     /_getPlayerDeviceType\(player, state\) === "tv"[\s\S]*?\["off", "standby", "unavailable", "unknown"\]/,

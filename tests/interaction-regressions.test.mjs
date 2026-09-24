@@ -2558,6 +2558,26 @@ test("vacuum dense compact reports a 2-row section footprint", () => {
   assert.doesNotMatch(source, /window\.dispatchEvent\(new Event\("resize"\)\)/);
 });
 
+test("compact cards ignore sub-48px resize glitches like vacuum", () => {
+  for (const file of [
+    "src/cards/light/light-card.ts",
+    "src/cards/fan/fan-card.ts",
+    "src/cards/humidifier/humidifier-card.ts",
+    "src/cards/cover/cover-card.ts",
+    "src/cards/entity/entity-card.ts",
+    "src/cards/fav/fav-card.ts",
+    "src/cards/alarm-panel/alarm-panel-card.ts",
+  ]) {
+    const source = read(file);
+    assert.match(source, /if \(nextWidth < 48\) \{\s*return;/, file);
+  }
+  const fav = read("src/cards/fav/fav-card.ts");
+  assert.doesNotMatch(fav, /window\.dispatchEvent\(new Event\("resize"\)\)/);
+  assert.match(fav, /_scheduleLayoutRefresh\(/);
+  const navigation = read("src/cards/navigation/navigation-card.ts");
+  assert.match(navigation, /_resizeSyncTimer/);
+});
+
 test("compact fan and humidifier keep configured mode controls beside the slider", () => {
   const fan = read("src/cards/fan/fan-card.ts");
   assert.match(fan, /const showCompactSecondary = hasSecondaryControls;/);

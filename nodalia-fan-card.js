@@ -4,7 +4,7 @@
   // src/cards/fan/fan-constants.ts
   var CARD_TAG = "nodalia-fan-card";
   var EDITOR_TAG = "nodalia-fan-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.45";
+  var CARD_VERSION = "2.3.0-alpha.46";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
@@ -500,6 +500,9 @@
             return;
           }
           const nextWidth = Math.round(entry.contentRect?.width || this.clientWidth || 0);
+          if (nextWidth < 48) {
+            return;
+          }
           const nextCompact = this._shouldUseCompactLayout(nextWidth);
           if (nextWidth === this._cardWidth && nextCompact === this._isCompactLayout) {
             return;

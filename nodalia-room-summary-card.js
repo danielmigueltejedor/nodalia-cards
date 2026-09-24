@@ -4,7 +4,7 @@
   // src/cards/room-summary/room-summary-constants.ts
   var CARD_TAG = "nodalia-room-summary-card";
   var EDITOR_TAG = "nodalia-room-summary-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.45";
+  var CARD_VERSION = "2.3.0-alpha.46";
   var HUB_PANELS = /* @__PURE__ */ new Set(["home", "lights", "covers", "climate", "vacuum", "fans", "humidifiers", "media", "camera", "security", "others"]);
   var COMFORT = { hot: 27, cold: 17, humid: 70, dry: 30 };
   var CUSTOMIZABLE_EMBED_LISTS = /* @__PURE__ */ new Set(["lights", "vacuums", "fans", "humidifiers", "others"]);
@@ -479,11 +479,13 @@
         this._detachPrimaryHold = () => {
         };
         this._suppressNextPrimaryClick = false;
-        this._lastRenderSignature = "";
-        this._hubShellConfigSignature = "";
+        this._parkHubEmbeddedCards();
         this._hubEmbedCache?.clear();
         this._hubEmbedConfigSignatures = /* @__PURE__ */ new WeakMap();
         this._hubEmbedStash = null;
+        this._lastRenderSignature = "";
+        this._hubShellConfigSignature = "";
+        window.NodaliaUtils?.clearDeferTimers?.(this);
       }
       _onHubBodyAnimationEnd(event) {
         const body = event.target;

@@ -11,11 +11,11 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.45
+2.3.0-alpha.46
 ```
 
-Preview **`2.3.0-alpha.45`** collapses Media Player when a TV powers off even if
-stale media attributes remain, so sections drop the tall on-state footprint.
+Preview **`2.3.0-alpha.46`** hardens section layout and resize handling across
+Media Player, Vacuum siblings, Fav, Navigation and Room Summary.
 Stable **`2.2.10`** remains the recommended daily-driver release.
 
 ## Current stable release

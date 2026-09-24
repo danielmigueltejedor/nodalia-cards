@@ -4,7 +4,7 @@
   // src/cards/alarm-panel/alarm-panel-constants.ts
   var CARD_TAG = "nodalia-alarm-panel-card";
   var EDITOR_TAG = "nodalia-alarm-panel-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.45";
+  var CARD_VERSION = "2.3.0-alpha.46";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
@@ -321,7 +321,10 @@
             if (!entry) {
               return;
             }
-            const nextWidth = entry.contentRect.width;
+            const nextWidth = Math.round(entry.contentRect?.width || this.clientWidth || 0);
+            if (nextWidth < 48) {
+              return;
+            }
             const nextCompact = this._shouldUseCompactLayout(nextWidth);
             if (nextWidth === this._cardWidth && nextCompact === this._isCompactLayout) {
               return;

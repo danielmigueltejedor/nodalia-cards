@@ -86,6 +86,10 @@ class NodaliaFavCard extends HTMLElement {
       }
 
       const nextWidth = Math.round(entry.contentRect?.width || this.clientWidth || 0);
+      // Ignore collapse glitches (display:none, mid-reflow 0-width).
+      if (nextWidth < 48) {
+        return;
+      }
       const nextLayout = this._getResolvedLayout(nextWidth);
 
       if (nextWidth === this._cardWidth && nextLayout === this._layout) {
@@ -129,9 +133,12 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   set hass(hass) {
-    const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
+    if (!this.isConnected) {
+      return;
+    }
 
+    const nextSignature = this._getRenderSignature(hass);
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
       return;
     }
@@ -886,6 +893,7 @@ class NodaliaFavCard extends HTMLElement {
     this._applyHostGridSpan(false);
     this._render();
     this._notifyLayoutChange();
+    this._scheduleLayoutRefresh(80);
   }
 
   _openMoreInfo(entityId = this._config?.entity) {
@@ -987,15 +995,27 @@ class NodaliaFavCard extends HTMLElement {
     if (!this.isConnected) {
       return;
     }
+    // Prefer sections-local iron-resize. A global window resize made sibling
+    // media players remeasure and re-render mid-layout.
     fireEvent(this, "iron-resize", {});
+  }
 
-    if (typeof window !== "undefined") {
-      requestAnimationFrame(() => {
-        if (!this.isConnected) {
-          return;
-        }
-        window.dispatchEvent(new Event("resize"));
-      });
+  _scheduleLayoutRefresh(delay = 0) {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const safeDelay = Math.max(0, Number(delay) || 0);
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      if (!this.isConnected) {
+        return;
+      }
+      this._notifyLayoutChange();
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, safeDelay);
+    } else {
+      window.setTimeout(done, safeDelay);
     }
   }
 
@@ -1058,6 +1078,9 @@ class NodaliaFavCard extends HTMLElement {
       this._applyHostGridSpan(this._alarmMenuOpen);
       this._render();
       this._notifyLayoutChange();
+      if (!this._alarmMenuOpen) {
+        this._scheduleLayoutRefresh(80);
+      }
       return;
     }
 
@@ -1721,6 +1744,9 @@ class NodaliaFavCard extends HTMLElement {
         }
         this._applyHostGridSpan(showAlarmPanel);
         this._notifyLayoutChange();
+        if (!showAlarmPanel) {
+          this._scheduleLayoutRefresh(80);
+        }
       });
     } else if (!isAlarmPanel) {
       this._lastAlarmPanelRenderedOpen = false;

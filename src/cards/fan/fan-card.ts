@@ -106,6 +106,11 @@ class NodaliaFanCard extends HTMLElement {
       }
 
       const nextWidth = Math.round(entry.contentRect?.width || this.clientWidth || 0);
+      // Ignore collapse glitches (display:none, mid-reflow 0-width). Treating those
+      // as "not compact" expands the card; sections can lock a taller footprint.
+      if (nextWidth < 48) {
+        return;
+      }
       const nextCompact = this._shouldUseCompactLayout(nextWidth);
 
       if (nextWidth === this._cardWidth && nextCompact === this._isCompactLayout) {

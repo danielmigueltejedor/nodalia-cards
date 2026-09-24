@@ -4,7 +4,7 @@
   // src/cards/navigation/navigation-constants.ts
   var CARD_TAG = "nodalia-navigation-bar";
   var EDITOR_TAG = "nodalia-navigation-bar-editor";
-  var CARD_VERSION = "2.3.0-alpha.45";
+  var CARD_VERSION = "2.3.0-alpha.46";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
@@ -567,10 +567,20 @@
         this._lastMediaToggleVisible = false;
         this._playPopupEntrance = false;
         this._lastMediaPlayerCardVisible = false;
+        this._resizeSyncTimer = 0;
         this._onResize = () => {
-          this._closePopup(false);
-          this._closeMediaBrowser(false);
-          this._render();
+          if (this._resizeSyncTimer) {
+            window.clearTimeout(this._resizeSyncTimer);
+          }
+          this._resizeSyncTimer = window.setTimeout(() => {
+            this._resizeSyncTimer = 0;
+            if (!this.isConnected) {
+              return;
+            }
+            this._closePopup(false);
+            this._closeMediaBrowser(false);
+            this._render();
+          }, 100);
         };
         this._onLocationChange = () => {
           this._closePopup(false);
@@ -628,6 +638,10 @@
         if (this._dockEntranceResetFrame) {
           window.cancelAnimationFrame(this._dockEntranceResetFrame);
           this._dockEntranceResetFrame = 0;
+        }
+        if (this._resizeSyncTimer) {
+          window.clearTimeout(this._resizeSyncTimer);
+          this._resizeSyncTimer = 0;
         }
         window.NodaliaUtils?.clearDeferTimers?.(this);
       }
