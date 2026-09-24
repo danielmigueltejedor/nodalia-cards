@@ -11,22 +11,22 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.2.10-beta.1
+2.2.10
 ```
 
-Preview **`2.2.10-beta.1`** restores Advance Vacuum fan speed on newer Roborock
-robots that expose a `cleaning_mode` select. Stable **`2.2.9`** remains the
-recommended daily-driver release until `2.2.10` graduates.
+Preview **`2.2.10`** is the current recommended release: Advance Vacuum shows fan
+speed again on newer Roborock robots that expose a `cleaning_mode` select beside
+`fan_speed_list`.
 
 ## Current stable release
 
 Current stable release:
 
 ```text
-2.2.9
+2.2.10
 ```
 
-Stable **`2.2.9`** keeps Vacuum and Advance Vacuum commands on the configured robot when sibling ids share a prefix (`vacuum.roborock_s8` vs `vacuum.roborock_s8_pro`). Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+Stable **`2.2.10`** restores Advance Vacuum fan speed on newer Roborock robots that expose a `cleaning_mode` select beside `fan_speed_list`. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
 
 The project currently includes:
 
@@ -47,7 +47,7 @@ The project currently includes:
 
 The current maintenance stage focuses on:
 
-- Regression-free mobile and desktop behavior on stable **`2.2.9`**
+- Regression-free mobile and desktop behavior on stable **`2.2.10`**
 - Lightweight single-bundle HACS installs and updates
 - Security and service-action policy consistency
 - Camera and notification delivery resilience

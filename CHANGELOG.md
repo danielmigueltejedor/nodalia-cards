@@ -10,6 +10,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.2.10] - 2026-09-24
+
+Stable **`2.2.10`**: Advance Vacuum shows fan speed again on newer Roborock robots that expose a `cleaning_mode` select beside `fan_speed_list`.
+
+### Fixed
+
+- Newer Roborock integrations expose `select.*_cleaning_mode` for vac/mop combo modes. Advance Vacuum was treating that select as suction and never falling back to the vacuum entity `fan_speed_list`, so the Vacuum and Mop panel hid fan speed. Suction now prefers real fan-speed selects or `fan_speed_list`, mop intensity prefers `water_box_mode` / water-level helpers, and mop route stays on `mop_mode`.
+
+### Validation
+
+- Node regression with a fake newer Roborock home (`vacuum.shiro_the_2nd` plus `cleaning_mode`, `water_box_mode`, and `mop_mode` selects) asserting Vacuum and Mop panel fan-speed options come from `fan_speed_list`.
+
+Per-build notes for **`2.2.10-beta.*`** are archived in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+
 ## [2.2.9] - 2026-09-15
 
 Stable **`2.2.9`**: Vacuum and Advance Vacuum keep commands on the configured robot when sibling entity ids share a prefix.
