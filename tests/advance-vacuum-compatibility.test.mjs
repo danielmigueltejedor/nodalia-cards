@@ -617,6 +617,71 @@ test("advance vacuum still binds mop helpers that share the vacuum device_id", (
   assert.equal(card._guessRelatedSelectEntity("mop"), "select.roborock_s8_pro_water_level");
 });
 
+test("newer Roborock cleaning_mode select does not hide vacuum fan_speed_list", () => {
+  const fanList = ["off", "quiet", "balanced", "turbo", "max", "custom", "max_plus"];
+  const { card } = createCard({
+    states: {
+      "vacuum.shiro_the_2nd": {
+        entity_id: "vacuum.shiro_the_2nd",
+        state: "docked",
+        attributes: {
+          friendly_name: "Shiro",
+          fan_speed: "balanced",
+          fan_speed_list: fanList,
+          battery_level: 100,
+        },
+      },
+      "select.shiro_the_2nd_cleaning_mode": {
+        entity_id: "select.shiro_the_2nd_cleaning_mode",
+        state: "vacuum_and_mop",
+        attributes: {
+          friendly_name: "Cleaning mode",
+          options: ["vacuum", "mop", "vacuum_and_mop"],
+        },
+      },
+      "select.shiro_the_2nd_water_box_mode": {
+        entity_id: "select.shiro_the_2nd_water_box_mode",
+        state: "medium",
+        attributes: {
+          friendly_name: "Mop intensity",
+          options: ["off", "low", "mild", "medium", "high", "custom"],
+        },
+      },
+      "select.shiro_the_2nd_mop_mode": {
+        entity_id: "select.shiro_the_2nd_mop_mode",
+        state: "standard",
+        attributes: {
+          friendly_name: "Mop mode",
+          options: ["standard", "deep", "deep_plus", "fast", "custom"],
+        },
+      },
+    },
+    entities: {
+      "vacuum.shiro_the_2nd": { device_id: "shiro-device" },
+      "select.shiro_the_2nd_cleaning_mode": { device_id: "shiro-device" },
+      "select.shiro_the_2nd_water_box_mode": { device_id: "shiro-device" },
+      "select.shiro_the_2nd_mop_mode": { device_id: "shiro-device" },
+    },
+  });
+  card._config.entity = "vacuum.shiro_the_2nd";
+
+  const suction = card._getModeDescriptor("suction");
+  const mop = card._getModeDescriptor("mop");
+  const mopMode = card._getMopModeDescriptor();
+  const visible = card._getVisibleModePanelDescriptors(
+    card._getVacuumState(),
+    "vacuum_mop",
+  );
+
+  assert.equal(suction?.service, "fan");
+  assert.equal(suction?.target, "vacuum.shiro_the_2nd");
+  assert.deepEqual(suction?.options, fanList);
+  assert.equal(mop?.target, "select.shiro_the_2nd_water_box_mode");
+  assert.equal(mopMode?.target, "select.shiro_the_2nd_mop_mode");
+  assert.ok(visible.some(item => item.kind === "suction" && item.options.includes("balanced")));
+  assert.ok(visible.some(item => item.kind === "mop" && item.options.includes("medium")));
+});
+
 test("advanced vacuum editor keeps platform selection compact and Valetudo-specific", () => {
   const source = read("nodalia-advance-vacuum-card.js");
   assert.match(source, /\.editor-grid \{\n\s+align-items: start;/);

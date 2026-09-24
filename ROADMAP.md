@@ -11,13 +11,13 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.21
+2.3.0-alpha.22
 ```
 
-Preview **`2.3.0-alpha.21`** repairs Advanced Vacuum and Room Summary configuration
-errors from the TypeScript split, restores elevated Calendar/Camera popups, and
-drops idle Media Player square gaps. Lovelace behavior matches **`2.3.0-alpha.3`**.
-Stable **`2.2.9`** remains the recommended daily-driver release.
+Preview **`2.3.0-alpha.22`** restores Calendar/Camera/more-info clicks on Safari
+after lazy custom-element boot, and brings the newer Roborock fan-speed fix from
+`2.2.10-beta.1`. Lovelace behavior matches **`2.3.0-alpha.3`**. Stable
+**`2.2.9`** remains the recommended daily-driver release.
 
 ## Current stable release
 

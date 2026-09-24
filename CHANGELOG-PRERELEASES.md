@@ -8,6 +8,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.22] - 2026-09-24
+
+Safari popup/more-info recovery after lazy custom-element boot, plus the newer
+Roborock fan-speed fix from `2.2.10-beta.1`.
+
+### Fixed
+
+- Lazy custom-element hosts now keep lifecycle forwarders on the registered
+  class. Safari captures `connectedCallback` at `define()` time; without those
+  stubs, click/hold listeners never attached, so Calendar/Camera overlays and
+  more-info taps appeared dead while the cards still rendered.
+- Advance Vacuum ignores Roborock `cleaning_mode` selects for suction and falls
+  back to `fan_speed_list`, restoring fan speed in the Vacuum and Mop panel.
+  Mop intensity prefers `water_box_mode` over `mop_mode`.
+
+### Validation
+
+- Node regressions for lazy lifecycle forwarders and the fake newer Roborock
+  `vacuum.shiro_the_2nd` fan-speed case.
+
 ## [2.3.0-alpha.21] - 2026-09-24
 
 Repair pass after alpha.20: Advanced Vacuum and Room Summary no longer throw

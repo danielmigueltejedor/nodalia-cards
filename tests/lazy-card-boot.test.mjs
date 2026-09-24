@@ -39,6 +39,9 @@ test("lazy host upgrades on first instance without compiling sibling cards", () 
       return this.shadowRoot;
     }
 
+    addEventListener() {}
+    removeEventListener() {}
+
     dispatchEvent() {
       return true;
     }
@@ -67,10 +70,31 @@ test("lazy host upgrades on first instance without compiling sibling cards", () 
 
   const Host = registry.get("nodalia-climate-card");
   assert.equal(Host.name, "NodaliaLazyHost");
+  assert.equal(typeof Host.prototype.connectedCallback, "function");
+  assert.equal(typeof Host.prototype.disconnectedCallback, "function");
   const card = new Host();
   assert.equal(typeof card.setConfig, "function");
   assert.equal(typeof card._nodaliaConstruct, "function");
   assert.ok(card.shadowRoot);
+
+  // Simulate the CE definition callback (captured from Host.prototype at define time).
+  const connectedCalls = [];
+  const RealConnected = Object.getPrototypeOf(card).connectedCallback;
+  assert.equal(typeof RealConnected, "function");
+  Object.getPrototypeOf(card).connectedCallback = function patchedConnected(...args) {
+    connectedCalls.push(args);
+    return RealConnected.apply(this, args);
+  };
+  Host.prototype.connectedCallback.call(card);
+  assert.equal(connectedCalls.length, 1);
+});
+
+test("lazy host definition keeps lifecycle forwarders for Safari CE reactions", () => {
+  const utils = read("nodalia-utils.js");
+  assert.match(utils, /nodaliaLazyLifecycleForward/);
+  assert.match(utils, /connectedCallback/);
+  assert.match(utils, /disconnectedCallback/);
+  assert.match(utils, /attributeChangedCallback/);
 });
 
 test("runtime i18n keeps unused locale packs as factories", () => {

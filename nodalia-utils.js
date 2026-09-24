@@ -783,6 +783,29 @@
       return realClass;
     };
 
+    /**
+     * Custom element definitions capture lifecycle callbacks from the registered
+     * class at `define()` time. After `Object.setPrototypeOf(this, Real.prototype)`,
+     * Safari (and the HTML CE algorithm) still invoke those captured Host stubs —
+     * so they must forward into the real class methods or click/hold listeners never
+     * attach and overlays / more-info never open.
+     */
+    function forwardLifecycle(name) {
+      Object.defineProperty(NodaliaLazyHost.prototype, name, {
+        configurable: true,
+        enumerable: false,
+        writable: true,
+        value: function nodaliaLazyLifecycleForward(...args) {
+          const Real = getReal();
+          const fn = Real?.prototype?.[name];
+          if (typeof fn === "function") {
+            return fn.apply(this, args);
+          }
+          return undefined;
+        },
+      });
+    }
+
     class NodaliaLazyHost extends HTMLElement {
       constructor() {
         super();
@@ -793,6 +816,23 @@
         }
       }
     }
+
+    for (const name of [
+      "connectedCallback",
+      "disconnectedCallback",
+      "adoptedCallback",
+      "attributeChangedCallback",
+    ]) {
+      forwardLifecycle(name);
+    }
+
+    Object.defineProperty(NodaliaLazyHost, "observedAttributes", {
+      configurable: true,
+      get() {
+        const Real = getReal();
+        return Array.isArray(Real?.observedAttributes) ? Real.observedAttributes : [];
+      },
+    });
 
     const editorTag = String(options.editorTag || "").trim();
     Object.defineProperty(NodaliaLazyHost, "getConfigElement", {

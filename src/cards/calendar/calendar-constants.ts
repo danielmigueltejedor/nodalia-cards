@@ -1,6 +1,6 @@
 export const CARD_TAG = "nodalia-calendar-card";
 export const EDITOR_TAG = "nodalia-calendar-card-editor";
-export const CARD_VERSION = "2.3.0-alpha.21";
+export const CARD_VERSION = "2.3.0-alpha.22";
 export const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
 export const HAPTIC_PATTERNS = {
   selection: 8,
