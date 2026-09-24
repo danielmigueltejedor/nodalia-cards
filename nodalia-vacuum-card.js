@@ -1,1881 +1,1518 @@
-const CARD_TAG = "nodalia-vacuum-card";
-const EDITOR_TAG = "nodalia-vacuum-card-editor";
-const CARD_VERSION = "2.3.0-alpha.3";
-const HAPTIC_PATTERNS = {
-  selection: 8,
-  light: 10,
-  medium: 16,
-  heavy: 24,
-  success: [10, 40, 10],
-  warning: [20, 50, 12],
-  failure: [12, 40, 12, 40, 18],
-};
-const COMPACT_LAYOUT_THRESHOLD = 190;
-const SUCTION_MODE_PATTERNS = [
-  "quiet",
-  "silent",
-  "balanced",
-  "standard",
-  "normal",
-  "turbo",
-  "max",
-  "strong",
-  "gentle",
-  "suction",
-  "vacuum",
-  "carpet",
-];
-const MOP_MODE_PATTERNS = [
-  "mop",
-  "water",
-  "scrub",
-  "wet",
-  "off",
-  "deep",
-  "soak",
-  "rinse",
-];
-const SHARED_SMART_MODE_PATTERNS = [
-  "smart",
-  "intelligent",
-  "inteligente",
-];
-const MODE_LABELS = {
-  quiet: "Quiet",
-  silent: "Quiet",
-  balanced: "Balanced",
-  standard: "Standard",
-  normal: "Normal",
-  turbo: "Turbo",
-  max: "Max",
-  maxplus: "Max+",
-  max_plus: "Max+",
-  gentle: "Gentle",
-  strong: "Strong",
-  smart: "Smart",
-  smartmode: "Smart",
-  smart_mode: "Smart",
-  intelligent: "Smart",
-  custom: "Custom",
-  custommode: "Custom",
-  custom_mode: "Custom",
-  custom_water_flow: "Custom water flow",
-  custom_watter_flow: "Custom water flow",
-  off: "Mop off",
-  low: "Low",
-  medium: "Medium",
-  high: "High",
-  intense: "Intense",
-  deep: "Deep",
-};
+/* Generated from src/cards/vacuum. Do not edit. */
+"use strict";
+(() => {
+  // src/cards/vacuum/vacuum-constants.ts
+  var CARD_TAG = "nodalia-vacuum-card";
+  var EDITOR_TAG = "nodalia-vacuum-card-editor";
+  var CARD_VERSION = "2.3.0-alpha.25";
+  var HAPTIC_PATTERNS = {
+    selection: 8,
+    light: 10,
+    medium: 16,
+    heavy: 24,
+    success: [10, 40, 10],
+    warning: [20, 50, 12],
+    failure: [12, 40, 12, 40, 18]
+  };
+  var COMPACT_LAYOUT_THRESHOLD = 190;
+  var SUCTION_MODE_PATTERNS = [
+    "quiet",
+    "silent",
+    "balanced",
+    "standard",
+    "normal",
+    "turbo",
+    "max",
+    "strong",
+    "gentle",
+    "suction",
+    "vacuum",
+    "carpet"
+  ];
+  var MOP_MODE_PATTERNS = [
+    "mop",
+    "water",
+    "scrub",
+    "wet",
+    "off",
+    "deep",
+    "soak",
+    "rinse"
+  ];
+  var SHARED_SMART_MODE_PATTERNS = [
+    "smart",
+    "intelligent",
+    "inteligente"
+  ];
+  var MODE_LABELS = {
+    quiet: "Quiet",
+    silent: "Quiet",
+    balanced: "Balanced",
+    standard: "Standard",
+    normal: "Normal",
+    turbo: "Turbo",
+    max: "Max",
+    maxplus: "Max+",
+    max_plus: "Max+",
+    gentle: "Gentle",
+    strong: "Strong",
+    smart: "Smart",
+    smartmode: "Smart",
+    smart_mode: "Smart",
+    intelligent: "Smart",
+    custom: "Custom",
+    custommode: "Custom",
+    custom_mode: "Custom",
+    custom_water_flow: "Custom water flow",
+    custom_watter_flow: "Custom water flow",
+    off: "Mop off",
+    low: "Low",
+    medium: "Medium",
+    high: "High",
+    intense: "Intense",
+    deep: "Deep"
+  };
 
-const DEFAULT_CONFIG = {
-  entity: "",
-  name: "",
-  icon: "",
-  entity_picture: "",
-  show_entity_picture: false,
-  tap_action: "default",
-  tap_navigation_path: "",
-  icon_tap_action: "",
-  hold_action: "more-info",
-  icon_hold_action: "",
-  hold_navigation_path: "",
-  icon_hold_navigation_path: "",
-  compact_layout_mode: "auto",
-  show_state_chip: true,
-  show_battery_chip: true,
-  show_fan_speed_chip: true,
-  show_mode_controls: true,
-  show_fan_presets: true,
-  show_return_to_base: true,
-  show_stop: true,
-  show_locate: true,
-  fan_presets: [],
-  hidden_suction_modes: [],
-  hidden_mop_modes: [],
-  state_entity: "",
-  error_entity: "",
-  battery_entity: "",
-  room_mapping_entity: "",
-  suction_select_entity: "",
-  mop_select_entity: "",
-  haptics: {
-    enabled: true,
-    style: "medium",
-    fallback_vibrate: false,
-  },
-  animations: {
-    enabled: true,
-    icon_animation: true,
-    panel_duration: 800,
-    button_bounce_duration: 320,
-  },
-  security: {
-    strict_service_actions: true,
-    allowed_services: [],
-    allowed_service_domains: [],
-  },
-  styles: {
-    card: {
-      background: "var(--ha-card-background)",
-      border: "1px solid var(--divider-color)",
-      border_radius: "var(--nodalia-card-border-radius, 28px)",
-      box_shadow: "var(--ha-card-box-shadow)",
-      padding: "14px",
-      gap: "12px",
+  // src/cards/vacuum/vacuum-runtime.ts
+  var utils = window.NodaliaUtils;
+  var isObject = utils.isObject.bind(utils);
+  var deepClone = utils.deepClone.bind(utils);
+  var mergeConfig = utils.mergeDeep.bind(utils);
+  var compactConfig = utils.compactConfig.bind(utils);
+  var isUnsafeConfigPathKey = utils.isUnsafeConfigPathKey.bind(utils);
+  var setByPath = utils.setByPath.bind(utils);
+  var deleteByPath = utils.deleteByPath.bind(utils);
+  var clamp = utils.clamp.bind(utils);
+  var escapeHtml = utils.escapeHtml.bind(utils);
+  var escapeSelectorValue = utils.escapeSelectorValue.bind(utils);
+  var fireEvent = utils.fireEvent.bind(utils);
+  var normalizeTextKey = utils.normalizeTextKey.bind(utils);
+
+  // src/cards/vacuum/vacuum-config.ts
+  var DEFAULT_CONFIG = {
+    entity: "",
+    name: "",
+    icon: "",
+    entity_picture: "",
+    show_entity_picture: false,
+    tap_action: "default",
+    tap_navigation_path: "",
+    icon_tap_action: "",
+    hold_action: "more-info",
+    icon_hold_action: "",
+    hold_navigation_path: "",
+    icon_hold_navigation_path: "",
+    compact_layout_mode: "auto",
+    show_state_chip: true,
+    show_battery_chip: true,
+    show_fan_speed_chip: true,
+    show_mode_controls: true,
+    show_fan_presets: true,
+    show_return_to_base: true,
+    show_stop: true,
+    show_locate: true,
+    fan_presets: [],
+    hidden_suction_modes: [],
+    hidden_mop_modes: [],
+    state_entity: "",
+    error_entity: "",
+    battery_entity: "",
+    room_mapping_entity: "",
+    suction_select_entity: "",
+    mop_select_entity: "",
+    haptics: {
+      enabled: true,
+      style: "medium",
+      fallback_vibrate: false
     },
-    icon: {
-      size: "50px",
-      background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
-      color: "var(--primary-text-color)",
-      active_color: "#61c97a",
-      washing_color: "#5aa7ff",
-      drying_color: "#f1c24c",
-      emptying_color: "#9b6b4a",
-      returning_color: "#f6b73c",
-      error_color: "var(--error-color, #ff6b6b)",
-      docked_color: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))",
+    animations: {
+      enabled: true,
+      icon_animation: true,
+      panel_duration: 800,
+      button_bounce_duration: 320
     },
-    control: {
-      size: "40px",
-      accent_color: "var(--primary-text-color)",
-      accent_background: "rgba(var(--rgb-primary-color), 0.18)",
+    security: {
+      strict_service_actions: true,
+      allowed_services: [],
+      allowed_service_domains: []
     },
-    chip_height: "24px",
-    chip_font_size: "11px",
-    chip_padding: "0 9px",
-    chip_border_radius: "999px",
-    title_size: "12px",
-  },
-};
-
-const STUB_CONFIG = {
-  entity: "vacuum.salon",
-  name: "Robot salon",
-};
-
-// Shared primitives are loaded by nodalia-cards core and inlined for standalone resources.
-const {
-  isObject,
-  deepClone,
-  mergeDeep: mergeConfig,
-  compactConfig,
-  isUnsafeConfigPathKey,
-  setByPath,
-  deleteByPath,
-  clamp,
-  escapeHtml,
-  escapeSelectorValue,
-  fireEvent,
-} = window.NodaliaUtils;
-
-
-
-function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
-  return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
-}
-
-function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
-  const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
-  if (!entityId) {
+    styles: {
+      card: {
+        background: "var(--ha-card-background)",
+        border: "1px solid var(--divider-color)",
+        border_radius: "var(--nodalia-card-border-radius, 28px)",
+        box_shadow: "var(--ha-card-box-shadow)",
+        padding: "14px",
+        gap: "12px"
+      },
+      icon: {
+        size: "50px",
+        background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
+        color: "var(--primary-text-color)",
+        active_color: "#61c97a",
+        washing_color: "#5aa7ff",
+        drying_color: "#f1c24c",
+        emptying_color: "#9b6b4a",
+        returning_color: "#f6b73c",
+        error_color: "var(--error-color, #ff6b6b)",
+        docked_color: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))"
+      },
+      control: {
+        size: "40px",
+        accent_color: "var(--primary-text-color)",
+        accent_background: "rgba(var(--rgb-primary-color), 0.18)"
+      },
+      chip_height: "24px",
+      chip_font_size: "11px",
+      chip_padding: "0 9px",
+      chip_border_radius: "999px",
+      title_size: "12px"
+    }
+  };
+  var STUB_CONFIG = {
+    entity: "vacuum.salon",
+    name: "Robot salon"
+  };
+  function sanitizeCssValue(value, fallback) {
+    const raw = String(value ?? "").trim();
+    const safeFallback = String(fallback ?? "").trim();
+    if (!raw) {
+      return safeFallback;
+    }
+    if (/[\u0000-\u001f\u007f<>;"'{}]/.test(raw) || raw.includes("/*") || raw.includes("*/")) {
+      return safeFallback;
+    }
+    return raw;
+  }
+  function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
+    const walk = (candidate, fallback) => {
+      if (isObject(fallback)) {
+        const out = {};
+        const source = isObject(candidate) ? candidate : {};
+        Object.keys(fallback).forEach((key) => {
+          out[key] = walk(source[key], fallback[key]);
+        });
+        return out;
+      }
+      if (typeof fallback === "string") {
+        return sanitizeCssValue(candidate, fallback);
+      }
+      return candidate === void 0 ? fallback : candidate;
+    };
+    return walk(styles, DEFAULT_CONFIG.styles);
+  }
+  function normalizeConfig(rawConfig) {
+    const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+    const normalizeList = (value) => (Array.isArray(value) ? value : typeof value === "string" ? value.split(",") : []).map((item) => String(item || "").trim()).filter(Boolean);
+    if (!Array.isArray(config.fan_presets)) {
+      config.fan_presets = [];
+    }
+    config.fan_presets = config.fan_presets.map((item) => String(item || "").trim()).filter(Boolean);
+    config.hidden_suction_modes = normalizeList(config.hidden_suction_modes);
+    config.hidden_mop_modes = normalizeList(config.hidden_mop_modes);
+    const VACUUM_CARD_ACTION_KEYS = /* @__PURE__ */ new Set(["default", "more_info", "navigate", "none"]);
+    const normVacuumCardActionKey = (raw) => {
+      const key = normalizeTextKey(String(raw ?? "").trim());
+      return VACUUM_CARD_ACTION_KEYS.has(key) ? key : null;
+    };
+    const holdKey = normVacuumCardActionKey(config.hold_action);
+    config.hold_action = holdKey || "none";
+    const iconHoldRaw = String(config.icon_hold_action ?? "").trim();
+    if (!iconHoldRaw) {
+      config.icon_hold_action = "";
+    } else {
+      const iconHoldKey = normVacuumCardActionKey(iconHoldRaw);
+      config.icon_hold_action = iconHoldKey || "";
+    }
+    config.hold_navigation_path = String(config.hold_navigation_path ?? "").trim();
+    config.icon_hold_navigation_path = String(config.icon_hold_navigation_path ?? "").trim();
+    config.entity_picture = String(config.entity_picture ?? "").trim();
+    config.show_entity_picture = config.show_entity_picture === true;
+    config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? { ...DEFAULT_CONFIG.security, ...isObject(config.security) ? config.security : {} };
+    config.security.strict_service_actions = config.security.strict_service_actions === true;
     return config;
   }
 
-  config.entity = entityId;
-  config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
-  return config;
-}
-
-
-
-
-
-
-
-
-function parseSizeToPixels(value, fallback = 0) {
-  const numeric = Number.parseFloat(String(value ?? ""));
-  return Number.isFinite(numeric) ? numeric : fallback;
-}
-
-function arrayFromCsv(value) {
-  return String(value || "")
-    .split(",")
-    .map(item => item.trim())
-    .filter(Boolean);
-}
-
-
-
-function sanitizeCssValue(value, fallback) {
-  const raw = String(value ?? "").trim();
-  const safeFallback = String(fallback ?? "").trim();
-  if (!raw) {
-    return safeFallback;
+  // src/cards/vacuum/vacuum-helpers.ts
+  function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
+    return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
   }
-  if (/[\u0000-\u001f\u007f<>;"'{}]/.test(raw) || raw.includes("/*") || raw.includes("*/")) {
-    return safeFallback;
-  }
-  return raw;
-}
-
-function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
-  const walk = (candidate, fallback) => {
-    if (isObject(fallback)) {
-      const out = {};
-      const source = isObject(candidate) ? candidate : {};
-      Object.keys(fallback).forEach(key => {
-        out[key] = walk(source[key], fallback[key]);
-      });
-      return out;
+  function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
+    const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
+    if (!entityId) {
+      return config;
     }
-    if (typeof fallback === "string") {
-      return sanitizeCssValue(candidate, fallback);
+    config.entity = entityId;
+    config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
+    return config;
+  }
+  function parseSizeToPixels(value, fallback = 0) {
+    const numeric = Number.parseFloat(String(value ?? ""));
+    return Number.isFinite(numeric) ? numeric : fallback;
+  }
+  function arrayFromCsv(value) {
+    return String(value || "").split(",").map((item) => item.trim()).filter(Boolean);
+  }
+  function resolveEditorColorValue(value) {
+    const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
+    if (typeof resolver === "function") {
+      return resolver(value);
     }
-    return candidate === undefined ? fallback : candidate;
-  };
-  return walk(styles, DEFAULT_CONFIG.styles);
-}
-
-function resolveEditorColorValue(value) {
-  const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
-  if (typeof resolver === "function") {
-    return resolver(value);
+    return String(value ?? "").trim();
   }
-  return String(value ?? "").trim();
-}
-
-function formatEditorHexChannel(value) {
-  return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
-}
-
-function formatEditorColorFromHex(hex, alpha = 1) {
-  const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
-  if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
-    return String(hex ?? "");
+  function formatEditorHexChannel(value) {
+    return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
   }
-
-  const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
-  const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
-  const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
-  const safeAlpha = clamp(Number(alpha), 0, 1);
-  if (safeAlpha >= 0.999) {
-    return `#${normalizedHex}`;
-  }
-
-  return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
-}
-
-function getEditorColorModel(value, fallbackValue = "#71c0ff") {
-  const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
-  const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
-  const channels = resolvedValue.match(/[\d.]+/g) || [];
-  const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
-  const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
-  const blue = clamp(Math.round(Number(channels[2] ?? 255)), 0, 255);
-  const alpha = channels.length > 3 ? clamp(Number(channels[3]), 0, 1) : 1;
-  const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
-
-  return {
-    alpha,
-    hex,
-    resolved: resolvedValue,
-    source: sourceValue,
-    value: formatEditorColorFromHex(hex, alpha),
-  };
-}
-
-function getEditorColorFallbackValue(field) {
-  const normalizedField = String(field ?? "");
-
-  if (normalizedField.endsWith("off_color") || normalizedField.endsWith("docked_color")) {
-    return "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))";
-  }
-
-  if (normalizedField.endsWith("accent_background")) {
-    return "rgba(var(--rgb-primary-color), 0.18)";
-  }
-
-  if (normalizedField.endsWith("background")) {
-    return "var(--ha-card-background)";
-  }
-
-  if (normalizedField.endsWith("error_color")) {
-    return "var(--error-color, #ff6b6b)";
-  }
-
-  return "var(--info-color, #71c0ff)";
-}
-
-
-function normalizeTextKey(value) {
-  return String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
-
-function listVacuumObjectIds(states = {}) {
-  return Object.keys(states || {})
-    .filter(id => id.startsWith("vacuum."))
-    .map(id => normalizeTextKey(id.split(".").slice(1).join("_")))
-    .filter(Boolean);
-}
-
-/**
- * Helpers whose ids contain `vacuum.roborock_s8` also match `vacuum.roborock_s8_pro`.
- * Same `device_id` always wins; otherwise the longest matching vacuum object id owns the helper.
- * Unscoped `roborock` guesses are allowed only when the home has a single `vacuum.*`.
- */
-function isHelperRelatedToConfiguredVacuum({
-  candidateId,
-  searchable = "",
-  isSameDevice = false,
-  objectId,
-  vacuumObjectIds,
-}) {
-  if (isSameDevice) {
-    return true;
-  }
-  if (!objectId) {
-    return false;
-  }
-  const haystack = `${normalizeTextKey(candidateId)} ${normalizeTextKey(searchable)}`;
-  if (!haystack.includes(objectId)) {
-    return false;
-  }
-  const claimedByLongerSibling = (vacuumObjectIds || []).some(siblingId => (
-    siblingId
-    && siblingId !== objectId
-    && siblingId.length > objectId.length
-    && siblingId.includes(objectId)
-    && haystack.includes(siblingId)
-  ));
-  return !claimedByLongerSibling;
-}
-
-function isUnavailableState(state) {
-  return normalizeTextKey(state?.state) === "unavailable";
-}
-
-function humanizeModeLabel(value, kind = "generic", hass = null, configLang = null) {
-  const raw = String(value || "").trim();
-  if (!raw) {
-    return "";
-  }
-
-  const key = normalizeTextKey(raw);
-  const h = hass ?? (typeof window !== "undefined" ? window.NodaliaI18n?.resolveHass?.(null) : null);
-  if (window.NodaliaI18n?.translateAdvanceVacuumVacuumMode) {
-    return window.NodaliaI18n.translateAdvanceVacuumVacuumMode(h, configLang ?? "auto", raw, kind);
-  }
-  if (key === "off" && kind === "suction") {
-    return "Off";
-  }
-
-  if (MODE_LABELS[key]) {
-    return MODE_LABELS[key];
-  }
-
-  return raw
-    .replaceAll("_", " ")
-    .replace(/\b\w/g, match => match.toUpperCase());
-}
-
-function normalizeConfig(rawConfig) {
-  const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-  const normalizeList = value => (
-    Array.isArray(value)
-      ? value
-      : typeof value === "string"
-        ? value.split(",")
-        : []
-  )
-    .map(item => String(item || "").trim())
-    .filter(Boolean);
-
-  if (!Array.isArray(config.fan_presets)) {
-    config.fan_presets = [];
-  }
-
-  config.fan_presets = config.fan_presets
-    .map(item => String(item || "").trim())
-    .filter(Boolean);
-  config.hidden_suction_modes = normalizeList(config.hidden_suction_modes);
-  config.hidden_mop_modes = normalizeList(config.hidden_mop_modes);
-
-  const VACUUM_CARD_ACTION_KEYS = new Set(["default", "more_info", "navigate", "none"]);
-  const normVacuumCardActionKey = raw => {
-    const key = normalizeTextKey(String(raw ?? "").trim());
-    return VACUUM_CARD_ACTION_KEYS.has(key) ? key : null;
-  };
-  const holdKey = normVacuumCardActionKey(config.hold_action);
-  config.hold_action = holdKey || "none";
-  const iconHoldRaw = String(config.icon_hold_action ?? "").trim();
-  if (!iconHoldRaw) {
-    config.icon_hold_action = "";
-  } else {
-    const iconHoldKey = normVacuumCardActionKey(iconHoldRaw);
-    config.icon_hold_action = iconHoldKey || "";
-  }
-  config.hold_navigation_path = String(config.hold_navigation_path ?? "").trim();
-  config.icon_hold_navigation_path = String(config.icon_hold_navigation_path ?? "").trim();
-  config.entity_picture = String(config.entity_picture ?? "").trim();
-  config.show_entity_picture = config.show_entity_picture === true;
-  config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
-    ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
-  config.security.strict_service_actions = config.security.strict_service_actions === true;
-
-  return config;
-}
-
-class NodaliaVacuumCard extends HTMLElement {
-  static async getConfigElement() {
-    return document.createElement(EDITOR_TAG);
-  }
-
-  static getStubConfig(hass, entities = [], entitiesFallback = []) {
-    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["vacuum"], entities, entitiesFallback);
-  }
-
-  static getEntitySuggestion(hass, entityId) {
-    return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, { domains: ["vacuum"] });
-  }
-
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = null;
-    this._hass = null;
-    this._cardWidth = 0;
-    this._isCompactLayout = false;
-    this._activeModePanel = null;
-    this._roomPanelOpen = false;
-    this._selectedCleaningAreas = [];
-    this._lastNonSmartModeSelection = {
-      suction: "",
-      mop: "",
-    };
-    this._pendingModeSelection = {
-      suction: "",
-      mop: "",
-    };
-    this._pendingModeSelectionTimers = {
-      suction: 0,
-      mop: 0,
-    };
-    this._relatedEntityCache = null;
-    this._relatedEntityCacheGeneration = 0;
-    this._lastRenderSignature = "";
-    this._animateContentOnNextRender = true;
-    this._entranceAnimationResetTimer = 0;
-    window.NodaliaUtils?.clearDeferTimers?.(this);
-    this._suppressNextVacuumTap = false;
-    this._resizeObserver = new ResizeObserver(entries => {
-      const entry = entries[0];
-      if (!entry) {
-        return;
-      }
-
-      const nextWidth = Math.round(entry.contentRect?.width || this.clientWidth || 0);
-      const nextCompact = this._shouldUseCompactLayout(nextWidth);
-
-      if (nextWidth === this._cardWidth && nextCompact === this._isCompactLayout) {
-        return;
-      }
-
-      this._cardWidth = nextWidth;
-      this._isCompactLayout = nextCompact;
-
-      const signature = this._getRenderSignature();
-      if (signature === this._lastRenderSignature) {
-        return;
-      }
-
-      this._lastRenderSignature = signature;
-      this._render();
-    });
-    this._onShadowClick = this._onShadowClick.bind(this);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this._detachHostHold =
-      typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function"
-        ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
-            resolveZone: event => {
-              const node = event
-                .composedPath()
-                .find(n => n instanceof HTMLElement && n.dataset?.vacuumAction);
-              const action = node?.dataset?.vacuumAction;
-              if (action === "body_tap") {
-                return "body";
-              }
-              if (action === "icon_tap") {
-                return "icon";
-              }
-              return null;
-            },
-            shouldBeginHold: zone => this._canRunConfiguredCardHoldAction(zone),
-            onHold: zone => {
-              const state = this._getState();
-              this._syncRememberedModeSelections(state);
-              this._triggerHaptic();
-              this._runConfiguredCardHoldAction(state, zone);
-            },
-            markHoldConsumedClick: () => {
-              this._suppressNextVacuumTap = true;
-            },
-          })
-        : () => {};
-  }
-
-  connectedCallback() {
-    this._detachHostHold?.reconnect?.();
-    this._resizeObserver?.observe(this);
-    this._animateContentOnNextRender = true;
-    if (this._hass && this._config) {
-      this._lastRenderSignature = "";
-      this._render();
+  function formatEditorColorFromHex(hex, alpha = 1) {
+    const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
+    if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
+      return String(hex ?? "");
     }
-  }
-
-  disconnectedCallback() {
-    this._detachHostHold?.();
-    this._resizeObserver?.disconnect();
-    if (this._entranceAnimationResetTimer) {
-      window.clearTimeout(this._entranceAnimationResetTimer);
-      this._entranceAnimationResetTimer = 0;
+    const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
+    const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
+    const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
+    const safeAlpha = clamp(Number(alpha), 0, 1);
+    if (safeAlpha >= 0.999) {
+      return `#${normalizedHex}`;
     }
-    Object.keys(this._pendingModeSelectionTimers).forEach(kind => {
-      if (this._pendingModeSelectionTimers[kind]) {
-        window.clearTimeout(this._pendingModeSelectionTimers[kind]);
-        this._pendingModeSelectionTimers[kind] = 0;
-      }
-    });
-    window.NodaliaUtils?.clearDeferTimers?.(this);
-    this._animateContentOnNextRender = true;
-    this._lastRenderSignature = "";
+    return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
   }
-
-  setConfig(config) {
-    this._config = normalizeConfig(config || {});
-    this._relatedEntityCache = null;
-    window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
-    this._isCompactLayout = this._shouldUseCompactLayout(
-      Math.round(this._cardWidth || this.clientWidth || 0),
-    );
-    this._lastRenderSignature = "";
-    this._animateContentOnNextRender = true;
-    this._render();
-  }
-
-  set hass(hass) {
-    this._hass = hass;
-    this._relatedEntityCacheGeneration += 1;
-    const nextSignature = this._getRenderSignature(hass);
-    const pendingChanged = this._syncPendingModeSelections();
-
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !pendingChanged) {
-      return;
-    }
-
-    this._lastRenderSignature = nextSignature;
-    this._render();
-  }
-
-  getCardSize() {
-    return this._getEstimatedCardSize();
-  }
-
-  getGridOptions() {
+  function getEditorColorModel(value, fallbackValue = "#71c0ff") {
+    const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
+    const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
+    const channels = resolvedValue.match(/[\d.]+/g) || [];
+    const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
+    const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
+    const blue = clamp(Math.round(Number(channels[2] ?? 255)), 0, 255);
+    const alpha = channels.length > 3 ? clamp(Number(channels[3]), 0, 1) : 1;
+    const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
     return {
-      rows: "auto",
-      columns: "full",
-      min_rows: 2,
-      min_columns: 2,
+      alpha,
+      hex,
+      resolved: resolvedValue,
+      source: sourceValue,
+      value: formatEditorColorFromHex(hex, alpha)
     };
   }
-
-  _notifyLayoutChange() {
-    if (!this.isConnected) {
-      return;
+  function getEditorColorFallbackValue(field) {
+    const normalizedField = String(field ?? "");
+    if (normalizedField.endsWith("off_color") || normalizedField.endsWith("docked_color")) {
+      return "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))";
     }
+    if (normalizedField.endsWith("accent_background")) {
+      return "rgba(var(--rgb-primary-color), 0.18)";
+    }
+    if (normalizedField.endsWith("background")) {
+      return "var(--ha-card-background)";
+    }
+    if (normalizedField.endsWith("error_color")) {
+      return "var(--error-color, #ff6b6b)";
+    }
+    return "var(--info-color, #71c0ff)";
+  }
+  function listVacuumObjectIds(states = {}) {
+    return Object.keys(states || {}).filter((id) => id.startsWith("vacuum.")).map((id) => normalizeTextKey(id.split(".").slice(1).join("_"))).filter(Boolean);
+  }
+  function isHelperRelatedToConfiguredVacuum({
+    candidateId,
+    searchable = "",
+    isSameDevice = false,
+    objectId,
+    vacuumObjectIds
+  }) {
+    if (isSameDevice) {
+      return true;
+    }
+    if (!objectId) {
+      return false;
+    }
+    const haystack = `${normalizeTextKey(candidateId)} ${normalizeTextKey(searchable)}`;
+    if (!haystack.includes(objectId)) {
+      return false;
+    }
+    const claimedByLongerSibling = (vacuumObjectIds || []).some((siblingId) => siblingId && siblingId !== objectId && siblingId.length > objectId.length && siblingId.includes(objectId) && haystack.includes(siblingId));
+    return !claimedByLongerSibling;
+  }
+  function isUnavailableState(state) {
+    return normalizeTextKey(state?.state) === "unavailable";
+  }
+  function humanizeModeLabel(value, kind = "generic", hass = null, configLang = null) {
+    const raw = String(value || "").trim();
+    if (!raw) {
+      return "";
+    }
+    const key = normalizeTextKey(raw);
+    const h = hass ?? (typeof window !== "undefined" ? window.NodaliaI18n?.resolveHass?.(null) : null);
+    if (window.NodaliaI18n?.translateAdvanceVacuumVacuumMode) {
+      return window.NodaliaI18n.translateAdvanceVacuumVacuumMode(h, configLang ?? "auto", raw, kind);
+    }
+    if (key === "off" && kind === "suction") {
+      return "Off";
+    }
+    if (MODE_LABELS[key]) {
+      return MODE_LABELS[key];
+    }
+    return raw.replaceAll("_", " ").replace(/\b\w/g, (match) => match.toUpperCase());
+  }
 
-    fireEvent(this, "iron-resize", {});
-
-    if (typeof window !== "undefined") {
-      requestAnimationFrame(() => {
+  // src/cards/vacuum/vacuum-card.ts
+  var _lazyNodaliaVacuumCard;
+  function loadNodaliaVacuumCard() {
+    if (_lazyNodaliaVacuumCard) {
+      return _lazyNodaliaVacuumCard;
+    }
+    class NodaliaVacuumCard extends HTMLElement {
+      static async getConfigElement() {
+        return document.createElement(EDITOR_TAG);
+      }
+      static getStubConfig(hass, entities = [], entitiesFallback = []) {
+        return applyStubEntity(deepClone(STUB_CONFIG), hass, ["vacuum"], entities, entitiesFallback);
+      }
+      static getEntitySuggestion(hass, entityId) {
+        return [
+          window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+            domains: ["vacuum"],
+            label: "Vacuum — Standard",
+            buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, compact_layout_mode: "auto" })
+          }),
+          window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+            domains: ["vacuum"],
+            label: "Vacuum — Compact",
+            buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, compact_layout_mode: "always" })
+          })
+        ].filter(Boolean);
+      }
+      constructor() {
+        super();
+        this._nodaliaConstruct();
+      }
+      _nodaliaConstruct() {
+        this.attachShadow({ mode: "open" });
+        this._config = null;
+        this._hass = null;
+        this._cardWidth = 0;
+        this._isCompactLayout = false;
+        this._activeModePanel = null;
+        this._roomPanelOpen = false;
+        this._selectedCleaningAreas = [];
+        this._lastNonSmartModeSelection = {
+          suction: "",
+          mop: ""
+        };
+        this._pendingModeSelection = {
+          suction: "",
+          mop: ""
+        };
+        this._pendingModeSelectionTimers = {
+          suction: 0,
+          mop: 0
+        };
+        this._relatedEntityCache = null;
+        this._relatedEntityCacheGeneration = 0;
+        this._lastRenderSignature = "";
+        this._animateContentOnNextRender = true;
+        this._entranceAnimationResetTimer = 0;
+        window.NodaliaUtils?.clearDeferTimers?.(this);
+        this._suppressNextVacuumTap = false;
+        this._resizeObserver = new ResizeObserver((entries) => {
+          const entry = entries[0];
+          if (!entry) {
+            return;
+          }
+          const nextWidth = Math.round(entry.contentRect?.width || this.clientWidth || 0);
+          const nextCompact = this._shouldUseCompactLayout(nextWidth);
+          if (nextWidth === this._cardWidth && nextCompact === this._isCompactLayout) {
+            return;
+          }
+          this._cardWidth = nextWidth;
+          this._isCompactLayout = nextCompact;
+          const signature = this._getRenderSignature();
+          if (signature === this._lastRenderSignature) {
+            return;
+          }
+          this._lastRenderSignature = signature;
+          this._render();
+        });
+        this._onShadowClick = this._onShadowClick.bind(this);
+        this.shadowRoot.addEventListener("click", this._onShadowClick);
+        this._detachHostHold = typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function" ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
+          resolveZone: (event) => {
+            const node = event.composedPath().find((n) => n instanceof HTMLElement && n.dataset?.vacuumAction);
+            const action = node?.dataset?.vacuumAction;
+            if (action === "body_tap") {
+              return "body";
+            }
+            if (action === "icon_tap") {
+              return "icon";
+            }
+            return null;
+          },
+          shouldBeginHold: (zone) => this._canRunConfiguredCardHoldAction(zone),
+          onHold: (zone) => {
+            const state = this._getState();
+            this._syncRememberedModeSelections(state);
+            this._triggerHaptic();
+            this._runConfiguredCardHoldAction(state, zone);
+          },
+          markHoldConsumedClick: () => {
+            this._suppressNextVacuumTap = true;
+          }
+        }) : () => {
+        };
+      }
+      connectedCallback() {
+        this._detachHostHold?.reconnect?.();
+        this._resizeObserver?.observe(this);
+        this._animateContentOnNextRender = true;
+        if (this._hass && this._config) {
+          this._lastRenderSignature = "";
+          this._render();
+        }
+      }
+      disconnectedCallback() {
+        this._detachHostHold?.();
+        this._resizeObserver?.disconnect();
+        if (this._entranceAnimationResetTimer) {
+          window.clearTimeout(this._entranceAnimationResetTimer);
+          this._entranceAnimationResetTimer = 0;
+        }
+        Object.keys(this._pendingModeSelectionTimers).forEach((kind) => {
+          if (this._pendingModeSelectionTimers[kind]) {
+            window.clearTimeout(this._pendingModeSelectionTimers[kind]);
+            this._pendingModeSelectionTimers[kind] = 0;
+          }
+        });
+        window.NodaliaUtils?.clearDeferTimers?.(this);
+        this._animateContentOnNextRender = true;
+        this._lastRenderSignature = "";
+      }
+      setConfig(config) {
+        this._config = normalizeConfig(config || {});
+        this._relatedEntityCache = null;
+        window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
+        this._isCompactLayout = this._shouldUseCompactLayout(
+          Math.round(this._cardWidth || this.clientWidth || 0)
+        );
+        this._lastRenderSignature = "";
+        this._animateContentOnNextRender = true;
+        this._render();
+      }
+      set hass(hass) {
+        this._hass = hass;
+        this._relatedEntityCacheGeneration += 1;
+        const nextSignature = this._getRenderSignature(hass);
+        const pendingChanged = this._syncPendingModeSelections();
+        if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !pendingChanged) {
+          return;
+        }
+        this._lastRenderSignature = nextSignature;
+        this._render();
+      }
+      getCardSize() {
+        return this._getEstimatedCardSize();
+      }
+      getGridOptions() {
+        return {
+          rows: "auto",
+          columns: "full",
+          min_rows: 2,
+          min_columns: 2
+        };
+      }
+      _notifyLayoutChange() {
         if (!this.isConnected) {
           return;
         }
-        window.dispatchEvent(new Event("resize"));
-      });
-    }
-  }
-
-  _scheduleLayoutRefresh(delay = 0) {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const safeDelay = Math.max(0, Number(delay) || 0);
-    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
-    const done = () => {
-      if (!this.isConnected) {
-        return;
-      }
-      this._notifyLayoutChange();
-    };
-    if (typeof schedule === "function") {
-      schedule(this, done, safeDelay);
-    } else {
-      window.setTimeout(done, safeDelay);
-    }
-  }
-
-  _scheduleEntranceAnimationReset(delay) {
-    if (this._entranceAnimationResetTimer) {
-      window.clearTimeout(this._entranceAnimationResetTimer);
-      this._entranceAnimationResetTimer = 0;
-    }
-
-    const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3000);
-    if (!safeDelay || typeof window === "undefined") {
-      this._animateContentOnNextRender = false;
-      return;
-    }
-
-    this._entranceAnimationResetTimer = window.setTimeout(() => {
-      this._entranceAnimationResetTimer = 0;
-      if (!this.isConnected) {
-        return;
-      }
-      this._animateContentOnNextRender = false;
-    }, safeDelay);
-  }
-
-  _getEstimatedCardSize(state = this._getState()) {
-    let size = 3;
-    const availableModeDescriptors = this._getVisibleModeDescriptors(state);
-    const activeModeDescriptor = availableModeDescriptors.find(mode => mode.kind === this._activeModePanel)
-      || null;
-    const roomMappings = this._getRoomMappings(state);
-    const modePanelVisible = Boolean(this._activeModePanel);
-    const roomPanelVisible = Boolean(this._roomPanelOpen && roomMappings.length);
-
-    if (modePanelVisible && activeModeDescriptor?.options?.length) {
-      size += Math.min(3, Math.max(1, Math.ceil(activeModeDescriptor.options.length / 4)));
-    }
-
-    if (roomPanelVisible) {
-      size += Math.min(3, Math.max(1, Math.ceil(roomMappings.length / 4)));
-    }
-
-    return size;
-  }
-
-  _getRoomPanelMaxHeight(roomMappings) {
-    const roomCount = Array.isArray(roomMappings) ? roomMappings.length : 0;
-    return clamp(84 + (roomCount * 52), 220, 720);
-  }
-
-  _getRenderSignature(hass = this._hass) {
-    const entityId = this._config?.entity || "";
-    const state = entityId ? hass?.states?.[entityId] || null : null;
-    const errorEntityId = this._config?.error_entity || this._guessRelatedErrorEntity();
-    const errorState = errorEntityId ? hass?.states?.[errorEntityId] || null : null;
-    const auxiliaryState = this._getAuxiliaryState();
-    const batteryState = this._getAuxiliaryBatteryState();
-    const mappingState = this._getRoomMappingSourceState();
-    const suctionSelectEntity = this._config?.suction_select_entity || this._guessRelatedSelectEntity("suction");
-    const suctionSelectState = suctionSelectEntity ? hass?.states?.[suctionSelectEntity] || null : null;
-    const mopSelectEntity = this._config?.mop_select_entity || this._guessRelatedSelectEntity("mop");
-    const mopSelectState = mopSelectEntity ? hass?.states?.[mopSelectEntity] || null : null;
-    const attrs = state?.attributes || {};
-    const joinParts = window.NodaliaRenderSignature?.joinParts;
-    const values = [
-      entityId,
-      state?.state || "",
-      state?.last_updated || "",
-      attrs.friendly_name || "",
-      attrs.icon || "",
-      this._config?.show_entity_picture === true,
-      this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || "",
-      attrs.battery_level ?? -1,
-      attrs.status || "",
-      attrs.fan_speed || "",
-      attrs.water_grade || attrs.water_box_mode || "",
-      attrs.current_room || attrs.current_segment || "",
-      errorEntityId,
-      errorState?.state || "",
-      errorState?.last_updated || "",
-      auxiliaryState?.entity_id || this._config?.state_entity || "",
-      auxiliaryState?.state || "",
-      auxiliaryState?.last_updated || "",
-      batteryState?.entity_id || this._config?.battery_entity || "",
-      batteryState?.state || "",
-      batteryState?.last_updated || "",
-      mappingState?.entity_id || this._config?.room_mapping_entity || "",
-      mappingState?.state || "",
-      mappingState?.last_updated || "",
-      suctionSelectEntity,
-      suctionSelectState?.state || "",
-      suctionSelectState?.last_updated || "",
-      mopSelectEntity,
-      mopSelectState?.state || "",
-      mopSelectState?.last_updated || "",
-      window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") || "en",
-      this._isCompactLayout,
-      this._activeModePanel || "",
-      this._roomPanelOpen === true,
-      this._config?.tap_action || "",
-      this._config?.icon_tap_action ?? "",
-      this._config?.tap_navigation_path || "",
-      this._config?.hold_action || "",
-      this._config?.icon_hold_action ?? "",
-      this._config?.hold_navigation_path || "",
-      this._config?.icon_hold_navigation_path || "",
-    ];
-    if (typeof joinParts === "function") {
-      return joinParts([{ prefix: "vacuum:", values }]);
-    }
-    return values.join("::");
-  }
-
-  _getConfiguredGridColumns() {
-    const numericColumns = Number(this._config?.grid_options?.columns);
-    return Number.isFinite(numericColumns) && numericColumns > 0 ? numericColumns : null;
-  }
-
-  _getCompactLayoutThreshold() {
-    const styles = getSafeStyles(this._config?.styles);
-    const iconSize = parseSizeToPixels(styles?.icon?.size, 58);
-    const cardPadding = parseSizeToPixels(styles?.card?.padding, 14);
-    const cardGap = parseSizeToPixels(styles?.card?.gap, 12);
-
-    return Math.max(
-      COMPACT_LAYOUT_THRESHOLD,
-      Math.round(iconSize + (cardPadding * 2) + (cardGap * 2) + 48),
-    );
-  }
-
-  _shouldUseCompactLayout(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
-    const mode = this._config?.compact_layout_mode || "auto";
-
-    if (mode === "always") {
-      return true;
-    }
-
-    if (mode === "never") {
-      return false;
-    }
-
-    const gridColumns = this._getConfiguredGridColumns();
-    if (gridColumns !== null) {
-      return gridColumns < 4;
-    }
-
-    return width > 0 && width < this._getCompactLayoutThreshold();
-  }
-
-  _triggerHaptic(style = this._config?.haptics?.style) {
-    if (!this._config?.haptics?.enabled) {
-      return;
-    }
-
-    const hapticStyle = String(style || "medium");
-
-    try {
-      fireEvent(this, "haptic", hapticStyle);
-    } catch (_error) {
-      // Ignore event dispatch issues and try vibration fallback below.
-    }
-
-    if (
-      !this._config.haptics.fallback_vibrate ||
-      typeof navigator === "undefined" ||
-      typeof navigator.vibrate !== "function"
-    ) {
-      return;
-    }
-
-    navigator.vibrate(HAPTIC_PATTERNS[hapticStyle] || HAPTIC_PATTERNS.selection);
-  }
-
-  _getAnimationSettings() {
-    const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
-    return {
-      enabled: configuredAnimations.enabled !== false,
-      iconAnimation: configuredAnimations.icon_animation !== false,
-      panelDuration: clamp(
-        Number(configuredAnimations.panel_duration) || DEFAULT_CONFIG.animations.panel_duration,
-        120,
-        2400,
-      ),
-      buttonBounceDuration: clamp(
-        Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration,
-        120,
-        1200,
-      ),
-    };
-  }
-
-  _triggerButtonBounce(button) {
-    if (!(button instanceof HTMLElement)) {
-      return;
-    }
-
-    const animations = this._getAnimationSettings();
-    if (!animations.enabled) {
-      return;
-    }
-
-    button.classList.remove("is-pressing");
-    button.getBoundingClientRect();
-    button.classList.add("is-pressing");
-
-    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
-    const done = () => {
-      if (!button.isConnected) {
-        return;
-      }
-      button.classList.remove("is-pressing");
-    };
-    if (typeof schedule === "function") {
-      schedule(this, done, animations.buttonBounceDuration + 40);
-    } else {
-      window.setTimeout(done, animations.buttonBounceDuration + 40);
-    }
-  }
-
-  _openMoreInfo(entityId = this._config?.entity) {
-    if (!entityId) {
-      return;
-    }
-
-    fireEvent(this, "hass-more-info", {
-      entityId,
-    });
-  }
-
-  _navigate(path) {
-    const navigationPath = String(path || "").trim();
-    if (!navigationPath) {
-      return;
-    }
-
-    if (this._hass?.navigate) {
-      this._hass.navigate(navigationPath);
-      return;
-    }
-
-    if (window?.history?.pushState && !navigationPath.includes("://")) {
-      window.history.pushState(null, "", navigationPath);
-      window.dispatchEvent(new CustomEvent("location-changed", {
-        detail: { replace: false },
-      }));
-      return;
-    }
-
-    fireEvent(this, "hass-navigate", { path: navigationPath });
-  }
-
-  _effectiveVacuumTapAction(zone = "body") {
-    const body = normalizeTextKey(this._config?.tap_action || "default");
-    if (zone === "icon") {
-      const raw = String(this._config?.icon_tap_action ?? "").trim();
-      if (!raw) {
-        return body;
-      }
-      return normalizeTextKey(raw);
-    }
-    return body;
-  }
-
-  _runConfiguredCardTapAction(state = this._getState(), zone = "body") {
-    const action = this._effectiveVacuumTapAction(zone);
-
-    switch (action) {
-      case "none":
-        break;
-      case "more_info":
-        this._openMoreInfo(this._config?.entity);
-        break;
-      case "navigate":
-        this._navigate(this._config?.tap_navigation_path);
-        break;
-      case "default":
-      default:
-        this._runPrimaryAction(state);
-        break;
-    }
-  }
-
-  _canRunConfiguredCardTapAction(zone = "body") {
-    const action = this._effectiveVacuumTapAction(zone);
-
-    if (action === "none") {
-      return false;
-    }
-
-    if (action === "navigate") {
-      return Boolean(String(this._config?.tap_navigation_path || "").trim());
-    }
-
-    if (action === "more_info") {
-      return Boolean(this._config?.entity);
-    }
-
-    return true;
-  }
-
-  _effectiveVacuumHoldAction(zone = "body") {
-    const body = normalizeTextKey(this._config?.hold_action || "none");
-    if (zone === "icon") {
-      const raw = String(this._config?.icon_hold_action ?? "").trim();
-      if (!raw) {
-        return body;
-      }
-      return normalizeTextKey(raw);
-    }
-    return body;
-  }
-
-  _resolveVacuumHoldNavigationPath(zone = "body") {
-    const tapPath = String(this._config?.tap_navigation_path ?? "").trim();
-    const holdPath = String(this._config?.hold_navigation_path ?? "").trim();
-    const iconHoldPath = String(this._config?.icon_hold_navigation_path ?? "").trim();
-    if (zone === "icon") {
-      return iconHoldPath || holdPath || tapPath;
-    }
-    return holdPath || tapPath;
-  }
-
-  _runConfiguredCardHoldAction(state = this._getState(), zone = "body") {
-    const action = this._effectiveVacuumHoldAction(zone);
-
-    switch (action) {
-      case "none":
-        break;
-      case "more_info":
-        this._openMoreInfo(this._config?.entity);
-        break;
-      case "navigate":
-        this._navigate(this._resolveVacuumHoldNavigationPath(zone));
-        break;
-      case "default":
-      default:
-        this._runPrimaryAction(state);
-        break;
-    }
-  }
-
-  _canRunConfiguredCardHoldAction(zone = "body") {
-    const action = this._effectiveVacuumHoldAction(zone);
-
-    if (action === "none") {
-      return false;
-    }
-
-    if (action === "navigate") {
-      return Boolean(this._resolveVacuumHoldNavigationPath(zone));
-    }
-
-    if (action === "more_info") {
-      return Boolean(this._config?.entity);
-    }
-
-    return true;
-  }
-
-  _getState() {
-    if (!this._config?.entity || !this._hass?.states) {
-      return null;
-    }
-
-    return this._hass.states[this._config.entity] || null;
-  }
-
-  _getRelatedEntityCache() {
-    if (!this._hass?.states || !this._config?.entity) {
-      return null;
-    }
-
-    const objectId = normalizeTextKey(String(this._config.entity).split(".").slice(1).join("_"));
-    if (!objectId) {
-      return null;
-    }
-
-    if (
-      this._relatedEntityCache?.objectId === objectId
-      && this._relatedEntityCache?.generation === this._relatedEntityCacheGeneration
-    ) {
-      return this._relatedEntityCache;
-    }
-
-    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
-    const candidates = {
-      state: [],
-      error: [],
-      battery: [],
-      roomMapping: [],
-      suctionSelect: [],
-      mopSelect: [],
-    };
-    const suctionPatterns = ["fan_speed", "fan_power", "suction", "cleaning_mode"];
-    const mopPatterns = ["mop", "water", "water_level", "water_volume", "scrub"];
-    const states = this._hass.states;
-    const registry = this._hass.entities || {};
-    const vacuumObjectIds = listVacuumObjectIds(states);
-    const vacuumDeviceId = registry[this._config.entity]?.device_id || "";
-    const allowUnscopedRoborock = vacuumObjectIds.length <= 1;
-
-    Object.keys(states).forEach(entityId => {
-      const isSameDevice = Boolean(vacuumDeviceId && registry[entityId]?.device_id === vacuumDeviceId);
-      const related = isHelperRelatedToConfiguredVacuum({
-        candidateId: entityId,
-        searchable: states[entityId]?.attributes?.friendly_name || "",
-        isSameDevice,
-        objectId,
-        vacuumObjectIds,
-      });
-      if (entityId.startsWith("sensor.")) {
-        if (related && ["estado", "status", "state"].some(pattern => entityId.includes(pattern))) {
-          candidates.state.push(entityId);
+        fireEvent(this, "iron-resize", {});
+        if (typeof window !== "undefined") {
+          requestAnimationFrame(() => {
+            if (!this.isConnected) {
+              return;
+            }
+            window.dispatchEvent(new Event("resize"));
+          });
         }
-        if (
-          (related || (allowUnscopedRoborock && entityId.includes("roborock")))
-          && ["error", "fault", "fallo", "erro"].some(pattern => entityId.includes(pattern))
-        ) {
-          candidates.error.push(entityId);
-        }
-        if (related && ["battery", "bateria"].some(pattern => entityId.includes(pattern))) {
-          candidates.battery.push(entityId);
-        }
-        if (related && ["room_mapping", "rooms", "segments", "habitaciones"].some(pattern => entityId.includes(pattern))) {
-          candidates.roomMapping.push(entityId);
-        }
-        return;
       }
-
-      if (!entityId.startsWith("select.") || !related) {
-        return;
-      }
-      if (suctionPatterns.some(pattern => entityId.includes(pattern))) {
-        candidates.suctionSelect.push(entityId);
-      }
-      if (mopPatterns.some(pattern => entityId.includes(pattern))) {
-        candidates.mopSelect.push(entityId);
-      }
-    });
-
-    Object.values(candidates).forEach(items => items.sort((left, right) => left.localeCompare(right, sortLoc)));
-    this._relatedEntityCache = {
-      objectId,
-      generation: this._relatedEntityCacheGeneration,
-      state: candidates.state[0] || "",
-      error: candidates.error[0] || "",
-      battery: candidates.battery[0] || "",
-      roomMapping: candidates.roomMapping[0] || "",
-      suctionSelect: candidates.suctionSelect[0] || "",
-      mopSelect: candidates.mopSelect[0] || "",
-    };
-    return this._relatedEntityCache;
-  }
-
-  _guessRelatedStateEntity() {
-    return this._getRelatedEntityCache()?.state || "";
-  }
-
-  _getAuxiliaryState() {
-    const entityId = this._config?.state_entity || this._guessRelatedStateEntity();
-    return entityId ? this._hass?.states?.[entityId] || null : null;
-  }
-
-  _guessRelatedErrorEntity() {
-    return this._getRelatedEntityCache()?.error || "";
-  }
-
-  _getErrorState() {
-    const entityId = this._config?.error_entity || this._guessRelatedErrorEntity();
-    return entityId ? this._hass?.states?.[entityId] || null : null;
-  }
-
-  _getErrorLabel() {
-    const raw = String(this._getErrorState()?.state || "").trim();
-    if (!raw || !window.NodaliaI18n?.isVacuumErrorState?.(raw)) {
-      return "";
-    }
-    return window.NodaliaI18n?.translateVacuumErrorState
-      ? window.NodaliaI18n.translateVacuumErrorState(this._hass, this._config?.language ?? "auto", raw, raw)
-      : raw;
-  }
-
-  _hasVacuumError() {
-    return Boolean(this._getErrorLabel());
-  }
-
-  _guessRelatedBatteryEntity() {
-    return this._getRelatedEntityCache()?.battery || "";
-  }
-
-  _getAuxiliaryBatteryState() {
-    const entityId = this._config?.battery_entity || this._guessRelatedBatteryEntity();
-    return entityId ? this._hass?.states?.[entityId] || null : null;
-  }
-
-  _guessRelatedRoomMappingEntity() {
-    return this._getRelatedEntityCache()?.roomMapping || "";
-  }
-
-  _getRoomMappingSourceState() {
-    const explicitEntityId = this._config?.room_mapping_entity;
-    if (explicitEntityId && this._hass?.states?.[explicitEntityId]) {
-      return this._hass.states[explicitEntityId];
-    }
-
-    const auxiliaryState = this._getAuxiliaryState();
-    if (
-      auxiliaryState &&
-      (
-        auxiliaryState.attributes?.room_mapping !== undefined ||
-        auxiliaryState.attributes?.rooms !== undefined ||
-        String(auxiliaryState.state || "").includes("cleaning_area_id:")
-      )
-    ) {
-      return auxiliaryState;
-    }
-
-    const state = this._getState();
-    if (
-      state &&
-      (
-        state.attributes?.room_mapping !== undefined ||
-        state.attributes?.rooms !== undefined ||
-        String(state.state || "").includes("cleaning_area_id:")
-      )
-    ) {
-      return state;
-    }
-
-    const guessedEntityId = this._guessRelatedRoomMappingEntity();
-    return guessedEntityId ? this._hass?.states?.[guessedEntityId] || null : null;
-  }
-
-  _extractRoomsFromString(rawValue) {
-    const text = String(rawValue || "").trim();
-    if (!text) {
-      return [];
-    }
-
-    try {
-      const parsed = JSON.parse(text);
-      return this._normalizeRoomCollection(parsed);
-    } catch (_error) {
-      // Fall through to YAML-like parsing.
-    }
-
-    const roomBlocks = text
-      .split(/\n(?=-\s*id:|\s*-\s*id:)/g)
-      .map(block => block.trim())
-      .filter(Boolean);
-
-    const rooms = roomBlocks
-      .map(block => {
-        const idMatch = block.match(/(?:^|\n)\s*-?\s*id:\s*([^\n]+)/i);
-        const nameMatch = block.match(/(?:^|\n)\s*name:\s*([^\n]+)/i);
-        const cleaningAreaMatch = block.match(/(?:^|\n)\s*cleaning_area_id:\s*([^\n]+)/i);
-
-        const id = idMatch ? idMatch[1].trim() : "";
-        const name = nameMatch ? nameMatch[1].trim() : "";
-        const cleaningAreaId = cleaningAreaMatch ? cleaningAreaMatch[1].trim() : "";
-
-        if (!id && !name && !cleaningAreaId) {
-          return null;
+      _scheduleLayoutRefresh(delay = 0) {
+        if (typeof window === "undefined") {
+          return;
         }
-
-        return {
-          id,
-          name,
-          cleaning_area_id: cleaningAreaId,
+        const safeDelay = Math.max(0, Number(delay) || 0);
+        const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+        const done = () => {
+          if (!this.isConnected) {
+            return;
+          }
+          this._notifyLayoutChange();
         };
-      })
-      .filter(Boolean);
-
-    return this._normalizeRoomCollection(rooms);
-  }
-
-  _normalizeRoomCollection(rawValue) {
-    let collection = rawValue;
-
-    if (typeof collection === "string") {
-      return this._extractRoomsFromString(collection);
-    }
-
-    if (Array.isArray(collection)) {
-      return collection;
-    }
-
-    if (collection && typeof collection === "object") {
-      if (Array.isArray(collection.room_mapping)) {
-        return collection.room_mapping;
-      }
-
-      if (Array.isArray(collection.rooms)) {
-        return collection.rooms;
-      }
-
-      return Object.values(collection);
-    }
-
-    return [];
-  }
-
-  _getReportedStateValue(state) {
-    const error = this._getErrorLabel();
-    if (error) {
-      return error;
-    }
-    const auxiliaryState = this._getAuxiliaryState();
-    if (auxiliaryState?.state && !["unknown", "unavailable"].includes(String(auxiliaryState.state).toLowerCase())) {
-      return String(auxiliaryState.state);
-    }
-
-    return state?.state ? String(state.state) : "";
-  }
-
-  _getReportedStateKey(state) {
-    return normalizeTextKey(this._getReportedStateValue(state));
-  }
-
-  _getVacuumName(state) {
-    if (this._config?.name) {
-      return this._config.name;
-    }
-
-    if (state?.attributes?.friendly_name) {
-      return state.attributes.friendly_name;
-    }
-
-    return this._config?.entity || "Vacuum";
-  }
-
-  _getVacuumIcon(state) {
-    if (this._config?.icon) {
-      return this._config.icon;
-    }
-
-    if (this._hasVacuumError()) {
-      return "mdi:alert-circle-outline";
-    }
-
-    if (state?.attributes?.icon) {
-      return state.attributes.icon;
-    }
-
-    switch (state?.state) {
-      case "cleaning":
-        return "mdi:robot-vacuum";
-      case "returning":
-        return "mdi:home-map-marker";
-      case "paused":
-        return "mdi:pause-circle-outline";
-      case "error":
-        return "mdi:alert-circle-outline";
-      default:
-        return "mdi:robot-vacuum";
-    }
-  }
-
-  _getEntityPicture(state) {
-    if (this._config?.show_entity_picture !== true) {
-      return "";
-    }
-    return String(
-      this._config?.entity_picture
-      || state?.attributes?.entity_picture_local
-      || state?.attributes?.entity_picture
-      || "",
-    ).trim();
-  }
-
-  _getStateLabel(state) {
-    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-    const langCfg = this._config?.language ?? "auto";
-    const trState = (stateKey, rawFallback = state?.state) => (
-      window.NodaliaI18n?.translateAdvanceVacuumReportedState
-        ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, langCfg, stateKey, rawFallback)
-        : rawFallback
-    );
-
-    const errorLabel = this._getErrorLabel();
-    if (errorLabel) {
-      return errorLabel;
-    }
-
-    if (this._isGoingToWashMops(state)) {
-      return this._humanizeStateLabel("going_to_wash_mop", hass, langCfg);
-    }
-
-    if (this._isWashingMops(state)) {
-      return trState("washing_mop", "Washing mops");
-    }
-
-    if (this._isDryingMops(state)) {
-      return trState("drying_mop", "Drying");
-    }
-
-    if (this._isAutoEmptying(state)) {
-      return trState("emptying", "Auto-emptying");
-    }
-
-    const roomMappings = this._getRoomMappings(state);
-    const cleaningAreaLabel = this._getCleaningAreaLabel(state, roomMappings);
-    if (cleaningAreaLabel) {
-      return `${trState("cleaning", "Cleaning")}: ${cleaningAreaLabel}`;
-    }
-
-    const reportedKey = normalizeTextKey(this._getReportedStateValue(state));
-    switch (reportedKey) {
-      case "cleaning":
-      case "segment_cleaning":
-      case "room_cleaning":
-      case "zone_cleaning":
-      case "segment_clean":
-      case "room_clean":
-      case "zone_clean":
-      case "clean_area":
-      case "vacuuming":
-      case "limpiando":
-        return trState("cleaning", "Cleaning");
-      case "going_to_wash_the_mop":
-      case "going_to_wash_mop":
-      case "go_to_wash_mop":
-      case "go_wash_mop":
-      case "returning_to_wash_mop":
-        return this._humanizeStateLabel("going_to_wash_mop", hass, langCfg);
-      case "paused":
-      case "pause":
-      case "pausado":
-        return trState("paused", "Paused");
-      case "returning":
-      case "return_to_base":
-      case "returning_home":
-      case "volviendo":
-        return trState("returning", "Returning to dock");
-      case "docked":
-      case "charging":
-      case "charging_completed":
-      case "en_base":
-      case "base":
-        return trState("docked", "Docked");
-      case "idle":
-      case "standby":
-      case "en_espera":
-        return trState("fallback", "Idle");
-      case "error":
-      case "fallo":
-        return trState("error", "Error");
-      case "unavailable":
-        return trState("unavailable", "Unavailable");
-      case "unknown":
-        return trState("unknown", "Unknown");
-      default:
-        return this._humanizeStateLabel(this._getReportedStateValue(state), hass, langCfg) || "No state";
-    }
-  }
-
-  _humanizeStateLabel(value, hass = null, configLang = null) {
-    const raw = String(value ?? "").trim();
-    if (!raw) {
-      return "";
-    }
-
-    const normalized = normalizeTextKey(raw);
-    if (!normalized) {
-      return raw;
-    }
-
-    if (normalized.includes("go") && normalized.includes("wash") && normalized.includes("mop")) {
-      return window.NodaliaI18n?.translateAdvanceVacuumReportedState
-        ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, configLang ?? "auto", "washing_mop", "Going to wash mops")
-        : "Going to wash mops";
-    }
-
-    if (normalized.includes("wash") && normalized.includes("mop")) {
-      return window.NodaliaI18n?.translateAdvanceVacuumReportedState
-        ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, configLang ?? "auto", "washing_mop", "Washing mops")
-        : "Washing mops";
-    }
-
-    if (normalized.includes("dry") && normalized.includes("mop")) {
-      return window.NodaliaI18n?.translateAdvanceVacuumReportedState
-        ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, configLang ?? "auto", "drying_mop", "Drying mops")
-        : "Drying mops";
-    }
-
-    if (normalized.includes("empty")) {
-      return window.NodaliaI18n?.translateAdvanceVacuumReportedState
-        ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, configLang ?? "auto", "emptying", "Auto-emptying")
-        : "Auto-emptying";
-    }
-
-    if (normalized.includes("zone") && normalized.includes("clean")) {
-      return window.NodaliaI18n?.translateAdvanceVacuumReportedState
-        ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, configLang ?? "auto", "cleaning", "Cleaning zone")
-        : "Cleaning zone";
-    }
-
-    if ((normalized.includes("room") || normalized.includes("segment")) && normalized.includes("clean")) {
-      return window.NodaliaI18n?.translateAdvanceVacuumReportedState
-        ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, configLang ?? "auto", "cleaning", "Cleaning room")
-        : "Cleaning room";
-    }
-
-    return raw
-      .replace(/[_-]+/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-      .replace(/\b\w/g, match => match.toUpperCase());
-  }
-
-  _getActivityTextBlob(state) {
-    const attributes = state?.attributes || {};
-    const auxiliaryState = this._getAuxiliaryState();
-    const auxiliaryAttributes = auxiliaryState?.attributes || {};
-    return [
-      auxiliaryState?.state,
-      auxiliaryAttributes.status,
-      auxiliaryAttributes.state,
-      auxiliaryAttributes.activity,
-      auxiliaryAttributes.phase,
-      auxiliaryAttributes.job,
-      auxiliaryAttributes.job_state,
-      auxiliaryAttributes.task_status,
-      auxiliaryAttributes.current_task,
-      auxiliaryAttributes.vacuum_state,
-      auxiliaryAttributes.robot_status,
-      auxiliaryAttributes.cleaning_state,
-      auxiliaryAttributes.cleaning_progress,
-      auxiliaryAttributes.operation,
-      state?.state,
-      attributes.status,
-      attributes.state,
-      attributes.activity,
-      attributes.phase,
-      attributes.job,
-      attributes.job_state,
-      attributes.task_status,
-      attributes.current_task,
-      attributes.vacuum_state,
-      attributes.robot_status,
-      attributes.cleaning_state,
-      attributes.cleaning_progress,
-      attributes.operation,
-    ]
-      .filter(Boolean)
-      .map(value => normalizeTextKey(value))
-      .join(" ");
-  }
-
-  _getActiveTaskTokens(state) {
-    const attributes = state?.attributes || {};
-    const auxiliaryState = this._getAuxiliaryState();
-    const auxiliaryAttributes = auxiliaryState?.attributes || {};
-
-    return [
-      auxiliaryState?.state,
-      auxiliaryAttributes.activity,
-      auxiliaryAttributes.phase,
-      auxiliaryAttributes.job,
-      auxiliaryAttributes.job_state,
-      auxiliaryAttributes.task_status,
-      auxiliaryAttributes.current_task,
-      auxiliaryAttributes.cleaning_state,
-      auxiliaryAttributes.operation,
-      state?.state,
-      attributes.activity,
-      attributes.phase,
-      attributes.job,
-      attributes.job_state,
-      attributes.task_status,
-      attributes.current_task,
-      attributes.cleaning_state,
-      attributes.operation,
-    ]
-      .filter(Boolean)
-      .map(value => normalizeTextKey(value));
-  }
-
-  _matchesActivity(state, keywords) {
-    const activityBlob = this._getActivityTextBlob(state);
-    return keywords.some(keyword => activityBlob.includes(normalizeTextKey(keyword)));
-  }
-
-  _getBatteryLevel(state) {
-    const directValue = Number(state?.attributes?.battery_level);
-    if (Number.isFinite(directValue)) {
-      return clamp(Math.round(directValue), 0, 100);
-    }
-
-    const auxiliaryState = this._getAuxiliaryState();
-    const auxiliaryBatteryLevel = Number(
-      auxiliaryState?.attributes?.battery_level ??
-      auxiliaryState?.attributes?.battery ??
-      auxiliaryState?.attributes?.battery_remaining,
-    );
-    if (Number.isFinite(auxiliaryBatteryLevel)) {
-      return clamp(Math.round(auxiliaryBatteryLevel), 0, 100);
-    }
-
-    const batterySensorState = this._getAuxiliaryBatteryState();
-    const batterySensorValue = Number(
-      batterySensorState?.state ??
-      batterySensorState?.attributes?.battery_level ??
-      batterySensorState?.attributes?.battery ??
-      batterySensorState?.attributes?.battery_remaining,
-    );
-    if (Number.isFinite(batterySensorValue)) {
-      return clamp(Math.round(batterySensorValue), 0, 100);
-    }
-
-    return null;
-  }
-
-  _getBatteryColor(level) {
-    if (!Number.isFinite(level)) {
-      return "var(--secondary-text-color)";
-    }
-
-    if (level <= 15) {
-      return "var(--error-color, #ff6b6b)";
-    }
-
-    if (level <= 35) {
-      return "#f59e0b";
-    }
-
-    if (level <= 60) {
-      return "#f1c24c";
-    }
-
-    return "#61c97a";
-  }
-
-  _getRoomMappings(state) {
-    const mappingSource = this._getRoomMappingSourceState();
-    const rawRooms = [
-      mappingSource?.attributes?.room_mapping,
-      mappingSource?.attributes?.rooms,
-      mappingSource?.state,
-      state?.attributes?.room_mapping,
-      state?.attributes?.rooms,
-    ]
-      .map(value => this._normalizeRoomCollection(value))
-      .find(value => Array.isArray(value) && value.length) || [];
-
-    if (!Array.isArray(rawRooms)) {
-      return [];
-    }
-
-    const seen = new Set();
-    return rawRooms
-      .map(room => {
-        if (!room || typeof room !== "object") {
-          return null;
+        if (typeof schedule === "function") {
+          schedule(this, done, safeDelay);
+        } else {
+          window.setTimeout(done, safeDelay);
         }
-
-        const cleaningAreaId = this._normalizeCleaningAreaId(
-          room.cleaning_area_id ?? room.cleaningAreaId ?? room.area_id ?? room.areaId,
+      }
+      _scheduleEntranceAnimationReset(delay) {
+        if (this._entranceAnimationResetTimer) {
+          window.clearTimeout(this._entranceAnimationResetTimer);
+          this._entranceAnimationResetTimer = 0;
+        }
+        const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3e3);
+        if (!safeDelay || typeof window === "undefined") {
+          this._animateContentOnNextRender = false;
+          return;
+        }
+        this._entranceAnimationResetTimer = window.setTimeout(() => {
+          this._entranceAnimationResetTimer = 0;
+          if (!this.isConnected) {
+            return;
+          }
+          this._animateContentOnNextRender = false;
+        }, safeDelay);
+      }
+      _getEstimatedCardSize(state = this._getState()) {
+        let size = 3;
+        const availableModeDescriptors = this._getVisibleModeDescriptors(state);
+        const activeModeDescriptor = availableModeDescriptors.find((mode) => mode.kind === this._activeModePanel) || null;
+        const roomMappings = this._getRoomMappings(state);
+        const modePanelVisible = Boolean(this._activeModePanel);
+        const roomPanelVisible = Boolean(this._roomPanelOpen && roomMappings.length);
+        if (modePanelVisible && activeModeDescriptor?.options?.length) {
+          size += Math.min(3, Math.max(1, Math.ceil(activeModeDescriptor.options.length / 4)));
+        }
+        if (roomPanelVisible) {
+          size += Math.min(3, Math.max(1, Math.ceil(roomMappings.length / 4)));
+        }
+        return size;
+      }
+      _getRoomPanelMaxHeight(roomMappings) {
+        const roomCount = Array.isArray(roomMappings) ? roomMappings.length : 0;
+        return clamp(84 + roomCount * 52, 220, 720);
+      }
+      _getRenderSignature(hass = this._hass) {
+        const entityId = this._config?.entity || "";
+        const state = entityId ? hass?.states?.[entityId] || null : null;
+        const errorEntityId = this._config?.error_entity || this._guessRelatedErrorEntity();
+        const errorState = errorEntityId ? hass?.states?.[errorEntityId] || null : null;
+        const auxiliaryState = this._getAuxiliaryState();
+        const batteryState = this._getAuxiliaryBatteryState();
+        const mappingState = this._getRoomMappingSourceState();
+        const suctionSelectEntity = this._config?.suction_select_entity || this._guessRelatedSelectEntity("suction");
+        const suctionSelectState = suctionSelectEntity ? hass?.states?.[suctionSelectEntity] || null : null;
+        const mopSelectEntity = this._config?.mop_select_entity || this._guessRelatedSelectEntity("mop");
+        const mopSelectState = mopSelectEntity ? hass?.states?.[mopSelectEntity] || null : null;
+        const attrs = state?.attributes || {};
+        const joinParts = window.NodaliaRenderSignature?.joinParts;
+        const values = [
+          entityId,
+          state?.state || "",
+          state?.last_updated || "",
+          attrs.friendly_name || "",
+          attrs.icon || "",
+          this._config?.show_entity_picture === true,
+          this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || "",
+          attrs.battery_level ?? -1,
+          attrs.status || "",
+          attrs.fan_speed || "",
+          attrs.water_grade || attrs.water_box_mode || "",
+          attrs.current_room || attrs.current_segment || "",
+          errorEntityId,
+          errorState?.state || "",
+          errorState?.last_updated || "",
+          auxiliaryState?.entity_id || this._config?.state_entity || "",
+          auxiliaryState?.state || "",
+          auxiliaryState?.last_updated || "",
+          batteryState?.entity_id || this._config?.battery_entity || "",
+          batteryState?.state || "",
+          batteryState?.last_updated || "",
+          mappingState?.entity_id || this._config?.room_mapping_entity || "",
+          mappingState?.state || "",
+          mappingState?.last_updated || "",
+          suctionSelectEntity,
+          suctionSelectState?.state || "",
+          suctionSelectState?.last_updated || "",
+          mopSelectEntity,
+          mopSelectState?.state || "",
+          mopSelectState?.last_updated || "",
+          window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") || "en",
+          this._isCompactLayout,
+          this._activeModePanel || "",
+          this._roomPanelOpen === true,
+          this._config?.tap_action || "",
+          this._config?.icon_tap_action ?? "",
+          this._config?.tap_navigation_path || "",
+          this._config?.hold_action || "",
+          this._config?.icon_hold_action ?? "",
+          this._config?.hold_navigation_path || "",
+          this._config?.icon_hold_navigation_path || ""
+        ];
+        if (typeof joinParts === "function") {
+          return joinParts([{ prefix: "vacuum:", values }]);
+        }
+        return values.join("::");
+      }
+      _getConfiguredGridColumns() {
+        const numericColumns = Number(this._config?.grid_options?.columns);
+        return Number.isFinite(numericColumns) && numericColumns > 0 ? numericColumns : null;
+      }
+      _getCompactLayoutThreshold() {
+        const styles = getSafeStyles(this._config?.styles);
+        const iconSize = parseSizeToPixels(styles?.icon?.size, 58);
+        const cardPadding = parseSizeToPixels(styles?.card?.padding, 14);
+        const cardGap = parseSizeToPixels(styles?.card?.gap, 12);
+        return Math.max(
+          COMPACT_LAYOUT_THRESHOLD,
+          Math.round(iconSize + cardPadding * 2 + cardGap * 2 + 48)
         );
-        const fallbackId = room.id !== undefined && room.id !== null ? String(room.id) : "";
-        const uniqueId = cleaningAreaId || fallbackId;
-        if (!uniqueId || seen.has(uniqueId)) {
+      }
+      _shouldUseCompactLayout(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
+        return window.NodaliaUtils.shouldUseCompactCardLayout({
+          mode: this._config?.compact_layout_mode,
+          width,
+          gridColumns: this._getConfiguredGridColumns()
+        });
+      }
+      _shouldShowCompactTitle(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
+        return window.NodaliaUtils.shouldShowCompactCardTitle({ width });
+      }
+      _triggerHaptic(style = this._config?.haptics?.style) {
+        if (!this._config?.haptics?.enabled) {
+          return;
+        }
+        const hapticStyle = String(style || "medium");
+        try {
+          fireEvent(this, "haptic", hapticStyle);
+        } catch (_error) {
+        }
+        if (!this._config.haptics.fallback_vibrate || typeof navigator === "undefined" || typeof navigator.vibrate !== "function") {
+          return;
+        }
+        navigator.vibrate(HAPTIC_PATTERNS[hapticStyle] || HAPTIC_PATTERNS.selection);
+      }
+      _getAnimationSettings() {
+        const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+        return {
+          enabled: configuredAnimations.enabled !== false,
+          iconAnimation: configuredAnimations.icon_animation !== false,
+          panelDuration: clamp(
+            Number(configuredAnimations.panel_duration) || DEFAULT_CONFIG.animations.panel_duration,
+            120,
+            2400
+          ),
+          buttonBounceDuration: clamp(
+            Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration,
+            120,
+            1200
+          )
+        };
+      }
+      _triggerButtonBounce(button) {
+        if (!(button instanceof HTMLElement)) {
+          return;
+        }
+        const animations = this._getAnimationSettings();
+        if (!animations.enabled) {
+          return;
+        }
+        button.classList.remove("is-pressing");
+        button.getBoundingClientRect();
+        button.classList.add("is-pressing");
+        const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+        const done = () => {
+          if (!button.isConnected) {
+            return;
+          }
+          button.classList.remove("is-pressing");
+        };
+        if (typeof schedule === "function") {
+          schedule(this, done, animations.buttonBounceDuration + 40);
+        } else {
+          window.setTimeout(done, animations.buttonBounceDuration + 40);
+        }
+      }
+      _openMoreInfo(entityId = this._config?.entity) {
+        if (!entityId) {
+          return;
+        }
+        fireEvent(this, "hass-more-info", {
+          entityId
+        });
+      }
+      _navigate(path) {
+        const navigationPath = String(path || "").trim();
+        if (!navigationPath) {
+          return;
+        }
+        if (this._hass?.navigate) {
+          this._hass.navigate(navigationPath);
+          return;
+        }
+        if (window?.history?.pushState && !navigationPath.includes("://")) {
+          window.history.pushState(null, "", navigationPath);
+          window.dispatchEvent(new CustomEvent("location-changed", {
+            detail: { replace: false }
+          }));
+          return;
+        }
+        fireEvent(this, "hass-navigate", { path: navigationPath });
+      }
+      _effectiveVacuumTapAction(zone = "body") {
+        const body = normalizeTextKey(this._config?.tap_action || "default");
+        if (zone === "icon") {
+          const raw = String(this._config?.icon_tap_action ?? "").trim();
+          if (!raw) {
+            return body;
+          }
+          return normalizeTextKey(raw);
+        }
+        return body;
+      }
+      _runConfiguredCardTapAction(state = this._getState(), zone = "body") {
+        const action = this._effectiveVacuumTapAction(zone);
+        switch (action) {
+          case "none":
+            break;
+          case "more_info":
+            this._openMoreInfo(this._config?.entity);
+            break;
+          case "navigate":
+            this._navigate(this._config?.tap_navigation_path);
+            break;
+          case "default":
+          default:
+            this._runPrimaryAction(state);
+            break;
+        }
+      }
+      _canRunConfiguredCardTapAction(zone = "body") {
+        const action = this._effectiveVacuumTapAction(zone);
+        if (action === "none") {
+          return false;
+        }
+        if (action === "navigate") {
+          return Boolean(String(this._config?.tap_navigation_path || "").trim());
+        }
+        if (action === "more_info") {
+          return Boolean(this._config?.entity);
+        }
+        return true;
+      }
+      _effectiveVacuumHoldAction(zone = "body") {
+        const body = normalizeTextKey(this._config?.hold_action || "none");
+        if (zone === "icon") {
+          const raw = String(this._config?.icon_hold_action ?? "").trim();
+          if (!raw) {
+            return body;
+          }
+          return normalizeTextKey(raw);
+        }
+        return body;
+      }
+      _resolveVacuumHoldNavigationPath(zone = "body") {
+        const tapPath = String(this._config?.tap_navigation_path ?? "").trim();
+        const holdPath = String(this._config?.hold_navigation_path ?? "").trim();
+        const iconHoldPath = String(this._config?.icon_hold_navigation_path ?? "").trim();
+        if (zone === "icon") {
+          return iconHoldPath || holdPath || tapPath;
+        }
+        return holdPath || tapPath;
+      }
+      _runConfiguredCardHoldAction(state = this._getState(), zone = "body") {
+        const action = this._effectiveVacuumHoldAction(zone);
+        switch (action) {
+          case "none":
+            break;
+          case "more_info":
+            this._openMoreInfo(this._config?.entity);
+            break;
+          case "navigate":
+            this._navigate(this._resolveVacuumHoldNavigationPath(zone));
+            break;
+          case "default":
+          default:
+            this._runPrimaryAction(state);
+            break;
+        }
+      }
+      _canRunConfiguredCardHoldAction(zone = "body") {
+        const action = this._effectiveVacuumHoldAction(zone);
+        if (action === "none") {
+          return false;
+        }
+        if (action === "navigate") {
+          return Boolean(this._resolveVacuumHoldNavigationPath(zone));
+        }
+        if (action === "more_info") {
+          return Boolean(this._config?.entity);
+        }
+        return true;
+      }
+      _getState() {
+        if (!this._config?.entity || !this._hass?.states) {
           return null;
         }
-
-        seen.add(uniqueId);
-        const rawName = room.name ? String(room.name) : "";
-        const normalizedName = this._humanizeRoomLabel(rawName || uniqueId);
-        return {
-          cleaningAreaId: uniqueId,
-          id: fallbackId,
-          name: normalizedName,
+        return this._hass.states[this._config.entity] || null;
+      }
+      _getRelatedEntityCache() {
+        if (!this._hass?.states || !this._config?.entity) {
+          return null;
+        }
+        const objectId = normalizeTextKey(String(this._config.entity).split(".").slice(1).join("_"));
+        if (!objectId) {
+          return null;
+        }
+        if (this._relatedEntityCache?.objectId === objectId && this._relatedEntityCache?.generation === this._relatedEntityCacheGeneration) {
+          return this._relatedEntityCache;
+        }
+        const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
+        const candidates = {
+          state: [],
+          error: [],
+          battery: [],
+          roomMapping: [],
+          suctionSelect: [],
+          mopSelect: []
         };
-      })
-      .filter(Boolean);
-  }
-
-  _normalizeCleaningAreaId(value) {
-    const raw = String(value ?? "").trim();
-    if (!raw) {
-      return "";
-    }
-
-    const cleaned = raw
-      .replace(/[\[\]\(\)"']/g, " ")
-      .replace(/cleaning_area_id[:=]/gi, " ")
-      .replace(/,+/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    if (!cleaned) {
-      return "";
-    }
-
-    return cleaned.split(" ")[0] || cleaned;
-  }
-
-  _humanizeRoomLabel(value) {
-    const raw = String(value ?? "").trim();
-    if (!raw) {
-      return "";
-    }
-
-    const normalized = raw.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
-    if (!normalized) {
-      return raw;
-    }
-
-    if (/^\d+$/.test(normalized)) {
-      return `Area ${normalized}`;
-    }
-
-    return normalized
-      .split(" ")
-      .map(token => (token ? token[0].toUpperCase() + token.slice(1) : token))
-      .join(" ");
-  }
-
-  _getCleaningAreaIdFromState(state) {
-    const reported = this._getReportedStateValue(state);
-    const match = String(reported || "").match(/cleaning_area_id:\s*([^\s,]+)/i);
-    return match ? this._normalizeCleaningAreaId(match[1]) : "";
-  }
-
-  _getCleaningAreaLabel(state, roomMappings) {
-    const id = this._getCleaningAreaIdFromState(state);
-    if (!id) {
-      return "";
-    }
-
-    const room = roomMappings.find(item => item.cleaningAreaId === id || item.id === id);
-    return room?.name || "";
-  }
-
-  _sanitizeSelectedCleaningAreas(roomMappings) {
-    const validIds = new Set(roomMappings.map(room => room.cleaningAreaId));
-    this._selectedCleaningAreas = this._selectedCleaningAreas.filter(areaId => validIds.has(areaId));
-  }
-
-  _toggleCleaningAreaSelection(areaId) {
-    if (!areaId) {
-      return;
-    }
-
-    if (this._selectedCleaningAreas.includes(areaId)) {
-      this._selectedCleaningAreas = this._selectedCleaningAreas.filter(value => value !== areaId);
-      return;
-    }
-
-    this._selectedCleaningAreas = [...this._selectedCleaningAreas, areaId];
-  }
-
-  _canSelectRooms(state, roomMappings = this._getRoomMappings(state)) {
-    return this._isDocked(state) && roomMappings.length > 0;
-  }
-
-  _runAreaCleaning(roomMappings) {
-    if (!roomMappings.length) {
-      return false;
-    }
-
-    const selectedIds = this._selectedCleaningAreas.length
-      ? this._selectedCleaningAreas
-      : roomMappings.map(room => room.cleaningAreaId);
-
-    if (!selectedIds.length) {
-      return false;
-    }
-
-    this._callService("clean_area", {
-      cleaning_area_id: selectedIds,
-    });
-    return true;
-  }
-
-  _getCurrentFanSpeed(state) {
-    const current = state?.attributes?.fan_speed;
-    return current ? String(current) : "";
-  }
-
-  _getModeVisibilityField(kind) {
-    return kind === "mop" ? "hidden_mop_modes" : "hidden_suction_modes";
-  }
-
-  _isModeHidden(kind, value) {
-    const field = this._getModeVisibilityField(kind);
-    const hiddenModes = Array.isArray(this._config?.[field]) ? this._config[field] : [];
-    const expectedKey = normalizeTextKey(value);
-    return hiddenModes.some(item => normalizeTextKey(item) === expectedKey);
-  }
-
-  _getSelectOptions(entityId) {
-    const selectState = entityId ? this._hass?.states?.[entityId] : null;
-    const options = Array.isArray(selectState?.attributes?.options)
-      ? selectState.attributes.options.map(item => String(item || "").trim()).filter(Boolean)
-      : [];
-
-    return {
-      entityId,
-      options,
-      state: selectState,
-      value: selectState?.state ? String(selectState.state) : "",
-    };
-  }
-
-  _getModeDescriptorLabel(kind) {
-    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-    const labels = window.NodaliaI18n?.strings?.(lang)?.advanceVacuum?.descriptorLabels
-      || window.NodaliaI18n?.strings?.("en")?.advanceVacuum?.descriptorLabels
-      || {};
-    return kind === "mop" ? (labels.mop || "Mop") : (labels.suction || "Vacuum");
-  }
-
-  _guessRelatedSelectEntity(kind) {
-    const cache = this._getRelatedEntityCache();
-    return kind === "mop" ? (cache?.mopSelect || "") : (cache?.suctionSelect || "");
-  }
-
-  _categorizeModeOption(value) {
-    const key = normalizeTextKey(value);
-
-    if (MOP_MODE_PATTERNS.some(pattern => key.includes(pattern))) {
-      return "mop";
-    }
-
-    if (SUCTION_MODE_PATTERNS.some(pattern => key.includes(pattern))) {
-      return "suction";
-    }
-
-    return "unknown";
-  }
-
-  _isSharedSmartMode(value) {
-    const key = normalizeTextKey(value);
-    return SHARED_SMART_MODE_PATTERNS.some(pattern => key.includes(pattern));
-  }
-
-  _getFanPresets(state) {
-    const configuredPresets = Array.isArray(this._config?.fan_presets) ? this._config.fan_presets : [];
-    if (configuredPresets.length) {
-      return configuredPresets;
-    }
-
-    if (Array.isArray(state?.attributes?.fan_speed_list)) {
-      return state.attributes.fan_speed_list
-        .map(item => String(item || "").trim())
-        .filter(Boolean);
-    }
-
-    return [];
-  }
-
-  _getModeDescriptor(kind, state) {
-    const explicitEntity = kind === "mop"
-      ? this._config?.mop_select_entity
-      : this._config?.suction_select_entity;
-    const selectEntity = explicitEntity || this._guessRelatedSelectEntity(kind);
-    const selectDescriptor = this._getSelectOptions(selectEntity);
-
-    if (selectDescriptor.entityId && selectDescriptor.options.length) {
-      const visibleOptions = selectDescriptor.options.filter(option => !this._isModeHidden(kind, option));
-      if (!visibleOptions.length) {
+        const suctionPatterns = ["fan_speed", "fan_power", "suction", "cleaning_mode"];
+        const mopPatterns = ["mop", "water", "water_level", "water_volume", "scrub"];
+        const states = this._hass.states;
+        const registry = this._hass.entities || {};
+        const vacuumObjectIds = listVacuumObjectIds(states);
+        const vacuumDeviceId = registry[this._config.entity]?.device_id || "";
+        const allowUnscopedRoborock = vacuumObjectIds.length <= 1;
+        Object.keys(states).forEach((entityId) => {
+          const isSameDevice = Boolean(vacuumDeviceId && registry[entityId]?.device_id === vacuumDeviceId);
+          const related = isHelperRelatedToConfiguredVacuum({
+            candidateId: entityId,
+            searchable: states[entityId]?.attributes?.friendly_name || "",
+            isSameDevice,
+            objectId,
+            vacuumObjectIds
+          });
+          if (entityId.startsWith("sensor.")) {
+            if (related && ["estado", "status", "state"].some((pattern) => entityId.includes(pattern))) {
+              candidates.state.push(entityId);
+            }
+            if ((related || allowUnscopedRoborock && entityId.includes("roborock")) && ["error", "fault", "fallo", "erro"].some((pattern) => entityId.includes(pattern))) {
+              candidates.error.push(entityId);
+            }
+            if (related && ["battery", "bateria"].some((pattern) => entityId.includes(pattern))) {
+              candidates.battery.push(entityId);
+            }
+            if (related && ["room_mapping", "rooms", "segments", "habitaciones"].some((pattern) => entityId.includes(pattern))) {
+              candidates.roomMapping.push(entityId);
+            }
+            return;
+          }
+          if (!entityId.startsWith("select.") || !related) {
+            return;
+          }
+          if (suctionPatterns.some((pattern) => entityId.includes(pattern))) {
+            candidates.suctionSelect.push(entityId);
+          }
+          if (mopPatterns.some((pattern) => entityId.includes(pattern))) {
+            candidates.mopSelect.push(entityId);
+          }
+        });
+        Object.values(candidates).forEach((items) => items.sort((left, right) => left.localeCompare(right, sortLoc)));
+        this._relatedEntityCache = {
+          objectId,
+          generation: this._relatedEntityCacheGeneration,
+          state: candidates.state[0] || "",
+          error: candidates.error[0] || "",
+          battery: candidates.battery[0] || "",
+          roomMapping: candidates.roomMapping[0] || "",
+          suctionSelect: candidates.suctionSelect[0] || "",
+          mopSelect: candidates.mopSelect[0] || ""
+        };
+        return this._relatedEntityCache;
+      }
+      _guessRelatedStateEntity() {
+        return this._getRelatedEntityCache()?.state || "";
+      }
+      _getAuxiliaryState() {
+        const entityId = this._config?.state_entity || this._guessRelatedStateEntity();
+        return entityId ? this._hass?.states?.[entityId] || null : null;
+      }
+      _guessRelatedErrorEntity() {
+        return this._getRelatedEntityCache()?.error || "";
+      }
+      _getErrorState() {
+        const entityId = this._config?.error_entity || this._guessRelatedErrorEntity();
+        return entityId ? this._hass?.states?.[entityId] || null : null;
+      }
+      _getErrorLabel() {
+        const raw = String(this._getErrorState()?.state || "").trim();
+        if (!raw || !window.NodaliaI18n?.isVacuumErrorState?.(raw)) {
+          return "";
+        }
+        return window.NodaliaI18n?.translateVacuumErrorState ? window.NodaliaI18n.translateVacuumErrorState(this._hass, this._config?.language ?? "auto", raw, raw) : raw;
+      }
+      _hasVacuumError() {
+        return Boolean(this._getErrorLabel());
+      }
+      _guessRelatedBatteryEntity() {
+        return this._getRelatedEntityCache()?.battery || "";
+      }
+      _getAuxiliaryBatteryState() {
+        const entityId = this._config?.battery_entity || this._guessRelatedBatteryEntity();
+        return entityId ? this._hass?.states?.[entityId] || null : null;
+      }
+      _guessRelatedRoomMappingEntity() {
+        return this._getRelatedEntityCache()?.roomMapping || "";
+      }
+      _getRoomMappingSourceState() {
+        const explicitEntityId = this._config?.room_mapping_entity;
+        if (explicitEntityId && this._hass?.states?.[explicitEntityId]) {
+          return this._hass.states[explicitEntityId];
+        }
+        const auxiliaryState = this._getAuxiliaryState();
+        if (auxiliaryState && (auxiliaryState.attributes?.room_mapping !== void 0 || auxiliaryState.attributes?.rooms !== void 0 || String(auxiliaryState.state || "").includes("cleaning_area_id:"))) {
+          return auxiliaryState;
+        }
+        const state = this._getState();
+        if (state && (state.attributes?.room_mapping !== void 0 || state.attributes?.rooms !== void 0 || String(state.state || "").includes("cleaning_area_id:"))) {
+          return state;
+        }
+        const guessedEntityId = this._guessRelatedRoomMappingEntity();
+        return guessedEntityId ? this._hass?.states?.[guessedEntityId] || null : null;
+      }
+      _extractRoomsFromString(rawValue) {
+        const text = String(rawValue || "").trim();
+        if (!text) {
+          return [];
+        }
+        try {
+          const parsed = JSON.parse(text);
+          return this._normalizeRoomCollection(parsed);
+        } catch (_error) {
+        }
+        const roomBlocks = text.split(/\n(?=-\s*id:|\s*-\s*id:)/g).map((block) => block.trim()).filter(Boolean);
+        const rooms = roomBlocks.map((block) => {
+          const idMatch = block.match(/(?:^|\n)\s*-?\s*id:\s*([^\n]+)/i);
+          const nameMatch = block.match(/(?:^|\n)\s*name:\s*([^\n]+)/i);
+          const cleaningAreaMatch = block.match(/(?:^|\n)\s*cleaning_area_id:\s*([^\n]+)/i);
+          const id = idMatch ? idMatch[1].trim() : "";
+          const name = nameMatch ? nameMatch[1].trim() : "";
+          const cleaningAreaId = cleaningAreaMatch ? cleaningAreaMatch[1].trim() : "";
+          if (!id && !name && !cleaningAreaId) {
+            return null;
+          }
+          return {
+            id,
+            name,
+            cleaning_area_id: cleaningAreaId
+          };
+        }).filter(Boolean);
+        return this._normalizeRoomCollection(rooms);
+      }
+      _normalizeRoomCollection(rawValue) {
+        let collection = rawValue;
+        if (typeof collection === "string") {
+          return this._extractRoomsFromString(collection);
+        }
+        if (Array.isArray(collection)) {
+          return collection;
+        }
+        if (collection && typeof collection === "object") {
+          if (Array.isArray(collection.room_mapping)) {
+            return collection.room_mapping;
+          }
+          if (Array.isArray(collection.rooms)) {
+            return collection.rooms;
+          }
+          return Object.values(collection);
+        }
+        return [];
+      }
+      _getReportedStateValue(state) {
+        const error = this._getErrorLabel();
+        if (error) {
+          return error;
+        }
+        const auxiliaryState = this._getAuxiliaryState();
+        if (auxiliaryState?.state && !["unknown", "unavailable"].includes(String(auxiliaryState.state).toLowerCase())) {
+          return String(auxiliaryState.state);
+        }
+        return state?.state ? String(state.state) : "";
+      }
+      _getReportedStateKey(state) {
+        return normalizeTextKey(this._getReportedStateValue(state));
+      }
+      _getVacuumName(state) {
+        if (this._config?.name) {
+          return this._config.name;
+        }
+        if (state?.attributes?.friendly_name) {
+          return state.attributes.friendly_name;
+        }
+        return this._config?.entity || "Vacuum";
+      }
+      _getVacuumIcon(state) {
+        if (this._config?.icon) {
+          return this._config.icon;
+        }
+        if (this._hasVacuumError()) {
+          return "mdi:alert-circle-outline";
+        }
+        if (state?.attributes?.icon) {
+          return state.attributes.icon;
+        }
+        switch (state?.state) {
+          case "cleaning":
+            return "mdi:robot-vacuum";
+          case "returning":
+            return "mdi:home-map-marker";
+          case "paused":
+            return "mdi:pause-circle-outline";
+          case "error":
+            return "mdi:alert-circle-outline";
+          default:
+            return "mdi:robot-vacuum";
+        }
+      }
+      _getEntityPicture(state) {
+        if (this._config?.show_entity_picture !== true) {
+          return "";
+        }
+        return String(
+          this._config?.entity_picture || state?.attributes?.entity_picture_local || state?.attributes?.entity_picture || ""
+        ).trim();
+      }
+      _getStateLabel(state) {
+        const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+        const langCfg = this._config?.language ?? "auto";
+        const trState = (stateKey, rawFallback = state?.state) => window.NodaliaI18n?.translateAdvanceVacuumReportedState ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, langCfg, stateKey, rawFallback) : rawFallback;
+        const errorLabel = this._getErrorLabel();
+        if (errorLabel) {
+          return errorLabel;
+        }
+        if (this._isGoingToWashMops(state)) {
+          return this._humanizeStateLabel("going_to_wash_mop", hass, langCfg);
+        }
+        if (this._isWashingMops(state)) {
+          return trState("washing_mop", "Washing mops");
+        }
+        if (this._isDryingMops(state)) {
+          return trState("drying_mop", "Drying");
+        }
+        if (this._isAutoEmptying(state)) {
+          return trState("emptying", "Auto-emptying");
+        }
+        const roomMappings = this._getRoomMappings(state);
+        const cleaningAreaLabel = this._getCleaningAreaLabel(state, roomMappings);
+        if (cleaningAreaLabel) {
+          return `${trState("cleaning", "Cleaning")}: ${cleaningAreaLabel}`;
+        }
+        const reportedKey = normalizeTextKey(this._getReportedStateValue(state));
+        switch (reportedKey) {
+          case "cleaning":
+          case "segment_cleaning":
+          case "room_cleaning":
+          case "zone_cleaning":
+          case "segment_clean":
+          case "room_clean":
+          case "zone_clean":
+          case "clean_area":
+          case "vacuuming":
+          case "limpiando":
+            return trState("cleaning", "Cleaning");
+          case "going_to_wash_the_mop":
+          case "going_to_wash_mop":
+          case "go_to_wash_mop":
+          case "go_wash_mop":
+          case "returning_to_wash_mop":
+            return this._humanizeStateLabel("going_to_wash_mop", hass, langCfg);
+          case "paused":
+          case "pause":
+          case "pausado":
+            return trState("paused", "Paused");
+          case "returning":
+          case "return_to_base":
+          case "returning_home":
+          case "volviendo":
+            return trState("returning", "Returning to dock");
+          case "docked":
+          case "charging":
+          case "charging_completed":
+          case "en_base":
+          case "base":
+            return trState("docked", "Docked");
+          case "idle":
+          case "standby":
+          case "en_espera":
+            return trState("fallback", "Idle");
+          case "error":
+          case "fallo":
+            return trState("error", "Error");
+          case "unavailable":
+            return trState("unavailable", "Unavailable");
+          case "unknown":
+            return trState("unknown", "Unknown");
+          default:
+            return this._humanizeStateLabel(this._getReportedStateValue(state), hass, langCfg) || "No state";
+        }
+      }
+      _humanizeStateLabel(value, hass = null, configLang = null) {
+        const raw = String(value ?? "").trim();
+        if (!raw) {
+          return "";
+        }
+        const normalized = normalizeTextKey(raw);
+        if (!normalized) {
+          return raw;
+        }
+        if (normalized.includes("go") && normalized.includes("wash") && normalized.includes("mop")) {
+          return window.NodaliaI18n?.translateAdvanceVacuumReportedState ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, configLang ?? "auto", "washing_mop", "Going to wash mops") : "Going to wash mops";
+        }
+        if (normalized.includes("wash") && normalized.includes("mop")) {
+          return window.NodaliaI18n?.translateAdvanceVacuumReportedState ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, configLang ?? "auto", "washing_mop", "Washing mops") : "Washing mops";
+        }
+        if (normalized.includes("dry") && normalized.includes("mop")) {
+          return window.NodaliaI18n?.translateAdvanceVacuumReportedState ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, configLang ?? "auto", "drying_mop", "Drying mops") : "Drying mops";
+        }
+        if (normalized.includes("empty")) {
+          return window.NodaliaI18n?.translateAdvanceVacuumReportedState ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, configLang ?? "auto", "emptying", "Auto-emptying") : "Auto-emptying";
+        }
+        if (normalized.includes("zone") && normalized.includes("clean")) {
+          return window.NodaliaI18n?.translateAdvanceVacuumReportedState ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, configLang ?? "auto", "cleaning", "Cleaning zone") : "Cleaning zone";
+        }
+        if ((normalized.includes("room") || normalized.includes("segment")) && normalized.includes("clean")) {
+          return window.NodaliaI18n?.translateAdvanceVacuumReportedState ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, configLang ?? "auto", "cleaning", "Cleaning room") : "Cleaning room";
+        }
+        return raw.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim().replace(/\b\w/g, (match) => match.toUpperCase());
+      }
+      _getActivityTextBlob(state) {
+        const attributes = state?.attributes || {};
+        const auxiliaryState = this._getAuxiliaryState();
+        const auxiliaryAttributes = auxiliaryState?.attributes || {};
+        return [
+          auxiliaryState?.state,
+          auxiliaryAttributes.status,
+          auxiliaryAttributes.state,
+          auxiliaryAttributes.activity,
+          auxiliaryAttributes.phase,
+          auxiliaryAttributes.job,
+          auxiliaryAttributes.job_state,
+          auxiliaryAttributes.task_status,
+          auxiliaryAttributes.current_task,
+          auxiliaryAttributes.vacuum_state,
+          auxiliaryAttributes.robot_status,
+          auxiliaryAttributes.cleaning_state,
+          auxiliaryAttributes.cleaning_progress,
+          auxiliaryAttributes.operation,
+          state?.state,
+          attributes.status,
+          attributes.state,
+          attributes.activity,
+          attributes.phase,
+          attributes.job,
+          attributes.job_state,
+          attributes.task_status,
+          attributes.current_task,
+          attributes.vacuum_state,
+          attributes.robot_status,
+          attributes.cleaning_state,
+          attributes.cleaning_progress,
+          attributes.operation
+        ].filter(Boolean).map((value) => normalizeTextKey(value)).join(" ");
+      }
+      _getActiveTaskTokens(state) {
+        const attributes = state?.attributes || {};
+        const auxiliaryState = this._getAuxiliaryState();
+        const auxiliaryAttributes = auxiliaryState?.attributes || {};
+        return [
+          auxiliaryState?.state,
+          auxiliaryAttributes.activity,
+          auxiliaryAttributes.phase,
+          auxiliaryAttributes.job,
+          auxiliaryAttributes.job_state,
+          auxiliaryAttributes.task_status,
+          auxiliaryAttributes.current_task,
+          auxiliaryAttributes.cleaning_state,
+          auxiliaryAttributes.operation,
+          state?.state,
+          attributes.activity,
+          attributes.phase,
+          attributes.job,
+          attributes.job_state,
+          attributes.task_status,
+          attributes.current_task,
+          attributes.cleaning_state,
+          attributes.operation
+        ].filter(Boolean).map((value) => normalizeTextKey(value));
+      }
+      _matchesActivity(state, keywords) {
+        const activityBlob = this._getActivityTextBlob(state);
+        return keywords.some((keyword) => activityBlob.includes(normalizeTextKey(keyword)));
+      }
+      _getBatteryLevel(state) {
+        const directValue = Number(state?.attributes?.battery_level);
+        if (Number.isFinite(directValue)) {
+          return clamp(Math.round(directValue), 0, 100);
+        }
+        const auxiliaryState = this._getAuxiliaryState();
+        const auxiliaryBatteryLevel = Number(
+          auxiliaryState?.attributes?.battery_level ?? auxiliaryState?.attributes?.battery ?? auxiliaryState?.attributes?.battery_remaining
+        );
+        if (Number.isFinite(auxiliaryBatteryLevel)) {
+          return clamp(Math.round(auxiliaryBatteryLevel), 0, 100);
+        }
+        const batterySensorState = this._getAuxiliaryBatteryState();
+        const batterySensorValue = Number(
+          batterySensorState?.state ?? batterySensorState?.attributes?.battery_level ?? batterySensorState?.attributes?.battery ?? batterySensorState?.attributes?.battery_remaining
+        );
+        if (Number.isFinite(batterySensorValue)) {
+          return clamp(Math.round(batterySensorValue), 0, 100);
+        }
         return null;
       }
-
-      return {
-        current: selectDescriptor.value,
-        kind,
-        label: this._getModeDescriptorLabel(kind),
-        options: visibleOptions,
-        service: "select",
-        target: selectDescriptor.entityId,
-      };
-    }
-
-    const rawPresets = this._getFanPresets(state);
-    if (!rawPresets.length) {
-      return null;
-    }
-
-    const options = rawPresets.filter(option => {
-      const optionKind = this._categorizeModeOption(option);
-      const isSharedSmartMode = this._isSharedSmartMode(option);
-
-      if (kind === "mop") {
-        return optionKind === "mop" || isSharedSmartMode;
+      _getBatteryColor(level) {
+        if (!Number.isFinite(level)) {
+          return "var(--secondary-text-color)";
+        }
+        if (level <= 15) {
+          return "var(--error-color, #ff6b6b)";
+        }
+        if (level <= 35) {
+          return "#f59e0b";
+        }
+        if (level <= 60) {
+          return "#f1c24c";
+        }
+        return "#61c97a";
       }
-
-      return optionKind !== "mop" || isSharedSmartMode;
-    }).filter(option => !this._isModeHidden(kind, option));
-
-    if (!options.length) {
-      return null;
-    }
-
-    return {
-      current: this._getCurrentFanSpeed(state),
-      kind,
-      label: this._getModeDescriptorLabel(kind),
-      options,
-      service: "fan",
-      target: this._config?.entity,
-    };
-  }
-
-  _getVisibleModeDescriptors(state) {
-    const modeControlsEnabled = this._config?.show_mode_controls !== false && this._config?.show_fan_presets !== false;
-    if (!modeControlsEnabled) {
-      return [];
-    }
-
-    return [
-      this._getModeDescriptor("suction", state),
-      this._getModeDescriptor("mop", state),
-    ].filter(Boolean);
-  }
-
-  _getActiveModeDescriptor(state, panelKind = this._activeModePanel) {
-    return this._getVisibleModeDescriptors(state).find(mode => mode.kind === panelKind) || null;
-  }
-
-  _getModePanelMaxHeight(descriptors) {
-    const maxOptions = Array.isArray(descriptors)
-      ? descriptors.reduce((maxValue, descriptor) => Math.max(maxValue, descriptor?.options?.length || 0), 0)
-      : 0;
-
-    return clamp(84 + (maxOptions * 52), 220, 560);
-  }
-
-  _getModePanelMarkup(panelKind, state = this._getState()) {
-    const descriptor = this._getActiveModeDescriptor(state, panelKind);
-    if (!descriptor) {
-      return "";
-    }
-
-    const activeModeDisplayValue = this._getOptimisticModeValue(
-      descriptor.kind,
-      descriptor.current,
-      descriptor.options,
-    );
-
-    return `
+      _getRoomMappings(state) {
+        const mappingSource = this._getRoomMappingSourceState();
+        const rawRooms = [
+          mappingSource?.attributes?.room_mapping,
+          mappingSource?.attributes?.rooms,
+          mappingSource?.state,
+          state?.attributes?.room_mapping,
+          state?.attributes?.rooms
+        ].map((value) => this._normalizeRoomCollection(value)).find((value) => Array.isArray(value) && value.length) || [];
+        if (!Array.isArray(rawRooms)) {
+          return [];
+        }
+        const seen = /* @__PURE__ */ new Set();
+        return rawRooms.map((room) => {
+          if (!room || typeof room !== "object") {
+            return null;
+          }
+          const cleaningAreaId = this._normalizeCleaningAreaId(
+            room.cleaning_area_id ?? room.cleaningAreaId ?? room.area_id ?? room.areaId
+          );
+          const fallbackId = room.id !== void 0 && room.id !== null ? String(room.id) : "";
+          const uniqueId = cleaningAreaId || fallbackId;
+          if (!uniqueId || seen.has(uniqueId)) {
+            return null;
+          }
+          seen.add(uniqueId);
+          const rawName = room.name ? String(room.name) : "";
+          const normalizedName = this._humanizeRoomLabel(rawName || uniqueId);
+          return {
+            cleaningAreaId: uniqueId,
+            id: fallbackId,
+            name: normalizedName
+          };
+        }).filter(Boolean);
+      }
+      _normalizeCleaningAreaId(value) {
+        const raw = String(value ?? "").trim();
+        if (!raw) {
+          return "";
+        }
+        const cleaned = raw.replace(/[\[\]\(\)"']/g, " ").replace(/cleaning_area_id[:=]/gi, " ").replace(/,+/g, " ").replace(/\s+/g, " ").trim();
+        if (!cleaned) {
+          return "";
+        }
+        return cleaned.split(" ")[0] || cleaned;
+      }
+      _humanizeRoomLabel(value) {
+        const raw = String(value ?? "").trim();
+        if (!raw) {
+          return "";
+        }
+        const normalized = raw.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+        if (!normalized) {
+          return raw;
+        }
+        if (/^\d+$/.test(normalized)) {
+          return `Area ${normalized}`;
+        }
+        return normalized.split(" ").map((token) => token ? token[0].toUpperCase() + token.slice(1) : token).join(" ");
+      }
+      _getCleaningAreaIdFromState(state) {
+        const reported = this._getReportedStateValue(state);
+        const match = String(reported || "").match(/cleaning_area_id:\s*([^\s,]+)/i);
+        return match ? this._normalizeCleaningAreaId(match[1]) : "";
+      }
+      _getCleaningAreaLabel(state, roomMappings) {
+        const id = this._getCleaningAreaIdFromState(state);
+        if (!id) {
+          return "";
+        }
+        const room = roomMappings.find((item) => item.cleaningAreaId === id || item.id === id);
+        return room?.name || "";
+      }
+      _sanitizeSelectedCleaningAreas(roomMappings) {
+        const validIds = new Set(roomMappings.map((room) => room.cleaningAreaId));
+        this._selectedCleaningAreas = this._selectedCleaningAreas.filter((areaId) => validIds.has(areaId));
+      }
+      _toggleCleaningAreaSelection(areaId) {
+        if (!areaId) {
+          return;
+        }
+        if (this._selectedCleaningAreas.includes(areaId)) {
+          this._selectedCleaningAreas = this._selectedCleaningAreas.filter((value) => value !== areaId);
+          return;
+        }
+        this._selectedCleaningAreas = [...this._selectedCleaningAreas, areaId];
+      }
+      _canSelectRooms(state, roomMappings = this._getRoomMappings(state)) {
+        return this._isDocked(state) && roomMappings.length > 0;
+      }
+      _runAreaCleaning(roomMappings) {
+        if (!roomMappings.length) {
+          return false;
+        }
+        const selectedIds = this._selectedCleaningAreas.length ? this._selectedCleaningAreas : roomMappings.map((room) => room.cleaningAreaId);
+        if (!selectedIds.length) {
+          return false;
+        }
+        this._callService("clean_area", {
+          cleaning_area_id: selectedIds
+        });
+        return true;
+      }
+      _getCurrentFanSpeed(state) {
+        const current = state?.attributes?.fan_speed;
+        return current ? String(current) : "";
+      }
+      _getModeVisibilityField(kind) {
+        return kind === "mop" ? "hidden_mop_modes" : "hidden_suction_modes";
+      }
+      _isModeHidden(kind, value) {
+        const field = this._getModeVisibilityField(kind);
+        const hiddenModes = Array.isArray(this._config?.[field]) ? this._config[field] : [];
+        const expectedKey = normalizeTextKey(value);
+        return hiddenModes.some((item) => normalizeTextKey(item) === expectedKey);
+      }
+      _getSelectOptions(entityId) {
+        const selectState = entityId ? this._hass?.states?.[entityId] : null;
+        const options = Array.isArray(selectState?.attributes?.options) ? selectState.attributes.options.map((item) => String(item || "").trim()).filter(Boolean) : [];
+        return {
+          entityId,
+          options,
+          state: selectState,
+          value: selectState?.state ? String(selectState.state) : ""
+        };
+      }
+      _getModeDescriptorLabel(kind) {
+        const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+        const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+        const labels = window.NodaliaI18n?.strings?.(lang)?.advanceVacuum?.descriptorLabels || window.NodaliaI18n?.strings?.("en")?.advanceVacuum?.descriptorLabels || {};
+        return kind === "mop" ? labels.mop || "Mop" : labels.suction || "Vacuum";
+      }
+      _guessRelatedSelectEntity(kind) {
+        const cache = this._getRelatedEntityCache();
+        return kind === "mop" ? cache?.mopSelect || "" : cache?.suctionSelect || "";
+      }
+      _categorizeModeOption(value) {
+        const key = normalizeTextKey(value);
+        if (MOP_MODE_PATTERNS.some((pattern) => key.includes(pattern))) {
+          return "mop";
+        }
+        if (SUCTION_MODE_PATTERNS.some((pattern) => key.includes(pattern))) {
+          return "suction";
+        }
+        return "unknown";
+      }
+      _isSharedSmartMode(value) {
+        const key = normalizeTextKey(value);
+        return SHARED_SMART_MODE_PATTERNS.some((pattern) => key.includes(pattern));
+      }
+      _getFanPresets(state) {
+        const configuredPresets = Array.isArray(this._config?.fan_presets) ? this._config.fan_presets : [];
+        if (configuredPresets.length) {
+          return configuredPresets;
+        }
+        if (Array.isArray(state?.attributes?.fan_speed_list)) {
+          return state.attributes.fan_speed_list.map((item) => String(item || "").trim()).filter(Boolean);
+        }
+        return [];
+      }
+      _getModeDescriptor(kind, state) {
+        const explicitEntity = kind === "mop" ? this._config?.mop_select_entity : this._config?.suction_select_entity;
+        const selectEntity = explicitEntity || this._guessRelatedSelectEntity(kind);
+        const selectDescriptor = this._getSelectOptions(selectEntity);
+        if (selectDescriptor.entityId && selectDescriptor.options.length) {
+          const visibleOptions = selectDescriptor.options.filter((option) => !this._isModeHidden(kind, option));
+          if (!visibleOptions.length) {
+            return null;
+          }
+          return {
+            current: selectDescriptor.value,
+            kind,
+            label: this._getModeDescriptorLabel(kind),
+            options: visibleOptions,
+            service: "select",
+            target: selectDescriptor.entityId
+          };
+        }
+        const rawPresets = this._getFanPresets(state);
+        if (!rawPresets.length) {
+          return null;
+        }
+        const options = rawPresets.filter((option) => {
+          const optionKind = this._categorizeModeOption(option);
+          const isSharedSmartMode = this._isSharedSmartMode(option);
+          if (kind === "mop") {
+            return optionKind === "mop" || isSharedSmartMode;
+          }
+          return optionKind !== "mop" || isSharedSmartMode;
+        }).filter((option) => !this._isModeHidden(kind, option));
+        if (!options.length) {
+          return null;
+        }
+        return {
+          current: this._getCurrentFanSpeed(state),
+          kind,
+          label: this._getModeDescriptorLabel(kind),
+          options,
+          service: "fan",
+          target: this._config?.entity
+        };
+      }
+      _getVisibleModeDescriptors(state) {
+        const modeControlsEnabled = this._config?.show_mode_controls !== false && this._config?.show_fan_presets !== false;
+        if (!modeControlsEnabled) {
+          return [];
+        }
+        return [
+          this._getModeDescriptor("suction", state),
+          this._getModeDescriptor("mop", state)
+        ].filter(Boolean);
+      }
+      _getActiveModeDescriptor(state, panelKind = this._activeModePanel) {
+        return this._getVisibleModeDescriptors(state).find((mode) => mode.kind === panelKind) || null;
+      }
+      _getModePanelMaxHeight(descriptors) {
+        const maxOptions = Array.isArray(descriptors) ? descriptors.reduce((maxValue, descriptor) => Math.max(maxValue, descriptor?.options?.length || 0), 0) : 0;
+        return clamp(84 + maxOptions * 52, 220, 560);
+      }
+      _getModePanelMarkup(panelKind, state = this._getState()) {
+        const descriptor = this._getActiveModeDescriptor(state, panelKind);
+        if (!descriptor) {
+          return "";
+        }
+        const activeModeDisplayValue = this._getOptimisticModeValue(
+          descriptor.kind,
+          descriptor.current,
+          descriptor.options
+        );
+        return `
       <div class="vacuum-card__presets vacuum-card__mode-panel">
-        ${descriptor.options
-          .map(option => `
+        ${descriptor.options.map((option) => `
             <button
               class="vacuum-card__preset ${normalizeTextKey(option) === normalizeTextKey(activeModeDisplayValue) ? "vacuum-card__preset--active" : ""}"
               type="button"
@@ -1886,22 +1523,18 @@ class NodaliaVacuumCard extends HTMLElement {
             >
               ${escapeHtml(humanizeModeLabel(option, descriptor.kind, this._hass, this._config?.language ?? "auto"))}
             </button>
-          `)
-          .join("")}
+          `).join("")}
       </div>
     `;
-  }
-
-  _getRoomPanelMarkup(state = this._getState()) {
-    const roomMappings = this._getRoomMappings(state);
-    if (!(this._roomPanelOpen && roomMappings.length)) {
-      return "";
-    }
-
-    return `
+      }
+      _getRoomPanelMarkup(state = this._getState()) {
+        const roomMappings = this._getRoomMappings(state);
+        if (!(this._roomPanelOpen && roomMappings.length)) {
+          return "";
+        }
+        return `
       <div class="vacuum-card__room-panel">
-        ${roomMappings
-          .map(room => `
+        ${roomMappings.map((room) => `
             <button
               class="vacuum-card__preset ${this._selectedCleaningAreas.includes(room.cleaningAreaId) ? "vacuum-card__preset--active" : ""}"
               type="button"
@@ -1910,838 +1543,680 @@ class NodaliaVacuumCard extends HTMLElement {
             >
               ${escapeHtml(room.name)}
             </button>
-          `)
-          .join("")}
+          `).join("")}
       </div>
     `;
-  }
-
-  _getPanelMarkup(panelKey, state = this._getState()) {
-    if (panelKey === "room") {
-      return this._getRoomPanelMarkup(state);
-    }
-
-    if (panelKey === "suction" || panelKey === "mop") {
-      return this._getModePanelMarkup(panelKey, state);
-    }
-
-    return "";
-  }
-
-  _setPanelToggleButtonsState(panelKey) {
-    this.shadowRoot
-      ?.querySelectorAll('[data-vacuum-action="toggle-mode-panel"]')
-      .forEach(button => {
-        if (!(button instanceof HTMLElement)) {
-          return;
-        }
-
-        const isActive = (button.dataset.modeKind || "") === panelKey;
-        button.classList.toggle("vacuum-card__mode-toggle--active", isActive);
-        button.classList.toggle("vacuum-card__control--active", isActive);
-      });
-
-    this.shadowRoot
-      ?.querySelectorAll('[data-vacuum-action="toggle-room-panel"]')
-      .forEach(button => {
-        if (!(button instanceof HTMLElement)) {
-          return;
-        }
-
-        const isActive = panelKey === "room";
-        button.classList.toggle("vacuum-card__control--active", isActive);
-      });
-  }
-
-  _setModePanelActiveSelection(modeKind, value) {
-    const panelShell = this.shadowRoot?.querySelector(".vacuum-card__panel-shell");
-    if (!(panelShell instanceof HTMLElement) || panelShell.dataset.panelKey !== String(modeKind || "")) {
-      return;
-    }
-
-    panelShell
-      .querySelectorAll(".vacuum-card__preset")
-      .forEach(button => {
-        if (!(button instanceof HTMLElement)) {
-          return;
-        }
-
-        const isActive = normalizeTextKey(button.dataset.value || "") === normalizeTextKey(value);
-        button.classList.toggle("vacuum-card__preset--active", isActive);
-      });
-  }
-
-  _createMarkupNode(markup) {
-    if (!markup || typeof document === "undefined") {
-      return null;
-    }
-
-    const template = document.createElement("template");
-    template.innerHTML = String(markup).trim();
-    const node = template.content.firstElementChild;
-    return node instanceof HTMLElement ? node : null;
-  }
-
-  _setVisiblePanelKey(panelKey, state = this._getState()) {
-    const nextPanelKey = panelKey === "room"
-      ? (this._canSelectRooms(state) ? "room" : "")
-      : this._getActiveModeDescriptor(state, panelKey)?.kind || "";
-
-    this._activeModePanel = nextPanelKey === "suction" || nextPanelKey === "mop" ? nextPanelKey : null;
-    this._roomPanelOpen = nextPanelKey === "room";
-    const animations = this._getAnimationSettings();
-    const panelsHost = this.shadowRoot?.querySelector(".vacuum-card__panels");
-    const panelMarkup = nextPanelKey ? this._getPanelMarkup(nextPanelKey, state) : "";
-
-    this._setPanelToggleButtonsState(nextPanelKey);
-
-    if (!panelsHost || !(panelsHost instanceof HTMLElement) || !state) {
-      this._render();
-      this._notifyLayoutChange();
-      return;
-    }
-
-    const existingPanel = panelsHost.querySelector(".vacuum-card__panel-shell");
-    if (!animations.enabled) {
-      if (existingPanel instanceof HTMLElement) {
-        existingPanel.remove();
       }
-
-      if (panelMarkup) {
-        const panelNode = this._createMarkupNode(`
+      _getPanelMarkup(panelKey, state = this._getState()) {
+        if (panelKey === "room") {
+          return this._getRoomPanelMarkup(state);
+        }
+        if (panelKey === "suction" || panelKey === "mop") {
+          return this._getModePanelMarkup(panelKey, state);
+        }
+        return "";
+      }
+      _setPanelToggleButtonsState(panelKey) {
+        this.shadowRoot?.querySelectorAll('[data-vacuum-action="toggle-mode-panel"]').forEach((button) => {
+          if (!(button instanceof HTMLElement)) {
+            return;
+          }
+          const isActive = (button.dataset.modeKind || "") === panelKey;
+          button.classList.toggle("vacuum-card__mode-toggle--active", isActive);
+          button.classList.toggle("vacuum-card__control--active", isActive);
+        });
+        this.shadowRoot?.querySelectorAll('[data-vacuum-action="toggle-room-panel"]').forEach((button) => {
+          if (!(button instanceof HTMLElement)) {
+            return;
+          }
+          const isActive = panelKey === "room";
+          button.classList.toggle("vacuum-card__control--active", isActive);
+        });
+      }
+      _setModePanelActiveSelection(modeKind, value) {
+        const panelShell = this.shadowRoot?.querySelector(".vacuum-card__panel-shell");
+        if (!(panelShell instanceof HTMLElement) || panelShell.dataset.panelKey !== String(modeKind || "")) {
+          return;
+        }
+        panelShell.querySelectorAll(".vacuum-card__preset").forEach((button) => {
+          if (!(button instanceof HTMLElement)) {
+            return;
+          }
+          const isActive = normalizeTextKey(button.dataset.value || "") === normalizeTextKey(value);
+          button.classList.toggle("vacuum-card__preset--active", isActive);
+        });
+      }
+      _createMarkupNode(markup) {
+        if (!markup || typeof document === "undefined") {
+          return null;
+        }
+        const template = document.createElement("template");
+        template.innerHTML = String(markup).trim();
+        const node = template.content.firstElementChild;
+        return node instanceof HTMLElement ? node : null;
+      }
+      _setVisiblePanelKey(panelKey, state = this._getState()) {
+        const nextPanelKey = panelKey === "room" ? this._canSelectRooms(state) ? "room" : "" : this._getActiveModeDescriptor(state, panelKey)?.kind || "";
+        this._activeModePanel = nextPanelKey === "suction" || nextPanelKey === "mop" ? nextPanelKey : null;
+        this._roomPanelOpen = nextPanelKey === "room";
+        const animations = this._getAnimationSettings();
+        const panelsHost = this.shadowRoot?.querySelector(".vacuum-card__panels");
+        const panelMarkup = nextPanelKey ? this._getPanelMarkup(nextPanelKey, state) : "";
+        this._setPanelToggleButtonsState(nextPanelKey);
+        if (!panelsHost || !(panelsHost instanceof HTMLElement) || !state) {
+          this._render();
+          this._notifyLayoutChange();
+          return;
+        }
+        const existingPanel = panelsHost.querySelector(".vacuum-card__panel-shell");
+        if (!animations.enabled) {
+          if (existingPanel instanceof HTMLElement) {
+            existingPanel.remove();
+          }
+          if (panelMarkup) {
+            const panelNode = this._createMarkupNode(`
           <div class="vacuum-card__panel-shell" data-panel-key="${nextPanelKey}">
             <div class="vacuum-card__panel-inner">
               ${panelMarkup}
             </div>
           </div>
         `);
-
-        if (panelNode instanceof HTMLElement) {
-          panelsHost.replaceChildren(panelNode);
+            if (panelNode instanceof HTMLElement) {
+              panelsHost.replaceChildren(panelNode);
+              this._notifyLayoutChange();
+              return;
+            }
+          }
+          panelsHost.replaceChildren();
           this._notifyLayoutChange();
           return;
         }
-      }
-
-      panelsHost.replaceChildren();
-      this._notifyLayoutChange();
-      return;
-    }
-
-    const removePanel = (panel, onDone = null) => {
-      if (!(panel instanceof HTMLElement)) {
-        if (typeof onDone === "function") {
-          onDone();
-        }
-        return;
-      }
-
-      panel.classList.remove("vacuum-card__panel-shell--entering");
-      panel.classList.add("vacuum-card__panel-shell--leaving");
-
-      const finalizeRemoval = () => {
-        if (panel.isConnected) {
-          panel.remove();
-        }
-        this._notifyLayoutChange();
-        if (typeof onDone === "function") {
-          onDone();
-        }
-      };
-
-      panel.addEventListener("animationend", finalizeRemoval, { once: true });
-      const schedule = window.NodaliaUtils?.scheduleDeferTimer;
-      if (typeof schedule === "function") {
-        schedule(this, finalizeRemoval, animations.panelDuration + 80);
-      } else {
-        window.setTimeout(finalizeRemoval, animations.panelDuration + 80);
-      }
-    };
-
-    const appendPanel = () => {
-      if (!panelMarkup) {
-        panelsHost.replaceChildren();
-        this._notifyLayoutChange();
-        return;
-      }
-
-      const panelNode = this._createMarkupNode(`
+        const removePanel = (panel, onDone = null) => {
+          if (!(panel instanceof HTMLElement)) {
+            if (typeof onDone === "function") {
+              onDone();
+            }
+            return;
+          }
+          panel.classList.remove("vacuum-card__panel-shell--entering");
+          panel.classList.add("vacuum-card__panel-shell--leaving");
+          const finalizeRemoval = () => {
+            if (panel.isConnected) {
+              panel.remove();
+            }
+            this._notifyLayoutChange();
+            if (typeof onDone === "function") {
+              onDone();
+            }
+          };
+          panel.addEventListener("animationend", finalizeRemoval, { once: true });
+          const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+          if (typeof schedule === "function") {
+            schedule(this, finalizeRemoval, animations.panelDuration + 80);
+          } else {
+            window.setTimeout(finalizeRemoval, animations.panelDuration + 80);
+          }
+        };
+        const appendPanel = () => {
+          if (!panelMarkup) {
+            panelsHost.replaceChildren();
+            this._notifyLayoutChange();
+            return;
+          }
+          const panelNode = this._createMarkupNode(`
         <div class="vacuum-card__panel-shell vacuum-card__panel-shell--entering" data-panel-key="${nextPanelKey}">
           <div class="vacuum-card__panel-inner">
             ${panelMarkup}
           </div>
         </div>
       `);
-
-      if (!(panelNode instanceof HTMLElement)) {
-        this._render();
-        return;
-      }
-
-      panelsHost.replaceChildren(panelNode);
-      this._notifyLayoutChange();
-      this._scheduleLayoutRefresh(animations.panelDuration + 120);
-      const finalizeEnter = () => {
-        if (panelNode.isConnected) {
-          panelNode.classList.remove("vacuum-card__panel-shell--entering");
+          if (!(panelNode instanceof HTMLElement)) {
+            this._render();
+            return;
+          }
+          panelsHost.replaceChildren(panelNode);
+          this._notifyLayoutChange();
+          this._scheduleLayoutRefresh(animations.panelDuration + 120);
+          const finalizeEnter = () => {
+            if (panelNode.isConnected) {
+              panelNode.classList.remove("vacuum-card__panel-shell--entering");
+            }
+          };
+          const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+          if (typeof schedule === "function") {
+            schedule(this, finalizeEnter, animations.panelDuration + 80);
+          } else {
+            window.setTimeout(finalizeEnter, animations.panelDuration + 80);
+          }
+        };
+        if (!nextPanelKey) {
+          if (existingPanel instanceof HTMLElement) {
+            removePanel(existingPanel, () => {
+              panelsHost.replaceChildren();
+            });
+          } else {
+            panelsHost.replaceChildren();
+            this._notifyLayoutChange();
+          }
+          return;
         }
-      };
-      const schedule = window.NodaliaUtils?.scheduleDeferTimer;
-      if (typeof schedule === "function") {
-        schedule(this, finalizeEnter, animations.panelDuration + 80);
-      } else {
-        window.setTimeout(finalizeEnter, animations.panelDuration + 80);
-      }
-    };
-
-    if (!nextPanelKey) {
-      if (existingPanel instanceof HTMLElement) {
-        removePanel(existingPanel, () => {
-          panelsHost.replaceChildren();
-        });
-      } else {
-        panelsHost.replaceChildren();
-        this._notifyLayoutChange();
-      }
-      return;
-    }
-
-    if (!panelMarkup) {
-      if (existingPanel instanceof HTMLElement) {
-        removePanel(existingPanel, () => {
-          panelsHost.replaceChildren();
-        });
-      } else {
-        panelsHost.replaceChildren();
-        this._notifyLayoutChange();
-      }
-      return;
-    }
-
-    const existingPanelKey = existingPanel instanceof HTMLElement ? existingPanel.dataset.panelKey || "" : "";
-    if (existingPanel instanceof HTMLElement && existingPanelKey === nextPanelKey) {
-      if (existingPanel.classList.contains("vacuum-card__panel-shell--leaving")) {
-        existingPanel.remove();
-      } else {
-        const panelInner = existingPanel.querySelector(".vacuum-card__panel-inner");
-        if (panelInner instanceof HTMLElement) {
-          panelInner.innerHTML = panelMarkup;
+        if (!panelMarkup) {
+          if (existingPanel instanceof HTMLElement) {
+            removePanel(existingPanel, () => {
+              panelsHost.replaceChildren();
+            });
+          } else {
+            panelsHost.replaceChildren();
+            this._notifyLayoutChange();
+          }
+          return;
         }
-        return;
+        const existingPanelKey = existingPanel instanceof HTMLElement ? existingPanel.dataset.panelKey || "" : "";
+        if (existingPanel instanceof HTMLElement && existingPanelKey === nextPanelKey) {
+          if (existingPanel.classList.contains("vacuum-card__panel-shell--leaving")) {
+            existingPanel.remove();
+          } else {
+            const panelInner = existingPanel.querySelector(".vacuum-card__panel-inner");
+            if (panelInner instanceof HTMLElement) {
+              panelInner.innerHTML = panelMarkup;
+            }
+            return;
+          }
+        }
+        if (existingPanel instanceof HTMLElement) {
+          removePanel(existingPanel, appendPanel);
+          return;
+        }
+        appendPanel();
       }
-    }
-
-    if (existingPanel instanceof HTMLElement) {
-      removePanel(existingPanel, appendPanel);
-      return;
-    }
-
-    appendPanel();
-  }
-
-  _isCleaning(state) {
-    return this._matchesActivity(state, [
-      "cleaning",
-      "segment_cleaning",
-      "segment_clean",
-      "room_cleaning",
-      "room_clean",
-      "zone_cleaning",
-      "zone_clean",
-      "clean_area",
-      "clean_zone",
-      "clean_room",
-      "spot_cleaning",
-      "vacuuming",
-      "limpiando",
-    ]);
-  }
-
-  _isGoingToWashMops(state) {
-    return this._matchesActivity(state, [
-      "going_to_wash_the_mop",
-      "going_to_wash_mop",
-      "go_to_wash_mop",
-      "go_wash_mop",
-      "returning_to_wash_mop",
-      "heading_to_wash_mop",
-    ]);
-  }
-
-  _isWashingMops(state) {
-    return this._matchesActivity(state, [
-      "washing",
-      "wash_mop",
-      "washmop",
-      "mop_wash",
-      "mopwash",
-      "washing_mop",
-      "clean_mop",
-      "mop_clean",
-      "lavando_mopas",
-      "lavando_mopa",
-      "lavado_mopa",
-      "washing_pads",
-      "rinse_mop",
-      "wash_the_mop",
-      "washing_the_mop",
-      "mop_rinsing",
-      "rinsing_mop",
-    ]);
-  }
-
-  _isDryingMops(state) {
-    return this._matchesActivity(state, [
-      "drying",
-      "dry_mop",
-      "mop_dry",
-      "drying_mop",
-      "drying_the_mop",
-      "air_dry",
-      "secando",
-      "secado_mopa",
-      "secando_mopas",
-    ]);
-  }
-
-  _isAutoEmptying(state) {
-    const keywords = [
-      "emptying",
-      "self_emptying",
-      "selfemptying",
-      "auto_empty",
-      "autoempty",
-      "dust_empty",
-      "collecting_dust",
-      "dock_empty",
-      "autovaciando",
-      "auto_vaciado",
-      "vaciando",
-    ];
-
-    const reportedKey = this._getReportedStateKey(state);
-    if (keywords.some(keyword => reportedKey.includes(normalizeTextKey(keyword)))) {
-      return true;
-    }
-
-    const activeTokens = this._getActiveTaskTokens(state);
-    return keywords.some(keyword => activeTokens.includes(normalizeTextKey(keyword)));
-  }
-
-  _isPaused(state) {
-    return this._matchesActivity(state, [
-      "paused",
-      "pause",
-      "pausado",
-    ]);
-  }
-
-  _isReturning(state) {
-    return this._matchesActivity(state, [
-      "returning",
-      "return_to_base",
-      "returning_home",
-      "volviendo",
-    ]);
-  }
-
-  _isDocked(state) {
-    return this._matchesActivity(state, [
-      "docked",
-      "charging",
-      "charging_completed",
-      "en_base",
-      "base",
-    ]);
-  }
-
-  _isActive(state) {
-    return (
-      this._isCleaning(state) ||
-      this._isPaused(state) ||
-      this._isReturning(state) ||
-      this._isWashingMops(state) ||
-      this._isDryingMops(state) ||
-      this._isAutoEmptying(state)
-    );
-  }
-
-  _shouldTintCard(state) {
-    const reportedStateKey = this._getReportedStateKey(state);
-
-    if (this._hasVacuumError()) {
-      return true;
-    }
-
-    if (!reportedStateKey || ["unknown", "unavailable"].includes(reportedStateKey)) {
-      return false;
-    }
-
-    if (this._isDocked(state)) {
-      return false;
-    }
-
-    return true;
-  }
-
-  _getAccentColor(state) {
-    const styles = getSafeStyles(this._config?.styles);
-
-    if (state?.state === "error" || this._hasVacuumError()) {
-      return styles.icon.error_color;
-    }
-
-    if (this._isWashingMops(state)) {
-      return styles.icon.washing_color || "#5aa7ff";
-    }
-
-    if (this._isDryingMops(state)) {
-      return styles.icon.drying_color || "#f1c24c";
-    }
-
-    if (this._isAutoEmptying(state)) {
-      return styles.icon.emptying_color || "#9b6b4a";
-    }
-
-    if (this._isReturning(state)) {
-      return styles.icon.returning_color;
-    }
-
-    if (this._isCleaning(state) || this._isPaused(state)) {
-      return styles.icon.active_color;
-    }
-
-    return styles.icon.docked_color;
-  }
-
-  _callService(service, data = {}) {
-    if (!this._hass || !this._config?.entity) {
-      return;
-    }
-
-    this._hass.callService("vacuum", service, {
-      entity_id: this._config.entity,
-      ...data,
-    });
-  }
-
-  _callSelectOption(entityId, option) {
-    if (!this._hass || !entityId || !option) {
-      return;
-    }
-
-    this._hass.callService("select", "select_option", {
-      entity_id: entityId,
-      option,
-    });
-  }
-
-  _findMatchingModeOption(options, value) {
-    const expectedKey = normalizeTextKey(value);
-    if (!expectedKey || !Array.isArray(options)) {
-      return "";
-    }
-
-    return options.find(option => normalizeTextKey(option) === expectedKey) || "";
-  }
-
-  _findSharedSmartOption(options) {
-    return Array.isArray(options)
-      ? options.find(option => this._isSharedSmartMode(option)) || ""
-      : "";
-  }
-
-  _getModeFallbackCandidates(kind) {
-    return kind === "mop"
-      ? ["off", "low", "medium", "high", "deep", "standard", "normal", "custom"]
-      : ["balanced", "standard", "normal", "quiet", "silent", "gentle", "turbo", "max", "strong", "custom"];
-  }
-
-  _getModeFallbackOption(kind, descriptor) {
-    if (!descriptor?.options?.length) {
-      return "";
-    }
-
-    const remembered = this._findMatchingModeOption(
-      descriptor.options,
-      this._lastNonSmartModeSelection[kind],
-    );
-    if (remembered && !this._isSharedSmartMode(remembered)) {
-      return remembered;
-    }
-
-    const normalizedOptions = descriptor.options.map(option => ({
-      key: normalizeTextKey(option),
-      value: option,
-    }));
-
-    for (const candidate of this._getModeFallbackCandidates(kind)) {
-      const exactMatch = normalizedOptions.find(option => option.key === candidate);
-      if (exactMatch && !this._isSharedSmartMode(exactMatch.value)) {
-        return exactMatch.value;
+      _isCleaning(state) {
+        return this._matchesActivity(state, [
+          "cleaning",
+          "segment_cleaning",
+          "segment_clean",
+          "room_cleaning",
+          "room_clean",
+          "zone_cleaning",
+          "zone_clean",
+          "clean_area",
+          "clean_zone",
+          "clean_room",
+          "spot_cleaning",
+          "vacuuming",
+          "limpiando"
+        ]);
       }
-    }
-
-    const firstNonSmart = descriptor.options.find(option => !this._isSharedSmartMode(option));
-    return firstNonSmart || "";
-  }
-
-  _clearPendingModeSelection(kind) {
-    if (!kind || !(kind in this._pendingModeSelection)) {
-      return false;
-    }
-
-    if (this._pendingModeSelectionTimers[kind]) {
-      window.clearTimeout(this._pendingModeSelectionTimers[kind]);
-      this._pendingModeSelectionTimers[kind] = 0;
-    }
-
-    if (!this._pendingModeSelection[kind]) {
-      return false;
-    }
-
-    this._pendingModeSelection[kind] = "";
-    return true;
-  }
-
-  _setPendingModeSelection(kind, value) {
-    if (!kind || !(kind in this._pendingModeSelection)) {
-      return;
-    }
-
-    this._clearPendingModeSelection(kind);
-    this._pendingModeSelection[kind] = String(value || "").trim();
-
-    if (!this._pendingModeSelection[kind]) {
-      return;
-    }
-
-    const done = () => {
-      this._pendingModeSelectionTimers[kind] = 0;
-      if (!this.isConnected || !this._pendingModeSelection[kind]) {
-        return;
+      _isGoingToWashMops(state) {
+        return this._matchesActivity(state, [
+          "going_to_wash_the_mop",
+          "going_to_wash_mop",
+          "go_to_wash_mop",
+          "go_wash_mop",
+          "returning_to_wash_mop",
+          "heading_to_wash_mop"
+        ]);
       }
-
-      this._pendingModeSelection[kind] = "";
-      this._render();
-    };
-    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
-    if (typeof schedule === "function") {
-      this._pendingModeSelectionTimers[kind] = schedule(this, done, 2500);
-    } else {
-      this._pendingModeSelectionTimers[kind] = window.setTimeout(done, 2500);
-    }
-  }
-
-  _syncPendingModeSelections(state = this._getState()) {
-    let didChange = false;
-
-    ["suction", "mop"].forEach(kind => {
-      const pendingValue = this._pendingModeSelection[kind];
-      if (!pendingValue) {
-        return;
+      _isWashingMops(state) {
+        return this._matchesActivity(state, [
+          "washing",
+          "wash_mop",
+          "washmop",
+          "mop_wash",
+          "mopwash",
+          "washing_mop",
+          "clean_mop",
+          "mop_clean",
+          "lavando_mopas",
+          "lavando_mopa",
+          "lavado_mopa",
+          "washing_pads",
+          "rinse_mop",
+          "wash_the_mop",
+          "washing_the_mop",
+          "mop_rinsing",
+          "rinsing_mop"
+        ]);
       }
-
-      const descriptor = this._getModeDescriptor(kind, state);
-      if (!descriptor?.current) {
-        return;
+      _isDryingMops(state) {
+        return this._matchesActivity(state, [
+          "drying",
+          "dry_mop",
+          "mop_dry",
+          "drying_mop",
+          "drying_the_mop",
+          "air_dry",
+          "secando",
+          "secado_mopa",
+          "secando_mopas"
+        ]);
       }
-
-      if (normalizeTextKey(descriptor.current) === normalizeTextKey(pendingValue)) {
-        didChange = this._clearPendingModeSelection(kind) || didChange;
+      _isAutoEmptying(state) {
+        const keywords = [
+          "emptying",
+          "self_emptying",
+          "selfemptying",
+          "auto_empty",
+          "autoempty",
+          "dust_empty",
+          "collecting_dust",
+          "dock_empty",
+          "autovaciando",
+          "auto_vaciado",
+          "vaciando"
+        ];
+        const reportedKey = this._getReportedStateKey(state);
+        if (keywords.some((keyword) => reportedKey.includes(normalizeTextKey(keyword)))) {
+          return true;
+        }
+        const activeTokens = this._getActiveTaskTokens(state);
+        return keywords.some((keyword) => activeTokens.includes(normalizeTextKey(keyword)));
       }
-    });
-
-    return didChange;
-  }
-
-  _getOptimisticModeValue(kind, currentValue, options = []) {
-    const pendingValue = this._pendingModeSelection?.[kind];
-    if (!pendingValue) {
-      return currentValue;
-    }
-
-    const matchedOption = Array.isArray(options)
-      ? options.find(option => normalizeTextKey(option) === normalizeTextKey(pendingValue))
-      : "";
-
-    return matchedOption || currentValue;
-  }
-
-  _rememberNonSmartModeSelection(kind, value) {
-    if (!kind || !value || this._isSharedSmartMode(value)) {
-      return;
-    }
-
-    this._lastNonSmartModeSelection[kind] = value;
-  }
-
-  _syncRememberedModeSelections(state) {
-    ["suction", "mop"].forEach(kind => {
-      const descriptor = this._getModeDescriptor(kind, state);
-      if (descriptor?.current && !this._isSharedSmartMode(descriptor.current)) {
-        this._rememberNonSmartModeSelection(kind, descriptor.current);
+      _isPaused(state) {
+        return this._matchesActivity(state, [
+          "paused",
+          "pause",
+          "pausado"
+        ]);
       }
-    });
-  }
-
-  _applyLinkedSmartModeSelection(kind, value, state) {
-    const descriptor = this._getModeDescriptor(kind, state);
-    const otherKind = kind === "mop" ? "suction" : "mop";
-    const otherDescriptor = this._getModeDescriptor(otherKind, state);
-
-    if (descriptor?.service === "select" && descriptor.target && value) {
-      this._callSelectOption(descriptor.target, value);
-    } else if (descriptor?.service === "fan" && value) {
-      this._callService("set_fan_speed", {
-        fan_speed: value,
-      });
-      return;
-    }
-
-    if (!descriptor || !otherDescriptor || otherDescriptor.service !== "select" || !otherDescriptor.target) {
-      return;
-    }
-
-    if (otherDescriptor.target === descriptor.target) {
-      return;
-    }
-
-    if (this._isSharedSmartMode(value)) {
-      const sharedSmartOption = this._findSharedSmartOption(otherDescriptor.options);
-      if (
-        sharedSmartOption &&
-        normalizeTextKey(sharedSmartOption) !== normalizeTextKey(otherDescriptor.current)
-      ) {
-        this._callSelectOption(otherDescriptor.target, sharedSmartOption);
+      _isReturning(state) {
+        return this._matchesActivity(state, [
+          "returning",
+          "return_to_base",
+          "returning_home",
+          "volviendo"
+        ]);
       }
-      return;
-    }
-
-    if (!this._isSharedSmartMode(otherDescriptor.current)) {
-      return;
-    }
-
-    const fallbackOption = this._getModeFallbackOption(otherKind, otherDescriptor);
-    if (
-      fallbackOption &&
-      normalizeTextKey(fallbackOption) !== normalizeTextKey(otherDescriptor.current)
-    ) {
-      this._callSelectOption(otherDescriptor.target, fallbackOption);
-    }
-  }
-
-  _runPrimaryAction(state) {
-    const roomMappings = this._getRoomMappings(state);
-    if (this._roomPanelOpen && this._canSelectRooms(state, roomMappings) && this._runAreaCleaning(roomMappings)) {
-      this._roomPanelOpen = false;
-      return;
-    }
-
-    if (this._shouldUsePausePrimary(state)) {
-      this._callService("pause");
-      return;
-    }
-
-    this._callService("start");
-  }
-
-  _shouldUsePausePrimary(state) {
-    const reportedStateKey = this._getReportedStateKey(state);
-
-    if (this._hasVacuumError() || !reportedStateKey || ["unknown", "unavailable", "error"].includes(reportedStateKey)) {
-      return false;
-    }
-
-    if (this._isDocked(state) || this._isPaused(state)) {
-      return false;
-    }
-
-    return true;
-  }
-
-  _getControls(state) {
-    const controls = [];
-    const usePausePrimary = this._shouldUsePausePrimary(state);
-    const roomMappings = this._getRoomMappings(state);
-
-    controls.push({
-      action: "primary",
-      icon: usePausePrimary ? "mdi:pause" : "mdi:play",
-      label: usePausePrimary ? "Pause" : "Start",
-      active: usePausePrimary,
-    });
-
-    if (
-      this._config?.show_return_to_base !== false &&
-      state?.state !== "unavailable" &&
-      !this._isDocked(state)
-    ) {
-      controls.push({
-        action: "return_to_base",
-        icon: "mdi:home-import-outline",
-        label: "Base",
-        active: this._isReturning(state),
-      });
-    }
-
-    if (this._config?.show_stop !== false && (this._isCleaning(state) || this._isPaused(state) || this._isReturning(state))) {
-      controls.push({
-        action: "stop",
-        icon: "mdi:stop",
-        label: "Parar",
-        active: false,
-      });
-    }
-
-    if (this._config?.show_locate !== false && state?.state !== "unavailable") {
-      controls.push({
-        action: "locate",
-        icon: "mdi:crosshairs-gps",
-        label: "Buscar",
-        active: false,
-      });
-    }
-
-    if (this._canSelectRooms(state, roomMappings)) {
-      controls.push({
-        action: "toggle-room-panel",
-        icon: "mdi:floor-plan",
-        label: "Habitaciones",
-        active: this._roomPanelOpen,
-      });
-    }
-
-    return controls.slice(0, 4);
-  }
-
-  _vacuumCardUi(key, fallback = "") {
-    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-    const pack = window.NodaliaI18n?.strings?.(lang)?.vacuumCard;
-    const enPack = window.NodaliaI18n?.strings?.("en")?.vacuumCard;
-    const raw = pack?.[key] ?? enPack?.[key];
-    return String(raw != null && raw !== "" ? raw : fallback);
-  }
-
-  _renderEmptyState() {
-    const title = escapeHtml(this._vacuumCardUi("emptyTitle", "Nodalia Vacuum Card"));
-    const body = escapeHtml(
-      this._vacuumCardUi("emptyBody", "Set `entity` to a `vacuum.*` entity to show this card."),
-    );
-    return `
+      _isDocked(state) {
+        return this._matchesActivity(state, [
+          "docked",
+          "charging",
+          "charging_completed",
+          "en_base",
+          "base"
+        ]);
+      }
+      _isActive(state) {
+        return this._isCleaning(state) || this._isPaused(state) || this._isReturning(state) || this._isWashingMops(state) || this._isDryingMops(state) || this._isAutoEmptying(state);
+      }
+      _shouldTintCard(state) {
+        const reportedStateKey = this._getReportedStateKey(state);
+        if (this._hasVacuumError()) {
+          return true;
+        }
+        if (!reportedStateKey || ["unknown", "unavailable"].includes(reportedStateKey)) {
+          return false;
+        }
+        if (this._isDocked(state)) {
+          return false;
+        }
+        return true;
+      }
+      _getAccentColor(state) {
+        const styles = getSafeStyles(this._config?.styles);
+        if (state?.state === "error" || this._hasVacuumError()) {
+          return styles.icon.error_color;
+        }
+        if (this._isWashingMops(state)) {
+          return styles.icon.washing_color || "#5aa7ff";
+        }
+        if (this._isDryingMops(state)) {
+          return styles.icon.drying_color || "#f1c24c";
+        }
+        if (this._isAutoEmptying(state)) {
+          return styles.icon.emptying_color || "#9b6b4a";
+        }
+        if (this._isReturning(state)) {
+          return styles.icon.returning_color;
+        }
+        if (this._isCleaning(state) || this._isPaused(state)) {
+          return styles.icon.active_color;
+        }
+        return styles.icon.docked_color;
+      }
+      _callService(service, data = {}) {
+        if (!this._hass || !this._config?.entity) {
+          return;
+        }
+        this._hass.callService("vacuum", service, {
+          entity_id: this._config.entity,
+          ...data
+        });
+      }
+      _callSelectOption(entityId, option) {
+        if (!this._hass || !entityId || !option) {
+          return;
+        }
+        this._hass.callService("select", "select_option", {
+          entity_id: entityId,
+          option
+        });
+      }
+      _findMatchingModeOption(options, value) {
+        const expectedKey = normalizeTextKey(value);
+        if (!expectedKey || !Array.isArray(options)) {
+          return "";
+        }
+        return options.find((option) => normalizeTextKey(option) === expectedKey) || "";
+      }
+      _findSharedSmartOption(options) {
+        return Array.isArray(options) ? options.find((option) => this._isSharedSmartMode(option)) || "" : "";
+      }
+      _getModeFallbackCandidates(kind) {
+        return kind === "mop" ? ["off", "low", "medium", "high", "deep", "standard", "normal", "custom"] : ["balanced", "standard", "normal", "quiet", "silent", "gentle", "turbo", "max", "strong", "custom"];
+      }
+      _getModeFallbackOption(kind, descriptor) {
+        if (!descriptor?.options?.length) {
+          return "";
+        }
+        const remembered = this._findMatchingModeOption(
+          descriptor.options,
+          this._lastNonSmartModeSelection[kind]
+        );
+        if (remembered && !this._isSharedSmartMode(remembered)) {
+          return remembered;
+        }
+        const normalizedOptions = descriptor.options.map((option) => ({
+          key: normalizeTextKey(option),
+          value: option
+        }));
+        for (const candidate of this._getModeFallbackCandidates(kind)) {
+          const exactMatch = normalizedOptions.find((option) => option.key === candidate);
+          if (exactMatch && !this._isSharedSmartMode(exactMatch.value)) {
+            return exactMatch.value;
+          }
+        }
+        const firstNonSmart = descriptor.options.find((option) => !this._isSharedSmartMode(option));
+        return firstNonSmart || "";
+      }
+      _clearPendingModeSelection(kind) {
+        if (!kind || !(kind in this._pendingModeSelection)) {
+          return false;
+        }
+        if (this._pendingModeSelectionTimers[kind]) {
+          window.clearTimeout(this._pendingModeSelectionTimers[kind]);
+          this._pendingModeSelectionTimers[kind] = 0;
+        }
+        if (!this._pendingModeSelection[kind]) {
+          return false;
+        }
+        this._pendingModeSelection[kind] = "";
+        return true;
+      }
+      _setPendingModeSelection(kind, value) {
+        if (!kind || !(kind in this._pendingModeSelection)) {
+          return;
+        }
+        this._clearPendingModeSelection(kind);
+        this._pendingModeSelection[kind] = String(value || "").trim();
+        if (!this._pendingModeSelection[kind]) {
+          return;
+        }
+        const done = () => {
+          this._pendingModeSelectionTimers[kind] = 0;
+          if (!this.isConnected || !this._pendingModeSelection[kind]) {
+            return;
+          }
+          this._pendingModeSelection[kind] = "";
+          this._render();
+        };
+        const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+        if (typeof schedule === "function") {
+          this._pendingModeSelectionTimers[kind] = schedule(this, done, 2500);
+        } else {
+          this._pendingModeSelectionTimers[kind] = window.setTimeout(done, 2500);
+        }
+      }
+      _syncPendingModeSelections(state = this._getState()) {
+        let didChange = false;
+        ["suction", "mop"].forEach((kind) => {
+          const pendingValue = this._pendingModeSelection[kind];
+          if (!pendingValue) {
+            return;
+          }
+          const descriptor = this._getModeDescriptor(kind, state);
+          if (!descriptor?.current) {
+            return;
+          }
+          if (normalizeTextKey(descriptor.current) === normalizeTextKey(pendingValue)) {
+            didChange = this._clearPendingModeSelection(kind) || didChange;
+          }
+        });
+        return didChange;
+      }
+      _getOptimisticModeValue(kind, currentValue, options = []) {
+        const pendingValue = this._pendingModeSelection?.[kind];
+        if (!pendingValue) {
+          return currentValue;
+        }
+        const matchedOption = Array.isArray(options) ? options.find((option) => normalizeTextKey(option) === normalizeTextKey(pendingValue)) : "";
+        return matchedOption || currentValue;
+      }
+      _rememberNonSmartModeSelection(kind, value) {
+        if (!kind || !value || this._isSharedSmartMode(value)) {
+          return;
+        }
+        this._lastNonSmartModeSelection[kind] = value;
+      }
+      _syncRememberedModeSelections(state) {
+        ["suction", "mop"].forEach((kind) => {
+          const descriptor = this._getModeDescriptor(kind, state);
+          if (descriptor?.current && !this._isSharedSmartMode(descriptor.current)) {
+            this._rememberNonSmartModeSelection(kind, descriptor.current);
+          }
+        });
+      }
+      _applyLinkedSmartModeSelection(kind, value, state) {
+        const descriptor = this._getModeDescriptor(kind, state);
+        const otherKind = kind === "mop" ? "suction" : "mop";
+        const otherDescriptor = this._getModeDescriptor(otherKind, state);
+        if (descriptor?.service === "select" && descriptor.target && value) {
+          this._callSelectOption(descriptor.target, value);
+        } else if (descriptor?.service === "fan" && value) {
+          this._callService("set_fan_speed", {
+            fan_speed: value
+          });
+          return;
+        }
+        if (!descriptor || !otherDescriptor || otherDescriptor.service !== "select" || !otherDescriptor.target) {
+          return;
+        }
+        if (otherDescriptor.target === descriptor.target) {
+          return;
+        }
+        if (this._isSharedSmartMode(value)) {
+          const sharedSmartOption = this._findSharedSmartOption(otherDescriptor.options);
+          if (sharedSmartOption && normalizeTextKey(sharedSmartOption) !== normalizeTextKey(otherDescriptor.current)) {
+            this._callSelectOption(otherDescriptor.target, sharedSmartOption);
+          }
+          return;
+        }
+        if (!this._isSharedSmartMode(otherDescriptor.current)) {
+          return;
+        }
+        const fallbackOption = this._getModeFallbackOption(otherKind, otherDescriptor);
+        if (fallbackOption && normalizeTextKey(fallbackOption) !== normalizeTextKey(otherDescriptor.current)) {
+          this._callSelectOption(otherDescriptor.target, fallbackOption);
+        }
+      }
+      _runPrimaryAction(state) {
+        const roomMappings = this._getRoomMappings(state);
+        if (this._roomPanelOpen && this._canSelectRooms(state, roomMappings) && this._runAreaCleaning(roomMappings)) {
+          this._roomPanelOpen = false;
+          return;
+        }
+        if (this._shouldUsePausePrimary(state)) {
+          this._callService("pause");
+          return;
+        }
+        this._callService("start");
+      }
+      _shouldUsePausePrimary(state) {
+        const reportedStateKey = this._getReportedStateKey(state);
+        if (this._hasVacuumError() || !reportedStateKey || ["unknown", "unavailable", "error"].includes(reportedStateKey)) {
+          return false;
+        }
+        if (this._isDocked(state) || this._isPaused(state)) {
+          return false;
+        }
+        return true;
+      }
+      _getControls(state) {
+        const controls = [];
+        const usePausePrimary = this._shouldUsePausePrimary(state);
+        const roomMappings = this._getRoomMappings(state);
+        controls.push({
+          action: "primary",
+          icon: usePausePrimary ? "mdi:pause" : "mdi:play",
+          label: usePausePrimary ? "Pause" : "Start",
+          active: usePausePrimary
+        });
+        if (this._config?.show_return_to_base !== false && state?.state !== "unavailable" && !this._isDocked(state)) {
+          controls.push({
+            action: "return_to_base",
+            icon: "mdi:home-import-outline",
+            label: "Base",
+            active: this._isReturning(state)
+          });
+        }
+        if (this._config?.show_stop !== false && (this._isCleaning(state) || this._isPaused(state) || this._isReturning(state))) {
+          controls.push({
+            action: "stop",
+            icon: "mdi:stop",
+            label: "Parar",
+            active: false
+          });
+        }
+        if (this._config?.show_locate !== false && state?.state !== "unavailable") {
+          controls.push({
+            action: "locate",
+            icon: "mdi:crosshairs-gps",
+            label: "Buscar",
+            active: false
+          });
+        }
+        if (this._canSelectRooms(state, roomMappings)) {
+          controls.push({
+            action: "toggle-room-panel",
+            icon: "mdi:floor-plan",
+            label: "Habitaciones",
+            active: this._roomPanelOpen
+          });
+        }
+        return controls.slice(0, 4);
+      }
+      _vacuumCardUi(key, fallback = "") {
+        const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+        const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+        const pack = window.NodaliaI18n?.strings?.(lang)?.vacuumCard;
+        const enPack = window.NodaliaI18n?.strings?.("en")?.vacuumCard;
+        const raw = pack?.[key] ?? enPack?.[key];
+        return String(raw != null && raw !== "" ? raw : fallback);
+      }
+      _renderEmptyState() {
+        const title = escapeHtml(this._vacuumCardUi("emptyTitle", "Nodalia Vacuum Card"));
+        const body = escapeHtml(
+          this._vacuumCardUi("emptyBody", "Set `entity` to a `vacuum.*` entity to show this card.")
+        );
+        return `
       <ha-card class="vacuum-card vacuum-card--empty">
         <div class="vacuum-card__empty-title">${title}</div>
         <div class="vacuum-card__empty-text">${body}</div>
       </ha-card>
     `;
-  }
-
-  _onShadowClick(event) {
-    const button = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.vacuumAction);
-
-    if (!button) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    const vacuumAction = button.dataset.vacuumAction;
-    if ((vacuumAction === "body_tap" || vacuumAction === "icon_tap") && this._suppressNextVacuumTap) {
-      this._suppressNextVacuumTap = false;
-      return;
-    }
-
-    this._triggerHaptic();
-    if (button instanceof HTMLButtonElement) {
-      this._triggerButtonBounce(button);
-    }
-
-    const state = this._getState();
-    this._syncRememberedModeSelections(state);
-
-    switch (vacuumAction) {
-      case "body_tap":
-        this._runConfiguredCardTapAction(state, "body");
-        break;
-      case "icon_tap":
-        this._runConfiguredCardTapAction(state, "icon");
-        break;
-      case "primary":
-        this._runPrimaryAction(state);
-        break;
-      case "start":
-        this._callService("start");
-        break;
-      case "pause":
-        this._callService("pause");
-        break;
-      case "stop":
-        this._callService("stop");
-        break;
-      case "return_to_base":
-        this._callService("return_to_base");
-        break;
-      case "locate":
-        this._callService("locate");
-        break;
-      case "toggle-mode-panel": {
-        const modeKind = button.dataset.modeKind || "";
-        const nextModeKind = this._activeModePanel === modeKind ? "" : modeKind;
-        this._setVisiblePanelKey(nextModeKind, state);
-        break;
       }
-      case "toggle-room-panel":
-        this._setVisiblePanelKey(this._roomPanelOpen ? "" : "room", state);
-        break;
-      case "toggle-room":
-        if (button.dataset.cleaningAreaId) {
-          this._toggleCleaningAreaSelection(button.dataset.cleaningAreaId);
+      _onShadowClick(event) {
+        const button = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.vacuumAction);
+        if (!button) {
+          return;
         }
-        this._render();
-        break;
-      case "fan":
-        if (button.dataset.value) {
-          this._setPendingModeSelection(button.dataset.modeKind || "suction", button.dataset.value);
-          this._rememberNonSmartModeSelection(button.dataset.modeKind || "suction", button.dataset.value);
-          this._setModePanelActiveSelection(button.dataset.modeKind || "suction", button.dataset.value);
-          this._callService("set_fan_speed", {
-            fan_speed: button.dataset.value,
-          });
+        event.preventDefault();
+        event.stopPropagation();
+        const vacuumAction = button.dataset.vacuumAction;
+        if ((vacuumAction === "body_tap" || vacuumAction === "icon_tap") && this._suppressNextVacuumTap) {
+          this._suppressNextVacuumTap = false;
+          return;
         }
-        break;
-      case "select":
-        if (button.dataset.targetEntity && button.dataset.value) {
-          this._setPendingModeSelection(button.dataset.modeKind || "", button.dataset.value);
-          this._rememberNonSmartModeSelection(button.dataset.modeKind || "", button.dataset.value);
-          this._setModePanelActiveSelection(button.dataset.modeKind || "", button.dataset.value);
-          this._applyLinkedSmartModeSelection(button.dataset.modeKind || "", button.dataset.value, state);
+        this._triggerHaptic();
+        if (button instanceof HTMLButtonElement) {
+          this._triggerButtonBounce(button);
         }
-        break;
-      default:
-        break;
-    }
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
-    }
-
-    if (!this._config) {
-      this.shadowRoot.innerHTML = "";
-      return;
-    }
-
-    const config = this._config;
-    const styles = config.styles;
-    const state = this._getState();
-
-    if (!state) {
-      this.shadowRoot.innerHTML = `
+        const state = this._getState();
+        this._syncRememberedModeSelections(state);
+        switch (vacuumAction) {
+          case "body_tap":
+            this._runConfiguredCardTapAction(state, "body");
+            break;
+          case "icon_tap":
+            this._runConfiguredCardTapAction(state, "icon");
+            break;
+          case "primary":
+            this._runPrimaryAction(state);
+            break;
+          case "start":
+            this._callService("start");
+            break;
+          case "pause":
+            this._callService("pause");
+            break;
+          case "stop":
+            this._callService("stop");
+            break;
+          case "return_to_base":
+            this._callService("return_to_base");
+            break;
+          case "locate":
+            this._callService("locate");
+            break;
+          case "toggle-mode-panel": {
+            const modeKind = button.dataset.modeKind || "";
+            const nextModeKind = this._activeModePanel === modeKind ? "" : modeKind;
+            this._setVisiblePanelKey(nextModeKind, state);
+            break;
+          }
+          case "toggle-room-panel":
+            this._setVisiblePanelKey(this._roomPanelOpen ? "" : "room", state);
+            break;
+          case "toggle-room":
+            if (button.dataset.cleaningAreaId) {
+              this._toggleCleaningAreaSelection(button.dataset.cleaningAreaId);
+            }
+            this._render();
+            break;
+          case "fan":
+            if (button.dataset.value) {
+              this._setPendingModeSelection(button.dataset.modeKind || "suction", button.dataset.value);
+              this._rememberNonSmartModeSelection(button.dataset.modeKind || "suction", button.dataset.value);
+              this._setModePanelActiveSelection(button.dataset.modeKind || "suction", button.dataset.value);
+              this._callService("set_fan_speed", {
+                fan_speed: button.dataset.value
+              });
+            }
+            break;
+          case "select":
+            if (button.dataset.targetEntity && button.dataset.value) {
+              this._setPendingModeSelection(button.dataset.modeKind || "", button.dataset.value);
+              this._rememberNonSmartModeSelection(button.dataset.modeKind || "", button.dataset.value);
+              this._setModePanelActiveSelection(button.dataset.modeKind || "", button.dataset.value);
+              this._applyLinkedSmartModeSelection(button.dataset.modeKind || "", button.dataset.value, state);
+            }
+            break;
+          default:
+            break;
+        }
+      }
+      _render() {
+        if (!this.shadowRoot) {
+          return;
+        }
+        if (!this._config) {
+          this.shadowRoot.innerHTML = "";
+          return;
+        }
+        const config = this._config;
+        const styles = config.styles;
+        const state = this._getState();
+        if (!state) {
+          this.shadowRoot.innerHTML = `
         <style>
           :host {
             display: block;
@@ -2775,105 +2250,80 @@ class NodaliaVacuumCard extends HTMLElement {
         </style>
         ${this._renderEmptyState()}
       `;
-      return;
-    }
-
-    const title = this._getVacuumName(state);
-    const icon = this._getVacuumIcon(state);
-    const entityPicture = this._getEntityPicture(state);
-    const stateLabel = this._getStateLabel(state);
-    const showUnavailableBadge = isUnavailableState(state);
-    const batteryLevel = this._getBatteryLevel(state);
-    const availableModeDescriptors = this._getVisibleModeDescriptors(state);
-    const isCompactLayout = this._isCompactLayout;
-    const accentColor = this._getAccentColor(state);
-    const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
-    const animations = this._getAnimationSettings();
-    const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
-    const shouldAnimateActiveIcon = animations.enabled && animations.iconAnimation && this._isCleaning(state);
-    const controls = this._getControls(state);
-    const isTintedState = this._shouldTintCard(state);
-    const shouldDarkenBubbleIconGlyph =
-      isTintedState && Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph?.(state, accentColor));
-    const iconGlyphColor = isTintedState
-      ? (
-          window.NodaliaBubbleContrast?.resolveBubbleIconGlyphColor?.(state, accentColor)
-          || `color-mix(in srgb, ${accentColor} ${shouldDarkenBubbleIconGlyph ? 42 : 72}%, var(--primary-text-color))`
-        )
-      : styles.icon.color;
-    const roomMappings = this._getRoomMappings(state);
-    const chips = [];
-    const batteryChipColor = this._getBatteryColor(batteryLevel);
-    const modePanelMaxHeight = this._getModePanelMaxHeight(availableModeDescriptors);
-    const roomPanelMaxHeight = this._getRoomPanelMaxHeight(roomMappings);
-    const batteryChipMarkup = config.show_battery_chip !== false && batteryLevel !== null
-      ? `
+          return;
+        }
+        const title = this._getVacuumName(state);
+        const icon = this._getVacuumIcon(state);
+        const entityPicture = this._getEntityPicture(state);
+        const stateLabel = this._getStateLabel(state);
+        const showUnavailableBadge = isUnavailableState(state);
+        const batteryLevel = this._getBatteryLevel(state);
+        const availableModeDescriptors = this._getVisibleModeDescriptors(state);
+        const isCompactLayout = this._isCompactLayout;
+        const accentColor = this._getAccentColor(state);
+        const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
+        const animations = this._getAnimationSettings();
+        const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
+        const shouldAnimateActiveIcon = animations.enabled && animations.iconAnimation && this._isCleaning(state);
+        const controls = this._getControls(state);
+        const cardWidth = Math.round(this._cardWidth || this.clientWidth || 0);
+        const denseCompact = isCompactLayout && cardWidth > 0 && cardWidth < 180;
+        const visibleControls = denseCompact ? controls.filter((control) => ["primary", "locate", "return_to_base"].includes(control.action)).slice(0, 3) : controls;
+        const visibleModeDescriptors = denseCompact ? [] : availableModeDescriptors;
+        const isTintedState = this._shouldTintCard(state);
+        const shouldDarkenBubbleIconGlyph = isTintedState && Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph?.(state, accentColor));
+        const iconGlyphColor = isTintedState ? window.NodaliaBubbleContrast?.resolveBubbleIconGlyphColor?.(state, accentColor) || `color-mix(in srgb, ${accentColor} ${shouldDarkenBubbleIconGlyph ? 42 : 72}%, var(--primary-text-color))` : styles.icon.color;
+        const roomMappings = this._getRoomMappings(state);
+        const chips = [];
+        const batteryChipColor = this._getBatteryColor(batteryLevel);
+        const modePanelMaxHeight = this._getModePanelMaxHeight(availableModeDescriptors);
+        const roomPanelMaxHeight = this._getRoomPanelMaxHeight(roomMappings);
+        const batteryChipMarkup = config.show_battery_chip !== false && batteryLevel !== null ? `
         <span class="vacuum-card__chip vacuum-card__chip--battery">
           <ha-icon icon="mdi:battery"></ha-icon>
           <span>${batteryLevel}%</span>
         </span>
-      `
-      : "";
-    const cardBackground = isTintedState
-      ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`
-      : styles.card.background;
-    const cardBorder = isTintedState
-      ? `color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`
-      : styles.card.border;
-    const cardShadow = isTintedState
-      ? `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`
-      : styles.card.box_shadow;
-
-    if (config.show_state_chip !== false) {
-      chips.push(`<span class="vacuum-card__chip vacuum-card__chip--state">${escapeHtml(stateLabel)}</span>`);
-    }
-
-    if (this._activeModePanel && !availableModeDescriptors.some(mode => mode.kind === this._activeModePanel)) {
-      this._activeModePanel = null;
-    }
-    if (this._roomPanelOpen && !this._canSelectRooms(state, roomMappings)) {
-      this._roomPanelOpen = false;
-    }
-    this._sanitizeSelectedCleaningAreas(roomMappings);
-
-    const activeModeDescriptor = availableModeDescriptors.find(mode => mode.kind === this._activeModePanel) || null;
-    const currentModePanelMarkup = activeModeDescriptor ? this._getModePanelMarkup(activeModeDescriptor.kind, state) : "";
-    const currentPanelKey = this._roomPanelOpen && roomMappings.length
-      ? "room"
-      : activeModeDescriptor?.kind || "";
-    const currentPanelMarkup = currentPanelKey
-      ? this._getPanelMarkup(currentPanelKey, state)
-      : "";
-    const panelShellMarkup = currentPanelMarkup
-      ? `
+      ` : "";
+        const cardBackground = isTintedState ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)` : styles.card.background;
+        const cardBorder = isTintedState ? `color-mix(in srgb, ${accentColor} 34%, var(--divider-color))` : styles.card.border;
+        const cardShadow = isTintedState ? `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))` : styles.card.box_shadow;
+        if (config.show_state_chip !== false && !denseCompact) {
+          chips.push(`<span class="vacuum-card__chip vacuum-card__chip--state">${escapeHtml(stateLabel)}</span>`);
+        }
+        if (this._activeModePanel && !availableModeDescriptors.some((mode) => mode.kind === this._activeModePanel)) {
+          this._activeModePanel = null;
+        }
+        if (this._roomPanelOpen && !this._canSelectRooms(state, roomMappings)) {
+          this._roomPanelOpen = false;
+        }
+        this._sanitizeSelectedCleaningAreas(roomMappings);
+        const activeModeDescriptor = availableModeDescriptors.find((mode) => mode.kind === this._activeModePanel) || null;
+        const currentModePanelMarkup = activeModeDescriptor ? this._getModePanelMarkup(activeModeDescriptor.kind, state) : "";
+        const currentPanelKey = this._roomPanelOpen && roomMappings.length ? "room" : activeModeDescriptor?.kind || "";
+        const currentPanelMarkup = currentPanelKey ? this._getPanelMarkup(currentPanelKey, state) : "";
+        const panelShellMarkup = currentPanelMarkup ? `
         <div class="vacuum-card__panel-shell" data-panel-key="${escapeHtml(currentPanelKey)}">
           <div class="vacuum-card__panel-inner">
             ${currentPanelMarkup}
           </div>
         </div>
-      `
-      : "";
-
-    const showCopyBlock = !isCompactLayout || chips.length > 0;
-    const canRunBodyCardTap =
-      this._canRunConfiguredCardTapAction("body") || this._canRunConfiguredCardHoldAction("body");
-    const canRunIconCardTap =
-      this._canRunConfiguredCardTapAction("icon") || this._canRunConfiguredCardHoldAction("icon");
-    const iconTapEffective = this._effectiveVacuumTapAction("icon");
-    const iconButtonLabel = iconTapEffective === "navigate"
-      ? "Open robot view"
-      : iconTapEffective === "more_info"
-        ? "Show more information"
-        : this._isCleaning(state)
-          ? "Pause cleaning"
-          : "Start cleaning";
-
-    this.shadowRoot.innerHTML = `
+      ` : "";
+        const showTitle = !isCompactLayout || this._shouldShowCompactTitle();
+        const showCopyBlock = showTitle || chips.length > 0 || Boolean(batteryChipMarkup);
+        const canRunBodyCardTap = this._canRunConfiguredCardTapAction("body") || this._canRunConfiguredCardHoldAction("body");
+        const canRunIconCardTap = this._canRunConfiguredCardTapAction("icon") || this._canRunConfiguredCardHoldAction("icon");
+        const iconTapEffective = this._effectiveVacuumTapAction("icon");
+        const iconButtonLabel = iconTapEffective === "navigate" ? "Open robot view" : iconTapEffective === "more_info" ? "Show more information" : this._isCleaning(state) ? "Pause cleaning" : "Start cleaning";
+        this.shadowRoot.innerHTML = `
         <style>
           :host {
-            --vacuum-card-content-duration: ${animations.enabled ? clamp(Math.round(animations.panelDuration * 0.9), 180, 900) : 0}ms;
-            display: block;
-          }
+          --vacuum-card-content-duration: ${animations.enabled ? clamp(Math.round(animations.panelDuration * 0.9), 180, 900) : 0}ms;
+          align-self: start;
+          display: block;
+          height: fit-content;
+          max-width: 100%;
+          width: 100%;
+        }
 
         * {
           box-sizing: border-box;
@@ -2897,9 +2347,7 @@ class NodaliaVacuumCard extends HTMLElement {
         }
 
         ha-card::before {
-          background: ${isTintedState
-            ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`
-            : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0))"};
+          background: ${isTintedState ? `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))` : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0))"};
           content: "";
           inset: 0;
           pointer-events: none;
@@ -2951,32 +2399,30 @@ class NodaliaVacuumCard extends HTMLElement {
           align-items: start;
           display: grid;
           gap: ${styles.card.gap};
-          grid-template-columns: auto minmax(0, 1fr) auto;
+          grid-template-columns: auto minmax(0, 1fr);
           min-width: 0;
-          padding-right: ${batteryChipMarkup ? "88px" : "0"};
           position: relative;
         }
 
         .vacuum-card--compact .vacuum-card__header {
-          grid-template-columns: auto minmax(0, 1fr) auto;
-          text-align: center;
+          grid-template-columns: auto minmax(0, 1fr);
+          text-align: start;
         }
 
         .vacuum-card--compact .vacuum-card__copy {
-          justify-items: ${batteryChipMarkup ? "start" : "center"};
+          justify-items: start;
+          min-width: 0;
         }
 
         .vacuum-card--compact .vacuum-card__chips {
-          justify-content: center;
+          justify-content: flex-start;
         }
 
         .vacuum-card__icon-button {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
           appearance: none;
-          background: ${isTintedState
-            ? `color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))`
-            : "color-mix(in srgb, var(--primary-text-color) 6%, transparent)"};
+          background: ${isTintedState ? `color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))` : "color-mix(in srgb, var(--primary-text-color) 6%, transparent)"};
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border-radius: 999px;
           box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent), 0 10px 24px rgba(0, 0, 0, 0.16);
@@ -3057,14 +2503,23 @@ class NodaliaVacuumCard extends HTMLElement {
           min-width: 0;
         }
 
-        .vacuum-card__header-meta {
-          align-items: flex-start;
-          display: flex;
-          justify-content: flex-end;
+        .vacuum-card__headline {
+          align-items: center;
+          display: grid;
+          gap: 8px;
+          grid-template-columns: minmax(0, 1fr) auto;
           min-width: 0;
-          position: absolute;
-          right: 0;
-          top: 0;
+        }
+
+        .vacuum-card__headline-fill {
+          min-width: 0;
+        }
+
+        .vacuum-card__header-meta {
+          align-items: center;
+          display: flex;
+          flex-shrink: 0;
+          justify-content: flex-end;
         }
 
         .vacuum-card__title {
@@ -3113,6 +2568,7 @@ class NodaliaVacuumCard extends HTMLElement {
           background: color-mix(in srgb, ${batteryChipColor} 16%, color-mix(in srgb, var(--primary-text-color) 4%, transparent));
           border-color: color-mix(in srgb, ${batteryChipColor} 38%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
           color: ${batteryChipColor};
+          flex-shrink: 0;
           gap: 6px;
         }
 
@@ -3144,6 +2600,49 @@ class NodaliaVacuumCard extends HTMLElement {
 
         .vacuum-card--compact .vacuum-card__controls {
           justify-content: center;
+        }
+
+        .vacuum-card--dense {
+          gap: 8px;
+        }
+
+        .vacuum-card--dense .vacuum-card__header {
+          gap: 8px;
+        }
+
+        .vacuum-card--dense .vacuum-card__icon-button {
+          height: 44px;
+          width: 44px;
+        }
+
+        .vacuum-card--dense .vacuum-card__icon-button ha-icon {
+          --mdc-icon-size: 20px;
+          height: 20px;
+          width: 20px;
+        }
+
+        .vacuum-card--dense .vacuum-card__controls {
+          gap: 6px;
+        }
+
+        .vacuum-card--dense .vacuum-card__control {
+          height: 34px;
+          min-width: 34px;
+          width: 34px;
+        }
+
+        .vacuum-card--dense .vacuum-card__control ha-icon {
+          --mdc-icon-size: 16px;
+        }
+
+        .vacuum-card--dense .vacuum-card__title {
+          font-size: 13px;
+        }
+
+        .vacuum-card--dense .vacuum-card__chip {
+          font-size: 10px;
+          height: 22px;
+          padding: 0 7px;
         }
 
         .vacuum-card__control {
@@ -3386,14 +2885,11 @@ class NodaliaVacuumCard extends HTMLElement {
 
           .vacuum-card__header {
             gap: 10px;
-            grid-template-columns: auto minmax(0, 1fr) auto;
-            padding-right: ${batteryChipMarkup ? "82px" : "0"};
+            grid-template-columns: auto minmax(0, 1fr);
           }
 
           .vacuum-card__header-meta {
             justify-content: flex-end;
-            right: 0;
-            top: 0;
           }
 
           .vacuum-card__chip--battery {
@@ -3412,7 +2908,7 @@ class NodaliaVacuumCard extends HTMLElement {
       </style>
 
       <ha-card ${canRunBodyCardTap ? 'data-vacuum-action="body_tap"' : ""}>
-        <div class="vacuum-card ${isCompactLayout ? "vacuum-card--compact" : ""} ${shouldAnimateEntrance ? "vacuum-card--entering" : ""}">
+        <div class="vacuum-card ${isCompactLayout ? "vacuum-card--compact" : ""} ${denseCompact ? "vacuum-card--dense" : ""} ${shouldAnimateEntrance ? "vacuum-card--entering" : ""}">
           <div class="vacuum-card__header">
             <button
               class="vacuum-card__icon-button ${shouldAnimateActiveIcon ? "vacuum-card__icon-button--active-motion" : ""}"
@@ -3420,32 +2916,25 @@ class NodaliaVacuumCard extends HTMLElement {
               ${canRunIconCardTap ? 'data-vacuum-action="icon_tap"' : ""}
               aria-label="${escapeHtml(iconButtonLabel)}"
             >
-              ${entityPicture
-                ? `<img class="vacuum-card__picture" src="${escapeHtml(entityPicture)}" alt="" loading="lazy" />`
-                : `<ha-icon icon="${escapeHtml(icon)}"></ha-icon>`}
+              ${entityPicture ? `<img class="vacuum-card__picture" src="${escapeHtml(entityPicture)}" alt="" loading="lazy" />` : `<ha-icon icon="${escapeHtml(icon)}"></ha-icon>`}
               ${showUnavailableBadge ? `<span class="vacuum-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
             </button>
-            ${
-              showCopyBlock
-                ? `
+            ${showCopyBlock ? `
                   <div class="vacuum-card__copy">
-                    <div class="vacuum-card__title">${escapeHtml(title)}</div>
+                    <div class="vacuum-card__headline">
+                      ${showTitle ? `<div class="vacuum-card__title">${escapeHtml(title)}</div>` : `<span class="vacuum-card__headline-fill"></span>`}
+                      ${batteryChipMarkup ? `<div class="vacuum-card__header-meta">${batteryChipMarkup}</div>` : ""}
+                    </div>
                     ${chips.length ? `<div class="vacuum-card__chips">${chips.join("")}</div>` : ""}
                   </div>
-                `
-                : ""
-            }
-            ${batteryChipMarkup ? `<div class="vacuum-card__header-meta">${batteryChipMarkup}</div>` : ""}
+                ` : ""}
           </div>
 
-          ${
-            controls.length || availableModeDescriptors.length
-              ? `
+          ${visibleControls.length || visibleModeDescriptors.length ? `
                 <div class="vacuum-card__controls-group">
                   <div class="vacuum-card__controls-inner">
                     <div class="vacuum-card__controls">
-                      ${controls
-                        .map(control => `
+                      ${visibleControls.map((control) => `
                           <button
                               class="vacuum-card__control ${control.active ? "vacuum-card__control--active" : ""}"
                               type="button"
@@ -3454,10 +2943,8 @@ class NodaliaVacuumCard extends HTMLElement {
                             >
                               <ha-icon icon="${escapeHtml(control.icon)}"></ha-icon>
                             </button>
-                          `)
-                        .join("")}
-                      ${availableModeDescriptors
-                        .map(mode => `
+                          `).join("")}
+                      ${visibleModeDescriptors.map((mode) => `
                           <button
                             class="vacuum-card__control vacuum-card__mode-toggle ${activeModeDescriptor?.kind === mode.kind ? "vacuum-card__mode-toggle--active vacuum-card__control--active" : ""}"
                             type="button"
@@ -3467,14 +2954,11 @@ class NodaliaVacuumCard extends HTMLElement {
                           >
                             <ha-icon icon="${mode.kind === "mop" ? "mdi:waves" : "mdi:fan"}"></ha-icon>
                           </button>
-                        `)
-                        .join("")}
+                        `).join("")}
                     </div>
                   </div>
                 </div>
-              `
-              : ""
-          }
+              ` : ""}
 
           <div class="vacuum-card__panels">
             ${panelShellMarkup}
@@ -3483,326 +2967,261 @@ class NodaliaVacuumCard extends HTMLElement {
         </div>
       </ha-card>
     `;
-
-    if (shouldAnimateEntrance) {
-      this._scheduleEntranceAnimationReset(clamp(Math.round(animations.panelDuration * 0.9), 180, 900) + 120);
+        if (shouldAnimateEntrance) {
+          this._scheduleEntranceAnimationReset(clamp(Math.round(animations.panelDuration * 0.9), 180, 900) + 120);
+        }
+      }
     }
-  }
-}
-
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaVacuumCard);
-}
-
-class NodaliaVacuumCardEditor extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(STUB_CONFIG);
-    this._hass = null;
-    this._entityOptionsSignature = "";
-    this._showStyleSection = false;
-    this._showAnimationSection = false;
-    this._showTapActionsSection = false;
-    this._pendingEditorControlTags = new Set();
-    this._onShadowInput = this._onShadowInput.bind(this);
-    this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
-    this._onShadowClick = this._onShadowClick.bind(this);
+    _lazyNodaliaVacuumCard = NodaliaVacuumCard;
+    return NodaliaVacuumCard;
   }
 
-  _attachEditorShadowListeners() {
-    window.NodaliaUtils.bindShadowListeners(this, [
-      ["input", this._onShadowInput],
-      ["change", this._onShadowInput],
-      ["value-changed", this._onShadowValueChanged],
-      ["click", this._onShadowClick],
-    ], "editor");
-  }
-
-  _detachEditorShadowListeners() {
-    window.NodaliaUtils.releaseShadowListeners(this, "editor");
-  }
-
-  connectedCallback() {
-    this._attachEditorShadowListeners();
-    window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
-  }
-
-  disconnectedCallback() {
-    this._detachEditorShadowListeners();
-    window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
-  }
-
-  set hass(hass) {
-    const nextSignature = this._getEntityOptionsSignature(hass);
-    const shouldRender =
-      !this._hass ||
-      nextSignature !== this._entityOptionsSignature ||
-      !this.shadowRoot?.innerHTML;
-
-    this._hass = hass;
-    this._entityOptionsSignature = nextSignature;
-
-    if (!shouldRender) {
-      return;
+  // src/cards/vacuum/vacuum-editor.ts
+  var _lazyNodaliaVacuumCardEditor;
+  function loadNodaliaVacuumCardEditor() {
+    if (_lazyNodaliaVacuumCardEditor) {
+      return _lazyNodaliaVacuumCardEditor;
     }
-
-    const focusState = this._captureFocusState();
-    this._render();
-    this._restoreFocusState(focusState);
-  }
-
-  setConfig(config) {
-    const focusState = this._captureFocusState();
-    this._config = normalizeConfig(config || {});
-    window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
-    this._render();
-    this._restoreFocusState(focusState);
-  }
-
-  _watchEditorControlTag(tagName) {
-    if (!tagName || this._pendingEditorControlTags.has(tagName)) {
-      return;
-    }
-
-    if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
-      return;
-    }
-
-    this._pendingEditorControlTags.add(tagName);
-    customElements.whenDefined(tagName)
-      .then(() => {
-        this._pendingEditorControlTags.delete(tagName);
-
-        if (!this.isConnected || !this._hass || !this.shadowRoot) {
+    class NodaliaVacuumCardEditor extends HTMLElement {
+      constructor() {
+        super();
+        this._nodaliaConstruct();
+      }
+      _nodaliaConstruct() {
+        this.attachShadow({ mode: "open" });
+        this._config = normalizeConfig(STUB_CONFIG);
+        this._hass = null;
+        this._entityOptionsSignature = "";
+        this._showStyleSection = false;
+        this._showAnimationSection = false;
+        this._showTapActionsSection = false;
+        this._pendingEditorControlTags = /* @__PURE__ */ new Set();
+        this._onShadowInput = this._onShadowInput.bind(this);
+        this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
+        this._onShadowClick = this._onShadowClick.bind(this);
+      }
+      _attachEditorShadowListeners() {
+        window.NodaliaUtils.bindShadowListeners(this, [
+          ["input", this._onShadowInput],
+          ["change", this._onShadowInput],
+          ["value-changed", this._onShadowValueChanged],
+          ["click", this._onShadowClick]
+        ], "editor");
+      }
+      _detachEditorShadowListeners() {
+        window.NodaliaUtils.releaseShadowListeners(this, "editor");
+      }
+      connectedCallback() {
+        this._attachEditorShadowListeners();
+        window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
+      }
+      disconnectedCallback() {
+        this._detachEditorShadowListeners();
+        window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
+      }
+      set hass(hass) {
+        const nextSignature = this._getEntityOptionsSignature(hass);
+        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+        this._hass = hass;
+        this._entityOptionsSignature = nextSignature;
+        if (!shouldRender) {
           return;
         }
-
         const focusState = this._captureFocusState();
         this._render();
         this._restoreFocusState(focusState);
-      })
-      .catch(() => {
-        this._pendingEditorControlTags.delete(tagName);
-      });
-  }
-
-  _ensureEditorControlsReady() {
-    this._watchEditorControlTag("ha-entity-picker");
-    this._watchEditorControlTag("ha-selector");
-    this._watchEditorControlTag("ha-icon-picker");
-  }
-
-  _getEntityOptionsSignature(hass = this._hass) {
-    return window.NodaliaUtils.editorFilteredStatesSignature(
-      hass,
-      this._config?.language,
-      id =>
-        id.startsWith("vacuum.") || id.startsWith("select.") || id.startsWith("sensor."),
-    );
-  }
-
-  _buildEntityOptions(filterFn, currentValue = "") {
-    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
-    const options = Object.entries(this._hass?.states || {})
-      .filter(([entityId, state]) => filterFn(entityId, state))
-      .map(([entityId, state]) => {
-        const friendlyName = String(state?.attributes?.friendly_name || "").trim();
-        return {
-          value: entityId,
-          label: friendlyName || entityId,
-          displayLabel: friendlyName && friendlyName !== entityId
-            ? `${friendlyName} (${entityId})`
-            : entityId,
-        };
-      })
-      .sort((left, right) => (
-        left.label.localeCompare(right.label, sortLoc, { sensitivity: "base" })
-        || left.value.localeCompare(right.value, sortLoc, { sensitivity: "base" })
-      ));
-
-    if (currentValue && !options.some(option => option.value === currentValue)) {
-      options.unshift({
-        value: currentValue,
-        label: currentValue,
-        displayLabel: currentValue,
-      });
-    }
-
-    return options;
-  }
-
-  _getVacuumEntityOptions() {
-    return this._buildEntityOptions(
-      entityId => entityId.startsWith("vacuum."),
-      String(this._config?.entity || "").trim(),
-    );
-  }
-
-  _getSelectEntityOptions(field) {
-    return this._buildEntityOptions(
-      entityId => entityId.startsWith("select."),
-      String(this._config?.[field] || "").trim(),
-    );
-  }
-
-  _getSensorEntityOptions(field) {
-    return this._buildEntityOptions(
-      entityId => entityId.startsWith("sensor."),
-      String(this._config?.[field] || "").trim(),
-    );
-  }
-
-  _captureFocusState() {
-    return window.NodaliaUtils.captureEditorFocusState(this);
-  }
-
-  _restoreFocusState(focusState) {
-    window.NodaliaUtils.restoreEditorFocusState(this, focusState);
-  }
-
-  _emitConfig() {
-    const focusState = this._captureFocusState();
-    const nextConfig = deepClone(this._config);
-    this._config = normalizeConfig(compactConfig(nextConfig));
-    this._render();
-    this._restoreFocusState(focusState);
-    fireEvent(this, "config-changed", {
-      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
-    });
-  }
-
-  _setEditorConfig() {
-    this._config = normalizeConfig(compactConfig(this._config));
-  }
-
-  _setFieldValue(path, value) {
-    if (value === undefined || value === null || value === "") {
-      deleteByPath(this._config, path);
-      return;
-    }
-
-    setByPath(this._config, path, value);
-  }
-
-  _readFieldValue(input) {
-    const valueType = input.dataset.valueType || "string";
-
-    switch (valueType) {
-      case "boolean":
-        return Boolean(input.checked);
-      case "color":
-        return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
-      case "csv":
-        return arrayFromCsv(input.value);
-      default:
-        return input.value;
-    }
-  }
-
-  _onShadowInput(event) {
-    const input = event
-      .composedPath()
-      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
-
-    if (!input?.dataset?.field) {
-      if (input?.dataset?.modeListField && input.dataset.modeValue !== undefined) {
+      }
+      setConfig(config) {
+        const focusState = this._captureFocusState();
+        this._config = normalizeConfig(config || {});
+        window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
+        this._render();
+        this._restoreFocusState(focusState);
+      }
+      _watchEditorControlTag(tagName) {
+        if (!tagName || this._pendingEditorControlTags.has(tagName)) {
+          return;
+        }
+        if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
+          return;
+        }
+        this._pendingEditorControlTags.add(tagName);
+        customElements.whenDefined(tagName).then(() => {
+          this._pendingEditorControlTags.delete(tagName);
+          if (!this.isConnected || !this._hass || !this.shadowRoot) {
+            return;
+          }
+          const focusState = this._captureFocusState();
+          this._render();
+          this._restoreFocusState(focusState);
+        }).catch(() => {
+          this._pendingEditorControlTags.delete(tagName);
+        });
+      }
+      _ensureEditorControlsReady() {
+        this._watchEditorControlTag("ha-entity-picker");
+        this._watchEditorControlTag("ha-selector");
+        this._watchEditorControlTag("ha-icon-picker");
+      }
+      _getEntityOptionsSignature(hass = this._hass) {
+        return window.NodaliaUtils.editorFilteredStatesSignature(
+          hass,
+          this._config?.language,
+          (id) => id.startsWith("vacuum.") || id.startsWith("select.") || id.startsWith("sensor.")
+        );
+      }
+      _buildEntityOptions(filterFn, currentValue = "") {
+        const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
+        const options = Object.entries(this._hass?.states || {}).filter(([entityId, state]) => filterFn(entityId, state)).map(([entityId, state]) => {
+          const friendlyName = String(state?.attributes?.friendly_name || "").trim();
+          return {
+            value: entityId,
+            label: friendlyName || entityId,
+            displayLabel: friendlyName && friendlyName !== entityId ? `${friendlyName} (${entityId})` : entityId
+          };
+        }).sort((left, right) => left.label.localeCompare(right.label, sortLoc, { sensitivity: "base" }) || left.value.localeCompare(right.value, sortLoc, { sensitivity: "base" }));
+        if (currentValue && !options.some((option) => option.value === currentValue)) {
+          options.unshift({
+            value: currentValue,
+            label: currentValue,
+            displayLabel: currentValue
+          });
+        }
+        return options;
+      }
+      _getVacuumEntityOptions() {
+        return this._buildEntityOptions(
+          (entityId) => entityId.startsWith("vacuum."),
+          String(this._config?.entity || "").trim()
+        );
+      }
+      _getSelectEntityOptions(field) {
+        return this._buildEntityOptions(
+          (entityId) => entityId.startsWith("select."),
+          String(this._config?.[field] || "").trim()
+        );
+      }
+      _getSensorEntityOptions(field) {
+        return this._buildEntityOptions(
+          (entityId) => entityId.startsWith("sensor."),
+          String(this._config?.[field] || "").trim()
+        );
+      }
+      _captureFocusState() {
+        return window.NodaliaUtils.captureEditorFocusState(this);
+      }
+      _restoreFocusState(focusState) {
+        window.NodaliaUtils.restoreEditorFocusState(this, focusState);
+      }
+      _emitConfig() {
+        const focusState = this._captureFocusState();
+        const nextConfig = deepClone(this._config);
+        this._config = normalizeConfig(compactConfig(nextConfig));
+        this._render();
+        this._restoreFocusState(focusState);
+        fireEvent(this, "config-changed", {
+          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {})
+        });
+      }
+      _setEditorConfig() {
+        this._config = normalizeConfig(compactConfig(this._config));
+      }
+      _setFieldValue(path, value) {
+        if (value === void 0 || value === null || value === "") {
+          deleteByPath(this._config, path);
+          return;
+        }
+        setByPath(this._config, path, value);
+      }
+      _readFieldValue(input) {
+        const valueType = input.dataset.valueType || "string";
+        switch (valueType) {
+          case "boolean":
+            return Boolean(input.checked);
+          case "color":
+            return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
+          case "csv":
+            return arrayFromCsv(input.value);
+          default:
+            return input.value;
+        }
+      }
+      _onShadowInput(event) {
+        const input = event.composedPath().find((node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+        if (!input?.dataset?.field) {
+          if (input?.dataset?.modeListField && input.dataset.modeValue !== void 0) {
+            event.stopPropagation();
+            this._setModeVisibility(input.dataset.modeListField, input.dataset.modeValue, input.checked);
+            this._setEditorConfig();
+            if (event.type === "change") {
+              this._emitConfig();
+            }
+          }
+          return;
+        }
         event.stopPropagation();
-        this._setModeVisibility(input.dataset.modeListField, input.dataset.modeValue, input.checked);
+        const nextValue = this._readFieldValue(input);
+        this._setFieldValue(input.dataset.field, nextValue);
         this._setEditorConfig();
-
         if (event.type === "change") {
           this._emitConfig();
         }
       }
-      return;
-    }
-
-    event.stopPropagation();
-
-    const nextValue = this._readFieldValue(input);
-    this._setFieldValue(input.dataset.field, nextValue);
-    this._setEditorConfig();
-
-    if (event.type === "change") {
-      this._emitConfig();
-    }
-  }
-
-  _onShadowValueChanged(event) {
-    const control = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.field);
-
-    if (!control?.dataset?.field) {
-      return;
-    }
-
-    event.stopPropagation();
-
-    const nextValue = typeof event.detail?.value === "string"
-      ? event.detail.value
-      : control.value;
-    if (typeof control.dataset?.value === "string") {
-      control.dataset.value = String(nextValue || "");
-    }
-
-    const field = control.dataset.field;
-    const previousEntity = field === "entity" ? String(this._config?.entity || "").trim() : "";
-    this._setFieldValue(field, nextValue);
-    if (field === "entity") {
-      window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass, { previousEntity });
-    }
-    this._setEditorConfig();
-    this._emitConfig();
-  }
-
-  _onShadowClick(event) {
-    const toggleButton = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
-
-    if (!toggleButton) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    if (toggleButton.dataset.editorToggle === "tap_actions") {
-      this._showTapActionsSection = !this._showTapActionsSection;
-      this._render();
-      return;
-    }
-
-    if (toggleButton.dataset.editorToggle === "styles") {
-      this._showStyleSection = !this._showStyleSection;
-      this._render();
-      return;
-    }
-
-    if (toggleButton.dataset.editorToggle === "animations") {
-      this._showAnimationSection = !this._showAnimationSection;
-      this._render();
-    }
-  }
-
-  _editorLabel(s) {
-    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
-      return s;
-    }
-    const hass = this._hass ?? this.hass;
-    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
-  }
-
-  _renderTextField(label, field, value, options = {}) {
-    const tLabel = this._editorLabel(label);
-    const inputType = options.type || "text";
-    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
-    const valueType = options.valueType || "string";
-    const inputValue = value === undefined || value === null ? "" : String(value);
-
-    return `
+      _onShadowValueChanged(event) {
+        const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+        if (!control?.dataset?.field) {
+          return;
+        }
+        event.stopPropagation();
+        const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+        if (typeof control.dataset?.value === "string") {
+          control.dataset.value = String(nextValue || "");
+        }
+        const field = control.dataset.field;
+        const previousEntity = field === "entity" ? String(this._config?.entity || "").trim() : "";
+        this._setFieldValue(field, nextValue);
+        if (field === "entity") {
+          window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass, { previousEntity });
+        }
+        this._setEditorConfig();
+        this._emitConfig();
+      }
+      _onShadowClick(event) {
+        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
+        if (!toggleButton) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        if (toggleButton.dataset.editorToggle === "tap_actions") {
+          this._showTapActionsSection = !this._showTapActionsSection;
+          this._render();
+          return;
+        }
+        if (toggleButton.dataset.editorToggle === "styles") {
+          this._showStyleSection = !this._showStyleSection;
+          this._render();
+          return;
+        }
+        if (toggleButton.dataset.editorToggle === "animations") {
+          this._showAnimationSection = !this._showAnimationSection;
+          this._render();
+        }
+      }
+      _editorLabel(s) {
+        if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+          return s;
+        }
+        const hass = this._hass ?? this.hass;
+        return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+      }
+      _renderTextField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const inputType = options.type || "text";
+        const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+        const valueType = options.valueType || "string";
+        const inputValue = value === void 0 || value === null ? "" : String(value);
+        return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <input
@@ -3814,18 +3233,14 @@ class NodaliaVacuumCardEditor extends HTMLElement {
         />
       </label>
     `;
-  }
-
-  _renderColorField(label, field, value, options = {}) {
-    const tLabel = this._editorLabel(label);
-    const tColorCustom = this._editorLabel("ed.vacuum.custom_color");
-    const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
-    const currentValue = value === undefined || value === null || value === ""
-      ? fallbackValue
-      : String(value);
-    const colorModel = getEditorColorModel(currentValue, fallbackValue);
-
-    return `
+      }
+      _renderColorField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const tColorCustom = this._editorLabel("ed.vacuum.custom_color");
+        const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
+        const currentValue = value === void 0 || value === null || value === "" ? fallbackValue : String(value);
+        const colorModel = getEditorColorModel(currentValue, fallbackValue);
+        return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
@@ -3843,11 +3258,10 @@ class NodaliaVacuumCardEditor extends HTMLElement {
         </div>
       </div>
     `;
-  }
-
-  _renderCheckboxField(label, field, checked) {
-    const tLabel = this._editorLabel(label);
-    return `
+      }
+      _renderCheckboxField(label, field, checked) {
+        const tLabel = this._editorLabel(label);
+        return `
       <label class="editor-toggle">
         <input
           type="checkbox"
@@ -3859,144 +3273,103 @@ class NodaliaVacuumCardEditor extends HTMLElement {
         <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
-  }
-
-  _getVacuumState() {
-    return this._config?.entity ? this._hass?.states?.[this._config.entity] || null : null;
-  }
-
-  _getEditorSelectOptionsForMode(kind) {
-    const explicitEntity = kind === "mop"
-      ? this._config?.mop_select_entity
-      : this._config?.suction_select_entity;
-    const entityId = explicitEntity || this._guessRelatedSelectEntity(kind);
-    const state = entityId ? this._hass?.states?.[entityId] || null : null;
-
-    return Array.isArray(state?.attributes?.options)
-      ? state.attributes.options.map(item => String(item || "").trim()).filter(Boolean)
-      : [];
-  }
-
-  _guessRelatedSelectEntity(kind) {
-    if (!this._hass?.states || !this._config?.entity) {
-      return "";
-    }
-
-    const objectId = normalizeTextKey(String(this._config.entity).split(".").slice(1).join("_"));
-    if (!objectId) {
-      return "";
-    }
-
-    const patterns = kind === "mop"
-      ? ["mop", "water", "water_level", "water_volume", "scrub"]
-      : ["fan_speed", "fan_power", "suction", "cleaning_mode"];
-
-    const states = this._hass.states;
-    const registry = this._hass.entities || {};
-    const vacuumObjectIds = listVacuumObjectIds(states);
-    const vacuumDeviceId = registry[this._config.entity]?.device_id || "";
-    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
-    const candidates = Object.keys(states)
-      .filter(entityId => entityId.startsWith("select."))
-      .filter(entityId => isHelperRelatedToConfiguredVacuum({
-        candidateId: entityId,
-        searchable: states[entityId]?.attributes?.friendly_name || "",
-        isSameDevice: Boolean(vacuumDeviceId && registry[entityId]?.device_id === vacuumDeviceId),
-        objectId,
-        vacuumObjectIds,
-      }))
-      .filter(entityId => patterns.some(pattern => entityId.includes(pattern)))
-      .sort((left, right) => left.localeCompare(right, sortLoc));
-
-    return candidates[0] || "";
-  }
-
-  _categorizeModeOption(value) {
-    const key = normalizeTextKey(value);
-
-    if (MOP_MODE_PATTERNS.some(pattern => key.includes(pattern))) {
-      return "mop";
-    }
-
-    if (SUCTION_MODE_PATTERNS.some(pattern => key.includes(pattern))) {
-      return "suction";
-    }
-
-    return "unknown";
-  }
-
-  _isSharedSmartMode(value) {
-    const key = normalizeTextKey(value);
-    return SHARED_SMART_MODE_PATTERNS.some(pattern => key.includes(pattern));
-  }
-
-  _getEditorFanPresets() {
-    const configuredPresets = Array.isArray(this._config?.fan_presets) ? this._config.fan_presets : [];
-    if (configuredPresets.length) {
-      return configuredPresets;
-    }
-
-    const vacuumState = this._getVacuumState();
-    return Array.isArray(vacuumState?.attributes?.fan_speed_list)
-      ? vacuumState.attributes.fan_speed_list.map(item => String(item || "").trim()).filter(Boolean)
-      : [];
-  }
-
-  _getModeVisibilityOptions(kind) {
-    const selectOptions = this._getEditorSelectOptionsForMode(kind);
-    if (selectOptions.length) {
-      return selectOptions;
-    }
-
-    const rawPresets = this._getEditorFanPresets();
-    return rawPresets.filter(option => {
-      const optionKind = this._categorizeModeOption(option);
-      const isSharedSmartMode = this._isSharedSmartMode(option);
-
-      if (kind === "mop") {
-        return optionKind === "mop" || isSharedSmartMode;
       }
-
-      return optionKind !== "mop" || isSharedSmartMode;
-    });
-  }
-
-  _getHiddenModeList(field) {
-    return Array.isArray(this._config?.[field])
-      ? this._config[field].map(item => String(item || "").trim()).filter(Boolean)
-      : [];
-  }
-
-  _isModeVisible(field, value) {
-    const expectedKey = normalizeTextKey(value);
-    return !this._getHiddenModeList(field).some(item => normalizeTextKey(item) === expectedKey);
-  }
-
-  _setModeVisibility(field, value, visible) {
-    const rawValue = String(value || "").trim();
-    if (!rawValue) {
-      return;
-    }
-
-    const nextValues = this._getHiddenModeList(field).filter(item => normalizeTextKey(item) !== normalizeTextKey(rawValue));
-    if (!visible) {
-      nextValues.push(rawValue);
-    }
-
-    if (nextValues.length) {
-      setByPath(this._config, field, nextValues);
-      return;
-    }
-
-    deleteByPath(this._config, field);
-  }
-
-  _renderModeVisibilityField(field, modeValue, kind) {
-    const translatedLabel = humanizeModeLabel(modeValue, kind, this._hass ?? this.hass, this._config?.language ?? "auto");
-    const showRawValue = normalizeTextKey(translatedLabel) !== normalizeTextKey(modeValue);
-    const label = showRawValue ? `${translatedLabel} (${modeValue})` : translatedLabel;
-
-    return `
+      _getVacuumState() {
+        return this._config?.entity ? this._hass?.states?.[this._config.entity] || null : null;
+      }
+      _getEditorSelectOptionsForMode(kind) {
+        const explicitEntity = kind === "mop" ? this._config?.mop_select_entity : this._config?.suction_select_entity;
+        const entityId = explicitEntity || this._guessRelatedSelectEntity(kind);
+        const state = entityId ? this._hass?.states?.[entityId] || null : null;
+        return Array.isArray(state?.attributes?.options) ? state.attributes.options.map((item) => String(item || "").trim()).filter(Boolean) : [];
+      }
+      _guessRelatedSelectEntity(kind) {
+        if (!this._hass?.states || !this._config?.entity) {
+          return "";
+        }
+        const objectId = normalizeTextKey(String(this._config.entity).split(".").slice(1).join("_"));
+        if (!objectId) {
+          return "";
+        }
+        const patterns = kind === "mop" ? ["mop", "water", "water_level", "water_volume", "scrub"] : ["fan_speed", "fan_power", "suction", "cleaning_mode"];
+        const states = this._hass.states;
+        const registry = this._hass.entities || {};
+        const vacuumObjectIds = listVacuumObjectIds(states);
+        const vacuumDeviceId = registry[this._config.entity]?.device_id || "";
+        const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
+        const candidates = Object.keys(states).filter((entityId) => entityId.startsWith("select.")).filter((entityId) => isHelperRelatedToConfiguredVacuum({
+          candidateId: entityId,
+          searchable: states[entityId]?.attributes?.friendly_name || "",
+          isSameDevice: Boolean(vacuumDeviceId && registry[entityId]?.device_id === vacuumDeviceId),
+          objectId,
+          vacuumObjectIds
+        })).filter((entityId) => patterns.some((pattern) => entityId.includes(pattern))).sort((left, right) => left.localeCompare(right, sortLoc));
+        return candidates[0] || "";
+      }
+      _categorizeModeOption(value) {
+        const key = normalizeTextKey(value);
+        if (MOP_MODE_PATTERNS.some((pattern) => key.includes(pattern))) {
+          return "mop";
+        }
+        if (SUCTION_MODE_PATTERNS.some((pattern) => key.includes(pattern))) {
+          return "suction";
+        }
+        return "unknown";
+      }
+      _isSharedSmartMode(value) {
+        const key = normalizeTextKey(value);
+        return SHARED_SMART_MODE_PATTERNS.some((pattern) => key.includes(pattern));
+      }
+      _getEditorFanPresets() {
+        const configuredPresets = Array.isArray(this._config?.fan_presets) ? this._config.fan_presets : [];
+        if (configuredPresets.length) {
+          return configuredPresets;
+        }
+        const vacuumState = this._getVacuumState();
+        return Array.isArray(vacuumState?.attributes?.fan_speed_list) ? vacuumState.attributes.fan_speed_list.map((item) => String(item || "").trim()).filter(Boolean) : [];
+      }
+      _getModeVisibilityOptions(kind) {
+        const selectOptions = this._getEditorSelectOptionsForMode(kind);
+        if (selectOptions.length) {
+          return selectOptions;
+        }
+        const rawPresets = this._getEditorFanPresets();
+        return rawPresets.filter((option) => {
+          const optionKind = this._categorizeModeOption(option);
+          const isSharedSmartMode = this._isSharedSmartMode(option);
+          if (kind === "mop") {
+            return optionKind === "mop" || isSharedSmartMode;
+          }
+          return optionKind !== "mop" || isSharedSmartMode;
+        });
+      }
+      _getHiddenModeList(field) {
+        return Array.isArray(this._config?.[field]) ? this._config[field].map((item) => String(item || "").trim()).filter(Boolean) : [];
+      }
+      _isModeVisible(field, value) {
+        const expectedKey = normalizeTextKey(value);
+        return !this._getHiddenModeList(field).some((item) => normalizeTextKey(item) === expectedKey);
+      }
+      _setModeVisibility(field, value, visible) {
+        const rawValue = String(value || "").trim();
+        if (!rawValue) {
+          return;
+        }
+        const nextValues = this._getHiddenModeList(field).filter((item) => normalizeTextKey(item) !== normalizeTextKey(rawValue));
+        if (!visible) {
+          nextValues.push(rawValue);
+        }
+        if (nextValues.length) {
+          setByPath(this._config, field, nextValues);
+          return;
+        }
+        deleteByPath(this._config, field);
+      }
+      _renderModeVisibilityField(field, modeValue, kind) {
+        const translatedLabel = humanizeModeLabel(modeValue, kind, this._hass ?? this.hass, this._config?.language ?? "auto");
+        const showRawValue = normalizeTextKey(translatedLabel) !== normalizeTextKey(modeValue);
+        const label = showRawValue ? `${translatedLabel} (${modeValue})` : translatedLabel;
+        return `
       <label class="editor-toggle">
         <input
           type="checkbox"
@@ -4008,33 +3381,27 @@ class NodaliaVacuumCardEditor extends HTMLElement {
         <span class="editor-toggle__label">${escapeHtml(label)}</span>
       </label>
     `;
-  }
-
-  _renderSelectField(label, field, value, options, renderOptions = {}) {
-    const tLabel = this._editorLabel(label);
-    return `
+      }
+      _renderSelectField(label, field, value, options, renderOptions = {}) {
+        const tLabel = this._editorLabel(label);
+        return `
       <label class="editor-field ${renderOptions.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
-          ${options
-            .map(option => `
+          ${options.map((option) => `
               <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
                 ${escapeHtml(this._editorLabel(option.label))}
               </option>
-            `)
-            .join("")}
+            `).join("")}
         </select>
       </label>
     `;
-  }
-
-  _renderEntityPickerField(label, field, value, options = {}) {
-    const tLabel = this._editorLabel(label);
-    const inputValue = value === undefined || value === null ? "" : String(value);
-    const placeholderAttr = options.placeholder
-      ? `data-placeholder="${escapeHtml(options.placeholder)}"`
-      : "";
-    return `
+      }
+      _renderEntityPickerField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const inputValue = value === void 0 || value === null ? "" : String(value);
+        const placeholderAttr = options.placeholder ? `data-placeholder="${escapeHtml(options.placeholder)}"` : "";
+        return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <div
@@ -4046,13 +3413,12 @@ class NodaliaVacuumCardEditor extends HTMLElement {
         ></div>
       </div>
     `;
-  }
-
-  _renderIconPickerField(label, field, value, options = {}) {
-    const tLabel = this._editorLabel(label);
-    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
-    const inputValue = value === undefined || value === null ? "" : String(value);
-    return `
+      }
+      _renderIconPickerField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+        const inputValue = value === void 0 || value === null ? "" : String(value);
+        return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <ha-icon-picker
@@ -4063,125 +3429,102 @@ class NodaliaVacuumCardEditor extends HTMLElement {
         ></ha-icon-picker>
       </div>
     `;
-  }
-
-  _mountEntityPicker(host, pickerOptions) {
-    if (!(host instanceof HTMLElement)) {
-      return;
-    }
-
-    const field = host.dataset.field || pickerOptions.field || "entity";
-    const nextValue = host.dataset.value || "";
-    const placeholder = host.dataset.placeholder || pickerOptions.placeholder || "";
-    const domains = pickerOptions.includeDomains || [];
-    let control = null;
-
-    if (customElements.get("ha-entity-picker")) {
-      control = document.createElement("ha-entity-picker");
-      if (domains.length) {
-        control.includeDomains = domains;
-        control.entityFilter =
-          pickerOptions.entityFilter ||
-          (stateObj => domains.some(d => String(stateObj?.entity_id || "").startsWith(`${d}.`)));
       }
-      control.allowCustomEntity = true;
-      if (placeholder) {
-        control.setAttribute("placeholder", placeholder);
+      _mountEntityPicker(host, pickerOptions) {
+        if (!(host instanceof HTMLElement)) {
+          return;
+        }
+        const field = host.dataset.field || pickerOptions.field || "entity";
+        const nextValue = host.dataset.value || "";
+        const placeholder = host.dataset.placeholder || pickerOptions.placeholder || "";
+        const domains = pickerOptions.includeDomains || [];
+        let control = null;
+        if (customElements.get("ha-entity-picker")) {
+          control = document.createElement("ha-entity-picker");
+          if (domains.length) {
+            control.includeDomains = domains;
+            control.entityFilter = pickerOptions.entityFilter || ((stateObj) => domains.some((d) => String(stateObj?.entity_id || "").startsWith(`${d}.`)));
+          }
+          control.allowCustomEntity = true;
+          if (placeholder) {
+            control.setAttribute("placeholder", placeholder);
+          }
+        } else if (customElements.get("ha-selector")) {
+          control = document.createElement("ha-selector");
+          const entitySelector = domains.length === 1 ? { domain: domains[0] } : domains.length > 1 ? { domain: domains } : {};
+          control.selector = { entity: entitySelector };
+          if (placeholder) {
+            control.setAttribute("label", placeholder);
+          }
+        } else {
+          control = document.createElement("select");
+          const emptyOption = document.createElement("option");
+          emptyOption.value = "";
+          emptyOption.textContent = placeholder || this._editorLabel("ed.vacuum.select_entity");
+          control.appendChild(emptyOption);
+          pickerOptions.getOptions(field).forEach((option) => {
+            const optionElement = document.createElement("option");
+            optionElement.value = option.value;
+            optionElement.textContent = option.displayLabel;
+            control.appendChild(optionElement);
+          });
+          control.addEventListener("change", this._onShadowInput);
+        }
+        control.dataset.field = field;
+        control.dataset.value = nextValue;
+        if ("hass" in control) {
+          control.hass = this._hass;
+        }
+        if ("value" in control) {
+          control.value = nextValue;
+        }
+        if (control.tagName !== "SELECT") {
+          control.addEventListener("value-changed", this._onShadowValueChanged);
+        }
+        host.replaceChildren(control);
       }
-    } else if (customElements.get("ha-selector")) {
-      control = document.createElement("ha-selector");
-      const entitySelector =
-        domains.length === 1
-          ? { domain: domains[0] }
-          : domains.length > 1
-            ? { domain: domains }
-            : {};
-      control.selector = { entity: entitySelector };
-      if (placeholder) {
-        control.setAttribute("label", placeholder);
+      _mountVacuumEntityPicker(host) {
+        this._mountEntityPicker(host, {
+          includeDomains: ["vacuum"],
+          entityFilter: (stateObj) => String(stateObj?.entity_id || "").startsWith("vacuum."),
+          getOptions: () => this._getVacuumEntityOptions()
+        });
       }
-    } else {
-      control = document.createElement("select");
-      const emptyOption = document.createElement("option");
-      emptyOption.value = "";
-      emptyOption.textContent = placeholder || this._editorLabel("ed.vacuum.select_entity");
-      control.appendChild(emptyOption);
-      pickerOptions.getOptions(field).forEach(option => {
-        const optionElement = document.createElement("option");
-        optionElement.value = option.value;
-        optionElement.textContent = option.displayLabel;
-        control.appendChild(optionElement);
-      });
-      control.addEventListener("change", this._onShadowInput);
-    }
-
-    control.dataset.field = field;
-    control.dataset.value = nextValue;
-
-    if ("hass" in control) {
-      control.hass = this._hass;
-    }
-
-    if ("value" in control) {
-      control.value = nextValue;
-    }
-
-    if (control.tagName !== "SELECT") {
-      control.addEventListener("value-changed", this._onShadowValueChanged);
-    }
-
-    host.replaceChildren(control);
-  }
-
-  _mountVacuumEntityPicker(host) {
-    this._mountEntityPicker(host, {
-      includeDomains: ["vacuum"],
-      entityFilter: stateObj => String(stateObj?.entity_id || "").startsWith("vacuum."),
-      getOptions: () => this._getVacuumEntityOptions(),
-    });
-  }
-
-  _mountSelectEntityPicker(host) {
-    this._mountEntityPicker(host, {
-      includeDomains: ["select"],
-      entityFilter: stateObj => String(stateObj?.entity_id || "").startsWith("select."),
-      getOptions: field => this._getSelectEntityOptions(field),
-    });
-  }
-
-  _mountSensorEntityPicker(host) {
-    this._mountEntityPicker(host, {
-      includeDomains: ["sensor"],
-      entityFilter: stateObj => String(stateObj?.entity_id || "").startsWith("sensor."),
-      getOptions: field => this._getSensorEntityOptions(field),
-    });
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
-    }
-
-    const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "medium";
-    const suctionModeVisibilityOptions = this._getModeVisibilityOptions("suction");
-    const mopModeVisibilityOptions = this._getModeVisibilityOptions("mop");
-    const phVacName = this._editorLabel("ed.vacuum.name_placeholder");
-    const phFanPresets = this._editorLabel("ed.vacuum.fan_presets_placeholder");
-    const tapActionVal = config.tap_action || "default";
-    const iconTapSelectValue = String(config.icon_tap_action ?? "").trim();
-    const showVacuumNavigatePath =
-      normalizeTextKey(tapActionVal) === "navigate" ||
-      (Boolean(iconTapSelectValue) && normalizeTextKey(iconTapSelectValue) === "navigate");
-    const holdActionVal = config.hold_action || "none";
-    const iconHoldSelectValue = String(config.icon_hold_action ?? "").trim();
-    const holdBodyKey = normalizeTextKey(holdActionVal);
-    const holdIconEffectiveRaw = iconHoldSelectValue || holdActionVal;
-    const holdIconKey = normalizeTextKey(holdIconEffectiveRaw);
-    const showVacuumHoldNavigateFields = holdBodyKey === "navigate" || holdIconKey === "navigate";
-    const showVacuumIconHoldNavField = Boolean(iconHoldSelectValue) && holdIconKey === "navigate";
-
-    this.shadowRoot.innerHTML = `
+      _mountSelectEntityPicker(host) {
+        this._mountEntityPicker(host, {
+          includeDomains: ["select"],
+          entityFilter: (stateObj) => String(stateObj?.entity_id || "").startsWith("select."),
+          getOptions: (field) => this._getSelectEntityOptions(field)
+        });
+      }
+      _mountSensorEntityPicker(host) {
+        this._mountEntityPicker(host, {
+          includeDomains: ["sensor"],
+          entityFilter: (stateObj) => String(stateObj?.entity_id || "").startsWith("sensor."),
+          getOptions: (field) => this._getSensorEntityOptions(field)
+        });
+      }
+      _render() {
+        if (!this.shadowRoot) {
+          return;
+        }
+        const config = this._config || normalizeConfig({});
+        const hapticStyle = config.haptics?.style || "medium";
+        const suctionModeVisibilityOptions = this._getModeVisibilityOptions("suction");
+        const mopModeVisibilityOptions = this._getModeVisibilityOptions("mop");
+        const phVacName = this._editorLabel("ed.vacuum.name_placeholder");
+        const phFanPresets = this._editorLabel("ed.vacuum.fan_presets_placeholder");
+        const tapActionVal = config.tap_action || "default";
+        const iconTapSelectValue = String(config.icon_tap_action ?? "").trim();
+        const showVacuumNavigatePath = normalizeTextKey(tapActionVal) === "navigate" || Boolean(iconTapSelectValue) && normalizeTextKey(iconTapSelectValue) === "navigate";
+        const holdActionVal = config.hold_action || "none";
+        const iconHoldSelectValue = String(config.icon_hold_action ?? "").trim();
+        const holdBodyKey = normalizeTextKey(holdActionVal);
+        const holdIconEffectiveRaw = iconHoldSelectValue || holdActionVal;
+        const holdIconKey = normalizeTextKey(holdIconEffectiveRaw);
+        const showVacuumHoldNavigateFields = holdBodyKey === "navigate" || holdIconKey === "navigate";
+        const showVacuumIconHoldNavField = Boolean(iconHoldSelectValue) && holdIconKey === "navigate";
+        this.shadowRoot.innerHTML = `
       <style>
         :host {
           display: block;
@@ -4511,33 +3854,33 @@ class NodaliaVacuumCardEditor extends HTMLElement {
           </div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderEntityPickerField("ed.vacuum.robot_entity", "entity", config.entity, {
-              controlType: "vacuum-entity",
-              fullWidth: true,
-              placeholder: "vacuum.robot",
-            })}
+          controlType: "vacuum-entity",
+          fullWidth: true,
+          placeholder: "vacuum.robot"
+        })}
             ${this._renderIconPickerField("ed.entity.icon", "icon", config.icon, {
-              placeholder: "mdi:robot-vacuum",
-              fullWidth: true,
-            })}
+          placeholder: "mdi:robot-vacuum",
+          fullWidth: true
+        })}
             ${this._renderTextField("ed.entity.name", "name", config.name, {
-              placeholder: phVacName,
-              fullWidth: true,
-            })}
+          placeholder: phVacName,
+          fullWidth: true
+        })}
             ${this._renderCheckboxField("ed.entity.show_entity_picture", "show_entity_picture", config.show_entity_picture === true)}
             ${this._renderTextField("ed.entity.entity_picture", "entity_picture", config.entity_picture, {
-              placeholder: "/local/vacuum.png",
-              fullWidth: true,
-            })}
+          placeholder: "/local/vacuum.png",
+          fullWidth: true
+        })}
             ${this._renderTextField(
-              "ed.vacuum.fan_presets",
-              "fan_presets",
-              Array.isArray(config.fan_presets) ? config.fan_presets.join(", ") : "",
-              {
-                valueType: "csv",
-                placeholder: phFanPresets,
-                fullWidth: true,
-              },
-            )}
+          "ed.vacuum.fan_presets",
+          "fan_presets",
+          Array.isArray(config.fan_presets) ? config.fan_presets.join(", ") : "",
+          {
+            valueType: "csv",
+            placeholder: phFanPresets,
+            fullWidth: true
+          }
+        )}
           </div>
         </section>
 
@@ -4547,105 +3890,89 @@ class NodaliaVacuumCardEditor extends HTMLElement {
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.vacuum.tap_actions_section_hint"))}</div>
             <div class="editor-section__actions">
               ${window.NodaliaUtils.renderEditorCollapsibleToggleHtml({
-                toggleId: "tap_actions",
-                expanded: this._showTapActionsSection === true,
-                showLabel: this._editorLabel("ed.shared.show_tap_action_settings"),
-                hideLabel: this._editorLabel("ed.shared.hide_tap_action_settings"),
-                escapeHtml,
-              })}
+          toggleId: "tap_actions",
+          expanded: this._showTapActionsSection === true,
+          showLabel: this._editorLabel("ed.shared.show_tap_action_settings"),
+          hideLabel: this._editorLabel("ed.shared.hide_tap_action_settings"),
+          escapeHtml
+        })}
             </div>
           </div>
-          ${
-            this._showTapActionsSection
-              ? `
+          ${this._showTapActionsSection ? `
           <div class="editor-grid editor-grid--stacked">
             ${this._renderSelectField(
-              "ed.light.icon_tap_action",
-              "icon_tap_action",
-              iconTapSelectValue,
-              [
-                { value: "", label: "ed.entity.icon_tap_inherit" },
-                { value: "default", label: "ed.vacuum.tap_default" },
-                { value: "more-info", label: "ed.vacuum.tap_more_info" },
-                { value: "navigate", label: "ed.vacuum.tap_navigate" },
-                { value: "none", label: "ed.vacuum.tap_none" },
-              ],
-              { fullWidth: true },
-            )}
+          "ed.light.icon_tap_action",
+          "icon_tap_action",
+          iconTapSelectValue,
+          [
+            { value: "", label: "ed.entity.icon_tap_inherit" },
+            { value: "default", label: "ed.vacuum.tap_default" },
+            { value: "more-info", label: "ed.vacuum.tap_more_info" },
+            { value: "navigate", label: "ed.vacuum.tap_navigate" },
+            { value: "none", label: "ed.vacuum.tap_none" }
+          ],
+          { fullWidth: true }
+        )}
             ${this._renderSelectField(
-              "ed.light.card_tap_action",
-              "tap_action",
-              config.tap_action || "default",
-              [
-                { value: "default", label: "ed.vacuum.tap_default" },
-                { value: "more-info", label: "ed.vacuum.tap_more_info" },
-                { value: "navigate", label: "ed.vacuum.tap_navigate" },
-                { value: "none", label: "ed.vacuum.tap_none" },
-              ],
-              { fullWidth: true },
-            )}
-            ${
-              showVacuumNavigatePath
-                ? this._renderTextField("ed.vacuum.navigation_path", "tap_navigation_path", config.tap_navigation_path, {
-                    placeholder: "/lovelace/robot",
-                    fullWidth: true,
-                  })
-                : ""
-            }
+          "ed.light.card_tap_action",
+          "tap_action",
+          config.tap_action || "default",
+          [
+            { value: "default", label: "ed.vacuum.tap_default" },
+            { value: "more-info", label: "ed.vacuum.tap_more_info" },
+            { value: "navigate", label: "ed.vacuum.tap_navigate" },
+            { value: "none", label: "ed.vacuum.tap_none" }
+          ],
+          { fullWidth: true }
+        )}
+            ${showVacuumNavigatePath ? this._renderTextField("ed.vacuum.navigation_path", "tap_navigation_path", config.tap_navigation_path, {
+          placeholder: "/lovelace/robot",
+          fullWidth: true
+        }) : ""}
             <div class="editor-section__hint editor-field--full" style="margin-top: 8px;">${escapeHtml(this._editorLabel("ed.vacuum.hold_actions_section_hint"))}</div>
             ${this._renderSelectField(
-              "ed.light.icon_hold_action",
-              "icon_hold_action",
-              iconHoldSelectValue,
-              [
-                { value: "", label: "ed.entity.icon_hold_inherit" },
-                { value: "default", label: "ed.vacuum.tap_default" },
-                { value: "more-info", label: "ed.vacuum.tap_more_info" },
-                { value: "navigate", label: "ed.vacuum.tap_navigate" },
-                { value: "none", label: "ed.vacuum.tap_none" },
-              ],
-              { fullWidth: true },
-            )}
+          "ed.light.icon_hold_action",
+          "icon_hold_action",
+          iconHoldSelectValue,
+          [
+            { value: "", label: "ed.entity.icon_hold_inherit" },
+            { value: "default", label: "ed.vacuum.tap_default" },
+            { value: "more-info", label: "ed.vacuum.tap_more_info" },
+            { value: "navigate", label: "ed.vacuum.tap_navigate" },
+            { value: "none", label: "ed.vacuum.tap_none" }
+          ],
+          { fullWidth: true }
+        )}
             ${this._renderSelectField(
-              "ed.light.card_hold_action",
-              "hold_action",
-              holdActionVal,
-              [
-                { value: "default", label: "ed.vacuum.tap_default" },
-                { value: "more-info", label: "ed.vacuum.tap_more_info" },
-                { value: "navigate", label: "ed.vacuum.tap_navigate" },
-                { value: "none", label: "ed.vacuum.tap_none" },
-              ],
-              { fullWidth: true },
-            )}
-            ${
-              showVacuumHoldNavigateFields
-                ? `
+          "ed.light.card_hold_action",
+          "hold_action",
+          holdActionVal,
+          [
+            { value: "default", label: "ed.vacuum.tap_default" },
+            { value: "more-info", label: "ed.vacuum.tap_more_info" },
+            { value: "navigate", label: "ed.vacuum.tap_navigate" },
+            { value: "none", label: "ed.vacuum.tap_none" }
+          ],
+          { fullWidth: true }
+        )}
+            ${showVacuumHoldNavigateFields ? `
                   ${this._renderTextField("ed.vacuum.hold_navigation_path", "hold_navigation_path", config.hold_navigation_path, {
-                    placeholder: "/lovelace/robot",
-                    fullWidth: true,
-                  })}
-                  ${
-                    showVacuumIconHoldNavField
-                      ? this._renderTextField(
-                          "ed.vacuum.icon_hold_navigation_path",
-                          "icon_hold_navigation_path",
-                          config.icon_hold_navigation_path,
-                          {
-                            placeholder: "/lovelace/robot",
-                            fullWidth: true,
-                          },
-                        )
-                      : ""
-                  }
-                `
-                : ""
-            }
+          placeholder: "/lovelace/robot",
+          fullWidth: true
+        })}
+                  ${showVacuumIconHoldNavField ? this._renderTextField(
+          "ed.vacuum.icon_hold_navigation_path",
+          "icon_hold_navigation_path",
+          config.icon_hold_navigation_path,
+          {
+            placeholder: "/lovelace/robot",
+            fullWidth: true
+          }
+        ) : ""}
+                ` : ""}
           </div>
 
-              `
-              : ""
-          }
+              ` : ""}
         </section>
 
         <section class="editor-section">
@@ -4655,29 +3982,29 @@ class NodaliaVacuumCardEditor extends HTMLElement {
           </div>
           <div class="editor-grid">
             ${this._renderEntityPickerField("ed.vacuum.state_sensor", "state_entity", config.state_entity, {
-              controlType: "sensor-entity",
-              placeholder: "sensor.robot_estado",
-            })}
+          controlType: "sensor-entity",
+          placeholder: "sensor.robot_estado"
+        })}
             ${this._renderEntityPickerField("ed.vacuum.error_sensor", "error_entity", config.error_entity, {
-              controlType: "sensor-entity",
-              placeholder: "sensor.robot_error",
-            })}
+          controlType: "sensor-entity",
+          placeholder: "sensor.robot_error"
+        })}
             ${this._renderEntityPickerField("ed.vacuum.battery_sensor", "battery_entity", config.battery_entity, {
-              controlType: "sensor-entity",
-              placeholder: "sensor.robot_bateria",
-            })}
+          controlType: "sensor-entity",
+          placeholder: "sensor.robot_bateria"
+        })}
             ${this._renderEntityPickerField("ed.vacuum.room_mapping_sensor", "room_mapping_entity", config.room_mapping_entity, {
-              controlType: "sensor-entity",
-              placeholder: "sensor.room_mapping",
-            })}
+          controlType: "sensor-entity",
+          placeholder: "sensor.room_mapping"
+        })}
             ${this._renderEntityPickerField("ed.vacuum.suction_select", "suction_select_entity", config.suction_select_entity, {
-              controlType: "select-entity",
-              placeholder: "select.robot_fan_speed",
-            })}
+          controlType: "select-entity",
+          placeholder: "select.robot_fan_speed"
+        })}
             ${this._renderEntityPickerField("ed.vacuum.mop_select", "mop_select_entity", config.mop_select_entity, {
-              controlType: "select-entity",
-              placeholder: "select.robot_mop_mode",
-            })}
+          controlType: "select-entity",
+          placeholder: "select.robot_mop_mode"
+        })}
           </div>
         </section>
 
@@ -4688,15 +4015,15 @@ class NodaliaVacuumCardEditor extends HTMLElement {
           </div>
           <div class="editor-grid">
             ${this._renderSelectField(
-              "ed.vacuum.layout_narrow",
-              "compact_layout_mode",
-              config.compact_layout_mode || "auto",
-              [
-                { value: "auto", label: "ed.vacuum.layout_auto" },
-                { value: "always", label: "ed.vacuum.layout_always" },
-                { value: "never", label: "ed.vacuum.layout_never" },
-              ],
-            )}
+          "ed.vacuum.layout_narrow",
+          "compact_layout_mode",
+          config.compact_layout_mode || "auto",
+          [
+            { value: "auto", label: "ed.vacuum.layout_auto" },
+            { value: "always", label: "ed.vacuum.layout_always" },
+            { value: "never", label: "ed.vacuum.layout_never" }
+          ]
+        )}
             ${this._renderCheckboxField("ed.vacuum.show_state_chip", "show_state_chip", config.show_state_chip !== false)}
             ${this._renderCheckboxField("ed.vacuum.show_battery_chip", "show_battery_chip", config.show_battery_chip !== false)}
             ${this._renderCheckboxField("ed.vacuum.show_mode_controls", "show_mode_controls", config.show_mode_controls !== false)}
@@ -4704,32 +4031,24 @@ class NodaliaVacuumCardEditor extends HTMLElement {
             ${this._renderCheckboxField("ed.vacuum.show_return_base", "show_return_to_base", config.show_return_to_base !== false)}
             ${this._renderCheckboxField("ed.vacuum.show_stop", "show_stop", config.show_stop !== false)}
             ${this._renderCheckboxField("ed.vacuum.show_locate", "show_locate", config.show_locate !== false)}
-            ${
-              suctionModeVisibilityOptions.length
-                ? `
+            ${suctionModeVisibilityOptions.length ? `
                   <div class="editor-subsection editor-field--full">
                     <div class="editor-subsection__title">${escapeHtml(this._editorLabel("ed.vacuum.suction_modes_title"))}</div>
                     <div class="editor-subsection__hint">${escapeHtml(this._editorLabel("ed.vacuum.suction_modes_hint"))}</div>
                     <div class="editor-grid editor-grid--stacked">
-                      ${suctionModeVisibilityOptions.map(mode => this._renderModeVisibilityField("hidden_suction_modes", mode, "suction")).join("")}
+                      ${suctionModeVisibilityOptions.map((mode) => this._renderModeVisibilityField("hidden_suction_modes", mode, "suction")).join("")}
                     </div>
                   </div>
-                `
-                : ""
-            }
-            ${
-              mopModeVisibilityOptions.length
-                ? `
+                ` : ""}
+            ${mopModeVisibilityOptions.length ? `
                   <div class="editor-subsection editor-field--full">
                     <div class="editor-subsection__title">${escapeHtml(this._editorLabel("ed.vacuum.mop_modes_title"))}</div>
                     <div class="editor-subsection__hint">${escapeHtml(this._editorLabel("ed.vacuum.mop_modes_hint"))}</div>
                     <div class="editor-grid editor-grid--stacked">
-                      ${mopModeVisibilityOptions.map(mode => this._renderModeVisibilityField("hidden_mop_modes", mode, "mop")).join("")}
+                      ${mopModeVisibilityOptions.map((mode) => this._renderModeVisibilityField("hidden_mop_modes", mode, "mop")).join("")}
                     </div>
                   </div>
-                `
-                : ""
-            }
+                ` : ""}
           </div>
         </section>
 
@@ -4742,19 +4061,19 @@ class NodaliaVacuumCardEditor extends HTMLElement {
             ${this._renderCheckboxField("ed.vacuum.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
             ${this._renderCheckboxField("ed.vacuum.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
-              "ed.vacuum.haptic_style",
-              "haptics.style",
-              hapticStyle,
-              [
-                { value: "selection", label: "ed.weather.haptic_selection" },
-                { value: "light", label: "ed.weather.haptic_light" },
-                { value: "medium", label: "ed.weather.haptic_medium" },
-                { value: "heavy", label: "ed.weather.haptic_heavy" },
-                { value: "success", label: "ed.weather.haptic_success" },
-                { value: "warning", label: "ed.weather.haptic_warning" },
-                { value: "failure", label: "ed.weather.haptic_failure" },
-              ],
-            )}
+          "ed.vacuum.haptic_style",
+          "haptics.style",
+          hapticStyle,
+          [
+            { value: "selection", label: "ed.weather.haptic_selection" },
+            { value: "light", label: "ed.weather.haptic_light" },
+            { value: "medium", label: "ed.weather.haptic_medium" },
+            { value: "heavy", label: "ed.weather.haptic_heavy" },
+            { value: "success", label: "ed.weather.haptic_success" },
+            { value: "warning", label: "ed.weather.haptic_warning" },
+            { value: "failure", label: "ed.weather.haptic_failure" }
+          ]
+        )}
           </div>
         </section>
 
@@ -4774,22 +4093,18 @@ class NodaliaVacuumCardEditor extends HTMLElement {
               </button>
             </div>
           </div>
-          ${
-            this._showAnimationSection
-              ? `
+          ${this._showAnimationSection ? `
                 <div class="editor-grid">
                   ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", config.animations.enabled !== false)}
                   ${this._renderCheckboxField("ed.vacuum.icon_animation_active", "animations.icon_animation", config.animations.icon_animation !== false)}
                   ${this._renderTextField("ed.vacuum.panel_duration_ms", "animations.panel_duration", config.animations.panel_duration, {
-                    type: "number",
-                  })}
+          type: "number"
+        })}
                   ${this._renderTextField("ed.vacuum.button_bounce_ms", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
-                    type: "number",
-                  })}
+          type: "number"
+        })}
                 </div>
-              `
-              : ""
-          }
+              ` : ""}
         </section>
 
         <section class="editor-section">
@@ -4808,119 +4123,113 @@ class NodaliaVacuumCardEditor extends HTMLElement {
               </button>
             </div>
           </div>
-          ${
-            this._showStyleSection
-              ? `
+          ${this._showStyleSection ? `
                 <div class="editor-grid">
                   ${this._renderColorField("ed.vacuum.style_bg", "styles.card.background", config.styles.card.background)}
                   ${this._renderTextField("ed.vacuum.style_border", "styles.card.border", config.styles.card.border)}
                   ${window.NodaliaUtils.renderEditorCardBorderRadiusHtml({
-                    escapeHtml,
-                    field: "styles.card.border_radius",
-                    value: config.styles?.card?.border_radius,
-                    tHeading: this._editorLabel("ed.entity.style_card_radius_presets"),
-                    labels: {
-                      pill: this._editorLabel("ed.entity.chip_radius_pill"),
-                      soft: this._editorLabel("ed.entity.chip_radius_soft"),
-                      round: this._editorLabel("ed.entity.chip_radius_round"),
-                      square: this._editorLabel("ed.entity.chip_radius_square"),
-                    },
-                  })}
+          escapeHtml,
+          field: "styles.card.border_radius",
+          value: config.styles?.card?.border_radius,
+          tHeading: this._editorLabel("ed.entity.style_card_radius_presets"),
+          labels: {
+            pill: this._editorLabel("ed.entity.chip_radius_pill"),
+            soft: this._editorLabel("ed.entity.chip_radius_soft"),
+            round: this._editorLabel("ed.entity.chip_radius_round"),
+            square: this._editorLabel("ed.entity.chip_radius_square")
+          }
+        })}
                   <div class="editor-section__hint editor-field--full" style="margin-top: -6px;">${escapeHtml(this._editorLabel("ed.entity.style_card_radius_yaml_hint"))}</div>
                   ${this._renderTextField("ed.vacuum.style_shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
                   ${this._renderTextField("ed.vacuum.style_padding", "styles.card.padding", config.styles.card.padding)}
                   ${this._renderTextField("ed.vacuum.style_gap", "styles.card.gap", config.styles.card.gap)}
                   ${this._renderTextField("ed.vacuum.style_main_bubble_size", "styles.icon.size", config.styles.icon.size)}
                   ${this._renderColorField("ed.vacuum.style_main_bubble_bg", "styles.icon.background", config.styles.icon.background, {
-                    fallbackValue: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
-                  })}
+          fallbackValue: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)"
+        })}
                   ${this._renderColorField("ed.vacuum.style_icon_base", "styles.icon.color", config.styles.icon.color, {
-                    fallbackValue: "var(--primary-text-color)",
-                  })}
+          fallbackValue: "var(--primary-text-color)"
+        })}
                   ${this._renderColorField("ed.vacuum.style_icon_cleaning", "styles.icon.active_color", config.styles.icon.active_color, {
-                    fallbackValue: "#61c97a",
-                  })}
+          fallbackValue: "#61c97a"
+        })}
                   ${this._renderColorField("ed.vacuum.style_icon_washing", "styles.icon.washing_color", config.styles.icon.washing_color, {
-                    fallbackValue: "#5aa7ff",
-                  })}
+          fallbackValue: "#5aa7ff"
+        })}
                   ${this._renderColorField("ed.vacuum.style_icon_drying", "styles.icon.drying_color", config.styles.icon.drying_color, {
-                    fallbackValue: "#f1c24c",
-                  })}
+          fallbackValue: "#f1c24c"
+        })}
                   ${this._renderColorField("ed.vacuum.style_icon_emptying", "styles.icon.emptying_color", config.styles.icon.emptying_color, {
-                    fallbackValue: "#9b6b4a",
-                  })}
+          fallbackValue: "#9b6b4a"
+        })}
                   ${this._renderColorField("ed.vacuum.style_icon_returning", "styles.icon.returning_color", config.styles.icon.returning_color, {
-                    fallbackValue: "#f6b73c",
-                  })}
+          fallbackValue: "#f6b73c"
+        })}
                   ${this._renderColorField("ed.vacuum.style_icon_docked", "styles.icon.docked_color", config.styles.icon.docked_color, {
-                    fallbackValue: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))",
-                  })}
+          fallbackValue: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))"
+        })}
                   ${this._renderColorField("ed.vacuum.style_icon_error", "styles.icon.error_color", config.styles.icon.error_color, {
-                    fallbackValue: "var(--error-color, #ff6b6b)",
-                  })}
+          fallbackValue: "var(--error-color, #ff6b6b)"
+        })}
                   ${this._renderTextField("ed.vacuum.style_button_size", "styles.control.size", config.styles.control.size)}
                   ${this._renderColorField("ed.vacuum.style_accent_bg", "styles.control.accent_background", config.styles.control.accent_background, {
-                    fallbackValue: "rgba(var(--rgb-primary-color), 0.18)",
-                  })}
+          fallbackValue: "rgba(var(--rgb-primary-color), 0.18)"
+        })}
                   ${this._renderColorField("ed.vacuum.style_accent_color", "styles.control.accent_color", config.styles.control.accent_color, {
-                    fallbackValue: "var(--primary-text-color)",
-                  })}
+          fallbackValue: "var(--primary-text-color)"
+        })}
                   ${this._renderTextField("ed.vacuum.style_chip_height", "styles.chip_height", config.styles.chip_height)}
                   ${this._renderTextField("ed.vacuum.style_chip_font", "styles.chip_font_size", config.styles.chip_font_size)}
                   ${this._renderTextField("ed.vacuum.style_chip_padding", "styles.chip_padding", config.styles.chip_padding)}
                   ${window.NodaliaUtils.renderEditorChipBorderRadiusHtml({
-                    escapeHtml,
-                    field: "styles.chip_border_radius",
-                    value: config.styles?.chip_border_radius,
-                    tHeading: this._editorLabel("ed.entity.style_chip_radius"),
-                    labels: {
-                      pill: this._editorLabel("ed.entity.chip_radius_pill"),
-                      soft: this._editorLabel("ed.entity.chip_radius_soft"),
-                      round: this._editorLabel("ed.entity.chip_radius_round"),
-                      square: this._editorLabel("ed.entity.chip_radius_square"),
-                    },
-                  })}
+          escapeHtml,
+          field: "styles.chip_border_radius",
+          value: config.styles?.chip_border_radius,
+          tHeading: this._editorLabel("ed.entity.style_chip_radius"),
+          labels: {
+            pill: this._editorLabel("ed.entity.chip_radius_pill"),
+            soft: this._editorLabel("ed.entity.chip_radius_soft"),
+            round: this._editorLabel("ed.entity.chip_radius_round"),
+            square: this._editorLabel("ed.entity.chip_radius_square")
+          }
+        })}
                   ${this._renderTextField("ed.vacuum.style_title_size", "styles.title_size", config.styles.title_size)}
                 </div>
-              `
-              : ""
-          }
+              ` : ""}
         </section>
       </div>
     `;
-
-    this.shadowRoot
-      .querySelectorAll('[data-mounted-control="vacuum-entity"]')
-      .forEach(host => this._mountVacuumEntityPicker(host));
-
-    this.shadowRoot
-      .querySelectorAll('[data-mounted-control="select-entity"]')
-      .forEach(host => this._mountSelectEntityPicker(host));
-
-    this.shadowRoot
-      .querySelectorAll('[data-mounted-control="sensor-entity"]')
-      .forEach(host => this._mountSensorEntityPicker(host));
-
-    this.shadowRoot
-      .querySelectorAll("ha-icon-picker[data-field]")
-      .forEach(control => {
-        control.hass = this._hass;
-        control.value = control.dataset.value || "";
-        control.addEventListener("value-changed", this._onShadowValueChanged);
-      });
-
-    this._ensureEditorControlsReady();
-    window.NodaliaUtils?.clampEditorDialogScroll?.(this);
+        this.shadowRoot.querySelectorAll('[data-mounted-control="vacuum-entity"]').forEach((host) => this._mountVacuumEntityPicker(host));
+        this.shadowRoot.querySelectorAll('[data-mounted-control="select-entity"]').forEach((host) => this._mountSelectEntityPicker(host));
+        this.shadowRoot.querySelectorAll('[data-mounted-control="sensor-entity"]').forEach((host) => this._mountSensorEntityPicker(host));
+        this.shadowRoot.querySelectorAll("ha-icon-picker[data-field]").forEach((control) => {
+          control.hass = this._hass;
+          control.value = control.dataset.value || "";
+          control.addEventListener("value-changed", this._onShadowValueChanged);
+        });
+        this._ensureEditorControlsReady();
+        window.NodaliaUtils?.clampEditorDialogScroll?.(this);
+      }
+    }
+    _lazyNodaliaVacuumCardEditor = NodaliaVacuumCardEditor;
+    return NodaliaVacuumCardEditor;
   }
-}
 
-if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaVacuumCardEditor);
-}
-
-window.NodaliaUtils.registerCustomCard({
-  type: CARD_TAG,
-  name: "Nodalia Vacuum Card",
-  description: "Vacuum card with the Nodalia look, quick actions, and visual editor.",
-  preview: true,
-});
+  // src/cards/vacuum/index.ts
+  window.NodaliaUtils.defineLazyCustomElement(CARD_TAG, loadNodaliaVacuumCard, { editorTag: EDITOR_TAG });
+  window.NodaliaUtils.defineLazyCustomElement(EDITOR_TAG, loadNodaliaVacuumCardEditor);
+  window.NodaliaUtils.registerCustomCard({
+    type: CARD_TAG,
+    name: "Nodalia Vacuum Card",
+    description: "Vacuum card with the Nodalia look, quick actions, and visual editor.",
+    preview: true
+  });
+  var publicApi = {
+    CARD_TAG,
+    EDITOR_TAG,
+    CARD_VERSION,
+    DEFAULT_CONFIG,
+    normalizeConfig
+  };
+  window.__NODALIA_VACUUM__ = publicApi;
+})();

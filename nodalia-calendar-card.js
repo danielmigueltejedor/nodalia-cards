@@ -1,1108 +1,987 @@
-const CARD_TAG = "nodalia-calendar-card";
-const EDITOR_TAG = "nodalia-calendar-card-editor";
-const CARD_VERSION = "2.3.0-alpha.3";
-const NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
-const HAPTIC_PATTERNS = {
-  selection: 8,
-  light: 10,
-  medium: 16,
-  heavy: 24,
-  success: [10, 40, 10],
-  warning: [20, 50, 12],
-  failure: [12, 40, 12, 40, 18],
-};
+/* Generated from src/cards/calendar. Do not edit. */
+"use strict";
+(() => {
+  // src/cards/calendar/calendar-constants.ts
+  var CARD_TAG = "nodalia-calendar-card";
+  var EDITOR_TAG = "nodalia-calendar-card-editor";
+  var CARD_VERSION = "2.3.0-alpha.25";
+  var NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
+  var HAPTIC_PATTERNS = {
+    selection: 8,
+    light: 10,
+    medium: 16,
+    heavy: 24,
+    success: [10, 40, 10],
+    warning: [20, 50, 12],
+    failure: [12, 40, 12, 40, 18]
+  };
+  var CALENDAR_DELETE_RECURRENCE_THIS = "";
+  var CALENDAR_DELETE_RECURRENCE_THIS_AND_FUTURE = "THISANDFUTURE";
+  var VALID_TIME_RANGES = ["3d", "1w", "2w", "1m"];
+  var DATE_TIME_FORMATTER_CACHE_LIMIT = 48;
+  var dateTimeFormatterCache = /* @__PURE__ */ new Map();
 
-/** Matches Home Assistant `calendar/event/delete` + frontend `RecurrenceRange`. */
-const CALENDAR_DELETE_RECURRENCE_THIS = "";
-const CALENDAR_DELETE_RECURRENCE_THIS_AND_FUTURE = "THISANDFUTURE";
+  // src/cards/calendar/calendar-runtime.ts
+  var utils = window.NodaliaUtils;
+  var isObject = utils.isObject.bind(utils);
+  var clamp = utils.clamp.bind(utils);
+  var escapeHtml = utils.escapeHtml.bind(utils);
 
-const VALID_TIME_RANGES = ["3d", "1w", "2w", "1m"];
-const DATE_TIME_FORMATTER_CACHE_LIMIT = 48;
-const dateTimeFormatterCache = new Map();
-
-const DEFAULT_CONFIG = {
-  title: "Calendar",
-  icon: "mdi:calendar-month",
-  calendars: [],
-  time_range: "1w",
-  days_to_show: 7,
-  max_visible_events: 2,
-  refresh_interval: 300,
-  allow_delete: true,
-  weather_entity: "",
-  native_event_webhook: "",
-  security: {
-    allow_webhooks_for_non_admin: false,
-  },
-  tint_auto: true,
-  haptics: {
-    enabled: true,
-    style: "medium",
-    fallback_vibrate: false,
-  },
-  animations: {
-    enabled: true,
-    content_duration: 260,
-  },
-  styles: {
-    card: {
-      background: "var(--ha-card-background)",
-      border: "1px solid var(--divider-color)",
-      border_radius: "var(--nodalia-card-border-radius, 28px)",
-      box_shadow: "var(--ha-card-box-shadow)",
-      padding: "14px",
-      gap: "12px",
-    },
-    icon: {
-      background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
-      on_color:
-        "color-mix(in srgb, var(--primary-color) 52%, var(--primary-text-color))",
-      off_color:
-        "color-mix(in srgb, var(--primary-text-color) 62%, var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 48%, transparent)))",
-      size: "38px",
-    },
-    tint: {
-      color: "var(--primary-color)",
-    },
-    title_size: "17px",
-    event_size: "13px",
-    chip_height: "24px",
-    chip_font_size: "11px",
-    chip_padding: "0 9px",
-    chip_border_radius: "999px",
-    chip_size: "11px",
-  },
-};
-
-function shouldDarkenCalendarBubbleIconGlyph(state, accentColor) {
-  const contrast = typeof window !== "undefined" ? window.NodaliaBubbleContrast : null;
-  if (contrast?.shouldDarkenBubbleIconGlyph?.(state, accentColor)) {
-    return true;
-  }
-  const hue = contrast?.parseCssColorHue?.(accentColor);
-  if (hue === null || hue === undefined || Number.isNaN(hue)) {
-    return false;
-  }
-  return (hue >= 35 && hue <= 165) || (hue >= 300 || hue <= 20);
-}
-
-function deepClone(value) {
-  return JSON.parse(JSON.stringify(value));
-}
-
-// Shared primitives are loaded by nodalia-cards core and inlined for standalone resources.
-const {
-  isObject,
-  escapeHtml,
-  escapeSelectorValue,
-  clamp,
-} = window.NodaliaUtils;
-
-
-function mergeConfig(base, override) {
-  if (Array.isArray(base)) {
-    return Array.isArray(override) ? deepClone(override) : deepClone(base);
-  }
-  if (!isObject(base)) {
-    return override === undefined ? base : override;
-  }
-  const out = {};
-  const keys = new Set([...Object.keys(base), ...Object.keys(override || {})]);
-  keys.forEach(key => {
-    if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
-      return;
+  // src/cards/calendar/calendar-helpers.ts
+  function shouldDarkenCalendarBubbleIconGlyph(state, accentColor) {
+    const contrast = typeof window !== "undefined" ? window.NodaliaBubbleContrast : null;
+    if (contrast?.shouldDarkenBubbleIconGlyph?.(state, accentColor)) {
+      return true;
     }
-    const baseValue = base[key];
-    const overrideValue = override ? override[key] : undefined;
-    if (overrideValue === undefined) {
-      out[key] = deepClone(baseValue);
-      return;
+    const hue = contrast?.parseCssColorHue?.(accentColor);
+    if (hue === null || hue === void 0 || Number.isNaN(hue)) {
+      return false;
     }
-    if (isObject(baseValue) && isObject(overrideValue)) {
-      out[key] = mergeConfig(baseValue, overrideValue);
-      return;
-    }
-    out[key] = deepClone(overrideValue);
-  });
-  return out;
-}
-
-function compactCalendarConfig(value) {
-  if (Array.isArray(value)) {
-    return value.map(item => compactCalendarConfig(item)).filter(item => item !== undefined);
+    return hue >= 35 && hue <= 165 || (hue >= 300 || hue <= 20);
   }
-  if (isObject(value)) {
-    const compacted = {};
-    Object.entries(value).forEach(([key, item]) => {
+  function deepClone(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
+  function mergeConfig(base, override) {
+    if (Array.isArray(base)) {
+      return Array.isArray(override) ? deepClone(override) : deepClone(base);
+    }
+    if (!isObject(base)) {
+      return override === void 0 ? base : override;
+    }
+    const out = {};
+    const keys = /* @__PURE__ */ new Set([...Object.keys(base), ...Object.keys(override || {})]);
+    keys.forEach((key) => {
       if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
         return;
       }
-      const cleaned = compactCalendarConfig(item);
-      const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
-      if (cleaned !== undefined && !isEmptyObject) {
-        compacted[key] = cleaned;
+      const baseValue = base[key];
+      const overrideValue = override ? override[key] : void 0;
+      if (overrideValue === void 0) {
+        out[key] = deepClone(baseValue);
+        return;
       }
+      if (isObject(baseValue) && isObject(overrideValue)) {
+        out[key] = mergeConfig(baseValue, overrideValue);
+        return;
+      }
+      out[key] = deepClone(overrideValue);
     });
-    return compacted;
+    return out;
   }
-  if (value === "" || value === null || value === undefined) {
-    return undefined;
-  }
-  return value;
-}
-
-function sanitizeCalendarTint(value) {
-  const s = String(value ?? "").trim();
-  if (!s) {
-    return "";
-  }
-  if (/^#[0-9a-f]{3,8}$/i.test(s)) {
-    return s;
-  }
-  if (/^rgba?\(/i.test(s) && s.length < 140) {
-    return s;
-  }
-  if (/^color-mix\(/i.test(s) && s.length < 240) {
-    return s;
-  }
-  if (/^var\(--[a-zA-Z0-9_-]+\)$/i.test(s)) {
-    return s;
-  }
-  return "";
-}
-
-function extractNodaliaEventColor(description) {
-  const text = String(description ?? "");
-  let color = "";
-  text.replace(NODALIA_EVENT_METADATA_RE, (_match, rawColor) => {
-    const safeColor = sanitizeCalendarTint(rawColor);
-    if (safeColor) {
-      color = safeColor;
+  function compactCalendarConfig(value) {
+    if (Array.isArray(value)) {
+      return value.map((item) => compactCalendarConfig(item)).filter((item) => item !== void 0);
     }
-    return "";
-  });
-  return color;
-}
-
-function stripNodaliaEventMetadata(description) {
-  return String(description ?? "")
-    .replace(NODALIA_EVENT_METADATA_RE, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-}
-
-function appendNodaliaEventMetadata(description, { color = "" } = {}) {
-  const cleanDescription = stripNodaliaEventMetadata(description);
-  const safeColor = sanitizeCalendarTint(color);
-  if (!safeColor) {
-    return cleanDescription;
-  }
-  const metadata = `<!-- nodalia:event color="${safeColor}" -->`;
-  return cleanDescription ? `${cleanDescription}\n\n${metadata}` : metadata;
-}
-
-function sanitizeCssRuntimeValue(value) {
-  const raw = String(value ?? "").trim();
-  if (!raw) {
-    return "";
-  }
-  if (
-    /[<>{};"']/.test(raw)
-    || raw.includes("/*")
-    || raw.includes("*/")
-    || /<\/style/i.test(raw)
-    || /\burl\s*\(/i.test(raw)
-    || /\b@import\b/i.test(raw)
-  ) {
-    return "";
-  }
-  return raw;
-}
-
-function daysFromTimeRange(tr) {
-  const map = { "3d": 3, "1w": 7, "2w": 14, "1m": 31 };
-  return map[tr] || 7;
-}
-
-function normalizeCalendarEntries(calendars) {
-  if (!Array.isArray(calendars)) {
-    return [];
-  }
-  const out = [];
-  calendars.forEach(raw => {
-    if (typeof raw === "string") {
-      out.push({
-        entity: String(raw ?? "").trim(),
-        label: "",
-        tint: "",
+    if (isObject(value)) {
+      const compacted = {};
+      Object.entries(value).forEach(([key, item]) => {
+        if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
+          return;
+        }
+        const cleaned = compactCalendarConfig(item);
+        const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
+        if (cleaned !== void 0 && !isEmptyObject) {
+          compacted[key] = cleaned;
+        }
       });
-      return;
+      return compacted;
     }
-    if (raw && typeof raw === "object" && !Array.isArray(raw)) {
-      out.push({
-        entity: String(raw.entity ?? "").trim(),
-        label: String(raw.label ?? "").trim(),
-        tint: sanitizeCalendarTint(raw.tint),
-      });
+    if (value === "" || value === null || value === void 0) {
+      return void 0;
     }
-  });
-  return out;
-}
-
-function normalizeConfig(config) {
-  const normalized = mergeConfig(DEFAULT_CONFIG, config || {});
-  normalized.calendars = normalizeCalendarEntries(normalized.calendars);
-  normalized.allow_delete = normalized.allow_delete !== false;
-  let timeRange = String(normalized.time_range || "").trim();
-  if (!VALID_TIME_RANGES.includes(timeRange)) {
-    const legacyDays = Number(normalized.days_to_show);
-    if (Number.isFinite(legacyDays)) {
-      if (legacyDays <= 3) {
-        timeRange = "3d";
-      } else if (legacyDays <= 7) {
-        timeRange = "1w";
-      } else if (legacyDays <= 14) {
-        timeRange = "2w";
-      } else {
-        timeRange = "1m";
-      }
-    } else {
-      timeRange = DEFAULT_CONFIG.time_range;
-    }
-  }
-  normalized.time_range = timeRange;
-  normalized.days_to_show = Math.min(62, Math.max(1, daysFromTimeRange(timeRange)));
-  delete normalized.quick_reminder_webhook;
-  normalized.native_event_webhook = String(normalized.native_event_webhook ?? "").trim();
-  const priorSecurity = isObject(normalized.security) ? normalized.security : {};
-  normalized.security = {
-    ...DEFAULT_CONFIG.security,
-    ...priorSecurity,
-  };
-  if (normalized.security.allow_webhooks_for_non_admin === undefined) {
-    normalized.security.allow_webhooks_for_non_admin =
-      priorSecurity.require_admin_for_webhooks === true
-        ? false
-        : DEFAULT_CONFIG.security.allow_webhooks_for_non_admin;
-  }
-  normalized.security.allow_webhooks_for_non_admin =
-    normalized.security.allow_webhooks_for_non_admin === true;
-  normalized.weather_entity = String(normalized.weather_entity ?? "").trim();
-  normalized.max_visible_events = Math.min(
-    12,
-    Math.max(1, Number(normalized.max_visible_events) || DEFAULT_CONFIG.max_visible_events),
-  );
-  normalized.refresh_interval = Math.min(3600, Math.max(30, Number(normalized.refresh_interval) || DEFAULT_CONFIG.refresh_interval));
-  if (!normalized.styles.chip_font_size && normalized.styles.chip_size) {
-    normalized.styles.chip_font_size = normalized.styles.chip_size;
-  }
-  normalized.styles.card.background =
-    sanitizeCssRuntimeValue(normalized.styles.card.background) || DEFAULT_CONFIG.styles.card.background;
-  normalized.styles.card.border =
-    sanitizeCssRuntimeValue(normalized.styles.card.border) || DEFAULT_CONFIG.styles.card.border;
-  normalized.styles.card.border_radius =
-    sanitizeCssRuntimeValue(normalized.styles.card.border_radius) || DEFAULT_CONFIG.styles.card.border_radius;
-  normalized.styles.card.box_shadow =
-    sanitizeCssRuntimeValue(normalized.styles.card.box_shadow) || DEFAULT_CONFIG.styles.card.box_shadow;
-  normalized.styles.card.padding =
-    sanitizeCssRuntimeValue(normalized.styles.card.padding) || DEFAULT_CONFIG.styles.card.padding;
-  normalized.styles.card.gap =
-    sanitizeCssRuntimeValue(normalized.styles.card.gap) || DEFAULT_CONFIG.styles.card.gap;
-  normalized.styles.title_size =
-    sanitizeCssRuntimeValue(normalized.styles.title_size) || DEFAULT_CONFIG.styles.title_size;
-  normalized.styles.event_size =
-    sanitizeCssRuntimeValue(normalized.styles.event_size) || DEFAULT_CONFIG.styles.event_size;
-  normalized.styles.chip_height =
-    sanitizeCssRuntimeValue(normalized.styles.chip_height) || DEFAULT_CONFIG.styles.chip_height;
-  normalized.styles.chip_font_size =
-    sanitizeCssRuntimeValue(normalized.styles.chip_font_size) || DEFAULT_CONFIG.styles.chip_font_size;
-  normalized.styles.chip_padding =
-    sanitizeCssRuntimeValue(normalized.styles.chip_padding) || DEFAULT_CONFIG.styles.chip_padding;
-  normalized.styles.chip_border_radius =
-    sanitizeCssRuntimeValue(normalized.styles.chip_border_radius) || DEFAULT_CONFIG.styles.chip_border_radius;
-  normalized.styles.icon.background =
-    sanitizeCssRuntimeValue(normalized.styles.icon.background) || DEFAULT_CONFIG.styles.icon.background;
-  normalized.styles.icon.on_color =
-    sanitizeCssRuntimeValue(normalized.styles.icon.on_color) || DEFAULT_CONFIG.styles.icon.on_color;
-  normalized.styles.icon.off_color =
-    sanitizeCssRuntimeValue(normalized.styles.icon.off_color) || DEFAULT_CONFIG.styles.icon.off_color;
-  normalized.styles.icon.size =
-    sanitizeCssRuntimeValue(normalized.styles.icon.size) || DEFAULT_CONFIG.styles.icon.size;
-  normalized.styles.tint.color =
-    sanitizeCssRuntimeValue(normalized.styles.tint.color) || DEFAULT_CONFIG.styles.tint.color;
-  const iconStyle = normalized.styles?.icon;
-  if (iconStyle && iconStyle.color && !iconStyle.on_color) {
-    iconStyle.on_color = iconStyle.color;
-  }
-  normalized.haptics = mergeConfig(DEFAULT_CONFIG.haptics, normalized.haptics || {});
-  normalized.haptics.enabled = normalized.haptics.enabled === true;
-  normalized.haptics.fallback_vibrate = normalized.haptics.fallback_vibrate === true;
-  normalized.haptics.style = Object.prototype.hasOwnProperty.call(HAPTIC_PATTERNS, normalized.haptics.style)
-    ? normalized.haptics.style
-    : DEFAULT_CONFIG.haptics.style;
-  return normalized;
-}
-
-function parseCalendarDateOnlyLocal(value) {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value ?? "").trim());
-  if (!match) {
-    return null;
-  }
-  const year = Number(match[1]);
-  const month = Number(match[2]) - 1;
-  const day = Number(match[3]);
-  const parsed = new Date(year, month, day, 12, 0, 0);
-  return Number.isFinite(parsed.getTime()) ? parsed : null;
-}
-
-function eventDate(value) {
-  if (!value) {
-    return null;
-  }
-  if (typeof value === "string") {
-    const dayLocal = parseCalendarDateOnlyLocal(value);
-    if (dayLocal) {
-      return dayLocal;
-    }
-    const parsed = new Date(value);
-    return Number.isFinite(parsed.getTime()) ? parsed : null;
-  }
-  if (typeof value === "object") {
-    if (value.dateTime) {
-      const parsed = new Date(value.dateTime);
-      return Number.isFinite(parsed.getTime()) ? parsed : null;
-    }
-    if (value.date) {
-      const dayLocal = parseCalendarDateOnlyLocal(value.date);
-      if (dayLocal) {
-        return dayLocal;
-      }
-      const parsed = new Date(value.date);
-      return Number.isFinite(parsed.getTime()) ? parsed : null;
-    }
-  }
-  return null;
-}
-
-function calendarEventUid(event) {
-  return String(event?.uid ?? event?.eventData?.uid ?? "").trim();
-}
-
-function calendarEventRecurrenceId(event) {
-  return String(event?.recurrence_id ?? event?.eventData?.recurrence_id ?? "").trim();
-}
-
-function calendarEventKey(event) {
-  const source = String(event?._entity || "");
-  const uid = calendarEventUid(event) || String(event?.id || "");
-  const recurrence = calendarEventRecurrenceId(event);
-  const start = eventDate(event?.start)?.toISOString() || "";
-  const summary = String(event?.summary || event?.message || "");
-  return `${source}|${uid}|${recurrence}|${start}|${summary}`;
-}
-
-
-
-
-function normalizeTextKey(value) {
-  return String(value ?? "")
-    .trim()
-    .toLowerCase()
-    .replaceAll(" ", "_");
-}
-
-function weatherConditionIcon(value) {
-  switch (normalizeTextKey(value)) {
-    case "clear_night":
-      return "mdi:weather-night";
-    case "cloudy":
-      return "mdi:weather-cloudy";
-    case "exceptional":
-      return "mdi:alert-circle-outline";
-    case "fog":
-      return "mdi:weather-fog";
-    case "hail":
-      return "mdi:weather-hail";
-    case "lightning":
-      return "mdi:weather-lightning";
-    case "lightning_rainy":
-      return "mdi:weather-lightning-rainy";
-    case "partlycloudy":
-      return "mdi:weather-partly-cloudy";
-    case "pouring":
-      return "mdi:weather-pouring";
-    case "rainy":
-      return "mdi:weather-rainy";
-    case "snowy":
-      return "mdi:weather-snowy";
-    case "snowy_rainy":
-      return "mdi:weather-snowy-rainy";
-    case "sunny":
-      return "mdi:weather-sunny";
-    case "windy":
-    case "windy_variant":
-      return "mdi:weather-windy";
-    default:
-      return "mdi:weather-partly-cloudy";
-  }
-}
-
-function forecastDayKey(value) {
-  const formatDateKey = date => {
-    if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
-      return "";
-    }
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-  };
-  if (typeof value === "number" && Number.isFinite(value)) {
-    const ms = value > 1e12 ? value : value * 1000;
-    const parsedNum = new Date(ms);
-    return formatDateKey(parsedNum);
-  }
-  const raw = String(value ?? "").trim();
-  if (!raw) {
-    return "";
-  }
-  if (/^\d{10,13}$/.test(raw)) {
-    const numeric = Number(raw);
-    if (Number.isFinite(numeric)) {
-      const ms = raw.length >= 13 ? numeric : numeric * 1000;
-      const parsedNum = new Date(ms);
-      return formatDateKey(parsedNum);
-    }
-  }
-  const datePrefixMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
-  if (datePrefixMatch) {
-    const y = Number(datePrefixMatch[1]);
-    const m = Number(datePrefixMatch[2]) - 1;
-    const d = Number(datePrefixMatch[3]);
-    if (Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(d)) {
-      return formatDateKey(new Date(y, m, d));
-    }
-  }
-  const parsed = new Date(raw);
-  return formatDateKey(parsed);
-}
-
-function withForecastDateFromKey(key, value) {
-  if (!value || typeof value !== "object" || !forecastDayKey(key)) {
     return value;
   }
-  if ("datetime" in value || "date" in value || "day" in value || "time" in value || "timestamp" in value) {
-    return value;
-  }
-  return { date: key, ...value };
-}
-
-function pickFirstFiniteNumber(...candidates) {
-  for (const candidate of candidates) {
-    const n = Number(candidate);
-    if (Number.isFinite(n)) {
-      return n;
-    }
-  }
-  return null;
-}
-
-function weatherSupportedFeature(state, feature) {
-  return Boolean((Number(state?.attributes?.supported_features) || 0) & feature);
-}
-
-function supportedWeatherForecastTypes(state) {
-  const types = [];
-  if (weatherSupportedFeature(state, 1)) {
-    types.push("daily");
-  }
-  if (weatherSupportedFeature(state, 4)) {
-    types.push("twice_daily");
-  }
-  if (weatherSupportedFeature(state, 2)) {
-    types.push("hourly");
-  }
-  return types.length ? types : ["daily", "twice_daily", "hourly"];
-}
-
-function resolveEditorColorValue(value) {
-  const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
-  if (typeof resolver === "function") {
-    return resolver(value);
-  }
-  return String(value ?? "").trim();
-}
-
-function formatEditorHexChannel(value) {
-  return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
-}
-
-function formatEditorColorFromHex(hex, alpha = 1) {
-  const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
-  if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
-    return String(hex ?? "");
-  }
-
-  const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
-  const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
-  const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
-  const safeAlpha = clamp(Number(alpha), 0, 1);
-  if (safeAlpha >= 0.999) {
-    return `#${normalizedHex}`;
-  }
-
-  return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
-}
-
-function getEditorColorModel(value, fallbackValue = "#71c0ff") {
-  const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
-  const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
-  const channels = resolvedValue.match(/[\d.]+/g) || [];
-  const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
-  const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
-  const blue = clamp(Math.round(Number(channels[2] ?? 255)), 0, 255);
-  const alpha = channels.length > 3 ? clamp(Number(channels[3]), 0, 1) : 1;
-  const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
-
-  return {
-    alpha,
-    hex,
-    resolved: resolvedValue,
-    source: sourceValue,
-    value: formatEditorColorFromHex(hex, alpha),
-  };
-}
-
-function getEditorColorFallbackValue(field) {
-  const normalizedField = String(field ?? "");
-  if (normalizedField.endsWith("styles.card.background")) {
-    return DEFAULT_CONFIG.styles.card.background;
-  }
-  if (normalizedField.endsWith("styles.icon.background")) {
-    return DEFAULT_CONFIG.styles.icon.background;
-  }
-  if (normalizedField.endsWith("styles.icon.on_color")) {
-    return DEFAULT_CONFIG.styles.icon.on_color;
-  }
-  if (normalizedField.endsWith("styles.icon.off_color")) {
-    return DEFAULT_CONFIG.styles.icon.off_color;
-  }
-  if (normalizedField.endsWith("styles.tint.color")) {
-    return DEFAULT_CONFIG.styles.tint.color;
-  }
-  if (normalizedField.endsWith("background")) {
-    return "var(--ha-card-background)";
-  }
-  return "var(--info-color, #71c0ff)";
-}
-
-function getDateTimeFormatter(locale, options) {
-  const key = `${String(locale || "default")}|${JSON.stringify(options)}`;
-  let formatter = dateTimeFormatterCache.get(key);
-  if (!formatter) {
-    formatter = new Intl.DateTimeFormat(locale, options);
-    dateTimeFormatterCache.set(key, formatter);
-    if (dateTimeFormatterCache.size > DATE_TIME_FORMATTER_CACHE_LIMIT) {
-      dateTimeFormatterCache.delete(dateTimeFormatterCache.keys().next().value);
-    }
-  }
-  return formatter;
-}
-
-function formatDateLabel(date, locale) {
-  return getDateTimeFormatter(locale, {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-  }).format(date);
-}
-
-function formatTimeLabel(date, locale) {
-  return getDateTimeFormatter(locale, {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-}
-
-function normalizeCalendarFetchResult(raw) {
-  if (Array.isArray(raw)) {
-    return raw;
-  }
-  if (raw && typeof raw === "object" && Array.isArray(raw.events)) {
-    return raw.events;
-  }
-  return [];
-}
-
-function eventIsAllDay(event) {
-  return Boolean(event?.start?.date && !event?.start?.dateTime);
-}
-
-function parseDateInputAsLocalDate(value) {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value ?? "").trim());
-  if (!match) {
-    return null;
-  }
-  const year = Number(match[1]);
-  const month = Number(match[2]) - 1;
-  const day = Number(match[3]);
-  const parsed = new Date(year, month, day);
-  if (
-    Number.isNaN(parsed.getTime()) ||
-    parsed.getFullYear() !== year ||
-    parsed.getMonth() !== month ||
-    parsed.getDate() !== day
-  ) {
-    return null;
-  }
-  return parsed;
-}
-
-function dateInputIsBeforeToday(value) {
-  const parsed = parseDateInputAsLocalDate(value);
-  if (!parsed) {
-    return false;
-  }
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  return parsed.getTime() < today.getTime();
-}
-
-class NodaliaCalendarCard extends HTMLElement {
-  static getStubConfig(hass, entities = [], entitiesFallback = []) {
-    const config = deepClone(DEFAULT_CONFIG);
-    const entityId = window.NodaliaUtils.findStubEntityIds(
-      hass,
-      entities,
-      entitiesFallback,
-      ["calendar"],
-      1,
-    )[0];
-    if (entityId) {
-      config.calendars = [{ entity: entityId }];
-    }
-    return config;
-  }
-
-  static getConfigElement() {
-    return document.createElement(EDITOR_TAG);
-  }
-
-  static getEntitySuggestion(hass, entityId) {
-    return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
-      domains: ["calendar"],
-      buildConfig: (_hass, selectedEntityId) => ({ calendars: [{ entity: selectedEntityId }] }),
-    });
-  }
-
-  getCardSize() {
-    const visible = Math.max(1, Math.min(Number(this._config?.max_visible_events) || 2, 6));
-    return Math.min(8, visible + 2);
-  }
-
-  getGridOptions() {
-    return { columns: "full", min_columns: 2, min_rows: 2, rows: "auto" };
-  }
-
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(DEFAULT_CONFIG);
-    this._hass = null;
-    this._events = [];
-    this._loading = false;
-    this._error = "";
-    this._refreshTimer = 0;
-    this._hadHass = false;
-    this._lastRenderSignature = "";
-    this._calendarEntrancePlayed = false;
-    /** Evita repetir la animacion del panel expandido en cada re-render. */
-    this._expandedOverlayEntrancePlayed = false;
-    this._calendarEntrancePlayFrame = 0;
-    this._expandedOverlayEntrancePlayFrame = 0;
-    this._expandedOpen = false;
-    this._nativeEventComposerOpen = false;
-    this._nativeComposerError = "";
-    this._nativeComposerCalendarValue = "";
-    /** Month popup: `Y-M-D` (M 0–11) when a single-day view is open; empty string = full month grid */
-    this._expandedMonthDayKey = "";
-    this._expandedEventDetailKey = "";
-    /** Event `calendarEventKey` while choosing how to delete a recurring instance. */
-    this._deleteRecurringChoiceKey = "";
-    /** Shown inside the recurrence-delete dialog after `calendar/event/delete` fails. */
-    this._deleteRecurrenceError = "";
-    /** True when expanded was auto-opened from compact list for the recurrence-delete dialog only. */
-    this._expandedOpenedForDeleteRecurrenceOnly = false;
-    this._onShadowClick = this._onShadowClick.bind(this);
-    this._onShadowKeydown = this._onShadowKeydown.bind(this);
-    this._onDocVisibility = this._onDocVisibility.bind(this);
-    this._onExternalOpenRequest = this._onExternalOpenRequest.bind(this);
-    this._viewVisibilityObserver = null;
-    this._wasInViewport = false;
-    this._weatherForecastByDay = new Map();
-    this._weatherForecastEvents = {};
-    this._weatherForecastSubscription = null;
-    this._weatherForecastSubscriptionKey = "";
-    this._refreshInFlight = false;
-    this._refreshQueued = false;
-    this._refreshRunId = 0;
-    this._renderVisibleEventsCache = null;
-  }
-
-  _uiText(path, fallback, values = {}) {
-    if (window.NodaliaI18n?.translateCalendarUi) {
-      return window.NodaliaI18n.translateCalendarUi(
-        this._hass,
-        this._config?.language ?? "auto",
-        path,
-        fallback,
-        values,
-      );
-    }
-    return fallback;
-  }
-
-  _timeRangeChipLabel(timeRange) {
-    switch (timeRange || DEFAULT_CONFIG.time_range) {
-      case "3d":
-        return this._uiText("timeRange.threeDays", "3 days");
-      case "1w":
-        return this._uiText("timeRange.oneWeek", "1 week");
-      case "2w":
-        return this._uiText("timeRange.twoWeeks", "2 weeks");
-      case "1m":
-        return this._uiText("timeRange.oneMonth", "1 month");
-      default:
-        return this._uiText("timeRange.oneWeek", "1 week");
-    }
-  }
-
-  _onDocVisibility() {
-    if (typeof document === "undefined" || document.visibilityState !== "visible") {
-      return;
-    }
-    if (!this._hass || !(this._config.calendars || []).some(c => c && c.entity)) {
-      return;
-    }
-    this._refreshEvents();
-  }
-
-  _triggerHaptic(styleOverride = null) {
-    const haptics = this._config?.haptics || DEFAULT_CONFIG.haptics;
-    if (haptics.enabled !== true) {
-      return;
-    }
-    const style = styleOverride || haptics.style || DEFAULT_CONFIG.haptics.style;
-    this.dispatchEvent(new CustomEvent("haptic", {
-      bubbles: true,
-      cancelable: false,
-      composed: true,
-      detail: style,
-    }));
-    if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
-      navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
-    }
-  }
-
-  _calendarMatchesExternalRequest(detail = {}) {
-    const requested = String(detail.entity_id || detail.entity || "").trim();
-    if (!requested) {
-      return true;
-    }
-    return (this._config?.calendars || []).some(calendar => String(calendar?.entity || "").trim() === requested);
-  }
-
-  _openExpandedCalendar({ date = "", eventKey = "" } = {}) {
-    this._expandedMonthDayKey = "";
-    const focusDate = eventDate(date);
-    if ((this._config?.time_range || DEFAULT_CONFIG.time_range) === "1m" && focusDate) {
-      this._expandedMonthDayKey = `${focusDate.getFullYear()}-${focusDate.getMonth()}-${focusDate.getDate()}`;
-    }
-    this._expandedEventDetailKey = String(eventKey || "");
-    this._nativeComposerError = "";
-    this._nativeEventComposerOpen = false;
-    this._deleteRecurringChoiceKey = "";
-    this._deleteRecurrenceError = "";
-    this._expandedOpenedForDeleteRecurrenceOnly = false;
-    this._expandedOpen = true;
-    this._expandedOverlayEntrancePlayed = false;
-    this._triggerHaptic("selection");
-    this._renderIfChanged(true);
-  }
-
-  _onExternalOpenRequest(event) {
-    const detail = event?.detail || {};
-    if (!this._calendarMatchesExternalRequest(detail)) {
-      return;
-    }
-    event?.preventDefault?.();
-    this._openExpandedCalendar({
-      date: detail.date || detail.start || "",
-      eventKey: detail.event_key || detail.eventKey || "",
-    });
-  }
-
-  async _fetchCalendarEventsViaRest(entityId, start, end) {
-    const hass = this._hass;
-    if (!hass?.auth?.fetchWithAuth || typeof hass.auth.fetchWithAuth !== "function") {
-      return [];
-    }
-    const qs = `start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`;
-    try {
-      const response = await hass.auth.fetchWithAuth(
-        `/api/calendars/${encodeURIComponent(entityId)}?${qs}`,
-      );
-      if (!response.ok) {
-        return [];
-      }
-      const data = await response.json();
-      return normalizeCalendarFetchResult(data);
-    } catch (_error) {
-      return [];
-    }
-  }
-
-  connectedCallback() {
-    this.shadowRoot?.addEventListener("click", this._onShadowClick);
-    this.shadowRoot?.addEventListener("keydown", this._onShadowKeydown);
-    if (typeof document !== "undefined") {
-      document.addEventListener("visibilitychange", this._onDocVisibility);
-    }
-    if (typeof window !== "undefined") {
-      window.addEventListener("nodalia-calendar-card-open", this._onExternalOpenRequest);
-    }
-    this._attachViewVisibilityObserver();
-    // Replay entrance animation whenever the card is re-attached to the dashboard view.
-    this._cancelCalendarEntrancePlayFrames();
-    this._calendarEntrancePlayed = false;
-    if (this._hadHass) {
-      this._renderIfChanged(true);
-    }
-    this._ensureWeatherForecastSubscription();
-    this._refreshEvents();
-  }
-
-  disconnectedCallback() {
-    window.NodaliaUtils?.releaseModalFocus?.(this);
-    if (typeof document !== "undefined") {
-      document.removeEventListener("visibilitychange", this._onDocVisibility);
-    }
-    if (typeof window !== "undefined") {
-      window.removeEventListener("nodalia-calendar-card-open", this._onExternalOpenRequest);
-    }
-    this._detachViewVisibilityObserver();
-    this.shadowRoot?.removeEventListener("click", this._onShadowClick);
-    this.shadowRoot?.removeEventListener("keydown", this._onShadowKeydown);
-    if (this._refreshTimer) {
-      window.clearTimeout(this._refreshTimer);
-      this._refreshTimer = 0;
-    }
-    this._cancelCalendarEntrancePlayFrames();
-    this._refreshRunId += 1;
-    this._refreshInFlight = false;
-    this._refreshQueued = false;
-    this._calendarEntrancePlayed = false;
-    this._wasInViewport = false;
-    this._unsubscribeWeatherForecast();
-  }
-
-  _cancelCalendarEntrancePlayFrames() {
-    if (this._calendarEntrancePlayFrame) {
-      window.cancelAnimationFrame(this._calendarEntrancePlayFrame);
-      this._calendarEntrancePlayFrame = 0;
-    }
-    if (this._expandedOverlayEntrancePlayFrame) {
-      window.cancelAnimationFrame(this._expandedOverlayEntrancePlayFrame);
-      this._expandedOverlayEntrancePlayFrame = 0;
-    }
-  }
-
-  _attachViewVisibilityObserver() {
-    if (this._viewVisibilityObserver || typeof IntersectionObserver !== "function") {
-      return;
-    }
-    this._viewVisibilityObserver = new IntersectionObserver(
-      entries => {
-        if (!this.isConnected) {
-          return;
-        }
-        const visible = entries.some(entry => entry.isIntersecting && entry.intersectionRatio > 0);
-        if (visible === this._wasInViewport) {
-          return;
-        }
-        this._wasInViewport = visible;
-        if (!visible) {
-          return;
-        }
-        // When HA keeps the card mounted but hidden between view switches, replay entrance on return.
-        this._cancelCalendarEntrancePlayFrames();
-        this._calendarEntrancePlayed = false;
-        this._renderIfChanged(true);
-      },
-      { threshold: [0, 0.01] },
-    );
-    this._viewVisibilityObserver.observe(this);
-  }
-
-  _detachViewVisibilityObserver() {
-    if (!this._viewVisibilityObserver) {
-      return;
-    }
-    this._viewVisibilityObserver.disconnect();
-    this._viewVisibilityObserver = null;
-  }
-
-  setConfig(config) {
-    const prevWeatherEntity = this._getWeatherEntityId();
-    this._config = normalizeConfig(config);
-    const nextWeatherEntity = this._getWeatherEntityId();
-    if (prevWeatherEntity !== nextWeatherEntity) {
-      this._unsubscribeWeatherForecast();
-      this._weatherForecastByDay = new Map();
-      this._weatherForecastEvents = {};
-    }
-    this._ensureWeatherForecastSubscription();
-    this._refreshEvents();
-  }
-
-  set hass(hass) {
-    const hadHass = this._hadHass;
-    this._hass = hass;
-    if (!hass) {
-      this._unsubscribeWeatherForecast();
-      return;
-    }
-    this._ensureWeatherForecastSubscription();
-    if (!hadHass) {
-      this._hadHass = true;
-      this._refreshEvents();
-      return;
-    }
-    this._renderIfChanged(false);
-  }
-
-  _getLocale() {
-    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto");
-    return window.NodaliaI18n?.localeTag?.(lang) || hass?.locale?.language || "en";
-  }
-
-  _getCalendarEntityLabel(entityId) {
-    const id = String(entityId ?? "").trim();
-    if (!id) {
-      return "";
-    }
-    const friendly = String(this._hass?.states?.[id]?.attributes?.friendly_name ?? "").trim();
-    if (friendly) {
-      return friendly;
-    }
-    const short = id.includes(".") ? id.slice(id.indexOf(".") + 1) : id;
-    const humanized = short.replace(/_/g, " ").trim();
-    return humanized || id;
-  }
-
-  _getCalendarEntityLabelsSignature() {
-    const hass = this._hass;
-    if (!hass?.states) {
-      return "";
-    }
-    const ids = new Set([
-      ...(this._config?.calendars || []).map(c => c?.entity).filter(Boolean),
-      ...this._events.map(event => event._entity).filter(Boolean),
-    ]);
-    const meta = (this._config?.calendars || [])
-      .map(c => `${c?.entity || ""}\u001f${c?.label || ""}\u001f${c?.tint || ""}`)
-      .join("\u001e");
-    return [
-      [...ids]
-        .sort()
-        .map(id => {
-          const friendly = String(hass.states[id]?.attributes?.friendly_name ?? "").trim();
-          return `${id}\u001f${friendly}`;
-        })
-        .join("\u001e"),
-      meta,
-    ].join("\u001f\u001f");
-  }
-
-  _getAvailableNativeCalendarIds() {
-    const configured = (this._config?.calendars || [])
-      .map(c => String(c?.entity || "").trim())
-      .filter(Boolean);
-    if (configured.length) {
-      return configured;
-    }
-    return Object.keys(this._hass?.states || {})
-      .filter(id => id.startsWith("calendar."))
-      .sort();
-  }
-
-  _getCalendarEntry(entityId) {
-    const id = String(entityId ?? "").trim();
-    const list = Array.isArray(this._config?.calendars) ? this._config.calendars : [];
-    return list.find(c => c.entity === id) || { entity: id, label: "", tint: "" };
-  }
-
-  _getEventSubtitleForDisplay(entityId) {
-    const entry = this._getCalendarEntry(entityId);
-    if (entry.label) {
-      return entry.label;
-    }
-    return this._getCalendarEntityLabel(entityId);
-  }
-
-  _getCalendarTintDotCss(entityId) {
-    const tint = sanitizeCalendarTint(this._getCalendarEntry(entityId).tint);
-    return tint || "var(--primary-color)";
-  }
-
-  _getEventTint(event) {
-    const colorOverride = extractNodaliaEventColor(event?.description);
-    if (colorOverride) {
-      return colorOverride;
-    }
-    return sanitizeCalendarTint(this._getCalendarEntry(event?._entity).tint);
-  }
-
-  _capitalizeFirst(text) {
-    const s = String(text ?? "").trim();
+  function sanitizeCalendarTint(value) {
+    const s = String(value ?? "").trim();
     if (!s) {
       return "";
     }
-    return s.charAt(0).toUpperCase() + s.slice(1);
-  }
-
-  _renderWeatherBadge(dayDate, weatherByDay, className = "calendar-day__weather") {
-    const w = this._getWeatherForDay(dayDate, weatherByDay);
-    if (!w) {
-      return "";
+    if (/^#[0-9a-f]{3,8}$/i.test(s)) {
+      return s;
     }
-    const icon = weatherConditionIcon(w?.condition);
-    const minRaw = Number.isFinite(w?.tempMin) ? Math.round(w.tempMin) : null;
-    const maxRaw = Number.isFinite(w?.tempMax) ? Math.round(w.tempMax) : null;
-    const hasCondition = Boolean(String(w?.condition || "").trim());
-    if (minRaw === null && maxRaw === null && !hasCondition) {
-      return "";
+    if (/^rgba?\(/i.test(s) && s.length < 140) {
+      return s;
     }
-    const minText = minRaw === null ? "—" : `${minRaw}°`;
-    const maxText = maxRaw === null ? "—" : `${maxRaw}°`;
-    return `<div class="${escapeHtml(className)}"><ha-icon icon="${escapeHtml(icon)}"></ha-icon><span>${escapeHtml(minText)} / ${escapeHtml(maxText)}</span></div>`;
+    if (/^color-mix\(/i.test(s) && s.length < 240) {
+      return s;
+    }
+    if (/^var\(--[a-zA-Z0-9_-]+\)$/i.test(s)) {
+      return s;
+    }
+    return "";
   }
-
-  _renderExpandedMonthDayDetail(events, focusDate, config, locale, weatherByDay) {
-    const sorted = [...events].sort((left, right) => {
-      const a = eventDate(left?.start)?.getTime() || 0;
-      const b = eventDate(right?.start)?.getTime() || 0;
-      return a - b;
+  function extractNodaliaEventColor(description) {
+    const text = String(description ?? "");
+    let color = "";
+    text.replace(NODALIA_EVENT_METADATA_RE, (_match, rawColor) => {
+      const safeColor = sanitizeCalendarTint(rawColor);
+      if (safeColor) {
+        color = safeColor;
+      }
+      return "";
     });
-    const longTitle = this._capitalizeFirst(
-      getDateTimeFormatter(locale, {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      }).format(focusDate),
-    );
+    return color;
+  }
+  function stripNodaliaEventMetadata(description) {
+    return String(description ?? "").replace(NODALIA_EVENT_METADATA_RE, "").replace(/\n{3,}/g, "\n\n").trim();
+  }
+  function appendNodaliaEventMetadata(description, { color = "" } = {}) {
+    const cleanDescription = stripNodaliaEventMetadata(description);
+    const safeColor = sanitizeCalendarTint(color);
+    if (!safeColor) {
+      return cleanDescription;
+    }
+    const metadata = `<!-- nodalia:event color="${safeColor}" -->`;
+    return cleanDescription ? `${cleanDescription}
 
-    if (!sorted.length) {
-      return `
+${metadata}` : metadata;
+  }
+  function sanitizeCssRuntimeValue(value) {
+    const raw = String(value ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+    if (/[<>{};"']/.test(raw) || raw.includes("/*") || raw.includes("*/") || /<\/style/i.test(raw) || /\burl\s*\(/i.test(raw) || /\b@import\b/i.test(raw)) {
+      return "";
+    }
+    return raw;
+  }
+  function daysFromTimeRange(tr) {
+    const map = { "3d": 3, "1w": 7, "2w": 14, "1m": 31 };
+    return map[tr] || 7;
+  }
+  function normalizeCalendarEntries(calendars) {
+    if (!Array.isArray(calendars)) {
+      return [];
+    }
+    const out = [];
+    calendars.forEach((raw) => {
+      if (typeof raw === "string") {
+        out.push({
+          entity: String(raw ?? "").trim(),
+          label: "",
+          tint: ""
+        });
+        return;
+      }
+      if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+        out.push({
+          entity: String(raw.entity ?? "").trim(),
+          label: String(raw.label ?? "").trim(),
+          tint: sanitizeCalendarTint(raw.tint)
+        });
+      }
+    });
+    return out;
+  }
+  function parseCalendarDateOnlyLocal(value) {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value ?? "").trim());
+    if (!match) {
+      return null;
+    }
+    const year = Number(match[1]);
+    const month = Number(match[2]) - 1;
+    const day = Number(match[3]);
+    const parsed = new Date(year, month, day, 12, 0, 0);
+    return Number.isFinite(parsed.getTime()) ? parsed : null;
+  }
+  function eventDate(value) {
+    if (!value) {
+      return null;
+    }
+    if (typeof value === "string") {
+      const dayLocal = parseCalendarDateOnlyLocal(value);
+      if (dayLocal) {
+        return dayLocal;
+      }
+      const parsed = new Date(value);
+      return Number.isFinite(parsed.getTime()) ? parsed : null;
+    }
+    if (typeof value === "object") {
+      if (value.dateTime) {
+        const parsed = new Date(value.dateTime);
+        return Number.isFinite(parsed.getTime()) ? parsed : null;
+      }
+      if (value.date) {
+        const dayLocal = parseCalendarDateOnlyLocal(value.date);
+        if (dayLocal) {
+          return dayLocal;
+        }
+        const parsed = new Date(value.date);
+        return Number.isFinite(parsed.getTime()) ? parsed : null;
+      }
+    }
+    return null;
+  }
+  function calendarEventUid(event) {
+    return String(event?.uid ?? event?.eventData?.uid ?? "").trim();
+  }
+  function calendarEventRecurrenceId(event) {
+    return String(event?.recurrence_id ?? event?.eventData?.recurrence_id ?? "").trim();
+  }
+  function calendarEventKey(event) {
+    const source = String(event?._entity || "");
+    const uid = calendarEventUid(event) || String(event?.id || "");
+    const recurrence = calendarEventRecurrenceId(event);
+    const start = eventDate(event?.start)?.toISOString() || "";
+    const summary = String(event?.summary || event?.message || "");
+    return `${source}|${uid}|${recurrence}|${start}|${summary}`;
+  }
+  function normalizeTextKey(value) {
+    return String(value ?? "").trim().toLowerCase().replaceAll(" ", "_");
+  }
+  function weatherConditionIcon(value) {
+    switch (normalizeTextKey(value)) {
+      case "clear_night":
+        return "mdi:weather-night";
+      case "cloudy":
+        return "mdi:weather-cloudy";
+      case "exceptional":
+        return "mdi:alert-circle-outline";
+      case "fog":
+        return "mdi:weather-fog";
+      case "hail":
+        return "mdi:weather-hail";
+      case "lightning":
+        return "mdi:weather-lightning";
+      case "lightning_rainy":
+        return "mdi:weather-lightning-rainy";
+      case "partlycloudy":
+        return "mdi:weather-partly-cloudy";
+      case "pouring":
+        return "mdi:weather-pouring";
+      case "rainy":
+        return "mdi:weather-rainy";
+      case "snowy":
+        return "mdi:weather-snowy";
+      case "snowy_rainy":
+        return "mdi:weather-snowy-rainy";
+      case "sunny":
+        return "mdi:weather-sunny";
+      case "windy":
+      case "windy_variant":
+        return "mdi:weather-windy";
+      default:
+        return "mdi:weather-partly-cloudy";
+    }
+  }
+  function forecastDayKey(value) {
+    const formatDateKey = (date) => {
+      if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+        return "";
+      }
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    };
+    if (typeof value === "number" && Number.isFinite(value)) {
+      const ms = value > 1e12 ? value : value * 1e3;
+      const parsedNum = new Date(ms);
+      return formatDateKey(parsedNum);
+    }
+    const raw = String(value ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+    if (/^\d{10,13}$/.test(raw)) {
+      const numeric = Number(raw);
+      if (Number.isFinite(numeric)) {
+        const ms = raw.length >= 13 ? numeric : numeric * 1e3;
+        const parsedNum = new Date(ms);
+        return formatDateKey(parsedNum);
+      }
+    }
+    const datePrefixMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
+    if (datePrefixMatch) {
+      const y = Number(datePrefixMatch[1]);
+      const m = Number(datePrefixMatch[2]) - 1;
+      const d = Number(datePrefixMatch[3]);
+      if (Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(d)) {
+        return formatDateKey(new Date(y, m, d));
+      }
+    }
+    const parsed = new Date(raw);
+    return formatDateKey(parsed);
+  }
+  function withForecastDateFromKey(key, value) {
+    if (!value || typeof value !== "object" || !forecastDayKey(key)) {
+      return value;
+    }
+    if ("datetime" in value || "date" in value || "day" in value || "time" in value || "timestamp" in value) {
+      return value;
+    }
+    return { date: key, ...value };
+  }
+  function pickFirstFiniteNumber(...candidates) {
+    for (const candidate of candidates) {
+      const n = Number(candidate);
+      if (Number.isFinite(n)) {
+        return n;
+      }
+    }
+    return null;
+  }
+  function weatherSupportedFeature(state, feature) {
+    return Boolean((Number(state?.attributes?.supported_features) || 0) & feature);
+  }
+  function supportedWeatherForecastTypes(state) {
+    const types = [];
+    if (weatherSupportedFeature(state, 1)) {
+      types.push("daily");
+    }
+    if (weatherSupportedFeature(state, 4)) {
+      types.push("twice_daily");
+    }
+    if (weatherSupportedFeature(state, 2)) {
+      types.push("hourly");
+    }
+    return types.length ? types : ["daily", "twice_daily", "hourly"];
+  }
+  function resolveEditorColorValue(value) {
+    const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
+    if (typeof resolver === "function") {
+      return resolver(value);
+    }
+    return String(value ?? "").trim();
+  }
+  function formatEditorHexChannel(value) {
+    return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+  }
+  function formatEditorColorFromHex(hex, alpha = 1) {
+    const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
+    if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
+      return String(hex ?? "");
+    }
+    const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
+    const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
+    const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
+    const safeAlpha = clamp(Number(alpha), 0, 1);
+    if (safeAlpha >= 0.999) {
+      return `#${normalizedHex}`;
+    }
+    return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
+  }
+  function getEditorColorModel(value, fallbackValue = "#71c0ff") {
+    const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
+    const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
+    const channels = resolvedValue.match(/[\d.]+/g) || [];
+    const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
+    const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
+    const blue = clamp(Math.round(Number(channels[2] ?? 255)), 0, 255);
+    const alpha = channels.length > 3 ? clamp(Number(channels[3]), 0, 1) : 1;
+    const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
+    return {
+      alpha,
+      hex,
+      resolved: resolvedValue,
+      source: sourceValue,
+      value: formatEditorColorFromHex(hex, alpha)
+    };
+  }
+  function getEditorColorFallbackValue(field) {
+    const normalizedField = String(field ?? "");
+    if (normalizedField.endsWith("styles.card.background")) {
+      return DEFAULT_CONFIG.styles.card.background;
+    }
+    if (normalizedField.endsWith("styles.icon.background")) {
+      return DEFAULT_CONFIG.styles.icon.background;
+    }
+    if (normalizedField.endsWith("styles.icon.on_color")) {
+      return DEFAULT_CONFIG.styles.icon.on_color;
+    }
+    if (normalizedField.endsWith("styles.icon.off_color")) {
+      return DEFAULT_CONFIG.styles.icon.off_color;
+    }
+    if (normalizedField.endsWith("styles.tint.color")) {
+      return DEFAULT_CONFIG.styles.tint.color;
+    }
+    if (normalizedField.endsWith("background")) {
+      return "var(--ha-card-background)";
+    }
+    return "var(--info-color, #71c0ff)";
+  }
+  function getDateTimeFormatter(locale, options) {
+    const key = `${String(locale || "default")}|${JSON.stringify(options)}`;
+    let formatter = dateTimeFormatterCache.get(key);
+    if (!formatter) {
+      formatter = new Intl.DateTimeFormat(locale, options);
+      dateTimeFormatterCache.set(key, formatter);
+      if (dateTimeFormatterCache.size > DATE_TIME_FORMATTER_CACHE_LIMIT) {
+        dateTimeFormatterCache.delete(dateTimeFormatterCache.keys().next().value);
+      }
+    }
+    return formatter;
+  }
+  function formatDateLabel(date, locale) {
+    return getDateTimeFormatter(locale, {
+      weekday: "short",
+      day: "2-digit",
+      month: "short"
+    }).format(date);
+  }
+  function formatTimeLabel(date, locale) {
+    return getDateTimeFormatter(locale, {
+      hour: "2-digit",
+      minute: "2-digit"
+    }).format(date);
+  }
+  function normalizeCalendarFetchResult(raw) {
+    if (Array.isArray(raw)) {
+      return raw;
+    }
+    if (raw && typeof raw === "object" && Array.isArray(raw.events)) {
+      return raw.events;
+    }
+    return [];
+  }
+  function eventIsAllDay(event) {
+    return Boolean(event?.start?.date && !event?.start?.dateTime);
+  }
+  function parseDateInputAsLocalDate(value) {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value ?? "").trim());
+    if (!match) {
+      return null;
+    }
+    const year = Number(match[1]);
+    const month = Number(match[2]) - 1;
+    const day = Number(match[3]);
+    const parsed = new Date(year, month, day);
+    if (Number.isNaN(parsed.getTime()) || parsed.getFullYear() !== year || parsed.getMonth() !== month || parsed.getDate() !== day) {
+      return null;
+    }
+    return parsed;
+  }
+  function dateInputIsBeforeToday(value) {
+    const parsed = parseDateInputAsLocalDate(value);
+    if (!parsed) {
+      return false;
+    }
+    const now = /* @__PURE__ */ new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return parsed.getTime() < today.getTime();
+  }
+
+  // src/cards/calendar/calendar-config.ts
+  var DEFAULT_CONFIG2 = {
+    title: "Calendar",
+    icon: "mdi:calendar-month",
+    calendars: [],
+    time_range: "1w",
+    days_to_show: 7,
+    max_visible_events: 2,
+    refresh_interval: 300,
+    allow_delete: true,
+    weather_entity: "",
+    native_event_webhook: "",
+    security: {
+      allow_webhooks_for_non_admin: false
+    },
+    tint_auto: true,
+    haptics: {
+      enabled: true,
+      style: "medium",
+      fallback_vibrate: false
+    },
+    animations: {
+      enabled: true,
+      content_duration: 260
+    },
+    styles: {
+      card: {
+        background: "var(--ha-card-background)",
+        border: "1px solid var(--divider-color)",
+        border_radius: "var(--nodalia-card-border-radius, 28px)",
+        box_shadow: "var(--ha-card-box-shadow)",
+        padding: "14px",
+        gap: "12px"
+      },
+      icon: {
+        background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
+        on_color: "color-mix(in srgb, var(--primary-color) 52%, var(--primary-text-color))",
+        off_color: "color-mix(in srgb, var(--primary-text-color) 62%, var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 48%, transparent)))",
+        size: "38px"
+      },
+      tint: {
+        color: "var(--primary-color)"
+      },
+      title_size: "17px",
+      event_size: "13px",
+      chip_height: "24px",
+      chip_font_size: "11px",
+      chip_padding: "0 9px",
+      chip_border_radius: "999px",
+      chip_size: "11px"
+    }
+  };
+  function normalizeConfig(config) {
+    const normalized = mergeConfig(DEFAULT_CONFIG2, config || {});
+    normalized.calendars = normalizeCalendarEntries(normalized.calendars);
+    normalized.allow_delete = normalized.allow_delete !== false;
+    let timeRange = String(normalized.time_range || "").trim();
+    if (!VALID_TIME_RANGES.includes(timeRange)) {
+      const legacyDays = Number(normalized.days_to_show);
+      if (Number.isFinite(legacyDays)) {
+        if (legacyDays <= 3) {
+          timeRange = "3d";
+        } else if (legacyDays <= 7) {
+          timeRange = "1w";
+        } else if (legacyDays <= 14) {
+          timeRange = "2w";
+        } else {
+          timeRange = "1m";
+        }
+      } else {
+        timeRange = DEFAULT_CONFIG2.time_range;
+      }
+    }
+    normalized.time_range = timeRange;
+    normalized.days_to_show = Math.min(62, Math.max(1, daysFromTimeRange(timeRange)));
+    delete normalized.quick_reminder_webhook;
+    normalized.native_event_webhook = String(normalized.native_event_webhook ?? "").trim();
+    const priorSecurity = isObject(normalized.security) ? normalized.security : {};
+    normalized.security = {
+      ...DEFAULT_CONFIG2.security,
+      ...priorSecurity
+    };
+    if (normalized.security.allow_webhooks_for_non_admin === void 0) {
+      normalized.security.allow_webhooks_for_non_admin = priorSecurity.require_admin_for_webhooks === true ? false : DEFAULT_CONFIG2.security.allow_webhooks_for_non_admin;
+    }
+    normalized.security.allow_webhooks_for_non_admin = normalized.security.allow_webhooks_for_non_admin === true;
+    normalized.weather_entity = String(normalized.weather_entity ?? "").trim();
+    normalized.max_visible_events = Math.min(
+      12,
+      Math.max(1, Number(normalized.max_visible_events) || DEFAULT_CONFIG2.max_visible_events)
+    );
+    normalized.refresh_interval = Math.min(3600, Math.max(30, Number(normalized.refresh_interval) || DEFAULT_CONFIG2.refresh_interval));
+    if (!normalized.styles.chip_font_size && normalized.styles.chip_size) {
+      normalized.styles.chip_font_size = normalized.styles.chip_size;
+    }
+    normalized.styles.card.background = sanitizeCssRuntimeValue(normalized.styles.card.background) || DEFAULT_CONFIG2.styles.card.background;
+    normalized.styles.card.border = sanitizeCssRuntimeValue(normalized.styles.card.border) || DEFAULT_CONFIG2.styles.card.border;
+    normalized.styles.card.border_radius = sanitizeCssRuntimeValue(normalized.styles.card.border_radius) || DEFAULT_CONFIG2.styles.card.border_radius;
+    normalized.styles.card.box_shadow = sanitizeCssRuntimeValue(normalized.styles.card.box_shadow) || DEFAULT_CONFIG2.styles.card.box_shadow;
+    normalized.styles.card.padding = sanitizeCssRuntimeValue(normalized.styles.card.padding) || DEFAULT_CONFIG2.styles.card.padding;
+    normalized.styles.card.gap = sanitizeCssRuntimeValue(normalized.styles.card.gap) || DEFAULT_CONFIG2.styles.card.gap;
+    normalized.styles.title_size = sanitizeCssRuntimeValue(normalized.styles.title_size) || DEFAULT_CONFIG2.styles.title_size;
+    normalized.styles.event_size = sanitizeCssRuntimeValue(normalized.styles.event_size) || DEFAULT_CONFIG2.styles.event_size;
+    normalized.styles.chip_height = sanitizeCssRuntimeValue(normalized.styles.chip_height) || DEFAULT_CONFIG2.styles.chip_height;
+    normalized.styles.chip_font_size = sanitizeCssRuntimeValue(normalized.styles.chip_font_size) || DEFAULT_CONFIG2.styles.chip_font_size;
+    normalized.styles.chip_padding = sanitizeCssRuntimeValue(normalized.styles.chip_padding) || DEFAULT_CONFIG2.styles.chip_padding;
+    normalized.styles.chip_border_radius = sanitizeCssRuntimeValue(normalized.styles.chip_border_radius) || DEFAULT_CONFIG2.styles.chip_border_radius;
+    normalized.styles.icon.background = sanitizeCssRuntimeValue(normalized.styles.icon.background) || DEFAULT_CONFIG2.styles.icon.background;
+    normalized.styles.icon.on_color = sanitizeCssRuntimeValue(normalized.styles.icon.on_color) || DEFAULT_CONFIG2.styles.icon.on_color;
+    normalized.styles.icon.off_color = sanitizeCssRuntimeValue(normalized.styles.icon.off_color) || DEFAULT_CONFIG2.styles.icon.off_color;
+    normalized.styles.icon.size = sanitizeCssRuntimeValue(normalized.styles.icon.size) || DEFAULT_CONFIG2.styles.icon.size;
+    normalized.styles.tint.color = sanitizeCssRuntimeValue(normalized.styles.tint.color) || DEFAULT_CONFIG2.styles.tint.color;
+    const iconStyle = normalized.styles?.icon;
+    if (iconStyle && iconStyle.color && !iconStyle.on_color) {
+      iconStyle.on_color = iconStyle.color;
+    }
+    normalized.haptics = mergeConfig(DEFAULT_CONFIG2.haptics, normalized.haptics || {});
+    normalized.haptics.enabled = normalized.haptics.enabled === true;
+    normalized.haptics.fallback_vibrate = normalized.haptics.fallback_vibrate === true;
+    normalized.haptics.style = Object.prototype.hasOwnProperty.call(HAPTIC_PATTERNS, normalized.haptics.style) ? normalized.haptics.style : DEFAULT_CONFIG2.haptics.style;
+    return normalized;
+  }
+
+  // src/cards/calendar/calendar-card.ts
+  var _lazyNodaliaCalendarCard;
+  function loadNodaliaCalendarCard() {
+    if (_lazyNodaliaCalendarCard) {
+      return _lazyNodaliaCalendarCard;
+    }
+    class NodaliaCalendarCard extends HTMLElement {
+      static getStubConfig(hass, entities = [], entitiesFallback = []) {
+        const config = deepClone(DEFAULT_CONFIG2);
+        const entityId = window.NodaliaUtils.findStubEntityIds(
+          hass,
+          entities,
+          entitiesFallback,
+          ["calendar"],
+          1
+        )[0];
+        if (entityId) {
+          config.calendars = [{ entity: entityId }];
+        }
+        return config;
+      }
+      static getConfigElement() {
+        return document.createElement(EDITOR_TAG);
+      }
+      static getEntitySuggestion(hass, entityId) {
+        return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+          domains: ["calendar"],
+          buildConfig: (_hass, selectedEntityId) => ({ calendars: [{ entity: selectedEntityId }] })
+        });
+      }
+      getCardSize() {
+        const visible = Math.max(1, Math.min(Number(this._config?.max_visible_events) || 2, 6));
+        return Math.min(8, visible + 2);
+      }
+      getGridOptions() {
+        return { columns: "full", min_columns: 2, min_rows: 2, rows: "auto" };
+      }
+      constructor() {
+        super();
+        this._nodaliaConstruct();
+      }
+      _nodaliaConstruct() {
+        this.attachShadow({ mode: "open" });
+        this._config = normalizeConfig(DEFAULT_CONFIG2);
+        this._hass = null;
+        this._events = [];
+        this._loading = false;
+        this._error = "";
+        this._refreshTimer = 0;
+        this._hadHass = false;
+        this._lastRenderSignature = "";
+        this._calendarEntrancePlayed = false;
+        this._expandedOverlayEntrancePlayed = false;
+        this._calendarEntrancePlayFrame = 0;
+        this._expandedOverlayEntrancePlayFrame = 0;
+        this._expandedOpen = false;
+        this._nativeEventComposerOpen = false;
+        this._nativeComposerError = "";
+        this._nativeComposerCalendarValue = "";
+        this._expandedMonthDayKey = "";
+        this._expandedEventDetailKey = "";
+        this._deleteRecurringChoiceKey = "";
+        this._deleteRecurrenceError = "";
+        this._expandedOpenedForDeleteRecurrenceOnly = false;
+        this._onShadowClick = this._onShadowClick.bind(this);
+        this._onShadowKeydown = this._onShadowKeydown.bind(this);
+        this._onDocVisibility = this._onDocVisibility.bind(this);
+        this._onExternalOpenRequest = this._onExternalOpenRequest.bind(this);
+        this._viewVisibilityObserver = null;
+        this._wasInViewport = false;
+        this._weatherForecastByDay = /* @__PURE__ */ new Map();
+        this._weatherForecastEvents = {};
+        this._weatherForecastSubscription = null;
+        this._weatherForecastSubscriptionKey = "";
+        this._refreshInFlight = false;
+        this._refreshQueued = false;
+        this._refreshRunId = 0;
+        this._renderVisibleEventsCache = null;
+      }
+      _uiText(path, fallback, values = {}) {
+        if (window.NodaliaI18n?.translateCalendarUi) {
+          return window.NodaliaI18n.translateCalendarUi(
+            this._hass,
+            this._config?.language ?? "auto",
+            path,
+            fallback,
+            values
+          );
+        }
+        return fallback;
+      }
+      _timeRangeChipLabel(timeRange) {
+        switch (timeRange || DEFAULT_CONFIG2.time_range) {
+          case "3d":
+            return this._uiText("timeRange.threeDays", "3 days");
+          case "1w":
+            return this._uiText("timeRange.oneWeek", "1 week");
+          case "2w":
+            return this._uiText("timeRange.twoWeeks", "2 weeks");
+          case "1m":
+            return this._uiText("timeRange.oneMonth", "1 month");
+          default:
+            return this._uiText("timeRange.oneWeek", "1 week");
+        }
+      }
+      _onDocVisibility() {
+        if (typeof document === "undefined" || document.visibilityState !== "visible") {
+          return;
+        }
+        if (!this._hass || !(this._config.calendars || []).some((c) => c && c.entity)) {
+          return;
+        }
+        this._refreshEvents();
+      }
+      _triggerHaptic(styleOverride = null) {
+        const haptics = this._config?.haptics || DEFAULT_CONFIG2.haptics;
+        if (haptics.enabled !== true) {
+          return;
+        }
+        const style = styleOverride || haptics.style || DEFAULT_CONFIG2.haptics.style;
+        this.dispatchEvent(new CustomEvent("haptic", {
+          bubbles: true,
+          cancelable: false,
+          composed: true,
+          detail: style
+        }));
+        if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
+          navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
+        }
+      }
+      _calendarMatchesExternalRequest(detail = {}) {
+        const requested = String(detail.entity_id || detail.entity || "").trim();
+        if (!requested) {
+          return true;
+        }
+        return (this._config?.calendars || []).some((calendar) => String(calendar?.entity || "").trim() === requested);
+      }
+      _openExpandedCalendar({ date = "", eventKey = "" } = {}) {
+        this._expandedMonthDayKey = "";
+        const focusDate = eventDate(date);
+        if ((this._config?.time_range || DEFAULT_CONFIG2.time_range) === "1m" && focusDate) {
+          this._expandedMonthDayKey = `${focusDate.getFullYear()}-${focusDate.getMonth()}-${focusDate.getDate()}`;
+        }
+        this._expandedEventDetailKey = String(eventKey || "");
+        this._nativeComposerError = "";
+        this._nativeEventComposerOpen = false;
+        this._deleteRecurringChoiceKey = "";
+        this._deleteRecurrenceError = "";
+        this._expandedOpenedForDeleteRecurrenceOnly = false;
+        this._expandedOpen = true;
+        this._expandedOverlayEntrancePlayed = false;
+        this._triggerHaptic("selection");
+        this._renderIfChanged(true);
+      }
+      _onExternalOpenRequest(event) {
+        const detail = event?.detail || {};
+        if (!this._calendarMatchesExternalRequest(detail)) {
+          return;
+        }
+        event?.preventDefault?.();
+        this._openExpandedCalendar({
+          date: detail.date || detail.start || "",
+          eventKey: detail.event_key || detail.eventKey || ""
+        });
+      }
+      async _fetchCalendarEventsViaRest(entityId, start, end) {
+        const hass = this._hass;
+        if (!hass?.auth?.fetchWithAuth || typeof hass.auth.fetchWithAuth !== "function") {
+          return [];
+        }
+        const qs = `start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`;
+        try {
+          const response = await hass.auth.fetchWithAuth(
+            `/api/calendars/${encodeURIComponent(entityId)}?${qs}`
+          );
+          if (!response.ok) {
+            return [];
+          }
+          const data = await response.json();
+          return normalizeCalendarFetchResult(data);
+        } catch (_error) {
+          return [];
+        }
+      }
+      connectedCallback() {
+        this.shadowRoot?.addEventListener("click", this._onShadowClick);
+        this.shadowRoot?.addEventListener("keydown", this._onShadowKeydown);
+        if (typeof document !== "undefined") {
+          document.addEventListener("visibilitychange", this._onDocVisibility);
+        }
+        if (typeof window !== "undefined") {
+          window.addEventListener("nodalia-calendar-card-open", this._onExternalOpenRequest);
+        }
+        this._attachViewVisibilityObserver();
+        this._cancelCalendarEntrancePlayFrames();
+        this._calendarEntrancePlayed = false;
+        if (this._hadHass) {
+          this._renderIfChanged(true);
+        }
+        this._ensureWeatherForecastSubscription();
+        this._refreshEvents();
+      }
+      disconnectedCallback() {
+        window.NodaliaUtils?.releaseModalFocus?.(this);
+        if (typeof document !== "undefined") {
+          document.removeEventListener("visibilitychange", this._onDocVisibility);
+        }
+        if (typeof window !== "undefined") {
+          window.removeEventListener("nodalia-calendar-card-open", this._onExternalOpenRequest);
+        }
+        this._detachViewVisibilityObserver();
+        this.shadowRoot?.removeEventListener("click", this._onShadowClick);
+        this.shadowRoot?.removeEventListener("keydown", this._onShadowKeydown);
+        if (this._refreshTimer) {
+          window.clearTimeout(this._refreshTimer);
+          this._refreshTimer = 0;
+        }
+        this._cancelCalendarEntrancePlayFrames();
+        this._refreshRunId += 1;
+        this._refreshInFlight = false;
+        this._refreshQueued = false;
+        this._calendarEntrancePlayed = false;
+        this._wasInViewport = false;
+        this._unsubscribeWeatherForecast();
+      }
+      _cancelCalendarEntrancePlayFrames() {
+        if (this._calendarEntrancePlayFrame) {
+          window.cancelAnimationFrame(this._calendarEntrancePlayFrame);
+          this._calendarEntrancePlayFrame = 0;
+        }
+        if (this._expandedOverlayEntrancePlayFrame) {
+          window.cancelAnimationFrame(this._expandedOverlayEntrancePlayFrame);
+          this._expandedOverlayEntrancePlayFrame = 0;
+        }
+      }
+      _attachViewVisibilityObserver() {
+        if (this._viewVisibilityObserver || typeof IntersectionObserver !== "function") {
+          return;
+        }
+        this._viewVisibilityObserver = new IntersectionObserver(
+          (entries) => {
+            if (!this.isConnected) {
+              return;
+            }
+            const visible = entries.some((entry) => entry.isIntersecting && entry.intersectionRatio > 0);
+            if (visible === this._wasInViewport) {
+              return;
+            }
+            this._wasInViewport = visible;
+            if (!visible) {
+              return;
+            }
+            this._cancelCalendarEntrancePlayFrames();
+            this._calendarEntrancePlayed = false;
+            this._renderIfChanged(true);
+          },
+          { threshold: [0, 0.01] }
+        );
+        this._viewVisibilityObserver.observe(this);
+      }
+      _detachViewVisibilityObserver() {
+        if (!this._viewVisibilityObserver) {
+          return;
+        }
+        this._viewVisibilityObserver.disconnect();
+        this._viewVisibilityObserver = null;
+      }
+      setConfig(config) {
+        const prevWeatherEntity = this._getWeatherEntityId();
+        this._config = normalizeConfig(config);
+        const nextWeatherEntity = this._getWeatherEntityId();
+        if (prevWeatherEntity !== nextWeatherEntity) {
+          this._unsubscribeWeatherForecast();
+          this._weatherForecastByDay = /* @__PURE__ */ new Map();
+          this._weatherForecastEvents = {};
+        }
+        this._ensureWeatherForecastSubscription();
+        this._refreshEvents();
+      }
+      set hass(hass) {
+        const hadHass = this._hadHass;
+        this._hass = hass;
+        if (!hass) {
+          this._unsubscribeWeatherForecast();
+          return;
+        }
+        this._ensureWeatherForecastSubscription();
+        if (!hadHass) {
+          this._hadHass = true;
+          this._refreshEvents();
+          return;
+        }
+        this._renderIfChanged(false);
+      }
+      _getLocale() {
+        const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+        const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto");
+        return window.NodaliaI18n?.localeTag?.(lang) || hass?.locale?.language || "en";
+      }
+      _getCalendarEntityLabel(entityId) {
+        const id = String(entityId ?? "").trim();
+        if (!id) {
+          return "";
+        }
+        const friendly = String(this._hass?.states?.[id]?.attributes?.friendly_name ?? "").trim();
+        if (friendly) {
+          return friendly;
+        }
+        const short = id.includes(".") ? id.slice(id.indexOf(".") + 1) : id;
+        const humanized = short.replace(/_/g, " ").trim();
+        return humanized || id;
+      }
+      _getCalendarEntityLabelsSignature() {
+        const hass = this._hass;
+        if (!hass?.states) {
+          return "";
+        }
+        const ids = /* @__PURE__ */ new Set([
+          ...(this._config?.calendars || []).map((c) => c?.entity).filter(Boolean),
+          ...this._events.map((event) => event._entity).filter(Boolean)
+        ]);
+        const meta = (this._config?.calendars || []).map((c) => `${c?.entity || ""}${c?.label || ""}${c?.tint || ""}`).join("");
+        return [
+          [...ids].sort().map((id) => {
+            const friendly = String(hass.states[id]?.attributes?.friendly_name ?? "").trim();
+            return `${id}${friendly}`;
+          }).join(""),
+          meta
+        ].join("");
+      }
+      _getAvailableNativeCalendarIds() {
+        const configured = (this._config?.calendars || []).map((c) => String(c?.entity || "").trim()).filter(Boolean);
+        if (configured.length) {
+          return configured;
+        }
+        return Object.keys(this._hass?.states || {}).filter((id) => id.startsWith("calendar.")).sort();
+      }
+      _getCalendarEntry(entityId) {
+        const id = String(entityId ?? "").trim();
+        const list = Array.isArray(this._config?.calendars) ? this._config.calendars : [];
+        return list.find((c) => c.entity === id) || { entity: id, label: "", tint: "" };
+      }
+      _getEventSubtitleForDisplay(entityId) {
+        const entry = this._getCalendarEntry(entityId);
+        if (entry.label) {
+          return entry.label;
+        }
+        return this._getCalendarEntityLabel(entityId);
+      }
+      _getCalendarTintDotCss(entityId) {
+        const tint = sanitizeCalendarTint(this._getCalendarEntry(entityId).tint);
+        return tint || "var(--primary-color)";
+      }
+      _getEventTint(event) {
+        const colorOverride = extractNodaliaEventColor(event?.description);
+        if (colorOverride) {
+          return colorOverride;
+        }
+        return sanitizeCalendarTint(this._getCalendarEntry(event?._entity).tint);
+      }
+      _capitalizeFirst(text) {
+        const s = String(text ?? "").trim();
+        if (!s) {
+          return "";
+        }
+        return s.charAt(0).toUpperCase() + s.slice(1);
+      }
+      _renderWeatherBadge(dayDate, weatherByDay, className = "calendar-day__weather") {
+        const w = this._getWeatherForDay(dayDate, weatherByDay);
+        if (!w) {
+          return "";
+        }
+        const icon = weatherConditionIcon(w?.condition);
+        const minRaw = Number.isFinite(w?.tempMin) ? Math.round(w.tempMin) : null;
+        const maxRaw = Number.isFinite(w?.tempMax) ? Math.round(w.tempMax) : null;
+        const hasCondition = Boolean(String(w?.condition || "").trim());
+        if (minRaw === null && maxRaw === null && !hasCondition) {
+          return "";
+        }
+        const minText = minRaw === null ? "—" : `${minRaw}°`;
+        const maxText = maxRaw === null ? "—" : `${maxRaw}°`;
+        return `<div class="${escapeHtml(className)}"><ha-icon icon="${escapeHtml(icon)}"></ha-icon><span>${escapeHtml(minText)} / ${escapeHtml(maxText)}</span></div>`;
+      }
+      _renderExpandedMonthDayDetail(events, focusDate, config, locale, weatherByDay) {
+        const sorted = [...events].sort((left, right) => {
+          const a = eventDate(left?.start)?.getTime() || 0;
+          const b = eventDate(right?.start)?.getTime() || 0;
+          return a - b;
+        });
+        const longTitle = this._capitalizeFirst(
+          getDateTimeFormatter(locale, {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            year: "numeric"
+          }).format(focusDate)
+        );
+        if (!sorted.length) {
+          return `
         <div class="calendar-expanded__day-detail">
           <div class="calendar-expanded__day-detail-toolbar">
             <button type="button" class="calendar-expanded__day-back" data-action="month-day-back">
@@ -1117,11 +996,9 @@ class NodaliaCalendarCard extends HTMLElement {
           <div class="calendar-expanded__day-empty">${escapeHtml(this._uiText("empty.day", "No events this day."))}</div>
         </div>
       `;
-    }
-
-    const eventsHtml = sorted.map(ev => this._renderSingleEventHtml(ev, config, locale, { detailAction: true })).join("");
-
-    return `
+        }
+        const eventsHtml = sorted.map((ev) => this._renderSingleEventHtml(ev, config, locale, { detailAction: true })).join("");
+        return `
       <div class="calendar-expanded__day-detail">
         <div class="calendar-expanded__day-detail-toolbar">
           <button type="button" class="calendar-expanded__day-back" data-action="month-day-back">
@@ -1136,51 +1013,38 @@ class NodaliaCalendarCard extends HTMLElement {
         <div class="calendar-expanded__day-detail-scroll">${eventsHtml}</div>
       </div>
     `;
-  }
-
-  _renderExpandedEventDetail(event, config, locale) {
-    const start = eventDate(event?.start);
-    const end = eventDate(event?.end);
-    const eventKey = calendarEventKey(event);
-    const summary = String(event?.summary || event?.message || this._uiText("event.untitled", "Untitled event")).trim();
-    const subtitle = this._getEventSubtitleForDisplay(event?._entity);
-    const timeLabel = eventIsAllDay(event)
-      ? this._uiText("allDay", "All day")
-      : start && end
-        ? `${formatTimeLabel(start, locale)} - ${formatTimeLabel(end, locale)}`
-        : start
-          ? formatTimeLabel(start, locale)
-          : "";
-    const dayLabel = start
-      ? this._capitalizeFirst(
-        getDateTimeFormatter(locale, {
-          weekday: "long",
-          day: "numeric",
-          month: "long",
-          year: "numeric",
-        }).format(start),
-      )
-      : "";
-    const description = stripNodaliaEventMetadata(event?.description);
-    const location = String(event?.location || "").trim();
-    const rrule = String(event?.rrule || "").trim();
-    const repeatLabel = this._formatRruleDisplayLabel(rrule);
-    const tint = this._getEventTint(event) || "var(--primary-color)";
-    return `
+      }
+      _renderExpandedEventDetail(event, config, locale) {
+        const start = eventDate(event?.start);
+        const end = eventDate(event?.end);
+        const eventKey = calendarEventKey(event);
+        const summary = String(event?.summary || event?.message || this._uiText("event.untitled", "Untitled event")).trim();
+        const subtitle = this._getEventSubtitleForDisplay(event?._entity);
+        const timeLabel = eventIsAllDay(event) ? this._uiText("allDay", "All day") : start && end ? `${formatTimeLabel(start, locale)} - ${formatTimeLabel(end, locale)}` : start ? formatTimeLabel(start, locale) : "";
+        const dayLabel = start ? this._capitalizeFirst(
+          getDateTimeFormatter(locale, {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            year: "numeric"
+          }).format(start)
+        ) : "";
+        const description = stripNodaliaEventMetadata(event?.description);
+        const location = String(event?.location || "").trim();
+        const rrule = String(event?.rrule || "").trim();
+        const repeatLabel = this._formatRruleDisplayLabel(rrule);
+        const tint = this._getEventTint(event) || "var(--primary-color)";
+        return `
       <div class="calendar-expanded__event-detail" style="--cal-detail-tint:${escapeHtml(tint)}">
         <div class="calendar-expanded__day-detail-toolbar">
           <button type="button" class="calendar-expanded__day-back" data-action="event-detail-back">
             <ha-icon icon="mdi:chevron-left"></ha-icon>
             <span>${escapeHtml(this._uiText("buttons.back", "Back"))}</span>
           </button>
-          ${
-            this._canDeleteCalendarEvent(event, config)
-              ? `<button type="button" class="calendar-expanded__event-delete" data-action="delete-event" data-key="${escapeHtml(eventKey)}" aria-label="${escapeHtml(this._uiText("aria.deleteEvent", "Delete event"))}">
+          ${this._canDeleteCalendarEvent(event, config) ? `<button type="button" class="calendar-expanded__event-delete" data-action="delete-event" data-key="${escapeHtml(eventKey)}" aria-label="${escapeHtml(this._uiText("aria.deleteEvent", "Delete event"))}">
                   <ha-icon icon="mdi:trash-can-outline"></ha-icon>
                   <span>${escapeHtml(this._uiText("buttons.delete", "Delete"))}</span>
-                </button>`
-              : ""
-          }
+                </button>` : ""}
         </div>
         <div class="calendar-expanded__event-hero">
           <div class="calendar-expanded__event-title">${escapeHtml(summary)}</div>
@@ -1191,151 +1055,115 @@ class NodaliaCalendarCard extends HTMLElement {
           </div>
         </div>
         <div class="calendar-expanded__event-sections">
-          ${
-            description
-              ? `<section class="calendar-expanded__event-section">
+          ${description ? `<section class="calendar-expanded__event-section">
                   <div class="calendar-expanded__event-section-title">${escapeHtml(this._uiText("fields.description", "Description"))}</div>
                   <div class="calendar-expanded__event-section-body">${escapeHtml(description).replace(/\n/g, "<br>")}</div>
-                </section>`
-              : ""
-          }
-          ${
-            location
-              ? `<section class="calendar-expanded__event-section">
+                </section>` : ""}
+          ${location ? `<section class="calendar-expanded__event-section">
                   <div class="calendar-expanded__event-section-title">${escapeHtml(this._uiText("fields.location", "Location"))}</div>
                   <div class="calendar-expanded__event-section-body">${escapeHtml(location)}</div>
-                </section>`
-              : ""
-          }
-          ${
-            repeatLabel
-              ? `<section class="calendar-expanded__event-section">
+                </section>` : ""}
+          ${repeatLabel ? `<section class="calendar-expanded__event-section">
                   <div class="calendar-expanded__event-section-title">${escapeHtml(this._uiText("fields.repeat", "Repeat"))}</div>
                   <div class="calendar-expanded__event-section-body">${escapeHtml(repeatLabel)}</div>
-                </section>`
-              : ""
-          }
-          ${
-            !description && !location && !repeatLabel
-              ? `<div class="calendar-expanded__day-empty">${escapeHtml(this._uiText("empty.eventDetails", "This event has no description or location."))}</div>`
-              : ""
-          }
+                </section>` : ""}
+          ${!description && !location && !repeatLabel ? `<div class="calendar-expanded__day-empty">${escapeHtml(this._uiText("empty.eventDetails", "This event has no description or location."))}</div>` : ""}
         </div>
       </div>
     `;
-  }
-
-  _formatRruleDisplayLabel(rruleRaw) {
-    const raw = String(rruleRaw || "").trim();
-    if (!raw) {
-      return "";
-    }
-    const upper = raw.toUpperCase();
-    const parts = upper.split(";");
-    const freqPart = parts.find(part => part.startsWith("FREQ=")) || "";
-    const intervalPart = parts.find(part => part.startsWith("INTERVAL=")) || "";
-    const freq = freqPart.replace("FREQ=", "").trim();
-    const interval = Number.parseInt(intervalPart.replace("INTERVAL=", "").trim(), 10);
-    if (Number.isFinite(interval) && interval > 1) {
-      return this._uiText("repeat.custom", "Custom");
-    }
-    const labels = {
-      DAILY: this._uiText("repeat.daily", "Daily"),
-      WEEKLY: this._uiText("repeat.weekly", "Weekly"),
-      MONTHLY: this._uiText("repeat.monthly", "Monthly"),
-      YEARLY: this._uiText("repeat.yearly", "Yearly"),
-    };
-    return labels[freq] || this._uiText("repeat.custom", "Custom");
-  }
-
-  _expandedLayoutKind(timeRange) {
-    const tr = timeRange || DEFAULT_CONFIG.time_range;
-    if (tr === "3d") {
-      return "column";
-    }
-    if (tr === "1m") {
-      return "month";
-    }
-    return "horizontal";
-  }
-
-  _groupsByDayKey(groups) {
-    const map = new Map();
-    groups.forEach(group => {
-      const d = group.dayDate instanceof Date && !Number.isNaN(group.dayDate.getTime())
-        ? group.dayDate
-        : eventDate(group.events?.[0]?.start);
-      if (d) {
-        map.set(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`, group);
       }
-    });
-    return map;
-  }
-
-  _expandedRangeGroups(groups, config, locale) {
-    const map = this._groupsByDayKey(groups);
-    const days = Math.max(1, Number(config.days_to_show) || daysFromTimeRange(config.time_range || DEFAULT_CONFIG.time_range));
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    return Array.from({ length: days }, (_, index) => {
-      const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + index);
-      const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-      const existing = map.get(key);
-      if (existing) {
-        return {
-          ...existing,
-          dayDate: existing.dayDate instanceof Date && !Number.isNaN(existing.dayDate.getTime())
-            ? existing.dayDate
-            : date,
+      _formatRruleDisplayLabel(rruleRaw) {
+        const raw = String(rruleRaw || "").trim();
+        if (!raw) {
+          return "";
+        }
+        const upper = raw.toUpperCase();
+        const parts = upper.split(";");
+        const freqPart = parts.find((part) => part.startsWith("FREQ=")) || "";
+        const intervalPart = parts.find((part) => part.startsWith("INTERVAL=")) || "";
+        const freq = freqPart.replace("FREQ=", "").trim();
+        const interval = Number.parseInt(intervalPart.replace("INTERVAL=", "").trim(), 10);
+        if (Number.isFinite(interval) && interval > 1) {
+          return this._uiText("repeat.custom", "Custom");
+        }
+        const labels = {
+          DAILY: this._uiText("repeat.daily", "Daily"),
+          WEEKLY: this._uiText("repeat.weekly", "Weekly"),
+          MONTHLY: this._uiText("repeat.monthly", "Monthly"),
+          YEARLY: this._uiText("repeat.yearly", "Yearly")
         };
+        return labels[freq] || this._uiText("repeat.custom", "Custom");
       }
-      return {
-        label: formatDateLabel(date, locale),
-        dayKey: key,
-        dayDate: date,
-        events: [],
-      };
-    });
-  }
-
-  _weekdayHeadersMondayFirst(locale) {
-    const refMonday = new Date(2024, 0, 1);
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(refMonday.getTime() + i * 86400000);
-      return getDateTimeFormatter(locale, { weekday: "short" }).format(d);
-    });
-  }
-
-  _renderSingleEventHtml(event, config, locale, options = {}) {
-    const compact = options.compact === true;
-    const detailAction = options.detailAction === true;
-    const eventKey = calendarEventKey(event);
-    const start = eventDate(event.start);
-    const timeLabel = eventIsAllDay(event)
-      ? this._uiText("allDay", "All day")
-      : start
-        ? formatTimeLabel(start, locale)
-        : "--:--";
-    const summary = String(event.summary || event.message || this._uiText("event.untitled", "Untitled event"));
-    const subtitle = this._getEventSubtitleForDisplay(event._entity);
-    const tintRaw = this._getEventTint(event);
-    const tintClass = tintRaw ? " calendar-event--tinted" : "";
-    const tintStyle = tintRaw ? ` style="--cal-tint:${escapeHtml(tintRaw)}"` : "";
-    const compactClass = compact ? " calendar-event--compact" : "";
-    const detailClass = detailAction ? " calendar-event--detail-link" : "";
-    const detailAttrs = detailAction
-      ? ` data-action="open-event-detail" data-key="${escapeHtml(eventKey)}" role="button" tabindex="0"`
-      : "";
-    const canDelete = this._canDeleteCalendarEvent(event, config);
-    const deleteButton = canDelete
-      ? `<button type="button" class="calendar-event__delete" data-action="delete-event" data-key="${escapeHtml(eventKey)}" aria-label="${escapeHtml(this._uiText("aria.deleteEvent", "Delete event"))}">
+      _expandedLayoutKind(timeRange) {
+        const tr = timeRange || DEFAULT_CONFIG2.time_range;
+        if (tr === "3d") {
+          return "column";
+        }
+        if (tr === "1m") {
+          return "month";
+        }
+        return "horizontal";
+      }
+      _groupsByDayKey(groups) {
+        const map = /* @__PURE__ */ new Map();
+        groups.forEach((group) => {
+          const d = group.dayDate instanceof Date && !Number.isNaN(group.dayDate.getTime()) ? group.dayDate : eventDate(group.events?.[0]?.start);
+          if (d) {
+            map.set(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`, group);
+          }
+        });
+        return map;
+      }
+      _expandedRangeGroups(groups, config, locale) {
+        const map = this._groupsByDayKey(groups);
+        const days = Math.max(1, Number(config.days_to_show) || daysFromTimeRange(config.time_range || DEFAULT_CONFIG2.time_range));
+        const now = /* @__PURE__ */ new Date();
+        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        return Array.from({ length: days }, (_, index) => {
+          const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + index);
+          const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+          const existing = map.get(key);
+          if (existing) {
+            return {
+              ...existing,
+              dayDate: existing.dayDate instanceof Date && !Number.isNaN(existing.dayDate.getTime()) ? existing.dayDate : date
+            };
+          }
+          return {
+            label: formatDateLabel(date, locale),
+            dayKey: key,
+            dayDate: date,
+            events: []
+          };
+        });
+      }
+      _weekdayHeadersMondayFirst(locale) {
+        const refMonday = new Date(2024, 0, 1);
+        return Array.from({ length: 7 }, (_, i) => {
+          const d = new Date(refMonday.getTime() + i * 864e5);
+          return getDateTimeFormatter(locale, { weekday: "short" }).format(d);
+        });
+      }
+      _renderSingleEventHtml(event, config, locale, options = {}) {
+        const compact = options.compact === true;
+        const detailAction = options.detailAction === true;
+        const eventKey = calendarEventKey(event);
+        const start = eventDate(event.start);
+        const timeLabel = eventIsAllDay(event) ? this._uiText("allDay", "All day") : start ? formatTimeLabel(start, locale) : "--:--";
+        const summary = String(event.summary || event.message || this._uiText("event.untitled", "Untitled event"));
+        const subtitle = this._getEventSubtitleForDisplay(event._entity);
+        const tintRaw = this._getEventTint(event);
+        const tintClass = tintRaw ? " calendar-event--tinted" : "";
+        const tintStyle = tintRaw ? ` style="--cal-tint:${escapeHtml(tintRaw)}"` : "";
+        const compactClass = compact ? " calendar-event--compact" : "";
+        const detailClass = detailAction ? " calendar-event--detail-link" : "";
+        const detailAttrs = detailAction ? ` data-action="open-event-detail" data-key="${escapeHtml(eventKey)}" role="button" tabindex="0"` : "";
+        const canDelete = this._canDeleteCalendarEvent(event, config);
+        const deleteButton = canDelete ? `<button type="button" class="calendar-event__delete" data-action="delete-event" data-key="${escapeHtml(eventKey)}" aria-label="${escapeHtml(this._uiText("aria.deleteEvent", "Delete event"))}">
           <ha-icon icon="mdi:trash-can-outline"></ha-icon>
-        </button>`
-      : "";
-    const actionsHtml = deleteButton
-      ? `<div class="calendar-event__actions">${deleteButton}</div>`
-      : "";
-    return `
+        </button>` : "";
+        const actionsHtml = deleteButton ? `<div class="calendar-event__actions">${deleteButton}</div>` : "";
+        return `
       <div class="calendar-event${tintClass}${compactClass}${detailClass}"${detailAttrs}${tintStyle}>
         <div class="calendar-event__time">${escapeHtml(timeLabel)}</div>
         <div class="calendar-event__summary">
@@ -1345,101 +1173,86 @@ class NodaliaCalendarCard extends HTMLElement {
         ${actionsHtml}
       </div>
     `;
-  }
-
-  _renderExpandedBody(groups, config, locale, weatherByDay) {
-    const tr = config.time_range || DEFAULT_CONFIG.time_range;
-    const mode = this._expandedLayoutKind(tr);
-    if (this._expandedEventDetailKey) {
-      const detailEvent = groups
-        .flatMap(group => Array.isArray(group?.events) ? group.events : [])
-        .find(event => calendarEventKey(event) === this._expandedEventDetailKey);
-      if (detailEvent) {
-        return this._renderExpandedEventDetail(detailEvent, config, locale);
       }
-      this._expandedEventDetailKey = "";
-    }
-    if (mode === "month") {
-      const now = new Date();
-      const y = now.getFullYear();
-      const m = now.getMonth();
-      const first = new Date(y, m, 1);
-      const last = new Date(y, m + 1, 0);
-      const daysInMonth = last.getDate();
-      const leading = (first.getDay() + 6) % 7;
-      const map = this._groupsByDayKey(groups);
-      const title = getDateTimeFormatter(locale, { month: "long", year: "numeric" }).format(first);
-      const headers = this._weekdayHeadersMondayFirst(locale);
-      const cells = [];
-      for (let i = 0; i < leading; i += 1) {
-        cells.push({ kind: "pad" });
-      }
-      for (let d = 1; d <= daysInMonth; d += 1) {
-        cells.push({ kind: "day", day: d, date: new Date(y, m, d) });
-      }
-      while (cells.length % 7 !== 0) {
-        cells.push({ kind: "pad" });
-      }
-
-      if (this._expandedMonthDayKey) {
-        const group = map.get(this._expandedMonthDayKey);
-        const rawParts = String(this._expandedMonthDayKey).split("-");
-        const py = Number(rawParts[0]);
-        const pm = Number(rawParts[1]);
-        const pd = Number(rawParts[2]);
-        if (
-          Number.isFinite(py) &&
-          Number.isFinite(pm) &&
-          Number.isFinite(pd) &&
-          py === y &&
-          pm === m &&
-          rawParts.length === 3
-        ) {
-          const focusDate = new Date(py, pm, pd);
-          const dayEvents = Array.isArray(group?.events) ? group.events : [];
-          return this._renderExpandedMonthDayDetail(dayEvents, focusDate, config, locale, weatherByDay);
+      _renderExpandedBody(groups, config, locale, weatherByDay) {
+        const tr = config.time_range || DEFAULT_CONFIG2.time_range;
+        const mode = this._expandedLayoutKind(tr);
+        if (this._expandedEventDetailKey) {
+          const detailEvent = groups.flatMap((group) => Array.isArray(group?.events) ? group.events : []).find((event) => calendarEventKey(event) === this._expandedEventDetailKey);
+          if (detailEvent) {
+            return this._renderExpandedEventDetail(detailEvent, config, locale);
+          }
+          this._expandedEventDetailKey = "";
         }
-        this._expandedMonthDayKey = "";
-      }
-
-      return `
+        if (mode === "month") {
+          const now = /* @__PURE__ */ new Date();
+          const y = now.getFullYear();
+          const m = now.getMonth();
+          const first = new Date(y, m, 1);
+          const last = new Date(y, m + 1, 0);
+          const daysInMonth = last.getDate();
+          const leading = (first.getDay() + 6) % 7;
+          const map = this._groupsByDayKey(groups);
+          const title = getDateTimeFormatter(locale, { month: "long", year: "numeric" }).format(first);
+          const headers = this._weekdayHeadersMondayFirst(locale);
+          const cells = [];
+          for (let i = 0; i < leading; i += 1) {
+            cells.push({ kind: "pad" });
+          }
+          for (let d = 1; d <= daysInMonth; d += 1) {
+            cells.push({ kind: "day", day: d, date: new Date(y, m, d) });
+          }
+          while (cells.length % 7 !== 0) {
+            cells.push({ kind: "pad" });
+          }
+          if (this._expandedMonthDayKey) {
+            const group = map.get(this._expandedMonthDayKey);
+            const rawParts = String(this._expandedMonthDayKey).split("-");
+            const py = Number(rawParts[0]);
+            const pm = Number(rawParts[1]);
+            const pd = Number(rawParts[2]);
+            if (Number.isFinite(py) && Number.isFinite(pm) && Number.isFinite(pd) && py === y && pm === m && rawParts.length === 3) {
+              const focusDate = new Date(py, pm, pd);
+              const dayEvents = Array.isArray(group?.events) ? group.events : [];
+              return this._renderExpandedMonthDayDetail(dayEvents, focusDate, config, locale, weatherByDay);
+            }
+            this._expandedMonthDayKey = "";
+          }
+          return `
         <div class="calendar-expanded__month">
           <div class="calendar-expanded__month-banner">${escapeHtml(title)}</div>
           <div class="calendar-expanded__month-matrix-wrap">
             <div class="calendar-expanded__month-matrix">
               <div class="calendar-expanded__month-weekdays">
-                ${headers.map(h => `<div class="calendar-expanded__month-weekday">${escapeHtml(h)}</div>`).join("")}
+                ${headers.map((h) => `<div class="calendar-expanded__month-weekday">${escapeHtml(h)}</div>`).join("")}
               </div>
               <div class="calendar-expanded__month-grid">
-                ${cells
-                  .map(cell => {
-                    if (cell.kind === "pad") {
-                      return `<div class="calendar-expanded__month-cell calendar-expanded__month-cell--pad"></div>`;
-                    }
-                    const key = `${cell.date.getFullYear()}-${cell.date.getMonth()}-${cell.date.getDate()}`;
-                    const group = map.get(key);
-                    let monthPeekInner = "";
-                    if (group?.events?.length) {
-                      const sortedDay = [...group.events].sort((a, b) => {
-                        const ta = eventDate(a?.start)?.getTime() || 0;
-                        const tb = eventDate(b?.start)?.getTime() || 0;
-                        return ta - tb;
-                      });
-                      const headEv = sortedDay[0];
-                      const tail = sortedDay.slice(1);
-                      monthPeekInner += this._renderSingleEventHtml(headEv, config, locale, { compact: true });
-                      if (tail.length) {
-                        monthPeekInner += `<div class="calendar-expanded__month-cell-dots">${tail
-                          .map(ev => {
-                            const tint = this._getEventTint(ev) || this._getCalendarTintDotCss(ev._entity);
-                            const summary = String(ev.summary || ev.message || "").trim();
-                            const hint = summary || this._getEventSubtitleForDisplay(ev._entity);
-                            return `<span class="calendar-expanded__month-cell-dot" style="--cal-dot:${escapeHtml(tint)}" title="${escapeHtml(hint)}"></span>`;
-                          })
-                          .join("")}</div>`;
-                      }
-                    }
-                    return `
+                ${cells.map((cell) => {
+            if (cell.kind === "pad") {
+              return `<div class="calendar-expanded__month-cell calendar-expanded__month-cell--pad"></div>`;
+            }
+            const key = `${cell.date.getFullYear()}-${cell.date.getMonth()}-${cell.date.getDate()}`;
+            const group = map.get(key);
+            let monthPeekInner = "";
+            if (group?.events?.length) {
+              const sortedDay = [...group.events].sort((a, b) => {
+                const ta = eventDate(a?.start)?.getTime() || 0;
+                const tb = eventDate(b?.start)?.getTime() || 0;
+                return ta - tb;
+              });
+              const headEv = sortedDay[0];
+              const tail = sortedDay.slice(1);
+              monthPeekInner += this._renderSingleEventHtml(headEv, config, locale, { compact: true });
+              if (tail.length) {
+                monthPeekInner += `<div class="calendar-expanded__month-cell-dots">${tail.map((ev) => {
+                  const tint = this._getEventTint(ev) || this._getCalendarTintDotCss(ev._entity);
+                  const summary = String(ev.summary || ev.message || "").trim();
+                  const hint = summary || this._getEventSubtitleForDisplay(ev._entity);
+                  return `<span class="calendar-expanded__month-cell-dot" style="--cal-dot:${escapeHtml(tint)}" title="${escapeHtml(hint)}"></span>`;
+                }).join("")}</div>`;
+              }
+            }
+            return `
                       <div
                         class="calendar-expanded__month-cell calendar-expanded__month-cell--day"
                         data-action="open-month-day"
@@ -1456,274 +1269,258 @@ class NodaliaCalendarCard extends HTMLElement {
                         </div>
                       </div>
                     `;
-                  })
-                  .join("")}
+          }).join("")}
               </div>
             </div>
           </div>
         </div>
       `;
-    }
-    const displayGroups = this._expandedRangeGroups(groups, config, locale);
-    const rowClass = mode === "column" ? "calendar-expanded__column" : "calendar-expanded__horizontal";
-    return `
+        }
+        const displayGroups = this._expandedRangeGroups(groups, config, locale);
+        const rowClass = mode === "column" ? "calendar-expanded__column" : "calendar-expanded__horizontal";
+        return `
       <div class="${rowClass}">
-        ${displayGroups
-          .map(
-            group => `
+        ${displayGroups.map(
+          (group) => `
           <div class="calendar-expanded__col">
             <div class="calendar-expanded__col-head">
               <div class="calendar-expanded__col-label">${escapeHtml(group.label)}</div>
               ${this._renderWeatherBadge(group.dayDate, weatherByDay, "calendar-expanded__weather")}
             </div>
             <div class="calendar-expanded__col-events">
-              ${group.events.length
-                ? group.events.map(ev => this._renderSingleEventHtml(ev, config, locale, { detailAction: true })).join("")
-                : `<div class="calendar-expanded__day-empty">${escapeHtml(this._uiText("empty.day", "No events this day."))}</div>`}
+              ${group.events.length ? group.events.map((ev) => this._renderSingleEventHtml(ev, config, locale, { detailAction: true })).join("") : `<div class="calendar-expanded__day-empty">${escapeHtml(this._uiText("empty.day", "No events this day."))}</div>`}
             </div>
           </div>
-        `,
-          )
-          .join("")}
+        `
+        ).join("")}
       </div>
     `;
-  }
-
-  _scheduleRefresh() {
-    if (this._refreshTimer) {
-      window.clearTimeout(this._refreshTimer);
-      this._refreshTimer = 0;
-    }
-    this._refreshTimer = window.setTimeout(() => {
-      this._refreshTimer = 0;
-      this._refreshEvents();
-    }, this._config.refresh_interval * 1000);
-  }
-
-  _getRenderSignature() {
-    const config = this._config;
-    const styles = config.styles || DEFAULT_CONFIG.styles;
-    const visibleEvents = this._events;
-    this._renderVisibleEventsCache = visibleEvents;
-    let hash = 2166136261;
-    const mix = value => {
-      const text = value === null || value === undefined ? "" : String(value);
-      for (let i = 0; i < text.length; i += 1) {
-        hash ^= text.charCodeAt(i);
-        hash = Math.imul(hash, 16777619) >>> 0;
       }
-      hash = Math.imul(hash ^ 0x9e3779b9, 16777619) >>> 0;
-    };
-    (config.calendars || []).forEach(c => {
-      mix(c?.entity || "");
-      mix(c?.label || "");
-      mix(c?.tint || "");
-    });
-    mix(config.title);
-    mix(config.icon);
-    mix(config.time_range || DEFAULT_CONFIG.time_range);
-    mix(config.days_to_show);
-    mix(config.max_visible_events);
-    mix(config.allow_delete ? 1 : 0);
-    mix(config.weather_entity || "");
-    mix(config.native_event_webhook || "");
-    mix(config.security?.allow_webhooks_for_non_admin ? 1 : 0);
-    mix(config.tint_auto ? 1 : 0);
-    mix(config.haptics?.enabled ? 1 : 0);
-    mix(config.haptics?.style || "");
-    mix(config.haptics?.fallback_vibrate ? 1 : 0);
-    mix(config.animations?.enabled ? 1 : 0);
-    mix(config.animations?.content_duration);
-    mix(styles.card?.background);
-    mix(styles.card?.border);
-    mix(styles.card?.border_radius);
-    mix(styles.card?.box_shadow);
-    mix(styles.card?.padding);
-    mix(styles.card?.gap);
-    mix(styles.title_size);
-    mix(styles.event_size);
-    mix(styles.chip_height);
-    mix(styles.chip_font_size);
-    mix(styles.chip_padding);
-    mix(styles.chip_size);
-    mix(styles.icon?.background);
-    mix(styles.icon?.on_color);
-    mix(styles.icon?.off_color);
-    mix(styles.icon?.size);
-    mix(styles.tint?.color);
-    mix(this._getLocale());
-    mix(this._loading ? 1 : 0);
-    mix(this._error);
-    mix(this._getWeatherForecastSignature());
-    visibleEvents.forEach(event => {
-      mix(calendarEventKey(event));
-      mix(eventDate(event?.start)?.getTime() || 0);
-      mix(calendarEventUid(event));
-      mix(calendarEventRecurrenceId(event));
-      mix(event?.description || "");
-      mix(event?.location || "");
-      mix(event?.rrule || "");
-    });
-    mix(this._expandedOpen ? 1 : 0);
-    mix(this._expandedMonthDayKey || "");
-    mix(this._expandedEventDetailKey || "");
-    mix(this._deleteRecurringChoiceKey || "");
-    mix(this._deleteRecurrenceError || "");
-    mix(this._expandedOpenedForDeleteRecurrenceOnly ? 1 : 0);
-    mix(this._nativeComposerError || "");
-    return `r:${hash.toString(36)}`;
-  }
-
-  _renderIfChanged(force = false) {
-    if (!this.isConnected) {
-      return;
-    }
-    const next = this._getRenderSignature();
-    if (!force && next === this._lastRenderSignature) {
-      return;
-    }
-    this._lastRenderSignature = next;
-    this._render();
-  }
-
-  async _refreshEvents() {
-    if (this._refreshInFlight) {
-      this._refreshQueued = true;
-      return;
-    }
-    this._refreshInFlight = true;
-    this._refreshQueued = false;
-    const refreshRunId = ++this._refreshRunId;
-    const calendarIds = (this._config.calendars || []).map(c => c.entity).filter(Boolean);
-    try {
-      if (!this._hass) {
-        this._events = [];
-        this._weatherForecastByDay = new Map();
-        this._loading = false;
-        this._error = "";
-        this._renderIfChanged(true);
-        return;
+      _scheduleRefresh() {
+        if (this._refreshTimer) {
+          window.clearTimeout(this._refreshTimer);
+          this._refreshTimer = 0;
+        }
+        this._refreshTimer = window.setTimeout(() => {
+          this._refreshTimer = 0;
+          this._refreshEvents();
+        }, this._config.refresh_interval * 1e3);
       }
-      if (!calendarIds.length) {
-        this._events = [];
-        await this._refreshWeatherForecastByDay(refreshRunId);
-        this._loading = false;
-        this._error = "";
-        this._renderIfChanged(true);
-        return;
-      }
-      this._loading = true;
-      this._error = "";
-      this._renderIfChanged(true);
-      const hass = this._hass;
-      try {
-        const start = new Date();
-        const end = new Date(start.getTime() + this._config.days_to_show * 24 * 60 * 60 * 1000);
-        const all = [];
-        for (const entityId of calendarIds) {
-          const path = `calendars/${encodeURIComponent(entityId)}?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`;
-          let rows = [];
-          try {
-            const raw = await hass.callApi("GET", path);
-            rows = normalizeCalendarFetchResult(raw);
-            // Solo REST fallback si sigue vacío *y* la respuesta no era ya un array JSON (p. ej. `{ events: [...] }`
-            // normaliza bien pero no es array → el viejo `!Array.isArray(raw)` disparaba fetch duplicado).
-            if (!rows.length && (raw === undefined || raw === null)) {
-              const fallback = await this._fetchCalendarEventsViaRest(entityId, start, end);
-              if (fallback.length) {
-                rows = fallback;
-              }
-            }
-          } catch (_apiError) {
-            rows = await this._fetchCalendarEventsViaRest(entityId, start, end);
+      _getRenderSignature() {
+        const config = this._config;
+        const styles = config.styles || DEFAULT_CONFIG2.styles;
+        const visibleEvents = this._events;
+        this._renderVisibleEventsCache = visibleEvents;
+        let hash = 2166136261;
+        const mix = (value) => {
+          const text = value === null || value === void 0 ? "" : String(value);
+          for (let i = 0; i < text.length; i += 1) {
+            hash ^= text.charCodeAt(i);
+            hash = Math.imul(hash, 16777619) >>> 0;
           }
-          rows.forEach(item => all.push({ ...item, _entity: entityId }));
-        }
-        all.sort((left, right) => {
-          const a = eventDate(left?.start)?.getTime() || 0;
-          const b = eventDate(right?.start)?.getTime() || 0;
-          return a - b;
+          hash = Math.imul(hash ^ 2654435769, 16777619) >>> 0;
+        };
+        (config.calendars || []).forEach((c) => {
+          mix(c?.entity || "");
+          mix(c?.label || "");
+          mix(c?.tint || "");
         });
-        if (refreshRunId !== this._refreshRunId) {
-          return;
-        }
-        this._events = all;
-        await this._refreshWeatherForecastByDay(refreshRunId);
-      } catch (_error) {
-        if (refreshRunId !== this._refreshRunId) {
-          return;
-        }
-        this._events = [];
-        this._error = this._uiText("errors.loadEvents", "Could not load calendar events.");
-      } finally {
-        if (refreshRunId !== this._refreshRunId || !this.isConnected) {
-          return;
-        }
-        this._loading = false;
-        this._renderIfChanged(true);
-        if (this.isConnected) {
-          this._scheduleRefresh();
-        }
+        mix(config.title);
+        mix(config.icon);
+        mix(config.time_range || DEFAULT_CONFIG2.time_range);
+        mix(config.days_to_show);
+        mix(config.max_visible_events);
+        mix(config.allow_delete ? 1 : 0);
+        mix(config.weather_entity || "");
+        mix(config.native_event_webhook || "");
+        mix(config.security?.allow_webhooks_for_non_admin ? 1 : 0);
+        mix(config.tint_auto ? 1 : 0);
+        mix(config.haptics?.enabled ? 1 : 0);
+        mix(config.haptics?.style || "");
+        mix(config.haptics?.fallback_vibrate ? 1 : 0);
+        mix(config.animations?.enabled ? 1 : 0);
+        mix(config.animations?.content_duration);
+        mix(styles.card?.background);
+        mix(styles.card?.border);
+        mix(styles.card?.border_radius);
+        mix(styles.card?.box_shadow);
+        mix(styles.card?.padding);
+        mix(styles.card?.gap);
+        mix(styles.title_size);
+        mix(styles.event_size);
+        mix(styles.chip_height);
+        mix(styles.chip_font_size);
+        mix(styles.chip_padding);
+        mix(styles.chip_size);
+        mix(styles.icon?.background);
+        mix(styles.icon?.on_color);
+        mix(styles.icon?.off_color);
+        mix(styles.icon?.size);
+        mix(styles.tint?.color);
+        mix(this._getLocale());
+        mix(this._loading ? 1 : 0);
+        mix(this._error);
+        mix(this._getWeatherForecastSignature());
+        visibleEvents.forEach((event) => {
+          mix(calendarEventKey(event));
+          mix(eventDate(event?.start)?.getTime() || 0);
+          mix(calendarEventUid(event));
+          mix(calendarEventRecurrenceId(event));
+          mix(event?.description || "");
+          mix(event?.location || "");
+          mix(event?.rrule || "");
+        });
+        mix(this._expandedOpen ? 1 : 0);
+        mix(this._expandedMonthDayKey || "");
+        mix(this._expandedEventDetailKey || "");
+        mix(this._deleteRecurringChoiceKey || "");
+        mix(this._deleteRecurrenceError || "");
+        mix(this._expandedOpenedForDeleteRecurrenceOnly ? 1 : 0);
+        mix(this._nativeComposerError || "");
+        return `r:${hash.toString(36)}`;
       }
-    } finally {
-      this._refreshInFlight = false;
-      if (this._refreshQueued && this.isConnected) {
+      _renderIfChanged(force = false) {
+        if (!this.isConnected) {
+          return;
+        }
+        const next = this._getRenderSignature();
+        if (!force && next === this._lastRenderSignature) {
+          return;
+        }
+        this._lastRenderSignature = next;
+        this._render();
+      }
+      async _refreshEvents() {
+        if (this._refreshInFlight) {
+          this._refreshQueued = true;
+          return;
+        }
+        this._refreshInFlight = true;
         this._refreshQueued = false;
-        this._refreshEvents();
+        const refreshRunId = ++this._refreshRunId;
+        const calendarIds = (this._config.calendars || []).map((c) => c.entity).filter(Boolean);
+        try {
+          if (!this._hass) {
+            this._events = [];
+            this._weatherForecastByDay = /* @__PURE__ */ new Map();
+            this._loading = false;
+            this._error = "";
+            this._renderIfChanged(true);
+            return;
+          }
+          if (!calendarIds.length) {
+            this._events = [];
+            await this._refreshWeatherForecastByDay(refreshRunId);
+            this._loading = false;
+            this._error = "";
+            this._renderIfChanged(true);
+            return;
+          }
+          this._loading = true;
+          this._error = "";
+          this._renderIfChanged(true);
+          const hass = this._hass;
+          try {
+            const start = /* @__PURE__ */ new Date();
+            const end = new Date(start.getTime() + this._config.days_to_show * 24 * 60 * 60 * 1e3);
+            const all = [];
+            for (const entityId of calendarIds) {
+              const path = `calendars/${encodeURIComponent(entityId)}?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`;
+              let rows = [];
+              try {
+                const raw = await hass.callApi("GET", path);
+                rows = normalizeCalendarFetchResult(raw);
+                if (!rows.length && (raw === void 0 || raw === null)) {
+                  const fallback = await this._fetchCalendarEventsViaRest(entityId, start, end);
+                  if (fallback.length) {
+                    rows = fallback;
+                  }
+                }
+              } catch (_apiError) {
+                rows = await this._fetchCalendarEventsViaRest(entityId, start, end);
+              }
+              rows.forEach((item) => all.push({ ...item, _entity: entityId }));
+            }
+            all.sort((left, right) => {
+              const a = eventDate(left?.start)?.getTime() || 0;
+              const b = eventDate(right?.start)?.getTime() || 0;
+              return a - b;
+            });
+            if (refreshRunId !== this._refreshRunId) {
+              return;
+            }
+            this._events = all;
+            await this._refreshWeatherForecastByDay(refreshRunId);
+          } catch (_error) {
+            if (refreshRunId !== this._refreshRunId) {
+              return;
+            }
+            this._events = [];
+            this._error = this._uiText("errors.loadEvents", "Could not load calendar events.");
+          } finally {
+            if (refreshRunId !== this._refreshRunId || !this.isConnected) {
+              return;
+            }
+            this._loading = false;
+            this._renderIfChanged(true);
+            if (this.isConnected) {
+              this._scheduleRefresh();
+            }
+          }
+        } finally {
+          this._refreshInFlight = false;
+          if (this._refreshQueued && this.isConnected) {
+            this._refreshQueued = false;
+            this._refreshEvents();
+          }
+        }
       }
-    }
-  }
-
-  _findEventByKey(key) {
-    const targetKey = String(key || "");
-    if (!targetKey) {
-      return null;
-    }
-    return this._events.find(event => calendarEventKey(event) === targetKey) || null;
-  }
-
-  _canDeleteCalendarEvent(event, config = this._config) {
-    const entityId = String(event?._entity || "").trim();
-    const uid = calendarEventUid(event);
-    if (!config?.allow_delete || !entityId.startsWith("calendar.") || !uid) {
-      return false;
-    }
-    if (!this._hass || typeof this._hass.callWS !== "function") {
-      return false;
-    }
-    const features = Number(this._hass?.states?.[entityId]?.attributes?.supported_features);
-    if (Number.isFinite(features) && features > 0 && (features & 2) !== 2) {
-      return false;
-    }
-    return true;
-  }
-
-  _deleteRecurrenceDialogMarkup() {
-    const key = String(this._deleteRecurringChoiceKey || "").trim();
-    if (!key) {
-      return "";
-    }
-    const event = this._findEventByKey(key);
-    if (!event || !this._canDeleteCalendarEvent(event)) {
-      return "";
-    }
-    const title = this._uiText("deleteRecurrence.title", "Delete recurring event");
-    const message = this._uiText(
-      "deleteRecurrence.message",
-      "This event is part of a series. What would you like to delete?",
-    );
-    const thisOnly = this._uiText("deleteRecurrence.thisOnly", "This occurrence only");
-    const thisAndFuture = this._uiText(
-      "deleteRecurrence.thisAndFuture",
-      "This and all following occurrences",
-    );
-    const cancel = this._uiText("buttons.cancel", "Cancel");
-    const ariaDialog = this._uiText("aria.deleteRecurringDialog", "Choose how to delete the recurring event");
-    const err = String(this._deleteRecurrenceError || "").trim();
-    const errBlock = err
-      ? `<p class="calendar-delete-recurrence__error" role="alert">${escapeHtml(err)}</p>`
-      : "";
-    return `
+      _findEventByKey(key) {
+        const targetKey = String(key || "");
+        if (!targetKey) {
+          return null;
+        }
+        return this._events.find((event) => calendarEventKey(event) === targetKey) || null;
+      }
+      _canDeleteCalendarEvent(event, config = this._config) {
+        const entityId = String(event?._entity || "").trim();
+        const uid = calendarEventUid(event);
+        if (!config?.allow_delete || !entityId.startsWith("calendar.") || !uid) {
+          return false;
+        }
+        if (!this._hass || typeof this._hass.callWS !== "function") {
+          return false;
+        }
+        const features = Number(this._hass?.states?.[entityId]?.attributes?.supported_features);
+        if (Number.isFinite(features) && features > 0 && (features & 2) !== 2) {
+          return false;
+        }
+        return true;
+      }
+      _deleteRecurrenceDialogMarkup() {
+        const key = String(this._deleteRecurringChoiceKey || "").trim();
+        if (!key) {
+          return "";
+        }
+        const event = this._findEventByKey(key);
+        if (!event || !this._canDeleteCalendarEvent(event)) {
+          return "";
+        }
+        const title = this._uiText("deleteRecurrence.title", "Delete recurring event");
+        const message = this._uiText(
+          "deleteRecurrence.message",
+          "This event is part of a series. What would you like to delete?"
+        );
+        const thisOnly = this._uiText("deleteRecurrence.thisOnly", "This occurrence only");
+        const thisAndFuture = this._uiText(
+          "deleteRecurrence.thisAndFuture",
+          "This and all following occurrences"
+        );
+        const cancel = this._uiText("buttons.cancel", "Cancel");
+        const ariaDialog = this._uiText("aria.deleteRecurringDialog", "Choose how to delete the recurring event");
+        const err = String(this._deleteRecurrenceError || "").trim();
+        const errBlock = err ? `<p class="calendar-delete-recurrence__error" role="alert">${escapeHtml(err)}</p>` : "";
+        return `
       <div class="calendar-composer calendar-delete-recurrence is-open">
         <div class="calendar-composer__backdrop" data-action="delete-recurrence-dismiss"></div>
         <div class="calendar-composer__panel" role="dialog" aria-modal="true" aria-label="${escapeHtml(ariaDialog)}">
@@ -1744,1037 +1541,939 @@ class NodaliaCalendarCard extends HTMLElement {
         </div>
       </div>
     `;
-  }
-
-  _requestDeleteCalendarEvent(key) {
-    const event = this._findEventByKey(key);
-    if (!this._canDeleteCalendarEvent(event)) {
-      return;
-    }
-    if (calendarEventRecurrenceId(event)) {
-      const keyTrim = String(key || "").trim();
-      if (!this._expandedOpen) {
-        this._expandedOpen = true;
-        this._nativeComposerError = "";
-        this._deleteRecurrenceError = "";
-        this._nativeEventComposerOpen = false;
-        this._expandedEventDetailKey = keyTrim;
-        const focusDate = eventDate(event.start);
-        const tr = this._config?.time_range || DEFAULT_CONFIG.time_range;
-        if (tr === "1m" && focusDate) {
-          this._expandedMonthDayKey = `${focusDate.getFullYear()}-${focusDate.getMonth()}-${focusDate.getDate()}`;
-        } else {
-          this._expandedMonthDayKey = "";
-        }
-        this._expandedOverlayEntrancePlayed = true;
-        this._expandedOpenedForDeleteRecurrenceOnly = true;
       }
-      this._deleteRecurringChoiceKey = keyTrim;
-      this._deleteRecurrenceError = "";
-      this._triggerHaptic("selection");
-      this._renderIfChanged(true);
-      return;
-    }
-    void this._deleteCalendarEvent(key);
-  }
-
-  async _deleteCalendarEvent(key, recurrenceRange = undefined) {
-    const keyTrim = String(key || "").trim();
-    const event = this._findEventByKey(keyTrim);
-    if (!this._canDeleteCalendarEvent(event)) {
-      this._deleteRecurringChoiceKey = "";
-      this._deleteRecurrenceError = "";
-      this._renderIfChanged(true);
-      return;
-    }
-    this._deleteRecurrenceError = "";
-    const entityId = String(event._entity || "").trim();
-    const uid = calendarEventUid(event);
-    const recurrenceId = calendarEventRecurrenceId(event);
-    const payload = {
-      type: "calendar/event/delete",
-      entity_id: entityId,
-      uid,
-    };
-    if (recurrenceId) {
-      payload.recurrence_id = recurrenceId;
-      payload.recurrence_range =
-        recurrenceRange === CALENDAR_DELETE_RECURRENCE_THIS_AND_FUTURE
-          ? CALENDAR_DELETE_RECURRENCE_THIS_AND_FUTURE
-          : CALENDAR_DELETE_RECURRENCE_THIS;
-    }
-    try {
-      await this._hass.callWS(payload);
-      if (!this.isConnected) {
-        return;
-      }
-      this._deleteRecurringChoiceKey = "";
-      this._deleteRecurrenceError = "";
-      this._events = this._events.filter(item => calendarEventKey(item) !== keyTrim);
-      if (this._expandedEventDetailKey === keyTrim) {
-        this._expandedEventDetailKey = "";
-      }
-      this._collapseExpandedIfOpenedOnlyForRecurrenceDelete();
-      this._renderIfChanged(true);
-      this._refreshEvents();
-    } catch (err) {
-      const fromWs = String(err?.message || "").trim();
-      this._deleteRecurrenceError = fromWs
-        ? this._uiText("deleteRecurrence.deleteFailedWithMessage", "Could not delete the event: {message}").replace(
-          "{message}",
-          fromWs,
-        )
-        : this._uiText(
-          "deleteRecurrence.deleteFailed",
-          "Could not delete the event. Please try again.",
-        );
-      if (typeof console !== "undefined" && typeof console.warn === "function") {
-        console.warn("Nodalia Calendar Card: calendar/event/delete failed", err);
-      }
-      this._renderIfChanged(true);
-    }
-  }
-
-  _collapseExpandedIfOpenedOnlyForRecurrenceDelete() {
-    if (!this._expandedOpenedForDeleteRecurrenceOnly) {
-      return;
-    }
-    this._expandedOpenedForDeleteRecurrenceOnly = false;
-    this._expandedOpen = false;
-    this._expandedOverlayEntrancePlayed = false;
-    this._expandedMonthDayKey = "";
-    this._expandedEventDetailKey = "";
-    this._nativeEventComposerOpen = false;
-    this._nativeComposerError = "";
-  }
-
-  _dismissDeleteRecurrenceDialog() {
-    if (!this._deleteRecurringChoiceKey) {
-      return;
-    }
-    this._deleteRecurringChoiceKey = "";
-    this._deleteRecurrenceError = "";
-    this._collapseExpandedIfOpenedOnlyForRecurrenceDelete();
-    this._triggerHaptic("light");
-    this._renderIfChanged(true);
-  }
-
-  _groupEvents(events) {
-    const locale = this._getLocale();
-    const groups = new Map();
-    events.forEach(event => {
-      const date = eventDate(event.start);
-      if (!date) {
-        return;
-      }
-      const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-      if (!groups.has(key)) {
-        groups.set(key, {
-          label: formatDateLabel(date, locale),
-          dayKey: key,
-          dayDate: new Date(date.getFullYear(), date.getMonth(), date.getDate()),
-          events: [],
-        });
-      }
-      groups.get(key).events.push(event);
-    });
-    return [...groups.values()];
-  }
-
-  _getWeatherEntityId() {
-    const id = String(this._config?.weather_entity || "").trim();
-    return id.startsWith("weather.") ? id : "";
-  }
-
-  _buildForecastDayMap(forecastRows) {
-    const map = new Map();
-    (Array.isArray(forecastRows) ? forecastRows : []).forEach(item => {
-      if (!item || typeof item !== "object") {
-        return;
-      }
-      const dayKey = forecastDayKey(item.datetime ?? item.date ?? item.day ?? item.time ?? item.timestamp ?? item.dt ?? "");
-      if (!dayKey) {
-        return;
-      }
-      const maxCandidate = pickFirstFiniteNumber(
-        item.temperature,
-        item.temperature_max,
-        item.temp_max,
-        item.temperatureHigh,
-        item.temperature_high,
-        item.tempHigh,
-        item.temp_high,
-        item.high,
-        item.high_temp,
-        item.maxtemp,
-        item.max_temperature,
-        item.max,
-        item.max_temp,
-        item.day_temp,
-        item.native_temperature,
-        item.native_temp,
-        item.native_temperature_max,
-        item.native_temp_max,
-        item.temperature_2m_max,
-        item.apparent_temperature_max,
-      );
-      const minCandidate = pickFirstFiniteNumber(
-        item.templow,
-        item.temperature_low,
-        item.temp_low,
-        item.temperatureLow,
-        item.temperatureMin,
-        item.temperature_min,
-        item.tempMin,
-        item.temp_min,
-        item.low,
-        item.low_temp,
-        item.mintemp,
-        item.min_temperature,
-        item.min,
-        item.min_temp,
-        item.night_temp,
-        item.native_templow,
-        item.native_temp_low,
-        item.native_temperature_low,
-        item.native_temperature_min,
-        item.native_temp_min,
-        item.temperature_2m_min,
-        item.apparent_temperature_min,
-      );
-      const condition = String(
-        item.condition ??
-          item.weather ??
-          item.main ??
-          item.state ??
-          item.symbol ??
-          "",
-      ).trim();
-      const existing = map.get(dayKey) || { condition: "", tempMax: null, tempMin: null };
-      const temperatureCandidate = pickFirstFiniteNumber(item.temperature, item.native_temperature, item.native_temp);
-      const canUsePointTemperatureAsLow =
-        item._nodaliaForecastType === "hourly" || item._nodaliaForecastType === "twice_daily";
-      const numericForHigh = Number.isFinite(maxCandidate) ? maxCandidate : temperatureCandidate;
-      const numericForLow = Number.isFinite(minCandidate)
-        ? minCandidate
-        : (canUsePointTemperatureAsLow ? temperatureCandidate : null);
-      const nextMax = Number.isFinite(numericForHigh)
-        ? (Number.isFinite(existing.tempMax) ? Math.max(existing.tempMax, numericForHigh) : numericForHigh)
-        : existing.tempMax;
-      const nextMin = Number.isFinite(numericForLow)
-        ? (Number.isFinite(existing.tempMin) ? Math.min(existing.tempMin, numericForLow) : numericForLow)
-        : existing.tempMin;
-      map.set(dayKey, {
-        condition: existing.condition || condition,
-        tempMax: nextMax,
-        tempMin: nextMin,
-      });
-    });
-    return map;
-  }
-
-  _tagForecastRows(rows, forecastType = "") {
-    const normalized = this._normalizeForecastRows(rows);
-    const type = String(forecastType || "").trim();
-    if (!type) {
-      return normalized;
-    }
-    return normalized.map(item => (
-      item && typeof item === "object" ? { ...item, _nodaliaForecastType: type } : item
-    ));
-  }
-
-  _scoreForecastMap(forecastMap) {
-    if (!(forecastMap instanceof Map) || !forecastMap.size) {
-      return 0;
-    }
-    const now = new Date();
-    const todayMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    let currentOrFutureDays = 0;
-    let minDays = 0;
-    let maxDays = 0;
-    let conditionDays = 0;
-    forecastMap.forEach((item, key) => {
-      const parsed = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(String(key));
-      if (parsed) {
-        const y = Number(parsed[1]);
-        const m = Number(parsed[2]);
-        const d = Number(parsed[3]);
-        const dayMs = new Date(y, m, d).getTime();
-        if (Number.isFinite(dayMs) && dayMs >= todayMs) {
-          currentOrFutureDays += 1;
-        }
-      }
-      if (Number.isFinite(item?.tempMin)) {
-        minDays += 1;
-      }
-      if (Number.isFinite(item?.tempMax)) {
-        maxDays += 1;
-      }
-      if (String(item?.condition || "").trim()) {
-        conditionDays += 1;
-      }
-    });
-    return (currentOrFutureDays * 10000) + (forecastMap.size * 1000) + (minDays * 100) + (maxDays * 20) + conditionDays;
-  }
-
-  _isRicherForecastMap(candidateMap, currentMap) {
-    const candidateScore = this._scoreForecastMap(candidateMap);
-    const currentScore = this._scoreForecastMap(currentMap);
-    if (!candidateScore) {
-      return false;
-    }
-    return candidateScore >= currentScore;
-  }
-
-  _selectBestForecastRows(candidateSets) {
-    let bestRows = [];
-    let bestMap = new Map();
-    const normalizedSets = (Array.isArray(candidateSets) ? candidateSets : [])
-      .map(rows => this._normalizeForecastRows(rows))
-      .filter(rows => rows.length);
-    const combinedRows = normalizedSets.flat();
-    const setsToCompare = combinedRows.length ? [...normalizedSets, combinedRows] : normalizedSets;
-    setsToCompare.forEach(rows => {
-      const candidateMap = this._buildForecastDayMap(rows);
-      if (this._isRicherForecastMap(candidateMap, bestMap)) {
-        bestRows = rows;
-        bestMap = candidateMap;
-      }
-    });
-    return bestRows;
-  }
-
-  _normalizeForecastRows(raw) {
-    if (Array.isArray(raw)) {
-      return raw.flatMap(item => this._normalizeForecastRows(item));
-    }
-    if (!raw || typeof raw !== "object") {
-      return [];
-    }
-    const dateSeries = raw.time ?? raw.datetime ?? raw.date ?? raw.dates;
-    if (Array.isArray(dateSeries)) {
-      return dateSeries
-        .map((dateValue, index) => {
-          const row = { date: dateValue };
-          Object.entries(raw).forEach(([key, value]) => {
-            if (Array.isArray(value) && index < value.length) {
-              row[key] = value[index];
-            }
-          });
-          return row;
-        })
-        .filter(item => item && typeof item === "object");
-    }
-    if (Array.isArray(raw.forecast)) {
-      return raw.forecast.flatMap(item => this._normalizeForecastRows(item));
-    }
-    if (Array.isArray(raw.daily)) {
-      return raw.daily.flatMap(item => this._normalizeForecastRows(item));
-    }
-    if (Array.isArray(raw.hourly)) {
-      return raw.hourly.flatMap(item => this._normalizeForecastRows(item));
-    }
-    const objectEntries = Object.entries(raw).filter(([, value]) => value && typeof value === "object");
-    const nestedArrays = objectEntries.flatMap(([key, value]) =>
-      this._normalizeForecastRows(withForecastDateFromKey(key, value)).map(item => withForecastDateFromKey(key, item)),
-    );
-    if (nestedArrays.length) {
-      return nestedArrays;
-    }
-    const looksLikeForecastPoint =
-      "datetime" in raw ||
-      "date" in raw ||
-      "day" in raw ||
-      "time" in raw ||
-      "timestamp" in raw ||
-      "temperature" in raw ||
-      "temperature_2m_max" in raw ||
-      "templow" in raw ||
-      "temperatureLow" in raw ||
-      "temperature_2m_min" in raw ||
-      "condition" in raw ||
-      "weather" in raw;
-    return looksLikeForecastPoint ? [raw] : [];
-  }
-
-  _applyWeatherForecastRows(forecastRows, { allowFallback = true, preserveRicherExisting = false } = {}) {
-    const forecastMap = this._buildForecastDayMap(forecastRows);
-    if (!forecastMap.size && allowFallback) {
-      const entityId = this._getWeatherEntityId();
-      const stateObj = entityId ? this._hass?.states?.[entityId] : null;
-      if (stateObj) {
-        const now = new Date();
-        const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
-        const currentTemp = Number(
-          stateObj.attributes?.temperature ?? stateObj.attributes?.native_temperature,
-        );
-        const lowTemp = Number(
-          stateObj.attributes?.templow ??
-            stateObj.attributes?.temperature_low ??
-            stateObj.attributes?.native_templow,
-        );
-        const condition = String(
-          stateObj.attributes?.condition ?? stateObj.state ?? "",
-        ).trim();
-        if (condition || Number.isFinite(currentTemp) || Number.isFinite(lowTemp)) {
-          forecastMap.set(todayKey, {
-            condition,
-            tempMax: Number.isFinite(currentTemp) ? currentTemp : null,
-            tempMin: Number.isFinite(lowTemp) ? lowTemp : null,
-          });
-        }
-      }
-    }
-    if (
-      preserveRicherExisting &&
-      this._weatherForecastByDay instanceof Map &&
-      this._weatherForecastByDay.size &&
-      !this._isRicherForecastMap(forecastMap, this._weatherForecastByDay)
-    ) {
-      return this._weatherForecastByDay;
-    }
-    this._weatherForecastByDay = forecastMap;
-    return forecastMap;
-  }
-
-  _unsubscribeWeatherForecast() {
-    if (!this._weatherForecastSubscription) {
-      this._weatherForecastSubscriptionKey = "";
-      return;
-    }
-    this._weatherForecastSubscription
-      .then(unsubscribe => {
-        if (typeof unsubscribe === "function") {
-          unsubscribe();
-        }
-      })
-      .catch(() => {});
-    this._weatherForecastSubscription = null;
-    this._weatherForecastSubscriptionKey = "";
-  }
-
-  _ensureWeatherForecastSubscription() {
-    const entityId = this._getWeatherEntityId();
-    const stateObj = entityId ? this._hass?.states?.[entityId] : null;
-    if (!this.isConnected || !this._hass || !entityId || !stateObj) {
-      this._unsubscribeWeatherForecast();
-      return;
-    }
-    const subscribeMessage = this._hass.connection?.subscribeMessage;
-    if (typeof subscribeMessage !== "function") {
-      this._unsubscribeWeatherForecast();
-      return;
-    }
-    const forecastType = supportedWeatherForecastTypes(stateObj)[0] || "daily";
-    const subscriptionKey = `${entityId}:${forecastType}`;
-    if (subscriptionKey === this._weatherForecastSubscriptionKey && this._weatherForecastSubscription) {
-      return;
-    }
-    this._unsubscribeWeatherForecast();
-    this._weatherForecastSubscriptionKey = subscriptionKey;
-    this._weatherForecastSubscription = subscribeMessage(event => {
-      if (!this.isConnected) {
-        return;
-      }
-      this._weatherForecastEvents = {
-        ...this._weatherForecastEvents,
-        [forecastType]: event,
-      };
-      const rows = this._tagForecastRows(event?.forecast ?? event, forecastType);
-      const forecastMap = this._applyWeatherForecastRows(rows, {
-        allowFallback: rows.length === 0,
-        preserveRicherExisting: true,
-      });
-      if (forecastMap.size) {
-        this._lastRenderSignature = "";
-        this._renderIfChanged(true);
-      }
-    }, {
-      type: "weather/subscribe_forecast",
-      entity_id: entityId,
-      forecast_type: forecastType,
-    }).catch(() => {
-      this._weatherForecastSubscription = null;
-      this._weatherForecastSubscriptionKey = "";
-    });
-  }
-
-  _extractForecastRowsFromResponse(response, entityId) {
-    const candidates = [
-      response?.[entityId],
-      response?.response?.[entityId],
-      response?.service_response?.[entityId],
-      response?.result?.[entityId],
-      response,
-      response?.response,
-      response?.service_response,
-      response?.result,
-    ];
-    for (const candidate of candidates) {
-      const normalized = this._normalizeForecastRows(candidate);
-      if (normalized.length) {
-        return normalized;
-      }
-    }
-    return [];
-  }
-
-  async _fetchForecastViaWebSocket(entityId, forecastType) {
-    if (typeof this._hass?.callWS !== "function") {
-      return [];
-    }
-    const response = await this._hass.callWS({
-      type: "weather/get_forecasts",
-      entity_ids: [entityId],
-      forecast_type: forecastType,
-    });
-    return this._tagForecastRows(this._extractForecastRowsFromResponse(response, entityId), forecastType);
-  }
-
-  async _fetchForecastViaService(entityId, forecastType) {
-    if (typeof this._hass?.callService !== "function") {
-      return [];
-    }
-    const response = await this._hass.callService(
-      "weather",
-      "get_forecasts",
-      { type: forecastType },
-      { entity_id: entityId },
-      false,
-      true,
-    );
-    return this._tagForecastRows(this._extractForecastRowsFromResponse(response, entityId), forecastType);
-  }
-
-  _getCachedForecastRows(forecastTypes) {
-    return (Array.isArray(forecastTypes) ? forecastTypes : [])
-      .flatMap(forecastType => this._tagForecastRows(this._weatherForecastEvents?.[forecastType]?.forecast, forecastType));
-  }
-
-  async _refreshWeatherForecastByDay(refreshRunId = this._refreshRunId) {
-    const entityId = this._getWeatherEntityId();
-    if (!entityId || !this._hass?.states?.[entityId]) {
-      this._weatherForecastByDay = new Map();
-      return;
-    }
-    if (refreshRunId !== this._refreshRunId) {
-      return;
-    }
-    const stateObj = this._hass.states[entityId];
-    const forecastTypes = supportedWeatherForecastTypes(stateObj);
-    const forecastCandidates = [];
-    const addForecastCandidate = rows => {
-      const normalized = this._normalizeForecastRows(rows);
-      if (normalized.length) {
-        forecastCandidates.push(normalized);
-      }
-    };
-    addForecastCandidate(this._getCachedForecastRows(forecastTypes));
-    for (const forecastType of forecastTypes) {
-      if (refreshRunId !== this._refreshRunId || !this.isConnected) {
-        return;
-      }
-      try {
-        addForecastCandidate(await this._fetchForecastViaWebSocket(entityId, forecastType));
-      } catch (_error) {
-        // fallback below
-      }
-      if (refreshRunId !== this._refreshRunId || !this.isConnected) {
-        return;
-      }
-      try {
-        addForecastCandidate(await this._fetchForecastViaService(entityId, forecastType));
-      } catch (_error) {
-        // fallback below
-      }
-    }
-    addForecastCandidate(this._tagForecastRows(stateObj.attributes?.forecast, "daily"));
-    addForecastCandidate(this._tagForecastRows(stateObj.attributes?.forecast_daily, "daily"));
-    addForecastCandidate(this._tagForecastRows(stateObj.attributes?.daily_forecast, "daily"));
-    if (typeof this._hass?.callApi === "function") {
-      try {
-        const restDaily = await this._hass.callApi(
-          "GET",
-          `weather/forecast/${encodeURIComponent(entityId)}?type=daily`,
-        );
-        if (refreshRunId !== this._refreshRunId || !this.isConnected) {
+      _requestDeleteCalendarEvent(key) {
+        const event = this._findEventByKey(key);
+        if (!this._canDeleteCalendarEvent(event)) {
           return;
         }
-        addForecastCandidate(this._tagForecastRows(restDaily, "daily"));
-      } catch (_error) {
-        // Keep silent, not all HA versions expose this endpoint.
+        if (calendarEventRecurrenceId(event)) {
+          const keyTrim = String(key || "").trim();
+          if (!this._expandedOpen) {
+            this._expandedOpen = true;
+            this._nativeComposerError = "";
+            this._deleteRecurrenceError = "";
+            this._nativeEventComposerOpen = false;
+            this._expandedEventDetailKey = keyTrim;
+            const focusDate = eventDate(event.start);
+            const tr = this._config?.time_range || DEFAULT_CONFIG2.time_range;
+            if (tr === "1m" && focusDate) {
+              this._expandedMonthDayKey = `${focusDate.getFullYear()}-${focusDate.getMonth()}-${focusDate.getDate()}`;
+            } else {
+              this._expandedMonthDayKey = "";
+            }
+            this._expandedOverlayEntrancePlayed = true;
+            this._expandedOpenedForDeleteRecurrenceOnly = true;
+          }
+          this._deleteRecurringChoiceKey = keyTrim;
+          this._deleteRecurrenceError = "";
+          this._triggerHaptic("selection");
+          this._renderIfChanged(true);
+          return;
+        }
+        void this._deleteCalendarEvent(key);
       }
-    }
-    const forecastRows = this._selectBestForecastRows(forecastCandidates);
-    if (refreshRunId !== this._refreshRunId) {
-      return;
-    }
-    this._applyWeatherForecastRows(forecastRows);
-  }
-
-  _buildWeatherForecastByDay() {
-    return this._weatherForecastByDay instanceof Map ? this._weatherForecastByDay : new Map();
-  }
-
-  _getWeatherForDay(dayDate, weatherByDay) {
-    if (!(weatherByDay instanceof Map) || !(dayDate instanceof Date) || Number.isNaN(dayDate.getTime())) {
-      return null;
-    }
-    const y = dayDate.getFullYear();
-    const m = dayDate.getMonth();
-    const d = dayDate.getDate();
-    const today = new Date();
-    const todayTs = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-    const targetTs = new Date(y, m, d).getTime();
-    if (targetTs < todayTs) {
-      return null;
-    }
-    const key = forecastDayKey(new Date(y, m, d));
-    if (weatherByDay.has(key)) {
-      return weatherByDay.get(key);
-    }
-    // Last-resort fallback: nearest forecast day (within +/- 1 day).
-    let nearest = null;
-    let nearestDiff = Number.POSITIVE_INFINITY;
-    for (const [k, value] of weatherByDay.entries()) {
-      const rowKey = forecastDayKey(k);
-      if (!rowKey) {
-        continue;
+      async _deleteCalendarEvent(key, recurrenceRange = void 0) {
+        const keyTrim = String(key || "").trim();
+        const event = this._findEventByKey(keyTrim);
+        if (!this._canDeleteCalendarEvent(event)) {
+          this._deleteRecurringChoiceKey = "";
+          this._deleteRecurrenceError = "";
+          this._renderIfChanged(true);
+          return;
+        }
+        this._deleteRecurrenceError = "";
+        const entityId = String(event._entity || "").trim();
+        const uid = calendarEventUid(event);
+        const recurrenceId = calendarEventRecurrenceId(event);
+        const payload = {
+          type: "calendar/event/delete",
+          entity_id: entityId,
+          uid
+        };
+        if (recurrenceId) {
+          payload.recurrence_id = recurrenceId;
+          payload.recurrence_range = recurrenceRange === CALENDAR_DELETE_RECURRENCE_THIS_AND_FUTURE ? CALENDAR_DELETE_RECURRENCE_THIS_AND_FUTURE : CALENDAR_DELETE_RECURRENCE_THIS;
+        }
+        try {
+          await this._hass.callWS(payload);
+          if (!this.isConnected) {
+            return;
+          }
+          this._deleteRecurringChoiceKey = "";
+          this._deleteRecurrenceError = "";
+          this._events = this._events.filter((item) => calendarEventKey(item) !== keyTrim);
+          if (this._expandedEventDetailKey === keyTrim) {
+            this._expandedEventDetailKey = "";
+          }
+          this._collapseExpandedIfOpenedOnlyForRecurrenceDelete();
+          this._renderIfChanged(true);
+          this._refreshEvents();
+        } catch (err) {
+          const fromWs = String(err?.message || "").trim();
+          this._deleteRecurrenceError = fromWs ? this._uiText("deleteRecurrence.deleteFailedWithMessage", "Could not delete the event: {message}").replace(
+            "{message}",
+            fromWs
+          ) : this._uiText(
+            "deleteRecurrence.deleteFailed",
+            "Could not delete the event. Please try again."
+          );
+          if (typeof console !== "undefined" && typeof console.warn === "function") {
+            console.warn("Nodalia Calendar Card: calendar/event/delete failed", err);
+          }
+          this._renderIfChanged(true);
+        }
       }
-      const [ky, km, kd] = rowKey.split("-").map(Number);
-      const rowMonth = km - 1;
-      if (ky !== y || rowMonth !== m) {
-        continue;
+      _collapseExpandedIfOpenedOnlyForRecurrenceDelete() {
+        if (!this._expandedOpenedForDeleteRecurrenceOnly) {
+          return;
+        }
+        this._expandedOpenedForDeleteRecurrenceOnly = false;
+        this._expandedOpen = false;
+        this._expandedOverlayEntrancePlayed = false;
+        this._expandedMonthDayKey = "";
+        this._expandedEventDetailKey = "";
+        this._nativeEventComposerOpen = false;
+        this._nativeComposerError = "";
       }
-      const rowTs = new Date(ky, rowMonth, kd).getTime();
-      const diff = Math.abs(rowTs - targetTs);
-      if (diff < nearestDiff) {
-        nearestDiff = diff;
-        nearest = value;
+      _dismissDeleteRecurrenceDialog() {
+        if (!this._deleteRecurringChoiceKey) {
+          return;
+        }
+        this._deleteRecurringChoiceKey = "";
+        this._deleteRecurrenceError = "";
+        this._collapseExpandedIfOpenedOnlyForRecurrenceDelete();
+        this._triggerHaptic("light");
+        this._renderIfChanged(true);
       }
-    }
-    return nearestDiff <= 86400000 ? nearest : null;
-  }
-
-  _getWeatherForecastSignature() {
-    const entityId = this._getWeatherEntityId();
-    if (!entityId || !this._hass?.states?.[entityId]) {
-      return "";
-    }
-    const stateObj = this._hass.states[entityId];
-    let hash = 2166136261;
-    const mix = value => {
-      const text = value === null || value === undefined ? "" : String(value);
-      for (let i = 0; i < text.length; i += 1) {
-        hash ^= text.charCodeAt(i);
-        hash = Math.imul(hash, 16777619) >>> 0;
+      _groupEvents(events) {
+        const locale = this._getLocale();
+        const groups = /* @__PURE__ */ new Map();
+        events.forEach((event) => {
+          const date = eventDate(event.start);
+          if (!date) {
+            return;
+          }
+          const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+          if (!groups.has(key)) {
+            groups.set(key, {
+              label: formatDateLabel(date, locale),
+              dayKey: key,
+              dayDate: new Date(date.getFullYear(), date.getMonth(), date.getDate()),
+              events: []
+            });
+          }
+          groups.get(key).events.push(event);
+        });
+        return [...groups.values()];
       }
-      hash = Math.imul(hash ^ 0x9e3779b9, 16777619) >>> 0;
-    };
-    mix(entityId);
-    mix(String(stateObj.state || ""));
-    [...this._buildWeatherForecastByDay().entries()]
-      .sort((left, right) => String(left[0]).localeCompare(String(right[0])))
-      .forEach(([key, item]) => {
-        mix(key);
-        mix(item?.condition || "");
-        mix(item?.tempMax ?? "");
-        mix(item?.tempMin ?? "");
-      });
-    return `w:${hash.toString(36)}`;
-  }
-
-  _openNativeEventComposer() {
-    this._nativeComposerError = "";
-    if (!this._nativeComposerCalendarValue) {
-      this._nativeComposerCalendarValue = this._getAvailableNativeCalendarIds()[0] || "";
-    }
-    this._nativeEventComposerOpen = true;
-    this._renderIfChanged(true);
-  }
-
-  _closeNativeEventComposer() {
-    if (!this._nativeEventComposerOpen) {
-      return;
-    }
-    this._nativeEventComposerOpen = false;
-    this._nativeComposerError = "";
-    this._renderIfChanged(true);
-  }
-
-  _setComposerError(kind, message) {
-    const text = String(message || "").trim();
-    const isNative = kind === "native";
-    if (isNative) {
-      this._nativeComposerError = text;
-    }
-    const selector = isNative ? "[data-native-error]" : "";
-    if (!selector) {
-      return;
-    }
-    const node = this.shadowRoot?.querySelector(selector);
-    if (!(node instanceof HTMLElement)) {
-      return;
-    }
-    node.hidden = !text;
-    const label = node.querySelector("[data-error-text]");
-    if (label) {
-      label.textContent = text;
-    } else {
-      node.textContent = text;
-    }
-  }
-
-  _renderComposerError(kind) {
-    const isNative = kind === "native";
-    const message = isNative ? this._nativeComposerError : "";
-    const marker = isNative ? "data-native-error" : "";
-    return `
+      _getWeatherEntityId() {
+        const id = String(this._config?.weather_entity || "").trim();
+        return id.startsWith("weather.") ? id : "";
+      }
+      _buildForecastDayMap(forecastRows) {
+        const map = /* @__PURE__ */ new Map();
+        (Array.isArray(forecastRows) ? forecastRows : []).forEach((item) => {
+          if (!item || typeof item !== "object") {
+            return;
+          }
+          const dayKey = forecastDayKey(item.datetime ?? item.date ?? item.day ?? item.time ?? item.timestamp ?? item.dt ?? "");
+          if (!dayKey) {
+            return;
+          }
+          const maxCandidate = pickFirstFiniteNumber(
+            item.temperature,
+            item.temperature_max,
+            item.temp_max,
+            item.temperatureHigh,
+            item.temperature_high,
+            item.tempHigh,
+            item.temp_high,
+            item.high,
+            item.high_temp,
+            item.maxtemp,
+            item.max_temperature,
+            item.max,
+            item.max_temp,
+            item.day_temp,
+            item.native_temperature,
+            item.native_temp,
+            item.native_temperature_max,
+            item.native_temp_max,
+            item.temperature_2m_max,
+            item.apparent_temperature_max
+          );
+          const minCandidate = pickFirstFiniteNumber(
+            item.templow,
+            item.temperature_low,
+            item.temp_low,
+            item.temperatureLow,
+            item.temperatureMin,
+            item.temperature_min,
+            item.tempMin,
+            item.temp_min,
+            item.low,
+            item.low_temp,
+            item.mintemp,
+            item.min_temperature,
+            item.min,
+            item.min_temp,
+            item.night_temp,
+            item.native_templow,
+            item.native_temp_low,
+            item.native_temperature_low,
+            item.native_temperature_min,
+            item.native_temp_min,
+            item.temperature_2m_min,
+            item.apparent_temperature_min
+          );
+          const condition = String(
+            item.condition ?? item.weather ?? item.main ?? item.state ?? item.symbol ?? ""
+          ).trim();
+          const existing = map.get(dayKey) || { condition: "", tempMax: null, tempMin: null };
+          const temperatureCandidate = pickFirstFiniteNumber(item.temperature, item.native_temperature, item.native_temp);
+          const canUsePointTemperatureAsLow = item._nodaliaForecastType === "hourly" || item._nodaliaForecastType === "twice_daily";
+          const numericForHigh = Number.isFinite(maxCandidate) ? maxCandidate : temperatureCandidate;
+          const numericForLow = Number.isFinite(minCandidate) ? minCandidate : canUsePointTemperatureAsLow ? temperatureCandidate : null;
+          const nextMax = Number.isFinite(numericForHigh) ? Number.isFinite(existing.tempMax) ? Math.max(existing.tempMax, numericForHigh) : numericForHigh : existing.tempMax;
+          const nextMin = Number.isFinite(numericForLow) ? Number.isFinite(existing.tempMin) ? Math.min(existing.tempMin, numericForLow) : numericForLow : existing.tempMin;
+          map.set(dayKey, {
+            condition: existing.condition || condition,
+            tempMax: nextMax,
+            tempMin: nextMin
+          });
+        });
+        return map;
+      }
+      _tagForecastRows(rows, forecastType = "") {
+        const normalized = this._normalizeForecastRows(rows);
+        const type = String(forecastType || "").trim();
+        if (!type) {
+          return normalized;
+        }
+        return normalized.map((item) => item && typeof item === "object" ? { ...item, _nodaliaForecastType: type } : item);
+      }
+      _scoreForecastMap(forecastMap) {
+        if (!(forecastMap instanceof Map) || !forecastMap.size) {
+          return 0;
+        }
+        const now = /* @__PURE__ */ new Date();
+        const todayMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        let currentOrFutureDays = 0;
+        let minDays = 0;
+        let maxDays = 0;
+        let conditionDays = 0;
+        forecastMap.forEach((item, key) => {
+          const parsed = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(String(key));
+          if (parsed) {
+            const y = Number(parsed[1]);
+            const m = Number(parsed[2]);
+            const d = Number(parsed[3]);
+            const dayMs = new Date(y, m, d).getTime();
+            if (Number.isFinite(dayMs) && dayMs >= todayMs) {
+              currentOrFutureDays += 1;
+            }
+          }
+          if (Number.isFinite(item?.tempMin)) {
+            minDays += 1;
+          }
+          if (Number.isFinite(item?.tempMax)) {
+            maxDays += 1;
+          }
+          if (String(item?.condition || "").trim()) {
+            conditionDays += 1;
+          }
+        });
+        return currentOrFutureDays * 1e4 + forecastMap.size * 1e3 + minDays * 100 + maxDays * 20 + conditionDays;
+      }
+      _isRicherForecastMap(candidateMap, currentMap) {
+        const candidateScore = this._scoreForecastMap(candidateMap);
+        const currentScore = this._scoreForecastMap(currentMap);
+        if (!candidateScore) {
+          return false;
+        }
+        return candidateScore >= currentScore;
+      }
+      _selectBestForecastRows(candidateSets) {
+        let bestRows = [];
+        let bestMap = /* @__PURE__ */ new Map();
+        const normalizedSets = (Array.isArray(candidateSets) ? candidateSets : []).map((rows) => this._normalizeForecastRows(rows)).filter((rows) => rows.length);
+        const combinedRows = normalizedSets.flat();
+        const setsToCompare = combinedRows.length ? [...normalizedSets, combinedRows] : normalizedSets;
+        setsToCompare.forEach((rows) => {
+          const candidateMap = this._buildForecastDayMap(rows);
+          if (this._isRicherForecastMap(candidateMap, bestMap)) {
+            bestRows = rows;
+            bestMap = candidateMap;
+          }
+        });
+        return bestRows;
+      }
+      _normalizeForecastRows(raw) {
+        if (Array.isArray(raw)) {
+          return raw.flatMap((item) => this._normalizeForecastRows(item));
+        }
+        if (!raw || typeof raw !== "object") {
+          return [];
+        }
+        const dateSeries = raw.time ?? raw.datetime ?? raw.date ?? raw.dates;
+        if (Array.isArray(dateSeries)) {
+          return dateSeries.map((dateValue, index) => {
+            const row = { date: dateValue };
+            Object.entries(raw).forEach(([key, value]) => {
+              if (Array.isArray(value) && index < value.length) {
+                row[key] = value[index];
+              }
+            });
+            return row;
+          }).filter((item) => item && typeof item === "object");
+        }
+        if (Array.isArray(raw.forecast)) {
+          return raw.forecast.flatMap((item) => this._normalizeForecastRows(item));
+        }
+        if (Array.isArray(raw.daily)) {
+          return raw.daily.flatMap((item) => this._normalizeForecastRows(item));
+        }
+        if (Array.isArray(raw.hourly)) {
+          return raw.hourly.flatMap((item) => this._normalizeForecastRows(item));
+        }
+        const objectEntries = Object.entries(raw).filter(([, value]) => value && typeof value === "object");
+        const nestedArrays = objectEntries.flatMap(
+          ([key, value]) => this._normalizeForecastRows(withForecastDateFromKey(key, value)).map((item) => withForecastDateFromKey(key, item))
+        );
+        if (nestedArrays.length) {
+          return nestedArrays;
+        }
+        const looksLikeForecastPoint = "datetime" in raw || "date" in raw || "day" in raw || "time" in raw || "timestamp" in raw || "temperature" in raw || "temperature_2m_max" in raw || "templow" in raw || "temperatureLow" in raw || "temperature_2m_min" in raw || "condition" in raw || "weather" in raw;
+        return looksLikeForecastPoint ? [raw] : [];
+      }
+      _applyWeatherForecastRows(forecastRows, { allowFallback = true, preserveRicherExisting = false } = {}) {
+        const forecastMap = this._buildForecastDayMap(forecastRows);
+        if (!forecastMap.size && allowFallback) {
+          const entityId = this._getWeatherEntityId();
+          const stateObj = entityId ? this._hass?.states?.[entityId] : null;
+          if (stateObj) {
+            const now = /* @__PURE__ */ new Date();
+            const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+            const currentTemp = Number(
+              stateObj.attributes?.temperature ?? stateObj.attributes?.native_temperature
+            );
+            const lowTemp = Number(
+              stateObj.attributes?.templow ?? stateObj.attributes?.temperature_low ?? stateObj.attributes?.native_templow
+            );
+            const condition = String(
+              stateObj.attributes?.condition ?? stateObj.state ?? ""
+            ).trim();
+            if (condition || Number.isFinite(currentTemp) || Number.isFinite(lowTemp)) {
+              forecastMap.set(todayKey, {
+                condition,
+                tempMax: Number.isFinite(currentTemp) ? currentTemp : null,
+                tempMin: Number.isFinite(lowTemp) ? lowTemp : null
+              });
+            }
+          }
+        }
+        if (preserveRicherExisting && this._weatherForecastByDay instanceof Map && this._weatherForecastByDay.size && !this._isRicherForecastMap(forecastMap, this._weatherForecastByDay)) {
+          return this._weatherForecastByDay;
+        }
+        this._weatherForecastByDay = forecastMap;
+        return forecastMap;
+      }
+      _unsubscribeWeatherForecast() {
+        if (!this._weatherForecastSubscription) {
+          this._weatherForecastSubscriptionKey = "";
+          return;
+        }
+        this._weatherForecastSubscription.then((unsubscribe) => {
+          if (typeof unsubscribe === "function") {
+            unsubscribe();
+          }
+        }).catch(() => {
+        });
+        this._weatherForecastSubscription = null;
+        this._weatherForecastSubscriptionKey = "";
+      }
+      _ensureWeatherForecastSubscription() {
+        const entityId = this._getWeatherEntityId();
+        const stateObj = entityId ? this._hass?.states?.[entityId] : null;
+        if (!this.isConnected || !this._hass || !entityId || !stateObj) {
+          this._unsubscribeWeatherForecast();
+          return;
+        }
+        const subscribeMessage = this._hass.connection?.subscribeMessage;
+        if (typeof subscribeMessage !== "function") {
+          this._unsubscribeWeatherForecast();
+          return;
+        }
+        const forecastType = supportedWeatherForecastTypes(stateObj)[0] || "daily";
+        const subscriptionKey = `${entityId}:${forecastType}`;
+        if (subscriptionKey === this._weatherForecastSubscriptionKey && this._weatherForecastSubscription) {
+          return;
+        }
+        this._unsubscribeWeatherForecast();
+        this._weatherForecastSubscriptionKey = subscriptionKey;
+        this._weatherForecastSubscription = subscribeMessage((event) => {
+          if (!this.isConnected) {
+            return;
+          }
+          this._weatherForecastEvents = {
+            ...this._weatherForecastEvents,
+            [forecastType]: event
+          };
+          const rows = this._tagForecastRows(event?.forecast ?? event, forecastType);
+          const forecastMap = this._applyWeatherForecastRows(rows, {
+            allowFallback: rows.length === 0,
+            preserveRicherExisting: true
+          });
+          if (forecastMap.size) {
+            this._lastRenderSignature = "";
+            this._renderIfChanged(true);
+          }
+        }, {
+          type: "weather/subscribe_forecast",
+          entity_id: entityId,
+          forecast_type: forecastType
+        }).catch(() => {
+          this._weatherForecastSubscription = null;
+          this._weatherForecastSubscriptionKey = "";
+        });
+      }
+      _extractForecastRowsFromResponse(response, entityId) {
+        const candidates = [
+          response?.[entityId],
+          response?.response?.[entityId],
+          response?.service_response?.[entityId],
+          response?.result?.[entityId],
+          response,
+          response?.response,
+          response?.service_response,
+          response?.result
+        ];
+        for (const candidate of candidates) {
+          const normalized = this._normalizeForecastRows(candidate);
+          if (normalized.length) {
+            return normalized;
+          }
+        }
+        return [];
+      }
+      async _fetchForecastViaWebSocket(entityId, forecastType) {
+        if (typeof this._hass?.callWS !== "function") {
+          return [];
+        }
+        const response = await this._hass.callWS({
+          type: "weather/get_forecasts",
+          entity_ids: [entityId],
+          forecast_type: forecastType
+        });
+        return this._tagForecastRows(this._extractForecastRowsFromResponse(response, entityId), forecastType);
+      }
+      async _fetchForecastViaService(entityId, forecastType) {
+        if (typeof this._hass?.callService !== "function") {
+          return [];
+        }
+        const response = await this._hass.callService(
+          "weather",
+          "get_forecasts",
+          { type: forecastType },
+          { entity_id: entityId },
+          false,
+          true
+        );
+        return this._tagForecastRows(this._extractForecastRowsFromResponse(response, entityId), forecastType);
+      }
+      _getCachedForecastRows(forecastTypes) {
+        return (Array.isArray(forecastTypes) ? forecastTypes : []).flatMap((forecastType) => this._tagForecastRows(this._weatherForecastEvents?.[forecastType]?.forecast, forecastType));
+      }
+      async _refreshWeatherForecastByDay(refreshRunId = this._refreshRunId) {
+        const entityId = this._getWeatherEntityId();
+        if (!entityId || !this._hass?.states?.[entityId]) {
+          this._weatherForecastByDay = /* @__PURE__ */ new Map();
+          return;
+        }
+        if (refreshRunId !== this._refreshRunId) {
+          return;
+        }
+        const stateObj = this._hass.states[entityId];
+        const forecastTypes = supportedWeatherForecastTypes(stateObj);
+        const forecastCandidates = [];
+        const addForecastCandidate = (rows) => {
+          const normalized = this._normalizeForecastRows(rows);
+          if (normalized.length) {
+            forecastCandidates.push(normalized);
+          }
+        };
+        addForecastCandidate(this._getCachedForecastRows(forecastTypes));
+        for (const forecastType of forecastTypes) {
+          if (refreshRunId !== this._refreshRunId || !this.isConnected) {
+            return;
+          }
+          try {
+            addForecastCandidate(await this._fetchForecastViaWebSocket(entityId, forecastType));
+          } catch (_error) {
+          }
+          if (refreshRunId !== this._refreshRunId || !this.isConnected) {
+            return;
+          }
+          try {
+            addForecastCandidate(await this._fetchForecastViaService(entityId, forecastType));
+          } catch (_error) {
+          }
+        }
+        addForecastCandidate(this._tagForecastRows(stateObj.attributes?.forecast, "daily"));
+        addForecastCandidate(this._tagForecastRows(stateObj.attributes?.forecast_daily, "daily"));
+        addForecastCandidate(this._tagForecastRows(stateObj.attributes?.daily_forecast, "daily"));
+        if (typeof this._hass?.callApi === "function") {
+          try {
+            const restDaily = await this._hass.callApi(
+              "GET",
+              `weather/forecast/${encodeURIComponent(entityId)}?type=daily`
+            );
+            if (refreshRunId !== this._refreshRunId || !this.isConnected) {
+              return;
+            }
+            addForecastCandidate(this._tagForecastRows(restDaily, "daily"));
+          } catch (_error) {
+          }
+        }
+        const forecastRows = this._selectBestForecastRows(forecastCandidates);
+        if (refreshRunId !== this._refreshRunId) {
+          return;
+        }
+        this._applyWeatherForecastRows(forecastRows);
+      }
+      _buildWeatherForecastByDay() {
+        return this._weatherForecastByDay instanceof Map ? this._weatherForecastByDay : /* @__PURE__ */ new Map();
+      }
+      _getWeatherForDay(dayDate, weatherByDay) {
+        if (!(weatherByDay instanceof Map) || !(dayDate instanceof Date) || Number.isNaN(dayDate.getTime())) {
+          return null;
+        }
+        const y = dayDate.getFullYear();
+        const m = dayDate.getMonth();
+        const d = dayDate.getDate();
+        const today = /* @__PURE__ */ new Date();
+        const todayTs = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+        const targetTs = new Date(y, m, d).getTime();
+        if (targetTs < todayTs) {
+          return null;
+        }
+        const key = forecastDayKey(new Date(y, m, d));
+        if (weatherByDay.has(key)) {
+          return weatherByDay.get(key);
+        }
+        let nearest = null;
+        let nearestDiff = Number.POSITIVE_INFINITY;
+        for (const [k, value] of weatherByDay.entries()) {
+          const rowKey = forecastDayKey(k);
+          if (!rowKey) {
+            continue;
+          }
+          const [ky, km, kd] = rowKey.split("-").map(Number);
+          const rowMonth = km - 1;
+          if (ky !== y || rowMonth !== m) {
+            continue;
+          }
+          const rowTs = new Date(ky, rowMonth, kd).getTime();
+          const diff = Math.abs(rowTs - targetTs);
+          if (diff < nearestDiff) {
+            nearestDiff = diff;
+            nearest = value;
+          }
+        }
+        return nearestDiff <= 864e5 ? nearest : null;
+      }
+      _getWeatherForecastSignature() {
+        const entityId = this._getWeatherEntityId();
+        if (!entityId || !this._hass?.states?.[entityId]) {
+          return "";
+        }
+        const stateObj = this._hass.states[entityId];
+        let hash = 2166136261;
+        const mix = (value) => {
+          const text = value === null || value === void 0 ? "" : String(value);
+          for (let i = 0; i < text.length; i += 1) {
+            hash ^= text.charCodeAt(i);
+            hash = Math.imul(hash, 16777619) >>> 0;
+          }
+          hash = Math.imul(hash ^ 2654435769, 16777619) >>> 0;
+        };
+        mix(entityId);
+        mix(String(stateObj.state || ""));
+        [...this._buildWeatherForecastByDay().entries()].sort((left, right) => String(left[0]).localeCompare(String(right[0]))).forEach(([key, item]) => {
+          mix(key);
+          mix(item?.condition || "");
+          mix(item?.tempMax ?? "");
+          mix(item?.tempMin ?? "");
+        });
+        return `w:${hash.toString(36)}`;
+      }
+      _openNativeEventComposer() {
+        this._nativeComposerError = "";
+        if (!this._nativeComposerCalendarValue) {
+          this._nativeComposerCalendarValue = this._getAvailableNativeCalendarIds()[0] || "";
+        }
+        this._nativeEventComposerOpen = true;
+        this._renderIfChanged(true);
+      }
+      _closeNativeEventComposer() {
+        if (!this._nativeEventComposerOpen) {
+          return;
+        }
+        this._nativeEventComposerOpen = false;
+        this._nativeComposerError = "";
+        this._renderIfChanged(true);
+      }
+      _setComposerError(kind, message) {
+        const text = String(message || "").trim();
+        const isNative = kind === "native";
+        if (isNative) {
+          this._nativeComposerError = text;
+        }
+        const selector = isNative ? "[data-native-error]" : "";
+        if (!selector) {
+          return;
+        }
+        const node = this.shadowRoot?.querySelector(selector);
+        if (!(node instanceof HTMLElement)) {
+          return;
+        }
+        node.hidden = !text;
+        const label = node.querySelector("[data-error-text]");
+        if (label) {
+          label.textContent = text;
+        } else {
+          node.textContent = text;
+        }
+      }
+      _renderComposerError(kind) {
+        const isNative = kind === "native";
+        const message = isNative ? this._nativeComposerError : "";
+        const marker = isNative ? "data-native-error" : "";
+        return `
       <div class="calendar-composer__error" ${marker} role="alert" aria-live="polite" ${message ? "" : "hidden"}>
         <ha-icon icon="mdi:alert-circle-outline"></ha-icon>
         <span data-error-text>${escapeHtml(message)}</span>
       </div>
     `;
-  }
-
-  async _postWebhookPayload(webhookId, body) {
-    const id = String(webhookId ?? "").trim();
-    if (!id) {
-      return false;
-    }
-    if (
-      this._config?.security?.allow_webhooks_for_non_admin === false &&
-      !this._hass?.user?.is_admin
-    ) {
-      if (typeof console !== "undefined" && typeof console.warn === "function") {
-        console.warn(
-          this._uiText(
-            "warnings.webhookBlockedNonAdmin",
-            "Nodalia Calendar Card: webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false).",
-          ),
+      }
+      async _postWebhookPayload(webhookId, body) {
+        const id = String(webhookId ?? "").trim();
+        if (!id) {
+          return false;
+        }
+        if (this._config?.security?.allow_webhooks_for_non_admin === false && !this._hass?.user?.is_admin) {
+          if (typeof console !== "undefined" && typeof console.warn === "function") {
+            console.warn(
+              this._uiText(
+                "warnings.webhookBlockedNonAdmin",
+                "Nodalia Calendar Card: webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false)."
+              )
+            );
+          }
+          return false;
+        }
+        const post = typeof window !== "undefined" && window.NodaliaUtils && typeof window.NodaliaUtils.postHomeAssistantWebhook === "function" ? window.NodaliaUtils.postHomeAssistantWebhook : null;
+        if (!post) {
+          return false;
+        }
+        try {
+          return Boolean(await post(id, body, this._hass));
+        } catch (_error) {
+          return false;
+        }
+      }
+      _buildNativeCalendarCreateEventWebhookBody(servicePayload, eventKind, calendarEvent = null) {
+        const calendarId = String(servicePayload?.entity_id || "").trim();
+        const serviceData = Object.fromEntries(
+          Object.entries(servicePayload || {}).filter(([, value]) => value !== "" && value !== null && value !== void 0)
         );
-      }
-      return false;
-    }
-    const post =
-      typeof window !== "undefined" &&
-      window.NodaliaUtils &&
-      typeof window.NodaliaUtils.postHomeAssistantWebhook === "function"
-        ? window.NodaliaUtils.postHomeAssistantWebhook
-        : null;
-    if (!post) {
-      return false;
-    }
-    try {
-      return Boolean(await post(id, body, this._hass));
-    } catch (_error) {
-      return false;
-    }
-  }
-
-  _buildNativeCalendarCreateEventWebhookBody(servicePayload, eventKind, calendarEvent = null) {
-    const calendarId = String(servicePayload?.entity_id || "").trim();
-    const serviceData = Object.fromEntries(
-      Object.entries(servicePayload || {}).filter(([, value]) => value !== "" && value !== null && value !== undefined),
-    );
-    const eventData = calendarEvent && typeof calendarEvent === "object" ? Object.fromEntries(
-      Object.entries(calendarEvent).filter(([, value]) => value !== "" && value !== null && value !== undefined),
-    ) : null;
-    const allowedCalendarIds = this._getAvailableNativeCalendarIds();
-    return {
-      type: "calendar_create_event",
-      event_kind: eventKind,
-      allowed_calendar_ids: allowedCalendarIds,
-      service: "calendar.create_event",
-      target: calendarId ? { entity_id: [calendarId] } : {},
-      data: serviceData,
-      service_data: serviceData,
-      calendar_event: eventData,
-      ws_message: eventData ? {
-        type: "calendar/event/create",
-        entity_id: calendarId,
-        event: eventData,
-      } : null,
-      ha_action: {
-        action: "calendar.create_event",
-        target: calendarId ? { entity_id: [calendarId] } : {},
-        data: serviceData,
-      },
-    };
-  }
-
-  async _submitNativeEventComposer() {
-    if (!this.isConnected || !this._hass || !this.shadowRoot) {
-      return;
-    }
-    this._setComposerError("native", "");
-    const pickerValue = this.shadowRoot.querySelector('[data-native-field="calendar"]')?.value;
-    const calendarId = String(this._nativeComposerCalendarValue || pickerValue || "").trim();
-    const title = String(
-      this.shadowRoot.querySelector('[data-native-field="title"]')?.value || "",
-    ).trim();
-    const dateRaw = String(
-      this.shadowRoot.querySelector('[data-native-field="date"]')?.value || "",
-    ).trim();
-    const allDay = Boolean(
-      this.shadowRoot.querySelector('[data-native-field="allDay"]')?.checked,
-    );
-    const startRaw = String(
-      this.shadowRoot.querySelector('[data-native-field="start"]')?.value || "",
-    ).trim();
-    const endRaw = String(
-      this.shadowRoot.querySelector('[data-native-field="end"]')?.value || "",
-    ).trim();
-    const descriptionRaw = String(
-      this.shadowRoot.querySelector('[data-native-field="description"]')?.value || "",
-    ).trim();
-    const locationRaw = String(
-      this.shadowRoot.querySelector('[data-native-field="location"]')?.value || "",
-    ).trim();
-    const colorEnabled = Boolean(
-      this.shadowRoot.querySelector('[data-native-field="colorEnabled"]')?.checked,
-    );
-    const colorRaw = String(
-      this.shadowRoot.querySelector('[data-native-field="color"]')?.value || "",
-    ).trim();
-    const repeatKind = String(
-      this.shadowRoot.querySelector('[data-native-field="repeatKind"]')?.value || "none",
-    ).trim().toLowerCase();
-    const repeatCustomUnit = String(
-      this.shadowRoot.querySelector('[data-native-field="repeatCustomUnit"]')?.value || "weekly",
-    ).trim().toLowerCase();
-    const repeatCustomIntervalRaw = String(
-      this.shadowRoot.querySelector('[data-native-field="repeatCustomInterval"]')?.value || "1",
-    ).trim();
-    if (!calendarId) {
-      this._setComposerError("native", this._uiText("errors.selectCalendar", "Select a calendar."));
-      return;
-    }
-    const allowedCalendarIds = this._getAvailableNativeCalendarIds();
-    if (!allowedCalendarIds.includes(calendarId)) {
-      this._setComposerError(
-        "native",
-        this._uiText("errors.calendarNotAllowed", "That calendar is not available on this card."),
-      );
-      return;
-    }
-    if (!title) {
-      this._setComposerError("native", this._uiText("errors.enterTitle", "Enter a title."));
-      return;
-    }
-    if (!dateRaw || (!allDay && (!startRaw || !endRaw))) {
-      this._setComposerError(
-        "native",
-        allDay
-          ? this._uiText("errors.selectDate", "Select a date.")
-          : this._uiText("errors.selectDateTime", "Select date, start and end."),
-      );
-      return;
-    }
-    if (dateInputIsBeforeToday(dateRaw)) {
-      this._setComposerError("native", this._uiText("errors.pastDate", "The date cannot be before today."));
-      return;
-    }
-    const rruleByKind = {
-      yearly: "FREQ=YEARLY",
-      monthly: "FREQ=MONTHLY",
-      weekly: "FREQ=WEEKLY",
-      daily: "FREQ=DAILY",
-    };
-    const resolvedRepeatKind = repeatKind === "custom" ? repeatCustomUnit : repeatKind;
-    if (repeatKind === "custom" && !rruleByKind[resolvedRepeatKind]) {
-      this._setComposerError(
-        "native",
-        this._uiText("errors.selectRepeatFrequency", "Select the frequency for custom repeat."),
-      );
-      return;
-    }
-    let customInterval = 1;
-    if (repeatKind === "custom") {
-      const parsedInterval = Number.parseInt(repeatCustomIntervalRaw, 10);
-      if (!Number.isFinite(parsedInterval) || parsedInterval < 1) {
-        this._setComposerError(
-          "native",
-          this._uiText("errors.invalidRepeatInterval", "The interval must be a number greater than or equal to 1."),
-        );
-        return;
-      }
-      customInterval = parsedInterval;
-    }
-    const rruleBase = rruleByKind[resolvedRepeatKind] || "";
-    const rrule = repeatKind === "custom" && rruleBase
-      ? `${rruleBase};INTERVAL=${customInterval}`
-      : rruleBase;
-    const colorOverride = colorEnabled ? (sanitizeCalendarTint(colorRaw) || "#ff7ab6") : "";
-    const description = appendNodaliaEventMetadata(descriptionRaw, { color: colorOverride });
-    const addOptionalEventFields = payload => {
-      if (description) {
-        payload.description = description;
-      }
-      if (locationRaw) {
-        payload.location = locationRaw;
-      }
-      return payload;
-    };
-    const addOptionalWsEventFields = eventPayload => {
-      if (description) {
-        eventPayload.description = description;
-      }
-      if (locationRaw) {
-        eventPayload.location = locationRaw;
-      }
-      if (rrule) {
-        eventPayload.rrule = String(rrule).trim();
-      }
-      return eventPayload;
-    };
-    const createCalendarEventViaWs = async eventPayload => {
-      if (typeof this._hass?.callWS !== "function") {
-        throw new Error("calendar/event/create unavailable");
-      }
-      await this._hass.callWS({
-        type: "calendar/event/create",
-        entity_id: calendarId,
-        event: eventPayload,
-      });
-    };
-    try {
-      const nativeWebhookId = String(this._config?.native_event_webhook || "").trim();
-      if (allDay) {
-        const startDay = new Date(`${dateRaw}T00:00:00`);
-        const nextDay = Number.isNaN(startDay.getTime()) ? null : new Date(startDay.getTime() + 86400000);
-        const endDate =
-          nextDay
-            ? `${nextDay.getFullYear()}-${String(nextDay.getMonth() + 1).padStart(2, "0")}-${String(nextDay.getDate()).padStart(2, "0")}`
-            : dateRaw;
-        const payload = {
-          entity_id: calendarId,
-          summary: title,
-          start_date: dateRaw,
-          end_date: endDate,
+        const eventData = calendarEvent && typeof calendarEvent === "object" ? Object.fromEntries(
+          Object.entries(calendarEvent).filter(([, value]) => value !== "" && value !== null && value !== void 0)
+        ) : null;
+        const allowedCalendarIds = this._getAvailableNativeCalendarIds();
+        return {
+          type: "calendar_create_event",
+          event_kind: eventKind,
+          allowed_calendar_ids: allowedCalendarIds,
+          service: "calendar.create_event",
+          target: calendarId ? { entity_id: [calendarId] } : {},
+          data: serviceData,
+          service_data: serviceData,
+          calendar_event: eventData,
+          ws_message: eventData ? {
+            type: "calendar/event/create",
+            entity_id: calendarId,
+            event: eventData
+          } : null,
+          ha_action: {
+            action: "calendar.create_event",
+            target: calendarId ? { entity_id: [calendarId] } : {},
+            data: serviceData
+          }
         };
-        addOptionalEventFields(payload);
-        const calendarEventPayload = addOptionalWsEventFields({
-          summary: title,
-          dtstart: dateRaw,
-          dtend: endDate,
-        });
-        if (rrule) {
-          await createCalendarEventViaWs(calendarEventPayload);
+      }
+      async _submitNativeEventComposer() {
+        if (!this.isConnected || !this._hass || !this.shadowRoot) {
+          return;
+        }
+        this._setComposerError("native", "");
+        const pickerValue = this.shadowRoot.querySelector('[data-native-field="calendar"]')?.value;
+        const calendarId = String(this._nativeComposerCalendarValue || pickerValue || "").trim();
+        const title = String(
+          this.shadowRoot.querySelector('[data-native-field="title"]')?.value || ""
+        ).trim();
+        const dateRaw = String(
+          this.shadowRoot.querySelector('[data-native-field="date"]')?.value || ""
+        ).trim();
+        const allDay = Boolean(
+          this.shadowRoot.querySelector('[data-native-field="allDay"]')?.checked
+        );
+        const startRaw = String(
+          this.shadowRoot.querySelector('[data-native-field="start"]')?.value || ""
+        ).trim();
+        const endRaw = String(
+          this.shadowRoot.querySelector('[data-native-field="end"]')?.value || ""
+        ).trim();
+        const descriptionRaw = String(
+          this.shadowRoot.querySelector('[data-native-field="description"]')?.value || ""
+        ).trim();
+        const locationRaw = String(
+          this.shadowRoot.querySelector('[data-native-field="location"]')?.value || ""
+        ).trim();
+        const colorEnabled = Boolean(
+          this.shadowRoot.querySelector('[data-native-field="colorEnabled"]')?.checked
+        );
+        const colorRaw = String(
+          this.shadowRoot.querySelector('[data-native-field="color"]')?.value || ""
+        ).trim();
+        const repeatKind = String(
+          this.shadowRoot.querySelector('[data-native-field="repeatKind"]')?.value || "none"
+        ).trim().toLowerCase();
+        const repeatCustomUnit = String(
+          this.shadowRoot.querySelector('[data-native-field="repeatCustomUnit"]')?.value || "weekly"
+        ).trim().toLowerCase();
+        const repeatCustomIntervalRaw = String(
+          this.shadowRoot.querySelector('[data-native-field="repeatCustomInterval"]')?.value || "1"
+        ).trim();
+        if (!calendarId) {
+          this._setComposerError("native", this._uiText("errors.selectCalendar", "Select a calendar."));
+          return;
+        }
+        const allowedCalendarIds = this._getAvailableNativeCalendarIds();
+        if (!allowedCalendarIds.includes(calendarId)) {
+          this._setComposerError(
+            "native",
+            this._uiText("errors.calendarNotAllowed", "That calendar is not available on this card.")
+          );
+          return;
+        }
+        if (!title) {
+          this._setComposerError("native", this._uiText("errors.enterTitle", "Enter a title."));
+          return;
+        }
+        if (!dateRaw || !allDay && (!startRaw || !endRaw)) {
+          this._setComposerError(
+            "native",
+            allDay ? this._uiText("errors.selectDate", "Select a date.") : this._uiText("errors.selectDateTime", "Select date, start and end.")
+          );
+          return;
+        }
+        if (dateInputIsBeforeToday(dateRaw)) {
+          this._setComposerError("native", this._uiText("errors.pastDate", "The date cannot be before today."));
+          return;
+        }
+        const rruleByKind = {
+          yearly: "FREQ=YEARLY",
+          monthly: "FREQ=MONTHLY",
+          weekly: "FREQ=WEEKLY",
+          daily: "FREQ=DAILY"
+        };
+        const resolvedRepeatKind = repeatKind === "custom" ? repeatCustomUnit : repeatKind;
+        if (repeatKind === "custom" && !rruleByKind[resolvedRepeatKind]) {
+          this._setComposerError(
+            "native",
+            this._uiText("errors.selectRepeatFrequency", "Select the frequency for custom repeat.")
+          );
+          return;
+        }
+        let customInterval = 1;
+        if (repeatKind === "custom") {
+          const parsedInterval = Number.parseInt(repeatCustomIntervalRaw, 10);
+          if (!Number.isFinite(parsedInterval) || parsedInterval < 1) {
+            this._setComposerError(
+              "native",
+              this._uiText("errors.invalidRepeatInterval", "The interval must be a number greater than or equal to 1.")
+            );
+            return;
+          }
+          customInterval = parsedInterval;
+        }
+        const rruleBase = rruleByKind[resolvedRepeatKind] || "";
+        const rrule = repeatKind === "custom" && rruleBase ? `${rruleBase};INTERVAL=${customInterval}` : rruleBase;
+        const colorOverride = colorEnabled ? sanitizeCalendarTint(colorRaw) || "#ff7ab6" : "";
+        const description = appendNodaliaEventMetadata(descriptionRaw, { color: colorOverride });
+        const addOptionalEventFields = (payload) => {
+          if (description) {
+            payload.description = description;
+          }
+          if (locationRaw) {
+            payload.location = locationRaw;
+          }
+          return payload;
+        };
+        const addOptionalWsEventFields = (eventPayload) => {
+          if (description) {
+            eventPayload.description = description;
+          }
+          if (locationRaw) {
+            eventPayload.location = locationRaw;
+          }
+          if (rrule) {
+            eventPayload.rrule = String(rrule).trim();
+          }
+          return eventPayload;
+        };
+        const createCalendarEventViaWs = async (eventPayload) => {
+          if (typeof this._hass?.callWS !== "function") {
+            throw new Error("calendar/event/create unavailable");
+          }
+          await this._hass.callWS({
+            type: "calendar/event/create",
+            entity_id: calendarId,
+            event: eventPayload
+          });
+        };
+        try {
+          const nativeWebhookId = String(this._config?.native_event_webhook || "").trim();
+          if (allDay) {
+            const startDay = /* @__PURE__ */ new Date(`${dateRaw}T00:00:00`);
+            const nextDay = Number.isNaN(startDay.getTime()) ? null : new Date(startDay.getTime() + 864e5);
+            const endDate = nextDay ? `${nextDay.getFullYear()}-${String(nextDay.getMonth() + 1).padStart(2, "0")}-${String(nextDay.getDate()).padStart(2, "0")}` : dateRaw;
+            const payload = {
+              entity_id: calendarId,
+              summary: title,
+              start_date: dateRaw,
+              end_date: endDate
+            };
+            addOptionalEventFields(payload);
+            const calendarEventPayload = addOptionalWsEventFields({
+              summary: title,
+              dtstart: dateRaw,
+              dtend: endDate
+            });
+            if (rrule) {
+              await createCalendarEventViaWs(calendarEventPayload);
+              if (!this.isConnected) {
+                return;
+              }
+              this._nativeComposerError = "";
+              this._nativeEventComposerOpen = false;
+              this._refreshEvents();
+              return;
+            }
+            if (nativeWebhookId) {
+              const ok = await this._postWebhookPayload(
+                nativeWebhookId,
+                this._buildNativeCalendarCreateEventWebhookBody(payload, "all_day", calendarEventPayload)
+              );
+              if (!this.isConnected) {
+                return;
+              }
+              if (!ok) {
+                this._setComposerError("native", this._uiText("errors.createEvent", "Could not create the event."));
+                return;
+              }
+            } else {
+              await this._hass.callService("calendar", "create_event", payload);
+              if (!this.isConnected) {
+                return;
+              }
+            }
+          } else {
+            const formatLocalDateTime = (value) => {
+              const yy = value.getFullYear();
+              const mm = String(value.getMonth() + 1).padStart(2, "0");
+              const dd = String(value.getDate()).padStart(2, "0");
+              const hh = String(value.getHours()).padStart(2, "0");
+              const mi = String(value.getMinutes()).padStart(2, "0");
+              const ss = String(value.getSeconds()).padStart(2, "0");
+              return `${yy}-${mm}-${dd}T${hh}:${mi}:${ss}`;
+            };
+            const startDateTime = /* @__PURE__ */ new Date(`${dateRaw}T${startRaw}:00`);
+            let endDateTime = /* @__PURE__ */ new Date(`${dateRaw}T${endRaw}:00`);
+            if (!Number.isNaN(startDateTime.getTime()) && !Number.isNaN(endDateTime.getTime()) && endDateTime <= startDateTime) {
+              endDateTime = new Date(endDateTime.getTime() + 864e5);
+            }
+            const payload = {
+              entity_id: calendarId,
+              summary: title,
+              start_date_time: Number.isNaN(startDateTime.getTime()) ? `${dateRaw}T${startRaw}:00` : formatLocalDateTime(startDateTime),
+              end_date_time: Number.isNaN(endDateTime.getTime()) ? `${dateRaw}T${endRaw}:00` : formatLocalDateTime(endDateTime)
+            };
+            addOptionalEventFields(payload);
+            const calendarEventPayload = addOptionalWsEventFields({
+              summary: title,
+              dtstart: payload.start_date_time,
+              dtend: payload.end_date_time
+            });
+            if (rrule) {
+              await createCalendarEventViaWs(calendarEventPayload);
+              if (!this.isConnected) {
+                return;
+              }
+              this._nativeComposerError = "";
+              this._nativeEventComposerOpen = false;
+              this._refreshEvents();
+              return;
+            }
+            if (nativeWebhookId) {
+              const ok = await this._postWebhookPayload(
+                nativeWebhookId,
+                this._buildNativeCalendarCreateEventWebhookBody(payload, "timed", calendarEventPayload)
+              );
+              if (!this.isConnected) {
+                return;
+              }
+              if (!ok) {
+                this._setComposerError("native", this._uiText("errors.createEvent", "Could not create the event."));
+                return;
+              }
+            } else {
+              await this._hass.callService("calendar", "create_event", payload);
+              if (!this.isConnected) {
+                return;
+              }
+            }
+          }
           if (!this.isConnected) {
             return;
           }
           this._nativeComposerError = "";
           this._nativeEventComposerOpen = false;
           this._refreshEvents();
-          return;
-        }
-        if (nativeWebhookId) {
-          const ok = await this._postWebhookPayload(
-            nativeWebhookId,
-            this._buildNativeCalendarCreateEventWebhookBody(payload, "all_day", calendarEventPayload),
+        } catch (error) {
+          const message = String(error?.message || "").trim();
+          this._setComposerError(
+            "native",
+            message && message !== "calendar/event/create unavailable" ? this._uiText("errors.createEventWithMessage", "Could not create the event: {message}", { message }) : this._uiText("errors.createEvent", "Could not create the event.")
           );
-          if (!this.isConnected) {
-            return;
-          }
-          if (!ok) {
-            this._setComposerError("native", this._uiText("errors.createEvent", "Could not create the event."));
-            return;
-          }
-        } else {
-          await this._hass.callService("calendar", "create_event", payload);
-          if (!this.isConnected) {
-            return;
-          }
-        }
-      } else {
-        const formatLocalDateTime = value => {
-          const yy = value.getFullYear();
-          const mm = String(value.getMonth() + 1).padStart(2, "0");
-          const dd = String(value.getDate()).padStart(2, "0");
-          const hh = String(value.getHours()).padStart(2, "0");
-          const mi = String(value.getMinutes()).padStart(2, "0");
-          const ss = String(value.getSeconds()).padStart(2, "0");
-          return `${yy}-${mm}-${dd}T${hh}:${mi}:${ss}`;
-        };
-        const startDateTime = new Date(`${dateRaw}T${startRaw}:00`);
-        let endDateTime = new Date(`${dateRaw}T${endRaw}:00`);
-        if (!Number.isNaN(startDateTime.getTime()) && !Number.isNaN(endDateTime.getTime()) && endDateTime <= startDateTime) {
-          endDateTime = new Date(endDateTime.getTime() + 86400000);
-        }
-        const payload = {
-          entity_id: calendarId,
-          summary: title,
-          start_date_time: Number.isNaN(startDateTime.getTime()) ? `${dateRaw}T${startRaw}:00` : formatLocalDateTime(startDateTime),
-          end_date_time: Number.isNaN(endDateTime.getTime()) ? `${dateRaw}T${endRaw}:00` : formatLocalDateTime(endDateTime),
-        };
-        addOptionalEventFields(payload);
-        const calendarEventPayload = addOptionalWsEventFields({
-          summary: title,
-          dtstart: payload.start_date_time,
-          dtend: payload.end_date_time,
-        });
-        if (rrule) {
-          await createCalendarEventViaWs(calendarEventPayload);
-          if (!this.isConnected) {
-            return;
-          }
-          this._nativeComposerError = "";
-          this._nativeEventComposerOpen = false;
-          this._refreshEvents();
-          return;
-        }
-        if (nativeWebhookId) {
-          const ok = await this._postWebhookPayload(
-            nativeWebhookId,
-            this._buildNativeCalendarCreateEventWebhookBody(payload, "timed", calendarEventPayload),
-          );
-          if (!this.isConnected) {
-            return;
-          }
-          if (!ok) {
-            this._setComposerError("native", this._uiText("errors.createEvent", "Could not create the event."));
-            return;
-          }
-        } else {
-          await this._hass.callService("calendar", "create_event", payload);
-          if (!this.isConnected) {
-            return;
-          }
         }
       }
-      if (!this.isConnected) {
-        return;
-      }
-      this._nativeComposerError = "";
-      this._nativeEventComposerOpen = false;
-      this._refreshEvents();
-    } catch (error) {
-      const message = String(error?.message || "").trim();
-      this._setComposerError(
-        "native",
-        message && message !== "calendar/event/create unavailable"
-          ? this._uiText("errors.createEventWithMessage", "Could not create the event: {message}", { message })
-          : this._uiText("errors.createEvent", "Could not create the event."),
-      );
-    }
-  }
-
-  _nativeEventComposerMarkup() {
-    if (!this._nativeEventComposerOpen) {
-      return "";
-    }
-    const calendarIds = this._getAvailableNativeCalendarIds();
-    if (!calendarIds.length) {
-      return "";
-    }
-    const now = new Date();
-    const pad = value => String(value).padStart(2, "0");
-    const defaultDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-    const defaultStart = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    const defaultEnd = `${pad((now.getHours() + 1) % 24)}:${pad(now.getMinutes())}`;
-    return `
+      _nativeEventComposerMarkup() {
+        if (!this._nativeEventComposerOpen) {
+          return "";
+        }
+        const calendarIds = this._getAvailableNativeCalendarIds();
+        if (!calendarIds.length) {
+          return "";
+        }
+        const now = /* @__PURE__ */ new Date();
+        const pad = (value) => String(value).padStart(2, "0");
+        const defaultDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+        const defaultStart = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        const defaultEnd = `${pad((now.getHours() + 1) % 24)}:${pad(now.getMinutes())}`;
+        return `
       <div class="calendar-composer ${this._nativeEventComposerOpen ? "is-open" : ""}">
         <div class="calendar-composer__backdrop" data-action="close-native-composer"></div>
         <div class="calendar-composer__panel" role="dialog" aria-modal="true" aria-label="${escapeHtml(this._uiText("aria.newEventDialog", "New calendar event"))}">
@@ -2869,99 +2568,77 @@ class NodaliaCalendarCard extends HTMLElement {
         </div>
       </div>
     `;
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
-    }
-
-    const calendarConfig = this._config || {};
-    const calendarEntityIds = (Array.isArray(calendarConfig.calendars) ? calendarConfig.calendars : [])
-      .map((entry) => String(entry?.entity ?? "").trim())
-      .filter(Boolean);
-    const calendarEntityGuard = window.NodaliaUtils?.renderLovelaceEntityGuardForEntities?.(
-      this._hass,
-      calendarEntityIds.length ? calendarEntityIds : [""],
-      { cardClass: "calendar-card" },
-    );
-    if (calendarEntityGuard) {
-      this.shadowRoot.innerHTML = calendarEntityGuard;
-      return;
-    }
-
-    const config = this._config;
-    const styles = config.styles || DEFAULT_CONFIG.styles;
-    const locale = this._getLocale();
-    const useAutoPrimaryTint = config.tint_auto !== false;
-    const accentColor = useAutoPrimaryTint
-      ? "var(--primary-color)"
-      : String(styles.tint?.color || DEFAULT_CONFIG.styles.tint.color).trim() || "var(--primary-color)";
-    const baseCardBg = styles.card.background;
-    // Keep accent washes as ::before/::after fills (no border-radius) so the
-    // tint stays as strong as before the Gecko seam fix. Nested color-mix uses a
-    // comma-free custom property, matching Notifications Card.
-    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, var(--nodalia-calendar-surface-base)) 0%, color-mix(in srgb, ${accentColor} 10%, var(--nodalia-calendar-surface-base)) 52%, var(--nodalia-calendar-surface-base) 100%)`;
-    const onCardBorder = `color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
-    const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
-    const cardBorder = `1px solid ${onCardBorder}`;
-    const cardShadow = `${styles.card.box_shadow}, ${onCardShadow}`;
-    const iconBubbleBg = `color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))`;
-    const calendarsForIcon = Array.isArray(config.calendars) ? config.calendars : [];
-    const firstCalendarEntityId = calendarsForIcon.map(c => String(c?.entity || "").trim()).find(Boolean);
-    const stateForBubbleIcon = firstCalendarEntityId && this._hass?.states?.[firstCalendarEntityId]
-      ? this._hass.states[firstCalendarEntityId]
-      : undefined;
-    const darkenBubbleIconGlyph = shouldDarkenCalendarBubbleIconGlyph(stateForBubbleIcon, accentColor);
-    const baseIconBubbleGlyph = String(styles.icon?.on_color || DEFAULT_CONFIG.styles.icon.on_color);
-    const iconBubbleGlyph = darkenBubbleIconGlyph
-      ? `color-mix(in srgb, var(--primary-text-color) 56%, ${accentColor})`
-      : baseIconBubbleGlyph;
-    const iconSize = styles.icon?.size || DEFAULT_CONFIG.styles.icon.size;
-    const chipHeight = styles.chip_height || DEFAULT_CONFIG.styles.chip_height;
-    const chipFontSize = styles.chip_font_size || styles.chip_size || DEFAULT_CONFIG.styles.chip_font_size;
-    const chipPadding = styles.chip_padding || DEFAULT_CONFIG.styles.chip_padding;
-    const chipBorderRadius = escapeHtml(
-      String(styles.chip_border_radius || DEFAULT_CONFIG.styles.chip_border_radius || "").trim() || "999px",
-    );
-    const animationDuration = Math.min(
-      1600,
-      Math.max(120, Number(config.animations?.content_duration) || DEFAULT_CONFIG.animations.content_duration),
-    );
-    const maxVisibleEvents = Math.max(1, Number(config.max_visible_events) || DEFAULT_CONFIG.max_visible_events);
-    const visibleEvents = Array.isArray(this._renderVisibleEventsCache)
-      ? this._renderVisibleEventsCache
-      : this._events;
-    this._renderVisibleEventsCache = null;
-    const groups = this._groupEvents(visibleEvents);
-    const weatherByDay = this._buildWeatherForecastByDay();
-    const hasEvents = visibleEvents.length > 0;
-    const playEntrance =
-      config.animations?.enabled !== false && !this._calendarEntrancePlayed && !this._loading;
-    // Lovelace often calls setConfig then hass in the same turn. Marking the
-    // entrance as played synchronously made the second render drop --entering
-    // classes before Gecko could composite the first frame.
-    if (playEntrance && !this._calendarEntrancePlayFrame) {
-      this._calendarEntrancePlayFrame = window.requestAnimationFrame(() => {
-        this._calendarEntrancePlayFrame = 0;
-        this._calendarEntrancePlayed = true;
-      });
-    }
-    const playExpandedPanelEntrance =
-      config.animations?.enabled !== false &&
-      this._expandedOpen &&
-      !this._expandedOverlayEntrancePlayed;
-    if (playExpandedPanelEntrance && !this._expandedOverlayEntrancePlayFrame) {
-      this._expandedOverlayEntrancePlayFrame = window.requestAnimationFrame(() => {
-        this._expandedOverlayEntrancePlayFrame = 0;
-        this._expandedOverlayEntrancePlayed = true;
-      });
-    }
-
-    this.shadowRoot.innerHTML = `
+      }
+      _render() {
+        if (!this.shadowRoot) {
+          return;
+        }
+        const calendarConfig = this._config || {};
+        const calendarEntityIds = (Array.isArray(calendarConfig.calendars) ? calendarConfig.calendars : []).map((entry) => String(entry?.entity ?? "").trim()).filter(Boolean);
+        const calendarEntityGuard = window.NodaliaUtils?.renderLovelaceEntityGuardForEntities?.(
+          this._hass,
+          calendarEntityIds.length ? calendarEntityIds : [""],
+          { cardClass: "calendar-card" }
+        );
+        if (calendarEntityGuard) {
+          this.shadowRoot.innerHTML = calendarEntityGuard;
+          return;
+        }
+        const config = this._config;
+        const styles = config.styles || DEFAULT_CONFIG2.styles;
+        const locale = this._getLocale();
+        const useAutoPrimaryTint = config.tint_auto !== false;
+        const accentColor = useAutoPrimaryTint ? "var(--primary-color)" : String(styles.tint?.color || DEFAULT_CONFIG2.styles.tint.color).trim() || "var(--primary-color)";
+        const baseCardBg = styles.card.background;
+        const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, var(--nodalia-calendar-surface-base)) 0%, color-mix(in srgb, ${accentColor} 10%, var(--nodalia-calendar-surface-base)) 52%, var(--nodalia-calendar-surface-base) 100%)`;
+        const onCardBorder = `color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
+        const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
+        const cardBorder = `1px solid ${onCardBorder}`;
+        const cardShadow = `${styles.card.box_shadow}, ${onCardShadow}`;
+        const iconBubbleBg = `color-mix(in srgb, ${accentColor} 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent))`;
+        const calendarsForIcon = Array.isArray(config.calendars) ? config.calendars : [];
+        const firstCalendarEntityId = calendarsForIcon.map((c) => String(c?.entity || "").trim()).find(Boolean);
+        const stateForBubbleIcon = firstCalendarEntityId && this._hass?.states?.[firstCalendarEntityId] ? this._hass.states[firstCalendarEntityId] : void 0;
+        const darkenBubbleIconGlyph = shouldDarkenCalendarBubbleIconGlyph(stateForBubbleIcon, accentColor);
+        const baseIconBubbleGlyph = String(styles.icon?.on_color || DEFAULT_CONFIG2.styles.icon.on_color);
+        const iconBubbleGlyph = darkenBubbleIconGlyph ? `color-mix(in srgb, var(--primary-text-color) 56%, ${accentColor})` : baseIconBubbleGlyph;
+        const iconSize = styles.icon?.size || DEFAULT_CONFIG2.styles.icon.size;
+        const chipHeight = styles.chip_height || DEFAULT_CONFIG2.styles.chip_height;
+        const chipFontSize = styles.chip_font_size || styles.chip_size || DEFAULT_CONFIG2.styles.chip_font_size;
+        const chipPadding = styles.chip_padding || DEFAULT_CONFIG2.styles.chip_padding;
+        const chipBorderRadius = escapeHtml(
+          String(styles.chip_border_radius || DEFAULT_CONFIG2.styles.chip_border_radius || "").trim() || "999px"
+        );
+        const animationDuration = Math.min(
+          1600,
+          Math.max(120, Number(config.animations?.content_duration) || DEFAULT_CONFIG2.animations.content_duration)
+        );
+        const maxVisibleEvents = Math.max(1, Number(config.max_visible_events) || DEFAULT_CONFIG2.max_visible_events);
+        const visibleEvents = Array.isArray(this._renderVisibleEventsCache) ? this._renderVisibleEventsCache : this._events;
+        this._renderVisibleEventsCache = null;
+        const groups = this._groupEvents(visibleEvents);
+        const weatherByDay = this._buildWeatherForecastByDay();
+        const hasEvents = visibleEvents.length > 0;
+        const playEntrance = config.animations?.enabled !== false && !this._calendarEntrancePlayed && !this._loading;
+        if (playEntrance && !this._calendarEntrancePlayFrame) {
+          this._calendarEntrancePlayFrame = window.requestAnimationFrame(() => {
+            this._calendarEntrancePlayFrame = 0;
+            this._calendarEntrancePlayed = true;
+          });
+        }
+        const playExpandedPanelEntrance = config.animations?.enabled !== false && this._expandedOpen && !this._expandedOverlayEntrancePlayed;
+        if (playExpandedPanelEntrance && !this._expandedOverlayEntrancePlayFrame) {
+          this._expandedOverlayEntrancePlayFrame = window.requestAnimationFrame(() => {
+            this._expandedOverlayEntrancePlayFrame = 0;
+            this._expandedOverlayEntrancePlayed = true;
+          });
+        }
+        this.shadowRoot.innerHTML = `
       <style>
         :host {
           display:block;
+          position: relative;
+          z-index: ${this._expandedOpen ? "2147483000" : "auto"};
         }
         * { box-sizing:border-box; }
         ha-card {
@@ -3310,7 +2987,7 @@ class NodaliaCalendarCard extends HTMLElement {
           pointer-events: none;
           position: fixed;
           transition: opacity 220ms cubic-bezier(0.16, 0.84, 0.22, 1);
-          z-index: 120;
+          z-index: 2147483001;
         }
         .calendar-expanded.is-open {
           opacity: 1;
@@ -4071,32 +3748,24 @@ class NodaliaCalendarCard extends HTMLElement {
       <ha-card>
         <div class="calendar-card">
           <div class="calendar-header ${playEntrance ? "calendar-header--entering" : ""}">
-            <span class="calendar-icon-bubble ${playEntrance ? "calendar-icon-bubble--entering" : ""}"><ha-icon icon="${escapeHtml(config.icon || DEFAULT_CONFIG.icon)}"></ha-icon></span>
+            <span class="calendar-icon-bubble ${playEntrance ? "calendar-icon-bubble--entering" : ""}"><ha-icon icon="${escapeHtml(config.icon || DEFAULT_CONFIG2.icon)}"></ha-icon></span>
             <div class="calendar-title ${playEntrance ? "calendar-title--entering" : ""}">${escapeHtml(config.title)}</div>
             <span class="calendar-header__spacer"></span>
-            <div class="calendar-chip ${playEntrance ? "calendar-chip--entering" : ""}"><span class="calendar-chip__text">${escapeHtml(this._timeRangeChipLabel(config.time_range || DEFAULT_CONFIG.time_range))}</span></div>
+            <div class="calendar-chip ${playEntrance ? "calendar-chip--entering" : ""}"><span class="calendar-chip__text">${escapeHtml(this._timeRangeChipLabel(config.time_range || DEFAULT_CONFIG2.time_range))}</span></div>
           </div>
-          ${
-            this._loading
-              ? `<div class="calendar-loading">${escapeHtml(this._uiText("states.loading", "Loading events..."))}</div>`
-              : this._error
-                ? `<div class="calendar-error">${escapeHtml(this._error)}</div>`
-                : !hasEvents
-                  ? `<div class="calendar-empty">${escapeHtml(this._uiText("empty.range", "No events in this range."))}</div>`
-                  : `<div class="calendar-events-scroll ${playEntrance ? "calendar-events-scroll--entering" : ""}">
+          ${this._loading ? `<div class="calendar-loading">${escapeHtml(this._uiText("states.loading", "Loading events..."))}</div>` : this._error ? `<div class="calendar-error">${escapeHtml(this._error)}</div>` : !hasEvents ? `<div class="calendar-empty">${escapeHtml(this._uiText("empty.range", "No events in this range."))}</div>` : `<div class="calendar-events-scroll ${playEntrance ? "calendar-events-scroll--entering" : ""}">
                       ${groups.map((group, groupIndex) => `
                         <div class="calendar-day" style="--calendar-day-index:${groupIndex};">
                           <div class="calendar-day__header">
                             <div class="calendar-day__label">${escapeHtml(group.label)}</div>
                             ${(() => {
-                              return this._renderWeatherBadge(group.dayDate, weatherByDay);
-                            })()}
+          return this._renderWeatherBadge(group.dayDate, weatherByDay);
+        })()}
                           </div>
-                          ${group.events.map(event => this._renderSingleEventHtml(event, config, locale)).join("")}
+                          ${group.events.map((event) => this._renderSingleEventHtml(event, config, locale)).join("")}
                         </div>
                       `).join("")}
-                    </div>`
-          }
+                    </div>`}
         </div>
       </ha-card>
       <div class="calendar-expanded ${this._expandedOpen ? "is-open" : ""}" style="--calendar-expanded-accent:${accentColor};" aria-hidden="${this._expandedOpen ? "false" : "true"}">
@@ -4114,783 +3783,697 @@ class NodaliaCalendarCard extends HTMLElement {
             </div>
           </div>
           <div class="calendar-expanded__body">
-            ${
-              this._loading
-                ? `<div class="calendar-loading">${escapeHtml(this._uiText("states.loading", "Loading events..."))}</div>`
-                : this._error
-                  ? `<div class="calendar-error">${escapeHtml(this._error)}</div>`
-                  : this._renderExpandedBody(groups, config, locale, weatherByDay)
-            }
+            ${this._loading ? `<div class="calendar-loading">${escapeHtml(this._uiText("states.loading", "Loading events..."))}</div>` : this._error ? `<div class="calendar-error">${escapeHtml(this._error)}</div>` : this._renderExpandedBody(groups, config, locale, weatherByDay)}
           </div>
           ${this._nativeEventComposerMarkup()}
           ${this._deleteRecurrenceDialogMarkup()}
         </div>
       </div>
     `;
-    this._mountNativeCalendarControl();
-    this._mountNativeColorControl();
-    this._mountNativeRepeatControl();
-    const calendarDialogs = this.shadowRoot.querySelectorAll('[role="dialog"][aria-modal="true"]');
-    const activeCalendarDialog = calendarDialogs[calendarDialogs.length - 1];
-    if (activeCalendarDialog instanceof HTMLElement) {
-      window.NodaliaUtils?.bindModalFocus?.(this, activeCalendarDialog);
-    } else {
-      window.NodaliaUtils?.releaseModalFocus?.(this);
-    }
-  }
-
-  _mountNativeCalendarControl() {
-    if (!this._nativeEventComposerOpen || !this.shadowRoot) {
-      return;
-    }
-    const host = this.shadowRoot.querySelector("[data-native-calendar-host]");
-    if (!(host instanceof HTMLElement)) {
-      return;
-    }
-    const calendarIds = this._getAvailableNativeCalendarIds();
-    const configuredIds = (this._config?.calendars || [])
-      .map(entry => String(entry?.entity || "").trim())
-      .filter(Boolean);
-    const nextValue = calendarIds.includes(this._nativeComposerCalendarValue)
-      ? this._nativeComposerCalendarValue
-      : calendarIds[0] || "";
-    this._nativeComposerCalendarValue = nextValue;
-    let control = null;
-
-    if (configuredIds.length) {
-      control = document.createElement("select");
-      control.className = "calendar-composer__select";
-      calendarIds.forEach(calendarId => {
-        const option = document.createElement("option");
-        option.value = calendarId;
-        option.textContent = this._getCalendarEntityLabel(calendarId) || calendarId;
-        control.appendChild(option);
-      });
-      control.addEventListener("change", () => {
-        this._nativeComposerCalendarValue = String(control.value || "").trim();
-      });
-    } else if (customElements.get("ha-selector")) {
-      control = document.createElement("ha-selector");
-      control.selector = { entity: { domain: "calendar" } };
-      control.addEventListener("value-changed", event => {
-        this._nativeComposerCalendarValue = String(event?.detail?.value || "").trim();
-      });
-    } else if (customElements.get("ha-entity-picker")) {
-      control = document.createElement("ha-entity-picker");
-      control.includeDomains = ["calendar"];
-      control.allowCustomEntity = false;
-      control.entityFilter = stateObj =>
-        String(stateObj?.entity_id || "").startsWith("calendar.");
-      control.addEventListener("value-changed", event => {
-        this._nativeComposerCalendarValue = String(event?.detail?.value || "").trim();
-      });
-    } else {
-      control = document.createElement("input");
-      control.type = "text";
-      control.placeholder = "calendar.ejemplo";
-      control.addEventListener("change", () => {
-        this._nativeComposerCalendarValue = String(control.value || "").trim();
-      });
-    }
-    control.dataset.nativeField = "calendar";
-    if ("hass" in control) {
-      control.hass = this._hass;
-    }
-    if ("value" in control) {
-      control.value = nextValue;
-    }
-    host.replaceChildren(control);
-  }
-
-  _mountNativeColorControl() {
-    if (!this._nativeEventComposerOpen || !this.shadowRoot) {
-      return;
-    }
-    const input = this.shadowRoot.querySelector('[data-native-field="color"]');
-    if (!(input instanceof HTMLInputElement) || input.dataset.nativeMounted === "color") {
-      return;
-    }
-    input.dataset.nativeMounted = "color";
-    const sync = () => {
-      const swatch = input.closest(".editor-color-picker")?.querySelector(".editor-color-swatch");
-      if (swatch instanceof HTMLElement) {
-        swatch.style.setProperty("--editor-swatch", input.value || "#ff7ab6");
+        this._mountNativeCalendarControl();
+        this._mountNativeColorControl();
+        this._mountNativeRepeatControl();
+        const calendarDialogs = this.shadowRoot.querySelectorAll('[role="dialog"][aria-modal="true"]');
+        const activeCalendarDialog = calendarDialogs[calendarDialogs.length - 1];
+        if (activeCalendarDialog instanceof HTMLElement) {
+          window.NodaliaUtils?.bindModalFocus?.(this, activeCalendarDialog);
+        } else {
+          window.NodaliaUtils?.releaseModalFocus?.(this);
+        }
       }
-    };
-    input.addEventListener("input", sync);
-    input.addEventListener("change", sync);
-    sync();
-  }
-
-  _mountNativeRepeatControl() {
-    if (!this._nativeEventComposerOpen || !this.shadowRoot) {
-      return;
-    }
-    const repeatSelect = this.shadowRoot.querySelector('[data-native-field="repeatKind"]');
-    if (!(repeatSelect instanceof HTMLSelectElement) || repeatSelect.dataset.nativeMounted === "repeat") {
-      return;
-    }
-    repeatSelect.dataset.nativeMounted = "repeat";
-    const sync = () => {
-      const customRow = this.shadowRoot?.querySelector('[data-native-field-group="repeatCustom"]');
-      if (customRow instanceof HTMLElement) {
-        customRow.hidden = repeatSelect.value !== "custom";
-      }
-    };
-    repeatSelect.addEventListener("change", sync);
-    sync();
-  }
-
-  _onShadowKeydown(event) {
-    if (!this._expandedOpen) {
-      return;
-    }
-    if (event.key === "Escape") {
-      event.preventDefault();
-      event.stopPropagation();
-      if (this._deleteRecurringChoiceKey) {
-        this._dismissDeleteRecurrenceDialog();
-        return;
-      }
-      this._triggerHaptic("light");
-      if (this._nativeEventComposerOpen) {
-        this._nativeEventComposerOpen = false;
-        this._nativeComposerError = "";
-        this._deleteRecurrenceError = "";
-        this._renderIfChanged(true);
-        return;
-      }
-      if (this._expandedEventDetailKey) {
-        this._expandedEventDetailKey = "";
-        this._renderIfChanged(true);
-        return;
-      }
-      if (this._expandedMonthDayKey) {
-        this._expandedMonthDayKey = "";
-        this._renderIfChanged(true);
-        return;
-      }
-      this._expandedOpenedForDeleteRecurrenceOnly = false;
-      this._deleteRecurringChoiceKey = "";
-      this._deleteRecurrenceError = "";
-      this._expandedOpen = false;
-      this._expandedOverlayEntrancePlayed = false;
-      this._renderIfChanged(true);
-      return;
-    }
-    if (event.key !== "Enter" && event.key !== " ") {
-      return;
-    }
-    const path = event.composedPath();
-    const interactive = path.find(
-      node =>
-        node instanceof HTMLElement &&
-        (node.matches?.("button,input,select,textarea") ||
-          ["HA-SELECTOR", "HA-ENTITY-PICKER"].includes(node.tagName)),
-    );
-    if (interactive) {
-      return;
-    }
-    const monthDayCell = path.find(
-      node =>
-        node instanceof HTMLElement &&
-        node.dataset?.action === "open-month-day" &&
-        node.classList?.contains("calendar-expanded__month-cell--day"),
-    );
-    if (monthDayCell instanceof HTMLElement) {
-      event.preventDefault();
-      event.stopPropagation();
-      this._triggerHaptic("selection");
-      this._expandedMonthDayKey = monthDayCell.dataset.dayKey || "";
-      this._expandedEventDetailKey = "";
-      this._renderIfChanged(true);
-      return;
-    }
-    const eventDetail = path.find(
-      node => node instanceof HTMLElement && node.dataset?.action === "open-event-detail",
-    );
-    if (eventDetail instanceof HTMLElement) {
-      event.preventDefault();
-      event.stopPropagation();
-      this._triggerHaptic("selection");
-      this._expandedEventDetailKey = eventDetail.dataset.key || "";
-      this._renderIfChanged(true);
-    }
-  }
-
-  _onShadowClick(event) {
-    const path = event.composedPath();
-    const deleteRecDismiss = path.find(
-      node => node instanceof HTMLElement && node.dataset?.action === "delete-recurrence-dismiss",
-    );
-    if (deleteRecDismiss) {
-      event.preventDefault();
-      event.stopPropagation();
-      this._dismissDeleteRecurrenceDialog();
-      return;
-    }
-    const deleteThis = path.find(
-      node => node instanceof HTMLElement && node.dataset?.action === "delete-recurrence-this",
-    );
-    if (deleteThis instanceof HTMLElement) {
-      event.preventDefault();
-      event.stopPropagation();
-      this._triggerHaptic("warning");
-      void this._deleteCalendarEvent(deleteThis.dataset.key || "", CALENDAR_DELETE_RECURRENCE_THIS);
-      return;
-    }
-    const deleteFuture = path.find(
-      node => node instanceof HTMLElement && node.dataset?.action === "delete-recurrence-future",
-    );
-    if (deleteFuture instanceof HTMLElement) {
-      event.preventDefault();
-      event.stopPropagation();
-      this._triggerHaptic("warning");
-      void this._deleteCalendarEvent(deleteFuture.dataset.key || "", CALENDAR_DELETE_RECURRENCE_THIS_AND_FUTURE);
-      return;
-    }
-    const deleteBtn = path.find(
-      node => node instanceof HTMLElement && node.dataset?.action === "delete-event",
-    );
-    if (deleteBtn instanceof HTMLElement) {
-      event.preventDefault();
-      event.stopPropagation();
-      this._triggerHaptic("warning");
-      this._requestDeleteCalendarEvent(deleteBtn.dataset.key || "");
-      return;
-    }
-    const closeAction = path.find(
-      node =>
-        node instanceof HTMLElement &&
-        (node.dataset?.action === "close-expanded" || node.dataset?.action === "expanded-backdrop"),
-    );
-    if (closeAction) {
-      event.preventDefault();
-      event.stopPropagation();
-      this._triggerHaptic("light");
-      this._expandedMonthDayKey = "";
-      this._nativeEventComposerOpen = false;
-      this._nativeComposerError = "";
-      this._deleteRecurringChoiceKey = "";
-      this._deleteRecurrenceError = "";
-      this._expandedOpenedForDeleteRecurrenceOnly = false;
-      this._expandedEventDetailKey = "";
-      this._expandedOpen = false;
-      this._expandedOverlayEntrancePlayed = false;
-      this._renderIfChanged(true);
-      return;
-    }
-    const monthDayBack = path.find(
-      node => node instanceof HTMLElement && node.dataset?.action === "month-day-back",
-    );
-    if (monthDayBack && this._expandedOpen) {
-      event.preventDefault();
-      event.stopPropagation();
-      this._triggerHaptic("light");
-      this._expandedMonthDayKey = "";
-      this._expandedEventDetailKey = "";
-      this._deleteRecurringChoiceKey = "";
-      this._deleteRecurrenceError = "";
-      this._renderIfChanged(true);
-      return;
-    }
-    const eventDetailBack = path.find(
-      node => node instanceof HTMLElement && node.dataset?.action === "event-detail-back",
-    );
-    if (eventDetailBack && this._expandedOpen) {
-      event.preventDefault();
-      event.stopPropagation();
-      this._triggerHaptic("light");
-      this._expandedEventDetailKey = "";
-      this._deleteRecurringChoiceKey = "";
-      this._deleteRecurrenceError = "";
-      this._renderIfChanged(true);
-      return;
-    }
-    const addNativeEvent = path.find(
-      node => node instanceof HTMLElement && node.dataset?.action === "add-native-event",
-    );
-    if (addNativeEvent && this._expandedOpen) {
-      event.preventDefault();
-      event.stopPropagation();
-      this._triggerHaptic("selection");
-      this._openNativeEventComposer();
-      return;
-    }
-    const closeNativeComposer = path.find(
-      node => node instanceof HTMLElement && node.dataset?.action === "close-native-composer",
-    );
-    if (closeNativeComposer && this._expandedOpen) {
-      event.preventDefault();
-      event.stopPropagation();
-      this._triggerHaptic("light");
-      this._closeNativeEventComposer();
-      return;
-    }
-    const saveNativeComposer = path.find(
-      node => node instanceof HTMLElement && node.dataset?.action === "save-native-composer",
-    );
-    if (saveNativeComposer && this._expandedOpen) {
-      event.preventDefault();
-      event.stopPropagation();
-      this._triggerHaptic("success");
-      void this._submitNativeEventComposer();
-      return;
-    }
-    const monthDayOpen = path.find(
-      node =>
-        node instanceof HTMLElement &&
-        node.dataset?.action === "open-month-day" &&
-        node.classList?.contains("calendar-expanded__month-cell--day"),
-    );
-    if (monthDayOpen instanceof HTMLElement && this._expandedOpen) {
-      event.preventDefault();
-      event.stopPropagation();
-      this._triggerHaptic("selection");
-      this._expandedMonthDayKey = monthDayOpen.dataset.dayKey || "";
-      this._expandedEventDetailKey = "";
-      this._deleteRecurringChoiceKey = "";
-      this._deleteRecurrenceError = "";
-      this._renderIfChanged(true);
-      return;
-    }
-    const eventDetailOpen = path.find(
-      node => node instanceof HTMLElement && node.dataset?.action === "open-event-detail",
-    );
-    if (eventDetailOpen instanceof HTMLElement && this._expandedOpen) {
-      event.preventDefault();
-      event.stopPropagation();
-      this._triggerHaptic("selection");
-      this._expandedEventDetailKey = eventDetailOpen.dataset.key || "";
-      this._deleteRecurringChoiceKey = "";
-      this._deleteRecurrenceError = "";
-      this._renderIfChanged(true);
-      return;
-    }
-    if (this._expandedOpen) {
-      return;
-    }
-    const target = event.target instanceof Element ? event.target : null;
-    if (target?.closest?.("button")) {
-      return;
-    }
-    if (!target?.closest?.(".calendar-card")) {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    this._openExpandedCalendar();
-  }
-}
-
-class NodaliaCalendarCardEditor extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(DEFAULT_CONFIG);
-    this._hass = null;
-    this._showHapticsSection = false;
-    this._showAnimationSection = false;
-    this._showStyleSection = false;
-    this._entityOptionsSignature = "";
-    this._pendingEditorControlTags = new Set();
-    this._onShadowInput = this._onShadowInput.bind(this);
-    this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
-    this._onShadowClick = this._onShadowClick.bind(this);
-  }
-
-  _attachEditorShadowListeners() {
-    window.NodaliaUtils.bindShadowListeners(this, [
-      ["input", this._onShadowInput],
-      ["change", this._onShadowInput],
-      ["value-changed", this._onShadowValueChanged],
-      ["click", this._onShadowClick],
-    ], "editor");
-  }
-
-  _detachEditorShadowListeners() {
-    window.NodaliaUtils.releaseShadowListeners(this, "editor");
-  }
-
-  connectedCallback() {
-    this._attachEditorShadowListeners();
-    window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
-  }
-
-  disconnectedCallback() {
-    this._detachEditorShadowListeners();
-    window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
-  }
-
-  set hass(hass) {
-    const nextSignature = this._getEntityOptionsSignature(hass);
-    const shouldRender =
-      !this._hass ||
-      nextSignature !== this._entityOptionsSignature ||
-      !this.shadowRoot?.innerHTML;
-
-    this._hass = hass;
-    this._entityOptionsSignature = nextSignature;
-
-    if (shouldRender) {
-      const focusState = this._captureFocusState();
-      this._render();
-      this._restoreFocusState(focusState);
-      return;
-    }
-
-    this.shadowRoot?.querySelectorAll("ha-entity-picker, ha-selector, ha-icon-picker").forEach(el => {
-      if ("hass" in el) {
-        el.hass = hass;
-      }
-    });
-  }
-
-  setConfig(config) {
-    const focusState = this._captureFocusState();
-    this._config = normalizeConfig(config || {});
-    window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
-    this._render();
-    this._restoreFocusState(focusState);
-  }
-
-  _getEntityOptionsSignature(hass = this._hass) {
-    if (window.NodaliaUtils?.editorFilteredStatesSignature) {
-      return window.NodaliaUtils.editorFilteredStatesSignature(
-        hass,
-        this._config?.language,
-        id => id.startsWith("calendar.") || id.startsWith("weather."),
-      );
-    }
-    return Object.keys(hass?.states || {})
-      .filter(id => id.startsWith("calendar.") || id.startsWith("weather."))
-      .join("|");
-  }
-
-  _editorLabel(s) {
-    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
-      return s;
-    }
-    return window.NodaliaI18n.editorStr(this._hass, this._config?.language ?? "auto", s);
-  }
-
-  _emitConfig() {
-    const raw = deepClone(this._config || DEFAULT_CONFIG);
-    const stripped =
-      typeof window !== "undefined" && window.NodaliaUtils?.stripEqualToDefaults
-        ? window.NodaliaUtils.stripEqualToDefaults(raw, DEFAULT_CONFIG)
-        : raw;
-    const payload = compactCalendarConfig(
-      stripped !== undefined && stripped !== null ? stripped : {},
-    );
-    this.dispatchEvent(
-      new CustomEvent("config-changed", {
-        bubbles: true,
-        composed: true,
-        detail: { config: payload },
-      }),
-    );
-  }
-
-  _captureFocusState() {
-    return window.NodaliaUtils.captureEditorFocusState(this);
-  }
-
-  _restoreFocusState(focusState) {
-    window.NodaliaUtils.restoreEditorFocusState(this, focusState);
-  }
-
-  _watchEditorControlTag(tagName) {
-    if (!tagName || this._pendingEditorControlTags.has(tagName)) {
-      return;
-    }
-    if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
-      return;
-    }
-    this._pendingEditorControlTags.add(tagName);
-    customElements.whenDefined(tagName)
-      .then(() => {
-        this._pendingEditorControlTags.delete(tagName);
-        if (!this.isConnected || !this._hass || !this.shadowRoot) {
+      _mountNativeCalendarControl() {
+        if (!this._nativeEventComposerOpen || !this.shadowRoot) {
           return;
         }
+        const host = this.shadowRoot.querySelector("[data-native-calendar-host]");
+        if (!(host instanceof HTMLElement)) {
+          return;
+        }
+        const calendarIds = this._getAvailableNativeCalendarIds();
+        const configuredIds = (this._config?.calendars || []).map((entry) => String(entry?.entity || "").trim()).filter(Boolean);
+        const nextValue = calendarIds.includes(this._nativeComposerCalendarValue) ? this._nativeComposerCalendarValue : calendarIds[0] || "";
+        this._nativeComposerCalendarValue = nextValue;
+        let control = null;
+        if (configuredIds.length) {
+          control = document.createElement("select");
+          control.className = "calendar-composer__select";
+          calendarIds.forEach((calendarId) => {
+            const option = document.createElement("option");
+            option.value = calendarId;
+            option.textContent = this._getCalendarEntityLabel(calendarId) || calendarId;
+            control.appendChild(option);
+          });
+          control.addEventListener("change", () => {
+            this._nativeComposerCalendarValue = String(control.value || "").trim();
+          });
+        } else if (customElements.get("ha-selector")) {
+          control = document.createElement("ha-selector");
+          control.selector = { entity: { domain: "calendar" } };
+          control.addEventListener("value-changed", (event) => {
+            this._nativeComposerCalendarValue = String(event?.detail?.value || "").trim();
+          });
+        } else if (customElements.get("ha-entity-picker")) {
+          control = document.createElement("ha-entity-picker");
+          control.includeDomains = ["calendar"];
+          control.allowCustomEntity = false;
+          control.entityFilter = (stateObj) => String(stateObj?.entity_id || "").startsWith("calendar.");
+          control.addEventListener("value-changed", (event) => {
+            this._nativeComposerCalendarValue = String(event?.detail?.value || "").trim();
+          });
+        } else {
+          control = document.createElement("input");
+          control.type = "text";
+          control.placeholder = "calendar.ejemplo";
+          control.addEventListener("change", () => {
+            this._nativeComposerCalendarValue = String(control.value || "").trim();
+          });
+        }
+        control.dataset.nativeField = "calendar";
+        if ("hass" in control) {
+          control.hass = this._hass;
+        }
+        if ("value" in control) {
+          control.value = nextValue;
+        }
+        host.replaceChildren(control);
+      }
+      _mountNativeColorControl() {
+        if (!this._nativeEventComposerOpen || !this.shadowRoot) {
+          return;
+        }
+        const input = this.shadowRoot.querySelector('[data-native-field="color"]');
+        if (!(input instanceof HTMLInputElement) || input.dataset.nativeMounted === "color") {
+          return;
+        }
+        input.dataset.nativeMounted = "color";
+        const sync = () => {
+          const swatch = input.closest(".editor-color-picker")?.querySelector(".editor-color-swatch");
+          if (swatch instanceof HTMLElement) {
+            swatch.style.setProperty("--editor-swatch", input.value || "#ff7ab6");
+          }
+        };
+        input.addEventListener("input", sync);
+        input.addEventListener("change", sync);
+        sync();
+      }
+      _mountNativeRepeatControl() {
+        if (!this._nativeEventComposerOpen || !this.shadowRoot) {
+          return;
+        }
+        const repeatSelect = this.shadowRoot.querySelector('[data-native-field="repeatKind"]');
+        if (!(repeatSelect instanceof HTMLSelectElement) || repeatSelect.dataset.nativeMounted === "repeat") {
+          return;
+        }
+        repeatSelect.dataset.nativeMounted = "repeat";
+        const sync = () => {
+          const customRow = this.shadowRoot?.querySelector('[data-native-field-group="repeatCustom"]');
+          if (customRow instanceof HTMLElement) {
+            customRow.hidden = repeatSelect.value !== "custom";
+          }
+        };
+        repeatSelect.addEventListener("change", sync);
+        sync();
+      }
+      _onShadowKeydown(event) {
+        if (!this._expandedOpen) {
+          return;
+        }
+        if (event.key === "Escape") {
+          event.preventDefault();
+          event.stopPropagation();
+          if (this._deleteRecurringChoiceKey) {
+            this._dismissDeleteRecurrenceDialog();
+            return;
+          }
+          this._triggerHaptic("light");
+          if (this._nativeEventComposerOpen) {
+            this._nativeEventComposerOpen = false;
+            this._nativeComposerError = "";
+            this._deleteRecurrenceError = "";
+            this._renderIfChanged(true);
+            return;
+          }
+          if (this._expandedEventDetailKey) {
+            this._expandedEventDetailKey = "";
+            this._renderIfChanged(true);
+            return;
+          }
+          if (this._expandedMonthDayKey) {
+            this._expandedMonthDayKey = "";
+            this._renderIfChanged(true);
+            return;
+          }
+          this._expandedOpenedForDeleteRecurrenceOnly = false;
+          this._deleteRecurringChoiceKey = "";
+          this._deleteRecurrenceError = "";
+          this._expandedOpen = false;
+          this._expandedOverlayEntrancePlayed = false;
+          this._renderIfChanged(true);
+          return;
+        }
+        if (event.key !== "Enter" && event.key !== " ") {
+          return;
+        }
+        const path = event.composedPath();
+        const interactive = path.find(
+          (node) => node instanceof HTMLElement && (node.matches?.("button,input,select,textarea") || ["HA-SELECTOR", "HA-ENTITY-PICKER"].includes(node.tagName))
+        );
+        if (interactive) {
+          return;
+        }
+        const monthDayCell = path.find(
+          (node) => node instanceof HTMLElement && node.dataset?.action === "open-month-day" && node.classList?.contains("calendar-expanded__month-cell--day")
+        );
+        if (monthDayCell instanceof HTMLElement) {
+          event.preventDefault();
+          event.stopPropagation();
+          this._triggerHaptic("selection");
+          this._expandedMonthDayKey = monthDayCell.dataset.dayKey || "";
+          this._expandedEventDetailKey = "";
+          this._renderIfChanged(true);
+          return;
+        }
+        const eventDetail = path.find(
+          (node) => node instanceof HTMLElement && node.dataset?.action === "open-event-detail"
+        );
+        if (eventDetail instanceof HTMLElement) {
+          event.preventDefault();
+          event.stopPropagation();
+          this._triggerHaptic("selection");
+          this._expandedEventDetailKey = eventDetail.dataset.key || "";
+          this._renderIfChanged(true);
+        }
+      }
+      _onShadowClick(event) {
+        const path = event.composedPath();
+        const deleteRecDismiss = path.find(
+          (node) => node instanceof HTMLElement && node.dataset?.action === "delete-recurrence-dismiss"
+        );
+        if (deleteRecDismiss) {
+          event.preventDefault();
+          event.stopPropagation();
+          this._dismissDeleteRecurrenceDialog();
+          return;
+        }
+        const deleteThis = path.find(
+          (node) => node instanceof HTMLElement && node.dataset?.action === "delete-recurrence-this"
+        );
+        if (deleteThis instanceof HTMLElement) {
+          event.preventDefault();
+          event.stopPropagation();
+          this._triggerHaptic("warning");
+          void this._deleteCalendarEvent(deleteThis.dataset.key || "", CALENDAR_DELETE_RECURRENCE_THIS);
+          return;
+        }
+        const deleteFuture = path.find(
+          (node) => node instanceof HTMLElement && node.dataset?.action === "delete-recurrence-future"
+        );
+        if (deleteFuture instanceof HTMLElement) {
+          event.preventDefault();
+          event.stopPropagation();
+          this._triggerHaptic("warning");
+          void this._deleteCalendarEvent(deleteFuture.dataset.key || "", CALENDAR_DELETE_RECURRENCE_THIS_AND_FUTURE);
+          return;
+        }
+        const deleteBtn = path.find(
+          (node) => node instanceof HTMLElement && node.dataset?.action === "delete-event"
+        );
+        if (deleteBtn instanceof HTMLElement) {
+          event.preventDefault();
+          event.stopPropagation();
+          this._triggerHaptic("warning");
+          this._requestDeleteCalendarEvent(deleteBtn.dataset.key || "");
+          return;
+        }
+        const closeAction = path.find(
+          (node) => node instanceof HTMLElement && (node.dataset?.action === "close-expanded" || node.dataset?.action === "expanded-backdrop")
+        );
+        if (closeAction) {
+          event.preventDefault();
+          event.stopPropagation();
+          this._triggerHaptic("light");
+          this._expandedMonthDayKey = "";
+          this._nativeEventComposerOpen = false;
+          this._nativeComposerError = "";
+          this._deleteRecurringChoiceKey = "";
+          this._deleteRecurrenceError = "";
+          this._expandedOpenedForDeleteRecurrenceOnly = false;
+          this._expandedEventDetailKey = "";
+          this._expandedOpen = false;
+          this._expandedOverlayEntrancePlayed = false;
+          this._renderIfChanged(true);
+          return;
+        }
+        const monthDayBack = path.find(
+          (node) => node instanceof HTMLElement && node.dataset?.action === "month-day-back"
+        );
+        if (monthDayBack && this._expandedOpen) {
+          event.preventDefault();
+          event.stopPropagation();
+          this._triggerHaptic("light");
+          this._expandedMonthDayKey = "";
+          this._expandedEventDetailKey = "";
+          this._deleteRecurringChoiceKey = "";
+          this._deleteRecurrenceError = "";
+          this._renderIfChanged(true);
+          return;
+        }
+        const eventDetailBack = path.find(
+          (node) => node instanceof HTMLElement && node.dataset?.action === "event-detail-back"
+        );
+        if (eventDetailBack && this._expandedOpen) {
+          event.preventDefault();
+          event.stopPropagation();
+          this._triggerHaptic("light");
+          this._expandedEventDetailKey = "";
+          this._deleteRecurringChoiceKey = "";
+          this._deleteRecurrenceError = "";
+          this._renderIfChanged(true);
+          return;
+        }
+        const addNativeEvent = path.find(
+          (node) => node instanceof HTMLElement && node.dataset?.action === "add-native-event"
+        );
+        if (addNativeEvent && this._expandedOpen) {
+          event.preventDefault();
+          event.stopPropagation();
+          this._triggerHaptic("selection");
+          this._openNativeEventComposer();
+          return;
+        }
+        const closeNativeComposer = path.find(
+          (node) => node instanceof HTMLElement && node.dataset?.action === "close-native-composer"
+        );
+        if (closeNativeComposer && this._expandedOpen) {
+          event.preventDefault();
+          event.stopPropagation();
+          this._triggerHaptic("light");
+          this._closeNativeEventComposer();
+          return;
+        }
+        const saveNativeComposer = path.find(
+          (node) => node instanceof HTMLElement && node.dataset?.action === "save-native-composer"
+        );
+        if (saveNativeComposer && this._expandedOpen) {
+          event.preventDefault();
+          event.stopPropagation();
+          this._triggerHaptic("success");
+          void this._submitNativeEventComposer();
+          return;
+        }
+        const monthDayOpen = path.find(
+          (node) => node instanceof HTMLElement && node.dataset?.action === "open-month-day" && node.classList?.contains("calendar-expanded__month-cell--day")
+        );
+        if (monthDayOpen instanceof HTMLElement && this._expandedOpen) {
+          event.preventDefault();
+          event.stopPropagation();
+          this._triggerHaptic("selection");
+          this._expandedMonthDayKey = monthDayOpen.dataset.dayKey || "";
+          this._expandedEventDetailKey = "";
+          this._deleteRecurringChoiceKey = "";
+          this._deleteRecurrenceError = "";
+          this._renderIfChanged(true);
+          return;
+        }
+        const eventDetailOpen = path.find(
+          (node) => node instanceof HTMLElement && node.dataset?.action === "open-event-detail"
+        );
+        if (eventDetailOpen instanceof HTMLElement && this._expandedOpen) {
+          event.preventDefault();
+          event.stopPropagation();
+          this._triggerHaptic("selection");
+          this._expandedEventDetailKey = eventDetailOpen.dataset.key || "";
+          this._deleteRecurringChoiceKey = "";
+          this._deleteRecurrenceError = "";
+          this._renderIfChanged(true);
+          return;
+        }
+        if (this._expandedOpen) {
+          return;
+        }
+        const target = event.target instanceof Element ? event.target : null;
+        if (target?.closest?.("button")) {
+          return;
+        }
+        if (!target?.closest?.(".calendar-card")) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        this._openExpandedCalendar();
+      }
+    }
+    _lazyNodaliaCalendarCard = NodaliaCalendarCard;
+    return NodaliaCalendarCard;
+  }
+
+  // src/cards/calendar/calendar-editor.ts
+  var _lazyNodaliaCalendarCardEditor;
+  function loadNodaliaCalendarCardEditor() {
+    if (_lazyNodaliaCalendarCardEditor) {
+      return _lazyNodaliaCalendarCardEditor;
+    }
+    class NodaliaCalendarCardEditor extends HTMLElement {
+      constructor() {
+        super();
+        this._nodaliaConstruct();
+      }
+      _nodaliaConstruct() {
+        this.attachShadow({ mode: "open" });
+        this._config = normalizeConfig(DEFAULT_CONFIG2);
+        this._hass = null;
+        this._showHapticsSection = false;
+        this._showAnimationSection = false;
+        this._showStyleSection = false;
+        this._entityOptionsSignature = "";
+        this._pendingEditorControlTags = /* @__PURE__ */ new Set();
+        this._onShadowInput = this._onShadowInput.bind(this);
+        this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
+        this._onShadowClick = this._onShadowClick.bind(this);
+      }
+      _attachEditorShadowListeners() {
+        window.NodaliaUtils.bindShadowListeners(this, [
+          ["input", this._onShadowInput],
+          ["change", this._onShadowInput],
+          ["value-changed", this._onShadowValueChanged],
+          ["click", this._onShadowClick]
+        ], "editor");
+      }
+      _detachEditorShadowListeners() {
+        window.NodaliaUtils.releaseShadowListeners(this, "editor");
+      }
+      connectedCallback() {
+        this._attachEditorShadowListeners();
+        window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
+      }
+      disconnectedCallback() {
+        this._detachEditorShadowListeners();
+        window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
+      }
+      set hass(hass) {
+        const nextSignature = this._getEntityOptionsSignature(hass);
+        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+        this._hass = hass;
+        this._entityOptionsSignature = nextSignature;
+        if (shouldRender) {
+          const focusState = this._captureFocusState();
+          this._render();
+          this._restoreFocusState(focusState);
+          return;
+        }
+        this.shadowRoot?.querySelectorAll("ha-entity-picker, ha-selector, ha-icon-picker").forEach((el) => {
+          if ("hass" in el) {
+            el.hass = hass;
+          }
+        });
+      }
+      setConfig(config) {
+        const focusState = this._captureFocusState();
+        this._config = normalizeConfig(config || {});
+        window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
+        this._render();
+        this._restoreFocusState(focusState);
+      }
+      _getEntityOptionsSignature(hass = this._hass) {
+        if (window.NodaliaUtils?.editorFilteredStatesSignature) {
+          return window.NodaliaUtils.editorFilteredStatesSignature(
+            hass,
+            this._config?.language,
+            (id) => id.startsWith("calendar.") || id.startsWith("weather.")
+          );
+        }
+        return Object.keys(hass?.states || {}).filter((id) => id.startsWith("calendar.") || id.startsWith("weather.")).join("|");
+      }
+      _editorLabel(s) {
+        if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+          return s;
+        }
+        return window.NodaliaI18n.editorStr(this._hass, this._config?.language ?? "auto", s);
+      }
+      _emitConfig() {
+        const raw = deepClone(this._config || DEFAULT_CONFIG2);
+        const stripped = typeof window !== "undefined" && window.NodaliaUtils?.stripEqualToDefaults ? window.NodaliaUtils.stripEqualToDefaults(raw, DEFAULT_CONFIG2) : raw;
+        const payload = compactCalendarConfig(
+          stripped !== void 0 && stripped !== null ? stripped : {}
+        );
+        this.dispatchEvent(
+          new CustomEvent("config-changed", {
+            bubbles: true,
+            composed: true,
+            detail: { config: payload }
+          })
+        );
+      }
+      _captureFocusState() {
+        return window.NodaliaUtils.captureEditorFocusState(this);
+      }
+      _restoreFocusState(focusState) {
+        window.NodaliaUtils.restoreEditorFocusState(this, focusState);
+      }
+      _watchEditorControlTag(tagName) {
+        if (!tagName || this._pendingEditorControlTags.has(tagName)) {
+          return;
+        }
+        if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
+          return;
+        }
+        this._pendingEditorControlTags.add(tagName);
+        customElements.whenDefined(tagName).then(() => {
+          this._pendingEditorControlTags.delete(tagName);
+          if (!this.isConnected || !this._hass || !this.shadowRoot) {
+            return;
+          }
+          const focusState = this._captureFocusState();
+          this._render();
+          this._restoreFocusState(focusState);
+        }).catch(() => {
+          this._pendingEditorControlTags.delete(tagName);
+        });
+      }
+      _ensureEditorControlsReady() {
+        this._watchEditorControlTag("ha-entity-picker");
+        this._watchEditorControlTag("ha-selector");
+        this._watchEditorControlTag("ha-icon-picker");
+      }
+      _setFieldValue(targetConfig, field, value) {
+        if (!field) {
+          return;
+        }
+        if (!field.startsWith("calendars.") && typeof window !== "undefined" && window.NodaliaUtils && typeof window.NodaliaUtils.setByPath === "function") {
+          window.NodaliaUtils.setByPath(targetConfig, field, value);
+          return;
+        }
+        if (field.startsWith("calendars.")) {
+          const parts = field.split(".");
+          const index = Number(parts[1]);
+          if (!Number.isFinite(index) || index < 0) {
+            return;
+          }
+          if (!Array.isArray(targetConfig.calendars)) {
+            targetConfig.calendars = [];
+          }
+          while (targetConfig.calendars.length <= index) {
+            targetConfig.calendars.push({ entity: "", label: "", tint: "" });
+          }
+          if (parts.length >= 3) {
+            const key = parts[2];
+            const unsafeKey = typeof window !== "undefined" && window.NodaliaUtils && typeof window.NodaliaUtils.isUnsafeConfigPathKey === "function" && window.NodaliaUtils.isUnsafeConfigPathKey(key);
+            if (key === "__proto__" || key === "constructor" || key === "prototype" || unsafeKey) {
+              return;
+            }
+            let entry = targetConfig.calendars[index];
+            if (typeof entry === "string") {
+              entry = { entity: String(entry).trim(), label: "", tint: "" };
+            } else if (!entry || typeof entry !== "object") {
+              entry = { entity: "", label: "", tint: "" };
+            }
+            if (key === "entity") {
+              entry.entity = String(value ?? "").trim();
+            } else if (key === "label") {
+              entry.label = String(value ?? "").trim();
+            } else if (key === "tint") {
+              entry.tint = sanitizeCalendarTint(value);
+            }
+            targetConfig.calendars[index] = entry;
+            return;
+          }
+          targetConfig.calendars[index] = {
+            entity: String(value ?? "").trim(),
+            label: "",
+            tint: ""
+          };
+          return;
+        }
+      }
+      _readFieldValue(input) {
+        const valueType = input.dataset.valueType || "string";
+        if (valueType === "boolean") {
+          return Boolean(input.checked);
+        }
+        if (valueType === "number") {
+          return Number(input.value || 0);
+        }
+        if (valueType === "color") {
+          return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
+        }
+        return input.value;
+      }
+      _onShadowInput(event) {
+        const input = event.composedPath().find(
+          (node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement
+        );
+        if (!input?.dataset?.field) {
+          return;
+        }
+        event.stopPropagation();
+        if (event.type === "input" && input.type !== "checkbox") {
+          return;
+        }
+        if (input.type === "checkbox" && event.type === "input") {
+          return;
+        }
+        const next = deepClone(this._config || DEFAULT_CONFIG2);
+        const field = input.dataset.field || "";
+        const value = this._readFieldValue(input);
+        this._setFieldValue(next, field, value);
+        this._config = normalizeConfig(next);
+        if (event.type === "change") {
+          this._emitConfig();
+          const focusState = this._captureFocusState();
+          this._render();
+          this._restoreFocusState(focusState);
+        }
+      }
+      _onShadowValueChanged(event) {
+        const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+        if (!control?.dataset?.field) {
+          return;
+        }
+        event.stopPropagation();
+        const field = control.dataset.field;
+        const next = deepClone(this._config || DEFAULT_CONFIG2);
+        const raw = event.detail?.value;
+        const value = typeof raw === "string" ? raw : control.value;
+        this._setFieldValue(next, field, value);
+        this._config = normalizeConfig(next);
+        this._emitConfig();
         const focusState = this._captureFocusState();
         this._render();
         this._restoreFocusState(focusState);
-      })
-      .catch(() => {
-        this._pendingEditorControlTags.delete(tagName);
-      });
-  }
-
-  _ensureEditorControlsReady() {
-    this._watchEditorControlTag("ha-entity-picker");
-    this._watchEditorControlTag("ha-selector");
-    this._watchEditorControlTag("ha-icon-picker");
-  }
-
-  _setFieldValue(targetConfig, field, value) {
-    if (!field) {
-      return;
-    }
-    if (
-      !field.startsWith("calendars.") &&
-      typeof window !== "undefined" &&
-      window.NodaliaUtils &&
-      typeof window.NodaliaUtils.setByPath === "function"
-    ) {
-      window.NodaliaUtils.setByPath(targetConfig, field, value);
-      return;
-    }
-    if (field.startsWith("calendars.")) {
-      const parts = field.split(".");
-      const index = Number(parts[1]);
-      if (!Number.isFinite(index) || index < 0) {
-        return;
       }
-      if (!Array.isArray(targetConfig.calendars)) {
-        targetConfig.calendars = [];
-      }
-      while (targetConfig.calendars.length <= index) {
-        targetConfig.calendars.push({ entity: "", label: "", tint: "" });
-      }
-      if (parts.length >= 3) {
-        const key = parts[2];
-        const unsafeKey =
-          typeof window !== "undefined"
-          && window.NodaliaUtils
-          && typeof window.NodaliaUtils.isUnsafeConfigPathKey === "function"
-          && window.NodaliaUtils.isUnsafeConfigPathKey(key);
-        if (
-          key === "__proto__"
-          || key === "constructor"
-          || key === "prototype"
-          || unsafeKey
-        ) {
+      _moveCalendar(index, delta) {
+        const next = deepClone(this._config || DEFAULT_CONFIG2);
+        const list = Array.isArray(next.calendars) ? [...next.calendars] : [];
+        const j = index + delta;
+        if (!Number.isFinite(index) || index < 0 || !Number.isFinite(j) || j < 0 || j >= list.length) {
           return;
         }
-        let entry = targetConfig.calendars[index];
-        if (typeof entry === "string") {
-          entry = { entity: String(entry).trim(), label: "", tint: "" };
-        } else if (!entry || typeof entry !== "object") {
-          entry = { entity: "", label: "", tint: "" };
+        [list[index], list[j]] = [list[j], list[index]];
+        next.calendars = list;
+        this._config = normalizeConfig(next);
+        this._emitConfig();
+        const focusState = this._captureFocusState();
+        this._render();
+        this._restoreFocusState(focusState);
+      }
+      _onShadowClick(event) {
+        const rootTarget = event.target instanceof Element ? event.target : null;
+        const toggleButton = rootTarget?.closest?.("[data-editor-toggle]");
+        if (toggleButton) {
+          event.preventDefault();
+          event.stopPropagation();
+          if (toggleButton.dataset.editorToggle === "styles") {
+            this._showStyleSection = !this._showStyleSection;
+          } else if (toggleButton.dataset.editorToggle === "animations") {
+            this._showAnimationSection = !this._showAnimationSection;
+          } else if (toggleButton.dataset.editorToggle === "haptics") {
+            this._showHapticsSection = !this._showHapticsSection;
+          }
+          const focusState2 = this._captureFocusState();
+          this._render();
+          this._restoreFocusState(focusState2);
+          return;
         }
-        if (key === "entity") {
-          entry.entity = String(value ?? "").trim();
-        } else if (key === "label") {
-          entry.label = String(value ?? "").trim();
-        } else if (key === "tint") {
-          entry.tint = sanitizeCalendarTint(value);
+        const button = rootTarget?.closest?.("[data-editor-action]");
+        if (!button) {
+          return;
         }
-        targetConfig.calendars[index] = entry;
-        return;
+        event.preventDefault();
+        event.stopPropagation();
+        const action = button.dataset.editorAction;
+        if (action === "move-calendar-up") {
+          this._moveCalendar(Number(button.dataset.index || -1), -1);
+          return;
+        }
+        if (action === "move-calendar-down") {
+          this._moveCalendar(Number(button.dataset.index || -1), 1);
+          return;
+        }
+        const next = deepClone(this._config || DEFAULT_CONFIG2);
+        if (!Array.isArray(next.calendars)) {
+          next.calendars = [];
+        }
+        if (action === "add-calendar") {
+          next.calendars.push({ entity: "", label: "", tint: "" });
+        } else if (action === "remove-calendar") {
+          const index = Number(button.dataset.index || -1);
+          if (Number.isFinite(index) && index >= 0 && index < next.calendars.length) {
+            next.calendars.splice(index, 1);
+          }
+        } else {
+          return;
+        }
+        this._config = normalizeConfig(next);
+        this._emitConfig();
+        const focusState = this._captureFocusState();
+        this._render();
+        this._restoreFocusState(focusState);
       }
-      targetConfig.calendars[index] = {
-        entity: String(value ?? "").trim(),
-        label: "",
-        tint: "",
-      };
-      return;
-    }
-  }
-
-  _readFieldValue(input) {
-    const valueType = input.dataset.valueType || "string";
-    if (valueType === "boolean") {
-      return Boolean(input.checked);
-    }
-    if (valueType === "number") {
-      return Number(input.value || 0);
-    }
-    if (valueType === "color") {
-      return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
-    }
-    return input.value;
-  }
-
-  _onShadowInput(event) {
-    const input = event
-      .composedPath()
-      .find(
-        node =>
-          node instanceof HTMLInputElement ||
-          node instanceof HTMLSelectElement ||
-          node instanceof HTMLTextAreaElement,
-      );
-    if (!input?.dataset?.field) {
-      return;
-    }
-    event.stopPropagation();
-    if (event.type === "input" && input.type !== "checkbox") {
-      return;
-    }
-    if (input.type === "checkbox" && event.type === "input") {
-      return;
-    }
-    const next = deepClone(this._config || DEFAULT_CONFIG);
-    const field = input.dataset.field || "";
-    const value = this._readFieldValue(input);
-    this._setFieldValue(next, field, value);
-    this._config = normalizeConfig(next);
-    if (event.type === "change") {
-      this._emitConfig();
-      const focusState = this._captureFocusState();
-      this._render();
-      this._restoreFocusState(focusState);
-    }
-  }
-
-  _onShadowValueChanged(event) {
-    const control = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.field);
-    if (!control?.dataset?.field) {
-      return;
-    }
-    event.stopPropagation();
-    const field = control.dataset.field;
-    const next = deepClone(this._config || DEFAULT_CONFIG);
-    const raw = event.detail?.value;
-    const value = typeof raw === "string" ? raw : control.value;
-    this._setFieldValue(next, field, value);
-    this._config = normalizeConfig(next);
-    this._emitConfig();
-    const focusState = this._captureFocusState();
-    this._render();
-    this._restoreFocusState(focusState);
-  }
-
-  _moveCalendar(index, delta) {
-    const next = deepClone(this._config || DEFAULT_CONFIG);
-    const list = Array.isArray(next.calendars) ? [...next.calendars] : [];
-    const j = index + delta;
-    if (!Number.isFinite(index) || index < 0 || !Number.isFinite(j) || j < 0 || j >= list.length) {
-      return;
-    }
-    [list[index], list[j]] = [list[j], list[index]];
-    next.calendars = list;
-    this._config = normalizeConfig(next);
-    this._emitConfig();
-    const focusState = this._captureFocusState();
-    this._render();
-    this._restoreFocusState(focusState);
-  }
-
-  _onShadowClick(event) {
-    const rootTarget = event.target instanceof Element ? event.target : null;
-    const toggleButton = rootTarget?.closest?.("[data-editor-toggle]");
-    if (toggleButton) {
-      event.preventDefault();
-      event.stopPropagation();
-      if (toggleButton.dataset.editorToggle === "styles") {
-        this._showStyleSection = !this._showStyleSection;
-      } else if (toggleButton.dataset.editorToggle === "animations") {
-        this._showAnimationSection = !this._showAnimationSection;
-      } else if (toggleButton.dataset.editorToggle === "haptics") {
-        this._showHapticsSection = !this._showHapticsSection;
+      _mountCalendarEntityHost(host) {
+        if (!(host instanceof HTMLElement)) {
+          return;
+        }
+        const field = host.dataset.field || "calendars.0";
+        const nextValue = host.dataset.value || "";
+        const placeholder = host.dataset.placeholder || "";
+        const allowedDomains = String(host.dataset.domains || "").split(",").map((domain) => domain.trim()).filter(Boolean);
+        let control = null;
+        if (customElements.get("ha-entity-picker")) {
+          control = document.createElement("ha-entity-picker");
+          if (allowedDomains.length) {
+            control.includeDomains = allowedDomains;
+            control.entityFilter = (stateObj) => allowedDomains.some((domain) => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+          }
+          if (placeholder) {
+            control.setAttribute("placeholder", placeholder);
+          }
+          control.allowCustomEntity = true;
+        } else if (customElements.get("ha-selector")) {
+          control = document.createElement("ha-selector");
+          const entitySelector = allowedDomains.length === 1 ? { domain: allowedDomains[0] } : allowedDomains.length > 1 ? { domain: allowedDomains } : {};
+          control.selector = { entity: entitySelector };
+        } else {
+          control = document.createElement("input");
+          control.type = "text";
+          control.placeholder = placeholder || "calendar.ejemplo";
+          control.addEventListener("change", this._onShadowInput);
+        }
+        control.dataset.field = field;
+        control.dataset.value = nextValue;
+        if ("hass" in control) {
+          control.hass = this._hass;
+        }
+        if ("value" in control) {
+          control.value = nextValue;
+        }
+        if (control.tagName !== "INPUT") {
+          control.addEventListener("value-changed", this._onShadowValueChanged);
+        }
+        host.replaceChildren(control);
       }
-      const focusState = this._captureFocusState();
-      this._render();
-      this._restoreFocusState(focusState);
-      return;
-    }
-
-    const button = rootTarget?.closest?.("[data-editor-action]");
-    if (!button) {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    const action = button.dataset.editorAction;
-    if (action === "move-calendar-up") {
-      this._moveCalendar(Number(button.dataset.index || -1), -1);
-      return;
-    }
-    if (action === "move-calendar-down") {
-      this._moveCalendar(Number(button.dataset.index || -1), 1);
-      return;
-    }
-    const next = deepClone(this._config || DEFAULT_CONFIG);
-    if (!Array.isArray(next.calendars)) {
-      next.calendars = [];
-    }
-    if (action === "add-calendar") {
-      next.calendars.push({ entity: "", label: "", tint: "" });
-    } else if (action === "remove-calendar") {
-      const index = Number(button.dataset.index || -1);
-      if (Number.isFinite(index) && index >= 0 && index < next.calendars.length) {
-        next.calendars.splice(index, 1);
-      }
-    } else {
-      return;
-    }
-    this._config = normalizeConfig(next);
-    this._emitConfig();
-    const focusState = this._captureFocusState();
-    this._render();
-    this._restoreFocusState(focusState);
-  }
-
-  _mountCalendarEntityHost(host) {
-    if (!(host instanceof HTMLElement)) {
-      return;
-    }
-    const field = host.dataset.field || "calendars.0";
-    const nextValue = host.dataset.value || "";
-    const placeholder = host.dataset.placeholder || "";
-    const allowedDomains = String(host.dataset.domains || "")
-      .split(",")
-      .map(domain => domain.trim())
-      .filter(Boolean);
-    let control = null;
-
-    if (customElements.get("ha-entity-picker")) {
-      control = document.createElement("ha-entity-picker");
-      if (allowedDomains.length) {
-        control.includeDomains = allowedDomains;
-        control.entityFilter = stateObj =>
-          allowedDomains.some(domain => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
-      }
-      if (placeholder) {
-        control.setAttribute("placeholder", placeholder);
-      }
-      control.allowCustomEntity = true;
-    } else if (customElements.get("ha-selector")) {
-      control = document.createElement("ha-selector");
-      const entitySelector =
-        allowedDomains.length === 1
-          ? { domain: allowedDomains[0] }
-          : allowedDomains.length > 1
-            ? { domain: allowedDomains }
-            : {};
-      control.selector = { entity: entitySelector };
-    } else {
-      control = document.createElement("input");
-      control.type = "text";
-      control.placeholder = placeholder || "calendar.ejemplo";
-      control.addEventListener("change", this._onShadowInput);
-    }
-
-    control.dataset.field = field;
-    control.dataset.value = nextValue;
-
-    if ("hass" in control) {
-      control.hass = this._hass;
-    }
-    if ("value" in control) {
-      control.value = nextValue;
-    }
-
-    if (control.tagName !== "INPUT") {
-      control.addEventListener("value-changed", this._onShadowValueChanged);
-    }
-
-    host.replaceChildren(control);
-  }
-
-  _renderCheckboxField(label, field, checked) {
-    const tLabel = this._editorLabel(label);
-    return `
+      _renderCheckboxField(label, field, checked) {
+        const tLabel = this._editorLabel(label);
+        return `
       <label class="editor-toggle">
         <input
           type="checkbox"
@@ -4902,13 +4485,12 @@ class NodaliaCalendarCardEditor extends HTMLElement {
         <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
-  }
-
-  _renderTintAutoToggle(checked) {
-    const tTitle = this._editorLabel("ed.calendar.tint_auto_title");
-    const tHint = this._editorLabel("ed.calendar.tint_auto_hint");
-    const aria = escapeHtml(`${tTitle}. ${tHint}`);
-    return `
+      }
+      _renderTintAutoToggle(checked) {
+        const tTitle = this._editorLabel("ed.calendar.tint_auto_title");
+        const tHint = this._editorLabel("ed.calendar.tint_auto_hint");
+        const aria = escapeHtml(`${tTitle}. ${tHint}`);
+        return `
       <div class="editor-tint-block">
         <div class="editor-tint-block__text">
           <div class="editor-tint-block__title">${escapeHtml(tTitle)}</div>
@@ -4927,40 +4509,33 @@ class NodaliaCalendarCardEditor extends HTMLElement {
         </label>
       </div>
     `;
-  }
-
-  _renderSelectField(label, field, value, options = {}) {
-    const tLabel = this._editorLabel(label);
-    const opts = options.options || [];
-    const current = String(value ?? "");
-    return `
+      }
+      _renderSelectField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const opts = options.options || [];
+        const current = String(value ?? "");
+        return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
-          ${opts
-            .map(
-              o =>
-                `<option value="${escapeHtml(String(o.value))}" ${String(o.value) === current ? "selected" : ""}>${escapeHtml(
-                  typeof o.label === "string" && o.label ? this._editorLabel(o.label) : String(o.label ?? ""),
-                )}</option>`,
-            )
-            .join("")}
+          ${opts.map(
+          (o) => `<option value="${escapeHtml(String(o.value))}" ${String(o.value) === current ? "selected" : ""}>${escapeHtml(
+            typeof o.label === "string" && o.label ? this._editorLabel(o.label) : String(o.label ?? "")
+          )}</option>`
+        ).join("")}
         </select>
       </label>
     `;
-  }
-
-  _renderTextField(label, field, value, options = {}) {
-    const tLabel = this._editorLabel(label);
-    const inputType = options.type || "text";
-    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
-    const valueType = options.valueType || (inputType === "number" ? "number" : "string");
-    const inputValue = value === undefined || value === null ? "" : String(value);
-    const hintRaw = options.hint ? String(options.hint) : "";
-    const hintHtml = hintRaw
-      ? `<span class="editor-field__hint">${escapeHtml(this._editorLabel(hintRaw))}</span>`
-      : "";
-    return `
+      }
+      _renderTextField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const inputType = options.type || "text";
+        const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+        const valueType = options.valueType || (inputType === "number" ? "number" : "string");
+        const inputValue = value === void 0 || value === null ? "" : String(value);
+        const hintRaw = options.hint ? String(options.hint) : "";
+        const hintHtml = hintRaw ? `<span class="editor-field__hint">${escapeHtml(this._editorLabel(hintRaw))}</span>` : "";
+        return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <input
@@ -4973,13 +4548,12 @@ class NodaliaCalendarCardEditor extends HTMLElement {
         ${hintHtml}
       </label>
     `;
-  }
-
-  _renderIconPickerField(label, field, value, options = {}) {
-    const tLabel = this._editorLabel(label);
-    const inputValue = value === undefined || value === null ? "" : String(value);
-    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
-    return `
+      }
+      _renderIconPickerField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const inputValue = value === void 0 || value === null ? "" : String(value);
+        const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+        return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <ha-icon-picker
@@ -4990,18 +4564,14 @@ class NodaliaCalendarCardEditor extends HTMLElement {
         ></ha-icon-picker>
       </div>
     `;
-  }
-
-  _renderColorField(label, field, value, options = {}) {
-    const tLabel = this._editorLabel(label);
-    const tColorCustom = this._editorLabel("Color personalizado");
-    const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
-    const currentValue = value === undefined || value === null || value === ""
-      ? fallbackValue
-      : String(value);
-    const colorModel = getEditorColorModel(currentValue, fallbackValue);
-
-    return `
+      }
+      _renderColorField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const tColorCustom = this._editorLabel("Color personalizado");
+        const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
+        const currentValue = value === void 0 || value === null || value === "" ? fallbackValue : String(value);
+        const colorModel = getEditorColorModel(currentValue, fallbackValue);
+        return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
@@ -5019,17 +4589,13 @@ class NodaliaCalendarCardEditor extends HTMLElement {
         </div>
       </div>
     `;
-  }
-
-  _renderCalendarCard(entry, index, total) {
-    const ent =
-      entry && typeof entry === "object" && !Array.isArray(entry)
-        ? entry
-        : { entity: String(entry ?? "").trim(), label: "", tint: "" };
-    const entityId = String(ent.entity ?? "").trim();
-    const label = String(ent.label ?? "").trim();
-    const tint = String(ent.tint ?? "").trim();
-    return `
+      }
+      _renderCalendarCard(entry, index, total) {
+        const ent = entry && typeof entry === "object" && !Array.isArray(entry) ? entry : { entity: String(entry ?? "").trim(), label: "", tint: "" };
+        const entityId = String(ent.entity ?? "").trim();
+        const label = String(ent.label ?? "").trim();
+        const tint = String(ent.tint ?? "").trim();
+        return `
       <div class="series-editor-card">
         <div class="series-editor-card__header">
           <div class="series-editor-card__title">${escapeHtml(this._editorLabel("ed.calendar.row_title"))} ${index + 1}</div>
@@ -5054,33 +4620,28 @@ class NodaliaCalendarCardEditor extends HTMLElement {
               ></div>
             </div>
             ${this._renderTextField("ed.calendar.visible_label", `calendars.${index}.label`, label, {
-              fullWidth: true,
-              placeholder: this._editorLabel("ed.calendar.label_placeholder"),
-            })}
+          fullWidth: true,
+          placeholder: this._editorLabel("ed.calendar.label_placeholder")
+        })}
             ${this._renderColorField("ed.calendar.row_card_tint", `calendars.${index}.tint`, tint, {
-              fullWidth: true,
-              fallbackValue: "#71c0ff",
-            })}
+          fullWidth: true,
+          fallbackValue: "#71c0ff"
+        })}
           </div>
         </div>
       </div>
     `;
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
-    }
-    this._ensureEditorControlsReady();
-    const config = normalizeConfig(this._config || DEFAULT_CONFIG);
-    const calendars =
-      Array.isArray(config.calendars) && config.calendars.length
-        ? config.calendars
-        : [{ entity: "", label: "", tint: "" }];
-    const hapticStyle = config.haptics?.style || DEFAULT_CONFIG.haptics.style;
-    const animations = config.animations || DEFAULT_CONFIG.animations;
-
-    this.shadowRoot.innerHTML = `
+      }
+      _render() {
+        if (!this.shadowRoot) {
+          return;
+        }
+        this._ensureEditorControlsReady();
+        const config = normalizeConfig(this._config || DEFAULT_CONFIG2);
+        const calendars = Array.isArray(config.calendars) && config.calendars.length ? config.calendars : [{ entity: "", label: "", tint: "" }];
+        const hapticStyle = config.haptics?.style || DEFAULT_CONFIG2.haptics.style;
+        const animations = config.animations || DEFAULT_CONFIG2.animations;
+        this.shadowRoot.innerHTML = `
       <style>
         :host {
           display: block;
@@ -5517,19 +5078,19 @@ class NodaliaCalendarCardEditor extends HTMLElement {
           </div>
           <div class="editor-grid">
             ${this._renderTextField("ed.nav.title", "title", config.title, { fullWidth: true, placeholder: "Calendar" })}
-            ${this._renderIconPickerField("Icono", "icon", config.icon || DEFAULT_CONFIG.icon, {
-              fullWidth: true,
-              placeholder: "mdi:calendar-month",
-            })}
-            ${this._renderSelectField("ed.calendar.visible_range", "time_range", config.time_range || DEFAULT_CONFIG.time_range, {
-              fullWidth: true,
-              options: [
-                { value: "3d", label: this._editorLabel("ed.calendar.period_3d") },
-                { value: "1w", label: this._editorLabel("ed.calendar.period_1w") },
-                { value: "2w", label: this._editorLabel("ed.calendar.period_2w") },
-                { value: "1m", label: this._editorLabel("ed.calendar.period_1m") },
-              ],
-            })}
+            ${this._renderIconPickerField("Icono", "icon", config.icon || DEFAULT_CONFIG2.icon, {
+          fullWidth: true,
+          placeholder: "mdi:calendar-month"
+        })}
+            ${this._renderSelectField("ed.calendar.visible_range", "time_range", config.time_range || DEFAULT_CONFIG2.time_range, {
+          fullWidth: true,
+          options: [
+            { value: "3d", label: this._editorLabel("ed.calendar.period_3d") },
+            { value: "1w", label: this._editorLabel("ed.calendar.period_1w") },
+            { value: "2w", label: this._editorLabel("ed.calendar.period_2w") },
+            { value: "1m", label: this._editorLabel("ed.calendar.period_1m") }
+          ]
+        })}
             ${this._renderTextField("ed.calendar.max_events_before_scroll", "max_visible_events", config.max_visible_events, { type: "number" })}
             ${this._renderTextField("ed.calendar.refresh_seconds", "refresh_interval", config.refresh_interval, { type: "number" })}
             <div class="editor-field editor-field--full">
@@ -5547,15 +5108,15 @@ class NodaliaCalendarCardEditor extends HTMLElement {
             ${this._renderTintAutoToggle(config.tint_auto !== false)}
             ${this._renderCheckboxField("ed.calendar.allow_delete_native", "allow_delete", config.allow_delete !== false)}
             ${this._renderTextField("ed.calendar.native_webhook_id", "native_event_webhook", config.native_event_webhook || "", {
-              fullWidth: true,
-              placeholder: "nodalia_calendar_create_event",
-              hint: "ed.calendar.native_webhook_hint",
-            })}
+          fullWidth: true,
+          placeholder: "nodalia_calendar_create_event",
+          hint: "ed.calendar.native_webhook_hint"
+        })}
             ${this._renderCheckboxField(
-              "ed.calendar.allow_webhooks_non_admin",
-              "security.allow_webhooks_for_non_admin",
-              config.security?.allow_webhooks_for_non_admin === true,
-            )}
+          "ed.calendar.allow_webhooks_non_admin",
+          "security.allow_webhooks_for_non_admin",
+          config.security?.allow_webhooks_for_non_admin === true
+        )}
           </div>
         </section>
 
@@ -5565,11 +5126,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.calendar.calendars_section_hint"))}</div>
           </div>
           <div class="series-editor-list">
-            ${
-              calendars.length
-                ? calendars.map((entityId, index) => this._renderCalendarCard(entityId, index, calendars.length)).join("")
-                : `<div class="empty-note">${escapeHtml(this._editorLabel("ed.calendar.no_calendars_yet"))}</div>`
-            }
+            ${calendars.length ? calendars.map((entityId, index) => this._renderCalendarCard(entityId, index, calendars.length)).join("") : `<div class="empty-note">${escapeHtml(this._editorLabel("ed.calendar.no_calendars_yet"))}</div>`}
           </div>
           <div class="editor-actions">
             <button type="button" class="editor-section__toggle-button" data-editor-action="add-calendar">
@@ -5595,28 +5152,24 @@ class NodaliaCalendarCardEditor extends HTMLElement {
               </button>
             </div>
           </div>
-          ${
-            this._showHapticsSection
-              ? `
+          ${this._showHapticsSection ? `
                 <div class="editor-grid">
                   ${this._renderCheckboxField("Activar respuesta háptica", "haptics.enabled", config.haptics?.enabled === true)}
                   ${this._renderCheckboxField("Usar vibración si no hay háptica", "haptics.fallback_vibrate", config.haptics?.fallback_vibrate === true)}
                   ${this._renderSelectField("Intensidad", "haptics.style", hapticStyle, {
-                    fullWidth: true,
-                    options: [
-                      { value: "selection", label: "ed.calendar.haptic_selection" },
-                      { value: "light", label: "ed.calendar.haptic_light" },
-                      { value: "medium", label: "ed.calendar.haptic_medium" },
-                      { value: "heavy", label: "ed.calendar.haptic_heavy" },
-                      { value: "success", label: "ed.calendar.haptic_success" },
-                      { value: "warning", label: "ed.calendar.haptic_warning" },
-                      { value: "failure", label: "ed.calendar.haptic_failure" },
-                    ],
-                  })}
+          fullWidth: true,
+          options: [
+            { value: "selection", label: "ed.calendar.haptic_selection" },
+            { value: "light", label: "ed.calendar.haptic_light" },
+            { value: "medium", label: "ed.calendar.haptic_medium" },
+            { value: "heavy", label: "ed.calendar.haptic_heavy" },
+            { value: "success", label: "ed.calendar.haptic_success" },
+            { value: "warning", label: "ed.calendar.haptic_warning" },
+            { value: "failure", label: "ed.calendar.haptic_failure" }
+          ]
+        })}
                 </div>
-              `
-              : ""
-          }
+              ` : ""}
         </section>
 
         <section class="editor-section">
@@ -5635,18 +5188,14 @@ class NodaliaCalendarCardEditor extends HTMLElement {
               </button>
             </div>
           </div>
-          ${
-            this._showAnimationSection
-              ? `
+          ${this._showAnimationSection ? `
                 <div class="editor-grid">
                   ${this._renderCheckboxField("Activar animaciones", "animations.enabled", animations.enabled !== false)}
                   ${this._renderTextField("ed.calendar.content_entrance_ms", "animations.content_duration", animations.content_duration, {
-                    type: "number",
-                  })}
+          type: "number"
+        })}
                 </div>
-              `
-              : ""
-          }
+              ` : ""}
         </section>
 
         <section class="editor-section">
@@ -5665,27 +5214,25 @@ class NodaliaCalendarCardEditor extends HTMLElement {
               </button>
             </div>
           </div>
-          ${
-            this._showStyleSection
-              ? `
+          ${this._showStyleSection ? `
                 <div class="editor-grid">
                   ${this._renderColorField("Fondo tarjeta", "styles.card.background", config.styles?.card?.background, {
-                    fullWidth: true,
-                    fallbackValue: DEFAULT_CONFIG.styles.card.background,
-                  })}
+          fullWidth: true,
+          fallbackValue: DEFAULT_CONFIG2.styles.card.background
+        })}
                   ${this._renderTextField("Borde tarjeta", "styles.card.border", config.styles?.card?.border)}
                   ${window.NodaliaUtils.renderEditorCardBorderRadiusHtml({
-                    escapeHtml,
-                    field: "styles.card.border_radius",
-                    value: config.styles?.card?.border_radius,
-                    tHeading: this._editorLabel("ed.entity.style_card_radius_presets"),
-                    labels: {
-                      pill: this._editorLabel("ed.entity.chip_radius_pill"),
-                      soft: this._editorLabel("ed.entity.chip_radius_soft"),
-                      round: this._editorLabel("ed.entity.chip_radius_round"),
-                      square: this._editorLabel("ed.entity.chip_radius_square"),
-                    },
-                  })}
+          escapeHtml,
+          field: "styles.card.border_radius",
+          value: config.styles?.card?.border_radius,
+          tHeading: this._editorLabel("ed.entity.style_card_radius_presets"),
+          labels: {
+            pill: this._editorLabel("ed.entity.chip_radius_pill"),
+            soft: this._editorLabel("ed.entity.chip_radius_soft"),
+            round: this._editorLabel("ed.entity.chip_radius_round"),
+            square: this._editorLabel("ed.entity.chip_radius_square")
+          }
+        })}
                   <div class="editor-section__hint editor-field--full" style="margin-top: -6px;">${escapeHtml(this._editorLabel("ed.entity.style_card_radius_yaml_hint"))}</div>
                   ${this._renderTextField("Sombra tarjeta", "styles.card.box_shadow", config.styles?.card?.box_shadow, { fullWidth: true })}
                   ${this._renderTextField("Padding", "styles.card.padding", config.styles?.card?.padding)}
@@ -5696,72 +5243,76 @@ class NodaliaCalendarCardEditor extends HTMLElement {
                   ${this._renderTextField("Texto chips", "styles.chip_font_size", config.styles?.chip_font_size)}
                   ${this._renderTextField("Relleno chips", "styles.chip_padding", config.styles?.chip_padding)}
                   ${window.NodaliaUtils.renderEditorChipBorderRadiusHtml({
-                    escapeHtml,
-                    field: "styles.chip_border_radius",
-                    value: config.styles?.chip_border_radius,
-                    tHeading: this._editorLabel("ed.entity.style_chip_radius"),
-                    labels: {
-                      pill: this._editorLabel("ed.entity.chip_radius_pill"),
-                      soft: this._editorLabel("ed.entity.chip_radius_soft"),
-                      round: this._editorLabel("ed.entity.chip_radius_round"),
-                      square: this._editorLabel("ed.entity.chip_radius_square"),
-                    },
-                  })}
+          escapeHtml,
+          field: "styles.chip_border_radius",
+          value: config.styles?.chip_border_radius,
+          tHeading: this._editorLabel("ed.entity.style_chip_radius"),
+          labels: {
+            pill: this._editorLabel("ed.entity.chip_radius_pill"),
+            soft: this._editorLabel("ed.entity.chip_radius_soft"),
+            round: this._editorLabel("ed.entity.chip_radius_round"),
+            square: this._editorLabel("ed.entity.chip_radius_square")
+          }
+        })}
                   ${this._renderColorField("Icono burbuja fondo", "styles.icon.background", config.styles?.icon?.background, {
-                    fullWidth: true,
-                    fallbackValue: DEFAULT_CONFIG.styles.icon.background,
-                  })}
+          fullWidth: true,
+          fallbackValue: DEFAULT_CONFIG2.styles.icon.background
+        })}
                   ${this._renderColorField("Color icono activo", "styles.icon.on_color", config.styles?.icon?.on_color, {
-                    fullWidth: true,
-                    fallbackValue: DEFAULT_CONFIG.styles.icon.on_color,
-                  })}
+          fullWidth: true,
+          fallbackValue: DEFAULT_CONFIG2.styles.icon.on_color
+        })}
                   ${this._renderColorField("Color icono inactivo", "styles.icon.off_color", config.styles?.icon?.off_color, {
-                    fullWidth: true,
-                    fallbackValue: DEFAULT_CONFIG.styles.icon.off_color,
-                  })}
+          fullWidth: true,
+          fallbackValue: DEFAULT_CONFIG2.styles.icon.off_color
+        })}
                   ${this._renderTextField("Icono burbuja tamaño", "styles.icon.size", config.styles?.icon?.size)}
                   ${this._renderColorField("ed.calendar.accent_if_tint_off", "styles.tint.color", config.styles?.tint?.color, {
-                    fullWidth: true,
-                    fallbackValue: DEFAULT_CONFIG.styles.tint.color,
-                  })}
+          fullWidth: true,
+          fallbackValue: DEFAULT_CONFIG2.styles.tint.color
+        })}
                 </div>
-              `
-              : ""
-          }
+              ` : ""}
         </section>
       </div>
     `;
-
-    this.shadowRoot
-      .querySelectorAll(
-        '[data-mounted-control="calendar-entity"], [data-mounted-control="weather-entity"]',
-      )
-      .forEach(host => {
-        this._mountCalendarEntityHost(host);
-      });
+        this.shadowRoot.querySelectorAll(
+          '[data-mounted-control="calendar-entity"], [data-mounted-control="weather-entity"]'
+        ).forEach((host) => {
+          this._mountCalendarEntityHost(host);
+        });
+      }
+    }
+    _lazyNodaliaCalendarCardEditor = NodaliaCalendarCardEditor;
+    return NodaliaCalendarCardEditor;
   }
-}
 
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaCalendarCard);
-}
-if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaCalendarCardEditor);
-}
-
-const _nodaliaCalendarLanguage = window.NodaliaI18n?.resolveLanguage?.(null, "auto") ?? "en";
-const _nodaliaCalendarStrings = window.NodaliaI18n?.strings?.(_nodaliaCalendarLanguage)?.calendarCard
-  || window.NodaliaI18n?.strings?.("en")?.calendarCard
-  || {};
-const _nodaliaCalendarCardMeta = {
-  type: CARD_TAG,
-  name: "Nodalia Calendar Card",
-  description: String(_nodaliaCalendarStrings.cardDescription || "Calendar card with native events and an expanded agenda."),
-  preview: true,
-};
-if (typeof window.NodaliaUtils?.registerCustomCard === "function") {
-  window.NodaliaUtils.registerCustomCard(_nodaliaCalendarCardMeta);
-} else {
-  window.customCards = window.customCards || [];
-  window.customCards.push(_nodaliaCalendarCardMeta);
-}
+  // src/cards/calendar/index.ts
+  window.NodaliaUtils.defineLazyCustomElement(CARD_TAG, loadNodaliaCalendarCard, { editorTag: EDITOR_TAG });
+  window.NodaliaUtils.defineLazyCustomElement(EDITOR_TAG, loadNodaliaCalendarCardEditor);
+  try {
+    const language = window.NodaliaI18n?.resolveLanguage?.(null, "auto") ?? "en";
+    const strings = window.NodaliaI18n?.strings?.(language)?.calendarCard ?? window.NodaliaI18n?.strings?.("en")?.calendarCard ?? {};
+    const meta = {
+      type: CARD_TAG,
+      name: "Nodalia Calendar Card",
+      description: String(strings.cardDescription || "Calendar card with native events and an expanded agenda."),
+      preview: true
+    };
+    if (typeof window.NodaliaUtils?.registerCustomCard === "function") {
+      window.NodaliaUtils.registerCustomCard(meta);
+    } else {
+      window.customCards = window.customCards || [];
+      window.customCards.push(meta);
+    }
+  } catch {
+  }
+  var publicApi = {
+    CARD_TAG,
+    EDITOR_TAG,
+    CARD_VERSION,
+    DEFAULT_CONFIG: DEFAULT_CONFIG2,
+    normalizeConfig
+  };
+  window.__NODALIA_CALENDAR__ = publicApi;
+})();

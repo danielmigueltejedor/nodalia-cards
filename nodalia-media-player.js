@@ -1,3172 +1,3184 @@
-const CARD_TAG = "nodalia-media-player";
-const EDITOR_TAG = "nodalia-media-player-editor";
-const CARD_VERSION = "2.3.0-alpha.3";
-const INVALID_EDITOR_VALUE = Symbol("invalid-editor-value");
-const MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
-const HAPTIC_PATTERNS = {
-  selection: 8,
-  light: 10,
-  medium: 16,
-  heavy: 24,
-  success: [10, 40, 10],
-  warning: [20, 50, 12],
-  failure: [12, 40, 12, 40, 18],
-};
-const MUSIC_ASSISTANT_BROWSER_EXCLUDE_PATTERNS = [
-  "ai generated",
-  "ai-generated",
-  "image",
-  "image upload",
-  "generated images",
-  "camera",
-  "cameras",
-  "dlna",
-  "dlna server",
-  "dlna servers",
-  "frigate",
-  "my media",
-  "text to speech",
-  "tts",
-  "xbox game media",
-  "xbox",
-  "imagenes generadas",
-  "images",
-  "imagenes",
-];
-const MUSIC_ASSISTANT_DIRECTORY_ICON_RULES = [
-  {
-    patterns: [
-      "artists",
-      "artistas",
-      "artistes",
-      "артисты",
-      "artiști",
-      "艺术家",
-      "καλλιτέχνες",
-    ],
-    icon: "mdi:account-music",
-  },
-  {
-    patterns: [
-      "albums",
-      "albumes",
-      "álbumes",
-      "álbums",
-      "albuns",
-      "альбомы",
-      "专辑",
-      "άλμπουμ",
-    ],
-    icon: "mdi:album",
-  },
-  {
-    patterns: [
-      "tracks",
-      "songs",
-      "canciones",
-      "temas",
-      "pistas",
-      "faixas",
-      "músicas",
-      "треки",
-      "曲目",
-      "κομμάτια",
-      "piese",
-    ],
-    icon: "mdi:music-note",
-  },
-  {
-    patterns: [
-      "playlists",
-      "listas",
-      "listas de reproduccion",
-      "listas de reproducción",
-      "listas de reprodução",
-      "плейлисты",
-      "播放列表",
-      "liste de redare",
-      "λίστες αναπαραγωγής",
-    ],
-    icon: "mdi:playlist-music",
-  },
-  {
-    patterns: [
-      "radio stations",
-      "radios",
-      "emisoras",
-      "stations",
-      "estações",
-      "радио",
-      "радиостанции",
-      "广播电台",
-      "stații radio",
-      "ραδιοφωνικοί",
-    ],
-    icon: "mdi:radio",
-  },
-  { patterns: ["podcasts", "подкасты", "播客", "podcasturi"], icon: "mdi:podcast" },
-  {
-    patterns: ["audiobooks", "audiolibros", "audiolivros", "аудиокниги", "有声书", "cărți audio", "ακουστικά βιβλία"],
-    icon: "mdi:book-music",
-  },
-  {
-    patterns: ["genres", "generos", "géneros", "жанры", "流派", "genuri", "είδη"],
-    icon: "mdi:shape",
-  },
-  {
-    patterns: [
-      "favorites",
-      "favourites",
-      "favoritos",
-      "избранное",
-      "收藏",
-      "favorite",
-      "αγαπημένα",
-    ],
-    icon: "mdi:heart",
-  },
-  {
-    patterns: [
-      "recent",
-      "recently",
-      "recientes",
-      "recentemente",
-      "недавно",
-      "最近",
-      "πρόσφατα",
-      "redări recente",
-    ],
-    icon: "mdi:history",
-  },
-  {
-    patterns: [
-      "search",
-      "buscar",
-      "busqueda",
-      "búsqueda",
-      "pesquisar",
-      "поиск",
-      "搜索",
-      "căutare",
-      "αναζήτηση",
-    ],
-    icon: "mdi:magnify",
-  },
-];
-
-const DEFAULT_CONFIG = {
-  title: "",
-  entity: "",
-  players: [],
-  show: true,
-  show_state: false,
-  show_device_chip: true,
-  album_cover_background: true,
-  show_unavailable_badge: true,
-  haptics: {
-    enabled: true,
-    style: "medium",
-    fallback_vibrate: false,
-  },
-  animations: {
-    enabled: true,
-    panel_duration: 700,
-    browser_duration: 760,
-    button_bounce_duration: 320,
-  },
-  security: {
-    // Custom actions configured in the visual editor must work out of the box.
-    // Users can still opt into an allowlist by enabling strict mode explicitly.
-    strict_service_actions: false,
-    allowed_services: [],
-    allowed_service_domains: [],
-  },
-  layout: {
-    fixed: false,
-    reserve_space: false,
-    reserve_height: "220px",
-    position: "bottom",
-    show_desktop: true,
-    mobile_breakpoint: 1279,
-    z_index: 3,
-    side_margin: "12px",
-    offset: "12px",
-    max_width: "min(100%, 560px)",
-  },
-  styles: {
-    player: {
-      background: "var(--ha-card-background)",
-      border: "1px solid var(--divider-color)",
-      border_radius: "var(--nodalia-card-border-radius, 28px)",
-      box_shadow: "var(--ha-card-box-shadow)",
-      padding: "14px",
-      min_height: "160px",
-      artwork_size: "62px",
-      tv_artwork_size: "68px",
-      control_size: "30px",
-      title_size: "12px",
-      subtitle_size: "10px",
-      slider_wrap_height: "48px",
-      slider_height: "14px",
-      slider_thumb_size: "24px",
-      progress_color: "var(--primary-color)",
-      progress_background: "rgba(var(--rgb-primary-color), 0.14)",
-      overlay_color: "rgba(0, 0, 0, 0.32)",
-      dot_size: "8px",
-      active_tint_color: "var(--info-color, #71c0ff)",
-      accent_color: "var(--primary-text-color)",
-      accent_background: "rgba(var(--rgb-primary-color), 0.18)",
+/* Generated from src/cards/media-player. Do not edit. */
+"use strict";
+(() => {
+  // src/cards/media-player/media-player-constants.ts
+  var CARD_TAG = "nodalia-media-player";
+  var EDITOR_TAG = "nodalia-media-player-editor";
+  var CARD_VERSION = "2.3.0-alpha.25";
+  var INVALID_EDITOR_VALUE = /* @__PURE__ */ Symbol("invalid-editor-value");
+  var MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
+  var HAPTIC_PATTERNS = {
+    selection: 8,
+    light: 10,
+    medium: 16,
+    heavy: 24,
+    success: [10, 40, 10],
+    warning: [20, 50, 12],
+    failure: [12, 40, 12, 40, 18]
+  };
+  var MUSIC_ASSISTANT_BROWSER_EXCLUDE_PATTERNS = [
+    "ai generated",
+    "ai-generated",
+    "image",
+    "image upload",
+    "generated images",
+    "camera",
+    "cameras",
+    "dlna",
+    "dlna server",
+    "dlna servers",
+    "frigate",
+    "my media",
+    "text to speech",
+    "tts",
+    "xbox game media",
+    "xbox",
+    "imagenes generadas",
+    "images",
+    "imagenes"
+  ];
+  var MUSIC_ASSISTANT_DIRECTORY_ICON_RULES = [
+    {
+      patterns: [
+        "artists",
+        "artistas",
+        "artistes",
+        "артисты",
+        "artiști",
+        "艺术家",
+        "καλλιτέχνες"
+      ],
+      icon: "mdi:account-music"
     },
-    browser: {
-      background: "var(--ha-card-background)",
-      border: "1px solid var(--divider-color)",
-      border_radius: "var(--nodalia-card-border-radius, 28px)",
-      box_shadow: "0 18px 40px rgba(0, 0, 0, 0.22)",
-      backdrop: "rgba(0, 0, 0, 0.18)",
+    {
+      patterns: [
+        "albums",
+        "albumes",
+        "álbumes",
+        "álbums",
+        "albuns",
+        "альбомы",
+        "专辑",
+        "άλμπουμ"
+      ],
+      icon: "mdi:album"
     },
-  },
-};
-
-// Shared primitives are loaded by nodalia-cards core and inlined for standalone resources.
-const {
-  isObject,
-  deepClone,
-  mergeDeep: mergeConfig,
-  isUnsafeConfigPathKey,
-  setByPath,
-  deleteByPath,
-  fireEvent,
-  escapeHtml,
-  clamp,
-} = window.NodaliaUtils;
-
-
-
-function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
-  return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
-}
-
-function getStubFriendlyName(hass, entityId) {
-  return hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
-}
-
-
-function compactConfig(value) {
-  if (Array.isArray(value)) {
-    return value
-      .map(item => compactConfig(item))
-      .filter(item => item !== undefined);
-  }
-
-  if (isObject(value)) {
-    const compacted = {};
-
-    Object.entries(value).forEach(([key, item]) => {
-      if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
-        return;
-      }
-      if (key === "entity" && item === "") {
-        compacted.entity = "";
-        return;
-      }
-
-      const cleaned = compactConfig(item);
-      const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
-
-      if (cleaned !== undefined && !isEmptyObject) {
-        compacted[key] = cleaned;
-      }
-    });
-
-    return compacted;
-  }
-
-  if (value === "" || value === null || value === undefined) {
-    return undefined;
-  }
-
-  return value;
-}
-
-function formatEditorJsonValue(value) {
-  if (value === undefined || value === null || value === "") {
-    return "";
-  }
-
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (!trimmed) {
-      return "";
+    {
+      patterns: [
+        "tracks",
+        "songs",
+        "canciones",
+        "temas",
+        "pistas",
+        "faixas",
+        "músicas",
+        "треки",
+        "曲目",
+        "κομμάτια",
+        "piese"
+      ],
+      icon: "mdi:music-note"
+    },
+    {
+      patterns: [
+        "playlists",
+        "listas",
+        "listas de reproduccion",
+        "listas de reproducción",
+        "listas de reprodução",
+        "плейлисты",
+        "播放列表",
+        "liste de redare",
+        "λίστες αναπαραγωγής"
+      ],
+      icon: "mdi:playlist-music"
+    },
+    {
+      patterns: [
+        "radio stations",
+        "radios",
+        "emisoras",
+        "stations",
+        "estações",
+        "радио",
+        "радиостанции",
+        "广播电台",
+        "stații radio",
+        "ραδιοφωνικοί"
+      ],
+      icon: "mdi:radio"
+    },
+    { patterns: ["podcasts", "подкасты", "播客", "podcasturi"], icon: "mdi:podcast" },
+    {
+      patterns: ["audiobooks", "audiolibros", "audiolivros", "аудиокниги", "有声书", "cărți audio", "ακουστικά βιβλία"],
+      icon: "mdi:book-music"
+    },
+    {
+      patterns: ["genres", "generos", "géneros", "жанры", "流派", "genuri", "είδη"],
+      icon: "mdi:shape"
+    },
+    {
+      patterns: [
+        "favorites",
+        "favourites",
+        "favoritos",
+        "избранное",
+        "收藏",
+        "favorite",
+        "αγαπημένα"
+      ],
+      icon: "mdi:heart"
+    },
+    {
+      patterns: [
+        "recent",
+        "recently",
+        "recientes",
+        "recentemente",
+        "недавно",
+        "最近",
+        "πρόσφατα",
+        "redări recente"
+      ],
+      icon: "mdi:history"
+    },
+    {
+      patterns: [
+        "search",
+        "buscar",
+        "busqueda",
+        "búsqueda",
+        "pesquisar",
+        "поиск",
+        "搜索",
+        "căutare",
+        "αναζήτηση"
+      ],
+      icon: "mdi:magnify"
     }
+  ];
 
-    try {
-      return JSON.stringify(JSON.parse(trimmed), null, 2);
-    } catch (_error) {
-      return value;
+  // src/cards/media-player/media-player-layout.ts
+  var MEDIA_PLAYER_PRESENTATION_MODES = [
+    "auto",
+    "standard",
+    "square",
+    "chip",
+    "compact",
+    "artwork"
+  ];
+  var TILE_MAX_WIDTH = 960;
+  var CHIP_MIN_WIDTH = 960;
+  var COMPACT_MAX_WIDTH = 132;
+  var SQUARE_MIN_WIDTH = 200;
+  function normalizePresentationMode(value) {
+    const key = String(value || "").trim().toLowerCase();
+    if (key === "horizontal" || key === "long" || key === "chip") {
+      return "chip";
     }
+    if (key === "minimal" || key === "artwork") {
+      return "artwork";
+    }
+    if (MEDIA_PLAYER_PRESENTATION_MODES.includes(key)) {
+      return key;
+    }
+    return "auto";
   }
-
-  try {
-    return JSON.stringify(value, null, 2);
-  } catch (_error) {
-    return String(value);
+  function keepCurrentIfClose(current, next, width, height, preferSquareTiles) {
+    if (!current || current === next) {
+      return next;
+    }
+    if (!preferSquareTiles && (current === "square" || current === "artwork")) {
+      return next;
+    }
+    if (preferSquareTiles && next === "square" && (current === "chip" || current === "compact")) {
+      return width >= SQUARE_MIN_WIDTH ? "square" : "compact";
+    }
+    if (preferSquareTiles && current === "square" && width > 0 && width >= SQUARE_MIN_WIDTH && width < TILE_MAX_WIDTH) {
+      return "square";
+    }
+    const ratio = width / Math.max(height, 1);
+    if (preferSquareTiles && current === "square" && ratio >= 0.72 && ratio <= 1.38 && height >= 150) {
+      return "square";
+    }
+    if (current === "chip" && width >= CHIP_MIN_WIDTH && height <= 168 && ratio >= 1.7) {
+      return "chip";
+    }
+    if (current === "compact" && width < COMPACT_MAX_WIDTH && height <= 230) {
+      return "compact";
+    }
+    if (preferSquareTiles && current === "artwork" && ratio >= 0.72 && ratio <= 1.45 && height >= 160) {
+      return "artwork";
+    }
+    return next;
   }
-}
-
-function parseEditorJsonObject(value) {
-  const trimmed = String(value ?? "").trim();
-  if (!trimmed) {
-    return { valid: true, value: undefined };
+  function resolvePresentationMode(mode, size = {}, current = "", options = {}) {
+    const requested = normalizePresentationMode(mode);
+    if (requested !== "auto") {
+      return requested;
+    }
+    const width = Number(size.width) || 0;
+    const height = Number(size.height) || 0;
+    if (!(width > 0)) {
+      return current && current !== "auto" ? current : "standard";
+    }
+    const preferSquareTiles = options.preferSquareTiles !== false;
+    const ratio = height > 0 ? width / height : 0;
+    let next = "standard";
+    if (width >= CHIP_MIN_WIDTH && height > 0 && height <= 132 && ratio >= 2.05) {
+      next = "chip";
+    } else if (preferSquareTiles && width >= SQUARE_MIN_WIDTH && width < TILE_MAX_WIDTH) {
+      next = "square";
+    } else if (!preferSquareTiles && width <= 248) {
+      next = "compact";
+    } else if (preferSquareTiles && width < SQUARE_MIN_WIDTH) {
+      next = "compact";
+    } else if (preferSquareTiles && ratio >= 0.84 && ratio <= 1.18 && Math.min(width, height) >= 168) {
+      next = "square";
+    }
+    const stableCurrent = current && current !== "auto" ? current : "";
+    return keepCurrentIfClose(stableCurrent, next, width, height, preferSquareTiles);
   }
-
-  try {
-    const parsed = JSON.parse(trimmed);
-    return isObject(parsed)
-      ? { valid: true, value: parsed }
-      : { valid: false, value: undefined };
-  } catch (_error) {
-    return { valid: false, value: undefined };
-  }
-}
-
-
-function normalizePowerActionConfig(action) {
-  if (!isObject(action)) {
-    return undefined;
-  }
-
-  const normalized = compactConfig(deepClone(action));
-
-  if (!isObject(normalized)) {
-    return undefined;
-  }
-
-  const actionType = String(normalized.action || "").trim();
-
-  if (!actionType || actionType === "default") {
-    return undefined;
-  }
-
-  // Older editor builds seeded "none" by default, which made power no-op.
-  // Treat that exact minimal shape as "use default power behavior".
-  if (actionType === "none" && Object.keys(normalized).length === 1) {
-    return undefined;
-  }
-
-  normalized.action = actionType;
-  return normalized;
-}
-
-
-
-function getByPath(target, path) {
-  return String(path || "")
-    .split(".")
-    .filter(Boolean)
-    .reduce((cursor, key) => (cursor == null ? undefined : cursor[key]), target);
-}
-
-
-function arrayFromCsv(value) {
-  return String(value || "")
-    .split(",")
-    .map(item => item.trim())
-    .filter(Boolean);
-}
-
-function escapeSelectorValue(value) {
-  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
-    return CSS.escape(String(value));
-  }
-
-  return String(value).replaceAll('"', '\\"');
-}
-
-function resolveEditorColorValue(value) {
-  const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
-  if (typeof resolver === "function") {
-    return resolver(value);
-  }
-  return String(value ?? "").trim();
-}
-
-function resolveColorInContext(contextNode, value) {
-  const rawValue = String(value ?? "").trim();
-  if (!rawValue || typeof document === "undefined") {
-    return "";
-  }
-
-  const probe = document.createElement("span");
-  probe.style.position = "fixed";
-  probe.style.opacity = "0";
-  probe.style.pointerEvents = "none";
-  probe.style.color = "";
-  probe.style.color = rawValue;
-  if (!probe.style.color) {
-    return rawValue;
-  }
-
-  const root = contextNode?.shadowRoot instanceof ShadowRoot
-    ? contextNode.shadowRoot
-    : document.body || document.documentElement;
-  root.appendChild(probe);
-  const resolved = getComputedStyle(probe).color;
-  probe.remove();
-  return resolved || rawValue;
-}
-
-function parseRgbColor(value) {
-  const source = String(value ?? "").trim();
-  if (!source) {
-    return null;
-  }
-
-  const rgbMatch = source.match(/rgba?\(([^)]+)\)/i);
-  if (rgbMatch) {
-    const channels = rgbMatch[1]
-      .split(",")
-      .map(channel => Number.parseFloat(channel.trim()))
-      .filter(channel => Number.isFinite(channel));
-
-    if (channels.length >= 3) {
-      return {
-        red: clamp(channels[0], 0, 255),
-        green: clamp(channels[1], 0, 255),
-        blue: clamp(channels[2], 0, 255),
-      };
+  function presentationGridOptions(mode) {
+    switch (mode) {
+      case "square":
+      case "artwork":
+        return { rows: "auto", columns: 6, min_rows: 3, min_columns: 3 };
+      case "chip":
+        return { rows: "auto", columns: "full", min_rows: 1, min_columns: 6 };
+      case "compact":
+        return { rows: "auto", columns: 3, min_rows: 2, min_columns: 2 };
+      default:
+        return { rows: "auto", columns: "full", min_rows: 2, min_columns: 3 };
     }
   }
 
-  const hexMatch = source.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
-  if (hexMatch) {
-    const hex = hexMatch[1].length === 3
-      ? hexMatch[1].split("").map(channel => channel + channel).join("")
-      : hexMatch[1];
+  // src/cards/media-player/media-player-runtime.ts
+  var utils = window.NodaliaUtils;
+  var isObject = utils.isObject.bind(utils);
+  var deepClone2 = utils.deepClone.bind(utils);
+  var mergeConfig = utils.mergeDeep.bind(utils);
+  var compactConfig = utils.compactConfig.bind(utils);
+  var isUnsafeConfigPathKey = utils.isUnsafeConfigPathKey.bind(utils);
+  var setByPath = utils.setByPath.bind(utils);
+  var deleteByPath = utils.deleteByPath.bind(utils);
+  var clamp = utils.clamp.bind(utils);
+  var escapeHtml = utils.escapeHtml.bind(utils);
+  var fireEvent = utils.fireEvent.bind(utils);
+  var normalizeTextKey = utils.normalizeTextKey.bind(utils);
 
+  // src/cards/media-player/media-player-config.ts
+  var DEFAULT_CONFIG = {
+    title: "",
+    entity: "",
+    players: [],
+    show: true,
+    show_state: false,
+    show_device_chip: true,
+    album_cover_background: true,
+    show_unavailable_badge: true,
+    haptics: {
+      enabled: true,
+      style: "medium",
+      fallback_vibrate: false
+    },
+    animations: {
+      enabled: true,
+      panel_duration: 700,
+      browser_duration: 760,
+      button_bounce_duration: 320
+    },
+    security: {
+      // Custom actions configured in the visual editor must work out of the box.
+      // Users can still opt into an allowlist by enabling strict mode explicitly.
+      strict_service_actions: false,
+      allowed_services: [],
+      allowed_service_domains: []
+    },
+    layout: {
+      mode: "auto",
+      fixed: false,
+      reserve_space: false,
+      reserve_height: "220px",
+      position: "bottom",
+      show_desktop: true,
+      mobile_breakpoint: 1279,
+      z_index: 3,
+      side_margin: "12px",
+      offset: "12px",
+      max_width: "min(100%, 560px)"
+    },
+    artwork: {
+      mode: "immersive",
+      blur: 0,
+      dim: 0.22,
+      saturation: 1.05,
+      opacity: 1,
+      dynamic_colors: true,
+      crossfade: true,
+      crossfade_duration: 500
+    },
+    progress: {
+      show: true,
+      draggable: true
+    },
+    idle_artwork: {
+      enabled: true,
+      slideshow: true,
+      interval: 15,
+      animation: "subtle",
+      max_items: 8
+    },
+    styles: {
+      player: {
+        background: "var(--ha-card-background)",
+        border: "1px solid var(--divider-color)",
+        border_radius: "var(--nodalia-card-border-radius, 28px)",
+        box_shadow: "var(--ha-card-box-shadow)",
+        padding: "14px",
+        min_height: "160px",
+        artwork_size: "62px",
+        tv_artwork_size: "68px",
+        control_size: "36px",
+        title_size: "15px",
+        subtitle_size: "12px",
+        slider_wrap_height: "48px",
+        slider_height: "14px",
+        slider_thumb_size: "24px",
+        progress_color: "var(--primary-color)",
+        progress_background: "rgba(var(--rgb-primary-color), 0.14)",
+        overlay_color: "rgba(0, 0, 0, 0.32)",
+        dot_size: "8px",
+        active_tint_color: "var(--info-color, #71c0ff)",
+        accent_color: "var(--primary-text-color)",
+        accent_background: "rgba(var(--rgb-primary-color), 0.18)"
+      },
+      browser: {
+        background: "var(--ha-card-background)",
+        border: "1px solid var(--divider-color)",
+        border_radius: "var(--nodalia-card-border-radius, 28px)",
+        box_shadow: "0 18px 40px rgba(0, 0, 0, 0.22)",
+        backdrop: "rgba(0, 0, 0, 0.18)"
+      }
+    }
+  };
+  function clampNumber(value, fallback, min, max) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+      return fallback;
+    }
+    return Math.min(max, Math.max(min, numeric));
+  }
+  function normalizeArtworkConfig(raw) {
+    const source = isObject(raw) ? raw : {};
+    const modeValue = String(source.mode || "").trim().toLowerCase();
+    const mode = modeValue === "blur" || modeValue === "off" || modeValue === "immersive" ? modeValue : DEFAULT_CONFIG.artwork.mode;
     return {
-      red: Number.parseInt(hex.slice(0, 2), 16),
-      green: Number.parseInt(hex.slice(2, 4), 16),
-      blue: Number.parseInt(hex.slice(4, 6), 16),
+      mode,
+      blur: clampNumber(source.blur, DEFAULT_CONFIG.artwork.blur, 0, 48),
+      dim: clampNumber(source.dim, DEFAULT_CONFIG.artwork.dim, 0, 0.85),
+      saturation: clampNumber(source.saturation, DEFAULT_CONFIG.artwork.saturation, 0.4, 1.6),
+      opacity: clampNumber(source.opacity, DEFAULT_CONFIG.artwork.opacity, 0.15, 1),
+      dynamic_colors: source.dynamic_colors !== false,
+      crossfade: source.crossfade !== false,
+      crossfade_duration: clampNumber(source.crossfade_duration, DEFAULT_CONFIG.artwork.crossfade_duration, 0, 2e3)
     };
   }
-
-  return null;
-}
-
-function getRelativeLuminance(color) {
-  if (!color) {
-    return null;
+  function normalizeProgressConfig(raw) {
+    const source = isObject(raw) ? raw : {};
+    return {
+      show: source.show !== false,
+      draggable: source.draggable !== false
+    };
+  }
+  function normalizeIdleArtworkConfig(raw) {
+    const source = isObject(raw) ? raw : {};
+    const animation = String(source.animation || "").trim().toLowerCase() === "none" ? "none" : "subtle";
+    return {
+      enabled: source.enabled !== false,
+      slideshow: source.slideshow !== false,
+      interval: clampNumber(source.interval, DEFAULT_CONFIG.idle_artwork.interval, 4, 120),
+      animation,
+      max_items: Math.round(clampNumber(source.max_items, DEFAULT_CONFIG.idle_artwork.max_items, 2, 16))
+    };
+  }
+  function normalizePowerActionConfig(action) {
+    if (!isObject(action)) {
+      return { action: "default" };
+    }
+    const next = { ...action };
+    if (!next.action) {
+      next.action = "default";
+    }
+    return next;
+  }
+  function normalizeConfig(rawConfig) {
+    const raw = isObject(rawConfig) ? rawConfig : {};
+    const layoutOverride = typeof raw.layout === "string" ? { mode: normalizePresentationMode(raw.layout) } : raw.layout;
+    const config = mergeConfig(DEFAULT_CONFIG, {
+      ...raw,
+      layout: layoutOverride
+    });
+    const mediaConfig = isObject(raw.media_player) ? raw.media_player : null;
+    if (mediaConfig) {
+      if (mediaConfig.show !== void 0) {
+        config.show = mediaConfig.show;
+      }
+      if (mediaConfig.show_state !== void 0) {
+        config.show_state = mediaConfig.show_state;
+      }
+      if (mediaConfig.album_cover_background !== void 0) {
+        config.album_cover_background = mediaConfig.album_cover_background;
+      }
+      if (mediaConfig.show_unavailable_badge !== void 0) {
+        config.show_unavailable_badge = mediaConfig.show_unavailable_badge;
+      }
+      if (mediaConfig.show_desktop !== void 0) {
+        config.layout.show_desktop = mediaConfig.show_desktop;
+      }
+      if (Array.isArray(mediaConfig.players) && mediaConfig.players.length > 0 && (!Array.isArray(raw.players) || raw.players.length === 0)) {
+        config.players = deepClone2(mediaConfig.players);
+      }
+    }
+    if ((!Array.isArray(config.players) || config.players.length === 0) && typeof config.entity === "string" && config.entity) {
+      config.players = [
+        {
+          entity: config.entity,
+          label: config.label,
+          name: config.name,
+          title: config.player_title,
+          subtitle: config.subtitle,
+          icon: config.icon,
+          image: config.image,
+          tv_mode: config.tv_mode,
+          browse_path: config.browse_path,
+          tap_action: config.tap_action,
+          power_action_off: config.power_action_off,
+          power_action_on: config.power_action_on,
+          power_action_unavailable: config.power_action_unavailable
+        }
+      ];
+    }
+    config.players = Array.isArray(config.players) ? config.players.filter((player) => isObject(player)) : [];
+    config.players = config.players.map((player) => ({
+      ...player,
+      power_action_off: normalizePowerActionConfig(player.power_action_off),
+      power_action_on: normalizePowerActionConfig(player.power_action_on),
+      power_action_unavailable: normalizePowerActionConfig(player.power_action_unavailable)
+    }));
+    config.layout.position = config.layout.position === "top" ? "top" : "bottom";
+    config.layout.mode = normalizePresentationMode(config.layout.mode);
+    config.artwork = normalizeArtworkConfig(config.artwork);
+    config.progress = normalizeProgressConfig(config.progress);
+    config.idle_artwork = normalizeIdleArtworkConfig(config.idle_artwork);
+    config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? { ...DEFAULT_CONFIG.security, ...isObject(config.security) ? config.security : {} };
+    return config;
   }
 
-  const toLinear = channel => {
-    const normalized = clamp(Number(channel) / 255, 0, 1);
-    return normalized <= 0.04045
-      ? normalized / 12.92
-      : ((normalized + 0.055) / 1.055) ** 2.4;
+  // src/cards/media-player/media-player-artwork.ts
+  var PALETTE_CACHE = /* @__PURE__ */ new Map();
+  var PRELOAD_CACHE = /* @__PURE__ */ new Map();
+  function getArtworkVisuals(artwork = {}, albumCoverEnabled = true, isLightTheme = false) {
+    if (!albumCoverEnabled || artwork.mode === "off") {
+      return { filter: "none", opacity: "0", dim: 0 };
+    }
+    const blur = artwork.mode === "blur" ? Math.max(18, Number(artwork.blur) || 18) : Math.max(0, Number(artwork.blur) || 0);
+    const saturation = Number.isFinite(Number(artwork.saturation)) ? Number(artwork.saturation) : 1;
+    const brightness = isLightTheme ? 1.03 : 1;
+    const opacity = Number.isFinite(Number(artwork.opacity)) ? Number(artwork.opacity) : 1;
+    const tone = `saturate(${saturation}) brightness(${brightness})`;
+    return {
+      filter: blur > 0 ? `blur(${blur}px) ${tone}` : tone,
+      opacity: String(Math.min(1, Math.max(0.15, opacity))),
+      dim: Math.min(0.85, Math.max(0, Number(artwork.dim) || 0))
+    };
+  }
+  function prefersReducedMotion() {
+    return typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
+  function rememberRecentArtwork(history, url, maxItems = 8) {
+    const nextUrl = String(url || "").trim();
+    const limit = Math.max(1, Math.min(24, Number(maxItems) || 8));
+    const next = Array.isArray(history) ? history.filter((item) => String(item || "").trim()) : [];
+    if (!nextUrl) {
+      return next.slice(0, limit);
+    }
+    if (next[0] === nextUrl) {
+      return next.slice(0, limit);
+    }
+    return [nextUrl, ...next.filter((item) => item !== nextUrl)].slice(0, limit);
+  }
+  function extractArtworkPalette(image) {
+    try {
+      const canvas = document.createElement("canvas");
+      const width = 24;
+      const height = 24;
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (!context) {
+        return null;
+      }
+      context.drawImage(image, 0, 0, width, height);
+      const { data } = context.getImageData(0, 0, width, height);
+      let red = 0;
+      let green = 0;
+      let blue = 0;
+      let count = 0;
+      for (let index = 0; index < data.length; index += 4) {
+        const alpha = data[index + 3] ?? 0;
+        if (alpha < 96) {
+          continue;
+        }
+        const r = data[index] ?? 0;
+        const g = data[index + 1] ?? 0;
+        const b = data[index + 2] ?? 0;
+        const luma2 = (r * 299 + g * 587 + b * 114) / 1e3;
+        if (luma2 < 18 || luma2 > 242) {
+          continue;
+        }
+        red += r;
+        green += g;
+        blue += b;
+        count += 1;
+      }
+      if (!count) {
+        return null;
+      }
+      const primary = `rgb(${Math.round(red / count)}, ${Math.round(green / count)}, ${Math.round(blue / count)})`;
+      const luma = (red / count * 299 + green / count * 587 + blue / count * 114) / 1e3;
+      return {
+        primary,
+        foreground: luma > 150 ? "dark" : "light"
+      };
+    } catch (_error) {
+      return null;
+    }
+  }
+  function getCachedArtworkPalette(url) {
+    return PALETTE_CACHE.get(url) || null;
+  }
+  function setCachedArtworkPalette(url, palette) {
+    PALETTE_CACHE.set(url, palette);
+  }
+  function preloadArtworkUrl(url) {
+    const nextUrl = String(url || "").trim();
+    if (!nextUrl) {
+      return Promise.resolve(false);
+    }
+    const cached = PRELOAD_CACHE.get(nextUrl);
+    if (cached) {
+      return cached;
+    }
+    const pending = new Promise((resolve) => {
+      const image = new Image();
+      image.decoding = "async";
+      const settle = (loaded) => {
+        image.onload = null;
+        image.onerror = null;
+        resolve(loaded);
+      };
+      image.onload = () => {
+        const decode = image.decode?.();
+        if (decode && typeof decode.then === "function") {
+          decode.then(() => settle(true)).catch(() => settle(true));
+          return;
+        }
+        settle(true);
+      };
+      image.onerror = () => settle(false);
+      image.src = nextUrl;
+    });
+    PRELOAD_CACHE.set(nextUrl, pending);
+    return pending;
+  }
+  async function sampleArtworkPalette(url) {
+    const nextUrl = String(url || "").trim();
+    if (!nextUrl) {
+      return null;
+    }
+    const cached = getCachedArtworkPalette(nextUrl);
+    if (cached) {
+      return cached;
+    }
+    try {
+      const image = new Image();
+      image.decoding = "async";
+      image.crossOrigin = "anonymous";
+      const loaded = await new Promise((resolve) => {
+        image.onload = () => resolve(true);
+        image.onerror = () => resolve(false);
+        image.src = nextUrl;
+      });
+      if (!loaded) {
+        return null;
+      }
+      const palette = extractArtworkPalette(image);
+      if (palette) {
+        setCachedArtworkPalette(nextUrl, palette);
+      }
+      return palette;
+    } catch (_error) {
+      return null;
+    }
+  }
+  function resetArtworkLayers(host) {
+    if (!host) {
+      return;
+    }
+    host.current.style.backgroundImage = "";
+    host.incoming.style.backgroundImage = "";
+    host.incoming.style.transitionDuration = "";
+    host.current.classList.remove("is-idle-animated");
+    host.incoming.classList.remove("is-visible", "is-ready", "is-idle-animated");
+  }
+  var MediaPlayerArtworkController = class {
+    constructor() {
+      this.currentUrl = "";
+      this.recent = [];
+      this.palette = null;
+      this.activeEntity = "";
+      this.recentByEntity = /* @__PURE__ */ new Map();
+      this.slideshowTimer = 0;
+      this.slideshowIndex = 0;
+      this.generation = 0;
+      this.host = null;
+      this.idleActive = false;
+    }
+    attach(host) {
+      this.host = host;
+    }
+    detach() {
+      this.stopSlideshow();
+      this.host = null;
+      this.generation += 1;
+    }
+    getStage() {
+      return this.host?.stage || null;
+    }
+    recentFor(entityId = "") {
+      const id = String(entityId || this.activeEntity || "").trim();
+      if (!id) {
+        return this.recent.slice();
+      }
+      return (this.recentByEntity.get(id) || []).slice();
+    }
+    remember(url, maxItems = 8, entityId = "") {
+      const id = String(entityId || this.activeEntity || "").trim();
+      this.activeEntity = id || this.activeEntity;
+      const next = rememberRecentArtwork(id ? this.recentFor(id) : this.recent, url, maxItems);
+      this.recent = next;
+      if (id) {
+        this.recentByEntity.set(id, next);
+      }
+    }
+    clear() {
+      this.generation += 1;
+      this.currentUrl = "";
+      this.stopSlideshow();
+      resetArtworkLayers(this.host);
+      this.host?.stage?.style.removeProperty("--nodalia-media-accent");
+      this.palette = null;
+    }
+    stopSlideshow() {
+      if (this.slideshowTimer) {
+        window.clearInterval(this.slideshowTimer);
+        this.slideshowTimer = 0;
+      }
+      this.idleActive = false;
+      this.host?.current.classList.remove("is-idle-animated");
+      this.host?.incoming.classList.remove("is-idle-animated");
+    }
+    async show(url, options = {}) {
+      const host = this.host;
+      const nextUrl = String(url || "").trim();
+      const entityId = String(options.entityId || this.activeEntity || "").trim();
+      if (entityId) {
+        this.activeEntity = entityId;
+        this.recent = this.recentFor(entityId);
+      }
+      if (!host) {
+        return false;
+      }
+      if (!nextUrl) {
+        this.clear();
+        return false;
+      }
+      if (nextUrl === this.currentUrl && host.current.style.backgroundImage) {
+        this.applyIdleAnimation(Boolean(options.idle), options.animation);
+        return true;
+      }
+      const token = ++this.generation;
+      const loaded = await preloadArtworkUrl(nextUrl);
+      if (token !== this.generation || options.connected === false) {
+        return false;
+      }
+      if (!loaded) {
+        return false;
+      }
+      const reduceMotion = prefersReducedMotion() || options.crossfade === false;
+      const duration = Math.max(0, Number(options.duration) || 500);
+      host.incoming.style.backgroundImage = `url("${nextUrl.replace(/"/g, "%22")}")`;
+      host.incoming.classList.add("is-visible");
+      if (reduceMotion || !this.currentUrl) {
+        host.current.style.backgroundImage = host.incoming.style.backgroundImage;
+        host.incoming.classList.remove("is-visible");
+        host.incoming.style.backgroundImage = "";
+        this.currentUrl = nextUrl;
+        this.applyIdleAnimation(Boolean(options.idle), options.animation);
+        return true;
+      }
+      host.incoming.style.transitionDuration = `${duration}ms`;
+      requestAnimationFrame(() => {
+        host.incoming.classList.add("is-ready");
+      });
+      window.setTimeout(() => {
+        if (token !== this.generation) {
+          return;
+        }
+        host.current.style.backgroundImage = host.incoming.style.backgroundImage;
+        host.incoming.classList.remove("is-visible", "is-ready");
+        host.incoming.style.backgroundImage = "";
+        this.currentUrl = nextUrl;
+        this.applyIdleAnimation(Boolean(options.idle), options.animation);
+      }, duration);
+      return true;
+    }
+    startSlideshow(config, onTick, entityId = "") {
+      const id = String(entityId || this.activeEntity || "").trim();
+      if (id) {
+        this.activeEntity = id;
+        this.recent = this.recentFor(id);
+      }
+      this.stopSlideshow();
+      if (!config.enabled || !config.slideshow || this.recent.length < 2) {
+        return;
+      }
+      this.idleActive = true;
+      const interval = Math.max(4, Number(config.interval) || 15) * 1e3;
+      this.slideshowTimer = window.setInterval(() => {
+        if (!this.recent.length) {
+          return;
+        }
+        this.slideshowIndex = (this.slideshowIndex + 1) % this.recent.length;
+        const url = this.recent[this.slideshowIndex];
+        if (url) {
+          onTick(url);
+        }
+      }, interval);
+    }
+    applyIdleAnimation(idle, animation) {
+      const host = this.host;
+      if (!host) {
+        return;
+      }
+      const enabled = idle && animation === "subtle" && !prefersReducedMotion();
+      host.current.classList.toggle("is-idle-animated", enabled);
+    }
   };
 
-  const red = toLinear(color.red);
-  const green = toLinear(color.green);
-  const blue = toLinear(color.blue);
-  return (0.2126 * red) + (0.7152 * green) + (0.0722 * blue);
-}
-
-function formatEditorHexChannel(value) {
-  return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
-}
-
-function formatEditorColorFromHex(hex, alpha = 1) {
-  const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
-  if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
-    return String(hex ?? "");
+  // src/cards/media-player/media-player-progress.ts
+  var MEDIA_PLAYER_FEATURE_SEEK = 2;
+  function clamp2(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+  function supportsMediaSeek(state) {
+    const features = Number(
+      state?.attributes?.supported_features || 0
+    );
+    return Number.isFinite(features) && (features & MEDIA_PLAYER_FEATURE_SEEK) !== 0;
+  }
+  function interpolatePlaybackProgress(state, now = Date.now()) {
+    const entity = state;
+    const duration = Number(entity?.attributes?.media_duration || 0);
+    if (!(duration > 0)) {
+      return null;
+    }
+    let position = Number(entity?.attributes?.media_position || 0);
+    const updatedAt = entity?.attributes?.media_position_updated_at;
+    if (entity?.state === "playing" && updatedAt) {
+      const updatedAtTime = new Date(String(updatedAt)).getTime();
+      if (!Number.isNaN(updatedAtTime)) {
+        position += Math.max(0, (now - updatedAtTime) / 1e3);
+      }
+    }
+    position = clamp2(position, 0, duration);
+    return {
+      duration,
+      position,
+      percent: clamp2(position / duration * 100, 0, 100)
+    };
+  }
+  function progressPercentFromClientX(track, clientX) {
+    const rect = track.getBoundingClientRect();
+    if (!(rect.width > 0)) {
+      return 0;
+    }
+    return clamp2((clientX - rect.left) / rect.width * 100, 0, 100);
+  }
+  function seekPositionFromPercent(percent, duration) {
+    if (!(duration > 0)) {
+      return 0;
+    }
+    return clamp2(Number(percent) / 100 * duration, 0, duration);
   }
 
-  const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
-  const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
-  const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
-  const safeAlpha = clamp(Number(alpha), 0, 1);
-  if (safeAlpha >= 0.999) {
-    return `#${normalizedHex}`;
+  // src/cards/media-player/media-player-helpers.ts
+  function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
+    return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
   }
-
-  return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
-}
-
-function getEditorColorModel(value, fallbackValue = "#71c0ff") {
-  const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
-  const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
-  const channels = resolvedValue.match(/[\d.]+/g) || [];
-  const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
-  const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
-  const blue = clamp(Math.round(Number(channels[2] ?? 255)), 0, 255);
-  const alpha = channels.length > 3 ? clamp(Number(channels[3]), 0, 1) : 1;
-  const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
-
-  return {
-    alpha,
-    hex,
-    resolved: resolvedValue,
-    source: sourceValue,
-    value: formatEditorColorFromHex(hex, alpha),
-  };
-}
-
-function getEditorColorFallbackValue(field) {
-  const normalizedField = String(field ?? "");
-
-  if (normalizedField.endsWith("off_color")) {
-    return "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))";
+  function getStubFriendlyName(hass, entityId) {
+    return hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
   }
-
-  if (normalizedField.endsWith("accent_background")) {
-    return "rgba(113, 192, 255, 0.2)";
+  function compactConfig2(value) {
+    if (Array.isArray(value)) {
+      return value.map((item) => compactConfig2(item)).filter((item) => item !== void 0);
+    }
+    if (isObject(value)) {
+      const compacted = {};
+      Object.entries(value).forEach(([key, item]) => {
+        if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
+          return;
+        }
+        if (key === "entity" && item === "") {
+          compacted.entity = "";
+          return;
+        }
+        const cleaned = compactConfig2(item);
+        const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
+        if (cleaned !== void 0 && !isEmptyObject) {
+          compacted[key] = cleaned;
+        }
+      });
+      return compacted;
+    }
+    if (value === "" || value === null || value === void 0) {
+      return void 0;
+    }
+    return value;
   }
-
-  if (normalizedField.endsWith("active_tint_color")) {
-    return "var(--info-color, #71c0ff)";
-  }
-
-  if (normalizedField.endsWith("progress_background")) {
-    return "color-mix(in srgb, var(--primary-text-color) 12%, transparent)";
-  }
-
-  if (normalizedField.endsWith("overlay_color")) {
-    return "rgba(0, 0, 0, 0.32)";
-  }
-
-  if (normalizedField.endsWith("background")) {
-    return "var(--ha-card-background)";
-  }
-
-  return "var(--info-color, #71c0ff)";
-}
-
-function moveItem(array, fromIndex, toIndex) {
-  if (!Array.isArray(array)) {
-    return array;
-  }
-
-  if (
-    fromIndex < 0 ||
-    toIndex < 0 ||
-    fromIndex >= array.length ||
-    toIndex >= array.length ||
-    fromIndex === toIndex
-  ) {
-    return array;
-  }
-
-  const [item] = array.splice(fromIndex, 1);
-  array.splice(toIndex, 0, item);
-  return array;
-}
-
-
-
-
-function getRangeValueFromClientX(slider, clientX) {
-  const rect = slider.getBoundingClientRect();
-  if (!rect.width) {
-    return Number(slider.value || 0);
-  }
-
-  const min = Number(slider.min || 0);
-  const max = Number(slider.max || 100);
-  const step = slider.step === "any" ? 0 : Number(slider.step || 1);
-  const ratio = clamp((clientX - rect.left) / rect.width, 0, 1);
-  let nextValue = min + ((max - min) * ratio);
-
-  if (Number.isFinite(step) && step > 0) {
-    nextValue = min + (Math.round((nextValue - min) / step) * step);
-  }
-
-  return clamp(nextValue, min, max);
-}
-
-function getSliderDragGeometry(slider) {
-  const rect = slider.getBoundingClientRect();
-  return {
-    left: rect.left,
-    width: rect.width,
-    min: Number(slider.min || 0),
-    max: Number(slider.max || 100),
-    step: slider.step === "any" ? 0 : Number(slider.step || 1),
-  };
-}
-
-function getRangeValueFromGeometry(geometry, currentValue, clientX) {
-  if (!geometry || !Number.isFinite(geometry.width) || geometry.width <= 0) {
-    return Number(currentValue || 0);
-  }
-  const ratio = clamp((clientX - geometry.left) / geometry.width, 0, 1);
-  let nextValue = geometry.min + ((geometry.max - geometry.min) * ratio);
-  if (Number.isFinite(geometry.step) && geometry.step > 0) {
-    nextValue = geometry.min + (Math.round((nextValue - geometry.min) / geometry.step) * geometry.step);
-  }
-  return clamp(nextValue, geometry.min, geometry.max);
-}
-
-function formatDuration(totalSeconds) {
-  const safeSeconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
-  const hours = Math.floor(safeSeconds / 3600);
-  const minutes = Math.floor((safeSeconds % 3600) / 60);
-  const seconds = safeSeconds % 60;
-
-  if (hours > 0) {
-    return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-  }
-
-  return `${minutes}:${String(seconds).padStart(2, "0")}`;
-}
-
-function normalizeTextKey(value) {
-  return String(value || "").trim().toLowerCase();
-}
-
-function getRenderSignatureRuntime() {
-  return window.NodaliaRenderSignature || {
-    toKey(value) {
-      if (value === null || value === undefined) {
+  function formatEditorJsonValue(value) {
+    if (value === void 0 || value === null || value === "") {
+      return "";
+    }
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (!trimmed) {
         return "";
       }
-      if (typeof value === "number") {
-        return Number.isFinite(value) ? String(value) : "";
+      try {
+        return JSON.stringify(JSON.parse(trimmed), null, 2);
+      } catch (_error) {
+        return value;
       }
+    }
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch (_error) {
       return String(value);
-    },
-    joinParts(parts, sectionSeparator = "||", valueSeparator = "::") {
-      return (Array.isArray(parts) ? parts : [])
-        .map(part => {
+    }
+  }
+  function parseEditorJsonObject(value) {
+    const trimmed = String(value ?? "").trim();
+    if (!trimmed) {
+      return { valid: true, value: void 0 };
+    }
+    try {
+      const parsed = JSON.parse(trimmed);
+      return isObject(parsed) ? { valid: true, value: parsed } : { valid: false, value: void 0 };
+    } catch (_error) {
+      return { valid: false, value: void 0 };
+    }
+  }
+  function getByPath(target, path) {
+    return String(path || "").split(".").filter(Boolean).reduce((cursor, key) => cursor == null ? void 0 : cursor[key], target);
+  }
+  function arrayFromCsv(value) {
+    return String(value || "").split(",").map((item) => item.trim()).filter(Boolean);
+  }
+  function escapeSelectorValue(value) {
+    if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+      return CSS.escape(String(value));
+    }
+    return String(value).replaceAll('"', '\\"');
+  }
+  function resolveEditorColorValue(value) {
+    const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
+    if (typeof resolver === "function") {
+      return resolver(value);
+    }
+    return String(value ?? "").trim();
+  }
+  function resolveColorInContext(contextNode, value) {
+    const rawValue = String(value ?? "").trim();
+    if (!rawValue || typeof document === "undefined") {
+      return "";
+    }
+    const probe = document.createElement("span");
+    probe.style.position = "fixed";
+    probe.style.opacity = "0";
+    probe.style.pointerEvents = "none";
+    probe.style.color = "";
+    probe.style.color = rawValue;
+    if (!probe.style.color) {
+      return rawValue;
+    }
+    const root = contextNode?.shadowRoot instanceof ShadowRoot ? contextNode.shadowRoot : document.body || document.documentElement;
+    root.appendChild(probe);
+    const resolved = getComputedStyle(probe).color;
+    probe.remove();
+    return resolved || rawValue;
+  }
+  function parseRgbColor(value) {
+    const source = String(value ?? "").trim();
+    if (!source) {
+      return null;
+    }
+    const rgbMatch = source.match(/rgba?\(([^)]+)\)/i);
+    if (rgbMatch) {
+      const channels = rgbMatch[1].split(",").map((channel) => Number.parseFloat(channel.trim())).filter((channel) => Number.isFinite(channel));
+      if (channels.length >= 3) {
+        return {
+          red: clamp(channels[0], 0, 255),
+          green: clamp(channels[1], 0, 255),
+          blue: clamp(channels[2], 0, 255)
+        };
+      }
+    }
+    const hexMatch = source.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+    if (hexMatch) {
+      const hex = hexMatch[1].length === 3 ? hexMatch[1].split("").map((channel) => channel + channel).join("") : hexMatch[1];
+      return {
+        red: Number.parseInt(hex.slice(0, 2), 16),
+        green: Number.parseInt(hex.slice(2, 4), 16),
+        blue: Number.parseInt(hex.slice(4, 6), 16)
+      };
+    }
+    return null;
+  }
+  function getRelativeLuminance(color) {
+    if (!color) {
+      return null;
+    }
+    const toLinear = (channel) => {
+      const normalized = clamp(Number(channel) / 255, 0, 1);
+      return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+    };
+    const red = toLinear(color.red);
+    const green = toLinear(color.green);
+    const blue = toLinear(color.blue);
+    return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+  }
+  function formatEditorHexChannel(value) {
+    return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+  }
+  function formatEditorColorFromHex(hex, alpha = 1) {
+    const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
+    if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
+      return String(hex ?? "");
+    }
+    const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
+    const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
+    const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
+    const safeAlpha = clamp(Number(alpha), 0, 1);
+    if (safeAlpha >= 0.999) {
+      return `#${normalizedHex}`;
+    }
+    return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
+  }
+  function getEditorColorModel(value, fallbackValue = "#71c0ff") {
+    const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
+    const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
+    const channels = resolvedValue.match(/[\d.]+/g) || [];
+    const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
+    const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
+    const blue = clamp(Math.round(Number(channels[2] ?? 255)), 0, 255);
+    const alpha = channels.length > 3 ? clamp(Number(channels[3]), 0, 1) : 1;
+    const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
+    return {
+      alpha,
+      hex,
+      resolved: resolvedValue,
+      source: sourceValue,
+      value: formatEditorColorFromHex(hex, alpha)
+    };
+  }
+  function getEditorColorFallbackValue(field) {
+    const normalizedField = String(field ?? "");
+    if (normalizedField.endsWith("off_color")) {
+      return "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))";
+    }
+    if (normalizedField.endsWith("accent_background")) {
+      return "rgba(113, 192, 255, 0.2)";
+    }
+    if (normalizedField.endsWith("active_tint_color")) {
+      return "var(--info-color, #71c0ff)";
+    }
+    if (normalizedField.endsWith("progress_background")) {
+      return "color-mix(in srgb, var(--primary-text-color) 12%, transparent)";
+    }
+    if (normalizedField.endsWith("overlay_color")) {
+      return "rgba(0, 0, 0, 0.32)";
+    }
+    if (normalizedField.endsWith("background")) {
+      return "var(--ha-card-background)";
+    }
+    return "var(--info-color, #71c0ff)";
+  }
+  function moveItem(array, fromIndex, toIndex) {
+    if (!Array.isArray(array)) {
+      return array;
+    }
+    if (fromIndex < 0 || toIndex < 0 || fromIndex >= array.length || toIndex >= array.length || fromIndex === toIndex) {
+      return array;
+    }
+    const [item] = array.splice(fromIndex, 1);
+    array.splice(toIndex, 0, item);
+    return array;
+  }
+  function getSliderDragGeometry(slider) {
+    const rect = slider.getBoundingClientRect();
+    return {
+      left: rect.left,
+      width: rect.width,
+      min: Number(slider.min || 0),
+      max: Number(slider.max || 100),
+      step: slider.step === "any" ? 0 : Number(slider.step || 1)
+    };
+  }
+  function getRangeValueFromGeometry(geometry, currentValue, clientX) {
+    if (!geometry || !Number.isFinite(geometry.width) || geometry.width <= 0) {
+      return Number(currentValue || 0);
+    }
+    const ratio = clamp((clientX - geometry.left) / geometry.width, 0, 1);
+    let nextValue = geometry.min + (geometry.max - geometry.min) * ratio;
+    if (Number.isFinite(geometry.step) && geometry.step > 0) {
+      nextValue = geometry.min + Math.round((nextValue - geometry.min) / geometry.step) * geometry.step;
+    }
+    return clamp(nextValue, geometry.min, geometry.max);
+  }
+  function formatDuration(totalSeconds) {
+    const safeSeconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+    const hours = Math.floor(safeSeconds / 3600);
+    const minutes = Math.floor(safeSeconds % 3600 / 60);
+    const seconds = safeSeconds % 60;
+    if (hours > 0) {
+      return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    }
+    return `${minutes}:${String(seconds).padStart(2, "0")}`;
+  }
+  function normalizeTextKey2(value) {
+    return String(value || "").trim().toLowerCase();
+  }
+  function getRenderSignatureRuntime() {
+    return window.NodaliaRenderSignature || {
+      toKey(value) {
+        if (value === null || value === void 0) {
+          return "";
+        }
+        if (typeof value === "number") {
+          return Number.isFinite(value) ? String(value) : "";
+        }
+        return String(value);
+      },
+      joinParts(parts, sectionSeparator = "||", valueSeparator = "::") {
+        return (Array.isArray(parts) ? parts : []).map((part) => {
           if (!part || !Array.isArray(part.values)) {
             return "";
           }
           const prefix = String(part.prefix || "");
-          const body = part.values.map(value => this.toKey(value)).join(valueSeparator);
+          const body = part.values.map((value) => this.toKey(value)).join(valueSeparator);
           return `${prefix}${body}`;
-        })
-        .filter(Boolean)
-        .join(sectionSeparator);
-    },
-  };
-}
-
-function sanitizeMediaArtworkUrl(value, hass) {
-  const raw = String(value || "").trim();
-  if (!raw) {
-    return "";
+        }).filter(Boolean).join(sectionSeparator);
+      }
+    };
   }
-  const safe = window.NodaliaUtils?.sanitizeActionUrl?.(raw, { allowRelative: true }) || "";
-  if (!safe) {
-    return "";
-  }
-  if (/^(?:https?:)?\/\//i.test(safe)) {
+  function sanitizeMediaArtworkUrl(value, hass) {
+    const raw = String(value || "").trim();
+    if (!raw) {
+      return "";
+    }
+    const safe = window.NodaliaUtils?.sanitizeActionUrl?.(raw, { allowRelative: true }) || "";
+    if (!safe) {
+      return "";
+    }
+    if (/^(?:https?:)?\/\//i.test(safe)) {
+      return safe;
+    }
+    if (typeof hass?.hassUrl === "function" && safe.startsWith("/")) {
+      return hass.hassUrl(safe);
+    }
     return safe;
   }
-  if (typeof hass?.hassUrl === "function" && safe.startsWith("/")) {
-    return hass.hassUrl(safe);
-  }
-  return safe;
-}
-
-function appendQueryParam(url, key, value) {
-  const rawUrl = String(url || "").trim();
-  if (!rawUrl || value === null || value === undefined || value === "") {
-    return rawUrl;
-  }
-
-  const encodedKey = encodeURIComponent(String(key));
-  const encodedValue = encodeURIComponent(String(value));
-  const existingPattern = new RegExp(`([?&])${encodedKey}=[^&]*`);
-  if (existingPattern.test(rawUrl)) {
-    return rawUrl.replace(existingPattern, `$1${encodedKey}=${encodedValue}`);
-  }
-
-  return `${rawUrl}${rawUrl.includes("?") ? "&" : "?"}${encodedKey}=${encodedValue}`;
-}
-
-function isUnavailableState(state) {
-  return normalizeTextKey(state?.state) === "unavailable";
-}
-
-function normalizeConfig(rawConfig) {
-  const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-  const mediaConfig = isObject(rawConfig?.media_player) ? rawConfig.media_player : null;
-
-  if (mediaConfig) {
-    if (mediaConfig.show !== undefined) {
-      config.show = mediaConfig.show;
+  function appendQueryParam(url, key, value) {
+    const rawUrl = String(url || "").trim();
+    if (!rawUrl || value === null || value === void 0 || value === "") {
+      return rawUrl;
     }
-    if (mediaConfig.show_state !== undefined) {
-      config.show_state = mediaConfig.show_state;
+    const encodedKey = encodeURIComponent(String(key));
+    const encodedValue = encodeURIComponent(String(value));
+    const existingPattern = new RegExp(`([?&])${encodedKey}=[^&]*`);
+    if (existingPattern.test(rawUrl)) {
+      return rawUrl.replace(existingPattern, `$1${encodedKey}=${encodedValue}`);
     }
-    if (mediaConfig.album_cover_background !== undefined) {
-      config.album_cover_background = mediaConfig.album_cover_background;
-    }
-    if (mediaConfig.show_unavailable_badge !== undefined) {
-      config.show_unavailable_badge = mediaConfig.show_unavailable_badge;
-    }
-    if (mediaConfig.show_desktop !== undefined) {
-      config.layout.show_desktop = mediaConfig.show_desktop;
-    }
-    if (Array.isArray(mediaConfig.players) && mediaConfig.players.length > 0 && (!Array.isArray(rawConfig?.players) || rawConfig.players.length === 0)) {
-      config.players = deepClone(mediaConfig.players);
-    }
+    return `${rawUrl}${rawUrl.includes("?") ? "&" : "?"}${encodedKey}=${encodedValue}`;
+  }
+  function isUnavailableState(state) {
+    return normalizeTextKey2(state?.state) === "unavailable";
   }
 
-  if (
-    (!Array.isArray(config.players) || config.players.length === 0) &&
-    typeof config.entity === "string" &&
-    config.entity
-  ) {
-    config.players = [
-      {
-        entity: config.entity,
-        label: config.label,
-        name: config.name,
-        title: config.player_title,
-        subtitle: config.subtitle,
-        icon: config.icon,
-        image: config.image,
-        tv_mode: config.tv_mode,
-        browse_path: config.browse_path,
-        tap_action: config.tap_action,
-        power_action_off: config.power_action_off,
-        power_action_on: config.power_action_on,
-        power_action_unavailable: config.power_action_unavailable,
-      },
-    ];
-  }
-
-  config.players = Array.isArray(config.players) ? config.players.filter(player => isObject(player)) : [];
-  config.players = config.players.map(player => ({
-    ...player,
-    power_action_off: normalizePowerActionConfig(player.power_action_off),
-    power_action_on: normalizePowerActionConfig(player.power_action_on),
-    power_action_unavailable: normalizePowerActionConfig(player.power_action_unavailable),
-  }));
-  config.layout.position = config.layout.position === "top" ? "top" : "bottom";
-  config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
-    ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
-
-  return config;
-}
-
-class NodaliaMediaPlayer extends HTMLElement {
-  static async getConfigElement() {
-    return document.createElement(EDITOR_TAG);
-  }
-
-  static getStubConfig(hass, entities = [], entitiesFallback = []) {
-    const entityId = getStubEntityId(hass, ["media_player"], entities, entitiesFallback);
-    return {
-      players: [
-        {
-          entity: entityId || "media_player.spotify",
-          label: entityId ? getStubFriendlyName(hass, entityId) : "Spotify",
-        },
-      ],
-      layout: {
-        fixed: false,
-        reserve_space: false,
-      },
-    };
-  }
-
-  static getEntitySuggestion(hass, entityId) {
-    return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
-      domains: ["media_player"],
-      buildConfig: (_hass, selectedEntityId) => ({
-        players: [{
-          entity: selectedEntityId,
-          label: getStubFriendlyName(hass, selectedEntityId),
-        }],
-        layout: { fixed: false, reserve_space: false },
-      }),
-    });
-  }
-
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = null;
-    this._hass = null;
-    this._mediaBrowserState = null;
-    this._mediaBrowserScrollPositions = new Map();
-    this._mediaBrowserRequestToken = 0;
-    this._activePlayerIndex = 0;
-    this._activePlayerEntity = "";
-    this._mediaTicker = null;
-    this._lastRenderSignature = "";
-    this._draftVolume = new Map();
-    this._draftVolumeTimers = new Map();
-    this._activeSliderDrag = null;
-    this._pendingRenderAfterDrag = false;
-    this._skipNextSliderChange = null;
-    this._dragFrame = 0;
-    this._pendingDragUpdate = null;
-    this._dragWindowListenersAttached = false;
-    this._volumeStepFallback = new Set();
-    this._tvSourcePickerEntity = null;
-    this._tvVolumePickerEntity = null;
-    this._tvPanelScrollPositions = new Map();
-    this._tvSourcePanelAnimatingEntity = null;
-    this._tvVolumePanelAnimatingEntity = null;
-    this._animateContentOnNextRender = true;
-    this._entranceAnimationResetTimer = 0;
-    this._readyArtworkUrls = new Set();
-    this._failedArtworkUrls = new Set();
-    this._pendingArtworkPreloads = new Map();
-    this._displayArtworkByEntity = new Map();
-    this._onResize = () => {
-      if (this._activeSliderDrag) {
-        this._pendingRenderAfterDrag = true;
-        return;
+  // src/cards/media-player/media-player-card.ts
+  var _lazyNodaliaMediaPlayer;
+  function loadNodaliaMediaPlayer() {
+    if (_lazyNodaliaMediaPlayer) {
+      return _lazyNodaliaMediaPlayer;
+    }
+    class NodaliaMediaPlayer extends HTMLElement {
+      static async getConfigElement() {
+        return document.createElement(EDITOR_TAG);
       }
-      this._render();
-    };
-    this._onWindowKeyDown = event => {
-      if (event.key === "Escape" && this._mediaBrowserState) {
-        event.preventDefault();
-        this._closeMediaBrowser();
+      static getStubConfig(hass, entities = [], entitiesFallback = []) {
+        const entityId = getStubEntityId(hass, ["media_player"], entities, entitiesFallback);
+        return {
+          players: [
+            {
+              entity: entityId || "media_player.spotify",
+              label: entityId ? getStubFriendlyName(hass, entityId) : "Spotify"
+            }
+          ],
+          layout: {
+            mode: "standard",
+            fixed: false,
+            reserve_space: false
+          }
+        };
       }
-    };
-    this._onShadowClick = this._onShadowClick.bind(this);
-    this._onShadowInput = this._onShadowInput.bind(this);
-    this._onShadowChange = this._onShadowChange.bind(this);
-    this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
-    this._onShadowMouseDown = this._onShadowMouseDown.bind(this);
-    this._onShadowTouchStart = this._onShadowTouchStart.bind(this);
-    this._onWindowPointerMove = this._onWindowPointerMove.bind(this);
-    this._onWindowPointerUp = this._onWindowPointerUp.bind(this);
-    this._onWindowMouseMove = this._onWindowMouseMove.bind(this);
-    this._onWindowMouseUp = this._onWindowMouseUp.bind(this);
-    this._onWindowTouchStartCapture = this._onWindowTouchStartCapture.bind(this);
-    this._onWindowTouchMove = this._onWindowTouchMove.bind(this);
-    this._onWindowTouchEnd = this._onWindowTouchEnd.bind(this);
-    this._onVisibilityChange = this._onVisibilityChange.bind(this);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("change", this._onShadowChange);
-    this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
-    this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown);
-    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
-      this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
-    }
-  }
-
-  connectedCallback() {
-    window.addEventListener("resize", this._onResize);
-    window.addEventListener("keydown", this._onWindowKeyDown);
-    document.addEventListener("visibilitychange", this._onVisibilityChange);
-    this._animateContentOnNextRender = true;
-    this._lastRenderSignature = "";
-    this._render();
-  }
-
-  disconnectedCallback() {
-    window.NodaliaUtils?.releaseModalFocus?.(this);
-    window.removeEventListener("resize", this._onResize);
-    window.removeEventListener("keydown", this._onWindowKeyDown);
-    document.removeEventListener("visibilitychange", this._onVisibilityChange);
-    this._detachWindowDragListeners();
-    if (this._dragFrame) {
-      window.cancelAnimationFrame(this._dragFrame);
-      this._dragFrame = 0;
-    }
-    this._pendingDragUpdate = null;
-    if (this._mediaTicker) {
-      window.clearInterval(this._mediaTicker);
-      this._mediaTicker = null;
-    }
-    this._draftVolumeTimers.forEach(timerId => window.clearTimeout(timerId));
-    this._draftVolumeTimers.clear();
-    if (this._entranceAnimationResetTimer) {
-      window.clearTimeout(this._entranceAnimationResetTimer);
-      this._entranceAnimationResetTimer = 0;
-    }
-    this._mediaBrowserRequestToken += 1;
-    this._animateContentOnNextRender = true;
-    this._lastRenderSignature = "";
-    window.NodaliaUtils?.clearDeferTimers?.(this);
-  }
-
-  setConfig(config) {
-    this._config = normalizeConfig(config);
-    this._lastRenderSignature = "";
-    this._animateContentOnNextRender = true;
-    if (!this.isConnected) {
-      return;
-    }
-    this._render();
-  }
-
-  set hass(hass) {
-    const previousHass = this._hass;
-    this._hass = hass;
-
-    if (!this.isConnected) {
-      return;
-    }
-
-    const nextSignature = this._getRenderSignature(hass);
-    if (previousHass && nextSignature === this._lastRenderSignature) {
-      return;
-    }
-
-    if (!this._activeSliderDrag) {
-      this._syncVolumeControlsFromHass(hass);
-    }
-
-    this._lastRenderSignature = nextSignature;
-
-    if (this._activeSliderDrag) {
-      this._pendingRenderAfterDrag = true;
-      return;
-    }
-
-    this._render();
-  }
-
-  getCardSize() {
-    return 3;
-  }
-
-  getGridOptions() {
-    return {
-      rows: "auto",
-      columns: "full",
-      min_rows: 2,
-      min_columns: 3,
-    };
-  }
-
-  _getTrackedEntities() {
-    const configuredPlayers = Array.isArray(this._config?.players)
-      ? this._config.players.map(player => player?.entity).filter(Boolean)
-      : [];
-
-    if (configuredPlayers.length) {
-      return [...new Set(configuredPlayers)];
-    }
-
-    return this._config?.entity ? [this._config.entity] : [];
-  }
-
-  _getRenderSignature(hass = this._hass) {
-    const states = hass?.states || {};
-    const entities = this._getTrackedEntities();
-    const runtime = getRenderSignatureRuntime();
-
-    return entities
-      .map(entityId => {
-        const state = states[entityId];
-        if (!state) {
-          return runtime.joinParts([{ values: [entityId, "missing"] }], "", "::");
+      static getEntitySuggestion(hass, entityId) {
+        const player = {
+          entity: entityId,
+          label: getStubFriendlyName(hass, entityId)
+        };
+        const variants = [
+          { label: "Media Player — Standard", mode: "standard" },
+          { label: "Media Player — Square", mode: "square" },
+          { label: "Media Player — Compact", mode: "compact" },
+          { label: "Media Player — Horizontal", mode: "chip" },
+          { label: "Media Player — Artwork", mode: "artwork" }
+        ];
+        return variants.map((variant) => window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+          domains: ["media_player"],
+          label: variant.label,
+          buildConfig: (_hass, selectedEntityId) => ({
+            players: [{ ...player, entity: selectedEntityId }],
+            layout: { mode: variant.mode, fixed: false, reserve_space: false }
+          })
+        })).filter(Boolean);
+      }
+      constructor() {
+        super();
+        this._nodaliaConstruct();
+      }
+      _nodaliaConstruct() {
+        this.attachShadow({ mode: "open" });
+        this._config = null;
+        this._hass = null;
+        this._mediaBrowserState = null;
+        this._mediaBrowserScrollPositions = /* @__PURE__ */ new Map();
+        this._mediaBrowserRequestToken = 0;
+        this._activePlayerIndex = 0;
+        this._activePlayerEntity = "";
+        this._mediaTicker = null;
+        this._lastRenderSignature = "";
+        this._draftVolume = /* @__PURE__ */ new Map();
+        this._draftVolumeTimers = /* @__PURE__ */ new Map();
+        this._activeSliderDrag = null;
+        this._pendingRenderAfterDrag = false;
+        this._skipNextSliderChange = null;
+        this._dragFrame = 0;
+        this._pendingDragUpdate = null;
+        this._dragWindowListenersAttached = false;
+        this._volumeStepFallback = /* @__PURE__ */ new Set();
+        this._tvSourcePickerEntity = null;
+        this._tvVolumePickerEntity = null;
+        this._tvPanelScrollPositions = /* @__PURE__ */ new Map();
+        this._tvSourcePanelAnimatingEntity = null;
+        this._tvVolumePanelAnimatingEntity = null;
+        this._animateContentOnNextRender = true;
+        this._entranceAnimationResetTimer = 0;
+        this._readyArtworkUrls = /* @__PURE__ */ new Set();
+        this._failedArtworkUrls = /* @__PURE__ */ new Set();
+        this._pendingArtworkPreloads = /* @__PURE__ */ new Map();
+        this._displayArtworkByEntity = /* @__PURE__ */ new Map();
+        this._artworkController = new MediaPlayerArtworkController();
+        this._artworkStageEl = null;
+        this._resolvedLayoutMode = "";
+        this._presentationEntityId = "";
+        this._layoutObserver = null;
+        this._activeProgressDrag = null;
+        this._idleSlideshowUrl = "";
+        this._onResize = () => {
+          if (this._activeSliderDrag || this._activeProgressDrag) {
+            this._pendingRenderAfterDrag = true;
+            return;
+          }
+          this._syncPresentationMode();
+        };
+        this._onWindowKeyDown = (event) => {
+          if (event.key === "Escape" && this._mediaBrowserState) {
+            event.preventDefault();
+            this._closeMediaBrowser();
+          }
+        };
+        this._onShadowClick = this._onShadowClick.bind(this);
+        this._onShadowInput = this._onShadowInput.bind(this);
+        this._onShadowChange = this._onShadowChange.bind(this);
+        this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
+        this._onShadowMouseDown = this._onShadowMouseDown.bind(this);
+        this._onShadowTouchStart = this._onShadowTouchStart.bind(this);
+        this._onWindowPointerMove = this._onWindowPointerMove.bind(this);
+        this._onWindowPointerUp = this._onWindowPointerUp.bind(this);
+        this._onWindowMouseMove = this._onWindowMouseMove.bind(this);
+        this._onWindowMouseUp = this._onWindowMouseUp.bind(this);
+        this._onWindowTouchStartCapture = this._onWindowTouchStartCapture.bind(this);
+        this._onWindowTouchMove = this._onWindowTouchMove.bind(this);
+        this._onWindowTouchEnd = this._onWindowTouchEnd.bind(this);
+        this._onVisibilityChange = this._onVisibilityChange.bind(this);
+        this.shadowRoot.addEventListener("click", this._onShadowClick);
+        this.shadowRoot.addEventListener("input", this._onShadowInput);
+        this.shadowRoot.addEventListener("change", this._onShadowChange);
+        this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
+        this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown);
+        if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+          this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
         }
-
-        const attrs = state.attributes || {};
-        return runtime.joinParts([
-          {
-            values: [
-              entityId,
-              state.state || "",
-              attrs.friendly_name || "",
-              attrs.entity_picture || "",
-              attrs.media_title || "",
-              attrs.media_artist || "",
-              attrs.media_series_title || "",
-              attrs.media_album_name || "",
-              attrs.app_name || "",
-              attrs.source || "",
-              attrs.media_channel || "",
-              attrs.media_duration ?? "",
-              attrs.supported_features ?? "",
-              Array.isArray(attrs.source_list) ? attrs.source_list.join("|") : "",
-            ],
-          },
-        ], "", "::");
-      })
-      .join("||");
-  }
-
-  _isInEditMode() {
-    const homeAssistantRoot = document.querySelector("body > home-assistant");
-
-    const inEditDashboardMode = this.closest("hui-card-edit-mode") !== null;
-    const inPreviewMode = this.closest("hui-card-preview") !== null || this.closest(".card > .preview") !== null;
-    const inEditCardMode = Boolean(
-      homeAssistantRoot?.shadowRoot
-        ?.querySelector("hui-dialog-edit-card")
-        ?.shadowRoot?.querySelector("ha-dialog"),
-    );
-
-    return inEditDashboardMode || inPreviewMode || inEditCardMode;
-  }
-
-  _shouldHideForScreen() {
-    if (this._isInEditMode()) {
-      return false;
-    }
-
-    if (this._config.layout.show_desktop) {
-      return false;
-    }
-
-    return window.innerWidth > Number(this._config.layout.mobile_breakpoint || 1279);
-  }
-
-  _triggerHaptic(style = this._config?.haptics?.style) {
-    if (!this._config?.haptics?.enabled) {
-      return;
-    }
-
-    const hapticStyle = String(style || "medium");
-
-    try {
-      fireEvent(this, "haptic", hapticStyle);
-    } catch (_error) {
-      // Ignore event dispatch issues and try vibration fallback below.
-    }
-
-    if (
-      !this._config.haptics.fallback_vibrate ||
-      typeof navigator === "undefined" ||
-      typeof navigator.vibrate !== "function"
-    ) {
-      return;
-    }
-
-    navigator.vibrate(HAPTIC_PATTERNS[hapticStyle] || HAPTIC_PATTERNS.selection);
-  }
-
-  _getAnimationSettings() {
-    const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
-    return {
-      enabled: configuredAnimations.enabled !== false,
-      panelDuration: clamp(
-        Number(configuredAnimations.panel_duration) || DEFAULT_CONFIG.animations.panel_duration,
-        120,
-        2400,
-      ),
-      browserDuration: clamp(
-        Number(configuredAnimations.browser_duration) || DEFAULT_CONFIG.animations.browser_duration,
-        120,
-        2400,
-      ),
-      buttonBounceDuration: clamp(
-        Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration,
-        120,
-        1200,
-      ),
-    };
-  }
-
-  _isLightThemeSurface() {
-    const textColor = parseRgbColor(resolveColorInContext(this, "var(--primary-text-color)"));
-    const backgroundColor = parseRgbColor(resolveColorInContext(this, "var(--ha-card-background, var(--card-background-color, #ffffff))"));
-
-    const textLuminance = getRelativeLuminance(textColor);
-    if (textLuminance !== null) {
-      return textLuminance < 0.36;
-    }
-
-    const backgroundLuminance = getRelativeLuminance(backgroundColor);
-    if (backgroundLuminance !== null) {
-      return backgroundLuminance > 0.62;
-    }
-
-    return false;
-  }
-
-  _triggerButtonBounce(button) {
-    if (!(button instanceof HTMLElement)) {
-      return;
-    }
-
-    const animations = this._getAnimationSettings();
-    if (!animations.enabled) {
-      return;
-    }
-
-    button.classList.remove("is-pressing");
-    button.getBoundingClientRect();
-    button.classList.add("is-pressing");
-
-    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
-    const done = () => {
-      if (!button.isConnected) {
-        return;
       }
-      button.classList.remove("is-pressing");
-    };
-    if (typeof schedule === "function") {
-      schedule(this, done, animations.buttonBounceDuration + 40);
-    } else {
-      window.setTimeout(done, animations.buttonBounceDuration + 40);
-    }
-  }
-
-  _scheduleEntranceAnimationReset(delay) {
-    if (this._entranceAnimationResetTimer) {
-      window.clearTimeout(this._entranceAnimationResetTimer);
-      this._entranceAnimationResetTimer = 0;
-    }
-
-    const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3000);
-    if (!safeDelay || typeof window === "undefined") {
-      this._animateContentOnNextRender = false;
-      return;
-    }
-
-    this._entranceAnimationResetTimer = window.setTimeout(() => {
-      this._entranceAnimationResetTimer = 0;
-      if (!this.isConnected) {
-        return;
-      }
-      this._animateContentOnNextRender = false;
-    }, safeDelay);
-  }
-
-  _isArtworkUrlReady(url) {
-    return Boolean(url) && this._readyArtworkUrls.has(url);
-  }
-
-  _isArtworkUrlFailed(url) {
-    return Boolean(url) && this._failedArtworkUrls.has(url);
-  }
-
-  _preloadArtworkUrl(url, onSettled = null) {
-    if (!url) {
-      return Promise.resolve(false);
-    }
-
-    if (this._isArtworkUrlReady(url)) {
-      onSettled?.(true);
-      return Promise.resolve(true);
-    }
-
-    if (this._isArtworkUrlFailed(url)) {
-      onSettled?.(false);
-      return Promise.resolve(false);
-    }
-
-    const existing = this._pendingArtworkPreloads.get(url);
-    if (existing) {
-      if (onSettled) {
-        existing.then(onSettled);
-      }
-      return existing;
-    }
-
-    if (typeof Image === "undefined") {
-      this._readyArtworkUrls.add(url);
-      onSettled?.(true);
-      return Promise.resolve(true);
-    }
-
-    const preloadPromise = new Promise(resolve => {
-      const image = new Image();
-      image.decoding = "async";
-
-      const settle = loaded => {
-        this._pendingArtworkPreloads.delete(url);
-        if (loaded) {
-          this._readyArtworkUrls.add(url);
-          this._failedArtworkUrls.delete(url);
-        } else {
-          this._failedArtworkUrls.add(url);
-        }
-        resolve(loaded);
-        onSettled?.(loaded);
-      };
-
-      image.onload = () => settle(true);
-      image.onerror = () => settle(false);
-      image.src = url;
-    });
-
-    this._pendingArtworkPreloads.set(url, preloadPromise);
-    return preloadPromise;
-  }
-
-  _ensureArtworkReady(entityId, url, { rerenderOnReady = false } = {}) {
-    if (!entityId) {
-      return !url;
-    }
-
-    if (!url) {
-      this._displayArtworkByEntity.delete(entityId);
-      return true;
-    }
-
-    if (this._isArtworkUrlReady(url)) {
-      this._displayArtworkByEntity.set(entityId, url);
-      return true;
-    }
-
-    if (this._isArtworkUrlFailed(url)) {
-      this._displayArtworkByEntity.delete(entityId);
-      return true;
-    }
-
-    this._preloadArtworkUrl(url, () => {
-      const currentPlayer = this._findPlayerConfig(entityId) || { entity: entityId };
-      const currentState = this._hass?.states?.[entityId];
-      const currentArtwork = currentState ? this._getPlayerArtwork(currentPlayer, currentState) : null;
-      if (currentArtwork !== url) {
-        return;
-      }
-
-      if (this._isArtworkUrlReady(url)) {
-        this._displayArtworkByEntity.set(entityId, url);
-      } else {
-        this._displayArtworkByEntity.delete(entityId);
-      }
-
-      if (rerenderOnReady) {
+      connectedCallback() {
+        window.addEventListener("resize", this._onResize);
+        window.addEventListener("keydown", this._onWindowKeyDown);
+        document.addEventListener("visibilitychange", this._onVisibilityChange);
+        this._observeLayout();
+        this._animateContentOnNextRender = true;
         this._lastRenderSignature = "";
         this._render();
       }
-    });
-
-    return false;
-  }
-
-  _getRenderableArtwork(entityId, desiredArtworkUrl) {
-    if (!entityId || !desiredArtworkUrl) {
-      if (entityId) {
-        this._displayArtworkByEntity.delete(entityId);
+      disconnectedCallback() {
+        window.NodaliaUtils?.releaseModalFocus?.(this);
+        window.removeEventListener("resize", this._onResize);
+        window.removeEventListener("keydown", this._onWindowKeyDown);
+        document.removeEventListener("visibilitychange", this._onVisibilityChange);
+        this._detachWindowDragListeners();
+        if (this._dragFrame) {
+          window.cancelAnimationFrame(this._dragFrame);
+          this._dragFrame = 0;
+        }
+        this._pendingDragUpdate = null;
+        if (this._mediaTicker) {
+          window.clearInterval(this._mediaTicker);
+          this._mediaTicker = null;
+        }
+        this._draftVolumeTimers.forEach((timerId) => window.clearTimeout(timerId));
+        this._draftVolumeTimers.clear();
+        if (this._entranceAnimationResetTimer) {
+          window.clearTimeout(this._entranceAnimationResetTimer);
+          this._entranceAnimationResetTimer = 0;
+        }
+        this._mediaBrowserRequestToken += 1;
+        this._animateContentOnNextRender = true;
+        this._lastRenderSignature = "";
+        this._layoutObserver?.disconnect();
+        this._layoutObserver = null;
+        this._artworkController?.detach();
+        this._artworkStageEl = null;
+        this._activeProgressDrag = null;
+        window.NodaliaUtils?.clearDeferTimers?.(this);
       }
-      return "";
-    }
-
-    if (this._isArtworkUrlReady(desiredArtworkUrl)) {
-      this._displayArtworkByEntity.set(entityId, desiredArtworkUrl);
-      return desiredArtworkUrl;
-    }
-
-    if (this._isArtworkUrlFailed(desiredArtworkUrl)) {
-      this._displayArtworkByEntity.delete(entityId);
-      return "";
-    }
-
-    return this._displayArtworkByEntity.get(entityId) || "";
-  }
-
-  _resolveMediaUrl(value, options = {}) {
-    const baseUrl = sanitizeMediaArtworkUrl(value, this._hass);
-    if (!baseUrl) {
-      return "";
-    }
-    return appendQueryParam(baseUrl, "nodalia_ts", options.cacheToken);
-  }
-
-  _getArtworkCacheToken(state) {
-    if (!state) {
-      return "";
-    }
-
-    return [
-      String(state.last_updated || state.last_changed || ""),
-      String(state.attributes?.entity_picture || state.attributes?.entity_picture_local || ""),
-      String(state.attributes?.media_title || ""),
-      String(state.attributes?.media_artist || ""),
-      String(state.attributes?.media_album_name || ""),
-      String(state.attributes?.app_name || ""),
-    ].filter(Boolean).join("|");
-  }
-
-  _getConfiguredPlayers() {
-    return Array.isArray(this._config?.players) ? this._config.players : [];
-  }
-
-  _resolveActivePlayerIndex(players) {
-    if (!Array.isArray(players) || players.length === 0) {
-      this._activePlayerIndex = 0;
-      return 0;
-    }
-
-    const entityIndex = this._activePlayerEntity
-      ? players.findIndex(player => player?.entity === this._activePlayerEntity)
-      : -1;
-    const nextIndex = entityIndex >= 0
-      ? entityIndex
-      : clamp(this._activePlayerIndex ?? 0, 0, players.length - 1);
-
-    this._activePlayerIndex = nextIndex;
-    this._activePlayerEntity = String(players[nextIndex]?.entity || "");
-    return nextIndex;
-  }
-
-  _findPlayerConfig(entityId) {
-    return this._getConfiguredPlayers().find(player => player.entity === entityId) || null;
-  }
-
-  _shouldShowOnCurrentScreen() {
-    if (this._isInEditMode()) {
-      return true;
-    }
-
-    const isDesktop = window.innerWidth > Number(this._config.layout.mobile_breakpoint || 1279);
-    return !isDesktop || this._config.layout.show_desktop;
-  }
-
-  _getVisiblePlayers() {
-    if (this._config.show === false || !this._shouldShowOnCurrentScreen()) {
-      return [];
-    }
-
-    return this._getConfiguredPlayers().filter(player => {
-      if (!player?.entity || player.show === false) {
-        return false;
-      }
-
-      const state = this._hass?.states?.[player.entity];
-      if (!state) {
-        return false;
-      }
-
-      if (this._config.show === true || player.show === true || this._isInEditMode()) {
-        return true;
-      }
-
-      const visibleStates = Array.isArray(player.show_states) && player.show_states.length > 0
-        ? player.show_states
-        : ["playing", "paused"];
-
-      return visibleStates.includes(state.state);
-    });
-  }
-
-  _getReservedHeight(showPlayer) {
-    if (!this._config.layout.reserve_space) {
-      return "0px";
-    }
-
-    if (showPlayer) {
-      return this._config.layout.reserve_height || this._config.styles.player.min_height;
-    }
-
-    return "0px";
-  }
-
-  _getPlayerLabel(player, state) {
-    return player.label || player.name || state.attributes.friendly_name || player.entity;
-  }
-
-  _isAppleTvPlayer(player, state) {
-    const candidates = [
-      player?.entity,
-      player?.label,
-      player?.name,
-      player?.title,
-      state?.attributes?.friendly_name,
-      state?.attributes?.app_name,
-      state?.attributes?.source,
-      state?.attributes?.device_class,
-    ];
-
-    return candidates.some(candidate => normalizeTextKey(candidate).includes("apple tv"));
-  }
-
-  _getPlayerDeviceType(player, state) {
-    if (player?.tv_mode === true) {
-      return "tv";
-    }
-
-    if (player?.tv_mode === false) {
-      return "music";
-    }
-
-    if (player?.device_type === "music" || player?.device_type === "tv") {
-      return player.device_type;
-    }
-
-    const deviceClass = normalizeTextKey(state?.attributes?.device_class);
-    if (["tv", "receiver", "set_top_box"].includes(deviceClass)) {
-      return "tv";
-    }
-
-    const haystack = normalizeTextKey([
-      player?.entity,
-      player?.label,
-      player?.name,
-      player?.title,
-      player?.icon,
-      state?.attributes?.friendly_name,
-      state?.attributes?.app_name,
-      state?.attributes?.source,
-      state?.attributes?.media_content_type,
-    ].filter(Boolean).join(" "));
-
-    if (
-      this._isAppleTvPlayer(player, state) ||
-      haystack.includes("google tv") ||
-      haystack.includes("android tv") ||
-      haystack.includes("chromecast") ||
-      haystack.includes("television") ||
-      haystack.includes("televisor") ||
-      /\btv\b/.test(haystack)
-    ) {
-      return "tv";
-    }
-
-    return "music";
-  }
-
-  _getPlayerFallbackIcon(player, state, deviceType) {
-    if (player?.icon) {
-      return player.icon;
-    }
-
-    if (deviceType === "tv") {
-      return this._isAppleTvPlayer(player, state) ? "mdi:apple" : "mdi:television";
-    }
-
-    return "mdi:music";
-  }
-
-  _getPlayerTitle(player, state) {
-    if (player.title) {
-      return player.title;
-    }
-
-    return state.attributes.media_title || state.attributes.friendly_name || player.entity;
-  }
-
-  _getTvContentTitle(player, state) {
-    if (player.title) {
-      return player.title;
-    }
-
-    return (
-      state?.attributes?.media_title ||
-      state?.attributes?.media_series_title ||
-      state?.attributes?.media_channel ||
-      ""
-    );
-  }
-
-  _getPlayerSubtitle(player, state) {
-    if (player.subtitle) {
-      return player.subtitle;
-    }
-
-    const fallbackState = this._config?.show_state === true
-      ? this._getPlayerStateLabel(state.state)
-      : "";
-
-    return (
-      state.attributes.media_artist ||
-      state.attributes.media_series_title ||
-      state.attributes.media_album_name ||
-      state.attributes.app_name ||
-      fallbackState
-    );
-  }
-
-  _shouldShowTvArtwork(player, state) {
-    const deviceType = this._getPlayerDeviceType(player, state);
-    if (deviceType !== "tv") {
-      return true;
-    }
-
-    const plexSignals = [
-      state?.attributes?.source,
-      state?.attributes?.app_name,
-      state?.attributes?.media_channel,
-      state?.attributes?.media_content_type,
-    ]
-      .filter(Boolean)
-      .map(value => normalizeTextKey(value));
-
-    return plexSignals.some(value => value.includes("plex"));
-  }
-
-  _getPlayerArtwork(player, state) {
-    if (player.image) {
-      return this._resolveMediaUrl(player.image);
-    }
-
-    if (!this._shouldShowTvArtwork(player, state)) {
-      return null;
-    }
-
-    const artwork =
-      state.attributes.entity_picture_local ||
-      state.attributes.entity_picture ||
-      "";
-
-    return artwork
-      ? this._resolveMediaUrl(artwork, {
-          cacheToken: this._getArtworkCacheToken(state),
-        })
-      : null;
-  }
-
-  _getPlayerStateLabel(stateValue) {
-    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-    const langCfg = this._config?.language ?? "auto";
-    if (window.NodaliaI18n?.translateMediaPlayerState) {
-      return window.NodaliaI18n.translateMediaPlayerState(hass, langCfg, stateValue);
-    }
-    switch (stateValue) {
-      case "on":
-        return "On";
-      case "playing":
-        return "Playing";
-      case "paused":
-        return "Paused";
-      case "buffering":
-        return "Buffering";
-      case "idle":
-        return "Idle";
-      case "off":
-        return "Off";
-      case "standby":
-        return "Standby";
-      case "unavailable":
-        return "Unavailable";
-      default:
-        return stateValue || "Unknown";
-    }
-  }
-
-  _isPlayerActive(state) {
-    const stateKey = normalizeTextKey(state?.state);
-    return !!stateKey && !["off", "standby", "unavailable", "unknown"].includes(stateKey);
-  }
-
-  _getPlayerProgress(state) {
-    const duration = Number(state?.attributes?.media_duration || 0);
-
-    if (!(duration > 0)) {
-      return null;
-    }
-
-    let position = Number(state.attributes.media_position || 0);
-    const updatedAt = state.attributes.media_position_updated_at;
-
-    if (state.state === "playing" && updatedAt) {
-      const updatedAtTime = new Date(updatedAt).getTime();
-
-      if (!Number.isNaN(updatedAtTime)) {
-        position += Math.max(0, (Date.now() - updatedAtTime) / 1000);
-      }
-    }
-
-    position = clamp(position, 0, duration);
-
-    return {
-      duration,
-      percent: clamp((position / duration) * 100, 0, 100),
-      position,
-    };
-  }
-
-  _getPlayerSourceLabel(state) {
-    const sourceLabel =
-      state.attributes.source ||
-      state.attributes.app_name ||
-      state.attributes.media_album_name ||
-      state.attributes.media_channel;
-
-    const sourceKey = normalizeTextKey(sourceLabel);
-
-    if (
-      !sourceKey ||
-      sourceKey.includes("music assistant") ||
-      sourceKey === "airmusic" ||
-      sourceKey.startsWith("airmusic ")
-    ) {
-      return null;
-    }
-
-    return sourceLabel;
-  }
-
-  _getPlayerSourceOptions(player, state) {
-    if (player?.show_source_controls === false) {
-      return [];
-    }
-
-    const sources = Array.isArray(state?.attributes?.source_list)
-      ? state.attributes.source_list.filter(source => String(source || "").trim())
-      : [];
-
-    if (!sources.length) {
-      return [];
-    }
-
-    const currentSource = String(state?.attributes?.source || "").trim();
-    const orderedSources = [];
-
-    if (currentSource && sources.includes(currentSource)) {
-      orderedSources.push(currentSource);
-    }
-
-    sources.forEach(source => {
-      if (!orderedSources.includes(source)) {
-        orderedSources.push(source);
-      }
-    });
-
-    const fallbackMaxSources = this._getPlayerDeviceType(player, state) === "tv" ? sources.length : 4;
-    const maxSources = clamp(Number(player?.max_sources || fallbackMaxSources), 1, 32);
-    return orderedSources.slice(0, maxSources);
-  }
-
-  _hasActiveMediaContent(state) {
-    if (!state?.attributes) {
-      return false;
-    }
-
-    return Boolean(
-      state.attributes.media_title ||
-      state.attributes.media_artist ||
-      state.attributes.media_album_name ||
-      state.attributes.media_series_title ||
-      state.attributes.media_channel ||
-      state.attributes.media_duration,
-    );
-  }
-
-  _shouldUseIdleLayout(player, state) {
-    if (!state) {
-      return false;
-    }
-
-    if (player?.compact_when_idle === false) {
-      return false;
-    }
-
-    if (this._hasActiveMediaContent(state)) {
-      return false;
-    }
-
-    return ["idle", "off", "standby", "paused", "unknown", "unavailable"].includes(state.state);
-  }
-
-  _isMusicAssistantPlayer(player, state) {
-    const candidates = [
-      player?.entity,
-      player?.label,
-      player?.name,
-      player?.title,
-      state?.attributes?.friendly_name,
-      state?.attributes?.source,
-      state?.attributes?.app_name,
-      state?.attributes?.media_channel,
-      state?.attributes?.media_content_id,
-    ];
-
-    return candidates.some(candidate => normalizeTextKey(candidate).includes("music assistant"));
-  }
-
-  _getPlayerBrowsePath(player, state) {
-    if (player?.browse_path) {
-      return player.browse_path;
-    }
-
-    if (player?.media_browser_path) {
-      return player.media_browser_path;
-    }
-
-    return this._isMusicAssistantPlayer(player, state) ? "/media-browser/browser" : "";
-  }
-
-  _supportsMediaBrowser(player, state) {
-    if (player?.browse_path || player?.media_browser_path) {
-      return true;
-    }
-
-    const supportedFeatures = Number(state?.attributes?.supported_features || 0);
-    return Number.isFinite(supportedFeatures) && (supportedFeatures & MEDIA_PLAYER_FEATURE_BROWSE_MEDIA) !== 0;
-  }
-
-  _supportsVolumeControl(state) {
-    return typeof state?.attributes?.volume_level === "number";
-  }
-
-  _getPlayerVolumePercent(entityId, state) {
-    const draftValue = this._draftVolume.get(entityId);
-    if (Number.isFinite(draftValue)) {
-      return clamp(Number(draftValue), 0, 100);
-    }
-
-    return clamp(Math.round(Number(state?.attributes?.volume_level || 0) * 100), 0, 100);
-  }
-
-  _updatePlayerVolumePreview(entityId, value) {
-    const nextValue = clamp(Number(value), 0, 100);
-    const normalizedEntityId = escapeSelectorValue(entityId);
-    const sliders = this.shadowRoot?.querySelectorAll(
-      `.media-player__volume-slider[data-entity="${normalizedEntityId}"]`,
-    ) || [];
-
-    sliders.forEach(slider => {
-      if (!(slider instanceof HTMLInputElement)) {
-        return;
-      }
-
-      slider.value = String(nextValue);
-      slider.style.setProperty("--media-volume", String(nextValue));
-      slider.closest(".media-player__volume-slider-shell")?.style.setProperty("--media-volume", String(nextValue));
-    });
-
-    const volumeButtons = this.shadowRoot?.querySelectorAll(
-      `.media-player__volume-button[data-entity="${normalizedEntityId}"][data-media-volume]`,
-    ) || [];
-
-    volumeButtons.forEach(button => {
-      if (!(button instanceof HTMLElement)) {
-        return;
-      }
-
-      button.dataset.mediaVolume = String(clamp(nextValue / 100, 0, 1));
-    });
-  }
-
-  _clearDraftVolume(entityId) {
-    const timerId = this._draftVolumeTimers.get(entityId);
-    if (timerId) {
-      window.clearTimeout(timerId);
-      this._draftVolumeTimers.delete(entityId);
-    }
-
-    this._draftVolume.delete(entityId);
-  }
-
-  _syncVolumeControlsFromHass(hass = this._hass) {
-    if (!this.shadowRoot?.innerHTML) {
-      return;
-    }
-
-    const states = hass?.states || {};
-    this._getTrackedEntities().forEach(entityId => {
-      const state = states[entityId];
-      if (!this._supportsVolumeControl(state)) {
-        return;
-      }
-
-      const actualPercent = clamp(Math.round(Number(state.attributes?.volume_level || 0) * 100), 0, 100);
-      const draftValue = this._draftVolume.get(entityId);
-      if (Number.isFinite(draftValue) && Math.abs(actualPercent - draftValue) <= 2) {
-        this._clearDraftVolume(entityId);
-      }
-
-      this._updatePlayerVolumePreview(entityId, this._getPlayerVolumePercent(entityId, state));
-    });
-  }
-
-  _scheduleDraftVolumeClear(entityId, delay = 1400) {
-    const existingTimer = this._draftVolumeTimers.get(entityId);
-    if (existingTimer) {
-      window.clearTimeout(existingTimer);
-      this._draftVolumeTimers.delete(entityId);
-    }
-
-    const timerId = window.setTimeout(() => {
-      this._clearDraftVolume(entityId);
-      this._syncVolumeControlsFromHass(this._hass);
-    }, delay);
-
-    this._draftVolumeTimers.set(entityId, timerId);
-  }
-
-  async _stepPlayerVolumeToTarget(entityId, targetPercent) {
-    if (!this._hass || !entityId) {
-      return;
-    }
-
-    const state = this._hass.states?.[entityId];
-    const currentPercent = clamp(Math.round(Number(state?.attributes?.volume_level || 0) * 100), 0, 100);
-    const delta = targetPercent - currentPercent;
-
-    if (Math.abs(delta) < 3) {
-      this._scheduleDraftVolumeClear(entityId, 800);
-      return;
-    }
-
-    const service = delta > 0 ? "volume_up" : "volume_down";
-    const stepCount = clamp(Math.round(Math.abs(delta) / 6), 1, 12);
-
-    for (let index = 0; index < stepCount; index += 1) {
-      if (!this.isConnected) {
-        break;
-      }
-      try {
-        await this._callInternalMediaService(service, { entity_id: entityId });
-      } catch (_error) {
-        break;
-      }
-
-      if (!this.isConnected) {
-        break;
-      }
-
-      await new Promise(resolve => window.setTimeout(resolve, 90));
-    }
-
-    this._scheduleDraftVolumeClear(entityId, 1800);
-  }
-
-  _commitPlayerVolume(entityId, value) {
-    if (!this._hass || !entityId) {
-      return;
-    }
-
-    const nextValue = clamp(Math.round(Number(value)), 0, 100);
-    const state = this._hass.states?.[entityId];
-    const player = this._findPlayerConfig(entityId) || { entity: entityId };
-    const isTvPlayer = this._getPlayerDeviceType(player, state) === "tv";
-
-    this._scheduleDraftVolumeClear(entityId);
-
-    if (isTvPlayer) {
-      this._volumeStepFallback.add(entityId);
-      void this._stepPlayerVolumeToTarget(entityId, nextValue);
-      return;
-    }
-
-    Promise.resolve(
-      this._callInternalMediaService("volume_set", {
-        entity_id: entityId,
-        volume_level: clamp(nextValue / 100, 0, 1),
-      }),
-    ).catch(() => {
-      if (!isTvPlayer) {
-        return;
-      }
-
-      this._volumeStepFallback.add(entityId);
-      void this._stepPlayerVolumeToTarget(entityId, nextValue);
-    });
-  }
-
-  _getPlayerChips(player, state, progress, title, subtitle) {
-    const chips = [];
-    const seen = new Set();
-    const titleKey = normalizeTextKey(title);
-    const subtitleKey = normalizeTextKey(subtitle);
-
-    const addChip = (label, tone = "default") => {
-      const text = String(label || "").trim();
-      if (!text) {
-        return;
-      }
-
-      const key = normalizeTextKey(text);
-      if (!key || key === titleKey || key === subtitleKey || seen.has(key)) {
-        return;
-      }
-
-      seen.add(key);
-      chips.push({ label: text, tone });
-    };
-
-    addChip(this._getPlayerSourceLabel(state), "source");
-
-    if (progress) {
-      addChip(`${formatDuration(progress.position)} / ${formatDuration(progress.duration)}`, "time");
-    }
-
-    return chips.slice(0, 4);
-  }
-
-  _getTvPlayerChips(player, state, progress, title, subtitle, sourceOptions = []) {
-    const chips = [];
-    const seen = new Set();
-    const titleKey = normalizeTextKey(title);
-    const subtitleKey = normalizeTextKey(subtitle);
-
-    const addChip = (label, tone = "default") => {
-      const text = String(label || "").trim();
-      if (!text) {
-        return;
-      }
-
-      const key = normalizeTextKey(text);
-      if (!key || key === titleKey || key === subtitleKey || seen.has(key)) {
-        return;
-      }
-
-      seen.add(key);
-      chips.push({ label: text, tone });
-    };
-
-    if (progress) {
-      addChip(`${formatDuration(progress.position)} / ${formatDuration(progress.duration)}`, "time");
-    }
-
-    return chips.slice(0, 3);
-  }
-
-  _syncTicker(players) {
-    if (!this.isConnected) {
-      if (this._mediaTicker) {
-        window.clearInterval(this._mediaTicker);
-        this._mediaTicker = null;
-      }
-      return;
-    }
-
-    if (typeof document !== "undefined" && document.hidden) {
-      if (this._mediaTicker) {
-        window.clearInterval(this._mediaTicker);
-        this._mediaTicker = null;
-      }
-      return;
-    }
-
-    if (this._mediaBrowserState) {
-      if (this._mediaTicker) {
-        window.clearInterval(this._mediaTicker);
-        this._mediaTicker = null;
-      }
-      return;
-    }
-
-    const shouldTick = players.some(player => {
-      const state = this._hass?.states?.[player.entity];
-      const progress = state ? this._getPlayerProgress(state) : null;
-      return state?.state === "playing" && progress;
-    });
-
-    if (shouldTick && !this._mediaTicker) {
-      this._mediaTicker = window.setInterval(() => {
-        if (typeof document !== "undefined" && document.hidden) {
+      setConfig(config) {
+        this._config = normalizeConfig(config);
+        this._lastRenderSignature = "";
+        this._animateContentOnNextRender = true;
+        if (!this.isConnected) {
           return;
         }
-
-        if (this._activeSliderDrag) {
+        this._render();
+      }
+      set hass(hass) {
+        const previousHass = this._hass;
+        this._hass = hass;
+        if (!this.isConnected) {
+          return;
+        }
+        if (!this._activeSliderDrag && !this._activeProgressDrag) {
+          this._syncVolumeControlsFromHass(hass);
+        }
+        const nextSignature = this._getRenderSignature(hass);
+        if (previousHass && nextSignature === this._lastRenderSignature) {
+          return;
+        }
+        this._lastRenderSignature = nextSignature;
+        if (this._activeSliderDrag || this._activeProgressDrag) {
           this._pendingRenderAfterDrag = true;
           return;
         }
-
-        const updated = this._updateProgressTick(players);
-        if (!updated && this.isConnected) {
-          this._progressTickMisses = (this._progressTickMisses || 0) + 1;
-          if (this._progressTickMisses >= 3) {
-            this._progressTickMisses = 0;
-            this._render();
-          }
-        } else {
-          this._progressTickMisses = 0;
-        }
-      }, 1000);
-      return;
-    }
-
-    if (!shouldTick && this._mediaTicker) {
-      window.clearInterval(this._mediaTicker);
-      this._mediaTicker = null;
-    }
-  }
-
-  _onVisibilityChange() {
-    if (typeof document !== "undefined" && document.hidden) {
-      if (this._mediaTicker) {
-        window.clearInterval(this._mediaTicker);
-        this._mediaTicker = null;
+        this._render();
       }
-      return;
-    }
-
-    this._render();
-  }
-
-  _updateProgressTick(players) {
-    if (!this.shadowRoot || !Array.isArray(players) || players.length === 0) {
-      return false;
-    }
-
-    const activeIndex = this._resolveActivePlayerIndex(players);
-    const player = players[activeIndex];
-    if (!player?.entity) {
-      return false;
-    }
-
-    const state = this._hass?.states?.[player.entity];
-    const progress = state ? this._getPlayerProgress(state) : null;
-    if (!progress) {
-      return false;
-    }
-
-    const card = this.shadowRoot.querySelector(
-      `.media-player-card[data-media-card-index="${activeIndex}"]`,
-    );
-    if (!card) {
-      return false;
-    }
-
-    let updated = false;
-    const fill = card.querySelector(".media-player__progress-fill");
-    if (fill) {
-      fill.style.width = `${progress.percent}%`;
-      updated = true;
-    }
-
-    const timeChip = card.querySelector(".media-player__chip--time");
-    if (timeChip) {
-      timeChip.textContent = `${formatDuration(progress.position)} / ${formatDuration(progress.duration)}`;
-      updated = true;
-    }
-
-    return updated;
-  }
-
-  _callInternalMediaService(service, data = {}) {
-    if (!this._hass || !service) {
-      return;
-    }
-
-    return this._hass.callService("media_player", service, data);
-  }
-
-  _callService(action) {
-    if (!this._hass || !action?.service) {
-      return;
-    }
-
-    if (!this._isServiceAllowed(action.service)) {
-      window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Media Player", action.service);
-      return;
-    }
-
-    const [domain, service] = String(action.service).split(".");
-    if (!domain || !service) {
-      return;
-    }
-
-    let payload = action.service_data ?? action.data ?? {};
-
-    if (typeof payload === "string") {
-      try {
-        const parsed = JSON.parse(payload);
-        payload = isObject(parsed) ? parsed : {};
-      } catch (_error) {
-        payload = {};
+      getCardSize() {
+        return 3;
       }
-    }
-
-    if (!isObject(payload)) {
-      payload = {};
-    }
-
-    this._hass.callService(domain, service, payload);
-  }
-
-  _isServiceAllowed(serviceValue) {
-    const security = this._config?.security || {};
-    if (security.strict_service_actions === false) {
-      return true;
-    }
-    const normalizedService = String(serviceValue || "").trim().toLowerCase();
-    if (!normalizedService || !normalizedService.includes(".")) {
-      return false;
-    }
-    const [domain] = normalizedService.split(".");
-    const domains = Array.isArray(security.allowed_service_domains)
-      ? security.allowed_service_domains.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
-      : [];
-    const services = Array.isArray(security.allowed_services)
-      ? security.allowed_services.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
-      : [];
-    if (!domains.length && !services.length) {
-      return false;
-    }
-    return services.includes(normalizedService) || domains.includes(domain);
-  }
-
-  _runActionDefinition(action, fallbackEntityId = "") {
-    if (!action || action.action === "none") {
-      return;
-    }
-
-    switch (action.action) {
-      case "more-info": {
-        const entityId = action.entity || fallbackEntityId;
-        if (entityId) {
-          fireEvent(this, "hass-more-info", { entityId });
-        }
-        break;
+      getGridOptions() {
+        return presentationGridOptions(this._getPresentationMode());
       }
-      case "navigate": {
-        const path = window.NodaliaUtils?.sanitizeActionUrl(action.navigation_path, { allowRelative: true }) || "";
-        if (path && !/^https?:\/\//i.test(path)) {
-          window.history.pushState(null, "", path);
-          window.dispatchEvent(new Event("location-changed"));
-        }
-        break;
-      }
-      case "url": {
-        const url = window.NodaliaUtils?.sanitizeActionUrl(action.url_path || action.url, { allowRelative: true }) || "";
-        if (!url) {
+      _observeLayout() {
+        if (this._layoutObserver || typeof ResizeObserver === "undefined") {
           return;
         }
-
-        if (action.new_tab) {
-          window.open(url, "_blank", "noopener,noreferrer");
+        this._layoutObserver = new ResizeObserver(() => {
+          if (!this.isConnected || this._activeSliderDrag || this._activeProgressDrag) {
+            return;
+          }
+          this._syncPresentationMode();
+        });
+        this._layoutObserver.observe(this);
+      }
+      _getActivePlayerContext() {
+        const players = this._getVisiblePlayers();
+        const player = players[this._resolveActivePlayerIndex(players)] || players[0] || this._getConfiguredPlayers()[0];
+        if (!player?.entity) {
+          return null;
+        }
+        return {
+          player,
+          state: this._hass?.states?.[player.entity] || null
+        };
+      }
+      _getPresentationMode() {
+        const context = this._getActivePlayerContext();
+        const entityId = String(context?.player?.entity || "");
+        if (entityId !== this._presentationEntityId) {
+          this._presentationEntityId = entityId;
+          this._resolvedLayoutMode = "";
+        }
+        const isTvPlayer = context ? this._getPlayerDeviceType(context.player, context.state) === "tv" : false;
+        const isIdleLayout = Boolean(
+          context && this._shouldUseIdleLayout(context.player, context.state)
+        );
+        const artworkUrl = context ? this._getPlayerArtwork(context.player, context.state) : "";
+        const preferSquareTiles = Boolean(!isTvPlayer && !isIdleLayout && artworkUrl);
+        return resolvePresentationMode(
+          this._config?.layout?.mode,
+          {
+            width: this.clientWidth,
+            height: preferSquareTiles ? this.clientHeight : 0
+          },
+          this._resolvedLayoutMode,
+          { preferSquareTiles }
+        );
+      }
+      _syncPresentationMode() {
+        const next = this._getPresentationMode();
+        if (next === this._resolvedLayoutMode) {
+          return false;
+        }
+        this._resolvedLayoutMode = next;
+        this.setAttribute("data-presentation", next);
+        if (this.isConnected && this._config) {
+          this._lastRenderSignature = "";
+          this._render();
+        }
+        return true;
+      }
+      _getTrackedEntities() {
+        const configuredPlayers = Array.isArray(this._config?.players) ? this._config.players.map((player) => player?.entity).filter(Boolean) : [];
+        if (configuredPlayers.length) {
+          return [...new Set(configuredPlayers)];
+        }
+        return this._config?.entity ? [this._config.entity] : [];
+      }
+      _getRenderSignature(hass = this._hass) {
+        const states = hass?.states || {};
+        const entities = this._getTrackedEntities();
+        const runtime = getRenderSignatureRuntime();
+        return entities.map((entityId) => {
+          const state = states[entityId];
+          if (!state) {
+            return runtime.joinParts([{ values: [entityId, "missing"] }], "", "::");
+          }
+          const attrs = state.attributes || {};
+          return runtime.joinParts([
+            {
+              values: [
+                entityId,
+                state.state || "",
+                attrs.friendly_name || "",
+                attrs.entity_picture || "",
+                attrs.media_title || "",
+                attrs.media_artist || "",
+                attrs.media_series_title || "",
+                attrs.media_album_name || "",
+                attrs.app_name || "",
+                attrs.source || "",
+                attrs.media_channel || "",
+                attrs.media_duration ?? "",
+                attrs.supported_features ?? "",
+                Array.isArray(attrs.source_list) ? attrs.source_list.join("|") : ""
+              ]
+            }
+          ], "", "::");
+        }).join("||");
+      }
+      _isInEditMode() {
+        const homeAssistantRoot = document.querySelector("body > home-assistant");
+        const inEditDashboardMode = this.closest("hui-card-edit-mode") !== null;
+        const inPreviewMode = this.closest("hui-card-preview") !== null || this.closest(".card > .preview") !== null;
+        const inEditCardMode = Boolean(
+          homeAssistantRoot?.shadowRoot?.querySelector("hui-dialog-edit-card")?.shadowRoot?.querySelector("ha-dialog")
+        );
+        return inEditDashboardMode || inPreviewMode || inEditCardMode;
+      }
+      _shouldHideForScreen() {
+        if (this._isInEditMode()) {
+          return false;
+        }
+        if (this._config.layout.show_desktop) {
+          return false;
+        }
+        return window.innerWidth > Number(this._config.layout.mobile_breakpoint || 1279);
+      }
+      _triggerHaptic(style = this._config?.haptics?.style) {
+        if (!this._config?.haptics?.enabled) {
+          return;
+        }
+        const hapticStyle = String(style || "medium");
+        try {
+          fireEvent(this, "haptic", hapticStyle);
+        } catch (_error) {
+        }
+        if (!this._config.haptics.fallback_vibrate || typeof navigator === "undefined" || typeof navigator.vibrate !== "function") {
+          return;
+        }
+        navigator.vibrate(HAPTIC_PATTERNS[hapticStyle] || HAPTIC_PATTERNS.selection);
+      }
+      _getAnimationSettings() {
+        const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+        return {
+          enabled: configuredAnimations.enabled !== false,
+          panelDuration: clamp(
+            Number(configuredAnimations.panel_duration) || DEFAULT_CONFIG.animations.panel_duration,
+            120,
+            2400
+          ),
+          browserDuration: clamp(
+            Number(configuredAnimations.browser_duration) || DEFAULT_CONFIG.animations.browser_duration,
+            120,
+            2400
+          ),
+          buttonBounceDuration: clamp(
+            Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration,
+            120,
+            1200
+          )
+        };
+      }
+      _isLightThemeSurface() {
+        const textColor = parseRgbColor(resolveColorInContext(this, "var(--primary-text-color)"));
+        const backgroundColor = parseRgbColor(resolveColorInContext(this, "var(--ha-card-background, var(--card-background-color, #ffffff))"));
+        const textLuminance = getRelativeLuminance(textColor);
+        if (textLuminance !== null) {
+          return textLuminance < 0.36;
+        }
+        const backgroundLuminance = getRelativeLuminance(backgroundColor);
+        if (backgroundLuminance !== null) {
+          return backgroundLuminance > 0.62;
+        }
+        return false;
+      }
+      _triggerButtonBounce(button) {
+        if (!(button instanceof HTMLElement)) {
+          return;
+        }
+        const animations = this._getAnimationSettings();
+        if (!animations.enabled) {
+          return;
+        }
+        button.classList.remove("is-pressing");
+        button.getBoundingClientRect();
+        button.classList.add("is-pressing");
+        const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+        const done = () => {
+          if (!button.isConnected) {
+            return;
+          }
+          button.classList.remove("is-pressing");
+        };
+        if (typeof schedule === "function") {
+          schedule(this, done, animations.buttonBounceDuration + 40);
         } else {
-          window.location.assign(url);
+          window.setTimeout(done, animations.buttonBounceDuration + 40);
         }
-        break;
       }
-      case "call-service":
-        this._callService(action);
-        break;
-      default:
-        break;
-    }
-  }
-
-  _getPlayerPowerAction(player, currentState) {
-    const stateKey = normalizeTextKey(currentState);
-
-    if (["unavailable", "unknown"].includes(stateKey) && player?.power_action_unavailable?.action && player.power_action_unavailable.action !== "default") {
-      return player.power_action_unavailable;
-    }
-
-    if (["off", "standby"].includes(stateKey) && player?.power_action_off?.action && player.power_action_off.action !== "default") {
-      return player.power_action_off;
-    }
-
-    if (player?.power_action_on?.action && player.power_action_on.action !== "default") {
-      return player.power_action_on;
-    }
-
-    return null;
-  }
-
-  _runPlayerAction(player, defaultAction = null) {
-    this._runActionDefinition(player.tap_action || defaultAction, player.entity);
-  }
-
-  _handleMediaControl(control, entityId, options = {}) {
-    if (!this._hass || !entityId) {
-      return;
-    }
-
-    switch (control) {
-      case "power-toggle": {
+      _scheduleEntranceAnimationReset(delay) {
+        if (this._entranceAnimationResetTimer) {
+          window.clearTimeout(this._entranceAnimationResetTimer);
+          this._entranceAnimationResetTimer = 0;
+        }
+        const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3e3);
+        if (!safeDelay || typeof window === "undefined") {
+          this._animateContentOnNextRender = false;
+          return;
+        }
+        this._entranceAnimationResetTimer = window.setTimeout(() => {
+          this._entranceAnimationResetTimer = 0;
+          if (!this.isConnected) {
+            return;
+          }
+          this._animateContentOnNextRender = false;
+        }, safeDelay);
+      }
+      _isArtworkUrlReady(url) {
+        return Boolean(url) && this._readyArtworkUrls.has(url);
+      }
+      _isArtworkUrlFailed(url) {
+        return Boolean(url) && this._failedArtworkUrls.has(url);
+      }
+      _preloadArtworkUrl(url, onSettled = null) {
+        if (!url) {
+          return Promise.resolve(false);
+        }
+        if (this._isArtworkUrlReady(url)) {
+          onSettled?.(true);
+          return Promise.resolve(true);
+        }
+        if (this._isArtworkUrlFailed(url)) {
+          onSettled?.(false);
+          return Promise.resolve(false);
+        }
+        const existing = this._pendingArtworkPreloads.get(url);
+        if (existing) {
+          if (onSettled) {
+            existing.then(onSettled);
+          }
+          return existing;
+        }
+        if (typeof Image === "undefined") {
+          this._readyArtworkUrls.add(url);
+          onSettled?.(true);
+          return Promise.resolve(true);
+        }
+        const preloadPromise = new Promise((resolve) => {
+          const image = new Image();
+          image.decoding = "async";
+          const settle = (loaded) => {
+            this._pendingArtworkPreloads.delete(url);
+            if (loaded) {
+              this._readyArtworkUrls.add(url);
+              this._failedArtworkUrls.delete(url);
+            } else {
+              this._failedArtworkUrls.add(url);
+            }
+            resolve(loaded);
+            onSettled?.(loaded);
+          };
+          image.onload = () => settle(true);
+          image.onerror = () => settle(false);
+          image.src = url;
+        });
+        this._pendingArtworkPreloads.set(url, preloadPromise);
+        return preloadPromise;
+      }
+      _ensureArtworkReady(entityId, url, { rerenderOnReady = false } = {}) {
+        if (!entityId) {
+          return !url;
+        }
+        if (!url) {
+          this._displayArtworkByEntity.delete(entityId);
+          return true;
+        }
+        if (this._isArtworkUrlReady(url)) {
+          this._displayArtworkByEntity.set(entityId, url);
+          return true;
+        }
+        if (this._isArtworkUrlFailed(url)) {
+          this._displayArtworkByEntity.delete(entityId);
+          return true;
+        }
+        this._preloadArtworkUrl(url, () => {
+          const currentPlayer = this._findPlayerConfig(entityId) || { entity: entityId };
+          const currentState = this._hass?.states?.[entityId];
+          const currentArtwork = currentState ? this._getPlayerArtwork(currentPlayer, currentState) : null;
+          if (currentArtwork !== url) {
+            return;
+          }
+          if (this._isArtworkUrlReady(url)) {
+            this._displayArtworkByEntity.set(entityId, url);
+          } else {
+            this._displayArtworkByEntity.delete(entityId);
+          }
+          if (rerenderOnReady) {
+            const existingStage = this.shadowRoot?.querySelector("[data-media-art-stage]");
+            if (existingStage instanceof HTMLElement && this._config?.album_cover_background !== false) {
+              this._activeArtworkUrl = url;
+              this._syncArtworkLayer(existingStage, {
+                artworkUrl: url,
+                idle: false,
+                entityId,
+                hasAlbumBackground: true
+              });
+              return;
+            }
+            this._lastRenderSignature = "";
+            this._render();
+          }
+        });
+        return false;
+      }
+      _getRenderableArtwork(entityId, desiredArtworkUrl) {
+        if (!entityId || !desiredArtworkUrl) {
+          if (entityId) {
+            this._displayArtworkByEntity.delete(entityId);
+          }
+          return "";
+        }
+        if (this._isArtworkUrlReady(desiredArtworkUrl)) {
+          this._displayArtworkByEntity.set(entityId, desiredArtworkUrl);
+          return desiredArtworkUrl;
+        }
+        if (this._isArtworkUrlFailed(desiredArtworkUrl)) {
+          this._displayArtworkByEntity.delete(entityId);
+          return "";
+        }
+        return this._displayArtworkByEntity.get(entityId) || "";
+      }
+      _resolveMediaUrl(value, options = {}) {
+        const baseUrl = sanitizeMediaArtworkUrl(value, this._hass);
+        if (!baseUrl) {
+          return "";
+        }
+        return appendQueryParam(baseUrl, "nodalia_ts", options.cacheToken);
+      }
+      _getArtworkCacheToken(state) {
+        if (!state) {
+          return "";
+        }
+        return [
+          String(state.last_updated || state.last_changed || ""),
+          String(state.attributes?.entity_picture || state.attributes?.entity_picture_local || ""),
+          String(state.attributes?.media_title || ""),
+          String(state.attributes?.media_artist || ""),
+          String(state.attributes?.media_album_name || ""),
+          String(state.attributes?.app_name || "")
+        ].filter(Boolean).join("|");
+      }
+      _getConfiguredPlayers() {
+        return Array.isArray(this._config?.players) ? this._config.players : [];
+      }
+      _resolveActivePlayerIndex(players) {
+        if (!Array.isArray(players) || players.length === 0) {
+          this._activePlayerIndex = 0;
+          return 0;
+        }
+        const entityIndex = this._activePlayerEntity ? players.findIndex((player) => player?.entity === this._activePlayerEntity) : -1;
+        const nextIndex = entityIndex >= 0 ? entityIndex : clamp(this._activePlayerIndex ?? 0, 0, players.length - 1);
+        this._activePlayerIndex = nextIndex;
+        this._activePlayerEntity = String(players[nextIndex]?.entity || "");
+        return nextIndex;
+      }
+      _findPlayerConfig(entityId) {
+        return this._getConfiguredPlayers().find((player) => player.entity === entityId) || null;
+      }
+      _shouldShowOnCurrentScreen() {
+        if (this._isInEditMode()) {
+          return true;
+        }
+        const isDesktop = window.innerWidth > Number(this._config.layout.mobile_breakpoint || 1279);
+        return !isDesktop || this._config.layout.show_desktop;
+      }
+      _getVisiblePlayers() {
+        if (this._config.show === false || !this._shouldShowOnCurrentScreen()) {
+          return [];
+        }
+        return this._getConfiguredPlayers().filter((player) => {
+          if (!player?.entity || player.show === false) {
+            return false;
+          }
+          const state = this._hass?.states?.[player.entity];
+          if (!state) {
+            return false;
+          }
+          if (this._config.show === true || player.show === true || this._isInEditMode()) {
+            return true;
+          }
+          const visibleStates = Array.isArray(player.show_states) && player.show_states.length > 0 ? player.show_states : ["playing", "paused"];
+          return visibleStates.includes(state.state);
+        });
+      }
+      _getReservedHeight(showPlayer) {
+        if (!this._config.layout.reserve_space) {
+          return "0px";
+        }
+        if (showPlayer) {
+          return this._config.layout.reserve_height || this._config.styles.player.min_height;
+        }
+        return "0px";
+      }
+      _getPlayerLabel(player, state) {
+        return player.label || player.name || state.attributes.friendly_name || player.entity;
+      }
+      _isAppleTvPlayer(player, state) {
+        const candidates = [
+          player?.entity,
+          player?.label,
+          player?.name,
+          player?.title,
+          state?.attributes?.friendly_name,
+          state?.attributes?.app_name,
+          state?.attributes?.source,
+          state?.attributes?.device_class
+        ];
+        return candidates.some((candidate) => normalizeTextKey2(candidate).includes("apple tv"));
+      }
+      _getPlayerDeviceType(player, state) {
+        if (player?.tv_mode === true) {
+          return "tv";
+        }
+        if (player?.tv_mode === false) {
+          return "music";
+        }
+        if (player?.device_type === "music" || player?.device_type === "tv") {
+          return player.device_type;
+        }
+        const deviceClass = normalizeTextKey2(state?.attributes?.device_class);
+        if (["tv", "receiver", "set_top_box"].includes(deviceClass)) {
+          return "tv";
+        }
+        const haystack = normalizeTextKey2([
+          player?.entity,
+          player?.label,
+          player?.name,
+          player?.title,
+          player?.icon,
+          state?.attributes?.friendly_name,
+          state?.attributes?.app_name,
+          state?.attributes?.source,
+          state?.attributes?.media_content_type
+        ].filter(Boolean).join(" "));
+        if (this._isAppleTvPlayer(player, state) || haystack.includes("google tv") || haystack.includes("android tv") || haystack.includes("chromecast") || haystack.includes("television") || haystack.includes("televisor") || /\btv\b/.test(haystack)) {
+          return "tv";
+        }
+        return "music";
+      }
+      _getPlayerFallbackIcon(player, state, deviceType) {
+        if (player?.icon) {
+          return player.icon;
+        }
+        if (deviceType === "tv") {
+          return this._isAppleTvPlayer(player, state) ? "mdi:apple" : "mdi:television";
+        }
+        return "mdi:music";
+      }
+      _getPlayerTitle(player, state) {
+        if (player.title) {
+          return player.title;
+        }
+        return state.attributes.media_title || state.attributes.friendly_name || player.entity;
+      }
+      _getTvContentTitle(player, state) {
+        if (player.title) {
+          return player.title;
+        }
+        return state?.attributes?.media_title || state?.attributes?.media_series_title || state?.attributes?.media_channel || "";
+      }
+      _getPlayerSubtitle(player, state) {
+        if (player.subtitle) {
+          return player.subtitle;
+        }
+        const fallbackState = this._config?.show_state === true ? this._getPlayerStateLabel(state.state) : "";
+        return state.attributes.media_artist || state.attributes.media_series_title || state.attributes.media_album_name || state.attributes.app_name || fallbackState;
+      }
+      _shouldShowTvArtwork(player, state) {
+        const deviceType = this._getPlayerDeviceType(player, state);
+        if (deviceType !== "tv") {
+          return true;
+        }
+        const plexSignals = [
+          state?.attributes?.source,
+          state?.attributes?.app_name,
+          state?.attributes?.media_channel,
+          state?.attributes?.media_content_type
+        ].filter(Boolean).map((value) => normalizeTextKey2(value));
+        return plexSignals.some((value) => value.includes("plex"));
+      }
+      _getPlayerArtwork(player, state) {
+        if (player.image) {
+          return this._resolveMediaUrl(player.image);
+        }
+        if (!this._shouldShowTvArtwork(player, state)) {
+          return null;
+        }
+        const artwork = state.attributes.entity_picture_local || state.attributes.entity_picture || "";
+        return artwork ? this._resolveMediaUrl(artwork, {
+          cacheToken: this._getArtworkCacheToken(state)
+        }) : null;
+      }
+      _getPlayerStateLabel(stateValue) {
+        const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+        const langCfg = this._config?.language ?? "auto";
+        if (window.NodaliaI18n?.translateMediaPlayerState) {
+          return window.NodaliaI18n.translateMediaPlayerState(hass, langCfg, stateValue);
+        }
+        switch (stateValue) {
+          case "on":
+            return "On";
+          case "playing":
+            return "Playing";
+          case "paused":
+            return "Paused";
+          case "buffering":
+            return "Buffering";
+          case "idle":
+            return "Idle";
+          case "off":
+            return "Off";
+          case "standby":
+            return "Standby";
+          case "unavailable":
+            return "Unavailable";
+          default:
+            return stateValue || "Unknown";
+        }
+      }
+      _isPlayerActive(state) {
+        const stateKey = normalizeTextKey2(state?.state);
+        return !!stateKey && !["off", "standby", "unavailable", "unknown"].includes(stateKey);
+      }
+      _getPlayerProgress(state) {
+        if (this._activeProgressDrag?.entityId && this._hass?.states?.[this._activeProgressDrag.entityId] === state) {
+          const duration = Number(state?.attributes?.media_duration || 0);
+          if (!(duration > 0)) {
+            return null;
+          }
+          const position = seekPositionFromPercent(this._activeProgressDrag.percent, duration);
+          return {
+            duration,
+            position,
+            percent: this._activeProgressDrag.percent
+          };
+        }
+        return interpolatePlaybackProgress(state);
+      }
+      _renderProgressMarkup(player, state, progress) {
+        if (!progress || this._config?.progress?.show === false) {
+          return "";
+        }
+        const canSeek = this._config?.progress?.draggable !== false && supportsMediaSeek(state);
+        const percent = this._activeProgressDrag?.entityId === player.entity ? this._activeProgressDrag.percent : progress.percent;
+        return `
+      <div
+        class="media-player__progress${canSeek ? " is-interactive" : ""}"
+        data-media-progress="${canSeek ? "seek" : "readonly"}"
+        data-entity="${escapeHtml(player.entity)}"
+        ${canSeek ? `role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="${progress.duration}" aria-valuenow="${progress.position}" aria-label="${escapeHtml(this._commonAria("seek", "Seek"))}"` : `role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percent}"`}
+      >
+        <span class="media-player__progress-fill" style="width:${percent}%"></span>
+      </div>
+    `;
+      }
+      _getPlayerSourceLabel(state) {
+        const sourceLabel = state.attributes.source || state.attributes.app_name || state.attributes.media_album_name || state.attributes.media_channel;
+        const sourceKey = normalizeTextKey2(sourceLabel);
+        if (!sourceKey || sourceKey.includes("music assistant") || sourceKey === "airmusic" || sourceKey.startsWith("airmusic ")) {
+          return null;
+        }
+        return sourceLabel;
+      }
+      _getPlayerSourceOptions(player, state) {
+        if (player?.show_source_controls === false) {
+          return [];
+        }
+        const sources = Array.isArray(state?.attributes?.source_list) ? state.attributes.source_list.filter((source) => String(source || "").trim()) : [];
+        if (!sources.length) {
+          return [];
+        }
+        const currentSource = String(state?.attributes?.source || "").trim();
+        const orderedSources = [];
+        if (currentSource && sources.includes(currentSource)) {
+          orderedSources.push(currentSource);
+        }
+        sources.forEach((source) => {
+          if (!orderedSources.includes(source)) {
+            orderedSources.push(source);
+          }
+        });
+        const fallbackMaxSources = this._getPlayerDeviceType(player, state) === "tv" ? sources.length : 4;
+        const maxSources = clamp(Number(player?.max_sources || fallbackMaxSources), 1, 32);
+        return orderedSources.slice(0, maxSources);
+      }
+      _hasActiveMediaContent(state) {
+        if (!state?.attributes) {
+          return false;
+        }
+        return Boolean(
+          state.attributes.media_title || state.attributes.media_artist || state.attributes.media_album_name || state.attributes.media_series_title || state.attributes.media_channel || state.attributes.media_duration
+        );
+      }
+      _shouldUseIdleLayout(player, state) {
+        if (!state) {
+          return false;
+        }
+        if (player?.compact_when_idle === false) {
+          return false;
+        }
+        if (this._hasActiveMediaContent(state)) {
+          return false;
+        }
+        return ["idle", "off", "standby", "paused", "unknown", "unavailable"].includes(state.state);
+      }
+      _isMusicAssistantPlayer(player, state) {
+        const candidates = [
+          player?.entity,
+          player?.label,
+          player?.name,
+          player?.title,
+          state?.attributes?.friendly_name,
+          state?.attributes?.source,
+          state?.attributes?.app_name,
+          state?.attributes?.media_channel,
+          state?.attributes?.media_content_id
+        ];
+        return candidates.some((candidate) => normalizeTextKey2(candidate).includes("music assistant"));
+      }
+      _getPlayerBrowsePath(player, state) {
+        if (player?.browse_path) {
+          return player.browse_path;
+        }
+        if (player?.media_browser_path) {
+          return player.media_browser_path;
+        }
+        return this._isMusicAssistantPlayer(player, state) ? "/media-browser/browser" : "";
+      }
+      _supportsMediaBrowser(player, state) {
+        if (player?.browse_path || player?.media_browser_path) {
+          return true;
+        }
+        const supportedFeatures = Number(state?.attributes?.supported_features || 0);
+        return Number.isFinite(supportedFeatures) && (supportedFeatures & MEDIA_PLAYER_FEATURE_BROWSE_MEDIA) !== 0;
+      }
+      _supportsVolumeControl(state) {
+        return typeof state?.attributes?.volume_level === "number";
+      }
+      _getPlayerVolumePercent(entityId, state) {
+        const draftValue = this._draftVolume.get(entityId);
+        if (Number.isFinite(draftValue)) {
+          return clamp(Number(draftValue), 0, 100);
+        }
+        return clamp(Math.round(Number(state?.attributes?.volume_level || 0) * 100), 0, 100);
+      }
+      _updatePlayerVolumePreview(entityId, value) {
+        const nextValue = clamp(Number(value), 0, 100);
+        const normalizedEntityId = escapeSelectorValue(entityId);
+        const sliders = this.shadowRoot?.querySelectorAll(
+          `.media-player__volume-slider[data-entity="${normalizedEntityId}"]`
+        ) || [];
+        sliders.forEach((slider) => {
+          if (!(slider instanceof HTMLInputElement)) {
+            return;
+          }
+          slider.value = String(nextValue);
+          slider.style.setProperty("--media-volume", String(nextValue));
+          slider.closest(".media-player__volume-slider-shell")?.style.setProperty("--media-volume", String(nextValue));
+        });
+        const volumeButtons = this.shadowRoot?.querySelectorAll(
+          `.media-player__volume-button[data-entity="${normalizedEntityId}"][data-media-volume]`
+        ) || [];
+        volumeButtons.forEach((button) => {
+          if (!(button instanceof HTMLElement)) {
+            return;
+          }
+          button.dataset.mediaVolume = String(clamp(nextValue / 100, 0, 1));
+        });
+      }
+      _clearDraftVolume(entityId) {
+        const timerId = this._draftVolumeTimers.get(entityId);
+        if (timerId) {
+          window.clearTimeout(timerId);
+          this._draftVolumeTimers.delete(entityId);
+        }
+        this._draftVolume.delete(entityId);
+      }
+      _syncVolumeControlsFromHass(hass = this._hass) {
+        if (!this.shadowRoot?.innerHTML) {
+          return;
+        }
+        const states = hass?.states || {};
+        this._getTrackedEntities().forEach((entityId) => {
+          const state = states[entityId];
+          if (!this._supportsVolumeControl(state)) {
+            return;
+          }
+          const actualPercent = clamp(Math.round(Number(state.attributes?.volume_level || 0) * 100), 0, 100);
+          const draftValue = this._draftVolume.get(entityId);
+          if (Number.isFinite(draftValue) && Math.abs(actualPercent - draftValue) <= 2) {
+            this._clearDraftVolume(entityId);
+          }
+          this._updatePlayerVolumePreview(entityId, this._getPlayerVolumePercent(entityId, state));
+        });
+      }
+      _scheduleDraftVolumeClear(entityId, delay = 1400) {
+        const existingTimer = this._draftVolumeTimers.get(entityId);
+        if (existingTimer) {
+          window.clearTimeout(existingTimer);
+          this._draftVolumeTimers.delete(entityId);
+        }
+        const timerId = window.setTimeout(() => {
+          this._clearDraftVolume(entityId);
+          this._syncVolumeControlsFromHass(this._hass);
+        }, delay);
+        this._draftVolumeTimers.set(entityId, timerId);
+      }
+      async _stepPlayerVolumeToTarget(entityId, targetPercent) {
+        if (!this._hass || !entityId) {
+          return;
+        }
+        const state = this._hass.states?.[entityId];
+        const currentPercent = clamp(Math.round(Number(state?.attributes?.volume_level || 0) * 100), 0, 100);
+        const delta = targetPercent - currentPercent;
+        if (Math.abs(delta) < 3) {
+          this._scheduleDraftVolumeClear(entityId, 800);
+          return;
+        }
+        const service = delta > 0 ? "volume_up" : "volume_down";
+        const stepCount = clamp(Math.round(Math.abs(delta) / 6), 1, 12);
+        for (let index = 0; index < stepCount; index += 1) {
+          if (!this.isConnected) {
+            break;
+          }
+          try {
+            await this._callInternalMediaService(service, { entity_id: entityId });
+          } catch (_error) {
+            break;
+          }
+          if (!this.isConnected) {
+            break;
+          }
+          await new Promise((resolve) => window.setTimeout(resolve, 90));
+        }
+        this._scheduleDraftVolumeClear(entityId, 1800);
+      }
+      _commitPlayerVolume(entityId, value) {
+        if (!this._hass || !entityId) {
+          return;
+        }
+        const nextValue = clamp(Math.round(Number(value)), 0, 100);
+        const state = this._hass.states?.[entityId];
         const player = this._findPlayerConfig(entityId) || { entity: entityId };
-        const currentState = String(options.state || this._hass?.states?.[entityId]?.state || "");
-        this._tvSourcePickerEntity = null;
-        this._tvVolumePickerEntity = null;
-        this._tvSourcePanelAnimatingEntity = null;
-        this._tvVolumePanelAnimatingEntity = null;
-        const customAction = this._getPlayerPowerAction(player, currentState);
-
-        if (customAction) {
-          this._runActionDefinition(customAction, entityId);
-          break;
+        const isTvPlayer = this._getPlayerDeviceType(player, state) === "tv";
+        this._scheduleDraftVolumeClear(entityId);
+        if (isTvPlayer) {
+          this._volumeStepFallback.add(entityId);
+          void this._stepPlayerVolumeToTarget(entityId, nextValue);
+          return;
         }
-
-        const service = ["off", "standby", "unavailable", "unknown"].includes(normalizeTextKey(currentState))
-          ? "turn_on"
-          : "turn_off";
-        this._callInternalMediaService(service, { entity_id: entityId });
-        break;
-      }
-      case "play":
-        this._callInternalMediaService("media_play", { entity_id: entityId });
-        break;
-      case "stop":
-        this._callInternalMediaService("media_stop", { entity_id: entityId });
-        break;
-      case "previous":
-        this._callInternalMediaService("media_previous_track", { entity_id: entityId });
-        break;
-      case "next":
-        this._callInternalMediaService("media_next_track", { entity_id: entityId });
-        break;
-      case "play-pause":
-        this._callInternalMediaService("media_play_pause", { entity_id: entityId });
-        break;
-      case "volume-down": {
-        const currentVolume = Number.isFinite(options.volume) ? options.volume : 0;
-        const nextVolumeLevel = clamp(currentVolume - 0.08, 0, 1);
-        this._draftVolume.set(entityId, Math.round(nextVolumeLevel * 100));
-        this._updatePlayerVolumePreview(entityId, nextVolumeLevel * 100);
-        this._scheduleDraftVolumeClear(entityId);
-        this._callInternalMediaService("volume_set", {
-          entity_id: entityId,
-          volume_level: nextVolumeLevel,
-        });
-        break;
-      }
-      case "volume-down-step":
-        this._callInternalMediaService("volume_down", { entity_id: entityId });
-        break;
-      case "volume-up": {
-        const currentVolume = Number.isFinite(options.volume) ? options.volume : 0;
-        const nextVolumeLevel = clamp(currentVolume + 0.08, 0, 1);
-        this._draftVolume.set(entityId, Math.round(nextVolumeLevel * 100));
-        this._updatePlayerVolumePreview(entityId, nextVolumeLevel * 100);
-        this._scheduleDraftVolumeClear(entityId);
-        this._callInternalMediaService("volume_set", {
-          entity_id: entityId,
-          volume_level: nextVolumeLevel,
-        });
-        break;
-      }
-      case "volume-up-step":
-        this._callInternalMediaService("volume_up", { entity_id: entityId });
-        break;
-      case "select-source":
-        if (options.source) {
-          this._callInternalMediaService("select_source", {
+        Promise.resolve(
+          this._callInternalMediaService("volume_set", {
             entity_id: entityId,
-            source: options.source,
-          });
-          if (this._tvSourcePickerEntity === entityId) {
+            volume_level: clamp(nextValue / 100, 0, 1)
+          })
+        ).catch(() => {
+          if (!isTvPlayer) {
+            return;
+          }
+          this._volumeStepFallback.add(entityId);
+          void this._stepPlayerVolumeToTarget(entityId, nextValue);
+        });
+      }
+      _getPlayerChips(player, state, progress, title, subtitle) {
+        const chips = [];
+        const seen = /* @__PURE__ */ new Set();
+        const titleKey = normalizeTextKey2(title);
+        const subtitleKey = normalizeTextKey2(subtitle);
+        const addChip = (label, tone = "default") => {
+          const text = String(label || "").trim();
+          if (!text) {
+            return;
+          }
+          const key = normalizeTextKey2(text);
+          if (!key || key === titleKey || key === subtitleKey || seen.has(key)) {
+            return;
+          }
+          seen.add(key);
+          chips.push({ label: text, tone });
+        };
+        addChip(this._getPlayerSourceLabel(state), "source");
+        if (progress) {
+          addChip(`${formatDuration(progress.position)} / ${formatDuration(progress.duration)}`, "time");
+        }
+        return chips.slice(0, 4);
+      }
+      _getTvPlayerChips(player, state, progress, title, subtitle, sourceOptions = []) {
+        const chips = [];
+        const seen = /* @__PURE__ */ new Set();
+        const titleKey = normalizeTextKey2(title);
+        const subtitleKey = normalizeTextKey2(subtitle);
+        const addChip = (label, tone = "default") => {
+          const text = String(label || "").trim();
+          if (!text) {
+            return;
+          }
+          const key = normalizeTextKey2(text);
+          if (!key || key === titleKey || key === subtitleKey || seen.has(key)) {
+            return;
+          }
+          seen.add(key);
+          chips.push({ label: text, tone });
+        };
+        if (progress) {
+          addChip(`${formatDuration(progress.position)} / ${formatDuration(progress.duration)}`, "time");
+        }
+        return chips.slice(0, 3);
+      }
+      _syncTicker(players) {
+        if (!this.isConnected) {
+          if (this._mediaTicker) {
+            window.clearInterval(this._mediaTicker);
+            this._mediaTicker = null;
+          }
+          return;
+        }
+        if (typeof document !== "undefined" && document.hidden) {
+          if (this._mediaTicker) {
+            window.clearInterval(this._mediaTicker);
+            this._mediaTicker = null;
+          }
+          return;
+        }
+        if (this._mediaBrowserState) {
+          if (this._mediaTicker) {
+            window.clearInterval(this._mediaTicker);
+            this._mediaTicker = null;
+          }
+          return;
+        }
+        const shouldTick = players.some((player) => {
+          const state = this._hass?.states?.[player.entity];
+          const progress = state ? this._getPlayerProgress(state) : null;
+          return state?.state === "playing" && progress;
+        });
+        if (shouldTick && !this._mediaTicker) {
+          this._mediaTicker = window.setInterval(() => {
+            if (typeof document !== "undefined" && document.hidden) {
+              return;
+            }
+            if (this._activeSliderDrag || this._activeProgressDrag) {
+              this._pendingRenderAfterDrag = true;
+              return;
+            }
+            const updated = this._updateProgressTick(players);
+            if (!updated && this.isConnected) {
+              this._progressTickMisses = (this._progressTickMisses || 0) + 1;
+              if (this._progressTickMisses >= 3) {
+                this._progressTickMisses = 0;
+                this._render();
+              }
+            } else {
+              this._progressTickMisses = 0;
+            }
+          }, 1e3);
+          return;
+        }
+        if (!shouldTick && this._mediaTicker) {
+          window.clearInterval(this._mediaTicker);
+          this._mediaTicker = null;
+        }
+      }
+      _onVisibilityChange() {
+        if (typeof document !== "undefined" && document.hidden) {
+          if (this._mediaTicker) {
+            window.clearInterval(this._mediaTicker);
+            this._mediaTicker = null;
+          }
+          return;
+        }
+        this._render();
+      }
+      _updateProgressTick(players) {
+        if (!this.shadowRoot || !Array.isArray(players) || players.length === 0) {
+          return false;
+        }
+        const activeIndex = this._resolveActivePlayerIndex(players);
+        const player = players[activeIndex];
+        if (!player?.entity) {
+          return false;
+        }
+        const state = this._hass?.states?.[player.entity];
+        const progress = state ? this._getPlayerProgress(state) : null;
+        if (!progress) {
+          return false;
+        }
+        const card = this.shadowRoot.querySelector(
+          `.media-player-card[data-media-card-index="${activeIndex}"]`
+        );
+        if (!card) {
+          return false;
+        }
+        let updated = false;
+        const fill = card.querySelector(".media-player__progress-fill");
+        if (fill && this._activeProgressDrag?.entityId !== player.entity) {
+          fill.style.width = `${progress.percent}%`;
+          updated = true;
+        }
+        const progressNode = card.querySelector("[data-media-progress]");
+        if (progressNode instanceof HTMLElement && this._activeProgressDrag?.entityId !== player.entity) {
+          progressNode.setAttribute("aria-valuenow", String(progress.position));
+        }
+        const timeChip = card.querySelector(".media-player__chip--time");
+        if (timeChip) {
+          timeChip.textContent = `${formatDuration(progress.position)} / ${formatDuration(progress.duration)}`;
+          updated = true;
+        }
+        return updated;
+      }
+      _callInternalMediaService(service, data = {}) {
+        if (!this._hass || !service) {
+          return;
+        }
+        return this._hass.callService("media_player", service, data);
+      }
+      _callService(action) {
+        if (!this._hass || !action?.service) {
+          return;
+        }
+        if (!this._isServiceAllowed(action.service)) {
+          window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Media Player", action.service);
+          return;
+        }
+        const [domain, service] = String(action.service).split(".");
+        if (!domain || !service) {
+          return;
+        }
+        let payload = action.service_data ?? action.data ?? {};
+        if (typeof payload === "string") {
+          try {
+            const parsed = JSON.parse(payload);
+            payload = isObject(parsed) ? parsed : {};
+          } catch (_error) {
+            payload = {};
+          }
+        }
+        if (!isObject(payload)) {
+          payload = {};
+        }
+        this._hass.callService(domain, service, payload);
+      }
+      _isServiceAllowed(serviceValue) {
+        const security = this._config?.security || {};
+        if (security.strict_service_actions === false) {
+          return true;
+        }
+        const normalizedService = String(serviceValue || "").trim().toLowerCase();
+        if (!normalizedService || !normalizedService.includes(".")) {
+          return false;
+        }
+        const [domain] = normalizedService.split(".");
+        const domains = Array.isArray(security.allowed_service_domains) ? security.allowed_service_domains.map((item) => String(item || "").trim().toLowerCase()).filter(Boolean) : [];
+        const services = Array.isArray(security.allowed_services) ? security.allowed_services.map((item) => String(item || "").trim().toLowerCase()).filter(Boolean) : [];
+        if (!domains.length && !services.length) {
+          return false;
+        }
+        return services.includes(normalizedService) || domains.includes(domain);
+      }
+      _runActionDefinition(action, fallbackEntityId = "") {
+        if (!action || action.action === "none") {
+          return;
+        }
+        switch (action.action) {
+          case "more-info": {
+            const entityId = action.entity || fallbackEntityId;
+            if (entityId) {
+              fireEvent(this, "hass-more-info", { entityId });
+            }
+            break;
+          }
+          case "navigate": {
+            const path = window.NodaliaUtils?.sanitizeActionUrl(action.navigation_path, { allowRelative: true }) || "";
+            if (path && !/^https?:\/\//i.test(path)) {
+              window.history.pushState(null, "", path);
+              window.dispatchEvent(new Event("location-changed"));
+            }
+            break;
+          }
+          case "url": {
+            const url = window.NodaliaUtils?.sanitizeActionUrl(action.url_path || action.url, { allowRelative: true }) || "";
+            if (!url) {
+              return;
+            }
+            if (action.new_tab) {
+              window.open(url, "_blank", "noopener,noreferrer");
+            } else {
+              window.location.assign(url);
+            }
+            break;
+          }
+          case "call-service":
+            this._callService(action);
+            break;
+          default:
+            break;
+        }
+      }
+      _getPlayerPowerAction(player, currentState) {
+        const stateKey = normalizeTextKey2(currentState);
+        if (["unavailable", "unknown"].includes(stateKey) && player?.power_action_unavailable?.action && player.power_action_unavailable.action !== "default") {
+          return player.power_action_unavailable;
+        }
+        if (["off", "standby"].includes(stateKey) && player?.power_action_off?.action && player.power_action_off.action !== "default") {
+          return player.power_action_off;
+        }
+        if (player?.power_action_on?.action && player.power_action_on.action !== "default") {
+          return player.power_action_on;
+        }
+        return null;
+      }
+      _runPlayerAction(player, defaultAction = null) {
+        this._runActionDefinition(player.tap_action || defaultAction, player.entity);
+      }
+      _handleMediaControl(control, entityId, options = {}) {
+        if (!this._hass || !entityId) {
+          return;
+        }
+        switch (control) {
+          case "power-toggle": {
+            const player = this._findPlayerConfig(entityId) || { entity: entityId };
+            const currentState = String(options.state || this._hass?.states?.[entityId]?.state || "");
             this._tvSourcePickerEntity = null;
             this._tvVolumePickerEntity = null;
             this._tvSourcePanelAnimatingEntity = null;
             this._tvVolumePanelAnimatingEntity = null;
+            const customAction = this._getPlayerPowerAction(player, currentState);
+            if (customAction) {
+              this._runActionDefinition(customAction, entityId);
+              break;
+            }
+            const service = ["off", "standby", "unavailable", "unknown"].includes(normalizeTextKey2(currentState)) ? "turn_on" : "turn_off";
+            this._callInternalMediaService(service, { entity_id: entityId });
+            break;
+          }
+          case "play":
+            this._callInternalMediaService("media_play", { entity_id: entityId });
+            break;
+          case "stop":
+            this._callInternalMediaService("media_stop", { entity_id: entityId });
+            break;
+          case "previous":
+            this._callInternalMediaService("media_previous_track", { entity_id: entityId });
+            break;
+          case "next":
+            this._callInternalMediaService("media_next_track", { entity_id: entityId });
+            break;
+          case "play-pause":
+            this._callInternalMediaService("media_play_pause", { entity_id: entityId });
+            break;
+          case "volume-down": {
+            const currentVolume = Number.isFinite(options.volume) ? options.volume : 0;
+            const nextVolumeLevel = clamp(currentVolume - 0.08, 0, 1);
+            this._draftVolume.set(entityId, Math.round(nextVolumeLevel * 100));
+            this._updatePlayerVolumePreview(entityId, nextVolumeLevel * 100);
+            this._scheduleDraftVolumeClear(entityId);
+            this._callInternalMediaService("volume_set", {
+              entity_id: entityId,
+              volume_level: nextVolumeLevel
+            });
+            break;
+          }
+          case "volume-down-step":
+            this._callInternalMediaService("volume_down", { entity_id: entityId });
+            break;
+          case "volume-up": {
+            const currentVolume = Number.isFinite(options.volume) ? options.volume : 0;
+            const nextVolumeLevel = clamp(currentVolume + 0.08, 0, 1);
+            this._draftVolume.set(entityId, Math.round(nextVolumeLevel * 100));
+            this._updatePlayerVolumePreview(entityId, nextVolumeLevel * 100);
+            this._scheduleDraftVolumeClear(entityId);
+            this._callInternalMediaService("volume_set", {
+              entity_id: entityId,
+              volume_level: nextVolumeLevel
+            });
+            break;
+          }
+          case "volume-up-step":
+            this._callInternalMediaService("volume_up", { entity_id: entityId });
+            break;
+          case "select-source":
+            if (options.source) {
+              this._callInternalMediaService("select_source", {
+                entity_id: entityId,
+                source: options.source
+              });
+              if (this._tvSourcePickerEntity === entityId) {
+                this._tvSourcePickerEntity = null;
+                this._tvVolumePickerEntity = null;
+                this._tvSourcePanelAnimatingEntity = null;
+                this._tvVolumePanelAnimatingEntity = null;
+                this._render();
+              }
+            }
+            break;
+          case "toggle-source-panel": {
+            const willOpen = this._tvSourcePickerEntity !== entityId;
+            this._tvVolumePickerEntity = null;
+            this._tvVolumePanelAnimatingEntity = null;
+            this._tvSourcePickerEntity = willOpen ? entityId : null;
+            this._tvSourcePanelAnimatingEntity = willOpen ? entityId : null;
+            this._render();
+            break;
+          }
+          case "toggle-volume-panel": {
+            const willOpen = this._tvVolumePickerEntity !== entityId;
+            this._tvSourcePickerEntity = null;
+            this._tvSourcePanelAnimatingEntity = null;
+            this._tvVolumePickerEntity = willOpen ? entityId : null;
+            this._tvVolumePanelAnimatingEntity = willOpen ? entityId : null;
+            this._render();
+            break;
+          }
+          case "browse-media":
+            this._openMediaBrowser(entityId, options.path || "");
+            break;
+          default:
+            break;
+        }
+      }
+      _onShadowInput(event) {
+        const slider = event.composedPath().find((node) => node instanceof HTMLInputElement && node.dataset?.mediaSlider);
+        if (!slider) {
+          return;
+        }
+        event.stopPropagation();
+        if (this._activeSliderDrag?.slider === slider) {
+          return;
+        }
+        if (slider.dataset.mediaSlider === "volume") {
+          const nextValue = clamp(Number(slider.value), 0, 100);
+          this._draftVolume.set(slider.dataset.entity, nextValue);
+          this._updatePlayerVolumePreview(slider.dataset.entity, nextValue);
+        }
+      }
+      _onShadowPointerDown(event) {
+        const path = event.composedPath();
+        const progress = path.find((node) => node instanceof HTMLElement && node.dataset?.mediaProgress);
+        if (progress && !this._activeProgressDrag && !this._activeSliderDrag && (typeof event.button !== "number" || event.button === 0)) {
+          this._startProgressDrag(progress, event.clientX, event, event.pointerId);
+          return;
+        }
+        const slider = path.find(
+          (node) => node instanceof HTMLInputElement && node.type === "range" && node.dataset?.mediaSlider
+        );
+        if (this._activeSliderDrag || this._activeProgressDrag || !slider || typeof event.button === "number" && event.button !== 0) {
+          return;
+        }
+        this._startSliderDrag(slider, event.clientX, event, event.pointerId);
+      }
+      _startSliderDrag(slider, clientX, event = null, pointerId = null) {
+        if (!slider) {
+          return;
+        }
+        this._activeSliderDrag = {
+          pointerId,
+          slider,
+          geometry: getSliderDragGeometry(slider)
+        };
+        this._attachWindowDragListeners();
+        if (event) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        this._pendingDragUpdate = null;
+        if (this._dragFrame) {
+          window.cancelAnimationFrame(this._dragFrame);
+          this._dragFrame = 0;
+        }
+        const nextValue = getRangeValueFromGeometry(this._activeSliderDrag.geometry, slider.value, clientX);
+        slider.value = String(nextValue);
+        if (slider.dataset.mediaSlider === "volume") {
+          this._draftVolume.set(slider.dataset.entity, nextValue);
+          this._updatePlayerVolumePreview(slider.dataset.entity, nextValue);
+        }
+      }
+      _queueSliderDragUpdate(slider, clientX) {
+        const nextValue = getRangeValueFromGeometry(this._activeSliderDrag?.geometry, slider.value, clientX);
+        slider.value = String(nextValue);
+        if (slider.dataset.mediaSlider === "volume") {
+          this._draftVolume.set(slider.dataset.entity, nextValue);
+          this._updatePlayerVolumePreview(slider.dataset.entity, nextValue);
+        }
+      }
+      _commitSliderDrag(clientX, event = null, pointerId = null) {
+        const drag = this._activeSliderDrag;
+        if (!drag) {
+          return;
+        }
+        if (event) {
+          event.preventDefault();
+        }
+        this._pendingDragUpdate = null;
+        if (this._dragFrame) {
+          window.cancelAnimationFrame(this._dragFrame);
+          this._dragFrame = 0;
+        }
+        const nextValue = getRangeValueFromGeometry(drag.geometry, drag.slider.value, clientX);
+        drag.slider.value = String(nextValue);
+        this._skipNextSliderChange = drag.slider;
+        if (drag.slider.dataset.mediaSlider === "volume") {
+          this._triggerHaptic("selection");
+          this._draftVolume.set(drag.slider.dataset.entity, nextValue);
+          this._updatePlayerVolumePreview(drag.slider.dataset.entity, nextValue);
+          this._commitPlayerVolume(drag.slider.dataset.entity, nextValue);
+        }
+        this._activeSliderDrag = null;
+        this._detachWindowDragListeners();
+        if (this._pendingRenderAfterDrag) {
+          this._pendingRenderAfterDrag = false;
+          this._render();
+        }
+      }
+      _onShadowMouseDown(event) {
+        const slider = event.composedPath().find(
+          (node) => node instanceof HTMLInputElement && node.type === "range" && node.dataset?.mediaSlider
+        );
+        if (this._activeSliderDrag || !slider || event.button !== 0) {
+          return;
+        }
+        this._startSliderDrag(slider, event.clientX, event);
+      }
+      _onShadowTouchStart(event) {
+        const slider = event.composedPath().find(
+          (node) => node instanceof HTMLInputElement && node.type === "range" && node.dataset?.mediaSlider
+        );
+        if (this._activeSliderDrag || !slider || !event.touches?.length) {
+          return;
+        }
+        this._startSliderDrag(slider, event.touches[0].clientX, event);
+      }
+      _onWindowPointerMove(event) {
+        if (this._activeProgressDrag && this._activeProgressDrag.pointerId === event.pointerId) {
+          event.preventDefault();
+          this._moveProgressDrag(event.clientX);
+          return;
+        }
+        const drag = this._activeSliderDrag;
+        if (!drag || drag.pointerId !== event.pointerId) {
+          return;
+        }
+        event.preventDefault();
+        this._queueSliderDragUpdate(drag.slider, event.clientX);
+      }
+      _onWindowPointerUp(event) {
+        if (this._activeProgressDrag && this._activeProgressDrag.pointerId === event.pointerId) {
+          this._commitProgressDrag();
+          return;
+        }
+        const drag = this._activeSliderDrag;
+        if (!drag || drag.pointerId !== event.pointerId) {
+          return;
+        }
+        this._commitSliderDrag(event.clientX, event, event.pointerId);
+      }
+      _onWindowMouseMove(event) {
+        if (this._activeProgressDrag) {
+          event.preventDefault();
+          this._moveProgressDrag(event.clientX);
+          return;
+        }
+        if (!this._activeSliderDrag || typeof event.buttons === "number" && (event.buttons & 1) === 0) {
+          return;
+        }
+        event.preventDefault();
+        this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.clientX);
+      }
+      _onWindowMouseUp(event) {
+        if (this._activeProgressDrag) {
+          this._commitProgressDrag();
+          return;
+        }
+        if (!this._activeSliderDrag) {
+          return;
+        }
+        this._commitSliderDrag(event.clientX, event);
+      }
+      _onWindowTouchMove(event) {
+        if (!this._activeSliderDrag || !event.touches?.length) {
+          return;
+        }
+        event.preventDefault();
+        this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.touches[0].clientX);
+      }
+      _onWindowTouchStartCapture(event) {
+        const drag = this._activeSliderDrag;
+        if (!drag) {
+          return;
+        }
+        const path = typeof event.composedPath === "function" ? event.composedPath() : [];
+        if (path.includes(drag.slider)) {
+          return;
+        }
+        this._activeSliderDrag = null;
+        this._detachWindowDragListeners();
+        this._pendingDragUpdate = null;
+        if (this._dragFrame) {
+          window.cancelAnimationFrame(this._dragFrame);
+          this._dragFrame = 0;
+        }
+        if (this._pendingRenderAfterDrag) {
+          this._pendingRenderAfterDrag = false;
+          this._render();
+        }
+      }
+      _onWindowTouchEnd(event) {
+        if (!this._activeSliderDrag) {
+          return;
+        }
+        const clientX = event.changedTouches?.[0]?.clientX;
+        if (!Number.isFinite(clientX)) {
+          this._activeSliderDrag = null;
+          this._detachWindowDragListeners();
+          if (this._pendingRenderAfterDrag) {
+            this._pendingRenderAfterDrag = false;
             this._render();
           }
+          return;
         }
-        break;
-      case "toggle-source-panel": {
-        const willOpen = this._tvSourcePickerEntity !== entityId;
-        this._tvVolumePickerEntity = null;
-        this._tvVolumePanelAnimatingEntity = null;
-        this._tvSourcePickerEntity = willOpen ? entityId : null;
-        this._tvSourcePanelAnimatingEntity = willOpen ? entityId : null;
-        this._render();
-        break;
+        this._commitSliderDrag(clientX, event);
       }
-      case "toggle-volume-panel": {
-        const willOpen = this._tvVolumePickerEntity !== entityId;
-        this._tvSourcePickerEntity = null;
-        this._tvSourcePanelAnimatingEntity = null;
-        this._tvVolumePickerEntity = willOpen ? entityId : null;
-        this._tvVolumePanelAnimatingEntity = willOpen ? entityId : null;
-        this._render();
-        break;
+      _attachWindowDragListeners() {
+        if (this._dragWindowListenersAttached) {
+          return;
+        }
+        this._dragWindowListenersAttached = true;
+        window.addEventListener("pointermove", this._onWindowPointerMove);
+        window.addEventListener("pointerup", this._onWindowPointerUp);
+        window.addEventListener("pointercancel", this._onWindowPointerUp);
+        window.addEventListener("mousemove", this._onWindowMouseMove);
+        window.addEventListener("mouseup", this._onWindowMouseUp);
+        if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+          window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
+          window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
+          window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
+          window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
+        }
       }
-      case "browse-media":
-        this._openMediaBrowser(entityId, options.path || "");
-        break;
-      default:
-        break;
-    }
-  }
-
-  _onShadowInput(event) {
-    const slider = event
-      .composedPath()
-      .find(node => node instanceof HTMLInputElement && node.dataset?.mediaSlider);
-
-    if (!slider) {
-      return;
-    }
-
-    event.stopPropagation();
-
-    if (this._activeSliderDrag?.slider === slider) {
-      return;
-    }
-
-    if (slider.dataset.mediaSlider === "volume") {
-      const nextValue = clamp(Number(slider.value), 0, 100);
-      this._draftVolume.set(slider.dataset.entity, nextValue);
-      this._updatePlayerVolumePreview(slider.dataset.entity, nextValue);
-    }
-  }
-
-  _onShadowPointerDown(event) {
-    const slider = event
-      .composedPath()
-      .find(node =>
-        node instanceof HTMLInputElement &&
-        node.type === "range" &&
-        node.dataset?.mediaSlider,
-      );
-
-    if (this._activeSliderDrag || !slider || (typeof event.button === "number" && event.button !== 0)) {
-      return;
-    }
-
-    this._startSliderDrag(slider, event.clientX, event, event.pointerId);
-  }
-
-  _startSliderDrag(slider, clientX, event = null, pointerId = null) {
-    if (!slider) {
-      return;
-    }
-
-    this._activeSliderDrag = {
-      pointerId,
-      slider,
-      geometry: getSliderDragGeometry(slider),
-    };
-    this._attachWindowDragListeners();
-
-    if (event) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-
-    this._pendingDragUpdate = null;
-    if (this._dragFrame) {
-      window.cancelAnimationFrame(this._dragFrame);
-      this._dragFrame = 0;
-    }
-
-    const nextValue = getRangeValueFromGeometry(this._activeSliderDrag.geometry, slider.value, clientX);
-    slider.value = String(nextValue);
-
-    if (slider.dataset.mediaSlider === "volume") {
-      this._draftVolume.set(slider.dataset.entity, nextValue);
-      this._updatePlayerVolumePreview(slider.dataset.entity, nextValue);
-    }
-  }
-
-  _queueSliderDragUpdate(slider, clientX) {
-    const nextValue = getRangeValueFromGeometry(this._activeSliderDrag?.geometry, slider.value, clientX);
-    slider.value = String(nextValue);
-
-    if (slider.dataset.mediaSlider === "volume") {
-      this._draftVolume.set(slider.dataset.entity, nextValue);
-      this._updatePlayerVolumePreview(slider.dataset.entity, nextValue);
-    }
-  }
-
-  _commitSliderDrag(clientX, event = null, pointerId = null) {
-    const drag = this._activeSliderDrag;
-    if (!drag) {
-      return;
-    }
-
-    if (event) {
-      event.preventDefault();
-    }
-
-    this._pendingDragUpdate = null;
-    if (this._dragFrame) {
-      window.cancelAnimationFrame(this._dragFrame);
-      this._dragFrame = 0;
-    }
-
-    const nextValue = getRangeValueFromGeometry(drag.geometry, drag.slider.value, clientX);
-    drag.slider.value = String(nextValue);
-    this._skipNextSliderChange = drag.slider;
-
-    if (drag.slider.dataset.mediaSlider === "volume") {
-      this._triggerHaptic("selection");
-      this._draftVolume.set(drag.slider.dataset.entity, nextValue);
-      this._updatePlayerVolumePreview(drag.slider.dataset.entity, nextValue);
-      this._commitPlayerVolume(drag.slider.dataset.entity, nextValue);
-    }
-
-    this._activeSliderDrag = null;
-    this._detachWindowDragListeners();
-
-    if (this._pendingRenderAfterDrag) {
-      this._pendingRenderAfterDrag = false;
-      this._render();
-    }
-  }
-
-  _onShadowMouseDown(event) {
-    const slider = event
-      .composedPath()
-      .find(node =>
-        node instanceof HTMLInputElement &&
-        node.type === "range" &&
-        node.dataset?.mediaSlider,
-      );
-
-    if (this._activeSliderDrag || !slider || event.button !== 0) {
-      return;
-    }
-
-    this._startSliderDrag(slider, event.clientX, event);
-  }
-
-  _onShadowTouchStart(event) {
-    const slider = event
-      .composedPath()
-      .find(node =>
-        node instanceof HTMLInputElement &&
-        node.type === "range" &&
-        node.dataset?.mediaSlider,
-      );
-
-    if (this._activeSliderDrag || !slider || !event.touches?.length) {
-      return;
-    }
-
-    this._startSliderDrag(slider, event.touches[0].clientX, event);
-  }
-
-  _onWindowPointerMove(event) {
-    const drag = this._activeSliderDrag;
-    if (!drag || drag.pointerId !== event.pointerId) {
-      return;
-    }
-
-    event.preventDefault();
-    this._queueSliderDragUpdate(drag.slider, event.clientX);
-  }
-
-  _onWindowPointerUp(event) {
-    const drag = this._activeSliderDrag;
-    if (!drag || drag.pointerId !== event.pointerId) {
-      return;
-    }
-
-    this._commitSliderDrag(event.clientX, event, event.pointerId);
-  }
-
-  _onWindowMouseMove(event) {
-    if (!this._activeSliderDrag || (typeof event.buttons === "number" && (event.buttons & 1) === 0)) {
-      return;
-    }
-
-    event.preventDefault();
-    this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.clientX);
-  }
-
-  _onWindowMouseUp(event) {
-    if (!this._activeSliderDrag) {
-      return;
-    }
-
-    this._commitSliderDrag(event.clientX, event);
-  }
-
-  _onWindowTouchMove(event) {
-    if (!this._activeSliderDrag || !event.touches?.length) {
-      return;
-    }
-
-    event.preventDefault();
-    this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.touches[0].clientX);
-  }
-
-  _onWindowTouchStartCapture(event) {
-    const drag = this._activeSliderDrag;
-    if (!drag) {
-      return;
-    }
-
-    const path = typeof event.composedPath === "function" ? event.composedPath() : [];
-    if (path.includes(drag.slider)) {
-      return;
-    }
-
-    this._activeSliderDrag = null;
-    this._detachWindowDragListeners();
-    this._pendingDragUpdate = null;
-    if (this._dragFrame) {
-      window.cancelAnimationFrame(this._dragFrame);
-      this._dragFrame = 0;
-    }
-
-    if (this._pendingRenderAfterDrag) {
-      this._pendingRenderAfterDrag = false;
-      this._render();
-    }
-  }
-
-  _onWindowTouchEnd(event) {
-    if (!this._activeSliderDrag) {
-      return;
-    }
-
-    const clientX = event.changedTouches?.[0]?.clientX;
-    if (!Number.isFinite(clientX)) {
-      this._activeSliderDrag = null;
-      this._detachWindowDragListeners();
-      if (this._pendingRenderAfterDrag) {
-        this._pendingRenderAfterDrag = false;
-        this._render();
+      _detachWindowDragListeners() {
+        if (!this._dragWindowListenersAttached) {
+          return;
+        }
+        this._dragWindowListenersAttached = false;
+        window.removeEventListener("pointermove", this._onWindowPointerMove);
+        window.removeEventListener("pointerup", this._onWindowPointerUp);
+        window.removeEventListener("pointercancel", this._onWindowPointerUp);
+        window.removeEventListener("mousemove", this._onWindowMouseMove);
+        window.removeEventListener("mouseup", this._onWindowMouseUp);
+        if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+          window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
+          window.removeEventListener("touchmove", this._onWindowTouchMove);
+          window.removeEventListener("touchend", this._onWindowTouchEnd);
+          window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+        }
       }
-      return;
-    }
-
-    this._commitSliderDrag(clientX, event);
-  }
-
-  _attachWindowDragListeners() {
-    if (this._dragWindowListenersAttached) {
-      return;
-    }
-    this._dragWindowListenersAttached = true;
-    window.addEventListener("pointermove", this._onWindowPointerMove);
-    window.addEventListener("pointerup", this._onWindowPointerUp);
-    window.addEventListener("pointercancel", this._onWindowPointerUp);
-    window.addEventListener("mousemove", this._onWindowMouseMove);
-    window.addEventListener("mouseup", this._onWindowMouseUp);
-    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
-      window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
-      window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
-      window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
-      window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
-    }
-  }
-
-  _detachWindowDragListeners() {
-    if (!this._dragWindowListenersAttached) {
-      return;
-    }
-    this._dragWindowListenersAttached = false;
-    window.removeEventListener("pointermove", this._onWindowPointerMove);
-    window.removeEventListener("pointerup", this._onWindowPointerUp);
-    window.removeEventListener("pointercancel", this._onWindowPointerUp);
-    window.removeEventListener("mousemove", this._onWindowMouseMove);
-    window.removeEventListener("mouseup", this._onWindowMouseUp);
-    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
-      window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
-      window.removeEventListener("touchmove", this._onWindowTouchMove);
-      window.removeEventListener("touchend", this._onWindowTouchEnd);
-      window.removeEventListener("touchcancel", this._onWindowTouchEnd);
-    }
-  }
-
-  _onShadowChange(event) {
-    const slider = event
-      .composedPath()
-      .find(node => node instanceof HTMLInputElement && node.dataset?.mediaSlider);
-
-    if (!slider) {
-      return;
-    }
-
-    event.stopPropagation();
-
-    if (this._skipNextSliderChange === slider) {
-      this._skipNextSliderChange = null;
-      return;
-    }
-
-    this._triggerHaptic("selection");
-
-    if (slider.dataset.mediaSlider === "volume") {
-      const nextValue = clamp(Number(slider.value), 0, 100);
-      this._draftVolume.set(slider.dataset.entity, nextValue);
-      this._commitPlayerVolume(slider.dataset.entity, nextValue);
-    }
-  }
-
-  _getMediaBrowserClient() {
-    if (typeof this._hass?.callWS === "function") {
-      return this._hass.callWS.bind(this._hass);
-    }
-
-    if (typeof this._hass?.connection?.sendMessagePromise === "function") {
-      return this._hass.connection.sendMessagePromise.bind(this._hass.connection);
-    }
-
-    return null;
-  }
-
-  _normalizeMediaBrowserItem(item) {
-    if (!item || typeof item !== "object") {
-      return null;
-    }
-
-    return {
-      title: item.title || item.name || "Elemento",
-      media_class: item.media_class || "",
-      media_content_id: item.media_content_id || "",
-      media_content_type: item.media_content_type || "",
-      can_play: item.can_play === true,
-      can_expand: item.can_expand === true,
-      thumbnail: item.thumbnail || item.thumbnail_url || "",
-      children: Array.isArray(item.children)
-        ? item.children.map(child => this._normalizeMediaBrowserItem(child)).filter(Boolean)
-        : [],
-    };
-  }
-
-  _normalizeMediaBrowserNode(result, entityId) {
-    let node = result;
-
-    if (node?.result && typeof node.result === "object") {
-      node = node.result;
-    }
-
-    if (node && entityId && typeof node[entityId] === "object") {
-      node = node[entityId];
-    }
-
-    const normalized = this._normalizeMediaBrowserItem(node);
-    if (!normalized) {
-      return null;
-    }
-
-    return {
-      ...normalized,
-      title: normalized.title || "Media",
-    };
-  }
-
-  async _fetchMediaBrowserNode(entityId, mediaContentType = "", mediaContentId = "") {
-    const client = this._getMediaBrowserClient();
-    if (!client || !entityId) {
-      return null;
-    }
-
-    const payload = {
-      type: "media_player/browse_media",
-      entity_id: entityId,
-    };
-
-    if (mediaContentType) {
-      payload.media_content_type = mediaContentType;
-    }
-
-    if (mediaContentId) {
-      payload.media_content_id = mediaContentId;
-    }
-
-    const result = await client(payload);
-    return this._normalizeMediaBrowserNode(result, entityId);
-  }
-
-  _closeMediaBrowser(shouldRender = true) {
-    if (!this._mediaBrowserState) {
-      return;
-    }
-
-    this._mediaBrowserState = null;
-    this._mediaBrowserScrollPositions.clear();
-    this._mediaBrowserRequestToken += 1;
-
-    if (shouldRender) {
-      this._render();
-    }
-  }
-
-  async _openMediaBrowser(entityId, fallbackPath = "") {
-    if (!entityId) {
-      return;
-    }
-
-    const playerConfig = this._findPlayerConfig(entityId) || { entity: entityId };
-    const playerState = this._hass?.states?.[entityId];
-    const isMusicAssistant = this._isMusicAssistantPlayer(playerConfig, playerState);
-    const isTvPlayer = this._getPlayerDeviceType(playerConfig, playerState) === "tv";
-    const token = this._mediaBrowserRequestToken + 1;
-    this._mediaBrowserRequestToken = token;
-    this._mediaBrowserState = {
-      entityId,
-      fallbackPath,
-      browserLabel: isMusicAssistant ? "Music Assistant" : this._getPlayerLabel(playerConfig, playerState),
-      isMusicAssistant,
-      isTvPlayer,
-      animateIn: true,
-      loading: true,
-      error: "",
-      stack: [],
-    };
-    this._render();
-
-    try {
-      const rootNode = await this._fetchMediaBrowserNode(entityId);
-      if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
-        return;
-      }
-
-      if (!rootNode) {
-        throw new Error("Empty media browser response");
-      }
-
-      this._mediaBrowserState = {
-        ...this._mediaBrowserState,
-        loading: false,
-        error: "",
-        stack: [rootNode],
-      };
-      this._render();
-    } catch (_error) {
-      if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
-        return;
-      }
-
-      const safeFallbackPath = window.NodaliaUtils?.sanitizeActionUrl(fallbackPath, { allowRelative: true }) || "";
-      if (safeFallbackPath && !/^https?:\/\//i.test(safeFallbackPath)) {
-        this._mediaBrowserState = null;
-        window.history.pushState(null, "", safeFallbackPath);
-        window.dispatchEvent(new Event("location-changed"));
-        return;
-      }
-
-      this._mediaBrowserState = {
-        ...this._mediaBrowserState,
-        loading: false,
-        error: this._mediaBrowserState?.isTvPlayer
-          ? "Este dispositivo no expone medios compatibles."
-          : "No se pudieron cargar los medios.",
-        stack: [],
-      };
-      this._render();
-    }
-  }
-
-  async _browseMediaBrowserItem(mediaContentType, mediaContentId) {
-    if (!this._mediaBrowserState?.entityId) {
-      return;
-    }
-
-    const previousState = this._mediaBrowserState;
-    const token = this._mediaBrowserRequestToken + 1;
-    this._mediaBrowserRequestToken = token;
-    this._mediaBrowserState = {
-      ...previousState,
-      loading: true,
-      error: "",
-    };
-    this._render();
-
-    try {
-      const nextNode = await this._fetchMediaBrowserNode(
-        previousState.entityId,
-        mediaContentType,
-        mediaContentId,
-      );
-
-      if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
-        return;
-      }
-
-      if (!nextNode) {
-        throw new Error("Empty media browser response");
-      }
-
-      this._mediaBrowserState = {
-        ...previousState,
-        loading: false,
-        error: "",
-        stack: [...previousState.stack, nextNode],
-      };
-      this._render();
-    } catch (_error) {
-      if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
-        return;
-      }
-
-      this._mediaBrowserState = {
-        ...previousState,
-        loading: false,
-        error: "No se pudo abrir este elemento.",
-      };
-      this._render();
-    }
-  }
-
-  _goBackMediaBrowser() {
-    if (!this._mediaBrowserState) {
-      return;
-    }
-
-    if (this._mediaBrowserState.stack.length <= 1) {
-      this._closeMediaBrowser();
-      return;
-    }
-
-    this._mediaBrowserState = {
-      ...this._mediaBrowserState,
-      error: "",
-      loading: false,
-      stack: this._mediaBrowserState.stack.slice(0, -1),
-    };
-    this._render();
-  }
-
-  _playMediaBrowserItem(mediaContentType, mediaContentId) {
-    const entityId = this._mediaBrowserState?.entityId;
-
-    if (!this._hass || !entityId || !mediaContentType || !mediaContentId) {
-      return;
-    }
-
-    this._callInternalMediaService("play_media", {
-      entity_id: entityId,
-      media_content_id: mediaContentId,
-      media_content_type: mediaContentType,
-    });
-    this._closeMediaBrowser();
-  }
-
-  _getMusicAssistantDirectoryIcon(item) {
-    const haystack = normalizeTextKey([
-      item?.title,
-      item?.media_content_type,
-      item?.media_content_id,
-    ].filter(Boolean).join(" "));
-
-    const match = MUSIC_ASSISTANT_DIRECTORY_ICON_RULES.find(rule =>
-      rule.patterns.some(pattern => haystack.includes(pattern)),
-    );
-
-    return match?.icon || "";
-  }
-
-  _getMediaBrowserDisplayTitle(value) {
-    const label = typeof value === "string" ? value : value?.title;
-    const fallback = String(label || "").trim();
-    const lang =
-      window.NodaliaI18n?.resolveLanguage?.(this._hass, this._config?.language ?? "auto") ?? "en";
-    const dict = window.NodaliaI18n?.strings?.(lang)?.navigationMusicAssist || {};
-    const enDict = window.NodaliaI18n?.strings?.("en")?.navigationMusicAssist || {};
-
-    if (!fallback) {
-      return dict.browseFallback || enDict.browseFallback || "Item";
-    }
-
-    if (!this._mediaBrowserState?.isMusicAssistant) {
-      return fallback;
-    }
-
-    const key = normalizeTextKey(fallback);
-    return dict[key] || enDict[key] || fallback;
-  }
-
-  _getMediaBrowserViewKey(state = this._mediaBrowserState) {
-    const currentNode = state?.stack?.[state.stack.length - 1];
-    if (!currentNode) {
-      return "";
-    }
-
-    return [
-      state?.entityId || "",
-      currentNode.media_content_type || "",
-      currentNode.media_content_id || "",
-      currentNode.title || "",
-    ].join("::");
-  }
-
-  _captureMediaBrowserScrollState() {
-    if (!this.shadowRoot || !this._mediaBrowserState) {
-      return;
-    }
-
-    const list = this.shadowRoot.querySelector(".media-browser__list");
-    if (!(list instanceof HTMLElement)) {
-      return;
-    }
-
-    const viewKey = this._getMediaBrowserViewKey();
-    if (!viewKey) {
-      return;
-    }
-
-    this._mediaBrowserScrollPositions.set(viewKey, list.scrollTop);
-  }
-
-  _restoreMediaBrowserScrollState() {
-    if (!this.shadowRoot || !this._mediaBrowserState) {
-      return;
-    }
-
-    const list = this.shadowRoot.querySelector(".media-browser__list");
-    if (!(list instanceof HTMLElement)) {
-      return;
-    }
-
-    const viewKey = this._getMediaBrowserViewKey();
-    if (!viewKey) {
-      return;
-    }
-
-    const savedScrollTop = this._mediaBrowserScrollPositions.get(viewKey);
-    if (typeof savedScrollTop !== "number") {
-      return;
-    }
-
-    list.scrollTop = savedScrollTop;
-  }
-
-  _captureTvPanelScrollState() {
-    if (!this.shadowRoot || !this._tvSourcePickerEntity) {
-      return;
-    }
-
-    const panel = this.shadowRoot.querySelector(".media-player__tv-source-panel");
-    if (!(panel instanceof HTMLElement)) {
-      return;
-    }
-
-    this._tvPanelScrollPositions.set(this._tvSourcePickerEntity, panel.scrollTop);
-  }
-
-  _restoreTvPanelScrollState() {
-    if (!this.shadowRoot || !this._tvSourcePickerEntity) {
-      return;
-    }
-
-    const panel = this.shadowRoot.querySelector(".media-player__tv-source-panel");
-    if (!(panel instanceof HTMLElement)) {
-      return;
-    }
-
-    const savedScrollTop = this._tvPanelScrollPositions.get(this._tvSourcePickerEntity);
-    if (typeof savedScrollTop !== "number") {
-      return;
-    }
-
-    panel.scrollTop = savedScrollTop;
-  }
-
-  _getMediaBrowserIcon(item) {
-    const musicAssistantDirectoryIcon =
-      item?.media_class === "directory" ? this._getMusicAssistantDirectoryIcon(item) : "";
-
-    if (musicAssistantDirectoryIcon) {
-      return musicAssistantDirectoryIcon;
-    }
-
-    switch (item?.media_class) {
-      case "directory":
-        return "mdi:folder";
-      case "album":
-        return "mdi:album";
-      case "artist":
-        return "mdi:account-music";
-      case "playlist":
-        return "mdi:playlist-music";
-      case "track":
-      case "music":
-        return "mdi:music-note";
-      case "podcast":
-        return "mdi:podcast";
-      case "radio":
-        return "mdi:radio";
-      case "tv_show":
-        return "mdi:television";
-      case "video":
-      case "movie":
-        return "mdi:movie";
-      default:
-        return item?.can_expand ? "mdi:folder-outline" : "mdi:music-box";
-    }
-  }
-
-  _shouldFilterMusicAssistantBrowserItems() {
-    return Boolean(
-      this._mediaBrowserState?.isMusicAssistant &&
-      Array.isArray(this._mediaBrowserState?.stack) &&
-      this._mediaBrowserState.stack.length <= 1,
-    );
-  }
-
-  _shouldFilterTvBrowserItems() {
-    return Boolean(
-      this._mediaBrowserState?.isTvPlayer &&
-      Array.isArray(this._mediaBrowserState?.stack) &&
-      this._mediaBrowserState.stack.length <= 1,
-    );
-  }
-
-  _shouldHideMediaBrowserItem(item) {
-    if ((!this._shouldFilterMusicAssistantBrowserItems() && !this._shouldFilterTvBrowserItems()) || !item) {
-      return false;
-    }
-
-    const haystack = normalizeTextKey([
-      item.title,
-      item.media_class,
-      item.media_content_type,
-      item.media_content_id,
-    ].filter(Boolean).join(" "));
-
-    return MUSIC_ASSISTANT_BROWSER_EXCLUDE_PATTERNS.some(pattern => haystack.includes(pattern));
-  }
-
-  _onShadowClick(event) {
-    const mediaSlider = event
-      .composedPath()
-      .find(node => node instanceof HTMLInputElement && node.dataset?.mediaSlider);
-
-    if (mediaSlider) {
-      event.stopPropagation();
-      return;
-    }
-
-    const mediaControlButton = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.mediaControl);
-
-    if (mediaControlButton) {
-      event.preventDefault();
-      event.stopPropagation();
-      this._triggerHaptic();
-      this._triggerButtonBounce(mediaControlButton);
-      this._handleMediaControl(mediaControlButton.dataset.mediaControl, mediaControlButton.dataset.entity, {
-        path: mediaControlButton.dataset.mediaPath,
-        source: mediaControlButton.dataset.mediaSource,
-        state: mediaControlButton.dataset.mediaState,
-        volume: Number(mediaControlButton.dataset.mediaVolume),
-      });
-      return;
-    }
-
-    const mediaArtwork = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.classList?.contains("media-player__artwork"));
-
-    if (mediaArtwork) {
-      event.preventDefault();
-      event.stopPropagation();
-      return;
-    }
-
-    const mediaDotButton = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.mediaIndex !== undefined);
-
-    if (mediaDotButton) {
-      event.preventDefault();
-      event.stopPropagation();
-      this._triggerHaptic();
-      this._triggerButtonBounce(mediaDotButton);
-      const visiblePlayers = this._getVisiblePlayers();
-      this._activePlayerIndex = clamp(Number(mediaDotButton.dataset.mediaIndex), 0, visiblePlayers.length - 1);
-      this._activePlayerEntity = String(visiblePlayers[this._activePlayerIndex]?.entity || "");
-      this._animateContentOnNextRender = true;
-      this._render();
-      return;
-    }
-
-    const mediaBrowserCloseButton = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.mediaBrowserClose === "true");
-
-    if (mediaBrowserCloseButton) {
-      event.preventDefault();
-      event.stopPropagation();
-      this._triggerButtonBounce(mediaBrowserCloseButton);
-      this._closeMediaBrowser();
-      return;
-    }
-
-    const mediaBrowserBackButton = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.mediaBrowserBack === "true");
-
-    if (mediaBrowserBackButton) {
-      event.preventDefault();
-      event.stopPropagation();
-      this._triggerButtonBounce(mediaBrowserBackButton);
-      this._goBackMediaBrowser();
-      return;
-    }
-
-    const mediaBrowserActionButton = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.mediaBrowserAction);
-
-    if (mediaBrowserActionButton) {
-      event.preventDefault();
-      event.stopPropagation();
-      this._triggerHaptic();
-      this._triggerButtonBounce(mediaBrowserActionButton);
-
-      const action = mediaBrowserActionButton.dataset.mediaBrowserAction;
-      const mediaContentType = mediaBrowserActionButton.dataset.mediaContentType || "";
-      const mediaContentId = mediaBrowserActionButton.dataset.mediaContentId || "";
-
-      if (action === "browse") {
-        this._browseMediaBrowserItem(mediaContentType, mediaContentId);
-        return;
-      }
-
-      if (action === "play") {
-        this._playMediaBrowserItem(mediaContentType, mediaContentId);
-      }
-      return;
-    }
-
-    const mediaCard = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.mediaCardIndex !== undefined);
-
-    if (mediaCard) {
-      const visiblePlayers = this._getVisiblePlayers();
-      const player = visiblePlayers[Number(mediaCard.dataset.mediaCardIndex)];
-
-      if (player) {
-        event.preventDefault();
+      _onShadowChange(event) {
+        const slider = event.composedPath().find((node) => node instanceof HTMLInputElement && node.dataset?.mediaSlider);
+        if (!slider) {
+          return;
+        }
         event.stopPropagation();
-        this._triggerHaptic();
-        this._runPlayerAction(player, {
-          action: "more-info",
-          entity: player.entity,
-        });
+        if (this._skipNextSliderChange === slider) {
+          this._skipNextSliderChange = null;
+          return;
+        }
+        this._triggerHaptic("selection");
+        if (slider.dataset.mediaSlider === "volume") {
+          const nextValue = clamp(Number(slider.value), 0, 100);
+          this._draftVolume.set(slider.dataset.entity, nextValue);
+          this._commitPlayerVolume(slider.dataset.entity, nextValue);
+        }
       }
-    }
-  }
-
-  _mediaPlayerCardUi(key, fallback = "") {
-    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-    const pack = window.NodaliaI18n?.strings?.(lang)?.mediaPlayerCard;
-    const enPack = window.NodaliaI18n?.strings?.("en")?.mediaPlayerCard;
-    const raw = pack?.[key] ?? enPack?.[key];
-    return String(raw != null && raw !== "" ? raw : fallback);
-  }
-
-  _commonAria(key, fallback = "") {
-    return window.NodaliaI18n?.translateCommonAria?.(this._hass, this._config?.language ?? "auto", key, fallback) || fallback;
-  }
-
-  _mediaBrowserUi(key, fallback = "", values = {}) {
-    return window.NodaliaI18n?.translateMediaBrowserUi?.(this._hass, this._config?.language ?? "auto", key, fallback, values) || fallback;
-  }
-
-  _mediaPlayerAria(key, fallback = "", values = {}) {
-    return window.NodaliaI18n?.translateMediaPlayerAria?.(this._hass, this._config?.language ?? "auto", key, fallback, values) || fallback;
-  }
-
-  _renderEmptyState() {
-    const title = escapeHtml(this._mediaPlayerCardUi("emptyTitle", "Nodalia Media Player"));
-    const body = escapeHtml(
-      this._mediaPlayerCardUi("emptyBody", "Set `entity` or `players` to show a player."),
-    );
-    return `
+      _getMediaBrowserClient() {
+        if (typeof this._hass?.callWS === "function") {
+          return this._hass.callWS.bind(this._hass);
+        }
+        if (typeof this._hass?.connection?.sendMessagePromise === "function") {
+          return this._hass.connection.sendMessagePromise.bind(this._hass.connection);
+        }
+        return null;
+      }
+      _normalizeMediaBrowserItem(item) {
+        if (!item || typeof item !== "object") {
+          return null;
+        }
+        return {
+          title: item.title || item.name || "Elemento",
+          media_class: item.media_class || "",
+          media_content_id: item.media_content_id || "",
+          media_content_type: item.media_content_type || "",
+          can_play: item.can_play === true,
+          can_expand: item.can_expand === true,
+          thumbnail: item.thumbnail || item.thumbnail_url || "",
+          children: Array.isArray(item.children) ? item.children.map((child) => this._normalizeMediaBrowserItem(child)).filter(Boolean) : []
+        };
+      }
+      _normalizeMediaBrowserNode(result, entityId) {
+        let node = result;
+        if (node?.result && typeof node.result === "object") {
+          node = node.result;
+        }
+        if (node && entityId && typeof node[entityId] === "object") {
+          node = node[entityId];
+        }
+        const normalized = this._normalizeMediaBrowserItem(node);
+        if (!normalized) {
+          return null;
+        }
+        return {
+          ...normalized,
+          title: normalized.title || "Media"
+        };
+      }
+      async _fetchMediaBrowserNode(entityId, mediaContentType = "", mediaContentId = "") {
+        const client = this._getMediaBrowserClient();
+        if (!client || !entityId) {
+          return null;
+        }
+        const payload = {
+          type: "media_player/browse_media",
+          entity_id: entityId
+        };
+        if (mediaContentType) {
+          payload.media_content_type = mediaContentType;
+        }
+        if (mediaContentId) {
+          payload.media_content_id = mediaContentId;
+        }
+        const result = await client(payload);
+        return this._normalizeMediaBrowserNode(result, entityId);
+      }
+      _closeMediaBrowser(shouldRender = true) {
+        if (!this._mediaBrowserState) {
+          return;
+        }
+        this._mediaBrowserState = null;
+        this._mediaBrowserScrollPositions.clear();
+        this._mediaBrowserRequestToken += 1;
+        if (shouldRender) {
+          this._render();
+        }
+      }
+      async _openMediaBrowser(entityId, fallbackPath = "") {
+        if (!entityId) {
+          return;
+        }
+        const playerConfig = this._findPlayerConfig(entityId) || { entity: entityId };
+        const playerState = this._hass?.states?.[entityId];
+        const isMusicAssistant = this._isMusicAssistantPlayer(playerConfig, playerState);
+        const isTvPlayer = this._getPlayerDeviceType(playerConfig, playerState) === "tv";
+        const token = this._mediaBrowserRequestToken + 1;
+        this._mediaBrowserRequestToken = token;
+        this._mediaBrowserState = {
+          entityId,
+          fallbackPath,
+          browserLabel: isMusicAssistant ? "Music Assistant" : this._getPlayerLabel(playerConfig, playerState),
+          isMusicAssistant,
+          isTvPlayer,
+          animateIn: true,
+          loading: true,
+          error: "",
+          stack: []
+        };
+        this._render();
+        try {
+          const rootNode = await this._fetchMediaBrowserNode(entityId);
+          if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
+            return;
+          }
+          if (!rootNode) {
+            throw new Error("Empty media browser response");
+          }
+          this._mediaBrowserState = {
+            ...this._mediaBrowserState,
+            loading: false,
+            error: "",
+            stack: [rootNode]
+          };
+          this._render();
+        } catch (_error) {
+          if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
+            return;
+          }
+          const safeFallbackPath = window.NodaliaUtils?.sanitizeActionUrl(fallbackPath, { allowRelative: true }) || "";
+          if (safeFallbackPath && !/^https?:\/\//i.test(safeFallbackPath)) {
+            this._mediaBrowserState = null;
+            window.history.pushState(null, "", safeFallbackPath);
+            window.dispatchEvent(new Event("location-changed"));
+            return;
+          }
+          this._mediaBrowserState = {
+            ...this._mediaBrowserState,
+            loading: false,
+            error: this._mediaBrowserState?.isTvPlayer ? "Este dispositivo no expone medios compatibles." : "No se pudieron cargar los medios.",
+            stack: []
+          };
+          this._render();
+        }
+      }
+      async _browseMediaBrowserItem(mediaContentType, mediaContentId) {
+        if (!this._mediaBrowserState?.entityId) {
+          return;
+        }
+        const previousState = this._mediaBrowserState;
+        const token = this._mediaBrowserRequestToken + 1;
+        this._mediaBrowserRequestToken = token;
+        this._mediaBrowserState = {
+          ...previousState,
+          loading: true,
+          error: ""
+        };
+        this._render();
+        try {
+          const nextNode = await this._fetchMediaBrowserNode(
+            previousState.entityId,
+            mediaContentType,
+            mediaContentId
+          );
+          if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
+            return;
+          }
+          if (!nextNode) {
+            throw new Error("Empty media browser response");
+          }
+          this._mediaBrowserState = {
+            ...previousState,
+            loading: false,
+            error: "",
+            stack: [...previousState.stack, nextNode]
+          };
+          this._render();
+        } catch (_error) {
+          if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
+            return;
+          }
+          this._mediaBrowserState = {
+            ...previousState,
+            loading: false,
+            error: "No se pudo abrir este elemento."
+          };
+          this._render();
+        }
+      }
+      _goBackMediaBrowser() {
+        if (!this._mediaBrowserState) {
+          return;
+        }
+        if (this._mediaBrowserState.stack.length <= 1) {
+          this._closeMediaBrowser();
+          return;
+        }
+        this._mediaBrowserState = {
+          ...this._mediaBrowserState,
+          error: "",
+          loading: false,
+          stack: this._mediaBrowserState.stack.slice(0, -1)
+        };
+        this._render();
+      }
+      _playMediaBrowserItem(mediaContentType, mediaContentId) {
+        const entityId = this._mediaBrowserState?.entityId;
+        if (!this._hass || !entityId || !mediaContentType || !mediaContentId) {
+          return;
+        }
+        this._callInternalMediaService("play_media", {
+          entity_id: entityId,
+          media_content_id: mediaContentId,
+          media_content_type: mediaContentType
+        });
+        this._closeMediaBrowser();
+      }
+      _getMusicAssistantDirectoryIcon(item) {
+        const haystack = normalizeTextKey2([
+          item?.title,
+          item?.media_content_type,
+          item?.media_content_id
+        ].filter(Boolean).join(" "));
+        const match = MUSIC_ASSISTANT_DIRECTORY_ICON_RULES.find(
+          (rule) => rule.patterns.some((pattern) => haystack.includes(pattern))
+        );
+        return match?.icon || "";
+      }
+      _getMediaBrowserDisplayTitle(value) {
+        const label = typeof value === "string" ? value : value?.title;
+        const fallback = String(label || "").trim();
+        const lang = window.NodaliaI18n?.resolveLanguage?.(this._hass, this._config?.language ?? "auto") ?? "en";
+        const dict = window.NodaliaI18n?.strings?.(lang)?.navigationMusicAssist || {};
+        const enDict = window.NodaliaI18n?.strings?.("en")?.navigationMusicAssist || {};
+        if (!fallback) {
+          return dict.browseFallback || enDict.browseFallback || "Item";
+        }
+        if (!this._mediaBrowserState?.isMusicAssistant) {
+          return fallback;
+        }
+        const key = normalizeTextKey2(fallback);
+        return dict[key] || enDict[key] || fallback;
+      }
+      _getMediaBrowserViewKey(state = this._mediaBrowserState) {
+        const currentNode = state?.stack?.[state.stack.length - 1];
+        if (!currentNode) {
+          return "";
+        }
+        return [
+          state?.entityId || "",
+          currentNode.media_content_type || "",
+          currentNode.media_content_id || "",
+          currentNode.title || ""
+        ].join("::");
+      }
+      _captureMediaBrowserScrollState() {
+        if (!this.shadowRoot || !this._mediaBrowserState) {
+          return;
+        }
+        const list = this.shadowRoot.querySelector(".media-browser__list");
+        if (!(list instanceof HTMLElement)) {
+          return;
+        }
+        const viewKey = this._getMediaBrowserViewKey();
+        if (!viewKey) {
+          return;
+        }
+        this._mediaBrowserScrollPositions.set(viewKey, list.scrollTop);
+      }
+      _restoreMediaBrowserScrollState() {
+        if (!this.shadowRoot || !this._mediaBrowserState) {
+          return;
+        }
+        const list = this.shadowRoot.querySelector(".media-browser__list");
+        if (!(list instanceof HTMLElement)) {
+          return;
+        }
+        const viewKey = this._getMediaBrowserViewKey();
+        if (!viewKey) {
+          return;
+        }
+        const savedScrollTop = this._mediaBrowserScrollPositions.get(viewKey);
+        if (typeof savedScrollTop !== "number") {
+          return;
+        }
+        list.scrollTop = savedScrollTop;
+      }
+      _captureTvPanelScrollState() {
+        if (!this.shadowRoot || !this._tvSourcePickerEntity) {
+          return;
+        }
+        const panel = this.shadowRoot.querySelector(".media-player__tv-source-panel");
+        if (!(panel instanceof HTMLElement)) {
+          return;
+        }
+        this._tvPanelScrollPositions.set(this._tvSourcePickerEntity, panel.scrollTop);
+      }
+      _restoreTvPanelScrollState() {
+        if (!this.shadowRoot || !this._tvSourcePickerEntity) {
+          return;
+        }
+        const panel = this.shadowRoot.querySelector(".media-player__tv-source-panel");
+        if (!(panel instanceof HTMLElement)) {
+          return;
+        }
+        const savedScrollTop = this._tvPanelScrollPositions.get(this._tvSourcePickerEntity);
+        if (typeof savedScrollTop !== "number") {
+          return;
+        }
+        panel.scrollTop = savedScrollTop;
+      }
+      _getMediaBrowserIcon(item) {
+        const musicAssistantDirectoryIcon = item?.media_class === "directory" ? this._getMusicAssistantDirectoryIcon(item) : "";
+        if (musicAssistantDirectoryIcon) {
+          return musicAssistantDirectoryIcon;
+        }
+        switch (item?.media_class) {
+          case "directory":
+            return "mdi:folder";
+          case "album":
+            return "mdi:album";
+          case "artist":
+            return "mdi:account-music";
+          case "playlist":
+            return "mdi:playlist-music";
+          case "track":
+          case "music":
+            return "mdi:music-note";
+          case "podcast":
+            return "mdi:podcast";
+          case "radio":
+            return "mdi:radio";
+          case "tv_show":
+            return "mdi:television";
+          case "video":
+          case "movie":
+            return "mdi:movie";
+          default:
+            return item?.can_expand ? "mdi:folder-outline" : "mdi:music-box";
+        }
+      }
+      _shouldFilterMusicAssistantBrowserItems() {
+        return Boolean(
+          this._mediaBrowserState?.isMusicAssistant && Array.isArray(this._mediaBrowserState?.stack) && this._mediaBrowserState.stack.length <= 1
+        );
+      }
+      _shouldFilterTvBrowserItems() {
+        return Boolean(
+          this._mediaBrowserState?.isTvPlayer && Array.isArray(this._mediaBrowserState?.stack) && this._mediaBrowserState.stack.length <= 1
+        );
+      }
+      _shouldHideMediaBrowserItem(item) {
+        if (!this._shouldFilterMusicAssistantBrowserItems() && !this._shouldFilterTvBrowserItems() || !item) {
+          return false;
+        }
+        const haystack = normalizeTextKey2([
+          item.title,
+          item.media_class,
+          item.media_content_type,
+          item.media_content_id
+        ].filter(Boolean).join(" "));
+        return MUSIC_ASSISTANT_BROWSER_EXCLUDE_PATTERNS.some((pattern) => haystack.includes(pattern));
+      }
+      _onShadowClick(event) {
+        const mediaSlider = event.composedPath().find((node) => node instanceof HTMLInputElement && node.dataset?.mediaSlider);
+        if (mediaSlider) {
+          event.stopPropagation();
+          return;
+        }
+        const mediaControlButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.mediaControl);
+        if (mediaControlButton) {
+          event.preventDefault();
+          event.stopPropagation();
+          this._triggerHaptic();
+          this._triggerButtonBounce(mediaControlButton);
+          this._handleMediaControl(mediaControlButton.dataset.mediaControl, mediaControlButton.dataset.entity, {
+            path: mediaControlButton.dataset.mediaPath,
+            source: mediaControlButton.dataset.mediaSource,
+            state: mediaControlButton.dataset.mediaState,
+            volume: Number(mediaControlButton.dataset.mediaVolume)
+          });
+          return;
+        }
+        const mediaArtwork = event.composedPath().find((node) => node instanceof HTMLElement && node.classList?.contains("media-player__artwork"));
+        if (mediaArtwork) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+        const mediaDotButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.mediaIndex !== void 0);
+        if (mediaDotButton) {
+          event.preventDefault();
+          event.stopPropagation();
+          this._triggerHaptic();
+          this._triggerButtonBounce(mediaDotButton);
+          const visiblePlayers = this._getVisiblePlayers();
+          this._activePlayerIndex = clamp(Number(mediaDotButton.dataset.mediaIndex), 0, visiblePlayers.length - 1);
+          this._activePlayerEntity = String(visiblePlayers[this._activePlayerIndex]?.entity || "");
+          this._animateContentOnNextRender = true;
+          this._render();
+          return;
+        }
+        const mediaBrowserCloseButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.mediaBrowserClose === "true");
+        if (mediaBrowserCloseButton) {
+          event.preventDefault();
+          event.stopPropagation();
+          this._triggerButtonBounce(mediaBrowserCloseButton);
+          this._closeMediaBrowser();
+          return;
+        }
+        const mediaBrowserBackButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.mediaBrowserBack === "true");
+        if (mediaBrowserBackButton) {
+          event.preventDefault();
+          event.stopPropagation();
+          this._triggerButtonBounce(mediaBrowserBackButton);
+          this._goBackMediaBrowser();
+          return;
+        }
+        const mediaBrowserActionButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.mediaBrowserAction);
+        if (mediaBrowserActionButton) {
+          event.preventDefault();
+          event.stopPropagation();
+          this._triggerHaptic();
+          this._triggerButtonBounce(mediaBrowserActionButton);
+          const action = mediaBrowserActionButton.dataset.mediaBrowserAction;
+          const mediaContentType = mediaBrowserActionButton.dataset.mediaContentType || "";
+          const mediaContentId = mediaBrowserActionButton.dataset.mediaContentId || "";
+          if (action === "browse") {
+            this._browseMediaBrowserItem(mediaContentType, mediaContentId);
+            return;
+          }
+          if (action === "play") {
+            this._playMediaBrowserItem(mediaContentType, mediaContentId);
+          }
+          return;
+        }
+        const mediaCard = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.mediaCardIndex !== void 0);
+        if (mediaCard) {
+          const visiblePlayers = this._getVisiblePlayers();
+          const player = visiblePlayers[Number(mediaCard.dataset.mediaCardIndex)];
+          if (player) {
+            event.preventDefault();
+            event.stopPropagation();
+            this._triggerHaptic();
+            this._runPlayerAction(player, {
+              action: "more-info",
+              entity: player.entity
+            });
+          }
+        }
+      }
+      _mediaPlayerCardUi(key, fallback = "") {
+        const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+        const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+        const pack = window.NodaliaI18n?.strings?.(lang)?.mediaPlayerCard;
+        const enPack = window.NodaliaI18n?.strings?.("en")?.mediaPlayerCard;
+        const raw = pack?.[key] ?? enPack?.[key];
+        return String(raw != null && raw !== "" ? raw : fallback);
+      }
+      _commonAria(key, fallback = "") {
+        return window.NodaliaI18n?.translateCommonAria?.(this._hass, this._config?.language ?? "auto", key, fallback) || fallback;
+      }
+      _mediaBrowserUi(key, fallback = "", values = {}) {
+        return window.NodaliaI18n?.translateMediaBrowserUi?.(this._hass, this._config?.language ?? "auto", key, fallback, values) || fallback;
+      }
+      _mediaPlayerAria(key, fallback = "", values = {}) {
+        return window.NodaliaI18n?.translateMediaPlayerAria?.(this._hass, this._config?.language ?? "auto", key, fallback, values) || fallback;
+      }
+      _renderEmptyState() {
+        const title = escapeHtml(this._mediaPlayerCardUi("emptyTitle", "Nodalia Media Player"));
+        const body = escapeHtml(
+          this._mediaPlayerCardUi("emptyBody", "Set `entity` or `players` to show a player.")
+        );
+        return `
       <ha-card class="empty-card">
         <div class="empty-card__title">${title}</div>
         <div class="empty-card__text">${body}</div>
       </ha-card>
     `;
-  }
-
-  _renderMediaBrowser() {
-    if (!this._mediaBrowserState) {
-      return "";
-    }
-
-    const currentNode = this._mediaBrowserState.stack[this._mediaBrowserState.stack.length - 1] || null;
-    const items = (Array.isArray(currentNode?.children) ? currentNode.children : []).filter(
-      item => !this._shouldHideMediaBrowserItem(item),
-    );
-
-    const bodyMarkup = this._mediaBrowserState.loading
-      ? `<div class="media-browser__empty">${escapeHtml(this._mediaBrowserUi("loading", "Loading media..."))}</div>`
-      : this._mediaBrowserState.error
-        ? `<div class="media-browser__empty">${escapeHtml(this._mediaBrowserState.error)}</div>`
-        : items.length === 0
-          ? `<div class="media-browser__empty">${escapeHtml(this._mediaBrowserUi("empty", "No items available here."))}</div>`
-          : `
+      }
+      _renderMediaBrowser() {
+        if (!this._mediaBrowserState) {
+          return "";
+        }
+        const currentNode = this._mediaBrowserState.stack[this._mediaBrowserState.stack.length - 1] || null;
+        const items = (Array.isArray(currentNode?.children) ? currentNode.children : []).filter(
+          (item) => !this._shouldHideMediaBrowserItem(item)
+        );
+        const bodyMarkup = this._mediaBrowserState.loading ? `<div class="media-browser__empty">${escapeHtml(this._mediaBrowserUi("loading", "Loading media..."))}</div>` : this._mediaBrowserState.error ? `<div class="media-browser__empty">${escapeHtml(this._mediaBrowserState.error)}</div>` : items.length === 0 ? `<div class="media-browser__empty">${escapeHtml(this._mediaBrowserUi("empty", "No items available here."))}</div>` : `
             <div class="media-browser__list">
-              ${items
-                .map(item => {
-                  const canExpand = item.can_expand === true;
-                  const canPlay = item.can_play === true;
-                  const defaultAction = canExpand ? "browse" : canPlay ? "play" : "";
-                  const itemIcon = this._getMediaBrowserIcon(item);
-                  const itemTitle = this._getMediaBrowserDisplayTitle(item);
-                  const itemThumbnail = this._resolveMediaUrl(item.thumbnail || item.thumbnail_url || "", {
-                    cacheToken: item.media_content_id || itemTitle,
-                  });
-
-                  return `
+              ${items.map((item) => {
+          const canExpand = item.can_expand === true;
+          const canPlay = item.can_play === true;
+          const defaultAction = canExpand ? "browse" : canPlay ? "play" : "";
+          const itemIcon = this._getMediaBrowserIcon(item);
+          const itemTitle = this._getMediaBrowserDisplayTitle(item);
+          const itemThumbnail = this._resolveMediaUrl(item.thumbnail || item.thumbnail_url || "", {
+            cacheToken: item.media_content_id || itemTitle
+          });
+          return `
                     <div class="media-browser__item">
                       <button
                         type="button"
@@ -3176,24 +3188,14 @@ class NodaliaMediaPlayer extends HTMLElement {
                         data-media-content-id="${escapeHtml(item.media_content_id || "")}"
                       >
                         <span class="media-browser__item-artwork">
-                          ${
-                            itemThumbnail
-                              ? `<img src="${escapeHtml(itemThumbnail)}" alt="${escapeHtml(itemTitle)}" />`
-                              : `<ha-icon icon="${escapeHtml(itemIcon)}"></ha-icon>`
-                          }
+                          ${itemThumbnail ? `<img src="${escapeHtml(itemThumbnail)}" alt="${escapeHtml(itemTitle)}" />` : `<ha-icon icon="${escapeHtml(itemIcon)}"></ha-icon>`}
                         </span>
                         <span class="media-browser__item-copy">
                           <span class="media-browser__item-title">${escapeHtml(itemTitle)}</span>
                         </span>
-                        ${
-                          canExpand
-                            ? `<ha-icon class="media-browser__item-chevron" icon="mdi:chevron-right"></ha-icon>`
-                            : ""
-                        }
+                        ${canExpand ? `<ha-icon class="media-browser__item-chevron" icon="mdi:chevron-right"></ha-icon>` : ""}
                       </button>
-                      ${
-                        canPlay && canExpand
-                          ? `
+                      ${canPlay && canExpand ? `
                             <button
                               type="button"
                               class="media-browser__item-play"
@@ -3204,29 +3206,21 @@ class NodaliaMediaPlayer extends HTMLElement {
                             >
                               <ha-icon icon="mdi:play"></ha-icon>
                             </button>
-                          `
-                          : ""
-                      }
+                          ` : ""}
                     </div>
                   `;
-                })
-                .join("")}
+        }).join("")}
             </div>
           `;
-    const mediaBrowserBackdropClasses = [
-      "media-browser-backdrop",
-      this._mediaBrowserState?.animateIn === true ? "media-browser-backdrop--entering" : "",
-    ]
-      .filter(Boolean)
-      .join(" ");
-    const mediaBrowserPanelClasses = [
-      "media-browser-panel",
-      this._mediaBrowserState?.animateIn === true ? "media-browser-panel--entering" : "",
-    ]
-      .filter(Boolean)
-      .join(" ");
-
-    return `
+        const mediaBrowserBackdropClasses = [
+          "media-browser-backdrop",
+          this._mediaBrowserState?.animateIn === true ? "media-browser-backdrop--entering" : ""
+        ].filter(Boolean).join(" ");
+        const mediaBrowserPanelClasses = [
+          "media-browser-panel",
+          this._mediaBrowserState?.animateIn === true ? "media-browser-panel--entering" : ""
+        ].filter(Boolean).join(" ");
+        return `
       <div class="${mediaBrowserBackdropClasses}" data-media-browser-close="true"></div>
       <div class="${mediaBrowserPanelClasses}" role="dialog" aria-modal="true" aria-label="${escapeHtml(this._mediaBrowserUi("dialog", "Media browser"))}">
         <div class="media-browser__header">
@@ -3254,110 +3248,83 @@ class NodaliaMediaPlayer extends HTMLElement {
         ${bodyMarkup}
       </div>
     `;
-  }
-
-  _renderPlayerCard(players, { animateEntrance = false } = {}) {
-    if (!players.length) {
-      return {
-        markup: "",
-        animateEntranceApplied: false,
-      };
-    }
-
-    this._resolveActivePlayerIndex(players);
-
-    const player = players[this._activePlayerIndex];
-    const state = this._hass?.states?.[player.entity];
-    if (!state) {
-      return {
-        markup: "",
-        animateEntranceApplied: false,
-      };
-    }
-
-    players.forEach((visiblePlayer, index) => {
-      const visibleState = this._hass?.states?.[visiblePlayer.entity];
-      if (!visibleState) {
-        return;
       }
-
-      const visibleArtwork = this._getPlayerArtwork(visiblePlayer, visibleState);
-      if (!visibleArtwork) {
-        return;
-      }
-
-      this._ensureArtworkReady(visiblePlayer.entity, visibleArtwork, {
-        rerenderOnReady: index === this._activePlayerIndex,
-      });
-    });
-
-    const desiredArtwork = this._getPlayerArtwork(player, state);
-    const artworkReady = !desiredArtwork || this._ensureArtworkReady(player.entity, desiredArtwork, {
-      rerenderOnReady: true,
-    });
-    const artwork = this._getRenderableArtwork(player.entity, desiredArtwork);
-    const renderAnimateEntrance = animateEntrance && artworkReady;
-    const safeArtwork = artwork ? escapeHtml(artwork) : "";
-    const deviceType = this._getPlayerDeviceType(player, state);
-    const isTvPlayer = deviceType === "tv";
-    const playerLabel = this._getPlayerLabel(player, state);
-    const sourceLabel = this._getPlayerSourceLabel(state);
-    const title = isTvPlayer
-      ? this._getTvContentTitle(player, state)
-      : this._getPlayerTitle(player, state);
-    const subtitle = isTvPlayer
-      ? ""
-      : this._getPlayerSubtitle(player, state);
-    const artworkAlt = escapeHtml(title || playerLabel);
-    const subtitleMarkup = subtitle && normalizeTextKey(subtitle) !== normalizeTextKey(title)
-      ? `<div class="media-player__subtitle">${escapeHtml(subtitle)}</div>`
-      : "";
-    const progress = this._getPlayerProgress(state);
-    const hasActiveMediaContent = this._hasActiveMediaContent(state);
-    const sourceOptions = isTvPlayer ? this._getPlayerSourceOptions(player, state) : [];
-    const chips = isTvPlayer
-      ? this._getTvPlayerChips(player, state, progress, title, subtitle, sourceOptions)
-      : this._getPlayerChips(player, state, progress, title, subtitle);
-    const showPrimaryTitle = !isTvPlayer
-      ? hasActiveMediaContent && (!playerLabel || normalizeTextKey(title) !== normalizeTextKey(playerLabel))
-      : Boolean(title) && (
-          !playerLabel ||
-          normalizeTextKey(title) !== normalizeTextKey(playerLabel) ||
-          !hasActiveMediaContent
-        );
-    const showTopChip = this._config.show_device_chip !== false && !!playerLabel && (
-      isTvPlayer
-        ? !showPrimaryTitle || normalizeTextKey(playerLabel) !== normalizeTextKey(title)
-        : !hasActiveMediaContent || normalizeTextKey(playerLabel) !== normalizeTextKey(title)
-    );
-    const statusLabel = this._getPlayerStateLabel(state.state);
-    const showStateLabel = this._config.show_state === true;
-    const browsePath = this._getPlayerBrowsePath(player, state);
-    const browseAvailable = isTvPlayer
-      ? Boolean(player?.browse_path || player?.media_browser_path)
-      : this._supportsMediaBrowser(player, state) || Boolean(browsePath);
-    const isIdleLayout = this._shouldUseIdleLayout(player, state);
-    const isTvOff = isTvPlayer && ["off", "standby", "unavailable", "unknown"].includes(normalizeTextKey(state.state));
-    const useCompactIdleLayout = isIdleLayout && (!isTvPlayer || isTvOff);
-    const volumeLevel = Number(state.attributes.volume_level ?? 0);
-    const currentVolumePercent = this._getPlayerVolumePercent(player.entity, state);
-    const volumeSupported = this._supportsVolumeControl(state);
-    const playerStyles = this._config.styles.player;
-    const hasAlbumBackground = this._config.album_cover_background !== false && Boolean(artwork);
-    const useActiveTint = isTvPlayer && this._isPlayerActive(state) && !hasAlbumBackground;
-    const showUnavailableBadge = this._config.show_unavailable_badge !== false && isUnavailableState(state);
-    const playerCardClasses = [
-      "media-player-card",
-      useCompactIdleLayout ? "media-player-card--idle" : "",
-      isTvPlayer ? "media-player-card--tv" : "",
-      hasAlbumBackground ? "has-album-background" : "",
-      useActiveTint ? "media-player-card--active" : "",
-    ]
-      .filter(Boolean)
-      .join(" ");
-
-    const volumeDownMarkup = volumeSupported
-      ? `
+      _renderPlayerCard(players, { animateEntrance = false } = {}) {
+        if (!players.length) {
+          return {
+            markup: "",
+            animateEntranceApplied: false
+          };
+        }
+        this._resolveActivePlayerIndex(players);
+        const player = players[this._activePlayerIndex];
+        const state = this._hass?.states?.[player.entity];
+        if (!state) {
+          return {
+            markup: "",
+            animateEntranceApplied: false
+          };
+        }
+        players.forEach((visiblePlayer, index) => {
+          const visibleState = this._hass?.states?.[visiblePlayer.entity];
+          if (!visibleState) {
+            return;
+          }
+          const visibleArtwork = this._getPlayerArtwork(visiblePlayer, visibleState);
+          if (!visibleArtwork) {
+            return;
+          }
+          this._ensureArtworkReady(visiblePlayer.entity, visibleArtwork, {
+            rerenderOnReady: index === this._activePlayerIndex
+          });
+        });
+        const desiredArtwork = this._getPlayerArtwork(player, state);
+        const artworkReady = !desiredArtwork || this._ensureArtworkReady(player.entity, desiredArtwork, {
+          rerenderOnReady: true
+        });
+        const artwork = this._getRenderableArtwork(player.entity, desiredArtwork);
+        const backgroundArtwork = artwork || desiredArtwork || "";
+        const renderAnimateEntrance = animateEntrance && artworkReady;
+        const safeArtwork = artwork ? escapeHtml(artwork) : "";
+        const deviceType = this._getPlayerDeviceType(player, state);
+        const isTvPlayer = deviceType === "tv";
+        const playerLabel = this._getPlayerLabel(player, state);
+        const sourceLabel = this._getPlayerSourceLabel(state);
+        const title = isTvPlayer ? this._getTvContentTitle(player, state) : this._getPlayerTitle(player, state);
+        const subtitle = isTvPlayer ? "" : this._getPlayerSubtitle(player, state);
+        const artworkAlt = escapeHtml(title || playerLabel);
+        const subtitleMarkup = subtitle && normalizeTextKey2(subtitle) !== normalizeTextKey2(title) ? `<div class="media-player__subtitle">${escapeHtml(subtitle)}</div>` : "";
+        const progress = this._getPlayerProgress(state);
+        const hasActiveMediaContent = this._hasActiveMediaContent(state);
+        const sourceOptions = isTvPlayer ? this._getPlayerSourceOptions(player, state) : [];
+        const chips = isTvPlayer ? this._getTvPlayerChips(player, state, progress, title, subtitle, sourceOptions) : this._getPlayerChips(player, state, progress, title, subtitle);
+        const showPrimaryTitle = !isTvPlayer ? hasActiveMediaContent && (!playerLabel || normalizeTextKey2(title) !== normalizeTextKey2(playerLabel)) : Boolean(title) && (!playerLabel || normalizeTextKey2(title) !== normalizeTextKey2(playerLabel) || !hasActiveMediaContent);
+        const showTopChip = this._config.show_device_chip !== false && !!playerLabel && (isTvPlayer ? !showPrimaryTitle || normalizeTextKey2(playerLabel) !== normalizeTextKey2(title) : !hasActiveMediaContent || normalizeTextKey2(playerLabel) !== normalizeTextKey2(title));
+        const statusLabel = this._getPlayerStateLabel(state.state);
+        const showStateLabel = this._config.show_state === true;
+        const browsePath = this._getPlayerBrowsePath(player, state);
+        const browseAvailable = isTvPlayer ? Boolean(player?.browse_path || player?.media_browser_path) : this._supportsMediaBrowser(player, state) || Boolean(browsePath);
+        const isIdleLayout = this._shouldUseIdleLayout(player, state);
+        const isTvOff = isTvPlayer && ["off", "standby", "unavailable", "unknown"].includes(normalizeTextKey2(state.state));
+        const useCompactIdleLayout = isIdleLayout && (!isTvPlayer || isTvOff);
+        const volumeLevel = Number(state.attributes.volume_level ?? 0);
+        const currentVolumePercent = this._getPlayerVolumePercent(player.entity, state);
+        const volumeSupported = this._supportsVolumeControl(state);
+        const playerStyles = this._config.styles.player;
+        const hasAlbumBackground = this._config.album_cover_background !== false && Boolean(backgroundArtwork);
+        const useActiveTint = isTvPlayer && this._isPlayerActive(state) && !hasAlbumBackground;
+        const showUnavailableBadge = this._config.show_unavailable_badge !== false && isUnavailableState(state);
+        const playerCardClasses = [
+          "media-player-card",
+          `media-player-card--${this._getPresentationMode()}`,
+          useCompactIdleLayout ? "media-player-card--idle" : "",
+          isTvPlayer ? "media-player-card--tv" : "",
+          hasAlbumBackground ? "has-album-background" : "",
+          useActiveTint ? "media-player-card--active" : ""
+        ].filter(Boolean).join(" ");
+        this._activeArtworkUrl = backgroundArtwork;
+        this._activeArtworkIdle = Boolean(useCompactIdleLayout);
+        const volumeDownMarkup = volumeSupported ? `
         <button
           type="button"
           class="media-player__volume-button"
@@ -3368,10 +3335,8 @@ class NodaliaMediaPlayer extends HTMLElement {
         >
           <ha-icon icon="mdi:minus"></ha-icon>
         </button>
-      `
-      : "";
-    const volumeUpMarkup = volumeSupported
-      ? `
+      ` : "";
+        const volumeUpMarkup = volumeSupported ? `
         <button
           type="button"
           class="media-player__volume-button"
@@ -3382,26 +3347,8 @@ class NodaliaMediaPlayer extends HTMLElement {
         >
           <ha-icon icon="mdi:plus"></ha-icon>
         </button>
-      `
-      : "";
-    const browseMarkup = browseAvailable && !isTvPlayer
-      ? `
-        <div class="media-player__transport-addon">
-          <button
-            type="button"
-            class="media-player__volume-button media-player__volume-button--browse"
-            data-media-control="browse-media"
-            data-entity="${escapeHtml(player.entity)}"
-            data-media-path="${escapeHtml(browsePath)}"
-            aria-label="${escapeHtml(this._commonAria("openMedia", "Open media"))}"
-          >
-            <ha-icon icon="mdi:music-box-multiple-outline"></ha-icon>
-          </button>
-        </div>
-      `
-      : "";
-    const browseIdleMarkup = browseAvailable && !isTvPlayer
-      ? `
+      ` : "";
+        const browseMarkup = browseAvailable && !isTvPlayer ? `
         <button
           type="button"
           class="media-player__volume-button media-player__volume-button--browse"
@@ -3412,9 +3359,8 @@ class NodaliaMediaPlayer extends HTMLElement {
         >
           <ha-icon icon="mdi:music-box-multiple-outline"></ha-icon>
         </button>
-      `
-      : "";
-    const tvPowerMarkup = `
+      ` : "";
+        const tvPowerMarkup = `
       <button
         type="button"
         class="media-player__control ${state.state === "off" ? "media-player__control--primary" : ""}"
@@ -3426,8 +3372,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         <ha-icon icon="mdi:power"></ha-icon>
       </button>
     `;
-    const tvPlayPauseMarkup = !isTvOff
-      ? `
+        const tvPlayPauseMarkup = !isTvOff ? `
       <button
         type="button"
         class="media-player__control media-player__control--primary"
@@ -3437,10 +3382,8 @@ class NodaliaMediaPlayer extends HTMLElement {
       >
         <ha-icon icon="${escapeHtml(state.state === "playing" ? "mdi:pause" : "mdi:play")}"></ha-icon>
       </button>
-    `
-      : "";
-    const tvVolumeToggleMarkup = volumeSupported && !isTvOff
-      ? `
+    ` : "";
+        const tvVolumeToggleMarkup = volumeSupported && !isTvOff ? `
         <button
           type="button"
           class="media-player__control ${this._tvVolumePickerEntity === player.entity ? "media-player__control--active" : ""}"
@@ -3450,11 +3393,9 @@ class NodaliaMediaPlayer extends HTMLElement {
         >
           <ha-icon icon="mdi:volume-high"></ha-icon>
         </button>
-      `
-      : "";
-    const artworkIsSourceToggle = isTvPlayer && sourceOptions.length && !isTvOff;
-    const tvBrowseMarkup = browseAvailable && !isTvOff
-      ? `
+      ` : "";
+        const artworkIsSourceToggle = isTvPlayer && sourceOptions.length && !isTvOff;
+        const tvBrowseMarkup = browseAvailable && !isTvOff ? `
         <button
           type="button"
           class="media-player__control"
@@ -3465,16 +3406,13 @@ class NodaliaMediaPlayer extends HTMLElement {
         >
           <ha-icon icon="mdi:apps"></ha-icon>
         </button>
-      `
-      : "";
-    const sourceButtonsMarkup = sourceOptions.length
-      ? `
+      ` : "";
+        const sourceButtonsMarkup = sourceOptions.length ? `
         <div class="media-player__source-buttons" aria-label="${escapeHtml(this._mediaPlayerAria("sources", "Sources"))}">
-          ${sourceOptions
-            .map(source => `
+          ${sourceOptions.map((source) => `
               <button
                 type="button"
-                class="media-player__source-button ${normalizeTextKey(source) === normalizeTextKey(state.attributes.source) ? "active" : ""}"
+                class="media-player__source-button ${normalizeTextKey2(source) === normalizeTextKey2(state.attributes.source) ? "active" : ""}"
                 data-media-control="select-source"
                 data-entity="${escapeHtml(player.entity)}"
                 data-media-source="${escapeHtml(source)}"
@@ -3482,20 +3420,15 @@ class NodaliaMediaPlayer extends HTMLElement {
               >
                 ${escapeHtml(source)}
               </button>
-            `)
-            .join("")}
+            `).join("")}
         </div>
-      `
-      : "";
-    const tvSourcePanelMarkup = sourceButtonsMarkup && !isTvOff && this._tvSourcePickerEntity === player.entity
-      ? `
+      ` : "";
+        const tvSourcePanelMarkup = sourceButtonsMarkup && !isTvOff && this._tvSourcePickerEntity === player.entity ? `
         <div class="media-player__tv-source-panel ${this._tvSourcePanelAnimatingEntity === player.entity ? "media-player__tv-source-panel--entering" : ""}">
           ${sourceButtonsMarkup}
         </div>
-      `
-      : "";
-    const tvVolumeSliderMarkup = volumeSupported && !isTvOff && this._tvVolumePickerEntity === player.entity
-      ? `
+      ` : "";
+        const tvVolumeSliderMarkup = volumeSupported && !isTvOff && this._tvVolumePickerEntity === player.entity ? `
         <div class="media-player__tv-volume-wrap ${this._tvVolumePanelAnimatingEntity === player.entity ? "media-player__tv-volume-wrap--entering" : ""}">
           <div class="media-player__volume-slider-shell" style="--media-volume:${currentVolumePercent};">
             <div class="media-player__volume-track"></div>
@@ -3513,9 +3446,8 @@ class NodaliaMediaPlayer extends HTMLElement {
             />
           </div>
         </div>
-      `
-      : "";
-    const tvControlsMarkup = `
+      ` : "";
+        const tvControlsMarkup = `
       <div class="media-player__tv-actions ${isTvOff ? "media-player__tv-actions--off" : ""}">
         ${tvPowerMarkup}
         ${tvPlayPauseMarkup}
@@ -3523,72 +3455,52 @@ class NodaliaMediaPlayer extends HTMLElement {
         ${tvBrowseMarkup}
       </div>
     `;
-    const tvSourceMarkup = isTvPlayer && sourceLabel
-      && normalizeTextKey(sourceLabel) !== normalizeTextKey(playerLabel)
-      && normalizeTextKey(sourceLabel) !== normalizeTextKey(title)
-      ? `<div class="media-player__subtitle media-player__subtitle--tv">${escapeHtml(sourceLabel)}</div>`
-      : "";
-    const dotsMarkup = players.length > 1
-      ? `
+        const tvSourceMarkup = isTvPlayer && sourceLabel && normalizeTextKey2(sourceLabel) !== normalizeTextKey2(playerLabel) && normalizeTextKey2(sourceLabel) !== normalizeTextKey2(title) ? `<div class="media-player__subtitle media-player__subtitle--tv">${escapeHtml(sourceLabel)}</div>` : "";
+        const dotsMarkup = players.length > 1 ? `
         <div class="media-player__dots" aria-label="${escapeHtml(this._commonAria("mediaPlayers", "Media players"))}">
-          ${players
-            .map(
-              (_item, index) => `
+          ${players.map(
+          (_item, index) => `
                 <button
                   type="button"
                   class="media-player__dot ${index === this._activePlayerIndex ? "active" : ""}"
                   data-media-index="${index}"
                   aria-label="${escapeHtml(this._mediaPlayerAria("selectPlayer", "Select player {index}", { index: index + 1 }))}"
                 ></button>
-              `,
-            )
-            .join("")}
+              `
+        ).join("")}
         </div>
-      `
-      : "";
-    const chipsMarkup = chips.length
-      ? `
+      ` : "";
+        const chipsMarkup = chips.length ? `
         <div class="media-player__chips-wrap">
           <div class="media-player__chips">
-            ${chips
-              .map(
-                chip => `
+            ${chips.map(
+          (chip) => `
                   <span class="media-player__chip media-player__chip--${escapeHtml(chip.tone)}">
                     <span class="media-player__chip-label">${escapeHtml(chip.label)}</span>
                   </span>
-                `,
-              )
-              .join("")}
+                `
+        ).join("")}
           </div>
         </div>
-      `
-      : "";
-    const infoRailItems = [
-      showTopChip
-        ? `
+      ` : "";
+        const infoRailItems = [
+          showTopChip ? `
           <span class="media-player__chip media-player__chip--device media-player__chip--top" title="${escapeHtml(playerLabel)}">
             <span class="media-player__chip-label">${escapeHtml(playerLabel)}</span>
           </span>
-        `
-        : "",
-      showStateLabel
-        ? `
+        ` : "",
+          showStateLabel ? `
           <span class="media-player__chip media-player__chip--${escapeHtml(state.state || "default")} media-player__chip--status">
             <span class="media-player__chip-label">${escapeHtml(statusLabel)}</span>
           </span>
-        `
-        : "",
-    ]
-      .filter(Boolean)
-      .join("");
-    const infoRailMarkup = infoRailItems
-      ? `
+        ` : ""
+        ].filter(Boolean).join("");
+        const infoRailMarkup = infoRailItems ? `
         <div class="media-player__info-rail ${useCompactIdleLayout ? "media-player__info-rail--idle" : ""}">
           ${infoRailItems}
         </div>
-      `
-      : "";
-    const idleControlsMarkup = `
+      ` : "";
+        const idleControlsMarkup = `
       <div class="media-player__idle-actions">
         ${volumeDownMarkup}
         <button
@@ -3601,10 +3513,10 @@ class NodaliaMediaPlayer extends HTMLElement {
           <ha-icon icon="mdi:play"></ha-icon>
         </button>
         ${volumeUpMarkup}
-        ${browseIdleMarkup}
+        ${browseMarkup}
       </div>
     `;
-    const idleTvControlsMarkup = `
+        const idleTvControlsMarkup = `
       <div class="media-player__idle-tv-stack">
         <div class="media-player__idle-actions media-player__idle-actions--tv">
           ${tvControlsMarkup}
@@ -3612,32 +3524,24 @@ class NodaliaMediaPlayer extends HTMLElement {
         ${tvVolumeSliderMarkup}
       </div>
     `;
-    const idleTvOffMarkup = `
-      <div class="media-player__idle-tv-off-bar">
-        ${infoRailMarkup}
-        <div class="media-player__idle-actions media-player__idle-actions--tv media-player__idle-actions--tv-off">
-          ${tvPowerMarkup}
-        </div>
+        const idleNameText = String(playerLabel || title || "").trim();
+        const idleNameMarkup = idleNameText ? `<div class="media-player__idle-name">${escapeHtml(idleNameText)}</div>` : "";
+        const idleTvOffPowerMarkup = `
+      <div class="media-player__idle-actions media-player__idle-actions--tv media-player__idle-actions--tv-off">
+        ${tvPowerMarkup}
       </div>
     `;
-
-    if (useCompactIdleLayout) {
-      return {
-        markup: `
+        if (useCompactIdleLayout) {
+          return {
+            markup: `
         <div
           class="${playerCardClasses}"
           data-media-card-index="${this._activePlayerIndex}"
         >
-          ${
-            hasAlbumBackground
-              ? `<div class="media-player__album-bg" style="background-image:url('${safeArtwork}');"></div>`
-              : ""
-          }
+          ${this._renderProgressMarkup(player, state, progress)}
           <div class="media-player__content media-player__content--idle${renderAnimateEntrance ? " media-player__content--entering" : ""}">
-            <div class="media-player__idle-hero">
-              ${
-                artworkIsSourceToggle
-                  ? `
+            <div class="media-player__idle-hero${isTvPlayer && isTvOff ? " media-player__idle-hero--tv-off" : ""}">
+              ${artworkIsSourceToggle ? `
                     <button
                       type="button"
                       class="media-player__artwork media-player__artwork--idle media-player__artwork--interactive ${this._tvSourcePickerEntity === player.entity ? "media-player__artwork--active" : ""}"
@@ -3645,70 +3549,40 @@ class NodaliaMediaPlayer extends HTMLElement {
                       data-entity="${escapeHtml(player.entity)}"
                       aria-label="${escapeHtml(this._mediaPlayerAria("switchSource", "Switch source"))}"
                     >
-                      ${
-                        artwork
-                          ? `<img src="${safeArtwork}" alt="${artworkAlt}" />`
-                          : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
-                      }
+                      ${artwork ? `<img src="${safeArtwork}" alt="${artworkAlt}" />` : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`}
                       ${showUnavailableBadge ? `<span class="media-player__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
                     </button>
-                  `
-                  : `
+                  ` : `
                     <div class="media-player__artwork media-player__artwork--idle">
-                      ${
-                        artwork
-                          ? `<img src="${safeArtwork}" alt="${artworkAlt}" />`
-                          : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
-                      }
+                      ${artwork ? `<img src="${safeArtwork}" alt="${artworkAlt}" />` : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`}
                       ${showUnavailableBadge ? `<span class="media-player__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
                     </div>
-                  `
-              }
-              ${
-                isTvPlayer && isTvOff
-                  ? idleTvOffMarkup
-                  : `
-                    <div class="media-player__idle-main ${isTvPlayer && isTvOff ? "media-player__idle-main--tv-off" : ""}">
-                      ${infoRailMarkup}
+                  `}
+              ${isTvPlayer && isTvOff ? `${idleNameMarkup}${idleTvOffPowerMarkup}` : `
+                    <div class="media-player__idle-main">
+                      ${idleNameMarkup}
                       ${isTvPlayer ? idleTvControlsMarkup : idleControlsMarkup}
                     </div>
-                  `
-              }
+                  `}
             </div>
             ${isTvPlayer ? tvSourcePanelMarkup : ""}
             ${dotsMarkup ? `<div class="media-player__switcher media-player__switcher--idle">${dotsMarkup}</div>` : ""}
           </div>
         </div>
       `,
-        animateEntranceApplied: renderAnimateEntrance,
-      };
-    }
-
-    return {
-      markup: `
+            animateEntranceApplied: renderAnimateEntrance
+          };
+        }
+        return {
+          markup: `
       <div
         class="${playerCardClasses}"
         data-media-card-index="${this._activePlayerIndex}"
       >
-        ${
-          hasAlbumBackground
-            ? `<div class="media-player__album-bg" style="background-image:url('${safeArtwork}');"></div>`
-            : ""
-        }
-        ${
-          progress
-            ? `
-              <div class="media-player__progress">
-                <span class="media-player__progress-fill" style="width:${progress.percent}%"></span>
-              </div>
-            `
-            : ""
-        }
+        ${this._renderProgressMarkup(player, state, progress)}
         <div class="media-player__content${renderAnimateEntrance ? " media-player__content--entering" : ""}">
           <div class="media-player__hero">
-            ${
-              artworkIsSourceToggle
-                ? `
+            ${artworkIsSourceToggle ? `
                   <button
                     type="button"
                     class="media-player__artwork media-player__artwork--interactive ${this._tvSourcePickerEntity === player.entity ? "media-player__artwork--active" : ""}"
@@ -3716,25 +3590,15 @@ class NodaliaMediaPlayer extends HTMLElement {
                     data-entity="${escapeHtml(player.entity)}"
                     aria-label="${escapeHtml(this._mediaPlayerAria("switchSource", "Switch source"))}"
                   >
-                    ${
-                      artwork
-                        ? `<img src="${safeArtwork}" alt="${artworkAlt}" />`
-                        : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
-                    }
+                    ${artwork ? `<img src="${safeArtwork}" alt="${artworkAlt}" />` : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`}
                     ${showUnavailableBadge ? `<span class="media-player__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
                   </button>
-                `
-                : `
+                ` : `
                   <div class="media-player__artwork">
-                    ${
-                      artwork
-                        ? `<img src="${safeArtwork}" alt="${artworkAlt}" />`
-                        : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`
-                    }
+                    ${artwork ? `<img src="${safeArtwork}" alt="${artworkAlt}" />` : `<ha-icon icon="${escapeHtml(this._getPlayerFallbackIcon(player, state, deviceType))}"></ha-icon>`}
                     ${showUnavailableBadge ? `<span class="media-player__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
                   </div>
-                `
-            }
+                `}
             <div class="media-player__hero-copy">
               <div class="media-player__hero-top">
                 ${isTvPlayer ? infoRailMarkup : ""}
@@ -3749,9 +3613,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           <div class="media-player__center-stack">
             ${dotsMarkup ? `<div class="media-player__switcher">${dotsMarkup}</div>` : ""}
             <div class="media-player__transport-row">
-              ${
-                isTvPlayer
-                  ? `
+              ${isTvPlayer ? `
                     <div class="media-player__tv-shell">
                       <div class="media-player__tv-stack">
                         ${tvControlsMarkup}
@@ -3759,8 +3621,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                         ${tvSourcePanelMarkup}
                       </div>
                     </div>
-                  `
-                  : `
+                  ` : `
                     <div class="media-player__transport-shell">
                       <div class="media-player__transport-cluster">
                         ${volumeDownMarkup}
@@ -3794,134 +3655,151 @@ class NodaliaMediaPlayer extends HTMLElement {
                           </button>
                         </div>
                         ${volumeUpMarkup}
+                        ${browseMarkup}
                       </div>
-                      ${browseMarkup}
                     </div>
-                  `
-              }
+                  `}
             </div>
           </div>
           ${chipsMarkup ? `<div class="media-player__footer">${chipsMarkup}</div>` : ""}
         </div>
       </div>
     `,
-      animateEntranceApplied: renderAnimateEntrance,
-    };
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
-    }
-
-    this._captureMediaBrowserScrollState();
-    this._captureTvPanelScrollState();
-
-    if (!this._config) {
-      this.shadowRoot.innerHTML = "";
-      return;
-    }
-
-    if (this._shouldHideForScreen()) {
-      this.shadowRoot.innerHTML = "";
-      return;
-    }
-
-    const mediaGuardIds = [];
-    const mediaEntity = String(this._config?.entity ?? "").trim();
-    if (mediaEntity) {
-      mediaGuardIds.push(mediaEntity);
-    }
-    for (const player of Array.isArray(this._config?.players) ? this._config.players : []) {
-      const playerEntity = String(player?.entity ?? "").trim();
-      if (playerEntity && !mediaGuardIds.includes(playerEntity)) {
-        mediaGuardIds.push(playerEntity);
+          animateEntranceApplied: renderAnimateEntrance
+        };
       }
-    }
-    const mediaEntityGuard = window.NodaliaUtils?.renderLovelaceEntityGuardForEntities?.(
-      this._hass,
-      mediaGuardIds.length ? mediaGuardIds : [""],
-      { cardClass: "media-player" },
-    );
-    if (mediaEntityGuard) {
-      this.shadowRoot.innerHTML = mediaEntityGuard;
-      return;
-    }
-
-    const inEditMode = this._isInEditMode();
-    const players = this._getVisiblePlayers();
-    const hasPlayers = players.length > 0;
-    const isFixed = this._config.layout.fixed && !inEditMode;
-    const spacerHeight = isFixed ? this._getReservedHeight(hasPlayers) : "0px";
-    const mediaBrowserMarkup = this._renderMediaBrowser();
-    const animations = this._getAnimationSettings();
-
-    this._syncTicker(hasPlayers ? players : []);
-
-    const playerCardRender = hasPlayers
-      ? this._renderPlayerCard(players, {
-        animateEntrance: animations.enabled && this._animateContentOnNextRender,
-      })
-      : { markup: "", animateEntranceApplied: false };
-
-    const contentMarkup = hasPlayers
-      ? playerCardRender.markup
-      : inEditMode
-        ? this._renderEmptyState()
-        : "";
-
-    const config = this._config;
-    const playerStyles = config.styles.player;
-    const browserStyles = config.styles.browser;
-    const tvArtworkSize = playerStyles.tv_artwork_size || playerStyles.artwork_size;
-    const activeTintColor = playerStyles.active_tint_color || "var(--info-color, #71c0ff)";
-    const isLightThemeSurface = this._isLightThemeSurface();
-    const albumOverlayColor = isLightThemeSurface
-      ? `color-mix(in srgb, ${playerStyles.overlay_color} 24%, var(--ha-card-background))`
-      : playerStyles.overlay_color;
-    const albumOverlayTop = isLightThemeSurface
-      ? `color-mix(in srgb, ${albumOverlayColor} 72%, transparent)`
-      : `color-mix(in srgb, ${albumOverlayColor} 64%, rgba(0, 0, 0, 0.08))`;
-    const albumOverlayBottom = isLightThemeSurface
-      ? `color-mix(in srgb, ${albumOverlayColor} 88%, color-mix(in srgb, var(--ha-card-background) 92%, transparent))`
-      : `color-mix(in srgb, ${albumOverlayColor} 86%, rgba(0, 0, 0, 0.16))`;
-    const albumBackgroundFilter = isLightThemeSurface
-      ? "blur(28px) saturate(0.94) brightness(1.06)"
-      : "blur(30px) saturate(0.82)";
-    const albumBackgroundOpacity = isLightThemeSurface ? "0.48" : "0.42";
-    const cardTopHighlight = isLightThemeSurface
-      ? "linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background) 34%, transparent), rgba(255, 255, 255, 0))"
-      : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent), rgba(255, 255, 255, 0))";
-    const activeTintPrimaryStrength = isLightThemeSurface ? 52 : 46;
-    const activeTintSecondaryStrength = isLightThemeSurface ? 34 : 30;
-    const activeTintTopStrength = isLightThemeSurface ? 40 : 34;
-    const activeTintBaseStrength = isLightThemeSurface ? 56 : 48;
-    const activeTintMidStrength = isLightThemeSurface ? 34 : 30;
-    const activeCardBaseBackground = "var(--ha-card-background, var(--card-background-color, #111827))";
-    const activeCardBackground = `
+      _render() {
+        if (!this.shadowRoot) {
+          return;
+        }
+        this._captureMediaBrowserScrollState();
+        this._captureTvPanelScrollState();
+        if (!this._config) {
+          this.shadowRoot.innerHTML = "";
+          return;
+        }
+        if (this._shouldHideForScreen()) {
+          this.shadowRoot.innerHTML = "";
+          return;
+        }
+        const mediaGuardIds = [];
+        const mediaEntity = String(this._config?.entity ?? "").trim();
+        if (mediaEntity) {
+          mediaGuardIds.push(mediaEntity);
+        }
+        for (const player of Array.isArray(this._config?.players) ? this._config.players : []) {
+          const playerEntity = String(player?.entity ?? "").trim();
+          if (playerEntity && !mediaGuardIds.includes(playerEntity)) {
+            mediaGuardIds.push(playerEntity);
+          }
+        }
+        const mediaEntityGuard = window.NodaliaUtils?.renderLovelaceEntityGuardForEntities?.(
+          this._hass,
+          mediaGuardIds.length ? mediaGuardIds : [""],
+          { cardClass: "media-player" }
+        );
+        if (mediaEntityGuard) {
+          this.shadowRoot.innerHTML = mediaEntityGuard;
+          return;
+        }
+        const inEditMode = this._isInEditMode();
+        const players = this._getVisiblePlayers();
+        const hasPlayers = players.length > 0;
+        if (!hasPlayers) {
+          this._activeArtworkIdle = false;
+        }
+        const isFixed = this._config.layout.fixed && !inEditMode;
+        const spacerHeight = isFixed ? this._getReservedHeight(hasPlayers) : "0px";
+        const mediaBrowserMarkup = this._renderMediaBrowser();
+        const animations = this._getAnimationSettings();
+        this._syncTicker(hasPlayers ? players : []);
+        const playerCardRender = hasPlayers ? this._renderPlayerCard(players, {
+          animateEntrance: animations.enabled && this._animateContentOnNextRender
+        }) : { markup: "", animateEntranceApplied: false };
+        const contentMarkup = hasPlayers ? playerCardRender.markup : inEditMode ? this._renderEmptyState() : "";
+        const config = this._config;
+        const playerStyles = config.styles.player;
+        const browserStyles = config.styles.browser;
+        const tvArtworkSize = playerStyles.tv_artwork_size || playerStyles.artwork_size;
+        const activeTintColor = playerStyles.active_tint_color || "var(--info-color, #71c0ff)";
+        const isLightThemeSurface = this._isLightThemeSurface();
+        const albumOverlayColor = isLightThemeSurface ? `color-mix(in srgb, ${playerStyles.overlay_color} 24%, var(--ha-card-background))` : playerStyles.overlay_color;
+        const albumOverlayTop = isLightThemeSurface ? `color-mix(in srgb, ${albumOverlayColor} 72%, transparent)` : `color-mix(in srgb, ${albumOverlayColor} 64%, rgba(0, 0, 0, 0.08))`;
+        const albumOverlayBottom = isLightThemeSurface ? `color-mix(in srgb, ${albumOverlayColor} 88%, color-mix(in srgb, var(--ha-card-background) 92%, transparent))` : `color-mix(in srgb, ${albumOverlayColor} 86%, rgba(0, 0, 0, 0.16))`;
+        const artworkVisuals = getArtworkVisuals(
+          config.artwork,
+          config.album_cover_background !== false,
+          isLightThemeSurface
+        );
+        const albumBackgroundFilter = artworkVisuals.filter;
+        const albumBackgroundOpacity = artworkVisuals.opacity;
+        const albumDim = artworkVisuals.dim;
+        const presentationMode = this._getPresentationMode();
+        this._resolvedLayoutMode = presentationMode;
+        this.setAttribute("data-presentation", presentationMode);
+        if (this._activeArtworkIdle) {
+          this.setAttribute("data-idle-compact", "true");
+        } else {
+          this.removeAttribute("data-idle-compact");
+        }
+        const cardTopHighlight = isLightThemeSurface ? "linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background) 34%, transparent), rgba(255, 255, 255, 0))" : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent), rgba(255, 255, 255, 0))";
+        const activeTintPrimaryStrength = isLightThemeSurface ? 52 : 46;
+        const activeTintSecondaryStrength = isLightThemeSurface ? 34 : 30;
+        const activeTintTopStrength = isLightThemeSurface ? 40 : 34;
+        const activeTintBaseStrength = isLightThemeSurface ? 56 : 48;
+        const activeTintMidStrength = isLightThemeSurface ? 34 : 30;
+        const activeCardBaseBackground = "var(--ha-card-background, var(--card-background-color, #111827))";
+        const activeCardBackground = `
       radial-gradient(circle at 18% 20%, color-mix(in srgb, ${activeTintColor} ${activeTintPrimaryStrength}%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 56%),
       radial-gradient(circle at top left, color-mix(in srgb, ${activeTintColor} ${activeTintPrimaryStrength}%, transparent) 0%, transparent 62%),
       radial-gradient(circle at 50% 38%, color-mix(in srgb, ${activeTintColor} ${activeTintSecondaryStrength}%, transparent) 0%, transparent 68%),
       linear-gradient(180deg, color-mix(in srgb, ${activeTintColor} ${activeTintTopStrength}%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)) 0%, transparent 44%),
       linear-gradient(135deg, color-mix(in srgb, ${activeTintColor} ${activeTintBaseStrength}%, ${activeCardBaseBackground}) 0%, color-mix(in srgb, ${activeTintColor} ${activeTintMidStrength}%, ${activeCardBaseBackground}) 58%, ${activeCardBaseBackground} 100%)
     `.trim();
-    const activeCardBorder = `color-mix(in srgb, ${activeTintColor} 52%, var(--divider-color))`;
-    const activeCardShadow = `${playerStyles.box_shadow}, inset 0 0 0 999px color-mix(in srgb, ${activeTintColor} ${isLightThemeSurface ? 18 : 16}%, transparent), 0 0 0 1px color-mix(in srgb, ${activeTintColor} 22%, color-mix(in srgb, var(--primary-text-color) 8%, transparent)), 0 18px 38px color-mix(in srgb, ${activeTintColor} 34%, rgba(16, 34, 82, 0.18))`;
-    const activeCardHighlight = `
+        const activeCardBorder = `color-mix(in srgb, ${activeTintColor} 52%, var(--divider-color))`;
+        const activeCardShadow = `${playerStyles.box_shadow}, inset 0 0 0 999px color-mix(in srgb, ${activeTintColor} ${isLightThemeSurface ? 18 : 16}%, transparent), 0 0 0 1px color-mix(in srgb, ${activeTintColor} 22%, color-mix(in srgb, var(--primary-text-color) 8%, transparent)), 0 18px 38px color-mix(in srgb, ${activeTintColor} 34%, rgba(16, 34, 82, 0.18))`;
+        const activeCardHighlight = `
       radial-gradient(circle at 18% 20%, color-mix(in srgb, ${activeTintColor} 34%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 54%),
       linear-gradient(135deg, color-mix(in srgb, ${activeTintColor} 24%, transparent) 0%, transparent 68%),
       linear-gradient(180deg, color-mix(in srgb, ${activeTintColor} ${activeTintTopStrength}%, color-mix(in srgb, var(--primary-text-color) 5%, transparent)), rgba(255, 255, 255, 0))
     `.trim();
-
-    this.shadowRoot.innerHTML = `
+        const markup = `
       <style>
         :host {
           --media-player-panel-duration: ${animations.enabled ? animations.panelDuration : 0}ms;
           --media-player-browser-duration: ${animations.enabled ? animations.browserDuration : 0}ms;
           --media-player-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           --media-player-content-duration: ${animations.enabled ? clamp(Math.round(animations.panelDuration * 0.9), 180, 900) : 0}ms;
+          aspect-ratio: auto;
           display: block;
+          height: auto;
           width: 100%;
+        }
+
+        :host([data-presentation="square"]),
+        :host([data-presentation="artwork"]) {
+          align-self: start;
+          aspect-ratio: 1 / 1;
+          height: auto;
+          max-width: 100%;
+          overflow: hidden;
+          width: 100%;
+        }
+
+        :host([data-presentation="compact"]) {
+          align-self: start;
+          aspect-ratio: auto;
+          height: fit-content;
+          max-width: 100%;
+          width: 100%;
+        }
+
+        :host([data-idle-compact="true"]) {
+          align-self: start;
+          aspect-ratio: auto;
+          height: auto;
+          max-height: none;
+          overflow: visible;
         }
 
         * {
@@ -3937,11 +3815,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           position: ${isFixed ? "fixed" : "static"};
           left: ${isFixed ? config.layout.side_margin : "auto"};
           right: ${isFixed ? config.layout.side_margin : "auto"};
-          ${isFixed
-            ? config.layout.position === "top"
-              ? `top: ${config.layout.offset};`
-              : `bottom: ${config.layout.offset};`
-            : "top: auto; bottom: auto;"}
+          ${isFixed ? config.layout.position === "top" ? `top: ${config.layout.offset};` : `bottom: ${config.layout.offset};` : "top: auto; bottom: auto;"}
           z-index: ${isFixed ? config.layout.z_index : "auto"};
           pointer-events: ${isFixed ? "none" : "auto"};
         }
@@ -3984,9 +3858,43 @@ class NodaliaMediaPlayer extends HTMLElement {
           box-shadow: ${playerStyles.box_shadow};
           isolation: isolate;
           min-height: ${playerStyles.min_height};
+          max-width: 100%;
           overflow: hidden;
           padding: ${playerStyles.padding};
           position: relative;
+          width: 100%;
+        }
+
+        .media-player-card--chip {
+          min-height: 72px;
+          padding: 10px 12px 14px;
+        }
+
+        .media-player-card--compact {
+          min-height: 0;
+          padding: 10px 10px 12px;
+        }
+
+        .media-player-card--compact .media-player__volume-button:not(.media-player__volume-button--browse),
+        .media-player-card--compact .media-player__chips-wrap,
+        .media-player-card--compact .media-player__subtitle {
+          display: none;
+        }
+
+        .media-player-card--compact .media-player__transport-cluster {
+          gap: 6px;
+          grid-template-columns: repeat(3, minmax(0, auto));
+          justify-content: center;
+        }
+
+        .media-player-card--compact .media-player__control {
+          height: 34px;
+          min-width: 34px;
+          width: 34px;
+        }
+
+        .media-player-card--compact .media-player__title {
+          font-size: 13px;
         }
 
         .media-player-card--active {
@@ -4030,7 +3938,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           background: linear-gradient(
             180deg,
             ${albumOverlayTop},
-            ${albumOverlayColor},
+            color-mix(in srgb, ${albumOverlayColor} ${Math.round(albumDim * 100)}%, transparent),
             ${albumOverlayBottom}
           );
           content: "";
@@ -4039,15 +3947,40 @@ class NodaliaMediaPlayer extends HTMLElement {
           z-index: 2;
         }
 
+        .media-player__art-stage,
         .media-player__album-bg {
           background-position: center;
           background-size: cover;
-          filter: ${albumBackgroundFilter};
-          inset: -24px;
-          opacity: ${albumBackgroundOpacity};
+          inset: -8px;
           position: absolute;
-          transform: scale(1.14);
           z-index: 0;
+        }
+
+        .media-player__art-stage {
+          inset: 0;
+          overflow: hidden;
+          pointer-events: none;
+        }
+
+        .media-player__album-bg,
+        .media-player__art-layer {
+          filter: ${albumBackgroundFilter};
+          inset: ${config.artwork?.mode === "immersive" ? "-6px" : "-24px"};
+          opacity: ${albumBackgroundOpacity};
+          transform: ${config.artwork?.mode === "immersive" ? "scale(1.04)" : "scale(1.14)"};
+          transition: opacity ${config.artwork?.crossfade !== false ? config.artwork.crossfade_duration : 0}ms ease;
+        }
+
+        .media-player__art-layer.is-incoming {
+          opacity: 0;
+        }
+
+        .media-player__art-layer.is-incoming.is-visible {
+          opacity: ${albumBackgroundOpacity};
+        }
+
+        .media-player__art-layer.is-idle-animated {
+          animation: nodalia-media-kenburns 48s ease-in-out alternate infinite;
         }
 
         .media-player__progress {
@@ -4059,6 +3992,16 @@ class NodaliaMediaPlayer extends HTMLElement {
           overflow: hidden;
           position: absolute;
           z-index: 3;
+        }
+
+        .media-player__progress.is-interactive {
+          cursor: pointer;
+          touch-action: none;
+        }
+
+        .media-player__progress.is-interactive:focus-visible {
+          outline: 2px solid ${playerStyles.progress_color};
+          outline-offset: 3px;
         }
 
         .media-player__progress-fill {
@@ -4077,7 +4020,8 @@ class NodaliaMediaPlayer extends HTMLElement {
           align-content: start;
           display: grid;
           gap: 10px;
-          padding-bottom: 10px;
+          min-width: 0;
+          padding-bottom: 18px;
         }
 
         .media-player__content--entering {
@@ -4090,7 +4034,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card--idle {
-          min-height: 96px;
+          min-height: 0;
         }
 
         .media-player__hero {
@@ -4103,9 +4047,24 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player__idle-hero {
           align-items: center;
           display: grid;
-          gap: 12px;
-          grid-template-columns: 56px minmax(0, 1fr);
+          gap: 10px;
+          grid-template-columns: 40px minmax(0, 1fr);
           min-width: 0;
+          width: 100%;
+        }
+
+        .media-player__idle-hero--tv-off {
+          grid-template-columns: 40px minmax(0, 1fr) auto;
+        }
+
+        .media-player__idle-name {
+          color: var(--primary-text-color);
+          font-size: ${playerStyles.title_size};
+          font-weight: 700;
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
 
         .media-player__idle-main {
@@ -4116,11 +4075,8 @@ class NodaliaMediaPlayer extends HTMLElement {
           min-width: 0;
         }
 
-        .media-player__idle-tv-off-bar {
-          align-items: center;
-          display: grid;
-          grid-template-columns: minmax(0, 1fr) auto;
-          min-width: 0;
+        .media-player__idle-hero--tv-off .media-player__idle-actions--tv-off {
+          justify-self: end;
         }
 
         .media-player__hero-copy {
@@ -4176,9 +4132,8 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player__artwork--idle {
-          border-radius: 18px;
-          height: 56px;
-          width: 56px;
+          height: 40px;
+          width: 40px;
         }
 
         .media-player__artwork img {
@@ -4257,6 +4212,11 @@ class NodaliaMediaPlayer extends HTMLElement {
           white-space: nowrap;
         }
 
+        .media-player-card.has-album-background .media-player__title,
+        .media-player-card.has-album-background .media-player__subtitle {
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.32), 0 6px 18px rgba(0, 0, 0, 0.28);
+        }
+
         .media-player__title {
           color: var(--primary-text-color);
           font-size: ${playerStyles.title_size};
@@ -4304,7 +4264,8 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player__idle-actions {
           align-items: center;
           display: inline-flex;
-          gap: 6px;
+          flex-wrap: wrap;
+          gap: 8px;
           justify-content: flex-end;
           min-width: 0;
         }
@@ -4328,43 +4289,30 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player__transport-shell {
           align-items: center;
-          display: inline-flex;
+          display: flex;
           justify-content: center;
-          position: relative;
-          width: auto;
+          max-width: 100%;
+          min-width: 0;
+          width: 100%;
         }
 
         .media-player__transport-cluster {
           align-items: center;
-          display: inline-flex;
-          gap: 8px;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
           justify-content: center;
-          width: auto;
+          max-width: 100%;
+          min-width: 0;
+          width: 100%;
         }
 
         .media-player__transport-cluster--idle {
           gap: 8px;
         }
 
-        .media-player__transport-addon {
-          align-items: center;
-          display: inline-flex;
-          left: calc(100% + 8px);
-          position: absolute;
-          top: 50%;
-          transform: translateY(-50%);
-        }
-
         .media-player__transport {
-          align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
-          border-radius: 999px;
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent);
-          display: inline-flex;
-          gap: 6px;
-          margin: 0 auto;
-          padding: 5px;
+          display: contents;
         }
 
         .media-player__tv-shell {
@@ -4422,7 +4370,6 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card--tv .media-player__artwork {
-          border-radius: 20px;
           height: ${tvArtworkSize};
           width: ${tvArtworkSize};
         }
@@ -4432,8 +4379,12 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card--tv.media-player-card--idle .media-player__artwork--idle {
-          height: ${tvArtworkSize};
-          width: ${tvArtworkSize};
+          height: 40px;
+          width: 40px;
+        }
+
+        .media-player-card--tv.media-player-card--idle .media-player__artwork ha-icon {
+          --mdc-icon-size: 22px;
         }
 
         .media-player-card--tv .media-player__hero-top {
@@ -4526,22 +4477,10 @@ class NodaliaMediaPlayer extends HTMLElement {
           padding-top: 6px;
         }
 
-        .media-player-card--tv.media-player-card--idle .media-player__idle-main--tv-off {
+        .media-player-card--tv.media-player-card--idle .media-player__idle-hero--tv-off {
           align-items: center;
-          gap: 10px;
-          grid-template-columns: minmax(0, 1fr) auto;
-        }
-
-        .media-player-card--tv.media-player-card--idle .media-player__idle-tv-off-bar .media-player__info-rail {
-          justify-self: end;
-          width: fit-content;
-        }
-
-        .media-player-card--tv.media-player-card--idle .media-player__idle-tv-off-bar {
-          align-items: end;
           gap: 8px;
-          grid-template-columns: minmax(0, 1fr);
-          justify-items: end;
+          grid-template-columns: 40px minmax(0, 1fr) auto;
         }
 
         .media-player-card--tv.media-player-card--idle .media-player__idle-actions--tv-off {
@@ -4549,18 +4488,20 @@ class NodaliaMediaPlayer extends HTMLElement {
           width: fit-content;
         }
 
+        .media-player-card--idle .media-player__control {
+          height: 32px;
+          min-width: 32px;
+          width: 32px;
+        }
+
+        .media-player-card--idle .media-player__control ha-icon {
+          --mdc-icon-size: 15px;
+          height: 15px;
+          width: 15px;
+        }
+
         .media-player-card--tv.media-player-card--idle .media-player__idle-hero {
-          align-items: start;
-        }
-
-        .media-player-card--tv .media-player__control {
-          height: calc(${playerStyles.control_size} + 6px);
-          width: calc(${playerStyles.control_size} + 6px);
-        }
-
-        .media-player-card--tv .media-player__control--primary {
-          height: calc(${playerStyles.control_size} + 6px);
-          width: calc(${playerStyles.control_size} + 6px);
+          align-items: center;
         }
 
         .media-player-card--tv .media-player__tv-source-panel {
@@ -4761,13 +4702,16 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player__chip {
           align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          -webkit-backdrop-filter: blur(22px) saturate(1.35);
+          backdrop-filter: blur(22px) saturate(1.35);
+          background: color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #1c1c20)) 62%, color-mix(in srgb, var(--primary-text-color) 14%, transparent));
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 18%, transparent);
           border-radius: 999px;
-          color: var(--secondary-text-color);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+          color: var(--primary-text-color);
           display: inline-flex;
           font-size: ${playerStyles.subtitle_size};
-          font-weight: 600;
+          font-weight: 700;
           line-height: 1;
           max-width: 100%;
           min-height: 26px;
@@ -4831,19 +4775,22 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player__source-button {
           align-items: center;
           appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          -webkit-backdrop-filter: blur(18px);
+          backdrop-filter: blur(18px);
+          background: color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
           border-radius: 999px;
-          color: var(--secondary-text-color);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent), 0 10px 24px rgba(0, 0, 0, 0.16);
+          color: var(--primary-text-color);
           cursor: pointer;
           display: inline-flex;
           font: inherit;
           font-size: ${playerStyles.subtitle_size};
-          font-weight: 600;
+          font-weight: 700;
           justify-content: center;
           line-height: 1;
           max-width: 100%;
-          min-height: 30px;
+          min-height: 32px;
           overflow: hidden;
           padding: 0 12px;
           text-overflow: ellipsis;
@@ -4882,72 +4829,56 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player__control,
         .media-player__volume-button {
+          -webkit-tap-highlight-color: transparent;
           align-items: center;
           appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          -webkit-backdrop-filter: blur(22px) saturate(1.35);
+          backdrop-filter: blur(22px) saturate(1.35);
+          background: color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #1c1c20)) 72%, color-mix(in srgb, var(--primary-text-color, #f4f4f4) 16%, transparent));
+          border: 1px solid color-mix(in srgb, var(--primary-text-color, #f4f4f4) 22%, transparent);
           border-radius: 999px;
-          color: var(--primary-text-color);
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color, #f4f4f4) 14%, transparent), 0 10px 24px rgba(0, 0, 0, 0.28);
+          color: var(--primary-text-color, #f4f4f4);
           cursor: pointer;
           display: inline-flex;
+          flex: 0 0 auto;
+          height: ${playerStyles.control_size};
           justify-content: center;
           line-height: 0;
+          margin: 0;
+          min-width: ${playerStyles.control_size};
+          outline: none;
+          padding: 0;
           position: relative;
-        }
-
-        .media-player__control {
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent);
-          height: ${playerStyles.control_size};
           width: ${playerStyles.control_size};
         }
 
         .media-player__control--primary {
-          background: ${playerStyles.accent_background};
-          border-color: rgba(var(--rgb-primary-color), 0.24);
-          color: ${playerStyles.accent_color};
-          height: calc(${playerStyles.control_size} + 4px);
-          width: calc(${playerStyles.control_size} + 4px);
+          background: var(--primary-color);
+          border-color: color-mix(in srgb, var(--primary-color) 70%, #fff);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 10px 24px rgba(0, 0, 0, 0.32);
+          color: var(--text-primary-color, #161616);
         }
 
         .media-player__control--active {
-          background: rgba(var(--rgb-primary-color), 0.14);
-          border-color: rgba(var(--rgb-primary-color), 0.2);
+          background: color-mix(in srgb, var(--primary-color) 18%, ${playerStyles.accent_background});
+          border-color: color-mix(in srgb, var(--primary-color) 42%, color-mix(in srgb, var(--primary-text-color) 12%, transparent));
           color: ${playerStyles.accent_color};
         }
 
-        .media-player__volume-button {
-          flex: 0 0 auto;
-          height: calc(${playerStyles.control_size} - 2px);
-          padding: 0;
-          width: calc(${playerStyles.control_size} - 2px);
-        }
-
-        .media-player__control ha-icon {
-          align-items: center;
-          display: inline-flex;
-          font-size: calc(${playerStyles.control_size} * 0.56);
-          height: calc(${playerStyles.control_size} * 0.56);
-          justify-content: center;
-          left: 50%;
-          line-height: 1;
-          position: absolute;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          width: calc(${playerStyles.control_size} * 0.56);
-        }
-
+        .media-player__control ha-icon,
         .media-player__volume-button ha-icon {
+          --mdc-icon-size: calc(${playerStyles.control_size} * 0.46);
           align-items: center;
           display: inline-flex;
-          font-size: calc(${playerStyles.control_size} * 0.48);
-          height: calc(${playerStyles.control_size} * 0.48);
+          height: calc(${playerStyles.control_size} * 0.46);
           justify-content: center;
           left: 50%;
           line-height: 1;
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
-          width: calc(${playerStyles.control_size} * 0.48);
+          width: calc(${playerStyles.control_size} * 0.46);
         }
 
         .media-player__dots {
@@ -5253,15 +5184,323 @@ class NodaliaMediaPlayer extends HTMLElement {
             justify-content: center;
           }
 
-          .media-player__idle-actions--tv,
+          .media-player__idle-actions--tv:not(.media-player__idle-actions--tv-off),
           .media-player__tv-footer {
             justify-content: center;
           }
         }
 
         @media (max-width: 420px) {
-          .media-player__hero {
+          .media-player-card:not(.media-player-card--square):not(.media-player-card--artwork) .media-player__hero {
             grid-template-columns: ${playerStyles.artwork_size} minmax(0, 1fr);
+          }
+        }
+
+        .media-player-card--square,
+        .media-player-card--artwork {
+          align-self: start;
+          aspect-ratio: 1 / 1;
+          container-type: inline-size;
+          display: grid;
+          grid-template-rows: minmax(0, 1fr) auto;
+          height: auto;
+          max-height: 100%;
+          max-width: 100%;
+          min-height: 0;
+          padding: 14px 14px 12px;
+          width: 100%;
+        }
+
+        .media-player-card--square.has-album-background::before,
+        .media-player-card--artwork.has-album-background::before {
+          background: transparent;
+        }
+
+        .media-player-card--square.has-album-background::after,
+        .media-player-card--artwork.has-album-background::after {
+          background: linear-gradient(
+            180deg,
+            rgba(8, 8, 10, 0.46) 0%,
+            rgba(8, 8, 10, 0.1) 24%,
+            rgba(8, 8, 10, 0.08) 48%,
+            rgba(8, 8, 10, 0.52) 74%,
+            rgba(8, 8, 10, 0.78) 100%
+          );
+        }
+
+        .media-player-card--square .media-player__album-bg,
+        .media-player-card--square .media-player__art-layer,
+        .media-player-card--artwork .media-player__album-bg,
+        .media-player-card--artwork .media-player__art-layer {
+          filter: none;
+          inset: 0;
+          opacity: 1;
+          transform: none;
+        }
+
+        .media-player-card--square .media-player__art-layer.is-idle-animated,
+        .media-player-card--artwork .media-player__art-layer.is-idle-animated {
+          animation: none;
+        }
+
+        .media-player-card--square.has-album-background .media-player__title,
+        .media-player-card--square.has-album-background .media-player__subtitle,
+        .media-player-card--artwork.has-album-background .media-player__title,
+        .media-player-card--artwork.has-album-background .media-player__subtitle {
+          color: #fff;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 8px 24px rgba(0, 0, 0, 0.42);
+        }
+
+        .media-player-card--square .media-player__content,
+        .media-player-card--artwork .media-player__content {
+          align-content: stretch;
+          display: grid;
+          gap: 10px;
+          grid-row: 1;
+          grid-template-rows: auto minmax(0, 1fr) auto;
+          height: 100%;
+          min-height: 0;
+          padding-top: 2px;
+          padding-bottom: 0;
+        }
+
+        .media-player-card--square .media-player__progress,
+        .media-player-card--artwork .media-player__progress {
+          grid-row: 2;
+          inset: auto;
+          margin-top: 10px;
+          position: static;
+          width: 100%;
+        }
+
+        .media-player-card--square .media-player__hero,
+        .media-player-card--artwork .media-player__hero {
+          grid-row: 1;
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .media-player-card--square .media-player__artwork,
+        .media-player-card--artwork .media-player__artwork {
+          display: none;
+        }
+
+        .media-player-card--square .media-player__hero-copy,
+        .media-player-card--artwork .media-player__hero-copy {
+          padding-right: 44px;
+        }
+
+        .media-player-card--square .media-player__hero-top,
+        .media-player-card--artwork .media-player__hero-top {
+          gap: 8px;
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .media-player-card--square .media-player__info-rail,
+        .media-player-card--artwork .media-player__info-rail {
+          justify-self: start;
+          max-width: 100%;
+        }
+
+        .media-player-card--square .media-player__title {
+          font-size: 16px;
+        }
+
+        .media-player-card--square .media-player__subtitle,
+        .media-player-card--artwork .media-player__subtitle {
+          font-size: 13px;
+        }
+
+        .media-player-card--square .media-player__center-stack,
+        .media-player-card--artwork .media-player__center-stack {
+          align-content: end;
+          align-self: end;
+          grid-row: 3;
+          min-width: 0;
+          width: 100%;
+        }
+
+        .media-player-card--square .media-player__transport-row,
+        .media-player-card--artwork .media-player__transport-row {
+          align-content: end;
+          min-width: 0;
+          width: 100%;
+        }
+
+        @container (max-width: 260px) {
+          .media-player__info-rail {
+            display: none;
+          }
+
+          .media-player__title {
+            font-size: 14px;
+          }
+
+          .media-player__subtitle {
+            font-size: 12px;
+          }
+
+          .media-player-card--square .media-player__content,
+          .media-player-card--artwork .media-player__content {
+            gap: 6px;
+          }
+        }
+
+        @container (max-width: 200px) {
+          .media-player__subtitle,
+          .media-player__volume-button:not(.media-player__control):not(.media-player__volume-button--browse),
+          .media-player-card--square .media-player__volume-button:not(.media-player__volume-button--browse),
+          .media-player-card--artwork .media-player__volume-button:not(.media-player__volume-button--browse) {
+            display: none;
+          }
+
+          .media-player-card--square .media-player__transport-cluster,
+          .media-player-card--artwork .media-player__transport-cluster {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            max-width: 148px;
+          }
+
+          .media-player-card--square,
+          .media-player-card--artwork {
+            padding: 10px 10px 12px;
+          }
+
+          .media-player__title {
+            font-size: 13px;
+          }
+        }
+
+        .media-player-card--square .media-player__transport-cluster,
+        .media-player-card--artwork .media-player__transport-cluster {
+          display: grid;
+          gap: 6px;
+          grid-template-columns: repeat(5, minmax(0, 1fr));
+          justify-content: stretch;
+          width: 100%;
+        }
+
+        .media-player-card--square .media-player__control,
+        .media-player-card--square .media-player__volume-button:not(.media-player__volume-button--browse),
+        .media-player-card--artwork .media-player__control,
+        .media-player-card--artwork .media-player__volume-button:not(.media-player__volume-button--browse) {
+          aspect-ratio: 1 / 1;
+          height: auto;
+          justify-self: center;
+          max-width: 36px;
+          min-width: 0;
+          width: 100%;
+        }
+
+        .media-player-card--square .media-player__control ha-icon,
+        .media-player-card--square .media-player__volume-button ha-icon,
+        .media-player-card--artwork .media-player__control ha-icon,
+        .media-player-card--artwork .media-player__volume-button ha-icon {
+          --mdc-icon-size: 14px;
+          height: 14px;
+          width: 14px;
+        }
+
+        .media-player-card--square .media-player__volume-button--browse,
+        .media-player-card--artwork .media-player__volume-button--browse {
+          height: 32px;
+          min-width: 32px;
+          position: absolute;
+          right: 10px;
+          top: 10px;
+          width: 32px;
+          z-index: 4;
+        }
+
+        .media-player-card--chip {
+          display: grid;
+          padding: 10px 12px 16px;
+        }
+
+        .media-player-card--chip .media-player__content {
+          align-items: center;
+          gap: 8px;
+          grid-template-columns: minmax(0, 1fr) auto;
+          min-width: 0;
+          padding-bottom: 10px;
+        }
+
+        .media-player-card--chip .media-player__hero {
+          align-items: center;
+          grid-template-columns: 44px minmax(0, 1fr);
+          min-width: 0;
+        }
+
+        .media-player-card--chip .media-player__artwork {
+          height: 44px;
+          width: 44px;
+        }
+
+        .media-player-card--chip .media-player__center-stack,
+        .media-player-card--chip .media-player__transport-row,
+        .media-player-card--chip .media-player__transport-shell {
+          justify-self: end;
+          max-width: 100%;
+          min-width: 0;
+          width: auto;
+        }
+
+        .media-player-card--chip .media-player__transport-cluster {
+          flex-wrap: nowrap;
+          gap: 6px;
+          justify-content: flex-end;
+          width: auto;
+        }
+
+        .media-player-card--chip .media-player__control,
+        .media-player-card--chip .media-player__volume-button {
+          height: 28px;
+          min-width: 28px;
+          width: 28px;
+        }
+
+        .media-player-card--chip .media-player__control ha-icon,
+        .media-player-card--chip .media-player__volume-button ha-icon {
+          --mdc-icon-size: 13px;
+          height: 13px;
+          width: 13px;
+        }
+
+        .media-player-card--chip .media-player__info-rail,
+        .media-player-card--chip .media-player__volume-button--browse {
+          display: none;
+        }
+
+        .media-player-card--compact .media-player__content {
+          padding-bottom: 16px;
+        }
+
+        .media-player-card--compact .media-player__transport-cluster {
+          gap: 8px;
+        }
+
+        .media-player-card--chip .media-player__footer,
+        .media-player-card--square .media-player__chips-wrap,
+        .media-player-card--artwork .media-player__chips-wrap,
+        .media-player-card--compact .media-player__chips-wrap {
+          display: none;
+        }
+
+        .media-player-card--compact .media-player__hero {
+          grid-template-columns: 48px minmax(0, 1fr);
+        }
+
+        .media-player-card--compact .media-player__artwork {
+          height: 48px;
+          width: 48px;
+        }
+
+        @keyframes nodalia-media-kenburns {
+          0% { transform: scale(1.04) translate3d(-1%, 0, 0); }
+          100% { transform: scale(1.12) translate3d(1.2%, -1.1%, 0); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .media-player__art-layer.is-idle-animated {
+            animation: none !important;
           }
         }
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
@@ -5276,429 +5515,540 @@ class NodaliaMediaPlayer extends HTMLElement {
       </div>
       ${mediaBrowserMarkup}
     `;
-
-    this._restoreMediaBrowserScrollState();
-    this._restoreTvPanelScrollState();
-    const mediaBrowserDialog = this.shadowRoot.querySelector('.media-browser-panel[role="dialog"]');
-    if (mediaBrowserDialog instanceof HTMLElement) {
-      window.NodaliaUtils?.bindModalFocus?.(this, mediaBrowserDialog, {
-        initialFocusSelector: '[data-media-browser-close="true"]',
-      });
-    } else {
-      window.NodaliaUtils?.releaseModalFocus?.(this);
-    }
-    this._tvSourcePanelAnimatingEntity = null;
-    this._tvVolumePanelAnimatingEntity = null;
-    if (this._mediaBrowserState?.animateIn === true) {
-      this._mediaBrowserState = {
-        ...this._mediaBrowserState,
-        animateIn: false,
-      };
-    }
-
-    if (animations.enabled && playerCardRender.animateEntranceApplied) {
-      this._scheduleEntranceAnimationReset(clamp(Math.round(animations.panelDuration * 0.9), 180, 900) + 120);
-    }
-  }
-}
-
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaMediaPlayer);
-}
-
-class NodaliaMediaPlayerEditor extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(NodaliaMediaPlayer.getStubConfig());
-    this._hass = null;
-    this._entityOptionsSignature = "";
-    this._showStyleSection = false;
-    this._showAnimationSection = false;
-    this._showTapActionsSection = false;
-    this._pendingEditorControlTags = new Set();
-    this._onShadowInput = this._onShadowInput.bind(this);
-    this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
-    this._onShadowClick = this._onShadowClick.bind(this);
-  }
-
-  _attachEditorShadowListeners() {
-    window.NodaliaUtils.bindShadowListeners(this, [
-      ["input", this._onShadowInput],
-      ["change", this._onShadowInput],
-      ["value-changed", this._onShadowValueChanged],
-      ["click", this._onShadowClick],
-    ], "editor");
-  }
-
-  _detachEditorShadowListeners() {
-    window.NodaliaUtils.releaseShadowListeners(this, "editor");
-  }
-
-  connectedCallback() {
-    this._attachEditorShadowListeners();
-    window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
-  }
-
-  disconnectedCallback() {
-    this._detachEditorShadowListeners();
-    window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
-  }
-
-  set hass(hass) {
-    const nextSignature = this._getEntityOptionsSignature(hass);
-    const shouldRender =
-      !this._hass ||
-      nextSignature !== this._entityOptionsSignature ||
-      !this.shadowRoot?.innerHTML;
-
-    this._hass = hass;
-    this._entityOptionsSignature = nextSignature;
-
-    if (!shouldRender) {
-      return;
-    }
-
-    const focusState = this._captureFocusState();
-    this._render();
-    this._restoreFocusState(focusState);
-  }
-
-  setConfig(config) {
-    const focusState = this._captureFocusState();
-    this._config = normalizeConfig(config || {});
-    window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
-    this._render();
-    this._restoreFocusState(focusState);
-  }
-
-  _watchEditorControlTag(tagName) {
-    if (!tagName || this._pendingEditorControlTags.has(tagName)) {
-      return;
-    }
-
-    if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
-      return;
-    }
-
-    this._pendingEditorControlTags.add(tagName);
-    customElements.whenDefined(tagName)
-      .then(() => {
-        this._pendingEditorControlTags.delete(tagName);
-
-        if (!this.isConnected || !this._hass || !this.shadowRoot) {
+        const idleArtworkConfig = this._config?.idle_artwork || {};
+        const artworkEntityId = String(this._activePlayerEntity || "");
+        const keepIdleArtwork = Boolean(this._activeArtworkIdle) && idleArtworkConfig.enabled !== false && this._artworkController.recentFor(artworkEntityId).length > 0;
+        this._commitPersistentMediaShadow(markup, {
+          artworkUrl: this._activeArtworkUrl || "",
+          idle: Boolean(this._activeArtworkIdle),
+          entityId: artworkEntityId,
+          hasAlbumBackground: Boolean(contentMarkup) && this._config.album_cover_background !== false && Boolean(this._activeArtworkUrl || keepIdleArtwork)
+        });
+        this._restoreMediaBrowserScrollState();
+        this._restoreTvPanelScrollState();
+        const mediaBrowserDialog = this.shadowRoot.querySelector('.media-browser-panel[role="dialog"]');
+        if (mediaBrowserDialog instanceof HTMLElement) {
+          window.NodaliaUtils?.bindModalFocus?.(this, mediaBrowserDialog, {
+            initialFocusSelector: '[data-media-browser-close="true"]'
+          });
+        } else {
+          window.NodaliaUtils?.releaseModalFocus?.(this);
+        }
+        this._tvSourcePanelAnimatingEntity = null;
+        this._tvVolumePanelAnimatingEntity = null;
+        if (this._mediaBrowserState?.animateIn === true) {
+          this._mediaBrowserState = {
+            ...this._mediaBrowserState,
+            animateIn: false
+          };
+        }
+        if (animations.enabled && playerCardRender.animateEntranceApplied) {
+          this._scheduleEntranceAnimationReset(clamp(Math.round(animations.panelDuration * 0.9), 180, 900) + 120);
+        }
+        this._lastRenderSignature = this._getRenderSignature(this._hass);
+      }
+      _commitPersistentMediaShadow(markup, artOptions = {}) {
+        if (!this.shadowRoot) {
           return;
         }
+        const styleStart = markup.indexOf("<style>");
+        const styleEnd = markup.indexOf("</style>");
+        if (styleStart < 0 || styleEnd < 0) {
+          this.shadowRoot.innerHTML = markup;
+          return;
+        }
+        const css = markup.slice(styleStart + 7, styleEnd);
+        const body = markup.slice(styleEnd + 8);
+        const previousArt = this._artworkStageEl instanceof HTMLElement ? this._artworkStageEl : this.shadowRoot.querySelector("[data-media-art-stage]");
+        if (previousArt instanceof HTMLElement && previousArt.parentNode !== this.shadowRoot) {
+          this.shadowRoot.appendChild(previousArt);
+        }
+        let styleEl = this.shadowRoot.querySelector("[data-media-style]");
+        let chrome = this.shadowRoot.querySelector("[data-media-chrome]");
+        if (!(styleEl instanceof HTMLStyleElement) || !(chrome instanceof HTMLElement)) {
+          const keptArt = previousArt instanceof HTMLElement ? previousArt : null;
+          this.shadowRoot.innerHTML = `<style data-media-style></style><div data-media-chrome></div>`;
+          styleEl = this.shadowRoot.querySelector("[data-media-style]");
+          chrome = this.shadowRoot.querySelector("[data-media-chrome]");
+          if (keptArt) {
+            this.shadowRoot.appendChild(keptArt);
+          }
+        }
+        if (styleEl.textContent !== css) {
+          styleEl.textContent = css;
+        }
+        chrome.innerHTML = body;
+        const card = this.shadowRoot.querySelector(".media-player-card");
+        if (card instanceof HTMLElement && artOptions.hasAlbumBackground) {
+          const stage = previousArt instanceof HTMLElement ? previousArt : this._createArtworkStage();
+          this._artworkStageEl = stage;
+          if (stage.parentElement !== card || card.firstChild !== stage) {
+            card.insertBefore(stage, card.firstChild);
+          }
+          this._syncArtworkLayer(stage, artOptions);
+        } else if (this._artworkController) {
+          if (previousArt instanceof HTMLElement) {
+            previousArt.remove();
+          }
+          this._artworkStageEl = null;
+          this._artworkController.clear();
+          this._artworkController.detach();
+        }
+      }
+      _createArtworkStage() {
+        const stage = document.createElement("div");
+        stage.className = "media-player__art-stage";
+        stage.setAttribute("data-media-art-stage", "");
+        stage.innerHTML = `
+      <div class="media-player__album-bg media-player__art-layer is-current" data-media-art-current></div>
+      <div class="media-player__album-bg media-player__art-layer is-incoming" data-media-art-incoming></div>
+    `;
+        return stage;
+      }
+      _syncArtworkLayer(stage, artOptions = {}) {
+        if (!(stage instanceof HTMLElement)) {
+          return;
+        }
+        const current = stage.querySelector("[data-media-art-current]");
+        const incoming = stage.querySelector("[data-media-art-incoming]");
+        if (!(current instanceof HTMLElement) || !(incoming instanceof HTMLElement)) {
+          return;
+        }
+        this._artworkController.attach({ stage, current, incoming });
+        const config = this._config || {};
+        const idleConfig = config.idle_artwork || {};
+        const playing = !artOptions.idle;
+        const artworkUrl = String(artOptions.artworkUrl || "").trim();
+        const entityId = String(artOptions.entityId || this._activePlayerEntity || "");
+        const entityRecent = this._artworkController.recentFor(entityId);
+        if (this._idleSlideshowUrl && !entityRecent.includes(this._idleSlideshowUrl)) {
+          this._idleSlideshowUrl = "";
+        }
+        if (artworkUrl) {
+          this._artworkController.remember(artworkUrl, idleConfig.max_items, entityId);
+          this._artworkController.stopSlideshow();
+          this._artworkController.show(artworkUrl, {
+            crossfade: config.artwork?.crossfade !== false,
+            duration: config.artwork?.crossfade_duration,
+            idle: Boolean(artOptions.idle) && idleConfig.animation === "subtle",
+            animation: idleConfig.animation,
+            connected: this.isConnected,
+            entityId
+          });
+          if (config.artwork?.dynamic_colors !== false) {
+            sampleArtworkPalette(artworkUrl).then((palette) => {
+              if (!this.isConnected || !palette) {
+                return;
+              }
+              this._artworkController.palette = palette;
+              stage.style.setProperty("--nodalia-media-accent", palette.primary);
+            }).catch(() => {
+            });
+          }
+          return;
+        }
+        if (playing || idleConfig.enabled === false || !entityRecent.length) {
+          this._artworkController.clear();
+          return;
+        }
+        const first = (this._idleSlideshowUrl && entityRecent.includes(this._idleSlideshowUrl) ? this._idleSlideshowUrl : entityRecent[0]) || "";
+        if (first) {
+          this._artworkController.show(first, {
+            crossfade: config.artwork?.crossfade !== false,
+            duration: Math.max(config.artwork?.crossfade_duration || 500, 700),
+            idle: true,
+            animation: idleConfig.animation,
+            connected: this.isConnected,
+            entityId
+          });
+        }
+        this._artworkController.startSlideshow(idleConfig, (url) => {
+          if (!this.isConnected) {
+            return;
+          }
+          this._idleSlideshowUrl = url;
+          this._artworkController.show(url, {
+            crossfade: true,
+            duration: Math.max(config.artwork?.crossfade_duration || 500, 700),
+            idle: true,
+            animation: idleConfig.animation,
+            connected: this.isConnected,
+            entityId
+          });
+        }, entityId);
+      }
+      _startProgressDrag(track, clientX, event = null, pointerId = null) {
+        if (!(track instanceof HTMLElement) || track.dataset.mediaProgress !== "seek") {
+          return;
+        }
+        const entityId = track.dataset.entity || "";
+        const state = this._hass?.states?.[entityId];
+        const progress = state ? this._getPlayerProgress(state) : null;
+        if (!progress || !supportsMediaSeek(state)) {
+          return;
+        }
+        const percent = progressPercentFromClientX(track, clientX);
+        this._activeProgressDrag = { entityId, percent, pointerId, track };
+        this._attachWindowDragListeners();
+        this._updateProgressFill(track, percent, progress.duration);
+        if (event) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      }
+      _updateProgressFill(track, percent, duration) {
+        const fill = track.querySelector(".media-player__progress-fill");
+        if (fill instanceof HTMLElement) {
+          fill.style.width = `${percent}%`;
+        }
+        track.setAttribute("aria-valuenow", String(seekPositionFromPercent(percent, duration)));
+      }
+      _moveProgressDrag(clientX) {
+        const drag = this._activeProgressDrag;
+        if (!drag) {
+          return;
+        }
+        const state = this._hass?.states?.[drag.entityId];
+        const duration = Number(state?.attributes?.media_duration || 0);
+        drag.percent = progressPercentFromClientX(drag.track, clientX);
+        this._updateProgressFill(drag.track, drag.percent, duration);
+      }
+      _commitProgressDrag() {
+        const drag = this._activeProgressDrag;
+        if (!drag) {
+          return;
+        }
+        const state = this._hass?.states?.[drag.entityId];
+        const duration = Number(state?.attributes?.media_duration || 0);
+        const seekPosition = seekPositionFromPercent(drag.percent, duration);
+        this._activeProgressDrag = null;
+        this._detachWindowDragListeners();
+        if (duration > 0 && drag.entityId) {
+          this._callInternalMediaService("media_seek", {
+            entity_id: drag.entityId,
+            seek_position: seekPosition
+          });
+        }
+        if (this._pendingRenderAfterDrag) {
+          this._pendingRenderAfterDrag = false;
+          this._render();
+        }
+      }
+    }
+    _lazyNodaliaMediaPlayer = NodaliaMediaPlayer;
+    return NodaliaMediaPlayer;
+  }
 
+  // src/cards/media-player/media-player-editor.ts
+  var _lazyNodaliaMediaPlayerEditor;
+  function loadNodaliaMediaPlayerEditor() {
+    if (_lazyNodaliaMediaPlayerEditor) {
+      return _lazyNodaliaMediaPlayerEditor;
+    }
+    class NodaliaMediaPlayerEditor extends HTMLElement {
+      constructor() {
+        super();
+        this._nodaliaConstruct();
+      }
+      _nodaliaConstruct() {
+        this.attachShadow({ mode: "open" });
+        this._config = normalizeConfig(loadNodaliaMediaPlayer().getStubConfig());
+        this._hass = null;
+        this._entityOptionsSignature = "";
+        this._showStyleSection = false;
+        this._showAnimationSection = false;
+        this._showTapActionsSection = false;
+        this._pendingEditorControlTags = /* @__PURE__ */ new Set();
+        this._onShadowInput = this._onShadowInput.bind(this);
+        this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
+        this._onShadowClick = this._onShadowClick.bind(this);
+      }
+      _attachEditorShadowListeners() {
+        window.NodaliaUtils.bindShadowListeners(this, [
+          ["input", this._onShadowInput],
+          ["change", this._onShadowInput],
+          ["value-changed", this._onShadowValueChanged],
+          ["click", this._onShadowClick]
+        ], "editor");
+      }
+      _detachEditorShadowListeners() {
+        window.NodaliaUtils.releaseShadowListeners(this, "editor");
+      }
+      connectedCallback() {
+        this._attachEditorShadowListeners();
+        window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
+      }
+      disconnectedCallback() {
+        this._detachEditorShadowListeners();
+        window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
+      }
+      set hass(hass) {
+        const nextSignature = this._getEntityOptionsSignature(hass);
+        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+        this._hass = hass;
+        this._entityOptionsSignature = nextSignature;
+        if (!shouldRender) {
+          return;
+        }
         const focusState = this._captureFocusState();
         this._render();
         this._restoreFocusState(focusState);
-      })
-      .catch(() => {
-        this._pendingEditorControlTags.delete(tagName);
-      });
-  }
-
-  _ensureEditorControlsReady() {
-    this._watchEditorControlTag("ha-entity-picker");
-    this._watchEditorControlTag("ha-selector");
-    this._watchEditorControlTag("ha-icon-picker");
-  }
-
-  _captureFocusState() {
-    return window.NodaliaUtils.captureEditorFocusState(this);
-  }
-
-  _getEntityOptionsSignature(hass = this._hass) {
-    return window.NodaliaUtils.editorFilteredStatesSignature(hass, this._config?.language, id => id.startsWith("media_player."));
-  }
-
-  _getEntityOptions(field = "players.0.entity", domains = []) {
-    const normalizedDomains = Array.isArray(domains)
-      ? domains.map(domain => String(domain || "").trim()).filter(Boolean)
-      : [];
-    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
-    const options = Object.entries(this._hass?.states || {})
-      .filter(([entityId]) => (
-        !normalizedDomains.length
-        || normalizedDomains.some(domain => entityId.startsWith(`${domain}.`))
-      ))
-      .map(([entityId, state]) => {
-        const friendlyName = String(state?.attributes?.friendly_name || "").trim();
-        return {
-          value: entityId,
-          label: friendlyName || entityId,
-          displayLabel: friendlyName && friendlyName !== entityId
-            ? `${friendlyName} (${entityId})`
-            : entityId,
-        };
-      })
-      .sort((left, right) => (
-        left.label.localeCompare(right.label, sortLoc, { sensitivity: "base" })
-        || left.value.localeCompare(right.value, sortLoc, { sensitivity: "base" })
-      ));
-
-    const currentValue = String(getByPath(this._config, field) || "").trim();
-    if (currentValue && !options.some(option => option.value === currentValue)) {
-      options.unshift({
-        value: currentValue,
-        label: currentValue,
-        displayLabel: currentValue,
-      });
-    }
-
-    return options;
-  }
-
-  _restoreFocusState(focusState) {
-    window.NodaliaUtils.restoreEditorFocusState(this, focusState);
-  }
-
-  _emitConfig() {
-    const focusState = this._captureFocusState();
-    const nextConfig = deepClone(this._config);
-
-    if (!Array.isArray(nextConfig.players)) {
-      nextConfig.players = [];
-    }
-
-    delete nextConfig.entity;
-    this._config = normalizeConfig(compactConfig(nextConfig));
-    this._render();
-    this._restoreFocusState(focusState);
-    fireEvent(this, "config-changed", {
-      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
-    });
-  }
-
-  _setFieldValue(path, value) {
-    const normalizedPath = String(path || "").trim();
-    const isEntityField = normalizedPath === "entity" || normalizedPath.endsWith(".entity");
-
-    if (isEntityField && (value === undefined || value === null || value === "")) {
-      setByPath(this._config, normalizedPath, "");
-      return;
-    }
-
-    if (value === undefined || value === null || value === "") {
-      deleteByPath(this._config, normalizedPath);
-      return;
-    }
-
-    setByPath(this._config, normalizedPath, value);
-  }
-
-  _readFieldValue(input) {
-    const valueType = input.dataset.valueType || "string";
-
-    switch (valueType) {
-      case "boolean":
-        return Boolean(input.checked);
-      case "number": {
-        const trimmed = String(input.value || "").trim();
-        if (!trimmed) {
-          return undefined;
-        }
-
-        const parsed = Number(trimmed);
-        return Number.isFinite(parsed) ? parsed : trimmed;
       }
-      case "csv": {
-        const values = arrayFromCsv(input.value);
-        return values.length ? values : undefined;
-      }
-      case "color":
-        return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
-      case "json": {
-        const parsed = parseEditorJsonObject(input.value);
-        if (!parsed.valid) {
-          input.setCustomValidity(this._editorLabel("ed.media_player.invalid_json_object"));
-          input.setAttribute("aria-invalid", "true");
-          return INVALID_EDITOR_VALUE;
-        }
-
-        input.setCustomValidity("");
-        input.removeAttribute("aria-invalid");
-        return parsed.value;
-      }
-      case "tristate":
-        if (input.value === "true") {
-          return true;
-        }
-
-        if (input.value === "false") {
-          return false;
-        }
-
-        return undefined;
-      default:
-        return input.value;
-    }
-  }
-
-  _onShadowInput(event) {
-    const input = event
-      .composedPath()
-      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
-
-    if (!input?.dataset?.field) {
-      return;
-    }
-
-    event.stopPropagation();
-
-    const nextValue = this._readFieldValue(input);
-    if (nextValue === INVALID_EDITOR_VALUE) {
-      return;
-    }
-    this._setFieldValue(input.dataset.field, nextValue);
-
-    if (event.type === "change") {
-      this._emitConfig();
-    }
-  }
-
-  _onShadowValueChanged(event) {
-    const control = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.field);
-
-    if (!control?.dataset?.field) {
-      return;
-    }
-
-    event.stopPropagation();
-
-    const nextValue = typeof event.detail?.value === "string"
-      ? event.detail.value
-      : control.value;
-    if (typeof control.dataset?.value === "string") {
-      control.dataset.value = String(nextValue || "");
-    }
-
-    const field = control.dataset.field;
-    const previousEntity = field === "entity" ? String(this._config?.entity || "").trim() : "";
-    this._setFieldValue(field, nextValue);
-    if (field === "entity") {
-      window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass, { previousEntity });
-    }
-    this._emitConfig();
-  }
-
-  _onShadowClick(event) {
-    const toggleButton = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
-
-    if (toggleButton) {
-      event.preventDefault();
-      event.stopPropagation();
-
-      if (toggleButton.dataset.editorToggle === "tap_actions") {
-        this._showTapActionsSection = !this._showTapActionsSection;
+      setConfig(config) {
+        const focusState = this._captureFocusState();
+        this._config = normalizeConfig(config || {});
+        window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
         this._render();
-        return;
+        this._restoreFocusState(focusState);
       }
-      if (toggleButton.dataset.editorToggle === "styles") {
-        this._showStyleSection = !this._showStyleSection;
+      _watchEditorControlTag(tagName) {
+        if (!tagName || this._pendingEditorControlTags.has(tagName)) {
+          return;
+        }
+        if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
+          return;
+        }
+        this._pendingEditorControlTags.add(tagName);
+        customElements.whenDefined(tagName).then(() => {
+          this._pendingEditorControlTags.delete(tagName);
+          if (!this.isConnected || !this._hass || !this.shadowRoot) {
+            return;
+          }
+          const focusState = this._captureFocusState();
+          this._render();
+          this._restoreFocusState(focusState);
+        }).catch(() => {
+          this._pendingEditorControlTags.delete(tagName);
+        });
+      }
+      _ensureEditorControlsReady() {
+        this._watchEditorControlTag("ha-entity-picker");
+        this._watchEditorControlTag("ha-selector");
+        this._watchEditorControlTag("ha-icon-picker");
+      }
+      _captureFocusState() {
+        return window.NodaliaUtils.captureEditorFocusState(this);
+      }
+      _getEntityOptionsSignature(hass = this._hass) {
+        return window.NodaliaUtils.editorFilteredStatesSignature(hass, this._config?.language, (id) => id.startsWith("media_player."));
+      }
+      _getEntityOptions(field = "players.0.entity", domains = []) {
+        const normalizedDomains = Array.isArray(domains) ? domains.map((domain) => String(domain || "").trim()).filter(Boolean) : [];
+        const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
+        const options = Object.entries(this._hass?.states || {}).filter(([entityId]) => !normalizedDomains.length || normalizedDomains.some((domain) => entityId.startsWith(`${domain}.`))).map(([entityId, state]) => {
+          const friendlyName = String(state?.attributes?.friendly_name || "").trim();
+          return {
+            value: entityId,
+            label: friendlyName || entityId,
+            displayLabel: friendlyName && friendlyName !== entityId ? `${friendlyName} (${entityId})` : entityId
+          };
+        }).sort((left, right) => left.label.localeCompare(right.label, sortLoc, { sensitivity: "base" }) || left.value.localeCompare(right.value, sortLoc, { sensitivity: "base" }));
+        const currentValue = String(getByPath(this._config, field) || "").trim();
+        if (currentValue && !options.some((option) => option.value === currentValue)) {
+          options.unshift({
+            value: currentValue,
+            label: currentValue,
+            displayLabel: currentValue
+          });
+        }
+        return options;
+      }
+      _restoreFocusState(focusState) {
+        window.NodaliaUtils.restoreEditorFocusState(this, focusState);
+      }
+      _emitConfig() {
+        const focusState = this._captureFocusState();
+        const nextConfig = deepClone2(this._config);
+        if (!Array.isArray(nextConfig.players)) {
+          nextConfig.players = [];
+        }
+        delete nextConfig.entity;
+        this._config = normalizeConfig(compactConfig2(nextConfig));
         this._render();
-        return;
+        this._restoreFocusState(focusState);
+        fireEvent(this, "config-changed", {
+          config: compactConfig2(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {})
+        });
       }
-
-      if (toggleButton.dataset.editorToggle === "animations") {
-        this._showAnimationSection = !this._showAnimationSection;
-        this._render();
+      _setFieldValue(path, value) {
+        const normalizedPath = String(path || "").trim();
+        const isEntityField = normalizedPath === "entity" || normalizedPath.endsWith(".entity");
+        if (isEntityField && (value === void 0 || value === null || value === "")) {
+          setByPath(this._config, normalizedPath, "");
+          return;
+        }
+        if (value === void 0 || value === null || value === "") {
+          deleteByPath(this._config, normalizedPath);
+          return;
+        }
+        setByPath(this._config, normalizedPath, value);
       }
-
-      return;
-    }
-
-    const button = event
-      .composedPath()
-      .find(node => node instanceof HTMLButtonElement && node.dataset?.action);
-
-    if (!button) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    const action = button.dataset.action;
-    const index = Number(button.dataset.index);
-
-    if (action === "add-player") {
-      this._config.players = Array.isArray(this._config.players) ? this._config.players : [];
-      this._config.players.push({
-        entity: "",
-        label: "",
-        tap_action: {
-          action: "more-info",
-        },
-        power_action_off: {
-          action: "default",
-        },
-        power_action_on: {
-          action: "default",
-        },
-        power_action_unavailable: {
-          action: "default",
-        },
-      });
-      this._emitConfig();
-      return;
-    }
-
-    if (!Number.isInteger(index) || index < 0 || index >= this._config.players.length) {
-      return;
-    }
-
-    if (action === "remove-player") {
-      this._config.players.splice(index, 1);
-      this._emitConfig();
-      return;
-    }
-
-    if (action === "move-player-up") {
-      moveItem(this._config.players, index, index - 1);
-      this._emitConfig();
-      return;
-    }
-
-    if (action === "move-player-down") {
-      moveItem(this._config.players, index, index + 1);
-      this._emitConfig();
-    }
-  }
-
-  _editorLabel(s) {
-    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
-      return s;
-    }
-    const hass = this._hass ?? this.hass;
-    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
-  }
-
-  _renderTextField(label, field, value, options = {}) {
-    const tLabel = this._editorLabel(label);
-    const tag = options.multiline ? "textarea" : "input";
-    const inputType = options.type || "text";
-    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
-    const valueType = options.valueType || "string";
-    const inputValue = valueType === "json"
-      ? formatEditorJsonValue(value)
-      : (value === undefined || value === null ? "" : String(value));
-
-    if (tag === "textarea") {
-      return `
+      _readFieldValue(input) {
+        const valueType = input.dataset.valueType || "string";
+        switch (valueType) {
+          case "boolean":
+            return Boolean(input.checked);
+          case "number": {
+            const trimmed = String(input.value || "").trim();
+            if (!trimmed) {
+              return void 0;
+            }
+            const parsed = Number(trimmed);
+            return Number.isFinite(parsed) ? parsed : trimmed;
+          }
+          case "csv": {
+            const values = arrayFromCsv(input.value);
+            return values.length ? values : void 0;
+          }
+          case "color":
+            return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
+          case "json": {
+            const parsed = parseEditorJsonObject(input.value);
+            if (!parsed.valid) {
+              input.setCustomValidity(this._editorLabel("ed.media_player.invalid_json_object"));
+              input.setAttribute("aria-invalid", "true");
+              return INVALID_EDITOR_VALUE;
+            }
+            input.setCustomValidity("");
+            input.removeAttribute("aria-invalid");
+            return parsed.value;
+          }
+          case "tristate":
+            if (input.value === "true") {
+              return true;
+            }
+            if (input.value === "false") {
+              return false;
+            }
+            return void 0;
+          default:
+            return input.value;
+        }
+      }
+      _onShadowInput(event) {
+        const input = event.composedPath().find((node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+        if (!input?.dataset?.field) {
+          return;
+        }
+        event.stopPropagation();
+        const nextValue = this._readFieldValue(input);
+        if (nextValue === INVALID_EDITOR_VALUE) {
+          return;
+        }
+        this._setFieldValue(input.dataset.field, nextValue);
+        if (event.type === "change") {
+          this._emitConfig();
+        }
+      }
+      _onShadowValueChanged(event) {
+        const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+        if (!control?.dataset?.field) {
+          return;
+        }
+        event.stopPropagation();
+        const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+        if (typeof control.dataset?.value === "string") {
+          control.dataset.value = String(nextValue || "");
+        }
+        const field = control.dataset.field;
+        const previousEntity = field === "entity" ? String(this._config?.entity || "").trim() : "";
+        this._setFieldValue(field, nextValue);
+        if (field === "entity") {
+          window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass, { previousEntity });
+        }
+        this._emitConfig();
+      }
+      _onShadowClick(event) {
+        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
+        if (toggleButton) {
+          event.preventDefault();
+          event.stopPropagation();
+          if (toggleButton.dataset.editorToggle === "tap_actions") {
+            this._showTapActionsSection = !this._showTapActionsSection;
+            this._render();
+            return;
+          }
+          if (toggleButton.dataset.editorToggle === "styles") {
+            this._showStyleSection = !this._showStyleSection;
+            this._render();
+            return;
+          }
+          if (toggleButton.dataset.editorToggle === "animations") {
+            this._showAnimationSection = !this._showAnimationSection;
+            this._render();
+          }
+          return;
+        }
+        const button = event.composedPath().find((node) => node instanceof HTMLButtonElement && node.dataset?.action);
+        if (!button) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        const action = button.dataset.action;
+        const index = Number(button.dataset.index);
+        if (action === "add-player") {
+          this._config.players = Array.isArray(this._config.players) ? this._config.players : [];
+          this._config.players.push({
+            entity: "",
+            label: "",
+            tap_action: {
+              action: "more-info"
+            },
+            power_action_off: {
+              action: "default"
+            },
+            power_action_on: {
+              action: "default"
+            },
+            power_action_unavailable: {
+              action: "default"
+            }
+          });
+          this._emitConfig();
+          return;
+        }
+        if (!Number.isInteger(index) || index < 0 || index >= this._config.players.length) {
+          return;
+        }
+        if (action === "remove-player") {
+          this._config.players.splice(index, 1);
+          this._emitConfig();
+          return;
+        }
+        if (action === "move-player-up") {
+          moveItem(this._config.players, index, index - 1);
+          this._emitConfig();
+          return;
+        }
+        if (action === "move-player-down") {
+          moveItem(this._config.players, index, index + 1);
+          this._emitConfig();
+        }
+      }
+      _editorLabel(s) {
+        if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+          return s;
+        }
+        const hass = this._hass ?? this.hass;
+        return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+      }
+      _renderTextField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const tag = options.multiline ? "textarea" : "input";
+        const inputType = options.type || "text";
+        const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+        const valueType = options.valueType || "string";
+        const inputValue = valueType === "json" ? formatEditorJsonValue(value) : value === void 0 || value === null ? "" : String(value);
+        if (tag === "textarea") {
+          return `
         <label class="editor-field editor-field--full">
           <span>${escapeHtml(tLabel)}</span>
           <textarea data-field="${escapeHtml(field)}" data-value-type="${escapeHtml(valueType)}" rows="${options.rows || 2}" ${placeholder}>${escapeHtml(inputValue)}</textarea>
         </label>
       `;
-    }
-
-    return `
+        }
+        return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <input
@@ -5710,18 +6060,14 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
         />
       </label>
     `;
-  }
-
-  _renderColorField(label, field, value, options = {}) {
-    const tLabel = this._editorLabel(label);
-    const tColorCustom = this._editorLabel("ed.weather.custom_color");
-    const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
-    const currentValue = value === undefined || value === null || value === ""
-      ? fallbackValue
-      : String(value);
-    const colorModel = getEditorColorModel(currentValue, fallbackValue);
-
-    return `
+      }
+      _renderColorField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const tColorCustom = this._editorLabel("ed.weather.custom_color");
+        const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
+        const currentValue = value === void 0 || value === null || value === "" ? fallbackValue : String(value);
+        const colorModel = getEditorColorModel(currentValue, fallbackValue);
+        return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
@@ -5739,20 +6085,18 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
         </div>
       </div>
     `;
-  }
-
-  _renderTextareaField(label, field, value, options = {}) {
-    const tLabel = this._editorLabel(label);
-    return this._renderTextField(label, field, value, {
-      ...options,
-      multiline: true,
-      fullWidth: options.fullWidth !== false,
-    });
-  }
-
-  _renderCheckboxField(label, field, checked) {
-    const tLabel = this._editorLabel(label);
-    return `
+      }
+      _renderTextareaField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        return this._renderTextField(label, field, value, {
+          ...options,
+          multiline: true,
+          fullWidth: options.fullWidth !== false
+        });
+      }
+      _renderCheckboxField(label, field, checked) {
+        const tLabel = this._editorLabel(label);
+        return `
       <label class="editor-toggle">
         <input
           type="checkbox"
@@ -5764,81 +6108,71 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
         <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
-  }
-
-  _renderSelectField(label, field, value, options, valueType = "string") {
-    const tLabel = this._editorLabel(label);
-    return `
+      }
+      _renderSelectField(label, field, value, options, valueType = "string") {
+        const tLabel = this._editorLabel(label);
+        return `
       <label class="editor-field">
         <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}" data-value-type="${escapeHtml(valueType)}">
-          ${options
-            .map(option => {
-              const optionValue = option.value === undefined ? "auto" : String(option.value);
-              const isSelected =
-                value === option.value ||
-                (option.value === undefined && value === undefined);
-
-              return `
+          ${options.map((option) => {
+          const optionValue = option.value === void 0 ? "auto" : String(option.value);
+          const isSelected = value === option.value || option.value === void 0 && value === void 0;
+          return `
                 <option value="${escapeHtml(optionValue)}" ${isSelected ? "selected" : ""}>
                   ${escapeHtml(this._editorLabel(option.label))}
                 </option>
               `;
-            })
-            .join("")}
+        }).join("")}
         </select>
       </label>
     `;
-  }
-
-  _renderActionConfigFields(titleKey, path, action = {}) {
-    return `
+      }
+      _renderActionConfigFields(titleKey, path, action = {}) {
+        return `
       <div class="player-editor-subgroup">
         <div class="player-editor-subgroup__title">${escapeHtml(this._editorLabel(titleKey))}</div>
         <div class="editor-grid">
           ${this._renderSelectField(
-            "ed.media_player.action_block",
-            `${path}.action`,
-            action?.action || "default",
-            [
-              { value: "default", label: "ed.media_player.action_default" },
-              { value: "none", label: "ed.entity.tap_none" },
-              { value: "more-info", label: "ed.entity.tap_more_info" },
-              { value: "navigate", label: "ed.media_player.action_navigate" },
-              { value: "url", label: "ed.entity.tap_open_url" },
-              { value: "call-service", label: "ed.entity.tap_service" },
-            ],
-          )}
+          "ed.media_player.action_block",
+          `${path}.action`,
+          action?.action || "default",
+          [
+            { value: "default", label: "ed.media_player.action_default" },
+            { value: "none", label: "ed.entity.tap_none" },
+            { value: "more-info", label: "ed.entity.tap_more_info" },
+            { value: "navigate", label: "ed.media_player.action_navigate" },
+            { value: "url", label: "ed.entity.tap_open_url" },
+            { value: "call-service", label: "ed.entity.tap_service" }
+          ]
+        )}
           ${this._renderEntityField("ed.media_player.more_info_entity", `${path}.entity`, action?.entity, {
-            placeholder: "media_player.salon",
-          })}
+          placeholder: "media_player.salon"
+        })}
           ${this._renderTextField("ed.media_player.navigation_path", `${path}.navigation_path`, action?.navigation_path, {
-            placeholder: "/lovelace/salon",
-          })}
+          placeholder: "/lovelace/salon"
+        })}
           ${this._renderTextField("ed.entity.tap_url_field", `${path}.url`, action?.url || action?.url_path, {
-            placeholder: "https://example.com",
-          })}
+          placeholder: "https://example.com"
+        })}
           ${this._renderCheckboxField("ed.entity.tap_new_tab", `${path}.new_tab`, action?.new_tab === true)}
           ${this._renderTextField("ed.entity.tap_service_field", `${path}.service`, action?.service, {
-            placeholder: "input_boolean.turn_off",
-          })}
+          placeholder: "input_boolean.turn_off"
+        })}
           ${this._renderTextareaField("ed.entity.tap_service_data_json", `${path}.service_data`, action?.service_data ?? action?.data, {
-            placeholder: '{"entity_id":"input_boolean.media_power"}',
-            rows: 4,
-            valueType: "json",
-          })}
+          placeholder: '{"entity_id":"input_boolean.media_power"}',
+          rows: 4,
+          valueType: "json"
+        })}
         </div>
       </div>
     `;
-  }
-
-  _renderEntityField(label, field, value, options = {}) {
-    const tLabel = this._editorLabel(label);
-    const inputValue = value === undefined || value === null ? "" : String(value);
-    const domains = Array.isArray(options.domains)
-      ? options.domains.map(domain => String(domain || "").trim()).filter(Boolean).join(",")
-      : "";
-    return `
+      }
+      _renderEntityField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const inputValue = value === void 0 || value === null ? "" : String(value);
+        const domains = Array.isArray(options.domains) ? options.domains.map((domain) => String(domain || "").trim()).filter(Boolean).join(",") : "";
+        return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <div
@@ -5851,12 +6185,11 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
         ></div>
       </div>
     `;
-  }
-
-  _renderIconPickerField(label, field, value, options = {}) {
-    const tLabel = this._editorLabel(label);
-    const inputValue = value === undefined || value === null ? "" : String(value);
-    return `
+      }
+      _renderIconPickerField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const inputValue = value === void 0 || value === null ? "" : String(value);
+        return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <div
@@ -5868,11 +6201,10 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
         ></div>
       </div>
     `;
-  }
-
-  _renderPlayerCard(player, index) {
-    const phShort = this._editorLabel("ed.media_player.name_placeholder");
-    return `
+      }
+      _renderPlayerCard(player, index) {
+        const phShort = this._editorLabel("ed.media_player.name_placeholder");
+        return `
       <div class="player-editor-card">
         <div class="player-editor-card__header">
           <div class="player-editor-card__title">${escapeHtml(this._editorLabel("ed.media_player.player_prefix"))} ${index + 1}</div>
@@ -5886,23 +6218,23 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
           <div class="player-editor-subgroup__title">${escapeHtml(this._editorLabel("ed.media_player.primary_subgroup"))}</div>
           <div class="editor-grid editor-grid--stacked">
             ${this._renderEntityField("ed.entity.quick_entity", `players.${index}.entity`, player.entity, {
-              domains: ["media_player"],
-              fullWidth: true,
-            })}
+          domains: ["media_player"],
+          fullWidth: true
+        })}
             ${this._renderIconPickerField("ed.entity.icon", `players.${index}.icon`, player.icon, {
-              placeholder: "mdi:speaker",
-              fullWidth: true,
-            })}
+          placeholder: "mdi:speaker",
+          fullWidth: true
+        })}
             ${this._renderTextField("ed.media_player.short_label", `players.${index}.label`, player.label, {
-              placeholder: phShort,
-              fullWidth: true,
-            })}
+          placeholder: phShort,
+          fullWidth: true
+        })}
             ${this._renderTextField("ed.media_player.title_fixed", `players.${index}.title`, player.title, {
-              fullWidth: true,
-            })}
+          fullWidth: true
+        })}
             ${this._renderTextField("ed.media_player.subtitle_fixed", `players.${index}.subtitle`, player.subtitle, {
-              fullWidth: true,
-            })}
+          fullWidth: true
+        })}
           </div>
         </div>
         <div class="player-editor-subgroup">
@@ -5911,170 +6243,146 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
             ${this._renderCheckboxField("ed.media_player.tv_mode", `players.${index}.tv_mode`, player.tv_mode === true)}
             ${this._renderCheckboxField("ed.media_player.show_sources", `players.${index}.show_source_controls`, player.show_source_controls !== false)}
             ${this._renderSelectField(
-              "ed.media_player.visibility_subgroup",
-              `players.${index}.show`,
-              player.show,
-              [
-                { value: undefined, label: "ed.media_player.tristate_auto" },
-                { value: true, label: "ed.media_player.tristate_always" },
-                { value: false, label: "ed.media_player.tristate_never" },
-              ],
-              "tristate",
-            )}
+          "ed.media_player.visibility_subgroup",
+          `players.${index}.show`,
+          player.show,
+          [
+            { value: void 0, label: "ed.media_player.tristate_auto" },
+            { value: true, label: "ed.media_player.tristate_always" },
+            { value: false, label: "ed.media_player.tristate_never" }
+          ],
+          "tristate"
+        )}
             ${this._renderTextField("ed.media_player.max_sources", `players.${index}.max_sources`, player.max_sources, {
-              type: "number",
-              valueType: "number",
-            })}
+          type: "number",
+          valueType: "number"
+        })}
             ${this._renderTextField("ed.media_player.browse_path", `players.${index}.browse_path`, player.browse_path, {
-              placeholder: "/media-browser/browser",
-            })}
+          placeholder: "/media-browser/browser"
+        })}
             ${this._renderTextField("ed.media_player.custom_image", `players.${index}.image`, player.image, {
-              placeholder: "/local/cover.png",
-            })}
+          placeholder: "/local/cover.png"
+        })}
             ${this._renderTextField("ed.media_player.show_states", `players.${index}.show_states`, Array.isArray(player.show_states) ? player.show_states.join(", ") : "", {
-              placeholder: "playing, paused",
-              valueType: "csv",
-              fullWidth: true,
-            })}
+          placeholder: "playing, paused",
+          valueType: "csv",
+          fullWidth: true
+        })}
           </div>
         </div>
         <div class="editor-tap-actions-subsection editor-field--full">
           ${window.NodaliaUtils.renderEditorCollapsibleSectionHeaderHtml({
-            titleKey: "ed.media_player.tap_on_card",
-            hintKey: "ed.light.tap_actions_section_hint",
-            toggleId: "tap_actions",
-            expanded: this._showTapActionsSection === true,
-            escapeHtml,
-            editorLabel: (key) => this._editorLabel(key),
-          })}
+          titleKey: "ed.media_player.tap_on_card",
+          hintKey: "ed.light.tap_actions_section_hint",
+          toggleId: "tap_actions",
+          expanded: this._showTapActionsSection === true,
+          escapeHtml,
+          editorLabel: (key) => this._editorLabel(key)
+        })}
           ${this._showTapActionsSection ? `${this._renderActionConfigFields("ed.media_player.tap_on_card", `players.${index}.tap_action`, player.tap_action)}` : ""}</div>
         ${this._renderActionConfigFields("ed.media_player.power_action_off", `players.${index}.power_action_off`, player.power_action_off)}
         ${this._renderActionConfigFields("ed.media_player.power_action_active", `players.${index}.power_action_on`, player.power_action_on)}
         ${this._renderActionConfigFields("ed.media_player.power_action_unavailable", `players.${index}.power_action_unavailable`, player.power_action_unavailable)}
       </div>
     `;
-  }
-
-  _mountEntityPicker(host) {
-    if (!(host instanceof HTMLElement)) {
-      return;
-    }
-
-    const field = host.dataset.field || "players.0.entity";
-    const nextValue = host.dataset.value || "";
-    const placeholder = host.dataset.placeholder || "";
-    const allowedDomains = String(host.dataset.domains || "")
-      .split(",")
-      .map(domain => domain.trim())
-      .filter(Boolean);
-    let control = null;
-
-    if (customElements.get("ha-entity-picker")) {
-      control = document.createElement("ha-entity-picker");
-      if (allowedDomains.length) {
-        control.includeDomains = allowedDomains;
-        control.entityFilter = stateObj => allowedDomains.some(domain => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
       }
-      control.allowCustomEntity = true;
-      if (placeholder) {
-        control.setAttribute("placeholder", placeholder);
+      _mountEntityPicker(host) {
+        if (!(host instanceof HTMLElement)) {
+          return;
+        }
+        const field = host.dataset.field || "players.0.entity";
+        const nextValue = host.dataset.value || "";
+        const placeholder = host.dataset.placeholder || "";
+        const allowedDomains = String(host.dataset.domains || "").split(",").map((domain) => domain.trim()).filter(Boolean);
+        let control = null;
+        if (customElements.get("ha-entity-picker")) {
+          control = document.createElement("ha-entity-picker");
+          if (allowedDomains.length) {
+            control.includeDomains = allowedDomains;
+            control.entityFilter = (stateObj) => allowedDomains.some((domain) => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+          }
+          control.allowCustomEntity = true;
+          if (placeholder) {
+            control.setAttribute("placeholder", placeholder);
+          }
+        } else if (customElements.get("ha-selector")) {
+          control = document.createElement("ha-selector");
+          control.selector = {
+            entity: allowedDomains.length === 1 ? { domain: allowedDomains[0] } : {}
+          };
+        } else {
+          control = document.createElement("select");
+          const emptyOption = document.createElement("option");
+          emptyOption.value = "";
+          const entityLabel = this._editorLabel("ed.entity.quick_entity");
+          emptyOption.textContent = String(entityLabel || "Select entity");
+          control.appendChild(emptyOption);
+          this._getEntityOptions(field, allowedDomains).forEach((option) => {
+            const optionElement = document.createElement("option");
+            optionElement.value = option.value;
+            optionElement.textContent = option.displayLabel;
+            control.appendChild(optionElement);
+          });
+          control.addEventListener("change", this._onShadowInput);
+        }
+        control.dataset.field = field;
+        control.dataset.value = nextValue;
+        if ("hass" in control) {
+          control.hass = this._hass;
+        }
+        if ("value" in control) {
+          control.value = nextValue;
+        }
+        if (control.tagName !== "SELECT") {
+          control.addEventListener("value-changed", this._onShadowValueChanged);
+        }
+        host.replaceChildren(control);
       }
-    } else if (customElements.get("ha-selector")) {
-      control = document.createElement("ha-selector");
-      control.selector = {
-        entity: allowedDomains.length === 1
-          ? { domain: allowedDomains[0] }
-          : {},
-      };
-    } else {
-      control = document.createElement("select");
-      const emptyOption = document.createElement("option");
-      emptyOption.value = "";
-      const entityLabel = this._editorLabel("ed.entity.quick_entity");
-      emptyOption.textContent = String(entityLabel || "Select entity");
-      control.appendChild(emptyOption);
-      this._getEntityOptions(field, allowedDomains).forEach(option => {
-        const optionElement = document.createElement("option");
-        optionElement.value = option.value;
-        optionElement.textContent = option.displayLabel;
-        control.appendChild(optionElement);
-      });
-      control.addEventListener("change", this._onShadowInput);
-    }
-
-    control.dataset.field = field;
-    control.dataset.value = nextValue;
-
-    if ("hass" in control) {
-      control.hass = this._hass;
-    }
-
-    if ("value" in control) {
-      control.value = nextValue;
-    }
-
-    if (control.tagName !== "SELECT") {
-      control.addEventListener("value-changed", this._onShadowValueChanged);
-    }
-
-    host.replaceChildren(control);
-  }
-
-  _mountIconPicker(host) {
-    if (!(host instanceof HTMLElement)) {
-      return;
-    }
-
-    const field = host.dataset.field || "players.0.icon";
-    const nextValue = host.dataset.value || "";
-    const placeholder = host.dataset.placeholder || "";
-    let control = null;
-
-    if (customElements.get("ha-icon-picker")) {
-      control = document.createElement("ha-icon-picker");
-      if (placeholder) {
-        control.setAttribute("placeholder", placeholder);
+      _mountIconPicker(host) {
+        if (!(host instanceof HTMLElement)) {
+          return;
+        }
+        const field = host.dataset.field || "players.0.icon";
+        const nextValue = host.dataset.value || "";
+        const placeholder = host.dataset.placeholder || "";
+        let control = null;
+        if (customElements.get("ha-icon-picker")) {
+          control = document.createElement("ha-icon-picker");
+          if (placeholder) {
+            control.setAttribute("placeholder", placeholder);
+          }
+        } else if (customElements.get("ha-selector")) {
+          control = document.createElement("ha-selector");
+          control.selector = {
+            icon: {}
+          };
+        } else {
+          control = document.createElement("input");
+          control.type = "text";
+          control.placeholder = placeholder;
+          control.addEventListener("input", this._onShadowInput);
+          control.addEventListener("change", this._onShadowInput);
+        }
+        control.dataset.field = field;
+        control.dataset.value = nextValue;
+        if ("hass" in control) {
+          control.hass = this._hass;
+        }
+        if ("value" in control) {
+          control.value = nextValue;
+        }
+        if (control.tagName !== "INPUT") {
+          control.addEventListener("value-changed", this._onShadowValueChanged);
+        }
+        host.replaceChildren(control);
       }
-    } else if (customElements.get("ha-selector")) {
-      control = document.createElement("ha-selector");
-      control.selector = {
-        icon: {},
-      };
-    } else {
-      control = document.createElement("input");
-      control.type = "text";
-      control.placeholder = placeholder;
-      control.addEventListener("input", this._onShadowInput);
-      control.addEventListener("change", this._onShadowInput);
-    }
-
-    control.dataset.field = field;
-    control.dataset.value = nextValue;
-
-    if ("hass" in control) {
-      control.hass = this._hass;
-    }
-
-    if ("value" in control) {
-      control.value = nextValue;
-    }
-
-    if (control.tagName !== "INPUT") {
-      control.addEventListener("value-changed", this._onShadowValueChanged);
-    }
-
-    host.replaceChildren(control);
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
-    }
-
-    const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "medium";
-
-    this.shadowRoot.innerHTML = `
+      _render() {
+        if (!this.shadowRoot) {
+          return;
+        }
+        const config = this._config || normalizeConfig({});
+        const hapticStyle = config.haptics?.style || "medium";
+        this.shadowRoot.innerHTML = `
       <style>
         :host {
           display: block;
@@ -6474,16 +6782,16 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
           </div>
           <div class="editor-grid">
             ${this._renderSelectField(
-              "ed.media_player.show_card",
-              "show",
-              config.show,
-              [
-                { value: undefined, label: "ed.media_player.tristate_auto" },
-                { value: true, label: "ed.media_player.tristate_always" },
-                { value: false, label: "ed.media_player.tristate_never" },
-              ],
-              "tristate",
-            )}
+          "ed.media_player.show_card",
+          "show",
+          config.show,
+          [
+            { value: void 0, label: "ed.media_player.tristate_auto" },
+            { value: true, label: "ed.media_player.tristate_always" },
+            { value: false, label: "ed.media_player.tristate_never" }
+          ],
+          "tristate"
+        )}
             ${this._renderCheckboxField("ed.media_player.show_state_text", "show_state", config.show_state === true)}
             ${this._renderCheckboxField("ed.media_player.album_cover_background", "album_cover_background", config.album_cover_background !== false)}
             ${this._renderCheckboxField("ed.media_player.show_unavailable_badge", "show_unavailable_badge", config.show_unavailable_badge !== false)}
@@ -6497,29 +6805,70 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.media_player.layout_dashboard_hint"))}</div>
           </div>
           <div class="editor-grid">
+            ${this._renderSelectField(
+          "ed.media_player.presentation_mode",
+          "layout.mode",
+          config.layout.mode || "auto",
+          [
+            { value: "auto", label: "ed.media_player.layout_auto" },
+            { value: "standard", label: "ed.media_player.layout_standard" },
+            { value: "square", label: "ed.media_player.layout_square" },
+            { value: "chip", label: "ed.media_player.layout_chip" },
+            { value: "compact", label: "ed.media_player.layout_compact" },
+            { value: "artwork", label: "ed.media_player.layout_artwork" }
+          ]
+        )}
             ${this._renderCheckboxField("ed.media_player.fixed_card", "layout.fixed", config.layout.fixed === true)}
             ${this._renderCheckboxField("ed.media_player.reserve_space", "layout.reserve_space", config.layout.reserve_space === true)}
             ${this._renderSelectField(
-              "ed.media_player.layout_position",
-              "layout.position",
-              config.layout.position,
-              [
-                { value: "bottom", label: "ed.media_player.position_bottom" },
-                { value: "top", label: "ed.media_player.position_top" },
-              ],
-            )}
+          "ed.media_player.layout_position",
+          "layout.position",
+          config.layout.position,
+          [
+            { value: "bottom", label: "ed.media_player.position_bottom" },
+            { value: "top", label: "ed.media_player.position_top" }
+          ]
+        )}
             ${this._renderTextField("ed.media_player.reserve_height", "layout.reserve_height", config.layout.reserve_height)}
             ${this._renderTextField("ed.media_player.layout_offset", "layout.offset", config.layout.offset)}
             ${this._renderTextField("ed.media_player.side_margin", "layout.side_margin", config.layout.side_margin)}
             ${this._renderTextField("ed.media_player.layout_max_width", "layout.max_width", config.layout.max_width)}
             ${this._renderTextField("ed.media_player.mobile_breakpoint", "layout.mobile_breakpoint", config.layout.mobile_breakpoint, {
-              type: "number",
-              valueType: "number",
-            })}
+          type: "number",
+          valueType: "number"
+        })}
             ${this._renderTextField("ed.media_player.layout_z_index", "layout.z_index", config.layout.z_index, {
-              type: "number",
-              valueType: "number",
-            })}
+          type: "number",
+          valueType: "number"
+        })}
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="editor-section__header">
+            <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.media_player.artwork_section"))}</div>
+            <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.media_player.artwork_section_hint"))}</div>
+          </div>
+          <div class="editor-grid">
+            ${this._renderSelectField(
+          "ed.media_player.artwork_mode",
+          "artwork.mode",
+          config.artwork?.mode || "immersive",
+          [
+            { value: "immersive", label: "ed.media_player.artwork_immersive" },
+            { value: "blur", label: "ed.media_player.artwork_blurred" },
+            { value: "off", label: "ed.media_player.artwork_off" }
+          ]
+        )}
+            ${this._renderTextField("ed.media_player.artwork_blur", "artwork.blur", config.artwork?.blur, { type: "number", valueType: "number" })}
+            ${this._renderTextField("ed.media_player.artwork_dim", "artwork.dim", config.artwork?.dim, { type: "number", valueType: "number" })}
+            ${this._renderTextField("ed.media_player.artwork_saturation", "artwork.saturation", config.artwork?.saturation, { type: "number", valueType: "number" })}
+            ${this._renderCheckboxField("ed.media_player.artwork_dynamic_colors", "artwork.dynamic_colors", config.artwork?.dynamic_colors !== false)}
+            ${this._renderCheckboxField("ed.media_player.artwork_crossfade", "artwork.crossfade", config.artwork?.crossfade !== false)}
+            ${this._renderCheckboxField("ed.media_player.progress_show", "progress.show", config.progress?.show !== false)}
+            ${this._renderCheckboxField("ed.media_player.progress_draggable", "progress.draggable", config.progress?.draggable !== false)}
+            ${this._renderCheckboxField("ed.media_player.idle_artwork_enabled", "idle_artwork.enabled", config.idle_artwork?.enabled !== false)}
+            ${this._renderCheckboxField("ed.media_player.idle_artwork_slideshow", "idle_artwork.slideshow", config.idle_artwork?.slideshow !== false)}
           </div>
         </section>
 
@@ -6529,11 +6878,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.media_player.players_section_hint"))}</div>
           </div>
           <div class="player-editor-list">
-            ${
-              Array.isArray(config.players) && config.players.length
-                ? config.players.map((player, index) => this._renderPlayerCard(player, index)).join("")
-                : `<div class="empty-note">${escapeHtml(this._editorLabel("ed.media_player.players_empty"))}</div>`
-            }
+            ${Array.isArray(config.players) && config.players.length ? config.players.map((player, index) => this._renderPlayerCard(player, index)).join("") : `<div class="empty-note">${escapeHtml(this._editorLabel("ed.media_player.players_empty"))}</div>`}
           </div>
           <div class="editor-actions">
             <button type="button" data-action="add-player">${escapeHtml(this._editorLabel("ed.media_player.add_player"))}</button>
@@ -6549,19 +6894,19 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
             ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
             ${this._renderCheckboxField("ed.person.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
-              "ed.vacuum.haptic_style",
-              "haptics.style",
-              hapticStyle,
-              [
-                { value: "selection", label: "ed.weather.haptic_selection" },
-                { value: "light", label: "ed.weather.haptic_light" },
-                { value: "medium", label: "ed.weather.haptic_medium" },
-                { value: "heavy", label: "ed.weather.haptic_heavy" },
-                { value: "success", label: "ed.weather.haptic_success" },
-                { value: "warning", label: "ed.weather.haptic_warning" },
-                { value: "failure", label: "ed.weather.haptic_failure" },
-              ],
-            )}
+          "ed.vacuum.haptic_style",
+          "haptics.style",
+          hapticStyle,
+          [
+            { value: "selection", label: "ed.weather.haptic_selection" },
+            { value: "light", label: "ed.weather.haptic_light" },
+            { value: "medium", label: "ed.weather.haptic_medium" },
+            { value: "heavy", label: "ed.weather.haptic_heavy" },
+            { value: "success", label: "ed.weather.haptic_success" },
+            { value: "warning", label: "ed.weather.haptic_warning" },
+            { value: "failure", label: "ed.weather.haptic_failure" }
+          ]
+        )}
           </div>
         </section>
 
@@ -6581,24 +6926,20 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
               </button>
             </div>
           </div>
-          ${
-            this._showAnimationSection
-              ? `
+          ${this._showAnimationSection ? `
                 <div class="editor-grid">
                   ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", config.animations.enabled !== false)}
                   ${this._renderTextField("ed.media_player.panel_tv_ms", "animations.panel_duration", config.animations.panel_duration, {
-                    type: "number",
-                  })}
+          type: "number"
+        })}
                   ${this._renderTextField("ed.media_player.browser_duration_ms", "animations.browser_duration", config.animations.browser_duration, {
-                    type: "number",
-                  })}
+          type: "number"
+        })}
                   ${this._renderTextField("ed.media_player.button_bounce_ms", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
-                    type: "number",
-                  })}
+          type: "number"
+        })}
                 </div>
-              `
-              : ""
-          }
+              ` : ""}
         </section>
 
         <section class="editor-section">
@@ -6617,9 +6958,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
               </button>
             </div>
           </div>
-          ${
-            this._showStyleSection
-              ? `
+          ${this._showStyleSection ? `
                 <div class="editor-grid">
                   ${this._renderColorField("ed.media_player.style_player_background", "styles.player.background", config.styles.player.background)}
                   ${this._renderTextField("ed.media_player.style_player_border", "styles.player.border", config.styles.player.border)}
@@ -6648,40 +6987,44 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
                   ${this._renderTextField("ed.media_player.style_browser_shadow", "styles.browser.box_shadow", config.styles.browser.box_shadow)}
                   ${this._renderColorField("ed.media_player.style_browser_backdrop", "styles.browser.backdrop", config.styles.browser.backdrop)}
                 </div>
-              `
-              : ""
-          }
+              ` : ""}
         </section>
       </div>
     `;
-
-    this.shadowRoot
-      .querySelectorAll('[data-mounted-control="entity-picker"]')
-      .forEach(host => this._mountEntityPicker(host));
-
-    this.shadowRoot
-      .querySelectorAll('[data-mounted-control="icon-picker"]')
-      .forEach(host => this._mountIconPicker(host));
-
-    this._ensureEditorControlsReady();
-    window.NodaliaUtils?.clampEditorDialogScroll?.(this);
+        this.shadowRoot.querySelectorAll('[data-mounted-control="entity-picker"]').forEach((host) => this._mountEntityPicker(host));
+        this.shadowRoot.querySelectorAll('[data-mounted-control="icon-picker"]').forEach((host) => this._mountIconPicker(host));
+        this._ensureEditorControlsReady();
+        window.NodaliaUtils?.clampEditorDialogScroll?.(this);
+      }
+    }
+    _lazyNodaliaMediaPlayerEditor = NodaliaMediaPlayerEditor;
+    return NodaliaMediaPlayerEditor;
   }
-}
 
-if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaMediaPlayerEditor);
-}
-
-window.NodaliaUtils.registerCustomCard({
-  type: CARD_TAG,
-  name: "Nodalia Media Player",
-  description: "Fixed media player with the Nodalia look and visual editor.",
-  preview: true,
-});
-
-if (typeof globalThis !== "undefined") {
-  globalThis.__NODALIA_MEDIA_PLAYER__ = {
+  // src/cards/media-player/index.ts
+  window.NodaliaUtils.defineLazyCustomElement(CARD_TAG, loadNodaliaMediaPlayer, { editorTag: EDITOR_TAG });
+  window.NodaliaUtils.defineLazyCustomElement(EDITOR_TAG, loadNodaliaMediaPlayerEditor);
+  window.NodaliaUtils.registerCustomCard({
+    type: CARD_TAG,
+    name: "Nodalia Media Player",
+    description: "This module turns your media player cards into the artwork of what is playing.",
+    preview: true
+  });
+  var publicApi = {
+    CARD_TAG,
+    EDITOR_TAG,
+    CARD_VERSION,
+    DEFAULT_CONFIG,
+    normalizeConfig,
     formatEditorJsonValue,
     parseEditorJsonObject,
+    resolvePresentationMode,
+    interpolatePlaybackProgress,
+    supportsMediaSeek,
+    rememberRecentArtwork,
+    extractArtworkPalette,
+    resetArtworkLayers,
+    MediaPlayerArtworkController
   };
-}
+  window.__NODALIA_MEDIA_PLAYER__ = publicApi;
+})();

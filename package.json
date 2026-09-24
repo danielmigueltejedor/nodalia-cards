@@ -1,6 +1,6 @@
 {
   "name": "nodalia-cards",
-  "version": "2.3.0-alpha.3",
+  "version": "2.3.0-alpha.25",
   "packageManager": "pnpm@11.17.0",
   "engines": {
     "node": ">=22"
@@ -12,6 +12,9 @@
     "sync-standalone-embed": "node scripts/sync-standalone-embed.mjs",
     "version:sync": "node scripts/sync-card-version.mjs",
     "version:check": "node scripts/sync-card-version.mjs --check",
+    "build:src": "node scripts/build-src-cards.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint src",
     "bundle": "pnpm run version:check && node scripts/build-bundle.mjs",
     "release:metadata": "node scripts/generate-release-metadata.mjs",
     "release:notes": "node scripts/generate-stable-release-notes.mjs",
@@ -22,7 +25,7 @@
     "i18n:audit": "node scripts/translate-all-locale-gaps.mjs --offline --check",
     "test": "node --test tests/**/*.test.mjs",
     "test:browser": "pnpm run bundle && playwright test",
-    "validate": "pnpm run version:check && node --check nodalia-*.js && pnpm run i18n:validate-editor && pnpm run i18n:validate-runtime && pnpm run i18n:audit && pnpm run bundle && pnpm test"
+    "validate": "pnpm run version:check && pnpm run typecheck && pnpm run lint && node --check nodalia-*.js && pnpm run i18n:validate-editor && pnpm run i18n:validate-runtime && pnpm run i18n:audit && pnpm run bundle && pnpm test"
   },
   "files": [
     "nodalia-i18n.js",
@@ -103,7 +106,11 @@
   "license": "MIT",
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
+    "@eslint/js": "^9.39.5",
     "@playwright/test": "1.63.0",
-    "esbuild": "^0.28.2"
+    "esbuild": "^0.28.2",
+    "eslint": "^9.39.5",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.70.0"
   }
 }

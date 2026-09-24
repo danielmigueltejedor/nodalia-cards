@@ -5,23 +5,41 @@ import { fileURLToPath } from "url";
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 const checkOnly = process.argv.includes("--check");
-const versionPattern = /const CARD_VERSION = "[^"]+";/;
-const expectedDeclaration = `const CARD_VERSION = ${JSON.stringify(pkg.version)};`;
-const cardFiles = fs.readdirSync(root)
-  .filter(name => /^nodalia-(?!cards(?:-|\.|$)).*\.js$/.test(name))
-  .filter(name => versionPattern.test(fs.readFileSync(path.join(root, name), "utf8")))
-  .sort();
+const versionPattern = /(?:export )?(?:const|let|var) CARD_VERSION = "[^"]+";/;
+const expectedDeclaration = declaration => {
+  const prefix = declaration.startsWith("export ") ? "export " : "";
+  const keyword = declaration.includes("let CARD_VERSION") ? "let" : declaration.includes("var CARD_VERSION") ? "var" : "const";
+  return `${prefix}${keyword} CARD_VERSION = ${JSON.stringify(pkg.version)};`;
+};
 
+function collectVersionFiles(dir, acc = []) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name === "node_modules" || entry.name === "release" || entry.name.startsWith(".")) continue;
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      collectVersionFiles(fullPath, acc);
+      continue;
+    }
+    if (!/\.(js|ts)$/.test(entry.name)) continue;
+    if (entry.name.startsWith("nodalia-cards")) continue;
+    const source = fs.readFileSync(fullPath, "utf8");
+    if (versionPattern.test(source)) acc.push(path.relative(root, fullPath));
+  }
+  return acc;
+}
+
+const cardFiles = collectVersionFiles(root).sort();
 const stale = [];
 for (const name of cardFiles) {
   const filePath = path.join(root, name);
   const source = fs.readFileSync(filePath, "utf8");
-  if (source.includes(expectedDeclaration)) {
-    continue;
-  }
+  const current = source.match(versionPattern)?.[0];
+  if (!current) continue;
+  const expected = expectedDeclaration(current);
+  if (source.includes(expected)) continue;
   stale.push(name);
   if (!checkOnly) {
-    fs.writeFileSync(filePath, source.replace(versionPattern, expectedDeclaration));
+    fs.writeFileSync(filePath, source.replace(versionPattern, expected));
   }
 }
 

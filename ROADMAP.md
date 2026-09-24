@@ -11,10 +11,13 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.3
+2.3.0-alpha.25
 ```
 
-Preview **`2.3.0-alpha.3`** embeds compact climate and alarm cards in Room Summary, exposes Camera Card go2rtc settings in the Hub editor, and stops the light slider fill from restarting on turn-on. Stable **`2.2.10`** is the recommended daily-driver release.
+Preview **`2.3.0-alpha.25`** densifies Vacuum and Media Player on narrow phone
+columns, portals Camera expand only inside Room Summary, and paints Media album
+stages immediately. Stable **`2.2.10`** remains the recommended daily-driver
+release.
 
 ## Current stable release
 

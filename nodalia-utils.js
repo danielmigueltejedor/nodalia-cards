@@ -9,6 +9,8 @@
     "deepEqual",
     "mergeDeep",
     "compactConfig",
+    "shouldUseCompactCardLayout",
+    "shouldShowCompactCardTitle",
     "getByPath",
     "clamp",
     "escapeHtml",
@@ -27,6 +29,7 @@
     "postHomeAssistantWebhook",
     "warnStrictServiceDenied",
     "registerCustomCard",
+    "defineLazyCustomElement",
     "findStubEntityIds",
     "createEntitySuggestion",
     "renderEditorChipBorderRadiusHtml",
@@ -287,6 +290,43 @@
 
   function clamp(value, min, max) {
     return Math.min(Math.max(value, min), max);
+  }
+
+  /** 4/6-col tiles and phone-width cards stay compact; 12-col desktops keep the full layout. */
+  const COMPACT_CARD_MAX_WIDTH = 480;
+  const COMPACT_CARD_MAX_COLUMNS = 6;
+
+  function shouldUseCompactCardLayout({ mode, width, gridColumns } = {}) {
+    const compactMode = String(mode || "auto").trim().toLowerCase();
+    if (compactMode === "always" || compactMode === "true") {
+      return true;
+    }
+    if (compactMode === "never" || compactMode === "false") {
+      return false;
+    }
+
+    const measured = Number(width);
+    if (Number.isFinite(measured) && measured > 0 && measured < COMPACT_CARD_MAX_WIDTH) {
+      return true;
+    }
+
+    const columns = Number(gridColumns);
+    if (Number.isFinite(columns) && columns > 0 && columns <= COMPACT_CARD_MAX_COLUMNS) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /** Compact tiles still show the name when the row is wide enough for icon + label. */
+  const COMPACT_CARD_TITLE_MIN_WIDTH = 148;
+
+  function shouldShowCompactCardTitle({ width } = {}) {
+    const measured = Number(width);
+    if (!Number.isFinite(measured) || measured <= 0) {
+      return true;
+    }
+    return measured >= COMPACT_CARD_TITLE_MIN_WIDTH;
   }
 
   function escapeHtml(value) {
@@ -721,6 +761,105 @@
       }
     }
     cards.push(entry);
+  }
+
+  /**
+   * Register a tiny host now and compile the real HTMLElement class on first use.
+   * Unused card types stay nested functions so old phones skip their parse/compile cost.
+   */
+  function defineLazyCustomElement(tag, loadClass, options = {}) {
+    if (typeof customElements === "undefined" || !tag || typeof loadClass !== "function") {
+      return;
+    }
+    if (customElements.get(tag)) {
+      return;
+    }
+
+    let realClass = null;
+    const getReal = () => {
+      if (!realClass) {
+        realClass = loadClass();
+      }
+      return realClass;
+    };
+
+    /**
+     * Custom element definitions capture lifecycle callbacks from the registered
+     * class at `define()` time. After `Object.setPrototypeOf(this, Real.prototype)`,
+     * Safari (and the HTML CE algorithm) still invoke those captured Host stubs —
+     * so they must forward into the real class methods or click/hold listeners never
+     * attach and overlays / more-info never open.
+     */
+    function forwardLifecycle(name) {
+      Object.defineProperty(NodaliaLazyHost.prototype, name, {
+        configurable: true,
+        enumerable: false,
+        writable: true,
+        value: function nodaliaLazyLifecycleForward(...args) {
+          const Real = getReal();
+          const fn = Real?.prototype?.[name];
+          if (typeof fn === "function") {
+            return fn.apply(this, args);
+          }
+          return undefined;
+        },
+      });
+    }
+
+    class NodaliaLazyHost extends HTMLElement {
+      constructor() {
+        super();
+        const Real = getReal();
+        Object.setPrototypeOf(this, Real.prototype);
+        if (typeof this._nodaliaConstruct === "function") {
+          this._nodaliaConstruct();
+        }
+      }
+    }
+
+    for (const name of [
+      "connectedCallback",
+      "disconnectedCallback",
+      "adoptedCallback",
+      "attributeChangedCallback",
+    ]) {
+      forwardLifecycle(name);
+    }
+
+    Object.defineProperty(NodaliaLazyHost, "observedAttributes", {
+      configurable: true,
+      get() {
+        const Real = getReal();
+        return Array.isArray(Real?.observedAttributes) ? Real.observedAttributes : [];
+      },
+    });
+
+    const editorTag = String(options.editorTag || "").trim();
+    Object.defineProperty(NodaliaLazyHost, "getConfigElement", {
+      configurable: true,
+      value: async function getConfigElement() {
+        if (editorTag) {
+          return document.createElement(editorTag);
+        }
+        const Real = getReal();
+        if (typeof Real.getConfigElement === "function") {
+          return Real.getConfigElement();
+        }
+        return undefined;
+      },
+    });
+    for (const name of ["getStubConfig", "getEntitySuggestion"]) {
+      Object.defineProperty(NodaliaLazyHost, name, {
+        configurable: true,
+        value: function lazyStaticForward(...args) {
+          const Real = getReal();
+          const fn = Real[name];
+          return typeof fn === "function" ? fn.apply(Real, args) : undefined;
+        },
+      });
+    }
+
+    customElements.define(tag, NodaliaLazyHost);
   }
 
   /**
@@ -1360,8 +1499,16 @@
     return false;
   }
 
+  function isElementHost(node) {
+    return node instanceof HTMLElement
+      || (Boolean(node)
+        && typeof node === "object"
+        && node.nodeType === 1
+        && typeof node.addEventListener === "function");
+  }
+
   function scheduleCardZoneTap(host, options) {
-    if (!(host instanceof HTMLElement)) {
+    if (!isElementHost(host)) {
       return;
     }
     const zone = String(options?.zone ?? "body");
@@ -1400,7 +1547,7 @@
    * card's click handler can ignore the following click (synthetic after pointerup).
    */
   function bindHostPointerHoldGesture(host, options) {
-    if (!(host instanceof HTMLElement)) {
+    if (!isElementHost(host)) {
       return () => {};
     }
     if (typeof options?.resolveZone !== "function" || typeof options?.onHold !== "function") {
@@ -2406,6 +2553,8 @@
     deepEqual,
     mergeDeep,
     compactConfig,
+    shouldUseCompactCardLayout,
+    shouldShowCompactCardTitle,
     getByPath,
     clamp,
     escapeHtml,
@@ -2462,6 +2611,7 @@
     scheduleDeferTimer,
     clearDeferTimers,
     normalizeSecurityConfig,
+    defineLazyCustomElement,
   };
 
   if (typeof window !== "undefined") {

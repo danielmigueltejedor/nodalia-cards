@@ -1,1106 +1,890 @@
-const CARD_TAG = "nodalia-circular-gauge-card";
-const EDITOR_TAG = "nodalia-circular-gauge-card-editor";
-const CARD_VERSION = "2.3.0-alpha.3";
-const HAPTIC_PATTERNS = {
-  selection: 8,
-  light: 10,
-  medium: 16,
-  heavy: 24,
-  success: [10, 40, 10],
-  warning: [20, 50, 12],
-  failure: [12, 40, 12, 40, 18],
-};
-const DIAL_START_ANGLE = 135;
-const DIAL_END_ANGLE = 405;
-const DIAL_SWEEP = DIAL_END_ANGLE - DIAL_START_ANGLE;
-const DIAL_VIEWBOX_SIZE = 240;
-const DIAL_CIRCLE_RADIUS = 86;
-const DIAL_CIRCUMFERENCE = 2 * Math.PI * DIAL_CIRCLE_RADIUS;
-const DIAL_VISIBLE_LENGTH = DIAL_CIRCUMFERENCE * (DIAL_SWEEP / 360);
-const DIAL_HIDDEN_LENGTH = DIAL_CIRCUMFERENCE - DIAL_VISIBLE_LENGTH;
-const DEFAULT_GAUGE_MIN_TINT_COLOR = "color-mix(in srgb, var(--primary-text-color) 24%, transparent)";
-const DEFAULT_GAUGE_MAX_TINT_COLOR = "#ff7d57";
-const GAUGE_TINT_SEGMENT_COUNT = 16;
-const GAUGE_SVG_FALLBACK_TINT_SCALE = [
-  { offset: 0, channels: [126, 136, 146] },
-  { offset: 0.28, channels: [113, 207, 120] },
-  { offset: 0.52, channels: [217, 196, 90] },
-  { offset: 0.76, channels: [245, 160, 61] },
-  { offset: 1, channels: [255, 125, 87] },
-];
+/* Generated from src/cards/circular-gauge. Do not edit. */
+"use strict";
+(() => {
+  // src/cards/circular-gauge/circular-gauge-constants.ts
+  var CARD_TAG = "nodalia-circular-gauge-card";
+  var EDITOR_TAG = "nodalia-circular-gauge-card-editor";
+  var CARD_VERSION = "2.3.0-alpha.25";
+  var HAPTIC_PATTERNS = {
+    selection: 8,
+    light: 10,
+    medium: 16,
+    heavy: 24,
+    success: [10, 40, 10],
+    warning: [20, 50, 12],
+    failure: [12, 40, 12, 40, 18]
+  };
+  var DIAL_START_ANGLE = 135;
+  var DIAL_END_ANGLE = 405;
+  var DIAL_SWEEP = DIAL_END_ANGLE - DIAL_START_ANGLE;
+  var DIAL_VIEWBOX_SIZE = 240;
+  var DIAL_CIRCLE_RADIUS = 86;
+  var DIAL_CIRCUMFERENCE = 2 * Math.PI * DIAL_CIRCLE_RADIUS;
+  var DIAL_VISIBLE_LENGTH = DIAL_CIRCUMFERENCE * (DIAL_SWEEP / 360);
+  var DIAL_HIDDEN_LENGTH = DIAL_CIRCUMFERENCE - DIAL_VISIBLE_LENGTH;
+  var DEFAULT_GAUGE_MIN_TINT_COLOR = "color-mix(in srgb, var(--primary-text-color) 24%, transparent)";
+  var DEFAULT_GAUGE_MAX_TINT_COLOR = "#ff7d57";
+  var GAUGE_TINT_SEGMENT_COUNT = 16;
+  var GAUGE_SVG_FALLBACK_TINT_SCALE = [
+    { offset: 0, channels: [126, 136, 146] },
+    { offset: 0.28, channels: [113, 207, 120] },
+    { offset: 0.52, channels: [217, 196, 90] },
+    { offset: 0.76, channels: [245, 160, 61] },
+    { offset: 1, channels: [255, 125, 87] }
+  ];
 
-const DEFAULT_CONFIG = {
-  entity: "",
-  name: "",
-  icon: "",
-  min: "",
-  max: "",
-  min_label: "",
-  max_label: "",
-  unit: "",
-  decimals: "",
-  start_from_zero: true,
-  show_header: true,
-  show_name: true,
-  show_icon: true,
-  show_name_chip: true,
-  show_percentage_chip: false,
-  show_range_labels: true,
-  show_unavailable_badge: true,
-  show_bottom_icon_bubble: false,
-  tap_action: "more-info",
-  haptics: {
-    enabled: true,
-    style: "medium",
-    fallback_vibrate: false,
-  },
-  animations: {
-    enabled: true,
-    dial_duration: 220,
-    button_bounce_duration: 320,
-    content_duration: 420,
-  },
-  styles: {
-    card: {
-      background: "var(--ha-card-background)",
-      border: "1px solid var(--divider-color)",
-      border_radius: "30px",
-      box_shadow: "var(--ha-card-box-shadow)",
-      padding: "16px",
-      gap: "14px",
+  // src/cards/circular-gauge/circular-gauge-runtime.ts
+  var utils = window.NodaliaUtils;
+  var isObject = utils.isObject.bind(utils);
+  var deepClone = utils.deepClone.bind(utils);
+  var mergeConfig = utils.mergeDeep.bind(utils);
+  var compactConfig = utils.compactConfig.bind(utils);
+  var isUnsafeConfigPathKey = utils.isUnsafeConfigPathKey.bind(utils);
+  var setByPath = utils.setByPath.bind(utils);
+  var deleteByPath = utils.deleteByPath.bind(utils);
+  var clamp = utils.clamp.bind(utils);
+  var escapeHtml = utils.escapeHtml.bind(utils);
+  var fireEvent = utils.fireEvent.bind(utils);
+  var normalizeTextKey = utils.normalizeTextKey.bind(utils);
+
+  // src/cards/circular-gauge/circular-gauge-config.ts
+  var DEFAULT_CONFIG = {
+    entity: "",
+    name: "",
+    icon: "",
+    min: "",
+    max: "",
+    min_label: "",
+    max_label: "",
+    unit: "",
+    decimals: "",
+    start_from_zero: true,
+    show_header: true,
+    show_name: true,
+    show_icon: true,
+    show_name_chip: true,
+    show_percentage_chip: false,
+    show_range_labels: true,
+    show_unavailable_badge: true,
+    show_bottom_icon_bubble: false,
+    tap_action: "more-info",
+    haptics: {
+      enabled: true,
+      style: "medium",
+      fallback_vibrate: false
     },
-    icon: {
-      size: "58px",
-      background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
-      color: "var(--primary-text-color)",
+    animations: {
+      enabled: true,
+      dial_duration: 220,
+      button_bounce_duration: 320,
+      content_duration: 420
     },
-    chip_height: "24px",
-    chip_font_size: "11px",
-    chip_padding: "0 10px",
-    chip_border_radius: "999px",
-    title_size: "16px",
-    value_size: "52px",
-    range_size: "14px",
-    name_chip_max_width: "170px",
-    gauge: {
-      size: "280px",
-      stroke: "18px",
-      thumb_size: "22px",
-      track_color: "color-mix(in srgb, var(--primary-text-color) 24%, var(--ha-card-background))",
-      background: "color-mix(in srgb, var(--primary-text-color) 2%, transparent)",
-      min_tint_color: DEFAULT_GAUGE_MIN_TINT_COLOR,
-      max_tint_color: DEFAULT_GAUGE_MAX_TINT_COLOR,
-      foreground_color: "",
-    },
-  },
-};
+    styles: {
+      card: {
+        background: "var(--ha-card-background)",
+        border: "1px solid var(--divider-color)",
+        border_radius: "30px",
+        box_shadow: "var(--ha-card-box-shadow)",
+        padding: "16px",
+        gap: "14px"
+      },
+      icon: {
+        size: "58px",
+        background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
+        color: "var(--primary-text-color)"
+      },
+      chip_height: "24px",
+      chip_font_size: "11px",
+      chip_padding: "0 10px",
+      chip_border_radius: "999px",
+      title_size: "16px",
+      value_size: "52px",
+      range_size: "14px",
+      name_chip_max_width: "170px",
+      gauge: {
+        size: "280px",
+        stroke: "18px",
+        thumb_size: "22px",
+        track_color: "color-mix(in srgb, var(--primary-text-color) 24%, var(--ha-card-background))",
+        background: "color-mix(in srgb, var(--primary-text-color) 2%, transparent)",
+        min_tint_color: DEFAULT_GAUGE_MIN_TINT_COLOR,
+        max_tint_color: DEFAULT_GAUGE_MAX_TINT_COLOR,
+        foreground_color: ""
+      }
+    }
+  };
+  var STUB_CONFIG = {
+    entity: "sensor.enchufe_inteligente_potencia",
+    name: "Potencia",
+    min: 0,
+    max: 2500
+  };
+  function normalizeConfig(rawConfig) {
+    return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  }
 
-const STUB_CONFIG = {
-  entity: "sensor.enchufe_inteligente_potencia",
-  name: "Potencia",
-  min: 0,
-  max: 2500,
-};
-
-// Shared primitives are loaded by nodalia-cards core and inlined for standalone resources.
-const {
-  isObject,
-  deepClone,
-  mergeDeep: mergeConfig,
-  compactConfig,
-  isUnsafeConfigPathKey,
-  setByPath,
-  deleteByPath,
-  clamp,
-  escapeHtml,
-  fireEvent,
-  normalizeTextKey,
-} = window.NodaliaUtils;
-
-
-
-function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
-  return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
-}
-
-function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
-  const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
-  if (!entityId) {
+  // src/cards/circular-gauge/circular-gauge-helpers.ts
+  function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
+    return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
+  }
+  function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
+    const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
+    if (!entityId) {
+      return config;
+    }
+    config.entity = entityId;
+    const state = hass?.states?.[entityId];
+    const unit = String(state?.attributes?.unit_of_measurement || "").trim();
+    const numericState = Number(state?.state);
+    config.name = state?.attributes?.friendly_name || entityId;
+    if (unit === "%") {
+      config.min = 0;
+      config.max = 100;
+    } else if (Number.isFinite(numericState) && numericState > Number(config.max || 0)) {
+      config.min = 0;
+      config.max = Math.ceil(numericState * 1.25);
+    }
     return config;
   }
-
-  config.entity = entityId;
-  const state = hass?.states?.[entityId];
-  const unit = String(state?.attributes?.unit_of_measurement || "").trim();
-  const numericState = Number(state?.state);
-  config.name = state?.attributes?.friendly_name || entityId;
-
-  if (unit === "%") {
-    config.min = 0;
-    config.max = 100;
-  } else if (Number.isFinite(numericState) && numericState > Number(config.max || 0)) {
-    config.min = 0;
-    config.max = Math.ceil(numericState * 1.25);
+  function parseSizeToPixels(value, fallback = 0) {
+    const numeric = Number.parseFloat(String(value ?? ""));
+    return Number.isFinite(numeric) ? numeric : fallback;
   }
-
-  return config;
-}
-
-
-
-
-
-
-
-
-function parseSizeToPixels(value, fallback = 0) {
-  const numeric = Number.parseFloat(String(value ?? ""));
-  return Number.isFinite(numeric) ? numeric : fallback;
-}
-
-
-function escapeSelectorValue(value) {
-  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
-    return CSS.escape(String(value));
-  }
-
-  return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
-}
-
-function sanitizeCssValue(value, fallback) {
-  const raw = String(value ?? "").trim();
-  const safeFallback = String(fallback ?? "").trim();
-  if (!raw) {
-    return safeFallback;
-  }
-  if (/[\u0000-\u001f\u007f<>;"'{}]/.test(raw) || raw.includes("/*") || raw.includes("*/")) {
-    return safeFallback;
-  }
-  return raw;
-}
-
-function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
-  const defaults = DEFAULT_CONFIG.styles;
-  const card = styles?.card || {};
-  const icon = styles?.icon || {};
-  const gauge = styles?.gauge || {};
-  return {
-    card: {
-      background: sanitizeCssValue(card.background, defaults.card.background),
-      border: sanitizeCssValue(card.border, defaults.card.border),
-      border_radius: sanitizeCssValue(card.border_radius, defaults.card.border_radius),
-      box_shadow: sanitizeCssValue(card.box_shadow, defaults.card.box_shadow),
-      padding: sanitizeCssValue(card.padding, defaults.card.padding),
-      gap: sanitizeCssValue(card.gap, defaults.card.gap),
-    },
-    icon: {
-      size: sanitizeCssValue(icon.size, defaults.icon.size),
-      background: sanitizeCssValue(icon.background, defaults.icon.background),
-      color: sanitizeCssValue(icon.color, defaults.icon.color),
-    },
-    chip_height: sanitizeCssValue(styles?.chip_height, defaults.chip_height),
-    chip_font_size: sanitizeCssValue(styles?.chip_font_size, defaults.chip_font_size),
-    chip_padding: sanitizeCssValue(styles?.chip_padding, defaults.chip_padding),
-    chip_border_radius: sanitizeCssValue(styles?.chip_border_radius, defaults.chip_border_radius),
-    title_size: sanitizeCssValue(styles?.title_size, defaults.title_size),
-    value_size: sanitizeCssValue(styles?.value_size, defaults.value_size),
-    range_size: sanitizeCssValue(styles?.range_size, defaults.range_size),
-    name_chip_max_width: sanitizeCssValue(styles?.name_chip_max_width, defaults.name_chip_max_width),
-    gauge: {
-      size: sanitizeCssValue(gauge.size, defaults.gauge.size),
-      stroke: sanitizeCssValue(gauge.stroke, defaults.gauge.stroke),
-      thumb_size: sanitizeCssValue(gauge.thumb_size, defaults.gauge.thumb_size),
-      track_color: sanitizeCssValue(gauge.track_color, defaults.gauge.track_color),
-      background: sanitizeCssValue(gauge.background, defaults.gauge.background),
-      min_tint_color: sanitizeCssValue(gauge.min_tint_color, defaults.gauge.min_tint_color),
-      max_tint_color: sanitizeCssValue(gauge.max_tint_color, defaults.gauge.max_tint_color),
-      foreground_color: sanitizeCssValue(gauge.foreground_color, defaults.gauge.foreground_color),
-    },
-  };
-}
-
-function resolveEditorColorValue(value) {
-  const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
-  if (typeof resolver === "function") {
-    return resolver(value);
-  }
-  return String(value ?? "").trim();
-}
-
-function formatEditorHexChannel(value) {
-  return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
-}
-
-function formatEditorColorFromHex(hex, alpha = 1) {
-  const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
-  if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
-    return String(hex ?? "");
-  }
-
-  const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
-  const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
-  const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
-  const safeAlpha = clamp(Number(alpha), 0, 1);
-  if (safeAlpha >= 0.999) {
-    return `#${normalizedHex}`;
-  }
-
-  return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
-}
-
-function getEditorColorModel(value, fallbackValue = "#71c0ff") {
-  const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
-  const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
-  const channels = resolvedValue.match(/[\d.]+/g) || [];
-  const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
-  const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
-  const blue = clamp(Math.round(Number(channels[2] ?? 255)), 0, 255);
-  const alpha = channels.length > 3 ? clamp(Number(channels[3]), 0, 1) : 1;
-  const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
-
-  return {
-    alpha,
-    hex,
-    resolved: resolvedValue,
-    source: sourceValue,
-    value: formatEditorColorFromHex(hex, alpha),
-  };
-}
-
-function getEditorColorFallbackValue(field) {
-  const normalizedField = String(field ?? "");
-
-  if (normalizedField.endsWith("icon.background")) {
-    return "color-mix(in srgb, var(--primary-text-color) 6%, transparent)";
-  }
-
-  if (normalizedField.endsWith("gauge.background")) {
-    return "color-mix(in srgb, var(--primary-text-color) 2%, transparent)";
-  }
-
-  if (normalizedField.endsWith("track_color")) {
-    return "color-mix(in srgb, var(--primary-text-color) 24%, var(--ha-card-background))";
-  }
-
-  if (normalizedField.endsWith("min_tint_color")) {
-    return DEFAULT_GAUGE_MIN_TINT_COLOR;
-  }
-
-  if (normalizedField.endsWith("max_tint_color")) {
-    return DEFAULT_GAUGE_MAX_TINT_COLOR;
-  }
-
-  if (normalizedField.endsWith("foreground_color")) {
-    return DEFAULT_GAUGE_MAX_TINT_COLOR;
-  }
-
-  if (normalizedField.endsWith("icon.color")) {
-    return "var(--primary-text-color)";
-  }
-
-  if (normalizedField.endsWith("background")) {
-    return "var(--ha-card-background)";
-  }
-
-  return "var(--info-color, #71c0ff)";
-}
-
-
-function resolveColorInContext(contextNode, value) {
-  const rawValue = String(value ?? "").trim();
-  if (!rawValue || typeof document === "undefined") {
-    return rawValue;
-  }
-
-  const probe = document.createElement("span");
-  probe.style.position = "fixed";
-  probe.style.opacity = "0";
-  probe.style.pointerEvents = "none";
-  probe.style.color = "";
-  probe.style.color = rawValue;
-  (contextNode || document.body || document.documentElement).appendChild(probe);
-  const resolved = getComputedStyle(probe).color;
-  probe.remove();
-  return resolved || rawValue;
-}
-
-function getGaugeSvgFallbackColor(ratio) {
-  const safeRatio = clamp(Number(ratio) || 0, 0, 1);
-  const upperIndex = GAUGE_SVG_FALLBACK_TINT_SCALE.findIndex(stop => safeRatio <= stop.offset);
-  if (upperIndex <= 0) {
-    return `rgb(${GAUGE_SVG_FALLBACK_TINT_SCALE[0].channels.join(", ")})`;
-  }
-
-  const upper = GAUGE_SVG_FALLBACK_TINT_SCALE[upperIndex];
-  const lower = GAUGE_SVG_FALLBACK_TINT_SCALE[upperIndex - 1];
-  const localRatio = (safeRatio - lower.offset) / Math.max(upper.offset - lower.offset, 0.0001);
-  const channels = lower.channels.map((channel, index) => (
-    Math.round(channel + ((upper.channels[index] - channel) * localRatio))
-  ));
-  return `rgb(${channels.join(", ")})`;
-}
-
-function resolveGaugeSvgStrokeColor(value, fallback) {
-  const source = String(value || "").trim();
-  if (
-    !source
-    || /(?:color-mix|var)\(/i.test(source)
-    || !/^(?:#[\da-f]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\)|[a-z]+)$/i.test(source)
-  ) {
-    return fallback;
-  }
-  return source;
-}
-
-function parseRgbColor(value) {
-  const source = String(value ?? "").trim();
-  if (!source) {
-    return null;
-  }
-
-  const rgbMatch = source.match(/^rgba?\(([^)]+)\)$/i);
-  if (rgbMatch) {
-    const channels = rgbMatch[1]
-      .split(",")
-      .map(channel => Number.parseFloat(channel.trim()))
-      .filter(channel => Number.isFinite(channel));
-
-    if (channels.length >= 3) {
-      return {
-        red: clamp(channels[0], 0, 255),
-        green: clamp(channels[1], 0, 255),
-        blue: clamp(channels[2], 0, 255),
-      };
+  function sanitizeCssValue(value, fallback) {
+    const raw = String(value ?? "").trim();
+    const safeFallback = String(fallback ?? "").trim();
+    if (!raw) {
+      return safeFallback;
     }
+    if (/[\u0000-\u001f\u007f<>;"'{}]/.test(raw) || raw.includes("/*") || raw.includes("*/")) {
+      return safeFallback;
+    }
+    return raw;
   }
-
-  const hexMatch = source.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
-  if (hexMatch) {
-    const hex = hexMatch[1].length === 3
-      ? hexMatch[1].split("").map(channel => channel + channel).join("")
-      : hexMatch[1];
-
+  function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
+    const defaults = DEFAULT_CONFIG.styles;
+    const card = styles?.card || {};
+    const icon = styles?.icon || {};
+    const gauge = styles?.gauge || {};
     return {
-      red: Number.parseInt(hex.slice(0, 2), 16),
-      green: Number.parseInt(hex.slice(2, 4), 16),
-      blue: Number.parseInt(hex.slice(4, 6), 16),
+      card: {
+        background: sanitizeCssValue(card.background, defaults.card.background),
+        border: sanitizeCssValue(card.border, defaults.card.border),
+        border_radius: sanitizeCssValue(card.border_radius, defaults.card.border_radius),
+        box_shadow: sanitizeCssValue(card.box_shadow, defaults.card.box_shadow),
+        padding: sanitizeCssValue(card.padding, defaults.card.padding),
+        gap: sanitizeCssValue(card.gap, defaults.card.gap)
+      },
+      icon: {
+        size: sanitizeCssValue(icon.size, defaults.icon.size),
+        background: sanitizeCssValue(icon.background, defaults.icon.background),
+        color: sanitizeCssValue(icon.color, defaults.icon.color)
+      },
+      chip_height: sanitizeCssValue(styles?.chip_height, defaults.chip_height),
+      chip_font_size: sanitizeCssValue(styles?.chip_font_size, defaults.chip_font_size),
+      chip_padding: sanitizeCssValue(styles?.chip_padding, defaults.chip_padding),
+      chip_border_radius: sanitizeCssValue(styles?.chip_border_radius, defaults.chip_border_radius),
+      title_size: sanitizeCssValue(styles?.title_size, defaults.title_size),
+      value_size: sanitizeCssValue(styles?.value_size, defaults.value_size),
+      range_size: sanitizeCssValue(styles?.range_size, defaults.range_size),
+      name_chip_max_width: sanitizeCssValue(styles?.name_chip_max_width, defaults.name_chip_max_width),
+      gauge: {
+        size: sanitizeCssValue(gauge.size, defaults.gauge.size),
+        stroke: sanitizeCssValue(gauge.stroke, defaults.gauge.stroke),
+        thumb_size: sanitizeCssValue(gauge.thumb_size, defaults.gauge.thumb_size),
+        track_color: sanitizeCssValue(gauge.track_color, defaults.gauge.track_color),
+        background: sanitizeCssValue(gauge.background, defaults.gauge.background),
+        min_tint_color: sanitizeCssValue(gauge.min_tint_color, defaults.gauge.min_tint_color),
+        max_tint_color: sanitizeCssValue(gauge.max_tint_color, defaults.gauge.max_tint_color),
+        foreground_color: sanitizeCssValue(gauge.foreground_color, defaults.gauge.foreground_color)
+      }
     };
   }
-
-  return null;
-}
-
-function getRelativeLuminance(color) {
-  if (!color) {
-    return null;
-  }
-
-  const toLinear = channel => {
-    const normalized = clamp(Number(channel) / 255, 0, 1);
-    return normalized <= 0.04045
-      ? normalized / 12.92
-      : ((normalized + 0.055) / 1.055) ** 2.4;
-  };
-
-  const red = toLinear(color.red);
-  const green = toLinear(color.green);
-  const blue = toLinear(color.blue);
-  return (0.2126 * red) + (0.7152 * green) + (0.0722 * blue);
-}
-
-
-function isUnavailableState(state) {
-  return normalizeTextKey(state?.state) === "unavailable";
-}
-
-function getStepPrecision(step) {
-  const text = String(step ?? "");
-  if (!text.includes(".")) {
-    return 0;
-  }
-
-  return text.split(".")[1].length;
-}
-
-function inferDecimals(rawValue) {
-  const text = String(rawValue ?? "").trim();
-  const normalized = text.replace(",", ".");
-  if (!normalized.includes(".")) {
-    return 0;
-  }
-
-  return Math.min(3, normalized.split(".")[1].length);
-}
-
-function getHassLocaleTag(hass, language = "auto") {
-  const lang = window.NodaliaI18n?.resolveLanguage?.(hass, language);
-  return window.NodaliaI18n?.localeTag?.(lang) || hass?.locale?.language || undefined;
-}
-
-function formatNumberValue(value, decimals = 0, locale = undefined) {
-  if (!Number.isFinite(Number(value))) {
-    return "--";
-  }
-
-  return Number(value).toLocaleString(locale, {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  });
-}
-
-function normalizeConfig(rawConfig) {
-  return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-}
-
-function inferReasonableMax(currentValue, unit, state) {
-  const normalizedUnit = normalizeTextKey(unit);
-  const domainHint = `${state?.entity_id || ""} ${state?.attributes?.device_class || ""} ${state?.attributes?.friendly_name || ""}`.toLowerCase();
-
-  if (normalizedUnit === "%" || domainHint.includes("battery") || domainHint.includes("humidity")) {
-    return 100;
-  }
-
-  if (["w", "watt", "watts", "va"].includes(normalizedUnit) || domainHint.includes("power") || domainHint.includes("potencia")) {
-    return 2500;
-  }
-
-  if (["kw"].includes(normalizedUnit)) {
-    return 10;
-  }
-
-  if (["a", "ma"].includes(normalizedUnit) || domainHint.includes("current") || domainHint.includes("corriente")) {
-    return normalizedUnit === "ma" ? 3000 : 32;
-  }
-
-  if (["v", "mv"].includes(normalizedUnit) || domainHint.includes("voltage") || domainHint.includes("tension")) {
-    return normalizedUnit === "mv" ? 1000 : 260;
-  }
-
-  if (
-    normalizedUnit.includes("l_s")
-    || normalizedUnit.includes("l_min")
-    || normalizedUnit.includes("m3_h")
-    || domainHint.includes("water")
-    || domainHint.includes("agua")
-    || domainHint.includes("caudal")
-    || domainHint.includes("flow")
-  ) {
-    if (normalizedUnit.includes("l_s")) {
-      return 10;
+  function resolveEditorColorValue(value) {
+    const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
+    if (typeof resolver === "function") {
+      return resolver(value);
     }
-    if (normalizedUnit.includes("l_min")) {
-      return 60;
+    return String(value ?? "").trim();
+  }
+  function formatEditorHexChannel(value) {
+    return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+  }
+  function formatEditorColorFromHex(hex, alpha = 1) {
+    const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
+    if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
+      return String(hex ?? "");
     }
-    if (normalizedUnit.includes("m3_h")) {
-      return 10;
+    const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
+    const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
+    const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
+    const safeAlpha = clamp(Number(alpha), 0, 1);
+    if (safeAlpha >= 0.999) {
+      return `#${normalizedHex}`;
     }
-    return 100;
+    return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
   }
-
-  if (["c", "f", "degc", "degf"].includes(normalizedUnit) || domainHint.includes("temperature") || domainHint.includes("temperatura")) {
-    return 40;
-  }
-
-  if (["bar", "hpa", "pa"].includes(normalizedUnit) || domainHint.includes("pressure") || domainHint.includes("presion")) {
-    return 1200;
-  }
-
-  if (Number.isFinite(currentValue)) {
-    if (currentValue <= 10) return 10;
-    if (currentValue <= 50) return 50;
-    if (currentValue <= 100) return 100;
-    if (currentValue <= 250) return 250;
-    if (currentValue <= 500) return 500;
-    if (currentValue <= 1000) return 1000;
-    if (currentValue <= 2500) return 2500;
-    if (currentValue <= 5000) return 5000;
-    if (currentValue <= 10000) return 10000;
-  }
-
-  return 100;
-}
-
-function getDialMarkerPosition(angle) {
-  const markerRadiusPercent = (DIAL_CIRCLE_RADIUS / DIAL_VIEWBOX_SIZE) * 100;
-  const radians = (angle * Math.PI) / 180;
-  return {
-    left: Number((50 + (Math.cos(radians) * markerRadiusPercent)).toFixed(3)),
-    top: Number((50 + (Math.sin(radians) * markerRadiusPercent)).toFixed(3)),
-  };
-}
-
-/** CSS rotate for thumb orbit: translateY(-orbit) starts at 12 o'clock; math angles use 3 o'clock = 0°. */
-function getDialThumbRotate(angle) {
-  return Number((angle + 90).toFixed(3));
-}
-
-function getContinuousThumbRotate(previousRotate, nextAngle) {
-  if (!Number.isFinite(previousRotate)) {
-    return getDialThumbRotate(nextAngle);
-  }
-  const nextRotate = getDialThumbRotate(nextAngle);
-  let delta = nextRotate - previousRotate;
-  if (delta > DIAL_SWEEP / 2) {
-    delta -= 360;
-  } else if (delta < -(DIAL_SWEEP / 2)) {
-    delta += 360;
-  }
-  return Number((previousRotate + delta).toFixed(3));
-}
-
-function getDialMarkerCoordinates(angle) {
-  const center = DIAL_VIEWBOX_SIZE / 2;
-  const radians = (angle * Math.PI) / 180;
-  return {
-    x: Number((center + (Math.cos(radians) * DIAL_CIRCLE_RADIUS)).toFixed(3)),
-    y: Number((center + (Math.sin(radians) * DIAL_CIRCLE_RADIUS)).toFixed(3)),
-  };
-}
-
-function mixCssColors(leftColor, rightColor, ratio) {
-  const safeRatio = clamp(Number(ratio) || 0, 0, 1);
-  if (safeRatio <= 0) {
-    return leftColor;
-  }
-
-  if (safeRatio >= 1) {
-    return rightColor;
-  }
-
-  const rightPercent = Number((safeRatio * 100).toFixed(2));
-  const leftPercent = Number((100 - rightPercent).toFixed(2));
-
-  return `color-mix(in srgb, ${leftColor} ${leftPercent}%, ${rightColor} ${rightPercent}%)`;
-}
-
-function buildGaugeTintScale(minTintColor, maxTintColor) {
-  const safeMinTintColor = String(minTintColor || DEFAULT_GAUGE_MIN_TINT_COLOR).trim() || DEFAULT_GAUGE_MIN_TINT_COLOR;
-  const safeMaxTintColor = String(maxTintColor || DEFAULT_GAUGE_MAX_TINT_COLOR).trim() || DEFAULT_GAUGE_MAX_TINT_COLOR;
-
-  return [
-    { offset: 0, color: safeMinTintColor },
-    { offset: 0.28, color: mixCssColors("#71cf78", safeMaxTintColor, 0.08) },
-    { offset: 0.52, color: mixCssColors("#d9c45a", safeMaxTintColor, 0.14) },
-    { offset: 0.76, color: mixCssColors("#f5a03d", safeMaxTintColor, 0.22) },
-    { offset: 1, color: safeMaxTintColor },
-  ];
-}
-
-function resolveGaugeTintColor(scale, ratio) {
-  const safeRatio = clamp(Number(ratio) || 0, 0, 1);
-  const tintScale = Array.isArray(scale) && scale.length ? scale : buildGaugeTintScale();
-
-  if (safeRatio <= tintScale[0].offset) {
-    return tintScale[0].color;
-  }
-
-  for (let index = 1; index < tintScale.length; index += 1) {
-    const currentStop = tintScale[index];
-    const previousStop = tintScale[index - 1];
-
-    if (safeRatio <= currentStop.offset) {
-      const span = Math.max(currentStop.offset - previousStop.offset, 0.0001);
-      const localRatio = (safeRatio - previousStop.offset) / span;
-      return mixCssColors(previousStop.color, currentStop.color, localRatio);
-    }
-  }
-
-  return tintScale[tintScale.length - 1].color;
-}
-
-class NodaliaCircularGaugeCard extends HTMLElement {
-  static async getConfigElement() {
-    return document.createElement(EDITOR_TAG);
-  }
-
-  static getStubConfig(hass, entities = [], entitiesFallback = []) {
-    return applyStubEntity(
-      deepClone(STUB_CONFIG),
-      hass,
-      ["sensor", "number", "input_number"],
-      entities,
-      entitiesFallback,
-    );
-  }
-
-  static getEntitySuggestion(hass, entityId) {
-    return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
-      domains: ["sensor", "number", "input_number"],
-    });
-  }
-
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(STUB_CONFIG);
-    this._hass = null;
-    window.NodaliaUtils?.clearDeferTimers?.(this);
-    this._lastRenderSignature = "";
-    this._lastGaugeVisualState = null;
-    this._gaugeVisualFrame = 0;
-    this._animateContentOnNextRender = true;
-    this._entranceAnimationResetTimer = 0;
-    this._onShadowClick = this._onShadowClick.bind(this);
-    this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this.shadowRoot.addEventListener("keydown", this._onShadowKeyDown);
-  }
-
-  connectedCallback() {
-    this._animateContentOnNextRender = true;
-    if (this._hass && this._config) {
-      this._lastRenderSignature = "";
-      this._render();
-    }
-  }
-
-  disconnectedCallback() {
-    if (this._gaugeVisualFrame) {
-      window.cancelAnimationFrame(this._gaugeVisualFrame);
-      this._gaugeVisualFrame = 0;
-    }
-    if (this._entranceAnimationResetTimer) {
-      window.clearTimeout(this._entranceAnimationResetTimer);
-      this._entranceAnimationResetTimer = 0;
-    }
-    window.NodaliaUtils?.clearDeferTimers?.(this);
-    this._animateContentOnNextRender = true;
-    this._lastRenderSignature = "";
-  }
-
-  setConfig(config) {
-    this._config = normalizeConfig(config || {});
-    window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
-    this._lastRenderSignature = "";
-    this._animateContentOnNextRender = true;
-    this._render();
-  }
-
-  set hass(hass) {
-    const nextSignature = this._getRenderSignature(hass);
-    this._hass = hass;
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
-      return;
-    }
-    this._lastRenderSignature = nextSignature;
-    this._render();
-  }
-
-  getCardSize() {
-    return 3;
-  }
-
-  getGridOptions() {
+  function getEditorColorModel(value, fallbackValue = "#71c0ff") {
+    const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
+    const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
+    const channels = resolvedValue.match(/[\d.]+/g) || [];
+    const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
+    const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
+    const blue = clamp(Math.round(Number(channels[2] ?? 255)), 0, 255);
+    const alpha = channels.length > 3 ? clamp(Number(channels[3]), 0, 1) : 1;
+    const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
     return {
-      rows: "auto",
-      columns: "full",
-      min_rows: 5,
-      min_columns: 6,
+      alpha,
+      hex,
+      resolved: resolvedValue,
+      source: sourceValue,
+      value: formatEditorColorFromHex(hex, alpha)
     };
   }
-
-  _getState() {
-    return this._config?.entity ? this._hass?.states?.[this._config.entity] || null : null;
-  }
-
-  _getRenderSignature(hass = this._hass) {
-    const entityId = this._config?.entity || "";
-    const state = entityId ? hass?.states?.[entityId] || null : null;
-    const attrs = state?.attributes || {};
-    const joinParts = window.NodaliaRenderSignature?.joinParts;
-    const values = [
-      entityId,
-      String(state?.state || ""),
-      String(attrs.native_value ?? ""),
-      String(attrs.friendly_name || ""),
-      String(attrs.icon || ""),
-      String(attrs.unit_of_measurement || attrs.native_unit_of_measurement || ""),
-      String(attrs.device_class || ""),
-      String(attrs.min ?? ""),
-      String(attrs.max ?? ""),
-      String(getHassLocaleTag(hass, this._config?.language ?? "auto") || ""),
-      Number(this._config?.grid_options?.rows || 0),
-      Number(this._config?.grid_options?.columns || 0),
-    ];
-    if (typeof joinParts === "function") {
-      return joinParts([{ prefix: "gauge:", values }]);
+  function getEditorColorFallbackValue(field) {
+    const normalizedField = String(field ?? "");
+    if (normalizedField.endsWith("icon.background")) {
+      return "color-mix(in srgb, var(--primary-text-color) 6%, transparent)";
     }
-    return values.join("::");
-  }
-
-  _getConfiguredGridRows() {
-    const numericRows = Number(this._config?.grid_options?.rows);
-    return Number.isFinite(numericRows) ? numericRows : null;
-  }
-
-  _getConfiguredGridColumns() {
-    const numericColumns = Number(this._config?.grid_options?.columns);
-    return Number.isFinite(numericColumns) ? numericColumns : null;
-  }
-
-  _getCompactLevel() {
-    const configuredRows = this._getConfiguredGridRows();
-    const configuredColumns = this._getConfiguredGridColumns();
-
-    if (
-      (configuredRows !== null && configuredRows <= 3)
-      || (configuredColumns !== null && configuredColumns <= 6)
-    ) {
-      return "compact";
+    if (normalizedField.endsWith("gauge.background")) {
+      return "color-mix(in srgb, var(--primary-text-color) 2%, transparent)";
     }
-
-    return "default";
-  }
-
-  _getTitle(state) {
-    return this._config?.name
-      || state?.attributes?.friendly_name
-      || this._config?.entity
-      || "Gauge";
-  }
-
-  _getIcon(state) {
-    return this._config?.icon
-      || state?.attributes?.icon
-      || "mdi:gauge";
-  }
-
-  _getUnit(state) {
-    return String(
-      this._config?.unit
-      || state?.attributes?.unit_of_measurement
-      || state?.attributes?.native_unit_of_measurement
-      || "",
-    ).trim();
-  }
-
-  _getNumericValue(state) {
-    const direct = Number(String(state?.state ?? "").replace(",", "."));
-    if (Number.isFinite(direct)) {
-      return direct;
+    if (normalizedField.endsWith("track_color")) {
+      return "color-mix(in srgb, var(--primary-text-color) 24%, var(--ha-card-background))";
     }
-
-    const nativeValue = Number(state?.attributes?.native_value);
-    return Number.isFinite(nativeValue) ? nativeValue : null;
-  }
-
-  _getDecimals(state) {
-    const configured = Number(this._config?.decimals);
-    if (Number.isFinite(configured) && configured >= 0) {
-      return Math.min(3, configured);
+    if (normalizedField.endsWith("min_tint_color")) {
+      return DEFAULT_GAUGE_MIN_TINT_COLOR;
     }
-
-    const rawState = String(state?.state ?? "").trim();
-    return inferDecimals(rawState);
-  }
-
-  _getRange(state, currentValue) {
-    const configuredMin = Number(this._config?.min);
-    const configuredMax = Number(this._config?.max);
-    const attrMin = Number(state?.attributes?.min);
-    const attrMax = Number(state?.attributes?.max);
-    const unit = this._getUnit(state);
-
-    const min = Number.isFinite(configuredMin)
-      ? configuredMin
-      : Number.isFinite(attrMin)
-        ? attrMin
-        : this._config?.start_from_zero === false && Number.isFinite(currentValue) && currentValue < 0
-          ? Math.floor(currentValue)
-          : 0;
-
-    let max = Number.isFinite(configuredMax)
-      ? configuredMax
-      : Number.isFinite(attrMax)
-        ? attrMax
-        : inferReasonableMax(currentValue, unit, state);
-
-    if (!Number.isFinite(max) || max <= min) {
-      max = min + 100;
+    if (normalizedField.endsWith("max_tint_color")) {
+      return DEFAULT_GAUGE_MAX_TINT_COLOR;
     }
-
-    return { min, max };
-  }
-
-  _getRangeLabel(boundary, range, state) {
-    const configuredLabel = String(
-      boundary === "min" ? this._config?.min_label ?? "" : this._config?.max_label ?? "",
-    ).trim();
-
-    if (configuredLabel) {
-      return configuredLabel;
+    if (normalizedField.endsWith("foreground_color")) {
+      return DEFAULT_GAUGE_MAX_TINT_COLOR;
     }
-
-    return formatNumberValue(boundary === "min" ? range.min : range.max, this._getDecimals(state), this._getLocaleTag());
-  }
-
-  _getGaugeTintScale() {
-    const gaugeStyles = this._config?.styles?.gauge || DEFAULT_CONFIG.styles.gauge;
-    return buildGaugeTintScale(gaugeStyles.min_tint_color, gaugeStyles.max_tint_color);
-  }
-
-  _resolveGaugeSvgStrokeColor(value, fallback) {
-    const cacheKey = `${value}\u0000${fallback}`;
-    if (this._gaugeSvgColorCache?.has(cacheKey)) {
-      return this._gaugeSvgColorCache.get(cacheKey);
+    if (normalizedField.endsWith("icon.color")) {
+      return "var(--primary-text-color)";
     }
-
-    const resolved = resolveGaugeSvgStrokeColor(value, fallback);
-    this._gaugeSvgColorCache?.set(cacheKey, resolved);
-    return resolved;
+    if (normalizedField.endsWith("background")) {
+      return "var(--ha-card-background)";
+    }
+    return "var(--info-color, #71c0ff)";
   }
-
-  _getGaugeProgressSegments(ratio, tintScale) {
+  function resolveColorInContext(contextNode, value) {
+    const rawValue = String(value ?? "").trim();
+    if (!rawValue || typeof document === "undefined") {
+      return rawValue;
+    }
+    const probe = document.createElement("span");
+    probe.style.position = "fixed";
+    probe.style.opacity = "0";
+    probe.style.pointerEvents = "none";
+    probe.style.color = "";
+    probe.style.color = rawValue;
+    (contextNode || document.body || document.documentElement).appendChild(probe);
+    const resolved = getComputedStyle(probe).color;
+    probe.remove();
+    return resolved || rawValue;
+  }
+  function getGaugeSvgFallbackColor(ratio) {
     const safeRatio = clamp(Number(ratio) || 0, 0, 1);
-    const configuredColor = String(this._config?.styles?.gauge?.foreground_color || "").trim();
-    const segmentLength = DIAL_VISIBLE_LENGTH / GAUGE_TINT_SEGMENT_COUNT;
-    const segmentRatioSize = 1 / GAUGE_TINT_SEGMENT_COUNT;
-
-    return Array.from({ length: GAUGE_TINT_SEGMENT_COUNT }, (_, index) => {
-      const startRatio = index * segmentRatioSize;
-      const fillRatio = clamp((safeRatio - startRatio) / segmentRatioSize, 0, 1);
-      const visibleLength = Number((segmentLength * fillRatio).toFixed(3));
-      const sampleRatio = startRatio + (segmentRatioSize * 0.5);
-      const rawColor = configuredColor || resolveGaugeTintColor(tintScale, sampleRatio);
-
+    const upperIndex = GAUGE_SVG_FALLBACK_TINT_SCALE.findIndex((stop) => safeRatio <= stop.offset);
+    if (upperIndex <= 0) {
+      return `rgb(${GAUGE_SVG_FALLBACK_TINT_SCALE[0].channels.join(", ")})`;
+    }
+    const upper = GAUGE_SVG_FALLBACK_TINT_SCALE[upperIndex];
+    const lower = GAUGE_SVG_FALLBACK_TINT_SCALE[upperIndex - 1];
+    const localRatio = (safeRatio - lower.offset) / Math.max(upper.offset - lower.offset, 1e-4);
+    const channels = lower.channels.map((channel, index) => Math.round(channel + (upper.channels[index] - channel) * localRatio));
+    return `rgb(${channels.join(", ")})`;
+  }
+  function resolveGaugeSvgStrokeColor(value, fallback) {
+    const source = String(value || "").trim();
+    if (!source || /(?:color-mix|var)\(/i.test(source) || !/^(?:#[\da-f]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\)|[a-z]+)$/i.test(source)) {
+      return fallback;
+    }
+    return source;
+  }
+  function parseRgbColor(value) {
+    const source = String(value ?? "").trim();
+    if (!source) {
+      return null;
+    }
+    const rgbMatch = source.match(/^rgba?\(([^)]+)\)$/i);
+    if (rgbMatch) {
+      const channels = rgbMatch[1].split(",").map((channel) => Number.parseFloat(channel.trim())).filter((channel) => Number.isFinite(channel));
+      if (channels.length >= 3) {
+        return {
+          red: clamp(channels[0], 0, 255),
+          green: clamp(channels[1], 0, 255),
+          blue: clamp(channels[2], 0, 255)
+        };
+      }
+    }
+    const hexMatch = source.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+    if (hexMatch) {
+      const hex = hexMatch[1].length === 3 ? hexMatch[1].split("").map((channel) => channel + channel).join("") : hexMatch[1];
       return {
-        color: this._resolveGaugeSvgStrokeColor(rawColor, getGaugeSvgFallbackColor(sampleRatio)),
-        dasharray: `${visibleLength} ${DIAL_CIRCUMFERENCE}`,
-        dashoffset: `${Number((-segmentLength * index).toFixed(3))}`,
-        opacity: visibleLength > 0.05 ? 0.96 : 0,
+        red: Number.parseInt(hex.slice(0, 2), 16),
+        green: Number.parseInt(hex.slice(2, 4), 16),
+        blue: Number.parseInt(hex.slice(4, 6), 16)
       };
+    }
+    return null;
+  }
+  function getRelativeLuminance(color) {
+    if (!color) {
+      return null;
+    }
+    const toLinear = (channel) => {
+      const normalized = clamp(Number(channel) / 255, 0, 1);
+      return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+    };
+    const red = toLinear(color.red);
+    const green = toLinear(color.green);
+    const blue = toLinear(color.blue);
+    return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+  }
+  function isUnavailableState(state) {
+    return normalizeTextKey(state?.state) === "unavailable";
+  }
+  function inferDecimals(rawValue) {
+    const text = String(rawValue ?? "").trim();
+    const normalized = text.replace(",", ".");
+    if (!normalized.includes(".")) {
+      return 0;
+    }
+    return Math.min(3, normalized.split(".")[1].length);
+  }
+  function getHassLocaleTag(hass, language = "auto") {
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, language);
+    return window.NodaliaI18n?.localeTag?.(lang) || hass?.locale?.language || void 0;
+  }
+  function formatNumberValue(value, decimals = 0, locale = void 0) {
+    if (!Number.isFinite(Number(value))) {
+      return "--";
+    }
+    return Number(value).toLocaleString(locale, {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals
     });
   }
-
-  _getAccentColor(state, ratio) {
-    const styles = this._config?.styles || DEFAULT_CONFIG.styles;
-    const configuredColor = String(styles?.gauge?.foreground_color || "").trim();
-    if (configuredColor) {
-      return configuredColor;
+  function inferReasonableMax(currentValue, unit, state) {
+    const normalizedUnit = normalizeTextKey(unit);
+    const domainHint = `${state?.entity_id || ""} ${state?.attributes?.device_class || ""} ${state?.attributes?.friendly_name || ""}`.toLowerCase();
+    if (normalizedUnit === "%" || domainHint.includes("battery") || domainHint.includes("humidity")) {
+      return 100;
     }
-
-    return resolveGaugeTintColor(this._getGaugeTintScale(), ratio);
-  }
-
-  _formatValue(value, state, withUnit = false) {
-    const decimals = this._getDecimals(state);
-    const formatted = formatNumberValue(value, decimals, this._getLocaleTag());
-    if (!withUnit) {
-      return formatted;
+    if (["w", "watt", "watts", "va"].includes(normalizedUnit) || domainHint.includes("power") || domainHint.includes("potencia")) {
+      return 2500;
     }
-
-    const unit = this._getUnit(state);
-    return unit ? `${formatted} ${unit}` : formatted;
+    if (["kw"].includes(normalizedUnit)) {
+      return 10;
+    }
+    if (["a", "ma"].includes(normalizedUnit) || domainHint.includes("current") || domainHint.includes("corriente")) {
+      return normalizedUnit === "ma" ? 3e3 : 32;
+    }
+    if (["v", "mv"].includes(normalizedUnit) || domainHint.includes("voltage") || domainHint.includes("tension")) {
+      return normalizedUnit === "mv" ? 1e3 : 260;
+    }
+    if (normalizedUnit.includes("l_s") || normalizedUnit.includes("l_min") || normalizedUnit.includes("m3_h") || domainHint.includes("water") || domainHint.includes("agua") || domainHint.includes("caudal") || domainHint.includes("flow")) {
+      if (normalizedUnit.includes("l_s")) {
+        return 10;
+      }
+      if (normalizedUnit.includes("l_min")) {
+        return 60;
+      }
+      if (normalizedUnit.includes("m3_h")) {
+        return 10;
+      }
+      return 100;
+    }
+    if (["c", "f", "degc", "degf"].includes(normalizedUnit) || domainHint.includes("temperature") || domainHint.includes("temperatura")) {
+      return 40;
+    }
+    if (["bar", "hpa", "pa"].includes(normalizedUnit) || domainHint.includes("pressure") || domainHint.includes("presion")) {
+      return 1200;
+    }
+    if (Number.isFinite(currentValue)) {
+      if (currentValue <= 10) return 10;
+      if (currentValue <= 50) return 50;
+      if (currentValue <= 100) return 100;
+      if (currentValue <= 250) return 250;
+      if (currentValue <= 500) return 500;
+      if (currentValue <= 1e3) return 1e3;
+      if (currentValue <= 2500) return 2500;
+      if (currentValue <= 5e3) return 5e3;
+      if (currentValue <= 1e4) return 1e4;
+    }
+    return 100;
   }
-
-  _getLocaleTag() {
-    return getHassLocaleTag(this._hass, this._config?.language ?? "auto");
+  function getDialThumbRotate(angle) {
+    return Number((angle + 90).toFixed(3));
   }
-
-  _getAnimationSettings() {
-    const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
-
+  function getContinuousThumbRotate(previousRotate, nextAngle) {
+    if (!Number.isFinite(previousRotate)) {
+      return getDialThumbRotate(nextAngle);
+    }
+    const nextRotate = getDialThumbRotate(nextAngle);
+    let delta = nextRotate - previousRotate;
+    if (delta > DIAL_SWEEP / 2) {
+      delta -= 360;
+    } else if (delta < -(DIAL_SWEEP / 2)) {
+      delta += 360;
+    }
+    return Number((previousRotate + delta).toFixed(3));
+  }
+  function getDialMarkerCoordinates(angle) {
+    const center = DIAL_VIEWBOX_SIZE / 2;
+    const radians = angle * Math.PI / 180;
     return {
-      enabled: configuredAnimations.enabled !== false,
-      dialDuration: clamp(
-        Number(configuredAnimations.dial_duration) || DEFAULT_CONFIG.animations.dial_duration,
-        80,
-        2000,
-      ),
-      buttonBounceDuration: clamp(
-        Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration,
-        120,
-        1200,
-      ),
-      contentDuration: clamp(
-        Number(configuredAnimations.content_duration) || DEFAULT_CONFIG.animations.content_duration,
-        140,
-        1800,
-      ),
+      x: Number((center + Math.cos(radians) * DIAL_CIRCLE_RADIUS).toFixed(3)),
+      y: Number((center + Math.sin(radians) * DIAL_CIRCLE_RADIUS).toFixed(3))
     };
   }
-
-  _isLightThemeSurface() {
-    const textColor = parseRgbColor(resolveColorInContext(this, "var(--primary-text-color)"));
-    const backgroundColor = parseRgbColor(resolveColorInContext(this, "var(--ha-card-background, var(--card-background-color, #ffffff))"));
-
-    const textLuminance = getRelativeLuminance(textColor);
-    if (textLuminance !== null) {
-      return textLuminance < 0.36;
+  function mixCssColors(leftColor, rightColor, ratio) {
+    const safeRatio = clamp(Number(ratio) || 0, 0, 1);
+    if (safeRatio <= 0) {
+      return leftColor;
     }
-
-    const backgroundLuminance = getRelativeLuminance(backgroundColor);
-    if (backgroundLuminance !== null) {
-      return backgroundLuminance > 0.62;
+    if (safeRatio >= 1) {
+      return rightColor;
     }
-
-    return false;
+    const rightPercent = Number((safeRatio * 100).toFixed(2));
+    const leftPercent = Number((100 - rightPercent).toFixed(2));
+    return `color-mix(in srgb, ${leftColor} ${leftPercent}%, ${rightColor} ${rightPercent}%)`;
   }
-
-  _canRunTapAction() {
-    return (this._config?.tap_action || "more-info") !== "none" && Boolean(this._config?.entity);
+  function buildGaugeTintScale(minTintColor, maxTintColor) {
+    const safeMinTintColor = String(minTintColor || DEFAULT_GAUGE_MIN_TINT_COLOR).trim() || DEFAULT_GAUGE_MIN_TINT_COLOR;
+    const safeMaxTintColor = String(maxTintColor || DEFAULT_GAUGE_MAX_TINT_COLOR).trim() || DEFAULT_GAUGE_MAX_TINT_COLOR;
+    return [
+      { offset: 0, color: safeMinTintColor },
+      { offset: 0.28, color: mixCssColors("#71cf78", safeMaxTintColor, 0.08) },
+      { offset: 0.52, color: mixCssColors("#d9c45a", safeMaxTintColor, 0.14) },
+      { offset: 0.76, color: mixCssColors("#f5a03d", safeMaxTintColor, 0.22) },
+      { offset: 1, color: safeMaxTintColor }
+    ];
   }
-
-  _triggerHaptic(styleOverride = null) {
-    const haptics = this._config?.haptics || {};
-    if (haptics.enabled !== true) {
-      return;
+  function resolveGaugeTintColor(scale, ratio) {
+    const safeRatio = clamp(Number(ratio) || 0, 0, 1);
+    const tintScale = Array.isArray(scale) && scale.length ? scale : buildGaugeTintScale();
+    if (safeRatio <= tintScale[0].offset) {
+      return tintScale[0].color;
     }
-
-    const style = styleOverride || haptics.style || "medium";
-    fireEvent(this, "haptic", style, {
-      bubbles: true,
-      cancelable: false,
-      composed: true,
-    });
-
-    if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
-      navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
-    }
-  }
-
-  _triggerContentBounce(content) {
-    if (!(content instanceof HTMLElement)) {
-      return;
-    }
-
-    const animations = this._getAnimationSettings();
-    if (!animations.enabled) {
-      return;
-    }
-
-    content.classList.remove("is-pressing");
-    content.getBoundingClientRect();
-    content.classList.add("is-pressing");
-
-    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
-    const done = () => {
-      if (!content.isConnected) {
-        return;
+    for (let index = 1; index < tintScale.length; index += 1) {
+      const currentStop = tintScale[index];
+      const previousStop = tintScale[index - 1];
+      if (safeRatio <= currentStop.offset) {
+        const span = Math.max(currentStop.offset - previousStop.offset, 1e-4);
+        const localRatio = (safeRatio - previousStop.offset) / span;
+        return mixCssColors(previousStop.color, currentStop.color, localRatio);
       }
-      content.classList.remove("is-pressing");
-    };
-    if (typeof schedule === "function") {
-      schedule(this, done, animations.buttonBounceDuration + 40);
-    } else {
-      window.setTimeout(done, animations.buttonBounceDuration + 40);
     }
+    return tintScale[tintScale.length - 1].color;
   }
 
-  _scheduleEntranceAnimationReset(delay) {
-    if (this._entranceAnimationResetTimer) {
-      window.clearTimeout(this._entranceAnimationResetTimer);
-      this._entranceAnimationResetTimer = 0;
+  // src/cards/circular-gauge/circular-gauge-card.ts
+  var _lazyNodaliaCircularGaugeCard;
+  function loadNodaliaCircularGaugeCard() {
+    if (_lazyNodaliaCircularGaugeCard) {
+      return _lazyNodaliaCircularGaugeCard;
     }
-
-    const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3000);
-    if (!safeDelay || typeof window === "undefined") {
-      this._animateContentOnNextRender = false;
-      return;
-    }
-
-    this._entranceAnimationResetTimer = window.setTimeout(() => {
-      this._entranceAnimationResetTimer = 0;
-      if (!this.isConnected) {
-        return;
+    class NodaliaCircularGaugeCard extends HTMLElement {
+      static async getConfigElement() {
+        return document.createElement(EDITOR_TAG);
       }
-      this._animateContentOnNextRender = false;
-      this._finalizeGaugeEntranceProgress();
-    }, safeDelay);
-  }
-
-  _finalizeGaugeEntranceProgress() {
-    const dial = this.shadowRoot?.querySelector(".gauge-card__dial");
-    if (!(dial instanceof HTMLElement)) {
-      return;
-    }
-
-    const visualState = this._lastGaugeVisualState;
-    const ratio = Number(visualState?.ratio) || 0;
-    const tintScale = this._getGaugeTintScale();
-    const segments = this._getGaugeProgressSegments(ratio, tintScale);
-    const dialStartCapColor =
-      sanitizeCssValue(this._config?.styles?.gauge?.foreground_color, "")
-      || resolveGaugeTintColor(tintScale, 0.02);
-
-    dial.classList.remove("gauge-card__dial--entrance-progress");
-
-    const smoothProgress = dial.querySelector("[data-progress-smooth]");
-    if (smoothProgress instanceof SVGElement) {
-      smoothProgress.style.opacity = "0";
-    }
-
-    dial.querySelectorAll("[data-progress-segment]").forEach((segmentElement, index) => {
-      const segment = segments[index];
-      if (!(segmentElement instanceof SVGElement) || !segment) {
-        return;
+      static getStubConfig(hass, entities = [], entitiesFallback = []) {
+        return applyStubEntity(
+          deepClone(STUB_CONFIG),
+          hass,
+          ["sensor", "number", "input_number"],
+          entities,
+          entitiesFallback
+        );
       }
-
-      segmentElement.style.transition = "none";
-      segmentElement.style.stroke = segment.color;
-      segmentElement.style.strokeDasharray = segment.dasharray;
-      segmentElement.style.strokeDashoffset = segment.dashoffset;
-      segmentElement.style.opacity = String(segment.opacity);
-      void segmentElement.getBoundingClientRect();
-      segmentElement.style.transition = "";
-    });
-
-    const startCap = dial.querySelector("[data-progress-start]");
-    if (startCap instanceof SVGElement) {
-      startCap.style.fill = dialStartCapColor;
-      startCap.style.opacity = ratio > 0 ? "0.96" : "0";
-    }
-  }
-
-  _openMoreInfo() {
-    if (!this._config?.entity) {
-      return;
-    }
-
-    fireEvent(this, "hass-more-info", {
-      entityId: this._config.entity,
-    });
-  }
-
-  _onShadowClick(event) {
-    const target = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.gaugeAction === "primary");
-
-    if (!target || !this._canRunTapAction()) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    this._triggerHaptic();
-    this._triggerContentBounce(target);
-    this._openMoreInfo();
-  }
-
-  _onShadowKeyDown(event) {
-    if (window.NodaliaUtils?.isKeyboardActivationEvent?.(event) !== true) {
-      return;
-    }
-    this._onShadowClick(event);
-  }
-
-  _circularGaugeCardUi(key, fallback = "") {
-    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-    const pack = window.NodaliaI18n?.strings?.(lang)?.circularGaugeCard;
-    const enPack = window.NodaliaI18n?.strings?.("en")?.circularGaugeCard;
-    const raw = pack?.[key] ?? enPack?.[key];
-    return String(raw != null && raw !== "" ? raw : fallback);
-  }
-
-  _renderEmptyState() {
-    const styles = this._config?.styles || DEFAULT_CONFIG.styles;
-    const title = escapeHtml(this._circularGaugeCardUi("emptyTitle", "Nodalia Circular Gauge Card"));
-    const body = escapeHtml(
-      this._circularGaugeCardUi("emptyBody", "Set `entity` to a numeric entity to show the dial."),
-    );
-    return `
+      static getEntitySuggestion(hass, entityId) {
+        return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+          domains: ["sensor", "number", "input_number"]
+        });
+      }
+      constructor() {
+        super();
+        this._nodaliaConstruct();
+      }
+      _nodaliaConstruct() {
+        this.attachShadow({ mode: "open" });
+        this._config = normalizeConfig(STUB_CONFIG);
+        this._hass = null;
+        window.NodaliaUtils?.clearDeferTimers?.(this);
+        this._lastRenderSignature = "";
+        this._lastGaugeVisualState = null;
+        this._gaugeVisualFrame = 0;
+        this._animateContentOnNextRender = true;
+        this._entranceAnimationResetTimer = 0;
+        this._onShadowClick = this._onShadowClick.bind(this);
+        this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
+        this.shadowRoot.addEventListener("click", this._onShadowClick);
+        this.shadowRoot.addEventListener("keydown", this._onShadowKeyDown);
+      }
+      connectedCallback() {
+        this._animateContentOnNextRender = true;
+        if (this._hass && this._config) {
+          this._lastRenderSignature = "";
+          this._render();
+        }
+      }
+      disconnectedCallback() {
+        if (this._gaugeVisualFrame) {
+          window.cancelAnimationFrame(this._gaugeVisualFrame);
+          this._gaugeVisualFrame = 0;
+        }
+        if (this._entranceAnimationResetTimer) {
+          window.clearTimeout(this._entranceAnimationResetTimer);
+          this._entranceAnimationResetTimer = 0;
+        }
+        window.NodaliaUtils?.clearDeferTimers?.(this);
+        this._animateContentOnNextRender = true;
+        this._lastRenderSignature = "";
+      }
+      setConfig(config) {
+        this._config = normalizeConfig(config || {});
+        window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
+        this._lastRenderSignature = "";
+        this._animateContentOnNextRender = true;
+        this._render();
+      }
+      set hass(hass) {
+        const nextSignature = this._getRenderSignature(hass);
+        this._hass = hass;
+        if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+          return;
+        }
+        this._lastRenderSignature = nextSignature;
+        this._render();
+      }
+      getCardSize() {
+        return 3;
+      }
+      getGridOptions() {
+        return {
+          rows: "auto",
+          columns: "full",
+          min_rows: 5,
+          min_columns: 6
+        };
+      }
+      _getState() {
+        return this._config?.entity ? this._hass?.states?.[this._config.entity] || null : null;
+      }
+      _getRenderSignature(hass = this._hass) {
+        const entityId = this._config?.entity || "";
+        const state = entityId ? hass?.states?.[entityId] || null : null;
+        const attrs = state?.attributes || {};
+        const joinParts = window.NodaliaRenderSignature?.joinParts;
+        const values = [
+          entityId,
+          String(state?.state || ""),
+          String(attrs.native_value ?? ""),
+          String(attrs.friendly_name || ""),
+          String(attrs.icon || ""),
+          String(attrs.unit_of_measurement || attrs.native_unit_of_measurement || ""),
+          String(attrs.device_class || ""),
+          String(attrs.min ?? ""),
+          String(attrs.max ?? ""),
+          String(getHassLocaleTag(hass, this._config?.language ?? "auto") || ""),
+          Number(this._config?.grid_options?.rows || 0),
+          Number(this._config?.grid_options?.columns || 0)
+        ];
+        if (typeof joinParts === "function") {
+          return joinParts([{ prefix: "gauge:", values }]);
+        }
+        return values.join("::");
+      }
+      _getConfiguredGridRows() {
+        const numericRows = Number(this._config?.grid_options?.rows);
+        return Number.isFinite(numericRows) ? numericRows : null;
+      }
+      _getConfiguredGridColumns() {
+        const numericColumns = Number(this._config?.grid_options?.columns);
+        return Number.isFinite(numericColumns) ? numericColumns : null;
+      }
+      _getCompactLevel() {
+        const configuredRows = this._getConfiguredGridRows();
+        const configuredColumns = this._getConfiguredGridColumns();
+        if (configuredRows !== null && configuredRows <= 3 || configuredColumns !== null && configuredColumns <= 6) {
+          return "compact";
+        }
+        return "default";
+      }
+      _getTitle(state) {
+        return this._config?.name || state?.attributes?.friendly_name || this._config?.entity || "Gauge";
+      }
+      _getIcon(state) {
+        return this._config?.icon || state?.attributes?.icon || "mdi:gauge";
+      }
+      _getUnit(state) {
+        return String(
+          this._config?.unit || state?.attributes?.unit_of_measurement || state?.attributes?.native_unit_of_measurement || ""
+        ).trim();
+      }
+      _getNumericValue(state) {
+        const direct = Number(String(state?.state ?? "").replace(",", "."));
+        if (Number.isFinite(direct)) {
+          return direct;
+        }
+        const nativeValue = Number(state?.attributes?.native_value);
+        return Number.isFinite(nativeValue) ? nativeValue : null;
+      }
+      _getDecimals(state) {
+        const configured = Number(this._config?.decimals);
+        if (Number.isFinite(configured) && configured >= 0) {
+          return Math.min(3, configured);
+        }
+        const rawState = String(state?.state ?? "").trim();
+        return inferDecimals(rawState);
+      }
+      _getRange(state, currentValue) {
+        const configuredMin = Number(this._config?.min);
+        const configuredMax = Number(this._config?.max);
+        const attrMin = Number(state?.attributes?.min);
+        const attrMax = Number(state?.attributes?.max);
+        const unit = this._getUnit(state);
+        const min = Number.isFinite(configuredMin) ? configuredMin : Number.isFinite(attrMin) ? attrMin : this._config?.start_from_zero === false && Number.isFinite(currentValue) && currentValue < 0 ? Math.floor(currentValue) : 0;
+        let max = Number.isFinite(configuredMax) ? configuredMax : Number.isFinite(attrMax) ? attrMax : inferReasonableMax(currentValue, unit, state);
+        if (!Number.isFinite(max) || max <= min) {
+          max = min + 100;
+        }
+        return { min, max };
+      }
+      _getRangeLabel(boundary, range, state) {
+        const configuredLabel = String(
+          boundary === "min" ? this._config?.min_label ?? "" : this._config?.max_label ?? ""
+        ).trim();
+        if (configuredLabel) {
+          return configuredLabel;
+        }
+        return formatNumberValue(boundary === "min" ? range.min : range.max, this._getDecimals(state), this._getLocaleTag());
+      }
+      _getGaugeTintScale() {
+        const gaugeStyles = this._config?.styles?.gauge || DEFAULT_CONFIG.styles.gauge;
+        return buildGaugeTintScale(gaugeStyles.min_tint_color, gaugeStyles.max_tint_color);
+      }
+      _resolveGaugeSvgStrokeColor(value, fallback) {
+        const cacheKey = `${value}\0${fallback}`;
+        if (this._gaugeSvgColorCache?.has(cacheKey)) {
+          return this._gaugeSvgColorCache.get(cacheKey);
+        }
+        const resolved = resolveGaugeSvgStrokeColor(value, fallback);
+        this._gaugeSvgColorCache?.set(cacheKey, resolved);
+        return resolved;
+      }
+      _getGaugeProgressSegments(ratio, tintScale) {
+        const safeRatio = clamp(Number(ratio) || 0, 0, 1);
+        const configuredColor = String(this._config?.styles?.gauge?.foreground_color || "").trim();
+        const segmentLength = DIAL_VISIBLE_LENGTH / GAUGE_TINT_SEGMENT_COUNT;
+        const segmentRatioSize = 1 / GAUGE_TINT_SEGMENT_COUNT;
+        return Array.from({ length: GAUGE_TINT_SEGMENT_COUNT }, (_, index) => {
+          const startRatio = index * segmentRatioSize;
+          const fillRatio = clamp((safeRatio - startRatio) / segmentRatioSize, 0, 1);
+          const visibleLength = Number((segmentLength * fillRatio).toFixed(3));
+          const sampleRatio = startRatio + segmentRatioSize * 0.5;
+          const rawColor = configuredColor || resolveGaugeTintColor(tintScale, sampleRatio);
+          return {
+            color: this._resolveGaugeSvgStrokeColor(rawColor, getGaugeSvgFallbackColor(sampleRatio)),
+            dasharray: `${visibleLength} ${DIAL_CIRCUMFERENCE}`,
+            dashoffset: `${Number((-segmentLength * index).toFixed(3))}`,
+            opacity: visibleLength > 0.05 ? 0.96 : 0
+          };
+        });
+      }
+      _getAccentColor(state, ratio) {
+        const styles = this._config?.styles || DEFAULT_CONFIG.styles;
+        const configuredColor = String(styles?.gauge?.foreground_color || "").trim();
+        if (configuredColor) {
+          return configuredColor;
+        }
+        return resolveGaugeTintColor(this._getGaugeTintScale(), ratio);
+      }
+      _formatValue(value, state, withUnit = false) {
+        const decimals = this._getDecimals(state);
+        const formatted = formatNumberValue(value, decimals, this._getLocaleTag());
+        if (!withUnit) {
+          return formatted;
+        }
+        const unit = this._getUnit(state);
+        return unit ? `${formatted} ${unit}` : formatted;
+      }
+      _getLocaleTag() {
+        return getHassLocaleTag(this._hass, this._config?.language ?? "auto");
+      }
+      _getAnimationSettings() {
+        const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+        return {
+          enabled: configuredAnimations.enabled !== false,
+          dialDuration: clamp(
+            Number(configuredAnimations.dial_duration) || DEFAULT_CONFIG.animations.dial_duration,
+            80,
+            2e3
+          ),
+          buttonBounceDuration: clamp(
+            Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration,
+            120,
+            1200
+          ),
+          contentDuration: clamp(
+            Number(configuredAnimations.content_duration) || DEFAULT_CONFIG.animations.content_duration,
+            140,
+            1800
+          )
+        };
+      }
+      _isLightThemeSurface() {
+        const textColor = parseRgbColor(resolveColorInContext(this, "var(--primary-text-color)"));
+        const backgroundColor = parseRgbColor(resolveColorInContext(this, "var(--ha-card-background, var(--card-background-color, #ffffff))"));
+        const textLuminance = getRelativeLuminance(textColor);
+        if (textLuminance !== null) {
+          return textLuminance < 0.36;
+        }
+        const backgroundLuminance = getRelativeLuminance(backgroundColor);
+        if (backgroundLuminance !== null) {
+          return backgroundLuminance > 0.62;
+        }
+        return false;
+      }
+      _canRunTapAction() {
+        return (this._config?.tap_action || "more-info") !== "none" && Boolean(this._config?.entity);
+      }
+      _triggerHaptic(styleOverride = null) {
+        const haptics = this._config?.haptics || {};
+        if (haptics.enabled !== true) {
+          return;
+        }
+        const style = styleOverride || haptics.style || "medium";
+        fireEvent(this, "haptic", style, {
+          bubbles: true,
+          cancelable: false,
+          composed: true
+        });
+        if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
+          navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
+        }
+      }
+      _triggerContentBounce(content) {
+        if (!(content instanceof HTMLElement)) {
+          return;
+        }
+        const animations = this._getAnimationSettings();
+        if (!animations.enabled) {
+          return;
+        }
+        content.classList.remove("is-pressing");
+        content.getBoundingClientRect();
+        content.classList.add("is-pressing");
+        const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+        const done = () => {
+          if (!content.isConnected) {
+            return;
+          }
+          content.classList.remove("is-pressing");
+        };
+        if (typeof schedule === "function") {
+          schedule(this, done, animations.buttonBounceDuration + 40);
+        } else {
+          window.setTimeout(done, animations.buttonBounceDuration + 40);
+        }
+      }
+      _scheduleEntranceAnimationReset(delay) {
+        if (this._entranceAnimationResetTimer) {
+          window.clearTimeout(this._entranceAnimationResetTimer);
+          this._entranceAnimationResetTimer = 0;
+        }
+        const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3e3);
+        if (!safeDelay || typeof window === "undefined") {
+          this._animateContentOnNextRender = false;
+          return;
+        }
+        this._entranceAnimationResetTimer = window.setTimeout(() => {
+          this._entranceAnimationResetTimer = 0;
+          if (!this.isConnected) {
+            return;
+          }
+          this._animateContentOnNextRender = false;
+          this._finalizeGaugeEntranceProgress();
+        }, safeDelay);
+      }
+      _finalizeGaugeEntranceProgress() {
+        const dial = this.shadowRoot?.querySelector(".gauge-card__dial");
+        if (!(dial instanceof HTMLElement)) {
+          return;
+        }
+        const visualState = this._lastGaugeVisualState;
+        const ratio = Number(visualState?.ratio) || 0;
+        const tintScale = this._getGaugeTintScale();
+        const segments = this._getGaugeProgressSegments(ratio, tintScale);
+        const dialStartCapColor = sanitizeCssValue(this._config?.styles?.gauge?.foreground_color, "") || resolveGaugeTintColor(tintScale, 0.02);
+        dial.classList.remove("gauge-card__dial--entrance-progress");
+        const smoothProgress = dial.querySelector("[data-progress-smooth]");
+        if (smoothProgress instanceof SVGElement) {
+          smoothProgress.style.opacity = "0";
+        }
+        dial.querySelectorAll("[data-progress-segment]").forEach((segmentElement, index) => {
+          const segment = segments[index];
+          if (!(segmentElement instanceof SVGElement) || !segment) {
+            return;
+          }
+          segmentElement.style.transition = "none";
+          segmentElement.style.stroke = segment.color;
+          segmentElement.style.strokeDasharray = segment.dasharray;
+          segmentElement.style.strokeDashoffset = segment.dashoffset;
+          segmentElement.style.opacity = String(segment.opacity);
+          void segmentElement.getBoundingClientRect();
+          segmentElement.style.transition = "";
+        });
+        const startCap = dial.querySelector("[data-progress-start]");
+        if (startCap instanceof SVGElement) {
+          startCap.style.fill = dialStartCapColor;
+          startCap.style.opacity = ratio > 0 ? "0.96" : "0";
+        }
+      }
+      _openMoreInfo() {
+        if (!this._config?.entity) {
+          return;
+        }
+        fireEvent(this, "hass-more-info", {
+          entityId: this._config.entity
+        });
+      }
+      _onShadowClick(event) {
+        const target = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.gaugeAction === "primary");
+        if (!target || !this._canRunTapAction()) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        this._triggerHaptic();
+        this._triggerContentBounce(target);
+        this._openMoreInfo();
+      }
+      _onShadowKeyDown(event) {
+        if (window.NodaliaUtils?.isKeyboardActivationEvent?.(event) !== true) {
+          return;
+        }
+        this._onShadowClick(event);
+      }
+      _circularGaugeCardUi(key, fallback = "") {
+        const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+        const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+        const pack = window.NodaliaI18n?.strings?.(lang)?.circularGaugeCard;
+        const enPack = window.NodaliaI18n?.strings?.("en")?.circularGaugeCard;
+        const raw = pack?.[key] ?? enPack?.[key];
+        return String(raw != null && raw !== "" ? raw : fallback);
+      }
+      _renderEmptyState() {
+        const styles = this._config?.styles || DEFAULT_CONFIG.styles;
+        const title = escapeHtml(this._circularGaugeCardUi("emptyTitle", "Nodalia Circular Gauge Card"));
+        const body = escapeHtml(
+          this._circularGaugeCardUi("emptyBody", "Set `entity` to a numeric entity to show the dial.")
+        );
+        return `
       <style>
         :host {
           display: block;
@@ -1137,117 +921,97 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         <div class="gauge-card__empty-text">${body}</div>
       </ha-card>
     `;
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
-    }
-
-    const config = this._config || normalizeConfig({});
-    const styles = getSafeStyles(config.styles);
-
-    const entityGuard = window.NodaliaUtils?.renderLovelaceEntityGuardCardHtml?.(
-      this._hass,
-      config.entity,
-      { cardClass: "gauge-card" },
-    );
-    if (entityGuard) {
-      this.shadowRoot.innerHTML = entityGuard;
-      return;
-    }
-
-    const state = this._getState();
-    if (!state) {
-      this.shadowRoot.innerHTML = window.NodaliaUtils?.renderCardEmptyStateDocument?.(
-        this._renderEmptyState(),
-        { card: (config || DEFAULT_CONFIG).styles?.card },
-      ) ?? this._renderEmptyState();
-      return;
-    }
-
-    const compactLayout = this._getCompactLevel() === "compact";
-    const title = this._getTitle(state);
-    const icon = this._getIcon(state);
-    const value = this._getNumericValue(state);
-    const unit = this._getUnit(state);
-    const range = this._getRange(state, value);
-    const ratio = value === null ? 0 : clamp((value - range.min) / Math.max(range.max - range.min, 1), 0, 1);
-    this._gaugeSvgColorCache = new Map();
-    const tintScale = this._getGaugeTintScale();
-    const accentColor = this._getAccentColor(state, ratio);
-    const progressLength = Number((DIAL_VISIBLE_LENGTH * ratio).toFixed(3));
-    const dialAngle = DIAL_START_ANGLE + (ratio * DIAL_SWEEP);
-    const thumbOrbitRatio = DIAL_CIRCLE_RADIUS / DIAL_VIEWBOX_SIZE;
-    const dialStartCoordinates = getDialMarkerCoordinates(DIAL_START_ANGLE);
-    const dialStartCapColor =
-      sanitizeCssValue(styles.gauge.foreground_color, "") || resolveGaugeTintColor(tintScale, 0.02);
-    const showUnavailableBadge = config.show_unavailable_badge !== false && isUnavailableState(state);
-    const showHeader = config.show_header !== false;
-    const showName = config.show_name !== false;
-    const showIcon = config.show_icon !== false;
-    const dialSizePx = Math.max(
-      220,
-      Math.min(parseSizeToPixels(styles.gauge.size, 280), compactLayout ? 248 : 280),
-    );
-    const dialStrokePx = Math.max(
-      15,
-      Math.min(parseSizeToPixels(styles.gauge.stroke, 18), compactLayout ? 17 : 18),
-    );
-    const thumbSizePx = Math.max(
-      18,
-      Math.min(parseSizeToPixels(styles.gauge.thumb_size, 22), compactLayout ? 20 : 22),
-    );
-    const effectiveCardPadding = compactLayout ? "14px" : styles.card.padding;
-    const effectiveGap = compactLayout ? "12px" : styles.card.gap;
-    const effectiveIconSize = `${Math.max(50, Math.min(parseSizeToPixels(styles.icon.size, 58), compactLayout ? 54 : 58))}px`;
-    const effectiveTitleSize = `${Math.max(14, Math.min(parseSizeToPixels(styles.title_size, 16), compactLayout ? 15 : 16))}px`;
-    const effectiveValueSize = `${Math.max(42, Math.min(parseSizeToPixels(styles.value_size, 52), compactLayout ? 46 : 52))}px`;
-    const effectiveRangeSize = `${Math.max(12, Math.min(parseSizeToPixels(styles.range_size, 14), compactLayout ? 13 : 14))}px`;
-    const effectiveChipHeight = `${Math.max(22, Math.min(parseSizeToPixels(styles.chip_height, 24), compactLayout ? 23 : 24))}px`;
-    const effectiveChipFontSize = `${Math.max(10, Math.min(parseSizeToPixels(styles.chip_font_size, 11), compactLayout ? 10.5 : 11))}px`;
-    const effectiveChipPadding = compactLayout ? "0 9px" : styles.chip_padding;
-    const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
-    const effectiveNameChipMaxWidth = `${Math.max(120, Math.min(parseSizeToPixels(styles.name_chip_max_width, 170), compactLayout ? 148 : 170))}px`;
-    const cardBackground = value === null
-      ? styles.card.background
-      : `
+      }
+      _render() {
+        if (!this.shadowRoot) {
+          return;
+        }
+        const config = this._config || normalizeConfig({});
+        const styles = getSafeStyles(config.styles);
+        const entityGuard = window.NodaliaUtils?.renderLovelaceEntityGuardCardHtml?.(
+          this._hass,
+          config.entity,
+          { cardClass: "gauge-card" }
+        );
+        if (entityGuard) {
+          this.shadowRoot.innerHTML = entityGuard;
+          return;
+        }
+        const state = this._getState();
+        if (!state) {
+          this.shadowRoot.innerHTML = window.NodaliaUtils?.renderCardEmptyStateDocument?.(
+            this._renderEmptyState(),
+            { card: (config || DEFAULT_CONFIG).styles?.card }
+          ) ?? this._renderEmptyState();
+          return;
+        }
+        const compactLayout = this._getCompactLevel() === "compact";
+        const title = this._getTitle(state);
+        const icon = this._getIcon(state);
+        const value = this._getNumericValue(state);
+        const unit = this._getUnit(state);
+        const range = this._getRange(state, value);
+        const ratio = value === null ? 0 : clamp((value - range.min) / Math.max(range.max - range.min, 1), 0, 1);
+        this._gaugeSvgColorCache = /* @__PURE__ */ new Map();
+        const tintScale = this._getGaugeTintScale();
+        const accentColor = this._getAccentColor(state, ratio);
+        const progressLength = Number((DIAL_VISIBLE_LENGTH * ratio).toFixed(3));
+        const dialAngle = DIAL_START_ANGLE + ratio * DIAL_SWEEP;
+        const thumbOrbitRatio = DIAL_CIRCLE_RADIUS / DIAL_VIEWBOX_SIZE;
+        const dialStartCoordinates = getDialMarkerCoordinates(DIAL_START_ANGLE);
+        const dialStartCapColor = sanitizeCssValue(styles.gauge.foreground_color, "") || resolveGaugeTintColor(tintScale, 0.02);
+        const showUnavailableBadge = config.show_unavailable_badge !== false && isUnavailableState(state);
+        const showHeader = config.show_header !== false;
+        const showName = config.show_name !== false;
+        const showIcon = config.show_icon !== false;
+        const dialSizePx = Math.max(
+          220,
+          Math.min(parseSizeToPixels(styles.gauge.size, 280), compactLayout ? 248 : 280)
+        );
+        const dialStrokePx = Math.max(
+          15,
+          Math.min(parseSizeToPixels(styles.gauge.stroke, 18), compactLayout ? 17 : 18)
+        );
+        const thumbSizePx = Math.max(
+          18,
+          Math.min(parseSizeToPixels(styles.gauge.thumb_size, 22), compactLayout ? 20 : 22)
+        );
+        const effectiveCardPadding = compactLayout ? "14px" : styles.card.padding;
+        const effectiveGap = compactLayout ? "12px" : styles.card.gap;
+        const effectiveIconSize = `${Math.max(50, Math.min(parseSizeToPixels(styles.icon.size, 58), compactLayout ? 54 : 58))}px`;
+        const effectiveTitleSize = `${Math.max(14, Math.min(parseSizeToPixels(styles.title_size, 16), compactLayout ? 15 : 16))}px`;
+        const effectiveValueSize = `${Math.max(42, Math.min(parseSizeToPixels(styles.value_size, 52), compactLayout ? 46 : 52))}px`;
+        const effectiveRangeSize = `${Math.max(12, Math.min(parseSizeToPixels(styles.range_size, 14), compactLayout ? 13 : 14))}px`;
+        const effectiveChipHeight = `${Math.max(22, Math.min(parseSizeToPixels(styles.chip_height, 24), compactLayout ? 23 : 24))}px`;
+        const effectiveChipFontSize = `${Math.max(10, Math.min(parseSizeToPixels(styles.chip_font_size, 11), compactLayout ? 10.5 : 11))}px`;
+        const effectiveChipPadding = compactLayout ? "0 9px" : styles.chip_padding;
+        const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
+        const effectiveNameChipMaxWidth = `${Math.max(120, Math.min(parseSizeToPixels(styles.name_chip_max_width, 170), compactLayout ? 148 : 170))}px`;
+        const cardBackground = value === null ? styles.card.background : `
         linear-gradient(135deg, color-mix(in srgb, ${accentColor} 22%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 12%, ${styles.card.background}) 56%, ${styles.card.background} 100%)
       `.trim();
-    const cardBorder = value === null
-      ? styles.card.border
-      : `1px solid color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`;
-    const cardShadow = value === null
-      ? styles.card.box_shadow
-      : `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.16))`;
-    const dialSurfaceBackground = `
+        const cardBorder = value === null ? styles.card.border : `1px solid color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`;
+        const cardShadow = value === null ? styles.card.box_shadow : `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.16))`;
+        const dialSurfaceBackground = `
       radial-gradient(circle at 24% 18%, color-mix(in srgb, ${accentColor} 20%, transparent), transparent 30%),
       linear-gradient(180deg, color-mix(in srgb, ${accentColor} 14%, color-mix(in srgb, var(--primary-text-color) 4%, transparent)) 0%, rgba(255, 255, 255, 0) 42%),
       linear-gradient(135deg, color-mix(in srgb, ${accentColor} 16%, ${styles.gauge.background}) 0%, color-mix(in srgb, ${accentColor} 8%, ${styles.gauge.background}) 60%, ${styles.gauge.background} 100%)
     `.trim();
-    const dialTrackColor = `color-mix(in srgb, ${styles.gauge.track_color} 68%, var(--primary-text-color) 32%)`;
-    const animations = this._getAnimationSettings();
-    const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
-    const previousVisualState = animations.enabled && !shouldAnimateEntrance ? this._lastGaugeVisualState : null;
-    const initialRatio = previousVisualState ? previousVisualState.ratio : shouldAnimateEntrance ? 0 : ratio;
-    const initialProgressLength = Number((DIAL_VISIBLE_LENGTH * initialRatio).toFixed(3));
-    const initialThumbAngle = previousVisualState
-      ? previousVisualState.dialAngle
-      : shouldAnimateEntrance
-        ? DIAL_START_ANGLE
-        : dialAngle;
-    const initialThumbRotate = previousVisualState?.thumbRotate ?? getDialThumbRotate(initialThumbAngle);
-    const targetThumbRotate = previousVisualState
-      ? getContinuousThumbRotate(initialThumbRotate, dialAngle)
-      : getDialThumbRotate(dialAngle);
-    const initialProgressSegments = this._getGaugeProgressSegments(initialRatio, tintScale);
-    const chips = [];
-
-    if (config.show_percentage_chip === true && value !== null) {
-      chips.push(`<div class="gauge-card__chip">${escapeHtml(`${Math.round(ratio * 100)}%`)}</div>`);
-    }
-
-    this.shadowRoot.innerHTML = `
+        const dialTrackColor = `color-mix(in srgb, ${styles.gauge.track_color} 68%, var(--primary-text-color) 32%)`;
+        const animations = this._getAnimationSettings();
+        const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
+        const previousVisualState = animations.enabled && !shouldAnimateEntrance ? this._lastGaugeVisualState : null;
+        const initialRatio = previousVisualState ? previousVisualState.ratio : shouldAnimateEntrance ? 0 : ratio;
+        const initialProgressLength = Number((DIAL_VISIBLE_LENGTH * initialRatio).toFixed(3));
+        const initialThumbAngle = previousVisualState ? previousVisualState.dialAngle : shouldAnimateEntrance ? DIAL_START_ANGLE : dialAngle;
+        const initialThumbRotate = previousVisualState?.thumbRotate ?? getDialThumbRotate(initialThumbAngle);
+        const targetThumbRotate = previousVisualState ? getContinuousThumbRotate(initialThumbRotate, dialAngle) : getDialThumbRotate(dialAngle);
+        const initialProgressSegments = this._getGaugeProgressSegments(initialRatio, tintScale);
+        const chips = [];
+        if (config.show_percentage_chip === true && value !== null) {
+          chips.push(`<div class="gauge-card__chip">${escapeHtml(`${Math.round(ratio * 100)}%`)}</div>`);
+        }
+        this.shadowRoot.innerHTML = `
       <style>
         :host {
           --gauge-card-dial-duration: ${animations.enabled ? animations.dialDuration : 0}ms;
@@ -1291,9 +1055,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         }
 
         .gauge-card::before {
-          background: ${value === null
-            ? "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0))"
-            : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 28%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`};
+          background: ${value === null ? "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0))" : `linear-gradient(180deg, color-mix(in srgb, ${accentColor} 28%, color-mix(in srgb, var(--primary-text-color) 6%, transparent)), rgba(255, 255, 255, 0))`};
           content: "";
           inset: 0;
           pointer-events: none;
@@ -1819,20 +1581,14 @@ class NodaliaCircularGaugeCard extends HTMLElement {
       </style>
       <ha-card class="gauge-card">
         <div class="gauge-card__content" ${this._canRunTapAction() ? `data-gauge-action="primary" role="button" tabindex="0" aria-label="${escapeHtml(title)}"` : ""}>
-          ${
-            showHeader
-              ? `
+          ${showHeader ? `
                 <div class="gauge-card__hero ${shouldAnimateEntrance ? "gauge-card__hero--entering" : ""}">
-                  ${
-                    showIcon
-                      ? `
+                  ${showIcon ? `
                         <div class="gauge-card__icon">
                           <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
                           ${showUnavailableBadge ? `<span class="gauge-card__unavailable-badge"><ha-icon icon="mdi:help"></ha-icon></span>` : ""}
                         </div>
-                      `
-                      : ""
-                  }
+                      ` : ""}
                   <div class="gauge-card__copy">
                     <div class="gauge-card__headline">
                       ${showName ? `<div class="gauge-card__title">${escapeHtml(title)}</div>` : `<div></div>`}
@@ -1840,15 +1596,9 @@ class NodaliaCircularGaugeCard extends HTMLElement {
                     </div>
                   </div>
                 </div>
-              `
-              : ""
-          }
+              ` : ""}
 
-          ${
-            !showHeader && showName && config.show_name_chip !== false
-              ? `<div class="gauge-card__chip gauge-card__name-chip">${escapeHtml(title)}</div>`
-              : ""
-          }
+          ${!showHeader && showName && config.show_name_chip !== false ? `<div class="gauge-card__chip gauge-card__name-chip">${escapeHtml(title)}</div>` : ""}
           <div class="gauge-card__dial-wrap ${shouldAnimateEntrance ? "gauge-card__dial-wrap--entering" : ""}">
             <div
               class="gauge-card__dial${shouldAnimateEntrance ? " gauge-card__dial--entrance-progress" : ""}"
@@ -1869,8 +1619,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
                   cy="${DIAL_VIEWBOX_SIZE / 2}"
                   r="${DIAL_CIRCLE_RADIUS}"
                 ></circle>
-                ${initialProgressSegments
-                  .map((segment, index) => `
+                ${initialProgressSegments.map((segment, index) => `
                     <circle
                       class="gauge-card__dial-progress-segment"
                       data-progress-segment="${index}"
@@ -1879,8 +1628,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
                       r="${DIAL_CIRCLE_RADIUS}"
                       style="stroke:${sanitizeCssValue(segment.color, styles.gauge.max_tint_color)};stroke-dasharray:${segment.dasharray};stroke-dashoffset:${segment.dashoffset};opacity:${segment.opacity};"
                     ></circle>
-                  `)
-                  .join("")}
+                  `).join("")}
                 <circle
                   class="gauge-card__dial-progress-start"
                   data-progress-start
@@ -1891,27 +1639,19 @@ class NodaliaCircularGaugeCard extends HTMLElement {
                 ></circle>
               </svg>
               <span class="gauge-card__dial-thumb" aria-hidden="true"></span>
-              ${
-                config.show_range_labels !== false
-                  ? `
+              ${config.show_range_labels !== false ? `
                     <span class="gauge-card__range-label gauge-card__range-label--min">
                       ${escapeHtml(this._getRangeLabel("min", range, state))}
                     </span>
                     <span class="gauge-card__range-label gauge-card__range-label--max">
                       ${escapeHtml(this._getRangeLabel("max", range, state))}
                     </span>
-                  `
-                  : ""
-              }
-              ${
-                config.show_bottom_icon_bubble === true && showIcon
-                  ? `
+                  ` : ""}
+              ${config.show_bottom_icon_bubble === true && showIcon ? `
                     <div class="gauge-card__bottom-icon">
                       <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
                     </div>
-                  `
-                  : ""
-              }
+                  ` : ""}
               <div class="gauge-card__dial-center">
                 <div class="gauge-card__value">
                   ${escapeHtml(this._formatValue(value, state, false))}
@@ -1923,362 +1663,291 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         </div>
       </ha-card>
     `;
-
-    if (this._gaugeVisualFrame) {
-      window.cancelAnimationFrame(this._gaugeVisualFrame);
-      this._gaugeVisualFrame = 0;
-    }
-
-    if (animations.enabled && (shouldAnimateEntrance || previousVisualState)) {
-      const dial = this.shadowRoot.querySelector(".gauge-card__dial");
-      if (dial instanceof HTMLElement) {
-        this._gaugeVisualFrame = window.requestAnimationFrame(() => {
-          dial.style.setProperty("--gauge-progress-length", `${progressLength}`);
-          dial.style.setProperty("--gauge-thumb-rotate", `${targetThumbRotate}deg`);
-
-          if (shouldAnimateEntrance) {
-            this._gaugeVisualFrame = 0;
-            return;
-          }
-
-          const nextProgressSegments = this._getGaugeProgressSegments(ratio, tintScale);
-          dial.querySelectorAll("[data-progress-segment]").forEach((segmentElement, index) => {
-            const segment = nextProgressSegments[index];
-            if (!(segmentElement instanceof SVGElement) || !segment) {
-              return;
-            }
-
-            segmentElement.style.stroke = segment.color;
-            segmentElement.style.strokeDasharray = segment.dasharray;
-            segmentElement.style.strokeDashoffset = segment.dashoffset;
-            segmentElement.style.opacity = String(segment.opacity);
-          });
-
-          const startCap = dial.querySelector("[data-progress-start]");
-          if (startCap instanceof SVGElement) {
-            startCap.style.fill = dialStartCapColor;
-            startCap.style.opacity = ratio > 0 ? "0.96" : "0";
-          }
-
+        if (this._gaugeVisualFrame) {
+          window.cancelAnimationFrame(this._gaugeVisualFrame);
           this._gaugeVisualFrame = 0;
-        });
+        }
+        if (animations.enabled && (shouldAnimateEntrance || previousVisualState)) {
+          const dial = this.shadowRoot.querySelector(".gauge-card__dial");
+          if (dial instanceof HTMLElement) {
+            this._gaugeVisualFrame = window.requestAnimationFrame(() => {
+              dial.style.setProperty("--gauge-progress-length", `${progressLength}`);
+              dial.style.setProperty("--gauge-thumb-rotate", `${targetThumbRotate}deg`);
+              if (shouldAnimateEntrance) {
+                this._gaugeVisualFrame = 0;
+                return;
+              }
+              const nextProgressSegments = this._getGaugeProgressSegments(ratio, tintScale);
+              dial.querySelectorAll("[data-progress-segment]").forEach((segmentElement, index) => {
+                const segment = nextProgressSegments[index];
+                if (!(segmentElement instanceof SVGElement) || !segment) {
+                  return;
+                }
+                segmentElement.style.stroke = segment.color;
+                segmentElement.style.strokeDasharray = segment.dasharray;
+                segmentElement.style.strokeDashoffset = segment.dashoffset;
+                segmentElement.style.opacity = String(segment.opacity);
+              });
+              const startCap = dial.querySelector("[data-progress-start]");
+              if (startCap instanceof SVGElement) {
+                startCap.style.fill = dialStartCapColor;
+                startCap.style.opacity = ratio > 0 ? "0.96" : "0";
+              }
+              this._gaugeVisualFrame = 0;
+            });
+          }
+        }
+        this._lastGaugeVisualState = {
+          progressLength,
+          ratio,
+          dialAngle,
+          thumbRotate: previousVisualState || shouldAnimateEntrance ? targetThumbRotate : getDialThumbRotate(dialAngle)
+        };
+        if (shouldAnimateEntrance) {
+          this._scheduleEntranceAnimationReset(animations.contentDuration + 120);
+        }
       }
     }
+    _lazyNodaliaCircularGaugeCard = NodaliaCircularGaugeCard;
+    return NodaliaCircularGaugeCard;
+  }
 
-    this._lastGaugeVisualState = {
-      progressLength,
-      ratio,
-      dialAngle,
-      thumbRotate: previousVisualState || shouldAnimateEntrance ? targetThumbRotate : getDialThumbRotate(dialAngle),
-    };
-
-    if (shouldAnimateEntrance) {
-      this._scheduleEntranceAnimationReset(animations.contentDuration + 120);
+  // src/cards/circular-gauge/circular-gauge-editor.ts
+  var _lazyNodaliaCircularGaugeCardEditor;
+  function loadNodaliaCircularGaugeCardEditor() {
+    if (_lazyNodaliaCircularGaugeCardEditor) {
+      return _lazyNodaliaCircularGaugeCardEditor;
     }
-  }
-}
-
-if (!customElements.get(CARD_TAG)) {
-  customElements.define(CARD_TAG, NodaliaCircularGaugeCard);
-}
-
-class NodaliaCircularGaugeCardEditor extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(STUB_CONFIG);
-    this._hass = null;
-    this._entityOptionsSignature = "";
-    this._showStyleSection = false;
-    this._showAnimationSection = false;
-    this._showTapActionsSection = false;
-    this._pendingEditorControlTags = new Set();
-    this._onShadowInput = this._onShadowInput.bind(this);
-    this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
-    this._onShadowClick = this._onShadowClick.bind(this);
-  }
-
-  _attachEditorShadowListeners() {
-    window.NodaliaUtils.bindShadowListeners(this, [
-      ["input", this._onShadowInput],
-      ["change", this._onShadowInput],
-      ["value-changed", this._onShadowValueChanged],
-      ["click", this._onShadowClick],
-    ], "editor");
-  }
-
-  _detachEditorShadowListeners() {
-    window.NodaliaUtils.releaseShadowListeners(this, "editor");
-  }
-
-  connectedCallback() {
-    this._attachEditorShadowListeners();
-    window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
-  }
-
-  disconnectedCallback() {
-    this._detachEditorShadowListeners();
-    window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
-  }
-
-  set hass(hass) {
-    const nextSignature = this._getEntityOptionsSignature(hass);
-    const shouldRender =
-      !this._hass ||
-      nextSignature !== this._entityOptionsSignature ||
-      !this.shadowRoot?.innerHTML;
-
-    this._hass = hass;
-    this._entityOptionsSignature = nextSignature;
-
-    if (!shouldRender) {
-      return;
-    }
-
-    const focusState = this._captureFocusState();
-    this._render();
-    this._restoreFocusState(focusState);
-  }
-
-  setConfig(config) {
-    const focusState = this._captureFocusState();
-    this._config = normalizeConfig(config || {});
-    window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
-    this._render();
-    this._restoreFocusState(focusState);
-  }
-
-  _watchEditorControlTag(tagName) {
-    if (!tagName || this._pendingEditorControlTags.has(tagName)) {
-      return;
-    }
-
-    if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
-      return;
-    }
-
-    this._pendingEditorControlTags.add(tagName);
-    customElements.whenDefined(tagName)
-      .then(() => {
-        this._pendingEditorControlTags.delete(tagName);
-
-        if (!this.isConnected || !this._hass || !this.shadowRoot) {
+    class NodaliaCircularGaugeCardEditor extends HTMLElement {
+      constructor() {
+        super();
+        this._nodaliaConstruct();
+      }
+      _nodaliaConstruct() {
+        this.attachShadow({ mode: "open" });
+        this._config = normalizeConfig(STUB_CONFIG);
+        this._hass = null;
+        this._entityOptionsSignature = "";
+        this._showStyleSection = false;
+        this._showAnimationSection = false;
+        this._showTapActionsSection = false;
+        this._pendingEditorControlTags = /* @__PURE__ */ new Set();
+        this._onShadowInput = this._onShadowInput.bind(this);
+        this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
+        this._onShadowClick = this._onShadowClick.bind(this);
+      }
+      _attachEditorShadowListeners() {
+        window.NodaliaUtils.bindShadowListeners(this, [
+          ["input", this._onShadowInput],
+          ["change", this._onShadowInput],
+          ["value-changed", this._onShadowValueChanged],
+          ["click", this._onShadowClick]
+        ], "editor");
+      }
+      _detachEditorShadowListeners() {
+        window.NodaliaUtils.releaseShadowListeners(this, "editor");
+      }
+      connectedCallback() {
+        this._attachEditorShadowListeners();
+        window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
+      }
+      disconnectedCallback() {
+        this._detachEditorShadowListeners();
+        window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
+      }
+      set hass(hass) {
+        const nextSignature = this._getEntityOptionsSignature(hass);
+        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+        this._hass = hass;
+        this._entityOptionsSignature = nextSignature;
+        if (!shouldRender) {
           return;
         }
-
         const focusState = this._captureFocusState();
         this._render();
         this._restoreFocusState(focusState);
-      })
-      .catch(() => {
-        this._pendingEditorControlTags.delete(tagName);
-      });
-  }
-
-  _ensureEditorControlsReady() {
-    this._watchEditorControlTag("ha-entity-picker");
-    this._watchEditorControlTag("ha-selector");
-    this._watchEditorControlTag("ha-icon-picker");
-  }
-
-  _getEntityOptionsSignature(hass = this._hass) {
-    return window.NodaliaUtils.editorFilteredStatesSignature(hass, this._config?.language, id =>
-      id.startsWith("sensor.") || id.startsWith("number.") || id.startsWith("input_number."),
-    );
-  }
-
-  _getNumericEntityOptions() {
-    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
-    const options = Object.entries(this._hass?.states || {})
-      .filter(([entityId]) => (
-        entityId.startsWith("sensor.")
-        || entityId.startsWith("number.")
-        || entityId.startsWith("input_number.")
-      ))
-      .map(([entityId, state]) => {
-        const friendlyName = String(state?.attributes?.friendly_name || "").trim();
-        return {
-          value: entityId,
-          label: friendlyName || entityId,
-          displayLabel: friendlyName && friendlyName !== entityId
-            ? `${friendlyName} (${entityId})`
-            : entityId,
-        };
-      })
-      .sort((left, right) => (
-        left.label.localeCompare(right.label, sortLoc, { sensitivity: "base" })
-        || left.value.localeCompare(right.value, sortLoc, { sensitivity: "base" })
-      ));
-
-    const currentValue = String(this._config?.entity || "").trim();
-    if (currentValue && !options.some(option => option.value === currentValue)) {
-      options.unshift({
-        value: currentValue,
-        label: currentValue,
-        displayLabel: currentValue,
-      });
-    }
-
-    return options;
-  }
-
-  _captureFocusState() {
-    return window.NodaliaUtils.captureEditorFocusState(this);
-  }
-
-  _restoreFocusState(focusState) {
-    window.NodaliaUtils.restoreEditorFocusState(this, focusState);
-  }
-
-  _emitConfig() {
-    const focusState = this._captureFocusState();
-    const nextConfig = deepClone(this._config);
-    this._config = normalizeConfig(compactConfig(nextConfig));
-    this._render();
-    this._restoreFocusState(focusState);
-    fireEvent(this, "config-changed", {
-      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
-    });
-  }
-
-  _setEditorConfig() {
-    this._config = normalizeConfig(compactConfig(this._config));
-  }
-
-  _setFieldValue(path, value) {
-    if (value === undefined || value === null || value === "") {
-      deleteByPath(this._config, path);
-      return;
-    }
-
-    setByPath(this._config, path, value);
-  }
-
-  _readFieldValue(input) {
-    const valueType = input.dataset.valueType || "string";
-
-    switch (valueType) {
-      case "boolean":
-        return Boolean(input.checked);
-      case "number": {
-        const trimmed = String(input.value || "").trim();
-        if (!trimmed) {
-          return undefined;
-        }
-
-        const parsed = Number(trimmed);
-        return Number.isFinite(parsed) ? parsed : trimmed;
       }
-      case "color":
-        return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
-      default:
-        return input.value;
-    }
-  }
-
-  _onShadowInput(event) {
-    const input = event
-      .composedPath()
-      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
-
-    if (!input?.dataset?.field) {
-      return;
-    }
-
-    event.stopPropagation();
-
-    const nextValue = this._readFieldValue(input);
-    this._setFieldValue(input.dataset.field, nextValue);
-    this._setEditorConfig();
-
-    if (event.type === "change") {
-      this._emitConfig();
-    }
-  }
-
-  _onShadowValueChanged(event) {
-    const control = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.field);
-
-    if (!control?.dataset?.field) {
-      return;
-    }
-
-    event.stopPropagation();
-
-    const nextValue = typeof event.detail?.value === "string"
-      ? event.detail.value
-      : control.value;
-    if (typeof control.dataset?.value === "string") {
-      control.dataset.value = String(nextValue || "");
-    }
-
-    const field = control.dataset.field;
-    const previousEntity = field === "entity" ? String(this._config?.entity || "").trim() : "";
-    this._setFieldValue(field, nextValue);
-    if (field === "entity") {
-      window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass, { previousEntity });
-    }
-    this._setEditorConfig();
-    this._emitConfig();
-  }
-
-  _onShadowClick(event) {
-    const toggleButton = event
-      .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
-
-    if (!toggleButton) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    if (toggleButton.dataset.editorToggle === "styles") {
-      this._showStyleSection = !this._showStyleSection;
-      this._render();
-      return;
-    }
-
-    if (toggleButton.dataset.editorToggle === "animations") {
-      this._showAnimationSection = !this._showAnimationSection;
-      this._render();
-      return;
-    }
-    if (toggleButton.dataset.editorToggle === "tap_actions") {
-      this._showTapActionsSection = !this._showTapActionsSection;
-      this._render();
-    }
-  }
-
-  _editorLabel(s) {
-    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
-      return s;
-    }
-    const hass = this._hass ?? this.hass;
-    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
-  }
-
-  _renderTextField(label, field, value, options = {}) {
-    const tLabel = this._editorLabel(label);
-    const tag = options.multiline ? "textarea" : "input";
-    const inputType = options.type || "text";
-    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
-    const valueType = options.valueType || "string";
-    const inputValue = value === undefined || value === null ? "" : String(value);
-
-    if (tag === "textarea") {
-      return `
+      setConfig(config) {
+        const focusState = this._captureFocusState();
+        this._config = normalizeConfig(config || {});
+        window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
+        this._render();
+        this._restoreFocusState(focusState);
+      }
+      _watchEditorControlTag(tagName) {
+        if (!tagName || this._pendingEditorControlTags.has(tagName)) {
+          return;
+        }
+        if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) {
+          return;
+        }
+        this._pendingEditorControlTags.add(tagName);
+        customElements.whenDefined(tagName).then(() => {
+          this._pendingEditorControlTags.delete(tagName);
+          if (!this.isConnected || !this._hass || !this.shadowRoot) {
+            return;
+          }
+          const focusState = this._captureFocusState();
+          this._render();
+          this._restoreFocusState(focusState);
+        }).catch(() => {
+          this._pendingEditorControlTags.delete(tagName);
+        });
+      }
+      _ensureEditorControlsReady() {
+        this._watchEditorControlTag("ha-entity-picker");
+        this._watchEditorControlTag("ha-selector");
+        this._watchEditorControlTag("ha-icon-picker");
+      }
+      _getEntityOptionsSignature(hass = this._hass) {
+        return window.NodaliaUtils.editorFilteredStatesSignature(
+          hass,
+          this._config?.language,
+          (id) => id.startsWith("sensor.") || id.startsWith("number.") || id.startsWith("input_number.")
+        );
+      }
+      _getNumericEntityOptions() {
+        const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
+        const options = Object.entries(this._hass?.states || {}).filter(([entityId]) => entityId.startsWith("sensor.") || entityId.startsWith("number.") || entityId.startsWith("input_number.")).map(([entityId, state]) => {
+          const friendlyName = String(state?.attributes?.friendly_name || "").trim();
+          return {
+            value: entityId,
+            label: friendlyName || entityId,
+            displayLabel: friendlyName && friendlyName !== entityId ? `${friendlyName} (${entityId})` : entityId
+          };
+        }).sort((left, right) => left.label.localeCompare(right.label, sortLoc, { sensitivity: "base" }) || left.value.localeCompare(right.value, sortLoc, { sensitivity: "base" }));
+        const currentValue = String(this._config?.entity || "").trim();
+        if (currentValue && !options.some((option) => option.value === currentValue)) {
+          options.unshift({
+            value: currentValue,
+            label: currentValue,
+            displayLabel: currentValue
+          });
+        }
+        return options;
+      }
+      _captureFocusState() {
+        return window.NodaliaUtils.captureEditorFocusState(this);
+      }
+      _restoreFocusState(focusState) {
+        window.NodaliaUtils.restoreEditorFocusState(this, focusState);
+      }
+      _emitConfig() {
+        const focusState = this._captureFocusState();
+        const nextConfig = deepClone(this._config);
+        this._config = normalizeConfig(compactConfig(nextConfig));
+        this._render();
+        this._restoreFocusState(focusState);
+        fireEvent(this, "config-changed", {
+          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {})
+        });
+      }
+      _setEditorConfig() {
+        this._config = normalizeConfig(compactConfig(this._config));
+      }
+      _setFieldValue(path, value) {
+        if (value === void 0 || value === null || value === "") {
+          deleteByPath(this._config, path);
+          return;
+        }
+        setByPath(this._config, path, value);
+      }
+      _readFieldValue(input) {
+        const valueType = input.dataset.valueType || "string";
+        switch (valueType) {
+          case "boolean":
+            return Boolean(input.checked);
+          case "number": {
+            const trimmed = String(input.value || "").trim();
+            if (!trimmed) {
+              return void 0;
+            }
+            const parsed = Number(trimmed);
+            return Number.isFinite(parsed) ? parsed : trimmed;
+          }
+          case "color":
+            return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
+          default:
+            return input.value;
+        }
+      }
+      _onShadowInput(event) {
+        const input = event.composedPath().find((node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+        if (!input?.dataset?.field) {
+          return;
+        }
+        event.stopPropagation();
+        const nextValue = this._readFieldValue(input);
+        this._setFieldValue(input.dataset.field, nextValue);
+        this._setEditorConfig();
+        if (event.type === "change") {
+          this._emitConfig();
+        }
+      }
+      _onShadowValueChanged(event) {
+        const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+        if (!control?.dataset?.field) {
+          return;
+        }
+        event.stopPropagation();
+        const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+        if (typeof control.dataset?.value === "string") {
+          control.dataset.value = String(nextValue || "");
+        }
+        const field = control.dataset.field;
+        const previousEntity = field === "entity" ? String(this._config?.entity || "").trim() : "";
+        this._setFieldValue(field, nextValue);
+        if (field === "entity") {
+          window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass, { previousEntity });
+        }
+        this._setEditorConfig();
+        this._emitConfig();
+      }
+      _onShadowClick(event) {
+        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
+        if (!toggleButton) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        if (toggleButton.dataset.editorToggle === "styles") {
+          this._showStyleSection = !this._showStyleSection;
+          this._render();
+          return;
+        }
+        if (toggleButton.dataset.editorToggle === "animations") {
+          this._showAnimationSection = !this._showAnimationSection;
+          this._render();
+          return;
+        }
+        if (toggleButton.dataset.editorToggle === "tap_actions") {
+          this._showTapActionsSection = !this._showTapActionsSection;
+          this._render();
+        }
+      }
+      _editorLabel(s) {
+        if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
+          return s;
+        }
+        const hass = this._hass ?? this.hass;
+        return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+      }
+      _renderTextField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const tag = options.multiline ? "textarea" : "input";
+        const inputType = options.type || "text";
+        const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
+        const valueType = options.valueType || "string";
+        const inputValue = value === void 0 || value === null ? "" : String(value);
+        if (tag === "textarea") {
+          return `
         <label class="editor-field ${options.fullWidth !== false ? "editor-field--full" : ""}">
           <span>${escapeHtml(tLabel)}</span>
           <textarea data-field="${escapeHtml(field)}" data-value-type="${escapeHtml(valueType)}" rows="${options.rows || 2}" ${placeholder}>${escapeHtml(inputValue)}</textarea>
         </label>
       `;
-    }
-
-    return `
+        }
+        return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <input
@@ -2290,18 +1959,14 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
         />
       </label>
     `;
-  }
-
-  _renderColorField(label, field, value, options = {}) {
-    const tLabel = this._editorLabel(label);
-    const tColorCustom = this._editorLabel("ed.weather.custom_color");
-    const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
-    const currentValue = value === undefined || value === null || value === ""
-      ? fallbackValue
-      : String(value);
-    const colorModel = getEditorColorModel(currentValue, fallbackValue);
-
-    return `
+      }
+      _renderColorField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const tColorCustom = this._editorLabel("ed.weather.custom_color");
+        const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
+        const currentValue = value === void 0 || value === null || value === "" ? fallbackValue : String(value);
+        const colorModel = getEditorColorModel(currentValue, fallbackValue);
+        return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <div class="editor-color-field">
@@ -2319,11 +1984,10 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
         </div>
       </div>
     `;
-  }
-
-  _renderCheckboxField(label, field, checked) {
-    const tLabel = this._editorLabel(label);
-    return `
+      }
+      _renderCheckboxField(label, field, checked) {
+        const tLabel = this._editorLabel(label);
+        return `
       <label class="editor-toggle">
         <input
           type="checkbox"
@@ -2335,31 +1999,26 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
         <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
       </label>
     `;
-  }
-
-  _renderSelectField(label, field, value, options) {
-    const tLabel = this._editorLabel(label);
-    return `
+      }
+      _renderSelectField(label, field, value, options) {
+        const tLabel = this._editorLabel(label);
+        return `
       <label class="editor-field">
         <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
-          ${options
-            .map(option => `
+          ${options.map((option) => `
               <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
                 ${escapeHtml(this._editorLabel(option.label))}
               </option>
-            `)
-            .join("")}
+            `).join("")}
         </select>
       </label>
     `;
-  }
-
-  _renderEntityField(label, field, value, options = {}) {
-    const tLabel = this._editorLabel(label);
-    const inputValue = value === undefined || value === null ? "" : String(value);
-
-    return `
+      }
+      _renderEntityField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const inputValue = value === void 0 || value === null ? "" : String(value);
+        return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <div
@@ -2371,13 +2030,11 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
         ></div>
       </div>
     `;
-  }
-
-  _renderIconPickerField(label, field, value, options = {}) {
-    const tLabel = this._editorLabel(label);
-    const inputValue = value === undefined || value === null ? "" : String(value);
-
-    return `
+      }
+      _renderIconPickerField(label, field, value, options = {}) {
+        const tLabel = this._editorLabel(label);
+        const inputValue = value === void 0 || value === null ? "" : String(value);
+        return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <div
@@ -2389,122 +2046,103 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
         ></div>
       </div>
     `;
-  }
-
-  _mountEntityPicker(host) {
-    if (!(host instanceof HTMLElement)) {
-      return;
-    }
-
-    const field = host.dataset.field || "entity";
-    const nextValue = host.dataset.value || "";
-    const placeholder = host.dataset.placeholder || "";
-    let control = null;
-
-    if (customElements.get("ha-entity-picker")) {
-      control = document.createElement("ha-entity-picker");
-      control.includeDomains = ["sensor", "number", "input_number"];
-      control.allowCustomEntity = true;
-      control.entityFilter = stateObj => {
-        const entityId = String(stateObj?.entity_id || "");
-        return entityId.startsWith("sensor.") || entityId.startsWith("number.") || entityId.startsWith("input_number.");
-      };
-      if (placeholder) {
-        control.setAttribute("placeholder", placeholder);
       }
-    } else if (customElements.get("ha-selector")) {
-      control = document.createElement("ha-selector");
-      control.selector = {
-        entity: {},
-      };
-    } else {
-      control = document.createElement("select");
-      const emptyOption = document.createElement("option");
-      emptyOption.value = "";
-      emptyOption.textContent = placeholder || this._editorLabel("ed.person.select_entity");
-      control.appendChild(emptyOption);
-      this._getNumericEntityOptions().forEach(option => {
-        const optionElement = document.createElement("option");
-        optionElement.value = option.value;
-        optionElement.textContent = option.displayLabel;
-        control.appendChild(optionElement);
-      });
-      control.addEventListener("change", this._onShadowInput);
-    }
-
-    control.dataset.field = field;
-    control.dataset.value = nextValue;
-
-    if ("hass" in control) {
-      control.hass = this._hass;
-    }
-
-    if ("value" in control) {
-      control.value = nextValue;
-    }
-
-    if (control.tagName !== "SELECT") {
-      control.addEventListener("value-changed", this._onShadowValueChanged);
-    }
-
-    host.replaceChildren(control);
-  }
-
-  _mountIconPicker(host) {
-    if (!(host instanceof HTMLElement)) {
-      return;
-    }
-
-    const field = host.dataset.field || "icon";
-    const nextValue = host.dataset.value || "";
-    const placeholder = host.dataset.placeholder || "";
-    let control = null;
-
-    if (customElements.get("ha-icon-picker")) {
-      control = document.createElement("ha-icon-picker");
-      if (placeholder) {
-        control.setAttribute("placeholder", placeholder);
+      _mountEntityPicker(host) {
+        if (!(host instanceof HTMLElement)) {
+          return;
+        }
+        const field = host.dataset.field || "entity";
+        const nextValue = host.dataset.value || "";
+        const placeholder = host.dataset.placeholder || "";
+        let control = null;
+        if (customElements.get("ha-entity-picker")) {
+          control = document.createElement("ha-entity-picker");
+          control.includeDomains = ["sensor", "number", "input_number"];
+          control.allowCustomEntity = true;
+          control.entityFilter = (stateObj) => {
+            const entityId = String(stateObj?.entity_id || "");
+            return entityId.startsWith("sensor.") || entityId.startsWith("number.") || entityId.startsWith("input_number.");
+          };
+          if (placeholder) {
+            control.setAttribute("placeholder", placeholder);
+          }
+        } else if (customElements.get("ha-selector")) {
+          control = document.createElement("ha-selector");
+          control.selector = {
+            entity: {}
+          };
+        } else {
+          control = document.createElement("select");
+          const emptyOption = document.createElement("option");
+          emptyOption.value = "";
+          emptyOption.textContent = placeholder || this._editorLabel("ed.person.select_entity");
+          control.appendChild(emptyOption);
+          this._getNumericEntityOptions().forEach((option) => {
+            const optionElement = document.createElement("option");
+            optionElement.value = option.value;
+            optionElement.textContent = option.displayLabel;
+            control.appendChild(optionElement);
+          });
+          control.addEventListener("change", this._onShadowInput);
+        }
+        control.dataset.field = field;
+        control.dataset.value = nextValue;
+        if ("hass" in control) {
+          control.hass = this._hass;
+        }
+        if ("value" in control) {
+          control.value = nextValue;
+        }
+        if (control.tagName !== "SELECT") {
+          control.addEventListener("value-changed", this._onShadowValueChanged);
+        }
+        host.replaceChildren(control);
       }
-    } else if (customElements.get("ha-selector")) {
-      control = document.createElement("ha-selector");
-      control.selector = {
-        icon: {},
-      };
-    } else {
-      control = document.createElement("input");
-      control.type = "text";
-      control.placeholder = placeholder;
-      control.addEventListener("input", this._onShadowInput);
-      control.addEventListener("change", this._onShadowInput);
-    }
-
-    control.dataset.field = field;
-    control.dataset.value = nextValue;
-
-    if ("hass" in control) {
-      control.hass = this._hass;
-    }
-
-    if ("value" in control) {
-      control.value = nextValue;
-    }
-
-    if (control.tagName !== "INPUT") {
-      control.addEventListener("value-changed", this._onShadowValueChanged);
-    }
-
-    host.replaceChildren(control);
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
-    }
-
-    const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "medium";
-
-    this.shadowRoot.innerHTML = `
+      _mountIconPicker(host) {
+        if (!(host instanceof HTMLElement)) {
+          return;
+        }
+        const field = host.dataset.field || "icon";
+        const nextValue = host.dataset.value || "";
+        const placeholder = host.dataset.placeholder || "";
+        let control = null;
+        if (customElements.get("ha-icon-picker")) {
+          control = document.createElement("ha-icon-picker");
+          if (placeholder) {
+            control.setAttribute("placeholder", placeholder);
+          }
+        } else if (customElements.get("ha-selector")) {
+          control = document.createElement("ha-selector");
+          control.selector = {
+            icon: {}
+          };
+        } else {
+          control = document.createElement("input");
+          control.type = "text";
+          control.placeholder = placeholder;
+          control.addEventListener("input", this._onShadowInput);
+          control.addEventListener("change", this._onShadowInput);
+        }
+        control.dataset.field = field;
+        control.dataset.value = nextValue;
+        if ("hass" in control) {
+          control.hass = this._hass;
+        }
+        if ("value" in control) {
+          control.value = nextValue;
+        }
+        if (control.tagName !== "INPUT") {
+          control.addEventListener("value-changed", this._onShadowValueChanged);
+        }
+        host.replaceChildren(control);
+      }
+      _render() {
+        if (!this.shadowRoot) {
+          return;
+        }
+        const config = this._config || normalizeConfig({});
+        const hapticStyle = config.haptics?.style || "medium";
+        this.shadowRoot.innerHTML = `
       <style>
         :host {
           display: block;
@@ -2802,70 +2440,66 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
           </div>
           <div class="editor-grid">
             ${this._renderEntityField("ed.circular_gauge.numeric_entity", "entity", config.entity, {
-              placeholder: "sensor.enchufe_inteligente_potencia",
-              fullWidth: true,
-            })}
+          placeholder: "sensor.enchufe_inteligente_potencia",
+          fullWidth: true
+        })}
             ${this._renderTextField("ed.entity.name", "name", config.name, {
-              placeholder: this._editorLabel("ed.circular_gauge.name_placeholder_power"),
-              fullWidth: true,
-            })}
+          placeholder: this._editorLabel("ed.circular_gauge.name_placeholder_power"),
+          fullWidth: true
+        })}
             ${this._renderIconPickerField("ed.entity.icon", "icon", config.icon, {
-              placeholder: "mdi:flash",
-              fullWidth: true,
-            })}
+          placeholder: "mdi:flash",
+          fullWidth: true
+        })}
             ${this._renderTextField("ed.circular_gauge.unit", "unit", config.unit, {
-              placeholder: "W",
-            })}
+          placeholder: "W"
+        })}
             ${this._renderTextField("ed.circular_gauge.min_value", "min", config.min, {
-              placeholder: "0",
-              type: "number",
-              valueType: "number",
-            })}
+          placeholder: "0",
+          type: "number",
+          valueType: "number"
+        })}
             ${this._renderTextField("ed.circular_gauge.max_value", "max", config.max, {
-              placeholder: "2500",
-              type: "number",
-              valueType: "number",
-            })}
+          placeholder: "2500",
+          type: "number",
+          valueType: "number"
+        })}
             ${this._renderTextField("ed.circular_gauge.label_min", "min_label", config.min_label, {
-              placeholder: "0",
-            })}
+          placeholder: "0"
+        })}
             ${this._renderTextField("ed.circular_gauge.label_max", "max_label", config.max_label, {
-              placeholder: "∞",
-            })}
+          placeholder: "∞"
+        })}
             ${this._renderTextField("ed.entity.number_decimals", "decimals", config.decimals, {
-              placeholder: "0",
-              type: "number",
-              valueType: "number",
-            })}
+          placeholder: "0",
+          type: "number",
+          valueType: "number"
+        })}
           </div>
         </section>
 
         <section class="editor-section">
           ${window.NodaliaUtils.renderEditorCollapsibleSectionHeaderHtml({
-            escapeHtml,
-            editorLabel: key => this._editorLabel(key),
-            titleKey: "ed.light.tap_actions_section_title",
-            hintKey: "ed.light.tap_actions_section_hint",
-            toggleId: "tap_actions",
-            expanded: this._showTapActionsSection === true,
-          })}
-          ${
-            this._showTapActionsSection
-              ? `
+          escapeHtml,
+          editorLabel: (key) => this._editorLabel(key),
+          titleKey: "ed.light.tap_actions_section_title",
+          hintKey: "ed.light.tap_actions_section_hint",
+          toggleId: "tap_actions",
+          expanded: this._showTapActionsSection === true
+        })}
+          ${this._showTapActionsSection ? `
           <div class="editor-grid">
             ${this._renderSelectField(
-              "ed.entity.tap_action",
-              "tap_action",
-              config.tap_action || "more-info",
-              [
-                { value: "more-info", label: "ed.entity.tap_more_info" },
-                { value: "none", label: "ed.entity.tap_none" },
-              ],
-            )}
+          "ed.entity.tap_action",
+          "tap_action",
+          config.tap_action || "more-info",
+          [
+            { value: "more-info", label: "ed.entity.tap_more_info" },
+            { value: "none", label: "ed.entity.tap_none" }
+          ]
+        )}
           </div>
-              `
-              : ""
-          }
+              ` : ""}
         </section>
 
         <section class="editor-section">
@@ -2875,13 +2509,13 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
           </div>
           <div class="editor-grid">
             ${this._renderTextField("ed.circular_gauge.grid_rows", "grid_options.rows", config.grid_options?.rows, {
-              type: "number",
-              valueType: "number",
-            })}
+          type: "number",
+          valueType: "number"
+        })}
             ${this._renderTextField("ed.circular_gauge.grid_columns", "grid_options.columns", config.grid_options?.columns, {
-              type: "number",
-              valueType: "number",
-            })}
+          type: "number",
+          valueType: "number"
+        })}
           </div>
         </section>
 
@@ -2912,19 +2546,19 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
             ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
             ${this._renderCheckboxField("ed.entity.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
-              "ed.vacuum.haptic_style",
-              "haptics.style",
-              hapticStyle,
-              [
-                { value: "selection", label: "ed.weather.haptic_selection" },
-                { value: "light", label: "ed.weather.haptic_light" },
-                { value: "medium", label: "ed.weather.haptic_medium" },
-                { value: "heavy", label: "ed.weather.haptic_heavy" },
-                { value: "success", label: "ed.weather.haptic_success" },
-                { value: "warning", label: "ed.weather.haptic_warning" },
-                { value: "failure", label: "ed.weather.haptic_failure" },
-              ],
-            )}
+          "ed.vacuum.haptic_style",
+          "haptics.style",
+          hapticStyle,
+          [
+            { value: "selection", label: "ed.weather.haptic_selection" },
+            { value: "light", label: "ed.weather.haptic_light" },
+            { value: "medium", label: "ed.weather.haptic_medium" },
+            { value: "heavy", label: "ed.weather.haptic_heavy" },
+            { value: "success", label: "ed.weather.haptic_success" },
+            { value: "warning", label: "ed.weather.haptic_warning" },
+            { value: "failure", label: "ed.weather.haptic_failure" }
+          ]
+        )}
           </div>
         </section>
 
@@ -2944,27 +2578,23 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
               </button>
             </div>
           </div>
-          ${
-            this._showAnimationSection
-              ? `
+          ${this._showAnimationSection ? `
                 <div class="editor-grid">
                   ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", config.animations.enabled !== false)}
                   ${this._renderTextField("ed.circular_gauge.dial_duration_ms", "animations.dial_duration", config.animations.dial_duration, {
-                    type: "number",
-                    valueType: "number",
-                  })}
+          type: "number",
+          valueType: "number"
+        })}
                   ${this._renderTextField("ed.notifications.button_bounce_ms", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
-                    type: "number",
-                    valueType: "number",
-                  })}
+          type: "number",
+          valueType: "number"
+        })}
                   ${this._renderTextField("ed.weather.content_entrance_ms", "animations.content_duration", config.animations.content_duration, {
-                    type: "number",
-                    valueType: "number",
-                  })}
+          type: "number",
+          valueType: "number"
+        })}
                 </div>
-              `
-              : ""
-          }
+              ` : ""}
         </section>
 
         <section class="editor-section">
@@ -2983,35 +2613,33 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
               </button>
             </div>
           </div>
-          ${
-            this._showStyleSection
-              ? `
+          ${this._showStyleSection ? `
                 <div class="editor-grid">
                   ${this._renderColorField("ed.person.style_card_bg", "styles.card.background", config.styles.card.background)}
                   ${this._renderTextField("ed.person.style_card_border", "styles.card.border", config.styles.card.border)}
                   ${window.NodaliaUtils.renderEditorCardBorderRadiusHtml({
-                    escapeHtml,
-                    field: "styles.card.border_radius",
-                    value: config.styles?.card?.border_radius,
-                    tHeading: this._editorLabel("ed.entity.style_card_radius_presets"),
-                    labels: {
-                      pill: this._editorLabel("ed.entity.chip_radius_pill"),
-                      soft: this._editorLabel("ed.entity.chip_radius_soft"),
-                      round: this._editorLabel("ed.entity.chip_radius_round"),
-                      square: this._editorLabel("ed.entity.chip_radius_square"),
-                    },
-                  })}
+          escapeHtml,
+          field: "styles.card.border_radius",
+          value: config.styles?.card?.border_radius,
+          tHeading: this._editorLabel("ed.entity.style_card_radius_presets"),
+          labels: {
+            pill: this._editorLabel("ed.entity.chip_radius_pill"),
+            soft: this._editorLabel("ed.entity.chip_radius_soft"),
+            round: this._editorLabel("ed.entity.chip_radius_round"),
+            square: this._editorLabel("ed.entity.chip_radius_square")
+          }
+        })}
                   <div class="editor-section__hint editor-field--full" style="margin-top: -6px;">${escapeHtml(this._editorLabel("ed.entity.style_card_radius_yaml_hint"))}</div>
                   ${this._renderTextField("ed.person.style_card_shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
                   ${this._renderTextField("ed.person.style_card_padding", "styles.card.padding", config.styles.card.padding)}
                   ${this._renderTextField("ed.person.style_card_gap", "styles.card.gap", config.styles.card.gap)}
                   ${this._renderTextField("ed.circular_gauge.entity_bubble_size", "styles.icon.size", config.styles.icon.size)}
                   ${this._renderColorField("ed.entity.style_main_bubble_bg", "styles.icon.background", config.styles.icon.background, {
-                    fallbackValue: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
-                  })}
+          fallbackValue: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)"
+        })}
                   ${this._renderColorField("ed.circular_gauge.bubble_icon_color", "styles.icon.color", config.styles.icon.color, {
-                    fallbackValue: "var(--primary-text-color)",
-                  })}
+          fallbackValue: "var(--primary-text-color)"
+        })}
                   ${this._renderTextField("ed.person.style_title_size", "styles.title_size", config.styles.title_size)}
                   ${this._renderTextField("ed.circular_gauge.value_size", "styles.value_size", config.styles.value_size)}
                   ${this._renderTextField("ed.circular_gauge.range_size", "styles.range_size", config.styles.range_size)}
@@ -3020,63 +2648,65 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
                   ${this._renderTextField("ed.circular_gauge.dial_stroke", "styles.gauge.stroke", config.styles.gauge.stroke)}
                   ${this._renderTextField("ed.circular_gauge.thumb_size", "styles.gauge.thumb_size", config.styles.gauge.thumb_size)}
                   ${this._renderColorField("ed.circular_gauge.dial_background", "styles.gauge.background", config.styles.gauge.background, {
-                    fallbackValue: "color-mix(in srgb, var(--primary-text-color) 2%, transparent)",
-                  })}
+          fallbackValue: "color-mix(in srgb, var(--primary-text-color) 2%, transparent)"
+        })}
                   ${this._renderColorField("ed.circular_gauge.min_tint", "styles.gauge.min_tint_color", config.styles.gauge.min_tint_color, {
-                    fallbackValue: DEFAULT_GAUGE_MIN_TINT_COLOR,
-                  })}
+          fallbackValue: DEFAULT_GAUGE_MIN_TINT_COLOR
+        })}
                   ${this._renderColorField("ed.circular_gauge.max_tint", "styles.gauge.max_tint_color", config.styles.gauge.max_tint_color, {
-                    fallbackValue: DEFAULT_GAUGE_MAX_TINT_COLOR,
-                  })}
+          fallbackValue: DEFAULT_GAUGE_MAX_TINT_COLOR
+        })}
                   ${this._renderColorField("ed.circular_gauge.fixed_gauge_color", "styles.gauge.foreground_color", config.styles.gauge.foreground_color, {
-                    fallbackValue: DEFAULT_GAUGE_MAX_TINT_COLOR,
-                  })}
+          fallbackValue: DEFAULT_GAUGE_MAX_TINT_COLOR
+        })}
                   ${this._renderColorField("ed.circular_gauge.track_color", "styles.gauge.track_color", config.styles.gauge.track_color, {
-                    fallbackValue: "color-mix(in srgb, var(--primary-text-color) 24%, var(--ha-card-background))",
-                  })}
+          fallbackValue: "color-mix(in srgb, var(--primary-text-color) 24%, var(--ha-card-background))"
+        })}
                   ${this._renderTextField("ed.person.style_chip_height", "styles.chip_height", config.styles.chip_height)}
                   ${this._renderTextField("ed.person.style_chip_font", "styles.chip_font_size", config.styles.chip_font_size)}
                   ${this._renderTextField("ed.entity.style_chip_padding", "styles.chip_padding", config.styles.chip_padding)}
                   ${window.NodaliaUtils.renderEditorChipBorderRadiusHtml({
-                    escapeHtml,
-                    field: "styles.chip_border_radius",
-                    value: config.styles?.chip_border_radius,
-                    tHeading: this._editorLabel("ed.entity.style_chip_radius"),
-                    labels: {
-                      pill: this._editorLabel("ed.entity.chip_radius_pill"),
-                      soft: this._editorLabel("ed.entity.chip_radius_soft"),
-                      round: this._editorLabel("ed.entity.chip_radius_round"),
-                      square: this._editorLabel("ed.entity.chip_radius_square"),
-                    },
-                  })}
-                </div>
-              `
-              : ""
+          escapeHtml,
+          field: "styles.chip_border_radius",
+          value: config.styles?.chip_border_radius,
+          tHeading: this._editorLabel("ed.entity.style_chip_radius"),
+          labels: {
+            pill: this._editorLabel("ed.entity.chip_radius_pill"),
+            soft: this._editorLabel("ed.entity.chip_radius_soft"),
+            round: this._editorLabel("ed.entity.chip_radius_round"),
+            square: this._editorLabel("ed.entity.chip_radius_square")
           }
+        })}
+                </div>
+              ` : ""}
         </section>
       </div>
     `;
-
-    this.shadowRoot
-      .querySelectorAll('[data-mounted-control="entity-picker"]')
-      .forEach(host => this._mountEntityPicker(host));
-
-    this.shadowRoot
-      .querySelectorAll('[data-mounted-control="icon-picker"]')
-      .forEach(host => this._mountIconPicker(host));
-
-    this._ensureEditorControlsReady();
-    window.NodaliaUtils?.clampEditorDialogScroll?.(this);
+        this.shadowRoot.querySelectorAll('[data-mounted-control="entity-picker"]').forEach((host) => this._mountEntityPicker(host));
+        this.shadowRoot.querySelectorAll('[data-mounted-control="icon-picker"]').forEach((host) => this._mountIconPicker(host));
+        this._ensureEditorControlsReady();
+        window.NodaliaUtils?.clampEditorDialogScroll?.(this);
+      }
+    }
+    _lazyNodaliaCircularGaugeCardEditor = NodaliaCircularGaugeCardEditor;
+    return NodaliaCircularGaugeCardEditor;
   }
-}
 
-if (!customElements.get(EDITOR_TAG)) {
-  customElements.define(EDITOR_TAG, NodaliaCircularGaugeCardEditor);
-}
-
-window.NodaliaUtils.registerCustomCard({
-  type: CARD_TAG,
-  name: "Nodalia Circular Gauge Card",
-  description: "Tarjeta circular para sensores y valores numericos con estetica Nodalia.",
-  preview: true,
-});
+  // src/cards/circular-gauge/index.ts
+  window.NodaliaUtils.defineLazyCustomElement(CARD_TAG, loadNodaliaCircularGaugeCard, { editorTag: EDITOR_TAG });
+  window.NodaliaUtils.defineLazyCustomElement(EDITOR_TAG, loadNodaliaCircularGaugeCardEditor);
+  window.NodaliaUtils.registerCustomCard({
+    type: CARD_TAG,
+    name: "Nodalia Circular Gauge Card",
+    description: "Tarjeta circular para sensores y valores numericos con estetica Nodalia.",
+    preview: true
+  });
+  var publicApi = {
+    CARD_TAG,
+    EDITOR_TAG,
+    CARD_VERSION,
+    DEFAULT_CONFIG,
+    normalizeConfig
+  };
+  window.__NODALIA_CIRCULAR_GAUGE__ = publicApi;
+})();

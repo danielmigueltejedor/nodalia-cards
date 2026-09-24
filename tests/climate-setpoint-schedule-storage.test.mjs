@@ -8,32 +8,29 @@ import { fileURLToPath } from "node:url";
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 function loadScheduleStorageApi() {
-  const source = fs.readFileSync(path.join(root, "nodalia-climate-card.js"), "utf8");
-  const start = source.indexOf("function parseScheduleClockMinutes");
-  const end = source.indexOf("function normalizeSetpointScheduleWeekStartsOn(value)");
-  assert.ok(start >= 0 && end > start, "schedule storage helpers should exist in climate card source");
-
   const sandbox = {
-    SETPOINT_SCHEDULE_DAY_ORDER: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
-    SETPOINT_SCHEDULE_MINUTES_PER_DAY: 24 * 60,
-    SETPOINT_SCHEDULE_STORAGE_VERSION: 1,
-    SETPOINT_SCHEDULE_STORAGE_VERSION_PACKED: 2,
-    SETPOINT_SCHEDULE_STORAGE_VERSION_BINARY: 3,
-    SETPOINT_SCHEDULE_INPUT_TEXT_MAX: 255,
-    SETPOINT_SCHEDULE_STORAGE_TIME_QUANTUM: 5,
-    SCHEDULE_TIMELINE_SNAP_MINUTES: 5,
-    SCHEDULE_MIN_BLOCK_MINUTES: 15,
-    clamp: (value, min, max) => Math.min(max, Math.max(min, Number(value) || 0)),
-    isObject: value => value !== null && typeof value === "object" && !Array.isArray(value),
-    createSetpointScheduleSlotId: () => "slot_generated",
+    URL,
     btoa: value => Buffer.from(value, "binary").toString("base64"),
     atob: value => Buffer.from(value, "base64").toString("binary"),
     Buffer,
+    console,
+    customElements: { define() {}, get() { return null; } },
+    HTMLElement: class {},
+    document: {
+      createElement() { return { style: {} }; },
+      documentElement: { getAttribute() { return ""; } },
+      querySelector() { return null; },
+    },
+    navigator: {},
+    window: null,
   };
-
+  sandbox.window = sandbox;
   vm.createContext(sandbox);
-  vm.runInContext(source.slice(start, end), sandbox);
-  return sandbox;
+  vm.runInContext(fs.readFileSync(path.join(root, "nodalia-utils.js"), "utf8"), sandbox);
+  vm.runInContext(fs.readFileSync(path.join(root, "nodalia-climate-card.js"), "utf8"), sandbox);
+  const api = sandbox.window.__NODALIA_CLIMATE__;
+  assert.ok(api, "climate public API should be published on window.__NODALIA_CLIMATE__");
+  return api;
 }
 
 function buildWeeklySlots(blocksPerDay = 2) {

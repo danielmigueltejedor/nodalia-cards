@@ -70,8 +70,8 @@ test("room summary card registers custom element and bundle entry", () => {
   const build = read("scripts/build-bundle.mjs");
   const pkg = JSON.parse(read("package.json"));
 
-  assert.match(source, /const CARD_TAG = "nodalia-room-summary-card"/);
-  assert.match(source, /customElements\.define\(CARD_TAG, NodaliaRoomSummaryCard\)/);
+  assert.match(source, /(?:const|let|var) CARD_TAG = "nodalia-room-summary-card"/);
+  assert.match(source, /defineLazyCustomElement\(CARD_TAG, loadNodaliaRoomSummaryCard/);
   assert.match(source, /registerCustomCard/);
   assert.match(build, /nodalia-room-summary-card\.js/);
   assert.ok(pkg.files.includes("nodalia-room-summary-card.js"));
@@ -250,7 +250,7 @@ test("room summary render signature tracks security and camera entities", () => 
 
 test("room summary always migrates legacy layouts to Hub", () => {
   const source = read("nodalia-room-summary-card.js");
-  const editorStart = source.indexOf("class NodaliaRoomSummaryCardEditor");
+  const editorStart = source.search(/(?:class NodaliaRoomSummaryCardEditor|NodaliaRoomSummaryCardEditor = class)/);
   const editorBlock = source.slice(editorStart);
 
   for (const layout of ["compact", "standard", "detailed", "security", "climate"]) {
@@ -280,7 +280,7 @@ test("room summary reuses normalized config and caches its render signature", ()
   const source = read("nodalia-room-summary-card.js");
   const config = rs.normalizeConfig({ name: "Office", lights: ["light.office"] });
   assert.equal(rs.normalizeConfig(config), config);
-  assert.match(source, /const NORMALIZED_ROOM_CONFIG = Symbol/);
+  assert.match(source, /(?:const|let|var) NORMALIZED_ROOM_CONFIG = (?:\/\* @__PURE__ \*\/ )?Symbol/);
   assert.match(source, /this\._configSignature = JSON\.stringify\(this\._config\)/);
   assert.match(source, /\|\$\{this\._configSignature\}`/);
   assert.match(source, /normalizeConfig\(deepClone\(this\._config\)\)/);
@@ -407,14 +407,19 @@ test("room summary hub layout uses embedded nodalia cards and flat home header",
   assert.match(source, /data-hub-embed="media"/);
   assert.match(source, /data-hub-embed="camera"/);
   assert.match(source, /_mountHubEmbeddedCards/);
-  assert.match(source, /_hubEmbedCache = new Map/);
-  assert.match(source, /_hubEmbedConfigSignatures = new WeakMap/);
+  assert.match(source, /_hubEmbedCache = (?:\/\* @__PURE__ \*\/ )?new Map/);
+  assert.match(source, /_hubEmbedConfigSignatures = (?:\/\* @__PURE__ \*\/ )?new WeakMap/);
   assert.match(source, /_activateHubPanel\(next\)/);
   assert.match(source, /data-hub-panel=/);
   assert.match(source, /const renderedPanels = \[activePanel\]/);
   assert.match(source, /data-hub-slot="group"/);
   assert.match(source, /data-hub-slot="live"/);
   assert.match(source, /_parkHubEmbeddedCards/);
+  assert.match(source, /createDocumentFragment/);
+  assert.match(source, /room-hub--camera-expanded/);
+  assert.match(source, /nodalia-overlay-change/);
+  assert.match(source, /transform:none/);
+  assert.doesNotMatch(source, /room-hub-slide[^\n]* both/);
   assert.match(source, /animations: \{ \.\.\.deepClone\(base\.animations\), content_duration: 0 \}/);
   assert.match(source, /panel_duration: 0/);
   assert.match(source, /nodalia-media-player-editor/);
@@ -438,14 +443,14 @@ test("room summary hub layout uses embedded nodalia cards and flat home header",
 
 test("room summary patches Hub state without remounting embedded cards", () => {
   const source = read("nodalia-room-summary-card.js");
-  const patchStart = source.indexOf("\n  _patchHubState() {");
-  const patchEnd = source.indexOf("\n  _toggleEntity(", patchStart);
+  const patchStart = source.indexOf("_patchHubState() {");
+  const patchEnd = source.indexOf("_toggleEntity(", patchStart);
   const patchBlock = source.slice(patchStart, patchEnd);
-  const chromeStart = source.indexOf("\n  _syncHubChrome(");
-  const chromeEnd = source.indexOf("\n  _activateHubPanel(", chromeStart);
+  const chromeStart = source.indexOf("_syncHubChrome(");
+  const chromeEnd = source.indexOf("_activateHubPanel(", chromeStart);
   const chromeBlock = source.slice(chromeStart, chromeEnd);
-  const mountStart = source.indexOf("\n  _mountHubEmbeddedCards() {");
-  const mountEnd = source.indexOf("\n  _renderHubEmbedHosts(", mountStart);
+  const mountStart = source.indexOf("_mountHubEmbeddedCards() {");
+  const mountEnd = source.indexOf("_renderHubEmbedHosts(", mountStart);
   const mountBlock = source.slice(mountStart, mountEnd);
 
   assert.match(source, /if \(prev && this\._patchHubState\(\)\) return;/);
@@ -461,6 +466,7 @@ test("room summary patches Hub state without remounting embedded cards", () => {
     mountBlock.indexOf("card.setConfig(cardConfig)") < mountBlock.indexOf("card.hass = this._hass"),
     "embedded card config should settle before hass triggers its render",
   );
+  assert.match(mountBlock, /if \(!customElements\.get\(tagName\)\) return;/);
   assert.match(source, /state\.last_updated \|\| state\.last_changed/);
 });
 
@@ -540,6 +546,87 @@ test("room summary hub supports a collapsible compact mode", () => {
   assert.match(source, /\$\{this\._renderHubRoomIcon\(config\.icon, title, styles\)\}/);
   assert.match(source, /\.room-hub__header--collapsed \.room-hub__room-icon \{ height:42px; width:42px; \}/);
   assert.match(source, /ed\.room_summary\.collapsible/);
+});
+
+test("room summary editor mounts nested camera and media editors without throwing", () => {
+  const registry = new Map();
+  class FakeHTMLElement {
+    constructor() {
+      this.isConnected = true;
+      this.dataset = {};
+    }
+
+    attachShadow() {
+      this.shadowRoot = {
+        addEventListener() {},
+        removeEventListener() {},
+        innerHTML: "",
+        querySelector() { return null; },
+        querySelectorAll(selector) {
+          const key = String(selector).match(/data-mounted-control="([^"]+)"/)?.[1];
+          if (key === "media-config-editor" || key === "camera-config-editor") {
+            const host = new FakeHTMLElement();
+            host.dataset.mountedControl = key;
+            return [host];
+          }
+          return [];
+        },
+      };
+      return this.shadowRoot;
+    }
+
+    addEventListener() {}
+    replaceChildren() {}
+    dispatchEvent() { return true; }
+  }
+  const sandbox = {
+    console,
+    URL,
+    location: { protocol: "https:", href: "https://home-assistant.example/lovelace/home" },
+    window: null,
+    document: {
+      createElement(tag) {
+        const Ctor = registry.get(tag) || FakeHTMLElement;
+        return new Ctor();
+      },
+    },
+    customElements: {
+      define(name, klass) { registry.set(name, klass); },
+      get(name) { return registry.get(name); },
+    },
+    HTMLElement: FakeHTMLElement,
+    requestAnimationFrame: () => 0,
+    cancelAnimationFrame() {},
+    setTimeout: (fn, ms) => globalThis.setTimeout(fn, ms),
+    clearTimeout: id => globalThis.clearTimeout(id),
+    globalThis: {},
+  };
+  sandbox.window = sandbox;
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(read("nodalia-utils.js"), sandbox);
+  vm.runInContext(read("nodalia-room-summary-model.js"), sandbox);
+  vm.runInContext(read("nodalia-camera-card.js"), sandbox);
+  vm.runInContext(read("nodalia-media-player.js"), sandbox);
+  vm.runInContext(read("nodalia-room-summary-card.js"), sandbox);
+  const Editor = registry.get("nodalia-room-summary-card-editor");
+  assert.equal(typeof Editor, "function");
+  const editor = new Editor();
+  assert.doesNotThrow(() => editor.setConfig({
+    name: "Salón",
+    camera: "camera.salon",
+    media_player: "media_player.salon",
+  }));
+});
+
+test("room summary setConfig renders without missing buildRoomSummary import", () => {
+  const card = new rs.Card();
+  assert.doesNotThrow(() => card.setConfig({ name: "Salón", temperature: "sensor.salon_temperature" }));
+  card.hass = mockHass({
+    "sensor.salon_temperature": state("sensor.salon_temperature", "22.5", { unit_of_measurement: "°C" }),
+  });
+  assert.ok(card.shadowRoot?.innerHTML?.length > 0);
+  assert.match(card.shadowRoot.innerHTML, /Salón|22/);
 });
 
 test("room summary editor emits valid config and preserves unknown fields", () => {

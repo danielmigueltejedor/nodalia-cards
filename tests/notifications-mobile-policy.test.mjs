@@ -34,7 +34,7 @@ function loadNotificationsRuntime() {
     window: {},
     customElements: {
       define(_tag, ctor) {
-        if (!CardClass && typeof ctor === "function" && ctor.name === "NodaliaNotificationsCard") {
+        if (!CardClass && typeof ctor === "function" && (_tag === "nodalia-notifications-card" || ctor.name === "NodaliaNotificationsCard")) {
           CardClass = ctor;
         }
       },

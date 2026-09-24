@@ -8,9 +8,13 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 const renderSignature = file => {
   const source = read(file);
-  const match = source.match(/_getRenderSignature\(hass = this\._hass\) \{[\s\S]*?\n  \}/);
-  assert.ok(match, `expected ${file} render signature`);
-  return match[0];
+  const start = source.search(/_getRenderSignature\(hass = this\._hass\) \{/);
+  assert.ok(start >= 0, `expected ${file} render signature`);
+  const from = source.slice(start);
+  const terminator = from.search(/\n\s*return values\.join\([^)]+\);\n\s*\}/);
+  assert.ok(terminator >= 0, `expected ${file} render signature terminator`);
+  const closer = from.indexOf("}", terminator);
+  return from.slice(0, closer + 1);
 };
 
 test("news history observes the current hass snapshot before signature side effects", () => {

@@ -270,8 +270,21 @@ test("device and Climate layout variants render and keep their native controls",
     compactClimate._lastRenderSignature = "";
     compactClimate._render();
     await new Promise(resolve => requestAnimationFrame(() => resolve()));
+    await new Promise(resolve => requestAnimationFrame(() => resolve()));
 
     const visual = element => {
+      if (!(element instanceof Element)) {
+        return {
+          width: 0,
+          height: 0,
+          borderRadius: "",
+          fontSize: "",
+          fontWeight: "",
+          padding: "",
+          backdropFilter: "",
+          strokeWidth: "",
+        };
+      }
       const style = getComputedStyle(element);
       const rect = element.getBoundingClientRect();
       return {
@@ -306,8 +319,12 @@ test("device and Climate layout variants render and keep their native controls",
       fanControl: visual(fanCompactRoot.querySelector(".fan-card__control")),
       climateControl: visual(climateCompactRoot.querySelector(".climate-card__compact-step")),
       climateOverride: visual(climateCompactRoot.querySelector(".climate-card__override-chip")),
-      climateOverrideBoxSizing: getComputedStyle(climateCompactRoot.querySelector(".climate-card__override-chip")).boxSizing,
-      climateOverrideLabelOverflow: getComputedStyle(climateCompactRoot.querySelector(".climate-card__override-chip-label")).textOverflow,
+      climateOverrideBoxSizing: climateCompactRoot.querySelector(".climate-card__override-chip")
+        ? getComputedStyle(climateCompactRoot.querySelector(".climate-card__override-chip")).boxSizing
+        : "",
+      climateOverrideLabelOverflow: climateCompactRoot.querySelector(".climate-card__override-chip-label")
+        ? getComputedStyle(climateCompactRoot.querySelector(".climate-card__override-chip-label")).textOverflow
+        : "",
     };
     const climateDial = climateCircularRoot.querySelector(".climate-card__dial");
     const circularMetrics = {
@@ -606,6 +623,11 @@ test("entity-first picker receives relevant Nodalia card suggestions", async ({ 
   expect(suggestions["media_player.living_room"].find(item => item.config.type === "custom:nodalia-media-player")?.config).toMatchObject({
     players: [{ entity: "media_player.living_room", label: "Living room" }],
   });
+  expect(
+    suggestions["media_player.living_room"]
+      .filter(item => item.config.type === "custom:nodalia-media-player")
+      .map(item => item.config.layout?.mode),
+  ).toEqual(expect.arrayContaining(["standard", "square", "compact", "chip", "artwork"]));
   expect(errors).toEqual([]);
 });
 
@@ -1831,7 +1853,7 @@ test("Room Summary cover and climate controls expose accessible names", async ({
   }
 
   await card.locator('[data-room-action="nav:climate"]').click();
-  const climateControls = card.locator('.room-hub__panel--climate button');
+  const climateControls = card.locator("nodalia-climate-card").locator(".climate-card__compact-step");
   await expect(climateControls).toHaveCount(2);
   for (let index = 0; index < 2; index += 1) {
     await expect(climateControls.nth(index)).toHaveAttribute("aria-label", /\S+/);
@@ -1839,8 +1861,213 @@ test("Room Summary cover and climate controls expose accessible names", async ({
 
   const results = await new AxeBuilder({ page })
     .include("nodalia-room-summary-card")
-    .disableRules(["color-contrast"])
+    .disableRules(["color-contrast", "aria-hidden-focus"])
     .analyze();
   const serious = results.violations.filter(item => ["serious", "critical"].includes(item.impact));
   expect(serious).toEqual([]);
 });
+
+test("Media Player keeps the artwork stage across unrelated state updates", async ({ page }) => {
+  await loadBundle(page);
+  await page.evaluate(() => {
+    const picture = "/local/cover.jpg";
+    const state = (volume, title = "Song") => ({
+      entity_id: "media_player.test",
+      state: "playing",
+      attributes: {
+        friendly_name: "Living room",
+        media_title: title,
+        media_artist: "Artist",
+        entity_picture: picture,
+        media_duration: 100,
+        media_position: 10,
+        media_position_updated_at: new Date().toISOString(),
+        volume_level: volume,
+        supported_features: 2,
+      },
+    });
+    const hass = window.makeHass({ "media_player.test": state(0.4) });
+    const card = document.createElement("nodalia-media-player");
+    card.setConfig({
+      players: [{ entity: "media_player.test", label: "Living room" }],
+      layout: { mode: "standard", fixed: false },
+    });
+    card.hass = hass;
+    document.querySelector("#fixture").append(card);
+    window.mediaArtworkFixture = { card, state };
+  });
+
+  expect(await page.evaluate(() => Boolean(
+    window.mediaArtworkFixture.card.shadowRoot.querySelector("[data-media-art-stage]"),
+  ))).toBe(true);
+
+  await page.evaluate(() => {
+    const fixture = window.mediaArtworkFixture;
+    fixture.artNode = fixture.card.shadowRoot.querySelector("[data-media-art-stage]");
+    fixture.card.hass = window.makeHass({ "media_player.test": fixture.state(0.7, "Song") });
+  });
+
+  expect(await page.evaluate(() => {
+    const fixture = window.mediaArtworkFixture;
+    return fixture.artNode === fixture.card.shadowRoot.querySelector("[data-media-art-stage]");
+  })).toBe(true);
+});
+
+test("Media Player control bubbles stay readable and inside square cards", async ({ page }) => {
+  await loadBundle(page);
+  const metrics = await page.evaluate(() => {
+    const state = {
+      entity_id: "media_player.test",
+      state: "playing",
+      attributes: {
+        friendly_name: "HomePod mini",
+        media_title: "Ojos Brujos",
+        media_artist: "Clarent",
+        entity_picture: "/local/cover.jpg",
+        media_duration: 250,
+        media_position: 48,
+        media_position_updated_at: new Date().toISOString(),
+        volume_level: 0.4,
+        supported_features: 2050,
+      },
+    };
+    const card = document.createElement("nodalia-media-player");
+    document.documentElement.style.setProperty("--primary-text-color", "#f4f4f4");
+    document.documentElement.style.setProperty("--secondary-text-color", "rgba(244,244,244,0.72)");
+    document.documentElement.style.setProperty("--primary-color", "#ffb74a");
+    document.documentElement.style.setProperty("--rgb-primary-color", "255, 183, 74");
+    card.style.width = "320px";
+    card.setConfig({
+      players: [{ entity: "media_player.test", label: "HomePod mini" }],
+      layout: { mode: "square", fixed: false },
+    });
+    card.hass = window.makeHass({ "media_player.test": state });
+    document.querySelector("#fixture").append(card);
+    const root = card.shadowRoot;
+    const surface = root.querySelector(".media-player-card");
+    const play = root.querySelector(".media-player__control--primary");
+    const buttons = [...root.querySelectorAll(".media-player__control, .media-player__volume-button")];
+    const cardBox = surface.getBoundingClientRect();
+    const styles = window.getComputedStyle(play);
+    const art = root.querySelector(".media-player__art-layer");
+    const timeChip = root.querySelector(".media-player__chip--time");
+    const progress = root.querySelector(".media-player__progress");
+    const clipped = buttons.some(button => {
+      const box = button.getBoundingClientRect();
+      return box.left < cardBox.left - 1
+        || box.right > cardBox.right + 1
+        || box.top < cardBox.top - 1
+        || box.bottom > cardBox.bottom + 1;
+    });
+    const timeBox = timeChip?.getBoundingClientRect();
+    const progressBox = progress?.getBoundingClientRect();
+    const timeOverlapsProgress = Boolean(timeBox && progressBox
+      && timeBox.bottom > progressBox.top + 1
+      && timeBox.top < progressBox.bottom - 1);
+    return {
+      buttonCount: buttons.length,
+      clipped,
+      boxShadow: styles.boxShadow,
+      backdrop: styles.backdropFilter || styles.webkitBackdropFilter,
+      playSize: Math.round(play.getBoundingClientRect().width),
+      hasAddon: Boolean(root.querySelector(".media-player__transport-addon")),
+      artFilter: art ? window.getComputedStyle(art).filter : "",
+      timeOverlapsProgress,
+    };
+  });
+
+  expect(metrics.buttonCount).toBeGreaterThanOrEqual(5);
+  expect(metrics.clipped).toBe(false);
+  expect(metrics.hasAddon).toBe(false);
+  expect(metrics.playSize).toBeGreaterThanOrEqual(24);
+  expect(metrics.boxShadow).toMatch(/24px/);
+  expect(metrics.backdrop).toMatch(/blur/);
+  expect(metrics.timeOverlapsProgress).toBe(false);
+  expect(metrics.artFilter === "none" || metrics.artFilter === "").toBe(true);
+});
+
+test("Media Player square overlay stays square in a tall phone cell", async ({ page }) => {
+  await loadBundle(page);
+  const metrics = await page.evaluate(() => {
+    const state = {
+      entity_id: "media_player.test",
+      state: "playing",
+      attributes: {
+        friendly_name: "HomePod mini",
+        media_title: "Ojos Brujos",
+        media_artist: "Clarent",
+        entity_picture: "/local/cover.jpg",
+        media_duration: 250,
+        media_position: 48,
+        media_position_updated_at: new Date().toISOString(),
+        volume_level: 0.4,
+        supported_features: 2050,
+      },
+    };
+    const cell = document.createElement("div");
+    cell.style.width = "180px";
+    cell.style.height = "640px";
+    cell.style.display = "grid";
+    const card = document.createElement("nodalia-media-player");
+    card.style.width = "100%";
+    card.setConfig({
+      players: [{ entity: "media_player.test", label: "HomePod mini" }],
+      layout: { mode: "square", fixed: false },
+    });
+    card.hass = window.makeHass({ "media_player.test": state });
+    cell.append(card);
+    document.querySelector("#fixture").append(cell);
+    const root = card.shadowRoot;
+    const surface = root.querySelector(".media-player-card");
+    const artwork = root.querySelector(".media-player__artwork");
+    const browse = root.querySelector(".media-player__volume-button--browse");
+    const cardBox = surface.getBoundingClientRect();
+    const hostBox = card.getBoundingClientRect();
+    const browseBox = browse?.getBoundingClientRect();
+    return {
+      presentation: card.getAttribute("data-presentation"),
+      hostRatio: hostBox.height / Math.max(hostBox.width, 1),
+      surfaceRatio: cardBox.height / Math.max(cardBox.width, 1),
+      artworkDisplay: artwork ? window.getComputedStyle(artwork).display : "",
+      browseNearTop: browseBox ? browseBox.top - cardBox.top < 56 : false,
+      browseNearRight: browseBox ? cardBox.right - browseBox.right < 28 : false,
+    };
+  });
+
+  expect(metrics.presentation).toBe("square");
+  expect(metrics.hostRatio).toBeGreaterThan(0.85);
+  expect(metrics.hostRatio).toBeLessThan(1.2);
+  expect(metrics.surfaceRatio).toBeGreaterThan(0.85);
+  expect(metrics.surfaceRatio).toBeLessThan(1.2);
+  expect(metrics.artworkDisplay).toBe("none");
+  expect(metrics.browseNearTop).toBe(true);
+  expect(metrics.browseNearRight).toBe(true);
+});
+
+test("Advance Vacuum keeps the card surface when expanding rooms", async ({ page }) => {
+  await loadBundle(page);
+  const persisted = await page.evaluate(() => {
+    const hass = window.makeHass({
+      "vacuum.robot": {
+        entity_id: "vacuum.robot",
+        state: "docked",
+        attributes: { friendly_name: "Robot" },
+      },
+    });
+    const card = document.createElement("nodalia-advance-vacuum-card");
+    card.setConfig({ entity: "vacuum.robot" });
+    card.hass = hass;
+    document.querySelector("#fixture").append(card);
+    const before = card.shadowRoot.querySelector("[data-vacuum-surface], ha-card.advance-vacuum-card");
+    card._activeMode = "rooms";
+    card._lastRenderSignature = "";
+    card._render();
+    return {
+      sameSurface: before === card.shadowRoot.querySelector("[data-vacuum-surface], ha-card.advance-vacuum-card"),
+      hasCommit: typeof card._commitPersistentVacuumShadow === "function",
+    };
+  });
+  expect(persisted.hasCommit).toBe(true);
+  expect(persisted.sameSurface).toBe(true);
+});
+

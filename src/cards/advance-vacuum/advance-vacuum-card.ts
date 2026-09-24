@@ -1,0 +1,7647 @@
+// @ts-nocheck
+/* Large HTMLElement view/controller: typed incrementally as methods are extracted. */
+import {
+  CARD_TAG,
+  CLEANING_SESSION_PENDING_TIMEOUT_MS,
+  DOCK_CONTROL_DEFINITIONS,
+  DOCK_PANEL_SECTIONS,
+  DOCK_SETTING_DEFINITIONS,
+  EDITOR_TAG,
+  HAPTIC_PATTERNS,
+  MODE_LABELS,
+  MOP_MODE_PATTERNS,
+  MOP_ONLY_COMBO_PATTERNS,
+  PANEL_MODE_PRESETS,
+  SHARED_CLEANING_SESSION_OVERFLOW_SENTINEL,
+  SHARED_SMART_MODE_PATTERNS,
+  SUCTION_MODE_PATTERNS,
+  VACUUM_FEATURE_CLEAN_AREA,
+  VACUUM_MOP_COMBO_PATTERNS,
+  VACUUM_ONLY_COMBO_PATTERNS,
+} from "./advance-vacuum-constants";
+import {
+  clamp,
+  deepClone,
+  escapeHtml,
+  fireEvent,
+  isObject,
+  isUnsafeConfigPathKey,
+  normalizeTextKey,
+} from "./advance-vacuum-runtime";
+import { DEFAULT_CONFIG, STUB_CONFIG, normalizeConfig } from "./advance-vacuum-config";
+import {
+  CoordinatesConverter,
+  appendQueryParam,
+  applyStubEntity,
+  arrayFromMaybe,
+  centroid,
+  decodeSharedSessionList,
+  decodeSharedSessionZones,
+  encodeSharedSessionList,
+  encodeSharedSessionZones,
+  flattenPolygons,
+  getSafeStyles,
+  humanizeModeLabel,
+  humanizeSelectOptionLabel,
+  isHelperRelatedToConfiguredVacuum,
+  isUnavailableState,
+  listVacuumObjectIds,
+  normalizeCustomMenuItems,
+  normalizeRoutineItems,
+  parseCalibrationPoints,
+  parseInteger,
+  parseNumber,
+  parseOutlines,
+  parsePoint,
+  parsePolygon,
+  parseSizeToPixels,
+  parseZoneRect,
+  pickShapeSource,
+  pointInPolygon,
+  polygonArea,
+  polygonBounds,
+  rectIntersectionArea,
+  resolveGotoPoints,
+  resolveHeaderIcons,
+  resolveLegacyMode,
+  resolvePredefinedZones,
+  resolveRoomSegments,
+  resolveRoomsFromMapState,
+  resolveRoomsFromVacuumState,
+  sanitizeCssValue,
+  sanitizeStyleTree,
+  stripMapCacheBuster,
+} from "./advance-vacuum-helpers";
+
+let _lazyNodaliaAdvanceVacuumCard;
+export function loadNodaliaAdvanceVacuumCard() {
+  if (_lazyNodaliaAdvanceVacuumCard) {
+    return _lazyNodaliaAdvanceVacuumCard;
+  }
+class NodaliaAdvanceVacuumCard extends HTMLElement {
+  static async getConfigElement() {
+    return document.createElement(EDITOR_TAG);
+  }
+
+  static getStubConfig(hass, entities = [], entitiesFallback = []) {
+    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["vacuum"], entities, entitiesFallback);
+  }
+
+  static getEntitySuggestion(hass, entityId) {
+    return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+      domains: ["vacuum"],
+      label: "Vacuum — Advanced",
+    });
+  }
+
+  constructor() {
+    super();
+    this._nodaliaConstruct();
+  }
+
+  _nodaliaConstruct() {this.attachShadow({ mode: "open" });
+    this._config = normalizeConfig(DEFAULT_CONFIG);
+    this._hass = null;
+    this._mapImageWidth = 1024;
+    this._mapImageHeight = 1024;
+    this._activeMode = "all";
+    this._activeUtilityPanel = null;
+    this._selectedRoomIds = [];
+    this._activeCleaningRoomIds = [];
+    this._activeCleaningZones = [];
+    this._activeCleaningSessionMode = "";
+    this._selectedPredefinedZoneIds = [];
+    this._manualZones = [];
+    this._selectedManualZoneIndex = -1;
+    this._transientZoneReturnMode = "";
+    this._draftZone = null;
+    this._gotoPoint = null;
+    this._repeats = 1;
+    this._activeSeries = "";
+    this._activeModePanelPreset = "";
+    this._activeDockPanelSection = DOCK_PANEL_SECTIONS[0]?.id || "control";
+    this._lastNonSmartModeSelection = {
+      suction: "",
+      mop: "",
+    };
+    this._pendingRoomCleaningResumeRoomIds = [];
+    this._pendingRoomCleaningResumeRepeats = 1;
+    this._roomCleaningResumeInFlight = false;
+    this._lastResolvedModePanelPreset = "";
+    this._dockedModePanelPreset = "";
+    this._hasLoadedPersistedCleaningSessionState = false;
+    this._pendingCleaningSessionStartAt = 0;
+    this._converter = new CoordinatesConverter([]);
+    this._mapScale = 1;
+    this._mapOffset = { x: 0, y: 0 };
+    this._activeMapPointers = new Map();
+    this._pinchGesture = null;
+    this._touchPinchGesture = null;
+    this._zoneHandleDrag = null;
+    this._pendingTouchZoneStart = null;
+    this._pendingRoomSelectionTap = null;
+    this._pointerStart = null;
+    this._pointerSurfaceRect = null;
+    this._suppressedRoomSelectionClick = null;
+    this._lastSubmittedSharedCleaningSessionValue = null;
+    this._lastSharedCleaningSessionOverflowFingerprint = null;
+    this._calibrationSignatureStamp = "";
+    this._selectionUpdatedAt = 0;
+    this._wasCleaningSessionActive = false;
+    this._roomTrackingEntityCache = null;
+    this._lastRenderSignature = "";
+    this._calibrationSignatureStamp = "";
+    this._animateContentOnNextRender = true;
+    this._entranceAnimationResetTimer = 0;
+    this._mapActionInFlight = false;
+
+    this._onShadowClick = this._onShadowClick.bind(this);
+    this._onShadowChange = this._onShadowChange.bind(this);
+    this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
+    this._onShadowPointerMove = this._onShadowPointerMove.bind(this);
+    this._onShadowPointerUp = this._onShadowPointerUp.bind(this);
+    this._onShadowTouchStart = this._onShadowTouchStart.bind(this);
+    this._onShadowTouchMove = this._onShadowTouchMove.bind(this);
+    this._onShadowTouchEnd = this._onShadowTouchEnd.bind(this);
+    this._onMapImageLoad = this._onMapImageLoad.bind(this);
+    this._onMapBackClick = this._onMapBackClick.bind(this);
+    this._onNodaliaI18nReady = this._onNodaliaI18nReady.bind(this);
+
+    this._localeReconciliationTimeouts = null;
+
+    this.shadowRoot.addEventListener("click", this._onShadowClick);
+    this.shadowRoot.addEventListener("change", this._onShadowChange);
+    this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
+    this.shadowRoot.addEventListener("pointermove", this._onShadowPointerMove);
+    this.shadowRoot.addEventListener("pointerup", this._onShadowPointerUp);
+    this.shadowRoot.addEventListener("pointercancel", this._onShadowPointerUp);
+    this.shadowRoot.addEventListener("pointerleave", this._onShadowPointerUp);
+    this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
+    this.shadowRoot.addEventListener("touchmove", this._onShadowTouchMove, { passive: false });
+    this.shadowRoot.addEventListener("touchend", this._onShadowTouchEnd, { passive: false });
+    this.shadowRoot.addEventListener("touchcancel", this._onShadowTouchEnd, { passive: false });
+    }
+
+  connectedCallback() {
+    this._animateContentOnNextRender = true;
+    this._lastRenderSignature = "";
+    this._render();
+    if (typeof window !== "undefined") {
+      window.addEventListener("nodalia-i18n-ready", this._onNodaliaI18nReady);
+    }
+    this._scheduleLocaleReconciliation();
+  }
+
+  disconnectedCallback() {
+    if (typeof window !== "undefined") {
+      window.removeEventListener("nodalia-i18n-ready", this._onNodaliaI18nReady);
+    }
+    this._clearLocaleReconciliation();
+    const image = this.shadowRoot?.querySelector("[data-map-image]");
+    if (image) {
+      image.removeEventListener("load", this._onMapImageLoad);
+    }
+    if (this._entranceAnimationResetTimer) {
+      clearTimeout(this._entranceAnimationResetTimer);
+      this._entranceAnimationResetTimer = 0;
+    }
+    this._mapActionInFlight = false;
+    window.NodaliaUtils?.clearDeferTimers?.(this);
+  }
+
+  _onNodaliaI18nReady() {
+    this._reconcileI18nOrLocaleIfNeeded();
+  }
+
+  _reconcileI18nOrLocaleIfNeeded() {
+    if (!this.isConnected || !this.shadowRoot) {
+      return;
+    }
+    try {
+      const nextSignature = this._getRenderSignature(this._hass);
+      if (nextSignature === this._lastRenderSignature && this.shadowRoot.innerHTML) {
+        return;
+      }
+      this._syncCalibrationIfNeeded();
+      this._render();
+    } catch (_err) {
+      // ignore
+    }
+  }
+
+  _clearLocaleReconciliation() {
+    if (this._localeReconciliationTimeouts?.length) {
+      this._localeReconciliationTimeouts.forEach(id => {
+        window.clearTimeout(id);
+      });
+      this._localeReconciliationTimeouts = null;
+    }
+  }
+
+  /**
+   * Re-render when `nodalia-i18n` loads after the first paint or when HA exposes UI language / locale
+   * slightly later (signature includes `ui.resolvedLang` + `ui.i18nLoaded`; without this, `set hass`
+   * may not run again and strings stay on fallbacks).
+   */
+  _scheduleLocaleReconciliation() {
+    if (typeof window === "undefined") {
+      return;
+    }
+    this._clearLocaleReconciliation();
+    const run = () => {
+      if (!this.isConnected) {
+        return;
+      }
+      this._reconcileI18nOrLocaleIfNeeded();
+    };
+    queueMicrotask(run);
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(run);
+    });
+    const delaysMs = [0, 200, 600, 1600, 4000];
+    this._localeReconciliationTimeouts = delaysMs.map(ms => window.setTimeout(run, ms));
+  }
+
+  setConfig(config) {
+    this._config = normalizeConfig(config || {});
+    window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
+    this._lastRenderSignature = "";
+    this._repeats = clamp(Number(this._config.max_repeats || 1), 1, 9);
+    this._selectedRoomIds = [];
+    this._activeCleaningRoomIds = [];
+    this._activeCleaningZones = [];
+    this._activeCleaningSessionMode = "";
+    this._selectedPredefinedZoneIds = [];
+    this._manualZones = [];
+    this._selectedManualZoneIndex = -1;
+    this._transientZoneReturnMode = "";
+    this._draftZone = null;
+    this._gotoPoint = null;
+    this._activeUtilityPanel = null;
+    this._activeModePanelPreset = "";
+    this._activeDockPanelSection = DOCK_PANEL_SECTIONS[0]?.id || "control";
+    this._pendingRoomCleaningResumeRoomIds = [];
+    this._pendingRoomCleaningResumeRepeats = this._repeats;
+    this._roomCleaningResumeInFlight = false;
+    this._lastResolvedModePanelPreset = "";
+    this._dockedModePanelPreset = "";
+    this._hasLoadedPersistedCleaningSessionState = false;
+    this._pendingCleaningSessionStartAt = 0;
+    this._mapScale = 1;
+    this._mapOffset = { x: 0, y: 0 };
+    this._activeMapPointers = new Map();
+    this._pinchGesture = null;
+    this._touchPinchGesture = null;
+    this._zoneHandleDrag = null;
+    this._pendingTouchZoneStart = null;
+    this._pendingRoomSelectionTap = null;
+    this._suppressedRoomSelectionClick = null;
+    this._lastSubmittedSharedCleaningSessionValue = null;
+    this._lastSharedCleaningSessionOverflowFingerprint = null;
+    this._selectionUpdatedAt = 0;
+    this._wasCleaningSessionActive = false;
+    this._roomTrackingEntityCache = null;
+    this._animateContentOnNextRender = true;
+    this._activeMode = this._getAvailableModes()[0]?.id || "all";
+    this._ensurePersistedCleaningSessionStateLoaded();
+    this._syncCalibrationIfNeeded();
+    this._render();
+  }
+
+  set hass(hass) {
+    try {
+      this._hass = hass;
+      const nextSignature = this._getRenderSignature(hass);
+      if (nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
+        this._lastRenderSignature = nextSignature;
+        return;
+      }
+      this._ensurePersistedCleaningSessionStateLoaded();
+      this._syncCalibrationIfNeeded(hass);
+      this._lastRenderSignature = nextSignature;
+      this._render();
+    } catch (error) {
+      this._handleCardError(error, "set hass");
+    }
+  }
+
+  getCardSize() {
+    return 8;
+  }
+
+  getGridOptions() {
+    return {
+      rows: "auto",
+      columns: "full",
+      min_rows: 5,
+      min_columns: 6,
+    };
+  }
+
+  _triggerHaptic(styleOverride = null) {
+    const haptics = this._config?.haptics || {};
+    if (haptics.enabled !== true) {
+      return;
+    }
+
+    const style = styleOverride || haptics.style || "medium";
+    fireEvent(this, "haptic", style, {
+      bubbles: true,
+      cancelable: false,
+      composed: true,
+    });
+
+    if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
+      navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
+    }
+  }
+
+  _getAnimationSettings() {
+    const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+
+    return {
+      enabled: configuredAnimations.enabled !== false,
+      iconAnimation: configuredAnimations.icon_animation !== false,
+      contentDuration: clamp(Number(configuredAnimations.content_duration) || DEFAULT_CONFIG.animations.content_duration, 120, 2400),
+      panelDuration: clamp(Number(configuredAnimations.panel_duration) || DEFAULT_CONFIG.animations.panel_duration, 120, 2000),
+      buttonBounceDuration: clamp(Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration, 120, 1200),
+    };
+  }
+
+  _scheduleEntranceAnimationReset(delay = 0) {
+    if (this._entranceAnimationResetTimer) {
+      clearTimeout(this._entranceAnimationResetTimer);
+      this._entranceAnimationResetTimer = 0;
+    }
+
+    const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3000);
+    if (!safeDelay || typeof window === "undefined") {
+      this._animateContentOnNextRender = false;
+      return;
+    }
+
+    this._entranceAnimationResetTimer = window.setTimeout(() => {
+      this._entranceAnimationResetTimer = 0;
+      if (!this.isConnected) {
+        return;
+      }
+      this._animateContentOnNextRender = false;
+    }, safeDelay);
+  }
+
+  _triggerPressAnimation(element) {
+    if (!(element instanceof HTMLElement)) {
+      return;
+    }
+
+    const animations = this._getAnimationSettings();
+    if (!animations.enabled) {
+      return;
+    }
+
+    element.classList.remove("is-pressing");
+    element.getBoundingClientRect();
+    element.classList.add("is-pressing");
+
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      if (!element.isConnected) {
+        return;
+      }
+      element.classList.remove("is-pressing");
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, animations.buttonBounceDuration + 40);
+    } else {
+      window.setTimeout(done, animations.buttonBounceDuration + 40);
+    }
+  }
+
+  _getPressTargetFromEvent(event) {
+    return event.composedPath().find(node => (
+      node instanceof HTMLElement
+      && (
+        node.dataset?.zoneHandleIndex
+        || node.dataset?.roomId
+        || node.dataset?.zoneId
+        || node.dataset?.gotoId
+        || node.dataset?.modeId
+        || node.dataset?.headerActionIndex
+        || node.dataset?.manualZoneIndex
+        || node.dataset?.controlAction
+        || node.dataset?.modePresetId
+        || node.dataset?.modeOptionKind
+        || node.dataset?.dockSectionId
+        || node.dataset?.dockActionId
+        || node.dataset?.routineIndex
+        || node.dataset?.customMenuIndex
+      )
+    ));
+  }
+
+  _getVacuumState() {
+    return this._hass?.states?.[this._config?.entity] || null;
+  }
+
+  _getName() {
+    const state = this._getVacuumState();
+    return this._config?.name || state?.attributes?.friendly_name || this._config?.entity || "Robot";
+  }
+
+  _getIcon() {
+    const state = this._getVacuumState();
+    return this._config?.icon || state?.attributes?.icon || "mdi:robot-vacuum";
+  }
+
+  _getReportedStateKey(state) {
+    const baseKey = normalizeTextKey(state?.state);
+    const { activityIds } = this._getRelatedVacuumEntityIds();
+    const candidates = [
+      state?.attributes?.status,
+      state?.attributes?.task_status,
+      state?.attributes?.cleaning_status,
+      state?.attributes?.activity,
+      state?.attributes?.dock_status,
+      state?.attributes?.station_status,
+      ...activityIds.flatMap(entityId => {
+        const activityState = this._hass?.states?.[entityId];
+        return [
+          `${entityId} ${activityState?.state || ""}`,
+          activityState?.attributes?.status,
+          activityState?.attributes?.activity,
+        ];
+      }),
+    ].map(value => normalizeTextKey(value)).filter(Boolean);
+    const aliases = [
+      ["washing_mop", /self_wash.*(wash|washing|cleaning)|wash(ing)?_(the_)?(mop|mops|pad|pads)|mop_(wash|washing)|lavando_(mopa|mopas)/],
+      ["drying_mop", /self_wash.*(dry|drying)|dry(ing)?_(the_)?(mop|mops|pad|pads)|mop_(dry|drying)|secando_(mopa|mopas)/],
+      ["self_emptying", /self_empty|auto_empty|emptying_(the_)?(bin|dust)|vaciando|autovaciando/],
+      ["segment_cleaning", /segment_clean|room_clean|cleaning_(room|rooms|segment|segments)/],
+      ["zone_cleaning", /zone_clean|cleaning_(zone|zones)/],
+      ["returning", /returning|going_to_(dock|base|charger|wash)|return_to_(dock|base)/],
+    ];
+    const specific = aliases.find(([, pattern]) => candidates.some(key => pattern.test(key)))?.[0];
+    if (specific && ["cleaning", "docked", "charging", "returning", "paused", "idle", ""].includes(baseKey)) {
+      return specific;
+    }
+    return baseKey || candidates[0] || "";
+  }
+
+  _matchesActivity(state, values) {
+    const key = this._getReportedStateKey(state);
+    return values.map(item => normalizeTextKey(item)).includes(key);
+  }
+
+  _isCleaning(state) {
+    return this._matchesActivity(state, [
+      "cleaning",
+      "spot_cleaning",
+      "segment_cleaning",
+      "room_cleaning",
+      "zone_cleaning",
+      "clean_area",
+      "vacuuming",
+      "limpiando",
+    ]);
+  }
+
+  _isPaused(state) {
+    return this._matchesActivity(state, ["paused", "pause", "pausado"]);
+  }
+
+  _isWashingMops(state) {
+    return this._matchesActivity(state, [
+      "washing",
+      "wash_mop",
+      "mop_wash",
+      "washing_mop",
+      "washing_pads",
+      "lavando_mopas",
+      "lavando_mopa",
+    ]);
+  }
+
+  _isDryingMops(state) {
+    return this._matchesActivity(state, ["drying", "drying_mop", "secando", "secando_mopas"]);
+  }
+
+  _isAutoEmptying(state) {
+    return this._matchesActivity(state, ["emptying", "self_emptying", "autovaciando", "vaciando"]);
+  }
+
+  _isReturning(state) {
+    return this._matchesActivity(state, ["returning", "return_to_base", "returning_home", "volviendo"]);
+  }
+
+  _isDocked(state) {
+    return this._matchesActivity(state, ["docked", "charging", "charging_completed", "en_base", "base"]);
+  }
+
+  _isActive(state) {
+    return (
+      this._isCleaning(state) ||
+      this._isPaused(state) ||
+      this._isReturning(state) ||
+      this._isWashingMops(state) ||
+      this._isDryingMops(state) ||
+      this._isAutoEmptying(state)
+    );
+  }
+
+  _getStateLabel(state) {
+    const key = this._getReportedStateKey(state);
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const langCfg = this._config?.language ?? "auto";
+    if (window.NodaliaI18n?.translateAdvanceVacuumReportedState) {
+      return window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, langCfg, key, state?.state);
+    }
+
+    const labels = {
+      docked: "Docked",
+      charging: "Charging",
+      charging_completed: "Charging",
+      cleaning: "Cleaning",
+      spot_cleaning: "Cleaning",
+      segment_cleaning: "Cleaning",
+      room_cleaning: "Cleaning",
+      zone_cleaning: "Cleaning",
+      clean_area: "Cleaning",
+      paused: "Paused",
+      returning: "Returning to dock",
+      return_to_base: "Returning to dock",
+      returning_home: "Returning to dock",
+      washing: "Washing mops",
+      wash_mop: "Washing mops",
+      washing_mop: "Washing mops",
+      washing_pads: "Washing mops",
+      drying: "Drying",
+      drying_mop: "Drying",
+      emptying: "Auto-emptying",
+      self_emptying: "Auto-emptying",
+      unavailable: "Unavailable",
+      unknown: "Unknown",
+      error: "Error",
+    };
+
+    return labels[key] || (state?.state ? String(state.state) : "Unknown");
+  }
+
+  _descriptorLabel(kind) {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+    if (!window.NodaliaI18n?.strings) {
+      if (kind === "mop_mode") {
+        return "Mop mode";
+      }
+      return kind === "mop" ? "Mop" : "Vacuum";
+    }
+    const d = window.NodaliaI18n.strings(lang).advanceVacuum.descriptorLabels;
+    if (kind === "mop_mode") {
+      return d.mop_mode;
+    }
+    return kind === "mop" ? d.mop : d.suction;
+  }
+
+  _advanceVacuumStrings() {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+    return window.NodaliaI18n?.strings?.(lang)?.advanceVacuum || null;
+  }
+
+  _getAccentColor(state) {
+    const styles = getSafeStyles(this._config?.styles);
+
+    if (this._getReportedStateKey(state) === "error") {
+      return styles.icon.error_color || "#ff6b6b";
+    }
+    if (this._isWashingMops(state)) {
+      return styles.icon.washing_color || "#5aa7ff";
+    }
+    if (this._isDryingMops(state)) {
+      return styles.icon.drying_color || "#f1c24c";
+    }
+    if (this._isAutoEmptying(state)) {
+      return styles.icon.emptying_color || "#9b6b4a";
+    }
+    if (this._isReturning(state)) {
+      return styles.icon.returning_color || "#f6b73c";
+    }
+    if (this._isCleaning(state) || this._isPaused(state)) {
+      return styles.icon.active_color || "#61c97a";
+    }
+    return styles.icon.docked_color || "rgba(255, 255, 255, 0.56)";
+  }
+
+  _getBatteryLevel(state) {
+    const direct = Number(state?.attributes?.battery_level);
+    if (Number.isFinite(direct)) {
+      return clamp(Math.round(direct), 0, 100);
+    }
+    return null;
+  }
+
+  _getBatteryColor(level) {
+    if (!Number.isFinite(level)) {
+      return "rgba(255,255,255,0.62)";
+    }
+    if (level >= 70) {
+      return "#61c97a";
+    }
+    if (level >= 35) {
+      return "#f1c24c";
+    }
+    return "#ff8c69";
+  }
+
+  _getMapStatusIndicator(state = this._getVacuumState()) {
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+    const ms = window.NodaliaI18n?.strings?.(lang)?.advanceVacuum?.mapStatus;
+    const activeDockControlIds = DOCK_CONTROL_DEFINITIONS
+      .map(definition => this._getDockControlDescriptor(definition, state))
+      .filter(descriptor => descriptor?.active)
+      .map(descriptor => descriptor.id);
+
+    if (activeDockControlIds.includes("wash") || this._isWashingMops(state)) {
+      return {
+        icon: "mdi:water",
+        title: ms?.washing_mop ?? "Washing mop",
+        tone: "wash",
+      };
+    }
+
+    if (activeDockControlIds.includes("dry") || this._isDryingMops(state)) {
+      return {
+        icon: "mdi:white-balance-sunny",
+        title: ms?.drying_mop ?? "Drying mop",
+        tone: "dry",
+      };
+    }
+
+    if (activeDockControlIds.includes("empty") || this._isAutoEmptying(state)) {
+      return {
+        icon: "mdi:delete-empty-outline",
+        title: ms?.emptying_dust ?? "Emptying dust",
+        tone: "empty",
+      };
+    }
+
+    const batteryLevel = this._getBatteryLevel(state);
+    if (this._isDocked(state) && Number.isFinite(batteryLevel) && batteryLevel < 100) {
+      return {
+        icon: "mdi:lightning-bolt",
+        title: ms?.charging ?? "Charging",
+        tone: "charging",
+      };
+    }
+
+    return null;
+  }
+
+  _getMapEntityId() {
+    return this._config?.map_source?.camera || this._config?.map_source?.image || this._config?.map_camera || "";
+  }
+
+  _getMapState() {
+    const entityId = this._getMapEntityId();
+    return entityId ? this._hass?.states?.[entityId] || null : null;
+  }
+
+  _getCleaningSessionStorageKey() {
+    const entityId = String(this._config?.entity || "").trim();
+    return entityId ? `nodalia-advance-vacuum-card:cleaning-session:${entityId}` : "";
+  }
+
+  _getSharedCleaningSessionEntityId() {
+    const entityId = String(this._config?.shared_cleaning_session_entity || "").trim();
+    return entityId.startsWith("input_text.") ? entityId : "";
+  }
+
+  _getSharedCleaningSessionState() {
+    return this._getEntityState(this._getSharedCleaningSessionEntityId());
+  }
+
+  _getSharedCleaningSessionMaxLength() {
+    const maxLength = Number(this._getSharedCleaningSessionState()?.attributes?.max);
+    return Number.isFinite(maxLength) && maxLength > 0 ? maxLength : 255;
+  }
+
+  _buildSharedCleaningSessionSnapshot(session, { minimal = false } = {}) {
+    const normalizedSession = this._normalizeCleaningSession(session);
+    if (!normalizedSession) {
+      return null;
+    }
+
+    if (!minimal) {
+      return normalizedSession;
+    }
+
+    const essentialRoomIds = normalizedSession.activeRoomIds.length
+      ? normalizedSession.activeRoomIds
+      : normalizedSession.selectedRoomIds;
+    const essentialZones = normalizedSession.activeZones.length
+      ? normalizedSession.activeZones
+      : normalizedSession.manualZones;
+
+    return this._normalizeCleaningSession({
+      mode: normalizedSession.mode,
+      activeMode: normalizedSession.activeMode,
+      activeRoomIds: essentialRoomIds,
+      activeZones: essentialZones,
+      selectedRoomIds: essentialRoomIds,
+      selectedPredefinedZoneIds: [],
+      manualZones: [],
+      repeats: normalizedSession.repeats,
+      selectionUpdatedAt: normalizedSession.selectionUpdatedAt,
+      pendingStartAt: normalizedSession.pendingStartAt,
+      resumeRoomIdsAfterZone: normalizedSession.resumeRoomIdsAfterZone,
+      resumeRepeatsAfterZone: normalizedSession.resumeRepeatsAfterZone,
+      modePanelPreset: normalizedSession.modePanelPreset,
+      utilityPanel: normalizedSession.utilityPanel,
+    });
+  }
+
+  _serializeSharedCleaningSession(session, options = {}) {
+    const snapshot = this._buildSharedCleaningSessionSnapshot(session, options);
+    if (!snapshot) {
+      return "";
+    }
+
+    const parts = ["v=1"];
+
+    if (snapshot.mode) {
+      parts.push(`m=${encodeURIComponent(snapshot.mode)}`);
+    }
+    if (snapshot.activeMode) {
+      parts.push(`a=${encodeURIComponent(snapshot.activeMode)}`);
+    }
+    if (snapshot.activeRoomIds.length) {
+      parts.push(`ar=${encodeSharedSessionList(snapshot.activeRoomIds)}`);
+    }
+    if (snapshot.activeZones.length) {
+      parts.push(`az=${encodeSharedSessionZones(snapshot.activeZones)}`);
+    }
+    if (snapshot.selectedRoomIds.length) {
+      parts.push(`sr=${encodeSharedSessionList(snapshot.selectedRoomIds)}`);
+    }
+    if (snapshot.selectedPredefinedZoneIds.length) {
+      parts.push(`sz=${encodeSharedSessionList(snapshot.selectedPredefinedZoneIds)}`);
+    }
+    if (snapshot.manualZones.length) {
+      parts.push(`mz=${encodeSharedSessionZones(snapshot.manualZones)}`);
+    }
+    if (snapshot.repeats) {
+      parts.push(`r=${snapshot.repeats}`);
+    }
+    if (snapshot.selectionUpdatedAt) {
+      parts.push(`su=${Math.round(snapshot.selectionUpdatedAt)}`);
+    }
+    if (snapshot.pendingStartAt) {
+      parts.push(`p=${Math.round(snapshot.pendingStartAt)}`);
+    }
+    if (snapshot.resumeRoomIdsAfterZone?.length) {
+      parts.push(`rr=${encodeSharedSessionList(snapshot.resumeRoomIdsAfterZone)}`);
+    }
+    if (snapshot.resumeRepeatsAfterZone) {
+      parts.push(`rq=${snapshot.resumeRepeatsAfterZone}`);
+    }
+    if (snapshot.modePanelPreset) {
+      parts.push(`pp=${encodeURIComponent(snapshot.modePanelPreset)}`);
+    }
+    if (snapshot.utilityPanel) {
+      parts.push(`xu=${encodeURIComponent(snapshot.utilityPanel)}`);
+    }
+
+    return parts.join("&");
+  }
+
+  _deserializeSharedCleaningSession(rawValue) {
+    const value = String(rawValue || "").trim();
+    if (!value) {
+      return null;
+    }
+
+    if (value.startsWith("{")) {
+      try {
+        return this._normalizeCleaningSession(JSON.parse(value));
+      } catch (_error) {
+        return null;
+      }
+    }
+
+    const params = new URLSearchParams(value);
+    if ((params.get("v") || "") !== "1") {
+      return null;
+    }
+
+    return this._normalizeCleaningSession({
+      mode: params.get("m") || "",
+      activeMode: params.get("a") || "",
+      activeRoomIds: decodeSharedSessionList(params.get("ar")),
+      activeZones: decodeSharedSessionZones(params.get("az")),
+      selectedRoomIds: decodeSharedSessionList(params.get("sr")),
+      selectedPredefinedZoneIds: decodeSharedSessionList(params.get("sz")),
+      manualZones: decodeSharedSessionZones(params.get("mz")),
+      repeats: Number(params.get("r") || 1),
+      selectionUpdatedAt: Number(params.get("su") || 0),
+      pendingStartAt: Number(params.get("p") || 0),
+      resumeRoomIdsAfterZone: decodeSharedSessionList(params.get("rr")),
+      resumeRepeatsAfterZone: Number(params.get("rq") || 1),
+      modePanelPreset: params.get("pp") || "",
+      utilityPanel: params.get("xu") || "",
+    });
+  }
+
+  _readSharedCleaningSession() {
+    const helperState = this._getSharedCleaningSessionState();
+    const rawValue = String(helperState?.state || "").trim();
+    if (!rawValue || isUnavailableState(helperState)) {
+      return null;
+    }
+
+    this._lastSubmittedSharedCleaningSessionValue = rawValue;
+    return this._deserializeSharedCleaningSession(rawValue);
+  }
+
+  async _postSharedCleaningSessionWebhook(webhookId, body) {
+    const id = String(webhookId ?? "").trim();
+    if (!id) {
+      return false;
+    }
+
+    if (
+      this._config?.security?.allow_webhooks_for_non_admin === false &&
+      !this._hass?.user?.is_admin
+    ) {
+      if (typeof console !== "undefined" && typeof console.warn === "function") {
+        console.warn(
+          "Nodalia Advance Vacuum Card: webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false).",
+        );
+      }
+      return false;
+    }
+
+    const post =
+      typeof window !== "undefined" &&
+      window.NodaliaUtils &&
+      typeof window.NodaliaUtils.postHomeAssistantWebhook === "function"
+        ? window.NodaliaUtils.postHomeAssistantWebhook
+        : null;
+    if (!post) {
+      return false;
+    }
+
+    try {
+      return Boolean(await post(id, body, this._hass));
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  _persistSharedCleaningSession(session) {
+    const webhookId = String(this._config?.shared_cleaning_session_webhook ?? "").trim();
+    const entityId = this._getSharedCleaningSessionEntityId();
+    if (!webhookId && !entityId) {
+      return;
+    }
+
+    const maxLength = entityId ? this._getSharedCleaningSessionMaxLength() : 255;
+    let serialized = this._serializeSharedCleaningSession(session);
+
+    if (serialized.length > maxLength) {
+      serialized = this._serializeSharedCleaningSession(session, { minimal: true });
+    }
+
+    if (serialized.length > maxLength) {
+      if (this._lastSharedCleaningSessionOverflowFingerprint !== serialized) {
+        this._lastSharedCleaningSessionOverflowFingerprint = serialized;
+        if (typeof console !== "undefined" && typeof console.warn === "function") {
+          console.warn("Nodalia Advance Vacuum Card shared cleaning session exceeds helper length limit");
+        }
+      }
+      this._lastSubmittedSharedCleaningSessionValue = SHARED_CLEANING_SESSION_OVERFLOW_SENTINEL;
+      return;
+    }
+
+    this._lastSharedCleaningSessionOverflowFingerprint = null;
+    const serializedTrim = serialized.trim();
+    const currentValue = entityId ? String(this._getSharedCleaningSessionState()?.state ?? "").trim() : "";
+    const hasEntityTarget = Boolean(entityId);
+    const hasWebhookTarget = Boolean(webhookId);
+    if (hasEntityTarget && serializedTrim === currentValue) {
+      return;
+    }
+    if (hasEntityTarget && serializedTrim === this._lastSubmittedSharedCleaningSessionValue) {
+      return;
+    }
+    if (
+      !hasEntityTarget &&
+      hasWebhookTarget &&
+      serializedTrim === this._lastSubmittedSharedCleaningSessionValue
+    ) {
+      return;
+    }
+
+    this._lastSubmittedSharedCleaningSessionValue = serializedTrim;
+
+    if (webhookId) {
+      void this._postSharedCleaningSessionWebhook(webhookId, { value: serializedTrim }).then(ok => {
+        if (!this.isConnected) {
+          return;
+        }
+        if (!ok) {
+          this._lastSubmittedSharedCleaningSessionValue = null;
+          if (typeof console !== "undefined" && typeof console.warn === "function") {
+            console.warn(
+              "Nodalia Advance Vacuum Card: Persistence webhook rejected or failed; check webhook_id and your Home Assistant automation.",
+            );
+          }
+        }
+      });
+      return;
+    }
+
+    const pending = this._callInternalService("input_text.set_value", {
+      entity_id: entityId,
+      value: serializedTrim,
+    });
+    if (pending && typeof pending.then === "function") {
+      pending.catch(err => {
+        this._lastSubmittedSharedCleaningSessionValue = null;
+        if (typeof console !== "undefined" && typeof console.warn === "function") {
+          console.warn("Nodalia Advance Vacuum Card: input_text.set_value failed", err);
+          console.warn(
+            "Nodalia Advance Vacuum Card: Non-admin users need control permission on the shared cleaning session input_text helper, or set shared_cleaning_session_webhook.",
+          );
+        }
+      });
+    }
+  }
+
+  _clearSharedCleaningSession() {
+    const webhookId = String(this._config?.shared_cleaning_session_webhook ?? "").trim();
+    const entityId = this._getSharedCleaningSessionEntityId();
+    if (!webhookId && !entityId) {
+      return;
+    }
+
+    this._lastSharedCleaningSessionOverflowFingerprint = null;
+    if (webhookId) {
+      this._lastSubmittedSharedCleaningSessionValue = "";
+      void this._postSharedCleaningSessionWebhook(webhookId, { value: "" }).then(ok => {
+        if (!this.isConnected) {
+          return;
+        }
+        if (!ok && typeof console !== "undefined" && typeof console.warn === "function") {
+          console.warn("Nodalia Advance Vacuum Card: Webhook clear for shared cleaning session failed.");
+        }
+      });
+      return;
+    }
+
+    const currentValue = String(this._getSharedCleaningSessionState()?.state || "");
+    if (
+      (!currentValue || ["unknown", "unavailable"].includes(normalizeTextKey(currentValue)))
+      && this._lastSubmittedSharedCleaningSessionValue === ""
+    ) {
+      return;
+    }
+
+    this._lastSubmittedSharedCleaningSessionValue = "";
+    this._callInternalService("input_text.set_value", {
+      entity_id: entityId,
+      value: "",
+    });
+  }
+
+  _normalizeCleaningSession(session) {
+    if (!isObject(session)) {
+      return null;
+    }
+
+    const mode = ["rooms", "zone"].includes(session.mode) ? session.mode : "";
+    const activeMode = ["all", "rooms", "zone", "goto", "routines"].includes(session.activeMode)
+      ? session.activeMode
+      : "";
+    const activeRoomIds = arrayFromMaybe(session.activeRoomIds)
+      .map(item => String(item || "").trim())
+      .filter(Boolean);
+    const activeZones = arrayFromMaybe(session.activeZones)
+      .map(zone => parseZoneRect(zone))
+      .filter(Boolean);
+    const selectedRoomIds = arrayFromMaybe(session.selectedRoomIds)
+      .map(item => String(item || "").trim())
+      .filter(Boolean);
+    const selectedPredefinedZoneIds = arrayFromMaybe(session.selectedPredefinedZoneIds)
+      .map(item => String(item || "").trim())
+      .filter(Boolean);
+    const manualZones = arrayFromMaybe(session.manualZones)
+      .map(zone => parseZoneRect(zone))
+      .filter(Boolean);
+    const repeats = clamp(Number(session.repeats || 1), 1, 9);
+    const selectionUpdatedAt = Number(session.selectionUpdatedAt || 0);
+    const pendingStartAt = Number(session.pendingStartAt || 0);
+    const resumeRoomIdsAfterZone = arrayFromMaybe(session.resumeRoomIdsAfterZone)
+      .map(item => String(item || "").trim())
+      .filter(Boolean);
+    const resumeRepeatsAfterZone = clamp(Number(session.resumeRepeatsAfterZone || repeats || 1), 1, 9);
+    const modePanelPreset = String(session.modePanelPreset ?? "").trim().slice(0, 64);
+    const utilityPanel = String(session.utilityPanel ?? "").trim().slice(0, 64);
+
+    if (
+      !mode &&
+      !activeMode &&
+      !activeRoomIds.length &&
+      !activeZones.length &&
+      !selectedRoomIds.length &&
+      !selectedPredefinedZoneIds.length &&
+      !manualZones.length &&
+      !selectionUpdatedAt &&
+      !pendingStartAt &&
+      !resumeRoomIdsAfterZone.length &&
+      !modePanelPreset &&
+      !utilityPanel
+    ) {
+      return null;
+    }
+
+    return {
+      mode,
+      activeMode,
+      activeRoomIds,
+      activeZones,
+      selectedRoomIds,
+      selectedPredefinedZoneIds,
+      manualZones,
+      repeats,
+      selectionUpdatedAt,
+      pendingStartAt,
+      resumeRoomIdsAfterZone,
+      resumeRepeatsAfterZone,
+      modePanelPreset,
+      utilityPanel,
+    };
+  }
+
+  _restorePersistedCleaningSessionState() {
+    const persistedSession = this._readStoredCleaningSession();
+    if (!persistedSession) {
+      return false;
+    }
+
+    this._selectedRoomIds = [...arrayFromMaybe(persistedSession.selectedRoomIds)];
+    this._selectedPredefinedZoneIds = [...arrayFromMaybe(persistedSession.selectedPredefinedZoneIds)];
+    this._manualZones = arrayFromMaybe(persistedSession.manualZones).map(zone => ({ ...zone }));
+    this._selectedManualZoneIndex = this._manualZones.length > 0
+      ? clamp(this._selectedManualZoneIndex, 0, this._manualZones.length - 1)
+      : -1;
+    this._activeCleaningRoomIds = [...arrayFromMaybe(persistedSession.activeRoomIds)];
+    this._activeCleaningZones = arrayFromMaybe(persistedSession.activeZones).map(zone => ({ ...zone }));
+    this._activeCleaningSessionMode = String(persistedSession.mode || "");
+    this._selectionUpdatedAt = Number(persistedSession.selectionUpdatedAt || this._selectionUpdatedAt || 0);
+    this._pendingCleaningSessionStartAt = Number(persistedSession.pendingStartAt || 0);
+    this._pendingRoomCleaningResumeRoomIds = [...arrayFromMaybe(persistedSession.resumeRoomIdsAfterZone)];
+    this._pendingRoomCleaningResumeRepeats = clamp(Number(persistedSession.resumeRepeatsAfterZone || this._repeats || 1), 1, 9);
+    this._roomCleaningResumeInFlight = false;
+    if (persistedSession.activeMode) {
+      this._activeMode = persistedSession.activeMode;
+    }
+    this._repeats = clamp(Number(persistedSession.repeats || this._repeats || 1), 1, 9);
+    const presetPersist = String(persistedSession.modePanelPreset ?? "").trim().slice(0, 64);
+    if (presetPersist) {
+      this._activeModePanelPreset = presetPersist;
+      this._lastResolvedModePanelPreset = presetPersist;
+    }
+    const utilPersist = String(persistedSession.utilityPanel ?? "").trim().slice(0, 64);
+    if (utilPersist) {
+      this._activeUtilityPanel = utilPersist;
+    }
+    return true;
+  }
+
+  _ensurePersistedCleaningSessionStateLoaded() {
+    if (this._hasLoadedPersistedCleaningSessionState) {
+      return false;
+    }
+
+    const hasConfigEntity = Boolean(String(this._config?.entity || "").trim());
+    if (!hasConfigEntity) {
+      return false;
+    }
+
+    this._hasLoadedPersistedCleaningSessionState = true;
+    return this._restorePersistedCleaningSessionState();
+  }
+
+  _markSelectionInteraction(timestamp = Date.now()) {
+    const nextTimestamp = Math.max(0, Math.round(Number(timestamp) || Date.now()));
+    this._selectionUpdatedAt = Math.max(this._selectionUpdatedAt || 0, nextTimestamp);
+    return this._selectionUpdatedAt;
+  }
+
+  _syncRemoteInteractiveSelectionState(persistedSession = this._readStoredCleaningSession()) {
+    if (this._zoneHandleDrag || this._draftZone || this._pendingTouchZoneStart) {
+      return false;
+    }
+
+    const remoteSelectionUpdatedAt = Number(persistedSession?.selectionUpdatedAt || 0);
+    if (!persistedSession || !remoteSelectionUpdatedAt || remoteSelectionUpdatedAt <= Number(this._selectionUpdatedAt || 0)) {
+      return false;
+    }
+
+    this._selectedRoomIds = [...arrayFromMaybe(persistedSession.selectedRoomIds)];
+    this._selectedPredefinedZoneIds = [...arrayFromMaybe(persistedSession.selectedPredefinedZoneIds)];
+    this._manualZones = arrayFromMaybe(persistedSession.manualZones).map(zone => ({ ...zone }));
+    this._selectedManualZoneIndex = this._manualZones.length > 0
+      ? clamp(this._selectedManualZoneIndex, 0, this._manualZones.length - 1)
+      : -1;
+    this._repeats = clamp(Number(persistedSession.repeats || this._repeats || 1), 1, 9);
+
+    if (persistedSession.activeMode) {
+      this._activeMode = persistedSession.activeMode;
+    }
+
+    this._selectionUpdatedAt = remoteSelectionUpdatedAt;
+    return true;
+  }
+
+  _persistCurrentCleaningSessionState(activeMode = this._activeMode, { markSelectionChange = false, selectionUpdatedAt = null } = {}) {
+    const nextSelectionUpdatedAt = markSelectionChange
+      ? this._markSelectionInteraction(selectionUpdatedAt || Date.now())
+      : Number(this._selectionUpdatedAt || 0);
+
+    this._persistCleaningSession({
+      mode: this._activeCleaningSessionMode || "",
+      activeMode,
+      activeRoomIds: this._activeCleaningRoomIds,
+      activeZones: this._activeCleaningZones,
+      selectedRoomIds: this._selectedRoomIds,
+      selectedPredefinedZoneIds: this._selectedPredefinedZoneIds,
+      manualZones: this._manualZones,
+      repeats: this._repeats,
+      selectionUpdatedAt: nextSelectionUpdatedAt,
+      pendingStartAt: this._pendingCleaningSessionStartAt,
+      resumeRoomIdsAfterZone: this._pendingRoomCleaningResumeRoomIds,
+      resumeRepeatsAfterZone: this._pendingRoomCleaningResumeRepeats,
+      modePanelPreset: String(this._activeModePanelPreset || "").trim().slice(0, 64),
+      utilityPanel: this._activeUtilityPanel ? String(this._activeUtilityPanel).trim().slice(0, 64) : "",
+    });
+  }
+
+  _setPendingRoomCleaningResume(roomIds = [], repeats = this._repeats) {
+    this._pendingRoomCleaningResumeRoomIds = [...new Set(arrayFromMaybe(roomIds)
+      .map(item => String(item || "").trim())
+      .filter(Boolean))];
+    this._pendingRoomCleaningResumeRepeats = clamp(Number(repeats || this._repeats || 1), 1, 9);
+  }
+
+  _clearPendingRoomCleaningResume() {
+    this._pendingRoomCleaningResumeRoomIds = [];
+    this._pendingRoomCleaningResumeRepeats = clamp(Number(this._repeats || 1), 1, 9);
+  }
+
+  _getPendingRoomCleaningResumeState(persistedSession = this._readStoredCleaningSession()) {
+    const hasInMemoryPendingResume = this._pendingRoomCleaningResumeRoomIds.length > 0;
+    const roomIds = [...new Set([
+      ...this._pendingRoomCleaningResumeRoomIds,
+      ...arrayFromMaybe(persistedSession?.resumeRoomIdsAfterZone),
+    ].map(item => String(item || "").trim()).filter(Boolean))];
+
+    return {
+      roomIds,
+      repeats: clamp(
+        Number(
+          (hasInMemoryPendingResume ? this._pendingRoomCleaningResumeRepeats : 0)
+          || persistedSession?.resumeRepeatsAfterZone
+          || this._repeats
+          || 1
+        ),
+        1,
+        9,
+      ),
+    };
+  }
+
+  _getRoomCleaningResumeIds(state = this._getVacuumState(), persistedSession = this._readStoredCleaningSession()) {
+    const orderedRoomIds = [...new Set([
+      ...this._selectedRoomIds,
+      ...arrayFromMaybe(persistedSession?.selectedRoomIds),
+      ...this._getTrackedActiveCleaningRoomIds(persistedSession),
+    ].map(item => String(item || "").trim()).filter(Boolean))];
+
+    if (!orderedRoomIds.length) {
+      return [];
+    }
+
+    const currentRoomId = this._getCurrentVacuumRoomId(state);
+    if (currentRoomId && orderedRoomIds.includes(currentRoomId)) {
+      return orderedRoomIds.slice(orderedRoomIds.indexOf(currentRoomId));
+    }
+
+    return orderedRoomIds;
+  }
+
+  _isCleaningSessionPendingStart(session = this._readStoredCleaningSession()) {
+    const pendingStartAt = Number(session?.pendingStartAt || this._pendingCleaningSessionStartAt || 0);
+    const timeoutMs = typeof CLEANING_SESSION_PENDING_TIMEOUT_MS === "number"
+      ? CLEANING_SESSION_PENDING_TIMEOUT_MS
+      : 45000;
+    return pendingStartAt > 0 && (Date.now() - pendingStartAt) < timeoutMs;
+  }
+
+  _markCleaningSessionPendingStart() {
+    this._pendingCleaningSessionStartAt = Date.now();
+  }
+
+  _clearCleaningSessionPendingStart() {
+    this._pendingCleaningSessionStartAt = 0;
+  }
+
+  _readStoredCleaningSession() {
+    const sharedSession = this._readSharedCleaningSession();
+    if (sharedSession) {
+      return sharedSession;
+    }
+
+    const key = this._getCleaningSessionStorageKey();
+    if (!key || typeof window === "undefined" || !window.localStorage) {
+      return null;
+    }
+
+    try {
+      const rawValue = window.localStorage.getItem(key);
+      if (!rawValue) {
+        return null;
+      }
+
+      return this._normalizeCleaningSession(JSON.parse(rawValue));
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  _persistCleaningSession(session) {
+    this._persistSharedCleaningSession(session);
+
+    const key = this._getCleaningSessionStorageKey();
+    if (!key || typeof window === "undefined" || !window.localStorage) {
+      return;
+    }
+
+    const normalizedSession = this._normalizeCleaningSession(session);
+
+    try {
+      if (!normalizedSession) {
+        window.localStorage.removeItem(key);
+        return;
+      }
+
+      window.localStorage.setItem(key, JSON.stringify(normalizedSession));
+    } catch (_error) {
+      // Ignore storage quota/security errors and keep the in-memory state.
+    }
+  }
+
+  _clearPersistedCleaningSession() {
+    this._clearSharedCleaningSession();
+
+    const key = this._getCleaningSessionStorageKey();
+    if (!key || typeof window === "undefined" || !window.localStorage) {
+      return;
+    }
+
+    try {
+      window.localStorage.removeItem(key);
+    } catch (_error) {
+      // Ignore storage quota/security errors.
+    }
+  }
+
+  _extractRoomIdsFromValue(value, depth = 0) {
+    if (value === null || value === undefined || depth > 5) {
+      return [];
+    }
+
+    if (Array.isArray(value)) {
+      return value.flatMap(item => this._extractRoomIdsFromValue(item, depth + 1));
+    }
+
+    if (isObject(value)) {
+      const directCandidates = [
+        value.id,
+        value.room_id,
+        value.roomId,
+        value.segment_id,
+        value.segmentId,
+        value.area_id,
+        value.areaId,
+        value.number,
+      ].filter(candidate => candidate !== null && candidate !== undefined && candidate !== "");
+      if (directCandidates.length) {
+        return directCandidates.flatMap(item => this._extractRoomIdsFromValue(item, depth + 1));
+      }
+      return [
+        value.active_segments,
+        value.selected_segments,
+        value.current_segments,
+        value.selected_rooms,
+        value.room_ids,
+        value.selected_areas,
+        value.current_area,
+      ].flatMap(item => this._extractRoomIdsFromValue(item, depth + 1));
+    }
+
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (!trimmed || ["unknown", "unavailable", "none", "null"].includes(normalizeTextKey(trimmed))) {
+        return [];
+      }
+      if ((trimmed.startsWith("[") && trimmed.endsWith("]")) || (trimmed.startsWith("{") && trimmed.endsWith("}"))) {
+        try {
+          return this._extractRoomIdsFromValue(JSON.parse(trimmed), depth + 1);
+        } catch (_error) {
+          // Keep the raw value: some integrations use non-JSON room labels.
+        }
+      }
+      if (trimmed.includes(",")) {
+        return trimmed.split(",").flatMap(item => this._extractRoomIdsFromValue(item, depth + 1));
+      }
+      return [trimmed];
+    }
+
+    if (typeof value === "number" || typeof value === "bigint") {
+      return [String(value)];
+    }
+
+    return [];
+  }
+
+  _normalizeReportedRoomIds(values = []) {
+    const rooms = this._getRoomSegments();
+    const configuredRooms = arrayFromMaybe(this._config?.room_segments);
+    const byId = new Map(rooms.map(room => [String(room.id), String(room.id)]));
+    const byLabel = new Map(rooms.map(room => [normalizeTextKey(room.label), String(room.id)]).filter(([label]) => label));
+    const byAreaId = new Map(configuredRooms.flatMap(room => [
+      room?.cleaning_area_id,
+      room?.area_id,
+      room?.ha_area_id,
+    ].filter(Boolean).map(areaId => [String(areaId), String(room?.id ?? "")])));
+    const resolved = this._extractRoomIdsFromValue(values).map(value => {
+      const direct = byId.get(value);
+      if (direct) {
+        return direct;
+      }
+      const areaMatch = byAreaId.get(value);
+      if (areaMatch) {
+        return areaMatch;
+      }
+      const labelMatch = byLabel.get(normalizeTextKey(value));
+      if (labelMatch) {
+        return labelMatch;
+      }
+      const suffixMatches = rooms
+        .map(room => String(room.id))
+        .filter(roomId => roomId.endsWith(`_${value}`));
+      return suffixMatches.length === 1 ? suffixMatches[0] : value;
+    });
+    return [...new Set(resolved.map(item => String(item || "").trim()).filter(Boolean))];
+  }
+
+  _getRelatedVacuumEntityIds(hass = this._hass) {
+    const entityId = String(this._config?.entity || "");
+    const explicitRoomEntityId = String(this._config?.room_tracking?.entity || "");
+    const explicitActivityEntityId = String(this._config?.room_tracking?.activity_entity || "");
+    const autoDetect = this._config?.room_tracking?.auto_detect !== false;
+    const registry = hass?.entities || {};
+    const states = hass?.states || {};
+    if (
+      this._roomTrackingEntityCache?.hass === hass
+      && this._roomTrackingEntityCache?.states === states
+      && this._roomTrackingEntityCache?.registry === registry
+      && this._roomTrackingEntityCache?.entityId === entityId
+      && this._roomTrackingEntityCache?.explicitRoomEntityId === explicitRoomEntityId
+      && this._roomTrackingEntityCache?.explicitActivityEntityId === explicitActivityEntityId
+      && this._roomTrackingEntityCache?.autoDetect === autoDetect
+    ) {
+      return this._roomTrackingEntityCache;
+    }
+    const cacheKey = [
+      entityId,
+      explicitRoomEntityId,
+      explicitActivityEntityId,
+      autoDetect ? "1" : "0",
+      Object.keys(registry).length,
+      Object.keys(states).length,
+    ].join("|");
+    if (this._roomTrackingEntityCache?.key === cacheKey) {
+      this._roomTrackingEntityCache.hass = hass;
+      this._roomTrackingEntityCache.states = states;
+      this._roomTrackingEntityCache.registry = registry;
+      return this._roomTrackingEntityCache;
+    }
+
+    const roomIds = new Set(explicitRoomEntityId ? [explicitRoomEntityId] : []);
+    const activityIds = new Set(explicitActivityEntityId ? [explicitActivityEntityId] : []);
+    if (autoDetect && entityId) {
+      const vacuumRegistryEntry = registry[entityId] || null;
+      const vacuumDeviceId = vacuumRegistryEntry?.device_id || "";
+      const objectId = normalizeTextKey(entityId.split(".").slice(1).join("_"));
+      const vacuumObjectIds = listVacuumObjectIds(states);
+      Object.keys(states).forEach(candidateId => {
+        if (candidateId === entityId) {
+          return;
+        }
+        const domain = candidateId.split(".")[0];
+        const supportsRoomTracking = ["sensor", "select", "text", "input_text"].includes(domain);
+        const supportsActivityTracking = supportsRoomTracking || domain === "binary_sensor";
+        if (!supportsActivityTracking) {
+          return;
+        }
+        const candidateRegistryEntry = registry[candidateId] || null;
+        const isSameDevice = Boolean(vacuumDeviceId && candidateRegistryEntry?.device_id === vacuumDeviceId);
+        const candidateState = states[candidateId];
+        const searchable = normalizeTextKey([
+          candidateId,
+          candidateRegistryEntry?.original_name,
+          candidateRegistryEntry?.translation_key,
+          candidateState?.attributes?.friendly_name,
+        ].filter(Boolean).join(" "));
+        const resemblesVacuum = isHelperRelatedToConfiguredVacuum({
+          candidateId,
+          searchable,
+          isSameDevice,
+          objectId,
+          vacuumObjectIds,
+        });
+        if (!resemblesVacuum) {
+          return;
+        }
+        if (supportsRoomTracking && /(current|active|selected|cleaning)_(room|rooms|segment|segments|area|areas)|room_(id|status)/.test(searchable)) {
+          roomIds.add(candidateId);
+        }
+        if (/(task|cleaning|self_wash|wash_base|dock|station|vacuum)_(status|state)|(^|_)activity($|_)/.test(searchable)) {
+          activityIds.add(candidateId);
+        }
+      });
+    }
+
+    this._roomTrackingEntityCache = {
+      key: cacheKey,
+      hass,
+      states,
+      registry,
+      entityId,
+      explicitRoomEntityId,
+      explicitActivityEntityId,
+      autoDetect,
+      roomIds: [...roomIds].filter(id => states[id]),
+      activityIds: [...activityIds].filter(id => states[id]),
+    };
+    return this._roomTrackingEntityCache;
+  }
+
+  _getExternalRoomTrackingSnapshot(hass = this._hass) {
+    const { roomIds } = this._getRelatedVacuumEntityIds(hass);
+    const explicitRoomEntityId = String(this._config?.room_tracking?.entity || "");
+    const explicitAttribute = String(this._config?.room_tracking?.attribute || "");
+    const allIds = [];
+    const currentIds = [];
+
+    roomIds.forEach(entityId => {
+      const source = hass?.states?.[entityId];
+      if (!source || isUnavailableState(source)) {
+        return;
+      }
+      const attributes = source.attributes || {};
+      const configuredValue = entityId === explicitRoomEntityId && explicitAttribute
+        ? attributes[explicitAttribute]
+        : undefined;
+      const values = configuredValue !== undefined ? [configuredValue] : [
+        attributes.active_segments,
+        attributes.selected_segments,
+        attributes.current_segments,
+        attributes.cleaning_segments,
+        attributes.selected_rooms,
+        attributes.room_ids,
+        attributes.rooms_to_clean,
+        attributes.active_areas,
+        attributes.selected_areas,
+        attributes.current_area,
+        attributes.room_id,
+        attributes.current_room_id,
+        attributes.segment_id,
+        attributes.current_segment_id,
+      ];
+      const searchable = normalizeTextKey(`${entityId} ${attributes.friendly_name || ""}`);
+      const isCurrentSource = /(current)_(room|segment|area)|room_id/.test(searchable);
+      if (configuredValue === undefined && (isCurrentSource || entityId === explicitRoomEntityId)) {
+        values.push(source.state);
+      }
+      const extracted = values.flatMap(value => this._extractRoomIdsFromValue(value));
+      allIds.push(...extracted);
+      if (isCurrentSource) {
+        currentIds.push(...extracted);
+      }
+    });
+
+    const ids = this._normalizeReportedRoomIds(allIds);
+    const current = this._normalizeReportedRoomIds(currentIds);
+    return {
+      ids,
+      currentId: current[0] || "",
+      entityIds: roomIds,
+    };
+  }
+
+  _getReportedCleaningRoomIds(state = this._getVacuumState()) {
+    const mapState = this._getMapState();
+    const external = this._getExternalRoomTrackingSnapshot();
+    const candidates = [
+      state?.attributes?.segments,
+      state?.attributes?.segment_ids,
+      state?.attributes?.active_segments,
+      state?.attributes?.selected_segments,
+      state?.attributes?.selected_rooms,
+      state?.attributes?.room_ids,
+      state?.attributes?.rooms_to_clean,
+      state?.attributes?.cleaning_segments,
+      state?.attributes?.current_segments,
+      state?.attributes?.active_areas,
+      state?.attributes?.selected_areas,
+      state?.attributes?.current_area,
+      mapState?.attributes?.active_segments,
+      mapState?.attributes?.selected_rooms,
+      mapState?.attributes?.room_ids,
+      mapState?.attributes?.selected_segments,
+      mapState?.attributes?.current_segments,
+      mapState?.attributes?.active_areas,
+      mapState?.attributes?.selected_areas,
+      mapState?.attributes?.current_area,
+      external.ids,
+    ];
+
+    return this._normalizeReportedRoomIds(candidates);
+  }
+
+  _getCurrentVacuumRoomId(state = this._getVacuumState()) {
+    const mapState = this._getMapState();
+    const external = this._getExternalRoomTrackingSnapshot();
+    const candidate = (
+      mapState?.attributes?.vacuum_room ??
+      mapState?.attributes?.current_room ??
+      mapState?.attributes?.current_room_id ??
+      mapState?.attributes?.current_area ??
+      state?.attributes?.vacuum_room ??
+      state?.attributes?.room_id ??
+      state?.attributes?.current_room_id ??
+      state?.attributes?.current_area ??
+      external.currentId
+    );
+
+    if (candidate === null || candidate === undefined || candidate === "") {
+      return "";
+    }
+
+    return this._normalizeReportedRoomIds([candidate])[0] || "";
+  }
+
+  _extractZoneRectsFromValue(value) {
+    if (value === null || value === undefined) {
+      return [];
+    }
+
+    if (Array.isArray(value)) {
+      const directZone = parseZoneRect(value);
+      if (directZone) {
+        return [directZone];
+      }
+
+      return value.flatMap(item => this._extractZoneRectsFromValue(item));
+    }
+
+    if (!isObject(value)) {
+      return [];
+    }
+
+    const directZone = parseZoneRect(value);
+    if (directZone) {
+      return [directZone];
+    }
+
+    return [
+      value.zone,
+      value.zones,
+      value.rect,
+      value.rects,
+      value.rectangle,
+      value.rectangles,
+      value.area,
+      value.areas,
+      value.coordinates,
+      value.points,
+    ].flatMap(item => this._extractZoneRectsFromValue(item));
+  }
+
+  _getReportedCleaningZones(state = this._getVacuumState()) {
+    const mapState = this._getMapState();
+    const candidates = [
+      state?.attributes?.zone,
+      state?.attributes?.zones,
+      state?.attributes?.selected_zones,
+      state?.attributes?.cleaning_zone,
+      state?.attributes?.cleaning_zones,
+      state?.attributes?.current_zone,
+      state?.attributes?.current_zones,
+      state?.attributes?.active_zone,
+      state?.attributes?.active_zones,
+      state?.attributes?.zones_to_clean,
+      mapState?.attributes?.zone,
+      mapState?.attributes?.zones,
+      mapState?.attributes?.selected_zones,
+      mapState?.attributes?.cleaning_zone,
+      mapState?.attributes?.cleaning_zones,
+      mapState?.attributes?.current_zone,
+      mapState?.attributes?.current_zones,
+      mapState?.attributes?.active_zone,
+      mapState?.attributes?.active_zones,
+    ];
+
+    const seen = new Set();
+    return candidates
+      .flatMap(value => this._extractZoneRectsFromValue(value))
+      .filter(zone => {
+        const key = `${zone.x1}:${zone.y1}:${zone.x2}:${zone.y2}`;
+        if (seen.has(key)) {
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
+  }
+
+  _isCleaningSessionActive(state = this._getVacuumState(), persistedSession = this._readStoredCleaningSession()) {
+    const hasTrackedWork = Boolean(
+      this._activeCleaningRoomIds.length ||
+      this._activeCleaningZones.length ||
+      persistedSession?.activeRoomIds?.length ||
+      persistedSession?.activeZones?.length ||
+      this._getReportedCleaningRoomIds(state).length
+    );
+    const isDockMaintenanceInterlude = hasTrackedWork && (
+      this._isWashingMops(state) ||
+      this._isDryingMops(state) ||
+      this._isAutoEmptying(state)
+    );
+    return this._isCleaning(state)
+      || this._isPaused(state)
+      || this._isReturning(state)
+      || isDockMaintenanceInterlude
+      || this._isCleaningSessionPendingStart(persistedSession);
+  }
+
+  _isRoomCleaningSessionActive(state = this._getVacuumState()) {
+    const persistedSession = this._readStoredCleaningSession();
+    const reportedRoomIds = this._getReportedCleaningRoomIds(state);
+    return this._matchesActivity(state, ["segment_cleaning", "room_cleaning"]) || (
+      this._isCleaningSessionActive(state, persistedSession) && (
+        reportedRoomIds.length > 0 ||
+        this._activeCleaningSessionMode === "rooms" ||
+        persistedSession?.mode === "rooms" ||
+        this._activeCleaningRoomIds.length > 0
+      )
+    );
+  }
+
+  _getTrackedActiveCleaningRoomIds(persistedSession = this._readStoredCleaningSession()) {
+    return [...new Set([
+      ...this._activeCleaningRoomIds,
+      ...arrayFromMaybe(persistedSession?.activeRoomIds),
+      ...this._selectedRoomIds,
+      ...arrayFromMaybe(persistedSession?.selectedRoomIds),
+    ].map(item => String(item || "").trim()).filter(Boolean))];
+  }
+
+  _hasMixedRoomZoneCleaningSession(persistedSession = this._readStoredCleaningSession(), reportedZones = []) {
+    const sessionMode = String(this._activeCleaningSessionMode || persistedSession?.mode || "");
+    if (sessionMode !== "rooms") {
+      return false;
+    }
+
+    return Boolean(
+      (Array.isArray(reportedZones) ? reportedZones.length : 0) ||
+      this._activeCleaningZones.length ||
+      arrayFromMaybe(persistedSession?.activeZones).length
+    );
+  }
+
+  _attemptPendingRoomCleaningResume(state = this._getVacuumState(), persistedSession = this._readStoredCleaningSession()) {
+    const pendingResume = this._getPendingRoomCleaningResumeState(persistedSession);
+    if (!pendingResume.roomIds.length || this._roomCleaningResumeInFlight) {
+      return false;
+    }
+
+    if (!state || isUnavailableState(state) || this._isCleaningSessionPendingStart(persistedSession)) {
+      return false;
+    }
+
+    if (this._isCleaning(state) || this._isPaused(state)) {
+      return false;
+    }
+
+    if (
+      !this._isReturning(state) &&
+      !this._isDocked(state) &&
+      !this._matchesActivity(state, ["idle", "stopped", "ready"])
+    ) {
+      return false;
+    }
+
+    const roomIds = pendingResume.roomIds
+      .map(id => String(id || "").trim())
+      .filter(Boolean);
+    if (!roomIds.length) {
+      this._clearPendingRoomCleaningResume();
+      this._persistCurrentCleaningSessionState(this._activeMode);
+      return false;
+    }
+
+    this._roomCleaningResumeInFlight = true;
+    this._clearPendingRoomCleaningResume();
+    this._activeCleaningRoomIds = pendingResume.roomIds;
+    this._activeCleaningZones = [];
+    this._activeCleaningSessionMode = "rooms";
+    this._markCleaningSessionPendingStart();
+    this._persistCurrentCleaningSessionState("rooms");
+
+    Promise.resolve().then(() => this._callRoomCleaningService(roomIds, pendingResume.repeats))
+      .then(() => {
+        this._persistCurrentCleaningSessionState("rooms");
+      })
+      .catch(error => {
+        this._clearCleaningSessionPendingStart();
+        this._setPendingRoomCleaningResume(pendingResume.roomIds, pendingResume.repeats);
+        this._persistCurrentCleaningSessionState("rooms");
+        if (typeof console !== "undefined" && typeof console.error === "function") {
+          console.error("Nodalia Advance Vacuum Card room resume error", error);
+        }
+      })
+      .finally(() => {
+        this._roomCleaningResumeInFlight = false;
+        this._render();
+      });
+
+    return true;
+  }
+
+  _resolveActiveCleaningSessionMode(state = this._getVacuumState(), persistedSession = this._readStoredCleaningSession()) {
+    if (!state || !this._isCleaningSessionActive(state, persistedSession)) {
+      return "";
+    }
+
+    if (this._matchesActivity(state, ["segment_cleaning", "room_cleaning"]) || this._getReportedCleaningRoomIds(state).length) {
+      return "rooms";
+    }
+
+    if (this._activeCleaningRoomIds.length || persistedSession?.mode === "rooms") {
+      return "rooms";
+    }
+
+    if (this._matchesActivity(state, ["zone_cleaning"])) {
+      return "zone";
+    }
+
+    if (this._activeCleaningZones.length) {
+      return persistedSession?.mode === "rooms" ? "rooms" : "zone";
+    }
+
+    return persistedSession?.mode || "";
+  }
+
+  _syncActiveCleaningSession(state = this._getVacuumState()) {
+    const persistedSession = this._readStoredCleaningSession();
+    this._syncRemoteInteractiveSelectionState(persistedSession);
+    if ((!state || isUnavailableState(state)) && persistedSession) {
+      if (!this._selectedRoomIds.length && persistedSession.selectedRoomIds?.length) {
+        this._selectedRoomIds = [...persistedSession.selectedRoomIds];
+      }
+      if (!this._selectedPredefinedZoneIds.length && persistedSession.selectedPredefinedZoneIds?.length) {
+        this._selectedPredefinedZoneIds = [...persistedSession.selectedPredefinedZoneIds];
+      }
+      if (!this._manualZones.length && persistedSession.manualZones?.length) {
+        this._manualZones = persistedSession.manualZones.map(zone => ({ ...zone }));
+      }
+      if (!this._activeCleaningRoomIds.length && persistedSession.activeRoomIds?.length) {
+        this._activeCleaningRoomIds = [...persistedSession.activeRoomIds];
+      }
+      if (!this._activeCleaningZones.length && persistedSession.activeZones?.length) {
+        this._activeCleaningZones = persistedSession.activeZones.map(zone => ({ ...zone }));
+      }
+      if (!this._activeCleaningSessionMode && persistedSession.mode) {
+        this._activeCleaningSessionMode = String(persistedSession.mode);
+      }
+      if (!this._pendingRoomCleaningResumeRoomIds.length && persistedSession.resumeRoomIdsAfterZone?.length) {
+        this._pendingRoomCleaningResumeRoomIds = [...persistedSession.resumeRoomIdsAfterZone];
+        this._pendingRoomCleaningResumeRepeats = clamp(Number(persistedSession.resumeRepeatsAfterZone || 1), 1, 9);
+      }
+      if (persistedSession.activeMode) {
+        this._activeMode = persistedSession.activeMode;
+      }
+      return;
+    }
+
+    const reportedRoomIds = this._getReportedCleaningRoomIds(state);
+    const reportedZones = this._getReportedCleaningZones(state);
+    const trackedRoomIds = this._getTrackedActiveCleaningRoomIds(persistedSession);
+    const hasMixedRoomZoneCleaningSession = this._hasMixedRoomZoneCleaningSession(persistedSession, reportedZones);
+    const currentRoomId = this._getCurrentVacuumRoomId(state);
+    const isRoomCleaning = this._matchesActivity(state, ["segment_cleaning", "room_cleaning"]) || reportedRoomIds.length > 0;
+    const isReportedCleaningSessionActive = this._isCleaning(state)
+      || this._isPaused(state)
+      || this._isReturning(state)
+      || (reportedRoomIds.length > 0 && (
+        this._isWashingMops(state) ||
+        this._isDryingMops(state) ||
+        this._isAutoEmptying(state)
+      ));
+    const isCleaningSessionActive = this._isCleaningSessionActive(state, persistedSession);
+    const wasCleaningSessionActive = this._wasCleaningSessionActive;
+    this._wasCleaningSessionActive = isCleaningSessionActive;
+    const hadTrackedCleaningSession = Boolean(
+      this._activeCleaningSessionMode ||
+      persistedSession?.mode ||
+      this._activeCleaningRoomIds.length ||
+      this._activeCleaningZones.length ||
+      persistedSession?.activeRoomIds?.length ||
+      persistedSession?.activeZones?.length ||
+      this._pendingCleaningSessionStartAt ||
+      persistedSession?.pendingStartAt ||
+      this._getPendingRoomCleaningResumeState(persistedSession).roomIds.length
+    );
+    const preserveInteractiveSelection = ["rooms", "zone", "goto"].includes(this._activeMode);
+
+    if (this._attemptPendingRoomCleaningResume(state, persistedSession)) {
+      return;
+    }
+
+    if (reportedRoomIds.length && isCleaningSessionActive) {
+      this._activeCleaningRoomIds = hasMixedRoomZoneCleaningSession && trackedRoomIds.length
+        ? trackedRoomIds
+        : reportedRoomIds;
+    } else if (isCleaningSessionActive && isRoomCleaning && currentRoomId && !hasMixedRoomZoneCleaningSession) {
+      this._activeCleaningRoomIds = [...new Set([currentRoomId, ...trackedRoomIds])];
+    } else if (isCleaningSessionActive && persistedSession?.activeRoomIds?.length) {
+      this._activeCleaningRoomIds = [...persistedSession.activeRoomIds];
+    } else if (!isCleaningSessionActive) {
+      this._activeCleaningRoomIds = [];
+    }
+
+    if (reportedZones.length) {
+      this._activeCleaningZones = reportedZones;
+    } else if (isCleaningSessionActive && persistedSession?.activeZones?.length) {
+      this._activeCleaningZones = [...persistedSession.activeZones];
+    } else if (!isCleaningSessionActive) {
+      this._activeCleaningZones = [];
+    }
+
+    this._activeCleaningSessionMode = this._resolveActiveCleaningSessionMode(state, persistedSession);
+
+    if (isReportedCleaningSessionActive && this._pendingCleaningSessionStartAt) {
+      this._clearCleaningSessionPendingStart();
+    }
+
+    if (!isCleaningSessionActive) {
+      this._activeCleaningSessionMode = "";
+      this._clearCleaningSessionPendingStart();
+      this._clearPendingRoomCleaningResume();
+      this._roomCleaningResumeInFlight = false;
+      if (wasCleaningSessionActive && hadTrackedCleaningSession && !preserveInteractiveSelection) {
+        this._selectedRoomIds = [];
+        this._selectedPredefinedZoneIds = [];
+        this._manualZones = [];
+        this._selectedManualZoneIndex = -1;
+        this._draftZone = null;
+      }
+      if (
+        !this._selectedRoomIds.length &&
+        !this._selectedPredefinedZoneIds.length &&
+        !this._manualZones.length
+      ) {
+        this._clearPersistedCleaningSession();
+      }
+      return;
+    }
+
+    this._persistCurrentCleaningSessionState(this._activeCleaningSessionMode || this._activeMode);
+
+    if (!this._transientZoneReturnMode && !["rooms", "zone", "goto"].includes(this._activeMode) && this._activeCleaningSessionMode) {
+      this._activeMode = this._activeCleaningSessionMode;
+    }
+  }
+
+  _getHighlightedRoomIds(state = this._getVacuumState()) {
+    const highlighted = new Set(this._selectedRoomIds.map(id => String(id)));
+    const hasMixedRoomZoneCleaningSession = this._hasMixedRoomZoneCleaningSession();
+
+    if (this._isRoomCleaningSessionActive(state)) {
+      this._activeCleaningRoomIds.forEach(id => highlighted.add(String(id)));
+      const currentRoomId = this._getCurrentVacuumRoomId(state);
+      if (currentRoomId && !hasMixedRoomZoneCleaningSession) {
+        highlighted.add(currentRoomId);
+      }
+    }
+
+    return [...highlighted];
+  }
+
+  _getMapImageUrl(state = this._getVacuumState()) {
+    const mapState = this._getMapState();
+    const entityId = this._getMapEntityId();
+    if (!mapState || !this._hass) {
+      return "";
+    }
+
+    const refreshToken = String(mapState?.last_updated || mapState?.last_changed || "");
+
+    const fromPicture = mapState.attributes?.entity_picture;
+    if (fromPicture) {
+      return appendQueryParam(this._hass.hassUrl(fromPicture), "nodalia_ts", refreshToken);
+    }
+
+    if (normalizeTextKey(entityId.split(".")[0]) === "image") {
+      return appendQueryParam(this._hass.hassUrl(`/api/image_proxy/${entityId}`), "nodalia_ts", refreshToken);
+    }
+
+    return "";
+  }
+
+  /**
+   * Cheap calibration fingerprint for render signatures (avoids a second
+   * `parseCalibrationPoints` pass; `_updateCalibration` already parses once per render).
+   */
+  _getCalibrationSignatureFragment(hass = this._hass) {
+    const config = this._config;
+    const directPoints = arrayFromMaybe(config?.calibration_source?.calibration_points);
+    if (directPoints.length) {
+      return {
+        kind: "direct",
+        len: directPoints.length,
+        fingerprint: JSON.stringify(directPoints),
+      };
+    }
+    const calibrationEntityId = config?.calibration_source?.entity;
+    if (calibrationEntityId && hass?.states?.[calibrationEntityId]) {
+      const st = hass.states[calibrationEntityId];
+      const pts = st.attributes?.calibration_points;
+      const len = Array.isArray(pts) ? pts.length : 0;
+      return {
+        kind: "entity",
+        id: String(calibrationEntityId || ""),
+        len,
+        lu: String(st.last_updated || st.last_changed || ""),
+      };
+    }
+    if (config?.calibration_source?.camera === true) {
+      const mapEntityId = String(config?.map_source?.camera || config?.map_camera || "");
+      const st = mapEntityId ? hass?.states?.[mapEntityId] : null;
+      const pts = st?.attributes?.calibration_points;
+      const len = Array.isArray(pts) ? pts.length : 0;
+      return {
+        kind: "camera",
+        id: mapEntityId,
+        len,
+        lu: String(st?.last_updated || st?.last_changed || ""),
+      };
+    }
+    return { kind: "none", len: 0 };
+  }
+
+  _getCalibrationSignatureStamp(hass = this._hass) {
+    const fragment = this._getCalibrationSignatureFragment(hass);
+    const joinParts = window.NodaliaRenderSignature?.joinParts;
+    const values = [
+      fragment.kind,
+      fragment.id || "",
+      fragment.len,
+      fragment.lu || "",
+      fragment.fingerprint || "",
+    ];
+    if (typeof joinParts === "function") {
+      return joinParts([{ prefix: "cal:", values }]);
+    }
+    return values.join(":");
+  }
+
+  _syncCalibrationIfNeeded(hass = this._hass) {
+    const stamp = this._getCalibrationSignatureStamp(hass);
+    if (stamp === this._calibrationSignatureStamp) {
+      return;
+    }
+    this._calibrationSignatureStamp = stamp;
+    this._updateCalibration();
+  }
+
+  _getRenderSignature(hass = this._hass) {
+    const entityId = this._config?.entity || "";
+    const state = entityId ? hass?.states?.[entityId] || null : null;
+    const mapEntityId = this._getMapEntityId();
+    const mapState = mapEntityId ? hass?.states?.[mapEntityId] || null : null;
+    const sharedSessionEntityId = this._getSharedCleaningSessionEntityId();
+    const sharedSessionState = sharedSessionEntityId ? hass?.states?.[sharedSessionEntityId] || null : null;
+    const mapPicture = String(mapState?.attributes?.entity_picture || "");
+    const relatedVacuumEntities = this._getRelatedVacuumEntityIds(hass);
+    const roomTrackingSignature = [...new Set([
+      ...relatedVacuumEntities.roomIds,
+      ...relatedVacuumEntities.activityIds,
+    ])].map(trackedEntityId => {
+      const trackedState = hass?.states?.[trackedEntityId] || null;
+      return `${trackedEntityId}:${String(trackedState?.state || "")}:${String(trackedState?.last_updated || trackedState?.last_changed || "")}`;
+    }).join("|");
+    const currentRoomId = this._getCurrentVacuumRoomId(state);
+    const displayModeId = this._getDisplayCleaningModeId();
+    const needsModeDescriptorSignature = this._activeUtilityPanel === "modes"
+      || this._activeUtilityPanel === "dock"
+      || ["rooms", "zone", "goto"].includes(this._activeMode)
+      || ["rooms", "zone", "goto"].includes(displayModeId);
+    const suctionDescriptor = needsModeDescriptorSignature ? this._getModeDescriptor("suction", state) : null;
+    const mopDescriptor = needsModeDescriptorSignature ? this._getModeDescriptor("mop", state) : null;
+    const mopModeDescriptor = needsModeDescriptorSignature ? this._getMopModeDescriptor(state) : null;
+    const dockControlDescriptors = needsModeDescriptorSignature ? this._getDockControlDescriptors(state) : [];
+    const dockSettingDescriptors = needsModeDescriptorSignature ? this._getDockSettingDescriptors(state) : [];
+    const routineSignature = this._activeMode === "routines" || this._activeUtilityPanel === "modes"
+      ? this._getRoutineItems(state)
+        .map(item => {
+          const routineState = item.entity ? hass?.states?.[item.entity] || null : null;
+          return `${item.entity || item.service || item.label}:${String(routineState?.state || "")}:${String(routineState?.last_updated || "")}`;
+        })
+        .join("|")
+      : "";
+
+    const joinParts = window.NodaliaRenderSignature?.joinParts;
+    const sections = [
+      {
+        prefix: "vac:",
+        values: [
+          state?.state || "",
+          state?.last_updated || "",
+          state?.attributes?.battery_level ?? -1,
+          state?.attributes?.fan_speed || "",
+          this._getIcon() || "",
+          this._getName() || "",
+        ],
+      },
+      {
+        prefix: "map:",
+        values: [mapEntityId || "", mapState?.state || "", mapState?.last_updated || "", mapPicture],
+      },
+      {
+        prefix: "session:",
+        values: [
+          sharedSessionEntityId || "",
+          this._config?.shared_cleaning_session_webhook || "",
+          sharedSessionState?.state || "",
+          sharedSessionState?.last_updated || "",
+        ],
+      },
+      {
+        prefix: "room-track:",
+        values: [
+          this._config?.room_tracking?.entity || "",
+          this._config?.room_tracking?.attribute || "",
+          this._config?.room_tracking?.activity_entity || "",
+          this._config?.room_tracking?.auto_detect !== false,
+          roomTrackingSignature,
+        ],
+      },
+      {
+        prefix: "ui:",
+        values: [
+          this._activeMode || "",
+          this._activeCleaningSessionMode || "",
+          this._transientZoneReturnMode || "",
+          this._activeUtilityPanel || "",
+          this._activeModePanelPreset || "",
+          this._activeDockPanelSection || "",
+          this._selectedRoomIds.join("|"),
+          this._activeCleaningRoomIds.join("|"),
+          this._activeCleaningZones.map(zone => `${zone.x1}:${zone.y1}:${zone.x2}:${zone.y2}`).join("|"),
+          currentRoomId,
+          this._selectedPredefinedZoneIds.join("|"),
+          this._manualZones.length,
+          this._gotoPoint ? `${Math.round(this._gotoPoint.x)}:${Math.round(this._gotoPoint.y)}` : "",
+          this._repeats || 1,
+          `${this._mapImageWidth}x${this._mapImageHeight}`,
+          this._getCalibrationSignatureStamp(hass),
+          suctionDescriptor
+            ? `${suctionDescriptor.service}:${suctionDescriptor.target}:${suctionDescriptor.current}:${suctionDescriptor.options.join("|")}`
+            : "",
+          mopDescriptor
+            ? `${mopDescriptor.service}:${mopDescriptor.target}:${mopDescriptor.current}:${mopDescriptor.options.join("|")}`
+            : "",
+          mopModeDescriptor
+            ? `${mopModeDescriptor.service}:${mopModeDescriptor.target}:${mopModeDescriptor.current}:${mopModeDescriptor.options.join("|")}`
+            : "",
+          dockControlDescriptors.map(d => `${d.id}:${d.target}:${d.active ? "1" : "0"}`).join("|"),
+          dockSettingDescriptors.map(d => `${d.id}:${d.target}:${d.current}:${d.options.join("|")}`).join("|"),
+          routineSignature,
+          this._config?.language ?? "auto",
+          typeof window !== "undefined"
+            ? window.NodaliaI18n?.resolveLanguage?.(
+                hass ?? window.NodaliaI18n?.resolveHass?.(null),
+                this._config?.language ?? "auto",
+              ) ?? ""
+            : "",
+          Boolean(typeof window !== "undefined" && window.NodaliaI18n?.strings),
+        ],
+      },
+    ];
+    if (typeof joinParts === "function") {
+      return joinParts(sections);
+    }
+    return sections.map(section => `${section.prefix}${section.values.map(v => String(v ?? "")).join(":")}`).join("||");
+  }
+
+  _updateCalibration() {
+    this._converter = new CoordinatesConverter(parseCalibrationPoints(this._config, this._hass));
+  }
+
+  _getRoomSegments() {
+    return resolveRoomSegments(this._config, this._hass, this._config?.entity, this._getMapEntityId());
+  }
+
+  _getPredefinedZones() {
+    return resolvePredefinedZones(this._config);
+  }
+
+  _getGotoPoints() {
+    return resolveGotoPoints(this._config);
+  }
+
+  _getHeaderIcons() {
+    return resolveHeaderIcons(this._config);
+  }
+
+  _getRoutineItems(state = this._getVacuumState()) {
+    return normalizeRoutineItems(this._config?.routines)
+      .filter(item => this._isMenuItemVisible(item, state));
+  }
+
+  _getDisplayCleaningModeId() {
+    return ["rooms", "zone", "goto"].includes(this._activeMode)
+      ? this._activeMode
+      : (this._activeCleaningSessionMode || this._activeMode || "all");
+  }
+
+  _resolveDisplayMode(modes = this._getAvailableModes(), strings = this._advanceVacuumStrings()) {
+    const preferredModeId = this._getDisplayCleaningModeId();
+    const modeLabels = strings?.modeLabels || MODE_LABELS;
+    return modes.find(mode => mode.id === preferredModeId)
+      || (["rooms", "zone", "goto"].includes(preferredModeId)
+        ? {
+            id: preferredModeId,
+            label: modeLabels[preferredModeId] || MODE_LABELS[preferredModeId],
+            icon: preferredModeId === "rooms"
+              ? "mdi:floor-plan"
+              : preferredModeId === "zone"
+                ? "mdi:vector-rectangle"
+                : "mdi:map-marker",
+          }
+        : null)
+      || modes[0]
+      || { id: "all", label: modeLabels.all || MODE_LABELS.all, icon: "mdi:home" };
+  }
+
+  _supportsMapActionKind(actionKind) {
+    if (this._getConfiguredMapMode(actionKind)) {
+      return true;
+    }
+    const profile = this._getVacuumPlatformProfile();
+    if (actionKind === "goto") {
+      return !["deebot", "home_assistant"].includes(profile);
+    }
+    if (actionKind === "zone") {
+      return profile !== "home_assistant";
+    }
+    return true;
+  }
+
+  _getAvailableModes() {
+    const modeLabels = this._advanceVacuumStrings()?.modeLabels || MODE_LABELS;
+    const modes = [];
+    const showAllMode = this._config?.show_all_mode !== false;
+    const hasRooms = this._getRoomSegments().length > 0;
+    const hasZones = this._supportsMapActionKind("zone") && (
+      this._config?.allow_zone_mode !== false
+      || this._getPredefinedZones().length > 0
+      || Boolean(resolveLegacyMode(this._config, "vacuum_clean_zone"))
+    );
+    const hasGoto = this._supportsMapActionKind("goto") && this._config?.allow_goto_mode !== false;
+    const hasRoutines = this._getRoutineItems().length > 0;
+
+    if (showAllMode) {
+      modes.push({ id: "all", label: modeLabels.all || MODE_LABELS.all, icon: "mdi:home" });
+    }
+    if (hasRooms && this._config?.allow_segment_mode !== false) {
+      modes.push({ id: "rooms", label: modeLabels.rooms || MODE_LABELS.rooms, icon: "mdi:floor-plan" });
+    }
+    if (hasZones) {
+      modes.push({ id: "zone", label: modeLabels.zone || MODE_LABELS.zone, icon: "mdi:vector-rectangle" });
+    }
+    if (hasGoto) {
+      modes.push({ id: "goto", label: modeLabels.goto || MODE_LABELS.goto, icon: "mdi:map-marker" });
+    }
+    if (hasRoutines) {
+      modes.push({ id: "routines", label: modeLabels.routines || MODE_LABELS.routines, icon: "mdi:play-box-multiple-outline" });
+    }
+
+    return modes;
+  }
+
+  _getSelectOptions(entityId) {
+    const selectState = entityId ? this._hass?.states?.[entityId] || null : null;
+    const options = Array.isArray(selectState?.attributes?.options)
+      ? selectState.attributes.options.map(item => String(item || "").trim()).filter(Boolean)
+      : [];
+
+    return {
+      entityId,
+      options,
+      state: selectState,
+      value: selectState?.state ? String(selectState.state) : "",
+    };
+  }
+
+  _getModeEntityPatterns(kind) {
+    return kind === "mop"
+      ? [
+        "mop_intensity",
+        "intensidad_mopa",
+        "mop_level",
+        "water_level",
+        "water_volume",
+        "water_flow",
+        "water_box_mode",
+        "water_grade",
+        "nivel_agua",
+        "caudal_agua",
+        "water",
+        "mop",
+      ]
+      : [
+        "suction_level",
+        "suction_mode",
+        "intensidad_aspirado",
+        "fan_speed",
+        "fan_power",
+        "modo_aspirado",
+        "suction",
+      ];
+  }
+
+  _getMopModeEntityPatterns() {
+    return [
+      "modo_mopa",
+      "mop_mode",
+      "scrub_mode",
+      "scrub",
+      "mop_route",
+      "patron_mopa",
+      "trayectoria_mopa",
+    ];
+  }
+
+  _getEntityMatchScore(entityId, patterns) {
+    const normalizedEntityId = normalizeTextKey(entityId);
+    return patterns.reduce((bestScore, pattern, index) => {
+      const normalizedPattern = normalizeTextKey(pattern);
+      if (!normalizedPattern || !normalizedEntityId.includes(normalizedPattern)) {
+        return bestScore;
+      }
+
+      return Math.max(bestScore, patterns.length - index);
+    }, 0);
+  }
+
+  _guessRelatedEntityByPatterns(domain, patterns, excludedEntities = []) {
+    const candidates = this._listRelatedEntitiesByPatterns(domain, patterns, excludedEntities);
+    return candidates[0] || "";
+  }
+
+  _listRelatedEntitiesByPatterns(domain, patterns, excludedEntities = []) {
+    if (!this._hass?.states || !this._config?.entity) {
+      return [];
+    }
+
+    const objectId = normalizeTextKey(String(this._config.entity).split(".").slice(1).join("_"));
+    if (!objectId) {
+      return [];
+    }
+
+    const states = this._hass.states;
+    const registry = this._hass.entities || {};
+    const vacuumObjectIds = listVacuumObjectIds(states);
+    const vacuumDeviceId = registry[this._config.entity]?.device_id || "";
+    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
+    return Object.keys(states)
+      .filter(entityId => entityId.startsWith(`${domain}.`))
+      .filter(entityId => isHelperRelatedToConfiguredVacuum({
+        candidateId: entityId,
+        searchable: states[entityId]?.attributes?.friendly_name || "",
+        isSameDevice: Boolean(vacuumDeviceId && registry[entityId]?.device_id === vacuumDeviceId),
+        objectId,
+        vacuumObjectIds,
+      }))
+      .filter(entityId => !excludedEntities.includes(entityId))
+      .map(entityId => ({
+        entityId,
+        score: this._getEntityMatchScore(entityId, patterns),
+      }))
+      .filter(candidate => candidate.score > 0)
+      .sort((left, right) => right.score - left.score || left.entityId.localeCompare(right.entityId, sortLoc))
+      .map(candidate => candidate.entityId);
+  }
+
+  _guessRelatedSelectEntityByPatterns(patterns, excludedEntities = []) {
+    return this._guessRelatedEntityByPatterns("select", patterns, excludedEntities);
+  }
+
+  _guessRelatedButtonEntityByPatterns(patterns, excludedEntities = []) {
+    return this._guessRelatedEntityByPatterns("button", patterns, excludedEntities);
+  }
+
+  _guessGlobalEntityByPatterns(domains, patterns, excludedEntities = []) {
+    if (!this._hass?.states || !Array.isArray(patterns) || !patterns.length) {
+      return "";
+    }
+
+    const domainList = arrayFromMaybe(domains).map(domain => String(domain || "").trim()).filter(Boolean);
+    if (!domainList.length) {
+      return "";
+    }
+
+    const states = this._hass.states;
+    const registry = this._hass.entities || {};
+    const objectId = normalizeTextKey(String(this._config?.entity || "").split(".").slice(1).join("_"));
+    const vacuumObjectIds = listVacuumObjectIds(states);
+    const vacuumDeviceId = registry[this._config?.entity]?.device_id || "";
+    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
+    const candidates = Object.keys(states)
+      .filter(entityId => domainList.some(domain => entityId.startsWith(`${domain}.`)))
+      .filter(entityId => !excludedEntities.includes(entityId))
+      .map(entityId => ({
+        entityId,
+        score: this._getEntityMatchScore(entityId, patterns),
+      }))
+      .filter(candidate => candidate.score > 0)
+      .sort((left, right) => right.score - left.score || left.entityId.localeCompare(right.entityId, sortLoc));
+
+    const related = candidates.filter(candidate => isHelperRelatedToConfiguredVacuum({
+      candidateId: candidate.entityId,
+      searchable: states[candidate.entityId]?.attributes?.friendly_name || "",
+      isSameDevice: Boolean(vacuumDeviceId && registry[candidate.entityId]?.device_id === vacuumDeviceId),
+      objectId,
+      vacuumObjectIds,
+    }));
+    if (related.length) {
+      return related[0].entityId;
+    }
+
+    return vacuumObjectIds.length > 1
+      ? ""
+      : (candidates[0]?.entityId || "");
+  }
+
+  _getEntityState(entityId) {
+    return entityId ? this._hass?.states?.[entityId] || null : null;
+  }
+
+  _getEntityDomain(entityId) {
+    return String(entityId || "").split(".")[0] || "";
+  }
+
+  _findFirstAvailableEntity(entityIds = [], excludedEntities = []) {
+    if (!this._hass?.states) {
+      return "";
+    }
+
+    return arrayFromMaybe(entityIds)
+      .map(entityId => String(entityId || "").trim())
+      .find(entityId => entityId && !excludedEntities.includes(entityId) && this._hass.states[entityId]) || "";
+  }
+
+  _isBooleanEntityOn(entityId) {
+    return normalizeTextKey(this._getEntityState(entityId)?.state) === "on";
+  }
+
+  _toggleBooleanEntity(entityId) {
+    if (!this._hass || !entityId) {
+      return;
+    }
+
+    this._callInternalService(
+      `homeassistant.${this._isBooleanEntityOn(entityId) ? "turn_off" : "turn_on"}`,
+      { entity_id: entityId },
+    );
+  }
+
+  _setEntityOption(entityId, value) {
+    if (!this._hass || !entityId || !value) {
+      return;
+    }
+
+    const domain = this._getEntityDomain(entityId);
+    const serviceName = domain === "input_select" ? "input_select.select_option" : "select.select_option";
+    this._callInternalService(serviceName, {
+      entity_id: entityId,
+      option: value,
+    });
+  }
+
+  _guessRelatedSelectEntity(kind) {
+    return this._listRelatedSelectEntities(kind)[0] || "";
+  }
+
+  _listRelatedSelectEntities(kind, excludedEntities = []) {
+    return this._listRelatedEntitiesByPatterns(
+      "select",
+      this._getModeEntityPatterns(kind),
+      excludedEntities,
+    );
+  }
+
+  _looksLikeSuctionSpeedDescriptor(descriptor) {
+    if (!descriptor?.options?.length || this._descriptorSupportsCleaningCombo(descriptor)) {
+      return false;
+    }
+
+    return descriptor.options.some(option => {
+      const optionKind = this._categorizeModeOption(option);
+      return optionKind === "suction"
+        || this._isOffModeValue(option)
+        || this._isSharedSmartMode(option)
+        || this._isCustomModeValue(option);
+    });
+  }
+
+  _categorizeModeOption(value) {
+    const key = normalizeTextKey(value);
+
+    if (MOP_MODE_PATTERNS.some(pattern => key.includes(pattern))) {
+      return "mop";
+    }
+
+    if (SUCTION_MODE_PATTERNS.some(pattern => key.includes(pattern))) {
+      return "suction";
+    }
+
+    return "unknown";
+  }
+
+  _isSharedSmartMode(value) {
+    const key = normalizeTextKey(value);
+    return SHARED_SMART_MODE_PATTERNS.some(pattern => key.includes(pattern));
+  }
+
+  _isOffModeValue(value) {
+    return ["off", "apagado", "disabled", "none", "sin_fregado"].includes(normalizeTextKey(value));
+  }
+
+  _isCustomModeValue(value) {
+    const key = normalizeTextKey(value);
+    return key === "custom" || key.startsWith("custom_");
+  }
+
+  _getCleaningComboModeFromValue(value) {
+    const key = normalizeTextKey(value);
+    if (!key) {
+      return "";
+    }
+
+    if (VACUUM_MOP_COMBO_PATTERNS.some(pattern => key === pattern || key.includes(pattern))) {
+      return "vacuum_mop";
+    }
+
+    if (VACUUM_ONLY_COMBO_PATTERNS.some(pattern => key === pattern || key.includes(pattern)) || this._isOffModeValue(value)) {
+      return "vacuum";
+    }
+
+    if (MOP_ONLY_COMBO_PATTERNS.some(pattern => key === pattern || key.includes(pattern))) {
+      return "mop";
+    }
+
+    return "";
+  }
+
+  _descriptorSupportsCleaningCombo(descriptor) {
+    return Boolean(descriptor?.options?.some(option => this._getCleaningComboModeFromValue(option)));
+  }
+
+  _getCleaningComboOptionForPreset(descriptor, presetId) {
+    if (!this._descriptorSupportsCleaningCombo(descriptor)) {
+      return "";
+    }
+
+    const targetMode = ["vacuum_mop", "vacuum", "mop"].includes(presetId) ? presetId : "";
+    if (!targetMode) {
+      return "";
+    }
+
+    return descriptor.options.find(option => this._getCleaningComboModeFromValue(option) === targetMode) || "";
+  }
+
+  _isMopIntensityDescriptor(descriptor) {
+    if (!descriptor?.options?.length) {
+      return false;
+    }
+
+    return descriptor.options.some(option => {
+      const key = normalizeTextKey(option);
+      return [
+        "off",
+        "apagado",
+        "sin_fregado",
+        "low",
+        "medium",
+        "media",
+        "high",
+        "alta",
+        "intense",
+        "deep",
+      ].includes(key);
+    });
+  }
+
+  _getFanPresets(state) {
+    if (Array.isArray(state?.attributes?.fan_speed_list)) {
+      return state.attributes.fan_speed_list
+        .map(item => String(item || "").trim())
+        .filter(Boolean);
+    }
+
+    return [];
+  }
+
+  _getCurrentFanSpeed(state) {
+    const current = state?.attributes?.fan_speed;
+    return current ? String(current) : "";
+  }
+
+  _getModeDescriptor(kind, state = this._getVacuumState()) {
+    const explicitEntity = kind === "mop"
+      ? this._config?.mop_select_entity
+      : this._config?.suction_select_entity;
+    const explicitDescriptor = explicitEntity ? this._getSelectOptions(explicitEntity) : null;
+    const shouldUseExplicitDescriptor = kind !== "mop" || this._isMopIntensityDescriptor(explicitDescriptor);
+    const candidateEntities = shouldUseExplicitDescriptor && explicitDescriptor?.entityId
+      ? [explicitDescriptor.entityId]
+      : this._listRelatedSelectEntities(kind);
+
+    for (const selectEntity of candidateEntities) {
+      const descriptor = explicitDescriptor?.entityId === selectEntity
+        ? explicitDescriptor
+        : this._getSelectOptions(selectEntity);
+      if (!descriptor.entityId || !descriptor.options.length) {
+        continue;
+      }
+
+      if (kind === "suction" && !this._looksLikeSuctionSpeedDescriptor(descriptor)) {
+        continue;
+      }
+
+      if (kind === "mop" && !this._isMopIntensityDescriptor(descriptor)) {
+        continue;
+      }
+
+      return {
+        kind,
+        label: this._descriptorLabel(kind),
+        target: descriptor.entityId,
+        options: descriptor.options,
+        current: descriptor.value,
+        service: "select",
+      };
+    }
+
+    const rawPresets = this._getFanPresets(state);
+    if (!rawPresets.length) {
+      return null;
+    }
+
+    const options = rawPresets.filter(option => {
+      const optionKind = this._categorizeModeOption(option);
+      const isSharedSmartMode = this._isSharedSmartMode(option);
+      const isOffOption = normalizeTextKey(option) === "off";
+
+      if (kind === "mop") {
+        return optionKind === "mop" || isSharedSmartMode;
+      }
+
+      return optionKind !== "mop" || isSharedSmartMode || isOffOption;
+    });
+
+    if (!options.length) {
+      return null;
+    }
+
+    return {
+      kind,
+      label: this._descriptorLabel(kind),
+      target: this._config?.entity,
+      options,
+      current: this._getCurrentFanSpeed(state),
+      service: "fan",
+    };
+  }
+
+  _getModeDescriptors(state = this._getVacuumState()) {
+    return ["suction", "mop", "mop_mode"]
+      .map(kind => this._getModeDescriptorById(kind, state))
+      .filter(Boolean);
+  }
+
+  _getMopModeDescriptor(state = this._getVacuumState()) {
+    const explicitEntity = this._config?.mop_mode_select_entity || (
+      this._config?.mop_select_entity && !this._isMopIntensityDescriptor(this._getSelectOptions(this._config?.mop_select_entity))
+        ? this._config.mop_select_entity
+        : ""
+    );
+    const explicitDescriptor = explicitEntity ? this._getSelectOptions(explicitEntity) : null;
+    const excludedEntities = [this._getModeDescriptor("mop", state)?.target].filter(Boolean);
+    const guessedEntity = explicitDescriptor?.entityId
+      ? explicitDescriptor.entityId
+      : this._guessRelatedSelectEntityByPatterns(this._getMopModeEntityPatterns(), excludedEntities);
+    const descriptor = explicitDescriptor?.entityId === guessedEntity
+      ? explicitDescriptor
+      : this._getSelectOptions(guessedEntity);
+
+    if (!descriptor?.entityId || !descriptor.options?.length) {
+      return null;
+    }
+
+    return {
+      kind: "mop_mode",
+      label: this._descriptorLabel("mop_mode"),
+      target: descriptor.entityId,
+      options: descriptor.options,
+      current: descriptor.value,
+      service: "select",
+    };
+  }
+
+  _getModeDescriptorById(descriptorId, state = this._getVacuumState()) {
+    if (descriptorId === "mop_mode") {
+      return this._getMopModeDescriptor(state);
+    }
+
+    return this._getModeDescriptor(descriptorId, state);
+  }
+
+  _getDockPanelSectionConfig(sectionId = this._activeDockPanelSection) {
+    return DOCK_PANEL_SECTIONS.find(section => section.id === sectionId) || DOCK_PANEL_SECTIONS[0];
+  }
+
+  _setActiveDockPanelSection(sectionId) {
+    if (!sectionId || sectionId === this._activeDockPanelSection) {
+      return;
+    }
+
+    this._activeDockPanelSection = sectionId;
+    this._triggerHaptic("selection");
+    this._render();
+  }
+
+  _getDockControlState(definition, state) {
+    switch (definition?.id) {
+      case "empty":
+        return this._isAutoEmptying(state);
+      case "wash":
+        return this._isWashingMops(state);
+      case "dry":
+        return this._isDryingMops(state);
+      default:
+        return false;
+    }
+  }
+
+  _getDockControlDescriptor(definition, state = this._getVacuumState()) {
+    if (!definition) {
+      return null;
+    }
+
+    const dockControlLabels = this._advanceVacuumStrings()?.dockControls?.[definition.id];
+    const inactiveLabel = dockControlLabels?.label || definition.label;
+    const activeLabel = dockControlLabels?.active || definition.active_label || definition.label;
+
+    const toggleEntity = this._findFirstAvailableEntity(definition.entity_ids || []);
+    if (toggleEntity) {
+      const isActive = this._isBooleanEntityOn(toggleEntity);
+      return {
+        id: definition.id,
+        label: isActive ? activeLabel : inactiveLabel,
+        icon: isActive ? definition.active_icon || definition.icon : definition.icon,
+        target: toggleEntity,
+        active: isActive,
+        type: "toggle",
+      };
+    }
+
+    const startEntity = this._guessGlobalEntityByPatterns(["button"], definition.start_patterns || []);
+    const stopEntity = this._guessGlobalEntityByPatterns(["button"], definition.stop_patterns || [], [startEntity].filter(Boolean));
+    const isActive = this._getDockControlState(definition, state);
+    const target = isActive ? stopEntity || startEntity : startEntity || stopEntity;
+
+    if (!target) {
+      return null;
+    }
+
+    return {
+      id: definition.id,
+      label: isActive ? activeLabel : inactiveLabel,
+      icon: isActive ? definition.active_icon || definition.icon : definition.icon,
+      target,
+      active: isActive,
+      type: "button",
+    };
+  }
+
+  _getDockControlDescriptors(state = this._getVacuumState()) {
+    const actions = this._advanceVacuumStrings()?.actions;
+    const isCleaningSessionActive = this._isCleaningSessionActive(state);
+    if (isCleaningSessionActive) {
+      const descriptors = [];
+
+      if (this._config?.show_return_to_base !== false && !this._isDocked(state)) {
+        descriptors.push({
+          id: "return_to_base",
+          label: actions?.returnToBase || "Volver a base",
+          icon: "mdi:home-import-outline",
+          builtin_action: "return_to_base",
+        });
+      }
+
+      if (this._config?.show_locate !== false) {
+        descriptors.push({
+          id: "locate",
+          label: actions?.locate || "Localizar",
+          icon: "mdi:crosshairs-gps",
+          builtin_action: "locate",
+        });
+      }
+
+      return descriptors;
+    }
+
+    return DOCK_CONTROL_DEFINITIONS
+      .map(definition => this._getDockControlDescriptor(definition, state))
+      .filter(Boolean);
+  }
+
+  _getDockSettingDescriptor(definition, state = this._getVacuumState()) {
+    if (!definition) {
+      return null;
+    }
+
+    const dockSettingLabel = this._advanceVacuumStrings()?.dockSettings?.[definition.id] || definition.label;
+    const explicitEntity = this._findFirstAvailableEntity(definition.entity_ids || []);
+    const entityId = explicitEntity || this._guessGlobalEntityByPatterns(["input_select", "select"], definition.patterns || []);
+    const descriptor = this._getSelectOptions(entityId);
+    if (descriptor?.entityId && descriptor.options?.length) {
+      return {
+        id: definition.id,
+        label: dockSettingLabel,
+        target: descriptor.entityId,
+        options: descriptor.options,
+        current: descriptor.value,
+      };
+    }
+
+    if (definition.id === "mop_mode") {
+      const mopModeDescriptor = this._getMopModeDescriptor(state);
+      return mopModeDescriptor
+        ? {
+            id: definition.id,
+            label: dockSettingLabel,
+            target: mopModeDescriptor.target,
+            options: mopModeDescriptor.options,
+            current: mopModeDescriptor.current,
+          }
+        : null;
+    }
+
+    return null;
+  }
+
+  _getDockSettingDescriptors(state = this._getVacuumState()) {
+    return DOCK_SETTING_DEFINITIONS
+      .map(definition => this._getDockSettingDescriptor(definition, state))
+      .filter(Boolean);
+  }
+
+  _getRoutineEntityState(item) {
+    const entityId = String(item?.entity || "").trim();
+    return entityId ? this._hass?.states?.[entityId] || null : null;
+  }
+
+  _getRoutineLabel(item, entityState = this._getRoutineEntityState(item)) {
+    const explicitLabel = String(item?.label || "").trim();
+    if (explicitLabel) {
+      return explicitLabel;
+    }
+
+    const friendlyName = String(entityState?.attributes?.friendly_name || "").trim();
+    if (friendlyName) {
+      return friendlyName;
+    }
+
+    const entityId = String(item?.entity || "").trim();
+    const objectId = entityId.includes(".") ? entityId.split(".").slice(1).join(".") : entityId;
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const langCfg = this._config?.language ?? "auto";
+    if (!String(objectId || "").trim()) {
+      const lang = window.NodaliaI18n?.resolveLanguage?.(hass, langCfg) ?? "en";
+      return window.NodaliaI18n?.strings?.(lang)?.advanceVacuum?.utility?.routineDefault || "Routine";
+    }
+    return humanizeModeLabel(objectId, "generic", hass, langCfg);
+  }
+
+  _getRoutineIcon(item, entityState = this._getRoutineEntityState(item)) {
+    const explicitIcon = String(item?.icon || "").trim();
+    if (explicitIcon) {
+      return explicitIcon;
+    }
+
+    const entityIcon = String(entityState?.attributes?.icon || "").trim();
+    if (entityIcon) {
+      return entityIcon;
+    }
+
+    const routineKey = normalizeTextKey([
+      this._getRoutineLabel(item, entityState),
+      String(item?.entity || ""),
+    ].filter(Boolean).join(" "));
+
+    if (routineKey.includes("comeder") || routineKey.includes("food")) {
+      return "mdi:food-variant";
+    }
+    if (routineKey.includes("profund") || routineKey.includes("deep")) {
+      return "mdi:layers-triple";
+    }
+    if (routineKey.includes("intensiv") || routineKey.includes("turbo")) {
+      return "mdi:weather-windy";
+    }
+    if (routineKey.includes("fregar") || routineKey.includes("mopa") || routineKey.includes("mop") || routineKey.includes("wash")) {
+      return "mdi:water";
+    }
+    if (routineKey.includes("completa") || routineKey.includes("complete") || routineKey.includes("full")) {
+      return "mdi:broom";
+    }
+    if (routineKey.includes("comida") || routineKey.includes("meal")) {
+      return "mdi:silverware-fork-knife";
+    }
+
+    return "mdi:play-box-outline";
+  }
+
+  _pressButtonEntity(entityId) {
+    if (!this._hass || !entityId) {
+      return;
+    }
+
+    this._hass.callService("button", "press", {
+      entity_id: entityId,
+    });
+  }
+
+  _runDockControlAction(actionId, state = this._getVacuumState()) {
+    if (actionId === "return_to_base" || actionId === "locate") {
+      this._handleControlAction(actionId);
+      return;
+    }
+
+    const descriptor = this._getDockControlDescriptors(state).find(item => item.id === actionId);
+    if (!descriptor?.target) {
+      return;
+    }
+
+    if (descriptor.type === "toggle") {
+      this._toggleBooleanEntity(descriptor.target);
+    } else {
+      this._pressButtonEntity(descriptor.target);
+    }
+    this._triggerHaptic("selection");
+  }
+
+  _runRoutineItem(item) {
+    if (!item) {
+      return;
+    }
+
+    const entityId = String(item.entity || "").trim();
+    const entityState = this._getRoutineEntityState(item);
+    if (entityId && isUnavailableState(entityState)) {
+      return;
+    }
+
+    if (item.tap_action) {
+      this._triggerHaptic("selection");
+      this._runExternalAction(item.tap_action);
+      return;
+    }
+
+    if (item.service) {
+      const serviceData = isObject(item.service_data) ? deepClone(item.service_data) : {};
+      if (entityId && !serviceData.entity_id) {
+        serviceData.entity_id = entityId;
+      }
+      this._callNamedService(item.service, serviceData, item.target || null);
+      this._triggerHaptic("selection");
+      return;
+    }
+
+    const domain = entityId.split(".")[0] || "";
+    if (domain === "button") {
+      this._pressButtonEntity(entityId);
+    } else if (domain === "input_button") {
+      this._callNamedService("input_button.press", {
+        entity_id: entityId,
+      });
+    } else if (domain === "script") {
+      this._callNamedService("script.turn_on", {
+        entity_id: entityId,
+      });
+    } else if (domain === "scene") {
+      this._callNamedService("scene.turn_on", {
+        entity_id: entityId,
+      });
+    } else if (domain === "automation") {
+      this._callNamedService("automation.trigger", {
+        entity_id: entityId,
+      });
+    } else if (entityId) {
+      this._runExternalAction({
+        action: "more_info",
+        entity: entityId,
+      });
+      this._triggerHaptic("selection");
+      return;
+    } else {
+      return;
+    }
+
+    this._triggerHaptic("selection");
+  }
+
+  _setDockSettingOption(settingId, value, state = this._getVacuumState()) {
+    if (!this._hass || !settingId || !value) {
+      return;
+    }
+
+    const descriptor = this._getDockSettingDescriptors(state).find(item => item.id === settingId);
+    if (!descriptor?.target) {
+      return;
+    }
+
+    this._setEntityOption(descriptor.target, value);
+    this._triggerHaptic("selection");
+  }
+
+  _findMatchingModeOption(options, value) {
+    const expectedKey = normalizeTextKey(value);
+    if (!expectedKey || !Array.isArray(options)) {
+      return "";
+    }
+
+    return options.find(option => normalizeTextKey(option) === expectedKey) || "";
+  }
+
+  _findSharedSmartOption(options) {
+    return Array.isArray(options)
+      ? options.find(option => this._isSharedSmartMode(option)) || ""
+      : "";
+  }
+
+  _getModeFallbackCandidates(kind) {
+    return kind === "mop"
+      ? ["off", "low", "medium", "high", "deep", "standard", "normal", "custom"]
+      : ["balanced", "standard", "normal", "quiet", "silent", "gentle", "turbo", "max", "strong", "custom"];
+  }
+
+  _getModeFallbackOption(kind, descriptor) {
+    if (!descriptor?.options?.length) {
+      return "";
+    }
+
+    const remembered = this._findMatchingModeOption(
+      descriptor.options,
+      this._lastNonSmartModeSelection[kind],
+    );
+    if (remembered && !this._isSharedSmartMode(remembered)) {
+      return remembered;
+    }
+
+    const normalizedOptions = descriptor.options.map(option => ({
+      key: normalizeTextKey(option),
+      value: option,
+    }));
+
+    for (const candidate of this._getModeFallbackCandidates(kind)) {
+      const exactMatch = normalizedOptions.find(option => option.key === candidate);
+      if (exactMatch && !this._isSharedSmartMode(exactMatch.value)) {
+        return exactMatch.value;
+      }
+    }
+
+    const firstNonSmart = descriptor.options.find(option => !this._isSharedSmartMode(option));
+    return firstNonSmart || "";
+  }
+
+  _rememberNonSmartModeSelection(kind, value) {
+    if (!kind || !value || this._isSharedSmartMode(value)) {
+      return;
+    }
+
+    this._lastNonSmartModeSelection[kind] = value;
+  }
+
+  _syncRememberedModeSelections(state) {
+    if (this._isDocked(state) || this._isReturning(state)) {
+      return;
+    }
+
+    ["suction", "mop"].forEach(kind => {
+      const descriptor = this._getModeDescriptor(kind, state);
+      if (descriptor?.current && !this._isSharedSmartMode(descriptor.current)) {
+        this._rememberNonSmartModeSelection(kind, descriptor.current);
+      }
+    });
+  }
+
+  _applyLinkedSmartModeSelection(kind, value, state) {
+    const descriptor = this._getModeDescriptor(kind, state);
+    const otherKind = kind === "mop" ? "suction" : "mop";
+    const otherDescriptor = this._getModeDescriptor(otherKind, state);
+
+    if (descriptor?.service === "select" && descriptor.target && value) {
+      this._callInternalService("select.select_option", {
+        entity_id: descriptor.target,
+        option: value,
+      });
+    } else if (descriptor?.service === "fan" && value) {
+      this._callVacuumService("set_fan_speed", {
+        fan_speed: value,
+      });
+      return;
+    }
+
+    if (!descriptor || !otherDescriptor || otherDescriptor.service !== "select" || !otherDescriptor.target) {
+      return;
+    }
+
+    if (otherDescriptor.target === descriptor.target) {
+      return;
+    }
+
+    if (this._isSharedSmartMode(value)) {
+      const sharedSmartOption = this._findSharedSmartOption(otherDescriptor.options);
+      if (
+        sharedSmartOption &&
+        normalizeTextKey(sharedSmartOption) !== normalizeTextKey(otherDescriptor.current)
+      ) {
+        this._callInternalService("select.select_option", {
+          entity_id: otherDescriptor.target,
+          option: sharedSmartOption,
+        });
+      }
+      return;
+    }
+
+    if (!this._isSharedSmartMode(otherDescriptor.current)) {
+      return;
+    }
+
+    const fallbackOption = this._getModeFallbackOption(otherKind, otherDescriptor);
+    if (
+      fallbackOption &&
+      normalizeTextKey(fallbackOption) !== normalizeTextKey(otherDescriptor.current)
+    ) {
+      this._callInternalService("select.select_option", {
+        entity_id: otherDescriptor.target,
+        option: fallbackOption,
+      });
+    }
+  }
+
+  _setModeOption(kind, value, state = this._getVacuumState(), options = {}) {
+    const triggerHaptic = options.triggerHaptic !== false;
+    if (!this._hass || !value) {
+      return;
+    }
+
+    if (kind === "mop_mode") {
+      const descriptor = this._getMopModeDescriptor(state);
+      if (!descriptor?.target) {
+        return;
+      }
+
+      this._callInternalService("select.select_option", {
+        entity_id: descriptor.target,
+        option: value,
+      });
+
+      if (triggerHaptic) {
+        this._triggerHaptic("selection");
+      }
+      return;
+    }
+
+    const descriptor = this._getModeDescriptor(kind, state);
+    if (!descriptor?.target) {
+      return;
+    }
+
+    this._rememberNonSmartModeSelection(kind, value);
+    this._applyLinkedSmartModeSelection(kind, value, state);
+    if (triggerHaptic) {
+      this._triggerHaptic("selection");
+    }
+  }
+
+  _findOptionByCandidates(options, candidates) {
+    if (!Array.isArray(options) || !options.length || !Array.isArray(candidates) || !candidates.length) {
+      return "";
+    }
+
+    const normalizedOptions = options.map(option => ({
+      key: normalizeTextKey(option),
+      value: option,
+    }));
+
+    for (const candidate of candidates) {
+      const key = normalizeTextKey(candidate);
+      const exactMatch = normalizedOptions.find(option => option.key === key);
+      if (exactMatch) {
+        return exactMatch.value;
+      }
+    }
+
+    for (const candidate of candidates) {
+      const key = normalizeTextKey(candidate);
+      const partialMatch = normalizedOptions.find(option => option.key.includes(key) || key.includes(option.key));
+      if (partialMatch) {
+        return partialMatch.value;
+      }
+    }
+
+    return "";
+  }
+
+  _getPresetDefaultOption(descriptor, candidates, { excludeOff = false } = {}) {
+    if (!descriptor?.options?.length) {
+      return "";
+    }
+
+    const preferred = this._findOptionByCandidates(descriptor.options, candidates);
+    if (preferred) {
+      return preferred;
+    }
+
+    return descriptor.options.find(option => {
+      if (this._isSharedSmartMode(option) || this._isCustomModeValue(option)) {
+        return false;
+      }
+
+      if (excludeOff && this._isOffModeValue(option)) {
+        return false;
+      }
+
+      return true;
+    }) || "";
+  }
+
+  _getModePanelPresetSelection(presetId, state = this._getVacuumState()) {
+    const suctionDescriptor = this._getModeDescriptor("suction", state);
+    const mopDescriptor = this._getModeDescriptor("mop", state);
+    const mopModeDescriptor = this._getMopModeDescriptor(state);
+
+    switch (presetId) {
+      case "smart":
+        return {
+          suction: this._findSharedSmartOption(suctionDescriptor?.options),
+          mop: this._findSharedSmartOption(mopDescriptor?.options),
+          mopMode: this._findSharedSmartOption(mopModeDescriptor?.options),
+        };
+      case "vacuum_mop":
+        return {
+          suction: this._getPresetDefaultOption(suctionDescriptor, ["balanced", "equilibrado", "standard", "normal"], {
+            excludeOff: true,
+          }),
+          mop: this._getPresetDefaultOption(mopDescriptor, ["medium", "media", "normal", "standard"], {
+            excludeOff: true,
+          }),
+          mopMode: this._getCleaningComboOptionForPreset(mopModeDescriptor, "vacuum_mop")
+            || this._getPresetDefaultOption(mopModeDescriptor, ["standard", "estandar", "normal", "default"]),
+        };
+      case "vacuum":
+        return {
+          suction: this._getPresetDefaultOption(suctionDescriptor, ["balanced", "equilibrado", "standard", "normal"], {
+            excludeOff: true,
+          }),
+          mop: this._findOptionByCandidates(mopDescriptor?.options, ["off", "sin_fregado", "apagado", "none"]),
+          mopMode: this._getCleaningComboOptionForPreset(mopModeDescriptor, "vacuum")
+            || this._getPresetDefaultOption(mopModeDescriptor, ["standard", "estandar", "normal", "default"]),
+        };
+      case "mop":
+        return {
+          suction: this._findOptionByCandidates(suctionDescriptor?.options, ["off", "apagado", "none"]),
+          mop: this._getPresetDefaultOption(mopDescriptor, ["medium", "media", "normal", "standard"], {
+            excludeOff: true,
+          }),
+          mopMode: this._getCleaningComboOptionForPreset(mopModeDescriptor, "mop")
+            || this._getPresetDefaultOption(mopModeDescriptor, ["standard", "estandar", "normal", "default"]),
+        };
+      case "custom":
+        return {
+          suction: this._findOptionByCandidates(suctionDescriptor?.options, ["custom", "custom_mode", "custommode", "personalizado"]),
+          mop: this._findOptionByCandidates(mopDescriptor?.options, ["custom", "custom_mode", "custommode", "custom_water_flow", "personalizado"]),
+          mopMode: this._findOptionByCandidates(mopModeDescriptor?.options, ["custom", "custom_mode", "custommode", "personalizado"]),
+        };
+      default:
+        return null;
+    }
+  }
+
+  _detectModePanelPreset(state = this._getVacuumState()) {
+    const suctionDescriptor = this._getModeDescriptor("suction", state);
+    const mopDescriptor = this._getModeDescriptor("mop", state);
+    const mopModeDescriptor = this._getMopModeDescriptor(state);
+    const suctionCurrent = suctionDescriptor?.current || "";
+    const mopCurrent = mopDescriptor?.current || "";
+    const mopModeCurrent = mopModeDescriptor?.current || "";
+    const cleaningComboMode = this._getCleaningComboModeFromValue(
+      this._descriptorSupportsCleaningCombo(mopModeDescriptor)
+        ? mopModeCurrent
+        : this._descriptorSupportsCleaningCombo(mopDescriptor)
+          ? mopCurrent
+          : "",
+    );
+
+    if (
+      this._isSharedSmartMode(suctionCurrent) &&
+      this._isSharedSmartMode(mopCurrent) &&
+      (!mopModeCurrent || this._isSharedSmartMode(mopModeCurrent))
+    ) {
+      return "smart";
+    }
+
+    if (
+      this._isCustomModeValue(suctionCurrent) ||
+      this._isCustomModeValue(mopCurrent) ||
+      this._isCustomModeValue(mopModeCurrent)
+    ) {
+      return "custom";
+    }
+
+    if (cleaningComboMode) {
+      return cleaningComboMode;
+    }
+
+    let suctionEnabled = Boolean(suctionCurrent) && !this._isOffModeValue(suctionCurrent) && !this._isSharedSmartMode(suctionCurrent);
+    let mopEnabled = Boolean(mopCurrent) && !this._isOffModeValue(mopCurrent) && !this._isSharedSmartMode(mopCurrent);
+
+    if (this._descriptorSupportsCleaningCombo(mopDescriptor)) {
+      const mopDescriptorComboMode = this._getCleaningComboModeFromValue(mopCurrent);
+      if (mopDescriptorComboMode === "vacuum") {
+        mopEnabled = false;
+      } else if (mopDescriptorComboMode === "mop") {
+        suctionEnabled = false;
+        mopEnabled = true;
+      } else if (mopDescriptorComboMode === "vacuum_mop") {
+        suctionEnabled = true;
+        mopEnabled = true;
+      }
+    }
+
+    if (suctionEnabled && mopEnabled) {
+      return "vacuum_mop";
+    }
+
+    if (suctionEnabled) {
+      return "vacuum";
+    }
+
+    if (mopEnabled) {
+      return "mop";
+    }
+
+    return "custom";
+  }
+
+  _isAmbiguousVacuumMopPreset(detectedPreset, state = this._getVacuumState()) {
+    if (detectedPreset !== "vacuum_mop") {
+      return false;
+    }
+
+    const mopDescriptor = this._getModeDescriptor("mop", state);
+    const mopModeDescriptor = this._getMopModeDescriptor(state);
+    if (this._descriptorSupportsCleaningCombo(mopDescriptor) || this._descriptorSupportsCleaningCombo(mopModeDescriptor)) {
+      return false;
+    }
+
+    return (
+      !mopDescriptor?.current ||
+      this._isSharedSmartMode(mopDescriptor.current) ||
+      this._isCustomModeValue(mopDescriptor.current) ||
+      this._isMopIntensityDescriptor(mopDescriptor)
+    );
+  }
+
+  _getActiveModePanelPreset(state = this._getVacuumState()) {
+    const detectedPreset = this._detectModePanelPreset(state);
+    const manualPreset = this._activeModePanelPreset;
+    const isDockContext = this._isDocked(state) || this._isReturning(state);
+    const isCleaningContext = this._isCleaning(state) || this._isPaused(state);
+    const isFrozenPresetContext = isCleaningContext || isDockContext;
+    const fallbackPreset = manualPreset || this._dockedModePanelPreset || this._lastResolvedModePanelPreset || "";
+    const isAmbiguousVacuumMopPreset = this._isAmbiguousVacuumMopPreset(detectedPreset, state);
+    const stableDetectedPreset = isAmbiguousVacuumMopPreset && fallbackPreset
+      ? fallbackPreset
+      : detectedPreset;
+
+    if (
+      stableDetectedPreset &&
+      stableDetectedPreset !== "custom" &&
+      !isFrozenPresetContext
+    ) {
+      this._lastResolvedModePanelPreset = stableDetectedPreset;
+    }
+
+    const shouldKeepFrozenPreset = Boolean(this._dockedModePanelPreset) && (
+      isFrozenPresetContext ||
+      isAmbiguousVacuumMopPreset ||
+      !stableDetectedPreset ||
+      stableDetectedPreset === "custom" ||
+      stableDetectedPreset === this._dockedModePanelPreset
+    );
+
+    if (!shouldKeepFrozenPreset && this._dockedModePanelPreset) {
+      this._dockedModePanelPreset = "";
+    }
+
+    if (isFrozenPresetContext || this._dockedModePanelPreset) {
+      return manualPreset || this._dockedModePanelPreset || this._lastResolvedModePanelPreset || stableDetectedPreset || "vacuum_mop";
+    }
+
+    return manualPreset || stableDetectedPreset || this._lastResolvedModePanelPreset || "vacuum_mop";
+  }
+
+  _freezeCurrentModePanelPreset(state = this._getVacuumState()) {
+    const preset = this._getActiveModePanelPreset(state) || this._activeModePanelPreset || this._lastResolvedModePanelPreset || this._detectModePanelPreset(state) || "";
+    if (!preset || preset === "custom") {
+      return;
+    }
+
+    this._dockedModePanelPreset = preset;
+    this._lastResolvedModePanelPreset = preset;
+  }
+
+  _getActiveModePanelPresetConfig(state = this._getVacuumState()) {
+    const activePreset = this._getActiveModePanelPreset(state);
+    return PANEL_MODE_PRESETS.find(preset => preset.id === activePreset) || PANEL_MODE_PRESETS[0];
+  }
+
+  _selectModePanelPreset(presetId, state = this._getVacuumState()) {
+    this._activeModePanelPreset = presetId;
+    this._lastResolvedModePanelPreset = presetId;
+
+    const selection = this._getModePanelPresetSelection(presetId, state);
+    if (!selection) {
+      this._persistCurrentCleaningSessionState(this._activeMode, {
+        markSelectionChange: true,
+      });
+      this._triggerHaptic("selection");
+      this._render();
+      return;
+    }
+
+    if (
+      selection.suction &&
+      normalizeTextKey(selection.suction) !== normalizeTextKey(this._getModeDescriptor("suction", state)?.current)
+    ) {
+      this._setModeOption("suction", selection.suction, state, { triggerHaptic: false });
+    }
+
+    if (
+      selection.mop &&
+      normalizeTextKey(selection.mop) !== normalizeTextKey(this._getModeDescriptor("mop", state)?.current)
+    ) {
+      this._setModeOption("mop", selection.mop, state, { triggerHaptic: false });
+    }
+
+    if (
+      selection.mopMode &&
+      normalizeTextKey(selection.mopMode) !== normalizeTextKey(this._getMopModeDescriptor(state)?.current)
+    ) {
+      this._setModeOption("mop_mode", selection.mopMode, state, { triggerHaptic: false });
+    }
+
+    this._persistCurrentCleaningSessionState(this._activeMode, {
+      markSelectionChange: true,
+    });
+    this._triggerHaptic("selection");
+    this._render();
+  }
+
+  _filterModePanelOptions(descriptor, presetId) {
+    if (!descriptor?.options?.length) {
+      return [];
+    }
+
+    return descriptor.options.filter(option => {
+      const isSmart = this._isSharedSmartMode(option);
+      const isOff = this._isOffModeValue(option);
+      const isCustom = this._isCustomModeValue(option);
+
+      switch (presetId) {
+        case "smart":
+          return false;
+        case "vacuum_mop":
+          if (descriptor.kind === "suction" || descriptor.kind === "mop") {
+            return !isSmart && !isOff && !isCustom;
+          }
+          return !isSmart;
+        case "vacuum":
+          if (descriptor.kind === "suction") {
+            return !isSmart && !isOff && !isCustom;
+          }
+          return false;
+        case "mop":
+          if (descriptor.kind === "mop") {
+            return !isSmart && !isOff && !isCustom;
+          }
+          if (descriptor.kind === "mop_mode") {
+            return !isSmart;
+          }
+          return false;
+        case "custom":
+          return false;
+        default:
+          return !isSmart;
+      }
+    });
+  }
+
+  _getVisibleModePanelDescriptors(state = this._getVacuumState(), presetId = this._getActiveModePanelPreset(state)) {
+    return [
+      this._getModeDescriptor("suction", state),
+      this._getModeDescriptor("mop", state),
+      this._getMopModeDescriptor(state),
+    ]
+      .filter(Boolean)
+      .map(descriptor => ({
+        ...descriptor,
+        options: this._filterModePanelOptions(descriptor, presetId),
+      }))
+      .filter(descriptor => descriptor.options.length > 0);
+  }
+
+  _getDefaultCustomMenuItems(state) {
+    const actions = this._advanceVacuumStrings()?.actions;
+    const items = [];
+
+    if (this._config?.show_return_to_base !== false && !this._isDocked(state)) {
+      items.push({
+        label: actions?.returnToBase || "Volver a base",
+        icon: "mdi:home-import-outline",
+        builtin_action: "return_to_base",
+      });
+    }
+
+    if (this._config?.show_stop !== false && this._isActive(state)) {
+      items.push({
+        label: actions?.stop || "Parar",
+        icon: "mdi:stop",
+        builtin_action: "stop",
+      });
+    }
+
+    if (this._config?.show_locate !== false) {
+      items.push({
+        label: actions?.locate || "Localizar",
+        icon: "mdi:crosshairs-gps",
+        builtin_action: "locate",
+      });
+    }
+
+    return items;
+  }
+
+  _isMenuItemVisible(item, state) {
+    const condition = normalizeTextKey(item?.visible_when || "always");
+
+    if (condition === "active") {
+      return this._isActive(state) || this._isPaused(state);
+    }
+
+    if (condition === "docked" || condition === "base") {
+      return this._isDocked(state);
+    }
+
+    if (condition === "undocked" || condition === "idle_away") {
+      return !this._isDocked(state);
+    }
+
+    return true;
+  }
+
+  _getVisibleCustomMenuItems(state) {
+    const configuredItems = normalizeCustomMenuItems(this._config?.custom_menu?.items);
+    const sourceItems = configuredItems.length ? configuredItems : this._getDefaultCustomMenuItems(state);
+    return sourceItems.filter(item => this._isMenuItemVisible(item, state));
+  }
+
+  _getMapSurfaceRect() {
+    return this.shadowRoot?.querySelector("[data-map-surface]")?.getBoundingClientRect() || null;
+  }
+
+  _getMapViewportPoint(event, rect = this._getMapSurfaceRect()) {
+    if (!rect) {
+      return null;
+    }
+
+    return {
+      x: clamp(event.clientX - rect.left, 0, rect.width),
+      y: clamp(event.clientY - rect.top, 0, rect.height),
+    };
+  }
+
+  _clampMapTransform(scale = this._mapScale, offset = this._mapOffset, rect = this._getMapSurfaceRect()) {
+    const safeScale = clamp(Number(scale || 1), 1, 3);
+    if (!rect || safeScale <= 1) {
+      return {
+        scale: 1,
+        offset: { x: 0, y: 0 },
+      };
+    }
+
+    const minOffsetX = rect.width * (1 - safeScale);
+    const minOffsetY = rect.height * (1 - safeScale);
+
+    return {
+      scale: safeScale,
+      offset: {
+        x: clamp(Number(offset?.x || 0), minOffsetX, 0),
+        y: clamp(Number(offset?.y || 0), minOffsetY, 0),
+      },
+    };
+  }
+
+  _setMapTransform(scale = this._mapScale, offset = this._mapOffset) {
+    const nextTransform = this._clampMapTransform(scale, offset);
+    this._mapScale = nextTransform.scale;
+    this._mapOffset = nextTransform.offset;
+  }
+
+  _resetMapTransform() {
+    this._mapScale = 1;
+    this._mapOffset = { x: 0, y: 0 };
+    this._pinchGesture = null;
+    this._touchPinchGesture = null;
+    this._activeMapPointers.clear();
+  }
+
+  _eventToMapPoint(event) {
+    const rect = this._getMapSurfaceRect();
+    if (!rect) {
+      return null;
+    }
+
+    const viewportPoint = this._getMapViewportPoint(event, rect);
+    if (!viewportPoint) {
+      return null;
+    }
+
+    const localX = clamp((viewportPoint.x - this._mapOffset.x) / this._mapScale, 0, rect.width);
+    const localY = clamp((viewportPoint.y - this._mapOffset.y) / this._mapScale, 0, rect.height);
+    const x = clamp((localX / rect.width) * this._mapImageWidth, 0, this._mapImageWidth);
+    const y = clamp((localY / rect.height) * this._mapImageHeight, 0, this._mapImageHeight);
+    return { x, y };
+  }
+
+  _eventToVacuumPoint(event) {
+    const mapPoint = this._eventToMapPoint(event);
+    return mapPoint ? this._converter.mapToVacuum(mapPoint.x, mapPoint.y) : null;
+  }
+
+  _vacuumToPercent(point) {
+    const mapped = this._converter.vacuumToMap(point.x, point.y);
+    return {
+      left: clamp((mapped.x / this._mapImageWidth) * 100, 0, 100),
+      top: clamp((mapped.y / this._mapImageHeight) * 100, 0, 100),
+    };
+  }
+
+  _mapToViewportPercent(point) {
+    if (!point) {
+      return {
+        left: 50,
+        top: 50,
+      };
+    }
+
+    const rect = this._getMapSurfaceRect();
+    const width = rect?.width || this._mapImageWidth || 1;
+    const height = rect?.height || this._mapImageHeight || 1;
+    const offsetX = rect ? this._mapOffset.x : 0;
+    const offsetY = rect ? this._mapOffset.y : 0;
+    const x = ((point.x / this._mapImageWidth) * width * this._mapScale) + offsetX;
+    const y = ((point.y / this._mapImageHeight) * height * this._mapScale) + offsetY;
+    return {
+      left: clamp((x / width) * 100, 0, 100),
+      top: clamp((y / height) * 100, 0, 100),
+    };
+  }
+
+  _vacuumToViewportPercent(point) {
+    const mapped = this._converter.vacuumToMap(point.x, point.y);
+    return this._mapToViewportPercent(mapped);
+  }
+
+  _vacuumOutlineToSvgPoints(points) {
+    return points
+      .map(point => this._converter.vacuumToMap(point.x, point.y))
+      .map(point => `${point.x.toFixed(1)},${point.y.toFixed(1)}`)
+      .join(" ");
+  }
+
+  _vacuumOutlineToCssPolygon(points) {
+    return points
+      .map(point => this._converter.vacuumToMap(point.x, point.y))
+      .map(point => {
+        const left = clamp((point.x / this._mapImageWidth) * 100, 0, 100);
+        const top = clamp((point.y / this._mapImageHeight) * 100, 0, 100);
+        return `${left.toFixed(3)}% ${top.toFixed(3)}%`;
+      })
+      .join(", ");
+  }
+
+  _vacuumZoneToCssPolygon(zone) {
+    if (!zone) {
+      return "";
+    }
+
+    return this._vacuumOutlineToCssPolygon([
+      { x: zone.x1, y: zone.y1 },
+      { x: zone.x2, y: zone.y1 },
+      { x: zone.x2, y: zone.y2 },
+      { x: zone.x1, y: zone.y2 },
+    ]);
+  }
+
+  _zoneToSvgRect(zone) {
+    const first = this._converter.vacuumToMap(zone.x1, zone.y1);
+    const second = this._converter.vacuumToMap(zone.x2, zone.y2);
+    return {
+      x: Math.min(first.x, second.x),
+      y: Math.min(first.y, second.y),
+      width: Math.abs(second.x - first.x),
+      height: Math.abs(second.y - first.y),
+    };
+  }
+
+  _mapRectToVacuumZone(rect) {
+    if (!rect) {
+      return null;
+    }
+
+    const first = this._converter.mapToVacuum(rect.x1, rect.y1);
+    const second = this._converter.mapToVacuum(rect.x2, rect.y2);
+    return {
+      x1: Math.round(Math.min(first.x, second.x)),
+      y1: Math.round(Math.min(first.y, second.y)),
+      x2: Math.round(Math.max(first.x, second.x)),
+      y2: Math.round(Math.max(first.y, second.y)),
+    };
+  }
+
+  _getManualZoneCountLimit() {
+    return clamp(Number(this._config?.max_zone_selections || 5), 1, 10);
+  }
+
+  _sanitizeSelectedManualZoneIndex() {
+    if (this._selectedManualZoneIndex >= this._manualZones.length) {
+      this._selectedManualZoneIndex = this._manualZones.length - 1;
+    }
+
+    if (this._manualZones.length <= 0) {
+      this._selectedManualZoneIndex = -1;
+    }
+  }
+
+  _selectManualZone(index, { triggerHaptic = false } = {}) {
+    const normalizedIndex = Number(index);
+    if (!Number.isInteger(normalizedIndex) || normalizedIndex < 0 || normalizedIndex >= this._manualZones.length) {
+      return;
+    }
+
+    this._selectedManualZoneIndex = normalizedIndex;
+    if (triggerHaptic) {
+      this._triggerHaptic("selection");
+    }
+    this._render();
+  }
+
+  _updateManualZone(index, nextZone) {
+    if (!Number.isInteger(index) || index < 0 || index >= this._manualZones.length || !nextZone) {
+      return;
+    }
+
+    this._manualZones = this._manualZones.map((zone, zoneIndex) => (zoneIndex === index ? nextZone : zone));
+    this._selectedManualZoneIndex = index;
+  }
+
+  _getVisibleMapCenter() {
+    const rect = this._getMapSurfaceRect();
+    if (!rect) {
+      return {
+        x: this._mapImageWidth / 2,
+        y: this._mapImageHeight / 2,
+      };
+    }
+
+    return {
+      x: clamp(((rect.width / 2) - this._mapOffset.x) / this._mapScale / rect.width * this._mapImageWidth, 0, this._mapImageWidth),
+      y: clamp(((rect.height / 2) - this._mapOffset.y) / this._mapScale / rect.height * this._mapImageHeight, 0, this._mapImageHeight),
+    };
+  }
+
+  _createDefaultManualZone() {
+    const center = this._getVisibleMapCenter();
+    const size = Math.max(120, Math.round(Math.min(this._mapImageWidth, this._mapImageHeight) * 0.18));
+    const halfSize = size / 2;
+    const rect = {
+      x1: clamp(center.x - halfSize, 0, this._mapImageWidth),
+      y1: clamp(center.y - halfSize, 0, this._mapImageHeight),
+      x2: clamp(center.x + halfSize, 0, this._mapImageWidth),
+      y2: clamp(center.y + halfSize, 0, this._mapImageHeight),
+    };
+
+    return this._mapRectToVacuumZone(rect);
+  }
+
+  _addManualZone() {
+    if (this._manualZones.length >= this._getManualZoneCountLimit()) {
+      return;
+    }
+
+    const zone = this._createDefaultManualZone();
+    if (!zone) {
+      return;
+    }
+
+    this._manualZones = [...this._manualZones, zone];
+    this._selectedManualZoneIndex = this._manualZones.length - 1;
+    this._draftZone = null;
+    this._persistCurrentCleaningSessionState(this._activeMode, {
+      markSelectionChange: true,
+    });
+    this._triggerHaptic("selection");
+    this._render();
+  }
+
+  _deleteManualZone(index) {
+    if (!Number.isInteger(index) || index < 0 || index >= this._manualZones.length) {
+      return;
+    }
+
+    this._manualZones = this._manualZones.filter((_zone, zoneIndex) => zoneIndex !== index);
+
+    if (this._selectedManualZoneIndex > index) {
+      this._selectedManualZoneIndex -= 1;
+    } else if (this._selectedManualZoneIndex === index) {
+      this._selectedManualZoneIndex = Math.min(index, this._manualZones.length - 1);
+    }
+
+    this._sanitizeSelectedManualZoneIndex();
+    this._zoneHandleDrag = null;
+    this._persistCurrentCleaningSessionState(this._activeMode, {
+      markSelectionChange: true,
+    });
+    this._triggerHaptic("selection");
+    this._render();
+  }
+
+  _getMinimumManualZoneSize() {
+    return Math.max(72, Math.round(Math.min(this._mapImageWidth, this._mapImageHeight) * 0.06));
+  }
+
+  _getZoneHandlePoints(zone) {
+    const rect = this._zoneToSvgRect(zone);
+    const handlesText = this._advanceVacuumStrings()?.handles;
+    return {
+      rect,
+      handles: [
+        { id: "move", icon: "mdi:arrow-all", x: rect.x, y: rect.y, title: handlesText?.moveZone || "Mover zona" },
+        { id: "delete", icon: "mdi:trash-can-outline", x: rect.x, y: rect.y + rect.height, title: handlesText?.deleteZone || "Delete zone" },
+        { id: "resize", icon: "mdi:arrow-bottom-right", x: rect.x + rect.width, y: rect.y + rect.height, title: handlesText?.resizeZone || "Redimensionar zona" },
+      ],
+    };
+  }
+
+  _updateManualZoneFromHandleDrag(event) {
+    if (!this._zoneHandleDrag || event.pointerId !== this._zoneHandleDrag.pointerId) {
+      return false;
+    }
+
+    const mapPoint = this._eventToMapPoint(event);
+    if (!mapPoint) {
+      return false;
+    }
+
+    let nextZone = null;
+    if (this._zoneHandleDrag.action === "move") {
+      const deltaX = mapPoint.x - this._zoneHandleDrag.startPoint.x;
+      const deltaY = mapPoint.y - this._zoneHandleDrag.startPoint.y;
+      const width = this._zoneHandleDrag.startRect.width;
+      const height = this._zoneHandleDrag.startRect.height;
+      const nextX = clamp(this._zoneHandleDrag.startRect.x + deltaX, 0, this._mapImageWidth - width);
+      const nextY = clamp(this._zoneHandleDrag.startRect.y + deltaY, 0, this._mapImageHeight - height);
+
+      nextZone = this._mapRectToVacuumZone({
+        x1: nextX,
+        y1: nextY,
+        x2: nextX + width,
+        y2: nextY + height,
+      });
+    } else if (this._zoneHandleDrag.action === "resize") {
+      const minSize = this._getMinimumManualZoneSize();
+      nextZone = this._mapRectToVacuumZone({
+        x1: this._zoneHandleDrag.fixedPoint.x,
+        y1: this._zoneHandleDrag.fixedPoint.y,
+        x2: clamp(mapPoint.x, this._zoneHandleDrag.fixedPoint.x + minSize, this._mapImageWidth),
+        y2: clamp(mapPoint.y, this._zoneHandleDrag.fixedPoint.y + minSize, this._mapImageHeight),
+      });
+    }
+
+    if (!nextZone) {
+      return false;
+    }
+
+    this._updateManualZone(this._zoneHandleDrag.index, nextZone);
+    this._render();
+    return true;
+  }
+
+  _startPinchGesture() {
+    if (this._activeMapPointers.size < 2) {
+      return;
+    }
+
+    const rect = this._getMapSurfaceRect();
+    if (!rect) {
+      return;
+    }
+
+    const [first, second] = [...this._activeMapPointers.values()];
+    const midpoint = {
+      x: ((first.clientX + second.clientX) / 2) - rect.left,
+      y: ((first.clientY + second.clientY) / 2) - rect.top,
+    };
+    const distance = Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY);
+
+    this._pinchGesture = {
+      startDistance: Math.max(distance, 1),
+      startScale: this._mapScale,
+      anchor: {
+        x: (midpoint.x - this._mapOffset.x) / this._mapScale,
+        y: (midpoint.y - this._mapOffset.y) / this._mapScale,
+      },
+    };
+    this._draftZone = null;
+    this._zoneHandleDrag = null;
+  }
+
+  _updatePinchGesture() {
+    if (!this._pinchGesture || this._activeMapPointers.size < 2) {
+      return false;
+    }
+
+    const rect = this._getMapSurfaceRect();
+    if (!rect) {
+      return false;
+    }
+
+    const [first, second] = [...this._activeMapPointers.values()];
+    const midpoint = {
+      x: ((first.clientX + second.clientX) / 2) - rect.left,
+      y: ((first.clientY + second.clientY) / 2) - rect.top,
+    };
+    const distance = Math.max(Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY), 1);
+    const scale = this._pinchGesture.startScale * (distance / this._pinchGesture.startDistance);
+    const offset = {
+      x: midpoint.x - (this._pinchGesture.anchor.x * scale),
+      y: midpoint.y - (this._pinchGesture.anchor.y * scale),
+    };
+
+    this._setMapTransform(scale, offset);
+    this._render();
+    return true;
+  }
+
+  _getTouchDistance(touches) {
+    if (!touches || touches.length < 2) {
+      return 0;
+    }
+
+    const [first, second] = Array.from(touches);
+    return Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY);
+  }
+
+  _getTouchMidpoint(touches, rect = this._getMapSurfaceRect()) {
+    if (!rect || !touches || touches.length < 2) {
+      return null;
+    }
+
+    const [first, second] = Array.from(touches);
+    return {
+      x: clamp(((first.clientX + second.clientX) / 2) - rect.left, 0, rect.width),
+      y: clamp(((first.clientY + second.clientY) / 2) - rect.top, 0, rect.height),
+    };
+  }
+
+  _beginTouchPinchGesture(touches) {
+    const rect = this._getMapSurfaceRect();
+    if (!rect || !touches || touches.length < 2) {
+      this._touchPinchGesture = null;
+      return false;
+    }
+
+    const midpoint = this._getTouchMidpoint(touches, rect);
+    const distance = this._getTouchDistance(touches);
+    if (!midpoint || distance <= 0) {
+      this._touchPinchGesture = null;
+      return false;
+    }
+
+    this._activeMapPointers.clear();
+    this._pinchGesture = null;
+    this._draftZone = null;
+    this._zoneHandleDrag = null;
+    this._pointerStart = null;
+    this._touchPinchGesture = {
+      startDistance: Math.max(distance, 1),
+      startScale: this._mapScale,
+      anchor: {
+        x: (midpoint.x - this._mapOffset.x) / this._mapScale,
+        y: (midpoint.y - this._mapOffset.y) / this._mapScale,
+      },
+    };
+    return true;
+  }
+
+  _onShadowTouchStart(event) {
+    const zoneHandleTarget = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.zoneHandleIndex && node.dataset?.zoneHandleAction === "delete");
+    if (zoneHandleTarget && event.touches.length === 1) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._deleteManualZone(Number(zoneHandleTarget.dataset.zoneHandleIndex));
+      return;
+    }
+
+    const surface = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.mapSurface === "main");
+    if (!surface || event.touches.length < 2) {
+      return;
+    }
+
+    this._clearPendingRoomSelectionTap();
+    if (this._beginTouchPinchGesture(event.touches)) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }
+
+  _onShadowTouchMove(event) {
+    if (!this._touchPinchGesture) {
+      return;
+    }
+
+    if (event.touches.length < 2) {
+      this._touchPinchGesture = null;
+      return;
+    }
+
+    const rect = this._getMapSurfaceRect();
+    const midpoint = this._getTouchMidpoint(event.touches, rect);
+    if (!rect || !midpoint) {
+      return;
+    }
+
+    const distance = Math.max(this._getTouchDistance(event.touches), 1);
+    const scale = this._touchPinchGesture.startScale * (distance / this._touchPinchGesture.startDistance);
+    const offset = {
+      x: midpoint.x - (this._touchPinchGesture.anchor.x * scale),
+      y: midpoint.y - (this._touchPinchGesture.anchor.y * scale),
+    };
+
+    this._setMapTransform(scale, offset);
+    this._render();
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  _onShadowTouchEnd(event) {
+    if (!this._touchPinchGesture) {
+      return;
+    }
+
+    if (event.touches.length < 2) {
+      this._touchPinchGesture = null;
+      return;
+    }
+
+    if (this._beginTouchPinchGesture(event.touches)) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }
+
+  _navigate(path) {
+    if (!path) {
+      return;
+    }
+    if (this._hass?.navigate) {
+      this._hass.navigate(path);
+      return;
+    }
+    if (window?.history?.pushState) {
+      window.history.pushState(null, "", path);
+      fireEvent(this, "location-changed", { replace: false });
+      return;
+    }
+    fireEvent(this, "hass-navigate", { path });
+  }
+
+  _runExternalAction(actionConfig = {}) {
+    const action = normalizeTextKey(actionConfig.action);
+
+    if (!action || action === "none") {
+      return;
+    }
+
+    if (action === "navigate") {
+      this._navigate(actionConfig.navigation_path);
+      return;
+    }
+
+    if (action === "url") {
+      const target = actionConfig.new_tab === true ? "_blank" : "_self";
+      const safeUrl = window.NodaliaUtils?.sanitizeActionUrl(actionConfig.url_path || actionConfig.url, { allowRelative: true }) || "";
+      if (!safeUrl) {
+        return;
+      }
+      if (target === "_blank") {
+        window.open(safeUrl, "_blank", "noopener,noreferrer");
+      } else {
+        window.location.assign(safeUrl);
+      }
+      return;
+    }
+
+    if (action === "more_info") {
+      fireEvent(this, "hass-more-info", {
+        entityId: actionConfig.entity || this._config?.entity,
+      });
+      return;
+    }
+
+    if (["call_service", "call-service", "perform_action", "perform-action"].includes(action)) {
+      const service = actionConfig.service || actionConfig.perform_action;
+      if (!service || !this._hass) {
+        return;
+      }
+      if (!this._isServiceAllowed(service)) {
+        window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Advance Vacuum Card", service);
+        return;
+      }
+      const [domain, serviceName] = String(service).split(".");
+      if (!domain || !serviceName) {
+        return;
+      }
+      this._hass.callService(domain, serviceName, actionConfig.service_data || {}, actionConfig.target);
+    }
+  }
+
+  _callVacuumService(service, data = {}) {
+    if (!this._hass || !this._config?.entity) {
+      return;
+    }
+
+    return this._callInternalService(`vacuum.${service}`, {
+      entity_id: this._config.entity,
+      ...data,
+    });
+  }
+
+  _isServiceAllowed(serviceValue) {
+    const security = this._config?.security || {};
+    if (security.strict_service_actions === false) {
+      return true;
+    }
+    const normalizedService = String(serviceValue || "").trim().toLowerCase();
+    if (!normalizedService || !normalizedService.includes(".")) {
+      return false;
+    }
+    const [domain] = normalizedService.split(".");
+    const domains = Array.isArray(security.allowed_service_domains)
+      ? security.allowed_service_domains.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    const services = Array.isArray(security.allowed_services)
+      ? security.allowed_services.map(item => String(item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    if (!domains.length && !services.length) {
+      return false;
+    }
+    return services.includes(normalizedService) || domains.includes(domain);
+  }
+
+  _callNamedService(service, data = {}, target = null) {
+    if (!this._hass || !service) {
+      return;
+    }
+    if (!this._isServiceAllowed(service)) {
+      window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Advance Vacuum Card", service);
+      return;
+    }
+
+    const [domain, serviceName] = String(service).split(".");
+    if (!domain || !serviceName) {
+      return;
+    }
+
+    return this._hass.callService(domain, serviceName, data, target || undefined);
+  }
+
+  /**
+   * Fixed, card-owned service calls that must not be blocked by strict allowlists.
+   * External/user-provided service actions still go through _callNamedService.
+   */
+  _callInternalService(service, data = {}, target = null) {
+    if (!this._hass || !service) {
+      return;
+    }
+    const [domain, serviceName] = String(service).split(".");
+    if (!domain || !serviceName) {
+      return;
+    }
+    return this._hass.callService(domain, serviceName, data, target || undefined);
+  }
+
+  _getVacuumPlatformProfile() {
+    const configured = normalizeTextKey(this._config?.vacuum_platform || "auto");
+    let key = configured;
+    if (["", "auto", "automatic", "default", "home_assistant_auto"].includes(key)) {
+      const entityId = String(this._config?.entity || "");
+      key = normalizeTextKey(
+        this._hass?.entities?.[entityId]?.platform
+        || this._getVacuumState()?.attributes?.integration
+        || "roborock",
+      );
+    }
+    if (key.includes("dreame")) {
+      return "dreame";
+    }
+    if (key.includes("xiaomi_miio") || key === "xiaomi_miio" || key === "xiaomi") {
+      return "xiaomi_miio";
+    }
+    if (key.includes("deebot")) {
+      return "deebot";
+    }
+    if (key.includes("ecovacs")) {
+      return "home_assistant";
+    }
+    if (key.includes("valetudo")) {
+      return "valetudo";
+    }
+    if (key === "matter" || key === "home_assistant" || key === "clean_area") {
+      return "home_assistant";
+    }
+    if (key === "send_command") {
+      return "send_command";
+    }
+    return "roborock";
+  }
+
+  _getConfiguredMapMode(actionKind) {
+    const templates = actionKind === "rooms"
+      ? ["vacuum_clean_segment"]
+      : actionKind === "zone"
+        ? ["vacuum_clean_zone", "vacuum_clean_zone_predefined"]
+        : ["vacuum_goto", "vacuum_goto_predefined"];
+    return templates
+      .map(template => resolveLegacyMode(this._config, template))
+      .find(mode => isObject(mode?.service_call_schema)) || null;
+  }
+
+  _resolveMapActionTemplateValue(value, context, depth = 0) {
+    if (depth > 8) {
+      return null;
+    }
+    if (Array.isArray(value)) {
+      return value.map(item => this._resolveMapActionTemplateValue(item, context, depth + 1));
+    }
+    if (isObject(value)) {
+      return Object.fromEntries(Object.entries(value)
+        .filter(([key]) => !isUnsafeConfigPathKey(key))
+        .map(([key, item]) => [key, this._resolveMapActionTemplateValue(item, context, depth + 1)]));
+    }
+    if (typeof value !== "string") {
+      return value;
+    }
+
+    const exactToken = value.match(/^\[\[([a-zA-Z0-9_]+)\]\]$/)?.[1];
+    if (exactToken && Object.prototype.hasOwnProperty.call(context, exactToken)) {
+      return deepClone(context[exactToken]);
+    }
+    return value.replace(/\[\[([a-zA-Z0-9_]+)\]\]/g, (match, token) => {
+      if (!Object.prototype.hasOwnProperty.call(context, token)) {
+        return match;
+      }
+      const replacement = context[token];
+      return typeof replacement === "object" ? JSON.stringify(replacement) : String(replacement ?? "");
+    });
+  }
+
+  _isBuiltInMapService(service, serviceData = {}, target = null, profile = this._getVacuumPlatformProfile()) {
+    const allowedByProfile = {
+      roborock: ["vacuum.send_command", "roborock.set_vacuum_goto_position"],
+      send_command: ["vacuum.send_command"],
+      dreame: [
+        "dreame_vacuum.vacuum_clean_segment",
+        "dreame_vacuum.vacuum_clean_zone",
+        "dreame_vacuum.vacuum_clean_spot",
+        "dreame_vacuum.vacuum_goto",
+      ],
+      xiaomi_miio: [
+        "xiaomi_miio.vacuum_clean_segment",
+        "xiaomi_miio.vacuum_clean_zone",
+        "xiaomi_miio.vacuum_goto",
+      ],
+      deebot: ["vacuum.send_command"],
+      valetudo: ["mqtt.publish"],
+      home_assistant: ["vacuum.clean_area"],
+    };
+    const normalizedService = String(service || "").trim();
+    if (normalizedService === "mqtt.publish") {
+      const baseTopic = String(this._config?.vacuum_mqtt_topic || "");
+      const topic = String(serviceData?.topic || "");
+      return profile === "valetudo" && Boolean(baseTopic) && topic.startsWith(`${baseTopic}/`);
+    }
+    if (!allowedByProfile[profile]?.includes(normalizedService)) {
+      return false;
+    }
+    const configuredEntityId = String(this._config?.entity || "");
+    const requestedEntityIds = [serviceData?.entity_id, target?.entity_id]
+      .flatMap(value => Array.isArray(value) ? value : [value])
+      .map(value => String(value || "").trim())
+      .filter(Boolean);
+    return Boolean(configuredEntityId)
+      && requestedEntityIds.length > 0
+      && requestedEntityIds.every(entityId => entityId === configuredEntityId);
+  }
+
+  _callConfiguredMapModeService(actionKind, selection, repeats = 1, point = null) {
+    const mode = this._getConfiguredMapMode(actionKind);
+    const schema = mode?.service_call_schema;
+    const service = String(schema?.service || "").trim();
+    if (!service) {
+      return null;
+    }
+    if (schema.evaluate_data_as_template === true && /{%|{{/.test(JSON.stringify(schema.service_data || {}))) {
+      return null;
+    }
+
+    const variables = {
+      ...(isObject(this._config?.internal_variables) ? this._config.internal_variables : {}),
+      ...(isObject(mode?.variables) ? mode.variables : {}),
+    };
+    if (this._config?.vacuum_mqtt_topic) {
+      variables.topic = this._config.vacuum_mqtt_topic;
+    }
+    const normalizeSelectionItem = item => Array.isArray(item)
+      ? item.map(normalizeSelectionItem)
+      : (typeof item === "string" && /^-?\d+(?:\.\d+)?$/.test(item.trim()) ? Number(item) : item);
+    const normalizedSelection = normalizeSelectionItem(selection);
+    const unwrapped = Array.isArray(normalizedSelection)
+      ? normalizedSelection.flat(Infinity).map(item => String(item)).join(",")
+      : String(normalizedSelection ?? "");
+    const context = {
+      ...variables,
+      entity_id: this._config.entity,
+      vacuum_entity_id: this._config.entity,
+      selection: normalizedSelection,
+      selection_unwrapped: unwrapped,
+      repeats,
+      point_x: Math.round(Number(point?.x || 0)),
+      point_y: Math.round(Number(point?.y || 0)),
+    };
+    const serviceData = this._resolveMapActionTemplateValue(schema.service_data || {}, context);
+    const target = this._resolveMapActionTemplateValue(schema.target || null, context);
+    if (this._isBuiltInMapService(service, serviceData, target)) {
+      return Promise.resolve(this._callInternalService(service, serviceData, target));
+    }
+    if (!this._isServiceAllowed(service)) {
+      window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Advance Vacuum Card", service);
+      return Promise.reject(new Error(`Configured map service blocked by security policy: ${service}`));
+    }
+    return Promise.resolve(this._callNamedService(service, serviceData, target));
+  }
+
+  _getCleaningAreaIdsForRooms(roomIds) {
+    const selectedIds = new Set(roomIds.map(id => String(id)));
+    const rooms = this._getRoomSegments().filter(room => selectedIds.has(String(room.id)));
+    const configuredRooms = arrayFromMaybe(this._config?.room_segments);
+    const areaRegistry = this._hass?.areas || {};
+    const areas = Array.isArray(areaRegistry) ? areaRegistry : Object.values(areaRegistry);
+    return [...new Set(rooms.map(room => {
+      const configuredRoom = configuredRooms.find(item => String(item?.id ?? "") === String(room.id));
+      const explicitAreaId = configuredRoom?.cleaning_area_id || configuredRoom?.area_id || configuredRoom?.ha_area_id;
+      if (explicitAreaId) {
+        return String(explicitAreaId);
+      }
+      const labelKey = normalizeTextKey(room.label);
+      const areaMatch = areas.find(area => normalizeTextKey(area?.name) === labelKey);
+      return areaMatch?.area_id || areaMatch?.id || "";
+    }).filter(Boolean))];
+  }
+
+  _callRoomCleaningService(roomIds, repeats = 1) {
+    const configuredCall = this._callConfiguredMapModeService("rooms", roomIds, repeats);
+    if (configuredCall) {
+      return configuredCall;
+    }
+    const profile = this._getVacuumPlatformProfile();
+    const numericOrStringIds = roomIds.map(id => /^-?\d+$/.test(String(id)) ? Number(id) : String(id));
+    const cleaningAreaIds = this._getCleaningAreaIdsForRooms(roomIds);
+    const supportedFeatures = Number(this._getVacuumState()?.attributes?.supported_features || 0);
+    const supportsNativeCleanArea = (supportedFeatures & VACUUM_FEATURE_CLEAN_AREA) === VACUUM_FEATURE_CLEAN_AREA;
+    const canUseNativeCleanArea = profile === "home_assistant" || (
+      profile === "roborock"
+      && repeats === 1
+      && supportsNativeCleanArea
+      && Boolean(this._hass?.services?.vacuum?.clean_area)
+      && cleaningAreaIds.length === roomIds.length
+    );
+    if (canUseNativeCleanArea) {
+      if (cleaningAreaIds.length !== roomIds.length) {
+        throw new Error("No se han podido vincular todas las habitaciones con áreas de Home Assistant.");
+      }
+      return this._callInternalService("vacuum.clean_area", {
+        cleaning_area_id: cleaningAreaIds,
+      }, { entity_id: this._config.entity });
+    }
+    if (profile === "dreame") {
+      return this._callInternalService("dreame_vacuum.vacuum_clean_segment", {
+        entity_id: this._config.entity,
+        segments: numericOrStringIds,
+        repeats,
+      });
+    }
+    if (profile === "xiaomi_miio") {
+      return this._callInternalService("xiaomi_miio.vacuum_clean_segment", {
+        entity_id: this._config.entity,
+        segments: Array.from({ length: repeats }, () => numericOrStringIds).flat(),
+      });
+    }
+    if (profile === "deebot") {
+      return this._callInternalService("vacuum.send_command", {
+        entity_id: this._config.entity,
+        command: "spot_area",
+        params: {
+          rooms: numericOrStringIds.join(","),
+          cleanings: repeats,
+        },
+      });
+    }
+    if (profile === "valetudo") {
+      const topic = this._config?.vacuum_mqtt_topic;
+      if (!topic) {
+        throw new Error("Valetudo necesita vacuum_mqtt_topic para limpiar habitaciones.");
+      }
+      return this._callInternalService("mqtt.publish", {
+        topic: `${topic}/MapSegmentationCapability/clean/set`,
+        payload: JSON.stringify({ segment_ids: numericOrStringIds.map(String), iterations: repeats, customOrder: true }),
+      });
+    }
+    const params = profile === "send_command"
+      ? Array.from({ length: repeats }, () => numericOrStringIds).flat()
+      : [{ segments: numericOrStringIds, repeat: repeats }];
+    return this._callInternalService("vacuum.send_command", {
+      entity_id: this._config.entity,
+      command: "app_segment_clean",
+      params,
+    });
+  }
+
+  _callZoneCleaningService(zones, repeats = 1) {
+    const configuredCall = this._callConfiguredMapModeService("zone", zones, repeats);
+    if (configuredCall) {
+      return configuredCall;
+    }
+    const profile = this._getVacuumPlatformProfile();
+    const coordinates = zones.map(zone => zone.slice(0, 4));
+    if (["dreame", "xiaomi_miio"].includes(profile)) {
+      const service = profile === "dreame"
+        ? "dreame_vacuum.vacuum_clean_zone"
+        : "xiaomi_miio.vacuum_clean_zone";
+      return this._callInternalService(service, {
+        entity_id: this._config.entity,
+        zone: coordinates,
+        repeats,
+      });
+    }
+    if (profile === "deebot") {
+      return this._callInternalService("vacuum.send_command", {
+        entity_id: this._config.entity,
+        command: "custom_area",
+        params: { coordinates: coordinates[0] || [] },
+      });
+    }
+    if (profile === "valetudo") {
+      const topic = this._config?.vacuum_mqtt_topic;
+      if (!topic) {
+        throw new Error("Valetudo necesita vacuum_mqtt_topic para limpiar zonas.");
+      }
+      const payloadZones = coordinates.map(([x1, y1, x2, y2]) => ({
+        points: {
+          pA: { x: x1, y: y1 },
+          pB: { x: x2, y: y1 },
+          pC: { x: x2, y: y2 },
+          pD: { x: x1, y: y2 },
+        },
+      }));
+      return this._callInternalService("mqtt.publish", {
+        topic: `${topic}/ZoneCleaningCapability/start/set`,
+        payload: JSON.stringify({ zones: payloadZones, iterations: repeats }),
+      });
+    }
+    if (profile === "home_assistant") {
+      throw new Error("vacuum.clean_area solo admite áreas configuradas, no rectángulos libres.");
+    }
+    return this._callInternalService("vacuum.send_command", {
+      entity_id: this._config.entity,
+      command: "app_zoned_clean",
+      params: zones,
+    });
+  }
+
+  _callGotoService(point) {
+    const configuredCall = this._callConfiguredMapModeService("goto", [[point.x, point.y]], 1, point);
+    if (configuredCall) {
+      return configuredCall;
+    }
+    const profile = this._getVacuumPlatformProfile();
+    const x = Math.round(point.x);
+    const y = Math.round(point.y);
+    if (profile === "dreame") {
+      return this._callInternalService("dreame_vacuum.vacuum_goto", { entity_id: this._config.entity, x, y });
+    }
+    if (profile === "xiaomi_miio") {
+      return this._callInternalService("xiaomi_miio.vacuum_goto", { entity_id: this._config.entity, x_coord: x, y_coord: y });
+    }
+    if (profile === "valetudo") {
+      const topic = this._config?.vacuum_mqtt_topic;
+      if (!topic) {
+        throw new Error("Valetudo necesita vacuum_mqtt_topic para enviar el robot a un punto.");
+      }
+      return this._callInternalService("mqtt.publish", {
+        topic: `${topic}/GoToLocationCapability/go/set`,
+        payload: JSON.stringify({ coordinates: { x, y } }),
+      });
+    }
+    if (profile === "send_command") {
+      return this._callInternalService("vacuum.send_command", {
+        entity_id: this._config.entity,
+        command: "app_goto_target",
+        params: [x, y],
+      });
+    }
+    if (["deebot", "home_assistant"].includes(profile)) {
+      throw new Error("La integración seleccionada no publica una acción compatible para ir a un punto.");
+    }
+    return this._callInternalService("roborock.set_vacuum_goto_position", {
+      entity_id: this._config.entity,
+      x,
+      y,
+    });
+  }
+
+  _toggleRoomSelection(roomId) {
+    roomId = String(roomId || "").trim();
+    if (!roomId) {
+      return;
+    }
+
+    if (this._isRoomSelectionLocked()) {
+      return;
+    }
+
+    this._selectedRoomIds = this._selectedRoomIds.includes(roomId)
+      ? this._selectedRoomIds.filter(id => id !== roomId)
+      : [...this._selectedRoomIds, roomId];
+    this._persistCurrentCleaningSessionState(this._activeMode === "rooms" ? "rooms" : this._activeMode, {
+      markSelectionChange: true,
+    });
+    this._triggerHaptic("selection");
+    this._render();
+  }
+
+  _isRoomSelectionLocked(state = this._getVacuumState()) {
+    const persistedSession = this._readStoredCleaningSession();
+    return this._isCleaningSessionActive(state) && (
+      this._activeMode === "rooms" ||
+      this._activeCleaningSessionMode === "rooms" ||
+      persistedSession?.mode === "rooms"
+    );
+  }
+
+  _togglePredefinedZone(zoneId) {
+    this._selectedPredefinedZoneIds = this._selectedPredefinedZoneIds.includes(zoneId)
+      ? this._selectedPredefinedZoneIds.filter(id => id !== zoneId)
+      : [...this._selectedPredefinedZoneIds, zoneId];
+    this._selectedManualZoneIndex = -1;
+    this._persistCurrentCleaningSessionState(this._activeMode, {
+      markSelectionChange: true,
+    });
+    this._triggerHaptic("selection");
+    this._render();
+  }
+
+  _restoreTransientZoneMode() {
+    if (!this._transientZoneReturnMode) {
+      return false;
+    }
+
+    this._selectedPredefinedZoneIds = [];
+    this._manualZones = [];
+    this._selectedManualZoneIndex = -1;
+    this._draftZone = null;
+    this._gotoPoint = null;
+    this._zoneHandleDrag = null;
+    this._activeUtilityPanel = null;
+    this._activeMode = this._transientZoneReturnMode;
+    this._transientZoneReturnMode = "";
+    return true;
+  }
+
+  _openTransientZoneMode() {
+    const hasZoneMode = this._getAvailableModes().some(mode => mode.id === "zone");
+    if (!hasZoneMode) {
+      return;
+    }
+
+    if (this._activeMode !== "zone") {
+      this._transientZoneReturnMode = this._activeMode || "all";
+      this._activeMode = "zone";
+      this._activeUtilityPanel = null;
+      this._selectedPredefinedZoneIds = [];
+      this._manualZones = [];
+      this._selectedManualZoneIndex = -1;
+      this._draftZone = null;
+      this._gotoPoint = null;
+    }
+
+    this._addManualZone();
+  }
+
+  _setActiveMode(modeId) {
+    if (!modeId) {
+      return;
+    }
+
+    if (modeId === this._activeMode) {
+      if (modeId === "zone" && !this._isCleaningSessionActive(this._getVacuumState())) {
+        this._activeUtilityPanel = null;
+        this._persistCurrentCleaningSessionState(this._activeMode, {
+          markSelectionChange: true,
+        });
+        this._triggerHaptic("selection");
+        this._render();
+      }
+      return;
+    }
+
+    this._activeMode = modeId;
+    this._transientZoneReturnMode = "";
+    this._activeUtilityPanel = null;
+    this._manualZones = [];
+    this._selectedManualZoneIndex = -1;
+    this._draftZone = null;
+    this._gotoPoint = null;
+    this._selectedPredefinedZoneIds = [];
+    this._persistCurrentCleaningSessionState(modeId, {
+      markSelectionChange: true,
+    });
+    this._triggerHaptic("selection");
+    this._render();
+  }
+
+  _toggleUtilityPanel(panelId) {
+    this._activeUtilityPanel = this._activeUtilityPanel === panelId ? null : panelId;
+    this._persistCurrentCleaningSessionState(this._activeMode, {
+      markSelectionChange: true,
+    });
+    this._triggerHaptic("selection");
+    this._render();
+  }
+
+  _cycleRepeats() {
+    const maxRepeats = clamp(Number(this._config?.max_repeats || 1), 1, 9);
+    this._repeats = this._repeats >= maxRepeats ? 1 : this._repeats + 1;
+    this._persistCurrentCleaningSessionState(this._activeMode, {
+      markSelectionChange: true,
+    });
+    this._triggerHaptic("selection");
+    this._render();
+  }
+
+  _clearSelection() {
+    this._selectedRoomIds = [];
+    this._selectedPredefinedZoneIds = [];
+    this._manualZones = [];
+    this._selectedManualZoneIndex = -1;
+    this._draftZone = null;
+    this._gotoPoint = null;
+    this._persistCurrentCleaningSessionState(this._activeMode, {
+      markSelectionChange: true,
+    });
+    this._triggerHaptic("selection");
+    this._render();
+  }
+
+  _goBack() {
+    if (this._restoreTransientZoneMode()) {
+      this._persistCurrentCleaningSessionState(this._activeMode, {
+        markSelectionChange: true,
+      });
+      this._triggerHaptic("selection");
+      this._render();
+      return;
+    }
+
+    const shouldReturnToAll = this._activeMode !== "all";
+    this._selectedRoomIds = [];
+    this._selectedPredefinedZoneIds = [];
+    this._manualZones = [];
+    this._selectedManualZoneIndex = -1;
+    this._draftZone = null;
+    this._gotoPoint = null;
+    this._zoneHandleDrag = null;
+    this._activeUtilityPanel = null;
+
+    if (shouldReturnToAll) {
+      this._activeMode = "all";
+    }
+
+    this._persistCurrentCleaningSessionState(this._activeMode, {
+      markSelectionChange: true,
+    });
+    this._triggerHaptic("selection");
+    this._render();
+  }
+
+  async _runMapAction() {
+    if (this._mapActionInFlight) {
+      return;
+    }
+    this._mapActionInFlight = true;
+    try {
+      const state = this._getVacuumState();
+      const selectedPredefinedZones = this._getPredefinedZones()
+        .filter(zone => this._selectedPredefinedZoneIds.includes(zone.id))
+        .flatMap(zone => zone.zones.map(item => [...item, this._repeats]));
+      const manualZones = this._manualZones.map(zone => [zone.x1, zone.y1, zone.x2, zone.y2, this._repeats]);
+      const selectedZones = [...selectedPredefinedZones, ...manualZones].slice(0, clamp(Number(this._config?.max_zone_selections || 5), 1, 10));
+      const canRunZoneAction = this._activeMode === "zone" && selectedZones.length > 0;
+
+      if ((this._isCleaning(state) || this._isPaused(state)) && !canRunZoneAction) {
+        await this._callVacuumService(this._isCleaning(state) ? "pause" : "start");
+        if (!this.isConnected) {
+          return;
+        }
+        this._triggerHaptic("selection");
+        return;
+      }
+
+      if (this._activeMode === "rooms") {
+        const roomIds = this._selectedRoomIds
+          .map(id => String(id || "").trim())
+          .filter(Boolean);
+
+        if (!roomIds.length) {
+          throw new Error("Selecciona al menos una habitación válida antes de iniciar la limpieza.");
+        }
+
+        this._freezeCurrentModePanelPreset(state);
+        this._clearPendingRoomCleaningResume();
+        this._activeCleaningRoomIds = [...roomIds];
+        this._activeCleaningZones = [];
+        this._activeCleaningSessionMode = "rooms";
+        this._markCleaningSessionPendingStart();
+        this._persistCurrentCleaningSessionState("rooms", {
+          markSelectionChange: true,
+        });
+        await this._callRoomCleaningService(roomIds, this._repeats);
+        if (!this.isConnected) {
+          return;
+        }
+        this._persistCurrentCleaningSessionState("rooms");
+        this._triggerHaptic("success");
+        this._render();
+        return;
+      }
+
+      if (this._activeMode === "zone" && selectedZones.length) {
+        const isTransientZoneAddition = Boolean(this._transientZoneReturnMode) && (
+          this._isCleaning(state)
+          || this._isPaused(state)
+          || this._isReturning(state)
+          || this._isRoomCleaningSessionActive(state)
+        );
+        this._freezeCurrentModePanelPreset(state);
+        if (isTransientZoneAddition && this._isRoomCleaningSessionActive(state)) {
+          this._setPendingRoomCleaningResume(this._getRoomCleaningResumeIds(state), this._repeats);
+        } else {
+          this._clearPendingRoomCleaningResume();
+        }
+        if (!this._isRoomCleaningSessionActive(state)) {
+          this._activeCleaningRoomIds = [];
+        }
+        this._activeCleaningZones = selectedZones.map(zone => ({
+          x1: Number(zone[0]),
+          y1: Number(zone[1]),
+          x2: Number(zone[2]),
+          y2: Number(zone[3]),
+        }));
+        this._activeCleaningSessionMode = this._isRoomCleaningSessionActive(state) ? "rooms" : "zone";
+        this._markCleaningSessionPendingStart();
+        this._persistCurrentCleaningSessionState(this._activeCleaningSessionMode || "zone", {
+          markSelectionChange: true,
+        });
+
+        if (isTransientZoneAddition && this._isCleaning(state)) {
+          await this._callVacuumService("pause");
+          await new Promise(resolve => window.setTimeout(resolve, 450));
+          if (!this.isConnected) {
+            return;
+          }
+        }
+
+        await this._callZoneCleaningService(selectedZones, this._repeats);
+        if (!this.isConnected) {
+          return;
+        }
+        const latestState = this._getVacuumState();
+        const activeCleaningSessionMode = this._isRoomCleaningSessionActive(latestState) ? "rooms" : "zone";
+        if (!this._restoreTransientZoneMode()) {
+          this._selectedManualZoneIndex = -1;
+          this._draftZone = null;
+        }
+        this._activeCleaningSessionMode = activeCleaningSessionMode;
+        this._persistCurrentCleaningSessionState(activeCleaningSessionMode);
+        this._triggerHaptic("success");
+        this._render();
+        return;
+      }
+
+      if (this._activeMode === "goto" && this._gotoPoint) {
+        this._freezeCurrentModePanelPreset(state);
+        this._clearPendingRoomCleaningResume();
+        this._activeCleaningRoomIds = [];
+        this._activeCleaningZones = [];
+        this._activeCleaningSessionMode = "";
+        this._clearCleaningSessionPendingStart();
+        this._clearPersistedCleaningSession();
+        await this._callGotoService(this._gotoPoint);
+        if (!this.isConnected) {
+          return;
+        }
+        this._triggerHaptic("success");
+        return;
+      }
+
+      this._freezeCurrentModePanelPreset(state);
+      this._clearPendingRoomCleaningResume();
+      this._activeCleaningRoomIds = [];
+      this._activeCleaningZones = [];
+      this._activeCleaningSessionMode = "";
+      this._clearCleaningSessionPendingStart();
+      this._clearPersistedCleaningSession();
+      await this._callVacuumService("start");
+      if (!this.isConnected) {
+        return;
+      }
+      this._triggerHaptic("selection");
+    } finally {
+      this._mapActionInFlight = false;
+    }
+  }
+
+  _runCustomMenuItem(item) {
+    if (!item) {
+      return;
+    }
+
+    if (item.builtin_action) {
+      this._handleControlAction(item.builtin_action);
+    } else {
+      this._triggerHaptic("selection");
+      this._runExternalAction(item.tap_action || {});
+    }
+
+    this._activeUtilityPanel = null;
+    this._render();
+  }
+
+  _handleMapActionError(error) {
+    this._clearCleaningSessionPendingStart();
+    this._clearPendingRoomCleaningResume();
+    this._roomCleaningResumeInFlight = false;
+    this._syncActiveCleaningSession(this._getVacuumState());
+    this._render();
+    if (typeof console !== "undefined" && typeof console.error === "function") {
+      console.error("Nodalia Advance Vacuum Card map action error", error);
+    }
+  }
+
+  _handleCardError(error, context = "render") {
+    if (typeof console !== "undefined" && typeof console.error === "function") {
+      console.error(`Nodalia Advance Vacuum Card ${context} error`, error);
+    }
+
+    this._lastRenderSignature = "";
+
+    if (!this.shadowRoot || this.shadowRoot.innerHTML) {
+      return;
+    }
+
+    const message = error?.message ? escapeHtml(error.message) : "No se ha podido actualizar la tarjeta.";
+    this.shadowRoot.innerHTML = `
+      <ha-card style="padding:16px;border-radius:20px;">
+        <div style="color:var(--error-color);font-weight:700;margin-bottom:8px;">Nodalia Advance Vacuum Card</div>
+        <div style="color:var(--secondary-text-color);font-size:13px;line-height:1.4;">${message}</div>
+      </ha-card>
+    `;
+  }
+
+  _handleMapBackAction() {
+    if (this._restoreTransientZoneMode()) {
+      this._persistCurrentCleaningSessionState(this._activeMode, {
+        markSelectionChange: true,
+      });
+      this._triggerHaptic("selection");
+      this._render();
+      return;
+    }
+
+    this._triggerHaptic("selection");
+    this._navigate("/lovelace/principal");
+  }
+
+  _onMapBackClick(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    this._handleMapBackAction();
+  }
+
+  _handleControlAction(action) {
+    switch (action) {
+      case "primary":
+        this._triggerHaptic("selection");
+        this._runMapAction().catch(error => this._handleMapActionError(error));
+        break;
+      case "toggle_modes":
+        this._toggleUtilityPanel("modes");
+        break;
+      case "toggle_dock_panel":
+        if (this._activeUtilityPanel !== "dock") {
+          this._activeDockPanelSection = DOCK_PANEL_SECTIONS[0]?.id || "control";
+        }
+        this._toggleUtilityPanel("dock");
+        break;
+      case "return_to_base":
+        this._freezeCurrentModePanelPreset(this._getVacuumState());
+        this._clearPendingRoomCleaningResume();
+        this._persistCurrentCleaningSessionState(this._activeMode);
+        this._callVacuumService("return_to_base");
+        this._triggerHaptic("selection");
+        break;
+      case "stop":
+        this._freezeCurrentModePanelPreset(this._getVacuumState());
+        this._selectedRoomIds = [];
+        this._selectedPredefinedZoneIds = [];
+        this._manualZones = [];
+        this._selectedManualZoneIndex = -1;
+        this._draftZone = null;
+        this._gotoPoint = null;
+        this._activeCleaningRoomIds = [];
+        this._activeCleaningZones = [];
+        this._activeCleaningSessionMode = "";
+        this._clearCleaningSessionPendingStart();
+        this._clearPendingRoomCleaningResume();
+        this._roomCleaningResumeInFlight = false;
+        this._clearPersistedCleaningSession();
+        this._callVacuumService("stop");
+        this._triggerHaptic("selection");
+        this._render();
+        break;
+      case "locate":
+        this._callVacuumService("locate");
+        this._triggerHaptic("selection");
+        break;
+      case "clear":
+        this._handleMapBackAction();
+        break;
+      case "add_zone":
+        if ((this._isCleaning(this._getVacuumState()) || this._isPaused(this._getVacuumState()) || this._isReturning(this._getVacuumState())) && this._activeMode !== "zone") {
+          this._openTransientZoneMode();
+        } else {
+          this._addManualZone();
+        }
+        break;
+      case "repeats":
+        this._cycleRepeats();
+        break;
+      default:
+        break;
+    }
+  }
+
+  _getRoomSelectionTarget(event) {
+    return event?.composedPath?.().find(node => node instanceof Element && typeof node.getAttribute === "function" && node.getAttribute("data-room-id")) || null;
+  }
+
+  _clearPendingRoomSelectionTap(pointerId = null) {
+    if (
+      pointerId === null
+      || pointerId === undefined
+      || this._pendingRoomSelectionTap?.pointerId === pointerId
+    ) {
+      this._pendingRoomSelectionTap = null;
+    }
+  }
+
+  _markSuppressedRoomSelectionClick(roomId) {
+    const normalizedRoomId = String(roomId || "").trim();
+    if (!normalizedRoomId) {
+      return;
+    }
+
+    this._suppressedRoomSelectionClick = {
+      roomId: normalizedRoomId,
+      expiresAt: Date.now() + 450,
+    };
+  }
+
+  _shouldSuppressRoomSelectionClick(roomId) {
+    const normalizedRoomId = String(roomId || "").trim();
+    const suppression = this._suppressedRoomSelectionClick;
+    if (!suppression || !normalizedRoomId) {
+      return false;
+    }
+
+    const isActive = suppression.roomId === normalizedRoomId && suppression.expiresAt > Date.now();
+    if (!isActive || suppression.roomId === normalizedRoomId) {
+      this._suppressedRoomSelectionClick = null;
+    }
+    return isActive;
+  }
+
+  _onShadowClick(event) {
+    this._triggerPressAnimation(this._getPressTargetFromEvent(event));
+
+    const zoneHandleTarget = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.zoneHandleIndex && node.dataset?.zoneHandleAction);
+    if (zoneHandleTarget) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const index = Number(zoneHandleTarget.dataset.zoneHandleIndex);
+      const action = zoneHandleTarget.dataset.zoneHandleAction;
+      if (action === "delete") {
+        this._deleteManualZone(index);
+      } else {
+        this._selectManualZone(index, { triggerHaptic: true });
+      }
+      return;
+    }
+
+    const roomTarget = this._getRoomSelectionTarget(event);
+    if (roomTarget) {
+      const roomId = String(roomTarget.getAttribute("data-room-id") || "").trim();
+      event.preventDefault();
+      event.stopPropagation();
+      if (this._shouldSuppressRoomSelectionClick(roomId)) {
+        return;
+      }
+      if (this._isRoomSelectionLocked()) {
+        return;
+      }
+      this._toggleRoomSelection(roomId);
+      return;
+    }
+
+    const zoneTarget = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.zoneId);
+    if (zoneTarget) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._togglePredefinedZone(zoneTarget.dataset.zoneId);
+      return;
+    }
+
+    const gotoTarget = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.gotoId);
+    if (gotoTarget) {
+      const gotoPoint = this._getGotoPoints().find(point => point.id === gotoTarget.dataset.gotoId);
+      if (gotoPoint?.position) {
+        event.preventDefault();
+        event.stopPropagation();
+        this._gotoPoint = gotoPoint.position;
+        this._triggerHaptic("selection");
+        this._render();
+      }
+      return;
+    }
+
+    const modeTarget = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.modeId);
+    if (modeTarget) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._setActiveMode(modeTarget.dataset.modeId);
+      return;
+    }
+
+    const headerAction = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.headerActionIndex);
+    if (headerAction) {
+      const action = this._getHeaderIcons()[Number(headerAction.dataset.headerActionIndex)];
+      if (action) {
+        event.preventDefault();
+        event.stopPropagation();
+        this._triggerHaptic("selection");
+        this._runExternalAction(action.tap_action);
+      }
+      return;
+    }
+
+    const manualZoneTarget = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.manualZoneIndex);
+    if (manualZoneTarget) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._selectManualZone(Number(manualZoneTarget.dataset.manualZoneIndex), { triggerHaptic: true });
+      return;
+    }
+
+    const controlTarget = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.controlAction);
+    if (controlTarget) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._handleControlAction(controlTarget.dataset.controlAction);
+      return;
+    }
+
+    const modePresetTarget = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.modePresetId);
+    if (modePresetTarget) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._selectModePanelPreset(modePresetTarget.dataset.modePresetId, this._getVacuumState());
+      return;
+    }
+
+    const modeOptionTarget = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.modeOptionKind && node.dataset?.modeOptionValue);
+    if (modeOptionTarget) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._setModeOption(
+        modeOptionTarget.dataset.modeOptionKind,
+        modeOptionTarget.dataset.modeOptionValue,
+        this._getVacuumState(),
+      );
+      return;
+    }
+
+    const dockSectionTarget = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.dockSectionId);
+    if (dockSectionTarget) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._setActiveDockPanelSection(dockSectionTarget.dataset.dockSectionId);
+      return;
+    }
+
+    const dockActionTarget = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.dockActionId);
+    if (dockActionTarget) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._runDockControlAction(dockActionTarget.dataset.dockActionId, this._getVacuumState());
+      return;
+    }
+
+    const routineTarget = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.routineIndex);
+    if (routineTarget) {
+      const items = this._getRoutineItems(this._getVacuumState());
+      const item = items[Number(routineTarget.dataset.routineIndex)];
+      if (item) {
+        event.preventDefault();
+        event.stopPropagation();
+        this._runRoutineItem(item);
+      }
+      return;
+    }
+
+    const customMenuItemTarget = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.customMenuIndex);
+    if (customMenuItemTarget) {
+      const items = this._getVisibleCustomMenuItems(this._getVacuumState());
+      const item = items[Number(customMenuItemTarget.dataset.customMenuIndex)];
+      if (item) {
+        event.preventDefault();
+        event.stopPropagation();
+        this._runCustomMenuItem(item);
+      }
+    }
+  }
+
+  _onShadowChange(event) {
+    const selectTarget = event.composedPath().find(node => node instanceof HTMLSelectElement && node.dataset?.dockSettingId);
+    if (!selectTarget) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    this._setDockSettingOption(selectTarget.dataset.dockSettingId, selectTarget.value, this._getVacuumState());
+  }
+
+  _onShadowPointerDown(event) {
+    this._triggerPressAnimation(this._getPressTargetFromEvent(event));
+
+    if (this._touchPinchGesture && event.pointerType === "touch") {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    const roomTarget = this._getRoomSelectionTarget(event);
+    if (roomTarget) {
+      if (event.button !== undefined && event.button !== 0) {
+        return;
+      }
+
+      if (this._isRoomSelectionLocked()) {
+        this._clearPendingRoomSelectionTap();
+        return;
+      }
+
+      const roomId = String(roomTarget.getAttribute("data-room-id") || "").trim();
+      if (!roomId) {
+        this._clearPendingRoomSelectionTap();
+        return;
+      }
+
+      this._pendingRoomSelectionTap = {
+        pointerId: event.pointerId,
+        roomId,
+        clientX: Number(event.clientX || 0),
+        clientY: Number(event.clientY || 0),
+      };
+      return;
+    }
+
+    const surface = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.mapSurface === "main");
+    if (!surface) {
+      return;
+    }
+
+    const interactiveTarget = event.composedPath().find(node => node instanceof Element && typeof node.getAttribute === "function" && (
+      node.getAttribute("data-room-id") ||
+      node.getAttribute("data-zone-id") ||
+      node.getAttribute("data-goto-id") ||
+      node.getAttribute("data-control-action") ||
+      node.getAttribute("data-mode-id") ||
+      node.getAttribute("data-header-action-index") ||
+      node.getAttribute("data-mode-option-kind") ||
+      node.getAttribute("data-custom-menu-index") ||
+      node.getAttribute("data-dock-section-id") ||
+      node.getAttribute("data-dock-action-id") ||
+      node.getAttribute("data-dock-setting-id") ||
+      node.getAttribute("data-manual-zone-index")
+    ));
+
+    if (interactiveTarget) {
+      return;
+    }
+
+    if (this._activeMode !== "zone") {
+      return;
+    }
+
+    if (event.button !== 0) {
+      return;
+    }
+
+    const zoneHandleTarget = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.zoneHandleIndex && node.dataset?.zoneHandleAction);
+    if (zoneHandleTarget) {
+      const index = Number(zoneHandleTarget.dataset.zoneHandleIndex);
+      const zone = this._manualZones[index];
+      const handlePoints = zone ? this._getZoneHandlePoints(zone) : null;
+      const selectedHandle = handlePoints?.handles?.find(handle => handle.id === zoneHandleTarget.dataset.zoneHandleAction);
+
+      if (!zone || !selectedHandle) {
+        return;
+      }
+
+      this._selectedManualZoneIndex = index;
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (event.pointerId !== undefined) {
+        try {
+          surface.setPointerCapture(event.pointerId);
+        } catch (_error) {
+          // Ignore unsupported pointer capture.
+        }
+      }
+
+      if (selectedHandle.id === "delete") {
+        this._deleteManualZone(index);
+        return;
+      }
+
+      const rect = handlePoints.rect;
+      const mapPoint = this._eventToMapPoint(event);
+      this._zoneHandleDrag = selectedHandle.id === "move"
+        ? {
+            pointerId: event.pointerId,
+            index,
+            action: "move",
+            startPoint: mapPoint || { x: rect.x, y: rect.y },
+            startRect: rect,
+          }
+        : {
+            pointerId: event.pointerId,
+            index,
+            action: "resize",
+            fixedPoint: {
+              x: rect.x,
+              y: rect.y,
+            },
+          };
+
+      this._render();
+      return;
+    }
+
+    if (event.pointerId !== undefined) {
+      this._activeMapPointers.set(event.pointerId, {
+        clientX: event.clientX,
+        clientY: event.clientY,
+      });
+      if (event.pointerType !== "touch") {
+        try {
+          surface.setPointerCapture(event.pointerId);
+        } catch (_error) {
+          // Ignore unsupported pointer capture.
+        }
+      }
+    }
+
+    if (this._activeMapPointers.size >= 2) {
+      this._startPinchGesture();
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    const skip = event.composedPath().find(node => node instanceof HTMLElement && (
+      node.dataset?.roomId ||
+      node.dataset?.zoneId ||
+      node.dataset?.gotoId ||
+      node.dataset?.controlAction ||
+      node.dataset?.modeId ||
+      node.dataset?.headerActionIndex ||
+      node.dataset?.modeOptionKind ||
+      node.dataset?.customMenuIndex ||
+      node.dataset?.dockSectionId ||
+      node.dataset?.dockActionId ||
+      node.dataset?.dockSettingId ||
+      node.dataset?.manualZoneIndex
+    ));
+
+    if (skip) {
+      return;
+    }
+
+    const vacuumPoint = this._eventToVacuumPoint(event);
+    if (!vacuumPoint) {
+      return;
+    }
+
+    if (this._manualZones.length >= this._getManualZoneCountLimit()) {
+      return;
+    }
+
+    this._pointerStart = vacuumPoint;
+    this._pointerSurfaceRect = this._getMapSurfaceRect();
+
+    if (event.pointerType === "touch") {
+      this._pendingTouchZoneStart = {
+        pointerId: event.pointerId,
+        clientX: event.clientX,
+        clientY: event.clientY,
+        vacuumPoint: {
+          x: Math.round(vacuumPoint.x),
+          y: Math.round(vacuumPoint.y),
+        },
+      };
+      return;
+    }
+
+    this._draftZone = {
+      x1: Math.round(vacuumPoint.x),
+      y1: Math.round(vacuumPoint.y),
+      x2: Math.round(vacuumPoint.x),
+      y2: Math.round(vacuumPoint.y),
+    };
+
+    event.preventDefault();
+    event.stopPropagation();
+    this._render();
+  }
+
+  _onShadowPointerMove(event) {
+    if (this._touchPinchGesture && event.pointerType === "touch") {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    if (this._pendingRoomSelectionTap?.pointerId === event.pointerId) {
+      const deltaX = Number(event.clientX || 0) - this._pendingRoomSelectionTap.clientX;
+      const deltaY = Number(event.clientY || 0) - this._pendingRoomSelectionTap.clientY;
+      if (Math.hypot(deltaX, deltaY) > 10) {
+        this._pendingRoomSelectionTap = null;
+      }
+    }
+
+    if (this._activeMapPointers.has(event.pointerId)) {
+      this._activeMapPointers.set(event.pointerId, {
+        clientX: event.clientX,
+        clientY: event.clientY,
+      });
+    }
+
+    if (this._updatePinchGesture()) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    if (this._updateManualZoneFromHandleDrag(event)) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    if (
+      this._pendingTouchZoneStart &&
+      event.pointerType === "touch" &&
+      event.pointerId === this._pendingTouchZoneStart.pointerId
+    ) {
+      const deltaX = event.clientX - this._pendingTouchZoneStart.clientX;
+      const deltaY = event.clientY - this._pendingTouchZoneStart.clientY;
+      const distance = Math.hypot(deltaX, deltaY);
+
+      if (distance < 12) {
+        return;
+      }
+
+      if (Math.abs(deltaY) > Math.abs(deltaX) * 1.1) {
+        this._pendingTouchZoneStart = null;
+        this._pointerStart = null;
+        this._pointerSurfaceRect = null;
+        return;
+      }
+
+      this._pointerStart = this._pendingTouchZoneStart.vacuumPoint;
+      this._pointerSurfaceRect = this._getMapSurfaceRect();
+      this._draftZone = {
+        x1: Math.round(this._pointerStart.x),
+        y1: Math.round(this._pointerStart.y),
+        x2: Math.round(this._pointerStart.x),
+        y2: Math.round(this._pointerStart.y),
+      };
+      this._pendingTouchZoneStart = null;
+    }
+
+    if (!this._draftZone || this._activeMode !== "zone") {
+      return;
+    }
+
+    const vacuumPoint = this._eventToVacuumPoint(event);
+    if (!vacuumPoint) {
+      return;
+    }
+
+    this._draftZone = {
+      x1: Math.round(this._pointerStart.x),
+      y1: Math.round(this._pointerStart.y),
+      x2: Math.round(vacuumPoint.x),
+      y2: Math.round(vacuumPoint.y),
+    };
+    this._render();
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  _onShadowPointerUp(event) {
+    if (this._touchPinchGesture && event.pointerType === "touch") {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    if (this._pendingRoomSelectionTap?.pointerId === event.pointerId) {
+      const pendingTap = this._pendingRoomSelectionTap;
+      this._pendingRoomSelectionTap = null;
+
+      if (!this._isRoomSelectionLocked()) {
+        const deltaX = Number(event.clientX || 0) - pendingTap.clientX;
+        const deltaY = Number(event.clientY || 0) - pendingTap.clientY;
+        if (Math.hypot(deltaX, deltaY) <= 10) {
+          event.preventDefault();
+          event.stopPropagation();
+          this._markSuppressedRoomSelectionClick(pendingTap.roomId);
+          this._toggleRoomSelection(pendingTap.roomId);
+          return;
+        }
+      }
+    }
+
+    const surface = this.shadowRoot?.querySelector("[data-map-surface='main']");
+    if (surface && event.pointerId !== undefined) {
+      try {
+        surface.releasePointerCapture(event.pointerId);
+      } catch (_error) {
+        // Ignore unsupported pointer capture release.
+      }
+    }
+
+    const wasPinching = Boolean(this._pinchGesture);
+    if (this._activeMapPointers.has(event.pointerId)) {
+      this._activeMapPointers.delete(event.pointerId);
+    }
+
+    if (wasPinching) {
+      if (this._activeMapPointers.size < 2) {
+        this._pinchGesture = null;
+      }
+      return;
+    }
+
+    if (this._zoneHandleDrag?.pointerId === event.pointerId) {
+      this._zoneHandleDrag = null;
+      this._persistCurrentCleaningSessionState(this._activeMode, {
+        markSelectionChange: true,
+      });
+      this._triggerHaptic("selection");
+      this._render();
+      return;
+    }
+
+    if (this._pendingTouchZoneStart?.pointerId === event.pointerId) {
+      this._pendingTouchZoneStart = null;
+      this._pointerStart = null;
+      this._pointerSurfaceRect = null;
+      return;
+    }
+
+    if (this._activeMode === "goto") {
+      const skip = event.composedPath().find(node => node instanceof HTMLElement && (
+        node.dataset?.roomId ||
+        node.dataset?.zoneId ||
+        node.dataset?.gotoId ||
+        node.dataset?.controlAction ||
+        node.dataset?.modeId ||
+        node.dataset?.headerActionIndex ||
+        node.dataset?.modeOptionKind ||
+        node.dataset?.customMenuIndex ||
+        node.dataset?.dockSectionId ||
+        node.dataset?.dockActionId ||
+        node.dataset?.dockSettingId ||
+        node.dataset?.manualZoneIndex ||
+        node.dataset?.zoneHandleIndex
+      ));
+
+      const surface = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.mapSurface === "main");
+      if (!skip && surface) {
+        const point = this._eventToVacuumPoint(event);
+        if (point) {
+          this._gotoPoint = {
+            x: Math.round(point.x),
+            y: Math.round(point.y),
+          };
+          this._triggerHaptic("selection");
+          this._render();
+        }
+      }
+      return;
+    }
+
+    if (!this._draftZone || this._activeMode !== "zone") {
+      return;
+    }
+
+    const zone = this._draftZone;
+    this._draftZone = null;
+    this._pointerStart = null;
+    this._pointerSurfaceRect = null;
+
+    const width = Math.abs(zone.x2 - zone.x1);
+    const height = Math.abs(zone.y2 - zone.y1);
+    if (width > 200 && height > 200) {
+      this._manualZones = [...this._manualZones, {
+        x1: Math.min(zone.x1, zone.x2),
+        y1: Math.min(zone.y1, zone.y2),
+        x2: Math.max(zone.x1, zone.x2),
+        y2: Math.max(zone.y1, zone.y2),
+      }];
+      this._selectedManualZoneIndex = this._manualZones.length - 1;
+      this._persistCurrentCleaningSessionState(this._activeMode, {
+        markSelectionChange: true,
+      });
+      this._triggerHaptic("selection");
+    }
+
+    this._render();
+  }
+
+  _onMapImageLoad(event) {
+    const image = event.currentTarget;
+    const width = Number(image?.naturalWidth || image?.width || 0);
+    const height = Number(image?.naturalHeight || image?.height || 0);
+    const staleImages = this.shadowRoot?.querySelectorAll("[data-map-image-previous='true']") || [];
+
+    image?.classList?.remove("is-pending");
+    image?.classList?.add("is-loaded");
+
+    staleImages.forEach(staleImage => {
+      staleImage.classList.add("is-fading-out");
+      const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+      const removeStale = () => {
+        if (staleImage.isConnected) {
+          staleImage.remove();
+        }
+      };
+      if (typeof schedule === "function") {
+        schedule(this, removeStale, 260);
+      } else {
+        window.setTimeout(removeStale, 260);
+      }
+    });
+
+    if (width > 0 && height > 0) {
+      const dimensionsChanged = width !== this._mapImageWidth || height !== this._mapImageHeight;
+      this._mapImageWidth = width;
+      this._mapImageHeight = height;
+      if (dimensionsChanged) {
+        this._render();
+      }
+    }
+  }
+
+  _estimateRoomMarkerFootprint(room, markerSize, labelSize, iconSize) {
+    if (this._config?.show_room_labels === false) {
+      return {
+        width: markerSize,
+        height: markerSize,
+      };
+    }
+
+    const label = String(room?.label || room?.id || "").trim();
+    const estimatedTextWidth = Math.max(labelSize * 2.6, label.length * labelSize * 0.57);
+    return {
+      width: Math.max(markerSize, estimatedTextWidth + iconSize + 24),
+      height: markerSize,
+    };
+  }
+
+  _isPointInsideRoom(point, room) {
+    return arrayFromMaybe(room?.outlines).some(outline => pointInPolygon(point, outline));
+  }
+
+  _getPrimaryRoomOutline(room) {
+    const outlines = arrayFromMaybe(room?.outlines)
+      .filter(outline => Array.isArray(outline) && outline.length >= 3)
+      .sort((left, right) => polygonArea(right) - polygonArea(left));
+
+    if (outlines.length) {
+      return outlines[0];
+    }
+
+    const legacyOutline = arrayFromMaybe(room?.outline);
+    return legacyOutline.length >= 3 ? legacyOutline : [];
+  }
+
+  _getRoomMarkerCandidatePoints(room) {
+    const primaryOutline = this._getPrimaryRoomOutline(room);
+    if (primaryOutline.length < 3) {
+      return [];
+    }
+
+    const bounds = polygonBounds(primaryOutline);
+    const overallCenter = centroid(primaryOutline);
+    const lowerCenter = {
+      x: bounds.minX + (bounds.width * 0.5),
+      y: bounds.minY + (bounds.height * 0.72),
+    };
+    const lowerDeepCenter = {
+      x: bounds.minX + (bounds.width * 0.5),
+      y: bounds.minY + (bounds.height * 0.84),
+    };
+    const upperCenter = {
+      x: bounds.minX + (bounds.width * 0.5),
+      y: bounds.minY + (bounds.height * 0.36),
+    };
+    const leftCenter = {
+      x: bounds.minX + (bounds.width * 0.34),
+      y: bounds.minY + (bounds.height * 0.56),
+    };
+    const rightCenter = {
+      x: bounds.minX + (bounds.width * 0.66),
+      y: bounds.minY + (bounds.height * 0.56),
+    };
+
+    const candidates = [
+      room?.labelPoint,
+      lowerCenter,
+      centroid(primaryOutline),
+      lowerDeepCenter,
+      upperCenter,
+      leftCenter,
+      rightCenter,
+      room?.iconPoint,
+      overallCenter,
+    ]
+      .filter(point => point && Number.isFinite(point.x) && Number.isFinite(point.y))
+      .filter((point, index, items) => items.findIndex(item => Math.abs(item.x - point.x) < 1 && Math.abs(item.y - point.y) < 1) === index);
+
+    return candidates.filter(point => this._isPointInsideRoom(point, room));
+  }
+
+  _getRoomMarkerPlacements(rooms, markerSize, labelSize, iconSize) {
+    const mapRect = this._getMapSurfaceRect();
+    const viewportWidth = mapRect?.width || this._mapImageWidth || 1;
+    const viewportHeight = mapRect?.height || this._mapImageHeight || 1;
+    const placements = new Map();
+    const placedRects = [];
+
+    const orderedRooms = rooms
+      .filter(room => this._getPrimaryRoomOutline(room).length >= 3)
+      .map(room => {
+        const primaryOutline = this._getPrimaryRoomOutline(room);
+        return {
+          room,
+          area: polygonArea(primaryOutline),
+          preferredAnchor: room.labelPoint || room.iconPoint || centroid(primaryOutline),
+        };
+      })
+      .filter(item => item.area > 0)
+      .sort((left, right) => left.area - right.area);
+
+    orderedRooms.forEach(({ room, preferredAnchor }) => {
+      const footprint = this._estimateRoomMarkerFootprint(room, markerSize, labelSize, iconSize);
+      const candidates = this._getRoomMarkerCandidatePoints(room);
+      const fallbackAnchor = preferredAnchor && Number.isFinite(preferredAnchor.x) && Number.isFinite(preferredAnchor.y)
+        ? preferredAnchor
+        : this._getPrimaryRoomOutline(room).length >= 3
+          ? centroid(this._getPrimaryRoomOutline(room))
+          : null;
+
+      if (!candidates.length && fallbackAnchor) {
+        candidates.push(fallbackAnchor);
+      }
+
+      let bestPlacement = null;
+      let bestScore = Number.POSITIVE_INFINITY;
+
+      candidates.forEach((candidate, index) => {
+        const percent = this._vacuumToViewportPercent(candidate);
+        const centerX = (percent.left / 100) * viewportWidth;
+        const centerY = ((percent.top / 100) * viewportHeight) + Number(room.labelOffsetY || 0);
+        const rect = {
+          left: centerX - (footprint.width / 2),
+          top: centerY - (footprint.height / 2),
+          right: centerX + (footprint.width / 2),
+          bottom: centerY + (footprint.height / 2),
+        };
+        const overflow = (
+          Math.max(0, 8 - rect.left) +
+          Math.max(0, 8 - rect.top) +
+          Math.max(0, rect.right - (viewportWidth - 8)) +
+          Math.max(0, rect.bottom - (viewportHeight - 8))
+        );
+        const overlap = placedRects.reduce((acc, placedRect) => acc + rectIntersectionArea(rect, placedRect), 0);
+        const distancePenalty = preferredAnchor
+          ? Math.hypot(candidate.x - preferredAnchor.x, candidate.y - preferredAnchor.y) * 0.01
+          : 0;
+        const score = (overlap * 1000) + (overflow * 100) + (index * 4) + distancePenalty;
+
+        if (score < bestScore) {
+          bestScore = score;
+          bestPlacement = {
+            left: clamp((centerX / viewportWidth) * 100, 0, 100),
+            top: clamp((centerY / viewportHeight) * 100, 0, 100),
+            rect,
+          };
+        }
+
+        if (overlap === 0 && overflow === 0 && index > 0) {
+          bestScore = score;
+          bestPlacement = {
+            left: clamp((centerX / viewportWidth) * 100, 0, 100),
+            top: clamp((centerY / viewportHeight) * 100, 0, 100),
+            rect,
+          };
+        }
+      });
+
+      if (bestPlacement) {
+        placements.set(String(room.id), bestPlacement);
+        placedRects.push(bestPlacement.rect);
+      }
+    });
+
+    return placements;
+  }
+
+  _renderRoomMarkers(rooms) {
+    if (this._config?.show_room_markers === false) {
+      return "";
+    }
+
+    const isRoomSelectionLocked = this._isRoomSelectionLocked();
+    const highlightedRoomIds = new Set(this._getHighlightedRoomIds());
+    const safeStyles = getSafeStyles(this._config?.styles);
+    const markerSize = Math.max(22, Math.round(parseSizeToPixels(safeStyles?.map?.marker_size, 34) * 0.76));
+    const labelSize = Math.max(9, Math.round(parseSizeToPixels(safeStyles?.map?.label_size, 12) * 0.84));
+    const iconSize = Math.max(12, Math.round(markerSize * 0.42));
+    const placements = this._getRoomMarkerPlacements(rooms, markerSize, labelSize, iconSize);
+
+    return rooms
+      .filter(room => this._getPrimaryRoomOutline(room).length >= 3)
+      .map(room => {
+      const placement = placements.get(String(room.id));
+      const primaryOutline = this._getPrimaryRoomOutline(room);
+      const anchor = room.iconPoint || room.labelPoint || centroid(primaryOutline);
+      const percent = placement || this._vacuumToViewportPercent(anchor);
+      const selected = highlightedRoomIds.has(String(room.id));
+      return `
+        <button
+          class="advance-vacuum-card__room-marker ${selected ? "is-selected" : ""} ${this._config?.show_room_labels === false ? "is-icon-only" : ""} ${isRoomSelectionLocked ? "is-readonly" : ""}"
+          style="left:${percent.left}%; top:${percent.top}%; --marker-size:${markerSize}px; --room-label-size:${labelSize}px; --room-icon-size:${iconSize}px; --room-marker-gap:5px; --room-marker-padding:0 9px;"
+          data-room-id="${escapeHtml(room.id)}"
+          title="${escapeHtml(room.label || room.id)}"
+          ${isRoomSelectionLocked ? "disabled" : ""}
+        >
+          <ha-icon icon="${escapeHtml(room.icon || "mdi:broom")}"></ha-icon>
+          ${
+            this._config?.show_room_labels === false
+              ? ""
+              : `<span>${escapeHtml(room.label || room.id)}</span>`
+          }
+        </button>
+      `;
+    }).join("");
+  }
+
+  _renderRoomSelectionHighlights(rooms, highlightedRoomIds, mapImageUrl, modeId = this._activeMode) {
+    if (
+      modeId !== "rooms" ||
+      !mapImageUrl
+    ) {
+      return "";
+    }
+
+    const highlights = rooms
+      .filter(room => highlightedRoomIds.has(String(room.id)))
+      .flatMap(room => room.outlines.map((outline, index) => ({
+        clipPath: this._vacuumOutlineToCssPolygon(outline),
+        key: `${room.id}-${index}`,
+      })))
+      .filter(item => item.clipPath);
+
+    if (!highlights.length) {
+      return "";
+    }
+
+    return `
+      <div class="advance-vacuum-card__room-highlight-layer" aria-hidden="true">
+        ${highlights.map(highlight => `
+          <img
+            class="advance-vacuum-card__room-highlight-image"
+            src="${escapeHtml(mapImageUrl)}"
+            alt=""
+            draggable="false"
+            style="clip-path: polygon(${escapeHtml(highlight.clipPath)});"
+            data-room-highlight-id="${escapeHtml(highlight.key)}"
+          />
+        `).join("")}
+      </div>
+    `;
+  }
+
+  _renderZoneSelectionHighlights(zones, mapImageUrl, modeId = this._activeMode) {
+    if (
+      modeId !== "rooms" ||
+      !Array.isArray(zones) ||
+      !zones.length ||
+      !mapImageUrl
+    ) {
+      return "";
+    }
+
+    const highlights = zones
+      .map((zone, index) => ({
+        clipPath: this._vacuumZoneToCssPolygon(zone),
+        key: `zone-${index}`,
+      }))
+      .filter(item => item.clipPath);
+
+    if (!highlights.length) {
+      return "";
+    }
+
+    return `
+      <div class="advance-vacuum-card__room-highlight-layer advance-vacuum-card__room-highlight-layer--zones" aria-hidden="true">
+        ${highlights.map(highlight => `
+          <img
+            class="advance-vacuum-card__room-highlight-image"
+            src="${escapeHtml(mapImageUrl)}"
+            alt=""
+            draggable="false"
+            style="clip-path: polygon(${escapeHtml(highlight.clipPath)});"
+            data-zone-highlight-id="${escapeHtml(highlight.key)}"
+          />
+        `).join("")}
+      </div>
+    `;
+  }
+
+  _renderRoomFallbackList(rooms, modeId = this._activeMode) {
+    if (modeId !== "rooms" || !rooms.length) {
+      return "";
+    }
+
+    const state = this._getVacuumState();
+    const isRoomSelectionLocked = this._isRoomSelectionLocked(state);
+    const highlightedRoomIds = new Set(this._getHighlightedRoomIds(state));
+    const fallbackRooms = rooms.filter(room => room.outlines.length === 0);
+    if (!fallbackRooms.length) {
+      return "";
+    }
+
+    return `
+      <div class="advance-vacuum-card__room-list">
+        ${fallbackRooms.map(room => `
+          <button
+            class="advance-vacuum-card__room-chip ${highlightedRoomIds.has(String(room.id)) ? "is-selected" : ""} ${isRoomSelectionLocked ? "is-readonly" : ""}"
+            data-room-id="${escapeHtml(room.id)}"
+            title="${escapeHtml(room.label || room.id)}"
+            ${isRoomSelectionLocked ? "disabled" : ""}
+          >
+            <ha-icon icon="${escapeHtml(room.icon || "mdi:broom")}"></ha-icon>
+            <span>${escapeHtml(room.label || room.id)}</span>
+          </button>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  _renderGotoMarkers(points) {
+    if (this._activeMode !== "goto") {
+      return "";
+    }
+
+    return points.map(point => {
+      const percent = this._vacuumToViewportPercent(point.position);
+      const selected = this._gotoPoint && Math.round(this._gotoPoint.x) === Math.round(point.position.x) && Math.round(this._gotoPoint.y) === Math.round(point.position.y);
+      return `
+        <button
+          class="advance-vacuum-card__goto-marker ${selected ? "is-selected" : ""}"
+          style="left:${percent.left}%; top:${percent.top}%;"
+          data-goto-id="${escapeHtml(point.id)}"
+          title="${escapeHtml(point.label || this._advanceVacuumStrings()?.titles?.gotoFallback || "Point")}"
+        >
+          <ha-icon icon="${escapeHtml(point.icon || "mdi:map-marker")}"></ha-icon>
+        </button>
+      `;
+    }).join("");
+  }
+
+  _renderManualZoneEditors() {
+    if (this._activeMode !== "zone" || !this._manualZones.length) {
+      return "";
+    }
+
+    this._sanitizeSelectedManualZoneIndex();
+
+    const editZoneTemplate = this._advanceVacuumStrings()?.titles?.editZoneNumber || "Edit zone {index}";
+    return this._manualZones.map((zone, index) => {
+      const { rect, handles } = this._getZoneHandlePoints(zone);
+      const selected = index === this._selectedManualZoneIndex;
+      const topLeft = this._mapToViewportPercent({ x: rect.x, y: rect.y });
+      const bottomRight = this._mapToViewportPercent({ x: rect.x + rect.width, y: rect.y + rect.height });
+      const left = Math.min(topLeft.left, bottomRight.left);
+      const top = Math.min(topLeft.top, bottomRight.top);
+      const width = Math.abs(bottomRight.left - topLeft.left);
+      const height = Math.abs(bottomRight.top - topLeft.top);
+      const handleMarkup = selected
+        ? handles.map(handle => {
+            const percent = this._mapToViewportPercent({ x: handle.x, y: handle.y });
+            return `
+              <button
+                class="advance-vacuum-card__zone-handle"
+                style="left:${percent.left}%; top:${percent.top}%;"
+                data-zone-handle-index="${index}"
+                data-zone-handle-action="${escapeHtml(handle.id)}"
+                title="${escapeHtml(handle.title)}"
+              >
+                <ha-icon icon="${escapeHtml(handle.icon)}"></ha-icon>
+              </button>
+            `;
+          }).join("")
+        : "";
+
+      return `
+        <button
+          class="advance-vacuum-card__zone-hitbox ${selected ? "is-selected" : ""}"
+          style="left:${left}%; top:${top}%; width:${width}%; height:${height}%;"
+          data-manual-zone-index="${index}"
+          title="${escapeHtml(editZoneTemplate.replace(/\{index\}/g, String(index + 1)))}"
+        ></button>
+        ${handleMarkup}
+      `;
+    }).join("");
+  }
+
+  _renderMapTools() {
+    const advanceVacuumStrings = this._advanceVacuumStrings();
+    const state = this._getVacuumState();
+    const hasZoneMode = this._getAvailableModes().some(mode => mode.id === "zone");
+    const isCleaningSessionActive = this._isCleaningSessionActive(state);
+    const mapStatusIndicator = this._getMapStatusIndicator(state);
+    const displayModeId = this._getDisplayCleaningModeId();
+    const showAddZoneButton = hasZoneMode && (displayModeId === "zone" || isCleaningSessionActive);
+    const canAddZone = this._manualZones.length < this._getManualZoneCountLimit();
+    return `
+      <div class="advance-vacuum-card__map-tools">
+        <div class="advance-vacuum-card__map-tools-group advance-vacuum-card__map-tools-group--left">
+          <button
+            type="button"
+            class="advance-vacuum-card__map-tool advance-vacuum-card__map-tool--back"
+            data-map-back="true"
+            data-control-action="clear"
+            title="${escapeHtml(advanceVacuumStrings?.titles?.backPanel || "Back to main panel")}"
+          >
+            <ha-icon icon="mdi:arrow-left"></ha-icon>
+          </button>
+        </div>
+        ${
+          mapStatusIndicator
+            ? `
+              <div class="advance-vacuum-card__map-tools-group advance-vacuum-card__map-tools-group--center" aria-hidden="true">
+                <div
+                  class="advance-vacuum-card__map-tool advance-vacuum-card__map-tool--status advance-vacuum-card__map-tool--status-${escapeHtml(mapStatusIndicator.tone)}"
+                  title="${escapeHtml(mapStatusIndicator.title)}"
+                  aria-label="${escapeHtml(mapStatusIndicator.title)}"
+                >
+                  <ha-icon icon="${escapeHtml(mapStatusIndicator.icon)}"></ha-icon>
+                </div>
+              </div>
+            `
+            : ""
+        }
+        <div class="advance-vacuum-card__map-tools-group advance-vacuum-card__map-tools-group--right">
+          ${
+            showAddZoneButton
+              ? `
+                <button
+                  class="advance-vacuum-card__map-tool advance-vacuum-card__map-tool--add ${!canAddZone ? "is-disabled" : ""}"
+                  data-control-action="add_zone"
+                  title="${escapeHtml(advanceVacuumStrings?.actions?.addZone || "Add zone")}"
+                  ${!canAddZone ? "disabled" : ""}
+                >
+                  <ha-icon icon="mdi:plus"></ha-icon>
+                  <span class="advance-vacuum-card__map-tool-label">${escapeHtml(advanceVacuumStrings?.utility?.zoneTool || "Zone")}</span>
+                </button>
+              `
+              : ""
+          }
+        </div>
+      </div>
+    `;
+  }
+
+  _renderStateChip(state) {
+    if (this._config?.show_state_chip === false) {
+      return "";
+    }
+    return `
+      <span class="advance-vacuum-card__chip">
+        ${escapeHtml(this._getStateLabel(state))}
+      </span>
+    `;
+  }
+
+  _renderBatteryChip(state) {
+    const level = this._getBatteryLevel(state);
+    if (this._config?.show_battery_chip === false || level === null) {
+      return "";
+    }
+    return `
+      <span class="advance-vacuum-card__chip advance-vacuum-card__chip--battery" style="--battery-color:${escapeHtml(this._getBatteryColor(level))};">
+        <ha-icon icon="mdi:battery"></ha-icon>
+        <span>${level}%</span>
+      </span>
+    `;
+  }
+
+  _renderModePanel(state) {
+    const activePreset = this._getActiveModePanelPreset(state);
+    const descriptors = this._getVisibleModePanelDescriptors(state, activePreset);
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const langCfg = this._config?.language ?? "auto";
+    const u = window.NodaliaI18n?.strings?.(window.NodaliaI18n?.resolveLanguage?.(hass, langCfg))?.advanceVacuum?.utility;
+    const utilityMetaContent = [
+      ["smart", "custom"].includes(activePreset)
+        ? ""
+        : `
+          <div class="advance-vacuum-card__utility-chip-group">
+            <div class="advance-vacuum-card__utility-label">${escapeHtml(u?.cleaningCounter ?? "Contador de limpiezas")}</div>
+            <button class="advance-vacuum-card__selection-chip" data-control-action="repeats">
+              <ha-icon icon="mdi:repeat"></ha-icon>
+              <strong>x${this._repeats}</strong>
+            </button>
+          </div>
+        `,
+      this._activeMode === "goto"
+        ? `<div class="advance-vacuum-card__selection-chip"><strong>${this._gotoPoint ? "1" : "0"}</strong><span>${escapeHtml(u?.pointWord ?? "punto")}</span></div>`
+        : "",
+    ].filter(Boolean).join("");
+    if (!PANEL_MODE_PRESETS.length && !descriptors.length && this._activeMode === "all") {
+      return "";
+    }
+
+    return `
+      <div class="advance-vacuum-card__utility-panel">
+        <div class="advance-vacuum-card__utility-group">
+          <div class="advance-vacuum-card__utility-label">${escapeHtml(u?.cleaningMode ?? "Modo de limpieza")}</div>
+          <div class="advance-vacuum-card__utility-options advance-vacuum-card__utility-options--presets">
+            ${PANEL_MODE_PRESETS.map(preset => `
+              <button
+                class="advance-vacuum-card__utility-option ${preset.id === activePreset ? "is-active" : ""}"
+                data-mode-preset-id="${escapeHtml(preset.id)}"
+              >
+                ${escapeHtml(this._advanceVacuumStrings()?.panelModes?.[preset.id] || preset.label)}
+              </button>
+            `).join("")}
+          </div>
+        </div>
+        ${descriptors.map(descriptor => `
+          <div class="advance-vacuum-card__utility-group">
+            <div class="advance-vacuum-card__utility-label">${escapeHtml(descriptor.label)}</div>
+            <div class="advance-vacuum-card__utility-options">
+              ${descriptor.options.map(option => `
+                <button
+                  class="advance-vacuum-card__utility-option ${descriptor.current === option ? "is-active" : ""}"
+                  data-mode-option-kind="${escapeHtml(descriptor.kind)}"
+                  data-mode-option-value="${escapeHtml(option)}"
+                >
+                  ${escapeHtml(humanizeModeLabel(option, descriptor.kind, hass, langCfg))}
+                </button>
+              `).join("")}
+            </div>
+          </div>
+        `).join("")}
+        ${utilityMetaContent ? `<div class="advance-vacuum-card__utility-meta">${utilityMetaContent}</div>` : ""}
+      </div>
+    `;
+  }
+
+  _renderDockControlSection(state) {
+    const descriptors = this._getDockControlDescriptors(state);
+    if (!descriptors.length) {
+      return "";
+    }
+
+    return `
+      <div class="advance-vacuum-card__utility-group">
+        <div class="advance-vacuum-card__utility-label">${escapeHtml(window.NodaliaI18n?.strings?.(window.NodaliaI18n?.resolveLanguage?.(this._hass ?? window.NodaliaI18n?.resolveHass?.(null), this._config?.language ?? "auto"))?.advanceVacuum?.utility?.dockActions ?? "Dock actions")}</div>
+        <div class="advance-vacuum-card__utility-options advance-vacuum-card__utility-options--menu">
+          ${descriptors.map(descriptor => `
+            <button
+              class="advance-vacuum-card__utility-option advance-vacuum-card__utility-option--menu ${descriptor.active ? "is-active" : ""}"
+              data-dock-action-id="${escapeHtml(descriptor.id)}"
+            >
+              <ha-icon icon="${escapeHtml(descriptor.icon || "mdi:flash")}"></ha-icon>
+              <span>${escapeHtml(descriptor.label)}</span>
+            </button>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  _renderDockSettingsSection(state) {
+    const descriptors = this._getDockSettingDescriptors(state);
+    if (!descriptors.length) {
+      return "";
+    }
+
+    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const langCfg = this._config?.language ?? "auto";
+
+    return descriptors.map(descriptor => `
+      <label class="advance-vacuum-card__utility-field">
+        <span class="advance-vacuum-card__utility-label">${escapeHtml(descriptor.label)}</span>
+        <select class="advance-vacuum-card__utility-select" data-dock-setting-id="${escapeHtml(descriptor.id)}">
+          ${descriptor.options.map(option => `
+            <option value="${escapeHtml(option)}" ${normalizeTextKey(descriptor.current) === normalizeTextKey(option) ? "selected" : ""}>
+              ${escapeHtml(humanizeSelectOptionLabel(option, descriptor.id === "mop_mode" ? "mop_mode" : "generic", hass, langCfg))}
+            </option>
+          `).join("")}
+        </select>
+      </label>
+    `).join("");
+  }
+
+  _renderDockPanel(state) {
+    const controlDescriptors = this._getDockControlDescriptors(state);
+    const settingDescriptors = this._getDockSettingDescriptors(state);
+    const availableSections = DOCK_PANEL_SECTIONS.filter(section => (
+      section.id === "control" ? controlDescriptors.length > 0 : settingDescriptors.length > 0
+    ));
+
+    if (!availableSections.length) {
+      return "";
+    }
+
+    const activeSection = availableSections.find(section => section.id === this._activeDockPanelSection) || availableSections[0];
+    if (activeSection.id !== this._activeDockPanelSection) {
+      this._activeDockPanelSection = activeSection.id;
+    }
+
+    return `
+      <div class="advance-vacuum-card__utility-panel">
+        <div class="advance-vacuum-card__utility-group">
+          <div class="advance-vacuum-card__utility-label">${escapeHtml(this._advanceVacuumStrings()?.utility?.chargingStation || "Charging station")}</div>
+          <div class="advance-vacuum-card__utility-options advance-vacuum-card__utility-options--presets">
+            ${availableSections.map(section => `
+              <button
+                class="advance-vacuum-card__utility-option ${section.id === activeSection.id ? "is-active" : ""}"
+                data-dock-section-id="${escapeHtml(section.id)}"
+              >
+                ${escapeHtml(this._advanceVacuumStrings()?.dockSections?.[section.id] || section.label)}
+              </button>
+            `).join("")}
+          </div>
+        </div>
+        ${activeSection.id === "control" ? this._renderDockControlSection(state) : this._renderDockSettingsSection(state)}
+      </div>
+    `;
+  }
+
+  _renderCustomMenuPanel(state) {
+    const items = this._getVisibleCustomMenuItems(state);
+    if (!items.length) {
+      return "";
+    }
+
+    return `
+      <div class="advance-vacuum-card__utility-panel">
+        <div class="advance-vacuum-card__utility-options advance-vacuum-card__utility-options--menu">
+          ${items.map((item, index) => `
+            <button class="advance-vacuum-card__utility-option advance-vacuum-card__utility-option--menu" data-custom-menu-index="${index}">
+              <ha-icon icon="${escapeHtml(item.icon || "mdi:flash")}"></ha-icon>
+              <span>${escapeHtml(item.label)}</span>
+            </button>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  _renderRoutinesPanel(state = this._getVacuumState()) {
+    const routines = this._getRoutineItems(state);
+    if (!routines.length || this._isCleaningSessionActive(state) || this._activeMode !== "routines") {
+      return "";
+    }
+
+    return `
+      <div class="advance-vacuum-card__routines">
+        ${routines.map((item, index) => {
+          const entityState = this._getRoutineEntityState(item);
+          const isDisabled = Boolean(item.entity) && isUnavailableState(entityState);
+          const label = this._getRoutineLabel(item, entityState);
+          const icon = this._getRoutineIcon(item, entityState);
+          return `
+            <button
+              type="button"
+              class="advance-vacuum-card__routine-button ${isDisabled ? "is-disabled" : ""}"
+              data-routine-index="${index}"
+              title="${escapeHtml(label)}"
+              ${isDisabled ? "disabled" : ""}
+            >
+              <span class="advance-vacuum-card__routine-icon">
+                <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+              </span>
+              <span class="advance-vacuum-card__routine-label">${escapeHtml(label)}</span>
+            </button>
+          `;
+        }).join("")}
+      </div>
+    `;
+  }
+
+  _commitPersistentVacuumShadow(markup) {
+    if (!this.shadowRoot) {
+      return;
+    }
+    const styleStart = markup.indexOf("<style>");
+    const styleEnd = markup.indexOf("</style>");
+    if (styleStart < 0 || styleEnd < 0) {
+      this.shadowRoot.innerHTML = markup;
+      return;
+    }
+    const css = markup.slice(styleStart + 7, styleEnd);
+    const body = markup.slice(styleEnd + 8).trim();
+    const cardOpen = body.indexOf("<ha-card");
+    const cardOpenEnd = body.indexOf(">", cardOpen);
+    const cardClose = body.lastIndexOf("</ha-card>");
+    if (cardOpen < 0 || cardOpenEnd < 0 || cardClose < 0) {
+      this.shadowRoot.innerHTML = markup;
+      return;
+    }
+    const cardAttrs = body.slice(cardOpen, cardOpenEnd + 1);
+    const inner = body.slice(cardOpenEnd + 1, cardClose);
+    const liveImage = this.shadowRoot.querySelector("[data-map-image]");
+    if (liveImage instanceof HTMLElement) {
+      liveImage.remove();
+    }
+    let styleEl = this.shadowRoot.querySelector("[data-vacuum-style]");
+    let card = this.shadowRoot.querySelector("ha-card.advance-vacuum-card");
+    if (!(styleEl instanceof HTMLStyleElement) || !(card instanceof HTMLElement)) {
+      this.shadowRoot.innerHTML = `<style data-vacuum-style></style><ha-card class="advance-vacuum-card" data-vacuum-surface="true"></ha-card>`;
+      styleEl = this.shadowRoot.querySelector("[data-vacuum-style]");
+      card = this.shadowRoot.querySelector("ha-card.advance-vacuum-card");
+    }
+    if (styleEl.textContent !== css) {
+      styleEl.textContent = css;
+    }
+    const classMatch = cardAttrs.match(/class="([^"]*)"/);
+    card.className = classMatch ? classMatch[1] : "advance-vacuum-card";
+    card.setAttribute("data-vacuum-surface", "true");
+    card.innerHTML = inner;
+  }
+
+  _render() {
+    if (!this.shadowRoot) {
+      return;
+    }
+
+    try {
+      this._ensurePersistedCleaningSessionStateLoaded();
+
+      const previousImage = this.shadowRoot.querySelector("[data-map-image]");
+      const previousImageSrc = previousImage?.getAttribute("src") || "";
+
+      const config = this._config || normalizeConfig({});
+      const advanceVacuumGuard = window.NodaliaUtils?.renderLovelaceEntityGuardCardHtml?.(
+        this._hass,
+        config.entity,
+        { cardClass: "advance-vacuum-card" },
+      );
+      if (advanceVacuumGuard) {
+        this.shadowRoot.innerHTML = advanceVacuumGuard;
+        this._lastRenderSignature = `guard:${config.entity || ""}`;
+        return;
+      }
+      const state = this._getVacuumState();
+      const accentColor = this._getAccentColor(state);
+      const advanceVacuumStrings = this._advanceVacuumStrings();
+      const styles = getSafeStyles(config.styles);
+      const animations = this._getAnimationSettings();
+      const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
+      this._syncActiveCleaningSession(state);
+      const rooms = this._getRoomSegments();
+      const gotoPoints = this._getGotoPoints();
+      const predefinedZones = this._getPredefinedZones();
+      const highlightedRoomIds = new Set(this._getHighlightedRoomIds(state));
+      const modes = this._getAvailableModes();
+      const currentMode = this._resolveDisplayMode(modes, advanceVacuumStrings);
+      const isCleaningSessionActive = this._isCleaningSessionActive(state);
+      const iconSize = Math.max(54, parseSizeToPixels(styles.icon.size, 64));
+      const controlSize = Math.max(38, parseSizeToPixels(styles.control.size, 42));
+      const titleSize = Math.max(15, parseSizeToPixels(styles.title_size, 16));
+      const mapRadius = Math.max(22, parseSizeToPixels(styles.map.radius, 26));
+      const cardRadius = Math.max(mapRadius, parseSizeToPixels(styles.card.border_radius, 32));
+      const cardPaddingPx = Math.max(0, parseSizeToPixels(styles.card.padding, 16));
+      const mapHorizontalBleed = Math.max(0, Math.round(cardPaddingPx));
+      const mapTopBleed = Math.max(0, Math.round(cardPaddingPx));
+      const mapMinHeight = Math.max(320, Math.round(controlSize * 7.4));
+      const chipHeight = Math.max(24, parseSizeToPixels(styles.chip_height, 26));
+      const chipPadding = styles.chip_padding || "0 10px";
+      const chipFontSize = Math.max(11, parseSizeToPixels(styles.chip_font_size, 11));
+      const mapImageUrl = this._getMapImageUrl(state);
+      const previousMapNorm = stripMapCacheBuster(previousImageSrc);
+      const nextMapNorm = stripMapCacheBuster(mapImageUrl || "");
+      const mapImageStartsPending =
+        Boolean(mapImageUrl) &&
+        previousImage?.tagName === "IMG" &&
+        Boolean(previousMapNorm) &&
+        Boolean(nextMapNorm) &&
+        previousMapNorm !== nextMapNorm;
+      const unavailable = isUnavailableState(state) || !mapImageUrl;
+      this._syncRememberedModeSelections(state);
+      this._sanitizeSelectedManualZoneIndex();
+      const roomColor = styles.map.room_color || "rgba(97, 201, 122, 0.18)";
+      const roomBorder = styles.map.room_border || "rgba(97, 201, 122, 0.55)";
+      const zoneColor = styles.map.zone_color || "rgba(90, 167, 255, 0.18)";
+      const zoneBorder = styles.map.zone_border || "rgba(90, 167, 255, 0.72)";
+      const gotoColor = styles.map.goto_color || "#f6b73c";
+      const isRoomSelectionMode = currentMode.id === "rooms";
+      const isRoomSelectionLocked = this._isRoomSelectionLocked(state);
+      const roomModeCleaningZones = isRoomSelectionMode ? this._activeCleaningZones : [];
+      const zoneModeCleaningZones = currentMode.id === "zone" ? this._activeCleaningZones : [];
+      const showRoomSelectionDim = isRoomSelectionMode;
+      const showRealRoomSelectionColors = isRoomSelectionMode && (highlightedRoomIds.size > 0 || roomModeCleaningZones.length > 0);
+      const hasPendingZoneSelection = currentMode.id === "zone" && (
+        this._selectedPredefinedZoneIds.length > 0 ||
+        this._manualZones.length > 0
+      );
+      const primaryButtonIcon = hasPendingZoneSelection
+        ? "mdi:check"
+        : this._isCleaning(state)
+          ? "mdi:pause"
+          : "mdi:play";
+      const primaryButtonTitle = hasPendingZoneSelection
+        ? (isCleaningSessionActive
+          ? (advanceVacuumStrings?.actions?.addZoneToClean || "Add zone to cleaning")
+          : (advanceVacuumStrings?.actions?.cleanZone || "Clean zone"))
+        : (advanceVacuumStrings?.actions?.run || "Run");
+      const modeDescriptors = this._getModeDescriptors(state);
+      const dockControlDescriptors = this._getDockControlDescriptors(state);
+      const dockSettingDescriptors = this._getDockSettingDescriptors(state);
+      const activeModePanelPresetConfig = this._getActiveModePanelPresetConfig(state);
+      const activeDockPanelSectionConfig = this._getDockPanelSectionConfig();
+      const isRoutinesMode = currentMode.id === "routines";
+      const showPrimaryActionButton = !isRoutinesMode;
+      const showModeMenuButton = !isRoutinesMode && (modeDescriptors.length > 0 || this._activeMode !== "all");
+      const showDockMenuButton = !isRoutinesMode && (dockControlDescriptors.length > 0 || dockSettingDescriptors.length > 0);
+      const utilityPanelMarkup = isRoutinesMode
+        ? ""
+        : this._activeUtilityPanel === "modes"
+          ? this._renderModePanel(state)
+          : this._activeUtilityPanel === "dock"
+            ? this._renderDockPanel(state)
+            : "";
+      const mapTransformStyle = `transform: translate(${this._mapOffset.x.toFixed(1)}px, ${this._mapOffset.y.toFixed(1)}px) scale(${this._mapScale.toFixed(3)});`;
+
+      const selectedPredefinedZones = predefinedZones.filter(zone => this._selectedPredefinedZoneIds.includes(zone.id));
+      const allZoneRects = [
+      ...zoneModeCleaningZones.map(zone => ({ ...zone, predefined: false, active: true })),
+      ...selectedPredefinedZones.flatMap(zone => zone.zones.map(item => ({
+        x1: Number(item[0]),
+        y1: Number(item[1]),
+        x2: Number(item[2]),
+        y2: Number(item[3]),
+        predefined: true,
+      }))),
+      ...this._manualZones.map(zone => ({ ...zone, predefined: false })),
+      ...(this._draftZone ? [{ ...this._draftZone, predefined: false, draft: true }] : []),
+      ];
+
+      const vacuumMarkup = `
+      <style>
+        :host {
+          --advance-vacuum-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
+          --advance-vacuum-card-content-duration: ${animations.enabled ? animations.contentDuration : 0}ms;
+          --advance-vacuum-card-panel-duration: ${animations.enabled ? animations.panelDuration : 0}ms;
+          --av-surface: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          --av-surface-raised: color-mix(in srgb, var(--primary-text-color) 7%, transparent);
+          --av-border: color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          --av-border-strong: color-mix(in srgb, var(--primary-text-color) 14%, transparent);
+          --av-inset: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          --av-inset-soft: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          --av-float: 0 10px 24px rgba(0, 0, 0, 0.12);
+          --av-float-subtle: 0 6px 18px rgba(0, 0, 0, 0.1);
+          --av-accent-hover: color-mix(in srgb, ${accentColor} 12%, color-mix(in srgb, var(--primary-text-color) 6%, transparent));
+          --av-accent-hover-shadow: 0 6px 14px color-mix(in srgb, ${accentColor} 10%, transparent);
+          --av-selected-bg: color-mix(in srgb, ${accentColor} 22%, color-mix(in srgb, var(--primary-text-color) 7%, transparent));
+          --av-selected-border: color-mix(in srgb, ${accentColor} 38%, color-mix(in srgb, var(--primary-text-color) 12%, transparent));
+          --av-selected-inset: color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+          --av-selected-glow: 0 8px 20px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.12));
+          --av-selected-ring: 0 0 0 2px color-mix(in srgb, ${accentColor} 30%, transparent);
+          --av-cta-bg: color-mix(in srgb, ${accentColor} 18%, color-mix(in srgb, var(--primary-text-color) 6%, transparent));
+          --av-cta-border: color-mix(in srgb, ${accentColor} 48%, color-mix(in srgb, var(--primary-text-color) 14%, transparent));
+          --av-cta-inset: color-mix(in srgb, ${accentColor} 28%, transparent);
+          --av-cta-float: 0 12px 28px color-mix(in srgb, ${accentColor} 16%, rgba(0, 0, 0, 0.12));
+          --av-cta-color: ${styles.control.accent_color};
+          --av-float-lift: 0 16px 30px rgba(0, 0, 0, 0.14);
+          --av-accent-tile-bg: color-mix(in srgb, ${accentColor} 14%, color-mix(in srgb, var(--primary-text-color) 6%, transparent));
+          --av-accent-tile-border: color-mix(in srgb, ${accentColor} 32%, color-mix(in srgb, var(--primary-text-color) 12%, transparent));
+          --av-accent-tile-inset: color-mix(in srgb, ${accentColor} 22%, transparent);
+          display: block;
+        }
+
+        * {
+          box-sizing: border-box;
+        }
+
+        ha-card {
+          overflow: hidden;
+        }
+
+        .advance-vacuum-card {
+          background:
+            radial-gradient(circle at top left, color-mix(in srgb, ${accentColor} 12%, transparent) 0%, transparent 42%),
+            linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(0,0,0,0.03) 100%),
+            ${styles.card.background};
+          border: 1px solid color-mix(in srgb, ${accentColor} 20%, var(--divider-color));
+          border-radius: ${styles.card.border_radius};
+          box-shadow: ${styles.card.box_shadow}, 0 18px 34px color-mix(in srgb, ${accentColor} 8%, rgba(0,0,0,0.14));
+          color: var(--primary-text-color);
+          display: grid;
+          gap: ${styles.card.gap};
+          overflow: hidden;
+          padding: ${styles.card.padding};
+          position: relative;
+        }
+
+        .advance-vacuum-card--entering {
+          animation: advance-vacuum-card-enter var(--advance-vacuum-card-content-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        }
+
+        .advance-vacuum-card--entering .advance-vacuum-card__map {
+          animation: advance-vacuum-map-enter var(--advance-vacuum-card-content-duration) cubic-bezier(0.2, 0.85, 0.25, 1) 60ms both;
+        }
+
+        .advance-vacuum-card--entering .advance-vacuum-card__footer {
+          animation: advance-vacuum-footer-enter var(--advance-vacuum-card-content-duration) cubic-bezier(0.22, 0.84, 0.26, 1) 100ms both;
+        }
+
+        .advance-vacuum-card__footer {
+          align-items: center;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          width: 100%;
+        }
+
+        .advance-vacuum-card__header,
+        .advance-vacuum-card__icon,
+        .advance-vacuum-card__unavailable,
+        .advance-vacuum-card__header-main,
+        .advance-vacuum-card__title,
+        .advance-vacuum-card__chips,
+        .advance-vacuum-card__chip,
+        .advance-vacuum-card__header-actions,
+        .advance-vacuum-card__header-action {
+          display: none !important;
+        }
+
+        .advance-vacuum-card__control,
+        .advance-vacuum-card__mode-button,
+        .advance-vacuum-card__goto-marker,
+        .advance-vacuum-card__room-marker {
+          appearance: none;
+          background: none;
+          border: none;
+          color: inherit;
+          cursor: pointer;
+          font: inherit;
+          margin: 0;
+          padding: 0;
+        }
+
+        .advance-vacuum-card__control {
+          align-items: center;
+          background: var(--av-surface);
+          border: 1px solid var(--av-border);
+          border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 var(--av-inset),
+            var(--av-float);
+          display: inline-flex;
+          flex-shrink: 0;
+          height: ${controlSize}px;
+          justify-content: center;
+          transition: transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1), box-shadow 180ms ease, border-color 180ms ease, background 180ms ease, color 180ms ease;
+          width: ${controlSize}px;
+        }
+
+        .advance-vacuum-card__control:hover {
+          transform: translateY(-1px);
+        }
+
+        .advance-vacuum-card__mode-button:hover {
+          transform: translateY(-1px);
+        }
+
+        :is(
+          .advance-vacuum-card__control--primary,
+          .advance-vacuum-card__mode-button,
+          .advance-vacuum-card__map-tool,
+          .advance-vacuum-card__room-marker,
+          .advance-vacuum-card__goto-marker,
+          .advance-vacuum-card__routine-button,
+          .advance-vacuum-card__utility-option,
+          .advance-vacuum-card__selection-chip,
+          .advance-vacuum-card__zone-handle
+        ).is-pressing:not(.is-disabled):not(:disabled) {
+          animation: advance-vacuum-button-bounce var(--advance-vacuum-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
+        }
+
+        .advance-vacuum-card__control.is-pressing:not(.is-disabled):not(:disabled):not(.advance-vacuum-card__control--primary) {
+          animation: advance-vacuum-button-bounce-subtle var(--advance-vacuum-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
+        }
+
+        .advance-vacuum-card__control ha-icon {
+          --mdc-icon-size: ${Math.round(controlSize * 0.48)}px;
+        }
+
+        .advance-vacuum-card__control--active-motion ha-icon {
+          animation: advance-vacuum-icon-sweep 1.45s ease-in-out infinite;
+          transform-origin: 50% 70%;
+        }
+
+        .advance-vacuum-card__modes {
+          display: flex;
+          justify-content: center;
+          width: 100%;
+        }
+
+        .advance-vacuum-card__modes-bubble {
+          background: var(--av-surface);
+          border: 1px solid var(--av-border);
+          border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-float-subtle);
+          display: inline-flex;
+          flex-wrap: wrap;
+          gap: 4px;
+          justify-content: center;
+          max-width: 100%;
+          padding: 4px;
+        }
+
+        .advance-vacuum-card__mode-button {
+          align-items: center;
+          background: transparent;
+          border: 1px solid transparent;
+          border-radius: 999px;
+          box-shadow: none;
+          color: var(--secondary-text-color);
+          display: inline-flex;
+          font-size: 12px;
+          font-weight: 600;
+          gap: 8px;
+          min-height: 30px;
+          padding: 0 11px;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, color 180ms ease, transform 180ms cubic-bezier(0.2, 0.9, 0.24, 1);
+        }
+
+        .advance-vacuum-card__mode-button:hover {
+          background: var(--av-accent-hover);
+          box-shadow: var(--av-accent-hover-shadow);
+        }
+
+        .advance-vacuum-card__mode-button.is-active {
+          background: var(--av-selected-bg);
+          border-color: var(--av-selected-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-selected-inset),
+            var(--av-selected-glow);
+          color: var(--primary-text-color);
+          font-weight: 700;
+        }
+
+        .advance-vacuum-card__mode-button ha-icon {
+          --mdc-icon-size: 15px;
+        }
+
+        .advance-vacuum-card__utility-panel {
+          animation: advance-vacuum-utility-panel-in var(--advance-vacuum-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) forwards;
+          display: grid;
+          gap: 10px;
+          justify-items: center;
+          opacity: 0;
+          transform: translateY(-6px);
+          transform-origin: top center;
+          width: 100%;
+        }
+
+        .advance-vacuum-card__utility-panel-slot {
+          display: flex;
+          justify-content: center;
+          width: 100%;
+        }
+
+        .advance-vacuum-card__utility-group {
+          display: grid;
+          gap: 8px;
+          justify-items: center;
+          width: 100%;
+        }
+
+        .advance-vacuum-card__utility-label {
+          color: var(--secondary-text-color);
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+        }
+
+        .advance-vacuum-card__utility-options {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          justify-content: center;
+          width: 100%;
+        }
+
+        .advance-vacuum-card__utility-options--menu {
+          max-width: 100%;
+        }
+
+        .advance-vacuum-card__utility-options--presets {
+          justify-content: center;
+        }
+
+        .advance-vacuum-card__utility-option {
+          align-items: center;
+          appearance: none;
+          background: var(--av-surface);
+          border: 1px solid var(--av-border);
+          border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-float-subtle);
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font: inherit;
+          gap: 8px;
+          justify-content: center;
+          margin: 0;
+          min-height: 34px;
+          padding: 0 12px;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, color 180ms ease, transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1);
+        }
+
+        .advance-vacuum-card__utility-option.is-active {
+          background: var(--av-selected-bg);
+          border-color: var(--av-selected-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-selected-inset),
+            var(--av-selected-ring),
+            var(--av-selected-glow);
+          color: var(--primary-text-color);
+          font-weight: 700;
+        }
+
+        .advance-vacuum-card__utility-option:not(.is-active):hover {
+          background: var(--av-accent-hover);
+          border-color: var(--av-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-accent-hover-shadow);
+        }
+
+        .advance-vacuum-card__utility-option--menu ha-icon {
+          --mdc-icon-size: 16px;
+        }
+
+        .advance-vacuum-card__utility-field {
+          display: grid;
+          gap: 8px;
+          justify-items: center;
+          max-width: 340px;
+          width: min(100%, 340px);
+        }
+
+        .advance-vacuum-card__utility-select {
+          appearance: none;
+          background: var(--av-surface);
+          border: 1px solid var(--av-border);
+          border-radius: 16px;
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-float-subtle);
+          color: var(--primary-text-color);
+          cursor: pointer;
+          font: inherit;
+          min-height: 42px;
+          padding: 0 14px;
+          text-align: center;
+          width: 100%;
+        }
+
+        .advance-vacuum-card__utility-meta {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          justify-content: center;
+          width: 100%;
+        }
+
+        .advance-vacuum-card__utility-chip-group {
+          display: grid;
+          gap: 6px;
+          justify-items: center;
+        }
+
+        .advance-vacuum-card__map {
+          background:
+            linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent) 0%, color-mix(in srgb, var(--primary-text-color) 2%, transparent) 100%),
+            color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border: 1px solid var(--av-border);
+          border-radius: ${cardRadius}px;
+          margin: -${mapTopBleed}px -${mapHorizontalBleed}px 0;
+          overflow: hidden;
+          position: relative;
+        }
+
+        .advance-vacuum-card__map-surface {
+          aspect-ratio: ${this._mapImageWidth} / ${this._mapImageHeight};
+          min-height: ${mapMinHeight}px;
+          overflow: hidden;
+          position: relative;
+          touch-action: pan-y;
+          user-select: none;
+        }
+
+        .advance-vacuum-card__map-viewport {
+          inset: 0;
+          overflow: hidden;
+          position: absolute;
+        }
+
+        .advance-vacuum-card__map-canvas {
+          height: 100%;
+          inset: 0;
+          position: absolute;
+          transform-origin: top left;
+          width: 100%;
+        }
+
+        .advance-vacuum-card__map-image {
+          display: block;
+          height: 100%;
+          inset: 0;
+          object-fit: cover;
+          opacity: 1;
+          position: absolute;
+          transition: opacity 220ms ease-out;
+          width: 100%;
+          z-index: 0;
+        }
+
+        .advance-vacuum-card__map-image[data-map-image-previous="true"] {
+          z-index: 0;
+        }
+
+        .advance-vacuum-card__map-image[data-map-image] {
+          z-index: 1;
+        }
+
+        .advance-vacuum-card__map-image.is-pending,
+        .advance-vacuum-card__map-image.is-fading-out {
+          opacity: 0;
+        }
+
+        .advance-vacuum-card__map-room-dim,
+        .advance-vacuum-card__room-highlight-layer,
+        .advance-vacuum-card__map-svg,
+        .advance-vacuum-card__map-markers,
+        .advance-vacuum-card__map-overlays {
+          inset: 0;
+          position: absolute;
+        }
+
+        .advance-vacuum-card__map-room-dim {
+          background: rgba(8, 12, 20, 0.5);
+          pointer-events: none;
+          z-index: 1;
+        }
+
+        .advance-vacuum-card__room-highlight-layer {
+          pointer-events: none;
+          z-index: 2;
+        }
+
+        .advance-vacuum-card__room-highlight-image {
+          display: block;
+          height: 100%;
+          inset: 0;
+          object-fit: cover;
+          pointer-events: none;
+          position: absolute;
+          width: 100%;
+        }
+
+        .advance-vacuum-card__map-svg {
+          height: 100%;
+          pointer-events: none;
+          width: 100%;
+          z-index: 3;
+        }
+
+        .advance-vacuum-card__map-markers {
+          pointer-events: none;
+        }
+
+        .advance-vacuum-card__map-overlays {
+          pointer-events: none;
+          z-index: 4;
+        }
+
+        .advance-vacuum-card__room-polygon {
+          cursor: pointer;
+          fill: rgba(255, 255, 255, 0.01);
+          pointer-events: all;
+          stroke: rgba(255,255,255,0.16);
+          stroke-dasharray: 10 10;
+          stroke-width: 10;
+          touch-action: manipulation;
+          transition: fill 160ms ease, stroke 160ms ease;
+        }
+
+        .advance-vacuum-card__room-polygon.is-selected {
+          fill: ${roomColor};
+          stroke: ${roomBorder};
+        }
+
+        .advance-vacuum-card__room-polygon.is-revealed {
+          fill: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          stroke: rgba(255, 255, 255, 0.42);
+        }
+
+        .advance-vacuum-card__room-polygon.is-readonly {
+          cursor: default;
+          pointer-events: none;
+        }
+
+        .advance-vacuum-card__zone-rect {
+          fill: ${zoneColor};
+          stroke: ${zoneBorder};
+          stroke-dasharray: 16 12;
+          stroke-linecap: round;
+          stroke-width: 10;
+        }
+
+        .advance-vacuum-card__zone-rect.is-draft {
+          opacity: 0.72;
+        }
+
+        .advance-vacuum-card__zone-rect--room-overlay {
+          fill: ${roomColor};
+          stroke: ${roomBorder};
+        }
+
+        .advance-vacuum-card__goto-line {
+          stroke: color-mix(in srgb, ${gotoColor} 72%, rgba(255,255,255,0.8));
+          stroke-dasharray: 10 10;
+          stroke-width: 8;
+        }
+
+        .advance-vacuum-card__zone-hitbox,
+        .advance-vacuum-card__zone-handle,
+        .advance-vacuum-card__map-tool {
+          appearance: none;
+          background: none;
+          border: none;
+          color: inherit;
+          cursor: pointer;
+          font: inherit;
+          margin: 0;
+          padding: 0;
+        }
+
+        .advance-vacuum-card__zone-hitbox {
+          background: rgba(255,255,255,0.01);
+          border: 2px dashed transparent;
+          border-radius: 16px;
+          pointer-events: auto;
+          position: absolute;
+          touch-action: none;
+          z-index: 2;
+        }
+
+        .advance-vacuum-card__zone-hitbox.is-selected {
+          border-color: color-mix(in srgb, ${accentColor} 46%, rgba(255,255,255,0.18));
+        }
+
+        .advance-vacuum-card__zone-handle {
+          align-items: center;
+          background: var(--av-surface-raised);
+          border: 1px solid var(--av-border-strong);
+          border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 var(--av-inset),
+            var(--av-float);
+          color: var(--primary-text-color);
+          display: inline-flex;
+          height: 34px;
+          justify-content: center;
+          pointer-events: auto;
+          position: absolute;
+          touch-action: none;
+          transform: translate(-50%, -50%);
+          width: 34px;
+          z-index: 3;
+        }
+
+        .advance-vacuum-card__zone-handle[data-zone-handle-action="move"] {
+          border-color: color-mix(in srgb, ${accentColor} 40%, color-mix(in srgb, var(--primary-text-color) 14%, transparent));
+          color: color-mix(in srgb, ${accentColor} 75%, var(--primary-text-color));
+        }
+
+        .advance-vacuum-card__zone-handle[data-zone-handle-action="delete"] {
+          border-color: rgba(255, 130, 130, 0.32);
+          color: #ffb3b3;
+        }
+
+        .advance-vacuum-card__zone-handle ha-icon,
+        .advance-vacuum-card__map-tool ha-icon {
+          --mdc-icon-size: 16px;
+        }
+
+        .advance-vacuum-card__map-tools {
+          align-items: flex-start;
+          display: flex;
+          gap: 8px;
+          justify-content: space-between;
+          left: 12px;
+          pointer-events: none;
+          position: absolute;
+          right: 12px;
+          top: 12px;
+          z-index: 4;
+        }
+
+        .advance-vacuum-card__map-tools-group {
+          display: flex;
+          gap: 8px;
+        }
+
+        .advance-vacuum-card__map-tools-group--center {
+          left: 50%;
+          pointer-events: none;
+          position: absolute;
+          top: 0;
+          transform: translateX(-50%);
+        }
+
+        .advance-vacuum-card__map-tools-group--right {
+          justify-content: flex-end;
+        }
+
+        .advance-vacuum-card__map-tool--back {
+          padding: 0;
+          width: 44px;
+        }
+
+        .advance-vacuum-card__map-tool--status {
+          padding: 0;
+          pointer-events: none;
+          width: 44px;
+        }
+
+        .advance-vacuum-card__map-tool--status-charging {
+          color: #f6b73c;
+        }
+
+        .advance-vacuum-card__map-tool--status-wash {
+          color: ${styles.icon.washing_color || "#5aa7ff"};
+        }
+
+        .advance-vacuum-card__map-tool--status-dry {
+          color: ${styles.icon.drying_color || "#f1c24c"};
+        }
+
+        .advance-vacuum-card__map-tool--status-empty {
+          color: ${styles.icon.emptying_color || "#9b6b4a"};
+        }
+
+        .advance-vacuum-card__map-tool {
+          align-items: center;
+          background: var(--av-surface-raised);
+          border: 1px solid var(--av-border-strong);
+          border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 var(--av-inset),
+            var(--av-float);
+          color: var(--primary-text-color);
+          display: inline-flex;
+          gap: 6px;
+          justify-content: center;
+          min-height: 44px;
+          min-width: 44px;
+          padding: 0 14px;
+          pointer-events: auto;
+          transition: transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1), box-shadow 180ms ease, border-color 180ms ease, background 180ms ease, filter 180ms ease;
+        }
+
+        .advance-vacuum-card__map-tool--add {
+          background: var(--av-selected-bg);
+          border-color: var(--av-selected-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-selected-inset),
+            var(--av-selected-glow);
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .advance-vacuum-card__map-tool-label {
+          line-height: 1;
+        }
+
+        .advance-vacuum-card__map-tool.is-disabled {
+          opacity: 0.45;
+        }
+
+        .advance-vacuum-card__map-tool:not(.advance-vacuum-card__map-tool--status):not(.advance-vacuum-card__map-tool--add):not(.is-disabled):hover {
+          background: var(--av-accent-hover);
+          border-color: var(--av-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-accent-hover-shadow);
+        }
+
+        .advance-vacuum-card__map-tool--add:not(.is-disabled):hover {
+          filter: brightness(1.05);
+          transform: translateY(-1px);
+        }
+
+        .advance-vacuum-card__room-marker,
+        .advance-vacuum-card__goto-marker {
+          align-items: center;
+          background: var(--av-surface-raised);
+          border: 1px solid var(--av-border);
+          border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-float);
+          color: var(--primary-text-color);
+          display: inline-flex;
+          gap: var(--room-marker-gap, 8px);
+          justify-content: center;
+          left: 0;
+          min-height: var(--marker-size, 34px);
+          min-width: var(--marker-size, 34px);
+          padding: var(--room-marker-padding, 0 12px);
+          pointer-events: auto;
+          position: absolute;
+          top: 0;
+          touch-action: manipulation;
+          transform: translate(-50%, -50%);
+          white-space: nowrap;
+          z-index: 2;
+        }
+
+        .advance-vacuum-card__room-marker.is-icon-only {
+          border-radius: 999px;
+          padding: 0;
+          width: var(--marker-size, 34px);
+        }
+
+        .advance-vacuum-card__room-marker.is-readonly,
+        .advance-vacuum-card__room-chip.is-readonly {
+          cursor: default;
+          opacity: 0.96;
+        }
+
+        .advance-vacuum-card__room-marker.is-selected,
+        .advance-vacuum-card__goto-marker.is-selected {
+          background: var(--av-selected-bg);
+          border-color: var(--av-selected-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-selected-inset),
+            var(--av-selected-glow);
+        }
+
+        .advance-vacuum-card__room-marker ha-icon,
+        .advance-vacuum-card__goto-marker ha-icon {
+          --mdc-icon-size: var(--room-icon-size, 16px);
+        }
+
+        .advance-vacuum-card__room-marker span {
+          font-size: var(--room-label-size, ${Math.max(11, parseSizeToPixels(styles.map.label_size, 12))}px);
+          font-weight: 600;
+        }
+
+        .advance-vacuum-card__goto-marker {
+          height: 38px;
+          width: 38px;
+        }
+
+        .advance-vacuum-card__room-list {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          justify-content: center;
+          width: 100%;
+        }
+
+        .advance-vacuum-card__room-chip {
+          align-items: center;
+          background: var(--av-surface);
+          border: 1px solid var(--av-border);
+          border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-float-subtle);
+          color: var(--secondary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          gap: 8px;
+          min-height: 36px;
+          padding: 0 14px;
+          touch-action: manipulation;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, color 180ms ease, transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1);
+        }
+
+        .advance-vacuum-card__room-chip.is-selected {
+          background: var(--av-selected-bg);
+          border-color: var(--av-selected-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-selected-inset),
+            var(--av-selected-glow);
+          color: var(--primary-text-color);
+        }
+
+        .advance-vacuum-card__room-chip:not(.is-readonly):not(.is-selected):hover {
+          background: var(--av-accent-hover);
+          border-color: var(--av-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-accent-hover-shadow);
+        }
+
+        .advance-vacuum-card__room-chip ha-icon {
+          --mdc-icon-size: 16px;
+        }
+
+        .advance-vacuum-card__room-chip span {
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .advance-vacuum-card__controls {
+          align-items: center;
+          display: grid;
+          gap: 10px;
+          justify-items: center;
+          width: 100%;
+        }
+
+        .advance-vacuum-card__controls-row {
+          align-items: center;
+          column-gap: 14px;
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+          width: 100%;
+        }
+
+        .advance-vacuum-card__controls-slot {
+          align-items: center;
+          display: flex;
+          min-height: ${Math.round(controlSize * 1.16)}px;
+        }
+
+        .advance-vacuum-card__controls-slot--left {
+          gap: 10px;
+          justify-content: flex-end;
+        }
+
+        .advance-vacuum-card__controls-slot--center {
+          flex: 0 0 auto;
+          justify-content: center;
+        }
+
+        .advance-vacuum-card__controls-slot--right {
+          gap: 10px;
+          justify-content: flex-start;
+        }
+
+        .advance-vacuum-card__control.is-panel-open {
+          background: var(--av-selected-bg);
+          border-color: var(--av-selected-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-selected-inset),
+            var(--av-selected-glow);
+          color: var(--primary-text-color);
+          height: ${controlSize}px;
+          width: ${controlSize}px;
+        }
+
+        .advance-vacuum-card__control--primary {
+          background: var(--av-cta-bg);
+          border-color: var(--av-cta-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-cta-inset),
+            var(--av-cta-float);
+          color: var(--av-cta-color);
+          flex-shrink: 0;
+          height: ${Math.round(controlSize * 1.16)}px;
+          width: ${Math.round(controlSize * 1.16)}px;
+        }
+
+        .advance-vacuum-card__control--primary ha-icon {
+          --mdc-icon-size: ${Math.round(controlSize * 1.16 * 0.48)}px;
+        }
+
+        .advance-vacuum-card__selection-chip {
+          align-items: center;
+          background: var(--av-surface);
+          border: 1px solid var(--av-border);
+          border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-float-subtle);
+          color: var(--secondary-text-color);
+          display: inline-flex;
+          font-size: 12px;
+          font-weight: 600;
+          gap: 8px;
+          min-height: 34px;
+          padding: 0 12px;
+        }
+
+        .advance-vacuum-card__selection-chip strong {
+          color: var(--primary-text-color);
+        }
+
+        .advance-vacuum-card__selection-chip:hover {
+          background: var(--av-accent-hover);
+          border-color: var(--av-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-accent-hover-shadow);
+        }
+
+        .advance-vacuum-card__routines {
+          display: grid;
+          gap: 10px;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          width: 100%;
+        }
+
+        .advance-vacuum-card__routine-button {
+          align-items: center;
+          appearance: none;
+          background: var(--av-surface);
+          border: 1px solid var(--av-border);
+          border-radius: 18px;
+          box-shadow:
+            inset 0 1px 0 var(--av-inset),
+            var(--av-float);
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: grid;
+          gap: 10px;
+          justify-items: center;
+          min-height: 118px;
+          padding: 16px 14px;
+          text-align: center;
+          transition: transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1), box-shadow 180ms ease, border-color 180ms ease;
+          width: 100%;
+        }
+
+        .advance-vacuum-card__routine-button:hover {
+          transform: translateY(-1px);
+          box-shadow:
+            inset 0 1px 0 var(--av-inset),
+            var(--av-float-lift);
+        }
+
+        .advance-vacuum-card__routine-button.is-disabled {
+          cursor: default;
+          opacity: 0.5;
+        }
+
+        .advance-vacuum-card__routine-icon {
+          align-items: center;
+          background: var(--av-accent-tile-bg);
+          border: 1px solid var(--av-accent-tile-border);
+          border-radius: 999px;
+          box-shadow: inset 0 1px 0 var(--av-accent-tile-inset);
+          display: inline-flex;
+          height: 46px;
+          justify-content: center;
+          width: 46px;
+        }
+
+        .advance-vacuum-card__routine-icon ha-icon {
+          --mdc-icon-size: 22px;
+        }
+
+        .advance-vacuum-card__routine-label {
+          font-size: 12px;
+          font-weight: 700;
+          line-height: 1.35;
+          text-wrap: balance;
+        }
+
+        @keyframes advance-vacuum-utility-panel-in {
+          from {
+            opacity: 0;
+            transform: translateY(-6px);
+          }
+
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes advance-vacuum-card-enter {
+          0% {
+            opacity: 0;
+            transform: translateY(8px) scale(0.992);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes advance-vacuum-map-enter {
+          0% {
+            opacity: 0;
+            transform: translateY(12px) scale(0.988);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes advance-vacuum-footer-enter {
+          0% {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes advance-vacuum-button-bounce {
+          0% { transform: scale(1); }
+          38% { transform: scale(0.935); }
+          72% { transform: scale(1.035); }
+          100% { transform: scale(1); }
+        }
+
+        @keyframes advance-vacuum-button-bounce-subtle {
+          0% { transform: scale(1); }
+          40% { transform: scale(0.965); }
+          72% { transform: scale(1.02); }
+          100% { transform: scale(1); }
+        }
+
+        @keyframes advance-vacuum-icon-sweep {
+          0%, 100% { transform: translateX(-3px) rotate(-10deg); }
+          50% { transform: translateX(4px) rotate(12deg); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .advance-vacuum-card,
+          .advance-vacuum-card *,
+          .advance-vacuum-card__control--active-motion ha-icon {
+            animation: none !important;
+            transition: none !important;
+          }
+        }
+      </style>
+      <ha-card class="advance-vacuum-card ${shouldAnimateEntrance ? "advance-vacuum-card--entering" : ""}">
+        <div class="advance-vacuum-card__map">
+          <div class="advance-vacuum-card__map-surface" data-map-surface="main">
+            <div class="advance-vacuum-card__map-viewport">
+              <div class="advance-vacuum-card__map-canvas" style="${mapTransformStyle}">
+                ${
+                  mapImageUrl
+                    ? `<img class="advance-vacuum-card__map-image${mapImageStartsPending ? " is-pending" : ""}" data-map-image src="${escapeHtml(mapImageUrl)}" alt="${escapeHtml(advanceVacuumStrings?.utility?.mapImageAlt || "Robot map")}" />`
+                    : `<div class="advance-vacuum-card__map-image" style="display:flex;align-items:center;justify-content:center;color:var(--secondary-text-color);">${escapeHtml(advanceVacuumStrings?.utility?.mapUnavailable || "Map unavailable")}</div>`
+                }
+                ${showRoomSelectionDim ? `<div class="advance-vacuum-card__map-room-dim"></div>` : ""}
+                ${showRealRoomSelectionColors ? this._renderRoomSelectionHighlights(rooms, highlightedRoomIds, mapImageUrl, this._activeMode) : ""}
+                ${showRealRoomSelectionColors ? this._renderZoneSelectionHighlights(roomModeCleaningZones, mapImageUrl, this._activeMode) : ""}
+                <svg class="advance-vacuum-card__map-svg" viewBox="0 0 ${this._mapImageWidth} ${this._mapImageHeight}" preserveAspectRatio="none">
+                  ${currentMode.id === "rooms" ? rooms.map(room => room.outlines.map(outline => `
+                    <polygon
+                      class="advance-vacuum-card__room-polygon ${highlightedRoomIds.has(String(room.id)) ? (showRealRoomSelectionColors ? "is-revealed" : "is-selected") : ""} ${isRoomSelectionLocked ? "is-readonly" : ""}"
+                      data-room-id="${escapeHtml(room.id)}"
+                      points="${escapeHtml(this._vacuumOutlineToSvgPoints(outline))}"
+                    ></polygon>
+                  `).join("")).join("") : ""}
+
+                  ${currentMode.id === "rooms" ? roomModeCleaningZones.map(zone => {
+                    const rect = this._zoneToSvgRect(zone);
+                    return `
+                      <rect
+                        class="advance-vacuum-card__zone-rect advance-vacuum-card__zone-rect--room-overlay"
+                        x="${rect.x.toFixed(1)}"
+                        y="${rect.y.toFixed(1)}"
+                        width="${rect.width.toFixed(1)}"
+                        height="${rect.height.toFixed(1)}"
+                        rx="18"
+                        ry="18"
+                      ></rect>
+                    `;
+                  }).join("") : ""}
+
+                  ${currentMode.id === "zone" ? allZoneRects.map(zone => {
+                    const rect = this._zoneToSvgRect(zone);
+                    return `
+                      <rect
+                        class="advance-vacuum-card__zone-rect ${zone.draft ? "is-draft" : ""}"
+                        x="${rect.x.toFixed(1)}"
+                        y="${rect.y.toFixed(1)}"
+                        width="${rect.width.toFixed(1)}"
+                        height="${rect.height.toFixed(1)}"
+                        rx="18"
+                        ry="18"
+                      ></rect>
+                    `;
+                  }).join("") : ""}
+
+                  ${
+                    currentMode.id === "goto" && this._gotoPoint
+                      ? (() => {
+                          const mapped = this._converter.vacuumToMap(this._gotoPoint.x, this._gotoPoint.y);
+                          return `
+                            <circle cx="${mapped.x.toFixed(1)}" cy="${mapped.y.toFixed(1)}" r="22" fill="color-mix(in srgb, ${gotoColor} 22%, rgba(255,255,255,0.08))"></circle>
+                            <circle cx="${mapped.x.toFixed(1)}" cy="${mapped.y.toFixed(1)}" r="10" fill="${gotoColor}" stroke="rgba(255,255,255,0.94)" stroke-width="5"></circle>
+                          `;
+                        })()
+                      : ""
+                  }
+                </svg>
+              </div>
+            </div>
+            <div class="advance-vacuum-card__map-overlays">
+              ${this._renderManualZoneEditors()}
+              ${currentMode.id === "rooms" ? this._renderRoomMarkers(rooms) : ""}
+              ${currentMode.id === "goto" ? this._renderGotoMarkers(gotoPoints) : ""}
+              ${
+                currentMode.id === "zone" ? predefinedZones.map(zone => {
+                  const position = zone.position || centroid(zone.zones.map(item => ({ x: Number(item[0]), y: Number(item[1]) })));
+                  const percent = this._vacuumToViewportPercent(position);
+                  const selected = this._selectedPredefinedZoneIds.includes(zone.id);
+                  return `
+                    <button
+                      class="advance-vacuum-card__room-marker ${selected ? "is-selected" : ""}"
+                      style="left:${percent.left}%; top:${percent.top}%;"
+                      data-zone-id="${escapeHtml(zone.id)}"
+                      title="${escapeHtml(zone.label || zone.id)}"
+                    >
+                      <ha-icon icon="${escapeHtml(zone.icon || "mdi:vector-rectangle")}"></ha-icon>
+                      <span>${escapeHtml(zone.label || zone.id)}</span>
+                    </button>
+                  `;
+                }).join("") : ""
+              }
+            </div>
+            ${this._renderMapTools()}
+          </div>
+        </div>
+
+        ${this._renderRoomFallbackList(rooms, this._activeMode)}
+
+        <div class="advance-vacuum-card__footer">
+
+        ${
+          !isCleaningSessionActive
+            ? `
+              <div class="advance-vacuum-card__modes">
+                <div class="advance-vacuum-card__modes-bubble" role="tablist" aria-label="${escapeHtml(advanceVacuumStrings?.aria?.modeTablist || "Modo de limpieza")}">
+                ${modes.map(mode => `
+                  <button type="button" class="advance-vacuum-card__mode-button ${mode.id === this._activeMode ? "is-active" : ""}" data-mode-id="${escapeHtml(mode.id)}" role="tab" aria-selected="${mode.id === this._activeMode ? "true" : "false"}">
+                    <span>${escapeHtml(mode.label)}</span>
+                  </button>
+                `).join("")}
+                </div>
+              </div>
+            `
+            : ""
+        }
+
+        ${this._renderRoutinesPanel(state)}
+
+        <div class="advance-vacuum-card__controls">
+          <div class="advance-vacuum-card__controls-row">
+            <div class="advance-vacuum-card__controls-slot advance-vacuum-card__controls-slot--left">
+              ${
+                showModeMenuButton
+                  ? `
+                    <button type="button" class="advance-vacuum-card__control ${this._activeUtilityPanel === "modes" ? "is-panel-open" : ""}" data-control-action="toggle_modes" title="${escapeHtml((activeModePanelPresetConfig?.id ? advanceVacuumStrings?.panelModes?.[activeModePanelPresetConfig.id] : "") || advanceVacuumStrings?.utility?.modesFallbackTitle || "Modos de aspirado y fregado")}">
+                      <ha-icon icon="${escapeHtml(activeModePanelPresetConfig?.icon || "mdi:tune-variant")}"></ha-icon>
+                    </button>
+                  `
+                  : ""
+              }
+            </div>
+            <div class="advance-vacuum-card__controls-slot advance-vacuum-card__controls-slot--center">
+              ${
+                showPrimaryActionButton
+                  ? `
+                    <button type="button" class="advance-vacuum-card__control advance-vacuum-card__control--primary" data-control-action="primary" title="${escapeHtml(primaryButtonTitle)}">
+                      <ha-icon icon="${primaryButtonIcon}"></ha-icon>
+                    </button>
+                  `
+                  : ""
+              }
+            </div>
+            <div class="advance-vacuum-card__controls-slot advance-vacuum-card__controls-slot--right">
+              ${
+                showDockMenuButton
+                  ? `
+                    <button type="button" class="advance-vacuum-card__control ${this._activeUtilityPanel === "dock" ? "is-panel-open" : ""}" data-control-action="toggle_dock_panel" title="${escapeHtml((activeDockPanelSectionConfig?.id ? advanceVacuumStrings?.dockSections?.[activeDockPanelSectionConfig.id] : "") || advanceVacuumStrings?.utility?.chargingStation || "Charging station")}">
+                      <ha-icon icon="${escapeHtml(activeDockPanelSectionConfig?.icon || "mdi:home-import-outline")}"></ha-icon>
+                    </button>
+                `
+                  : ""
+              }
+            </div>
+          </div>
+        </div>
+
+        ${
+          utilityPanelMarkup
+            ? `<div class="advance-vacuum-card__utility-panel-slot">${utilityPanelMarkup}</div>`
+            : ""
+        }
+        </div>
+      </ha-card>
+    `;
+      this._commitPersistentVacuumShadow(vacuumMarkup);
+
+      let image = this.shadowRoot.querySelector("[data-map-image]");
+      const canvas = this.shadowRoot.querySelector(".advance-vacuum-card__map-canvas");
+      if (previousImage && image && previousMapNorm && nextMapNorm && previousMapNorm === nextMapNorm) {
+        image.replaceWith(previousImage);
+        image = previousImage;
+        image.removeAttribute("data-map-image-previous");
+        image.setAttribute("data-map-image", "");
+        if (mapImageUrl && image.getAttribute("src") !== mapImageUrl) {
+          image.setAttribute("src", mapImageUrl);
+        }
+        image.classList.remove("is-pending", "is-fading-out");
+        image.classList.add("is-loaded");
+      } else if (previousImage && image && canvas && previousMapNorm && nextMapNorm && previousMapNorm !== nextMapNorm) {
+        previousImage.removeEventListener("load", this._onMapImageLoad);
+        previousImage.removeAttribute("data-map-image");
+        previousImage.setAttribute("data-map-image-previous", "true");
+        previousImage.classList.remove("is-pending", "is-fading-out");
+        previousImage.classList.add("is-loaded");
+        canvas.insertBefore(previousImage, image);
+      } else if (image) {
+        image.classList.remove("is-pending", "is-fading-out");
+        image.classList.add("is-loaded");
+      }
+
+      if (image) {
+        image.removeEventListener("load", this._onMapImageLoad);
+        image.addEventListener("load", this._onMapImageLoad);
+        if (image.complete && Number(image.naturalWidth || 0) > 0) {
+          this._onMapImageLoad({ currentTarget: image });
+        }
+      }
+
+      const backButton = this.shadowRoot.querySelector("[data-map-back='true']");
+      if (backButton) {
+        backButton.removeEventListener("click", this._onMapBackClick);
+        backButton.addEventListener("click", this._onMapBackClick);
+      }
+
+      if (shouldAnimateEntrance) {
+        this._scheduleEntranceAnimationReset(animations.contentDuration + 160);
+      }
+
+      this._lastRenderSignature = this._getRenderSignature();
+    } catch (error) {
+      this._handleCardError(error, "_render");
+    }
+  }
+}
+  _lazyNodaliaAdvanceVacuumCard = NodaliaAdvanceVacuumCard;
+  return NodaliaAdvanceVacuumCard;
+}
