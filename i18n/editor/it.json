@@ -554,6 +554,7 @@
   "ed.media_player.album_cover_background": "Usa la copertina dell'album come sfondo",
   "ed.media_player.animations_section_hint": "Apertura del pannello, browser multimediale e tempi di rimbalzo dei pulsanti.",
   "ed.media_player.artwork_blur": "Sfocatura della copertina",
+  "ed.media_player.artwork_blur_gradient": "Copertina sfocata a gradiente",
   "ed.media_player.artwork_blurred": "Sfocatura leggera",
   "ed.media_player.artwork_crossfade": "Dissolvenza tra copertine",
   "ed.media_player.artwork_dim": "Oscura copertina",

@@ -554,6 +554,7 @@
   "ed.media_player.album_cover_background": "Folosiți arta de album ca fundal",
   "ed.media_player.animations_section_hint": "Deschiderea panoului, browserul media și sincronizarea butoanelor.",
   "ed.media_player.artwork_blur": "Estomparea coperții",
+  "ed.media_player.artwork_blur_gradient": "Copertă cu estompare în gradient",
   "ed.media_player.artwork_blurred": "Estompare ușoară",
   "ed.media_player.artwork_crossfade": "Tranziție între coperți",
   "ed.media_player.artwork_dim": "Întunecarea coperții",

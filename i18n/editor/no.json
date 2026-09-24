@@ -554,6 +554,7 @@
   "ed.media_player.album_cover_background": "Bruk albumgrafikk som bakgrunn",
   "ed.media_player.animations_section_hint": "Panelåpning, medieleser og tidspunkt for sprett av knapper.",
   "ed.media_player.artwork_blur": "Omslagsuskarphet",
+  "ed.media_player.artwork_blur_gradient": "Uskarpt gradientomslag",
   "ed.media_player.artwork_blurred": "Myk uskarphet",
   "ed.media_player.artwork_crossfade": "Kryssfade mellom omslag",
   "ed.media_player.artwork_dim": "Demp omslaget",

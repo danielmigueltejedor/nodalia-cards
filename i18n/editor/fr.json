@@ -554,6 +554,7 @@
   "ed.media_player.album_cover_background": "Utiliser la pochette de l'album comme arrière-plan",
   "ed.media_player.animations_section_hint": "Ouverture du panneau, navigateur multimédia et synchronisation des rebonds des boutons.",
   "ed.media_player.artwork_blur": "Flou de la pochette",
+  "ed.media_player.artwork_blur_gradient": "Pochette floue dégradée",
   "ed.media_player.artwork_blurred": "Flou léger",
   "ed.media_player.artwork_crossfade": "Fondu entre pochettes",
   "ed.media_player.artwork_dim": "Assombrir la pochette",

@@ -554,6 +554,7 @@
   "ed.media_player.album_cover_background": "Χρησιμοποιήστε το εξώφυλλο άλμπουμ ως φόντο",
   "ed.media_player.animations_section_hint": "Άνοιγμα πίνακα, πρόγραμμα περιήγησης πολυμέσων και χρονισμός αναπήδησης κουμπιών.",
   "ed.media_player.artwork_blur": "Θόλωμα εξωφύλλου",
+  "ed.media_player.artwork_blur_gradient": "Θολό εξώφυλλο με διαβάθμιση",
   "ed.media_player.artwork_blurred": "Ήπιο θόλωμα",
   "ed.media_player.artwork_crossfade": "Ομαλή εναλλαγή εξωφύλλων",
   "ed.media_player.artwork_dim": "Σκούρασμα εξωφύλλου",

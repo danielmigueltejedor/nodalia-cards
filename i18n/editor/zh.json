@@ -554,6 +554,7 @@
   "ed.media_player.album_cover_background": "使用专辑封面作为背景",
   "ed.media_player.animations_section_hint": "调整面板展开、媒体浏览器与按钮回弹。",
   "ed.media_player.artwork_blur": "封面模糊",
+  "ed.media_player.artwork_blur_gradient": "模糊渐变封面",
   "ed.media_player.artwork_blurred": "柔和模糊",
   "ed.media_player.artwork_crossfade": "封面交叉淡入淡出",
   "ed.media_player.artwork_dim": "封面变暗",

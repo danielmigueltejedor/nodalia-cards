@@ -215,6 +215,11 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     const normalizedPath = String(path || "").trim();
     const isEntityField = normalizedPath === "entity" || normalizedPath.endsWith(".entity");
 
+    if (normalizedPath === "artwork.blur_gradient") {
+      setByPath(this._config, "artwork.mode", value ? "blur" : "immersive");
+      return;
+    }
+
     if (isEntityField && (value === undefined || value === null || value === "")) {
       setByPath(this._config, normalizedPath, "");
       return;
@@ -1282,17 +1287,14 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.media_player.artwork_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderSelectField(
-              "ed.media_player.artwork_mode",
-              "artwork.mode",
-              config.artwork?.mode || "immersive",
-              [
-                { value: "immersive", label: "ed.media_player.artwork_immersive" },
-                { value: "blur", label: "ed.media_player.artwork_blurred" },
-                { value: "off", label: "ed.media_player.artwork_off" },
-              ],
+            ${this._renderCheckboxField(
+              "ed.media_player.artwork_blur_gradient",
+              "artwork.blur_gradient",
+              config.artwork?.mode === "blur",
             )}
-            ${this._renderTextField("ed.media_player.artwork_blur", "artwork.blur", config.artwork?.blur, { type: "number", valueType: "number" })}
+            ${config.artwork?.mode === "blur"
+              ? this._renderTextField("ed.media_player.artwork_blur", "artwork.blur", config.artwork?.blur, { type: "number", valueType: "number" })
+              : ""}
             ${this._renderTextField("ed.media_player.artwork_dim", "artwork.dim", config.artwork?.dim, { type: "number", valueType: "number" })}
             ${this._renderTextField("ed.media_player.artwork_saturation", "artwork.saturation", config.artwork?.saturation, { type: "number", valueType: "number" })}
             ${this._renderCheckboxField("ed.media_player.artwork_dynamic_colors", "artwork.dynamic_colors", config.artwork?.dynamic_colors !== false)}

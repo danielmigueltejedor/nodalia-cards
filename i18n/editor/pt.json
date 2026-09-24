@@ -554,6 +554,7 @@
   "ed.media_player.album_cover_background": "Use a arte do álbum como plano de fundo",
   "ed.media_player.animations_section_hint": "Abertura do painel, navegador de mídia e tempo de salto dos botões.",
   "ed.media_player.artwork_blur": "Desfoque da capa",
+  "ed.media_player.artwork_blur_gradient": "Capa com desfoque degradê",
   "ed.media_player.artwork_blurred": "Desfoque suave",
   "ed.media_player.artwork_crossfade": "Transição entre capas",
   "ed.media_player.artwork_dim": "Escurecer a capa",

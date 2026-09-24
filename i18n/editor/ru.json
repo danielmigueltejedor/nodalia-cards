@@ -554,6 +554,7 @@
   "ed.media_player.album_cover_background": "Используйте обложку альбома в качестве фона",
   "ed.media_player.animations_section_hint": "Открытие панели, медиабраузер и время нажатия кнопок.",
   "ed.media_player.artwork_blur": "Размытие обложки",
+  "ed.media_player.artwork_blur_gradient": "Обложка с размытием и градиентом",
   "ed.media_player.artwork_blurred": "Мягкое размытие",
   "ed.media_player.artwork_crossfade": "Плавная смена обложек",
   "ed.media_player.artwork_dim": "Затемнение обложки",

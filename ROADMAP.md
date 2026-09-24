@@ -11,11 +11,11 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.41
+2.3.0-alpha.42
 ```
 
-Preview **`2.3.0-alpha.41`** keeps light-theme album covers colorful and uses a
-soft rounded shadow instead of a square Material frame.
+Preview **`2.3.0-alpha.42`** adds a Media Player editor toggle for sharp album
+cover vs blurred gradient fill.
 Stable **`2.2.10`** remains the recommended daily-driver release.
 
 ## Current stable release

@@ -8,6 +8,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.42] - 2026-09-24
+
+Media Player visual editor toggle for sharp album cover vs blurred gradient fill.
+
+### Changed
+
+- Artwork section replaces the immersive/blur/off select with a **Blurred
+  gradient cover** toggle (`artwork.mode` immersive ↔ blur).
+- Blur intensity field shows only when the blur toggle is on.
+- Album background on/off remains the existing **Use album art as background**
+  control.
+
+### Validation
+
+- Editor i18n catalog includes `artwork_blur_gradient` across locales.
+
 ## [2.3.0-alpha.41] - 2026-09-24
 
 Light-theme Media Player album backgrounds keep color instead of washing out,
