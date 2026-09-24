@@ -17,7 +17,7 @@
     <a href="#optional-companion-nodalia-cards-engine">Engine</a> ·
     <a href="#quick-start">Quick start</a> ·
     <a href="https://github.com/danielmigueltejedor/nodalia-cards/issues">Support</a> ·
-    <a href="https://crowdin.com/project/nodalia-cards">Translate</a>
+    <a href="https://translate.getnodalia.com">Translate</a>
   </p>
 </div>
 
@@ -231,7 +231,7 @@ Stable changes are documented in the [changelog](./CHANGELOG.md). Detailed prere
 
 Nodalia Cards currently includes Spanish, English, German, French, Italian, Dutch, Norwegian, Portuguese, Russian, Greek, Chinese and Romanian.
 
-Help review or extend the project on [Crowdin](https://crowdin.com/project/nodalia-cards). Translation pull requests are also welcome; follow the [translation guide](./docs/TRANSLATIONS.md) to keep runtime and editor strings synchronized.
+Help review or extend the project on the self-hosted [Weblate](https://translate.getnodalia.com) instance (Crowdin is no longer used). Translation pull requests are also welcome; follow the [translation guide](./docs/TRANSLATIONS.md) and [Weblate operator docs](./docs/weblate/README.md) to keep runtime and editor strings synchronized.
 
 ## Support and contributions
 

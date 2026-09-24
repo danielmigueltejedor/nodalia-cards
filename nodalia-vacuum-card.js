@@ -4,7 +4,7 @@
   // src/cards/vacuum/vacuum-constants.ts
   var CARD_TAG = "nodalia-vacuum-card";
   var EDITOR_TAG = "nodalia-vacuum-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.25";
+  var CARD_VERSION = "2.3.0-alpha.26";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
@@ -668,7 +668,8 @@
         return window.NodaliaUtils.shouldUseCompactCardLayout({
           mode: this._config?.compact_layout_mode,
           width,
-          gridColumns: this._getConfiguredGridColumns()
+          gridColumns: this._getConfiguredGridColumns(),
+          parentWidth: window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0
         });
       }
       _shouldShowCompactTitle(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
@@ -2266,10 +2267,13 @@
         const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
         const shouldAnimateActiveIcon = animations.enabled && animations.iconAnimation && this._isCleaning(state);
         const controls = this._getControls(state);
-        const cardWidth = Math.round(this._cardWidth || this.clientWidth || 0);
-        const denseCompact = isCompactLayout && cardWidth > 0 && cardWidth < 180;
+        const denseCompact = isCompactLayout;
         const visibleControls = denseCompact ? controls.filter((control) => ["primary", "locate", "return_to_base"].includes(control.action)).slice(0, 3) : controls;
         const visibleModeDescriptors = denseCompact ? [] : availableModeDescriptors;
+        if (denseCompact) {
+          this._activeModePanel = null;
+          this._roomPanelOpen = false;
+        }
         const isTintedState = this._shouldTintCard(state);
         const shouldDarkenBubbleIconGlyph = isTintedState && Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph?.(state, accentColor));
         const iconGlyphColor = isTintedState ? window.NodaliaBubbleContrast?.resolveBubbleIconGlyphColor?.(state, accentColor) || `color-mix(in srgb, ${accentColor} ${shouldDarkenBubbleIconGlyph ? 42 : 72}%, var(--primary-text-color))` : styles.icon.color;
@@ -2287,7 +2291,7 @@
         const cardBackground = isTintedState ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)` : styles.card.background;
         const cardBorder = isTintedState ? `color-mix(in srgb, ${accentColor} 34%, var(--divider-color))` : styles.card.border;
         const cardShadow = isTintedState ? `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))` : styles.card.box_shadow;
-        if (config.show_state_chip !== false && !denseCompact) {
+        if (config.show_state_chip !== false) {
           chips.push(`<span class="vacuum-card__chip vacuum-card__chip--state">${escapeHtml(stateLabel)}</span>`);
         }
         if (this._activeModePanel && !availableModeDescriptors.some((mode) => mode.kind === this._activeModePanel)) {
@@ -2308,7 +2312,7 @@
           </div>
         </div>
       ` : "";
-        const showTitle = !isCompactLayout || this._shouldShowCompactTitle();
+        const showTitle = true;
         const showCopyBlock = showTitle || chips.length > 0 || Boolean(batteryChipMarkup);
         const canRunBodyCardTap = this._canRunConfiguredCardTapAction("body") || this._canRunConfiguredCardHoldAction("body");
         const canRunIconCardTap = this._canRunConfiguredCardTapAction("icon") || this._canRunConfiguredCardHoldAction("icon");
@@ -2603,7 +2607,8 @@
         }
 
         .vacuum-card--dense {
-          gap: 8px;
+          container-type: inline-size;
+          gap: 10px;
         }
 
         .vacuum-card--dense .vacuum-card__header {
@@ -2611,32 +2616,38 @@
         }
 
         .vacuum-card--dense .vacuum-card__icon-button {
-          height: 44px;
-          width: 44px;
+          height: 48px;
+          width: 48px;
         }
 
         .vacuum-card--dense .vacuum-card__icon-button ha-icon {
-          --mdc-icon-size: 20px;
-          height: 20px;
-          width: 20px;
+          --mdc-icon-size: 22px;
+          height: 22px;
+          width: 22px;
         }
 
         .vacuum-card--dense .vacuum-card__controls {
-          gap: 6px;
+          display: flex;
+          flex-wrap: nowrap;
+          gap: clamp(12px, 5cqi, 20px);
+          justify-content: center;
+          padding-block: 4px 2px;
+          width: 100%;
         }
 
         .vacuum-card--dense .vacuum-card__control {
-          height: 34px;
-          min-width: 34px;
-          width: 34px;
+          flex: 0 0 auto;
+          height: clamp(44px, 16cqi, 56px);
+          min-width: clamp(44px, 16cqi, 56px);
+          width: clamp(44px, 16cqi, 56px);
         }
 
         .vacuum-card--dense .vacuum-card__control ha-icon {
-          --mdc-icon-size: 16px;
+          --mdc-icon-size: clamp(18px, 6.5cqi, 24px);
         }
 
         .vacuum-card--dense .vacuum-card__title {
-          font-size: 13px;
+          font-size: 14px;
         }
 
         .vacuum-card--dense .vacuum-card__chip {

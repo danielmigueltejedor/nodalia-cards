@@ -9,6 +9,7 @@ body:
     attributes:
       value: |
         Use this when **your Home Assistant UI language** is not Spanish and a label reads wrong, mixed, or unnatural.  
+        Prefer fixing strings in the self-hosted [Weblate](https://translate.getnodalia.com) when possible; otherwise open this issue.  
         Proposals are reviewed before being merged into the next release. Thank you for helping polish non-Spanish locales 🙌
 
   - type: dropdown
@@ -120,7 +121,7 @@ body:
     id: nodalia_version
     attributes:
       label: Nodalia Cards version
-      placeholder: e.g. v2.3.0-alpha.25 / latest
+      placeholder: e.g. v2.3.0-alpha.26 / latest
 
   - type: checkboxes
     id: consent

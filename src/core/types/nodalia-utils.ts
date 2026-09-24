@@ -15,7 +15,9 @@ export interface NodaliaUtilsApi {
     mode?: unknown;
     width?: number;
     gridColumns?: number | null;
+    parentWidth?: number | null;
   }): boolean;
+  resolveCompactLayoutParentWidth(host?: unknown): number;
   shouldShowCompactCardTitle(options?: {
     width?: number;
   }): boolean;

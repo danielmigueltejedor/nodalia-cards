@@ -10,6 +10,7 @@
     "mergeDeep",
     "compactConfig",
     "shouldUseCompactCardLayout",
+    "resolveCompactLayoutParentWidth",
     "shouldShowCompactCardTitle",
     "getByPath",
     "clamp",
@@ -292,11 +293,16 @@
     return Math.min(Math.max(value, min), max);
   }
 
-  /** 4/6-col tiles and phone-width cards stay compact; 12-col desktops keep the full layout. */
-  const COMPACT_CARD_MAX_WIDTH = 480;
+  /**
+   * 4/6-col tiles and phone-width cards stay compact.
+   * Desktop half-columns often measure 500–700px for the same YAML columns,
+   * so width alone is not enough — also treat "share of parent row" as a tile.
+   */
+  const COMPACT_CARD_MAX_WIDTH = 640;
   const COMPACT_CARD_MAX_COLUMNS = 6;
+  const COMPACT_CARD_TILE_PARENT_RATIO = 0.62;
 
-  function shouldUseCompactCardLayout({ mode, width, gridColumns } = {}) {
+  function shouldUseCompactCardLayout({ mode, width, gridColumns, parentWidth } = {}) {
     const compactMode = String(mode || "auto").trim().toLowerCase();
     if (compactMode === "always" || compactMode === "true") {
       return true;
@@ -315,18 +321,45 @@
       return true;
     }
 
+    const parent = Number(parentWidth);
+    if (
+      Number.isFinite(measured)
+      && measured > 0
+      && Number.isFinite(parent)
+      && parent > measured
+      && measured / parent <= COMPACT_CARD_TILE_PARENT_RATIO
+      && measured < 900
+    ) {
+      return true;
+    }
+
     return false;
   }
 
-  /** Compact tiles still show the name when the row is wide enough for icon + label. */
-  const COMPACT_CARD_TITLE_MIN_WIDTH = 148;
-
-  function shouldShowCompactCardTitle({ width } = {}) {
-    const measured = Number(width);
-    if (!Number.isFinite(measured) || measured <= 0) {
-      return true;
+  /** Best-effort parent row width for section/grid tiles (desktop half-columns). */
+  function resolveCompactLayoutParentWidth(host) {
+    if (!host || typeof host !== "object") {
+      return 0;
     }
-    return measured >= COMPACT_CARD_TITLE_MIN_WIDTH;
+    const candidates = [
+      host.parentElement,
+      typeof host.closest === "function"
+        ? host.closest("hui-card, hui-grid-section, hui-section, .card, .column")
+        : null,
+      host.offsetParent && typeof host.offsetParent === "object" ? host.offsetParent : null,
+    ];
+    for (const node of candidates) {
+      const width = Math.round(Number(node?.clientWidth) || 0);
+      if (width > 0) {
+        return width;
+      }
+    }
+    return 0;
+  }
+
+  /** Compact tiles always keep the entity name; only secondary chrome is trimmed. */
+  function shouldShowCompactCardTitle(_options = {}) {
+    return true;
   }
 
   function escapeHtml(value) {
@@ -2554,6 +2587,7 @@
     mergeDeep,
     compactConfig,
     shouldUseCompactCardLayout,
+    resolveCompactLayoutParentWidth,
     shouldShowCompactCardTitle,
     getByPath,
     clamp,

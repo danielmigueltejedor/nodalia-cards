@@ -11,13 +11,14 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.25
+2.3.0-alpha.26
 ```
 
-Preview **`2.3.0-alpha.25`** densifies Vacuum and Media Player on narrow phone
-columns, portals Camera expand only inside Room Summary, and paints Media album
-stages immediately. Stable **`2.2.10`** remains the recommended daily-driver
-release.
+Preview **`2.3.0-alpha.26`** keeps compact tiles dense on desktop half-columns
+(not only narrow phone widths), centers and scales Vacuum / Fan / Humidifier /
+Media controls, migrates community translations from Crowdin to self-hosted
+Weblate, and always keeps entity names visible in compact mode. Stable
+**`2.2.10`** remains the recommended daily-driver release.
 
 ## Current stable release
 

@@ -392,6 +392,7 @@ class NodaliaEntityCard extends HTMLElement {
       mode: this._config?.compact_layout_mode,
       width,
       gridColumns: this._getConfiguredGridColumns(),
+      parentWidth: window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0,
     });
   }
 

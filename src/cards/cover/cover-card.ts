@@ -349,6 +349,7 @@ class NodaliaCoverCard extends HTMLElement {
       mode: this._config?.compact_layout_mode,
       width: Math.round(this._cardWidth || this.clientWidth || 0),
       gridColumns: this._getConfiguredGridColumns(),
+      parentWidth: window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0,
     });
   }
 

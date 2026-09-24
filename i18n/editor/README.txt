@@ -1,8 +1,8 @@
 Editor visual i18n (new path)
 ==============================
 
-Crowdin (community translations): https://crowdin.com/project/nodalia-cards
-Repo mapping: ../../crowdin.yml
+Weblate (self-hosted community translations): https://translate.getnodalia.com
+Operator docs: ../../docs/weblate/README.md
 
 Stable keys:  ed.<card>.<slug>   (example: ed.calendar.visible_range)
 
@@ -24,6 +24,7 @@ Build pipeline:
 Adding a new language (e.g. Japanese):
   - Add "ja" to EDITOR_CATALOG_LANGS in scripts/gen-editor-ui.mjs and ensure nodalia-i18n PACK supports "ja" for resolveLanguage.
   - Copy i18n/editor/en.json to i18n/editor/ja.json and translate values.
+  - Register the language in Weblate (editor + runtime components).
   - Run validate + gen-editor + bundle.
 
 Legacy: strings without the "ed." prefix still use the generated ROWS table (Spanish keys → locales) until migrated card-by-card.

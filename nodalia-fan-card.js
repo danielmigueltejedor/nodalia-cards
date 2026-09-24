@@ -4,7 +4,7 @@
   // src/cards/fan/fan-constants.ts
   var CARD_TAG = "nodalia-fan-card";
   var EDITOR_TAG = "nodalia-fan-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.25";
+  var CARD_VERSION = "2.3.0-alpha.26";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
@@ -718,7 +718,8 @@
         return window.NodaliaUtils.shouldUseCompactCardLayout({
           mode: this._config?.compact_layout_mode,
           width,
-          gridColumns: this._getConfiguredGridColumns()
+          gridColumns: this._getConfiguredGridColumns(),
+          parentWidth: window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0
         });
       }
       _shouldShowCompactTitle(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
@@ -2230,19 +2231,23 @@
         const translatedPresetMode = currentPresetMode ? translatePresetLabel(currentPresetMode) : "";
         const isCompactLayout = this._isCompactLayout;
         const hasSecondaryControls = isOn && (supportsOscillation || presetModes.length);
+        const showCompactSecondary = hasSecondaryControls && (!isCompactLayout || !supportsPercentage);
         const chips = [];
-        const showTitle = isCircularLayout || !isCompactLayout || this._shouldShowCompactTitle();
-        const showCopyBlock = showTitle || config.show_state === true || isOn && (config.show_percentage_chip !== false && supportsPercentage || config.show_mode_chip !== false && translatedPresetMode);
+        const showTitle = true;
+        const showCopyBlock = showTitle || config.show_state === true || !isCompactLayout && isOn && (config.show_percentage_chip !== false && supportsPercentage || config.show_mode_chip !== false && translatedPresetMode);
         if (config.show_state === true) {
           chips.push(`<span class="fan-card__chip fan-card__chip--state">${escapeHtml(this._getStateLabel(state))}</span>`);
         }
-        if (isOn && config.show_percentage_chip !== false && supportsPercentage) {
+        if (!isCompactLayout && isOn && config.show_percentage_chip !== false && supportsPercentage) {
           chips.push(`<span class="fan-card__chip" data-fan-chip="percentage">${escapeHtml(`${Math.round(currentPercentage)}%`)}</span>`);
         }
-        if (isOn && config.show_mode_chip !== false && translatedPresetMode) {
+        if (!isCompactLayout && isOn && config.show_mode_chip !== false && translatedPresetMode) {
           chips.push(`<span class="fan-card__chip">${escapeHtml(translatedPresetMode)}</span>`);
         }
         if (!presetModes.length) {
+          this._presetPanelOpen = false;
+        }
+        if (isCompactLayout && supportsPercentage) {
           this._presetPanelOpen = false;
         }
         const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 54%, ${styles.card.background} 100%)`;
@@ -2321,7 +2326,7 @@
           percentageEmptyDelay = -clamp(now - Number(this._controlsTransition.startedAt), 0, percentageEmptyDuration);
         }
         const mainControlsMarkup = isOn && supportsPercentage ? `
-        <div class="fan-card__slider-row ${hasSecondaryControls ? "" : "fan-card__slider-row--solo"}">
+        <div class="fan-card__slider-row ${showCompactSecondary ? "" : "fan-card__slider-row--solo"}">
           <div class="fan-card__slider-wrap">
             <div class="fan-card__slider-shell${percentageSliderShellClass}" style="--percentage:${currentPercentage}; --percentage-target:${currentPercentage};">
               <div class="fan-card__slider-track"></div>
@@ -2338,7 +2343,7 @@
               />
             </div>
           </div>
-          ${hasSecondaryControls ? `
+          ${showCompactSecondary ? `
                 <div class="fan-card__slider-actions">
                   ${supportsOscillation ? `
                         <button
@@ -2363,7 +2368,7 @@
                 </div>
               ` : ""}
         </div>
-      ` : !supportsPercentage && hasSecondaryControls ? `
+      ` : !supportsPercentage && showCompactSecondary ? `
           <div class="fan-card__controls">
             ${supportsOscillation ? `
                   <button
@@ -2583,6 +2588,34 @@
         .fan-card--compact .fan-card__hero {
           justify-items: start;
           text-align: start;
+        }
+
+        .fan-card--compact {
+          container-type: inline-size;
+        }
+
+        .fan-card--compact .fan-card__controls {
+          display: flex;
+          flex-wrap: nowrap;
+          gap: clamp(12px, 5cqi, 20px);
+          justify-content: center;
+          padding-block: 4px 2px;
+          width: 100%;
+        }
+
+        .fan-card--compact .fan-card__control {
+          flex: 0 0 auto;
+          height: clamp(44px, 16cqi, 56px);
+          min-width: clamp(44px, 16cqi, 56px);
+          width: clamp(44px, 16cqi, 56px);
+        }
+
+        .fan-card--compact .fan-card__control ha-icon {
+          --mdc-icon-size: clamp(18px, 6.5cqi, 24px);
+        }
+
+        .fan-card--compact .fan-card__title {
+          font-size: 14px;
         }
 
         .fan-card__icon {

@@ -4,7 +4,7 @@
   // src/cards/cover/cover-constants.ts
   var CARD_TAG = "nodalia-cover-card";
   var EDITOR_TAG = "nodalia-cover-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.25";
+  var CARD_VERSION = "2.3.0-alpha.26";
   var COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS = 6;
   var COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH = 620;
   var HAPTIC_PATTERNS = {
@@ -705,7 +705,8 @@
         return window.NodaliaUtils.shouldUseCompactCardLayout({
           mode: this._config?.compact_layout_mode,
           width: Math.round(this._cardWidth || this.clientWidth || 0),
-          gridColumns: this._getConfiguredGridColumns()
+          gridColumns: this._getConfiguredGridColumns(),
+          parentWidth: window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0
         });
       }
       _shouldShowCompactTitle() {

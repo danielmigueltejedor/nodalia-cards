@@ -1,0 +1,70 @@
+name: Weblate i18n sync
+
+# When Weblate pushes locale JSON to the dedicated `weblate` branch, regenerate
+# tracked catalogs so PRs into main are not blocked by stale generated files.
+# No Crowdin integration — secrets stay in GitHub Actions / Weblate only.
+
+on:
+  push:
+    branches:
+      - weblate
+    paths:
+      - "i18n/runtime/**"
+      - "i18n/editor/**"
+      - "scripts/gen-runtime-i18n.mjs"
+      - "scripts/gen-editor-ui.mjs"
+      - ".github/workflows/weblate-i18n-sync.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: weblate-i18n-sync
+  cancel-in-progress: true
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: weblate
+          # Needed so the push below can update the same branch.
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate locale catalogs
+        run: |
+          pnpm run i18n:validate-editor
+          pnpm run i18n:validate-runtime
+          pnpm run i18n:audit
+
+      - name: Regenerate tracked i18n artifacts
+        run: |
+          pnpm run i18n:gen-editor
+          pnpm run i18n:gen-runtime
+
+      - name: Commit regenerated artifacts if needed
+        run: |
+          if git diff --quiet -- nodalia-editor-ui.js nodalia-i18n.js; then
+            echo "Generated i18n artifacts already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add nodalia-editor-ui.js nodalia-i18n.js
+          git commit -m "$(cat <<'EOF'
+          chore(i18n): regenerate catalogs after Weblate sync
+
+          EOF
+          )"
+          git push

@@ -1,0 +1,80 @@
+# Example self-hosted Weblate stack for Nodalia Cards.
+# Documentation only — do not run this against production without reviewing
+# secrets, reverse-proxy TLS, backups, and image pins.
+#
+# Usage (from this directory after copying .env.example → .env):
+#   docker compose --env-file .env up -d
+#
+# Put HTTPS in front of the `weblate` service (Caddy, Traefik, nginx, etc.).
+# Official upstream reference: https://github.com/WeblateOrg/docker-compose
+
+services:
+  database:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-weblate}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-weblate}
+    volumes:
+      - weblate-postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  cache:
+    image: valkey/valkey:9.0.3
+    restart: unless-stopped
+    command: ["valkey-server", "--save", "60", "1", "--loglevel", "warning"]
+    volumes:
+      - weblate-valkey:/data
+    read_only: true
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  weblate:
+    image: weblate/weblate:latest
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      WEBLATE_SITE_DOMAIN: ${WEBLATE_SITE_DOMAIN:-translate.getnodalia.com}
+      WEBLATE_ADMIN_NAME: ${WEBLATE_ADMIN_NAME:-Nodalia Admin}
+      WEBLATE_ADMIN_EMAIL: ${WEBLATE_ADMIN_EMAIL:?set WEBLATE_ADMIN_EMAIL in .env}
+      WEBLATE_ADMIN_PASSWORD: ${WEBLATE_ADMIN_PASSWORD:?set WEBLATE_ADMIN_PASSWORD in .env}
+      POSTGRES_HOST: database
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-weblate}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DATABASE: ${POSTGRES_DB:-weblate}
+      REDIS_HOST: cache
+      REDIS_PORT: 6379
+      # GitHub VCS credentials are configured in the Weblate UI / secrets — not here.
+    volumes:
+      - weblate-data:/app/data
+      - weblate-cache:/app/cache
+    ports:
+      # Reverse-proxy this port with TLS. Do not expose plain HTTP publicly.
+      - "${WEBLATE_HTTP_PORT:-8080}:8080"
+    read_only: true
+    tmpfs:
+      - /run
+      - /tmp
+
+volumes:
+  weblate-postgres:
+  weblate-valkey:
+  weblate-data:
+  weblate-cache:

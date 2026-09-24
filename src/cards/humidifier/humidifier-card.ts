@@ -402,6 +402,7 @@ class NodaliaHumidifierCard extends HTMLElement {
       mode: this._config?.compact_layout_mode,
       width,
       gridColumns: this._getConfiguredGridColumns(),
+      parentWidth: window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0,
     });
   }
 
@@ -2311,21 +2312,26 @@ class NodaliaHumidifierCard extends HTMLElement {
       chips.push(`<div class="humidifier-card__chip humidifier-card__chip--state">${escapeHtml(this._getStateLabel(state))}</div>`);
     }
 
-    if (config.show_target_humidity_chip !== false && supportsHumidity) {
+    if (!isCompactLayout && config.show_target_humidity_chip !== false && supportsHumidity) {
       chips.push(`<div class="humidifier-card__chip" data-humidifier-chip="humidity">${escapeHtml(`${Math.round(currentHumidity)}%`)}</div>`);
     }
 
-    if (config.show_mode_chip !== false && currentMode) {
+    if (!isCompactLayout && config.show_mode_chip !== false && currentMode) {
       chips.push(`<div class="humidifier-card__chip">${escapeHtml(translateModeLabel(currentMode, this._hass, config.language ?? "auto"))}</div>`);
     }
 
-    if (config.show_fan_mode_chip !== false && currentFanMode) {
+    if (!isCompactLayout && config.show_fan_mode_chip !== false && currentFanMode) {
       chips.push(`<div class="humidifier-card__chip">${escapeHtml(translateModeLabel(currentFanMode, this._hass, config.language ?? "auto"))}</div>`);
     }
 
-    const showTitle = isCircularLayout || !isCompactLayout || this._shouldShowCompactTitle();
+    const showTitle = true;
     const showCopyBlock = showTitle || chips.length > 0;
     const hasSecondaryControls = (modeOptions.length > 0) || (fanModeOptions.length > 0);
+    const showCompactSecondary = hasSecondaryControls && (!isCompactLayout || !supportsHumidity);
+    if (isCompactLayout && supportsHumidity) {
+      this._modePanelOpen = false;
+      this._fanModePanelOpen = false;
+    }
     const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 54%, ${styles.card.background} 100%)`;
     const onCardBorder = `color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`;
     const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.18))`;
@@ -2424,7 +2430,7 @@ class NodaliaHumidifierCard extends HTMLElement {
 
     const mainControlsMarkup = isOn && supportsHumidity
       ? `
-        <div class="humidifier-card__slider-row ${hasSecondaryControls ? "" : "humidifier-card__slider-row--solo"}">
+        <div class="humidifier-card__slider-row ${showCompactSecondary ? "" : "humidifier-card__slider-row--solo"}">
           <div class="humidifier-card__slider-wrap">
             <div class="humidifier-card__slider-shell${humiditySliderShellClass}" style="--humidity:${clamp(humidityProgress, 0, 100)}; --humidity-target:${clamp(humidityProgress, 0, 100)};">
               <div class="humidifier-card__slider-track"></div>
@@ -2442,7 +2448,7 @@ class NodaliaHumidifierCard extends HTMLElement {
             </div>
           </div>
           ${
-            hasSecondaryControls
+            showCompactSecondary
               ? `
                 <div class="humidifier-card__slider-actions">
                   ${
@@ -2479,7 +2485,7 @@ class NodaliaHumidifierCard extends HTMLElement {
           }
         </div>
       `
-      : !supportsHumidity && hasSecondaryControls && isOn
+      : !supportsHumidity && showCompactSecondary && isOn
         ? `
           <div class="humidifier-card__controls">
             ${
@@ -2774,6 +2780,34 @@ class NodaliaHumidifierCard extends HTMLElement {
 
         .humidifier-card--compact .humidifier-card__hero {
           grid-template-columns: ${styles.icon.size} minmax(0, 1fr);
+        }
+
+        .humidifier-card--compact {
+          container-type: inline-size;
+        }
+
+        .humidifier-card--compact .humidifier-card__controls {
+          display: flex;
+          flex-wrap: nowrap;
+          gap: clamp(12px, 5cqi, 20px);
+          justify-content: center;
+          padding-block: 4px 2px;
+          width: 100%;
+        }
+
+        .humidifier-card--compact .humidifier-card__control {
+          flex: 0 0 auto;
+          height: clamp(44px, 16cqi, 56px);
+          min-width: clamp(44px, 16cqi, 56px);
+          width: clamp(44px, 16cqi, 56px);
+        }
+
+        .humidifier-card--compact .humidifier-card__control ha-icon {
+          --mdc-icon-size: clamp(18px, 6.5cqi, 24px);
+        }
+
+        .humidifier-card--compact .humidifier-card__title {
+          font-size: 14px;
         }
 
         .humidifier-card__icon {

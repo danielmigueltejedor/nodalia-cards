@@ -2,9 +2,27 @@
 
 Nodalia Cards maintains synchronized runtime and visual-editor catalogs across every supported language. Translation pull requests are welcome, including small wording fixes, missing editor labels, and complete new languages.
 
-## Community translations (Crowdin)
+## Community translations (Weblate)
 
-**[Nodalia Cards on Crowdin](https://crowdin.com/project/nodalia-cards)** is the public community translation space for this repository. It complements GitHub PRs: you can suggest or vote on wording there without opening a PR. Project configuration for source and downloaded files lives in [`crowdin.yml`](../crowdin.yml) at the repo root (`i18n/editor/en.json`, `i18n/runtime/en.json`, and per-locale JSON paths).
+**Crowdin is no longer used.** Nodalia Cards now uses a **self-hosted Weblate** instance as the canonical community translation platform. GitHub remains the source repository; locale JSON in Git is what the application builds from.
+
+Public translator URL (replace if your deploy uses another domain):
+
+```text
+https://translate.getnodalia.com
+```
+
+Operator setup, Docker Compose, branch strategy, and exact Weblate component settings live in [`docs/weblate/README.md`](./weblate/README.md).
+
+High-level sync:
+
+1. Developers change English source strings in Git (`i18n/**/en.json`).
+2. Weblate pulls repository updates.
+3. Translators work in Weblate.
+4. Weblate commits translated locale files back to the `weblate` branch (recommended).
+5. A pull request into `main` runs normal CI validation before merge.
+
+You can still open translation PRs directly on GitHub; follow this guide so runtime and editor catalogs stay synchronized.
 
 This guide explains the current translation system without requiring deep source-code knowledge.
 
@@ -137,8 +155,9 @@ cp i18n/editor/en.json i18n/editor/ja.json
 2. Translate the values in `i18n/editor/ja.json`.
 3. Add `ja` to `EDITOR_CATALOG_LANGS` in `scripts/gen-editor-ui.mjs` and to `RUNTIME_LANGS` in `scripts/gen-runtime-i18n.mjs`.
 4. Copy `i18n/runtime/en.json` to `i18n/runtime/ja.json`, translate it, then extend `nodalia-i18n.js` (outside the generated pack) only where needed: `localeTag()`, `baseLang()` / alias handling in `resolveLanguage`, and any card-specific language lists.
+5. Register the language in Weblate (both `runtime` and `editor` components) so translators can maintain it going forward.
 
-5. Run:
+6. Run:
 
 ```bash
 pnpm run i18n:validate-editor
@@ -152,7 +171,7 @@ pnpm test
 
 ## 8. Adding runtime translation keys
 
-Add new keys to **`i18n/runtime/en.json`** first (same nested shape as sibling keys). Mirror the key path in other `i18n/runtime/<lang>.json` files when you have a translation.
+Add new keys to **`i18n/runtime/en.json`** first (same nested shape as sibling keys). Mirror the key path in other `i18n/runtime/<lang>.json` files when you have a translation (Weblate will also surface new English strings after the next repository pull).
 
 Then run `pnpm run i18n:validate-runtime`, `pnpm run i18n:audit` and `pnpm run i18n:gen-runtime` so the `const PACK` block in `nodalia-i18n.js` is regenerated. The audit runs fully offline and fails when a locale is missing a key or still contains a suspicious copy of its English source value. Intentional universal terms and true cognates are explicitly allowlisted in the audit script.
 
@@ -211,6 +230,7 @@ Nodalia's `language: auto` follows the Home Assistant profile language. You can 
 - Editing the generated `const PACK` block or the `// <nodalia-runtime-i18n-pack>` region in `nodalia-i18n.js` by hand. Edit `i18n/runtime/*.json` and run `pnpm run i18n:gen-runtime`.
 - Editing `nodalia-editor-ui.js` directly. It is generated.
 - Hardcoding user-facing strings inside a card instead of using `window.NodaliaI18n` helpers or `ed.*` keys.
+- Committing Weblate JSON updates without regenerating `nodalia-i18n.js` / `nodalia-editor-ui.js` (CI regenerates and fails the diff check if they drift).
 
 ## 12. Pull request checklist
 

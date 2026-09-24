@@ -288,6 +288,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       mode: this._config?.compact_layout_mode,
       width,
       gridColumns: this._config?.grid_options?.columns,
+      parentWidth: window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0,
     });
   }
 

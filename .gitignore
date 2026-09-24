@@ -7,3 +7,6 @@ test-results/
 playwright-report/
 __pycache__/
 *.py[cod]
+
+# Local Weblate deploy secrets (see docs/weblate/.env.example)
+docs/weblate/.env

@@ -8,6 +8,43 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.26] - 2026-09-24
+
+Desktop-aware compact density, centered larger controls on Vacuum / Fan /
+Humidifier / Media tiles, and Crowdin → self-hosted Weblate migration.
+
+### Changed
+
+- Compact auto mode treats wider desktop half-columns as tiles (width threshold
+  raised to 640px plus parent-row ratio heuristic), so PC layouts with the same
+  section columns stay dense instead of expanding into the full control set.
+- Vacuum compact always densifies: up to three primary actions (start/pause,
+  locate, return), centered and size-scaled with the card width; mop/fan mode
+  toggles stay hidden; name and state/battery chips remain visible.
+- Fan and Humidifier compact keep the name, drop secondary chips/mode buttons
+  beside the slider, and enlarge remaining controls.
+- Media Player compact/square transport buttons are centered and larger instead
+  of a cramped five-column 36px grid.
+- Community translations move from Crowdin to self-hosted Weblate; locale JSON
+  in Git remains the app source of truth.
+
+### Fixed
+
+- Compact tiles no longer hide the entity name based on narrow title width.
+
+### Added
+
+- `docs/weblate/` Docker Compose example, operator settings, and optional
+  LibreTranslate notes.
+- GitHub workflow to regenerate `nodalia-i18n.js` / `nodalia-editor-ui.js` after
+  Weblate pushes to the `weblate` branch.
+
+### Validation
+
+- Architecture contracts cover parent-width compact detection and always-on
+  compact titles; editor i18n tests assert Crowdin config is gone and locale
+  inventories stay aligned.
+
 ## [2.3.0-alpha.25] - 2026-09-24
 
 Mobile compact polish for Vacuum and Media Player, CI-safe Camera expand, and

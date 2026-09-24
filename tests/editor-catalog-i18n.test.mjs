@@ -71,3 +71,39 @@ test("nodalia-editor-ui embeds editorCatalog for ed.* keys", () => {
   assert.match(src, /\\"ed\.light\.show_quick_color_presets\\"/);
   assert.match(src, /\\"ed\.light\.show_quick_temperature_presets\\"/);
 });
+
+test("Crowdin config is gone; Weblate docs and locale inventories stay aligned", () => {
+  assert.equal(fs.existsSync(path.join(root, "crowdin.yml")), false);
+  assert.equal(fs.existsSync(path.join(root, ".crowdin.yml")), false);
+  assert.equal(fs.existsSync(path.join(root, "docs", "weblate", "README.md")), true);
+  assert.equal(fs.existsSync(path.join(root, "docs", "weblate", "docker-compose.yml")), true);
+  assert.equal(fs.existsSync(path.join(root, "docs", "weblate", ".env.example")), true);
+
+  const listJson = dir =>
+    fs.readdirSync(path.join(root, "i18n", dir))
+      .filter(name => name.endsWith(".json"))
+      .sort();
+
+  const runtimeLocales = listJson("runtime");
+  const editorLocales = listJson("editor");
+  assert.deepEqual(runtimeLocales, editorLocales, "runtime and editor must expose the same locale files");
+  assert.ok(runtimeLocales.includes("en.json"), "English source locale must exist");
+
+  for (const name of runtimeLocales) {
+    const runtime = JSON.parse(fs.readFileSync(path.join(root, "i18n", "runtime", name), "utf8"));
+    const editor = JSON.parse(fs.readFileSync(path.join(root, "i18n", "editor", name), "utf8"));
+    assert.equal(typeof runtime, "object");
+    assert.equal(typeof editor, "object");
+    assert.ok(runtime && !Array.isArray(runtime));
+    assert.ok(editor && !Array.isArray(editor));
+  }
+
+  const enRuntime = JSON.parse(fs.readFileSync(path.join(root, "i18n", "runtime", "en.json"), "utf8"));
+  const enEditor = JSON.parse(fs.readFileSync(path.join(root, "i18n", "editor", "en.json"), "utf8"));
+  assert.ok(Object.keys(enRuntime).length > 0, "English runtime catalog must not be empty");
+  assert.ok(Object.keys(enEditor).length > 0, "English editor catalog must not be empty");
+  assert.ok(
+    Object.keys(enEditor).every(key => key.startsWith("ed.")),
+    "English editor keys must use the ed.* schema",
+  );
+});

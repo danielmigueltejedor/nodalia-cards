@@ -3460,8 +3460,9 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card--compact {
+          container-type: inline-size;
           min-height: 0;
-          padding: 10px 10px 12px;
+          padding: 10px 10px 8px;
         }
 
         .media-player-card--compact .media-player__volume-button:not(.media-player__volume-button--browse),
@@ -3471,19 +3472,23 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card--compact .media-player__transport-cluster {
-          gap: 6px;
-          grid-template-columns: repeat(3, minmax(0, auto));
+          display: flex;
+          flex-wrap: nowrap;
+          gap: clamp(10px, 5cqi, 18px);
+          grid-template-columns: none;
           justify-content: center;
+          width: 100%;
         }
 
         .media-player-card--compact .media-player__control {
-          height: 34px;
-          min-width: 34px;
-          width: 34px;
+          flex: 0 0 auto;
+          height: clamp(42px, 16cqi, 54px);
+          min-width: clamp(42px, 16cqi, 54px);
+          width: clamp(42px, 16cqi, 54px);
         }
 
         .media-player-card--compact .media-player__title {
-          font-size: 13px;
+          font-size: 14px;
         }
 
         .media-player-card--active {
@@ -4944,13 +4949,35 @@ class NodaliaMediaPlayer extends HTMLElement {
 
           .media-player-card--square .media-player__transport-cluster,
           .media-player-card--artwork .media-player__transport-cluster {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            max-width: 148px;
+            display: flex;
+            flex-wrap: nowrap;
+            gap: clamp(10px, 5cqi, 16px);
+            grid-template-columns: none;
+            justify-content: center;
+            max-width: none;
+            width: 100%;
+          }
+
+          .media-player-card--square .media-player__control,
+          .media-player-card--artwork .media-player__control {
+            aspect-ratio: auto;
+            flex: 0 0 auto;
+            height: clamp(40px, 18cqi, 52px);
+            max-width: none;
+            min-width: clamp(40px, 18cqi, 52px);
+            width: clamp(40px, 18cqi, 52px);
+          }
+
+          .media-player-card--square .media-player__control ha-icon,
+          .media-player-card--artwork .media-player__control ha-icon {
+            --mdc-icon-size: clamp(16px, 7cqi, 22px);
+            height: clamp(16px, 7cqi, 22px);
+            width: clamp(16px, 7cqi, 22px);
           }
 
           .media-player-card--square,
           .media-player-card--artwork {
-            padding: 10px 10px 12px;
+            padding: 10px 10px 8px;
           }
 
           .media-player__title {
@@ -4958,12 +4985,18 @@ class NodaliaMediaPlayer extends HTMLElement {
           }
         }
 
+        .media-player-card--square,
+        .media-player-card--artwork {
+          container-type: inline-size;
+        }
+
         .media-player-card--square .media-player__transport-cluster,
         .media-player-card--artwork .media-player__transport-cluster {
-          display: grid;
-          gap: 6px;
-          grid-template-columns: repeat(5, minmax(0, 1fr));
-          justify-content: stretch;
+          display: flex;
+          flex-wrap: nowrap;
+          gap: clamp(10px, 4cqi, 18px);
+          grid-template-columns: none;
+          justify-content: center;
           width: 100%;
         }
 
@@ -4971,21 +5004,22 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player-card--square .media-player__volume-button:not(.media-player__volume-button--browse),
         .media-player-card--artwork .media-player__control,
         .media-player-card--artwork .media-player__volume-button:not(.media-player__volume-button--browse) {
-          aspect-ratio: 1 / 1;
-          height: auto;
+          aspect-ratio: auto;
+          flex: 0 0 auto;
+          height: clamp(42px, 14cqi, 54px);
           justify-self: center;
-          max-width: 36px;
-          min-width: 0;
-          width: 100%;
+          max-width: none;
+          min-width: clamp(42px, 14cqi, 54px);
+          width: clamp(42px, 14cqi, 54px);
         }
 
         .media-player-card--square .media-player__control ha-icon,
         .media-player-card--square .media-player__volume-button ha-icon,
         .media-player-card--artwork .media-player__control ha-icon,
         .media-player-card--artwork .media-player__volume-button ha-icon {
-          --mdc-icon-size: 14px;
-          height: 14px;
-          width: 14px;
+          --mdc-icon-size: clamp(16px, 5.5cqi, 22px);
+          height: clamp(16px, 5.5cqi, 22px);
+          width: clamp(16px, 5.5cqi, 22px);
         }
 
         .media-player-card--square .media-player__volume-button--browse,
@@ -5059,11 +5093,11 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card--compact .media-player__content {
-          padding-bottom: 16px;
+          padding-bottom: 8px;
         }
 
         .media-player-card--compact .media-player__transport-cluster {
-          gap: 8px;
+          gap: clamp(10px, 5cqi, 18px);
         }
 
         .media-player-card--chip .media-player__footer,

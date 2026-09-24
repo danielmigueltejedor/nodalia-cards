@@ -264,7 +264,7 @@ If helping with translations:
 - Preserve consistency between cards
 - Match Home Assistant terminology when possible
 
-You can also contribute via **[Nodalia Cards on Crowdin](https://crowdin.com/project/nodalia-cards)** (community strings for runtime + editor catalogs; see [`crowdin.yml`](./crowdin.yml)).
+You can also contribute via the self-hosted **[Nodalia Weblate](https://translate.getnodalia.com)** instance (community strings for runtime + editor catalogs). Crowdin is no longer used. Operator setup lives in [`docs/weblate/README.md`](./docs/weblate/README.md).
 
 For the full step-by-step workflow, including adding a new language to the bundle, see [`docs/TRANSLATIONS.md`](./docs/TRANSLATIONS.md).
 

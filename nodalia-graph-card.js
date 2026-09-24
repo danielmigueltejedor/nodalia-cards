@@ -4,7 +4,7 @@
   // src/cards/graph/graph-constants.ts
   var CARD_TAG = "nodalia-graph-card";
   var EDITOR_TAG = "nodalia-graph-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.25";
+  var CARD_VERSION = "2.3.0-alpha.26";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,

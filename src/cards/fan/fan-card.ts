@@ -364,6 +364,7 @@ class NodaliaFanCard extends HTMLElement {
       mode: this._config?.compact_layout_mode,
       width,
       gridColumns: this._getConfiguredGridColumns(),
+      parentWidth: window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0,
     });
   }
 
@@ -2164,23 +2165,29 @@ class NodaliaFanCard extends HTMLElement {
     const translatedPresetMode = currentPresetMode ? translatePresetLabel(currentPresetMode) : "";
     const isCompactLayout = this._isCompactLayout;
     const hasSecondaryControls = isOn && (supportsOscillation || presetModes.length);
+    const showCompactSecondary = hasSecondaryControls && (!isCompactLayout || !supportsPercentage);
     const chips = [];
-    const showTitle = isCircularLayout || !isCompactLayout || this._shouldShowCompactTitle();
-    const showCopyBlock = showTitle || config.show_state === true || (isOn && ((config.show_percentage_chip !== false && supportsPercentage) || (config.show_mode_chip !== false && translatedPresetMode)));
+    const showTitle = true;
+    const showCopyBlock = showTitle
+      || config.show_state === true
+      || (!isCompactLayout && isOn && ((config.show_percentage_chip !== false && supportsPercentage) || (config.show_mode_chip !== false && translatedPresetMode)));
 
     if (config.show_state === true) {
       chips.push(`<span class="fan-card__chip fan-card__chip--state">${escapeHtml(this._getStateLabel(state))}</span>`);
     }
 
-    if (isOn && config.show_percentage_chip !== false && supportsPercentage) {
+    if (!isCompactLayout && isOn && config.show_percentage_chip !== false && supportsPercentage) {
       chips.push(`<span class="fan-card__chip" data-fan-chip="percentage">${escapeHtml(`${Math.round(currentPercentage)}%`)}</span>`);
     }
 
-    if (isOn && config.show_mode_chip !== false && translatedPresetMode) {
+    if (!isCompactLayout && isOn && config.show_mode_chip !== false && translatedPresetMode) {
       chips.push(`<span class="fan-card__chip">${escapeHtml(translatedPresetMode)}</span>`);
     }
 
     if (!presetModes.length) {
+      this._presetPanelOpen = false;
+    }
+    if (isCompactLayout && supportsPercentage) {
       this._presetPanelOpen = false;
     }
 
@@ -2276,7 +2283,7 @@ class NodaliaFanCard extends HTMLElement {
 
     const mainControlsMarkup = isOn && supportsPercentage
       ? `
-        <div class="fan-card__slider-row ${hasSecondaryControls ? "" : "fan-card__slider-row--solo"}">
+        <div class="fan-card__slider-row ${showCompactSecondary ? "" : "fan-card__slider-row--solo"}">
           <div class="fan-card__slider-wrap">
             <div class="fan-card__slider-shell${percentageSliderShellClass}" style="--percentage:${currentPercentage}; --percentage-target:${currentPercentage};">
               <div class="fan-card__slider-track"></div>
@@ -2294,7 +2301,7 @@ class NodaliaFanCard extends HTMLElement {
             </div>
           </div>
           ${
-            hasSecondaryControls
+            showCompactSecondary
               ? `
                 <div class="fan-card__slider-actions">
                   ${
@@ -2331,7 +2338,7 @@ class NodaliaFanCard extends HTMLElement {
           }
         </div>
       `
-      : !supportsPercentage && hasSecondaryControls
+      : !supportsPercentage && showCompactSecondary
         ? `
           <div class="fan-card__controls">
             ${
@@ -2604,6 +2611,34 @@ class NodaliaFanCard extends HTMLElement {
         .fan-card--compact .fan-card__hero {
           justify-items: start;
           text-align: start;
+        }
+
+        .fan-card--compact {
+          container-type: inline-size;
+        }
+
+        .fan-card--compact .fan-card__controls {
+          display: flex;
+          flex-wrap: nowrap;
+          gap: clamp(12px, 5cqi, 20px);
+          justify-content: center;
+          padding-block: 4px 2px;
+          width: 100%;
+        }
+
+        .fan-card--compact .fan-card__control {
+          flex: 0 0 auto;
+          height: clamp(44px, 16cqi, 56px);
+          min-width: clamp(44px, 16cqi, 56px);
+          width: clamp(44px, 16cqi, 56px);
+        }
+
+        .fan-card--compact .fan-card__control ha-icon {
+          --mdc-icon-size: clamp(18px, 6.5cqi, 24px);
+        }
+
+        .fan-card--compact .fan-card__title {
+          font-size: 14px;
         }
 
         .fan-card__icon {
