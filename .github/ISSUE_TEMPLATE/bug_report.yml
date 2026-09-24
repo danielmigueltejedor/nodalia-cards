@@ -101,7 +101,7 @@ body:
     id: nodalia_version
     attributes:
       label: Nodalia Cards version
-      placeholder: e.g. v2.3.0-alpha.32 / latest
+      placeholder: e.g. v2.3.0-alpha.33 / latest
 
   - type: dropdown
     id: browser

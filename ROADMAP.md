@@ -11,11 +11,11 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.32
+2.3.0-alpha.33
 ```
 
-Preview **`2.3.0-alpha.32`** fixes the empty band under compact Vacuum/Media
-pairs on mobile by reporting a 2-row section footprint for dense vacuum tiles.
+Preview **`2.3.0-alpha.33`** keeps wide / >6-column Media Players in standard
+layout with the entity icon visible instead of forcing a square tile.
 Stable **`2.2.10`** remains the recommended daily-driver release.
 
 ## Current stable release

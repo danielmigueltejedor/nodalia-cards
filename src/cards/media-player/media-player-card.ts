@@ -334,6 +334,11 @@ class NodaliaMediaPlayer extends HTMLElement {
     };
   }
 
+  _getConfiguredGridColumns() {
+    const numericColumns = Number(this._config?.grid_options?.columns);
+    return Number.isFinite(numericColumns) && numericColumns > 0 ? numericColumns : null;
+  }
+
   _getPresentationMode() {
     const context = this._getActivePlayerContext();
     const entityId = String(context?.player?.entity || "");
@@ -358,7 +363,10 @@ class NodaliaMediaPlayer extends HTMLElement {
         height: preferSquareTiles ? this.clientHeight : 0,
       },
       this._resolvedLayoutMode,
-      { preferSquareTiles },
+      {
+        preferSquareTiles,
+        gridColumns: this._getConfiguredGridColumns(),
+      },
     );
   }
 
@@ -5021,9 +5029,21 @@ class NodaliaMediaPlayer extends HTMLElement {
           grid-template-columns: minmax(0, 1fr);
         }
 
-        .media-player-card--square .media-player__artwork,
-        .media-player-card--artwork .media-player__artwork {
+        /* Full-bleed album art replaces the thumb; keep the entity icon when there is no cover. */
+        .media-player-card--square.has-album-background .media-player__artwork,
+        .media-player-card--artwork.has-album-background .media-player__artwork {
           display: none;
+        }
+
+        .media-player-card--square:not(.has-album-background) .media-player__hero,
+        .media-player-card--artwork:not(.has-album-background) .media-player__hero {
+          grid-template-columns: 48px minmax(0, 1fr);
+        }
+
+        .media-player-card--square:not(.has-album-background) .media-player__artwork,
+        .media-player-card--artwork:not(.has-album-background) .media-player__artwork {
+          height: 48px;
+          width: 48px;
         }
 
         .media-player-card--square .media-player__hero-copy,

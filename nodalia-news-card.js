@@ -4,7 +4,7 @@
   // src/cards/news/news-constants.ts
   var CARD_TAG = "nodalia-news-card";
   var EDITOR_TAG = "nodalia-news-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.32";
+  var CARD_VERSION = "2.3.0-alpha.33";
   var MAGAZINE_SWIPE_THRESHOLD_PX = 48;
   var MAGAZINE_SWIPE_LOCK_PX = 10;
   var NEWS_HISTORY_STORAGE_PREFIX = "nodalia-news-card:history:";

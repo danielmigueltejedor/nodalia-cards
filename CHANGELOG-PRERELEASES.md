@@ -8,6 +8,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.33] - 2026-09-24
+
+Media Player auto layout: wide / >6-column spans stay standard (with entity
+icon) instead of forcing a square tile that hid the artwork thumb.
+
+### Fixed
+
+- Auto square only applies to half-width tiles (about 300–480px, section span
+  ≤ 6). Wider cards resolve to **standard** so the entity icon stays visible.
+- Square/artwork hide the hero thumb only when album cover background is
+  present; without cover the entity icon remains.
+
+### Validation
+
+- Media presentation tests cover wide widths and `gridColumns > 6`.
+
 ## [2.3.0-alpha.32] - 2026-09-24
 
 Vacuum compact section footprint drops to 2 rows so mobile vacuum/media pairs

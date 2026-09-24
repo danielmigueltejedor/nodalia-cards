@@ -44,6 +44,16 @@ test("media player layouts stay stable across nearby size changes", () => {
   assert.equal(api.resolvePresentationMode("auto", { width: 320, height: 160 }, "compact"), "square");
   assert.equal(api.resolvePresentationMode("auto", { width: 210, height: 160 }, "square"), "compact");
   assert.equal(api.resolvePresentationMode("auto", { width: 1000, height: 96 }), "chip");
+  // Wide / >6-column spans stay standard so the entity icon hero remains visible.
+  assert.equal(api.resolvePresentationMode("auto", { width: 560, height: 200 }), "standard");
+  assert.equal(
+    api.resolvePresentationMode("auto", { width: 400, height: 200 }, "square", { gridColumns: 8 }),
+    "standard",
+  );
+  assert.equal(
+    api.resolvePresentationMode("auto", { width: 400, height: 200 }, "", { gridColumns: 12 }),
+    "standard",
+  );
   assert.equal(
     api.resolvePresentationMode("auto", { width: 220, height: 160 }, "", { preferSquareTiles: false }),
     "compact",
@@ -217,7 +227,10 @@ test("square media player overlay stays a tile instead of collapsing to a chip",
   assert.doesNotMatch(source, /height: auto !important;/);
   const layout = read("src/cards/media-player/media-player-layout.ts");
   assert.match(layout, /CHIP_MIN_WIDTH = 960/);
-  assert.match(layout, /preferSquareTiles && width >= SQUARE_MIN_WIDTH && width < TILE_MAX_WIDTH/);
+  assert.match(layout, /SQUARE_MAX_WIDTH = 480/);
+  assert.match(layout, /WIDE_GRID_COLUMNS = 6/);
+  assert.match(layout, /canAutoSquare\(/);
+  assert.match(source, /has-album-background \.media-player__artwork/);
 });
 
 test("media player artwork containers share one border radius", () => {

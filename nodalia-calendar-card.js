@@ -4,7 +4,7 @@
   // src/cards/calendar/calendar-constants.ts
   var CARD_TAG = "nodalia-calendar-card";
   var EDITOR_TAG = "nodalia-calendar-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.32";
+  var CARD_VERSION = "2.3.0-alpha.33";
   var NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
   var HAPTIC_PATTERNS = {
     selection: 8,

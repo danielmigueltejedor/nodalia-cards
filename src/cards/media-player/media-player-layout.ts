@@ -19,9 +19,17 @@ const COMPACT_MAX_WIDTH = 160;
  * forcing 1:1 squares there leaves vacuum/media pairs looking empty and uneven.
  */
 const SQUARE_MIN_WIDTH = 300;
+/**
+ * Auto square is only for half-width tiles. Wider cards (or section spans > 6)
+ * should stay standard so the entity icon / hero thumb remains visible.
+ */
+const SQUARE_MAX_WIDTH = 480;
+const WIDE_GRID_COLUMNS = 6;
 
 export type ResolvePresentationOptions = {
   preferSquareTiles?: boolean;
+  /** Configured section grid span (1–12). Spans above 6 never auto-square. */
+  gridColumns?: number | null;
 };
 
 export function normalizePresentationMode(value: unknown): MediaPlayerPresentationMode {
@@ -38,12 +46,29 @@ export function normalizePresentationMode(value: unknown): MediaPlayerPresentati
   return "auto";
 }
 
+function isWideSectionSpan(gridColumns: number | null | undefined): boolean {
+  const cols = Number(gridColumns);
+  return Number.isFinite(cols) && cols > WIDE_GRID_COLUMNS;
+}
+
+function canAutoSquare(
+  preferSquareTiles: boolean,
+  width: number,
+  gridColumns: number | null | undefined,
+): boolean {
+  if (!preferSquareTiles || isWideSectionSpan(gridColumns)) {
+    return false;
+  }
+  return width >= SQUARE_MIN_WIDTH && width < SQUARE_MAX_WIDTH;
+}
+
 function keepCurrentIfClose(
   current: Exclude<MediaPlayerPresentationMode, "auto"> | "",
   next: Exclude<MediaPlayerPresentationMode, "auto">,
   width: number,
   height: number,
   preferSquareTiles: boolean,
+  gridColumns: number | null | undefined,
 ): Exclude<MediaPlayerPresentationMode, "auto"> {
   if (!current || current === next) {
     return next;
@@ -53,11 +78,24 @@ function keepCurrentIfClose(
     return next;
   }
 
-  if (preferSquareTiles && next === "square" && (current === "chip" || current === "compact")) {
-    return width >= SQUARE_MIN_WIDTH ? "square" : "compact";
+  // Leave square as soon as the card is a wide section span or too wide for a tile.
+  if (
+    (current === "square" || current === "artwork")
+    && (isWideSectionSpan(gridColumns) || width >= SQUARE_MAX_WIDTH)
+  ) {
+    return next;
   }
 
-  if (preferSquareTiles && current === "square" && width > 0 && width >= SQUARE_MIN_WIDTH && width < TILE_MAX_WIDTH) {
+  if (preferSquareTiles && next === "square" && (current === "chip" || current === "compact")) {
+    return canAutoSquare(preferSquareTiles, width, gridColumns) ? "square" : "compact";
+  }
+
+  if (
+    preferSquareTiles
+    && current === "square"
+    && canAutoSquare(preferSquareTiles, width, gridColumns)
+    && width < TILE_MAX_WIDTH
+  ) {
     return "square";
   }
 
@@ -65,7 +103,7 @@ function keepCurrentIfClose(
   if (
     preferSquareTiles
     && current === "square"
-    && width >= SQUARE_MIN_WIDTH
+    && canAutoSquare(preferSquareTiles, width, gridColumns)
     && ratio >= 0.72
     && ratio <= 1.38
     && height >= 150
@@ -78,7 +116,14 @@ function keepCurrentIfClose(
   if (current === "compact" && width < COMPACT_MAX_WIDTH && height <= 230) {
     return "compact";
   }
-  if (preferSquareTiles && current === "artwork" && ratio >= 0.72 && ratio <= 1.45 && height >= 160) {
+  if (
+    preferSquareTiles
+    && current === "artwork"
+    && canAutoSquare(preferSquareTiles, width, gridColumns)
+    && ratio >= 0.72
+    && ratio <= 1.45
+    && height >= 160
+  ) {
     return "artwork";
   }
   return next;
@@ -102,12 +147,13 @@ export function resolvePresentationMode(
   }
 
   const preferSquareTiles = options.preferSquareTiles !== false;
+  const gridColumns = options.gridColumns;
   const ratio = height > 0 ? width / height : 0;
   let next: Exclude<MediaPlayerPresentationMode, "auto"> = "standard";
 
   if (width >= CHIP_MIN_WIDTH && height > 0 && height <= 132 && ratio >= 2.05) {
     next = "chip";
-  } else if (preferSquareTiles && width >= SQUARE_MIN_WIDTH && width < TILE_MAX_WIDTH) {
+  } else if (canAutoSquare(preferSquareTiles, width, gridColumns)) {
     next = "square";
   } else if (!preferSquareTiles && width <= 248) {
     next = "compact";
@@ -115,15 +161,17 @@ export function resolvePresentationMode(
     next = "compact";
   } else if (
     preferSquareTiles
+    && !isWideSectionSpan(gridColumns)
     && ratio >= 0.84
     && ratio <= 1.18
     && Math.min(width, height) >= 168
+    && width < SQUARE_MAX_WIDTH
   ) {
     next = "square";
   }
 
   const stableCurrent = current && current !== "auto" ? current : "";
-  return keepCurrentIfClose(stableCurrent, next, width, height, preferSquareTiles);
+  return keepCurrentIfClose(stableCurrent, next, width, height, preferSquareTiles, gridColumns);
 }
 
 export function presentationGridOptions(mode: Exclude<MediaPlayerPresentationMode, "auto">): {

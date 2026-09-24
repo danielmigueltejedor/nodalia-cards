@@ -4,7 +4,7 @@
   // src/cards/media-player/media-player-constants.ts
   var CARD_TAG = "nodalia-media-player";
   var EDITOR_TAG = "nodalia-media-player-editor";
-  var CARD_VERSION = "2.3.0-alpha.32";
+  var CARD_VERSION = "2.3.0-alpha.33";
   var INVALID_EDITOR_VALUE = /* @__PURE__ */ Symbol("invalid-editor-value");
   var MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
   var HAPTIC_PATTERNS = {
@@ -171,6 +171,8 @@
   var CHIP_MIN_WIDTH = 960;
   var COMPACT_MAX_WIDTH = 160;
   var SQUARE_MIN_WIDTH = 300;
+  var SQUARE_MAX_WIDTH = 480;
+  var WIDE_GRID_COLUMNS = 6;
   function normalizePresentationMode(value) {
     const key = String(value || "").trim().toLowerCase();
     if (key === "horizontal" || key === "long" || key === "chip") {
@@ -184,21 +186,34 @@
     }
     return "auto";
   }
-  function keepCurrentIfClose(current, next, width, height, preferSquareTiles) {
+  function isWideSectionSpan(gridColumns) {
+    const cols = Number(gridColumns);
+    return Number.isFinite(cols) && cols > WIDE_GRID_COLUMNS;
+  }
+  function canAutoSquare(preferSquareTiles, width, gridColumns) {
+    if (!preferSquareTiles || isWideSectionSpan(gridColumns)) {
+      return false;
+    }
+    return width >= SQUARE_MIN_WIDTH && width < SQUARE_MAX_WIDTH;
+  }
+  function keepCurrentIfClose(current, next, width, height, preferSquareTiles, gridColumns) {
     if (!current || current === next) {
       return next;
     }
     if (!preferSquareTiles && (current === "square" || current === "artwork")) {
       return next;
     }
-    if (preferSquareTiles && next === "square" && (current === "chip" || current === "compact")) {
-      return width >= SQUARE_MIN_WIDTH ? "square" : "compact";
+    if ((current === "square" || current === "artwork") && (isWideSectionSpan(gridColumns) || width >= SQUARE_MAX_WIDTH)) {
+      return next;
     }
-    if (preferSquareTiles && current === "square" && width > 0 && width >= SQUARE_MIN_WIDTH && width < TILE_MAX_WIDTH) {
+    if (preferSquareTiles && next === "square" && (current === "chip" || current === "compact")) {
+      return canAutoSquare(preferSquareTiles, width, gridColumns) ? "square" : "compact";
+    }
+    if (preferSquareTiles && current === "square" && canAutoSquare(preferSquareTiles, width, gridColumns) && width < TILE_MAX_WIDTH) {
       return "square";
     }
     const ratio = width / Math.max(height, 1);
-    if (preferSquareTiles && current === "square" && width >= SQUARE_MIN_WIDTH && ratio >= 0.72 && ratio <= 1.38 && height >= 150) {
+    if (preferSquareTiles && current === "square" && canAutoSquare(preferSquareTiles, width, gridColumns) && ratio >= 0.72 && ratio <= 1.38 && height >= 150) {
       return "square";
     }
     if (current === "chip" && width >= CHIP_MIN_WIDTH && height <= 168 && ratio >= 1.7) {
@@ -207,7 +222,7 @@
     if (current === "compact" && width < COMPACT_MAX_WIDTH && height <= 230) {
       return "compact";
     }
-    if (preferSquareTiles && current === "artwork" && ratio >= 0.72 && ratio <= 1.45 && height >= 160) {
+    if (preferSquareTiles && current === "artwork" && canAutoSquare(preferSquareTiles, width, gridColumns) && ratio >= 0.72 && ratio <= 1.45 && height >= 160) {
       return "artwork";
     }
     return next;
@@ -223,21 +238,22 @@
       return current && current !== "auto" ? current : "standard";
     }
     const preferSquareTiles = options.preferSquareTiles !== false;
+    const gridColumns = options.gridColumns;
     const ratio = height > 0 ? width / height : 0;
     let next = "standard";
     if (width >= CHIP_MIN_WIDTH && height > 0 && height <= 132 && ratio >= 2.05) {
       next = "chip";
-    } else if (preferSquareTiles && width >= SQUARE_MIN_WIDTH && width < TILE_MAX_WIDTH) {
+    } else if (canAutoSquare(preferSquareTiles, width, gridColumns)) {
       next = "square";
     } else if (!preferSquareTiles && width <= 248) {
       next = "compact";
     } else if (preferSquareTiles && width < SQUARE_MIN_WIDTH) {
       next = "compact";
-    } else if (preferSquareTiles && ratio >= 0.84 && ratio <= 1.18 && Math.min(width, height) >= 168) {
+    } else if (preferSquareTiles && !isWideSectionSpan(gridColumns) && ratio >= 0.84 && ratio <= 1.18 && Math.min(width, height) >= 168 && width < SQUARE_MAX_WIDTH) {
       next = "square";
     }
     const stableCurrent = current && current !== "auto" ? current : "";
-    return keepCurrentIfClose(stableCurrent, next, width, height, preferSquareTiles);
+    return keepCurrentIfClose(stableCurrent, next, width, height, preferSquareTiles, gridColumns);
   }
   function presentationGridOptions(mode) {
     switch (mode) {
@@ -1385,6 +1401,10 @@
           state: this._hass?.states?.[player.entity] || null
         };
       }
+      _getConfiguredGridColumns() {
+        const numericColumns = Number(this._config?.grid_options?.columns);
+        return Number.isFinite(numericColumns) && numericColumns > 0 ? numericColumns : null;
+      }
       _getPresentationMode() {
         const context = this._getActivePlayerContext();
         const entityId = String(context?.player?.entity || "");
@@ -1405,7 +1425,10 @@
             height: preferSquareTiles ? this.clientHeight : 0
           },
           this._resolvedLayoutMode,
-          { preferSquareTiles }
+          {
+            preferSquareTiles,
+            gridColumns: this._getConfiguredGridColumns()
+          }
         );
       }
       _syncPresentationMode() {
@@ -5425,9 +5448,21 @@
           grid-template-columns: minmax(0, 1fr);
         }
 
-        .media-player-card--square .media-player__artwork,
-        .media-player-card--artwork .media-player__artwork {
+        /* Full-bleed album art replaces the thumb; keep the entity icon when there is no cover. */
+        .media-player-card--square.has-album-background .media-player__artwork,
+        .media-player-card--artwork.has-album-background .media-player__artwork {
           display: none;
+        }
+
+        .media-player-card--square:not(.has-album-background) .media-player__hero,
+        .media-player-card--artwork:not(.has-album-background) .media-player__hero {
+          grid-template-columns: 48px minmax(0, 1fr);
+        }
+
+        .media-player-card--square:not(.has-album-background) .media-player__artwork,
+        .media-player-card--artwork:not(.has-album-background) .media-player__artwork {
+          height: 48px;
+          width: 48px;
         }
 
         .media-player-card--square .media-player__hero-copy,

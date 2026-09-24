@@ -75,7 +75,7 @@ export interface MediaPlayerPublicApi {
     mode: unknown,
     size?: { width: number; height: number },
     current?: MediaPlayerPresentationMode | "",
-    options?: { preferSquareTiles?: boolean },
+    options?: { preferSquareTiles?: boolean; gridColumns?: number | null },
   ) => Exclude<MediaPlayerPresentationMode, "auto">;
   interpolatePlaybackProgress: (state: unknown, now?: number) => PlaybackProgress | null;
   supportsMediaSeek: (state: unknown) => boolean;
