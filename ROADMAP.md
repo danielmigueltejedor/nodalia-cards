@@ -11,11 +11,11 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.31
+2.3.0-alpha.32
 ```
 
-Preview **`2.3.0-alpha.31`** left-aligns idle Media Player icon/name with power
-on the right, and grows idle icons to 50px under 420px like Light/Fan.
+Preview **`2.3.0-alpha.32`** fixes the empty band under compact Vacuum/Media
+pairs on mobile by reporting a 2-row section footprint for dense vacuum tiles.
 Stable **`2.2.10`** remains the recommended daily-driver release.
 
 ## Current stable release

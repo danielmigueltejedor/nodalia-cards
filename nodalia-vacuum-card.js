@@ -4,7 +4,7 @@
   // src/cards/vacuum/vacuum-constants.ts
   var CARD_TAG = "nodalia-vacuum-card";
   var EDITOR_TAG = "nodalia-vacuum-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.31";
+  var CARD_VERSION = "2.3.0-alpha.32";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
@@ -421,11 +421,15 @@
           }
           const nextWidth = Math.round(entry.contentRect?.width || this.clientWidth || 0);
           const nextCompact = this._shouldUseCompactLayout(nextWidth);
-          if (nextWidth === this._cardWidth && nextCompact === this._isCompactLayout) {
+          const compactChanged = nextCompact !== this._isCompactLayout;
+          if (nextWidth === this._cardWidth && !compactChanged) {
             return;
           }
           this._cardWidth = nextWidth;
           this._isCompactLayout = nextCompact;
+          if (compactChanged) {
+            this._notifyLayoutChange();
+          }
           const signature = this._getRenderSignature();
           if (signature === this._lastRenderSignature) {
             return;
@@ -512,10 +516,11 @@
         return this._getEstimatedCardSize();
       }
       getGridOptions() {
+        const rows = this._getEstimatedCardSize();
         return {
           rows: "auto",
           columns: "full",
-          min_rows: 2,
+          min_rows: rows,
           min_columns: 2
         };
       }
@@ -570,7 +575,10 @@
         }, safeDelay);
       }
       _getEstimatedCardSize(state = this._getState()) {
-        let size = 3;
+        if (this._isCompactLayout) {
+          return 2;
+        }
+        let size = 2;
         const availableModeDescriptors = this._getVisibleModeDescriptors(state);
         const activeModeDescriptor = availableModeDescriptors.find((mode) => mode.kind === this._activeModePanel) || null;
         const roomMappings = this._getRoomMappings(state);

@@ -101,13 +101,19 @@ class NodaliaVacuumCard extends HTMLElement {
 
       const nextWidth = Math.round(entry.contentRect?.width || this.clientWidth || 0);
       const nextCompact = this._shouldUseCompactLayout(nextWidth);
+      const compactChanged = nextCompact !== this._isCompactLayout;
 
-      if (nextWidth === this._cardWidth && nextCompact === this._isCompactLayout) {
+      if (nextWidth === this._cardWidth && !compactChanged) {
         return;
       }
 
       this._cardWidth = nextWidth;
       this._isCompactLayout = nextCompact;
+
+      if (compactChanged) {
+        // Sections caches grid options; compact↔full changes the row footprint.
+        this._notifyLayoutChange();
+      }
 
       const signature = this._getRenderSignature();
       if (signature === this._lastRenderSignature) {
@@ -208,10 +214,11 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   getGridOptions() {
+    const rows = this._getEstimatedCardSize();
     return {
       rows: "auto",
       columns: "full",
-      min_rows: 2,
+      min_rows: rows,
       min_columns: 2,
     };
   }
@@ -275,7 +282,13 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   _getEstimatedCardSize(state = this._getState()) {
-    let size = 3;
+    // Dense/compact tiles only show header + a short control row — match Light/Fan
+    // (2 section rows). Returning 3 here left an empty band under vacuum/media pairs.
+    if (this._isCompactLayout) {
+      return 2;
+    }
+
+    let size = 2;
     const availableModeDescriptors = this._getVisibleModeDescriptors(state);
     const activeModeDescriptor = availableModeDescriptors.find(mode => mode.kind === this._activeModePanel)
       || null;

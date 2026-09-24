@@ -1,6 +1,6 @@
 export const CARD_TAG = "nodalia-light-card";
 export const EDITOR_TAG = "nodalia-light-card-editor";
-export const CARD_VERSION = "2.3.0-alpha.31";
+export const CARD_VERSION = "2.3.0-alpha.32";
 export const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,

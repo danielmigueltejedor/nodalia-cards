@@ -1,6 +1,6 @@
 export const CARD_TAG = "nodalia-advance-vacuum-card";
 export const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-export const CARD_VERSION = "2.3.0-alpha.31";
+export const CARD_VERSION = "2.3.0-alpha.32";
 /** Sentinel for `_lastSubmittedSharedCleaningSessionValue` when serialized session exceeds helper max length. */
 export const SHARED_CLEANING_SESSION_OVERFLOW_SENTINEL = "__NODALIA_SHARED_SESSION_OVERFLOW__";
 export const HAPTIC_PATTERNS = {

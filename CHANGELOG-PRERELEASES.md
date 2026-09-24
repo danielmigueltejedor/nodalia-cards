@@ -8,6 +8,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.32] - 2026-09-24
+
+Vacuum compact section footprint drops to 2 rows so mobile vacuum/media pairs
+no longer leave an empty band underneath.
+
+### Fixed
+
+- Compact/dense Vacuum `getCardSize` / `min_rows` stay at **2** (was estimated
+  **3**), matching the short header+controls tile and clearing the gap under
+  vacuum/media rows in sections.
+- Compact↔full width changes notify sections to re-read grid options.
+
+### Validation
+
+- Interaction regression covers the dense 2-row vacuum footprint.
+
 ## [2.3.0-alpha.31] - 2026-09-24
 
 Idle Media Player tiles: left-aligned icon/name with power on the right, and

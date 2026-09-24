@@ -1,6 +1,6 @@
 export const CARD_TAG = "nodalia-media-player";
 export const EDITOR_TAG = "nodalia-media-player-editor";
-export const CARD_VERSION = "2.3.0-alpha.31";
+export const CARD_VERSION = "2.3.0-alpha.32";
 export const INVALID_EDITOR_VALUE = Symbol("invalid-editor-value");
 export const MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
 export const HAPTIC_PATTERNS = {

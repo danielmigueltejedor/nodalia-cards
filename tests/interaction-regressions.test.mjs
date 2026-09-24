@@ -2546,6 +2546,13 @@ test("compact tiles show the name when the row is wide enough", () => {
   }
 });
 
+test("vacuum dense compact reports a 2-row section footprint", () => {
+  const source = read("src/cards/vacuum/vacuum-card.ts");
+  assert.match(source, /if \(this\._isCompactLayout\) \{\s*return 2;/);
+  assert.match(source, /getGridOptions\(\) \{[\s\S]*min_rows: rows/);
+  assert.match(source, /let size = 2;/);
+});
+
 test("compact vacuum keeps the name full-width and moves battery into the chip row", () => {
   const source = read("nodalia-vacuum-card.js");
   assert.match(source, /vacuum-card__headline/);
