@@ -4,7 +4,7 @@
   // src/cards/room-summary/room-summary-constants.ts
   var CARD_TAG = "nodalia-room-summary-card";
   var EDITOR_TAG = "nodalia-room-summary-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.34";
+  var CARD_VERSION = "2.3.0-alpha.35";
   var HUB_PANELS = /* @__PURE__ */ new Set(["home", "lights", "covers", "climate", "vacuum", "fans", "humidifiers", "media", "camera", "security", "others"]);
   var COMFORT = { hot: 27, cold: 17, humid: 70, dry: 30 };
   var CUSTOMIZABLE_EMBED_LISTS = /* @__PURE__ */ new Set(["lights", "vacuums", "fans", "humidifiers", "others"]);
@@ -1195,6 +1195,12 @@
         const groupedPlayers = nativePlayers.length ? nativePlayers : ids.map((entity) => ({ entity }));
         const players = (scope === "group" ? groupedPlayers : [matchingPlayer || { entity: entityId }]).filter((player) => player?.entity).map((player) => ({ ...player, show: player.show !== false }));
         const nativeAnimations = isObject(native.animations) ? native.animations : config.animations;
+        const nativeLayout = isObject(native.layout) ? native.layout : {};
+        const requestedMode = String(nativeLayout.mode || "auto").trim().toLowerCase();
+        const explicitModes = /* @__PURE__ */ new Set(["standard", "square", "chip", "compact", "artwork"]);
+        const layoutMode = explicitModes.has(requestedMode) ? requestedMode : "standard";
+        const nativeGrid = isObject(native.grid_options) ? native.grid_options : {};
+        const configuredColumns = Number(nativeGrid.columns);
         return {
           ...native,
           show: true,
@@ -1204,9 +1210,14 @@
           players,
           animations: { ...deepClone(nativeAnimations), content_duration: 0, panel_duration: 0 },
           layout: {
-            ...isObject(native.layout) ? native.layout : {},
+            ...nativeLayout,
+            mode: layoutMode,
             fixed: false,
             reserve_space: false
+          },
+          grid_options: {
+            ...nativeGrid,
+            columns: Number.isFinite(configuredColumns) && configuredColumns > 0 ? configuredColumns : 12
           },
           styles: isObject(native.styles) ? native.styles : {}
         };

@@ -435,6 +435,9 @@ test("room summary hub layout uses embedded nodalia cards and flat home header",
   assert.match(source, /layout: "compact"/);
   assert.match(source, /media_players/);
   assert.match(source, /hubMediaPlayerIds/);
+  assert.match(source, /_hubMediaEmbedConfig\(/);
+  assert.match(source, /layoutMode = explicitModes\.has\(requestedMode\) \? requestedMode : "standard"/);
+  assert.match(source, /columns: Number\.isFinite\(configuredColumns\) && configuredColumns > 0 \? configuredColumns : 12/);
   assert.match(source, /room-summary-card--hub[\s\S]*overflow:\s*visible/);
   assert.match(source, /nodalia-media-player/);
   assert.match(source, /styles\.accent/);

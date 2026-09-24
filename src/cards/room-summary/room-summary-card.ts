@@ -861,6 +861,14 @@ class NodaliaRoomSummaryCard extends HTMLElement {
       .filter(player => player?.entity)
       .map(player => ({ ...player, show: player.show !== false }));
     const nativeAnimations = isObject(native.animations) ? native.animations : config.animations;
+    const nativeLayout = isObject(native.layout) ? native.layout : {};
+    const requestedMode = String(nativeLayout.mode || "auto").trim().toLowerCase();
+    const explicitModes = new Set(["standard", "square", "chip", "compact", "artwork"]);
+    // Hub media lives in a wide panel. Auto still picked square for mid widths and
+    // hid the entity icon — default embeds to standard unless the user picked a mode.
+    const layoutMode = explicitModes.has(requestedMode) ? requestedMode : "standard";
+    const nativeGrid = isObject(native.grid_options) ? native.grid_options : {};
+    const configuredColumns = Number(nativeGrid.columns);
     return {
       ...native,
       show: true,
@@ -870,9 +878,14 @@ class NodaliaRoomSummaryCard extends HTMLElement {
       players,
       animations: { ...deepClone(nativeAnimations), content_duration: 0, panel_duration: 0 },
       layout: {
-        ...(isObject(native.layout) ? native.layout : {}),
+        ...nativeLayout,
+        mode: layoutMode,
         fixed: false,
         reserve_space: false,
+      },
+      grid_options: {
+        ...nativeGrid,
+        columns: Number.isFinite(configuredColumns) && configuredColumns > 0 ? configuredColumns : 12,
       },
       styles: isObject(native.styles) ? native.styles : {},
     };

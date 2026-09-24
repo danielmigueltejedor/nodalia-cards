@@ -8,6 +8,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.35] - 2026-09-24
+
+Room Summary hub Media Player embeds default to standard layout so they are
+not forced into a square tile inside the wide hub panel.
+
+### Fixed
+
+- Hub-embedded Media Player uses `layout.mode: standard` when media_config is
+  auto/unset, and reports a 12-column grid span so auto-square cannot win.
+  Explicit square/artwork/chip/compact choices in `media_config` are preserved.
+
+### Validation
+
+- Room summary hub tests cover the standard embed layout default.
+
 ## [2.3.0-alpha.34] - 2026-09-24
 
 Compact Fan (and Humidifier) keep configured mode / oscillation controls beside
