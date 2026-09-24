@@ -3399,7 +3399,7 @@
             rooms: "Habitaciones",
             zone: "Zona",
             routines: "Rutinas",
-            goto: "Ir a punto"
+            goto: "Ir a lugar"
           },
           aria: {
             modeTablist: "Modo de limpieza"
