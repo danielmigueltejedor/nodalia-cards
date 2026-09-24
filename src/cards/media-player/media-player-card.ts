@@ -303,14 +303,24 @@ class NodaliaMediaPlayer extends HTMLElement {
     return ["off", "standby", "unavailable", "unknown"].includes(stateKey);
   }
 
-  _notifySectionLayoutChange() {
+  _notifySectionLayoutChange({ forceWindowResize = false } = {}) {
     if (!this.isConnected) {
       return;
     }
     fireEvent(this, "iron-resize", {});
+    // Fav-style: sections sometimes keeps the tall span after a shrink until a
+    // window resize lands (iron-resize alone is not enough when collapsing).
+    if (forceWindowResize && typeof window !== "undefined") {
+      requestAnimationFrame(() => {
+        if (!this.isConnected) {
+          return;
+        }
+        window.dispatchEvent(new Event("resize"));
+      });
+    }
   }
 
-  _scheduleSectionLayoutRefresh(delay = 0) {
+  _scheduleSectionLayoutRefresh(delay = 0, { forceWindowResize = false } = {}) {
     if (typeof window === "undefined" || !this.isConnected) {
       return;
     }
@@ -320,7 +330,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       if (!this.isConnected) {
         return;
       }
-      this._notifySectionLayoutChange();
+      this._notifySectionLayoutChange({ forceWindowResize });
     };
     if (typeof schedule === "function") {
       schedule(this, done, safeDelay);
@@ -1142,11 +1152,21 @@ class NodaliaMediaPlayer extends HTMLElement {
       return false;
     }
 
+    const stateKey = normalizeTextKey(state.state);
+    // Apple TV / webOS often keep media_* attrs after power-off. Still collapse to
+    // the idle chip so sections can drop the tall "on" footprint.
+    if (
+      this._getPlayerDeviceType(player, state) === "tv"
+      && ["off", "standby", "unavailable", "unknown"].includes(stateKey)
+    ) {
+      return true;
+    }
+
     if (this._hasActiveMediaContent(state)) {
       return false;
     }
 
-    return ["idle", "off", "standby", "paused", "unknown", "unavailable"].includes(state.state);
+    return ["idle", "off", "standby", "paused", "unknown", "unavailable"].includes(stateKey);
   }
 
   _isMusicAssistantPlayer(player, state) {
@@ -3411,10 +3431,13 @@ class NodaliaMediaPlayer extends HTMLElement {
       this.removeAttribute("data-idle-compact");
     }
     if (wasIdleCompact !== nextIdleCompact) {
-      this._notifySectionLayoutChange();
-      // After square→idle the host must shrink with content; a deferred nudge
-      // lets sections remeasure once height:auto has painted.
-      this._scheduleSectionLayoutRefresh(80);
+      this._notifySectionLayoutChange({ forceWindowResize: nextIdleCompact });
+      // After on→off the host must shrink with content; deferred nudges let
+      // sections remeasure once height:auto has painted (and again after paint).
+      this._scheduleSectionLayoutRefresh(80, { forceWindowResize: nextIdleCompact });
+      if (nextIdleCompact) {
+        this._scheduleSectionLayoutRefresh(220, { forceWindowResize: true });
+      }
     }
     const cardTopHighlight = isLightThemeSurface
       ? "linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background) 34%, transparent), rgba(255, 255, 255, 0))"

@@ -1,6 +1,6 @@
 export const CARD_TAG = "nodalia-camera-card";
 export const EDITOR_TAG = "nodalia-camera-card-editor";
-export const CARD_VERSION = "2.3.0-alpha.44";
+export const CARD_VERSION = "2.3.0-alpha.45";
 export const CAMERA_LAYOUT = "mosaic";
 export const CAMERA_PRESENTATION = "feed";
 export const MAX_CAMERAS = 4;

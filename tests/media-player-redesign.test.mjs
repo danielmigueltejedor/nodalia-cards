@@ -289,6 +289,12 @@ test("media player idle compact sizes to content instead of stretching section c
     /:host\(\[data-idle-compact="true"\]\) \{[\s\S]*?align-self: stretch;[\s\S]*?height: 100%;/,
   );
   assert.match(source, /_scheduleSectionLayoutRefresh\(/);
+  assert.match(source, /forceWindowResize: nextIdleCompact/);
+  assert.match(
+    source,
+    /_getPlayerDeviceType\(player, state\) === "tv"[\s\S]*?\["off", "standby", "unavailable", "unknown"\]/,
+  );
+  assert.match(source, /often keep media_\* attrs after power-off/);
 });
 
 test("media player skips album fill when artwork mode is off", () => {

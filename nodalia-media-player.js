@@ -4,7 +4,7 @@
   // src/cards/media-player/media-player-constants.ts
   var CARD_TAG = "nodalia-media-player";
   var EDITOR_TAG = "nodalia-media-player-editor";
-  var CARD_VERSION = "2.3.0-alpha.44";
+  var CARD_VERSION = "2.3.0-alpha.45";
   var INVALID_EDITOR_VALUE = /* @__PURE__ */ Symbol("invalid-editor-value");
   var MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
   var HAPTIC_PATTERNS = {
@@ -1387,13 +1387,21 @@
         const stateKey = String(context.state?.state || "").trim().toLowerCase();
         return ["off", "standby", "unavailable", "unknown"].includes(stateKey);
       }
-      _notifySectionLayoutChange() {
+      _notifySectionLayoutChange({ forceWindowResize = false } = {}) {
         if (!this.isConnected) {
           return;
         }
         fireEvent(this, "iron-resize", {});
+        if (forceWindowResize && typeof window !== "undefined") {
+          requestAnimationFrame(() => {
+            if (!this.isConnected) {
+              return;
+            }
+            window.dispatchEvent(new Event("resize"));
+          });
+        }
       }
-      _scheduleSectionLayoutRefresh(delay = 0) {
+      _scheduleSectionLayoutRefresh(delay = 0, { forceWindowResize = false } = {}) {
         if (typeof window === "undefined" || !this.isConnected) {
           return;
         }
@@ -1403,7 +1411,7 @@
           if (!this.isConnected) {
             return;
           }
-          this._notifySectionLayoutChange();
+          this._notifySectionLayoutChange({ forceWindowResize });
         };
         if (typeof schedule === "function") {
           schedule(this, done, safeDelay);
@@ -2022,10 +2030,14 @@
         if (player?.compact_when_idle === false) {
           return false;
         }
+        const stateKey = normalizeTextKey2(state.state);
+        if (this._getPlayerDeviceType(player, state) === "tv" && ["off", "standby", "unavailable", "unknown"].includes(stateKey)) {
+          return true;
+        }
         if (this._hasActiveMediaContent(state)) {
           return false;
         }
-        return ["idle", "off", "standby", "paused", "unknown", "unavailable"].includes(state.state);
+        return ["idle", "off", "standby", "paused", "unknown", "unavailable"].includes(stateKey);
       }
       _isMusicAssistantPlayer(player, state) {
         const candidates = [
@@ -3841,8 +3853,11 @@
           this.removeAttribute("data-idle-compact");
         }
         if (wasIdleCompact !== nextIdleCompact) {
-          this._notifySectionLayoutChange();
-          this._scheduleSectionLayoutRefresh(80);
+          this._notifySectionLayoutChange({ forceWindowResize: nextIdleCompact });
+          this._scheduleSectionLayoutRefresh(80, { forceWindowResize: nextIdleCompact });
+          if (nextIdleCompact) {
+            this._scheduleSectionLayoutRefresh(220, { forceWindowResize: true });
+          }
         }
         const cardTopHighlight = isLightThemeSurface ? "linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background) 34%, transparent), rgba(255, 255, 255, 0))" : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent), rgba(255, 255, 255, 0))";
         const albumCardShadow = "0 1px 2px rgba(0, 0, 0, 0.08), 0 12px 28px rgba(0, 0, 0, 0.16)";

@@ -8,6 +8,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.45] - 2026-09-25
+
+Collapse Media Player to idle height when a TV powers off, even if stale
+`media_*` attributes remain (Apple TV / webOS).
+
+### Fixed
+
+- Powered-off TVs (`off` / `standby` / unavailable) always use idle compact,
+  ignoring leftover `media_title` / related attrs that previously kept the tall
+  “on” layout and left empty space under the card in sections.
+- Collapsing to idle nudges sections with deferred `iron-resize` plus a window
+  `resize` (Fav-style) so the cached on-state footprint shrinks after paint.
+
+### Validation
+
+- Idle-compact regression asserts TV power-off ignores stale media attrs and
+  schedules a forced window resize on collapse.
+
 ## [2.3.0-alpha.44] - 2026-09-25
 
 Keep half-width Media Player tiles content-height so they match Vacuum/Light/Fan

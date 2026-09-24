@@ -11,11 +11,11 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.44
+2.3.0-alpha.45
 ```
 
-Preview **`2.3.0-alpha.44`** keeps half-width Media Player tiles compact so they
-match Vacuum/Light/Fan and no longer leave empty bands under kiosk section rows.
+Preview **`2.3.0-alpha.45`** collapses Media Player when a TV powers off even if
+stale media attributes remain, so sections drop the tall on-state footprint.
 Stable **`2.2.10`** remains the recommended daily-driver release.
 
 ## Current stable release
