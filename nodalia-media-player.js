@@ -4,7 +4,7 @@
   // src/cards/media-player/media-player-constants.ts
   var CARD_TAG = "nodalia-media-player";
   var EDITOR_TAG = "nodalia-media-player-editor";
-  var CARD_VERSION = "2.3.0-alpha.40";
+  var CARD_VERSION = "2.3.0-alpha.41";
   var INVALID_EDITOR_VALUE = /* @__PURE__ */ Symbol("invalid-editor-value");
   var MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
   var HAPTIC_PATTERNS = {
@@ -503,7 +503,7 @@
     }
     const blur = artwork.mode === "blur" ? Math.max(18, Number(artwork.blur) || 18) : Math.max(0, Number(artwork.blur) || 0);
     const saturation = Number.isFinite(Number(artwork.saturation)) ? Number(artwork.saturation) : 1;
-    const brightness = isLightTheme ? 1.03 : 1;
+    const brightness = isLightTheme ? 0.92 : 1;
     const opacity = Number.isFinite(Number(artwork.opacity)) ? Number(artwork.opacity) : 1;
     const tone = `saturate(${saturation}) brightness(${brightness})`;
     return {
@@ -3782,9 +3782,9 @@
         const tvArtworkSize = playerStyles.tv_artwork_size || playerStyles.artwork_size;
         const activeTintColor = playerStyles.active_tint_color || "var(--info-color, #71c0ff)";
         const isLightThemeSurface = this._isLightThemeSurface();
-        const albumOverlayColor = isLightThemeSurface ? `color-mix(in srgb, ${playerStyles.overlay_color} 24%, var(--ha-card-background))` : playerStyles.overlay_color;
-        const albumOverlayTop = isLightThemeSurface ? `color-mix(in srgb, ${albumOverlayColor} 72%, transparent)` : `color-mix(in srgb, ${albumOverlayColor} 58%, rgba(0, 0, 0, 0.28))`;
-        const albumOverlayBottom = isLightThemeSurface ? `color-mix(in srgb, ${albumOverlayColor} 88%, color-mix(in srgb, var(--ha-card-background) 92%, transparent))` : `color-mix(in srgb, ${albumOverlayColor} 72%, rgba(0, 0, 0, 0.42))`;
+        const albumOverlayColor = playerStyles.overlay_color;
+        const albumOverlayTop = isLightThemeSurface ? `color-mix(in srgb, ${albumOverlayColor} 46%, rgba(0, 0, 0, 0.18))` : `color-mix(in srgb, ${albumOverlayColor} 58%, rgba(0, 0, 0, 0.28))`;
+        const albumOverlayBottom = isLightThemeSurface ? `color-mix(in srgb, ${albumOverlayColor} 58%, rgba(0, 0, 0, 0.28))` : `color-mix(in srgb, ${albumOverlayColor} 72%, rgba(0, 0, 0, 0.42))`;
         const artworkVisuals = getArtworkVisuals(
           config.artwork,
           config.album_cover_background !== false,
@@ -3807,6 +3807,7 @@
           this._notifySectionLayoutChange();
         }
         const cardTopHighlight = isLightThemeSurface ? "linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background) 34%, transparent), rgba(255, 255, 255, 0))" : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent), rgba(255, 255, 255, 0))";
+        const albumCardShadow = "0 1px 2px rgba(0, 0, 0, 0.08), 0 12px 28px rgba(0, 0, 0, 0.16)";
         const activeTintPrimaryStrength = isLightThemeSurface ? 52 : 46;
         const activeTintSecondaryStrength = isLightThemeSurface ? 34 : 30;
         const activeTintTopStrength = isLightThemeSurface ? 40 : 34;
@@ -3821,7 +3822,7 @@
       linear-gradient(135deg, color-mix(in srgb, ${activeTintColor} ${activeTintBaseStrength}%, ${activeCardBaseBackground}) 0%, color-mix(in srgb, ${activeTintColor} ${activeTintMidStrength}%, ${activeCardBaseBackground}) 58%, ${activeCardBaseBackground} 100%)
     `.trim();
         const activeCardBorder = `color-mix(in srgb, ${activeTintColor} 52%, var(--divider-color))`;
-        const activeCardShadow = `${playerStyles.box_shadow}, inset 0 0 0 999px color-mix(in srgb, ${activeTintColor} ${isLightThemeSurface ? 18 : 16}%, transparent), 0 0 0 1px color-mix(in srgb, ${activeTintColor} 22%, color-mix(in srgb, var(--primary-text-color) 8%, transparent)), 0 18px 38px color-mix(in srgb, ${activeTintColor} 34%, rgba(16, 34, 82, 0.18))`;
+        const activeCardShadow = `inset 0 0 0 999px color-mix(in srgb, ${activeTintColor} ${isLightThemeSurface ? 18 : 16}%, transparent), 0 0 0 1px color-mix(in srgb, ${activeTintColor} 22%, color-mix(in srgb, var(--primary-text-color) 8%, transparent)), ${albumCardShadow}`;
         const activeCardHighlight = `
       radial-gradient(circle at 18% 20%, color-mix(in srgb, ${activeTintColor} 34%, color-mix(in srgb, var(--primary-text-color) 12%, transparent)) 0%, transparent 54%),
       linear-gradient(135deg, color-mix(in srgb, ${activeTintColor} 24%, transparent) 0%, transparent 68%),
@@ -4045,6 +4046,16 @@
           background: ${activeCardHighlight};
         }
 
+        .media-player-card.has-album-background {
+          background: transparent;
+          border-color: color-mix(in srgb, var(--divider-color) 55%, transparent);
+          box-shadow: ${albumCardShadow};
+        }
+
+        .media-player-card.has-album-background::before {
+          background: linear-gradient(180deg, rgba(0, 0, 0, 0.14), transparent 46%);
+        }
+
         .media-player-card.has-album-background::after {
           background: linear-gradient(
             180deg,
@@ -4052,6 +4063,7 @@
             color-mix(in srgb, ${albumOverlayColor} ${Math.round(albumDim * 100)}%, transparent),
             ${albumOverlayBottom}
           );
+          border-radius: inherit;
           content: "";
           inset: 0;
           position: absolute;

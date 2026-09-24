@@ -8,6 +8,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.41] - 2026-09-24
+
+Light-theme Media Player album backgrounds keep color instead of washing out,
+and the card shadow follows the rounded corners.
+
+### Fixed
+
+- Light theme no longer bleaches album art toward `--ha-card-background`; uses a
+  dark scrim like dark theme so covers stay saturated and white type remains
+  readable.
+- Album cards use a soft rounded elevation instead of Material
+  `--ha-card-box-shadow`, which read as a hard square frame on light themes.
+- Light-theme artwork brightness is slightly reduced (0.92) instead of boosted.
+
+### Validation
+
+- Media redesign asserts light theme no longer mixes overlay into card background
+  and uses the soft album card shadow.
+
 ## [2.3.0-alpha.40] - 2026-09-24
 
 Keep Media Player track title and artist readable on any album cover.

@@ -4,7 +4,7 @@
   // src/cards/power-flow/power-flow-constants.ts
   var CARD_TAG = "nodalia-power-flow-card";
   var EDITOR_TAG = "nodalia-power-flow-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.40";
+  var CARD_VERSION = "2.3.0-alpha.41";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,

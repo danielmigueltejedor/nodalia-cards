@@ -11,11 +11,11 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.40
+2.3.0-alpha.41
 ```
 
-Preview **`2.3.0-alpha.40`** keeps Media Player track/artist text readable on
-any album cover.
+Preview **`2.3.0-alpha.41`** keeps light-theme album covers colorful and uses a
+soft rounded shadow instead of a square Material frame.
 Stable **`2.2.10`** remains the recommended daily-driver release.
 
 ## Current stable release

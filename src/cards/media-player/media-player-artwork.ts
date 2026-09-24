@@ -21,7 +21,7 @@ export function getArtworkVisuals(
     ? Math.max(18, Number(artwork.blur) || 18)
     : Math.max(0, Number(artwork.blur) || 0);
   const saturation = Number.isFinite(Number(artwork.saturation)) ? Number(artwork.saturation) : 1;
-  const brightness = isLightTheme ? 1.03 : 1;
+  const brightness = isLightTheme ? 0.92 : 1;
   const opacity = Number.isFinite(Number(artwork.opacity)) ? Number(artwork.opacity) : 1;
   const tone = `saturate(${saturation}) brightness(${brightness})`;
   return {
