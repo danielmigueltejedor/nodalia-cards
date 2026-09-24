@@ -8,6 +8,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.24] - 2026-09-24
+
+Follow-up to alpha.23: Camera only portals when embedded (or trapped by a
+transform containing block), so standalone expand focus traps keep working, and
+Media Player holds a strong reference to the artwork stage across remounts.
+
 ## [2.3.0-alpha.23] - 2026-09-24
 
 Faster Room Summary Hub, a true fullscreen Camera expand from inside the Hub,

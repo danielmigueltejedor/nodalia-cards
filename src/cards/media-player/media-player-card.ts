@@ -139,6 +139,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._pendingArtworkPreloads = new Map();
     this._displayArtworkByEntity = new Map();
     this._artworkController = new MediaPlayerArtworkController();
+    this._artworkStageEl = null;
     this._resolvedLayoutMode = "";
     this._presentationEntityId = "";
     this._layoutObserver = null;
@@ -218,6 +219,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._layoutObserver?.disconnect();
     this._layoutObserver = null;
     this._artworkController?.detach();
+    this._artworkStageEl = null;
     this._activeProgressDrag = null;
     window.NodaliaUtils?.clearDeferTimers?.(this);
   }
@@ -618,6 +620,17 @@ class NodaliaMediaPlayer extends HTMLElement {
       }
 
       if (rerenderOnReady) {
+        const existingStage = this.shadowRoot?.querySelector("[data-media-art-stage]");
+        if (existingStage instanceof HTMLElement && this._config?.album_cover_background !== false) {
+          this._activeArtworkUrl = url;
+          this._syncArtworkLayer(existingStage, {
+            artworkUrl: url,
+            idle: false,
+            entityId,
+            hasAlbumBackground: true,
+          });
+          return;
+        }
         this._lastRenderSignature = "";
         this._render();
       }
@@ -5085,9 +5098,11 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
     const css = markup.slice(styleStart + 7, styleEnd);
     const body = markup.slice(styleEnd + 8);
-    const previousArt = this.shadowRoot.querySelector("[data-media-art-stage]");
+    const previousArt = this._artworkStageEl instanceof HTMLElement
+      ? this._artworkStageEl
+      : this.shadowRoot.querySelector("[data-media-art-stage]");
     // Park outside chrome before wiping so identity survives the commit.
-    if (previousArt instanceof HTMLElement && previousArt.parentElement !== this.shadowRoot) {
+    if (previousArt instanceof HTMLElement && previousArt.parentNode !== this.shadowRoot) {
       this.shadowRoot.appendChild(previousArt);
     }
 
@@ -5112,6 +5127,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       const stage = previousArt instanceof HTMLElement
         ? previousArt
         : this._createArtworkStage();
+      this._artworkStageEl = stage;
       if (stage.parentElement !== card || card.firstChild !== stage) {
         card.insertBefore(stage, card.firstChild);
       }
@@ -5120,6 +5136,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       if (previousArt instanceof HTMLElement) {
         previousArt.remove();
       }
+      this._artworkStageEl = null;
       this._artworkController.clear();
       this._artworkController.detach();
     }

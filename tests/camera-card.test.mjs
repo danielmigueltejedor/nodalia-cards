@@ -647,6 +647,7 @@ test("camera card expanded overlay opens, closes, and cleans up listeners", () =
   assert.match(source, /_closeExpanded\(/);
   assert.match(source, /_syncExpandedPortal\(/);
   assert.match(source, /_teardownExpandedPortal\(/);
+  assert.match(source, /_shouldPortalExpanded\(/);
   assert.match(source, /nodalia-overlay-change/);
   assert.match(source, /data-nodalia-overlay-portal/);
   assert.match(source, /event\.key === "Escape"/);

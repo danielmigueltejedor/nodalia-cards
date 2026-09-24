@@ -11,10 +11,10 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.23
+2.3.0-alpha.24
 ```
 
-Preview **`2.3.0-alpha.23`** makes Room Summary Hub lighter (inactive embeds
+Preview **`2.3.0-alpha.24`** makes Room Summary Hub lighter (inactive embeds
 disconnect), portals Camera expand out of trapped stacking contexts, and keeps
 Media Player artwork stable across hass updates. Stable **`2.2.10`** remains
 the recommended daily-driver release.

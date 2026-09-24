@@ -4,7 +4,7 @@
   // src/cards/media-player/media-player-constants.ts
   var CARD_TAG = "nodalia-media-player";
   var EDITOR_TAG = "nodalia-media-player-editor";
-  var CARD_VERSION = "2.3.0-alpha.23";
+  var CARD_VERSION = "2.3.0-alpha.24";
   var INVALID_EDITOR_VALUE = /* @__PURE__ */ Symbol("invalid-editor-value");
   var MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
   var HAPTIC_PATTERNS = {
@@ -1209,6 +1209,7 @@
         this._pendingArtworkPreloads = /* @__PURE__ */ new Map();
         this._displayArtworkByEntity = /* @__PURE__ */ new Map();
         this._artworkController = new MediaPlayerArtworkController();
+        this._artworkStageEl = null;
         this._resolvedLayoutMode = "";
         this._presentationEntityId = "";
         this._layoutObserver = null;
@@ -1286,6 +1287,7 @@
         this._layoutObserver?.disconnect();
         this._layoutObserver = null;
         this._artworkController?.detach();
+        this._artworkStageEl = null;
         this._activeProgressDrag = null;
         window.NodaliaUtils?.clearDeferTimers?.(this);
       }
@@ -1610,6 +1612,17 @@
             this._displayArtworkByEntity.delete(entityId);
           }
           if (rerenderOnReady) {
+            const existingStage = this.shadowRoot?.querySelector("[data-media-art-stage]");
+            if (existingStage instanceof HTMLElement && this._config?.album_cover_background !== false) {
+              this._activeArtworkUrl = url;
+              this._syncArtworkLayer(existingStage, {
+                artworkUrl: url,
+                idle: false,
+                entityId,
+                hasAlbumBackground: true
+              });
+              return;
+            }
             this._lastRenderSignature = "";
             this._render();
           }
@@ -5490,8 +5503,8 @@
         }
         const css = markup.slice(styleStart + 7, styleEnd);
         const body = markup.slice(styleEnd + 8);
-        const previousArt = this.shadowRoot.querySelector("[data-media-art-stage]");
-        if (previousArt instanceof HTMLElement && previousArt.parentElement !== this.shadowRoot) {
+        const previousArt = this._artworkStageEl instanceof HTMLElement ? this._artworkStageEl : this.shadowRoot.querySelector("[data-media-art-stage]");
+        if (previousArt instanceof HTMLElement && previousArt.parentNode !== this.shadowRoot) {
           this.shadowRoot.appendChild(previousArt);
         }
         let styleEl = this.shadowRoot.querySelector("[data-media-style]");
@@ -5512,6 +5525,7 @@
         const card = this.shadowRoot.querySelector(".media-player-card");
         if (card instanceof HTMLElement && artOptions.hasAlbumBackground) {
           const stage = previousArt instanceof HTMLElement ? previousArt : this._createArtworkStage();
+          this._artworkStageEl = stage;
           if (stage.parentElement !== card || card.firstChild !== stage) {
             card.insertBefore(stage, card.firstChild);
           }
@@ -5520,6 +5534,7 @@
           if (previousArt instanceof HTMLElement) {
             previousArt.remove();
           }
+          this._artworkStageEl = null;
           this._artworkController.clear();
           this._artworkController.detach();
         }
