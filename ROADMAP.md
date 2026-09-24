@@ -11,11 +11,11 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.33
+2.3.0-alpha.34
 ```
 
-Preview **`2.3.0-alpha.33`** keeps wide / >6-column Media Players in standard
-layout with the entity icon visible instead of forcing a square tile.
+Preview **`2.3.0-alpha.34`** keeps Fan/Humidifier mode controls visible in
+compact layouts when those features are configured.
 Stable **`2.2.10`** remains the recommended daily-driver release.
 
 ## Current stable release

@@ -2327,9 +2327,13 @@ class NodaliaHumidifierCard extends HTMLElement {
     const showTitle = true;
     const showCopyBlock = showTitle || chips.length > 0;
     const hasSecondaryControls = (modeOptions.length > 0) || (fanModeOptions.length > 0);
-    const showCompactSecondary = hasSecondaryControls && (!isCompactLayout || !supportsHumidity);
-    if (isCompactLayout && supportsHumidity) {
+    // Keep mode / fan-mode toggles in compact when configured — compact only
+    // densifies chips, not the controls the user enabled.
+    const showCompactSecondary = hasSecondaryControls;
+    if (!modeOptions.length) {
       this._modePanelOpen = false;
+    }
+    if (!fanModeOptions.length) {
       this._fanModePanelOpen = false;
     }
     const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 54%, ${styles.card.background} 100%)`;

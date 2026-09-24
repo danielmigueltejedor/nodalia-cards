@@ -8,6 +8,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.34] - 2026-09-24
+
+Compact Fan (and Humidifier) keep configured mode / oscillation controls beside
+the slider instead of showing only the percentage track.
+
+### Fixed
+
+- Compact Fan again shows oscillation and preset-mode toggles when those
+  features are enabled; compact only densifies chips, not mode controls.
+- Compact Humidifier keeps mode / fan-mode toggles the same way.
+
+### Validation
+
+- Interaction regression asserts compact secondary controls stay enabled.
+
 ## [2.3.0-alpha.33] - 2026-09-24
 
 Media Player auto layout: wide / >6-column spans stay standard (with entity

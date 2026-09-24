@@ -2165,7 +2165,9 @@ class NodaliaFanCard extends HTMLElement {
     const translatedPresetMode = currentPresetMode ? translatePresetLabel(currentPresetMode) : "";
     const isCompactLayout = this._isCompactLayout;
     const hasSecondaryControls = isOn && (supportsOscillation || presetModes.length);
-    const showCompactSecondary = hasSecondaryControls && (!isCompactLayout || !supportsPercentage);
+    // Keep oscillation / preset toggles in compact when configured — compact only
+    // densifies chips, not the mode controls the user enabled.
+    const showCompactSecondary = hasSecondaryControls;
     const chips = [];
     const showTitle = true;
     const showCopyBlock = showTitle
@@ -2185,9 +2187,6 @@ class NodaliaFanCard extends HTMLElement {
     }
 
     if (!presetModes.length) {
-      this._presetPanelOpen = false;
-    }
-    if (isCompactLayout && supportsPercentage) {
       this._presetPanelOpen = false;
     }
 

@@ -4,7 +4,7 @@
   // src/cards/fan/fan-constants.ts
   var CARD_TAG = "nodalia-fan-card";
   var EDITOR_TAG = "nodalia-fan-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.33";
+  var CARD_VERSION = "2.3.0-alpha.34";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
@@ -2231,7 +2231,7 @@
         const translatedPresetMode = currentPresetMode ? translatePresetLabel(currentPresetMode) : "";
         const isCompactLayout = this._isCompactLayout;
         const hasSecondaryControls = isOn && (supportsOscillation || presetModes.length);
-        const showCompactSecondary = hasSecondaryControls && (!isCompactLayout || !supportsPercentage);
+        const showCompactSecondary = hasSecondaryControls;
         const chips = [];
         const showTitle = true;
         const showCopyBlock = showTitle || config.show_state === true || !isCompactLayout && isOn && (config.show_percentage_chip !== false && supportsPercentage || config.show_mode_chip !== false && translatedPresetMode);
@@ -2245,9 +2245,6 @@
           chips.push(`<span class="fan-card__chip">${escapeHtml(translatedPresetMode)}</span>`);
         }
         if (!presetModes.length) {
-          this._presetPanelOpen = false;
-        }
-        if (isCompactLayout && supportsPercentage) {
           this._presetPanelOpen = false;
         }
         const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 54%, ${styles.card.background} 100%)`;

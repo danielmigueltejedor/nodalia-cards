@@ -2553,6 +2553,21 @@ test("vacuum dense compact reports a 2-row section footprint", () => {
   assert.match(source, /let size = 2;/);
 });
 
+test("compact fan and humidifier keep configured mode controls beside the slider", () => {
+  const fan = read("src/cards/fan/fan-card.ts");
+  assert.match(fan, /const showCompactSecondary = hasSecondaryControls;/);
+  assert.doesNotMatch(fan, /isCompactLayout && supportsPercentage/);
+  assert.doesNotMatch(fan, /showCompactSecondary = hasSecondaryControls && \(!isCompactLayout \|\| !supportsPercentage\)/);
+
+  const humidifier = read("src/cards/humidifier/humidifier-card.ts");
+  assert.match(humidifier, /const showCompactSecondary = hasSecondaryControls;/);
+  assert.doesNotMatch(humidifier, /isCompactLayout && supportsHumidity/);
+  assert.doesNotMatch(
+    humidifier,
+    /showCompactSecondary = hasSecondaryControls && \(!isCompactLayout \|\| !supportsHumidity\)/,
+  );
+});
+
 test("compact vacuum keeps the name full-width and moves battery into the chip row", () => {
   const source = read("nodalia-vacuum-card.js");
   assert.match(source, /vacuum-card__headline/);
