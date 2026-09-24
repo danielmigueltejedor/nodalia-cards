@@ -37,7 +37,7 @@ test("media player layouts stay stable across nearby size changes", () => {
   const api = loadMediaPlayerApi();
   assert.equal(api.resolvePresentationMode("square"), "square");
   assert.equal(api.resolvePresentationMode("horizontal"), "chip");
-  assert.equal(api.resolvePresentationMode("auto", { width: 180, height: 180 }), "square");
+  assert.equal(api.resolvePresentationMode("auto", { width: 180, height: 180 }), "compact");
   assert.equal(api.resolvePresentationMode("auto", { width: 400, height: 96 }), "square");
   assert.equal(api.resolvePresentationMode("auto", { width: 220, height: 160 }), "square");
   assert.equal(api.resolvePresentationMode("auto", { width: 220, height: 160 }, "compact"), "square");
@@ -52,7 +52,7 @@ test("media player layouts stay stable across nearby size changes", () => {
     "standard",
   );
   assert.equal(
-    api.resolvePresentationMode("auto", { width: 220, height: 220 }, "square", { preferSquareTiles: false }),
+    api.resolvePresentationMode("auto", { width: 180, height: 180 }, "square", { preferSquareTiles: false }),
     "compact",
   );
 });
@@ -202,7 +202,7 @@ test("square media player overlay stays a tile instead of collapsing to a chip",
   assert.doesNotMatch(source, /height: auto !important;/);
   const layout = read("src/cards/media-player/media-player-layout.ts");
   assert.match(layout, /CHIP_MIN_WIDTH = 960/);
-  assert.match(layout, /preferSquareTiles && width >= COMPACT_MAX_WIDTH && width < TILE_MAX_WIDTH/);
+  assert.match(layout, /preferSquareTiles && width >= SQUARE_MIN_WIDTH && width < TILE_MAX_WIDTH/);
 });
 
 test("media player artwork containers share one border radius", () => {

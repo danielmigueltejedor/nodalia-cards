@@ -13,6 +13,8 @@ const EXPLICIT_MODES = ["standard", "square", "chip", "compact", "artwork"] as c
 const TILE_MAX_WIDTH = 960;
 const CHIP_MIN_WIDTH = 960;
 const COMPACT_MAX_WIDTH = 132;
+/** Below this, 2-column phone tiles stay content-sized instead of forcing 1:1 squares. */
+const SQUARE_MIN_WIDTH = 200;
 
 export type ResolvePresentationOptions = {
   preferSquareTiles?: boolean;
@@ -48,10 +50,10 @@ function keepCurrentIfClose(
   }
 
   if (preferSquareTiles && next === "square" && (current === "chip" || current === "compact")) {
-    return "square";
+    return width >= SQUARE_MIN_WIDTH ? "square" : "compact";
   }
 
-  if (preferSquareTiles && current === "square" && width > 0 && width < TILE_MAX_WIDTH) {
+  if (preferSquareTiles && current === "square" && width > 0 && width >= SQUARE_MIN_WIDTH && width < TILE_MAX_WIDTH) {
     return "square";
   }
 
@@ -94,11 +96,11 @@ export function resolvePresentationMode(
 
   if (width >= CHIP_MIN_WIDTH && height > 0 && height <= 132 && ratio >= 2.05) {
     next = "chip";
-  } else if (preferSquareTiles && width >= COMPACT_MAX_WIDTH && width < TILE_MAX_WIDTH) {
+  } else if (preferSquareTiles && width >= SQUARE_MIN_WIDTH && width < TILE_MAX_WIDTH) {
     next = "square";
   } else if (!preferSquareTiles && width <= 248) {
     next = "compact";
-  } else if (preferSquareTiles && width < COMPACT_MAX_WIDTH) {
+  } else if (preferSquareTiles && width < SQUARE_MIN_WIDTH) {
     next = "compact";
   } else if (
     preferSquareTiles

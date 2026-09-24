@@ -708,28 +708,9 @@ class NodaliaCameraCard extends HTMLElement {
   }
 
   _shouldPortalExpanded() {
-    if (!this.isConnected) {
-      return false;
-    }
-    if (this.closest?.("nodalia-room-summary-card")) {
-      return true;
-    }
-    let node = this.parentElement;
-    while (node && node !== document.documentElement) {
-      if (node instanceof HTMLElement) {
-        const style = window.getComputedStyle(node);
-        if (
-          (style.transform && style.transform !== "none")
-          || (style.filter && style.filter !== "none")
-          || (style.perspective && style.perspective !== "none")
-          || style.contain?.includes("paint")
-        ) {
-          return true;
-        }
-      }
-      node = node.parentElement;
-    }
-    return false;
+    // Only escape Room Summary stacking. Standalone cards keep the dialog in
+    // their shadow root so focus-trap browser tests and SPA taps keep working.
+    return Boolean(this.closest?.("nodalia-room-summary-card"));
   }
 
   _syncExpandedPortal() {

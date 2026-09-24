@@ -4,7 +4,7 @@
   // src/cards/vacuum/vacuum-constants.ts
   var CARD_TAG = "nodalia-vacuum-card";
   var EDITOR_TAG = "nodalia-vacuum-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.24";
+  var CARD_VERSION = "2.3.0-alpha.25";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
@@ -2266,6 +2266,10 @@
         const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
         const shouldAnimateActiveIcon = animations.enabled && animations.iconAnimation && this._isCleaning(state);
         const controls = this._getControls(state);
+        const cardWidth = Math.round(this._cardWidth || this.clientWidth || 0);
+        const denseCompact = isCompactLayout && cardWidth > 0 && cardWidth < 180;
+        const visibleControls = denseCompact ? controls.filter((control) => ["primary", "locate", "return_to_base"].includes(control.action)).slice(0, 3) : controls;
+        const visibleModeDescriptors = denseCompact ? [] : availableModeDescriptors;
         const isTintedState = this._shouldTintCard(state);
         const shouldDarkenBubbleIconGlyph = isTintedState && Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph?.(state, accentColor));
         const iconGlyphColor = isTintedState ? window.NodaliaBubbleContrast?.resolveBubbleIconGlyphColor?.(state, accentColor) || `color-mix(in srgb, ${accentColor} ${shouldDarkenBubbleIconGlyph ? 42 : 72}%, var(--primary-text-color))` : styles.icon.color;
@@ -2283,7 +2287,7 @@
         const cardBackground = isTintedState ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)` : styles.card.background;
         const cardBorder = isTintedState ? `color-mix(in srgb, ${accentColor} 34%, var(--divider-color))` : styles.card.border;
         const cardShadow = isTintedState ? `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))` : styles.card.box_shadow;
-        if (config.show_state_chip !== false) {
+        if (config.show_state_chip !== false && !denseCompact) {
           chips.push(`<span class="vacuum-card__chip vacuum-card__chip--state">${escapeHtml(stateLabel)}</span>`);
         }
         if (this._activeModePanel && !availableModeDescriptors.some((mode) => mode.kind === this._activeModePanel)) {
@@ -2313,9 +2317,13 @@
         this.shadowRoot.innerHTML = `
         <style>
           :host {
-            --vacuum-card-content-duration: ${animations.enabled ? clamp(Math.round(animations.panelDuration * 0.9), 180, 900) : 0}ms;
-            display: block;
-          }
+          --vacuum-card-content-duration: ${animations.enabled ? clamp(Math.round(animations.panelDuration * 0.9), 180, 900) : 0}ms;
+          align-self: start;
+          display: block;
+          height: fit-content;
+          max-width: 100%;
+          width: 100%;
+        }
 
         * {
           box-sizing: border-box;
@@ -2594,6 +2602,49 @@
           justify-content: center;
         }
 
+        .vacuum-card--dense {
+          gap: 8px;
+        }
+
+        .vacuum-card--dense .vacuum-card__header {
+          gap: 8px;
+        }
+
+        .vacuum-card--dense .vacuum-card__icon-button {
+          height: 44px;
+          width: 44px;
+        }
+
+        .vacuum-card--dense .vacuum-card__icon-button ha-icon {
+          --mdc-icon-size: 20px;
+          height: 20px;
+          width: 20px;
+        }
+
+        .vacuum-card--dense .vacuum-card__controls {
+          gap: 6px;
+        }
+
+        .vacuum-card--dense .vacuum-card__control {
+          height: 34px;
+          min-width: 34px;
+          width: 34px;
+        }
+
+        .vacuum-card--dense .vacuum-card__control ha-icon {
+          --mdc-icon-size: 16px;
+        }
+
+        .vacuum-card--dense .vacuum-card__title {
+          font-size: 13px;
+        }
+
+        .vacuum-card--dense .vacuum-card__chip {
+          font-size: 10px;
+          height: 22px;
+          padding: 0 7px;
+        }
+
         .vacuum-card__control {
           -webkit-tap-highlight-color: transparent;
           align-items: center;
@@ -2857,7 +2908,7 @@
       </style>
 
       <ha-card ${canRunBodyCardTap ? 'data-vacuum-action="body_tap"' : ""}>
-        <div class="vacuum-card ${isCompactLayout ? "vacuum-card--compact" : ""} ${shouldAnimateEntrance ? "vacuum-card--entering" : ""}">
+        <div class="vacuum-card ${isCompactLayout ? "vacuum-card--compact" : ""} ${denseCompact ? "vacuum-card--dense" : ""} ${shouldAnimateEntrance ? "vacuum-card--entering" : ""}">
           <div class="vacuum-card__header">
             <button
               class="vacuum-card__icon-button ${shouldAnimateActiveIcon ? "vacuum-card__icon-button--active-motion" : ""}"
@@ -2879,11 +2930,11 @@
                 ` : ""}
           </div>
 
-          ${controls.length || availableModeDescriptors.length ? `
+          ${visibleControls.length || visibleModeDescriptors.length ? `
                 <div class="vacuum-card__controls-group">
                   <div class="vacuum-card__controls-inner">
                     <div class="vacuum-card__controls">
-                      ${controls.map((control) => `
+                      ${visibleControls.map((control) => `
                           <button
                               class="vacuum-card__control ${control.active ? "vacuum-card__control--active" : ""}"
                               type="button"
@@ -2893,7 +2944,7 @@
                               <ha-icon icon="${escapeHtml(control.icon)}"></ha-icon>
                             </button>
                           `).join("")}
-                      ${availableModeDescriptors.map((mode) => `
+                      ${visibleModeDescriptors.map((mode) => `
                           <button
                             class="vacuum-card__control vacuum-card__mode-toggle ${activeModeDescriptor?.kind === mode.kind ? "vacuum-card__mode-toggle--active vacuum-card__control--active" : ""}"
                             type="button"

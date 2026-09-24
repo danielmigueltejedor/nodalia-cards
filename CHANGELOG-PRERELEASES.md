@@ -8,7 +8,36 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.25] - 2026-09-24
+
+Mobile compact polish for Vacuum and Media Player, CI-safe Camera expand, and
+immediate Media Player album stages.
+
+### Fixed
+
+- Camera expanded dialog portals only when embedded in Room Summary, so
+  standalone focus-trap and navigate browser tests find the dialog again.
+- Media Player paints the album artwork stage immediately from the desired
+  entity picture (instead of waiting for preload), fixing the empty-stage CI
+  case and blank tiles while art loads.
+- Narrow phone tiles (under 200px) prefer content-sized compact Media Player
+  layouts instead of forcing tall 1:1 squares that left empty space under the
+  Vacuum / Media row.
+- Vacuum cards `align-self: start` and densify under 180px: fewer controls, no
+  mop/fan mode toggles, hidden status chip, tighter padding.
+
+### Changed
+
+- Compact Media Player hides volume chips/subtitle and keeps a three-button
+  transport when space is tight.
+
+### Validation
+
+- Layout unit expectations updated for the 200px square threshold; Node suite
+  covers Camera portal gating and Vacuum dense compact markup.
+
 ## [2.3.0-alpha.24] - 2026-09-24
+
 
 Follow-up to alpha.23: Camera only portals when embedded (or trapped by a
 transform containing block), so standalone expand focus traps keep working, and

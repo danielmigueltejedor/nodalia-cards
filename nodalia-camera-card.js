@@ -1003,7 +1003,7 @@
   // src/cards/camera/camera-constants.ts
   var CARD_TAG = "nodalia-camera-card";
   var EDITOR_TAG = "nodalia-camera-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.24";
+  var CARD_VERSION = "2.3.0-alpha.25";
   var CAMERA_LAYOUT = "mosaic";
   var CAMERA_PRESENTATION = "feed";
   var MAX_CAMERAS = 4;
@@ -2193,23 +2193,7 @@
         portal.remove();
       }
       _shouldPortalExpanded() {
-        if (!this.isConnected) {
-          return false;
-        }
-        if (this.closest?.("nodalia-room-summary-card")) {
-          return true;
-        }
-        let node = this.parentElement;
-        while (node && node !== document.documentElement) {
-          if (node instanceof HTMLElement) {
-            const style = window.getComputedStyle(node);
-            if (style.transform && style.transform !== "none" || style.filter && style.filter !== "none" || style.perspective && style.perspective !== "none" || style.contain?.includes("paint")) {
-              return true;
-            }
-          }
-          node = node.parentElement;
-        }
-        return false;
+        return Boolean(this.closest?.("nodalia-room-summary-card"));
       }
       _syncExpandedPortal() {
         if (!this._expandedOpen || !this.shadowRoot) {

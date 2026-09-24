@@ -2742,6 +2742,9 @@ class NodaliaMediaPlayer extends HTMLElement {
       rerenderOnReady: true,
     });
     const artwork = this._getRenderableArtwork(player.entity, desiredArtwork);
+    // Prefer cached/ready art, but still paint the album stage immediately with the
+    // desired URL so compact tiles and CI fixtures are never blank while preloading.
+    const backgroundArtwork = artwork || desiredArtwork || "";
     const renderAnimateEntrance = animateEntrance && artworkReady;
     const safeArtwork = artwork ? escapeHtml(artwork) : "";
     const deviceType = this._getPlayerDeviceType(player, state);
@@ -2789,7 +2792,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     const currentVolumePercent = this._getPlayerVolumePercent(player.entity, state);
     const volumeSupported = this._supportsVolumeControl(state);
     const playerStyles = this._config.styles.player;
-    const hasAlbumBackground = this._config.album_cover_background !== false && Boolean(artwork);
+    const hasAlbumBackground = this._config.album_cover_background !== false && Boolean(backgroundArtwork);
     const useActiveTint = isTvPlayer && this._isPlayerActive(state) && !hasAlbumBackground;
     const showUnavailableBadge = this._config.show_unavailable_badge !== false && isUnavailableState(state);
     const playerCardClasses = [
@@ -2802,7 +2805,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     ]
       .filter(Boolean)
       .join(" ");
-    this._activeArtworkUrl = artwork || "";
+    this._activeArtworkUrl = backgroundArtwork;
     this._activeArtworkIdle = Boolean(useCompactIdleLayout);
 
     const volumeDownMarkup = volumeSupported
@@ -3368,6 +3371,14 @@ class NodaliaMediaPlayer extends HTMLElement {
           width: 100%;
         }
 
+        :host([data-presentation="compact"]) {
+          align-self: start;
+          aspect-ratio: auto;
+          height: fit-content;
+          max-width: 100%;
+          width: 100%;
+        }
+
         :host([data-idle-compact="true"]) {
           align-self: start;
           aspect-ratio: auto;
@@ -3449,8 +3460,30 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card--compact {
-          min-height: 120px;
-          padding: 12px;
+          min-height: 0;
+          padding: 10px 10px 12px;
+        }
+
+        .media-player-card--compact .media-player__volume-button:not(.media-player__volume-button--browse),
+        .media-player-card--compact .media-player__chips-wrap,
+        .media-player-card--compact .media-player__subtitle {
+          display: none;
+        }
+
+        .media-player-card--compact .media-player__transport-cluster {
+          gap: 6px;
+          grid-template-columns: repeat(3, minmax(0, auto));
+          justify-content: center;
+        }
+
+        .media-player-card--compact .media-player__control {
+          height: 34px;
+          min-width: 34px;
+          width: 34px;
+        }
+
+        .media-player-card--compact .media-player__title {
+          font-size: 13px;
         }
 
         .media-player-card--active {
@@ -4898,6 +4931,30 @@ class NodaliaMediaPlayer extends HTMLElement {
           .media-player-card--square .media-player__content,
           .media-player-card--artwork .media-player__content {
             gap: 6px;
+          }
+        }
+
+        @container (max-width: 200px) {
+          .media-player__subtitle,
+          .media-player__volume-button:not(.media-player__control):not(.media-player__volume-button--browse),
+          .media-player-card--square .media-player__volume-button:not(.media-player__volume-button--browse),
+          .media-player-card--artwork .media-player__volume-button:not(.media-player__volume-button--browse) {
+            display: none;
+          }
+
+          .media-player-card--square .media-player__transport-cluster,
+          .media-player-card--artwork .media-player__transport-cluster {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            max-width: 148px;
+          }
+
+          .media-player-card--square,
+          .media-player-card--artwork {
+            padding: 10px 10px 12px;
+          }
+
+          .media-player__title {
+            font-size: 13px;
           }
         }
 

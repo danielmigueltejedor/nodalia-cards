@@ -4,7 +4,7 @@
   // src/cards/media-player/media-player-constants.ts
   var CARD_TAG = "nodalia-media-player";
   var EDITOR_TAG = "nodalia-media-player-editor";
-  var CARD_VERSION = "2.3.0-alpha.24";
+  var CARD_VERSION = "2.3.0-alpha.25";
   var INVALID_EDITOR_VALUE = /* @__PURE__ */ Symbol("invalid-editor-value");
   var MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
   var HAPTIC_PATTERNS = {
@@ -170,6 +170,7 @@
   var TILE_MAX_WIDTH = 960;
   var CHIP_MIN_WIDTH = 960;
   var COMPACT_MAX_WIDTH = 132;
+  var SQUARE_MIN_WIDTH = 200;
   function normalizePresentationMode(value) {
     const key = String(value || "").trim().toLowerCase();
     if (key === "horizontal" || key === "long" || key === "chip") {
@@ -191,9 +192,9 @@
       return next;
     }
     if (preferSquareTiles && next === "square" && (current === "chip" || current === "compact")) {
-      return "square";
+      return width >= SQUARE_MIN_WIDTH ? "square" : "compact";
     }
-    if (preferSquareTiles && current === "square" && width > 0 && width < TILE_MAX_WIDTH) {
+    if (preferSquareTiles && current === "square" && width > 0 && width >= SQUARE_MIN_WIDTH && width < TILE_MAX_WIDTH) {
       return "square";
     }
     const ratio = width / Math.max(height, 1);
@@ -226,11 +227,11 @@
     let next = "standard";
     if (width >= CHIP_MIN_WIDTH && height > 0 && height <= 132 && ratio >= 2.05) {
       next = "chip";
-    } else if (preferSquareTiles && width >= COMPACT_MAX_WIDTH && width < TILE_MAX_WIDTH) {
+    } else if (preferSquareTiles && width >= SQUARE_MIN_WIDTH && width < TILE_MAX_WIDTH) {
       next = "square";
     } else if (!preferSquareTiles && width <= 248) {
       next = "compact";
-    } else if (preferSquareTiles && width < COMPACT_MAX_WIDTH) {
+    } else if (preferSquareTiles && width < SQUARE_MIN_WIDTH) {
       next = "compact";
     } else if (preferSquareTiles && ratio >= 0.84 && ratio <= 1.18 && Math.min(width, height) >= 168) {
       next = "square";
@@ -3282,6 +3283,7 @@
           rerenderOnReady: true
         });
         const artwork = this._getRenderableArtwork(player.entity, desiredArtwork);
+        const backgroundArtwork = artwork || desiredArtwork || "";
         const renderAnimateEntrance = animateEntrance && artworkReady;
         const safeArtwork = artwork ? escapeHtml(artwork) : "";
         const deviceType = this._getPlayerDeviceType(player, state);
@@ -3309,7 +3311,7 @@
         const currentVolumePercent = this._getPlayerVolumePercent(player.entity, state);
         const volumeSupported = this._supportsVolumeControl(state);
         const playerStyles = this._config.styles.player;
-        const hasAlbumBackground = this._config.album_cover_background !== false && Boolean(artwork);
+        const hasAlbumBackground = this._config.album_cover_background !== false && Boolean(backgroundArtwork);
         const useActiveTint = isTvPlayer && this._isPlayerActive(state) && !hasAlbumBackground;
         const showUnavailableBadge = this._config.show_unavailable_badge !== false && isUnavailableState(state);
         const playerCardClasses = [
@@ -3320,7 +3322,7 @@
           hasAlbumBackground ? "has-album-background" : "",
           useActiveTint ? "media-player-card--active" : ""
         ].filter(Boolean).join(" ");
-        this._activeArtworkUrl = artwork || "";
+        this._activeArtworkUrl = backgroundArtwork;
         this._activeArtworkIdle = Boolean(useCompactIdleLayout);
         const volumeDownMarkup = volumeSupported ? `
         <button
@@ -3784,6 +3786,14 @@
           width: 100%;
         }
 
+        :host([data-presentation="compact"]) {
+          align-self: start;
+          aspect-ratio: auto;
+          height: fit-content;
+          max-width: 100%;
+          width: 100%;
+        }
+
         :host([data-idle-compact="true"]) {
           align-self: start;
           aspect-ratio: auto;
@@ -3861,8 +3871,30 @@
         }
 
         .media-player-card--compact {
-          min-height: 120px;
-          padding: 12px;
+          min-height: 0;
+          padding: 10px 10px 12px;
+        }
+
+        .media-player-card--compact .media-player__volume-button:not(.media-player__volume-button--browse),
+        .media-player-card--compact .media-player__chips-wrap,
+        .media-player-card--compact .media-player__subtitle {
+          display: none;
+        }
+
+        .media-player-card--compact .media-player__transport-cluster {
+          gap: 6px;
+          grid-template-columns: repeat(3, minmax(0, auto));
+          justify-content: center;
+        }
+
+        .media-player-card--compact .media-player__control {
+          height: 34px;
+          min-width: 34px;
+          width: 34px;
+        }
+
+        .media-player-card--compact .media-player__title {
+          font-size: 13px;
         }
 
         .media-player-card--active {
@@ -5310,6 +5342,30 @@
           .media-player-card--square .media-player__content,
           .media-player-card--artwork .media-player__content {
             gap: 6px;
+          }
+        }
+
+        @container (max-width: 200px) {
+          .media-player__subtitle,
+          .media-player__volume-button:not(.media-player__control):not(.media-player__volume-button--browse),
+          .media-player-card--square .media-player__volume-button:not(.media-player__volume-button--browse),
+          .media-player-card--artwork .media-player__volume-button:not(.media-player__volume-button--browse) {
+            display: none;
+          }
+
+          .media-player-card--square .media-player__transport-cluster,
+          .media-player-card--artwork .media-player__transport-cluster {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            max-width: 148px;
+          }
+
+          .media-player-card--square,
+          .media-player-card--artwork {
+            padding: 10px 10px 12px;
+          }
+
+          .media-player__title {
+            font-size: 13px;
           }
         }
 
