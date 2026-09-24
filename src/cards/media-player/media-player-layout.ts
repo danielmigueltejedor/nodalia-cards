@@ -14,21 +14,22 @@ const TILE_MAX_WIDTH = 960;
 const CHIP_MIN_WIDTH = 960;
 const COMPACT_MAX_WIDTH = 160;
 /**
- * Prefer content-height compact tiles under this width.
- * Phone 2-column sections and many desktop half-columns sit below ~280px–300px;
- * forcing 1:1 squares there leaves vacuum/media pairs looking empty and uneven.
+ * Prefer content-height compact tiles under this width when columns are unset.
+ * Configured ≤6-col tiles never auto-square (see isConfiguredHalfWidthSpan) —
+ * kiosk/desktop half-columns often land in the 300–480px band and 1:1 squares
+ * left empty bands beside vacuum/light/fan in the same row.
  */
 const SQUARE_MIN_WIDTH = 300;
 /**
- * Auto square is only for half-width tiles. Wider cards (or section spans > 6)
- * should stay standard so the entity icon / hero thumb remains visible.
+ * Auto square is only when section columns are unset. Wider cards (spans > 6)
+ * stay standard so the entity icon / hero thumb remains visible.
  */
 const SQUARE_MAX_WIDTH = 480;
 const WIDE_GRID_COLUMNS = 6;
 
 export type ResolvePresentationOptions = {
   preferSquareTiles?: boolean;
-  /** Configured section grid span (1–12). Spans above 6 never auto-square. */
+  /** Configured section grid span (1–12). Spans ≤6 stay compact; >6 never auto-square. */
   gridColumns?: number | null;
 };
 
@@ -51,12 +52,23 @@ function isWideSectionSpan(gridColumns: number | null | undefined): boolean {
   return Number.isFinite(cols) && cols > WIDE_GRID_COLUMNS;
 }
 
+/** Matches vacuum/light/fan: configured half-tiles stay content-height compact. */
+function isConfiguredHalfWidthSpan(gridColumns: number | null | undefined): boolean {
+  const cols = Number(gridColumns);
+  return Number.isFinite(cols) && cols > 0 && cols <= WIDE_GRID_COLUMNS;
+}
+
 function canAutoSquare(
   preferSquareTiles: boolean,
   width: number,
   gridColumns: number | null | undefined,
 ): boolean {
-  if (!preferSquareTiles || isWideSectionSpan(gridColumns)) {
+  // Explicit ≤6-col spans mirror vacuum density; square only when columns are unset.
+  if (
+    !preferSquareTiles
+    || isWideSectionSpan(gridColumns)
+    || isConfiguredHalfWidthSpan(gridColumns)
+  ) {
     return false;
   }
   return width >= SQUARE_MIN_WIDTH && width < SQUARE_MAX_WIDTH;
@@ -78,10 +90,14 @@ function keepCurrentIfClose(
     return next;
   }
 
-  // Leave square as soon as the card is a wide section span or too wide for a tile.
+  // Leave square as soon as the card is a configured section span or too wide.
   if (
     (current === "square" || current === "artwork")
-    && (isWideSectionSpan(gridColumns) || width >= SQUARE_MAX_WIDTH)
+    && (
+      isWideSectionSpan(gridColumns)
+      || isConfiguredHalfWidthSpan(gridColumns)
+      || width >= SQUARE_MAX_WIDTH
+    )
   ) {
     return next;
   }
@@ -142,16 +158,23 @@ export function resolvePresentationMode(
 
   const width = Number(size.width) || 0;
   const height = Number(size.height) || 0;
+  const gridColumns = options.gridColumns;
   if (!(width > 0)) {
+    // Avoid a transient standard/square footprint before the first measure.
+    if (isConfiguredHalfWidthSpan(gridColumns)) {
+      return "compact";
+    }
     return current && current !== "auto" ? current : "standard";
   }
 
   const preferSquareTiles = options.preferSquareTiles !== false;
-  const gridColumns = options.gridColumns;
   const ratio = height > 0 ? width / height : 0;
   let next: Exclude<MediaPlayerPresentationMode, "auto"> = "standard";
 
-  if (width >= CHIP_MIN_WIDTH && height > 0 && height <= 132 && ratio >= 2.05) {
+  if (isConfiguredHalfWidthSpan(gridColumns)) {
+    // columns: 6 (and below) must match vacuum/light/fan row rhythm — never 1:1.
+    next = "compact";
+  } else if (width >= CHIP_MIN_WIDTH && height > 0 && height <= 132 && ratio >= 2.05) {
     next = "chip";
   } else if (canAutoSquare(preferSquareTiles, width, gridColumns)) {
     next = "square";

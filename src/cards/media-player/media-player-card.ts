@@ -310,6 +310,25 @@ class NodaliaMediaPlayer extends HTMLElement {
     fireEvent(this, "iron-resize", {});
   }
 
+  _scheduleSectionLayoutRefresh(delay = 0) {
+    if (typeof window === "undefined" || !this.isConnected) {
+      return;
+    }
+    const safeDelay = Math.max(0, Number(delay) || 0);
+    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const done = () => {
+      if (!this.isConnected) {
+        return;
+      }
+      this._notifySectionLayoutChange();
+    };
+    if (typeof schedule === "function") {
+      schedule(this, done, safeDelay);
+    } else {
+      window.setTimeout(done, safeDelay);
+    }
+  }
+
   _observeLayout() {
     if (this._layoutObserver || typeof ResizeObserver === "undefined") {
       return;
@@ -372,8 +391,9 @@ class NodaliaMediaPlayer extends HTMLElement {
   }
 
   _syncPresentationMode() {
+    const previous = this._resolvedLayoutMode;
     const next = this._getPresentationMode();
-    if (next === this._resolvedLayoutMode) {
+    if (next === previous) {
       return false;
     }
     this._resolvedLayoutMode = next;
@@ -384,6 +404,14 @@ class NodaliaMediaPlayer extends HTMLElement {
       // Sections view caches grid options; nudge a reflow when the tile mode changes
       // so min_rows from a wide measure (square) does not leave a gap once compact.
       this._notifySectionLayoutChange();
+      if (
+        previous === "square"
+        || previous === "artwork"
+        || next === "compact"
+        || next === "standard"
+      ) {
+        this._scheduleSectionLayoutRefresh(80);
+      }
     }
     return true;
   }
@@ -3384,6 +3412,9 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
     if (wasIdleCompact !== nextIdleCompact) {
       this._notifySectionLayoutChange();
+      // After square→idle the host must shrink with content; a deferred nudge
+      // lets sections remeasure once height:auto has painted.
+      this._scheduleSectionLayoutRefresh(80);
     }
     const cardTopHighlight = isLightThemeSurface
       ? "linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background) 34%, transparent), rgba(255, 255, 255, 0))"
@@ -3436,18 +3467,18 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         :host([data-presentation="compact"]) {
-          align-self: stretch;
+          align-self: start;
           aspect-ratio: auto;
-          height: 100%;
+          height: auto;
           max-width: 100%;
           min-height: 0;
           width: 100%;
         }
 
         :host([data-idle-compact="true"]) {
-          align-self: stretch;
+          align-self: start;
           aspect-ratio: auto;
-          height: 100%;
+          height: auto;
           max-height: none;
           min-height: 68px;
           overflow: visible;
@@ -3528,7 +3559,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player-card--compact {
           display: flex;
           flex-direction: column;
-          height: 100%;
+          height: auto;
           justify-content: space-between;
           min-height: 0;
           padding: 12px;
@@ -3537,7 +3568,7 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player-card--compact.media-player-card--idle {
           align-items: stretch;
-          height: 100%;
+          height: auto;
           justify-content: center;
           min-height: 68px;
           padding: 14px 12px;

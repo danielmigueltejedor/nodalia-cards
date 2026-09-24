@@ -8,6 +8,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.44] - 2026-09-25
+
+Keep half-width Media Player tiles content-height so they match Vacuum/Light/Fan
+and stop leaving empty bands under kiosk/desktop section rows.
+
+### Fixed
+
+- Media Player with configured `grid_options.columns` ≤ 6 stays **compact** in
+  auto mode instead of switching to 1:1 square (or tall standard) when the tile
+  lands in the ~300–480px band under kiosk `custom_width` / multi-column
+  sections — that mismatch left empty space beside Vacuum in the same row.
+- Idle/compact Media Player hosts size to content (`align-self: start`,
+  `height: auto`) instead of stretching the section cell.
+- Leaving square/artwork or idle-compact triggers a deferred sections reflow so
+  cached footprints shrink after the content height paints.
+
+### Validation
+
+- Layout resolver asserts columns `6` stay compact even in the former square
+  band; idle-compact CSS asserts content-sized hosts.
+
 ## [2.3.0-alpha.43] - 2026-09-24
 
 Smoother weather/humidifier icon motion, Media Player no-fill surface fix, and

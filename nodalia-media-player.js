@@ -4,7 +4,7 @@
   // src/cards/media-player/media-player-constants.ts
   var CARD_TAG = "nodalia-media-player";
   var EDITOR_TAG = "nodalia-media-player-editor";
-  var CARD_VERSION = "2.3.0-alpha.43";
+  var CARD_VERSION = "2.3.0-alpha.44";
   var INVALID_EDITOR_VALUE = /* @__PURE__ */ Symbol("invalid-editor-value");
   var MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
   var HAPTIC_PATTERNS = {
@@ -190,8 +190,12 @@
     const cols = Number(gridColumns);
     return Number.isFinite(cols) && cols > WIDE_GRID_COLUMNS;
   }
+  function isConfiguredHalfWidthSpan(gridColumns) {
+    const cols = Number(gridColumns);
+    return Number.isFinite(cols) && cols > 0 && cols <= WIDE_GRID_COLUMNS;
+  }
   function canAutoSquare(preferSquareTiles, width, gridColumns) {
-    if (!preferSquareTiles || isWideSectionSpan(gridColumns)) {
+    if (!preferSquareTiles || isWideSectionSpan(gridColumns) || isConfiguredHalfWidthSpan(gridColumns)) {
       return false;
     }
     return width >= SQUARE_MIN_WIDTH && width < SQUARE_MAX_WIDTH;
@@ -203,7 +207,7 @@
     if (!preferSquareTiles && (current === "square" || current === "artwork")) {
       return next;
     }
-    if ((current === "square" || current === "artwork") && (isWideSectionSpan(gridColumns) || width >= SQUARE_MAX_WIDTH)) {
+    if ((current === "square" || current === "artwork") && (isWideSectionSpan(gridColumns) || isConfiguredHalfWidthSpan(gridColumns) || width >= SQUARE_MAX_WIDTH)) {
       return next;
     }
     if (preferSquareTiles && next === "square" && (current === "chip" || current === "compact")) {
@@ -234,14 +238,19 @@
     }
     const width = Number(size.width) || 0;
     const height = Number(size.height) || 0;
+    const gridColumns = options.gridColumns;
     if (!(width > 0)) {
+      if (isConfiguredHalfWidthSpan(gridColumns)) {
+        return "compact";
+      }
       return current && current !== "auto" ? current : "standard";
     }
     const preferSquareTiles = options.preferSquareTiles !== false;
-    const gridColumns = options.gridColumns;
     const ratio = height > 0 ? width / height : 0;
     let next = "standard";
-    if (width >= CHIP_MIN_WIDTH && height > 0 && height <= 132 && ratio >= 2.05) {
+    if (isConfiguredHalfWidthSpan(gridColumns)) {
+      next = "compact";
+    } else if (width >= CHIP_MIN_WIDTH && height > 0 && height <= 132 && ratio >= 2.05) {
       next = "chip";
     } else if (canAutoSquare(preferSquareTiles, width, gridColumns)) {
       next = "square";
@@ -1384,6 +1393,24 @@
         }
         fireEvent(this, "iron-resize", {});
       }
+      _scheduleSectionLayoutRefresh(delay = 0) {
+        if (typeof window === "undefined" || !this.isConnected) {
+          return;
+        }
+        const safeDelay = Math.max(0, Number(delay) || 0);
+        const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+        const done = () => {
+          if (!this.isConnected) {
+            return;
+          }
+          this._notifySectionLayoutChange();
+        };
+        if (typeof schedule === "function") {
+          schedule(this, done, safeDelay);
+        } else {
+          window.setTimeout(done, safeDelay);
+        }
+      }
       _observeLayout() {
         if (this._layoutObserver || typeof ResizeObserver === "undefined") {
           return;
@@ -1438,8 +1465,9 @@
         );
       }
       _syncPresentationMode() {
+        const previous = this._resolvedLayoutMode;
         const next = this._getPresentationMode();
-        if (next === this._resolvedLayoutMode) {
+        if (next === previous) {
           return false;
         }
         this._resolvedLayoutMode = next;
@@ -1448,6 +1476,9 @@
           this._lastRenderSignature = "";
           this._render();
           this._notifySectionLayoutChange();
+          if (previous === "square" || previous === "artwork" || next === "compact" || next === "standard") {
+            this._scheduleSectionLayoutRefresh(80);
+          }
         }
         return true;
       }
@@ -3811,6 +3842,7 @@
         }
         if (wasIdleCompact !== nextIdleCompact) {
           this._notifySectionLayoutChange();
+          this._scheduleSectionLayoutRefresh(80);
         }
         const cardTopHighlight = isLightThemeSurface ? "linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background) 34%, transparent), rgba(255, 255, 255, 0))" : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent), rgba(255, 255, 255, 0))";
         const albumCardShadow = "0 1px 2px rgba(0, 0, 0, 0.08), 0 12px 28px rgba(0, 0, 0, 0.16)";
@@ -3858,18 +3890,18 @@
         }
 
         :host([data-presentation="compact"]) {
-          align-self: stretch;
+          align-self: start;
           aspect-ratio: auto;
-          height: 100%;
+          height: auto;
           max-width: 100%;
           min-height: 0;
           width: 100%;
         }
 
         :host([data-idle-compact="true"]) {
-          align-self: stretch;
+          align-self: start;
           aspect-ratio: auto;
-          height: 100%;
+          height: auto;
           max-height: none;
           min-height: 68px;
           overflow: visible;
@@ -3946,7 +3978,7 @@
         .media-player-card--compact {
           display: flex;
           flex-direction: column;
-          height: 100%;
+          height: auto;
           justify-content: space-between;
           min-height: 0;
           padding: 12px;
@@ -3955,7 +3987,7 @@
 
         .media-player-card--compact.media-player-card--idle {
           align-items: stretch;
-          height: 100%;
+          height: auto;
           justify-content: center;
           min-height: 68px;
           padding: 14px 12px;

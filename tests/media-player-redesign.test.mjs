@@ -54,6 +54,22 @@ test("media player layouts stay stable across nearby size changes", () => {
     api.resolvePresentationMode("auto", { width: 400, height: 200 }, "", { gridColumns: 12 }),
     "standard",
   );
+  // Configured half-width tiles stay compact (match vacuum) even in the old square band.
+  assert.equal(
+    api.resolvePresentationMode("auto", { width: 400, height: 200 }, "", { gridColumns: 6 }),
+    "compact",
+  );
+  assert.equal(
+    api.resolvePresentationMode("auto", { width: 340, height: 340 }, "square", {
+      gridColumns: 6,
+      preferSquareTiles: true,
+    }),
+    "compact",
+  );
+  assert.equal(
+    api.resolvePresentationMode("auto", { width: 0, height: 0 }, "", { gridColumns: 6 }),
+    "compact",
+  );
   assert.equal(
     api.resolvePresentationMode("auto", { width: 220, height: 160 }, "", { preferSquareTiles: false }),
     "compact",
@@ -229,6 +245,7 @@ test("square media player overlay stays a tile instead of collapsing to a chip",
   assert.match(layout, /CHIP_MIN_WIDTH = 960/);
   assert.match(layout, /SQUARE_MAX_WIDTH = 480/);
   assert.match(layout, /WIDE_GRID_COLUMNS = 6/);
+  assert.match(layout, /isConfiguredHalfWidthSpan\(/);
   assert.match(layout, /canAutoSquare\(/);
   assert.match(source, /has-album-background \.media-player__artwork/);
 });
@@ -251,6 +268,27 @@ test("media player keeps track text readable on album backgrounds", () => {
     /isLightThemeSurface\s*\?\s*`color-mix\(in srgb, \$\{playerStyles\.overlay_color\} 24%, var\(--ha-card-background\)\)`/,
   );
   assert.match(source, /albumCardShadow = "0 1px 2px rgba\(0, 0, 0, 0\.08\), 0 12px 28px rgba\(0, 0, 0, 0\.16\)"/);
+});
+
+test("media player idle compact sizes to content instead of stretching section cells", () => {
+  const source = read("src/cards/media-player/media-player-card.ts");
+  assert.match(
+    source,
+    /:host\(\[data-idle-compact="true"\]\) \{[\s\S]*?align-self: start;[\s\S]*?height: auto;/,
+  );
+  assert.match(
+    source,
+    /:host\(\[data-presentation="compact"\]\) \{[\s\S]*?align-self: start;[\s\S]*?height: auto;/,
+  );
+  assert.match(
+    source,
+    /\.media-player-card--compact\.media-player-card--idle \{[\s\S]*?height: auto;/,
+  );
+  assert.doesNotMatch(
+    source,
+    /:host\(\[data-idle-compact="true"\]\) \{[\s\S]*?align-self: stretch;[\s\S]*?height: 100%;/,
+  );
+  assert.match(source, /_scheduleSectionLayoutRefresh\(/);
 });
 
 test("media player skips album fill when artwork mode is off", () => {
