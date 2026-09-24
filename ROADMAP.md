@@ -11,11 +11,11 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.37
+2.3.0-alpha.38
 ```
 
-Preview **`2.3.0-alpha.37`** aligns compact Climate title metrics with Fan so
-WebKit iPhone browser CI stays green.
+Preview **`2.3.0-alpha.38`** restores compact Climate/Fan title parity at 12px
+and keeps browser CI green on WebKit iPhone.
 Stable **`2.2.10`** remains the recommended daily-driver release.
 
 ## Current stable release

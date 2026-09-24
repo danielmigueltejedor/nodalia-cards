@@ -4,7 +4,7 @@
   // src/cards/fan/fan-constants.ts
   var CARD_TAG = "nodalia-fan-card";
   var EDITOR_TAG = "nodalia-fan-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.37";
+  var CARD_VERSION = "2.3.0-alpha.38";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
@@ -2612,7 +2612,7 @@
         }
 
         .fan-card--compact .fan-card__title {
-          font-size: 13px;
+          font-size: 12px;
         }
 
         .fan-card__icon {

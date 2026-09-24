@@ -4233,7 +4233,7 @@ class NodaliaClimateCard extends HTMLElement {
       );
     const effectiveIconSize = `${effectiveIconSizePx}px`;
     const effectiveTitleSize = isCompactCardLayout
-      ? "13px"
+      ? "12px"
       : `${Math.max(
         14,
         Math.min(parseSizeToPixels(styles.title_size, 16), tightLayout ? 15 : compactLayout ? 15.5 : 16),
@@ -4894,7 +4894,7 @@ class NodaliaClimateCard extends HTMLElement {
         }
         .climate-card--layout-compact .climate-card__copy { gap: 10px; }
         .climate-card--layout-compact .climate-card__headline { gap: 10px; }
-        .climate-card--layout-compact .climate-card__title { font-size: 13px; line-height: 1.15; }
+        .climate-card--layout-compact .climate-card__title { font-size: 12px; line-height: 1.15; }
         .climate-card--layout-compact .climate-card__chips { gap: 10px; }
         .climate-card--layout-compact .climate-card__chip {
           font-size: 11px;

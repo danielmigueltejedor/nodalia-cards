@@ -2823,11 +2823,11 @@ test("device and climate cards normalize interoperable compact and circular layo
   assert.match(climate, /climate-card--layout-compact/);
   assert.match(climate, /ed\.shared\.layout_compact/);
   assert.match(climate, /ed\.shared\.layout_circular/);
-  // Compact title metrics must match fan/humidifier (13px) so WebKit iPhone
-  // layout parity checks do not fail on a ~1px title height delta.
+  // Compact title metrics must stay at 12px across Climate and Fan so WebKit
+  // iPhone layout parity checks do not fail when Fan applies width densification.
   const climateSrc = read("src/cards/climate/climate-card.ts");
   const fanSrc = read("src/cards/fan/fan-card.ts");
-  assert.match(climateSrc, /isCompactCardLayout\s*\?\s*"13px"/);
-  assert.match(climateSrc, /\.climate-card--layout-compact \.climate-card__title \{ font-size: 13px;/);
-  assert.match(fanSrc, /\.fan-card--compact \.fan-card__title \{\s*font-size: 13px;/);
+  assert.match(climateSrc, /isCompactCardLayout\s*\?\s*"12px"/);
+  assert.match(climateSrc, /\.climate-card--layout-compact \.climate-card__title \{ font-size: 12px;/);
+  assert.match(fanSrc, /\.fan-card--compact \.fan-card__title \{\s*font-size: 12px;/);
 });

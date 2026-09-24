@@ -2811,7 +2811,7 @@ class NodaliaHumidifierCard extends HTMLElement {
         }
 
         .humidifier-card--compact .humidifier-card__title {
-          font-size: 13px;
+          font-size: 12px;
         }
 
         .humidifier-card__icon {

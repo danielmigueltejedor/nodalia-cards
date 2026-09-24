@@ -4,7 +4,7 @@
   // src/cards/climate/climate-constants.ts
   var CARD_TAG = "nodalia-climate-card";
   var EDITOR_TAG = "nodalia-climate-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.37";
+  var CARD_VERSION = "2.3.0-alpha.38";
   var SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
   var SETPOINT_SCHEDULE_MINUTES_PER_DAY = 24 * 60;
   var SCHEDULE_TIMELINE_SNAP_MINUTES = 5;
@@ -6306,7 +6306,7 @@ ${weekdayYaml}
           Math.min(parseSizeToPixels(styles.icon.size, 58), tightLayout ? 50 : compactLayout ? 54 : 58)
         );
         const effectiveIconSize = `${effectiveIconSizePx}px`;
-        const effectiveTitleSize = isCompactCardLayout ? "13px" : `${Math.max(
+        const effectiveTitleSize = isCompactCardLayout ? "12px" : `${Math.max(
           14,
           Math.min(parseSizeToPixels(styles.title_size, 16), tightLayout ? 15 : compactLayout ? 15.5 : 16)
         )}px`;
@@ -6843,7 +6843,7 @@ ${weekdayYaml}
         }
         .climate-card--layout-compact .climate-card__copy { gap: 10px; }
         .climate-card--layout-compact .climate-card__headline { gap: 10px; }
-        .climate-card--layout-compact .climate-card__title { font-size: 13px; line-height: 1.15; }
+        .climate-card--layout-compact .climate-card__title { font-size: 12px; line-height: 1.15; }
         .climate-card--layout-compact .climate-card__chips { gap: 10px; }
         .climate-card--layout-compact .climate-card__chip {
           font-size: 11px;

@@ -2637,7 +2637,7 @@ class NodaliaFanCard extends HTMLElement {
         }
 
         .fan-card--compact .fan-card__title {
-          font-size: 13px;
+          font-size: 12px;
         }
 
         .fan-card__icon {

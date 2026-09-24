@@ -8,6 +8,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.38] - 2026-09-24
+
+Restore compact Climate/Fan title parity at 12px (removing the densified 13px
+override) and keep a Fan state chip in the browser parity fixture so WebKit
+iPhone CI stops failing header height checks.
+
+### Fixed
+
+- Fan/Humidifier width-compact titles stay at 12px like Climate compact and the
+  shared `styles.title_size` default, instead of jumping to 13px only on narrow
+  viewports.
+- Compact Climate title keeps letter-spacing aligned with Fan.
+- Browser layout parity fixture enables Fan `show_state` so a chip remains when
+  densification hides percentage/mode chips.
+
+### Validation
+
+- Interaction regression asserts compact Climate/Fan titles stay at 12px.
+- CI browser smoke must pass on chromium, firefox, webkit, and webkit-iphone.
+
 ## [2.3.0-alpha.37] - 2026-09-24
 
 Align compact Climate title metrics with Fan/Humidifier so WebKit iPhone
