@@ -8,6 +8,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.27] - 2026-09-24
+
+Elegant compact tiles: no empty stretch, proportional controls, readable names.
+
+### Changed
+
+- Vacuum dense cards use content height (`align-self` / `fit-content`), 36px
+  controls, a tighter 40px icon, and move the battery chip under the title so
+  the name can use the full headline width.
+- Media Player auto layout prefers compact below 300px width instead of forcing
+  tall 1:1 squares next to vacuum tiles; compact/square transports use 36px
+  buttons (40px primary).
+- Fan and Humidifier compact controls match the same 36px scale.
+
+### Validation
+
+- Media presentation tests updated for the 300px square threshold; vacuum
+  compact regressions cover battery-in-chips and 36px controls.
+
 ## [2.3.0-alpha.26] - 2026-09-24
 
 Desktop-aware compact density, centered larger controls on Vacuum / Fan /

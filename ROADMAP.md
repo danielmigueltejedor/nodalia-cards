@@ -11,14 +11,14 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.26
+2.3.0-alpha.27
 ```
 
-Preview **`2.3.0-alpha.26`** keeps compact tiles dense on desktop half-columns
-(not only narrow phone widths), centers and scales Vacuum / Fan / Humidifier /
-Media controls, uses self-hosted Weblate for community translations, and always
-keeps entity names visible in compact mode. Stable **`2.2.10`** remains the
-recommended daily-driver release.
+Preview **`2.3.0-alpha.27`** tightens compact Vacuum / Media / Fan / Humidifier
+tiles: content-height cards (no empty stretch), 36px controls, full-width names
+with battery in the chip row, and Media prefers compact under 300px instead of
+tall 1:1 squares. Stable **`2.2.10`** remains the recommended daily-driver
+release.
 
 ## Current stable release
 

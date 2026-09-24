@@ -39,9 +39,10 @@ test("media player layouts stay stable across nearby size changes", () => {
   assert.equal(api.resolvePresentationMode("horizontal"), "chip");
   assert.equal(api.resolvePresentationMode("auto", { width: 180, height: 180 }), "compact");
   assert.equal(api.resolvePresentationMode("auto", { width: 400, height: 96 }), "square");
-  assert.equal(api.resolvePresentationMode("auto", { width: 220, height: 160 }), "square");
-  assert.equal(api.resolvePresentationMode("auto", { width: 220, height: 160 }, "compact"), "square");
-  assert.equal(api.resolvePresentationMode("auto", { width: 210, height: 160 }, "square"), "square");
+  assert.equal(api.resolvePresentationMode("auto", { width: 220, height: 160 }), "compact");
+  assert.equal(api.resolvePresentationMode("auto", { width: 220, height: 160 }, "compact"), "compact");
+  assert.equal(api.resolvePresentationMode("auto", { width: 320, height: 160 }, "compact"), "square");
+  assert.equal(api.resolvePresentationMode("auto", { width: 210, height: 160 }, "square"), "compact");
   assert.equal(api.resolvePresentationMode("auto", { width: 1000, height: 96 }), "chip");
   assert.equal(
     api.resolvePresentationMode("auto", { width: 220, height: 160 }, "", { preferSquareTiles: false }),

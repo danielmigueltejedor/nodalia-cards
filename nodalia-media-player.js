@@ -4,7 +4,7 @@
   // src/cards/media-player/media-player-constants.ts
   var CARD_TAG = "nodalia-media-player";
   var EDITOR_TAG = "nodalia-media-player-editor";
-  var CARD_VERSION = "2.3.0-alpha.26";
+  var CARD_VERSION = "2.3.0-alpha.27";
   var INVALID_EDITOR_VALUE = /* @__PURE__ */ Symbol("invalid-editor-value");
   var MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
   var HAPTIC_PATTERNS = {
@@ -169,8 +169,8 @@
   ];
   var TILE_MAX_WIDTH = 960;
   var CHIP_MIN_WIDTH = 960;
-  var COMPACT_MAX_WIDTH = 132;
-  var SQUARE_MIN_WIDTH = 200;
+  var COMPACT_MAX_WIDTH = 160;
+  var SQUARE_MIN_WIDTH = 300;
   function normalizePresentationMode(value) {
     const key = String(value || "").trim().toLowerCase();
     if (key === "horizontal" || key === "long" || key === "chip") {
@@ -198,7 +198,7 @@
       return "square";
     }
     const ratio = width / Math.max(height, 1);
-    if (preferSquareTiles && current === "square" && ratio >= 0.72 && ratio <= 1.38 && height >= 150) {
+    if (preferSquareTiles && current === "square" && width >= SQUARE_MIN_WIDTH && ratio >= 0.72 && ratio <= 1.38 && height >= 150) {
       return "square";
     }
     if (current === "chip" && width >= CHIP_MIN_WIDTH && height <= 168 && ratio >= 1.7) {
@@ -247,7 +247,7 @@
       case "chip":
         return { rows: "auto", columns: "full", min_rows: 1, min_columns: 6 };
       case "compact":
-        return { rows: "auto", columns: 3, min_rows: 2, min_columns: 2 };
+        return { rows: "auto", columns: 6, min_rows: 2, min_columns: 2 };
       default:
         return { rows: "auto", columns: "full", min_rows: 2, min_columns: 3 };
     }
@@ -3873,7 +3873,7 @@
         .media-player-card--compact {
           container-type: inline-size;
           min-height: 0;
-          padding: 10px 10px 8px;
+          padding: 10px 10px 10px;
         }
 
         .media-player-card--compact .media-player__volume-button:not(.media-player__volume-button--browse),
@@ -3885,7 +3885,7 @@
         .media-player-card--compact .media-player__transport-cluster {
           display: flex;
           flex-wrap: nowrap;
-          gap: clamp(10px, 5cqi, 18px);
+          gap: 10px;
           grid-template-columns: none;
           justify-content: center;
           width: 100%;
@@ -3893,13 +3893,19 @@
 
         .media-player-card--compact .media-player__control {
           flex: 0 0 auto;
-          height: clamp(42px, 16cqi, 54px);
-          min-width: clamp(42px, 16cqi, 54px);
-          width: clamp(42px, 16cqi, 54px);
+          height: 36px;
+          min-width: 36px;
+          width: 36px;
+        }
+
+        .media-player-card--compact .media-player__control--primary {
+          height: 40px;
+          min-width: 40px;
+          width: 40px;
         }
 
         .media-player-card--compact .media-player__title {
-          font-size: 14px;
+          font-size: 13px;
         }
 
         .media-player-card--active {
@@ -5358,41 +5364,8 @@
             display: none;
           }
 
-          .media-player-card--square .media-player__transport-cluster,
-          .media-player-card--artwork .media-player__transport-cluster {
-            display: flex;
-            flex-wrap: nowrap;
-            gap: clamp(10px, 5cqi, 16px);
-            grid-template-columns: none;
-            justify-content: center;
-            max-width: none;
-            width: 100%;
-          }
-
-          .media-player-card--square .media-player__control,
-          .media-player-card--artwork .media-player__control {
-            aspect-ratio: auto;
-            flex: 0 0 auto;
-            height: clamp(40px, 18cqi, 52px);
-            max-width: none;
-            min-width: clamp(40px, 18cqi, 52px);
-            width: clamp(40px, 18cqi, 52px);
-          }
-
-          .media-player-card--square .media-player__control ha-icon,
-          .media-player-card--artwork .media-player__control ha-icon {
-            --mdc-icon-size: clamp(16px, 7cqi, 22px);
-            height: clamp(16px, 7cqi, 22px);
-            width: clamp(16px, 7cqi, 22px);
-          }
-
-          .media-player-card--square,
-          .media-player-card--artwork {
-            padding: 10px 10px 8px;
-          }
-
           .media-player__title {
-            font-size: 13px;
+            font-size: 12px;
           }
         }
 
@@ -5405,7 +5378,7 @@
         .media-player-card--artwork .media-player__transport-cluster {
           display: flex;
           flex-wrap: nowrap;
-          gap: clamp(10px, 4cqi, 18px);
+          gap: 10px;
           grid-template-columns: none;
           justify-content: center;
           width: 100%;
@@ -5417,20 +5390,27 @@
         .media-player-card--artwork .media-player__volume-button:not(.media-player__volume-button--browse) {
           aspect-ratio: auto;
           flex: 0 0 auto;
-          height: clamp(42px, 14cqi, 54px);
+          height: 36px;
           justify-self: center;
           max-width: none;
-          min-width: clamp(42px, 14cqi, 54px);
-          width: clamp(42px, 14cqi, 54px);
+          min-width: 36px;
+          width: 36px;
+        }
+
+        .media-player-card--square .media-player__control--primary,
+        .media-player-card--artwork .media-player__control--primary {
+          height: 40px;
+          min-width: 40px;
+          width: 40px;
         }
 
         .media-player-card--square .media-player__control ha-icon,
         .media-player-card--square .media-player__volume-button ha-icon,
         .media-player-card--artwork .media-player__control ha-icon,
         .media-player-card--artwork .media-player__volume-button ha-icon {
-          --mdc-icon-size: clamp(16px, 5.5cqi, 22px);
-          height: clamp(16px, 5.5cqi, 22px);
-          width: clamp(16px, 5.5cqi, 22px);
+          --mdc-icon-size: 16px;
+          height: 16px;
+          width: 16px;
         }
 
         .media-player-card--square .media-player__volume-button--browse,
@@ -5504,11 +5484,12 @@
         }
 
         .media-player-card--compact .media-player__content {
-          padding-bottom: 8px;
+          gap: 8px;
+          padding-bottom: 4px;
         }
 
         .media-player-card--compact .media-player__transport-cluster {
-          gap: clamp(10px, 5cqi, 18px);
+          gap: 10px;
         }
 
         .media-player-card--chip .media-player__footer,

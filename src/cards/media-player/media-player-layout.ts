@@ -12,9 +12,13 @@ export const MEDIA_PLAYER_PRESENTATION_MODES = [
 const EXPLICIT_MODES = ["standard", "square", "chip", "compact", "artwork"] as const;
 const TILE_MAX_WIDTH = 960;
 const CHIP_MIN_WIDTH = 960;
-const COMPACT_MAX_WIDTH = 132;
-/** Below this, 2-column phone tiles stay content-sized instead of forcing 1:1 squares. */
-const SQUARE_MIN_WIDTH = 200;
+const COMPACT_MAX_WIDTH = 160;
+/**
+ * Prefer content-height compact tiles under this width.
+ * Phone 2-column sections and many desktop half-columns sit below ~280px–300px;
+ * forcing 1:1 squares there leaves vacuum/media pairs looking empty and uneven.
+ */
+const SQUARE_MIN_WIDTH = 300;
 
 export type ResolvePresentationOptions = {
   preferSquareTiles?: boolean;
@@ -58,7 +62,14 @@ function keepCurrentIfClose(
   }
 
   const ratio = width / Math.max(height, 1);
-  if (preferSquareTiles && current === "square" && ratio >= 0.72 && ratio <= 1.38 && height >= 150) {
+  if (
+    preferSquareTiles
+    && current === "square"
+    && width >= SQUARE_MIN_WIDTH
+    && ratio >= 0.72
+    && ratio <= 1.38
+    && height >= 150
+  ) {
     return "square";
   }
   if (current === "chip" && width >= CHIP_MIN_WIDTH && height <= 168 && ratio >= 1.7) {
@@ -128,7 +139,7 @@ export function presentationGridOptions(mode: Exclude<MediaPlayerPresentationMod
     case "chip":
       return { rows: "auto", columns: "full", min_rows: 1, min_columns: 6 };
     case "compact":
-      return { rows: "auto", columns: 3, min_rows: 2, min_columns: 2 };
+      return { rows: "auto", columns: 6, min_rows: 2, min_columns: 2 };
     default:
       return { rows: "auto", columns: "full", min_rows: 2, min_columns: 3 };
   }

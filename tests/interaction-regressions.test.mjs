@@ -2546,11 +2546,13 @@ test("compact tiles show the name when the row is wide enough", () => {
   }
 });
 
-test("compact vacuum keeps the battery chip in the title row", () => {
+test("compact vacuum keeps the name full-width and moves battery into the chip row", () => {
   const source = read("nodalia-vacuum-card.js");
   assert.match(source, /vacuum-card__headline/);
-  assert.match(source, /\.vacuum-card__headline \{[^}]*grid-template-columns: minmax\(0, 1fr\) auto;/);
-  assert.match(source, /showCopyBlock = showTitle \|\| chips\.length > 0 \|\| Boolean\(batteryChipMarkup\)/);
+  assert.match(source, /headerBatteryMarkup = denseCompact \? "" : batteryChipMarkup/);
+  assert.match(source, /denseCompact && batteryChipMarkup/);
+  assert.match(source, /\.vacuum-card--dense \.vacuum-card__headline \{[^}]*grid-template-columns: minmax\(0, 1fr\);/);
+  assert.match(source, /\.vacuum-card--dense \.vacuum-card__control \{[^}]*height: 36px;/);
   assert.doesNotMatch(source, /\.vacuum-card__header-meta \{[^}]*position:\s*absolute;/);
   assert.doesNotMatch(source, /padding-right: \$\{batteryChipMarkup \? "88px"/);
 });

@@ -3462,7 +3462,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player-card--compact {
           container-type: inline-size;
           min-height: 0;
-          padding: 10px 10px 8px;
+          padding: 10px 10px 10px;
         }
 
         .media-player-card--compact .media-player__volume-button:not(.media-player__volume-button--browse),
@@ -3474,7 +3474,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player-card--compact .media-player__transport-cluster {
           display: flex;
           flex-wrap: nowrap;
-          gap: clamp(10px, 5cqi, 18px);
+          gap: 10px;
           grid-template-columns: none;
           justify-content: center;
           width: 100%;
@@ -3482,13 +3482,19 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player-card--compact .media-player__control {
           flex: 0 0 auto;
-          height: clamp(42px, 16cqi, 54px);
-          min-width: clamp(42px, 16cqi, 54px);
-          width: clamp(42px, 16cqi, 54px);
+          height: 36px;
+          min-width: 36px;
+          width: 36px;
+        }
+
+        .media-player-card--compact .media-player__control--primary {
+          height: 40px;
+          min-width: 40px;
+          width: 40px;
         }
 
         .media-player-card--compact .media-player__title {
-          font-size: 14px;
+          font-size: 13px;
         }
 
         .media-player-card--active {
@@ -4947,41 +4953,8 @@ class NodaliaMediaPlayer extends HTMLElement {
             display: none;
           }
 
-          .media-player-card--square .media-player__transport-cluster,
-          .media-player-card--artwork .media-player__transport-cluster {
-            display: flex;
-            flex-wrap: nowrap;
-            gap: clamp(10px, 5cqi, 16px);
-            grid-template-columns: none;
-            justify-content: center;
-            max-width: none;
-            width: 100%;
-          }
-
-          .media-player-card--square .media-player__control,
-          .media-player-card--artwork .media-player__control {
-            aspect-ratio: auto;
-            flex: 0 0 auto;
-            height: clamp(40px, 18cqi, 52px);
-            max-width: none;
-            min-width: clamp(40px, 18cqi, 52px);
-            width: clamp(40px, 18cqi, 52px);
-          }
-
-          .media-player-card--square .media-player__control ha-icon,
-          .media-player-card--artwork .media-player__control ha-icon {
-            --mdc-icon-size: clamp(16px, 7cqi, 22px);
-            height: clamp(16px, 7cqi, 22px);
-            width: clamp(16px, 7cqi, 22px);
-          }
-
-          .media-player-card--square,
-          .media-player-card--artwork {
-            padding: 10px 10px 8px;
-          }
-
           .media-player__title {
-            font-size: 13px;
+            font-size: 12px;
           }
         }
 
@@ -4994,7 +4967,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player-card--artwork .media-player__transport-cluster {
           display: flex;
           flex-wrap: nowrap;
-          gap: clamp(10px, 4cqi, 18px);
+          gap: 10px;
           grid-template-columns: none;
           justify-content: center;
           width: 100%;
@@ -5006,20 +4979,27 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player-card--artwork .media-player__volume-button:not(.media-player__volume-button--browse) {
           aspect-ratio: auto;
           flex: 0 0 auto;
-          height: clamp(42px, 14cqi, 54px);
+          height: 36px;
           justify-self: center;
           max-width: none;
-          min-width: clamp(42px, 14cqi, 54px);
-          width: clamp(42px, 14cqi, 54px);
+          min-width: 36px;
+          width: 36px;
+        }
+
+        .media-player-card--square .media-player__control--primary,
+        .media-player-card--artwork .media-player__control--primary {
+          height: 40px;
+          min-width: 40px;
+          width: 40px;
         }
 
         .media-player-card--square .media-player__control ha-icon,
         .media-player-card--square .media-player__volume-button ha-icon,
         .media-player-card--artwork .media-player__control ha-icon,
         .media-player-card--artwork .media-player__volume-button ha-icon {
-          --mdc-icon-size: clamp(16px, 5.5cqi, 22px);
-          height: clamp(16px, 5.5cqi, 22px);
-          width: clamp(16px, 5.5cqi, 22px);
+          --mdc-icon-size: 16px;
+          height: 16px;
+          width: 16px;
         }
 
         .media-player-card--square .media-player__volume-button--browse,
@@ -5093,11 +5073,12 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card--compact .media-player__content {
-          padding-bottom: 8px;
+          gap: 8px;
+          padding-bottom: 4px;
         }
 
         .media-player-card--compact .media-player__transport-cluster {
-          gap: clamp(10px, 5cqi, 18px);
+          gap: 10px;
         }
 
         .media-player-card--chip .media-player__footer,

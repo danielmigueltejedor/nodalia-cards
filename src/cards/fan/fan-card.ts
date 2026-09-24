@@ -2620,25 +2620,25 @@ class NodaliaFanCard extends HTMLElement {
         .fan-card--compact .fan-card__controls {
           display: flex;
           flex-wrap: nowrap;
-          gap: clamp(12px, 5cqi, 20px);
+          gap: 10px;
           justify-content: center;
-          padding-block: 4px 2px;
+          padding-block: 0;
           width: 100%;
         }
 
         .fan-card--compact .fan-card__control {
           flex: 0 0 auto;
-          height: clamp(44px, 16cqi, 56px);
-          min-width: clamp(44px, 16cqi, 56px);
-          width: clamp(44px, 16cqi, 56px);
+          height: 36px;
+          min-width: 36px;
+          width: 36px;
         }
 
         .fan-card--compact .fan-card__control ha-icon {
-          --mdc-icon-size: clamp(18px, 6.5cqi, 24px);
+          --mdc-icon-size: 16px;
         }
 
         .fan-card--compact .fan-card__title {
-          font-size: 14px;
+          font-size: 13px;
         }
 
         .fan-card__icon {

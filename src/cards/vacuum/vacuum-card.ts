@@ -208,10 +208,11 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   getGridOptions() {
+    const compact = this._isCompactLayout;
     return {
       rows: "auto",
       columns: "full",
-      min_rows: 2,
+      min_rows: compact ? 1 : 2,
       min_columns: 2,
     };
   }
@@ -2449,6 +2450,9 @@ class NodaliaVacuumCard extends HTMLElement {
     if (config.show_state_chip !== false) {
       chips.push(`<span class="vacuum-card__chip vacuum-card__chip--state">${escapeHtml(stateLabel)}</span>`);
     }
+    if (denseCompact && batteryChipMarkup) {
+      chips.push(batteryChipMarkup);
+    }
 
     if (this._activeModePanel && !availableModeDescriptors.some(mode => mode.kind === this._activeModePanel)) {
       this._activeModePanel = null;
@@ -2477,7 +2481,8 @@ class NodaliaVacuumCard extends HTMLElement {
       : "";
 
     const showTitle = true;
-    const showCopyBlock = showTitle || chips.length > 0 || Boolean(batteryChipMarkup);
+    const headerBatteryMarkup = denseCompact ? "" : batteryChipMarkup;
+    const showCopyBlock = showTitle || chips.length > 0 || Boolean(headerBatteryMarkup);
     const canRunBodyCardTap =
       this._canRunConfiguredCardTapAction("body") || this._canRunConfiguredCardHoldAction("body");
     const canRunIconCardTap =
@@ -2495,9 +2500,10 @@ class NodaliaVacuumCard extends HTMLElement {
         <style>
           :host {
           --vacuum-card-content-duration: ${animations.enabled ? clamp(Math.round(animations.panelDuration * 0.9), 180, 900) : 0}ms;
-          align-self: start;
+          align-self: start !important;
           display: block;
-          height: fit-content;
+          height: fit-content !important;
+          max-height: max-content;
           max-width: 100%;
           width: 100%;
         }
@@ -2510,12 +2516,14 @@ class NodaliaVacuumCard extends HTMLElement {
           --vacuum-card-panel-duration: ${animations.enabled ? animations.panelDuration : 0}ms;
           --vacuum-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
           --vacuum-card-panel-max-height: ${Math.max(modePanelMaxHeight, roomPanelMaxHeight)}px;
+          align-content: start;
           background: ${cardBackground};
           border: ${cardBorder};
           border-radius: ${styles.card.border_radius};
           box-shadow: ${cardShadow};
           display: grid;
           gap: ${styles.card.gap};
+          height: fit-content !important;
           min-width: 0;
           overflow: hidden;
           padding: ${styles.card.padding};
@@ -2784,53 +2792,72 @@ class NodaliaVacuumCard extends HTMLElement {
         }
 
         .vacuum-card--dense {
-          container-type: inline-size;
-          gap: 10px;
-        }
-
-        .vacuum-card--dense .vacuum-card__header {
           gap: 8px;
         }
 
+        .vacuum-card--dense .vacuum-card__header {
+          align-items: center;
+          gap: 10px;
+        }
+
         .vacuum-card--dense .vacuum-card__icon-button {
-          height: 48px;
-          width: 48px;
+          height: 40px;
+          width: 40px;
         }
 
         .vacuum-card--dense .vacuum-card__icon-button ha-icon {
-          --mdc-icon-size: 22px;
-          height: 22px;
-          width: 22px;
+          --mdc-icon-size: 18px;
+          height: 18px;
+          width: 18px;
+        }
+
+        .vacuum-card--dense .vacuum-card__headline {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .vacuum-card--dense .vacuum-card__title {
+          font-size: 13px;
+          letter-spacing: -0.015em;
+        }
+
+        .vacuum-card--dense .vacuum-card__chips {
+          gap: 6px;
+        }
+
+        .vacuum-card--dense .vacuum-card__controls-group,
+        .vacuum-card--dense .vacuum-card__controls-inner {
+          min-height: 0;
         }
 
         .vacuum-card--dense .vacuum-card__controls {
           display: flex;
           flex-wrap: nowrap;
-          gap: clamp(12px, 5cqi, 20px);
+          gap: 10px;
           justify-content: center;
-          padding-block: 4px 2px;
+          padding-block: 0;
           width: 100%;
         }
 
         .vacuum-card--dense .vacuum-card__control {
           flex: 0 0 auto;
-          height: clamp(44px, 16cqi, 56px);
-          min-width: clamp(44px, 16cqi, 56px);
-          width: clamp(44px, 16cqi, 56px);
+          height: 36px;
+          min-width: 36px;
+          width: 36px;
         }
 
         .vacuum-card--dense .vacuum-card__control ha-icon {
-          --mdc-icon-size: clamp(18px, 6.5cqi, 24px);
-        }
-
-        .vacuum-card--dense .vacuum-card__title {
-          font-size: 14px;
+          --mdc-icon-size: 16px;
         }
 
         .vacuum-card--dense .vacuum-card__chip {
           font-size: 10px;
-          height: 22px;
+          height: 20px;
           padding: 0 7px;
+        }
+
+        ha-card:has(.vacuum-card--dense) {
+          gap: 8px;
+          padding: 12px;
         }
 
         .vacuum-card__control {
@@ -3115,7 +3142,7 @@ class NodaliaVacuumCard extends HTMLElement {
                   <div class="vacuum-card__copy">
                     <div class="vacuum-card__headline">
                       ${showTitle ? `<div class="vacuum-card__title">${escapeHtml(title)}</div>` : `<span class="vacuum-card__headline-fill"></span>`}
-                      ${batteryChipMarkup ? `<div class="vacuum-card__header-meta">${batteryChipMarkup}</div>` : ""}
+                      ${headerBatteryMarkup ? `<div class="vacuum-card__header-meta">${headerBatteryMarkup}</div>` : ""}
                     </div>
                     ${chips.length ? `<div class="vacuum-card__chips">${chips.join("")}</div>` : ""}
                   </div>
