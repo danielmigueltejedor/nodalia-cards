@@ -5,7 +5,7 @@ The public Lovelace/HACS contract is unchanged: custom element tags, YAML keys,
 defaults, editors, translations, and the single-file `nodalia-cards.js` install
 path stay the same.
 
-## Current architecture map (2.3.0-alpha.22)
+## Current architecture map (2.3.0-alpha.26)
 
 The project is a Home Assistant Lovelace plugin. Handwritten cards historically
 lived as root `nodalia-*.js` files that were both source and published artifacts.
@@ -197,6 +197,11 @@ boundaries so standalone `<script>` loading still works.
 | `nodalia-cards.manifest.js` | Version/hash metadata |
 | `nodalia-i18n.js` / `nodalia-editor-ui.js` | Generated from `i18n/` JSON |
 
+Community translations are curated on self-hosted Weblate
+([translate.getnodalia.com](https://translate.getnodalia.com)); see
+[`docs/TRANSLATIONS.md`](./TRANSLATIONS.md) and [`docs/weblate/README.md`](./weblate/README.md).
+Locale JSON under `i18n/runtime/` and `i18n/editor/` remains authoritative for builds.
+
 Do not edit generated Climate, Media Player, Light, Fan, Humidifier, Cover, Alarm Panel, Vacuum, Entity, Fav, Person, Camera, Circular Gauge, Insignia, Scenes, News, Weather, Graph, Calendar, Power Flow, Notifications, Navigation, Room Summary, or Advance Vacuum JS by hand. Change
 `src/cards/climate`, `src/cards/media-player`, `src/cards/light`, `src/cards/fan`,
 `src/cards/humidifier`, `src/cards/cover`, `src/cards/alarm-panel`, `src/cards/vacuum`, `src/cards/entity`, `src/cards/fav`, `src/cards/person`, `src/cards/camera`, `src/cards/circular-gauge`, `src/cards/insignia`, `src/cards/scenes`, `src/cards/news`, `src/cards/weather`, `src/cards/graph`, `src/cards/calendar`, `src/cards/power-flow`, `src/cards/notifications`, `src/cards/navigation`, `src/cards/room-summary`, or `src/cards/advance-vacuum` and run `pnpm run bundle`. The HACS bundle compiles those cards from `index.ts` so the
@@ -214,7 +219,7 @@ assert both editor implementations.
 | Climate interactions, compact/circular, editors | `tests/interaction-regressions.test.mjs`, `tests/high-severity-regressions.test.mjs` |
 | Engine schedule / override chips | `tests/engine-dashboard-native-ux.test.mjs` |
 | Browser / a11y / layouts | `tests/browser/*.spec.mjs` (Chromium, Firefox, WebKit) |
-| i18n | `pnpm run i18n:validate-editor`, `i18n:validate-runtime`, `i18n:audit` |
+| i18n | `pnpm run i18n:validate-editor`, `i18n:validate-runtime`, `i18n:audit`, `tests/editor-catalog-i18n.test.mjs` |
 
 Treat existing tests as the behavior specification. Prefer adding a behavioral
 test before removing a source-regex check.

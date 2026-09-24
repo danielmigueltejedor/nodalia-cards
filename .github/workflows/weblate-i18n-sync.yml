@@ -2,7 +2,7 @@ name: Weblate i18n sync
 
 # When Weblate pushes locale JSON to the dedicated `weblate` branch, regenerate
 # tracked catalogs so PRs into main are not blocked by stale generated files.
-# No Crowdin integration — secrets stay in GitHub Actions / Weblate only.
+# VCS credentials stay in GitHub Actions / Weblate secrets only.
 
 on:
   push:

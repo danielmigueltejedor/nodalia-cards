@@ -17,7 +17,7 @@
     <a href="#optional-companion-nodalia-cards-engine">Engine</a> ·
     <a href="#quick-start">Quick start</a> ·
     <a href="https://github.com/danielmigueltejedor/nodalia-cards/issues">Support</a> ·
-    <a href="https://translate.getnodalia.com">Translate</a>
+    <a href="https://translate.getnodalia.com">Translate on Weblate</a>
   </p>
 </div>
 
@@ -212,7 +212,7 @@ The layout selector is also available in each card's visual editor. Existing YAM
 | Device and Climate layouts | [Compact and circular variants](./docs/cards/device-climate-layouts.md) |
 | Shared styling | [Theme variables and card-mod reference](./docs/STYLING.md) |
 | Background mobile notifications | [Native delivery and legacy fallback](./docs/nodalia-integration.md#background-mobile-notifications) |
-| Translations | [Contributor guide](./docs/TRANSLATIONS.md) |
+| Translations | [Contributor guide](./docs/TRANSLATIONS.md) · [Weblate](https://translate.getnodalia.com) · [Operator setup](./docs/weblate/README.md) |
 
 ## Release channels
 
@@ -231,7 +231,11 @@ Stable changes are documented in the [changelog](./CHANGELOG.md). Detailed prere
 
 Nodalia Cards currently includes Spanish, English, German, French, Italian, Dutch, Norwegian, Portuguese, Russian, Greek, Chinese and Romanian.
 
-Help review or extend the project on the self-hosted [Weblate](https://translate.getnodalia.com) instance (Crowdin is no longer used). Translation pull requests are also welcome; follow the [translation guide](./docs/TRANSLATIONS.md) and [Weblate operator docs](./docs/weblate/README.md) to keep runtime and editor strings synchronized.
+Community translations are curated on the self-hosted **[Weblate](https://translate.getnodalia.com)** instance. GitHub remains the source repository; locale files under `i18n/` are what the cards build from. Translation pull requests are also welcome.
+
+- Translators: [translate.getnodalia.com](https://translate.getnodalia.com)
+- Developer / key workflow: [docs/TRANSLATIONS.md](./docs/TRANSLATIONS.md)
+- Weblate operators / self-host setup: [docs/weblate/README.md](./docs/weblate/README.md)
 
 ## Support and contributions
 

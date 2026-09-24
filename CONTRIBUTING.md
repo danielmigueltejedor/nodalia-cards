@@ -264,9 +264,11 @@ If helping with translations:
 - Preserve consistency between cards
 - Match Home Assistant terminology when possible
 
-You can also contribute via the self-hosted **[Nodalia Weblate](https://translate.getnodalia.com)** instance (community strings for runtime + editor catalogs). Crowdin is no longer used. Operator setup lives in [`docs/weblate/README.md`](./docs/weblate/README.md).
+Prefer contributing through the self-hosted **[Nodalia Weblate](https://translate.getnodalia.com)** (runtime + editor catalogs). You can also open a GitHub pull request against the locale JSON files.
 
-For the full step-by-step workflow, including adding a new language to the bundle, see [`docs/TRANSLATIONS.md`](./docs/TRANSLATIONS.md).
+- Translator entry point: [https://translate.getnodalia.com](https://translate.getnodalia.com)
+- Full workflow (keys, validation, new languages): [`docs/TRANSLATIONS.md`](./docs/TRANSLATIONS.md)
+- Weblate operators / Docker example: [`docs/weblate/README.md`](./docs/weblate/README.md)
 
 For matching Nodalia’s look on **other** Lovelace cards (themes, **card-mod**, YAML), see [`docs/STYLING.md`](./docs/STYLING.md).
 
@@ -276,7 +278,7 @@ For matching Nodalia’s look on **other** Lovelace cards (themes, **card-mod**,
 
 Wrong or awkward string?
 
-Open an issue using:
+Prefer fixing it in **[Weblate](https://translate.getnodalia.com)**. You can also open an issue using:
 
 ```text
 Translation correction

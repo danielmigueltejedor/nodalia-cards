@@ -4,7 +4,7 @@ Nodalia Cards maintains synchronized runtime and visual-editor catalogs across e
 
 ## Community translations (Weblate)
 
-**Crowdin is no longer used.** Nodalia Cards now uses a **self-hosted Weblate** instance as the canonical community translation platform. GitHub remains the source repository; locale JSON in Git is what the application builds from.
+Nodalia Cards uses a **self-hosted Weblate** instance as the canonical community translation platform. GitHub remains the source repository; locale JSON in Git is what the application builds from.
 
 Public translator URL (replace if your deploy uses another domain):
 

@@ -16,9 +16,9 @@ Current preview release:
 
 Preview **`2.3.0-alpha.26`** keeps compact tiles dense on desktop half-columns
 (not only narrow phone widths), centers and scales Vacuum / Fan / Humidifier /
-Media controls, migrates community translations from Crowdin to self-hosted
-Weblate, and always keeps entity names visible in compact mode. Stable
-**`2.2.10`** remains the recommended daily-driver release.
+Media controls, uses self-hosted Weblate for community translations, and always
+keeps entity names visible in compact mode. Stable **`2.2.10`** remains the
+recommended daily-driver release.
 
 ## Current stable release
 
@@ -123,11 +123,13 @@ Goal: make Nodalia feel truly international and easier to configure.
 ## Planned work
 
 ### Translation improvements
-- Continue refining existing locales
-- Improve machine-translated strings
+- Continue refining existing locales via self-hosted Weblate
+  ([translate.getnodalia.com](https://translate.getnodalia.com))
+- Improve machine-translated strings (optional LibreTranslate suggestions)
 - Add missing editor translations
 - Improve runtime translation consistency
 - Expand translation coverage across all cards
+- Keep `i18n/**` JSON in Git as the build source of truth
 
 ### Editor improvements
 - More native Home Assistant selectors

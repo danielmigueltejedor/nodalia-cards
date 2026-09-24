@@ -11,7 +11,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [2.3.0-alpha.26] - 2026-09-24
 
 Desktop-aware compact density, centered larger controls on Vacuum / Fan /
-Humidifier / Media tiles, and Crowdin → self-hosted Weblate migration.
+Humidifier / Media tiles, and self-hosted Weblate for community translations.
 
 ### Changed
 
@@ -25,8 +25,9 @@ Humidifier / Media tiles, and Crowdin → self-hosted Weblate migration.
   beside the slider, and enlarge remaining controls.
 - Media Player compact/square transport buttons are centered and larger instead
   of a cramped five-column 36px grid.
-- Community translations move from Crowdin to self-hosted Weblate; locale JSON
-  in Git remains the app source of truth.
+- Community translations are curated on self-hosted Weblate
+  (`https://translate.getnodalia.com`); locale JSON in Git remains the app
+  source of truth.
 
 ### Fixed
 
@@ -42,7 +43,7 @@ Humidifier / Media tiles, and Crowdin → self-hosted Weblate migration.
 ### Validation
 
 - Architecture contracts cover parent-width compact detection and always-on
-  compact titles; editor i18n tests assert Crowdin config is gone and locale
+  compact titles; editor i18n tests assert Weblate docs exist and locale
   inventories stay aligned.
 
 ## [2.3.0-alpha.25] - 2026-09-24

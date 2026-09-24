@@ -1,6 +1,6 @@
 # Self-hosted Weblate for Nodalia Cards
 
-Crowdin is **no longer used**. Community and maintainer translations for Nodalia Cards run on a **self-hosted Weblate** instance that syncs with this GitHub repository.
+Community and maintainer translations for Nodalia Cards run on a **self-hosted Weblate** instance that syncs with this GitHub repository.
 
 Public URL (configurable; replace if your deploy differs):
 
@@ -115,7 +115,7 @@ Create one Weblate **project** (for example `nodalia-cards`) and **two component
 | Optional SMTP / OAuth client secrets | Weblate UI or host env |
 | Optional LibreTranslate API URL/key | Weblate machine-translation add-on |
 
-Do **not** put tokens in compose files committed to Git, application source, or old Crowdin-style config files.
+Do **not** put tokens in compose files committed to Git or in application source.
 
 ## CI expectations
 

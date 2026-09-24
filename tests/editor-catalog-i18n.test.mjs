@@ -72,7 +72,7 @@ test("nodalia-editor-ui embeds editorCatalog for ed.* keys", () => {
   assert.match(src, /\\"ed\.light\.show_quick_temperature_presets\\"/);
 });
 
-test("Crowdin config is gone; Weblate docs and locale inventories stay aligned", () => {
+test("Weblate docs exist and locale inventories stay aligned", () => {
   assert.equal(fs.existsSync(path.join(root, "crowdin.yml")), false);
   assert.equal(fs.existsSync(path.join(root, ".crowdin.yml")), false);
   assert.equal(fs.existsSync(path.join(root, "docs", "weblate", "README.md")), true);
