@@ -4,7 +4,7 @@
   // src/cards/scenes/scenes-constants.ts
   var CARD_TAG = "nodalia-scenes-card";
   var EDITOR_TAG = "nodalia-scenes-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.28";
+  var CARD_VERSION = "2.3.0-alpha.29";
   var DEFAULT_SCENE_ACCENT = "#c9a86c";
   var SCENE_LAUNCH_DURATION = 780;
   var HAPTIC_PATTERNS = {

@@ -175,7 +175,7 @@ test("media player controls follow the Nodalia bubble recipe and keep square lay
   assert.match(source, /\.media-player-card--square \.media-player__album-bg[\s\S]*filter: none/);
   assert.match(source, /:not\(\.media-player-card--square\):not\(\.media-player-card--artwork\) \.media-player__hero/);
   const layout = read("src/cards/media-player/media-player-layout.ts");
-  assert.match(layout, /min_rows: 3/);
+  assert.match(layout, /min_rows: 2/);
 });
 
 test("media player idle compact keeps name and power on one row", () => {
@@ -183,8 +183,8 @@ test("media player idle compact keeps name and power on one row", () => {
   assert.match(source, /media-player__idle-name/);
   assert.match(source, /media-player__idle-hero--tv-off/);
   assert.match(source, /\.media-player-card--idle \{[\s\S]*?min-height: 0;/);
-  assert.match(source, /\.media-player-card--tv\.media-player-card--idle \.media-player__idle-hero--tv-off \{[\s\S]*?grid-template-columns: 40px minmax\(0, 1fr\) auto;/);
-  assert.match(source, /\.media-player-card--tv\.media-player-card--idle \.media-player__artwork--idle \{[\s\S]*?height: 40px;/);
+  assert.match(source, /\.media-player-card--tv\.media-player-card--idle \.media-player__idle-hero--tv-off \{[\s\S]*?grid-template-columns: 38px minmax\(0, 1fr\) auto;/);
+  assert.match(source, /\.media-player-card--tv\.media-player-card--idle \.media-player__artwork--idle \{[\s\S]*?height: 38px;/);
   assert.doesNotMatch(source, /idle-tv-off-bar/);
 });
 
@@ -209,7 +209,8 @@ test("square media player overlay stays a tile instead of collapsing to a chip",
 test("media player artwork containers share one border radius", () => {
   const source = read("src/cards/media-player/media-player-card.ts");
   assert.match(source, /\.media-player__artwork \{[\s\S]*?border-radius: 22px;/);
-  assert.doesNotMatch(source, /\.media-player__artwork--idle \{[^}]*border-radius:/);
+  // Idle tiles mirror Fav/Light circular icons instead of the square artwork radius.
+  assert.match(source, /\.media-player__artwork--idle \{[\s\S]*?border-radius: 999px;/);
   assert.doesNotMatch(source, /\.media-player-card--tv \.media-player__artwork \{[^}]*border-radius:/);
   assert.doesNotMatch(source, /\.media-player-card--chip \.media-player__artwork \{[^}]*border-radius:/);
   assert.doesNotMatch(source, /\.media-player-card--compact \.media-player__artwork \{[^}]*border-radius:/);

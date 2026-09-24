@@ -11,12 +11,12 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.28
+2.3.0-alpha.29
 ```
 
-Preview **`2.3.0-alpha.28`** raises compact Media Player tiles to the same
-section rhythm as Light/Fan (`min_rows: 2`, ~88px min height, stretch to fill
-the grid cell) so narrow media cards stop collapsing shorter than siblings.
+Preview **`2.3.0-alpha.29`** aligns idle Media Player tiles with Fav/Light height,
+drops the empty section gap under playing media (`min_rows: 2`), and keeps
+compact transport buttons inside the card on mobile.
 Stable **`2.2.10`** remains the recommended daily-driver release.
 
 ## Current stable release

@@ -1,6 +1,6 @@
 export const CARD_TAG = "nodalia-weather-card";
 export const EDITOR_TAG = "nodalia-weather-card-editor";
-export const CARD_VERSION = "2.3.0-alpha.28";
+export const CARD_VERSION = "2.3.0-alpha.29";
 export const HAPTIC_PATTERNS = {
   selection: 8,
   light: 10,

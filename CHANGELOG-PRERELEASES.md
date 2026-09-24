@@ -8,6 +8,32 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.29] - 2026-09-24
+
+Media Player layout polish: idle tiles match Fav/Light, no section gap under
+playing tiles, and compact transport no longer clips on mobile.
+
+### Fixed
+
+- Idle/off Media Player tiles (Apple TV, Televisión, etc.) use a Fav/Light-like
+  footprint (`min_rows: 1`, 38px circular icon, 10×12 padding) instead of the
+  taller 88px compact stretch.
+- Square/artwork section footprint drops to `min_rows: 2` (same as vacuum/light)
+  so half-width playing tiles no longer reserve an empty row underneath.
+- Compact transport moves Browse out of the button row (absolute top-right) and
+  shrinks controls to 32/36px so prev/play/next stay inside the card on narrow
+  phones.
+
+### Changed
+
+- Presentation/idle mode changes fire `iron-resize` so sections re-read grid
+  options after a wide→narrow switch.
+
+### Validation
+
+- Media Player redesign tests cover the 2-row square footprint and 38px idle
+  artwork; full validate suite green before tag.
+
 ## [2.3.0-alpha.28] - 2026-09-24
 
 Compact Media Player tiles match Light/Fan section height instead of collapsing.

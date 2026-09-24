@@ -20,7 +20,11 @@ import {
   seekPositionFromPercent,
   supportsMediaSeek,
 } from "./media-player-progress";
-import { presentationGridOptions, resolvePresentationMode } from "./media-player-layout";
+import {
+  idlePresentationGridOptions,
+  presentationGridOptions,
+  resolvePresentationMode,
+} from "./media-player-layout";
 import { clamp, escapeHtml, fireEvent, isObject } from "./media-player-runtime";
 import {
   getStubEntityId,
@@ -262,18 +266,47 @@ class NodaliaMediaPlayer extends HTMLElement {
   }
 
   getCardSize() {
+    if (this._isIdleCompactLayout()) {
+      return 1;
+    }
     const mode = this._getPresentationMode();
     if (mode === "chip") {
       return 1;
     }
-    if (mode === "compact") {
-      return 2;
-    }
-    return 3;
+    // Compact / square / artwork / standard all share the 2-row sections rhythm
+    // used by light, fan and vacuum — avoids empty gaps under half-width tiles.
+    return 2;
   }
 
   getGridOptions() {
+    if (this._isIdleCompactLayout()) {
+      return idlePresentationGridOptions();
+    }
     return presentationGridOptions(this._getPresentationMode());
+  }
+
+  _isIdleCompactLayout() {
+    const context = this._getActivePlayerContext();
+    if (!context) {
+      return false;
+    }
+    const isIdleLayout = this._shouldUseIdleLayout(context.player, context.state);
+    if (!isIdleLayout) {
+      return false;
+    }
+    const isTvPlayer = this._getPlayerDeviceType(context.player, context.state) === "tv";
+    if (!isTvPlayer) {
+      return true;
+    }
+    const stateKey = String(context.state?.state || "").trim().toLowerCase();
+    return ["off", "standby", "unavailable", "unknown"].includes(stateKey);
+  }
+
+  _notifySectionLayoutChange() {
+    if (!this.isConnected) {
+      return;
+    }
+    fireEvent(this, "iron-resize", {});
   }
 
   _observeLayout() {
@@ -339,6 +372,9 @@ class NodaliaMediaPlayer extends HTMLElement {
     if (this.isConnected && this._config) {
       this._lastRenderSignature = "";
       this._render();
+      // Sections view caches grid options; nudge a reflow when the tile mode changes
+      // so min_rows from a wide measure (square) does not leave a gap once compact.
+      this._notifySectionLayoutChange();
     }
     return true;
   }
@@ -3326,10 +3362,15 @@ class NodaliaMediaPlayer extends HTMLElement {
     const presentationMode = this._getPresentationMode();
     this._resolvedLayoutMode = presentationMode;
     this.setAttribute("data-presentation", presentationMode);
-    if (this._activeArtworkIdle) {
+    const wasIdleCompact = this.getAttribute("data-idle-compact") === "true";
+    const nextIdleCompact = Boolean(this._activeArtworkIdle);
+    if (nextIdleCompact) {
       this.setAttribute("data-idle-compact", "true");
     } else {
       this.removeAttribute("data-idle-compact");
+    }
+    if (wasIdleCompact !== nextIdleCompact) {
+      this._notifySectionLayoutChange();
     }
     const cardTopHighlight = isLightThemeSurface
       ? "linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background) 34%, transparent), rgba(255, 255, 255, 0))"
@@ -3383,16 +3424,16 @@ class NodaliaMediaPlayer extends HTMLElement {
           aspect-ratio: auto;
           height: 100%;
           max-width: 100%;
-          min-height: 88px;
+          min-height: 0;
           width: 100%;
         }
 
         :host([data-idle-compact="true"]) {
           align-self: stretch;
           aspect-ratio: auto;
-          height: 100%;
+          height: auto;
           max-height: none;
-          min-height: 88px;
+          min-height: 0;
           overflow: visible;
         }
 
@@ -3473,8 +3514,16 @@ class NodaliaMediaPlayer extends HTMLElement {
           flex-direction: column;
           height: 100%;
           justify-content: space-between;
-          min-height: 88px;
+          min-height: 0;
           padding: 12px;
+          position: relative;
+        }
+
+        .media-player-card--compact.media-player-card--idle {
+          height: auto;
+          justify-content: center;
+          min-height: 0;
+          padding: 10px 12px;
         }
 
         .media-player-card--compact .media-player__volume-button:not(.media-player__volume-button--browse),
@@ -3486,27 +3535,42 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player-card--compact .media-player__transport-cluster {
           display: flex;
           flex-wrap: nowrap;
-          gap: 10px;
+          gap: 6px;
           grid-template-columns: none;
           justify-content: center;
+          max-width: 100%;
+          min-width: 0;
+          overflow: visible;
+          padding-inline: 2px;
           width: 100%;
         }
 
         .media-player-card--compact .media-player__control {
           flex: 0 0 auto;
-          height: 40px;
-          min-width: 40px;
-          width: 40px;
+          height: 32px;
+          min-width: 32px;
+          width: 32px;
         }
 
         .media-player-card--compact .media-player__control--primary {
-          height: 44px;
-          min-width: 44px;
-          width: 44px;
+          height: 36px;
+          min-width: 36px;
+          width: 36px;
+        }
+
+        .media-player-card--compact .media-player__volume-button--browse {
+          height: 28px;
+          min-width: 28px;
+          position: absolute;
+          right: 8px;
+          top: 8px;
+          width: 28px;
+          z-index: 4;
         }
 
         .media-player-card--compact .media-player__title {
           font-size: 13px;
+          padding-inline-end: 34px;
         }
 
         .media-player-card--active {
@@ -3647,6 +3711,7 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         .media-player-card--idle {
           min-height: 0;
+          padding: 10px 12px;
         }
 
         .media-player__hero {
@@ -3660,18 +3725,18 @@ class NodaliaMediaPlayer extends HTMLElement {
           align-items: center;
           display: grid;
           gap: 10px;
-          grid-template-columns: 40px minmax(0, 1fr);
+          grid-template-columns: 38px minmax(0, 1fr);
           min-width: 0;
           width: 100%;
         }
 
         .media-player__idle-hero--tv-off {
-          grid-template-columns: 40px minmax(0, 1fr) auto;
+          grid-template-columns: 38px minmax(0, 1fr) auto;
         }
 
         .media-player__idle-name {
           color: var(--primary-text-color);
-          font-size: ${playerStyles.title_size};
+          font-size: 13px;
           font-weight: 700;
           min-width: 0;
           overflow: hidden;
@@ -3744,8 +3809,10 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player__artwork--idle {
-          height: 40px;
-          width: 40px;
+          border-radius: 999px;
+          box-shadow: none;
+          height: 38px;
+          width: 38px;
         }
 
         .media-player__artwork img {
@@ -3991,12 +4058,12 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card--tv.media-player-card--idle .media-player__artwork--idle {
-          height: 40px;
-          width: 40px;
+          height: 38px;
+          width: 38px;
         }
 
         .media-player-card--tv.media-player-card--idle .media-player__artwork ha-icon {
-          --mdc-icon-size: 22px;
+          --mdc-icon-size: 18px;
         }
 
         .media-player-card--tv .media-player__hero-top {
@@ -4092,7 +4159,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player-card--tv.media-player-card--idle .media-player__idle-hero--tv-off {
           align-items: center;
           gap: 8px;
-          grid-template-columns: 40px minmax(0, 1fr) auto;
+          grid-template-columns: 38px minmax(0, 1fr) auto;
         }
 
         .media-player-card--tv.media-player-card--idle .media-player__idle-actions--tv-off {
@@ -4101,15 +4168,15 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player-card--idle .media-player__control {
-          height: 32px;
-          min-width: 32px;
-          width: 32px;
+          height: 36px;
+          min-width: 36px;
+          width: 36px;
         }
 
         .media-player-card--idle .media-player__control ha-icon {
-          --mdc-icon-size: 15px;
-          height: 15px;
-          width: 15px;
+          --mdc-icon-size: 16px;
+          height: 16px;
+          width: 16px;
         }
 
         .media-player-card--tv.media-player-card--idle .media-player__idle-hero {
@@ -5088,19 +5155,28 @@ class NodaliaMediaPlayer extends HTMLElement {
           display: flex;
           flex: 1 1 auto;
           flex-direction: column;
-          gap: 10px;
+          gap: 8px;
           justify-content: space-between;
           min-height: 0;
           padding-bottom: 0;
         }
 
+        .media-player-card--compact.media-player-card--idle .media-player__content {
+          flex: 0 0 auto;
+          gap: 0;
+          justify-content: center;
+        }
+
         .media-player-card--compact .media-player__transport-cluster {
-          gap: 10px;
+          gap: 6px;
           margin-top: auto;
         }
 
         .media-player-card--compact .media-player__transport-row {
           margin-top: auto;
+          max-width: 100%;
+          min-width: 0;
+          overflow: visible;
         }
 
         .media-player-card--chip .media-player__footer,

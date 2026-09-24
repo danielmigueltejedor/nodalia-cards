@@ -135,7 +135,9 @@ export function presentationGridOptions(mode: Exclude<MediaPlayerPresentationMod
   switch (mode) {
     case "square":
     case "artwork":
-      return { rows: "auto", columns: 6, min_rows: 3, min_columns: 3 };
+      // Keep section footprint at 2 rows (same as vacuum/light). Aspect-ratio
+      // handles visual height; min_rows: 3 left empty gaps under half-width tiles.
+      return { rows: "auto", columns: 6, min_rows: 2, min_columns: 3 };
     case "chip":
       return { rows: "auto", columns: "full", min_rows: 1, min_columns: 6 };
     case "compact":
@@ -145,6 +147,16 @@ export function presentationGridOptions(mode: Exclude<MediaPlayerPresentationMod
     default:
       return { rows: "auto", columns: "full", min_rows: 2, min_columns: 3 };
   }
+}
+
+/** Idle/off tiles mirror Fav/Light chip height in sections (one row). */
+export function idlePresentationGridOptions(): {
+  rows: "auto";
+  columns: number;
+  min_rows: number;
+  min_columns: number;
+} {
+  return { rows: "auto", columns: 6, min_rows: 1, min_columns: 2 };
 }
 
 export function isExplicitPresentationMode(
