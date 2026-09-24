@@ -1,6 +1,6 @@
 const CARD_TAG = "nodalia-advance-vacuum-card";
 const EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-const CARD_VERSION = "2.2.9";
+const CARD_VERSION = "2.2.10-beta.1";
 /** Sentinel for `_lastSubmittedSharedCleaningSessionValue` when serialized session exceeds helper max length. */
 const SHARED_CLEANING_SESSION_OVERFLOW_SENTINEL = "__NODALIA_SHARED_SESSION_OVERFLOW__";
 const HAPTIC_PATTERNS = {
@@ -3636,7 +3636,6 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         "mop_intensity",
         "intensidad_mopa",
         "mop_level",
-        "mop",
         "water_level",
         "water_volume",
         "water_flow",
@@ -3645,19 +3644,16 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         "nivel_agua",
         "caudal_agua",
         "water",
+        "mop",
       ]
       : [
-        "vacuum_cleaner_mode",
-        "vacuum_mode",
-        "modo_aspirado",
         "suction_level",
         "suction_mode",
         "intensidad_aspirado",
         "fan_speed",
         "fan_power",
+        "modo_aspirado",
         "suction",
-        "clean_mode",
-        "cleaning_mode",
       ];
   }
 
@@ -3686,13 +3682,18 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _guessRelatedEntityByPatterns(domain, patterns, excludedEntities = []) {
+    const candidates = this._listRelatedEntitiesByPatterns(domain, patterns, excludedEntities);
+    return candidates[0] || "";
+  }
+
+  _listRelatedEntitiesByPatterns(domain, patterns, excludedEntities = []) {
     if (!this._hass?.states || !this._config?.entity) {
-      return "";
+      return [];
     }
 
     const objectId = normalizeTextKey(String(this._config.entity).split(".").slice(1).join("_"));
     if (!objectId) {
-      return "";
+      return [];
     }
 
     const states = this._hass.states;
@@ -3700,7 +3701,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const vacuumObjectIds = listVacuumObjectIds(states);
     const vacuumDeviceId = registry[this._config.entity]?.device_id || "";
     const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
-    const candidates = Object.keys(states)
+    return Object.keys(states)
       .filter(entityId => entityId.startsWith(`${domain}.`))
       .filter(entityId => isHelperRelatedToConfiguredVacuum({
         candidateId: entityId,
@@ -3715,9 +3716,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         score: this._getEntityMatchScore(entityId, patterns),
       }))
       .filter(candidate => candidate.score > 0)
-      .sort((left, right) => right.score - left.score || left.entityId.localeCompare(right.entityId, sortLoc));
-
-    return candidates[0]?.entityId || "";
+      .sort((left, right) => right.score - left.score || left.entityId.localeCompare(right.entityId, sortLoc))
+      .map(candidate => candidate.entityId);
   }
 
   _guessRelatedSelectEntityByPatterns(patterns, excludedEntities = []) {
@@ -3817,7 +3817,29 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _guessRelatedSelectEntity(kind) {
-    return this._guessRelatedSelectEntityByPatterns(this._getModeEntityPatterns(kind));
+    return this._listRelatedSelectEntities(kind)[0] || "";
+  }
+
+  _listRelatedSelectEntities(kind, excludedEntities = []) {
+    return this._listRelatedEntitiesByPatterns(
+      "select",
+      this._getModeEntityPatterns(kind),
+      excludedEntities,
+    );
+  }
+
+  _looksLikeSuctionSpeedDescriptor(descriptor) {
+    if (!descriptor?.options?.length || this._descriptorSupportsCleaningCombo(descriptor)) {
+      return false;
+    }
+
+    return descriptor.options.some(option => {
+      const optionKind = this._categorizeModeOption(option);
+      return optionKind === "suction"
+        || this._isOffModeValue(option)
+        || this._isSharedSmartMode(option)
+        || this._isCustomModeValue(option);
+    });
   }
 
   _categorizeModeOption(value) {
@@ -3929,14 +3951,26 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       : this._config?.suction_select_entity;
     const explicitDescriptor = explicitEntity ? this._getSelectOptions(explicitEntity) : null;
     const shouldUseExplicitDescriptor = kind !== "mop" || this._isMopIntensityDescriptor(explicitDescriptor);
-    const selectEntity = shouldUseExplicitDescriptor && explicitDescriptor?.entityId
-      ? explicitDescriptor.entityId
-      : this._guessRelatedSelectEntity(kind);
-    const descriptor = explicitDescriptor?.entityId === selectEntity
-      ? explicitDescriptor
-      : this._getSelectOptions(selectEntity);
+    const candidateEntities = shouldUseExplicitDescriptor && explicitDescriptor?.entityId
+      ? [explicitDescriptor.entityId]
+      : this._listRelatedSelectEntities(kind);
 
-    if (descriptor.entityId && descriptor.options.length) {
+    for (const selectEntity of candidateEntities) {
+      const descriptor = explicitDescriptor?.entityId === selectEntity
+        ? explicitDescriptor
+        : this._getSelectOptions(selectEntity);
+      if (!descriptor.entityId || !descriptor.options.length) {
+        continue;
+      }
+
+      if (kind === "suction" && !this._looksLikeSuctionSpeedDescriptor(descriptor)) {
+        continue;
+      }
+
+      if (kind === "mop" && !this._isMopIntensityDescriptor(descriptor)) {
+        continue;
+      }
+
       return {
         kind,
         label: this._descriptorLabel(kind),
