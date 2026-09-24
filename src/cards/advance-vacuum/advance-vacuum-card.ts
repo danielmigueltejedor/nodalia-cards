@@ -46,6 +46,8 @@ import {
   isHelperRelatedToConfiguredVacuum,
   isUnavailableState,
   listVacuumObjectIds,
+  normalizeCustomMenuItems,
+  normalizeRoutineItems,
   parseCalibrationPoints,
   parseInteger,
   parseNumber,

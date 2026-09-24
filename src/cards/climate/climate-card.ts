@@ -47,6 +47,7 @@ import {
 import { DEFAULT_CONFIG, STUB_CONFIG, applyStubEntity, normalizeConfig } from "./climate-config";
 import {
   climateDialActionMeta,
+  escapeSelectorValue,
   formatEditorColorFromHex,
   formatEngineOverrideTime,
   formatTemperature,

@@ -4,7 +4,7 @@
   // src/cards/advance-vacuum/advance-vacuum-constants.ts
   var CARD_TAG = "nodalia-advance-vacuum-card";
   var EDITOR_TAG = "nodalia-advance-vacuum-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.20";
+  var CARD_VERSION = "2.3.0-alpha.21";
   var SHARED_CLEANING_SESSION_OVERFLOW_SENTINEL = "__NODALIA_SHARED_SESSION_OVERFLOW__";
   var HAPTIC_PATTERNS = {
     selection: 8,
@@ -699,7 +699,7 @@
     }
     return normalized.charAt(0).toUpperCase() + normalized.slice(1).toLowerCase();
   }
-  function normalizeCustomMenuItems2(items) {
+  function normalizeCustomMenuItems(items) {
     return arrayFromMaybe(items).filter(isObject).map((item) => ({
       label: String(item.label || item.name || "").trim(),
       icon: String(item.icon || "mdi:flash").trim(),
@@ -708,7 +708,7 @@
       builtin_action: String(item.builtin_action || "").trim()
     })).filter((item) => item.label && (item.tap_action || item.builtin_action));
   }
-  function normalizeRoutineItems2(items) {
+  function normalizeRoutineItems(items) {
     return sortByOrder(
       arrayFromMaybe(items).map((item) => typeof item === "string" ? { entity: item } : item).filter((item) => typeof item === "string" || isObject(item)).map((item) => ({
         order: Number(item.order || 0),
@@ -1165,8 +1165,8 @@
     config.room_tracking.auto_detect = config.room_tracking.auto_detect !== false;
     config.vacuum_platform = String(config.vacuum_platform || "auto").trim() || "auto";
     config.vacuum_mqtt_topic = String(config.vacuum_mqtt_topic ?? "").trim().replace(/\/+$/, "");
-    config.custom_menu.items = normalizeCustomMenuItems2(config.custom_menu.items);
-    config.routines = normalizeRoutineItems2(config.routines);
+    config.custom_menu.items = normalizeCustomMenuItems(config.custom_menu.items);
+    config.routines = normalizeRoutineItems(config.routines);
     config.shared_cleaning_session_webhook = String(config.shared_cleaning_session_webhook ?? "").trim();
     config.security = {
       ...DEFAULT_CONFIG.security,

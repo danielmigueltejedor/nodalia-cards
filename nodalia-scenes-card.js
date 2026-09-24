@@ -4,7 +4,7 @@
   // src/cards/scenes/scenes-constants.ts
   var CARD_TAG = "nodalia-scenes-card";
   var EDITOR_TAG = "nodalia-scenes-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.20";
+  var CARD_VERSION = "2.3.0-alpha.21";
   var DEFAULT_SCENE_ACCENT = "#c9a86c";
   var SCENE_LAUNCH_DURATION = 780;
   var HAPTIC_PATTERNS = {
@@ -30,7 +30,7 @@
   var clamp = utils.clamp.bind(utils);
   var normalizeTextKey = utils.normalizeTextKey.bind(utils);
   var escapeHtml = utils.escapeHtml.bind(utils);
-  var escapeSelectorValue2 = utils.escapeSelectorValue.bind(utils);
+  var escapeSelectorValue = utils.escapeSelectorValue.bind(utils);
   var fireEvent = utils.fireEvent.bind(utils);
 
   // src/cards/scenes/scenes-helpers.ts
@@ -314,7 +314,7 @@
       title_size: sanitizeCssValue(styles?.title_size, defaults.title_size)
     };
   }
-  function normalizeSceneRows2(rawScenes, options = {}) {
+  function normalizeSceneRows(rawScenes, options = {}) {
     const keepEmpty = options.keepEmpty === true;
     if (!Array.isArray(rawScenes)) {
       return [];
@@ -448,7 +448,7 @@
     config.tap_action = TAP_ACTIONS.has(tap) ? tap : "activate";
     const hold = normalizeTextKey(config.hold_action);
     config.hold_action = HOLD_ACTIONS.has(hold) ? hold : "more-info";
-    config.scenes = normalizeSceneRows2(config.scenes, options);
+    config.scenes = normalizeSceneRows(config.scenes, options);
     return config;
   }
 

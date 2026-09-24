@@ -15,6 +15,7 @@ import {
   getEditorColorFallbackValue,
   getEditorColorModel,
   moveItem,
+  normalizeSceneRows,
 } from "./scenes-helpers";
 
 let _lazyNodaliaScenesCardEditor;

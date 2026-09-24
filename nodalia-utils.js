@@ -1459,8 +1459,16 @@
     return false;
   }
 
+  function isElementHost(node) {
+    return node instanceof HTMLElement
+      || (Boolean(node)
+        && typeof node === "object"
+        && node.nodeType === 1
+        && typeof node.addEventListener === "function");
+  }
+
   function scheduleCardZoneTap(host, options) {
-    if (!(host instanceof HTMLElement)) {
+    if (!isElementHost(host)) {
       return;
     }
     const zone = String(options?.zone ?? "body");
@@ -1499,7 +1507,7 @@
    * card's click handler can ignore the following click (synthetic after pointerup).
    */
   function bindHostPointerHoldGesture(host, options) {
-    if (!(host instanceof HTMLElement)) {
+    if (!isElementHost(host)) {
       return () => {};
     }
     if (typeof options?.resolveZone !== "function" || typeof options?.onHold !== "function") {

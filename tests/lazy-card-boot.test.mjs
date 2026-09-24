@@ -79,3 +79,13 @@ test("runtime i18n keeps unused locale packs as factories", () => {
   assert.match(source, /es: function \(\) \{\s*return \{/);
   assert.match(source, /function localePack\(/);
 });
+
+test("calendar and camera elevate host stacking while expanded overlays are open", () => {
+  assert.match(read("nodalia-calendar-card.js"), /z-index: \$\{this\._expandedOpen \? "2147483000" : "auto"\}/);
+  assert.match(read("nodalia-camera-card.js"), /z-index: \$\{this\._expandedOpen \? "2147483000" : "auto"\}/);
+});
+
+test("media player drops square host aspect ratio while idle compact", () => {
+  assert.match(read("nodalia-media-player.js"), /data-idle-compact/);
+  assert.match(read("nodalia-media-player.js"), /:host\(\[data-idle-compact="true"\]\)/);
+});

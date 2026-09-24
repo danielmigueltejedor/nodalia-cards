@@ -1003,7 +1003,7 @@
   // src/cards/camera/camera-constants.ts
   var CARD_TAG = "nodalia-camera-card";
   var EDITOR_TAG = "nodalia-camera-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.20";
+  var CARD_VERSION = "2.3.0-alpha.21";
   var CAMERA_LAYOUT = "mosaic";
   var CAMERA_PRESENTATION = "feed";
   var MAX_CAMERAS = 4;
@@ -1020,11 +1020,11 @@
   var getByPath = utils.getByPath.bind(utils);
   var clamp = utils.clamp.bind(utils);
   var escapeHtml = utils.escapeHtml.bind(utils);
-  var buildGo2rtcViewerUrl = (baseUrl, streamName, mode) => window.NodaliaCameraStreamModel.buildGo2rtcViewerUrl(baseUrl, streamName, mode);
-  var sanitizeIframeUrl = (rawValue) => window.NodaliaCameraStreamModel.sanitizeIframeUrl(rawValue);
-  var buildGo2rtcWebSocketEndpoint = (baseUrl, streamName) => window.NodaliaCameraStreamModel.buildGo2rtcWebSocketEndpoint(baseUrl, streamName);
-  var buildFrigateGo2rtcPath = (clientId, streamName) => window.NodaliaCameraStreamModel.buildFrigateGo2rtcPath(clientId, streamName);
-  var isMixedContentUrl = (rawValue, pageLocation) => window.NodaliaCameraStreamModel.isMixedContentUrl(rawValue, pageLocation);
+  var buildGo2rtcViewerUrl = (baseUrl, streamName, mode) => window.NodaliaCameraStreamModel?.buildGo2rtcViewerUrl?.(baseUrl, streamName, mode) ?? "";
+  var sanitizeIframeUrl = (rawValue) => window.NodaliaCameraStreamModel?.sanitizeIframeUrl?.(rawValue) ?? "";
+  var buildGo2rtcWebSocketEndpoint = (baseUrl, streamName) => window.NodaliaCameraStreamModel?.buildGo2rtcWebSocketEndpoint?.(baseUrl, streamName) ?? "";
+  var buildFrigateGo2rtcPath = (clientId, streamName) => window.NodaliaCameraStreamModel?.buildFrigateGo2rtcPath?.(clientId, streamName) ?? "";
+  var isMixedContentUrl = (rawValue, pageLocation) => window.NodaliaCameraStreamModel?.isMixedContentUrl?.(rawValue, pageLocation) ?? false;
 
   // src/cards/camera/camera-helpers.ts
   function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
@@ -2796,6 +2796,8 @@
         :host {
           --camera-card-content-duration: ${animations.enabled ? animations.contentDuration : 0}ms;
           display: block;
+          position: relative;
+          z-index: ${this._expandedOpen ? "2147483000" : "auto"};
         }
 
         * { box-sizing: border-box; }
@@ -3055,7 +3057,7 @@
           display: none;
           inset: 0;
           position: fixed;
-          z-index: 30;
+          z-index: 2147483001;
         }
 
         .camera-card__expanded.is-open {

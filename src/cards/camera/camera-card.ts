@@ -1387,6 +1387,8 @@ class NodaliaCameraCard extends HTMLElement {
         :host {
           --camera-card-content-duration: ${animations.enabled ? animations.contentDuration : 0}ms;
           display: block;
+          position: relative;
+          z-index: ${this._expandedOpen ? "2147483000" : "auto"};
         }
 
         * { box-sizing: border-box; }
@@ -1646,7 +1648,7 @@ class NodaliaCameraCard extends HTMLElement {
           display: none;
           inset: 0;
           position: fixed;
-          z-index: 30;
+          z-index: 2147483001;
         }
 
         .camera-card__expanded.is-open {

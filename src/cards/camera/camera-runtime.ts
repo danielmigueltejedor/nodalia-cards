@@ -9,17 +9,17 @@ export const clamp = utils.clamp.bind(utils) as NodaliaUtilsApi["clamp"];
 export const escapeHtml = utils.escapeHtml.bind(utils) as NodaliaUtilsApi["escapeHtml"];
 
 export const buildGo2rtcViewerUrl = (baseUrl: unknown, streamName: unknown, mode?: unknown) => (
-  window.NodaliaCameraStreamModel.buildGo2rtcViewerUrl(baseUrl, streamName, mode)
+  window.NodaliaCameraStreamModel?.buildGo2rtcViewerUrl?.(baseUrl, streamName, mode) ?? ""
 );
 export const sanitizeIframeUrl = (rawValue: unknown) => (
-  window.NodaliaCameraStreamModel.sanitizeIframeUrl(rawValue)
+  window.NodaliaCameraStreamModel?.sanitizeIframeUrl?.(rawValue) ?? ""
 );
 export const buildGo2rtcWebSocketEndpoint = (baseUrl: unknown, streamName: unknown) => (
-  window.NodaliaCameraStreamModel.buildGo2rtcWebSocketEndpoint(baseUrl, streamName)
+  window.NodaliaCameraStreamModel?.buildGo2rtcWebSocketEndpoint?.(baseUrl, streamName) ?? ""
 );
 export const buildFrigateGo2rtcPath = (clientId: unknown, streamName: unknown) => (
-  window.NodaliaCameraStreamModel.buildFrigateGo2rtcPath(clientId, streamName)
+  window.NodaliaCameraStreamModel?.buildFrigateGo2rtcPath?.(clientId, streamName) ?? ""
 );
 export const isMixedContentUrl = (rawValue: unknown, pageLocation?: Location) => (
-  window.NodaliaCameraStreamModel.isMixedContentUrl(rawValue, pageLocation)
+  window.NodaliaCameraStreamModel?.isMixedContentUrl?.(rawValue, pageLocation) ?? false
 );

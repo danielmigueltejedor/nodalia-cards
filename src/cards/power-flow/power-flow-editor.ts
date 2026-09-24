@@ -2,6 +2,8 @@
 /* Visual editor surface: typed incrementally after the card runtime split. */
 import { NODE_DEFAULTS } from "./power-flow-constants";
 import {
+  clamp,
+  deepClone,
   deleteByPath,
   escapeHtml,
   fireEvent,
@@ -14,10 +16,13 @@ import {
   arrayFromMaybe,
   compactConfig,
   formatEditorColorFromHex,
+  formatEditorHexChannel,
   getEditorColorFallbackValue,
   getEditorColorModel,
   moveItem,
   resolveIndividualConfigs,
+  resolveNodeConfig,
+  rgbArrayToColor,
   sanitizeIndividualEntries,
 } from "./power-flow-helpers";
 

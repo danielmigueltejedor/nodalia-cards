@@ -4,7 +4,7 @@
   // src/cards/power-flow/power-flow-constants.ts
   var CARD_TAG = "nodalia-power-flow-card";
   var EDITOR_TAG = "nodalia-power-flow-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.20";
+  var CARD_VERSION = "2.3.0-alpha.21";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
@@ -65,13 +65,13 @@
   // src/cards/power-flow/power-flow-runtime.ts
   var utils = window.NodaliaUtils;
   var isObject = utils.isObject.bind(utils);
-  var deepClone2 = utils.deepClone.bind(utils);
+  var deepClone = utils.deepClone.bind(utils);
   var mergeConfig = utils.mergeDeep.bind(utils);
   var isUnsafeConfigPathKey = utils.isUnsafeConfigPathKey.bind(utils);
   var setByPath = utils.setByPath.bind(utils);
   var deleteByPath = utils.deleteByPath.bind(utils);
   var getByPath = utils.getByPath.bind(utils);
-  var clamp2 = utils.clamp.bind(utils);
+  var clamp = utils.clamp.bind(utils);
   var escapeHtml = utils.escapeHtml.bind(utils);
   var escapeSelectorValue = utils.escapeSelectorValue.bind(utils);
   var fireEvent = utils.fireEvent.bind(utils);
@@ -368,8 +368,8 @@
     }
     return String(value ?? "").trim();
   }
-  function formatEditorHexChannel2(value) {
-    return clamp2(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+  function formatEditorHexChannel(value) {
+    return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
   }
   function formatEditorColorFromHex(hex, alpha = 1) {
     const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
@@ -379,7 +379,7 @@
     const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
     const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
     const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
-    const safeAlpha = clamp2(Number(alpha), 0, 1);
+    const safeAlpha = clamp(Number(alpha), 0, 1);
     if (safeAlpha >= 0.999) {
       return `#${normalizedHex}`;
     }
@@ -389,11 +389,11 @@
     const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
     const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
     const channels = resolvedValue.match(/[\d.]+/g) || [];
-    const red = clamp2(Math.round(Number(channels[0] ?? 113)), 0, 255);
-    const green = clamp2(Math.round(Number(channels[1] ?? 192)), 0, 255);
-    const blue = clamp2(Math.round(Number(channels[2] ?? 255)), 0, 255);
-    const alpha = channels.length > 3 ? clamp2(Number(channels[3]), 0, 1) : 1;
-    const hex = `#${formatEditorHexChannel2(red)}${formatEditorHexChannel2(green)}${formatEditorHexChannel2(blue)}`;
+    const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
+    const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
+    const blue = clamp(Math.round(Number(channels[2] ?? 255)), 0, 255);
+    const alpha = channels.length > 3 ? clamp(Number(channels[3]), 0, 1) : 1;
+    const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
     return {
       alpha,
       hex,
@@ -412,7 +412,7 @@
       return NODE_DEFAULTS[nodeColorMatch[1]]?.color || "#71c0ff";
     }
     if (normalizedField.endsWith("display_zero_lines.grey_color")) {
-      return rgbArrayToColor2(DEFAULT_CONFIG.display_zero_lines.grey_color);
+      return rgbArrayToColor(DEFAULT_CONFIG.display_zero_lines.grey_color);
     }
     if (normalizedField.endsWith(".color")) {
       return "#71c0ff";
@@ -460,15 +460,15 @@
       unit: normalizedUnit
     };
   }
-  function rgbArrayToColor2(value, fallback = [189, 189, 189]) {
+  function rgbArrayToColor(value, fallback = [189, 189, 189]) {
     const source = Array.isArray(value) && value.length >= 3 ? value : fallback;
-    const [r, g, b] = source.map((item) => clamp2(Number(item) || 0, 0, 255));
+    const [r, g, b] = source.map((item) => clamp(Number(item) || 0, 0, 255));
     return `rgb(${r}, ${g}, ${b})`;
   }
   function arrayFromMaybe(value) {
     return Array.isArray(value) ? value : [];
   }
-  function resolveNodeConfig2(kind, config) {
+  function resolveNodeConfig(kind, config) {
     return mergeConfig(NODE_DEFAULTS[kind] || {}, config?.entities?.[kind] || {});
   }
   function isEntitySourceConfigured(entity) {
@@ -509,9 +509,9 @@
   }
   function getFlowLayoutFlagsFromConfig(config) {
     const c = config || {};
-    const homeConfigured = isEntitySourceConfigured(resolveNodeConfig2("home", c)?.entity);
+    const homeConfigured = isEntitySourceConfigured(resolveNodeConfig("home", c)?.entity);
     const activeTopKinds = ["grid", "solar", "battery"].filter((kind) => {
-      const node = resolveNodeConfig2(kind, c);
+      const node = resolveNodeConfig(kind, c);
       if (kind === "grid" && homeConfigured) {
         return true;
       }
@@ -521,7 +521,7 @@
     const hasGrid = activeTopKinds.includes("grid");
     const hasSolar = activeTopKinds.includes("solar");
     const hasBattery = activeTopKinds.includes("battery");
-    const bottomUtilities = [resolveNodeConfig2("water", c), resolveNodeConfig2("gas", c)].filter((item) => item.entity).length;
+    const bottomUtilities = [resolveNodeConfig("water", c), resolveNodeConfig("gas", c)].filter((item) => item.entity).length;
     const individualCount = getDiagramIndividualCount(c);
     return {
       hasGrid,
@@ -775,7 +775,7 @@
     merged.consumption_chips.day_label = String(merged.consumption_chips.day_label ?? "").trim();
     merged.consumption_chips.month_label = String(merged.consumption_chips.month_label ?? "").trim();
     merged.show_home_device_popup = merged.show_home_device_popup !== false;
-    merged.styles = window.NodaliaUtils?.sanitizeStyleTree?.(merged.styles, DEFAULT_CONFIG2.styles) ?? deepClone2(DEFAULT_CONFIG2.styles);
+    merged.styles = window.NodaliaUtils?.sanitizeStyleTree?.(merged.styles, DEFAULT_CONFIG2.styles) ?? deepClone(DEFAULT_CONFIG2.styles);
     return merged;
   }
 
@@ -2663,7 +2663,7 @@
         return document.createElement(EDITOR_TAG);
       }
       static getStubConfig(hass, entities = [], entitiesFallback = []) {
-        const config = deepClone2(STUB_CONFIG);
+        const config = deepClone(STUB_CONFIG);
         const entityId = getStubEntityId(hass, ["sensor"], entities, entitiesFallback);
         if (!entityId) {
           return config;
@@ -2903,7 +2903,7 @@
           window.clearTimeout(this._entranceAnimationResetTimer);
           this._entranceAnimationResetTimer = 0;
         }
-        const safeDelay = clamp2(Math.round(Number(delay) || 0), 0, 3e3);
+        const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3e3);
         if (!safeDelay || typeof window === "undefined") {
           this._animateContentOnNextRender = false;
           return;
@@ -2920,12 +2920,12 @@
         const configuredAnimations = this._config?.animations || DEFAULT_CONFIG2.animations;
         return {
           enabled: configuredAnimations.enabled !== false,
-          buttonBounceDuration: clamp2(
+          buttonBounceDuration: clamp(
             Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG2.animations.button_bounce_duration,
             120,
             1200
           ),
-          contentDuration: clamp2(
+          contentDuration: clamp(
             Number(configuredAnimations.content_duration) || DEFAULT_CONFIG2.animations.content_duration,
             160,
             1800
@@ -3087,7 +3087,7 @@
         return `${formatRawValue(rawValue, decimals, this._getLocaleTag())}${unit ? ` ${unit}` : ""}`;
       }
       _resolveNodeDescriptor(kind, configOverride = null, index = 0, total = 0, hasBottomUtilities = false, flowFlags = {}) {
-        const nodeConfig = configOverride || resolveNodeConfig2(kind, this._config);
+        const nodeConfig = configOverride || resolveNodeConfig(kind, this._config);
         let sourceResult = this._resolveSourceValue(nodeConfig.entity, kind);
         if (kind === "grid" && !sourceResult.entityId && String(nodeConfig?.export_entity || "").trim()) {
           const exportEntityId = String(nodeConfig.export_entity).trim();
@@ -3172,7 +3172,7 @@
           }
         }
         const level = values.find((value) => Number.isFinite(value) && value >= 0 && value <= 100);
-        return Number.isFinite(level) ? clamp2(level, 0, 100) : null;
+        return Number.isFinite(level) ? clamp(level, 0, 100) : null;
       }
       _getBatteryStatusIcon(node, fallbackIcon = NODE_DEFAULTS.battery.icon) {
         const configuredIcon = String(this._config?.entities?.battery?.icon ?? "").trim();
@@ -3232,7 +3232,7 @@
           }
         });
         ["grid", "home", "solar", "battery", "water", "gas"].forEach((kind) => {
-          registerNodeEntity(resolveNodeConfig2(kind, config));
+          registerNodeEntity(resolveNodeConfig(kind, config));
         });
         resolveIndividualConfigs(config).forEach(registerNodeEntity);
         const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
@@ -3297,7 +3297,7 @@
       }
       _getLayoutConfigStamp() {
         const branchStamp = ["grid", "solar", "battery", "home", "water", "gas"].map((kind) => {
-          const cfg = resolveNodeConfig2(kind, this._config);
+          const cfg = resolveNodeConfig(kind, this._config);
           const entity = cfg?.entity;
           if (typeof entity === "string") {
             return `${kind}:${entity.trim()}`;
@@ -3348,7 +3348,7 @@
         ].join("::");
       }
       _isDiagramBranchConfigured(kind) {
-        const cfg = resolveNodeConfig2(kind, this._config);
+        const cfg = resolveNodeConfig(kind, this._config);
         if (kind === "grid") {
           return isEntitySourceConfigured(cfg?.entity) || Boolean(String(cfg?.export_entity || "").trim());
         }
@@ -3363,7 +3363,7 @@
        * Nodo red con exportación: número en positivo y flecha integrada en el chip de valor.
        */
       _applyDerivedHomeAndGridDisplay(nodes) {
-        const homeCfg = resolveNodeConfig2("home", this._config);
+        const homeCfg = resolveNodeConfig("home", this._config);
         const homeConfigured = isEntitySourceConfigured(homeCfg.entity);
         if (!homeConfigured) {
           const grid = nodes.grid;
@@ -3424,7 +3424,7 @@
         if (!home?.entityId || home.unavailable || !Number.isFinite(home.value)) {
           return;
         }
-        const hasGridSensor = Boolean(isEntitySourceConfigured(resolveNodeConfig2("grid", this._config).entity) || String(resolveNodeConfig2("grid", this._config).export_entity || "").trim());
+        const hasGridSensor = Boolean(isEntitySourceConfigured(resolveNodeConfig("grid", this._config).entity) || String(resolveNodeConfig("grid", this._config).export_entity || "").trim());
         const hasSolar = Boolean(solar?.entityId && !solar.unavailable && Number.isFinite(solar.value));
         const hasBattery = Boolean(battery?.entityId && !battery.unavailable && Number.isFinite(battery.value));
         if (!hasSolar && !hasBattery && hasGridSensor) {
@@ -3458,7 +3458,7 @@
         grid.isDerived = true;
         grid.isExporting = gridExport > 1e-3;
         if (grid.isExporting) {
-          const gridCfg = resolveNodeConfig2("grid", this._config);
+          const gridCfg = resolveNodeConfig("grid", this._config);
           grid.color = gridCfg.export_color || NODE_DEFAULTS.grid.export_color;
         }
         const gridDisplay = formatDisplayValue(Math.abs(gridNet), unit, this._getLocaleTag());
@@ -3568,8 +3568,8 @@
         return nodes;
       }
       _getLineNeutralStyle() {
-        const grey = rgbArrayToColor2(this._config?.display_zero_lines?.grey_color);
-        const opacity = 1 - clamp2(Number(this._config?.display_zero_lines?.transparency ?? 50), 0, 100) / 100;
+        const grey = rgbArrayToColor(this._config?.display_zero_lines?.grey_color);
+        const opacity = 1 - clamp(Number(this._config?.display_zero_lines?.transparency ?? 50), 0, 100) / 100;
         return { color: grey, opacity };
       }
       _shouldShowZeroLines() {
@@ -3589,7 +3589,7 @@
         const minFlowRate = Math.max(0.6, Number(this._config?.min_flow_rate) || DEFAULT_CONFIG2.min_flow_rate);
         const maxFlowRate = Math.max(minFlowRate + 0.1, Number(this._config?.max_flow_rate) || DEFAULT_CONFIG2.max_flow_rate);
         const safeMax = Math.max(maxMagnitude, 1);
-        const ratio = clamp2(magnitude / safeMax, 0, 1);
+        const ratio = clamp(magnitude / safeMax, 0, 1);
         return maxFlowRate - (maxFlowRate - minFlowRate) * ratio;
       }
       _buildLines(nodes) {

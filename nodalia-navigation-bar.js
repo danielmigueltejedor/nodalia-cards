@@ -4,7 +4,7 @@
   // src/cards/navigation/navigation-constants.ts
   var CARD_TAG = "nodalia-navigation-bar";
   var EDITOR_TAG = "nodalia-navigation-bar-editor";
-  var CARD_VERSION = "2.3.0-alpha.20";
+  var CARD_VERSION = "2.3.0-alpha.21";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,

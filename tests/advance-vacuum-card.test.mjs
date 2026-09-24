@@ -43,3 +43,50 @@ test("advance vacuum public API keeps map defaults and admin-only webhooks", () 
   assert.equal(config.custom_menu.items.length, 0);
   assert.equal(config.routines.length, 0);
 });
+
+test("advance vacuum setConfig renders without missing helper imports", () => {
+  const registry = new Map();
+  class FakeHTMLElement {
+    constructor() { this.isConnected = true; }
+    attachShadow() {
+      this.shadowRoot = {
+        addEventListener() {}, removeEventListener() {}, innerHTML: "",
+        querySelector() { return null; }, querySelectorAll() { return []; },
+      };
+      return this.shadowRoot;
+    }
+    dispatchEvent() { return true; }
+  }
+  const sandbox = {
+    console,
+    URL,
+    window: null,
+    customElements: {
+      define(name, klass) { registry.set(name, klass); },
+      get(name) { return registry.get(name); },
+    },
+    HTMLElement: FakeHTMLElement,
+  };
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(read("nodalia-utils.js"), sandbox);
+  vm.runInContext(read("nodalia-advance-vacuum-card.js"), sandbox);
+  const Host = registry.get("nodalia-advance-vacuum-card");
+  assert.ok(Host, "advance vacuum host should register");
+  const card = new Host();
+  assert.doesNotThrow(() => card.setConfig({ entity: "vacuum.test" }));
+  card.hass = {
+    language: "es",
+    states: {
+      "vacuum.test": {
+        entity_id: "vacuum.test",
+        state: "docked",
+        attributes: { friendly_name: "Vac", battery_level: 80 },
+      },
+    },
+    callService: async () => {},
+    themes: {},
+    config: {},
+  };
+  assert.ok(card.shadowRoot?.innerHTML?.length > 0);
+});

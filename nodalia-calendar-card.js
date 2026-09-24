@@ -4,7 +4,7 @@
   // src/cards/calendar/calendar-constants.ts
   var CARD_TAG = "nodalia-calendar-card";
   var EDITOR_TAG = "nodalia-calendar-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.20";
+  var CARD_VERSION = "2.3.0-alpha.21";
   var NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
   var HAPTIC_PATTERNS = {
     selection: 8,
@@ -2637,6 +2637,8 @@ ${metadata}` : metadata;
       <style>
         :host {
           display:block;
+          position: relative;
+          z-index: ${this._expandedOpen ? "2147483000" : "auto"};
         }
         * { box-sizing:border-box; }
         ha-card {
@@ -2985,7 +2987,7 @@ ${metadata}` : metadata;
           pointer-events: none;
           position: fixed;
           transition: opacity 220ms cubic-bezier(0.16, 0.84, 0.22, 1);
-          z-index: 120;
+          z-index: 2147483001;
         }
         .calendar-expanded.is-open {
           opacity: 1;

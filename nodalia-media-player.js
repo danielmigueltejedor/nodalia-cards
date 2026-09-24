@@ -4,7 +4,7 @@
   // src/cards/media-player/media-player-constants.ts
   var CARD_TAG = "nodalia-media-player";
   var EDITOR_TAG = "nodalia-media-player-editor";
-  var CARD_VERSION = "2.3.0-alpha.20";
+  var CARD_VERSION = "2.3.0-alpha.21";
   var INVALID_EDITOR_VALUE = /* @__PURE__ */ Symbol("invalid-editor-value");
   var MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
   var HAPTIC_PATTERNS = {
@@ -3690,6 +3690,9 @@
         const inEditMode = this._isInEditMode();
         const players = this._getVisiblePlayers();
         const hasPlayers = players.length > 0;
+        if (!hasPlayers) {
+          this._activeArtworkIdle = false;
+        }
         const isFixed = this._config.layout.fixed && !inEditMode;
         const spacerHeight = isFixed ? this._getReservedHeight(hasPlayers) : "0px";
         const mediaBrowserMarkup = this._renderMediaBrowser();
@@ -3719,6 +3722,11 @@
         const presentationMode = this._getPresentationMode();
         this._resolvedLayoutMode = presentationMode;
         this.setAttribute("data-presentation", presentationMode);
+        if (this._activeArtworkIdle) {
+          this.setAttribute("data-idle-compact", "true");
+        } else {
+          this.removeAttribute("data-idle-compact");
+        }
         const cardTopHighlight = isLightThemeSurface ? "linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background) 34%, transparent), rgba(255, 255, 255, 0))" : "linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent), rgba(255, 255, 255, 0))";
         const activeTintPrimaryStrength = isLightThemeSurface ? 52 : 46;
         const activeTintSecondaryStrength = isLightThemeSurface ? 34 : 30;
@@ -3761,6 +3769,14 @@
           max-width: 100%;
           overflow: hidden;
           width: 100%;
+        }
+
+        :host([data-idle-compact="true"]) {
+          align-self: start;
+          aspect-ratio: auto;
+          height: auto;
+          max-height: none;
+          overflow: visible;
         }
 
         * {

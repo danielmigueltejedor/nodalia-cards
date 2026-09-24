@@ -2342,6 +2342,8 @@ class NodaliaCalendarCard extends HTMLElement {
       <style>
         :host {
           display:block;
+          position: relative;
+          z-index: ${this._expandedOpen ? "2147483000" : "auto"};
         }
         * { box-sizing:border-box; }
         ha-card {
@@ -2690,7 +2692,7 @@ class NodaliaCalendarCard extends HTMLElement {
           pointer-events: none;
           position: fixed;
           transition: opacity 220ms cubic-bezier(0.16, 0.84, 0.22, 1);
-          z-index: 120;
+          z-index: 2147483001;
         }
         .calendar-expanded.is-open {
           opacity: 1;

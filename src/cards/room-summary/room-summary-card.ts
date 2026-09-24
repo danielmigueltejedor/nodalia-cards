@@ -18,6 +18,7 @@ import {
 } from "./room-summary-runtime";
 import {
   DEFAULT_CONFIG,
+  buildRoomSummary,
   hasRoomContent,
   hubMediaPlayerIds,
   normalizeConfig,

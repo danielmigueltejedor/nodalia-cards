@@ -4,7 +4,7 @@
   // src/cards/climate/climate-constants.ts
   var CARD_TAG = "nodalia-climate-card";
   var EDITOR_TAG = "nodalia-climate-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.20";
+  var CARD_VERSION = "2.3.0-alpha.21";
   var SETPOINT_SCHEDULE_DAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
   var SETPOINT_SCHEDULE_MINUTES_PER_DAY = 24 * 60;
   var SCHEDULE_TIMELINE_SNAP_MINUTES = 5;
@@ -697,6 +697,12 @@ ${weekdayYaml}
   function parseSizeToPixels(value, fallback = 0) {
     const numeric = Number.parseFloat(String(value ?? ""));
     return Number.isFinite(numeric) ? numeric : fallback;
+  }
+  function escapeSelectorValue(value) {
+    if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+      return CSS.escape(String(value));
+    }
+    return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
   }
   function resolveEditorColorValue(value) {
     const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;

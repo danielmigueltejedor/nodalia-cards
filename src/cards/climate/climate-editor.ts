@@ -46,6 +46,7 @@ import {
 
 import { DEFAULT_CONFIG, STUB_CONFIG, normalizeConfig } from "./climate-config";
 import {
+  escapeSelectorValue,
   formatEditorColorFromHex,
   formatEditorHexChannel,
   getEditorColorFallbackValue,

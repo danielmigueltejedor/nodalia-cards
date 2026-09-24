@@ -614,6 +614,16 @@ test("room summary editor mounts nested camera and media editors without throwin
   }));
 });
 
+test("room summary setConfig renders without missing buildRoomSummary import", () => {
+  const card = new rs.Card();
+  assert.doesNotThrow(() => card.setConfig({ name: "Salón", temperature: "sensor.salon_temperature" }));
+  card.hass = mockHass({
+    "sensor.salon_temperature": state("sensor.salon_temperature", "22.5", { unit_of_measurement: "°C" }),
+  });
+  assert.ok(card.shadowRoot?.innerHTML?.length > 0);
+  assert.match(card.shadowRoot.innerHTML, /Salón|22/);
+});
+
 test("room summary editor emits valid config and preserves unknown fields", () => {
   const source = read("nodalia-room-summary-card.js");
   assert.match(source, /stripEqualToDefaults/);

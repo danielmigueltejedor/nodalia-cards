@@ -8,6 +8,31 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2.3.0-alpha.21] - 2026-09-24
+
+Repair pass after alpha.20: Advanced Vacuum and Room Summary no longer throw
+during Lovelace `setConfig`, expanded Calendar/Camera overlays rise above
+section stacking, and idle Media Player tiles stop leaving empty square gaps.
+
+### Fixed
+
+- Advanced Vacuum and Room Summary import the helpers used at boot
+  (`normalizeRoutineItems` / `normalizeCustomMenuItems`, `buildRoomSummary`),
+  so Lovelace no longer shows a configuration error for those cards.
+- Calendar and Camera elevate the host stacking context while their expanded
+  overlays are open, matching Weather forecast popups.
+- Camera stream helpers tolerate a missing stream model instead of crashing the
+  expanded render.
+- Idle compact Media Player hosts drop the square `aspect-ratio`, removing the
+  occasional empty band under the controls.
+- Climate, Scenes and Power Flow editors regain helper imports that only failed
+  on schedule, scene-tile and color-picker paths.
+
+### Validation
+
+- Node regressions for Advance Vacuum / Room Summary `setConfig` render, overlay
+  stacking, and idle Media Player host aspect ratio. Full suite **529** tests.
+
 ## [2.3.0-alpha.20] - 2026-09-20
 
 TypeScript architecture preview without the parallel `b` suffix. Every Lovelace
