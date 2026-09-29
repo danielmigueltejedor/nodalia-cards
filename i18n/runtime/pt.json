@@ -1051,5 +1051,26 @@
     "devices": "dispositivos",
     "close": "Fechar",
     "moreInfo": "Mais informações"
+  },
+  "lock": {
+    "locked": "Trancada",
+    "unlocked": "Destrancada",
+    "locking": "A trancar",
+    "unlocking": "A destrancar",
+    "jammed": "Bloqueada",
+    "unavailable": "Indisponível",
+    "unknown": "Desconhecido",
+    "lock": "Trancar",
+    "slide": "Deslize para destrancar",
+    "help": "Arraste até ao fim e solte. Teclado: Direita 10 vezes, depois Enter.",
+    "failed": "O comando falhou. Verifique a fechadura no Home Assistant.",
+    "timeout": "Sem confirmação. Verifique a fechadura antes de tentar novamente.",
+    "entity": "Entidade da fechadura",
+    "name": "Nome",
+    "layout": "Disposição",
+    "standard": "Padrão",
+    "compact": "Compacta",
+    "showName": "Mostrar nome",
+    "showState": "Mostrar estado"
   }
 }

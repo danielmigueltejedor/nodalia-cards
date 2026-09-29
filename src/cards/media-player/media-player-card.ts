@@ -1,5 +1,6 @@
 // @ts-nocheck
 /* Large HTMLElement view/controller: typed incrementally as methods are extracted. */
+import { applyArtworkControlTheme, MEDIA_CONTROL_STYLES } from "./media-player-control-theme";
 import {
   CARD_TAG,
   EDITOR_TAG,
@@ -13,7 +14,6 @@ import {
   getArtworkVisuals,
   isAlbumCoverFillEnabled,
   MediaPlayerArtworkController,
-  sampleArtworkPalette,
 } from "./media-player-artwork";
 import {
   interpolatePlaybackProgress,
@@ -5480,7 +5480,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       this.shadowRoot.innerHTML = markup;
       return;
     }
-    const css = markup.slice(styleStart + 7, styleEnd);
+    const css = markup.slice(styleStart + 7, styleEnd) + MEDIA_CONTROL_STYLES;
     const body = markup.slice(styleEnd + 8);
     const previousArt = this._artworkStageEl instanceof HTMLElement
       ? this._artworkStageEl
@@ -5507,6 +5507,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     chrome.innerHTML = body;
 
     const card = this.shadowRoot.querySelector(".media-player-card");
+    void applyArtworkControlTheme(card, this._config?.artwork?.dynamic_colors === false ? "" : artOptions.artworkUrl || "");
     if (card instanceof HTMLElement && artOptions.hasAlbumBackground) {
       const stage = previousArt instanceof HTMLElement
         ? previousArt
@@ -5567,15 +5568,6 @@ class NodaliaMediaPlayer extends HTMLElement {
         connected: this.isConnected,
         entityId,
       });
-      if (config.artwork?.dynamic_colors !== false) {
-        sampleArtworkPalette(artworkUrl).then(palette => {
-          if (!this.isConnected || !palette) {
-            return;
-          }
-          this._artworkController.palette = palette;
-          stage.style.setProperty("--nodalia-media-accent", palette.primary);
-        }).catch(() => {});
-      }
       return;
     }
 

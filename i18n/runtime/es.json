@@ -1051,5 +1051,26 @@
     "devices": "dispositivos",
     "close": "Cerrar",
     "moreInfo": "Más información"
+  },
+  "lock": {
+    "locked": "Cerrada",
+    "unlocked": "Abierta",
+    "locking": "Cerrando",
+    "unlocking": "Abriendo",
+    "jammed": "Atascada",
+    "unavailable": "No disponible",
+    "unknown": "Desconocido",
+    "lock": "Cerrar",
+    "slide": "Desliza para abrir",
+    "help": "Arrastra hasta el final y suelta. Teclado: pulsa Derecha 10 veces y después Intro.",
+    "failed": "La orden ha fallado. Comprueba la cerradura en Home Assistant.",
+    "timeout": "Sin confirmación. Comprueba la cerradura antes de reintentar.",
+    "entity": "Entidad de cerradura",
+    "name": "Nombre",
+    "layout": "Diseño",
+    "standard": "Estándar",
+    "compact": "Compacto",
+    "showName": "Mostrar nombre",
+    "showState": "Mostrar estado"
   }
 }

@@ -1051,5 +1051,26 @@
     "devices": "apparaten",
     "close": "Sluiten",
     "moreInfo": "Meer informatie"
+  },
+  "lock": {
+    "locked": "Vergrendeld",
+    "unlocked": "Ontgrendeld",
+    "locking": "Vergrendelen",
+    "unlocking": "Ontgrendelen",
+    "jammed": "Geblokkeerd",
+    "unavailable": "Niet beschikbaar",
+    "unknown": "Onbekend",
+    "lock": "Vergrendelen",
+    "slide": "Schuif om te ontgrendelen",
+    "help": "Sleep tot het einde en laat los. Toetsenbord: 10 keer Rechts, dan Enter.",
+    "failed": "Opdracht mislukt. Controleer het slot in Home Assistant.",
+    "timeout": "Geen bevestiging. Controleer het slot voordat je opnieuw probeert.",
+    "entity": "Slotentiteit",
+    "name": "Naam",
+    "layout": "Indeling",
+    "standard": "Standaard",
+    "compact": "Compact",
+    "showName": "Naam tonen",
+    "showState": "Status tonen"
   }
 }

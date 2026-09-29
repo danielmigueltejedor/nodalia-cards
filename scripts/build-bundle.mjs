@@ -40,6 +40,7 @@ const CARD_PARTS = [
   "nodalia-cover-card.js",
   "nodalia-climate-card.js",
   "nodalia-alarm-panel-card.js",
+  "nodalia-lock-card.js",
   "nodalia-advance-vacuum-card.js",
   "nodalia-entity-card.js",
   "nodalia-fav-card.js",
@@ -58,6 +59,7 @@ const CARD_PARTS = [
 const ALL_PARTS = [...CORE_PARTS, ...CARD_SUPPORT_PARTS, ...CARD_PARTS];
 
 const BUNDLE_SOURCE_ALIASES = {
+  "nodalia-lock-card.js": "src/cards/lock/index.ts",
   "nodalia-climate-card.js": "src/cards/climate/index.ts",
   "nodalia-media-player.js": "src/cards/media-player/index.ts",
   "nodalia-light-card.js": "src/cards/light/index.ts",

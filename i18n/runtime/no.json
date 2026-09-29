@@ -1051,5 +1051,26 @@
     "devices": "enheter",
     "close": "Lukk",
     "moreInfo": "Mer informasjon"
+  },
+  "lock": {
+    "locked": "Låst",
+    "unlocked": "Ulåst",
+    "locking": "Låser",
+    "unlocking": "Låser opp",
+    "jammed": "Fastlåst",
+    "unavailable": "Utilgjengelig",
+    "unknown": "Ukjent",
+    "lock": "Lås",
+    "slide": "Skyv for å låse opp",
+    "help": "Dra helt til enden og slipp. Tastatur: Høyre 10 ganger, deretter Enter.",
+    "failed": "Kommandoen mislyktes. Sjekk låsen i Home Assistant.",
+    "timeout": "Ingen bekreftelse. Sjekk låsen før du prøver igjen.",
+    "entity": "Låsenhet",
+    "name": "Navn",
+    "layout": "Oppsett",
+    "standard": "Standard",
+    "compact": "Kompakt",
+    "showName": "Vis navn",
+    "showState": "Vis status"
   }
 }

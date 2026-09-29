@@ -1274,6 +1274,27 @@
           devices: "devices",
           close: "Close",
           moreInfo: "More info"
+        },
+        lock: {
+          locked: "Locked",
+          unlocked: "Unlocked",
+          locking: "Locking",
+          unlocking: "Unlocking",
+          jammed: "Jammed",
+          unavailable: "Unavailable",
+          unknown: "Unknown",
+          lock: "Lock",
+          slide: "Slide to unlock",
+          help: "Drag to the end and release. Keyboard: press Right 10 times, then Enter.",
+          failed: "The command failed. Check the lock in Home Assistant.",
+          timeout: "No confirmation received. Check the lock before trying again.",
+          entity: "Lock entity",
+          name: "Name",
+          layout: "Layout",
+          standard: "Standard",
+          compact: "Compact",
+          showName: "Show name",
+          showState: "Show state"
         }
       };
     },
@@ -2331,6 +2352,27 @@
           devices: "Geräte",
           close: "Schließen",
           moreInfo: "Mehr Informationen"
+        },
+        lock: {
+          locked: "Verriegelt",
+          unlocked: "Entriegelt",
+          locking: "Wird verriegelt",
+          unlocking: "Wird entriegelt",
+          jammed: "Blockiert",
+          unavailable: "Nicht verfügbar",
+          unknown: "Unbekannt",
+          lock: "Verriegeln",
+          slide: "Zum Entriegeln schieben",
+          help: "Bis zum Ende ziehen und loslassen. Tastatur: 10-mal Rechts, dann Eingabe.",
+          failed: "Befehl fehlgeschlagen. Schloss in Home Assistant prüfen.",
+          timeout: "Keine Bestätigung. Vor erneutem Versuch das Schloss prüfen.",
+          entity: "Schloss-Entität",
+          name: "Name",
+          layout: "Layout",
+          standard: "Standard",
+          compact: "Kompakt",
+          showName: "Name anzeigen",
+          showState: "Status anzeigen"
         }
       };
     },
@@ -3388,6 +3430,27 @@
           devices: "συσκευές",
           close: "Κλείσιμο",
           moreInfo: "Περισσότερες πληροφορίες"
+        },
+        lock: {
+          locked: "Κλειδωμένη",
+          unlocked: "Ξεκλείδωτη",
+          locking: "Κλείδωμα",
+          unlocking: "Ξεκλείδωμα",
+          jammed: "Μπλοκαρισμένη",
+          unavailable: "Μη διαθέσιμη",
+          unknown: "Άγνωστο",
+          lock: "Κλείδωμα",
+          slide: "Σύρετε για ξεκλείδωμα",
+          help: "Σύρετε μέχρι το τέλος και αφήστε. Πληκτρολόγιο: Δεξιά 10 φορές και μετά Enter.",
+          failed: "Η εντολή απέτυχε. Ελέγξτε την κλειδαριά στο Home Assistant.",
+          timeout: "Χωρίς επιβεβαίωση. Ελέγξτε την κλειδαριά πριν δοκιμάσετε ξανά.",
+          entity: "Οντότητα κλειδαριάς",
+          name: "Όνομα",
+          layout: "Διάταξη",
+          standard: "Τυπική",
+          compact: "Συμπαγής",
+          showName: "Εμφάνιση ονόματος",
+          showState: "Εμφάνιση κατάστασης"
         }
       };
     },
@@ -4445,6 +4508,27 @@
           devices: "dispositivos",
           close: "Cerrar",
           moreInfo: "Más información"
+        },
+        lock: {
+          locked: "Cerrada",
+          unlocked: "Abierta",
+          locking: "Cerrando",
+          unlocking: "Abriendo",
+          jammed: "Atascada",
+          unavailable: "No disponible",
+          unknown: "Desconocido",
+          lock: "Cerrar",
+          slide: "Desliza para abrir",
+          help: "Arrastra hasta el final y suelta. Teclado: pulsa Derecha 10 veces y después Intro.",
+          failed: "La orden ha fallado. Comprueba la cerradura en Home Assistant.",
+          timeout: "Sin confirmación. Comprueba la cerradura antes de reintentar.",
+          entity: "Entidad de cerradura",
+          name: "Nombre",
+          layout: "Diseño",
+          standard: "Estándar",
+          compact: "Compacto",
+          showName: "Mostrar nombre",
+          showState: "Mostrar estado"
         }
       };
     },
@@ -5502,6 +5586,27 @@
           devices: "appareils",
           close: "Fermer",
           moreInfo: "Plus d’informations"
+        },
+        lock: {
+          locked: "Verrouillée",
+          unlocked: "Déverrouillée",
+          locking: "Verrouillage",
+          unlocking: "Déverrouillage",
+          jammed: "Bloquée",
+          unavailable: "Indisponible",
+          unknown: "Inconnu",
+          lock: "Verrouiller",
+          slide: "Glisser pour déverrouiller",
+          help: "Glissez jusqu’au bout puis relâchez. Clavier : 10 fois Droite, puis Entrée.",
+          failed: "Échec de la commande. Vérifiez la serrure dans Home Assistant.",
+          timeout: "Aucune confirmation. Vérifiez la serrure avant de réessayer.",
+          entity: "Entité serrure",
+          name: "Nom",
+          layout: "Disposition",
+          standard: "Standard",
+          compact: "Compacte",
+          showName: "Afficher le nom",
+          showState: "Afficher l’état"
         }
       };
     },
@@ -6559,6 +6664,27 @@
           devices: "dispositivi",
           close: "Chiudi",
           moreInfo: "Maggiori informazioni"
+        },
+        lock: {
+          locked: "Bloccata",
+          unlocked: "Sbloccata",
+          locking: "Blocco in corso",
+          unlocking: "Sblocco in corso",
+          jammed: "Inceppata",
+          unavailable: "Non disponibile",
+          unknown: "Sconosciuto",
+          lock: "Blocca",
+          slide: "Scorri per sbloccare",
+          help: "Trascina fino in fondo e rilascia. Tastiera: Destra 10 volte, poi Invio.",
+          failed: "Comando non riuscito. Controlla la serratura in Home Assistant.",
+          timeout: "Nessuna conferma. Controlla la serratura prima di riprovare.",
+          entity: "Entità serratura",
+          name: "Nome",
+          layout: "Layout",
+          standard: "Standard",
+          compact: "Compatto",
+          showName: "Mostra nome",
+          showState: "Mostra stato"
         }
       };
     },
@@ -7616,6 +7742,27 @@
           devices: "apparaten",
           close: "Sluiten",
           moreInfo: "Meer informatie"
+        },
+        lock: {
+          locked: "Vergrendeld",
+          unlocked: "Ontgrendeld",
+          locking: "Vergrendelen",
+          unlocking: "Ontgrendelen",
+          jammed: "Geblokkeerd",
+          unavailable: "Niet beschikbaar",
+          unknown: "Onbekend",
+          lock: "Vergrendelen",
+          slide: "Schuif om te ontgrendelen",
+          help: "Sleep tot het einde en laat los. Toetsenbord: 10 keer Rechts, dan Enter.",
+          failed: "Opdracht mislukt. Controleer het slot in Home Assistant.",
+          timeout: "Geen bevestiging. Controleer het slot voordat je opnieuw probeert.",
+          entity: "Slotentiteit",
+          name: "Naam",
+          layout: "Indeling",
+          standard: "Standaard",
+          compact: "Compact",
+          showName: "Naam tonen",
+          showState: "Status tonen"
         }
       };
     },
@@ -8673,6 +8820,27 @@
           devices: "enheter",
           close: "Lukk",
           moreInfo: "Mer informasjon"
+        },
+        lock: {
+          locked: "Låst",
+          unlocked: "Ulåst",
+          locking: "Låser",
+          unlocking: "Låser opp",
+          jammed: "Fastlåst",
+          unavailable: "Utilgjengelig",
+          unknown: "Ukjent",
+          lock: "Lås",
+          slide: "Skyv for å låse opp",
+          help: "Dra helt til enden og slipp. Tastatur: Høyre 10 ganger, deretter Enter.",
+          failed: "Kommandoen mislyktes. Sjekk låsen i Home Assistant.",
+          timeout: "Ingen bekreftelse. Sjekk låsen før du prøver igjen.",
+          entity: "Låsenhet",
+          name: "Navn",
+          layout: "Oppsett",
+          standard: "Standard",
+          compact: "Kompakt",
+          showName: "Vis navn",
+          showState: "Vis status"
         }
       };
     },
@@ -9730,6 +9898,27 @@
           devices: "dispositivos",
           close: "Fechar",
           moreInfo: "Mais informações"
+        },
+        lock: {
+          locked: "Trancada",
+          unlocked: "Destrancada",
+          locking: "A trancar",
+          unlocking: "A destrancar",
+          jammed: "Bloqueada",
+          unavailable: "Indisponível",
+          unknown: "Desconhecido",
+          lock: "Trancar",
+          slide: "Deslize para destrancar",
+          help: "Arraste até ao fim e solte. Teclado: Direita 10 vezes, depois Enter.",
+          failed: "O comando falhou. Verifique a fechadura no Home Assistant.",
+          timeout: "Sem confirmação. Verifique a fechadura antes de tentar novamente.",
+          entity: "Entidade da fechadura",
+          name: "Nome",
+          layout: "Disposição",
+          standard: "Padrão",
+          compact: "Compacta",
+          showName: "Mostrar nome",
+          showState: "Mostrar estado"
         }
       };
     },
@@ -10787,6 +10976,27 @@
           devices: "dispozitive",
           close: "Închide",
           moreInfo: "Mai multe informații"
+        },
+        lock: {
+          locked: "Încuiată",
+          unlocked: "Descuiată",
+          locking: "Se încuie",
+          unlocking: "Se descuie",
+          jammed: "Blocată",
+          unavailable: "Indisponibilă",
+          unknown: "Necunoscut",
+          lock: "Încuie",
+          slide: "Glisează pentru descuiere",
+          help: "Trage până la capăt și eliberează. Tastatură: Dreapta de 10 ori, apoi Enter.",
+          failed: "Comanda a eșuat. Verifică încuietoarea în Home Assistant.",
+          timeout: "Fără confirmare. Verifică încuietoarea înainte de a reîncerca.",
+          entity: "Entitate încuietoare",
+          name: "Nume",
+          layout: "Aspect",
+          standard: "Standard",
+          compact: "Compact",
+          showName: "Arată numele",
+          showState: "Arată starea"
         }
       };
     },
@@ -11844,6 +12054,27 @@
           devices: "устройства",
           close: "Закрыть",
           moreInfo: "Подробнее"
+        },
+        lock: {
+          locked: "Заперто",
+          unlocked: "Отперто",
+          locking: "Запирание",
+          unlocking: "Отпирание",
+          jammed: "Заклинило",
+          unavailable: "Недоступно",
+          unknown: "Неизвестно",
+          lock: "Запереть",
+          slide: "Сдвиньте для отпирания",
+          help: "Перетащите до конца и отпустите. Клавиатура: 10 раз вправо, затем Enter.",
+          failed: "Команда не выполнена. Проверьте замок в Home Assistant.",
+          timeout: "Нет подтверждения. Проверьте замок перед повторной попыткой.",
+          entity: "Сущность замка",
+          name: "Название",
+          layout: "Макет",
+          standard: "Обычный",
+          compact: "Компактный",
+          showName: "Показывать название",
+          showState: "Показывать состояние"
         }
       };
     },
@@ -12901,6 +13132,27 @@
           devices: "设备",
           close: "关闭",
           moreInfo: "更多信息"
+        },
+        lock: {
+          locked: "已锁定",
+          unlocked: "已解锁",
+          locking: "正在锁定",
+          unlocking: "正在解锁",
+          jammed: "卡住",
+          unavailable: "不可用",
+          unknown: "未知",
+          lock: "锁定",
+          slide: "滑动以解锁",
+          help: "拖动到末端并松开。键盘：按右箭头 10 次，再按回车。",
+          failed: "命令失败。请在 Home Assistant 中检查门锁。",
+          timeout: "未收到确认。请检查门锁后再重试。",
+          entity: "门锁实体",
+          name: "名称",
+          layout: "布局",
+          standard: "标准",
+          compact: "紧凑",
+          showName: "显示名称",
+          showState: "显示状态"
         }
       };
     }

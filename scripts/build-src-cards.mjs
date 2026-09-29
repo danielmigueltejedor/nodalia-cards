@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 export const SRC_CARD_ENTRIES = [
+  { entry: "src/cards/lock/standalone.ts", outfile: "nodalia-lock-card.js" },
   {
     entry: "src/cards/climate/standalone.ts",
     outfile: "nodalia-climate-card.js",

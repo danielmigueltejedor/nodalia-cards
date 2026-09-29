@@ -1051,5 +1051,26 @@
     "devices": "appareils",
     "close": "Fermer",
     "moreInfo": "Plus d’informations"
+  },
+  "lock": {
+    "locked": "Verrouillée",
+    "unlocked": "Déverrouillée",
+    "locking": "Verrouillage",
+    "unlocking": "Déverrouillage",
+    "jammed": "Bloquée",
+    "unavailable": "Indisponible",
+    "unknown": "Inconnu",
+    "lock": "Verrouiller",
+    "slide": "Glisser pour déverrouiller",
+    "help": "Glissez jusqu’au bout puis relâchez. Clavier : 10 fois Droite, puis Entrée.",
+    "failed": "Échec de la commande. Vérifiez la serrure dans Home Assistant.",
+    "timeout": "Aucune confirmation. Vérifiez la serrure avant de réessayer.",
+    "entity": "Entité serrure",
+    "name": "Nom",
+    "layout": "Disposition",
+    "standard": "Standard",
+    "compact": "Compacte",
+    "showName": "Afficher le nom",
+    "showState": "Afficher l’état"
   }
 }

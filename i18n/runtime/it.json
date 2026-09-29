@@ -1051,5 +1051,26 @@
     "devices": "dispositivi",
     "close": "Chiudi",
     "moreInfo": "Maggiori informazioni"
+  },
+  "lock": {
+    "locked": "Bloccata",
+    "unlocked": "Sbloccata",
+    "locking": "Blocco in corso",
+    "unlocking": "Sblocco in corso",
+    "jammed": "Inceppata",
+    "unavailable": "Non disponibile",
+    "unknown": "Sconosciuto",
+    "lock": "Blocca",
+    "slide": "Scorri per sbloccare",
+    "help": "Trascina fino in fondo e rilascia. Tastiera: Destra 10 volte, poi Invio.",
+    "failed": "Comando non riuscito. Controlla la serratura in Home Assistant.",
+    "timeout": "Nessuna conferma. Controlla la serratura prima di riprovare.",
+    "entity": "Entità serratura",
+    "name": "Nome",
+    "layout": "Layout",
+    "standard": "Standard",
+    "compact": "Compatto",
+    "showName": "Mostra nome",
+    "showState": "Mostra stato"
   }
 }
