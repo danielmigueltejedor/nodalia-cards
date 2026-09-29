@@ -201,3 +201,63 @@ test("Media controls remain circular across compact and artwork layouts", async 
   mismatches.push(...navSizes.filter(rect => Math.abs(rect.width - rect.height) > 0.5).map(rect => ({ mode: "navigation", ...rect })));
   expect(mismatches).toEqual([]);
 });
+
+test("Lock and Media Player use the Nodalia icon bubble and state-chip styling", async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await mountMedia(page, "#ac5522");
+  await page.evaluate(() => {
+    const states = { ...window.hass.states, "lock.front": { entity_id: "lock.front", state: "unlocked", attributes: { friendly_name: "Front door" } }, "sensor.test": { entity_id: "sensor.test", state: "idle", attributes: { friendly_name: "Reference" } } };
+    const hass = window.makeHass(states);
+    for (const [tag, config] of [
+      ["nodalia-fav-card", { entity: "sensor.test" }],
+      ["nodalia-lock-card", { entity: "lock.front", layout: "compact" }],
+      ["nodalia-lock-card", { entity: "lock.front", layout: "standard", name: "Main entrance" }],
+    ]) {
+      const card = document.createElement(tag); card.setConfig(config); card.hass = config.layout === "standard" ? window.makeHass({ ...states, "lock.front": { ...states["lock.front"], state: "locked" } }) : hass;
+      document.querySelector("#fixture").append(card);
+    }
+    document.querySelector("nodalia-media-player").setConfig({ entity: "media_player.test", layout: { mode: "compact" }, animations: { enabled: false } });
+    document.querySelector("#fixture").style.maxWidth = "320px";
+  });
+  for (const light of [false, true]) {
+    await page.evaluate(light => {
+      const root = document.documentElement;
+      root.style.setProperty("--primary-text-color", light ? "#212121" : "#f4f4f4");
+      root.style.setProperty("--secondary-text-color", light ? "#555" : "#aeb6c5");
+      root.style.setProperty("--ha-card-background", light ? "#fff" : "#20242b");
+      root.style.setProperty("--divider-color", light ? "#ddd" : "#414957");
+      root.style.setProperty("--ha-card-box-shadow", "0 8px 24px rgba(0,0,0,.2)");
+    }, light);
+    const readStyles = () => page.evaluate(() => {
+      const read = element => {
+        const css = getComputedStyle(element);
+        return { background: css.backgroundColor, border: css.border, radius: css.borderRadius, shadow: css.boxShadow };
+      };
+      const reference = document.querySelector("nodalia-fav-card").shadowRoot;
+      const media = document.querySelector("nodalia-media-player").shadowRoot;
+      const lock = document.querySelector("nodalia-lock-card").shadowRoot;
+      return {
+        reference: read(reference.querySelector(".fav-card__icon")),
+        media: read(media.querySelector(".media-player__artwork")),
+        lock: read(lock.querySelector(".icon")),
+        title: getComputedStyle(lock.querySelector(".name")).fontSize,
+        stateRadius: getComputedStyle(lock.querySelector(".state")).borderRadius,
+        stateSize: getComputedStyle(lock.querySelector(".state")).fontSize,
+        surfaceShadow: getComputedStyle(lock.querySelector("ha-card")).boxShadow,
+        referenceShadow: getComputedStyle(reference.querySelector("ha-card")).boxShadow,
+      };
+    });
+    await expect.poll(async () => {
+      const current = await readStyles();
+      return JSON.stringify(current.media) === JSON.stringify(current.reference) && JSON.stringify(current.lock) === JSON.stringify(current.reference);
+    }).toBe(true);
+    const styles = await readStyles();
+    expect(styles.media).toEqual(styles.reference);
+    expect(styles.lock).toEqual(styles.reference);
+    expect(styles.title).toBe("13px");
+    expect(styles.stateRadius).toBe("999px");
+    expect(styles.stateSize).toBe("11px");
+    expect(styles.surfaceShadow).toBe(styles.referenceShadow);
+    await page.screenshot({ path: testInfo.outputPath(`card-family-${light ? "light" : "dark"}.png`), fullPage: true });
+  }
+});

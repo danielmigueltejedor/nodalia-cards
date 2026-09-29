@@ -3439,10 +3439,10 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
         .media-player__artwork {
           align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 22px;
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent), 0 10px 24px rgba(0, 0, 0, 0.18);
+          border-radius: 999px;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent), 0 10px 24px rgba(0, 0, 0, 0.16);
           display: flex;
           height: ${config.styles.media_player.artwork_size};
           justify-content: center;

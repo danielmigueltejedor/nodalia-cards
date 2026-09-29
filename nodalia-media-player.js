@@ -4361,10 +4361,10 @@
         .media-player__artwork {
           align-items: center;
           appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 22px;
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent), 0 10px 24px rgba(0, 0, 0, 0.18);
+          border-radius: 999px;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent), 0 10px 24px rgba(0, 0, 0, 0.16);
           color: inherit;
           cursor: default;
           display: flex;
@@ -4379,7 +4379,6 @@
 
         .media-player__artwork--idle {
           border-radius: 999px;
-          box-shadow: none;
           height: 38px;
           width: 38px;
         }
@@ -4392,7 +4391,7 @@
         }
 
         .media-player__artwork ha-icon {
-          --mdc-icon-size: calc(${playerStyles.artwork_size} * 0.5);
+          --mdc-icon-size: calc(${playerStyles.artwork_size} * 0.46);
           align-items: center;
           color: var(--primary-text-color);
           display: inline-flex;
@@ -4634,7 +4633,7 @@
         }
 
         .media-player-card--tv .media-player__artwork ha-icon {
-          --mdc-icon-size: calc(${tvArtworkSize} * 0.5);
+          --mdc-icon-size: calc(${tvArtworkSize} * 0.46);
         }
 
         .media-player-card--tv.media-player-card--idle .media-player__artwork--idle {
