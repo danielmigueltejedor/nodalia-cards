@@ -8,6 +8,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## Unreleased
+
+### Fixed
+
+- Keep media controls translucent from first paint and while artwork changes; give Play the same size and styling as previous/next.
+- Add Lock Card to entity-first suggestions and align its visual editor with Nodalia sections without losing focus on state updates.
+- Tint playback-control containers and stacked-player selectors with the shared translucent artwork color in both media players; add a centered playback capsule to the standalone card and contrasting selector indicators.
+
 ## [2.3.0-alpha.48] - 2026-09-29
 
 ### Fixed

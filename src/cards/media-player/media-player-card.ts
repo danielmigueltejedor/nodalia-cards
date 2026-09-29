@@ -2989,7 +2989,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       ? `
       <button
         type="button"
-        class="media-player__control media-player__control--primary"
+        class="media-player__control"
         data-media-control="play-pause"
         data-entity="${escapeHtml(player.entity)}"
         aria-label="${escapeHtml(this._mediaPlayerAria("playPause", "Play or pause"))}"
@@ -3152,7 +3152,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         ${volumeDownMarkup}
         <button
           type="button"
-          class="media-player__control media-player__control--primary"
+          class="media-player__control"
           data-media-control="play"
           data-entity="${escapeHtml(player.entity)}"
           aria-label="${escapeHtml(this._mediaPlayerAria("play", "Play"))}"
@@ -3319,7 +3319,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                           </button>
                           <button
                             type="button"
-                            class="media-player__control media-player__control--primary"
+                            class="media-player__control"
                             data-media-control="play-pause"
                             data-entity="${escapeHtml(player.entity)}"
                             aria-label="${escapeHtml(this._commonAria("playPause", "Play or pause"))}"
@@ -4112,7 +4112,16 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player__transport {
-          display: contents;
+          align-items: center;
+          display: inline-flex;
+          flex: 0 0 auto;
+          justify-content: center;
+          gap: 8px;
+          padding: 6px;
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border-radius: 999px;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent);
         }
 
         .media-player__tv-shell {

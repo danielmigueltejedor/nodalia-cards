@@ -116,10 +116,10 @@ test("Lock editor saves layout, entity and visibility settings", async ({ page }
   expect(await page.evaluate(() => window.savedConfig)).toMatchObject({ entity: "lock.front", layout: "compact", show_state: false, name: "Side Door" });
 });
 
-async function mountMedia(page, color) {
-  await page.route("**/test-artwork.svg*", route => route.fulfill({
+async function mountMedia(page, color, artworkReady = Promise.resolve()) {
+  await page.route("**/test-artwork.svg*", async route => { await artworkReady; return route.fulfill({
     contentType: "image/svg+xml", body: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><rect width="24" height="24" fill="${color}"/></svg>`,
-  }));
+  }); });
   await page.goto("/tests/fixtures/browser.html");
   await page.waitForFunction(() => customElements.get("nodalia-navigation-bar"));
   await page.evaluate(color => {
@@ -265,4 +265,77 @@ test("Lock and Media Player use the Nodalia icon bubble and state-chip styling",
     expect(styles.surfaceShadow).toBe(styles.referenceShadow);
     await page.screenshot({ path: testInfo.outputPath(`card-family-${light ? "light" : "dark"}.png`), fullPage: true });
   }
+});
+
+test("Media capsules and selectors stay translucent before artwork loads and after a track change", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  let releaseArtwork;
+  const artworkReady = new Promise(resolve => { releaseArtwork = resolve; });
+  await mountMedia(page, "#ac5522", artworkReady);
+  await page.evaluate(() => {
+    window.hass.states["media_player.second"] = { ...window.hass.states["media_player.test"], entity_id: "media_player.second" };
+    const players = [{ entity: "media_player.test" }, { entity: "media_player.second" }];
+    const media = document.querySelector("nodalia-media-player");
+    media.setConfig({ players, animations: { enabled: false } }); media.hass = window.hass;
+    const nav = document.querySelector("nodalia-navigation-bar");
+    nav.setConfig({ layout: { fixed: false, show_desktop: true }, routes: [{ icon: "mdi:home", path: "/" }], media_player: { show: true, show_desktop: true, players } }); nav.hass = window.hass;
+  });
+  const expand = page.locator("nodalia-navigation-bar").locator('[data-media-toggle="expand"]');
+  if (await expand.isVisible()) await expand.click();
+  const check = async () => {
+    for (const tag of ["nodalia-navigation-bar", "nodalia-media-player"]) {
+      const card = page.locator(tag);
+      const result = await card.evaluate(element => {
+        const root = element.shadowRoot;
+        const controls = [...root.querySelectorAll('.media-player__transport .media-player__control')];
+        const read = node => {
+          const style = getComputedStyle(node), rect = node.getBoundingClientRect();
+          const canvas = document.createElement("canvas"); canvas.width = canvas.height = 1;
+          const ctx = canvas.getContext("2d"); ctx.fillStyle = style.backgroundColor; ctx.fillRect(0, 0, 1, 1);
+          return { alpha: ctx.getImageData(0, 0, 1, 1).data[3] / 255, width: rect.width, height: rect.height, border: style.border, background: style.backgroundColor, shadow: style.boxShadow };
+        };
+        const transport = root.querySelector('.media-player__transport');
+        return { controls: controls.map(read), containers: [transport, root.querySelector('.media-player__dots')].map(read), display: getComputedStyle(transport).display };
+      });
+      expect(["flex", "inline-flex"]).toContain(result.display);
+      expect(result.controls).toHaveLength(3);
+      expect(result.controls[1]).toEqual(result.controls[0]);
+      expect(result.controls[2]).toEqual(result.controls[0]);
+      for (const surface of [...result.controls, ...result.containers]) {
+        expect(surface.alpha).toBeGreaterThan(0.15); expect(surface.alpha).toBeLessThan(0.35);
+      }
+    }
+  };
+  await check();
+  releaseArtwork();
+  for (const tag of ["nodalia-navigation-bar", "nodalia-media-player"]) await expect(page.locator(tag).locator('[data-artwork-controls]')).toHaveCount(1);
+  await check();
+  await page.route('**/next-cover.svg*', route => route.abort());
+  await page.evaluate(() => {
+    const entity = window.hass.states["media_player.test"];
+    window.hass.states["media_player.test"] = { ...entity, attributes: { ...entity.attributes, media_title: "Next song", entity_picture: "/next-cover.svg" } };
+    for (const card of document.querySelectorAll('nodalia-media-player, nodalia-navigation-bar')) card.hass = window.hass;
+  });
+  await check();
+});
+
+test("Lock is suggested by entity and its editor keeps focus during state updates", async ({ page }) => {
+  await mountLock(page);
+  const suggestions = await page.evaluate(() => {
+    const metadata = window.customCards.find(card => card.type === 'nodalia-lock-card');
+    const hass = window.makeHass({ 'lock.front': { state: 'locked', attributes: {} }, 'light.test': { state: 'off', attributes: {} } });
+    return [metadata.getEntitySuggestion(hass, 'lock.front'), metadata.getEntitySuggestion(hass, 'light.test')];
+  });
+  expect(suggestions[0].config).toEqual({ type: 'custom:nodalia-lock-card', entity: 'lock.front' });
+  expect(suggestions[1]).toBeNull();
+  await page.evaluate(() => {
+    const editor = document.createElement('nodalia-lock-card-editor');
+    editor.hass = window.makeHass({}); editor.setConfig({ entity: 'lock.front' }); document.querySelector('#fixture').append(editor);
+  });
+  const editor = page.locator('nodalia-lock-card-editor');
+  await expect(editor.locator('.editor-section')).toHaveCount(2);
+  await editor.locator('[data-field="name"]').fill('My door');
+  await page.evaluate(() => { document.querySelector('nodalia-lock-card-editor').hass = window.makeHass({}); });
+  await expect(editor.locator('[data-field="name"]')).toBeFocused();
+  await expect(editor.locator('[data-field="name"]')).toHaveValue('My door');
 });

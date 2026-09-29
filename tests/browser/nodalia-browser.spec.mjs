@@ -1947,7 +1947,7 @@ test("Media Player control bubbles stay readable and inside square cards", async
     document.querySelector("#fixture").append(card);
     const root = card.shadowRoot;
     const surface = root.querySelector(".media-player-card");
-    const play = root.querySelector(".media-player__control--primary");
+    const play = root.querySelector('[data-media-control="play-pause"]');
     const buttons = [...root.querySelectorAll(".media-player__control, .media-player__volume-button")];
     const cardBox = surface.getBoundingClientRect();
     const styles = window.getComputedStyle(play);
