@@ -8,13 +8,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## Unreleased
+## [2.3.0-alpha.48] - 2026-09-29
+
+### Fixed
 
 - Make Media Player and Navigation controls translucent with a subtle artwork tint and backdrop blur, matching Nodalia bubble borders and shadows.
-### Fixed
 
 - Align Media Player icon/artwork bubbles and Lock Card surfaces, typography, state chips and controls with the existing Nodalia cards.
 - Restore circular Media Player controls in compact, chip, square and artwork layouts by preserving each layout’s matching button width and height.
+
+### Maintenance
+
+- Update `@eslint/js` to 10.0.1 to match ESLint 10.
 
 ## [2.3.0-alpha.47] - 2026-09-29
 

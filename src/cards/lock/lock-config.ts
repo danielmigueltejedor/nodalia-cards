@@ -1,6 +1,6 @@
 export const CARD_TAG = "nodalia-lock-card";
 export const EDITOR_TAG = "nodalia-lock-card-editor";
-export const CARD_VERSION = "2.3.0-alpha.47";
+export const CARD_VERSION = "2.3.0-alpha.48";
 export interface LockConfig {
   type?: string;
   entity: string;
