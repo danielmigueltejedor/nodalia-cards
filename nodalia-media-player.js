@@ -1182,8 +1182,6 @@
     -webkit-backdrop-filter: blur(22px) saturate(1.35);
     backdrop-filter: blur(22px) saturate(1.35);
     box-sizing: border-box;
-    min-width: 44px;
-    min-height: 44px;
     padding: 0;
     touch-action: manipulation;
     transition: background-color 220ms ease, border-color 220ms ease, transform 160ms ease;

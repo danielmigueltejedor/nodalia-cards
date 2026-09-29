@@ -8,6 +8,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## Unreleased
+
+### Fixed
+
+- Restore circular Media Player controls in compact, chip, square and artwork layouts by preserving each layout’s matching button width and height.
+
 ## [2.3.0-alpha.47] - 2026-09-29
 
 ### Added
