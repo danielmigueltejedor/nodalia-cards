@@ -2347,7 +2347,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
                     </button>
                     <button
                       type="button"
-                      class="media-player__control media-player__control--primary"
+                      class="media-player__control"
                       data-media-control="play-pause"
                       data-entity="${escapeHtml(player.entity)}"
                       aria-label="${escapeHtml(this._commonAria("playPause", "Play or pause"))}"

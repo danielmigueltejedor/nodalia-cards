@@ -1,5 +1,5 @@
 import type { HomeAssistant } from "../../core/types/home-assistant";
-import { EDITOR_TAG, normalizeConfig } from "./lock-config";
+import { CARD_TAG, EDITOR_TAG, normalizeConfig } from "./lock-config";
 import type { LockConfig } from "./lock-config";
 import { lockText } from "./lock-strings";
 
@@ -35,6 +35,9 @@ export function loadNodaliaLockCard(): CustomElementConstructor {
     static getConfigElement(): HTMLElement { return document.createElement(EDITOR_TAG); }
     static getStubConfig(hass?: HomeAssistant): LockConfig {
       return { entity: Object.keys(hass?.states || {}).find(id => id.startsWith("lock.")) || "lock.front_door" };
+    }
+    static getEntitySuggestion(hass: HomeAssistant, entityId: string) {
+      return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, { domains: ["lock"] });
     }
     connectedCallback(): void { this.render(); }
     disconnectedCallback(): void { this.cancelGesture(); this.clearPending(); }

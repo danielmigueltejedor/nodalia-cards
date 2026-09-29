@@ -1163,26 +1163,40 @@
 
   // src/cards/media-player/media-player-control-theme.ts
   var requests = /* @__PURE__ */ new WeakMap();
+  var themes = /* @__PURE__ */ new WeakMap();
   async function applyArtworkControlTheme(host, url) {
     if (!host) return;
+    const owner = host.getRootNode?.()?.host || host;
     const token = {};
     requests.set(host, token);
-    host.removeAttribute("data-artwork-controls");
-    host.style.removeProperty("--media-control-tint");
-    host.style.removeProperty("--media-control-ink");
-    if (!url) return;
+    if (!url) {
+      themes.delete(owner);
+      host.removeAttribute("data-artwork-controls");
+      host.style.removeProperty("--media-control-tint");
+      host.style.removeProperty("--media-control-ink");
+      return;
+    }
+    const apply = (theme2) => {
+      host.style.setProperty("--media-control-tint", theme2.tint);
+      host.style.setProperty("--media-control-ink", theme2.ink);
+      host.setAttribute("data-artwork-controls", "");
+    };
+    const previous = themes.get(owner);
+    if (previous) {
+      apply(previous);
+      if (previous.url === url) return;
+    }
     const palette = await sampleArtworkPalette(url);
     if (!palette || requests.get(host) !== token || !host.isConnected) return;
-    host.style.setProperty("--media-control-tint", palette.primary);
-    host.style.setProperty("--media-control-ink", palette.foreground === "dark" ? "#000" : "#fff");
-    host.setAttribute("data-artwork-controls", "");
+    const theme = { url, tint: palette.primary, ink: palette.foreground === "dark" ? "#000" : "#fff" };
+    themes.set(owner, theme);
+    apply(theme);
   }
   var MEDIA_CONTROL_STYLES = `
-  .media-player__control, .media-player__volume-button, .media-player__collapse {
+  .media-player__control, .media-player__volume-button, .media-player__collapse, .media-player__transport, .media-player__dots {
     -webkit-backdrop-filter: blur(22px) saturate(1.35);
     backdrop-filter: blur(22px) saturate(1.35);
     box-sizing: border-box;
-    padding: 0;
     touch-action: manipulation;
     transition: background-color 220ms ease, border-color 220ms ease, transform 160ms ease;
   }
@@ -1191,19 +1205,21 @@
     outline: 2px solid var(--primary-text-color, #fff);
     outline-offset: 3px;
   }
-  .media-player-card[data-artwork-controls] :is(.media-player__control, .media-player__volume-button, .media-player__chip, .media-player__collapse) {
-    background: color-mix(in srgb, var(--media-control-tint) 24%, transparent);
-    color: var(--media-control-ink);
-    border-color: color-mix(in srgb, var(--media-control-ink) 18%, transparent);
+  .media-player-card :is(.media-player__control, .media-player__volume-button, .media-player__chip, .media-player__collapse, .media-player__transport, .media-player__dots) {
+    background: color-mix(in srgb, var(--media-control-tint, var(--primary-text-color, #fff)) 24%, transparent);
+    color: var(--media-control-ink, var(--primary-text-color, #fff));
+    border-color: color-mix(in srgb, var(--media-control-ink, var(--primary-text-color, #fff)) 18%, transparent);
     box-shadow: inset 0 1px 0 #ffffff0f, 0 10px 24px #00000029;
     text-shadow: none;
   }
-  .media-player-card[data-artwork-controls] :is(.media-player__control, .media-player__volume-button, .media-player__collapse) ha-icon {
+  .media-player-card :is(.media-player__control, .media-player__volume-button, .media-player__collapse) ha-icon {
     color: inherit;
   }
-  .media-player-card[data-artwork-controls] .media-player__control--primary {
-    border-width: 1px;
-    border-color: color-mix(in srgb, var(--media-control-ink) 38%, transparent);
+  .media-player-card .media-player__dot::before {
+    background: color-mix(in srgb, var(--media-control-ink, var(--primary-text-color, #fff)) 45%, transparent);
+  }
+  .media-player-card .media-player__dot.active::before {
+    background: var(--media-control-ink, var(--primary-text-color, #fff));
   }
   @media (prefers-reduced-motion: reduce) {
     .media-player__control, .media-player__volume-button { transition: none; }
@@ -3549,7 +3565,7 @@
         const tvPlayPauseMarkup = !isTvOff ? `
       <button
         type="button"
-        class="media-player__control media-player__control--primary"
+        class="media-player__control"
         data-media-control="play-pause"
         data-entity="${escapeHtml(player.entity)}"
         aria-label="${escapeHtml(this._mediaPlayerAria("playPause", "Play or pause"))}"
@@ -3679,7 +3695,7 @@
         ${volumeDownMarkup}
         <button
           type="button"
-          class="media-player__control media-player__control--primary"
+          class="media-player__control"
           data-media-control="play"
           data-entity="${escapeHtml(player.entity)}"
           aria-label="${escapeHtml(this._mediaPlayerAria("play", "Play"))}"
@@ -3811,7 +3827,7 @@
                           </button>
                           <button
                             type="button"
-                            class="media-player__control media-player__control--primary"
+                            class="media-player__control"
                             data-media-control="play-pause"
                             data-entity="${escapeHtml(player.entity)}"
                             aria-label="${escapeHtml(this._commonAria("playPause", "Play or pause"))}"
@@ -4570,7 +4586,16 @@
         }
 
         .media-player__transport {
-          display: contents;
+          align-items: center;
+          display: inline-flex;
+          flex: 0 0 auto;
+          justify-content: center;
+          gap: 8px;
+          padding: 6px;
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          border-radius: 999px;
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent);
         }
 
         .media-player__tv-shell {

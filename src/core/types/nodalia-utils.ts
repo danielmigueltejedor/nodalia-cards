@@ -44,6 +44,9 @@ export interface NodaliaUtilsApi {
   normalizeSecurityConfig?: (security: unknown, defaults?: unknown) => Record<string, unknown>;
   sanitizeStyleTree?: (candidate: unknown, fallback: unknown) => unknown;
   stripEqualToDefaults?: (config: unknown, defaults: unknown) => unknown;
+  createEntitySuggestion: (cardType: string, hass: HomeAssistant, entityId: string, options?: {
+    domains?: string[];
+  }) => { config: Record<string, unknown>; label?: string } | null;
   registerCustomCard: (metadata: {
     type: string;
     name: string;
