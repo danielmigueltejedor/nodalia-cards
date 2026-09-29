@@ -18,10 +18,10 @@ export async function applyArtworkControlTheme(host: HTMLElement | null, url: st
   host.setAttribute("data-artwork-controls", "");
 }
 
-// Opaque sampled colors keep the computed contrast independent of the artwork
-// behind a control. Layouts own control dimensions; share only visual treatment.
+// Let the artwork show through a softly tinted, blurred surface.
+// Layouts own control dimensions; share only visual treatment.
 export const MEDIA_CONTROL_STYLES = `
-  .media-player__control, .media-player__volume-button {
+  .media-player__control, .media-player__volume-button, .media-player__collapse {
     -webkit-backdrop-filter: blur(22px) saturate(1.35);
     backdrop-filter: blur(22px) saturate(1.35);
     box-sizing: border-box;
@@ -35,18 +35,18 @@ export const MEDIA_CONTROL_STYLES = `
     outline-offset: 3px;
   }
   .media-player-card[data-artwork-controls] :is(.media-player__control, .media-player__volume-button, .media-player__chip, .media-player__collapse) {
-    background: var(--media-control-tint);
+    background: color-mix(in srgb, var(--media-control-tint) 24%, transparent);
     color: var(--media-control-ink);
-    border-color: color-mix(in srgb, var(--media-control-ink) 24%, var(--media-control-tint));
-    box-shadow: inset 0 1px 0 #ffffff24, 0 6px 16px #00000024;
+    border-color: color-mix(in srgb, var(--media-control-ink) 18%, transparent);
+    box-shadow: inset 0 1px 0 #ffffff0f, 0 10px 24px #00000029;
     text-shadow: none;
   }
   .media-player-card[data-artwork-controls] :is(.media-player__control, .media-player__volume-button, .media-player__collapse) ha-icon {
     color: inherit;
   }
   .media-player-card[data-artwork-controls] .media-player__control--primary {
-    border-width: 2px;
-    border-color: var(--media-control-ink);
+    border-width: 1px;
+    border-color: color-mix(in srgb, var(--media-control-ink) 38%, transparent);
   }
   @media (prefers-reduced-motion: reduce) {
     .media-player__control, .media-player__volume-button { transition: none; }

@@ -10,6 +10,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+- Make Media Player and Navigation controls translucent with a subtle artwork tint and backdrop blur, matching Nodalia bubble borders and shadows.
 ### Fixed
 
 - Align Media Player icon/artwork bubbles and Lock Card surfaces, typography, state chips and controls with the existing Nodalia cards.

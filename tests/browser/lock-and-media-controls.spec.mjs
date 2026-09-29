@@ -153,20 +153,25 @@ test("Expanded Navigation artwork does not intercept playback, volume or collaps
 });
 
 for (const color of ["#ffffff", "#000000", "#00ff00", "#0000ff"]) {
-  test(`Both players derive readable control colors from ${color}`, async ({ page }) => {
+  test(`Both players keep translucent, blurred controls with artwork tint from ${color}`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
     await mountMedia(page, color);
     for (const tag of ["nodalia-navigation-bar", "nodalia-media-player"]) {
       const card = page.locator(tag);
       await expect(card.locator("[data-artwork-controls]")).toHaveCount(1);
-      const contrast = await card.locator('[data-media-control="play-pause"]').evaluate(button => {
-        const luminance = rgb => rgb.match(/[\d.]+/g).slice(0, 3).map(Number).map(value => {
-          const c = value / 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-        }).reduce((sum, value, i) => sum + value * [0.2126, 0.7152, 0.0722][i], 0);
+      const surfaces = await card.locator('.media-player__control, .media-player__volume-button, .media-player__collapse').evaluateAll(buttons => buttons.map(button => {
         const style = getComputedStyle(button);
-        const a = luminance(style.color), b = luminance(style.backgroundColor);
-        return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
-      });
-      expect(contrast).toBeGreaterThanOrEqual(4.5);
+        const canvas = document.createElement("canvas"); canvas.width = canvas.height = 1;
+        const context = canvas.getContext("2d");
+        context.fillStyle = style.backgroundColor; context.fillRect(0, 0, 1, 1);
+        return { alpha: context.getImageData(0, 0, 1, 1).data[3] / 255, blur: style.backdropFilter || style.webkitBackdropFilter };
+      }));
+      expect(surfaces.length).toBeGreaterThanOrEqual(3);
+      for (const surface of surfaces) {
+        expect(surface.alpha).toBeGreaterThan(0.15);
+        expect(surface.alpha).toBeLessThan(0.35);
+        expect(surface.blur).toContain("blur(");
+      }
     }
     await page.evaluate(() => {
       const entity = window.hass.states["media_player.test"];
