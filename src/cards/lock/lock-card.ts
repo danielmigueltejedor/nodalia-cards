@@ -136,28 +136,91 @@ export function loadNodaliaLockCard(): CustomElementConstructor {
         <style>
           :host { display:block; }
           * { box-sizing:border-box; }
-          ha-card { display:grid; gap:20px; padding:20px; border-radius:var(--ha-card-border-radius, 28px); background:var(--ha-card-background, var(--card-background-color, #1c1c20)); color:var(--primary-text-color, #f4f4f4); box-shadow:var(--ha-card-box-shadow, 0 8px 24px #0002); border:1px solid var(--divider-color, #ffffff18); }
-          .header { display:flex; align-items:center; gap:14px; min-width:0; }
-          .icon { display:grid; place-items:center; flex:0 0 52px; height:52px; border-radius:50%; background:color-mix(in srgb, var(--primary-color, #03a9f4) 18%, transparent); transition:background 200ms ease; }
-          .name { font-size:16px; font-weight:700; overflow-wrap:anywhere; }
-          .state, .help { font-size:12px; color:var(--secondary-text-color, #aeb6c5); }
-          .state { margin-top:4px; }
-          .slider { --progress:0; height:56px; position:relative; border-radius:999px; background:color-mix(in srgb, var(--primary-text-color, #fff) 10%, transparent); border:1px solid var(--divider-color, #ffffff18); user-select:none; }
-          .track-label { position:absolute; inset:0; display:grid; place-items:center; padding-left:48px; font-size:13px; pointer-events:none; }
-          .handle { position:absolute; left:calc(4px + (100% - 56px) * var(--progress)); top:4px; width:46px; height:46px; border-radius:50%; display:grid; place-items:center; background:var(--primary-color, #03a9f4); color:var(--text-primary-color, #fff); touch-action:none; cursor:grab; transition:left 160ms ease; }
+          ha-card {
+            --lock-accent: var(--success-color, #6acb9a);
+            --lock-surface: var(--ha-card-background, var(--card-background-color, #1c1c20));
+            --lock-handle-size: 42px;
+            display:grid; gap:14px; padding:16px;
+            border-radius:var(--nodalia-card-border-radius, 28px);
+            background:var(--lock-surface); color:var(--primary-text-color, #f4f4f4);
+            box-shadow:var(--ha-card-box-shadow, 0 8px 24px #0002);
+            border:1px solid var(--divider-color, #ffffff18);
+            position:relative; overflow:hidden;
+          }
+          ha-card::before {
+            content:""; position:absolute; inset:0; pointer-events:none;
+            background:linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), transparent);
+          }
+          ha-card > * { position:relative; z-index:1; }
+          ha-card.is-locked {
+            background:linear-gradient(135deg, color-mix(in srgb, var(--lock-accent) 18%, var(--lock-surface)), color-mix(in srgb, var(--lock-accent) 10%, var(--lock-surface)) 52%, var(--lock-surface));
+            border-color:color-mix(in srgb, var(--lock-accent) 32%, var(--divider-color, #ffffff18));
+          }
+          .header { display:flex; align-items:center; gap:12px; min-width:0; }
+          .icon {
+            display:inline-flex; align-items:center; justify-content:center;
+            flex:0 0 38px; width:38px; height:38px; border-radius:999px;
+            background:color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+            border:1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+            box-shadow:inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent), 0 10px 24px rgba(0,0,0,.16);
+            color:var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent));
+            transition:background 180ms ease; position:relative;
+          }
+          .is-locked .icon {
+            background:color-mix(in srgb, var(--lock-accent) 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
+            color:var(--lock-accent);
+          }
+          .is-unavailable .icon { color:var(--warning-color, #ff9b4a); }
+          .icon ha-icon { --mdc-icon-size:17.48px; width:17.48px; height:17.48px; }
+          .name { font-size:13px; font-weight:600; line-height:1.3; overflow-wrap:anywhere; }
+          .state {
+            display:inline-flex; align-items:center; min-height:22px; padding:0 9px; margin-top:6px;
+            border-radius:999px; font-size:11px; font-weight:600; line-height:1;
+            background:color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+            border:1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+            color:var(--secondary-text-color, #aeb6c5);
+          }
+          .slider {
+            --progress:0; height:calc(var(--lock-handle-size) + 10px); position:relative;
+            border-radius:999px; background:color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+            border:1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+            box-shadow:inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+            user-select:none;
+          }
+          .track-label { position:absolute; inset:0; display:grid; place-items:center; padding-left:calc(var(--lock-handle-size) + 6px); font-size:12px; font-weight:600; pointer-events:none; }
+          .handle {
+            position:absolute; left:calc(4px + (100% - var(--lock-handle-size) - 8px) * var(--progress)); top:4px;
+            width:var(--lock-handle-size); height:var(--lock-handle-size); border-radius:999px;
+            display:grid; place-items:center;
+            background:color-mix(in srgb, var(--primary-text-color) 8%, var(--lock-surface));
+            color:var(--primary-text-color);
+            border:1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+            box-shadow:inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent), 0 10px 24px rgba(0,0,0,.16);
+            touch-action:none; cursor:grab; transition:left 160ms ease;
+          }
+          .handle ha-icon { --mdc-icon-size:20px; width:20px; height:20px; }
           .slider:has(.handle:active) .handle { transition:none; }
           [aria-disabled=true] { opacity:.5; }
           [aria-disabled=true] .handle { cursor:default; }
-          button { min-height:48px; border:0; border-radius:999px; background:var(--primary-color, #03a9f4); color:var(--text-primary-color, #fff); font:inherit; cursor:pointer; }
+          button {
+            min-height:44px; border:1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+            border-radius:999px; background:color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+            color:var(--primary-text-color); font:inherit; font-size:12px; font-weight:600; cursor:pointer;
+            box-shadow:inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+          }
           button:disabled { opacity:.5; cursor:default; }
-          :focus-visible { outline:2px solid var(--primary-color, #03a9f4); outline-offset:4px; }
-          .help { margin:8px 4px 0; }
-          .error { color:var(--error-color, #ff7777); font-size:13px; }
-          .compact { padding:14px; gap:12px; }
-          .compact .icon { flex-basis:40px; height:40px; }
+          :focus-visible { outline:2px solid var(--primary-color, #71c0ff); outline-offset:3px; }
+          .help { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+          .slider:focus-visible + .help { position:static; width:auto; height:auto; margin:8px 4px 0; clip-path:none; white-space:normal; font-size:11px; color:var(--secondary-text-color, #aeb6c5); }
+          .error { color:var(--error-color, #ff7777); font-size:12px; }
+          .compact { --lock-handle-size:38px; padding:10px 12px; gap:10px; }
+          @media (max-width:600px) {
+            .icon { flex-basis:50px; width:50px; height:50px; }
+            .icon ha-icon { --mdc-icon-size:23px; width:23px; height:23px; }
+          }
           @media (prefers-reduced-motion:reduce) { .handle, .icon { transition:none; } }
         </style>
-        <ha-card class="${this.config.layout}" aria-busy="${Boolean(this.pending)}">
+        <ha-card class="${this.config.layout} ${this.state === "locked" ? "is-locked" : ""} ${["jammed", "unknown", "unavailable"].includes(this.state) ? "is-unavailable" : ""}" aria-busy="${Boolean(this.pending)}">
           <div class="header"><span class="icon"><ha-icon icon="${icon}"></ha-icon></span><div>
             ${this.config.show_name ? `<div class="name">${name}</div>` : ""}
             ${this.config.show_state ? `<div class="state" role="status">${text(status)}</div>` : ""}

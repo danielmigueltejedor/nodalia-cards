@@ -315,8 +315,8 @@ test("media player skips album fill when artwork mode is off", () => {
 
 test("media player artwork containers share one border radius", () => {
   const source = read("src/cards/media-player/media-player-card.ts");
-  assert.match(source, /\.media-player__artwork \{[\s\S]*?border-radius: 22px;/);
-  // Idle tiles mirror Fav/Light circular icons instead of the square artwork radius.
+  assert.match(source, /\.media-player__artwork \{[\s\S]*?border-radius: 999px;/);
+  // Artwork and idle tiles share the Fav/Light circular icon shape.
   assert.match(source, /\.media-player__artwork--idle \{[\s\S]*?border-radius: 999px;/);
   assert.doesNotMatch(source, /\.media-player-card--tv \.media-player__artwork \{[^}]*border-radius:/);
   assert.doesNotMatch(source, /\.media-player-card--chip \.media-player__artwork \{[^}]*border-radius:/);
