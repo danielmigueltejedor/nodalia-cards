@@ -5,7 +5,7 @@ The public Lovelace/HACS contract is unchanged: custom element tags, YAML keys,
 defaults, editors, translations, and the single-file `nodalia-cards.js` install
 path stay the same.
 
-## Current architecture map (2.3.0-alpha.46)
+## Current architecture map (2.3.0-alpha.47)
 
 The project is a Home Assistant Lovelace plugin. Handwritten cards historically
 lived as root `nodalia-*.js` files that were both source and published artifacts.
@@ -24,6 +24,7 @@ src/
   cards/humidifier/           Humidifier TypeScript split
   cards/cover/                Cover TypeScript split
   cards/alarm-panel/          Alarm Panel TypeScript split
+  cards/lock/                 Lock Card with deliberate unlock confirmation
   cards/vacuum/               Vacuum TypeScript split
   cards/entity/               Entity TypeScript split
   cards/fav/                  Fav TypeScript split

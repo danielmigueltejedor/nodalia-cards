@@ -27,6 +27,7 @@ body:
         - Cover Card
         - Climate Card
         - Alarm Panel Card
+        - Lock Card
         - Advance Vacuum Card
         - Entity Card
         - Fav Card

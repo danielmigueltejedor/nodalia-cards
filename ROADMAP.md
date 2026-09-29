@@ -11,11 +11,12 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.46
+2.3.0-alpha.47
 ```
 
-Preview **`2.3.0-alpha.46`** hardens section layout and resize handling across
-Media Player, Vacuum siblings, Fav, Navigation and Room Summary.
+Preview **`2.3.0-alpha.47`** adds a Lock Card with deliberate slide-to-unlock
+confirmation, restores expanded Navigation playback controls and shares
+artwork-derived control colors across both media players.
 Stable **`2.2.10`** remains the recommended daily-driver release.
 
 ## Current stable release

@@ -35,6 +35,7 @@ jobs:
               ["Cover Card", "area: entity"],
               ["Climate Card", "area: climate"],
               ["Alarm Panel Card", "area: alarm-panel"],
+              ["Lock Card", "area: security"],
               ["Advance Vacuum Card", "area: advance-vacuum"],
               ["Entity Card", "area: entity"],
               ["Fav Card", "area: fav"],
