@@ -174,6 +174,10 @@ export function loadNodaliaLockCard(): CustomElementConstructor {
             color:var(--lock-accent);
           }
           .is-unavailable .icon { color:var(--warning-color, #ff9b4a); }
+          .icon ha-icon, .handle ha-icon {
+            display:inline-flex; align-items:center; justify-content:center;
+            line-height:0; vertical-align:middle;
+          }
           .icon ha-icon { --mdc-icon-size:17.48px; width:17.48px; height:17.48px; }
           .name { font-size:13px; font-weight:600; line-height:1.3; overflow-wrap:anywhere; }
           .state {

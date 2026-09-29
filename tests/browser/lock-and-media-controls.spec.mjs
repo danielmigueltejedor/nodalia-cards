@@ -339,3 +339,23 @@ test("Lock is suggested by entity and its editor keeps focus during state update
   await expect(editor.locator('[data-field="name"]')).toBeFocused();
   await expect(editor.locator('[data-field="name"]')).toHaveValue('My door');
 });
+
+test("Lock icon glyphs are centered inside the state and slide bubbles", async ({ page }) => {
+  for (const layout of ['standard', 'compact']) {
+    const card = await mountLock(page, { layout });
+    const offsets = await card.evaluate(element => {
+      // Model ha-icon > ha-svg-icon: an inline-flex child aligned to the text middle.
+      return [...element.shadowRoot.querySelectorAll('.icon ha-icon, .handle ha-icon')].map(icon => {
+        icon.attachShadow({ mode: 'open' }).innerHTML = '<span style="display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;width:var(--mdc-icon-size,24px);height:var(--mdc-icon-size,24px)"><svg xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:100%" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/></svg></span>';
+        const glyph = icon.shadowRoot.querySelector('svg').getBoundingClientRect();
+        const bubble = icon.parentElement.getBoundingClientRect();
+        return { x: Math.abs(glyph.x + glyph.width / 2 - bubble.x - bubble.width / 2), y: Math.abs(glyph.y + glyph.height / 2 - bubble.y - bubble.height / 2) };
+      });
+    });
+    expect(offsets).toHaveLength(2);
+    for (const offset of offsets) {
+      expect(offset.x).toBeLessThan(0.5);
+      expect(offset.y).toBeLessThan(0.5);
+    }
+  }
+});

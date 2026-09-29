@@ -8,9 +8,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## Unreleased
+## [2.3.0-alpha.49] - 2026-09-29
 
 ### Fixed
+
+- Center Lock Card state and slide-handle icon glyphs inside their circular bubbles, including Safari/iOS.
 
 - Keep media controls translucent from first paint and while artwork changes; give Play the same size and styling as previous/next.
 - Add Lock Card to entity-first suggestions and align its visual editor with Nodalia sections without losing focus on state updates.

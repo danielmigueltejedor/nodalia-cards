@@ -11,12 +11,12 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-2.3.0-alpha.48
+2.3.0-alpha.49
 ```
 
-Preview **`2.3.0-alpha.48`** refines Media Player and Lock Card styling to match
-the Nodalia card family, restores circular compact playback buttons and adds
-translucent artwork-tinted controls across both media players.
+Preview **`2.3.0-alpha.49`** adds tinted playback and player-selector capsules,
+keeps controls translucent during artwork loading, and removes the Play highlight.
+Lock Card gains entity-first suggestions, a consistent visual editor and centered icons.
 Stable **`2.2.10`** remains the recommended daily-driver release.
 
 ## Current stable release
