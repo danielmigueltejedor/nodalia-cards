@@ -58,7 +58,7 @@ The suite is designed for real daily dashboards: one interaction model, predicta
 | Humidifier | Power Flow | Person |
 | Cover | Weather | Scenes |
 | Climate | Calendar | Favourites |
-| Alarm Panel | Notifications | Insignia |
+| Alarm Panel / Lock | Notifications | Insignia |
 | Media Player | News | Entity |
 | Vacuum | Camera | Advanced Vacuum |
 
@@ -78,6 +78,7 @@ Every card is registered with the `custom:nodalia-…` prefix. The complete set 
 - `custom:nodalia-cover-card`
 - `custom:nodalia-climate-card`
 - `custom:nodalia-alarm-panel-card`
+- `custom:nodalia-lock-card`
 - `custom:nodalia-advance-vacuum-card`
 - `custom:nodalia-entity-card`
 - `custom:nodalia-fav-card`
@@ -169,6 +170,16 @@ Add a card through the dashboard visual editor, or start with one of these minim
 type: custom:nodalia-light-card
 entity: light.living_room
 ```
+
+### Lock
+
+```yaml
+type: custom:nodalia-lock-card
+entity: lock.front_door
+layout: standard
+```
+
+Drag the handle to the end and release to unlock. A tap never unlocks. See the [Lock Card guide](./docs/cards/lock-card.md) for keyboard controls and supported states.
 
 ### Calendar
 

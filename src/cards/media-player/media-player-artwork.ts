@@ -84,10 +84,6 @@ export function extractArtworkPalette(image: CanvasImageSource): ArtworkPalette 
       const r = data[index] ?? 0;
       const g = data[index + 1] ?? 0;
       const b = data[index + 2] ?? 0;
-      const luma = (r * 299 + g * 587 + b * 114) / 1000;
-      if (luma < 18 || luma > 242) {
-        continue;
-      }
       red += r;
       green += g;
       blue += b;
@@ -97,10 +93,14 @@ export function extractArtworkPalette(image: CanvasImageSource): ArtworkPalette 
       return null;
     }
     const primary = `rgb(${Math.round(red / count)}, ${Math.round(green / count)}, ${Math.round(blue / count)})`;
-    const luma = (red / count * 299 + green / count * 587 + blue / count * 114) / 1000;
+    const linear = (channel: number) => {
+      const value = Math.round(channel / count) / 255;
+      return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+    };
+    const luminance = 0.2126 * linear(red) + 0.7152 * linear(green) + 0.0722 * linear(blue);
     return {
       primary,
-      foreground: luma > 150 ? "dark" : "light",
+      foreground: luminance > 0.179 ? "dark" : "light",
     };
   } catch (_error) {
     return null;

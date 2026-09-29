@@ -1051,5 +1051,26 @@
     "devices": "设备",
     "close": "关闭",
     "moreInfo": "更多信息"
+  },
+  "lock": {
+    "locked": "已锁定",
+    "unlocked": "已解锁",
+    "locking": "正在锁定",
+    "unlocking": "正在解锁",
+    "jammed": "卡住",
+    "unavailable": "不可用",
+    "unknown": "未知",
+    "lock": "锁定",
+    "slide": "滑动以解锁",
+    "help": "拖动到末端并松开。键盘：按右箭头 10 次，再按回车。",
+    "failed": "命令失败。请在 Home Assistant 中检查门锁。",
+    "timeout": "未收到确认。请检查门锁后再重试。",
+    "entity": "门锁实体",
+    "name": "名称",
+    "layout": "布局",
+    "standard": "标准",
+    "compact": "紧凑",
+    "showName": "显示名称",
+    "showState": "显示状态"
   }
 }

@@ -28,6 +28,8 @@ import {
   sanitizeMediaArtworkUrl,
 } from "./navigation-helpers";
 
+import { applyArtworkControlTheme, MEDIA_CONTROL_STYLES } from "../media-player/media-player-control-theme";
+
 let _lazyNodaliaNavigationBarCard;
 export function loadNodaliaNavigationBarCard() {
   if (_lazyNodaliaNavigationBarCard) {
@@ -3353,11 +3355,13 @@ class NodaliaNavigationBarCard extends HTMLElement {
           );
           content: "";
           inset: 0;
+          pointer-events: none;
           position: absolute;
           z-index: 2;
         }
 
         .media-player__album-bg {
+          pointer-events: none;
           background-position: center;
           background-size: cover;
           filter: saturate(1.05) brightness(0.96);
@@ -3407,7 +3411,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
         .media-player__content,
         .media-player__dots {
           position: relative;
-          z-index: 1;
+          z-index: 3;
         }
 
         .media-player__content {
@@ -3722,7 +3726,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
           position: absolute;
           right: 14px;
           top: 14px;
-          z-index: 2;
+          z-index: 4;
           width: 28px;
         }
 
@@ -3879,6 +3883,17 @@ class NodaliaNavigationBarCard extends HTMLElement {
             grid-template-columns: ${config.styles.media_player.artwork_size} minmax(0, 1fr);
           }
         }
+        .media-player__control, .media-player__volume-button {
+          background: color-mix(in srgb, var(--ha-card-background, #1c1c20) 72%, var(--primary-text-color, #f4f4f4) 16%);
+          box-shadow: inset 0 1px 0 #ffffff24, 0 10px 24px #00000047;
+        }
+        .media-player__control--primary { background: var(--primary-color); color: var(--text-primary-color, #161616); }
+        .media-player__title { font-weight: 700; letter-spacing: -0.02em; }
+        @media (max-width: 360px) {
+          .media-player__transport-cluster { gap: 4px; }
+          .media-player__transport-shell { max-width: 100%; padding-inline: 4px; }
+        }
+        ${MEDIA_CONTROL_STYLES}
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <div class="spacer" aria-hidden="true"></div>
@@ -3900,6 +3915,9 @@ class NodaliaNavigationBarCard extends HTMLElement {
       ${mediaBrowserMarkup}
     `;
 
+    const mediaCard = this.shadowRoot.querySelector(".media-player-card");
+    const artworkUrl = mediaCard?.querySelector(".media-player__artwork img")?.getAttribute("src") || "";
+    void applyArtworkControlTheme(mediaCard, artworkUrl);
     this._applyRouteRuntimeStyles(visibleRoutes, playDockEntrance);
     this._applyPopupRuntimeStyles();
     this._playPopupEntrance = false;

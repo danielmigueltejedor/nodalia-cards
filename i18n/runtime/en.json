@@ -1051,5 +1051,26 @@
     "devices": "devices",
     "close": "Close",
     "moreInfo": "More info"
+  },
+  "lock": {
+    "locked": "Locked",
+    "unlocked": "Unlocked",
+    "locking": "Locking",
+    "unlocking": "Unlocking",
+    "jammed": "Jammed",
+    "unavailable": "Unavailable",
+    "unknown": "Unknown",
+    "lock": "Lock",
+    "slide": "Slide to unlock",
+    "help": "Drag to the end and release. Keyboard: press Right 10 times, then Enter.",
+    "failed": "The command failed. Check the lock in Home Assistant.",
+    "timeout": "No confirmation received. Check the lock before trying again.",
+    "entity": "Lock entity",
+    "name": "Name",
+    "layout": "Layout",
+    "standard": "Standard",
+    "compact": "Compact",
+    "showName": "Show name",
+    "showState": "Show state"
   }
 }

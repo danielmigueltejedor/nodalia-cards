@@ -1051,5 +1051,26 @@
     "devices": "Geräte",
     "close": "Schließen",
     "moreInfo": "Mehr Informationen"
+  },
+  "lock": {
+    "locked": "Verriegelt",
+    "unlocked": "Entriegelt",
+    "locking": "Wird verriegelt",
+    "unlocking": "Wird entriegelt",
+    "jammed": "Blockiert",
+    "unavailable": "Nicht verfügbar",
+    "unknown": "Unbekannt",
+    "lock": "Verriegeln",
+    "slide": "Zum Entriegeln schieben",
+    "help": "Bis zum Ende ziehen und loslassen. Tastatur: 10-mal Rechts, dann Eingabe.",
+    "failed": "Befehl fehlgeschlagen. Schloss in Home Assistant prüfen.",
+    "timeout": "Keine Bestätigung. Vor erneutem Versuch das Schloss prüfen.",
+    "entity": "Schloss-Entität",
+    "name": "Name",
+    "layout": "Layout",
+    "standard": "Standard",
+    "compact": "Kompakt",
+    "showName": "Name anzeigen",
+    "showState": "Status anzeigen"
   }
 }

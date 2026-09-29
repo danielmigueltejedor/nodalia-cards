@@ -518,6 +518,143 @@
     return currentPath === candidatePath;
   }
 
+  // src/cards/media-player/media-player-artwork.ts
+  var PALETTE_CACHE = /* @__PURE__ */ new Map();
+  function extractArtworkPalette(image) {
+    try {
+      const canvas = document.createElement("canvas");
+      const width = 24;
+      const height = 24;
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (!context) {
+        return null;
+      }
+      context.drawImage(image, 0, 0, width, height);
+      const { data } = context.getImageData(0, 0, width, height);
+      let red = 0;
+      let green = 0;
+      let blue = 0;
+      let count = 0;
+      for (let index = 0; index < data.length; index += 4) {
+        const alpha = data[index + 3] ?? 0;
+        if (alpha < 96) {
+          continue;
+        }
+        const r = data[index] ?? 0;
+        const g = data[index + 1] ?? 0;
+        const b = data[index + 2] ?? 0;
+        red += r;
+        green += g;
+        blue += b;
+        count += 1;
+      }
+      if (!count) {
+        return null;
+      }
+      const primary = `rgb(${Math.round(red / count)}, ${Math.round(green / count)}, ${Math.round(blue / count)})`;
+      const linear = (channel) => {
+        const value = Math.round(channel / count) / 255;
+        return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+      };
+      const luminance = 0.2126 * linear(red) + 0.7152 * linear(green) + 0.0722 * linear(blue);
+      return {
+        primary,
+        foreground: luminance > 0.179 ? "dark" : "light"
+      };
+    } catch (_error) {
+      return null;
+    }
+  }
+  function getCachedArtworkPalette(url) {
+    return PALETTE_CACHE.get(url) || null;
+  }
+  function setCachedArtworkPalette(url, palette) {
+    PALETTE_CACHE.set(url, palette);
+  }
+  async function sampleArtworkPalette(url) {
+    const nextUrl = String(url || "").trim();
+    if (!nextUrl) {
+      return null;
+    }
+    const cached = getCachedArtworkPalette(nextUrl);
+    if (cached) {
+      return cached;
+    }
+    try {
+      const image = new Image();
+      image.decoding = "async";
+      image.crossOrigin = "anonymous";
+      const loaded = await new Promise((resolve) => {
+        image.onload = () => resolve(true);
+        image.onerror = () => resolve(false);
+        image.src = nextUrl;
+      });
+      if (!loaded) {
+        return null;
+      }
+      const palette = extractArtworkPalette(image);
+      if (palette) {
+        setCachedArtworkPalette(nextUrl, palette);
+      }
+      return palette;
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  // src/cards/media-player/media-player-control-theme.ts
+  var requests = /* @__PURE__ */ new WeakMap();
+  async function applyArtworkControlTheme(host, url) {
+    if (!host) return;
+    const token = {};
+    requests.set(host, token);
+    host.removeAttribute("data-artwork-controls");
+    host.style.removeProperty("--media-control-tint");
+    host.style.removeProperty("--media-control-ink");
+    if (!url) return;
+    const palette = await sampleArtworkPalette(url);
+    if (!palette || requests.get(host) !== token || !host.isConnected) return;
+    host.style.setProperty("--media-control-tint", palette.primary);
+    host.style.setProperty("--media-control-ink", palette.foreground === "dark" ? "#000" : "#fff");
+    host.setAttribute("data-artwork-controls", "");
+  }
+  var MEDIA_CONTROL_STYLES = `
+  .media-player__control, .media-player__volume-button {
+    -webkit-backdrop-filter: blur(22px) saturate(1.35);
+    backdrop-filter: blur(22px) saturate(1.35);
+    box-sizing: border-box;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    touch-action: manipulation;
+    transition: background-color 220ms ease, border-color 220ms ease, transform 160ms ease;
+  }
+  .media-player__control:focus-visible, .media-player__volume-button:focus-visible,
+  .media-player__collapse:focus-visible {
+    outline: 2px solid var(--primary-text-color, #fff);
+    outline-offset: 3px;
+  }
+  .media-player-card[data-artwork-controls] :is(.media-player__control, .media-player__volume-button, .media-player__chip, .media-player__collapse) {
+    background: var(--media-control-tint);
+    color: var(--media-control-ink);
+    border-color: color-mix(in srgb, var(--media-control-ink) 24%, var(--media-control-tint));
+    box-shadow: inset 0 1px 0 #ffffff24, 0 6px 16px #00000024;
+    text-shadow: none;
+  }
+  .media-player-card[data-artwork-controls] :is(.media-player__control, .media-player__volume-button, .media-player__collapse) ha-icon {
+    color: inherit;
+  }
+  .media-player-card[data-artwork-controls] .media-player__control--primary {
+    border-width: 2px;
+    border-color: var(--media-control-ink);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .media-player__control, .media-player__volume-button { transition: none; }
+  }
+`;
+
   // src/cards/navigation/navigation-card.ts
   var _lazyNodaliaNavigationBarCard;
   function loadNodaliaNavigationBarCard() {
@@ -3292,11 +3429,13 @@
           );
           content: "";
           inset: 0;
+          pointer-events: none;
           position: absolute;
           z-index: 2;
         }
 
         .media-player__album-bg {
+          pointer-events: none;
           background-position: center;
           background-size: cover;
           filter: saturate(1.05) brightness(0.96);
@@ -3346,7 +3485,7 @@
         .media-player__content,
         .media-player__dots {
           position: relative;
-          z-index: 1;
+          z-index: 3;
         }
 
         .media-player__content {
@@ -3661,7 +3800,7 @@
           position: absolute;
           right: 14px;
           top: 14px;
-          z-index: 2;
+          z-index: 4;
           width: 28px;
         }
 
@@ -3818,6 +3957,17 @@
             grid-template-columns: ${config.styles.media_player.artwork_size} minmax(0, 1fr);
           }
         }
+        .media-player__control, .media-player__volume-button {
+          background: color-mix(in srgb, var(--ha-card-background, #1c1c20) 72%, var(--primary-text-color, #f4f4f4) 16%);
+          box-shadow: inset 0 1px 0 #ffffff24, 0 10px 24px #00000047;
+        }
+        .media-player__control--primary { background: var(--primary-color); color: var(--text-primary-color, #161616); }
+        .media-player__title { font-weight: 700; letter-spacing: -0.02em; }
+        @media (max-width: 360px) {
+          .media-player__transport-cluster { gap: 4px; }
+          .media-player__transport-shell { max-width: 100%; padding-inline: 4px; }
+        }
+        ${MEDIA_CONTROL_STYLES}
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <div class="spacer" aria-hidden="true"></div>
@@ -3838,6 +3988,9 @@
       ${popupMarkup}
       ${mediaBrowserMarkup}
     `;
+        const mediaCard = this.shadowRoot.querySelector(".media-player-card");
+        const artworkUrl = mediaCard?.querySelector(".media-player__artwork img")?.getAttribute("src") || "";
+        void applyArtworkControlTheme(mediaCard, artworkUrl);
         this._applyRouteRuntimeStyles(visibleRoutes, playDockEntrance);
         this._applyPopupRuntimeStyles();
         this._playPopupEntrance = false;

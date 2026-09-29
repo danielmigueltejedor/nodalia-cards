@@ -510,6 +510,8 @@
       }
       connectedCallback() {
         this._resizeObserver?.observe(this);
+        this._lastRenderSignature = "";
+        this._render();
       }
       disconnectedCallback() {
         this._resizeObserver?.disconnect();

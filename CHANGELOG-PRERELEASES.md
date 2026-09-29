@@ -8,6 +8,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## Unreleased
+
+### Added
+
+- Lock Card with standard and compact layouts, a visual editor, accessible slide-to-unlock confirmation, pending-command feedback and localized labels.
+- Artwork-derived control colors shared by Navigation and Media Player, with luminance-based foreground contrast and theme fallback.
+
+### Fixed
+
+- Navigation artwork overlays no longer intercept expanded playback controls.
+- Favourites renders preloaded Home Assistant state on connection and reconnection.
+
+### Maintenance
+
+- Integrate TypeScript 6.0.3, ESLint 10.11.0, typescript-eslint 8.70.1 and matching CodeQL 4.38.2 actions. Group future CodeQL updates to avoid incompatible init/analyze versions.
+
 ## [2.3.0-alpha.46] - 2026-09-25
 
 Bundle-wide layout and performance pass: safer ResizeObservers, less global

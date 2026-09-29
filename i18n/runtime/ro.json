@@ -1051,5 +1051,26 @@
     "devices": "dispozitive",
     "close": "Închide",
     "moreInfo": "Mai multe informații"
+  },
+  "lock": {
+    "locked": "Încuiată",
+    "unlocked": "Descuiată",
+    "locking": "Se încuie",
+    "unlocking": "Se descuie",
+    "jammed": "Blocată",
+    "unavailable": "Indisponibilă",
+    "unknown": "Necunoscut",
+    "lock": "Încuie",
+    "slide": "Glisează pentru descuiere",
+    "help": "Trage până la capăt și eliberează. Tastatură: Dreapta de 10 ori, apoi Enter.",
+    "failed": "Comanda a eșuat. Verifică încuietoarea în Home Assistant.",
+    "timeout": "Fără confirmare. Verifică încuietoarea înainte de a reîncerca.",
+    "entity": "Entitate încuietoare",
+    "name": "Nume",
+    "layout": "Aspect",
+    "standard": "Standard",
+    "compact": "Compact",
+    "showName": "Arată numele",
+    "showState": "Arată starea"
   }
 }
