@@ -176,3 +176,28 @@ for (const color of ["#ffffff", "#000000", "#00ff00", "#0000ff"]) {
     await expect(page.locator("[data-artwork-controls]")).toHaveCount(0);
   });
 }
+
+test("Media controls remain circular across compact and artwork layouts", async ({ page }) => {
+  await mountMedia(page, "#ac5522");
+  const mismatches = [];
+  for (const mode of ["standard", "square", "artwork", "compact", "chip", "auto"]) {
+    await page.evaluate(mode => {
+      const card = document.querySelector("nodalia-media-player");
+      card.style.width = "300px";
+      card.setConfig({ entity: "media_player.test", layout: { mode, fixed: false }, grid_options: { columns: 6, rows: 2 }, animations: { enabled: false } });
+    }, mode);
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const sizes = await page.locator("nodalia-media-player").locator(".media-player__control, .media-player__volume-button").evaluateAll(buttons => buttons.map(button => {
+      const rect = button.getBoundingClientRect();
+      return { control: button.dataset.mediaControl, width: rect.width, height: rect.height };
+    }).filter(rect => rect.width > 0 && rect.height > 0));
+    expect(sizes.length, mode).toBeGreaterThanOrEqual(3);
+    mismatches.push(...sizes.filter(rect => Math.abs(rect.width - rect.height) > 0.5).map(rect => ({ mode, ...rect })));
+  }
+  const navSizes = await page.locator("nodalia-navigation-bar").locator(".media-player__control, .media-player__volume-button").evaluateAll(buttons => buttons.map(button => {
+    const rect = button.getBoundingClientRect();
+    return { control: button.dataset.mediaControl, width: rect.width, height: rect.height };
+  }));
+  mismatches.push(...navSizes.filter(rect => Math.abs(rect.width - rect.height) > 0.5).map(rect => ({ mode: "navigation", ...rect })));
+  expect(mismatches).toEqual([]);
+});

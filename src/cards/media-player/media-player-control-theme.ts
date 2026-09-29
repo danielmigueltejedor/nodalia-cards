@@ -19,14 +19,12 @@ export async function applyArtworkControlTheme(host: HTMLElement | null, url: st
 }
 
 // Opaque sampled colors keep the computed contrast independent of the artwork
-// behind a control. Both player surfaces share sizing, glass edges and focus.
+// behind a control. Layouts own control dimensions; share only visual treatment.
 export const MEDIA_CONTROL_STYLES = `
   .media-player__control, .media-player__volume-button {
     -webkit-backdrop-filter: blur(22px) saturate(1.35);
     backdrop-filter: blur(22px) saturate(1.35);
     box-sizing: border-box;
-    min-width: 44px;
-    min-height: 44px;
     padding: 0;
     touch-action: manipulation;
     transition: background-color 220ms ease, border-color 220ms ease, transform 160ms ease;
