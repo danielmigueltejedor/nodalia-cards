@@ -24,10 +24,6 @@
   var CIRCULAR_LAYOUT_DIAL_START_ANGLE = 135;
   var CIRCULAR_LAYOUT_DIAL_END_ANGLE = 405;
   var CIRCULAR_LAYOUT_DIAL_SWEEP = CIRCULAR_LAYOUT_DIAL_END_ANGLE - CIRCULAR_LAYOUT_DIAL_START_ANGLE;
-  var LEGACY_ICON_OFF_COLOR_VALUES = [
-    "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))",
-    "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))"
-  ];
 
   // src/cards/fan/fan-runtime.ts
   var utils = window.NodaliaUtils;
@@ -44,7 +40,67 @@
   var fireEvent = utils.fireEvent.bind(utils);
   var normalizeTextKey = utils.normalizeTextKey.bind(utils);
 
+  // src/shared/control-config.ts
+  function normalizeControlStyles(candidate, defaults) {
+    const utils2 = window.NodaliaUtils;
+    const source = utils2.isObject(candidate) ? candidate : {};
+    const result = {};
+    for (const [key, fallback] of Object.entries(defaults)) {
+      if (utils2.isUnsafeConfigPathKey(key)) continue;
+      result[key] = typeof fallback === "string" ? utils2.sanitizeCssValue(source[key], fallback) : normalizeControlStyles(source[key], fallback);
+    }
+    return result;
+  }
+  function normalizeControlList(value) {
+    const values = Array.isArray(value) ? value : typeof value === "string" ? value.split(",") : [];
+    return values.map((item) => String(item || "").trim()).filter(Boolean);
+  }
+  function migrateControlIconOffColor(iconStyles, canonicalOffColor) {
+    if (!window.NodaliaUtils.isObject(iconStyles)) return;
+    const raw = String(iconStyles.off_color ?? "").trim();
+    if (/^var\(\s*--state-inactive-color/i.test(raw)) iconStyles.off_color = canonicalOffColor;
+  }
+  var actionFields = (prefix, fallback, navigationKey = `${prefix}_navigation_path`) => ({
+    actionKey: `${prefix}_action`,
+    serviceKey: `${prefix}_service`,
+    serviceDataKey: `${prefix}_service_data`,
+    serviceTargetKey: `${prefix}_service_target`,
+    urlKey: `${prefix}_url`,
+    navigationKey,
+    newTabKey: `${prefix}_new_tab`,
+    fallback
+  });
+  var FIELDS = [
+    actionFields("tap", "toggle", "navigation_path"),
+    actionFields("icon_tap", "", "icon_navigation_path"),
+    actionFields("hold", "more-info", "hold_navigation_path"),
+    actionFields("icon_hold", ""),
+    actionFields("double_tap", "none"),
+    actionFields("icon_double_tap", "")
+  ];
+  var ALLOWED_ACTIONS = /* @__PURE__ */ new Set(["auto", "toggle", "more-info", "service", "navigate", "url", "none"]);
+  function normalizeControlActions(config, rawConfig, doubleTap = false) {
+    const utils2 = window.NodaliaUtils;
+    const source = utils2.isObject(rawConfig) ? rawConfig : {};
+    const serialize = (value) => utils2.isObject(value) ? JSON.stringify(value) : String(value ?? "").trim();
+    for (const fields of doubleTap ? FIELDS : FIELDS.slice(0, 4)) {
+      utils2.applyCardTapActionField?.(config, fields, source[fields.actionKey] ?? config[fields.actionKey], fields.fallback);
+      const action = String(config[fields.actionKey] ?? "").trim().toLowerCase();
+      config[fields.actionKey] = ALLOWED_ACTIONS.has(action) ? action : fields.fallback;
+      config[fields.serviceKey] = String(config[fields.serviceKey] ?? "").trim();
+      config[fields.serviceDataKey] = serialize(config[fields.serviceDataKey]);
+      config[fields.serviceTargetKey] = serialize(config[fields.serviceTargetKey]);
+      config[fields.urlKey] = String(config[fields.urlKey] ?? "").trim();
+      config[fields.navigationKey] = String(config[fields.navigationKey] ?? "").trim();
+      config[fields.newTabKey] = config[fields.newTabKey] === true;
+      if (config[fields.actionKey] === "navigate" && !config[fields.navigationKey] && config[fields.urlKey]) {
+        config[fields.navigationKey] = config[fields.urlKey];
+      }
+    }
+  }
+
   // src/cards/fan/fan-config.ts
+  var sanitizeCssValue = window.NodaliaUtils.sanitizeCssValue.bind(window.NodaliaUtils);
   var DEFAULT_CONFIG = {
     entity: "",
     name: "",
@@ -159,96 +215,98 @@
     entity: "fan.salon",
     name: "Salon"
   };
-  function sanitizeCssValue(value, fallback) {
-    const raw = String(value ?? "").trim();
-    const safeFallback = String(fallback ?? "").trim();
-    if (!raw) {
-      return safeFallback;
-    }
-    if (/[\u0000-\u001f\u007f<>;"'{}]/.test(raw) || raw.includes("/*") || raw.includes("*/")) {
-      return safeFallback;
-    }
-    return raw;
-  }
   function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
-    const walk = (candidate, fallback) => {
-      if (isObject(fallback)) {
-        const out = {};
-        const source = isObject(candidate) ? candidate : {};
-        Object.keys(fallback).forEach((key) => {
-          out[key] = walk(source[key], fallback[key]);
-        });
-        return out;
-      }
-      if (typeof fallback === "string") {
-        return sanitizeCssValue(candidate, fallback);
-      }
-      return candidate === void 0 ? fallback : candidate;
+    return normalizeControlStyles(styles, DEFAULT_CONFIG.styles);
+  }
+  function normalizeConfig(rawConfig = {}) {
+    const defaults = DEFAULT_CONFIG;
+    const config = mergeConfig(defaults, rawConfig);
+    const layout = normalizeTextKey(config.layout) === "circular" ? "circular" : "compact";
+    const sourceStyles = isObject(config.styles) ? config.styles : {};
+    migrateControlIconOffColor(sourceStyles.icon, DEFAULT_CONFIG.styles.icon.off_color);
+    normalizeControlActions(config, rawConfig, true);
+    const security = window.NodaliaUtils.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? { ...DEFAULT_CONFIG.security, ...isObject(config.security) ? config.security : {} };
+    return {
+      ...config,
+      layout,
+      hidden_preset_modes: normalizeControlList(config.hidden_preset_modes),
+      entity_picture: String(config.entity_picture ?? "").trim(),
+      show_entity_picture: config.show_entity_picture === true,
+      security,
+      styles: getSafeStyles(config.styles)
     };
-    return walk(styles, DEFAULT_CONFIG.styles);
   }
-  function migrateLegacyIconOffColor(iconStyles, canonicalOffColor) {
-    if (!iconStyles) {
-      return;
+
+  // src/shared/editor-color.ts
+  var clamp2 = (value, max) => Math.max(0, Math.min(max, value));
+  var component = (value, scale) => {
+    if (!value || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?%?$/i.test(value)) return null;
+    const numeric = Number(value.replace(/%$/, ""));
+    return Number.isFinite(numeric) ? clamp2(value.endsWith("%") ? numeric * scale / 100 : numeric, scale) : null;
+  };
+  function parseEditorColorChannels(value) {
+    const raw = String(value ?? "").trim();
+    const hexMatch = raw.match(/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
+    if (hexMatch?.[1]) {
+      const hex = hexMatch[1].length < 5 ? hexMatch[1].split("").map((channel) => channel + channel).join("") : hexMatch[1];
+      return { red: parseInt(hex.slice(0, 2), 16), green: parseInt(hex.slice(2, 4), 16), blue: parseInt(hex.slice(4, 6), 16), alpha: hex.length === 8 ? parseInt(hex.slice(6, 8), 16) / 255 : 1 };
     }
-    const raw = String(iconStyles.off_color ?? "").trim();
-    if (!raw) {
-      return;
-    }
-    if (LEGACY_ICON_OFF_COLOR_VALUES.includes(raw)) {
-      iconStyles.off_color = canonicalOffColor;
-      return;
-    }
-    if (/^var\(\s*--state-inactive-color/i.test(raw)) {
-      iconStyles.off_color = canonicalOffColor;
-    }
+    const rgb = raw.match(/^rgba?\(([^)]+)\)$/i);
+    const srgb = raw.match(/^color\(\s*srgb\s+([^)]+)\)$/i);
+    const body = rgb?.[1] ?? srgb?.[1];
+    if (!body) return null;
+    const sections = body.trim().split(/\s*\/\s*/);
+    if (sections.length > 2) return null;
+    const parts = sections[0]?.split(/[\s,]+/) ?? [];
+    if (sections.length === 2 && parts.length !== 3 || parts.length < 3 || parts.length > 4) return null;
+    const scale = srgb ? 1 : 255;
+    const red = component(parts[0], scale), green = component(parts[1], scale), blue = component(parts[2], scale);
+    const alphaPart = sections[1] ?? parts[3];
+    const alpha = alphaPart === void 0 ? 1 : component(alphaPart, 1);
+    if (red === null || green === null || blue === null || alpha === null) return null;
+    return { red: red * 255 / scale, green: green * 255 / scale, blue: blue * 255 / scale, alpha };
   }
-  function normalizeConfig(rawConfig) {
-    const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-    config.layout = normalizeTextKey(config.layout) === "circular" ? "circular" : "compact";
-    const normalizeList = (value) => (Array.isArray(value) ? value : typeof value === "string" ? value.split(",") : []).map((item) => String(item || "").trim()).filter(Boolean);
-    config.hidden_preset_modes = normalizeList(config.hidden_preset_modes);
-    migrateLegacyIconOffColor(config.styles?.icon, DEFAULT_CONFIG.styles.icon.off_color);
-    const actionFields = [
-      { action: "tap_action", service: "tap_service", data: "tap_service_data", target: "tap_service_target", url: "tap_url", navigation: "navigation_path", newTab: "tap_new_tab", fallback: "toggle" },
-      { action: "icon_tap_action", service: "icon_tap_service", data: "icon_tap_service_data", target: "icon_tap_service_target", url: "icon_tap_url", navigation: "icon_navigation_path", newTab: "icon_tap_new_tab", fallback: "" },
-      { action: "hold_action", service: "hold_service", data: "hold_service_data", target: "hold_service_target", url: "hold_url", navigation: "hold_navigation_path", newTab: "hold_new_tab", fallback: "more-info" },
-      { action: "icon_hold_action", service: "icon_hold_service", data: "icon_hold_service_data", target: "icon_hold_service_target", url: "icon_hold_url", navigation: "icon_hold_navigation_path", newTab: "icon_hold_new_tab", fallback: "" },
-      { action: "double_tap_action", service: "double_tap_service", data: "double_tap_service_data", target: "double_tap_service_target", url: "double_tap_url", navigation: "double_tap_navigation_path", newTab: "double_tap_new_tab", fallback: "none" },
-      { action: "icon_double_tap_action", service: "icon_double_tap_service", data: "icon_double_tap_service_data", target: "icon_double_tap_service_target", url: "icon_double_tap_url", navigation: "icon_double_tap_navigation_path", newTab: "icon_double_tap_new_tab", fallback: "" }
-    ];
-    const applyTap = window.NodaliaUtils?.applyCardTapActionField?.bind(window.NodaliaUtils);
-    const allowedActions = /* @__PURE__ */ new Set(["auto", "toggle", "more-info", "service", "navigate", "url", "none"]);
-    const serializeActionObject = (value) => isObject(value) ? JSON.stringify(value) : String(value ?? "").trim();
-    actionFields.forEach((fields) => {
-      if (typeof applyTap === "function") {
-        applyTap(config, {
-          actionKey: fields.action,
-          serviceKey: fields.service,
-          serviceDataKey: fields.data,
-          serviceTargetKey: fields.target,
-          urlKey: fields.url,
-          navigationKey: fields.navigation,
-          newTabKey: fields.newTab
-        }, rawConfig?.[fields.action] ?? config[fields.action], fields.fallback);
-      }
-      const rawAction = String(config[fields.action] ?? "").trim().toLowerCase();
-      config[fields.action] = rawAction ? allowedActions.has(rawAction) ? rawAction : fields.fallback : fields.fallback;
-      config[fields.service] = String(config[fields.service] ?? "").trim();
-      config[fields.data] = serializeActionObject(config[fields.data]);
-      config[fields.target] = serializeActionObject(config[fields.target]);
-      config[fields.url] = String(config[fields.url] ?? "").trim();
-      config[fields.navigation] = String(config[fields.navigation] ?? "").trim();
-      config[fields.newTab] = config[fields.newTab] === true;
-      if (config[fields.action] === "navigate" && !config[fields.navigation] && config[fields.url]) {
-        config[fields.navigation] = config[fields.url];
-      }
-    });
-    config.entity_picture = String(config.entity_picture ?? "").trim();
-    config.show_entity_picture = config.show_entity_picture === true;
-    config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? { ...DEFAULT_CONFIG.security, ...isObject(config.security) ? config.security : {} };
-    config.styles = getSafeStyles(config.styles);
-    return config;
+  function formatEditorHexChannel(value) {
+    const numeric = Number(value);
+    return clamp2(Math.round(Number.isFinite(numeric) ? numeric : 0), 255).toString(16).padStart(2, "0");
+  }
+  function formatEditorColorFromHex(hex, alpha = 1) {
+    const normalized = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
+    if (!/^[0-9a-f]{6}$/.test(normalized)) return String(hex ?? "");
+    const numeric = Number(alpha);
+    const safeAlpha = clamp2(Number.isFinite(numeric) ? numeric : 1, 1);
+    if (safeAlpha >= 0.999) return `#${normalized}`;
+    const red = parseInt(normalized.slice(0, 2), 16), green = parseInt(normalized.slice(2, 4), 16), blue = parseInt(normalized.slice(4, 6), 16);
+    return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
+  }
+  function resolveEditorColorValue(value) {
+    const resolve = typeof window !== "undefined" ? window.NodaliaBubbleContrast?.resolveEditorColorValue : void 0;
+    return resolve?.(value) || String(value ?? "").trim();
+  }
+  function browserColorChannels(value) {
+    if (typeof document === "undefined" || !/^(?:color|oklab|oklch|lab|lch)\(/i.test(value)) return null;
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 1;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    if (!context) return null;
+    context.fillStyle = "#000001";
+    context.fillStyle = value;
+    if (context.fillStyle === "#000001") {
+      context.fillStyle = "#000002";
+      context.fillStyle = value;
+      if (context.fillStyle === "#000002") return null;
+    }
+    context.fillRect(0, 0, 1, 1);
+    const [red, green, blue, alpha] = context.getImageData(0, 0, 1, 1).data;
+    if (red === void 0 || green === void 0 || blue === void 0 || alpha === void 0) return null;
+    return { red, green, blue, alpha: alpha / 255 };
+  }
+  function getEditorColorModel(value, fallbackValue = "#71c0ff") {
+    const source = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
+    const resolved = resolveEditorColorValue(source);
+    const channels = parseEditorColorChannels(resolved) || parseEditorColorChannels(source) || browserColorChannels(resolved) || parseEditorColorChannels(resolveEditorColorValue(fallbackValue)) || parseEditorColorChannels(fallbackValue) || { red: 113, green: 192, blue: 255, alpha: 1 };
+    const hex = `#${formatEditorHexChannel(channels.red)}${formatEditorHexChannel(channels.green)}${formatEditorHexChannel(channels.blue)}`;
+    return { alpha: channels.alpha, hex, label: source, resolved, source, value: formatEditorColorFromHex(hex, channels.alpha) };
   }
 
   // src/cards/fan/fan-helpers.ts
@@ -267,41 +325,6 @@
   function parseSizeToPixels(value, fallback = 0) {
     const numeric = Number.parseFloat(String(value ?? ""));
     return Number.isFinite(numeric) ? numeric : fallback;
-  }
-  function formatEditorHexChannel(value) {
-    return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
-  }
-  function formatEditorColorFromHex(hex, alpha = 1) {
-    const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
-    if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
-      return String(hex ?? "");
-    }
-    const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
-    const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
-    const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
-    const safeAlpha = clamp(Number(alpha), 0, 1);
-    if (safeAlpha >= 0.999) {
-      return `#${normalizedHex}`;
-    }
-    return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
-  }
-  function getEditorColorModel(value, fallbackValue = "#71c0ff") {
-    const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
-    const resolve = window.NodaliaBubbleContrast?.resolveEditorColorValue;
-    const resolvedValue = (resolve ? resolve(sourceValue) : "") || (resolve ? resolve(fallbackValue) : "") || "rgb(113, 192, 255)";
-    const channels = resolvedValue.match(/[\d.]+/g) || [];
-    const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
-    const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
-    const blue = clamp(Math.round(Number(channels[2] ?? 255)), 0, 255);
-    const alpha = channels.length > 3 ? clamp(Number(channels[3]), 0, 1) : 1;
-    const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
-    return {
-      alpha,
-      hex,
-      resolved: resolvedValue,
-      source: sourceValue,
-      value: formatEditorColorFromHex(hex, alpha)
-    };
   }
   function getEditorColorFallbackValue(field) {
     const normalizedField = String(field ?? "");

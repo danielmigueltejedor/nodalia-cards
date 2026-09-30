@@ -47,6 +47,36 @@
   var fireEvent = utils.fireEvent.bind(utils);
   var normalizeTextKey = utils.normalizeTextKey.bind(utils);
 
+  // src/shared/control-config.ts
+  function normalizeControlStyles(candidate, defaults) {
+    const utils2 = window.NodaliaUtils;
+    const source = utils2.isObject(candidate) ? candidate : {};
+    const result = {};
+    for (const [key, fallback] of Object.entries(defaults)) {
+      if (utils2.isUnsafeConfigPathKey(key)) continue;
+      result[key] = typeof fallback === "string" ? utils2.sanitizeCssValue(source[key], fallback) : normalizeControlStyles(source[key], fallback);
+    }
+    return result;
+  }
+  var actionFields = (prefix, fallback, navigationKey = `${prefix}_navigation_path`) => ({
+    actionKey: `${prefix}_action`,
+    serviceKey: `${prefix}_service`,
+    serviceDataKey: `${prefix}_service_data`,
+    serviceTargetKey: `${prefix}_service_target`,
+    urlKey: `${prefix}_url`,
+    navigationKey,
+    newTabKey: `${prefix}_new_tab`,
+    fallback
+  });
+  var FIELDS = [
+    actionFields("tap", "toggle", "navigation_path"),
+    actionFields("icon_tap", "", "icon_navigation_path"),
+    actionFields("hold", "more-info", "hold_navigation_path"),
+    actionFields("icon_hold", ""),
+    actionFields("double_tap", "none"),
+    actionFields("icon_double_tap", "")
+  ];
+
   // src/cards/cover/cover-config.ts
   var DEFAULT_CONFIG = {
     entity: "",
@@ -152,15 +182,17 @@
     }
     return String(value || "").split(",").map((item) => item.trim()).filter(Boolean);
   }
-  function normalizeConfig(rawConfig) {
-    const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  function normalizeConfig(rawConfig = {}) {
+    const defaults = DEFAULT_CONFIG;
+    const config = mergeConfig(defaults, rawConfig);
+    const source = isObject(rawConfig) ? rawConfig : {};
     config.layout = normalizeTextKey(config.layout) === "circular" ? "circular" : "compact";
-    config.compact_layout_mode = ["auto", "always", "never"].includes(config.compact_layout_mode) ? config.compact_layout_mode : "auto";
+    config.compact_layout_mode = typeof config.compact_layout_mode === "string" && ["auto", "always", "never"].includes(config.compact_layout_mode) ? config.compact_layout_mode : "auto";
     const openCloseIcons = normalizeTextKey(config.open_close_icons) || "auto";
     config.open_close_icons = ["auto", "vertical", "horizontal"].includes(openCloseIcons) ? openCloseIcons : "auto";
-    config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? { ...DEFAULT_CONFIG.security, ...isObject(config.security) ? config.security : {} };
-    config.security.allowed_services = normalizeList(config.security?.allowed_services);
-    config.security.allowed_service_domains = normalizeList(config.security?.allowed_service_domains);
+    const security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? { ...DEFAULT_CONFIG.security, ...isObject(config.security) ? config.security : {} };
+    security.allowed_services = normalizeList(security.allowed_services);
+    security.allowed_service_domains = normalizeList(security.allowed_service_domains);
     const applyTap = window.NodaliaUtils?.applyCardTapActionField?.bind(window.NodaliaUtils);
     if (typeof applyTap === "function") {
       applyTap(config, {
@@ -171,7 +203,7 @@
         urlKey: "tap_url",
         navigationKey: "navigation_path",
         newTabKey: "tap_new_tab"
-      }, rawConfig?.tap_action ?? config.tap_action, "toggle");
+      }, source.tap_action ?? config.tap_action, "toggle");
       applyTap(config, {
         actionKey: "icon_tap_action",
         serviceKey: "icon_tap_service",
@@ -180,7 +212,7 @@
         urlKey: "icon_tap_url",
         navigationKey: "icon_navigation_path",
         newTabKey: "icon_tap_new_tab"
-      }, rawConfig?.icon_tap_action ?? config.icon_tap_action, "");
+      }, source.icon_tap_action ?? config.icon_tap_action, "");
       applyTap(config, {
         actionKey: "hold_action",
         serviceKey: "hold_service",
@@ -189,7 +221,7 @@
         urlKey: "hold_url",
         navigationKey: "hold_navigation_path",
         newTabKey: "hold_new_tab"
-      }, rawConfig?.hold_action ?? config.hold_action, "more-info");
+      }, source.hold_action ?? config.hold_action, "more-info");
       applyTap(config, {
         actionKey: "icon_hold_action",
         serviceKey: "icon_hold_service",
@@ -198,7 +230,7 @@
         urlKey: "icon_hold_url",
         navigationKey: "icon_hold_navigation_path",
         newTabKey: "icon_hold_new_tab"
-      }, rawConfig?.icon_hold_action ?? config.icon_hold_action, "");
+      }, source.icon_hold_action ?? config.icon_hold_action, "");
     }
     if (String(config.icon_tap_action || "").trim() === "") {
       config.icon_tap_action = "";
@@ -216,52 +248,82 @@
     if (config.hold_action === "navigate" && !config.hold_navigation_path && config.hold_url) {
       config.hold_navigation_path = config.hold_url;
     }
-    config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles) ?? deepClone(DEFAULT_CONFIG.styles);
-    return config;
+    return { ...config, security, styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles) };
+  }
+
+  // src/shared/editor-color.ts
+  var clamp2 = (value, max) => Math.max(0, Math.min(max, value));
+  var component = (value, scale) => {
+    if (!value || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?%?$/i.test(value)) return null;
+    const numeric = Number(value.replace(/%$/, ""));
+    return Number.isFinite(numeric) ? clamp2(value.endsWith("%") ? numeric * scale / 100 : numeric, scale) : null;
+  };
+  function parseEditorColorChannels(value) {
+    const raw = String(value ?? "").trim();
+    const hexMatch = raw.match(/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
+    if (hexMatch?.[1]) {
+      const hex = hexMatch[1].length < 5 ? hexMatch[1].split("").map((channel) => channel + channel).join("") : hexMatch[1];
+      return { red: parseInt(hex.slice(0, 2), 16), green: parseInt(hex.slice(2, 4), 16), blue: parseInt(hex.slice(4, 6), 16), alpha: hex.length === 8 ? parseInt(hex.slice(6, 8), 16) / 255 : 1 };
+    }
+    const rgb = raw.match(/^rgba?\(([^)]+)\)$/i);
+    const srgb = raw.match(/^color\(\s*srgb\s+([^)]+)\)$/i);
+    const body = rgb?.[1] ?? srgb?.[1];
+    if (!body) return null;
+    const sections = body.trim().split(/\s*\/\s*/);
+    if (sections.length > 2) return null;
+    const parts = sections[0]?.split(/[\s,]+/) ?? [];
+    if (sections.length === 2 && parts.length !== 3 || parts.length < 3 || parts.length > 4) return null;
+    const scale = srgb ? 1 : 255;
+    const red = component(parts[0], scale), green = component(parts[1], scale), blue = component(parts[2], scale);
+    const alphaPart = sections[1] ?? parts[3];
+    const alpha = alphaPart === void 0 ? 1 : component(alphaPart, 1);
+    if (red === null || green === null || blue === null || alpha === null) return null;
+    return { red: red * 255 / scale, green: green * 255 / scale, blue: blue * 255 / scale, alpha };
+  }
+  function formatEditorHexChannel(value) {
+    const numeric = Number(value);
+    return clamp2(Math.round(Number.isFinite(numeric) ? numeric : 0), 255).toString(16).padStart(2, "0");
+  }
+  function formatEditorColorFromHex(hex, alpha = 1) {
+    const normalized = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
+    if (!/^[0-9a-f]{6}$/.test(normalized)) return String(hex ?? "");
+    const numeric = Number(alpha);
+    const safeAlpha = clamp2(Number.isFinite(numeric) ? numeric : 1, 1);
+    if (safeAlpha >= 0.999) return `#${normalized}`;
+    const red = parseInt(normalized.slice(0, 2), 16), green = parseInt(normalized.slice(2, 4), 16), blue = parseInt(normalized.slice(4, 6), 16);
+    return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
+  }
+  function resolveEditorColorValue(value) {
+    const resolve = typeof window !== "undefined" ? window.NodaliaBubbleContrast?.resolveEditorColorValue : void 0;
+    return resolve?.(value) || String(value ?? "").trim();
+  }
+  function browserColorChannels(value) {
+    if (typeof document === "undefined" || !/^(?:color|oklab|oklch|lab|lch)\(/i.test(value)) return null;
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 1;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    if (!context) return null;
+    context.fillStyle = "#000001";
+    context.fillStyle = value;
+    if (context.fillStyle === "#000001") {
+      context.fillStyle = "#000002";
+      context.fillStyle = value;
+      if (context.fillStyle === "#000002") return null;
+    }
+    context.fillRect(0, 0, 1, 1);
+    const [red, green, blue, alpha] = context.getImageData(0, 0, 1, 1).data;
+    if (red === void 0 || green === void 0 || blue === void 0 || alpha === void 0) return null;
+    return { red, green, blue, alpha: alpha / 255 };
+  }
+  function getEditorColorModel(value, fallbackValue = "#71c0ff") {
+    const source = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
+    const resolved = resolveEditorColorValue(source);
+    const channels = parseEditorColorChannels(resolved) || parseEditorColorChannels(source) || browserColorChannels(resolved) || parseEditorColorChannels(resolveEditorColorValue(fallbackValue)) || parseEditorColorChannels(fallbackValue) || { red: 113, green: 192, blue: 255, alpha: 1 };
+    const hex = `#${formatEditorHexChannel(channels.red)}${formatEditorHexChannel(channels.green)}${formatEditorHexChannel(channels.blue)}`;
+    return { alpha: channels.alpha, hex, label: source, resolved, source, value: formatEditorColorFromHex(hex, channels.alpha) };
   }
 
   // src/cards/cover/cover-helpers.ts
-  function resolveEditorColorValue(value) {
-    const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
-    if (typeof resolver === "function") {
-      return resolver(value);
-    }
-    return String(value ?? "").trim();
-  }
-  function formatEditorHexChannel(value) {
-    return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
-  }
-  function formatEditorColorFromHex(hex, alpha = 1) {
-    const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
-    if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
-      return String(hex ?? "");
-    }
-    const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
-    const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
-    const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
-    const safeAlpha = clamp(Number(alpha), 0, 1);
-    if (safeAlpha >= 0.999) {
-      return `#${normalizedHex}`;
-    }
-    return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
-  }
-  function getEditorColorModel(value, fallbackValue = "#71c0ff") {
-    const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
-    const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
-    const channels = resolvedValue.match(/[\d.]+/g) || [];
-    const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
-    const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
-    const blue = clamp(Math.round(Number(channels[2] ?? 255)), 0, 255);
-    const alpha = channels.length > 3 ? clamp(Number(channels[3]), 0, 1) : 1;
-    const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
-    return {
-      alpha,
-      hex,
-      resolved: resolvedValue,
-      source: sourceValue,
-      value: formatEditorColorFromHex(hex, alpha)
-    };
-  }
   function coverDeviceClassPrefersHorizontalOpenClose(deviceClass) {
     const key = normalizeTextKey(deviceClass);
     return key === "door" || key === "gate" || key === "garage";

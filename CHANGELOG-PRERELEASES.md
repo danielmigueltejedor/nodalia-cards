@@ -12,6 +12,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Show correct CSS Color 4 tints in the visual editors; changing a Lock color now retains its existing translucency.
+
+- Malformed Fan and Humidifier icon styles no longer prevent configuration loading; shared control normalization retains HA actions and service restrictions.
+
 - Match Lock’s visual editor to the bundle with shared switches, color controls and corner presets; apply its configurable card/icon styles.
 - Keep Room Summary media players on Home only and embed the native Lock Card for locks, including correct first-state delivery.
 - Request at least 4 columns for Alarm Panel/Entity and 6 for Weather/Calendar.
@@ -22,6 +26,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Remove Camera portal listeners from their owning shadow root.
 
 ### Maintenance
+
+- Check Fan, Humidifier and Cover YAML normalization with TypeScript; share control normalization and editor color models while retaining legacy helper exports.
 
 - Centralize all 25 cards (including Lock) in the build/test registry and derive card versions from package.json.
 - Gate release publishing on shared strict validation and four browser projects; check every distributed JavaScript file.

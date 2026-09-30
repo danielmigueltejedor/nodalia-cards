@@ -1,6 +1,7 @@
-// @ts-nocheck -- merged Lovelace YAML is projected into the runtime fan config.
-import { LEGACY_ICON_OFF_COLOR_VALUES } from "./fan-constants";
 import { isObject, mergeConfig, normalizeTextKey } from "./fan-runtime";
+import { normalizeControlActions, normalizeControlList, normalizeControlStyles, migrateControlIconOffColor } from "../../shared/control-config";
+export { migrateControlIconOffColor as migrateLegacyIconOffColor } from "../../shared/control-config";
+export const sanitizeCssValue = window.NodaliaUtils.sanitizeCssValue.bind(window.NodaliaUtils);
 
 export const DEFAULT_CONFIG = {
   entity: "",
@@ -118,114 +119,27 @@ export const STUB_CONFIG = {
   name: "Salon",
 };
 
-export function sanitizeCssValue(value, fallback) {
-  const raw = String(value ?? "").trim();
-  const safeFallback = String(fallback ?? "").trim();
-  if (!raw) {
-    return safeFallback;
-  }
-  if (/[\u0000-\u001f\u007f<>;"'{}]/.test(raw) || raw.includes("/*") || raw.includes("*/")) { // eslint-disable-line no-control-regex
-    return safeFallback;
-  }
-  return raw;
+export function getSafeStyles(styles: unknown = DEFAULT_CONFIG.styles) {
+  return normalizeControlStyles(styles, DEFAULT_CONFIG.styles);
 }
 
-export function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
-  const walk = (candidate, fallback) => {
-    if (isObject(fallback)) {
-      const out = {};
-      const source = isObject(candidate) ? candidate : {};
-      Object.keys(fallback).forEach(key => {
-        out[key] = walk(source[key], fallback[key]);
-      });
-      return out;
-    }
-    if (typeof fallback === "string") {
-      return sanitizeCssValue(candidate, fallback);
-    }
-    return candidate === undefined ? fallback : candidate;
-  };
-  return walk(styles, DEFAULT_CONFIG.styles);
-}
-
-export function migrateLegacyIconOffColor(iconStyles, canonicalOffColor) {
-  if (!iconStyles) {
-    return;
-  }
-  const raw = String(iconStyles.off_color ?? "").trim();
-  if (!raw) {
-    return;
-  }
-  if (LEGACY_ICON_OFF_COLOR_VALUES.includes(raw)) {
-    iconStyles.off_color = canonicalOffColor;
-    return;
-  }
-  if (/^var\(\s*--state-inactive-color/i.test(raw)) {
-    iconStyles.off_color = canonicalOffColor;
-  }
-}
-
-export function normalizeConfig(rawConfig) {
-  const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-  config.layout = normalizeTextKey(config.layout) === "circular" ? "circular" : "compact";
-  const normalizeList = value => (
-    Array.isArray(value)
-      ? value
-      : typeof value === "string"
-        ? value.split(",")
-        : []
-  )
-    .map(item => String(item || "").trim())
-    .filter(Boolean);
-
-  config.hidden_preset_modes = normalizeList(config.hidden_preset_modes);
-
-  migrateLegacyIconOffColor(config.styles?.icon, DEFAULT_CONFIG.styles.icon.off_color);
-
-  const actionFields = [
-    { action: "tap_action", service: "tap_service", data: "tap_service_data", target: "tap_service_target", url: "tap_url", navigation: "navigation_path", newTab: "tap_new_tab", fallback: "toggle" },
-    { action: "icon_tap_action", service: "icon_tap_service", data: "icon_tap_service_data", target: "icon_tap_service_target", url: "icon_tap_url", navigation: "icon_navigation_path", newTab: "icon_tap_new_tab", fallback: "" },
-    { action: "hold_action", service: "hold_service", data: "hold_service_data", target: "hold_service_target", url: "hold_url", navigation: "hold_navigation_path", newTab: "hold_new_tab", fallback: "more-info" },
-    { action: "icon_hold_action", service: "icon_hold_service", data: "icon_hold_service_data", target: "icon_hold_service_target", url: "icon_hold_url", navigation: "icon_hold_navigation_path", newTab: "icon_hold_new_tab", fallback: "" },
-    { action: "double_tap_action", service: "double_tap_service", data: "double_tap_service_data", target: "double_tap_service_target", url: "double_tap_url", navigation: "double_tap_navigation_path", newTab: "double_tap_new_tab", fallback: "none" },
-    { action: "icon_double_tap_action", service: "icon_double_tap_service", data: "icon_double_tap_service_data", target: "icon_double_tap_service_target", url: "icon_double_tap_url", navigation: "icon_double_tap_navigation_path", newTab: "icon_double_tap_new_tab", fallback: "" },
-  ];
-  const applyTap = window.NodaliaUtils?.applyCardTapActionField?.bind(window.NodaliaUtils);
-  const allowedActions = new Set(["auto", "toggle", "more-info", "service", "navigate", "url", "none"]);
-  const serializeActionObject = value => (
-    isObject(value) ? JSON.stringify(value) : String(value ?? "").trim()
-  );
-  actionFields.forEach(fields => {
-    if (typeof applyTap === "function") {
-      applyTap(config, {
-        actionKey: fields.action,
-        serviceKey: fields.service,
-        serviceDataKey: fields.data,
-        serviceTargetKey: fields.target,
-        urlKey: fields.url,
-        navigationKey: fields.navigation,
-        newTabKey: fields.newTab,
-      }, rawConfig?.[fields.action] ?? config[fields.action], fields.fallback);
-    }
-    const rawAction = String(config[fields.action] ?? "").trim().toLowerCase();
-    config[fields.action] = rawAction
-      ? (allowedActions.has(rawAction) ? rawAction : fields.fallback)
-      : fields.fallback;
-    config[fields.service] = String(config[fields.service] ?? "").trim();
-    config[fields.data] = serializeActionObject(config[fields.data]);
-    config[fields.target] = serializeActionObject(config[fields.target]);
-    config[fields.url] = String(config[fields.url] ?? "").trim();
-    config[fields.navigation] = String(config[fields.navigation] ?? "").trim();
-    config[fields.newTab] = config[fields.newTab] === true;
-    if (config[fields.action] === "navigate" && !config[fields.navigation] && config[fields.url]) {
-      config[fields.navigation] = config[fields.url];
-    }
-  });
-  config.entity_picture = String(config.entity_picture ?? "").trim();
-  config.show_entity_picture = config.show_entity_picture === true;
-  config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
+export function normalizeConfig(rawConfig: unknown = {}) {
+  // Unknown YAML overrides must remain unknown until each field is normalized.
+  const defaults: Record<string, unknown> = DEFAULT_CONFIG;
+  const config = mergeConfig(defaults, rawConfig);
+  const layout = normalizeTextKey(config.layout) === "circular" ? "circular" : "compact";
+  const sourceStyles = isObject(config.styles) ? config.styles : {};
+  migrateControlIconOffColor(sourceStyles.icon, DEFAULT_CONFIG.styles.icon.off_color);
+  normalizeControlActions(config, rawConfig, true);
+  const security = window.NodaliaUtils.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
     ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
-  config.styles = getSafeStyles(config.styles);
-
-  return config;
+  return {
+    ...config,
+    layout,
+    hidden_preset_modes: normalizeControlList(config.hidden_preset_modes),
+    entity_picture: String(config.entity_picture ?? "").trim(),
+    show_entity_picture: config.show_entity_picture === true,
+    security,
+    styles: getSafeStyles(config.styles),
+  };
 }

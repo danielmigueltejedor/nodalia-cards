@@ -1,5 +1,5 @@
-// @ts-nocheck -- merged Lovelace YAML is projected into the runtime cover config.
-import { deepClone, isObject, mergeConfig, normalizeTextKey } from "./cover-runtime";
+import { isObject, mergeConfig, normalizeTextKey } from "./cover-runtime";
+import { normalizeControlStyles } from "../../shared/control-config";
 
 export const DEFAULT_CONFIG = {
   entity: "",
@@ -101,25 +101,27 @@ export const STUB_CONFIG = {
   name: "Salon",
 };
 
-export function normalizeList(value) {
+export function normalizeList(value: unknown): string[] {
   if (Array.isArray(value)) {
     return value.map(item => String(item).trim()).filter(Boolean);
   }
   return String(value || "").split(",").map(item => item.trim()).filter(Boolean);
 }
 
-export function normalizeConfig(rawConfig) {
-  const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+export function normalizeConfig(rawConfig: unknown = {}) {
+  const defaults: Record<string, unknown> = DEFAULT_CONFIG;
+  const config = mergeConfig(defaults, rawConfig);
+  const source = isObject(rawConfig) ? rawConfig : {};
   config.layout = normalizeTextKey(config.layout) === "circular" ? "circular" : "compact";
-  config.compact_layout_mode = ["auto", "always", "never"].includes(config.compact_layout_mode)
+  config.compact_layout_mode = typeof config.compact_layout_mode === "string" && ["auto", "always", "never"].includes(config.compact_layout_mode)
     ? config.compact_layout_mode
     : "auto";
   const openCloseIcons = normalizeTextKey(config.open_close_icons) || "auto";
   config.open_close_icons = ["auto", "vertical", "horizontal"].includes(openCloseIcons) ? openCloseIcons : "auto";
-  config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
+  const security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
     ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
-  config.security.allowed_services = normalizeList(config.security?.allowed_services);
-  config.security.allowed_service_domains = normalizeList(config.security?.allowed_service_domains);
+  security.allowed_services = normalizeList(security.allowed_services);
+  security.allowed_service_domains = normalizeList(security.allowed_service_domains);
   const applyTap = window.NodaliaUtils?.applyCardTapActionField?.bind(window.NodaliaUtils);
   if (typeof applyTap === "function") {
     applyTap(config, {
@@ -130,7 +132,7 @@ export function normalizeConfig(rawConfig) {
       urlKey: "tap_url",
       navigationKey: "navigation_path",
       newTabKey: "tap_new_tab",
-    }, rawConfig?.tap_action ?? config.tap_action, "toggle");
+    }, source.tap_action ?? config.tap_action, "toggle");
     applyTap(config, {
       actionKey: "icon_tap_action",
       serviceKey: "icon_tap_service",
@@ -139,7 +141,7 @@ export function normalizeConfig(rawConfig) {
       urlKey: "icon_tap_url",
       navigationKey: "icon_navigation_path",
       newTabKey: "icon_tap_new_tab",
-    }, rawConfig?.icon_tap_action ?? config.icon_tap_action, "");
+    }, source.icon_tap_action ?? config.icon_tap_action, "");
     applyTap(config, {
       actionKey: "hold_action",
       serviceKey: "hold_service",
@@ -148,7 +150,7 @@ export function normalizeConfig(rawConfig) {
       urlKey: "hold_url",
       navigationKey: "hold_navigation_path",
       newTabKey: "hold_new_tab",
-    }, rawConfig?.hold_action ?? config.hold_action, "more-info");
+    }, source.hold_action ?? config.hold_action, "more-info");
     applyTap(config, {
       actionKey: "icon_hold_action",
       serviceKey: "icon_hold_service",
@@ -157,7 +159,7 @@ export function normalizeConfig(rawConfig) {
       urlKey: "icon_hold_url",
       navigationKey: "icon_hold_navigation_path",
       newTabKey: "icon_hold_new_tab",
-    }, rawConfig?.icon_hold_action ?? config.icon_hold_action, "");
+    }, source.icon_hold_action ?? config.icon_hold_action, "");
   }
   if (String(config.icon_tap_action || "").trim() === "") {
     config.icon_tap_action = "";
@@ -175,7 +177,5 @@ export function normalizeConfig(rawConfig) {
   if (config.hold_action === "navigate" && !config.hold_navigation_path && config.hold_url) {
     config.hold_navigation_path = config.hold_url;
   }
-  config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles)
-    ?? deepClone(DEFAULT_CONFIG.styles);
-  return config;
+  return { ...config, security, styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles) };
 }

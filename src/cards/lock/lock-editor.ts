@@ -1,6 +1,7 @@
 import type { HomeAssistant } from "../../core/types/home-assistant";
 import type { LockConfig } from "./lock-config";
 import { normalizeLockStyles } from "./lock-styles";
+import { getEditorColorModel, formatEditorColorFromHex } from "../../shared/editor-color";
 import { lockText } from "./lock-strings";
 import { EDITOR_TOGGLE_STYLES, EDITOR_RADIUS_STYLES, EDITOR_COLOR_STYLES, EDITOR_SECTION_ACTION_STYLES } from "../../shared/editor-toggle-styles";
 
@@ -37,14 +38,15 @@ export function loadNodaliaLockCardEditor(): CustomElementConstructor {
       if (!field) return;
       let value: unknown;
       if (event instanceof CustomEvent && event.type === "value-changed") value = (event.detail as { value?: unknown } | undefined)?.value;
-      else if (target instanceof HTMLInputElement) value = target.type === "checkbox" ? target.checked : target.value;
+      else if (target instanceof HTMLInputElement) value = target.type === "checkbox" ? target.checked
+        : target.type === "color" ? formatEditorColorFromHex(target.value, target.dataset.alpha ?? 1) : target.value;
       else if (target instanceof HTMLSelectElement) value = target.value;
       else return;
       const next = window.NodaliaUtils.deepClone(this.config);
       window.NodaliaUtils.setByPath(next, field, value);
       this.config = next;
       if (target instanceof HTMLInputElement && target.type === "color") {
-        target.parentElement?.querySelector<HTMLElement>(".editor-color-swatch")?.style.setProperty("--editor-swatch", target.value);
+        target.parentElement?.querySelector<HTMLElement>(".editor-color-swatch")?.style.setProperty("--editor-swatch", String(value));
       }
       this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: this.config }, bubbles: true, composed: true }));
     }
@@ -56,11 +58,9 @@ export function loadNodaliaLockCardEditor(): CustomElementConstructor {
       const escape = window.NodaliaUtils.escapeHtml;
       const label = escape(this.label(key));
       if (!color) return `<label class="editor-field"><span>${label}</span><input data-field="${field}" value="${escape(value)}"></label>`;
-      const resolved = window.NodaliaBubbleContrast?.resolveEditorColorValue?.(value) || value;
-      const channels = resolved.match(/[\d.]+/g) || [];
-      const hex = /^#[0-9a-f]{6}$/i.test(resolved) ? resolved : `#${[0, 1, 2].map(index => Math.max(0, Math.min(255, Math.round(Number(channels[index]) || 0))).toString(16).padStart(2, "0")).join("")}`;
+      const model = getEditorColorModel(value);
       return `<div class="editor-field"><span>${label}</span><div class="editor-color-field"><label class="editor-color-picker">
-        <input type="color" data-field="${field}" value="${hex}" aria-label="${label}"><span class="editor-color-swatch" style="--editor-swatch:${escape(value)}"></span>
+        <input type="color" data-field="${field}" data-alpha="${model.alpha}" value="${model.hex}" aria-label="${label}"><span class="editor-color-swatch" style="--editor-swatch:${escape(value)}"></span>
       </label></div></div>`;
     }
     private render(): void {

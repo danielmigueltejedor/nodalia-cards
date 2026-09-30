@@ -371,7 +371,7 @@ Six config/helper cycles were removed through checked defaults and normalization
 Do not place defaults in modules that import their own normalizers.
 Notifications normalization now lives below the config and presentation helpers;
 no runtime import cycles remain.
-93 legacy modules still suppress typechecking; see `scripts/type-debt.json`.
+90 legacy modules still suppress typechecking; see `scripts/type-debt.json`.
 **The full TypeScript migration is not complete.** Checked modules and extracted
 contracts must grow without adding suppressions or casts to hide errors. The
 architecture guard prevents new unchecked files and new runtime cycles.
@@ -393,3 +393,10 @@ See [audit](TECHNICAL_AUDIT.md), [adding cards](adding-a-card.md),
 
 Scenes configuration and helpers are now checked without suppression, including
 normalized row contracts, CSS input boundaries and dashboard scroll snapshots.
+
+Editor color conversion now lives in checked `src/shared/editor-color.ts`. Twenty
+legacy helper modules re-export its functions for existing callers; Lock uses it
+directly. The model distinguishes RGB channels from CSS Color 4 sRGB channels,
+retains alpha and delegates wider-gamut conversion to the browser. Card-specific
+color fallback policies remain colocated with their helpers. Fan/Humidifier share
+checked control action/style normalization; Cover reuses the style projection.

@@ -83,6 +83,22 @@ export interface NodaliaUtilsApi {
   renderEditorCardBorderRadiusHtml(options: EditorRadiusOptions): string;
   renderEditorChipBorderRadiusHtml(options: EditorRadiusOptions): string;
   sanitizeCssValue(value: unknown, fallback?: unknown): string;
+  applyCardTapActionField?: (
+    config: Record<string, unknown>,
+    keys: CardActionFieldKeys,
+    rawValue: unknown,
+    fallback: string,
+  ) => void;
+}
+
+export interface CardActionFieldKeys {
+  actionKey: string;
+  serviceKey: string;
+  serviceDataKey: string;
+  serviceTargetKey: string;
+  urlKey: string;
+  navigationKey: string;
+  newTabKey: string;
 }
 
 export interface EditorRadiusOptions {

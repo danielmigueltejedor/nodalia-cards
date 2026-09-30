@@ -22,7 +22,9 @@ contract rather than copying a large unchecked view/controller.
    Do not add another global API without a typed declaration and compatibility
    reason. Pure domain modules should not require `window` or DOM initialization.
 7. Use editor section/grid/field conventions; retain focus during HA updates.
-   Fire bubbling, composed `config-changed` with `{ config }`. Guard absent HA
+   Use the checked `src/shared/editor-color.ts` model for native color pickers
+   so CSS Color 4 colors and alpha survive edits. Fire bubbling, composed
+   `config-changed` with `{ config }`. Guard absent HA
    entities and optional services; do not trigger services while rendering.
 8. Put runtime text in every `i18n/runtime/*.json` locale and editor labels in
    the editor catalog. Generate and validate translations. Do not silently fall
