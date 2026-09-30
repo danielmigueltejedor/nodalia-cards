@@ -86,7 +86,7 @@ const publicApi = {
   isUsableCameraAccessToken,
   parseCameraProxyAuth,
   appendQueryParam,
-} as CameraPublicApi;
+} satisfies CameraPublicApi;
 
 window.__NODALIA_CAMERA__ = publicApi;
 if (typeof globalThis !== "undefined") {

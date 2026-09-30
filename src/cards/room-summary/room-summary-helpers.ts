@@ -3,7 +3,6 @@ import { DEFAULT_CONFIG } from "./room-summary-defaults";
 import {
   deepClone,
   isObject,
-  isUnsafeConfigPathKey,
   normalizeEntityField,
 } from "./room-summary-runtime";
 
@@ -89,34 +88,4 @@ export function moveListItem<T>(list: T[], fromIndex: number, toIndex: number) {
   list.splice(toIndex, 0, ...items);
 }
 
-type ConfigNode = Record<string, unknown> | unknown[];
-const readNode = (node: ConfigNode, key: string): unknown => Array.isArray(node) ? node[Number(key)] : node[key];
-function writeNode(node: ConfigNode, key: string, value: unknown): boolean {
-  if (!Array.isArray(node)) { node[key] = value; return true; }
-  // Array paths address actual indices; reject non-index/prototype properties.
-  if (!/^\d+$/.test(key)) return false;
-  const index = Number(key);
-  if (!Number.isSafeInteger(index) || index >= 4294967295) return false;
-  node[index] = value;
-  return true;
-}
-
-export function setByPath(target: ConfigNode, path: string, value: unknown): void {
-  const parts = String(path || "").split(".");
-  if (!parts.length || parts.some(isUnsafeConfigPathKey)) return;
-  let cursor = target;
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (key === undefined) return;
-    const child = readNode(cursor, key);
-    if (isObject(child) || Array.isArray(child)) {
-      cursor = child;
-    } else {
-      const next: ConfigNode = /^\d+$/.test(parts[index + 1] ?? "") ? [] : {};
-      if (!writeNode(cursor, key, next)) return;
-      cursor = next;
-    }
-  }
-  const leaf = parts[parts.length - 1];
-  if (leaf !== undefined) writeNode(cursor, leaf, value);
-}
+export { setByPath } from "../../shared/editor-array-paths";

@@ -419,3 +419,37 @@ gate. No distributed card asset or public API is removed.
 
 Cleanup validation: no missing relative links in README or documentation. All
 fast checks and 663 unit tests pass, with no generated distributed asset changes.
+
+## Camera helper findings — 2026-10-01
+
+Camera's config/helper boundary still suppresses typing around stream/action
+rows, config merging, editor paths and signed URL caches. The local editor path
+setter lacks unsafe-key checks; use a shared array-aware path helper with Room
+Summary and protect inherited branches. Unknown action/stream lists must be
+checked before compaction. Keep the distinct append-only Camera query semantics,
+provider aliases, mixed-content proxy behavior and signing ownership/TTL/retry.
+Guard unknown sign_path responses rather than trusting their path field; retain
+valid stream behavior and all public API filenames.
+
+Signing tests also expose the minimum 60-second cache interval outliving
+explicit signed-path lifetimes shorter than 60 seconds. Bound cache retention
+by the requested expiry; keep the existing default lifetime and early-refresh
+margin. Guard absent preview-age timestamps without turning them into epoch
+readings, while retaining actual timestamp 0.
+
+Share fragment-preserving query construction with Navigation while retaining
+Camera's append-only behavior and Navigation's replacement behavior. Camera
+queries now remain before fragments too.
+
+Camera config/helpers now pass strict checking and typed lint; public methods
+derive from actual source and the public object uses satisfies rather than a
+cast. Preserve mixed numeric/CSS style leaves and root YAML extensions. Share
+protected array paths with Room Summary, and fragment-preserving query
+construction with Navigation while keeping their distinct query behavior.
+Seven unit regressions cover path ownership, malformed rows/config, scoped
+actions, provider aliases, signing coalescing/TTL/ownership, retry and age/query
+boundaries. 387 valid Camera configuration/action/stream/query outputs match
+merged main. All 670 unit tests pass; full local browser suite: 248 passed, one
+existing platform skip. After the final malformed camera-ID guards, all 39
+Camera/Navigation/Summary browser cases pass. Remaining unchecked modules: 66;
+Camera view and editor remain in the migration.

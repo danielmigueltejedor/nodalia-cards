@@ -1028,6 +1028,76 @@
   var buildFrigateGo2rtcPath = (clientId, streamName) => window.NodaliaCameraStreamModel?.buildFrigateGo2rtcPath?.(clientId, streamName) ?? "";
   var isMixedContentUrl = (rawValue, pageLocation) => window.NodaliaCameraStreamModel?.isMixedContentUrl?.(rawValue, pageLocation) ?? false;
 
+  // src/shared/url-query.ts
+  function appendUrlQueryParam(url, key, value, replaceExisting = false) {
+    const rawUrl = String(url || "").trim();
+    if (!rawUrl || value === null || value === void 0 || value === "") {
+      return rawUrl;
+    }
+    const fragmentIndex = rawUrl.indexOf("#");
+    const base = fragmentIndex < 0 ? rawUrl : rawUrl.slice(0, fragmentIndex);
+    const fragment = fragmentIndex < 0 ? "" : rawUrl.slice(fragmentIndex);
+    const encodedKey = encodeURIComponent(String(key));
+    const encodedValue = encodeURIComponent(String(value));
+    const escapedKey = encodedKey.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const existingPattern = new RegExp(`([?&])${escapedKey}=[^&]*`);
+    if (replaceExisting && existingPattern.test(base)) {
+      return base.replace(existingPattern, `$1${encodedKey}=${encodedValue}`) + fragment;
+    }
+    return `${base}${base.includes("?") ? "&" : "?"}${encodedKey}=${encodedValue}${fragment}`;
+  }
+
+  // src/shared/editor-entity-helpers.ts
+  function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
+    return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
+  }
+  function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
+    const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
+    if (!entityId) return config;
+    config.entity = entityId;
+    config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
+    return config;
+  }
+
+  // src/shared/editor-array-paths.ts
+  var isObject2 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var isUnsafeConfigPathKey = (key) => key === "__proto__" || key === "constructor" || key === "prototype";
+  var readNode = (node, key) => {
+    if (!Object.prototype.hasOwnProperty.call(node, key)) return void 0;
+    return Array.isArray(node) ? /^\d+$/.test(key) ? node[Number(key)] : void 0 : node[key];
+  };
+  function writeNode(node, key, value) {
+    if (!Array.isArray(node)) {
+      Object.defineProperty(node, key, { configurable: true, enumerable: true, writable: true, value });
+      return true;
+    }
+    if (!/^\d+$/.test(key)) return false;
+    const index = Number(key);
+    if (!Number.isSafeInteger(index) || index >= 4294967295) return false;
+    node[index] = value;
+    return true;
+  }
+  function setByPath(target, path, value) {
+    if (!isObject2(target) && !Array.isArray(target) || typeof path !== "string") return;
+    const parts = String(path || "").split(".");
+    if (!parts.length || parts.some(isUnsafeConfigPathKey)) return;
+    let cursor = target;
+    for (let index = 0; index < parts.length - 1; index += 1) {
+      const key = parts[index];
+      if (key === void 0) return;
+      const child = readNode(cursor, key);
+      if (isObject2(child) || Array.isArray(child)) {
+        cursor = child;
+      } else {
+        const next = /^\d+$/.test(parts[index + 1] ?? "") ? [] : {};
+        if (!writeNode(cursor, key, next)) return;
+        cursor = next;
+      }
+    }
+    const leaf = parts[parts.length - 1];
+    if (leaf !== void 0) writeNode(cursor, leaf, value);
+  }
+
   // src/cards/camera/camera-defaults.ts
   var DEFAULT_CONFIG = {
     entity: "",
@@ -1100,18 +1170,6 @@
   };
 
   // src/cards/camera/camera-helpers.ts
-  function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
-    return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
-  }
-  function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
-    const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
-    if (!entityId) {
-      return config;
-    }
-    config.entity = entityId;
-    config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
-    return config;
-  }
   function mergeConfig(base, override) {
     if (Array.isArray(base)) {
       return Array.isArray(override) ? override.map((item) => deepClone(item)) : deepClone(base);
@@ -1120,30 +1178,19 @@
       return override === void 0 ? base : override;
     }
     const result = {};
-    const keys = /* @__PURE__ */ new Set([...Object.keys(base), ...Object.keys(override || {})]);
+    const source = isObject(override) ? override : {};
+    const keys = /* @__PURE__ */ new Set([...Object.keys(base), ...Object.keys(source)]);
     keys.forEach((key) => {
       if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
         return;
       }
-      if (isObject(base[key]) && isObject(override?.[key]) && !Array.isArray(base[key])) {
-        result[key] = mergeConfig(base[key], override[key]);
+      if (isObject(base[key]) && isObject(source[key]) && !Array.isArray(base[key])) {
+        result[key] = mergeConfig(base[key], source[key]);
         return;
       }
-      result[key] = override?.[key] === void 0 ? deepClone(base[key]) : deepClone(override[key]);
+      result[key] = source[key] === void 0 ? deepClone(base[key]) : deepClone(source[key]);
     });
     return result;
-  }
-  function setByPath(target, path, value) {
-    const parts = String(path || "").split(".");
-    let cursor = target;
-    for (let index = 0; index < parts.length - 1; index += 1) {
-      const key = parts[index];
-      if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-        cursor[key] = /^\d+$/.test(parts[index + 1]) ? [] : {};
-      }
-      cursor = cursor[key];
-    }
-    cursor[parts[parts.length - 1]] = value;
   }
   function normalizeTextKey(value) {
     return String(value ?? "").trim().toLowerCase();
@@ -1153,12 +1200,7 @@
     return key === "unavailable" || key === "unknown";
   }
   function appendQueryParam(url, key, value) {
-    const safeUrl = String(url || "").trim();
-    if (!safeUrl || value === void 0 || value === null || value === "") {
-      return safeUrl;
-    }
-    const separator = safeUrl.includes("?") ? "&" : "?";
-    return `${safeUrl}${separator}${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`;
+    return appendUrlQueryParam(url, key, value);
   }
   function isUsableCameraAccessToken(token) {
     const value = String(token ?? "").trim();
@@ -1169,7 +1211,7 @@
       const parsed = new URL(String(url || "").trim(), "http://localhost");
       const match = parsed.pathname.match(/\/api\/camera_proxy\/([^/?]+)/i);
       return {
-        entityId: match ? decodeURIComponent(match[1]) : "",
+        entityId: match ? decodeURIComponent(match[1] ?? "") : "",
         accessToken: String(parsed.searchParams.get("token") || "").trim()
       };
     } catch (_error) {
@@ -1177,8 +1219,8 @@
     }
   }
   function formatRelativeAge(timestamp, locale = "en", now = Date.now()) {
-    const value = new Date(timestamp || "").getTime();
-    if (!Number.isFinite(value)) {
+    const value = (timestamp instanceof Date ? timestamp : typeof timestamp === "string" || typeof timestamp === "number" ? new Date(timestamp) : /* @__PURE__ */ new Date(NaN)).getTime();
+    if (!Number.isFinite(value) || !Number.isFinite(now)) {
       return "";
     }
     const elapsedSeconds = Math.max(0, Math.floor((Number(now) - value) / 1e3));
@@ -1213,7 +1255,7 @@
       return deepClone(rawValue);
     }
     try {
-      const parsed = JSON.parse(rawValue);
+      const parsed = typeof rawValue === "string" ? JSON.parse(rawValue) : void 0;
       return isObject(parsed) ? parsed : {};
     } catch (_error) {
       return {};
@@ -1228,7 +1270,7 @@
     }));
   }
   function stripEqualToDefaults(config, defaults = DEFAULT_CONFIG) {
-    const result = deepClone(config || {});
+    const result = deepClone(isObject(config) ? config : {});
     const walk = (current, base, path = "") => {
       if (!isObject(current) || !isObject(base)) {
         return;
@@ -1236,8 +1278,10 @@
       Object.keys(current).forEach((key) => {
         const nextPath = path ? `${path}.${key}` : key;
         if (isObject(current[key]) && isObject(base[key]) && !Array.isArray(current[key])) {
-          walk(current[key], base[key], nextPath);
-          if (!Object.keys(current[key]).length) {
+          const child = current[key];
+          if (!isObject(child)) return;
+          walk(child, base[key], nextPath);
+          if (!Object.keys(child).length) {
             delete current[key];
           }
           return;
@@ -1256,11 +1300,12 @@
     }
     return String(value ?? "").trim();
   }
-  function normalizeCameras(config = {}) {
+  function normalizeCameras(value = {}) {
+    const config = isObject(value) ? value : {};
     const seen = /* @__PURE__ */ new Set();
     const ids = [];
-    const pushId = (value) => {
-      const id = normalizeCameraEntityId(value);
+    const pushId = (value2) => {
+      const id = normalizeCameraEntityId(value2);
       if (!id || seen.has(id)) {
         return;
       }
@@ -1299,30 +1344,32 @@
         navigation_path: String(item.navigation_path ?? "").trim(),
         tap_new_tab: item.tap_new_tab === true
       };
-    }).filter(Boolean).slice(0, 8);
+    }).filter((item) => item !== null).slice(0, 8);
   }
   function normalizeCameraActions(rawActions = [], cameraIds = []) {
     if (!Array.isArray(rawActions)) {
       return [];
     }
-    const validCameras = new Set(cameraIds);
+    const ids = Array.isArray(cameraIds) ? cameraIds.filter((id) => typeof id === "string") : [];
+    const validCameras = new Set(ids);
     return rawActions.map((item) => {
       if (!isObject(item)) {
         return null;
       }
-      const camera = normalizeCameraEntityId(item.camera ?? item.camera_entity ?? item.camera_id) || cameraIds[0] || "";
+      const camera = normalizeCameraEntityId(item.camera ?? item.camera_entity ?? item.camera_id) || ids[0] || "";
       const action = normalizeExpandedActions([item])[0];
       if (!camera || !action || validCameras.size && !validCameras.has(camera)) {
         return null;
       }
       return { camera, ...action };
-    }).filter(Boolean).slice(0, MAX_CAMERAS * 8);
+    }).filter((item) => item !== null).slice(0, MAX_CAMERAS * 8);
   }
   function normalizeCameraTapActions(rawActions = [], cameraIds = []) {
     if (!Array.isArray(rawActions)) {
       return [];
     }
-    const validCameras = new Set(cameraIds);
+    const ids = Array.isArray(cameraIds) ? cameraIds.filter((id) => typeof id === "string") : [];
+    const validCameras = new Set(ids);
     const seen = /* @__PURE__ */ new Set();
     const applyTap = window.NodaliaUtils?.applyCardTapActionField?.bind(window.NodaliaUtils);
     const serializeActionObject = (value) => isObject(value) ? JSON.stringify(value) : String(value ?? "").trim();
@@ -1330,7 +1377,7 @@
       if (!isObject(item)) {
         return null;
       }
-      const camera = normalizeCameraEntityId(item.camera ?? item.camera_entity ?? item.camera_id) || cameraIds[0] || "";
+      const camera = normalizeCameraEntityId(item.camera ?? item.camera_entity ?? item.camera_id) || ids[0] || "";
       if (!camera || seen.has(camera) || validCameras.size && !validCameras.has(camera)) {
         return null;
       }
@@ -1357,18 +1404,20 @@
         }, item.tap_action ?? "toggle", "toggle");
       }
       const action = normalizeTextKey(normalized.tap_action || "toggle");
-      normalized.tap_action = TAP_ACTIONS.has(action) ? action : "toggle";
-      normalized.tap_service = String(normalized.tap_service ?? "").trim();
-      normalized.tap_service_data = serializeActionObject(normalized.tap_service_data);
-      normalized.tap_service_target = serializeActionObject(normalized.tap_service_target);
-      normalized.tap_url = String(normalized.tap_url ?? "").trim();
-      normalized.navigation_path = String(normalized.navigation_path ?? "").trim();
-      normalized.tap_new_tab = normalized.tap_new_tab === true;
-      if (normalized.tap_action === "navigate" && !normalized.navigation_path && normalized.tap_url) {
-        normalized.navigation_path = normalized.tap_url;
-      }
-      return normalized;
-    }).filter(Boolean).slice(0, MAX_CAMERAS);
+      const tapAction = TAP_ACTIONS.has(action) ? action : "toggle";
+      const tapUrl = String(normalized.tap_url ?? "").trim();
+      const navigationPath = String(normalized.navigation_path ?? "").trim();
+      return {
+        camera,
+        tap_action: tapAction,
+        tap_service: String(normalized.tap_service ?? "").trim(),
+        tap_service_data: serializeActionObject(normalized.tap_service_data),
+        tap_service_target: serializeActionObject(normalized.tap_service_target),
+        tap_url: tapUrl,
+        navigation_path: tapAction === "navigate" && !navigationPath && tapUrl ? tapUrl : navigationPath,
+        tap_new_tab: normalized.tap_new_tab === true
+      };
+    }).filter((item) => item !== null).slice(0, MAX_CAMERAS);
   }
   function compactCameraTapAction(rawAction = {}, fallbackAction = "toggle") {
     const source = isObject(rawAction) ? rawAction : { tap_action: rawAction };
@@ -1387,9 +1436,10 @@
     return compact;
   }
   function compactCameraTapActions(rawActions = [], globalTapConfig = "toggle") {
+    if (!Array.isArray(rawActions)) return [];
     const fallback = compactCameraTapAction(globalTapConfig, "toggle");
     return rawActions.map((item) => {
-      if (!item?.camera) {
+      if (!isObject(item) || !item.camera) {
         return null;
       }
       const actionConfig = compactCameraTapAction(item, "toggle");
@@ -1397,7 +1447,7 @@
         return null;
       }
       return { camera: item.camera, ...actionConfig };
-    }).filter(Boolean);
+    }).filter((item) => item !== null);
   }
   function cameraStreamName(entityId) {
     return String(entityId || "").trim().replace(/^camera\./, "");
@@ -1406,13 +1456,14 @@
     if (!Array.isArray(rawStreams)) {
       return [];
     }
-    const validCameras = new Set(cameraIds);
+    const ids = Array.isArray(cameraIds) ? cameraIds.filter((id) => typeof id === "string") : [];
+    const validCameras = new Set(ids);
     const seen = /* @__PURE__ */ new Set();
     return rawStreams.map((item) => {
       if (!isObject(item)) {
         return null;
       }
-      const camera = normalizeCameraEntityId(item.camera ?? item.camera_entity ?? item.camera_id) || cameraIds[0] || "";
+      const camera = normalizeCameraEntityId(item.camera ?? item.camera_entity ?? item.camera_id) || ids[0] || "";
       if (!camera || seen.has(camera) || validCameras.size && !validCameras.has(camera)) {
         return null;
       }
@@ -1432,10 +1483,12 @@
         muted: item.muted !== false,
         controls: item.controls === true
       };
-    }).filter(Boolean).slice(0, MAX_CAMERAS);
+    }).filter((item) => item !== null).slice(0, MAX_CAMERAS);
   }
   function compactCameraStreams(rawStreams = []) {
+    if (!Array.isArray(rawStreams)) return [];
     return rawStreams.map((item) => {
+      if (!isObject(item)) return null;
       if (item.provider === "frigate_go2rtc") {
         return {
           camera: item.camera,
@@ -1472,7 +1525,7 @@
         ...item.muted === false ? { muted: false } : {},
         ...item.controls === true ? { controls: true } : {}
       };
-    }).filter(Boolean);
+    }).filter((item) => item !== null);
   }
   var SIGNED_PATH_CACHE = /* @__PURE__ */ new WeakMap();
   function signedPathCacheForHass(hass) {
@@ -1488,9 +1541,10 @@
     return cache;
   }
   async function signHomeAssistantPath(hass, path, expires = 24 * 60 * 60) {
-    if (!path || typeof hass?.callWS !== "function") {
+    if (typeof path !== "string" || !path || typeof hass?.callWS !== "function") {
       return "";
     }
+    if (!Number.isFinite(expires)) expires = 24 * 60 * 60;
     const cache = signedPathCacheForHass(hass);
     const cacheKey = `${path}|${expires}`;
     const cached = cache?.get(cacheKey);
@@ -1502,14 +1556,14 @@
       path,
       expires
     })).then((response) => {
-      const signedPath = String(response?.path || "").trim();
+      const signedPath = isObject(response) && typeof response.path === "string" ? response.path.trim() : "";
       if (!signedPath) {
         throw new Error("Home Assistant returned an empty signed go2rtc path");
       }
       return typeof hass?.hassUrl === "function" ? hass.hassUrl(signedPath) : new URL(signedPath, window.location.origin).toString();
     });
     cache?.set(cacheKey, {
-      expiresAt: Date.now() + Math.max(60, expires - 300) * 1e3,
+      expiresAt: Date.now() + Math.max(0, Math.min(expires, Math.max(60, expires - 300))) * 1e3,
       promise
     });
     try {
@@ -1521,7 +1575,8 @@
       throw error;
     }
   }
-  async function resolveGo2rtcPlayerSource(hass, streamConfig) {
+  async function resolveGo2rtcPlayerSource(hass, value) {
+    const streamConfig = isObject(value) ? value : {};
     const stream = String(streamConfig?.stream || "").trim();
     if (streamConfig?.provider === "frigate_go2rtc") {
       return signHomeAssistantPath(
@@ -1554,8 +1609,9 @@
     entity: "camera.entrada",
     name: "Entrada"
   };
-  function normalizeConfig(rawConfig) {
-    const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  function normalizeConfig(rawConfig = {}) {
+    const raw = isObject(rawConfig) ? rawConfig : {};
+    const config = mergeConfig(DEFAULT_CONFIG, raw);
     const cameraIds = normalizeCameras(config);
     config.cameras = cameraIds;
     config.entity = cameraIds[0] || String(config.entity ?? "").trim();
@@ -1577,7 +1633,7 @@
         urlKey: "tap_url",
         navigationKey: "navigation_path",
         newTabKey: "tap_new_tab"
-      }, rawConfig?.tap_action ?? config.tap_action, "more-info");
+      }, raw.tap_action ?? config.tap_action, "more-info");
       applyTap(config, {
         actionKey: "hold_action",
         serviceKey: "hold_service",
@@ -1586,7 +1642,7 @@
         urlKey: "hold_url",
         navigationKey: "hold_navigation_path",
         newTabKey: "hold_new_tab"
-      }, rawConfig?.hold_action ?? config.hold_action, "none");
+      }, raw.hold_action ?? config.hold_action, "none");
     }
     config.tap_action = TAP_ACTIONS.has(normalizeTextKey(config.tap_action)) ? normalizeTextKey(config.tap_action) : DEFAULT_CONFIG.tap_action;
     config.hold_action = HOLD_ACTIONS.has(normalizeTextKey(config.hold_action)) ? normalizeTextKey(config.hold_action) : DEFAULT_CONFIG.hold_action;

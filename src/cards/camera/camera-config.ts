@@ -1,4 +1,3 @@
-// @ts-nocheck -- merged Lovelace YAML is projected into the runtime camera config.
 import { CAMERA_LAYOUT, CAMERA_PRESENTATION, HOLD_ACTIONS, TAP_ACTIONS } from "./camera-constants";
 import { deepClone, isObject } from "./camera-runtime";
 import {
@@ -19,8 +18,9 @@ export const STUB_CONFIG = {
   name: "Entrada",
 };
 
-export function normalizeConfig(rawConfig) {
-  const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+export function normalizeConfig(rawConfig: unknown = {}) {
+  const raw = isObject(rawConfig) ? rawConfig : {};
+  const config = mergeConfig(DEFAULT_CONFIG, raw);
   const cameraIds = normalizeCameras(config);
   config.cameras = cameraIds;
   config.entity = cameraIds[0] || String(config.entity ?? "").trim();
@@ -44,7 +44,7 @@ export function normalizeConfig(rawConfig) {
       urlKey: "tap_url",
       navigationKey: "navigation_path",
       newTabKey: "tap_new_tab",
-    }, rawConfig?.tap_action ?? config.tap_action, "more-info");
+    }, raw.tap_action ?? config.tap_action, "more-info");
     applyTap(config, {
       actionKey: "hold_action",
       serviceKey: "hold_service",
@@ -53,7 +53,7 @@ export function normalizeConfig(rawConfig) {
       urlKey: "hold_url",
       navigationKey: "hold_navigation_path",
       newTabKey: "hold_new_tab",
-    }, rawConfig?.hold_action ?? config.hold_action, "none");
+    }, raw.hold_action ?? config.hold_action, "none");
   }
 
   config.tap_action = TAP_ACTIONS.has(normalizeTextKey(config.tap_action))
@@ -62,7 +62,7 @@ export function normalizeConfig(rawConfig) {
   config.hold_action = HOLD_ACTIONS.has(normalizeTextKey(config.hold_action))
     ? normalizeTextKey(config.hold_action)
     : DEFAULT_CONFIG.hold_action;
-  const serializeActionObject = value => (
+  const serializeActionObject = (value: unknown) => (
     isObject(value) ? JSON.stringify(value) : String(value ?? "").trim()
   );
   config.tap_service = String(config.tap_service ?? "").trim();

@@ -1,6 +1,17 @@
-// @ts-nocheck -- camera stream, proxy and config helpers stay loosely typed until remaining unknowns are narrowed.
+import { appendUrlQueryParam } from "../../shared/url-query";
+import type { HassEntity, HomeAssistant } from "../../core/types/home-assistant";
+export { getStubEntityId, applyStubEntity } from "../../shared/editor-entity-helpers";
+export { setByPath } from "../../shared/editor-array-paths";
+export interface CameraHass {
+  connection?: unknown;
+  auth?: unknown;
+  callWS?: HomeAssistant["callWS"];
+  callService?: HomeAssistant["callService"];
+  hassUrl?: (path: string) => string;
+  config?: { components?: unknown };
+}
+interface SignedPathEntry { expiresAt: number; promise: Promise<string> }
 import {
-  HOLD_ACTIONS,
   MAX_CAMERAS,
   STREAM_MODES,
   STREAM_PROVIDERS,
@@ -15,86 +26,56 @@ import {
 } from "./camera-runtime";
 import { DEFAULT_CONFIG } from "./camera-defaults";
 
-export function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
-  return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
-}
-
-export function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
-  const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
-  if (!entityId) {
-    return config;
-  }
-  config.entity = entityId;
-  config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
-  return config;
-}
-
-export function mergeConfig(base, override) {
+export function mergeConfig(base: Record<string, unknown>, override: unknown): Record<string, unknown>;
+export function mergeConfig(base: unknown, override: unknown): unknown;
+export function mergeConfig(base: unknown, override: unknown): unknown {
   if (Array.isArray(base)) {
-    return Array.isArray(override) ? override.map(item => deepClone(item)) : deepClone(base);
+    return Array.isArray(override) ? override.map((item: unknown) => deepClone(item)) : deepClone(base);
   }
   if (!isObject(base)) {
     return override === undefined ? base : override;
   }
-  const result = {};
-  const keys = new Set([...Object.keys(base), ...Object.keys(override || {})]);
+  const result: Record<string, unknown> = {};
+  const source = isObject(override) ? override : {};
+  const keys = new Set([...Object.keys(base), ...Object.keys(source)]);
   keys.forEach(key => {
     if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
       return;
     }
-    if (isObject(base[key]) && isObject(override?.[key]) && !Array.isArray(base[key])) {
-      result[key] = mergeConfig(base[key], override[key]);
+    if (isObject(base[key]) && isObject(source[key]) && !Array.isArray(base[key])) {
+      result[key] = mergeConfig(base[key], source[key]);
       return;
     }
-    result[key] = override?.[key] === undefined ? deepClone(base[key]) : deepClone(override[key]);
+    result[key] = source[key] === undefined ? deepClone(base[key]) : deepClone(source[key]);
   });
   return result;
 }
 
 
-export function setByPath(target, path, value) {
-  const parts = String(path || "").split(".");
-  let cursor = target;
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-      cursor[key] = /^\d+$/.test(parts[index + 1]) ? [] : {};
-    }
-    cursor = cursor[key];
-  }
-  cursor[parts[parts.length - 1]] = value;
-}
-
-
-export function normalizeTextKey(value) {
+export function normalizeTextKey(value: unknown) {
   return String(value ?? "").trim().toLowerCase();
 }
 
-export function isUnavailableState(state) {
+export function isUnavailableState(state: HassEntity | null | undefined) {
   const key = normalizeTextKey(state?.state);
   return key === "unavailable" || key === "unknown";
 }
 
-export function appendQueryParam(url, key, value) {
-  const safeUrl = String(url || "").trim();
-  if (!safeUrl || value === undefined || value === null || value === "") {
-    return safeUrl;
-  }
-  const separator = safeUrl.includes("?") ? "&" : "?";
-  return `${safeUrl}${separator}${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`;
+export function appendQueryParam(url: unknown, key: unknown, value: unknown) {
+  return appendUrlQueryParam(url, key, value);
 }
 
-export function isUsableCameraAccessToken(token) {
+export function isUsableCameraAccessToken(token: unknown) {
   const value = String(token ?? "").trim();
   return Boolean(value) && value !== "undefined" && value !== "null";
 }
 
-export function parseCameraProxyAuth(url) {
+export function parseCameraProxyAuth(url: unknown) {
   try {
     const parsed = new URL(String(url || "").trim(), "http://localhost");
     const match = parsed.pathname.match(/\/api\/camera_proxy\/([^/?]+)/i);
     return {
-      entityId: match ? decodeURIComponent(match[1]) : "",
+      entityId: match ? decodeURIComponent(match[1] ?? "") : "",
       accessToken: String(parsed.searchParams.get("token") || "").trim(),
     };
   } catch (_error) {
@@ -102,14 +83,14 @@ export function parseCameraProxyAuth(url) {
   }
 }
 
-export function formatRelativeAge(timestamp, locale = "en", now = Date.now()) {
-  const value = new Date(timestamp || "").getTime();
-  if (!Number.isFinite(value)) {
+export function formatRelativeAge(timestamp: unknown, locale = "en", now = Date.now()) {
+  const value = (timestamp instanceof Date ? timestamp : typeof timestamp === "string" || typeof timestamp === "number" ? new Date(timestamp) : new Date(NaN)).getTime();
+  if (!Number.isFinite(value) || !Number.isFinite(now)) {
     return "";
   }
   const elapsedSeconds = Math.max(0, Math.floor((Number(now) - value) / 1000));
   let amount = elapsedSeconds;
-  let unit = "second";
+  let unit: Intl.RelativeTimeFormatUnit = "second";
   if (elapsedSeconds >= 86400) {
     amount = Math.max(1, Math.floor(elapsedSeconds / 86400));
     unit = "day";
@@ -132,7 +113,7 @@ export function formatRelativeAge(timestamp, locale = "en", now = Date.now()) {
   }
 }
 
-export function parseServiceData(rawValue) {
+export function parseServiceData(rawValue: unknown) {
   if (!rawValue) {
     return {};
   }
@@ -140,14 +121,14 @@ export function parseServiceData(rawValue) {
     return deepClone(rawValue);
   }
   try {
-    const parsed = JSON.parse(rawValue);
+    const parsed: unknown = typeof rawValue === "string" ? JSON.parse(rawValue) : undefined;
     return isObject(parsed) ? parsed : {};
   } catch (_error) {
     return {};
   }
 }
 
-export function fireEvent(node, type, detail, options) {
+export function fireEvent(node: EventTarget, type: string, detail: unknown, options?: { bubbles?: boolean; composed?: boolean; cancelable?: boolean }) {
   node.dispatchEvent(new CustomEvent(type, {
     bubbles: options?.bubbles !== false,
     composed: options?.composed !== false,
@@ -156,17 +137,19 @@ export function fireEvent(node, type, detail, options) {
   }));
 }
 
-export function stripEqualToDefaults(config, defaults = DEFAULT_CONFIG) {
-  const result = deepClone(config || {});
-  const walk = (current, base, path = "") => {
+export function stripEqualToDefaults(config: unknown, defaults: unknown = DEFAULT_CONFIG) {
+  const result = deepClone(isObject(config) ? config : {});
+  const walk = (current: unknown, base: unknown, path = ""): void => {
     if (!isObject(current) || !isObject(base)) {
       return;
     }
     Object.keys(current).forEach(key => {
       const nextPath = path ? `${path}.${key}` : key;
       if (isObject(current[key]) && isObject(base[key]) && !Array.isArray(current[key])) {
-        walk(current[key], base[key], nextPath);
-        if (!Object.keys(current[key]).length) {
+        const child = current[key];
+        if (!isObject(child)) return;
+        walk(child, base[key], nextPath);
+        if (!Object.keys(child).length) {
           delete current[key];
         }
         return;
@@ -180,17 +163,18 @@ export function stripEqualToDefaults(config, defaults = DEFAULT_CONFIG) {
   return result;
 }
 
-export function normalizeCameraEntityId(value) {
+export function normalizeCameraEntityId(value: unknown) {
   if (isObject(value)) {
     return String(value.entity ?? value.entity_id ?? "").trim();
   }
   return String(value ?? "").trim();
 }
 
-export function normalizeCameras(config = {}) {
-  const seen = new Set();
-  const ids = [];
-  const pushId = value => {
+export function normalizeCameras(value: unknown = {}) {
+  const config = isObject(value) ? value : {};
+  const seen = new Set<string>();
+  const ids: string[] = [];
+  const pushId = (value: unknown) => {
     const id = normalizeCameraEntityId(value);
     if (!id || seen.has(id)) {
       return;
@@ -205,11 +189,11 @@ export function normalizeCameras(config = {}) {
   return ids.slice(0, MAX_CAMERAS);
 }
 
-export function normalizeExpandedActions(rawActions = []) {
+export function normalizeExpandedActions(rawActions: unknown = []) {
   if (!Array.isArray(rawActions)) {
     return [];
   }
-  return rawActions.map(item => {
+  return rawActions.map((item: unknown) => {
     if (!isObject(item)) {
       return null;
     }
@@ -235,47 +219,49 @@ export function normalizeExpandedActions(rawActions = []) {
       navigation_path: String(item.navigation_path ?? "").trim(),
       tap_new_tab: item.tap_new_tab === true,
     };
-  }).filter(Boolean).slice(0, 8);
+  }).filter(item => item !== null).slice(0, 8);
 }
 
-export function normalizeCameraActions(rawActions = [], cameraIds = []) {
+export function normalizeCameraActions(rawActions: unknown = [], cameraIds: unknown = []) {
   if (!Array.isArray(rawActions)) {
     return [];
   }
-  const validCameras = new Set(cameraIds);
-  return rawActions.map(item => {
+  const ids = Array.isArray(cameraIds) ? cameraIds.filter((id: unknown): id is string => typeof id === "string") : [];
+  const validCameras = new Set(ids);
+  return rawActions.map((item: unknown) => {
     if (!isObject(item)) {
       return null;
     }
-    const camera = normalizeCameraEntityId(item.camera ?? item.camera_entity ?? item.camera_id) || cameraIds[0] || "";
+    const camera = normalizeCameraEntityId(item.camera ?? item.camera_entity ?? item.camera_id) || ids[0] || "";
     const action = normalizeExpandedActions([item])[0];
     if (!camera || !action || (validCameras.size && !validCameras.has(camera))) {
       return null;
     }
     return { camera, ...action };
-  }).filter(Boolean).slice(0, MAX_CAMERAS * 8);
+  }).filter(item => item !== null).slice(0, MAX_CAMERAS * 8);
 }
 
-export function normalizeCameraTapActions(rawActions = [], cameraIds = []) {
+export function normalizeCameraTapActions(rawActions: unknown = [], cameraIds: unknown = []) {
   if (!Array.isArray(rawActions)) {
     return [];
   }
-  const validCameras = new Set(cameraIds);
-  const seen = new Set();
+  const ids = Array.isArray(cameraIds) ? cameraIds.filter((id: unknown): id is string => typeof id === "string") : [];
+  const validCameras = new Set(ids);
+  const seen = new Set<string>();
   const applyTap = window.NodaliaUtils?.applyCardTapActionField?.bind(window.NodaliaUtils);
-  const serializeActionObject = value => (
+  const serializeActionObject = (value: unknown) => (
     isObject(value) ? JSON.stringify(value) : String(value ?? "").trim()
   );
-  return rawActions.map(item => {
+  return rawActions.map((item: unknown) => {
     if (!isObject(item)) {
       return null;
     }
-    const camera = normalizeCameraEntityId(item.camera ?? item.camera_entity ?? item.camera_id) || cameraIds[0] || "";
+    const camera = normalizeCameraEntityId(item.camera ?? item.camera_entity ?? item.camera_id) || ids[0] || "";
     if (!camera || seen.has(camera) || (validCameras.size && !validCameras.has(camera))) {
       return null;
     }
     seen.add(camera);
-    const normalized = {
+    const normalized: Record<string, unknown> = {
       camera,
       tap_action: item.tap_action ?? "toggle",
       tap_service: item.tap_service ?? "",
@@ -297,26 +283,28 @@ export function normalizeCameraTapActions(rawActions = [], cameraIds = []) {
       }, item.tap_action ?? "toggle", "toggle");
     }
     const action = normalizeTextKey(normalized.tap_action || "toggle");
-    normalized.tap_action = TAP_ACTIONS.has(action) ? action : "toggle";
-    normalized.tap_service = String(normalized.tap_service ?? "").trim();
-    normalized.tap_service_data = serializeActionObject(normalized.tap_service_data);
-    normalized.tap_service_target = serializeActionObject(normalized.tap_service_target);
-    normalized.tap_url = String(normalized.tap_url ?? "").trim();
-    normalized.navigation_path = String(normalized.navigation_path ?? "").trim();
-    normalized.tap_new_tab = normalized.tap_new_tab === true;
-    if (normalized.tap_action === "navigate" && !normalized.navigation_path && normalized.tap_url) {
-      normalized.navigation_path = normalized.tap_url;
-    }
-    return normalized;
-  }).filter(Boolean).slice(0, MAX_CAMERAS);
+    const tapAction = TAP_ACTIONS.has(action) ? action : "toggle";
+    const tapUrl = String(normalized.tap_url ?? "").trim();
+    const navigationPath = String(normalized.navigation_path ?? "").trim();
+    return {
+      camera,
+      tap_action: tapAction,
+      tap_service: String(normalized.tap_service ?? "").trim(),
+      tap_service_data: serializeActionObject(normalized.tap_service_data),
+      tap_service_target: serializeActionObject(normalized.tap_service_target),
+      tap_url: tapUrl,
+      navigation_path: tapAction === "navigate" && !navigationPath && tapUrl ? tapUrl : navigationPath,
+      tap_new_tab: normalized.tap_new_tab === true,
+    };
+  }).filter(item => item !== null).slice(0, MAX_CAMERAS);
 }
 
-export function compactCameraTapAction(rawAction = {}, fallbackAction = "toggle") {
-  const source = isObject(rawAction) ? rawAction : { tap_action: rawAction };
+export function compactCameraTapAction(rawAction: unknown = {}, fallbackAction = "toggle") {
+  const source: Record<string, unknown> = isObject(rawAction) ? rawAction : { tap_action: rawAction };
   const action = TAP_ACTIONS.has(normalizeTextKey(source.tap_action))
     ? normalizeTextKey(source.tap_action)
     : fallbackAction;
-  const compact = { tap_action: action };
+  const compact: Record<string, unknown> = { tap_action: action };
   if (action === "service") {
     compact.tap_service = String(source.tap_service || "").trim();
     if (String(source.tap_service_data || "").trim()) compact.tap_service_data = source.tap_service_data;
@@ -330,10 +318,11 @@ export function compactCameraTapAction(rawAction = {}, fallbackAction = "toggle"
   return compact;
 }
 
-export function compactCameraTapActions(rawActions = [], globalTapConfig = "toggle") {
+export function compactCameraTapActions(rawActions: unknown = [], globalTapConfig: unknown = "toggle") {
+  if (!Array.isArray(rawActions)) return [];
   const fallback = compactCameraTapAction(globalTapConfig, "toggle");
-  return rawActions.map(item => {
-    if (!item?.camera) {
+  return rawActions.map((item: unknown) => {
+    if (!isObject(item) || !item.camera) {
       return null;
     }
     const actionConfig = compactCameraTapAction(item, "toggle");
@@ -341,24 +330,25 @@ export function compactCameraTapActions(rawActions = [], globalTapConfig = "togg
       return null;
     }
     return { camera: item.camera, ...actionConfig };
-  }).filter(Boolean);
+  }).filter(item => item !== null);
 }
 
-export function cameraStreamName(entityId) {
+export function cameraStreamName(entityId: unknown) {
   return String(entityId || "").trim().replace(/^camera\./, "");
 }
 
-export function normalizeCameraStreams(rawStreams = [], cameraIds = []) {
+export function normalizeCameraStreams(rawStreams: unknown = [], cameraIds: unknown = []) {
   if (!Array.isArray(rawStreams)) {
     return [];
   }
-  const validCameras = new Set(cameraIds);
-  const seen = new Set();
-  return rawStreams.map(item => {
+  const ids = Array.isArray(cameraIds) ? cameraIds.filter((id: unknown): id is string => typeof id === "string") : [];
+  const validCameras = new Set(ids);
+  const seen = new Set<string>();
+  return rawStreams.map((item: unknown) => {
     if (!isObject(item)) {
       return null;
     }
-    const camera = normalizeCameraEntityId(item.camera ?? item.camera_entity ?? item.camera_id) || cameraIds[0] || "";
+    const camera = normalizeCameraEntityId(item.camera ?? item.camera_entity ?? item.camera_id) || ids[0] || "";
     if (!camera || seen.has(camera) || (validCameras.size && !validCameras.has(camera))) {
       return null;
     }
@@ -378,11 +368,13 @@ export function normalizeCameraStreams(rawStreams = [], cameraIds = []) {
       muted: item.muted !== false,
       controls: item.controls === true,
     };
-  }).filter(Boolean).slice(0, MAX_CAMERAS);
+  }).filter(item => item !== null).slice(0, MAX_CAMERAS);
 }
 
-export function compactCameraStreams(rawStreams = []) {
-  return rawStreams.map(item => {
+export function compactCameraStreams(rawStreams: unknown = []) {
+  if (!Array.isArray(rawStreams)) return [];
+  return rawStreams.map((item: unknown) => {
+    if (!isObject(item)) return null;
     if (item.provider === "frigate_go2rtc") {
       return {
         camera: item.camera,
@@ -419,28 +411,29 @@ export function compactCameraStreams(rawStreams = []) {
       ...(item.muted === false ? { muted: false } : {}),
       ...(item.controls === true ? { controls: true } : {}),
     };
-  }).filter(Boolean);
+  }).filter(item => item !== null);
 }
 
-export const SIGNED_PATH_CACHE = new WeakMap();
+export const SIGNED_PATH_CACHE = new WeakMap<object, Map<string, SignedPathEntry>>();
 
-export function signedPathCacheForHass(hass) {
+export function signedPathCacheForHass(hass: CameraHass | null | undefined) {
   const owner = hass?.connection || hass?.auth || hass;
   if (!owner || (typeof owner !== "object" && typeof owner !== "function")) {
     return null;
   }
   let cache = SIGNED_PATH_CACHE.get(owner);
   if (!cache) {
-    cache = new Map();
+    cache = new Map<string, SignedPathEntry>();
     SIGNED_PATH_CACHE.set(owner, cache);
   }
   return cache;
 }
 
-export async function signHomeAssistantPath(hass, path, expires = 24 * 60 * 60) {
-  if (!path || typeof hass?.callWS !== "function") {
+export async function signHomeAssistantPath(hass: CameraHass | null | undefined, path: unknown, expires = 24 * 60 * 60) {
+  if (typeof path !== "string" || !path || typeof hass?.callWS !== "function") {
     return "";
   }
+  if (!Number.isFinite(expires)) expires = 24 * 60 * 60;
   const cache = signedPathCacheForHass(hass);
   const cacheKey = `${path}|${expires}`;
   const cached = cache?.get(cacheKey);
@@ -452,7 +445,7 @@ export async function signHomeAssistantPath(hass, path, expires = 24 * 60 * 60) 
     path,
     expires,
   })).then(response => {
-    const signedPath = String(response?.path || "").trim();
+    const signedPath = isObject(response) && typeof response.path === "string" ? response.path.trim() : "";
     if (!signedPath) {
       throw new Error("Home Assistant returned an empty signed go2rtc path");
     }
@@ -461,7 +454,7 @@ export async function signHomeAssistantPath(hass, path, expires = 24 * 60 * 60) 
       : new URL(signedPath, window.location.origin).toString();
   });
   cache?.set(cacheKey, {
-    expiresAt: Date.now() + Math.max(60, expires - 300) * 1000,
+    expiresAt: Date.now() + Math.max(0, Math.min(expires, Math.max(60, expires - 300))) * 1000,
     promise,
   });
   try {
@@ -474,7 +467,8 @@ export async function signHomeAssistantPath(hass, path, expires = 24 * 60 * 60) 
   }
 }
 
-export async function resolveGo2rtcPlayerSource(hass, streamConfig) {
+export async function resolveGo2rtcPlayerSource(hass: CameraHass | null | undefined, value: unknown) {
+  const streamConfig = isObject(value) ? value : {};
   const stream = String(streamConfig?.stream || "").trim();
   if (streamConfig?.provider === "frigate_go2rtc") {
     return signHomeAssistantPath(

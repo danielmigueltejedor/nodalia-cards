@@ -339,6 +339,25 @@
     return mergedConfig;
   }
 
+  // src/shared/url-query.ts
+  function appendUrlQueryParam(url, key, value, replaceExisting = false) {
+    const rawUrl = String(url || "").trim();
+    if (!rawUrl || value === null || value === void 0 || value === "") {
+      return rawUrl;
+    }
+    const fragmentIndex = rawUrl.indexOf("#");
+    const base = fragmentIndex < 0 ? rawUrl : rawUrl.slice(0, fragmentIndex);
+    const fragment = fragmentIndex < 0 ? "" : rawUrl.slice(fragmentIndex);
+    const encodedKey = encodeURIComponent(String(key));
+    const encodedValue = encodeURIComponent(String(value));
+    const escapedKey = encodedKey.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const existingPattern = new RegExp(`([?&])${escapedKey}=[^&]*`);
+    if (replaceExisting && existingPattern.test(base)) {
+      return base.replace(existingPattern, `$1${encodedKey}=${encodedValue}`) + fragment;
+    }
+    return `${base}${base.includes("?") ? "&" : "?"}${encodedKey}=${encodedValue}${fragment}`;
+  }
+
   // src/shared/render-signature.ts
   function toKey(value) {
     if (value === null || value === void 0) return "";
@@ -418,21 +437,7 @@
 
   // src/cards/navigation/navigation-helpers.ts
   function appendQueryParam(url, key, value) {
-    const rawUrl = String(url || "").trim();
-    if (!rawUrl || value === null || value === void 0 || value === "") {
-      return rawUrl;
-    }
-    const fragmentIndex = rawUrl.indexOf("#");
-    const base = fragmentIndex < 0 ? rawUrl : rawUrl.slice(0, fragmentIndex);
-    const fragment = fragmentIndex < 0 ? "" : rawUrl.slice(fragmentIndex);
-    const encodedKey = encodeURIComponent(String(key));
-    const encodedValue = encodeURIComponent(String(value));
-    const escapedKey = encodedKey.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const existingPattern = new RegExp(`([?&])${escapedKey}=[^&]*`);
-    if (existingPattern.test(base)) {
-      return base.replace(existingPattern, `$1${encodedKey}=${encodedValue}`) + fragment;
-    }
-    return `${base}${base.includes("?") ? "&" : "?"}${encodedKey}=${encodedValue}${fragment}`;
+    return appendUrlQueryParam(url, key, value, true);
   }
   function arrayFromCsv(value) {
     return String(value || "").split(",").map((item) => item.trim()).filter(Boolean);

@@ -220,6 +220,45 @@
     }
   };
 
+  // src/shared/editor-array-paths.ts
+  var isObject2 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var isUnsafeConfigPathKey2 = (key) => key === "__proto__" || key === "constructor" || key === "prototype";
+  var readNode = (node, key) => {
+    if (!Object.prototype.hasOwnProperty.call(node, key)) return void 0;
+    return Array.isArray(node) ? /^\d+$/.test(key) ? node[Number(key)] : void 0 : node[key];
+  };
+  function writeNode(node, key, value) {
+    if (!Array.isArray(node)) {
+      Object.defineProperty(node, key, { configurable: true, enumerable: true, writable: true, value });
+      return true;
+    }
+    if (!/^\d+$/.test(key)) return false;
+    const index = Number(key);
+    if (!Number.isSafeInteger(index) || index >= 4294967295) return false;
+    node[index] = value;
+    return true;
+  }
+  function setByPath(target, path, value) {
+    if (!isObject2(target) && !Array.isArray(target) || typeof path !== "string") return;
+    const parts = String(path || "").split(".");
+    if (!parts.length || parts.some(isUnsafeConfigPathKey2)) return;
+    let cursor = target;
+    for (let index = 0; index < parts.length - 1; index += 1) {
+      const key = parts[index];
+      if (key === void 0) return;
+      const child = readNode(cursor, key);
+      if (isObject2(child) || Array.isArray(child)) {
+        cursor = child;
+      } else {
+        const next = /^\d+$/.test(parts[index + 1] ?? "") ? [] : {};
+        if (!writeNode(cursor, key, next)) return;
+        cursor = next;
+      }
+    }
+    const leaf = parts[parts.length - 1];
+    if (leaf !== void 0) writeNode(cursor, leaf, value);
+  }
+
   // src/cards/room-summary/room-summary-helpers.ts
   function normalizeTextKey(v) {
     return String(v ?? "").trim().toLowerCase();
@@ -297,37 +336,6 @@
     }
     const items = list.splice(fromIndex, 1);
     list.splice(toIndex, 0, ...items);
-  }
-  var readNode = (node, key) => Array.isArray(node) ? node[Number(key)] : node[key];
-  function writeNode(node, key, value) {
-    if (!Array.isArray(node)) {
-      node[key] = value;
-      return true;
-    }
-    if (!/^\d+$/.test(key)) return false;
-    const index = Number(key);
-    if (!Number.isSafeInteger(index) || index >= 4294967295) return false;
-    node[index] = value;
-    return true;
-  }
-  function setByPath(target, path, value) {
-    const parts = String(path || "").split(".");
-    if (!parts.length || parts.some(isUnsafeConfigPathKey)) return;
-    let cursor = target;
-    for (let index = 0; index < parts.length - 1; index += 1) {
-      const key = parts[index];
-      if (key === void 0) return;
-      const child = readNode(cursor, key);
-      if (isObject(child) || Array.isArray(child)) {
-        cursor = child;
-      } else {
-        const next = /^\d+$/.test(parts[index + 1] ?? "") ? [] : {};
-        if (!writeNode(cursor, key, next)) return;
-        cursor = next;
-      }
-    }
-    const leaf = parts[parts.length - 1];
-    if (leaf !== void 0) writeNode(cursor, leaf, value);
   }
 
   // src/cards/room-summary/room-summary-config.ts
