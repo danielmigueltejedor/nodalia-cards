@@ -367,9 +367,10 @@ published `window.Nodalia*` APIs and root JS filenames. Pure modules do not muta
 browser globals; their runtime adapters own that boundary. Existing consumers
 can migrate to imports without breaking users' standalone resources.
 
-Five config/helper cycles were removed by extracting checked defaults modules.
+Six config/helper cycles were removed by extracting checked defaults modules.
 Do not place defaults in modules that import their own normalizers. One existing
-Notifications config/helper cycle remains tracked in `scripts/import-cycle-debt.json`.
+Notifications normalization now lives below the config and presentation helpers;
+no runtime import cycles remain.
 94 legacy modules still suppress typechecking; see `scripts/type-debt.json`.
 **The full TypeScript migration is not complete.** Checked modules and extracted
 contracts must grow without adding suppressions or casts to hide errors. The

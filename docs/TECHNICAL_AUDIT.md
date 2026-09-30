@@ -80,7 +80,7 @@ assets and include release-gate tests. Record remaining unchecked modules honest
   JavaScript file receives a syntax check. Release preparation requires curated notes.
 - Camera stream, render signatures and Room Summary projections have checked TS
   sources and compatibility adapters. Camera portal listener ownership is corrected.
-- Five config/helper cycles were removed through defaults modules. Scenes config
+- Six config/helper cycles were removed through defaults and checked Notifications normalization modules. Scenes config
   and helpers now pass strict checking and lint without suppression; malformed YAML,
   scene rows, styles and editor placeholders have behavioral coverage.
 - Media transport uses equal side columns. Cached palettes apply synchronously;
@@ -90,12 +90,11 @@ assets and include release-gate tests. Record remaining unchecked modules honest
   image data exists; fetching an unseen image still depends on the network.
 - HA fixture construction is shared by browser and Node tests. Developer guides
   cover adding cards, testing and release preparation.
-- Latest local validation: strict types, lint, translations, build and 553 unit tests
+- Latest local validation: strict types, lint, translations, build and 555 unit tests
   pass. Full Chromium/WebKit/iPhone run: 182 passed, one existing platform skip;
   subsequent Scenes changes: all nine layout/browser regressions passed. Linux CI
   remains required for Firefox and the final committed artifacts.
 
-The full TS migration remains open: **94 unchecked modules and one Notifications
-runtime cycle** are explicitly tracked. No new suppressions or `any` shortcuts were
+The full TS migration remains open: **94 unchecked modules and no runtime import cycles** are explicitly tracked. No new suppressions or `any` shortcuts were
 introduced. This stage is foundational work, not a declaration that the entire
 migration is finished.
