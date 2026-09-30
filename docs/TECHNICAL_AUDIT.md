@@ -338,3 +338,24 @@ cases cover malformed YAML, CSS injection, actions, bounds, source rows and
 history aliases. All 642 unit tests and the full local browser suite (242 passed,
 one existing platform skip) pass. Remaining unchecked modules: 71; the views
 and helper modules of these cards remain in the open migration.
+
+
+## Weather helper findings — 2026-10-01
+
+Weather still suppresses forecast/date/unit helpers and duplicates checked stub,
+size and editor compaction logic. Its numeric coercion treats null or blank data
+as zero; absent precipitation probability can mask a real precipitation amount
+with “0%”, and absent dates can render the Unix epoch. Guard missing values while
+keeping actual zero, numeric strings and epoch timestamp 0. Check forecast record
+boundaries and retain condition/Meteoalarm/unit mappings and valid date/locale
+formatting. Share exact editor compaction with Insignia, preserving false/zero
+and rejecting unsafe keys.
+
+Weather helpers now pass strict checking and typed lint. The actual view's two
+numeric converters also use the checked parser, so missing values stay absent
+through rendering. Reuse shared stub/size helpers and checked editor compaction
+with Insignia. Seven new unit cases and the rendered forecast regression cover
+missing/zero distinctions, precipitation fallback, dates, mappings and units.
+2,103 valid helper results match merged main. All 649 unit tests and the full
+local browser suite (245 passed, one existing platform skip) pass. Remaining unchecked
+modules: 70. Weather's view and editor still remain in the migration.

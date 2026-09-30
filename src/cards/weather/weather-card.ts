@@ -15,6 +15,7 @@ import {
   formatForecastDateTime,
   formatMeteoalarmDate,
   formatNumber,
+  parseWeatherNumericValue,
   getConditionAccent,
   getConditionIcon,
   getConditionIconMotionClass,
@@ -426,8 +427,8 @@ class NodaliaWeatherCard extends HTMLElement {
   }
 
   _convertTemperatureValue(value, fromUnit, toUnit) {
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric)) {
+    const numeric = parseWeatherNumericValue(value);
+    if (numeric === null) {
       return null;
     }
     if (fromUnit === toUnit) {
@@ -443,8 +444,8 @@ class NodaliaWeatherCard extends HTMLElement {
   }
 
   _convertWindSpeedValue(value, fromUnit, toUnit) {
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric)) {
+    const numeric = parseWeatherNumericValue(value);
+    if (numeric === null) {
       return null;
     }
     if (fromUnit === toUnit) {

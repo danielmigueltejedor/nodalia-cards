@@ -12,6 +12,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Keep missing Weather temperatures, dates and rain probabilities absent; preserve real zeros and show precipitation amounts when probability is unavailable.
+
 - Refresh colors based on theme variables immediately after theme changes; recognize modern translucent sRGB colors when choosing icon contrast.
 
 - Translate Vacuum’s charger-disconnected status and error sensor in every language; truncate long chips with an ellipsis while preserving the full label.
@@ -30,6 +32,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Remove Camera portal listeners from their owning shadow root.
 
 ### Maintenance
+
+- Check Weather forecast/unit helpers and share editor compaction with Insignia without changing valid forecast or unit behavior.
 
 - Check Weather, Circular Gauge and News configuration, preserving forecast/actions, gauge bounds and News source/history aliases while guarding nested styles.
 

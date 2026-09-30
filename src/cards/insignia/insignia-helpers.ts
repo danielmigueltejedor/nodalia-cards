@@ -5,36 +5,7 @@ export { formatEditorHexChannel, resolveEditorColorValue, formatEditorColorFromH
 import { isObject, isUnsafeConfigPathKey, normalizeTextKey } from "./insignia-runtime";
 import { DEFAULT_CONFIG } from "./insignia-defaults";
 
-export function compactConfig(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    return value.map(item => compactConfig(item)).filter(item => item !== undefined);
-  }
-
-  if (isObject(value)) {
-    const compacted: Record<string, unknown> = {};
-
-    Object.entries(value).forEach(([key, item]) => {
-      if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
-        return;
-      }
-      const cleaned = compactConfig(item);
-      const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
-      if (cleaned !== undefined && !isEmptyObject) {
-        compacted[key] = cleaned;
-      }
-    });
-
-    return compacted;
-  }
-
-  if (value === "" || value === null || value === undefined) {
-    return undefined;
-  }
-
-  return value;
-}
-
-
+export { compactConfig } from "../../shared/config-values";
 
 export function setByPath(target: Record<string, unknown>, path: string, value: unknown) {
   const parts = path.split(".");
