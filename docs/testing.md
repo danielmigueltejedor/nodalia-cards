@@ -36,7 +36,9 @@ Artwork tests use explicit delayed responses and synchronous cache assertions.
 
 `.github/workflows/quality.yml` is the shared gate for PRs and releases. Static
 validation and the four browsers run in parallel. Browser downloads are cached
-by OS/project/lockfile; system dependencies are still installed. Static validation
+by OS/project/lockfile using the official pinned cache action; system dependencies
+are still installed. The cache action uses Node 24 on GitHub-hosted runners; the
+project itself builds/tests with Node 22. Static validation
 regenerates translations and bundles and fails on `git diff --exit-code`.
 Never edit root generated JS or generated fixtures by hand.
 
