@@ -23,11 +23,157 @@
   var DATE_TIME_FORMATTER_CACHE_LIMIT = 48;
   var dateTimeFormatterCache = /* @__PURE__ */ new Map();
 
+  // src/shared/control-config.ts
+  function normalizeControlStyles(candidate, defaults, sanitize = window.NodaliaUtils.sanitizeCssValue) {
+    const utils2 = window.NodaliaUtils;
+    const source = utils2.isObject(candidate) ? candidate : {};
+    const result = {};
+    for (const [key, fallback] of Object.entries(defaults)) {
+      if (utils2.isUnsafeConfigPathKey(key)) continue;
+      result[key] = typeof fallback === "string" ? sanitize(source[key], fallback) : normalizeControlStyles(source[key], fallback, sanitize);
+    }
+    return result;
+  }
+  var actionFields = (prefix, fallback, navigationKey = `${prefix}_navigation_path`) => ({
+    actionKey: `${prefix}_action`,
+    serviceKey: `${prefix}_service`,
+    serviceDataKey: `${prefix}_service_data`,
+    serviceTargetKey: `${prefix}_service_target`,
+    urlKey: `${prefix}_url`,
+    navigationKey,
+    newTabKey: `${prefix}_new_tab`,
+    fallback
+  });
+  var FIELDS = [
+    actionFields("tap", "toggle", "navigation_path"),
+    actionFields("icon_tap", "", "icon_navigation_path"),
+    actionFields("hold", "more-info", "hold_navigation_path"),
+    actionFields("icon_hold", ""),
+    actionFields("double_tap", "none"),
+    actionFields("icon_double_tap", "")
+  ];
+
+  // src/shared/numeric-values.ts
+  function parseFiniteNumericValue(value) {
+    if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
   // src/cards/calendar/calendar-runtime.ts
   var utils = window.NodaliaUtils;
   var isObject = utils.isObject.bind(utils);
   var clamp = utils.clamp.bind(utils);
   var escapeHtml = utils.escapeHtml.bind(utils);
+  var deepClone = utils.deepClone.bind(utils);
+  var mergeConfig = utils.mergeDeep.bind(utils);
+
+  // src/shared/config-values.ts
+  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var unsafeKeys = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
+  function compactConfig(value) {
+    if (Array.isArray(value)) return value.map((item) => compactConfig(item)).filter((item) => item !== void 0);
+    if (isRecord(value)) {
+      const result = {};
+      for (const [key, item] of Object.entries(value)) {
+        if (unsafeKeys.has(key)) continue;
+        const cleaned = compactConfig(item);
+        if (cleaned !== void 0 && !(isRecord(cleaned) && Object.keys(cleaned).length === 0)) result[key] = cleaned;
+      }
+      return result;
+    }
+    return value === "" || value === null || value === void 0 ? void 0 : value;
+  }
+
+  // src/shared/weather-condition-icons.ts
+  function weatherConditionIcon(value) {
+    switch (String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "")) {
+      case "clear_night":
+        return "mdi:weather-night";
+      case "cloudy":
+        return "mdi:weather-cloudy";
+      case "exceptional":
+        return "mdi:alert-circle-outline";
+      case "fog":
+        return "mdi:weather-fog";
+      case "hail":
+        return "mdi:weather-hail";
+      case "lightning":
+        return "mdi:weather-lightning";
+      case "lightning_rainy":
+        return "mdi:weather-lightning-rainy";
+      case "partlycloudy":
+        return "mdi:weather-partly-cloudy";
+      case "pouring":
+        return "mdi:weather-pouring";
+      case "rainy":
+        return "mdi:weather-rainy";
+      case "snowy":
+        return "mdi:weather-snowy";
+      case "snowy_rainy":
+        return "mdi:weather-snowy-rainy";
+      case "sunny":
+        return "mdi:weather-sunny";
+      case "windy":
+      case "windy_variant":
+        return "mdi:weather-windy";
+      default:
+        return "mdi:weather-partly-cloudy";
+    }
+  }
+
+  // src/cards/calendar/calendar-defaults.ts
+  var DEFAULT_CONFIG = {
+    title: "Calendar",
+    icon: "mdi:calendar-month",
+    calendars: [],
+    time_range: "1w",
+    days_to_show: 7,
+    max_visible_events: 2,
+    refresh_interval: 300,
+    allow_delete: true,
+    weather_entity: "",
+    native_event_webhook: "",
+    security: {
+      allow_webhooks_for_non_admin: false
+    },
+    tint_auto: true,
+    haptics: {
+      enabled: true,
+      style: "medium",
+      fallback_vibrate: false
+    },
+    animations: {
+      enabled: true,
+      content_duration: 260
+    },
+    styles: {
+      card: {
+        background: "var(--ha-card-background)",
+        border: "1px solid var(--divider-color)",
+        border_radius: "var(--nodalia-card-border-radius, 28px)",
+        box_shadow: "var(--ha-card-box-shadow)",
+        padding: "14px",
+        gap: "12px"
+      },
+      icon: {
+        background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
+        on_color: "color-mix(in srgb, var(--primary-color) 52%, var(--primary-text-color))",
+        off_color: "color-mix(in srgb, var(--primary-text-color) 62%, var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 48%, transparent)))",
+        size: "38px"
+      },
+      tint: {
+        color: "var(--primary-color)"
+      },
+      title_size: "17px",
+      event_size: "13px",
+      chip_height: "24px",
+      chip_font_size: "11px",
+      chip_padding: "0 9px",
+      chip_border_radius: "999px",
+      chip_size: "11px"
+    }
+  };
 
   // src/shared/editor-color.ts
   var clamp2 = (value, max) => Math.max(0, Math.min(max, value));
@@ -113,61 +259,8 @@
     }
     return hue >= 35 && hue <= 165 || (hue >= 300 || hue <= 20);
   }
-  function deepClone(value) {
-    return JSON.parse(JSON.stringify(value));
-  }
-  function mergeConfig(base, override) {
-    if (Array.isArray(base)) {
-      return Array.isArray(override) ? deepClone(override) : deepClone(base);
-    }
-    if (!isObject(base)) {
-      return override === void 0 ? base : override;
-    }
-    const out = {};
-    const keys = /* @__PURE__ */ new Set([...Object.keys(base), ...Object.keys(override || {})]);
-    keys.forEach((key) => {
-      if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
-        return;
-      }
-      const baseValue = base[key];
-      const overrideValue = override ? override[key] : void 0;
-      if (overrideValue === void 0) {
-        out[key] = deepClone(baseValue);
-        return;
-      }
-      if (isObject(baseValue) && isObject(overrideValue)) {
-        out[key] = mergeConfig(baseValue, overrideValue);
-        return;
-      }
-      out[key] = deepClone(overrideValue);
-    });
-    return out;
-  }
-  function compactCalendarConfig(value) {
-    if (Array.isArray(value)) {
-      return value.map((item) => compactCalendarConfig(item)).filter((item) => item !== void 0);
-    }
-    if (isObject(value)) {
-      const compacted = {};
-      Object.entries(value).forEach(([key, item]) => {
-        if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
-          return;
-        }
-        const cleaned = compactCalendarConfig(item);
-        const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
-        if (cleaned !== void 0 && !isEmptyObject) {
-          compacted[key] = cleaned;
-        }
-      });
-      return compacted;
-    }
-    if (value === "" || value === null || value === void 0) {
-      return void 0;
-    }
-    return value;
-  }
   function sanitizeCalendarTint(value) {
-    const s = String(value ?? "").trim();
+    const s = sanitizeCssRuntimeValue(value);
     if (!s) {
       return "";
     }
@@ -216,14 +309,13 @@ ${metadata}` : metadata;
     if (!raw) {
       return "";
     }
-    if (/[<>{};"']/.test(raw) || raw.includes("/*") || raw.includes("*/") || /<\/style/i.test(raw) || /\burl\s*\(/i.test(raw) || /\b@import\b/i.test(raw)) {
+    if ([...raw].some((character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127) || /[<>{};"']/.test(raw) || raw.includes("/*") || raw.includes("*/") || /<\/style/i.test(raw) || /\burl\s*\(/i.test(raw) || /\b@import\b/i.test(raw)) {
       return "";
     }
     return raw;
   }
   function daysFromTimeRange(tr) {
-    const map = { "3d": 3, "1w": 7, "2w": 14, "1m": 31 };
-    return map[tr] || 7;
+    return (/* @__PURE__ */ new Map([["3d", 3], ["1w", 7], ["2w", 14], ["1m", 31]])).get(String(tr)) || 7;
   }
   function normalizeCalendarEntries(calendars) {
     if (!Array.isArray(calendars)) {
@@ -239,7 +331,7 @@ ${metadata}` : metadata;
         });
         return;
       }
-      if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+      if (isObject(raw)) {
         out.push({
           entity: String(raw.entity ?? "").trim(),
           label: String(raw.label ?? "").trim(),
@@ -249,96 +341,49 @@ ${metadata}` : metadata;
     });
     return out;
   }
-  function parseCalendarDateOnlyLocal(value) {
+  function localDateFromInput(value, hour) {
     const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value ?? "").trim());
-    if (!match) {
-      return null;
-    }
-    const year = Number(match[1]);
-    const month = Number(match[2]) - 1;
-    const day = Number(match[3]);
-    const parsed = new Date(year, month, day, 12, 0, 0);
-    return Number.isFinite(parsed.getTime()) ? parsed : null;
+    if (!match) return null;
+    const year = Number(match[1]), month = Number(match[2]) - 1, day = Number(match[3]);
+    const parsed = /* @__PURE__ */ new Date(0);
+    parsed.setHours(hour, 0, 0, 0);
+    parsed.setFullYear(year, month, day);
+    return Number.isFinite(parsed.getTime()) && parsed.getFullYear() === year && parsed.getMonth() === month && parsed.getDate() === day ? parsed : null;
+  }
+  function parseCalendarDateOnlyLocal(value) {
+    return localDateFromInput(value, 12);
   }
   function eventDate(value) {
-    if (!value) {
-      return null;
-    }
+    if (value instanceof Date) return Number.isFinite(value.getTime()) ? new Date(value.getTime()) : null;
     if (typeof value === "string") {
-      const dayLocal = parseCalendarDateOnlyLocal(value);
-      if (dayLocal) {
-        return dayLocal;
-      }
+      if (/^\d{4}-\d{2}-\d{2}$/.test(value.trim())) return parseCalendarDateOnlyLocal(value);
       const parsed = new Date(value);
       return Number.isFinite(parsed.getTime()) ? parsed : null;
     }
-    if (typeof value === "object") {
-      if (value.dateTime) {
-        const parsed = new Date(value.dateTime);
-        return Number.isFinite(parsed.getTime()) ? parsed : null;
-      }
-      if (value.date) {
-        const dayLocal = parseCalendarDateOnlyLocal(value.date);
-        if (dayLocal) {
-          return dayLocal;
-        }
-        const parsed = new Date(value.date);
-        return Number.isFinite(parsed.getTime()) ? parsed : null;
-      }
+    if (isObject(value)) {
+      if (value.dateTime) return eventDate(String(value.dateTime));
+      if (value.date) return eventDate(String(value.date));
     }
     return null;
   }
-  function calendarEventUid(event) {
-    return String(event?.uid ?? event?.eventData?.uid ?? "").trim();
+  function calendarEventUid(value) {
+    const event = isObject(value) ? value : {};
+    const data = isObject(event.eventData) ? event.eventData : {};
+    return String(event.uid ?? data.uid ?? "").trim();
   }
-  function calendarEventRecurrenceId(event) {
-    return String(event?.recurrence_id ?? event?.eventData?.recurrence_id ?? "").trim();
+  function calendarEventRecurrenceId(value) {
+    const event = isObject(value) ? value : {};
+    const data = isObject(event.eventData) ? event.eventData : {};
+    return String(event.recurrence_id ?? data.recurrence_id ?? "").trim();
   }
-  function calendarEventKey(event) {
+  function calendarEventKey(value) {
+    const event = isObject(value) ? value : {};
     const source = String(event?._entity || "");
     const uid = calendarEventUid(event) || String(event?.id || "");
     const recurrence = calendarEventRecurrenceId(event);
     const start = eventDate(event?.start)?.toISOString() || "";
     const summary = String(event?.summary || event?.message || "");
     return `${source}|${uid}|${recurrence}|${start}|${summary}`;
-  }
-  function normalizeTextKey(value) {
-    return String(value ?? "").trim().toLowerCase().replaceAll(" ", "_");
-  }
-  function weatherConditionIcon(value) {
-    switch (normalizeTextKey(value)) {
-      case "clear_night":
-        return "mdi:weather-night";
-      case "cloudy":
-        return "mdi:weather-cloudy";
-      case "exceptional":
-        return "mdi:alert-circle-outline";
-      case "fog":
-        return "mdi:weather-fog";
-      case "hail":
-        return "mdi:weather-hail";
-      case "lightning":
-        return "mdi:weather-lightning";
-      case "lightning_rainy":
-        return "mdi:weather-lightning-rainy";
-      case "partlycloudy":
-        return "mdi:weather-partly-cloudy";
-      case "pouring":
-        return "mdi:weather-pouring";
-      case "rainy":
-        return "mdi:weather-rainy";
-      case "snowy":
-        return "mdi:weather-snowy";
-      case "snowy_rainy":
-        return "mdi:weather-snowy-rainy";
-      case "sunny":
-        return "mdi:weather-sunny";
-      case "windy":
-      case "windy_variant":
-        return "mdi:weather-windy";
-      default:
-        return "mdi:weather-partly-cloudy";
-    }
   }
   function forecastDayKey(value) {
     const formatDateKey = (date) => {
@@ -365,19 +410,12 @@ ${metadata}` : metadata;
       }
     }
     const datePrefixMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
-    if (datePrefixMatch) {
-      const y = Number(datePrefixMatch[1]);
-      const m = Number(datePrefixMatch[2]) - 1;
-      const d = Number(datePrefixMatch[3]);
-      if (Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(d)) {
-        return formatDateKey(new Date(y, m, d));
-      }
-    }
+    if (datePrefixMatch) return formatDateKey(parseCalendarDateOnlyLocal(datePrefixMatch[0]));
     const parsed = new Date(raw);
     return formatDateKey(parsed);
   }
   function withForecastDateFromKey(key, value) {
-    if (!value || typeof value !== "object" || !forecastDayKey(key)) {
+    if (!isObject(value) || !forecastDayKey(key)) {
       return value;
     }
     if ("datetime" in value || "date" in value || "day" in value || "time" in value || "timestamp" in value) {
@@ -387,8 +425,8 @@ ${metadata}` : metadata;
   }
   function pickFirstFiniteNumber(...candidates) {
     for (const candidate of candidates) {
-      const n = Number(candidate);
-      if (Number.isFinite(n)) {
+      const n = parseFiniteNumericValue(candidate);
+      if (n !== null) {
         return n;
       }
     }
@@ -439,7 +477,8 @@ ${metadata}` : metadata;
       formatter = new Intl.DateTimeFormat(locale, options);
       dateTimeFormatterCache.set(key, formatter);
       if (dateTimeFormatterCache.size > DATE_TIME_FORMATTER_CACHE_LIMIT) {
-        dateTimeFormatterCache.delete(dateTimeFormatterCache.keys().next().value);
+        const oldest = dateTimeFormatterCache.keys().next().value;
+        if (oldest !== void 0) dateTimeFormatterCache.delete(oldest);
       }
     }
     return formatter;
@@ -458,30 +497,16 @@ ${metadata}` : metadata;
     }).format(date);
   }
   function normalizeCalendarFetchResult(raw) {
-    if (Array.isArray(raw)) {
-      return raw;
-    }
-    if (raw && typeof raw === "object" && Array.isArray(raw.events)) {
-      return raw.events;
-    }
-    return [];
+    const rows = Array.isArray(raw) ? raw : isObject(raw) && Array.isArray(raw.events) ? raw.events : [];
+    return rows.filter(isObject);
   }
-  function eventIsAllDay(event) {
-    return Boolean(event?.start?.date && !event?.start?.dateTime);
+  function eventIsAllDay(value) {
+    const event = isObject(value) ? value : {};
+    const start = isObject(event.start) ? event.start : {};
+    return Boolean(start.date && !start.dateTime);
   }
   function parseDateInputAsLocalDate(value) {
-    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value ?? "").trim());
-    if (!match) {
-      return null;
-    }
-    const year = Number(match[1]);
-    const month = Number(match[2]) - 1;
-    const day = Number(match[3]);
-    const parsed = new Date(year, month, day);
-    if (Number.isNaN(parsed.getTime()) || parsed.getFullYear() !== year || parsed.getMonth() !== month || parsed.getDate() !== day) {
-      return null;
-    }
-    return parsed;
+    return localDateFromInput(value, 0);
   }
   function dateInputIsBeforeToday(value) {
     const parsed = parseDateInputAsLocalDate(value);
@@ -494,65 +519,14 @@ ${metadata}` : metadata;
   }
 
   // src/cards/calendar/calendar-config.ts
-  var DEFAULT_CONFIG2 = {
-    title: "Calendar",
-    icon: "mdi:calendar-month",
-    calendars: [],
-    time_range: "1w",
-    days_to_show: 7,
-    max_visible_events: 2,
-    refresh_interval: 300,
-    allow_delete: true,
-    weather_entity: "",
-    native_event_webhook: "",
-    security: {
-      allow_webhooks_for_non_admin: false
-    },
-    tint_auto: true,
-    haptics: {
-      enabled: true,
-      style: "medium",
-      fallback_vibrate: false
-    },
-    animations: {
-      enabled: true,
-      content_duration: 260
-    },
-    styles: {
-      card: {
-        background: "var(--ha-card-background)",
-        border: "1px solid var(--divider-color)",
-        border_radius: "var(--nodalia-card-border-radius, 28px)",
-        box_shadow: "var(--ha-card-box-shadow)",
-        padding: "14px",
-        gap: "12px"
-      },
-      icon: {
-        background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
-        on_color: "color-mix(in srgb, var(--primary-color) 52%, var(--primary-text-color))",
-        off_color: "color-mix(in srgb, var(--primary-text-color) 62%, var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 48%, transparent)))",
-        size: "38px"
-      },
-      tint: {
-        color: "var(--primary-color)"
-      },
-      title_size: "17px",
-      event_size: "13px",
-      chip_height: "24px",
-      chip_font_size: "11px",
-      chip_padding: "0 9px",
-      chip_border_radius: "999px",
-      chip_size: "11px"
-    }
-  };
-  function normalizeConfig(config) {
-    const normalized = mergeConfig(DEFAULT_CONFIG2, config || {});
-    normalized.calendars = normalizeCalendarEntries(normalized.calendars);
+  function normalizeConfig(config = {}) {
+    const defaults = DEFAULT_CONFIG;
+    const normalized = mergeConfig(defaults, isObject(config) ? config : {});
     normalized.allow_delete = normalized.allow_delete !== false;
     let timeRange = String(normalized.time_range || "").trim();
     if (!VALID_TIME_RANGES.includes(timeRange)) {
-      const legacyDays = Number(normalized.days_to_show);
-      if (Number.isFinite(legacyDays)) {
+      const legacyDays = parseFiniteNumericValue(normalized.days_to_show);
+      if (legacyDays !== null) {
         if (legacyDays <= 3) {
           timeRange = "3d";
         } else if (legacyDays <= 7) {
@@ -563,7 +537,7 @@ ${metadata}` : metadata;
           timeRange = "1m";
         }
       } else {
-        timeRange = DEFAULT_CONFIG2.time_range;
+        timeRange = DEFAULT_CONFIG.time_range;
       }
     }
     normalized.time_range = timeRange;
@@ -571,49 +545,43 @@ ${metadata}` : metadata;
     delete normalized.quick_reminder_webhook;
     normalized.native_event_webhook = String(normalized.native_event_webhook ?? "").trim();
     const priorSecurity = isObject(normalized.security) ? normalized.security : {};
-    normalized.security = {
-      ...DEFAULT_CONFIG2.security,
+    const security = {
+      ...DEFAULT_CONFIG.security,
       ...priorSecurity
     };
-    if (normalized.security.allow_webhooks_for_non_admin === void 0) {
-      normalized.security.allow_webhooks_for_non_admin = priorSecurity.require_admin_for_webhooks === true ? false : DEFAULT_CONFIG2.security.allow_webhooks_for_non_admin;
+    if (security.allow_webhooks_for_non_admin === void 0) {
+      security.allow_webhooks_for_non_admin = priorSecurity.require_admin_for_webhooks === true ? false : DEFAULT_CONFIG.security.allow_webhooks_for_non_admin;
     }
-    normalized.security.allow_webhooks_for_non_admin = normalized.security.allow_webhooks_for_non_admin === true;
+    security.allow_webhooks_for_non_admin = security.allow_webhooks_for_non_admin === true;
+    normalized.security = security;
     normalized.weather_entity = String(normalized.weather_entity ?? "").trim();
     normalized.max_visible_events = Math.min(
       12,
-      Math.max(1, Number(normalized.max_visible_events) || DEFAULT_CONFIG2.max_visible_events)
+      Math.max(1, parseFiniteNumericValue(normalized.max_visible_events) || DEFAULT_CONFIG.max_visible_events)
     );
-    normalized.refresh_interval = Math.min(3600, Math.max(30, Number(normalized.refresh_interval) || DEFAULT_CONFIG2.refresh_interval));
-    if (!normalized.styles.chip_font_size && normalized.styles.chip_size) {
-      normalized.styles.chip_font_size = normalized.styles.chip_size;
-    }
-    normalized.styles.card.background = sanitizeCssRuntimeValue(normalized.styles.card.background) || DEFAULT_CONFIG2.styles.card.background;
-    normalized.styles.card.border = sanitizeCssRuntimeValue(normalized.styles.card.border) || DEFAULT_CONFIG2.styles.card.border;
-    normalized.styles.card.border_radius = sanitizeCssRuntimeValue(normalized.styles.card.border_radius) || DEFAULT_CONFIG2.styles.card.border_radius;
-    normalized.styles.card.box_shadow = sanitizeCssRuntimeValue(normalized.styles.card.box_shadow) || DEFAULT_CONFIG2.styles.card.box_shadow;
-    normalized.styles.card.padding = sanitizeCssRuntimeValue(normalized.styles.card.padding) || DEFAULT_CONFIG2.styles.card.padding;
-    normalized.styles.card.gap = sanitizeCssRuntimeValue(normalized.styles.card.gap) || DEFAULT_CONFIG2.styles.card.gap;
-    normalized.styles.title_size = sanitizeCssRuntimeValue(normalized.styles.title_size) || DEFAULT_CONFIG2.styles.title_size;
-    normalized.styles.event_size = sanitizeCssRuntimeValue(normalized.styles.event_size) || DEFAULT_CONFIG2.styles.event_size;
-    normalized.styles.chip_height = sanitizeCssRuntimeValue(normalized.styles.chip_height) || DEFAULT_CONFIG2.styles.chip_height;
-    normalized.styles.chip_font_size = sanitizeCssRuntimeValue(normalized.styles.chip_font_size) || DEFAULT_CONFIG2.styles.chip_font_size;
-    normalized.styles.chip_padding = sanitizeCssRuntimeValue(normalized.styles.chip_padding) || DEFAULT_CONFIG2.styles.chip_padding;
-    normalized.styles.chip_border_radius = sanitizeCssRuntimeValue(normalized.styles.chip_border_radius) || DEFAULT_CONFIG2.styles.chip_border_radius;
-    normalized.styles.icon.background = sanitizeCssRuntimeValue(normalized.styles.icon.background) || DEFAULT_CONFIG2.styles.icon.background;
-    normalized.styles.icon.on_color = sanitizeCssRuntimeValue(normalized.styles.icon.on_color) || DEFAULT_CONFIG2.styles.icon.on_color;
-    normalized.styles.icon.off_color = sanitizeCssRuntimeValue(normalized.styles.icon.off_color) || DEFAULT_CONFIG2.styles.icon.off_color;
-    normalized.styles.icon.size = sanitizeCssRuntimeValue(normalized.styles.icon.size) || DEFAULT_CONFIG2.styles.icon.size;
-    normalized.styles.tint.color = sanitizeCssRuntimeValue(normalized.styles.tint.color) || DEFAULT_CONFIG2.styles.tint.color;
-    const iconStyle = normalized.styles?.icon;
-    if (iconStyle && iconStyle.color && !iconStyle.on_color) {
-      iconStyle.on_color = iconStyle.color;
-    }
-    normalized.haptics = mergeConfig(DEFAULT_CONFIG2.haptics, normalized.haptics || {});
-    normalized.haptics.enabled = normalized.haptics.enabled === true;
-    normalized.haptics.fallback_vibrate = normalized.haptics.fallback_vibrate === true;
-    normalized.haptics.style = Object.prototype.hasOwnProperty.call(HAPTIC_PATTERNS, normalized.haptics.style) ? normalized.haptics.style : DEFAULT_CONFIG2.haptics.style;
-    return normalized;
+    normalized.refresh_interval = Math.min(3600, Math.max(30, parseFiniteNumericValue(normalized.refresh_interval) || DEFAULT_CONFIG.refresh_interval));
+    const rawStyles = isObject(normalized.styles) ? normalized.styles : {};
+    if (!rawStyles.chip_font_size && rawStyles.chip_size) rawStyles.chip_font_size = rawStyles.chip_size;
+    const card = isObject(rawStyles.card) ? rawStyles.card : {};
+    const icon = isObject(rawStyles.icon) ? rawStyles.icon : {};
+    const tint = isObject(rawStyles.tint) ? rawStyles.tint : {};
+    const projected = normalizeControlStyles(rawStyles, DEFAULT_CONFIG.styles, (value, fallback) => sanitizeCssRuntimeValue(value) || fallback);
+    const styles = { ...rawStyles, ...projected, card: { ...card, ...projected.card }, icon: { ...icon, ...projected.icon }, tint: { ...tint, ...projected.tint } };
+    if (icon.color && !styles.icon.on_color) styles.icon.on_color = sanitizeCssRuntimeValue(icon.color) || DEFAULT_CONFIG.styles.icon.on_color;
+    normalized.styles = styles;
+    const haptics = mergeConfig(DEFAULT_CONFIG.haptics, isObject(normalized.haptics) ? normalized.haptics : {});
+    const hapticStyle = String(haptics.style ?? "");
+    return {
+      ...normalized,
+      styles,
+      calendars: normalizeCalendarEntries(normalized.calendars),
+      haptics: {
+        ...haptics,
+        enabled: haptics.enabled === true,
+        fallback_vibrate: haptics.fallback_vibrate === true,
+        style: Object.prototype.hasOwnProperty.call(HAPTIC_PATTERNS, hapticStyle) ? hapticStyle : DEFAULT_CONFIG.haptics.style
+      }
+    };
   }
 
   // src/cards/calendar/calendar-card.ts
@@ -624,7 +592,7 @@ ${metadata}` : metadata;
     }
     class NodaliaCalendarCard extends HTMLElement {
       static getStubConfig(hass, entities = [], entitiesFallback = []) {
-        const config = deepClone(DEFAULT_CONFIG2);
+        const config = deepClone(DEFAULT_CONFIG);
         const entityId = window.NodaliaUtils.findStubEntityIds(
           hass,
           entities,
@@ -659,7 +627,7 @@ ${metadata}` : metadata;
       }
       _nodaliaConstruct() {
         this.attachShadow({ mode: "open" });
-        this._config = normalizeConfig(DEFAULT_CONFIG2);
+        this._config = normalizeConfig(DEFAULT_CONFIG);
         this._hass = null;
         this._events = [];
         this._loading = false;
@@ -708,7 +676,7 @@ ${metadata}` : metadata;
         return fallback;
       }
       _timeRangeChipLabel(timeRange) {
-        switch (timeRange || DEFAULT_CONFIG2.time_range) {
+        switch (timeRange || DEFAULT_CONFIG.time_range) {
           case "3d":
             return this._uiText("timeRange.threeDays", "3 days");
           case "1w":
@@ -731,11 +699,11 @@ ${metadata}` : metadata;
         this._refreshEvents();
       }
       _triggerHaptic(styleOverride = null) {
-        const haptics = this._config?.haptics || DEFAULT_CONFIG2.haptics;
+        const haptics = this._config?.haptics || DEFAULT_CONFIG.haptics;
         if (haptics.enabled !== true) {
           return;
         }
-        const style = styleOverride || haptics.style || DEFAULT_CONFIG2.haptics.style;
+        const style = styleOverride || haptics.style || DEFAULT_CONFIG.haptics.style;
         this.dispatchEvent(new CustomEvent("haptic", {
           bubbles: true,
           cancelable: false,
@@ -756,7 +724,7 @@ ${metadata}` : metadata;
       _openExpandedCalendar({ date = "", eventKey = "" } = {}) {
         this._expandedMonthDayKey = "";
         const focusDate = eventDate(date);
-        if ((this._config?.time_range || DEFAULT_CONFIG2.time_range) === "1m" && focusDate) {
+        if ((this._config?.time_range || DEFAULT_CONFIG.time_range) === "1m" && focusDate) {
           this._expandedMonthDayKey = `${focusDate.getFullYear()}-${focusDate.getMonth()}-${focusDate.getDate()}`;
         }
         this._expandedEventDetailKey = String(eventKey || "");
@@ -1128,7 +1096,7 @@ ${metadata}` : metadata;
         return labels[freq] || this._uiText("repeat.custom", "Custom");
       }
       _expandedLayoutKind(timeRange) {
-        const tr = timeRange || DEFAULT_CONFIG2.time_range;
+        const tr = timeRange || DEFAULT_CONFIG.time_range;
         if (tr === "3d") {
           return "column";
         }
@@ -1149,7 +1117,7 @@ ${metadata}` : metadata;
       }
       _expandedRangeGroups(groups, config, locale) {
         const map = this._groupsByDayKey(groups);
-        const days = Math.max(1, Number(config.days_to_show) || daysFromTimeRange(config.time_range || DEFAULT_CONFIG2.time_range));
+        const days = Math.max(1, Number(config.days_to_show) || daysFromTimeRange(config.time_range || DEFAULT_CONFIG.time_range));
         const now = /* @__PURE__ */ new Date();
         const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         return Array.from({ length: days }, (_, index) => {
@@ -1208,7 +1176,7 @@ ${metadata}` : metadata;
     `;
       }
       _renderExpandedBody(groups, config, locale, weatherByDay) {
-        const tr = config.time_range || DEFAULT_CONFIG2.time_range;
+        const tr = config.time_range || DEFAULT_CONFIG.time_range;
         const mode = this._expandedLayoutKind(tr);
         if (this._expandedEventDetailKey) {
           const detailEvent = groups.flatMap((group) => Array.isArray(group?.events) ? group.events : []).find((event) => calendarEventKey(event) === this._expandedEventDetailKey);
@@ -1341,7 +1309,7 @@ ${metadata}` : metadata;
       }
       _getRenderSignature() {
         const config = this._config;
-        const styles = config.styles || DEFAULT_CONFIG2.styles;
+        const styles = config.styles || DEFAULT_CONFIG.styles;
         const visibleEvents = this._events;
         this._renderVisibleEventsCache = visibleEvents;
         let hash = 2166136261;
@@ -1360,7 +1328,7 @@ ${metadata}` : metadata;
         });
         mix(config.title);
         mix(config.icon);
-        mix(config.time_range || DEFAULT_CONFIG2.time_range);
+        mix(config.time_range || DEFAULT_CONFIG.time_range);
         mix(config.days_to_show);
         mix(config.max_visible_events);
         mix(config.allow_delete ? 1 : 0);
@@ -1589,7 +1557,7 @@ ${metadata}` : metadata;
             this._nativeEventComposerOpen = false;
             this._expandedEventDetailKey = keyTrim;
             const focusDate = eventDate(event.start);
-            const tr = this._config?.time_range || DEFAULT_CONFIG2.time_range;
+            const tr = this._config?.time_range || DEFAULT_CONFIG.time_range;
             if (tr === "1m" && focusDate) {
               this._expandedMonthDayKey = `${focusDate.getFullYear()}-${focusDate.getMonth()}-${focusDate.getDate()}`;
             } else {
@@ -1797,15 +1765,9 @@ ${metadata}` : metadata;
         let maxDays = 0;
         let conditionDays = 0;
         forecastMap.forEach((item, key) => {
-          const parsed = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(String(key));
-          if (parsed) {
-            const y = Number(parsed[1]);
-            const m = Number(parsed[2]);
-            const d = Number(parsed[3]);
-            const dayMs = new Date(y, m, d).getTime();
-            if (Number.isFinite(dayMs) && dayMs >= todayMs) {
-              currentOrFutureDays += 1;
-            }
+          const parsed = parseCalendarDateOnlyLocal(key);
+          if (parsed && parsed.getTime() >= todayMs) {
+            currentOrFutureDays += 1;
           }
           if (Number.isFinite(item?.tempMin)) {
             minDays += 1;
@@ -1887,12 +1849,15 @@ ${metadata}` : metadata;
           const stateObj = entityId ? this._hass?.states?.[entityId] : null;
           if (stateObj) {
             const now = /* @__PURE__ */ new Date();
-            const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
-            const currentTemp = Number(
-              stateObj.attributes?.temperature ?? stateObj.attributes?.native_temperature
+            const todayKey = forecastDayKey(now);
+            const currentTemp = pickFirstFiniteNumber(
+              stateObj.attributes?.temperature,
+              stateObj.attributes?.native_temperature
             );
-            const lowTemp = Number(
-              stateObj.attributes?.templow ?? stateObj.attributes?.temperature_low ?? stateObj.attributes?.native_templow
+            const lowTemp = pickFirstFiniteNumber(
+              stateObj.attributes?.templow,
+              stateObj.attributes?.temperature_low,
+              stateObj.attributes?.native_templow
             );
             const condition = String(
               stateObj.attributes?.condition ?? stateObj.state ?? ""
@@ -2618,10 +2583,10 @@ ${metadata}` : metadata;
           return;
         }
         const config = this._config;
-        const styles = config.styles || DEFAULT_CONFIG2.styles;
+        const styles = config.styles || DEFAULT_CONFIG.styles;
         const locale = this._getLocale();
         const useAutoPrimaryTint = config.tint_auto !== false;
-        const accentColor = useAutoPrimaryTint ? "var(--primary-color)" : String(styles.tint?.color || DEFAULT_CONFIG2.styles.tint.color).trim() || "var(--primary-color)";
+        const accentColor = useAutoPrimaryTint ? "var(--primary-color)" : String(styles.tint?.color || DEFAULT_CONFIG.styles.tint.color).trim() || "var(--primary-color)";
         const baseCardBg = styles.card.background;
         const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, var(--nodalia-calendar-surface-base)) 0%, color-mix(in srgb, ${accentColor} 10%, var(--nodalia-calendar-surface-base)) 52%, var(--nodalia-calendar-surface-base) 100%)`;
         const onCardBorder = `color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
@@ -2633,20 +2598,20 @@ ${metadata}` : metadata;
         const firstCalendarEntityId = calendarsForIcon.map((c) => String(c?.entity || "").trim()).find(Boolean);
         const stateForBubbleIcon = firstCalendarEntityId && this._hass?.states?.[firstCalendarEntityId] ? this._hass.states[firstCalendarEntityId] : void 0;
         const darkenBubbleIconGlyph = shouldDarkenCalendarBubbleIconGlyph(stateForBubbleIcon, accentColor);
-        const baseIconBubbleGlyph = String(styles.icon?.on_color || DEFAULT_CONFIG2.styles.icon.on_color);
+        const baseIconBubbleGlyph = String(styles.icon?.on_color || DEFAULT_CONFIG.styles.icon.on_color);
         const iconBubbleGlyph = darkenBubbleIconGlyph ? `color-mix(in srgb, var(--primary-text-color) 56%, ${accentColor})` : baseIconBubbleGlyph;
-        const iconSize = styles.icon?.size || DEFAULT_CONFIG2.styles.icon.size;
-        const chipHeight = styles.chip_height || DEFAULT_CONFIG2.styles.chip_height;
-        const chipFontSize = styles.chip_font_size || styles.chip_size || DEFAULT_CONFIG2.styles.chip_font_size;
-        const chipPadding = styles.chip_padding || DEFAULT_CONFIG2.styles.chip_padding;
+        const iconSize = styles.icon?.size || DEFAULT_CONFIG.styles.icon.size;
+        const chipHeight = styles.chip_height || DEFAULT_CONFIG.styles.chip_height;
+        const chipFontSize = styles.chip_font_size || styles.chip_size || DEFAULT_CONFIG.styles.chip_font_size;
+        const chipPadding = styles.chip_padding || DEFAULT_CONFIG.styles.chip_padding;
         const chipBorderRadius = escapeHtml(
-          String(styles.chip_border_radius || DEFAULT_CONFIG2.styles.chip_border_radius || "").trim() || "999px"
+          String(styles.chip_border_radius || DEFAULT_CONFIG.styles.chip_border_radius || "").trim() || "999px"
         );
         const animationDuration = Math.min(
           1600,
-          Math.max(120, Number(config.animations?.content_duration) || DEFAULT_CONFIG2.animations.content_duration)
+          Math.max(120, Number(config.animations?.content_duration) || DEFAULT_CONFIG.animations.content_duration)
         );
-        const maxVisibleEvents = Math.max(1, Number(config.max_visible_events) || DEFAULT_CONFIG2.max_visible_events);
+        const maxVisibleEvents = Math.max(1, Number(config.max_visible_events) || DEFAULT_CONFIG.max_visible_events);
         const visibleEvents = Array.isArray(this._renderVisibleEventsCache) ? this._renderVisibleEventsCache : this._events;
         this._renderVisibleEventsCache = null;
         const groups = this._groupEvents(visibleEvents);
@@ -3781,10 +3746,10 @@ ${metadata}` : metadata;
       <ha-card>
         <div class="calendar-card">
           <div class="calendar-header ${playEntrance ? "calendar-header--entering" : ""}">
-            <span class="calendar-icon-bubble ${playEntrance ? "calendar-icon-bubble--entering" : ""}"><ha-icon icon="${escapeHtml(config.icon || DEFAULT_CONFIG2.icon)}"></ha-icon></span>
+            <span class="calendar-icon-bubble ${playEntrance ? "calendar-icon-bubble--entering" : ""}"><ha-icon icon="${escapeHtml(config.icon || DEFAULT_CONFIG.icon)}"></ha-icon></span>
             <div class="calendar-title ${playEntrance ? "calendar-title--entering" : ""}">${escapeHtml(config.title)}</div>
             <span class="calendar-header__spacer"></span>
-            <div class="calendar-chip ${playEntrance ? "calendar-chip--entering" : ""}"><span class="calendar-chip__text">${escapeHtml(this._timeRangeChipLabel(config.time_range || DEFAULT_CONFIG2.time_range))}</span></div>
+            <div class="calendar-chip ${playEntrance ? "calendar-chip--entering" : ""}"><span class="calendar-chip__text">${escapeHtml(this._timeRangeChipLabel(config.time_range || DEFAULT_CONFIG.time_range))}</span></div>
           </div>
           ${this._loading ? `<div class="calendar-loading">${escapeHtml(this._uiText("states.loading", "Loading events..."))}</div>` : this._error ? `<div class="calendar-error">${escapeHtml(this._error)}</div>` : !hasEvents ? `<div class="calendar-empty">${escapeHtml(this._uiText("empty.range", "No events in this range."))}</div>` : `<div class="calendar-events-scroll ${playEntrance ? "calendar-events-scroll--entering" : ""}">
                       ${groups.map((group, groupIndex) => `
@@ -4173,7 +4138,7 @@ ${metadata}` : metadata;
       }
       _nodaliaConstruct() {
         this.attachShadow({ mode: "open" });
-        this._config = normalizeConfig(DEFAULT_CONFIG2);
+        this._config = normalizeConfig(DEFAULT_CONFIG);
         this._hass = null;
         this._showHapticsSection = false;
         this._showAnimationSection = false;
@@ -4244,9 +4209,9 @@ ${metadata}` : metadata;
         return window.NodaliaI18n.editorStr(this._hass, this._config?.language ?? "auto", s);
       }
       _emitConfig() {
-        const raw = deepClone(this._config || DEFAULT_CONFIG2);
-        const stripped = typeof window !== "undefined" && window.NodaliaUtils?.stripEqualToDefaults ? window.NodaliaUtils.stripEqualToDefaults(raw, DEFAULT_CONFIG2) : raw;
-        const payload = compactCalendarConfig(
+        const raw = deepClone(this._config || DEFAULT_CONFIG);
+        const stripped = typeof window !== "undefined" && window.NodaliaUtils?.stripEqualToDefaults ? window.NodaliaUtils.stripEqualToDefaults(raw, DEFAULT_CONFIG) : raw;
+        const payload = compactConfig(
           stripped !== void 0 && stripped !== null ? stripped : {}
         );
         this.dispatchEvent(
@@ -4365,7 +4330,7 @@ ${metadata}` : metadata;
         if (input.type === "checkbox" && event.type === "input") {
           return;
         }
-        const next = deepClone(this._config || DEFAULT_CONFIG2);
+        const next = deepClone(this._config || DEFAULT_CONFIG);
         const field = input.dataset.field || "";
         const value = this._readFieldValue(input);
         this._setFieldValue(next, field, value);
@@ -4384,7 +4349,7 @@ ${metadata}` : metadata;
         }
         event.stopPropagation();
         const field = control.dataset.field;
-        const next = deepClone(this._config || DEFAULT_CONFIG2);
+        const next = deepClone(this._config || DEFAULT_CONFIG);
         const raw = event.detail?.value;
         const value = typeof raw === "string" ? raw : control.value;
         this._setFieldValue(next, field, value);
@@ -4395,7 +4360,7 @@ ${metadata}` : metadata;
         this._restoreFocusState(focusState);
       }
       _moveCalendar(index, delta) {
-        const next = deepClone(this._config || DEFAULT_CONFIG2);
+        const next = deepClone(this._config || DEFAULT_CONFIG);
         const list = Array.isArray(next.calendars) ? [...next.calendars] : [];
         const j = index + delta;
         if (!Number.isFinite(index) || index < 0 || !Number.isFinite(j) || j < 0 || j >= list.length) {
@@ -4442,7 +4407,7 @@ ${metadata}` : metadata;
           this._moveCalendar(Number(button.dataset.index || -1), 1);
           return;
         }
-        const next = deepClone(this._config || DEFAULT_CONFIG2);
+        const next = deepClone(this._config || DEFAULT_CONFIG);
         if (!Array.isArray(next.calendars)) {
           next.calendars = [];
         }
@@ -4670,10 +4635,10 @@ ${metadata}` : metadata;
           return;
         }
         this._ensureEditorControlsReady();
-        const config = normalizeConfig(this._config || DEFAULT_CONFIG2);
+        const config = normalizeConfig(this._config || DEFAULT_CONFIG);
         const calendars = Array.isArray(config.calendars) && config.calendars.length ? config.calendars : [{ entity: "", label: "", tint: "" }];
-        const hapticStyle = config.haptics?.style || DEFAULT_CONFIG2.haptics.style;
-        const animations = config.animations || DEFAULT_CONFIG2.animations;
+        const hapticStyle = config.haptics?.style || DEFAULT_CONFIG.haptics.style;
+        const animations = config.animations || DEFAULT_CONFIG.animations;
         this.shadowRoot.innerHTML = `
       <style>
         :host {
@@ -5111,11 +5076,11 @@ ${metadata}` : metadata;
           </div>
           <div class="editor-grid">
             ${this._renderTextField("ed.nav.title", "title", config.title, { fullWidth: true, placeholder: "Calendar" })}
-            ${this._renderIconPickerField("Icono", "icon", config.icon || DEFAULT_CONFIG2.icon, {
+            ${this._renderIconPickerField("Icono", "icon", config.icon || DEFAULT_CONFIG.icon, {
           fullWidth: true,
           placeholder: "mdi:calendar-month"
         })}
-            ${this._renderSelectField("ed.calendar.visible_range", "time_range", config.time_range || DEFAULT_CONFIG2.time_range, {
+            ${this._renderSelectField("ed.calendar.visible_range", "time_range", config.time_range || DEFAULT_CONFIG.time_range, {
           fullWidth: true,
           options: [
             { value: "3d", label: this._editorLabel("ed.calendar.period_3d") },
@@ -5251,7 +5216,7 @@ ${metadata}` : metadata;
                 <div class="editor-grid">
                   ${this._renderColorField("Fondo tarjeta", "styles.card.background", config.styles?.card?.background, {
           fullWidth: true,
-          fallbackValue: DEFAULT_CONFIG2.styles.card.background
+          fallbackValue: DEFAULT_CONFIG.styles.card.background
         })}
                   ${this._renderTextField("Borde tarjeta", "styles.card.border", config.styles?.card?.border)}
                   ${window.NodaliaUtils.renderEditorCardBorderRadiusHtml({
@@ -5289,20 +5254,20 @@ ${metadata}` : metadata;
         })}
                   ${this._renderColorField("Icono burbuja fondo", "styles.icon.background", config.styles?.icon?.background, {
           fullWidth: true,
-          fallbackValue: DEFAULT_CONFIG2.styles.icon.background
+          fallbackValue: DEFAULT_CONFIG.styles.icon.background
         })}
                   ${this._renderColorField("Color icono activo", "styles.icon.on_color", config.styles?.icon?.on_color, {
           fullWidth: true,
-          fallbackValue: DEFAULT_CONFIG2.styles.icon.on_color
+          fallbackValue: DEFAULT_CONFIG.styles.icon.on_color
         })}
                   ${this._renderColorField("Color icono inactivo", "styles.icon.off_color", config.styles?.icon?.off_color, {
           fullWidth: true,
-          fallbackValue: DEFAULT_CONFIG2.styles.icon.off_color
+          fallbackValue: DEFAULT_CONFIG.styles.icon.off_color
         })}
                   ${this._renderTextField("Icono burbuja tamaño", "styles.icon.size", config.styles?.icon?.size)}
                   ${this._renderColorField("ed.calendar.accent_if_tint_off", "styles.tint.color", config.styles?.tint?.color, {
           fullWidth: true,
-          fallbackValue: DEFAULT_CONFIG2.styles.tint.color
+          fallbackValue: DEFAULT_CONFIG.styles.tint.color
         })}
                 </div>
               ` : ""}
@@ -5344,7 +5309,7 @@ ${metadata}` : metadata;
     CARD_TAG,
     EDITOR_TAG,
     CARD_VERSION,
-    DEFAULT_CONFIG: DEFAULT_CONFIG2,
+    DEFAULT_CONFIG,
     normalizeConfig
   };
   window.__NODALIA_CALENDAR__ = publicApi;

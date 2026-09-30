@@ -18,13 +18,13 @@
   };
 
   // src/shared/control-config.ts
-  function normalizeControlStyles(candidate, defaults) {
+  function normalizeControlStyles(candidate, defaults, sanitize = window.NodaliaUtils.sanitizeCssValue) {
     const utils2 = window.NodaliaUtils;
     const source = utils2.isObject(candidate) ? candidate : {};
     const result = {};
     for (const [key, fallback] of Object.entries(defaults)) {
       if (utils2.isUnsafeConfigPathKey(key)) continue;
-      result[key] = typeof fallback === "string" ? utils2.sanitizeCssValue(source[key], fallback) : normalizeControlStyles(source[key], fallback);
+      result[key] = typeof fallback === "string" ? sanitize(source[key], fallback) : normalizeControlStyles(source[key], fallback, sanitize);
     }
     return result;
   }
@@ -249,6 +249,43 @@
     if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
     const numeric = Number(value);
     return Number.isFinite(numeric) ? numeric : null;
+  }
+
+  // src/shared/weather-condition-icons.ts
+  function weatherConditionIcon(value) {
+    switch (String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "")) {
+      case "clear_night":
+        return "mdi:weather-night";
+      case "cloudy":
+        return "mdi:weather-cloudy";
+      case "exceptional":
+        return "mdi:alert-circle-outline";
+      case "fog":
+        return "mdi:weather-fog";
+      case "hail":
+        return "mdi:weather-hail";
+      case "lightning":
+        return "mdi:weather-lightning";
+      case "lightning_rainy":
+        return "mdi:weather-lightning-rainy";
+      case "partlycloudy":
+        return "mdi:weather-partly-cloudy";
+      case "pouring":
+        return "mdi:weather-pouring";
+      case "rainy":
+        return "mdi:weather-rainy";
+      case "snowy":
+        return "mdi:weather-snowy";
+      case "snowy_rainy":
+        return "mdi:weather-snowy-rainy";
+      case "sunny":
+        return "mdi:weather-sunny";
+      case "windy":
+      case "windy_variant":
+        return "mdi:weather-windy";
+      default:
+        return "mdi:weather-partly-cloudy";
+    }
   }
 
   // src/cards/weather/weather-helpers.ts
@@ -535,41 +572,6 @@
         return "Windy";
       default:
         return String(value || "").trim() || "Weather";
-    }
-  }
-  function getConditionIcon(value) {
-    switch (normalizeTextKey(value)) {
-      case "clear_night":
-        return "mdi:weather-night";
-      case "cloudy":
-        return "mdi:weather-cloudy";
-      case "exceptional":
-        return "mdi:alert-circle-outline";
-      case "fog":
-        return "mdi:weather-fog";
-      case "hail":
-        return "mdi:weather-hail";
-      case "lightning":
-        return "mdi:weather-lightning";
-      case "lightning_rainy":
-        return "mdi:weather-lightning-rainy";
-      case "partlycloudy":
-        return "mdi:weather-partly-cloudy";
-      case "pouring":
-        return "mdi:weather-pouring";
-      case "rainy":
-        return "mdi:weather-rainy";
-      case "snowy":
-        return "mdi:weather-snowy";
-      case "snowy_rainy":
-        return "mdi:weather-snowy-rainy";
-      case "sunny":
-        return "mdi:weather-sunny";
-      case "windy":
-      case "windy_variant":
-        return "mdi:weather-windy";
-      default:
-        return "mdi:weather-partly-cloudy";
     }
   }
   function getConditionIconMotionClass(value) {
@@ -965,7 +967,7 @@
         if (customIcon) {
           return customIcon;
         }
-        return getConditionIcon(state?.state);
+        return weatherConditionIcon(state?.state);
       }
       _getAccentColor(state) {
         return getConditionAccent(state?.state);
@@ -1611,7 +1613,7 @@
           </button>
           <div class="weather-card__forecast-popup-time">${escapeHtml(formatForecastDateTime(item?.datetime, type, forecastLocale))}</div>
           <div class="weather-card__forecast-popup-main">
-            <ha-icon icon="${escapeHtml(getConditionIcon(item?.condition || state?.state))}"></ha-icon>
+            <ha-icon icon="${escapeHtml(weatherConditionIcon(item?.condition || state?.state))}"></ha-icon>
             <span>${escapeHtml(translateCondition(item?.condition || "", this._hass, this._config?.language ?? "auto"))}</span>
           </div>
           <div class="weather-card__forecast-popup-rows">
@@ -1645,7 +1647,7 @@
           style="--forecast-accent:${escapeHtml(accent)}; --forecast-icon-color:${escapeHtml(iconColor)}; --forecast-preview-left:${escapeHtml(left)}; --forecast-preview-top:${escapeHtml(top)};"
           data-weather-action="noop"
         >
-          <ha-icon icon="${escapeHtml(getConditionIcon(item?.condition || state?.state))}"></ha-icon>
+          <ha-icon icon="${escapeHtml(weatherConditionIcon(item?.condition || state?.state))}"></ha-icon>
           <span>${escapeHtml(formatForecastDateTime(item?.datetime, type, forecastLocale))}</span>
           ${temperatureLabel ? `<strong>${escapeHtml(temperatureLabel)}</strong>` : ""}
         </div>
@@ -1774,7 +1776,7 @@
           return `
                               <article class="weather-card__forecast-item" style="--forecast-accent:${escapeHtml(accent)}; --forecast-icon-color:${escapeHtml(iconColor)}; --forecast-delay:${Math.min(index, 8) * 28}ms;">
                                 <div class="weather-card__forecast-time">${escapeHtml(formatForecastDateTime(item?.datetime, activeType, forecastLocale))}</div>
-                                <ha-icon icon="${escapeHtml(getConditionIcon(item?.condition || state?.state))}"></ha-icon>
+                                <ha-icon icon="${escapeHtml(weatherConditionIcon(item?.condition || state?.state))}"></ha-icon>
                                 <div class="weather-card__forecast-temp">${escapeHtml(this._formatForecastTemperature(item, activeType, unitPrefs.targetTemperatureUnit))}</div>
                                 <div class="weather-card__forecast-condition">${escapeHtml(translateCondition(item?.condition || "", this._hass, this._config?.language ?? "auto"))}</div>
                                 ${precipitationLabel ? `<div class="weather-card__forecast-rain"><ha-icon icon="mdi:weather-rainy"></ha-icon><span>${escapeHtml(precipitationLabel)}</span></div>` : ""}

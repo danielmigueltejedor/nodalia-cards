@@ -3,5 +3,5 @@ export interface CalendarPublicApi {
   EDITOR_TAG: string;
   CARD_VERSION: string;
   DEFAULT_CONFIG: Record<string, unknown>;
-  normalizeConfig: (rawConfig?: unknown) => Record<string, unknown>;
+  normalizeConfig: typeof import("./calendar-config").normalizeConfig;
 }

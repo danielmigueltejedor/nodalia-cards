@@ -262,13 +262,13 @@
   }
 
   // src/shared/control-config.ts
-  function normalizeControlStyles(candidate, defaults) {
+  function normalizeControlStyles(candidate, defaults, sanitize = window.NodaliaUtils.sanitizeCssValue) {
     const utils2 = window.NodaliaUtils;
     const source = utils2.isObject(candidate) ? candidate : {};
     const result = {};
     for (const [key, fallback] of Object.entries(defaults)) {
       if (utils2.isUnsafeConfigPathKey(key)) continue;
-      result[key] = typeof fallback === "string" ? utils2.sanitizeCssValue(source[key], fallback) : normalizeControlStyles(source[key], fallback);
+      result[key] = typeof fallback === "string" ? sanitize(source[key], fallback) : normalizeControlStyles(source[key], fallback, sanitize);
     }
     return result;
   }

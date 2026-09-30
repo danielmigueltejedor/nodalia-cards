@@ -6,15 +6,15 @@ type CssValues<T extends CssDefaults> = {
   [Key in keyof T]: T[Key] extends CssDefaults ? CssValues<T[Key]> : string;
 };
 
-export function normalizeControlStyles<T extends CssDefaults>(candidate: unknown, defaults: T): CssValues<T> {
+export function normalizeControlStyles<T extends CssDefaults>(candidate: unknown, defaults: T, sanitize: (value: unknown, fallback: string) => string = window.NodaliaUtils.sanitizeCssValue): CssValues<T> {
   const utils = window.NodaliaUtils;
   const source = utils.isObject(candidate) ? candidate : {};
   const result: Record<string, unknown> = {};
   for (const [key, fallback] of Object.entries(defaults)) {
     if (utils.isUnsafeConfigPathKey(key)) continue;
     result[key] = typeof fallback === "string"
-      ? utils.sanitizeCssValue(source[key], fallback)
-      : normalizeControlStyles(source[key], fallback);
+      ? sanitize(source[key], fallback)
+      : normalizeControlStyles(source[key], fallback, sanitize);
   }
   // Every default key has been reconstructed above; leaves are sanitized strings.
   return result as CssValues<T>;

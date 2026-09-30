@@ -1375,15 +1375,9 @@ class NodaliaCalendarCard extends HTMLElement {
     let maxDays = 0;
     let conditionDays = 0;
     forecastMap.forEach((item, key) => {
-      const parsed = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(String(key));
-      if (parsed) {
-        const y = Number(parsed[1]);
-        const m = Number(parsed[2]);
-        const d = Number(parsed[3]);
-        const dayMs = new Date(y, m, d).getTime();
-        if (Number.isFinite(dayMs) && dayMs >= todayMs) {
-          currentOrFutureDays += 1;
-        }
+      const parsed = parseCalendarDateOnlyLocal(key);
+      if (parsed && parsed.getTime() >= todayMs) {
+        currentOrFutureDays += 1;
       }
       if (Number.isFinite(item?.tempMin)) {
         minDays += 1;
@@ -1485,14 +1479,14 @@ class NodaliaCalendarCard extends HTMLElement {
       const stateObj = entityId ? this._hass?.states?.[entityId] : null;
       if (stateObj) {
         const now = new Date();
-        const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
-        const currentTemp = Number(
-          stateObj.attributes?.temperature ?? stateObj.attributes?.native_temperature,
+        const todayKey = forecastDayKey(now);
+        const currentTemp = pickFirstFiniteNumber(
+          stateObj.attributes?.temperature, stateObj.attributes?.native_temperature,
         );
-        const lowTemp = Number(
-          stateObj.attributes?.templow ??
-            stateObj.attributes?.temperature_low ??
-            stateObj.attributes?.native_templow,
+        const lowTemp = pickFirstFiniteNumber(
+          stateObj.attributes?.templow,
+          stateObj.attributes?.temperature_low,
+          stateObj.attributes?.native_templow,
         );
         const condition = String(
           stateObj.attributes?.condition ?? stateObj.state ?? "",
