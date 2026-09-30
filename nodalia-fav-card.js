@@ -26,6 +26,36 @@
   var COVER_SET_POSITION = 4;
   var LOCK_LOCK = 2;
 
+  // src/shared/control-config.ts
+  function normalizeControlStyles(candidate, defaults) {
+    const utils2 = window.NodaliaUtils;
+    const source = utils2.isObject(candidate) ? candidate : {};
+    const result = {};
+    for (const [key, fallback] of Object.entries(defaults)) {
+      if (utils2.isUnsafeConfigPathKey(key)) continue;
+      result[key] = typeof fallback === "string" ? utils2.sanitizeCssValue(source[key], fallback) : normalizeControlStyles(source[key], fallback);
+    }
+    return result;
+  }
+  var actionFields = (prefix, fallback, navigationKey = `${prefix}_navigation_path`) => ({
+    actionKey: `${prefix}_action`,
+    serviceKey: `${prefix}_service`,
+    serviceDataKey: `${prefix}_service_data`,
+    serviceTargetKey: `${prefix}_service_target`,
+    urlKey: `${prefix}_url`,
+    navigationKey,
+    newTabKey: `${prefix}_new_tab`,
+    fallback
+  });
+  var FIELDS = [
+    actionFields("tap", "toggle", "navigation_path"),
+    actionFields("icon_tap", "", "icon_navigation_path"),
+    actionFields("hold", "more-info", "hold_navigation_path"),
+    actionFields("icon_hold", ""),
+    actionFields("double_tap", "none"),
+    actionFields("icon_double_tap", "")
+  ];
+
   // src/cards/fav/fav-runtime.ts
   var utils = window.NodaliaUtils;
   var isObject = utils.isObject.bind(utils);
@@ -107,12 +137,15 @@
     show_state: false,
     layout_mode: "auto"
   };
-  function normalizeConfig(rawConfig) {
-    const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-    config.styles.icon.background = window.NodaliaBubbleContrast?.normalizeNeutralBubbleBackground?.(
-      config.styles.icon.background,
+  function normalizeConfig(rawConfig = {}) {
+    const raw = isObject(rawConfig) ? rawConfig : {};
+    const defaults = DEFAULT_CONFIG;
+    const config = mergeConfig(defaults, raw);
+    const styles = normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles);
+    styles.icon.background = window.NodaliaBubbleContrast?.normalizeNeutralBubbleBackground?.(
+      styles.icon.background,
       DEFAULT_CONFIG.styles.icon.background
-    ) || config.styles.icon.background;
+    ) || styles.icon.background;
     config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? { ...DEFAULT_CONFIG.security, ...isObject(config.security) ? config.security : {} };
     const applyTap = window.NodaliaUtils?.applyCardTapActionField?.bind(window.NodaliaUtils);
     if (typeof applyTap === "function") {
@@ -124,17 +157,35 @@
         urlKey: "tap_url",
         navigationKey: "navigation_path",
         newTabKey: "tap_new_tab"
-      }, rawConfig?.tap_action ?? config.tap_action, "auto");
+      }, raw.tap_action ?? config.tap_action, "auto");
     }
     const serializeActionObject = (value) => isObject(value) ? JSON.stringify(value) : String(value ?? "").trim();
-    config.tap_action = String(config.tap_action ?? "auto").trim() || "auto";
-    config.tap_service = String(config.tap_service ?? "").trim();
-    config.tap_service_data = serializeActionObject(config.tap_service_data);
-    config.tap_service_target = serializeActionObject(config.tap_service_target);
-    config.tap_url = String(config.tap_url ?? "").trim();
-    config.tap_new_tab = config.tap_new_tab === true;
-    config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles) ?? deepClone(DEFAULT_CONFIG.styles);
+    return {
+      ...config,
+      styles,
+      tap_action: String(config.tap_action ?? "auto").trim() || "auto",
+      tap_service: String(config.tap_service ?? "").trim(),
+      tap_service_data: serializeActionObject(config.tap_service_data),
+      tap_service_target: serializeActionObject(config.tap_service_target),
+      tap_url: String(config.tap_url ?? "").trim(),
+      tap_new_tab: config.tap_new_tab === true
+    };
+  }
+
+  // src/shared/editor-entity-helpers.ts
+  function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
+    return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
+  }
+  function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
+    const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
+    if (!entityId) return config;
+    config.entity = entityId;
+    config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
     return config;
+  }
+  function parseSizeToPixels(value, fallback = 0) {
+    const numeric = Number.parseFloat(String(value ?? ""));
+    return Number.isFinite(numeric) ? numeric : fallback;
   }
 
   // src/shared/editor-color.ts
@@ -210,20 +261,8 @@
   }
 
   // src/cards/fav/fav-helpers.ts
-  function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
-    return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
-  }
-  function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
-    const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
-    if (!entityId) {
-      return config;
-    }
-    config.entity = entityId;
-    config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
-    return config;
-  }
   function shouldDarkenFavBubbleIconGlyph(state, accentColor) {
-    return Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(state, accentColor));
+    return Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph?.(state, accentColor));
   }
   function resolveFavBubbleIconGlyphColor(accentColor, state) {
     const accent = String(accentColor || "").trim() || "var(--primary-color)";
@@ -247,10 +286,6 @@
       return "var(--ha-card-background)";
     }
     return "var(--info-color, #71c0ff)";
-  }
-  function parseSizeToPixels(value, fallback = 0) {
-    const numeric = Number.parseFloat(String(value ?? ""));
-    return Number.isFinite(numeric) ? numeric : fallback;
   }
   function miredToKelvin(mired) {
     const numeric = Number(mired);

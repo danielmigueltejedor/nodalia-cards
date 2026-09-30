@@ -28,6 +28,52 @@
   var escapeSelectorValue = utils.escapeSelectorValue.bind(utils);
   var fireEvent = utils.fireEvent.bind(utils);
 
+  // src/shared/control-config.ts
+  function normalizeControlStyles(candidate, defaults) {
+    const utils2 = window.NodaliaUtils;
+    const source = utils2.isObject(candidate) ? candidate : {};
+    const result = {};
+    for (const [key, fallback] of Object.entries(defaults)) {
+      if (utils2.isUnsafeConfigPathKey(key)) continue;
+      result[key] = typeof fallback === "string" ? utils2.sanitizeCssValue(source[key], fallback) : normalizeControlStyles(source[key], fallback);
+    }
+    return result;
+  }
+  var actionFields = (prefix, fallback, navigationKey = `${prefix}_navigation_path`) => ({
+    actionKey: `${prefix}_action`,
+    serviceKey: `${prefix}_service`,
+    serviceDataKey: `${prefix}_service_data`,
+    serviceTargetKey: `${prefix}_service_target`,
+    urlKey: `${prefix}_url`,
+    navigationKey,
+    newTabKey: `${prefix}_new_tab`,
+    fallback
+  });
+  var FIELDS = [
+    actionFields("tap", "toggle", "navigation_path"),
+    actionFields("icon_tap", "", "icon_navigation_path"),
+    actionFields("hold", "more-info", "hold_navigation_path"),
+    actionFields("icon_hold", ""),
+    actionFields("double_tap", "none"),
+    actionFields("icon_double_tap", "")
+  ];
+
+  // src/shared/editor-entity-helpers.ts
+  function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
+    return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
+  }
+  function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
+    const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
+    if (!entityId) return config;
+    config.entity = entityId;
+    config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
+    return config;
+  }
+  function parseSizeToPixels(value, fallback = 0) {
+    const numeric = Number.parseFloat(String(value ?? ""));
+    return Number.isFinite(numeric) ? numeric : fallback;
+  }
+
   // src/shared/editor-color.ts
   var clamp = (value, max) => Math.max(0, Math.min(max, value));
   var component = (value, scale) => {
@@ -158,18 +204,6 @@
   };
 
   // src/cards/insignia/insignia-helpers.ts
-  function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
-    return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
-  }
-  function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
-    const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
-    if (!entityId) {
-      return config;
-    }
-    config.entity = entityId;
-    config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
-    return config;
-  }
   function compactConfig(value) {
     if (Array.isArray(value)) {
       return value.map((item) => compactConfig(item)).filter((item) => item !== void 0);
@@ -201,10 +235,11 @@
     let cursor = target;
     for (let index = 0; index < parts.length - 1; index += 1) {
       const key = parts[index];
+      if (key === void 0) return;
       if (key === "__proto__" || key === "constructor" || key === "prototype") {
         return;
       }
-      const current = Object.hasOwn(cursor, key) ? cursor[key] : void 0;
+      const current = Object.prototype.hasOwnProperty.call(cursor, key) ? cursor[key] : void 0;
       if (!isObject(current)) {
         Object.defineProperty(cursor, key, {
           configurable: true,
@@ -213,9 +248,12 @@
           writable: true
         });
       }
-      cursor = cursor[key];
+      const child = cursor[key];
+      if (!isObject(child)) return;
+      cursor = child;
     }
     const finalKey = parts[parts.length - 1];
+    if (finalKey === void 0) return;
     if (finalKey === "__proto__" || finalKey === "constructor" || finalKey === "prototype") {
       return;
     }
@@ -234,16 +272,16 @@
     let cursor = target;
     for (let index = 0; index < parts.length - 1; index += 1) {
       const key = parts[index];
+      if (key === void 0) return;
       if (!isObject(cursor[key])) {
         return;
       }
-      cursor = cursor[key];
+      const child = cursor[key];
+      if (!isObject(child)) return;
+      cursor = child;
     }
-    delete cursor[parts[parts.length - 1]];
-  }
-  function parseSizeToPixels(value, fallback = 0) {
-    const numeric = Number.parseFloat(String(value ?? ""));
-    return Number.isFinite(numeric) ? numeric : fallback;
+    const finalKey = parts[parts.length - 1];
+    if (finalKey !== void 0) delete cursor[finalKey];
   }
   function normalizeTintPreset(value) {
     const key = normalizeTextKey(value);
@@ -279,7 +317,7 @@
       teal: "#7fd0c8",
       gray: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))"
     };
-    return presets[preset] || presets.blue;
+    return presets[preset] || "#4da3ff";
   }
   function isUnavailableState(state) {
     return normalizeTextKey(state?.state) === "unavailable";
@@ -349,43 +387,10 @@
     return raw.replace(/(\.\d*?[1-9])0+$/g, "$1").replace(/\.0+$/g, "");
   }
   function sanitizeCssValue(value, fallback) {
-    const raw = String(value ?? "").trim();
-    const safeFallback = String(fallback ?? "").trim();
-    if (!raw) {
-      return safeFallback;
-    }
-    if (/[\u0000-\u001f\u007f<>;"'{}]/.test(raw) || raw.includes("/*") || raw.includes("*/")) {
-      return safeFallback;
-    }
-    return raw;
+    return window.NodaliaUtils.sanitizeCssValue(value, fallback);
   }
   function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
-    const defaults = DEFAULT_CONFIG.styles;
-    const card = styles?.card || {};
-    const icon = styles?.icon || {};
-    const tint = styles?.tint || {};
-    return {
-      card: {
-        background: sanitizeCssValue(card.background, defaults.card.background),
-        border: sanitizeCssValue(card.border, defaults.card.border),
-        border_radius: sanitizeCssValue(card.border_radius, defaults.card.border_radius),
-        box_shadow: sanitizeCssValue(card.box_shadow, defaults.card.box_shadow),
-        gap: sanitizeCssValue(card.gap, defaults.card.gap),
-        padding: sanitizeCssValue(card.padding, defaults.card.padding)
-      },
-      icon: {
-        background: sanitizeCssValue(icon.background, defaults.icon.background),
-        icon_only_offset_y: sanitizeCssValue(icon.icon_only_offset_y, defaults.icon.icon_only_offset_y),
-        off_color: sanitizeCssValue(icon.off_color, defaults.icon.off_color),
-        on_color: sanitizeCssValue(icon.on_color, defaults.icon.on_color),
-        size: sanitizeCssValue(icon.size, defaults.icon.size)
-      },
-      tint: {
-        color: sanitizeCssValue(tint.color, defaults.tint.color)
-      },
-      title_size: sanitizeCssValue(styles?.title_size, defaults.title_size),
-      value_size: sanitizeCssValue(styles?.value_size, defaults.value_size)
-    };
+    return normalizeControlStyles(styles, DEFAULT_CONFIG.styles);
   }
   function getEditorColorFallbackValue(field) {
     const normalizedField = String(field ?? "");
@@ -409,25 +414,34 @@
     show_value: true,
     tap_action: "more-info"
   };
-  function normalizeConfig(rawConfig) {
-    const merged = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-    const legacyPreset = normalizeTintPreset(rawConfig?.tint_preset || rawConfig?.color);
+  function normalizeConfig(rawConfig = {}) {
+    const raw = isObject(rawConfig) ? rawConfig : {};
+    const defaults = DEFAULT_CONFIG;
+    const merged = mergeConfig(defaults, raw);
+    const styles = isObject(merged.styles) ? merged.styles : deepClone(DEFAULT_CONFIG.styles);
+    const tint = isObject(styles.tint) ? styles.tint : deepClone(DEFAULT_CONFIG.styles.tint);
+    const rawStyles = isObject(raw.styles) ? raw.styles : {};
+    const rawTint = isObject(rawStyles.tint) ? rawStyles.tint : {};
+    const legacyPreset = normalizeTintPreset(raw.tint_preset || raw.color);
     if (legacyPreset === "auto") {
       merged.tint_auto = true;
     } else if (legacyPreset) {
       merged.tint_auto = false;
-      if (!rawConfig?.styles?.tint?.color) {
-        merged.styles.tint.color = getTintPresetColor(legacyPreset);
+      if (!rawTint.color) {
+        tint.color = getTintPresetColor(legacyPreset);
       }
     }
     const HOLD_ACTIONS = /* @__PURE__ */ new Set(["auto", "toggle", "more-info", "service", "navigate", "url", "none"]);
     const h = String(merged.hold_action ?? "none").trim().toLowerCase();
-    merged.hold_action = HOLD_ACTIONS.has(h) ? h : "none";
-    merged.hold_service = String(merged.hold_service ?? "").trim();
-    merged.hold_service_data = String(merged.hold_service_data ?? "").trim();
-    merged.hold_url = String(merged.hold_url ?? "").trim();
-    merged.hold_new_tab = merged.hold_new_tab === true;
-    return merged;
+    return {
+      ...merged,
+      styles: { ...styles, tint },
+      hold_action: HOLD_ACTIONS.has(h) ? h : "none",
+      hold_service: String(merged.hold_service ?? "").trim(),
+      hold_service_data: String(merged.hold_service_data ?? "").trim(),
+      hold_url: String(merged.hold_url ?? "").trim(),
+      hold_new_tab: merged.hold_new_tab === true
+    };
   }
 
   // src/cards/insignia/insignia-card.ts
