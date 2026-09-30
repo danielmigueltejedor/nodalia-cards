@@ -406,3 +406,16 @@ match merged main. All 663 unit tests and the full local browser suite (248
 passed, one existing platform skip) pass. The added real kW/decimal sequence
 also passes the three local projects before integration. Remaining unchecked
 modules: 68; Gauge view/editor checking is still open.
+
+## Documentation and demo cleanup — 2026-10-01
+
+Repository-wide reference searches find only the optimized animation GIFs in
+README and no consumers or generation scripts for the original animation GIFs.
+Remove the two unused originals (14,954,034 bytes total); retain optimized demos
+and their existing URLs. Preserve historical audit records, clearly identify
+the 2.2.2 checkpoint as historical, and update the active build/validation
+instructions to the 25-card registry, strict/lint/static checks and four-browser
+gate. No distributed card asset or public API is removed.
+
+Cleanup validation: no missing relative links in README or documentation. All
+fast checks and 663 unit tests pass, with no generated distributed asset changes.
