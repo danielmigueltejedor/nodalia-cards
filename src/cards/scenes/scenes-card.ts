@@ -193,7 +193,7 @@ class NodaliaScenesCard extends HTMLElement {
       styles.accent || "",
       styles.icon?.size || "",
       sceneStamp,
-      entries.map(entry => `${entry.entity}:${entry.unavailable}:${entry.accent}`).join("|"),
+      JSON.stringify(entries),
     ].join("::");
   }
 

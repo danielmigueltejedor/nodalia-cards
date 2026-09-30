@@ -1,6 +1,6 @@
 // @ts-nocheck
 /* Large HTMLElement view/controller: typed incrementally as methods are extracted. */
-import { applyArtworkControlTheme, MEDIA_CONTROL_STYLES } from "./media-player-control-theme";
+import { applyArtworkControlTheme, prepareArtworkTheme, MEDIA_CONTROL_STYLES } from "./media-player-control-theme";
 import {
   CARD_TAG,
   EDITOR_TAG,
@@ -11,7 +11,9 @@ import {
 } from "./media-player-constants";
 import { DEFAULT_CONFIG, normalizeConfig } from "./media-player-config";
 import {
+  artworkCacheToken,
   getArtworkVisuals,
+  getCachedArtworkPalette,
   isAlbumCoverFillEnabled,
   MediaPlayerArtworkController,
 } from "./media-player-artwork";
@@ -732,19 +734,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         return;
       }
 
-      // Keep the album stage in sync immediately, but always re-render chrome too.
-      // Skipping _render when a stage already exists left the hero thumb on the
-      // fallback icon while the background already showed the cover.
-      const existingStage = this.shadowRoot?.querySelector("[data-media-art-stage]");
-      if (existingStage instanceof HTMLElement && isAlbumCoverFillEnabled(this._config)) {
-        this._activeArtworkUrl = url;
-        this._syncArtworkLayer(existingStage, {
-          artworkUrl: url,
-          idle: false,
-          entityId,
-          hasAlbumBackground: true,
-        });
-      }
+      // Render chrome and artwork together once their shared palette is ready.
       this._lastRenderSignature = "";
       this._render();
     });
@@ -782,18 +772,7 @@ class NodaliaMediaPlayer extends HTMLElement {
   }
 
   _getArtworkCacheToken(state) {
-    if (!state) {
-      return "";
-    }
-
-    return [
-      String(state.last_updated || state.last_changed || ""),
-      String(state.attributes?.entity_picture || state.attributes?.entity_picture_local || ""),
-      String(state.attributes?.media_title || ""),
-      String(state.attributes?.media_artist || ""),
-      String(state.attributes?.media_album_name || ""),
-      String(state.attributes?.app_name || ""),
-    ].filter(Boolean).join("|");
+    return artworkCacheToken(state);
   }
 
   _getConfiguredPlayers() {
@@ -2864,7 +2843,9 @@ class NodaliaMediaPlayer extends HTMLElement {
     const artworkReady = !desiredArtwork || this._ensureArtworkReady(player.entity, desiredArtwork, {
       rerenderOnReady: true,
     });
-    const artwork = this._getRenderableArtwork(player.entity, desiredArtwork);
+    const artwork = getCachedArtworkPalette(desiredArtwork)
+      ? desiredArtwork
+      : this._getRenderableArtwork(player.entity, desiredArtwork);
     // Prefer cached/ready art, but still paint the album stage immediately with the
     // desired URL so compact tiles and CI fixtures are never blank while preloading.
     const backgroundArtwork = artwork || desiredArtwork || "";
@@ -3393,6 +3374,11 @@ class NodaliaMediaPlayer extends HTMLElement {
     const inEditMode = this._isInEditMode();
     const players = this._getVisiblePlayers();
     const hasPlayers = players.length > 0;
+    const themePlayer = players[this._resolveActivePlayerIndex(players)];
+    const themeState = themePlayer && this._hass?.states?.[themePlayer.entity];
+    const themeUrl = this._config.artwork?.dynamic_colors !== false && themeState
+      ? this._getPlayerArtwork(themePlayer, themeState) : "";
+    if (!prepareArtworkTheme(this, themeUrl, Boolean(this.shadowRoot.querySelector(".media-player-card")), () => this._render())) return;
     if (!hasPlayers) {
       this._activeArtworkIdle = false;
     }

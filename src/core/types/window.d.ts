@@ -38,7 +38,7 @@ interface NodaliaI18nApi {
 }
 
 interface NodaliaBubbleContrastApi {
-  resolveEditorColorValue?: (value: string) => string;
+  resolveEditorColorValue?: (value: unknown) => string;
 }
 
 type NodaliaRenderSignatureApi = typeof import("../../shared/render-signature").renderSignature;
@@ -65,19 +65,7 @@ interface NodaliaNotificationsMobilePolicyApi {
   legacyMobilePolicyLabel: (...args: unknown[]) => string;
 }
 
-interface NodaliaRoomSummaryModelApi {
-  normalizeEntityField: (...args: unknown[]) => unknown;
-  hubMediaPlayerIds: (...args: unknown[]) => unknown;
-  finiteNumber: (...args: unknown[]) => unknown;
-  isUnavailable: (...args: unknown[]) => boolean;
-  stateIsOn: (...args: unknown[]) => boolean;
-  stateIsOpen: (...args: unknown[]) => boolean;
-  stateIsUnlocked: (...args: unknown[]) => boolean;
-  formatMetric: (...args: unknown[]) => unknown;
-  getState: (...args: unknown[]) => unknown;
-  hasRoomContent: (...args: unknown[]) => boolean;
-  buildRoomSummary: (...args: unknown[]) => unknown;
-}
+type NodaliaRoomSummaryModelApi = typeof import("../../cards/room-summary/room-summary-model").roomSummaryModel;
 
 type NodaliaCameraStreamModelApi = typeof import("../../cards/camera/camera-stream-model").cameraStreamModel;
 

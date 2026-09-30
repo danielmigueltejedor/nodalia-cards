@@ -626,7 +626,7 @@
       };
       image.onload = () => {
         const decode = image.decode?.();
-        if (decode && typeof decode.then === "function") {
+        if (decode !== void 0 && typeof decode.then === "function") {
           decode.then(() => settle(true)).catch(() => settle(true));
           return;
         }
@@ -663,8 +663,15 @@
       image.decoding = "async";
       image.crossOrigin = "anonymous";
       const loaded = await new Promise((resolve) => {
-        image.onload = () => resolve(true);
-        image.onerror = () => resolve(false);
+        const timeout = setTimeout(() => settle(false), 4e3);
+        const settle = (success) => {
+          clearTimeout(timeout);
+          image.onload = null;
+          image.onerror = null;
+          resolve(success);
+        };
+        image.onload = () => settle(true);
+        image.onerror = () => settle(false);
         image.src = nextUrl;
       });
       if (!loaded) {
@@ -833,6 +840,17 @@
       host.current.classList.toggle("is-idle-animated", enabled);
     }
   };
+  function artworkCacheToken(state) {
+    if (!state) return "";
+    return [
+      state.attributes.entity_picture || state.attributes.entity_picture_local,
+      state.attributes.media_content_id,
+      state.attributes.media_title,
+      state.attributes.media_artist,
+      state.attributes.media_album_name,
+      state.attributes.app_name
+    ].map((value) => String(value || "")).filter(Boolean).join("|");
+  }
 
   // src/cards/media-player/media-player-progress.ts
   var MEDIA_PLAYER_FEATURE_SEEK = 2;
@@ -1187,6 +1205,31 @@
   // src/cards/media-player/media-player-control-theme.ts
   var requests = /* @__PURE__ */ new WeakMap();
   var themes = /* @__PURE__ */ new WeakMap();
+  var prepared = /* @__PURE__ */ new Set();
+  var displayedArtwork = /* @__PURE__ */ new WeakMap();
+  var renderRequests = /* @__PURE__ */ new WeakMap();
+  function prepareArtworkTheme(owner, url, hasCurrentCard, render) {
+    if (!hasCurrentCard || displayedArtwork.get(owner) === url || !url || getCachedArtworkPalette(url) || prepared.has(url)) {
+      displayedArtwork.set(owner, url);
+      renderRequests.delete(owner);
+      return true;
+    }
+    const existing = renderRequests.get(owner);
+    if (existing?.url === url) return false;
+    const token = {};
+    renderRequests.set(owner, { url, token });
+    void sampleArtworkPalette(url).then(() => {
+      if (renderRequests.get(owner)?.token !== token) return;
+      renderRequests.delete(owner);
+      prepared.add(url);
+      if (prepared.size > 64) {
+        const first = prepared.values().next().value;
+        if (first !== void 0) prepared.delete(first);
+      }
+      if (owner.isConnected) render();
+    });
+    return false;
+  }
   async function applyArtworkControlTheme(host, url) {
     if (!host) return;
     const owner = host.getRootNode?.()?.host || host;
@@ -1841,16 +1884,6 @@
           if (!rerenderOnReady || !this.isConnected) {
             return;
           }
-          const existingStage = this.shadowRoot?.querySelector("[data-media-art-stage]");
-          if (existingStage instanceof HTMLElement && isAlbumCoverFillEnabled(this._config)) {
-            this._activeArtworkUrl = url;
-            this._syncArtworkLayer(existingStage, {
-              artworkUrl: url,
-              idle: false,
-              entityId,
-              hasAlbumBackground: true
-            });
-          }
           this._lastRenderSignature = "";
           this._render();
         });
@@ -1881,17 +1914,7 @@
         return appendQueryParam(baseUrl, "nodalia_ts", options.cacheToken);
       }
       _getArtworkCacheToken(state) {
-        if (!state) {
-          return "";
-        }
-        return [
-          String(state.last_updated || state.last_changed || ""),
-          String(state.attributes?.entity_picture || state.attributes?.entity_picture_local || ""),
-          String(state.attributes?.media_title || ""),
-          String(state.attributes?.media_artist || ""),
-          String(state.attributes?.media_album_name || ""),
-          String(state.attributes?.app_name || "")
-        ].filter(Boolean).join("|");
+        return artworkCacheToken(state);
       }
       _getConfiguredPlayers() {
         return Array.isArray(this._config?.players) ? this._config.players : [];
@@ -3512,7 +3535,7 @@
         const artworkReady = !desiredArtwork || this._ensureArtworkReady(player.entity, desiredArtwork, {
           rerenderOnReady: true
         });
-        const artwork = this._getRenderableArtwork(player.entity, desiredArtwork);
+        const artwork = getCachedArtworkPalette(desiredArtwork) ? desiredArtwork : this._getRenderableArtwork(player.entity, desiredArtwork);
         const backgroundArtwork = artwork || desiredArtwork || "";
         const renderAnimateEntrance = animateEntrance && artworkReady;
         const safeArtwork = artwork ? escapeHtml(artwork) : "";
@@ -3934,6 +3957,10 @@
         const inEditMode = this._isInEditMode();
         const players = this._getVisiblePlayers();
         const hasPlayers = players.length > 0;
+        const themePlayer = players[this._resolveActivePlayerIndex(players)];
+        const themeState = themePlayer && this._hass?.states?.[themePlayer.entity];
+        const themeUrl = this._config.artwork?.dynamic_colors !== false && themeState ? this._getPlayerArtwork(themePlayer, themeState) : "";
+        if (!prepareArtworkTheme(this, themeUrl, Boolean(this.shadowRoot.querySelector(".media-player-card")), () => this._render())) return;
         if (!hasPlayers) {
           this._activeArtworkIdle = false;
         }

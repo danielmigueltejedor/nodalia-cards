@@ -609,8 +609,15 @@
       image.decoding = "async";
       image.crossOrigin = "anonymous";
       const loaded = await new Promise((resolve) => {
-        image.onload = () => resolve(true);
-        image.onerror = () => resolve(false);
+        const timeout = setTimeout(() => settle(false), 4e3);
+        const settle = (success) => {
+          clearTimeout(timeout);
+          image.onload = null;
+          image.onerror = null;
+          resolve(success);
+        };
+        image.onload = () => settle(true);
+        image.onerror = () => settle(false);
         image.src = nextUrl;
       });
       if (!loaded) {
@@ -625,10 +632,46 @@
       return null;
     }
   }
+  function artworkCacheToken(state) {
+    if (!state) return "";
+    return [
+      state.attributes.entity_picture || state.attributes.entity_picture_local,
+      state.attributes.media_content_id,
+      state.attributes.media_title,
+      state.attributes.media_artist,
+      state.attributes.media_album_name,
+      state.attributes.app_name
+    ].map((value) => String(value || "")).filter(Boolean).join("|");
+  }
 
   // src/cards/media-player/media-player-control-theme.ts
   var requests = /* @__PURE__ */ new WeakMap();
   var themes = /* @__PURE__ */ new WeakMap();
+  var prepared = /* @__PURE__ */ new Set();
+  var displayedArtwork = /* @__PURE__ */ new WeakMap();
+  var renderRequests = /* @__PURE__ */ new WeakMap();
+  function prepareArtworkTheme(owner, url, hasCurrentCard, render) {
+    if (!hasCurrentCard || displayedArtwork.get(owner) === url || !url || getCachedArtworkPalette(url) || prepared.has(url)) {
+      displayedArtwork.set(owner, url);
+      renderRequests.delete(owner);
+      return true;
+    }
+    const existing = renderRequests.get(owner);
+    if (existing?.url === url) return false;
+    const token = {};
+    renderRequests.set(owner, { url, token });
+    void sampleArtworkPalette(url).then(() => {
+      if (renderRequests.get(owner)?.token !== token) return;
+      renderRequests.delete(owner);
+      prepared.add(url);
+      if (prepared.size > 64) {
+        const first = prepared.values().next().value;
+        if (first !== void 0) prepared.delete(first);
+      }
+      if (owner.isConnected) render();
+    });
+    return false;
+  }
   async function applyArtworkControlTheme(host, url) {
     if (!host) return;
     const owner = host.getRootNode?.()?.host || host;
@@ -1611,17 +1654,7 @@
         return appendQueryParam(baseUrl, "nodalia_ts", options.cacheToken);
       }
       _getArtworkCacheToken(state) {
-        if (!state) {
-          return "";
-        }
-        return [
-          String(state.last_updated || state.last_changed || ""),
-          String(state.attributes?.entity_picture || state.attributes?.entity_picture_local || ""),
-          String(state.attributes?.media_title || ""),
-          String(state.attributes?.media_artist || ""),
-          String(state.attributes?.media_album_name || ""),
-          String(state.attributes?.app_name || "")
-        ].filter(Boolean).join("|");
+        return artworkCacheToken(state);
       }
       _isAppleTvPlayer(player, state) {
         const candidates = [
@@ -2681,6 +2714,10 @@
         }
         const showMediaPlayerCard = hasVisiblePlayers && (inEditMode || this._mediaPlayerExpanded === true);
         const showMediaPlayerToggle = hasVisiblePlayers && !showMediaPlayerCard;
+        const themePlayer = visiblePlayers[this._resolveActiveMediaPlayerIndex(visiblePlayers)];
+        const themeState = themePlayer && this._hass?.states?.[themePlayer.entity];
+        const themeUrl = showMediaPlayerCard && themeState ? this._getMediaPlayerArtwork(themePlayer, themeState) : "";
+        if (!prepareArtworkTheme(this, themeUrl, Boolean(this.shadowRoot.querySelector(".media-player-card")), () => this._render())) return;
         const playMediaToggleEntrance = animations.enabled && showMediaPlayerToggle && !this._lastMediaToggleVisible;
         this._lastMediaToggleVisible = showMediaPlayerToggle;
         const playMediaCardEntrance = animations.enabled && showMediaPlayerCard && !this._lastMediaPlayerCardVisible;
@@ -4255,11 +4292,11 @@
       }
       _emitConfig(nextConfig) {
         const focusState = this._captureFocusState();
-        const prepared = this._prepareEditorConfig(deepClone(nextConfig));
-        this._config = compactConfig(prepared);
+        const prepared2 = this._prepareEditorConfig(deepClone(nextConfig));
+        this._config = compactConfig(prepared2);
         this._render();
         this._restoreFocusState(focusState);
-        const merged = mergeConfig(DEFAULT_CONFIG, prepared);
+        const merged = mergeConfig(DEFAULT_CONFIG, prepared2);
         fireEvent(this, "config-changed", {
           config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(merged, DEFAULT_CONFIG) ?? {})
         });

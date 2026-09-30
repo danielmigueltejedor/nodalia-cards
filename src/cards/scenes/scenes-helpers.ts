@@ -1,9 +1,10 @@
-// @ts-nocheck -- scene, scroll and color helpers stay loosely typed until remaining unknowns are narrowed.
+import type { HassEntity, HomeAssistant } from "../../core/types/home-assistant";
+import type { SceneRow, ScenesInput, SceneNormalizationOptions, DashboardScrollSnapshot } from "./scenes-types";
 import { DEFAULT_SCENE_ACCENT } from "./scenes-constants";
 import { clamp, deepClone, isObject, isUnsafeConfigPathKey, normalizeTextKey } from "./scenes-runtime";
 import { DEFAULT_CONFIG } from "./scenes-defaults";
 
-export function mergeConfig(base, override) {
+export function mergeConfig(base: unknown, override: unknown): unknown {
   if (window.NodaliaUtils?.mergeDeep) {
     return window.NodaliaUtils.mergeDeep(base, override || {});
   }
@@ -13,14 +14,15 @@ export function mergeConfig(base, override) {
   if (!isObject(base)) {
     return override === undefined ? base : override;
   }
-  const result = {};
-  const keys = new Set([...Object.keys(base), ...Object.keys(override || {})]);
+  const result: Record<string, unknown> = {};
+  const overrides = isObject(override) ? override : {};
+  const keys = new Set([...Object.keys(base), ...Object.keys(overrides)]);
   keys.forEach(key => {
     if (isUnsafeConfigPathKey(key)) {
       return;
     }
     const baseValue = base[key];
-    const overrideValue = override ? override[key] : undefined;
+    const overrideValue = overrides[key];
     if (overrideValue === undefined) {
       result[key] = deepClone(baseValue);
       return;
@@ -38,7 +40,7 @@ export function mergeConfig(base, override) {
   return result;
 }
 
-export function compactConfig(value) {
+export function compactConfig(value: unknown): unknown {
   if (window.NodaliaUtils?.compactConfig) {
     return window.NodaliaUtils.compactConfig(value);
   }
@@ -46,7 +48,7 @@ export function compactConfig(value) {
     return value.map(item => compactConfig(item)).filter(item => item !== undefined);
   }
   if (isObject(value)) {
-    const compacted = {};
+    const compacted: Record<string, unknown> = {};
     Object.entries(value).forEach(([key, item]) => {
       if (isUnsafeConfigPathKey(key)) {
         return;
@@ -69,20 +71,20 @@ export function compactConfig(value) {
 
 
 
-export function moveItem(list, fromIndex, toIndex) {
+export function moveItem<T>(list: T[], fromIndex: number, toIndex: number) {
   if (!Array.isArray(list) || fromIndex < 0 || toIndex < 0 || fromIndex >= list.length || toIndex >= list.length) {
     return;
   }
-  const [item] = list.splice(fromIndex, 1);
-  list.splice(toIndex, 0, item);
+  const items = list.splice(fromIndex, 1);
+  list.splice(toIndex, 0, ...items);
 }
 
 
-export function formatEditorHexChannel(value) {
+export function formatEditorHexChannel(value: number) {
   return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
 }
 
-export function resolveEditorColorValue(value) {
+export function resolveEditorColorValue(value: unknown) {
   const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
   if (typeof resolver === "function") {
     return resolver(value);
@@ -90,7 +92,7 @@ export function resolveEditorColorValue(value) {
   return String(value ?? "").trim();
 }
 
-export function formatEditorColorFromHex(hex, alpha = 1) {
+export function formatEditorColorFromHex(hex: unknown, alpha = 1) {
   const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
   if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
     return String(hex ?? "");
@@ -105,7 +107,7 @@ export function formatEditorColorFromHex(hex, alpha = 1) {
   return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
 }
 
-export function getEditorColorModel(value, fallbackValue = "#71c0ff") {
+export function getEditorColorModel(value: unknown, fallbackValue = "#71c0ff") {
   const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
   const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
   const channels = resolvedValue.match(/[\d.]+/g) || [];
@@ -123,7 +125,7 @@ export function getEditorColorModel(value, fallbackValue = "#71c0ff") {
   };
 }
 
-export function getEditorColorFallbackValue(field) {
+export function getEditorColorFallbackValue(field: unknown) {
   const normalized = String(field || "");
   if (normalized.endsWith("icon.on_color") || normalized.endsWith("styles.accent") || normalized.endsWith(".color")) {
     return DEFAULT_SCENE_ACCENT;
@@ -143,22 +145,22 @@ export function getEditorColorFallbackValue(field) {
   return DEFAULT_CONFIG.styles.icon.on_color;
 }
 
-export function parseSizeToPixels(value, fallback = 0) {
+export function parseSizeToPixels(value: unknown, fallback = 0) {
   const numeric = Number.parseFloat(String(value ?? ""));
   return Number.isFinite(numeric) ? numeric : fallback;
 }
 
 
-export function isUnavailableState(state) {
+export function isUnavailableState(state: HassEntity | null | undefined) {
   return normalizeTextKey(state?.state) === "unavailable";
 }
 
 
 
-export function collectDashboardScrollSnapshot(anchor) {
-  const containers = [];
-  const seen = new Set();
-  const remember = el => {
+export function collectDashboardScrollSnapshot(anchor: unknown): DashboardScrollSnapshot {
+  const containers: DashboardScrollSnapshot["containers"] = [];
+  const seen = new Set<HTMLElement>();
+  const remember = (el: unknown) => {
     if (!(el instanceof HTMLElement) || seen.has(el)) {
       return;
     }
@@ -209,7 +211,7 @@ export function collectDashboardScrollSnapshot(anchor) {
   };
 }
 
-export function restoreDashboardScrollSnapshot(snapshot) {
+export function restoreDashboardScrollSnapshot(snapshot: DashboardScrollSnapshot | null | undefined) {
   if (!snapshot?.containers?.length) {
     return;
   }
@@ -231,7 +233,7 @@ export function restoreDashboardScrollSnapshot(snapshot) {
 
 let dashboardScrollRestoreGeneration = 0;
 
-export function scheduleDashboardScrollRestore(snapshot) {
+export function scheduleDashboardScrollRestore(snapshot: DashboardScrollSnapshot | null | undefined) {
   if (!snapshot?.containers?.length || typeof window === "undefined") {
     return () => {};
   }
@@ -266,23 +268,26 @@ export function cancelDashboardScrollRestore() {
   dashboardScrollRestoreGeneration += 1;
 }
 
-export function sanitizeCssValue(value, fallback) {
+export function sanitizeCssValue(value: unknown, fallback: unknown) {
   const raw = String(value ?? "").trim();
   const safeFallback = String(fallback ?? "").trim();
   if (!raw) {
     return safeFallback;
   }
+  // Reject control characters intentionally at the CSS input boundary.
+  // eslint-disable-next-line no-control-regex
   if (/[\u0000-\u001f\u007f<>;"'{}]/.test(raw) || raw.includes("/*") || raw.includes("*/")) {
     return safeFallback;
   }
   return raw;
 }
 
-export function getDefaultSceneAccent(styles = DEFAULT_CONFIG.styles) {
-  return sanitizeCssValue(styles?.accent, DEFAULT_SCENE_ACCENT) || DEFAULT_SCENE_ACCENT;
+export function getDefaultSceneAccent(styles: unknown = DEFAULT_CONFIG.styles) {
+  const input = isObject(styles) ? styles : {};
+  return sanitizeCssValue(input.accent, DEFAULT_SCENE_ACCENT) || DEFAULT_SCENE_ACCENT;
 }
 
-export function resolveSceneAccent(value, fallback = DEFAULT_SCENE_ACCENT) {
+export function resolveSceneAccent(value: unknown, fallback = DEFAULT_SCENE_ACCENT) {
   const raw = String(value ?? "").trim();
   if (!raw) {
     return fallback;
@@ -291,11 +296,12 @@ export function resolveSceneAccent(value, fallback = DEFAULT_SCENE_ACCENT) {
 }
 
 
-export function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
+export function getSafeStyles(styles: unknown = DEFAULT_CONFIG.styles) {
+  const input = isObject(styles) ? styles : {};
   const defaults = DEFAULT_CONFIG.styles;
-  const card = styles?.card || {};
-  const button = styles?.button || {};
-  const icon = styles?.icon || {};
+  const card = isObject(input.card) ? input.card : {};
+  const button = isObject(input.button) ? input.button : {};
+  const icon = isObject(input.icon) ? input.icon : {};
   return {
     accent: getDefaultSceneAccent(styles),
     card: {
@@ -321,19 +327,19 @@ export function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
       on_color: sanitizeCssValue(icon.on_color, defaults.icon.on_color),
       size: sanitizeCssValue(icon.size, defaults.icon.size),
     },
-    chip_border_radius: sanitizeCssValue(styles?.chip_border_radius, defaults.chip_border_radius),
-    title_size: sanitizeCssValue(styles?.title_size, defaults.title_size),
+    chip_border_radius: sanitizeCssValue(input.chip_border_radius, defaults.chip_border_radius),
+    title_size: sanitizeCssValue(input.title_size, defaults.title_size),
   };
 }
 
-export function normalizeSceneRows(rawScenes, options = {}) {
+export function normalizeSceneRows(rawScenes: unknown, options: SceneNormalizationOptions = {}): SceneRow[] {
   const keepEmpty = options.keepEmpty === true;
   if (!Array.isArray(rawScenes)) {
     return [];
   }
 
   const rows = rawScenes
-    .map(item => {
+    .map((item: unknown) => {
       if (typeof item === "string") {
         return { entity: String(item).trim(), name: "", icon: "", color: "" };
       }
@@ -352,13 +358,13 @@ export function normalizeSceneRows(rawScenes, options = {}) {
   return keepEmpty ? rows : rows.filter(item => item.entity);
 }
 
-export function getStubSceneEntities(hass, limit = 4, entities = [], entitiesFallback = []) {
+export function getStubSceneEntities(hass: HomeAssistant | null | undefined, limit = 4, entities: unknown = [], entitiesFallback: unknown = []) {
   return window.NodaliaUtils
     .findStubEntityIds(hass, entities, entitiesFallback, ["scene"], limit)
     .map(entity => ({ entity }));
 }
 
-export function applyStubConfig(config, hass, entities = [], entitiesFallback = []) {
+export function applyStubConfig(config: Record<string, unknown>, hass: HomeAssistant | null | undefined, entities: unknown = [], entitiesFallback: unknown = []) {
   const next = deepClone(config);
   const scenes = getStubSceneEntities(hass, 4, entities, entitiesFallback);
   if (scenes.length) {
@@ -370,11 +376,12 @@ export function applyStubConfig(config, hass, entities = [], entitiesFallback = 
   return next;
 }
 
-export function resolveSceneEntries(config, hass) {
+export function resolveSceneEntries(config: ScenesInput, hass: HomeAssistant | null | undefined) {
   const rows = Array.isArray(config?.scenes) ? config.scenes : [];
   const defaultAccent = getDefaultSceneAccent(config?.styles);
   return rows
-    .map((item, index) => {
+    .map((raw: unknown, index: number) => {
+      const item = isObject(raw) ? raw : {};
       const entity = String(item?.entity || "").trim();
       if (!entity.startsWith("scene.")) {
         return null;
@@ -408,5 +415,5 @@ export function resolveSceneEntries(config, hass) {
         unavailable: !state || isUnavailableState(state),
       };
     })
-    .filter(Boolean);
+    .filter(item => item !== null);
 }

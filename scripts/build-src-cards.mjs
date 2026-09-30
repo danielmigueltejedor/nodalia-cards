@@ -8,10 +8,12 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const SRC_CARD_ENTRIES = CARD_REGISTRY.map(card => ({ entry: card.standalone, outfile: card.artifact }));
 
 export const RUNTIME_ENTRIES = [
+  { entry: "src/cards/room-summary/room-summary-model-runtime.ts", outfile: "nodalia-room-summary-model.js" },
   { entry: "src/cards/camera/camera-stream-runtime.ts", outfile: "nodalia-camera-stream-model.js" },
   { entry: "src/shared/render-signature-runtime.ts", outfile: "nodalia-render-signature.js" },
 ];
 export async function buildSrcCards() {
+  await build({ absWorkingDir: root, entryPoints: ["tests/fixtures/hass.ts"], outfile: "tests/fixtures/hass.mjs", bundle: true, format: "esm", platform: "browser", target: ["es2020"], banner: { js: "// Generated from tests/fixtures/hass.ts. Do not edit." } });
   for (const card of [...RUNTIME_ENTRIES, ...SRC_CARD_ENTRIES]) {
     await build({
       absWorkingDir: root,

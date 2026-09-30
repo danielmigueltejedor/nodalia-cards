@@ -100,13 +100,14 @@
       return override === void 0 ? base : override;
     }
     const result = {};
-    const keys = /* @__PURE__ */ new Set([...Object.keys(base), ...Object.keys(override || {})]);
+    const overrides = isObject(override) ? override : {};
+    const keys = /* @__PURE__ */ new Set([...Object.keys(base), ...Object.keys(overrides)]);
     keys.forEach((key) => {
       if (isUnsafeConfigPathKey(key)) {
         return;
       }
       const baseValue = base[key];
-      const overrideValue = override ? override[key] : void 0;
+      const overrideValue = overrides[key];
       if (overrideValue === void 0) {
         result[key] = deepClone(baseValue);
         return;
@@ -153,8 +154,8 @@
     if (!Array.isArray(list) || fromIndex < 0 || toIndex < 0 || fromIndex >= list.length || toIndex >= list.length) {
       return;
     }
-    const [item] = list.splice(fromIndex, 1);
-    list.splice(toIndex, 0, item);
+    const items = list.splice(fromIndex, 1);
+    list.splice(toIndex, 0, ...items);
   }
   function formatEditorHexChannel(value) {
     return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
@@ -326,7 +327,8 @@
     return raw;
   }
   function getDefaultSceneAccent(styles = DEFAULT_CONFIG.styles) {
-    return sanitizeCssValue(styles?.accent, DEFAULT_SCENE_ACCENT) || DEFAULT_SCENE_ACCENT;
+    const input = isObject(styles) ? styles : {};
+    return sanitizeCssValue(input.accent, DEFAULT_SCENE_ACCENT) || DEFAULT_SCENE_ACCENT;
   }
   function resolveSceneAccent(value, fallback = DEFAULT_SCENE_ACCENT) {
     const raw = String(value ?? "").trim();
@@ -336,10 +338,11 @@
     return sanitizeCssValue(raw, fallback) || fallback;
   }
   function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
+    const input = isObject(styles) ? styles : {};
     const defaults = DEFAULT_CONFIG.styles;
-    const card = styles?.card || {};
-    const button = styles?.button || {};
-    const icon = styles?.icon || {};
+    const card = isObject(input.card) ? input.card : {};
+    const button = isObject(input.button) ? input.button : {};
+    const icon = isObject(input.icon) ? input.icon : {};
     return {
       accent: getDefaultSceneAccent(styles),
       card: {
@@ -365,8 +368,8 @@
         on_color: sanitizeCssValue(icon.on_color, defaults.icon.on_color),
         size: sanitizeCssValue(icon.size, defaults.icon.size)
       },
-      chip_border_radius: sanitizeCssValue(styles?.chip_border_radius, defaults.chip_border_radius),
-      title_size: sanitizeCssValue(styles?.title_size, defaults.title_size)
+      chip_border_radius: sanitizeCssValue(input.chip_border_radius, defaults.chip_border_radius),
+      title_size: sanitizeCssValue(input.title_size, defaults.title_size)
     };
   }
   function normalizeSceneRows(rawScenes, options = {}) {
@@ -407,7 +410,8 @@
   function resolveSceneEntries(config, hass) {
     const rows = Array.isArray(config?.scenes) ? config.scenes : [];
     const defaultAccent = getDefaultSceneAccent(config?.styles);
-    return rows.map((item, index) => {
+    return rows.map((raw, index) => {
+      const item = isObject(raw) ? raw : {};
       const entity = String(item?.entity || "").trim();
       if (!entity.startsWith("scene.")) {
         return null;
@@ -433,7 +437,7 @@
         index,
         unavailable: !state || isUnavailableState(state)
       };
-    }).filter(Boolean);
+    }).filter((item) => item !== null);
   }
 
   // src/cards/scenes/scenes-config.ts
@@ -443,17 +447,20 @@
     columns: 2,
     scenes: []
   };
-  function normalizeConfig(rawConfig, options = {}) {
-    const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  function normalizeConfig(rawConfig = {}, options = {}) {
+    const merged = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+    const config = isObject(merged) ? merged : { ...DEFAULT_CONFIG };
     const layout = normalizeTextKey(config.layout);
-    config.layout = ["grid", "list", "single"].includes(layout) ? layout : "grid";
-    config.columns = clamp(Math.round(Number(config.columns) || DEFAULT_CONFIG.columns), 1, 6);
     const tap = normalizeTextKey(config.tap_action);
-    config.tap_action = TAP_ACTIONS.has(tap) ? tap : "activate";
     const hold = normalizeTextKey(config.hold_action);
-    config.hold_action = HOLD_ACTIONS.has(hold) ? hold : "more-info";
-    config.scenes = normalizeSceneRows(config.scenes, options);
-    return config;
+    return {
+      ...config,
+      layout: layout === "list" || layout === "single" ? layout : "grid",
+      columns: clamp(Math.round(Number(config.columns) || DEFAULT_CONFIG.columns), 1, 6),
+      tap_action: TAP_ACTIONS.has(tap) ? tap : "activate",
+      hold_action: HOLD_ACTIONS.has(hold) ? hold : "more-info",
+      scenes: normalizeSceneRows(config.scenes, options)
+    };
   }
 
   // src/cards/scenes/scenes-card.ts
@@ -612,7 +619,7 @@
           styles.accent || "",
           styles.icon?.size || "",
           sceneStamp,
-          entries.map((entry) => `${entry.entity}:${entry.unavailable}:${entry.accent}`).join("|")
+          JSON.stringify(entries)
         ].join("::");
       }
       _canRunHoldAction(entityId) {

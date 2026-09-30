@@ -1,3 +1,5 @@
+import type { HassEntity } from "../../core/types/home-assistant";
+
 import type { ArtworkPalette, MediaPlayerIdleArtworkConfig } from "./media-player-types";
 
 const PALETTE_CACHE = new Map<string, ArtworkPalette>();
@@ -144,7 +146,7 @@ export function preloadArtworkUrl(url: string): Promise<boolean> {
     };
     image.onload = () => {
       const decode = image.decode?.();
-      if (decode && typeof decode.then === "function") {
+      if (decode !== undefined && typeof decode.then === "function") {
         decode.then(() => settle(true)).catch(() => settle(true));
         return;
       }
@@ -183,8 +185,16 @@ async function loadArtworkPalette(url: string): Promise<ArtworkPalette | null> {
     image.decoding = "async";
     image.crossOrigin = "anonymous";
     const loaded = await new Promise<boolean>(resolve => {
-      image.onload = () => resolve(true);
-      image.onerror = () => resolve(false);
+      // A stalled cover must never hold the player UI indefinitely.
+      const timeout = setTimeout(() => settle(false), 4000);
+      const settle = (success: boolean) => {
+        clearTimeout(timeout);
+        image.onload = null;
+        image.onerror = null;
+        resolve(success);
+      };
+      image.onload = () => settle(true);
+      image.onerror = () => settle(false);
       image.src = nextUrl;
     });
     if (!loaded) {
@@ -386,4 +396,17 @@ export class MediaPlayerArtworkController {
     const enabled = idle && animation === "subtle" && !prefersReducedMotion();
     host.current.classList.toggle("is-idle-animated", enabled);
   }
+}
+
+/** State timestamps also change on volume/progress updates; only artwork identity belongs here. */
+export function artworkCacheToken(state: HassEntity | null | undefined): string {
+  if (!state) return "";
+  return [
+    state.attributes.entity_picture || state.attributes.entity_picture_local,
+    state.attributes.media_content_id,
+    state.attributes.media_title,
+    state.attributes.media_artist,
+    state.attributes.media_album_name,
+    state.attributes.app_name,
+  ].map(value => String(value || "")).filter(Boolean).join("|");
 }

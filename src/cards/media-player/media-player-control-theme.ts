@@ -3,6 +3,35 @@ import { getCachedArtworkPalette, sampleArtworkPalette } from "./media-player-ar
 const requests = new WeakMap<HTMLElement, object>();
 const themes = new WeakMap<Element, { url: string; tint: string; ink: string }>();
 
+
+const prepared = new Set<string>();
+const displayedArtwork = new WeakMap<HTMLElement, string>();
+const renderRequests = new WeakMap<HTMLElement, { url: string; token: object }>();
+
+/** Commit a replacement cover and palette together; cached covers never yield. */
+export function prepareArtworkTheme(owner: HTMLElement, url: string, hasCurrentCard: boolean, render: () => void): boolean {
+  if (!hasCurrentCard || displayedArtwork.get(owner) === url || !url || getCachedArtworkPalette(url) || prepared.has(url)) {
+    displayedArtwork.set(owner, url);
+    renderRequests.delete(owner);
+    return true;
+  }
+  const existing = renderRequests.get(owner);
+  if (existing?.url === url) return false;
+  const token = {};
+  renderRequests.set(owner, { url, token });
+  void sampleArtworkPalette(url).then(() => {
+    if (renderRequests.get(owner)?.token !== token) return;
+    renderRequests.delete(owner);
+    prepared.add(url);
+    if (prepared.size > 64) {
+      const first = prepared.values().next().value;
+      if (first !== undefined) prepared.delete(first);
+    }
+    if (owner.isConnected) render();
+  });
+  return false;
+}
+
 /** Apply to the controls' ancestor, never to the sibling artwork layer. */
 export async function applyArtworkControlTheme(host: HTMLElement | null, url: string): Promise<void> {
   if (!host) return;
