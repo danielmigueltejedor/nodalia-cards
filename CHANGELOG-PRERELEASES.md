@@ -27,6 +27,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Maintenance
 
+- Control animation and lifecycle time together in browser regressions, including slow-worker stalls, to avoid sampling detached controls.
+
 - Check Fan, Humidifier and Cover YAML normalization with TypeScript; share control normalization and editor color models while retaining legacy helper exports.
 
 - Centralize all 25 cards (including Lock) in the build/test registry and derive card versions from package.json.
