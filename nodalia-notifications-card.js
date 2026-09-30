@@ -439,18 +439,19 @@
     config.dismissed_entity = entityDomain(config.dismissed_entity) === "input_text" ? String(config.dismissed_entity).trim() : "";
     config.smart_recommendations = config.smart_recommendations !== false;
     config.language = String(config.language || "auto").trim() || "auto";
+    const thresholds = isObject(config.thresholds) ? config.thresholds : {};
     config.thresholds = {
-      hot_temperature: finiteNumber(config.thresholds?.hot_temperature, DEFAULT_CONFIG.thresholds.hot_temperature),
-      cold_temperature: finiteNumber(config.thresholds?.cold_temperature, DEFAULT_CONFIG.thresholds.cold_temperature),
-      humidity_high: finiteNumber(config.thresholds?.humidity_high, DEFAULT_CONFIG.thresholds.humidity_high),
-      humidity_low: finiteNumber(config.thresholds?.humidity_low, DEFAULT_CONFIG.thresholds.humidity_low),
-      rain_probability: Math.max(0, Math.min(100, finiteNumber(config.thresholds?.rain_probability, DEFAULT_CONFIG.thresholds.rain_probability))),
-      rain_lookahead_hours: Math.max(1, Math.min(24, finiteNumber(config.thresholds?.rain_lookahead_hours, DEFAULT_CONFIG.thresholds.rain_lookahead_hours))),
-      media_absence_minutes: Math.max(1, Math.min(240, finiteNumber(config.thresholds?.media_absence_minutes, DEFAULT_CONFIG.thresholds.media_absence_minutes))),
-      battery_low: Math.max(0, Math.min(100, finiteNumber(config.thresholds?.battery_low, DEFAULT_CONFIG.thresholds.battery_low))),
-      humidifier_fill_low: Math.max(0, Math.min(100, finiteNumber(config.thresholds?.humidifier_fill_low, DEFAULT_CONFIG.thresholds.humidifier_fill_low))),
-      humidifier_fill_full: Math.max(0, Math.min(100, finiteNumber(config.thresholds?.humidifier_fill_full, DEFAULT_CONFIG.thresholds.humidifier_fill_full))),
-      ink_low: Math.max(0, Math.min(100, finiteNumber(config.thresholds?.ink_low, DEFAULT_CONFIG.thresholds.ink_low)))
+      hot_temperature: finiteNumber(thresholds.hot_temperature, DEFAULT_CONFIG.thresholds.hot_temperature),
+      cold_temperature: finiteNumber(thresholds.cold_temperature, DEFAULT_CONFIG.thresholds.cold_temperature),
+      humidity_high: finiteNumber(thresholds.humidity_high, DEFAULT_CONFIG.thresholds.humidity_high),
+      humidity_low: finiteNumber(thresholds.humidity_low, DEFAULT_CONFIG.thresholds.humidity_low),
+      rain_probability: Math.max(0, Math.min(100, finiteNumber(thresholds.rain_probability, DEFAULT_CONFIG.thresholds.rain_probability))),
+      rain_lookahead_hours: Math.max(1, Math.min(24, finiteNumber(thresholds.rain_lookahead_hours, DEFAULT_CONFIG.thresholds.rain_lookahead_hours))),
+      media_absence_minutes: Math.max(1, Math.min(240, finiteNumber(thresholds.media_absence_minutes, DEFAULT_CONFIG.thresholds.media_absence_minutes))),
+      battery_low: Math.max(0, Math.min(100, finiteNumber(thresholds.battery_low, DEFAULT_CONFIG.thresholds.battery_low))),
+      humidifier_fill_low: Math.max(0, Math.min(100, finiteNumber(thresholds.humidifier_fill_low, DEFAULT_CONFIG.thresholds.humidifier_fill_low))),
+      humidifier_fill_full: Math.max(0, Math.min(100, finiteNumber(thresholds.humidifier_fill_full, DEFAULT_CONFIG.thresholds.humidifier_fill_full))),
+      ink_low: Math.max(0, Math.min(100, finiteNumber(thresholds.ink_low, DEFAULT_CONFIG.thresholds.ink_low)))
     };
     config.smart_notifications = normalizeSmartNotifications(config.smart_notifications);
     config.smart_entity_overrides = normalizeSmartEntityOverrides(config.smart_entity_overrides);
@@ -459,48 +460,50 @@
     config.external_alerts = normalizeExternalAlerts(config.external_alerts, {
       keepDrafts: options.keepDrafts === true
     });
-    config.mobile_notifications = mergeDeep(DEFAULT_CONFIG.mobile_notifications, config.mobile_notifications || {});
-    config.mobile_notifications.enabled = config.mobile_notifications.enabled === true;
-    config.mobile_notifications.entities = normalizeEntityList(config.mobile_notifications.entities, ["notify"]);
-    config.mobile_notifications.services = normalizeNotifyServices(config.mobile_notifications.services);
-    config.mobile_notifications.critical_alerts = config.mobile_notifications.critical_alerts === true;
-    config.mobile_notifications.default_policy = normalizeMobilePolicy(
-      config.mobile_notifications.default_policy ?? "auto"
+    const mobile_notifications = mergeDeep(DEFAULT_CONFIG.mobile_notifications, config.mobile_notifications || {});
+    mobile_notifications.enabled = mobile_notifications.enabled === true;
+    mobile_notifications.entities = normalizeEntityList(mobile_notifications.entities, ["notify"]);
+    mobile_notifications.services = normalizeNotifyServices(mobile_notifications.services);
+    mobile_notifications.critical_alerts = mobile_notifications.critical_alerts === true;
+    mobile_notifications.default_policy = normalizeMobilePolicy(
+      mobile_notifications.default_policy ?? "auto"
     );
-    config.mobile_notifications.cooldown_minutes = Math.max(
+    mobile_notifications.cooldown_minutes = Math.max(
       0,
-      Math.min(1440, Number(config.mobile_notifications.cooldown_minutes) || DEFAULT_CONFIG.mobile_notifications.cooldown_minutes)
+      Math.min(1440, Number(mobile_notifications.cooldown_minutes) || DEFAULT_CONFIG.mobile_notifications.cooldown_minutes)
     );
-    config.mobile_notifications.group_similar = config.mobile_notifications.group_similar !== false;
-    config.mobile_notifications.min_severity = ["info", "success", "warning", "critical"].includes(String(config.mobile_notifications.min_severity || "").toLowerCase()) ? String(config.mobile_notifications.min_severity).toLowerCase() : DEFAULT_CONFIG.mobile_notifications.min_severity;
-    config.background_mobile = mergeDeep(DEFAULT_CONFIG.background_mobile, config.background_mobile || {});
-    config.background_mobile.enabled = config.background_mobile.enabled === true;
-    config.background_mobile.profile_id = String(config.background_mobile.profile_id || "default").trim() || "default";
-    config.background_mobile.webhook = String(config.background_mobile.webhook || "").trim();
-    config.background_mobile.chunk_size = Math.max(
+    mobile_notifications.group_similar = mobile_notifications.group_similar !== false;
+    mobile_notifications.min_severity = ["info", "success", "warning", "critical"].includes(String(mobile_notifications.min_severity || "").toLowerCase()) ? String(mobile_notifications.min_severity).toLowerCase() : DEFAULT_CONFIG.mobile_notifications.min_severity;
+    const background_mobile = mergeDeep(DEFAULT_CONFIG.background_mobile, config.background_mobile || {});
+    background_mobile.enabled = background_mobile.enabled === true;
+    background_mobile.profile_id = String(background_mobile.profile_id || "default").trim() || "default";
+    background_mobile.webhook = String(background_mobile.webhook || "").trim();
+    background_mobile.chunk_size = Math.max(
       120,
-      Math.min(240, Number(config.background_mobile.chunk_size) || DEFAULT_CONFIG.background_mobile.chunk_size)
+      Math.min(240, Number(background_mobile.chunk_size) || DEFAULT_CONFIG.background_mobile.chunk_size)
     );
-    config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? mergeDeep(DEFAULT_CONFIG.security, config.security || {});
-    if (config.security.allow_webhooks_for_non_admin === void 0) {
-      config.security.allow_webhooks_for_non_admin = DEFAULT_CONFIG.security.allow_webhooks_for_non_admin;
+    const security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? mergeDeep(DEFAULT_CONFIG.security, config.security || {});
+    if (security.allow_webhooks_for_non_admin === void 0) {
+      security.allow_webhooks_for_non_admin = DEFAULT_CONFIG.security.allow_webhooks_for_non_admin;
     }
-    config.security.allow_webhooks_for_non_admin = config.security.allow_webhooks_for_non_admin === true;
+    security.allow_webhooks_for_non_admin = security.allow_webhooks_for_non_admin === true;
     config.haptics = mergeDeep(DEFAULT_CONFIG.haptics, config.haptics || {});
-    config.animations = mergeDeep(DEFAULT_CONFIG.animations, config.animations || {});
-    config.animations.enabled = config.animations.enabled !== false;
-    config.animations.content_duration = Math.max(120, Math.min(1800, Number(config.animations.content_duration) || DEFAULT_CONFIG.animations.content_duration));
-    config.animations.button_bounce_duration = Math.max(120, Math.min(1200, Number(config.animations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration));
-    config.styles = mergeDeep(DEFAULT_CONFIG.styles, config.styles || {});
+    const animations = mergeDeep(DEFAULT_CONFIG.animations, config.animations || {});
+    animations.enabled = animations.enabled !== false;
+    animations.content_duration = Math.max(120, Math.min(1800, Number(animations.content_duration) || DEFAULT_CONFIG.animations.content_duration));
+    animations.button_bounce_duration = Math.max(120, Math.min(1200, Number(animations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration));
+    const styles = mergeDeep(DEFAULT_CONFIG.styles, config.styles || {});
+    const cardStyles = isObject(styles.card) ? styles.card : {};
     const familyRadius = DEFAULT_CONFIG.styles.card.border_radius;
-    if (String(config.styles?.card?.border_radius ?? "").trim() === "28px") {
-      config.styles.card.border_radius = familyRadius;
+    if (String(cardStyles.border_radius ?? "").trim() === "28px") {
+      cardStyles.border_radius = familyRadius;
+      styles.card = cardStyles;
     }
-    const itemRadius = String(config.styles?.item_radius ?? "").trim();
+    const itemRadius = String(styles?.item_radius ?? "").trim();
     if (itemRadius === "18px" || itemRadius === "28px") {
-      config.styles.item_radius = familyRadius;
+      styles.item_radius = familyRadius;
     }
-    return config;
+    return { ...config, mobile_notifications, background_mobile, security, animations, styles };
   }
 
   // src/cards/notifications/notifications-helpers.ts

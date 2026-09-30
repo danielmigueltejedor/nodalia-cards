@@ -95,7 +95,7 @@ assets and include release-gate tests. Record remaining unchecked modules honest
   Summary native Lock regressions. Linux CI
   remains required for Firefox and the final committed artifacts.
 
-The full TS migration remains open: **94 unchecked modules and no runtime import cycles** are explicitly tracked. No new suppressions or `any` shortcuts were
+The full TS migration remains open: **93 unchecked modules and no runtime import cycles** are explicitly tracked. No new suppressions or `any` shortcuts were
 introduced. This stage is foundational work, not a declaration that the entire
 migration is finished.
 

@@ -101,7 +101,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ["src/cards/scenes/scenes-config.ts", "src/cards/scenes/scenes-helpers.ts", "src/shared/**/*.ts", "src/cards/lock/**/*.ts", "src/cards/camera/camera-stream-*.ts", "src/cards/room-summary/room-summary-model*.ts", "src/cards/media-player/media-player-artwork.ts", "src/cards/media-player/media-player-control-theme.ts"],
+    files: ["src/cards/notifications/notifications-config.ts", "src/cards/notifications/notifications-normalization.ts", "src/cards/scenes/scenes-config.ts", "src/cards/scenes/scenes-helpers.ts", "src/shared/**/*.ts", "src/cards/lock/**/*.ts", "src/cards/camera/camera-stream-*.ts", "src/cards/room-summary/room-summary-model*.ts", "src/cards/media-player/media-player-artwork.ts", "src/cards/media-player/media-player-control-theme.ts"],
     languageOptions: { parserOptions: { project: "./tsconfig.json" } },
     rules: {
       "@typescript-eslint/no-floating-promises": "error",
