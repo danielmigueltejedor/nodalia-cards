@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { nextVersion, promoteChangelog, prepareRelease } from '../scripts/prepare-release.mjs';
+import { nextVersion, promoteChangelog, prepareRelease, updateRoadmap } from '../scripts/prepare-release.mjs';
 
 test('release preparation follows channels without downgrades', () => {
   assert.equal(nextVersion('2.3.0-alpha.49', 'alpha'), '2.3.0-alpha.50');
@@ -43,4 +43,16 @@ test('release publishing cannot bypass the shared browser quality gate', () => {
   assert.match(quality, /project: \[chromium, firefox, webkit, webkit-iphone\]/);
   assert.match(quality, /git diff --exit-code/);
   assert.doesNotMatch(release, /continue-on-error/);
+});
+
+test('stable promotion retires the preview and advances the stable roadmap', () => {
+  const source = fs.readFileSync(new URL('../ROADMAP.md', import.meta.url), 'utf8');
+  const stable = updateRoadmap(source, '2.3.0', 'stable');
+  assert.match(stable, /No active preview/);
+  assert.match(stable, /Current stable release:\s+```text\s+2\.3\.0\s+```/);
+  assert.doesNotMatch(stable, /2\.3\.0-alpha\.49|2\.2\.10/);
+  const next = updateRoadmap(stable, '2.3.1-alpha.1', 'alpha');
+  assert.match(next, /Current preview release:\s+```text\s+2\.3\.1-alpha\.1\s+```/);
+  assert.match(next, /Stable \*\*`2\.3\.0`\*\* remains/);
+  assert.throws(() => updateRoadmap('# Missing sections', '2.3.0', 'stable'), /sections are missing/);
 });

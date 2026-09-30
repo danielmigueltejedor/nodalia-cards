@@ -28,3 +28,6 @@ Do not silently infer a major upgrade from dependency availability.
 HACS continues to load only `nodalia-cards.js`. Source TS, tooling and tests are
 not runtime npm dependencies. Published tags/releases are immutable historical
 checkpoints; do not rerun an old release expecting the new workflow to apply.
+
+Stable promotion retires the active preview in the roadmap. Both stable and preview
+GitHub releases use their curated changelog sections; missing notes block publication.
