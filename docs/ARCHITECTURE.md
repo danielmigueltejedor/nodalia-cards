@@ -364,7 +364,7 @@ Six config/helper cycles were removed through checked defaults and normalization
 Do not place defaults in modules that import their own normalizers.
 Notifications normalization now lives below the config and presentation helpers;
 no runtime import cycles remain.
-88 legacy modules still suppress typechecking; see `scripts/type-debt.json`.
+85 legacy modules still suppress typechecking; see `scripts/type-debt.json`.
 **The full TypeScript migration is not complete.** Checked modules and extracted
 contracts must grow without adding suppressions or casts to hide errors. The
 architecture guard prevents new unchecked files and new runtime cycles.
@@ -398,3 +398,9 @@ Vacuum configuration and helper ownership/mode-label functions now pass strict
 checking. Reported states and error sensors share localized
 `charger_disconnected` labels. Status chips constrain both their flex row and a
 dedicated ellipsis span; full text is retained in the title.
+
+Fan, Humidifier and Cover helpers are checked. Their identical slider/dial pointer
+math lives in `src/shared/device-control-geometry.ts` with explicit DOM, rectangle
+and range contracts. Distinct unavailable policies and device icon rules remain
+local. The shared model prevents NaN markers from malformed values and retains
+quantized steps, cached drag geometry, center dead zones and bottom arc gaps.

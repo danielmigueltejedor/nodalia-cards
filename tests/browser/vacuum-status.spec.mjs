@@ -9,7 +9,7 @@ for (const mode of ["always", "never"]) {
         const card = document.createElement("nodalia-vacuum-card");
         card.style.width = "180px";
         card.setConfig({ entity: "vacuum.robot", [source]: "sensor.robot_status", compact_layout_mode: mode, language: "es", animations: { enabled: false } });
-        card.hass = window.createHassFixture({ language: "es", entities: {
+        card.hass = window.createHassFixture({ overrides: { language: "es", locale: { language: "es" } }, entities: {
           "vacuum.robot": { state: "docked", attributes: { friendly_name: "Robot", battery_level: 91 } },
           "sensor.robot_status": { state: "Charger Disconnected" },
         } });
@@ -40,7 +40,7 @@ for (const mode of ["always", "never"]) {
       await expect(card.locator(".vacuum-card__chip--battery")).toContainText("91%");
       await page.evaluate(() => {
         const card = window.vacuumStatusCard;
-        card.hass = window.createHassFixture({ language: "es", entities: {
+        card.hass = window.createHassFixture({ overrides: { language: "es", locale: { language: "es" } }, entities: {
           "vacuum.robot": { state: "cleaning", attributes: { friendly_name: "Robot", battery_level: 90 } },
           "sensor.robot_status": { state: "none" },
         } });

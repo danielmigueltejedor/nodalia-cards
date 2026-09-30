@@ -4,6 +4,81 @@
   // src/version.ts
   var CARD_VERSION = "2.3.0-alpha.49";
 
+  // src/shared/device-control-geometry.ts
+  var CIRCULAR_LAYOUT_DIAL_START_ANGLE = 135;
+  var CIRCULAR_LAYOUT_DIAL_END_ANGLE = 405;
+  var CIRCULAR_LAYOUT_DIAL_SWEEP = CIRCULAR_LAYOUT_DIAL_END_ANGLE - CIRCULAR_LAYOUT_DIAL_START_ANGLE;
+  var clampGeometryValue = (value, min, max) => Math.min(Math.max(value, min), max);
+  function getSliderDragGeometry(slider) {
+    const rect = slider.getBoundingClientRect();
+    return {
+      left: rect.left,
+      width: rect.width,
+      min: Number(slider.min || 0),
+      max: Number(slider.max || 100),
+      step: slider.step === "any" ? 0 : Number(slider.step || 1)
+    };
+  }
+  function getRangeValueFromGeometry(geometry, currentValue, clientX) {
+    if (!geometry || !Number.isFinite(geometry.width) || geometry.width <= 0) {
+      return Number(currentValue || 0);
+    }
+    const ratio = clampGeometryValue((clientX - geometry.left) / geometry.width, 0, 1);
+    let nextValue = geometry.min + (geometry.max - geometry.min) * ratio;
+    if (Number.isFinite(geometry.step) && geometry.step > 0) {
+      nextValue = geometry.min + Math.round((nextValue - geometry.min) / geometry.step) * geometry.step;
+    }
+    return clampGeometryValue(nextValue, geometry.min, geometry.max);
+  }
+  function getCircularLayoutDialModel(value, min = 0, max = 100) {
+    const safeMin = Number.isFinite(Number(min)) ? Number(min) : 0;
+    const safeMax = Number.isFinite(Number(max)) && Number(max) > safeMin ? Number(max) : Math.max(100, safeMin + 1);
+    const safeValue = clampGeometryValue(Number.isFinite(Number(value)) ? Number(value) : safeMin, safeMin, safeMax);
+    const ratio = clampGeometryValue((safeValue - safeMin) / (safeMax - safeMin), 0, 1);
+    const angle = CIRCULAR_LAYOUT_DIAL_START_ANGLE + ratio * CIRCULAR_LAYOUT_DIAL_SWEEP;
+    const radians = angle * (Math.PI / 180);
+    const markerRadius = 86;
+    return {
+      progress: Number((ratio * 75).toFixed(3)),
+      markerLeft: Number(((120 + Math.cos(radians) * markerRadius) / 240 * 100).toFixed(3)),
+      markerTop: Number(((120 + Math.sin(radians) * markerRadius) / 240 * 100).toFixed(3))
+    };
+  }
+  function getCircularLayoutDialValueFromPoint(dial, clientX, clientY, range, step, fallbackValue = null, geometry = null) {
+    const rect = geometry || dial?.getBoundingClientRect?.();
+    const safeMin = Number.isFinite(Number(range?.min)) ? Number(range?.min) : 0;
+    const safeMax = Number.isFinite(Number(range?.max)) && Number(range?.max) > safeMin ? Number(range?.max) : Math.max(100, safeMin + 1);
+    if (!rect?.width || !rect?.height) {
+      return Number.isFinite(Number(fallbackValue)) ? Number(fallbackValue) : safeMin;
+    }
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const dx = clientX - centerX;
+    const dy = clientY - centerY;
+    const distance = Math.sqrt(dx ** 2 + dy ** 2);
+    const outerRadius = Math.min(rect.width, rect.height) / 2;
+    const innerDeadZone = outerRadius * 0.42;
+    if (distance < innerDeadZone && Number.isFinite(Number(fallbackValue))) {
+      return Number(fallbackValue);
+    }
+    const angle = Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI);
+    let normalizedAngle = angle < 0 ? angle + 360 : angle;
+    const gapStart = CIRCULAR_LAYOUT_DIAL_END_ANGLE % 360;
+    const gapEnd = CIRCULAR_LAYOUT_DIAL_START_ANGLE;
+    if (normalizedAngle > gapStart && normalizedAngle < gapEnd && Number.isFinite(Number(fallbackValue))) {
+      return Number(fallbackValue);
+    }
+    if (normalizedAngle < CIRCULAR_LAYOUT_DIAL_START_ANGLE) {
+      normalizedAngle += 360;
+    }
+    normalizedAngle = clampGeometryValue(normalizedAngle, CIRCULAR_LAYOUT_DIAL_START_ANGLE, CIRCULAR_LAYOUT_DIAL_END_ANGLE);
+    const ratio = (normalizedAngle - CIRCULAR_LAYOUT_DIAL_START_ANGLE) / CIRCULAR_LAYOUT_DIAL_SWEEP;
+    const rawValue = safeMin + (safeMax - safeMin) * ratio;
+    const safeStep = Number.isFinite(step) && step > 0 ? step : 1;
+    const rounded = safeMin + Math.round((rawValue - safeMin) / safeStep) * safeStep;
+    return clampGeometryValue(rounded, safeMin, safeMax);
+  }
+
   // src/cards/fan/fan-constants.ts
   var CARD_TAG = "nodalia-fan-card";
   var EDITOR_TAG = "nodalia-fan-card-editor";
@@ -21,9 +96,6 @@
   var OPTIMISTIC_VISUAL_SETTLE_MS = 420;
   var FAN_MEMORY_STORAGE_KEY = "nodalia-fan-card:last-visual-state:v1";
   var ALLOWED_DOUBLE_TAP_ACTIONS = /* @__PURE__ */ new Set(["auto", "toggle", "more-info", "service", "navigate", "url", "none"]);
-  var CIRCULAR_LAYOUT_DIAL_START_ANGLE = 135;
-  var CIRCULAR_LAYOUT_DIAL_END_ANGLE = 405;
-  var CIRCULAR_LAYOUT_DIAL_SWEEP = CIRCULAR_LAYOUT_DIAL_END_ANGLE - CIRCULAR_LAYOUT_DIAL_START_ANGLE;
 
   // src/cards/fan/fan-runtime.ts
   var utils = window.NodaliaUtils;
@@ -347,75 +419,6 @@
   }
   function isUnavailableState(state) {
     return normalizeTextKey(state?.state) === "unavailable";
-  }
-  function getSliderDragGeometry(slider) {
-    const rect = slider.getBoundingClientRect();
-    return {
-      left: rect.left,
-      width: rect.width,
-      min: Number(slider.min || 0),
-      max: Number(slider.max || 100),
-      step: slider.step === "any" ? 0 : Number(slider.step || 1)
-    };
-  }
-  function getRangeValueFromGeometry(geometry, currentValue, clientX) {
-    if (!geometry || !Number.isFinite(geometry.width) || geometry.width <= 0) {
-      return Number(currentValue || 0);
-    }
-    const ratio = clamp((clientX - geometry.left) / geometry.width, 0, 1);
-    let nextValue = geometry.min + (geometry.max - geometry.min) * ratio;
-    if (Number.isFinite(geometry.step) && geometry.step > 0) {
-      nextValue = geometry.min + Math.round((nextValue - geometry.min) / geometry.step) * geometry.step;
-    }
-    return clamp(nextValue, geometry.min, geometry.max);
-  }
-  function getCircularLayoutDialModel(value, min = 0, max = 100) {
-    const safeMin = Number.isFinite(Number(min)) ? Number(min) : 0;
-    const safeMax = Number.isFinite(Number(max)) && Number(max) > safeMin ? Number(max) : 100;
-    const safeValue = clamp(Number(value), safeMin, safeMax);
-    const ratio = clamp((safeValue - safeMin) / (safeMax - safeMin), 0, 1);
-    const angle = CIRCULAR_LAYOUT_DIAL_START_ANGLE + ratio * CIRCULAR_LAYOUT_DIAL_SWEEP;
-    const radians = angle * (Math.PI / 180);
-    const markerRadius = 86;
-    return {
-      progress: Number((ratio * 75).toFixed(3)),
-      markerLeft: Number(((120 + Math.cos(radians) * markerRadius) / 240 * 100).toFixed(3)),
-      markerTop: Number(((120 + Math.sin(radians) * markerRadius) / 240 * 100).toFixed(3))
-    };
-  }
-  function getCircularLayoutDialValueFromPoint(dial, clientX, clientY, range, step, fallbackValue = null, geometry = null) {
-    const rect = geometry || dial?.getBoundingClientRect?.();
-    const safeMin = Number.isFinite(Number(range?.min)) ? Number(range.min) : 0;
-    const safeMax = Number.isFinite(Number(range?.max)) && Number(range.max) > safeMin ? Number(range.max) : 100;
-    if (!rect?.width || !rect?.height) {
-      return Number.isFinite(Number(fallbackValue)) ? Number(fallbackValue) : safeMin;
-    }
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    const dx = clientX - centerX;
-    const dy = clientY - centerY;
-    const distance = Math.sqrt(dx ** 2 + dy ** 2);
-    const outerRadius = Math.min(rect.width, rect.height) / 2;
-    const innerDeadZone = outerRadius * 0.42;
-    if (distance < innerDeadZone && Number.isFinite(Number(fallbackValue))) {
-      return Number(fallbackValue);
-    }
-    const angle = Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI);
-    let normalizedAngle = angle < 0 ? angle + 360 : angle;
-    const gapStart = CIRCULAR_LAYOUT_DIAL_END_ANGLE % 360;
-    const gapEnd = CIRCULAR_LAYOUT_DIAL_START_ANGLE;
-    if (normalizedAngle > gapStart && normalizedAngle < gapEnd && Number.isFinite(Number(fallbackValue))) {
-      return Number(fallbackValue);
-    }
-    if (normalizedAngle < CIRCULAR_LAYOUT_DIAL_START_ANGLE) {
-      normalizedAngle += 360;
-    }
-    normalizedAngle = clamp(normalizedAngle, CIRCULAR_LAYOUT_DIAL_START_ANGLE, CIRCULAR_LAYOUT_DIAL_END_ANGLE);
-    const ratio = (normalizedAngle - CIRCULAR_LAYOUT_DIAL_START_ANGLE) / CIRCULAR_LAYOUT_DIAL_SWEEP;
-    const rawValue = safeMin + (safeMax - safeMin) * ratio;
-    const safeStep = Number.isFinite(step) && step > 0 ? step : 1;
-    const rounded = safeMin + Math.round((rawValue - safeMin) / safeStep) * safeStep;
-    return clamp(rounded, safeMin, safeMax);
   }
   function translatePresetLabel(value) {
     const normalized = normalizeTextKey(value);
