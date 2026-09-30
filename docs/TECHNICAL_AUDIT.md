@@ -482,3 +482,34 @@ merged main. All 676 unit tests and the full local browser suite (251 passed,
 one existing platform skip) pass. Remaining unchecked modules: 64; Graph view
 and editor remain in the migration. Document sampling and allocation bounds in
 `docs/cards/graph-card.md`.
+
+## Calendar helper findings — 2026-10-01
+
+Calendar still suppresses config, event/date, forecast, metadata and formatter
+helpers. Editor color fallbacks reference DEFAULT_CONFIG without importing it;
+extract defaults to a cycle-free module and use that actual shared configuration.
+Missing forecast numeric candidates become zero before valid alternative fields
+are considered. Guard absent values while keeping real zeros. Date-only parsing
+rolls invalid dates into another day; use strict local parsing while retaining
+noon for all-day events and midnight for date input. Guard event records and
+metadata tints, preserve recurrence keys and timezone-date prefixes, and type
+the bounded 48-entry Intl formatter cache.
+
+The rendered regression also exposed zero-based months in the current-weather
+fallback and forecast freshness scoring, although normalized forecast keys use
+one-based months. Use the same day-key/parser path throughout forecast lookup
+and scoring. Keep the separate internal month-grid keys unchanged. The fallback
+now ignores absent numeric attributes just like forecast alternatives.
+
+Calendar config/helpers pass strict checking and typed lint. Shared style
+projection accepts an explicit sanitizer so Calendar retains its existing URL
+rejection policy and YAML style extensions. Defaults live in a cycle-free
+module; duplicate clone/merge/compaction/weather icon code is retired. Real
+Calendar editor color changes preserve alpha. Six new unit cases cover dates,
+metadata, events, config, numeric alternatives and the 48-entry formatter cache;
+run in Europe/Madrid and America/Los_Angeles. 2,000 valid helper/config outputs
+match merged main. All 682 unit tests pass. Four duplicate untracked files from
+the previous Graph stage were removed only after byte-for-byte comparison.
+Remaining unchecked modules: 62; Calendar view/editor remain in the migration.
+Full local browser suite: 257 passed, one existing platform skip. Publication
+remains held until the full migration is checked.

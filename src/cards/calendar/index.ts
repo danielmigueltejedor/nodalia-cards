@@ -34,6 +34,6 @@ const publicApi = {
   CARD_VERSION,
   DEFAULT_CONFIG,
   normalizeConfig,
-} as CalendarPublicApi;
+} satisfies CalendarPublicApi;
 
 window.__NODALIA_CALENDAR__ = publicApi;

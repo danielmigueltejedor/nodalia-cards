@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-for (const card of ["lock", "entity", "fan", "notifications"]) {
+for (const card of ["lock", "entity", "fan", "notifications", "calendar"]) {
   test(`${card} editor shows the actual translucent tint and retains alpha when changing color`, async ({ page }) => {
     await page.goto("/tests/fixtures/browser.html");
     const tag = `nodalia-${card}-card-editor`;

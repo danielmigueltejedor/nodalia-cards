@@ -12,6 +12,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Preserve Calendar forecast alternatives and real zero temperatures, correct current-day forecast keys and scoring, reject impossible date-only inputs, and share HA hyphenated weather icons.
+
 - Keep blank Graph readings out of current values/history, ignore malformed history/statistics rows, and guard SVG geometry and integral bounded sample allocation.
 
 - Prevent Camera signed-path caches from outliving short signed URL expiry, retry malformed responses, and protect array-aware editor paths from unsafe or inherited branches.
@@ -40,6 +42,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Remove Camera portal listeners from their owning shadow root.
 
 ### Maintenance
+
+- Check Calendar configuration/helpers, share compaction/styles/weather icons while retaining Calendar’s CSS policy, and extract cycle-free editor color defaults.
 
 - Check Graph configuration/helpers, share numeric formatting with Gauge and list reordering with Navigation, and document history sampling behavior.
 

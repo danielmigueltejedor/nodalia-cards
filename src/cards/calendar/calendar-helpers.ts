@@ -1,13 +1,18 @@
-// @ts-nocheck -- forecast, date and editor color helpers stay loosely typed until remaining unknowns are narrowed.
+import type { HassEntity } from "../../core/types/home-assistant";
+import { parseFiniteNumericValue } from "../../shared/numeric-values";
+export { compactConfig as compactCalendarConfig } from "../../shared/config-values";
+export { weatherConditionIcon } from "../../shared/weather-condition-icons";
+import { DEFAULT_CONFIG } from "./calendar-defaults";
+export { deepClone, mergeConfig } from "./calendar-runtime";
 export { resolveEditorColorValue, formatEditorHexChannel, formatEditorColorFromHex, getEditorColorModel } from "../../shared/editor-color";
 import {
   DATE_TIME_FORMATTER_CACHE_LIMIT,
   NODALIA_EVENT_METADATA_RE,
   dateTimeFormatterCache,
 } from "./calendar-constants";
-import { clamp, isObject } from "./calendar-runtime";
+import { isObject } from "./calendar-runtime";
 
-export function shouldDarkenCalendarBubbleIconGlyph(state, accentColor) {
+export function shouldDarkenCalendarBubbleIconGlyph(state: HassEntity | null | undefined, accentColor: unknown) {
   const contrast = typeof window !== "undefined" ? window.NodaliaBubbleContrast : null;
   if (contrast?.shouldDarkenBubbleIconGlyph?.(state, accentColor)) {
     return true;
@@ -19,64 +24,8 @@ export function shouldDarkenCalendarBubbleIconGlyph(state, accentColor) {
   return (hue >= 35 && hue <= 165) || (hue >= 300 || hue <= 20);
 }
 
-export function deepClone(value) {
-  return JSON.parse(JSON.stringify(value));
-}
-
-export function mergeConfig(base, override) {
-  if (Array.isArray(base)) {
-    return Array.isArray(override) ? deepClone(override) : deepClone(base);
-  }
-  if (!isObject(base)) {
-    return override === undefined ? base : override;
-  }
-  const out = {};
-  const keys = new Set([...Object.keys(base), ...Object.keys(override || {})]);
-  keys.forEach(key => {
-    if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
-      return;
-    }
-    const baseValue = base[key];
-    const overrideValue = override ? override[key] : undefined;
-    if (overrideValue === undefined) {
-      out[key] = deepClone(baseValue);
-      return;
-    }
-    if (isObject(baseValue) && isObject(overrideValue)) {
-      out[key] = mergeConfig(baseValue, overrideValue);
-      return;
-    }
-    out[key] = deepClone(overrideValue);
-  });
-  return out;
-}
-
-export function compactCalendarConfig(value) {
-  if (Array.isArray(value)) {
-    return value.map(item => compactCalendarConfig(item)).filter(item => item !== undefined);
-  }
-  if (isObject(value)) {
-    const compacted = {};
-    Object.entries(value).forEach(([key, item]) => {
-      if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
-        return;
-      }
-      const cleaned = compactCalendarConfig(item);
-      const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
-      if (cleaned !== undefined && !isEmptyObject) {
-        compacted[key] = cleaned;
-      }
-    });
-    return compacted;
-  }
-  if (value === "" || value === null || value === undefined) {
-    return undefined;
-  }
-  return value;
-}
-
-export function sanitizeCalendarTint(value) {
-  const s = String(value ?? "").trim();
+export function sanitizeCalendarTint(value: unknown) {
+  const s = sanitizeCssRuntimeValue(value);
   if (!s) {
     return "";
   }
@@ -95,10 +44,10 @@ export function sanitizeCalendarTint(value) {
   return "";
 }
 
-export function extractNodaliaEventColor(description) {
+export function extractNodaliaEventColor(description: unknown) {
   const text = String(description ?? "");
   let color = "";
-  text.replace(NODALIA_EVENT_METADATA_RE, (_match, rawColor) => {
+  text.replace(NODALIA_EVENT_METADATA_RE, (_match: string, rawColor: string | undefined) => {
     const safeColor = sanitizeCalendarTint(rawColor);
     if (safeColor) {
       color = safeColor;
@@ -108,14 +57,14 @@ export function extractNodaliaEventColor(description) {
   return color;
 }
 
-export function stripNodaliaEventMetadata(description) {
+export function stripNodaliaEventMetadata(description: unknown) {
   return String(description ?? "")
     .replace(NODALIA_EVENT_METADATA_RE, "")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
 
-export function appendNodaliaEventMetadata(description, { color = "" } = {}) {
+export function appendNodaliaEventMetadata(description: unknown, { color = "" }: { color?: unknown } = {}) {
   const cleanDescription = stripNodaliaEventMetadata(description);
   const safeColor = sanitizeCalendarTint(color);
   if (!safeColor) {
@@ -125,13 +74,14 @@ export function appendNodaliaEventMetadata(description, { color = "" } = {}) {
   return cleanDescription ? `${cleanDescription}\n\n${metadata}` : metadata;
 }
 
-export function sanitizeCssRuntimeValue(value) {
+export function sanitizeCssRuntimeValue(value: unknown) {
   const raw = String(value ?? "").trim();
   if (!raw) {
     return "";
   }
   if (
-    /[<>{};"']/.test(raw)
+    [...raw].some(character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)
+    || /[<>{};"']/.test(raw)
     || raw.includes("/*")
     || raw.includes("*/")
     || /<\/style/i.test(raw)
@@ -143,17 +93,16 @@ export function sanitizeCssRuntimeValue(value) {
   return raw;
 }
 
-export function daysFromTimeRange(tr) {
-  const map = { "3d": 3, "1w": 7, "2w": 14, "1m": 31 };
-  return map[tr] || 7;
+export function daysFromTimeRange(tr: unknown) {
+  return new Map([["3d", 3], ["1w", 7], ["2w", 14], ["1m", 31]]).get(String(tr)) || 7;
 }
 
-export function normalizeCalendarEntries(calendars) {
+export function normalizeCalendarEntries(calendars: unknown) {
   if (!Array.isArray(calendars)) {
     return [];
   }
-  const out = [];
-  calendars.forEach(raw => {
+  const out: { entity: string; label: string; tint: string }[] = [];
+  calendars.forEach((raw: unknown) => {
     if (typeof raw === "string") {
       out.push({
         entity: String(raw ?? "").trim(),
@@ -162,7 +111,7 @@ export function normalizeCalendarEntries(calendars) {
       });
       return;
     }
-    if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    if (isObject(raw)) {
       out.push({
         entity: String(raw.entity ?? "").trim(),
         label: String(raw.label ?? "").trim(),
@@ -173,56 +122,48 @@ export function normalizeCalendarEntries(calendars) {
   return out;
 }
 
-export function parseCalendarDateOnlyLocal(value) {
+function localDateFromInput(value: unknown, hour: number): Date | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value ?? "").trim());
-  if (!match) {
-    return null;
-  }
-  const year = Number(match[1]);
-  const month = Number(match[2]) - 1;
-  const day = Number(match[3]);
-  const parsed = new Date(year, month, day, 12, 0, 0);
-  return Number.isFinite(parsed.getTime()) ? parsed : null;
+  if (!match) return null;
+  const year = Number(match[1]), month = Number(match[2]) - 1, day = Number(match[3]);
+  const parsed = new Date(0);
+  parsed.setHours(hour, 0, 0, 0);
+  parsed.setFullYear(year, month, day);
+  return Number.isFinite(parsed.getTime()) && parsed.getFullYear() === year && parsed.getMonth() === month && parsed.getDate() === day ? parsed : null;
 }
 
-export function eventDate(value) {
-  if (!value) {
-    return null;
-  }
+export function parseCalendarDateOnlyLocal(value: unknown): Date | null {
+  return localDateFromInput(value, 12);
+}
+
+export function eventDate(value: unknown): Date | null {
+  if (value instanceof Date) return Number.isFinite(value.getTime()) ? new Date(value.getTime()) : null;
   if (typeof value === "string") {
-    const dayLocal = parseCalendarDateOnlyLocal(value);
-    if (dayLocal) {
-      return dayLocal;
-    }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value.trim())) return parseCalendarDateOnlyLocal(value);
     const parsed = new Date(value);
     return Number.isFinite(parsed.getTime()) ? parsed : null;
   }
-  if (typeof value === "object") {
-    if (value.dateTime) {
-      const parsed = new Date(value.dateTime);
-      return Number.isFinite(parsed.getTime()) ? parsed : null;
-    }
-    if (value.date) {
-      const dayLocal = parseCalendarDateOnlyLocal(value.date);
-      if (dayLocal) {
-        return dayLocal;
-      }
-      const parsed = new Date(value.date);
-      return Number.isFinite(parsed.getTime()) ? parsed : null;
-    }
+  if (isObject(value)) {
+    if (value.dateTime) return eventDate(String(value.dateTime));
+    if (value.date) return eventDate(String(value.date));
   }
   return null;
 }
 
-export function calendarEventUid(event) {
-  return String(event?.uid ?? event?.eventData?.uid ?? "").trim();
+export function calendarEventUid(value: unknown) {
+  const event = isObject(value) ? value : {};
+  const data = isObject(event.eventData) ? event.eventData : {};
+  return String(event.uid ?? data.uid ?? "").trim();
 }
 
-export function calendarEventRecurrenceId(event) {
-  return String(event?.recurrence_id ?? event?.eventData?.recurrence_id ?? "").trim();
+export function calendarEventRecurrenceId(value: unknown) {
+  const event = isObject(value) ? value : {};
+  const data = isObject(event.eventData) ? event.eventData : {};
+  return String(event.recurrence_id ?? data.recurrence_id ?? "").trim();
 }
 
-export function calendarEventKey(event) {
+export function calendarEventKey(value: unknown) {
+  const event = isObject(value) ? value : {};
   const source = String(event?._entity || "");
   const uid = calendarEventUid(event) || String(event?.id || "");
   const recurrence = calendarEventRecurrenceId(event);
@@ -231,54 +172,15 @@ export function calendarEventKey(event) {
   return `${source}|${uid}|${recurrence}|${start}|${summary}`;
 }
 
-
-
-
-export function normalizeTextKey(value) {
+export function normalizeTextKey(value: unknown) {
   return String(value ?? "")
     .trim()
     .toLowerCase()
     .replaceAll(" ", "_");
 }
 
-export function weatherConditionIcon(value) {
-  switch (normalizeTextKey(value)) {
-    case "clear_night":
-      return "mdi:weather-night";
-    case "cloudy":
-      return "mdi:weather-cloudy";
-    case "exceptional":
-      return "mdi:alert-circle-outline";
-    case "fog":
-      return "mdi:weather-fog";
-    case "hail":
-      return "mdi:weather-hail";
-    case "lightning":
-      return "mdi:weather-lightning";
-    case "lightning_rainy":
-      return "mdi:weather-lightning-rainy";
-    case "partlycloudy":
-      return "mdi:weather-partly-cloudy";
-    case "pouring":
-      return "mdi:weather-pouring";
-    case "rainy":
-      return "mdi:weather-rainy";
-    case "snowy":
-      return "mdi:weather-snowy";
-    case "snowy_rainy":
-      return "mdi:weather-snowy-rainy";
-    case "sunny":
-      return "mdi:weather-sunny";
-    case "windy":
-    case "windy_variant":
-      return "mdi:weather-windy";
-    default:
-      return "mdi:weather-partly-cloudy";
-  }
-}
-
-export function forecastDayKey(value) {
-  const formatDateKey = date => {
+export function forecastDayKey(value: unknown) {
+  const formatDateKey = (date: Date | null) => {
     if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
       return "";
     }
@@ -302,20 +204,13 @@ export function forecastDayKey(value) {
     }
   }
   const datePrefixMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
-  if (datePrefixMatch) {
-    const y = Number(datePrefixMatch[1]);
-    const m = Number(datePrefixMatch[2]) - 1;
-    const d = Number(datePrefixMatch[3]);
-    if (Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(d)) {
-      return formatDateKey(new Date(y, m, d));
-    }
-  }
+  if (datePrefixMatch) return formatDateKey(parseCalendarDateOnlyLocal(datePrefixMatch[0]));
   const parsed = new Date(raw);
   return formatDateKey(parsed);
 }
 
-export function withForecastDateFromKey(key, value) {
-  if (!value || typeof value !== "object" || !forecastDayKey(key)) {
+export function withForecastDateFromKey(key: unknown, value: unknown) {
+  if (!isObject(value) || !forecastDayKey(key)) {
     return value;
   }
   if ("datetime" in value || "date" in value || "day" in value || "time" in value || "timestamp" in value) {
@@ -324,22 +219,22 @@ export function withForecastDateFromKey(key, value) {
   return { date: key, ...value };
 }
 
-export function pickFirstFiniteNumber(...candidates) {
+export function pickFirstFiniteNumber(...candidates: unknown[]) {
   for (const candidate of candidates) {
-    const n = Number(candidate);
-    if (Number.isFinite(n)) {
+    const n = parseFiniteNumericValue(candidate);
+    if (n !== null) {
       return n;
     }
   }
   return null;
 }
 
-export function weatherSupportedFeature(state, feature) {
+export function weatherSupportedFeature(state: HassEntity | null | undefined, feature: number) {
   return Boolean((Number(state?.attributes?.supported_features) || 0) & feature);
 }
 
-export function supportedWeatherForecastTypes(state) {
-  const types = [];
+export function supportedWeatherForecastTypes(state: HassEntity | null | undefined) {
+  const types: ("daily" | "twice_daily" | "hourly")[] = [];
   if (weatherSupportedFeature(state, 1)) {
     types.push("daily");
   }
@@ -352,15 +247,7 @@ export function supportedWeatherForecastTypes(state) {
   return types.length ? types : ["daily", "twice_daily", "hourly"];
 }
 
-
-
-
-
-
-
-
-
-export function getEditorColorFallbackValue(field) {
+export function getEditorColorFallbackValue(field: unknown) {
   const normalizedField = String(field ?? "");
   if (normalizedField.endsWith("styles.card.background")) {
     return DEFAULT_CONFIG.styles.card.background;
@@ -383,20 +270,21 @@ export function getEditorColorFallbackValue(field) {
   return "var(--info-color, #71c0ff)";
 }
 
-export function getDateTimeFormatter(locale, options) {
+export function getDateTimeFormatter(locale: string | undefined, options: Intl.DateTimeFormatOptions) {
   const key = `${String(locale || "default")}|${JSON.stringify(options)}`;
   let formatter = dateTimeFormatterCache.get(key);
   if (!formatter) {
     formatter = new Intl.DateTimeFormat(locale, options);
     dateTimeFormatterCache.set(key, formatter);
     if (dateTimeFormatterCache.size > DATE_TIME_FORMATTER_CACHE_LIMIT) {
-      dateTimeFormatterCache.delete(dateTimeFormatterCache.keys().next().value);
+      const oldest = dateTimeFormatterCache.keys().next().value;
+      if (oldest !== undefined) dateTimeFormatterCache.delete(oldest);
     }
   }
   return formatter;
 }
 
-export function formatDateLabel(date, locale) {
+export function formatDateLabel(date: Date, locale: string | undefined) {
   return getDateTimeFormatter(locale, {
     weekday: "short",
     day: "2-digit",
@@ -404,48 +292,29 @@ export function formatDateLabel(date, locale) {
   }).format(date);
 }
 
-export function formatTimeLabel(date, locale) {
+export function formatTimeLabel(date: Date, locale: string | undefined) {
   return getDateTimeFormatter(locale, {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
 }
 
-export function normalizeCalendarFetchResult(raw) {
-  if (Array.isArray(raw)) {
-    return raw;
-  }
-  if (raw && typeof raw === "object" && Array.isArray(raw.events)) {
-    return raw.events;
-  }
-  return [];
+export function normalizeCalendarFetchResult(raw: unknown): Record<string, unknown>[] {
+  const rows = Array.isArray(raw) ? raw : isObject(raw) && Array.isArray(raw.events) ? raw.events : [];
+  return rows.filter(isObject);
 }
 
-export function eventIsAllDay(event) {
-  return Boolean(event?.start?.date && !event?.start?.dateTime);
+export function eventIsAllDay(value: unknown) {
+  const event = isObject(value) ? value : {};
+  const start = isObject(event.start) ? event.start : {};
+  return Boolean(start.date && !start.dateTime);
 }
 
-export function parseDateInputAsLocalDate(value) {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value ?? "").trim());
-  if (!match) {
-    return null;
-  }
-  const year = Number(match[1]);
-  const month = Number(match[2]) - 1;
-  const day = Number(match[3]);
-  const parsed = new Date(year, month, day);
-  if (
-    Number.isNaN(parsed.getTime()) ||
-    parsed.getFullYear() !== year ||
-    parsed.getMonth() !== month ||
-    parsed.getDate() !== day
-  ) {
-    return null;
-  }
-  return parsed;
+export function parseDateInputAsLocalDate(value: unknown): Date | null {
+  return localDateFromInput(value, 0);
 }
 
-export function dateInputIsBeforeToday(value) {
+export function dateInputIsBeforeToday(value: unknown) {
   const parsed = parseDateInputAsLocalDate(value);
   if (!parsed) {
     return false;
