@@ -57,8 +57,9 @@ scripts/build-bundle.mjs      HACS bundle (imports migrated cards from src/)
 
 All Lovelace cards now live under `src/cards/` and emit root `nodalia-*.js`
 artifacts. Camera stream, Room Summary and render signatures also have checked
-TS sources and generated compatibility adapters. Generic utils, backend, bubble
-contrast and Notifications mobile policy remain handwritten compatibility code;
+TS sources and generated compatibility adapters. Notifications mobile policy is
+also generated from checked, side-effect-free TS with an idempotent global adapter.
+Generic utils, backend and bubble contrast remain handwritten compatibility code;
 the i18n pack is generated from JSON while its lookup logic remains root JS.
 
 ## Large controller responsibilities
@@ -157,6 +158,7 @@ boundaries so standalone `<script>` loading still works.
 | Artifact | Role |
 |---|---|
 | `nodalia-cards.js` | HACS/manual install: minified runtime + editor catalog |
+| `nodalia-notifications-mobile-policy.js` | Generated from checked Notifications policy + global adapter |
 | `nodalia-climate-card.js` | Generated from `src/cards/climate/standalone.ts` (unminified IIFE) |
 | `nodalia-media-player.js` | Generated from `src/cards/media-player/standalone.ts` (unminified IIFE) |
 | `nodalia-light-card.js` | Generated from `src/cards/light/standalone.ts` (unminified IIFE) |
