@@ -37,6 +37,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Maintenance
 
+- Remove unused original demo GIFs while preserving the referenced optimized demos; refresh historical audit links and current build/validation instructions.
+
 - Check Gauge helpers, reuse shared style/color/numeric boundaries and clean up temporary color probes on failure.
 
 - Check Navigation helpers, reuse the shared render-signature fallback and share object-only editor paths with Insignia.

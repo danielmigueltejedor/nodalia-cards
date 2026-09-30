@@ -1,7 +1,7 @@
 # Nodalia Cards — Performance & interaction audit
 
 > [!NOTE]
-> Historical audit snapshot. It records the `1.2.x` findings and the fixes made at that time; unresolved rows are not an authoritative backlog and must be revalidated against the current source. The document was reviewed for `2.0.0-rc.1` on 2026-07-28, while current release gates live in `package.json`, the test suites and `.github/workflows/`.
+> Historical audit snapshot. It records the `1.2.x` findings and the fixes made at that time; unresolved rows are not an authoritative backlog and must be revalidated against the current source. Historical observations below retain their original versions and measurements. Current migration findings and release status live in [`TECHNICAL_AUDIT.md`](./TECHNICAL_AUDIT.md); current verification instructions live in [`testing.md`](./testing.md).
 
 **Date:** 2026-05-18 (pass 1–3); refreshed **2026-06-11** for stable **`1.2.1.1`**; **2026-06-12** for **`1.2.2-alpha.1`** (graph hover patch, calendar hass gate, fav parity)  
 **Scope:** Lovelace custom-card bundle (`nodalia-cards.js` / HACS artifact)  
@@ -10,7 +10,7 @@
 
 ---
 
-## Current audit — 2.2.2 (2026-08-28)
+## Historical audit — 2.2.2 (2026-08-28)
 
 The complete 24-card source set and generated HACS bundle were re-scanned for render-signature coverage, repeated serialization, auxiliary-entity invalidation, locale-dependent output and lifecycle cleanup. The current pass found and fixed the following regressions without changing the visual design:
 
@@ -189,9 +189,9 @@ Tap/hold/double-tap: configured per card; body vs icon inheritance documented in
 
 ## 9. Build & HACS
 
-- **Entry:** 24 card modules + i18n + utils + render-signature + bubble-contrast (historical snapshot; current builds also include focused support models).
+- **Entry:** 25 cards from `src/cards/registry.json`, i18n, shared utilities and focused checked support models; canonical source entries feed the HACS and standalone builds.
 - **Standalone embed:** `scripts/sync-standalone-embed.mjs` for single-file artifacts only (not committed in card sources).
-- **Tests:** `pnpm test` for unit/regression suites and `pnpm run test:browser` for Chromium/WebKit interaction coverage. No ESLint script is currently defined in `package.json`.
+- **Validation:** `pnpm validate:fast` checks versions, architecture, strict types, lint, every distributed JavaScript file, translation catalogs, build and unit tests. `pnpm validate` also runs Chromium, Firefox, WebKit and iPhone WebKit; the shared CI gate validates committed artifact drift.
 - **i18n:** Editor + runtime JSON; validate via `pnpm run i18n:validate-editor` etc.
 
 ---
@@ -298,7 +298,7 @@ pnpm run test:browser
 pnpm run release:metadata         # before publishing a tag
 ```
 
-`pnpm run validate` checks versions, syntax, both translation catalogs, unit regressions and generated bundles. No `pnpm lint` script is currently defined.
+`pnpm run validate` runs the complete static and four-browser gate described in [`testing.md`](./testing.md). `pnpm lint` is defined; checked modules are covered and remaining legacy exclusions are explicitly tracked. Publication stays held until the current source migration is complete.
 
 ---
 
