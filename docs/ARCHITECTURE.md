@@ -192,10 +192,7 @@ Locale JSON under `i18n/runtime/` and `i18n/editor/` remains authoritative for b
 
 Do not edit generated Climate, Media Player, Light, Fan, Humidifier, Cover, Alarm Panel, Vacuum, Entity, Fav, Person, Camera, Circular Gauge, Insignia, Scenes, News, Weather, Graph, Calendar, Power Flow, Notifications, Navigation, Room Summary, Advance Vacuum or Lock JS by hand. Change
 `src/cards/climate`, `src/cards/media-player`, `src/cards/light`, `src/cards/fan`,
-`src/cards/humidifier`, `src/cards/cover`, `src/cards/alarm-panel`, `src/cards/vacuum`, `src/cards/entity`, `src/cards/fav`, `src/cards/person`, `src/cards/camera`, `src/cards/circular-gauge`, `src/cards/insignia`, `src/cards/scenes`, `src/cards/news`, `src/cards/weather`, `src/cards/graph`, `src/cards/calendar`, `src/cards/power-flow`, `src/cards/notifications`, `src/cards/navigation`, `src/cards/room-summary`, `src/cards/advance-vacuum` or `src/cards/lock` and run `pnpm run bundle`. The HACS bundle compiles those cards from `index.ts` so the
-unused legacy editor class is tree-shaken there (same as `2.3.0-alpha.3`).
-The standalone Climate artifact keeps that class because source-contract tests still
-assert both editor implementations.
+`src/cards/humidifier`, `src/cards/cover`, `src/cards/alarm-panel`, `src/cards/vacuum`, `src/cards/entity`, `src/cards/fav`, `src/cards/person`, `src/cards/camera`, `src/cards/circular-gauge`, `src/cards/insignia`, `src/cards/scenes`, `src/cards/news`, `src/cards/weather`, `src/cards/graph`, `src/cards/calendar`, `src/cards/power-flow`, `src/cards/notifications`, `src/cards/navigation`, `src/cards/room-summary`, `src/cards/advance-vacuum` or `src/cards/lock` and run `pnpm run bundle`. The HACS bundle and standalone artifacts both register the same lazy card and visual editor. Climate’s unused, unregistered legacy editor has been removed; the registered editor retains legacy YAML schedule fields when the Engine is unavailable.
 
 ## Tests protecting each subsystem
 
@@ -274,7 +271,7 @@ climate-schedule.ts    Schedule parse/storage/timeline/serialization
 climate-card.ts        Web component lifecycle and render (still large)
 climate-editor.ts      Visual editor (still large)
 index.ts               Custom element registration + window.__NODALIA_CLIMATE__
-standalone.ts          Standalone entry; keeps unused legacy editor class
+standalone.ts          Standalone entry; uses the same registered editor as HACS
 ```
 
 ## Card architecture (Light)

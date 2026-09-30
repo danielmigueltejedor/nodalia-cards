@@ -29,6 +29,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Maintenance
 
+- Remove Climate’s unregistered legacy visual editor and eager standalone lookup; retain the registered editor and legacy YAML schedule fallback.
+
 - Check Light configuration and color/temperature helpers, reuse typed slider/stub helpers and reject nonfinite RGB channels.
 
 - Check Alarm Panel/Person configuration and helpers plus Summary editor helpers; share typed stub selection and include Lock in registry-driven standalone embedding.

@@ -219,3 +219,15 @@ modules also remain part of the open migration. The alpha publication hold stays
 Light full browser stage: 236 passed, one existing platform skip across local
 Chromium/WebKit/iPhone. Preset selection uses the real Color-mode UI and sends
 finite hue/saturation without changing the four-slot normalization contract.
+
+
+## Climate cleanup — verified
+
+The standalone entry eagerly retained an unregistered 759-line legacy editor;
+no public API, custom element registration or caller used it. Removed that class
+and its keep-alive lookup, plus a duplicate import. Both distributions retain the
+registered lazy visual editor and public schedule API. The standalone artifact
+shrinks from 358,550 to 329,564 bytes. Behavioral tests cover Engine-managed
+schedules and populated legacy webhook/helper fields without Engine. All 618
+unit tests and the full local browser suite (236 passed, one existing platform
+skip) pass. This cleanup does not change the remaining unchecked count of 78.
