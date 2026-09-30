@@ -12,6 +12,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Keep Navigation artwork query parameters before URL fragments and match parameter names literally; guard malformed duration and editor move inputs.
+
 - Keep missing Weather temperatures, dates and rain probabilities absent; preserve real zeros and show precipitation amounts when probability is unavailable.
 
 - Refresh colors based on theme variables immediately after theme changes; recognize modern translucent sRGB colors when choosing icon contrast.
@@ -32,6 +34,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Remove Camera portal listeners from their owning shadow root.
 
 ### Maintenance
+
+- Check Navigation helpers, reuse the shared render-signature fallback and share object-only editor paths with Insignia.
 
 - Check Weather forecast/unit helpers and share editor compaction with Insignia without changing valid forecast or unit behavior.
 

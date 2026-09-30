@@ -359,3 +359,24 @@ missing/zero distinctions, precipitation fallback, dates, mappings and units.
 2,103 valid helper results match merged main. All 649 unit tests and the full
 local browser suite (245 passed, one existing platform skip) pass. Remaining unchecked
 modules: 70. Weather's view and editor still remain in the migration.
+
+## Navigation helper findings — 2026-10-01
+
+Navigation suppresses checks around route matching, artwork URLs, render
+signatures and editor paths. Query parameters are appended after a fragment
+when an artwork URL contains one, and parameter names are used as unescaped
+regular expressions. Its path helpers duplicate Insignia's object-only editor
+semantics; share that coherent responsibility while guarding inherited branches
+and unsafe keys. Keep Room Summary's different array-aware paths separate.
+Duration formatting can output NaN for Infinity and list moves accept fractional
+indices. Guard malformed inputs while preserving valid paths, route boundaries,
+media URL sanitization and signature fallback behavior.
+
+Navigation helpers now pass strict checking and typed lint. Shared object-only
+editor paths preserve numeric object keys, reject unsafe keys and avoid mutating
+inherited branches. Reuse the checked render-signature fallback; retain existing
+optional runtime identity. Query insertion preserves fragments and treats names
+literally. Guard nonfinite durations, noninteger list indices and control
+characters in runtime CSS. Seven new unit cases pass; 836 valid helper results
+match merged main. All 656 unit tests and the full local browser suite (245
+passed, one existing platform skip) pass. Remaining unchecked modules: 69.

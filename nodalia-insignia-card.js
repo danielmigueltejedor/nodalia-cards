@@ -220,10 +220,13 @@
     return value === "" || value === null || value === void 0 ? void 0 : value;
   }
 
-  // src/cards/insignia/insignia-helpers.ts
+  // src/shared/editor-object-paths.ts
+  var isObject2 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var isUnsafeConfigPathKey2 = (key) => key === "__proto__" || key === "constructor" || key === "prototype";
   function setByPath(target, path, value) {
+    if (!isObject2(target) || typeof path !== "string") return;
     const parts = path.split(".");
-    if (parts.some(isUnsafeConfigPathKey)) {
+    if (parts.some(isUnsafeConfigPathKey2)) {
       return;
     }
     let cursor = target;
@@ -234,7 +237,7 @@
         return;
       }
       const current = Object.prototype.hasOwnProperty.call(cursor, key) ? cursor[key] : void 0;
-      if (!isObject(current)) {
+      if (!isObject2(current)) {
         Object.defineProperty(cursor, key, {
           configurable: true,
           enumerable: true,
@@ -243,7 +246,7 @@
         });
       }
       const child = cursor[key];
-      if (!isObject(child)) return;
+      if (!isObject2(child)) return;
       cursor = child;
     }
     const finalKey = parts[parts.length - 1];
@@ -259,24 +262,27 @@
     });
   }
   function deleteByPath(target, path) {
+    if (!isObject2(target) || typeof path !== "string") return;
     const parts = path.split(".");
-    if (parts.some(isUnsafeConfigPathKey)) {
+    if (parts.some(isUnsafeConfigPathKey2)) {
       return;
     }
     let cursor = target;
     for (let index = 0; index < parts.length - 1; index += 1) {
       const key = parts[index];
       if (key === void 0) return;
-      if (!isObject(cursor[key])) {
+      if (!Object.prototype.hasOwnProperty.call(cursor, key) || !isObject2(cursor[key])) {
         return;
       }
       const child = cursor[key];
-      if (!isObject(child)) return;
+      if (!isObject2(child)) return;
       cursor = child;
     }
     const finalKey = parts[parts.length - 1];
     if (finalKey !== void 0) delete cursor[finalKey];
   }
+
+  // src/cards/insignia/insignia-helpers.ts
   function normalizeTintPreset(value) {
     const key = normalizeTextKey(value);
     if (!key) {

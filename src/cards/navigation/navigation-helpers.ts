@@ -1,78 +1,26 @@
-// @ts-nocheck -- path, artwork and editor path helpers stay loosely typed until remaining unknowns are narrowed.
-import { isObject, isUnsafeConfigPathKey } from "./navigation-runtime";
+import { renderSignature } from "../../shared/render-signature";
+export { setByPath, deleteByPath } from "../../shared/editor-object-paths";
 
-export function setByPath(target, path, value) {
-  const parts = path.split(".");
-  if (parts.some(isUnsafeConfigPathKey)) {
-    return;
-  }
-  let cursor = target;
-
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (key === "__proto__" || key === "constructor" || key === "prototype") {
-      return;
-    }
-    const current = Object.hasOwn(cursor, key) ? cursor[key] : undefined;
-    if (!isObject(current)) {
-      Object.defineProperty(cursor, key, {
-        configurable: true,
-        enumerable: true,
-        value: {},
-        writable: true,
-      });
-    }
-    cursor = cursor[key];
-  }
-  const finalKey = parts[parts.length - 1];
-  if (finalKey === "__proto__" || finalKey === "constructor" || finalKey === "prototype") {
-    return;
-  }
-  Object.defineProperty(cursor, finalKey, {
-    configurable: true,
-    enumerable: true,
-    value,
-    writable: true,
-  });
-}
-
-export function deleteByPath(target, path) {
-  const parts = path.split(".");
-  if (parts.some(isUnsafeConfigPathKey)) {
-    return;
-  }
-  let cursor = target;
-
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key])) {
-      return;
-    }
-    cursor = cursor[key];
-  }
-
-  delete cursor[parts[parts.length - 1]];
-}
-
-
-
-export function appendQueryParam(url, key, value) {
+export function appendQueryParam(url: unknown, key: unknown, value: unknown) {
   const rawUrl = String(url || "").trim();
   if (!rawUrl || value === null || value === undefined || value === "") {
     return rawUrl;
   }
 
+  const fragmentIndex = rawUrl.indexOf("#");
+  const base = fragmentIndex < 0 ? rawUrl : rawUrl.slice(0, fragmentIndex);
+  const fragment = fragmentIndex < 0 ? "" : rawUrl.slice(fragmentIndex);
   const encodedKey = encodeURIComponent(String(key));
   const encodedValue = encodeURIComponent(String(value));
-  const existingPattern = new RegExp(`([?&])${encodedKey}=[^&]*`);
-  if (existingPattern.test(rawUrl)) {
-    return rawUrl.replace(existingPattern, `$1${encodedKey}=${encodedValue}`);
+  const escapedKey = encodedKey.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const existingPattern = new RegExp(`([?&])${escapedKey}=[^&]*`);
+  if (existingPattern.test(base)) {
+    return base.replace(existingPattern, `$1${encodedKey}=${encodedValue}`) + fragment;
   }
-
-  return `${rawUrl}${rawUrl.includes("?") ? "&" : "?"}${encodedKey}=${encodedValue}`;
+  return `${base}${base.includes("?") ? "&" : "?"}${encodedKey}=${encodedValue}${fragment}`;
 }
 
-export function arrayFromCsv(value) {
+export function arrayFromCsv(value: unknown) {
   return String(value || "")
     .split(",")
     .map(item => item.trim())
@@ -80,12 +28,16 @@ export function arrayFromCsv(value) {
 }
 
 
-export function moveItem(array, fromIndex, toIndex) {
-  if (!Array.isArray(array)) {
+const isUnknownArray = (value: unknown): value is unknown[] => Array.isArray(value);
+
+export function moveItem<T>(array: T, fromIndex: number, toIndex: number): T {
+  if (!isUnknownArray(array)) {
     return array;
   }
 
   if (
+    !Number.isInteger(fromIndex) ||
+    !Number.isInteger(toIndex) ||
     fromIndex < 0 ||
     toIndex < 0 ||
     fromIndex >= array.length ||
@@ -95,13 +47,14 @@ export function moveItem(array, fromIndex, toIndex) {
     return array;
   }
 
-  const [item] = array.splice(fromIndex, 1);
-  array.splice(toIndex, 0, item);
+  const removed = array.splice(fromIndex, 1);
+  array.splice(toIndex, 0, ...removed);
   return array;
 }
 
-export function formatDuration(totalSeconds) {
-  const safeSeconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+export function formatDuration(totalSeconds: unknown) {
+  const numeric = typeof totalSeconds === "number" || typeof totalSeconds === "string" ? Number(totalSeconds) : 0;
+  const safeSeconds = Number.isFinite(numeric) ? Math.max(0, Math.floor(numeric)) : 0;
   const hours = Math.floor(safeSeconds / 3600);
   const minutes = Math.floor((safeSeconds % 3600) / 60);
   const seconds = safeSeconds % 60;
@@ -113,17 +66,18 @@ export function formatDuration(totalSeconds) {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
-export function normalizeTextKey(value) {
+export function normalizeTextKey(value: unknown) {
   return String(value || "").trim().toLowerCase();
 }
 
-export function sanitizeCssRuntimeValue(value) {
+export function sanitizeCssRuntimeValue(value: unknown) {
   const raw = String(value ?? "").trim();
   if (!raw) {
     return "";
   }
   if (
-    /[<>{};"']/.test(raw)
+    [...raw].some(character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)
+    || /[<>{};"']/.test(raw)
     || raw.includes("/*")
     || raw.includes("*/")
     || /\burl\s*\(/i.test(raw)
@@ -134,7 +88,7 @@ export function sanitizeCssRuntimeValue(value) {
   return raw;
 }
 
-export function sanitizeMediaArtworkUrl(value, hass) {
+export function sanitizeMediaArtworkUrl(value: unknown, hass: { hassUrl?: (path: string) => string } | null | undefined) {
   const raw = String(value || "").trim();
   if (!raw) {
     return "";
@@ -153,33 +107,10 @@ export function sanitizeMediaArtworkUrl(value, hass) {
 }
 
 export function getRenderSignatureRuntime() {
-  return window.NodaliaRenderSignature || {
-    toKey(value) {
-      if (value === null || value === undefined) {
-        return "";
-      }
-      if (typeof value === "number") {
-        return Number.isFinite(value) ? String(value) : "";
-      }
-      return String(value);
-    },
-    joinParts(parts, sectionSeparator = "||", valueSeparator = "::") {
-      return (Array.isArray(parts) ? parts : [])
-        .map(part => {
-          if (!part || !Array.isArray(part.values)) {
-            return "";
-          }
-          const prefix = String(part.prefix || "");
-          const body = part.values.map(value => this.toKey(value)).join(valueSeparator);
-          return `${prefix}${body}`;
-        })
-        .filter(Boolean)
-        .join(sectionSeparator);
-    },
-  };
+  return window.NodaliaRenderSignature || renderSignature;
 }
 
-export function parsePrimitiveValue(value) {
+export function parsePrimitiveValue(value: unknown) {
   if (value === "true") {
     return true;
   }
@@ -195,7 +126,7 @@ export function parsePrimitiveValue(value) {
   return value;
 }
 
-export function escapeSelectorValue(value) {
+export function escapeSelectorValue(value: unknown) {
   if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
     return CSS.escape(String(value));
   }
@@ -203,7 +134,7 @@ export function escapeSelectorValue(value) {
   return String(value).replaceAll('"', '\\"');
 }
 
-export function normalizePath(value) {
+export function normalizePath(value: unknown) {
   if (!value || typeof value !== "string") {
     return null;
   }
@@ -220,8 +151,8 @@ export function normalizePath(value) {
   }
 }
 
-export function matchPath(currentPath, candidatePath, mode) {
-  if (!candidatePath) {
+export function matchPath(currentPath: string | null, candidatePath: string | null, mode: unknown) {
+  if (!currentPath || !candidatePath) {
     return false;
   }
 

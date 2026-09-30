@@ -2,68 +2,12 @@ import type { HassEntity } from "../../core/types/home-assistant";
 import { normalizeControlStyles } from "../../shared/control-config";
 export { getStubEntityId, applyStubEntity, parseSizeToPixels } from "../../shared/editor-entity-helpers";
 export { formatEditorHexChannel, resolveEditorColorValue, formatEditorColorFromHex, getEditorColorModel } from "../../shared/editor-color";
-import { isObject, isUnsafeConfigPathKey, normalizeTextKey } from "./insignia-runtime";
+import { normalizeTextKey } from "./insignia-runtime";
 import { DEFAULT_CONFIG } from "./insignia-defaults";
 
 export { compactConfig } from "../../shared/config-values";
 
-export function setByPath(target: Record<string, unknown>, path: string, value: unknown) {
-  const parts = path.split(".");
-  if (parts.some(isUnsafeConfigPathKey)) {
-    return;
-  }
-  let cursor = target;
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (key === undefined) return;
-    if (key === "__proto__" || key === "constructor" || key === "prototype") {
-      return;
-    }
-    const current = Object.prototype.hasOwnProperty.call(cursor, key) ? cursor[key] : undefined;
-    if (!isObject(current)) {
-      Object.defineProperty(cursor, key, {
-        configurable: true,
-        enumerable: true,
-        value: {},
-        writable: true,
-      });
-    }
-    const child = cursor[key];
-    if (!isObject(child)) return;
-    cursor = child;
-  }
-  const finalKey = parts[parts.length - 1];
-  if (finalKey === undefined) return;
-  if (finalKey === "__proto__" || finalKey === "constructor" || finalKey === "prototype") {
-    return;
-  }
-  Object.defineProperty(cursor, finalKey, {
-    configurable: true,
-    enumerable: true,
-    value,
-    writable: true,
-  });
-}
-
-export function deleteByPath(target: Record<string, unknown>, path: string) {
-  const parts = path.split(".");
-  if (parts.some(isUnsafeConfigPathKey)) {
-    return;
-  }
-  let cursor = target;
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (key === undefined) return;
-    if (!isObject(cursor[key])) {
-      return;
-    }
-    const child = cursor[key];
-    if (!isObject(child)) return;
-    cursor = child;
-  }
-  const finalKey = parts[parts.length - 1];
-  if (finalKey !== undefined) delete cursor[finalKey];
-}
+export { setByPath, deleteByPath } from "../../shared/editor-object-paths";
 
 export function normalizeTintPreset(value: unknown) {
   const key = normalizeTextKey(value);
