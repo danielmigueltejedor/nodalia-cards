@@ -90,12 +90,12 @@ assets and include release-gate tests. Record remaining unchecked modules honest
   image data exists; fetching an unseen image still depends on the network.
 - HA fixture construction is shared by browser and Node tests. Developer guides
   cover adding cards, testing and release preparation.
-- Latest local validation: strict types, lint, translations, build and 556 unit tests
+- Latest local validation: strict types, lint, translations, build and 566 unit tests
   pass. Full Chromium/WebKit/iPhone run: 197 passed, one existing platform skip, including Scenes, Lock editor styles and
   Summary native Lock regressions. Linux CI
   remains required for Firefox and the final committed artifacts.
 
-The full TS migration remains open: **93 unchecked modules and no runtime import cycles** are explicitly tracked. No new suppressions or `any` shortcuts were
+The full TS migration remains open: **90 unchecked modules and no runtime import cycles** are explicitly tracked. No new suppressions or `any` shortcuts were
 introduced. This stage is foundational work, not a declaration that the entire
 migration is finished.
 
@@ -103,3 +103,10 @@ Lock now shares editor controls with Entity, exposes sanitized style settings an
 keeps deliberate unlock semantics. Summary embeds native Lock cards and keeps
 media on Home only. Requested Sections minimum widths are 4/4/6/6 for
 Alarm Panel, Entity, Weather and Calendar respectively.
+
+Control configuration stage: Fan, Humidifier and Cover now check unknown YAML
+without suppression, and their public APIs expose the actual normalized fields.
+Unvalidated extension fields remain unknown. Fan/Humidifier share checked action
+and style normalization; primitive style branches no longer crash the inactive
+icon migration. Ten regressions cover malformed inputs, HA action objects, double
+tap, service restrictions, CSS rejection, and mutation isolation.

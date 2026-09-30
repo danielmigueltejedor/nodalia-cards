@@ -2,6 +2,6 @@ export interface HumidifierPublicApi {
   CARD_TAG: string;
   EDITOR_TAG: string;
   CARD_VERSION: string;
-  DEFAULT_CONFIG: Record<string, unknown>;
-  normalizeConfig: (rawConfig?: unknown) => Record<string, unknown>;
+  DEFAULT_CONFIG: typeof import("./humidifier-config").DEFAULT_CONFIG;
+  normalizeConfig: typeof import("./humidifier-config").normalizeConfig;
 }

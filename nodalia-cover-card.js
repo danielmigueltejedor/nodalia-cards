@@ -47,6 +47,36 @@
   var fireEvent = utils.fireEvent.bind(utils);
   var normalizeTextKey = utils.normalizeTextKey.bind(utils);
 
+  // src/shared/control-config.ts
+  function normalizeControlStyles(candidate, defaults) {
+    const utils2 = window.NodaliaUtils;
+    const source = utils2.isObject(candidate) ? candidate : {};
+    const result = {};
+    for (const [key, fallback] of Object.entries(defaults)) {
+      if (utils2.isUnsafeConfigPathKey(key)) continue;
+      result[key] = typeof fallback === "string" ? utils2.sanitizeCssValue(source[key], fallback) : normalizeControlStyles(source[key], fallback);
+    }
+    return result;
+  }
+  var actionFields = (prefix, fallback, navigationKey = `${prefix}_navigation_path`) => ({
+    actionKey: `${prefix}_action`,
+    serviceKey: `${prefix}_service`,
+    serviceDataKey: `${prefix}_service_data`,
+    serviceTargetKey: `${prefix}_service_target`,
+    urlKey: `${prefix}_url`,
+    navigationKey,
+    newTabKey: `${prefix}_new_tab`,
+    fallback
+  });
+  var FIELDS = [
+    actionFields("tap", "toggle", "navigation_path"),
+    actionFields("icon_tap", "", "icon_navigation_path"),
+    actionFields("hold", "more-info", "hold_navigation_path"),
+    actionFields("icon_hold", ""),
+    actionFields("double_tap", "none"),
+    actionFields("icon_double_tap", "")
+  ];
+
   // src/cards/cover/cover-config.ts
   var DEFAULT_CONFIG = {
     entity: "",
@@ -152,15 +182,17 @@
     }
     return String(value || "").split(",").map((item) => item.trim()).filter(Boolean);
   }
-  function normalizeConfig(rawConfig) {
-    const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  function normalizeConfig(rawConfig = {}) {
+    const defaults = DEFAULT_CONFIG;
+    const config = mergeConfig(defaults, rawConfig);
+    const source = isObject(rawConfig) ? rawConfig : {};
     config.layout = normalizeTextKey(config.layout) === "circular" ? "circular" : "compact";
-    config.compact_layout_mode = ["auto", "always", "never"].includes(config.compact_layout_mode) ? config.compact_layout_mode : "auto";
+    config.compact_layout_mode = typeof config.compact_layout_mode === "string" && ["auto", "always", "never"].includes(config.compact_layout_mode) ? config.compact_layout_mode : "auto";
     const openCloseIcons = normalizeTextKey(config.open_close_icons) || "auto";
     config.open_close_icons = ["auto", "vertical", "horizontal"].includes(openCloseIcons) ? openCloseIcons : "auto";
-    config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? { ...DEFAULT_CONFIG.security, ...isObject(config.security) ? config.security : {} };
-    config.security.allowed_services = normalizeList(config.security?.allowed_services);
-    config.security.allowed_service_domains = normalizeList(config.security?.allowed_service_domains);
+    const security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? { ...DEFAULT_CONFIG.security, ...isObject(config.security) ? config.security : {} };
+    security.allowed_services = normalizeList(security.allowed_services);
+    security.allowed_service_domains = normalizeList(security.allowed_service_domains);
     const applyTap = window.NodaliaUtils?.applyCardTapActionField?.bind(window.NodaliaUtils);
     if (typeof applyTap === "function") {
       applyTap(config, {
@@ -171,7 +203,7 @@
         urlKey: "tap_url",
         navigationKey: "navigation_path",
         newTabKey: "tap_new_tab"
-      }, rawConfig?.tap_action ?? config.tap_action, "toggle");
+      }, source.tap_action ?? config.tap_action, "toggle");
       applyTap(config, {
         actionKey: "icon_tap_action",
         serviceKey: "icon_tap_service",
@@ -180,7 +212,7 @@
         urlKey: "icon_tap_url",
         navigationKey: "icon_navigation_path",
         newTabKey: "icon_tap_new_tab"
-      }, rawConfig?.icon_tap_action ?? config.icon_tap_action, "");
+      }, source.icon_tap_action ?? config.icon_tap_action, "");
       applyTap(config, {
         actionKey: "hold_action",
         serviceKey: "hold_service",
@@ -189,7 +221,7 @@
         urlKey: "hold_url",
         navigationKey: "hold_navigation_path",
         newTabKey: "hold_new_tab"
-      }, rawConfig?.hold_action ?? config.hold_action, "more-info");
+      }, source.hold_action ?? config.hold_action, "more-info");
       applyTap(config, {
         actionKey: "icon_hold_action",
         serviceKey: "icon_hold_service",
@@ -198,7 +230,7 @@
         urlKey: "icon_hold_url",
         navigationKey: "icon_hold_navigation_path",
         newTabKey: "icon_hold_new_tab"
-      }, rawConfig?.icon_hold_action ?? config.icon_hold_action, "");
+      }, source.icon_hold_action ?? config.icon_hold_action, "");
     }
     if (String(config.icon_tap_action || "").trim() === "") {
       config.icon_tap_action = "";
@@ -216,8 +248,7 @@
     if (config.hold_action === "navigate" && !config.hold_navigation_path && config.hold_url) {
       config.hold_navigation_path = config.hold_url;
     }
-    config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles) ?? deepClone(DEFAULT_CONFIG.styles);
-    return config;
+    return { ...config, security, styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles) };
   }
 
   // src/cards/cover/cover-helpers.ts
