@@ -90,12 +90,12 @@ assets and include release-gate tests. Record remaining unchecked modules honest
   image data exists; fetching an unseen image still depends on the network.
 - HA fixture construction is shared by browser and Node tests. Developer guides
   cover adding cards, testing and release preparation.
-- Latest local validation: strict types, lint, translations, build and 592 unit tests
-  pass. Full Chromium/WebKit/iPhone run: 224 passed, one existing platform skip, including Scenes, Lock editor styles and
+- Latest local validation: strict types, lint, translations, build and 602 unit tests
+  pass. Full Chromium/WebKit/iPhone run: 233 passed, one existing platform skip, including Scenes, Lock editor styles and
   Summary native Lock, editor color and Vacuum status regressions. Linux CI
   remains required for Firefox and the final committed artifacts.
 
-The full TS migration remains open: **88 unchecked modules and no runtime import cycles** are explicitly tracked. No new suppressions or `any` shortcuts were
+The full TS migration remains open: **85 unchecked modules and no runtime import cycles** are explicitly tracked. No new suppressions or `any` shortcuts were
 introduced. This stage is foundational work, not a declaration that the entire
 migration is finished.
 
@@ -157,3 +157,19 @@ checking tracked callers. Nine identical untracked “ 2” copies were removed.
 Historical audit snapshots remain explicitly historical; current architecture and
 contribution instructions now match the registry, generated assets and release gate.
 The next alpha is deferred until the full strict migration is complete.
+
+## Device pointer helpers — findings before implementation
+
+Fan, Humidifier and Cover duplicate identical slider/dial geometry with untyped
+DOM and range inputs. Their dial arc is 135–405 degrees in all three cards. Extract
+this shared math with explicit rectangles/ranges and preserve quantization, dead
+zone and gap behavior. Malformed dial values can currently produce NaN marker
+coordinates; guard them without changing valid ranges or service behavior. Then
+check the remaining family helpers, retaining their distinct unavailable policies.
+
+Device pointer stage validated: 602 unit tests and the full local browser suite
+(233 passed, one existing platform skip) pass. Real dial gestures in all three
+cards send exactly one midpoint service call on release, including iPhone.
+Helpers are checked with typed lint and no suppressions; remaining debt is 85.
+Ten Node cases cover quantized/fractional steps, cached geometry, pointer/marker
+round trips, center/gap retention, malformed values and distinct domain policies.

@@ -1,28 +1,15 @@
-// @ts-nocheck -- color/dial helpers stay loosely typed until remaining unknowns are narrowed.
 export { resolveEditorColorValue, formatEditorHexChannel, formatEditorColorFromHex, getEditorColorModel } from "../../shared/editor-color";
-import {
-  CIRCULAR_LAYOUT_DIAL_END_ANGLE,
-  CIRCULAR_LAYOUT_DIAL_START_ANGLE,
-  CIRCULAR_LAYOUT_DIAL_SWEEP,
-} from "./cover-constants";
+import type { HassEntity, HomeAssistant } from "../../core/types/home-assistant";
+export { getSliderDragGeometry, getRangeValueFromGeometry, getCircularLayoutDialModel, getCircularLayoutDialValueFromPoint } from "../../shared/device-control-geometry";
 import { DEFAULT_CONFIG } from "./cover-config";
-import { clamp, deepClone, isObject, normalizeTextKey } from "./cover-runtime";
+import { deepClone, isObject, normalizeTextKey } from "./cover-runtime";
 
-
-
-
-
-
-
-
-
-
-export function coverDeviceClassPrefersHorizontalOpenClose(deviceClass) {
+export function coverDeviceClassPrefersHorizontalOpenClose(deviceClass: unknown) {
   const key = normalizeTextKey(deviceClass);
   return key === "door" || key === "gate" || key === "garage";
 }
 
-export function resolveOpenCloseControlIcons(mode, deviceClass) {
+export function resolveOpenCloseControlIcons(mode: unknown, deviceClass: unknown) {
   const vertical = { open: "mdi:arrow-up", close: "mdi:arrow-down" };
   const horizontal = { open: "mdi:arrow-right", close: "mdi:arrow-left" };
   const layout = normalizeTextKey(mode) || "auto";
@@ -35,8 +22,7 @@ export function resolveOpenCloseControlIcons(mode, deviceClass) {
   return coverDeviceClassPrefersHorizontalOpenClose(deviceClass) ? horizontal : vertical;
 }
 
-
-export function parseNumber(value) {
+export function parseNumber(value: unknown) {
   if (value === null || value === undefined || value === "") {
     return null;
   }
@@ -44,11 +30,11 @@ export function parseNumber(value) {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
-export function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
+export function getStubEntityId(hass: HomeAssistant | null | undefined, domains: string[] = [], entities: unknown = [], entitiesFallback: unknown = []) {
   return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
 }
 
-export function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
+export function applyStubEntity<T extends { entity: string; name: string }>(config: T, hass: HomeAssistant | null | undefined, domains: string[], entities: unknown = [], entitiesFallback: unknown = []) {
   const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
   if (!entityId) {
     return config;
@@ -58,93 +44,12 @@ export function applyStubEntity(config, hass, domains, entities = [], entitiesFa
   return config;
 }
 
-export function isUnavailableState(state) {
+export function isUnavailableState(state: Pick<HassEntity, "state"> | null | undefined) {
   const key = normalizeTextKey(state?.state);
   return key === "unavailable" || key === "unknown";
 }
 
-export function getSliderDragGeometry(slider) {
-  const rect = slider.getBoundingClientRect();
-  return {
-    left: rect.left,
-    width: rect.width,
-    min: Number(slider.min || 0),
-    max: Number(slider.max || 100),
-    step: slider.step === "any" ? 0 : Number(slider.step || 1),
-  };
-}
-
-export function getRangeValueFromGeometry(geometry, currentValue, clientX) {
-  if (!geometry || !Number.isFinite(geometry.width) || geometry.width <= 0) {
-    return Number(currentValue || 0);
-  }
-  const ratio = clamp((clientX - geometry.left) / geometry.width, 0, 1);
-  let nextValue = geometry.min + ((geometry.max - geometry.min) * ratio);
-  if (Number.isFinite(geometry.step) && geometry.step > 0) {
-    nextValue = geometry.min + (Math.round((nextValue - geometry.min) / geometry.step) * geometry.step);
-  }
-  return clamp(nextValue, geometry.min, geometry.max);
-}
-
-export function getCircularLayoutDialModel(value, min = 0, max = 100) {
-  const safeMin = Number.isFinite(Number(min)) ? Number(min) : 0;
-  const safeMax = Number.isFinite(Number(max)) && Number(max) > safeMin ? Number(max) : 100;
-  const safeValue = clamp(Number(value), safeMin, safeMax);
-  const ratio = clamp((safeValue - safeMin) / (safeMax - safeMin), 0, 1);
-  const angle = CIRCULAR_LAYOUT_DIAL_START_ANGLE + (ratio * CIRCULAR_LAYOUT_DIAL_SWEEP);
-  const radians = angle * (Math.PI / 180);
-  const markerRadius = 86;
-  return {
-    progress: Number((ratio * 75).toFixed(3)),
-    markerLeft: Number((((120 + (Math.cos(radians) * markerRadius)) / 240) * 100).toFixed(3)),
-    markerTop: Number((((120 + (Math.sin(radians) * markerRadius)) / 240) * 100).toFixed(3)),
-  };
-}
-
-export function getCircularLayoutDialValueFromPoint(dial, clientX, clientY, range, step, fallbackValue = null, geometry = null) {
-  const rect = geometry || dial?.getBoundingClientRect?.();
-  const safeMin = Number.isFinite(Number(range?.min)) ? Number(range.min) : 0;
-  const safeMax = Number.isFinite(Number(range?.max)) && Number(range.max) > safeMin ? Number(range.max) : 100;
-  if (!rect?.width || !rect?.height) {
-    return Number.isFinite(Number(fallbackValue)) ? Number(fallbackValue) : safeMin;
-  }
-
-  const centerX = rect.left + (rect.width / 2);
-  const centerY = rect.top + (rect.height / 2);
-  const dx = clientX - centerX;
-  const dy = clientY - centerY;
-  const distance = Math.sqrt((dx ** 2) + (dy ** 2));
-  const outerRadius = Math.min(rect.width, rect.height) / 2;
-  const innerDeadZone = outerRadius * 0.42;
-
-  if (distance < innerDeadZone && Number.isFinite(Number(fallbackValue))) {
-    return Number(fallbackValue);
-  }
-
-  const angle = Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI);
-  let normalizedAngle = angle < 0 ? angle + 360 : angle;
-  const gapStart = CIRCULAR_LAYOUT_DIAL_END_ANGLE % 360;
-  const gapEnd = CIRCULAR_LAYOUT_DIAL_START_ANGLE;
-  if (
-    normalizedAngle > gapStart
-    && normalizedAngle < gapEnd
-    && Number.isFinite(Number(fallbackValue))
-  ) {
-    return Number(fallbackValue);
-  }
-  if (normalizedAngle < CIRCULAR_LAYOUT_DIAL_START_ANGLE) {
-    normalizedAngle += 360;
-  }
-  normalizedAngle = clamp(normalizedAngle, CIRCULAR_LAYOUT_DIAL_START_ANGLE, CIRCULAR_LAYOUT_DIAL_END_ANGLE);
-
-  const ratio = (normalizedAngle - CIRCULAR_LAYOUT_DIAL_START_ANGLE) / CIRCULAR_LAYOUT_DIAL_SWEEP;
-  const rawValue = safeMin + ((safeMax - safeMin) * ratio);
-  const safeStep = Number.isFinite(step) && step > 0 ? step : 1;
-  const rounded = safeMin + (Math.round((rawValue - safeMin) / safeStep) * safeStep);
-  return clamp(rounded, safeMin, safeMax);
-}
-
-export function parseServiceData(value) {
+export function parseServiceData(value: unknown): Record<string, unknown> {
   if (isObject(value)) {
     return deepClone(value);
   }
@@ -153,18 +58,18 @@ export function parseServiceData(value) {
     return {};
   }
   try {
-    const parsed = JSON.parse(raw);
+    const parsed: unknown = JSON.parse(raw);
     return isObject(parsed) ? parsed : {};
   } catch (_error) {
     return {};
   }
 }
 
-export function shouldOpenNewTab(value) {
+export function shouldOpenNewTab(value: unknown) {
   return value === true;
 }
 
-export function getEditorColorFallbackValue(field) {
+export function getEditorColorFallbackValue(field: unknown) {
   const normalized = String(field || "");
   if (normalized.endsWith("icon.on_color") || normalized.endsWith("slider_color")) {
     return DEFAULT_CONFIG.styles.icon.on_color;
@@ -181,7 +86,7 @@ export function getEditorColorFallbackValue(field) {
   return DEFAULT_CONFIG.styles.icon.on_color;
 }
 
-export function coverDeviceIcon(state) {
+export function coverDeviceIcon(state: HassEntity | null | undefined) {
   const deviceClass = normalizeTextKey(state?.attributes?.device_class || "");
   const isOpen = ["open", "opening"].includes(normalizeTextKey(state?.state || ""));
   switch (deviceClass) {
