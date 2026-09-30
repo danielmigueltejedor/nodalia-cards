@@ -1,70 +1,49 @@
-// @ts-nocheck -- chart, history and editor color helpers stay loosely typed until remaining unknowns are narrowed.
+import type { HassEntity, HomeAssistant } from "../../core/types/home-assistant";
+import { renderSignature } from "../../shared/render-signature";
+import { parseFiniteNumericValue } from "../../shared/numeric-values";
+import { parseSizeToPixels } from "../../shared/editor-entity-helpers";
+export { parseSizeToPixels } from "../../shared/editor-entity-helpers";
+export { compactConfig } from "../../shared/config-values";
+export { moveItem } from "../../shared/editor-lists";
+export interface GraphPoint { x: number; y: number }
+export interface HistorySample { ts: number; value: number }
 export { resolveEditorColorValue, formatEditorHexChannel, formatEditorColorFromHex, getEditorColorModel } from "../../shared/editor-color";
-import { SERIES_COLORS } from "./graph-constants";
+import { SERIES_COLORS, DEFAULT_HISTORY_POINTS, MAX_HISTORY_POINTS } from "./graph-constants";
 import { clamp, isObject, normalizeTextKey } from "./graph-runtime";
 
-export function getStubEntityIds(hass, domains = [], limit = 1, entities = [], entitiesFallback = []) {
+export function getStubEntityIds(hass: HomeAssistant | null | undefined, domains: string[] = [], limit = 1, entities: unknown = [], entitiesFallback: unknown = []) {
   return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, limit);
 }
 
-export function getStubFriendlyName(hass, entityId) {
+export function getStubFriendlyName(hass: HomeAssistant | null | undefined, entityId: string) {
   return hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
 }
 
 
-export function compactConfig(value) {
-  if (Array.isArray(value)) {
-    return value.map(item => compactConfig(item)).filter(item => item !== undefined);
+export function getByPath(target: unknown, path: unknown): unknown {
+  let cursor = target;
+  for (const key of String(path || "").split(".")) {
+    if (!key || key === "__proto__" || key === "constructor" || key === "prototype"
+      || cursor === null || typeof cursor !== "object" || !Object.prototype.hasOwnProperty.call(cursor, key)) return undefined;
+    cursor = Reflect.get(cursor, key);
   }
-
-  if (isObject(value)) {
-    const compacted = {};
-
-    Object.entries(value).forEach(([key, item]) => {
-      if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
-        return;
-      }
-      const cleaned = compactConfig(item);
-      const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
-
-      if (cleaned !== undefined && !isEmptyObject) {
-        compacted[key] = cleaned;
-      }
-    });
-
-    return compacted;
-  }
-
-  if (value === "" || value === null || value === undefined) {
-    return undefined;
-  }
-
-  return value;
+  return cursor;
 }
 
-
-
-
-export function getByPath(target, path) {
-  return String(path || "")
-    .split(".")
-    .reduce((cursor, key) => (cursor === undefined || cursor === null ? undefined : cursor[key]), target);
-}
-
-
-
-
-
-export function isUnavailableState(state) {
+export function isUnavailableState(state: HassEntity | null | undefined) {
   return normalizeTextKey(state?.state) === "unavailable";
 }
 
-export function parseNumber(value) {
-  const numeric = Number(String(value ?? "").replace(",", "."));
-  return Number.isFinite(numeric) ? numeric : null;
+export function parseNumber(value: unknown) {
+  return parseFiniteNumericValue(typeof value === "string" ? value.replace(",", ".") : value);
 }
 
-export function parseHistoryTimestamp(value) {
+export function normalizeGraphPointCount(value: unknown): number {
+  const numeric = parseFiniteNumericValue(value) || DEFAULT_HISTORY_POINTS;
+  return Math.min(MAX_HISTORY_POINTS, Math.max(20, Math.floor(numeric)));
+}
+
+export function parseHistoryTimestamp(value: unknown) {
   if (typeof value === "number" && Number.isFinite(value)) {
     return value > 1e12 ? value : value * 1000;
   }
@@ -73,38 +52,23 @@ export function parseHistoryTimestamp(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-export function getHassLocaleTag(hass, language = "auto") {
+export function getHassLocaleTag(hass: HomeAssistant | null | undefined, language = "auto") {
   const lang = window.NodaliaI18n?.resolveLanguage?.(hass, language);
-  return window.NodaliaI18n?.localeTag?.(lang) || hass?.locale?.language || undefined;
+  return (lang === undefined ? undefined : window.NodaliaI18n?.localeTag?.(lang)) || hass?.locale?.language || undefined;
 }
 
-export function formatNumberValue(value, decimals = 0, locale = undefined) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
-    return "--";
-  }
+export { formatFiniteNumericValue as formatNumberValue } from "../../shared/numeric-values";
 
-  return numeric.toLocaleString(locale, {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  });
-}
-
-export function inferDecimals(rawValue) {
+export function inferDecimals(rawValue: unknown) {
   const text = String(rawValue ?? "").trim().replace(",", ".");
   if (!text.includes(".")) {
     return 0;
   }
-  return Math.min(3, text.split(".")[1].length);
-}
-
-export function parseSizeToPixels(value, fallback = 0) {
-  const numeric = Number.parseFloat(String(value ?? ""));
-  return Number.isFinite(numeric) ? numeric : fallback;
+  return Math.min(3, (text.split(".")[1]?.length ?? 0));
 }
 
 /** Parses CSS padding shorthand into edge pixel values (numbers only tokens). */
-export function parsePaddingEdges(value, fallback = 16) {
+export function parsePaddingEdges(value: unknown, fallback = 16) {
   const fb = Number.isFinite(fallback) ? fallback : 16;
   const raw = String(value ?? "").trim();
   if (!raw) {
@@ -115,62 +79,39 @@ export function parsePaddingEdges(value, fallback = 16) {
     return { top: fb, right: fb, bottom: fb, left: fb };
   }
   if (parts.length === 1) {
-    const v = parts[0];
+    const v = parts[0] ?? fb;
     return { top: v, right: v, bottom: v, left: v };
   }
   if (parts.length === 2) {
-    const [vertical, horizontal] = parts;
+    const [vertical = fb, horizontal = fb] = parts;
     return { top: vertical, right: horizontal, bottom: vertical, left: horizontal };
   }
   if (parts.length === 3) {
-    const [top, horizontal, bottom] = parts;
+    const [top = fb, horizontal = fb, bottom = fb] = parts;
     return { top, right: horizontal, bottom, left: horizontal };
   }
-  const [top, right, bottom, left] = parts;
+  const [top = fb, right = fb, bottom = fb, left = fb] = parts;
   return { top, right, bottom, left };
 }
 
 
 export function getRenderSignatureRuntime() {
-  return window.NodaliaRenderSignature || {
-    toKey(value) {
-      if (value === null || value === undefined) {
-        return "";
-      }
-      if (typeof value === "number") {
-        return Number.isFinite(value) ? String(value) : "";
-      }
-      return String(value);
-    },
-    joinParts(parts, sectionSeparator = "||", valueSeparator = "::") {
-      return (Array.isArray(parts) ? parts : [])
-        .map(part => {
-          if (!part || !Array.isArray(part.values)) {
-            return "";
-          }
-          const prefix = String(part.prefix || "");
-          const body = part.values.map(value => this.toKey(value)).join(valueSeparator);
-          return `${prefix}${body}`;
-        })
-        .filter(Boolean)
-        .join(sectionSeparator);
-    },
-  };
+  return window.NodaliaRenderSignature || renderSignature;
 }
 
 /** Map SVG viewBox X (0..chart.width) to overlay percentage. */
-export function graphChartXToPercent(x, chart) {
-  if (!chart || typeof chart.width !== "number") {
+export function graphChartXToPercent(x: number, chart: unknown) {
+  if (!isObject(chart) || typeof chart.width !== "number") {
     return 50;
   }
   const width = chart.width;
-  if (!Number.isFinite(width) || width <= 0) {
+  if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(x)) {
     return 50;
   }
   return (x / width) * 100;
 }
 
-export function escapeSelectorValue(value) {
+export function escapeSelectorValue(value: unknown) {
   if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
     return CSS.escape(String(value));
   }
@@ -186,7 +127,7 @@ export function escapeSelectorValue(value) {
 
 
 
-export function getEditorColorFallbackValue(field) {
+export function getEditorColorFallbackValue(field: unknown) {
   const normalizedField = String(field ?? "");
 
   if (normalizedField.endsWith("background")) {
@@ -200,28 +141,8 @@ export function getEditorColorFallbackValue(field) {
   return "var(--info-color, #71c0ff)";
 }
 
-export function moveItem(array, fromIndex, toIndex) {
-  if (!Array.isArray(array)) {
-    return array;
-  }
-
-  if (
-    fromIndex < 0 ||
-    toIndex < 0 ||
-    fromIndex >= array.length ||
-    toIndex >= array.length ||
-    fromIndex === toIndex
-  ) {
-    return array;
-  }
-
-  const [item] = array.splice(fromIndex, 1);
-  array.splice(toIndex, 0, item);
-  return array;
-}
-
-export function formatHoverTimestamp(value, locale = undefined) {
-  const date = new Date(value);
+export function formatHoverTimestamp(value: unknown, locale: string | undefined = undefined) {
+  const date = value instanceof Date ? value : typeof value === "string" || typeof value === "number" ? new Date(value) : new Date(NaN);
   if (Number.isNaN(date.getTime())) {
     return "";
   }
@@ -234,7 +155,8 @@ export function formatHoverTimestamp(value, locale = undefined) {
   });
 }
 
-export function resolveEntityEntries(config, { preserveEmpty = false } = {}) {
+export function resolveEntityEntries(value: unknown, { preserveEmpty = false } = {}) {
+  const config = isObject(value) ? value : {};
   const source = Array.isArray(config?.entities) && config.entities.length
     ? config.entities
     : config?.entity
@@ -242,12 +164,12 @@ export function resolveEntityEntries(config, { preserveEmpty = false } = {}) {
       : [];
 
   return source
-    .map((entry, index) => {
+    .map((entry: unknown, index: number) => {
       if (typeof entry === "string") {
         return {
           entity: entry.trim(),
           name: "",
-          color: SERIES_COLORS[index % SERIES_COLORS.length],
+          color: (SERIES_COLORS[index % SERIES_COLORS.length] ?? "#f29f05"),
         };
       }
 
@@ -258,28 +180,34 @@ export function resolveEntityEntries(config, { preserveEmpty = false } = {}) {
       return {
         entity: String(entry.entity || "").trim(),
         name: String(entry.name || "").trim(),
-        color: String(entry.color || SERIES_COLORS[index % SERIES_COLORS.length]).trim(),
+        color: String(entry.color || (SERIES_COLORS[index % SERIES_COLORS.length] ?? "#f29f05")).trim(),
       };
     })
-    .filter(entry => entry && (preserveEmpty || entry.entity));
+    .filter(entry => entry !== null).filter(entry => preserveEmpty || entry.entity);
 }
 
-export function buildSmoothPath(points) {
-  if (!Array.isArray(points) || points.length === 0) {
-    return "";
-  }
+function validPoints(value: unknown): GraphPoint[] {
+  if (!Array.isArray(value)) return [];
+  const points: unknown[] = Array.from(value);
+  return points.every((point: unknown): point is GraphPoint => isObject(point) && typeof point.x === "number" && Number.isFinite(point.x) && typeof point.y === "number" && Number.isFinite(point.y)) ? points : [];
+}
 
+export function buildSmoothPath(value: unknown) {
+  const points = validPoints(value);
+  const first = points[0];
+  if (!first) return "";
   if (points.length === 1) {
-    return `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
+    return `M ${first.x.toFixed(2)} ${first.y.toFixed(2)}`;
   }
 
-  let path = `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
+  let path = `M ${first.x.toFixed(2)} ${first.y.toFixed(2)}`;
 
   for (let index = 0; index < points.length - 1; index += 1) {
     const p0 = points[index - 1] || points[index];
     const p1 = points[index];
     const p2 = points[index + 1];
     const p3 = points[index + 2] || p2;
+    if (!p0 || !p1 || !p2 || !p3) return "";
 
     const cp1x = p1.x + ((p2.x - p0.x) / 6);
     const cp1y = p1.y + ((p2.y - p0.y) / 6);
@@ -292,7 +220,8 @@ export function buildSmoothPath(points) {
   return path;
 }
 
-export function buildAreaPath(points, bottomY) {
+export function buildAreaPath(value: unknown, bottomY: number) {
+  const points = validPoints(value);
   if (!Array.isArray(points) || points.length === 0) {
     return "";
   }
@@ -300,12 +229,16 @@ export function buildAreaPath(points, bottomY) {
   const linePath = buildSmoothPath(points);
   const first = points[0];
   const last = points[points.length - 1];
+  if (!first || !last || !Number.isFinite(bottomY)) return "";
   return `${linePath} L ${last.x.toFixed(2)} ${bottomY.toFixed(2)} L ${first.x.toFixed(2)} ${bottomY.toFixed(2)} Z`;
 }
 
-export function buildInterpolatedSamples(events, startMs, endMs, pointsCount, fallbackValue = null) {
-  if (!Array.isArray(events) || !events.length) {
-    if (!Number.isFinite(fallbackValue)) {
+export function buildInterpolatedSamples(value: unknown, startMs: number, endMs: number, pointsCount: number, fallbackValue: number | null = null): HistorySample[] {
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs < startMs || !Number.isFinite(pointsCount) || pointsCount < 1) return [];
+  pointsCount = Math.min(MAX_HISTORY_POINTS, Math.floor(pointsCount));
+  const events = Array.isArray(value) ? value.filter((event: unknown): event is HistorySample => isObject(event) && typeof event.ts === "number" && Number.isFinite(event.ts) && typeof event.value === "number" && Number.isFinite(event.value)) : [];
+  if (!events.length) {
+    if (fallbackValue === null || !Number.isFinite(fallbackValue)) {
       return [];
     }
 
@@ -316,16 +249,16 @@ export function buildInterpolatedSamples(events, startMs, endMs, pointsCount, fa
   }
   const spanMs = Math.max(endMs - startMs, 1);
   const bucketSize = spanMs / Math.max(pointsCount - 1, 1);
-  const buckets = Array.from({ length: pointsCount }, () => []);
+  const buckets = Array.from({ length: pointsCount }, (): number[] => []);
 
   events.forEach(event => {
     const clampedTs = clamp(event.ts, startMs, endMs);
     const rawIndex = Math.floor((clampedTs - startMs) / Math.max(bucketSize, 1));
     const bucketIndex = clamp(rawIndex, 0, pointsCount - 1);
-    buckets[bucketIndex].push(event.value);
+    buckets[bucketIndex]?.push(event.value);
   });
 
-  let lastValue = Number.isFinite(fallbackValue)
+  let lastValue = fallbackValue !== null && Number.isFinite(fallbackValue)
     ? fallbackValue
     : buckets.flat().find(Number.isFinite);
 
@@ -337,7 +270,7 @@ export function buildInterpolatedSamples(events, startMs, endMs, pointsCount, fa
 
     return {
       ts: sampleTs,
-      value: Number.isFinite(lastValue) ? lastValue : 0,
+      value: lastValue !== undefined && Number.isFinite(lastValue) ? lastValue : 0,
     };
   });
 }

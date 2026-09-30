@@ -12,6 +12,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Keep blank Graph readings out of current values/history, ignore malformed history/statistics rows, and guard SVG geometry and integral bounded sample allocation.
+
 - Prevent Camera signed-path caches from outliving short signed URL expiry, retry malformed responses, and protect array-aware editor paths from unsafe or inherited branches.
 
 - Restore Gauge automatic ranges and state precision when bounds/decimals are blank; keep absent readings distinct from zero and give physical units priority over names. Read modern translucent theme colors correctly.
@@ -38,6 +40,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Remove Camera portal listeners from their owning shadow root.
 
 ### Maintenance
+
+- Check Graph configuration/helpers, share numeric formatting with Gauge and list reordering with Navigation, and document history sampling behavior.
 
 - Check Camera configuration and helpers, derive public method declarations from source, and share protected array paths and fragment-preserving URL query construction.
 

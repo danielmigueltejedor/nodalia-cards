@@ -453,3 +453,32 @@ merged main. All 670 unit tests pass; full local browser suite: 248 passed, one
 existing platform skip. After the final malformed camera-ID guards, all 39
 Camera/Navigation/Summary browser cases pass. Remaining unchecked modules: 66;
 Camera view and editor remain in the migration.
+
+## Graph helper findings — 2026-10-01
+
+Graph's suppressed chart/config helpers duplicate checked compaction, signature,
+size and list-move behavior. Empty readings become numeric zero, including blank
+history values; guard absent numeric data while preserving comma decimals and
+real zero. Check SVG point and history-event boundaries before geometry/buckets,
+keep smoothing and carry-forward averaging for valid data, and handle nonfinite
+time/count inputs without generating invalid SVG or array indices. Protect
+attribute paths and preserve editor placeholder rows. The actual view must
+ignore malformed history rows before accessing their fields.
+
+Normalize Graph history counts to whole values between 20 and 10,000 (default
+100; explicit zero retains its old default behavior). Nonfinite counts no longer
+throw or generate invalid bucket indices, and an extreme YAML count cannot
+allocate an unbounded chart. The low-level sampler also bounds allocation.
+
+Graph config/helpers now pass strict checking and typed lint; public method
+declarations derive from source and the public object uses satisfies. Reuse
+checked compaction, signature fallback, size parsing, list reordering with
+Navigation and numeric formatting with Gauge. Ignore malformed history and
+statistics records before the actual view reads them; missing readings remain
+absent, while real zero and comma decimals remain valid. Six new unit cases and
+a real rendered two-source regression cover numeric/geometry/bucket/config/path
+boundaries. 1,915 valid smoothing/sampling/format/config/padding outputs match
+merged main. All 676 unit tests and the full local browser suite (251 passed,
+one existing platform skip) pass. Remaining unchecked modules: 64; Graph view
+and editor remain in the migration. Document sampling and allocation bounds in
+`docs/cards/graph-card.md`.
