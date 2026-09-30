@@ -1,3 +1,4 @@
+import type { HassEntity } from "./home-assistant";
 import type { NodaliaBackendApi } from "./engine";
 import type { NodaliaUtilsApi } from "./nodalia-utils";
 import type { ClimatePublicApi } from "../../cards/climate/climate-types";
@@ -43,6 +44,9 @@ interface NodaliaI18nApi {
 }
 
 interface NodaliaBubbleContrastApi {
+  shouldDarkenBubbleIconGlyph?: (state: HassEntity | null | undefined, accentColor: unknown) => boolean;
+  resolveBubbleIconGlyphColor?: (state: HassEntity | null | undefined, accentColor: unknown) => string;
+  normalizeNeutralBubbleBackground?: (value: unknown, fallback?: string) => string;
   resolveEditorColorValue?: (value: unknown) => string;
 }
 

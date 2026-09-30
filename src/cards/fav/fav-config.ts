@@ -1,5 +1,5 @@
-// @ts-nocheck -- merged Lovelace YAML is projected into the runtime fav config.
-import { deepClone, isObject, mergeConfig } from "./fav-runtime";
+import { normalizeControlStyles } from "../../shared/control-config";
+import { isObject, mergeConfig } from "./fav-runtime";
 
 export const DEFAULT_CONFIG = {
   entity: "",
@@ -67,12 +67,15 @@ export const STUB_CONFIG = {
   layout_mode: "auto",
 };
 
-export function normalizeConfig(rawConfig) {
-  const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-  config.styles.icon.background = window.NodaliaBubbleContrast?.normalizeNeutralBubbleBackground?.(
-    config.styles.icon.background,
+export function normalizeConfig(rawConfig: unknown = {}) {
+  const raw = isObject(rawConfig) ? rawConfig : {};
+  const defaults: Record<string, unknown> = DEFAULT_CONFIG;
+  const config = mergeConfig(defaults, raw);
+  const styles = normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles);
+  styles.icon.background = window.NodaliaBubbleContrast?.normalizeNeutralBubbleBackground?.(
+    styles.icon.background,
     DEFAULT_CONFIG.styles.icon.background,
-  ) || config.styles.icon.background;
+  ) || styles.icon.background;
   config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
     ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
   const applyTap = window.NodaliaUtils?.applyCardTapActionField?.bind(window.NodaliaUtils);
@@ -85,18 +88,19 @@ export function normalizeConfig(rawConfig) {
       urlKey: "tap_url",
       navigationKey: "navigation_path",
       newTabKey: "tap_new_tab",
-    }, rawConfig?.tap_action ?? config.tap_action, "auto");
+    }, raw.tap_action ?? config.tap_action, "auto");
   }
-  const serializeActionObject = value => (
+  const serializeActionObject = (value: unknown) => (
     isObject(value) ? JSON.stringify(value) : String(value ?? "").trim()
   );
-  config.tap_action = String(config.tap_action ?? "auto").trim() || "auto";
-  config.tap_service = String(config.tap_service ?? "").trim();
-  config.tap_service_data = serializeActionObject(config.tap_service_data);
-  config.tap_service_target = serializeActionObject(config.tap_service_target);
-  config.tap_url = String(config.tap_url ?? "").trim();
-  config.tap_new_tab = config.tap_new_tab === true;
-  config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles)
-    ?? deepClone(DEFAULT_CONFIG.styles);
-  return config;
+  return {
+    ...config,
+    styles,
+    tap_action: String(config.tap_action ?? "auto").trim() || "auto",
+    tap_service: String(config.tap_service ?? "").trim(),
+    tap_service_data: serializeActionObject(config.tap_service_data),
+    tap_service_target: serializeActionObject(config.tap_service_target),
+    tap_url: String(config.tap_url ?? "").trim(),
+    tap_new_tab: config.tap_new_tab === true,
+  };
 }

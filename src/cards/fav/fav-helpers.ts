@@ -1,29 +1,13 @@
-// @ts-nocheck -- color, icon and domain helpers stay loosely typed until remaining unknowns are narrowed.
+import type { HassEntity } from "../../core/types/home-assistant";
+export { getStubEntityId, applyStubEntity, parseSizeToPixels } from "../../shared/editor-entity-helpers";
 export { resolveEditorColorValue, formatEditorHexChannel, formatEditorColorFromHex, getEditorColorModel } from "../../shared/editor-color";
-import { clamp, normalizeTextKey } from "./fav-runtime";
+import { normalizeTextKey } from "./fav-runtime";
 
-export function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
-  return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
+export function shouldDarkenFavBubbleIconGlyph(state: HassEntity | null | undefined, accentColor: unknown) {
+  return Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph?.(state, accentColor));
 }
 
-export function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
-  const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
-  if (!entityId) {
-    return config;
-  }
-
-  config.entity = entityId;
-  config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
-  return config;
-}
-
-
-
-export function shouldDarkenFavBubbleIconGlyph(state, accentColor) {
-  return Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(state, accentColor));
-}
-
-export function resolveFavBubbleIconGlyphColor(accentColor, state) {
+export function resolveFavBubbleIconGlyphColor(accentColor: unknown, state: HassEntity | null | undefined) {
   const accent = String(accentColor || "").trim() || "var(--primary-color)";
   let accentWeight = 72;
   try {
@@ -44,7 +28,7 @@ export function resolveFavBubbleIconGlyphColor(accentColor, state) {
 
 
 
-export function getEditorColorFallbackValue(field) {
+export function getEditorColorFallbackValue(field: unknown) {
   const normalizedField = String(field ?? "");
 
   if (normalizedField.endsWith("off_color")) {
@@ -58,13 +42,7 @@ export function getEditorColorFallbackValue(field) {
   return "var(--info-color, #71c0ff)";
 }
 
-export function parseSizeToPixels(value, fallback = 0) {
-  const numeric = Number.parseFloat(String(value ?? ""));
-  return Number.isFinite(numeric) ? numeric : fallback;
-}
-
-
-export function miredToKelvin(mired) {
+export function miredToKelvin(mired: unknown) {
   const numeric = Number(mired);
   if (!Number.isFinite(numeric) || numeric <= 0) {
     return 0;
@@ -74,7 +52,7 @@ export function miredToKelvin(mired) {
 }
 
 
-export function parseNumericValue(value) {
+export function parseNumericValue(value: unknown) {
   if (value === null || value === undefined || value === "") {
     return null;
   }
@@ -82,15 +60,15 @@ export function parseNumericValue(value) {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
-export function entitySupportedFeatures(state) {
+export function entitySupportedFeatures(state: HassEntity | null | undefined) {
   return Number(state?.attributes?.supported_features) || 0;
 }
 
-export function entitySupportsFeature(state, flag) {
+export function entitySupportsFeature(state: HassEntity | null | undefined, flag: number) {
   return (entitySupportedFeatures(state) & flag) !== 0;
 }
 
-export function coverEntityIsOpen(state) {
+export function coverEntityIsOpen(state: HassEntity | null | undefined) {
   const stateKey = normalizeTextKey(state?.state);
   if (["open", "opening"].includes(stateKey)) {
     return true;
@@ -102,16 +80,16 @@ export function coverEntityIsOpen(state) {
   return position !== null && position > 0;
 }
 
-export function isUnavailableState(state) {
+export function isUnavailableState(state: HassEntity | null | undefined) {
   return normalizeTextKey(state?.state) === "unavailable";
 }
 
-export function getEntityDomain(state) {
+export function getEntityDomain(state: HassEntity | null | undefined) {
   const entityId = String(state?.entity_id || "");
   return entityId.includes(".") ? entityId.split(".")[0] : "";
 }
 
-export function getDynamicEntityIcon(state) {
+export function getDynamicEntityIcon(state: HassEntity | null | undefined) {
   if (!state) {
     return "";
   }

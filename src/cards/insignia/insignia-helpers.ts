@@ -1,31 +1,17 @@
-// @ts-nocheck -- color, icon and path helpers stay loosely typed until remaining unknowns are narrowed.
+import type { HassEntity } from "../../core/types/home-assistant";
+import { normalizeControlStyles } from "../../shared/control-config";
+export { getStubEntityId, applyStubEntity, parseSizeToPixels } from "../../shared/editor-entity-helpers";
 export { formatEditorHexChannel, resolveEditorColorValue, formatEditorColorFromHex, getEditorColorModel } from "../../shared/editor-color";
 import { isObject, isUnsafeConfigPathKey, normalizeTextKey } from "./insignia-runtime";
 import { DEFAULT_CONFIG } from "./insignia-defaults";
 
-export function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
-  return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
-}
-
-export function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
-  const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
-  if (!entityId) {
-    return config;
-  }
-
-  config.entity = entityId;
-  config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
-  return config;
-}
-
-
-export function compactConfig(value) {
+export function compactConfig(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map(item => compactConfig(item)).filter(item => item !== undefined);
   }
 
   if (isObject(value)) {
-    const compacted = {};
+    const compacted: Record<string, unknown> = {};
 
     Object.entries(value).forEach(([key, item]) => {
       if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
@@ -50,7 +36,7 @@ export function compactConfig(value) {
 
 
 
-export function setByPath(target, path, value) {
+export function setByPath(target: Record<string, unknown>, path: string, value: unknown) {
   const parts = path.split(".");
   if (parts.some(isUnsafeConfigPathKey)) {
     return;
@@ -58,10 +44,11 @@ export function setByPath(target, path, value) {
   let cursor = target;
   for (let index = 0; index < parts.length - 1; index += 1) {
     const key = parts[index];
+    if (key === undefined) return;
     if (key === "__proto__" || key === "constructor" || key === "prototype") {
       return;
     }
-    const current = Object.hasOwn(cursor, key) ? cursor[key] : undefined;
+    const current = Object.prototype.hasOwnProperty.call(cursor, key) ? cursor[key] : undefined;
     if (!isObject(current)) {
       Object.defineProperty(cursor, key, {
         configurable: true,
@@ -70,9 +57,12 @@ export function setByPath(target, path, value) {
         writable: true,
       });
     }
-    cursor = cursor[key];
+    const child = cursor[key];
+    if (!isObject(child)) return;
+    cursor = child;
   }
   const finalKey = parts[parts.length - 1];
+  if (finalKey === undefined) return;
   if (finalKey === "__proto__" || finalKey === "constructor" || finalKey === "prototype") {
     return;
   }
@@ -84,7 +74,7 @@ export function setByPath(target, path, value) {
   });
 }
 
-export function deleteByPath(target, path) {
+export function deleteByPath(target: Record<string, unknown>, path: string) {
   const parts = path.split(".");
   if (parts.some(isUnsafeConfigPathKey)) {
     return;
@@ -92,27 +82,25 @@ export function deleteByPath(target, path) {
   let cursor = target;
   for (let index = 0; index < parts.length - 1; index += 1) {
     const key = parts[index];
+    if (key === undefined) return;
     if (!isObject(cursor[key])) {
       return;
     }
-    cursor = cursor[key];
+    const child = cursor[key];
+    if (!isObject(child)) return;
+    cursor = child;
   }
-  delete cursor[parts[parts.length - 1]];
+  const finalKey = parts[parts.length - 1];
+  if (finalKey !== undefined) delete cursor[finalKey];
 }
 
-export function parseSizeToPixels(value, fallback = 0) {
-  const numeric = Number.parseFloat(String(value ?? ""));
-  return Number.isFinite(numeric) ? numeric : fallback;
-}
-
-
-export function normalizeTintPreset(value) {
+export function normalizeTintPreset(value: unknown) {
   const key = normalizeTextKey(value);
   if (!key) {
     return "";
   }
 
-  const map = {
+  const map: Record<string, string> = {
     grey: "gray",
     light_grey: "gray",
     light_gray: "gray",
@@ -131,8 +119,8 @@ export function normalizeTintPreset(value) {
   return map[key] || key;
 }
 
-export function getTintPresetColor(preset) {
-  const presets = {
+export function getTintPresetColor(preset: string) {
+  const presets: Record<string, string> = {
     red: "#ff6b6b",
     orange: "#f6b04d",
     yellow: "#f2c94c",
@@ -143,19 +131,19 @@ export function getTintPresetColor(preset) {
     teal: "#7fd0c8",
     gray: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))",
   };
-  return presets[preset] || presets.blue;
+  return presets[preset] || "#4da3ff";
 }
 
-export function isUnavailableState(state) {
+export function isUnavailableState(state: HassEntity | null | undefined) {
   return normalizeTextKey(state?.state) === "unavailable";
 }
 
-export function getEntityDomain(state) {
+export function getEntityDomain(state: HassEntity | null | undefined) {
   const entityId = String(state?.entity_id || "");
   return entityId.includes(".") ? entityId.split(".")[0] : "";
 }
 
-export function getDynamicEntityIcon(state) {
+export function getDynamicEntityIcon(state: HassEntity | null | undefined) {
   if (!state) {
     return "";
   }
@@ -211,7 +199,7 @@ export function getDynamicEntityIcon(state) {
   return state.attributes?.icon || "";
 }
 
-export function formatNumericString(value) {
+export function formatNumericString(value: unknown) {
   const raw = String(value ?? "").trim();
   if (!raw) {
     return "";
@@ -233,49 +221,15 @@ export function formatNumericString(value) {
 
 
 
-export function sanitizeCssValue(value, fallback) {
-  const raw = String(value ?? "").trim();
-  const safeFallback = String(fallback ?? "").trim();
-  if (!raw) {
-    return safeFallback;
-  }
-  if (/[\u0000-\u001f\u007f<>;"'{}]/.test(raw) || raw.includes("/*") || raw.includes("*/")) {
-    return safeFallback;
-  }
-  return raw;
+export function sanitizeCssValue(value: unknown, fallback: unknown) {
+  return window.NodaliaUtils.sanitizeCssValue(value, fallback);
 }
 
-export function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
-  const defaults = DEFAULT_CONFIG.styles;
-  const card = styles?.card || {};
-  const icon = styles?.icon || {};
-  const tint = styles?.tint || {};
-
-  return {
-    card: {
-      background: sanitizeCssValue(card.background, defaults.card.background),
-      border: sanitizeCssValue(card.border, defaults.card.border),
-      border_radius: sanitizeCssValue(card.border_radius, defaults.card.border_radius),
-      box_shadow: sanitizeCssValue(card.box_shadow, defaults.card.box_shadow),
-      gap: sanitizeCssValue(card.gap, defaults.card.gap),
-      padding: sanitizeCssValue(card.padding, defaults.card.padding),
-    },
-    icon: {
-      background: sanitizeCssValue(icon.background, defaults.icon.background),
-      icon_only_offset_y: sanitizeCssValue(icon.icon_only_offset_y, defaults.icon.icon_only_offset_y),
-      off_color: sanitizeCssValue(icon.off_color, defaults.icon.off_color),
-      on_color: sanitizeCssValue(icon.on_color, defaults.icon.on_color),
-      size: sanitizeCssValue(icon.size, defaults.icon.size),
-    },
-    tint: {
-      color: sanitizeCssValue(tint.color, defaults.tint.color),
-    },
-    title_size: sanitizeCssValue(styles?.title_size, defaults.title_size),
-    value_size: sanitizeCssValue(styles?.value_size, defaults.value_size),
-  };
+export function getSafeStyles(styles: unknown = DEFAULT_CONFIG.styles) {
+  return normalizeControlStyles(styles, DEFAULT_CONFIG.styles);
 }
 
-export function clampNumber(value, min, max) {
+export function clampNumber(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
@@ -287,7 +241,7 @@ export function clampNumber(value, min, max) {
 
 
 
-export function getEditorColorFallbackValue(field) {
+export function getEditorColorFallbackValue(field: unknown) {
   const normalizedField = String(field ?? "");
 
   if (normalizedField.endsWith("tint.color")) {

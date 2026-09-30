@@ -348,7 +348,7 @@ Six config/helper cycles were removed through checked defaults and normalization
 Do not place defaults in modules that import their own normalizers.
 Notifications normalization now lives below the config and presentation helpers;
 no runtime import cycles remain.
-78 legacy modules still suppress typechecking; see `scripts/type-debt.json`.
+74 legacy modules still suppress typechecking; see `scripts/type-debt.json`.
 **The full TypeScript migration is not complete.** Checked modules and extracted
 contracts must grow without adding suppressions or casts to hide errors. The
 architecture guard prevents new unchecked files and new runtime cycles.
@@ -400,3 +400,10 @@ animation bounds, legacy inactive tint and collapsed aliases retain existing YAM
 behavior. RGB inputs require three finite channels; editor stubs and slider math
 reuse the checked shared modules. Kelvin/mired conversion and gradient direction
 remain domain-specific.
+
+
+Fav and Insignia configuration/helpers are checked without suppression, sharing
+only identical stub selection, size parsing and CSS projection. Their distinct
+domain icon policies and legacy tint/action semantics remain separate. Unknown
+YAML branches are narrowed before reading; invalid nested styles no longer crash
+configuration. Insignia still sanitizes CSS at rendering, preserving stored YAML.

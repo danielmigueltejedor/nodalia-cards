@@ -231,3 +231,17 @@ shrinks from 358,550 to 329,564 bytes. Behavioral tests cover Engine-managed
 schedules and populated legacy webhook/helper fields without Engine. All 618
 unit tests and the full local browser suite (236 passed, one existing platform
 skip) pass. This cleanup does not change the remaining unchecked count of 78.
+
+
+## Fav / Insignia checked boundaries — verified
+
+Four config/helper modules now pass strict checking and typed lint. Keep Fav’s
+HA action objects, security rules and neutral bubble migration; retain Insignia’s
+legacy tint aliases, explicit tint precedence and own-property editor paths.
+Their icon and numeric policies differ and remain independent. Shared stub and
+style helpers remove exact duplication, with guarded unknown style/tint branches.
+Twenty-eight complete valid configurations match the merged baseline. Six new
+unit cases cover malformed YAML, aliases, actions, prototype rejection and domain
+policies. Validation: 624 unit tests; full local browser suite 239 passed, one
+existing platform skip. Insignia’s real tint/default icon geometry and updates
+pass all three local browser projects. Remaining unchecked modules: 74.
