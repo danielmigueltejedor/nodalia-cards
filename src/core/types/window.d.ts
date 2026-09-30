@@ -52,27 +52,7 @@ interface NodaliaBubbleContrastApi {
 
 type NodaliaRenderSignatureApi = typeof import("../../shared/render-signature").renderSignature;
 
-interface NodaliaNotificationsMobilePolicyApi {
-  BACKGROUND_MOBILE_MAX_CHUNKS: number;
-  MOBILE_COOLDOWN_STORAGE_KEY: string;
-  MOBILE_DELIVERY_STATES: ReadonlySet<string>;
-  normalizeMobilePolicy: (value?: unknown) => string;
-  resolveSmartEntityMobilePolicy: (...args: unknown[]) => unknown;
-  backgroundMobilePayloadOverLimit: (...args: unknown[]) => boolean;
-  normalizeSmartEntityMobile: (...args: unknown[]) => unknown;
-  normalizeSmartEntityOverrideMobile: (...args: unknown[]) => unknown;
-  isExplicitSmartEntityMobile: (...args: unknown[]) => boolean;
-  isWithinQuietHours: (...args: unknown[]) => boolean;
-  getNextQuietHoursBoundaryDelay: (...args: unknown[]) => number;
-  normalizeQuietHours: (...args: unknown[]) => unknown;
-  normalizeMobileContext: (...args: unknown[]) => unknown;
-  resolvePresenceOccupancy: (...args: unknown[]) => unknown;
-  passesPresenceContext: (...args: unknown[]) => boolean;
-  buildMobileAlertIdentity: (...args: unknown[]) => string;
-  buildMobileGroupIdentity: (...args: unknown[]) => string;
-  resolveMobileDeliveryState: (...args: unknown[]) => unknown;
-  legacyMobilePolicyLabel: (...args: unknown[]) => string;
-}
+type NodaliaNotificationsMobilePolicyApi = typeof import("../../cards/notifications/notifications-mobile-policy").notificationsMobilePolicy;
 
 type NodaliaRoomSummaryModelApi = typeof import("../../cards/room-summary/room-summary-model").roomSummaryModel;
 

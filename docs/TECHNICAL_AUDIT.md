@@ -245,3 +245,20 @@ unit cases cover malformed YAML, aliases, actions, prototype rejection and domai
 policies. Validation: 624 unit tests; full local browser suite 239 passed, one
 existing platform skip. Insignia’s real tint/default icon geometry and updates
 pass all three local browser projects. Remaining unchecked modules: 74.
+
+
+## Notifications mobile policy — checked source and generated runtime
+
+Replaced the handwritten public JS implementation with a pure checked TS model
+and a generated idempotent window adapter. Exact public keys, frozen API, aliases,
+quiet-hour boundaries, presence context, severity/cooldown rules and 40-chunk
+limit remain intact. Window typings now derive from the actual API and correctly
+allow a null next-boundary delay. The model needs no DOM or HA global; malformed
+public identity/presence payloads are guarded instead of throwing.
+
+Differential validation preserves 12,288 complete delivery decisions and 55
+alias normalizations against merged main. All 628 unit tests and the full local
+browser suite (239 passed, one existing platform skip) pass. Typed lint includes
+the policy and both Insignia modules explicitly. Unchecked TS debt remains 74;
+utils, backend, bubble contrast and i18n lookup still require source migration.
+The publication hold remains in force.
