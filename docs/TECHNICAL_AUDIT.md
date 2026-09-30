@@ -2,6 +2,8 @@
 
 Baseline: `355a307c` / 2.3.0-alpha.49. This is an implementation audit, not a
 claim that the earlier filename migration completed TypeScript checking.
+The findings below describe that baseline; dated implementation sections record
+completed work and current remaining debt.
 
 ## Critical / release safety
 
@@ -302,3 +304,19 @@ remain intact. Validation: 637 unit tests; targeted color/editor browser cases
 18 passed; full local suite 242 passed, one existing platform skip. Unchecked
 TS debt is still 74. Generic utils and root i18n lookup remain unported; the full
 migration and alpha publication remain pending.
+
+
+## Tooling refresh — compatibility reviewed
+
+Updated typescript-eslint 8.70.1 to 8.71.0 after reviewing upstream release notes
+and peer constraints (ESLint 10 supported; TypeScript >=4.8.4 and <6.1 supported).
+Keep TypeScript 6.0.3: the available 7.0.2 major is outside those peer constraints.
+Updated the official actions/cache SHA from v4.3.0 to v6.1.0 after checking its
+Node 24 runtime, unchanged used inputs and minimum runner requirement. Quality
+gates already use GitHub-hosted ubuntu-latest and other Node 24 actions.
+
+All 637 unit tests, strict checking, lint, build and fast checks pass after the
+update; generated artifacts are unchanged. A fresh dependency audit reports
+zero vulnerabilities across 130 development dependencies. Outdated reports now
+list only the deliberately deferred TypeScript major. The browser CI exercises
+all four projects with the new cache action before integration.

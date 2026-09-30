@@ -16,7 +16,9 @@ class only when that custom element is first created.
 
 ```text
 src/
+  core/engine-client*.ts      Checked optional Engine protocol and global adapter
   core/types/                 Shared HA / action / Engine / utils types
+  shared/                     Checked color, geometry, config and editor helpers
   cards/climate/              Climate TypeScript split (pilot)
   cards/media-player/         Media Player TypeScript split
   cards/light/                Light TypeScript split
