@@ -46,6 +46,7 @@ export interface HomeAssistant {
     data?: Record<string, unknown>,
     target?: Record<string, unknown>,
   ) => unknown;
+  callWS?: (message: Record<string, unknown>) => Promise<unknown>;
   connection?: {
     sendMessagePromise?: (message: Record<string, unknown>) => Promise<unknown>;
   };

@@ -44,7 +44,7 @@ src/
   cards/advance-vacuum/       Advance Vacuum TypeScript split
 
 nodalia-utils.js              Shared runtime helpers (window.NodaliaUtils), including compact density
-nodalia-backend.js            Optional Nodalia Engine client
+nodalia-backend.js            Generated optional Nodalia Engine client
 nodalia-render-signature.js   Render-signature helpers
 nodalia-bubble-contrast.js    Icon contrast helpers
 nodalia-i18n.js               Generated runtime i18n
@@ -59,7 +59,8 @@ All Lovelace cards now live under `src/cards/` and emit root `nodalia-*.js`
 artifacts. Camera stream, Room Summary and render signatures also have checked
 TS sources and generated compatibility adapters. Notifications mobile policy is
 also generated from checked, side-effect-free TS with an idempotent global adapter.
-Generic utils, backend and bubble contrast remain handwritten compatibility code;
+Engine client also has checked TS source and a generated compatibility adapter.
+Generic utils and bubble contrast remain handwritten compatibility code;
 the i18n pack is generated from JSON while its lookup logic remains root JS.
 
 ## Large controller responsibilities
@@ -159,6 +160,7 @@ boundaries so standalone `<script>` loading still works.
 |---|---|
 | `nodalia-cards.js` | HACS/manual install: minified runtime + editor catalog |
 | `nodalia-notifications-mobile-policy.js` | Generated from checked Notifications policy + global adapter |
+| `nodalia-backend.js` | Generated from checked Engine client + global adapter |
 | `nodalia-climate-card.js` | Generated from `src/cards/climate/standalone.ts` (unminified IIFE) |
 | `nodalia-media-player.js` | Generated from `src/cards/media-player/standalone.ts` (unminified IIFE) |
 | `nodalia-light-card.js` | Generated from `src/cards/light/standalone.ts` (unminified IIFE) |

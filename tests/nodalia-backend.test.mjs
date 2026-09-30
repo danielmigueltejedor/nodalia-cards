@@ -8,8 +8,8 @@ import { fileURLToPath } from "node:url";
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(path.join(root, "nodalia-backend.js"), "utf8");
 
-function loadBackend() {
-  const sandbox = { console, window: null };
+function loadBackend(overrides = {}) {
+  const sandbox = { console, window: null, ...overrides };
   sandbox.window = sandbox;
   vm.createContext(sandbox);
   vm.runInContext(source, sandbox);
@@ -262,4 +262,63 @@ test("backend bridge reports no engine capabilities when the integration is miss
     notificationsInbox: false,
     climateOverrides: false,
   });
+});
+
+test("backend bridge preserves transport receiver and prefers hass.callWS over connection fallback", async () => {
+  const backend = loadBackend();
+  const calls = [];
+  const connection = { sendMessagePromise(message) { assert.equal(this, connection); calls.push(message.type); return Promise.resolve({}); } };
+  await backend.listClimateSchedules({ connection });
+  const hass = { connection, callWS(message) { assert.equal(this, hass); calls.push(message.type); return Promise.resolve({}); } };
+  await backend.listNotificationProfiles(hass);
+  assert.deepEqual(calls, ["nodalia/climate/schedule/list", "nodalia/notifications/list"]);
+  await assert.rejects(backend.callWS(null, { type: "test" }), /WebSocket API is unavailable/);
+});
+
+test("backend bridge expires status at 30 seconds, honors force/reset and isolates connection identity", async () => {
+  let now = 0;
+  let calls = 0;
+  const backend = loadBackend({ Date: { now: () => now } });
+  const connection = {};
+  const callWS = async () => { calls += 1; return { available: true, api_version: 2 }; };
+  const hass = { connection, callWS };
+  await backend.status(hass);
+  now = 29_999;
+  await backend.status(hass);
+  assert.equal(calls, 1);
+  now = 30_000;
+  await backend.status(hass);
+  assert.equal(calls, 2);
+  await backend.status(hass, { force: true });
+  assert.equal(calls, 3);
+  backend.clearStatusCache();
+  await backend.status(hass);
+  assert.equal(calls, 4);
+  await backend.status({ connection: {}, callWS });
+  assert.equal(calls, 5);
+});
+
+test("backend bridge narrows malformed handshake branches without declaring unsupported capabilities", async () => {
+  for (const response of [null, false, 7, [], "bad"]) {
+    const value = await loadBackend().status({ callWS: async () => response });
+    assert.equal(value.available, false);
+    assert.equal(value.api_version, 0);
+    assert.deepEqual(JSON.parse(JSON.stringify(value.capabilities)), []);
+  }
+  const value = await loadBackend().status({ callWS: async () => ({ available: true, api_version: 2, capabilities: ["climate_schedules", 7, null], limits: [], health: false }) });
+  assert.deepEqual(JSON.parse(JSON.stringify(value.capabilities)), ["climate_schedules"]);
+  assert.deepEqual(JSON.parse(JSON.stringify(value.limits)), {});
+  assert.deepEqual(JSON.parse(JSON.stringify(value.health)), {});
+  assert.equal(loadBackend().hasCapability(value, "climate_schedules"), true);
+});
+
+test("generated backend adapter remains idempotent and does not require a DOM", () => {
+  const sandbox = { window: {}, console };
+  vm.createContext(sandbox);
+  vm.runInContext(source, sandbox);
+  const first = sandbox.window.NodaliaBackend;
+  assert.equal(Object.isFrozen(first), true);
+  vm.runInContext(source, sandbox);
+  assert.equal(sandbox.window.NodaliaBackend, first);
+  assert.doesNotThrow(() => vm.runInNewContext(source, { console }));
 });
