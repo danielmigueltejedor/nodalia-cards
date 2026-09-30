@@ -12,6 +12,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Refresh colors based on theme variables immediately after theme changes; recognize modern translucent sRGB colors when choosing icon contrast.
+
 - Translate Vacuum’s charger-disconnected status and error sensor in every language; truncate long chips with an ellipsis while preserving the full label.
 
 - Show correct CSS Color 4 tints in the visual editors; changing a Lock color now retains its existing translucency.
@@ -28,6 +30,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Remove Camera portal listeners from their owning shadow root.
 
 ### Maintenance
+
+- Generate Bubble Contrast from checked TypeScript and share canonical runtime entries and CSS color parsing with the HACS build.
 
 - Generate the Engine client from checked TypeScript and derive runtime method declarations from its actual API; preserve transport, version checks and retry/cache behavior.
 

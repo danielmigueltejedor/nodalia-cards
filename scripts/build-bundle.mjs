@@ -4,7 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { build } from "esbuild";
 import { CARD_REGISTRY } from "./card-registry.mjs";
-import { buildSrcCards } from "./build-src-cards.mjs";
+import { buildSrcCards, RUNTIME_ENTRIES } from "./build-src-cards.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
@@ -33,7 +33,10 @@ const CARD_PARTS = CARD_REGISTRY.map(card => card.artifact);
 
 const ALL_PARTS = [...CORE_PARTS, ...CARD_SUPPORT_PARTS, ...CARD_PARTS];
 
-const BUNDLE_SOURCE_ALIASES = Object.fromEntries(CARD_REGISTRY.map(card => [card.artifact, card.entry]));
+const BUNDLE_SOURCE_ALIASES = Object.fromEntries([
+  ...CARD_REGISTRY.map(card => [card.artifact, card.entry]),
+  ...RUNTIME_ENTRIES.map(runtime => [runtime.outfile, runtime.entry]),
+]);
 
 await buildSrcCards();
 

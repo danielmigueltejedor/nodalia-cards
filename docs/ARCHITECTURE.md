@@ -60,7 +60,8 @@ artifacts. Camera stream, Room Summary and render signatures also have checked
 TS sources and generated compatibility adapters. Notifications mobile policy is
 also generated from checked, side-effect-free TS with an idempotent global adapter.
 Engine client also has checked TS source and a generated compatibility adapter.
-Generic utils and bubble contrast remain handwritten compatibility code;
+Bubble contrast now has checked source and a generated adapter as well. Generic
+utils remain handwritten compatibility code;
 the i18n pack is generated from JSON while its lookup logic remains root JS.
 
 ## Large controller responsibilities
@@ -161,6 +162,7 @@ boundaries so standalone `<script>` loading still works.
 | `nodalia-cards.js` | HACS/manual install: minified runtime + editor catalog |
 | `nodalia-notifications-mobile-policy.js` | Generated from checked Notifications policy + global adapter |
 | `nodalia-backend.js` | Generated from checked Engine client + global adapter |
+| `nodalia-bubble-contrast.js` | Generated from checked contrast model + global adapter |
 | `nodalia-climate-card.js` | Generated from `src/cards/climate/standalone.ts` (unminified IIFE) |
 | `nodalia-media-player.js` | Generated from `src/cards/media-player/standalone.ts` (unminified IIFE) |
 | `nodalia-light-card.js` | Generated from `src/cards/light/standalone.ts` (unminified IIFE) |
@@ -411,3 +413,11 @@ only identical stub selection, size parsing and CSS projection. Their distinct
 domain icon policies and legacy tint/action semantics remain separate. Unknown
 YAML branches are narrowed before reading; invalid nested styles no longer crash
 configuration. Insignia still sanitizes CSS at rendering, preserving stored YAML.
+
+
+The HACS build maps every generated support runtime back to its canonical TS
+entry using `RUNTIME_ENTRIES`, as it does for card entries through the registry.
+This lets support and card code share modules such as CSS color parsing instead
+of compiling independent copies. Standalone support filenames remain public.
+Theme-dependent CSS values are resolved on every use; fixed-color probe results
+have a bounded 256-entry cache. Temporary probes are removed in a finally block.

@@ -279,3 +279,26 @@ connection identity, malformed wire and adapter coverage. All 632 unit tests and
 the local full browser suite (239 passed, one existing platform skip) pass. No
 new unchecked module or runtime cycle. Strict source migration remains open,
 with 74 unchecked TS modules plus generic utils, bubble contrast and i18n lookup.
+
+
+## Bubble contrast — checked source, live theme colors and canonical build inputs
+
+Migrated the contrast model and DOM probe into checked TS and generated the
+existing public filename. Shared CSS Color 4 parsing now recognizes translucent
+sRGB/space/percentage RGB and alpha hex in hue decisions. Old valid hue and
+contrast behavior is retained for 648 colors across three entity cases.
+
+The raw-string cache incorrectly retained theme-variable values after a theme
+change. Theme-dependent values now resolve synchronously on each use; fixed
+colors retain the bounded 256-entry cache. A finally block removes the temporary
+DOM probe even when resolution fails. Unit coverage verifies cache eviction,
+probe cleanup, neutral aliases, semantics and adapter identity. A real-browser
+regression changes a CSS variable from orange to blue and sees the new hue
+immediately, with no leaked probe.
+
+HACS now imports canonical TS runtime entries from the same build inventory,
+allowing shared color parsing to be bundled once while all standalone filenames
+remain intact. Validation: 637 unit tests; targeted color/editor browser cases
+18 passed; full local suite 242 passed, one existing platform skip. Unchecked
+TS debt is still 74. Generic utils and root i18n lookup remain unported; the full
+migration and alpha publication remain pending.
