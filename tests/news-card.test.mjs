@@ -70,7 +70,7 @@ test("news card registers custom element and bundle entry", () => {
   assert.match(source, /registerCustomCard\?\.\(\{[\s\S]*type: CARD_TAG/);
   assert.match(source, /if \(items\.length > 0\) \{[\s\S]*health\.unavailable/);
   assert.match(source, /_renderShell\(bodyMarkup, styles, cardBackground, density, layout\)/);
-  assert.match(read("scripts/build-bundle.mjs"), /nodalia-news-card\.js/);
+  assert.match(read("src/cards/registry.json"), /nodalia-news-card\.js/);
 });
 
 test("simple entity config resolves items", () => {

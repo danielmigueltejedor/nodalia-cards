@@ -1,10 +1,12 @@
 /* Generated from src/cards/graph. Do not edit. */
 "use strict";
 (() => {
+  // src/version.ts
+  var CARD_VERSION = "2.3.0-alpha.49";
+
   // src/cards/graph/graph-constants.ts
   var CARD_TAG = "nodalia-graph-card";
   var EDITOR_TAG = "nodalia-graph-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.49";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,

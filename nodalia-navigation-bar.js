@@ -1,10 +1,12 @@
 /* Generated from src/cards/navigation. Do not edit. */
 "use strict";
 (() => {
+  // src/version.ts
+  var CARD_VERSION = "2.3.0-alpha.49";
+
   // src/cards/navigation/navigation-constants.ts
   var CARD_TAG = "nodalia-navigation-bar";
   var EDITOR_TAG = "nodalia-navigation-bar-editor";
-  var CARD_VERSION = "2.3.0-alpha.49";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
@@ -520,6 +522,15 @@
 
   // src/cards/media-player/media-player-artwork.ts
   var PALETTE_CACHE = /* @__PURE__ */ new Map();
+  var PALETTE_REQUESTS = /* @__PURE__ */ new Map();
+  var ARTWORK_CACHE_LIMIT = 64;
+  function boundCache(cache) {
+    while (cache.size > ARTWORK_CACHE_LIMIT) {
+      const first = cache.keys().next().value;
+      if (first === void 0) break;
+      cache.delete(first);
+    }
+  }
   function extractArtworkPalette(image) {
     try {
       const canvas = document.createElement("canvas");
@@ -572,8 +583,19 @@
   }
   function setCachedArtworkPalette(url, palette) {
     PALETTE_CACHE.set(url, palette);
+    boundCache(PALETTE_CACHE);
   }
-  async function sampleArtworkPalette(url) {
+  function sampleArtworkPalette(url) {
+    const key = String(url || "").trim();
+    const cached = getCachedArtworkPalette(key);
+    if (cached) return Promise.resolve(cached);
+    const pending = PALETTE_REQUESTS.get(key);
+    if (pending) return pending;
+    const request = loadArtworkPalette(key).finally(() => PALETTE_REQUESTS.delete(key));
+    PALETTE_REQUESTS.set(key, request);
+    return request;
+  }
+  async function loadArtworkPalette(url) {
     const nextUrl = String(url || "").trim();
     if (!nextUrl) {
       return null;
@@ -624,6 +646,13 @@
       host.style.setProperty("--media-control-ink", theme2.ink);
       host.setAttribute("data-artwork-controls", "");
     };
+    const cached = getCachedArtworkPalette(url);
+    if (cached) {
+      const theme2 = { url, tint: cached.primary, ink: cached.foreground === "dark" ? "#000" : "#fff" };
+      themes.set(owner, theme2);
+      apply(theme2);
+      return;
+    }
     const previous = themes.get(owner);
     if (previous) {
       apply(previous);
@@ -636,12 +665,22 @@
     apply(theme);
   }
   var MEDIA_CONTROL_STYLES = `
+  .media-player-card .media-player__transport-shell { width:100%; }
+  .media-player-card .media-player__transport-cluster {
+    display:grid; grid-template-columns:minmax(0, 1fr) auto minmax(0, 1fr);
+    gap:8px; width:100%; align-items:center;
+  }
+  .media-player__transport-side { display:flex; flex-wrap:wrap; gap:8px; min-width:0; align-items:center; }
+  .media-player__transport-side--start { justify-content:flex-end; }
+  .media-player__transport-side--end { justify-content:flex-start; }
+  .media-player-card .media-player__transport-addon { position:static; transform:none; }
+
   .media-player__control, .media-player__volume-button, .media-player__collapse, .media-player__transport, .media-player__dots {
     -webkit-backdrop-filter: blur(22px) saturate(1.35);
     backdrop-filter: blur(22px) saturate(1.35);
     box-sizing: border-box;
     touch-action: manipulation;
-    transition: background-color 220ms ease, border-color 220ms ease, transform 160ms ease;
+    transition: transform 160ms ease;
   }
   .media-player__control:focus-visible, .media-player__volume-button:focus-visible,
   .media-player__collapse:focus-visible {
@@ -2500,7 +2539,7 @@
             <div class="media-player__transport-row">
               <div class="media-player__transport-shell">
                 <div class="media-player__transport-cluster">
-                  ${volumeDownMarkup}
+                  <div class="media-player__transport-side media-player__transport-side--start">${volumeDownMarkup}</div>
                   <div class="media-player__transport">
                     <button
                       type="button"
@@ -2530,9 +2569,8 @@
                       <ha-icon icon="mdi:skip-next"></ha-icon>
                     </button>
                   </div>
-                  ${volumeUpMarkup}
+                  <div class="media-player__transport-side media-player__transport-side--end">${volumeUpMarkup}${browseMediaMarkup}</div>
                 </div>
-                ${browseMediaMarkup}
               </div>
             </div>
           </div>

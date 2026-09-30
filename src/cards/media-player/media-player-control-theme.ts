@@ -1,4 +1,4 @@
-import { sampleArtworkPalette } from "./media-player-artwork";
+import { getCachedArtworkPalette, sampleArtworkPalette } from "./media-player-artwork";
 
 const requests = new WeakMap<HTMLElement, object>();
 const themes = new WeakMap<Element, { url: string; tint: string; ink: string }>();
@@ -23,6 +23,13 @@ export async function applyArtworkControlTheme(host: HTMLElement | null, url: st
   };
   // Navigation can recreate its inner card on track changes. Keep its previous
   // palette on the owning component so a new inner card never flashes neutral.
+  const cached = getCachedArtworkPalette(url);
+  if (cached) {
+    const theme = { url, tint: cached.primary, ink: cached.foreground === "dark" ? "#000" : "#fff" };
+    themes.set(owner, theme);
+    apply(theme);
+    return;
+  }
   const previous = themes.get(owner);
   if (previous) {
     apply(previous);
@@ -38,12 +45,22 @@ export async function applyArtworkControlTheme(host: HTMLElement | null, url: st
 // Let the artwork show through a softly tinted, blurred surface.
 // Layouts own control dimensions; share only visual treatment.
 export const MEDIA_CONTROL_STYLES = `
+  .media-player-card .media-player__transport-shell { width:100%; }
+  .media-player-card .media-player__transport-cluster {
+    display:grid; grid-template-columns:minmax(0, 1fr) auto minmax(0, 1fr);
+    gap:8px; width:100%; align-items:center;
+  }
+  .media-player__transport-side { display:flex; flex-wrap:wrap; gap:8px; min-width:0; align-items:center; }
+  .media-player__transport-side--start { justify-content:flex-end; }
+  .media-player__transport-side--end { justify-content:flex-start; }
+  .media-player-card .media-player__transport-addon { position:static; transform:none; }
+
   .media-player__control, .media-player__volume-button, .media-player__collapse, .media-player__transport, .media-player__dots {
     -webkit-backdrop-filter: blur(22px) saturate(1.35);
     backdrop-filter: blur(22px) saturate(1.35);
     box-sizing: border-box;
     touch-action: manipulation;
-    transition: background-color 220ms ease, border-color 220ms ease, transform 160ms ease;
+    transition: transform 160ms ease;
   }
   .media-player__control:focus-visible, .media-player__volume-button:focus-visible,
   .media-player__collapse:focus-visible {

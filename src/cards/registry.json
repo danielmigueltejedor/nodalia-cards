@@ -1,0 +1,202 @@
+[
+  {
+    "id": "navigation",
+    "tag": "nodalia-navigation-bar",
+    "editorTag": "nodalia-navigation-bar-editor",
+    "entry": "src/cards/navigation/index.ts",
+    "standalone": "src/cards/navigation/standalone.ts",
+    "artifact": "nodalia-navigation-bar.js"
+  },
+  {
+    "id": "media-player",
+    "tag": "nodalia-media-player",
+    "editorTag": "nodalia-media-player-editor",
+    "entry": "src/cards/media-player/index.ts",
+    "standalone": "src/cards/media-player/standalone.ts",
+    "artifact": "nodalia-media-player.js"
+  },
+  {
+    "id": "light",
+    "tag": "nodalia-light-card",
+    "editorTag": "nodalia-light-card-editor",
+    "entry": "src/cards/light/index.ts",
+    "standalone": "src/cards/light/standalone.ts",
+    "artifact": "nodalia-light-card.js"
+  },
+  {
+    "id": "fan",
+    "tag": "nodalia-fan-card",
+    "editorTag": "nodalia-fan-card-editor",
+    "entry": "src/cards/fan/index.ts",
+    "standalone": "src/cards/fan/standalone.ts",
+    "artifact": "nodalia-fan-card.js"
+  },
+  {
+    "id": "humidifier",
+    "tag": "nodalia-humidifier-card",
+    "editorTag": "nodalia-humidifier-card-editor",
+    "entry": "src/cards/humidifier/index.ts",
+    "standalone": "src/cards/humidifier/standalone.ts",
+    "artifact": "nodalia-humidifier-card.js"
+  },
+  {
+    "id": "circular-gauge",
+    "tag": "nodalia-circular-gauge-card",
+    "editorTag": "nodalia-circular-gauge-card-editor",
+    "entry": "src/cards/circular-gauge/index.ts",
+    "standalone": "src/cards/circular-gauge/standalone.ts",
+    "artifact": "nodalia-circular-gauge-card.js"
+  },
+  {
+    "id": "graph",
+    "tag": "nodalia-graph-card",
+    "editorTag": "nodalia-graph-card-editor",
+    "entry": "src/cards/graph/index.ts",
+    "standalone": "src/cards/graph/standalone.ts",
+    "artifact": "nodalia-graph-card.js"
+  },
+  {
+    "id": "power-flow",
+    "tag": "nodalia-power-flow-card",
+    "editorTag": "nodalia-power-flow-card-editor",
+    "entry": "src/cards/power-flow/index.ts",
+    "standalone": "src/cards/power-flow/standalone.ts",
+    "artifact": "nodalia-power-flow-card.js"
+  },
+  {
+    "id": "cover",
+    "tag": "nodalia-cover-card",
+    "editorTag": "nodalia-cover-card-editor",
+    "entry": "src/cards/cover/index.ts",
+    "standalone": "src/cards/cover/standalone.ts",
+    "artifact": "nodalia-cover-card.js"
+  },
+  {
+    "id": "climate",
+    "tag": "nodalia-climate-card",
+    "editorTag": "nodalia-climate-card-editor",
+    "entry": "src/cards/climate/index.ts",
+    "standalone": "src/cards/climate/standalone.ts",
+    "artifact": "nodalia-climate-card.js"
+  },
+  {
+    "id": "alarm-panel",
+    "tag": "nodalia-alarm-panel-card",
+    "editorTag": "nodalia-alarm-panel-card-editor",
+    "entry": "src/cards/alarm-panel/index.ts",
+    "standalone": "src/cards/alarm-panel/standalone.ts",
+    "artifact": "nodalia-alarm-panel-card.js"
+  },
+  {
+    "id": "lock",
+    "tag": "nodalia-lock-card",
+    "editorTag": "nodalia-lock-card-editor",
+    "entry": "src/cards/lock/index.ts",
+    "standalone": "src/cards/lock/standalone.ts",
+    "artifact": "nodalia-lock-card.js"
+  },
+  {
+    "id": "advance-vacuum",
+    "tag": "nodalia-advance-vacuum-card",
+    "editorTag": "nodalia-advance-vacuum-card-editor",
+    "entry": "src/cards/advance-vacuum/index.ts",
+    "standalone": "src/cards/advance-vacuum/standalone.ts",
+    "artifact": "nodalia-advance-vacuum-card.js"
+  },
+  {
+    "id": "entity",
+    "tag": "nodalia-entity-card",
+    "editorTag": "nodalia-entity-card-editor",
+    "entry": "src/cards/entity/index.ts",
+    "standalone": "src/cards/entity/standalone.ts",
+    "artifact": "nodalia-entity-card.js"
+  },
+  {
+    "id": "fav",
+    "tag": "nodalia-fav-card",
+    "editorTag": "nodalia-fav-card-editor",
+    "entry": "src/cards/fav/index.ts",
+    "standalone": "src/cards/fav/standalone.ts",
+    "artifact": "nodalia-fav-card.js"
+  },
+  {
+    "id": "insignia",
+    "tag": "nodalia-insignia-card",
+    "editorTag": "nodalia-insignia-card-editor",
+    "entry": "src/cards/insignia/index.ts",
+    "standalone": "src/cards/insignia/standalone.ts",
+    "artifact": "nodalia-insignia-card.js"
+  },
+  {
+    "id": "person",
+    "tag": "nodalia-person-card",
+    "editorTag": "nodalia-person-card-editor",
+    "entry": "src/cards/person/index.ts",
+    "standalone": "src/cards/person/standalone.ts",
+    "artifact": "nodalia-person-card.js"
+  },
+  {
+    "id": "scenes",
+    "tag": "nodalia-scenes-card",
+    "editorTag": "nodalia-scenes-card-editor",
+    "entry": "src/cards/scenes/index.ts",
+    "standalone": "src/cards/scenes/standalone.ts",
+    "artifact": "nodalia-scenes-card.js"
+  },
+  {
+    "id": "weather",
+    "tag": "nodalia-weather-card",
+    "editorTag": "nodalia-weather-card-editor",
+    "entry": "src/cards/weather/index.ts",
+    "standalone": "src/cards/weather/standalone.ts",
+    "artifact": "nodalia-weather-card.js"
+  },
+  {
+    "id": "calendar",
+    "tag": "nodalia-calendar-card",
+    "editorTag": "nodalia-calendar-card-editor",
+    "entry": "src/cards/calendar/index.ts",
+    "standalone": "src/cards/calendar/standalone.ts",
+    "artifact": "nodalia-calendar-card.js"
+  },
+  {
+    "id": "notifications",
+    "tag": "nodalia-notifications-card",
+    "editorTag": "nodalia-notifications-card-editor",
+    "entry": "src/cards/notifications/index.ts",
+    "standalone": "src/cards/notifications/standalone.ts",
+    "artifact": "nodalia-notifications-card.js"
+  },
+  {
+    "id": "vacuum",
+    "tag": "nodalia-vacuum-card",
+    "editorTag": "nodalia-vacuum-card-editor",
+    "entry": "src/cards/vacuum/index.ts",
+    "standalone": "src/cards/vacuum/standalone.ts",
+    "artifact": "nodalia-vacuum-card.js"
+  },
+  {
+    "id": "news",
+    "tag": "nodalia-news-card",
+    "editorTag": "nodalia-news-card-editor",
+    "entry": "src/cards/news/index.ts",
+    "standalone": "src/cards/news/standalone.ts",
+    "artifact": "nodalia-news-card.js"
+  },
+  {
+    "id": "camera",
+    "tag": "nodalia-camera-card",
+    "editorTag": "nodalia-camera-card-editor",
+    "entry": "src/cards/camera/index.ts",
+    "standalone": "src/cards/camera/standalone.ts",
+    "artifact": "nodalia-camera-card.js"
+  },
+  {
+    "id": "room-summary",
+    "tag": "nodalia-room-summary-card",
+    "editorTag": "nodalia-room-summary-card-editor",
+    "entry": "src/cards/room-summary/index.ts",
+    "standalone": "src/cards/room-summary/standalone.ts",
+    "artifact": "nodalia-room-summary-card.js"
+  }
+]

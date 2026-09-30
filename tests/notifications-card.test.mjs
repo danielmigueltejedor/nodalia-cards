@@ -33,8 +33,8 @@ test("notifications card registers custom element and bundle entry", () => {
   assert.match(source, /window\.__NODALIA_NOTIFICATIONS__/);
   assert.match(source, /__NODALIA_NOTIFICATIONS_TEMPLATES__/);
   assert.match(source, /__NODALIA_NOTIFICATIONS_MOBILE__/);
-  assert.match(read("scripts/build-bundle.mjs"), /src\/cards\/notifications\/index\.ts/);
-  assert.match(read("scripts/build-src-cards.mjs"), /src\/cards\/notifications\/standalone\.ts/);
+  assert.match(read("src/cards/registry.json"), /src\/cards\/notifications\/index\.ts/);
+  assert.match(read("src/cards/registry.json"), /src\/cards\/notifications\/standalone\.ts/);
 });
 
 test("notifications public API normalizes entity lists and mobile defaults", () => {

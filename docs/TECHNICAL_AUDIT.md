@@ -1,0 +1,73 @@
+# Technical audit — 2026-09-29
+
+Baseline: `355a307c` / 2.3.0-alpha.49. This is an implementation audit, not a
+claim that the earlier filename migration completed TypeScript checking.
+
+## Critical / release safety
+
+- The tag release workflow runs unit validation but publishes without browser
+  validation or waiting for CI at the same commit. A failing interaction or
+  Safari regression can therefore be published. Gate publication on the same
+  reusable validation workflow used by PRs, including browsers and artifact drift.
+- `node --check nodalia-*.js` checks only the first expanded file: the remainder
+  are script arguments. Validate each distributed JavaScript artifact explicitly.
+
+## Important
+
+- 96 of 233 TS files disable checking with `@ts-nocheck` (119,631 lines).
+  Strict/noImplicitAny/noUncheckedIndexedAccess/exactOptionalPropertyTypes are
+  already enabled; turning on more flags does not check suppressed files.
+  24 views, 24 editors, 23 helpers, 23 configs, a model and a schedule module
+  remain unchecked. Do not replace suppressions with `any` or pretend they are
+  migrated. Move independently testable contracts/models first and track the debt.
+- The build has two parallel card lists and an alias map; package assets and
+  architecture tests maintain further copies. Lock is built and registered but
+  is missing from the architecture-contract test's 24-card inventory. Consolidate
+  build metadata and test inclusion of every card, including Lock.
+- Runtime support models and generic services remain handwritten root JS. Keep
+  public window APIs and standalone artifact paths, but migrate pure source into
+  typed modules rather than introducing another runtime framework.
+- Version preparation still requires updating documentation, issue templates,
+  declarations and changelog by hand. Automate preparation separately from
+  publication; reject invalid channel transitions and missing release notes.
+- `validate` excludes browser tests. CI repeats builds, has no browser cache and
+  couples all work into one job. Make fast validation and full validation explicit.
+
+## Technical debt
+
+- View/controller modules reach 7,647 lines (Advanced Vacuum), 6,494 (Climate),
+  5,679 (Media Player). Most complexity is template/editor markup. Extract only
+  coherent, characterized responsibilities; do not rename/reformat whole files.
+- Basic lint ignores 71 legacy view/editor/helper modules. Introduce executable
+  checks for new debt/cycles and typed lint on genuinely checked modules before
+  attempting noisy wholesale enforcement on unchecked code.
+- HA fixtures and fake icon elements are repeated. Existing icon tests initially
+  used empty custom elements that cannot reveal internal SVG alignment defects.
+- Lock normalizes values but returns an input type with optional defaults.
+  Distinguish user input from normalized runtime config and validate malformed YAML.
+- Room Summary deliberately parks embeds in a DocumentFragment, invoking their
+  disconnect cleanup. Camera removes streams, timers, portals and global listeners.
+  Preserve this behavior. Portal cleanup currently removes listeners from the
+  host although they were registered on its shadow root; correct that ownership.
+- Historical architecture documentation describes earlier 24-card checkpoints.
+  Add current developer guides and keep historical notes clearly identified.
+
+## Optional / deliberately deferred until evidence
+
+- Do not introduce `components/`, `hosts/`, `runtime/`, `shared/` layers merely
+  to mirror a template. Keep colocated card/editor/config/types; use focused shared
+  modules when at least two real consumers need the same behavior.
+- Do not consolidate state predicates with subtly different domain meanings.
+- Do not remove old config aliases, standalone files, or the self-contained HACS
+  resource. Single-file HACS and explicit split distributions are public contracts.
+- Dependency audit: 0 reported vulnerabilities across 130 dev dependencies,
+  no production npm dependencies. Available updates: typescript-eslint 8.71.0
+  and TypeScript 7.0.2. Keep TypeScript 6 during refactoring; no blind major update.
+
+## Verification approach
+
+Each implementation stage must pass lint, strict typecheck, unit tests and build;
+UI/lifecycle changes also get browser regressions. Keep YAML/defaults/tag/asset
+contracts. Use Chromium/WebKit/iPhone locally; Firefox also runs in Linux CI
+because the local macOS Firefox profile cannot launch reliably. Compare generated
+assets and include release-gate tests. Record remaining unchecked modules honestly.

@@ -1,7 +1,7 @@
 // @ts-nocheck -- scene, scroll and color helpers stay loosely typed until remaining unknowns are narrowed.
 import { DEFAULT_SCENE_ACCENT } from "./scenes-constants";
 import { clamp, deepClone, isObject, isUnsafeConfigPathKey, normalizeTextKey } from "./scenes-runtime";
-import { DEFAULT_CONFIG } from "./scenes-config";
+import { DEFAULT_CONFIG } from "./scenes-defaults";
 
 export function mergeConfig(base, override) {
   if (window.NodaliaUtils?.mergeDeep) {

@@ -1,10 +1,12 @@
 /* Generated from src/cards/weather. Do not edit. */
 "use strict";
 (() => {
+  // src/version.ts
+  var CARD_VERSION = "2.3.0-alpha.49";
+
   // src/cards/weather/weather-constants.ts
   var CARD_TAG = "nodalia-weather-card";
   var EDITOR_TAG = "nodalia-weather-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.49";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,

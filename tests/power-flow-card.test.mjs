@@ -31,8 +31,8 @@ test("power flow card registers custom element and bundle entry", () => {
   assert.match(source, /defineLazyCustomElement\(CARD_TAG, loadNodaliaPowerFlowCard/);
   assert.match(source, /defineLazyCustomElement\(EDITOR_TAG, loadNodaliaPowerFlowCardVisualEditor/);
   assert.match(source, /window\.__NODALIA_POWER_FLOW__/);
-  assert.match(read("scripts/build-bundle.mjs"), /src\/cards\/power-flow\/index\.ts/);
-  assert.match(read("scripts/build-src-cards.mjs"), /src\/cards\/power-flow\/standalone\.ts/);
+  assert.match(read("src/cards/registry.json"), /src\/cards\/power-flow\/index\.ts/);
+  assert.match(read("src/cards/registry.json"), /src\/cards\/power-flow\/standalone\.ts/);
 });
 
 test("power flow public API normalizes entities and consumption chips", () => {

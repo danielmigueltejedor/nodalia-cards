@@ -1,10 +1,12 @@
 /* Generated from src/cards/alarm-panel. Do not edit. */
 "use strict";
 (() => {
+  // src/version.ts
+  var CARD_VERSION = "2.3.0-alpha.49";
+
   // src/cards/alarm-panel/alarm-panel-constants.ts
   var CARD_TAG = "nodalia-alarm-panel-card";
   var EDITOR_TAG = "nodalia-alarm-panel-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.49";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,

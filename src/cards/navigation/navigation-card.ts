@@ -2334,7 +2334,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
             <div class="media-player__transport-row">
               <div class="media-player__transport-shell">
                 <div class="media-player__transport-cluster">
-                  ${volumeDownMarkup}
+                  <div class="media-player__transport-side media-player__transport-side--start">${volumeDownMarkup}</div>
                   <div class="media-player__transport">
                     <button
                       type="button"
@@ -2364,9 +2364,8 @@ class NodaliaNavigationBarCard extends HTMLElement {
                       <ha-icon icon="mdi:skip-next"></ha-icon>
                     </button>
                   </div>
-                  ${volumeUpMarkup}
+                  <div class="media-player__transport-side media-player__transport-side--end">${volumeUpMarkup}${browseMediaMarkup}</div>
                 </div>
-                ${browseMediaMarkup}
               </div>
             </div>
           </div>

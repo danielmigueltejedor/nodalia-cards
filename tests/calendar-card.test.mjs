@@ -30,8 +30,8 @@ test("calendar card registers custom element and bundle entry", () => {
   const source = read("nodalia-calendar-card.js");
   assert.match(source, /defineLazyCustomElement\(CARD_TAG, loadNodaliaCalendarCard/);
   assert.match(source, /window\.__NODALIA_CALENDAR__/);
-  assert.match(read("scripts/build-bundle.mjs"), /src\/cards\/calendar\/index\.ts/);
-  assert.match(read("scripts/build-src-cards.mjs"), /src\/cards\/calendar\/standalone\.ts/);
+  assert.match(read("src/cards/registry.json"), /src\/cards\/calendar\/index\.ts/);
+  assert.match(read("src/cards/registry.json"), /src\/cards\/calendar\/standalone\.ts/);
 });
 
 test("calendar public API normalizes calendars and time range", () => {

@@ -9,10 +9,7 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
 function cardPartsFromBuildScript() {
-  const source = read("scripts/build-bundle.mjs");
-  const match = source.match(/const CARD_PARTS = \[([\s\S]*?)\];/);
-  assert.ok(match, "build-bundle.mjs should declare CARD_PARTS");
-  return [...match[1].matchAll(/"([^"]+\.js)"/g)].map(entry => entry[1]);
+  return JSON.parse(read("src/cards/registry.json")).map(card => card.artifact);
 }
 
 function packagePatternIncludes(patterns, file) {
@@ -223,6 +220,7 @@ test("Cards documentation exposes the optional Engine HACS installer", () => {
 test("repository workflows pin audited external actions by immutable commit", () => {
   const auditedActions = new Set([
     "actions/checkout",
+    "actions/cache",
     "actions/setup-node",
     "pnpm/action-setup",
     "actions/github-script",
@@ -828,7 +826,7 @@ test("climate card is registered and shipped in the HACS bundle", () => {
   const bundle = read("nodalia-cards.js");
   assert.match(source, /(?:const|let|var) CARD_TAG = "nodalia-climate-card"/);
   assert.match(source, /defineLazyCustomElement\(CARD_TAG, loadNodaliaClimateCard/);
-  assert.match(build, /nodalia-climate-card\.js/);
+  assert.match(read("src/cards/registry.json"), /nodalia-climate-card\.js/);
   assert.ok(pkg.files.includes("nodalia-climate-card.js"), "nodalia-climate-card.js should be published");
   assert.match(readme, /custom:nodalia-climate-card/);
   assert.match(source, /"show_schedule_button", config\.show_schedule_button/);
@@ -851,7 +849,7 @@ test("scenes card is registered and shipped in the HACS bundle", () => {
   assert.match(source, /defineLazyCustomElement\(CARD_TAG, loadNodaliaScenesCard/);
   assert.match(source, /callService\("scene", "turn_on"/);
   assert.match(source, /_triggerLaunchAnimation/);
-  assert.match(build, /nodalia-scenes-card\.js/);
+  assert.match(read("src/cards/registry.json"), /nodalia-scenes-card\.js/);
   assert.match(sync, /nodalia-scenes-card\.js/);
   assert.ok(pkg.files.includes("nodalia-scenes-card.js"), "nodalia-scenes-card.js should be published");
   assert.match(readme, /custom:nodalia-scenes-card/);
@@ -867,7 +865,7 @@ test("news card is registered and shipped in the HACS bundle", () => {
   assert.match(source, /defineLazyCustomElement\(CARD_TAG, loadNodaliaNewsCard/);
   assert.match(source, /registerCustomCard\?\.\(\{/);
   assert.match(source, /function isSafeHttpUrl\(/);
-  assert.match(build, /nodalia-news-card\.js/);
+  assert.match(read("src/cards/registry.json"), /nodalia-news-card\.js/);
   assert.ok(pkg.files.includes("nodalia-news-card.js"), "nodalia-news-card.js should be published");
   assert.match(bundle, /nodalia-news-card/);
 });
@@ -882,7 +880,7 @@ test("camera card is registered and shipped in the HACS bundle", () => {
   assert.match(source, /defineLazyCustomElement\(CARD_TAG, loadNodaliaCameraCard/);
   assert.match(source, /camera_proxy/);
   assert.match(source, /camera-card__expanded/);
-  assert.match(build, /nodalia-camera-card\.js/);
+  assert.match(read("src/cards/registry.json"), /nodalia-camera-card\.js/);
   assert.ok(pkg.files.includes("nodalia-camera-card.js"), "nodalia-camera-card.js should be published");
   assert.match(readme, /custom:nodalia-camera-card/);
   assert.match(bundle, /nodalia-camera-card/);
@@ -898,7 +896,7 @@ test("cover card is registered and shipped in the HACS bundle", () => {
   assert.match(source, /set_cover_position/);
   assert.match(source, /set_cover_tilt_position/);
   assert.match(source, /defineLazyCustomElement\(CARD_TAG, loadNodaliaCoverCard/);
-  assert.match(build, /nodalia-cover-card\.js/);
+  assert.match(read("src/cards/registry.json"), /nodalia-cover-card\.js/);
   assert.match(sync, /nodalia-cover-card\.js/);
   assert.match(pkg, /"nodalia-cover-card\.js"/);
   assert.match(readme, /custom:nodalia-cover-card/);
@@ -1192,7 +1190,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.equal(editorRowBySpanish(editorRows, "Etiqueta")[2], "Beschriftung");
   assert.equal(editorRowBySpanish(editorRows, "Mostrar tambien en escritorio")[2], "Auch auf dem Desktop anzeigen");
   assert.match(i18n, /function translateNotificationsUi/);
-  assert.match(build, /nodalia-notifications-card\.js/);
+  assert.match(read("src/cards/registry.json"), /nodalia-notifications-card\.js/);
   assert.match(pkg, /"nodalia-notifications-card\.js"/);
   assert.doesNotMatch(pkg, /"nodalia-cards\.bundle\.js"/);
   assert.match(pkg, /"nodalia-cards\.manifest\.js"/);

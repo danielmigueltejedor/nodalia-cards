@@ -1,6 +1,9 @@
 /* Generated from src/cards/lock. Do not edit. */
 "use strict";
 (() => {
+  // src/version.ts
+  var CARD_VERSION = "2.3.0-alpha.49";
+
   // src/cards/lock/lock-config.ts
   var CARD_TAG = "nodalia-lock-card";
   var EDITOR_TAG = "nodalia-lock-card-editor";
@@ -393,4 +396,5 @@
     description: "Lock controls with deliberate slide-to-unlock confirmation.",
     preview: true
   });
+  window.__NODALIA_LOCK__ = { CARD_TAG, EDITOR_TAG, CARD_VERSION, normalizeConfig };
 })();

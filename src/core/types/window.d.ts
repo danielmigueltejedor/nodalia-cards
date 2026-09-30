@@ -41,9 +41,7 @@ interface NodaliaBubbleContrastApi {
   resolveEditorColorValue?: (value: string) => string;
 }
 
-interface NodaliaRenderSignatureApi {
-  joinParts?: (...parts: unknown[]) => string;
-}
+type NodaliaRenderSignatureApi = typeof import("../../shared/render-signature").renderSignature;
 
 interface NodaliaNotificationsMobilePolicyApi {
   BACKGROUND_MOBILE_MAX_CHUNKS: number;
@@ -81,16 +79,11 @@ interface NodaliaRoomSummaryModelApi {
   buildRoomSummary: (...args: unknown[]) => unknown;
 }
 
-interface NodaliaCameraStreamModelApi {
-  buildGo2rtcViewerUrl(baseUrl: unknown, streamName: unknown, mode?: unknown): string;
-  sanitizeIframeUrl(rawValue: unknown): string;
-  buildGo2rtcWebSocketEndpoint(baseUrl: unknown, streamName: unknown): string;
-  buildFrigateGo2rtcPath(clientId: unknown, streamName: unknown): string;
-  isMixedContentUrl(rawValue: unknown, pageLocation?: Location): boolean;
-}
+type NodaliaCameraStreamModelApi = typeof import("../../cards/camera/camera-stream-model").cameraStreamModel;
 
 declare global {
   interface Window {
+    __NODALIA_LOCK__: Pick<typeof import("../../cards/lock/lock-config"), "CARD_TAG" | "EDITOR_TAG" | "CARD_VERSION" | "normalizeConfig">;
     NodaliaUtils: NodaliaUtilsApi;
     NodaliaI18n?: NodaliaI18nApi;
     NodaliaBackend?: NodaliaBackendApi;

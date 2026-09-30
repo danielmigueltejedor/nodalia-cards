@@ -25,7 +25,15 @@
     "i18n:audit": "node scripts/translate-all-locale-gaps.mjs --offline --check",
     "test": "node --test tests/**/*.test.mjs",
     "test:browser": "pnpm run bundle && playwright test",
-    "validate": "pnpm run version:check && pnpm run typecheck && pnpm run lint && node --check nodalia-*.js && pnpm run i18n:validate-editor && pnpm run i18n:validate-runtime && pnpm run i18n:audit && pnpm run bundle && pnpm test"
+    "validate": "pnpm run validate:fast && pnpm exec playwright test",
+    "validate:fast": "pnpm run version:check && pnpm run architecture:check && pnpm run typecheck && pnpm run lint && node scripts/check-distribution.mjs && pnpm run i18n:validate-editor && pnpm run i18n:validate-runtime && pnpm run i18n:audit && pnpm run bundle && pnpm test",
+    "build": "pnpm run bundle",
+    "dev": "node scripts/dev.mjs",
+    "release:alpha": "node scripts/prepare-release.mjs alpha",
+    "release:beta": "node scripts/prepare-release.mjs beta",
+    "release:rc": "node scripts/prepare-release.mjs rc",
+    "release": "node scripts/prepare-release.mjs stable",
+    "architecture:check": "node scripts/check-architecture.mjs"
   },
   "files": [
     "nodalia-i18n.js",

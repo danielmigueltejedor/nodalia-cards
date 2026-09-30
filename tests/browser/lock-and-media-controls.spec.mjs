@@ -359,3 +359,25 @@ test("Lock icon glyphs are centered inside the state and slide bubbles", async (
     }
   }
 });
+
+test("Playback capsule stays at the card center with asymmetric auxiliary controls", async ({ page }) => {
+  await mountMedia(page, '#ac5522');
+  for (const width of [300, 480, 700]) {
+    for (const tag of ['nodalia-media-player', 'nodalia-navigation-bar']) {
+      const result = await page.locator(tag).evaluate((element, width) => {
+        element.style.width = `${width}px`;
+        const root = element.shadowRoot;
+        const end = root.querySelector('.media-player__transport-side--end');
+        if (!end.querySelector('[data-extra]')) {
+          const auxiliary = root.querySelector('.media-player__volume-button').cloneNode(true);
+          auxiliary.dataset.extra = ''; end.append(auxiliary);
+        }
+        const surface = root.querySelector('.media-player-card').getBoundingClientRect();
+        const capsule = root.querySelector('.media-player__transport').getBoundingClientRect();
+        return { offset: Math.abs(capsule.x + capsule.width / 2 - surface.x - surface.width / 2), inside: capsule.left >= surface.left && capsule.right <= surface.right };
+      }, width);
+      expect(result.offset).toBeLessThan(1);
+      expect(result.inside).toBe(true);
+    }
+  }
+});

@@ -1,6 +1,6 @@
 // @ts-nocheck -- color, icon and path helpers stay loosely typed until remaining unknowns are narrowed.
 import { isObject, isUnsafeConfigPathKey, normalizeTextKey } from "./insignia-runtime";
-import { DEFAULT_CONFIG } from "./insignia-config";
+import { DEFAULT_CONFIG } from "./insignia-defaults";
 
 export function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
   return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";

@@ -1000,10 +1000,12 @@
     customElements.define(GO2RTC_PLAYER_TAG, NodaliaGo2RTCPlayer);
   }
 
+  // src/version.ts
+  var CARD_VERSION = "2.3.0-alpha.49";
+
   // src/cards/camera/camera-constants.ts
   var CARD_TAG = "nodalia-camera-card";
   var EDITOR_TAG = "nodalia-camera-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.49";
   var CAMERA_LAYOUT = "mosaic";
   var CAMERA_PRESENTATION = "feed";
   var MAX_CAMERAS = 4;
@@ -1025,6 +1027,77 @@
   var buildGo2rtcWebSocketEndpoint = (baseUrl, streamName) => window.NodaliaCameraStreamModel?.buildGo2rtcWebSocketEndpoint?.(baseUrl, streamName) ?? "";
   var buildFrigateGo2rtcPath = (clientId, streamName) => window.NodaliaCameraStreamModel?.buildFrigateGo2rtcPath?.(clientId, streamName) ?? "";
   var isMixedContentUrl = (rawValue, pageLocation) => window.NodaliaCameraStreamModel?.isMixedContentUrl?.(rawValue, pageLocation) ?? false;
+
+  // src/cards/camera/camera-defaults.ts
+  var DEFAULT_CONFIG = {
+    entity: "",
+    cameras: [],
+    name: "",
+    layout: CAMERA_LAYOUT,
+    presentation: CAMERA_PRESENTATION,
+    language: "auto",
+    show_name: false,
+    show_state: false,
+    show_status_chips: false,
+    show_last_changed: false,
+    show_preview_age: true,
+    camera_streams: [],
+    camera_tap_actions: [],
+    camera_actions: [],
+    expanded_actions: [],
+    tap_action: "toggle",
+    tap_service: "",
+    tap_service_data: "",
+    tap_service_target: "",
+    tap_url: "",
+    navigation_path: "",
+    tap_new_tab: false,
+    hold_action: "none",
+    hold_service: "",
+    hold_service_data: "",
+    hold_service_target: "",
+    hold_url: "",
+    hold_navigation_path: "",
+    hold_new_tab: false,
+    security: {
+      strict_service_actions: true,
+      allowed_services: [],
+      allowed_service_domains: []
+    },
+    haptics: {
+      enabled: true,
+      style: "medium",
+      fallback_vibrate: false
+    },
+    animations: {
+      enabled: true,
+      content_duration: 420,
+      button_bounce_duration: 320
+    },
+    styles: {
+      card: {
+        background: "var(--ha-card-background)",
+        border: "1px solid var(--divider-color)",
+        border_radius: "var(--nodalia-card-border-radius, 28px)",
+        box_shadow: "var(--ha-card-box-shadow)",
+        padding: "14px",
+        gap: "10px"
+      },
+      preview: {
+        aspect_ratio: "16 / 9",
+        border_radius: "18px",
+        overlay_strength: 0.42,
+        min_height: "220px",
+        mosaic_gap: "0px"
+      },
+      title_size: "15px",
+      subtitle_size: "12px",
+      chip_height: "24px",
+      chip_font_size: "11px",
+      chip_padding: "0 9px",
+      chip_border_radius: "999px"
+    }
+  };
 
   // src/cards/camera/camera-helpers.ts
   function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
@@ -1477,75 +1550,6 @@
   }
 
   // src/cards/camera/camera-config.ts
-  var DEFAULT_CONFIG = {
-    entity: "",
-    cameras: [],
-    name: "",
-    layout: CAMERA_LAYOUT,
-    presentation: CAMERA_PRESENTATION,
-    language: "auto",
-    show_name: false,
-    show_state: false,
-    show_status_chips: false,
-    show_last_changed: false,
-    show_preview_age: true,
-    camera_streams: [],
-    camera_tap_actions: [],
-    camera_actions: [],
-    expanded_actions: [],
-    tap_action: "toggle",
-    tap_service: "",
-    tap_service_data: "",
-    tap_service_target: "",
-    tap_url: "",
-    navigation_path: "",
-    tap_new_tab: false,
-    hold_action: "none",
-    hold_service: "",
-    hold_service_data: "",
-    hold_service_target: "",
-    hold_url: "",
-    hold_navigation_path: "",
-    hold_new_tab: false,
-    security: {
-      strict_service_actions: true,
-      allowed_services: [],
-      allowed_service_domains: []
-    },
-    haptics: {
-      enabled: true,
-      style: "medium",
-      fallback_vibrate: false
-    },
-    animations: {
-      enabled: true,
-      content_duration: 420,
-      button_bounce_duration: 320
-    },
-    styles: {
-      card: {
-        background: "var(--ha-card-background)",
-        border: "1px solid var(--divider-color)",
-        border_radius: "var(--nodalia-card-border-radius, 28px)",
-        box_shadow: "var(--ha-card-box-shadow)",
-        padding: "14px",
-        gap: "10px"
-      },
-      preview: {
-        aspect_ratio: "16 / 9",
-        border_radius: "18px",
-        overlay_strength: 0.42,
-        min_height: "220px",
-        mosaic_gap: "0px"
-      },
-      title_size: "15px",
-      subtitle_size: "12px",
-      chip_height: "24px",
-      chip_font_size: "11px",
-      chip_padding: "0 9px",
-      chip_border_radius: "999px"
-    }
-  };
   var STUB_CONFIG = {
     entity: "camera.entrada",
     name: "Entrada"
@@ -2188,8 +2192,8 @@
         if (!(portal instanceof HTMLElement)) {
           return;
         }
-        portal.removeEventListener("click", this._onShadowClick);
-        portal.removeEventListener("keydown", this._onShadowKeyDown);
+        portal.shadowRoot?.removeEventListener("click", this._onShadowClick);
+        portal.shadowRoot?.removeEventListener("keydown", this._onShadowKeyDown);
         portal.remove();
       }
       _shouldPortalExpanded() {

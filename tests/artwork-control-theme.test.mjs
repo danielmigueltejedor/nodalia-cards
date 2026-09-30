@@ -50,7 +50,9 @@ test("late artwork responses cannot overwrite a newer palette or a reset", async
   assert.equal(properties.get("--media-control-tint"), "rgb(0, 255, 0)");
   const replacementProperties = new Map();
   const replacement = { ...host, style: { setProperty: (k, v) => replacementProperties.set(k, v), removeProperty: k => replacementProperties.delete(k) } };
-  await sandbox.theme.applyArtworkControlTheme(replacement, "new");
+  const restored = sandbox.theme.applyArtworkControlTheme(replacement, "new");
+  assert.equal(replacementProperties.get("--media-control-tint"), "rgb(0, 255, 0)", "cache is applied before any await");
+  await restored;
   assert.equal(replacementProperties.get("--media-control-tint"), "rgb(0, 255, 0)", "restore the tint synchronously when an inner card is recreated");
   const late = sandbox.theme.applyArtworkControlTheme(host, "late");
   assert.equal(properties.get("--media-control-tint"), "rgb(0, 255, 0)", "keep the last tint while the next image is pending");

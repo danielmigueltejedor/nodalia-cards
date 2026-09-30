@@ -2,6 +2,15 @@ import type { ArtworkPalette, MediaPlayerIdleArtworkConfig } from "./media-playe
 
 const PALETTE_CACHE = new Map<string, ArtworkPalette>();
 const PRELOAD_CACHE = new Map<string, Promise<boolean>>();
+const PALETTE_REQUESTS = new Map<string, Promise<ArtworkPalette | null>>();
+const ARTWORK_CACHE_LIMIT = 64;
+function boundCache<T>(cache: Map<string, T>): void {
+  while (cache.size > ARTWORK_CACHE_LIMIT) {
+    const first = cache.keys().next().value;
+    if (first === undefined) break;
+    cache.delete(first);
+  }
+}
 
 export function getArtworkVisuals(
   artwork: {
@@ -113,6 +122,7 @@ export function getCachedArtworkPalette(url: string): ArtworkPalette | null {
 
 export function setCachedArtworkPalette(url: string, palette: ArtworkPalette): void {
   PALETTE_CACHE.set(url, palette);
+  boundCache(PALETTE_CACHE);
 }
 
 export function preloadArtworkUrl(url: string): Promise<boolean> {
@@ -144,10 +154,22 @@ export function preloadArtworkUrl(url: string): Promise<boolean> {
     image.src = nextUrl;
   });
   PRELOAD_CACHE.set(nextUrl, pending);
+  boundCache(PRELOAD_CACHE);
   return pending;
 }
 
-export async function sampleArtworkPalette(url: string): Promise<ArtworkPalette | null> {
+export function sampleArtworkPalette(url: string): Promise<ArtworkPalette | null> {
+  const key = String(url || "").trim();
+  const cached = getCachedArtworkPalette(key);
+  if (cached) return Promise.resolve(cached);
+  const pending = PALETTE_REQUESTS.get(key);
+  if (pending) return pending;
+  const request = loadArtworkPalette(key).finally(() => PALETTE_REQUESTS.delete(key));
+  PALETTE_REQUESTS.set(key, request);
+  return request;
+}
+
+async function loadArtworkPalette(url: string): Promise<ArtworkPalette | null> {
   const nextUrl = String(url || "").trim();
   if (!nextUrl) {
     return null;

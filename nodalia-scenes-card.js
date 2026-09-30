@@ -1,10 +1,12 @@
 /* Generated from src/cards/scenes. Do not edit. */
 "use strict";
 (() => {
+  // src/version.ts
+  var CARD_VERSION = "2.3.0-alpha.49";
+
   // src/cards/scenes/scenes-constants.ts
   var CARD_TAG = "nodalia-scenes-card";
   var EDITOR_TAG = "nodalia-scenes-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.49";
   var DEFAULT_SCENE_ACCENT = "#c9a86c";
   var SCENE_LAUNCH_DURATION = 780;
   var HAPTIC_PATTERNS = {
@@ -32,6 +34,59 @@
   var escapeHtml = utils.escapeHtml.bind(utils);
   var escapeSelectorValue = utils.escapeSelectorValue.bind(utils);
   var fireEvent = utils.fireEvent.bind(utils);
+
+  // src/cards/scenes/scenes-defaults.ts
+  var DEFAULT_CONFIG = {
+    name: "",
+    language: "auto",
+    scenes: [],
+    layout: "grid",
+    columns: 3,
+    show_title: true,
+    use_entity_icon: true,
+    use_entity_picture: false,
+    tap_action: "activate",
+    hold_action: "more-info",
+    haptics: {
+      enabled: true,
+      style: "medium",
+      fallback_vibrate: false
+    },
+    animations: {
+      enabled: true,
+      content_duration: 420,
+      button_bounce_duration: 320,
+      launch_duration: SCENE_LAUNCH_DURATION
+    },
+    styles: {
+      accent: DEFAULT_SCENE_ACCENT,
+      card: {
+        background: "var(--ha-card-background)",
+        border: "1px solid var(--divider-color)",
+        border_radius: "var(--nodalia-card-border-radius, 28px)",
+        box_shadow: "var(--ha-card-box-shadow)",
+        padding: "14px",
+        gap: "12px"
+      },
+      button: {
+        min_height: "88px",
+        border_radius: "22px",
+        gap: "8px",
+        icon_size: "24px",
+        label_size: "12px",
+        background: "",
+        border: ""
+      },
+      icon: {
+        size: "44px",
+        background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
+        color: "var(--primary-text-color)",
+        on_color: DEFAULT_SCENE_ACCENT
+      },
+      chip_border_radius: "999px",
+      title_size: "15px"
+    }
+  };
 
   // src/cards/scenes/scenes-helpers.ts
   function mergeConfig(base, override) {
@@ -382,57 +437,6 @@
   }
 
   // src/cards/scenes/scenes-config.ts
-  var DEFAULT_CONFIG = {
-    name: "",
-    language: "auto",
-    scenes: [],
-    layout: "grid",
-    columns: 3,
-    show_title: true,
-    use_entity_icon: true,
-    use_entity_picture: false,
-    tap_action: "activate",
-    hold_action: "more-info",
-    haptics: {
-      enabled: true,
-      style: "medium",
-      fallback_vibrate: false
-    },
-    animations: {
-      enabled: true,
-      content_duration: 420,
-      button_bounce_duration: 320,
-      launch_duration: SCENE_LAUNCH_DURATION
-    },
-    styles: {
-      accent: DEFAULT_SCENE_ACCENT,
-      card: {
-        background: "var(--ha-card-background)",
-        border: "1px solid var(--divider-color)",
-        border_radius: "var(--nodalia-card-border-radius, 28px)",
-        box_shadow: "var(--ha-card-box-shadow)",
-        padding: "14px",
-        gap: "12px"
-      },
-      button: {
-        min_height: "88px",
-        border_radius: "22px",
-        gap: "8px",
-        icon_size: "24px",
-        label_size: "12px",
-        background: "",
-        border: ""
-      },
-      icon: {
-        size: "44px",
-        background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
-        color: "var(--primary-text-color)",
-        on_color: DEFAULT_SCENE_ACCENT
-      },
-      chip_border_radius: "999px",
-      title_size: "15px"
-    }
-  };
   var STUB_CONFIG = {
     name: "Scenes",
     layout: "grid",

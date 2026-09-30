@@ -1,10 +1,12 @@
 /* Generated from src/cards/insignia. Do not edit. */
 "use strict";
 (() => {
+  // src/version.ts
+  var CARD_VERSION = "2.3.0-alpha.49";
+
   // src/cards/insignia/insignia-constants.ts
   var CARD_TAG = "nodalia-insignia-card";
   var EDITOR_TAG = "nodalia-insignia-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.49";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,
@@ -25,6 +27,63 @@
   var escapeHtml = utils.escapeHtml.bind(utils);
   var escapeSelectorValue = utils.escapeSelectorValue.bind(utils);
   var fireEvent = utils.fireEvent.bind(utils);
+
+  // src/cards/insignia/insignia-defaults.ts
+  var DEFAULT_CONFIG = {
+    entity: "",
+    name: "",
+    icon: "",
+    icon_active: "",
+    icon_inactive: "",
+    use_entity_icon: false,
+    use_entity_picture: false,
+    state_attribute: "",
+    tap_action: "auto",
+    tap_service: "",
+    tap_service_data: "",
+    tap_url: "",
+    tap_new_tab: false,
+    hold_action: "more-info",
+    hold_service: "",
+    hold_service_data: "",
+    hold_url: "",
+    hold_new_tab: false,
+    show_name: true,
+    show_value: true,
+    security: {
+      strict_service_actions: true,
+      allowed_services: [],
+      allowed_service_domains: []
+    },
+    haptics: {
+      enabled: true,
+      style: "medium",
+      fallback_vibrate: false
+    },
+    styles: {
+      card: {
+        background: "var(--ha-card-background)",
+        border: "1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
+        border_radius: "999px",
+        box_shadow: "var(--ha-card-box-shadow)",
+        padding: "4px 8px",
+        gap: "8px"
+      },
+      icon: {
+        size: "26px",
+        background: "color-mix(in srgb, var(--primary-text-color) 5%, transparent)",
+        on_color: "var(--info-color, #71c0ff)",
+        off_color: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))",
+        icon_only_offset_y: "0"
+      },
+      tint: {
+        color: "var(--info-color, #71c0ff)"
+      },
+      title_size: "12px",
+      value_size: "12px"
+    },
+    tint_auto: true
+  };
 
   // src/cards/insignia/insignia-helpers.ts
   function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
@@ -315,61 +374,6 @@
   }
 
   // src/cards/insignia/insignia-config.ts
-  var DEFAULT_CONFIG = {
-    entity: "",
-    name: "",
-    icon: "",
-    icon_active: "",
-    icon_inactive: "",
-    use_entity_icon: false,
-    use_entity_picture: false,
-    state_attribute: "",
-    tap_action: "auto",
-    tap_service: "",
-    tap_service_data: "",
-    tap_url: "",
-    tap_new_tab: false,
-    hold_action: "more-info",
-    hold_service: "",
-    hold_service_data: "",
-    hold_url: "",
-    hold_new_tab: false,
-    show_name: true,
-    show_value: true,
-    security: {
-      strict_service_actions: true,
-      allowed_services: [],
-      allowed_service_domains: []
-    },
-    haptics: {
-      enabled: true,
-      style: "medium",
-      fallback_vibrate: false
-    },
-    styles: {
-      card: {
-        background: "var(--ha-card-background)",
-        border: "1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
-        border_radius: "999px",
-        box_shadow: "var(--ha-card-box-shadow)",
-        padding: "4px 8px",
-        gap: "8px"
-      },
-      icon: {
-        size: "26px",
-        background: "color-mix(in srgb, var(--primary-text-color) 5%, transparent)",
-        on_color: "var(--info-color, #71c0ff)",
-        off_color: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))",
-        icon_only_offset_y: "0"
-      },
-      tint: {
-        color: "var(--info-color, #71c0ff)"
-      },
-      title_size: "12px",
-      value_size: "12px"
-    },
-    tint_auto: true
-  };
   var STUB_CONFIG = {
     entity: "sensor.temperatura_salon",
     name: "Salon",

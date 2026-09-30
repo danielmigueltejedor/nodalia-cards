@@ -29,8 +29,8 @@ test("navigation card registers custom element and bundle entry", () => {
   const source = read("nodalia-navigation-bar.js");
   assert.match(source, /defineLazyCustomElement\(CARD_TAG, loadNodaliaNavigationBarCard/);
   assert.match(source, /window\.__NODALIA_NAVIGATION__/);
-  assert.match(read("scripts/build-bundle.mjs"), /src\/cards\/navigation\/index\.ts/);
-  assert.match(read("scripts/build-src-cards.mjs"), /src\/cards\/navigation\/standalone\.ts/);
+  assert.match(read("src/cards/registry.json"), /src\/cards\/navigation\/index\.ts/);
+  assert.match(read("src/cards/registry.json"), /src\/cards\/navigation\/standalone\.ts/);
 });
 
 test("navigation public API requires routes and keeps media player defaults", () => {
