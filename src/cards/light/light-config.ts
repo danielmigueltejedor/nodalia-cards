@@ -1,7 +1,7 @@
-// @ts-nocheck -- merged Lovelace YAML is projected into the runtime light config.
 import { LEGACY_ICON_OFF_COLOR_VALUES } from "./light-constants";
 import { clamp, deepClone, isObject, mergeConfig } from "./light-runtime";
 import { normalizeHexColorForLightPreset } from "./light-helpers";
+import { normalizeControlStyles } from "../../shared/control-config";
 
 export const DEFAULT_CONFIG = {
   entity: "",
@@ -116,8 +116,8 @@ export const STUB_CONFIG = {
   name: "Salon",
 };
 
-export function migrateLegacyIconOffColor(iconStyles, canonicalOffColor) {
-  if (!iconStyles) {
+export function migrateLegacyIconOffColor(iconStyles: unknown, canonicalOffColor: string) {
+  if (!isObject(iconStyles)) {
     return;
   }
   const raw = String(iconStyles.off_color ?? "").trim();
@@ -133,8 +133,10 @@ export function migrateLegacyIconOffColor(iconStyles, canonicalOffColor) {
   }
 }
 
-export function normalizeConfig(rawConfig) {
-  const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+export function normalizeConfig(rawConfig: unknown = {}) {
+  const raw = isObject(rawConfig) ? rawConfig : {};
+  const defaults: Record<string, unknown> = DEFAULT_CONFIG;
+  const config = mergeConfig(defaults, raw);
   if (config.keep_collapsed === true) {
     config.auto_expand = false;
   }
@@ -142,21 +144,15 @@ export function normalizeConfig(rawConfig) {
   const normalizedStatePosition = String(config.state_position || "").toLowerCase();
   config.state_position = normalizedStatePosition === "below" ? "below" : "right";
 
-  if (!Array.isArray(config.quick_brightness) || !config.quick_brightness.length) {
-    config.quick_brightness = deepClone(DEFAULT_CONFIG.quick_brightness);
-  }
-
-  config.quick_brightness = config.quick_brightness
-    .map(value => Number(value))
+  const rawBrightness = Array.isArray(config.quick_brightness) && config.quick_brightness.length
+    ? config.quick_brightness : DEFAULT_CONFIG.quick_brightness;
+  let quickBrightness = rawBrightness.map(value => Number(value))
     .filter(value => Number.isFinite(value))
     .map(value => clamp(Math.round(value), 1, 100));
-
-  if (!config.quick_brightness.length) {
-    config.quick_brightness = deepClone(DEFAULT_CONFIG.quick_brightness);
-  }
+  if (!quickBrightness.length) quickBrightness = deepClone(DEFAULT_CONFIG.quick_brightness);
 
   const rawPresets = Array.isArray(config.color_presets) ? config.color_presets : [];
-  const normalizedPresets = [];
+  const normalizedPresets: { color: string; label: string }[] = [];
   for (let index = 0; index < Math.min(rawPresets.length, 4); index += 1) {
     const entry = rawPresets[index];
     if (!isObject(entry)) {
@@ -171,14 +167,15 @@ export function normalizeConfig(rawConfig) {
       label: String(entry.label ?? "").trim(),
     });
   }
-  config.color_presets = normalizedPresets.length ? normalizedPresets : deepClone(DEFAULT_CONFIG.color_presets);
+  const colorPresets = normalizedPresets.length ? normalizedPresets : deepClone(DEFAULT_CONFIG.color_presets);
 
-  const numericPowerDuration = Number(config.animations?.power_duration);
-  const numericControlsDuration = Number(config.animations?.controls_duration);
-  const numericModeSwitchDuration = Number(config.animations?.mode_switch_duration);
-  const numericButtonBounceDuration = Number(config.animations?.button_bounce_duration);
-  config.animations = {
-    enabled: config.animations?.enabled !== false,
+  const rawAnimations = isObject(config.animations) ? config.animations : {};
+  const numericPowerDuration = Number(rawAnimations.power_duration);
+  const numericControlsDuration = Number(rawAnimations.controls_duration);
+  const numericModeSwitchDuration = Number(rawAnimations.mode_switch_duration);
+  const numericButtonBounceDuration = Number(rawAnimations.button_bounce_duration);
+  const animations = {
+    enabled: rawAnimations.enabled !== false,
     power_duration: Number.isFinite(numericPowerDuration)
       ? clamp(Math.round(numericPowerDuration), 120, 4000)
       : DEFAULT_CONFIG.animations.power_duration,
@@ -191,10 +188,11 @@ export function normalizeConfig(rawConfig) {
     button_bounce_duration: Number.isFinite(numericButtonBounceDuration)
       ? clamp(Math.round(numericButtonBounceDuration), 120, 1200)
       : DEFAULT_CONFIG.animations.button_bounce_duration,
-    mode_switch_horizontal: config.animations?.mode_switch_horizontal !== false,
+    mode_switch_horizontal: rawAnimations.mode_switch_horizontal !== false,
   };
 
-  migrateLegacyIconOffColor(config.styles?.icon, DEFAULT_CONFIG.styles.icon.off_color);
+  const rawStyles = isObject(config.styles) ? config.styles : {};
+  migrateLegacyIconOffColor(rawStyles.icon, DEFAULT_CONFIG.styles.icon.off_color);
 
   const applyTap = window.NodaliaUtils?.applyCardTapActionField?.bind(window.NodaliaUtils);
   if (typeof applyTap === "function") {
@@ -202,25 +200,25 @@ export function normalizeConfig(rawConfig) {
       actionKey: "tap_action", serviceKey: "tap_service", serviceDataKey: "tap_service_data",
       serviceTargetKey: "tap_service_target", urlKey: "tap_url", navigationKey: "navigation_path",
       newTabKey: "tap_new_tab",
-    }, rawConfig?.tap_action ?? config.tap_action, "toggle");
+    }, raw.tap_action ?? config.tap_action, "toggle");
     applyTap(config, {
       actionKey: "icon_tap_action", serviceKey: "icon_tap_service", serviceDataKey: "icon_tap_service_data",
       serviceTargetKey: "icon_tap_service_target", urlKey: "icon_tap_url", navigationKey: "icon_navigation_path",
       newTabKey: "icon_tap_new_tab",
-    }, rawConfig?.icon_tap_action ?? config.icon_tap_action, "toggle");
+    }, raw.icon_tap_action ?? config.icon_tap_action, "toggle");
     applyTap(config, {
       actionKey: "hold_action", serviceKey: "hold_service", serviceDataKey: "hold_service_data",
       serviceTargetKey: "hold_service_target", urlKey: "hold_url", navigationKey: "hold_navigation_path",
       newTabKey: "hold_new_tab",
-    }, rawConfig?.hold_action ?? config.hold_action, "more-info");
+    }, raw.hold_action ?? config.hold_action, "more-info");
     applyTap(config, {
       actionKey: "icon_hold_action", serviceKey: "icon_hold_service", serviceDataKey: "icon_hold_service_data",
       serviceTargetKey: "icon_hold_service_target", urlKey: "icon_hold_url", navigationKey: "icon_hold_navigation_path",
       newTabKey: "icon_hold_new_tab",
-    }, rawConfig?.icon_hold_action ?? config.icon_hold_action, "");
+    }, raw.icon_hold_action ?? config.icon_hold_action, "");
   }
 
-  const serializeActionObject = value => (
+  const serializeActionObject = (value: unknown) => (
     isObject(value) ? JSON.stringify(value) : String(value ?? "").trim()
   );
   const TAP_ACTIONS = new Set(["auto", "toggle", "more-info", "service", "navigate", "url", "none"]);
@@ -271,10 +269,17 @@ export function normalizeConfig(rawConfig) {
   if (config.hold_action === "navigate" && !config.hold_navigation_path && config.hold_url) {
     config.hold_navigation_path = config.hold_url;
   }
-  config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
+  const security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
     ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
-  config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles)
-    ?? deepClone(DEFAULT_CONFIG.styles);
-
-  return config;
+  return {
+    ...config,
+    state_position: normalizedStatePosition === "below" ? "below" : "right",
+    quick_brightness: quickBrightness,
+    color_presets: colorPresets,
+    animations,
+    entity_picture: String(config.entity_picture),
+    show_entity_picture: config.show_entity_picture === true,
+    security,
+    styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles),
+  };
 }

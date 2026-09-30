@@ -120,15 +120,13 @@
     return { alpha: channels.alpha, hex, label: source, resolved, source, value: formatEditorColorFromHex(hex, channels.alpha) };
   }
 
-  // src/cards/light/light-helpers.ts
+  // src/shared/editor-entity-helpers.ts
   function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
     return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
   }
   function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
     const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
-    if (!entityId) {
-      return config;
-    }
+    if (!entityId) return config;
     config.entity = entityId;
     config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
     return config;
@@ -137,6 +135,35 @@
     const numeric = Number.parseFloat(String(value ?? ""));
     return Number.isFinite(numeric) ? numeric : fallback;
   }
+
+  // src/shared/device-control-geometry.ts
+  var CIRCULAR_LAYOUT_DIAL_START_ANGLE = 135;
+  var CIRCULAR_LAYOUT_DIAL_END_ANGLE = 405;
+  var CIRCULAR_LAYOUT_DIAL_SWEEP = CIRCULAR_LAYOUT_DIAL_END_ANGLE - CIRCULAR_LAYOUT_DIAL_START_ANGLE;
+  var clampGeometryValue = (value, min, max) => Math.min(Math.max(value, min), max);
+  function getSliderDragGeometry(slider) {
+    const rect = slider.getBoundingClientRect();
+    return {
+      left: rect.left,
+      width: rect.width,
+      min: Number(slider.min || 0),
+      max: Number(slider.max || 100),
+      step: slider.step === "any" ? 0 : Number(slider.step || 1)
+    };
+  }
+  function getRangeValueFromGeometry(geometry, currentValue, clientX) {
+    if (!geometry || !Number.isFinite(geometry.width) || geometry.width <= 0) {
+      return Number(currentValue || 0);
+    }
+    const ratio = clampGeometryValue((clientX - geometry.left) / geometry.width, 0, 1);
+    let nextValue = geometry.min + (geometry.max - geometry.min) * ratio;
+    if (Number.isFinite(geometry.step) && geometry.step > 0) {
+      nextValue = geometry.min + Math.round((nextValue - geometry.min) / geometry.step) * geometry.step;
+    }
+    return clampGeometryValue(nextValue, geometry.min, geometry.max);
+  }
+
+  // src/cards/light/light-helpers.ts
   function isUnavailableState(state) {
     return String(state?.state || "").toLowerCase() === "unavailable";
   }
@@ -144,7 +171,11 @@
     if (!Array.isArray(rgb) || rgb.length !== 3) {
       return null;
     }
-    const [rawRed, rawGreen, rawBlue] = rgb.map((value) => clamp(Number(value) / 255, 0, 1));
+    const channels = [Number(rgb[0]), Number(rgb[1]), Number(rgb[2])];
+    if (channels.some((value) => !Number.isFinite(value))) return null;
+    const rawRed = clamp(Number(rgb[0]) / 255, 0, 1);
+    const rawGreen = clamp(Number(rgb[1]) / 255, 0, 1);
+    const rawBlue = clamp(Number(rgb[2]) / 255, 0, 1);
     const max = Math.max(rawRed, rawGreen, rawBlue);
     const min = Math.min(rawRed, rawGreen, rawBlue);
     const delta = max - min;
@@ -215,32 +246,13 @@
     }
     return "var(--info-color, #71c0ff)";
   }
-  function getSliderDragGeometry(slider) {
-    const rect = slider.getBoundingClientRect();
-    return {
-      left: rect.left,
-      width: rect.width,
-      min: Number(slider.min || 0),
-      max: Number(slider.max || 100),
-      step: slider.step === "any" ? 0 : Number(slider.step || 1)
-    };
-  }
-  function getRangeValueFromGeometry(geometry, currentValue, clientX) {
-    if (!geometry || !Number.isFinite(geometry.width) || geometry.width <= 0) {
-      return Number(currentValue || 0);
-    }
-    const ratio = clamp((clientX - geometry.left) / geometry.width, 0, 1);
-    let nextValue = geometry.min + (geometry.max - geometry.min) * ratio;
-    if (Number.isFinite(geometry.step) && geometry.step > 0) {
-      nextValue = geometry.min + Math.round((nextValue - geometry.min) / geometry.step) * geometry.step;
-    }
-    return clamp(nextValue, geometry.min, geometry.max);
-  }
   function miredToKelvin(value) {
-    return value > 0 ? Math.round(1e6 / value) : 0;
+    const numeric = Number(value);
+    return numeric > 0 ? Math.round(1e6 / numeric) : 0;
   }
   function kelvinToMired(value) {
-    return value > 0 ? Math.round(1e6 / value) : 0;
+    const numeric = Number(value);
+    return numeric > 0 ? Math.round(1e6 / numeric) : 0;
   }
   function getTemperatureSliderTrackGradient(unit = "kelvin") {
     if (unit === "mired") {
@@ -248,6 +260,36 @@
     }
     return "linear-gradient(90deg, #f4b55f 0%, #ffd166 32%, #fff1c1 56%, #8fd3ff 100%)";
   }
+
+  // src/shared/control-config.ts
+  function normalizeControlStyles(candidate, defaults) {
+    const utils2 = window.NodaliaUtils;
+    const source = utils2.isObject(candidate) ? candidate : {};
+    const result = {};
+    for (const [key, fallback] of Object.entries(defaults)) {
+      if (utils2.isUnsafeConfigPathKey(key)) continue;
+      result[key] = typeof fallback === "string" ? utils2.sanitizeCssValue(source[key], fallback) : normalizeControlStyles(source[key], fallback);
+    }
+    return result;
+  }
+  var actionFields = (prefix, fallback, navigationKey = `${prefix}_navigation_path`) => ({
+    actionKey: `${prefix}_action`,
+    serviceKey: `${prefix}_service`,
+    serviceDataKey: `${prefix}_service_data`,
+    serviceTargetKey: `${prefix}_service_target`,
+    urlKey: `${prefix}_url`,
+    navigationKey,
+    newTabKey: `${prefix}_new_tab`,
+    fallback
+  });
+  var FIELDS = [
+    actionFields("tap", "toggle", "navigation_path"),
+    actionFields("icon_tap", "", "icon_navigation_path"),
+    actionFields("hold", "more-info", "hold_navigation_path"),
+    actionFields("icon_hold", ""),
+    actionFields("double_tap", "none"),
+    actionFields("icon_double_tap", "")
+  ];
 
   // src/cards/light/light-config.ts
   var DEFAULT_CONFIG = {
@@ -362,7 +404,7 @@
     name: "Salon"
   };
   function migrateLegacyIconOffColor(iconStyles, canonicalOffColor) {
-    if (!iconStyles) {
+    if (!isObject(iconStyles)) {
       return;
     }
     const raw = String(iconStyles.off_color ?? "").trim();
@@ -377,21 +419,19 @@
       iconStyles.off_color = canonicalOffColor;
     }
   }
-  function normalizeConfig(rawConfig) {
-    const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  function normalizeConfig(rawConfig = {}) {
+    const raw = isObject(rawConfig) ? rawConfig : {};
+    const defaults = DEFAULT_CONFIG;
+    const config = mergeConfig(defaults, raw);
     if (config.keep_collapsed === true) {
       config.auto_expand = false;
     }
     delete config.keep_collapsed;
     const normalizedStatePosition = String(config.state_position || "").toLowerCase();
     config.state_position = normalizedStatePosition === "below" ? "below" : "right";
-    if (!Array.isArray(config.quick_brightness) || !config.quick_brightness.length) {
-      config.quick_brightness = deepClone(DEFAULT_CONFIG.quick_brightness);
-    }
-    config.quick_brightness = config.quick_brightness.map((value) => Number(value)).filter((value) => Number.isFinite(value)).map((value) => clamp(Math.round(value), 1, 100));
-    if (!config.quick_brightness.length) {
-      config.quick_brightness = deepClone(DEFAULT_CONFIG.quick_brightness);
-    }
+    const rawBrightness = Array.isArray(config.quick_brightness) && config.quick_brightness.length ? config.quick_brightness : DEFAULT_CONFIG.quick_brightness;
+    let quickBrightness = rawBrightness.map((value) => Number(value)).filter((value) => Number.isFinite(value)).map((value) => clamp(Math.round(value), 1, 100));
+    if (!quickBrightness.length) quickBrightness = deepClone(DEFAULT_CONFIG.quick_brightness);
     const rawPresets = Array.isArray(config.color_presets) ? config.color_presets : [];
     const normalizedPresets = [];
     for (let index = 0; index < Math.min(rawPresets.length, 4); index += 1) {
@@ -408,20 +448,22 @@
         label: String(entry.label ?? "").trim()
       });
     }
-    config.color_presets = normalizedPresets.length ? normalizedPresets : deepClone(DEFAULT_CONFIG.color_presets);
-    const numericPowerDuration = Number(config.animations?.power_duration);
-    const numericControlsDuration = Number(config.animations?.controls_duration);
-    const numericModeSwitchDuration = Number(config.animations?.mode_switch_duration);
-    const numericButtonBounceDuration = Number(config.animations?.button_bounce_duration);
-    config.animations = {
-      enabled: config.animations?.enabled !== false,
+    const colorPresets = normalizedPresets.length ? normalizedPresets : deepClone(DEFAULT_CONFIG.color_presets);
+    const rawAnimations = isObject(config.animations) ? config.animations : {};
+    const numericPowerDuration = Number(rawAnimations.power_duration);
+    const numericControlsDuration = Number(rawAnimations.controls_duration);
+    const numericModeSwitchDuration = Number(rawAnimations.mode_switch_duration);
+    const numericButtonBounceDuration = Number(rawAnimations.button_bounce_duration);
+    const animations = {
+      enabled: rawAnimations.enabled !== false,
       power_duration: Number.isFinite(numericPowerDuration) ? clamp(Math.round(numericPowerDuration), 120, 4e3) : DEFAULT_CONFIG.animations.power_duration,
       controls_duration: Number.isFinite(numericControlsDuration) ? clamp(Math.round(numericControlsDuration), 120, 2400) : DEFAULT_CONFIG.animations.controls_duration,
       mode_switch_duration: Number.isFinite(numericModeSwitchDuration) ? clamp(Math.round(numericModeSwitchDuration), 120, 2400) : DEFAULT_CONFIG.animations.mode_switch_duration,
       button_bounce_duration: Number.isFinite(numericButtonBounceDuration) ? clamp(Math.round(numericButtonBounceDuration), 120, 1200) : DEFAULT_CONFIG.animations.button_bounce_duration,
-      mode_switch_horizontal: config.animations?.mode_switch_horizontal !== false
+      mode_switch_horizontal: rawAnimations.mode_switch_horizontal !== false
     };
-    migrateLegacyIconOffColor(config.styles?.icon, DEFAULT_CONFIG.styles.icon.off_color);
+    const rawStyles = isObject(config.styles) ? config.styles : {};
+    migrateLegacyIconOffColor(rawStyles.icon, DEFAULT_CONFIG.styles.icon.off_color);
     const applyTap = window.NodaliaUtils?.applyCardTapActionField?.bind(window.NodaliaUtils);
     if (typeof applyTap === "function") {
       applyTap(config, {
@@ -432,7 +474,7 @@
         urlKey: "tap_url",
         navigationKey: "navigation_path",
         newTabKey: "tap_new_tab"
-      }, rawConfig?.tap_action ?? config.tap_action, "toggle");
+      }, raw.tap_action ?? config.tap_action, "toggle");
       applyTap(config, {
         actionKey: "icon_tap_action",
         serviceKey: "icon_tap_service",
@@ -441,7 +483,7 @@
         urlKey: "icon_tap_url",
         navigationKey: "icon_navigation_path",
         newTabKey: "icon_tap_new_tab"
-      }, rawConfig?.icon_tap_action ?? config.icon_tap_action, "toggle");
+      }, raw.icon_tap_action ?? config.icon_tap_action, "toggle");
       applyTap(config, {
         actionKey: "hold_action",
         serviceKey: "hold_service",
@@ -450,7 +492,7 @@
         urlKey: "hold_url",
         navigationKey: "hold_navigation_path",
         newTabKey: "hold_new_tab"
-      }, rawConfig?.hold_action ?? config.hold_action, "more-info");
+      }, raw.hold_action ?? config.hold_action, "more-info");
       applyTap(config, {
         actionKey: "icon_hold_action",
         serviceKey: "icon_hold_service",
@@ -459,7 +501,7 @@
         urlKey: "icon_hold_url",
         navigationKey: "icon_hold_navigation_path",
         newTabKey: "icon_hold_new_tab"
-      }, rawConfig?.icon_hold_action ?? config.icon_hold_action, "");
+      }, raw.icon_hold_action ?? config.icon_hold_action, "");
     }
     const serializeActionObject = (value) => isObject(value) ? JSON.stringify(value) : String(value ?? "").trim();
     const TAP_ACTIONS = /* @__PURE__ */ new Set(["auto", "toggle", "more-info", "service", "navigate", "url", "none"]);
@@ -509,9 +551,18 @@
     if (config.hold_action === "navigate" && !config.hold_navigation_path && config.hold_url) {
       config.hold_navigation_path = config.hold_url;
     }
-    config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? { ...DEFAULT_CONFIG.security, ...isObject(config.security) ? config.security : {} };
-    config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles) ?? deepClone(DEFAULT_CONFIG.styles);
-    return config;
+    const security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? { ...DEFAULT_CONFIG.security, ...isObject(config.security) ? config.security : {} };
+    return {
+      ...config,
+      state_position: normalizedStatePosition === "below" ? "below" : "right",
+      quick_brightness: quickBrightness,
+      color_presets: colorPresets,
+      animations,
+      entity_picture: String(config.entity_picture),
+      show_entity_picture: config.show_entity_picture === true,
+      security,
+      styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles)
+    };
   }
 
   // src/cards/light/light-card.ts
