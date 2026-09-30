@@ -17,6 +17,36 @@
     failure: [12, 40, 12, 40, 18]
   };
 
+  // src/shared/control-config.ts
+  function normalizeControlStyles(candidate, defaults) {
+    const utils2 = window.NodaliaUtils;
+    const source = utils2.isObject(candidate) ? candidate : {};
+    const result = {};
+    for (const [key, fallback] of Object.entries(defaults)) {
+      if (utils2.isUnsafeConfigPathKey(key)) continue;
+      result[key] = typeof fallback === "string" ? utils2.sanitizeCssValue(source[key], fallback) : normalizeControlStyles(source[key], fallback);
+    }
+    return result;
+  }
+  var actionFields = (prefix, fallback, navigationKey = `${prefix}_navigation_path`) => ({
+    actionKey: `${prefix}_action`,
+    serviceKey: `${prefix}_service`,
+    serviceDataKey: `${prefix}_service_data`,
+    serviceTargetKey: `${prefix}_service_target`,
+    urlKey: `${prefix}_url`,
+    navigationKey,
+    newTabKey: `${prefix}_new_tab`,
+    fallback
+  });
+  var FIELDS = [
+    actionFields("tap", "toggle", "navigation_path"),
+    actionFields("icon_tap", "", "icon_navigation_path"),
+    actionFields("hold", "more-info", "hold_navigation_path"),
+    actionFields("icon_hold", ""),
+    actionFields("double_tap", "none"),
+    actionFields("icon_double_tap", "")
+  ];
+
   // src/cards/weather/weather-runtime.ts
   var utils = window.NodaliaUtils;
   var isObject = utils.isObject.bind(utils);
@@ -97,18 +127,20 @@
     entity: "weather.casa",
     name: "Weather"
   };
-  function normalizeConfig(rawConfig) {
-    const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-    const WEATHER_ACTIONS = /* @__PURE__ */ new Set(["more-info", "none"]);
+  function normalizeConfig(rawConfig = {}) {
+    const defaults = DEFAULT_CONFIG;
+    const config = mergeConfig(defaults, isObject(rawConfig) ? rawConfig : {});
     const norm = (value, fallback) => {
       const key = String(value ?? fallback).trim().toLowerCase();
-      return WEATHER_ACTIONS.has(key) ? key : fallback;
+      return key === "more-info" || key === "none" ? key : fallback;
     };
-    config.tap_action = norm(config.tap_action, "more-info");
-    config.hold_action = norm(config.hold_action, "more-info");
-    config.double_tap_action = norm(config.double_tap_action, "none");
-    config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles) ?? deepClone(DEFAULT_CONFIG.styles);
-    return config;
+    return {
+      ...config,
+      tap_action: norm(config.tap_action, "more-info"),
+      hold_action: norm(config.hold_action, "more-info"),
+      double_tap_action: norm(config.double_tap_action, "none"),
+      styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles)
+    };
   }
 
   // src/shared/editor-color.ts

@@ -14,7 +14,6 @@
   "src/cards/camera/camera-editor.ts",
   "src/cards/camera/camera-helpers.ts",
   "src/cards/circular-gauge/circular-gauge-card.ts",
-  "src/cards/circular-gauge/circular-gauge-config.ts",
   "src/cards/circular-gauge/circular-gauge-editor.ts",
   "src/cards/circular-gauge/circular-gauge-helpers.ts",
   "src/cards/climate/climate-card.ts",
@@ -50,7 +49,6 @@
   "src/cards/navigation/navigation-editor.ts",
   "src/cards/navigation/navigation-helpers.ts",
   "src/cards/news/news-card.ts",
-  "src/cards/news/news-config.ts",
   "src/cards/news/news-editor.ts",
   "src/cards/news/news-helpers.ts",
   "src/cards/notifications/notifications-card.ts",
@@ -70,7 +68,6 @@
   "src/cards/vacuum/vacuum-card.ts",
   "src/cards/vacuum/vacuum-editor.ts",
   "src/cards/weather/weather-card.ts",
-  "src/cards/weather/weather-config.ts",
   "src/cards/weather/weather-editor.ts",
   "src/cards/weather/weather-helpers.ts"
 ]

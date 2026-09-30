@@ -1,6 +1,6 @@
-// @ts-nocheck -- merged Lovelace YAML is projected into the runtime circular-gauge config.
+import { normalizeControlStyles } from "../../shared/control-config";
 import { DEFAULT_GAUGE_MAX_TINT_COLOR, DEFAULT_GAUGE_MIN_TINT_COLOR } from "./circular-gauge-constants";
-import { mergeConfig } from "./circular-gauge-runtime";
+import { isObject, mergeConfig } from "./circular-gauge-runtime";
 
 export const DEFAULT_CONFIG = {
   entity: "",
@@ -75,6 +75,8 @@ export const STUB_CONFIG = {
   max: 2500,
 };
 
-export function normalizeConfig(rawConfig) {
-  return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+export function normalizeConfig(rawConfig: unknown = {}) {
+  const defaults: Record<string, unknown> = DEFAULT_CONFIG;
+  const config = mergeConfig(defaults, isObject(rawConfig) ? rawConfig : {});
+  return { ...config, styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles) };
 }

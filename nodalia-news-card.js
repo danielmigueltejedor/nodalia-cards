@@ -18,6 +18,36 @@
   var DENSITY_MODES = /* @__PURE__ */ new Set(["compact", "normal", "relaxed"]);
   var APPEARANCE_PRESETS = /* @__PURE__ */ new Set(["default", "glass"]);
 
+  // src/shared/control-config.ts
+  function normalizeControlStyles(candidate, defaults) {
+    const utils2 = window.NodaliaUtils;
+    const source = utils2.isObject(candidate) ? candidate : {};
+    const result = {};
+    for (const [key, fallback] of Object.entries(defaults)) {
+      if (utils2.isUnsafeConfigPathKey(key)) continue;
+      result[key] = typeof fallback === "string" ? utils2.sanitizeCssValue(source[key], fallback) : normalizeControlStyles(source[key], fallback);
+    }
+    return result;
+  }
+  var actionFields = (prefix, fallback, navigationKey = `${prefix}_navigation_path`) => ({
+    actionKey: `${prefix}_action`,
+    serviceKey: `${prefix}_service`,
+    serviceDataKey: `${prefix}_service_data`,
+    serviceTargetKey: `${prefix}_service_target`,
+    urlKey: `${prefix}_url`,
+    navigationKey,
+    newTabKey: `${prefix}_new_tab`,
+    fallback
+  });
+  var FIELDS = [
+    actionFields("tap", "toggle", "navigation_path"),
+    actionFields("icon_tap", "", "icon_navigation_path"),
+    actionFields("hold", "more-info", "hold_navigation_path"),
+    actionFields("icon_hold", ""),
+    actionFields("double_tap", "none"),
+    actionFields("icon_double_tap", "")
+  ];
+
   // src/cards/news/news-runtime.ts
   var utils = window.NodaliaUtils;
   var isObject = utils.isObject.bind(utils);
@@ -74,10 +104,11 @@
     layout: { mode: "magazine" },
     sources: []
   };
-  function normalizeConfig(rawConfig) {
-    const merged = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  function normalizeConfig(rawConfig = {}) {
+    const defaults = DEFAULT_CONFIG;
+    const merged = mergeConfig(defaults, isObject(rawConfig) ? rawConfig : {});
     const layout = isObject(merged.layout) ? merged.layout : {};
-    merged.layout = {
+    const normalizedLayout = {
       ...DEFAULT_CONFIG.layout,
       ...layout,
       mode: LAYOUT_MODES.has(String(layout.mode || "").trim()) ? String(layout.mode).trim() : DEFAULT_CONFIG.layout.mode,
@@ -89,32 +120,41 @@
       show_category: layout.show_category !== false
     };
     const filters = isObject(merged.filters) ? merged.filters : {};
-    merged.filters = {
+    const normalizedFilters = {
       hide_older_than: String(filters.hide_older_than ?? "").trim(),
       max_per_source: Math.max(0, Number(filters.max_per_source) || 0),
       include_keywords: Array.isArray(filters.include_keywords) ? filters.include_keywords.map(String) : [],
       exclude_keywords: Array.isArray(filters.exclude_keywords) ? filters.exclude_keywords.map(String) : []
     };
     const appearance = isObject(merged.appearance) ? merged.appearance : {};
-    merged.appearance = {
+    const normalizedAppearance = {
       preset: APPEARANCE_PRESETS.has(String(appearance.preset || "").trim()) ? String(appearance.preset).trim() : DEFAULT_CONFIG.appearance.preset
     };
-    merged.max_items = Math.max(1, Math.min(50, Number(merged.max_items) || DEFAULT_CONFIG.max_items));
-    merged.remember_items = merged.remember_items !== false;
-    merged.storage_key = String(merged.storage_key ?? "").trim();
-    merged.history_helper = String(merged.history_helper ?? merged.history_entity ?? "").trim();
-    merged.mirror_history_local = merged.mirror_history_local !== false;
-    merged.title = String(merged.title ?? "").trim();
-    merged.entity = String(merged.entity ?? "").trim();
-    merged.language = String(merged.language ?? "auto").trim() || "auto";
-    merged.sources = Array.isArray(merged.sources) ? merged.sources.map((entry) => ({
-      entity: String(entry?.entity ?? entry?.entity_id ?? "").trim(),
-      name: String(entry?.name ?? "").trim(),
-      icon: String(entry?.icon ?? "").trim(),
-      category: String(entry?.category ?? "").trim()
-    })).filter((entry) => entry.entity) : [];
-    merged.styles = window.NodaliaUtils?.sanitizeStyleTree?.(merged.styles, DEFAULT_CONFIG.styles) ?? deepClone(DEFAULT_CONFIG.styles);
-    return merged;
+    const sources = Array.isArray(merged.sources) ? merged.sources : [];
+    return {
+      ...merged,
+      layout: normalizedLayout,
+      filters: normalizedFilters,
+      appearance: normalizedAppearance,
+      max_items: Math.max(1, Math.min(50, Number(merged.max_items) || DEFAULT_CONFIG.max_items)),
+      remember_items: merged.remember_items !== false,
+      storage_key: String(merged.storage_key ?? "").trim(),
+      history_helper: String(merged.history_helper ?? merged.history_entity ?? "").trim(),
+      mirror_history_local: merged.mirror_history_local !== false,
+      title: String(merged.title ?? "").trim(),
+      entity: String(merged.entity ?? "").trim(),
+      language: String(merged.language ?? "auto").trim() || "auto",
+      sources: sources.map((entry) => {
+        const row = isObject(entry) ? entry : {};
+        return {
+          entity: String(row.entity ?? row.entity_id ?? "").trim(),
+          name: String(row.name ?? "").trim(),
+          icon: String(row.icon ?? "").trim(),
+          category: String(row.category ?? "").trim()
+        };
+      }).filter((entry) => entry.entity),
+      styles: normalizeControlStyles(merged.styles, DEFAULT_CONFIG.styles)
+    };
   }
 
   // src/cards/news/news-helpers.ts

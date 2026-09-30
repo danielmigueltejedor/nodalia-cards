@@ -35,6 +35,36 @@
     { offset: 1, channels: [255, 125, 87] }
   ];
 
+  // src/shared/control-config.ts
+  function normalizeControlStyles(candidate, defaults) {
+    const utils2 = window.NodaliaUtils;
+    const source = utils2.isObject(candidate) ? candidate : {};
+    const result = {};
+    for (const [key, fallback] of Object.entries(defaults)) {
+      if (utils2.isUnsafeConfigPathKey(key)) continue;
+      result[key] = typeof fallback === "string" ? utils2.sanitizeCssValue(source[key], fallback) : normalizeControlStyles(source[key], fallback);
+    }
+    return result;
+  }
+  var actionFields = (prefix, fallback, navigationKey = `${prefix}_navigation_path`) => ({
+    actionKey: `${prefix}_action`,
+    serviceKey: `${prefix}_service`,
+    serviceDataKey: `${prefix}_service_data`,
+    serviceTargetKey: `${prefix}_service_target`,
+    urlKey: `${prefix}_url`,
+    navigationKey,
+    newTabKey: `${prefix}_new_tab`,
+    fallback
+  });
+  var FIELDS = [
+    actionFields("tap", "toggle", "navigation_path"),
+    actionFields("icon_tap", "", "icon_navigation_path"),
+    actionFields("hold", "more-info", "hold_navigation_path"),
+    actionFields("icon_hold", ""),
+    actionFields("double_tap", "none"),
+    actionFields("icon_double_tap", "")
+  ];
+
   // src/cards/circular-gauge/circular-gauge-runtime.ts
   var utils = window.NodaliaUtils;
   var isObject = utils.isObject.bind(utils);
@@ -121,8 +151,10 @@
     min: 0,
     max: 2500
   };
-  function normalizeConfig(rawConfig) {
-    return mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  function normalizeConfig(rawConfig = {}) {
+    const defaults = DEFAULT_CONFIG;
+    const config = mergeConfig(defaults, isObject(rawConfig) ? rawConfig : {});
+    return { ...config, styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles) };
   }
 
   // src/shared/editor-color.ts

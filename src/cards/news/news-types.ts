@@ -3,7 +3,7 @@ export interface NewsPublicApi {
   EDITOR_TAG: string;
   CARD_VERSION: string;
   DEFAULT_CONFIG: Record<string, unknown>;
-  normalizeConfig: (rawConfig?: unknown) => Record<string, unknown>;
+  normalizeConfig: typeof import("./news-config").normalizeConfig;
   normalizeNewsItem: (...args: unknown[]) => unknown;
   resolveSourceEntries: (...args: unknown[]) => unknown;
   collectNormalizedItems: (...args: unknown[]) => unknown;
