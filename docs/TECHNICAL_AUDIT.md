@@ -90,12 +90,12 @@ assets and include release-gate tests. Record remaining unchecked modules honest
   image data exists; fetching an unseen image still depends on the network.
 - HA fixture construction is shared by browser and Node tests. Developer guides
   cover adding cards, testing and release preparation.
-- Latest local validation: strict types, lint, translations, build and 610 unit tests
-  pass. Full Chromium/WebKit/iPhone run: 233 passed, one existing platform skip, including Scenes, Lock editor styles and
+- Latest local validation: strict types, lint, translations, build and 616 unit tests
+  pass. Full Chromium/WebKit/iPhone run: 236 passed, one existing platform skip, including Scenes, Lock editor styles and
   Summary native Lock, editor color and Vacuum status regressions. Linux CI
   remains required for Firefox and the final committed artifacts.
 
-The full TS migration remains open: **80 unchecked modules and no runtime import cycles** are explicitly tracked. No new suppressions or `any` shortcuts were
+The full TS migration remains open: **78 unchecked modules and no runtime import cycles** are explicitly tracked. No new suppressions or `any` shortcuts were
 introduced. This stage is foundational work, not a declaration that the entire
 migration is finished.
 
@@ -198,3 +198,24 @@ retain array creation and reject prototype/non-index array paths; malformed hub
 lists no longer throw. Shared stub helpers preserve six cards' domain selection.
 Standalone utils embedding now consumes all 25 registry artifacts, with an
 idempotent embed/strip round trip including Lock. Remaining unchecked debt: 80.
+
+## Light normalization and color stage — findings before implementation
+
+Light repeats the checked stub/slider helpers but still suppresses its config
+and colors. Preserve quick-brightness bounds, four preset slots, legacy inactive
+colors and keep-collapsed aliases. Read unknown animation/style branches through
+record guards before checking the normalizer. RGB conversion currently lets NaN
+channels produce an invalid hue/saturation pair; validate all three channels.
+Keep Kelvin/mired direction and valid hexadecimal/temperature behavior.
+
+Light unit stage: 616 tests pass. Eighteen complete normalized configurations
+were compared with the merged baseline, including native action objects, legacy
+aliases, brightness/presets, styles and extension fields; every valid result is
+identical. Nonfinite RGB channels now return null instead of an invalid HS pair.
+Real Color-mode selection and preset service calls pass Chromium/WebKit/iPhone.
+Remaining tracked unchecked TS modules: 78; handwritten compatibility runtime
+modules also remain part of the open migration. The alpha publication hold stays.
+
+Light full browser stage: 236 passed, one existing platform skip across local
+Chromium/WebKit/iPhone. Preset selection uses the real Color-mode UI and sends
+finite hue/saturation without changing the four-slot normalization contract.

@@ -1,44 +1,23 @@
-// @ts-nocheck -- color/slider helpers stay loosely typed until remaining unknowns are narrowed.
 export { resolveEditorColorValue, formatEditorHexChannel, formatEditorColorFromHex, getEditorColorModel } from "../../shared/editor-color";
 import { clamp } from "./light-runtime";
+import type { HassEntity } from "../../core/types/home-assistant";
+export { getStubEntityId, applyStubEntity, parseSizeToPixels } from "../../shared/editor-entity-helpers";
+export { getRangeValueFromClientX, getSliderDragGeometry, getRangeValueFromGeometry } from "../../shared/device-control-geometry";
 
-export function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
-  return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
-}
-
-export function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
-  const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
-  if (!entityId) {
-    return config;
-  }
-
-  config.entity = entityId;
-  config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
-  return config;
-}
-
-
-
-
-
-
-
-
-export function parseSizeToPixels(value, fallback = 0) {
-  const numeric = Number.parseFloat(String(value ?? ""));
-  return Number.isFinite(numeric) ? numeric : fallback;
-}
-
-export function isUnavailableState(state) {
+export function isUnavailableState(state: Pick<HassEntity, "state"> | null | undefined) {
   return String(state?.state || "").toLowerCase() === "unavailable";
 }
 
-export function rgbToHs(rgb) {
+export function rgbToHs(rgb: unknown): [number, number] | null {
   if (!Array.isArray(rgb) || rgb.length !== 3) {
     return null;
   }
 
-  const [rawRed, rawGreen, rawBlue] = rgb.map(value => clamp(Number(value) / 255, 0, 1));
+  const channels = [Number(rgb[0]), Number(rgb[1]), Number(rgb[2])];
+  if (channels.some(value => !Number.isFinite(value))) return null;
+  const rawRed = clamp(Number(rgb[0]) / 255, 0, 1);
+  const rawGreen = clamp(Number(rgb[1]) / 255, 0, 1);
+  const rawBlue = clamp(Number(rgb[2]) / 255, 0, 1);
   const max = Math.max(rawRed, rawGreen, rawBlue);
   const min = Math.min(rawRed, rawGreen, rawBlue);
   const delta = max - min;
@@ -62,7 +41,7 @@ export function rgbToHs(rgb) {
   return [Math.round(hue), Math.round(saturation)];
 }
 
-export function hexToRgb(hex) {
+export function hexToRgb(hex: unknown): [number, number, number] | null {
   const normalized = normalizeHexColorForLightPreset(hex);
   if (!normalized) {
     return null;
@@ -71,7 +50,7 @@ export function hexToRgb(hex) {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
-export function normalizeHexColorForLightPreset(raw) {
+export function normalizeHexColorForLightPreset(raw: unknown) {
   let s = String(raw ?? "").trim();
   if (!s) {
     return "";
@@ -86,24 +65,14 @@ export function normalizeHexColorForLightPreset(raw) {
   return /^#[0-9a-f]{6}$/i.test(s) ? s.toLowerCase() : "";
 }
 
-export function arrayFromCsv(value) {
+export function arrayFromCsv(value: unknown) {
   return String(value || "")
     .split(",")
     .map(item => item.trim())
     .filter(Boolean);
 }
 
-
-
-
-
-
-
-
-
-
-
-export function getEditorColorFallbackValue(field) {
+export function getEditorColorFallbackValue(field: unknown) {
   const normalizedField = String(field ?? "");
 
   if (normalizedField.endsWith("off_color")) {
@@ -136,55 +105,14 @@ export function getEditorColorFallbackValue(field) {
   return "var(--info-color, #71c0ff)";
 }
 
-export function getRangeValueFromClientX(slider, clientX) {
-  const rect = slider.getBoundingClientRect();
-  if (!rect.width) {
-    return Number(slider.value || 0);
-  }
-
-  const min = Number(slider.min || 0);
-  const max = Number(slider.max || 100);
-  const step = slider.step === "any" ? 0 : Number(slider.step || 1);
-  const ratio = clamp((clientX - rect.left) / rect.width, 0, 1);
-  let nextValue = min + ((max - min) * ratio);
-
-  if (Number.isFinite(step) && step > 0) {
-    nextValue = min + (Math.round((nextValue - min) / step) * step);
-  }
-
-  return clamp(nextValue, min, max);
+export function miredToKelvin(value: unknown) {
+  const numeric = Number(value);
+  return numeric > 0 ? Math.round(1000000 / numeric) : 0;
 }
 
-export function getSliderDragGeometry(slider) {
-  const rect = slider.getBoundingClientRect();
-  return {
-    left: rect.left,
-    width: rect.width,
-    min: Number(slider.min || 0),
-    max: Number(slider.max || 100),
-    step: slider.step === "any" ? 0 : Number(slider.step || 1),
-  };
-}
-
-export function getRangeValueFromGeometry(geometry, currentValue, clientX) {
-  if (!geometry || !Number.isFinite(geometry.width) || geometry.width <= 0) {
-    return Number(currentValue || 0);
-  }
-  const ratio = clamp((clientX - geometry.left) / geometry.width, 0, 1);
-  let nextValue = geometry.min + ((geometry.max - geometry.min) * ratio);
-  if (Number.isFinite(geometry.step) && geometry.step > 0) {
-    nextValue = geometry.min + (Math.round((nextValue - geometry.min) / geometry.step) * geometry.step);
-  }
-  return clamp(nextValue, geometry.min, geometry.max);
-}
-
-
-export function miredToKelvin(value) {
-  return value > 0 ? Math.round(1000000 / value) : 0;
-}
-
-export function kelvinToMired(value) {
-  return value > 0 ? Math.round(1000000 / value) : 0;
+export function kelvinToMired(value: unknown) {
+  const numeric = Number(value);
+  return numeric > 0 ? Math.round(1000000 / numeric) : 0;
 }
 
 /** Kelvin sliders increase left→right (warm→cool). Mired sliders increase left→right (cool→warm). */

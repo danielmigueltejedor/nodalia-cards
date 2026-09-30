@@ -14,7 +14,6 @@ export default tseslint.config(
       "src/cards/media-player/media-player-helpers.ts",
       "src/cards/light/light-card.ts",
       "src/cards/light/light-editor.ts",
-      "src/cards/light/light-helpers.ts",
       "src/cards/fan/fan-card.ts",
       "src/cards/fan/fan-editor.ts",
       "src/cards/humidifier/humidifier-card.ts",
@@ -94,7 +93,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ["src/cards/room-summary/room-summary-helpers.ts", "src/cards/alarm-panel/alarm-panel-config.ts", "src/cards/alarm-panel/alarm-panel-helpers.ts", "src/cards/person/person-config.ts", "src/cards/person/person-helpers.ts", "src/cards/fan/fan-helpers.ts", "src/cards/humidifier/humidifier-helpers.ts", "src/cards/cover/cover-helpers.ts", "src/cards/vacuum/vacuum-config.ts", "src/cards/vacuum/vacuum-helpers.ts", "src/cards/cover/cover-config.ts", "src/cards/fan/fan-config.ts", "src/cards/humidifier/humidifier-config.ts", "src/cards/notifications/notifications-config.ts", "src/cards/notifications/notifications-normalization.ts", "src/cards/scenes/scenes-config.ts", "src/cards/scenes/scenes-helpers.ts", "src/shared/**/*.ts", "src/cards/lock/**/*.ts", "src/cards/camera/camera-stream-*.ts", "src/cards/room-summary/room-summary-model*.ts", "src/cards/media-player/media-player-artwork.ts", "src/cards/media-player/media-player-control-theme.ts"],
+    files: ["src/cards/light/light-config.ts", "src/cards/light/light-helpers.ts", "src/cards/room-summary/room-summary-helpers.ts", "src/cards/alarm-panel/alarm-panel-config.ts", "src/cards/alarm-panel/alarm-panel-helpers.ts", "src/cards/person/person-config.ts", "src/cards/person/person-helpers.ts", "src/cards/fan/fan-helpers.ts", "src/cards/humidifier/humidifier-helpers.ts", "src/cards/cover/cover-helpers.ts", "src/cards/vacuum/vacuum-config.ts", "src/cards/vacuum/vacuum-helpers.ts", "src/cards/cover/cover-config.ts", "src/cards/fan/fan-config.ts", "src/cards/humidifier/humidifier-config.ts", "src/cards/notifications/notifications-config.ts", "src/cards/notifications/notifications-normalization.ts", "src/cards/scenes/scenes-config.ts", "src/cards/scenes/scenes-helpers.ts", "src/shared/**/*.ts", "src/cards/lock/**/*.ts", "src/cards/camera/camera-stream-*.ts", "src/cards/room-summary/room-summary-model*.ts", "src/cards/media-player/media-player-artwork.ts", "src/cards/media-player/media-player-control-theme.ts"],
     languageOptions: { parserOptions: { project: "./tsconfig.json" } },
     rules: {
       "@typescript-eslint/no-floating-promises": "error",
