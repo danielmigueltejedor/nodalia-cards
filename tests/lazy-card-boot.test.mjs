@@ -23,6 +23,7 @@ test("lazy custom elements keep unused card classes nested until first instance"
 
 test("lazy host upgrades on first instance without compiling sibling cards", () => {
   const registry = new Map();
+  const definitionLookups = [];
   class FakeHTMLElement {
     constructor() {
       this.isConnected = true;
@@ -53,7 +54,7 @@ test("lazy host upgrades on first instance without compiling sibling cards", () 
     CustomEvent: class {},
     customElements: {
       define(name, klass) { registry.set(name, klass); },
-      get(name) { return registry.get(name); },
+      get(name) { definitionLookups.push(name); return registry.get(name); },
     },
     HTMLElement: FakeHTMLElement,
     document: {
@@ -67,6 +68,22 @@ test("lazy host upgrades on first instance without compiling sibling cards", () 
   vm.createContext(sandbox);
   vm.runInContext(read("nodalia-utils.js"), sandbox);
   vm.runInContext(read("nodalia-climate-card.js"), sandbox);
+
+  assert.deepEqual([...registry.keys()].sort(), ["nodalia-climate-card", "nodalia-climate-card-editor"]);
+  assert.equal(definitionLookups.some(name => name.endsWith("-legacy")), false);
+  assert.deepEqual(Object.keys(sandbox.__NODALIA_CLIMATE__).sort(), [
+    "CARD_TAG", "CARD_VERSION", "DEFAULT_CONFIG", "EDITOR_TAG", "decodeSetpointScheduleStorageState",
+    "encodeSetpointScheduleStorageState", "isSetpointScheduleStorageStateWithinLimit", "normalizeConfig",
+    "parseScheduleClockMinutes",
+  ].sort());
+  const EditorHost = registry.get("nodalia-climate-card-editor");
+  assert.equal(EditorHost.name, "NodaliaLazyHost");
+  const editor = new EditorHost();
+  assert.equal(Object.getPrototypeOf(editor).constructor.name, "NodaliaClimateCardEditor");
+  assert.equal(typeof editor.setConfig, "function");
+  assert.equal(editor._showStyleSection, false);
+  assert.equal(typeof editor._renderColorField, "function");
+  assert.ok(editor.shadowRoot);
 
   const Host = registry.get("nodalia-climate-card");
   assert.equal(Host.name, "NodaliaLazyHost");

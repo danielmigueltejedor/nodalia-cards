@@ -45,7 +45,7 @@ test("notifications card pulls the Engine inbox after a successful background sy
   assert.match(notifications, /this\._engineInbox = inbox/);
 });
 
-test("climate editors switch the schedule section to Engine mode", () => {
+test("registered climate editor switches the schedule section to Engine mode", () => {
   assert.match(climate, /refreshClimateEditorEngineStatus/);
   assert.match(climate, /climateEditorEngineSchedulesActive/);
   assert.match(climate, /renderClimateEditorScheduleSectionHtml/);
@@ -58,8 +58,8 @@ test("climate editors switch the schedule section to Engine mode", () => {
   assert.match(engineBranch, /week_starts_on|setpoint_schedule_week_starts_on/);
   assert.doesNotMatch(engineBranch, /setpoint_schedule_helper/);
 
-  // Both editor classes must render the shared schedule section instead of inline webhook fields.
-  assert.equal(climate.split("renderClimateEditorScheduleSectionHtml(this, config)").length - 1, 2);
+  // The registered editor renders the shared schedule section.
+  assert.equal(climate.split("renderClimateEditorScheduleSectionHtml(this, config)").length - 1, 1);
   assert.equal(climate.split('this._renderTextField("ed.climate.schedule_webhook"').length - 1, 0);
 });
 
