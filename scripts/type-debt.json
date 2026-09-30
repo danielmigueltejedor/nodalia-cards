@@ -68,6 +68,5 @@
   "src/cards/vacuum/vacuum-card.ts",
   "src/cards/vacuum/vacuum-editor.ts",
   "src/cards/weather/weather-card.ts",
-  "src/cards/weather/weather-editor.ts",
-  "src/cards/weather/weather-helpers.ts"
+  "src/cards/weather/weather-editor.ts"
 ]

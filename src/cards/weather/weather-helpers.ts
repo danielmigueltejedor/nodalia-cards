@@ -1,75 +1,22 @@
-// @ts-nocheck -- forecast, unit and editor color helpers stay loosely typed until remaining unknowns are narrowed.
+import type { HassEntity } from "../../core/types/home-assistant";
+export { compactConfig } from "../../shared/config-values";
+export { getStubEntityId, applyStubEntity, parseSizeToPixels } from "../../shared/editor-entity-helpers";
 export { resolveEditorColorValue, formatEditorHexChannel, formatEditorColorFromHex, getEditorColorModel } from "../../shared/editor-color";
 import { clamp, isObject, normalizeTextKey } from "./weather-runtime";
 
-export function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
-  return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
+export function parseWeatherNumericValue(value: unknown): number | null {
+  if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
 }
 
-export function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
-  const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
-  if (!entityId) {
-    return config;
-  }
-
-  config.entity = entityId;
-  config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
-  return config;
+function dateFromUnknown(value: unknown): Date {
+  if (value instanceof Date) return new Date(value.getTime());
+  if (typeof value === "string" || typeof value === "number") return new Date(value);
+  return new Date(NaN);
 }
 
-
-export function compactConfig(value) {
-  if (Array.isArray(value)) {
-    return value.map(item => compactConfig(item)).filter(item => item !== undefined);
-  }
-
-  if (isObject(value)) {
-    const compacted = {};
-
-    Object.entries(value).forEach(([key, item]) => {
-      if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
-        return;
-      }
-      const cleaned = compactConfig(item);
-      const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
-
-      if (cleaned !== undefined && !isEmptyObject) {
-        compacted[key] = cleaned;
-      }
-    });
-
-    return compacted;
-  }
-
-  if (value === "" || value === null || value === undefined) {
-    return undefined;
-  }
-
-  return value;
-}
-
-
-
-
-
-
-export function parseSizeToPixels(value, fallback = 0) {
-  const numeric = Number.parseFloat(String(value ?? ""));
-  return Number.isFinite(numeric) ? numeric : fallback;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-export function getEditorColorFallbackValue(field) {
+export function getEditorColorFallbackValue(field: unknown) {
   const normalizedField = String(field ?? "");
 
   if (normalizedField.endsWith("icon.background")) {
@@ -89,13 +36,13 @@ export function getEditorColorFallbackValue(field) {
 
 
 
-export function isUnavailableState(state) {
+export function isUnavailableState(state: HassEntity | null | undefined) {
   return normalizeTextKey(state?.state) === "unavailable";
 }
 
-export function formatNumber(value) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
+export function formatNumber(value: unknown) {
+  const numeric = parseWeatherNumericValue(value);
+  if (numeric === null) {
     return null;
   }
 
@@ -106,34 +53,34 @@ export function formatNumber(value) {
   return numeric.toFixed(1);
 }
 
-export function formatCompactTemperature(value, unitLabel = "°") {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
+export function formatCompactTemperature(value: unknown, unitLabel = "°") {
+  const numeric = parseWeatherNumericValue(value);
+  if (numeric === null) {
     return "";
   }
 
   return `${Math.round(numeric)}${unitLabel}`;
 }
 
-export function normalizeForecastType(value) {
-  return ["hourly", "daily"].includes(value) ? value : "hourly";
+export function normalizeForecastType(value: unknown) {
+  return value === "daily" ? "daily" : "hourly";
 }
 
-export function normalizeForecastView(value) {
+export function normalizeForecastView(value: unknown) {
   return String(value || "cards").toLowerCase() === "chart" ? "chart" : "cards";
 }
 
-export function normalizeForecastChartColorMode(value) {
+export function normalizeForecastChartColorMode(value: unknown) {
   return String(value || "").toLowerCase() === "condition" ? "condition" : "temperature";
 }
 
-export function getTemperatureScaleColor(value) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
+export function getTemperatureScaleColor(value: unknown) {
+  const numeric = parseWeatherNumericValue(value);
+  if (numeric === null) {
     return "var(--info-color, #71c0ff)";
   }
 
-  const stops = [
+  const stops: { value: number; color: [number, number, number] }[] = [
     { value: -5, color: [22, 58, 143] },
     { value: 2, color: [43, 128, 211] },
     { value: 10, color: [74, 177, 126] },
@@ -144,6 +91,7 @@ export function getTemperatureScaleColor(value) {
 
   let lower = stops[0];
   let upper = stops[stops.length - 1];
+  if (!lower || !upper) return "var(--info-color, #71c0ff)";
   for (const stop of stops) {
     if (numeric >= stop.value) {
       lower = stop;
@@ -158,24 +106,26 @@ export function getTemperatureScaleColor(value) {
   }
 
   const progress = clamp((numeric - lower.value) / Math.max(upper.value - lower.value, 1), 0, 1);
-  const channels = lower.color.map((channel, index) => Math.round(channel + ((upper.color[index] - channel) * progress)));
+  const channels = lower.color.map((channel, index) => Math.round(channel + (((upper.color[index] ?? channel) - channel) * progress)));
   return `rgb(${channels.join(", ")})`;
 }
 
-export function getForecastChartPointColor(point, mode, fallbackCondition) {
+export function getForecastChartPointColor(value: unknown, mode: unknown, fallbackCondition: unknown) {
+  const point = isObject(value) ? value : {};
+  const item = isObject(point.item) ? point.item : {};
   if (mode === "condition") {
-    return getConditionAccent(point?.item?.condition || fallbackCondition);
+    return getConditionAccent(item.condition || fallbackCondition);
   }
 
   return getTemperatureScaleColor(point?.value);
 }
 
-export function getWeatherSupportedFeature(state, feature) {
+export function getWeatherSupportedFeature(state: HassEntity | null | undefined, feature: number) {
   return Boolean((Number(state?.attributes?.supported_features) || 0) & feature);
 }
 
-export function getSupportedForecastTypes(state) {
-  const types = [];
+export function getSupportedForecastTypes(state: HassEntity | null | undefined): ("hourly" | "daily")[] {
+  const types: ("hourly" | "daily")[] = [];
   if (getWeatherSupportedFeature(state, 2)) {
     types.push("hourly");
   }
@@ -185,8 +135,8 @@ export function getSupportedForecastTypes(state) {
   return types.length ? types : ["hourly", "daily"];
 }
 
-export function formatForecastDateTime(value, type, locale) {
-  const date = new Date(value);
+export function formatForecastDateTime(value: unknown, type: unknown, locale: string | undefined) {
+  const date = dateFromUnknown(value);
   if (Number.isNaN(date.getTime())) {
     return "";
   }
@@ -205,15 +155,16 @@ export function formatForecastDateTime(value, type, locale) {
   });
 }
 
-export function getForecastTemperatureValue(item, type) {
-  const temperature = Number(item?.temperature);
-  if (Number.isFinite(temperature)) {
+export function getForecastTemperatureValue(value: unknown, type: unknown) {
+  const item = isObject(value) ? value : {};
+  const temperature = parseWeatherNumericValue(item.temperature);
+  if (temperature !== null) {
     return temperature;
   }
 
   if (type === "daily") {
-    const low = Number(item?.templow);
-    if (Number.isFinite(low)) {
+    const low = parseWeatherNumericValue(item.templow);
+    if (low !== null) {
       return low;
     }
   }
@@ -221,12 +172,13 @@ export function getForecastTemperatureValue(item, type) {
   return null;
 }
 
-export function getForecastTemperatureSeriesValue(item, series) {
-  const value = Number(series === "low" ? item?.templow : item?.temperature);
-  return Number.isFinite(value) ? value : null;
+export function getForecastTemperatureSeriesValue(input: unknown, series: unknown) {
+  const item = isObject(input) ? input : {};
+  return parseWeatherNumericValue(series === "low" ? item.templow : item.temperature);
 }
 
-export function getForecastPrecipitationLabel(item, unit = "") {
+export function getForecastPrecipitationLabel(value: unknown, unit = "") {
+  const item = isObject(value) ? value : {};
   const probability = formatNumber(item?.precipitation_probability);
   if (probability) {
     return `${probability}%`;
@@ -240,7 +192,7 @@ export function getForecastPrecipitationLabel(item, unit = "") {
   return "";
 }
 
-export function getMeteoalarmAwarenessParts(state) {
+export function getMeteoalarmAwarenessParts(state: HassEntity | null | undefined) {
   const rawLevel = String(state?.attributes?.awareness_level || "").trim();
   const parts = rawLevel.split(";").map(part => part.trim()).filter(Boolean);
   return {
@@ -250,7 +202,7 @@ export function getMeteoalarmAwarenessParts(state) {
   };
 }
 
-export function getMeteoalarmAccentColor(state) {
+export function getMeteoalarmAccentColor(state: HassEntity | null | undefined) {
   if (!state) {
     return "var(--secondary-text-color)";
   }
@@ -278,8 +230,8 @@ export function getMeteoalarmAccentColor(state) {
   }
 }
 
-export function formatMeteoalarmDate(value, hass, configLang) {
-  const date = new Date(value);
+export function formatMeteoalarmDate(value: unknown, hass: unknown, configLang: string | null | undefined) {
+  const date = dateFromUnknown(value);
   if (Number.isNaN(date.getTime())) {
     return String(value || "").trim();
   }
@@ -294,7 +246,7 @@ export function formatMeteoalarmDate(value, hass, configLang) {
   });
 }
 
-export function translateMeteoalarmValue(value, hass, configLang) {
+export function translateMeteoalarmValue(value: unknown, hass: unknown, configLang: string | null | undefined) {
   if (window.NodaliaI18n?.translateMeteoalarmTerm) {
     return window.NodaliaI18n.translateMeteoalarmTerm(hass, configLang ?? "auto", value);
   }
@@ -345,7 +297,7 @@ export function translateMeteoalarmValue(value, hass, configLang) {
   }
 }
 
-export function translateCondition(value, hass = null, configLang = null) {
+export function translateCondition(value: unknown, hass: unknown = null, configLang: string | null = null) {
   const h = hass ?? (typeof window !== "undefined" ? window.NodaliaI18n?.resolveHass?.(null) : null);
   if (window.NodaliaI18n?.translateWeatherCondition) {
     return window.NodaliaI18n.translateWeatherCondition(h, configLang ?? "auto", value);
@@ -386,7 +338,7 @@ export function translateCondition(value, hass = null, configLang = null) {
   }
 }
 
-export function getConditionIcon(value) {
+export function getConditionIcon(value: unknown) {
   switch (normalizeTextKey(value)) {
     case "clear_night":
       return "mdi:weather-night";
@@ -422,7 +374,7 @@ export function getConditionIcon(value) {
   }
 }
 
-export function getConditionIconMotionClass(value) {
+export function getConditionIconMotionClass(value: unknown) {
   switch (normalizeTextKey(value)) {
     case "rainy":
     case "pouring":
@@ -448,7 +400,7 @@ export function getConditionIconMotionClass(value) {
   }
 }
 
-export function getConditionAccent(value) {
+export function getConditionAccent(value: unknown) {
   switch (normalizeTextKey(value)) {
     case "sunny":
       return "#ffd65b";
@@ -480,7 +432,7 @@ export function getConditionAccent(value) {
   }
 }
 
-export function getConditionReadableIconColor(value, accentColor = getConditionAccent(value)) {
+export function getConditionReadableIconColor(value: unknown, accentColor = getConditionAccent(value)) {
   const key = normalizeTextKey(value || "");
   const accentWeight = key === "sunny"
     ? 66
@@ -490,15 +442,15 @@ export function getConditionReadableIconColor(value, accentColor = getConditionA
   return `color-mix(in srgb, ${accentColor} ${accentWeight}%, var(--primary-text-color))`;
 }
 
-export function getForecastIconColor(accentColor, conditionValue = "") {
+export function getForecastIconColor(accentColor: string, conditionValue = "") {
   return getConditionReadableIconColor(conditionValue, accentColor);
 }
 
-export function getMetricReadableIconColor(accentColor) {
+export function getMetricReadableIconColor(accentColor: string) {
   return `color-mix(in srgb, ${accentColor} 72%, var(--primary-text-color))`;
 }
 
-export function normalizeUnitSystem(value) {
+export function normalizeUnitSystem(value: unknown) {
   const normalized = normalizeTextKey(value);
   if (["metric", "eu", "europe", "european"].includes(normalized)) {
     return "metric";
@@ -509,7 +461,7 @@ export function normalizeUnitSystem(value) {
   return "auto";
 }
 
-export function normalizeTemperatureUnitPreference(value) {
+export function normalizeTemperatureUnitPreference(value: unknown) {
   const normalized = normalizeTextKey(value);
   if (["c", "celsius", "centigrade"].includes(normalized)) {
     return "c";
@@ -520,7 +472,7 @@ export function normalizeTemperatureUnitPreference(value) {
   return "auto";
 }
 
-export function normalizeWindUnitPreference(value) {
+export function normalizeWindUnitPreference(value: unknown) {
   const normalized = normalizeTextKey(value);
   if (["km_h", "kmh", "kph", "kilometers_per_hour", "kilometres_per_hour"].includes(normalized)) {
     return "kmh";
@@ -531,7 +483,7 @@ export function normalizeWindUnitPreference(value) {
   return "auto";
 }
 
-export function normalizeTemperatureUnitFromState(value) {
+export function normalizeTemperatureUnitFromState(value: unknown) {
   const normalized = normalizeTextKey(value);
   if (normalized.includes("f")) {
     return "f";
@@ -539,7 +491,7 @@ export function normalizeTemperatureUnitFromState(value) {
   return "c";
 }
 
-export function normalizeWindUnitFromState(value) {
+export function normalizeWindUnitFromState(value: unknown) {
   const raw = String(value || "").trim().toLowerCase();
   if (!raw) {
     return "kmh";

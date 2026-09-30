@@ -203,30 +203,24 @@
     tint_auto: true
   };
 
-  // src/cards/insignia/insignia-helpers.ts
+  // src/shared/config-values.ts
+  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var unsafeKeys = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
   function compactConfig(value) {
-    if (Array.isArray(value)) {
-      return value.map((item) => compactConfig(item)).filter((item) => item !== void 0);
-    }
-    if (isObject(value)) {
-      const compacted = {};
-      Object.entries(value).forEach(([key, item]) => {
-        if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
-          return;
-        }
+    if (Array.isArray(value)) return value.map((item) => compactConfig(item)).filter((item) => item !== void 0);
+    if (isRecord(value)) {
+      const result = {};
+      for (const [key, item] of Object.entries(value)) {
+        if (unsafeKeys.has(key)) continue;
         const cleaned = compactConfig(item);
-        const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
-        if (cleaned !== void 0 && !isEmptyObject) {
-          compacted[key] = cleaned;
-        }
-      });
-      return compacted;
+        if (cleaned !== void 0 && !(isRecord(cleaned) && Object.keys(cleaned).length === 0)) result[key] = cleaned;
+      }
+      return result;
     }
-    if (value === "" || value === null || value === void 0) {
-      return void 0;
-    }
-    return value;
+    return value === "" || value === null || value === void 0 ? void 0 : value;
   }
+
+  // src/cards/insignia/insignia-helpers.ts
   function setByPath(target, path, value) {
     const parts = path.split(".");
     if (parts.some(isUnsafeConfigPathKey)) {
