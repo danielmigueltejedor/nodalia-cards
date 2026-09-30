@@ -1,5 +1,5 @@
-// @ts-nocheck -- merged Lovelace YAML is projected into the runtime alarm panel config.
-import { clamp, deepClone, mergeConfig, normalizeTextKey } from "./alarm-panel-runtime";
+import { clamp, isObject, mergeConfig, normalizeTextKey } from "./alarm-panel-runtime";
+import { normalizeControlStyles } from "../../shared/control-config";
 
 export const DEFAULT_CONFIG = {
   entity: "",
@@ -65,12 +65,14 @@ export const STUB_CONFIG = {
   name: "Alarm",
 };
 
-export function normalizeConfig(rawConfig) {
-  const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+export function normalizeConfig(rawConfig: unknown = {}) {
+  const raw = isObject(rawConfig) ? rawConfig : {};
+  const defaults: Record<string, unknown> = DEFAULT_CONFIG;
+  const config = mergeConfig(defaults, raw);
   config.entity_picture = String(config.entity_picture ?? "").trim();
   config.show_entity_picture = config.show_entity_picture === true;
-  const rawShowCodeInput = rawConfig && Object.prototype.hasOwnProperty.call(rawConfig, "show_code_input")
-    ? rawConfig.show_code_input
+  const rawShowCodeInput = Object.prototype.hasOwnProperty.call(raw, "show_code_input")
+    ? raw.show_code_input
     : config.show_code_input;
   if (rawShowCodeInput === true || normalizeTextKey(rawShowCodeInput) === "true" || normalizeTextKey(rawShowCodeInput) === "always") {
     config.show_code_input = true;
@@ -83,7 +85,12 @@ export function normalizeConfig(rawConfig) {
   config.wrong_code_feedback_ms = Number.isFinite(wcfb)
     ? clamp(Math.round(wcfb), 2000, 30000)
     : DEFAULT_CONFIG.wrong_code_feedback_ms;
-  config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles)
-    ?? deepClone(DEFAULT_CONFIG.styles);
-  return config;
+  return {
+    ...config,
+    entity_picture: String(config.entity_picture),
+    show_entity_picture: config.show_entity_picture === true,
+    show_code_input: config.show_code_input === "auto" ? "auto" : config.show_code_input === true,
+    wrong_code_feedback_ms: Number(config.wrong_code_feedback_ms),
+    styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles),
+  };
 }

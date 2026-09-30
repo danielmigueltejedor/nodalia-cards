@@ -51,6 +51,36 @@
   var fireEvent = utils.fireEvent.bind(utils);
   var normalizeTextKey = utils.normalizeTextKey.bind(utils);
 
+  // src/shared/control-config.ts
+  function normalizeControlStyles(candidate, defaults) {
+    const utils2 = window.NodaliaUtils;
+    const source = utils2.isObject(candidate) ? candidate : {};
+    const result = {};
+    for (const [key, fallback] of Object.entries(defaults)) {
+      if (utils2.isUnsafeConfigPathKey(key)) continue;
+      result[key] = typeof fallback === "string" ? utils2.sanitizeCssValue(source[key], fallback) : normalizeControlStyles(source[key], fallback);
+    }
+    return result;
+  }
+  var actionFields = (prefix, fallback, navigationKey = `${prefix}_navigation_path`) => ({
+    actionKey: `${prefix}_action`,
+    serviceKey: `${prefix}_service`,
+    serviceDataKey: `${prefix}_service_data`,
+    serviceTargetKey: `${prefix}_service_target`,
+    urlKey: `${prefix}_url`,
+    navigationKey,
+    newTabKey: `${prefix}_new_tab`,
+    fallback
+  });
+  var FIELDS = [
+    actionFields("tap", "toggle", "navigation_path"),
+    actionFields("icon_tap", "", "icon_navigation_path"),
+    actionFields("hold", "more-info", "hold_navigation_path"),
+    actionFields("icon_hold", ""),
+    actionFields("double_tap", "none"),
+    actionFields("icon_double_tap", "")
+  ];
+
   // src/cards/alarm-panel/alarm-panel-config.ts
   var DEFAULT_CONFIG = {
     entity: "",
@@ -114,11 +144,13 @@
     entity: "alarm_control_panel.casa",
     name: "Alarm"
   };
-  function normalizeConfig(rawConfig) {
-    const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
+  function normalizeConfig(rawConfig = {}) {
+    const raw = isObject(rawConfig) ? rawConfig : {};
+    const defaults = DEFAULT_CONFIG;
+    const config = mergeConfig(defaults, raw);
     config.entity_picture = String(config.entity_picture ?? "").trim();
     config.show_entity_picture = config.show_entity_picture === true;
-    const rawShowCodeInput = rawConfig && Object.prototype.hasOwnProperty.call(rawConfig, "show_code_input") ? rawConfig.show_code_input : config.show_code_input;
+    const rawShowCodeInput = Object.prototype.hasOwnProperty.call(raw, "show_code_input") ? raw.show_code_input : config.show_code_input;
     if (rawShowCodeInput === true || normalizeTextKey(rawShowCodeInput) === "true" || normalizeTextKey(rawShowCodeInput) === "always") {
       config.show_code_input = true;
     } else if (rawShowCodeInput === false || normalizeTextKey(rawShowCodeInput) === "false" || normalizeTextKey(rawShowCodeInput) === "never") {
@@ -128,8 +160,30 @@
     }
     const wcfb = Number(config.wrong_code_feedback_ms);
     config.wrong_code_feedback_ms = Number.isFinite(wcfb) ? clamp(Math.round(wcfb), 2e3, 3e4) : DEFAULT_CONFIG.wrong_code_feedback_ms;
-    config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles) ?? deepClone(DEFAULT_CONFIG.styles);
+    return {
+      ...config,
+      entity_picture: String(config.entity_picture),
+      show_entity_picture: config.show_entity_picture === true,
+      show_code_input: config.show_code_input === "auto" ? "auto" : config.show_code_input === true,
+      wrong_code_feedback_ms: Number(config.wrong_code_feedback_ms),
+      styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles)
+    };
+  }
+
+  // src/shared/editor-entity-helpers.ts
+  function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
+    return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
+  }
+  function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
+    const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
+    if (!entityId) return config;
+    config.entity = entityId;
+    config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
     return config;
+  }
+  function parseSizeToPixels(value, fallback = 0) {
+    const numeric = Number.parseFloat(String(value ?? ""));
+    return Number.isFinite(numeric) ? numeric : fallback;
   }
 
   // src/shared/editor-color.ts
@@ -205,22 +259,6 @@
   }
 
   // src/cards/alarm-panel/alarm-panel-helpers.ts
-  function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
-    return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
-  }
-  function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
-    const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
-    if (!entityId) {
-      return config;
-    }
-    config.entity = entityId;
-    config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
-    return config;
-  }
-  function parseSizeToPixels(value, fallback = 0) {
-    const numeric = Number.parseFloat(String(value ?? ""));
-    return Number.isFinite(numeric) ? numeric : fallback;
-  }
   function getEditorColorFallbackValue(field) {
     const normalizedField = String(field ?? "");
     if (normalizedField.endsWith("off_color")) {

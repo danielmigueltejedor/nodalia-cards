@@ -33,6 +33,36 @@
   var fireEvent = utils.fireEvent.bind(utils);
   var normalizeTextKey = utils.normalizeTextKey.bind(utils);
 
+  // src/shared/control-config.ts
+  function normalizeControlStyles(candidate, defaults) {
+    const utils2 = window.NodaliaUtils;
+    const source = utils2.isObject(candidate) ? candidate : {};
+    const result = {};
+    for (const [key, fallback] of Object.entries(defaults)) {
+      if (utils2.isUnsafeConfigPathKey(key)) continue;
+      result[key] = typeof fallback === "string" ? utils2.sanitizeCssValue(source[key], fallback) : normalizeControlStyles(source[key], fallback);
+    }
+    return result;
+  }
+  var actionFields = (prefix, fallback, navigationKey = `${prefix}_navigation_path`) => ({
+    actionKey: `${prefix}_action`,
+    serviceKey: `${prefix}_service`,
+    serviceDataKey: `${prefix}_service_data`,
+    serviceTargetKey: `${prefix}_service_target`,
+    urlKey: `${prefix}_url`,
+    navigationKey,
+    newTabKey: `${prefix}_new_tab`,
+    fallback
+  });
+  var FIELDS = [
+    actionFields("tap", "toggle", "navigation_path"),
+    actionFields("icon_tap", "", "icon_navigation_path"),
+    actionFields("hold", "more-info", "hold_navigation_path"),
+    actionFields("icon_hold", ""),
+    actionFields("double_tap", "none"),
+    actionFields("icon_double_tap", "")
+  ];
+
   // src/cards/person/person-config.ts
   var DEFAULT_CONFIG = {
     entity: "",
@@ -109,9 +139,10 @@
     entity: "person.ana",
     name: "Ana"
   };
-  function normalizeConfig(rawConfig) {
+  function normalizeConfig(rawConfig = {}) {
     const raw = isObject(rawConfig) ? rawConfig : {};
-    const config = mergeConfig(DEFAULT_CONFIG, raw);
+    const defaults = DEFAULT_CONFIG;
+    const config = mergeConfig(defaults, raw);
     const actionDefinitions = [
       {
         prefix: "tap",
@@ -161,9 +192,24 @@
       const configuredEntity = isObject(rawValue) ? rawValue.entity : config[`${prefix}_action_entity`];
       config[`${prefix}_action_entity`] = String(configuredEntity ?? "").trim();
     });
-    config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? mergeConfig(DEFAULT_CONFIG.security, config.security || {});
-    config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles) ?? deepClone(DEFAULT_CONFIG.styles);
+    const security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? mergeConfig(DEFAULT_CONFIG.security, config.security);
+    return { ...config, security, styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles) };
+  }
+
+  // src/shared/editor-entity-helpers.ts
+  function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
+    return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
+  }
+  function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
+    const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
+    if (!entityId) return config;
+    config.entity = entityId;
+    config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
     return config;
+  }
+  function parseSizeToPixels(value, fallback = 0) {
+    const numeric = Number.parseFloat(String(value ?? ""));
+    return Number.isFinite(numeric) ? numeric : fallback;
   }
 
   // src/shared/editor-color.ts
@@ -239,22 +285,6 @@
   }
 
   // src/cards/person/person-helpers.ts
-  function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
-    return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
-  }
-  function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
-    const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
-    if (!entityId) {
-      return config;
-    }
-    config.entity = entityId;
-    config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
-    return config;
-  }
-  function parseSizeToPixels(value, fallback = 0) {
-    const numeric = Number.parseFloat(String(value ?? ""));
-    return Number.isFinite(numeric) ? numeric : fallback;
-  }
   function getEditorColorFallbackValue(field) {
     const normalizedField = String(field ?? "");
     if (normalizedField.endsWith("avatar.background")) {

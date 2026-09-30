@@ -6,6 +6,7 @@
  *   node scripts/sync-standalone-embed.mjs --strip  # remove embed blocks from card sources
  */
 import fs from "fs";
+import { CARD_REGISTRY } from "./card-registry.mjs";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -15,32 +16,7 @@ const root = path.join(__dirname, "..");
 const START = "// <nodalia-standalone-utils>";
 const END = "// </nodalia-standalone-utils>";
 
-const FILES = [
-  "nodalia-navigation-bar.js",
-  "nodalia-media-player.js",
-  "nodalia-light-card.js",
-  "nodalia-fan-card.js",
-  "nodalia-humidifier-card.js",
-  "nodalia-circular-gauge-card.js",
-  "nodalia-graph-card.js",
-  "nodalia-power-flow-card.js",
-  "nodalia-cover-card.js",
-  "nodalia-climate-card.js",
-  "nodalia-alarm-panel-card.js",
-  "nodalia-advance-vacuum-card.js",
-  "nodalia-entity-card.js",
-  "nodalia-fav-card.js",
-  "nodalia-insignia-card.js",
-  "nodalia-person-card.js",
-  "nodalia-scenes-card.js",
-  "nodalia-weather-card.js",
-  "nodalia-calendar-card.js",
-  "nodalia-notifications-card.js",
-  "nodalia-news-card.js",
-  "nodalia-room-summary-card.js",
-  "nodalia-camera-card.js",
-  "nodalia-vacuum-card.js",
-];
+const FILES = CARD_REGISTRY.map(card => card.artifact);
 
 function stripEmbed(content) {
   const i0 = content.indexOf(START);

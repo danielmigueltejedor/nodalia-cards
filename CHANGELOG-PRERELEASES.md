@@ -29,6 +29,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Maintenance
 
+- Check Alarm Panel/Person configuration and helpers plus Summary editor helpers; share typed stub selection and include Lock in registry-driven standalone embedding.
+
 - Check Fan, Humidifier and Cover helpers and share their typed pointer geometry; prevent invalid dial markers from malformed range/value data.
 
 - Check Vacuum configuration and helpers with TypeScript; remove obsolete source-extraction/editor mutation scripts and update build/contribution guidance.
