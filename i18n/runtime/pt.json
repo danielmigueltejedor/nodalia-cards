@@ -100,7 +100,8 @@
       "unavailable": "Indisponível",
       "unknown": "Desconhecido",
       "error": "Erro",
-      "fallback": "Desconhecido"
+      "fallback": "Desconhecido",
+      "charger_disconnected": "Carregador desligado"
     },
     "mapStatus": {
       "washing_mop": "A lavar a esfregona",
@@ -1032,7 +1033,8 @@
     "water_carriage_drop": "Carruagem de água caiu",
     "check_clean_carouse": "Verifique o carrossel de limpeza",
     "audio_error": "Erro de áudio",
-    "water_empty": "Depósito de água vazio"
+    "water_empty": "Depósito de água vazio",
+    "charger_disconnected": "Carregador desligado"
   },
   "powerFlowCard": {
     "nodes": {

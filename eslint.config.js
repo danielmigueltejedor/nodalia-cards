@@ -29,7 +29,6 @@ export default tseslint.config(
       "src/cards/alarm-panel/alarm-panel-helpers.ts",
       "src/cards/vacuum/vacuum-card.ts",
       "src/cards/vacuum/vacuum-editor.ts",
-      "src/cards/vacuum/vacuum-helpers.ts",
       "src/cards/entity/entity-card.ts",
       "src/cards/entity/entity-editor.ts",
       "src/cards/entity/entity-helpers.ts",
@@ -101,7 +100,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ["src/cards/cover/cover-config.ts", "src/cards/fan/fan-config.ts", "src/cards/humidifier/humidifier-config.ts", "src/cards/notifications/notifications-config.ts", "src/cards/notifications/notifications-normalization.ts", "src/cards/scenes/scenes-config.ts", "src/cards/scenes/scenes-helpers.ts", "src/shared/**/*.ts", "src/cards/lock/**/*.ts", "src/cards/camera/camera-stream-*.ts", "src/cards/room-summary/room-summary-model*.ts", "src/cards/media-player/media-player-artwork.ts", "src/cards/media-player/media-player-control-theme.ts"],
+    files: ["src/cards/vacuum/vacuum-config.ts", "src/cards/vacuum/vacuum-helpers.ts", "src/cards/cover/cover-config.ts", "src/cards/fan/fan-config.ts", "src/cards/humidifier/humidifier-config.ts", "src/cards/notifications/notifications-config.ts", "src/cards/notifications/notifications-normalization.ts", "src/cards/scenes/scenes-config.ts", "src/cards/scenes/scenes-helpers.ts", "src/shared/**/*.ts", "src/cards/lock/**/*.ts", "src/cards/camera/camera-stream-*.ts", "src/cards/room-summary/room-summary-model*.ts", "src/cards/media-player/media-player-artwork.ts", "src/cards/media-player/media-player-control-theme.ts"],
     languageOptions: { parserOptions: { project: "./tsconfig.json" } },
     rules: {
       "@typescript-eslint/no-floating-promises": "error",

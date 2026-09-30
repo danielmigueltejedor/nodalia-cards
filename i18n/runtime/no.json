@@ -100,7 +100,8 @@
       "unavailable": "Ikke tilgjengelig",
       "unknown": "Ukjent",
       "error": "Fout",
-      "fallback": "Ukjent"
+      "fallback": "Ukjent",
+      "charger_disconnected": "Lader frakoblet"
     },
     "mapStatus": {
       "washing_mop": "Dweil wordt gewassen",
@@ -1032,7 +1033,8 @@
     "water_carriage_drop": "Vannvogn falt",
     "check_clean_carouse": "Sjekk rengjøringskarusellen",
     "audio_error": "Lydfeil",
-    "water_empty": "Vanntank tom"
+    "water_empty": "Vanntank tom",
+    "charger_disconnected": "Lader frakoblet"
   },
   "powerFlowCard": {
     "nodes": {

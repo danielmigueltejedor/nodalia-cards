@@ -90,12 +90,12 @@ assets and include release-gate tests. Record remaining unchecked modules honest
   image data exists; fetching an unseen image still depends on the network.
 - HA fixture construction is shared by browser and Node tests. Developer guides
   cover adding cards, testing and release preparation.
-- Latest local validation: strict types, lint, translations, build and 589 unit tests
-  pass. Full Chromium/WebKit/iPhone run: 212 passed, one existing platform skip, including Scenes, Lock editor styles and
-  Summary native Lock and editor color regressions. Linux CI
+- Latest local validation: strict types, lint, translations, build and 592 unit tests
+  pass. Full Chromium/WebKit/iPhone run: 224 passed, one existing platform skip, including Scenes, Lock editor styles and
+  Summary native Lock, editor color and Vacuum status regressions. Linux CI
   remains required for Firefox and the final committed artifacts.
 
-The full TS migration remains open: **90 unchecked modules and no runtime import cycles** are explicitly tracked. No new suppressions or `any` shortcuts were
+The full TS migration remains open: **88 unchecked modules and no runtime import cycles** are explicitly tracked. No new suppressions or `any` shortcuts were
 introduced. This stage is foundational work, not a declaration that the entire
 migration is finished.
 
@@ -131,3 +131,29 @@ cleanup explicitly. A deliberate 750ms wall-time stall exceeds the original
 class, grid-track and final cleanup assertions remain. Ten runs per device/project
 passed locally (90 cases, Chromium/WebKit/iPhone), with retries disabled. All 589
 unit tests still pass. Production animation code and durations are unchanged.
+
+## Vacuum and repository cleanup stage — findings before implementation
+
+- `charger_disconnected` is missing from both reported-state and error dictionaries.
+  Vacuum's unrecognized reported states bypass the dictionary, so adding the locale
+  entry alone would not fix every integration. Keep genuine errors ahead of activity.
+- Status chips set ellipsis on an inline-flex container; its anonymous text item
+  cannot truncate. Constrain a dedicated text span while retaining the full title.
+- Nine untracked macOS “ 2” files are byte-identical copies of canonical files.
+  Remove only verified duplicates.
+- The 23 source extractors slice historical JS by fixed line numbers. All target
+  TS modules exist and the build now generates JS from them; these unused one-shot
+  scripts cannot regenerate the current sources. Retire them and obsolete editor/
+  lazy-wrapper mutation scripts after checking their callers. Retain translation
+  generators, shared data, runtime adapters and public distribution artifacts.
+
+Vacuum stage validated: 592 unit tests and 12 narrow-layout browser cases across
+Chromium, WebKit and iPhone pass. Both auxiliary status and error sensors display
+“Cargador desconectado”; ellipsis now constrains the grid item's intrinsic width
+as well as the inner text, and the battery remains visible. Vacuum config/helpers
+are checked without suppression; unknown extension fields remain unknown.
+23 fixed-line extractors and five completed mutation scripts were retired after
+checking tracked callers. Nine identical untracked “ 2” copies were removed.
+Historical audit snapshots remain explicitly historical; current architecture and
+contribution instructions now match the registry, generated assets and release gate.
+The next alpha is deferred until the full strict migration is complete.

@@ -100,7 +100,8 @@
       "unavailable": "Недоступно",
       "unknown": "Неизвестно",
       "error": "Ошибка",
-      "fallback": "Неизвестно"
+      "fallback": "Неизвестно",
+      "charger_disconnected": "Зарядное устройство отключено"
     },
     "mapStatus": {
       "washing_mop": "Промывка швабры",
@@ -1032,7 +1033,8 @@
     "water_carriage_drop": "Водная повозка упала",
     "check_clean_carouse": "Проверьте карусель очистки",
     "audio_error": "Ошибка звука",
-    "water_empty": "Бак для воды пуст"
+    "water_empty": "Бак для воды пуст",
+    "charger_disconnected": "Зарядное устройство отключено"
   },
   "powerFlowCard": {
     "nodes": {

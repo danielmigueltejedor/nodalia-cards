@@ -100,7 +100,8 @@
       "unavailable": "Nicht verfügbar",
       "unknown": "Unbekannt",
       "error": "Fehler",
-      "fallback": "Unbekannt"
+      "fallback": "Unbekannt",
+      "charger_disconnected": "Ladegerät getrennt"
     },
     "mapStatus": {
       "washing_mop": "Wischtuch wird gewaschen",
@@ -1032,7 +1033,8 @@
     "water_carriage_drop": "Wasserwagen heruntergefallen",
     "check_clean_carouse": "Reinigungskarussell prüfen",
     "audio_error": "Audiofehler",
-    "water_empty": "Wassertank leer"
+    "water_empty": "Wassertank leer",
+    "charger_disconnected": "Ladegerät getrennt"
   },
   "powerFlowCard": {
     "nodes": {

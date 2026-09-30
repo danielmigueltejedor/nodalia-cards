@@ -100,7 +100,8 @@
       "unavailable": "Indisponibil",
       "unknown": "Necunoscut",
       "error": "Eroare",
-      "fallback": "Necunoscut"
+      "fallback": "Necunoscut",
+      "charger_disconnected": "Încărcător deconectat"
     },
     "mapStatus": {
       "washing_mop": "Spălare mop",
@@ -1032,7 +1033,8 @@
     "water_carriage_drop": "Căruciorul cu apă a căzut",
     "check_clean_carouse": "Verificați caruselul de curățare",
     "audio_error": "Eroare audio",
-    "water_empty": "Rezervorul de apă este gol"
+    "water_empty": "Rezervorul de apă este gol",
+    "charger_disconnected": "Încărcător deconectat"
   },
   "powerFlowCard": {
     "nodes": {

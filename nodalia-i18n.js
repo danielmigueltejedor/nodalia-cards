@@ -323,7 +323,8 @@
             unavailable: "Unavailable",
             unknown: "Unknown",
             error: "Error",
-            fallback: "Unknown"
+            fallback: "Unknown",
+            charger_disconnected: "Charger disconnected"
           },
           mapStatus: {
             washing_mop: "Washing mop",
@@ -1255,7 +1256,8 @@
           water_carriage_drop: "Water carriage dropped",
           check_clean_carouse: "Check cleaning carousel",
           audio_error: "Audio error",
-          water_empty: "Water tank empty"
+          water_empty: "Water tank empty",
+          charger_disconnected: "Charger disconnected"
         },
         powerFlowCard: {
           nodes: {
@@ -1401,7 +1403,8 @@
             unavailable: "Nicht verfügbar",
             unknown: "Unbekannt",
             error: "Fehler",
-            fallback: "Unbekannt"
+            fallback: "Unbekannt",
+            charger_disconnected: "Ladegerät getrennt"
           },
           mapStatus: {
             washing_mop: "Wischtuch wird gewaschen",
@@ -2333,7 +2336,8 @@
           water_carriage_drop: "Wasserwagen heruntergefallen",
           check_clean_carouse: "Reinigungskarussell prüfen",
           audio_error: "Audiofehler",
-          water_empty: "Wassertank leer"
+          water_empty: "Wassertank leer",
+          charger_disconnected: "Ladegerät getrennt"
         },
         powerFlowCard: {
           nodes: {
@@ -2479,7 +2483,8 @@
             unavailable: "Μη διαθέσιμο",
             unknown: "Άγνωστο",
             error: "Σφάλμα",
-            fallback: "Άγνωστο"
+            fallback: "Άγνωστο",
+            charger_disconnected: "Ο φορτιστής αποσυνδέθηκε"
           },
           mapStatus: {
             washing_mop: "Πλύση πανιού",
@@ -3411,7 +3416,8 @@
           water_carriage_drop: "Το βαγόνι του νερού έπεσε",
           check_clean_carouse: "Ελέγξτε το καρουζέλ καθαρισμού",
           audio_error: "Σφάλμα ήχου",
-          water_empty: "Άδειο δοχείο νερού"
+          water_empty: "Άδειο δοχείο νερού",
+          charger_disconnected: "Ο φορτιστής αποσυνδέθηκε"
         },
         powerFlowCard: {
           nodes: {
@@ -3557,7 +3563,8 @@
             unavailable: "No disponible",
             unknown: "Desconocido",
             error: "Error",
-            fallback: "Desconocido"
+            fallback: "Desconocido",
+            charger_disconnected: "Cargador desconectado"
           },
           mapStatus: {
             washing_mop: "Lavando la mopa",
@@ -4489,7 +4496,8 @@
           water_carriage_drop: "Carro de agua caído",
           check_clean_carouse: "Revisa el carrusel de limpieza",
           audio_error: "Error de audio",
-          water_empty: "Depósito de agua vacío"
+          water_empty: "Depósito de agua vacío",
+          charger_disconnected: "Cargador desconectado"
         },
         powerFlowCard: {
           nodes: {
@@ -4635,7 +4643,8 @@
             unavailable: "Indisponible",
             unknown: "Inconnu",
             error: "Erreur",
-            fallback: "Inconnu"
+            fallback: "Inconnu",
+            charger_disconnected: "Chargeur déconnecté"
           },
           mapStatus: {
             washing_mop: "Lavage serpillière",
@@ -5567,7 +5576,8 @@
           water_carriage_drop: "Le transport d'eau est tombé",
           check_clean_carouse: "Vérifier le carrousel de nettoyage",
           audio_error: "Erreur audio",
-          water_empty: "Réservoir d’eau vide"
+          water_empty: "Réservoir d’eau vide",
+          charger_disconnected: "Chargeur déconnecté"
         },
         powerFlowCard: {
           nodes: {
@@ -5713,7 +5723,8 @@
             unavailable: "Non disponibile",
             unknown: "Sconosciuto",
             error: "Errore",
-            fallback: "Sconosciuto"
+            fallback: "Sconosciuto",
+            charger_disconnected: "Caricatore scollegato"
           },
           mapStatus: {
             washing_mop: "Lavaggio mopa",
@@ -6645,7 +6656,8 @@
           water_carriage_drop: "Il trasporto dell'acqua è caduto",
           check_clean_carouse: "Controllare il carosello di pulizia",
           audio_error: "Errore audio",
-          water_empty: "Serbatoio dell’acqua vuoto"
+          water_empty: "Serbatoio dell’acqua vuoto",
+          charger_disconnected: "Caricatore scollegato"
         },
         powerFlowCard: {
           nodes: {
@@ -6791,7 +6803,8 @@
             unavailable: "Niet beschikbaar",
             unknown: "Onbekend",
             error: "Fout",
-            fallback: "Onbekend"
+            fallback: "Onbekend",
+            charger_disconnected: "Oplader losgekoppeld"
           },
           mapStatus: {
             washing_mop: "Dweil wordt gewassen",
@@ -7723,7 +7736,8 @@
           water_carriage_drop: "Waterwagen gevallen",
           check_clean_carouse: "Controleer de schoonmaakcarrousel",
           audio_error: "Audiofout",
-          water_empty: "Watertank leeg"
+          water_empty: "Watertank leeg",
+          charger_disconnected: "Oplader losgekoppeld"
         },
         powerFlowCard: {
           nodes: {
@@ -7869,7 +7883,8 @@
             unavailable: "Ikke tilgjengelig",
             unknown: "Ukjent",
             error: "Fout",
-            fallback: "Ukjent"
+            fallback: "Ukjent",
+            charger_disconnected: "Lader frakoblet"
           },
           mapStatus: {
             washing_mop: "Dweil wordt gewassen",
@@ -8801,7 +8816,8 @@
           water_carriage_drop: "Vannvogn falt",
           check_clean_carouse: "Sjekk rengjøringskarusellen",
           audio_error: "Lydfeil",
-          water_empty: "Vanntank tom"
+          water_empty: "Vanntank tom",
+          charger_disconnected: "Lader frakoblet"
         },
         powerFlowCard: {
           nodes: {
@@ -8947,7 +8963,8 @@
             unavailable: "Indisponível",
             unknown: "Desconhecido",
             error: "Erro",
-            fallback: "Desconhecido"
+            fallback: "Desconhecido",
+            charger_disconnected: "Carregador desligado"
           },
           mapStatus: {
             washing_mop: "A lavar a esfregona",
@@ -9879,7 +9896,8 @@
           water_carriage_drop: "Carruagem de água caiu",
           check_clean_carouse: "Verifique o carrossel de limpeza",
           audio_error: "Erro de áudio",
-          water_empty: "Depósito de água vazio"
+          water_empty: "Depósito de água vazio",
+          charger_disconnected: "Carregador desligado"
         },
         powerFlowCard: {
           nodes: {
@@ -10025,7 +10043,8 @@
             unavailable: "Indisponibil",
             unknown: "Necunoscut",
             error: "Eroare",
-            fallback: "Necunoscut"
+            fallback: "Necunoscut",
+            charger_disconnected: "Încărcător deconectat"
           },
           mapStatus: {
             washing_mop: "Spălare mop",
@@ -10957,7 +10976,8 @@
           water_carriage_drop: "Căruciorul cu apă a căzut",
           check_clean_carouse: "Verificați caruselul de curățare",
           audio_error: "Eroare audio",
-          water_empty: "Rezervorul de apă este gol"
+          water_empty: "Rezervorul de apă este gol",
+          charger_disconnected: "Încărcător deconectat"
         },
         powerFlowCard: {
           nodes: {
@@ -11103,7 +11123,8 @@
             unavailable: "Недоступно",
             unknown: "Неизвестно",
             error: "Ошибка",
-            fallback: "Неизвестно"
+            fallback: "Неизвестно",
+            charger_disconnected: "Зарядное устройство отключено"
           },
           mapStatus: {
             washing_mop: "Промывка швабры",
@@ -12035,7 +12056,8 @@
           water_carriage_drop: "Водная повозка упала",
           check_clean_carouse: "Проверьте карусель очистки",
           audio_error: "Ошибка звука",
-          water_empty: "Бак для воды пуст"
+          water_empty: "Бак для воды пуст",
+          charger_disconnected: "Зарядное устройство отключено"
         },
         powerFlowCard: {
           nodes: {
@@ -12181,7 +12203,8 @@
             unavailable: "不可用",
             unknown: "未知",
             error: "错误",
-            fallback: "未知"
+            fallback: "未知",
+            charger_disconnected: "充电器已断开"
           },
           mapStatus: {
             washing_mop: "清洗拖布",
@@ -13113,7 +13136,8 @@
           water_carriage_drop: "水车掉落",
           check_clean_carouse: "检查清洁转盘",
           audio_error: "音频错误",
-          water_empty: "水箱为空"
+          water_empty: "水箱为空",
+          charger_disconnected: "充电器已断开"
         },
         powerFlowCard: {
           nodes: {
