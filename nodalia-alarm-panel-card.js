@@ -428,7 +428,7 @@
           rows: "auto",
           columns: "full",
           min_rows: 2,
-          min_columns: 3
+          min_columns: 4
         };
       }
       _shouldUseCompactLayout(width) {

@@ -80,5 +80,15 @@ export interface NodaliaUtilsApi {
     target?: Record<string, unknown> | null,
   ) => unknown;
   clampEditorDialogScroll?: (editorHost: object) => void;
+  renderEditorCardBorderRadiusHtml(options: EditorRadiusOptions): string;
+  renderEditorChipBorderRadiusHtml(options: EditorRadiusOptions): string;
   sanitizeCssValue(value: unknown, fallback?: unknown): string;
+}
+
+export interface EditorRadiusOptions {
+  escapeHtml: (value: unknown) => string;
+  field: string;
+  value: string;
+  tHeading: string;
+  labels: Record<"pill" | "soft" | "round" | "square", string>;
 }

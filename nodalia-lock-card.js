@@ -1,6 +1,60 @@
 /* Generated from src/cards/lock. Do not edit. */
 "use strict";
 (() => {
+  // src/cards/lock/lock-styles.ts
+  var DEFAULT_LOCK_STYLES = {
+    card: {
+      background: "var(--ha-card-background, var(--card-background-color, #1c1c20))",
+      border: "1px solid var(--divider-color, #ffffff18)",
+      border_radius: "var(--nodalia-card-border-radius, 28px)",
+      box_shadow: "var(--ha-card-box-shadow, 0 8px 24px #0002)",
+      padding: "var(--lock-card-padding, 16px)",
+      gap: "var(--lock-card-gap, 14px)"
+    },
+    icon: {
+      size: "var(--lock-icon-size, 38px)",
+      background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
+      on_color: "var(--success-color, #6acb9a)",
+      off_color: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))"
+    },
+    control: {
+      size: "var(--lock-handle-default, 42px)",
+      background: "color-mix(in srgb, var(--primary-text-color) 8%, var(--lock-surface))"
+    },
+    chip_border_radius: "999px",
+    title_size: "13px",
+    chip_font_size: "11px"
+  };
+  function normalizeLockStyles(value) {
+    const utils = window.NodaliaUtils;
+    const source = utils.isObject(value) ? value : {};
+    const read = (group, key, fallback) => utils.sanitizeCssValue(utils.isObject(group) ? group[key] : void 0, fallback);
+    const defaults = DEFAULT_LOCK_STYLES;
+    return {
+      card: {
+        background: read(source.card, "background", defaults.card.background),
+        border: read(source.card, "border", defaults.card.border),
+        border_radius: read(source.card, "border_radius", defaults.card.border_radius),
+        box_shadow: read(source.card, "box_shadow", defaults.card.box_shadow),
+        padding: read(source.card, "padding", defaults.card.padding),
+        gap: read(source.card, "gap", defaults.card.gap)
+      },
+      icon: {
+        size: read(source.icon, "size", defaults.icon.size),
+        background: read(source.icon, "background", defaults.icon.background),
+        on_color: read(source.icon, "on_color", defaults.icon.on_color),
+        off_color: read(source.icon, "off_color", defaults.icon.off_color)
+      },
+      control: {
+        size: read(source.control, "size", defaults.control.size),
+        background: read(source.control, "background", defaults.control.background)
+      },
+      chip_border_radius: read(source, "chip_border_radius", defaults.chip_border_radius),
+      title_size: read(source, "title_size", defaults.title_size),
+      chip_font_size: read(source, "chip_font_size", defaults.chip_font_size)
+    };
+  }
+
   // src/version.ts
   var CARD_VERSION = "2.3.0-alpha.49";
 
@@ -18,7 +72,8 @@
       layout: config.layout === "compact" ? "compact" : "standard",
       unlock_action: "slider",
       show_name: config.show_name !== false,
-      show_state: config.show_state !== false
+      show_state: config.show_state !== false,
+      styles: normalizeLockStyles(config.styles)
     };
   }
 
@@ -194,6 +249,7 @@
       render() {
         if (!this.shadowRoot || !this.config) return;
         const text = (key) => window.NodaliaUtils.escapeHtml(lockText(this.stateHass, key));
+        const styles = this.config.styles;
         const status = this.pending ? this.pending === "lock" ? "locking" : "unlocking" : this.state;
         const name = window.NodaliaUtils.escapeHtml(this.config.name || this.entity?.attributes.friendly_name || this.config.entity);
         const unlocked = this.state === "unlocked";
@@ -203,14 +259,14 @@
           :host { display:block; }
           * { box-sizing:border-box; }
           ha-card {
-            --lock-accent: var(--success-color, #6acb9a);
-            --lock-surface: var(--ha-card-background, var(--card-background-color, #1c1c20));
-            --lock-handle-size: 42px;
-            display:grid; gap:14px; padding:16px;
-            border-radius:var(--nodalia-card-border-radius, 28px);
+            --lock-accent: ${styles.icon.on_color};
+            --lock-surface: ${styles.card.background};
+            --lock-handle-size: ${styles.control.size};
+            display:grid; gap:${styles.card.gap}; padding:${styles.card.padding};
+            border-radius:${styles.card.border_radius};
             background:var(--lock-surface); color:var(--primary-text-color, #f4f4f4);
-            box-shadow:var(--ha-card-box-shadow, 0 8px 24px #0002);
-            border:1px solid var(--divider-color, #ffffff18);
+            box-shadow:${styles.card.box_shadow};
+            border:${styles.card.border};
             position:relative; overflow:hidden;
           }
           ha-card::before {
@@ -225,15 +281,15 @@
           .header { display:flex; align-items:center; gap:12px; min-width:0; }
           .icon {
             display:inline-flex; align-items:center; justify-content:center;
-            flex:0 0 38px; width:38px; height:38px; border-radius:999px;
-            background:color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+            flex:0 0 ${styles.icon.size}; width:${styles.icon.size}; height:${styles.icon.size}; border-radius:${styles.chip_border_radius};
+            background:${styles.icon.background};
             border:1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
             box-shadow:inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent), 0 10px 24px rgba(0,0,0,.16);
-            color:var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent));
+            color:${styles.icon.off_color};
             transition:background 180ms ease; position:relative;
           }
           .is-locked .icon {
-            background:color-mix(in srgb, var(--lock-accent) 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
+            background:color-mix(in srgb, var(--lock-accent) 24%, ${styles.icon.background});
             color:var(--lock-accent);
           }
           .is-unavailable .icon { color:var(--warning-color, #ff9b4a); }
@@ -241,11 +297,11 @@
             display:inline-flex; align-items:center; justify-content:center;
             line-height:0; vertical-align:middle;
           }
-          .icon ha-icon { --mdc-icon-size:17.48px; width:17.48px; height:17.48px; }
-          .name { font-size:13px; font-weight:600; line-height:1.3; overflow-wrap:anywhere; }
+          .icon ha-icon { --mdc-icon-size:calc(${styles.icon.size} * .46); width:var(--mdc-icon-size); height:var(--mdc-icon-size); }
+          .name { font-size:${styles.title_size}; font-weight:600; line-height:1.3; overflow-wrap:anywhere; }
           .state {
             display:inline-flex; align-items:center; min-height:22px; padding:0 9px; margin-top:6px;
-            border-radius:999px; font-size:11px; font-weight:600; line-height:1;
+            border-radius:${styles.chip_border_radius}; font-size:${styles.chip_font_size}; font-weight:600; line-height:1;
             background:color-mix(in srgb, var(--primary-text-color) 6%, transparent);
             border:1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
             color:var(--secondary-text-color, #aeb6c5);
@@ -262,7 +318,7 @@
             position:absolute; left:calc(4px + (100% - var(--lock-handle-size) - 8px) * var(--progress)); top:4px;
             width:var(--lock-handle-size); height:var(--lock-handle-size); border-radius:999px;
             display:grid; place-items:center;
-            background:color-mix(in srgb, var(--primary-text-color) 8%, var(--lock-surface));
+            background:${styles.control.background};
             color:var(--primary-text-color);
             border:1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
             box-shadow:inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent), 0 10px 24px rgba(0,0,0,.16);
@@ -283,10 +339,9 @@
           .help { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
           .slider:focus-visible + .help { position:static; width:auto; height:auto; margin:8px 4px 0; clip-path:none; white-space:normal; font-size:11px; color:var(--secondary-text-color, #aeb6c5); }
           .error { color:var(--error-color, #ff7777); font-size:12px; }
-          .compact { --lock-handle-size:38px; padding:10px 12px; gap:10px; }
+          .compact { --lock-handle-default:38px; --lock-card-padding:10px 12px; --lock-card-gap:10px; }
           @media (max-width:600px) {
-            .icon { flex-basis:50px; width:50px; height:50px; }
-            .icon ha-icon { --mdc-icon-size:23px; width:23px; height:23px; }
+            :host { --lock-icon-size:50px; }
           }
           @media (prefers-reduced-motion:reduce) { .handle, .icon { transition:none; } }
         </style>
@@ -306,26 +361,215 @@
     return NodaliaLockCard;
   }
 
+  // src/shared/editor-toggle-styles.ts
+  var EDITOR_TOGGLE_STYLES = `
+:is(.editor-toggle, .editor-checkbox) {
+align-items: center;
+column-gap: 10px;
+cursor: pointer;
+grid-auto-flow: row;
+grid-template-columns: auto minmax(0, 1fr);
+justify-content: stretch;
+min-height: 40px;
+padding-top: 0;
+position: relative;
+}
+
+:is(.editor-toggle, .editor-checkbox) input {
+block-size: 1px;
+inline-size: 1px;
+margin: 0;
+opacity: 0;
+pointer-events: none;
+position: absolute;
+}
+
+.editor-toggle__switch {
+background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+border-radius: 999px;
+box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+display: inline-flex;
+font-size: 0;
+height: 22px;
+line-height: 0;
+position: relative;
+transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+width: 40px;
+}
+
+.editor-toggle__switch::before {
+background: rgba(255, 255, 255, 0.92);
+border-radius: 999px;
+box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
+content: "";
+height: 18px;
+left: 1px;
+position: absolute;
+top: 1px;
+transition: transform 160ms ease;
+width: 18px;
+}
+
+.editor-toggle__label {
+min-width: 0;
+}
+
+:is(.editor-toggle, .editor-checkbox) input:checked + .editor-toggle__switch {
+background: var(--primary-color);
+border-color: var(--primary-color);
+}
+
+:is(.editor-toggle, .editor-checkbox) input:checked + .editor-toggle__switch::before {
+transform: translateX(18px);
+}
+
+:is(.editor-toggle, .editor-checkbox) input:focus-visible + .editor-toggle__switch {
+box-shadow:
+0 0 0 3px color-mix(in srgb, var(--primary-text-color) 14%, transparent),
+inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+}
+`;
+  var EDITOR_RADIUS_STYLES = `
+.editor-chip-radius__options {
+display: flex;
+flex-wrap: wrap;
+gap: 8px;
+}
+
+.editor-chip-radius__option {
+align-items: center;
+border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+border-radius: 12px;
+cursor: pointer;
+display: inline-flex;
+gap: 8px;
+padding: 8px 12px;
+}
+
+.editor-chip-radius__option:has(input:checked) {
+background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+border-color: var(--primary-color);
+}
+
+.editor-chip-radius__option input[type="radio"] {
+accent-color: var(--primary-color);
+appearance: auto;
+margin: 0;
+min-height: auto;
+padding: 0;
+width: auto;
+}
+`;
+  var EDITOR_COLOR_STYLES = `
+.editor-color-field {
+align-items: center;
+display: flex;
+flex-wrap: wrap;
+gap: 10px;
+min-height: 40px;
+}
+
+.editor-color-picker {
+align-items: center;
+background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+border-radius: 999px;
+cursor: pointer;
+display: inline-flex;
+flex: 0 0 auto;
+height: 40px;
+justify-content: center;
+position: relative;
+width: 40px;
+}
+
+.editor-color-picker input {
+cursor: pointer;
+inset: 0;
+opacity: 0;
+position: absolute;
+}
+
+.editor-color-picker:hover,
+.editor-color-picker:focus-within {
+border-color: color-mix(in srgb, var(--primary-text-color) 22%, transparent);
+box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+}
+
+.editor-color-swatch {
+--editor-swatch: #71c0ff;
+background:
+linear-gradient(var(--editor-swatch), var(--editor-swatch)),
+conic-gradient(from 90deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent) 25%, rgba(0, 0, 0, 0.12) 0 50%, color-mix(in srgb, var(--primary-text-color) 6%, transparent) 0 75%, rgba(0, 0, 0, 0.12) 0);
+background-position: center;
+background-size: cover, 10px 10px;
+border: 1px solid color-mix(in srgb, var(--primary-text-color) 14%, transparent);
+border-radius: 999px;
+display: block;
+height: 22px;
+width: 22px;
+}
+`;
+  var EDITOR_SECTION_ACTION_STYLES = `
+.editor-section__actions {
+align-items: center;
+display: flex;
+flex-wrap: wrap;
+gap: 8px;
+margin-top: 2px;
+}
+
+.editor-section__toggle-button {
+align-items: center;
+appearance: none;
+background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+border-radius: 999px;
+color: var(--primary-text-color);
+cursor: pointer;
+display: inline-flex;
+font: inherit;
+font-size: 12px;
+font-weight: 600;
+gap: 8px;
+min-height: 34px;
+padding: 0 12px;
+}
+
+.editor-section__toggle-button ha-icon {
+--mdc-icon-size: 16px;
+}
+`;
+
   // src/cards/lock/lock-editor.ts
   function loadNodaliaLockCardEditor() {
     class NodaliaLockCardEditor extends HTMLElement {
       constructor() {
         super();
+        this.showStyles = false;
         this._nodaliaConstruct();
       }
       _nodaliaConstruct() {
         this.config = {};
         this.stateHass = null;
+        this.showStyles = false;
         this.attachShadow({ mode: "open" });
         this.shadowRoot.addEventListener("change", (event) => this.change(event));
         this.shadowRoot.addEventListener("value-changed", (event) => this.change(event));
+        this.shadowRoot.addEventListener("click", (event) => {
+          if (!(event.target instanceof Element) || !event.target.closest('[data-editor-toggle="styles"]')) return;
+          this.showStyles = !this.showStyles;
+          this.render();
+          this.shadowRoot?.querySelector('[data-editor-toggle="styles"]')?.focus();
+        });
       }
       setConfig(config) {
-        this.config = { ...config };
+        this.config = window.NodaliaUtils.deepClone(config);
         this.render();
       }
       set hass(hass) {
-        const languageChanged = this.stateHass?.language !== hass.language;
+        const languageChanged = window.NodaliaI18n?.resolveLanguage?.(this.stateHass) !== window.NodaliaI18n?.resolveLanguage?.(hass);
         this.stateHass = hass;
         if (languageChanged || !this.shadowRoot?.querySelector(".editor")) this.render();
         const picker = this.shadowRoot?.querySelector("ha-entity-picker");
@@ -333,18 +577,44 @@
       }
       change(event) {
         const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
         const field = target.dataset.field;
         if (!field) return;
-        const value = event.type === "value-changed" ? event.detail.value : target.type === "checkbox" ? target.checked : target.value;
-        this.config = { ...this.config, [field]: value };
+        let value;
+        if (event instanceof CustomEvent && event.type === "value-changed") value = event.detail?.value;
+        else if (target instanceof HTMLInputElement) value = target.type === "checkbox" ? target.checked : target.value;
+        else if (target instanceof HTMLSelectElement) value = target.value;
+        else return;
+        const next = window.NodaliaUtils.deepClone(this.config);
+        window.NodaliaUtils.setByPath(next, field, value);
+        this.config = next;
+        if (target instanceof HTMLInputElement && target.type === "color") {
+          target.parentElement?.querySelector(".editor-color-swatch")?.style.setProperty("--editor-swatch", target.value);
+        }
         this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: this.config }, bubbles: true, composed: true }));
+      }
+      label(key) {
+        const language = window.NodaliaI18n?.resolveLanguage?.(this.stateHass) || "en";
+        return window.NodaliaI18n?.editorStr?.(this.stateHass, language, key) || key;
+      }
+      field(key, field, value, color = false) {
+        const escape = window.NodaliaUtils.escapeHtml;
+        const label = escape(this.label(key));
+        if (!color) return `<label class="editor-field"><span>${label}</span><input data-field="${field}" value="${escape(value)}"></label>`;
+        const resolved = window.NodaliaBubbleContrast?.resolveEditorColorValue?.(value) || value;
+        const channels = resolved.match(/[\d.]+/g) || [];
+        const hex = /^#[0-9a-f]{6}$/i.test(resolved) ? resolved : `#${[0, 1, 2].map((index) => Math.max(0, Math.min(255, Math.round(Number(channels[index]) || 0))).toString(16).padStart(2, "0")).join("")}`;
+        return `<div class="editor-field"><span>${label}</span><div class="editor-color-field"><label class="editor-color-picker">
+        <input type="color" data-field="${field}" value="${hex}" aria-label="${label}"><span class="editor-color-swatch" style="--editor-swatch:${escape(value)}"></span>
+      </label></div></div>`;
       }
       render() {
         if (!this.shadowRoot) return;
         const text = (key) => window.NodaliaUtils.escapeHtml(lockText(this.stateHass, key));
         const escape = window.NodaliaUtils.escapeHtml;
-        const language = window.NodaliaI18n?.resolveLanguage?.(this.stateHass) || "en";
-        const label = (key) => escape(window.NodaliaI18n?.editorStr?.(this.stateHass, language, key) || key);
+        const label = (key) => escape(this.label(key));
+        const styles = normalizeLockStyles(this.config.styles);
+        const radiusLabels = { pill: this.label("ed.entity.chip_radius_pill"), soft: this.label("ed.entity.chip_radius_soft"), round: this.label("ed.entity.chip_radius_round"), square: this.label("ed.entity.chip_radius_square") };
         this.shadowRoot.innerHTML = `<style>
         :host { display:block; }
         * { box-sizing:border-box; }
@@ -354,14 +624,16 @@
         .editor-section__title { font-size:15px; font-weight:700; }
         .editor-section__hint { color:var(--secondary-text-color); font-size:12px; line-height:1.45; }
         .editor-grid { display:grid; gap:12px; grid-template-columns:repeat(2,minmax(0,1fr)); }
-        .editor-field { display:grid; gap:6px; min-width:0; }
+        .editor-field, .editor-toggle { display:grid; gap:6px; min-width:0; }
         .editor-field--full { grid-column:1 / -1; }
         .editor-field > span, .editor-toggle > span { font-size:12px; font-weight:600; }
         .editor-field input, .editor-field select { appearance:none; background:color-mix(in srgb, var(--primary-text-color) 4%, transparent); border:1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent); border-radius:12px; color:var(--primary-text-color); font:inherit; min-height:40px; padding:10px 12px; width:100%; }
-        .editor-toggle { display:flex; gap:10px; align-items:center; min-height:40px; }
-        input[type=checkbox] { accent-color:var(--primary-color); width:18px; height:18px; }
         :focus-visible { outline:2px solid var(--primary-color); outline-offset:2px; }
         @media(max-width:450px) { .editor-grid { grid-template-columns:1fr; } }
+        ${EDITOR_TOGGLE_STYLES}
+        ${EDITOR_RADIUS_STYLES}
+        ${EDITOR_COLOR_STYLES}
+        ${EDITOR_SECTION_ACTION_STYLES}
       </style><div class="editor">
         <section class="editor-section">
           <div class="editor-section__header"><div class="editor-section__title">${label("ed.weather.general_section_title")}</div></div>
@@ -374,14 +646,35 @@
         <section class="editor-section">
           <div class="editor-section__header"><div class="editor-section__title">${label("ed.vacuum.visibility_section_title")}</div></div>
           <div class="editor-grid">
-            <label class="editor-toggle"><input type="checkbox" data-field="show_name" ${this.config.show_name !== false ? "checked" : ""}><span>${text("showName")}</span></label>
-            <label class="editor-toggle"><input type="checkbox" data-field="show_state" ${this.config.show_state !== false ? "checked" : ""}><span>${text("showState")}</span></label>
+            <label class="editor-toggle"><input type="checkbox" role="switch" data-field="show_name" ${this.config.show_name !== false ? "checked" : ""}><span class="editor-toggle__switch" aria-hidden="true"></span><span class="editor-toggle__label">${text("showName")}</span></label>
+            <label class="editor-toggle"><input type="checkbox" role="switch" data-field="show_state" ${this.config.show_state !== false ? "checked" : ""}><span class="editor-toggle__switch" aria-hidden="true"></span><span class="editor-toggle__label">${text("showState")}</span></label>
           </div>
+        </section>
+        <section class="editor-section">
+          <div class="editor-section__header"><div class="editor-section__title">${label("ed.weather.styles_section_title")}</div><div class="editor-section__hint">${label("ed.entity.styles_section_hint")}</div>
+          <div class="editor-section__actions"><button type="button" class="editor-section__toggle-button" data-editor-toggle="styles" aria-expanded="${this.showStyles}"><ha-icon icon="${this.showStyles ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon><span>${label(this.showStyles ? "ed.weather.hide_style_settings" : "ed.weather.show_style_settings")}</span></button></div></div>
+          ${this.showStyles ? `<div class="editor-grid">
+            ${this.field("ed.entity.style_card_bg", "styles.card.background", styles.card.background, true)}
+            ${this.field("ed.entity.style_card_border", "styles.card.border", styles.card.border)}
+            ${window.NodaliaUtils.renderEditorCardBorderRadiusHtml({ escapeHtml: escape, field: "styles.card.border_radius", value: styles.card.border_radius, tHeading: this.label("ed.entity.style_card_radius_presets"), labels: radiusLabels })}
+            ${this.field("ed.entity.style_card_shadow", "styles.card.box_shadow", styles.card.box_shadow)}
+            ${this.field("ed.entity.style_card_padding", "styles.card.padding", styles.card.padding)}
+            ${this.field("ed.entity.style_card_gap", "styles.card.gap", styles.card.gap)}
+            ${this.field("ed.entity.style_main_button_size", "styles.icon.size", styles.icon.size)}
+            ${this.field("ed.entity.style_main_bubble_bg", "styles.icon.background", styles.icon.background, true)}
+            ${this.field("ed.entity.style_icon_on", "styles.icon.on_color", styles.icon.on_color, true)}
+            ${this.field("ed.entity.style_icon_off", "styles.icon.off_color", styles.icon.off_color, true)}
+            ${this.field("ed.entity.style_aux_button_size", "styles.control.size", styles.control.size)}
+            ${this.field("ed.entity.style_accent_bg", "styles.control.background", styles.control.background, true)}
+            ${this.field("ed.entity.style_title_size", "styles.title_size", styles.title_size)}
+            ${this.field("ed.entity.style_chip_font", "styles.chip_font_size", styles.chip_font_size)}
+            ${window.NodaliaUtils.renderEditorChipBorderRadiusHtml({ escapeHtml: escape, field: "styles.chip_border_radius", value: styles.chip_border_radius, tHeading: this.label("ed.entity.style_chip_radius"), labels: radiusLabels })}
+          </div>` : ""}
         </section>
         <div class="editor-section__hint">${text("help")}</div>
       </div>`;
         const picker = this.shadowRoot.querySelector("ha-entity-picker");
-        if (picker) Object.assign(picker, { hass: this.stateHass, value: this.config.entity || "", includeDomains: ["lock"], label: text("entity"), allowCustomEntity: true });
+        if (picker) Object.assign(picker, { hass: this.stateHass, value: this.config.entity || "", includeDomains: ["lock"], label: lockText(this.stateHass, "entity"), allowCustomEntity: true });
       }
     }
     return NodaliaLockCardEditor;

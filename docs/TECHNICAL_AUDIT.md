@@ -90,11 +90,16 @@ assets and include release-gate tests. Record remaining unchecked modules honest
   image data exists; fetching an unseen image still depends on the network.
 - HA fixture construction is shared by browser and Node tests. Developer guides
   cover adding cards, testing and release preparation.
-- Latest local validation: strict types, lint, translations, build and 555 unit tests
-  pass. Full Chromium/WebKit/iPhone run: 182 passed, one existing platform skip;
-  subsequent Scenes changes: all nine layout/browser regressions passed. Linux CI
+- Latest local validation: strict types, lint, translations, build and 556 unit tests
+  pass. Full Chromium/WebKit/iPhone run: 197 passed, one existing platform skip, including Scenes, Lock editor styles and
+  Summary native Lock regressions. Linux CI
   remains required for Firefox and the final committed artifacts.
 
 The full TS migration remains open: **94 unchecked modules and no runtime import cycles** are explicitly tracked. No new suppressions or `any` shortcuts were
 introduced. This stage is foundational work, not a declaration that the entire
 migration is finished.
+
+Lock now shares editor controls with Entity, exposes sanitized style settings and
+keeps deliberate unlock semantics. Summary embeds native Lock cards and keeps
+media on Home only. Requested Sections minimum widths are 4/4/6/6 for
+Alarm Panel, Entity, Weather and Calendar respectively.

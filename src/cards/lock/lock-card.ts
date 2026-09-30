@@ -131,6 +131,7 @@ export function loadNodaliaLockCard(): CustomElementConstructor {
     private render(): void {
       if (!this.shadowRoot || !this.config) return;
       const text = (key: string) => window.NodaliaUtils.escapeHtml(lockText(this.stateHass, key));
+      const styles = this.config.styles;
       const status = this.pending ? (this.pending === "lock" ? "locking" : "unlocking") : this.state;
       const name = window.NodaliaUtils.escapeHtml(this.config.name || this.entity?.attributes.friendly_name || this.config.entity);
       const unlocked = this.state === "unlocked";
@@ -140,14 +141,14 @@ export function loadNodaliaLockCard(): CustomElementConstructor {
           :host { display:block; }
           * { box-sizing:border-box; }
           ha-card {
-            --lock-accent: var(--success-color, #6acb9a);
-            --lock-surface: var(--ha-card-background, var(--card-background-color, #1c1c20));
-            --lock-handle-size: 42px;
-            display:grid; gap:14px; padding:16px;
-            border-radius:var(--nodalia-card-border-radius, 28px);
+            --lock-accent: ${styles.icon.on_color};
+            --lock-surface: ${styles.card.background};
+            --lock-handle-size: ${styles.control.size};
+            display:grid; gap:${styles.card.gap}; padding:${styles.card.padding};
+            border-radius:${styles.card.border_radius};
             background:var(--lock-surface); color:var(--primary-text-color, #f4f4f4);
-            box-shadow:var(--ha-card-box-shadow, 0 8px 24px #0002);
-            border:1px solid var(--divider-color, #ffffff18);
+            box-shadow:${styles.card.box_shadow};
+            border:${styles.card.border};
             position:relative; overflow:hidden;
           }
           ha-card::before {
@@ -162,15 +163,15 @@ export function loadNodaliaLockCard(): CustomElementConstructor {
           .header { display:flex; align-items:center; gap:12px; min-width:0; }
           .icon {
             display:inline-flex; align-items:center; justify-content:center;
-            flex:0 0 38px; width:38px; height:38px; border-radius:999px;
-            background:color-mix(in srgb, var(--primary-text-color) 6%, transparent);
+            flex:0 0 ${styles.icon.size}; width:${styles.icon.size}; height:${styles.icon.size}; border-radius:${styles.chip_border_radius};
+            background:${styles.icon.background};
             border:1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
             box-shadow:inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent), 0 10px 24px rgba(0,0,0,.16);
-            color:var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent));
+            color:${styles.icon.off_color};
             transition:background 180ms ease; position:relative;
           }
           .is-locked .icon {
-            background:color-mix(in srgb, var(--lock-accent) 24%, color-mix(in srgb, var(--primary-text-color) 8%, transparent));
+            background:color-mix(in srgb, var(--lock-accent) 24%, ${styles.icon.background});
             color:var(--lock-accent);
           }
           .is-unavailable .icon { color:var(--warning-color, #ff9b4a); }
@@ -178,11 +179,11 @@ export function loadNodaliaLockCard(): CustomElementConstructor {
             display:inline-flex; align-items:center; justify-content:center;
             line-height:0; vertical-align:middle;
           }
-          .icon ha-icon { --mdc-icon-size:17.48px; width:17.48px; height:17.48px; }
-          .name { font-size:13px; font-weight:600; line-height:1.3; overflow-wrap:anywhere; }
+          .icon ha-icon { --mdc-icon-size:calc(${styles.icon.size} * .46); width:var(--mdc-icon-size); height:var(--mdc-icon-size); }
+          .name { font-size:${styles.title_size}; font-weight:600; line-height:1.3; overflow-wrap:anywhere; }
           .state {
             display:inline-flex; align-items:center; min-height:22px; padding:0 9px; margin-top:6px;
-            border-radius:999px; font-size:11px; font-weight:600; line-height:1;
+            border-radius:${styles.chip_border_radius}; font-size:${styles.chip_font_size}; font-weight:600; line-height:1;
             background:color-mix(in srgb, var(--primary-text-color) 6%, transparent);
             border:1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
             color:var(--secondary-text-color, #aeb6c5);
@@ -199,7 +200,7 @@ export function loadNodaliaLockCard(): CustomElementConstructor {
             position:absolute; left:calc(4px + (100% - var(--lock-handle-size) - 8px) * var(--progress)); top:4px;
             width:var(--lock-handle-size); height:var(--lock-handle-size); border-radius:999px;
             display:grid; place-items:center;
-            background:color-mix(in srgb, var(--primary-text-color) 8%, var(--lock-surface));
+            background:${styles.control.background};
             color:var(--primary-text-color);
             border:1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
             box-shadow:inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent), 0 10px 24px rgba(0,0,0,.16);
@@ -220,10 +221,9 @@ export function loadNodaliaLockCard(): CustomElementConstructor {
           .help { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
           .slider:focus-visible + .help { position:static; width:auto; height:auto; margin:8px 4px 0; clip-path:none; white-space:normal; font-size:11px; color:var(--secondary-text-color, #aeb6c5); }
           .error { color:var(--error-color, #ff7777); font-size:12px; }
-          .compact { --lock-handle-size:38px; padding:10px 12px; gap:10px; }
+          .compact { --lock-handle-default:38px; --lock-card-padding:10px 12px; --lock-card-gap:10px; }
           @media (max-width:600px) {
-            .icon { flex-basis:50px; width:50px; height:50px; }
-            .icon ha-icon { --mdc-icon-size:23px; width:23px; height:23px; }
+            :host { --lock-icon-size:50px; }
           }
           @media (prefers-reduced-motion:reduce) { .handle, .icon { transition:none; } }
         </style>

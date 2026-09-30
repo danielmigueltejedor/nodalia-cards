@@ -18,4 +18,19 @@ Locking an unlocked entity takes one tap. Controls stay disabled during commands
 
 Only `unlock_action: slider` is supported. PIN-required locks and open-latch commands are not supported in this version; use the integration's controls for those operations. The Home Assistant lock service remains responsible for permission checks and device-specific requirements.
 
-The visual editor provides a lock entity picker, name, layout, and name/state visibility controls. Runtime labels follow the dashboard language.
+The visual editor provides a lock entity picker, name, layout, and name/state visibility switches. Its collapsible Styles section shares color controls and corner-radius presets with the other Nodalia editors. Runtime labels follow the dashboard language.
+
+Styles use the same nested YAML convention as the rest of the bundle. For example:
+
+```yaml
+styles:
+  card:
+    border_radius: 20px
+    padding: 18px
+  icon:
+    size: 48px
+    on_color: "#6acb9a"
+  chip_border_radius: 12px
+```
+
+Card background, border, shadow, padding and gap; icon size, background and state colors; handle size/background; title and chip font sizes are configurable. Styling never replaces deliberate slide-to-unlock confirmation. Room Summary uses this same native Lock Card for its lock entities.

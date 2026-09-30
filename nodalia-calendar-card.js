@@ -620,7 +620,7 @@ ${metadata}` : metadata;
         return Math.min(8, visible + 2);
       }
       getGridOptions() {
-        return { columns: "full", min_columns: 2, min_rows: 2, rows: "auto" };
+        return { columns: "full", min_columns: 6, min_rows: 2, rows: "auto" };
       }
       constructor() {
         super();

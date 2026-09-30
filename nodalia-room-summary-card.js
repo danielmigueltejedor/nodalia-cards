@@ -7,7 +7,7 @@
   // src/cards/room-summary/room-summary-constants.ts
   var CARD_TAG = "nodalia-room-summary-card";
   var EDITOR_TAG = "nodalia-room-summary-card-editor";
-  var HUB_PANELS = /* @__PURE__ */ new Set(["home", "lights", "covers", "climate", "vacuum", "fans", "humidifiers", "media", "camera", "security", "others"]);
+  var HUB_PANELS = /* @__PURE__ */ new Set(["home", "lights", "covers", "climate", "vacuum", "fans", "humidifiers", "camera", "security", "others"]);
   var COMFORT = { hot: 27, cold: 17, humid: 70, dry: 30 };
   var CUSTOMIZABLE_EMBED_LISTS = /* @__PURE__ */ new Set(["lights", "vacuums", "fans", "humidifiers", "others"]);
   var NORMALIZED_ROOM_CONFIG = /* @__PURE__ */ Symbol("nodalia-room-summary-normalized");
@@ -640,15 +640,6 @@
             active: anyHumidifierOn
           });
         }
-        if (config.show_media !== false && hubMediaPlayerIds(config).length) {
-          const anyMediaOn = hubMediaPlayerIds(config).some((id) => stateIsOn(getState(this._hass, id)));
-          items.push({
-            id: "media",
-            icon: "mdi:play-circle",
-            label: this._t("mediaPlayer", "Media player"),
-            active: anyMediaOn
-          });
-        }
         if (config.show_camera !== false && config.camera) {
           items.push({
             id: "camera",
@@ -1178,11 +1169,13 @@
           vacuum: "vacuums",
           fan: "fans",
           humidifier: "humidifiers",
-          entity: "others"
+          entity: "others",
+          lock: "others"
         };
         const listKey = listKeyByType[String(host?.dataset?.hubEmbed || "")];
         if (!listKey) return {};
         const entityId = String(host?.dataset?.entity || "").trim();
+        if (host?.dataset?.hubEmbed === "lock" && !config.others?.includes(entityId)) return {};
         const index = Number(host?.dataset?.hubIndex);
         const options = config.embed_options?.[listKey] || [];
         const option = options.find((item) => String(item?.entity || "").trim() === entityId) || (Number.isInteger(index) ? options[index] : null) || {};
@@ -1264,7 +1257,7 @@
         const keys = /* @__PURE__ */ new Set();
         const add = (type, id, slot) => {
           const entityId = String(id || "").trim();
-          if (entityId) keys.add(`${type}:${entityId}:${slot}`);
+          if (entityId) keys.add(`${type === "entity" && entityId.startsWith("lock.") ? "lock" : type}:${entityId}:${slot}`);
         };
         (config.lights || []).forEach((id) => add("light", id, "panel"));
         (config.vacuums || []).forEach((id) => add("vacuum", id, "panel"));
@@ -1315,7 +1308,8 @@
             } catch (error) {
               console.warn(`[nodalia-room-summary-card] ${tagName} setConfig failed`, error);
             }
-          } else if (this._hass) {
+          }
+          if (this._hass) {
             card.hass = this._hass;
           }
         };
@@ -1382,6 +1376,9 @@
             styles: embeddedStyles
           });
         });
+        this.shadowRoot.querySelectorAll('[data-hub-embed="lock"]').forEach((host) => {
+          mount(host, "nodalia-lock-card", { styles: embeddedStyles });
+        });
         this.shadowRoot.querySelectorAll('[data-hub-embed="entity"]').forEach((host) => {
           mount(host, "nodalia-entity-card", {
             compact_layout_mode: "never",
@@ -1404,7 +1401,7 @@
       }
       _renderHubEmbedHosts(entityIds, embedType, slot = "panel") {
         return `<div class="room-hub__embed-list">${(entityIds || []).map((entityId, index) => `
-      <div class="room-hub__embed-host" data-hub-embed="${escapeHtml(embedType)}" data-hub-slot="${escapeHtml(slot)}" data-hub-index="${index}" data-entity="${escapeHtml(entityId)}"></div>
+      <div class="room-hub__embed-host" data-hub-embed="${escapeHtml(embedType === "entity" && entityId.startsWith("lock.") ? "lock" : embedType)}" data-hub-slot="${escapeHtml(slot)}" data-hub-index="${index}" data-entity="${escapeHtml(entityId)}"></div>
     `).join("")}</div>`;
       }
       _renderHubRoomIcon(icon, title, styles) {
@@ -1612,13 +1609,6 @@
       _renderHubVacuumPanel(config) {
         return `<div class="room-hub__panel room-hub__panel--embed">${this._renderHubEmbedHosts(config.vacuums, "vacuum")}</div>`;
       }
-      _renderHubMediaPanel(config) {
-        const ids = hubMediaPlayerIds(config);
-        if (!ids.length) return "";
-        return `<div class="room-hub__panel room-hub__panel--embed"><div class="room-hub__embed-list">
-      <div class="room-hub__embed-host" data-hub-embed="media" data-hub-slot="group" data-hub-media="group" data-entity="${escapeHtml(ids[0])}"></div>
-    </div></div>`;
-      }
       _renderHubCameraPanel(config) {
         if (!config.camera) return "";
         return `<div class="room-hub__panel room-hub__panel--embed">${this._renderHubEmbedHosts([config.camera], "camera", "live")}</div>`;
@@ -1638,7 +1628,6 @@
         if (panel === "vacuum") return this._renderHubVacuumPanel(config);
         if (panel === "fans") return this._renderHubFanPanel(config);
         if (panel === "humidifiers") return this._renderHubHumidifierPanel(config);
-        if (panel === "media") return this._renderHubMediaPanel(config);
         if (panel === "camera") return this._renderHubCameraPanel(config);
         if (panel === "security") return this._renderHubSecurityPanel(config);
         if (panel === "others") return this._renderHubOthersPanel(config);
@@ -1867,6 +1856,7 @@
         .room-hub__embed-host > nodalia-fan-card,
         .room-hub__embed-host > nodalia-humidifier-card,
         .room-hub__embed-host > nodalia-entity-card,
+        .room-hub__embed-host > nodalia-lock-card,
         .room-hub__embed-host > nodalia-climate-card,
         .room-hub__embed-host > nodalia-alarm-panel-card,
         .room-hub__embed-host > nodalia-camera-card,

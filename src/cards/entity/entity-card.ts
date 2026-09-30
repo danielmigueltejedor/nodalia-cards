@@ -283,14 +283,14 @@ class NodaliaEntityCard extends HTMLElement {
         rows: "auto",
         columns: 12,
         min_rows: 3,
-        min_columns: 6,
+        min_columns: 4,
       };
     }
     return {
       rows: "auto",
       columns: "full",
       min_rows: 2,
-      min_columns: 2,
+      min_columns: 4,
     };
   }
 

@@ -12,6 +12,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Match Lock’s visual editor to the bundle with shared switches, color controls and corner presets; apply its configurable card/icon styles.
+- Keep Room Summary media players on Home only and embed the native Lock Card for locks, including correct first-state delivery.
+- Request at least 4 columns for Alarm Panel/Entity and 6 for Weather/Calendar.
+
 - Keep the playback capsule centered regardless of auxiliary controls; apply cached artwork tints synchronously without color transitions.
 - Present replacement artwork and its tint together; keep cached artwork through volume/progress updates and bound stalled requests and cache growth.
 - Refresh Scene labels and icons when Home Assistant changes an entity.
