@@ -1,12 +1,11 @@
+/* Generated from src/core/engine-client-runtime.ts. Do not edit. */
+"use strict";
 (() => {
-  if (typeof window === "undefined" || window.NodaliaBackend) {
-    return;
-  }
-
-  const API_VERSION = 2;
-  const STATUS_TTL_MS = 30_000;
-  let statusCache = { connection: null, checkedAt: 0, value: null };
-
+  // src/core/engine-client.ts
+  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var API_VERSION = 2;
+  var STATUS_TTL_MS = 3e4;
+  var statusCache = { connection: null, checkedAt: 0, value: null };
   function callWS(hass, message) {
     if (typeof hass?.callWS === "function") {
       return hass.callWS(message);
@@ -16,28 +15,21 @@
     }
     return Promise.reject(new Error("Home Assistant WebSocket API is unavailable"));
   }
-
   function isUnavailableError(error) {
-    const code = String(error?.code || "").toLowerCase();
-    const message = String(error?.message || error || "").toLowerCase();
-    return code === "unknown_command"
-      || code === "not_found"
-      || message.includes("unknown command");
+    const row = isRecord(error) ? error : {};
+    const code = String(row.code || "").toLowerCase();
+    const message = String(row.message || error || "").toLowerCase();
+    return code === "unknown_command" || code === "not_found" || message.includes("unknown command");
   }
-
   async function status(hass, options = {}) {
     const now = Date.now();
     const connection = hass?.connection || hass;
-    if (
-      options.force !== true
-      && statusCache.connection === connection
-      && statusCache.value
-      && now - statusCache.checkedAt < STATUS_TTL_MS
-    ) {
+    if (options.force !== true && statusCache.connection === connection && statusCache.value && now - statusCache.checkedAt < STATUS_TTL_MS) {
       return statusCache.value;
     }
     try {
-      const result = await callWS(hass, { type: "nodalia/status", api_version: API_VERSION });
+      const response = await callWS(hass, { type: "nodalia/status", api_version: API_VERSION });
+      const result = isRecord(response) ? response : {};
       const serverVersion = Number(result?.api_version) || 0;
       const minimumVersion = Number(result?.api_min_version) || serverVersion;
       const maximumVersion = Number(result?.api_max_version) || serverVersion;
@@ -47,9 +39,9 @@
         api_min_version: minimumVersion,
         api_max_version: maximumVersion,
         version: String(result?.version || ""),
-        capabilities: Array.isArray(result?.capabilities) ? result.capabilities : [],
-        limits: result?.limits && typeof result.limits === "object" ? { ...result.limits } : {},
-        health: result?.health && typeof result.health === "object" ? { ...result.health } : {},
+        capabilities: Array.isArray(result.capabilities) ? result.capabilities.filter((value2) => typeof value2 === "string") : [],
+        limits: isRecord(result.limits) ? { ...result.limits } : {},
+        health: isRecord(result.health) ? { ...result.health } : {}
       };
       statusCache = { connection, checkedAt: now, value };
       return value;
@@ -67,30 +59,24 @@
         capabilities: [],
         limits: {},
         health: {},
-        transient: !engineMissing,
+        transient: !engineMissing
       };
-      // Only a confirmed missing command proves that Engine is absent. Timeouts
-      // and websocket interruptions must be retried instead of poisoning the
-      // negative cache for STATUS_TTL_MS.
       if (engineMissing) {
         statusCache = { connection, checkedAt: now, value };
       }
       return value;
     }
   }
-
   function profileId(config) {
-    const value = String(config?.background_mobile?.profile_id || "default").trim();
+    const background = isRecord(config) && isRecord(config.background_mobile) ? config.background_mobile : {};
+    const value = String(background.profile_id || "default").trim();
     return value || "default";
   }
-
-  function hasCapability(statusValue, capability) {
-    return statusValue?.available === true
-      && Array.isArray(statusValue.capabilities)
-      && statusValue.capabilities.includes(String(capability || ""));
+  function hasCapability(value, capability) {
+    const statusValue = isRecord(value) ? value : {};
+    return statusValue?.available === true && Array.isArray(statusValue.capabilities) && statusValue.capabilities.includes(String(capability || ""));
   }
-
-  const backend = {
+  var nodaliaBackend = Object.freeze({
     API_VERSION,
     callWS,
     status,
@@ -110,36 +96,36 @@
           notificationsBackground: hasCapability(statusValue, "notifications_background"),
           climateSchedules: hasCapability(statusValue, "climate_schedules"),
           notificationsInbox: hasCapability(statusValue, "notifications_inbox"),
-          climateOverrides: hasCapability(statusValue, "climate_overrides"),
-        },
+          climateOverrides: hasCapability(statusValue, "climate_overrides")
+        }
       };
     },
     notificationProfileId: profileId,
     async listNotificationProfiles(hass) {
       return callWS(hass, {
         type: "nodalia/notifications/list",
-        api_version: API_VERSION,
+        api_version: API_VERSION
       });
     },
     async listNotificationInbox(hass, id = "default") {
       return callWS(hass, {
         type: "nodalia/notifications/inbox/list",
         api_version: API_VERSION,
-        profile_id: String(id || "default"),
+        profile_id: String(id || "default")
       });
     },
     async clearNotificationInbox(hass, id = "default") {
       return callWS(hass, {
         type: "nodalia/notifications/inbox/clear",
         api_version: API_VERSION,
-        profile_id: String(id || "default"),
+        profile_id: String(id || "default")
       });
     },
     async getNotificationProfile(hass, id = "default") {
       return callWS(hass, {
         type: "nodalia/notifications/get",
         api_version: API_VERSION,
-        profile_id: String(id || "default"),
+        profile_id: String(id || "default")
       });
     },
     async setNotificationProfile(hass, profile, id = "default") {
@@ -147,14 +133,14 @@
         type: "nodalia/notifications/set",
         api_version: API_VERSION,
         profile_id: String(id || "default"),
-        profile,
+        profile
       });
     },
     async deleteNotificationProfile(hass, id = "default") {
       return callWS(hass, {
         type: "nodalia/notifications/delete",
         api_version: API_VERSION,
-        profile_id: String(id || "default"),
+        profile_id: String(id || "default")
       });
     },
     async dismissNotification(hass, id, profile = "default") {
@@ -162,14 +148,14 @@
         type: "nodalia/notifications/dismiss",
         api_version: API_VERSION,
         profile_id: String(profile || "default"),
-        alert_id: String(id || ""),
+        alert_id: String(id || "")
       });
     },
     async testNotification(hass, id = "default") {
       return callWS(hass, {
         type: "nodalia/notifications/test",
         api_version: API_VERSION,
-        profile_id: String(id || "default"),
+        profile_id: String(id || "default")
       });
     },
     async sendExternalNotification(hass, alertId, id = "default") {
@@ -177,20 +163,20 @@
         type: "nodalia/notifications/send_external",
         api_version: API_VERSION,
         profile_id: String(id || "default"),
-        alert_id: String(alertId || ""),
+        alert_id: String(alertId || "")
       });
     },
     async getClimateSchedule(hass, entityId) {
       return callWS(hass, {
         type: "nodalia/climate/schedule/get",
         api_version: API_VERSION,
-        entity_id: String(entityId || ""),
+        entity_id: String(entityId || "")
       });
     },
     async listClimateSchedules(hass) {
       return callWS(hass, {
         type: "nodalia/climate/schedule/list",
-        api_version: API_VERSION,
+        api_version: API_VERSION
       });
     },
     async setClimateOverride(hass, entityId, override) {
@@ -198,14 +184,14 @@
         type: "nodalia/climate/override/set",
         api_version: API_VERSION,
         entity_id: String(entityId || ""),
-        override,
+        override
       });
     },
     async clearClimateOverride(hass, entityId) {
       return callWS(hass, {
         type: "nodalia/climate/override/clear",
         api_version: API_VERSION,
-        entity_id: String(entityId || ""),
+        entity_id: String(entityId || "")
       });
     },
     async setClimateSchedule(hass, entityId, schedule) {
@@ -213,24 +199,27 @@
         type: "nodalia/climate/schedule/set",
         api_version: API_VERSION,
         entity_id: String(entityId || ""),
-        schedule,
+        schedule
       });
     },
     async deleteClimateSchedule(hass, entityId) {
       return callWS(hass, {
         type: "nodalia/climate/schedule/delete",
         api_version: API_VERSION,
-        entity_id: String(entityId || ""),
+        entity_id: String(entityId || "")
       });
     },
     async applyClimateSchedule(hass, entityId) {
       return callWS(hass, {
         type: "nodalia/climate/schedule/apply",
         api_version: API_VERSION,
-        entity_id: String(entityId || ""),
+        entity_id: String(entityId || "")
       });
-    },
-  };
+    }
+  });
 
-  window.NodaliaBackend = Object.freeze(backend);
+  // src/core/engine-client-runtime.ts
+  if (typeof window !== "undefined" && !window.NodaliaBackend) {
+    window.NodaliaBackend = nodaliaBackend;
+  }
 })();

@@ -262,3 +262,20 @@ browser suite (239 passed, one existing platform skip) pass. Typed lint includes
 the policy and both Insignia modules explicitly. Unchecked TS debt remains 74;
 utils, backend, bubble contrast and i18n lookup still require source migration.
 The publication hold remains in force.
+
+
+## Engine client — checked protocol boundary and generated runtime
+
+Replaced the handwritten backend with a checked TS client and idempotent global
+adapter. Runtime declarations derive from the actual API, correcting the old
+two-argument schedule signature and eliminating unused parallel override types.
+HA transports explicitly return unknown promises; handshake records are narrowed
+before reading capabilities, health and limits. Invalid capability entries and
+non-record health/limit branches are excluded. Valid wire data is unchanged.
+
+Sixteen versioned command envelopes and five complete handshake snapshots match
+merged main. Added receiver/transport fallback, exact 30-second TTL, force/reset,
+connection identity, malformed wire and adapter coverage. All 632 unit tests and
+the local full browser suite (239 passed, one existing platform skip) pass. No
+new unchecked module or runtime cycle. Strict source migration remains open,
+with 74 unchecked TS modules plus generic utils, bubble contrast and i18n lookup.

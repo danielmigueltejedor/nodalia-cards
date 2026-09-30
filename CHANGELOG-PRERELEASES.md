@@ -29,6 +29,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Maintenance
 
+- Generate the Engine client from checked TypeScript and derive runtime method declarations from its actual API; preserve transport, version checks and retry/cache behavior.
+
 - Generate the Notifications mobile policy from checked TypeScript, preserving its public API, delivery rules and idempotent global adapter.
 
 - Check Fav/Insignia configuration and helpers while retaining domain-specific icons, legacy tints and actions; guard malformed nested YAML styles.
