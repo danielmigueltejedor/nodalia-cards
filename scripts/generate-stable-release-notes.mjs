@@ -13,10 +13,14 @@ export function extractStableChangelog(changelog, version) {
     throw new Error(`Stable release notes require a stable version, received: ${version}`);
   }
 
+  return extractChangelogSection(changelog, version);
+}
+
+export function extractChangelogSection(changelog, version, filename = "CHANGELOG.md") {
   const heading = new RegExp(`^## \\[${escapeRegExp(version)}\\](?:\\s+-\\s+[^\\n]+)?\\s*$`, "m");
   const match = heading.exec(changelog);
   if (!match) {
-    throw new Error(`CHANGELOG.md has no stable section for ${version}`);
+    throw new Error(`${filename} has no release section for ${version}`);
   }
 
   const sectionStart = match.index + match[0].length;
@@ -25,7 +29,7 @@ export function extractStableChangelog(changelog, version) {
   const section = (nextHeading === -1 ? remainder : remainder.slice(0, nextHeading)).trim();
 
   if (!section || !/^###\s+/m.test(section)) {
-    throw new Error(`CHANGELOG.md section ${version} needs a summary and at least one detailed subsection`);
+    throw new Error(`${filename} section ${version} needs a summary and at least one detailed subsection`);
   }
 
   return section;

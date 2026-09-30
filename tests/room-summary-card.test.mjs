@@ -475,7 +475,7 @@ test("room summary patches Hub state without remounting embedded cards", () => {
 
 test("room summary keeps a grouped media player and surfaces camera plus security entities", () => {
   const source = read("nodalia-room-summary-card.js");
-  const mediaPanel = source.slice(source.indexOf("_renderHubMediaPanel"), source.indexOf("_renderHubCameraPanel"));
+  const mediaPanel = source.slice(source.indexOf("_renderHubHomeMedia(config) {"), source.indexOf("_renderHubHomeCamera(config) {"));
   const securityPanel = source.slice(source.indexOf("  _renderHubSecurityPanel(config) {"), source.indexOf("  _renderHubPanelContent(panel, config, summary, styles, accentColor) {"));
 
   assert.match(mediaPanel, /data-hub-media="group"/);

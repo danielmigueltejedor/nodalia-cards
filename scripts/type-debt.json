@@ -68,7 +68,6 @@
   "src/cards/news/news-editor.ts",
   "src/cards/news/news-helpers.ts",
   "src/cards/notifications/notifications-card.ts",
-  "src/cards/notifications/notifications-config.ts",
   "src/cards/notifications/notifications-editor.ts",
   "src/cards/notifications/notifications-helpers.ts",
   "src/cards/person/person-card.ts",

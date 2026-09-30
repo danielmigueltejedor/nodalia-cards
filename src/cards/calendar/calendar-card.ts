@@ -75,7 +75,7 @@ class NodaliaCalendarCard extends HTMLElement {
   }
 
   getGridOptions() {
-    return { columns: "full", min_columns: 2, min_rows: 2, rows: "auto" };
+    return { columns: "full", min_columns: 6, min_rows: 2, rows: "auto" };
   }
 
   constructor() {

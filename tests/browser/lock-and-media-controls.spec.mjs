@@ -110,7 +110,8 @@ test("Lock editor saves layout, entity and visibility settings", async ({ page }
   });
   const editor = page.locator("nodalia-lock-card-editor");
   await editor.locator("select").selectOption("compact");
-  await editor.locator('[data-field="show_state"]').uncheck();
+  await editor.locator('[data-field="show_state"]').focus();
+  await editor.locator('[data-field="show_state"]').press("Space");
   await editor.locator('[data-field="name"]').fill("Side Door");
   await editor.locator('[data-field="name"]').blur();
   expect(await page.evaluate(() => window.savedConfig)).toMatchObject({ entity: "lock.front", layout: "compact", show_state: false, name: "Side Door" });
@@ -333,7 +334,7 @@ test("Lock is suggested by entity and its editor keeps focus during state update
     editor.hass = window.makeHass({}); editor.setConfig({ entity: 'lock.front' }); document.querySelector('#fixture').append(editor);
   });
   const editor = page.locator('nodalia-lock-card-editor');
-  await expect(editor.locator('.editor-section')).toHaveCount(2);
+  await expect(editor.locator('.editor-section')).toHaveCount(3);
   await editor.locator('[data-field="name"]').fill('My door');
   await page.evaluate(() => { document.querySelector('nodalia-lock-card-editor').hass = window.makeHass({}); });
   await expect(editor.locator('[data-field="name"]')).toBeFocused();
@@ -421,4 +422,64 @@ test("a replacement cover and its control palette are committed together", async
   for (const tag of ["nodalia-navigation-bar", "nodalia-media-player"]) await expect(page.locator(tag)).toContainText("Replacement song");
   await expect.poll(() => page.evaluate(() => window.paletteCommits.length)).toBeGreaterThanOrEqual(2);
   expect(await page.evaluate(() => window.paletteCommits.every(tint => tint === "rgb(255, 0, 0)"))).toBe(true);
+});
+
+test("Lock editor uses the shared switches and style presets, preserving nested settings", async ({ page }) => {
+  await mountLock(page);
+  await page.evaluate(() => {
+    const editor = document.createElement("nodalia-lock-card-editor");
+    editor.hass = window.hass;
+    editor.setConfig({ entity: "lock.front", styles: { card: { padding: "18px" } } });
+    editor.addEventListener("config-changed", event => { window.savedConfig = event.detail.config; window.card.setConfig(event.detail.config); });
+    document.querySelector("#fixture").append(editor);
+  });
+  const editor = page.locator("nodalia-lock-card-editor");
+  const stateSwitch = editor.locator('[data-field="show_state"]');
+  await expect(stateSwitch).toHaveRole("switch");
+  await expect(editor.locator(".editor-toggle__switch").first()).toHaveCSS("width", "40px");
+  await expect(editor.locator(".editor-toggle__switch").first()).toHaveCSS("height", "22px");
+  await stateSwitch.focus(); await stateSwitch.press("Space");
+  await expect(page.locator("nodalia-lock-card").locator(".state")).toHaveCount(0);
+  await editor.locator('[data-editor-toggle="styles"]').click();
+  await expect(editor.locator('[data-editor-toggle="styles"]')).toHaveAttribute("aria-expanded", "true");
+  await expect(editor).not.toContainText("ed.entity.");
+  await editor.locator('[data-field="styles.card.border_radius"][value="14px"]').check();
+  await editor.locator('[data-field="styles.icon.size"]').fill("48px");
+  await editor.locator('[data-field="styles.icon.size"]').blur();
+  const saved = await page.evaluate(() => window.savedConfig);
+  expect(saved.styles.card).toEqual({ padding: "18px", border_radius: "14px" });
+  expect(saved.styles.icon.size).toBe("48px");
+  await expect(page.locator("nodalia-lock-card").locator("ha-card")).toHaveCSS("border-radius", "14px");
+  await expect(page.locator("nodalia-lock-card").locator(".icon")).toHaveCSS("width", "48px");
+  await expect(page.locator("nodalia-lock-card").locator(".icon")).toHaveCSS("height", "48px");
+});
+
+test("Summary keeps media on home and embeds the native Lock card in security", async ({ page }) => {
+  await page.goto("/tests/fixtures/browser.html");
+  await page.waitForFunction(() => customElements.get("nodalia-room-summary-card"));
+  await page.evaluate(() => {
+    window.calls = [];
+    const hass = window.createHassFixture({ entities: {
+      "lock.front": { state: "locked", attributes: { friendly_name: "Front door" } },
+      "media_player.room": { state: "playing", attributes: { media_title: "Song" } },
+    }, overrides: { callService: async (...args) => { window.calls.push(args); } } });
+    const summary = document.createElement("nodalia-room-summary-card");
+    summary.setConfig({ locks: ["lock.front"], media_player: "media_player.room", animations: { enabled: false } });
+    summary.hass = hass;
+    document.querySelector("#fixture").append(summary);
+  });
+  const summary = page.locator("nodalia-room-summary-card");
+  await expect(summary.locator("nodalia-media-player")).toHaveCount(1);
+  await expect(summary.locator('[data-room-action="nav:media"]')).toHaveCount(0);
+  await summary.locator('[data-room-action="nav:security"]').click();
+  const lock = summary.locator("nodalia-lock-card");
+  await expect(lock).toHaveCount(1);
+  await expect(summary.locator("nodalia-entity-card")).toHaveCount(0);
+  await expect(lock.getByRole("slider")).toHaveAttribute("aria-disabled", "false");
+  await lock.getByRole("slider").press("End");
+  await lock.getByRole("slider").press("Enter");
+  expect(await page.evaluate(() => window.calls)).toEqual([]);
+  await summary.locator('[data-room-action="nav:home"]').click();
+  await expect(summary.locator("nodalia-media-player")).toHaveCount(1);
+  await expect(summary.locator('[data-room-action="nav:media"]')).toHaveCount(0);
 });

@@ -193,7 +193,7 @@ class NodaliaWeatherCard extends HTMLElement {
       rows: "auto",
       columns: "full",
       min_rows: 2,
-      min_columns: 2,
+      min_columns: 6,
     };
   }
 
