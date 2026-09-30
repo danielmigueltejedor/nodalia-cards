@@ -88,16 +88,14 @@ Ideally both results should be empty except for explicitly documented prerelease
 
 # 🚀 Release notes
 
-Preview tags (alpha, beta and release candidates) use GitHub's automatically generated notes and keep their detailed archive in `CHANGELOG-PRERELEASES.md`.
+Preview tags use the matching curated section in `CHANGELOG-PRERELEASES.md`;
+stable tags use `CHANGELOG.md`. Add user-facing Unreleased notes before running
+`pnpm release:alpha --dry-run` (or the appropriate channel). Preparation updates
+version references and artifacts locally, without committing, tagging or publishing.
 
-Stable tags use the matching `CHANGELOG.md` section as their public release notes. Before creating a stable tag:
-
-1. Replace `Unreleased` work with a `## [x.y.z] - YYYY-MM-DD` section.
-2. Start with a short, user-facing summary of the release.
-3. Include at least one structured subsection such as `Highlights`, `Added`, `Changed`, `Fixed`, `Breaking changes`, `Migration` or `Validation`.
-4. Explain dashboard impact and migration steps in plain language; avoid presenting the commit list as release notes.
-
-The release workflow refuses to publish a stable tag without that curated changelog section, then appends HACS update, integrity and support guidance automatically.
+Follow [the release guide](docs/releasing.md). Release publication waits for the
+same static and four-browser checks used by CI, then attaches integrity and
+provenance metadata. Missing curated notes block both stable and preview releases.
 
 ---
 
@@ -389,7 +387,11 @@ The self-contained HACS distribution appends `nodalia-editor-ui.js` to the same 
 
 # 🧰 Shared utilities (`nodalia-utils.js`)
 
-Lovelace helpers (`escapeLovelaceWarningText`, entity guards, editor collapsibles, zone tap scheduling, etc.) live only in **`nodalia-utils.js`** and are exposed as **`window.NodaliaUtils`**. Card sources call those APIs; they do not duplicate the implementations.
+Compatibility helpers for entity guards, editor sections and service actions
+remain in **`nodalia-utils.js`** on **`window.NodaliaUtils`**. Checked shared models
+and card logic live under `src/`; runtime adapters retain existing globals and
+standalone resource names. Card JS outputs are generated from TypeScript.
+See [architecture](docs/ARCHITECTURE.md) and [adding a card](docs/adding-a-card.md).
 
 The bundle loads **`nodalia-utils.js` once** before card modules (see order above). After editing **`nodalia-utils.js`**, run **`pnpm run bundle`** and commit the updated **`nodalia-cards.js`** artifact and its small manifest.
 
@@ -525,11 +527,19 @@ fully aligned.
 
 Before opening a PR:
 
-## Build the bundle
+## Validate changes
 
 ```bash
-pnpm run bundle
+pnpm install --frozen-lockfile
+pnpm validate:fast
+pnpm validate
 ```
+
+The fast check includes strict types, lint, translations, build and unit tests.
+The full check adds browser tests; see [testing](docs/testing.md) for browser
+installation and project selection. Commit generated card artifacts and the
+bundle manifest after changing their TS sources. Never run retired extractors
+or edit generated card JS as canonical source.
 
 ---
 

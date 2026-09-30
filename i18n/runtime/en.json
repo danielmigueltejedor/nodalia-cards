@@ -100,7 +100,8 @@
       "unavailable": "Unavailable",
       "unknown": "Unknown",
       "error": "Error",
-      "fallback": "Unknown"
+      "fallback": "Unknown",
+      "charger_disconnected": "Charger disconnected"
     },
     "mapStatus": {
       "washing_mop": "Washing mop",
@@ -1032,7 +1033,8 @@
     "water_carriage_drop": "Water carriage dropped",
     "check_clean_carouse": "Check cleaning carousel",
     "audio_error": "Audio error",
-    "water_empty": "Water tank empty"
+    "water_empty": "Water tank empty",
+    "charger_disconnected": "Charger disconnected"
   },
   "powerFlowCard": {
     "nodes": {

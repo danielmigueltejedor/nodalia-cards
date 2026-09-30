@@ -100,7 +100,8 @@
       "unavailable": "Niet beschikbaar",
       "unknown": "Onbekend",
       "error": "Fout",
-      "fallback": "Onbekend"
+      "fallback": "Onbekend",
+      "charger_disconnected": "Oplader losgekoppeld"
     },
     "mapStatus": {
       "washing_mop": "Dweil wordt gewassen",
@@ -1032,7 +1033,8 @@
     "water_carriage_drop": "Waterwagen gevallen",
     "check_clean_carouse": "Controleer de schoonmaakcarrousel",
     "audio_error": "Audiofout",
-    "water_empty": "Watertank leeg"
+    "water_empty": "Watertank leeg",
+    "charger_disconnected": "Oplader losgekoppeld"
   },
   "powerFlowCard": {
     "nodes": {

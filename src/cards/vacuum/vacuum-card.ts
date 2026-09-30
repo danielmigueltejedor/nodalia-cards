@@ -1021,7 +1021,7 @@ class NodaliaVacuumCard extends HTMLElement {
       case "unknown":
         return trState("unknown", "Unknown");
       default:
-        return this._humanizeStateLabel(this._getReportedStateValue(state), hass, langCfg) || "No state";
+        return trState(reportedKey, this._humanizeStateLabel(this._getReportedStateValue(state), hass, langCfg)) || "No state";
     }
   }
 
@@ -2473,7 +2473,7 @@ class NodaliaVacuumCard extends HTMLElement {
       : styles.card.box_shadow;
 
     if (config.show_state_chip !== false) {
-      chips.push(`<span class="vacuum-card__chip vacuum-card__chip--state">${escapeHtml(stateLabel)}</span>`);
+      chips.push(`<span class="vacuum-card__chip vacuum-card__chip--state" title="${escapeHtml(stateLabel)}"><span class="vacuum-card__chip-label">${escapeHtml(stateLabel)}</span></span>`);
     }
     if (denseCompact && batteryChipMarkup) {
       chips.push(batteryChipMarkup);
@@ -2751,6 +2751,7 @@ class NodaliaVacuumCard extends HTMLElement {
           display: flex;
           flex-wrap: wrap;
           gap: 8px;
+          max-width: 100%;
           min-width: 0;
         }
 
@@ -2770,6 +2771,14 @@ class NodaliaVacuumCard extends HTMLElement {
           min-width: 0;
           overflow: hidden;
           padding: ${styles.chip_padding};
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .vacuum-card__chip-label {
+          display: block;
+          min-width: 0;
+          overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
         }

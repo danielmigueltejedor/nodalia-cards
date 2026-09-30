@@ -12,6 +12,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Translate Vacuum’s charger-disconnected status and error sensor in every language; truncate long chips with an ellipsis while preserving the full label.
+
 - Show correct CSS Color 4 tints in the visual editors; changing a Lock color now retains its existing translucency.
 
 - Malformed Fan and Humidifier icon styles no longer prevent configuration loading; shared control normalization retains HA actions and service restrictions.
@@ -26,6 +28,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Remove Camera portal listeners from their owning shadow root.
 
 ### Maintenance
+
+- Check Vacuum configuration and helpers with TypeScript; remove obsolete source-extraction/editor mutation scripts and update build/contribution guidance.
 
 - Control animation and lifecycle time together in browser regressions, including slow-worker stalls, to avoid sampling detached controls.
 

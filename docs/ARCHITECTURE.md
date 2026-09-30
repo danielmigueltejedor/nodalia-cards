@@ -5,11 +5,11 @@ The public Lovelace/HACS contract is unchanged: custom element tags, YAML keys,
 defaults, editors, translations, and the single-file `nodalia-cards.js` install
 path stay the same.
 
-## Current architecture map (2.3.0-alpha.49)
+## Current architecture map (main after 2.3.0-alpha.49)
 
 The project is a Home Assistant Lovelace plugin. Handwritten cards historically
 lived as root `nodalia-*.js` files that were both source and published artifacts.
-Climate, Media Player, Light, Fan, Humidifier, Cover, Alarm Panel, Vacuum, Entity, Fav, Person, Camera, Circular Gauge, Insignia, Scenes, News, Weather, Graph, Calendar, Power Flow, Notifications, Navigation, Room Summary and Advance Vacuum canonical source now lives under
+Climate, Media Player, Light, Fan, Humidifier, Cover, Alarm Panel, Vacuum, Entity, Fav, Person, Camera, Circular Gauge, Insignia, Scenes, News, Weather, Graph, Calendar, Power Flow, Notifications, Navigation, Room Summary, Advance Vacuum and Lock canonical source now lives under
 `src/cards/` and is compiled to the existing HACS `nodalia-*-card.js` artifacts.
 Dashboard boot registers a tiny host per tag and compiles the real card or editor
 class only when that custom element is first created.
@@ -256,8 +256,8 @@ when a file is large *and* mixed.
 2. **Shared core** — move utils/backend/render-signature/bubble-contrast into
    `src/core/` with window adapters at the bundle edge.
 3. **Climate pilot (this preview)** — split Climate; keep Lovelace behavior.
-4. **Remaining large cards** — complete.
-5. **Smaller cards** — complete.
+4. **Remaining large cards** — source split complete; strict migration remains open.
+5. **Smaller cards** — source split complete; strict migration remains open.
 6. **Cleanup** — drop obsolete internals, reduce globals, type remaining
    `@ts-nocheck` files, replace regex tests with behavioral tests where safe.
 
@@ -269,7 +269,10 @@ when a file is large *and* mixed.
 4. `scripts/build-bundle.mjs` — esbuild HACS bundle from published JS parts,
    compiling migrated cards from `src/cards/*/index.ts`.
 
-`pnpm run validate` runs typecheck, lint, i18n checks, the bundle, and unit tests.
+`pnpm validate:fast` checks versions, tracked architecture debt, strict types, lint,
+distribution syntax, translations, build and unit tests. `pnpm validate` adds the
+full Playwright suite. CI also rejects generated artifact drift and validates
+Chromium, Firefox, WebKit and iPhone WebKit before release publication.
 
 ## Card architecture (Climate pilot)
 
@@ -307,18 +310,10 @@ standalone.ts          Standalone entry for nodalia-light-card.js
 `exactOptionalPropertyTypes`, `noFallthroughCasesInSwitch`, `noImplicitOverride`
 and `useUnknownInCatchVariables`.
 
-Relaxed checking is currently limited to:
-
-- `climate-card.ts` and `climate-editor.ts` (`// @ts-nocheck`) because they are
-  still the large HTMLElement/view controllers.
-- `climate-model.ts` and `climate-schedule.ts` (`// @ts-nocheck` with a
-  description) until remaining `unknown` internals are narrowed. Public
-  exports already have signatures.
-- `light-card.ts` and `light-editor.ts` (`// @ts-nocheck`) for the same reason.
-- `light-config.ts` and `light-helpers.ts` (`// @ts-nocheck` with a description)
-  until remaining `unknown` internals are narrowed.
-- Fan, Humidifier, Cover, Alarm Panel, Vacuum and Entity card/editor/helpers follow the same `@ts-nocheck`
-  split while their HTMLElement controllers stay large.
+Legacy suppressions remain in large views/editors and some helpers/configs,
+plus Climate's model and schedule. The exact current inventory is
+`scripts/type-debt.json`; `pnpm architecture:check` reports it and rejects new debt.
+A `.ts` filename or passing `tsc` does not imply suppressed modules were checked.
 
 Do not introduce `any` in new modules. Prefer `unknown` plus narrowing.
 Home Assistant types in `src/core/types` only include fields Nodalia actually
@@ -326,14 +321,12 @@ reads.
 
 ## Adding a new card
 
-1. Create `src/cards/<name>/` following the Climate split.
-2. Register the custom element in that card's `index.ts`.
-3. Add the generated `nodalia-<name>.js` outfile to `scripts/build-src-cards.mjs`
-   and `scripts/build-bundle.mjs` `CARD_PARTS`.
-4. Keep the tag, editor tag, YAML keys and defaults identical to any previous JS
-   card you are replacing.
-
-Until a card is migrated, add it as a root `nodalia-*.js` file as today.
+Follow [adding-a-card.md](adding-a-card.md). Define checked TS modules and add
+one entry to `src/cards/registry.json`; the registry supplies both bundle and
+standalone build inventories. Include the artifact in `package.json.files`.
+Root `nodalia-*.js` card files are generated outputs, not a place to implement
+new cards or edit existing behavior. Retired one-shot extractors are recoverable
+from Git history, but their fixed line offsets do not fit the current build.
 
 ## Adding a new editor
 
@@ -371,7 +364,7 @@ Six config/helper cycles were removed through checked defaults and normalization
 Do not place defaults in modules that import their own normalizers.
 Notifications normalization now lives below the config and presentation helpers;
 no runtime import cycles remain.
-90 legacy modules still suppress typechecking; see `scripts/type-debt.json`.
+88 legacy modules still suppress typechecking; see `scripts/type-debt.json`.
 **The full TypeScript migration is not complete.** Checked modules and extracted
 contracts must grow without adding suppressions or casts to hide errors. The
 architecture guard prevents new unchecked files and new runtime cycles.
@@ -400,3 +393,8 @@ directly. The model distinguishes RGB channels from CSS Color 4 sRGB channels,
 retains alpha and delegates wider-gamut conversion to the browser. Card-specific
 color fallback policies remain colocated with their helpers. Fan/Humidifier share
 checked control action/style normalization; Cover reuses the style projection.
+
+Vacuum configuration and helper ownership/mode-label functions now pass strict
+checking. Reported states and error sensors share localized
+`charger_disconnected` labels. Status chips constrain both their flex row and a
+dedicated ellipsis span; full text is retained in the title.

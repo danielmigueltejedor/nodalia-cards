@@ -100,7 +100,8 @@
       "unavailable": "Non disponibile",
       "unknown": "Sconosciuto",
       "error": "Errore",
-      "fallback": "Sconosciuto"
+      "fallback": "Sconosciuto",
+      "charger_disconnected": "Caricatore scollegato"
     },
     "mapStatus": {
       "washing_mop": "Lavaggio mopa",
@@ -1032,7 +1033,8 @@
     "water_carriage_drop": "Il trasporto dell'acqua è caduto",
     "check_clean_carouse": "Controllare il carosello di pulizia",
     "audio_error": "Errore audio",
-    "water_empty": "Serbatoio dell’acqua vuoto"
+    "water_empty": "Serbatoio dell’acqua vuoto",
+    "charger_disconnected": "Caricatore scollegato"
   },
   "powerFlowCard": {
     "nodes": {

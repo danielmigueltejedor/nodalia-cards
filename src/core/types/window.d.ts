@@ -34,6 +34,10 @@ interface NodaliaI18nApi {
   resolveLanguage?: (hass: unknown, language?: string) => string;
   strings?: (language: string) => Record<string, unknown>;
   editorStr?: (hass: unknown, language: string, key: string) => string;
+  translateAdvanceVacuumVacuumMode?: (hass: unknown, language: string, value: unknown, kind?: string) => string;
+  translateAdvanceVacuumReportedState?: (hass: unknown, language: string, key: unknown, fallback?: unknown) => string;
+  translateVacuumErrorState?: (hass: unknown, language: string, value: unknown, fallback?: unknown) => string;
+  isVacuumErrorState?: (value: unknown) => boolean;
   localeTag?: (language: string) => string;
 }
 

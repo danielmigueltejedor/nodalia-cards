@@ -1,5 +1,5 @@
-// @ts-nocheck -- merged Lovelace YAML is projected into the runtime vacuum config.
 import { isObject, mergeConfig, normalizeTextKey } from "./vacuum-runtime";
+import { normalizeControlList, normalizeControlStyles } from "../../shared/control-config";
 
 export const DEFAULT_CONFIG = {
   entity: "",
@@ -87,60 +87,21 @@ export const STUB_CONFIG = {
   name: "Robot salon",
 };
 
-export function sanitizeCssValue(value, fallback) {
-  const raw = String(value ?? "").trim();
-  const safeFallback = String(fallback ?? "").trim();
-  if (!raw) {
-    return safeFallback;
-  }
-  if (/[\u0000-\u001f\u007f<>;"'{}]/.test(raw) || raw.includes("/*") || raw.includes("*/")) { // eslint-disable-line no-control-regex
-    return safeFallback;
-  }
-  return raw;
+export const sanitizeCssValue = window.NodaliaUtils.sanitizeCssValue.bind(window.NodaliaUtils);
+
+export function getSafeStyles(styles: unknown = DEFAULT_CONFIG.styles) {
+  return normalizeControlStyles(styles, DEFAULT_CONFIG.styles);
 }
 
-export function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
-  const walk = (candidate, fallback) => {
-    if (isObject(fallback)) {
-      const out = {};
-      const source = isObject(candidate) ? candidate : {};
-      Object.keys(fallback).forEach(key => {
-        out[key] = walk(source[key], fallback[key]);
-      });
-      return out;
-    }
-    if (typeof fallback === "string") {
-      return sanitizeCssValue(candidate, fallback);
-    }
-    return candidate === undefined ? fallback : candidate;
-  };
-  return walk(styles, DEFAULT_CONFIG.styles);
-}
-
-export function normalizeConfig(rawConfig) {
-  const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-  const normalizeList = value => (
-    Array.isArray(value)
-      ? value
-      : typeof value === "string"
-        ? value.split(",")
-        : []
-  )
-    .map(item => String(item || "").trim())
-    .filter(Boolean);
-
-  if (!Array.isArray(config.fan_presets)) {
-    config.fan_presets = [];
-  }
-
-  config.fan_presets = config.fan_presets
-    .map(item => String(item || "").trim())
-    .filter(Boolean);
-  config.hidden_suction_modes = normalizeList(config.hidden_suction_modes);
-  config.hidden_mop_modes = normalizeList(config.hidden_mop_modes);
+export function normalizeConfig(rawConfig: unknown = {}) {
+  const defaults: Record<string, unknown> = DEFAULT_CONFIG;
+  const config = mergeConfig(defaults, rawConfig);
+  const fanPresets = Array.isArray(config.fan_presets) ? normalizeControlList(config.fan_presets) : [];
+  const hiddenSuctionModes = normalizeControlList(config.hidden_suction_modes);
+  const hiddenMopModes = normalizeControlList(config.hidden_mop_modes);
 
   const VACUUM_CARD_ACTION_KEYS = new Set(["default", "more_info", "navigate", "none"]);
-  const normVacuumCardActionKey = raw => {
+  const normVacuumCardActionKey = (raw: unknown) => {
     const key = normalizeTextKey(String(raw ?? "").trim());
     return VACUUM_CARD_ACTION_KEYS.has(key) ? key : null;
   };
@@ -157,9 +118,22 @@ export function normalizeConfig(rawConfig) {
   config.icon_hold_navigation_path = String(config.icon_hold_navigation_path ?? "").trim();
   config.entity_picture = String(config.entity_picture ?? "").trim();
   config.show_entity_picture = config.show_entity_picture === true;
-  config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
+  const security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
     ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
-  config.security.strict_service_actions = config.security.strict_service_actions === true;
+  security.strict_service_actions = security.strict_service_actions === true;
 
-  return config;
+  return {
+    ...config,
+    fan_presets: fanPresets,
+    hidden_suction_modes: hiddenSuctionModes,
+    hidden_mop_modes: hiddenMopModes,
+    hold_action: holdKey || "none",
+    icon_hold_action: String(config.icon_hold_action),
+    hold_navigation_path: String(config.hold_navigation_path),
+    icon_hold_navigation_path: String(config.icon_hold_navigation_path),
+    entity_picture: String(config.entity_picture),
+    show_entity_picture: config.show_entity_picture === true,
+    security,
+    styles: getSafeStyles(config.styles),
+  };
 }

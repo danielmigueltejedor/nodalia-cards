@@ -90,6 +90,40 @@
   var fireEvent = utils.fireEvent.bind(utils);
   var normalizeTextKey = utils.normalizeTextKey.bind(utils);
 
+  // src/shared/control-config.ts
+  function normalizeControlStyles(candidate, defaults) {
+    const utils2 = window.NodaliaUtils;
+    const source = utils2.isObject(candidate) ? candidate : {};
+    const result = {};
+    for (const [key, fallback] of Object.entries(defaults)) {
+      if (utils2.isUnsafeConfigPathKey(key)) continue;
+      result[key] = typeof fallback === "string" ? utils2.sanitizeCssValue(source[key], fallback) : normalizeControlStyles(source[key], fallback);
+    }
+    return result;
+  }
+  function normalizeControlList(value) {
+    const values = Array.isArray(value) ? value : typeof value === "string" ? value.split(",") : [];
+    return values.map((item) => String(item || "").trim()).filter(Boolean);
+  }
+  var actionFields = (prefix, fallback, navigationKey = `${prefix}_navigation_path`) => ({
+    actionKey: `${prefix}_action`,
+    serviceKey: `${prefix}_service`,
+    serviceDataKey: `${prefix}_service_data`,
+    serviceTargetKey: `${prefix}_service_target`,
+    urlKey: `${prefix}_url`,
+    navigationKey,
+    newTabKey: `${prefix}_new_tab`,
+    fallback
+  });
+  var FIELDS = [
+    actionFields("tap", "toggle", "navigation_path"),
+    actionFields("icon_tap", "", "icon_navigation_path"),
+    actionFields("hold", "more-info", "hold_navigation_path"),
+    actionFields("icon_hold", ""),
+    actionFields("double_tap", "none"),
+    actionFields("icon_double_tap", "")
+  ];
+
   // src/cards/vacuum/vacuum-config.ts
   var DEFAULT_CONFIG = {
     entity: "",
@@ -175,43 +209,16 @@
     entity: "vacuum.salon",
     name: "Robot salon"
   };
-  function sanitizeCssValue(value, fallback) {
-    const raw = String(value ?? "").trim();
-    const safeFallback = String(fallback ?? "").trim();
-    if (!raw) {
-      return safeFallback;
-    }
-    if (/[\u0000-\u001f\u007f<>;"'{}]/.test(raw) || raw.includes("/*") || raw.includes("*/")) {
-      return safeFallback;
-    }
-    return raw;
-  }
+  var sanitizeCssValue = window.NodaliaUtils.sanitizeCssValue.bind(window.NodaliaUtils);
   function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
-    const walk = (candidate, fallback) => {
-      if (isObject(fallback)) {
-        const out = {};
-        const source = isObject(candidate) ? candidate : {};
-        Object.keys(fallback).forEach((key) => {
-          out[key] = walk(source[key], fallback[key]);
-        });
-        return out;
-      }
-      if (typeof fallback === "string") {
-        return sanitizeCssValue(candidate, fallback);
-      }
-      return candidate === void 0 ? fallback : candidate;
-    };
-    return walk(styles, DEFAULT_CONFIG.styles);
+    return normalizeControlStyles(styles, DEFAULT_CONFIG.styles);
   }
-  function normalizeConfig(rawConfig) {
-    const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-    const normalizeList = (value) => (Array.isArray(value) ? value : typeof value === "string" ? value.split(",") : []).map((item) => String(item || "").trim()).filter(Boolean);
-    if (!Array.isArray(config.fan_presets)) {
-      config.fan_presets = [];
-    }
-    config.fan_presets = config.fan_presets.map((item) => String(item || "").trim()).filter(Boolean);
-    config.hidden_suction_modes = normalizeList(config.hidden_suction_modes);
-    config.hidden_mop_modes = normalizeList(config.hidden_mop_modes);
+  function normalizeConfig(rawConfig = {}) {
+    const defaults = DEFAULT_CONFIG;
+    const config = mergeConfig(defaults, rawConfig);
+    const fanPresets = Array.isArray(config.fan_presets) ? normalizeControlList(config.fan_presets) : [];
+    const hiddenSuctionModes = normalizeControlList(config.hidden_suction_modes);
+    const hiddenMopModes = normalizeControlList(config.hidden_mop_modes);
     const VACUUM_CARD_ACTION_KEYS = /* @__PURE__ */ new Set(["default", "more_info", "navigate", "none"]);
     const normVacuumCardActionKey = (raw) => {
       const key = normalizeTextKey(String(raw ?? "").trim());
@@ -230,9 +237,22 @@
     config.icon_hold_navigation_path = String(config.icon_hold_navigation_path ?? "").trim();
     config.entity_picture = String(config.entity_picture ?? "").trim();
     config.show_entity_picture = config.show_entity_picture === true;
-    config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? { ...DEFAULT_CONFIG.security, ...isObject(config.security) ? config.security : {} };
-    config.security.strict_service_actions = config.security.strict_service_actions === true;
-    return config;
+    const security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? { ...DEFAULT_CONFIG.security, ...isObject(config.security) ? config.security : {} };
+    security.strict_service_actions = security.strict_service_actions === true;
+    return {
+      ...config,
+      fan_presets: fanPresets,
+      hidden_suction_modes: hiddenSuctionModes,
+      hidden_mop_modes: hiddenMopModes,
+      hold_action: holdKey || "none",
+      icon_hold_action: String(config.icon_hold_action),
+      hold_navigation_path: String(config.hold_navigation_path),
+      icon_hold_navigation_path: String(config.icon_hold_navigation_path),
+      entity_picture: String(config.entity_picture),
+      show_entity_picture: config.show_entity_picture === true,
+      security,
+      styles: getSafeStyles(config.styles)
+    };
   }
 
   // src/shared/editor-color.ts
@@ -382,8 +402,9 @@
     if (key === "off" && kind === "suction") {
       return "Off";
     }
-    if (MODE_LABELS[key]) {
-      return MODE_LABELS[key];
+    const labels = MODE_LABELS;
+    if (labels[key]) {
+      return labels[key];
     }
     return raw.replaceAll("_", " ").replace(/\b\w/g, (match) => match.toUpperCase());
   }
@@ -1194,7 +1215,7 @@
           case "unknown":
             return trState("unknown", "Unknown");
           default:
-            return this._humanizeStateLabel(this._getReportedStateValue(state), hass, langCfg) || "No state";
+            return trState(reportedKey, this._humanizeStateLabel(this._getReportedStateValue(state), hass, langCfg)) || "No state";
         }
       }
       _humanizeStateLabel(value, hass = null, configLang = null) {
@@ -2336,7 +2357,7 @@
         const cardBorder = isTintedState ? `color-mix(in srgb, ${accentColor} 34%, var(--divider-color))` : styles.card.border;
         const cardShadow = isTintedState ? `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))` : styles.card.box_shadow;
         if (config.show_state_chip !== false) {
-          chips.push(`<span class="vacuum-card__chip vacuum-card__chip--state">${escapeHtml(stateLabel)}</span>`);
+          chips.push(`<span class="vacuum-card__chip vacuum-card__chip--state" title="${escapeHtml(stateLabel)}"><span class="vacuum-card__chip-label">${escapeHtml(stateLabel)}</span></span>`);
         }
         if (denseCompact && batteryChipMarkup) {
           chips.push(batteryChipMarkup);
@@ -2592,6 +2613,7 @@
           display: flex;
           flex-wrap: wrap;
           gap: 8px;
+          max-width: 100%;
           min-width: 0;
         }
 
@@ -2611,6 +2633,14 @@
           min-width: 0;
           overflow: hidden;
           padding: ${styles.chip_padding};
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .vacuum-card__chip-label {
+          display: block;
+          min-width: 0;
+          overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
         }

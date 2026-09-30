@@ -1,13 +1,13 @@
-// @ts-nocheck -- color, helper matching and mode labels stay loosely typed until remaining unknowns are narrowed.
 export { resolveEditorColorValue, formatEditorHexChannel, formatEditorColorFromHex, getEditorColorModel } from "../../shared/editor-color";
 import { MODE_LABELS } from "./vacuum-constants";
-import { clamp, normalizeTextKey } from "./vacuum-runtime";
+import type { HassEntity, HomeAssistant } from "../../core/types/home-assistant";
+import { normalizeTextKey } from "./vacuum-runtime";
 
-export function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
+export function getStubEntityId(hass: HomeAssistant | null | undefined, domains: string[] = [], entities: unknown = [], entitiesFallback: unknown = []) {
   return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
 }
 
-export function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
+export function applyStubEntity<T extends { entity: string; name: string }>(config: T, hass: HomeAssistant | null | undefined, domains: string[], entities: unknown = [], entitiesFallback: unknown = []) {
   const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
   if (!entityId) {
     return config;
@@ -18,34 +18,19 @@ export function applyStubEntity(config, hass, domains, entities = [], entitiesFa
   return config;
 }
 
-
-
-
-
-
-
-
-export function parseSizeToPixels(value, fallback = 0) {
+export function parseSizeToPixels(value: unknown, fallback = 0) {
   const numeric = Number.parseFloat(String(value ?? ""));
   return Number.isFinite(numeric) ? numeric : fallback;
 }
 
-export function arrayFromCsv(value) {
+export function arrayFromCsv(value: unknown) {
   return String(value || "")
     .split(",")
     .map(item => item.trim())
     .filter(Boolean);
 }
 
-
-
-
-
-
-
-
-
-export function getEditorColorFallbackValue(field) {
+export function getEditorColorFallbackValue(field: unknown) {
   const normalizedField = String(field ?? "");
 
   if (normalizedField.endsWith("off_color") || normalizedField.endsWith("docked_color")) {
@@ -67,7 +52,7 @@ export function getEditorColorFallbackValue(field) {
   return "var(--info-color, #71c0ff)";
 }
 
-export function listVacuumObjectIds(states = {}) {
+export function listVacuumObjectIds(states: HomeAssistant["states"] = {}) {
   return Object.keys(states || {})
     .filter(id => id.startsWith("vacuum."))
     .map(id => normalizeTextKey(id.split(".").slice(1).join("_")))
@@ -79,13 +64,21 @@ export function listVacuumObjectIds(states = {}) {
  * Same `device_id` always wins; otherwise the longest matching vacuum object id owns the helper.
  * Unscoped `roborock` guesses are allowed only when the home has a single `vacuum.*`.
  */
+interface VacuumHelperMatch {
+  candidateId: string;
+  searchable?: string;
+  isSameDevice?: boolean;
+  objectId: string;
+  vacuumObjectIds?: readonly string[];
+}
+
 export function isHelperRelatedToConfiguredVacuum({
   candidateId,
   searchable = "",
   isSameDevice = false,
   objectId,
   vacuumObjectIds,
-}) {
+}: VacuumHelperMatch) {
   if (isSameDevice) {
     return true;
   }
@@ -106,11 +99,11 @@ export function isHelperRelatedToConfiguredVacuum({
   return !claimedByLongerSibling;
 }
 
-export function isUnavailableState(state) {
+export function isUnavailableState(state: Pick<HassEntity, "state"> | null | undefined) {
   return normalizeTextKey(state?.state) === "unavailable";
 }
 
-export function humanizeModeLabel(value, kind = "generic", hass = null, configLang = null) {
+export function humanizeModeLabel(value: unknown, kind = "generic", hass: HomeAssistant | null = null, configLang: string | null = null) {
   const raw = String(value || "").trim();
   if (!raw) {
     return "";
@@ -125,8 +118,9 @@ export function humanizeModeLabel(value, kind = "generic", hass = null, configLa
     return "Off";
   }
 
-  if (MODE_LABELS[key]) {
-    return MODE_LABELS[key];
+  const labels: Readonly<Record<string, string>> = MODE_LABELS;
+  if (labels[key]) {
+    return labels[key];
   }
 
   return raw
