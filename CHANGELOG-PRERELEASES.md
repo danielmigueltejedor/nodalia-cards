@@ -12,6 +12,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Prevent Camera signed-path caches from outliving short signed URL expiry, retry malformed responses, and protect array-aware editor paths from unsafe or inherited branches.
+
 - Restore Gauge automatic ranges and state precision when bounds/decimals are blank; keep absent readings distinct from zero and give physical units priority over names. Read modern translucent theme colors correctly.
 
 - Keep Navigation artwork query parameters before URL fragments and match parameter names literally; guard malformed duration and editor move inputs.
@@ -36,6 +38,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Remove Camera portal listeners from their owning shadow root.
 
 ### Maintenance
+
+- Check Camera configuration and helpers, derive public method declarations from source, and share protected array paths and fragment-preserving URL query construction.
 
 - Remove unused original demo GIFs while preserving the referenced optimized demos; refresh historical audit links and current build/validation instructions.
 
