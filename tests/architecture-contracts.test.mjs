@@ -1,3 +1,4 @@
+import { CARD_REGISTRY } from "../scripts/card-registry.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -8,32 +9,7 @@ import { fileURLToPath } from "node:url";
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
-const CARD_FILES = [
-  "nodalia-navigation-bar.js",
-  "nodalia-media-player.js",
-  "nodalia-light-card.js",
-  "nodalia-fan-card.js",
-  "nodalia-humidifier-card.js",
-  "nodalia-circular-gauge-card.js",
-  "nodalia-graph-card.js",
-  "nodalia-power-flow-card.js",
-  "nodalia-cover-card.js",
-  "nodalia-climate-card.js",
-  "nodalia-alarm-panel-card.js",
-  "nodalia-advance-vacuum-card.js",
-  "nodalia-entity-card.js",
-  "nodalia-fav-card.js",
-  "nodalia-insignia-card.js",
-  "nodalia-person-card.js",
-  "nodalia-scenes-card.js",
-  "nodalia-weather-card.js",
-  "nodalia-calendar-card.js",
-  "nodalia-notifications-card.js",
-  "nodalia-vacuum-card.js",
-  "nodalia-news-card.js",
-  "nodalia-camera-card.js",
-  "nodalia-room-summary-card.js",
-];
+const CARD_FILES = CARD_REGISTRY.map(card => card.artifact);
 
 const CARD_TAGS = CARD_FILES.map(file => file.replace(/\.js$/, ""));
 const EDITOR_TAGS = CARD_TAGS.map(tag => `${tag}-editor`);
@@ -103,10 +79,14 @@ test("public custom-element and editor tags stay exact", () => {
 
 test("build and package expose the exact supported card source set", () => {
   const build = read("scripts/build-bundle.mjs");
-  const listed = [...build.matchAll(/^\s+"(nodalia-(?:[^"/]+))",$/gm)]
-    .map(match => match[1])
-    .filter(file => CARD_FILES.includes(file));
-  assert.deepEqual(listed, CARD_FILES);
+  assert.match(build, /CARD_REGISTRY\.map/);
+  assert.equal(CARD_REGISTRY.length, 25);
+  assert.equal(new Set(CARD_FILES).size, CARD_FILES.length);
+  assert.ok(CARD_FILES.includes("nodalia-lock-card.js"));
+  for (const card of CARD_REGISTRY) {
+    assert.ok(fs.existsSync(path.join(root, card.entry)));
+    assert.ok(fs.existsSync(path.join(root, card.standalone)));
+  }
 
   const pkg = JSON.parse(read("package.json"));
   CARD_FILES.forEach(file => assert.ok(pkg.files.includes(file), `${file} must remain published`));
@@ -723,8 +703,8 @@ test("TypeScript climate, media player, light, fan and humidifier sources are ca
   const generatedAdvanceVacuum = read("nodalia-advance-vacuum-card.js");
   assert.match(generatedAdvanceVacuum, /window\.__NODALIA_ADVANCE_VACUUM__/);
   assert.match(generatedAdvanceVacuum, /defineLazyCustomElement\(CARD_TAG, loadNodaliaAdvanceVacuumCard/);
-  const standaloneBuild = read("scripts/build-src-cards.mjs");
-  const hacsBuild = read("scripts/build-bundle.mjs");
+  const standaloneBuild = read("src/cards/registry.json");
+  const hacsBuild = read("src/cards/registry.json");
   assert.match(standaloneBuild, /src\/cards\/climate\/standalone\.ts/);
   assert.match(standaloneBuild, /src\/cards\/media-player\/standalone\.ts/);
   assert.match(standaloneBuild, /src\/cards\/light\/standalone\.ts/);

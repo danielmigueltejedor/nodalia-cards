@@ -12,7 +12,12 @@ permissions:
   artifact-metadata: write
 
 jobs:
+  quality:
+    uses: ./.github/workflows/quality.yml
+    permissions:
+      contents: read
   build-release:
+    needs: quality
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
@@ -37,7 +42,7 @@ jobs:
         run: |
           pnpm run i18n:gen-editor
           pnpm run i18n:gen-runtime
-          pnpm run validate
+          pnpm run validate:fast
           git diff --exit-code
 
       - name: Validate release assets and generate metadata

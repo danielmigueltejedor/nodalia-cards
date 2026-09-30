@@ -13,7 +13,7 @@ import {
   isMixedContentUrl,
   isObject,
 } from "./camera-runtime";
-import { DEFAULT_CONFIG } from "./camera-config";
+import { DEFAULT_CONFIG } from "./camera-defaults";
 
 export function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
   return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";

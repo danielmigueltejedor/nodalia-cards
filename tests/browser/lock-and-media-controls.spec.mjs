@@ -359,3 +359,66 @@ test("Lock icon glyphs are centered inside the state and slide bubbles", async (
     }
   }
 });
+
+test("Playback capsule stays at the card center with asymmetric auxiliary controls", async ({ page }) => {
+  await mountMedia(page, '#ac5522');
+  for (const width of [300, 480, 700]) {
+    for (const tag of ['nodalia-media-player', 'nodalia-navigation-bar']) {
+      const result = await page.locator(tag).evaluate((element, width) => {
+        element.style.width = `${width}px`;
+        const root = element.shadowRoot;
+        const end = root.querySelector('.media-player__transport-side--end');
+        if (!end.querySelector('[data-extra]')) {
+          const auxiliary = root.querySelector('.media-player__volume-button').cloneNode(true);
+          auxiliary.dataset.extra = ''; end.append(auxiliary);
+        }
+        const surface = root.querySelector('.media-player-card').getBoundingClientRect();
+        const capsule = root.querySelector('.media-player__transport').getBoundingClientRect();
+        return { offset: Math.abs(capsule.x + capsule.width / 2 - surface.x - surface.width / 2), inside: capsule.left >= surface.left && capsule.right <= surface.right };
+      }, width);
+      expect(result.offset).toBeLessThan(1);
+      expect(result.inside).toBe(true);
+    }
+  }
+});
+
+test("a replacement cover and its control palette are committed together", async ({ page }) => {
+  await mountMedia(page, "#0000ff");
+  const players = page.locator("nodalia-navigation-bar, nodalia-media-player");
+  await expect.poll(() => players.evaluateAll(cards => cards.every(card =>
+    card.shadowRoot.querySelector("[data-artwork-controls]")?.style.getPropertyValue("--media-control-tint") === "rgb(0, 0, 255)"
+  ))).toBe(true);
+  let release;
+  const ready = new Promise(resolve => { release = resolve; });
+  let requested = false;
+  await page.route("**/replacement-cover.svg*", async route => {
+    requested = true;
+    await ready;
+    await route.fulfill({ contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><rect width="24" height="24" fill="#ff0000"/></svg>' });
+  });
+  await page.evaluate(() => {
+    const previous = window.hass.states["media_player.test"];
+    window.hass = { ...window.hass, states: { ...window.hass.states, "media_player.test": {
+      ...previous, attributes: { ...previous.attributes, media_title: "Replacement song", entity_picture: "/replacement-cover.svg" },
+    } } };
+    for (const card of document.querySelectorAll("nodalia-navigation-bar, nodalia-media-player")) card.hass = window.hass;
+  });
+  await expect.poll(() => requested).toBe(true);
+  for (const tag of ["nodalia-navigation-bar", "nodalia-media-player"]) {
+    await expect(page.locator(tag)).not.toContainText("Replacement song");
+  }
+  await players.evaluateAll(cards => {
+    window.paletteCommits = [];
+    for (const card of cards) {
+      const observer = new MutationObserver(() => {
+        if (!card.shadowRoot.textContent.includes("Replacement song")) return;
+        window.paletteCommits.push(card.shadowRoot.querySelector("[data-artwork-controls]")?.style.getPropertyValue("--media-control-tint"));
+      });
+      observer.observe(card.shadowRoot, { subtree: true, childList: true, attributes: true });
+    }
+  });
+  release();
+  for (const tag of ["nodalia-navigation-bar", "nodalia-media-player"]) await expect(page.locator(tag)).toContainText("Replacement song");
+  await expect.poll(() => page.evaluate(() => window.paletteCommits.length)).toBeGreaterThanOrEqual(2);
+  expect(await page.evaluate(() => window.paletteCommits.every(tint => tint === "rgb(255, 0, 0)"))).toBe(true);
+});

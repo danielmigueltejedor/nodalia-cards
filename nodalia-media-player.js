@@ -1,10 +1,12 @@
 /* Generated from src/cards/media-player. Do not edit. */
 "use strict";
 (() => {
+  // src/version.ts
+  var CARD_VERSION = "2.3.0-alpha.49";
+
   // src/cards/media-player/media-player-constants.ts
   var CARD_TAG = "nodalia-media-player";
   var EDITOR_TAG = "nodalia-media-player-editor";
-  var CARD_VERSION = "2.3.0-alpha.49";
   var INVALID_EDITOR_VALUE = /* @__PURE__ */ Symbol("invalid-editor-value");
   var MEDIA_PLAYER_FEATURE_BROWSE_MEDIA = 2048;
   var HAPTIC_PATTERNS = {
@@ -506,6 +508,15 @@
   // src/cards/media-player/media-player-artwork.ts
   var PALETTE_CACHE = /* @__PURE__ */ new Map();
   var PRELOAD_CACHE = /* @__PURE__ */ new Map();
+  var PALETTE_REQUESTS = /* @__PURE__ */ new Map();
+  var ARTWORK_CACHE_LIMIT = 64;
+  function boundCache(cache) {
+    while (cache.size > ARTWORK_CACHE_LIMIT) {
+      const first = cache.keys().next().value;
+      if (first === void 0) break;
+      cache.delete(first);
+    }
+  }
   function getArtworkVisuals(artwork = {}, albumCoverEnabled = true, isLightTheme = false) {
     if (!albumCoverEnabled || artwork.mode === "off") {
       return { filter: "none", opacity: "0", dim: 0 };
@@ -594,6 +605,7 @@
   }
   function setCachedArtworkPalette(url, palette) {
     PALETTE_CACHE.set(url, palette);
+    boundCache(PALETTE_CACHE);
   }
   function preloadArtworkUrl(url) {
     const nextUrl = String(url || "").trim();
@@ -614,7 +626,7 @@
       };
       image.onload = () => {
         const decode = image.decode?.();
-        if (decode && typeof decode.then === "function") {
+        if (decode !== void 0 && typeof decode.then === "function") {
           decode.then(() => settle(true)).catch(() => settle(true));
           return;
         }
@@ -624,9 +636,20 @@
       image.src = nextUrl;
     });
     PRELOAD_CACHE.set(nextUrl, pending);
+    boundCache(PRELOAD_CACHE);
     return pending;
   }
-  async function sampleArtworkPalette(url) {
+  function sampleArtworkPalette(url) {
+    const key = String(url || "").trim();
+    const cached = getCachedArtworkPalette(key);
+    if (cached) return Promise.resolve(cached);
+    const pending = PALETTE_REQUESTS.get(key);
+    if (pending) return pending;
+    const request = loadArtworkPalette(key).finally(() => PALETTE_REQUESTS.delete(key));
+    PALETTE_REQUESTS.set(key, request);
+    return request;
+  }
+  async function loadArtworkPalette(url) {
     const nextUrl = String(url || "").trim();
     if (!nextUrl) {
       return null;
@@ -640,8 +663,15 @@
       image.decoding = "async";
       image.crossOrigin = "anonymous";
       const loaded = await new Promise((resolve) => {
-        image.onload = () => resolve(true);
-        image.onerror = () => resolve(false);
+        const timeout = setTimeout(() => settle(false), 4e3);
+        const settle = (success) => {
+          clearTimeout(timeout);
+          image.onload = null;
+          image.onerror = null;
+          resolve(success);
+        };
+        image.onload = () => settle(true);
+        image.onerror = () => settle(false);
         image.src = nextUrl;
       });
       if (!loaded) {
@@ -810,6 +840,17 @@
       host.current.classList.toggle("is-idle-animated", enabled);
     }
   };
+  function artworkCacheToken(state) {
+    if (!state) return "";
+    return [
+      state.attributes.entity_picture || state.attributes.entity_picture_local,
+      state.attributes.media_content_id,
+      state.attributes.media_title,
+      state.attributes.media_artist,
+      state.attributes.media_album_name,
+      state.attributes.app_name
+    ].map((value) => String(value || "")).filter(Boolean).join("|");
+  }
 
   // src/cards/media-player/media-player-progress.ts
   var MEDIA_PLAYER_FEATURE_SEEK = 2;
@@ -1164,6 +1205,31 @@
   // src/cards/media-player/media-player-control-theme.ts
   var requests = /* @__PURE__ */ new WeakMap();
   var themes = /* @__PURE__ */ new WeakMap();
+  var prepared = /* @__PURE__ */ new Set();
+  var displayedArtwork = /* @__PURE__ */ new WeakMap();
+  var renderRequests = /* @__PURE__ */ new WeakMap();
+  function prepareArtworkTheme(owner, url, hasCurrentCard, render) {
+    if (!hasCurrentCard || displayedArtwork.get(owner) === url || !url || getCachedArtworkPalette(url) || prepared.has(url)) {
+      displayedArtwork.set(owner, url);
+      renderRequests.delete(owner);
+      return true;
+    }
+    const existing = renderRequests.get(owner);
+    if (existing?.url === url) return false;
+    const token = {};
+    renderRequests.set(owner, { url, token });
+    void sampleArtworkPalette(url).then(() => {
+      if (renderRequests.get(owner)?.token !== token) return;
+      renderRequests.delete(owner);
+      prepared.add(url);
+      if (prepared.size > 64) {
+        const first = prepared.values().next().value;
+        if (first !== void 0) prepared.delete(first);
+      }
+      if (owner.isConnected) render();
+    });
+    return false;
+  }
   async function applyArtworkControlTheme(host, url) {
     if (!host) return;
     const owner = host.getRootNode?.()?.host || host;
@@ -1181,6 +1247,13 @@
       host.style.setProperty("--media-control-ink", theme2.ink);
       host.setAttribute("data-artwork-controls", "");
     };
+    const cached = getCachedArtworkPalette(url);
+    if (cached) {
+      const theme2 = { url, tint: cached.primary, ink: cached.foreground === "dark" ? "#000" : "#fff" };
+      themes.set(owner, theme2);
+      apply(theme2);
+      return;
+    }
     const previous = themes.get(owner);
     if (previous) {
       apply(previous);
@@ -1193,12 +1266,22 @@
     apply(theme);
   }
   var MEDIA_CONTROL_STYLES = `
+  .media-player-card .media-player__transport-shell { width:100%; }
+  .media-player-card .media-player__transport-cluster {
+    display:grid; grid-template-columns:minmax(0, 1fr) auto minmax(0, 1fr);
+    gap:8px; width:100%; align-items:center;
+  }
+  .media-player__transport-side { display:flex; flex-wrap:wrap; gap:8px; min-width:0; align-items:center; }
+  .media-player__transport-side--start { justify-content:flex-end; }
+  .media-player__transport-side--end { justify-content:flex-start; }
+  .media-player-card .media-player__transport-addon { position:static; transform:none; }
+
   .media-player__control, .media-player__volume-button, .media-player__collapse, .media-player__transport, .media-player__dots {
     -webkit-backdrop-filter: blur(22px) saturate(1.35);
     backdrop-filter: blur(22px) saturate(1.35);
     box-sizing: border-box;
     touch-action: manipulation;
-    transition: background-color 220ms ease, border-color 220ms ease, transform 160ms ease;
+    transition: transform 160ms ease;
   }
   .media-player__control:focus-visible, .media-player__volume-button:focus-visible,
   .media-player__collapse:focus-visible {
@@ -1801,16 +1884,6 @@
           if (!rerenderOnReady || !this.isConnected) {
             return;
           }
-          const existingStage = this.shadowRoot?.querySelector("[data-media-art-stage]");
-          if (existingStage instanceof HTMLElement && isAlbumCoverFillEnabled(this._config)) {
-            this._activeArtworkUrl = url;
-            this._syncArtworkLayer(existingStage, {
-              artworkUrl: url,
-              idle: false,
-              entityId,
-              hasAlbumBackground: true
-            });
-          }
           this._lastRenderSignature = "";
           this._render();
         });
@@ -1841,17 +1914,7 @@
         return appendQueryParam(baseUrl, "nodalia_ts", options.cacheToken);
       }
       _getArtworkCacheToken(state) {
-        if (!state) {
-          return "";
-        }
-        return [
-          String(state.last_updated || state.last_changed || ""),
-          String(state.attributes?.entity_picture || state.attributes?.entity_picture_local || ""),
-          String(state.attributes?.media_title || ""),
-          String(state.attributes?.media_artist || ""),
-          String(state.attributes?.media_album_name || ""),
-          String(state.attributes?.app_name || "")
-        ].filter(Boolean).join("|");
+        return artworkCacheToken(state);
       }
       _getConfiguredPlayers() {
         return Array.isArray(this._config?.players) ? this._config.players : [];
@@ -3472,7 +3535,7 @@
         const artworkReady = !desiredArtwork || this._ensureArtworkReady(player.entity, desiredArtwork, {
           rerenderOnReady: true
         });
-        const artwork = this._getRenderableArtwork(player.entity, desiredArtwork);
+        const artwork = getCachedArtworkPalette(desiredArtwork) ? desiredArtwork : this._getRenderableArtwork(player.entity, desiredArtwork);
         const backgroundArtwork = artwork || desiredArtwork || "";
         const renderAnimateEntrance = animateEntrance && artworkReady;
         const safeArtwork = artwork ? escapeHtml(artwork) : "";
@@ -3814,7 +3877,7 @@
                   ` : `
                     <div class="media-player__transport-shell">
                       <div class="media-player__transport-cluster">
-                        ${volumeDownMarkup}
+                        <div class="media-player__transport-side media-player__transport-side--start">${volumeDownMarkup}</div>
                         <div class="media-player__transport">
                           <button
                             type="button"
@@ -3844,8 +3907,7 @@
                             <ha-icon icon="mdi:skip-next"></ha-icon>
                           </button>
                         </div>
-                        ${volumeUpMarkup}
-                        ${browseMarkup}
+                        <div class="media-player__transport-side media-player__transport-side--end">${volumeUpMarkup}${browseMarkup}</div>
                       </div>
                     </div>
                   `}
@@ -3895,6 +3957,10 @@
         const inEditMode = this._isInEditMode();
         const players = this._getVisiblePlayers();
         const hasPlayers = players.length > 0;
+        const themePlayer = players[this._resolveActivePlayerIndex(players)];
+        const themeState = themePlayer && this._hass?.states?.[themePlayer.entity];
+        const themeUrl = this._config.artwork?.dynamic_colors !== false && themeState ? this._getPlayerArtwork(themePlayer, themeState) : "";
+        if (!prepareArtworkTheme(this, themeUrl, Boolean(this.shadowRoot.querySelector(".media-player-card")), () => this._render())) return;
         if (!hasPlayers) {
           this._activeArtworkIdle = false;
         }

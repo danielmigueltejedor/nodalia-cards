@@ -1,10 +1,12 @@
 /* Generated from src/cards/person. Do not edit. */
 "use strict";
 (() => {
+  // src/version.ts
+  var CARD_VERSION = "2.3.0-alpha.49";
+
   // src/cards/person/person-constants.ts
   var CARD_TAG = "nodalia-person-card";
   var EDITOR_TAG = "nodalia-person-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.49";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,

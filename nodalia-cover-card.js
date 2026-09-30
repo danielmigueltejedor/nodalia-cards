@@ -1,10 +1,12 @@
 /* Generated from src/cards/cover. Do not edit. */
 "use strict";
 (() => {
+  // src/version.ts
+  var CARD_VERSION = "2.3.0-alpha.49";
+
   // src/cards/cover/cover-constants.ts
   var CARD_TAG = "nodalia-cover-card";
   var EDITOR_TAG = "nodalia-cover-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.49";
   var COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS = 6;
   var COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH = 620;
   var HAPTIC_PATTERNS = {

@@ -1,10 +1,12 @@
 /* Generated from src/cards/room-summary. Do not edit. */
 "use strict";
 (() => {
+  // src/version.ts
+  var CARD_VERSION = "2.3.0-alpha.49";
+
   // src/cards/room-summary/room-summary-constants.ts
   var CARD_TAG = "nodalia-room-summary-card";
   var EDITOR_TAG = "nodalia-room-summary-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.49";
   var HUB_PANELS = /* @__PURE__ */ new Set(["home", "lights", "covers", "climate", "vacuum", "fans", "humidifiers", "media", "camera", "security", "others"]);
   var COMFORT = { hot: 27, cold: 17, humid: 70, dry: 30 };
   var CUSTOMIZABLE_EMBED_LISTS = /* @__PURE__ */ new Set(["lights", "vacuums", "fans", "humidifiers", "others"]);
@@ -31,6 +33,120 @@
   var getState = model.getState;
   var hasNormalizedRoomContent = model.hasRoomContent;
   var buildNormalizedRoomSummary = model.buildRoomSummary;
+
+  // src/cards/room-summary/room-summary-defaults.ts
+  var DEFAULT_CONFIG = {
+    name: "",
+    icon: "mdi:floor-plan",
+    image: "",
+    language: "auto",
+    layout: "hub",
+    collapsible: false,
+    temperature: "",
+    humidity: "",
+    presence: "",
+    occupancy: "",
+    climate: "",
+    camera: "",
+    camera_config: {},
+    media_player: "",
+    media_players: [],
+    media_config: {},
+    vacuums: [],
+    fans: [],
+    humidifiers: [],
+    others: [],
+    embed_options: {
+      lights: [],
+      vacuums: [],
+      fans: [],
+      humidifiers: [],
+      others: []
+    },
+    power: "",
+    air_quality: "",
+    lights: [],
+    covers: [],
+    locks: [],
+    doors: [],
+    windows: [],
+    alerts: [],
+    alarms: [],
+    show_temperature: true,
+    show_humidity: true,
+    show_presence: true,
+    show_lights: true,
+    show_covers: true,
+    show_climate: true,
+    show_camera: true,
+    show_media: true,
+    show_security: true,
+    show_power: true,
+    show_quick_actions: true,
+    tap_action: "more-info",
+    tap_service: "",
+    tap_service_data: "",
+    tap_service_target: "",
+    tap_url: "",
+    navigation_path: "",
+    tap_new_tab: false,
+    hold_action: "none",
+    hold_service: "",
+    hold_service_data: "",
+    hold_service_target: "",
+    hold_url: "",
+    hold_navigation_path: "",
+    hold_new_tab: false,
+    security: {
+      strict_service_actions: true,
+      allowed_services: [],
+      allowed_service_domains: []
+    },
+    haptics: { enabled: true, style: "medium", fallback_vibrate: false },
+    animations: { enabled: true, content_duration: 420, button_bounce_duration: 320 },
+    styles: {
+      card: {
+        background: "var(--ha-card-background)",
+        border: "1px solid var(--divider-color)",
+        border_radius: "var(--nodalia-card-border-radius, 28px)",
+        box_shadow: "var(--ha-card-box-shadow)",
+        padding: "14px",
+        gap: "12px"
+      },
+      icon: {
+        size: "38px",
+        background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
+        color: "var(--primary-text-color)"
+      },
+      control: {
+        size: "36px",
+        accent_color: "var(--primary-text-color)",
+        accent_background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)"
+      },
+      chip_height: "24px",
+      chip_font_size: "11px",
+      chip_padding: "0 9px",
+      chip_border_radius: "999px",
+      title_size: "16px",
+      metric_size: "14px",
+      accent: "var(--primary-color)",
+      embed_off_tint: "color-mix(in srgb, var(--primary-text-color) 5%, transparent)",
+      hub: {
+        metric_chip_font_size: "10px",
+        metric_chip_height: "24px",
+        metric_chip_padding: "0 8px",
+        metric_chip_icon_size: "13px",
+        context_action_size: "42px",
+        context_action_icon_size: "20px",
+        embed_title_size: "11px",
+        embed_chip_font_size: "10px",
+        embed_chip_height: "22px",
+        embed_chip_padding: "0 7px",
+        device_name_size: "12px",
+        device_state_size: "10px"
+      }
+    }
+  };
 
   // src/cards/room-summary/room-summary-helpers.ts
   function normalizeTextKey(v) {
@@ -158,118 +274,6 @@
   }
 
   // src/cards/room-summary/room-summary-config.ts
-  var DEFAULT_CONFIG = {
-    name: "",
-    icon: "mdi:floor-plan",
-    image: "",
-    language: "auto",
-    layout: "hub",
-    collapsible: false,
-    temperature: "",
-    humidity: "",
-    presence: "",
-    occupancy: "",
-    climate: "",
-    camera: "",
-    camera_config: {},
-    media_player: "",
-    media_players: [],
-    media_config: {},
-    vacuums: [],
-    fans: [],
-    humidifiers: [],
-    others: [],
-    embed_options: {
-      lights: [],
-      vacuums: [],
-      fans: [],
-      humidifiers: [],
-      others: []
-    },
-    power: "",
-    air_quality: "",
-    lights: [],
-    covers: [],
-    locks: [],
-    doors: [],
-    windows: [],
-    alerts: [],
-    alarms: [],
-    show_temperature: true,
-    show_humidity: true,
-    show_presence: true,
-    show_lights: true,
-    show_covers: true,
-    show_climate: true,
-    show_camera: true,
-    show_media: true,
-    show_security: true,
-    show_power: true,
-    show_quick_actions: true,
-    tap_action: "more-info",
-    tap_service: "",
-    tap_service_data: "",
-    tap_service_target: "",
-    tap_url: "",
-    navigation_path: "",
-    tap_new_tab: false,
-    hold_action: "none",
-    hold_service: "",
-    hold_service_data: "",
-    hold_service_target: "",
-    hold_url: "",
-    hold_navigation_path: "",
-    hold_new_tab: false,
-    security: {
-      strict_service_actions: true,
-      allowed_services: [],
-      allowed_service_domains: []
-    },
-    haptics: { enabled: true, style: "medium", fallback_vibrate: false },
-    animations: { enabled: true, content_duration: 420, button_bounce_duration: 320 },
-    styles: {
-      card: {
-        background: "var(--ha-card-background)",
-        border: "1px solid var(--divider-color)",
-        border_radius: "var(--nodalia-card-border-radius, 28px)",
-        box_shadow: "var(--ha-card-box-shadow)",
-        padding: "14px",
-        gap: "12px"
-      },
-      icon: {
-        size: "38px",
-        background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
-        color: "var(--primary-text-color)"
-      },
-      control: {
-        size: "36px",
-        accent_color: "var(--primary-text-color)",
-        accent_background: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)"
-      },
-      chip_height: "24px",
-      chip_font_size: "11px",
-      chip_padding: "0 9px",
-      chip_border_radius: "999px",
-      title_size: "16px",
-      metric_size: "14px",
-      accent: "var(--primary-color)",
-      embed_off_tint: "color-mix(in srgb, var(--primary-text-color) 5%, transparent)",
-      hub: {
-        metric_chip_font_size: "10px",
-        metric_chip_height: "24px",
-        metric_chip_padding: "0 8px",
-        metric_chip_icon_size: "13px",
-        context_action_size: "42px",
-        context_action_icon_size: "20px",
-        embed_title_size: "11px",
-        embed_chip_font_size: "10px",
-        embed_chip_height: "22px",
-        embed_chip_padding: "0 7px",
-        device_name_size: "12px",
-        device_state_size: "10px"
-      }
-    }
-  };
   var STUB_CONFIG = {
     name: "Living room",
     icon: "mdi:sofa",

@@ -29,8 +29,8 @@ test("advance vacuum card registers custom element and bundle entry", () => {
   assert.match(source, /(?:const|let|var) CARD_TAG = "nodalia-advance-vacuum-card"/);
   assert.match(source, /defineLazyCustomElement\(CARD_TAG, loadNodaliaAdvanceVacuumCard/);
   assert.match(source, /window\.__NODALIA_ADVANCE_VACUUM__/);
-  assert.match(read("scripts/build-bundle.mjs"), /src\/cards\/advance-vacuum\/index\.ts/);
-  assert.match(read("scripts/build-src-cards.mjs"), /src\/cards\/advance-vacuum\/standalone\.ts/);
+  assert.match(read("src/cards/registry.json"), /src\/cards\/advance-vacuum\/index\.ts/);
+  assert.match(read("src/cards/registry.json"), /src\/cards\/advance-vacuum\/standalone\.ts/);
 });
 
 test("advance vacuum public API keeps map defaults and admin-only webhooks", () => {

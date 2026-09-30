@@ -1,5 +1,5 @@
 // @ts-nocheck -- room entity lists and editor color helpers stay loosely typed until remaining unknowns are narrowed.
-import { DEFAULT_CONFIG } from "./room-summary-config";
+import { DEFAULT_CONFIG } from "./room-summary-defaults";
 import {
   clamp,
   deepClone,

@@ -1,11 +1,11 @@
 import type { HomeAssistant } from "../../core/types/home-assistant";
 import { CARD_TAG, EDITOR_TAG, normalizeConfig } from "./lock-config";
-import type { LockConfig } from "./lock-config";
+import type { LockConfig, NormalizedLockConfig } from "./lock-config";
 import { lockText } from "./lock-strings";
 
 export function loadNodaliaLockCard(): CustomElementConstructor {
   class NodaliaLockCard extends HTMLElement {
-    private config!: LockConfig | null;
+    private config!: NormalizedLockConfig | null;
     private stateHass!: HomeAssistant | null;
     private pending!: "lock" | "unlock" | null;
     private timer!: number;

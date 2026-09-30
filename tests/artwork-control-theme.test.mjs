@@ -31,6 +31,7 @@ const themeSource = buildSync({ entryPoints: ["src/cards/media-player/media-play
 test("late artwork responses cannot overwrite a newer palette or a reset", async () => {
   const images = [];
   const sandbox = {
+    setTimeout, clearTimeout,
     Image: class { constructor() { images.push(this); } },
     document: { createElement: () => {
       let image;
@@ -50,7 +51,9 @@ test("late artwork responses cannot overwrite a newer palette or a reset", async
   assert.equal(properties.get("--media-control-tint"), "rgb(0, 255, 0)");
   const replacementProperties = new Map();
   const replacement = { ...host, style: { setProperty: (k, v) => replacementProperties.set(k, v), removeProperty: k => replacementProperties.delete(k) } };
-  await sandbox.theme.applyArtworkControlTheme(replacement, "new");
+  const restored = sandbox.theme.applyArtworkControlTheme(replacement, "new");
+  assert.equal(replacementProperties.get("--media-control-tint"), "rgb(0, 255, 0)", "cache is applied before any await");
+  await restored;
   assert.equal(replacementProperties.get("--media-control-tint"), "rgb(0, 255, 0)", "restore the tint synchronously when an inner card is recreated");
   const late = sandbox.theme.applyArtworkControlTheme(host, "late");
   assert.equal(properties.get("--media-control-tint"), "rgb(0, 255, 0)", "keep the last tint while the next image is pending");
@@ -58,4 +61,54 @@ test("late artwork responses cannot overwrite a newer palette or a reset", async
   images[2].onload(); await late;
   assert.equal(attributes.has("data-artwork-controls"), false);
   assert.equal(properties.size, 0);
+});
+
+test("replacement artwork waits for its palette, ignores stale requests and recovers from stalled images", async () => {
+  const images = [], timers = new Map();
+  let timerId = 0;
+  const sandbox = {
+    setTimeout(callback) { timers.set(++timerId, callback); return timerId; },
+    clearTimeout(id) { timers.delete(id); },
+    Image: class { constructor() { images.push(this); } },
+    document: { createElement: () => ({ getContext: () => ({ drawImage() {}, getImageData() {
+      return { data: new Uint8ClampedArray([255, 0, 0, 255]) };
+    } }) }) },
+  };
+  vm.createContext(sandbox); vm.runInContext(themeSource, sandbox);
+  const owner = { isConnected: true };
+  let renders = 0;
+  const prepare = url => sandbox.theme.prepareArtworkTheme(owner, url, true, () => { renders++; });
+  const flush = async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); };
+  assert.equal(prepare("old"), false);
+  assert.equal(prepare("old"), false);
+  assert.equal(images.length, 1, "coalesce requests for the same cover");
+  assert.equal(prepare("new"), false);
+  images[0].onload(); await flush();
+  assert.equal(renders, 0, "the previous track must not commit");
+  images[1].onload(); await flush();
+  assert.equal(renders, 1);
+  assert.equal(prepare("new"), true, "known covers never wait");
+  assert.equal(prepare("stalled"), false);
+  for (const callback of [...timers.values()]) callback();
+  await flush();
+  assert.equal(renders, 2);
+  assert.equal(prepare("stalled"), true, "network failure cannot freeze the player");
+  assert.equal(images[2].onload, null, "late image handlers are detached");
+  assert.equal(prepare("removed"), false);
+  owner.isConnected = false;
+  images[3].onerror(); await flush();
+  assert.equal(renders, 2, "disconnected cards are not rerendered");
+});
+
+test("artwork identity survives volume and progress updates but changes with the track", () => {
+  const sandbox = {};
+  vm.createContext(sandbox); vm.runInContext(source, sandbox);
+  const state = { entity_id: "media_player.test", state: "playing", last_updated: "old", attributes: {
+    entity_picture: "/api/media_player_proxy/test", media_content_id: "track-1", media_title: "Song", volume_level: 0.2,
+  } };
+  const token = sandbox.artwork.artworkCacheToken(state);
+  const changedVolume = { ...state, last_updated: "new", attributes: { ...state.attributes, volume_level: 0.8, media_position: 30 } };
+  assert.equal(sandbox.artwork.artworkCacheToken(changedVolume), token);
+  assert.notEqual(sandbox.artwork.artworkCacheToken({ ...state, attributes: { ...state.attributes, media_content_id: "track-2" } }), token);
+  assert.notEqual(sandbox.artwork.artworkCacheToken({ ...state, attributes: { ...state.attributes, entity_picture: "/new-cover" } }), token);
 });

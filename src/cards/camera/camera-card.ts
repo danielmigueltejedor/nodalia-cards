@@ -702,8 +702,8 @@ class NodaliaCameraCard extends HTMLElement {
     if (!(portal instanceof HTMLElement)) {
       return;
     }
-    portal.removeEventListener("click", this._onShadowClick);
-    portal.removeEventListener("keydown", this._onShadowKeyDown);
+    portal.shadowRoot?.removeEventListener("click", this._onShadowClick);
+    portal.shadowRoot?.removeEventListener("keydown", this._onShadowKeyDown);
     portal.remove();
   }
 

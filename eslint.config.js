@@ -50,7 +50,6 @@ export default tseslint.config(
       "src/cards/insignia/insignia-helpers.ts",
       "src/cards/scenes/scenes-card.ts",
       "src/cards/scenes/scenes-editor.ts",
-      "src/cards/scenes/scenes-helpers.ts",
       "src/cards/news/news-card.ts",
       "src/cards/news/news-editor.ts",
       "src/cards/news/news-helpers.ts",
@@ -99,6 +98,15 @@ export default tseslint.config(
         "minimumDescriptionLength": 10,
       }],
       "no-console": "off",
+    },
+  },
+  {
+    files: ["src/cards/scenes/scenes-config.ts", "src/cards/scenes/scenes-helpers.ts", "src/shared/**/*.ts", "src/cards/lock/**/*.ts", "src/cards/camera/camera-stream-*.ts", "src/cards/room-summary/room-summary-model*.ts", "src/cards/media-player/media-player-artwork.ts", "src/cards/media-player/media-player-control-theme.ts"],
+    languageOptions: { parserOptions: { project: "./tsconfig.json" } },
+    rules: {
+      "@typescript-eslint/no-floating-promises": "error",
+      "@typescript-eslint/no-misused-promises": "error",
+      "no-duplicate-imports": ["error", { allowSeparateTypeImports: true }],
     },
   },
 );

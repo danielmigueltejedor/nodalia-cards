@@ -1,4 +1,4 @@
-import { CARD_TAG, EDITOR_TAG } from "./lock-config";
+import { CARD_TAG, EDITOR_TAG, CARD_VERSION, normalizeConfig } from "./lock-config";
 import { loadNodaliaLockCard } from "./lock-card";
 import { loadNodaliaLockCardEditor } from "./lock-editor";
 window.NodaliaUtils.defineLazyCustomElement(CARD_TAG, loadNodaliaLockCard, { editorTag: EDITOR_TAG });
@@ -9,3 +9,5 @@ window.NodaliaUtils.registerCustomCard({
   description: "Lock controls with deliberate slide-to-unlock confirmation.",
   preview: true,
 });
+
+window.__NODALIA_LOCK__ = { CARD_TAG, EDITOR_TAG, CARD_VERSION, normalizeConfig };

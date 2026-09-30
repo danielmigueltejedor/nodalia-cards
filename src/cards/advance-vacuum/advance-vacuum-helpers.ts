@@ -1,6 +1,6 @@
 // @ts-nocheck -- map geometry, calibration and session helpers stay loosely typed until remaining unknowns are narrowed.
 import { VACUUM_MODE_LABELS } from "./advance-vacuum-constants";
-import { DEFAULT_CONFIG } from "./advance-vacuum-config";
+import { DEFAULT_CONFIG } from "./advance-vacuum-defaults";
 import {
   deepClone,
   isObject,

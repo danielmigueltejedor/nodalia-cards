@@ -108,7 +108,7 @@ test("camera card registers custom element and bundle entry", () => {
   assert.match(source, /(?:const|let|var) CARD_TAG = "nodalia-camera-card"/);
   assert.match(source, /defineLazyCustomElement\(CARD_TAG, loadNodaliaCameraCard/);
   assert.match(source, /registerCustomCard/);
-  assert.match(build, /nodalia-camera-card\.js/);
+  assert.match(read("src/cards/registry.json"), /nodalia-camera-card\.js/);
   assert.ok(pkg.files.includes("nodalia-camera-card.js"));
   assert.doesNotMatch(source, /streamModel\.buildGo2rtcViewerUrl\.bind\(streamModel\)/);
 });

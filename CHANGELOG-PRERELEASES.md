@@ -8,6 +8,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## Unreleased
+
+### Fixed
+
+- Keep the playback capsule centered regardless of auxiliary controls; apply cached artwork tints synchronously without color transitions.
+- Present replacement artwork and its tint together; keep cached artwork through volume/progress updates and bound stalled requests and cache growth.
+- Refresh Scene labels and icons when Home Assistant changes an entity.
+- Remove Camera portal listeners from their owning shadow root.
+
+### Maintenance
+
+- Centralize all 25 cards (including Lock) in the build/test registry and derive card versions from package.json.
+- Gate release publishing on shared strict validation and four browser projects; check every distributed JavaScript file.
+- Add safe local release preparation, typed shared models/defaults and Home Assistant fixtures, cycle/debt guards and developer guides.
+
 ## [2.3.0-alpha.49] - 2026-09-29
 
 ### Fixed

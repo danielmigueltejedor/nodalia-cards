@@ -1,10 +1,12 @@
 /* Generated from src/cards/calendar. Do not edit. */
 "use strict";
 (() => {
+  // src/version.ts
+  var CARD_VERSION = "2.3.0-alpha.49";
+
   // src/cards/calendar/calendar-constants.ts
   var CARD_TAG = "nodalia-calendar-card";
   var EDITOR_TAG = "nodalia-calendar-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.49";
   var NODALIA_EVENT_METADATA_RE = /<!--\s*nodalia:event(?:\s+color="([^"]+)")?\s*-->/gi;
   var HAPTIC_PATTERNS = {
     selection: 8,

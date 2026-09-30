@@ -1,6 +1,6 @@
 export const CARD_TAG = "nodalia-lock-card";
 export const EDITOR_TAG = "nodalia-lock-card-editor";
-export const CARD_VERSION = "2.3.0-alpha.49";
+export { CARD_VERSION } from "../../version";
 export interface LockConfig {
   type?: string;
   entity: string;
@@ -10,7 +10,8 @@ export interface LockConfig {
   show_name?: boolean;
   show_state?: boolean;
 }
-export function normalizeConfig(config: LockConfig): LockConfig {
+export type NormalizedLockConfig = LockConfig & Required<Pick<LockConfig, "layout" | "unlock_action" | "show_name" | "show_state">>;
+export function normalizeConfig(config: LockConfig): NormalizedLockConfig {
   if (!config || typeof config.entity !== "string" || !/^lock\.[a-z0-9_]+$/.test(config.entity)) {
     throw new Error("A lock entity is required");
   }

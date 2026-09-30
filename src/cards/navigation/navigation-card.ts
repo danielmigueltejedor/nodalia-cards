@@ -28,7 +28,8 @@ import {
   sanitizeMediaArtworkUrl,
 } from "./navigation-helpers";
 
-import { applyArtworkControlTheme, MEDIA_CONTROL_STYLES } from "../media-player/media-player-control-theme";
+import { artworkCacheToken } from "../media-player/media-player-artwork";
+import { applyArtworkControlTheme, prepareArtworkTheme, MEDIA_CONTROL_STYLES } from "../media-player/media-player-control-theme";
 
 let _lazyNodaliaNavigationBarCard;
 export function loadNodaliaNavigationBarCard() {
@@ -1162,18 +1163,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
   }
 
   _getArtworkCacheToken(state) {
-    if (!state) {
-      return "";
-    }
-
-    return [
-      String(state.last_updated || state.last_changed || ""),
-      String(state.attributes?.entity_picture || state.attributes?.entity_picture_local || ""),
-      String(state.attributes?.media_title || ""),
-      String(state.attributes?.media_artist || ""),
-      String(state.attributes?.media_album_name || ""),
-      String(state.attributes?.app_name || ""),
-    ].filter(Boolean).join("|");
+    return artworkCacheToken(state);
   }
 
   _isAppleTvPlayer(player, state) {
@@ -2334,7 +2324,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
             <div class="media-player__transport-row">
               <div class="media-player__transport-shell">
                 <div class="media-player__transport-cluster">
-                  ${volumeDownMarkup}
+                  <div class="media-player__transport-side media-player__transport-side--start">${volumeDownMarkup}</div>
                   <div class="media-player__transport">
                     <button
                       type="button"
@@ -2364,9 +2354,8 @@ class NodaliaNavigationBarCard extends HTMLElement {
                       <ha-icon icon="mdi:skip-next"></ha-icon>
                     </button>
                   </div>
-                  ${volumeUpMarkup}
+                  <div class="media-player__transport-side media-player__transport-side--end">${volumeUpMarkup}${browseMediaMarkup}</div>
                 </div>
-                ${browseMediaMarkup}
               </div>
             </div>
           </div>
@@ -2510,6 +2499,10 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
     const showMediaPlayerCard = hasVisiblePlayers && (inEditMode || this._mediaPlayerExpanded === true);
     const showMediaPlayerToggle = hasVisiblePlayers && !showMediaPlayerCard;
+    const themePlayer = visiblePlayers[this._resolveActiveMediaPlayerIndex(visiblePlayers)];
+    const themeState = themePlayer && this._hass?.states?.[themePlayer.entity];
+    const themeUrl = showMediaPlayerCard && themeState ? this._getMediaPlayerArtwork(themePlayer, themeState) : "";
+    if (!prepareArtworkTheme(this, themeUrl, Boolean(this.shadowRoot.querySelector(".media-player-card")), () => this._render())) return;
     const playMediaToggleEntrance = animations.enabled && showMediaPlayerToggle && !this._lastMediaToggleVisible;
     this._lastMediaToggleVisible = showMediaPlayerToggle;
     const playMediaCardEntrance = animations.enabled && showMediaPlayerCard && !this._lastMediaPlayerCardVisible;

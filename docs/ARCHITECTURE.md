@@ -352,3 +352,43 @@ transition). Do not centralize look-alike code with different semantics.
 3. Remove obsolete globals once every consumer imports modules
 
 See `docs/REFACTOR_ALPHA47.md` for the earlier JS-layer helper centralization.
+
+## 2026-09-30 audit implementation
+
+The build-time source inventory is `src/cards/registry.json` (25 cards, including
+Lock). Build and architecture tests consume it; registration still belongs to each
+card's `index.ts` so lazy custom-element behavior and public tags remain stable.
+`package.json.version` feeds generated `src/version.ts`; per-card constants
+re-export it rather than storing independent versions.
+
+Camera stream rules, Room Summary projection and render signatures now have
+checked TypeScript source with small compatibility entrypoints that retain the
+published `window.Nodalia*` APIs and root JS filenames. Pure modules do not mutate
+browser globals; their runtime adapters own that boundary. Existing consumers
+can migrate to imports without breaking users' standalone resources.
+
+Five config/helper cycles were removed by extracting checked defaults modules.
+Do not place defaults in modules that import their own normalizers. One existing
+Notifications config/helper cycle remains tracked in `scripts/import-cycle-debt.json`.
+94 legacy modules still suppress typechecking; see `scripts/type-debt.json`.
+**The full TypeScript migration is not complete.** Checked modules and extracted
+contracts must grow without adding suppressions or casts to hide errors. The
+architecture guard prevents new unchecked files and new runtime cycles.
+
+Room Summary parking deliberately disconnects embedded cards; their disconnect
+callbacks release streams/timers/listeners. Camera's body portal owns listeners
+on its shadow root and removes them from that same root. Preserve these ownership
+boundaries and the existing reconnect/portal browser regressions.
+
+Media Player shares palette sampling and transport styling with Navigation.
+Transport uses equal side columns so auxiliary controls cannot shift the center
+capsule. Cached palettes apply synchronously; sampling requests are coalesced,
+cache sizes bounded, and color transitions do not animate on reconstruction.
+An unseen artwork still needs network/image decoding; do not promise zero network
+latency or hide a failed cover request with an opaque fallback.
+
+See [audit](TECHNICAL_AUDIT.md), [adding cards](adding-a-card.md),
+[testing](testing.md) and [releasing](releasing.md).
+
+Scenes configuration and helpers are now checked without suppression, including
+normalized row contracts, CSS input boundaries and dashboard scroll snapshots.

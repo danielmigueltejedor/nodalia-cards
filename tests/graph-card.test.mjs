@@ -30,8 +30,8 @@ test("graph card registers custom element and bundle entry", () => {
   const source = read("nodalia-graph-card.js");
   assert.match(source, /defineLazyCustomElement\(CARD_TAG, loadNodaliaGraphCard/);
   assert.match(source, /window\.__NODALIA_GRAPH__/);
-  assert.match(read("scripts/build-bundle.mjs"), /src\/cards\/graph\/index\.ts/);
-  assert.match(read("scripts/build-src-cards.mjs"), /src\/cards\/graph\/standalone\.ts/);
+  assert.match(read("src/cards/registry.json"), /src\/cards\/graph\/index\.ts/);
+  assert.match(read("src/cards/registry.json"), /src\/cards\/graph\/standalone\.ts/);
 });
 
 test("graph public API normalizes entity series", () => {

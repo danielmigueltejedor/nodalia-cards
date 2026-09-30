@@ -73,7 +73,7 @@ test("room summary card registers custom element and bundle entry", () => {
   assert.match(source, /(?:const|let|var) CARD_TAG = "nodalia-room-summary-card"/);
   assert.match(source, /defineLazyCustomElement\(CARD_TAG, loadNodaliaRoomSummaryCard/);
   assert.match(source, /registerCustomCard/);
-  assert.match(build, /nodalia-room-summary-card\.js/);
+  assert.match(read("src/cards/registry.json"), /nodalia-room-summary-card\.js/);
   assert.ok(pkg.files.includes("nodalia-room-summary-card.js"));
   const escapedVersion = pkg.version.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   assert.equal(source.match(new RegExp(`CARD_VERSION = "${escapedVersion}"`))?.length, 1);

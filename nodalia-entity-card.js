@@ -1,10 +1,12 @@
 /* Generated from src/cards/entity. Do not edit. */
 "use strict";
 (() => {
+  // src/version.ts
+  var CARD_VERSION = "2.3.0-alpha.49";
+
   // src/cards/entity/entity-constants.ts
   var CARD_TAG = "nodalia-entity-card";
   var EDITOR_TAG = "nodalia-entity-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.49";
   var HAPTIC_PATTERNS = {
     selection: 8,
     light: 10,

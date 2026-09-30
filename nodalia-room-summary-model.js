@@ -1,28 +1,22 @@
-/** Pure state projection used by Nodalia Room Summary Card. */
-(function initNodaliaRoomSummaryModel() {
-  if (typeof window !== "undefined" && window.NodaliaRoomSummaryModel) {
-    return;
-  }
-
+/* Generated from src/cards/room-summary/room-summary-model-runtime.ts. Do not edit. */
+"use strict";
+(() => {
+  // src/cards/room-summary/room-summary-model.ts
   function normalizeTextKey(value) {
     return String(value ?? "").trim().toLowerCase();
   }
-
   function normalizeEntityField(value) {
     if (Array.isArray(value)) {
-      const seen = new Set();
-      return value
-        .map(item => String(item || "").trim())
-        .filter(entityId => entityId && !seen.has(entityId) && seen.add(entityId));
+      const seen = /* @__PURE__ */ new Set();
+      return value.map((item) => String(item || "").trim()).filter((entityId) => entityId && !seen.has(entityId) && seen.add(entityId));
     }
     const single = String(value ?? "").trim();
     return single ? [single] : [];
   }
-
   function hubMediaPlayerIds(config) {
     const ids = [];
-    const seen = new Set();
-    const add = entityId => {
+    const seen = /* @__PURE__ */ new Set();
+    const add = (entityId) => {
       const normalized = String(entityId || "").trim();
       if (normalized && !seen.has(normalized)) {
         seen.add(normalized);
@@ -31,37 +25,29 @@
     };
     add(config?.media_player);
     (config?.media_players || []).forEach(add);
-    (config?.media_config?.players || []).forEach(player => add(player?.entity));
+    (config?.media_config?.players || []).forEach((player) => add(player?.entity));
     return ids;
   }
-
   function finiteNumber(value) {
     const number = Number(value);
     return Number.isFinite(number) ? number : null;
   }
-
   function isUnavailable(state) {
     const key = normalizeTextKey(state?.state);
     return key === "unavailable" || key === "unknown";
   }
-
   function stateIsOn(state) {
-    return ["on", "open", "opening", "true", "home", "occupied", "present", "detected", "unlocked", "playing", "paused"]
-      .includes(normalizeTextKey(state?.state));
+    return ["on", "open", "opening", "true", "home", "occupied", "present", "detected", "unlocked", "playing", "paused"].includes(normalizeTextKey(state?.state));
   }
-
   function stateIsOpen(state) {
     return ["on", "open", "opening"].includes(normalizeTextKey(state?.state));
   }
-
   function stateIsUnlocked(state) {
     return ["unlocked", "open"].includes(normalizeTextKey(state?.state));
   }
-
   function stateIsAlarmTriggered(state) {
     return ["triggered", "pending", "arming"].includes(normalizeTextKey(state?.state));
   }
-
   function formatMetric(state, unitFallback = "") {
     if (!state || isUnavailable(state)) return "—";
     const unit = String(state.attributes?.unit_of_measurement || unitFallback || "").trim();
@@ -69,34 +55,22 @@
     if (number !== null) return `${Number.isInteger(number) ? number : number.toFixed(1)}${unit}`;
     return String(state.state ?? "—");
   }
-
   function getState(hass, entityId) {
     const id = String(entityId || "").trim();
     return id ? hass?.states?.[id] || null : null;
   }
-
   function countMatching(hass, ids, predicate) {
-    return (ids || []).filter(entityId => {
+    return (ids || []).filter((entityId) => {
       const state = getState(hass, entityId);
       return state && !isUnavailable(state) && predicate(state);
     }).length;
   }
-
   function hasRoomContent(config) {
     const c = config || {};
     return Boolean(
-      c.name || c.temperature || c.humidity || c.presence || c.occupancy || c.climate
-      || c.camera || c.media_player || c.power || c.air_quality
-      || (c.media_players || []).length
-      || (c.media_config?.players || []).length
-      || (c.lights || []).length || (c.covers || []).length || (c.locks || []).length
-      || (c.vacuums || []).length || (c.fans || []).length
-      || (c.humidifiers || []).length || (c.others || []).length
-      || (c.doors || []).length || (c.windows || []).length || (c.alerts || []).length
-      || (c.alarms || []).length,
+      c.name || c.temperature || c.humidity || c.presence || c.occupancy || c.climate || c.camera || c.media_player || c.power || c.air_quality || (c.media_players || []).length || (c.media_config?.players || []).length || (c.lights || []).length || (c.covers || []).length || (c.locks || []).length || (c.vacuums || []).length || (c.fans || []).length || (c.humidifiers || []).length || (c.others || []).length || (c.doors || []).length || (c.windows || []).length || (c.alerts || []).length || (c.alarms || []).length
     );
   }
-
   function buildRoomSummary(hass, config, comfort = {}) {
     const c = config || {};
     const tempState = getState(hass, c.temperature);
@@ -125,7 +99,6 @@
     const dry = humidityNum !== null && humidityNum <= Number(comfort.dry ?? 30);
     const comfortable = tempNum !== null && !hot && !cold && !humid && !dry;
     const securityIssue = doorsOpen > 0 || windowsOpen > 0 || locksUnlocked > 0 || alertsActive > 0 || alarmsTriggered > 0;
-
     let climateLabel = "";
     if (climateState && !isUnavailable(climateState)) {
       const mode = normalizeTextKey(climateState.attributes?.hvac_mode || climateState.state);
@@ -137,7 +110,6 @@
         climateLabel = target !== null && target !== current ? `${current}${unit} → ${target}${unit}` : `${current}${unit}`;
       }
     }
-
     return {
       occupied: occupied === true,
       empty: occupied === false,
@@ -167,26 +139,11 @@
       locksUnlocked,
       alertsActive,
       alarmsTriggered,
-      mediaState: mediaState ? String(mediaState.state) : "",
+      mediaState: mediaState ? String(mediaState.state) : ""
     };
   }
+  var roomSummaryModel = Object.freeze({ normalizeTextKey, normalizeEntityField, hubMediaPlayerIds, finiteNumber, isUnavailable, stateIsOn, stateIsOpen, stateIsUnlocked, stateIsAlarmTriggered, formatMetric, getState, countMatching, hasRoomContent, buildRoomSummary });
 
-  const api = Object.freeze({
-    normalizeEntityField,
-    hubMediaPlayerIds,
-    finiteNumber,
-    isUnavailable,
-    stateIsOn,
-    stateIsOpen,
-    stateIsUnlocked,
-    stateIsAlarmTriggered,
-    formatMetric,
-    getState,
-    countMatching,
-    hasRoomContent,
-    buildRoomSummary,
-  });
-  if (typeof window !== "undefined") {
-    window.NodaliaRoomSummaryModel = api;
-  }
+  // src/cards/room-summary/room-summary-model-runtime.ts
+  if (typeof window !== "undefined" && !window.NodaliaRoomSummaryModel) window.NodaliaRoomSummaryModel = roomSummaryModel;
 })();

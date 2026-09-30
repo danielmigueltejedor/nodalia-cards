@@ -1,10 +1,12 @@
 /* Generated from src/cards/notifications. Do not edit. */
 "use strict";
 (() => {
+  // src/version.ts
+  var CARD_VERSION = "2.3.0-alpha.49";
+
   // src/cards/notifications/notifications-constants.ts
   var CARD_TAG = "nodalia-notifications-card";
   var EDITOR_TAG = "nodalia-notifications-card-editor";
-  var CARD_VERSION = "2.3.0-alpha.49";
   var STORAGE_KEY = "nodalia_notifications_dismissed_v1";
   var BACKGROUND_MOBILE_NATIVE_HEALTH_TTL_MS = 3e4;
   var LEGACY_BACKGROUND_MOBILE_TOGGLE = "input_boolean.nodalia_background_mobile_notifications";

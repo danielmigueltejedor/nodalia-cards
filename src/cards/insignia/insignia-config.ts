@@ -2,61 +2,8 @@
 import { mergeConfig } from "./insignia-runtime";
 import { getTintPresetColor, normalizeTintPreset } from "./insignia-helpers";
 
-export const DEFAULT_CONFIG = {
-  entity: "",
-  name: "",
-  icon: "",
-  icon_active: "",
-  icon_inactive: "",
-  use_entity_icon: false,
-  use_entity_picture: false,
-  state_attribute: "",
-  tap_action: "auto",
-  tap_service: "",
-  tap_service_data: "",
-  tap_url: "",
-  tap_new_tab: false,
-  hold_action: "more-info",
-  hold_service: "",
-  hold_service_data: "",
-  hold_url: "",
-  hold_new_tab: false,
-  show_name: true,
-  show_value: true,
-  security: {
-    strict_service_actions: true,
-    allowed_services: [],
-    allowed_service_domains: [],
-  },
-  haptics: {
-    enabled: true,
-    style: "medium",
-    fallback_vibrate: false,
-  },
-  styles: {
-    card: {
-      background: "var(--ha-card-background)",
-      border: "1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent)",
-      border_radius: "999px",
-      box_shadow: "var(--ha-card-box-shadow)",
-      padding: "4px 8px",
-      gap: "8px",
-    },
-    icon: {
-      size: "26px",
-      background: "color-mix(in srgb, var(--primary-text-color) 5%, transparent)",
-      on_color: "var(--info-color, #71c0ff)",
-      off_color: "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))",
-      icon_only_offset_y: "0",
-    },
-    tint: {
-      color: "var(--info-color, #71c0ff)",
-    },
-    title_size: "12px",
-    value_size: "12px",
-  },
-  tint_auto: true,
-};
+import { DEFAULT_CONFIG } from "./insignia-defaults";
+export { DEFAULT_CONFIG } from "./insignia-defaults";
 
 export const STUB_CONFIG = {
   entity: "sensor.temperatura_salon",
