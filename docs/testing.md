@@ -39,3 +39,11 @@ validation and the four browsers run in parallel. Browser downloads are cached
 by OS/project/lockfile; system dependencies are still installed. Static validation
 regenerates translations and bundles and fails on `git diff --exit-code`.
 Never edit root generated JS or generated fixtures by hand.
+
+Animation trajectory tests must control both CSS animation time and JS lifecycle
+timers. Install the [Playwright clock](https://playwright.dev/docs/clock) before
+loading the page; pause after loading, set CSS hold times and advance animation
+frames with `page.clock.runFor`. Advance cleanup explicitly after sampling. See
+`tests/browser/device-expansion-animations.spec.mjs`: deliberate wall-time stalls
+and connected-element assertions guard against sampling detached nodes on slow CI
+workers. Keep geometry and final cleanup assertions; retries are not a fix.

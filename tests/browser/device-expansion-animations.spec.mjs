@@ -83,70 +83,52 @@ function pickTrajectoryValues(sample) {
   return sample.heights;
 }
 
-async function sampleAnimation(shell, animationName, expectedClass) {
-  return shell.evaluate(async (element, expected) => {
-    const nextFrame = () => new Promise(resolve => requestAnimationFrame(resolve));
-    const deadline = performance.now() + 2_000;
-    let animation = null;
-
-    while (!animation && performance.now() < deadline) {
-      animation = element.getAnimations().find(item => item.animationName === expected.name) || null;
-      if (!animation) {
-        await nextFrame();
-      }
-    }
-
-    if (!animation || !animation.effect) {
-      return {
-        found: false,
-        hadExpectedClass: element.classList.contains(expected.className),
-        heights: [],
-        maxHeights: [],
-        rows: [],
-      };
-    }
-
+async function sampleAnimation(page, shell, animationName, expectedClass, stalled = false) {
+  const handle = await shell.evaluateHandle((element, expected) => {
+    const animation = element.getAnimations().find(item => item.animationName === expected.name);
+    if (!animation?.effect) return null;
     const timing = animation.effect.getTiming();
-    const duration = Number(timing.duration);
-    const delay = Number(timing.delay) || 0;
-    const samples = [];
-
     animation.pause();
-    try {
-      await animation.ready;
-    } catch {
-      // A detached animation can reject ready in some WebKit builds. Setting
-      // currentTime below still provides deterministic computed-style samples.
-    }
-
-    for (const progress of [0.15, 0.5, 0.85]) {
-      animation.currentTime = delay + duration * progress;
-      // Force layout so WebKit applies interpolated max-height / grid tracks.
-      void element.offsetHeight;
-      await nextFrame();
-      void element.offsetHeight;
-      const styles = getComputedStyle(element);
-      samples.push({
-        height: element.getBoundingClientRect().height,
-        maxHeight: Number.parseFloat(styles.maxHeight) || 0,
-        row: styles.gridTemplateRows,
-      });
-    }
-
-    animation.play();
-    return {
-      found: true,
-      hadExpectedClass: element.classList.contains(expected.className),
-      heights: samples.map(sample => sample.height),
-      maxHeights: samples.map(sample => sample.maxHeight),
-      rows: samples.map(sample => sample.row),
-    };
+    return { element, animation, duration: Number(timing.duration), delay: Number(timing.delay) || 0,
+      hadExpectedClass: element.classList.contains(expected.className) };
   }, { name: animationName, className: expectedClass });
+  try {
+    if (await handle.evaluate(model => model === null)) {
+      return { found: false, hadExpectedClass: false, heights: [], maxHeights: [], rows: [] };
+    }
+    // Reproduce slow CI: wall time exceeds the 600ms cleanup timer. Pausing CSS
+    // alone used to leave that JS timer running and detach the measured element.
+    if (stalled) await page.waitForTimeout(750);
+    const samples = [];
+    for (const progress of [0.15, 0.5, 0.85]) {
+      await handle.evaluate((model, progress) => {
+        model.animation.currentTime = model.delay + model.duration * progress;
+        void model.element.offsetHeight;
+      }, progress);
+      await page.clock.runFor(16);
+      samples.push(await handle.evaluate(model => {
+        const styles = getComputedStyle(model.element);
+        return { connected: model.element.isConnected, height: model.element.getBoundingClientRect().height,
+          maxHeight: Number.parseFloat(styles.maxHeight) || 0, row: styles.gridTemplateRows };
+      }));
+    }
+    expect(samples.every(sample => sample.connected)).toBe(true);
+    const hadExpectedClass = await handle.evaluate(model => {
+      model.animation.play();
+      return model.hadExpectedClass;
+    });
+    return { found: true, hadExpectedClass, heights: samples.map(sample => sample.height),
+      maxHeights: samples.map(sample => sample.maxHeight), rows: samples.map(sample => sample.row) };
+  } finally {
+    await handle.dispose();
+  }
 }
 
 for (const device of devices) {
   test(`${device.name} expands, collapses and settles across browser engines`, async ({ page }) => {
+    await page.clock.install({ time: new Date("2026-08-15T00:00:00Z") });
     const errors = await loadBundle(page);
+    await page.clock.pauseAt(new Date("2026-08-15T00:01:00Z"));
     await page.evaluate(current => {
       const fixture = document.querySelector("#fixture");
       fixture.replaceChildren();
@@ -175,6 +157,7 @@ for (const device of devices) {
       card.hass = window.deviceAnimationHass;
       fixture.append(card);
     }, device);
+    await page.clock.runFor(50);
 
     const card = page.locator(`[data-animation-fixture="${device.name.toLowerCase()}"]`);
     await expect(card.locator(device.shell)).toHaveCount(0);
@@ -194,14 +177,15 @@ for (const device of devices) {
       document.querySelector(`[data-animation-fixture="${current.name.toLowerCase()}"]`).hass = window.deviceAnimationHass;
     }, device);
 
+    await page.clock.runFor(50);
     const openingShell = card.locator(device.shell);
-    const opening = await sampleAnimation(openingShell, device.expandAnimation, device.entering);
+    const opening = await sampleAnimation(page, openingShell, device.expandAnimation, device.entering, device.name === "Light");
     expect(opening.found).toBe(true);
     expect(opening.hadExpectedClass).toBe(true);
     expectHeightTrajectory(pickTrajectoryValues(opening), 1);
     expect(opening.rows[0]).not.toBe(opening.rows[2]);
 
-    await page.waitForTimeout(220);
+    await page.clock.runFor(1_000);
     await expect(card.locator(device.shell)).toHaveCount(1);
     await expect(card.locator(device.shell)).not.toHaveClass(new RegExp(device.entering));
 
@@ -219,13 +203,14 @@ for (const device of devices) {
       document.querySelector(`[data-animation-fixture="${current.name.toLowerCase()}"]`).hass = window.deviceAnimationHass;
     }, device);
 
+    await page.clock.runFor(50);
     const closingShell = card.locator(device.shell);
-    const closing = await sampleAnimation(closingShell, device.collapseAnimation, device.leaving);
+    const closing = await sampleAnimation(page, closingShell, device.collapseAnimation, device.leaving, device.name === "Humidifier");
     expect(closing.found).toBe(true);
     expect(closing.hadExpectedClass).toBe(true);
     expectHeightTrajectory(pickTrajectoryValues(closing), -1);
 
-    await page.waitForTimeout(220);
+    await page.clock.runFor(1_000);
     await expect(card.locator(device.shell)).toHaveCount(0);
     expect(errors).toEqual([]);
   });

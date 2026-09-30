@@ -120,3 +120,14 @@ Lock also keeps alpha on input changes. Unit regressions exercise each helper
 consumer; browser regressions cover Lock, Entity, Fan and Notifications and wider
 gamut conversion. Current bundle: 4,304,273 bytes / 949,882 gzip bytes, down
 20,202 / 7,366 bytes from the previous merged stage, with budgets unchanged.
+
+Animation verification stage: Linux CI passed all four projects for the control/
+color changes, but two iPhone animation tests needed retries. Their CSS animations
+were paused while the card's JS cleanup timers continued on wall time, allowing
+slow workers to detach the measured elements. Tests now install the Playwright
+clock before loading the bundle, pause lifecycle time, and advance rendering and
+cleanup explicitly. A deliberate 750ms wall-time stall exceeds the original
+600ms timer; every measured element must remain connected. Existing trajectory,
+class, grid-track and final cleanup assertions remain. Ten runs per device/project
+passed locally (90 cases, Chromium/WebKit/iPhone), with retries disabled. All 589
+unit tests still pass. Production animation code and durations are unchanged.
