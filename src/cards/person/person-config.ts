@@ -1,5 +1,5 @@
-// @ts-nocheck -- merged Lovelace YAML is projected into the runtime person config.
-import { deepClone, isObject, mergeConfig } from "./person-runtime";
+import { isObject, mergeConfig } from "./person-runtime";
+import { normalizeControlStyles } from "../../shared/control-config";
 
 export const DEFAULT_CONFIG = {
   entity: "",
@@ -78,9 +78,10 @@ export const STUB_CONFIG = {
   name: "Ana",
 };
 
-export function normalizeConfig(rawConfig) {
+export function normalizeConfig(rawConfig: unknown = {}) {
   const raw = isObject(rawConfig) ? rawConfig : {};
-  const config = mergeConfig(DEFAULT_CONFIG, raw);
+  const defaults: Record<string, unknown> = DEFAULT_CONFIG;
+  const config = mergeConfig(defaults, raw);
   const actionDefinitions = [
     {
       prefix: "tap",
@@ -117,7 +118,7 @@ export function normalizeConfig(rawConfig) {
   }
 
   const allowedActions = new Set(["toggle", "more-info", "service", "navigate", "url", "none"]);
-  const serializeActionObject = value => (
+  const serializeActionObject = (value: unknown) => (
     isObject(value) ? JSON.stringify(value) : String(value ?? "").trim()
   );
   actionDefinitions.forEach(({ prefix, rawValue, fallback, navigationKey }) => {
@@ -133,9 +134,7 @@ export function normalizeConfig(rawConfig) {
     const configuredEntity = isObject(rawValue) ? rawValue.entity : config[`${prefix}_action_entity`];
     config[`${prefix}_action_entity`] = String(configuredEntity ?? "").trim();
   });
-  config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
-    ?? mergeConfig(DEFAULT_CONFIG.security, config.security || {});
-  config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles)
-    ?? deepClone(DEFAULT_CONFIG.styles);
-  return config;
+  const security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
+    ?? mergeConfig<Record<string, unknown>>(DEFAULT_CONFIG.security, config.security);
+  return { ...config, security, styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles) };
 }

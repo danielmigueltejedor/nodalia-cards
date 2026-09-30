@@ -90,12 +90,12 @@ assets and include release-gate tests. Record remaining unchecked modules honest
   image data exists; fetching an unseen image still depends on the network.
 - HA fixture construction is shared by browser and Node tests. Developer guides
   cover adding cards, testing and release preparation.
-- Latest local validation: strict types, lint, translations, build and 602 unit tests
+- Latest local validation: strict types, lint, translations, build and 610 unit tests
   pass. Full Chromium/WebKit/iPhone run: 233 passed, one existing platform skip, including Scenes, Lock editor styles and
   Summary native Lock, editor color and Vacuum status regressions. Linux CI
   remains required for Firefox and the final committed artifacts.
 
-The full TS migration remains open: **85 unchecked modules and no runtime import cycles** are explicitly tracked. No new suppressions or `any` shortcuts were
+The full TS migration remains open: **80 unchecked modules and no runtime import cycles** are explicitly tracked. No new suppressions or `any` shortcuts were
 introduced. This stage is foundational work, not a declaration that the entire
 migration is finished.
 
@@ -173,3 +173,28 @@ cards send exactly one midpoint service call on release, including iPhone.
 Helpers are checked with typed lint and no suppressions; remaining debt is 85.
 Ten Node cases cover quantized/fractional steps, cached geometry, pointer/marker
 round trips, center/gap retention, malformed values and distinct domain policies.
+
+## Small configuration and packaging stage — findings before implementation
+
+Alarm Panel and Person config/helpers are compact but still unchecked. Their
+normalizers assume a typed default survives unknown overrides; check record
+boundaries and use the checked CSS projection while preserving Person's explicit
+action entity and Alarm's code-input/timer aliases. Six checked card families
+repeat the same stub entity selection and size parsing; share only those exact
+helpers. Standalone utils embedding still has a manual 24-card inventory missing
+Lock, and README incorrectly calls HACS the only generated runtime. Bring them
+into line with the 25-card registry without changing the public distribution.
+
+Room Summary's small editor helpers also require checked unknown config/list
+boundaries. Keep array-aware YAML paths and prototype guards while typing those
+operations; malformed hub lists must not throw or be treated as character lists.
+
+Small configuration stage validated: 610 unit tests and the full local browser
+suite (233 passed, one existing platform skip). Alarm Panel and Person preserve
+code-input aliases, timing bounds, HA action objects, explicit action entities,
+service allowlists and unknown extensions. Their config/helpers and Room Summary
+helpers pass strict checking and typed lint without suppression. Summary paths
+retain array creation and reject prototype/non-index array paths; malformed hub
+lists no longer throw. Shared stub helpers preserve six cards' domain selection.
+Standalone utils embedding now consumes all 25 registry artifacts, with an
+idempotent embed/strip round trip including Lock. Remaining unchecked debt: 80.

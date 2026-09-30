@@ -850,7 +850,7 @@ test("scenes card is registered and shipped in the HACS bundle", () => {
   assert.match(source, /callService\("scene", "turn_on"/);
   assert.match(source, /_triggerLaunchAnimation/);
   assert.match(read("src/cards/registry.json"), /nodalia-scenes-card\.js/);
-  assert.match(sync, /nodalia-scenes-card\.js/);
+  assert.match(sync, /CARD_REGISTRY\.map\(card => card\.artifact\)/);
   assert.ok(pkg.files.includes("nodalia-scenes-card.js"), "nodalia-scenes-card.js should be published");
   assert.match(readme, /custom:nodalia-scenes-card/);
   assert.match(bundle, /callService\("scene","turn_on"/);
@@ -897,7 +897,7 @@ test("cover card is registered and shipped in the HACS bundle", () => {
   assert.match(source, /set_cover_tilt_position/);
   assert.match(source, /defineLazyCustomElement\(CARD_TAG, loadNodaliaCoverCard/);
   assert.match(read("src/cards/registry.json"), /nodalia-cover-card\.js/);
-  assert.match(sync, /nodalia-cover-card\.js/);
+  assert.match(sync, /CARD_REGISTRY\.map\(card => card\.artifact\)/);
   assert.match(pkg, /"nodalia-cover-card\.js"/);
   assert.match(readme, /custom:nodalia-cover-card/);
 });

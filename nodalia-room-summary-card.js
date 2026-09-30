@@ -244,11 +244,13 @@
     return [];
   }
   function hubSecurityEntityIds(config) {
-    const c = config || {};
-    return [...c.doors || [], ...c.windows || [], ...c.locks || [], ...c.alerts || []].map((id) => String(id || "").trim()).filter(Boolean);
+    const c = isObject(config) ? config : {};
+    const fields = [c.doors, c.windows, c.locks, c.alerts];
+    return fields.flatMap((field) => Array.isArray(field) ? field : []).map((id) => String(id || "").trim()).filter(Boolean);
   }
   function hubAlarmEntityIds(config) {
-    return (config?.alarms || []).map((id) => String(id || "").trim()).filter(Boolean);
+    const alarms = isObject(config) && Array.isArray(config.alarms) ? config.alarms : [];
+    return alarms.map((id) => String(id || "").trim()).filter(Boolean);
   }
   function getEditorColorFallbackValue(field) {
     const normalizedField = String(field ?? "");
@@ -264,13 +266,15 @@
     return "var(--info-color, #71c0ff)";
   }
   function stripEqualToDefaults(config, defaults = DEFAULT_CONFIG) {
-    const result = deepClone(config || {});
+    const result = deepClone(isObject(config) ? config : {});
     const walk = (cur, base) => {
       if (!isObject(cur) || !isObject(base)) return;
       Object.keys(cur).forEach((key) => {
-        if (isObject(cur[key]) && isObject(base[key]) && !Array.isArray(cur[key])) {
-          walk(cur[key], base[key]);
-          if (!Object.keys(cur[key]).length) delete cur[key];
+        const child = cur[key];
+        const fallback = base[key];
+        if (isObject(child) && isObject(fallback)) {
+          walk(child, fallback);
+          if (!Object.keys(child).length) delete cur[key];
           return;
         }
         if (JSON.stringify(cur[key]) === JSON.stringify(base[key])) delete cur[key];
@@ -288,26 +292,42 @@
     }));
   }
   function moveListItem(list, fromIndex, toIndex) {
-    if (!Array.isArray(list) || fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= list.length || toIndex >= list.length) {
+    if (!Array.isArray(list) || fromIndex === toIndex || !Number.isInteger(fromIndex) || !Number.isInteger(toIndex) || fromIndex < 0 || toIndex < 0 || fromIndex >= list.length || toIndex >= list.length) {
       return;
     }
-    const [item] = list.splice(fromIndex, 1);
-    list.splice(toIndex, 0, item);
+    const items = list.splice(fromIndex, 1);
+    list.splice(toIndex, 0, ...items);
+  }
+  var readNode = (node, key) => Array.isArray(node) ? node[Number(key)] : node[key];
+  function writeNode(node, key, value) {
+    if (!Array.isArray(node)) {
+      node[key] = value;
+      return true;
+    }
+    if (!/^\d+$/.test(key)) return false;
+    const index = Number(key);
+    if (!Number.isSafeInteger(index) || index >= 4294967295) return false;
+    node[index] = value;
+    return true;
   }
   function setByPath(target, path, value) {
     const parts = String(path || "").split(".");
-    if (!parts.length || parts.some(isUnsafeConfigPathKey)) {
-      return;
-    }
+    if (!parts.length || parts.some(isUnsafeConfigPathKey)) return;
     let cursor = target;
     for (let index = 0; index < parts.length - 1; index += 1) {
       const key = parts[index];
-      if (!isObject(cursor[key]) && !Array.isArray(cursor[key])) {
-        cursor[key] = /^\d+$/.test(parts[index + 1]) ? [] : {};
+      if (key === void 0) return;
+      const child = readNode(cursor, key);
+      if (isObject(child) || Array.isArray(child)) {
+        cursor = child;
+      } else {
+        const next = /^\d+$/.test(parts[index + 1] ?? "") ? [] : {};
+        if (!writeNode(cursor, key, next)) return;
+        cursor = next;
       }
-      cursor = cursor[key];
     }
-    cursor[parts[parts.length - 1]] = value;
+    const leaf = parts[parts.length - 1];
+    if (leaf !== void 0) writeNode(cursor, leaf, value);
   }
 
   // src/cards/room-summary/room-summary-config.ts

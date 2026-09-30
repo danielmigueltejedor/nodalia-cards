@@ -23,7 +23,6 @@ export default tseslint.config(
       "src/cards/cover/cover-editor.ts",
       "src/cards/alarm-panel/alarm-panel-card.ts",
       "src/cards/alarm-panel/alarm-panel-editor.ts",
-      "src/cards/alarm-panel/alarm-panel-helpers.ts",
       "src/cards/vacuum/vacuum-card.ts",
       "src/cards/vacuum/vacuum-editor.ts",
       "src/cards/entity/entity-card.ts",
@@ -34,7 +33,6 @@ export default tseslint.config(
       "src/cards/fav/fav-helpers.ts",
       "src/cards/person/person-card.ts",
       "src/cards/person/person-editor.ts",
-      "src/cards/person/person-helpers.ts",
       "src/cards/camera/camera-card.ts",
       "src/cards/camera/camera-editor.ts",
       "src/cards/camera/camera-helpers.ts",
@@ -69,7 +67,6 @@ export default tseslint.config(
       "src/cards/navigation/navigation-helpers.ts",
       "src/cards/room-summary/room-summary-card.ts",
       "src/cards/room-summary/room-summary-editor.ts",
-      "src/cards/room-summary/room-summary-helpers.ts",
       "src/cards/advance-vacuum/advance-vacuum-card.ts",
       "src/cards/advance-vacuum/advance-vacuum-editor.ts",
       "src/cards/advance-vacuum/advance-vacuum-helpers.ts",
@@ -97,7 +94,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ["src/cards/fan/fan-helpers.ts", "src/cards/humidifier/humidifier-helpers.ts", "src/cards/cover/cover-helpers.ts", "src/cards/vacuum/vacuum-config.ts", "src/cards/vacuum/vacuum-helpers.ts", "src/cards/cover/cover-config.ts", "src/cards/fan/fan-config.ts", "src/cards/humidifier/humidifier-config.ts", "src/cards/notifications/notifications-config.ts", "src/cards/notifications/notifications-normalization.ts", "src/cards/scenes/scenes-config.ts", "src/cards/scenes/scenes-helpers.ts", "src/shared/**/*.ts", "src/cards/lock/**/*.ts", "src/cards/camera/camera-stream-*.ts", "src/cards/room-summary/room-summary-model*.ts", "src/cards/media-player/media-player-artwork.ts", "src/cards/media-player/media-player-control-theme.ts"],
+    files: ["src/cards/room-summary/room-summary-helpers.ts", "src/cards/alarm-panel/alarm-panel-config.ts", "src/cards/alarm-panel/alarm-panel-helpers.ts", "src/cards/person/person-config.ts", "src/cards/person/person-helpers.ts", "src/cards/fan/fan-helpers.ts", "src/cards/humidifier/humidifier-helpers.ts", "src/cards/cover/cover-helpers.ts", "src/cards/vacuum/vacuum-config.ts", "src/cards/vacuum/vacuum-helpers.ts", "src/cards/cover/cover-config.ts", "src/cards/fan/fan-config.ts", "src/cards/humidifier/humidifier-config.ts", "src/cards/notifications/notifications-config.ts", "src/cards/notifications/notifications-normalization.ts", "src/cards/scenes/scenes-config.ts", "src/cards/scenes/scenes-helpers.ts", "src/shared/**/*.ts", "src/cards/lock/**/*.ts", "src/cards/camera/camera-stream-*.ts", "src/cards/room-summary/room-summary-model*.ts", "src/cards/media-player/media-player-artwork.ts", "src/cards/media-player/media-player-control-theme.ts"],
     languageOptions: { parserOptions: { project: "./tsconfig.json" } },
     rules: {
       "@typescript-eslint/no-floating-promises": "error",

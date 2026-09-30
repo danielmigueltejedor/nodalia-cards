@@ -19,6 +19,16 @@ keeps controls translucent during artwork loading, and removes the Play highligh
 Lock Card gains entity-first suggestions, a consistent visual editor and centered icons.
 Stable **`2.2.10`** remains the recommended daily-driver release.
 
+## Unreleased implementation audit
+
+The `main` source includes fixes after alpha.49 for Lock editor styles, centered
+media controls and artwork caching, Summary native Lock embedding, Sections
+minimum widths and Vacuum status localization/ellipsis. These are tracked in
+[Unreleased notes](CHANGELOG-PRERELEASES.md) and the [technical audit](docs/TECHNICAL_AUDIT.md).
+The strict TypeScript migration remains open; the next alpha will be published
+when the migration and its validation are complete. A TS source split alone does
+not satisfy that requirement.
+
 ## Current stable release
 
 Current stable release:

@@ -56,42 +56,28 @@ scripts/build-bundle.mjs      HACS bundle (imports migrated cards from src/)
 ```
 
 All Lovelace cards now live under `src/cards/` and emit root `nodalia-*.js`
-artifacts. Support files such as `nodalia-utils.js` and the camera/notifications
-models remain handwritten until their own migration.
+artifacts. Camera stream, Room Summary and render signatures also have checked
+TS sources and generated compatibility adapters. Generic utils, backend, bubble
+contrast and Notifications mobile policy remain handwritten compatibility code;
+the i18n pack is generated from JSON while its lookup logic remains root JS.
 
-## Largest source files
+## Large controller responsibilities
 
-Approximate sizes on this preview (handwritten unless noted):
+Size snapshots from the initial source split are obsolete. The main remaining
+responsibilities live in these controllers; their strict migration is still open:
 
-| File | Size | Responsibilities |
-|---|---|---|
-| `nodalia-advance-vacuum-card.js` | generated | Compiled Advance Vacuum artifact |
-| `src/cards/advance-vacuum/advance-vacuum-card.ts` | ~7520 lines | Map, rooms, dock, sessions |
-| `nodalia-climate-card.js` | generated ~338 KB | Compiled Climate artifact |
-| `src/cards/climate/climate-card.ts` | ~6470 lines | Climate HTMLElement / render / interactions |
-| `nodalia-entity-card.js` | generated | Compiled Entity artifact |
-| `src/cards/entity/entity-card.ts` | ~4260 lines | Generic entity, domains, air quality, editor |
-| `src/cards/fav/fav-card.ts` | ~1670 lines | Favorite mini control, alarm host, editor |
-| `src/cards/person/person-card.ts` | ~1230 lines | Person photo, zone, actions |
-| `nodalia-notifications-card.js` | ~258 KB | Inbox, mobile policy, Engine sync, editor |
-| `nodalia-power-flow-card.js` | ~231 KB | Energy graph, nodes, chips, editor |
-| `nodalia-media-player.js` | generated | Compiled Media Player artifact |
-| `src/cards/media-player/media-player-card.ts` | ~4900 lines | Media Player HTMLElement / artwork / layouts |
-| `nodalia-calendar-card.js` | ~207 KB | Events, weather, composers, webhooks |
-| `src/cards/climate/climate-editor.ts` | ~2037 lines | Climate visual editor (incl. unused legacy class) |
-| `nodalia-humidifier-card.js` | generated | Compiled Humidifier artifact |
-| `src/cards/humidifier/humidifier-card.ts` | ~3870 lines | Humidifier HTMLElement / humidity / modes |
-| `nodalia-fan-card.js` | generated | Compiled Fan artifact |
-| `src/cards/fan/fan-card.ts` | ~3640 lines | Fan HTMLElement / speed / oscillation |
-| `nodalia-cover-card.js` | generated | Compiled Cover artifact |
-| `src/cards/cover/cover-card.ts` | ~1930 lines | Cover HTMLElement / position / tilt |
-| `nodalia-vacuum-card.js` | generated | Compiled Vacuum artifact |
-| `src/cards/vacuum/vacuum-card.ts` | ~3100 lines | Vacuum HTMLElement / presets / battery |
-| `nodalia-alarm-panel-card.js` | generated | Compiled Alarm Panel artifact |
-| `src/cards/alarm-panel/alarm-panel-card.ts` | ~1510 lines | Alarm HTMLElement / arm / code |
-| `nodalia-light-card.js` | generated | Compiled Light artifact |
-| `src/cards/light/light-card.ts` | ~3970 lines | Light HTMLElement / brightness / color |
-| `nodalia-navigation-bar.js` | ~196 KB | Routes, media overlay, popups |
+| Source | Responsibilities |
+|---|---|
+| `src/cards/advance-vacuum/advance-vacuum-card.ts` | Map, rooms, dock and sessions |
+| `src/cards/climate/climate-card.ts` | Climate rendering and interactions |
+| `src/cards/entity/entity-card.ts` | Entity domains and air quality |
+| `src/cards/media-player/media-player-card.ts` | Artwork, playback and layouts |
+| `src/cards/notifications/notifications-card.ts` | Inbox, mobile policy and Engine sync |
+| `src/cards/power-flow/power-flow-card.ts` | Energy graph, nodes and popups |
+| `src/cards/room-summary/room-summary-card.ts` | Room navigation and embedded card lifecycle |
+
+The exact suppression inventory is `scripts/type-debt.json`; use the source
+files, not generated JS size, to plan coherent typed extractions.
 
 Climate still has a large view/controller. Config, model, dial, schedule and
 types are already separate. Styles, actions and controller logic remain inside
@@ -177,6 +163,7 @@ boundaries so standalone `<script>` loading still works.
 | `nodalia-fan-card.js` | Generated from `src/cards/fan/standalone.ts` (unminified IIFE) |
 | `nodalia-humidifier-card.js` | Generated from `src/cards/humidifier/standalone.ts` (unminified IIFE) |
 | `nodalia-cover-card.js` | Generated from `src/cards/cover/standalone.ts` (unminified IIFE) |
+| `nodalia-lock-card.js` | Generated from `src/cards/lock/standalone.ts` |
 | `nodalia-alarm-panel-card.js` | Generated from `src/cards/alarm-panel/standalone.ts` (unminified IIFE) |
 | `nodalia-vacuum-card.js` | Generated from `src/cards/vacuum/standalone.ts` (unminified IIFE) |
 | `nodalia-entity-card.js` | Generated from `src/cards/entity/standalone.ts` (unminified IIFE) |
@@ -203,9 +190,9 @@ Community translations are curated on self-hosted Weblate
 [`docs/TRANSLATIONS.md`](./TRANSLATIONS.md) and [`docs/weblate/README.md`](./weblate/README.md).
 Locale JSON under `i18n/runtime/` and `i18n/editor/` remains authoritative for builds.
 
-Do not edit generated Climate, Media Player, Light, Fan, Humidifier, Cover, Alarm Panel, Vacuum, Entity, Fav, Person, Camera, Circular Gauge, Insignia, Scenes, News, Weather, Graph, Calendar, Power Flow, Notifications, Navigation, Room Summary, or Advance Vacuum JS by hand. Change
+Do not edit generated Climate, Media Player, Light, Fan, Humidifier, Cover, Alarm Panel, Vacuum, Entity, Fav, Person, Camera, Circular Gauge, Insignia, Scenes, News, Weather, Graph, Calendar, Power Flow, Notifications, Navigation, Room Summary, Advance Vacuum or Lock JS by hand. Change
 `src/cards/climate`, `src/cards/media-player`, `src/cards/light`, `src/cards/fan`,
-`src/cards/humidifier`, `src/cards/cover`, `src/cards/alarm-panel`, `src/cards/vacuum`, `src/cards/entity`, `src/cards/fav`, `src/cards/person`, `src/cards/camera`, `src/cards/circular-gauge`, `src/cards/insignia`, `src/cards/scenes`, `src/cards/news`, `src/cards/weather`, `src/cards/graph`, `src/cards/calendar`, `src/cards/power-flow`, `src/cards/notifications`, `src/cards/navigation`, `src/cards/room-summary`, or `src/cards/advance-vacuum` and run `pnpm run bundle`. The HACS bundle compiles those cards from `index.ts` so the
+`src/cards/humidifier`, `src/cards/cover`, `src/cards/alarm-panel`, `src/cards/vacuum`, `src/cards/entity`, `src/cards/fav`, `src/cards/person`, `src/cards/camera`, `src/cards/circular-gauge`, `src/cards/insignia`, `src/cards/scenes`, `src/cards/news`, `src/cards/weather`, `src/cards/graph`, `src/cards/calendar`, `src/cards/power-flow`, `src/cards/notifications`, `src/cards/navigation`, `src/cards/room-summary`, `src/cards/advance-vacuum` or `src/cards/lock` and run `pnpm run bundle`. The HACS bundle compiles those cards from `index.ts` so the
 unused legacy editor class is tree-shaken there (same as `2.3.0-alpha.3`).
 The standalone Climate artifact keeps that class because source-contract tests still
 assert both editor implementations.
@@ -364,7 +351,7 @@ Six config/helper cycles were removed through checked defaults and normalization
 Do not place defaults in modules that import their own normalizers.
 Notifications normalization now lives below the config and presentation helpers;
 no runtime import cycles remain.
-85 legacy modules still suppress typechecking; see `scripts/type-debt.json`.
+80 legacy modules still suppress typechecking; see `scripts/type-debt.json`.
 **The full TypeScript migration is not complete.** Checked modules and extracted
 contracts must grow without adding suppressions or casts to hide errors. The
 architecture guard prevents new unchecked files and new runtime cycles.
@@ -404,3 +391,9 @@ math lives in `src/shared/device-control-geometry.ts` with explicit DOM, rectang
 and range contracts. Distinct unavailable policies and device icon rules remain
 local. The shared model prevents NaN markers from malformed values and retains
 quantized steps, cached drag geometry, center dead zones and bottom arc gaps.
+
+Alarm Panel and Person config/helpers are checked, as are Room Summary's editor
+list/path helpers. Stub entity selection and size parsing have six real card
+consumers in `src/shared/editor-entity-helpers.ts`. Optional standalone utils
+embedding consumes the registry too, including Lock; its embed/strip round trip
+is tested for every artifact.
