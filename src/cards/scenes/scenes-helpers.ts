@@ -1,7 +1,8 @@
+export { formatEditorHexChannel, resolveEditorColorValue, formatEditorColorFromHex, getEditorColorModel } from "../../shared/editor-color";
 import type { HassEntity, HomeAssistant } from "../../core/types/home-assistant";
 import type { SceneRow, ScenesInput, SceneNormalizationOptions, DashboardScrollSnapshot } from "./scenes-types";
 import { DEFAULT_SCENE_ACCENT } from "./scenes-constants";
-import { clamp, deepClone, isObject, isUnsafeConfigPathKey, normalizeTextKey } from "./scenes-runtime";
+import { deepClone, isObject, isUnsafeConfigPathKey, normalizeTextKey } from "./scenes-runtime";
 import { DEFAULT_CONFIG } from "./scenes-defaults";
 
 export function mergeConfig(base: unknown, override: unknown): unknown {
@@ -80,50 +81,13 @@ export function moveItem<T>(list: T[], fromIndex: number, toIndex: number) {
 }
 
 
-export function formatEditorHexChannel(value: number) {
-  return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
-}
 
-export function resolveEditorColorValue(value: unknown) {
-  const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
-  if (typeof resolver === "function") {
-    return resolver(value);
-  }
-  return String(value ?? "").trim();
-}
 
-export function formatEditorColorFromHex(hex: unknown, alpha = 1) {
-  const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
-  if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
-    return String(hex ?? "");
-  }
-  const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
-  const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
-  const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
-  const safeAlpha = clamp(Number(alpha), 0, 1);
-  if (safeAlpha >= 0.999) {
-    return `#${normalizedHex}`;
-  }
-  return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
-}
 
-export function getEditorColorModel(value: unknown, fallbackValue = "#71c0ff") {
-  const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
-  const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
-  const channels = resolvedValue.match(/[\d.]+/g) || [];
-  const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
-  const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
-  const blue = clamp(Math.round(Number(channels[2] ?? 255)), 0, 255);
-  const alpha = channels.length > 3 ? clamp(Number(channels[3]), 0, 1) : 1;
-  const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
-  return {
-    alpha,
-    hex,
-    resolved: resolvedValue,
-    source: sourceValue,
-    value: formatEditorColorFromHex(hex, alpha),
-  };
-}
+
+
+
+
 
 export function getEditorColorFallbackValue(field: unknown) {
   const normalized = String(field || "");

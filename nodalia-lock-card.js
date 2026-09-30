@@ -361,6 +361,78 @@
     return NodaliaLockCard;
   }
 
+  // src/shared/editor-color.ts
+  var clamp = (value, max) => Math.max(0, Math.min(max, value));
+  var component = (value, scale) => {
+    if (!value || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?%?$/i.test(value)) return null;
+    const numeric = Number(value.replace(/%$/, ""));
+    return Number.isFinite(numeric) ? clamp(value.endsWith("%") ? numeric * scale / 100 : numeric, scale) : null;
+  };
+  function parseEditorColorChannels(value) {
+    const raw = String(value ?? "").trim();
+    const hexMatch = raw.match(/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
+    if (hexMatch?.[1]) {
+      const hex = hexMatch[1].length < 5 ? hexMatch[1].split("").map((channel) => channel + channel).join("") : hexMatch[1];
+      return { red: parseInt(hex.slice(0, 2), 16), green: parseInt(hex.slice(2, 4), 16), blue: parseInt(hex.slice(4, 6), 16), alpha: hex.length === 8 ? parseInt(hex.slice(6, 8), 16) / 255 : 1 };
+    }
+    const rgb = raw.match(/^rgba?\(([^)]+)\)$/i);
+    const srgb = raw.match(/^color\(\s*srgb\s+([^)]+)\)$/i);
+    const body = rgb?.[1] ?? srgb?.[1];
+    if (!body) return null;
+    const sections = body.trim().split(/\s*\/\s*/);
+    if (sections.length > 2) return null;
+    const parts = sections[0]?.split(/[\s,]+/) ?? [];
+    if (sections.length === 2 && parts.length !== 3 || parts.length < 3 || parts.length > 4) return null;
+    const scale = srgb ? 1 : 255;
+    const red = component(parts[0], scale), green = component(parts[1], scale), blue = component(parts[2], scale);
+    const alphaPart = sections[1] ?? parts[3];
+    const alpha = alphaPart === void 0 ? 1 : component(alphaPart, 1);
+    if (red === null || green === null || blue === null || alpha === null) return null;
+    return { red: red * 255 / scale, green: green * 255 / scale, blue: blue * 255 / scale, alpha };
+  }
+  function formatEditorHexChannel(value) {
+    const numeric = Number(value);
+    return clamp(Math.round(Number.isFinite(numeric) ? numeric : 0), 255).toString(16).padStart(2, "0");
+  }
+  function formatEditorColorFromHex(hex, alpha = 1) {
+    const normalized = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
+    if (!/^[0-9a-f]{6}$/.test(normalized)) return String(hex ?? "");
+    const numeric = Number(alpha);
+    const safeAlpha = clamp(Number.isFinite(numeric) ? numeric : 1, 1);
+    if (safeAlpha >= 0.999) return `#${normalized}`;
+    const red = parseInt(normalized.slice(0, 2), 16), green = parseInt(normalized.slice(2, 4), 16), blue = parseInt(normalized.slice(4, 6), 16);
+    return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
+  }
+  function resolveEditorColorValue(value) {
+    const resolve = typeof window !== "undefined" ? window.NodaliaBubbleContrast?.resolveEditorColorValue : void 0;
+    return resolve?.(value) || String(value ?? "").trim();
+  }
+  function browserColorChannels(value) {
+    if (typeof document === "undefined" || !/^(?:color|oklab|oklch|lab|lch)\(/i.test(value)) return null;
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 1;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    if (!context) return null;
+    context.fillStyle = "#000001";
+    context.fillStyle = value;
+    if (context.fillStyle === "#000001") {
+      context.fillStyle = "#000002";
+      context.fillStyle = value;
+      if (context.fillStyle === "#000002") return null;
+    }
+    context.fillRect(0, 0, 1, 1);
+    const [red, green, blue, alpha] = context.getImageData(0, 0, 1, 1).data;
+    if (red === void 0 || green === void 0 || blue === void 0 || alpha === void 0) return null;
+    return { red, green, blue, alpha: alpha / 255 };
+  }
+  function getEditorColorModel(value, fallbackValue = "#71c0ff") {
+    const source = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
+    const resolved = resolveEditorColorValue(source);
+    const channels = parseEditorColorChannels(resolved) || parseEditorColorChannels(source) || browserColorChannels(resolved) || parseEditorColorChannels(resolveEditorColorValue(fallbackValue)) || parseEditorColorChannels(fallbackValue) || { red: 113, green: 192, blue: 255, alpha: 1 };
+    const hex = `#${formatEditorHexChannel(channels.red)}${formatEditorHexChannel(channels.green)}${formatEditorHexChannel(channels.blue)}`;
+    return { alpha: channels.alpha, hex, label: source, resolved, source, value: formatEditorColorFromHex(hex, channels.alpha) };
+  }
+
   // src/shared/editor-toggle-styles.ts
   var EDITOR_TOGGLE_STYLES = `
 :is(.editor-toggle, .editor-checkbox) {
@@ -582,14 +654,14 @@ padding: 0 12px;
         if (!field) return;
         let value;
         if (event instanceof CustomEvent && event.type === "value-changed") value = event.detail?.value;
-        else if (target instanceof HTMLInputElement) value = target.type === "checkbox" ? target.checked : target.value;
+        else if (target instanceof HTMLInputElement) value = target.type === "checkbox" ? target.checked : target.type === "color" ? formatEditorColorFromHex(target.value, target.dataset.alpha ?? 1) : target.value;
         else if (target instanceof HTMLSelectElement) value = target.value;
         else return;
         const next = window.NodaliaUtils.deepClone(this.config);
         window.NodaliaUtils.setByPath(next, field, value);
         this.config = next;
         if (target instanceof HTMLInputElement && target.type === "color") {
-          target.parentElement?.querySelector(".editor-color-swatch")?.style.setProperty("--editor-swatch", target.value);
+          target.parentElement?.querySelector(".editor-color-swatch")?.style.setProperty("--editor-swatch", String(value));
         }
         this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: this.config }, bubbles: true, composed: true }));
       }
@@ -601,11 +673,9 @@ padding: 0 12px;
         const escape = window.NodaliaUtils.escapeHtml;
         const label = escape(this.label(key));
         if (!color) return `<label class="editor-field"><span>${label}</span><input data-field="${field}" value="${escape(value)}"></label>`;
-        const resolved = window.NodaliaBubbleContrast?.resolveEditorColorValue?.(value) || value;
-        const channels = resolved.match(/[\d.]+/g) || [];
-        const hex = /^#[0-9a-f]{6}$/i.test(resolved) ? resolved : `#${[0, 1, 2].map((index) => Math.max(0, Math.min(255, Math.round(Number(channels[index]) || 0))).toString(16).padStart(2, "0")).join("")}`;
+        const model = getEditorColorModel(value);
         return `<div class="editor-field"><span>${label}</span><div class="editor-color-field"><label class="editor-color-picker">
-        <input type="color" data-field="${field}" value="${hex}" aria-label="${label}"><span class="editor-color-swatch" style="--editor-swatch:${escape(value)}"></span>
+        <input type="color" data-field="${field}" data-alpha="${model.alpha}" value="${model.hex}" aria-label="${label}"><span class="editor-color-swatch" style="--editor-swatch:${escape(value)}"></span>
       </label></div></div>`;
       }
       render() {

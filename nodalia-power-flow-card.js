@@ -79,6 +79,78 @@
   var fireEvent = utils.fireEvent.bind(utils);
   var normalizeTextKey = utils.normalizeTextKey.bind(utils);
 
+  // src/shared/editor-color.ts
+  var clamp2 = (value, max) => Math.max(0, Math.min(max, value));
+  var component = (value, scale) => {
+    if (!value || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?%?$/i.test(value)) return null;
+    const numeric = Number(value.replace(/%$/, ""));
+    return Number.isFinite(numeric) ? clamp2(value.endsWith("%") ? numeric * scale / 100 : numeric, scale) : null;
+  };
+  function parseEditorColorChannels(value) {
+    const raw = String(value ?? "").trim();
+    const hexMatch = raw.match(/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
+    if (hexMatch?.[1]) {
+      const hex = hexMatch[1].length < 5 ? hexMatch[1].split("").map((channel) => channel + channel).join("") : hexMatch[1];
+      return { red: parseInt(hex.slice(0, 2), 16), green: parseInt(hex.slice(2, 4), 16), blue: parseInt(hex.slice(4, 6), 16), alpha: hex.length === 8 ? parseInt(hex.slice(6, 8), 16) / 255 : 1 };
+    }
+    const rgb = raw.match(/^rgba?\(([^)]+)\)$/i);
+    const srgb = raw.match(/^color\(\s*srgb\s+([^)]+)\)$/i);
+    const body = rgb?.[1] ?? srgb?.[1];
+    if (!body) return null;
+    const sections = body.trim().split(/\s*\/\s*/);
+    if (sections.length > 2) return null;
+    const parts = sections[0]?.split(/[\s,]+/) ?? [];
+    if (sections.length === 2 && parts.length !== 3 || parts.length < 3 || parts.length > 4) return null;
+    const scale = srgb ? 1 : 255;
+    const red = component(parts[0], scale), green = component(parts[1], scale), blue = component(parts[2], scale);
+    const alphaPart = sections[1] ?? parts[3];
+    const alpha = alphaPart === void 0 ? 1 : component(alphaPart, 1);
+    if (red === null || green === null || blue === null || alpha === null) return null;
+    return { red: red * 255 / scale, green: green * 255 / scale, blue: blue * 255 / scale, alpha };
+  }
+  function formatEditorHexChannel(value) {
+    const numeric = Number(value);
+    return clamp2(Math.round(Number.isFinite(numeric) ? numeric : 0), 255).toString(16).padStart(2, "0");
+  }
+  function formatEditorColorFromHex(hex, alpha = 1) {
+    const normalized = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
+    if (!/^[0-9a-f]{6}$/.test(normalized)) return String(hex ?? "");
+    const numeric = Number(alpha);
+    const safeAlpha = clamp2(Number.isFinite(numeric) ? numeric : 1, 1);
+    if (safeAlpha >= 0.999) return `#${normalized}`;
+    const red = parseInt(normalized.slice(0, 2), 16), green = parseInt(normalized.slice(2, 4), 16), blue = parseInt(normalized.slice(4, 6), 16);
+    return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
+  }
+  function resolveEditorColorValue(value) {
+    const resolve = typeof window !== "undefined" ? window.NodaliaBubbleContrast?.resolveEditorColorValue : void 0;
+    return resolve?.(value) || String(value ?? "").trim();
+  }
+  function browserColorChannels(value) {
+    if (typeof document === "undefined" || !/^(?:color|oklab|oklch|lab|lch)\(/i.test(value)) return null;
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 1;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    if (!context) return null;
+    context.fillStyle = "#000001";
+    context.fillStyle = value;
+    if (context.fillStyle === "#000001") {
+      context.fillStyle = "#000002";
+      context.fillStyle = value;
+      if (context.fillStyle === "#000002") return null;
+    }
+    context.fillRect(0, 0, 1, 1);
+    const [red, green, blue, alpha] = context.getImageData(0, 0, 1, 1).data;
+    if (red === void 0 || green === void 0 || blue === void 0 || alpha === void 0) return null;
+    return { red, green, blue, alpha: alpha / 255 };
+  }
+  function getEditorColorModel(value, fallbackValue = "#71c0ff") {
+    const source = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
+    const resolved = resolveEditorColorValue(source);
+    const channels = parseEditorColorChannels(resolved) || parseEditorColorChannels(source) || browserColorChannels(resolved) || parseEditorColorChannels(resolveEditorColorValue(fallbackValue)) || parseEditorColorChannels(fallbackValue) || { red: 113, green: 192, blue: 255, alpha: 1 };
+    const hex = `#${formatEditorHexChannel(channels.red)}${formatEditorHexChannel(channels.green)}${formatEditorHexChannel(channels.blue)}`;
+    return { alpha: channels.alpha, hex, label: source, resolved, source, value: formatEditorColorFromHex(hex, channels.alpha) };
+  }
+
   // src/cards/power-flow/power-flow-helpers.ts
   function deepCloneNode(value) {
     return JSON.parse(JSON.stringify(value));
@@ -361,47 +433,6 @@
     return {
       start,
       path: output.length ? output.join(" ") : "M 0 0"
-    };
-  }
-  function resolveEditorColorValue(value) {
-    const resolver = window.NodaliaBubbleContrast?.resolveEditorColorValue;
-    if (typeof resolver === "function") {
-      return resolver(value);
-    }
-    return String(value ?? "").trim();
-  }
-  function formatEditorHexChannel(value) {
-    return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
-  }
-  function formatEditorColorFromHex(hex, alpha = 1) {
-    const normalizedHex = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
-    if (!/^[0-9a-f]{6}$/.test(normalizedHex)) {
-      return String(hex ?? "");
-    }
-    const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
-    const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
-    const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
-    const safeAlpha = clamp(Number(alpha), 0, 1);
-    if (safeAlpha >= 0.999) {
-      return `#${normalizedHex}`;
-    }
-    return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
-  }
-  function getEditorColorModel(value, fallbackValue = "#71c0ff") {
-    const sourceValue = String(value ?? "").trim() || String(fallbackValue ?? "").trim() || "#71c0ff";
-    const resolvedValue = resolveEditorColorValue(sourceValue) || resolveEditorColorValue(fallbackValue) || "rgb(113, 192, 255)";
-    const channels = resolvedValue.match(/[\d.]+/g) || [];
-    const red = clamp(Math.round(Number(channels[0] ?? 113)), 0, 255);
-    const green = clamp(Math.round(Number(channels[1] ?? 192)), 0, 255);
-    const blue = clamp(Math.round(Number(channels[2] ?? 255)), 0, 255);
-    const alpha = channels.length > 3 ? clamp(Number(channels[3]), 0, 1) : 1;
-    const hex = `#${formatEditorHexChannel(red)}${formatEditorHexChannel(green)}${formatEditorHexChannel(blue)}`;
-    return {
-      alpha,
-      hex,
-      resolved: resolvedValue,
-      source: sourceValue,
-      value: formatEditorColorFromHex(hex, alpha)
     };
   }
   function getEditorColorFallbackValue(field) {
