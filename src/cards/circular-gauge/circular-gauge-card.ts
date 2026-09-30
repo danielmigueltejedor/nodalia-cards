@@ -41,6 +41,7 @@ import {
   inferReasonableMax,
   isUnavailableState,
   parseRgbColor,
+  parseFiniteNumericValue,
   parseSizeToPixels,
   resolveColorInContext,
   resolveGaugeSvgStrokeColor,
@@ -223,19 +224,18 @@ class NodaliaCircularGaugeCard extends HTMLElement {
   }
 
   _getNumericValue(state) {
-    const direct = Number(String(state?.state ?? "").replace(",", "."));
-    if (Number.isFinite(direct)) {
+    const direct = parseFiniteNumericValue(String(state?.state ?? "").replace(",", "."));
+    if (direct !== null) {
       return direct;
     }
 
-    const nativeValue = Number(state?.attributes?.native_value);
-    return Number.isFinite(nativeValue) ? nativeValue : null;
+    return parseFiniteNumericValue(state?.attributes?.native_value);
   }
 
   _getDecimals(state) {
-    const configured = Number(this._config?.decimals);
-    if (Number.isFinite(configured) && configured >= 0) {
-      return Math.min(3, configured);
+    const configured = parseFiniteNumericValue(this._config?.decimals);
+    if (configured !== null && configured >= 0) {
+      return Math.min(3, Math.floor(configured));
     }
 
     const rawState = String(state?.state ?? "").trim();
@@ -243,23 +243,23 @@ class NodaliaCircularGaugeCard extends HTMLElement {
   }
 
   _getRange(state, currentValue) {
-    const configuredMin = Number(this._config?.min);
-    const configuredMax = Number(this._config?.max);
-    const attrMin = Number(state?.attributes?.min);
-    const attrMax = Number(state?.attributes?.max);
+    const configuredMin = parseFiniteNumericValue(this._config?.min);
+    const configuredMax = parseFiniteNumericValue(this._config?.max);
+    const attrMin = parseFiniteNumericValue(state?.attributes?.min);
+    const attrMax = parseFiniteNumericValue(state?.attributes?.max);
     const unit = this._getUnit(state);
 
-    const min = Number.isFinite(configuredMin)
+    const min = configuredMin !== null
       ? configuredMin
-      : Number.isFinite(attrMin)
+      : attrMin !== null
         ? attrMin
         : this._config?.start_from_zero === false && Number.isFinite(currentValue) && currentValue < 0
           ? Math.floor(currentValue)
           : 0;
 
-    let max = Number.isFinite(configuredMax)
+    let max = configuredMax !== null
       ? configuredMax
-      : Number.isFinite(attrMax)
+      : attrMax !== null
         ? attrMax
         : inferReasonableMax(currentValue, unit, state);
 

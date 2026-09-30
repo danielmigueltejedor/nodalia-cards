@@ -380,3 +380,29 @@ literally. Guard nonfinite durations, noninteger list indices and control
 characters in runtime CSS. Seven new unit cases pass; 836 valid helper results
 match merged main. All 656 unit tests and the full local browser suite (245
 passed, one existing platform skip) pass. Remaining unchecked modules: 69.
+
+## Circular Gauge helper findings — 2026-10-01
+
+Gauge helpers suppress style, color, numeric, stub and geometry checking. The
+view converts empty range defaults and null native values to zero, overriding
+automatic ranges or displaying unavailable readings as zero. Missing decimals
+also become zero instead of using state precision. Guard numeric inputs through
+the real view. Keep explicit zero bounds, comma decimal state values, valid
+dial geometry and tint interpolation. Share finite numeric parsing with Weather.
+The old RGB parser misreads percentages and cannot read modern computed sRGB;
+reuse the checked color parser. Its DOM color probe needs finally cleanup.
+
+Regression coverage also revealed that a kW sensor named “power” gets the W
+range before kW is considered. Give explicit physical units priority over
+friendly-name/domain heuristics; retain those heuristics when units are unknown.
+
+Gauge helpers now pass strict checking and typed lint. Share numeric parsing
+with Weather, stub/size selection, checked style projection and CSS Color 4
+channels. Keep exact geometry and interpolation for valid stops, guard malformed
+scale entries and remove color probes in finally. The actual view preserves
+absent readings and automatic bounds/precision, explicit zeros and comma decimal
+states. Seven new unit cases pass; 4,374 valid color/geometry/format/style results
+match merged main. All 663 unit tests and the full local browser suite (248
+passed, one existing platform skip) pass. The added real kW/decimal sequence
+also passes the three local projects before integration. Remaining unchecked
+modules: 68; Gauge view/editor checking is still open.

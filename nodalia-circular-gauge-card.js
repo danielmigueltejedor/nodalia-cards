@@ -229,32 +229,61 @@
     return { alpha: channels.alpha, hex, label: source, resolved, source, value: formatEditorColorFromHex(hex, channels.alpha) };
   }
 
-  // src/cards/circular-gauge/circular-gauge-helpers.ts
+  // src/shared/numeric-values.ts
+  function parseFiniteNumericValue(value) {
+    if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
+  // src/shared/editor-entity-helpers.ts
   function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
     return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
-  }
-  function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
-    const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
-    if (!entityId) {
-      return config;
-    }
-    config.entity = entityId;
-    const state = hass?.states?.[entityId];
-    const unit = String(state?.attributes?.unit_of_measurement || "").trim();
-    const numericState = Number(state?.state);
-    config.name = state?.attributes?.friendly_name || entityId;
-    if (unit === "%") {
-      config.min = 0;
-      config.max = 100;
-    } else if (Number.isFinite(numericState) && numericState > Number(config.max || 0)) {
-      config.min = 0;
-      config.max = Math.ceil(numericState * 1.25);
-    }
-    return config;
   }
   function parseSizeToPixels(value, fallback = 0) {
     const numeric = Number.parseFloat(String(value ?? ""));
     return Number.isFinite(numeric) ? numeric : fallback;
+  }
+
+  // src/cards/circular-gauge/circular-gauge-helpers.ts
+  var GAUGE_MAX_BY_UNIT = /* @__PURE__ */ new Map([
+    ["%", 100],
+    ["w", 2500],
+    ["watt", 2500],
+    ["watts", 2500],
+    ["va", 2500],
+    ["kw", 10],
+    ["l_s", 10],
+    ["l_min", 60],
+    ["m3_h", 10],
+    ["a", 32],
+    ["ma", 3e3],
+    ["v", 260],
+    ["mv", 1e3],
+    ["c", 40],
+    ["f", 40],
+    ["degc", 40],
+    ["degf", 40],
+    ["bar", 1200],
+    ["hpa", 1200],
+    ["pa", 1200]
+  ]);
+  function applyStubEntity(config, hass, domains = [], entities = [], entitiesFallback = []) {
+    const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
+    if (!entityId) {
+      return config;
+    }
+    Object.assign(config, { entity: entityId });
+    const state = hass?.states?.[entityId];
+    const unit = String(state?.attributes?.unit_of_measurement || "").trim();
+    const numericState = Number(state?.state);
+    Object.assign(config, { name: state?.attributes?.friendly_name || entityId });
+    if (unit === "%") {
+      Object.assign(config, { min: 0, max: 100 });
+    } else if (Number.isFinite(numericState) && numericState > Number(config.max || 0)) {
+      Object.assign(config, { min: 0, max: Math.ceil(numericState * 1.25) });
+    }
+    return config;
   }
   function sanitizeCssValue(value, fallback) {
     const raw = String(value ?? "").trim();
@@ -262,49 +291,13 @@
     if (!raw) {
       return safeFallback;
     }
-    if (/[\u0000-\u001f\u007f<>;"'{}]/.test(raw) || raw.includes("/*") || raw.includes("*/")) {
+    if ([...raw].some((character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127) || /[<>;"'{}]/.test(raw) || raw.includes("/*") || raw.includes("*/")) {
       return safeFallback;
     }
     return raw;
   }
   function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
-    const defaults = DEFAULT_CONFIG.styles;
-    const card = styles?.card || {};
-    const icon = styles?.icon || {};
-    const gauge = styles?.gauge || {};
-    return {
-      card: {
-        background: sanitizeCssValue(card.background, defaults.card.background),
-        border: sanitizeCssValue(card.border, defaults.card.border),
-        border_radius: sanitizeCssValue(card.border_radius, defaults.card.border_radius),
-        box_shadow: sanitizeCssValue(card.box_shadow, defaults.card.box_shadow),
-        padding: sanitizeCssValue(card.padding, defaults.card.padding),
-        gap: sanitizeCssValue(card.gap, defaults.card.gap)
-      },
-      icon: {
-        size: sanitizeCssValue(icon.size, defaults.icon.size),
-        background: sanitizeCssValue(icon.background, defaults.icon.background),
-        color: sanitizeCssValue(icon.color, defaults.icon.color)
-      },
-      chip_height: sanitizeCssValue(styles?.chip_height, defaults.chip_height),
-      chip_font_size: sanitizeCssValue(styles?.chip_font_size, defaults.chip_font_size),
-      chip_padding: sanitizeCssValue(styles?.chip_padding, defaults.chip_padding),
-      chip_border_radius: sanitizeCssValue(styles?.chip_border_radius, defaults.chip_border_radius),
-      title_size: sanitizeCssValue(styles?.title_size, defaults.title_size),
-      value_size: sanitizeCssValue(styles?.value_size, defaults.value_size),
-      range_size: sanitizeCssValue(styles?.range_size, defaults.range_size),
-      name_chip_max_width: sanitizeCssValue(styles?.name_chip_max_width, defaults.name_chip_max_width),
-      gauge: {
-        size: sanitizeCssValue(gauge.size, defaults.gauge.size),
-        stroke: sanitizeCssValue(gauge.stroke, defaults.gauge.stroke),
-        thumb_size: sanitizeCssValue(gauge.thumb_size, defaults.gauge.thumb_size),
-        track_color: sanitizeCssValue(gauge.track_color, defaults.gauge.track_color),
-        background: sanitizeCssValue(gauge.background, defaults.gauge.background),
-        min_tint_color: sanitizeCssValue(gauge.min_tint_color, defaults.gauge.min_tint_color),
-        max_tint_color: sanitizeCssValue(gauge.max_tint_color, defaults.gauge.max_tint_color),
-        foreground_color: sanitizeCssValue(gauge.foreground_color, defaults.gauge.foreground_color)
-      }
-    };
+    return normalizeControlStyles(styles, DEFAULT_CONFIG.styles);
   }
   function getEditorColorFallbackValue(field) {
     const normalizedField = String(field ?? "");
@@ -346,20 +339,23 @@
     probe.style.color = "";
     probe.style.color = rawValue;
     (contextNode || document.body || document.documentElement).appendChild(probe);
-    const resolved = getComputedStyle(probe).color;
-    probe.remove();
-    return resolved || rawValue;
+    try {
+      return getComputedStyle(probe).color || rawValue;
+    } finally {
+      probe.remove();
+    }
   }
   function getGaugeSvgFallbackColor(ratio) {
     const safeRatio = clamp(Number(ratio) || 0, 0, 1);
     const upperIndex = GAUGE_SVG_FALLBACK_TINT_SCALE.findIndex((stop) => safeRatio <= stop.offset);
     if (upperIndex <= 0) {
-      return `rgb(${GAUGE_SVG_FALLBACK_TINT_SCALE[0].channels.join(", ")})`;
+      return `rgb(${GAUGE_SVG_FALLBACK_TINT_SCALE[0]?.channels.join(", ") || "126, 136, 146"})`;
     }
     const upper = GAUGE_SVG_FALLBACK_TINT_SCALE[upperIndex];
     const lower = GAUGE_SVG_FALLBACK_TINT_SCALE[upperIndex - 1];
+    if (!upper || !lower) return "rgb(126, 136, 146)";
     const localRatio = (safeRatio - lower.offset) / Math.max(upper.offset - lower.offset, 1e-4);
-    const channels = lower.channels.map((channel, index) => Math.round(channel + (upper.channels[index] - channel) * localRatio));
+    const channels = lower.channels.map((channel, index) => Math.round(channel + ((upper.channels[index] ?? channel) - channel) * localRatio));
     return `rgb(${channels.join(", ")})`;
   }
   function resolveGaugeSvgStrokeColor(value, fallback) {
@@ -370,31 +366,8 @@
     return source;
   }
   function parseRgbColor(value) {
-    const source = String(value ?? "").trim();
-    if (!source) {
-      return null;
-    }
-    const rgbMatch = source.match(/^rgba?\(([^)]+)\)$/i);
-    if (rgbMatch) {
-      const channels = rgbMatch[1].split(",").map((channel) => Number.parseFloat(channel.trim())).filter((channel) => Number.isFinite(channel));
-      if (channels.length >= 3) {
-        return {
-          red: clamp(channels[0], 0, 255),
-          green: clamp(channels[1], 0, 255),
-          blue: clamp(channels[2], 0, 255)
-        };
-      }
-    }
-    const hexMatch = source.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
-    if (hexMatch) {
-      const hex = hexMatch[1].length === 3 ? hexMatch[1].split("").map((channel) => channel + channel).join("") : hexMatch[1];
-      return {
-        red: Number.parseInt(hex.slice(0, 2), 16),
-        green: Number.parseInt(hex.slice(2, 4), 16),
-        blue: Number.parseInt(hex.slice(4, 6), 16)
-      };
-    }
-    return null;
+    const channels = parseEditorColorChannels(value);
+    return channels ? { red: channels.red, green: channels.green, blue: channels.blue } : null;
   }
   function getRelativeLuminance(color) {
     if (!color) {
@@ -418,38 +391,39 @@
     if (!normalized.includes(".")) {
       return 0;
     }
-    return Math.min(3, normalized.split(".")[1].length);
+    return Math.min(3, normalized.split(".")[1]?.length ?? 0);
   }
   function getHassLocaleTag(hass, language = "auto") {
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, language);
-    return window.NodaliaI18n?.localeTag?.(lang) || hass?.locale?.language || void 0;
+    return (lang === void 0 ? void 0 : window.NodaliaI18n?.localeTag?.(lang)) || hass?.locale?.language || void 0;
   }
   function formatNumberValue(value, decimals = 0, locale = void 0) {
-    if (!Number.isFinite(Number(value))) {
+    const numeric = parseFiniteNumericValue(value);
+    if (numeric === null) {
       return "--";
     }
-    return Number(value).toLocaleString(locale, {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals
+    const digits = Number.isFinite(decimals) ? Math.min(20, Math.max(0, Math.floor(decimals))) : 0;
+    return numeric.toLocaleString(locale, {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits
     });
   }
   function inferReasonableMax(currentValue, unit, state) {
     const normalizedUnit = normalizeTextKey(unit);
+    const knownUnitMax = GAUGE_MAX_BY_UNIT.get(String(unit ?? "").trim() === "%" ? "%" : normalizedUnit);
+    if (knownUnitMax !== void 0) return knownUnitMax;
     const domainHint = `${state?.entity_id || ""} ${state?.attributes?.device_class || ""} ${state?.attributes?.friendly_name || ""}`.toLowerCase();
-    if (normalizedUnit === "%" || domainHint.includes("battery") || domainHint.includes("humidity")) {
+    if (domainHint.includes("battery") || domainHint.includes("humidity")) {
       return 100;
     }
-    if (["w", "watt", "watts", "va"].includes(normalizedUnit) || domainHint.includes("power") || domainHint.includes("potencia")) {
+    if (domainHint.includes("power") || domainHint.includes("potencia")) {
       return 2500;
     }
-    if (["kw"].includes(normalizedUnit)) {
-      return 10;
+    if (domainHint.includes("current") || domainHint.includes("corriente")) {
+      return 32;
     }
-    if (["a", "ma"].includes(normalizedUnit) || domainHint.includes("current") || domainHint.includes("corriente")) {
-      return normalizedUnit === "ma" ? 3e3 : 32;
-    }
-    if (["v", "mv"].includes(normalizedUnit) || domainHint.includes("voltage") || domainHint.includes("tension")) {
-      return normalizedUnit === "mv" ? 1e3 : 260;
+    if (domainHint.includes("voltage") || domainHint.includes("tension")) {
+      return 260;
     }
     if (normalizedUnit.includes("l_s") || normalizedUnit.includes("l_min") || normalizedUnit.includes("m3_h") || domainHint.includes("water") || domainHint.includes("agua") || domainHint.includes("caudal") || domainHint.includes("flow")) {
       if (normalizedUnit.includes("l_s")) {
@@ -463,13 +437,13 @@
       }
       return 100;
     }
-    if (["c", "f", "degc", "degf"].includes(normalizedUnit) || domainHint.includes("temperature") || domainHint.includes("temperatura")) {
+    if (domainHint.includes("temperature") || domainHint.includes("temperatura")) {
       return 40;
     }
-    if (["bar", "hpa", "pa"].includes(normalizedUnit) || domainHint.includes("pressure") || domainHint.includes("presion")) {
+    if (domainHint.includes("pressure") || domainHint.includes("presion")) {
       return 1200;
     }
-    if (Number.isFinite(currentValue)) {
+    if (currentValue !== null && Number.isFinite(currentValue)) {
       if (currentValue <= 10) return 10;
       if (currentValue <= 50) return 50;
       if (currentValue <= 100) return 100;
@@ -486,7 +460,7 @@
     return Number((angle + 90).toFixed(3));
   }
   function getContinuousThumbRotate(previousRotate, nextAngle) {
-    if (!Number.isFinite(previousRotate)) {
+    if (previousRotate == null || !Number.isFinite(previousRotate)) {
       return getDialThumbRotate(nextAngle);
     }
     const nextRotate = getDialThumbRotate(nextAngle);
@@ -518,7 +492,7 @@
     const leftPercent = Number((100 - rightPercent).toFixed(2));
     return `color-mix(in srgb, ${leftColor} ${leftPercent}%, ${rightColor} ${rightPercent}%)`;
   }
-  function buildGaugeTintScale(minTintColor, maxTintColor) {
+  function buildGaugeTintScale(minTintColor = void 0, maxTintColor = void 0) {
     const safeMinTintColor = String(minTintColor || DEFAULT_GAUGE_MIN_TINT_COLOR).trim() || DEFAULT_GAUGE_MIN_TINT_COLOR;
     const safeMaxTintColor = String(maxTintColor || DEFAULT_GAUGE_MAX_TINT_COLOR).trim() || DEFAULT_GAUGE_MAX_TINT_COLOR;
     return [
@@ -531,20 +505,21 @@
   }
   function resolveGaugeTintColor(scale, ratio) {
     const safeRatio = clamp(Number(ratio) || 0, 0, 1);
-    const tintScale = Array.isArray(scale) && scale.length ? scale : buildGaugeTintScale();
-    if (safeRatio <= tintScale[0].offset) {
-      return tintScale[0].color;
-    }
+    const validStops = Array.isArray(scale) ? scale.filter((stop) => stop !== null && typeof stop === "object" && "offset" in stop && typeof stop.offset === "number" && Number.isFinite(stop.offset) && "color" in stop && typeof stop.color === "string") : [];
+    const tintScale = validStops.length ? validStops : buildGaugeTintScale();
+    const first = tintScale[0];
+    if (!first) return DEFAULT_GAUGE_MAX_TINT_COLOR;
+    if (safeRatio <= first.offset) return first.color;
     for (let index = 1; index < tintScale.length; index += 1) {
       const currentStop = tintScale[index];
       const previousStop = tintScale[index - 1];
+      if (!currentStop || !previousStop) continue;
       if (safeRatio <= currentStop.offset) {
         const span = Math.max(currentStop.offset - previousStop.offset, 1e-4);
-        const localRatio = (safeRatio - previousStop.offset) / span;
-        return mixCssColors(previousStop.color, currentStop.color, localRatio);
+        return mixCssColors(previousStop.color, currentStop.color, (safeRatio - previousStop.offset) / span);
       }
     }
-    return tintScale[tintScale.length - 1].color;
+    return tintScale[tintScale.length - 1]?.color || DEFAULT_GAUGE_MAX_TINT_COLOR;
   }
 
   // src/cards/circular-gauge/circular-gauge-card.ts
@@ -692,29 +667,28 @@
         ).trim();
       }
       _getNumericValue(state) {
-        const direct = Number(String(state?.state ?? "").replace(",", "."));
-        if (Number.isFinite(direct)) {
+        const direct = parseFiniteNumericValue(String(state?.state ?? "").replace(",", "."));
+        if (direct !== null) {
           return direct;
         }
-        const nativeValue = Number(state?.attributes?.native_value);
-        return Number.isFinite(nativeValue) ? nativeValue : null;
+        return parseFiniteNumericValue(state?.attributes?.native_value);
       }
       _getDecimals(state) {
-        const configured = Number(this._config?.decimals);
-        if (Number.isFinite(configured) && configured >= 0) {
-          return Math.min(3, configured);
+        const configured = parseFiniteNumericValue(this._config?.decimals);
+        if (configured !== null && configured >= 0) {
+          return Math.min(3, Math.floor(configured));
         }
         const rawState = String(state?.state ?? "").trim();
         return inferDecimals(rawState);
       }
       _getRange(state, currentValue) {
-        const configuredMin = Number(this._config?.min);
-        const configuredMax = Number(this._config?.max);
-        const attrMin = Number(state?.attributes?.min);
-        const attrMax = Number(state?.attributes?.max);
+        const configuredMin = parseFiniteNumericValue(this._config?.min);
+        const configuredMax = parseFiniteNumericValue(this._config?.max);
+        const attrMin = parseFiniteNumericValue(state?.attributes?.min);
+        const attrMax = parseFiniteNumericValue(state?.attributes?.max);
         const unit = this._getUnit(state);
-        const min = Number.isFinite(configuredMin) ? configuredMin : Number.isFinite(attrMin) ? attrMin : this._config?.start_from_zero === false && Number.isFinite(currentValue) && currentValue < 0 ? Math.floor(currentValue) : 0;
-        let max = Number.isFinite(configuredMax) ? configuredMax : Number.isFinite(attrMax) ? attrMax : inferReasonableMax(currentValue, unit, state);
+        const min = configuredMin !== null ? configuredMin : attrMin !== null ? attrMin : this._config?.start_from_zero === false && Number.isFinite(currentValue) && currentValue < 0 ? Math.floor(currentValue) : 0;
+        let max = configuredMax !== null ? configuredMax : attrMax !== null ? attrMax : inferReasonableMax(currentValue, unit, state);
         if (!Number.isFinite(max) || max <= min) {
           max = min + 100;
         }
