@@ -229,13 +229,6 @@
     return { alpha: channels.alpha, hex, label: source, resolved, source, value: formatEditorColorFromHex(hex, channels.alpha) };
   }
 
-  // src/shared/numeric-values.ts
-  function parseFiniteNumericValue(value) {
-    if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
-    const numeric = Number(value);
-    return Number.isFinite(numeric) ? numeric : null;
-  }
-
   // src/shared/editor-entity-helpers.ts
   function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
     return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
@@ -243,6 +236,24 @@
   function parseSizeToPixels(value, fallback = 0) {
     const numeric = Number.parseFloat(String(value ?? ""));
     return Number.isFinite(numeric) ? numeric : fallback;
+  }
+
+  // src/shared/numeric-values.ts
+  function parseFiniteNumericValue(value) {
+    if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+  function formatFiniteNumericValue(value, decimals = 0, locale = void 0) {
+    const numeric = parseFiniteNumericValue(value);
+    if (numeric === null) {
+      return "--";
+    }
+    const digits = Number.isFinite(decimals) ? Math.min(20, Math.max(0, Math.floor(decimals))) : 0;
+    return numeric.toLocaleString(locale, {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits
+    });
   }
 
   // src/cards/circular-gauge/circular-gauge-helpers.ts
@@ -396,17 +407,6 @@
   function getHassLocaleTag(hass, language = "auto") {
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, language);
     return (lang === void 0 ? void 0 : window.NodaliaI18n?.localeTag?.(lang)) || hass?.locale?.language || void 0;
-  }
-  function formatNumberValue(value, decimals = 0, locale = void 0) {
-    const numeric = parseFiniteNumericValue(value);
-    if (numeric === null) {
-      return "--";
-    }
-    const digits = Number.isFinite(decimals) ? Math.min(20, Math.max(0, Math.floor(decimals))) : 0;
-    return numeric.toLocaleString(locale, {
-      minimumFractionDigits: digits,
-      maximumFractionDigits: digits
-    });
   }
   function inferReasonableMax(currentValue, unit, state) {
     const normalizedUnit = normalizeTextKey(unit);
@@ -701,7 +701,7 @@
         if (configuredLabel) {
           return configuredLabel;
         }
-        return formatNumberValue(boundary === "min" ? range.min : range.max, this._getDecimals(state), this._getLocaleTag());
+        return formatFiniteNumericValue(boundary === "min" ? range.min : range.max, this._getDecimals(state), this._getLocaleTag());
       }
       _getGaugeTintScale() {
         const gaugeStyles = this._config?.styles?.gauge || DEFAULT_CONFIG.styles.gauge;
@@ -745,7 +745,7 @@
       }
       _formatValue(value, state, withUnit = false) {
         const decimals = this._getDecimals(state);
-        const formatted = formatNumberValue(value, decimals, this._getLocaleTag());
+        const formatted = formatFiniteNumericValue(value, decimals, this._getLocaleTag());
         if (!withUnit) {
           return formatted;
         }

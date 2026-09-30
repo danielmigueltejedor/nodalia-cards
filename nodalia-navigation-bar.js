@@ -435,13 +435,7 @@
     if (finalKey !== void 0) delete cursor[finalKey];
   }
 
-  // src/cards/navigation/navigation-helpers.ts
-  function appendQueryParam(url, key, value) {
-    return appendUrlQueryParam(url, key, value, true);
-  }
-  function arrayFromCsv(value) {
-    return String(value || "").split(",").map((item) => item.trim()).filter(Boolean);
-  }
+  // src/shared/editor-lists.ts
   var isUnknownArray = (value) => Array.isArray(value);
   function moveItem(array, fromIndex, toIndex) {
     if (!isUnknownArray(array)) {
@@ -453,6 +447,14 @@
     const removed = array.splice(fromIndex, 1);
     array.splice(toIndex, 0, ...removed);
     return array;
+  }
+
+  // src/cards/navigation/navigation-helpers.ts
+  function appendQueryParam(url, key, value) {
+    return appendUrlQueryParam(url, key, value, true);
+  }
+  function arrayFromCsv(value) {
+    return String(value || "").split(",").map((item) => item.trim()).filter(Boolean);
   }
   function formatDuration(totalSeconds) {
     const numeric = typeof totalSeconds === "number" || typeof totalSeconds === "string" ? Number(totalSeconds) : 0;

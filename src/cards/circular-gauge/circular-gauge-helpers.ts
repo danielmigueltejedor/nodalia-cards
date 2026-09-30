@@ -1,7 +1,6 @@
 import type { HassEntity, HomeAssistant } from "../../core/types/home-assistant";
 import { parseEditorColorChannels } from "../../shared/editor-color";
 import { normalizeControlStyles } from "../../shared/control-config";
-import { parseFiniteNumericValue } from "../../shared/numeric-values";
 import { getStubEntityId } from "../../shared/editor-entity-helpers";
 export { getStubEntityId, parseSizeToPixels } from "../../shared/editor-entity-helpers";
 export { parseFiniteNumericValue } from "../../shared/numeric-values";
@@ -218,18 +217,7 @@ export function getHassLocaleTag(hass: HomeAssistant | null | undefined, languag
   return (lang === undefined ? undefined : window.NodaliaI18n?.localeTag?.(lang)) || hass?.locale?.language || undefined;
 }
 
-export function formatNumberValue(value: unknown, decimals = 0, locale: string | undefined = undefined) {
-  const numeric = parseFiniteNumericValue(value);
-  if (numeric === null) {
-    return "--";
-  }
-
-  const digits = Number.isFinite(decimals) ? Math.min(20, Math.max(0, Math.floor(decimals))) : 0;
-  return numeric.toLocaleString(locale, {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  });
-}
+export { formatFiniteNumericValue as formatNumberValue } from "../../shared/numeric-values";
 
 export function inferReasonableMax(currentValue: number | null, unit: unknown, state: HassEntity | null | undefined) {
   const normalizedUnit = normalizeTextKey(unit);

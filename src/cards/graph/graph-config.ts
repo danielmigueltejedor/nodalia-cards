@@ -1,6 +1,7 @@
-// @ts-nocheck -- merged Lovelace YAML is projected into the runtime graph config.
-import { deepClone, mergeConfig } from "./graph-runtime";
-import { resolveEntityEntries } from "./graph-helpers";
+import { normalizeControlStyles } from "../../shared/control-config";
+import { DEFAULT_HISTORY_POINTS } from "./graph-constants";
+import { isObject, mergeConfig } from "./graph-runtime";
+import { resolveEntityEntries, normalizeGraphPointCount } from "./graph-helpers";
 
 export const DEFAULT_CONFIG = {
   entity: "",
@@ -10,7 +11,7 @@ export const DEFAULT_CONFIG = {
   min: 15,
   max: 25,
   hours_to_show: 24,
-  points: 100,
+  points: DEFAULT_HISTORY_POINTS,
   show_header: true,
   show_icon: true,
   show_value: true,
@@ -71,14 +72,14 @@ export const STUB_CONFIG = {
   ],
 };
 
-export function normalizeConfig(rawConfig, { preserveEmptyEntities = false } = {}) {
-  const merged = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-  merged.entities = resolveEntityEntries(merged, { preserveEmpty: preserveEmptyEntities });
-  merged.styles = window.NodaliaUtils?.sanitizeStyleTree?.(merged.styles, DEFAULT_CONFIG.styles)
-    ?? deepClone(DEFAULT_CONFIG.styles);
-  return merged;
+export function normalizeConfig(rawConfig: unknown = {}, { preserveEmptyEntities = false } = {}) {
+  const defaults: Record<string, unknown> = DEFAULT_CONFIG;
+  const merged = mergeConfig(defaults, isObject(rawConfig) ? rawConfig : {});
+  return { ...merged, entities: resolveEntityEntries(merged, { preserveEmpty: preserveEmptyEntities }),
+    points: normalizeGraphPointCount(merged.points), styles: normalizeControlStyles(merged.styles, DEFAULT_CONFIG.styles) };
+
 }
 
-export function normalizeEditorConfig(rawConfig) {
+export function normalizeEditorConfig(rawConfig: unknown = {}) {
   return normalizeConfig(rawConfig, { preserveEmptyEntities: true });
 }

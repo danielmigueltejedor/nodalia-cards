@@ -36,6 +36,7 @@ import {
   isUnavailableState,
   parseHistoryTimestamp,
   parseNumber,
+  normalizeGraphPointCount,
   parsePaddingEdges,
   parseSizeToPixels,
   resolveEntityEntries,
@@ -1186,6 +1187,7 @@ class NodaliaGraphCard extends HTMLElement {
       const state = this._hass?.states?.[entry.entity];
       const rows = Array.isArray(raw?.[entry.entity]) ? raw[entry.entity] : [];
       const samples = rows
+        .filter(isObject)
         .map(item => {
           const ts = parseHistoryTimestamp(item.start ?? item.end);
           const value = parseNumber(item.mean ?? item.state ?? item.max ?? item.min ?? item.sum);
@@ -1213,7 +1215,7 @@ class NodaliaGraphCard extends HTMLElement {
   _normalizeHistorySeries(raw, start, end) {
     const entries = this._getLegendEntries();
     const historyByEntity = new Map();
-    const pointsCount = Math.max(20, Number(this._config?.points) || DEFAULT_CONFIG.points);
+    const pointsCount = normalizeGraphPointCount(this._config?.points);
     const startMs = start.getTime();
     const endMs = end.getTime();
 
@@ -1240,6 +1242,7 @@ class NodaliaGraphCard extends HTMLElement {
       const state = this._hass?.states?.[entry.entity];
       const rawGroup = historyByEntity.get(entry.entity) || [];
       const events = rawGroup
+        .filter(isObject)
         .map(item => ({
           ts: parseHistoryTimestamp(
             item.last_changed

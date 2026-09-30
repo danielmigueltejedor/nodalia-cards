@@ -29,6 +29,8 @@
   var CHART_TAP_MAX_MOVE = 14;
   var TOUCH_CLICK_SUPPRESSION_WINDOW = 350;
   var HISTORY_REFRESH_INTERVAL = 18e4;
+  var DEFAULT_HISTORY_POINTS = 100;
+  var MAX_HISTORY_POINTS = 1e4;
 
   // src/cards/graph/graph-runtime.ts
   var utils = window.NodaliaUtils;
@@ -42,6 +44,106 @@
   var escapeHtml = utils.escapeHtml.bind(utils);
   var fireEvent = utils.fireEvent.bind(utils);
   var normalizeTextKey = utils.normalizeTextKey.bind(utils);
+
+  // src/shared/control-config.ts
+  function normalizeControlStyles(candidate, defaults) {
+    const utils2 = window.NodaliaUtils;
+    const source = utils2.isObject(candidate) ? candidate : {};
+    const result = {};
+    for (const [key, fallback] of Object.entries(defaults)) {
+      if (utils2.isUnsafeConfigPathKey(key)) continue;
+      result[key] = typeof fallback === "string" ? utils2.sanitizeCssValue(source[key], fallback) : normalizeControlStyles(source[key], fallback);
+    }
+    return result;
+  }
+  var actionFields = (prefix, fallback, navigationKey = `${prefix}_navigation_path`) => ({
+    actionKey: `${prefix}_action`,
+    serviceKey: `${prefix}_service`,
+    serviceDataKey: `${prefix}_service_data`,
+    serviceTargetKey: `${prefix}_service_target`,
+    urlKey: `${prefix}_url`,
+    navigationKey,
+    newTabKey: `${prefix}_new_tab`,
+    fallback
+  });
+  var FIELDS = [
+    actionFields("tap", "toggle", "navigation_path"),
+    actionFields("icon_tap", "", "icon_navigation_path"),
+    actionFields("hold", "more-info", "hold_navigation_path"),
+    actionFields("icon_hold", ""),
+    actionFields("double_tap", "none"),
+    actionFields("icon_double_tap", "")
+  ];
+
+  // src/shared/render-signature.ts
+  function toKey(value) {
+    if (value === null || value === void 0) return "";
+    if (typeof value === "number") return Number.isFinite(value) ? String(value) : "";
+    return String(value);
+  }
+  function joinParts(parts, sectionSeparator = "||", valueSeparator = "::") {
+    return (Array.isArray(parts) ? parts : []).map((part) => {
+      if (!part || typeof part !== "object" || !("values" in part) || !Array.isArray(part.values)) return "";
+      const prefix = "prefix" in part ? String(part.prefix || "") : "";
+      return `${prefix}${part.values.map((value) => toKey(value)).join(valueSeparator)}`;
+    }).filter(Boolean).join(sectionSeparator);
+  }
+  var renderSignature = { joinParts, toKey };
+
+  // src/shared/numeric-values.ts
+  function parseFiniteNumericValue(value) {
+    if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+  function formatFiniteNumericValue(value, decimals = 0, locale = void 0) {
+    const numeric = parseFiniteNumericValue(value);
+    if (numeric === null) {
+      return "--";
+    }
+    const digits = Number.isFinite(decimals) ? Math.min(20, Math.max(0, Math.floor(decimals))) : 0;
+    return numeric.toLocaleString(locale, {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits
+    });
+  }
+
+  // src/shared/editor-entity-helpers.ts
+  function parseSizeToPixels(value, fallback = 0) {
+    const numeric = Number.parseFloat(String(value ?? ""));
+    return Number.isFinite(numeric) ? numeric : fallback;
+  }
+
+  // src/shared/config-values.ts
+  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var unsafeKeys = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
+  function compactConfig(value) {
+    if (Array.isArray(value)) return value.map((item) => compactConfig(item)).filter((item) => item !== void 0);
+    if (isRecord(value)) {
+      const result = {};
+      for (const [key, item] of Object.entries(value)) {
+        if (unsafeKeys.has(key)) continue;
+        const cleaned = compactConfig(item);
+        if (cleaned !== void 0 && !(isRecord(cleaned) && Object.keys(cleaned).length === 0)) result[key] = cleaned;
+      }
+      return result;
+    }
+    return value === "" || value === null || value === void 0 ? void 0 : value;
+  }
+
+  // src/shared/editor-lists.ts
+  var isUnknownArray = (value) => Array.isArray(value);
+  function moveItem(array, fromIndex, toIndex) {
+    if (!isUnknownArray(array)) {
+      return array;
+    }
+    if (!Number.isInteger(fromIndex) || !Number.isInteger(toIndex) || fromIndex < 0 || toIndex < 0 || fromIndex >= array.length || toIndex >= array.length || fromIndex === toIndex) {
+      return array;
+    }
+    const removed = array.splice(fromIndex, 1);
+    array.splice(toIndex, 0, ...removed);
+    return array;
+  }
 
   // src/shared/editor-color.ts
   var clamp2 = (value, max) => Math.max(0, Math.min(max, value));
@@ -122,38 +224,23 @@
   function getStubFriendlyName(hass, entityId) {
     return hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
   }
-  function compactConfig(value) {
-    if (Array.isArray(value)) {
-      return value.map((item) => compactConfig(item)).filter((item) => item !== void 0);
-    }
-    if (isObject(value)) {
-      const compacted = {};
-      Object.entries(value).forEach(([key, item]) => {
-        if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
-          return;
-        }
-        const cleaned = compactConfig(item);
-        const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
-        if (cleaned !== void 0 && !isEmptyObject) {
-          compacted[key] = cleaned;
-        }
-      });
-      return compacted;
-    }
-    if (value === "" || value === null || value === void 0) {
-      return void 0;
-    }
-    return value;
-  }
   function getByPath(target, path) {
-    return String(path || "").split(".").reduce((cursor, key) => cursor === void 0 || cursor === null ? void 0 : cursor[key], target);
+    let cursor = target;
+    for (const key of String(path || "").split(".")) {
+      if (!key || key === "__proto__" || key === "constructor" || key === "prototype" || cursor === null || typeof cursor !== "object" || !Object.prototype.hasOwnProperty.call(cursor, key)) return void 0;
+      cursor = Reflect.get(cursor, key);
+    }
+    return cursor;
   }
   function isUnavailableState(state) {
     return normalizeTextKey(state?.state) === "unavailable";
   }
   function parseNumber(value) {
-    const numeric = Number(String(value ?? "").replace(",", "."));
-    return Number.isFinite(numeric) ? numeric : null;
+    return parseFiniteNumericValue(typeof value === "string" ? value.replace(",", ".") : value);
+  }
+  function normalizeGraphPointCount(value) {
+    const numeric = parseFiniteNumericValue(value) || DEFAULT_HISTORY_POINTS;
+    return Math.min(MAX_HISTORY_POINTS, Math.max(20, Math.floor(numeric)));
   }
   function parseHistoryTimestamp(value) {
     if (typeof value === "number" && Number.isFinite(value)) {
@@ -164,28 +251,14 @@
   }
   function getHassLocaleTag(hass, language = "auto") {
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, language);
-    return window.NodaliaI18n?.localeTag?.(lang) || hass?.locale?.language || void 0;
-  }
-  function formatNumberValue(value, decimals = 0, locale = void 0) {
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric)) {
-      return "--";
-    }
-    return numeric.toLocaleString(locale, {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals
-    });
+    return (lang === void 0 ? void 0 : window.NodaliaI18n?.localeTag?.(lang)) || hass?.locale?.language || void 0;
   }
   function inferDecimals(rawValue) {
     const text = String(rawValue ?? "").trim().replace(",", ".");
     if (!text.includes(".")) {
       return 0;
     }
-    return Math.min(3, text.split(".")[1].length);
-  }
-  function parseSizeToPixels(value, fallback = 0) {
-    const numeric = Number.parseFloat(String(value ?? ""));
-    return Number.isFinite(numeric) ? numeric : fallback;
+    return Math.min(3, text.split(".")[1]?.length ?? 0);
   }
   function parsePaddingEdges(value, fallback = 16) {
     const fb = Number.isFinite(fallback) ? fallback : 16;
@@ -198,49 +271,29 @@
       return { top: fb, right: fb, bottom: fb, left: fb };
     }
     if (parts.length === 1) {
-      const v = parts[0];
+      const v = parts[0] ?? fb;
       return { top: v, right: v, bottom: v, left: v };
     }
     if (parts.length === 2) {
-      const [vertical, horizontal] = parts;
+      const [vertical = fb, horizontal = fb] = parts;
       return { top: vertical, right: horizontal, bottom: vertical, left: horizontal };
     }
     if (parts.length === 3) {
-      const [top2, horizontal, bottom2] = parts;
+      const [top2 = fb, horizontal = fb, bottom2 = fb] = parts;
       return { top: top2, right: horizontal, bottom: bottom2, left: horizontal };
     }
-    const [top, right, bottom, left] = parts;
+    const [top = fb, right = fb, bottom = fb, left = fb] = parts;
     return { top, right, bottom, left };
   }
   function getRenderSignatureRuntime() {
-    return window.NodaliaRenderSignature || {
-      toKey(value) {
-        if (value === null || value === void 0) {
-          return "";
-        }
-        if (typeof value === "number") {
-          return Number.isFinite(value) ? String(value) : "";
-        }
-        return String(value);
-      },
-      joinParts(parts, sectionSeparator = "||", valueSeparator = "::") {
-        return (Array.isArray(parts) ? parts : []).map((part) => {
-          if (!part || !Array.isArray(part.values)) {
-            return "";
-          }
-          const prefix = String(part.prefix || "");
-          const body = part.values.map((value) => this.toKey(value)).join(valueSeparator);
-          return `${prefix}${body}`;
-        }).filter(Boolean).join(sectionSeparator);
-      }
-    };
+    return window.NodaliaRenderSignature || renderSignature;
   }
   function graphChartXToPercent(x, chart) {
-    if (!chart || typeof chart.width !== "number") {
+    if (!isObject(chart) || typeof chart.width !== "number") {
       return 50;
     }
     const width = chart.width;
-    if (!Number.isFinite(width) || width <= 0) {
+    if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(x)) {
       return 50;
     }
     return x / width * 100;
@@ -255,19 +308,8 @@
     }
     return "var(--info-color, #71c0ff)";
   }
-  function moveItem(array, fromIndex, toIndex) {
-    if (!Array.isArray(array)) {
-      return array;
-    }
-    if (fromIndex < 0 || toIndex < 0 || fromIndex >= array.length || toIndex >= array.length || fromIndex === toIndex) {
-      return array;
-    }
-    const [item] = array.splice(fromIndex, 1);
-    array.splice(toIndex, 0, item);
-    return array;
-  }
   function formatHoverTimestamp(value, locale = void 0) {
-    const date = new Date(value);
+    const date = value instanceof Date ? value : typeof value === "string" || typeof value === "number" ? new Date(value) : /* @__PURE__ */ new Date(NaN);
     if (Number.isNaN(date.getTime())) {
       return "";
     }
@@ -278,14 +320,15 @@
       minute: "2-digit"
     });
   }
-  function resolveEntityEntries(config, { preserveEmpty = false } = {}) {
+  function resolveEntityEntries(value, { preserveEmpty = false } = {}) {
+    const config = isObject(value) ? value : {};
     const source = Array.isArray(config?.entities) && config.entities.length ? config.entities : config?.entity ? [{ entity: config.entity, name: config.name || "" }] : [];
     return source.map((entry, index) => {
       if (typeof entry === "string") {
         return {
           entity: entry.trim(),
           name: "",
-          color: SERIES_COLORS[index % SERIES_COLORS.length]
+          color: SERIES_COLORS[index % SERIES_COLORS.length] ?? "#f29f05"
         };
       }
       if (!isObject(entry)) {
@@ -294,23 +337,29 @@
       return {
         entity: String(entry.entity || "").trim(),
         name: String(entry.name || "").trim(),
-        color: String(entry.color || SERIES_COLORS[index % SERIES_COLORS.length]).trim()
+        color: String(entry.color || (SERIES_COLORS[index % SERIES_COLORS.length] ?? "#f29f05")).trim()
       };
-    }).filter((entry) => entry && (preserveEmpty || entry.entity));
+    }).filter((entry) => entry !== null).filter((entry) => preserveEmpty || entry.entity);
   }
-  function buildSmoothPath(points) {
-    if (!Array.isArray(points) || points.length === 0) {
-      return "";
-    }
+  function validPoints(value) {
+    if (!Array.isArray(value)) return [];
+    const points = Array.from(value);
+    return points.every((point) => isObject(point) && typeof point.x === "number" && Number.isFinite(point.x) && typeof point.y === "number" && Number.isFinite(point.y)) ? points : [];
+  }
+  function buildSmoothPath(value) {
+    const points = validPoints(value);
+    const first = points[0];
+    if (!first) return "";
     if (points.length === 1) {
-      return `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
+      return `M ${first.x.toFixed(2)} ${first.y.toFixed(2)}`;
     }
-    let path = `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
+    let path = `M ${first.x.toFixed(2)} ${first.y.toFixed(2)}`;
     for (let index = 0; index < points.length - 1; index += 1) {
       const p0 = points[index - 1] || points[index];
       const p1 = points[index];
       const p2 = points[index + 1];
       const p3 = points[index + 2] || p2;
+      if (!p0 || !p1 || !p2 || !p3) return "";
       const cp1x = p1.x + (p2.x - p0.x) / 6;
       const cp1y = p1.y + (p2.y - p0.y) / 6;
       const cp2x = p2.x - (p3.x - p1.x) / 6;
@@ -319,18 +368,23 @@
     }
     return path;
   }
-  function buildAreaPath(points, bottomY) {
+  function buildAreaPath(value, bottomY) {
+    const points = validPoints(value);
     if (!Array.isArray(points) || points.length === 0) {
       return "";
     }
     const linePath = buildSmoothPath(points);
     const first = points[0];
     const last = points[points.length - 1];
+    if (!first || !last || !Number.isFinite(bottomY)) return "";
     return `${linePath} L ${last.x.toFixed(2)} ${bottomY.toFixed(2)} L ${first.x.toFixed(2)} ${bottomY.toFixed(2)} Z`;
   }
-  function buildInterpolatedSamples(events, startMs, endMs, pointsCount, fallbackValue = null) {
-    if (!Array.isArray(events) || !events.length) {
-      if (!Number.isFinite(fallbackValue)) {
+  function buildInterpolatedSamples(value, startMs, endMs, pointsCount, fallbackValue = null) {
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs < startMs || !Number.isFinite(pointsCount) || pointsCount < 1) return [];
+    pointsCount = Math.min(MAX_HISTORY_POINTS, Math.floor(pointsCount));
+    const events = Array.isArray(value) ? value.filter((event) => isObject(event) && typeof event.ts === "number" && Number.isFinite(event.ts) && typeof event.value === "number" && Number.isFinite(event.value)) : [];
+    if (!events.length) {
+      if (fallbackValue === null || !Number.isFinite(fallbackValue)) {
         return [];
       }
       return Array.from({ length: pointsCount }, (_item, index) => ({
@@ -345,17 +399,17 @@
       const clampedTs = clamp(event.ts, startMs, endMs);
       const rawIndex = Math.floor((clampedTs - startMs) / Math.max(bucketSize, 1));
       const bucketIndex = clamp(rawIndex, 0, pointsCount - 1);
-      buckets[bucketIndex].push(event.value);
+      buckets[bucketIndex]?.push(event.value);
     });
-    let lastValue = Number.isFinite(fallbackValue) ? fallbackValue : buckets.flat().find(Number.isFinite);
+    let lastValue = fallbackValue !== null && Number.isFinite(fallbackValue) ? fallbackValue : buckets.flat().find(Number.isFinite);
     return buckets.map((bucket, index) => {
       const sampleTs = startMs + (endMs - startMs) * index / Math.max(pointsCount - 1, 1);
       if (bucket.length) {
-        lastValue = bucket.reduce((sum, value) => sum + value, 0) / bucket.length;
+        lastValue = bucket.reduce((sum, value2) => sum + value2, 0) / bucket.length;
       }
       return {
         ts: sampleTs,
-        value: Number.isFinite(lastValue) ? lastValue : 0
+        value: lastValue !== void 0 && Number.isFinite(lastValue) ? lastValue : 0
       };
     });
   }
@@ -369,7 +423,7 @@
     min: 15,
     max: 25,
     hours_to_show: 24,
-    points: 100,
+    points: DEFAULT_HISTORY_POINTS,
     show_header: true,
     show_icon: true,
     show_value: true,
@@ -428,13 +482,17 @@
       }
     ]
   };
-  function normalizeConfig(rawConfig, { preserveEmptyEntities = false } = {}) {
-    const merged = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-    merged.entities = resolveEntityEntries(merged, { preserveEmpty: preserveEmptyEntities });
-    merged.styles = window.NodaliaUtils?.sanitizeStyleTree?.(merged.styles, DEFAULT_CONFIG.styles) ?? deepClone(DEFAULT_CONFIG.styles);
-    return merged;
+  function normalizeConfig(rawConfig = {}, { preserveEmptyEntities = false } = {}) {
+    const defaults = DEFAULT_CONFIG;
+    const merged = mergeConfig(defaults, isObject(rawConfig) ? rawConfig : {});
+    return {
+      ...merged,
+      entities: resolveEntityEntries(merged, { preserveEmpty: preserveEmptyEntities }),
+      points: normalizeGraphPointCount(merged.points),
+      styles: normalizeControlStyles(merged.styles, DEFAULT_CONFIG.styles)
+    };
   }
-  function normalizeEditorConfig(rawConfig) {
+  function normalizeEditorConfig(rawConfig = {}) {
     return normalizeConfig(rawConfig, { preserveEmptyEntities: true });
   }
 
@@ -2489,14 +2547,14 @@
               3
             );
             return {
-              value: formatNumberValue(avg, decimals, locale),
+              value: formatFiniteNumericValue(avg, decimals, locale),
               unit
             };
           }
         }
         const primary = currentSeries[0];
         return {
-          value: formatNumberValue(primary.value, primary.decimals, locale),
+          value: formatFiniteNumericValue(primary.value, primary.decimals, locale),
           unit: primary.unit || this._getUnit()
         };
       }
@@ -3099,7 +3157,7 @@
         return entries.map((entry) => {
           const state = this._hass?.states?.[entry.entity];
           const rows = Array.isArray(raw?.[entry.entity]) ? raw[entry.entity] : [];
-          const samples = rows.map((item) => {
+          const samples = rows.filter(isObject).map((item) => {
             const ts = parseHistoryTimestamp(item.start ?? item.end);
             const value = parseNumber(item.mean ?? item.state ?? item.max ?? item.min ?? item.sum);
             return { ts, value };
@@ -3119,7 +3177,7 @@
       _normalizeHistorySeries(raw, start, end) {
         const entries = this._getLegendEntries();
         const historyByEntity = /* @__PURE__ */ new Map();
-        const pointsCount = Math.max(20, Number(this._config?.points) || DEFAULT_CONFIG.points);
+        const pointsCount = normalizeGraphPointCount(this._config?.points);
         const startMs = start.getTime();
         const endMs = end.getTime();
         if (Array.isArray(raw)) {
@@ -3142,7 +3200,7 @@
         return entries.map((entry) => {
           const state = this._hass?.states?.[entry.entity];
           const rawGroup = historyByEntity.get(entry.entity) || [];
-          const events = rawGroup.map((item) => ({
+          const events = rawGroup.filter(isObject).map((item) => ({
             ts: parseHistoryTimestamp(
               item.last_changed || item.last_updated || item.lc || item.lu || item.last_changed_ts || item.last_updated_ts
             ),
@@ -3401,7 +3459,7 @@
             return {
               color: entry.color,
               name: entry.name,
-              value: formatNumberValue(sample.value, decimals, locale),
+              value: formatFiniteNumericValue(sample.value, decimals, locale),
               unit: entry.unit || this._getUnit(),
               point: entry.points?.[boundedIndex] || null
             };

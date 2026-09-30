@@ -25,6 +25,6 @@ const publicApi = {
   DEFAULT_CONFIG,
   normalizeConfig,
   normalizeEditorConfig,
-} as GraphPublicApi;
+} satisfies GraphPublicApi;
 
 window.__NODALIA_GRAPH__ = publicApi;
