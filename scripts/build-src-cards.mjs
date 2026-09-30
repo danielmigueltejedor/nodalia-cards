@@ -8,6 +8,7 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const SRC_CARD_ENTRIES = CARD_REGISTRY.map(card => ({ entry: card.standalone, outfile: card.artifact }));
 
 export const RUNTIME_ENTRIES = [
+  { entry: "src/shared/bubble-contrast-runtime.ts", outfile: "nodalia-bubble-contrast.js" },
   { entry: "src/core/engine-client-runtime.ts", outfile: "nodalia-backend.js" },
   { entry: "src/cards/notifications/notifications-mobile-policy-runtime.ts", outfile: "nodalia-notifications-mobile-policy.js" },
   { entry: "src/cards/room-summary/room-summary-model-runtime.ts", outfile: "nodalia-room-summary-model.js" },
