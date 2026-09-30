@@ -15,7 +15,6 @@
   "src/cards/camera/camera-helpers.ts",
   "src/cards/circular-gauge/circular-gauge-card.ts",
   "src/cards/circular-gauge/circular-gauge-editor.ts",
-  "src/cards/circular-gauge/circular-gauge-helpers.ts",
   "src/cards/climate/climate-card.ts",
   "src/cards/climate/climate-editor.ts",
   "src/cards/climate/climate-model.ts",

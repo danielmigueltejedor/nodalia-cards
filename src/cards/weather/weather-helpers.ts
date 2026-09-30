@@ -4,11 +4,8 @@ export { getStubEntityId, applyStubEntity, parseSizeToPixels } from "../../share
 export { resolveEditorColorValue, formatEditorHexChannel, formatEditorColorFromHex, getEditorColorModel } from "../../shared/editor-color";
 import { clamp, isObject, normalizeTextKey } from "./weather-runtime";
 
-export function parseWeatherNumericValue(value: unknown): number | null {
-  if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
-  const numeric = Number(value);
-  return Number.isFinite(numeric) ? numeric : null;
-}
+import { parseFiniteNumericValue as parseWeatherNumericValue } from "../../shared/numeric-values";
+export { parseFiniteNumericValue as parseWeatherNumericValue } from "../../shared/numeric-values";
 
 function dateFromUnknown(value: unknown): Date {
   if (value instanceof Date) return new Date(value.getTime());

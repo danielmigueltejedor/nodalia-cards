@@ -1,4 +1,19 @@
-// @ts-nocheck -- color, dial and stub helpers stay loosely typed until remaining unknowns are narrowed.
+import type { HassEntity, HomeAssistant } from "../../core/types/home-assistant";
+import { parseEditorColorChannels } from "../../shared/editor-color";
+import { normalizeControlStyles } from "../../shared/control-config";
+import { parseFiniteNumericValue } from "../../shared/numeric-values";
+import { getStubEntityId } from "../../shared/editor-entity-helpers";
+export { getStubEntityId, parseSizeToPixels } from "../../shared/editor-entity-helpers";
+export { parseFiniteNumericValue } from "../../shared/numeric-values";
+interface RgbChannels { red: number; green: number; blue: number }
+interface TintStop { offset: number; color: string }
+// Explicit physical units take precedence over friendly-name/domain heuristics.
+const GAUGE_MAX_BY_UNIT = new Map<string, number>([
+  ["%", 100], ["w", 2500], ["watt", 2500], ["watts", 2500], ["va", 2500], ["kw", 10],
+  ["l_s", 10], ["l_min", 60], ["m3_h", 10],
+  ["a", 32], ["ma", 3000], ["v", 260], ["mv", 1000],
+  ["c", 40], ["f", 40], ["degc", 40], ["degf", 40], ["bar", 1200], ["hpa", 1200], ["pa", 1200],
+ ]);
 export { resolveEditorColorValue, formatEditorHexChannel, formatEditorColorFromHex, getEditorColorModel } from "../../shared/editor-color";
 import {
   DEFAULT_GAUGE_MAX_TINT_COLOR,
@@ -11,28 +26,22 @@ import {
 import { clamp, normalizeTextKey } from "./circular-gauge-runtime";
 import { DEFAULT_CONFIG } from "./circular-gauge-config";
 
-export function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
-  return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
-}
-
-export function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
+export function applyStubEntity<T extends Record<string, unknown>>(config: T, hass: HomeAssistant | null | undefined, domains: string[] = [], entities: unknown = [], entitiesFallback: unknown = []) {
   const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
   if (!entityId) {
     return config;
   }
 
-  config.entity = entityId;
+  Object.assign(config, { entity: entityId });
   const state = hass?.states?.[entityId];
   const unit = String(state?.attributes?.unit_of_measurement || "").trim();
   const numericState = Number(state?.state);
-  config.name = state?.attributes?.friendly_name || entityId;
+  Object.assign(config, { name: state?.attributes?.friendly_name || entityId });
 
   if (unit === "%") {
-    config.min = 0;
-    config.max = 100;
+    Object.assign(config, { min: 0, max: 100 });
   } else if (Number.isFinite(numericState) && numericState > Number(config.max || 0)) {
-    config.min = 0;
-    config.max = Math.ceil(numericState * 1.25);
+    Object.assign(config, { min: 0, max: Math.ceil(numericState * 1.25) });
   }
 
   return config;
@@ -45,13 +54,7 @@ export function applyStubEntity(config, hass, domains, entities = [], entitiesFa
 
 
 
-export function parseSizeToPixels(value, fallback = 0) {
-  const numeric = Number.parseFloat(String(value ?? ""));
-  return Number.isFinite(numeric) ? numeric : fallback;
-}
-
-
-export function escapeSelectorValue(value) {
+export function escapeSelectorValue(value: unknown) {
   if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
     return CSS.escape(String(value));
   }
@@ -59,67 +62,23 @@ export function escapeSelectorValue(value) {
   return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 }
 
-export function sanitizeCssValue(value, fallback) {
+export function sanitizeCssValue(value: unknown, fallback: unknown) {
   const raw = String(value ?? "").trim();
   const safeFallback = String(fallback ?? "").trim();
   if (!raw) {
     return safeFallback;
   }
-  if (/[\u0000-\u001f\u007f<>;"'{}]/.test(raw) || raw.includes("/*") || raw.includes("*/")) {
+  if (([...raw].some(character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127) || /[<>;"'{}]/.test(raw)) || raw.includes("/*") || raw.includes("*/")) {
     return safeFallback;
   }
   return raw;
 }
 
-export function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
-  const defaults = DEFAULT_CONFIG.styles;
-  const card = styles?.card || {};
-  const icon = styles?.icon || {};
-  const gauge = styles?.gauge || {};
-  return {
-    card: {
-      background: sanitizeCssValue(card.background, defaults.card.background),
-      border: sanitizeCssValue(card.border, defaults.card.border),
-      border_radius: sanitizeCssValue(card.border_radius, defaults.card.border_radius),
-      box_shadow: sanitizeCssValue(card.box_shadow, defaults.card.box_shadow),
-      padding: sanitizeCssValue(card.padding, defaults.card.padding),
-      gap: sanitizeCssValue(card.gap, defaults.card.gap),
-    },
-    icon: {
-      size: sanitizeCssValue(icon.size, defaults.icon.size),
-      background: sanitizeCssValue(icon.background, defaults.icon.background),
-      color: sanitizeCssValue(icon.color, defaults.icon.color),
-    },
-    chip_height: sanitizeCssValue(styles?.chip_height, defaults.chip_height),
-    chip_font_size: sanitizeCssValue(styles?.chip_font_size, defaults.chip_font_size),
-    chip_padding: sanitizeCssValue(styles?.chip_padding, defaults.chip_padding),
-    chip_border_radius: sanitizeCssValue(styles?.chip_border_radius, defaults.chip_border_radius),
-    title_size: sanitizeCssValue(styles?.title_size, defaults.title_size),
-    value_size: sanitizeCssValue(styles?.value_size, defaults.value_size),
-    range_size: sanitizeCssValue(styles?.range_size, defaults.range_size),
-    name_chip_max_width: sanitizeCssValue(styles?.name_chip_max_width, defaults.name_chip_max_width),
-    gauge: {
-      size: sanitizeCssValue(gauge.size, defaults.gauge.size),
-      stroke: sanitizeCssValue(gauge.stroke, defaults.gauge.stroke),
-      thumb_size: sanitizeCssValue(gauge.thumb_size, defaults.gauge.thumb_size),
-      track_color: sanitizeCssValue(gauge.track_color, defaults.gauge.track_color),
-      background: sanitizeCssValue(gauge.background, defaults.gauge.background),
-      min_tint_color: sanitizeCssValue(gauge.min_tint_color, defaults.gauge.min_tint_color),
-      max_tint_color: sanitizeCssValue(gauge.max_tint_color, defaults.gauge.max_tint_color),
-      foreground_color: sanitizeCssValue(gauge.foreground_color, defaults.gauge.foreground_color),
-    },
-  };
+export function getSafeStyles(styles: unknown = DEFAULT_CONFIG.styles) {
+  return normalizeControlStyles(styles, DEFAULT_CONFIG.styles);
 }
 
-
-
-
-
-
-
-
-
-export function getEditorColorFallbackValue(field) {
+export function getEditorColorFallbackValue(field: unknown) {
   const normalizedField = String(field ?? "");
 
   if (normalizedField.endsWith("icon.background")) {
@@ -158,7 +117,7 @@ export function getEditorColorFallbackValue(field) {
 }
 
 
-export function resolveColorInContext(contextNode, value) {
+export function resolveColorInContext(contextNode: Node | null | undefined, value: unknown) {
   const rawValue = String(value ?? "").trim();
   if (!rawValue || typeof document === "undefined") {
     return rawValue;
@@ -171,28 +130,31 @@ export function resolveColorInContext(contextNode, value) {
   probe.style.color = "";
   probe.style.color = rawValue;
   (contextNode || document.body || document.documentElement).appendChild(probe);
-  const resolved = getComputedStyle(probe).color;
-  probe.remove();
-  return resolved || rawValue;
+  try {
+    return getComputedStyle(probe).color || rawValue;
+  } finally {
+    probe.remove();
+  }
 }
 
-export function getGaugeSvgFallbackColor(ratio) {
+export function getGaugeSvgFallbackColor(ratio: unknown) {
   const safeRatio = clamp(Number(ratio) || 0, 0, 1);
   const upperIndex = GAUGE_SVG_FALLBACK_TINT_SCALE.findIndex(stop => safeRatio <= stop.offset);
   if (upperIndex <= 0) {
-    return `rgb(${GAUGE_SVG_FALLBACK_TINT_SCALE[0].channels.join(", ")})`;
+    return `rgb(${GAUGE_SVG_FALLBACK_TINT_SCALE[0]?.channels.join(", ") || "126, 136, 146"})`;
   }
 
   const upper = GAUGE_SVG_FALLBACK_TINT_SCALE[upperIndex];
   const lower = GAUGE_SVG_FALLBACK_TINT_SCALE[upperIndex - 1];
+  if (!upper || !lower) return "rgb(126, 136, 146)";
   const localRatio = (safeRatio - lower.offset) / Math.max(upper.offset - lower.offset, 0.0001);
   const channels = lower.channels.map((channel, index) => (
-    Math.round(channel + ((upper.channels[index] - channel) * localRatio))
+    Math.round(channel + (((upper.channels[index] ?? channel) - channel) * localRatio))
   ));
   return `rgb(${channels.join(", ")})`;
 }
 
-export function resolveGaugeSvgStrokeColor(value, fallback) {
+export function resolveGaugeSvgStrokeColor(value: unknown, fallback: string) {
   const source = String(value || "").trim();
   if (
     !source
@@ -204,50 +166,17 @@ export function resolveGaugeSvgStrokeColor(value, fallback) {
   return source;
 }
 
-export function parseRgbColor(value) {
-  const source = String(value ?? "").trim();
-  if (!source) {
-    return null;
-  }
-
-  const rgbMatch = source.match(/^rgba?\(([^)]+)\)$/i);
-  if (rgbMatch) {
-    const channels = rgbMatch[1]
-      .split(",")
-      .map(channel => Number.parseFloat(channel.trim()))
-      .filter(channel => Number.isFinite(channel));
-
-    if (channels.length >= 3) {
-      return {
-        red: clamp(channels[0], 0, 255),
-        green: clamp(channels[1], 0, 255),
-        blue: clamp(channels[2], 0, 255),
-      };
-    }
-  }
-
-  const hexMatch = source.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
-  if (hexMatch) {
-    const hex = hexMatch[1].length === 3
-      ? hexMatch[1].split("").map(channel => channel + channel).join("")
-      : hexMatch[1];
-
-    return {
-      red: Number.parseInt(hex.slice(0, 2), 16),
-      green: Number.parseInt(hex.slice(2, 4), 16),
-      blue: Number.parseInt(hex.slice(4, 6), 16),
-    };
-  }
-
-  return null;
+export function parseRgbColor(value: unknown): RgbChannels | null {
+  const channels = parseEditorColorChannels(value);
+  return channels ? { red: channels.red, green: channels.green, blue: channels.blue } : null;
 }
 
-export function getRelativeLuminance(color) {
+export function getRelativeLuminance(color: RgbChannels | null | undefined) {
   if (!color) {
     return null;
   }
 
-  const toLinear = channel => {
+  const toLinear = (channel: number) => {
     const normalized = clamp(Number(channel) / 255, 0, 1);
     return normalized <= 0.04045
       ? normalized / 12.92
@@ -261,67 +190,67 @@ export function getRelativeLuminance(color) {
 }
 
 
-export function isUnavailableState(state) {
+export function isUnavailableState(state: HassEntity | null | undefined) {
   return normalizeTextKey(state?.state) === "unavailable";
 }
 
-export function getStepPrecision(step) {
+export function getStepPrecision(step: unknown) {
   const text = String(step ?? "");
   if (!text.includes(".")) {
     return 0;
   }
 
-  return text.split(".")[1].length;
+  return (text.split(".")[1]?.length ?? 0);
 }
 
-export function inferDecimals(rawValue) {
+export function inferDecimals(rawValue: unknown) {
   const text = String(rawValue ?? "").trim();
   const normalized = text.replace(",", ".");
   if (!normalized.includes(".")) {
     return 0;
   }
 
-  return Math.min(3, normalized.split(".")[1].length);
+  return Math.min(3, (normalized.split(".")[1]?.length ?? 0));
 }
 
-export function getHassLocaleTag(hass, language = "auto") {
+export function getHassLocaleTag(hass: HomeAssistant | null | undefined, language = "auto") {
   const lang = window.NodaliaI18n?.resolveLanguage?.(hass, language);
-  return window.NodaliaI18n?.localeTag?.(lang) || hass?.locale?.language || undefined;
+  return (lang === undefined ? undefined : window.NodaliaI18n?.localeTag?.(lang)) || hass?.locale?.language || undefined;
 }
 
-export function formatNumberValue(value, decimals = 0, locale = undefined) {
-  if (!Number.isFinite(Number(value))) {
+export function formatNumberValue(value: unknown, decimals = 0, locale: string | undefined = undefined) {
+  const numeric = parseFiniteNumericValue(value);
+  if (numeric === null) {
     return "--";
   }
 
-  return Number(value).toLocaleString(locale, {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
+  const digits = Number.isFinite(decimals) ? Math.min(20, Math.max(0, Math.floor(decimals))) : 0;
+  return numeric.toLocaleString(locale, {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
   });
 }
 
-export function inferReasonableMax(currentValue, unit, state) {
+export function inferReasonableMax(currentValue: number | null, unit: unknown, state: HassEntity | null | undefined) {
   const normalizedUnit = normalizeTextKey(unit);
+  const knownUnitMax = GAUGE_MAX_BY_UNIT.get(String(unit ?? "").trim() === "%" ? "%" : normalizedUnit);
+  if (knownUnitMax !== undefined) return knownUnitMax;
   const domainHint = `${state?.entity_id || ""} ${state?.attributes?.device_class || ""} ${state?.attributes?.friendly_name || ""}`.toLowerCase();
 
-  if (normalizedUnit === "%" || domainHint.includes("battery") || domainHint.includes("humidity")) {
+  if (domainHint.includes("battery") || domainHint.includes("humidity")) {
     return 100;
   }
 
-  if (["w", "watt", "watts", "va"].includes(normalizedUnit) || domainHint.includes("power") || domainHint.includes("potencia")) {
+  if (domainHint.includes("power") || domainHint.includes("potencia")) {
     return 2500;
   }
 
-  if (["kw"].includes(normalizedUnit)) {
-    return 10;
+  if (domainHint.includes("current") || domainHint.includes("corriente")) {
+    return 32;
   }
 
-  if (["a", "ma"].includes(normalizedUnit) || domainHint.includes("current") || domainHint.includes("corriente")) {
-    return normalizedUnit === "ma" ? 3000 : 32;
-  }
-
-  if (["v", "mv"].includes(normalizedUnit) || domainHint.includes("voltage") || domainHint.includes("tension")) {
-    return normalizedUnit === "mv" ? 1000 : 260;
+  if (domainHint.includes("voltage") || domainHint.includes("tension")) {
+    return 260;
   }
 
   if (
@@ -345,15 +274,15 @@ export function inferReasonableMax(currentValue, unit, state) {
     return 100;
   }
 
-  if (["c", "f", "degc", "degf"].includes(normalizedUnit) || domainHint.includes("temperature") || domainHint.includes("temperatura")) {
+  if (domainHint.includes("temperature") || domainHint.includes("temperatura")) {
     return 40;
   }
 
-  if (["bar", "hpa", "pa"].includes(normalizedUnit) || domainHint.includes("pressure") || domainHint.includes("presion")) {
+  if (domainHint.includes("pressure") || domainHint.includes("presion")) {
     return 1200;
   }
 
-  if (Number.isFinite(currentValue)) {
+  if (currentValue !== null && Number.isFinite(currentValue)) {
     if (currentValue <= 10) return 10;
     if (currentValue <= 50) return 50;
     if (currentValue <= 100) return 100;
@@ -368,7 +297,7 @@ export function inferReasonableMax(currentValue, unit, state) {
   return 100;
 }
 
-export function getDialMarkerPosition(angle) {
+export function getDialMarkerPosition(angle: number) {
   const markerRadiusPercent = (DIAL_CIRCLE_RADIUS / DIAL_VIEWBOX_SIZE) * 100;
   const radians = (angle * Math.PI) / 180;
   return {
@@ -378,12 +307,12 @@ export function getDialMarkerPosition(angle) {
 }
 
 /** CSS rotate for thumb orbit: translateY(-orbit) starts at 12 o'clock; math angles use 3 o'clock = 0°. */
-export function getDialThumbRotate(angle) {
+export function getDialThumbRotate(angle: number) {
   return Number((angle + 90).toFixed(3));
 }
 
-export function getContinuousThumbRotate(previousRotate, nextAngle) {
-  if (!Number.isFinite(previousRotate)) {
+export function getContinuousThumbRotate(previousRotate: number | null | undefined, nextAngle: number) {
+  if (previousRotate == null || !Number.isFinite(previousRotate)) {
     return getDialThumbRotate(nextAngle);
   }
   const nextRotate = getDialThumbRotate(nextAngle);
@@ -396,7 +325,7 @@ export function getContinuousThumbRotate(previousRotate, nextAngle) {
   return Number((previousRotate + delta).toFixed(3));
 }
 
-export function getDialMarkerCoordinates(angle) {
+export function getDialMarkerCoordinates(angle: number) {
   const center = DIAL_VIEWBOX_SIZE / 2;
   const radians = (angle * Math.PI) / 180;
   return {
@@ -405,7 +334,7 @@ export function getDialMarkerCoordinates(angle) {
   };
 }
 
-export function mixCssColors(leftColor, rightColor, ratio) {
+export function mixCssColors(leftColor: string, rightColor: string, ratio: unknown) {
   const safeRatio = clamp(Number(ratio) || 0, 0, 1);
   if (safeRatio <= 0) {
     return leftColor;
@@ -421,7 +350,7 @@ export function mixCssColors(leftColor, rightColor, ratio) {
   return `color-mix(in srgb, ${leftColor} ${leftPercent}%, ${rightColor} ${rightPercent}%)`;
 }
 
-export function buildGaugeTintScale(minTintColor, maxTintColor) {
+export function buildGaugeTintScale(minTintColor: unknown = undefined, maxTintColor: unknown = undefined) {
   const safeMinTintColor = String(minTintColor || DEFAULT_GAUGE_MIN_TINT_COLOR).trim() || DEFAULT_GAUGE_MIN_TINT_COLOR;
   const safeMaxTintColor = String(maxTintColor || DEFAULT_GAUGE_MAX_TINT_COLOR).trim() || DEFAULT_GAUGE_MAX_TINT_COLOR;
 
@@ -434,24 +363,26 @@ export function buildGaugeTintScale(minTintColor, maxTintColor) {
   ];
 }
 
-export function resolveGaugeTintColor(scale, ratio) {
+export function resolveGaugeTintColor(scale: unknown, ratio: unknown) {
   const safeRatio = clamp(Number(ratio) || 0, 0, 1);
-  const tintScale = Array.isArray(scale) && scale.length ? scale : buildGaugeTintScale();
+  const validStops = Array.isArray(scale) ? scale.filter((stop: unknown): stop is TintStop => (
+    stop !== null && typeof stop === "object" && "offset" in stop && typeof stop.offset === "number" && Number.isFinite(stop.offset)
+    && "color" in stop && typeof stop.color === "string"
+  )) : [];
+  const tintScale = validStops.length ? validStops : buildGaugeTintScale();
+  const first = tintScale[0];
+  if (!first) return DEFAULT_GAUGE_MAX_TINT_COLOR;
 
-  if (safeRatio <= tintScale[0].offset) {
-    return tintScale[0].color;
-  }
+  if (safeRatio <= first.offset) return first.color;
 
   for (let index = 1; index < tintScale.length; index += 1) {
     const currentStop = tintScale[index];
     const previousStop = tintScale[index - 1];
-
+    if (!currentStop || !previousStop) continue;
     if (safeRatio <= currentStop.offset) {
       const span = Math.max(currentStop.offset - previousStop.offset, 0.0001);
-      const localRatio = (safeRatio - previousStop.offset) / span;
-      return mixCssColors(previousStop.color, currentStop.color, localRatio);
+      return mixCssColors(previousStop.color, currentStop.color, (safeRatio - previousStop.offset) / span);
     }
   }
-
-  return tintScale[tintScale.length - 1].color;
+  return tintScale[tintScale.length - 1]?.color || DEFAULT_GAUGE_MAX_TINT_COLOR;
 }

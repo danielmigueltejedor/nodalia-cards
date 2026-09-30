@@ -12,6 +12,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Restore Gauge automatic ranges and state precision when bounds/decimals are blank; keep absent readings distinct from zero and give physical units priority over names. Read modern translucent theme colors correctly.
+
 - Keep Navigation artwork query parameters before URL fragments and match parameter names literally; guard malformed duration and editor move inputs.
 
 - Keep missing Weather temperatures, dates and rain probabilities absent; preserve real zeros and show precipitation amounts when probability is unavailable.
@@ -34,6 +36,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Remove Camera portal listeners from their owning shadow root.
 
 ### Maintenance
+
+- Check Gauge helpers, reuse shared style/color/numeric boundaries and clean up temporary color probes on failure.
 
 - Check Navigation helpers, reuse the shared render-signature fallback and share object-only editor paths with Insignia.
 

@@ -244,12 +244,14 @@
     return { alpha: channels.alpha, hex, label: source, resolved, source, value: formatEditorColorFromHex(hex, channels.alpha) };
   }
 
-  // src/cards/weather/weather-helpers.ts
-  function parseWeatherNumericValue(value) {
+  // src/shared/numeric-values.ts
+  function parseFiniteNumericValue(value) {
     if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
     const numeric = Number(value);
     return Number.isFinite(numeric) ? numeric : null;
   }
+
+  // src/cards/weather/weather-helpers.ts
   function dateFromUnknown(value) {
     if (value instanceof Date) return new Date(value.getTime());
     if (typeof value === "string" || typeof value === "number") return new Date(value);
@@ -272,7 +274,7 @@
     return normalizeTextKey(state?.state) === "unavailable";
   }
   function formatNumber(value) {
-    const numeric = parseWeatherNumericValue(value);
+    const numeric = parseFiniteNumericValue(value);
     if (numeric === null) {
       return null;
     }
@@ -282,7 +284,7 @@
     return numeric.toFixed(1);
   }
   function formatCompactTemperature(value, unitLabel = "°") {
-    const numeric = parseWeatherNumericValue(value);
+    const numeric = parseFiniteNumericValue(value);
     if (numeric === null) {
       return "";
     }
@@ -298,7 +300,7 @@
     return String(value || "").toLowerCase() === "condition" ? "condition" : "temperature";
   }
   function getTemperatureScaleColor(value) {
-    const numeric = parseWeatherNumericValue(value);
+    const numeric = parseFiniteNumericValue(value);
     if (numeric === null) {
       return "var(--info-color, #71c0ff)";
     }
@@ -369,12 +371,12 @@
   }
   function getForecastTemperatureValue(value, type) {
     const item = isObject(value) ? value : {};
-    const temperature = parseWeatherNumericValue(item.temperature);
+    const temperature = parseFiniteNumericValue(item.temperature);
     if (temperature !== null) {
       return temperature;
     }
     if (type === "daily") {
-      const low = parseWeatherNumericValue(item.templow);
+      const low = parseFiniteNumericValue(item.templow);
       if (low !== null) {
         return low;
       }
@@ -383,7 +385,7 @@
   }
   function getForecastTemperatureSeriesValue(input, series) {
     const item = isObject(input) ? input : {};
-    return parseWeatherNumericValue(series === "low" ? item.templow : item.temperature);
+    return parseFiniteNumericValue(series === "low" ? item.templow : item.temperature);
   }
   function getForecastPrecipitationLabel(value, unit = "") {
     const item = isObject(value) ? value : {};
@@ -1033,7 +1035,7 @@
         return unit === "mph" ? "mph" : "km/h";
       }
       _convertTemperatureValue(value, fromUnit, toUnit) {
-        const numeric = parseWeatherNumericValue(value);
+        const numeric = parseFiniteNumericValue(value);
         if (numeric === null) {
           return null;
         }
@@ -1049,7 +1051,7 @@
         return numeric;
       }
       _convertWindSpeedValue(value, fromUnit, toUnit) {
-        const numeric = parseWeatherNumericValue(value);
+        const numeric = parseFiniteNumericValue(value);
         if (numeric === null) {
           return null;
         }
