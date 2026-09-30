@@ -34,6 +34,7 @@ export interface NodaliaUtilsApi {
     options?: Record<string, unknown>,
   ): void;
   normalizeTextKey(value: unknown): string;
+  sanitizeActionUrl(value: unknown, options?: { allowRelative?: boolean; allowHash?: boolean }): string;
   getEntityFriendlyName(hass: HomeAssistant | null | undefined, entityId: unknown): string;
   findStubEntityIds(
     hass: HomeAssistant | null | undefined,

@@ -339,20 +339,39 @@
     return mergedConfig;
   }
 
-  // src/cards/navigation/navigation-helpers.ts
+  // src/shared/render-signature.ts
+  function toKey(value) {
+    if (value === null || value === void 0) return "";
+    if (typeof value === "number") return Number.isFinite(value) ? String(value) : "";
+    return String(value);
+  }
+  function joinParts(parts, sectionSeparator = "||", valueSeparator = "::") {
+    return (Array.isArray(parts) ? parts : []).map((part) => {
+      if (!part || typeof part !== "object" || !("values" in part) || !Array.isArray(part.values)) return "";
+      const prefix = "prefix" in part ? String(part.prefix || "") : "";
+      return `${prefix}${part.values.map((value) => toKey(value)).join(valueSeparator)}`;
+    }).filter(Boolean).join(sectionSeparator);
+  }
+  var renderSignature = { joinParts, toKey };
+
+  // src/shared/editor-object-paths.ts
+  var isObject2 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var isUnsafeConfigPathKey2 = (key) => key === "__proto__" || key === "constructor" || key === "prototype";
   function setByPath(target, path, value) {
+    if (!isObject2(target) || typeof path !== "string") return;
     const parts = path.split(".");
-    if (parts.some(isUnsafeConfigPathKey)) {
+    if (parts.some(isUnsafeConfigPathKey2)) {
       return;
     }
     let cursor = target;
     for (let index = 0; index < parts.length - 1; index += 1) {
       const key = parts[index];
+      if (key === void 0) return;
       if (key === "__proto__" || key === "constructor" || key === "prototype") {
         return;
       }
-      const current = Object.hasOwn(cursor, key) ? cursor[key] : void 0;
-      if (!isObject(current)) {
+      const current = Object.prototype.hasOwnProperty.call(cursor, key) ? cursor[key] : void 0;
+      if (!isObject2(current)) {
         Object.defineProperty(cursor, key, {
           configurable: true,
           enumerable: true,
@@ -360,9 +379,12 @@
           writable: true
         });
       }
-      cursor = cursor[key];
+      const child = cursor[key];
+      if (!isObject2(child)) return;
+      cursor = child;
     }
     const finalKey = parts[parts.length - 1];
+    if (finalKey === void 0) return;
     if (finalKey === "__proto__" || finalKey === "constructor" || finalKey === "prototype") {
       return;
     }
@@ -374,49 +396,62 @@
     });
   }
   function deleteByPath(target, path) {
+    if (!isObject2(target) || typeof path !== "string") return;
     const parts = path.split(".");
-    if (parts.some(isUnsafeConfigPathKey)) {
+    if (parts.some(isUnsafeConfigPathKey2)) {
       return;
     }
     let cursor = target;
     for (let index = 0; index < parts.length - 1; index += 1) {
       const key = parts[index];
-      if (!isObject(cursor[key])) {
+      if (key === void 0) return;
+      if (!Object.prototype.hasOwnProperty.call(cursor, key) || !isObject2(cursor[key])) {
         return;
       }
-      cursor = cursor[key];
+      const child = cursor[key];
+      if (!isObject2(child)) return;
+      cursor = child;
     }
-    delete cursor[parts[parts.length - 1]];
+    const finalKey = parts[parts.length - 1];
+    if (finalKey !== void 0) delete cursor[finalKey];
   }
+
+  // src/cards/navigation/navigation-helpers.ts
   function appendQueryParam(url, key, value) {
     const rawUrl = String(url || "").trim();
     if (!rawUrl || value === null || value === void 0 || value === "") {
       return rawUrl;
     }
+    const fragmentIndex = rawUrl.indexOf("#");
+    const base = fragmentIndex < 0 ? rawUrl : rawUrl.slice(0, fragmentIndex);
+    const fragment = fragmentIndex < 0 ? "" : rawUrl.slice(fragmentIndex);
     const encodedKey = encodeURIComponent(String(key));
     const encodedValue = encodeURIComponent(String(value));
-    const existingPattern = new RegExp(`([?&])${encodedKey}=[^&]*`);
-    if (existingPattern.test(rawUrl)) {
-      return rawUrl.replace(existingPattern, `$1${encodedKey}=${encodedValue}`);
+    const escapedKey = encodedKey.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const existingPattern = new RegExp(`([?&])${escapedKey}=[^&]*`);
+    if (existingPattern.test(base)) {
+      return base.replace(existingPattern, `$1${encodedKey}=${encodedValue}`) + fragment;
     }
-    return `${rawUrl}${rawUrl.includes("?") ? "&" : "?"}${encodedKey}=${encodedValue}`;
+    return `${base}${base.includes("?") ? "&" : "?"}${encodedKey}=${encodedValue}${fragment}`;
   }
   function arrayFromCsv(value) {
     return String(value || "").split(",").map((item) => item.trim()).filter(Boolean);
   }
+  var isUnknownArray = (value) => Array.isArray(value);
   function moveItem(array, fromIndex, toIndex) {
-    if (!Array.isArray(array)) {
+    if (!isUnknownArray(array)) {
       return array;
     }
-    if (fromIndex < 0 || toIndex < 0 || fromIndex >= array.length || toIndex >= array.length || fromIndex === toIndex) {
+    if (!Number.isInteger(fromIndex) || !Number.isInteger(toIndex) || fromIndex < 0 || toIndex < 0 || fromIndex >= array.length || toIndex >= array.length || fromIndex === toIndex) {
       return array;
     }
-    const [item] = array.splice(fromIndex, 1);
-    array.splice(toIndex, 0, item);
+    const removed = array.splice(fromIndex, 1);
+    array.splice(toIndex, 0, ...removed);
     return array;
   }
   function formatDuration(totalSeconds) {
-    const safeSeconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+    const numeric = typeof totalSeconds === "number" || typeof totalSeconds === "string" ? Number(totalSeconds) : 0;
+    const safeSeconds = Number.isFinite(numeric) ? Math.max(0, Math.floor(numeric)) : 0;
     const hours = Math.floor(safeSeconds / 3600);
     const minutes = Math.floor(safeSeconds % 3600 / 60);
     const seconds = safeSeconds % 60;
@@ -433,7 +468,7 @@
     if (!raw) {
       return "";
     }
-    if (/[<>{};"']/.test(raw) || raw.includes("/*") || raw.includes("*/") || /\burl\s*\(/i.test(raw) || /\b@import\b/i.test(raw)) {
+    if ([...raw].some((character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127) || /[<>{};"']/.test(raw) || raw.includes("/*") || raw.includes("*/") || /\burl\s*\(/i.test(raw) || /\b@import\b/i.test(raw)) {
       return "";
     }
     return raw;
@@ -456,27 +491,7 @@
     return safe;
   }
   function getRenderSignatureRuntime() {
-    return window.NodaliaRenderSignature || {
-      toKey(value) {
-        if (value === null || value === void 0) {
-          return "";
-        }
-        if (typeof value === "number") {
-          return Number.isFinite(value) ? String(value) : "";
-        }
-        return String(value);
-      },
-      joinParts(parts, sectionSeparator = "||", valueSeparator = "::") {
-        return (Array.isArray(parts) ? parts : []).map((part) => {
-          if (!part || !Array.isArray(part.values)) {
-            return "";
-          }
-          const prefix = String(part.prefix || "");
-          const body = part.values.map((value) => this.toKey(value)).join(valueSeparator);
-          return `${prefix}${body}`;
-        }).filter(Boolean).join(sectionSeparator);
-      }
-    };
+    return window.NodaliaRenderSignature || renderSignature;
   }
   function parsePrimitiveValue(value) {
     if (value === "true") {
@@ -511,7 +526,7 @@
     }
   }
   function matchPath(currentPath, candidatePath, mode) {
-    if (!candidatePath) {
+    if (!currentPath || !candidatePath) {
       return false;
     }
     if (mode === "prefix") {
