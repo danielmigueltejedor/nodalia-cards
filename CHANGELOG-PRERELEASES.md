@@ -31,6 +31,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Maintenance
 
+- Check Weather, Circular Gauge and News configuration, preserving forecast/actions, gauge bounds and News source/history aliases while guarding nested styles.
+
 - Update TypeScript ESLint to 8.71.0 and the official CI cache action to v6.1.0 after compatibility review; retain TypeScript 6 until its next major is supported by the toolchain.
 
 - Generate Bubble Contrast from checked TypeScript and share canonical runtime entries and CSS color parsing with the HACS build.

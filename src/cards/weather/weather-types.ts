@@ -3,5 +3,5 @@ export interface WeatherPublicApi {
   EDITOR_TAG: string;
   CARD_VERSION: string;
   DEFAULT_CONFIG: Record<string, unknown>;
-  normalizeConfig: (rawConfig?: unknown) => Record<string, unknown>;
+  normalizeConfig: typeof import("./weather-config").normalizeConfig;
 }

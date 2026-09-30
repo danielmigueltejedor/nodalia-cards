@@ -356,7 +356,7 @@ Six config/helper cycles were removed through checked defaults and normalization
 Do not place defaults in modules that import their own normalizers.
 Notifications normalization now lives below the config and presentation helpers;
 no runtime import cycles remain.
-74 legacy modules still suppress typechecking; see `scripts/type-debt.json`.
+71 legacy modules still suppress typechecking; see `scripts/type-debt.json`.
 **The full TypeScript migration is not complete.** Checked modules and extracted
 contracts must grow without adding suppressions or casts to hide errors. The
 architecture guard prevents new unchecked files and new runtime cycles.
@@ -423,3 +423,10 @@ This lets support and card code share modules such as CSS color parsing instead
 of compiling independent copies. Standalone support filenames remain public.
 Theme-dependent CSS values are resolved on every use; fixed-color probe results
 have a bounded 256-entry cache. Temporary probes are removed in a finally block.
+
+
+Weather, Circular Gauge and News configuration now passes strict checking and
+typed lint. Weather retains its two allowed actions; Gauge keeps its numeric or
+string bounds and optional foreground tint; News preserves source aliases,
+layout/filter/history semantics. All three use the checked CSS projection and
+retain unknown root extension fields. Their helpers/views still need migration.

@@ -1,5 +1,5 @@
-// @ts-nocheck -- merged Lovelace YAML is projected into the runtime weather config.
-import { deepClone, mergeConfig } from "./weather-runtime";
+import { normalizeControlStyles } from "../../shared/control-config";
+import { isObject, mergeConfig } from "./weather-runtime";
 
 export const DEFAULT_CONFIG = {
   entity: "",
@@ -67,17 +67,18 @@ export const STUB_CONFIG = {
   name: "Weather",
 };
 
-export function normalizeConfig(rawConfig) {
-  const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-  const WEATHER_ACTIONS = new Set(["more-info", "none"]);
-  const norm = (value, fallback) => {
+export function normalizeConfig(rawConfig: unknown = {}) {
+  const defaults: Record<string, unknown> = DEFAULT_CONFIG;
+  const config = mergeConfig(defaults, isObject(rawConfig) ? rawConfig : {});
+  const norm = (value: unknown, fallback: "more-info" | "none") => {
     const key = String(value ?? fallback).trim().toLowerCase();
-    return WEATHER_ACTIONS.has(key) ? key : fallback;
+    return key === "more-info" || key === "none" ? key : fallback;
   };
-  config.tap_action = norm(config.tap_action, "more-info");
-  config.hold_action = norm(config.hold_action, "more-info");
-  config.double_tap_action = norm(config.double_tap_action, "none");
-  config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles)
-    ?? deepClone(DEFAULT_CONFIG.styles);
-  return config;
+  return {
+    ...config,
+    tap_action: norm(config.tap_action, "more-info"),
+    hold_action: norm(config.hold_action, "more-info"),
+    double_tap_action: norm(config.double_tap_action, "none"),
+    styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles),
+  };
 }

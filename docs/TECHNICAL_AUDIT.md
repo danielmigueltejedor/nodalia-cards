@@ -320,3 +320,21 @@ update; generated artifacts are unchanged. A fresh dependency audit reports
 zero vulnerabilities across 130 development dependencies. Outdated reports now
 list only the deliberately deferred TypeScript major. The browser CI exercises
 all four projects with the new cache action before integration.
+
+
+## Display-card config boundaries — 2026-10-01
+
+Weather, Circular Gauge and News config modules now pass strict checking and
+typed lint without suppression. Runtime APIs derive the normalizer signatures
+from source. Check unknown records before reading layout/filter/source/style
+branches, and reconstruct styles through the common checked CSS projection.
+Retain Weather’s restricted actions and forecast/unit values, Gauge’s string or
+numeric bounds and optional foreground tint, and News’s source aliases, layout
+visibility, filters and helper-history compatibility. Root extension fields
+remain unknown and preserved rather than silently claimed to match defaults.
+
+Twenty-four complete valid configurations match merged main. Five regression
+cases cover malformed YAML, CSS injection, actions, bounds, source rows and
+history aliases. All 642 unit tests and the full local browser suite (242 passed,
+one existing platform skip) pass. Remaining unchecked modules: 71; the views
+and helper modules of these cards remain in the open migration.
