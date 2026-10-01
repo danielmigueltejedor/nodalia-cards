@@ -1416,3 +1416,29 @@ All 749 unit tests, 15 targeted browser cases and 3,000 equivalent Weather
 presentation/sizing outputs pass. Full local suite: 566 passed, one existing skip.
 Remaining unchecked modules: 15. Publication
 remains held until the complete source/runtime migration.
+
+## Vacuum view findings — 2026-10-01
+
+The unchecked view retained optimistic modes/rooms across robots and pending
+selections after disconnection. Animation end and timeout could complete the same
+panel removal twice; older transitions could replace a newer panel. Fallback
+timers and animation listeners were unowned. Battery null became a fabricated
+zero, malformed registry values were accessed without guards, and HA service
+failures escaped the UI boundary. The tappable main card lacked keyboard access.
+
+Check actual HA, native events, normalized config, DOM, rooms, mode descriptors
+and related-helper contracts. Reset robot-specific state on entity changes while
+preserving the 2.5-second optimistic deadline during equivalent HA feedback. Own
+fallback timers, panel callbacks and deferred resize work, complete transitions
+once and discard stale listeners. Preserve numeric zero while omitting missing
+battery data; guard registry/mapping shapes. Use the shared service boundary for
+commands and activate the main card via Enter/Space. Remove five unused imported
+bindings and one unused panel markup calculation. Keep related-robot ownership,
+translations/ellipsis, existing sizing, controls and translucent styles.
+
+All 749 unit tests, 21 targeted browser cases and 3,000 equivalent presentation/
+sizing outputs outside restored keyboard attributes pass. Safari's initial
+deferred measurement could replace a label while the old truncation test
+resolved it; poll the live label with the same ellipsis/clipping assertions.
+Full local suite: 575 passed, one existing skip. Remaining unchecked modules:
+14. Hold publication until the complete migration.
