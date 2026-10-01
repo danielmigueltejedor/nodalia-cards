@@ -1,13 +1,9 @@
-// @ts-nocheck -- extracted climate model; typed incrementally with climate-dial/config
+import type { HassEntity, HomeAssistant } from "../../core/types/home-assistant";
+import { parseFiniteNumericValue } from "../../shared/numeric-values";
+export { parseSizeToPixels } from "../../shared/editor-entity-helpers";
+export { parseRgbColor, getRelativeLuminance } from "../../shared/color-luminance";
 export { resolveEditorColorValue, formatEditorHexChannel, formatEditorColorFromHex, getEditorColorModel } from "../../shared/editor-color";
-import { clamp, normalizeTextKey } from "./climate-runtime";
-
-export function parseSizeToPixels(value: unknown, fallback: number = 0): number {
-  const numeric = Number.parseFloat(String(value ?? ""));
-  return Number.isFinite(numeric) ? numeric : fallback;
-}
-
-
+import { normalizeTextKey } from "./climate-runtime";
 
 export function escapeSelectorValue(value: unknown) {
   if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
@@ -16,15 +12,6 @@ export function escapeSelectorValue(value: unknown) {
 
   return String(value ?? "").replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 }
-
-
-
-
-
-
-
-
-
 
 export function getEditorColorFallbackValue(field: unknown) {
   const normalizedField = String(field ?? "");
@@ -65,7 +52,7 @@ export function getEditorColorFallbackValue(field: unknown) {
 }
 
 
-export function resolveColorInContext(contextNode: unknown, value: unknown) {
+export function resolveColorInContext(contextNode: ParentNode | null | undefined, value: unknown) {
   const rawValue = String(value ?? "").trim();
   if (!rawValue || typeof document === "undefined") {
     return rawValue;
@@ -77,70 +64,18 @@ export function resolveColorInContext(contextNode: unknown, value: unknown) {
   probe.style.pointerEvents = "none";
   probe.style.color = "";
   probe.style.color = rawValue;
-  (contextNode || document.body || document.documentElement).appendChild(probe);
-  const resolved = getComputedStyle(probe).color;
-  probe.remove();
-  return resolved || rawValue;
+  const context = typeof Element !== "undefined" && contextNode instanceof Element
+    ? contextNode.shadowRoot || contextNode : contextNode;
+  try {
+    (context || document.body || document.documentElement).appendChild(probe);
+    const resolved = getComputedStyle(probe).color;
+    return resolved || rawValue;
+  } finally {
+    probe.remove();
+  }
 }
 
-export function parseRgbColor(value: unknown) {
-  const source = String(value ?? "").trim();
-  if (!source) {
-    return null;
-  }
-
-  const rgbMatch = source.match(/^rgba?\(([^)]+)\)$/i);
-  if (rgbMatch) {
-    const channels = rgbMatch[1]
-      .split(",")
-      .map(channel => Number.parseFloat(channel.trim()))
-      .filter(channel => Number.isFinite(channel));
-
-    if (channels.length >= 3) {
-      return {
-        red: clamp(channels[0], 0, 255),
-        green: clamp(channels[1], 0, 255),
-        blue: clamp(channels[2], 0, 255),
-      };
-    }
-  }
-
-  const hexMatch = source.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
-  if (hexMatch) {
-    const hex = hexMatch[1].length === 3
-      ? hexMatch[1].split("").map(channel => channel + channel).join("")
-      : hexMatch[1];
-
-    return {
-      red: Number.parseInt(hex.slice(0, 2), 16),
-      green: Number.parseInt(hex.slice(2, 4), 16),
-      blue: Number.parseInt(hex.slice(4, 6), 16),
-    };
-  }
-
-  return null;
-}
-
-export function getRelativeLuminance(color: unknown) {
-  if (!color) {
-    return null;
-  }
-
-  const toLinear = channel => {
-    const normalized = clamp(Number(channel) / 255, 0, 1);
-    return normalized <= 0.04045
-      ? normalized / 12.92
-      : ((normalized + 0.055) / 1.055) ** 2.4;
-  };
-
-  const red = toLinear(color.red);
-  const green = toLinear(color.green);
-  const blue = toLinear(color.blue);
-  return (0.2126 * red) + (0.7152 * green) + (0.0722 * blue);
-}
-
-
-export function isUnavailableState(state: unknown) {
+export function isUnavailableState(state: HassEntity | null | undefined) {
   return normalizeTextKey(state?.state) === "unavailable";
 }
 
@@ -150,29 +85,28 @@ export function getStepPrecision(step: unknown) {
     return 0;
   }
 
-  return text.split(".")[1].length;
+  return (text.split(".")[1]?.length ?? 0);
 }
 
 /** Avoids `Number(null) === 0` / `Number("") === 0` which mis-renders many climate entities (e.g. ecobee off). */
 export function parseFiniteClimateNumber(value: unknown) {
-  if (value === null || value === undefined) {
-    return NaN;
-  }
-  if (typeof value === "string" && value.trim() === "") {
-    return NaN;
-  }
-  const n = Number(value);
-  return Number.isFinite(n) ? n : NaN;
+  return parseFiniteNumericValue(value) ?? NaN;
 }
 
-export function getHassLocale(hass: unknown) {
+export function getHassLocale(hass: HomeAssistant | null | undefined) {
   const raw =
     hass?.locale?.language
     || hass?.selectedLanguage
     || hass?.language
     || (typeof navigator !== "undefined" ? navigator.language : "");
   const s = String(raw || "").trim();
-  return s || "en";
+  if (!s) return "en";
+  try {
+    Intl.getCanonicalLocales(s);
+    return s;
+  } catch (_error) {
+    return "en";
+  }
 }
 
 /** Engine overrides carry an ISO 8601 `until`; values without an offset are local time. */
@@ -185,7 +119,7 @@ export function parseEngineOverrideUntil(value: unknown) {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-export function formatEngineOverrideTime(value: unknown, hass: unknown) {
+export function formatEngineOverrideTime(value: unknown, hass: HomeAssistant | null | undefined) {
   const parsed = parseEngineOverrideUntil(value);
   if (!parsed) {
     return "";
@@ -193,7 +127,7 @@ export function formatEngineOverrideTime(value: unknown, hass: unknown) {
   return parsed.toLocaleTimeString(getHassLocale(hass), { hour: "2-digit", minute: "2-digit" });
 }
 
-export function getClimateTemperatureUnit(hass: unknown) {
+export function getClimateTemperatureUnit(hass: HomeAssistant | null | undefined) {
   const raw = String(hass?.config?.unit_system?.temperature ?? "").trim();
   if (raw.toUpperCase().includes("F")) {
     return "°F";
@@ -204,11 +138,11 @@ export function getClimateTemperatureUnit(hass: unknown) {
   return "°C";
 }
 
-export function getClimateTemperatureScaleLetter(hass: unknown) {
+export function getClimateTemperatureScaleLetter(hass: HomeAssistant | null | undefined) {
   return getClimateTemperatureUnit(hass).toUpperCase().includes("F") ? "F" : "C";
 }
 
-export function formatTemperature(value: unknown, step: unknown =  0.5, withUnit: unknown =  true, hass: unknown =  null) {
+export function formatTemperature(value: unknown, step: unknown =  0.5, withUnit: unknown =  true, hass: HomeAssistant | null | undefined =  null) {
   const n = parseFiniteClimateNumber(value);
   if (!Number.isFinite(n)) {
     const u = getClimateTemperatureUnit(hass);
@@ -225,7 +159,7 @@ export function formatTemperature(value: unknown, step: unknown =  0.5, withUnit
 }
 
 /** Human-readable band for dual-setpoint (Ecobee-style) climate: numbers without degree, unit once at end (e.g. `20 – 22 °C`). */
-export function formatTemperatureRangeSummary(low: unknown, high: unknown, step: unknown, hass: unknown) {
+export function formatTemperatureRangeSummary(low: unknown, high: unknown, step: unknown, hass: HomeAssistant | null | undefined) {
   if (!Number.isFinite(low) || !Number.isFinite(high)) {
     const u = getClimateTemperatureUnit(hass);
     return `-- ${u}`;

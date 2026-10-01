@@ -695,6 +695,19 @@ ${weekdayYaml}
     return config;
   }
 
+  // src/shared/numeric-values.ts
+  function parseFiniteNumericValue(value) {
+    if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
+  // src/shared/editor-entity-helpers.ts
+  function parseSizeToPixels(value, fallback = 0) {
+    const numeric = Number.parseFloat(String(value ?? ""));
+    return Number.isFinite(numeric) ? numeric : fallback;
+  }
+
   // src/shared/editor-color.ts
   var clamp2 = (value, max) => Math.max(0, Math.min(max, value));
   var component = (value, scale) => {
@@ -767,11 +780,21 @@ ${weekdayYaml}
     return { alpha: channels.alpha, hex, label: source, resolved, source, value: formatEditorColorFromHex(hex, channels.alpha) };
   }
 
-  // src/cards/climate/climate-model.ts
-  function parseSizeToPixels(value, fallback = 0) {
-    const numeric = Number.parseFloat(String(value ?? ""));
-    return Number.isFinite(numeric) ? numeric : fallback;
+  // src/shared/color-luminance.ts
+  function parseRgbColor(value) {
+    const channels = parseEditorColorChannels(value);
+    return channels ? { red: channels.red, green: channels.green, blue: channels.blue } : null;
   }
+  function getRelativeLuminance(color) {
+    if (!color || ![color.red, color.green, color.blue].every(Number.isFinite)) return null;
+    const toLinear = (channel) => {
+      const normalized = Math.max(0, Math.min(1, channel / 255));
+      return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+    };
+    return 0.2126 * toLinear(color.red) + 0.7152 * toLinear(color.green) + 0.0722 * toLinear(color.blue);
+  }
+
+  // src/cards/climate/climate-model.ts
   function escapeSelectorValue(value) {
     if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
       return CSS.escape(String(value));
@@ -817,50 +840,14 @@ ${weekdayYaml}
     probe.style.pointerEvents = "none";
     probe.style.color = "";
     probe.style.color = rawValue;
-    (contextNode || document.body || document.documentElement).appendChild(probe);
-    const resolved = getComputedStyle(probe).color;
-    probe.remove();
-    return resolved || rawValue;
-  }
-  function parseRgbColor(value) {
-    const source = String(value ?? "").trim();
-    if (!source) {
-      return null;
+    const context = typeof Element !== "undefined" && contextNode instanceof Element ? contextNode.shadowRoot || contextNode : contextNode;
+    try {
+      (context || document.body || document.documentElement).appendChild(probe);
+      const resolved = getComputedStyle(probe).color;
+      return resolved || rawValue;
+    } finally {
+      probe.remove();
     }
-    const rgbMatch = source.match(/^rgba?\(([^)]+)\)$/i);
-    if (rgbMatch) {
-      const channels = rgbMatch[1].split(",").map((channel) => Number.parseFloat(channel.trim())).filter((channel) => Number.isFinite(channel));
-      if (channels.length >= 3) {
-        return {
-          red: clamp(channels[0], 0, 255),
-          green: clamp(channels[1], 0, 255),
-          blue: clamp(channels[2], 0, 255)
-        };
-      }
-    }
-    const hexMatch = source.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
-    if (hexMatch) {
-      const hex = hexMatch[1].length === 3 ? hexMatch[1].split("").map((channel) => channel + channel).join("") : hexMatch[1];
-      return {
-        red: Number.parseInt(hex.slice(0, 2), 16),
-        green: Number.parseInt(hex.slice(2, 4), 16),
-        blue: Number.parseInt(hex.slice(4, 6), 16)
-      };
-    }
-    return null;
-  }
-  function getRelativeLuminance(color) {
-    if (!color) {
-      return null;
-    }
-    const toLinear = (channel) => {
-      const normalized = clamp(Number(channel) / 255, 0, 1);
-      return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
-    };
-    const red = toLinear(color.red);
-    const green = toLinear(color.green);
-    const blue = toLinear(color.blue);
-    return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
   }
   function isUnavailableState(state) {
     return normalizeTextKey(state?.state) === "unavailable";
@@ -870,22 +857,21 @@ ${weekdayYaml}
     if (!text.includes(".")) {
       return 0;
     }
-    return text.split(".")[1].length;
+    return text.split(".")[1]?.length ?? 0;
   }
   function parseFiniteClimateNumber(value) {
-    if (value === null || value === void 0) {
-      return NaN;
-    }
-    if (typeof value === "string" && value.trim() === "") {
-      return NaN;
-    }
-    const n = Number(value);
-    return Number.isFinite(n) ? n : NaN;
+    return parseFiniteNumericValue(value) ?? NaN;
   }
   function getHassLocale(hass) {
     const raw = hass?.locale?.language || hass?.selectedLanguage || hass?.language || (typeof navigator !== "undefined" ? navigator.language : "");
     const s = String(raw || "").trim();
-    return s || "en";
+    if (!s) return "en";
+    try {
+      Intl.getCanonicalLocales(s);
+      return s;
+    } catch (_error) {
+      return "en";
+    }
   }
   function parseEngineOverrideUntil(value) {
     const raw = String(value ?? "").trim();

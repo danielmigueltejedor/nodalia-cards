@@ -12,6 +12,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Resolve Climate theme colors inside its shadow root, support modern translucent RGB, clean up color probes and preserve missing temperatures/locales safely.
+
 - Guard Entity style/graph boundaries, preserve missing AQ readings as unknown, restore PM2.5 aliases and use bounded finite shared history geometry.
 
 - Keep blank Summary metrics absent while displaying real zeros and preserving comfort, media and security calculations.
@@ -52,6 +54,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Remove Camera portal listeners from their owning shadow root.
 
 ### Maintenance
+
+- Strictly check Climate model and share finite number, size and color helpers.
 
 - Strictly check Entity configuration and helpers, derive public AQ methods from source, retire duplicate constants/graph/stub helpers and share equivalent Graph history algorithms.
 
