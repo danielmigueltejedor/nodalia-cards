@@ -12,6 +12,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Keep blank Summary metrics absent while displaying real zeros and preserving comfort, media and security calculations.
+
 - Terminate malformed Power Flow SVG paths, preserve whole kilowatt digits, keep absent readings separate from zero, guard invalid connector coordinates and restore cycle-free editor color defaults.
 
 - Guard malformed Media Player/Navigation layout, media, route and style blocks; retain defaults for absent artwork numbers, real zero options and all legacy aliases.
@@ -48,6 +50,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Remove Camera portal listeners from their owning shadow root.
 
 ### Maintenance
+
+- Check Summary configuration, derive its public methods from checked source, and retain normalization identity through a typed weak cache.
 
 - Check Power Flow configuration/SVG/node helpers, share checked editor/numeric utilities and document source, unit and diagram behavior.
 

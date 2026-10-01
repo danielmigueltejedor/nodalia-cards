@@ -1,4 +1,6 @@
-// @ts-nocheck -- merged Lovelace YAML is projected into the runtime room-summary config.
+import type { HomeAssistant } from "../../core/types/home-assistant";
+import type { RoomProjectionConfig } from "./room-summary-model";
+const normalizedRoomConfigs = new WeakMap<object, RoomProjectionConfig & Record<string, unknown>>();
 import { COMFORT, CUSTOMIZABLE_EMBED_LISTS, NORMALIZED_ROOM_CONFIG } from "./room-summary-constants";
 import {
   buildNormalizedRoomSummary,
@@ -27,16 +29,17 @@ export const STUB_CONFIG = {
   media_player: "media_player.living_room",
 };
 
-export function hubMediaPlayerIds(config) {
+export function hubMediaPlayerIds(config: unknown = {}) {
   return collectHubMediaPlayerIds(normalizeConfig(config || {}));
 }
 
-export function normalizeConfig(rawConfig = {}) {
-  if (rawConfig?.[NORMALIZED_ROOM_CONFIG] === true) {
-    return rawConfig;
+export function normalizeConfig(rawConfig: unknown = {}) {
+  if (isObject(rawConfig) && Reflect.get(rawConfig, NORMALIZED_ROOM_CONFIG) === true) {
+    const cached = normalizedRoomConfigs.get(rawConfig);
+    if (cached) return cached;
   }
   const raw = isObject(rawConfig) ? rawConfig : {};
-  const config = mergeConfig(DEFAULT_CONFIG, raw);
+  const config = mergeConfig<Record<string, unknown>>(DEFAULT_CONFIG, raw);
 
   config.name = String(config.name ?? "").trim();
   config.icon = String(config.icon ?? DEFAULT_CONFIG.icon).trim() || DEFAULT_CONFIG.icon;
@@ -50,50 +53,43 @@ export function normalizeConfig(rawConfig = {}) {
   config.presence = entityScalar(config.presence, config.occupancy_entity, config.occupancy);
   config.occupancy = entityScalar(config.occupancy, config.presence);
   config.climate = entityScalar(config.climate, config.climate_entity);
-  config.camera_config = isObject(config.camera_config) ? deepClone(config.camera_config) : {};
-  config.camera = entityScalar(
+  const cameraConfig: Record<string, unknown> = isObject(config.camera_config) ? deepClone(config.camera_config) : {};
+  const camera = entityScalar(
     config.camera,
-    config.camera_config.entity,
-    Array.isArray(config.camera_config.cameras) ? config.camera_config.cameras[0] : "",
+    cameraConfig.entity,
+    Array.isArray(cameraConfig.cameras) ? cameraConfig.cameras[0] : "",
   );
-  if (config.camera) {
-    config.camera_config.entity = config.camera;
-    const cameras = Array.isArray(config.camera_config.cameras)
-      ? config.camera_config.cameras.map(id => String(id || "").trim()).filter(Boolean)
+  config.camera = camera;
+  if (camera) {
+    cameraConfig.entity = camera;
+    const cameras = Array.isArray(cameraConfig.cameras)
+      ? cameraConfig.cameras.map(id => String(id || "").trim()).filter(Boolean)
       : [];
-    if (!cameras.includes(config.camera)) {
-      config.camera_config.cameras = [config.camera, ...cameras];
+    if (!cameras.includes(camera)) {
+      cameraConfig.cameras = [camera, ...cameras];
     }
   }
-  config.media_config = isObject(config.media_config) ? deepClone(config.media_config) : {};
-  config.media_config.players = Array.isArray(config.media_config.players)
-    ? config.media_config.players.filter(isObject).map(player => deepClone(player))
-    : [];
-  const nativeMediaIds = config.media_config.players.map(player => String(player.entity || "").trim()).filter(Boolean);
-  config.media_player = entityScalar(config.media_player, nativeMediaIds[0]);
-  config.media_players = entityList(config.media_players, config.media_player_entities);
-  if (config.media_player) {
-    config.media_players = config.media_players.filter(id => id !== config.media_player);
-  }
-  config.vacuums = entityList(config.vacuums, config.vacuum, config.vacuum_entities);
-  config.fans = entityList(config.fans, config.fan_entities);
-  config.humidifiers = entityList(config.humidifiers, config.humidifier_entities);
-  config.others = entityList(config.others, config.other_entities, config.entities);
-  config.power = entityScalar(config.power);
-  config.air_quality = entityScalar(config.air_quality);
-
-  config.lights = entityList(config.lights, config.light_entities);
-  config.covers = entityList(config.covers, config.cover_entities);
-  config.locks = entityList(config.locks);
-  config.doors = entityList(config.doors);
-  config.windows = entityList(config.windows);
-  config.alerts = entityList(config.alerts, config.motion_entities);
-  config.alarms = entityList(config.alarms, config.alarm, config.alarm_entities);
+  const mediaSource = isObject(config.media_config) ? deepClone(config.media_config) : {};
+  const players = Array.isArray(mediaSource.players) ? mediaSource.players.filter(isObject).map(player => deepClone(player)) : [];
+  const mediaConfig = { ...mediaSource, players };
+  const nativeMediaIds = players.map(player => String(player.entity || "").trim()).filter(Boolean);
+  const mediaPlayer = entityScalar(config.media_player, nativeMediaIds[0]);
+  const mediaPlayers = entityList(config.media_players, config.media_player_entities).filter(id => !mediaPlayer || id !== mediaPlayer);
+  const lists = {
+    vacuums: entityList(config.vacuums, config.vacuum, config.vacuum_entities),
+    fans: entityList(config.fans, config.fan_entities),
+    humidifiers: entityList(config.humidifiers, config.humidifier_entities),
+    others: entityList(config.others, config.other_entities, config.entities),
+    lights: entityList(config.lights, config.light_entities), covers: entityList(config.covers, config.cover_entities),
+    locks: entityList(config.locks), doors: entityList(config.doors), windows: entityList(config.windows),
+    alerts: entityList(config.alerts, config.motion_entities), alarms: entityList(config.alarms, config.alarm, config.alarm_entities),
+  };
+  Object.assign(config, lists);
   const rawEmbedOptions = isObject(config.embed_options) ? config.embed_options : {};
-  config.embed_options = {};
+  const embedOptions: Record<string, unknown> = {};
   CUSTOMIZABLE_EMBED_LISTS.forEach(listKey => {
     const options = Array.isArray(rawEmbedOptions[listKey]) ? rawEmbedOptions[listKey].filter(isObject) : [];
-    config.embed_options[listKey] = config[listKey].map((entity, index) => {
+    embedOptions[listKey] = lists[listKey].map((entity, index) => {
       const byEntity = options.find(option => String(option.entity || "").trim() === entity);
       const source = byEntity || options[index] || {};
       return {
@@ -136,20 +132,23 @@ export function normalizeConfig(rawConfig = {}) {
     ?? mergeConfig(DEFAULT_CONFIG.security, config.security || {});
   config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles)
     ?? deepClone(DEFAULT_CONFIG.styles);
-  Object.defineProperty(config, NORMALIZED_ROOM_CONFIG, {
-    configurable: false,
-    enumerable: false,
-    value: true,
-  });
-  return config;
+  const normalized = { ...config, ...lists,
+    name: String(config.name ?? "").trim(), temperature: entityScalar(config.temperature), humidity: entityScalar(config.humidity),
+    presence: entityScalar(config.presence), occupancy: entityScalar(config.occupancy), climate: entityScalar(config.climate),
+    camera: entityScalar(config.camera), power: entityScalar(config.power), air_quality: entityScalar(config.air_quality),
+    camera_config: cameraConfig, media_player: mediaPlayer, media_players: mediaPlayers, media_config: mediaConfig, embed_options: embedOptions,
+  } satisfies RoomProjectionConfig & Record<string, unknown>;
+  Object.defineProperty(normalized, NORMALIZED_ROOM_CONFIG, { configurable: false, enumerable: false, value: true });
+  normalizedRoomConfigs.set(normalized, normalized);
+  return normalized;
 }
 
-export function hasRoomContent(config) {
+export function hasRoomContent(config: unknown = {}) {
   const normalized = normalizeConfig(config || {});
   return Boolean(String(normalized.name || "").trim()) || hasNormalizedRoomContent(normalized);
 }
 
-export function buildRoomSummary(hass, config) {
+export function buildRoomSummary(hass?: Pick<HomeAssistant, "states"> | null, config: unknown = {}) {
   const c = normalizeConfig(config || {});
   return buildNormalizedRoomSummary(hass, c, COMFORT);
 }

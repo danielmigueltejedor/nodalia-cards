@@ -1,6 +1,13 @@
 /* Generated from src/cards/room-summary/room-summary-model-runtime.ts. Do not edit. */
 "use strict";
 (() => {
+  // src/shared/numeric-values.ts
+  function parseFiniteNumericValue(value) {
+    if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
   // src/cards/room-summary/room-summary-model.ts
   function normalizeTextKey(value) {
     return String(value ?? "").trim().toLowerCase();
@@ -29,8 +36,7 @@
     return ids;
   }
   function finiteNumber(value) {
-    const number = Number(value);
-    return Number.isFinite(number) ? number : null;
+    return parseFiniteNumericValue(value);
   }
   function isUnavailable(state) {
     const key = normalizeTextKey(state?.state);
@@ -53,7 +59,8 @@
     const unit = String(state.attributes?.unit_of_measurement || unitFallback || "").trim();
     const number = finiteNumber(state.state);
     if (number !== null) return `${Number.isInteger(number) ? number : number.toFixed(1)}${unit}`;
-    return String(state.state ?? "—");
+    const text = String(state.state ?? "");
+    return text.trim() ? text : "—";
   }
   function getState(hass, entityId) {
     const id = String(entityId || "").trim();
