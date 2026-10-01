@@ -40,3 +40,18 @@ zero. Shared style and action sections retain translucent colors. Malformed
 haptic or animation settings use guarded editor controls. The unused historical
 editor, which was never registered, has been removed from source and standalone
 output; the registered editor and public card API keep their existing names.
+
+
+The checked view coalesces pending requests within the same connection and
+configuration. Successful empty responses are cached until the refresh interval;
+connection/user changes and detach abort the old owner. A late failure cannot
+start a REST fallback against another connection or replace a new request.
+Statistics supplement insufficient history without discarding a usable current
+reading. Missing range bounds stay distinct from explicit zero.
+
+Series and primary actions support Enter/Space. The chart supports Left/Right,
+Home/End and Escape, retaining focus while the tooltip changes. Tooltip markers
+track each entity, including series with identical names, and update in place.
+Native cancellation, configuration changes and detach release holds, document
+watchers, frames and animation fallback timers. Hover styles remain embedded
+in the standalone file and HACS bundle; no additional stylesheet is fetched.
