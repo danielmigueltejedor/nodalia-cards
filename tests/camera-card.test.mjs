@@ -698,7 +698,7 @@ test("camera configured services respect strict security and explicit targets", 
 test("camera visual editor normalizes config and mounts camera entity picker", () => {
   const source = read("nodalia-camera-card.js");
   assert.match(source, /(?:class NodaliaCameraCardEditor\b|(?:var|let|const) NodaliaCameraCardEditor = class)/);
-  assert.match(source, /picker\.includeDomains = domains\.length \? domains : \["camera"\]/);
+  assert.match(source, /includeDomains: domains\.length \? domains : \["camera"\]/);
   assert.match(source, /stripEqualToDefaults/);
   assert.match(source, /bindEditorDialogLayoutFix/);
   assert.doesNotMatch(source, /_renderSelectField\("ed\.camera\.presentation"/);

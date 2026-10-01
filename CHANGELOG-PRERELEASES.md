@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+- Check Camera visual editor boundaries, ignore malformed rows and removal indices, preserve the original camera when adding a draft row, and retain camera-specific actions, streams, YAML fields and focus.
+
 - Check Cover view/editor boundaries, cancel abandoned position/tilt drags without sending commands, retain inherited icon action parameters and handle service failures through the shared checked invocation boundary.
 
 - Check Person view/editor boundaries, cancel stalled or abandoned picture loads, bound image caches, refresh renamed zones and handle service failures while retaining separate actions and editor focus.

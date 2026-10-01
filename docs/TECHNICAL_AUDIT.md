@@ -1016,3 +1016,26 @@ including Fav service coverage: 380 passed, one existing platform skip. The init
 Cover run exposed the inherited-parameter bug and an ambiguous circular-chip test
 locator; both are corrected. Remaining unchecked modules: 35. Hold 3.0.0-alpha.1
 until full migration, including handwritten utility/i18n runtime sources.
+
+## Camera editor findings — 2026-10-01
+
+Camera editor suppressed checking over native/custom HA controls, action/stream
+lists and focus. Malformed action rows could break rendering, negative or blank
+removal indices could remove valid rows, and adding a camera to a legacy entity-
+only configuration lost the original camera.
+
+The editor now checks its actual editable draft schema and native/custom control
+payloads without discarding root YAML extensions. Invalid rows and removal indices
+are ignored. Camera rename/removal preserves or removes its own tap, stream and
+expanded-action references; false/zero service data and explicit targets survive.
+Draft camera/action rows remain editable, legacy first cameras remain present,
+missing selections and focus survive rendering. Two verified unused editor fields
+and their unreachable toggle branch were removed.
+
+1,400 valid editor HTML outputs match main. All 742 unit tests, nine targeted
+browser cases and the full local browser suite (389 passed, one existing skip)
+pass. An initial malformed-event fixture expected no emitted configuration;
+the shared picker fallback correctly preserves and emits its current valid value.
+The existing picker source assertion now checks identical Object.assign metadata.
+Remaining unchecked modules: 34. Hold 3.0.0-alpha.1 until full migration, including
+handwritten utility/i18n runtime sources.

@@ -3474,7 +3474,37 @@
     return NodaliaCameraCard;
   }
 
+  // src/shared/editor-controls.ts
+  function isNativeEditorInput(node) {
+    return node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement;
+  }
+  function editorControlValue(event, control) {
+    const detail = event instanceof CustomEvent ? event.detail : void 0;
+    if (detail && typeof detail === "object" && "value" in detail && typeof detail.value === "string") return detail.value;
+    return "value" in control ? control.value : void 0;
+  }
+
   // src/cards/camera/camera-editor.ts
+  function objectRows(value) {
+    if (!Array.isArray(value)) return [];
+    const rows = value;
+    return rows.filter(isObject);
+  }
+  function editorConfig(raw) {
+    const config = mergeConfig(DEFAULT_CONFIG, raw);
+    const cameras = Array.isArray(config.cameras) ? config.cameras : [];
+    const fields = {
+      entity: typeof config.entity === "string" ? config.entity : "",
+      language: typeof config.language === "string" ? config.language : "auto",
+      cameras: cameras.map(normalizeCameraEntityId),
+      camera_actions: objectRows(config.camera_actions),
+      expanded_actions: objectRows(config.expanded_actions),
+      camera_streams: objectRows(config.camera_streams),
+      camera_tap_actions: objectRows(config.camera_tap_actions)
+    };
+    const normalized = { ...config, ...fields };
+    return normalized;
+  }
   var _lazyNodaliaCameraCardEditor;
   function loadNodaliaCameraCardEditor() {
     if (_lazyNodaliaCameraCardEditor) {
@@ -3487,11 +3517,9 @@
       }
       _nodaliaConstruct() {
         this.attachShadow({ mode: "open" });
-        this._config = normalizeConfig(STUB_CONFIG);
+        this._config = editorConfig(STUB_CONFIG);
         this._hass = null;
         this._entityOptionsSignature = "";
-        this._showTapActionsSection = false;
-        this._pendingEditorControlTags = /* @__PURE__ */ new Set();
         this._onShadowInput = this._onShadowInput.bind(this);
         this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
         this._onShadowClick = this._onShadowClick.bind(this);
@@ -3529,7 +3557,7 @@
       }
       setConfig(config) {
         const focusState = this._captureFocusState();
-        this._config = mergeConfig(DEFAULT_CONFIG, config || {});
+        this._config = editorConfig(config || {});
         window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
         this._render();
         this._restoreFocusState(focusState);
@@ -3538,11 +3566,11 @@
         return window.NodaliaI18n?.editorStr?.(this._hass, this._config?.language ?? "auto", key) || key;
       }
       _getEntityOptionsSignature(hass = this._hass) {
-        return window.NodaliaUtils.editorFilteredStatesSignature(
+        return window.NodaliaUtils.editorFilteredStatesSignature?.(
           hass,
           this._config?.language,
           (id) => /^(camera|light|fan|humidifier|vacuum|cover|climate|lock|switch|input_boolean)\./.test(id)
-        );
+        ) ?? "";
       }
       _captureFocusState() {
         return window.NodaliaUtils.captureEditorFocusState(this);
@@ -3562,7 +3590,9 @@
           config: outgoing
         });
         if (reRender) {
+          const focusState = this._captureFocusState();
           this._render();
+          this._restoreFocusState(focusState);
         }
       }
       _editorCameras() {
@@ -3607,7 +3637,7 @@
           const configured = existing.find((item) => normalizeCameraEntityId(item?.camera) === camera);
           const source = isObject(configured) ? { camera, ...configured } : { camera, ...legacy };
           return normalizeCameraTapActions([source], [camera])[0];
-        }).filter(Boolean);
+        }).filter((item) => item !== void 0);
       }
       _migrateCameraReferences(previousCamera, nextCamera) {
         const previous = String(previousCamera || "").trim();
@@ -3643,7 +3673,7 @@
       }
       _onShadowInput(event) {
         const target = event.target;
-        if (!(target instanceof HTMLElement) || !target.dataset?.field) {
+        if (!target || !isNativeEditorInput(target) || !target.dataset.field) {
           return;
         }
         const field = target.dataset.field;
@@ -3654,7 +3684,7 @@
         if (cameraField || field === "entity") {
           this._migrateCameraReferences(previousCamera, value);
         }
-        if (field === "entity" && value) {
+        if (field === "entity" && typeof value === "string" && value) {
           if (!Array.isArray(this._config.cameras) || !this._config.cameras.length) {
             this._config.cameras = [value];
           } else {
@@ -3668,12 +3698,13 @@
         );
       }
       _onShadowValueChanged(event) {
-        const host = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+        const host = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.field));
         if (!host?.dataset?.field) {
           return;
         }
         event.stopPropagation();
-        const detailValue = event.detail?.value ?? "";
+        const detailValue = editorControlValue(event, host);
+        if (typeof detailValue !== "string") return;
         const field = host.dataset.field;
         const cameraField = field.match(/^cameras\.(\d+)$/);
         const previousCamera = cameraField ? String(getByPath(this._config, field) || "").trim() : field === "entity" ? String(this._config.entity || "").trim() : "";
@@ -3694,14 +3725,15 @@
         this._emitConfig(Boolean(cameraField) || field === "entity");
       }
       _onShadowClick(event) {
-        const button = event.composedPath().find((node) => node instanceof HTMLButtonElement && node.dataset?.editorAction);
+        const button = event.composedPath().find((node) => node instanceof HTMLButtonElement && Boolean(node.dataset.editorAction));
         if (button) {
           event.preventDefault();
           event.stopPropagation();
           const action = button.dataset.editorAction;
-          const index = Number(button.dataset.index);
+          const indexValue = button.dataset.index;
+          const index = indexValue && /^\d+$/.test(indexValue) ? Number(indexValue) : NaN;
           if (action === "add-camera") {
-            if (!Array.isArray(this._config.cameras)) {
+            if (!this._config.cameras.length) {
               this._config.cameras = this._editorCameras();
             }
             if (this._config.cameras.length < MAX_CAMERAS) {
@@ -3710,8 +3742,8 @@
             }
             return;
           }
-          if (action === "remove-camera" && Number.isInteger(index)) {
-            if (!Array.isArray(this._config.cameras)) {
+          if (action === "remove-camera" && Number.isInteger(index) && index >= 0 && index < this._editorCameras().length) {
+            if (!this._config.cameras.length) {
               this._config.cameras = this._editorCameras();
             }
             const removedCamera = String(this._config.cameras[index] || "").trim();
@@ -3749,7 +3781,7 @@
             }
             return;
           }
-          if (action === "remove-camera-action" && Number.isInteger(index)) {
+          if (action === "remove-camera-action" && Number.isInteger(index) && index >= 0 && index < this._config.camera_actions.length) {
             if (!Array.isArray(this._config.camera_actions)) {
               this._config.camera_actions = [];
             }
@@ -3770,7 +3802,7 @@
             this._render();
             return;
           }
-          if (action === "remove-expanded-action" && Number.isInteger(index)) {
+          if (action === "remove-expanded-action" && Number.isInteger(index) && index >= 0 && index < this._config.expanded_actions.length) {
             if (!Array.isArray(this._config.expanded_actions)) {
               this._config.expanded_actions = [];
             }
@@ -3779,18 +3811,8 @@
           }
           return;
         }
-        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
-        if (!toggleButton) {
-          return;
-        }
-        event.preventDefault();
-        event.stopPropagation();
-        if (toggleButton.dataset.editorToggle === "tap_actions") {
-          this._showTapActionsSection = !this._showTapActionsSection;
-          this._render();
-        }
       }
-      _renderTextareaField(label, field, value, options = {}) {
+      _renderTextareaField(label, field, value, _options = {}) {
         const textValue = isObject(value) ? JSON.stringify(value, null, 2) : value ?? "";
         return `
       <label class="editor-field editor-field--full">
@@ -3865,10 +3887,12 @@
         const domains = String(host.dataset.domains || "camera").split(",").filter(Boolean);
         const picker = document.createElement("ha-entity-picker");
         picker.dataset.field = field;
-        picker.hass = this._hass;
-        picker.value = value;
-        picker.includeDomains = domains.length ? domains : ["camera"];
-        picker.allowCustomEntity = true;
+        Object.assign(picker, {
+          hass: this._hass,
+          value,
+          includeDomains: domains.length ? domains : ["camera"],
+          allowCustomEntity: true
+        });
         host.replaceChildren(picker);
       }
       _mountIconPicker(host) {
@@ -3877,8 +3901,7 @@
         }
         const picker = document.createElement("ha-icon-picker");
         picker.dataset.field = host.dataset.field || "icon";
-        picker.hass = this._hass;
-        picker.value = host.dataset.value || "";
+        Object.assign(picker, { hass: this._hass, value: host.dataset.value || "" });
         host.replaceChildren(picker);
       }
       _renderCameraListSection(config) {
@@ -3925,7 +3948,7 @@
         </div>
         <div class="editor-list">
           ${cameras.length ? cameras.map((cameraId, cameraIndex) => {
-          const actions = cameraActions.map((action, sourceIndex) => ({ action, sourceIndex })).filter((item) => item.action?.camera === cameraId);
+          const actions = cameraActions.map((action, sourceIndex) => ({ action, sourceIndex, legacy: false })).filter((item) => item.action?.camera === cameraId);
           const legacy = cameraIndex === 0 && !actions.length ? legacyActions.map((action, sourceIndex) => ({ action, sourceIndex, legacy: true })) : [];
           const rows = actions.length ? actions : legacy;
           const cameraName = this._hass?.states?.[cameraId]?.attributes?.friendly_name || cameraId;
@@ -4079,7 +4102,8 @@
       _render() {
         this._syncEditorCameraStreams();
         this._syncEditorCameraTapActions();
-        const config = this._config || mergeConfig(DEFAULT_CONFIG, {});
+        if (!this.shadowRoot) return;
+        const config = this._config;
         this.shadowRoot.innerHTML = `
       <style>
         :host { display: block; }
