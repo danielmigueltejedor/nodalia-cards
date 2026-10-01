@@ -337,6 +337,7 @@
   // src/cards/media-player/media-player-config.ts
   var DEFAULT_CONFIG = {
     title: "",
+    language: "auto",
     entity: "",
     players: [],
     show: true,
@@ -527,12 +528,15 @@
         }
       ];
     }
-    const players = (Array.isArray(config.players) ? config.players.filter(isObject) : []).map((player) => ({
-      ...player,
-      power_action_off: normalizePowerActionConfig(player.power_action_off),
-      power_action_on: normalizePowerActionConfig(player.power_action_on),
-      power_action_unavailable: normalizePowerActionConfig(player.power_action_unavailable)
-    }));
+    const players = (Array.isArray(config.players) ? config.players.filter(isObject) : []).map((player) => {
+      const actions = {
+        power_action_off: normalizePowerActionConfig(player.power_action_off),
+        power_action_on: normalizePowerActionConfig(player.power_action_on),
+        power_action_unavailable: normalizePowerActionConfig(player.power_action_unavailable)
+      };
+      const normalized2 = { ...player, ...actions };
+      return normalized2;
+    });
     const rawStyles = isObject(config.styles) ? config.styles : {};
     const projected = normalizeControlStyles(rawStyles, DEFAULT_CONFIG.styles);
     const styles = {
@@ -542,16 +546,21 @@
       browser: { ...isObject(rawStyles.browser) ? rawStyles.browser : {}, ...projected.browser }
     };
     const security = window.NodaliaUtils.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? { ...DEFAULT_CONFIG.security, ...isObject(config.security) ? config.security : {} };
-    return {
-      ...config,
+    const layoutFields = { position: layout.position === "top" ? "top" : "bottom", mode: normalizePresentationMode(layout.mode) };
+    const normalizedLayout = { ...layout, ...layoutFields };
+    const fields = {
       players,
       styles,
       security,
-      layout: { ...layout, position: layout.position === "top" ? "top" : "bottom", mode: normalizePresentationMode(layout.mode) },
+      entity: typeof config.entity === "string" ? config.entity : "",
+      language: typeof config.language === "string" ? config.language : "auto",
+      layout: normalizedLayout,
       artwork: normalizeArtworkConfig(config.artwork),
       progress: normalizeProgressConfig(config.progress),
       idle_artwork: normalizeIdleArtworkConfig(config.idle_artwork)
     };
+    const normalized = { ...config, ...fields };
+    return normalized;
   }
 
   // src/cards/media-player/media-player-artwork.ts
@@ -1277,6 +1286,10 @@
   function isUnavailableState(state) {
     return normalizeTextKey2(state?.state) === "unavailable";
   }
+  function getMediaPlayerStubConfig(hass = null, entities = [], entitiesFallback = []) {
+    const entityId = getStubEntityId(hass, ["media_player"], entities, entitiesFallback);
+    return { players: [{ entity: entityId || "media_player.spotify", label: entityId ? getStubFriendlyName(hass, entityId) : "Spotify" }], layout: { mode: "standard", fixed: false, reserve_space: false } };
+  }
 
   // src/cards/media-player/media-player-control-theme.ts
   var requests = /* @__PURE__ */ new WeakMap();
@@ -1396,20 +1409,7 @@
         return document.createElement(EDITOR_TAG);
       }
       static getStubConfig(hass, entities = [], entitiesFallback = []) {
-        const entityId = getStubEntityId(hass, ["media_player"], entities, entitiesFallback);
-        return {
-          players: [
-            {
-              entity: entityId || "media_player.spotify",
-              label: entityId ? getStubFriendlyName(hass, entityId) : "Spotify"
-            }
-          ],
-          layout: {
-            mode: "standard",
-            fixed: false,
-            reserve_space: false
-          }
-        };
+        return getMediaPlayerStubConfig(hass, entities, entitiesFallback);
       }
       static getEntitySuggestion(hass, entityId) {
         const player = {
@@ -6267,6 +6267,16 @@
     return NodaliaMediaPlayer;
   }
 
+  // src/shared/editor-controls.ts
+  function isNativeEditorInput(node) {
+    return node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement;
+  }
+  function editorControlValue(event, control) {
+    const detail = event instanceof CustomEvent ? event.detail : void 0;
+    if (detail && typeof detail === "object" && "value" in detail && typeof detail.value === "string") return detail.value;
+    return "value" in control ? control.value : void 0;
+  }
+
   // src/cards/media-player/media-player-editor.ts
   var _lazyNodaliaMediaPlayerEditor;
   function loadNodaliaMediaPlayerEditor() {
@@ -6280,7 +6290,7 @@
       }
       _nodaliaConstruct() {
         this.attachShadow({ mode: "open" });
-        this._config = normalizeConfig(loadNodaliaMediaPlayer().getStubConfig());
+        this._config = normalizeConfig(getMediaPlayerStubConfig());
         this._hass = null;
         this._entityOptionsSignature = "";
         this._showStyleSection = false;
@@ -6358,7 +6368,7 @@
         return window.NodaliaUtils.captureEditorFocusState(this);
       }
       _getEntityOptionsSignature(hass = this._hass) {
-        return window.NodaliaUtils.editorFilteredStatesSignature(hass, this._config?.language, (id) => id.startsWith("media_player."));
+        return window.NodaliaUtils.editorFilteredStatesSignature?.(hass, this._config?.language, (id) => id.startsWith("media_player.")) ?? "";
       }
       _getEntityOptions(field = "players.0.entity", domains = []) {
         const normalizedDomains = Array.isArray(domains) ? domains.map((domain) => String(domain || "").trim()).filter(Boolean) : [];
@@ -6395,11 +6405,21 @@
         this._render();
         this._restoreFocusState(focusState);
         fireEvent(this, "config-changed", {
-          config: compactConfig3(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {})
+          config: compactConfig3(window.NodaliaUtils.stripEqualToDefaults?.(nextConfig, DEFAULT_CONFIG) ?? {})
         });
       }
       _setFieldValue(path, value) {
         const normalizedPath = String(path || "").trim();
+        const parts = normalizedPath.split(".");
+        if (parts[0] === "players" && parts.length > 1) {
+          const index = parseFiniteNumericValue(parts[1]);
+          if (index === null || !Number.isInteger(index) || index < 0 || index >= this._config.players.length) return;
+          const field = parts[2] || "";
+          const actionFields2 = ["tap_action", "power_action_off", "power_action_on", "power_action_unavailable"];
+          const isActionField = actionFields2.includes(field) && parts.length === 4 && ["action", "entity", "navigation_path", "url", "new_tab", "service", "service_data"].includes(parts[3] || "");
+          const isPlayerField = parts.length === 3 && ["entity", "icon", "label", "title", "subtitle", "tv_mode", "show_source_controls", "show", "max_sources", "browse_path", "image", "show_states"].includes(field);
+          if (!isActionField && !isPlayerField) return;
+        }
         const isEntityField = normalizedPath === "entity" || normalizedPath.endsWith(".entity");
         if (normalizedPath === "artwork.blur_gradient") {
           setByPath(this._config, "artwork.mode", value ? "blur" : "immersive");
@@ -6418,6 +6438,10 @@
         }
         if (value === void 0 || value === null || value === "") {
           deleteByPath(this._config, normalizedPath);
+          if (parts[0] === "players" && parts.length === 4) {
+            const alias = parts[3] === "service_data" ? "data" : parts[3] === "url" ? "url_path" : "";
+            if (alias) deleteByPath(this._config, [...parts.slice(0, 3), alias].join("."));
+          }
           return;
         }
         setByPath(this._config, normalizedPath, value);
@@ -6426,7 +6450,7 @@
         const valueType = input.dataset.valueType || "string";
         switch (valueType) {
           case "boolean":
-            return Boolean(input.checked);
+            return input instanceof HTMLInputElement && input.checked;
           case "number": {
             const trimmed = String(input.value || "").trim();
             if (!trimmed) {
@@ -6465,7 +6489,7 @@
         }
       }
       _onShadowInput(event) {
-        const input = event.composedPath().find((node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+        const input = event.composedPath().find(isNativeEditorInput);
         if (!input?.dataset?.field) {
           return;
         }
@@ -6480,12 +6504,12 @@
         }
       }
       _onShadowValueChanged(event) {
-        const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+        const control = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.field));
         if (!control?.dataset?.field) {
           return;
         }
         event.stopPropagation();
-        const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+        const nextValue = editorControlValue(event, control);
         if (typeof control.dataset?.value === "string") {
           control.dataset.value = String(nextValue || "");
         }
@@ -6498,7 +6522,7 @@
         this._emitConfig();
       }
       _onShadowClick(event) {
-        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
+        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.editorToggle));
         if (toggleButton) {
           event.preventDefault();
           event.stopPropagation();
@@ -6518,14 +6542,14 @@
           }
           return;
         }
-        const button = event.composedPath().find((node) => node instanceof HTMLButtonElement && node.dataset?.action);
+        const button = event.composedPath().find((node) => node instanceof HTMLButtonElement && Boolean(node.dataset.action));
         if (!button) {
           return;
         }
         event.preventDefault();
         event.stopPropagation();
         const action = button.dataset.action;
-        const index = Number(button.dataset.index);
+        const index = parseFiniteNumericValue(button.dataset.index) ?? -1;
         if (action === "add-player") {
           this._config.players = Array.isArray(this._config.players) ? this._config.players : [];
           this._config.players.push({
@@ -6569,7 +6593,7 @@
         if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
           return s;
         }
-        const hass = this._hass ?? this.hass;
+        const hass = this._hass;
         return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
       }
       _renderTextField(label, field, value, options = {}) {
@@ -6626,7 +6650,6 @@
     `;
       }
       _renderTextareaField(label, field, value, options = {}) {
-        const tLabel = this._editorLabel(label);
         return this._renderTextField(label, field, value, {
           ...options,
           multiline: true,
@@ -6667,7 +6690,8 @@
       </label>
     `;
       }
-      _renderActionConfigFields(titleKey, path, action = {}) {
+      _renderActionConfigFields(titleKey, path, rawAction = {}) {
+        const action = isObject(rawAction) ? rawAction : {};
         return `
       <div class="player-editor-subgroup">
         <div class="player-editor-subgroup__title">${escapeHtml(this._editorLabel(titleKey))}</div>
@@ -6833,22 +6857,22 @@
         const nextValue = host.dataset.value || "";
         const placeholder = host.dataset.placeholder || "";
         const allowedDomains = String(host.dataset.domains || "").split(",").map((domain) => domain.trim()).filter(Boolean);
-        let control = null;
+        let control;
         if (customElements.get("ha-entity-picker")) {
           control = document.createElement("ha-entity-picker");
           if (allowedDomains.length) {
-            control.includeDomains = allowedDomains;
-            control.entityFilter = (stateObj) => allowedDomains.some((domain) => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+            Object.assign(control, { includeDomains: allowedDomains });
+            Object.assign(control, { entityFilter: (stateObj) => allowedDomains.some((domain) => String(stateObj?.entity_id || "").startsWith(`${domain}.`)) });
           }
-          control.allowCustomEntity = true;
+          Object.assign(control, { allowCustomEntity: true });
           if (placeholder) {
             control.setAttribute("placeholder", placeholder);
           }
         } else if (customElements.get("ha-selector")) {
           control = document.createElement("ha-selector");
-          control.selector = {
+          Object.assign(control, { selector: {
             entity: allowedDomains.length === 1 ? { domain: allowedDomains[0] } : {}
-          };
+          } });
         } else {
           control = document.createElement("select");
           const emptyOption = document.createElement("option");
@@ -6866,12 +6890,8 @@
         }
         control.dataset.field = field;
         control.dataset.value = nextValue;
-        if ("hass" in control) {
-          control.hass = this._hass;
-        }
-        if ("value" in control) {
-          control.value = nextValue;
-        }
+        if ("hass" in control) Object.assign(control, { hass: this._hass });
+        if ("value" in control) Object.assign(control, { value: nextValue });
         if (control.tagName !== "SELECT") {
           control.addEventListener("value-changed", this._onShadowValueChanged);
         }
@@ -6884,7 +6904,7 @@
         const field = host.dataset.field || "players.0.icon";
         const nextValue = host.dataset.value || "";
         const placeholder = host.dataset.placeholder || "";
-        let control = null;
+        let control;
         if (customElements.get("ha-icon-picker")) {
           control = document.createElement("ha-icon-picker");
           if (placeholder) {
@@ -6892,24 +6912,21 @@
           }
         } else if (customElements.get("ha-selector")) {
           control = document.createElement("ha-selector");
-          control.selector = {
+          Object.assign(control, { selector: {
             icon: {}
-          };
+          } });
         } else {
-          control = document.createElement("input");
-          control.type = "text";
-          control.placeholder = placeholder;
+          const input = document.createElement("input");
+          input.type = "text";
+          input.placeholder = placeholder;
+          control = input;
           control.addEventListener("input", this._onShadowInput);
           control.addEventListener("change", this._onShadowInput);
         }
         control.dataset.field = field;
         control.dataset.value = nextValue;
-        if ("hass" in control) {
-          control.hass = this._hass;
-        }
-        if ("value" in control) {
-          control.value = nextValue;
-        }
+        if ("hass" in control) Object.assign(control, { hass: this._hass });
+        if ("value" in control) Object.assign(control, { value: nextValue });
         if (control.tagName !== "INPUT") {
           control.addEventListener("value-changed", this._onShadowValueChanged);
         }
@@ -6920,7 +6937,9 @@
           return;
         }
         const config = this._config || normalizeConfig({});
-        const hapticStyle = config.haptics?.style || "medium";
+        const haptics = isObject(config.haptics) ? config.haptics : {};
+        const animations = isObject(config.animations) ? config.animations : DEFAULT_CONFIG.animations;
+        const hapticStyle = haptics.style || "medium";
         this.shadowRoot.innerHTML = `
       <style>
         :host {
@@ -7425,8 +7444,8 @@
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.media_player.haptics_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("ed.person.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.person.fallback_vibrate", "haptics.fallback_vibrate", haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
           "ed.vacuum.haptic_style",
           "haptics.style",
@@ -7462,14 +7481,14 @@
           </div>
           ${this._showAnimationSection ? `
                 <div class="editor-grid">
-                  ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", config.animations.enabled !== false)}
-                  ${this._renderTextField("ed.media_player.panel_tv_ms", "animations.panel_duration", config.animations.panel_duration, {
+                  ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", animations.enabled !== false)}
+                  ${this._renderTextField("ed.media_player.panel_tv_ms", "animations.panel_duration", animations.panel_duration, {
           type: "number"
         })}
-                  ${this._renderTextField("ed.media_player.browser_duration_ms", "animations.browser_duration", config.animations.browser_duration, {
+                  ${this._renderTextField("ed.media_player.browser_duration_ms", "animations.browser_duration", animations.browser_duration, {
           type: "number"
         })}
-                  ${this._renderTextField("ed.media_player.button_bounce_ms", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
+                  ${this._renderTextField("ed.media_player.button_bounce_ms", "animations.button_bounce_duration", animations.button_bounce_duration, {
           type: "number"
         })}
                 </div>

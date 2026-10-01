@@ -68,7 +68,7 @@ Every card is registered with the `custom:nodalia-…` prefix. The complete set 
 <summary><strong>Show all custom element names</strong></summary>
 
 - `custom:nodalia-navigation-bar`
-- `custom:nodalia-media-player`
+- [`custom:nodalia-media-player`](docs/cards/media-player-card.md)
 - [`custom:nodalia-light-card`](docs/cards/light-card.md)
 - [`custom:nodalia-fan-card`](docs/cards/fan-card.md)
 - [`custom:nodalia-humidifier-card`](docs/cards/humidifier-card.md)

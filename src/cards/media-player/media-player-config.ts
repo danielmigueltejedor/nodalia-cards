@@ -10,6 +10,7 @@ import type {
 
 export const DEFAULT_CONFIG = {
   title: "",
+  language: "auto",
   entity: "",
   players: [],
   show: true,
@@ -217,12 +218,15 @@ export function normalizeConfig(rawConfig?: unknown) {
     ];
   }
 
-  const players = (Array.isArray(config.players) ? config.players.filter(isObject) : []).map(player => ({
-    ...player,
-    power_action_off: normalizePowerActionConfig(player.power_action_off),
-    power_action_on: normalizePowerActionConfig(player.power_action_on),
-    power_action_unavailable: normalizePowerActionConfig(player.power_action_unavailable),
-  }));
+  const players = (Array.isArray(config.players) ? config.players.filter(isObject) : []).map(player => {
+    const actions = {
+      power_action_off: normalizePowerActionConfig(player.power_action_off),
+      power_action_on: normalizePowerActionConfig(player.power_action_on),
+      power_action_unavailable: normalizePowerActionConfig(player.power_action_unavailable),
+    };
+    const normalized: typeof actions & Record<string, unknown> = { ...player, ...actions };
+    return normalized;
+  });
   const rawStyles = isObject(config.styles) ? config.styles : {};
   const projected = normalizeControlStyles(rawStyles, DEFAULT_CONFIG.styles);
   const styles = { ...rawStyles, ...projected,
@@ -230,7 +234,13 @@ export function normalizeConfig(rawConfig?: unknown) {
     browser: { ...(isObject(rawStyles.browser) ? rawStyles.browser : {}), ...projected.browser } };
   const security = window.NodaliaUtils.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
     ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
-  return { ...config, players, styles, security,
-    layout: { ...layout, position: layout.position === "top" ? "top" : "bottom", mode: normalizePresentationMode(layout.mode) },
+  const layoutFields = { position: layout.position === "top" ? "top" : "bottom", mode: normalizePresentationMode(layout.mode) };
+  const normalizedLayout: typeof layoutFields & Record<string, unknown> = { ...layout, ...layoutFields };
+  const fields = { players, styles, security,
+    entity: typeof config.entity === "string" ? config.entity : "",
+    language: typeof config.language === "string" ? config.language : "auto",
+    layout: normalizedLayout,
     artwork: normalizeArtworkConfig(config.artwork), progress: normalizeProgressConfig(config.progress), idle_artwork: normalizeIdleArtworkConfig(config.idle_artwork) };
+  const normalized: typeof fields & Record<string, unknown> = { ...config, ...fields };
+  return normalized;
 }
