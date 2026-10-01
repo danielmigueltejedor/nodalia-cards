@@ -749,3 +749,30 @@ checked source. Six new unit cases and a real card refresh case cover these fixe
 change to include previously omitted content. All 725 unit tests pass; full local
 browser suite: 284 passed, one existing platform skip. Remaining unchecked
 modules: 51. The next release remains 3.0.0-alpha.1 after full migration.
+
+## Notifications helper findings — 2026-10-01
+
+Templates, forecast/calendar inputs, registry records and background profile
+builders still suppress checking. Missing numeric state/forecast values coerce
+to zero; impossible all-day dates roll into another day. Editor paths traverse
+inherited objects. Preserve notification compaction's object-null/array-empty
+policy, actual delivery profiles/hashes and Engine ownership while narrowing
+these boundaries and deriving real public template/mobile helper contracts.
+
+Notifications helpers now pass strict checking and typed lint. Registry and
+forecast/calendar rows are narrowed; missing numeric measurements, forecasts
+and configured thresholds stay absent/default rather than coercing to zero.
+Real zeros retain value/unit. Impossible all-day dates are rejected while valid
+dates keep local midnight. Editor array paths filter empty segments and block
+inherited/prototype traversal, retaining Notifications' distinct compaction policy.
+Background templates/profiles/chunks and Engine read/write responses have actual
+checked contracts; public APIs derive from source and external-alert ingestion
+has one checked implementation. Config output exposes its normalized fields
+instead of leaving them unknown. Add a linked Notifications guide.
+
+Six new unit cases cover numeric/template values, registry lookup, array paths,
+calendar/forecast data, profiles/chunks/temporary Engine failure, external alert
+ingestion and legacy fallback. 4,800 valid template/registry/forecast/profile/
+chunk/hash outputs match main. All 731 unit tests and three targeted real
+browser cases pass; full local browser suite: 287 passed, one existing platform
+skip. Remaining unchecked modules: 50. Hold 3.0.0-alpha.1 until full migration.

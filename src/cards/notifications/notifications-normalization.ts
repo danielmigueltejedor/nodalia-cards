@@ -1,3 +1,4 @@
+import { parseFiniteNumericValue } from "../../shared/numeric-values";
 import { DEFAULT_CONFIG } from "./notifications-defaults";
 import {
   deepClone, isObject, isUnsafeConfigPathKey, normalizeMobilePolicy,
@@ -281,8 +282,7 @@ export function normalizeCustomNotifications(value: unknown, options: Notificati
 }
 
 export function finiteNumber<T>(value: unknown, fallback: T): number | T {
-  const number = Number(value);
-  return Number.isFinite(number) ? number : fallback;
+  return parseFiniteNumericValue(value) ?? fallback;
 }
 
 export function normalizeMatchText(value: unknown) {

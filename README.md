@@ -224,6 +224,7 @@ The layout selector is also available in each card's visual editor. Existing YAM
 | Graph Card | [History sources and sampling](./docs/cards/graph-card.md) |
 | Lock Card | [Controls and configuration](./docs/cards/lock-card.md) |
 | News Card | [Layouts, sources and configuration](./docs/cards/news-card.md) |
+| Notifications Card | [Rules, templates and mobile delivery](./docs/cards/notifications-card.md) |
 | Device and Climate layouts | [Compact and circular variants](./docs/cards/device-climate-layouts.md) |
 | Shared styling | [Theme variables and card-mod reference](./docs/STYLING.md) |
 | Background mobile notifications | [Native delivery and legacy fallback](./docs/nodalia-integration.md#background-mobile-notifications) |

@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+- Notifications: distinguish missing measurements/forecasts from actual zero, reject impossible calendar dates and check registry/editor/background profile boundaries. Public helper contracts now derive from strict source.
+
 The next prerelease is **3.0.0-alpha.1** and starts the 3.0.0 line. Publish it only after the complete
 TypeScript migration and its validation are finished; alpha.49 remains the
 latest published version during this work.

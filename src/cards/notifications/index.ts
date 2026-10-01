@@ -8,6 +8,7 @@ import {
   formatNotificationTemplate,
   getBackgroundMobileConfigPayload,
   normalizeExternalAlerts,
+  pushExternalAlerts,
   referencedNotificationTemplateEntities,
 } from "./notifications-helpers";
 import {
@@ -51,7 +52,7 @@ const templatesApi = {
   customNotificationTemplateValues,
   formatNotificationTemplate,
   referencedNotificationTemplateEntities,
-} as NotificationsTemplatesPublicApi;
+} satisfies NotificationsTemplatesPublicApi;
 
 const mobileApi = {
   MOBILE_DELIVERY_STATES,
@@ -72,8 +73,8 @@ const mobileApi = {
   BACKGROUND_MOBILE_MAX_CHUNKS,
   resolveSmartEntityMobilePolicy,
   isExplicitSmartEntityMobile,
-  pushExternalAlerts: (...args: unknown[]) => loadNodaliaNotificationsCard().pushExternalAlerts(...args),
-} as NotificationsMobilePublicApi;
+  pushExternalAlerts,
+} satisfies NotificationsMobilePublicApi;
 
 const publicApi = {
   CARD_TAG,
@@ -81,7 +82,7 @@ const publicApi = {
   CARD_VERSION,
   DEFAULT_CONFIG,
   normalizeConfig,
-} as NotificationsPublicApi;
+} satisfies NotificationsPublicApi;
 
 const globalScope = globalThis as typeof globalThis & {
   __NODALIA_NOTIFICATIONS_TEMPLATES__?: typeof templatesApi;
