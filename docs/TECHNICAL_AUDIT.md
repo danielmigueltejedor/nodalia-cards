@@ -1326,3 +1326,30 @@ existing free-text CSS style control; correct the fixture to its actual contract
 Full local suite: 518 passed, one existing skip. Remaining unchecked modules: 19.
 Hold publication until the entire migration and
 shared runtimes finish.
+
+## Notifications editor findings — 2026-10-01
+
+The unchecked editor accepted negative/blank removal and distant row edits.
+Runtime YAML deliberately excludes unfinished custom/external rows, but HA
+feedback then erased those local drafts. Entity-option signatures omitted
+Climate, Humidifier and Media Player domains. Outstanding Engine replies and
+background syncs could commit after a connection/config change or disconnection.
+
+Check actual normalized config, native/HA events, picker metadata, focus and Engine
+contracts. Bound row/list mutations before editing or swapping and keep smart
+overrides attached to their entity. Preserve unfinished local rows on feedback
+without emitting live placeholder notifications. Expand selector signatures and
+retain missing entities, focused drafts, JSON service data, real zero/default
+numbers and translucent CSS alpha. Share smart-override normalization instead of
+inventing partial records and remove one verified unused import.
+
+Own background timers and invalidate obsolete Engine replies and profile syncs.
+The shared native boundary checks the editor's generation before profile writes;
+transport failure stays transient. Normal HA feedback retains the latest queued
+sync, including explicit disabled profiles that stop background delivery.
+
+All 749 unit tests, 15 targeted browser cases and 1,400 equivalent editor HTML
+outputs pass. Full local suite: 533 passed, one existing skip. New fixtures were
+corrected to the actual native text-input picker
+fallback rather than expecting a select. Remaining unchecked modules: 18.
+Publication remains held until the entire migration and shared runtimes finish.

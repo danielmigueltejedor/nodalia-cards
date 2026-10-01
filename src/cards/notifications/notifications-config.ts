@@ -113,7 +113,7 @@ export function normalizeConfig(rawConfig: unknown = {}, options: NotificationNo
   if (itemRadius === "18px" || itemRadius === "28px") {
     styles.item_radius = familyRadius;
   }
-  return {
+  const fields = {
     ...config,
     calendar_entities, vacuum_entities, vacuum_error_entities, fan_entities,
     climate_entities, humidifier_entities, media_player_entities, weather_entities,
@@ -125,4 +125,6 @@ export function normalizeConfig(rawConfig: unknown = {}, options: NotificationNo
     smart_entity_overrides, presence_entity, mobile_context, external_alerts,
     haptics, mobile_notifications, background_mobile, security, animations, styles,
   };
+  const normalized: typeof fields & Record<string, unknown> = fields;
+  return normalized;
 }

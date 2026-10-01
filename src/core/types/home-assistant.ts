@@ -24,6 +24,7 @@ export interface HassLocale {
 }
 
 export interface HassUser {
+  id?: string;
   is_admin?: boolean;
 }
 

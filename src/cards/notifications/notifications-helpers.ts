@@ -674,12 +674,14 @@ export function getBackgroundMobileNativeSignature(rawConfig: unknown, hass: Hom
   };
 }
 
-export async function syncBackgroundMobileNative(hass: HomeAssistant | null, rawConfig: unknown) {
+export async function syncBackgroundMobileNative(hass: HomeAssistant | null, rawConfig: unknown, options: { isCurrent?: () => boolean } = {}) {
   const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
   if (!backend || !hass) {
     return { available: false, synced: false, signature: "", transient: false };
   }
+  if (options.isCurrent?.() === false) return { available: false, synced: false, signature: "", transient: true };
   const status = await backend.status(hass, { silent: true });
+  if (options.isCurrent?.() === false) return { available: false, synced: false, signature: "", transient: true };
   if (!status?.available || !status.capabilities?.includes("notifications_background")) {
     return {
       available: false,

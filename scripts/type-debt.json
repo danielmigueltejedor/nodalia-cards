@@ -13,7 +13,6 @@
   "src/cards/media-player/media-player-card.ts",
   "src/cards/navigation/navigation-card.ts",
   "src/cards/notifications/notifications-card.ts",
-  "src/cards/notifications/notifications-editor.ts",
   "src/cards/power-flow/power-flow-card.ts",
   "src/cards/room-summary/room-summary-card.ts",
   "src/cards/vacuum/vacuum-card.ts",
