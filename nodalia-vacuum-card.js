@@ -16,7 +16,6 @@
     warning: [20, 50, 12],
     failure: [12, 40, 12, 40, 18]
   };
-  var COMPACT_LAYOUT_THRESHOLD = 190;
   var SUCTION_MODE_PATTERNS = [
     "quiet",
     "silent",
@@ -275,10 +274,6 @@
     config.entity = entityId;
     config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
     return config;
-  }
-  function parseSizeToPixels(value, fallback = 0) {
-    const numeric = Number.parseFloat(String(value ?? ""));
-    return Number.isFinite(numeric) ? numeric : fallback;
   }
 
   // src/shared/editor-color.ts
@@ -844,16 +839,6 @@
         const numericColumns = Number(isObject(this._config.grid_options) ? this._config.grid_options.columns : void 0);
         return Number.isFinite(numericColumns) && numericColumns > 0 ? numericColumns : null;
       }
-      _getCompactLayoutThreshold() {
-        const styles = getSafeStyles(this._config?.styles);
-        const iconSize = parseSizeToPixels(styles?.icon?.size, 58);
-        const cardPadding = parseSizeToPixels(styles?.card?.padding, 14);
-        const cardGap = parseSizeToPixels(styles?.card?.gap, 12);
-        return Math.max(
-          COMPACT_LAYOUT_THRESHOLD,
-          Math.round(iconSize + cardPadding * 2 + cardGap * 2 + 48)
-        );
-      }
       _shouldUseCompactLayout(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
         return window.NodaliaUtils.shouldUseCompactCardLayout({
           mode: this._config?.compact_layout_mode,
@@ -861,9 +846,6 @@
           gridColumns: this._getConfiguredGridColumns(),
           parentWidth: window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0
         });
-      }
-      _shouldShowCompactTitle(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
-        return window.NodaliaUtils.shouldShowCompactCardTitle({ width });
       }
       _triggerHaptic(style = void 0) {
         const haptics = isObject(this._config.haptics) ? this._config.haptics : {};

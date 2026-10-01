@@ -2535,7 +2535,13 @@ test("compact tiles show the name when the row is wide enough", () => {
     "nodalia-alarm-panel-card.js",
   ]) {
     const source = read(file);
-    assert.match(source, /shouldShowCompactCardTitle/, file);
+    // These three tiles always show their title; their old threshold helper
+    // was dead code. Other tiles still use the shared width-dependent policy.
+    if (/(?:fan|humidifier|vacuum)-card\.(?:ts|js)$/.test(file)) {
+      assert.match(source, /(?:const|var) showTitle = true/, file);
+    } else {
+      assert.match(source, /shouldShowCompactCardTitle/, file);
+    }
     assert.doesNotMatch(source, /isCompactLayout \? "" : `<div class="\w+-card__title"/, file);
   }
 });
@@ -2792,7 +2798,7 @@ test("visual editors expose individual haptic controls for every slider and dial
     }
   }
 
-  assert.match(read("nodalia-light-card.js"), /haptics\?\.scrolls\?\.\[kind\] === false/);
+  assert.match(read("nodalia-light-card.js"), /const scrolls = isObject\(haptics.scrolls\) \? haptics.scrolls : \{\};[\s\S]*scrolls\[kind\] === false/);
   assert.match(read("nodalia-fan-card.js"), /const scrolls = isObject\(haptics.scrolls\) \? haptics.scrolls : \{\};[\s\S]*scrolls.percentage === false/);
   assert.match(read("nodalia-humidifier-card.js"), /const scrolls = isObject\(haptics.scrolls\) \? haptics.scrolls : \{\};[\s\S]*scrolls.humidity === false/);
   assert.match(read("nodalia-climate-card.js"), /haptics\?\.scrolls\?\.temperature_dial === false/);

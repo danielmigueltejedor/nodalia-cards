@@ -120,3 +120,19 @@ visual-settle deadlines. Missing/null humidity and range values are ignored;
 actual zero remains a supported value and a missing target falls back to the
 range midpoint. External select/input-select mode controls and hidden options
 remain supported. The main card accepts Enter/Space.
+
+
+### Light interaction ownership
+
+Cancelled brightness, hue or temperature drags discard their draft without
+sending a command. Changing the light also discards the previous light's queued
+changes, transitions and panels. Successful releases retain their existing
+ranges, geometry and haptic behavior. Enter/Space activates the main card.
+
+Pending on/off changes retain their original 3.2-second deadline. Turn-on
+confirmation sends queued changes once; expiry also finishes the queue once
+when the same light is still off. Turn-off expiry restores actual HA state.
+The remembered color's visual settle ends within 420 ms even without a new HA
+message. Mode changes, disconnection and entity changes cancel owned timers
+and frame callbacks. Temperature-limit changes refresh the slider track.
+Malformed stored state or nullable color channels do not manufacture a color.
