@@ -1479,3 +1479,30 @@ measured dial after Safari replaces it during initial sizing, retaining its
 single-command and midpoint assertions. Full local suite: 587 passed, one
 existing skip. Remaining unchecked modules: 13. Hold publication until the
 complete source/runtime migration.
+
+## Humidifier view findings — 2026-10-01
+
+Cancellation committed tentative humidity, entity/outside-touch changes retained
+drafts and render signatures consumed optimistic confirmation before capturing
+the remembered display. Mode/fan-mode transitions could complete twice or
+append a stale panel; deferred resize and button frames were not owned.
+
+Check actual HA, config, stored snapshots, native events, DOM, drag unions,
+geometry, transitions and deadlines. Cancel drafts without commands, preserve
+3.2-second toggle / 420-ms settle deadlines, make signatures pure and reset
+entity-specific transitions. Own panel listeners, timers and frames; restart
+enter cleanup when the same entering panel is selected again. Guard stored
+JSON and nullable numeric humidity/range fields, retain real zero, guard
+haptics/animations and catch built-in/configured/external-helper failures. Add
+main-card keyboard activation and device-class render signatures. Remove six
+unused imports and two unused drag queue fields.
+
+The initial build exceeded the existing raw bundle budget. Share checked
+animation ownership and panel construction across Humidifier/Fan/Vacuum,
+removing duplicate implementations without changing either size gate. All
+749 unit tests and 45 targeted Chromium/WebKit/iPhone cases pass; 3,000
+equivalent presentation/sizing outputs per card (9,000 total) match main
+outside keyboard attributes. Full local suite: 602 passed, one existing skip.
+Native touch lifecycle fixtures enable a real touch context for Firefox too;
+remote Firefox checks remain required. Remaining unchecked modules: 12.
+Hold publication until the complete source/runtime migration.

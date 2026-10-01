@@ -426,6 +426,15 @@
     return Number.isFinite(numeric) ? numeric : null;
   }
 
+  // src/shared/view-markup.ts
+  function createMarkupElement(markup) {
+    if (!markup || typeof document === "undefined") return null;
+    const template = document.createElement("template");
+    template.innerHTML = markup.trim();
+    const node = template.content.firstElementChild;
+    return node instanceof HTMLElement ? node : null;
+  }
+
   // src/shared/home-assistant-services.ts
   function callHassService(hass, domain, service, data = {}, target = null) {
     if (!hass?.callService) return;
@@ -449,6 +458,52 @@
     } catch (error) {
       failure(error);
     }
+  }
+
+  // src/shared/view-animation-work.ts
+  function createViewAnimationWork() {
+    return { generation: 0, timers: /* @__PURE__ */ new Set(), cancels: /* @__PURE__ */ new Set() };
+  }
+  function scheduleViewFallback(work, callback, delay) {
+    const timer = window.setTimeout(() => {
+      work.timers.delete(timer);
+      callback();
+    }, delay);
+    work.timers.add(timer);
+    return timer;
+  }
+  function cancelViewPanelAnimations(work) {
+    ++work.generation;
+    work.cancels.forEach((cancel) => cancel());
+    work.cancels.clear();
+  }
+  function releaseViewAnimationWork(work) {
+    cancelViewPanelAnimations(work);
+    work.timers.forEach((timer) => window.clearTimeout(timer));
+    work.timers.clear();
+  }
+  function waitForViewPanelAnimation(work, panel, callback, delay) {
+    let done = false;
+    let timer = 0;
+    const cancel = () => {
+      done = true;
+      panel.removeEventListener("animationend", onEnd);
+      window.clearTimeout(timer);
+      work.timers.delete(timer);
+      work.cancels.delete(cancel);
+    };
+    const finish = () => {
+      if (!done) {
+        cancel();
+        callback();
+      }
+    };
+    const onEnd = (event) => {
+      if (event.target === panel) finish();
+    };
+    panel.addEventListener("animationend", onEnd);
+    timer = scheduleViewFallback(work, finish, delay);
+    work.cancels.add(cancel);
   }
 
   // src/cards/vacuum/vacuum-card.ts
@@ -489,9 +544,9 @@
         this._config = normalizeConfig({});
         this._hass = null;
         this._resizeFrame = 0;
-        this._fallbackTimers = /* @__PURE__ */ new Set();
-        this._panelGeneration = 0;
-        this._panelAnimationCancels = /* @__PURE__ */ new Set();
+        this._panelWork = createViewAnimationWork();
+        this._fallbackTimers = this._panelWork.timers;
+        this._panelAnimationCancels = this._panelWork.cancels;
         this._cardWidth = 0;
         this._isCompactLayout = false;
         this._activeModePanel = null;
@@ -1730,60 +1785,22 @@
           button.classList.toggle("vacuum-card__preset--active", isActive);
         });
       }
-      _createMarkupNode(markup) {
-        if (!markup || typeof document === "undefined") {
-          return null;
-        }
-        const template = document.createElement("template");
-        template.innerHTML = String(markup).trim();
-        const node = template.content.firstElementChild;
-        return node instanceof HTMLElement ? node : null;
-      }
       _scheduleFallback(callback, delay) {
-        const timer = window.setTimeout(() => {
-          this._fallbackTimers.delete(timer);
-          callback();
-        }, delay);
-        this._fallbackTimers.add(timer);
-        return timer;
+        return scheduleViewFallback(this._panelWork, callback, delay);
       }
       _cancelPanelAnimations() {
-        ++this._panelGeneration;
-        this._panelAnimationCancels.forEach((cancel) => cancel());
-        this._panelAnimationCancels.clear();
+        cancelViewPanelAnimations(this._panelWork);
       }
       _releaseViewWork() {
-        this._cancelPanelAnimations();
-        this._fallbackTimers.forEach((timer) => window.clearTimeout(timer));
-        this._fallbackTimers.clear();
+        releaseViewAnimationWork(this._panelWork);
         window.NodaliaUtils?.clearDeferTimers?.(this);
       }
       _waitForPanelAnimation(panel, callback, delay) {
-        let done = false;
-        let timer = 0;
-        const cancel = () => {
-          done = true;
-          panel.removeEventListener("animationend", onEnd);
-          window.clearTimeout(timer);
-          this._fallbackTimers.delete(timer);
-          this._panelAnimationCancels.delete(cancel);
-        };
-        const finish = () => {
-          if (!done) {
-            cancel();
-            callback();
-          }
-        };
-        const onEnd = (event) => {
-          if (event.target === panel) finish();
-        };
-        panel.addEventListener("animationend", onEnd);
-        timer = this._scheduleFallback(finish, delay);
-        this._panelAnimationCancels.add(cancel);
+        waitForViewPanelAnimation(this._panelWork, panel, callback, delay);
       }
       _setVisiblePanelKey(panelKey, state = this._getState()) {
         this._cancelPanelAnimations();
-        const generation = this._panelGeneration;
+        const generation = this._panelWork.generation;
         const nextPanelKey = panelKey === "room" ? this._canSelectRooms(state) ? "room" : "" : this._getActiveModeDescriptor(state, panelKey)?.kind || "";
         this._activeModePanel = nextPanelKey === "suction" || nextPanelKey === "mop" ? nextPanelKey : null;
         this._roomPanelOpen = nextPanelKey === "room";
@@ -1802,7 +1819,7 @@
             existingPanel.remove();
           }
           if (panelMarkup) {
-            const panelNode = this._createMarkupNode(`
+            const panelNode = createMarkupElement(`
           <div class="vacuum-card__panel-shell" data-panel-key="${nextPanelKey}">
             <div class="vacuum-card__panel-inner">
               ${panelMarkup}
@@ -1829,7 +1846,7 @@
           panel.classList.remove("vacuum-card__panel-shell--entering");
           panel.classList.add("vacuum-card__panel-shell--leaving");
           const finalizeRemoval = () => {
-            if (generation !== this._panelGeneration || !this.isConnected || !panelsHost.isConnected) return;
+            if (generation !== this._panelWork.generation || !this.isConnected || !panelsHost.isConnected) return;
             if (panel.isConnected) {
               panel.remove();
             }
@@ -1841,13 +1858,13 @@
           this._waitForPanelAnimation(panel, finalizeRemoval, animations.panelDuration + 80);
         };
         const appendPanel = () => {
-          if (generation !== this._panelGeneration || !this.isConnected || !panelsHost.isConnected) return;
+          if (generation !== this._panelWork.generation || !this.isConnected || !panelsHost.isConnected) return;
           if (!panelMarkup) {
             panelsHost.replaceChildren();
             this._notifyLayoutChange();
             return;
           }
-          const panelNode = this._createMarkupNode(`
+          const panelNode = createMarkupElement(`
         <div class="vacuum-card__panel-shell vacuum-card__panel-shell--entering" data-panel-key="${nextPanelKey}">
           <div class="vacuum-card__panel-inner">
             ${panelMarkup}
