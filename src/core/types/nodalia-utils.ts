@@ -6,6 +6,7 @@ import type { HomeAssistant } from "./home-assistant";
  * available at runtime on the compatibility global.
  */
 export interface NodaliaUtilsApi {
+  isLovelaceHassStatesHydrated?: (hass: HomeAssistant | null | undefined) => boolean;
   isObject(value: unknown): value is Record<string, unknown>;
   deepClone<T>(value: T): T;
   mergeDeep<T>(base: T, override?: unknown): T;

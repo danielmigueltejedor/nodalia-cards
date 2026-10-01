@@ -16,6 +16,8 @@ latest published version during this work.
 
 ### Fixed
 
+- Refresh News summary/image/URL and all visible articles when content changes; reject out-of-range publication dates, retain epoch zero and validate identified history rows.
+
 - Reject corrupt Climate schedule storage, guard agenda/webhook inputs and keep absent schedule temperatures/bounds separate from zero; project nested Climate settings without assertions.
 
 - Resolve Climate theme colors inside its shadow root, support modern translucent RGB, clean up color probes and preserve missing temperatures/locales safely.
@@ -60,6 +62,8 @@ latest published version during this work.
 - Remove Camera portal listeners from their owning shadow root.
 
 ### Maintenance
+
+- Check News helpers and source-derived public methods, share compaction/editor paths and observe asynchronous history-write failures.
 
 - Check Climate schedule codecs and public methods, retain v1/v2/v3 valid storage behavior and document the 3.0.0-alpha.1 publication target.
 
