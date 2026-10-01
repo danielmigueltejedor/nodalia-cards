@@ -30,6 +30,7 @@ import type { RoomSummaryPublicApi } from "../../cards/room-summary/room-summary
 import type { AdvanceVacuumPublicApi } from "../../cards/advance-vacuum/advance-vacuum-types";
 
 interface NodaliaI18nApi {
+  translateNewsUi?: (hass: unknown, language: string, key: string, fallback?: string, values?: Record<string, unknown>) => string;
   resolveHass?: (hass: unknown) => unknown;
   resolveLanguage?: (hass: unknown, language?: string) => string;
   strings?: (language: string) => Record<string, unknown>;

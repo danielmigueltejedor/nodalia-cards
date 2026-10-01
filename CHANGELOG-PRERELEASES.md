@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+- News: migrate the view/editor to strict checking; cancel abandoned swipe gestures and own their timeout, and restore default limits when a numeric editor field is cleared.
+
 - Advanced Vacuum: check map/session/calibration helpers and config; reject absent coordinates and invalid matrices, retain nested rectangle rooms, and preserve query fragments.
 
 - Notifications: distinguish missing measurements/forecasts from actual zero, reject impossible calendar dates and check registry/editor/background profile boundaries. Public helper contracts now derive from strict source.

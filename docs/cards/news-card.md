@@ -182,3 +182,5 @@ Optional `storage_key` still scopes browser cache when `mirror_history_local` is
 ## Visual editor
 
 The visual editor follows the Nodalia suite layout: General (entity picker, title, max articles, history toggle, shared helper), Layout (mode, density, visibility toggles), and Appearance (glass/default preset).
+
+The magazine view cancels abandoned/cancelled pointer gestures and releases its listeners and timers when removed. Clearing the visual editor's item limit restores the default of five; editor refreshes preserve focus and the current text value.

@@ -836,14 +836,18 @@
         return document.createElement(EDITOR_TAG);
       }
       static getStubConfig(hass, entities = [], entitiesFallback = []) {
-        const config = deepClone(STUB_CONFIG);
+        const sources = [];
+        const config = { ...deepClone(STUB_CONFIG), sources };
         const entityId = window.NodaliaUtils.findStubEntityIds(
           hass,
           entities,
           entitiesFallback,
           ["sensor"],
           Object.keys(hass?.states || {}).length
-        ).find((id) => Array.isArray(hass.states[id]?.attributes?.items) && hass.states[id].attributes.items.length);
+        ).find((id) => {
+          const items = hass?.states[id]?.attributes.items;
+          return Array.isArray(items) && items.length > 0;
+        });
         if (entityId) {
           config.sources = [{ entity: entityId, name: "News" }];
         }
@@ -874,6 +878,7 @@
         this._magazineSwipeState = null;
         this._magazineSwipeWindowAttached = false;
         this._suppressArticleTap = false;
+        this._articleTapResetTimer = 0;
         this._newsHistory = [];
         this._historyStorageKey = "";
         this._historyHelperEntityId = "";
@@ -885,9 +890,9 @@
         this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
         this._onWindowMagazinePointerMove = this._onWindowMagazinePointerMove.bind(this);
         this._onWindowMagazinePointerUp = this._onWindowMagazinePointerUp.bind(this);
-        this.shadowRoot.addEventListener("click", this._onShadowClick);
-        this.shadowRoot.addEventListener("keydown", this._onShadowKeyDown);
-        this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown, true);
+        this.shadowRoot?.addEventListener("click", this._onShadowClick);
+        this.shadowRoot?.addEventListener("keydown", this._onShadowKeyDown);
+        this.shadowRoot?.addEventListener("pointerdown", this._onShadowPointerDown, true);
       }
       connectedCallback() {
         this._animateContentOnNextRender = true;
@@ -897,6 +902,9 @@
         }
       }
       disconnectedCallback() {
+        window.clearTimeout(this._articleTapResetTimer);
+        this._articleTapResetTimer = 0;
+        this._suppressArticleTap = false;
         if (this._entranceAnimationResetTimer) {
           window.clearTimeout(this._entranceAnimationResetTimer);
           this._entranceAnimationResetTimer = 0;
@@ -915,6 +923,7 @@
         this._lastRenderSignature = "";
       }
       setConfig(config) {
+        this._cancelMagazineSwipe();
         this._config = normalizeConfig(config || {});
         this._lastRenderSignature = "";
         this._magazineItemsStamp = "";
@@ -976,7 +985,7 @@
         return getNewsSourceHealth(hass, this._config);
       }
       _ensureNewsHistory(incoming) {
-        const config = this._config || DEFAULT_CONFIG;
+        const config = this._config;
         const helperEntityId = String(config.history_helper || "").trim();
         const storageKey = getNewsHistoryStorageKey(config);
         const helperSignature = helperEntityId ? getNewsHistoryHelperSignature(this._hass, helperEntityId) : "";
@@ -1031,13 +1040,13 @@
         if (!hass) {
           return [];
         }
-        const config = this._config || DEFAULT_CONFIG;
+        const config = this._config;
         const collected = collectNormalizedItems(hass, config);
         const pool = config.remember_items !== false ? this._ensureNewsHistory(collected) : collected;
         return applyNewsFilters(pool, config);
       }
       _getRenderSignature(hass = this._hass) {
-        const config = this._config || DEFAULT_CONFIG;
+        const config = this._config;
         const layout = config.layout || DEFAULT_CONFIG.layout;
         const items = this._getDisplayItems(hass);
         const health = getNewsSourceHealth(hass, config);
@@ -1133,6 +1142,7 @@
         this._openArticleUrl(url);
       }
       _onShadowKeyDown(event) {
+        if (!(event instanceof KeyboardEvent)) return;
         const carousel = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.newsCarousel !== void 0);
         if (carousel instanceof HTMLElement) {
           if (event.key === "ArrowLeft") {
@@ -1310,6 +1320,7 @@
         track.classList.toggle("news-card__carousel-track--dragging", !animate);
       }
       _onShadowPointerDown(event) {
+        if (!(event instanceof PointerEvent)) return;
         if (event.button !== void 0 && event.button !== 0) {
           return;
         }
@@ -1347,6 +1358,7 @@
         }
       }
       _onWindowMagazinePointerMove(event) {
+        if (!(event instanceof PointerEvent)) return;
         const swipe = this._magazineSwipeState;
         if (!swipe || event.pointerId !== swipe.pointerId) {
           return;
@@ -1379,6 +1391,11 @@
         this._updateMagazineTrackTransform(swipe.track, swipe.startIndex, offset, false);
       }
       _onWindowMagazinePointerUp(event) {
+        if (!(event instanceof PointerEvent)) return;
+        if (event.type === "pointercancel") {
+          this._cancelMagazineSwipe();
+          return;
+        }
         const swipe = this._magazineSwipeState;
         if (!swipe || event.pointerId !== swipe.pointerId) {
           return;
@@ -1395,7 +1412,9 @@
             navigated = true;
           }
           this._suppressArticleTap = true;
-          window.setTimeout(() => {
+          window.clearTimeout(this._articleTapResetTimer);
+          this._articleTapResetTimer = window.setTimeout(() => {
+            this._articleTapResetTimer = 0;
             this._suppressArticleTap = false;
           }, 320);
         }
@@ -1580,10 +1599,11 @@
         ) || "";
       }
       _render() {
+        this._cancelMagazineSwipe();
         if (!this.shadowRoot) {
           return;
         }
-        const config = this._config || DEFAULT_CONFIG;
+        const config = this._config;
         const styles = config.styles || DEFAULT_CONFIG.styles;
         const layout = config.layout || DEFAULT_CONFIG.layout;
         const preset = config.appearance?.preset || "glass";
@@ -1593,7 +1613,7 @@
         const cardTitle = this._getCardTitle();
         const cardBackground = this._getCardBackground(styles, preset);
         const animateClass = this._animateContentOnNextRender ? " news-card--enter" : "";
-        let bodyMarkup = "";
+        let bodyMarkup;
         if (items.length > 0) {
           bodyMarkup = `
         <ha-card class="news-card news-card--ready news-card--${layout.mode} news-card--density-${density}${animateClass}">
@@ -2098,11 +2118,10 @@
       _readFieldValue(input) {
         const valueType = input.dataset.valueType || "string";
         if (valueType === "boolean") {
-          return Boolean(input.checked);
+          return input instanceof HTMLInputElement && input.checked;
         }
         if (valueType === "number") {
-          const numeric = Number(input.value);
-          return Number.isFinite(numeric) ? numeric : input.value;
+          return parseFiniteNumericValue(input.value) ?? input.value;
         }
         return input.value;
       }
@@ -2119,12 +2138,13 @@
         }
       }
       _onShadowValueChanged(event) {
-        const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+        const control = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.field));
         if (!control?.dataset?.field) {
           return;
         }
         event.stopPropagation();
-        const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+        const detail = event instanceof CustomEvent ? event.detail : void 0;
+        const nextValue = window.NodaliaUtils.isObject(detail) && Object.prototype.hasOwnProperty.call(detail, "value") ? detail.value : "value" in control ? control.value : void 0;
         if (typeof control.dataset?.value === "string") {
           control.dataset.value = String(nextValue || "");
         }

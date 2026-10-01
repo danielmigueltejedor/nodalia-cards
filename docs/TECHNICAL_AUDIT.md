@@ -805,3 +805,26 @@ rooms. All 738 unit tests and three targeted real room-mode browser cases pass;
 full local browser suite: 290 passed, one existing platform skip. Remaining
 unchecked modules: 48 (views/editors). Shared handwritten utility/i18n runtime
 also remains pending. Hold 3.0.0-alpha.1 until the full migration is complete.
+
+## News view/editor findings — 2026-10-01
+
+The News view/editor still suppress checking after helper migration. Type actual
+HTMLElement lifecycle, HA picker/event/focus and swipe/history/render boundaries.
+One swipe suppression timeout is unowned; cancelled pointers can navigate and
+config/render changes leave old gesture state attached. Empty numeric editor
+fields coerce to zero and clamp to one instead of restoring the default.
+
+News card/editor now pass strict checking and typed lint with actual normalized
+config/history/render/swipe types, guarded DOM/custom event payloads and typed
+HA editor focus/picker/lifecycle contracts read from the shared implementation.
+Cancelled pointers no longer advance the carousel; reconfiguration/rerender
+cancels abandoned gesture state, and disconnection owns/releases the article
+tap-suppression timeout. Clearing the numeric item limit restores its default
+instead of coercing an empty string to zero.
+
+1,200 valid view/editor HTML and sizing outputs match main. All 738 unit tests
+pass; six targeted gesture/lifecycle/editor browser cases pass. The first full
+run encountered one Chromium ERR_CONTENT_LENGTH_MISMATCH before bundle import,
+not a card assertion; the isolated Climate case passed, then the full rerun
+passed 296 cases with one existing platform skip. Remaining unchecked modules:
+46. Hold 3.0.0-alpha.1 until full migration, including shared runtime sources.

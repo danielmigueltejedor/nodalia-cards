@@ -6,6 +6,18 @@ import type { HomeAssistant } from "./home-assistant";
  * available at runtime on the compatibility global.
  */
 export interface NodaliaUtilsApi {
+  captureEditorFocusState: (host: HTMLElement) => EditorFocusState | null;
+  restoreEditorFocusState: (host: HTMLElement, state: EditorFocusState | null) => void;
+  bindShadowListeners: (host: HTMLElement, listeners: readonly (readonly [string, EventListener, (boolean | AddEventListenerOptions)?])[], key?: string) => boolean;
+  releaseShadowListeners: (host: HTMLElement, key?: string) => boolean;
+  bindEditorDialogLayoutFix?: (host: HTMLElement) => void;
+  releaseEditorDialogLayoutFix?: (host: HTMLElement) => void;
+  editorFilteredStatesSignature?: (hass: HomeAssistant | null | undefined, language: string | undefined, predicate: (id: string) => boolean) => string;
+  mountEntityPickerHost?: (host: HTMLElement, options: {
+    hass: HomeAssistant | null | undefined; field?: string; value?: unknown;
+    placeholder?: string; onShadowInput?: EventListener; onShadowValueChanged?: EventListener;
+    copyDatasetFromHost?: boolean;
+  }) => void;
   isLovelaceHassStatesHydrated?: (hass: HomeAssistant | null | undefined) => boolean;
   isObject(value: unknown): value is Record<string, unknown>;
   deepClone<T>(value: T): T;
@@ -49,6 +61,9 @@ export interface NodaliaUtilsApi {
   stripEqualToDefaults?: (config: unknown, defaults: unknown) => unknown;
   createEntitySuggestion: (cardType: string, hass: HomeAssistant, entityId: string, options?: {
     domains?: string[];
+    label?: string;
+    isSupported?: (hass: HomeAssistant, entityId: string) => boolean;
+    buildConfig?: (hass: HomeAssistant, entityId: string) => Record<string, unknown>;
   }) => { config: Record<string, unknown>; label?: string } | null;
   registerCustomCard: (metadata: {
     type: string;
@@ -68,7 +83,7 @@ export interface NodaliaUtilsApi {
     options?: Record<string, unknown>,
   ) => string;
   renderCardEmptyStateDocument?: (innerHtml: string, options?: Record<string, unknown>) => string;
-  scheduleDeferTimer?: (host: object, callback: () => void, delayMs: number) => unknown;
+  scheduleDeferTimer?: (host: object, callback: () => void, delayMs: number) => number;
   clearDeferTimers?: (host: object) => void;
   engineStatusSignature?: (engine: unknown) => string;
   renderEditorEngineBannerHtml?: (options: Record<string, unknown>) => string;
@@ -109,4 +124,9 @@ export interface EditorRadiusOptions {
   value: string;
   tHeading: string;
   labels: Record<"pill" | "soft" | "round" | "square", string>;
+}
+
+/** Snapshot fields actually produced by the shared editor caret helper. */
+export interface EditorFocusState {
+  selector: string; selectionStart: number | null; selectionEnd: number | null; type: string;
 }
