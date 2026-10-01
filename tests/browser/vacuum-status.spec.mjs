@@ -21,9 +21,13 @@ for (const mode of ["always", "never"]) {
       await expect(chip).toHaveText("Cargador desconectado");
       await expect(chip).toHaveAttribute("title", "Cargador desconectado");
       const text = chip.locator(".vacuum-card__chip-label");
-      const clipped = await text.evaluate(node => ({ ellipsis: getComputedStyle(node).textOverflow, width: node.clientWidth, fullWidth: node.scrollWidth }));
-      expect(clipped.ellipsis).toBe("ellipsis");
-      expect(clipped.fullWidth).toBeGreaterThan(clipped.width);
+      // The initial deferred resize can replace the label while WebKit resolves
+      // a locator. Assert the live label after that measurement settles.
+      await expect.poll(() => text.evaluate(node => ({
+        connected: node.isConnected,
+        ellipsis: getComputedStyle(node).textOverflow,
+        clipped: node.scrollWidth > node.clientWidth,
+      }))).toEqual({ connected: true, ellipsis: "ellipsis", clipped: true });
       const geometry = await card.evaluate(node => {
         const root = node.shadowRoot;
         const rect = root.querySelector(".vacuum-card").getBoundingClientRect();

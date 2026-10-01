@@ -25,3 +25,17 @@ Language defaults to automatic detection.
 Status values, including `charger_disconnected`, use runtime translations. Long
 status chips end with an ellipsis and retain their full text as a tooltip while
 leaving room for the battery chip.
+
+## Pending modes and lifecycle
+
+Mode selections remain optimistic for 2.5 seconds, or until Home Assistant
+confirms the selection. Equivalent editor feedback preserves that deadline.
+Changing robots clears pending modes, remembered modes, room selections and
+expanded panels. Removing the card releases timers, resize work and animation
+listeners. Panel transitions complete once, preventing an old callback from
+reopening a panel after a newer selection.
+
+Missing battery values do not become 0%; an actual zero remains visible. Registry
+and room data are checked before use. The main card supports Enter/Space when
+its tap action is enabled; native controls retain normal keyboard interaction.
+Home Assistant command failures are caught at the shared service boundary.

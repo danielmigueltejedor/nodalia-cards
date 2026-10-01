@@ -245,6 +245,9 @@
       language: typeof config.language === "string" ? config.language : "auto",
       suction_select_entity: typeof config.suction_select_entity === "string" ? config.suction_select_entity : "",
       mop_select_entity: typeof config.mop_select_entity === "string" ? config.mop_select_entity : "",
+      state_entity: typeof config.state_entity === "string" ? config.state_entity : "",
+      battery_entity: typeof config.battery_entity === "string" ? config.battery_entity : "",
+      room_mapping_entity: typeof config.room_mapping_entity === "string" ? config.room_mapping_entity : "",
       error_entity: typeof config.error_entity === "string" ? config.error_entity : "",
       fan_presets: fanPresets,
       hidden_suction_modes: hiddenSuctionModes,
@@ -416,7 +419,41 @@
     return raw.replaceAll("_", " ").replace(/\b\w/g, (match) => match.toUpperCase());
   }
 
+  // src/shared/numeric-values.ts
+  function parseFiniteNumericValue(value) {
+    if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
+  // src/shared/home-assistant-services.ts
+  function callHassService(hass, domain, service, data = {}, target = null) {
+    if (!hass?.callService) return;
+    const failure = (error) => console.warn("Nodalia Cards: service call failed", `${domain}.${service}`, error);
+    try {
+      void Promise.resolve(target !== null ? hass.callService(domain, service, data, target) : hass.callService(domain, service, data)).catch(failure);
+    } catch (error) {
+      failure(error);
+    }
+  }
+  function invokeHassService(host, hass, domain, service, data = {}, target = null) {
+    const utils2 = window.NodaliaUtils;
+    const invoke = utils2?.invokeHomeAssistantService;
+    if (!invoke) {
+      callHassService(hass, domain, service, data, target);
+      return;
+    }
+    const failure = (error) => console.warn("Nodalia Cards: service call failed", `${domain}.${service}`, error);
+    try {
+      void Promise.resolve(invoke.call(utils2, host, hass, domain, service, data, target)).catch(failure);
+    } catch (error) {
+      failure(error);
+    }
+  }
+
   // src/cards/vacuum/vacuum-card.ts
+  var modeKinds = ["suction", "mop"];
+  var isModeKind = (value) => value === "suction" || value === "mop";
   var _lazyNodaliaVacuumCard;
   function loadNodaliaVacuumCard() {
     if (_lazyNodaliaVacuumCard) {
@@ -449,8 +486,12 @@
       }
       _nodaliaConstruct() {
         this.attachShadow({ mode: "open" });
-        this._config = null;
+        this._config = normalizeConfig({});
         this._hass = null;
+        this._resizeFrame = 0;
+        this._fallbackTimers = /* @__PURE__ */ new Set();
+        this._panelGeneration = 0;
+        this._panelAnimationCancels = /* @__PURE__ */ new Set();
         this._cardWidth = 0;
         this._isCompactLayout = false;
         this._activeModePanel = null;
@@ -481,31 +522,38 @@
             return;
           }
           const nextWidth = Math.round(entry.contentRect?.width || this.clientWidth || 0);
-          if (nextWidth < 48) {
-            return;
-          }
-          const nextCompact = this._shouldUseCompactLayout(nextWidth);
-          const compactChanged = nextCompact !== this._isCompactLayout;
-          if (nextWidth === this._cardWidth && !compactChanged) {
-            return;
-          }
-          this._cardWidth = nextWidth;
-          this._isCompactLayout = nextCompact;
-          if (compactChanged) {
-            this._notifyLayoutChange();
-          }
-          const signature = this._getRenderSignature();
-          if (signature === this._lastRenderSignature) {
-            return;
-          }
-          this._lastRenderSignature = signature;
-          this._render();
+          if (this._resizeFrame) window.cancelAnimationFrame(this._resizeFrame);
+          this._resizeFrame = window.requestAnimationFrame(() => {
+            this._resizeFrame = 0;
+            if (!this.isConnected) return;
+            if (nextWidth < 48) {
+              return;
+            }
+            const nextCompact = this._shouldUseCompactLayout(nextWidth);
+            const compactChanged = nextCompact !== this._isCompactLayout;
+            if (nextWidth === this._cardWidth && !compactChanged) {
+              return;
+            }
+            this._cardWidth = nextWidth;
+            this._isCompactLayout = nextCompact;
+            if (compactChanged) {
+              this._notifyLayoutChange();
+            }
+            const signature = this._getRenderSignature();
+            if (signature === this._lastRenderSignature) {
+              return;
+            }
+            this._lastRenderSignature = signature;
+            this._render();
+          });
         });
         this._onShadowClick = this._onShadowClick.bind(this);
-        this.shadowRoot.addEventListener("click", this._onShadowClick);
+        this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
+        this.shadowRoot?.addEventListener("click", this._onShadowClick);
+        this.shadowRoot?.addEventListener("keydown", this._onShadowKeyDown);
         this._detachHostHold = typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function" ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
           resolveZone: (event) => {
-            const node = event.composedPath().find((n) => n instanceof HTMLElement && n.dataset?.vacuumAction);
+            const node = event.composedPath().find((n) => n instanceof HTMLElement && Boolean(n.dataset.vacuumAction));
             const action = node?.dataset?.vacuumAction;
             if (action === "body_tap") {
               return "body";
@@ -540,11 +588,16 @@
       disconnectedCallback() {
         this._detachHostHold?.();
         this._resizeObserver?.disconnect();
+        if (this._resizeFrame) window.cancelAnimationFrame(this._resizeFrame);
+        this._resizeFrame = 0;
+        this._releaseViewWork();
+        this._suppressNextVacuumTap = false;
+        this._pendingModeSelection = { suction: "", mop: "" };
         if (this._entranceAnimationResetTimer) {
           window.clearTimeout(this._entranceAnimationResetTimer);
           this._entranceAnimationResetTimer = 0;
         }
-        Object.keys(this._pendingModeSelectionTimers).forEach((kind) => {
+        modeKinds.forEach((kind) => {
           if (this._pendingModeSelectionTimers[kind]) {
             window.clearTimeout(this._pendingModeSelectionTimers[kind]);
             this._pendingModeSelectionTimers[kind] = 0;
@@ -555,7 +608,17 @@
         this._lastRenderSignature = "";
       }
       setConfig(config) {
-        this._config = normalizeConfig(config || {});
+        const next = normalizeConfig(config || {});
+        if (next.entity !== this._config.entity) {
+          this._releaseViewWork();
+          modeKinds.forEach((kind) => this._clearPendingModeSelection(kind));
+          this._lastNonSmartModeSelection = { suction: "", mop: "" };
+          this._selectedCleaningAreas = [];
+          this._activeModePanel = null;
+          this._roomPanelOpen = false;
+        }
+        this._suppressNextVacuumTap = false;
+        this._config = next;
         this._relatedEntityCache = null;
         window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
         this._isCompactLayout = this._shouldUseCompactLayout(
@@ -617,7 +680,7 @@
         if (typeof schedule === "function") {
           schedule(this, done, safeDelay);
         } else {
-          window.setTimeout(done, safeDelay);
+          this._scheduleFallback(done, safeDelay);
         }
       }
       _scheduleEntranceAnimationReset(delay) {
@@ -723,7 +786,7 @@
         return values.join("::");
       }
       _getConfiguredGridColumns() {
-        const numericColumns = Number(this._config?.grid_options?.columns);
+        const numericColumns = Number(isObject(this._config.grid_options) ? this._config.grid_options.columns : void 0);
         return Number.isFinite(numericColumns) && numericColumns > 0 ? numericColumns : null;
       }
       _getCompactLayoutThreshold() {
@@ -747,22 +810,24 @@
       _shouldShowCompactTitle(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
         return window.NodaliaUtils.shouldShowCompactCardTitle({ width });
       }
-      _triggerHaptic(style = this._config?.haptics?.style) {
-        if (!this._config?.haptics?.enabled) {
+      _triggerHaptic(style = void 0) {
+        const haptics = isObject(this._config.haptics) ? this._config.haptics : {};
+        if (!haptics.enabled) {
           return;
         }
-        const hapticStyle = String(style || "medium");
+        const hapticStyle = String(style || haptics.style || "medium");
         try {
           fireEvent(this, "haptic", hapticStyle);
         } catch (_error) {
         }
-        if (!this._config.haptics.fallback_vibrate || typeof navigator === "undefined" || typeof navigator.vibrate !== "function") {
+        if (!haptics.fallback_vibrate || typeof navigator === "undefined" || typeof navigator.vibrate !== "function") {
           return;
         }
-        navigator.vibrate(HAPTIC_PATTERNS[hapticStyle] || HAPTIC_PATTERNS.selection);
+        const patterns = HAPTIC_PATTERNS;
+        navigator.vibrate(patterns[hapticStyle] || HAPTIC_PATTERNS.selection);
       }
       _getAnimationSettings() {
-        const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+        const configuredAnimations = isObject(this._config.animations) ? this._config.animations : DEFAULT_CONFIG.animations;
         return {
           enabled: configuredAnimations.enabled !== false,
           iconAnimation: configuredAnimations.icon_animation !== false,
@@ -799,7 +864,7 @@
         if (typeof schedule === "function") {
           schedule(this, done, animations.buttonBounceDuration + 40);
         } else {
-          window.setTimeout(done, animations.buttonBounceDuration + 40);
+          this._scheduleFallback(done, animations.buttonBounceDuration + 40);
         }
       }
       _openMoreInfo(entityId = this._config?.entity) {
@@ -948,12 +1013,14 @@
         const suctionPatterns = ["fan_speed", "fan_power", "suction", "cleaning_mode"];
         const mopPatterns = ["mop", "water", "water_level", "water_volume", "scrub"];
         const states = this._hass.states;
-        const registry = this._hass.entities || {};
+        const registry = isObject(this._hass.entities) ? this._hass.entities : {};
         const vacuumObjectIds = listVacuumObjectIds(states);
-        const vacuumDeviceId = registry[this._config.entity]?.device_id || "";
+        const vacuumRegistry = registry[this._config.entity];
+        const vacuumDeviceId = isObject(vacuumRegistry) ? vacuumRegistry.device_id : void 0;
         const allowUnscopedRoborock = vacuumObjectIds.length <= 1;
         Object.keys(states).forEach((entityId) => {
-          const isSameDevice = Boolean(vacuumDeviceId && registry[entityId]?.device_id === vacuumDeviceId);
+          const candidate = registry[entityId];
+          const isSameDevice = Boolean(vacuumDeviceId && isObject(candidate) && candidate.device_id === vacuumDeviceId);
           const related = isHelperRelatedToConfiguredVacuum({
             candidateId: entityId,
             searchable: states[entityId]?.attributes?.friendly_name || "",
@@ -1064,9 +1131,9 @@
           const idMatch = block.match(/(?:^|\n)\s*-?\s*id:\s*([^\n]+)/i);
           const nameMatch = block.match(/(?:^|\n)\s*name:\s*([^\n]+)/i);
           const cleaningAreaMatch = block.match(/(?:^|\n)\s*cleaning_area_id:\s*([^\n]+)/i);
-          const id = idMatch ? idMatch[1].trim() : "";
-          const name = nameMatch ? nameMatch[1].trim() : "";
-          const cleaningAreaId = cleaningAreaMatch ? cleaningAreaMatch[1].trim() : "";
+          const id = idMatch?.[1]?.trim() ?? "";
+          const name = nameMatch?.[1]?.trim() ?? "";
+          const cleaningAreaId = cleaningAreaMatch?.[1]?.trim() ?? "";
           if (!id && !name && !cleaningAreaId) {
             return null;
           }
@@ -1079,14 +1146,14 @@
         return this._normalizeRoomCollection(rooms);
       }
       _normalizeRoomCollection(rawValue) {
-        let collection = rawValue;
+        const collection = rawValue;
         if (typeof collection === "string") {
           return this._extractRoomsFromString(collection);
         }
         if (Array.isArray(collection)) {
           return collection;
         }
-        if (collection && typeof collection === "object") {
+        if (isObject(collection)) {
           if (Array.isArray(collection.room_mapping)) {
             return collection.room_mapping;
           }
@@ -1319,28 +1386,28 @@
         return keywords.some((keyword) => activityBlob.includes(normalizeTextKey(keyword)));
       }
       _getBatteryLevel(state) {
-        const directValue = Number(state?.attributes?.battery_level);
-        if (Number.isFinite(directValue)) {
+        const directValue = parseFiniteNumericValue(state?.attributes?.battery_level);
+        if (directValue !== null) {
           return clamp(Math.round(directValue), 0, 100);
         }
         const auxiliaryState = this._getAuxiliaryState();
-        const auxiliaryBatteryLevel = Number(
+        const auxiliaryBatteryLevel = parseFiniteNumericValue(
           auxiliaryState?.attributes?.battery_level ?? auxiliaryState?.attributes?.battery ?? auxiliaryState?.attributes?.battery_remaining
         );
-        if (Number.isFinite(auxiliaryBatteryLevel)) {
+        if (auxiliaryBatteryLevel !== null) {
           return clamp(Math.round(auxiliaryBatteryLevel), 0, 100);
         }
         const batterySensorState = this._getAuxiliaryBatteryState();
-        const batterySensorValue = Number(
+        const batterySensorValue = parseFiniteNumericValue(
           batterySensorState?.state ?? batterySensorState?.attributes?.battery_level ?? batterySensorState?.attributes?.battery ?? batterySensorState?.attributes?.battery_remaining
         );
-        if (Number.isFinite(batterySensorValue)) {
+        if (batterySensorValue !== null) {
           return clamp(Math.round(batterySensorValue), 0, 100);
         }
         return null;
       }
       _getBatteryColor(level) {
-        if (!Number.isFinite(level)) {
+        if (level === null || !Number.isFinite(level)) {
           return "var(--secondary-text-color)";
         }
         if (level <= 15) {
@@ -1368,7 +1435,7 @@
         }
         const seen = /* @__PURE__ */ new Set();
         return rawRooms.map((room) => {
-          if (!room || typeof room !== "object") {
+          if (!isObject(room)) {
             return null;
           }
           const cleaningAreaId = this._normalizeCleaningAreaId(
@@ -1387,14 +1454,14 @@
             id: fallbackId,
             name: normalizedName
           };
-        }).filter(Boolean);
+        }).filter((room) => room !== null);
       }
       _normalizeCleaningAreaId(value) {
         const raw = String(value ?? "").trim();
         if (!raw) {
           return "";
         }
-        const cleaned = raw.replace(/[\[\]\(\)"']/g, " ").replace(/cleaning_area_id[:=]/gi, " ").replace(/,+/g, " ").replace(/\s+/g, " ").trim();
+        const cleaned = raw.replace(/[[\]()"']/g, " ").replace(/cleaning_area_id[:=]/gi, " ").replace(/,+/g, " ").replace(/\s+/g, " ").trim();
         if (!cleaned) {
           return "";
         }
@@ -1412,7 +1479,7 @@
         if (/^\d+$/.test(normalized)) {
           return `Area ${normalized}`;
         }
-        return normalized.split(" ").map((token) => token ? token[0].toUpperCase() + token.slice(1) : token).join(" ");
+        return normalized.split(" ").map((token) => token ? token.charAt(0).toUpperCase() + token.slice(1) : token).join(" ");
       }
       _getCleaningAreaIdFromState(state) {
         const reported = this._getReportedStateValue(state);
@@ -1483,8 +1550,12 @@
       _getModeDescriptorLabel(kind) {
         const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
         const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-        const labels = window.NodaliaI18n?.strings?.(lang)?.advanceVacuum?.descriptorLabels || window.NodaliaI18n?.strings?.("en")?.advanceVacuum?.descriptorLabels || {};
-        return kind === "mop" ? labels.mop || "Mop" : labels.suction || "Vacuum";
+        const pack = window.NodaliaI18n?.strings?.(lang)?.advanceVacuum;
+        const enPack = window.NodaliaI18n?.strings?.("en")?.advanceVacuum;
+        const localized = isObject(pack) ? pack.descriptorLabels : void 0;
+        const fallback = isObject(enPack) ? enPack.descriptorLabels : void 0;
+        const labels = isObject(localized) ? localized : isObject(fallback) ? fallback : {};
+        return String(kind === "mop" ? labels.mop || "Mop" : labels.suction || "Vacuum");
       }
       _guessRelatedSelectEntity(kind) {
         const cache = this._getRelatedEntityCache();
@@ -1553,7 +1624,7 @@
           label: this._getModeDescriptorLabel(kind),
           options,
           service: "fan",
-          target: this._config?.entity
+          target: this._config.entity
         };
       }
       _getVisibleModeDescriptors(state) {
@@ -1564,7 +1635,7 @@
         return [
           this._getModeDescriptor("suction", state),
           this._getModeDescriptor("mop", state)
-        ].filter(Boolean);
+        ].filter((mode) => mode !== null);
       }
       _getActiveModeDescriptor(state, panelKind = this._activeModePanel) {
         return this._getVisibleModeDescriptors(state).find((mode) => mode.kind === panelKind) || null;
@@ -1668,7 +1739,51 @@
         const node = template.content.firstElementChild;
         return node instanceof HTMLElement ? node : null;
       }
+      _scheduleFallback(callback, delay) {
+        const timer = window.setTimeout(() => {
+          this._fallbackTimers.delete(timer);
+          callback();
+        }, delay);
+        this._fallbackTimers.add(timer);
+        return timer;
+      }
+      _cancelPanelAnimations() {
+        ++this._panelGeneration;
+        this._panelAnimationCancels.forEach((cancel) => cancel());
+        this._panelAnimationCancels.clear();
+      }
+      _releaseViewWork() {
+        this._cancelPanelAnimations();
+        this._fallbackTimers.forEach((timer) => window.clearTimeout(timer));
+        this._fallbackTimers.clear();
+        window.NodaliaUtils?.clearDeferTimers?.(this);
+      }
+      _waitForPanelAnimation(panel, callback, delay) {
+        let done = false;
+        let timer = 0;
+        const cancel = () => {
+          done = true;
+          panel.removeEventListener("animationend", onEnd);
+          window.clearTimeout(timer);
+          this._fallbackTimers.delete(timer);
+          this._panelAnimationCancels.delete(cancel);
+        };
+        const finish = () => {
+          if (!done) {
+            cancel();
+            callback();
+          }
+        };
+        const onEnd = (event) => {
+          if (event.target === panel) finish();
+        };
+        panel.addEventListener("animationend", onEnd);
+        timer = this._scheduleFallback(finish, delay);
+        this._panelAnimationCancels.add(cancel);
+      }
       _setVisiblePanelKey(panelKey, state = this._getState()) {
+        this._cancelPanelAnimations();
+        const generation = this._panelGeneration;
         const nextPanelKey = panelKey === "room" ? this._canSelectRooms(state) ? "room" : "" : this._getActiveModeDescriptor(state, panelKey)?.kind || "";
         this._activeModePanel = nextPanelKey === "suction" || nextPanelKey === "mop" ? nextPanelKey : null;
         this._roomPanelOpen = nextPanelKey === "room";
@@ -1714,6 +1829,7 @@
           panel.classList.remove("vacuum-card__panel-shell--entering");
           panel.classList.add("vacuum-card__panel-shell--leaving");
           const finalizeRemoval = () => {
+            if (generation !== this._panelGeneration || !this.isConnected || !panelsHost.isConnected) return;
             if (panel.isConnected) {
               panel.remove();
             }
@@ -1722,15 +1838,10 @@
               onDone();
             }
           };
-          panel.addEventListener("animationend", finalizeRemoval, { once: true });
-          const schedule = window.NodaliaUtils?.scheduleDeferTimer;
-          if (typeof schedule === "function") {
-            schedule(this, finalizeRemoval, animations.panelDuration + 80);
-          } else {
-            window.setTimeout(finalizeRemoval, animations.panelDuration + 80);
-          }
+          this._waitForPanelAnimation(panel, finalizeRemoval, animations.panelDuration + 80);
         };
         const appendPanel = () => {
+          if (generation !== this._panelGeneration || !this.isConnected || !panelsHost.isConnected) return;
           if (!panelMarkup) {
             panelsHost.replaceChildren();
             this._notifyLayoutChange();
@@ -1755,12 +1866,7 @@
               panelNode.classList.remove("vacuum-card__panel-shell--entering");
             }
           };
-          const schedule = window.NodaliaUtils?.scheduleDeferTimer;
-          if (typeof schedule === "function") {
-            schedule(this, finalizeEnter, animations.panelDuration + 80);
-          } else {
-            window.setTimeout(finalizeEnter, animations.panelDuration + 80);
-          }
+          this._waitForPanelAnimation(panelNode, finalizeEnter, animations.panelDuration + 80);
         };
         if (!nextPanelKey) {
           if (existingPanel instanceof HTMLElement) {
@@ -1950,7 +2056,7 @@
         if (!this._hass || !this._config?.entity) {
           return;
         }
-        this._hass.callService("vacuum", service, {
+        invokeHassService(this, this._hass, "vacuum", service, {
           entity_id: this._config.entity,
           ...data
         });
@@ -1959,7 +2065,7 @@
         if (!this._hass || !entityId || !option) {
           return;
         }
-        this._hass.callService("select", "select_option", {
+        invokeHassService(this, this._hass, "select", "select_option", {
           entity_id: entityId,
           option
         });
@@ -2002,7 +2108,7 @@
         return firstNonSmart || "";
       }
       _clearPendingModeSelection(kind) {
-        if (!kind || !(kind in this._pendingModeSelection)) {
+        if (!isModeKind(kind)) {
           return false;
         }
         if (this._pendingModeSelectionTimers[kind]) {
@@ -2016,7 +2122,7 @@
         return true;
       }
       _setPendingModeSelection(kind, value) {
-        if (!kind || !(kind in this._pendingModeSelection)) {
+        if (!isModeKind(kind)) {
           return;
         }
         this._clearPendingModeSelection(kind);
@@ -2041,7 +2147,7 @@
       }
       _syncPendingModeSelections(state = this._getState()) {
         let didChange = false;
-        ["suction", "mop"].forEach((kind) => {
+        modeKinds.forEach((kind) => {
           const pendingValue = this._pendingModeSelection[kind];
           if (!pendingValue) {
             return;
@@ -2065,13 +2171,13 @@
         return matchedOption || currentValue;
       }
       _rememberNonSmartModeSelection(kind, value) {
-        if (!kind || !value || this._isSharedSmartMode(value)) {
+        if (!isModeKind(kind) || !value || this._isSharedSmartMode(value)) {
           return;
         }
         this._lastNonSmartModeSelection[kind] = value;
       }
       _syncRememberedModeSelections(state) {
-        ["suction", "mop"].forEach((kind) => {
+        modeKinds.forEach((kind) => {
           const descriptor = this._getModeDescriptor(kind, state);
           if (descriptor?.current && !this._isSharedSmartMode(descriptor.current)) {
             this._rememberNonSmartModeSelection(kind, descriptor.current);
@@ -2079,6 +2185,7 @@
         });
       }
       _applyLinkedSmartModeSelection(kind, value, state) {
+        if (!isModeKind(kind)) return;
         const descriptor = this._getModeDescriptor(kind, state);
         const otherKind = kind === "mop" ? "suction" : "mop";
         const otherDescriptor = this._getModeDescriptor(otherKind, state);
@@ -2182,7 +2289,7 @@
         const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
         const pack = window.NodaliaI18n?.strings?.(lang)?.vacuumCard;
         const enPack = window.NodaliaI18n?.strings?.("en")?.vacuumCard;
-        const raw = pack?.[key] ?? enPack?.[key];
+        const raw = (isObject(pack) ? pack[key] : void 0) ?? (isObject(enPack) ? enPack[key] : void 0);
         return String(raw != null && raw !== "" ? raw : fallback);
       }
       _renderEmptyState() {
@@ -2197,8 +2304,14 @@
       </ha-card>
     `;
       }
+      _onShadowKeyDown(event) {
+        if (!(event instanceof KeyboardEvent) || !["Enter", " "].includes(event.key)) return;
+        const target = event.composedPath()[0];
+        if (!(target instanceof HTMLElement) || target instanceof HTMLButtonElement) return;
+        if (target.dataset.vacuumAction === "body_tap" || target.dataset.vacuumAction === "icon_tap") this._onShadowClick(event);
+      }
       _onShadowClick(event) {
-        const button = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.vacuumAction);
+        const button = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.vacuumAction));
         if (!button) {
           return;
         }
@@ -2278,6 +2391,7 @@
         }
       }
       _render() {
+        this._cancelPanelAnimations();
         if (!this.shadowRoot) {
           return;
         }
@@ -2377,7 +2491,6 @@
         }
         this._sanitizeSelectedCleaningAreas(roomMappings);
         const activeModeDescriptor = availableModeDescriptors.find((mode) => mode.kind === this._activeModePanel) || null;
-        const currentModePanelMarkup = activeModeDescriptor ? this._getModePanelMarkup(activeModeDescriptor.kind, state) : "";
         const currentPanelKey = this._roomPanelOpen && roomMappings.length ? "room" : activeModeDescriptor?.kind || "";
         const currentPanelMarkup = currentPanelKey ? this._getPanelMarkup(currentPanelKey, state) : "";
         const panelShellMarkup = currentPanelMarkup ? `
@@ -3051,7 +3164,7 @@
         }
       </style>
 
-      <ha-card ${canRunBodyCardTap ? 'data-vacuum-action="body_tap"' : ""}>
+      <ha-card ${canRunBodyCardTap ? 'data-vacuum-action="body_tap" role="button" tabindex="0"' : ""}>
         <div class="vacuum-card ${isCompactLayout ? "vacuum-card--compact" : ""} ${denseCompact ? "vacuum-card--dense" : ""} ${shouldAnimateEntrance ? "vacuum-card--entering" : ""}">
           <div class="vacuum-card__header">
             <button

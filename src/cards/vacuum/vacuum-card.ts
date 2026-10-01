@@ -1,5 +1,3 @@
-// @ts-nocheck
-/* Large HTMLElement view/controller: typed incrementally as methods are extracted. */
 import {
   CARD_TAG,
   COMPACT_LAYOUT_THRESHOLD,
@@ -11,16 +9,11 @@ import {
 } from "./vacuum-constants";
 import {
   clamp,
-  compactConfig,
   deepClone,
-  deleteByPath,
   escapeHtml,
-  escapeSelectorValue,
   fireEvent,
   isObject,
-  mergeConfig,
   normalizeTextKey,
-  setByPath,
 } from "./vacuum-runtime";
 import { DEFAULT_CONFIG, STUB_CONFIG, getSafeStyles, normalizeConfig } from "./vacuum-config";
 import {
@@ -32,21 +25,54 @@ import {
   parseSizeToPixels,
 } from "./vacuum-helpers";
 
-let _lazyNodaliaVacuumCard;
-export function loadNodaliaVacuumCard() {
+import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
+import type { HostPointerHoldBinding } from "../../core/types/nodalia-utils";
+import { parseFiniteNumericValue } from "../../shared/numeric-values";
+import { invokeHassService } from "../../shared/home-assistant-services";
+
+type ModeKind = "suction" | "mop";
+type RoomMapping = { cleaningAreaId: string; id: string; name: string };
+type ModeDescriptor = { current: string; kind: ModeKind; label: string; options: string[]; service: string; target: string };
+type RelatedEntityCache = { objectId: string; generation: number; state: string; error: string; battery: string; roomMapping: string; suctionSelect: string; mopSelect: string };
+const modeKinds: ModeKind[] = ["suction", "mop"];
+const isModeKind = (value: unknown): value is ModeKind => value === "suction" || value === "mop";
+let _lazyNodaliaVacuumCard: CustomElementConstructor | undefined;
+export function loadNodaliaVacuumCard(): CustomElementConstructor {
   if (_lazyNodaliaVacuumCard) {
     return _lazyNodaliaVacuumCard;
   }
 class NodaliaVacuumCard extends HTMLElement {
+  private _config!: ReturnType<typeof normalizeConfig>;
+  private _hass!: HomeAssistant | null;
+  private _cardWidth!: number;
+  private _isCompactLayout!: boolean;
+  private _activeModePanel!: ModeKind | null;
+  private _roomPanelOpen!: boolean;
+  private _selectedCleaningAreas!: string[];
+  private _lastNonSmartModeSelection!: Record<ModeKind, string>;
+  private _pendingModeSelection!: Record<ModeKind, string>;
+  private _pendingModeSelectionTimers!: Record<ModeKind, number>;
+  private _relatedEntityCache!: RelatedEntityCache | null;
+  private _relatedEntityCacheGeneration!: number;
+  private _lastRenderSignature!: string;
+  private _animateContentOnNextRender!: boolean;
+  private _entranceAnimationResetTimer!: number;
+  private _suppressNextVacuumTap!: boolean;
+  private _resizeObserver!: ResizeObserver;
+  private _resizeFrame!: number;
+  private _detachHostHold!: HostPointerHoldBinding;
+  private _fallbackTimers!: Set<number>;
+  private _panelGeneration!: number;
+  private _panelAnimationCancels!: Set<() => void>;
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig(hass, entities = [], entitiesFallback = []) {
+  static getStubConfig(hass: HomeAssistant | null | undefined, entities: unknown = [], entitiesFallback: unknown = []) {
     return applyStubEntity(deepClone(STUB_CONFIG), hass, ["vacuum"], entities, entitiesFallback);
   }
 
-  static getEntitySuggestion(hass, entityId) {
+  static getEntitySuggestion(hass: HomeAssistant, entityId: string) {
     return [
       window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
         domains: ["vacuum"],
@@ -67,8 +93,12 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   _nodaliaConstruct() {this.attachShadow({ mode: "open" });
-    this._config = null;
+    this._config = normalizeConfig({});
     this._hass = null;
+    this._resizeFrame = 0;
+    this._fallbackTimers = new Set();
+    this._panelGeneration = 0;
+    this._panelAnimationCancels = new Set();
     this._cardWidth = 0;
     this._isCompactLayout = false;
     this._activeModePanel = null;
@@ -100,6 +130,10 @@ class NodaliaVacuumCard extends HTMLElement {
       }
 
       const nextWidth = Math.round(entry.contentRect?.width || this.clientWidth || 0);
+      if (this._resizeFrame) window.cancelAnimationFrame(this._resizeFrame);
+      this._resizeFrame = window.requestAnimationFrame(() => {
+      this._resizeFrame = 0;
+      if (!this.isConnected) return;
       // Ignore collapse glitches (display:none, mid-reflow 0-width). Treating those
       // as "not compact" expands the card, sections lock a taller footprint, and
       // returning to dense leaves an empty band under vacuum/media pairs.
@@ -129,16 +163,19 @@ class NodaliaVacuumCard extends HTMLElement {
 
       this._lastRenderSignature = signature;
       this._render();
+      });
     });
     this._onShadowClick = this._onShadowClick.bind(this);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
+    this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
+    this.shadowRoot?.addEventListener("click", this._onShadowClick);
+    this.shadowRoot?.addEventListener("keydown", this._onShadowKeyDown);
     this._detachHostHold =
       typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function"
         ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
             resolveZone: event => {
               const node = event
                 .composedPath()
-                .find(n => n instanceof HTMLElement && n.dataset?.vacuumAction);
+                .find((n): n is HTMLElement => n instanceof HTMLElement && Boolean(n.dataset.vacuumAction));
               const action = node?.dataset?.vacuumAction;
               if (action === "body_tap") {
                 return "body";
@@ -175,11 +212,16 @@ class NodaliaVacuumCard extends HTMLElement {
   disconnectedCallback() {
     this._detachHostHold?.();
     this._resizeObserver?.disconnect();
+    if (this._resizeFrame) window.cancelAnimationFrame(this._resizeFrame);
+    this._resizeFrame = 0;
+    this._releaseViewWork();
+    this._suppressNextVacuumTap = false;
+    this._pendingModeSelection = { suction: "", mop: "" };
     if (this._entranceAnimationResetTimer) {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
     }
-    Object.keys(this._pendingModeSelectionTimers).forEach(kind => {
+    modeKinds.forEach(kind => {
       if (this._pendingModeSelectionTimers[kind]) {
         window.clearTimeout(this._pendingModeSelectionTimers[kind]);
         this._pendingModeSelectionTimers[kind] = 0;
@@ -190,8 +232,18 @@ class NodaliaVacuumCard extends HTMLElement {
     this._lastRenderSignature = "";
   }
 
-  setConfig(config) {
-    this._config = normalizeConfig(config || {});
+  setConfig(config: unknown) {
+    const next = normalizeConfig(config || {});
+    if (next.entity !== this._config.entity) {
+      this._releaseViewWork();
+      modeKinds.forEach(kind => this._clearPendingModeSelection(kind));
+      this._lastNonSmartModeSelection = { suction: "", mop: "" };
+      this._selectedCleaningAreas = [];
+      this._activeModePanel = null;
+      this._roomPanelOpen = false;
+    }
+    this._suppressNextVacuumTap = false;
+    this._config = next;
     this._relatedEntityCache = null;
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
     this._isCompactLayout = this._shouldUseCompactLayout(
@@ -202,7 +254,7 @@ class NodaliaVacuumCard extends HTMLElement {
     this._render();
   }
 
-  set hass(hass) {
+  set hass(hass: HomeAssistant) {
     this._hass = hass;
     this._relatedEntityCacheGeneration += 1;
     const nextSignature = this._getRenderSignature(hass);
@@ -269,11 +321,11 @@ class NodaliaVacuumCard extends HTMLElement {
     if (typeof schedule === "function") {
       schedule(this, done, safeDelay);
     } else {
-      window.setTimeout(done, safeDelay);
+      this._scheduleFallback(done, safeDelay);
     }
   }
 
-  _scheduleEntranceAnimationReset(delay) {
+  _scheduleEntranceAnimationReset(delay: unknown) {
     if (this._entranceAnimationResetTimer) {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
@@ -320,7 +372,7 @@ class NodaliaVacuumCard extends HTMLElement {
     return size;
   }
 
-  _getRoomPanelMaxHeight(roomMappings) {
+  _getRoomPanelMaxHeight(roomMappings: RoomMapping[]) {
     const roomCount = Array.isArray(roomMappings) ? roomMappings.length : 0;
     return clamp(84 + (roomCount * 52), 220, 720);
   }
@@ -389,7 +441,7 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   _getConfiguredGridColumns() {
-    const numericColumns = Number(this._config?.grid_options?.columns);
+    const numericColumns = Number(isObject(this._config.grid_options) ? this._config.grid_options.columns : undefined);
     return Number.isFinite(numericColumns) && numericColumns > 0 ? numericColumns : null;
   }
 
@@ -418,12 +470,13 @@ class NodaliaVacuumCard extends HTMLElement {
     return window.NodaliaUtils.shouldShowCompactCardTitle({ width });
   }
 
-  _triggerHaptic(style = this._config?.haptics?.style) {
-    if (!this._config?.haptics?.enabled) {
+  _triggerHaptic(style: unknown = undefined) {
+    const haptics = isObject(this._config.haptics) ? this._config.haptics : {};
+    if (!haptics.enabled) {
       return;
     }
 
-    const hapticStyle = String(style || "medium");
+    const hapticStyle = String(style || haptics.style || "medium");
 
     try {
       fireEvent(this, "haptic", hapticStyle);
@@ -432,18 +485,19 @@ class NodaliaVacuumCard extends HTMLElement {
     }
 
     if (
-      !this._config.haptics.fallback_vibrate ||
+      !haptics.fallback_vibrate ||
       typeof navigator === "undefined" ||
       typeof navigator.vibrate !== "function"
     ) {
       return;
     }
 
-    navigator.vibrate(HAPTIC_PATTERNS[hapticStyle] || HAPTIC_PATTERNS.selection);
+    const patterns: Record<string, number | number[]> = HAPTIC_PATTERNS;
+    navigator.vibrate(patterns[hapticStyle] || HAPTIC_PATTERNS.selection);
   }
 
   _getAnimationSettings() {
-    const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+    const configuredAnimations = isObject(this._config.animations) ? this._config.animations : DEFAULT_CONFIG.animations;
     return {
       enabled: configuredAnimations.enabled !== false,
       iconAnimation: configuredAnimations.icon_animation !== false,
@@ -460,7 +514,7 @@ class NodaliaVacuumCard extends HTMLElement {
     };
   }
 
-  _triggerButtonBounce(button) {
+  _triggerButtonBounce(button: Element | null | undefined) {
     if (!(button instanceof HTMLElement)) {
       return;
     }
@@ -484,7 +538,7 @@ class NodaliaVacuumCard extends HTMLElement {
     if (typeof schedule === "function") {
       schedule(this, done, animations.buttonBounceDuration + 40);
     } else {
-      window.setTimeout(done, animations.buttonBounceDuration + 40);
+      this._scheduleFallback(done, animations.buttonBounceDuration + 40);
     }
   }
 
@@ -498,7 +552,7 @@ class NodaliaVacuumCard extends HTMLElement {
     });
   }
 
-  _navigate(path) {
+  _navigate(path: unknown) {
     const navigationPath = String(path || "").trim();
     if (!navigationPath) {
       return;
@@ -636,7 +690,7 @@ class NodaliaVacuumCard extends HTMLElement {
     return this._hass.states[this._config.entity] || null;
   }
 
-  _getRelatedEntityCache() {
+  _getRelatedEntityCache(): RelatedEntityCache | null {
     if (!this._hass?.states || !this._config?.entity) {
       return null;
     }
@@ -654,7 +708,7 @@ class NodaliaVacuumCard extends HTMLElement {
     }
 
     const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
-    const candidates = {
+    const candidates: Record<"state" | "error" | "battery" | "roomMapping" | "suctionSelect" | "mopSelect", string[]> = {
       state: [],
       error: [],
       battery: [],
@@ -665,13 +719,15 @@ class NodaliaVacuumCard extends HTMLElement {
     const suctionPatterns = ["fan_speed", "fan_power", "suction", "cleaning_mode"];
     const mopPatterns = ["mop", "water", "water_level", "water_volume", "scrub"];
     const states = this._hass.states;
-    const registry = this._hass.entities || {};
+    const registry = isObject(this._hass.entities) ? this._hass.entities : {};
     const vacuumObjectIds = listVacuumObjectIds(states);
-    const vacuumDeviceId = registry[this._config.entity]?.device_id || "";
+    const vacuumRegistry = registry[this._config.entity];
+    const vacuumDeviceId = isObject(vacuumRegistry) ? vacuumRegistry.device_id : undefined;
     const allowUnscopedRoborock = vacuumObjectIds.length <= 1;
 
     Object.keys(states).forEach(entityId => {
-      const isSameDevice = Boolean(vacuumDeviceId && registry[entityId]?.device_id === vacuumDeviceId);
+      const candidate = registry[entityId];
+      const isSameDevice = Boolean(vacuumDeviceId && isObject(candidate) && candidate.device_id === vacuumDeviceId);
       const related = isHelperRelatedToConfiguredVacuum({
         candidateId: entityId,
         searchable: states[entityId]?.attributes?.friendly_name || "",
@@ -802,7 +858,7 @@ class NodaliaVacuumCard extends HTMLElement {
     return guessedEntityId ? this._hass?.states?.[guessedEntityId] || null : null;
   }
 
-  _extractRoomsFromString(rawValue) {
+  _extractRoomsFromString(rawValue: unknown): unknown[] {
     const text = String(rawValue || "").trim();
     if (!text) {
       return [];
@@ -826,9 +882,9 @@ class NodaliaVacuumCard extends HTMLElement {
         const nameMatch = block.match(/(?:^|\n)\s*name:\s*([^\n]+)/i);
         const cleaningAreaMatch = block.match(/(?:^|\n)\s*cleaning_area_id:\s*([^\n]+)/i);
 
-        const id = idMatch ? idMatch[1].trim() : "";
-        const name = nameMatch ? nameMatch[1].trim() : "";
-        const cleaningAreaId = cleaningAreaMatch ? cleaningAreaMatch[1].trim() : "";
+        const id = idMatch?.[1]?.trim() ?? "";
+        const name = nameMatch?.[1]?.trim() ?? "";
+        const cleaningAreaId = cleaningAreaMatch?.[1]?.trim() ?? "";
 
         if (!id && !name && !cleaningAreaId) {
           return null;
@@ -845,8 +901,8 @@ class NodaliaVacuumCard extends HTMLElement {
     return this._normalizeRoomCollection(rooms);
   }
 
-  _normalizeRoomCollection(rawValue) {
-    let collection = rawValue;
+  _normalizeRoomCollection(rawValue: unknown): unknown[] {
+    const collection = rawValue;
 
     if (typeof collection === "string") {
       return this._extractRoomsFromString(collection);
@@ -856,7 +912,7 @@ class NodaliaVacuumCard extends HTMLElement {
       return collection;
     }
 
-    if (collection && typeof collection === "object") {
+    if (isObject(collection)) {
       if (Array.isArray(collection.room_mapping)) {
         return collection.room_mapping;
       }
@@ -871,7 +927,7 @@ class NodaliaVacuumCard extends HTMLElement {
     return [];
   }
 
-  _getReportedStateValue(state) {
+  _getReportedStateValue(state: HassEntity | null) {
     const error = this._getErrorLabel();
     if (error) {
       return error;
@@ -884,11 +940,11 @@ class NodaliaVacuumCard extends HTMLElement {
     return state?.state ? String(state.state) : "";
   }
 
-  _getReportedStateKey(state) {
+  _getReportedStateKey(state: HassEntity | null) {
     return normalizeTextKey(this._getReportedStateValue(state));
   }
 
-  _getVacuumName(state) {
+  _getVacuumName(state: HassEntity | null) {
     if (this._config?.name) {
       return this._config.name;
     }
@@ -900,7 +956,7 @@ class NodaliaVacuumCard extends HTMLElement {
     return this._config?.entity || "Vacuum";
   }
 
-  _getVacuumIcon(state) {
+  _getVacuumIcon(state: HassEntity | null) {
     if (this._config?.icon) {
       return this._config.icon;
     }
@@ -927,7 +983,7 @@ class NodaliaVacuumCard extends HTMLElement {
     }
   }
 
-  _getEntityPicture(state) {
+  _getEntityPicture(state: HassEntity | null) {
     if (this._config?.show_entity_picture !== true) {
       return "";
     }
@@ -939,10 +995,10 @@ class NodaliaVacuumCard extends HTMLElement {
     ).trim();
   }
 
-  _getStateLabel(state) {
+  _getStateLabel(state: HassEntity | null) {
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const langCfg = this._config?.language ?? "auto";
-    const trState = (stateKey, rawFallback = state?.state) => (
+    const trState = (stateKey: string, rawFallback: unknown = state?.state) => (
       window.NodaliaI18n?.translateAdvanceVacuumReportedState
         ? window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, langCfg, stateKey, rawFallback)
         : rawFallback
@@ -1025,7 +1081,7 @@ class NodaliaVacuumCard extends HTMLElement {
     }
   }
 
-  _humanizeStateLabel(value, hass = null, configLang = null) {
+  _humanizeStateLabel(value: unknown, hass: unknown = null, configLang: string | null = null) {
     const raw = String(value ?? "").trim();
     if (!raw) {
       return "";
@@ -1079,7 +1135,7 @@ class NodaliaVacuumCard extends HTMLElement {
       .replace(/\b\w/g, match => match.toUpperCase());
   }
 
-  _getActivityTextBlob(state) {
+  _getActivityTextBlob(state: HassEntity | null) {
     const attributes = state?.attributes || {};
     const auxiliaryState = this._getAuxiliaryState();
     const auxiliaryAttributes = auxiliaryState?.attributes || {};
@@ -1118,7 +1174,7 @@ class NodaliaVacuumCard extends HTMLElement {
       .join(" ");
   }
 
-  _getActiveTaskTokens(state) {
+  _getActiveTaskTokens(state: HassEntity | null) {
     const attributes = state?.attributes || {};
     const auxiliaryState = this._getAuxiliaryState();
     const auxiliaryAttributes = auxiliaryState?.attributes || {};
@@ -1147,43 +1203,43 @@ class NodaliaVacuumCard extends HTMLElement {
       .map(value => normalizeTextKey(value));
   }
 
-  _matchesActivity(state, keywords) {
+  _matchesActivity(state: HassEntity | null, keywords: string[]) {
     const activityBlob = this._getActivityTextBlob(state);
     return keywords.some(keyword => activityBlob.includes(normalizeTextKey(keyword)));
   }
 
-  _getBatteryLevel(state) {
-    const directValue = Number(state?.attributes?.battery_level);
-    if (Number.isFinite(directValue)) {
+  _getBatteryLevel(state: HassEntity | null) {
+    const directValue = parseFiniteNumericValue(state?.attributes?.battery_level);
+    if (directValue !== null) {
       return clamp(Math.round(directValue), 0, 100);
     }
 
     const auxiliaryState = this._getAuxiliaryState();
-    const auxiliaryBatteryLevel = Number(
+    const auxiliaryBatteryLevel = parseFiniteNumericValue(
       auxiliaryState?.attributes?.battery_level ??
       auxiliaryState?.attributes?.battery ??
       auxiliaryState?.attributes?.battery_remaining,
     );
-    if (Number.isFinite(auxiliaryBatteryLevel)) {
+    if (auxiliaryBatteryLevel !== null) {
       return clamp(Math.round(auxiliaryBatteryLevel), 0, 100);
     }
 
     const batterySensorState = this._getAuxiliaryBatteryState();
-    const batterySensorValue = Number(
+    const batterySensorValue = parseFiniteNumericValue(
       batterySensorState?.state ??
       batterySensorState?.attributes?.battery_level ??
       batterySensorState?.attributes?.battery ??
       batterySensorState?.attributes?.battery_remaining,
     );
-    if (Number.isFinite(batterySensorValue)) {
+    if (batterySensorValue !== null) {
       return clamp(Math.round(batterySensorValue), 0, 100);
     }
 
     return null;
   }
 
-  _getBatteryColor(level) {
-    if (!Number.isFinite(level)) {
+  _getBatteryColor(level: number | null) {
+    if (level === null || !Number.isFinite(level)) {
       return "var(--secondary-text-color)";
     }
 
@@ -1202,7 +1258,7 @@ class NodaliaVacuumCard extends HTMLElement {
     return "#61c97a";
   }
 
-  _getRoomMappings(state) {
+  _getRoomMappings(state: HassEntity | null): RoomMapping[] {
     const mappingSource = this._getRoomMappingSourceState();
     const rawRooms = [
       mappingSource?.attributes?.room_mapping,
@@ -1221,7 +1277,7 @@ class NodaliaVacuumCard extends HTMLElement {
     const seen = new Set();
     return rawRooms
       .map(room => {
-        if (!room || typeof room !== "object") {
+        if (!isObject(room)) {
           return null;
         }
 
@@ -1243,17 +1299,17 @@ class NodaliaVacuumCard extends HTMLElement {
           name: normalizedName,
         };
       })
-      .filter(Boolean);
+      .filter((room): room is RoomMapping => room !== null);
   }
 
-  _normalizeCleaningAreaId(value) {
+  _normalizeCleaningAreaId(value: unknown) {
     const raw = String(value ?? "").trim();
     if (!raw) {
       return "";
     }
 
     const cleaned = raw
-      .replace(/[\[\]\(\)"']/g, " ")
+      .replace(/[[\]()"']/g, " ")
       .replace(/cleaning_area_id[:=]/gi, " ")
       .replace(/,+/g, " ")
       .replace(/\s+/g, " ")
@@ -1266,7 +1322,7 @@ class NodaliaVacuumCard extends HTMLElement {
     return cleaned.split(" ")[0] || cleaned;
   }
 
-  _humanizeRoomLabel(value) {
+  _humanizeRoomLabel(value: unknown) {
     const raw = String(value ?? "").trim();
     if (!raw) {
       return "";
@@ -1283,17 +1339,17 @@ class NodaliaVacuumCard extends HTMLElement {
 
     return normalized
       .split(" ")
-      .map(token => (token ? token[0].toUpperCase() + token.slice(1) : token))
+      .map(token => (token ? token.charAt(0).toUpperCase() + token.slice(1) : token))
       .join(" ");
   }
 
-  _getCleaningAreaIdFromState(state) {
+  _getCleaningAreaIdFromState(state: HassEntity | null) {
     const reported = this._getReportedStateValue(state);
     const match = String(reported || "").match(/cleaning_area_id:\s*([^\s,]+)/i);
     return match ? this._normalizeCleaningAreaId(match[1]) : "";
   }
 
-  _getCleaningAreaLabel(state, roomMappings) {
+  _getCleaningAreaLabel(state: HassEntity | null, roomMappings: RoomMapping[]) {
     const id = this._getCleaningAreaIdFromState(state);
     if (!id) {
       return "";
@@ -1303,12 +1359,12 @@ class NodaliaVacuumCard extends HTMLElement {
     return room?.name || "";
   }
 
-  _sanitizeSelectedCleaningAreas(roomMappings) {
+  _sanitizeSelectedCleaningAreas(roomMappings: RoomMapping[]) {
     const validIds = new Set(roomMappings.map(room => room.cleaningAreaId));
     this._selectedCleaningAreas = this._selectedCleaningAreas.filter(areaId => validIds.has(areaId));
   }
 
-  _toggleCleaningAreaSelection(areaId) {
+  _toggleCleaningAreaSelection(areaId: string) {
     if (!areaId) {
       return;
     }
@@ -1321,11 +1377,11 @@ class NodaliaVacuumCard extends HTMLElement {
     this._selectedCleaningAreas = [...this._selectedCleaningAreas, areaId];
   }
 
-  _canSelectRooms(state, roomMappings = this._getRoomMappings(state)) {
+  _canSelectRooms(state: HassEntity | null, roomMappings = this._getRoomMappings(state)) {
     return this._isDocked(state) && roomMappings.length > 0;
   }
 
-  _runAreaCleaning(roomMappings) {
+  _runAreaCleaning(roomMappings: RoomMapping[]) {
     if (!roomMappings.length) {
       return false;
     }
@@ -1344,23 +1400,23 @@ class NodaliaVacuumCard extends HTMLElement {
     return true;
   }
 
-  _getCurrentFanSpeed(state) {
+  _getCurrentFanSpeed(state: HassEntity | null) {
     const current = state?.attributes?.fan_speed;
     return current ? String(current) : "";
   }
 
-  _getModeVisibilityField(kind) {
+  _getModeVisibilityField(kind: ModeKind) {
     return kind === "mop" ? "hidden_mop_modes" : "hidden_suction_modes";
   }
 
-  _isModeHidden(kind, value) {
+  _isModeHidden(kind: ModeKind, value: unknown) {
     const field = this._getModeVisibilityField(kind);
     const hiddenModes = Array.isArray(this._config?.[field]) ? this._config[field] : [];
     const expectedKey = normalizeTextKey(value);
     return hiddenModes.some(item => normalizeTextKey(item) === expectedKey);
   }
 
-  _getSelectOptions(entityId) {
+  _getSelectOptions(entityId: string | undefined) {
     const selectState = entityId ? this._hass?.states?.[entityId] : null;
     const options = Array.isArray(selectState?.attributes?.options)
       ? selectState.attributes.options.map(item => String(item || "").trim()).filter(Boolean)
@@ -1374,21 +1430,23 @@ class NodaliaVacuumCard extends HTMLElement {
     };
   }
 
-  _getModeDescriptorLabel(kind) {
+  _getModeDescriptorLabel(kind: ModeKind) {
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-    const labels = window.NodaliaI18n?.strings?.(lang)?.advanceVacuum?.descriptorLabels
-      || window.NodaliaI18n?.strings?.("en")?.advanceVacuum?.descriptorLabels
-      || {};
-    return kind === "mop" ? (labels.mop || "Mop") : (labels.suction || "Vacuum");
+    const pack = window.NodaliaI18n?.strings?.(lang)?.advanceVacuum;
+    const enPack = window.NodaliaI18n?.strings?.("en")?.advanceVacuum;
+    const localized = isObject(pack) ? pack.descriptorLabels : undefined;
+    const fallback = isObject(enPack) ? enPack.descriptorLabels : undefined;
+    const labels = isObject(localized) ? localized : isObject(fallback) ? fallback : {};
+    return String(kind === "mop" ? (labels.mop || "Mop") : (labels.suction || "Vacuum"));
   }
 
-  _guessRelatedSelectEntity(kind) {
+  _guessRelatedSelectEntity(kind: ModeKind) {
     const cache = this._getRelatedEntityCache();
     return kind === "mop" ? (cache?.mopSelect || "") : (cache?.suctionSelect || "");
   }
 
-  _categorizeModeOption(value) {
+  _categorizeModeOption(value: unknown) {
     const key = normalizeTextKey(value);
 
     if (MOP_MODE_PATTERNS.some(pattern => key.includes(pattern))) {
@@ -1402,12 +1460,12 @@ class NodaliaVacuumCard extends HTMLElement {
     return "unknown";
   }
 
-  _isSharedSmartMode(value) {
+  _isSharedSmartMode(value: unknown) {
     const key = normalizeTextKey(value);
     return SHARED_SMART_MODE_PATTERNS.some(pattern => key.includes(pattern));
   }
 
-  _getFanPresets(state) {
+  _getFanPresets(state: HassEntity | null) {
     const configuredPresets = Array.isArray(this._config?.fan_presets) ? this._config.fan_presets : [];
     if (configuredPresets.length) {
       return configuredPresets;
@@ -1422,7 +1480,7 @@ class NodaliaVacuumCard extends HTMLElement {
     return [];
   }
 
-  _getModeDescriptor(kind, state) {
+  _getModeDescriptor(kind: ModeKind, state: HassEntity | null): ModeDescriptor | null {
     const explicitEntity = kind === "mop"
       ? this._config?.mop_select_entity
       : this._config?.suction_select_entity;
@@ -1471,11 +1529,11 @@ class NodaliaVacuumCard extends HTMLElement {
       label: this._getModeDescriptorLabel(kind),
       options,
       service: "fan",
-      target: this._config?.entity,
+      target: this._config.entity,
     };
   }
 
-  _getVisibleModeDescriptors(state) {
+  _getVisibleModeDescriptors(state: HassEntity | null) {
     const modeControlsEnabled = this._config?.show_mode_controls !== false && this._config?.show_fan_presets !== false;
     if (!modeControlsEnabled) {
       return [];
@@ -1484,14 +1542,14 @@ class NodaliaVacuumCard extends HTMLElement {
     return [
       this._getModeDescriptor("suction", state),
       this._getModeDescriptor("mop", state),
-    ].filter(Boolean);
+    ].filter((mode): mode is ModeDescriptor => mode !== null);
   }
 
-  _getActiveModeDescriptor(state, panelKind = this._activeModePanel) {
+  _getActiveModeDescriptor(state: HassEntity | null, panelKind: string | null = this._activeModePanel) {
     return this._getVisibleModeDescriptors(state).find(mode => mode.kind === panelKind) || null;
   }
 
-  _getModePanelMaxHeight(descriptors) {
+  _getModePanelMaxHeight(descriptors: ModeDescriptor[]) {
     const maxOptions = Array.isArray(descriptors)
       ? descriptors.reduce((maxValue, descriptor) => Math.max(maxValue, descriptor?.options?.length || 0), 0)
       : 0;
@@ -1499,7 +1557,7 @@ class NodaliaVacuumCard extends HTMLElement {
     return clamp(84 + (maxOptions * 52), 220, 560);
   }
 
-  _getModePanelMarkup(panelKind, state = this._getState()) {
+  _getModePanelMarkup(panelKind: string, state = this._getState()) {
     const descriptor = this._getActiveModeDescriptor(state, panelKind);
     if (!descriptor) {
       return "";
@@ -1555,7 +1613,7 @@ class NodaliaVacuumCard extends HTMLElement {
     `;
   }
 
-  _getPanelMarkup(panelKey, state = this._getState()) {
+  _getPanelMarkup(panelKey: string, state = this._getState()) {
     if (panelKey === "room") {
       return this._getRoomPanelMarkup(state);
     }
@@ -1567,7 +1625,7 @@ class NodaliaVacuumCard extends HTMLElement {
     return "";
   }
 
-  _setPanelToggleButtonsState(panelKey) {
+  _setPanelToggleButtonsState(panelKey: string) {
     this.shadowRoot
       ?.querySelectorAll('[data-vacuum-action="toggle-mode-panel"]')
       .forEach(button => {
@@ -1592,7 +1650,7 @@ class NodaliaVacuumCard extends HTMLElement {
       });
   }
 
-  _setModePanelActiveSelection(modeKind, value) {
+  _setModePanelActiveSelection(modeKind: string, value: unknown) {
     const panelShell = this.shadowRoot?.querySelector(".vacuum-card__panel-shell");
     if (!(panelShell instanceof HTMLElement) || panelShell.dataset.panelKey !== String(modeKind || "")) {
       return;
@@ -1610,7 +1668,7 @@ class NodaliaVacuumCard extends HTMLElement {
       });
   }
 
-  _createMarkupNode(markup) {
+  _createMarkupNode(markup: string) {
     if (!markup || typeof document === "undefined") {
       return null;
     }
@@ -1621,7 +1679,45 @@ class NodaliaVacuumCard extends HTMLElement {
     return node instanceof HTMLElement ? node : null;
   }
 
-  _setVisiblePanelKey(panelKey, state = this._getState()) {
+  _scheduleFallback(callback: () => void, delay: number) {
+    const timer = window.setTimeout(() => { this._fallbackTimers.delete(timer); callback(); }, delay);
+    this._fallbackTimers.add(timer);
+    return timer;
+  }
+
+  _cancelPanelAnimations() {
+    ++this._panelGeneration;
+    this._panelAnimationCancels.forEach(cancel => cancel());
+    this._panelAnimationCancels.clear();
+  }
+
+  _releaseViewWork() {
+    this._cancelPanelAnimations();
+    this._fallbackTimers.forEach(timer => window.clearTimeout(timer));
+    this._fallbackTimers.clear();
+    window.NodaliaUtils?.clearDeferTimers?.(this);
+  }
+
+  _waitForPanelAnimation(panel: HTMLElement, callback: () => void, delay: number) {
+    let done = false;
+    let timer = 0;
+    const cancel = () => {
+      done = true;
+      panel.removeEventListener("animationend", onEnd);
+      window.clearTimeout(timer);
+      this._fallbackTimers.delete(timer);
+      this._panelAnimationCancels.delete(cancel);
+    };
+    const finish = () => { if (!done) { cancel(); callback(); } };
+    const onEnd = (event: Event) => { if (event.target === panel) finish(); };
+    panel.addEventListener("animationend", onEnd);
+    timer = this._scheduleFallback(finish, delay);
+    this._panelAnimationCancels.add(cancel);
+  }
+
+  _setVisiblePanelKey(panelKey: string, state = this._getState()) {
+    this._cancelPanelAnimations();
+    const generation = this._panelGeneration;
     const nextPanelKey = panelKey === "room"
       ? (this._canSelectRooms(state) ? "room" : "")
       : this._getActiveModeDescriptor(state, panelKey)?.kind || "";
@@ -1667,7 +1763,7 @@ class NodaliaVacuumCard extends HTMLElement {
       return;
     }
 
-    const removePanel = (panel, onDone = null) => {
+    const removePanel = (panel: HTMLElement, onDone: (() => void) | null = null) => {
       if (!(panel instanceof HTMLElement)) {
         if (typeof onDone === "function") {
           onDone();
@@ -1679,6 +1775,7 @@ class NodaliaVacuumCard extends HTMLElement {
       panel.classList.add("vacuum-card__panel-shell--leaving");
 
       const finalizeRemoval = () => {
+        if (generation !== this._panelGeneration || !this.isConnected || !panelsHost.isConnected) return;
         if (panel.isConnected) {
           panel.remove();
         }
@@ -1688,16 +1785,11 @@ class NodaliaVacuumCard extends HTMLElement {
         }
       };
 
-      panel.addEventListener("animationend", finalizeRemoval, { once: true });
-      const schedule = window.NodaliaUtils?.scheduleDeferTimer;
-      if (typeof schedule === "function") {
-        schedule(this, finalizeRemoval, animations.panelDuration + 80);
-      } else {
-        window.setTimeout(finalizeRemoval, animations.panelDuration + 80);
-      }
+      this._waitForPanelAnimation(panel, finalizeRemoval, animations.panelDuration + 80);
     };
 
     const appendPanel = () => {
+      if (generation !== this._panelGeneration || !this.isConnected || !panelsHost.isConnected) return;
       if (!panelMarkup) {
         panelsHost.replaceChildren();
         this._notifyLayoutChange();
@@ -1725,12 +1817,7 @@ class NodaliaVacuumCard extends HTMLElement {
           panelNode.classList.remove("vacuum-card__panel-shell--entering");
         }
       };
-      const schedule = window.NodaliaUtils?.scheduleDeferTimer;
-      if (typeof schedule === "function") {
-        schedule(this, finalizeEnter, animations.panelDuration + 80);
-      } else {
-        window.setTimeout(finalizeEnter, animations.panelDuration + 80);
-      }
+      this._waitForPanelAnimation(panelNode, finalizeEnter, animations.panelDuration + 80);
     };
 
     if (!nextPanelKey) {
@@ -1778,7 +1865,7 @@ class NodaliaVacuumCard extends HTMLElement {
     appendPanel();
   }
 
-  _isCleaning(state) {
+  _isCleaning(state: HassEntity | null) {
     return this._matchesActivity(state, [
       "cleaning",
       "segment_cleaning",
@@ -1796,7 +1883,7 @@ class NodaliaVacuumCard extends HTMLElement {
     ]);
   }
 
-  _isGoingToWashMops(state) {
+  _isGoingToWashMops(state: HassEntity | null) {
     return this._matchesActivity(state, [
       "going_to_wash_the_mop",
       "going_to_wash_mop",
@@ -1807,7 +1894,7 @@ class NodaliaVacuumCard extends HTMLElement {
     ]);
   }
 
-  _isWashingMops(state) {
+  _isWashingMops(state: HassEntity | null) {
     return this._matchesActivity(state, [
       "washing",
       "wash_mop",
@@ -1829,7 +1916,7 @@ class NodaliaVacuumCard extends HTMLElement {
     ]);
   }
 
-  _isDryingMops(state) {
+  _isDryingMops(state: HassEntity | null) {
     return this._matchesActivity(state, [
       "drying",
       "dry_mop",
@@ -1843,7 +1930,7 @@ class NodaliaVacuumCard extends HTMLElement {
     ]);
   }
 
-  _isAutoEmptying(state) {
+  _isAutoEmptying(state: HassEntity | null) {
     const keywords = [
       "emptying",
       "self_emptying",
@@ -1867,7 +1954,7 @@ class NodaliaVacuumCard extends HTMLElement {
     return keywords.some(keyword => activeTokens.includes(normalizeTextKey(keyword)));
   }
 
-  _isPaused(state) {
+  _isPaused(state: HassEntity | null) {
     return this._matchesActivity(state, [
       "paused",
       "pause",
@@ -1875,7 +1962,7 @@ class NodaliaVacuumCard extends HTMLElement {
     ]);
   }
 
-  _isReturning(state) {
+  _isReturning(state: HassEntity | null) {
     return this._matchesActivity(state, [
       "returning",
       "return_to_base",
@@ -1884,7 +1971,7 @@ class NodaliaVacuumCard extends HTMLElement {
     ]);
   }
 
-  _isDocked(state) {
+  _isDocked(state: HassEntity | null) {
     return this._matchesActivity(state, [
       "docked",
       "charging",
@@ -1894,7 +1981,7 @@ class NodaliaVacuumCard extends HTMLElement {
     ]);
   }
 
-  _isActive(state) {
+  _isActive(state: HassEntity | null) {
     return (
       this._isCleaning(state) ||
       this._isPaused(state) ||
@@ -1905,7 +1992,7 @@ class NodaliaVacuumCard extends HTMLElement {
     );
   }
 
-  _shouldTintCard(state) {
+  _shouldTintCard(state: HassEntity | null) {
     const reportedStateKey = this._getReportedStateKey(state);
 
     if (this._hasVacuumError()) {
@@ -1923,7 +2010,7 @@ class NodaliaVacuumCard extends HTMLElement {
     return true;
   }
 
-  _getAccentColor(state) {
+  _getAccentColor(state: HassEntity | null) {
     const styles = getSafeStyles(this._config?.styles);
 
     if (state?.state === "error" || this._hasVacuumError()) {
@@ -1953,29 +2040,29 @@ class NodaliaVacuumCard extends HTMLElement {
     return styles.icon.docked_color;
   }
 
-  _callService(service, data = {}) {
+  _callService(service: string, data: Record<string, unknown> = {}) {
     if (!this._hass || !this._config?.entity) {
       return;
     }
 
-    this._hass.callService("vacuum", service, {
+    invokeHassService(this, this._hass, "vacuum", service, {
       entity_id: this._config.entity,
       ...data,
     });
   }
 
-  _callSelectOption(entityId, option) {
+  _callSelectOption(entityId: string, option: string) {
     if (!this._hass || !entityId || !option) {
       return;
     }
 
-    this._hass.callService("select", "select_option", {
+    invokeHassService(this, this._hass, "select", "select_option", {
       entity_id: entityId,
       option,
     });
   }
 
-  _findMatchingModeOption(options, value) {
+  _findMatchingModeOption(options: string[], value: unknown) {
     const expectedKey = normalizeTextKey(value);
     if (!expectedKey || !Array.isArray(options)) {
       return "";
@@ -1984,19 +2071,19 @@ class NodaliaVacuumCard extends HTMLElement {
     return options.find(option => normalizeTextKey(option) === expectedKey) || "";
   }
 
-  _findSharedSmartOption(options) {
+  _findSharedSmartOption(options: string[]) {
     return Array.isArray(options)
       ? options.find(option => this._isSharedSmartMode(option)) || ""
       : "";
   }
 
-  _getModeFallbackCandidates(kind) {
+  _getModeFallbackCandidates(kind: ModeKind) {
     return kind === "mop"
       ? ["off", "low", "medium", "high", "deep", "standard", "normal", "custom"]
       : ["balanced", "standard", "normal", "quiet", "silent", "gentle", "turbo", "max", "strong", "custom"];
   }
 
-  _getModeFallbackOption(kind, descriptor) {
+  _getModeFallbackOption(kind: ModeKind, descriptor: ModeDescriptor | null) {
     if (!descriptor?.options?.length) {
       return "";
     }
@@ -2025,8 +2112,8 @@ class NodaliaVacuumCard extends HTMLElement {
     return firstNonSmart || "";
   }
 
-  _clearPendingModeSelection(kind) {
-    if (!kind || !(kind in this._pendingModeSelection)) {
+  _clearPendingModeSelection(kind: unknown) {
+    if (!isModeKind(kind)) {
       return false;
     }
 
@@ -2043,8 +2130,8 @@ class NodaliaVacuumCard extends HTMLElement {
     return true;
   }
 
-  _setPendingModeSelection(kind, value) {
-    if (!kind || !(kind in this._pendingModeSelection)) {
+  _setPendingModeSelection(kind: unknown, value: unknown) {
+    if (!isModeKind(kind)) {
       return;
     }
 
@@ -2075,7 +2162,7 @@ class NodaliaVacuumCard extends HTMLElement {
   _syncPendingModeSelections(state = this._getState()) {
     let didChange = false;
 
-    ["suction", "mop"].forEach(kind => {
+    modeKinds.forEach(kind => {
       const pendingValue = this._pendingModeSelection[kind];
       if (!pendingValue) {
         return;
@@ -2094,7 +2181,7 @@ class NodaliaVacuumCard extends HTMLElement {
     return didChange;
   }
 
-  _getOptimisticModeValue(kind, currentValue, options = []) {
+  _getOptimisticModeValue(kind: ModeKind, currentValue: string, options: string[] = []) {
     const pendingValue = this._pendingModeSelection?.[kind];
     if (!pendingValue) {
       return currentValue;
@@ -2107,16 +2194,16 @@ class NodaliaVacuumCard extends HTMLElement {
     return matchedOption || currentValue;
   }
 
-  _rememberNonSmartModeSelection(kind, value) {
-    if (!kind || !value || this._isSharedSmartMode(value)) {
+  _rememberNonSmartModeSelection(kind: unknown, value: string) {
+    if (!isModeKind(kind) || !value || this._isSharedSmartMode(value)) {
       return;
     }
 
     this._lastNonSmartModeSelection[kind] = value;
   }
 
-  _syncRememberedModeSelections(state) {
-    ["suction", "mop"].forEach(kind => {
+  _syncRememberedModeSelections(state: HassEntity | null) {
+    modeKinds.forEach(kind => {
       const descriptor = this._getModeDescriptor(kind, state);
       if (descriptor?.current && !this._isSharedSmartMode(descriptor.current)) {
         this._rememberNonSmartModeSelection(kind, descriptor.current);
@@ -2124,7 +2211,8 @@ class NodaliaVacuumCard extends HTMLElement {
     });
   }
 
-  _applyLinkedSmartModeSelection(kind, value, state) {
+  _applyLinkedSmartModeSelection(kind: unknown, value: string, state: HassEntity | null) {
+    if (!isModeKind(kind)) return;
     const descriptor = this._getModeDescriptor(kind, state);
     const otherKind = kind === "mop" ? "suction" : "mop";
     const otherDescriptor = this._getModeDescriptor(otherKind, state);
@@ -2170,7 +2258,7 @@ class NodaliaVacuumCard extends HTMLElement {
     }
   }
 
-  _runPrimaryAction(state) {
+  _runPrimaryAction(state: HassEntity | null) {
     const roomMappings = this._getRoomMappings(state);
     if (this._roomPanelOpen && this._canSelectRooms(state, roomMappings) && this._runAreaCleaning(roomMappings)) {
       this._roomPanelOpen = false;
@@ -2185,7 +2273,7 @@ class NodaliaVacuumCard extends HTMLElement {
     this._callService("start");
   }
 
-  _shouldUsePausePrimary(state) {
+  _shouldUsePausePrimary(state: HassEntity | null) {
     const reportedStateKey = this._getReportedStateKey(state);
 
     if (this._hasVacuumError() || !reportedStateKey || ["unknown", "unavailable", "error"].includes(reportedStateKey)) {
@@ -2199,7 +2287,7 @@ class NodaliaVacuumCard extends HTMLElement {
     return true;
   }
 
-  _getControls(state) {
+  _getControls(state: HassEntity | null) {
     const controls = [];
     const usePausePrimary = this._shouldUsePausePrimary(state);
     const roomMappings = this._getRoomMappings(state);
@@ -2254,12 +2342,12 @@ class NodaliaVacuumCard extends HTMLElement {
     return controls.slice(0, 4);
   }
 
-  _vacuumCardUi(key, fallback = "") {
+  _vacuumCardUi(key: string, fallback = "") {
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
     const pack = window.NodaliaI18n?.strings?.(lang)?.vacuumCard;
     const enPack = window.NodaliaI18n?.strings?.("en")?.vacuumCard;
-    const raw = pack?.[key] ?? enPack?.[key];
+    const raw = (isObject(pack) ? pack[key] : undefined) ?? (isObject(enPack) ? enPack[key] : undefined);
     return String(raw != null && raw !== "" ? raw : fallback);
   }
 
@@ -2276,10 +2364,17 @@ class NodaliaVacuumCard extends HTMLElement {
     `;
   }
 
-  _onShadowClick(event) {
+  _onShadowKeyDown(event: Event) {
+    if (!(event instanceof KeyboardEvent) || !["Enter", " "].includes(event.key)) return;
+    const target = event.composedPath()[0];
+    if (!(target instanceof HTMLElement) || target instanceof HTMLButtonElement) return;
+    if (target.dataset.vacuumAction === "body_tap" || target.dataset.vacuumAction === "icon_tap") this._onShadowClick(event);
+  }
+
+  _onShadowClick(event: Event) {
     const button = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.vacuumAction);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.vacuumAction));
 
     if (!button) {
       return;
@@ -2366,6 +2461,7 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   _render() {
+    this._cancelPanelAnimations();
     if (!this.shadowRoot) {
       return;
     }
@@ -2488,7 +2584,6 @@ class NodaliaVacuumCard extends HTMLElement {
     this._sanitizeSelectedCleaningAreas(roomMappings);
 
     const activeModeDescriptor = availableModeDescriptors.find(mode => mode.kind === this._activeModePanel) || null;
-    const currentModePanelMarkup = activeModeDescriptor ? this._getModePanelMarkup(activeModeDescriptor.kind, state) : "";
     const currentPanelKey = this._roomPanelOpen && roomMappings.length
       ? "room"
       : activeModeDescriptor?.kind || "";
@@ -3182,7 +3277,7 @@ class NodaliaVacuumCard extends HTMLElement {
         }
       </style>
 
-      <ha-card ${canRunBodyCardTap ? 'data-vacuum-action="body_tap"' : ""}>
+      <ha-card ${canRunBodyCardTap ? 'data-vacuum-action="body_tap" role="button" tabindex="0"' : ""}>
         <div class="vacuum-card ${isCompactLayout ? "vacuum-card--compact" : ""} ${denseCompact ? "vacuum-card--dense" : ""} ${shouldAnimateEntrance ? "vacuum-card--entering" : ""}">
           <div class="vacuum-card__header">
             <button
