@@ -4,7 +4,6 @@
   "src/cards/camera/camera-card.ts",
   "src/cards/climate/climate-card.ts",
   "src/cards/entity/entity-card.ts",
-  "src/cards/fan/fan-card.ts",
   "src/cards/graph/graph-card.ts",
   "src/cards/humidifier/humidifier-card.ts",
   "src/cards/light/light-card.ts",

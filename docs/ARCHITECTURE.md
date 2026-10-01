@@ -356,7 +356,7 @@ Six config/helper cycles were removed through checked defaults and normalization
 Do not place defaults in modules that import their own normalizers.
 Notifications normalization now lives below the config and presentation helpers;
 no runtime import cycles remain.
-14 legacy modules still suppress typechecking; see `scripts/type-debt.json`.
+13 legacy modules still suppress typechecking; see `scripts/type-debt.json`.
 **The full TypeScript migration is not complete.** Checked modules and extracted
 contracts must grow without adding suppressions or casts to hide errors. The
 architecture guard prevents new unchecked files and new runtime cycles.
