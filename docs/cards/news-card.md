@@ -135,7 +135,9 @@ If both `entity` and `sources` are configured, both are merged.
 | `filters.include_keywords` | Keep items whose title/summary contains any keyword. |
 | `filters.exclude_keywords` | Remove items whose title/summary contains any keyword. |
 
-Items are sorted by published date descending.
+Items are sorted by published date descending. Missing or out-of-range dates
+remain absent; epoch zero remains a valid date. Content refresh includes article
+summary, image, URL and every displayed item (up to the 50-item limit).
 
 ## Interaction
 

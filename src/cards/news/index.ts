@@ -65,6 +65,6 @@ const publicApi = {
   fitNewsHistoryPayloadToLimit,
   loadNewsHistoryFromHelper,
   writeNewsHistoryToHelper,
-};
+} satisfies NewsPublicApi;
 
-window.__NODALIA_NEWS__ = publicApi as NewsPublicApi;
+window.__NODALIA_NEWS__ = publicApi;

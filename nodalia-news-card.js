@@ -157,29 +157,103 @@
     };
   }
 
+  // src/shared/numeric-values.ts
+  function parseFiniteNumericValue(value) {
+    if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
+  // src/shared/config-values.ts
+  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var unsafeKeys = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
+  function compactConfig(value, preserveEmptyKeys = []) {
+    if (Array.isArray(value)) return value.map((item) => compactConfig(item, preserveEmptyKeys)).filter((item) => item !== void 0);
+    if (isRecord(value)) {
+      const result = {};
+      for (const [key, item] of Object.entries(value)) {
+        if (unsafeKeys.has(key)) continue;
+        if (item === "" && preserveEmptyKeys.includes(key)) {
+          result[key] = "";
+          continue;
+        }
+        const cleaned = compactConfig(item, preserveEmptyKeys);
+        if (cleaned !== void 0 && !(isRecord(cleaned) && Object.keys(cleaned).length === 0)) result[key] = cleaned;
+      }
+      return result;
+    }
+    return value === "" || value === null || value === void 0 ? void 0 : value;
+  }
+
+  // src/shared/editor-object-paths.ts
+  var isObject2 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var isUnsafeConfigPathKey2 = (key) => key === "__proto__" || key === "constructor" || key === "prototype";
+  function setByPath(target, path, value) {
+    if (!isObject2(target) || typeof path !== "string") return;
+    const parts = path.split(".");
+    if (parts.some(isUnsafeConfigPathKey2)) {
+      return;
+    }
+    let cursor = target;
+    for (let index = 0; index < parts.length - 1; index += 1) {
+      const key = parts[index];
+      if (key === void 0) return;
+      if (key === "__proto__" || key === "constructor" || key === "prototype") {
+        return;
+      }
+      const current = Object.prototype.hasOwnProperty.call(cursor, key) ? cursor[key] : void 0;
+      if (!isObject2(current)) {
+        Object.defineProperty(cursor, key, {
+          configurable: true,
+          enumerable: true,
+          value: {},
+          writable: true
+        });
+      }
+      const child = cursor[key];
+      if (!isObject2(child)) return;
+      cursor = child;
+    }
+    const finalKey = parts[parts.length - 1];
+    if (finalKey === void 0) return;
+    if (finalKey === "__proto__" || finalKey === "constructor" || finalKey === "prototype") {
+      return;
+    }
+    Object.defineProperty(cursor, finalKey, {
+      configurable: true,
+      enumerable: true,
+      value,
+      writable: true
+    });
+  }
+  function deleteByPath(target, path) {
+    if (!isObject2(target) || typeof path !== "string") return;
+    const parts = path.split(".");
+    if (parts.some(isUnsafeConfigPathKey2)) {
+      return;
+    }
+    let cursor = target;
+    for (let index = 0; index < parts.length - 1; index += 1) {
+      const key = parts[index];
+      if (key === void 0) return;
+      if (!Object.prototype.hasOwnProperty.call(cursor, key) || !isObject2(cursor[key])) {
+        return;
+      }
+      const child = cursor[key];
+      if (!isObject2(child)) return;
+      cursor = child;
+    }
+    const finalKey = parts[parts.length - 1];
+    if (finalKey !== void 0) delete cursor[finalKey];
+  }
+
   // src/cards/news/news-helpers.ts
-  function compactConfig(value) {
-    if (Array.isArray(value)) {
-      return value.map((item) => compactConfig(item)).filter((item) => item !== void 0);
-    }
-    if (isObject(value)) {
-      const compacted = {};
-      Object.entries(value).forEach(([key, item]) => {
-        if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
-          return;
-        }
-        const cleaned = compactConfig(item);
-        const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
-        if (cleaned !== void 0 && !isEmptyObject) {
-          compacted[key] = cleaned;
-        }
-      });
-      return compacted;
-    }
-    if (value === "" || value === null || value === void 0) {
-      return void 0;
-    }
-    return value;
+  var newsTextFields = ["id", "title", "summary", "source", "category", "url", "image", "publishedISO", "sourceEntityId", "sourceName", "sourceIcon", "sourceCategory"];
+  function dateTimestamp(ms) {
+    return Number.isFinite(ms) && Number.isFinite(new Date(ms).getTime()) ? ms : null;
+  }
+  function isNewsItem(value) {
+    return isObject(value) && newsTextFields.every((key) => typeof value[key] === "string") && typeof value.hasUrl === "boolean" && (value.publishedMs === null || typeof value.publishedMs === "number" && dateTimestamp(value.publishedMs) !== null) && (!value.url || isSafeHttpUrl(value.url)) && (!value.image || isSafeHttpUrl(value.image));
   }
   function escapeHtml(text) {
     return String(text ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -201,7 +275,7 @@
     return isSafeHttpUrl(url) ? String(url).trim() : "";
   }
   function pickFirstString(source, keys) {
-    if (!source || typeof source !== "object") {
+    if (!isObject(source)) {
       return "";
     }
     for (const key of keys) {
@@ -221,7 +295,7 @@
       return null;
     }
     if (typeof value === "number" && Number.isFinite(value)) {
-      return value > 1e12 ? value : value * 1e3;
+      return dateTimestamp(value > 1e12 ? value : value * 1e3);
     }
     const text = String(value).trim();
     if (!text) {
@@ -232,7 +306,7 @@
       if (!Number.isFinite(numeric)) {
         return null;
       }
-      return numeric > 1e12 ? numeric : numeric * 1e3;
+      return dateTimestamp(numeric > 1e12 ? numeric : numeric * 1e3);
     }
     const parsed = Date.parse(text);
     return Number.isFinite(parsed) ? parsed : null;
@@ -251,12 +325,8 @@
       return null;
     }
     const unit = match[2];
-    if (unit === "h") {
-      return amount * 60 * 60 * 1e3;
-    }
-    if (unit === "d") {
-      return amount * 24 * 60 * 60 * 1e3;
-    }
+    const duration = unit === "h" ? amount * 60 * 60 * 1e3 : unit === "d" ? amount * 24 * 60 * 60 * 1e3 : null;
+    if (duration !== null && Number.isFinite(duration)) return duration;
     return null;
   }
   function normalizeKeywordList(value) {
@@ -265,8 +335,9 @@
     }
     return value.map((item) => String(item ?? "").trim().toLowerCase()).filter(Boolean);
   }
-  function normalizeNewsItem(raw, sourceMeta = {}) {
-    if (!raw || typeof raw !== "object") {
+  function normalizeNewsItem(raw, meta = {}) {
+    const sourceMeta = isObject(meta) ? meta : {};
+    if (!isObject(raw)) {
       return null;
     }
     const title = pickFirstString(raw, ["title", "headline", "name"]);
@@ -282,7 +353,7 @@
     const publishedMs = parsePublishedMs(publishedRaw);
     const safeUrl = isSafeHttpUrl(url) ? url.trim() : "";
     return {
-      id: `${sourceMeta.entity || "news"}::${safeUrl || title}::${publishedMs || ""}`,
+      id: `${sourceMeta.entity || "news"}::${safeUrl || title}::${publishedMs ?? ""}`,
       title,
       summary,
       source,
@@ -290,7 +361,7 @@
       url: safeUrl,
       image,
       publishedMs,
-      publishedISO: publishedMs ? new Date(publishedMs).toISOString() : "",
+      publishedISO: publishedMs !== null ? new Date(publishedMs).toISOString() : "",
       sourceEntityId: String(sourceMeta.entity || "").trim(),
       sourceName: String(sourceMeta.name || "").trim(),
       sourceIcon: String(sourceMeta.icon || "").trim(),
@@ -342,10 +413,11 @@
     }
     return [];
   }
-  function resolveSourceEntries(config) {
+  function resolveSourceEntries(value) {
+    const config = isObject(value) ? value : {};
     const entries = [];
     const pushEntry = (raw) => {
-      if (!raw || typeof raw !== "object") {
+      if (!isObject(raw)) {
         return;
       }
       const entity = String(raw.entity ?? raw.entity_id ?? "").trim();
@@ -434,12 +506,13 @@
     const haystack = String(text || "").toLowerCase();
     return keywords.some((keyword) => haystack.includes(keyword));
   }
-  function applyNewsFilters(items, config, nowMs = Date.now()) {
-    const filters = config?.filters || {};
+  function applyNewsFilters(items, value, nowMs = Date.now()) {
+    const config = isObject(value) ? value : {};
+    const filters = isObject(config.filters) ? config.filters : {};
     const hideOlderMs = parseHideOlderThanMs(filters.hide_older_than);
     const includeKeywords = normalizeKeywordList(filters.include_keywords);
     const excludeKeywords = normalizeKeywordList(filters.exclude_keywords);
-    const maxPerSource = Math.max(0, Number(filters.max_per_source) || 0);
+    const maxPerSource = Math.max(0, parseFiniteNumericValue(filters.max_per_source) || 0);
     let filtered = items.filter((item) => {
       const blob = `${item.title} ${item.summary}`;
       if (includeKeywords.length && !keywordMatches(blob, includeKeywords)) {
@@ -475,7 +548,7 @@
         return true;
       });
     }
-    const maxItems = Math.max(1, Math.min(50, Number(config?.max_items) || DEFAULT_CONFIG.max_items));
+    const maxItems = Math.max(1, Math.min(50, parseFiniteNumericValue(config.max_items) || DEFAULT_CONFIG.max_items));
     return filtered.slice(0, maxItems);
   }
   function getNewsItemsForConfig(hass, config, nowMs = Date.now()) {
@@ -484,15 +557,10 @@
     return applyNewsFilters(collected, normalized, nowMs);
   }
   function buildNewsRenderStamp(items) {
-    return items.slice(0, 12).map((item) => [
-      item.sourceEntityId,
-      item.title,
-      item.publishedMs ?? "",
-      item.source,
-      item.hasUrl ? 1 : 0
-    ].join(":")).join("|");
+    return JSON.stringify(items.slice(0, 50).map((item) => [item.id, item.title, item.summary, item.publishedMs, item.source, item.category, item.url, item.image, item.sourceEntityId, item.sourceName, item.sourceIcon, item.sourceCategory, item.hasUrl]));
   }
-  function getNewsHistoryStorageKey(config) {
+  function getNewsHistoryStorageKey(value) {
+    const config = isObject(value) ? value : {};
     const explicit = String(config?.storage_key ?? "").trim();
     if (explicit) {
       return `${NEWS_HISTORY_STORAGE_PREFIX}${explicit}`;
@@ -501,7 +569,7 @@
     return `${NEWS_HISTORY_STORAGE_PREFIX}${sources || "default"}`;
   }
   function compactNewsHistoryItem(item) {
-    if (!item || typeof item !== "object") {
+    if (!isObject(item)) {
       return null;
     }
     const title = String(item.title || "").trim();
@@ -515,7 +583,7 @@
       category: String(item.category || "").trim(),
       url: String(item.url || "").trim(),
       image: String(item.image || "").trim(),
-      publishedMs: item.publishedMs ?? null,
+      publishedMs: typeof item.publishedMs === "number" ? dateTimestamp(item.publishedMs) : null,
       sourceEntityId: String(item.sourceEntityId || "").trim(),
       sourceName: String(item.sourceName || "").trim(),
       sourceIcon: String(item.sourceIcon || "").trim(),
@@ -523,19 +591,20 @@
     };
   }
   function restoreNewsHistoryItem(stored) {
-    if (!stored || typeof stored !== "object") {
+    if (!isObject(stored)) {
       return null;
     }
     const title = String(stored.title || "").trim();
     if (!title) {
       return null;
     }
-    const publishedMs = stored.publishedMs ?? null;
+    const numeric = parseFiniteNumericValue(stored.publishedMs);
+    const publishedMs = numeric === null ? null : dateTimestamp(numeric);
     const url = isSafeHttpUrl(stored.url) ? String(stored.url).trim() : "";
     const image = sanitizeImageUrl(stored.image);
     const sourceEntityId = String(stored.sourceEntityId || "").trim();
     return {
-      id: `${sourceEntityId || "news"}::${url || title}::${publishedMs || ""}`,
+      id: `${sourceEntityId || "news"}::${url || title}::${publishedMs ?? ""}`,
       title,
       summary: String(stored.summary || "").trim(),
       source: String(stored.source || "").trim(),
@@ -543,7 +612,7 @@
       url,
       image,
       publishedMs,
-      publishedISO: publishedMs ? new Date(publishedMs).toISOString() : "",
+      publishedISO: publishedMs !== null ? new Date(publishedMs).toISOString() : "",
       sourceEntityId,
       sourceName: String(stored.sourceName || "").trim(),
       sourceIcon: String(stored.sourceIcon || "").trim(),
@@ -552,10 +621,10 @@
     };
   }
   function mergeNewsItemHistory(stored, incoming, maxItems) {
-    const limit = Math.max(1, Math.min(50, Number(maxItems) || DEFAULT_CONFIG.max_items));
+    const limit = Math.max(1, Math.min(50, parseFiniteNumericValue(maxItems) || DEFAULT_CONFIG.max_items));
     const byId = /* @__PURE__ */ new Map();
     [...Array.isArray(stored) ? stored : [], ...Array.isArray(incoming) ? incoming : []].forEach((item) => {
-      const normalized = item?.id ? item : restoreNewsHistoryItem(item);
+      const normalized = isNewsItem(item) ? item : restoreNewsHistoryItem(item);
       if (normalized?.id) {
         byId.set(normalized.id, normalized);
       }
@@ -578,7 +647,7 @@
       if (!Array.isArray(raw)) {
         return [];
       }
-      return raw.map(restoreNewsHistoryItem).filter(Boolean);
+      return raw.map(restoreNewsHistoryItem).filter((item) => item !== null);
     } catch (_err) {
       return [];
     }
@@ -618,7 +687,7 @@
     return entry;
   }
   function decodeCompactNewsHistoryEntry(entry) {
-    if (!entry || typeof entry !== "object") {
+    if (!isObject(entry)) {
       return null;
     }
     if (entry.title || entry.headline) {
@@ -649,7 +718,7 @@
       if (!Array.isArray(parsed)) {
         return [];
       }
-      return parsed.map(decodeCompactNewsHistoryEntry).filter(Boolean);
+      return parsed.map(decodeCompactNewsHistoryEntry).filter((item) => item !== null);
     } catch (_err) {
       return [];
     }
@@ -657,7 +726,12 @@
   function fitNewsHistoryPayloadToLimit(entries, maxChars = NEWS_HISTORY_HELPER_MAX_CHARS) {
     let payload = Array.isArray(entries) ? entries.filter(Boolean) : [];
     while (payload.length > 0) {
-      const json = JSON.stringify(payload);
+      let json;
+      try {
+        json = JSON.stringify(payload);
+      } catch (_error) {
+        return "[]";
+      }
       if (json.length <= maxChars) {
         return json;
       }
@@ -697,10 +771,8 @@
       return true;
     }
     try {
-      hass.callService(domain, "set_value", {
-        entity_id: id,
-        value: payload
-      });
+      const result = hass.callService(domain, "set_value", { entity_id: id, value: payload });
+      void Promise.resolve(result).catch(() => void 0);
       return true;
     } catch (_err) {
       return false;
@@ -708,10 +780,10 @@
   }
   function getLocaleTag(hass, language) {
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, language ?? "auto");
-    return window.NodaliaI18n?.localeTag?.(lang) || hass?.locale?.language || "en";
+    return (lang === void 0 ? void 0 : window.NodaliaI18n?.localeTag?.(lang)) || hass?.locale?.language || "en";
   }
   function formatRelativePublished(ms, ui, locale) {
-    if (ms === null || ms === void 0) {
+    if (ms === null || ms === void 0 || dateTimestamp(ms) === null) {
       return "";
     }
     const now = Date.now();
@@ -741,36 +813,6 @@
     } catch (_err) {
       return "";
     }
-  }
-  function setByPath(target, path, value) {
-    const parts = String(path || "").split(".");
-    if (parts.some(isUnsafeConfigPathKey)) {
-      return;
-    }
-    let cursor = target;
-    for (let index = 0; index < parts.length - 1; index += 1) {
-      const key = parts[index];
-      if (!isObject(cursor[key])) {
-        cursor[key] = {};
-      }
-      cursor = cursor[key];
-    }
-    cursor[parts[parts.length - 1]] = value;
-  }
-  function deleteByPath(target, path) {
-    const parts = String(path || "").split(".");
-    if (parts.some(isUnsafeConfigPathKey)) {
-      return;
-    }
-    let cursor = target;
-    for (let index = 0; index < parts.length - 1; index += 1) {
-      const key = parts[index];
-      if (!isObject(cursor[key])) {
-        return;
-      }
-      cursor = cursor[key];
-    }
-    delete cursor[parts[parts.length - 1]];
   }
   function fireEvent(node, type, detail, options) {
     const event = new CustomEvent(type, {

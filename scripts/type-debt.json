@@ -35,7 +35,6 @@
   "src/cards/navigation/navigation-editor.ts",
   "src/cards/news/news-card.ts",
   "src/cards/news/news-editor.ts",
-  "src/cards/news/news-helpers.ts",
   "src/cards/notifications/notifications-card.ts",
   "src/cards/notifications/notifications-editor.ts",
   "src/cards/notifications/notifications-helpers.ts",

@@ -728,3 +728,24 @@ tests and three real malformed-config/zero browser cases pass; full local
 browser suite: 281 passed, one existing platform skip. Remaining unchecked
 modules: 52. Publish **3.0.0-alpha.1** only after migration completion; package
 version stays at the latest published build during migration.
+
+## News helper findings — 2026-10-01
+
+News helpers suppress checking and publish arbitrary unknown argument lists.
+Timestamp values can exceed the Date range and crash ISO generation; epoch
+zero loses its date/identity. History rows with an id bypass shape validation.
+Render/history stamps omit summaries/images/URLs and every item after the first
+12, so updates can remain stale. Reuse equivalent compaction/editor-path helpers,
+narrow feed/history/HA inputs, and retain sorting, source filters, helper size
+limits and asynchronous service-write rejection handling.
+
+News helpers now pass strict checking and typed lint. Feed/history/source inputs
+are narrowed, date values are bounded and epoch zero remains a real timestamp.
+Identified history rows are validated and complete content stamps detect summary,
+image, URL and later-item updates. Equivalent shared compaction and object paths
+replace duplicates without changing editor policy. Public methods derive from
+checked source. Six new unit cases and a real card refresh case cover these fixes.
+4,000 valid feed/filter/history/helper outputs match main; render stamps deliberately
+change to include previously omitted content. All 725 unit tests pass; full local
+browser suite: 284 passed, one existing platform skip. Remaining unchecked
+modules: 51. The next release remains 3.0.0-alpha.1 after full migration.

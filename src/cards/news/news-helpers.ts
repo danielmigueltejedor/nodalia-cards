@@ -1,37 +1,21 @@
-// @ts-nocheck -- news, history and URL helpers stay loosely typed until remaining unknowns are narrowed.
+import type { HassEntity, HomeAssistant } from "../../core/types/home-assistant";
+import { parseFiniteNumericValue } from "../../shared/numeric-values";
+export { compactConfig } from "../../shared/config-values";
+export { setByPath, deleteByPath } from "../../shared/editor-object-paths";
+export interface NewsSource { entity: string; name: string; icon: string; category: string }
+export interface NewsItem { id: string; title: string; summary: string; source: string; category: string; url: string; image: string; publishedMs: number | null; publishedISO: string; sourceEntityId: string; sourceName: string; sourceIcon: string; sourceCategory: string; hasUrl: boolean }
+const newsTextFields = ["id", "title", "summary", "source", "category", "url", "image", "publishedISO", "sourceEntityId", "sourceName", "sourceIcon", "sourceCategory"];
+function dateTimestamp(ms: number): number | null { return Number.isFinite(ms) && Number.isFinite(new Date(ms).getTime()) ? ms : null; }
+function isNewsItem(value: unknown): value is NewsItem { return isObject(value) && newsTextFields.every(key => typeof value[key] === "string") && typeof value.hasUrl === "boolean" && (value.publishedMs === null || typeof value.publishedMs === "number" && dateTimestamp(value.publishedMs) !== null) && (!value.url || isSafeHttpUrl(value.url)) && (!value.image || isSafeHttpUrl(value.image)); }
 import {
   ITEM_LIST_ATTRS,
   NEWS_HISTORY_HELPER_MAX_CHARS,
   NEWS_HISTORY_STORAGE_PREFIX,
 } from "./news-constants";
-import { deepClone, isObject, isUnsafeConfigPathKey } from "./news-runtime";
+import { isObject } from "./news-runtime";
 import { DEFAULT_CONFIG, normalizeConfig } from "./news-config";
 
-export function compactConfig(value) {
-  if (Array.isArray(value)) {
-    return value.map(item => compactConfig(item)).filter(item => item !== undefined);
-  }
-  if (isObject(value)) {
-    const compacted = {};
-    Object.entries(value).forEach(([key, item]) => {
-      if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
-        return;
-      }
-      const cleaned = compactConfig(item);
-      const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
-      if (cleaned !== undefined && !isEmptyObject) {
-        compacted[key] = cleaned;
-      }
-    });
-    return compacted;
-  }
-  if (value === "" || value === null || value === undefined) {
-    return undefined;
-  }
-  return value;
-}
-
-export function escapeHtml(text) {
+export function escapeHtml(text: unknown) {
   return String(text ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -39,7 +23,7 @@ export function escapeHtml(text) {
     .replace(/"/g, "&quot;");
 }
 
-export function isSafeHttpUrl(url) {
+export function isSafeHttpUrl(url: unknown) {
   const raw = String(url ?? "").trim();
   if (!raw) {
     return false;
@@ -55,12 +39,12 @@ export function isSafeHttpUrl(url) {
   }
 }
 
-export function sanitizeImageUrl(url) {
+export function sanitizeImageUrl(url: unknown) {
   return isSafeHttpUrl(url) ? String(url).trim() : "";
 }
 
-export function pickFirstString(source, keys) {
-  if (!source || typeof source !== "object") {
+export function pickFirstString(source: unknown, keys: readonly string[]) {
+  if (!isObject(source)) {
     return "";
   }
   for (const key of keys) {
@@ -76,12 +60,12 @@ export function pickFirstString(source, keys) {
   return "";
 }
 
-export function parsePublishedMs(value) {
+export function parsePublishedMs(value: unknown) {
   if (value === undefined || value === null || value === "") {
     return null;
   }
   if (typeof value === "number" && Number.isFinite(value)) {
-    return value > 1e12 ? value : value * 1000;
+    return dateTimestamp(value > 1e12 ? value : value * 1000);
   }
   const text = String(value).trim();
   if (!text) {
@@ -92,13 +76,13 @@ export function parsePublishedMs(value) {
     if (!Number.isFinite(numeric)) {
       return null;
     }
-    return numeric > 1e12 ? numeric : numeric * 1000;
+    return dateTimestamp(numeric > 1e12 ? numeric : numeric * 1000);
   }
   const parsed = Date.parse(text);
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-export function parseHideOlderThanMs(value) {
+export function parseHideOlderThanMs(value: unknown) {
   const text = String(value ?? "").trim().toLowerCase();
   if (!text) {
     return null;
@@ -112,16 +96,12 @@ export function parseHideOlderThanMs(value) {
     return null;
   }
   const unit = match[2];
-  if (unit === "h") {
-    return amount * 60 * 60 * 1000;
-  }
-  if (unit === "d") {
-    return amount * 24 * 60 * 60 * 1000;
-  }
+  const duration = unit === "h" ? amount * 60 * 60 * 1000 : unit === "d" ? amount * 24 * 60 * 60 * 1000 : null;
+  if (duration !== null && Number.isFinite(duration)) return duration;
   return null;
 }
 
-export function normalizeKeywordList(value) {
+export function normalizeKeywordList(value: unknown) {
   if (!Array.isArray(value)) {
     return [];
   }
@@ -130,8 +110,9 @@ export function normalizeKeywordList(value) {
     .filter(Boolean);
 }
 
-export function normalizeNewsItem(raw, sourceMeta = {}) {
-  if (!raw || typeof raw !== "object") {
+export function normalizeNewsItem(raw: unknown, meta: unknown = {}): NewsItem | null {
+  const sourceMeta = isObject(meta) ? meta : {};
+  if (!isObject(raw)) {
     return null;
   }
   const title = pickFirstString(raw, ["title", "headline", "name"]);
@@ -154,7 +135,7 @@ export function normalizeNewsItem(raw, sourceMeta = {}) {
   const publishedMs = parsePublishedMs(publishedRaw);
   const safeUrl = isSafeHttpUrl(url) ? url.trim() : "";
   return {
-    id: `${sourceMeta.entity || "news"}::${safeUrl || title}::${publishedMs || ""}`,
+    id: `${sourceMeta.entity || "news"}::${safeUrl || title}::${publishedMs ?? ""}`,
     title,
     summary,
     source,
@@ -162,7 +143,7 @@ export function normalizeNewsItem(raw, sourceMeta = {}) {
     url: safeUrl,
     image,
     publishedMs,
-    publishedISO: publishedMs ? new Date(publishedMs).toISOString() : "",
+    publishedISO: publishedMs !== null ? new Date(publishedMs).toISOString() : "",
     sourceEntityId: String(sourceMeta.entity || "").trim(),
     sourceName: String(sourceMeta.name || "").trim(),
     sourceIcon: String(sourceMeta.icon || "").trim(),
@@ -171,7 +152,7 @@ export function normalizeNewsItem(raw, sourceMeta = {}) {
   };
 }
 
-export function coerceNewsAttributeList(value) {
+export function coerceNewsAttributeList(value: unknown): unknown[] {
   if (Array.isArray(value)) {
     return value;
   }
@@ -197,14 +178,14 @@ export function coerceNewsAttributeList(value) {
     return [];
   }
   try {
-    const parsed = JSON.parse(trimmed);
+    const parsed: unknown = JSON.parse(trimmed);
     return coerceNewsAttributeList(parsed);
   } catch (_err) {
     return [];
   }
 }
 
-export function extractRawItemsFromState(state) {
+export function extractRawItemsFromState(state: HassEntity | null | undefined) {
   if (!state?.attributes) {
     return [];
   }
@@ -221,10 +202,11 @@ export function extractRawItemsFromState(state) {
   return [];
 }
 
-export function resolveSourceEntries(config) {
-  const entries = [];
-  const pushEntry = raw => {
-    if (!raw || typeof raw !== "object") {
+export function resolveSourceEntries(value: unknown): NewsSource[] {
+  const config = isObject(value) ? value : {};
+  const entries: NewsSource[] = [];
+  const pushEntry = (raw: unknown) => {
+    if (!isObject(raw)) {
       return;
     }
     const entity = String(raw.entity ?? raw.entity_id ?? "").trim();
@@ -253,11 +235,11 @@ export function resolveSourceEntries(config) {
   return entries;
 }
 
-export function isLovelaceHassStatesHydrated(hass) {
+export function isLovelaceHassStatesHydrated(hass: HomeAssistant | null | undefined) {
   return window.NodaliaUtils?.isLovelaceHassStatesHydrated?.(hass) === true;
 }
 
-export function isNewsSourceStateUnavailable(state) {
+export function isNewsSourceStateUnavailable(state: HassEntity | null | undefined) {
   if (!state) {
     return true;
   }
@@ -268,7 +250,7 @@ export function isNewsSourceStateUnavailable(state) {
   return stateKey === "unavailable" || stateKey === "unknown";
 }
 
-export function getNewsSourceHealth(hass, config) {
+export function getNewsSourceHealth(hass: HomeAssistant | null | undefined, config: unknown) {
   const sources = resolveSourceEntries(config);
   if (!sources.length) {
     return { hasSources: false, unavailable: false, loading: false };
@@ -297,9 +279,9 @@ export function getNewsSourceHealth(hass, config) {
   return { hasSources: true, unavailable, loading: false };
 }
 
-export function collectNormalizedItems(hass, config) {
+export function collectNormalizedItems(hass: HomeAssistant | null | undefined, config: unknown) {
   const sources = resolveSourceEntries(config);
-  const collected = [];
+  const collected: NewsItem[] = [];
   sources.forEach(source => {
     const state = hass?.states?.[source.entity] || null;
     const rawItems = extractRawItemsFromState(state);
@@ -313,7 +295,7 @@ export function collectNormalizedItems(hass, config) {
   return collected;
 }
 
-export function keywordMatches(text, keywords) {
+export function keywordMatches(text: unknown, keywords: readonly string[]) {
   if (!keywords.length) {
     return true;
   }
@@ -321,12 +303,13 @@ export function keywordMatches(text, keywords) {
   return keywords.some(keyword => haystack.includes(keyword));
 }
 
-export function applyNewsFilters(items, config, nowMs = Date.now()) {
-  const filters = config?.filters || {};
+export function applyNewsFilters(items: readonly NewsItem[], value: unknown, nowMs = Date.now()) {
+  const config = isObject(value) ? value : {};
+  const filters = isObject(config.filters) ? config.filters : {};
   const hideOlderMs = parseHideOlderThanMs(filters.hide_older_than);
   const includeKeywords = normalizeKeywordList(filters.include_keywords);
   const excludeKeywords = normalizeKeywordList(filters.exclude_keywords);
-  const maxPerSource = Math.max(0, Number(filters.max_per_source) || 0);
+  const maxPerSource = Math.max(0, parseFiniteNumericValue(filters.max_per_source) || 0);
 
   let filtered = items.filter(item => {
     const blob = `${item.title} ${item.summary}`;
@@ -354,7 +337,7 @@ export function applyNewsFilters(items, config, nowMs = Date.now()) {
   });
 
   if (maxPerSource > 0) {
-    const perSource = new Map();
+    const perSource = new Map<string, number>();
     filtered = filtered.filter(item => {
       const key = item.sourceEntityId || item.source || "unknown";
       const count = perSource.get(key) || 0;
@@ -366,30 +349,22 @@ export function applyNewsFilters(items, config, nowMs = Date.now()) {
     });
   }
 
-  const maxItems = Math.max(1, Math.min(50, Number(config?.max_items) || DEFAULT_CONFIG.max_items));
+  const maxItems = Math.max(1, Math.min(50, parseFiniteNumericValue(config.max_items) || DEFAULT_CONFIG.max_items));
   return filtered.slice(0, maxItems);
 }
 
-export function getNewsItemsForConfig(hass, config, nowMs = Date.now()) {
+export function getNewsItemsForConfig(hass: HomeAssistant | null | undefined, config: unknown, nowMs = Date.now()) {
   const normalized = normalizeConfig(config);
   const collected = collectNormalizedItems(hass, normalized);
   return applyNewsFilters(collected, normalized, nowMs);
 }
 
-export function buildNewsRenderStamp(items) {
-  return items
-    .slice(0, 12)
-    .map(item => [
-      item.sourceEntityId,
-      item.title,
-      item.publishedMs ?? "",
-      item.source,
-      item.hasUrl ? 1 : 0,
-    ].join(":"))
-    .join("|");
+export function buildNewsRenderStamp(items: readonly NewsItem[]) {
+  return JSON.stringify(items.slice(0, 50).map(item => [item.id, item.title, item.summary, item.publishedMs, item.source, item.category, item.url, item.image, item.sourceEntityId, item.sourceName, item.sourceIcon, item.sourceCategory, item.hasUrl]));
 }
 
-export function getNewsHistoryStorageKey(config) {
+export function getNewsHistoryStorageKey(value: unknown) {
+  const config = isObject(value) ? value : {};
   const explicit = String(config?.storage_key ?? "").trim();
   if (explicit) {
     return `${NEWS_HISTORY_STORAGE_PREFIX}${explicit}`;
@@ -398,8 +373,8 @@ export function getNewsHistoryStorageKey(config) {
   return `${NEWS_HISTORY_STORAGE_PREFIX}${sources || "default"}`;
 }
 
-export function compactNewsHistoryItem(item) {
-  if (!item || typeof item !== "object") {
+export function compactNewsHistoryItem(item: unknown) {
+  if (!isObject(item)) {
     return null;
   }
   const title = String(item.title || "").trim();
@@ -413,7 +388,7 @@ export function compactNewsHistoryItem(item) {
     category: String(item.category || "").trim(),
     url: String(item.url || "").trim(),
     image: String(item.image || "").trim(),
-    publishedMs: item.publishedMs ?? null,
+    publishedMs: typeof item.publishedMs === "number" ? dateTimestamp(item.publishedMs) : null,
     sourceEntityId: String(item.sourceEntityId || "").trim(),
     sourceName: String(item.sourceName || "").trim(),
     sourceIcon: String(item.sourceIcon || "").trim(),
@@ -421,20 +396,21 @@ export function compactNewsHistoryItem(item) {
   };
 }
 
-export function restoreNewsHistoryItem(stored) {
-  if (!stored || typeof stored !== "object") {
+export function restoreNewsHistoryItem(stored: unknown): NewsItem | null {
+  if (!isObject(stored)) {
     return null;
   }
   const title = String(stored.title || "").trim();
   if (!title) {
     return null;
   }
-  const publishedMs = stored.publishedMs ?? null;
+  const numeric = parseFiniteNumericValue(stored.publishedMs);
+  const publishedMs = numeric === null ? null : dateTimestamp(numeric);
   const url = isSafeHttpUrl(stored.url) ? String(stored.url).trim() : "";
   const image = sanitizeImageUrl(stored.image);
   const sourceEntityId = String(stored.sourceEntityId || "").trim();
   return {
-    id: `${sourceEntityId || "news"}::${url || title}::${publishedMs || ""}`,
+    id: `${sourceEntityId || "news"}::${url || title}::${publishedMs ?? ""}`,
     title,
     summary: String(stored.summary || "").trim(),
     source: String(stored.source || "").trim(),
@@ -442,7 +418,7 @@ export function restoreNewsHistoryItem(stored) {
     url,
     image,
     publishedMs,
-    publishedISO: publishedMs ? new Date(publishedMs).toISOString() : "",
+    publishedISO: publishedMs !== null ? new Date(publishedMs).toISOString() : "",
     sourceEntityId,
     sourceName: String(stored.sourceName || "").trim(),
     sourceIcon: String(stored.sourceIcon || "").trim(),
@@ -451,11 +427,11 @@ export function restoreNewsHistoryItem(stored) {
   };
 }
 
-export function mergeNewsItemHistory(stored, incoming, maxItems) {
-  const limit = Math.max(1, Math.min(50, Number(maxItems) || DEFAULT_CONFIG.max_items));
-  const byId = new Map();
-  [...(Array.isArray(stored) ? stored : []), ...(Array.isArray(incoming) ? incoming : [])].forEach(item => {
-    const normalized = item?.id ? item : restoreNewsHistoryItem(item);
+export function mergeNewsItemHistory(stored: unknown, incoming: unknown, maxItems: unknown) {
+  const limit = Math.max(1, Math.min(50, parseFiniteNumericValue(maxItems) || DEFAULT_CONFIG.max_items));
+  const byId = new Map<string, NewsItem>();
+  [...(Array.isArray(stored) ? stored : []), ...(Array.isArray(incoming) ? incoming : [])].forEach((item: unknown) => {
+    const normalized = isNewsItem(item) ? item : restoreNewsHistoryItem(item);
     if (normalized?.id) {
       byId.set(normalized.id, normalized);
     }
@@ -472,22 +448,22 @@ export function mergeNewsItemHistory(stored, incoming, maxItems) {
     .slice(0, limit);
 }
 
-export function loadNewsHistoryFromStorage(storageKey) {
+export function loadNewsHistoryFromStorage(storageKey: string) {
   if (typeof localStorage === "undefined" || !storageKey) {
     return [];
   }
   try {
-    const raw = JSON.parse(localStorage.getItem(storageKey) || "[]");
+    const raw: unknown = JSON.parse(localStorage.getItem(storageKey) || "[]");
     if (!Array.isArray(raw)) {
       return [];
     }
-    return raw.map(restoreNewsHistoryItem).filter(Boolean);
+    return raw.map(restoreNewsHistoryItem).filter((item): item is NewsItem => item !== null);
   } catch (_err) {
     return [];
   }
 }
 
-export function saveNewsHistoryToStorage(storageKey, items) {
+export function saveNewsHistoryToStorage(storageKey: string, items: unknown) {
   if (typeof localStorage === "undefined" || !storageKey) {
     return;
   }
@@ -501,12 +477,12 @@ export function saveNewsHistoryToStorage(storageKey, items) {
   }
 }
 
-export function encodeCompactNewsHistoryEntry(item) {
+export function encodeCompactNewsHistoryEntry(item: unknown) {
   const compact = compactNewsHistoryItem(item);
   if (!compact) {
     return null;
   }
-  const entry = {
+  const entry: Record<string, string | number | undefined> = {
     t: compact.title.slice(0, 48),
     p: compact.publishedMs ?? undefined,
     e: compact.sourceEntityId || undefined,
@@ -524,8 +500,8 @@ export function encodeCompactNewsHistoryEntry(item) {
   return entry;
 }
 
-export function decodeCompactNewsHistoryEntry(entry) {
-  if (!entry || typeof entry !== "object") {
+export function decodeCompactNewsHistoryEntry(entry: unknown) {
+  if (!isObject(entry)) {
     return null;
   }
   if (entry.title || entry.headline) {
@@ -547,26 +523,27 @@ export function decodeCompactNewsHistoryEntry(entry) {
   });
 }
 
-export function parseNewsHistoryFromHelperState(rawState) {
+export function parseNewsHistoryFromHelperState(rawState: unknown) {
   const raw = String(rawState ?? "").trim();
   if (!raw || raw === "unknown" || raw === "unavailable") {
     return [];
   }
   try {
-    const parsed = JSON.parse(raw);
+    const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) {
       return [];
     }
-    return parsed.map(decodeCompactNewsHistoryEntry).filter(Boolean);
+    return parsed.map(decodeCompactNewsHistoryEntry).filter((item): item is NewsItem => item !== null);
   } catch (_err) {
     return [];
   }
 }
 
-export function fitNewsHistoryPayloadToLimit(entries, maxChars = NEWS_HISTORY_HELPER_MAX_CHARS) {
+export function fitNewsHistoryPayloadToLimit(entries: unknown, maxChars = NEWS_HISTORY_HELPER_MAX_CHARS) {
   let payload = Array.isArray(entries) ? entries.filter(Boolean) : [];
   while (payload.length > 0) {
-    const json = JSON.stringify(payload);
+    let json: string;
+    try { json = JSON.stringify(payload); } catch (_error) { return "[]"; }
     if (json.length <= maxChars) {
       return json;
     }
@@ -575,7 +552,7 @@ export function fitNewsHistoryPayloadToLimit(entries, maxChars = NEWS_HISTORY_HE
   return "[]";
 }
 
-export function loadNewsHistoryFromHelper(hass, entityId) {
+export function loadNewsHistoryFromHelper(hass: HomeAssistant | null | undefined, entityId: unknown) {
   const id = String(entityId ?? "").trim();
   if (!id || !hass?.states?.[id]) {
     return [];
@@ -583,7 +560,7 @@ export function loadNewsHistoryFromHelper(hass, entityId) {
   return parseNewsHistoryFromHelperState(hass.states[id].state);
 }
 
-export function getNewsHistoryHelperSignature(hass, entityId) {
+export function getNewsHistoryHelperSignature(hass: HomeAssistant | null | undefined, entityId: unknown) {
   const id = String(entityId ?? "").trim();
   if (!id || !hass?.states?.[id]) {
     return "";
@@ -592,7 +569,7 @@ export function getNewsHistoryHelperSignature(hass, entityId) {
   return `${state.state ?? ""}::${state.last_changed ?? state.last_updated ?? ""}`;
 }
 
-export function writeNewsHistoryToHelper(hass, entityId, items) {
+export function writeNewsHistoryToHelper(hass: HomeAssistant | null | undefined, entityId: unknown, items: unknown) {
   const id = String(entityId ?? "").trim();
   if (!id || typeof hass?.callService !== "function") {
     return false;
@@ -609,23 +586,22 @@ export function writeNewsHistoryToHelper(hass, entityId, items) {
     return true;
   }
   try {
-    hass.callService(domain, "set_value", {
-      entity_id: id,
-      value: payload,
-    });
+    const result = hass.callService(domain, "set_value", { entity_id: id, value: payload });
+    // Preserve the synchronous accepted-write contract while observing async errors.
+    void Promise.resolve(result).catch(() => undefined);
     return true;
   } catch (_err) {
     return false;
   }
 }
 
-export function getLocaleTag(hass, language) {
+export function getLocaleTag(hass: HomeAssistant | null | undefined, language: string | undefined) {
   const lang = window.NodaliaI18n?.resolveLanguage?.(hass, language ?? "auto");
-  return window.NodaliaI18n?.localeTag?.(lang) || hass?.locale?.language || "en";
+  return (lang === undefined ? undefined : window.NodaliaI18n?.localeTag?.(lang)) || hass?.locale?.language || "en";
 }
 
-export function formatRelativePublished(ms, ui, locale) {
-  if (ms === null || ms === undefined) {
+export function formatRelativePublished(ms: number | null | undefined, ui: (key: string, fallback: string, parameters?: Record<string, number>) => string, locale: string) {
+  if (ms === null || ms === undefined || dateTimestamp(ms) === null) {
     return "";
   }
   const now = Date.now();
@@ -657,39 +633,7 @@ export function formatRelativePublished(ms, ui, locale) {
   }
 }
 
-export function setByPath(target, path, value) {
-  const parts = String(path || "").split(".");
-  if (parts.some(isUnsafeConfigPathKey)) {
-    return;
-  }
-  let cursor = target;
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key])) {
-      cursor[key] = {};
-    }
-    cursor = cursor[key];
-  }
-  cursor[parts[parts.length - 1]] = value;
-}
-
-export function deleteByPath(target, path) {
-  const parts = String(path || "").split(".");
-  if (parts.some(isUnsafeConfigPathKey)) {
-    return;
-  }
-  let cursor = target;
-  for (let index = 0; index < parts.length - 1; index += 1) {
-    const key = parts[index];
-    if (!isObject(cursor[key])) {
-      return;
-    }
-    cursor = cursor[key];
-  }
-  delete cursor[parts[parts.length - 1]];
-}
-
-export function escapeSelectorValue(value) {
+export function escapeSelectorValue(value: unknown) {
   const text = String(value ?? "");
   if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
     return CSS.escape(text);
@@ -697,7 +641,7 @@ export function escapeSelectorValue(value) {
   return text.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
 
-export function fireEvent(node, type, detail, options) {
+export function fireEvent(node: EventTarget, type: string, detail?: unknown, options?: { bubbles?: boolean; composed?: boolean; cancelable?: boolean }) {
   const event = new CustomEvent(type, {
     bubbles: options?.bubbles !== false,
     composed: options?.composed !== false,
