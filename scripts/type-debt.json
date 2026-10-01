@@ -1,8 +1,6 @@
 [
   "src/cards/advance-vacuum/advance-vacuum-card.ts",
-  "src/cards/advance-vacuum/advance-vacuum-config.ts",
   "src/cards/advance-vacuum/advance-vacuum-editor.ts",
-  "src/cards/advance-vacuum/advance-vacuum-helpers.ts",
   "src/cards/alarm-panel/alarm-panel-card.ts",
   "src/cards/alarm-panel/alarm-panel-editor.ts",
   "src/cards/calendar/calendar-card.ts",

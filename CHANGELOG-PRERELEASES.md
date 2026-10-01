@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+- Advanced Vacuum: check map/session/calibration helpers and config; reject absent coordinates and invalid matrices, retain nested rectangle rooms, and preserve query fragments.
+
 - Notifications: distinguish missing measurements/forecasts from actual zero, reject impossible calendar dates and check registry/editor/background profile boundaries. Public helper contracts now derive from strict source.
 
 The next prerelease is **3.0.0-alpha.1** and starts the 3.0.0 line. Publish it only after the complete

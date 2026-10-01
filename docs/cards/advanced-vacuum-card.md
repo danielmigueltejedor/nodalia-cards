@@ -60,6 +60,12 @@ room_segments:
 
 Configure the vacuum's area mapping in Home Assistant before using this profile. See the official [Vacuum entity developer documentation](https://developers.home-assistant.io/docs/core/entity/vacuum/) and Home Assistant's [`vacuum/get_segments` implementation](https://github.com/home-assistant/core/blob/dev/homeassistant/components/vacuum/websocket.py).
 
+## Geometry and calibration inputs
+
+Coordinates accept finite numbers or numeric strings; missing values do not become zero. A real zero remains a valid coordinate. Room outlines can use points, rectangle bounds or nested collections of rectangles/polygons; rectangle tuples are kept distinct from point tuples.
+
+Three valid calibration correspondences create an affine transform; four or more use the first four for a projective transform. Incomplete, nonfinite or singular calibration data leaves the converter uncalibrated. Existing valid transforms and shared cleaning-session codecs retain their format. Map cache parameters remain before any URL fragment.
+
 ## Integration references
 
 - [Home Assistant Roborock implementation](https://github.com/home-assistant/core/blob/dev/homeassistant/components/roborock/vacuum.py)
