@@ -150,11 +150,11 @@ test("alarm panel keeps PIN watchdog armed after resolved service calls", () => 
   assert.match(source, /st\.state !== w\.snapState \|\| st\.last_changed !== w\.snapLc/);
   assert.match(
     source,
-    /Promise\.resolve\(invoke\(this, this\._hass, "alarm_control_panel", service, payload\)\)[\s\S]*?\.catch\(/,
+    /invoke\(\)\.catch\(/,
   );
   assert.doesNotMatch(
     source,
-    /Promise\.resolve\(invoke\(this, this\._hass, "alarm_control_panel", service, payload\)\)[\s\S]*?\.then\([\s\S]*?_clearPinVerifyWatch/,
+    /invoke\(\)\.then\([\s\S]*?_clearPinVerifyWatch/,
     "resolved alarm service calls must not clear the PIN watchdog early",
   );
 });

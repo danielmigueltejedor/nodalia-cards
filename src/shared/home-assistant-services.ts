@@ -19,6 +19,13 @@ export function callHassService(hass: HomeAssistant | null | undefined, domain: 
   catch (error) { failure(error); }
 }
 
+/** Awaitable boundary for controls that need to show their own service feedback. */
+export async function requestHassService(host: HTMLElement, hass: HomeAssistant | null | undefined, domain: string, service: string, data: Record<string, unknown> = {}, target: Record<string, unknown> | null = null): Promise<unknown> {
+  if (hass?.callService) return target !== null ? hass.callService(domain, service, data, target) : hass.callService(domain, service, data);
+  const utils = window.NodaliaUtils;
+  return utils?.invokeHomeAssistantService?.call(utils, host, hass, domain, service, data, target);
+}
+
 /** Preserve the compatibility event fallback and explicit targets at a card UI boundary. */
 export function invokeHassService(host: HTMLElement, hass: HomeAssistant | null | undefined, domain: string, service: string, data: Record<string, unknown> = {}, target: Record<string, unknown> | null = null): void {
   const utils = window.NodaliaUtils;

@@ -1,5 +1,6 @@
-// @ts-nocheck
-/* Large HTMLElement view/controller: typed incrementally as methods are extracted. */
+import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
+import { parseFiniteNumericValue } from "../../shared/numeric-values";
+import { requestHassService } from "../../shared/home-assistant-services";
 import {
   ALARM_STATE_TINT_FALLBACKS,
   CARD_TAG,
@@ -13,17 +14,11 @@ import {
 } from "./alarm-panel-constants";
 import {
   clamp,
-  compactConfig,
   deepClone,
-  deleteByPath,
   escapeHtml,
-  escapeSelectorValue,
   fireEvent,
-  getByPath,
   isObject,
-  mergeConfig,
   normalizeTextKey,
-  setByPath,
 } from "./alarm-panel-runtime";
 import { DEFAULT_CONFIG, STUB_CONFIG, normalizeConfig } from "./alarm-panel-config";
 import {
@@ -32,21 +27,48 @@ import {
   parseSizeToPixels,
 } from "./alarm-panel-helpers";
 
-let _lazyNodaliaAlarmPanelCard;
-export function loadNodaliaAlarmPanelCard() {
+type AlarmState = Pick<HassEntity, "state"> & Partial<Omit<HassEntity, "state">>;
+interface CodeFocusState { value: string; selectionStart: number | null; selectionEnd: number | null; }
+interface PinBaseline { state: string; lc: string | undefined; }
+interface PinVerifyWatch { snapState: string; snapLc: string | undefined; timer: number; }
+let _lazyNodaliaAlarmPanelCard: CustomElementConstructor | undefined;
+export function loadNodaliaAlarmPanelCard(): CustomElementConstructor {
   if (_lazyNodaliaAlarmPanelCard) {
     return _lazyNodaliaAlarmPanelCard;
   }
 class NodaliaAlarmPanelCard extends HTMLElement {
+  private _config!: ReturnType<typeof normalizeConfig>;
+  private _hass!: HomeAssistant | null;
+  private _animateContentOnNextRender!: boolean;
+  private _entranceAnimationResetTimer!: number;
+  private _cardWidth!: number;
+  private _resizeRenderFrame!: number;
+  private _isCompactLayout!: boolean;
+  private _codeInput!: string;
+  private _isCodeInputFocused!: boolean;
+  private _pendingRenderWhileCodeFocused!: boolean;
+  private _countdownInterval!: number | null;
+  private _resizeObserver!: ResizeObserver | null;
+  private _lastRenderSignature!: string;
+  private _pinVerifyWatch!: PinVerifyWatch | null;
+  private _pinErrorVisible!: boolean;
+  private _pinErrorClearTimer!: number;
+  private _pinErrorBaseline!: PinBaseline | null;
+  private _focusDeferTimer!: number;
+  private _fallbackAnimationTimers!: Set<number>;
+  private _actionGeneration!: number;
+  private _actionPointer!: number | null;
+  private _actionPointerButton!: HTMLButtonElement | null;
+
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig(hass, entities = [], entitiesFallback = []) {
+  static getStubConfig(hass: HomeAssistant | null | undefined, entities: unknown = [], entitiesFallback: unknown = []) {
     return applyStubEntity(deepClone(STUB_CONFIG), hass, ["alarm_control_panel"], entities, entitiesFallback);
   }
 
-  static getEntitySuggestion(hass, entityId) {
+  static getEntitySuggestion(hass: HomeAssistant, entityId: string) {
     return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, { domains: ["alarm_control_panel"] });
   }
 
@@ -58,9 +80,18 @@ class NodaliaAlarmPanelCard extends HTMLElement {
   _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
+    this._focusDeferTimer = 0;
+    this._fallbackAnimationTimers = new Set();
+    this._actionGeneration = 0;
+    this._actionPointer = null;
+    this._actionPointerButton = null;
+    this._onActionPointerDown = this._onActionPointerDown.bind(this);
+    this._onActionPointerEnd = this._onActionPointerEnd.bind(this);
+    this._onActionPointerCancel = this._onActionPointerCancel.bind(this);
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
     this._cardWidth = 0;
+    this._resizeRenderFrame = 0;
     this._isCompactLayout = false;
     this._codeInput = "";
     this._isCodeInputFocused = false;
@@ -95,12 +126,12 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     };
   }
 
-  _restoreCodeFocusState(focusState) {
+  _restoreCodeFocusState(focusState: CodeFocusState | null) {
     if (!focusState || !(this.shadowRoot instanceof ShadowRoot)) {
       return;
     }
 
-    const target = this.shadowRoot.querySelector('input[data-alarm-field="code"]');
+    const target = this.shadowRoot?.querySelector('input[data-alarm-field="code"]');
     if (!(target instanceof HTMLInputElement)) {
       return;
     }
@@ -135,6 +166,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
   }
 
   _shouldDeferRenderForCodeInput() {
+    if (this._actionPointer !== null) return true;
     if (!this._isCodeInputFocused) {
       return false;
     }
@@ -156,10 +188,14 @@ class NodaliaAlarmPanelCard extends HTMLElement {
   }
 
   connectedCallback() {
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("focusin", this._onShadowFocusIn);
-    this.shadowRoot.addEventListener("focusout", this._onShadowFocusOut);
+    this.shadowRoot?.addEventListener("pointerdown", this._onActionPointerDown);
+    window.addEventListener("pointerup", this._onActionPointerEnd);
+    window.addEventListener("pointercancel", this._onActionPointerCancel);
+    window.addEventListener("blur", this._onActionPointerCancel);
+    this.shadowRoot?.addEventListener("click", this._onShadowClick);
+    this.shadowRoot?.addEventListener("input", this._onShadowInput);
+    this.shadowRoot?.addEventListener("focusin", this._onShadowFocusIn);
+    this.shadowRoot?.addEventListener("focusout", this._onShadowFocusOut);
 
     if (!this._resizeObserver) {
       this._resizeObserver = new ResizeObserver(entries => {
@@ -185,7 +221,12 @@ class NodaliaAlarmPanelCard extends HTMLElement {
           return;
         }
         this._lastRenderSignature = signature;
-        this._requestRender();
+        if (!this._resizeRenderFrame) {
+          this._resizeRenderFrame = window.requestAnimationFrame(() => {
+            this._resizeRenderFrame = 0;
+            if (this.isConnected) this._requestRender();
+          });
+        }
       });
     }
 
@@ -196,50 +237,59 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     this._requestRender();
   }
 
-  disconnectedCallback() {
-    this.shadowRoot.removeEventListener("click", this._onShadowClick);
-    this.shadowRoot.removeEventListener("input", this._onShadowInput);
-    this.shadowRoot.removeEventListener("focusin", this._onShadowFocusIn);
-    this.shadowRoot.removeEventListener("focusout", this._onShadowFocusOut);
-    this._resizeObserver?.disconnect();
-    this._clearCountdownTimer();
+  _releaseActionWork() {
+    this._actionGeneration += 1;
+    this._actionPointer = null;
+    this._actionPointerButton = null;
+    if (this._resizeRenderFrame) window.cancelAnimationFrame(this._resizeRenderFrame);
+    this._resizeRenderFrame = 0;
     this._clearPinVerifyWatch();
-    if (this._pinErrorClearTimer) {
-      window.clearTimeout(this._pinErrorClearTimer);
-      this._pinErrorClearTimer = 0;
-    }
+    for (const timer of this._fallbackAnimationTimers) window.clearTimeout(timer);
+    this._fallbackAnimationTimers.clear();
+    if (this._focusDeferTimer) window.clearTimeout(this._focusDeferTimer);
+    this._focusDeferTimer = 0;
+    if (this._pinErrorClearTimer) window.clearTimeout(this._pinErrorClearTimer);
+    this._pinErrorClearTimer = 0;
+    if (this._entranceAnimationResetTimer) window.clearTimeout(this._entranceAnimationResetTimer);
+    this._entranceAnimationResetTimer = 0;
     this._pinErrorVisible = false;
     this._pinErrorBaseline = null;
-    if (this._focusDeferTimer) {
-      window.clearTimeout(this._focusDeferTimer);
-      this._focusDeferTimer = 0;
-    }
+    this._isCodeInputFocused = false;
+    this._pendingRenderWhileCodeFocused = false;
     window.NodaliaUtils?.clearDeferTimers?.(this);
-    if (this._entranceAnimationResetTimer) {
-      window.clearTimeout(this._entranceAnimationResetTimer);
-      this._entranceAnimationResetTimer = 0;
-    }
+  }
+
+  disconnectedCallback() {
+    this.shadowRoot?.removeEventListener("pointerdown", this._onActionPointerDown);
+    window.removeEventListener("pointerup", this._onActionPointerEnd);
+    window.removeEventListener("pointercancel", this._onActionPointerCancel);
+    window.removeEventListener("blur", this._onActionPointerCancel);
+    this.shadowRoot?.removeEventListener("click", this._onShadowClick);
+    this.shadowRoot?.removeEventListener("input", this._onShadowInput);
+    this.shadowRoot?.removeEventListener("focusin", this._onShadowFocusIn);
+    this.shadowRoot?.removeEventListener("focusout", this._onShadowFocusOut);
+    this._resizeObserver?.disconnect();
+    this._releaseActionWork();
+    this._codeInput = "";
+    this._clearCountdownTimer();
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
   }
 
-  setConfig(config) {
+  setConfig(config: unknown) {
+    const previousEntity = this._config.entity;
+    this._releaseActionWork();
     this._config = normalizeConfig(config || {});
+    if (previousEntity !== this._config.entity) this._codeInput = "";
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
-    this._clearPinVerifyWatch();
-    if (this._pinErrorClearTimer) {
-      window.clearTimeout(this._pinErrorClearTimer);
-      this._pinErrorClearTimer = 0;
-    }
-    this._pinErrorVisible = false;
-    this._pinErrorBaseline = null;
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
     this._syncCountdownTimer();
-    this._requestRender();
+    if (previousEntity !== this._config.entity) this._render();
+    else this._requestRender();
   }
 
-  set hass(hass) {
+  set hass(hass: HomeAssistant) {
     const entityId = this._config?.entity || "";
     let bustSignatureCache = false;
 
@@ -287,16 +337,16 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     };
   }
 
-  _shouldUseCompactLayout(width) {
+  _shouldUseCompactLayout(width: number) {
     return window.NodaliaUtils.shouldUseCompactCardLayout({
       mode: this._config?.compact_layout_mode,
       width,
-      gridColumns: this._config?.grid_options?.columns,
+      gridColumns: parseFiniteNumericValue(isObject(this._config.grid_options) ? this._config.grid_options.columns : undefined),
       parentWidth: window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0,
     });
   }
 
-  _shouldShowCompactTitle(width) {
+  _shouldShowCompactTitle(width = 0) {
     return window.NodaliaUtils.shouldShowCompactCardTitle({
       width: Math.round(width || this._cardWidth || this.clientWidth || 0),
     });
@@ -308,7 +358,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
 
   _getRenderSignature(hass = this._hass) {
     const entityId = this._config?.entity || "";
-    const helperEntityId = this._config?.code_entity || "";
+    const helperEntityId = String(this._config.code_entity || "");
     const state = entityId ? hass?.states?.[entityId] || null : null;
     const helperState = helperEntityId ? hass?.states?.[helperEntityId] || null : null;
     const attrs = state?.attributes || {};
@@ -325,6 +375,9 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       String(attrs.next_state || ""),
       String(attrs.post_pending_state || ""),
       String(attrs.post_delay_state || ""),
+      String(attrs.arm_mode || ""),
+      String(attrs.arming_mode || ""),
+      String(state?.last_changed || ""),
       helperEntityId,
       String(helperState?.state || ""),
       Boolean(this._isCompactLayout),
@@ -340,7 +393,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     return values.join("::");
   }
 
-  _getTitle(state) {
+  _getTitle(state: HassEntity | null) {
     if (this._config?.name) {
       return this._config.name;
     }
@@ -352,14 +405,15 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     }
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-    return window.NodaliaI18n?.strings?.(lang)?.alarmPanel?.defaultTitle || "Alarm";
+    const pack = window.NodaliaI18n?.strings?.(lang)?.alarmPanel;
+    return (isObject(pack) ? pack.defaultTitle : undefined) || "Alarm";
   }
 
   _getIcon() {
     return this._config?.icon || "mdi:shield-home";
   }
 
-  _getEntityPicture(state) {
+  _getEntityPicture(state: HassEntity | null) {
     if (this._config?.show_entity_picture !== true) {
       return "";
     }
@@ -371,14 +425,17 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     ).trim();
   }
 
-  _translateState(state) {
+  _translateState(state: AlarmState | null) {
     const key = normalizeTextKey(state?.state);
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const langCfg = this._config?.language ?? "auto";
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, langCfg) ?? "en";
-    const alarmStrings = window.NodaliaI18n?.strings?.(lang)?.alarmPanel;
-    const enAlarm = window.NodaliaI18n?.strings?.("en")?.alarmPanel;
-    const translated = alarmStrings?.states?.[key] || enAlarm?.states?.[key];
+    const pack = window.NodaliaI18n?.strings?.(lang)?.alarmPanel;
+    const enPack = window.NodaliaI18n?.strings?.("en")?.alarmPanel;
+    const alarmStrings = isObject(pack) ? pack : {};
+    const enAlarm = isObject(enPack) ? enPack : {};
+    const translated = (isObject(alarmStrings.states) ? alarmStrings.states[key] : undefined)
+      || (isObject(enAlarm.states) ? enAlarm.states[key] : undefined);
     if (translated) {
       return translated;
     }
@@ -386,7 +443,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     return state?.state ? String(state.state) : (alarmStrings?.noState || enAlarm?.noState || "No state");
   }
 
-  _getCountdownSecondsRemaining(state) {
+  _getCountdownSecondsRemaining(state: HassEntity | null) {
     const status = normalizeTextKey(state?.state);
     if (!["arming", "pending"].includes(status)) {
       return null;
@@ -406,8 +463,8 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     return Math.max(0, Math.ceil(delay - elapsedSeconds));
   }
 
-  _formatCountdownLabel(seconds) {
-    if (!Number.isFinite(seconds) || seconds < 0) {
+  _formatCountdownLabel(seconds: number | null) {
+    if (seconds === null || !Number.isFinite(seconds) || seconds < 0) {
       return null;
     }
 
@@ -425,6 +482,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
   }
 
   _syncCountdownTimer() {
+    if (!this.isConnected) { this._clearCountdownTimer(); return; }
     const state = this._getState();
     const remaining = this._getCountdownSecondsRemaining(state);
 
@@ -453,22 +511,24 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     }, 1000);
   }
 
-  _getAccentColor(state) {
+  _getAccentColor(state: HassEntity | null) {
     const key = normalizeTextKey(state?.state);
-    const configuredTint = this._config?.styles?.state_tints?.[key];
+    const tints: Record<string, unknown> = this._config.styles.state_tints;
+    const configuredTint = tints[key];
     if (typeof configuredTint === "string" && configuredTint.trim()) {
       return configuredTint.trim();
     }
 
-    return ALARM_STATE_TINT_FALLBACKS[key] || "var(--info-color, #71c0ff)";
+    const fallbacks: Record<string, string> = ALARM_STATE_TINT_FALLBACKS;
+    return fallbacks[key] || "var(--info-color, #71c0ff)";
   }
 
-  _isActiveState(state) {
+  _isActiveState(state: HassEntity | null) {
     const key = normalizeTextKey(state?.state);
     return !["", "disarmed", "unknown", "unavailable"].includes(key);
   }
 
-  _getSupportedFeatures(state) {
+  _getSupportedFeatures(state: HassEntity | null) {
     const attrs = state?.attributes;
     if (!attrs || !Object.prototype.hasOwnProperty.call(attrs, "supported_features")) {
       return null;
@@ -477,7 +537,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     return Number.isFinite(value) ? value : 0;
   }
 
-  _supportsMode(state, mode) {
+  _supportsMode(state: HassEntity | null, mode: string) {
     const features = this._getSupportedFeatures(state);
 
     if (features === null) {
@@ -500,7 +560,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     }
   }
 
-  _getAlarmStateCandidates(state) {
+  _getAlarmStateCandidates(state: HassEntity | null) {
     return [
       state?.state,
       state?.attributes?.next_state,
@@ -513,15 +573,17 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       .filter(Boolean);
   }
 
-  _matchesAlarmMode(state, ...keys) {
+  _matchesAlarmMode(state: HassEntity | null, ...keys: string[]) {
     const candidates = this._getAlarmStateCandidates(state);
     return keys.some(key => candidates.includes(normalizeTextKey(key)));
   }
 
-  _getModeDefinitions(state) {
+  _getModeDefinitions(state: HassEntity | null) {
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-    const actionLabels = window.NodaliaI18n?.strings?.(lang)?.alarmPanel?.actions || {};
+    const pack = window.NodaliaI18n?.strings?.(lang)?.alarmPanel;
+    const labels = isObject(pack) ? pack.actions : undefined;
+    const actionLabels = isObject(labels) ? labels : {};
     const modes = [
       {
         key: "disarm",
@@ -586,7 +648,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     return modes.filter(mode => mode.enabled);
   }
 
-  _getCodeValue(state) {
+  _getCodeValue(_state: HassEntity | null) {
     const manualPin = String(this._codeInput || "").trim();
     if (manualPin) {
       return manualPin;
@@ -610,7 +672,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     return "";
   }
 
-  _shouldShowCodeInput(state) {
+  _shouldShowCodeInput(state: HassEntity | null) {
     if (this._config?.show_code_input === false) {
       return false;
     }
@@ -623,13 +685,13 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     return Boolean(codeFormat);
   }
 
-  _triggerHaptic(styleOverride = null) {
-    const haptics = this._config?.haptics || {};
+  _triggerHaptic(styleOverride: string | null = null) {
+    const haptics = isObject(this._config.haptics) ? this._config.haptics : {};
     if (haptics.enabled !== true) {
       return;
     }
 
-    const style = styleOverride || haptics.style || "medium";
+    const style = String(styleOverride || haptics.style || "medium");
     fireEvent(this, "haptic", style, {
       bubbles: true,
       cancelable: false,
@@ -637,13 +699,13 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     });
 
     if (haptics.fallback_vibrate && typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
-      const pattern = HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection;
-      navigator.vibrate(pattern);
+      const patterns: Record<string, number | number[]> = HAPTIC_PATTERNS;
+      try { navigator.vibrate(patterns[style] ?? HAPTIC_PATTERNS.selection); } catch { /* Vibration must not block alarm actions. */ }
     }
   }
 
   _getAnimationSettings() {
-    const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+    const configuredAnimations = isObject(this._config.animations) ? this._config.animations : DEFAULT_CONFIG.animations;
 
     return {
       enabled: configuredAnimations.enabled !== false,
@@ -660,7 +722,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     };
   }
 
-  _triggerPressAnimation(element, className = "is-pressing") {
+  _triggerPressAnimation(element: Element | null | undefined, className = "is-pressing") {
     if (!(element instanceof HTMLElement)) {
       return;
     }
@@ -684,15 +746,13 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     if (typeof schedule === "function") {
       schedule(this, done, animations.buttonBounceDuration + 40);
     } else {
-      window.setTimeout(done, animations.buttonBounceDuration + 40);
+      const timer = window.setTimeout(() => { this._fallbackAnimationTimers.delete(timer); done(); }, animations.buttonBounceDuration + 40);
+      this._fallbackAnimationTimers.add(timer);
     }
   }
 
-  _scheduleEntranceAnimationReset(delay) {
-    if (this._entranceAnimationResetTimer) {
-      window.clearTimeout(this._entranceAnimationResetTimer);
-      this._entranceAnimationResetTimer = 0;
-    }
+  _scheduleEntranceAnimationReset(delay: number) {
+    if (this._entranceAnimationResetTimer) return;
 
     const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3000);
     if (!safeDelay || typeof window === "undefined") {
@@ -746,12 +806,12 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     this._requestRender();
   }
 
-  _alarmPanelUi(key, fallback = "") {
+  _alarmPanelUi(key: string, fallback = "") {
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
     const pack = window.NodaliaI18n?.strings?.(lang)?.alarmPanel;
     const enPack = window.NodaliaI18n?.strings?.("en")?.alarmPanel;
-    const raw = pack?.[key] ?? enPack?.[key];
+    const raw = (isObject(pack) ? pack[key] : undefined) ?? (isObject(enPack) ? enPack[key] : undefined);
     return String(raw != null && raw !== "" ? raw : fallback);
   }
 
@@ -759,13 +819,13 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     return this._alarmPanelUi("wrongCode", "Wrong code");
   }
 
-  _runAlarmAction(service) {
+  _runAlarmAction(service: string | undefined) {
     const state = this._getState();
     if (!this._hass || !this._config?.entity || !service || !state) {
       return;
     }
 
-    const payload = {
+    const payload: Record<string, unknown> = {
       entity_id: this._config.entity,
     };
 
@@ -786,8 +846,16 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     }
 
     const usedManualCode = requiresManualPin && manualPin !== "";
-    const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils)
-      || ((host, hass, domain, svc, data) => Promise.resolve(hass?.callService?.(domain, svc, data)));
+    this._clearPinVerifyWatch();
+    const generation = ++this._actionGeneration;
+    const actionState = state.state;
+    const actionChangedAt = state.last_changed;
+    const isCurrentAction = () => {
+      const current = this._getState();
+      return this.isConnected && generation === this._actionGeneration
+        && current?.state === actionState && current.last_changed === actionChangedAt;
+    };
+    const invoke = () => requestHassService(this, this._hass, "alarm_control_panel", service, payload);
 
     this._triggerHaptic();
 
@@ -804,9 +872,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
         snapState,
         snapLc,
         timer: window.setTimeout(() => {
-          if (!this._pinVerifyWatch) {
-            return;
-          }
+          if (!this._pinVerifyWatch || generation !== this._actionGeneration || !this.isConnected) return;
           this._pinVerifyWatch = null;
           const st = this._getState();
           if (!st || st.state !== snapState || st.last_changed !== snapLc) {
@@ -816,19 +882,15 @@ class NodaliaAlarmPanelCard extends HTMLElement {
         }, pinVerifyMs),
       };
 
-      Promise.resolve(invoke(this, this._hass, "alarm_control_panel", service, payload))
+      invoke()
         .catch(() => {
-          if (!this.isConnected) {
-            return;
-          }
+          if (!isCurrentAction()) return;
           this._clearPinVerifyWatch();
           this._showNativePinErrorChip();
         });
     } else {
-      Promise.resolve(invoke(this, this._hass, "alarm_control_panel", service, payload)).catch(() => {
-        if (!this.isConnected) {
-          return;
-        }
+      invoke().catch(() => {
+        if (!isCurrentAction()) return;
         this._showNativePinErrorChip();
       });
     }
@@ -844,10 +906,37 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     });
   }
 
-  _onShadowClick(event) {
+  _onActionPointerDown(event: Event) {
+    if (!(event instanceof PointerEvent) || !event.isPrimary || event.button !== 0) return;
+    const button = event.composedPath().find((node): node is HTMLButtonElement =>
+      node instanceof HTMLButtonElement && Boolean(node.dataset.alarmAction));
+    if (!button || button.disabled) return;
+    this._actionPointer = event.pointerId;
+    this._actionPointerButton = button;
+  }
+
+  _onActionPointerEnd(event: Event) {
+    if (!(event instanceof PointerEvent) || event.pointerId !== this._actionPointer) return;
+    // Keep a valid button in place until its native click follows pointerup.
+    if (this._actionPointerButton && event.composedPath().includes(this._actionPointerButton)) return;
+    this._onActionPointerCancel(event);
+  }
+
+  _onActionPointerCancel(event: Event) {
+    if (event instanceof PointerEvent && event.pointerId !== this._actionPointer) return;
+    this._actionPointer = null;
+    this._actionPointerButton = null;
+    if (this._pendingRenderWhileCodeFocused && this.isConnected) this._requestRender();
+  }
+
+  _flushPendingActionRender() {
+    if (this._pendingRenderWhileCodeFocused) this._requestRender();
+  }
+
+  _onShadowClick(event: Event) {
     const button = event
       .composedPath()
-      .find(node => node instanceof HTMLButtonElement && node.dataset?.alarmAction);
+      .find((node): node is HTMLButtonElement => node instanceof HTMLButtonElement && Boolean(node.dataset.alarmAction));
 
     if (!button) {
       return;
@@ -856,23 +945,27 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     event.preventDefault();
     event.stopPropagation();
 
+    this._actionPointer = null;
+    this._actionPointerButton = null;
     const action = button.dataset.alarmAction;
 
     if (action === "more-info") {
       this._triggerHaptic();
-      this._triggerPressAnimation(this.shadowRoot.querySelector(".alarm-card__content"));
-      this._triggerPressAnimation(this.shadowRoot.querySelector(".alarm-card__icon"));
+      this._triggerPressAnimation(this.shadowRoot?.querySelector(".alarm-card__content"));
+      this._triggerPressAnimation(this.shadowRoot?.querySelector(".alarm-card__icon"));
       this._openMoreInfo();
+      this._flushPendingActionRender();
       return;
     }
 
-    this._triggerPressAnimation(this.shadowRoot.querySelector(".alarm-card__content"));
+    this._triggerPressAnimation(this.shadowRoot?.querySelector(".alarm-card__content"));
     this._triggerPressAnimation(button);
     this._runAlarmAction(action);
+    this._flushPendingActionRender();
   }
 
-  _onShadowInput(event) {
-    const input = event.composedPath().find(node => node instanceof HTMLInputElement && node.dataset?.alarmField === "code");
+  _onShadowInput(event: Event) {
+    const input = event.composedPath().find((node): node is HTMLInputElement => node instanceof HTMLInputElement && node.dataset.alarmField === "code");
     if (!input) {
       return;
     }
@@ -880,8 +973,8 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     this._codeInput = input.value;
   }
 
-  _onShadowFocusIn(event) {
-    const input = event.composedPath().find(node => node instanceof HTMLInputElement && node.dataset?.alarmField === "code");
+  _onShadowFocusIn(event: Event) {
+    const input = event.composedPath().find((node): node is HTMLInputElement => node instanceof HTMLInputElement && node.dataset.alarmField === "code");
     if (!input) {
       return;
     }
@@ -889,8 +982,8 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     this._isCodeInputFocused = true;
   }
 
-  _onShadowFocusOut(event) {
-    const input = event.composedPath().find(node => node instanceof HTMLInputElement && node.dataset?.alarmField === "code");
+  _onShadowFocusOut(event: Event) {
+    const input = event.composedPath().find((node): node is HTMLInputElement => node instanceof HTMLInputElement && node.dataset.alarmField === "code");
     if (!input) {
       return;
     }
@@ -910,7 +1003,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
 
       this._isCodeInputFocused = stillFocused;
 
-      if (!stillFocused && this._pendingRenderWhileCodeFocused) {
+      if (!stillFocused && this._actionPointer === null && this._pendingRenderWhileCodeFocused) {
         this._pendingRenderWhileCodeFocused = false;
         this._renderWithFocusPreserved();
       }
@@ -922,7 +1015,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     }
   }
 
-  _renderChip(label, tone = "default", accentColor = "var(--accent-color)") {
+  _renderChip(label: unknown, tone = "default", accentColor = "var(--accent-color)") {
     if (!label) {
       return "";
     }
@@ -957,12 +1050,16 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       { cardClass: "alarm-card" },
     );
     if (entityGuard) {
+      this._releaseActionWork();
+      this._codeInput = "";
       this.shadowRoot.innerHTML = entityGuard;
       return;
     }
 
     const state = this._getState();
     if (!state) {
+      this._releaseActionWork();
+      this._codeInput = "";
       this.shadowRoot.innerHTML = window.NodaliaUtils?.renderCardEmptyStateDocument?.(
         this._renderEmptyState(),
         { card: (config || DEFAULT_CONFIG).styles?.card },
