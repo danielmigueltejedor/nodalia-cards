@@ -60,4 +60,4 @@ window.__NODALIA_ENTITY_AIR_QUALITY__ = {
   buildAirQualityChartGeometry,
   getAirQualityHoverPayload,
   buildAirQualityInterpolatedSamples,
-} as EntityAirQualityPublicApi;
+} satisfies EntityAirQualityPublicApi;

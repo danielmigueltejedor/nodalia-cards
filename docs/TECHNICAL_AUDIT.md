@@ -639,3 +639,34 @@ rendered metric cases pass. Remaining unchecked modules: 56; Summary view and
 editor remain in the migration.
 Full local browser suite: 272 passed, one existing platform skip. Publication
 remains held until the complete migration is checked.
+
+## Entity configuration and model findings — 2026-10-01
+
+Entity suppresses checking in configuration and helpers. Its graph algorithms
+duplicate Graph, accept malformed points, and can generate nonfinite SVG or
+unbounded sample arrays. Empty AQ readings coerce to a good level; empty graph
+settings coerce to minimal ranges. Nested malformed styles can throw before
+sanitization. Configuration redeclares imported overview constants. Merged default pm25 is
+empty and masks the pm2_5/pm2.5 aliases; normalize the actual configured value
+before selecting aliases. Preserve
+valid geometry, thresholds, action fallbacks and style policy while narrowing
+these boundaries and reusing equivalent shared algorithms.
+
+Entity config/helpers now pass strict checking and typed lint. Guard nested
+style groups before neutral-bubble normalization and use the equivalent checked
+CSS projection; keep action fallbacks and security policy. Empty graph options
+use defaults, PM2.5 aliases survive merged defaults, and missing AQ readings
+remain unknown. Threshold tables and valid color/format behavior are unchanged.
+Retire duplicated imported constants, stub/size helpers and SVG/history
+algorithms; Graph and Entity use a shared finite geometry module. Filter invalid
+series samples, reject nonfinite geometry and cap allocation at 10,000 points
+(the Entity configuration limit remains 96). Derive public AQ methods from
+source, including parseAirQualityNumeric's actual NaN absence convention.
+
+Five new unit cases cover config/actions/aliases, missing data, graph safety,
+bucket averaging, continuous hover and HA state formatting. 5,000 valid
+Entity/Graph config, geometry, history, hover, threshold and format outputs match
+merged main. All 708 unit tests pass; real malformed-style/zero browser cases
+pass in all three local projects. Full suite: 275 passed, one existing platform
+skip. Remaining unchecked modules: 54; Entity view/editor remain in migration.
+Add an Entity guide and README link. Publication stays held until completion.

@@ -132,6 +132,44 @@
   var AIR_QUALITY_COMFORT_KEYS = /* @__PURE__ */ new Set(["temperature", "humidity"]);
   var AIR_QUALITY_HISTORY_REFRESH_MS = 18e4;
   var OVERVIEW_LAYOUTS = /* @__PURE__ */ new Set(["battery", "network"]);
+  var NETWORK_ROLES = /* @__PURE__ */ new Set(["auto", "status", "download", "upload", "latency", "signal", "traffic"]);
+
+  // src/shared/control-config.ts
+  function normalizeControlStyles(candidate, defaults, sanitize = window.NodaliaUtils.sanitizeCssValue) {
+    const utils2 = window.NodaliaUtils;
+    const source = utils2.isObject(candidate) ? candidate : {};
+    const result = {};
+    for (const [key, fallback] of Object.entries(defaults)) {
+      if (utils2.isUnsafeConfigPathKey(key)) continue;
+      result[key] = typeof fallback === "string" ? sanitize(source[key], fallback) : normalizeControlStyles(source[key], fallback, sanitize);
+    }
+    return result;
+  }
+  var actionFields = (prefix, fallback, navigationKey = `${prefix}_navigation_path`) => ({
+    actionKey: `${prefix}_action`,
+    serviceKey: `${prefix}_service`,
+    serviceDataKey: `${prefix}_service_data`,
+    serviceTargetKey: `${prefix}_service_target`,
+    urlKey: `${prefix}_url`,
+    navigationKey,
+    newTabKey: `${prefix}_new_tab`,
+    fallback
+  });
+  var FIELDS = [
+    actionFields("tap", "toggle", "navigation_path"),
+    actionFields("icon_tap", "", "icon_navigation_path"),
+    actionFields("hold", "more-info", "hold_navigation_path"),
+    actionFields("icon_hold", ""),
+    actionFields("double_tap", "none"),
+    actionFields("icon_double_tap", "")
+  ];
+
+  // src/shared/numeric-values.ts
+  function parseFiniteNumericValue(value) {
+    if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
 
   // src/cards/entity/entity-runtime.ts
   var utils = window.NodaliaUtils;
@@ -319,7 +357,7 @@
     ]
   };
   function migrateLegacyIconOffColor(iconStyles, canonicalOffColor) {
-    if (!iconStyles) {
+    if (!isObject(iconStyles)) {
       return;
     }
     const raw = String(iconStyles.off_color ?? "").trim();
@@ -337,15 +375,15 @@
   function entityScalar(value) {
     return String(value ?? "").trim();
   }
-  function normalizeAirQualityBlock(raw) {
+  function normalizeAirQualityBlock(raw = {}) {
     const source = isObject(raw) ? raw : {};
-    const hours = Number(source.graph_hours);
-    const points = Number(source.graph_points);
+    const hours = parseFiniteNumericValue(source.graph_hours);
+    const points = parseFiniteNumericValue(source.graph_points);
     const graphSeries = isObject(source.graph_series) ? source.graph_series : {};
     const graphColors = isObject(source.graph_colors) ? source.graph_colors : {};
     return {
       pm1: entityScalar(source.pm1),
-      pm25: entityScalar(source.pm25 ?? source.pm2_5 ?? source["pm2.5"]),
+      pm25: entityScalar(source.pm25) || entityScalar(source.pm2_5 ?? source["pm2.5"]),
       pm4: entityScalar(source.pm4),
       pm10: entityScalar(source.pm10),
       tvoc: entityScalar(source.tvoc),
@@ -354,8 +392,8 @@
       co2: entityScalar(source.co2),
       guidelines: String(source.guidelines ?? "who").trim().toLowerCase() === "none" ? "none" : "who",
       show_graphs: source.show_graphs === true,
-      graph_hours: Number.isFinite(hours) ? clamp(Math.round(hours), 1, 168) : 24,
-      graph_points: Number.isFinite(points) ? clamp(Math.round(points), 8, 96) : 96,
+      graph_hours: hours !== null ? clamp(Math.round(hours), 1, 168) : 24,
+      graph_points: points !== null ? clamp(Math.round(points), 8, 96) : 96,
       graph_series: Object.fromEntries(AIR_QUALITY_METRIC_KEYS.map((kind) => [
         kind,
         graphSeries[kind] !== false
@@ -366,8 +404,6 @@
       ]))
     };
   }
-  var OVERVIEW_LAYOUTS2 = /* @__PURE__ */ new Set(["battery", "network"]);
-  var NETWORK_ROLES = /* @__PURE__ */ new Set(["auto", "status", "download", "upload", "latency", "signal", "traffic"]);
   function normalizeOverviewEntities(raw, options = {}) {
     const entries = Array.isArray(raw) ? raw : [];
     return entries.filter((item) => typeof item === "string" || isObject(item)).map((item) => {
@@ -392,12 +428,18 @@
     const source = isObject(raw) ? raw : {};
     return { entities: normalizeOverviewEntities(source.entities, { network: true }) };
   }
-  function normalizeConfig(rawConfig) {
-    const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-    config.styles.icon.background = window.NodaliaBubbleContrast?.normalizeNeutralBubbleBackground?.(
-      config.styles.icon.background,
+  function normalizeConfig(rawConfig = {}) {
+    const raw = isObject(rawConfig) ? rawConfig : {};
+    const defaults = DEFAULT_CONFIG;
+    const config = mergeConfig(defaults, raw);
+    const rawStyles = isObject(config.styles) ? config.styles : {};
+    const iconStyles = isObject(rawStyles.icon) ? rawStyles.icon : deepClone(DEFAULT_CONFIG.styles.icon);
+    rawStyles.icon = iconStyles;
+    config.styles = rawStyles;
+    iconStyles.background = window.NodaliaBubbleContrast?.normalizeNeutralBubbleBackground?.(
+      iconStyles.background,
       DEFAULT_CONFIG.styles.icon.background
-    ) || config.styles.icon.background;
+    ) || iconStyles.background;
     const normalizedStatePosition = String(config.state_position || "").toLowerCase();
     if (normalizedStatePosition === "right" || normalizedStatePosition === "below") {
       config.state_position = normalizedStatePosition;
@@ -412,7 +454,7 @@
       service: action.service || "",
       service_data: action.service_data || ""
     })) : [];
-    migrateLegacyIconOffColor(config.styles?.icon, DEFAULT_CONFIG.styles.icon.off_color);
+    migrateLegacyIconOffColor(iconStyles, DEFAULT_CONFIG.styles.icon.off_color);
     const applyTap = window.NodaliaUtils?.applyCardTapActionField?.bind(window.NodaliaUtils);
     if (typeof applyTap === "function") {
       applyTap(config, {
@@ -423,7 +465,7 @@
         urlKey: "tap_url",
         navigationKey: "navigation_path",
         newTabKey: "tap_new_tab"
-      }, rawConfig?.tap_action ?? config.tap_action, "auto");
+      }, raw.tap_action ?? config.tap_action, "auto");
       applyTap(config, {
         actionKey: "hold_action",
         serviceKey: "hold_service",
@@ -432,7 +474,7 @@
         urlKey: "hold_url",
         navigationKey: "hold_navigation_path",
         newTabKey: "hold_new_tab"
-      }, rawConfig?.hold_action ?? config.hold_action, "none");
+      }, raw.hold_action ?? config.hold_action, "none");
       applyTap(config, {
         actionKey: "icon_tap_action",
         serviceKey: "icon_tap_service",
@@ -441,7 +483,7 @@
         urlKey: "icon_tap_url",
         navigationKey: "icon_navigation_path",
         newTabKey: "icon_tap_new_tab"
-      }, rawConfig?.icon_tap_action ?? config.icon_tap_action, "");
+      }, raw.icon_tap_action ?? config.icon_tap_action, "");
       applyTap(config, {
         actionKey: "icon_hold_action",
         serviceKey: "icon_hold_service",
@@ -450,7 +492,7 @@
         urlKey: "icon_hold_url",
         navigationKey: "icon_hold_navigation_path",
         newTabKey: "icon_hold_new_tab"
-      }, rawConfig?.icon_hold_action ?? config.icon_hold_action, "");
+      }, raw.icon_hold_action ?? config.icon_hold_action, "");
       applyTap(config, {
         actionKey: "double_tap_action",
         serviceKey: "double_tap_service",
@@ -459,7 +501,7 @@
         urlKey: "double_tap_url",
         navigationKey: "double_tap_navigation_path",
         newTabKey: "double_tap_new_tab"
-      }, rawConfig?.double_tap_action ?? config.double_tap_action, "none");
+      }, raw.double_tap_action ?? config.double_tap_action, "none");
       applyTap(config, {
         actionKey: "icon_double_tap_action",
         serviceKey: "icon_double_tap_service",
@@ -468,7 +510,7 @@
         urlKey: "icon_double_tap_url",
         navigationKey: "icon_double_tap_navigation_path",
         newTabKey: "icon_double_tap_new_tab"
-      }, rawConfig?.icon_double_tap_action ?? config.icon_double_tap_action, "");
+      }, raw.icon_double_tap_action ?? config.icon_double_tap_action, "");
     }
     if (String(config.icon_tap_action || "").trim() === "") {
       config.icon_tap_action = "";
@@ -529,21 +571,121 @@
     config.entity_picture = String(config.entity_picture ?? "").trim();
     config.show_entity_picture = config.show_entity_picture === true;
     const layoutKey = String(config.layout ?? "default").trim().toLowerCase();
-    config.layout = layoutKey === "air_quality" || OVERVIEW_LAYOUTS2.has(layoutKey) ? layoutKey : "default";
-    config.air_quality = normalizeAirQualityBlock(config.air_quality);
-    config.battery = normalizeBatteryBlock(config.battery);
-    config.network = normalizeNetworkBlock(config.network);
+    config.layout = layoutKey === "air_quality" || OVERVIEW_LAYOUTS.has(layoutKey) ? layoutKey : "default";
     config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? { ...DEFAULT_CONFIG.security, ...isObject(config.security) ? config.security : {} };
-    config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles) ?? deepClone(DEFAULT_CONFIG.styles);
+    return {
+      ...config,
+      air_quality: normalizeAirQualityBlock(config.air_quality),
+      battery: normalizeBatteryBlock(config.battery),
+      network: normalizeNetworkBlock(config.network),
+      styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles)
+    };
+  }
+
+  // src/shared/history-geometry.ts
+  var MAX_SAMPLES = 1e4;
+  var clamp2 = (value, min, max) => Math.min(max, Math.max(min, value));
+  var isObject2 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  function parseHistoryTimestamp(value) {
+    if (typeof value === "number" && Number.isFinite(value)) return value > 1e12 ? value : value * 1e3;
+    const parsed = Date.parse(String(value ?? ""));
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  function validPoints(value) {
+    if (!Array.isArray(value)) return [];
+    const points = Array.from(value);
+    return points.every((point) => isObject2(point) && typeof point.x === "number" && Number.isFinite(point.x) && typeof point.y === "number" && Number.isFinite(point.y)) ? points : [];
+  }
+  function buildSmoothPath(value) {
+    const points = validPoints(value);
+    const first = points[0];
+    if (!first) return "";
+    if (points.length === 1) {
+      return `M ${first.x.toFixed(2)} ${first.y.toFixed(2)}`;
+    }
+    let path = `M ${first.x.toFixed(2)} ${first.y.toFixed(2)}`;
+    for (let index = 0; index < points.length - 1; index += 1) {
+      const p0 = points[index - 1] || points[index];
+      const p1 = points[index];
+      const p2 = points[index + 1];
+      const p3 = points[index + 2] || p2;
+      if (!p0 || !p1 || !p2 || !p3) return "";
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = p2.y - (p3.y - p1.y) / 6;
+      path += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)}, ${cp2x.toFixed(2)} ${cp2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+    }
+    return path;
+  }
+  function buildAreaPath(value, bottomY) {
+    const points = validPoints(value);
+    if (!Array.isArray(points) || points.length === 0) {
+      return "";
+    }
+    const linePath = buildSmoothPath(points);
+    const first = points[0];
+    const last = points[points.length - 1];
+    if (!first || !last || !Number.isFinite(bottomY)) return "";
+    return `${linePath} L ${last.x.toFixed(2)} ${bottomY.toFixed(2)} L ${first.x.toFixed(2)} ${bottomY.toFixed(2)} Z`;
+  }
+  function buildInterpolatedSamples(value, startMs, endMs, pointsCount, fallbackValue = null) {
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs < startMs || !Number.isFinite(pointsCount) || pointsCount < 1) return [];
+    pointsCount = Math.min(MAX_SAMPLES, Math.floor(pointsCount));
+    const events = Array.isArray(value) ? value.filter((event) => isObject2(event) && typeof event.ts === "number" && Number.isFinite(event.ts) && typeof event.value === "number" && Number.isFinite(event.value)) : [];
+    if (!events.length) {
+      if (fallbackValue === null || !Number.isFinite(fallbackValue)) {
+        return [];
+      }
+      return Array.from({ length: pointsCount }, (_item, index) => ({
+        ts: startMs + (endMs - startMs) * index / Math.max(pointsCount - 1, 1),
+        value: fallbackValue
+      }));
+    }
+    const spanMs = Math.max(endMs - startMs, 1);
+    const bucketSize = spanMs / Math.max(pointsCount - 1, 1);
+    const buckets = Array.from({ length: pointsCount }, () => []);
+    events.forEach((event) => {
+      const clampedTs = clamp2(event.ts, startMs, endMs);
+      const rawIndex = Math.floor((clampedTs - startMs) / Math.max(bucketSize, 1));
+      const bucketIndex = clamp2(rawIndex, 0, pointsCount - 1);
+      buckets[bucketIndex]?.push(event.value);
+    });
+    let lastValue = fallbackValue !== null && Number.isFinite(fallbackValue) ? fallbackValue : buckets.flat().find(Number.isFinite);
+    return buckets.map((bucket, index) => {
+      const sampleTs = startMs + (endMs - startMs) * index / Math.max(pointsCount - 1, 1);
+      if (bucket.length) {
+        lastValue = bucket.reduce((sum, value2) => sum + value2, 0) / bucket.length;
+      }
+      return {
+        ts: sampleTs,
+        value: lastValue !== void 0 && Number.isFinite(lastValue) ? lastValue : 0
+      };
+    });
+  }
+
+  // src/shared/editor-entity-helpers.ts
+  function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
+    return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
+  }
+  function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
+    const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
+    if (!entityId) return config;
+    config.entity = entityId;
+    config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
     return config;
+  }
+  function parseSizeToPixels(value, fallback = 0) {
+    const numeric = Number.parseFloat(String(value ?? ""));
+    return Number.isFinite(numeric) ? numeric : fallback;
   }
 
   // src/shared/editor-color.ts
-  var clamp2 = (value, max) => Math.max(0, Math.min(max, value));
+  var clamp3 = (value, max) => Math.max(0, Math.min(max, value));
   var component = (value, scale) => {
     if (!value || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?%?$/i.test(value)) return null;
     const numeric = Number(value.replace(/%$/, ""));
-    return Number.isFinite(numeric) ? clamp2(value.endsWith("%") ? numeric * scale / 100 : numeric, scale) : null;
+    return Number.isFinite(numeric) ? clamp3(value.endsWith("%") ? numeric * scale / 100 : numeric, scale) : null;
   };
   function parseEditorColorChannels(value) {
     const raw = String(value ?? "").trim();
@@ -569,13 +711,13 @@
   }
   function formatEditorHexChannel(value) {
     const numeric = Number(value);
-    return clamp2(Math.round(Number.isFinite(numeric) ? numeric : 0), 255).toString(16).padStart(2, "0");
+    return clamp3(Math.round(Number.isFinite(numeric) ? numeric : 0), 255).toString(16).padStart(2, "0");
   }
   function formatEditorColorFromHex(hex, alpha = 1) {
     const normalized = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
     if (!/^[0-9a-f]{6}$/.test(normalized)) return String(hex ?? "");
     const numeric = Number(alpha);
-    const safeAlpha = clamp2(Number.isFinite(numeric) ? numeric : 1, 1);
+    const safeAlpha = clamp3(Number.isFinite(numeric) ? numeric : 1, 1);
     if (safeAlpha >= 0.999) return `#${normalized}`;
     const red = parseInt(normalized.slice(0, 2), 16), green = parseInt(normalized.slice(2, 4), 16), blue = parseInt(normalized.slice(4, 6), 16);
     return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
@@ -612,20 +754,24 @@
 
   // src/cards/entity/entity-helpers.ts
   function resolveAirQualityLevelFromBands(value, bands) {
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric) || !Array.isArray(bands) || !bands.length) {
+    const numeric = parseFiniteNumericValue(value);
+    if (numeric === null || !Array.isArray(bands) || !bands.length) {
       return "unknown";
     }
+    const validBands = [];
     for (const band of bands) {
-      if (numeric <= Number(band.max)) {
-        return band.level;
-      }
+      if (!isObject(band) || typeof band.level !== "string") continue;
+      const max = band.max === Infinity ? Infinity : parseFiniteNumericValue(band.max);
+      if (max !== null) validBands.push({ max, level: band.level });
     }
-    return bands[bands.length - 1]?.level || "unknown";
+    for (const band of validBands) {
+      if (numeric <= band.max) return band.level;
+    }
+    return validBands[validBands.length - 1]?.level || "unknown";
   }
   function resolveAirQualityLevelFromAqi(value) {
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric)) {
+    const numeric = parseFiniteNumericValue(value);
+    if (numeric === null) {
       return "unknown";
     }
     if (numeric <= 50) return "good";
@@ -643,22 +789,31 @@
       }
       return AIR_QUALITY_WHO_BANDS.tvoc_ugm3;
     }
-    return AIR_QUALITY_WHO_BANDS[kind] || null;
+    return typeof kind === "string" && isGuidelineKey(kind) ? AIR_QUALITY_WHO_BANDS[kind] : null;
+  }
+  function isGuidelineKey(key) {
+    return Object.prototype.hasOwnProperty.call(AIR_QUALITY_WHO_BANDS, key);
+  }
+  function isLevel(key) {
+    return typeof key === "string" && Object.prototype.hasOwnProperty.call(AIR_QUALITY_LEVEL_RANK, key);
+  }
+  function isMetric(key) {
+    return typeof key === "string" && Object.prototype.hasOwnProperty.call(AIR_QUALITY_ATTR_ALIASES, key);
   }
   function worseAirQualityLevel(left, right) {
-    const leftRank = AIR_QUALITY_LEVEL_RANK[left];
-    const rightRank = AIR_QUALITY_LEVEL_RANK[right];
-    if (!Number.isFinite(leftRank)) {
-      return Number.isFinite(rightRank) ? right : "unknown";
+    const leftRank = isLevel(left) ? AIR_QUALITY_LEVEL_RANK[left] : void 0;
+    const rightRank = isLevel(right) ? AIR_QUALITY_LEVEL_RANK[right] : void 0;
+    if (leftRank === void 0) {
+      return rightRank !== void 0 && isLevel(right) ? right : "unknown";
     }
-    if (!Number.isFinite(rightRank)) {
+    if (rightRank === void 0 && isLevel(left)) {
       return left;
     }
-    return rightRank > leftRank ? right : left;
+    return rightRank !== void 0 && rightRank > leftRank && isLevel(right) ? right : isLevel(left) ? left : "unknown";
   }
   function readAirQualityAttribute(state, kind) {
     const attrs = state?.attributes || {};
-    for (const alias of AIR_QUALITY_ATTR_ALIASES[kind] || []) {
+    for (const alias of isMetric(kind) ? AIR_QUALITY_ATTR_ALIASES[kind] : []) {
       if (attrs[alias] !== void 0 && attrs[alias] !== null && attrs[alias] !== "") {
         return attrs[alias];
       }
@@ -675,42 +830,8 @@
     }
     return Number(match[0].replace(",", "."));
   }
-  function parseAirQualityHistoryTimestamp(value) {
-    if (typeof value === "number" && Number.isFinite(value)) {
-      return value > 1e12 ? value : value * 1e3;
-    }
-    const parsed = Date.parse(String(value ?? ""));
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-  function buildAirQualitySmoothPath(points) {
-    if (!Array.isArray(points) || !points.length) {
-      return "";
-    }
-    if (points.length === 1) {
-      return `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
-    }
-    let path = `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
-    for (let index = 0; index < points.length - 1; index += 1) {
-      const p0 = points[index - 1] || points[index];
-      const p1 = points[index];
-      const p2 = points[index + 1];
-      const p3 = points[index + 2] || p2;
-      const cp1x = p1.x + (p2.x - p0.x) / 6;
-      const cp1y = p1.y + (p2.y - p0.y) / 6;
-      const cp2x = p2.x - (p3.x - p1.x) / 6;
-      const cp2y = p2.y - (p3.y - p1.y) / 6;
-      path += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)}, ${cp2x.toFixed(2)} ${cp2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
-    }
-    return path;
-  }
-  function buildAirQualityAreaPath(points, bottomY) {
-    if (!Array.isArray(points) || !points.length) {
-      return "";
-    }
-    const linePath = buildAirQualitySmoothPath(points);
-    const first = points[0];
-    const last = points[points.length - 1];
-    return `${linePath} L ${last.x.toFixed(2)} ${bottomY.toFixed(2)} L ${first.x.toFixed(2)} ${bottomY.toFixed(2)} Z`;
+  function finiteSample(value) {
+    return isObject(value) && typeof value.ts === "number" && Number.isFinite(value.ts) && typeof value.value === "number" && Number.isFinite(value.value);
   }
   function buildAirQualityChartGeometry(seriesEntries = []) {
     const width = 100;
@@ -718,7 +839,12 @@
     const paddingX = 0;
     const paddingTop = 3;
     const paddingBottom = 3;
-    const usable = seriesEntries.filter((entry) => Array.isArray(entry?.samples) && entry.samples.length);
+    const usable = [];
+    for (const entry of Array.isArray(seriesEntries) ? seriesEntries : []) {
+      if (!isObject(entry) || !Array.isArray(entry.samples)) continue;
+      const samples = entry.samples.filter(finiteSample);
+      if (samples.length) usable.push({ ...entry, samples });
+    }
     let min = Infinity;
     let max = -Infinity;
     usable.forEach((entry) => {
@@ -734,6 +860,9 @@
     }
     if (max <= min) {
       max = min + 1;
+    }
+    if (!Number.isFinite(max - min) || max <= min) {
+      return { width, height, paddingX, paddingTop, paddingBottom, min: null, max: null, paths: [] };
     }
     const spanX = width - paddingX * 2;
     const paths = usable.map((entry) => {
@@ -751,23 +880,23 @@
       return {
         ...entry,
         points,
-        linePath: buildAirQualitySmoothPath(points),
-        fillPath: buildAirQualityAreaPath(points, height - paddingBottom)
+        linePath: buildSmoothPath(points),
+        fillPath: buildAreaPath(points, height - paddingBottom)
       };
     });
     return { width, height, paddingX, paddingTop, paddingBottom, min, max, paths };
   }
   function getAirQualityHoverPayload(geometry, hoverState) {
-    if (!geometry?.paths?.length || !hoverState) {
+    if (!geometry?.paths?.length || !isObject(hoverState)) {
       return null;
     }
     const path = geometry.paths.find((entry) => entry.kind === hoverState.kind);
     if (!path?.points?.length) {
       return null;
     }
-    const requestedPosition = Number(hoverState.position);
+    const requestedPosition = parseFiniteNumericValue(hoverState.position);
     const position = clamp(
-      Number.isFinite(requestedPosition) ? requestedPosition : Number(hoverState.index) || 0,
+      requestedPosition !== null ? requestedPosition : parseFiniteNumericValue(hoverState.index) || 0,
       0,
       path.points.length - 1
     );
@@ -776,6 +905,7 @@
     const fraction = position - leftIndex;
     const leftPoint = path.points[leftIndex];
     const rightPoint = path.points[rightIndex] || leftPoint;
+    if (!leftPoint || !rightPoint) return null;
     const interpolate = (key) => leftPoint[key] + (rightPoint[key] - leftPoint[key]) * fraction;
     const point = {
       x: interpolate("x"),
@@ -799,53 +929,6 @@
       yPercent: clamp(point.y / geometry.height * 100, 0, 100)
     };
   }
-  function buildAirQualityInterpolatedSamples(events, startMs, endMs, pointsCount, fallbackValue = null) {
-    if (!Array.isArray(events) || !events.length) {
-      if (!Number.isFinite(fallbackValue)) {
-        return [];
-      }
-      return Array.from({ length: pointsCount }, (_item, index) => ({
-        ts: startMs + (endMs - startMs) * index / Math.max(pointsCount - 1, 1),
-        value: fallbackValue
-      }));
-    }
-    const spanMs = Math.max(endMs - startMs, 1);
-    const bucketSize = spanMs / Math.max(pointsCount - 1, 1);
-    const buckets = Array.from({ length: pointsCount }, () => []);
-    events.forEach((event) => {
-      const clampedTs = clamp(event.ts, startMs, endMs);
-      const rawIndex = Math.floor((clampedTs - startMs) / Math.max(bucketSize, 1));
-      const bucketIndex = clamp(rawIndex, 0, pointsCount - 1);
-      buckets[bucketIndex].push(event.value);
-    });
-    let lastValue = Number.isFinite(fallbackValue) ? fallbackValue : buckets.flat().find(Number.isFinite);
-    return buckets.map((bucket, index) => {
-      const sampleTs = startMs + (endMs - startMs) * index / Math.max(pointsCount - 1, 1);
-      if (bucket.length) {
-        lastValue = bucket.reduce((sum, value) => sum + value, 0) / bucket.length;
-      }
-      return {
-        ts: sampleTs,
-        value: Number.isFinite(lastValue) ? lastValue : 0
-      };
-    });
-  }
-  function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
-    return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
-  }
-  function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
-    const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
-    if (!entityId) {
-      return config;
-    }
-    config.entity = entityId;
-    config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
-    return config;
-  }
-  function parseSizeToPixels(value, fallback = 0) {
-    const numeric = Number.parseFloat(String(value ?? ""));
-    return Number.isFinite(numeric) ? numeric : fallback;
-  }
   function parseNumericValue(value) {
     if (typeof value === "number") {
       return Number.isFinite(value) ? value : null;
@@ -859,10 +942,10 @@
   }
   function formatNumericValue(value, maximumFractionDigits = 2) {
     const numericValue = parseNumericValue(value);
-    if (!Number.isFinite(numericValue)) {
+    if (numericValue === null) {
       return String(value ?? "");
     }
-    const safeDigits = clamp(Math.round(Number(maximumFractionDigits)), 0, 6);
+    const safeDigits = clamp(Math.round(parseFiniteNumericValue(maximumFractionDigits) ?? 2), 0, 6);
     return numericValue.toFixed(safeDigits).replace(/\.0+$/, "").replace(/(\.\d*?)0+$/, "$1");
   }
   function formatNumericValueWithUnit(value, unit = "", maximumFractionDigits = 2) {
@@ -900,7 +983,7 @@
     return "var(--info-color, #71c0ff)";
   }
   function shouldDarkenEntityBubbleIconGlyph(state, accentColor) {
-    return Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(state, accentColor));
+    return Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph?.(state, accentColor));
   }
   function resolveEntityBubbleIconGlyphColor(accentColor, state) {
     const accent = String(accentColor || "").trim() || "var(--primary-color)";
@@ -920,7 +1003,7 @@
   }
   function getEntityDomain(state) {
     const entityId = String(state?.entity_id || "");
-    return entityId.includes(".") ? entityId.split(".")[0] : "";
+    return entityId.includes(".") ? entityId.split(".")[0] ?? "" : "";
   }
   function isSelectDomainEntity(state) {
     const domain = getEntityDomain(state);
@@ -953,6 +1036,7 @@
       if (typeof formatter !== "function") {
         continue;
       }
+      if (!state) continue;
       try {
         const formatted = String(formatter.call(hass || window.hass, state) ?? "").trim();
         if (formatted && formatted !== rawState) {
@@ -3263,7 +3347,7 @@
           const entries = series.map((item) => {
             const rows = Array.isArray(raw?.[item.entityId]) ? raw[item.entityId] : [];
             const events = rows.map((row) => {
-              const ts = parseAirQualityHistoryTimestamp(
+              const ts = parseHistoryTimestamp(
                 row.last_changed ?? row.last_updated ?? row.lc ?? row.lu ?? row.last_changed
               );
               const value = parseAirQualityNumeric(row.state ?? row.s ?? row);
@@ -3273,13 +3357,13 @@
             const liveValue = parseAirQualityNumeric(live?.state);
             if (Number.isFinite(liveValue)) {
               events.push({
-                ts: parseAirQualityHistoryTimestamp(live.last_changed || live.last_updated) || endMs,
+                ts: parseHistoryTimestamp(live.last_changed || live.last_updated) || endMs,
                 value: liveValue
               });
             }
             return {
               ...item,
-              samples: buildAirQualityInterpolatedSamples(
+              samples: buildInterpolatedSamples(
                 events,
                 startMs,
                 endMs,
@@ -6350,10 +6434,10 @@ padding: 0 12px;
     resolveMetricGuidelineBands,
     worseAirQualityLevel,
     parseAirQualityNumeric,
-    buildAirQualitySmoothPath,
-    buildAirQualityAreaPath,
+    buildAirQualitySmoothPath: buildSmoothPath,
+    buildAirQualityAreaPath: buildAreaPath,
     buildAirQualityChartGeometry,
     getAirQualityHoverPayload,
-    buildAirQualityInterpolatedSamples
+    buildAirQualityInterpolatedSamples: buildInterpolatedSamples
   };
 })();

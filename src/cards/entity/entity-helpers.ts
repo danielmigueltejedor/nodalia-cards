@@ -1,4 +1,9 @@
-// @ts-nocheck -- air-quality, icon and editor helpers stay loosely typed until remaining unknowns are narrowed.
+import type { HassEntity, HomeAssistant } from "../../core/types/home-assistant";
+import { parseFiniteNumericValue } from "../../shared/numeric-values";
+import { buildSmoothPath, buildAreaPath } from "../../shared/history-geometry";
+import type { HistorySample, GraphPoint } from "../../shared/history-geometry";
+export { buildSmoothPath as buildAirQualitySmoothPath, buildAreaPath as buildAirQualityAreaPath, buildInterpolatedSamples as buildAirQualityInterpolatedSamples, parseHistoryTimestamp as parseAirQualityHistoryTimestamp } from "../../shared/history-geometry";
+export { getStubEntityId, applyStubEntity, parseSizeToPixels } from "../../shared/editor-entity-helpers";
 export { formatEditorHexChannel, formatEditorColorFromHex, getEditorColorModel } from "../../shared/editor-color";
 import {
   AIR_QUALITY_ATTR_ALIASES,
@@ -7,22 +12,26 @@ import {
 } from "./entity-constants";
 import { clamp, isObject, normalizeTextKey } from "./entity-runtime";
 
-export function resolveAirQualityLevelFromBands(value, bands) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric) || !Array.isArray(bands) || !bands.length) {
+export function resolveAirQualityLevelFromBands(value: unknown, bands: unknown) {
+  const numeric = parseFiniteNumericValue(value);
+  if (numeric === null || !Array.isArray(bands) || !bands.length) {
     return "unknown";
   }
+  const validBands: { max: number; level: string }[] = [];
   for (const band of bands) {
-    if (numeric <= Number(band.max)) {
-      return band.level;
-    }
+    if (!isObject(band) || typeof band.level !== "string") continue;
+    const max = band.max === Infinity ? Infinity : parseFiniteNumericValue(band.max);
+    if (max !== null) validBands.push({ max, level: band.level });
   }
-  return bands[bands.length - 1]?.level || "unknown";
+  for (const band of validBands) {
+    if (numeric <= band.max) return band.level;
+  }
+  return validBands[validBands.length - 1]?.level || "unknown";
 }
 
-export function resolveAirQualityLevelFromAqi(value) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
+export function resolveAirQualityLevelFromAqi(value: unknown) {
+  const numeric = parseFiniteNumericValue(value);
+  if (numeric === null) {
     return "unknown";
   }
   if (numeric <= 50) return "good";
@@ -33,7 +42,7 @@ export function resolveAirQualityLevelFromAqi(value) {
   return "hazardous";
 }
 
-export function resolveMetricGuidelineBands(kind, unit = "") {
+export function resolveMetricGuidelineBands(kind: unknown, unit: unknown = "") {
   const unitKey = String(unit || "").toLowerCase();
   if (kind === "tvoc") {
     if (unitKey.includes("ppb")) {
@@ -41,24 +50,28 @@ export function resolveMetricGuidelineBands(kind, unit = "") {
     }
     return AIR_QUALITY_WHO_BANDS.tvoc_ugm3;
   }
-  return AIR_QUALITY_WHO_BANDS[kind] || null;
+  return typeof kind === "string" && isGuidelineKey(kind) ? AIR_QUALITY_WHO_BANDS[kind] : null;
 }
 
-export function worseAirQualityLevel(left, right) {
-  const leftRank = AIR_QUALITY_LEVEL_RANK[left];
-  const rightRank = AIR_QUALITY_LEVEL_RANK[right];
-  if (!Number.isFinite(leftRank)) {
-    return Number.isFinite(rightRank) ? right : "unknown";
+function isGuidelineKey(key: string): key is keyof typeof AIR_QUALITY_WHO_BANDS { return Object.prototype.hasOwnProperty.call(AIR_QUALITY_WHO_BANDS, key); }
+function isLevel(key: unknown): key is keyof typeof AIR_QUALITY_LEVEL_RANK { return typeof key === "string" && Object.prototype.hasOwnProperty.call(AIR_QUALITY_LEVEL_RANK, key); }
+function isMetric(key: unknown): key is keyof typeof AIR_QUALITY_ATTR_ALIASES { return typeof key === "string" && Object.prototype.hasOwnProperty.call(AIR_QUALITY_ATTR_ALIASES, key); }
+
+export function worseAirQualityLevel(left: unknown, right: unknown) {
+  const leftRank = isLevel(left) ? AIR_QUALITY_LEVEL_RANK[left] : undefined;
+  const rightRank = isLevel(right) ? AIR_QUALITY_LEVEL_RANK[right] : undefined;
+  if (leftRank === undefined) {
+    return rightRank !== undefined && isLevel(right) ? right : "unknown";
   }
-  if (!Number.isFinite(rightRank)) {
+  if (rightRank === undefined && isLevel(left)) {
     return left;
   }
-  return rightRank > leftRank ? right : left;
+  return rightRank !== undefined && rightRank > leftRank && isLevel(right) ? right : isLevel(left) ? left : "unknown";
 }
 
-export function readAirQualityAttribute(state, kind) {
+export function readAirQualityAttribute(state: HassEntity | null | undefined, kind: unknown) {
   const attrs = state?.attributes || {};
-  for (const alias of AIR_QUALITY_ATTR_ALIASES[kind] || []) {
+  for (const alias of (isMetric(kind) ? AIR_QUALITY_ATTR_ALIASES[kind] : [])) {
     if (attrs[alias] !== undefined && attrs[alias] !== null && attrs[alias] !== "") {
       return attrs[alias];
     }
@@ -66,7 +79,7 @@ export function readAirQualityAttribute(state, kind) {
   return null;
 }
 
-export function parseAirQualityNumeric(value) {
+export function parseAirQualityNumeric(value: unknown) {
   if (typeof value === "number" && Number.isFinite(value)) {
     return value;
   }
@@ -77,53 +90,24 @@ export function parseAirQualityNumeric(value) {
   return Number(match[0].replace(",", "."));
 }
 
-export function parseAirQualityHistoryTimestamp(value) {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value > 1e12 ? value : value * 1000;
-  }
-  const parsed = Date.parse(String(value ?? ""));
-  return Number.isFinite(parsed) ? parsed : null;
-}
+export interface AirQualitySeries extends Record<string, unknown> { samples: HistorySample[] }
+export interface AirQualityPoint extends GraphPoint, HistorySample {}
+export interface AirQualityPath extends AirQualitySeries { points: AirQualityPoint[]; linePath: string; fillPath: string }
+export interface AirQualityGeometry { width: number; height: number; paddingX: number; paddingTop: number; paddingBottom: number; min: number | null; max: number | null; paths: AirQualityPath[] }
+function finiteSample(value: unknown): value is HistorySample { return isObject(value) && typeof value.ts === "number" && Number.isFinite(value.ts) && typeof value.value === "number" && Number.isFinite(value.value); }
 
-export function buildAirQualitySmoothPath(points) {
-  if (!Array.isArray(points) || !points.length) {
-    return "";
-  }
-  if (points.length === 1) {
-    return `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
-  }
-  let path = `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
-  for (let index = 0; index < points.length - 1; index += 1) {
-    const p0 = points[index - 1] || points[index];
-    const p1 = points[index];
-    const p2 = points[index + 1];
-    const p3 = points[index + 2] || p2;
-    const cp1x = p1.x + ((p2.x - p0.x) / 6);
-    const cp1y = p1.y + ((p2.y - p0.y) / 6);
-    const cp2x = p2.x - ((p3.x - p1.x) / 6);
-    const cp2y = p2.y - ((p3.y - p1.y) / 6);
-    path += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)}, ${cp2x.toFixed(2)} ${cp2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
-  }
-  return path;
-}
-
-export function buildAirQualityAreaPath(points, bottomY) {
-  if (!Array.isArray(points) || !points.length) {
-    return "";
-  }
-  const linePath = buildAirQualitySmoothPath(points);
-  const first = points[0];
-  const last = points[points.length - 1];
-  return `${linePath} L ${last.x.toFixed(2)} ${bottomY.toFixed(2)} L ${first.x.toFixed(2)} ${bottomY.toFixed(2)} Z`;
-}
-
-export function buildAirQualityChartGeometry(seriesEntries = []) {
+export function buildAirQualityChartGeometry(seriesEntries: unknown = []): AirQualityGeometry {
   const width = 100;
   const height = 42;
   const paddingX = 0;
   const paddingTop = 3;
   const paddingBottom = 3;
-  const usable = seriesEntries.filter(entry => Array.isArray(entry?.samples) && entry.samples.length);
+  const usable: AirQualitySeries[] = [];
+  for (const entry of Array.isArray(seriesEntries) ? seriesEntries : []) {
+    if (!isObject(entry) || !Array.isArray(entry.samples)) continue;
+    const samples = entry.samples.filter(finiteSample);
+    if (samples.length) usable.push({ ...entry, samples });
+  }
   let min = Infinity;
   let max = -Infinity;
   usable.forEach(entry => {
@@ -139,6 +123,9 @@ export function buildAirQualityChartGeometry(seriesEntries = []) {
   }
   if (max <= min) {
     max = min + 1;
+  }
+  if (!Number.isFinite(max - min) || max <= min) {
+    return { width, height, paddingX, paddingTop, paddingBottom, min: null, max: null, paths: [] };
   }
   const spanX = width - (paddingX * 2);
   const paths = usable.map(entry => {
@@ -156,24 +143,24 @@ export function buildAirQualityChartGeometry(seriesEntries = []) {
     return {
       ...entry,
       points,
-      linePath: buildAirQualitySmoothPath(points),
-      fillPath: buildAirQualityAreaPath(points, height - paddingBottom),
+      linePath: buildSmoothPath(points),
+      fillPath: buildAreaPath(points, height - paddingBottom),
     };
   });
   return { width, height, paddingX, paddingTop, paddingBottom, min, max, paths };
 }
 
-export function getAirQualityHoverPayload(geometry, hoverState) {
-  if (!geometry?.paths?.length || !hoverState) {
+export function getAirQualityHoverPayload(geometry: AirQualityGeometry | null | undefined, hoverState: unknown) {
+  if (!geometry?.paths?.length || !isObject(hoverState)) {
     return null;
   }
   const path = geometry.paths.find(entry => entry.kind === hoverState.kind);
   if (!path?.points?.length) {
     return null;
   }
-  const requestedPosition = Number(hoverState.position);
+  const requestedPosition = parseFiniteNumericValue(hoverState.position);
   const position = clamp(
-    Number.isFinite(requestedPosition) ? requestedPosition : (Number(hoverState.index) || 0),
+    requestedPosition !== null ? requestedPosition : (parseFiniteNumericValue(hoverState.index) || 0),
     0,
     path.points.length - 1,
   );
@@ -182,7 +169,8 @@ export function getAirQualityHoverPayload(geometry, hoverState) {
   const fraction = position - leftIndex;
   const leftPoint = path.points[leftIndex];
   const rightPoint = path.points[rightIndex] || leftPoint;
-  const interpolate = key => leftPoint[key] + ((rightPoint[key] - leftPoint[key]) * fraction);
+  if (!leftPoint || !rightPoint) return null;
+  const interpolate = (key: keyof AirQualityPoint) => leftPoint[key] + ((rightPoint[key] - leftPoint[key]) * fraction);
   const point = {
     x: interpolate("x"),
     y: interpolate("y"),
@@ -206,69 +194,7 @@ export function getAirQualityHoverPayload(geometry, hoverState) {
   };
 }
 
-export function buildAirQualityInterpolatedSamples(events, startMs, endMs, pointsCount, fallbackValue = null) {
-  if (!Array.isArray(events) || !events.length) {
-    if (!Number.isFinite(fallbackValue)) {
-      return [];
-    }
-    return Array.from({ length: pointsCount }, (_item, index) => ({
-      ts: startMs + (((endMs - startMs) * index) / Math.max(pointsCount - 1, 1)),
-      value: fallbackValue,
-    }));
-  }
-  const spanMs = Math.max(endMs - startMs, 1);
-  const bucketSize = spanMs / Math.max(pointsCount - 1, 1);
-  const buckets = Array.from({ length: pointsCount }, () => []);
-  events.forEach(event => {
-    const clampedTs = clamp(event.ts, startMs, endMs);
-    const rawIndex = Math.floor((clampedTs - startMs) / Math.max(bucketSize, 1));
-    const bucketIndex = clamp(rawIndex, 0, pointsCount - 1);
-    buckets[bucketIndex].push(event.value);
-  });
-  let lastValue = Number.isFinite(fallbackValue)
-    ? fallbackValue
-    : buckets.flat().find(Number.isFinite);
-  return buckets.map((bucket, index) => {
-    const sampleTs = startMs + (((endMs - startMs) * index) / Math.max(pointsCount - 1, 1));
-    if (bucket.length) {
-      lastValue = bucket.reduce((sum, value) => sum + value, 0) / bucket.length;
-    }
-    return {
-      ts: sampleTs,
-      value: Number.isFinite(lastValue) ? lastValue : 0,
-    };
-  });
-}
-
-export function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
-  return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
-}
-
-export function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
-  const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
-  if (!entityId) {
-    return config;
-  }
-
-  config.entity = entityId;
-  config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
-  return config;
-}
-
-
-
-
-
-
-
-
-export function parseSizeToPixels(value, fallback = 0) {
-  const numeric = Number.parseFloat(String(value ?? ""));
-  return Number.isFinite(numeric) ? numeric : fallback;
-}
-
-
-export function parseNumericValue(value) {
+export function parseNumericValue(value: unknown) {
   if (typeof value === "number") {
     return Number.isFinite(value) ? value : null;
   }
@@ -282,20 +208,20 @@ export function parseNumericValue(value) {
   return Number.isFinite(numericValue) ? numericValue : null;
 }
 
-export function formatNumericValue(value, maximumFractionDigits = 2) {
+export function formatNumericValue(value: unknown, maximumFractionDigits = 2) {
   const numericValue = parseNumericValue(value);
-  if (!Number.isFinite(numericValue)) {
+  if (numericValue === null) {
     return String(value ?? "");
   }
 
-  const safeDigits = clamp(Math.round(Number(maximumFractionDigits)), 0, 6);
+  const safeDigits = clamp(Math.round(parseFiniteNumericValue(maximumFractionDigits) ?? 2), 0, 6);
   return numericValue
     .toFixed(safeDigits)
     .replace(/\.0+$/, "")
     .replace(/(\.\d*?)0+$/, "$1");
 }
 
-export function formatNumericValueWithUnit(value, unit = "", maximumFractionDigits = 2) {
+export function formatNumericValueWithUnit(value: unknown, unit: unknown = "", maximumFractionDigits = 2) {
   const formattedValue = formatNumericValue(value, maximumFractionDigits);
   const normalizedUnit = String(unit || "").trim();
 
@@ -306,7 +232,7 @@ export function formatNumericValueWithUnit(value, unit = "", maximumFractionDigi
   return `${formattedValue}${normalizedUnit.startsWith("°") ? "" : " "}${normalizedUnit}`;
 }
 
-export function getValueSignature(value) {
+export function getValueSignature(value: unknown) {
   if (value === undefined || value === null) {
     return "";
   }
@@ -323,15 +249,7 @@ export function getValueSignature(value) {
   return String(value);
 }
 
-
-
-
-
-
-
-
-
-export function getEditorColorFallbackValue(field) {
+export function getEditorColorFallbackValue(field: unknown) {
   const normalizedField = String(field ?? "");
 
   if (normalizedField.endsWith("off_color")) {
@@ -349,13 +267,11 @@ export function getEditorColorFallbackValue(field) {
   return "var(--info-color, #71c0ff)";
 }
 
-
-
-export function shouldDarkenEntityBubbleIconGlyph(state, accentColor) {
-  return Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(state, accentColor));
+export function shouldDarkenEntityBubbleIconGlyph(state: HassEntity | null | undefined, accentColor: unknown) {
+  return Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph?.(state, accentColor));
 }
 
-export function resolveEntityBubbleIconGlyphColor(accentColor, state) {
+export function resolveEntityBubbleIconGlyphColor(accentColor: unknown, state: HassEntity | null | undefined) {
   const accent = String(accentColor || "").trim() || "var(--primary-color)";
   let accentWeight = 72;
   try {
@@ -370,21 +286,21 @@ export function resolveEntityBubbleIconGlyphColor(accentColor, state) {
   return `color-mix(in srgb, ${accent} ${accentWeight}%, var(--primary-text-color))`;
 }
 
-export function isUnavailableState(state) {
+export function isUnavailableState(state: HassEntity | null | undefined) {
   return normalizeTextKey(state?.state) === "unavailable";
 }
 
-export function getEntityDomain(state) {
+export function getEntityDomain(state: HassEntity | null | undefined) {
   const entityId = String(state?.entity_id || "");
-  return entityId.includes(".") ? entityId.split(".")[0] : "";
+  return entityId.includes(".") ? (entityId.split(".")[0] ?? "") : "";
 }
 
-export function isSelectDomainEntity(state) {
+export function isSelectDomainEntity(state: HassEntity | null | undefined) {
   const domain = getEntityDomain(state);
   return domain === "select" || domain === "input_select";
 }
 
-export function getSelectEntityOptions(state) {
+export function getSelectEntityOptions(state: HassEntity | null | undefined) {
   if (!state?.attributes) {
     return [];
   }
@@ -395,18 +311,18 @@ export function getSelectEntityOptions(state) {
   return options.map(item => String(item ?? "").trim()).filter(Boolean);
 }
 
-export function getSelectEntityCurrentValue(state) {
+export function getSelectEntityCurrentValue(state: HassEntity | null | undefined) {
   return String(state?.state ?? "").trim();
 }
 
-export function humanizeSelectOptionLabel(raw) {
+export function humanizeSelectOptionLabel(raw: unknown) {
   return String(raw ?? "")
     .replace(/_/g, " ")
     .replace(/\b\w/g, match => match.toUpperCase())
     .trim();
 }
 
-export function getHomeAssistantStateDisplayValue(state, hass = null) {
+export function getHomeAssistantStateDisplayValue(state: HassEntity | null | undefined, hass: HomeAssistant | null = null) {
   const attrs = state?.attributes || {};
   const rawState = String(state?.state ?? "").trim();
   const formatters = [
@@ -417,6 +333,7 @@ export function getHomeAssistantStateDisplayValue(state, hass = null) {
     if (typeof formatter !== "function") {
       continue;
     }
+    if (!state) continue;
     try {
       const formatted = String(formatter.call(hass || window.hass, state) ?? "").trim();
       if (formatted && formatted !== rawState) {
@@ -438,15 +355,15 @@ export function getHomeAssistantStateDisplayValue(state, hass = null) {
     .find(value => value && value !== rawState) || "";
 }
 
-export function entitySupportedFeatures(state) {
+export function entitySupportedFeatures(state: HassEntity | null | undefined) {
   return Number(state?.attributes?.supported_features) || 0;
 }
 
-export function entitySupportsFeature(state, flag) {
+export function entitySupportsFeature(state: HassEntity | null | undefined, flag: number) {
   return (entitySupportedFeatures(state) & flag) !== 0;
 }
 
-export function coverEntityIsOpen(state) {
+export function coverEntityIsOpen(state: HassEntity | null | undefined) {
   const stateKey = normalizeTextKey(state?.state);
   if (["open", "opening"].includes(stateKey)) {
     return true;
@@ -458,7 +375,7 @@ export function coverEntityIsOpen(state) {
   return position !== null && position > 0;
 }
 
-export function getDynamicEntityIcon(state) {
+export function getDynamicEntityIcon(state: HassEntity | null | undefined) {
   if (!state) {
     return "";
   }

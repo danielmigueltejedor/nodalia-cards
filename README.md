@@ -220,6 +220,7 @@ The layout selector is also available in each card's visual editor. Existing YAM
 | Climate setpoint scheduling | [Native weekly schedules](./docs/climate-setpoint-schedule.md) |
 | Advanced Vacuum compatibility | [Platforms, live room tracking and fallbacks](./docs/cards/advanced-vacuum-card.md) |
 | Power Flow Card | [Sources, units and diagram behavior](./docs/cards/power-flow-card.md) |
+| Entity Card | [Layouts, actions and configuration](./docs/cards/entity-card.md) |
 | Graph Card | [History sources and sampling](./docs/cards/graph-card.md) |
 | Lock Card | [Controls and configuration](./docs/cards/lock-card.md) |
 | News Card | [Layouts, sources and configuration](./docs/cards/news-card.md) |
