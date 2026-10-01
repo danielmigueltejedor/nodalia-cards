@@ -229,6 +229,20 @@
     return { alpha: channels.alpha, hex, label: source, resolved, source, value: formatEditorColorFromHex(hex, channels.alpha) };
   }
 
+  // src/shared/color-luminance.ts
+  function parseRgbColor(value) {
+    const channels = parseEditorColorChannels(value);
+    return channels ? { red: channels.red, green: channels.green, blue: channels.blue } : null;
+  }
+  function getRelativeLuminance(color) {
+    if (!color || ![color.red, color.green, color.blue].every(Number.isFinite)) return null;
+    const toLinear = (channel) => {
+      const normalized = Math.max(0, Math.min(1, channel / 255));
+      return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+    };
+    return 0.2126 * toLinear(color.red) + 0.7152 * toLinear(color.green) + 0.0722 * toLinear(color.blue);
+  }
+
   // src/shared/editor-entity-helpers.ts
   function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
     return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
@@ -375,23 +389,6 @@
       return fallback;
     }
     return source;
-  }
-  function parseRgbColor(value) {
-    const channels = parseEditorColorChannels(value);
-    return channels ? { red: channels.red, green: channels.green, blue: channels.blue } : null;
-  }
-  function getRelativeLuminance(color) {
-    if (!color) {
-      return null;
-    }
-    const toLinear = (channel) => {
-      const normalized = clamp(Number(channel) / 255, 0, 1);
-      return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
-    };
-    const red = toLinear(color.red);
-    const green = toLinear(color.green);
-    const blue = toLinear(color.blue);
-    return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
   }
   function isUnavailableState(state) {
     return normalizeTextKey(state?.state) === "unavailable";
