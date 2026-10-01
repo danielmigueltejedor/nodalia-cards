@@ -219,6 +219,9 @@ The layout selector is also available in each card's visual editor. Existing YAM
 | Nodalia Cards Engine | [Installation, compatibility and migration](./docs/nodalia-integration.md) |
 | Climate setpoint scheduling | [Native weekly schedules](./docs/climate-setpoint-schedule.md) |
 | Advanced Vacuum compatibility | [Platforms, live room tracking and fallbacks](./docs/cards/advanced-vacuum-card.md) |
+| Power Flow Card | [Sources, units and diagram behavior](./docs/cards/power-flow-card.md) |
+| Graph Card | [History sources and sampling](./docs/cards/graph-card.md) |
+| Lock Card | [Controls and configuration](./docs/cards/lock-card.md) |
 | News Card | [Layouts, sources and configuration](./docs/cards/news-card.md) |
 | Device and Climate layouts | [Compact and circular variants](./docs/cards/device-climate-layouts.md) |
 | Shared styling | [Theme variables and card-mod reference](./docs/STYLING.md) |

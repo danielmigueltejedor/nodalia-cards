@@ -1569,7 +1569,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
   }
 
   _formatConsumptionChipValue(value, unit = "") {
-    const numeric = Number(value);
+    const numeric = parseNumber(value);
     const locale = this._getLocaleTag();
     if (!Number.isFinite(numeric)) {
       return { value: "--", unit: unit || "" };

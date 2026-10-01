@@ -1,0 +1,83 @@
+import { NODE_DEFAULTS } from "./power-flow-constants";
+import { deepClone } from "./power-flow-runtime";
+
+export const DEFAULT_CONFIG = {
+  title: "",
+  name: "",
+  entities: {
+    grid: deepClone(NODE_DEFAULTS.grid),
+    home: deepClone(NODE_DEFAULTS.home),
+    solar: deepClone(NODE_DEFAULTS.solar),
+    battery: deepClone(NODE_DEFAULTS.battery),
+    water: deepClone(NODE_DEFAULTS.water),
+    gas: deepClone(NODE_DEFAULTS.gas),
+    individual: [],
+  },
+  display_zero_lines: {
+    mode: "show",
+    transparency: 50,
+    grey_color: [189, 189, 189],
+  },
+  dashboard_link: "",
+  dashboard_link_label: "Energy",
+  consumption_chips: {
+    day_entity: "",
+    month_entity: "",
+    day_label: "",
+    month_label: "",
+  },
+  show_home_device_popup: true,
+  show_header: true,
+  show_dashboard_link_button: true,
+  show_labels: true,
+  show_values: true,
+  show_secondary_info: true,
+  show_unavailable_badge: true,
+  clickable_entities: true,
+  tap_action: "none",
+  min_flow_rate: 1.4,
+  max_flow_rate: 5.8,
+  haptics: {
+    enabled: true,
+    style: "medium",
+    fallback_vibrate: false,
+  },
+  animations: {
+    enabled: true,
+    content_duration: 460,
+    button_bounce_duration: 320,
+  },
+  grid_options: {
+    rows: "auto",
+    columns: "full",
+    min_rows: 1,
+    min_columns: 6,
+  },
+  styles: {
+    card: {
+      background: "var(--ha-card-background)",
+      border: "1px solid var(--divider-color)",
+      border_radius: "32px",
+      box_shadow: "var(--ha-card-box-shadow)",
+      padding: "12px",
+      gap: "10px",
+    },
+    icon: {
+      node_size: "48px",
+      home_size: "96px",
+      individual_size: "40px",
+      color: "var(--primary-text-color)",
+    },
+    title_size: "15px",
+    chip_height: "21px",
+    chip_font_size: "10px",
+    chip_padding: "0 9px",
+    chip_border_radius: "999px",
+    home_value_size: "22px",
+    home_unit_size: "14px",
+    node_value_size: "11px",
+    secondary_size: "10px",
+    flow_width: "1px",
+  },
+};
+

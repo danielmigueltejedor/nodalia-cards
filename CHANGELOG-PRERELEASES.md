@@ -12,6 +12,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Terminate malformed Power Flow SVG paths, preserve whole kilowatt digits, keep absent readings separate from zero, guard invalid connector coordinates and restore cycle-free editor color defaults.
+
 - Guard malformed Media Player/Navigation layout, media, route and style blocks; retain defaults for absent artwork numbers, real zero options and all legacy aliases.
 
 - Read modern translucent Media Player theme colors immediately and keep artwork query keys/fragments intact; block inherited editor paths and clean up color probes on failure.
@@ -46,6 +48,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Remove Camera portal listeners from their owning shadow root.
 
 ### Maintenance
+
+- Check Power Flow configuration/SVG/node helpers, share checked editor/numeric utilities and document source, unit and diagram behavior.
 
 - Check Media Player/Navigation configuration and derive public normalizer contracts from source; sanitize known styles while preserving YAML extensions.
 
