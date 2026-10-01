@@ -154,7 +154,13 @@
   function normalizeConfig(rawConfig = {}) {
     const defaults = DEFAULT_CONFIG;
     const config = mergeConfig(defaults, isObject(rawConfig) ? rawConfig : {});
-    return { ...config, styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles) };
+    const fields = {
+      entity: typeof config.entity === "string" ? config.entity : "",
+      language: typeof config.language === "string" ? config.language : "auto",
+      styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles)
+    };
+    const normalized = { ...config, ...fields };
+    return normalized;
   }
 
   // src/shared/editor-color.ts
@@ -1748,6 +1754,16 @@
     return NodaliaCircularGaugeCard;
   }
 
+  // src/shared/editor-controls.ts
+  function isNativeEditorInput(node) {
+    return node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement;
+  }
+  function editorControlValue(event, control) {
+    const detail = event instanceof CustomEvent ? event.detail : void 0;
+    if (detail && typeof detail === "object" && "value" in detail && typeof detail.value === "string") return detail.value;
+    return "value" in control ? control.value : void 0;
+  }
+
   // src/cards/circular-gauge/circular-gauge-editor.ts
   var _lazyNodaliaCircularGaugeCardEditor;
   function loadNodaliaCircularGaugeCardEditor() {
@@ -1836,11 +1852,11 @@
         this._watchEditorControlTag("ha-icon-picker");
       }
       _getEntityOptionsSignature(hass = this._hass) {
-        return window.NodaliaUtils.editorFilteredStatesSignature(
+        return window.NodaliaUtils.editorFilteredStatesSignature?.(
           hass,
           this._config?.language,
           (id) => id.startsWith("sensor.") || id.startsWith("number.") || id.startsWith("input_number.")
-        );
+        ) ?? "";
       }
       _getNumericEntityOptions() {
         const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
@@ -1875,7 +1891,7 @@
         this._render();
         this._restoreFocusState(focusState);
         fireEvent(this, "config-changed", {
-          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {})
+          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults?.(nextConfig, DEFAULT_CONFIG) ?? {})
         });
       }
       _setEditorConfig() {
@@ -1892,7 +1908,7 @@
         const valueType = input.dataset.valueType || "string";
         switch (valueType) {
           case "boolean":
-            return Boolean(input.checked);
+            return input instanceof HTMLInputElement && input.checked;
           case "number": {
             const trimmed = String(input.value || "").trim();
             if (!trimmed) {
@@ -1908,7 +1924,7 @@
         }
       }
       _onShadowInput(event) {
-        const input = event.composedPath().find((node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+        const input = event.composedPath().find(isNativeEditorInput);
         if (!input?.dataset?.field) {
           return;
         }
@@ -1921,12 +1937,12 @@
         }
       }
       _onShadowValueChanged(event) {
-        const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+        const control = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.field));
         if (!control?.dataset?.field) {
           return;
         }
         event.stopPropagation();
-        const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+        const nextValue = editorControlValue(event, control);
         if (typeof control.dataset?.value === "string") {
           control.dataset.value = String(nextValue || "");
         }
@@ -1940,7 +1956,7 @@
         this._emitConfig();
       }
       _onShadowClick(event) {
-        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
+        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.editorToggle));
         if (!toggleButton) {
           return;
         }
@@ -2090,23 +2106,23 @@
         const field = host.dataset.field || "entity";
         const nextValue = host.dataset.value || "";
         const placeholder = host.dataset.placeholder || "";
-        let control = null;
+        let control;
         if (customElements.get("ha-entity-picker")) {
           control = document.createElement("ha-entity-picker");
-          control.includeDomains = ["sensor", "number", "input_number"];
-          control.allowCustomEntity = true;
-          control.entityFilter = (stateObj) => {
-            const entityId = String(stateObj?.entity_id || "");
-            return entityId.startsWith("sensor.") || entityId.startsWith("number.") || entityId.startsWith("input_number.");
-          };
+          Object.assign(control, {
+            includeDomains: ["sensor", "number", "input_number"],
+            allowCustomEntity: true,
+            entityFilter: (stateObj) => {
+              const entityId = String(stateObj?.entity_id || "");
+              return entityId.startsWith("sensor.") || entityId.startsWith("number.") || entityId.startsWith("input_number.");
+            }
+          });
           if (placeholder) {
             control.setAttribute("placeholder", placeholder);
           }
         } else if (customElements.get("ha-selector")) {
           control = document.createElement("ha-selector");
-          control.selector = {
-            entity: {}
-          };
+          Object.assign(control, { selector: { entity: {} } });
         } else {
           control = document.createElement("select");
           const emptyOption = document.createElement("option");
@@ -2141,7 +2157,7 @@
         const field = host.dataset.field || "icon";
         const nextValue = host.dataset.value || "";
         const placeholder = host.dataset.placeholder || "";
-        let control = null;
+        let control;
         if (customElements.get("ha-icon-picker")) {
           control = document.createElement("ha-icon-picker");
           if (placeholder) {
@@ -2149,13 +2165,10 @@
           }
         } else if (customElements.get("ha-selector")) {
           control = document.createElement("ha-selector");
-          control.selector = {
-            icon: {}
-          };
+          Object.assign(control, { selector: { icon: {} } });
         } else {
           control = document.createElement("input");
-          control.type = "text";
-          control.placeholder = placeholder;
+          Object.assign(control, { type: "text", placeholder });
           control.addEventListener("input", this._onShadowInput);
           control.addEventListener("change", this._onShadowInput);
         }
@@ -2177,7 +2190,10 @@
           return;
         }
         const config = this._config || normalizeConfig({});
-        const hapticStyle = config.haptics?.style || "medium";
+        const haptics = isObject(config.haptics) ? config.haptics : DEFAULT_CONFIG.haptics;
+        const animations = isObject(config.animations) ? config.animations : DEFAULT_CONFIG.animations;
+        const gridOptions = isObject(config.grid_options) ? config.grid_options : {};
+        const hapticStyle = haptics.style || "medium";
         this.shadowRoot.innerHTML = `
       <style>
         :host {
@@ -2544,11 +2560,11 @@
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.circular_gauge.layout_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderTextField("ed.circular_gauge.grid_rows", "grid_options.rows", config.grid_options?.rows, {
+            ${this._renderTextField("ed.circular_gauge.grid_rows", "grid_options.rows", gridOptions.rows, {
           type: "number",
           valueType: "number"
         })}
-            ${this._renderTextField("ed.circular_gauge.grid_columns", "grid_options.columns", config.grid_options?.columns, {
+            ${this._renderTextField("ed.circular_gauge.grid_columns", "grid_options.columns", gridOptions.columns, {
           type: "number",
           valueType: "number"
         })}
@@ -2579,8 +2595,8 @@
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.entity.haptics_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("ed.entity.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.entity.fallback_vibrate", "haptics.fallback_vibrate", haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
           "ed.vacuum.haptic_style",
           "haptics.style",
@@ -2616,16 +2632,16 @@
           </div>
           ${this._showAnimationSection ? `
                 <div class="editor-grid">
-                  ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", config.animations.enabled !== false)}
-                  ${this._renderTextField("ed.circular_gauge.dial_duration_ms", "animations.dial_duration", config.animations.dial_duration, {
+                  ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", animations.enabled !== false)}
+                  ${this._renderTextField("ed.circular_gauge.dial_duration_ms", "animations.dial_duration", animations.dial_duration, {
           type: "number",
           valueType: "number"
         })}
-                  ${this._renderTextField("ed.notifications.button_bounce_ms", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
+                  ${this._renderTextField("ed.notifications.button_bounce_ms", "animations.button_bounce_duration", animations.button_bounce_duration, {
           type: "number",
           valueType: "number"
         })}
-                  ${this._renderTextField("ed.weather.content_entrance_ms", "animations.content_duration", config.animations.content_duration, {
+                  ${this._renderTextField("ed.weather.content_entrance_ms", "animations.content_duration", animations.content_duration, {
           type: "number",
           valueType: "number"
         })}

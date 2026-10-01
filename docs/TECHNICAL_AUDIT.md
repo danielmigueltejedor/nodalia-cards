@@ -1039,3 +1039,23 @@ the shared picker fallback correctly preserves and emits its current valid value
 The existing picker source assertion now checks identical Object.assign metadata.
 Remaining unchecked modules: 34. Hold 3.0.0-alpha.1 until full migration, including
 handwritten utility/i18n runtime sources.
+
+## Weather and Circular Gauge editor findings — 2026-10-01
+
+Both editors suppressed checking across native/custom controls, HA picker metadata,
+nested settings and focus. Malformed haptic/animation blocks could break Weather
+or Gauge rendering; Gauge grid sizing also relied on unchecked nested access.
+
+Both now pass strict checking and typed lint using real HA/DOM/config/focus
+contracts. Known entity/language/style fields are projected while root YAML
+extensions remain. Guarded native/custom events and picker metadata preserve
+unavailable selections and fallback controls. Malformed nested settings fall
+back safely. Forecast/unit choices, explicit zero limits/decimals, automatic
+bounds, numeric reset defaults and translucent styles survive editing. Three
+verified unused Gauge editor imports were removed.
+
+1,400 valid HTML outputs per editor match main. All 742 unit tests, twelve
+specific browser cases and the full local browser suite (401 passed, one existing
+skip) pass. No type suppressions, broad casts or weaker flags were added.
+Remaining unchecked modules: 32. Hold 3.0.0-alpha.1 until full migration, including
+handwritten utility/i18n runtime sources.

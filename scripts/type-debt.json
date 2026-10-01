@@ -7,7 +7,6 @@
   "src/cards/calendar/calendar-editor.ts",
   "src/cards/camera/camera-card.ts",
   "src/cards/circular-gauge/circular-gauge-card.ts",
-  "src/cards/circular-gauge/circular-gauge-editor.ts",
   "src/cards/climate/climate-card.ts",
   "src/cards/climate/climate-editor.ts",
   "src/cards/entity/entity-card.ts",
@@ -31,6 +30,5 @@
   "src/cards/room-summary/room-summary-card.ts",
   "src/cards/vacuum/vacuum-card.ts",
   "src/cards/vacuum/vacuum-editor.ts",
-  "src/cards/weather/weather-card.ts",
-  "src/cards/weather/weather-editor.ts"
+  "src/cards/weather/weather-card.ts"
 ]

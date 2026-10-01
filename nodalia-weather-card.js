@@ -134,13 +134,16 @@
       const key = String(value ?? fallback).trim().toLowerCase();
       return key === "more-info" || key === "none" ? key : fallback;
     };
-    return {
-      ...config,
+    const fields = {
+      entity: typeof config.entity === "string" ? config.entity : "",
+      language: typeof config.language === "string" ? config.language : "auto",
       tap_action: norm(config.tap_action, "more-info"),
       hold_action: norm(config.hold_action, "more-info"),
       double_tap_action: norm(config.double_tap_action, "none"),
       styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles)
     };
+    const normalized = { ...config, ...fields };
+    return normalized;
   }
 
   // src/shared/config-values.ts
@@ -3195,6 +3198,16 @@
     return NodaliaWeatherCard;
   }
 
+  // src/shared/editor-controls.ts
+  function isNativeEditorInput(node) {
+    return node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement;
+  }
+  function editorControlValue(event, control) {
+    const detail = event instanceof CustomEvent ? event.detail : void 0;
+    if (detail && typeof detail === "object" && "value" in detail && typeof detail.value === "string") return detail.value;
+    return "value" in control ? control.value : void 0;
+  }
+
   // src/cards/weather/weather-editor.ts
   var _lazyNodaliaWeatherCardEditor;
   function loadNodaliaWeatherCardEditor() {
@@ -3258,11 +3271,11 @@
         this._restoreFocusState(focusState);
       }
       _getEntityOptionsSignature(hass = this._hass) {
-        return window.NodaliaUtils.editorFilteredStatesSignature(
+        return window.NodaliaUtils.editorFilteredStatesSignature?.(
           hass,
           this._config?.language,
           (id) => id.startsWith("weather.") || id.startsWith("binary_sensor.")
-        );
+        ) ?? "";
       }
       _watchEditorControlTag(tagName) {
         if (!tagName || this._pendingEditorControlTags.has(tagName)) {
@@ -3323,7 +3336,7 @@
         this._render();
         this._restoreFocusState(focusState);
         fireEvent(this, "config-changed", {
-          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {})
+          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults?.(nextConfig, DEFAULT_CONFIG) ?? {})
         });
       }
       _setEditorConfig() {
@@ -3340,7 +3353,7 @@
         const valueType = input.dataset.valueType || "string";
         switch (valueType) {
           case "boolean":
-            return Boolean(input.checked);
+            return input instanceof HTMLInputElement && input.checked;
           case "color":
             return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
           default:
@@ -3348,7 +3361,7 @@
         }
       }
       _onShadowInput(event) {
-        const input = event.composedPath().find((node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+        const input = event.composedPath().find(isNativeEditorInput);
         if (!input?.dataset?.field) {
           return;
         }
@@ -3361,12 +3374,12 @@
         }
       }
       _onShadowValueChanged(event) {
-        const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+        const control = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.field));
         if (!control?.dataset?.field) {
           return;
         }
         event.stopPropagation();
-        const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+        const nextValue = editorControlValue(event, control);
         if (typeof control.dataset?.value === "string") {
           control.dataset.value = String(nextValue || "");
         }
@@ -3380,7 +3393,7 @@
         this._emitConfig();
       }
       _onShadowClick(event) {
-        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
+        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.editorToggle));
         if (!toggleButton) {
           return;
         }
@@ -3520,22 +3533,20 @@
         const nextValue = host.dataset.value || "";
         const placeholder = host.dataset.placeholder || "";
         const domains = String(host.dataset.domains || "weather").split(",").map((domain) => domain.trim()).filter(Boolean);
-        let control = null;
+        let control;
         if (customElements.get("ha-entity-picker")) {
           control = document.createElement("ha-entity-picker");
-          control.includeDomains = domains;
-          control.allowCustomEntity = true;
-          control.entityFilter = (stateObj) => domains.some((domain) => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+          Object.assign(control, {
+            includeDomains: domains,
+            allowCustomEntity: true,
+            entityFilter: (stateObj) => domains.some((domain) => String(stateObj?.entity_id || "").startsWith(`${domain}.`))
+          });
           if (placeholder) {
             control.setAttribute("placeholder", placeholder);
           }
         } else if (customElements.get("ha-selector")) {
           control = document.createElement("ha-selector");
-          control.selector = {
-            entity: {
-              domain: domains.length === 1 ? domains[0] : domains
-            }
-          };
+          Object.assign(control, { selector: { entity: { domain: domains.length === 1 ? domains[0] : domains } } });
         } else {
           control = document.createElement("select");
           const emptyOption = document.createElement("option");
@@ -3564,11 +3575,12 @@
           return;
         }
         const config = this._config || normalizeConfig({});
-        const hapticStyle = config.haptics?.style || "medium";
+        const haptics = isObject(config.haptics) ? config.haptics : DEFAULT_CONFIG.haptics;
+        const hapticStyle = haptics.style || "medium";
         const tapAction = config.tap_action || "more-info";
         const holdAction = config.hold_action || "more-info";
         const doubleTapAction = config.double_tap_action || "none";
-        const animations = config.animations || DEFAULT_CONFIG.animations;
+        const animations = isObject(config.animations) ? config.animations : DEFAULT_CONFIG.animations;
         this.shadowRoot.innerHTML = `
       <style>
         :host {
@@ -4043,8 +4055,8 @@
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.weather.haptics_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("ed.weather.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("ed.weather.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.weather.enable_haptics", "haptics.enabled", haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.weather.fallback_vibrate", "haptics.fallback_vibrate", haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
           "ed.weather.haptic_style",
           "haptics.style",
@@ -4130,8 +4142,7 @@
     `;
         this.shadowRoot.querySelectorAll('[data-mounted-control="entity"]').forEach((host) => this._mountEntityPicker(host));
         this.shadowRoot.querySelectorAll("ha-icon-picker[data-field]").forEach((control) => {
-          control.hass = this._hass;
-          control.value = control.dataset.value || "";
+          Object.assign(control, { hass: this._hass, value: control.dataset.value || "" });
         });
         this._ensureEditorControlsReady();
         window.NodaliaUtils?.clampEditorDialogScroll?.(this);
