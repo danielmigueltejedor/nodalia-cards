@@ -129,6 +129,7 @@ export interface ClimateScheduleSlot {
 
 export interface ClimateSetpointSchedule {
   enabled: boolean;
+  week_starts_on?: ClimateWeekStartsOn;
   slots: ClimateScheduleSlot[];
 }
 
@@ -143,11 +144,11 @@ export interface ClimatePublicApi {
   EDITOR_TAG: string;
   CARD_VERSION: string;
   DEFAULT_CONFIG: ClimateConfig;
-  normalizeConfig: (rawConfig?: unknown) => ClimateConfig;
-  parseScheduleClockMinutes: (value: unknown) => number | null;
-  encodeSetpointScheduleStorageState: (schedule: ClimateSetpointSchedule | unknown) => string;
-  decodeSetpointScheduleStorageState: (rawState: unknown) => ClimateSetpointSchedule;
-  isSetpointScheduleStorageStateWithinLimit: (storageState: unknown) => boolean;
+  normalizeConfig: typeof import("./climate-config").normalizeConfig;
+  parseScheduleClockMinutes: typeof import("./climate-schedule").parseScheduleClockMinutes;
+  encodeSetpointScheduleStorageState: typeof import("./climate-schedule").encodeSetpointScheduleStorageState;
+  decodeSetpointScheduleStorageState: typeof import("./climate-schedule").decodeSetpointScheduleStorageState;
+  isSetpointScheduleStorageStateWithinLimit: typeof import("./climate-schedule").isSetpointScheduleStorageStateWithinLimit;
 }
 
 export type ClimateHassState = HassEntity | null;

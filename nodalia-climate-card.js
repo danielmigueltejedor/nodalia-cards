@@ -57,6 +57,13 @@
   var fireEvent = utils.fireEvent.bind(utils);
   var normalizeTextKey = utils.normalizeTextKey.bind(utils);
 
+  // src/shared/numeric-values.ts
+  function parseFiniteNumericValue(value) {
+    if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
   // src/cards/climate/climate-schedule.ts
   function createSetpointScheduleSlotId() {
     return `slot_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
@@ -82,9 +89,7 @@
   }
   function normalizeSetpointScheduleDay(value) {
     const key = String(value ?? "").trim().toLowerCase();
-    if (SETPOINT_SCHEDULE_DAY_ORDER.includes(key)) {
-      return key;
-    }
+    if (key === "mon" || key === "tue" || key === "wed" || key === "thu" || key === "fri" || key === "sat" || key === "sun") return key;
     const numeric = Number(value);
     if (Number.isFinite(numeric)) {
       const byIndex = SETPOINT_SCHEDULE_DAY_ORDER[numeric];
@@ -93,7 +98,7 @@
       }
       const jsMap = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
       if (numeric >= 0 && numeric <= 6 && jsMap[numeric]) {
-        return jsMap[numeric];
+        return jsMap[numeric] ?? "mon";
       }
     }
     return "mon";
@@ -105,28 +110,26 @@
     if (endMinutes <= startMinutes) {
       endMinutes = Math.min(startMinutes + 60, SETPOINT_SCHEDULE_MINUTES_PER_DAY - 1);
     }
-    const temperature = Number(source.temperature);
+    const temperature = parseFiniteNumericValue(source.temperature);
     const normalized = {
       id: String(source.id || "").trim() || createSetpointScheduleSlotId(),
       day: normalizeSetpointScheduleDay(source.day ?? SETPOINT_SCHEDULE_DAY_ORDER[index % 7]),
       start: formatScheduleClockMinutes(startMinutes),
       end: formatScheduleClockMinutes(endMinutes),
-      temperature: Number.isFinite(temperature) ? temperature : 21,
+      temperature: temperature !== null ? temperature : 21,
       enabled: source.enabled !== false
     };
     const hvacMode = String(source.hvac_mode || "").trim().toLowerCase();
     if (["off", "heat", "cool", "heat_cool", "auto", "dry", "fan_only"].includes(hvacMode)) {
       normalized.hvac_mode = hvacMode;
     }
-    ["fan_mode", "preset_mode"].forEach((key) => {
-      const value = String(source[key] || "").trim();
-      if (value) {
-        normalized[key] = value;
-      }
-    });
-    const targetLow = Number(source.target_temp_low);
-    const targetHigh = Number(source.target_temp_high);
-    if (Number.isFinite(targetLow) && Number.isFinite(targetHigh) && targetLow <= targetHigh) {
+    const fanMode = String(source.fan_mode || "").trim();
+    const presetMode = String(source.preset_mode || "").trim();
+    if (fanMode) normalized.fan_mode = fanMode;
+    if (presetMode) normalized.preset_mode = presetMode;
+    const targetLow = parseFiniteNumericValue(source.target_temp_low);
+    const targetHigh = parseFiniteNumericValue(source.target_temp_high);
+    if (targetLow !== null && targetHigh !== null && targetLow <= targetHigh) {
       normalized.target_temp_low = targetLow;
       normalized.target_temp_high = targetHigh;
     }
@@ -151,7 +154,7 @@
   }
   function quantizeSetpointScheduleStorageMinutes(minutes) {
     return clamp(
-      Math.round(Number(minutes) / SETPOINT_SCHEDULE_STORAGE_TIME_QUANTUM) * SETPOINT_SCHEDULE_STORAGE_TIME_QUANTUM,
+      Math.round((parseFiniteNumericValue(minutes) ?? 0) / SETPOINT_SCHEDULE_STORAGE_TIME_QUANTUM) * SETPOINT_SCHEDULE_STORAGE_TIME_QUANTUM,
       0,
       SETPOINT_SCHEDULE_MINUTES_PER_DAY - 1
     );
@@ -162,8 +165,8 @@
     if (endQ <= startQ) {
       endQ = Math.min(startQ + Math.ceil(SCHEDULE_MIN_BLOCK_MINUTES / SETPOINT_SCHEDULE_STORAGE_TIME_QUANTUM), 287);
     }
-    const day = clamp(Number(dayIdx), 0, 6);
-    const snappedTemp = Math.round(Number(temperature) * 4) / 4;
+    const day = clamp(Math.floor(parseFiniteNumericValue(dayIdx) ?? 0), 0, 6);
+    const snappedTemp = Math.round((parseFiniteNumericValue(temperature) ?? 21) * 4) / 4;
     const tempInteger = Math.floor(snappedTemp);
     const fractionQ = Math.round((snappedTemp - tempInteger) * 4) & 3;
     const temp = clamp(tempInteger - 5, 0, 255);
@@ -171,10 +174,13 @@
     return (startQ | endQ << 9 | day << 18 | disabled << 21 | temp << 22 | fractionQ << 30) >>> 0;
   }
   function unpackSetpointSchedulePacked(packedValue) {
-    const packed = Number(packedValue) >>> 0;
+    const numeric = parseFiniteNumericValue(packedValue);
+    if (numeric === null || !Number.isInteger(numeric) || numeric < 0 || numeric > 4294967295) return null;
+    const packed = numeric >>> 0;
     const startQ = packed & 511;
     const endQ = packed >> 9 & 511;
     const dayIdx = packed >> 18 & 7;
+    if (startQ > 287 || endQ > 287 || dayIdx > 6) return null;
     const disabled = packed >> 21 & 1;
     const temperatureInt = (packed >> 22 & 255) + 5;
     const fractionQ = packed >>> 30 & 3;
@@ -196,7 +202,7 @@
   function encodeSetpointScheduleBinaryBase64(slots) {
     const bytes = new Uint8Array(slots.length * 4);
     slots.forEach((slot, index) => {
-      const dayIdx = Math.max(0, SETPOINT_SCHEDULE_DAY_ORDER.indexOf(slot.day));
+      const dayIdx = Math.max(0, SETPOINT_SCHEDULE_DAY_ORDER.findIndex((day) => day === slot.day));
       const startMins = parseScheduleClockMinutes(slot.start) ?? 0;
       const endMins = parseScheduleClockMinutes(slot.end) ?? startMins + 60;
       const packed = packSetpointScheduleSlot(dayIdx, startMins, endMins, slot.temperature, slot.enabled);
@@ -222,20 +228,26 @@
     }
     let bytes;
     if (typeof atob === "function") {
-      const binary = atob(raw);
-      bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+      try {
+        const binary = atob(raw);
+        bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+      } catch (_error) {
+        return [];
+      }
     } else {
       return [];
     }
-    const slotCount = Number.isFinite(Number(slotCountHint)) && Number(slotCountHint) > 0 ? Number(slotCountHint) : Math.floor(bytes.length / 4);
+    const hint = parseFiniteNumericValue(slotCountHint);
+    const slotCount = Math.min(Math.floor(bytes.length / 4), hint !== null && hint > 0 ? Math.floor(hint) : Math.floor(bytes.length / 4));
     const slots = [];
     for (let index = 0; index < slotCount; index += 1) {
       const offset = index * 4;
       if (offset + 3 >= bytes.length) {
         break;
       }
-      const packed = (bytes[offset] << 24 | bytes[offset + 1] << 16 | bytes[offset + 2] << 8 | bytes[offset + 3]) >>> 0;
-      slots.push(unpackSetpointSchedulePacked(packed));
+      const packed = ((bytes[offset] ?? 0) << 24 | (bytes[offset + 1] ?? 0) << 16 | (bytes[offset + 2] ?? 0) << 8 | (bytes[offset + 3] ?? 0)) >>> 0;
+      const slot = unpackSetpointSchedulePacked(packed);
+      if (slot) slots.push(slot);
     }
     return slots;
   }
@@ -256,7 +268,7 @@
       }
       if (Number(parsed.v) === SETPOINT_SCHEDULE_STORAGE_VERSION_PACKED && Array.isArray(parsed.s)) {
         const enabled = parsed.e !== 0;
-        const slots = parsed.s.map((value) => unpackSetpointSchedulePacked(value)).filter(Boolean);
+        const slots = parsed.s.map((value) => unpackSetpointSchedulePacked(value)).filter((slot) => slot !== null);
         return normalizeSetpointScheduleConfig({ enabled, slots });
       }
       if (Number(parsed.v) === SETPOINT_SCHEDULE_STORAGE_VERSION && Array.isArray(parsed.s)) {
@@ -265,10 +277,14 @@
           if (!Array.isArray(row) || row.length < 4) {
             return null;
           }
-          const dayIdx = clamp(Number(row[0]), 0, SETPOINT_SCHEDULE_DAY_ORDER.length - 1);
-          const startMins = clamp(Number(row[1]), 0, SETPOINT_SCHEDULE_MINUTES_PER_DAY - 1);
-          let endMins = clamp(Number(row[2]), 0, SETPOINT_SCHEDULE_MINUTES_PER_DAY - 1);
-          const temperature = Number(row[3]);
+          const day = parseFiniteNumericValue(row[0]);
+          const start = parseFiniteNumericValue(row[1]);
+          const end = parseFiniteNumericValue(row[2]);
+          if (day === null || start === null || end === null) return null;
+          const dayIdx = clamp(Math.floor(day), 0, SETPOINT_SCHEDULE_DAY_ORDER.length - 1);
+          const startMins = clamp(start, 0, SETPOINT_SCHEDULE_MINUTES_PER_DAY - 1);
+          let endMins = clamp(end, 0, SETPOINT_SCHEDULE_MINUTES_PER_DAY - 1);
+          const temperature = parseFiniteNumericValue(row[3]);
           const slotEnabled = row[4] === void 0 || Number(row[4]) !== 0;
           if (endMins <= startMins) {
             endMins = Math.min(startMins + 60, SETPOINT_SCHEDULE_MINUTES_PER_DAY - 1);
@@ -278,7 +294,7 @@
             day: SETPOINT_SCHEDULE_DAY_ORDER[dayIdx] || SETPOINT_SCHEDULE_DAY_ORDER[index % 7],
             start: formatScheduleClockMinutes(startMins),
             end: formatScheduleClockMinutes(endMins),
-            temperature: Number.isFinite(temperature) ? temperature : 21,
+            temperature: temperature !== null ? temperature : 21,
             enabled: slotEnabled
           };
         }).filter(Boolean);
@@ -295,7 +311,7 @@
     const overflowCandidates = [];
     if (normalized.slots.length > 0) {
       const packed = normalized.slots.map((slot) => {
-        const dayIdx = Math.max(0, SETPOINT_SCHEDULE_DAY_ORDER.indexOf(slot.day));
+        const dayIdx = Math.max(0, SETPOINT_SCHEDULE_DAY_ORDER.findIndex((day) => day === slot.day));
         const startMins = parseScheduleClockMinutes(slot.start) ?? 0;
         const endMins = parseScheduleClockMinutes(slot.end) ?? startMins + 60;
         return packSetpointScheduleSlot(dayIdx, startMins, endMins, slot.temperature, slot.enabled);
@@ -319,7 +335,7 @@
       pathBCandidates.push(JSON.stringify(packedPayload));
     }
     const rows = normalized.slots.map((slot) => {
-      const dayIdx = Math.max(0, SETPOINT_SCHEDULE_DAY_ORDER.indexOf(slot.day));
+      const dayIdx = Math.max(0, SETPOINT_SCHEDULE_DAY_ORDER.findIndex((day) => day === slot.day));
       const startMins = parseScheduleClockMinutes(slot.start) ?? 0;
       const endMins = parseScheduleClockMinutes(slot.end) ?? startMins + 60;
       const row = [dayIdx, startMins, endMins, slot.temperature];
@@ -345,13 +361,13 @@
     }
     const pathBWithinLimit = pathBCandidates.filter((candidate) => candidate.length <= SETPOINT_SCHEDULE_INPUT_TEXT_MAX);
     if (pathBWithinLimit.length) {
-      return pathBWithinLimit.sort((left, right) => left.length - right.length)[0];
+      return pathBWithinLimit.sort((left, right) => left.length - right.length)[0] ?? "";
     }
     const withinLimit = [...overflowCandidates, ...pathBCandidates].filter((candidate) => candidate.length <= SETPOINT_SCHEDULE_INPUT_TEXT_MAX);
     if (withinLimit.length) {
-      return withinLimit.sort((left, right) => left.length - right.length)[0];
+      return withinLimit.sort((left, right) => left.length - right.length)[0] ?? "";
     }
-    return [...overflowCandidates, ...pathBCandidates].sort((left, right) => left.length - right.length)[0];
+    return [...overflowCandidates, ...pathBCandidates].sort((left, right) => left.length - right.length)[0] ?? "";
   }
   function isSetpointScheduleStorageStateWithinLimit(storageState) {
     return String(storageState ?? "").length <= SETPOINT_SCHEDULE_INPUT_TEXT_MAX;
@@ -368,12 +384,13 @@
   }
   function snapScheduleTimelineMinutes(minutes) {
     return clamp(
-      Math.round(Number(minutes) / SCHEDULE_TIMELINE_SNAP_MINUTES) * SCHEDULE_TIMELINE_SNAP_MINUTES,
+      Math.round((parseFiniteNumericValue(minutes) ?? 0) / SCHEDULE_TIMELINE_SNAP_MINUTES) * SCHEDULE_TIMELINE_SNAP_MINUTES,
       0,
       SETPOINT_SCHEDULE_MINUTES_PER_DAY - 1
     );
   }
-  function getSetpointScheduleBlockLayout(slot) {
+  function getSetpointScheduleBlockLayout(value) {
+    const slot = isObject(value) ? value : {};
     const start = parseScheduleClockMinutes(slot.start) ?? 0;
     let end = parseScheduleClockMinutes(slot.end) ?? start + 60;
     if (end <= start) {
@@ -385,7 +402,7 @@
     return { start, end, left, width };
   }
   function findScheduleGapForDay(slots, day) {
-    const daySlots = (Array.isArray(slots) ? slots : []).filter((slot) => slot.day === day && slot.enabled !== false).map((slot) => {
+    const daySlots = (Array.isArray(slots) ? slots : []).filter((slot) => isObject(slot) && slot.day === day && slot.enabled !== false).map((slot) => {
       const start2 = parseScheduleClockMinutes(slot.start) ?? 0;
       const end = parseScheduleClockMinutes(slot.end) ?? start2 + 60;
       return { start: start2, end: Math.max(end, start2 + SCHEDULE_MIN_BLOCK_MINUTES) };
@@ -416,7 +433,7 @@
       };
     }
     const last = daySlots[daySlots.length - 1];
-    const start = clamp(last.end, 0, SETPOINT_SCHEDULE_MINUTES_PER_DAY - SCHEDULE_MIN_BLOCK_MINUTES);
+    const start = clamp(last?.end ?? 0, 0, SETPOINT_SCHEDULE_MINUTES_PER_DAY - SCHEDULE_MIN_BLOCK_MINUTES);
     return {
       start,
       end: Math.min(start + 60, SETPOINT_SCHEDULE_MINUTES_PER_DAY - 1)
@@ -424,7 +441,7 @@
   }
   function scheduleMinutesFromTrackClientX(track, clientX) {
     const rect = track.getBoundingClientRect();
-    if (!rect.width) {
+    if (!Number.isFinite(rect.width) || rect.width <= 0 || !Number.isFinite(rect.left) || !Number.isFinite(clientX)) {
       return 0;
     }
     const ratio = clamp((clientX - rect.left) / rect.width, 0, 1);
@@ -451,15 +468,16 @@
     const base = `nodalia_climate_${String(entityId ?? "").replace(".", "_")}_${String(slotId ?? "")}`;
     return base.replace(/[^a-z0-9_]/gi, "_").slice(0, 120);
   }
-  function buildClimateSetpointScheduleAutomationSpecs(entityId, schedule, friendlyName = "") {
+  function buildClimateSetpointScheduleAutomationSpecs(entityId, value, friendlyName = "") {
+    const schedule = isObject(value) ? value : {};
     if (!String(entityId ?? "").trim() || schedule?.enabled === false) {
       return [];
     }
     const label = String(friendlyName || entityId).trim();
-    return (Array.isArray(schedule?.slots) ? schedule.slots : []).filter((slot) => slot?.enabled !== false).map((slot) => {
+    return (Array.isArray(schedule?.slots) ? schedule.slots : []).filter((slot) => isObject(slot) && slot.enabled !== false).map((slot) => {
       const start = String(slot.start || "08:00").trim();
       const at = /^\d{2}:\d{2}:\d{2}$/.test(start) ? start : `${start}:00`;
-      const weekday = SETPOINT_SCHEDULE_HA_WEEKDAY[slot.day] || [slot.day];
+      const weekday = typeof slot.day === "string" && Object.prototype.hasOwnProperty.call(SETPOINT_SCHEDULE_HA_WEEKDAY, slot.day) ? SETPOINT_SCHEDULE_HA_WEEKDAY[normalizeSetpointScheduleDay(slot.day)] : [String(slot.day ?? "mon")];
       return {
         id: buildClimateSetpointScheduleAutomationId(entityId, slot.id),
         alias: `Nodalia | ${label} | ${slot.day} ${slot.start}-${slot.end}`,
@@ -507,7 +525,8 @@ ${weekdayYaml}
         temperature: ${temperature}`;
     }).join("\n\n");
   }
-  function buildClimateSetpointScheduleWebhookBody(options = {}) {
+  function buildClimateSetpointScheduleWebhookBody(value = {}) {
+    const options = isObject(value) ? value : {};
     const entityId = String(options.entityId ?? "").trim();
     const schedule = normalizeSetpointScheduleConfig(options.schedule);
     const storageEntityId = String(options.storageEntityId ?? "").trim();
@@ -533,6 +552,52 @@ ${weekdayYaml}
         data: { value: storageState }
       } : null
     };
+  }
+
+  // src/shared/control-config.ts
+  function normalizeControlStyles(candidate, defaults, sanitize = window.NodaliaUtils.sanitizeCssValue) {
+    const utils2 = window.NodaliaUtils;
+    const source = utils2.isObject(candidate) ? candidate : {};
+    const result = {};
+    for (const [key, fallback] of Object.entries(defaults)) {
+      if (utils2.isUnsafeConfigPathKey(key)) continue;
+      result[key] = typeof fallback === "string" ? sanitize(source[key], fallback) : normalizeControlStyles(source[key], fallback, sanitize);
+    }
+    return result;
+  }
+  var actionFields = (prefix, fallback, navigationKey = `${prefix}_navigation_path`) => ({
+    actionKey: `${prefix}_action`,
+    serviceKey: `${prefix}_service`,
+    serviceDataKey: `${prefix}_service_data`,
+    serviceTargetKey: `${prefix}_service_target`,
+    urlKey: `${prefix}_url`,
+    navigationKey,
+    newTabKey: `${prefix}_new_tab`,
+    fallback
+  });
+  var FIELDS = [
+    actionFields("tap", "toggle", "navigation_path"),
+    actionFields("icon_tap", "", "icon_navigation_path"),
+    actionFields("hold", "more-info", "hold_navigation_path"),
+    actionFields("icon_hold", ""),
+    actionFields("double_tap", "none"),
+    actionFields("icon_double_tap", "")
+  ];
+
+  // src/shared/editor-entity-helpers.ts
+  function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
+    return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
+  }
+  function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
+    const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
+    if (!entityId) return config;
+    config.entity = entityId;
+    config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
+    return config;
+  }
+  function parseSizeToPixels(value, fallback = 0) {
+    const numeric = Number.parseFloat(String(value ?? ""));
+    return Number.isFinite(numeric) ? numeric : fallback;
   }
 
   // src/cards/climate/climate-config.ts
@@ -633,79 +698,82 @@ ${weekdayYaml}
     entity: "climate.salon",
     name: "Salon"
   };
-  function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
-    return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
-  }
-  function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
-    const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
-    if (!entityId) {
-      return config;
-    }
-    config.entity = entityId;
-    config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
-    return config;
-  }
   function migrateLegacyClimateOffColors(styles) {
-    if (!styles?.icon) {
-      return;
-    }
+    if (!isObject(styles) || !isObject(styles.icon)) return;
     const iconOff = String(styles.icon.off_color ?? "").trim();
     if (iconOff && (LEGACY_CLIMATE_ICON_OFF_COLORS.includes(iconOff) || /^var\(\s*--state-inactive-color/i.test(iconOff))) {
       styles.icon.off_color = DEFAULT_CONFIG.styles.icon.off_color;
     }
-    if (styles.dial) {
+    if (isObject(styles.dial)) {
       const dialOff = String(styles.dial.off_color ?? "").trim();
-      if (dialOff === LEGACY_CLIMATE_DIAL_OFF_COLOR) {
-        styles.dial.off_color = DEFAULT_CONFIG.styles.dial.off_color;
-      }
+      if (dialOff === LEGACY_CLIMATE_DIAL_OFF_COLOR) styles.dial.off_color = DEFAULT_CONFIG.styles.dial.off_color;
       const track = String(styles.dial.track_color ?? "").trim().replace(/\s+/g, " ");
-      if (track === LEGACY_CLIMATE_DIAL_TRACK_COLOR.replace(/\s+/g, " ")) {
-        styles.dial.track_color = DEFAULT_CONFIG.styles.dial.track_color;
-      }
+      if (track === LEGACY_CLIMATE_DIAL_TRACK_COLOR.replace(/\s+/g, " ")) styles.dial.track_color = DEFAULT_CONFIG.styles.dial.track_color;
       const dialBg = String(styles.dial.background ?? "").trim().replace(/\s+/g, " ");
-      if (dialBg === LEGACY_CLIMATE_DIAL_BACKGROUND.replace(/\s+/g, " ")) {
-        styles.dial.background = DEFAULT_CONFIG.styles.dial.background;
-      }
+      if (dialBg === LEGACY_CLIMATE_DIAL_BACKGROUND.replace(/\s+/g, " ")) styles.dial.background = DEFAULT_CONFIG.styles.dial.background;
     }
   }
-  function normalizeConfig(rawConfig) {
-    const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-    const CLIMATE_ACTIONS = /* @__PURE__ */ new Set(["more-info", "none"]);
+  function normalizeConfig(rawConfig = {}) {
+    const raw = isObject(rawConfig) ? rawConfig : {};
+    const defaults = DEFAULT_CONFIG;
+    const config = mergeConfig(defaults, raw);
     const norm = (value, fallback) => {
       const key = String(value ?? fallback).trim().toLowerCase();
-      return CLIMATE_ACTIONS.has(key) ? key : fallback;
+      return key === "more-info" || key === "none" ? key : fallback;
     };
-    config.tap_action = norm(config.tap_action, "more-info");
-    config.hold_action = norm(config.hold_action, "more-info");
-    config.double_tap_action = norm(config.double_tap_action, "none");
-    config.layout = normalizeTextKey(config.layout) === "compact" ? "compact" : "circular";
-    config.entity_picture = String(config.entity_picture ?? "").trim();
-    config.show_entity_picture = config.show_entity_picture === true;
     migrateLegacyClimateOffColors(config.styles);
-    config.setpoint_schedule_webhook = String(config.setpoint_schedule_webhook ?? "").trim();
-    config.setpoint_schedule_helper = String(config.setpoint_schedule_helper ?? "").trim();
-    config.setpoint_schedule_week_starts_on = normalizeSetpointScheduleWeekStartsOn(
-      config.setpoint_schedule_week_starts_on
-    );
-    config.show_schedule_button = config.show_schedule_button !== false;
-    const allowWebhooksForNonAdmin = config.security?.allow_webhooks_for_non_admin === true;
-    config.security = window.NodaliaUtils.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? { ...DEFAULT_CONFIG.security, ...isObject(config.security) ? config.security : {} };
-    config.security.allow_webhooks_for_non_admin = allowWebhooksForNonAdmin;
-    config.styles = window.NodaliaUtils.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles) ?? deepClone(DEFAULT_CONFIG.styles);
-    return config;
-  }
-
-  // src/shared/numeric-values.ts
-  function parseFiniteNumericValue(value) {
-    if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
-    const numeric = Number(value);
-    return Number.isFinite(numeric) ? numeric : null;
-  }
-
-  // src/shared/editor-entity-helpers.ts
-  function parseSizeToPixels(value, fallback = 0) {
-    const numeric = Number.parseFloat(String(value ?? ""));
-    return Number.isFinite(numeric) ? numeric : fallback;
+    const rawSecurity = isObject(config.security) ? config.security : {};
+    const security = window.NodaliaUtils.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? { ...DEFAULT_CONFIG.security, ...rawSecurity };
+    const list = (value, fallback) => Array.isArray(value) ? value.map((item) => String(item || "").trim().toLowerCase()).filter(Boolean) : [...fallback];
+    const display = isObject(config.display) ? config.display : {};
+    const haptics = isObject(config.haptics) ? config.haptics : {};
+    const scrolls = isObject(haptics.scrolls) ? haptics.scrolls : {};
+    const animations = isObject(config.animations) ? config.animations : {};
+    return {
+      ...config,
+      entity: String(config.entity ?? ""),
+      name: String(config.name ?? ""),
+      icon: String(config.icon ?? ""),
+      tap_action: norm(config.tap_action, "more-info"),
+      hold_action: norm(config.hold_action, "more-info"),
+      double_tap_action: norm(config.double_tap_action, "none"),
+      layout: normalizeTextKey(config.layout) === "compact" ? "compact" : "circular",
+      entity_picture: String(config.entity_picture ?? "").trim(),
+      show_entity_picture: config.show_entity_picture === true,
+      show_state_chip: config.show_state_chip !== false,
+      show_current_temperature_chip: config.show_current_temperature_chip !== false,
+      show_humidity_chip: config.show_humidity_chip !== false,
+      show_mode_buttons: config.show_mode_buttons !== false,
+      show_step_controls: config.show_step_controls !== false,
+      show_schedule_button: config.show_schedule_button !== false,
+      show_unavailable_badge: config.show_unavailable_badge !== false,
+      setpoint_schedule_webhook: String(config.setpoint_schedule_webhook ?? "").trim(),
+      setpoint_schedule_helper: String(config.setpoint_schedule_helper ?? "").trim(),
+      setpoint_schedule_week_starts_on: normalizeSetpointScheduleWeekStartsOn(config.setpoint_schedule_week_starts_on),
+      security: {
+        ...security,
+        allow_webhooks_for_non_admin: rawSecurity.allow_webhooks_for_non_admin === true,
+        strict_service_actions: security.strict_service_actions === true,
+        allowed_services: list(security.allowed_services, DEFAULT_CONFIG.security.allowed_services),
+        allowed_service_domains: list(security.allowed_service_domains, DEFAULT_CONFIG.security.allowed_service_domains)
+      },
+      display: { ...display, main_temperature: normalizeTextKey(display.main_temperature) === "current" ? "current" : "target" },
+      haptics: {
+        ...haptics,
+        enabled: haptics.enabled === true,
+        style: String(haptics.style ?? DEFAULT_CONFIG.haptics.style),
+        fallback_vibrate: haptics.fallback_vibrate === true,
+        scrolls: { ...scrolls, temperature_dial: scrolls.temperature_dial !== false }
+      },
+      animations: {
+        ...animations,
+        enabled: animations.enabled !== false,
+        dial_duration: parseFiniteNumericValue(animations.dial_duration) ?? DEFAULT_CONFIG.animations.dial_duration,
+        button_bounce_duration: parseFiniteNumericValue(animations.button_bounce_duration) ?? DEFAULT_CONFIG.animations.button_bounce_duration,
+        content_duration: parseFiniteNumericValue(animations.content_duration) ?? DEFAULT_CONFIG.animations.content_duration
+      },
+      styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles)
+    };
   }
 
   // src/shared/editor-color.ts
