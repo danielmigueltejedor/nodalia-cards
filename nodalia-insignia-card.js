@@ -467,11 +467,11 @@
       return {};
     }
   }
-  function callHassService(hass, domain, service, data = {}) {
+  function callHassService(hass, domain, service, data = {}, target = null) {
     if (!hass?.callService) return;
     const failure = (error) => console.warn("Nodalia Cards: service call failed", `${domain}.${service}`, error);
     try {
-      void Promise.resolve(hass.callService(domain, service, data)).catch(failure);
+      void Promise.resolve(target !== null ? hass.callService(domain, service, data, target) : hass.callService(domain, service, data)).catch(failure);
     } catch (error) {
       failure(error);
     }

@@ -989,3 +989,30 @@ The existing source assertion now checks the nullable finite grid parser and
 the same compact threshold. Full local browser suite: 359 passed, one existing
 platform skip. Remaining unchecked modules: 37. Hold 3.0.0-alpha.1 until full migration, including shared
 handwritten utility/i18n runtime sources.
+
+## Cover view/editor findings — 2026-10-01
+
+Cover suppressed checking across pointer/touch drag geometry, HA service/action
+parameters, native/custom picker events and nested editor settings. Cancellation
+could commit a position, configuration changes could leave an old gesture active,
+and inherited icon actions lost body service/URL/navigation parameters.
+
+Cover view/editor now pass strict checking and typed lint. Discriminated drag
+geometry represents the actual linear/circular controls. Cancelling or changing
+configuration abandons the gesture without a command, detaches window listeners
+and restores current HA values. Missing/non-finite input is ignored while zero
+remains valid. Fallback animation timers and consumed taps are released. Icon
+actions inherit both action and parameters; explicit icon overrides remain intact.
+Malformed picker/nested settings are guarded, custom YAML fields and focus remain.
+Eight verified unused imports and four unused lifecycle fields were removed.
+
+Fav, Person and Cover now share checked service invocation, retaining the utility's
+compatibility event fallback, context, explicit targets and false/zero data while
+handling both synchronous failures and rejected promises.
+
+1,400 valid editor and 3,000 valid view/grid outputs match main. All 742 unit tests
+and 33 targeted Cover/Person browser cases pass. Full local browser suite,
+including Fav service coverage: 380 passed, one existing platform skip. The initial
+Cover run exposed the inherited-parameter bug and an ambiguous circular-chip test
+locator; both are corrected. Remaining unchecked modules: 35. Hold 3.0.0-alpha.1
+until full migration, including handwritten utility/i18n runtime sources.

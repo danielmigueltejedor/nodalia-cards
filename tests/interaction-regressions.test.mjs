@@ -1337,8 +1337,8 @@ test("power flow derives grid import, export, and battery charge paths from home
 test("cover editor uses domain-filtered pickers and fan-style editor controls", () => {
   const source = read("nodalia-cover-card.js");
   const editorLabels = JSON.parse(read("i18n/editor/en.json"));
-  assert.match(source, /control\.includeDomains = \["cover"\]/);
-  assert.match(source, /control\.entityFilter = \(?stateObj\)? => String\(stateObj\?\.entity_id \|\| ""\)\.startsWith\("cover\."\)/);
+  assert.match(source, /Object\.assign\(control, \{ includeDomains: \["cover"\], allowCustomEntity: true, entityFilter:/);
+  assert.match(source, /entityFilter: \(?stateObj\)? => String\(stateObj\?\.entity_id \|\| ""\)\.startsWith\("cover\."\)/);
   assert.match(source, /class="editor-control-host"[\s\S]*data-mounted-control="cover-entity"/);
   assert.match(source, /<ha-icon-picker[\s\S]*data-field="\$\{escapeHtml\(field\)\}"/);
   assert.match(source, /editor-section__actions/);
@@ -1478,14 +1478,14 @@ test("cover card pointer controls avoid focus-driven dashboard scroll jumps", ()
   );
   assert.match(
     source,
-    /_onPointerDown\(event\) \{[\s\S]*node\.type === "range"[\s\S]*node\.dataset\?\.coverControl[\s\S]*this\._startSliderDrag\(slider, event\.clientX, event, event\.pointerId\)/,
+    /_onPointerDown\(event\) \{[\s\S]*node\.type === "range"[\s\S]*node\.dataset(?:\?)?\.coverControl[\s\S]*this\._startSliderDrag\(slider, event\.clientX, event, event\.pointerId\)/,
   );
   assert.match(source, /case "toggle_controls_view":[\s\S]*_syncCoverControlsViewDom\(\)/);
   assert.doesNotMatch(source, /case "toggle_controls_view":[\s\S]{0,280}this\._render\(\)/);
   assert.doesNotMatch(source, /_toggleCoverControlsView/);
-  assert.match(source, /this\.shadowRoot\.addEventListener\("pointerdown", this\._onPointerDown\)/);
-  assert.match(source, /this\.shadowRoot\.addEventListener\("mousedown", this\._onMouseDown\)/);
-  assert.match(source, /this\.shadowRoot\.addEventListener\("touchstart", this\._onTouchStart, \{ passive: false \}\)/);
+  assert.match(source, /this\.shadowRoot(?:\?)?\.addEventListener\("pointerdown", this\._onPointerDown\)/);
+  assert.match(source, /this\.shadowRoot(?:\?)?\.addEventListener\("mousedown", this\._onMouseDown\)/);
+  assert.match(source, /this\.shadowRoot\?\.addEventListener\("touchstart", this\._onTouchStart, \{ passive: false \}\)/);
   assert.doesNotMatch(source, /addEventListener\("focusin"/);
   assert.doesNotMatch(source, /_preventCoverPointerFocus/);
   assert.doesNotMatch(source, /button\.blur\(\)/);
@@ -1497,11 +1497,11 @@ test("cover card pointer controls avoid focus-driven dashboard scroll jumps", ()
   );
   assert.match(
     source,
-    /if \(!\(typeof window !== "undefined" && "PointerEvent" in window\)\) \{[\s\S]*this\.shadowRoot\.addEventListener\("touchstart", this\._onTouchStart, \{ passive: false \}\)/,
+    /if \(!this\._hasPointerEvents\(\)\) \{[\s\S]*this\.shadowRoot\?\.addEventListener\("touchstart", this\._onTouchStart, \{ passive: false \}\)/,
   );
   assert.match(
     source,
-    /if \(!\(typeof window !== "undefined" && "PointerEvent" in window\)\) \{[\s\S]*window\.addEventListener\("touchstart", this\._onWindowTouchStartCapture, \{ passive: true, capture: true \}\)/,
+    /if \(!this\._hasPointerEvents\(\)\) \{[\s\S]*window\.addEventListener\("touchstart", this\._onWindowTouchStartCapture, \{ passive: true, capture: true \}\)/,
   );
   assert.doesNotMatch(source, /_captureCoverInteractionScrollSnapshot/);
   assert.doesNotMatch(source, /_rememberCoverInteractionScroll/);
@@ -1946,7 +1946,7 @@ test("circular device surfaces and power buttons keep their card tap actions", (
   );
   assert.match(
     coverSource,
-    /_hapticOnPositionStep\([\s\S]{0,420}lastHapticValue/,
+    /_hapticOnPositionStep\([\s\S]{0,700}lastHapticValue/,
     "cover card should emit step haptics while dragging the circular dial",
   );
   assert.match(
@@ -2793,7 +2793,7 @@ test("visual editors expose individual haptic controls for every slider and dial
   assert.match(read("nodalia-fan-card.js"), /haptics\?\.scrolls\?\.percentage === false/);
   assert.match(read("nodalia-humidifier-card.js"), /haptics\?\.scrolls\?\.humidity === false/);
   assert.match(read("nodalia-climate-card.js"), /haptics\?\.scrolls\?\.temperature_dial === false/);
-  assert.match(read("nodalia-cover-card.js"), /haptics\?\.scrolls\?\.\[sliderKind\] !== false/);
+  assert.match(read("nodalia-cover-card.js"), /const scrolls = isObject\(haptics.scrolls\) \? haptics.scrolls : \{\};[\s\S]*scrolls\[sliderKind\] !== false/);
 });
 
 test("device control expansion uses Gecko-safe grid tracks and commits its final DOM state", () => {

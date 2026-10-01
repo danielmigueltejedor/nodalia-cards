@@ -1,5 +1,8 @@
-// @ts-nocheck
-/* Large HTMLElement view/controller: typed incrementally as methods are extracted. */
+import { invokeHassService } from "../../shared/home-assistant-services";
+import type { HomeAssistant } from "../../core/types/home-assistant";
+import type { HostPointerHoldBinding } from "../../core/types/nodalia-utils";
+import type { SliderDragGeometry, DialGeometry } from "../../shared/device-control-geometry";
+import { parseFiniteNumericValue } from "../../shared/numeric-values";
 import {
   CARD_TAG,
   COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS,
@@ -10,16 +13,12 @@ import {
 } from "./cover-constants";
 import {
   clamp,
-  compactConfig,
   deepClone,
-  deleteByPath,
   escapeHtml,
   escapeSelectorValue,
   fireEvent,
   isObject,
-  mergeConfig,
   normalizeTextKey,
-  setByPath,
 } from "./cover-runtime";
 import { DEFAULT_CONFIG, STUB_CONFIG, normalizeConfig } from "./cover-config";
 import {
@@ -35,21 +34,37 @@ import {
   resolveOpenCloseControlIcons,
 } from "./cover-helpers";
 
-let _lazyNodaliaCoverCard;
-export function loadNodaliaCoverCard() {
+type CoverZone = "body" | "icon";
+type CoverDrag = { kind: "linear"; slider: HTMLInputElement; geometry: SliderDragGeometry; pointerId: number | null; lastHapticValue?: number }
+  | { kind: "circular"; dial: HTMLElement; geometry: DialGeometry; range: { min: number; max: number }; step: number; pointerId: number | null; lastValue: number; lastClientY: number; lastHapticValue?: number };
+let _lazyNodaliaCoverCard: CustomElementConstructor | undefined;
+export function loadNodaliaCoverCard(): CustomElementConstructor {
   if (_lazyNodaliaCoverCard) {
     return _lazyNodaliaCoverCard;
   }
 class NodaliaCoverCard extends HTMLElement {
+  private _config!: ReturnType<typeof normalizeConfig>;
+  private _hass!: HomeAssistant | null;
+  private _lastRenderSignature!: string;
+  private _activeSliderDrag!: CoverDrag | null;
+  private _skipNextSliderChange!: HTMLInputElement | null;
+  private _dragWindowListenersAttached!: boolean;
+  private _pendingRenderAfterDrag!: boolean;
+  private _suppressNextCoverTap!: boolean;
+  private _cardWidth!: number;
+  private _resizeObserver!: ResizeObserver | null;
+  private _coverControlsViewMode!: "slider" | "arrows";
+  private _detachHostHold!: HostPointerHoldBinding;
+  private _fallbackAnimationTimers!: Set<number>;
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig(hass, entities = [], entitiesFallback = []) {
+  static getStubConfig(hass: HomeAssistant | null | undefined, entities: unknown = [], entitiesFallback: unknown = []) {
     return applyStubEntity(deepClone(STUB_CONFIG), hass, ["cover"], entities, entitiesFallback);
   }
 
-  static getEntitySuggestion(hass, entityId) {
+  static getEntitySuggestion(hass: HomeAssistant, entityId: string) {
     return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, { domains: ["cover"] });
   }
 
@@ -62,16 +77,13 @@ class NodaliaCoverCard extends HTMLElement {
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._lastRenderSignature = "";
-    this._lastRenderedIsActive = null;
-    this._controlsTransition = null;
-    this._powerTransition = null;
-    this._animationCleanupTimer = 0;
     this._activeSliderDrag = null;
     this._skipNextSliderChange = null;
     this._dragWindowListenersAttached = false;
     this._pendingRenderAfterDrag = false;
     this._suppressNextCoverTap = false;
     this._cardWidth = 0;
+    this._fallbackAnimationTimers = new Set();
     this._resizeObserver =
       typeof ResizeObserver === "function"
         ? new ResizeObserver(entries => {
@@ -116,13 +128,13 @@ class NodaliaCoverCard extends HTMLElement {
     this._onWindowTouchStartCapture = this._onWindowTouchStartCapture.bind(this);
     this._onWindowTouchMove = this._onWindowTouchMove.bind(this);
     this._onWindowTouchEnd = this._onWindowTouchEnd.bind(this);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("change", this._onShadowChange);
-    this.shadowRoot.addEventListener("pointerdown", this._onPointerDown);
-    this.shadowRoot.addEventListener("mousedown", this._onMouseDown);
-    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
-      this.shadowRoot.addEventListener("touchstart", this._onTouchStart, { passive: false });
+    this.shadowRoot?.addEventListener("click", this._onShadowClick);
+    this.shadowRoot?.addEventListener("input", this._onShadowInput);
+    this.shadowRoot?.addEventListener("change", this._onShadowChange);
+    this.shadowRoot?.addEventListener("pointerdown", this._onPointerDown);
+    this.shadowRoot?.addEventListener("mousedown", this._onMouseDown);
+    if (!this._hasPointerEvents()) {
+      this.shadowRoot?.addEventListener("touchstart", this._onTouchStart, { passive: false });
     }
     this._detachHostHold =
       typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function"
@@ -135,7 +147,7 @@ class NodaliaCoverCard extends HTMLElement {
               if (window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
                 return null;
               }
-              const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
+              const actionButton = path.find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.coverAction));
               const zone = actionButton?.dataset?.coverAction;
               return zone === "body" || zone === "icon" ? zone : null;
             },
@@ -165,19 +177,16 @@ class NodaliaCoverCard extends HTMLElement {
   disconnectedCallback() {
     this._resizeObserver?.disconnect();
     this._detachHostHold?.();
-    if (this._activeSliderDrag) {
-      this._activeSliderDrag.dial?.classList?.remove("is-dragging");
-      this._activeSliderDrag = null;
-    }
-    this._detachWindowDragListeners();
-    if (this._animationCleanupTimer) {
-      window.clearTimeout(this._animationCleanupTimer);
-      this._animationCleanupTimer = 0;
-    }
+    this._cancelSliderDrag(false);
+    this._suppressNextCoverTap = false;
     window.NodaliaUtils?.clearDeferTimers?.(this);
+    this._fallbackAnimationTimers.forEach(timer => window.clearTimeout(timer));
+    this._fallbackAnimationTimers.clear();
   }
 
-  setConfig(config) {
+  setConfig(config: unknown) {
+    this._cancelSliderDrag(false);
+    this._suppressNextCoverTap = false;
     this._config = normalizeConfig(config || {});
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
     this._coverControlsViewMode = "slider";
@@ -185,7 +194,7 @@ class NodaliaCoverCard extends HTMLElement {
     this._render();
   }
 
-  set hass(hass) {
+  set hass(hass: HomeAssistant) {
     const signature = this._getRenderSignature(hass);
     this._hass = hass;
     if (this._activeSliderDrag) {
@@ -222,8 +231,9 @@ class NodaliaCoverCard extends HTMLElement {
   }
 
   _getConfiguredGridColumns() {
-    const numericColumns = Number(this._config?.grid_options?.columns);
-    return Number.isFinite(numericColumns) && numericColumns > 0 ? numericColumns : null;
+    const grid = this._config.grid_options;
+    const numericColumns = parseFiniteNumericValue(isObject(grid) ? grid.columns : undefined);
+    return numericColumns !== null && numericColumns > 0 ? numericColumns : null;
   }
 
   _shouldReserveCoverToggleLane(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
@@ -235,7 +245,7 @@ class NodaliaCoverCard extends HTMLElement {
   }
 
   _getState(hass = this._hass) {
-    return hass?.states?.[this._config?.entity] || null;
+    return hass?.states?.[this._config.entity] || null;
   }
 
   _getRenderSignature(hass = this._hass) {
@@ -269,7 +279,7 @@ class NodaliaCoverCard extends HTMLElement {
     return Number(state?.attributes?.supported_features) || 0;
   }
 
-  _supports(feature, state = this._getState()) {
+  _supports(feature: number, state = this._getState()) {
     return Boolean(this._features(state) & feature);
   }
 
@@ -297,16 +307,18 @@ class NodaliaCoverCard extends HTMLElement {
     return this._getSettledPositionFallback(state);
   }
 
-  _coverCardUi(key, fallback = "") {
+  _coverCardUi(key: string, fallback = "") {
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-    const pack = window.NodaliaI18n?.strings?.(lang)?.coverCard;
-    const enPack = window.NodaliaI18n?.strings?.("en")?.coverCard;
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, String(this._config.language || "auto")) ?? "en";
+    const local = window.NodaliaI18n?.strings?.(lang)?.coverCard;
+    const english = window.NodaliaI18n?.strings?.("en")?.coverCard;
+    const pack = isObject(local) ? local : {};
+    const enPack = isObject(english) ? english : {};
     const raw = pack?.[key] ?? enPack?.[key];
     return String(raw != null && raw !== "" ? raw : fallback);
   }
 
-  _coverTiltChipText(tiltValue) {
+  _coverTiltChipText(tiltValue: unknown) {
     const tpl = this._coverCardUi("tiltChip", "Tilt {value}%");
     return tpl.replace(/\{value\}/g, String(Math.round(Number(tiltValue) || 0)));
   }
@@ -314,7 +326,7 @@ class NodaliaCoverCard extends HTMLElement {
   _stateLabel(state = this._getState()) {
     const key = normalizeTextKey(state?.state);
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-    const lang = this._config?.language ?? "auto";
+    const lang = String(this._config.language || "auto");
     const translated = window.NodaliaI18n?.translateEntityStateChip?.(hass, lang, key);
     if (translated) {
       return translated;
@@ -338,7 +350,7 @@ class NodaliaCoverCard extends HTMLElement {
   }
 
   _getAnimationSettings() {
-    const animations = this._config?.animations || DEFAULT_CONFIG.animations;
+    const animations = isObject(this._config.animations) ? this._config.animations : DEFAULT_CONFIG.animations;
     return {
       enabled: animations.enabled !== false,
       iconAnimation: animations.icon_animation !== false,
@@ -374,17 +386,17 @@ class NodaliaCoverCard extends HTMLElement {
     `;
   }
 
-  _triggerHaptic(styleOverride = null) {
-    const haptics = this._config?.haptics || {};
+  _triggerHaptic(styleOverride: string | null = null) {
+    const haptics = isObject(this._config.haptics) ? this._config.haptics : {};
     if (haptics.enabled !== true) return;
-    const style = styleOverride || haptics.style || "medium";
+    const style = styleOverride || String(haptics.style || "medium");
     fireEvent(this, "haptic", style);
     if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
-      navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
+      try { navigator.vibrate(Object.entries(HAPTIC_PATTERNS).find(([key]) => key === style)?.[1] || HAPTIC_PATTERNS.selection); } catch { /* Unsupported vibration. */ }
     }
   }
 
-  _triggerButtonBounce(element) {
+  _triggerButtonBounce(element: Element | null | undefined) {
     if (!(element instanceof HTMLElement)) return;
     const animations = this._getAnimationSettings();
     if (!animations.enabled) return;
@@ -401,11 +413,12 @@ class NodaliaCoverCard extends HTMLElement {
     if (typeof schedule === "function") {
       schedule(this, done, animations.buttonBounceDuration + 40);
     } else {
-      window.setTimeout(done, animations.buttonBounceDuration + 40);
+      const timer = window.setTimeout(() => { this._fallbackAnimationTimers.delete(timer); done(); }, animations.buttonBounceDuration + 40);
+      this._fallbackAnimationTimers.add(timer);
     }
   }
 
-  _isServiceAllowed(serviceValue) {
+  _isServiceAllowed(serviceValue: unknown) {
     const security = this._config?.security || {};
     if (security.strict_service_actions === false) {
       return true;
@@ -424,10 +437,14 @@ class NodaliaCoverCard extends HTMLElement {
     if (!domains.length && !services.length) {
       return false;
     }
-    return services.includes(normalizedService) || domains.includes(domain);
+    return services.includes(normalizedService) || domains.includes(domain || "");
   }
 
-  _callNamedService(service, data = {}, target = null) {
+  _invokeService(domain: string, service: string, data: Record<string, unknown>, target: Record<string, unknown> | null = null): void {
+    invokeHassService(this, this._hass, domain, service, data, target);
+  }
+
+  _callNamedService(service: unknown, data: Record<string, unknown> = {}, target: Record<string, unknown> | null = null) {
     if (!this._hass || !service) return;
     if (!this._isServiceAllowed(service)) {
       window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Cover Card", service);
@@ -435,25 +452,19 @@ class NodaliaCoverCard extends HTMLElement {
     }
     const [domain, serviceName] = String(service || "").split(".");
     if (!domain || !serviceName) return;
-    const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils)
-      || ((host, hass, svcDomain, svc, payload, svcTarget) => Promise.resolve(
-        svcTarget != null
-          ? hass?.callService?.(svcDomain, svc, payload, svcTarget)
-          : hass?.callService?.(svcDomain, svc, payload),
-      ));
-    invoke(this, this._hass, domain, serviceName, data, target);
+    this._invokeService(domain, serviceName, data, target);
   }
 
-  _callCover(service, data = {}) {
+  _callCover(service: string, data: Record<string, unknown> = {}) {
     if (!this._hass || !this._config?.entity) return;
-    this._hass.callService("cover", service, { entity_id: this._config.entity, ...data });
+    this._invokeService("cover", service, { entity_id: this._config.entity, ...data });
   }
 
   _openMoreInfo(entityId = this._config?.entity) {
     if (entityId) fireEvent(this, "hass-more-info", { entityId });
   }
 
-  _navigate(url, newTab = false) {
+  _navigate(url: unknown, newTab = false) {
     const safeUrl = window.NodaliaUtils?.sanitizeActionUrl?.(url, { allowRelative: true }) || "";
     if (!safeUrl) return;
     if (newTab) {
@@ -477,7 +488,7 @@ class NodaliaCoverCard extends HTMLElement {
     this._callCover("open_cover");
   }
 
-  _resolveTapAction(zone) {
+  _resolveTapAction(zone: CoverZone) {
     const bodyRaw = this._config?.tap_action ?? "toggle";
     const iconRaw = this._config?.icon_tap_action;
     const raw = zone === "icon" && String(iconRaw ?? "").trim() ? iconRaw : bodyRaw;
@@ -505,7 +516,7 @@ class NodaliaCoverCard extends HTMLElement {
     return action;
   }
 
-  _resolveHoldAction(zone) {
+  _resolveHoldAction(zone: CoverZone) {
     const bodyRaw = this._config?.hold_action ?? "none";
     const iconRaw = this._config?.icon_hold_action;
     const raw = zone === "icon" && String(iconRaw ?? "").trim() ? iconRaw : bodyRaw;
@@ -533,9 +544,10 @@ class NodaliaCoverCard extends HTMLElement {
     return action;
   }
 
-  _runAction(zone, interaction = "tap", resolvedAction = null) {
-    const isIcon = zone === "icon";
+  _runAction(zone: CoverZone, interaction = "tap", resolvedAction: string | null = null) {
     const isHold = interaction === "hold";
+    const iconAction = isHold ? this._config.icon_hold_action : this._config.icon_tap_action;
+    const isIcon = zone === "icon" && String(iconAction || "").trim() !== "";
     const action = resolvedAction || (isHold ? this._resolveHoldAction(zone) : this._resolveTapAction(zone));
     if (action === "none") return;
     if (action === "more_info" || action === "more-info") {
@@ -593,11 +605,11 @@ class NodaliaCoverCard extends HTMLElement {
     this._toggleCover();
   }
 
-  _onShadowClick(event) {
+  _onShadowClick(event: Event) {
     const path = event.composedPath();
-    const slider = path.find(node => node instanceof HTMLInputElement && node.dataset?.coverControl);
+    const slider = path.find((node): node is HTMLInputElement => node instanceof HTMLInputElement && Boolean(node.dataset.coverControl));
     if (slider) return;
-    const button = path.find(node => node instanceof HTMLElement && node.dataset?.coverAction);
+    const button = path.find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.coverAction));
     if (!button) return;
     event.preventDefault();
     event.stopPropagation();
@@ -637,7 +649,7 @@ class NodaliaCoverCard extends HTMLElement {
     }
   }
 
-  _isCardTapAction(action) {
+  _isCardTapAction(action: string | undefined) {
     return action === "body" || action === "icon";
   }
 
@@ -703,13 +715,14 @@ class NodaliaCoverCard extends HTMLElement {
     );
   }
 
-  _onPointerDown(event) {
+  _onPointerDown(event: Event) {
+    if (!(event instanceof PointerEvent)) return;
     const path = event.composedPath();
     const slider = path.find(
-      node =>
+      (node): node is HTMLInputElement =>
         node instanceof HTMLInputElement &&
         node.type === "range" &&
-        node.dataset?.coverControl,
+        Boolean(node.dataset.coverControl),
     );
 
     if (!this._activeSliderDrag && slider && (typeof event.button !== "number" || event.button === 0)) {
@@ -728,7 +741,7 @@ class NodaliaCoverCard extends HTMLElement {
       return;
     }
 
-    const dial = path.find(node => node instanceof HTMLElement && node.classList?.contains("fan-card__circular-dial"));
+    const dial = path.find((node): node is HTMLElement => node instanceof HTMLElement && node.classList.contains("fan-card__circular-dial"));
     if (!dial || !this._canSetPosition(this._getState())) {
       return;
     }
@@ -736,13 +749,14 @@ class NodaliaCoverCard extends HTMLElement {
     this._startCircularDialDrag(dial, event.clientX, event.clientY, event, event.pointerId);
   }
 
-  _onMouseDown(event) {
+  _onMouseDown(event: Event) {
+    if (!(event instanceof MouseEvent)) return;
     const path = event.composedPath();
     const slider = path.find(
-      node =>
+      (node): node is HTMLInputElement =>
         node instanceof HTMLInputElement &&
         node.type === "range" &&
-        node.dataset?.coverControl,
+        Boolean(node.dataset.coverControl),
     );
 
     if (!this._activeSliderDrag && slider && event.button === 0) {
@@ -761,7 +775,7 @@ class NodaliaCoverCard extends HTMLElement {
       return;
     }
 
-    const dial = path.find(node => node instanceof HTMLElement && node.classList?.contains("fan-card__circular-dial"));
+    const dial = path.find((node): node is HTMLElement => node instanceof HTMLElement && node.classList.contains("fan-card__circular-dial"));
     if (!dial || !this._canSetPosition(this._getState())) {
       return;
     }
@@ -769,16 +783,19 @@ class NodaliaCoverCard extends HTMLElement {
     this._startCircularDialDrag(dial, event.clientX, event.clientY, event);
   }
 
-  _onTouchStart(event) {
+  _onTouchStart(event: Event) {
+    if (!(event instanceof TouchEvent)) return;
     const path = event.composedPath();
-    const slider = path.find(node =>
+    const touch = event.touches[0];
+    if (!touch) return;
+    const slider = path.find((node): node is HTMLInputElement =>
       node instanceof HTMLInputElement &&
       node.type === "range" &&
-      node.dataset?.coverControl,
+      Boolean(node.dataset.coverControl),
     );
 
     if (!this._activeSliderDrag && slider && event.touches?.length) {
-      this._startSliderDrag(slider, event.touches[0].clientX, event);
+      this._startSliderDrag(slider, touch.clientX, event);
       return;
     }
 
@@ -793,12 +810,12 @@ class NodaliaCoverCard extends HTMLElement {
       return;
     }
 
-    const dial = path.find(node => node instanceof HTMLElement && node.classList?.contains("fan-card__circular-dial"));
+    const dial = path.find((node): node is HTMLElement => node instanceof HTMLElement && node.classList.contains("fan-card__circular-dial"));
     if (!dial || !this._canSetPosition(this._getState())) {
       return;
     }
 
-    this._startCircularDialDrag(dial, event.touches[0].clientX, event.touches[0].clientY, event);
+    this._startCircularDialDrag(dial, touch.clientX, touch.clientY, event);
   }
 
   _canSetPosition(state = this._getState()) {
@@ -809,8 +826,10 @@ class NodaliaCoverCard extends HTMLElement {
     return this._getCommandablePosition(state) ?? 0;
   }
 
-  _updatePositionPreview(value) {
-    const nextValue = clamp(Math.round(Number(value)), 0, 100);
+  _updatePositionPreview(value: unknown) {
+    const numericValue = parseFiniteNumericValue(value);
+    if (numericValue === null) return;
+    const nextValue = clamp(Math.round(numericValue), 0, 100);
     if (!Number.isFinite(nextValue)) {
       return;
     }
@@ -819,7 +838,7 @@ class NodaliaCoverCard extends HTMLElement {
     if (slider instanceof HTMLInputElement) {
       slider.value = String(nextValue);
       slider.style.setProperty("--percentage", String(nextValue));
-      slider.closest(".fan-card__slider-shell")?.style.setProperty("--percentage", String(nextValue));
+      slider.closest<HTMLElement>(".fan-card__slider-shell")?.style.setProperty("--percentage", String(nextValue));
     }
 
     const dial = this.shadowRoot?.querySelector(".fan-card__circular-dial");
@@ -843,8 +862,10 @@ class NodaliaCoverCard extends HTMLElement {
     return 5;
   }
 
-  _hapticOnPositionStep(steppedValue, { commit = false } = {}) {
-    if (this._config?.haptics?.scrolls?.position === false) {
+  _hapticOnPositionStep(steppedValue: unknown, { commit = false } = {}) {
+    const haptics = isObject(this._config.haptics) ? this._config.haptics : {};
+    const scrolls = isObject(haptics.scrolls) ? haptics.scrolls : {};
+    if (scrolls.position === false) {
       return;
     }
     const next = Number(steppedValue);
@@ -865,9 +886,11 @@ class NodaliaCoverCard extends HTMLElement {
     }
   }
 
-  _applyCircularDialValue(value, options = {}) {
+  _applyCircularDialValue(value: unknown, options: { commit?: boolean } = {}) {
     const commit = options.commit === true;
-    const nextValue = clamp(Math.round(Number(value)), 0, 100);
+    const numericValue = parseFiniteNumericValue(value);
+    if (numericValue === null) return;
+    const nextValue = clamp(Math.round(numericValue), 0, 100);
     if (!Number.isFinite(nextValue)) {
       return;
     }
@@ -879,7 +902,7 @@ class NodaliaCoverCard extends HTMLElement {
     }
   }
 
-  _startCircularDialDrag(dial, clientX, clientY, event = null, pointerId = null) {
+  _startCircularDialDrag(dial: HTMLElement, clientX: number, clientY: number, event: Event | null = null, pointerId: number | null = null) {
     if (!(dial instanceof HTMLElement)) {
       return;
     }
@@ -927,7 +950,7 @@ class NodaliaCoverCard extends HTMLElement {
     this._applyCircularDialValue(nextValue, { commit: false });
   }
 
-  _startSliderDrag(slider, clientX, event = null, pointerId = null) {
+  _startSliderDrag(slider: HTMLInputElement, clientX: number, event: Event | null = null, pointerId: number | null = null) {
     if (!slider) return;
     this._activeSliderDrag = {
       kind: "linear",
@@ -945,9 +968,10 @@ class NodaliaCoverCard extends HTMLElement {
     this._applySliderValue(slider, nextValue, { commit: false });
   }
 
-  _queueSliderDragUpdate(slider, clientX, clientY = null) {
+  _queueSliderDragUpdate(clientX: number, clientY: number | null = null) {
     const drag = this._activeSliderDrag;
-    if (drag?.kind === "circular") {
+    if (!drag) return;
+    if (drag.kind === "circular") {
       const nextValue = getCircularLayoutDialValueFromPoint(
         drag.dial,
         clientX,
@@ -963,12 +987,23 @@ class NodaliaCoverCard extends HTMLElement {
       return;
     }
 
-    const nextValue = getRangeValueFromGeometry(drag?.geometry, slider.value, clientX);
+    const slider = drag.slider;
+    const nextValue = getRangeValueFromGeometry(drag.geometry, slider.value, clientX);
     slider.value = String(nextValue);
     this._applySliderValue(slider, nextValue, { commit: false });
   }
 
-  _commitSliderDrag(clientX, event = null, pointerId = null, clientY = null) {
+  _cancelSliderDrag(refresh = true) {
+    const drag = this._activeSliderDrag;
+    if (drag?.kind === "circular") drag.dial.classList.remove("is-dragging");
+    this._activeSliderDrag = null;
+    this._skipNextSliderChange = null;
+    this._pendingRenderAfterDrag = false;
+    this._detachWindowDragListeners();
+    if (refresh && this.isConnected) this._render();
+  }
+
+  _commitSliderDrag(clientX: number, event: Event | null = null, pointerId: number | null = null, clientY: number | null = null) {
     const drag = this._activeSliderDrag;
     if (!drag || (pointerId !== null && drag.pointerId !== pointerId)) return;
     if (event) {
@@ -1010,41 +1045,43 @@ class NodaliaCoverCard extends HTMLElement {
     }
   }
 
-  _onWindowPointerMove(event) {
+  _onWindowPointerMove(event: PointerEvent) {
     const drag = this._activeSliderDrag;
     if (!drag || drag.pointerId !== event.pointerId) return;
     event.preventDefault();
-    this._queueSliderDragUpdate(drag.slider, event.clientX, event.clientY);
+    this._queueSliderDragUpdate(event.clientX, event.clientY);
   }
 
-  _onWindowPointerUp(event) {
+  _onWindowPointerUp(event: PointerEvent) {
     const drag = this._activeSliderDrag;
     if (!drag || drag.pointerId !== event.pointerId) return;
+    if (event.type === "pointercancel") {
+      this._cancelSliderDrag();
+      return;
+    }
     this._commitSliderDrag(event.clientX, event, event.pointerId, event.clientY);
   }
 
-  _onWindowMouseMove(event) {
+  _onWindowMouseMove(event: MouseEvent) {
     if (!this._activeSliderDrag || (typeof event.buttons === "number" && (event.buttons & 1) === 0)) return;
     event.preventDefault();
-    this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.clientX, event.clientY);
+    this._queueSliderDragUpdate(event.clientX, event.clientY);
   }
 
-  _onWindowMouseUp(event) {
+  _onWindowMouseUp(event: MouseEvent) {
     if (!this._activeSliderDrag) return;
     this._commitSliderDrag(event.clientX, event, null, event.clientY);
   }
 
-  _onWindowTouchMove(event) {
+  _onWindowTouchMove(event: TouchEvent) {
     if (!this._activeSliderDrag || !event.touches?.length) return;
     event.preventDefault();
-    this._queueSliderDragUpdate(
-      this._activeSliderDrag.slider,
-      event.touches[0].clientX,
-      event.touches[0].clientY,
-    );
+    const touch = event.touches[0];
+    if (!touch) return;
+    this._queueSliderDragUpdate(touch.clientX, touch.clientY);
   }
 
-  _onWindowTouchStartCapture(event) {
+  _onWindowTouchStartCapture(event: TouchEvent) {
     const drag = this._activeSliderDrag;
     if (!drag) {
       return;
@@ -1055,31 +1092,25 @@ class NodaliaCoverCard extends HTMLElement {
       return;
     }
 
-    drag.dial?.classList?.remove("is-dragging");
-    this._activeSliderDrag = null;
-    this._detachWindowDragListeners();
-
-    if (this._pendingRenderAfterDrag) {
-      this._pendingRenderAfterDrag = false;
-      this._render();
-    }
+    this._cancelSliderDrag();
   }
 
-  _onWindowTouchEnd(event) {
+  _onWindowTouchEnd(event: TouchEvent) {
     if (!this._activeSliderDrag) return;
-    const touch = event.changedTouches?.[0];
-    const clientX = touch?.clientX;
-    if (!Number.isFinite(clientX)) {
-      this._activeSliderDrag.dial?.classList?.remove("is-dragging");
-      this._activeSliderDrag = null;
-      this._detachWindowDragListeners();
-      if (this._pendingRenderAfterDrag) {
-        this._pendingRenderAfterDrag = false;
-        this._render();
-      }
+    if (event.type === "touchcancel") {
+      this._cancelSliderDrag();
       return;
     }
-    this._commitSliderDrag(clientX, event, null, touch?.clientY);
+    const touch = event.changedTouches[0];
+    if (!touch || !Number.isFinite(touch.clientX)) {
+      this._cancelSliderDrag();
+      return;
+    }
+    this._commitSliderDrag(touch.clientX, event, null, touch.clientY);
+  }
+
+  _hasPointerEvents() {
+    return typeof window.PointerEvent === "function";
   }
 
   _attachWindowDragListeners() {
@@ -1088,7 +1119,7 @@ class NodaliaCoverCard extends HTMLElement {
     window.addEventListener("pointermove", this._onWindowPointerMove);
     window.addEventListener("pointerup", this._onWindowPointerUp);
     window.addEventListener("pointercancel", this._onWindowPointerUp);
-    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+    if (!this._hasPointerEvents()) {
       window.addEventListener("mousemove", this._onWindowMouseMove);
       window.addEventListener("mouseup", this._onWindowMouseUp);
       window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
@@ -1104,7 +1135,7 @@ class NodaliaCoverCard extends HTMLElement {
     window.removeEventListener("pointermove", this._onWindowPointerMove);
     window.removeEventListener("pointerup", this._onWindowPointerUp);
     window.removeEventListener("pointercancel", this._onWindowPointerUp);
-    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+    if (!this._hasPointerEvents()) {
       window.removeEventListener("mousemove", this._onWindowMouseMove);
       window.removeEventListener("mouseup", this._onWindowMouseUp);
       window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
@@ -1114,18 +1145,18 @@ class NodaliaCoverCard extends HTMLElement {
     }
   }
 
-  _onShadowInput(event) {
-    const slider = event.composedPath().find(node => node instanceof HTMLInputElement && node.dataset?.coverControl);
+  _onShadowInput(event: Event) {
+    const slider = event.composedPath().find((node): node is HTMLInputElement => node instanceof HTMLInputElement && Boolean(node.dataset.coverControl));
     if (!slider) return;
     event.stopPropagation();
-    if (this._activeSliderDrag?.slider === slider) {
+    if (this._activeSliderDrag?.kind === "linear" && this._activeSliderDrag.slider === slider) {
       return;
     }
     this._applySliderValue(slider, slider.value, { commit: false });
   }
 
-  _onShadowChange(event) {
-    const slider = event.composedPath().find(node => node instanceof HTMLInputElement && node.dataset?.coverControl);
+  _onShadowChange(event: Event) {
+    const slider = event.composedPath().find((node): node is HTMLInputElement => node instanceof HTMLInputElement && Boolean(node.dataset.coverControl));
     if (!slider) return;
     event.stopPropagation();
     if (this._skipNextSliderChange === slider) {
@@ -1137,12 +1168,14 @@ class NodaliaCoverCard extends HTMLElement {
     this._detachWindowDragListeners?.();
   }
 
-  _applySliderValue(slider, rawValue, options = {}) {
-    const nextValue = clamp(Math.round(Number(rawValue)), 0, 100);
+  _applySliderValue(slider: HTMLInputElement, rawValue: unknown, options: { commit?: boolean } = {}) {
+    const numericValue = parseFiniteNumericValue(rawValue);
+    if (numericValue === null) return;
+    const nextValue = clamp(Math.round(numericValue), 0, 100);
     if (!Number.isFinite(nextValue)) return;
     const sliderKind = String(slider.dataset.coverControl || "").trim();
     slider.style.setProperty("--percentage", String(nextValue));
-    slider.closest(".fan-card__slider-shell")?.style.setProperty("--percentage", String(nextValue));
+    slider.closest<HTMLElement>(".fan-card__slider-shell")?.style.setProperty("--percentage", String(nextValue));
     const chip = this.shadowRoot?.querySelector(`[data-cover-chip="${escapeSelectorValue(sliderKind)}"]`);
     if (chip instanceof HTMLElement) {
       chip.textContent =
@@ -1151,7 +1184,9 @@ class NodaliaCoverCard extends HTMLElement {
           : `${nextValue}%`;
     }
     if (options.commit !== true) return;
-    if (this._config?.haptics?.scrolls?.[sliderKind] !== false) {
+    const haptics = isObject(this._config.haptics) ? this._config.haptics : {};
+    const scrolls = isObject(haptics.scrolls) ? haptics.scrolls : {};
+    if (scrolls[sliderKind] !== false) {
       this._triggerHaptic("selection");
     }
     if (sliderKind === "position") {
@@ -1161,8 +1196,7 @@ class NodaliaCoverCard extends HTMLElement {
     }
   }
 
-  _renderSlider(kind, label, value, options = {}) {
-    const styles = this._config.styles;
+  _renderSlider(kind: string, label: string, value: unknown, options: { variant?: string } = {}) {
     const percentage = clamp(Math.round(Number(value) || 0), 0, 100);
     const rowClass =
       options.variant === "stack" ? "fan-card__slider-row fan-card__slider-row--stack" : "fan-card__slider-row fan-card__slider-row--solo";
@@ -1940,7 +1974,6 @@ class NodaliaCoverCard extends HTMLElement {
         </div>
       </ha-card>
     `;
-    this._lastRenderedIsActive = isActive;
   }
 }
   _lazyNodaliaCoverCard = NodaliaCoverCard;
