@@ -1421,7 +1421,8 @@ test("power flow visual editor individual actions keep energy branch entities", 
   const clickStart = source.indexOf("_onShadowClick(event)", editorStart);
   assert.ok(clickStart > editorStart, "visual editor click handler should exist");
   const clickBlock = source.slice(clickStart, clickStart + 2200);
-  assert.match(clickBlock, /if \(!isObject\(this\._config\.entities\)\)/);
+  assert.match(clickBlock, /this\._config\.entities\.individual\.push\(/);
+  assert.match(clickBlock, /index >= this\._config\.entities\.individual\.length/);
   assert.doesNotMatch(clickBlock, /if \(!Array\.isArray\(this\._config\.entities\)\)/);
 });
 

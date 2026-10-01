@@ -3,6 +3,7 @@ import { deepClone } from "./power-flow-runtime";
 
 export const DEFAULT_CONFIG = {
   title: "",
+  language: "auto",
   name: "",
   entities: {
     grid: deepClone(NODE_DEFAULTS.grid),

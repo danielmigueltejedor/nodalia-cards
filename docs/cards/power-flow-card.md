@@ -46,3 +46,15 @@ Card, icon, chip and flow styles remain under `styles`. The published minimum
 width is six columns. Public tags, root standalone file
 `nodalia-power-flow-card.js`, default actions and HACS bundle installation remain
 unchanged.
+
+The visual editor preserves newly added individual rows while their entity is
+still blank, including after Home Assistant returns the emitted configuration.
+Names, icons, colors and secondary information stay attached to their row when
+moving or removing devices. Existing energy branches, grid export settings,
+daily/monthly consumption chips and custom YAML fields remain intact.
+
+Native selectors include missing configured entities and restrict available
+choices to sensors, numbers and input numbers. Home Assistant selectors commit
+their event value. Clearing a numeric override restores its default; an explicit
+zero remains a value. Custom translucent CSS colors and focused drafts survive
+editor updates.
