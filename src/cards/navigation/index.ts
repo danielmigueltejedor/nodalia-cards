@@ -25,6 +25,6 @@ const publicApi = {
   DEFAULT_CONFIG,
   STUB_CONFIG,
   normalizeConfig,
-} as NavigationPublicApi;
+} satisfies NavigationPublicApi;
 
 window.__NODALIA_NAVIGATION__ = publicApi;

@@ -546,3 +546,32 @@ pass; six targeted browser cases pass. Remaining unchecked modules: 61; Media
 config/view/editor remain in the migration.
 Full local browser suite: 263 passed, one existing platform skip. Publication
 remains held until the complete migration is checked.
+
+## Media/Navigation configuration findings — 2026-10-01
+
+Both configuration modules still suppress checking. Media aliases and runtime
+code write/read nested layout/styles without guarding malformed YAML branches.
+Navigation spreads an unknown root and projects nested media blocks without
+checking records. Style values reach stylesheet interpolation unsanitized.
+Guard records, sanitize known CSS leaves while retaining YAML extensions, and
+preserve routes/items, single-player/nested-player aliases, power-action and
+strict-service policies. Media numeric artwork options currently turn absent
+values into zero; keep explicit zero but apply defaults to absent/nonnumeric
+values. Use actual checked public normalizer declarations.
+
+Both configuration modules now pass strict checking and typed lint. Guard
+root/layout/media/style records, sanitize known CSS leaves with the shared
+projection, and keep style extensions. Navigation drops malformed route, popup
+and player rows while retaining empty editor records and routes/items
+precedence; route objects remain cloned independently of the input. Media
+keeps single-player/string-layout/nested Navigation aliases, empty player rows
+and the existing power-action/default service policies. Artwork numeric
+options retain explicit zero while absent inputs use documented defaults.
+Public normalizer contracts derive from source and registration uses satisfies.
+
+Five new unit cases cover alias compatibility, numeric bounds, record guards,
+CSS projection, independent route cloning and policies. 1,000 valid configs
+match merged main. All 692 unit tests and three targeted browser cases pass.
+Remaining unchecked modules: 59; both views/editors remain in the migration.
+Full local browser suite: 266 passed, one existing platform skip. Publication
+remains held until the complete migration is checked.

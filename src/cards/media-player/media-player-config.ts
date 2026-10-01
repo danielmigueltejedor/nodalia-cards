@@ -1,4 +1,5 @@
-// @ts-nocheck -- merged Lovelace YAML is projected into the runtime player config.
+import { normalizeControlStyles } from "../../shared/control-config";
+import { parseFiniteNumericValue } from "../../shared/numeric-values";
 import { normalizePresentationMode } from "./media-player-layout";
 import { deepClone, isObject, mergeConfig } from "./media-player-runtime";
 import type {
@@ -56,18 +57,18 @@ export const DEFAULT_CONFIG = {
     dynamic_colors: true,
     crossfade: true,
     crossfade_duration: 500,
-  },
+  } satisfies MediaPlayerArtworkConfig,
   progress: {
     show: true,
     draggable: true,
-  },
+  } satisfies MediaPlayerProgressConfig,
   idle_artwork: {
     enabled: true,
     slideshow: true,
     interval: 15,
     animation: "subtle",
     max_items: 8,
-  },
+  } satisfies MediaPlayerIdleArtworkConfig,
   styles: {
     player: {
       background: "var(--ha-card-background)",
@@ -103,8 +104,8 @@ export const DEFAULT_CONFIG = {
 };
 
 function clampNumber(value: unknown, fallback: number, min: number, max: number): number {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
+  const numeric = parseFiniteNumericValue(value);
+  if (numeric === null) {
     return fallback;
   }
   return Math.min(max, Math.max(min, numeric));
@@ -164,10 +165,11 @@ export function normalizeConfig(rawConfig?: unknown) {
   const layoutOverride = typeof raw.layout === "string"
     ? { mode: normalizePresentationMode(raw.layout) }
     : raw.layout;
-  const config = mergeConfig(DEFAULT_CONFIG, {
+  const config = mergeConfig<Record<string, unknown>>(DEFAULT_CONFIG, {
     ...raw,
     layout: layoutOverride,
   });
+  const layout: Record<string, unknown> = { ...DEFAULT_CONFIG.layout, ...(isObject(config.layout) ? config.layout : {}) };
   const mediaConfig = isObject(raw.media_player) ? raw.media_player : null;
 
   if (mediaConfig) {
@@ -184,7 +186,7 @@ export function normalizeConfig(rawConfig?: unknown) {
       config.show_unavailable_badge = mediaConfig.show_unavailable_badge;
     }
     if (mediaConfig.show_desktop !== undefined) {
-      config.layout.show_desktop = mediaConfig.show_desktop;
+      layout.show_desktop = mediaConfig.show_desktop;
     }
     if (Array.isArray(mediaConfig.players) && mediaConfig.players.length > 0 && (!Array.isArray(raw.players) || raw.players.length === 0)) {
       config.players = deepClone(mediaConfig.players);
@@ -215,20 +217,20 @@ export function normalizeConfig(rawConfig?: unknown) {
     ];
   }
 
-  config.players = Array.isArray(config.players) ? config.players.filter(player => isObject(player)) : [];
-  config.players = config.players.map(player => ({
+  const players = (Array.isArray(config.players) ? config.players.filter(isObject) : []).map(player => ({
     ...player,
     power_action_off: normalizePowerActionConfig(player.power_action_off),
     power_action_on: normalizePowerActionConfig(player.power_action_on),
     power_action_unavailable: normalizePowerActionConfig(player.power_action_unavailable),
   }));
-  config.layout.position = config.layout.position === "top" ? "top" : "bottom";
-  config.layout.mode = normalizePresentationMode(config.layout.mode);
-  config.artwork = normalizeArtworkConfig(config.artwork);
-  config.progress = normalizeProgressConfig(config.progress);
-  config.idle_artwork = normalizeIdleArtworkConfig(config.idle_artwork);
-  config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
+  const rawStyles = isObject(config.styles) ? config.styles : {};
+  const projected = normalizeControlStyles(rawStyles, DEFAULT_CONFIG.styles);
+  const styles = { ...rawStyles, ...projected,
+    player: { ...(isObject(rawStyles.player) ? rawStyles.player : {}), ...projected.player },
+    browser: { ...(isObject(rawStyles.browser) ? rawStyles.browser : {}), ...projected.browser } };
+  const security = window.NodaliaUtils.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
     ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
-
-  return config;
+  return { ...config, players, styles, security,
+    layout: { ...layout, position: layout.position === "top" ? "top" : "bottom", mode: normalizePresentationMode(layout.mode) },
+    artwork: normalizeArtworkConfig(config.artwork), progress: normalizeProgressConfig(config.progress), idle_artwork: normalizeIdleArtworkConfig(config.idle_artwork) };
 }

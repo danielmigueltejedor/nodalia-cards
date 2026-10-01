@@ -160,6 +160,43 @@
     }
   ];
 
+  // src/shared/control-config.ts
+  function normalizeControlStyles(candidate, defaults, sanitize = window.NodaliaUtils.sanitizeCssValue) {
+    const utils2 = window.NodaliaUtils;
+    const source = utils2.isObject(candidate) ? candidate : {};
+    const result = {};
+    for (const [key, fallback] of Object.entries(defaults)) {
+      if (utils2.isUnsafeConfigPathKey(key)) continue;
+      result[key] = typeof fallback === "string" ? sanitize(source[key], fallback) : normalizeControlStyles(source[key], fallback, sanitize);
+    }
+    return result;
+  }
+  var actionFields = (prefix, fallback, navigationKey = `${prefix}_navigation_path`) => ({
+    actionKey: `${prefix}_action`,
+    serviceKey: `${prefix}_service`,
+    serviceDataKey: `${prefix}_service_data`,
+    serviceTargetKey: `${prefix}_service_target`,
+    urlKey: `${prefix}_url`,
+    navigationKey,
+    newTabKey: `${prefix}_new_tab`,
+    fallback
+  });
+  var FIELDS = [
+    actionFields("tap", "toggle", "navigation_path"),
+    actionFields("icon_tap", "", "icon_navigation_path"),
+    actionFields("hold", "more-info", "hold_navigation_path"),
+    actionFields("icon_hold", ""),
+    actionFields("double_tap", "none"),
+    actionFields("icon_double_tap", "")
+  ];
+
+  // src/shared/numeric-values.ts
+  function parseFiniteNumericValue(value) {
+    if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
   // src/cards/media-player/media-player-layout.ts
   var MEDIA_PLAYER_PRESENTATION_MODES = [
     "auto",
@@ -393,8 +430,8 @@
     }
   };
   function clampNumber(value, fallback, min, max) {
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric)) {
+    const numeric = parseFiniteNumericValue(value);
+    if (numeric === null) {
       return fallback;
     }
     return Math.min(max, Math.max(min, numeric));
@@ -449,6 +486,7 @@
       ...raw,
       layout: layoutOverride
     });
+    const layout = { ...DEFAULT_CONFIG.layout, ...isObject(config.layout) ? config.layout : {} };
     const mediaConfig = isObject(raw.media_player) ? raw.media_player : null;
     if (mediaConfig) {
       if (mediaConfig.show !== void 0) {
@@ -464,7 +502,7 @@
         config.show_unavailable_badge = mediaConfig.show_unavailable_badge;
       }
       if (mediaConfig.show_desktop !== void 0) {
-        config.layout.show_desktop = mediaConfig.show_desktop;
+        layout.show_desktop = mediaConfig.show_desktop;
       }
       if (Array.isArray(mediaConfig.players) && mediaConfig.players.length > 0 && (!Array.isArray(raw.players) || raw.players.length === 0)) {
         config.players = deepClone(mediaConfig.players);
@@ -489,20 +527,31 @@
         }
       ];
     }
-    config.players = Array.isArray(config.players) ? config.players.filter((player) => isObject(player)) : [];
-    config.players = config.players.map((player) => ({
+    const players = (Array.isArray(config.players) ? config.players.filter(isObject) : []).map((player) => ({
       ...player,
       power_action_off: normalizePowerActionConfig(player.power_action_off),
       power_action_on: normalizePowerActionConfig(player.power_action_on),
       power_action_unavailable: normalizePowerActionConfig(player.power_action_unavailable)
     }));
-    config.layout.position = config.layout.position === "top" ? "top" : "bottom";
-    config.layout.mode = normalizePresentationMode(config.layout.mode);
-    config.artwork = normalizeArtworkConfig(config.artwork);
-    config.progress = normalizeProgressConfig(config.progress);
-    config.idle_artwork = normalizeIdleArtworkConfig(config.idle_artwork);
-    config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? { ...DEFAULT_CONFIG.security, ...isObject(config.security) ? config.security : {} };
-    return config;
+    const rawStyles = isObject(config.styles) ? config.styles : {};
+    const projected = normalizeControlStyles(rawStyles, DEFAULT_CONFIG.styles);
+    const styles = {
+      ...rawStyles,
+      ...projected,
+      player: { ...isObject(rawStyles.player) ? rawStyles.player : {}, ...projected.player },
+      browser: { ...isObject(rawStyles.browser) ? rawStyles.browser : {}, ...projected.browser }
+    };
+    const security = window.NodaliaUtils.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? { ...DEFAULT_CONFIG.security, ...isObject(config.security) ? config.security : {} };
+    return {
+      ...config,
+      players,
+      styles,
+      security,
+      layout: { ...layout, position: layout.position === "top" ? "top" : "bottom", mode: normalizePresentationMode(layout.mode) },
+      artwork: normalizeArtworkConfig(config.artwork),
+      progress: normalizeProgressConfig(config.progress),
+      idle_artwork: normalizeIdleArtworkConfig(config.idle_artwork)
+    };
   }
 
   // src/cards/media-player/media-player-artwork.ts

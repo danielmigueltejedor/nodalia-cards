@@ -4,5 +4,5 @@ export interface NavigationPublicApi {
   CARD_VERSION: string;
   DEFAULT_CONFIG: Record<string, unknown>;
   STUB_CONFIG: Record<string, unknown>;
-  normalizeConfig: (rawConfig?: unknown) => Record<string, unknown>;
+  normalizeConfig: typeof import("./navigation-config").normalizeConfig;
 }
