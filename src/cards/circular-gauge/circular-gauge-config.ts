@@ -78,5 +78,9 @@ export const STUB_CONFIG = {
 export function normalizeConfig(rawConfig: unknown = {}) {
   const defaults: Record<string, unknown> = DEFAULT_CONFIG;
   const config = mergeConfig(defaults, isObject(rawConfig) ? rawConfig : {});
-  return { ...config, styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles) };
+  const fields = { entity: typeof config.entity === "string" ? config.entity : "",
+    language: typeof config.language === "string" ? config.language : "auto",
+    styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles) };
+  const normalized: typeof fields & Record<string, unknown> = { ...config, ...fields };
+  return normalized;
 }

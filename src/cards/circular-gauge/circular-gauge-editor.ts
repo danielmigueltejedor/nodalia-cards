@@ -1,16 +1,14 @@
-// @ts-nocheck
-/* Visual editor surface: typed incrementally after the card runtime split. */
+import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
+import type { EditorFocusState } from "../../core/types/nodalia-utils";
+import { editorControlValue, isNativeEditorInput, type NativeEditorInput } from "../../shared/editor-controls";
 import { DEFAULT_GAUGE_MAX_TINT_COLOR, DEFAULT_GAUGE_MIN_TINT_COLOR } from "./circular-gauge-constants";
 import {
-  clamp,
   compactConfig,
   deepClone,
   deleteByPath,
   escapeHtml,
   fireEvent,
   isObject,
-  mergeConfig,
-  normalizeTextKey,
   setByPath,
 } from "./circular-gauge-runtime";
 import { DEFAULT_CONFIG, STUB_CONFIG, normalizeConfig } from "./circular-gauge-config";
@@ -20,12 +18,20 @@ import {
   getEditorColorModel,
 } from "./circular-gauge-helpers";
 
-let _lazyNodaliaCircularGaugeCardEditor;
-export function loadNodaliaCircularGaugeCardEditor() {
+interface FieldOptions { fullWidth?: boolean; type?: string; valueType?: string; placeholder?: string; fallbackValue?: string; multiline?: boolean; rows?: number; }
+let _lazyNodaliaCircularGaugeCardEditor: CustomElementConstructor | undefined;
+export function loadNodaliaCircularGaugeCardEditor(): CustomElementConstructor {
   if (_lazyNodaliaCircularGaugeCardEditor) {
     return _lazyNodaliaCircularGaugeCardEditor;
   }
 class NodaliaCircularGaugeCardEditor extends HTMLElement {
+  private _config!: ReturnType<typeof normalizeConfig>;
+  private _hass!: HomeAssistant | null;
+  private _entityOptionsSignature!: string;
+  private _showAnimationSection!: boolean;
+  private _showStyleSection!: boolean;
+  private _showTapActionsSection!: boolean;
+  private _pendingEditorControlTags!: Set<string>;
   constructor() {
     super();
     this._nodaliaConstruct();
@@ -67,7 +73,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
   }
 
-  set hass(hass) {
+  set hass(hass: HomeAssistant) {
     const nextSignature = this._getEntityOptionsSignature(hass);
     const shouldRender =
       !this._hass ||
@@ -86,7 +92,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     this._restoreFocusState(focusState);
   }
 
-  setConfig(config) {
+  setConfig(config: unknown) {
     const focusState = this._captureFocusState();
     this._config = normalizeConfig(config || {});
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
@@ -94,7 +100,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     this._restoreFocusState(focusState);
   }
 
-  _watchEditorControlTag(tagName) {
+  _watchEditorControlTag(tagName: string) {
     if (!tagName || this._pendingEditorControlTags.has(tagName)) {
       return;
     }
@@ -128,9 +134,9 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
   }
 
   _getEntityOptionsSignature(hass = this._hass) {
-    return window.NodaliaUtils.editorFilteredStatesSignature(hass, this._config?.language, id =>
+    return window.NodaliaUtils.editorFilteredStatesSignature?.(hass, this._config?.language, id =>
       id.startsWith("sensor.") || id.startsWith("number.") || id.startsWith("input_number."),
-    );
+    ) ?? "";
   }
 
   _getNumericEntityOptions() {
@@ -172,7 +178,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     return window.NodaliaUtils.captureEditorFocusState(this);
   }
 
-  _restoreFocusState(focusState) {
+  _restoreFocusState(focusState: EditorFocusState | null) {
     window.NodaliaUtils.restoreEditorFocusState(this, focusState);
   }
 
@@ -183,7 +189,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     this._render();
     this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
-      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
+      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults?.(nextConfig, DEFAULT_CONFIG) ?? {}),
     });
   }
 
@@ -191,7 +197,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     this._config = normalizeConfig(compactConfig(this._config));
   }
 
-  _setFieldValue(path, value) {
+  _setFieldValue(path: string, value: unknown) {
     if (value === undefined || value === null || value === "") {
       deleteByPath(this._config, path);
       return;
@@ -200,12 +206,12 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     setByPath(this._config, path, value);
   }
 
-  _readFieldValue(input) {
+  _readFieldValue(input: NativeEditorInput) {
     const valueType = input.dataset.valueType || "string";
 
     switch (valueType) {
       case "boolean":
-        return Boolean(input.checked);
+        return input instanceof HTMLInputElement && input.checked;
       case "number": {
         const trimmed = String(input.value || "").trim();
         if (!trimmed) {
@@ -222,10 +228,10 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     }
   }
 
-  _onShadowInput(event) {
+  _onShadowInput(event: Event) {
     const input = event
       .composedPath()
-      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+      .find(isNativeEditorInput);
 
     if (!input?.dataset?.field) {
       return;
@@ -242,10 +248,10 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     }
   }
 
-  _onShadowValueChanged(event) {
+  _onShadowValueChanged(event: Event) {
     const control = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.field);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.field));
 
     if (!control?.dataset?.field) {
       return;
@@ -253,9 +259,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
 
     event.stopPropagation();
 
-    const nextValue = typeof event.detail?.value === "string"
-      ? event.detail.value
-      : control.value;
+    const nextValue = editorControlValue(event, control);
     if (typeof control.dataset?.value === "string") {
       control.dataset.value = String(nextValue || "");
     }
@@ -270,10 +274,10 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     this._emitConfig();
   }
 
-  _onShadowClick(event) {
+  _onShadowClick(event: Event) {
     const toggleButton = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.editorToggle));
 
     if (!toggleButton) {
       return;
@@ -299,7 +303,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     }
   }
 
-  _editorLabel(s) {
+  _editorLabel(s: string) {
     if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
       return s;
     }
@@ -307,7 +311,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
   }
 
-  _renderTextField(label, field, value, options = {}) {
+  _renderTextField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const tag = options.multiline ? "textarea" : "input";
     const inputType = options.type || "text";
@@ -338,7 +342,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     `;
   }
 
-  _renderColorField(label, field, value, options = {}) {
+  _renderColorField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const tColorCustom = this._editorLabel("ed.weather.custom_color");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
@@ -367,7 +371,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     `;
   }
 
-  _renderCheckboxField(label, field, checked) {
+  _renderCheckboxField(label: string, field: string, checked: boolean) {
     const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
@@ -383,7 +387,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     `;
   }
 
-  _renderSelectField(label, field, value, options) {
+  _renderSelectField(label: string, field: string, value: unknown, options: { value: string; label: string }[]) {
     const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field">
@@ -401,7 +405,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     `;
   }
 
-  _renderEntityField(label, field, value, options = {}) {
+  _renderEntityField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
 
@@ -419,7 +423,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     `;
   }
 
-  _renderIconPickerField(label, field, value, options = {}) {
+  _renderIconPickerField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
 
@@ -437,7 +441,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     `;
   }
 
-  _mountEntityPicker(host) {
+  _mountEntityPicker(host: HTMLElement) {
     if (!(host instanceof HTMLElement)) {
       return;
     }
@@ -445,24 +449,21 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     const field = host.dataset.field || "entity";
     const nextValue = host.dataset.value || "";
     const placeholder = host.dataset.placeholder || "";
-    let control = null;
+    let control: HTMLElement;
 
     if (customElements.get("ha-entity-picker")) {
       control = document.createElement("ha-entity-picker");
-      control.includeDomains = ["sensor", "number", "input_number"];
-      control.allowCustomEntity = true;
-      control.entityFilter = stateObj => {
+      Object.assign(control, { includeDomains: ["sensor", "number", "input_number"], allowCustomEntity: true,
+      entityFilter: (stateObj: HassEntity) => {
         const entityId = String(stateObj?.entity_id || "");
         return entityId.startsWith("sensor.") || entityId.startsWith("number.") || entityId.startsWith("input_number.");
-      };
+      } });
       if (placeholder) {
         control.setAttribute("placeholder", placeholder);
       }
     } else if (customElements.get("ha-selector")) {
       control = document.createElement("ha-selector");
-      control.selector = {
-        entity: {},
-      };
+      Object.assign(control, { selector: { entity: {} } });
     } else {
       control = document.createElement("select");
       const emptyOption = document.createElement("option");
@@ -496,7 +497,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     host.replaceChildren(control);
   }
 
-  _mountIconPicker(host) {
+  _mountIconPicker(host: HTMLElement) {
     if (!(host instanceof HTMLElement)) {
       return;
     }
@@ -504,7 +505,7 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     const field = host.dataset.field || "icon";
     const nextValue = host.dataset.value || "";
     const placeholder = host.dataset.placeholder || "";
-    let control = null;
+    let control: HTMLElement;
 
     if (customElements.get("ha-icon-picker")) {
       control = document.createElement("ha-icon-picker");
@@ -513,13 +514,10 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
       }
     } else if (customElements.get("ha-selector")) {
       control = document.createElement("ha-selector");
-      control.selector = {
-        icon: {},
-      };
+      Object.assign(control, { selector: { icon: {} } });
     } else {
       control = document.createElement("input");
-      control.type = "text";
-      control.placeholder = placeholder;
+      Object.assign(control, { type: "text", placeholder });
       control.addEventListener("input", this._onShadowInput);
       control.addEventListener("change", this._onShadowInput);
     }
@@ -548,7 +546,10 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "medium";
+    const haptics = isObject(config.haptics) ? config.haptics : DEFAULT_CONFIG.haptics;
+    const animations = isObject(config.animations) ? config.animations : DEFAULT_CONFIG.animations;
+    const gridOptions = isObject(config.grid_options) ? config.grid_options : {};
+    const hapticStyle = haptics.style || "medium";
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -920,11 +921,11 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.circular_gauge.layout_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderTextField("ed.circular_gauge.grid_rows", "grid_options.rows", config.grid_options?.rows, {
+            ${this._renderTextField("ed.circular_gauge.grid_rows", "grid_options.rows", gridOptions.rows, {
               type: "number",
               valueType: "number",
             })}
-            ${this._renderTextField("ed.circular_gauge.grid_columns", "grid_options.columns", config.grid_options?.columns, {
+            ${this._renderTextField("ed.circular_gauge.grid_columns", "grid_options.columns", gridOptions.columns, {
               type: "number",
               valueType: "number",
             })}
@@ -955,8 +956,8 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.entity.haptics_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("ed.entity.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.entity.fallback_vibrate", "haptics.fallback_vibrate", haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
               "ed.vacuum.haptic_style",
               "haptics.style",
@@ -994,16 +995,16 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
             this._showAnimationSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", config.animations.enabled !== false)}
-                  ${this._renderTextField("ed.circular_gauge.dial_duration_ms", "animations.dial_duration", config.animations.dial_duration, {
+                  ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", animations.enabled !== false)}
+                  ${this._renderTextField("ed.circular_gauge.dial_duration_ms", "animations.dial_duration", animations.dial_duration, {
                     type: "number",
                     valueType: "number",
                   })}
-                  ${this._renderTextField("ed.notifications.button_bounce_ms", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
+                  ${this._renderTextField("ed.notifications.button_bounce_ms", "animations.button_bounce_duration", animations.button_bounce_duration, {
                     type: "number",
                     valueType: "number",
                   })}
-                  ${this._renderTextField("ed.weather.content_entrance_ms", "animations.content_duration", config.animations.content_duration, {
+                  ${this._renderTextField("ed.weather.content_entrance_ms", "animations.content_duration", animations.content_duration, {
                     type: "number",
                     valueType: "number",
                   })}
@@ -1104,11 +1105,11 @@ class NodaliaCircularGaugeCardEditor extends HTMLElement {
     `;
 
     this.shadowRoot
-      .querySelectorAll('[data-mounted-control="entity-picker"]')
+      .querySelectorAll<HTMLElement>('[data-mounted-control="entity-picker"]')
       .forEach(host => this._mountEntityPicker(host));
 
     this.shadowRoot
-      .querySelectorAll('[data-mounted-control="icon-picker"]')
+      .querySelectorAll<HTMLElement>('[data-mounted-control="icon-picker"]')
       .forEach(host => this._mountIconPicker(host));
 
     this._ensureEditorControlsReady();

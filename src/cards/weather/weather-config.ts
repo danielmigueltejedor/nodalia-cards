@@ -74,11 +74,14 @@ export function normalizeConfig(rawConfig: unknown = {}) {
     const key = String(value ?? fallback).trim().toLowerCase();
     return key === "more-info" || key === "none" ? key : fallback;
   };
-  return {
-    ...config,
+  const fields = {
+    entity: typeof config.entity === "string" ? config.entity : "",
+    language: typeof config.language === "string" ? config.language : "auto",
     tap_action: norm(config.tap_action, "more-info"),
     hold_action: norm(config.hold_action, "more-info"),
     double_tap_action: norm(config.double_tap_action, "none"),
     styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles),
   };
+  const normalized: typeof fields & Record<string, unknown> = { ...config, ...fields };
+  return normalized;
 }

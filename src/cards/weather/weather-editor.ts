@@ -1,11 +1,13 @@
-// @ts-nocheck
-/* Visual editor surface: typed incrementally after the card runtime split. */
+import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
+import type { EditorFocusState } from "../../core/types/nodalia-utils";
+import { editorControlValue, isNativeEditorInput, type NativeEditorInput } from "../../shared/editor-controls";
 import {
   deepClone,
   deleteByPath,
   escapeHtml,
   fireEvent,
   getByPath,
+  isObject,
   setByPath,
 } from "./weather-runtime";
 import { DEFAULT_CONFIG, STUB_CONFIG, normalizeConfig } from "./weather-config";
@@ -22,12 +24,20 @@ import {
   normalizeWindUnitPreference,
 } from "./weather-helpers";
 
-let _lazyNodaliaWeatherCardEditor;
-export function loadNodaliaWeatherCardEditor() {
+interface FieldOptions { fullWidth?: boolean; type?: string; valueType?: string; placeholder?: string; fallbackValue?: string; domains?: string[]; }
+let _lazyNodaliaWeatherCardEditor: CustomElementConstructor | undefined;
+export function loadNodaliaWeatherCardEditor(): CustomElementConstructor {
   if (_lazyNodaliaWeatherCardEditor) {
     return _lazyNodaliaWeatherCardEditor;
   }
 class NodaliaWeatherCardEditor extends HTMLElement {
+  private _config!: ReturnType<typeof normalizeConfig>;
+  private _hass!: HomeAssistant | null;
+  private _entityOptionsSignature!: string;
+  private _showAnimationSection!: boolean;
+  private _showStyleSection!: boolean;
+  private _showTapActionsSection!: boolean;
+  private _pendingEditorControlTags!: Set<string>;
   constructor() {
     super();
     this._nodaliaConstruct();
@@ -69,7 +79,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
     window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
   }
 
-  set hass(hass) {
+  set hass(hass: HomeAssistant) {
     const nextSignature = this._getEntityOptionsSignature(hass);
     const shouldRender =
       !this._hass ||
@@ -88,7 +98,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
     this._restoreFocusState(focusState);
   }
 
-  setConfig(config) {
+  setConfig(config: unknown) {
     const focusState = this._captureFocusState();
     this._config = normalizeConfig(config || {});
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
@@ -97,15 +107,15 @@ class NodaliaWeatherCardEditor extends HTMLElement {
   }
 
   _getEntityOptionsSignature(hass = this._hass) {
-    return window.NodaliaUtils.editorFilteredStatesSignature(
+    return window.NodaliaUtils.editorFilteredStatesSignature?.(
       hass,
       this._config?.language,
       id =>
         id.startsWith("weather.") || id.startsWith("binary_sensor."),
-    );
+    ) ?? "";
   }
 
-  _watchEditorControlTag(tagName) {
+  _watchEditorControlTag(tagName: string) {
     if (!tagName || this._pendingEditorControlTags.has(tagName)) {
       return;
     }
@@ -174,7 +184,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
     return window.NodaliaUtils.captureEditorFocusState(this);
   }
 
-  _restoreFocusState(focusState) {
+  _restoreFocusState(focusState: EditorFocusState | null) {
     window.NodaliaUtils.restoreEditorFocusState(this, focusState);
   }
 
@@ -185,7 +195,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
     this._render();
     this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
-      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
+      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults?.(nextConfig, DEFAULT_CONFIG) ?? {}),
     });
   }
 
@@ -193,7 +203,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
     this._config = normalizeConfig(compactConfig(this._config));
   }
 
-  _setFieldValue(path, value) {
+  _setFieldValue(path: string, value: unknown) {
     if (value === undefined || value === null || value === "") {
       deleteByPath(this._config, path);
       return;
@@ -202,12 +212,12 @@ class NodaliaWeatherCardEditor extends HTMLElement {
     setByPath(this._config, path, value);
   }
 
-  _readFieldValue(input) {
+  _readFieldValue(input: NativeEditorInput) {
     const valueType = input.dataset.valueType || "string";
 
     switch (valueType) {
       case "boolean":
-        return Boolean(input.checked);
+        return input instanceof HTMLInputElement && input.checked;
       case "color":
         return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
       default:
@@ -215,10 +225,10 @@ class NodaliaWeatherCardEditor extends HTMLElement {
     }
   }
 
-  _onShadowInput(event) {
+  _onShadowInput(event: Event) {
     const input = event
       .composedPath()
-      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+      .find(isNativeEditorInput);
 
     if (!input?.dataset?.field) {
       return;
@@ -234,10 +244,10 @@ class NodaliaWeatherCardEditor extends HTMLElement {
     }
   }
 
-  _onShadowValueChanged(event) {
+  _onShadowValueChanged(event: Event) {
     const control = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.field);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.field));
 
     if (!control?.dataset?.field) {
       return;
@@ -245,9 +255,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
 
     event.stopPropagation();
 
-    const nextValue = typeof event.detail?.value === "string"
-      ? event.detail.value
-      : control.value;
+    const nextValue = editorControlValue(event, control);
     if (typeof control.dataset?.value === "string") {
       control.dataset.value = String(nextValue || "");
     }
@@ -262,10 +270,10 @@ class NodaliaWeatherCardEditor extends HTMLElement {
     this._emitConfig();
   }
 
-  _onShadowClick(event) {
+  _onShadowClick(event: Event) {
     const toggleButton = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.editorToggle));
 
     if (!toggleButton) {
       return;
@@ -286,7 +294,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
     }
   }
 
-  _editorLabel(s) {
+  _editorLabel(s: string) {
     if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
       return s;
     }
@@ -294,7 +302,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
     return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
   }
 
-  _renderTextField(label, field, value, options = {}) {
+  _renderTextField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
@@ -314,7 +322,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
     `;
   }
 
-  _renderColorField(label, field, value, options = {}) {
+  _renderColorField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const tColorCustom = this._editorLabel("ed.weather.custom_color");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
@@ -343,7 +351,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
     `;
   }
 
-  _renderCheckboxField(label, field, checked) {
+  _renderCheckboxField(label: string, field: string, checked: boolean) {
     const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
@@ -359,7 +367,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
     `;
   }
 
-  _renderSelectField(label, field, value, options, renderOptions = {}) {
+  _renderSelectField(label: string, field: string, value: unknown, options: { value: string; label: string }[], renderOptions: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field ${renderOptions.fullWidth ? "editor-field--full" : ""}">
@@ -375,7 +383,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
     `;
   }
 
-  _renderEntityPickerField(label, field, value, options = {}) {
+  _renderEntityPickerField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder || "";
@@ -395,7 +403,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
     `;
   }
 
-  _renderIconPickerField(label, field, value, options = {}) {
+  _renderIconPickerField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
@@ -412,7 +420,7 @@ class NodaliaWeatherCardEditor extends HTMLElement {
     `;
   }
 
-  _mountEntityPicker(host) {
+  _mountEntityPicker(host: HTMLElement) {
     if (!(host instanceof HTMLElement)) {
       return;
     }
@@ -424,23 +432,18 @@ class NodaliaWeatherCardEditor extends HTMLElement {
       .split(",")
       .map(domain => domain.trim())
       .filter(Boolean);
-    let control = null;
+    let control: HTMLElement;
 
     if (customElements.get("ha-entity-picker")) {
       control = document.createElement("ha-entity-picker");
-      control.includeDomains = domains;
-      control.allowCustomEntity = true;
-      control.entityFilter = stateObj => domains.some(domain => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+      Object.assign(control, { includeDomains: domains, allowCustomEntity: true,
+        entityFilter: (stateObj: HassEntity) => domains.some(domain => String(stateObj?.entity_id || "").startsWith(`${domain}.`)) });
       if (placeholder) {
         control.setAttribute("placeholder", placeholder);
       }
     } else if (customElements.get("ha-selector")) {
       control = document.createElement("ha-selector");
-      control.selector = {
-        entity: {
-          domain: domains.length === 1 ? domains[0] : domains,
-        },
-      };
+      Object.assign(control, { selector: { entity: { domain: domains.length === 1 ? domains[0] : domains } } });
     } else {
       control = document.createElement("select");
       const emptyOption = document.createElement("option");
@@ -475,11 +478,12 @@ class NodaliaWeatherCardEditor extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "medium";
+    const haptics = isObject(config.haptics) ? config.haptics : DEFAULT_CONFIG.haptics;
+    const hapticStyle = haptics.style || "medium";
     const tapAction = config.tap_action || "more-info";
     const holdAction = config.hold_action || "more-info";
     const doubleTapAction = config.double_tap_action || "none";
-    const animations = config.animations || DEFAULT_CONFIG.animations;
+    const animations = isObject(config.animations) ? config.animations : DEFAULT_CONFIG.animations;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -963,8 +967,8 @@ class NodaliaWeatherCardEditor extends HTMLElement {
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.weather.haptics_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("ed.weather.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("ed.weather.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.weather.enable_haptics", "haptics.enabled", haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.weather.fallback_vibrate", "haptics.fallback_vibrate", haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
               "ed.weather.haptic_style",
               "haptics.style",
@@ -1054,14 +1058,13 @@ class NodaliaWeatherCardEditor extends HTMLElement {
     `;
 
     this.shadowRoot
-      .querySelectorAll('[data-mounted-control="entity"]')
+      .querySelectorAll<HTMLElement>('[data-mounted-control="entity"]')
       .forEach(host => this._mountEntityPicker(host));
 
     this.shadowRoot
-      .querySelectorAll("ha-icon-picker[data-field]")
+      .querySelectorAll<HTMLElement>("ha-icon-picker[data-field]")
       .forEach(control => {
-        control.hass = this._hass;
-        control.value = control.dataset.value || "";
+        Object.assign(control, { hass: this._hass, value: control.dataset.value || "" });
       });
 
     this._ensureEditorControlsReady();
