@@ -115,11 +115,9 @@ test("Graph editor keeps a newly added series until its entity is selected", () 
   const picker = new sandbox.HTMLElement();
   picker.dataset.field = "entities.1.entity";
   picker.dataset.value = "";
-  editor._onShadowValueChanged({
-    composedPath: () => [picker],
-    detail: { value: "sensor.humidity" },
-    stopPropagation() {},
-  });
+  const pickerEvent = new sandbox.CustomEvent("value-changed", { detail: { value: "sensor.humidity" } });
+  Object.assign(pickerEvent, { composedPath: () => [picker], stopPropagation() {} });
+  editor._onShadowValueChanged(pickerEvent);
 
   assert.equal(editor._config.entities[1].entity, "sensor.humidity");
   assert.equal(editor.lastDispatchedEvent.detail.config.entities[1].entity, "sensor.humidity");

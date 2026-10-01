@@ -1,11 +1,10 @@
-// @ts-nocheck
-/* Visual editor surface: typed incrementally after the card runtime split. */
 import { SERIES_COLORS } from "./graph-constants";
 import {
   deepClone,
   deleteByPath,
   escapeHtml,
   fireEvent,
+  isObject,
   setByPath,
 } from "./graph-runtime";
 import {
@@ -23,648 +22,25 @@ import {
   moveItem,
 } from "./graph-helpers";
 
-let _lazyNodaliaGraphCardEditorLegacy;
-export function loadNodaliaGraphCardEditorLegacy() {
-  if (_lazyNodaliaGraphCardEditorLegacy) {
-    return _lazyNodaliaGraphCardEditorLegacy;
-  }
-class NodaliaGraphCardEditorLegacy extends HTMLElement {
-  constructor() {
-    super();
-    this._nodaliaConstruct();
-  }
-
-  _nodaliaConstruct() {this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(STUB_CONFIG);
-    this._hass = null;
-    this._entityOptionsSignature = "";
-    this._onShadowInput = this._onShadowInput.bind(this);
-    }
-
-  set hass(hass) {
-    const nextSignature = this._getEntityOptionsSignature(hass);
-    const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
-    this._hass = hass;
-    this._entityOptionsSignature = nextSignature;
-
-    if (shouldRender) {
-      this._render();
-    }
-  }
-
-  setConfig(config) {
-    this._config = normalizeConfig(config || {});
-    window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
-    this._render();
-  }
-
-  _getEntityOptionsSignature(hass) {
-    return window.NodaliaUtils.editorFilteredStatesSignature(hass, this._config?.language, id =>
-      id.startsWith("sensor.") || id.startsWith("number.") || id.startsWith("input_number."),
-    );
-  }
-
-  _captureFocusState() {
-    const activeElement = this.shadowRoot?.activeElement;
-    if (
-      !(
-        activeElement instanceof HTMLInputElement ||
-        activeElement instanceof HTMLTextAreaElement ||
-        activeElement instanceof HTMLSelectElement
-      ) ||
-      !activeElement.dataset?.field
-    ) {
-      return null;
-    }
-
-    const selector = `[data-field="${CSS.escape(activeElement.dataset.field)}"]`;
-    const supportsSelection =
-      (activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement) &&
-      activeElement.type !== "checkbox" &&
-      typeof activeElement.selectionStart === "number" &&
-      typeof activeElement.selectionEnd === "number";
-
-    return {
-      selector,
-      selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
-      selectionStart: supportsSelection ? activeElement.selectionStart : null,
-      type: activeElement.type,
-    };
-  }
-
-  _restoreFocusState(focusState) {
-    if (!focusState?.selector || !this.shadowRoot) {
-      return;
-    }
-
-    const target = this.shadowRoot.querySelector(focusState.selector);
-    if (
-      !(
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target instanceof HTMLSelectElement
-      )
-    ) {
-      return;
-    }
-
-    try {
-      target.focus({ preventScroll: true });
-    } catch (_error) {
-      target.focus();
-    }
-
-    const canRestoreSelection =
-      focusState.type !== "checkbox" &&
-      typeof focusState.selectionStart === "number" &&
-      typeof focusState.selectionEnd === "number" &&
-      typeof target.setSelectionRange === "function";
-
-    if (!canRestoreSelection) {
-      return;
-    }
-
-    try {
-      target.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
-    } catch (_error) {
-      // Ignore unsupported inputs.
-    }
-  }
-
-  _emitConfig() {
-    const focusState = this._captureFocusState();
-    const nextConfig = deepClone(this._config);
-    this._config = normalizeConfig(compactConfig(nextConfig));
-    this._render();
-    this._restoreFocusState(focusState);
-    fireEvent(this, "config-changed", {
-      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
-    });
-  }
-
-  _setEditorConfig() {
-    this._config = normalizeConfig(compactConfig(this._config));
-  }
-
-  _setFieldValue(path, value) {
-    if (value === undefined || value === null || value === "") {
-      deleteByPath(this._config, path);
-      return;
-    }
-
-    setByPath(this._config, path, value);
-  }
-
-  _readFieldValue(input) {
-    const valueType = input.dataset.valueType || "string";
-
-    switch (valueType) {
-      case "boolean":
-        return Boolean(input.checked);
-      case "entities":
-        return String(input.value || "")
-          .split("\n")
-          .map(line => line.trim())
-          .filter(Boolean)
-          .map((line, index) => {
-            const [entity, name = "", color = ""] = line.split("|").map(part => part.trim());
-            return {
-              entity,
-              name,
-              color: color || SERIES_COLORS[index % SERIES_COLORS.length],
-            };
-          })
-          .filter(entry => entry.entity);
-      default:
-        return input.value;
-    }
-  }
-
-  _onShadowInput(event) {
-    const input = event
-      .composedPath()
-      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
-
-    if (!input?.dataset?.field) {
-      return;
-    }
-
-    event.stopPropagation();
-    const nextValue = this._readFieldValue(input);
-    this._setFieldValue(input.dataset.field, nextValue);
-    this._setEditorConfig();
-
-    if (event.type === "change") {
-      this._emitConfig();
-    }
-  }
-
-  _editorLabel(s) {
-    if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
-      return s;
-    }
-    const hass = this._hass ?? this.hass;
-    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
-  }
-
-  _renderTextField(label, field, value, options = {}) {
-    const tLabel = this._editorLabel(label);
-    const inputType = options.type || "text";
-    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
-    const valueType = options.valueType || "string";
-    const inputValue = value === undefined || value === null ? "" : String(value);
-
-    return `
-      <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
-        <span>${escapeHtml(tLabel)}</span>
-        <input
-          type="${escapeHtml(inputType)}"
-          data-field="${escapeHtml(field)}"
-          data-value-type="${escapeHtml(valueType)}"
-          value="${escapeHtml(inputValue)}"
-          ${placeholder}
-        />
-      </label>
-    `;
-  }
-
-  _renderTextareaField(label, field, value, options = {}) {
-    const tLabel = this._editorLabel(label);
-    const inputValue = value === undefined || value === null ? "" : String(value);
-    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
-
-    return `
-      <label class="editor-field editor-field--full">
-        <span>${escapeHtml(tLabel)}</span>
-        <textarea
-          data-field="${escapeHtml(field)}"
-          data-value-type="${escapeHtml(options.valueType || "string")}"
-          rows="${escapeHtml(String(options.rows || 4))}"
-          ${placeholder}
-        >${escapeHtml(inputValue)}</textarea>
-      </label>
-    `;
-  }
-
-  _renderCheckboxField(label, field, checked) {
-    const tLabel = this._editorLabel(label);
-    return `
-      <label class="editor-toggle">
-        <input
-          type="checkbox"
-          data-field="${escapeHtml(field)}"
-          data-value-type="boolean"
-          ${checked ? "checked" : ""}
-        />
-        <span class="editor-toggle__switch" aria-hidden="true"></span>
-        <span class="editor-toggle__label">${escapeHtml(tLabel)}</span>
-      </label>
-    `;
-  }
-
-  _renderSelectField(label, field, value, options) {
-    const tLabel = this._editorLabel(label);
-    return `
-      <label class="editor-field">
-        <span>${escapeHtml(tLabel)}</span>
-        <select data-field="${escapeHtml(field)}">
-          ${options
-            .map(option => `
-              <option value="${escapeHtml(option.value)}" ${String(value) === String(option.value) ? "selected" : ""}>
-                ${escapeHtml(this._editorLabel(option.label))}
-              </option>
-            `)
-            .join("")}
-        </select>
-      </label>
-    `;
-  }
-
-  _serializeEntities() {
-    return this._config.entities
-      .map(entry => [entry.entity || "", entry.name || "", entry.color || ""].join("|"))
-      .join("\n");
-  }
-
-  _render() {
-    if (!this.shadowRoot) {
-      return;
-    }
-
-    const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "medium";
-
-    this.shadowRoot.innerHTML = `
-      <style>
-        :host {
-          display: block;
-        }
-
-        * {
-          box-sizing: border-box;
-        }
-
-        .editor {
-          color: var(--primary-text-color);
-          display: grid;
-          gap: 16px;
-        }
-
-        .editor-section {
-          background: color-mix(in srgb, var(--primary-text-color) 2%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
-          border-radius: 18px;
-          display: grid;
-          gap: 14px;
-          padding: 16px;
-        }
-
-        .editor-section__header {
-          display: grid;
-          gap: 4px;
-        }
-
-        .editor-section__title {
-          font-size: 15px;
-          font-weight: 700;
-        }
-
-        .editor-section__hint {
-          color: var(--secondary-text-color);
-          font-size: 12px;
-          line-height: 1.45;
-        }
-
-        .editor-grid {
-          display: grid;
-          gap: 12px;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .editor-field,
-        .editor-toggle {
-          display: grid;
-          gap: 6px;
-          min-width: 0;
-        }
-
-        .editor-field--full {
-          grid-column: 1 / -1;
-        }
-
-        .editor-chip-radius__options {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-        }
-
-        .editor-chip-radius__option {
-          align-items: center;
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
-          border-radius: 12px;
-          cursor: pointer;
-          display: inline-flex;
-          gap: 8px;
-          padding: 8px 12px;
-        }
-
-        .editor-chip-radius__option:has(input:checked) {
-          background: color-mix(in srgb, var(--primary-color) 10%, transparent);
-          border-color: var(--primary-color);
-        }
-
-        .editor-chip-radius__option input[type="radio"] {
-          accent-color: var(--primary-color);
-          appearance: auto;
-          margin: 0;
-          min-height: auto;
-          padding: 0;
-          width: auto;
-        }
-
-
-        .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="entity-picker"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="vacuum-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="select-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="sensor-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="light-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="fan-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="humidifier-entity"]),
-        .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
-        .editor-field:has(> ha-icon-picker) {
-          grid-column: 1 / -1;
-        }
-
-        .editor-field > span,
-        .editor-toggle > span {
-          font-size: 12px;
-          font-weight: 600;
-        }
-
-        .editor-field input,
-        .editor-field select,
-        .editor-field textarea {
-          appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 12px;
-          color: var(--primary-text-color);
-          font: inherit;
-          min-height: 40px;
-          padding: 10px 12px;
-          width: 100%;
-        }
-
-        .editor-field textarea {
-          min-height: 110px;
-          resize: vertical;
-        }
-
-        .editor-toggle {
-          align-items: center;
-          grid-template-columns: auto 1fr;
-          padding-top: 20px;
-        }
-
-        .editor-toggle input {
-          accent-color: var(--primary-color);
-          height: 18px;
-          margin: 0;
-          width: 18px;
-        }
-
-        @media (max-width: 640px) {
-          .editor-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .editor-toggle {
-            padding-top: 0;
-          }
-        }
-      
-        :is(.editor-toggle, .editor-checkbox) {
-          align-items: center;
-          column-gap: 10px;
-          cursor: pointer;
-          grid-auto-flow: row;
-          grid-template-columns: auto minmax(0, 1fr);
-          justify-content: stretch;
-          min-height: 40px;
-          padding-top: 0;
-          position: relative;
-        }
-
-        :is(.editor-toggle, .editor-checkbox) input {
-          block-size: 1px;
-          inline-size: 1px;
-          margin: 0;
-          opacity: 0;
-          pointer-events: none;
-          position: absolute;
-        }
-
-        .editor-toggle__switch {
-          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
-          border-radius: 999px;
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent);
-          display: inline-flex;
-          font-size: 0;
-          height: 22px;
-          line-height: 0;
-          position: relative;
-          transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
-          width: 40px;
-        }
-
-        .editor-toggle__switch::before {
-          background: rgba(255, 255, 255, 0.92);
-          border-radius: 999px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
-          content: "";
-          height: 18px;
-          left: 1px;
-          position: absolute;
-          top: 1px;
-          transition: transform 160ms ease;
-          width: 18px;
-        }
-
-        .editor-toggle__label {
-          min-width: 0;
-        }
-
-        :is(.editor-toggle, .editor-checkbox) input:checked + .editor-toggle__switch {
-          background: var(--primary-color);
-          border-color: var(--primary-color);
-        }
-
-        :is(.editor-toggle, .editor-checkbox) input:checked + .editor-toggle__switch::before {
-          transform: translateX(18px);
-        }
-
-        :is(.editor-toggle, .editor-checkbox) input:focus-visible + .editor-toggle__switch {
-          box-shadow:
-            0 0 0 3px color-mix(in srgb, var(--primary-text-color) 14%, transparent),
-            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-        }
-</style>
-      <div class="editor">
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("General"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Configura titulo, entidades y rango visible de la grafica."))}</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderTextField("Nombre", "name", config.name, {
-              placeholder: "Temperature",
-            })}
-            ${this._renderTextField("Icono", "icon", config.icon, {
-              placeholder: "mdi:water-percent",
-            })}
-            ${this._renderTextField("Minimo", "min", config.min, {
-              type: "number",
-              placeholder: "0",
-            })}
-            ${this._renderTextField("Maximo", "max", config.max, {
-              type: "number",
-              placeholder: "100",
-            })}
-            ${this._renderTextField("Horas a mostrar", "hours_to_show", config.hours_to_show, {
-              type: "number",
-              placeholder: "24",
-            })}
-            ${this._renderTextField("Puntos", "points", config.points, {
-              type: "number",
-              placeholder: "48",
-            })}
-            ${this._renderTextareaField("Entidades", "entities", this._serializeEntities(), {
-              valueType: "entities",
-              rows: 5,
-              placeholder: "sensor.humedad_dormitorio|Dormitorio de Rocio|#f29f05\nsensor.humedad_pasillo|Pasillo|#42a5f5",
-            })}
-          </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Visibilidad"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Activa o desactiva cabecera, valor, leyenda y relleno."))}</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderCheckboxField("Mostrar cabecera", "show_header", config.show_header !== false)}
-            ${this._renderCheckboxField("Mostrar icono", "show_icon", config.show_icon !== false)}
-            ${this._renderCheckboxField("Mostrar valor grande", "show_value", config.show_value !== false)}
-            ${this._renderCheckboxField("Mostrar leyenda", "show_legend", config.show_legend !== false)}
-            ${this._renderCheckboxField("Mostrar relleno", "show_fill", config.show_fill !== false)}
-            ${this._renderCheckboxField("Mostrar badge de no disponible", "show_unavailable_badge", config.show_unavailable_badge !== false)}
-            ${this._renderSelectField(
-              "ed.entity.tap_action",
-              "tap_action",
-              config.tap_action || "more-info",
-              [
-                { value: "more-info", label: "ed.entity.tap_more_info" },
-                { value: "none", label: "ed.entity.tap_none" },
-              ],
-            )}
-            ${this._renderSelectField(
-              "ed.light.card_hold_action",
-              "hold_action",
-              config.hold_action || "more-info",
-              [
-                { value: "more-info", label: "ed.entity.tap_more_info" },
-                { value: "none", label: "ed.entity.tap_none" },
-              ],
-            )}
-          </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Haptics"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta haptica opcional al tocar la tarjeta."))}</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderCheckboxField("ed.entity.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("ed.entity.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
-            ${this._renderSelectField(
-              "ed.entity.haptic_style",
-              "haptics.style",
-              hapticStyle,
-              [
-                { value: "selection", label: "ed.person.haptic_selection" },
-                { value: "light", label: "ed.person.haptic_light" },
-                { value: "medium", label: "ed.person.haptic_medium" },
-                { value: "heavy", label: "ed.person.haptic_heavy" },
-                { value: "success", label: "ed.person.haptic_success" },
-                { value: "warning", label: "ed.person.haptic_warning" },
-                { value: "failure", label: "ed.person.haptic_failure" },
-              ],
-            )}
-          </div>
-        </section>
-
-        <section class="editor-section">
-          <div class="editor-section__header">
-            <div class="editor-section__title">${escapeHtml(this._editorLabel("Estilos"))}</div>
-            <div class="editor-section__hint">${escapeHtml(this._editorLabel("Ajustes visuales del grafico y el look Nodalia."))}</div>
-          </div>
-          <div class="editor-grid">
-            ${this._renderTextField("Background", "styles.card.background", config.styles.card.background)}
-            ${this._renderTextField("Border", "styles.card.border", config.styles.card.border)}
-            ${window.NodaliaUtils.renderEditorCardBorderRadiusHtml({
-              escapeHtml,
-              field: "styles.card.border_radius",
-              value: config.styles?.card?.border_radius,
-              tHeading: this._editorLabel("ed.entity.style_card_radius_presets"),
-              labels: {
-                pill: this._editorLabel("ed.entity.chip_radius_pill"),
-                soft: this._editorLabel("ed.entity.chip_radius_soft"),
-                round: this._editorLabel("ed.entity.chip_radius_round"),
-                square: this._editorLabel("ed.entity.chip_radius_square"),
-              },
-            })}
-            <div class="editor-section__hint editor-field--full" style="margin-top: -6px;">${escapeHtml(this._editorLabel("ed.entity.style_card_radius_yaml_hint"))}</div>
-            ${this._renderTextField("Shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
-            ${this._renderTextField("Padding", "styles.card.padding", config.styles.card.padding)}
-            ${this._renderTextField("Separacion", "styles.card.gap", config.styles.card.gap)}
-            ${this._renderTextField("Tamano icono", "styles.icon.size", config.styles.icon.size)}
-            ${this._renderTextField("Tamano titulo", "styles.title_size", config.styles.title_size)}
-            ${this._renderTextField("Tamano valor", "styles.value_size", config.styles.value_size)}
-            ${this._renderTextField("Tamano unidad", "styles.unit_size", config.styles.unit_size)}
-            ${this._renderTextField("Tamano leyenda", "styles.legend_size", config.styles.legend_size)}
-            ${window.NodaliaUtils.renderEditorChipBorderRadiusHtml({
-              escapeHtml,
-              field: "styles.chip_border_radius",
-              value: config.styles?.chip_border_radius,
-              tHeading: this._editorLabel("ed.entity.style_chip_radius"),
-              labels: {
-                pill: this._editorLabel("ed.entity.chip_radius_pill"),
-                soft: this._editorLabel("ed.entity.chip_radius_soft"),
-                round: this._editorLabel("ed.entity.chip_radius_round"),
-                square: this._editorLabel("ed.entity.chip_radius_square"),
-              },
-            })}
-            ${this._renderTextField("Alto grafico", "styles.chart_height", config.styles.chart_height)}
-            ${this._renderTextField("Grosor linea", "styles.line_width", config.styles.line_width)}
-          </div>
-        </section>
-      </div>
-    `;
-  }
-}
-  _lazyNodaliaGraphCardEditorLegacy = NodaliaGraphCardEditorLegacy;
-  return NodaliaGraphCardEditorLegacy;
-}
-
-let _lazyNodaliaGraphCardEditor;
-export function loadNodaliaGraphCardEditor() {
+import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
+import type { EditorFocusState } from "../../core/types/nodalia-utils";
+import { editorControlValue, isNativeEditorInput, type NativeEditorInput } from "../../shared/editor-controls";
+import { parseFiniteNumericValue } from "../../shared/numeric-values";
+interface FieldOptions { fullWidth?: boolean; type?: string; valueType?: string; placeholder?: string; fallbackValue?: string; multiline?: boolean; rows?: number; domains?: string[]; }
+type Series = ReturnType<typeof normalizeEditorConfig>["entities"][number];
+let _lazyNodaliaGraphCardEditor: CustomElementConstructor | undefined;
+export function loadNodaliaGraphCardEditor(): CustomElementConstructor {
   if (_lazyNodaliaGraphCardEditor) {
     return _lazyNodaliaGraphCardEditor;
   }
 class NodaliaGraphCardEditor extends HTMLElement {
+  private _config!: ReturnType<typeof normalizeEditorConfig>;
+  private _hass!: HomeAssistant | null;
+  private _entityOptionsSignature!: string;
+  private _showStyleSection!: boolean;
+  private _showAnimationSection!: boolean;
+  private _showTapActionsSection!: boolean;
+  private _pendingEditorControlTags!: Set<string>;
   constructor() {
     super();
     this._nodaliaConstruct();
@@ -706,7 +82,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
     window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
   }
 
-  set hass(hass) {
+  set hass(hass: HomeAssistant) {
     const nextSignature = this._getEntityOptionsSignature(hass);
     const shouldRender =
       !this._hass ||
@@ -725,7 +101,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
     this._restoreFocusState(focusState);
   }
 
-  setConfig(config) {
+  setConfig(config: unknown) {
     const focusState = this._captureFocusState();
     this._config = normalizeEditorConfig(config || {});
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
@@ -733,7 +109,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
     this._restoreFocusState(focusState);
   }
 
-  _watchEditorControlTag(tagName) {
+  _watchEditorControlTag(tagName: string) {
     if (!tagName || this._pendingEditorControlTags.has(tagName)) {
       return;
     }
@@ -766,13 +142,13 @@ class NodaliaGraphCardEditor extends HTMLElement {
     this._watchEditorControlTag("ha-icon-picker");
   }
 
-  _getEntityOptionsSignature(hass = this._hass) {
-    return window.NodaliaUtils.editorFilteredStatesSignature(hass, this._config?.language, id =>
+  _getEntityOptionsSignature(hass: HomeAssistant | null = this._hass) {
+    return window.NodaliaUtils.editorFilteredStatesSignature?.(hass, this._config?.language, id =>
       id.startsWith("sensor.") || id.startsWith("number.") || id.startsWith("input_number."),
-    );
+    ) ?? "";
   }
 
-  _getEntityOptions(field = "entities.0.entity", domains = []) {
+  _getEntityOptions(field = "entities.0.entity", domains: string[] = []) {
     const normalizedDomains = Array.isArray(domains)
       ? domains.map(domain => String(domain || "").trim()).filter(Boolean)
       : [];
@@ -813,13 +189,13 @@ class NodaliaGraphCardEditor extends HTMLElement {
     return window.NodaliaUtils.captureEditorFocusState(this);
   }
 
-  _restoreFocusState(focusState) {
+  _restoreFocusState(focusState: EditorFocusState | null) {
     window.NodaliaUtils.restoreEditorFocusState(this, focusState);
   }
 
   _emitConfig() {
     const focusState = this._captureFocusState();
-    const nextConfig = deepClone(this._config);
+    const nextConfig: Record<string, unknown> = deepClone(this._config);
 
     if (!Array.isArray(nextConfig.entities)) {
       nextConfig.entities = [];
@@ -830,7 +206,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
     this._render();
     this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
-      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
+      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults?.(nextConfig, DEFAULT_CONFIG) ?? {}),
     });
   }
 
@@ -838,7 +214,13 @@ class NodaliaGraphCardEditor extends HTMLElement {
     this._config = normalizeEditorConfig(compactConfig(this._config));
   }
 
-  _setFieldValue(path, value) {
+  _setFieldValue(path: string, value: unknown) {
+    const parts = path.split(".");
+    if (parts[0] === "entities" && parts.length > 1) {
+      const index = parseFiniteNumericValue(parts[1]);
+      if (index === null || !Number.isInteger(index) || index < 0 || index >= this._config.entities.length
+          || parts.length !== 3 || !["entity", "name", "color"].includes(parts[2] || "")) return;
+    }
     if (value === undefined || value === null || value === "") {
       deleteByPath(this._config, path);
       return;
@@ -847,12 +229,12 @@ class NodaliaGraphCardEditor extends HTMLElement {
     setByPath(this._config, path, value);
   }
 
-  _readFieldValue(input) {
+  _readFieldValue(input: NativeEditorInput) {
     const valueType = input.dataset.valueType || "string";
 
     switch (valueType) {
       case "boolean":
-        return Boolean(input.checked);
+        return input instanceof HTMLInputElement && input.checked;
       case "number": {
         const trimmed = String(input.value || "").trim();
         if (!trimmed) {
@@ -879,10 +261,10 @@ class NodaliaGraphCardEditor extends HTMLElement {
     }
   }
 
-  _onShadowInput(event) {
+  _onShadowInput(event: Event) {
     const input = event
       .composedPath()
-      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+      .find(isNativeEditorInput);
 
     if (!input?.dataset?.field) {
       return;
@@ -899,10 +281,10 @@ class NodaliaGraphCardEditor extends HTMLElement {
     }
   }
 
-  _onShadowValueChanged(event) {
+  _onShadowValueChanged(event: Event) {
     const control = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.field);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.field));
 
     if (!control?.dataset?.field) {
       return;
@@ -910,9 +292,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
 
     event.stopPropagation();
 
-    const nextValue = typeof event.detail?.value === "string"
-      ? event.detail.value
-      : control.value;
+    const nextValue = editorControlValue(event, control);
     if (typeof control.dataset?.value === "string") {
       control.dataset.value = String(nextValue || "");
     }
@@ -927,10 +307,10 @@ class NodaliaGraphCardEditor extends HTMLElement {
     this._emitConfig();
   }
 
-  _onShadowClick(event) {
+  _onShadowClick(event: Event) {
     const toggleButton = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.editorToggle));
 
     if (toggleButton) {
       event.preventDefault();
@@ -958,7 +338,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
 
     const button = event
       .composedPath()
-      .find(node => node instanceof HTMLButtonElement && node.dataset?.action);
+      .find((node): node is HTMLButtonElement => node instanceof HTMLButtonElement && Boolean(node.dataset.action));
 
     if (!button) {
       return;
@@ -968,14 +348,14 @@ class NodaliaGraphCardEditor extends HTMLElement {
     event.stopPropagation();
 
     const action = button.dataset.action;
-    const index = Number(button.dataset.index);
+    const index = parseFiniteNumericValue(button.dataset.index) ?? -1;
     this._config.entities = Array.isArray(this._config.entities) ? this._config.entities : [];
 
     if (action === "add-series") {
       this._config.entities.push({
         entity: "",
         name: "",
-        color: SERIES_COLORS[this._config.entities.length % SERIES_COLORS.length],
+        color: SERIES_COLORS[this._config.entities.length % SERIES_COLORS.length] ?? "#f29f05",
       });
       this._emitConfig();
       return;
@@ -1003,15 +383,15 @@ class NodaliaGraphCardEditor extends HTMLElement {
     }
   }
 
-  _editorLabel(s) {
+  _editorLabel(s: string) {
     if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
       return s;
     }
-    const hass = this._hass ?? this.hass;
+    const hass = this._hass;
     return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
   }
 
-  _renderTextField(label, field, value, options = {}) {
+  _renderTextField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const tag = options.multiline ? "textarea" : "input";
     const inputType = options.type || "text";
@@ -1042,7 +422,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
     `;
   }
 
-  _renderColorField(label, field, value, options = {}) {
+  _renderColorField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const tColorCustom = this._editorLabel("Color personalizado");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
@@ -1071,7 +451,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
     `;
   }
 
-  _renderCheckboxField(label, field, checked) {
+  _renderCheckboxField(label: string, field: string, checked: boolean) {
     const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
@@ -1087,7 +467,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
     `;
   }
 
-  _renderSelectField(label, field, value, options, valueType = "string") {
+  _renderSelectField(label: string, field: string, value: unknown, options: { value: unknown; label: string }[], valueType = "string") {
     const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field">
@@ -1112,7 +492,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
     `;
   }
 
-  _renderEntityField(label, field, value, options = {}) {
+  _renderEntityField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const domains = Array.isArray(options.domains)
@@ -1134,7 +514,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
     `;
   }
 
-  _renderIconPickerField(label, field, value, options = {}) {
+  _renderIconPickerField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
 
@@ -1152,8 +532,8 @@ class NodaliaGraphCardEditor extends HTMLElement {
     `;
   }
 
-  _renderSeriesCard(series, index, total) {
-    const fallbackColor = SERIES_COLORS[index % SERIES_COLORS.length];
+  _renderSeriesCard(series: Series, index: number, total: number) {
+    const fallbackColor = SERIES_COLORS[index % SERIES_COLORS.length] ?? "#f29f05";
 
     return `
       <div class="series-editor-card">
@@ -1186,7 +566,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
     `;
   }
 
-  _mountEntityPicker(host) {
+  _mountEntityPicker(host: HTMLElement) {
     if (!(host instanceof HTMLElement)) {
       return;
     }
@@ -1198,25 +578,25 @@ class NodaliaGraphCardEditor extends HTMLElement {
       .split(",")
       .map(domain => domain.trim())
       .filter(Boolean);
-    let control = null;
+    let control: HTMLElement;
 
     if (customElements.get("ha-entity-picker")) {
       control = document.createElement("ha-entity-picker");
       if (allowedDomains.length) {
-        control.includeDomains = allowedDomains;
-        control.entityFilter = stateObj => allowedDomains.some(domain => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+        Object.assign(control, { includeDomains: allowedDomains });
+        Object.assign(control, { entityFilter: (stateObj: HassEntity) => allowedDomains.some(domain => String(stateObj?.entity_id || "").startsWith(`${domain}.`)) });
       }
       if (placeholder) {
         control.setAttribute("placeholder", placeholder);
       }
-      control.allowCustomEntity = true;
+      Object.assign(control, { allowCustomEntity: true });
     } else if (customElements.get("ha-selector")) {
       control = document.createElement("ha-selector");
-      control.selector = {
+      Object.assign(control, { selector: {
         entity: allowedDomains.length === 1
           ? { domain: allowedDomains[0] }
           : {},
-      };
+      } });
     } else {
       control = document.createElement("select");
       const emptyOption = document.createElement("option");
@@ -1235,13 +615,9 @@ class NodaliaGraphCardEditor extends HTMLElement {
     control.dataset.field = field;
     control.dataset.value = nextValue;
 
-    if ("hass" in control) {
-      control.hass = this._hass;
-    }
+    if ("hass" in control) Object.assign(control, { hass: this._hass });
 
-    if ("value" in control) {
-      control.value = nextValue;
-    }
+    if ("value" in control) Object.assign(control, { value: nextValue });
 
     if (control.tagName !== "SELECT") {
       control.addEventListener("value-changed", this._onShadowValueChanged);
@@ -1250,7 +626,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
     host.replaceChildren(control);
   }
 
-  _mountIconPicker(host) {
+  _mountIconPicker(host: HTMLElement) {
     if (!(host instanceof HTMLElement)) {
       return;
     }
@@ -1258,7 +634,7 @@ class NodaliaGraphCardEditor extends HTMLElement {
     const field = host.dataset.field || "icon";
     const nextValue = host.dataset.value || "";
     const placeholder = host.dataset.placeholder || "";
-    let control = null;
+    let control: HTMLElement;
 
     if (customElements.get("ha-icon-picker")) {
       control = document.createElement("ha-icon-picker");
@@ -1267,13 +643,14 @@ class NodaliaGraphCardEditor extends HTMLElement {
       }
     } else if (customElements.get("ha-selector")) {
       control = document.createElement("ha-selector");
-      control.selector = {
+      Object.assign(control, { selector: {
         icon: {},
-      };
+      } });
     } else {
-      control = document.createElement("input");
-      control.type = "text";
-      control.placeholder = placeholder;
+      const input = document.createElement("input");
+      input.type = "text";
+      input.placeholder = placeholder;
+      control = input;
       control.addEventListener("input", this._onShadowInput);
       control.addEventListener("change", this._onShadowInput);
     }
@@ -1281,13 +658,9 @@ class NodaliaGraphCardEditor extends HTMLElement {
     control.dataset.field = field;
     control.dataset.value = nextValue;
 
-    if ("hass" in control) {
-      control.hass = this._hass;
-    }
+    if ("hass" in control) Object.assign(control, { hass: this._hass });
 
-    if ("value" in control) {
-      control.value = nextValue;
-    }
+    if ("value" in control) Object.assign(control, { value: nextValue });
 
     if (control.tagName !== "INPUT") {
       control.addEventListener("value-changed", this._onShadowValueChanged);
@@ -1302,7 +675,9 @@ class NodaliaGraphCardEditor extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "medium";
+    const haptics = isObject(config.haptics) ? config.haptics : {};
+    const animations = isObject(config.animations) ? config.animations : DEFAULT_CONFIG.animations;
+    const hapticStyle = haptics.style || "medium";
     const entities = Array.isArray(config.entities) ? config.entities : [];
 
     this.shadowRoot.innerHTML = `
@@ -1801,8 +1176,8 @@ class NodaliaGraphCardEditor extends HTMLElement {
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("Respuesta tactil opcional para taps, hover y cambios de serie."))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("ed.entity.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("ed.entity.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.entity.enable_haptics", "haptics.enabled", haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.entity.fallback_vibrate", "haptics.fallback_vibrate", haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
               "ed.entity.haptic_style",
               "haptics.style",
@@ -1840,12 +1215,12 @@ class NodaliaGraphCardEditor extends HTMLElement {
             this._showAnimationSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderCheckboxField("Activar animaciones", "animations.enabled", config.animations.enabled !== false)}
-                  ${this._renderTextField("Tooltip y hover (ms)", "animations.hover_duration", config.animations.hover_duration, {
+                  ${this._renderCheckboxField("Activar animaciones", "animations.enabled", animations.enabled !== false)}
+                  ${this._renderTextField("Tooltip y hover (ms)", "animations.hover_duration", animations.hover_duration, {
                     type: "number",
                     valueType: "number",
                   })}
-                  ${this._renderTextField("Rebote de chips (ms)", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
+                  ${this._renderTextField("Rebote de chips (ms)", "animations.button_bounce_duration", animations.button_bounce_duration, {
                     type: "number",
                     valueType: "number",
                   })}
@@ -1924,11 +1299,11 @@ class NodaliaGraphCardEditor extends HTMLElement {
     `;
 
     this.shadowRoot
-      .querySelectorAll('[data-mounted-control="entity-picker"]')
+      .querySelectorAll<HTMLElement>('[data-mounted-control="entity-picker"]')
       .forEach(host => this._mountEntityPicker(host));
 
     this.shadowRoot
-      .querySelectorAll('[data-mounted-control="icon-picker"]')
+      .querySelectorAll<HTMLElement>('[data-mounted-control="icon-picker"]')
       .forEach(host => this._mountIconPicker(host));
 
     this._ensureEditorControlsReady();
