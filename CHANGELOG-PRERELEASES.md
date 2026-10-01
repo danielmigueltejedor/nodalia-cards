@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+- Check the Scenes card and visual editor, own fallback animation timers, handle failed scene activation and preserve editable draft rows and focus.
+
 - Check the Summary visual editor, validate native child editor events and preserve entity/name/icon alignment when lists are reordered.
 
 - News: migrate the view/editor to strict checking; cancel abandoned swipe gestures and own their timeout, and restore default limits when a numeric editor field is cleared.

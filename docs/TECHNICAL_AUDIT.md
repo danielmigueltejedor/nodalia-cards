@@ -850,3 +850,33 @@ retained. All 738 unit tests and six targeted list/nested-editor browser cases
 pass. Full local browser suite: 302 passed, one existing platform skip.
 Remaining unchecked modules: 45. Hold 3.0.0-alpha.1 until full migration,
 including the handwritten shared utility/i18n runtime sources.
+
+## Scenes editor findings — 2026-10-01
+
+The Scenes visual editor still suppresses checking across native/HA picker
+events, list rows and raw nested style/haptic configuration. Check those
+boundaries, preserve draft scene rows and focus, and treat blank numeric fields
+as absent rather than coercing them to zero.
+
+The Scenes view also keeps unchecked hold/DOM/translation/animation boundaries.
+Its fallback timeouts lack ownership and failed scene service calls can throw or
+reject unhandled. Two legacy timer maps are initialized but never read/written
+and can be removed after adding ownership for the actual fallback timers.
+
+Scenes view/editor now pass strict checking and typed lint. Checked normalized
+rows and derived entries/styles guard raw nested config and translations; typed
+DOM and shared native/HA picker boundaries preserve focus and draft rows.
+Blank numeric overrides clear to defaults. Actual fallback animation timers are
+owned and cancelled on disconnect, pending hold/suppression state resets on
+config changes/disconnect, and synchronous/rejected service failures are handled.
+Remove two verified unused timer maps. Bubble contrast's actual input contract
+now describes entity ID and optional attributes, matching its existing reads.
+
+1,400 valid editor HTML outputs (including open styles/actions) and 2,100 valid
+card markup/sizing outputs match main. All 738 unit tests pass; nine targeted
+real-browser editor/service-failure/lifecycle cases pass. One older static
+source assertion was updated to accept the captured shadow root while still
+requiring the same event names and capture/passive flags. Full local browser
+suite: 311 passed, one existing platform skip. Remaining unchecked
+modules: 43. Hold 3.0.0-alpha.1 until full migration, including shared handwritten
+utility/i18n runtime sources.

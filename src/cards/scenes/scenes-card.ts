@@ -1,5 +1,6 @@
-// @ts-nocheck
-/* Large HTMLElement view/controller: typed incrementally as methods are extracted. */
+import type { HomeAssistant } from "../../core/types/home-assistant";
+import type { HostPointerHoldBinding } from "../../core/types/nodalia-utils";
+import type { DashboardScrollSnapshot } from "./scenes-types";
 import { CARD_TAG, CARD_VERSION, EDITOR_TAG, HAPTIC_PATTERNS, SCENE_LAUNCH_DURATION } from "./scenes-constants";
 import {
   clamp,
@@ -7,6 +8,7 @@ import {
   escapeHtml,
   escapeSelectorValue,
   fireEvent,
+  isObject,
   normalizeTextKey,
 } from "./scenes-runtime";
 import { DEFAULT_CONFIG, STUB_CONFIG, normalizeConfig } from "./scenes-config";
@@ -20,21 +22,34 @@ import {
   scheduleDashboardScrollRestore,
 } from "./scenes-helpers";
 
-let _lazyNodaliaScenesCard;
-export function loadNodaliaScenesCard() {
+type SceneEntry = ReturnType<typeof resolveSceneEntries>[number];
+type SceneStyles = ReturnType<typeof getSafeStyles>;
+interface ScenesUiCopy { emptyTitle: string; emptyBody: string; defaultName: string; unavailable: string; subtitle: string; moods: string; }
+let _lazyNodaliaScenesCard: CustomElementConstructor | undefined;
+export function loadNodaliaScenesCard(): CustomElementConstructor {
   if (_lazyNodaliaScenesCard) {
     return _lazyNodaliaScenesCard;
   }
 class NodaliaScenesCard extends HTMLElement {
+  private _config!: ReturnType<typeof normalizeConfig>;
+  private _hass!: HomeAssistant | null;
+  private _lastRenderSignature!: string;
+  private _animateContentOnNextRender!: boolean;
+  private _fallbackAnimationTimers!: Set<number>;
+  private _cancelScrollRestore!: (() => void) | null;
+  private _suppressNextSceneTap!: boolean;
+  private _interactionScrollSnapshot!: DashboardScrollSnapshot | null;
+  private _sceneInteractionScrollUntil!: number;
+  private _detachHostHold!: HostPointerHoldBinding;
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig(hass, entities = [], entitiesFallback = []) {
+  static getStubConfig(hass: HomeAssistant | null | undefined, entities: unknown = [], entitiesFallback: unknown = []) {
     return applyStubConfig(deepClone(STUB_CONFIG), hass, entities, entitiesFallback);
   }
 
-  static getEntitySuggestion(hass, entityId) {
+  static getEntitySuggestion(hass: HomeAssistant, entityId: string) {
     return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
       domains: ["scene"],
       buildConfig: (_hass, selectedEntityId) => ({
@@ -49,13 +64,12 @@ class NodaliaScenesCard extends HTMLElement {
     this._nodaliaConstruct();
   }
 
-  _nodaliaConstruct() {this.attachShadow({ mode: "open" });
+  _nodaliaConstruct() {const shadow = this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
-    this._launchAnimationTimers = new Map();
-    this._pressAnimationTimers = new Map();
+    this._fallbackAnimationTimers = new Set();
     this._cancelScrollRestore = null;
     this._suppressNextSceneTap = false;
     this._interactionScrollSnapshot = null;
@@ -64,17 +78,17 @@ class NodaliaScenesCard extends HTMLElement {
     this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
     this._onShadowMouseDown = this._onShadowMouseDown.bind(this);
     this._onShadowTouchStart = this._onShadowTouchStart.bind(this);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown, true);
-    this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown, true);
-    this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false, capture: true });
+    shadow.addEventListener("click", this._onShadowClick);
+    shadow.addEventListener("pointerdown", this._onShadowPointerDown, true);
+    shadow.addEventListener("mousedown", this._onShadowMouseDown, true);
+    shadow.addEventListener("touchstart", this._onShadowTouchStart, { passive: false, capture: true });
     this._detachHostHold =
       typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function"
         ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
             resolveZone: event => {
               const button = event
                 .composedPath()
-                .find(node => node instanceof HTMLElement && node.dataset?.sceneEntity);
+                .find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.sceneEntity));
               return button?.dataset?.sceneEntity || null;
             },
             shouldBeginHold: entityId => this._canRunHoldAction(entityId),
@@ -101,6 +115,11 @@ class NodaliaScenesCard extends HTMLElement {
   disconnectedCallback() {
     this._detachHostHold?.();
     window.NodaliaUtils?.clearDeferTimers?.(this);
+    this._fallbackAnimationTimers.forEach(timer => window.clearTimeout(timer));
+    this._fallbackAnimationTimers.clear();
+    this._suppressNextSceneTap = false;
+    this._interactionScrollSnapshot = null;
+    this._sceneInteractionScrollUntil = 0;
     this._cancelScrollRestore?.();
     this._cancelScrollRestore = null;
     cancelDashboardScrollRestore();
@@ -108,14 +127,17 @@ class NodaliaScenesCard extends HTMLElement {
     this._lastRenderSignature = "";
   }
 
-  setConfig(config) {
+  setConfig(config: unknown) {
+    this._detachHostHold?.();
+    if (this.isConnected) this._detachHostHold?.reconnect?.();
+    this._suppressNextSceneTap = false;
     this._config = normalizeConfig(config || {});
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._render();
   }
 
-  set hass(hass) {
+  set hass(hass: HomeAssistant) {
     this._hass = hass;
     const nextSignature = this._getRenderSignature();
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
@@ -143,7 +165,7 @@ class NodaliaScenesCard extends HTMLElement {
   }
 
   _getAnimationSettings() {
-    const animations = this._config?.animations || DEFAULT_CONFIG.animations;
+    const animations = isObject(this._config.animations) ? this._config.animations : DEFAULT_CONFIG.animations;
     return {
       enabled: animations.enabled !== false,
       contentDuration: clamp(Math.round(Number(animations.content_duration) || 420), 0, 2000),
@@ -164,25 +186,28 @@ class NodaliaScenesCard extends HTMLElement {
         moods: "moods",
       };
     }
-    const lang = NI.resolveLanguage(this._hass, this._config?.language);
-    const scenes = NI.strings(lang).scenes || {};
+    const lang = NI.resolveLanguage(this._hass, String(this._config.language || "auto"));
+    const rawScenes = NI.strings(lang).scenes;
+    const scenes = isObject(rawScenes) ? rawScenes : {};
+    const text = (key: string, fallback: string) => typeof scenes[key] === "string" && scenes[key] ? scenes[key] : fallback;
     return {
-      emptyTitle: scenes.emptyTitle || "Nodalia Scenes Card",
-      emptyBody: scenes.emptyBody || "Add scene entities in the card editor.",
-      defaultName: scenes.defaultName || "Scenes",
-      unavailable: scenes.unavailable || "Unavailable",
-      subtitle: scenes.subtitle || "Tap a mood to launch",
-      moods: scenes.moods || "moods",
+      emptyTitle: text("emptyTitle", "Nodalia Scenes Card"),
+      emptyBody: text("emptyBody", "Add scene entities in the card editor."),
+      defaultName: text("defaultName", "Scenes"),
+      unavailable: text("unavailable", "Unavailable"),
+      subtitle: text("subtitle", "Tap a mood to launch"),
+      moods: text("moods", "moods"),
     };
   }
 
   _getRenderSignature() {
-    const config = this._config || {};
+    const config = this._config;
     const entries = resolveSceneEntries(config, this._hass);
     const sceneStamp = (Array.isArray(config.scenes) ? config.scenes : [])
-      .map(item => (typeof item === "string" ? item : `${item?.entity || ""}:${item?.tint || ""}`))
+      .map(item => `${item.entity}:${item.color}`)
       .join("|");
-    const styles = config.styles || {};
+    const styles = isObject(config.styles) ? config.styles : {};
+    const iconStyles = isObject(styles.icon) ? styles.icon : {};
     return [
       CARD_VERSION,
       config.layout || "grid",
@@ -191,26 +216,26 @@ class NodaliaScenesCard extends HTMLElement {
       config.language || "auto",
       config.show_title !== false,
       styles.accent || "",
-      styles.icon?.size || "",
+      iconStyles.size || "",
       sceneStamp,
       JSON.stringify(entries),
     ].join("::");
   }
 
-  _canRunHoldAction(entityId) {
+  _canRunHoldAction(entityId: string) {
     const action = normalizeTextKey(this._config?.hold_action);
     return Boolean(entityId) && action !== "none";
   }
 
-  _triggerHaptic(styleOverride) {
-    const haptics = this._config?.haptics || DEFAULT_CONFIG.haptics;
+  _triggerHaptic(styleOverride?: string) {
+    const haptics = isObject(this._config.haptics) ? this._config.haptics : DEFAULT_CONFIG.haptics;
     if (haptics.enabled === false) {
       return;
     }
-    const style = styleOverride || haptics.style || "medium";
+    const style = styleOverride || String(haptics.style || "medium");
     fireEvent(this, "haptic", style, { bubbles: true, composed: true });
     if (haptics.fallback_vibrate && typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
-      const pattern = HAPTIC_PATTERNS[style] ?? HAPTIC_PATTERNS.medium;
+      const pattern = Object.entries(HAPTIC_PATTERNS).find(([key]) => key === style)?.[1] ?? HAPTIC_PATTERNS.medium;
       try {
         navigator.vibrate(pattern);
       } catch (_error) {
@@ -219,7 +244,14 @@ class NodaliaScenesCard extends HTMLElement {
     }
   }
 
-  _triggerPressAnimation(tile) {
+  _scheduleAnimation(done: () => void, delay: number) {
+    const schedule = window.NodaliaUtils.scheduleDeferTimer;
+    if (schedule) { schedule(this, done, delay); return; }
+    const timer = window.setTimeout(() => { this._fallbackAnimationTimers.delete(timer); done(); }, delay);
+    this._fallbackAnimationTimers.add(timer);
+  }
+
+  _triggerPressAnimation(tile: Element | null | undefined) {
     if (!(tile instanceof HTMLElement)) {
       return;
     }
@@ -227,21 +259,16 @@ class NodaliaScenesCard extends HTMLElement {
     tile.classList.remove("is-pressing");
     void tile.offsetWidth;
     tile.classList.add("is-pressing");
-    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
     const done = () => {
       if (!tile.isConnected) {
         return;
       }
       tile.classList.remove("is-pressing");
     };
-    if (typeof schedule === "function") {
-      schedule(this, done, animations.buttonBounceDuration);
-    } else {
-      window.setTimeout(done, animations.buttonBounceDuration);
-    }
+    this._scheduleAnimation(done, animations.buttonBounceDuration);
   }
 
-  _triggerLaunchAnimation(tile) {
+  _triggerLaunchAnimation(tile: Element | null | undefined) {
     if (!(tile instanceof HTMLElement)) {
       return;
     }
@@ -256,7 +283,6 @@ class NodaliaScenesCard extends HTMLElement {
     if (icon instanceof HTMLElement) {
       icon.classList.add("scenes-card__tile-icon--launching");
     }
-    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
     const done = () => {
       if (!tile.isConnected) {
         return;
@@ -266,14 +292,10 @@ class NodaliaScenesCard extends HTMLElement {
         icon.classList.remove("scenes-card__tile-icon--launching");
       }
     };
-    if (typeof schedule === "function") {
-      schedule(this, done, duration);
-    } else {
-      window.setTimeout(done, duration);
-    }
+    this._scheduleAnimation(done, duration);
   }
 
-  _openMoreInfo(entityId) {
+  _openMoreInfo(entityId: string) {
     if (!entityId) {
       return;
     }
@@ -289,7 +311,7 @@ class NodaliaScenesCard extends HTMLElement {
     this._cancelScrollRestore = scheduleDashboardScrollRestore(snapshot);
   }
 
-  _rememberSceneInteractionScroll(button) {
+  _rememberSceneInteractionScroll(button: HTMLElement) {
     this._interactionScrollSnapshot = collectDashboardScrollSnapshot(button || this);
     this._sceneInteractionScrollUntil = Date.now() + 1200;
   }
@@ -301,18 +323,23 @@ class NodaliaScenesCard extends HTMLElement {
     }
   }
 
-  _activateScene(entityId) {
-    if (!this._hass || !entityId) {
+  _activateScene(entityId: string) {
+    if (!this._hass?.callService || !entityId) {
       return;
     }
     this._triggerHaptic("success");
-    this._hass.callService("scene", "turn_on", { entity_id: entityId });
+    try {
+      void Promise.resolve(this._hass.callService("scene", "turn_on", { entity_id: entityId })).catch(error => console.warn("Nodalia Scenes: scene activation failed", error));
+    } catch (error) {
+      console.warn("Nodalia Scenes: scene activation failed", error);
+      return;
+    }
     const tile = this.shadowRoot?.querySelector(`[data-scene-entity="${escapeSelectorValue(entityId)}"]`);
     this._triggerLaunchAnimation(tile);
     this._scheduleDashboardScrollRestore(this._interactionScrollSnapshot);
   }
 
-  _performTapAction(entityId) {
+  _performTapAction(entityId: string) {
     const action = normalizeTextKey(this._config?.tap_action);
     if (action === "none") {
       return;
@@ -325,7 +352,7 @@ class NodaliaScenesCard extends HTMLElement {
     this._activateScene(entityId);
   }
 
-  _performHoldAction(entityId) {
+  _performHoldAction(entityId: string) {
     const action = normalizeTextKey(this._config?.hold_action);
     if (action === "none") {
       return;
@@ -339,23 +366,24 @@ class NodaliaScenesCard extends HTMLElement {
     this._activateScene(entityId);
   }
 
-  _findSceneButtonFromEvent(event) {
+  _findSceneButtonFromEvent(event: Event) {
     const button = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.sceneEntity);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.sceneEntity));
     if (!button || button.dataset.unavailable === "true" || button.getAttribute("aria-disabled") === "true") {
       return null;
     }
     return button;
   }
 
-  _prepareSceneInteraction(event, button) {
+  _prepareSceneInteraction(event: Event, button: HTMLElement) {
     this._rememberSceneInteractionScroll(button);
     event.preventDefault();
     this._blurSceneInteractionFocus();
   }
 
-  _onShadowPointerDown(event) {
+  _onShadowPointerDown(event: Event) {
+    if (!(event instanceof PointerEvent)) return;
     const button = this._findSceneButtonFromEvent(event);
     if (!button) {
       return;
@@ -372,7 +400,8 @@ class NodaliaScenesCard extends HTMLElement {
     this._triggerPressAnimation(button);
   }
 
-  _onShadowMouseDown(event) {
+  _onShadowMouseDown(event: Event) {
+    if (!(event instanceof MouseEvent)) return;
     const button = this._findSceneButtonFromEvent(event);
     if (!button || event.button !== 0) {
       return;
@@ -380,7 +409,8 @@ class NodaliaScenesCard extends HTMLElement {
     this._prepareSceneInteraction(event, button);
   }
 
-  _onShadowTouchStart(event) {
+  _onShadowTouchStart(event: Event) {
+    if (!(event instanceof TouchEvent)) return;
     const button = this._findSceneButtonFromEvent(event);
     if (!button) {
       return;
@@ -389,14 +419,14 @@ class NodaliaScenesCard extends HTMLElement {
     this._triggerPressAnimation(button);
   }
 
-  _onShadowClick(event) {
+  _onShadowClick(event: Event) {
     if (this._suppressNextSceneTap) {
       this._suppressNextSceneTap = false;
       return;
     }
     const button = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.sceneEntity);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.sceneEntity));
     if (!button) {
       return;
     }
@@ -440,7 +470,7 @@ class NodaliaScenesCard extends HTMLElement {
     `;
   }
 
-  _getSceneTilePresentation(entry, styles, layout = "grid") {
+  _getSceneTilePresentation(entry: SceneEntry, styles: SceneStyles, layout = "grid") {
     const iconSize = parseSizeToPixels(styles.icon.size, 44);
     const listIconSize = Math.max(42, iconSize - 2);
     const bubbleSize = layout === "single"
@@ -449,7 +479,7 @@ class NodaliaScenesCard extends HTMLElement {
         ? listIconSize
         : Math.max(46, iconSize + 2);
     const darkenBubbleIconGlyph = Boolean(
-      window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(
+      window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph?.(
         { entity_id: entry.entity || "scene.placeholder" },
         entry.accent,
       ),
@@ -463,7 +493,7 @@ class NodaliaScenesCard extends HTMLElement {
     };
   }
 
-  _renderSceneTileContent(entry, ui) {
+  _renderSceneTileContent(entry: SceneEntry, ui: ScenesUiCopy) {
     return `
       <span class="scenes-card__tile-ambient" aria-hidden="true"></span>
       <span class="scenes-card__tile-shimmer" aria-hidden="true"></span>
@@ -485,7 +515,7 @@ class NodaliaScenesCard extends HTMLElement {
     `;
   }
 
-  _renderSceneTile(entry, styles, ui, isList) {
+  _renderSceneTile(entry: SceneEntry, styles: SceneStyles, ui: ScenesUiCopy, isList: boolean) {
     const presentation = this._getSceneTilePresentation(entry, styles, isList ? "list" : "grid");
     return `
       <div
@@ -508,7 +538,7 @@ class NodaliaScenesCard extends HTMLElement {
       return;
     }
 
-    const config = this._config || {};
+    const config = this._config;
     const entries = resolveSceneEntries(config, this._hass);
     if (!entries.length) {
       this.shadowRoot.innerHTML = this._renderEmptyState();
@@ -1028,13 +1058,13 @@ class NodaliaScenesCard extends HTMLElement {
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <ha-card
-        class="scenes-card ${isSingle ? `scenes-card--single ${singlePresentation.tileClass}` : ""}"
+        class="scenes-card ${isSingle ? `scenes-card--single ${singlePresentation?.tileClass || ""}` : ""}"
         ${isSingle ? 'role="button" tabindex="-1"' : ""}
         ${singleEntry ? `data-scene-entity="${escapeHtml(singleEntry.entity)}" data-unavailable="${singleEntry.unavailable ? "true" : "false"}" aria-label="${escapeHtml(singleEntry.label)}"` : ""}
         ${singleEntry?.unavailable ? 'aria-disabled="true"' : ""}
         ${singlePresentation ? `style="${singlePresentation.style}"` : ""}
       >
-        ${isSingle
+        ${singleEntry
           ? this._renderSceneTileContent(singleEntry, ui)
           : `
             ${

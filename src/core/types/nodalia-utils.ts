@@ -5,7 +5,16 @@ import type { HomeAssistant } from "./home-assistant";
  * Only the members TypeScript modules call are typed; remaining helpers stay
  * available at runtime on the compatibility global.
  */
+export interface HostPointerHoldBinding { (): void; reconnect?: () => void; }
 export interface NodaliaUtilsApi {
+  renderReducedMotionStyles?: () => string;
+  bindHostPointerHoldGesture?: <Zone>(host: HTMLElement, options: {
+    resolveZone: (event: PointerEvent) => Zone | null;
+    shouldBeginHold?: (zone: Zone, event: PointerEvent) => boolean;
+    onHold: (zone: Zone) => void;
+    markHoldConsumedClick?: () => void;
+    holdMs?: number; moveTolerancePx?: number;
+  }) => HostPointerHoldBinding;
   editorStatesSignature?: (hass: HomeAssistant | null | undefined, language?: string) => string;
   mountIconPickerHost?: (host: HTMLElement, options: {
     hass: HomeAssistant | null | undefined; field?: string; value?: unknown;
