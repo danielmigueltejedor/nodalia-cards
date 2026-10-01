@@ -356,7 +356,7 @@ Six config/helper cycles were removed through checked defaults and normalization
 Do not place defaults in modules that import their own normalizers.
 Notifications normalization now lives below the config and presentation helpers;
 no runtime import cycles remain.
-11 legacy modules still suppress typechecking; see `scripts/type-debt.json`.
+10 legacy modules still suppress typechecking; see `scripts/type-debt.json`.
 **The full TypeScript migration is not complete.** Checked modules and extracted
 contracts must grow without adding suppressions or casts to hide errors. The
 architecture guard prevents new unchecked files and new runtime cycles.
@@ -430,3 +430,12 @@ typed lint. Weather retains its two allowed actions; Gauge keeps its numeric or
 string bounds and optional foreground tint; News preserves source aliases,
 layout/filter/history semantics. All three use the checked CSS projection and
 retain unknown root extension fields. Their helpers/views still need migration.
+
+### Component styles
+
+Calendar's native composer CSS lives alongside its view in
+`src/cards/calendar/calendar-composer.css`. Both distribution builders embed CSS
+imports as strings and remove whitespace at build time. Declarations, selector
+order, identifiers and browser prefixes are retained; no extra CSS resource is
+loaded by Home Assistant. Dynamic title sizing uses an inherited custom property.
+The source remains readable and browser tests check native input/select sizing.

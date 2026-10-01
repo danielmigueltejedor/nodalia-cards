@@ -644,7 +644,7 @@ test("notifications mobile sent state only marks successful deliveries", () => {
 
 test("calendar native webhook failures show composer errors", () => {
   const source = read("nodalia-calendar-card.js");
-  assert.match(source, /if \(!ok\) \{\s*this\._setComposerError\("native", this\._uiText\("errors\.createEvent"/);
+  assert.match(source, /if \(!ok\) \{\s*this\._setComposerError\(this\._uiText\("errors\.createEvent"/);
 });
 
 test("person card translates location state with runtime i18n", () => {
@@ -2403,7 +2403,7 @@ test("alpha.5 lifecycle guards on notifications media climate scenes calendar gr
   assert.match(read("nodalia-media-player.js"), /scheduleDeferTimer/);
   assert.match(read("nodalia-climate-card.js"), /scheduleDeferTimer/);
   assert.match(read("nodalia-scenes-card.js"), /scheduleDeferTimer/);
-  assert.match(read("nodalia-calendar-card.js"), /subscribeMessage\(\(?event\)? => \{[\s\S]*if \(!this\.isConnected\)/);
+  assert.match(read("nodalia-calendar-card.js"), /subscribeMessage\(\(?event\)? => \{[\s\S]*if \(!current\(\)\)/);
   assert.match(read("nodalia-graph-card.js"), /requestAnimationFrame\(\(\) => \{[\s\S]*if \(!this\.isConnected\)/);
   assert.match(read("nodalia-navigation-bar.js"), /_dockEntranceResetFrame/);
   assert.match(read("nodalia-calendar-card.js"), /_calendarEntrancePlayFrame/);

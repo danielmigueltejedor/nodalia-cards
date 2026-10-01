@@ -467,11 +467,11 @@ test("calendar weather forecast normalization keeps date-keyed and tabular daily
   assert.match(source, /_ensureWeatherForecastSubscription\(\)/);
   assert.match(source, /_weatherForecastEvents/);
   assert.match(source, /supportedWeatherForecastTypes\(stateObj\)/);
-  assert.match(source, /_fetchForecastViaService\(entityId, forecastType\)/);
+  assert.match(source, /_fetchForecastViaService\(entityId, forecastType, hass\)/);
   assert.match(source, /_selectBestForecastRows\(forecastCandidates\)/);
-  assert.match(source, /preserveRicherExisting: true/);
+  assert.match(source, /allowFallback: false/);
   assert.match(source, /_nodaliaForecastType === "hourly"/);
-  assert.match(source, /_tagForecastRows\(event\?\.forecast \?\? event, forecastType\)/);
+  assert.match(source, /_tagForecastRows\(value, forecastType\)/);
   assert.match(source, /raw\.time \?\? raw\.datetime \?\? raw\.date \?\? raw\.dates/);
   assert.match(source, /this\._normalizeForecastRows\(withForecastDateFromKey\(key, value\)\)/);
   assert.match(source, /item\.temperatureLow/);
@@ -507,8 +507,7 @@ test("calendar native event webhook sends sanitized service data", () => {
   assert.match(source, /ha_action: \{/);
   assert.match(source, /action: "calendar\.create_event"/);
   assert.match(source, /value !== "" && value !== null && value !== (?:undefined|void 0)/);
-  assert.match(source, /_buildNativeCalendarCreateEventWebhookBody\(payload, "all_day", calendarEventPayload\)/);
-  assert.match(source, /_buildNativeCalendarCreateEventWebhookBody\(payload, "timed", calendarEventPayload\)/);
+  assert.match(source, /_buildNativeCalendarCreateEventWebhookBody\(payload, allDay \? "all_day" : "timed", calendarEventPayload\)/);
   assert.match(example, /event_kind == 'all_day'/);
   assert.match(example, /event_kind == 'timed'/);
   assert.doesNotMatch(example, /start_date:\s*""/);
@@ -518,8 +517,8 @@ test("calendar native event webhook sends sanitized service data", () => {
 test("calendar composers reject past dates with inline popup errors", () => {
   const source = read("nodalia-calendar-card.js");
   assert.match(source, /function dateInputIsBeforeToday\(value\)/);
-  assert.match(source, /_setComposerError\(kind, message\)/);
-  assert.match(source, /_renderComposerError\("native"\)/);
+  assert.match(source, /_setComposerError\(message\)/);
+  assert.match(source, /_renderComposerError\(\)/);
   assert.match(source, /dateInputIsBeforeToday\(dateRaw\)/);
   assert.match(source, /The date cannot be before today\./);
   assert.match(source, /Select a calendar\./);
@@ -536,7 +535,7 @@ test("calendar native composer supports rich HA event fields and details", () =>
   assert.match(source, /data-native-field="repeatCustomUnit"/);
   assert.match(source, /data-native-field="repeatCustomInterval"/);
   assert.match(source, /data-native-field-group="repeatCustom" hidden/);
-  assert.match(source, /\.calendar-composer__row\[hidden\][\s\S]*display: none !important/);
+  assert.match(source, /\.calendar-composer__row\[hidden\][\s\S]*display:\s*none\s*!important/);
   assert.match(source, /value="custom">\$\{escapeHtml\(this\._uiText\("repeat\.custom", "Custom"\)\)\}/);
   assert.match(source, /INTERVAL=\$\{customInterval\}/);
   assert.match(source, /dtstart:/);

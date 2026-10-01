@@ -1204,9 +1204,6 @@
       _canSetPosition(state = this._getState()) {
         return this._config?.show_position_slider !== false && this._supports(COVER_FEATURES.SET_POSITION, state);
       }
-      _getDisplayPosition(state = this._getState()) {
-        return this._getCommandablePosition(state) ?? 0;
-      }
       _updatePositionPreview(value) {
         const numericValue = parseFiniteNumericValue(value);
         if (numericValue === null) return;

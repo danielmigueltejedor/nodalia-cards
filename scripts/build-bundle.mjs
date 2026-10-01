@@ -1,3 +1,4 @@
+import { embeddedStylesPlugin } from "./embedded-styles.mjs";
 import crypto from "crypto";
 import fs from "fs";
 import path from "path";
@@ -75,6 +76,7 @@ async function buildParts(parts, label) {
     legalComments: "inline",
     minify: true,
     plugins: [
+      embeddedStylesPlugin(),
       {
         name: "strip-standalone-utils-embed",
         setup(buildContext) {

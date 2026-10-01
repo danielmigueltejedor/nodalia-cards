@@ -110,7 +110,8 @@ export interface NodaliaUtilsApi {
     hass: unknown,
     entityId: unknown,
     options?: Record<string, unknown>,
-  ) => string;
+  ) => string | null;
+  renderLovelaceEntityGuardForEntities?: (hass: unknown, entityIds: unknown, options?: Record<string, unknown>) => string | null;
   renderCardEmptyStateDocument?: (innerHtml: string, options?: Record<string, unknown>) => string;
   scheduleDeferTimer?: (host: object, callback: () => void, delayMs: number) => number;
   clearDeferTimers?: (host: object) => void;
