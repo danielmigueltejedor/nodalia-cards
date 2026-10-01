@@ -4,7 +4,6 @@
   "src/cards/calendar/calendar-card.ts",
   "src/cards/camera/camera-card.ts",
   "src/cards/climate/climate-card.ts",
-  "src/cards/climate/climate-editor.ts",
   "src/cards/entity/entity-card.ts",
   "src/cards/fan/fan-card.ts",
   "src/cards/graph/graph-card.ts",

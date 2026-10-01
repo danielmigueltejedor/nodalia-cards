@@ -603,6 +603,7 @@ ${weekdayYaml}
   // src/cards/climate/climate-config.ts
   var DEFAULT_CONFIG = {
     entity: "",
+    language: "auto",
     name: "",
     layout: "circular",
     icon: "",
@@ -737,6 +738,7 @@ ${weekdayYaml}
       tap_action: norm(config.tap_action, "more-info"),
       hold_action: norm(config.hold_action, "more-info"),
       double_tap_action: norm(config.double_tap_action, "none"),
+      language: typeof config.language === "string" ? config.language : "auto",
       layout: normalizeTextKey(config.layout) === "compact" ? "compact" : "circular",
       entity_picture: String(config.entity_picture ?? "").trim(),
       show_entity_picture: config.show_entity_picture === true,
@@ -6736,15 +6738,29 @@ ${weekdayYaml}
     return NodaliaClimateCard;
   }
 
+  // src/shared/editor-controls.ts
+  function isNativeEditorInput(node) {
+    return node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement;
+  }
+  function editorControlValue(event, control) {
+    const detail = event instanceof CustomEvent ? event.detail : void 0;
+    if (detail && typeof detail === "object" && "value" in detail && typeof detail.value === "string") return detail.value;
+    return "value" in control ? control.value : void 0;
+  }
+
   // src/cards/climate/climate-editor.ts
   async function refreshClimateEditorEngineStatus(editor) {
     const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
     if (!backend || typeof backend.getEditorEngineStatus !== "function" || !editor._hass || editor._engineStatusInFlight) {
       return;
     }
+    if (!editor.isConnected) return;
+    const generation = editor._engineRequestGeneration;
+    const hass = editor._hass;
     editor._engineStatusInFlight = true;
     try {
-      const engine = await backend.getEditorEngineStatus(editor._hass);
+      const engine = await backend.getEditorEngineStatus(hass);
+      if (!editor.isConnected || generation !== editor._engineRequestGeneration) return;
       const signature = window.NodaliaUtils?.engineStatusSignature?.(engine) ?? "";
       if (signature === editor._engineStatusSignature) {
         return;
@@ -6758,7 +6774,7 @@ ${weekdayYaml}
       }
     } catch (_error) {
     } finally {
-      editor._engineStatusInFlight = false;
+      if (generation === editor._engineRequestGeneration) editor._engineStatusInFlight = false;
     }
   }
   function climateEditorEngineSchedulesActive(editor) {
@@ -6834,6 +6850,7 @@ ${weekdayYaml}
         this._engineStatus = null;
         this._engineStatusSignature = "";
         this._engineStatusInFlight = false;
+        this._engineRequestGeneration = 0;
         this._onShadowInput = this._onShadowInput.bind(this);
         this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
         this._onShadowClick = this._onShadowClick.bind(this);
@@ -6857,10 +6874,19 @@ ${weekdayYaml}
       disconnectedCallback() {
         this._detachEditorShadowListeners();
         window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
+        this._engineRequestGeneration++;
+        this._engineStatusInFlight = false;
       }
       set hass(hass) {
+        const changedContext = !this._hass || this._hass.connection !== hass.connection || this._hass.user?.id !== hass.user?.id || this._hass.user?.is_admin !== hass.user?.is_admin;
+        if (changedContext) {
+          this._engineRequestGeneration++;
+          this._engineStatusInFlight = false;
+          this._engineStatus = null;
+          this._engineStatusSignature = "";
+        }
         const nextSignature = this._getEntityOptionsSignature(hass);
-        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+        const shouldRender = changedContext || !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
         this._hass = hass;
         this._entityOptionsSignature = nextSignature;
         if (!shouldRender) {
@@ -6906,7 +6932,7 @@ ${weekdayYaml}
         this._watchEditorControlTag("ha-icon-picker");
       }
       _getEntityOptionsSignature(hass = this._hass) {
-        return window.NodaliaUtils.editorFilteredStatesSignature(hass, this._config?.language, (id) => id.startsWith("climate."));
+        return window.NodaliaUtils.editorFilteredStatesSignature?.(hass, this._config?.language, (id) => id.startsWith("climate.")) ?? "";
       }
       _getClimateEntityOptions() {
         const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
@@ -6941,7 +6967,7 @@ ${weekdayYaml}
         this._render();
         this._restoreFocusState(focusState);
         fireEvent(this, "config-changed", {
-          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {})
+          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults?.(nextConfig, DEFAULT_CONFIG) ?? {})
         });
       }
       _setEditorConfig() {
@@ -6958,14 +6984,9 @@ ${weekdayYaml}
         const valueType = input.dataset.valueType || "string";
         switch (valueType) {
           case "boolean":
-            return Boolean(input.checked);
+            return input instanceof HTMLInputElement && input.checked;
           case "number": {
-            const trimmed = String(input.value || "").trim();
-            if (!trimmed) {
-              return void 0;
-            }
-            const parsed = Number(trimmed);
-            return Number.isFinite(parsed) ? parsed : trimmed;
+            return parseFiniteNumericValue(input.value) ?? void 0;
           }
           case "color":
             return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
@@ -6974,7 +6995,7 @@ ${weekdayYaml}
         }
       }
       _onShadowInput(event) {
-        const input = event.composedPath().find((node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+        const input = event.composedPath().find(isNativeEditorInput);
         if (!input?.dataset?.field) {
           return;
         }
@@ -6987,12 +7008,12 @@ ${weekdayYaml}
         }
       }
       _onShadowValueChanged(event) {
-        const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+        const control = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.field));
         if (!control?.dataset?.field) {
           return;
         }
         event.stopPropagation();
-        const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+        const nextValue = editorControlValue(event, control);
         if (typeof control.dataset?.value === "string") {
           control.dataset.value = String(nextValue || "");
         }
@@ -7006,7 +7027,7 @@ ${weekdayYaml}
         this._emitConfig();
       }
       _onShadowClick(event) {
-        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
+        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.editorToggle));
         if (!toggleButton) {
           return;
         }
@@ -7031,7 +7052,7 @@ ${weekdayYaml}
         if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
           return s;
         }
-        const hass = this._hass ?? this.hass;
+        const hass = this._hass;
         return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
       }
       _renderTextField(label, field, value, options = {}) {
@@ -7102,10 +7123,10 @@ ${weekdayYaml}
       </label>
     `;
       }
-      _renderSelectField(label, field, value, options) {
+      _renderSelectField(label, field, value, options, renderOptions = {}) {
         const tLabel = this._editorLabel(label);
         return `
-      <label class="editor-field">
+      <label class="editor-field${renderOptions.fullWidth ? " editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
           ${options.map((option) => `
@@ -7156,22 +7177,22 @@ ${weekdayYaml}
         const field = host.dataset.field || "entity";
         const nextValue = host.dataset.value || "";
         const placeholder = host.dataset.placeholder || "";
-        let control = null;
+        let control;
         if (customElements.get("ha-entity-picker")) {
           control = document.createElement("ha-entity-picker");
-          control.includeDomains = ["climate"];
-          control.allowCustomEntity = true;
-          control.entityFilter = (stateObj) => String(stateObj?.entity_id || "").startsWith("climate.");
+          Object.assign(control, { includeDomains: ["climate"] });
+          Object.assign(control, { allowCustomEntity: true });
+          Object.assign(control, { entityFilter: (stateObj) => String(stateObj?.entity_id || "").startsWith("climate.") });
           if (placeholder) {
             control.setAttribute("placeholder", placeholder);
           }
         } else if (customElements.get("ha-selector")) {
           control = document.createElement("ha-selector");
-          control.selector = {
+          Object.assign(control, { selector: {
             entity: {
               domain: "climate"
             }
-          };
+          } });
         } else {
           control = document.createElement("select");
           const emptyOption = document.createElement("option");
@@ -7189,10 +7210,10 @@ ${weekdayYaml}
         control.dataset.field = field;
         control.dataset.value = nextValue;
         if ("hass" in control) {
-          control.hass = this._hass;
+          Object.assign(control, { hass: this._hass });
         }
         if ("value" in control) {
-          control.value = nextValue;
+          Object.assign(control, { value: nextValue });
         }
         if (control.tagName !== "SELECT") {
           control.addEventListener("value-changed", this._onShadowValueChanged);
@@ -7206,7 +7227,7 @@ ${weekdayYaml}
         const field = host.dataset.field || "icon";
         const nextValue = host.dataset.value || "";
         const placeholder = host.dataset.placeholder || "";
-        let control = null;
+        let control;
         if (customElements.get("ha-icon-picker")) {
           control = document.createElement("ha-icon-picker");
           if (placeholder) {
@@ -7214,23 +7235,23 @@ ${weekdayYaml}
           }
         } else if (customElements.get("ha-selector")) {
           control = document.createElement("ha-selector");
-          control.selector = {
+          Object.assign(control, { selector: {
             icon: {}
-          };
+          } });
         } else {
           control = document.createElement("input");
-          control.type = "text";
-          control.placeholder = placeholder;
+          Object.assign(control, { type: "text" });
+          Object.assign(control, { placeholder });
           control.addEventListener("input", this._onShadowInput);
           control.addEventListener("change", this._onShadowInput);
         }
         control.dataset.field = field;
         control.dataset.value = nextValue;
         if ("hass" in control) {
-          control.hass = this._hass;
+          Object.assign(control, { hass: this._hass });
         }
         if ("value" in control) {
-          control.value = nextValue;
+          Object.assign(control, { value: nextValue });
         }
         if (control.tagName !== "INPUT") {
           control.addEventListener("value-changed", this._onShadowValueChanged);

@@ -13,6 +13,7 @@ export { getStubEntityId, applyStubEntity } from "../../shared/editor-entity-hel
 
 export const DEFAULT_CONFIG = {
   entity: "",
+  language: "auto",
   name: "",
   layout: "circular",
   icon: "",
@@ -152,6 +153,7 @@ export function normalizeConfig(rawConfig: unknown = {}): ClimateConfig {
     tap_action: norm(config.tap_action, "more-info"),
     hold_action: norm(config.hold_action, "more-info"),
     double_tap_action: norm(config.double_tap_action, "none"),
+    language: typeof config.language === "string" ? config.language : "auto",
     layout: normalizeTextKey(config.layout) === "compact" ? "compact" : "circular",
     entity_picture: String(config.entity_picture ?? "").trim(),
     show_entity_picture: config.show_entity_picture === true,
