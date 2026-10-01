@@ -38,7 +38,6 @@
   "src/cards/power-flow/power-flow-card.ts",
   "src/cards/power-flow/power-flow-editor.ts",
   "src/cards/room-summary/room-summary-card.ts",
-  "src/cards/room-summary/room-summary-editor.ts",
   "src/cards/scenes/scenes-card.ts",
   "src/cards/scenes/scenes-editor.ts",
   "src/cards/vacuum/vacuum-card.ts",

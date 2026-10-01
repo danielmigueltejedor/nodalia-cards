@@ -1,6 +1,7 @@
+import { normalizeControlStyles } from "../../shared/control-config";
 import type { HomeAssistant } from "../../core/types/home-assistant";
 import type { RoomProjectionConfig } from "./room-summary-model";
-const normalizedRoomConfigs = new WeakMap<object, RoomProjectionConfig & Record<string, unknown>>();
+const normalizedRoomConfigs = new WeakMap<object, ReturnType<typeof buildRoomConfig>>();
 import { COMFORT, CUSTOMIZABLE_EMBED_LISTS, NORMALIZED_ROOM_CONFIG } from "./room-summary-constants";
 import {
   buildNormalizedRoomSummary,
@@ -38,6 +39,13 @@ export function normalizeConfig(rawConfig: unknown = {}) {
     const cached = normalizedRoomConfigs.get(rawConfig);
     if (cached) return cached;
   }
+  const normalized = buildRoomConfig(rawConfig);
+  Object.defineProperty(normalized, NORMALIZED_ROOM_CONFIG, { configurable: false, enumerable: false, value: true });
+  normalizedRoomConfigs.set(normalized, normalized);
+  return normalized;
+}
+
+function buildRoomConfig(rawConfig: unknown = {}) {
   const raw = isObject(rawConfig) ? rawConfig : {};
   const config = mergeConfig<Record<string, unknown>>(DEFAULT_CONFIG, raw);
 
@@ -86,7 +94,7 @@ export function normalizeConfig(rawConfig: unknown = {}) {
   };
   Object.assign(config, lists);
   const rawEmbedOptions = isObject(config.embed_options) ? config.embed_options : {};
-  const embedOptions: Record<string, unknown> = {};
+  const embedOptions: Record<string, (Record<string, unknown> & { entity: string; name: string; icon: string })[]> = {};
   CUSTOMIZABLE_EMBED_LISTS.forEach(listKey => {
     const options = Array.isArray(rawEmbedOptions[listKey]) ? rawEmbedOptions[listKey].filter(isObject) : [];
     embedOptions[listKey] = lists[listKey].map((entity, index) => {
@@ -132,14 +140,22 @@ export function normalizeConfig(rawConfig: unknown = {}) {
     ?? mergeConfig(DEFAULT_CONFIG.security, config.security || {});
   config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles)
     ?? deepClone(DEFAULT_CONFIG.styles);
-  const normalized = { ...config, ...lists,
+  const fields = { ...lists,
+    language: String(config.language || "auto"),
+    icon: String(config.icon), image: String(config.image), navigation_path: String(config.navigation_path),
+    show_temperature: config.show_temperature === true, show_humidity: config.show_humidity === true,
+    show_presence: config.show_presence === true, show_lights: config.show_lights === true,
+    show_covers: config.show_covers === true, show_climate: config.show_climate === true,
+    show_camera: config.show_camera === true, show_media: config.show_media === true,
+    show_security: config.show_security === true, show_power: config.show_power === true,
+    show_quick_actions: config.show_quick_actions === true,
+    styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles),
     name: String(config.name ?? "").trim(), temperature: entityScalar(config.temperature), humidity: entityScalar(config.humidity),
     presence: entityScalar(config.presence), occupancy: entityScalar(config.occupancy), climate: entityScalar(config.climate),
     camera: entityScalar(config.camera), power: entityScalar(config.power), air_quality: entityScalar(config.air_quality),
     camera_config: cameraConfig, media_player: mediaPlayer, media_players: mediaPlayers, media_config: mediaConfig, embed_options: embedOptions,
   } satisfies RoomProjectionConfig & Record<string, unknown>;
-  Object.defineProperty(normalized, NORMALIZED_ROOM_CONFIG, { configurable: false, enumerable: false, value: true });
-  normalizedRoomConfigs.set(normalized, normalized);
+  const normalized: typeof fields & Record<string, unknown> = { ...config, ...fields };
   return normalized;
 }
 

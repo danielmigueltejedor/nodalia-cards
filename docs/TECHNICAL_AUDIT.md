@@ -828,3 +828,25 @@ run encountered one Chromium ERR_CONTENT_LENGTH_MISMATCH before bundle import,
 not a card assertion; the isolated Climate case passed, then the full rerun
 passed 296 cases with one existing platform skip. Remaining unchecked modules:
 46. Hold 3.0.0-alpha.1 until full migration, including shared runtime sources.
+
+## Summary editor findings — 2026-10-01
+
+The hub editor still suppresses checking, accesses unvalidated nested custom
+events/child editor methods and can map non-array player payloads. Its normalized
+config cache widens known projected fields back to unknown. Check actual editor
+contracts and list operations, preserve metadata alignment, derive the cached
+config from its builder, and guard nested editor/media/camera input boundaries.
+
+Summary editor now passes strict checking and typed lint. The normalization
+builder preserves known fields, root YAML extensions and its cached identity.
+Actual nested editor methods, custom event records and player arrays are guarded;
+list buttons accept only known lists and valid indices, with customization rows
+moving/removing alongside their entities. A shared checked element contract guards
+the dynamically loaded Media/Camera editors without suppressing their types.
+
+1,400 valid normalized configurations and editor markup outputs match main,
+including custom extensions and artwork/style fields; normalized identities are
+retained. All 738 unit tests and six targeted list/nested-editor browser cases
+pass. Full local browser suite: 302 passed, one existing platform skip.
+Remaining unchecked modules: 45. Hold 3.0.0-alpha.1 until full migration,
+including the handwritten shared utility/i18n runtime sources.

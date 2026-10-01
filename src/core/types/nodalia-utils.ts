@@ -6,6 +6,11 @@ import type { HomeAssistant } from "./home-assistant";
  * available at runtime on the compatibility global.
  */
 export interface NodaliaUtilsApi {
+  editorStatesSignature?: (hass: HomeAssistant | null | undefined, language?: string) => string;
+  mountIconPickerHost?: (host: HTMLElement, options: {
+    hass: HomeAssistant | null | undefined; field?: string; value?: unknown;
+    onShadowInput?: EventListener; onShadowValueChanged?: EventListener; copyDatasetFromHost?: boolean;
+  }) => void;
   captureEditorFocusState: (host: HTMLElement) => EditorFocusState | null;
   restoreEditorFocusState: (host: HTMLElement, state: EditorFocusState | null) => void;
   bindShadowListeners: (host: HTMLElement, listeners: readonly (readonly [string, EventListener, (boolean | AddEventListenerOptions)?])[], key?: string) => boolean;
