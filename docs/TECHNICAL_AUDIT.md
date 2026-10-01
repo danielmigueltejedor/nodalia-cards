@@ -1126,3 +1126,21 @@ hidden checkbox directly; using its visible labelled switch verifies actual user
 interaction and resolves the six fixture timeouts. Remaining unchecked modules:
 28. Hold 3.0.0-alpha.1 until full migration, including handwritten utility/i18n
 runtime sources.
+
+## Light editor findings — 2026-10-01
+
+The editor suppressed checking across HA/native controls, named presets, nested
+settings and independent body/icon actions. Missing brightness values fabricated
+1% presets; blank animation overrides became the minimum instead of defaults.
+
+The editor now passes strict checking and typed lint with actual HA/DOM/config/
+focus contracts. Missing numeric values restore defaults, while real zero keeps
+existing bounds. Native/custom events and nested settings are guarded; missing
+entities, named colour presets, service targets, false/zero data, YAML extensions,
+focus and translucent styles remain intact. A verified dead datalist renderer and
+its unused icon option were removed.
+
+1,400 valid editor HTML outputs match main. All 744 unit tests, nine specific
+browser cases and the full local suite (440 passed, one existing skip) pass.
+Remaining unchecked modules: 27. Hold 3.0.0-alpha.1 until full migration,
+including handwritten utility/i18n runtime sources.
