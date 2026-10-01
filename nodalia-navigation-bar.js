@@ -158,6 +158,36 @@
     }
   ];
 
+  // src/shared/control-config.ts
+  function normalizeControlStyles(candidate, defaults, sanitize = window.NodaliaUtils.sanitizeCssValue) {
+    const utils2 = window.NodaliaUtils;
+    const source = utils2.isObject(candidate) ? candidate : {};
+    const result = {};
+    for (const [key, fallback] of Object.entries(defaults)) {
+      if (utils2.isUnsafeConfigPathKey(key)) continue;
+      result[key] = typeof fallback === "string" ? sanitize(source[key], fallback) : normalizeControlStyles(source[key], fallback, sanitize);
+    }
+    return result;
+  }
+  var actionFields = (prefix, fallback, navigationKey = `${prefix}_navigation_path`) => ({
+    actionKey: `${prefix}_action`,
+    serviceKey: `${prefix}_service`,
+    serviceDataKey: `${prefix}_service_data`,
+    serviceTargetKey: `${prefix}_service_target`,
+    urlKey: `${prefix}_url`,
+    navigationKey,
+    newTabKey: `${prefix}_new_tab`,
+    fallback
+  });
+  var FIELDS = [
+    actionFields("tap", "toggle", "navigation_path"),
+    actionFields("icon_tap", "", "icon_navigation_path"),
+    actionFields("hold", "more-info", "hold_navigation_path"),
+    actionFields("icon_hold", ""),
+    actionFields("double_tap", "none"),
+    actionFields("icon_double_tap", "")
+  ];
+
   // src/cards/navigation/navigation-runtime.ts
   var utils = window.NodaliaUtils;
   var isObject = utils.isObject.bind(utils);
@@ -315,8 +345,8 @@
       { icon: "mdi:dots-horizontal", label: "More", path: "/config/dashboard" }
     ]
   };
-  function normalizeConfig(config) {
-    const baseConfig = { ...config };
+  function normalizeConfig(config = {}) {
+    const baseConfig = isObject(config) ? { ...config } : {};
     if (!Array.isArray(baseConfig.routes) && Array.isArray(baseConfig.items)) {
       baseConfig.routes = baseConfig.items;
       delete baseConfig.items;
@@ -325,18 +355,31 @@
       throw new Error('"routes" is required and must be an array');
     }
     const mergedConfig = mergeConfig(DEFAULT_CONFIG, baseConfig);
-    const artworkMode = String(mergedConfig.media_player?.artwork?.mode || "").trim().toLowerCase();
-    mergedConfig.media_player = {
-      ...mergedConfig.media_player,
+    const media = { ...DEFAULT_CONFIG.media_player, ...isObject(mergedConfig.media_player) ? mergedConfig.media_player : {} };
+    const artwork = isObject(media.artwork) ? media.artwork : {};
+    const artworkMode = String(artwork.mode || "").trim().toLowerCase();
+    const mediaPlayer = {
+      ...media,
+      players: Array.isArray(media.players) ? media.players.filter(isObject) : [],
       artwork: {
         mode: artworkMode === "blur" ? "blur" : "immersive"
       }
     };
-    mergedConfig.security = window.NodaliaUtils?.normalizeSecurityConfig?.(mergedConfig.security, DEFAULT_CONFIG.security) ?? {
-      ...DEFAULT_CONFIG.security,
-      ...isObject(mergedConfig.security) ? mergedConfig.security : {}
+    const security = window.NodaliaUtils.normalizeSecurityConfig?.(mergedConfig.security, DEFAULT_CONFIG.security) ?? { ...DEFAULT_CONFIG.security, ...isObject(mergedConfig.security) ? mergedConfig.security : {} };
+    const rawStyles = isObject(mergedConfig.styles) ? mergedConfig.styles : {};
+    const projected = normalizeControlStyles(rawStyles, DEFAULT_CONFIG.styles);
+    const styles = {
+      ...rawStyles,
+      ...projected,
+      bar: { ...isObject(rawStyles.bar) ? rawStyles.bar : {}, ...projected.bar },
+      button: { ...isObject(rawStyles.button) ? rawStyles.button : {}, ...projected.button },
+      badge: { ...isObject(rawStyles.badge) ? rawStyles.badge : {}, ...projected.badge },
+      popup: { ...isObject(rawStyles.popup) ? rawStyles.popup : {}, ...projected.popup },
+      media_player: { ...isObject(rawStyles.media_player) ? rawStyles.media_player : {}, ...projected.media_player }
     };
-    return mergedConfig;
+    const layout = { ...DEFAULT_CONFIG.layout, ...isObject(mergedConfig.layout) ? mergedConfig.layout : {} };
+    const routes = (Array.isArray(mergedConfig.routes) ? mergedConfig.routes.filter(isObject) : []).map((route) => route.popup === void 0 ? route : { ...route, popup: Array.isArray(route.popup) ? route.popup.filter(isObject) : [] });
+    return { ...mergedConfig, routes, media_player: mediaPlayer, security, styles, layout };
   }
 
   // src/shared/url-query.ts

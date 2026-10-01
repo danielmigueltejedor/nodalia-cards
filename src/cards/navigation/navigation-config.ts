@@ -1,4 +1,4 @@
-// @ts-nocheck -- merged Lovelace YAML is projected into the runtime navigation config.
+import { normalizeControlStyles } from "../../shared/control-config";
 import { isObject, mergeConfig } from "./navigation-runtime";
 
 export const DEFAULT_CONFIG = {
@@ -148,8 +148,8 @@ export const STUB_CONFIG = {
   ],
 };
 
-export function normalizeConfig(config) {
-  const baseConfig = { ...config };
+export function normalizeConfig(config: unknown = {}) {
+  const baseConfig: Record<string, unknown> = isObject(config) ? { ...config } : {};
 
   if (!Array.isArray(baseConfig.routes) && Array.isArray(baseConfig.items)) {
     baseConfig.routes = baseConfig.items;
@@ -160,18 +160,28 @@ export function normalizeConfig(config) {
     throw new Error('"routes" is required and must be an array');
   }
 
-  const mergedConfig = mergeConfig(DEFAULT_CONFIG, baseConfig);
-  const artworkMode = String(mergedConfig.media_player?.artwork?.mode || "").trim().toLowerCase();
-  mergedConfig.media_player = {
-    ...mergedConfig.media_player,
+  const mergedConfig = mergeConfig<Record<string, unknown>>(DEFAULT_CONFIG, baseConfig);
+  const media = { ...DEFAULT_CONFIG.media_player, ...(isObject(mergedConfig.media_player) ? mergedConfig.media_player : {}) };
+  const artwork: Record<string, unknown> = isObject(media.artwork) ? media.artwork : {};
+  const artworkMode = String(artwork.mode || "").trim().toLowerCase();
+  const mediaPlayer = {
+    ...media,
+    players: Array.isArray(media.players) ? media.players.filter(isObject) : [],
     artwork: {
       mode: artworkMode === "blur" ? "blur" : "immersive",
     },
   };
-  mergedConfig.security = window.NodaliaUtils?.normalizeSecurityConfig?.(mergedConfig.security, DEFAULT_CONFIG.security)
-    ?? {
-      ...DEFAULT_CONFIG.security,
-      ...(isObject(mergedConfig.security) ? mergedConfig.security : {}),
-    };
-  return mergedConfig;
+  const security = window.NodaliaUtils.normalizeSecurityConfig?.(mergedConfig.security, DEFAULT_CONFIG.security)
+    ?? { ...DEFAULT_CONFIG.security, ...(isObject(mergedConfig.security) ? mergedConfig.security : {}) };
+  const rawStyles = isObject(mergedConfig.styles) ? mergedConfig.styles : {};
+  const projected = normalizeControlStyles(rawStyles, DEFAULT_CONFIG.styles);
+  const styles = { ...rawStyles, ...projected,
+    bar: { ...(isObject(rawStyles.bar) ? rawStyles.bar : {}), ...projected.bar },
+    button: { ...(isObject(rawStyles.button) ? rawStyles.button : {}), ...projected.button },
+    badge: { ...(isObject(rawStyles.badge) ? rawStyles.badge : {}), ...projected.badge },
+    popup: { ...(isObject(rawStyles.popup) ? rawStyles.popup : {}), ...projected.popup },
+    media_player: { ...(isObject(rawStyles.media_player) ? rawStyles.media_player : {}), ...projected.media_player } };
+  const layout = { ...DEFAULT_CONFIG.layout, ...(isObject(mergedConfig.layout) ? mergedConfig.layout : {}) };
+  const routes = (Array.isArray(mergedConfig.routes) ? mergedConfig.routes.filter(isObject) : []).map(route => route.popup === undefined ? route : { ...route, popup: Array.isArray(route.popup) ? route.popup.filter(isObject) : [] });
+  return { ...mergedConfig, routes, media_player: mediaPlayer, security, styles, layout };
 }

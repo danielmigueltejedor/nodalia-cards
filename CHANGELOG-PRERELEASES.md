@@ -12,6 +12,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Guard malformed Media Player/Navigation layout, media, route and style blocks; retain defaults for absent artwork numbers, real zero options and all legacy aliases.
+
 - Read modern translucent Media Player theme colors immediately and keep artwork query keys/fragments intact; block inherited editor paths and clean up color probes on failure.
 
 - Preserve Calendar forecast alternatives and real zero temperatures, correct current-day forecast keys and scoring, reject impossible date-only inputs, and share HA hyphenated weather icons.
@@ -44,6 +46,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Remove Camera portal listeners from their owning shadow root.
 
 ### Maintenance
+
+- Check Media Player/Navigation configuration and derive public normalizer contracts from source; sanitize known styles while preserving YAML extensions.
 
 - Check Media Player helpers, share duration/artwork/color/slider/list boundaries, preserve empty entity editor placeholders, and replace a source-shape row test with a real editor regression.
 

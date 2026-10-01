@@ -68,7 +68,7 @@ export interface MediaPlayerPublicApi {
   EDITOR_TAG: string;
   CARD_VERSION: string;
   DEFAULT_CONFIG: Record<string, unknown>;
-  normalizeConfig: (rawConfig?: unknown) => Record<string, unknown>;
+  normalizeConfig: typeof import("./media-player-config").normalizeConfig;
   formatEditorJsonValue: typeof import("./media-player-helpers").formatEditorJsonValue;
   parseEditorJsonObject: typeof import("./media-player-helpers").parseEditorJsonObject;
   resolvePresentationMode: (
