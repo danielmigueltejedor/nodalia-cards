@@ -1,71 +1,59 @@
-// @ts-nocheck
-/* Visual editor surface: typed incrementally after the card runtime split. */
 import {
-  CARD_TAG,
-  CARD_VERSION,
-  DIAL_CIRCLE_RADIUS,
-  DIAL_CIRCUMFERENCE,
-  DIAL_END_ANGLE,
-  DIAL_HIDDEN_LENGTH,
-  DIAL_START_ANGLE,
-  DIAL_SWEEP,
-  DIAL_VIEWBOX_SIZE,
-  DIAL_VISIBLE_LENGTH,
-  DRAFT_CONFIRMATION_RETRY_LIMIT,
-  DRAFT_CONFIRMATION_TIMEOUT,
-  EDITOR_TAG,
-  ENGINE_OVERRIDE_HOLD_HOURS,
-  ENGINE_OVERRIDE_REFRESH_MS,
-  HAPTIC_PATTERNS,
-  LEGACY_CLIMATE_DIAL_BACKGROUND,
-  LEGACY_CLIMATE_DIAL_OFF_COLOR,
-  LEGACY_CLIMATE_DIAL_TRACK_COLOR,
-  LEGACY_CLIMATE_ICON_OFF_COLORS,
-  RANGE_THUMB_DRAG_THRESHOLD_PX,
-  SCHEDULE_BLOCK_DRAG_THRESHOLD_PX,
-  SCHEDULE_MIN_BLOCK_MINUTES,
-  SCHEDULE_TIMELINE_SNAP_MINUTES,
-  SETPOINT_SCHEDULE_DAY_ORDER,
-  SETPOINT_SCHEDULE_DAY_TO_JS,
-  SETPOINT_SCHEDULE_MINUTES_PER_DAY,
-  STEP_BUTTON_COMMIT_DEBOUNCE,
-} from "./climate-constants";
-import {
-  clamp,
   compactConfig,
   deepClone,
   deleteByPath,
   escapeHtml,
   fireEvent,
-  isObject,
-  isUnsafeConfigPathKey,
-  mergeConfig,
-  normalizeTextKey,
   setByPath,
 } from "./climate-runtime";
 
 import { DEFAULT_CONFIG, STUB_CONFIG, normalizeConfig } from "./climate-config";
 import {
-  escapeSelectorValue,
   formatEditorColorFromHex,
-  formatEditorHexChannel,
   getEditorColorFallbackValue,
   getEditorColorModel,
-  parseSizeToPixels,
 } from "./climate-model";
+
+import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
+import type { EditorFocusState } from "../../core/types/nodalia-utils";
+import type { NodaliaEngineStatus } from "../../core/types/engine";
+import type { ClimateConfig } from "./climate-types";
+import { editorControlValue, isNativeEditorInput, type NativeEditorInput } from "../../shared/editor-controls";
+import { parseFiniteNumericValue } from "../../shared/numeric-values";
+interface FieldOptions { fullWidth?: boolean; multiline?: boolean; rows?: number; placeholder?: string; type?: string; valueType?: string; fallbackValue?: string; }
+interface ClimateEditorEngineSurface {
+  _hass: HomeAssistant | null;
+  _engineStatus: NodaliaEngineStatus | null;
+  _engineStatusSignature: string;
+  _engineStatusInFlight: boolean;
+  _engineRequestGeneration: number;
+  isConnected: boolean;
+  shadowRoot: ShadowRoot | null;
+  _captureFocusState(): EditorFocusState | null;
+  _restoreFocusState(state: EditorFocusState | null): void;
+  _render(): void;
+  _editorLabel(key: string): string;
+  _renderSelectField(label: string, field: string, value: unknown, options: {value: string; label: string}[], renderOptions?: FieldOptions): string;
+  _renderTextField(label: string, field: string, value: unknown, options?: FieldOptions): string;
+  _renderCheckboxField(label: string, field: string, checked: unknown): string;
+}
 
 /**
  * Engine status plumbing for the registered Climate editor: while the Engine owns schedules the
  * legacy webhook and helper fields are hidden, otherwise they stay available as a fallback.
  */
-export async function refreshClimateEditorEngineStatus(editor) {
+export async function refreshClimateEditorEngineStatus(editor: ClimateEditorEngineSurface) {
   const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
   if (!backend || typeof backend.getEditorEngineStatus !== "function" || !editor._hass || editor._engineStatusInFlight) {
     return;
   }
+  if (!editor.isConnected) return;
+  const generation = editor._engineRequestGeneration;
+  const hass = editor._hass;
   editor._engineStatusInFlight = true;
   try {
-    const engine = await backend.getEditorEngineStatus(editor._hass);
+    const engine = await backend.getEditorEngineStatus(hass);
+    if (!editor.isConnected || generation !== editor._engineRequestGeneration) return;
     const signature = window.NodaliaUtils?.engineStatusSignature?.(engine) ?? "";
     if (signature === editor._engineStatusSignature) {
       return;
@@ -80,18 +68,18 @@ export async function refreshClimateEditorEngineStatus(editor) {
   } catch (_error) {
     // Without the Engine the editor keeps rendering the legacy schedule fields.
   } finally {
-    editor._engineStatusInFlight = false;
+    if (generation === editor._engineRequestGeneration) editor._engineStatusInFlight = false;
   }
 }
 
-export function climateEditorEngineSchedulesActive(editor) {
+export function climateEditorEngineSchedulesActive(editor: ClimateEditorEngineSurface) {
   return editor?._engineStatus?.available === true && editor._engineStatus?.caps?.climateSchedules === true;
 }
 
-export function renderClimateEditorEngineBannerHtml(editor) {
+export function renderClimateEditorEngineBannerHtml(editor: ClimateEditorEngineSurface) {
   return window.NodaliaUtils?.renderEditorEngineBannerHtml?.({
     engine: editor?._engineStatus,
-    label: key => editor._editorLabel(key),
+    label: (key: string) => editor._editorLabel(key),
     fullWidthClass: "",
     extraRows: editor?._engineStatus?.caps?.climateOverrides === true
       ? [
@@ -104,7 +92,7 @@ export function renderClimateEditorEngineBannerHtml(editor) {
   }) || "";
 }
 
-export function renderClimateEditorScheduleSectionHtml(editor, config) {
+export function renderClimateEditorScheduleSectionHtml(editor: ClimateEditorEngineSurface, config: ClimateConfig) {
   const engineActive = climateEditorEngineSchedulesActive(editor);
   const weekStartsField = editor._renderSelectField(
     "ed.climate.schedule_week_starts_on",
@@ -142,12 +130,24 @@ export function renderClimateEditorScheduleSectionHtml(editor, config) {
   `;
 }
 
-let _lazyNodaliaClimateCardEditor;
-export function loadNodaliaClimateCardEditor() {
+let _lazyNodaliaClimateCardEditor: CustomElementConstructor | undefined;
+export function loadNodaliaClimateCardEditor(): CustomElementConstructor {
   if (_lazyNodaliaClimateCardEditor) {
     return _lazyNodaliaClimateCardEditor;
   }
 class NodaliaClimateCardEditor extends HTMLElement {
+  _config!: ClimateConfig;
+  _hass!: HomeAssistant | null;
+  _entityOptionsSignature!: string;
+  _showStyleSection!: boolean;
+  _showAnimationSection!: boolean;
+  _showTapActionsSection!: boolean;
+  _pendingEditorControlTags!: Set<string>;
+  _engineStatus!: NodaliaEngineStatus | null;
+  _engineStatusSignature!: string;
+  _engineStatusInFlight!: boolean;
+  _engineRequestGeneration!: number;
+
   constructor() {
     super();
     this._nodaliaConstruct();
@@ -164,6 +164,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
     this._engineStatus = null;
     this._engineStatusSignature = "";
     this._engineStatusInFlight = false;
+    this._engineRequestGeneration = 0;
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
@@ -191,11 +192,20 @@ class NodaliaClimateCardEditor extends HTMLElement {
   disconnectedCallback() {
     this._detachEditorShadowListeners();
     window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
+    this._engineRequestGeneration++;
+    this._engineStatusInFlight = false;
   }
 
-  set hass(hass) {
+  set hass(hass: HomeAssistant) {
+    const changedContext = !this._hass || this._hass.connection !== hass.connection || this._hass.user?.id !== hass.user?.id || this._hass.user?.is_admin !== hass.user?.is_admin;
+    if (changedContext) {
+      this._engineRequestGeneration++;
+      this._engineStatusInFlight = false;
+      this._engineStatus = null;
+      this._engineStatusSignature = "";
+    }
     const nextSignature = this._getEntityOptionsSignature(hass);
-    const shouldRender =
+    const shouldRender = changedContext ||
       !this._hass ||
       nextSignature !== this._entityOptionsSignature ||
       !this.shadowRoot?.innerHTML;
@@ -214,7 +224,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
     void refreshClimateEditorEngineStatus(this);
   }
 
-  setConfig(config) {
+  setConfig(config: unknown) {
     const focusState = this._captureFocusState();
     this._config = normalizeConfig(config || {});
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
@@ -223,7 +233,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
     void refreshClimateEditorEngineStatus(this);
   }
 
-  _watchEditorControlTag(tagName) {
+  _watchEditorControlTag(tagName: string) {
     if (!tagName || this._pendingEditorControlTags.has(tagName)) {
       return;
     }
@@ -256,8 +266,8 @@ class NodaliaClimateCardEditor extends HTMLElement {
     this._watchEditorControlTag("ha-icon-picker");
   }
 
-  _getEntityOptionsSignature(hass = this._hass) {
-    return window.NodaliaUtils.editorFilteredStatesSignature(hass, this._config?.language, id => id.startsWith("climate."));
+  _getEntityOptionsSignature(hass: HomeAssistant | null = this._hass) {
+    return window.NodaliaUtils.editorFilteredStatesSignature?.(hass, this._config?.language, id => id.startsWith("climate.")) ?? "";
   }
 
   _getClimateEntityOptions() {
@@ -295,7 +305,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
     return window.NodaliaUtils.captureEditorFocusState(this);
   }
 
-  _restoreFocusState(focusState) {
+  _restoreFocusState(focusState: EditorFocusState | null) {
     window.NodaliaUtils.restoreEditorFocusState(this, focusState);
   }
 
@@ -306,7 +316,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
     this._render();
     this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
-      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
+      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults?.(nextConfig, DEFAULT_CONFIG) ?? {}),
     });
   }
 
@@ -314,7 +324,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
     this._config = normalizeConfig(compactConfig(this._config));
   }
 
-  _setFieldValue(path, value) {
+  _setFieldValue(path: string, value: unknown) {
     if (value === undefined || value === null || value === "") {
       deleteByPath(this._config, path);
       return;
@@ -323,20 +333,14 @@ class NodaliaClimateCardEditor extends HTMLElement {
     setByPath(this._config, path, value);
   }
 
-  _readFieldValue(input) {
+  _readFieldValue(input: NativeEditorInput) {
     const valueType = input.dataset.valueType || "string";
 
     switch (valueType) {
       case "boolean":
-        return Boolean(input.checked);
+        return input instanceof HTMLInputElement && input.checked;
       case "number": {
-        const trimmed = String(input.value || "").trim();
-        if (!trimmed) {
-          return undefined;
-        }
-
-        const parsed = Number(trimmed);
-        return Number.isFinite(parsed) ? parsed : trimmed;
+        return parseFiniteNumericValue(input.value) ?? undefined;
       }
       case "color":
         return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
@@ -345,10 +349,10 @@ class NodaliaClimateCardEditor extends HTMLElement {
     }
   }
 
-  _onShadowInput(event) {
+  _onShadowInput(event: Event) {
     const input = event
       .composedPath()
-      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+      .find(isNativeEditorInput);
 
     if (!input?.dataset?.field) {
       return;
@@ -365,10 +369,10 @@ class NodaliaClimateCardEditor extends HTMLElement {
     }
   }
 
-  _onShadowValueChanged(event) {
+  _onShadowValueChanged(event: Event) {
     const control = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.field);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.field));
 
     if (!control?.dataset?.field) {
       return;
@@ -376,9 +380,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
 
     event.stopPropagation();
 
-    const nextValue = typeof event.detail?.value === "string"
-      ? event.detail.value
-      : control.value;
+    const nextValue = editorControlValue(event, control);
     if (typeof control.dataset?.value === "string") {
       control.dataset.value = String(nextValue || "");
     }
@@ -393,10 +395,10 @@ class NodaliaClimateCardEditor extends HTMLElement {
     this._emitConfig();
   }
 
-  _onShadowClick(event) {
+  _onShadowClick(event: Event) {
     const toggleButton = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.editorToggle));
 
     if (!toggleButton) {
       return;
@@ -423,15 +425,15 @@ class NodaliaClimateCardEditor extends HTMLElement {
     }
   }
 
-  _editorLabel(s) {
+  _editorLabel(s: string) {
     if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
       return s;
     }
-    const hass = this._hass ?? this.hass;
+    const hass = this._hass;
     return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
   }
 
-  _renderTextField(label, field, value, options = {}) {
+  _renderTextField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const tag = options.multiline ? "textarea" : "input";
     const inputType = options.type || "text";
@@ -462,7 +464,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
     `;
   }
 
-  _renderColorField(label, field, value, options = {}) {
+  _renderColorField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const tColorCustom = this._editorLabel("ed.entity.custom_color");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
@@ -491,7 +493,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
     `;
   }
 
-  _renderCheckboxField(label, field, checked) {
+  _renderCheckboxField(label: string, field: string, checked: unknown) {
     const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
@@ -507,10 +509,10 @@ class NodaliaClimateCardEditor extends HTMLElement {
     `;
   }
 
-  _renderSelectField(label, field, value, options) {
+  _renderSelectField(label: string, field: string, value: unknown, options: {value: string; label: string}[], renderOptions: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     return `
-      <label class="editor-field">
+      <label class="editor-field${renderOptions.fullWidth ? " editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
           ${options
@@ -525,7 +527,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
     `;
   }
 
-  _renderEntityField(label, field, value, options = {}) {
+  _renderEntityField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
 
@@ -543,7 +545,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
     `;
   }
 
-  _renderIconPickerField(label, field, value, options = {}) {
+  _renderIconPickerField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
 
@@ -561,7 +563,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
     `;
   }
 
-  _mountEntityPicker(host) {
+  _mountEntityPicker(host: HTMLElement) {
     if (!(host instanceof HTMLElement)) {
       return;
     }
@@ -569,23 +571,23 @@ class NodaliaClimateCardEditor extends HTMLElement {
     const field = host.dataset.field || "entity";
     const nextValue = host.dataset.value || "";
     const placeholder = host.dataset.placeholder || "";
-    let control = null;
+    let control: HTMLElement;
 
     if (customElements.get("ha-entity-picker")) {
       control = document.createElement("ha-entity-picker");
-      control.includeDomains = ["climate"];
-      control.allowCustomEntity = true;
-      control.entityFilter = stateObj => String(stateObj?.entity_id || "").startsWith("climate.");
+      Object.assign(control, { includeDomains: ["climate"] });
+      Object.assign(control, { allowCustomEntity: true });
+      Object.assign(control, { entityFilter: (stateObj: HassEntity) => String(stateObj?.entity_id || "").startsWith("climate.") });
       if (placeholder) {
         control.setAttribute("placeholder", placeholder);
       }
     } else if (customElements.get("ha-selector")) {
       control = document.createElement("ha-selector");
-      control.selector = {
+      Object.assign(control, { selector: {
         entity: {
           domain: "climate",
         },
-      };
+      } });
     } else {
       control = document.createElement("select");
       const emptyOption = document.createElement("option");
@@ -605,11 +607,11 @@ class NodaliaClimateCardEditor extends HTMLElement {
     control.dataset.value = nextValue;
 
     if ("hass" in control) {
-      control.hass = this._hass;
+      Object.assign(control, { hass: this._hass });
     }
 
     if ("value" in control) {
-      control.value = nextValue;
+      Object.assign(control, { value: nextValue });
     }
 
     if (control.tagName !== "SELECT") {
@@ -619,7 +621,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
     host.replaceChildren(control);
   }
 
-  _mountIconPicker(host) {
+  _mountIconPicker(host: HTMLElement) {
     if (!(host instanceof HTMLElement)) {
       return;
     }
@@ -627,7 +629,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
     const field = host.dataset.field || "icon";
     const nextValue = host.dataset.value || "";
     const placeholder = host.dataset.placeholder || "";
-    let control = null;
+    let control: HTMLElement;
 
     if (customElements.get("ha-icon-picker")) {
       control = document.createElement("ha-icon-picker");
@@ -636,13 +638,13 @@ class NodaliaClimateCardEditor extends HTMLElement {
       }
     } else if (customElements.get("ha-selector")) {
       control = document.createElement("ha-selector");
-      control.selector = {
+      Object.assign(control, { selector: {
         icon: {},
-      };
+      } });
     } else {
       control = document.createElement("input");
-      control.type = "text";
-      control.placeholder = placeholder;
+      Object.assign(control, { type: "text" });
+      Object.assign(control, { placeholder });
       control.addEventListener("input", this._onShadowInput);
       control.addEventListener("change", this._onShadowInput);
     }
@@ -651,11 +653,11 @@ class NodaliaClimateCardEditor extends HTMLElement {
     control.dataset.value = nextValue;
 
     if ("hass" in control) {
-      control.hass = this._hass;
+      Object.assign(control, { hass: this._hass });
     }
 
     if ("value" in control) {
-      control.value = nextValue;
+      Object.assign(control, { value: nextValue });
     }
 
     if (control.tagName !== "INPUT") {
@@ -1283,11 +1285,11 @@ class NodaliaClimateCardEditor extends HTMLElement {
     `;
 
     this.shadowRoot
-      .querySelectorAll('[data-mounted-control="entity-picker"]')
+      .querySelectorAll<HTMLElement>('[data-mounted-control="entity-picker"]')
       .forEach(host => this._mountEntityPicker(host));
 
     this.shadowRoot
-      .querySelectorAll('[data-mounted-control="icon-picker"]')
+      .querySelectorAll<HTMLElement>('[data-mounted-control="icon-picker"]')
       .forEach(host => this._mountIconPicker(host));
 
     this._ensureEditorControlsReady();

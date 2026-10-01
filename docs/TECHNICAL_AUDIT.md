@@ -1353,3 +1353,24 @@ outputs pass. Full local suite: 533 passed, one existing skip. New fixtures were
 corrected to the actual native text-input picker
 fallback rather than expecting a select. Remaining unchecked modules: 18.
 Publication remains held until the entire migration and shared runtimes finish.
+
+## Climate editor findings — 2026-10-01
+
+The unchecked editor passed full-width options to an action selector that ignored
+them. Engine status refreshes replaced controls even when the cached status was
+unchanged and could apply replies from an earlier connection or detached editor.
+
+Check actual HA, normalized Climate config, native events, DOM, focus and exported
+Engine helper contracts. Honor the existing full-width request for the independent
+tap/hold/double-tap selectors. Use status signatures and request generations to
+keep unchanged controls and discard abandoned replies. Retain missing entities,
+focused drafts, populated Engine/webhook schedule fallbacks, week selection,
+explicit zero/cleared animation defaults, translucent styles and YAML extensions.
+Automatic language is an explicit removable default. Remove 36 verified unused
+imported bindings and the setter-only hass fallback.
+
+All 749 unit tests, 12 targeted browser cases and 1,400 equivalent editor HTML
+outputs outside the restored action widths pass. Full local suite: 545 passed,
+one existing skip. The initial toggle fixture targeted the hidden native input;
+use its visible label, exercising the real switch interaction. Remaining
+unchecked modules: 17. Hold publication until the complete source/runtime migration.

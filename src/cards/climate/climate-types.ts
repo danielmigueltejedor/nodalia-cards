@@ -82,6 +82,7 @@ export interface ClimateStyleConfig {
 }
 
 export interface ClimateConfig {
+  language: string;
   entity: string;
   name: string;
   layout: ClimateLayout;

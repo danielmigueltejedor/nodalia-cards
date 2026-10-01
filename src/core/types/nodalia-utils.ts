@@ -112,6 +112,7 @@ export interface NodaliaUtilsApi {
   renderCardEmptyStateDocument?: (innerHtml: string, options?: Record<string, unknown>) => string;
   scheduleDeferTimer?: (host: object, callback: () => void, delayMs: number) => number;
   clearDeferTimers?: (host: object) => void;
+  applyLabelValues?: (text: string, values: Record<string, unknown>) => string;
   renderEditorEngineBannerStyles?: () => string;
   engineStatusSignature?: (engine: unknown) => string;
   renderEditorEngineBannerHtml?: (options: Record<string, unknown>) => string;

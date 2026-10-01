@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+- Check the Climate visual editor, restore full-width action controls, preserve schedule fallback fields and stop replacing controls for unchanged Engine status. Discard replies belonging to previous editor connections/lifetimes.
+
 - Check the Notifications visual editor, retain unfinished custom/external rows during HA feedback, bound list changes and discard obsolete Engine replies/profile writes while preserving the latest queued sync and explicit disabled profiles.
 
 - Check the Power Flow visual editor, import its actual selector domains, preserve draft individuals through HA feedback and bound row changes without losing energy branches or paired metadata. Remove its unregistered historical editor.

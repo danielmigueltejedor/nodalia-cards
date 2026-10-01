@@ -77,3 +77,16 @@ does not exceed high. Missing bounds do not become zero. Existing HVAC/fan/prese
 fields remain in the normalized schedule and webhook body. Blank or malformed
 style/security/display groups fall back through the same checked configuration
 projection used by the card; service and webhook authorization policies remain.
+
+The Climate visual editor retains populated legacy schedule fields while the
+Engine owns the visible schedule controls. Changing the first day of the week
+does not erase the webhook/helper fallback. When the Engine becomes unavailable,
+the saved fallback fields are shown again.
+
+Native entity selectors retain missing configured entities and filter Climate
+choices; HA pickers commit their event values. Focused drafts, separate tap/hold/
+double-tap choices and custom YAML fields survive updates. Action selectors use
+the full editor width. Cleared animation durations restore defaults while an
+explicit zero stays a value, and translucent CSS colors retain their alpha.
+Unchanged Engine status keeps existing controls; replies from a previous
+connection/user or detached editor cannot replace the current schedule UI.
