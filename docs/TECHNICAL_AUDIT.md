@@ -1240,7 +1240,7 @@ local suite passes 482 cases with one existing skip. Remaining unchecked modules
 ## Graph editor findings — 2026-10-01
 
 The editor suppressed checking and the standalone entry deliberately retained
-633 lines of a historical editor. Reference inspection confirms that editor was
+636 lines of a historical editor. Reference inspection confirms that editor was
 never registered and the retention expression was its only consumer; remove the
 class, loader and retention expression while keeping the registered editor/API.
 
@@ -1258,3 +1258,27 @@ outputs match main. Full local suite: 491 passed, one existing skip. The initial
 new browser assertion used a color from the stub rather than the actual second
 series default; correct the fixture to #42a5f5. Remaining unchecked modules: 22.
 Publication stays held until the entire migration and shared runtimes finish.
+
+## Media Player editor findings — 2026-10-01
+
+The editor suppressed checking across nested player actions, native/HA controls,
+JSON data and DOM focus. Empty removal indices affected row zero and distant field
+paths could extend player arrays. Clearing service data or URLs left legacy `data`
+or `url_path` aliases, causing an apparently deleted value to reappear.
+
+Check those actual contracts and restrict row/action field edits before mutation.
+Cleared fields remove their corresponding legacy alias. Invalid JSON objects,
+arrays or primitives retain the last valid service object; valid false/zero data,
+YAML targets, metadata and extensions survive edits and reordering. Preserve blank
+players, legacy single entities, missing selections, focus, artwork modes, cleared
+animation defaults and translucent styles. Guard malformed nested settings.
+Move actual stub generation into the checked helper shared by view and editor,
+removing the editor's dependency on the unchecked view factory; remove 19 verified
+unused imported bindings and a redundant label calculation. Automatic language
+is an explicit removable default. Add the card guide and README link.
+
+All 748 unit tests, nine targeted browser cases and 1,400 equivalent editor HTML
+outputs pass. Full local suite: 500 passed, one existing skip. Initial new browser
+assertions expected default values in compact emitted YAML; assert the normalized
+values instead, keeping the existing default-stripping contract. Remaining
+unchecked modules: 21. Keep publication held until the entire migration finishes.

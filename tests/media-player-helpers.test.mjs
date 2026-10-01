@@ -72,3 +72,9 @@ test("Media uses cached slider geometry and removes color probes when resolution
   assert.throws(() => throwing.resolveColorInContext({ shadowRoot: shadow }, "#123456"), /style failed/);
   assert.equal(added, 1); assert.equal(removed, 1);
 });
+
+
+test("Media shared stub chooses actual HA entities, fallback names and standard presentation",()=>{
+ const hass={states:{'media_player.room':{entity_id:'media_player.room',state:'playing',attributes:{friendly_name:'Living'}}}};
+ assert.deepEqual(plain(api.getMediaPlayerStubConfig(hass)),{players:[{entity:'media_player.room',label:'Living'}],layout:{mode:'standard',fixed:false,reserve_space:false}});assert.deepEqual(plain(api.getMediaPlayerStubConfig()),{players:[{entity:'media_player.spotify',label:'Spotify'}],layout:{mode:'standard',fixed:false,reserve_space:false}});
+});

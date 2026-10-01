@@ -1,55 +1,47 @@
-// @ts-nocheck
-/* Visual editor extracted from the legacy media-player source. */
 import {
-  CARD_TAG,
-  EDITOR_TAG,
   INVALID_EDITOR_VALUE,
 } from "./media-player-constants";
 import { DEFAULT_CONFIG, normalizeConfig } from "./media-player-config";
-import { loadNodaliaMediaPlayer } from "./media-player-card";
-import { clamp, deepClone, deleteByPath, escapeHtml, fireEvent, isObject, setByPath } from "./media-player-runtime";
+import { deepClone, deleteByPath, escapeHtml, fireEvent, isObject, setByPath } from "./media-player-runtime";
 import {
-  getStubEntityId,
-  getStubFriendlyName,
+  getMediaPlayerStubConfig,
   compactConfig,
   formatEditorJsonValue,
   parseEditorJsonObject,
   getByPath,
   arrayFromCsv,
-  escapeSelectorValue,
-  resolveEditorColorValue,
-  resolveColorInContext,
-  parseRgbColor,
-  getRelativeLuminance,
-  formatEditorHexChannel,
   formatEditorColorFromHex,
   getEditorColorModel,
   getEditorColorFallbackValue,
   moveItem,
-  getRangeValueFromClientX,
-  getSliderDragGeometry,
-  getRangeValueFromGeometry,
-  formatDuration,
-  normalizeTextKey,
-  getRenderSignatureRuntime,
-  sanitizeMediaArtworkUrl,
-  appendQueryParam,
-  isUnavailableState,
 } from "./media-player-helpers";
 
-let _lazyNodaliaMediaPlayerEditor;
-export function loadNodaliaMediaPlayerEditor() {
+import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
+import type { EditorFocusState } from "../../core/types/nodalia-utils";
+import { editorControlValue, isNativeEditorInput, type NativeEditorInput } from "../../shared/editor-controls";
+import { parseFiniteNumericValue } from "../../shared/numeric-values";
+interface FieldOptions { fullWidth?: boolean; type?: string; valueType?: string; placeholder?: string; fallbackValue?: string; multiline?: boolean; rows?: number; domains?: string[]; }
+type Player = ReturnType<typeof normalizeConfig>["players"][number];
+let _lazyNodaliaMediaPlayerEditor: CustomElementConstructor | undefined;
+export function loadNodaliaMediaPlayerEditor(): CustomElementConstructor {
   if (_lazyNodaliaMediaPlayerEditor) {
     return _lazyNodaliaMediaPlayerEditor;
   }
 class NodaliaMediaPlayerEditor extends HTMLElement {
+  private _config!: ReturnType<typeof normalizeConfig>;
+  private _hass!: HomeAssistant | null;
+  private _entityOptionsSignature!: string;
+  private _showStyleSection!: boolean;
+  private _showAnimationSection!: boolean;
+  private _showTapActionsSection!: boolean;
+  private _pendingEditorControlTags!: Set<string>;
   constructor() {
     super();
     this._nodaliaConstruct();
   }
 
   _nodaliaConstruct() {this.attachShadow({ mode: "open" });
-    this._config = normalizeConfig(loadNodaliaMediaPlayer().getStubConfig());
+    this._config = normalizeConfig(getMediaPlayerStubConfig());
     this._hass = null;
     this._entityOptionsSignature = "";
     this._showStyleSection = false;
@@ -84,7 +76,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
   }
 
-  set hass(hass) {
+  set hass(hass: HomeAssistant) {
     const nextSignature = this._getEntityOptionsSignature(hass);
     const shouldRender =
       !this._hass ||
@@ -103,7 +95,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     this._restoreFocusState(focusState);
   }
 
-  setConfig(config) {
+  setConfig(config: unknown) {
     const focusState = this._captureFocusState();
     this._config = normalizeConfig(config || {});
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
@@ -111,7 +103,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     this._restoreFocusState(focusState);
   }
 
-  _watchEditorControlTag(tagName) {
+  _watchEditorControlTag(tagName: string) {
     if (!tagName || this._pendingEditorControlTags.has(tagName)) {
       return;
     }
@@ -148,11 +140,11 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     return window.NodaliaUtils.captureEditorFocusState(this);
   }
 
-  _getEntityOptionsSignature(hass = this._hass) {
-    return window.NodaliaUtils.editorFilteredStatesSignature(hass, this._config?.language, id => id.startsWith("media_player."));
+  _getEntityOptionsSignature(hass: HomeAssistant | null = this._hass) {
+    return window.NodaliaUtils.editorFilteredStatesSignature?.(hass, this._config?.language, id => id.startsWith("media_player.")) ?? "";
   }
 
-  _getEntityOptions(field = "players.0.entity", domains = []) {
+  _getEntityOptions(field = "players.0.entity", domains: string[] = []) {
     const normalizedDomains = Array.isArray(domains)
       ? domains.map(domain => String(domain || "").trim()).filter(Boolean)
       : [];
@@ -189,13 +181,13 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     return options;
   }
 
-  _restoreFocusState(focusState) {
+  _restoreFocusState(focusState: EditorFocusState | null) {
     window.NodaliaUtils.restoreEditorFocusState(this, focusState);
   }
 
   _emitConfig() {
     const focusState = this._captureFocusState();
-    const nextConfig = deepClone(this._config);
+    const nextConfig: Record<string, unknown> = deepClone(this._config);
 
     if (!Array.isArray(nextConfig.players)) {
       nextConfig.players = [];
@@ -206,12 +198,23 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     this._render();
     this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
-      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
+      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults?.(nextConfig, DEFAULT_CONFIG) ?? {}),
     });
   }
 
-  _setFieldValue(path, value) {
+  _setFieldValue(path: string, value: unknown) {
     const normalizedPath = String(path || "").trim();
+    const parts = normalizedPath.split(".");
+    if (parts[0] === "players" && parts.length > 1) {
+      const index = parseFiniteNumericValue(parts[1]);
+      if (index === null || !Number.isInteger(index) || index < 0 || index >= this._config.players.length) return;
+      const field = parts[2] || "";
+      const actionFields = ["tap_action", "power_action_off", "power_action_on", "power_action_unavailable"];
+      const isActionField = actionFields.includes(field) && parts.length === 4
+        && ["action", "entity", "navigation_path", "url", "new_tab", "service", "service_data"].includes(parts[3] || "");
+      const isPlayerField = parts.length === 3 && ["entity", "icon", "label", "title", "subtitle", "tv_mode", "show_source_controls", "show", "max_sources", "browse_path", "image", "show_states"].includes(field);
+      if (!isActionField && !isPlayerField) return;
+    }
     const isEntityField = normalizedPath === "entity" || normalizedPath.endsWith(".entity");
 
     if (normalizedPath === "artwork.blur_gradient") {
@@ -236,18 +239,22 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
     if (value === undefined || value === null || value === "") {
       deleteByPath(this._config, normalizedPath);
+      if (parts[0] === "players" && parts.length === 4) {
+        const alias = parts[3] === "service_data" ? "data" : parts[3] === "url" ? "url_path" : "";
+        if (alias) deleteByPath(this._config, [...parts.slice(0, 3), alias].join("."));
+      }
       return;
     }
 
     setByPath(this._config, normalizedPath, value);
   }
 
-  _readFieldValue(input) {
+  _readFieldValue(input: NativeEditorInput) {
     const valueType = input.dataset.valueType || "string";
 
     switch (valueType) {
       case "boolean":
-        return Boolean(input.checked);
+        return input instanceof HTMLInputElement && input.checked;
       case "number": {
         const trimmed = String(input.value || "").trim();
         if (!trimmed) {
@@ -290,10 +297,10 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     }
   }
 
-  _onShadowInput(event) {
+  _onShadowInput(event: Event) {
     const input = event
       .composedPath()
-      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+      .find(isNativeEditorInput);
 
     if (!input?.dataset?.field) {
       return;
@@ -312,10 +319,10 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     }
   }
 
-  _onShadowValueChanged(event) {
+  _onShadowValueChanged(event: Event) {
     const control = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.field);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.field));
 
     if (!control?.dataset?.field) {
       return;
@@ -323,9 +330,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
     event.stopPropagation();
 
-    const nextValue = typeof event.detail?.value === "string"
-      ? event.detail.value
-      : control.value;
+    const nextValue = editorControlValue(event, control);
     if (typeof control.dataset?.value === "string") {
       control.dataset.value = String(nextValue || "");
     }
@@ -339,10 +344,10 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     this._emitConfig();
   }
 
-  _onShadowClick(event) {
+  _onShadowClick(event: Event) {
     const toggleButton = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.editorToggle));
 
     if (toggleButton) {
       event.preventDefault();
@@ -369,7 +374,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
 
     const button = event
       .composedPath()
-      .find(node => node instanceof HTMLButtonElement && node.dataset?.action);
+      .find((node): node is HTMLButtonElement => node instanceof HTMLButtonElement && Boolean(node.dataset.action));
 
     if (!button) {
       return;
@@ -379,7 +384,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     event.stopPropagation();
 
     const action = button.dataset.action;
-    const index = Number(button.dataset.index);
+    const index = parseFiniteNumericValue(button.dataset.index) ?? -1;
 
     if (action === "add-player") {
       this._config.players = Array.isArray(this._config.players) ? this._config.players : [];
@@ -425,15 +430,15 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     }
   }
 
-  _editorLabel(s) {
+  _editorLabel(s: string) {
     if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
       return s;
     }
-    const hass = this._hass ?? this.hass;
+    const hass = this._hass;
     return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
   }
 
-  _renderTextField(label, field, value, options = {}) {
+  _renderTextField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const tag = options.multiline ? "textarea" : "input";
     const inputType = options.type || "text";
@@ -466,7 +471,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     `;
   }
 
-  _renderColorField(label, field, value, options = {}) {
+  _renderColorField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const tColorCustom = this._editorLabel("ed.weather.custom_color");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
@@ -495,8 +500,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     `;
   }
 
-  _renderTextareaField(label, field, value, options = {}) {
-    const tLabel = this._editorLabel(label);
+  _renderTextareaField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     return this._renderTextField(label, field, value, {
       ...options,
       multiline: true,
@@ -504,7 +508,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     });
   }
 
-  _renderCheckboxField(label, field, checked) {
+  _renderCheckboxField(label: string, field: string, checked: boolean) {
     const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
@@ -520,7 +524,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     `;
   }
 
-  _renderSelectField(label, field, value, options, valueType = "string") {
+  _renderSelectField(label: string, field: string, value: unknown, options: { value: unknown; label: string }[], valueType = "string") {
     const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field">
@@ -545,7 +549,8 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     `;
   }
 
-  _renderActionConfigFields(titleKey, path, action = {}) {
+  _renderActionConfigFields(titleKey: string, path: string, rawAction: unknown = {}) {
+    const action = isObject(rawAction) ? rawAction : {};
     return `
       <div class="player-editor-subgroup">
         <div class="player-editor-subgroup__title">${escapeHtml(this._editorLabel(titleKey))}</div>
@@ -586,7 +591,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     `;
   }
 
-  _renderEntityField(label, field, value, options = {}) {
+  _renderEntityField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const domains = Array.isArray(options.domains)
@@ -607,7 +612,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     `;
   }
 
-  _renderIconPickerField(label, field, value, options = {}) {
+  _renderIconPickerField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
@@ -624,7 +629,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     `;
   }
 
-  _renderPlayerCard(player, index) {
+  _renderPlayerCard(player: Player, index: number) {
     const phShort = this._editorLabel("ed.media_player.name_placeholder");
     return `
       <div class="player-editor-card">
@@ -709,7 +714,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     `;
   }
 
-  _mountEntityPicker(host) {
+  _mountEntityPicker(host: HTMLElement) {
     if (!(host instanceof HTMLElement)) {
       return;
     }
@@ -721,25 +726,25 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
       .split(",")
       .map(domain => domain.trim())
       .filter(Boolean);
-    let control = null;
+    let control: HTMLElement;
 
     if (customElements.get("ha-entity-picker")) {
       control = document.createElement("ha-entity-picker");
       if (allowedDomains.length) {
-        control.includeDomains = allowedDomains;
-        control.entityFilter = stateObj => allowedDomains.some(domain => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+        Object.assign(control, { includeDomains: allowedDomains });
+        Object.assign(control, { entityFilter: (stateObj: HassEntity) => allowedDomains.some(domain => String(stateObj?.entity_id || "").startsWith(`${domain}.`)) });
       }
-      control.allowCustomEntity = true;
+      Object.assign(control, { allowCustomEntity: true });
       if (placeholder) {
         control.setAttribute("placeholder", placeholder);
       }
     } else if (customElements.get("ha-selector")) {
       control = document.createElement("ha-selector");
-      control.selector = {
+      Object.assign(control, { selector: {
         entity: allowedDomains.length === 1
           ? { domain: allowedDomains[0] }
           : {},
-      };
+      } });
     } else {
       control = document.createElement("select");
       const emptyOption = document.createElement("option");
@@ -759,13 +764,9 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     control.dataset.field = field;
     control.dataset.value = nextValue;
 
-    if ("hass" in control) {
-      control.hass = this._hass;
-    }
+    if ("hass" in control) Object.assign(control, { hass: this._hass });
 
-    if ("value" in control) {
-      control.value = nextValue;
-    }
+    if ("value" in control) Object.assign(control, { value: nextValue });
 
     if (control.tagName !== "SELECT") {
       control.addEventListener("value-changed", this._onShadowValueChanged);
@@ -774,7 +775,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     host.replaceChildren(control);
   }
 
-  _mountIconPicker(host) {
+  _mountIconPicker(host: HTMLElement) {
     if (!(host instanceof HTMLElement)) {
       return;
     }
@@ -782,7 +783,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     const field = host.dataset.field || "players.0.icon";
     const nextValue = host.dataset.value || "";
     const placeholder = host.dataset.placeholder || "";
-    let control = null;
+    let control: HTMLElement;
 
     if (customElements.get("ha-icon-picker")) {
       control = document.createElement("ha-icon-picker");
@@ -791,13 +792,14 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
       }
     } else if (customElements.get("ha-selector")) {
       control = document.createElement("ha-selector");
-      control.selector = {
+      Object.assign(control, { selector: {
         icon: {},
-      };
+      } });
     } else {
-      control = document.createElement("input");
-      control.type = "text";
-      control.placeholder = placeholder;
+      const input = document.createElement("input");
+      input.type = "text";
+      input.placeholder = placeholder;
+      control = input;
       control.addEventListener("input", this._onShadowInput);
       control.addEventListener("change", this._onShadowInput);
     }
@@ -805,13 +807,9 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     control.dataset.field = field;
     control.dataset.value = nextValue;
 
-    if ("hass" in control) {
-      control.hass = this._hass;
-    }
+    if ("hass" in control) Object.assign(control, { hass: this._hass });
 
-    if ("value" in control) {
-      control.value = nextValue;
-    }
+    if ("value" in control) Object.assign(control, { value: nextValue });
 
     if (control.tagName !== "INPUT") {
       control.addEventListener("value-changed", this._onShadowValueChanged);
@@ -826,7 +824,9 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "medium";
+    const haptics = isObject(config.haptics) ? config.haptics : {};
+    const animations = isObject(config.animations) ? config.animations : DEFAULT_CONFIG.animations;
+    const hapticStyle = haptics.style || "medium";
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -1338,8 +1338,8 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.media_player.haptics_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("ed.person.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.person.fallback_vibrate", "haptics.fallback_vibrate", haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
               "ed.vacuum.haptic_style",
               "haptics.style",
@@ -1377,14 +1377,14 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
             this._showAnimationSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", config.animations.enabled !== false)}
-                  ${this._renderTextField("ed.media_player.panel_tv_ms", "animations.panel_duration", config.animations.panel_duration, {
+                  ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", animations.enabled !== false)}
+                  ${this._renderTextField("ed.media_player.panel_tv_ms", "animations.panel_duration", animations.panel_duration, {
                     type: "number",
                   })}
-                  ${this._renderTextField("ed.media_player.browser_duration_ms", "animations.browser_duration", config.animations.browser_duration, {
+                  ${this._renderTextField("ed.media_player.browser_duration_ms", "animations.browser_duration", animations.browser_duration, {
                     type: "number",
                   })}
-                  ${this._renderTextField("ed.media_player.button_bounce_ms", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
+                  ${this._renderTextField("ed.media_player.button_bounce_ms", "animations.button_bounce_duration", animations.button_bounce_duration, {
                     type: "number",
                   })}
                 </div>
@@ -1448,11 +1448,11 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     `;
 
     this.shadowRoot
-      .querySelectorAll('[data-mounted-control="entity-picker"]')
+      .querySelectorAll<HTMLElement>('[data-mounted-control="entity-picker"]')
       .forEach(host => this._mountEntityPicker(host));
 
     this.shadowRoot
-      .querySelectorAll('[data-mounted-control="icon-picker"]')
+      .querySelectorAll<HTMLElement>('[data-mounted-control="icon-picker"]')
       .forEach(host => this._mountIconPicker(host));
 
     this._ensureEditorControlsReady();

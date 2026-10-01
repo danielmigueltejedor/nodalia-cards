@@ -4,6 +4,7 @@ import type { HassEntity, HomeAssistant } from "../../core/types/home-assistant"
 import { compactConfig as compactEditorValues } from "../../shared/config-values";
 import { appendUrlQueryParam } from "../../shared/url-query";
 import { renderSignature } from "../../shared/render-signature";
+import { getStubEntityId } from "../../shared/editor-entity-helpers";
 export { getStubEntityId } from "../../shared/editor-entity-helpers";
 export { moveItem } from "../../shared/editor-lists";
 export { getRangeValueFromClientX, getSliderDragGeometry, getRangeValueFromGeometry } from "../../shared/device-control-geometry";
@@ -156,3 +157,8 @@ export function isUnavailableState(state: HassEntity | null | undefined) {
   return normalizeTextKey(state?.state) === "unavailable";
 }
 
+
+export function getMediaPlayerStubConfig(hass: HomeAssistant | null | undefined = null, entities: unknown = [], entitiesFallback: unknown = []) {
+  const entityId = getStubEntityId(hass, ["media_player"], entities, entitiesFallback);
+  return { players: [{ entity: entityId || "media_player.spotify", label: entityId ? getStubFriendlyName(hass, entityId) : "Spotify" }], layout: { mode: "standard", fixed: false, reserve_space: false } };
+}

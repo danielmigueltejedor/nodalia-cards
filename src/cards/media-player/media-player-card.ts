@@ -30,7 +30,7 @@ import {
 } from "./media-player-layout";
 import { clamp, escapeHtml, fireEvent, isObject } from "./media-player-runtime";
 import {
-  getStubEntityId,
+  getMediaPlayerStubConfig,
   getStubFriendlyName,
   compactConfig,
   formatEditorJsonValue,
@@ -69,20 +69,7 @@ class NodaliaMediaPlayer extends HTMLElement {
   }
 
   static getStubConfig(hass, entities = [], entitiesFallback = []) {
-    const entityId = getStubEntityId(hass, ["media_player"], entities, entitiesFallback);
-    return {
-      players: [
-        {
-          entity: entityId || "media_player.spotify",
-          label: entityId ? getStubFriendlyName(hass, entityId) : "Spotify",
-        },
-      ],
-      layout: {
-        mode: "standard",
-        fixed: false,
-        reserve_space: false,
-      },
-    };
+    return getMediaPlayerStubConfig(hass, entities, entitiesFallback);
   }
 
   static getEntitySuggestion(hass, entityId) {

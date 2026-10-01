@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+- Check Media Player visual editor boundaries, preserve paired player actions and JSON validation, clear legacy action aliases when fields are emptied and share typed stub generation with the view.
+
 - Check Graph visual editor boundaries, preserve draft/legacy series and paired metadata, bound row edits and remove its unregistered historical editor.
 
 - Check Entity visual editor boundaries, expose missing double-tap details, keep YAML quick-service data as editable JSON and bound row changes while preserving paired metadata, missing entities and focus.
