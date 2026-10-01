@@ -12,6 +12,7 @@
   "ed.advance_vacuum.custom_menu_label": "Ετικέτα δεξιού μενού",
   "ed.advance_vacuum.general_section_hint": "Οντότητα ρομπότ και κύρια πηγή χάρτη. Αν το κείμενο δεν ταιριάζει με τη γλώσσα του προφίλ, επιλέξτε Αυτόματο στη γλώσσα κάρτας (παλιές ρυθμίσεις μπορεί να έχουν αποθηκευμένα ισπανικά).",
   "ed.advance_vacuum.goto_mode": "Λειτουργία μετάβασης σε σημείο",
+  "ed.advance_vacuum.invalid_json_array": "Εισαγάγετε έναν έγκυρο πίνακα JSON.",
   "ed.advance_vacuum.lang_auto_ha_profile": "Αυτόματο (προφίλ Home Assistant)",
   "ed.advance_vacuum.map_label_size": "Μέγεθος κειμένου δεικτών",
   "ed.advance_vacuum.map_locked": "Κλειδωμένος χάρτης",

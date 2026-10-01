@@ -12,6 +12,7 @@
   "ed.advance_vacuum.custom_menu_label": "Подпись правого меню",
   "ed.advance_vacuum.general_section_hint": "Сущность робота и основной источник карты. Если текст не совпадает с языком профиля, выберите «Авто» в языке карты (в старых конфигурациях мог быть сохранён испанский).",
   "ed.advance_vacuum.goto_mode": "Режим «точка на карте»",
+  "ed.advance_vacuum.invalid_json_array": "Введите корректный массив JSON.",
   "ed.advance_vacuum.lang_auto_ha_profile": "Авто (профиль Home Assistant)",
   "ed.advance_vacuum.map_label_size": "Размер подписей маркеров",
   "ed.advance_vacuum.map_locked": "Карта заблокирована",

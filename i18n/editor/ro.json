@@ -12,6 +12,7 @@
   "ed.advance_vacuum.custom_menu_label": "Etichetă meniu dreapta",
   "ed.advance_vacuum.general_section_hint": "Entitatea robotului și sursa principală a hărții. Dacă textul nu se potrivește cu limba profilului, alegeți Automat la limba cardului (configurările vechi pot avea spaniolă salvată).",
   "ed.advance_vacuum.goto_mode": "Mod mergi la punct",
+  "ed.advance_vacuum.invalid_json_array": "Introduceți o listă JSON validă.",
   "ed.advance_vacuum.lang_auto_ha_profile": "Automat (profil Home Assistant)",
   "ed.advance_vacuum.map_label_size": "Dimensiune text marcatori",
   "ed.advance_vacuum.map_locked": "Hartă blocată",

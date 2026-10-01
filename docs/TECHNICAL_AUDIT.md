@@ -1374,3 +1374,23 @@ outputs outside the restored action widths pass. Full local suite: 545 passed,
 one existing skip. The initial toggle fixture targeted the hidden native input;
 use its visible label, exercising the real switch interaction. Remaining
 unchecked modules: 17. Hold publication until the complete source/runtime migration.
+
+## Advance Vacuum editor findings — 2026-10-01
+
+The unchecked editor lost uncommitted text/JSON on HA updates and accepted JSON
+objects or primitives where menu/routine lists were required. Chromium dispatches
+a change from focused native controls during DOM replacement; that teardown
+could commit an obsolete value and overwrite the current draft.
+
+Check actual HA, native events, DOM, focus, config and picker contracts. Preserve
+text/JSON drafts without emitting every keystroke, and guard events during
+control replacement. Validate JSON arrays with translated feedback in all 12
+locales, retaining the last valid config and invalid draft across updates. Keep
+paired command metadata, false/zero data, missing entities, native/HA selectors,
+explicit zero/cleared animation defaults, translucent styles and YAML extensions.
+Clear drafts across robots/disconnection. Remove five unused historical datalists
+and their dead population/attachment paths; the actual selectors remain intact.
+
+All 749 unit tests, nine targeted browser cases and 1,400 equivalent editor HTML
+outputs outside the removed unused datalists pass. Full local suite: 554 passed,
+one existing skip. Remaining unchecked modules: 16. Publication remains held until the complete source/runtime migration.

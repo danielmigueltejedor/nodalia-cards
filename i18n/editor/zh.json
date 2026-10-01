@@ -12,6 +12,7 @@
   "ed.advance_vacuum.custom_menu_label": "右侧菜单标签",
   "ed.advance_vacuum.general_section_hint": "扫地机实体与主地图来源。若文案与配置文件语言不一致，请在卡片语言中选择“自动”（旧配置可能保存为西班牙语）。",
   "ed.advance_vacuum.goto_mode": "定点模式",
+  "ed.advance_vacuum.invalid_json_array": "请输入有效的 JSON 数组。",
   "ed.advance_vacuum.lang_auto_ha_profile": "自动（跟随 Home Assistant 配置文件）",
   "ed.advance_vacuum.map_label_size": "标记文字大小",
   "ed.advance_vacuum.map_locked": "锁定地图",

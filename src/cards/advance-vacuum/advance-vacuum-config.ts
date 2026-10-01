@@ -1,3 +1,4 @@
+import { normalizeControlStyles } from "../../shared/control-config";
 import { isObject, mergeConfig } from "./advance-vacuum-runtime";
 import { normalizeCustomMenuItems, normalizeRoutineItems } from "./advance-vacuum-helpers";
 
@@ -27,8 +28,10 @@ export function normalizeConfig(rawConfig: unknown = {}) {
     ...(isObject(config.security) ? config.security : {}),
     allow_webhooks_for_non_admin: config.security && isObject(config.security) ? config.security.allow_webhooks_for_non_admin === true : DEFAULT_CONFIG.security.allow_webhooks_for_non_admin,
   };
-  return {
+  const fields = {
     ...config,
+    language: typeof config.language === "string" ? config.language : "auto",
+    styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles),
     entity: String(config.entity ?? "").trim(),
     name: String(config.name ?? "").trim(),
     custom_menu, room_tracking, security,
@@ -37,4 +40,6 @@ export function normalizeConfig(rawConfig: unknown = {}) {
     routines: normalizeRoutineItems(config.routines),
     shared_cleaning_session_webhook: String(config.shared_cleaning_session_webhook ?? "").trim(),
   };
+  const normalized: typeof fields & Record<string, unknown> = fields;
+  return normalized;
 }

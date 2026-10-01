@@ -73,3 +73,15 @@ Three valid calibration correspondences create an affine transform; four or more
 - [Home Assistant Matter vacuum implementation](https://github.com/home-assistant/core/blob/dev/homeassistant/components/matter/vacuum.py)
 - [Dreame Vacuum integration](https://github.com/Tasshack/dreame-vacuum)
 - [Valetudo MQTT integration](https://valetudo.cloud/pages/integrations/mqtt/)
+
+## Visual editor drafts and validation
+
+Text and unfinished JSON remain editable during Home Assistant updates without
+emitting a configuration on every keystroke. Menus and routines require JSON
+lists; invalid syntax or another JSON shape shows translated validation and
+retains the last valid configuration. Empty fields remove their override.
+Explicit zero durations remain valid, and translucent CSS colours retain alpha.
+
+Missing configured entities remain selectable. Robot, map and helper fields use
+the shared Home Assistant pickers with native fallbacks. Changing robots or
+closing the editor releases unfinished drafts.

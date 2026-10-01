@@ -12,6 +12,7 @@
   "ed.advance_vacuum.custom_menu_label": "Beschriftung rechtes Menü",
   "ed.advance_vacuum.general_section_hint": "Staubsauger-Entität und primäre Kartenquelle. Wenn Texte nicht zur Profilsprache passen, wählen Sie unter Kartensprache „Automatisch“ (ältere Konfigurationen können Spanisch gespeichert haben).",
   "ed.advance_vacuum.goto_mode": "Punkt-zu-Punkt-Modus",
+  "ed.advance_vacuum.invalid_json_array": "Gib ein gültiges JSON-Array ein.",
   "ed.advance_vacuum.lang_auto_ha_profile": "Automatisch (Home-Assistant-Profil)",
   "ed.advance_vacuum.map_label_size": "Beschriftungsgröße",
   "ed.advance_vacuum.map_locked": "Karte gesperrt",
