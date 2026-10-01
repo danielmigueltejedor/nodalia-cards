@@ -1,11 +1,11 @@
 export default {
   "pkgVersion": "2.3.0-alpha.49",
-  "contentSha256_12": "c6112406472e",
+  "contentSha256_12": "12e3df1cd4ba",
   "file": "nodalia-cards.js",
   "loaderFile": "nodalia-cards.js",
   "hacsFile": "nodalia-cards.js",
   "editorSha256_12": "f2b1c45a416a"
 };
 export const pkgVersion = "2.3.0-alpha.49";
-export const contentSha256_12 = "c6112406472e";
+export const contentSha256_12 = "12e3df1cd4ba";
 export const file = "nodalia-cards.js";

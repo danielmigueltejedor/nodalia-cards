@@ -88,7 +88,7 @@ Every card is registered with the `custom:nodalia-…` prefix. The complete set 
 - [`custom:nodalia-weather-card`](docs/cards/weather-card.md)
 - [`custom:nodalia-calendar-card`](docs/cards/calendar-card.md)
 - `custom:nodalia-notifications-card`
-- `custom:nodalia-vacuum-card`
+- [`custom:nodalia-vacuum-card`](docs/cards/vacuum-card.md)
 - `custom:nodalia-news-card`
 - [`custom:nodalia-camera-card`](docs/cards/camera-card.md)
 - `custom:nodalia-room-summary-card`

@@ -1194,3 +1194,24 @@ browser cases and the full local suite (464 passed, one existing skip) pass.
 The first target run exposed the production text-draft loss above; the corrected
 input handling resolves all three cases. Remaining unchecked modules: 25.
 Hold 3.0.0-alpha.1 until complete migration, including handwritten shared runtimes.
+
+## Vacuum editor findings — 2026-10-01
+
+The editor suppressed checking over native/HA controls, device registry matching,
+mode lists and nested settings. Malformed registry entries and null haptic/animation
+groups were read directly.
+
+The editor now passes strict checking and typed lint with actual HA/DOM/config/
+focus/picker contracts. Device matching guards registry rows and preserves current
+robot suction/mop discovery and explicit helpers. Mode visibility updates only its
+two supported lists. Missing selected robots/helpers, presets, separate navigation
+actions, root YAML extensions, false/zero values, focus and translucent styles
+survive edits. Malformed settings/events are guarded and clearing durations
+restores existing defaults. Automatic language is an explicit removable default.
+Three verified unused imports and a redundant setter-only property read were removed;
+card documentation includes translated/truncated status chips.
+
+1,400 valid editor HTML outputs match main. All 746 unit tests, nine specific
+browser cases and the full local suite (473 passed, one existing skip) pass.
+Remaining unchecked modules: 24. Hold 3.0.0-alpha.1 until complete migration,
+including handwritten shared runtimes.

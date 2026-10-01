@@ -126,6 +126,7 @@
 
   // src/cards/vacuum/vacuum-config.ts
   var DEFAULT_CONFIG = {
+    language: "auto",
     entity: "",
     name: "",
     icon: "",
@@ -239,8 +240,12 @@
     config.show_entity_picture = config.show_entity_picture === true;
     const security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? { ...DEFAULT_CONFIG.security, ...isObject(config.security) ? config.security : {} };
     security.strict_service_actions = security.strict_service_actions === true;
-    return {
-      ...config,
+    const fields = {
+      entity: typeof config.entity === "string" ? config.entity : "",
+      language: typeof config.language === "string" ? config.language : "auto",
+      suction_select_entity: typeof config.suction_select_entity === "string" ? config.suction_select_entity : "",
+      mop_select_entity: typeof config.mop_select_entity === "string" ? config.mop_select_entity : "",
+      error_entity: typeof config.error_entity === "string" ? config.error_entity : "",
       fan_presets: fanPresets,
       hidden_suction_modes: hiddenSuctionModes,
       hidden_mop_modes: hiddenMopModes,
@@ -253,6 +258,8 @@
       security,
       styles: getSafeStyles(config.styles)
     };
+    const normalized = { ...config, ...fields };
+    return normalized;
   }
 
   // src/shared/editor-entity-helpers.ts
@@ -3113,6 +3120,16 @@
     return NodaliaVacuumCard;
   }
 
+  // src/shared/editor-controls.ts
+  function isNativeEditorInput(node) {
+    return node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement;
+  }
+  function editorControlValue(event, control) {
+    const detail = event instanceof CustomEvent ? event.detail : void 0;
+    if (detail && typeof detail === "object" && "value" in detail && typeof detail.value === "string") return detail.value;
+    return "value" in control ? control.value : void 0;
+  }
+
   // src/cards/vacuum/vacuum-editor.ts
   var _lazyNodaliaVacuumCardEditor;
   function loadNodaliaVacuumCardEditor() {
@@ -3201,11 +3218,11 @@
         this._watchEditorControlTag("ha-icon-picker");
       }
       _getEntityOptionsSignature(hass = this._hass) {
-        return window.NodaliaUtils.editorFilteredStatesSignature(
+        return window.NodaliaUtils.editorFilteredStatesSignature?.(
           hass,
           this._config?.language,
           (id) => id.startsWith("vacuum.") || id.startsWith("select.") || id.startsWith("sensor.")
-        );
+        ) ?? "";
       }
       _buildEntityOptions(filterFn, currentValue = "") {
         const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
@@ -3257,7 +3274,7 @@
         this._render();
         this._restoreFocusState(focusState);
         fireEvent(this, "config-changed", {
-          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {})
+          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults?.(nextConfig, DEFAULT_CONFIG) ?? {})
         });
       }
       _setEditorConfig() {
@@ -3274,7 +3291,7 @@
         const valueType = input.dataset.valueType || "string";
         switch (valueType) {
           case "boolean":
-            return Boolean(input.checked);
+            return input instanceof HTMLInputElement && input.checked;
           case "color":
             return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
           case "csv":
@@ -3284,11 +3301,11 @@
         }
       }
       _onShadowInput(event) {
-        const input = event.composedPath().find((node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+        const input = event.composedPath().find(isNativeEditorInput);
         if (!input?.dataset?.field) {
           if (input?.dataset?.modeListField && input.dataset.modeValue !== void 0) {
             event.stopPropagation();
-            this._setModeVisibility(input.dataset.modeListField, input.dataset.modeValue, input.checked);
+            this._setModeVisibility(input.dataset.modeListField, input.dataset.modeValue, input instanceof HTMLInputElement && input.checked);
             this._setEditorConfig();
             if (event.type === "change") {
               this._emitConfig();
@@ -3305,12 +3322,12 @@
         }
       }
       _onShadowValueChanged(event) {
-        const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+        const control = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.field));
         if (!control?.dataset?.field) {
           return;
         }
         event.stopPropagation();
-        const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+        const nextValue = editorControlValue(event, control);
         if (typeof control.dataset?.value === "string") {
           control.dataset.value = String(nextValue || "");
         }
@@ -3324,7 +3341,7 @@
         this._emitConfig();
       }
       _onShadowClick(event) {
-        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
+        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.editorToggle));
         if (!toggleButton) {
           return;
         }
@@ -3349,7 +3366,7 @@
         if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
           return s;
         }
-        const hass = this._hass ?? this.hass;
+        const hass = this._hass;
         return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
       }
       _renderTextField(label, field, value, options = {}) {
@@ -3430,14 +3447,15 @@
         }
         const patterns = kind === "mop" ? ["mop", "water", "water_level", "water_volume", "scrub"] : ["fan_speed", "fan_power", "suction", "cleaning_mode"];
         const states = this._hass.states;
-        const registry = this._hass.entities || {};
+        const registry = isObject(this._hass.entities) ? this._hass.entities : {};
         const vacuumObjectIds = listVacuumObjectIds(states);
-        const vacuumDeviceId = registry[this._config.entity]?.device_id || "";
+        const vacuumEntry = registry[this._config.entity];
+        const vacuumDeviceId = isObject(vacuumEntry) && typeof vacuumEntry.device_id === "string" ? vacuumEntry.device_id : "";
         const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
         const candidates = Object.keys(states).filter((entityId) => entityId.startsWith("select.")).filter((entityId) => isHelperRelatedToConfiguredVacuum({
           candidateId: entityId,
           searchable: states[entityId]?.attributes?.friendly_name || "",
-          isSameDevice: Boolean(vacuumDeviceId && registry[entityId]?.device_id === vacuumDeviceId),
+          isSameDevice: Boolean(vacuumDeviceId && isObject(registry[entityId]) && registry[entityId].device_id === vacuumDeviceId),
           objectId,
           vacuumObjectIds
         })).filter((entityId) => patterns.some((pattern) => entityId.includes(pattern))).sort((left, right) => left.localeCompare(right, sortLoc));
@@ -3481,13 +3499,15 @@
         });
       }
       _getHiddenModeList(field) {
-        return Array.isArray(this._config?.[field]) ? this._config[field].map((item) => String(item || "").trim()).filter(Boolean) : [];
+        const values = this._config[field];
+        return Array.isArray(values) ? values.map((item) => String(item || "").trim()).filter(Boolean) : [];
       }
       _isModeVisible(field, value) {
         const expectedKey = normalizeTextKey(value);
         return !this._getHiddenModeList(field).some((item) => normalizeTextKey(item) === expectedKey);
       }
       _setModeVisibility(field, value, visible) {
+        if (!["hidden_suction_modes", "hidden_mop_modes"].includes(field)) return;
         const rawValue = String(value || "").trim();
         if (!rawValue) {
           return;
@@ -3503,7 +3523,7 @@
         deleteByPath(this._config, field);
       }
       _renderModeVisibilityField(field, modeValue, kind) {
-        const translatedLabel = humanizeModeLabel(modeValue, kind, this._hass ?? this.hass, this._config?.language ?? "auto");
+        const translatedLabel = humanizeModeLabel(modeValue, kind, this._hass, this._config?.language ?? "auto");
         const showRawValue = normalizeTextKey(translatedLabel) !== normalizeTextKey(modeValue);
         const label = showRawValue ? `${translatedLabel} (${modeValue})` : translatedLabel;
         return `
@@ -3575,21 +3595,21 @@
         const nextValue = host.dataset.value || "";
         const placeholder = host.dataset.placeholder || pickerOptions.placeholder || "";
         const domains = pickerOptions.includeDomains || [];
-        let control = null;
+        let control;
         if (customElements.get("ha-entity-picker")) {
           control = document.createElement("ha-entity-picker");
           if (domains.length) {
-            control.includeDomains = domains;
-            control.entityFilter = pickerOptions.entityFilter || ((stateObj) => domains.some((d) => String(stateObj?.entity_id || "").startsWith(`${d}.`)));
+            Object.assign(control, { includeDomains: domains });
+            Object.assign(control, { entityFilter: pickerOptions.entityFilter || ((stateObj) => domains.some((d) => String(stateObj.entity_id || "").startsWith(`${d}.`))) });
           }
-          control.allowCustomEntity = true;
+          Object.assign(control, { allowCustomEntity: true });
           if (placeholder) {
             control.setAttribute("placeholder", placeholder);
           }
         } else if (customElements.get("ha-selector")) {
           control = document.createElement("ha-selector");
           const entitySelector = domains.length === 1 ? { domain: domains[0] } : domains.length > 1 ? { domain: domains } : {};
-          control.selector = { entity: entitySelector };
+          Object.assign(control, { selector: { entity: entitySelector } });
           if (placeholder) {
             control.setAttribute("label", placeholder);
           }
@@ -3646,7 +3666,9 @@
           return;
         }
         const config = this._config || normalizeConfig({});
-        const hapticStyle = config.haptics?.style || "medium";
+        const haptics = isObject(config.haptics) ? config.haptics : {};
+        const animations = isObject(config.animations) ? config.animations : DEFAULT_CONFIG.animations;
+        const hapticStyle = haptics.style || "medium";
         const suctionModeVisibilityOptions = this._getModeVisibilityOptions("suction");
         const mopModeVisibilityOptions = this._getModeVisibilityOptions("mop");
         const phVacName = this._editorLabel("ed.vacuum.name_placeholder");
@@ -4195,8 +4217,8 @@
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.vacuum.haptics_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("ed.vacuum.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("ed.vacuum.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.vacuum.enable_haptics", "haptics.enabled", haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.vacuum.fallback_vibrate", "haptics.fallback_vibrate", haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
           "ed.vacuum.haptic_style",
           "haptics.style",
@@ -4232,12 +4254,12 @@
           </div>
           ${this._showAnimationSection ? `
                 <div class="editor-grid">
-                  ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", config.animations.enabled !== false)}
-                  ${this._renderCheckboxField("ed.vacuum.icon_animation_active", "animations.icon_animation", config.animations.icon_animation !== false)}
-                  ${this._renderTextField("ed.vacuum.panel_duration_ms", "animations.panel_duration", config.animations.panel_duration, {
+                  ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", animations.enabled !== false)}
+                  ${this._renderCheckboxField("ed.vacuum.icon_animation_active", "animations.icon_animation", animations.icon_animation !== false)}
+                  ${this._renderTextField("ed.vacuum.panel_duration_ms", "animations.panel_duration", animations.panel_duration, {
           type: "number"
         })}
-                  ${this._renderTextField("ed.vacuum.button_bounce_ms", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
+                  ${this._renderTextField("ed.vacuum.button_bounce_ms", "animations.button_bounce_duration", animations.button_bounce_duration, {
           type: "number"
         })}
                 </div>
@@ -4340,8 +4362,7 @@
         this.shadowRoot.querySelectorAll('[data-mounted-control="select-entity"]').forEach((host) => this._mountSelectEntityPicker(host));
         this.shadowRoot.querySelectorAll('[data-mounted-control="sensor-entity"]').forEach((host) => this._mountSensorEntityPicker(host));
         this.shadowRoot.querySelectorAll("ha-icon-picker[data-field]").forEach((control) => {
-          control.hass = this._hass;
-          control.value = control.dataset.value || "";
+          Object.assign(control, { hass: this._hass, value: control.dataset.value || "" });
           control.addEventListener("value-changed", this._onShadowValueChanged);
         });
         this._ensureEditorControlsReady();
