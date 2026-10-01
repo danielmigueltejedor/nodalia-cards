@@ -18,7 +18,6 @@
   "src/cards/fan/fan-card.ts",
   "src/cards/fan/fan-editor.ts",
   "src/cards/fav/fav-card.ts",
-  "src/cards/fav/fav-editor.ts",
   "src/cards/graph/graph-card.ts",
   "src/cards/graph/graph-editor.ts",
   "src/cards/humidifier/humidifier-card.ts",

@@ -910,3 +910,24 @@ action; after correcting the fixture, all six editor cases passed. Full local
 browser suite: 323 passed, one existing platform skip. Remaining
 unchecked modules: 41. Hold 3.0.0-alpha.1 until full migration, including shared
 handwritten utility/i18n runtime sources.
+
+## Fav editor findings — 2026-10-01
+
+The Fav visual editor suppresses checking for native/HA pickers, fallback entity
+options, alarm/actions and raw nested haptic/security groups. Check actual
+config/DOM/picker contracts, retain custom YAML extensions and focus, and guard
+malformed custom event and nested group payloads.
+
+Fav editor now passes strict checking and typed lint. Config preserves known
+normalized style/action fields and root YAML extensions. Checked native/custom
+picker payloads, entity option filtering, focus and field contracts preserve
+native/HA control fallbacks, alarm PIN/helper fields and information-only actions.
+Malformed haptic/security groups fall back safely. Four verified unused imports
+are removed, and shared sort/collapsible-header contracts match the runtime.
+
+1,400 valid editor HTML outputs (open/closed styles/actions, all layouts and
+entity modes) match main. All 740 unit tests and six targeted real-browser
+PIN/helper/action/missing-entity/focus cases pass. Full local browser suite:
+329 passed, one existing platform skip. Remaining unchecked modules:
+40. Hold 3.0.0-alpha.1 until full migration, including the shared handwritten
+utility/i18n runtime sources.

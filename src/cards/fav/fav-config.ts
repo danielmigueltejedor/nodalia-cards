@@ -93,8 +93,7 @@ export function normalizeConfig(rawConfig: unknown = {}) {
   const serializeActionObject = (value: unknown) => (
     isObject(value) ? JSON.stringify(value) : String(value ?? "").trim()
   );
-  return {
-    ...config,
+  const fields = {
     styles,
     tap_action: String(config.tap_action ?? "auto").trim() || "auto",
     tap_service: String(config.tap_service ?? "").trim(),
@@ -103,4 +102,6 @@ export function normalizeConfig(rawConfig: unknown = {}) {
     tap_url: String(config.tap_url ?? "").trim(),
     tap_new_tab: config.tap_new_tab === true,
   };
+  const normalized: typeof fields & Record<string, unknown> = { ...config, ...fields };
+  return normalized;
 }

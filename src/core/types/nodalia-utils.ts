@@ -7,6 +7,12 @@ import type { HomeAssistant } from "./home-assistant";
  */
 export interface HostPointerHoldBinding { (): void; reconnect?: () => void; }
 export interface NodaliaUtilsApi {
+  renderEditorCollapsibleSectionHeaderHtml: (options: {
+    escapeHtml: (value: unknown) => string; editorLabel: (key: string) => string;
+    expanded: boolean; toggleId?: string; titleKey?: string; hintKey?: string;
+    showLabelKey?: string; hideLabelKey?: string;
+  }) => string;
+  editorSortLocale?: (hass: HomeAssistant | null | undefined, language?: string) => string;
   isKeyboardActivationEvent?: (event: Event) => boolean;
   warnStrictServiceDenied?: (label: string, service: unknown) => void;
   applyDefaultConfigNameFromEntity?: <Config extends Record<string, unknown>>(config: Config, hass: HomeAssistant | null | undefined, options?: { previousEntity?: string }) => Config;
