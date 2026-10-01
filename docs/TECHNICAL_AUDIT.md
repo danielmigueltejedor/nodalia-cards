@@ -880,3 +880,33 @@ requiring the same event names and capture/passive flags. Full local browser
 suite: 311 passed, one existing platform skip. Remaining unchecked
 modules: 43. Hold 3.0.0-alpha.1 until full migration, including shared handwritten
 utility/i18n runtime sources.
+
+## Insignia editor findings — 2026-10-01
+
+The badge editor suppresses checking and trusts native/HA custom event payloads
+and raw nested haptic/security/style groups. Check actual picker/focus/field
+contracts, preserve configuration extensions, and guard these nested boundaries.
+
+The badge view also trusts service JSON, action paths and visibility rules, and
+leaves consumed tap state across disconnect/config changes. Its render signature
+omits picture, unit and device class, so those changes can leave old imagery,
+values or tint. Check actual entity/action/DOM contracts and these boundaries.
+
+Insignia view/editor now pass strict checking and typed lint. Config keeps known
+entity/action string fields plus YAML extensions. Actual HA picker, focus,
+keyboard, drawer, state and translation boundaries are checked; malformed
+nested groups fall back in the editor. Render signatures include picture, unit
+and device class. Hold/tap state resets on reconnect/reconfiguration. Checked
+shared service JSON accepts object data retaining false/zero and rejects
+malformed/scalar/array data; service invocation handles synchronous/rejected
+failures, and navigation paths use the existing URL validator. Verified unused
+card/editor imports were removed.
+
+1,400 valid editor HTML and 1,400 valid card HTML/grid sizing outputs match main.
+All 740 unit tests pass, including two service boundary cases; twelve targeted
+real-browser name/focus/state/keyboard/service/lifecycle cases pass. The first
+editor test expected a service-only security control without selecting a service
+action; after correcting the fixture, all six editor cases passed. Full local
+browser suite: 323 passed, one existing platform skip. Remaining
+unchecked modules: 41. Hold 3.0.0-alpha.1 until full migration, including shared
+handwritten utility/i18n runtime sources.
