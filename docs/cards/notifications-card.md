@@ -42,3 +42,19 @@ Background delivery uses the optional Nodalia Cards Engine. See [Cards + Engine]
 ## Appearance
 
 The editor exposes the bundle's collapsible style sections and native selectors. Legacy card/item radius defaults are normalized to `var(--nodalia-card-border-radius, 28px)`. Service actions and webhook permissions continue to obey the configured security policy.
+
+Incomplete custom notifications and external alerts remain editable when Home
+Assistant returns the saved runtime configuration; those unfinished rows do not
+become live notifications. Reordering keeps each notification's entity, icon,
+action and JSON service data together. Smart overrides follow the entity even
+when its position in the connection lists changes.
+
+The editor retains missing configured entities and focused drafts. Home Assistant
+pickers commit their event values and use domain filters for connection lists.
+Clearing a numeric override restores its default; an explicit zero remains a
+value. Translucent CSS colors retain their alpha.
+
+Closing the editor or changing its HA connection/user invalidates outstanding
+Engine replies and queued background work. Configuration changes also invalidate
+obsolete profile syncs before they write. Normal HA feedback keeps the latest
+queued sync, including a disabled profile that stops background delivery.

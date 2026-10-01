@@ -29,3 +29,11 @@ test('Background notification profiles preserve explicit policies, valid chunks 
 test('Notification external alert injection and legacy fallback accept only usable targets and handle transport failure',async()=>{
  assert.equal(api.pushExternalAlerts(null,[]),false);const received=[],target={_ingestRuntimeExternalAlerts(alerts){received.push(alerts);}};assert.equal(api.pushExternalAlerts(target,[{title:'Hello'}]),true);assert.equal(received.length,1);assert.equal(await api.setLegacyBackgroundMobileFallback({states:{}},true),true);const id='input_boolean.nodalia_background_mobile_notifications',calls=[],hass={states:{[id]:entity('off')},callService:(...args)=>{calls.push(args);return Promise.resolve();}};assert.equal(await api.setLegacyBackgroundMobileFallback(hass,true),true);assert.equal(calls[0][1],'turn_on');hass.callService=()=>Promise.reject(Error('unavailable'));assert.equal(await api.setLegacyBackgroundMobileFallback(hass,true),false);
 });
+
+test('Background notification sync does not write a profile after its editor context is abandoned',async()=>{
+ const isolated=load(),calls=[];let resolveStatus;
+ isolated.NodaliaBackend={status:()=>new Promise(resolve=>{resolveStatus=resolve;}),setNotificationProfile:async(...args)=>{calls.push(args);}};
+ let current=true;const pending=isolated.api.syncBackgroundMobileNative({states:{},user:{is_admin:true}},{background_mobile:{enabled:true}},{isCurrent:()=>current});
+ current=false;resolveStatus({available:true,capabilities:['notifications_background']});
+ const result=await pending;assert.equal(result.synced,false);assert.equal(result.transient,true);assert.equal(calls.length,0);
+});

@@ -1018,9 +1018,9 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /_forceNextBackgroundMobileSync/);
   assert.match(source, /_scheduleBackgroundMobileSyncFromEditor/);
   assert.match(source, /_syncBackgroundMobileConfigFromEditor/);
-  assert.match(source, /buildBackgroundMobileWebhookPayload\(normalized, this\._hass, \{ enabled: true \}\)/);
+  assert.match(source, /buildBackgroundMobileWebhookPayload\(normalized, hass, \{ enabled: true \}\)/);
   assert.match(source, /_syncLegacyBackgroundMobileFallback(?:FromEditor)?\([^)]*false/);
-  assert.match(source, /await post\(webhookId, payload, this\._hass\)/);
+  assert.match(source, /await post\(webhookId, payload, hass\)/);
   assert.match(source, /callService\("notify", "send_message"/);
   assert.match(source, /_buildLegacyMobilePayload\(item, hash\)/);
   assert.match(source, /group:\s*"nodalia_notifications"/);

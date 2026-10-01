@@ -204,6 +204,20 @@ export function normalizeExternalAlerts(value: unknown, options: NotificationNor
     });
 }
 
+export function normalizeSmartEntityOverrideOptions(value: unknown) {
+  const row = isObject(value) ? value : {};
+  return {
+    entity: String(row.entity || row.entity_id || "").trim(),
+    title: String(row.title || "").trim(),
+    message: String(row.message || "").trim(),
+    tint_color: String(row.tint_color || "").trim(),
+    url: String(row.url || "").trim(),
+    action_label: String(row.action_label || "").trim(),
+    tap_action: normalizeNotificationTapAction(row.tap_action),
+    mobile: normalizeSmartEntityOverrideMobile(row.mobile ?? row.mobile_notifications ?? row.mobile_enabled),
+  };
+}
+
 export function normalizeSmartEntityOverrides(value: unknown) {
   const rows: unknown[] = Array.isArray(value)
     ? value
@@ -212,19 +226,7 @@ export function normalizeSmartEntityOverrides(value: unknown) {
       : [];
   const seen = new Set();
   return rows
-    .map((item: unknown) => {
-      const row = isObject(item) ? item : {};
-      return {
-        entity: String(row.entity || row.entity_id || "").trim(),
-        title: String(row.title || "").trim(),
-        message: String(row.message || "").trim(),
-        tint_color: String(row.tint_color || "").trim(),
-        url: String(row.url || "").trim(),
-        action_label: String(row.action_label || "").trim(),
-        tap_action: normalizeNotificationTapAction(row.tap_action),
-        mobile: normalizeSmartEntityOverrideMobile(row.mobile ?? row.mobile_notifications ?? row.mobile_enabled),
-      };
-    })
+    .map(normalizeSmartEntityOverrideOptions)
     .filter(item => {
       if (!item.entity || seen.has(item.entity)) {
         return false;

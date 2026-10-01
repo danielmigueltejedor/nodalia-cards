@@ -563,7 +563,7 @@ test("editor sends a disabled native profile so background delivery can be stopp
   );
   assert.match(
     source,
-    /const native = await syncBackgroundMobileNative\(this\._hass, normalized\);[\s\S]*if \(background\.enabled !== true\) \{\s*return false;/,
+    /const native = await syncBackgroundMobileNative\(hass, normalized, \{ isCurrent \}\)[\s\S]*if \(background\.enabled !== true\) \{\s*return false;/,
   );
 });
 

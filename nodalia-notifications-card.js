@@ -341,22 +341,23 @@
       return true;
     });
   }
+  function normalizeSmartEntityOverrideOptions(value) {
+    const row = isObject(value) ? value : {};
+    return {
+      entity: String(row.entity || row.entity_id || "").trim(),
+      title: String(row.title || "").trim(),
+      message: String(row.message || "").trim(),
+      tint_color: String(row.tint_color || "").trim(),
+      url: String(row.url || "").trim(),
+      action_label: String(row.action_label || "").trim(),
+      tap_action: normalizeNotificationTapAction(row.tap_action),
+      mobile: normalizeSmartEntityOverrideMobile(row.mobile ?? row.mobile_notifications ?? row.mobile_enabled)
+    };
+  }
   function normalizeSmartEntityOverrides(value) {
     const rows = Array.isArray(value) ? value : isObject(value) ? Object.entries(value).map(([entity, row]) => ({ ...isObject(row) ? row : {}, entity })) : [];
     const seen = /* @__PURE__ */ new Set();
-    return rows.map((item) => {
-      const row = isObject(item) ? item : {};
-      return {
-        entity: String(row.entity || row.entity_id || "").trim(),
-        title: String(row.title || "").trim(),
-        message: String(row.message || "").trim(),
-        tint_color: String(row.tint_color || "").trim(),
-        url: String(row.url || "").trim(),
-        action_label: String(row.action_label || "").trim(),
-        tap_action: normalizeNotificationTapAction(row.tap_action),
-        mobile: normalizeSmartEntityOverrideMobile(row.mobile ?? row.mobile_notifications ?? row.mobile_enabled)
-      };
-    }).filter((item) => {
+    return rows.map(normalizeSmartEntityOverrideOptions).filter((item) => {
       if (!item.entity || seen.has(item.entity)) {
         return false;
       }
@@ -507,7 +508,7 @@
     if (itemRadius === "18px" || itemRadius === "28px") {
       styles.item_radius = familyRadius;
     }
-    return {
+    const fields = {
       ...config,
       calendar_entities,
       vacuum_entities,
@@ -548,6 +549,8 @@
       animations,
       styles
     };
+    const normalized = fields;
+    return normalized;
   }
 
   // src/shared/editor-array-paths.ts
@@ -1221,12 +1224,14 @@
       signature: `${profileId}:${notificationHash(JSON.stringify(profile))}`
     };
   }
-  async function syncBackgroundMobileNative(hass, rawConfig) {
+  async function syncBackgroundMobileNative(hass, rawConfig, options = {}) {
     const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
     if (!backend || !hass) {
       return { available: false, synced: false, signature: "", transient: false };
     }
+    if (options.isCurrent?.() === false) return { available: false, synced: false, signature: "", transient: true };
     const status = await backend.status(hass, { silent: true });
+    if (options.isCurrent?.() === false) return { available: false, synced: false, signature: "", transient: true };
     if (!status?.available || !status.capabilities?.includes("notifications_background")) {
       return {
         available: false,
@@ -4249,6 +4254,16 @@
     return NodaliaNotificationsCard;
   }
 
+  // src/shared/editor-controls.ts
+  function isNativeEditorInput(node) {
+    return node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement;
+  }
+  function editorControlValue(event, control) {
+    const detail = event instanceof CustomEvent ? event.detail : void 0;
+    if (detail && typeof detail === "object" && "value" in detail && typeof detail.value === "string") return detail.value;
+    return "value" in control ? control.value : void 0;
+  }
+
   // src/cards/notifications/notifications-editor.ts
   var _lazyNodaliaNotificationsCardEditor;
   function loadNodaliaNotificationsCardEditor() {
@@ -4264,6 +4279,8 @@
         this.attachShadow({ mode: "open" });
         this._config = normalizeConfig({});
         this._hass = null;
+        this._entityOptionsSignature = "";
+        this._smartEntityEditorEntities = [];
         this._showStyleSection = false;
         this._showConnectionsSection = false;
         this._showSmartSection = false;
@@ -4278,6 +4295,9 @@
         this._engineStatus = null;
         this._engineStatusSignature = "";
         this._engineStatusInFlight = false;
+        this._engineRequestGeneration = 0;
+        this._backgroundSyncGeneration = 0;
+        this._lastEmittedConfigSignature = "";
         this._onShadowInput = this._onShadowInput.bind(this);
         this._onShadowValueChanged = this._onShadowValueChanged.bind(this);
         this._onShadowClick = this._onShadowClick.bind(this);
@@ -4298,17 +4318,31 @@
         window.NodaliaUtils?.bindEditorDialogLayoutFix?.(this);
         void this._refreshEngineStatus();
       }
+      _cancelBackgroundSync() {
+        this._backgroundSyncGeneration++;
+        if (this._backgroundMobileSyncTimer) window.clearTimeout(this._backgroundMobileSyncTimer);
+        this._backgroundMobileSyncTimer = 0;
+      }
       disconnectedCallback() {
         this._detachEditorShadowListeners();
         window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
-        if (this._backgroundMobileSyncTimer) {
-          window.clearTimeout(this._backgroundMobileSyncTimer);
-          this._backgroundMobileSyncTimer = 0;
-        }
+        this._cancelBackgroundSync();
+        this._engineRequestGeneration++;
+        this._engineStatusInFlight = false;
       }
       set hass(hass) {
+        const changedContext = !this._hass || this._hass.connection !== hass.connection || this._hass.user?.id !== hass.user?.id || this._hass.user?.is_admin !== hass.user?.is_admin;
+        if (changedContext) {
+          this._cancelBackgroundSync();
+          this._engineRequestGeneration++;
+          this._engineStatusInFlight = false;
+          this._engineStatus = null;
+          this._engineStatusSignature = "";
+          this._lastBackgroundMobileNativeSignature = "";
+          this._lastBackgroundMobileSyncSignature = "";
+        }
         const nextSignature = this._getEntityOptionsSignature(hass);
-        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+        const shouldRender = changedContext || !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
         this._hass = hass;
         this._entityOptionsSignature = nextSignature;
         if (shouldRender) {
@@ -4320,7 +4354,16 @@
       }
       setConfig(config) {
         const focus = this._captureFocusState();
-        this._config = normalizeConfig(config || {});
+        const next = normalizeConfig(config || {});
+        const isFeedback = this._lastEmittedConfigSignature && JSON.stringify(next) === this._lastEmittedConfigSignature;
+        if (isFeedback) {
+          next.custom_notifications = this._config.custom_notifications;
+          next.external_alerts = this._config.external_alerts;
+        } else {
+          this._cancelBackgroundSync();
+          this._lastEmittedConfigSignature = "";
+        }
+        this._config = next;
         window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
         this._render();
         this._restoreFocusState(focus);
@@ -4332,9 +4375,13 @@
         if (!backend || typeof backend.getEditorEngineStatus !== "function" || !this._hass || this._engineStatusInFlight) {
           return;
         }
+        if (!this.isConnected) return;
+        const generation = this._engineRequestGeneration;
+        const hass = this._hass;
         this._engineStatusInFlight = true;
         try {
-          const engine = await backend.getEditorEngineStatus(this._hass);
+          const engine = await backend.getEditorEngineStatus(hass);
+          if (!this.isConnected || generation !== this._engineRequestGeneration) return;
           const signature = window.NodaliaUtils?.engineStatusSignature?.(engine) ?? "";
           if (signature === this._engineStatusSignature) {
             return;
@@ -4348,7 +4395,7 @@
           }
         } catch (_error) {
         } finally {
-          this._engineStatusInFlight = false;
+          if (generation === this._engineRequestGeneration) this._engineStatusInFlight = false;
         }
       }
       _engineBackgroundActive() {
@@ -4362,7 +4409,7 @@
         }) || "";
       }
       _getEntityOptionsSignature(hass = this._hass) {
-        return window.NodaliaUtils?.editorFilteredStatesSignature ? window.NodaliaUtils.editorFilteredStatesSignature(hass, this._config?.language, (id) => id.startsWith("calendar.") || id.startsWith("vacuum.") || id.startsWith("fan.") || id.startsWith("weather.") || id.startsWith("binary_sensor.") || id.startsWith("sensor.") || id.startsWith("input_text.") || id.startsWith("notify.")) : Object.keys(hass?.states || {}).join("|");
+        return window.NodaliaUtils?.editorFilteredStatesSignature ? window.NodaliaUtils.editorFilteredStatesSignature(hass, this._config?.language, (id) => id.startsWith("calendar.") || id.startsWith("vacuum.") || id.startsWith("fan.") || id.startsWith("climate.") || id.startsWith("humidifier.") || id.startsWith("media_player.") || id.startsWith("weather.") || id.startsWith("binary_sensor.") || id.startsWith("sensor.") || id.startsWith("input_text.") || id.startsWith("notify.")) : Object.keys(hass?.states || {}).join("|");
       }
       _watchEditorControlTag(tagName) {
         if (!tagName || this._pendingEditorControlTags.has(tagName)) {
@@ -4400,10 +4447,13 @@
         this._render();
         this._restoreFocusState(focus);
         const stripped = window.NodaliaUtils?.stripEqualToDefaults ? window.NodaliaUtils.stripEqualToDefaults(emitted, DEFAULT_CONFIG) : emitted;
-        fireEvent(this, "config-changed", { config: compactConfig(stripped) || {} });
+        const persisted = compactConfig(stripped) || {};
+        this._lastEmittedConfigSignature = JSON.stringify(normalizeConfig(persisted));
+        fireEvent(this, "config-changed", { config: persisted });
         this._scheduleBackgroundMobileSyncFromEditor(emitted);
       }
       _scheduleBackgroundMobileSyncFromEditor(config = this._config, delay = 700) {
+        this._cancelBackgroundSync();
         const normalized = normalizeConfig(config || {});
         if (!this._hass || !this.isConnected) {
           return;
@@ -4423,16 +4473,25 @@
         if (!this.isConnected) {
           return false;
         }
-        const expectedNative = getBackgroundMobileNativeSignature(normalized, this._hass);
+        const generation = this._backgroundSyncGeneration;
+        const hass = this._hass;
+        const isCurrent = () => this.isConnected && generation === this._backgroundSyncGeneration;
+        const expectedNative = getBackgroundMobileNativeSignature(normalized, hass);
         const previousNative = String(this._lastBackgroundMobileNativeSignature || "");
         if (previousNative === expectedNative.signature || previousNative === `active:${expectedNative.profileId}`) {
-          return webhookId ? this._syncLegacyBackgroundMobileFallbackFromEditor(normalized, webhookId, false) : true;
+          return webhookId ? this._syncLegacyBackgroundMobileFallbackFromEditor(normalized, webhookId, false, hass, generation) : true;
         }
-        const native = await syncBackgroundMobileNative(this._hass, normalized);
+        const native = await syncBackgroundMobileNative(hass, normalized, { isCurrent }).catch(() => ({
+          available: false,
+          synced: false,
+          transient: true,
+          signature: ""
+        }));
+        if (!isCurrent()) return false;
         if (native.synced) {
           this._lastBackgroundMobileNativeSignature = native.signature;
           if (webhookId) {
-            await this._syncLegacyBackgroundMobileFallbackFromEditor(normalized, webhookId, false);
+            await this._syncLegacyBackgroundMobileFallbackFromEditor(normalized, webhookId, false, hass, generation);
           }
           return true;
         }
@@ -4446,13 +4505,13 @@
         if (!webhookId) {
           return false;
         }
-        if (normalized.security?.allow_webhooks_for_non_admin === false && !this._hass?.user?.is_admin) {
+        if (normalized.security?.allow_webhooks_for_non_admin === false && !hass?.user?.is_admin) {
           if (typeof console !== "undefined" && typeof console.warn === "function") {
             console.warn("Nodalia Notifications Card editor: background mobile sync webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false).");
           }
           return false;
         }
-        const payload = buildBackgroundMobileWebhookPayload(normalized, this._hass, { enabled: true });
+        const payload = buildBackgroundMobileWebhookPayload(normalized, hass, { enabled: true });
         if (backgroundMobilePayloadOverLimit(payload)) {
           if (typeof console !== "undefined" && typeof console.warn === "function") {
             console.warn(
@@ -4471,7 +4530,8 @@
           return false;
         }
         try {
-          const ok = Boolean(await post(webhookId, payload, this._hass));
+          const ok = Boolean(await post(webhookId, payload, hass));
+          if (!isCurrent()) return false;
           if (ok) {
             this._lastBackgroundMobileSyncSignature = signature;
           }
@@ -4480,11 +4540,13 @@
           return false;
         }
       }
-      async _syncLegacyBackgroundMobileFallbackFromEditor(config, webhookId, enabled) {
-        if (config.security?.allow_webhooks_for_non_admin === false && !this._hass?.user?.is_admin) {
+      async _syncLegacyBackgroundMobileFallbackFromEditor(config, webhookId, enabled, hass = this._hass, generation = this._backgroundSyncGeneration) {
+        const isCurrent = () => this.isConnected && generation === this._backgroundSyncGeneration;
+        if (!isCurrent()) return false;
+        if (config.security?.allow_webhooks_for_non_admin === false && !hass?.user?.is_admin) {
           return false;
         }
-        const payload = buildBackgroundMobileWebhookPayload(config, this._hass, { enabled });
+        const payload = buildBackgroundMobileWebhookPayload(config, hass, { enabled });
         if (backgroundMobilePayloadOverLimit(payload)) {
           return false;
         }
@@ -4497,7 +4559,8 @@
           return false;
         }
         try {
-          const ok = Boolean(await post(webhookId, payload, this._hass));
+          const ok = Boolean(await post(webhookId, payload, hass));
+          if (!isCurrent()) return false;
           if (ok) {
             this._lastBackgroundMobileSyncSignature = signature;
           }
@@ -4515,10 +4578,10 @@
       _readFieldValue(input) {
         const type = input.dataset.valueType || "string";
         if (type === "boolean") {
-          return Boolean(input.checked);
+          return input instanceof HTMLInputElement && input.checked;
         }
         if (type === "number") {
-          return input.value === "" ? "" : Number(input.value);
+          return parseFiniteNumericValue(input.value) ?? void 0;
         }
         if (type === "color") {
           return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
@@ -4569,12 +4632,23 @@
         }
       }
       _setFieldValue(path, value) {
+        const parts = path.split(".");
+        const root = parts[0];
+        if (root === "custom_notifications" || root === "external_alerts") {
+          const index = parseFiniteNumericValue(parts[1]);
+          const rows = this._config[root];
+          if (index === null || !Number.isInteger(index) || index < 0 || index >= rows.length) return;
+          const field = parts[2] || "";
+          const allowed = root === "custom_notifications" ? ["title", "message", "icon", "tint_color", "severity", "entity", "attribute", "condition", "value", "action_label", "action_type", "service", "service_data", "url", "mobile", "tap_action"] : ["id", "type", "title", "message", "severity", "mobile", "tap_action"];
+          if (!allowed.includes(field) || parts.length !== 3 && (field !== "tap_action" || parts.length !== 4 || !["action", "entity", "navigation_path", "url_path", "new_tab"].includes(parts[3] || ""))) return;
+        }
         const smartEntityMatch = String(path || "").match(/^smart_entity_overrides\.(\d+)\./);
+        if (root === "smart_entity_overrides" && !smartEntityMatch) return;
         if (smartEntityMatch) {
           const index = Number(smartEntityMatch[1]);
           const entity = this._smartEntityEditorEntities?.[index] || "";
           const relativePath = String(path || "").split(".").slice(2).join(".");
-          if (!entity || !relativePath) {
+          if (!entity || !["title", "message", "tint_color", "url", "action_label", "mobile", "tap_action"].includes(parts[2] || "") || parts.length !== 3 && (parts[2] !== "tap_action" || parts.length !== 4 || !["action", "entity", "navigation_path", "url_path", "new_tab"].includes(parts[3] || ""))) {
             return;
           }
           if (!Array.isArray(this._config.smart_entity_overrides)) {
@@ -4583,7 +4657,7 @@
           let overrideIndex = this._config.smart_entity_overrides.findIndex((item) => item?.entity === entity);
           if (overrideIndex < 0) {
             overrideIndex = this._config.smart_entity_overrides.length;
-            this._config.smart_entity_overrides.push({ entity });
+            this._config.smart_entity_overrides.push(normalizeSmartEntityOverrideOptions({ entity }));
           }
           if (value === "" || value === void 0 || value === null) {
             deleteByPath(this._config.smart_entity_overrides[overrideIndex], relativePath);
@@ -4600,12 +4674,14 @@
       }
       _setEntityListItem(field, index, value) {
         const key = String(field || "");
-        if (!key) {
+        if (!key || !this._entityDomainsForListField(key).length) {
           return;
         }
         const current = normalizeEntityList(getByPath(this._config, key));
         const nextValue = String(value || "").trim();
-        const safeIndex = Math.max(0, Number(index) || 0);
+        const safeIndex = index;
+        if (!Number.isInteger(index) || index < 0 || index > current.length) return;
+        this._cancelBackgroundSync();
         if (nextValue) {
           current[safeIndex] = nextValue;
         } else {
@@ -4616,7 +4692,7 @@
       }
       _addEntityListItem(field) {
         const key = String(field || "");
-        if (!key) {
+        if (!key || !this._entityDomainsForListField(key).length) {
           return;
         }
         const current = normalizeEntityList(getByPath(this._config, key), this._entityDomainsForListField(key));
@@ -4626,22 +4702,22 @@
       }
       _removeEntityListItem(field, index) {
         const key = String(field || "");
-        if (!key) {
+        if (!key || !this._entityDomainsForListField(key).length) {
           return;
         }
         const current = normalizeEntityList(getByPath(this._config, key), this._entityDomainsForListField(key));
         const safeIndex = Number(index);
-        if (Number.isInteger(safeIndex) && safeIndex >= 0) {
+        if (Number.isInteger(safeIndex) && safeIndex >= 0 && safeIndex < current.length) {
           current.splice(safeIndex, 1);
-        }
+        } else return;
         this._setFieldValue(key, current);
         this._emitConfig();
       }
       _onShadowInput(event) {
-        const input = event.composedPath().find((node) => node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement || node instanceof HTMLSelectElement);
+        const input = event.composedPath().find(isNativeEditorInput);
         if (input?.dataset?.listField) {
           event.stopPropagation();
-          this._setEntityListItem(input.dataset.listField, Number(input.dataset.index), input.value);
+          this._setEntityListItem(input.dataset.listField, parseFiniteNumericValue(input.dataset.index) ?? -1, input.value);
           if (event.type === "change") {
             this._emitConfig();
           }
@@ -4651,23 +4727,24 @@
           return;
         }
         event.stopPropagation();
+        this._cancelBackgroundSync();
         this._setFieldValue(input.dataset.field, this._readFieldValue(input));
         if (event.type === "change") {
           this._emitConfig();
         }
       }
       _onShadowValueChanged(event) {
-        const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+        const control = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.field));
         if (!control?.dataset?.field) {
           return;
         }
         event.stopPropagation();
-        const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+        const nextValue = editorControlValue(event, control);
         if (typeof control.dataset.value === "string") {
           control.dataset.value = String(nextValue || "");
         }
         if (control.dataset.listField) {
-          this._setEntityListItem(control.dataset.listField, Number(control.dataset.index), nextValue);
+          this._setEntityListItem(control.dataset.listField, parseFiniteNumericValue(control.dataset.index) ?? -1, nextValue);
           this._emitConfig();
           return;
         }
@@ -4675,7 +4752,7 @@
         this._emitConfig();
       }
       _onShadowClick(event) {
-        const toggle = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
+        const toggle = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.editorToggle));
         if (toggle) {
           event.preventDefault();
           event.stopPropagation();
@@ -4697,13 +4774,13 @@
           this._render();
           return;
         }
-        const button = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorAction);
+        const button = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.editorAction));
         if (!button) {
           return;
         }
         event.preventDefault();
         event.stopPropagation();
-        const index = Number(button.dataset.index);
+        const index = parseFiniteNumericValue(button.dataset.index) ?? -1;
         if (!Array.isArray(this._config.custom_notifications)) {
           this._config.custom_notifications = [];
         }
@@ -4715,7 +4792,7 @@
             this._removeEntityListItem(button.dataset.field || "", index);
             break;
           case "add-custom":
-            this._config.custom_notifications.push({
+            this._config.custom_notifications.push(...normalizeCustomNotifications([{
               _draft: true,
               title: "",
               message: "",
@@ -4723,26 +4800,26 @@
               severity: "info",
               condition: "always",
               action_type: "none"
-            });
+            }], { keepDrafts: true }));
             this._emitConfig();
             break;
           case "remove-custom":
-            if (Number.isInteger(index)) {
+            if (Number.isInteger(index) && index >= 0 && index < this._config.custom_notifications.length) {
               this._config.custom_notifications.splice(index, 1);
               this._emitConfig();
             }
             break;
           case "move-custom-up":
-            if (Number.isInteger(index) && index > 0) {
+            if (Number.isInteger(index) && index > 0 && index < this._config.custom_notifications.length) {
               const [item] = this._config.custom_notifications.splice(index, 1);
-              this._config.custom_notifications.splice(index - 1, 0, item);
+              this._config.custom_notifications.splice(index - 1, 0, ...item ? [item] : []);
               this._emitConfig();
             }
             break;
           case "move-custom-down":
-            if (Number.isInteger(index) && index < this._config.custom_notifications.length - 1) {
+            if (Number.isInteger(index) && index >= 0 && index < this._config.custom_notifications.length - 1) {
               const [item] = this._config.custom_notifications.splice(index, 1);
-              this._config.custom_notifications.splice(index + 1, 0, item);
+              this._config.custom_notifications.splice(index + 1, 0, ...item ? [item] : []);
               this._emitConfig();
             }
             break;
@@ -4750,7 +4827,7 @@
             if (!Array.isArray(this._config.external_alerts)) {
               this._config.external_alerts = [];
             }
-            this._config.external_alerts.push({
+            this._config.external_alerts.push(...normalizeExternalAlerts([{
               _draft: true,
               id: "",
               type: "camera_event",
@@ -4758,12 +4835,12 @@
               message: "",
               severity: "warning",
               mobile: "auto"
-            });
+            }], { keepDrafts: true }));
             this._showExternalAlertsSection = true;
             this._emitConfig();
             break;
           case "remove-external-alert":
-            if (Number.isInteger(index) && Array.isArray(this._config.external_alerts)) {
+            if (Number.isInteger(index) && index >= 0 && index < this._config.external_alerts.length) {
               this._config.external_alerts.splice(index, 1);
               this._emitConfig();
             }
@@ -4923,7 +5000,7 @@
         if (window.NodaliaUtils?.mountEntityPickerHost) {
           window.NodaliaUtils.mountEntityPickerHost(host, {
             hass: this._hass,
-            field: host.dataset.field,
+            field: host.dataset.field || "",
             value: host.dataset.value || "",
             placeholder: host.dataset.placeholder || "",
             onShadowInput: this._onShadowInput,
@@ -4940,14 +5017,14 @@
           return;
         }
         if (control.tagName === "HA-ENTITY-PICKER") {
-          control.includeDomains = allowedDomains;
-          control.entityFilter = (stateObj) => allowedDomains.some((domain) => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+          Object.assign(control, { includeDomains: allowedDomains });
+          Object.assign(control, { entityFilter: (stateObj) => allowedDomains.some((domain) => String(stateObj?.entity_id || "").startsWith(`${domain}.`)) });
           return;
         }
         if (control.tagName === "HA-SELECTOR") {
-          control.selector = {
+          Object.assign(control, { selector: {
             entity: allowedDomains.length === 1 ? { domain: allowedDomains[0] } : { domain: allowedDomains }
-          };
+          } });
         }
       }
       _mountIconPicker(host) {
@@ -4990,15 +5067,14 @@
         const seen = /* @__PURE__ */ new Set();
         const rows = [];
         labels.forEach(([field, label]) => {
-          (config[field] || []).forEach((entity) => {
+          normalizeEntityList(config[field]).forEach((entity) => {
             if (!entity || seen.has(entity)) {
               return;
             }
             seen.add(entity);
             rows.push({
-              entity,
               label,
-              ...byEntity.get(entity) || {}
+              ...normalizeSmartEntityOverrideOptions({ entity, ...byEntity.get(entity) || {} })
             });
           });
         });
@@ -5104,7 +5180,7 @@
           ["ink_low", "ed.notifications.smart_ink_low", "ed.notifications.smart_ph_ink_title", "ed.notifications.smart_ph_ink_message"]
         ];
         return rows.map(([key, label, titlePlaceholder, messagePlaceholder]) => {
-          const item = config.smart_notifications?.[key] || {};
+          const item = config.smart_notifications[key] ?? normalizeSmartNotificationOptions({});
           return `
         <div class="editor-action">
           <div class="editor-action__header">
@@ -5221,6 +5297,8 @@
         }
         const config = this._config || normalizeConfig({});
         const engineBackgroundActive = this._engineBackgroundActive();
+        const cardStyles = isObject(config.styles.card) ? config.styles.card : DEFAULT_CONFIG.styles.card;
+        const iconStyles = isObject(config.styles.icon) ? config.styles.icon : DEFAULT_CONFIG.styles.icon;
         this.shadowRoot.innerHTML = `
       <style>
         :host {
@@ -5844,12 +5922,12 @@
           </div>
           ${this._showStyleSection ? `
                 <div class="editor-grid">
-                  ${this._renderColorField("ed.notifications.card_background", "styles.card.background", config.styles.card.background)}
-                  ${this._renderTextField("ed.notifications.card_border", "styles.card.border", config.styles.card.border)}
+                  ${this._renderColorField("ed.notifications.card_background", "styles.card.background", cardStyles.background)}
+                  ${this._renderTextField("ed.notifications.card_border", "styles.card.border", cardStyles.border)}
                   ${window.NodaliaUtils?.renderEditorCardBorderRadiusHtml?.({
           escapeHtml,
           field: "styles.card.border_radius",
-          value: config.styles?.card?.border_radius,
+          value: String(cardStyles.border_radius ?? ""),
           tHeading: this._editorLabel("ed.notifications.card_radius_presets"),
           labels: {
             pill: this._editorLabel("ed.entity.chip_radius_pill"),
@@ -5857,19 +5935,19 @@
             round: this._editorLabel("ed.entity.chip_radius_round"),
             square: this._editorLabel("ed.entity.chip_radius_square")
           }
-        }) || this._renderTextField("ed.notifications.card_radius", "styles.card.border_radius", config.styles.card.border_radius)}
+        }) || this._renderTextField("ed.notifications.card_radius", "styles.card.border_radius", cardStyles.border_radius)}
                   <div class="editor-section__hint editor-field--full" style="margin-top: -6px;">${escapeHtml(this._editorLabel("ed.notifications.card_radius_yaml_hint"))}</div>
-                  ${this._renderTextField("ed.notifications.box_shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
-                  ${this._renderTextField("ed.notifications.padding", "styles.card.padding", config.styles.card.padding)}
-                  ${this._renderTextField("ed.notifications.gap", "styles.card.gap", config.styles.card.gap)}
-                  ${this._renderColorField("ed.notifications.icon_background", "styles.icon.background", config.styles.icon.background)}
-                  ${this._renderColorField("ed.notifications.icon_color", "styles.icon.color", config.styles.icon.color)}
-                  ${this._renderTextField("ed.notifications.icon_size", "styles.icon.size", config.styles.icon.size)}
+                  ${this._renderTextField("ed.notifications.box_shadow", "styles.card.box_shadow", cardStyles.box_shadow)}
+                  ${this._renderTextField("ed.notifications.padding", "styles.card.padding", cardStyles.padding)}
+                  ${this._renderTextField("ed.notifications.gap", "styles.card.gap", cardStyles.gap)}
+                  ${this._renderColorField("ed.notifications.icon_background", "styles.icon.background", iconStyles.background)}
+                  ${this._renderColorField("ed.notifications.icon_color", "styles.icon.color", iconStyles.color)}
+                  ${this._renderTextField("ed.notifications.icon_size", "styles.icon.size", iconStyles.size)}
                   ${this._renderTextField("ed.notifications.title_size", "styles.title_size", config.styles.title_size)}
                   ${window.NodaliaUtils?.renderEditorCardBorderRadiusHtml?.({
           escapeHtml,
           field: "styles.item_radius",
-          value: config.styles?.item_radius,
+          value: String(config.styles.item_radius ?? ""),
           tHeading: this._editorLabel("ed.notifications.item_radius_presets"),
           labels: {
             pill: this._editorLabel("ed.entity.chip_radius_pill"),
