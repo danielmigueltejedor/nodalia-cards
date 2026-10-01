@@ -14,7 +14,6 @@ import {
   compactConfig,
   formatEditorJsonValue,
   parseEditorJsonObject,
-  normalizePowerActionConfig,
   getByPath,
   arrayFromCsv,
   escapeSelectorValue,

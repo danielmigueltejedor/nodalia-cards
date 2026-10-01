@@ -449,13 +449,7 @@
     return array;
   }
 
-  // src/cards/navigation/navigation-helpers.ts
-  function appendQueryParam(url, key, value) {
-    return appendUrlQueryParam(url, key, value, true);
-  }
-  function arrayFromCsv(value) {
-    return String(value || "").split(",").map((item) => item.trim()).filter(Boolean);
-  }
+  // src/shared/media-values.ts
   function formatDuration(totalSeconds) {
     const numeric = typeof totalSeconds === "number" || typeof totalSeconds === "string" ? Number(totalSeconds) : 0;
     const safeSeconds = Number.isFinite(numeric) ? Math.max(0, Math.floor(numeric)) : 0;
@@ -466,19 +460,6 @@
       return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
     }
     return `${minutes}:${String(seconds).padStart(2, "0")}`;
-  }
-  function normalizeTextKey(value) {
-    return String(value || "").trim().toLowerCase();
-  }
-  function sanitizeCssRuntimeValue(value) {
-    const raw = String(value ?? "").trim();
-    if (!raw) {
-      return "";
-    }
-    if ([...raw].some((character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127) || /[<>{};"']/.test(raw) || raw.includes("/*") || raw.includes("*/") || /\burl\s*\(/i.test(raw) || /\b@import\b/i.test(raw)) {
-      return "";
-    }
-    return raw;
   }
   function sanitizeMediaArtworkUrl(value, hass) {
     const raw = String(value || "").trim();
@@ -496,6 +477,27 @@
       return hass.hassUrl(safe);
     }
     return safe;
+  }
+
+  // src/cards/navigation/navigation-helpers.ts
+  function appendQueryParam(url, key, value) {
+    return appendUrlQueryParam(url, key, value, true);
+  }
+  function arrayFromCsv(value) {
+    return String(value || "").split(",").map((item) => item.trim()).filter(Boolean);
+  }
+  function normalizeTextKey(value) {
+    return String(value || "").trim().toLowerCase();
+  }
+  function sanitizeCssRuntimeValue(value) {
+    const raw = String(value ?? "").trim();
+    if (!raw) {
+      return "";
+    }
+    if ([...raw].some((character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127) || /[<>{};"']/.test(raw) || raw.includes("/*") || raw.includes("*/") || /\burl\s*\(/i.test(raw) || /\b@import\b/i.test(raw)) {
+      return "";
+    }
+    return raw;
   }
   function getRenderSignatureRuntime() {
     return window.NodaliaRenderSignature || renderSignature;

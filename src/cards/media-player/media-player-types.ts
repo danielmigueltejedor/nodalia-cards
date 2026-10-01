@@ -69,8 +69,8 @@ export interface MediaPlayerPublicApi {
   CARD_VERSION: string;
   DEFAULT_CONFIG: Record<string, unknown>;
   normalizeConfig: (rawConfig?: unknown) => Record<string, unknown>;
-  formatEditorJsonValue: (value: unknown) => string;
-  parseEditorJsonObject: (value: unknown) => { valid: boolean; value?: unknown };
+  formatEditorJsonValue: typeof import("./media-player-helpers").formatEditorJsonValue;
+  parseEditorJsonObject: typeof import("./media-player-helpers").parseEditorJsonObject;
   resolvePresentationMode: (
     mode: unknown,
     size?: { width: number; height: number },

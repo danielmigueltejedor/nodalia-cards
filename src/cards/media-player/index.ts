@@ -38,6 +38,6 @@ const publicApi = {
   extractArtworkPalette,
   resetArtworkLayers,
   MediaPlayerArtworkController,
-};
+} satisfies MediaPlayerPublicApi;
 
-window.__NODALIA_MEDIA_PLAYER__ = publicApi as MediaPlayerPublicApi;
+window.__NODALIA_MEDIA_PLAYER__ = publicApi;

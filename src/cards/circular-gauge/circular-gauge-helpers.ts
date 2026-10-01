@@ -1,10 +1,9 @@
 import type { HassEntity, HomeAssistant } from "../../core/types/home-assistant";
-import { parseEditorColorChannels } from "../../shared/editor-color";
+export { parseRgbColor, getRelativeLuminance } from "../../shared/color-luminance";
 import { normalizeControlStyles } from "../../shared/control-config";
 import { getStubEntityId } from "../../shared/editor-entity-helpers";
 export { getStubEntityId, parseSizeToPixels } from "../../shared/editor-entity-helpers";
 export { parseFiniteNumericValue } from "../../shared/numeric-values";
-interface RgbChannels { red: number; green: number; blue: number }
 interface TintStop { offset: number; color: string }
 // Explicit physical units take precedence over friendly-name/domain heuristics.
 const GAUGE_MAX_BY_UNIT = new Map<string, number>([
@@ -164,30 +163,6 @@ export function resolveGaugeSvgStrokeColor(value: unknown, fallback: string) {
   }
   return source;
 }
-
-export function parseRgbColor(value: unknown): RgbChannels | null {
-  const channels = parseEditorColorChannels(value);
-  return channels ? { red: channels.red, green: channels.green, blue: channels.blue } : null;
-}
-
-export function getRelativeLuminance(color: RgbChannels | null | undefined) {
-  if (!color) {
-    return null;
-  }
-
-  const toLinear = (channel: number) => {
-    const normalized = clamp(Number(channel) / 255, 0, 1);
-    return normalized <= 0.04045
-      ? normalized / 12.92
-      : ((normalized + 0.055) / 1.055) ** 2.4;
-  };
-
-  const red = toLinear(color.red);
-  const green = toLinear(color.green);
-  const blue = toLinear(color.blue);
-  return (0.2126 * red) + (0.7152 * green) + (0.0722 * blue);
-}
-
 
 export function isUnavailableState(state: HassEntity | null | undefined) {
   return normalizeTextKey(state?.state) === "unavailable";

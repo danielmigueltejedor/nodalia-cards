@@ -12,6 +12,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Read modern translucent Media Player theme colors immediately and keep artwork query keys/fragments intact; block inherited editor paths and clean up color probes on failure.
+
 - Preserve Calendar forecast alternatives and real zero temperatures, correct current-day forecast keys and scoring, reject impossible date-only inputs, and share HA hyphenated weather icons.
 
 - Keep blank Graph readings out of current values/history, ignore malformed history/statistics rows, and guard SVG geometry and integral bounded sample allocation.
@@ -42,6 +44,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Remove Camera portal listeners from their owning shadow root.
 
 ### Maintenance
+
+- Check Media Player helpers, share duration/artwork/color/slider/list boundaries, preserve empty entity editor placeholders, and replace a source-shape row test with a real editor regression.
 
 - Check Calendar configuration/helpers, share compaction/styles/weather icons while retaining Calendar’s CSS policy, and extract cycle-free editor color defaults.
 

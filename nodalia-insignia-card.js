@@ -206,13 +206,17 @@
   // src/shared/config-values.ts
   var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
   var unsafeKeys = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
-  function compactConfig(value) {
-    if (Array.isArray(value)) return value.map((item) => compactConfig(item)).filter((item) => item !== void 0);
+  function compactConfig(value, preserveEmptyKeys = []) {
+    if (Array.isArray(value)) return value.map((item) => compactConfig(item, preserveEmptyKeys)).filter((item) => item !== void 0);
     if (isRecord(value)) {
       const result = {};
       for (const [key, item] of Object.entries(value)) {
         if (unsafeKeys.has(key)) continue;
-        const cleaned = compactConfig(item);
+        if (item === "" && preserveEmptyKeys.includes(key)) {
+          result[key] = "";
+          continue;
+        }
+        const cleaned = compactConfig(item, preserveEmptyKeys);
         if (cleaned !== void 0 && !(isRecord(cleaned) && Object.keys(cleaned).length === 0)) result[key] = cleaned;
       }
       return result;

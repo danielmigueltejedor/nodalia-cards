@@ -513,3 +513,36 @@ the previous Graph stage were removed only after byte-for-byte comparison.
 Remaining unchecked modules: 62; Calendar view/editor remain in the migration.
 Full local browser suite: 257 passed, one existing platform skip. Publication
 remains held until the full migration is checked.
+
+## Media Player helper findings — 2026-10-01
+
+Media helpers still suppress typechecking and duplicate slider math, stub
+selection, list moves, duration formatting, signature fallback, query building
+and color parsing. Query construction has the previously fixed Navigation
+fragment/literal-key bugs. Legacy RGB parsing cannot read modern resolved theme
+colors, and temporary probes are not removed if style resolution throws.
+Editor paths can read inherited/prototype fields. Preserve empty entity rows
+during compaction, and retain valid control geometry/palette behavior while
+checking unknown boundaries. An unused helper normalizes power actions using an
+undefined deepClone reference; verify there are no callers and remove this dead
+implementation/imports, leaving the separate live config policy unchanged.
+
+Media helpers now pass strict checking and typed lint. Reuse the checked slider,
+stub, list, signature and query helpers; share duration/artwork URL handling
+with Navigation and modern RGB/luminance parsing with Gauge. Empty entity rows
+remain during recursive compaction through an explicit preserved-key option;
+other consumers retain their existing empty-value behavior. JSON input is
+narrowed as unknown and formatting always returns a string. Read own path
+fields only, while retaining Media's empty-segment behavior. The unused power
+helper and both unused imports are retired after a repository-wide caller
+search; the live config normalization policy remains unchanged. Temporary theme
+color probes are removed in finally even when style resolution fails.
+
+Six new unit cases cover JSON, placeholders, colors, URLs, path/move boundaries,
+sliders and probe cleanup. Replace the implementation-shape empty-row test with
+a real editor clear/commit regression, and add real modern-theme switching in
+the browser. 3,000 valid helper outputs match merged main. All 687 unit tests
+pass; six targeted browser cases pass. Remaining unchecked modules: 61; Media
+config/view/editor remain in the migration.
+Full local browser suite: 263 passed, one existing platform skip. Publication
+remains held until the complete migration is checked.
