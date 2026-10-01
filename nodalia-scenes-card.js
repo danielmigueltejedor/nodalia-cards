@@ -742,9 +742,6 @@
         }
         fireEvent(this, "hass-more-info", { entityId });
       }
-      _captureDashboardScrollSnapshot() {
-        return collectDashboardScrollSnapshot(this);
-      }
       _scheduleDashboardScrollRestore(snapshot = this._interactionScrollSnapshot) {
         this._cancelScrollRestore?.();
         this._cancelScrollRestore = scheduleDashboardScrollRestore(snapshot);

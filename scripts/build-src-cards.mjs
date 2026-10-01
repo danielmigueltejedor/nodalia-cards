@@ -1,3 +1,4 @@
+import { embeddedStylesPlugin } from "./embedded-styles.mjs";
 import { CARD_REGISTRY } from "./card-registry.mjs";
 import { build } from "esbuild";
 import path from "node:path";
@@ -23,6 +24,7 @@ export async function buildSrcCards() {
       entryPoints: [card.entry],
       outfile: card.outfile,
       bundle: true,
+      plugins: [embeddedStylesPlugin()],
       write: true,
       format: "iife",
       platform: "browser",

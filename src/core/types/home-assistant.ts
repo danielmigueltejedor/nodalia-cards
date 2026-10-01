@@ -53,7 +53,11 @@ export interface HomeAssistant {
     service: string,
     data?: Record<string, unknown>,
     target?: Record<string, unknown>,
+    notifyOnError?: boolean,
+    returnResponse?: boolean,
   ) => unknown;
+  callApi?: (method: string, path: string, parameters?: unknown) => Promise<unknown>;
+  auth?: { fetchWithAuth?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response> };
   callWS?: (message: Record<string, unknown>) => Promise<unknown>;
   connection?: {
     subscribeMessage?: (callback: (event: unknown) => void, message: Record<string, unknown>) => Promise<(() => void) | void>;

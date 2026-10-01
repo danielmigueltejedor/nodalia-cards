@@ -546,7 +546,8 @@ ${metadata}` : metadata;
       }
     }
     normalized.time_range = timeRange;
-    normalized.days_to_show = Math.min(62, Math.max(1, daysFromTimeRange(timeRange)));
+    const daysToShow = Math.min(62, Math.max(1, daysFromTimeRange(timeRange)));
+    normalized.days_to_show = daysToShow;
     delete normalized.quick_reminder_webhook;
     normalized.native_event_webhook = String(normalized.native_event_webhook ?? "").trim();
     const priorSecurity = isObject(normalized.security) ? normalized.security : {};
@@ -564,7 +565,8 @@ ${metadata}` : metadata;
       12,
       Math.max(1, parseFiniteNumericValue(normalized.max_visible_events) || DEFAULT_CONFIG.max_visible_events)
     );
-    normalized.refresh_interval = Math.min(3600, Math.max(30, parseFiniteNumericValue(normalized.refresh_interval) || DEFAULT_CONFIG.refresh_interval));
+    const refreshInterval = Math.min(3600, Math.max(30, parseFiniteNumericValue(normalized.refresh_interval) || DEFAULT_CONFIG.refresh_interval));
+    normalized.refresh_interval = refreshInterval;
     const rawStyles = isObject(normalized.styles) ? normalized.styles : {};
     if (!rawStyles.chip_font_size && rawStyles.chip_size) rawStyles.chip_font_size = rawStyles.chip_size;
     const card = isObject(rawStyles.card) ? rawStyles.card : {};
@@ -584,6 +586,9 @@ ${metadata}` : metadata;
       content_duration: Math.max(120, animationDuration ?? DEFAULT_CONFIG.animations.content_duration)
     };
     const fields = {
+      days_to_show: daysToShow,
+      refresh_interval: refreshInterval,
+      security: { ...security, allow_webhooks_for_non_admin: security.allow_webhooks_for_non_admin === true },
       entity: typeof normalized.entity === "string" ? normalized.entity : "",
       language: typeof normalized.language === "string" ? normalized.language : "auto",
       weather_entity: String(normalized.weather_entity),
@@ -601,7 +606,24 @@ ${metadata}` : metadata;
     return configFields;
   }
 
+  // src/cards/calendar/calendar-composer.css
+  var calendar_composer_default = '.calendar-composer{display:grid;inset:0;opacity:0;overflow:auto;overscroll-behavior:contain;padding:12px;pointer-events:none;place-items:center;position:absolute;touch-action:pan-y;transition:opacity 180ms ease;-webkit-overflow-scrolling:touch;z-index:3}.calendar-composer.is-open{opacity:1;pointer-events:auto}.calendar-delete-recurrence.is-open{z-index:4}.calendar-delete-recurrence__text{color:var(--secondary-text-color);font-size:13px;line-height:1.45;margin:0}.calendar-delete-recurrence__choices{display:grid;gap:8px}.calendar-delete-recurrence__choices .calendar-composer__btn{justify-self:stretch;width:100%}.calendar-delete-recurrence__error{background:color-mix(in srgb,var(--error-color, #db4437) 12%,transparent);border:1px solid color-mix(in srgb,var(--error-color, #db4437) 35%,transparent);border-radius:10px;color:var(--error-color, #db4437);font-size:13px;line-height:1.4;margin:0;padding:8px 10px}.calendar-composer__backdrop{-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);background:rgba(0,0,0,0.28);inset:0;position:absolute}.calendar-composer__panel{background:linear-gradient(180deg,color-mix(in srgb,var(--calendar-expanded-accent) 14%,rgba(255,255,255,0.06)),rgba(255,255,255,0.02)),color-mix(in srgb,var(--ha-card-background, var(--card-background-color, #fff)) 94%,rgba(255,255,255,0.03));border:1px solid color-mix(in srgb,var(--calendar-expanded-accent) 30%,color-mix(in srgb,var(--primary-text-color) 9%,transparent));border-radius:16px;box-shadow:0 18px 38px rgba(0,0,0,0.28);display:grid;gap:10px;max-height:calc(100% - 24px);max-width:min(100%,640px);overflow:auto;padding:14px;position:relative;width:min(100%,640px);z-index:1}.calendar-composer__title{font-size:var(--calendar-title-size);font-weight:800;letter-spacing:-0.02em}.calendar-composer__row{display:grid;gap:10px;grid-template-columns:repeat(2,minmax(0,1fr))}.calendar-composer__row[hidden]{display:none!important}.calendar-composer__row--middle{align-items:center}.calendar-composer__field{display:grid;gap:6px}.calendar-composer__field--color{align-items:start;justify-items:start}.calendar-composer__field>span,.calendar-composer__check>span{font-size:12px;font-weight:700}.calendar-composer__field input,.calendar-composer__field textarea,.calendar-composer__field select{appearance:none;background:color-mix(in srgb,var(--primary-text-color) 4%,transparent);border:1px solid color-mix(in srgb,var(--primary-text-color) 8%,transparent);border-radius:12px;color:var(--primary-text-color);font:inherit;min-height:38px;padding:8px 10px;width:100%}.calendar-composer__field textarea{line-height:1.35;min-height:76px;resize:vertical}.calendar-composer .editor-color-field{align-items:center;display:flex;flex-wrap:wrap;gap:10px;min-height:40px}.calendar-composer .editor-color-picker{align-items:center;background:color-mix(in srgb,var(--primary-text-color) 4%,transparent);border:1px solid color-mix(in srgb,var(--primary-text-color) 8%,transparent);border-radius:999px;cursor:pointer;display:inline-flex;flex:0 0 auto;height:40px;justify-content:center;position:relative;width:40px}.calendar-composer .editor-color-picker input{cursor:pointer;inset:0;opacity:0;position:absolute}.calendar-composer .editor-color-picker:hover,.calendar-composer .editor-color-picker:focus-within{border-color:color-mix(in srgb,var(--primary-text-color) 22%,transparent);box-shadow:inset 0 1px 0 color-mix(in srgb,var(--primary-text-color) 8%,transparent)}.calendar-composer .editor-color-swatch{--editor-swatch: #71c0ff;background:linear-gradient(var(--editor-swatch),var(--editor-swatch)),conic-gradient(from 90deg,color-mix(in srgb,var(--primary-text-color) 6%,transparent) 25%,rgba(0,0,0,0.12) 0 50%,color-mix(in srgb,var(--primary-text-color) 6%,transparent) 0 75%,rgba(0,0,0,0.12) 0);background-position:center;background-size:cover,10px 10px;border:1px solid color-mix(in srgb,var(--primary-text-color) 14%,transparent);border-radius:999px;display:block;height:22px;width:22px}.calendar-composer__check{align-items:center;display:inline-grid;gap:8px;grid-template-columns:auto minmax(0,1fr);margin-top:22px}.calendar-composer__check input{appearance:none;background:color-mix(in srgb,var(--primary-text-color) 8%,transparent);border:1px solid color-mix(in srgb,var(--primary-text-color) 12%,transparent);border-radius:999px;cursor:pointer;height:22px;margin:0;position:relative;transition:background 160ms ease,border-color 160ms ease;width:40px}.calendar-composer__check input::before{background:rgba(255,255,255,0.92);border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,0.24);content:"";height:18px;left:1px;position:absolute;top:1px;transition:transform 160ms ease;width:18px}.calendar-composer__check input:checked{background:var(--calendar-expanded-accent);border-color:var(--calendar-expanded-accent)}.calendar-composer__check input:checked::before{transform:translateX(18px)}.calendar-composer__error{align-items:center;background:color-mix(in srgb,var(--error-color, #db4437) 13%,transparent);border:1px solid color-mix(in srgb,var(--error-color, #db4437) 34%,transparent);border-radius:12px;color:var(--error-color, #db4437);display:flex;font-size:12px;font-weight:800;gap:8px;line-height:1.35;padding:9px 10px}.calendar-composer__error[hidden]{display:none}.calendar-composer__error ha-icon{flex:0 0 auto;height:18px;width:18px}.calendar-composer__actions{display:flex;gap:8px;justify-content:flex-end}.calendar-composer__btn{appearance:none;background:color-mix(in srgb,var(--primary-text-color) 7%,transparent);border:1px solid color-mix(in srgb,var(--primary-text-color) 8%,transparent);border-radius:999px;color:var(--primary-text-color);cursor:pointer;font:inherit;font-size:12px;font-weight:700;min-height:34px;padding:0 12px}.calendar-composer__btn--primary{background:color-mix(in srgb,var(--calendar-expanded-accent) 22%,transparent);border-color:color-mix(in srgb,var(--calendar-expanded-accent) 38%,var(--divider-color))}';
+
   // src/cards/calendar/calendar-card.ts
+  function createCalendarSignature(prefix) {
+    let hash = 2166136261;
+    return {
+      mix(value) {
+        const text = value === null || value === void 0 ? "" : String(value);
+        for (let i = 0; i < text.length; i += 1) {
+          hash ^= text.charCodeAt(i);
+          hash = Math.imul(hash, 16777619) >>> 0;
+        }
+        hash = Math.imul(hash ^ 2654435769, 16777619) >>> 0;
+      },
+      key: () => `${prefix}:${hash.toString(36)}`
+    };
+  }
   var _lazyNodaliaCalendarCard;
   function loadNodaliaCalendarCard() {
     if (_lazyNodaliaCalendarCard) {
@@ -609,7 +631,6 @@ ${metadata}` : metadata;
     }
     class NodaliaCalendarCard extends HTMLElement {
       static getStubConfig(hass, entities = [], entitiesFallback = []) {
-        const config = deepClone(DEFAULT_CONFIG);
         const entityId = window.NodaliaUtils.findStubEntityIds(
           hass,
           entities,
@@ -617,10 +638,7 @@ ${metadata}` : metadata;
           ["calendar"],
           1
         )[0];
-        if (entityId) {
-          config.calendars = [{ entity: entityId }];
-        }
-        return config;
+        return { ...deepClone(DEFAULT_CONFIG), calendars: entityId ? [{ entity: entityId }] : [] };
       }
       static getConfigElement() {
         return document.createElement(EDITOR_TAG);
@@ -644,6 +662,12 @@ ${metadata}` : metadata;
       }
       _nodaliaConstruct() {
         this.attachShadow({ mode: "open" });
+        this._contextGeneration = 0;
+        this._composerGeneration = 0;
+        this._composerSavingGeneration = null;
+        this._weatherSubscriptionGeneration = 0;
+        this._weatherForecastRevision = 0;
+        this._weatherForecastConnection = void 0;
         this._config = normalizeConfig(DEFAULT_CONFIG);
         this._hass = null;
         this._events = [];
@@ -657,6 +681,7 @@ ${metadata}` : metadata;
         this._calendarEntrancePlayFrame = 0;
         this._expandedOverlayEntrancePlayFrame = 0;
         this._expandedOpen = false;
+        this._composerGeneration += 1;
         this._nativeEventComposerOpen = false;
         this._nativeComposerError = "";
         this._nativeComposerCalendarValue = "";
@@ -678,7 +703,6 @@ ${metadata}` : metadata;
         this._refreshInFlight = false;
         this._refreshQueued = false;
         this._refreshRunId = 0;
-        this._renderVisibleEventsCache = null;
       }
       _uiText(path, fallback, values = {}) {
         if (window.NodaliaI18n?.translateCalendarUi) {
@@ -728,7 +752,8 @@ ${metadata}` : metadata;
           detail: style
         }));
         if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
-          navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
+          const patterns = HAPTIC_PATTERNS;
+          navigator.vibrate(patterns[style] || HAPTIC_PATTERNS.selection);
         }
       }
       _calendarMatchesExternalRequest(detail = {}) {
@@ -746,6 +771,7 @@ ${metadata}` : metadata;
         }
         this._expandedEventDetailKey = String(eventKey || "");
         this._nativeComposerError = "";
+        this._composerGeneration += 1;
         this._nativeEventComposerOpen = false;
         this._deleteRecurringChoiceKey = "";
         this._deleteRecurrenceError = "";
@@ -756,7 +782,7 @@ ${metadata}` : metadata;
         this._renderIfChanged(true);
       }
       _onExternalOpenRequest(event) {
-        const detail = event?.detail || {};
+        const detail = event instanceof CustomEvent && isObject(event.detail) ? event.detail : {};
         if (!this._calendarMatchesExternalRequest(detail)) {
           return;
         }
@@ -766,8 +792,7 @@ ${metadata}` : metadata;
           eventKey: detail.event_key || detail.eventKey || ""
         });
       }
-      async _fetchCalendarEventsViaRest(entityId, start, end) {
-        const hass = this._hass;
+      async _fetchCalendarEventsViaRest(entityId, start, end, hass = this._hass) {
         if (!hass?.auth?.fetchWithAuth || typeof hass.auth.fetchWithAuth !== "function") {
           return [];
         }
@@ -819,9 +844,9 @@ ${metadata}` : metadata;
           this._refreshTimer = 0;
         }
         this._cancelCalendarEntrancePlayFrames();
-        this._refreshRunId += 1;
-        this._refreshInFlight = false;
-        this._refreshQueued = false;
+        this._contextGeneration += 1;
+        this._composerGeneration += 1;
+        this._invalidateRefresh();
         this._calendarEntrancePlayed = false;
         this._wasInViewport = false;
         this._unsubscribeWeatherForecast();
@@ -868,37 +893,80 @@ ${metadata}` : metadata;
         this._viewVisibilityObserver.disconnect();
         this._viewVisibilityObserver = null;
       }
+      _invalidateRefresh() {
+        this._refreshRunId += 1;
+        this._refreshInFlight = false;
+        this._refreshQueued = false;
+        this._loading = false;
+        if (this._refreshTimer) window.clearTimeout(this._refreshTimer);
+        this._refreshTimer = 0;
+      }
+      _contextKey(config = this._config) {
+        return JSON.stringify([
+          config.calendars.map((entry) => entry.entity),
+          config.days_to_show,
+          config.weather_entity,
+          config.native_event_webhook,
+          config.security.allow_webhooks_for_non_admin
+        ]);
+      }
       setConfig(config) {
-        const prevWeatherEntity = this._getWeatherEntityId();
-        this._config = normalizeConfig(config);
-        const nextWeatherEntity = this._getWeatherEntityId();
-        if (prevWeatherEntity !== nextWeatherEntity) {
+        const previous = this._config;
+        const next = normalizeConfig(config);
+        const changed = this._contextKey(previous) !== this._contextKey(next);
+        this._config = next;
+        if (changed) {
+          this._contextGeneration += 1;
+          this._composerGeneration += 1;
+          this._nativeEventComposerOpen = false;
+          this._nativeComposerError = "";
+          this._nativeComposerCalendarValue = "";
+          this._deleteRecurringChoiceKey = "";
+          this._deleteRecurrenceError = "";
+          this._expandedEventDetailKey = "";
+          this._events = [];
+          this._invalidateRefresh();
+        }
+        if (previous.weather_entity !== next.weather_entity) {
           this._unsubscribeWeatherForecast();
-          this._weatherForecastByDay = /* @__PURE__ */ new Map();
+          this._weatherForecastByDay.clear();
           this._weatherForecastEvents = {};
         }
         this._ensureWeatherForecastSubscription();
-        this._refreshEvents();
+        void this._refreshEvents();
       }
       set hass(hass) {
-        const hadHass = this._hadHass;
+        const previous = this._hass;
+        const changed = previous?.connection !== hass?.connection || previous?.user?.id !== hass?.user?.id || previous?.user?.is_admin !== hass?.user?.is_admin || Boolean(previous) !== Boolean(hass);
         this._hass = hass;
-        if (!hass) {
+        if (changed) {
+          this._contextGeneration += 1;
+          this._composerGeneration += 1;
+          this._invalidateRefresh();
           this._unsubscribeWeatherForecast();
+          this._weatherForecastByDay.clear();
+          this._weatherForecastEvents = {};
+        }
+        if (!hass) {
+          this._hadHass = false;
+          this._events = [];
+          this._renderIfChanged(true);
           return;
         }
         this._ensureWeatherForecastSubscription();
-        if (!hadHass) {
+        if (!this._hadHass || changed) {
           this._hadHass = true;
-          this._refreshEvents();
+          void this._refreshEvents();
           return;
         }
         this._renderIfChanged(false);
       }
       _getLocale() {
-        const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+        const resolved = window.NodaliaI18n?.resolveHass?.(null);
+        const hass = this._hass ?? resolved;
         const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto");
-        return window.NodaliaI18n?.localeTag?.(lang) || hass?.locale?.language || "en";
+        const locale = isObject(resolved) && isObject(resolved.locale) ? resolved.locale : {};
+        return (lang ? window.NodaliaI18n?.localeTag?.(lang) : "") || this._hass?.locale?.language || String(locale.language || "en");
       }
       _getCalendarEntityLabel(entityId) {
         const id = String(entityId ?? "").trim();
@@ -912,24 +980,6 @@ ${metadata}` : metadata;
         const short = id.includes(".") ? id.slice(id.indexOf(".") + 1) : id;
         const humanized = short.replace(/_/g, " ").trim();
         return humanized || id;
-      }
-      _getCalendarEntityLabelsSignature() {
-        const hass = this._hass;
-        if (!hass?.states) {
-          return "";
-        }
-        const ids = /* @__PURE__ */ new Set([
-          ...(this._config?.calendars || []).map((c) => c?.entity).filter(Boolean),
-          ...this._events.map((event) => event._entity).filter(Boolean)
-        ]);
-        const meta = (this._config?.calendars || []).map((c) => `${c?.entity || ""}${c?.label || ""}${c?.tint || ""}`).join("");
-        return [
-          [...ids].sort().map((id) => {
-            const friendly = String(hass.states[id]?.attributes?.friendly_name ?? "").trim();
-            return `${id}${friendly}`;
-          }).join(""),
-          meta
-        ].join("");
       }
       _getAvailableNativeCalendarIds() {
         const configured = (this._config?.calendars || []).map((c) => String(c?.entity || "").trim()).filter(Boolean);
@@ -974,8 +1024,8 @@ ${metadata}` : metadata;
           return "";
         }
         const icon = weatherConditionIcon(w?.condition);
-        const minRaw = Number.isFinite(w?.tempMin) ? Math.round(w.tempMin) : null;
-        const maxRaw = Number.isFinite(w?.tempMax) ? Math.round(w.tempMax) : null;
+        const minRaw = w.tempMin !== null && Number.isFinite(w.tempMin) ? Math.round(w.tempMin) : null;
+        const maxRaw = w.tempMax !== null && Number.isFinite(w.tempMax) ? Math.round(w.tempMax) : null;
         const hasCondition = Boolean(String(w?.condition || "").trim());
         if (minRaw === null && maxRaw === null && !hasCondition) {
           return "";
@@ -983,6 +1033,12 @@ ${metadata}` : metadata;
         const minText = minRaw === null ? "—" : `${minRaw}°`;
         const maxText = maxRaw === null ? "—" : `${maxRaw}°`;
         return `<div class="${escapeHtml(className)}"><ha-icon icon="${escapeHtml(icon)}"></ha-icon><span>${escapeHtml(minText)} / ${escapeHtml(maxText)}</span></div>`;
+      }
+      _renderDetailBackButton(action, label) {
+        return `<button type="button" class="calendar-expanded__day-back" data-action="${escapeHtml(action)}">
+              <ha-icon icon="mdi:chevron-left"></ha-icon>
+              <span>${escapeHtml(label)}</span>
+            </button>`;
       }
       _renderExpandedMonthDayDetail(events, focusDate, config, locale, weatherByDay) {
         const sorted = [...events].sort((left, right) => {
@@ -998,37 +1054,17 @@ ${metadata}` : metadata;
             year: "numeric"
           }).format(focusDate)
         );
-        if (!sorted.length) {
-          return `
-        <div class="calendar-expanded__day-detail">
-          <div class="calendar-expanded__day-detail-toolbar">
-            <button type="button" class="calendar-expanded__day-back" data-action="month-day-back">
-              <ha-icon icon="mdi:chevron-left"></ha-icon>
-              <span>${escapeHtml(this._uiText("buttons.month", "Month"))}</span>
-            </button>
-          </div>
-          <div class="calendar-expanded__day-detail-heading">
-            <div class="calendar-expanded__day-detail-title">${escapeHtml(longTitle)}</div>
-            ${this._renderWeatherBadge(focusDate, weatherByDay, "calendar-expanded__weather")}
-          </div>
-          <div class="calendar-expanded__day-empty">${escapeHtml(this._uiText("empty.day", "No events this day."))}</div>
-        </div>
-      `;
-        }
         const eventsHtml = sorted.map((ev) => this._renderSingleEventHtml(ev, config, locale, { detailAction: true })).join("");
         return `
       <div class="calendar-expanded__day-detail">
         <div class="calendar-expanded__day-detail-toolbar">
-          <button type="button" class="calendar-expanded__day-back" data-action="month-day-back">
-            <ha-icon icon="mdi:chevron-left"></ha-icon>
-            <span>${escapeHtml(this._uiText("buttons.month", "Month"))}</span>
-          </button>
+          ${this._renderDetailBackButton("month-day-back", this._uiText("buttons.month", "Month"))}
         </div>
         <div class="calendar-expanded__day-detail-heading">
           <div class="calendar-expanded__day-detail-title">${escapeHtml(longTitle)}</div>
           ${this._renderWeatherBadge(focusDate, weatherByDay, "calendar-expanded__weather")}
         </div>
-        <div class="calendar-expanded__day-detail-scroll">${eventsHtml}</div>
+        ${sorted.length ? `<div class="calendar-expanded__day-detail-scroll">${eventsHtml}</div>` : `<div class="calendar-expanded__day-empty">${escapeHtml(this._uiText("empty.day", "No events this day."))}</div>`}
       </div>
     `;
       }
@@ -1055,10 +1091,7 @@ ${metadata}` : metadata;
         return `
       <div class="calendar-expanded__event-detail" style="--cal-detail-tint:${escapeHtml(tint)}">
         <div class="calendar-expanded__day-detail-toolbar">
-          <button type="button" class="calendar-expanded__day-back" data-action="event-detail-back">
-            <ha-icon icon="mdi:chevron-left"></ha-icon>
-            <span>${escapeHtml(this._uiText("buttons.back", "Back"))}</span>
-          </button>
+          ${this._renderDetailBackButton("event-detail-back", this._uiText("buttons.back", "Back"))}
           ${this._canDeleteCalendarEvent(event, config) ? `<button type="button" class="calendar-expanded__event-delete" data-action="delete-event" data-key="${escapeHtml(eventKey)}" aria-label="${escapeHtml(this._uiText("aria.deleteEvent", "Delete event"))}">
                   <ha-icon icon="mdi:trash-can-outline"></ha-icon>
                   <span>${escapeHtml(this._uiText("buttons.delete", "Delete"))}</span>
@@ -1260,7 +1293,7 @@ ${metadata}` : metadata;
               });
               const headEv = sortedDay[0];
               const tail = sortedDay.slice(1);
-              monthPeekInner += this._renderSingleEventHtml(headEv, config, locale, { compact: true });
+              monthPeekInner += headEv ? this._renderSingleEventHtml(headEv, config, locale, { compact: true }) : "";
               if (tail.length) {
                 monthPeekInner += `<div class="calendar-expanded__month-cell-dots">${tail.map((ev) => {
                   const tint = this._getEventTint(ev) || this._getCalendarTintDotCss(ev._entity);
@@ -1328,20 +1361,14 @@ ${metadata}` : metadata;
         const config = this._config;
         const styles = config.styles || DEFAULT_CONFIG.styles;
         const visibleEvents = this._events;
-        this._renderVisibleEventsCache = visibleEvents;
-        let hash = 2166136261;
-        const mix = (value) => {
-          const text = value === null || value === void 0 ? "" : String(value);
-          for (let i = 0; i < text.length; i += 1) {
-            hash ^= text.charCodeAt(i);
-            hash = Math.imul(hash, 16777619) >>> 0;
-          }
-          hash = Math.imul(hash ^ 2654435769, 16777619) >>> 0;
-        };
+        const { mix, key } = createCalendarSignature("r");
         (config.calendars || []).forEach((c) => {
           mix(c?.entity || "");
           mix(c?.label || "");
           mix(c?.tint || "");
+          const state = this._hass?.states[c.entity];
+          mix(state?.attributes.friendly_name);
+          mix(state?.attributes.supported_features);
         });
         mix(config.title);
         mix(config.icon);
@@ -1384,6 +1411,8 @@ ${metadata}` : metadata;
           mix(eventDate(event?.start)?.getTime() || 0);
           mix(calendarEventUid(event));
           mix(calendarEventRecurrenceId(event));
+          mix(event.summary || event.message || "");
+          mix(event.end);
           mix(event?.description || "");
           mix(event?.location || "");
           mix(event?.rrule || "");
@@ -1394,8 +1423,9 @@ ${metadata}` : metadata;
         mix(this._deleteRecurringChoiceKey || "");
         mix(this._deleteRecurrenceError || "");
         mix(this._expandedOpenedForDeleteRecurrenceOnly ? 1 : 0);
+        mix(this._nativeEventComposerOpen ? 1 : 0);
         mix(this._nativeComposerError || "");
-        return `r:${hash.toString(36)}`;
+        return key();
       }
       _renderIfChanged(force = false) {
         if (!this.isConnected) {
@@ -1409,6 +1439,7 @@ ${metadata}` : metadata;
         this._render();
       }
       async _refreshEvents() {
+        if (!this.isConnected) return;
         if (this._refreshInFlight) {
           this._refreshQueued = true;
           return;
@@ -1429,6 +1460,7 @@ ${metadata}` : metadata;
           if (!calendarIds.length) {
             this._events = [];
             await this._refreshWeatherForecastByDay(refreshRunId);
+            if (refreshRunId !== this._refreshRunId || !this.isConnected) return;
             this._loading = false;
             this._error = "";
             this._renderIfChanged(true);
@@ -1443,19 +1475,22 @@ ${metadata}` : metadata;
             const end = new Date(start.getTime() + this._config.days_to_show * 24 * 60 * 60 * 1e3);
             const all = [];
             for (const entityId of calendarIds) {
+              if (refreshRunId !== this._refreshRunId || !this.isConnected) return;
               const path = `calendars/${encodeURIComponent(entityId)}?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`;
               let rows = [];
               try {
-                const raw = await hass.callApi("GET", path);
+                const raw = await hass.callApi?.("GET", path);
                 rows = normalizeCalendarFetchResult(raw);
+                if (refreshRunId !== this._refreshRunId || !this.isConnected) return;
                 if (!rows.length && (raw === void 0 || raw === null)) {
-                  const fallback = await this._fetchCalendarEventsViaRest(entityId, start, end);
+                  const fallback = await this._fetchCalendarEventsViaRest(entityId, start, end, hass);
                   if (fallback.length) {
                     rows = fallback;
                   }
                 }
               } catch (_apiError) {
-                rows = await this._fetchCalendarEventsViaRest(entityId, start, end);
+                if (refreshRunId !== this._refreshRunId || !this.isConnected) return;
+                rows = await this._fetchCalendarEventsViaRest(entityId, start, end, hass);
               }
               rows.forEach((item) => all.push({ ...item, _entity: entityId }));
             }
@@ -1486,6 +1521,7 @@ ${metadata}` : metadata;
             }
           }
         } finally {
+          if (refreshRunId !== this._refreshRunId) return;
           this._refreshInFlight = false;
           if (this._refreshQueued && this.isConnected) {
             this._refreshQueued = false;
@@ -1562,7 +1598,7 @@ ${metadata}` : metadata;
       }
       _requestDeleteCalendarEvent(key) {
         const event = this._findEventByKey(key);
-        if (!this._canDeleteCalendarEvent(event)) {
+        if (!event || !this._canDeleteCalendarEvent(event)) {
           return;
         }
         if (calendarEventRecurrenceId(event)) {
@@ -1571,6 +1607,7 @@ ${metadata}` : metadata;
             this._expandedOpen = true;
             this._nativeComposerError = "";
             this._deleteRecurrenceError = "";
+            this._composerGeneration += 1;
             this._nativeEventComposerOpen = false;
             this._expandedEventDetailKey = keyTrim;
             const focusDate = eventDate(event.start);
@@ -1594,12 +1631,14 @@ ${metadata}` : metadata;
       async _deleteCalendarEvent(key, recurrenceRange = void 0) {
         const keyTrim = String(key || "").trim();
         const event = this._findEventByKey(keyTrim);
-        if (!this._canDeleteCalendarEvent(event)) {
+        if (!event || !this._canDeleteCalendarEvent(event)) {
           this._deleteRecurringChoiceKey = "";
           this._deleteRecurrenceError = "";
           this._renderIfChanged(true);
           return;
         }
+        const generation = this._contextGeneration;
+        const current = () => this.isConnected && generation === this._contextGeneration;
         this._deleteRecurrenceError = "";
         const entityId = String(event._entity || "").trim();
         const uid = calendarEventUid(event);
@@ -1614,8 +1653,10 @@ ${metadata}` : metadata;
           payload.recurrence_range = recurrenceRange === CALENDAR_DELETE_RECURRENCE_THIS_AND_FUTURE ? CALENDAR_DELETE_RECURRENCE_THIS_AND_FUTURE : CALENDAR_DELETE_RECURRENCE_THIS;
         }
         try {
-          await this._hass.callWS(payload);
-          if (!this.isConnected) {
+          const hass = this._hass;
+          if (!hass?.callWS) throw new Error("calendar/event/delete unavailable");
+          await hass.callWS(payload);
+          if (!current()) {
             return;
           }
           this._deleteRecurringChoiceKey = "";
@@ -1628,7 +1669,8 @@ ${metadata}` : metadata;
           this._renderIfChanged(true);
           this._refreshEvents();
         } catch (err) {
-          const fromWs = String(err?.message || "").trim();
+          if (!current()) return;
+          const fromWs = String(err instanceof Error ? err.message : isObject(err) ? err.message ?? "" : "").trim();
           this._deleteRecurrenceError = fromWs ? this._uiText("deleteRecurrence.deleteFailedWithMessage", "Could not delete the event: {message}").replace(
             "{message}",
             fromWs
@@ -1651,6 +1693,7 @@ ${metadata}` : metadata;
         this._expandedOverlayEntrancePlayed = false;
         this._expandedMonthDayKey = "";
         this._expandedEventDetailKey = "";
+        this._composerGeneration += 1;
         this._nativeEventComposerOpen = false;
         this._nativeComposerError = "";
       }
@@ -1681,7 +1724,7 @@ ${metadata}` : metadata;
               events: []
             });
           }
-          groups.get(key).events.push(event);
+          groups.get(key)?.events.push(event);
         });
         return [...groups.values()];
       }
@@ -1753,8 +1796,8 @@ ${metadata}` : metadata;
           const canUsePointTemperatureAsLow = item._nodaliaForecastType === "hourly" || item._nodaliaForecastType === "twice_daily";
           const numericForHigh = Number.isFinite(maxCandidate) ? maxCandidate : temperatureCandidate;
           const numericForLow = Number.isFinite(minCandidate) ? minCandidate : canUsePointTemperatureAsLow ? temperatureCandidate : null;
-          const nextMax = Number.isFinite(numericForHigh) ? Number.isFinite(existing.tempMax) ? Math.max(existing.tempMax, numericForHigh) : numericForHigh : existing.tempMax;
-          const nextMin = Number.isFinite(numericForLow) ? Number.isFinite(existing.tempMin) ? Math.min(existing.tempMin, numericForLow) : numericForLow : existing.tempMin;
+          const nextMax = Number.isFinite(numericForHigh) ? existing.tempMax !== null && numericForHigh !== null ? Math.max(existing.tempMax, numericForHigh) : numericForHigh : existing.tempMax;
+          const nextMin = Number.isFinite(numericForLow) ? existing.tempMin !== null && numericForLow !== null ? Math.min(existing.tempMin, numericForLow) : numericForLow : existing.tempMin;
           map.set(dayKey, {
             condition: existing.condition || condition,
             tempMax: nextMax,
@@ -1769,7 +1812,7 @@ ${metadata}` : metadata;
         if (!type) {
           return normalized;
         }
-        return normalized.map((item) => item && typeof item === "object" ? { ...item, _nodaliaForecastType: type } : item);
+        return normalized.map((item) => ({ ...item, _nodaliaForecastType: type }));
       }
       _scoreForecastMap(forecastMap) {
         if (!(forecastMap instanceof Map) || !forecastMap.size) {
@@ -1825,7 +1868,7 @@ ${metadata}` : metadata;
         if (Array.isArray(raw)) {
           return raw.flatMap((item) => this._normalizeForecastRows(item));
         }
-        if (!raw || typeof raw !== "object") {
+        if (!isObject(raw)) {
           return [];
         }
         const dateSeries = raw.time ?? raw.datetime ?? raw.date ?? raw.dates;
@@ -1840,18 +1883,13 @@ ${metadata}` : metadata;
             return row;
           }).filter((item) => item && typeof item === "object");
         }
-        if (Array.isArray(raw.forecast)) {
-          return raw.forecast.flatMap((item) => this._normalizeForecastRows(item));
-        }
-        if (Array.isArray(raw.daily)) {
-          return raw.daily.flatMap((item) => this._normalizeForecastRows(item));
-        }
-        if (Array.isArray(raw.hourly)) {
-          return raw.hourly.flatMap((item) => this._normalizeForecastRows(item));
+        for (const key of ["forecast", "daily", "hourly"]) {
+          const rows = raw[key];
+          if (Array.isArray(rows)) return rows.flatMap((item) => this._normalizeForecastRows(item));
         }
         const objectEntries = Object.entries(raw).filter(([, value]) => value && typeof value === "object");
         const nestedArrays = objectEntries.flatMap(
-          ([key, value]) => this._normalizeForecastRows(withForecastDateFromKey(key, value)).map((item) => withForecastDateFromKey(key, item))
+          ([key, value]) => this._normalizeForecastRows(withForecastDateFromKey(key, value)).map((item) => withForecastDateFromKey(key, item)).filter(isObject)
         );
         if (nestedArrays.length) {
           return nestedArrays;
@@ -1859,7 +1897,7 @@ ${metadata}` : metadata;
         const looksLikeForecastPoint = "datetime" in raw || "date" in raw || "day" in raw || "time" in raw || "timestamp" in raw || "temperature" in raw || "temperature_2m_max" in raw || "templow" in raw || "temperatureLow" in raw || "temperature_2m_min" in raw || "condition" in raw || "weather" in raw;
         return looksLikeForecastPoint ? [raw] : [];
       }
-      _applyWeatherForecastRows(forecastRows, { allowFallback = true, preserveRicherExisting = false } = {}) {
+      _applyWeatherForecastRows(forecastRows, { allowFallback = true } = {}) {
         const forecastMap = this._buildForecastDayMap(forecastRows);
         if (!forecastMap.size && allowFallback) {
           const entityId = this._getWeatherEntityId();
@@ -1888,81 +1926,66 @@ ${metadata}` : metadata;
             }
           }
         }
-        if (preserveRicherExisting && this._weatherForecastByDay instanceof Map && this._weatherForecastByDay.size && !this._isRicherForecastMap(forecastMap, this._weatherForecastByDay)) {
-          return this._weatherForecastByDay;
-        }
         this._weatherForecastByDay = forecastMap;
         return forecastMap;
       }
       _unsubscribeWeatherForecast() {
-        if (!this._weatherForecastSubscription) {
-          this._weatherForecastSubscriptionKey = "";
-          return;
-        }
-        this._weatherForecastSubscription.then((unsubscribe) => {
-          if (typeof unsubscribe === "function") {
-            unsubscribe();
-          }
-        }).catch(() => {
-        });
+        this._weatherSubscriptionGeneration += 1;
+        const pending = this._weatherForecastSubscription;
         this._weatherForecastSubscription = null;
         this._weatherForecastSubscriptionKey = "";
+        this._weatherForecastConnection = void 0;
+        void pending?.then((unsubscribe) => {
+          if (typeof unsubscribe === "function") unsubscribe();
+        }).catch(() => {
+        });
       }
       _ensureWeatherForecastSubscription() {
         const entityId = this._getWeatherEntityId();
-        const stateObj = entityId ? this._hass?.states?.[entityId] : null;
-        if (!this.isConnected || !this._hass || !entityId || !stateObj) {
-          this._unsubscribeWeatherForecast();
-          return;
-        }
-        const subscribeMessage = this._hass.connection?.subscribeMessage;
-        if (typeof subscribeMessage !== "function") {
+        const stateObj = entityId ? this._hass?.states[entityId] : null;
+        const connection = this._hass?.connection;
+        if (!this.isConnected || !entityId || !stateObj || !connection?.subscribeMessage) {
           this._unsubscribeWeatherForecast();
           return;
         }
         const forecastType = supportedWeatherForecastTypes(stateObj)[0] || "daily";
-        const subscriptionKey = `${entityId}:${forecastType}`;
-        if (subscriptionKey === this._weatherForecastSubscriptionKey && this._weatherForecastSubscription) {
-          return;
-        }
+        const key = `${entityId}:${forecastType}`;
+        if (key === this._weatherForecastSubscriptionKey && connection === this._weatherForecastConnection && this._weatherForecastSubscription) return;
         this._unsubscribeWeatherForecast();
-        this._weatherForecastSubscriptionKey = subscriptionKey;
-        this._weatherForecastSubscription = subscribeMessage((event) => {
-          if (!this.isConnected) {
-            return;
-          }
-          this._weatherForecastEvents = {
-            ...this._weatherForecastEvents,
-            [forecastType]: event
-          };
-          const rows = this._tagForecastRows(event?.forecast ?? event, forecastType);
-          const forecastMap = this._applyWeatherForecastRows(rows, {
-            allowFallback: rows.length === 0,
-            preserveRicherExisting: true
-          });
-          if (forecastMap.size) {
-            this._lastRenderSignature = "";
+        this._weatherForecastEvents = {};
+        this._weatherForecastByDay.clear();
+        const generation = this._weatherSubscriptionGeneration;
+        const current = () => this.isConnected && generation === this._weatherSubscriptionGeneration;
+        this._weatherForecastSubscriptionKey = key;
+        this._weatherForecastConnection = connection;
+        try {
+          this._weatherForecastSubscription = connection.subscribeMessage((event) => {
+            if (!current()) return;
+            const value = isObject(event) && "forecast" in event ? event.forecast : event;
+            if (!Array.isArray(value) && !isObject(value)) return;
+            this._weatherForecastRevision += 1;
+            this._weatherForecastEvents[forecastType] = this._tagForecastRows(value, forecastType);
+            this._applyWeatherForecastRows(Object.values(this._weatherForecastEvents).flat(), { allowFallback: false });
             this._renderIfChanged(true);
-          }
-        }, {
-          type: "weather/subscribe_forecast",
-          entity_id: entityId,
-          forecast_type: forecastType
-        }).catch(() => {
+          }, { type: "weather/subscribe_forecast", entity_id: entityId, forecast_type: forecastType }).catch(() => {
+            if (current()) {
+              this._weatherForecastSubscription = null;
+              this._weatherForecastSubscriptionKey = "";
+              this._weatherForecastConnection = void 0;
+            }
+          });
+        } catch (_error) {
           this._weatherForecastSubscription = null;
           this._weatherForecastSubscriptionKey = "";
-        });
+          this._weatherForecastConnection = void 0;
+        }
       }
       _extractForecastRowsFromResponse(response, entityId) {
+        const outer = isObject(response) ? response : {};
         const candidates = [
-          response?.[entityId],
-          response?.response?.[entityId],
-          response?.service_response?.[entityId],
-          response?.result?.[entityId],
-          response,
-          response?.response,
-          response?.service_response,
-          response?.result
+          outer[entityId],
+          ...[outer.response, outer.service_response, outer.result].flatMap((value) => isObject(value) ? [value[entityId], value] : [value]),
+          response
         ];
         for (const candidate of candidates) {
           const normalized = this._normalizeForecastRows(candidate);
@@ -1972,22 +1995,22 @@ ${metadata}` : metadata;
         }
         return [];
       }
-      async _fetchForecastViaWebSocket(entityId, forecastType) {
-        if (typeof this._hass?.callWS !== "function") {
+      async _fetchForecastViaWebSocket(entityId, forecastType, hass = this._hass) {
+        if (typeof hass?.callWS !== "function") {
           return [];
         }
-        const response = await this._hass.callWS({
+        const response = await hass.callWS({
           type: "weather/get_forecasts",
           entity_ids: [entityId],
           forecast_type: forecastType
         });
         return this._tagForecastRows(this._extractForecastRowsFromResponse(response, entityId), forecastType);
       }
-      async _fetchForecastViaService(entityId, forecastType) {
-        if (typeof this._hass?.callService !== "function") {
+      async _fetchForecastViaService(entityId, forecastType, hass = this._hass) {
+        if (typeof hass?.callService !== "function") {
           return [];
         }
-        const response = await this._hass.callService(
+        const response = await hass.callService(
           "weather",
           "get_forecasts",
           { type: forecastType },
@@ -1998,18 +2021,21 @@ ${metadata}` : metadata;
         return this._tagForecastRows(this._extractForecastRowsFromResponse(response, entityId), forecastType);
       }
       _getCachedForecastRows(forecastTypes) {
-        return (Array.isArray(forecastTypes) ? forecastTypes : []).flatMap((forecastType) => this._tagForecastRows(this._weatherForecastEvents?.[forecastType]?.forecast, forecastType));
+        return (Array.isArray(forecastTypes) ? forecastTypes : []).flatMap((forecastType) => this._tagForecastRows(this._weatherForecastEvents[forecastType], forecastType));
       }
       async _refreshWeatherForecastByDay(refreshRunId = this._refreshRunId) {
+        const hass = this._hass;
+        const revision = this._weatherForecastRevision;
+        const subscriptionGeneration = this._weatherSubscriptionGeneration;
         const entityId = this._getWeatherEntityId();
-        if (!entityId || !this._hass?.states?.[entityId]) {
+        if (!entityId || !hass?.states?.[entityId]) {
           this._weatherForecastByDay = /* @__PURE__ */ new Map();
           return;
         }
-        if (refreshRunId !== this._refreshRunId) {
+        if (refreshRunId !== this._refreshRunId || subscriptionGeneration !== this._weatherSubscriptionGeneration) {
           return;
         }
-        const stateObj = this._hass.states[entityId];
+        const stateObj = hass.states[entityId];
         const forecastTypes = supportedWeatherForecastTypes(stateObj);
         const forecastCandidates = [];
         const addForecastCandidate = (rows) => {
@@ -2020,31 +2046,31 @@ ${metadata}` : metadata;
         };
         addForecastCandidate(this._getCachedForecastRows(forecastTypes));
         for (const forecastType of forecastTypes) {
-          if (refreshRunId !== this._refreshRunId || !this.isConnected) {
+          if (refreshRunId !== this._refreshRunId || subscriptionGeneration !== this._weatherSubscriptionGeneration || !this.isConnected) {
             return;
           }
           try {
-            addForecastCandidate(await this._fetchForecastViaWebSocket(entityId, forecastType));
+            addForecastCandidate(await this._fetchForecastViaWebSocket(entityId, forecastType, hass));
           } catch (_error) {
           }
-          if (refreshRunId !== this._refreshRunId || !this.isConnected) {
+          if (refreshRunId !== this._refreshRunId || subscriptionGeneration !== this._weatherSubscriptionGeneration || !this.isConnected) {
             return;
           }
           try {
-            addForecastCandidate(await this._fetchForecastViaService(entityId, forecastType));
+            addForecastCandidate(await this._fetchForecastViaService(entityId, forecastType, hass));
           } catch (_error) {
           }
         }
         addForecastCandidate(this._tagForecastRows(stateObj.attributes?.forecast, "daily"));
         addForecastCandidate(this._tagForecastRows(stateObj.attributes?.forecast_daily, "daily"));
         addForecastCandidate(this._tagForecastRows(stateObj.attributes?.daily_forecast, "daily"));
-        if (typeof this._hass?.callApi === "function") {
+        if (typeof hass?.callApi === "function") {
           try {
-            const restDaily = await this._hass.callApi(
+            const restDaily = await hass.callApi(
               "GET",
               `weather/forecast/${encodeURIComponent(entityId)}?type=daily`
             );
-            if (refreshRunId !== this._refreshRunId || !this.isConnected) {
+            if (refreshRunId !== this._refreshRunId || subscriptionGeneration !== this._weatherSubscriptionGeneration || !this.isConnected) {
               return;
             }
             addForecastCandidate(this._tagForecastRows(restDaily, "daily"));
@@ -2052,10 +2078,14 @@ ${metadata}` : metadata;
           }
         }
         const forecastRows = this._selectBestForecastRows(forecastCandidates);
-        if (refreshRunId !== this._refreshRunId) {
+        if (refreshRunId !== this._refreshRunId || subscriptionGeneration !== this._weatherSubscriptionGeneration) {
           return;
         }
-        this._applyWeatherForecastRows(forecastRows);
+        if (revision !== this._weatherForecastRevision || Object.keys(this._weatherForecastEvents).length) {
+          this._applyWeatherForecastRows(Object.values(this._weatherForecastEvents).flat(), { allowFallback: false });
+        } else {
+          this._applyWeatherForecastRows(forecastRows);
+        }
       }
       _buildWeatherForecastByDay() {
         return this._weatherForecastByDay instanceof Map ? this._weatherForecastByDay : /* @__PURE__ */ new Map();
@@ -2084,7 +2114,7 @@ ${metadata}` : metadata;
           if (!rowKey) {
             continue;
           }
-          const [ky, km, kd] = rowKey.split("-").map(Number);
+          const [ky = NaN, km = NaN, kd = NaN] = rowKey.split("-").map(Number);
           const rowMonth = km - 1;
           if (ky !== y || rowMonth !== m) {
             continue;
@@ -2104,15 +2134,7 @@ ${metadata}` : metadata;
           return "";
         }
         const stateObj = this._hass.states[entityId];
-        let hash = 2166136261;
-        const mix = (value) => {
-          const text = value === null || value === void 0 ? "" : String(value);
-          for (let i = 0; i < text.length; i += 1) {
-            hash ^= text.charCodeAt(i);
-            hash = Math.imul(hash, 16777619) >>> 0;
-          }
-          hash = Math.imul(hash ^ 2654435769, 16777619) >>> 0;
-        };
+        const { mix, key: signature } = createCalendarSignature("w");
         mix(entityId);
         mix(String(stateObj.state || ""));
         [...this._buildWeatherForecastByDay().entries()].sort((left, right) => String(left[0]).localeCompare(String(right[0]))).forEach(([key, item]) => {
@@ -2121,13 +2143,14 @@ ${metadata}` : metadata;
           mix(item?.tempMax ?? "");
           mix(item?.tempMin ?? "");
         });
-        return `w:${hash.toString(36)}`;
+        return signature();
       }
       _openNativeEventComposer() {
         this._nativeComposerError = "";
         if (!this._nativeComposerCalendarValue) {
           this._nativeComposerCalendarValue = this._getAvailableNativeCalendarIds()[0] || "";
         }
+        this._composerGeneration += 1;
         this._nativeEventComposerOpen = true;
         this._renderIfChanged(true);
       }
@@ -2135,38 +2158,25 @@ ${metadata}` : metadata;
         if (!this._nativeEventComposerOpen) {
           return;
         }
+        this._composerGeneration += 1;
         this._nativeEventComposerOpen = false;
         this._nativeComposerError = "";
         this._renderIfChanged(true);
       }
-      _setComposerError(kind, message) {
-        const text = String(message || "").trim();
-        const isNative = kind === "native";
-        if (isNative) {
-          this._nativeComposerError = text;
-        }
-        const selector = isNative ? "[data-native-error]" : "";
-        if (!selector) {
-          return;
-        }
-        const node = this.shadowRoot?.querySelector(selector);
-        if (!(node instanceof HTMLElement)) {
-          return;
-        }
+      _setComposerError(message) {
+        const text = message.trim();
+        this._nativeComposerError = text;
+        const node = this.shadowRoot?.querySelector("[data-native-error]");
+        if (!(node instanceof HTMLElement)) return;
         node.hidden = !text;
         const label = node.querySelector("[data-error-text]");
-        if (label) {
-          label.textContent = text;
-        } else {
-          node.textContent = text;
-        }
+        if (label) label.textContent = text;
+        else node.textContent = text;
       }
-      _renderComposerError(kind) {
-        const isNative = kind === "native";
-        const message = isNative ? this._nativeComposerError : "";
-        const marker = isNative ? "data-native-error" : "";
+      _renderComposerError() {
+        const message = this._nativeComposerError;
         return `
-      <div class="calendar-composer__error" ${marker} role="alert" aria-live="polite" ${message ? "" : "hidden"}>
+      <div class="calendar-composer__error" data-native-error role="alert" aria-live="polite" ${message ? "" : "hidden"}>
         <ha-icon icon="mdi:alert-circle-outline"></ha-icon>
         <span data-error-text>${escapeHtml(message)}</span>
       </div>
@@ -2228,74 +2238,61 @@ ${metadata}` : metadata;
           }
         };
       }
+      _nativeFieldValue(key, fallback = "") {
+        const field = this.shadowRoot?.querySelector(`[data-native-field="${CSS.escape(key)}"]`);
+        return field instanceof HTMLInputElement || field instanceof HTMLSelectElement || field instanceof HTMLTextAreaElement ? field.value.trim() || fallback : fallback;
+      }
+      _nativeFieldChecked(key) {
+        const field = this.shadowRoot?.querySelector(`[data-native-field="${CSS.escape(key)}"]`);
+        return field instanceof HTMLInputElement && field.checked;
+      }
       async _submitNativeEventComposer() {
         if (!this.isConnected || !this._hass || !this.shadowRoot) {
           return;
         }
-        this._setComposerError("native", "");
-        const pickerValue = this.shadowRoot.querySelector('[data-native-field="calendar"]')?.value;
-        const calendarId = String(this._nativeComposerCalendarValue || pickerValue || "").trim();
-        const title = String(
-          this.shadowRoot.querySelector('[data-native-field="title"]')?.value || ""
-        ).trim();
-        const dateRaw = String(
-          this.shadowRoot.querySelector('[data-native-field="date"]')?.value || ""
-        ).trim();
-        const allDay = Boolean(
-          this.shadowRoot.querySelector('[data-native-field="allDay"]')?.checked
-        );
-        const startRaw = String(
-          this.shadowRoot.querySelector('[data-native-field="start"]')?.value || ""
-        ).trim();
-        const endRaw = String(
-          this.shadowRoot.querySelector('[data-native-field="end"]')?.value || ""
-        ).trim();
-        const descriptionRaw = String(
-          this.shadowRoot.querySelector('[data-native-field="description"]')?.value || ""
-        ).trim();
-        const locationRaw = String(
-          this.shadowRoot.querySelector('[data-native-field="location"]')?.value || ""
-        ).trim();
-        const colorEnabled = Boolean(
-          this.shadowRoot.querySelector('[data-native-field="colorEnabled"]')?.checked
-        );
-        const colorRaw = String(
-          this.shadowRoot.querySelector('[data-native-field="color"]')?.value || ""
-        ).trim();
-        const repeatKind = String(
-          this.shadowRoot.querySelector('[data-native-field="repeatKind"]')?.value || "none"
-        ).trim().toLowerCase();
-        const repeatCustomUnit = String(
-          this.shadowRoot.querySelector('[data-native-field="repeatCustomUnit"]')?.value || "weekly"
-        ).trim().toLowerCase();
-        const repeatCustomIntervalRaw = String(
-          this.shadowRoot.querySelector('[data-native-field="repeatCustomInterval"]')?.value || "1"
-        ).trim();
+        const hass = this._hass;
+        const context = this._contextGeneration;
+        const generation = this._composerGeneration;
+        if (this._composerSavingGeneration === generation) return;
+        const currentContext = () => this.isConnected && context === this._contextGeneration;
+        const current = () => currentContext() && this._nativeEventComposerOpen && generation === this._composerGeneration;
+        this._setComposerError("");
+        const calendarId = String(this._nativeComposerCalendarValue || this._nativeFieldValue("calendar")).trim();
+        const title = this._nativeFieldValue("title");
+        const dateRaw = this._nativeFieldValue("date");
+        const allDay = this._nativeFieldChecked("allDay");
+        const startRaw = this._nativeFieldValue("start");
+        const endRaw = this._nativeFieldValue("end");
+        const descriptionRaw = this._nativeFieldValue("description");
+        const locationRaw = this._nativeFieldValue("location");
+        const colorEnabled = this._nativeFieldChecked("colorEnabled");
+        const colorRaw = this._nativeFieldValue("color");
+        const repeatKind = this._nativeFieldValue("repeatKind", "none").toLowerCase();
+        const repeatCustomUnit = this._nativeFieldValue("repeatCustomUnit", "weekly").toLowerCase();
+        const repeatCustomIntervalRaw = this._nativeFieldValue("repeatCustomInterval", "1");
         if (!calendarId) {
-          this._setComposerError("native", this._uiText("errors.selectCalendar", "Select a calendar."));
+          this._setComposerError(this._uiText("errors.selectCalendar", "Select a calendar."));
           return;
         }
         const allowedCalendarIds = this._getAvailableNativeCalendarIds();
         if (!allowedCalendarIds.includes(calendarId)) {
           this._setComposerError(
-            "native",
             this._uiText("errors.calendarNotAllowed", "That calendar is not available on this card.")
           );
           return;
         }
         if (!title) {
-          this._setComposerError("native", this._uiText("errors.enterTitle", "Enter a title."));
+          this._setComposerError(this._uiText("errors.enterTitle", "Enter a title."));
           return;
         }
         if (!dateRaw || !allDay && (!startRaw || !endRaw)) {
           this._setComposerError(
-            "native",
             allDay ? this._uiText("errors.selectDate", "Select a date.") : this._uiText("errors.selectDateTime", "Select date, start and end.")
           );
           return;
         }
         if (dateInputIsBeforeToday(dateRaw)) {
-          this._setComposerError("native", this._uiText("errors.pastDate", "The date cannot be before today."));
+          this._setComposerError(this._uiText("errors.pastDate", "The date cannot be before today."));
           return;
         }
         const rruleByKind = {
@@ -2307,7 +2304,6 @@ ${metadata}` : metadata;
         const resolvedRepeatKind = repeatKind === "custom" ? repeatCustomUnit : repeatKind;
         if (repeatKind === "custom" && !rruleByKind[resolvedRepeatKind]) {
           this._setComposerError(
-            "native",
             this._uiText("errors.selectRepeatFrequency", "Select the frequency for custom repeat.")
           );
           return;
@@ -2317,7 +2313,6 @@ ${metadata}` : metadata;
           const parsedInterval = Number.parseInt(repeatCustomIntervalRaw, 10);
           if (!Number.isFinite(parsedInterval) || parsedInterval < 1) {
             this._setComposerError(
-              "native",
               this._uiText("errors.invalidRepeatInterval", "The interval must be a number greater than or equal to 1.")
             );
             return;
@@ -2328,151 +2323,82 @@ ${metadata}` : metadata;
         const rrule = repeatKind === "custom" && rruleBase ? `${rruleBase};INTERVAL=${customInterval}` : rruleBase;
         const colorOverride = colorEnabled ? sanitizeCalendarTint(colorRaw) || "#ff7ab6" : "";
         const description = appendNodaliaEventMetadata(descriptionRaw, { color: colorOverride });
-        const addOptionalEventFields = (payload) => {
-          if (description) {
-            payload.description = description;
-          }
-          if (locationRaw) {
-            payload.location = locationRaw;
-          }
+        const withOptionalFields = (payload, includeRecurrence = false) => {
+          if (description) payload.description = description;
+          if (locationRaw) payload.location = locationRaw;
+          if (includeRecurrence && rrule) payload.rrule = rrule;
           return payload;
         };
-        const addOptionalWsEventFields = (eventPayload) => {
-          if (description) {
-            eventPayload.description = description;
-          }
-          if (locationRaw) {
-            eventPayload.location = locationRaw;
-          }
-          if (rrule) {
-            eventPayload.rrule = String(rrule).trim();
-          }
-          return eventPayload;
-        };
         const createCalendarEventViaWs = async (eventPayload) => {
-          if (typeof this._hass?.callWS !== "function") {
+          if (typeof hass.callWS !== "function") {
             throw new Error("calendar/event/create unavailable");
           }
-          await this._hass.callWS({
+          await hass.callWS({
             type: "calendar/event/create",
             entity_id: calendarId,
             event: eventPayload
           });
         };
+        this._composerSavingGeneration = generation;
         try {
           const nativeWebhookId = String(this._config?.native_event_webhook || "").trim();
+          let payload;
           if (allDay) {
             const startDay = /* @__PURE__ */ new Date(`${dateRaw}T00:00:00`);
-            const nextDay = Number.isNaN(startDay.getTime()) ? null : new Date(startDay.getTime() + 864e5);
+            const nextDay = Number.isNaN(startDay.getTime()) ? null : new Date(startDay.getFullYear(), startDay.getMonth(), startDay.getDate() + 1);
             const endDate = nextDay ? `${nextDay.getFullYear()}-${String(nextDay.getMonth() + 1).padStart(2, "0")}-${String(nextDay.getDate()).padStart(2, "0")}` : dateRaw;
-            const payload = {
-              entity_id: calendarId,
-              summary: title,
-              start_date: dateRaw,
-              end_date: endDate
-            };
-            addOptionalEventFields(payload);
-            const calendarEventPayload = addOptionalWsEventFields({
-              summary: title,
-              dtstart: dateRaw,
-              dtend: endDate
-            });
-            if (rrule) {
-              await createCalendarEventViaWs(calendarEventPayload);
-              if (!this.isConnected) {
-                return;
-              }
-              this._nativeComposerError = "";
-              this._nativeEventComposerOpen = false;
-              this._refreshEvents();
-              return;
-            }
-            if (nativeWebhookId) {
-              const ok = await this._postWebhookPayload(
-                nativeWebhookId,
-                this._buildNativeCalendarCreateEventWebhookBody(payload, "all_day", calendarEventPayload)
-              );
-              if (!this.isConnected) {
-                return;
-              }
-              if (!ok) {
-                this._setComposerError("native", this._uiText("errors.createEvent", "Could not create the event."));
-                return;
-              }
-            } else {
-              await this._hass.callService("calendar", "create_event", payload);
-              if (!this.isConnected) {
-                return;
-              }
-            }
+            payload = { entity_id: calendarId, summary: title, start_date: dateRaw, end_date: endDate };
           } else {
             const formatLocalDateTime = (value) => {
-              const yy = value.getFullYear();
-              const mm = String(value.getMonth() + 1).padStart(2, "0");
-              const dd = String(value.getDate()).padStart(2, "0");
-              const hh = String(value.getHours()).padStart(2, "0");
-              const mi = String(value.getMinutes()).padStart(2, "0");
-              const ss = String(value.getSeconds()).padStart(2, "0");
-              return `${yy}-${mm}-${dd}T${hh}:${mi}:${ss}`;
+              const pad = (number) => String(number).padStart(2, "0");
+              return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}:${pad(value.getSeconds())}`;
             };
             const startDateTime = /* @__PURE__ */ new Date(`${dateRaw}T${startRaw}:00`);
-            let endDateTime = /* @__PURE__ */ new Date(`${dateRaw}T${endRaw}:00`);
-            if (!Number.isNaN(startDateTime.getTime()) && !Number.isNaN(endDateTime.getTime()) && endDateTime <= startDateTime) {
-              endDateTime = new Date(endDateTime.getTime() + 864e5);
-            }
-            const payload = {
+            const endDateTime = /* @__PURE__ */ new Date(`${dateRaw}T${endRaw}:00`);
+            if (!Number.isNaN(startDateTime.getTime()) && !Number.isNaN(endDateTime.getTime()) && endDateTime <= startDateTime) endDateTime.setDate(endDateTime.getDate() + 1);
+            payload = {
               entity_id: calendarId,
               summary: title,
               start_date_time: Number.isNaN(startDateTime.getTime()) ? `${dateRaw}T${startRaw}:00` : formatLocalDateTime(startDateTime),
               end_date_time: Number.isNaN(endDateTime.getTime()) ? `${dateRaw}T${endRaw}:00` : formatLocalDateTime(endDateTime)
             };
-            addOptionalEventFields(payload);
-            const calendarEventPayload = addOptionalWsEventFields({
-              summary: title,
-              dtstart: payload.start_date_time,
-              dtend: payload.end_date_time
-            });
-            if (rrule) {
-              await createCalendarEventViaWs(calendarEventPayload);
-              if (!this.isConnected) {
-                return;
-              }
-              this._nativeComposerError = "";
-              this._nativeEventComposerOpen = false;
-              this._refreshEvents();
+          }
+          withOptionalFields(payload);
+          const calendarEventPayload = withOptionalFields({
+            summary: title,
+            dtstart: payload.start_date ?? payload.start_date_time,
+            dtend: payload.end_date ?? payload.end_date_time
+          }, true);
+          if (rrule) {
+            await createCalendarEventViaWs(calendarEventPayload);
+          } else if (nativeWebhookId) {
+            const ok = await this._postWebhookPayload(
+              nativeWebhookId,
+              this._buildNativeCalendarCreateEventWebhookBody(payload, allDay ? "all_day" : "timed", calendarEventPayload)
+            );
+            if (!ok) {
+              if (current()) this._setComposerError(this._uiText("errors.createEvent", "Could not create the event."));
               return;
             }
-            if (nativeWebhookId) {
-              const ok = await this._postWebhookPayload(
-                nativeWebhookId,
-                this._buildNativeCalendarCreateEventWebhookBody(payload, "timed", calendarEventPayload)
-              );
-              if (!this.isConnected) {
-                return;
-              }
-              if (!ok) {
-                this._setComposerError("native", this._uiText("errors.createEvent", "Could not create the event."));
-                return;
-              }
-            } else {
-              await this._hass.callService("calendar", "create_event", payload);
-              if (!this.isConnected) {
-                return;
-              }
-            }
+          } else {
+            if (!hass.callService) throw new Error("calendar/create_event unavailable");
+            await hass.callService("calendar", "create_event", payload);
           }
-          if (!this.isConnected) {
-            return;
+          if (!currentContext()) return;
+          if (current()) {
+            this._nativeComposerError = "";
+            this._composerGeneration += 1;
+            this._nativeEventComposerOpen = false;
           }
-          this._nativeComposerError = "";
-          this._nativeEventComposerOpen = false;
-          this._refreshEvents();
+          void this._refreshEvents();
         } catch (error) {
-          const message = String(error?.message || "").trim();
+          if (!current()) return;
+          const message = String(error instanceof Error ? error.message : isObject(error) ? error.message ?? "" : "").trim();
           this._setComposerError(
-            "native",
             message && message !== "calendar/event/create unavailable" ? this._uiText("errors.createEventWithMessage", "Could not create the event: {message}", { message }) : this._uiText("errors.createEvent", "Could not create the event.")
           );
+        } finally {
+          if (this._composerSavingGeneration === generation) this._composerSavingGeneration = null;
         }
       }
       _nativeEventComposerMarkup() {
@@ -2579,7 +2505,7 @@ ${metadata}` : metadata;
             <button type="button" class="calendar-composer__btn" data-action="close-native-composer">${escapeHtml(this._uiText("buttons.cancel", "Cancel"))}</button>
             <button type="button" class="calendar-composer__btn calendar-composer__btn--primary" data-action="save-native-composer">${escapeHtml(this._uiText("buttons.create", "Create"))}</button>
           </div>
-          ${this._renderComposerError("native")}
+          ${this._renderComposerError()}
         </div>
       </div>
     `;
@@ -2588,7 +2514,14 @@ ${metadata}` : metadata;
         if (!this.shadowRoot) {
           return;
         }
-        const calendarConfig = this._config || {};
+        const draft = this._nativeEventComposerOpen ? [...this.shadowRoot.querySelectorAll("[data-native-field]")].flatMap((field) => field instanceof HTMLInputElement || field instanceof HTMLSelectElement || field instanceof HTMLTextAreaElement ? [{ key: field.dataset.nativeField || "", value: field.value, checked: field instanceof HTMLInputElement && field.checked }] : []) : [];
+        const active = this.shadowRoot.activeElement;
+        const focus = active instanceof HTMLInputElement || active instanceof HTMLSelectElement || active instanceof HTMLTextAreaElement ? {
+          key: active.dataset.nativeField || "",
+          start: active instanceof HTMLSelectElement ? null : active.selectionStart,
+          end: active instanceof HTMLSelectElement ? null : active.selectionEnd
+        } : null;
+        const calendarConfig = this._config;
         const calendarEntityIds = (Array.isArray(calendarConfig.calendars) ? calendarConfig.calendars : []).map((entry) => String(entry?.entity ?? "").trim()).filter(Boolean);
         const calendarEntityGuard = window.NodaliaUtils?.renderLovelaceEntityGuardForEntities?.(
           this._hass,
@@ -2629,8 +2562,7 @@ ${metadata}` : metadata;
           Math.max(120, Number(config.animations?.content_duration) || DEFAULT_CONFIG.animations.content_duration)
         );
         const maxVisibleEvents = Math.max(1, Number(config.max_visible_events) || DEFAULT_CONFIG.max_visible_events);
-        const visibleEvents = Array.isArray(this._renderVisibleEventsCache) ? this._renderVisibleEventsCache : this._events;
-        this._renderVisibleEventsCache = null;
+        const visibleEvents = this._events;
         const groups = this._groupEvents(visibleEvents);
         const weatherByDay = this._buildWeatherForecastByDay();
         const hasEvents = visibleEvents.length > 0;
@@ -2914,7 +2846,6 @@ ${metadata}` : metadata;
           gap: 6px;
           justify-content: flex-end;
         }
-        .calendar-event__done,
         .calendar-event__delete {
           align-items:center;
           appearance:none;
@@ -3100,258 +3031,7 @@ ${metadata}` : metadata;
           min-height: 0;
           overflow: hidden;
         }
-        .calendar-composer {
-          display: grid;
-          inset: 0;
-          opacity: 0;
-          overflow: auto;
-          overscroll-behavior: contain;
-          padding: 12px;
-          pointer-events: none;
-          place-items: center;
-          position: absolute;
-          touch-action: pan-y;
-          transition: opacity 180ms ease;
-          -webkit-overflow-scrolling: touch;
-          z-index: 3;
-        }
-        .calendar-composer.is-open {
-          opacity: 1;
-          pointer-events: auto;
-        }
-        .calendar-delete-recurrence.is-open {
-          z-index: 4;
-        }
-        .calendar-delete-recurrence__text {
-          color: var(--secondary-text-color);
-          font-size: 13px;
-          line-height: 1.45;
-          margin: 0;
-        }
-        .calendar-delete-recurrence__choices {
-          display: grid;
-          gap: 8px;
-        }
-        .calendar-delete-recurrence__choices .calendar-composer__btn {
-          justify-self: stretch;
-          width: 100%;
-        }
-        .calendar-delete-recurrence__error {
-          background: color-mix(in srgb, var(--error-color, #db4437) 12%, transparent);
-          border: 1px solid color-mix(in srgb, var(--error-color, #db4437) 35%, transparent);
-          border-radius: 10px;
-          color: var(--error-color, #db4437);
-          font-size: 13px;
-          line-height: 1.4;
-          margin: 0;
-          padding: 8px 10px;
-        }
-        .calendar-composer__backdrop {
-          -webkit-backdrop-filter: blur(8px);
-          backdrop-filter: blur(8px);
-          background: rgba(0, 0, 0, 0.28);
-          inset: 0;
-          position: absolute;
-        }
-        .calendar-composer__panel {
-          background:
-            linear-gradient(180deg, color-mix(in srgb, var(--calendar-expanded-accent) 14%, rgba(255, 255, 255, 0.06)), rgba(255, 255, 255, 0.02)),
-            color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 94%, rgba(255, 255, 255, 0.03));
-          border: 1px solid color-mix(in srgb, var(--calendar-expanded-accent) 30%, color-mix(in srgb, var(--primary-text-color) 9%, transparent));
-          border-radius: 16px;
-          box-shadow: 0 18px 38px rgba(0, 0, 0, 0.28);
-          display: grid;
-          gap: 10px;
-          max-height: calc(100% - 24px);
-          max-width: min(100%, 640px);
-          overflow: auto;
-          padding: 14px;
-          position: relative;
-          width: min(100%, 640px);
-          z-index: 1;
-        }
-        .calendar-composer__title {
-          font-size: ${styles.title_size};
-          font-weight: 800;
-          letter-spacing: -0.02em;
-        }
-        .calendar-composer__row {
-          display: grid;
-          gap: 10px;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-        .calendar-composer__row[hidden] {
-          display: none !important;
-        }
-        .calendar-composer__row--middle {
-          align-items: center;
-        }
-        .calendar-composer__field {
-          display: grid;
-          gap: 6px;
-        }
-        .calendar-composer__field--color {
-          align-items: start;
-          justify-items: start;
-        }
-        .calendar-composer__field > span,
-        .calendar-composer__check > span {
-          font-size: 12px;
-          font-weight: 700;
-        }
-        .calendar-composer__field input,
-        .calendar-composer__field textarea {
-          appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 12px;
-          color: var(--primary-text-color);
-          font: inherit;
-          min-height: 38px;
-          padding: 8px 10px;
-          width: 100%;
-        }
-        .calendar-composer__field textarea {
-          line-height: 1.35;
-          min-height: 76px;
-          resize: vertical;
-        }
-        .calendar-composer__field select {
-          appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 12px;
-          color: var(--primary-text-color);
-          font: inherit;
-          min-height: 38px;
-          padding: 8px 10px;
-          width: 100%;
-        }
-        .calendar-composer .editor-color-field {
-          align-items: center;
-          display: flex;
-          flex-wrap: wrap;
-          gap: 10px;
-          min-height: 40px;
-        }
-        .calendar-composer .editor-color-picker {
-          align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 999px;
-          cursor: pointer;
-          display: inline-flex;
-          flex: 0 0 auto;
-          height: 40px;
-          justify-content: center;
-          position: relative;
-          width: 40px;
-        }
-        .calendar-composer .editor-color-picker input {
-          cursor: pointer;
-          inset: 0;
-          opacity: 0;
-          position: absolute;
-        }
-        .calendar-composer .editor-color-picker:hover,
-        .calendar-composer .editor-color-picker:focus-within {
-          border-color: color-mix(in srgb, var(--primary-text-color) 22%, transparent);
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-        }
-        .calendar-composer .editor-color-swatch {
-          --editor-swatch: #71c0ff;
-          background:
-            linear-gradient(var(--editor-swatch), var(--editor-swatch)),
-            conic-gradient(from 90deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent) 25%, rgba(0, 0, 0, 0.12) 0 50%, color-mix(in srgb, var(--primary-text-color) 6%, transparent) 0 75%, rgba(0, 0, 0, 0.12) 0);
-          background-position: center;
-          background-size: cover, 10px 10px;
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 14%, transparent);
-          border-radius: 999px;
-          display: block;
-          height: 22px;
-          width: 22px;
-        }
-        .calendar-composer__check {
-          align-items: center;
-          display: inline-grid;
-          gap: 8px;
-          grid-template-columns: auto minmax(0, 1fr);
-          margin-top: 22px;
-        }
-        .calendar-composer__check input {
-          appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
-          border-radius: 999px;
-          cursor: pointer;
-          height: 22px;
-          margin: 0;
-          position: relative;
-          transition: background 160ms ease, border-color 160ms ease;
-          width: 40px;
-        }
-        .calendar-composer__check input::before {
-          background: rgba(255, 255, 255, 0.92);
-          border-radius: 999px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
-          content: "";
-          height: 18px;
-          left: 1px;
-          position: absolute;
-          top: 1px;
-          transition: transform 160ms ease;
-          width: 18px;
-        }
-        .calendar-composer__check input:checked {
-          background: var(--calendar-expanded-accent);
-          border-color: var(--calendar-expanded-accent);
-        }
-        .calendar-composer__check input:checked::before {
-          transform: translateX(18px);
-        }
-        .calendar-composer__error {
-          align-items: center;
-          background: color-mix(in srgb, var(--error-color, #db4437) 13%, transparent);
-          border: 1px solid color-mix(in srgb, var(--error-color, #db4437) 34%, transparent);
-          border-radius: 12px;
-          color: var(--error-color, #db4437);
-          display: flex;
-          font-size: 12px;
-          font-weight: 800;
-          gap: 8px;
-          line-height: 1.35;
-          padding: 9px 10px;
-        }
-        .calendar-composer__error[hidden] {
-          display: none;
-        }
-        .calendar-composer__error ha-icon {
-          flex: 0 0 auto;
-          height: 18px;
-          width: 18px;
-        }
-        .calendar-composer__actions {
-          display: flex;
-          gap: 8px;
-          justify-content: flex-end;
-        }
-        .calendar-composer__btn {
-          appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 7%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 999px;
-          color: var(--primary-text-color);
-          cursor: pointer;
-          font: inherit;
-          font-size: 12px;
-          font-weight: 700;
-          min-height: 34px;
-          padding: 0 12px;
-        }
-        .calendar-composer__btn--primary {
-          background: color-mix(in srgb, var(--calendar-expanded-accent) 22%, transparent);
-          border-color: color-mix(in srgb, var(--calendar-expanded-accent) 38%, var(--divider-color));
-        }
+        ${calendar_composer_default}
         @keyframes calendar-expanded-panel-in {
           0% {
             clip-path: inset(0 42% 58% 42% round 16px);
@@ -3783,7 +3463,7 @@ ${metadata}` : metadata;
                     </div>`}
         </div>
       </ha-card>
-      <div class="calendar-expanded ${this._expandedOpen ? "is-open" : ""}" style="--calendar-expanded-accent:${accentColor};" aria-hidden="${this._expandedOpen ? "false" : "true"}">
+      <div class="calendar-expanded ${this._expandedOpen ? "is-open" : ""}" style="--calendar-expanded-accent:${accentColor};--calendar-title-size:${escapeHtml(styles.title_size)};" aria-hidden="${this._expandedOpen ? "false" : "true"}">
         <div class="calendar-expanded__backdrop" data-action="expanded-backdrop"></div>
         <div class="calendar-expanded__panel ${playExpandedPanelEntrance ? "calendar-expanded__panel--entrance" : ""} ${this._nativeEventComposerOpen || this._deleteRecurringChoiceKey ? "calendar-expanded__panel--composer-open" : ""}" role="dialog" aria-modal="true" aria-label="${escapeHtml(config.title)}">
           <div class="calendar-expanded__toolbar">
@@ -3806,14 +3486,33 @@ ${metadata}` : metadata;
       </div>
     `;
         this._mountNativeCalendarControl();
+        for (const entry of draft) {
+          const field = this.shadowRoot.querySelector(`[data-native-field="${CSS.escape(entry.key)}"]`);
+          if (field instanceof HTMLInputElement || field instanceof HTMLSelectElement || field instanceof HTMLTextAreaElement) {
+            field.value = entry.value;
+            if (field instanceof HTMLInputElement) field.checked = entry.checked;
+          }
+        }
         this._mountNativeColorControl();
         this._mountNativeRepeatControl();
         const calendarDialogs = this.shadowRoot.querySelectorAll('[role="dialog"][aria-modal="true"]');
         const activeCalendarDialog = calendarDialogs[calendarDialogs.length - 1];
-        if (activeCalendarDialog instanceof HTMLElement) {
-          window.NodaliaUtils?.bindModalFocus?.(this, activeCalendarDialog);
+        if (this._expandedOpen && activeCalendarDialog instanceof HTMLElement) {
+          window.NodaliaUtils?.bindModalFocus?.(this, activeCalendarDialog, focus?.key ? { initialFocusSelector: `[data-native-field="${CSS.escape(focus.key)}"]` } : void 0);
         } else {
           window.NodaliaUtils?.releaseModalFocus?.(this);
+        }
+        if (focus?.key && this._nativeEventComposerOpen) {
+          const field = this.shadowRoot.querySelector(`[data-native-field="${CSS.escape(focus.key)}"]`);
+          if (field instanceof HTMLInputElement || field instanceof HTMLSelectElement || field instanceof HTMLTextAreaElement) {
+            field.focus({ preventScroll: true });
+            if (!(field instanceof HTMLSelectElement) && focus.start !== null && focus.end !== null) {
+              try {
+                field.setSelectionRange(focus.start, focus.end);
+              } catch (_error) {
+              }
+            }
+          }
         }
       }
       _mountNativeCalendarControl() {
@@ -3828,7 +3527,7 @@ ${metadata}` : metadata;
         const configuredIds = (this._config?.calendars || []).map((entry) => String(entry?.entity || "").trim()).filter(Boolean);
         const nextValue = calendarIds.includes(this._nativeComposerCalendarValue) ? this._nativeComposerCalendarValue : calendarIds[0] || "";
         this._nativeComposerCalendarValue = nextValue;
-        let control = null;
+        let control;
         if (configuredIds.length) {
           control = document.createElement("select");
           control.className = "calendar-composer__select";
@@ -3839,28 +3538,28 @@ ${metadata}` : metadata;
             control.appendChild(option);
           });
           control.addEventListener("change", () => {
-            this._nativeComposerCalendarValue = String(control.value || "").trim();
+            this._nativeComposerCalendarValue = String("value" in control ? control.value || "" : "").trim();
           });
         } else if (customElements.get("ha-selector")) {
           control = document.createElement("ha-selector");
-          control.selector = { entity: { domain: "calendar" } };
+          Object.assign(control, { selector: { entity: { domain: "calendar" } } });
           control.addEventListener("value-changed", (event) => {
-            this._nativeComposerCalendarValue = String(event?.detail?.value || "").trim();
+            this._nativeComposerCalendarValue = String(event instanceof CustomEvent && isObject(event.detail) ? event.detail.value ?? "" : "").trim();
           });
         } else if (customElements.get("ha-entity-picker")) {
           control = document.createElement("ha-entity-picker");
-          control.includeDomains = ["calendar"];
-          control.allowCustomEntity = false;
-          control.entityFilter = (stateObj) => String(stateObj?.entity_id || "").startsWith("calendar.");
+          Object.assign(control, { includeDomains: ["calendar"] });
+          Object.assign(control, { allowCustomEntity: false });
+          Object.assign(control, { entityFilter: (stateObj) => String(stateObj.entity_id || "").startsWith("calendar.") });
           control.addEventListener("value-changed", (event) => {
-            this._nativeComposerCalendarValue = String(event?.detail?.value || "").trim();
+            this._nativeComposerCalendarValue = String(event instanceof CustomEvent && isObject(event.detail) ? event.detail.value ?? "" : "").trim();
           });
         } else {
           control = document.createElement("input");
-          control.type = "text";
-          control.placeholder = "calendar.ejemplo";
+          Object.assign(control, { type: "text" });
+          control.setAttribute("placeholder", "calendar.ejemplo");
           control.addEventListener("change", () => {
-            this._nativeComposerCalendarValue = String(control.value || "").trim();
+            this._nativeComposerCalendarValue = String("value" in control ? control.value || "" : "").trim();
           });
         }
         control.dataset.nativeField = "calendar";
@@ -3910,6 +3609,7 @@ ${metadata}` : metadata;
         sync();
       }
       _onShadowKeydown(event) {
+        if (!(event instanceof KeyboardEvent)) return;
         if (!this._expandedOpen) {
           return;
         }
@@ -3922,6 +3622,7 @@ ${metadata}` : metadata;
           }
           this._triggerHaptic("light");
           if (this._nativeEventComposerOpen) {
+            this._composerGeneration += 1;
             this._nativeEventComposerOpen = false;
             this._nativeComposerError = "";
             this._deleteRecurrenceError = "";
@@ -4028,6 +3729,7 @@ ${metadata}` : metadata;
           event.stopPropagation();
           this._triggerHaptic("light");
           this._expandedMonthDayKey = "";
+          this._composerGeneration += 1;
           this._nativeEventComposerOpen = false;
           this._nativeComposerError = "";
           this._deleteRecurringChoiceKey = "";

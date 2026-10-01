@@ -215,9 +215,6 @@ class NodaliaNewsCard extends HTMLElement {
     return text;
   }
 
-  _getSourceEntries() {
-    return resolveSourceEntries(this._config);
-  }
 
   _getSourceHealth(hass = this._hass) {
     return getNewsSourceHealth(hass, this._config);

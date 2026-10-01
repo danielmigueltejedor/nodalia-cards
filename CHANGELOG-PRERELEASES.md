@@ -10,6 +10,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+- Check Calendar view contracts, isolate pending refreshes/subscriptions/writes, preserve composer drafts and caret, and calculate next-day events across clock changes. Embed readable composer CSS without extra resources or relaxing bundle size limits; remove verified unused private methods.
 - Check Light view contracts, cancel draft brightness/color/temperature without commands, finish optimistic queues at their original deadlines and own mode/settle/resize work. Share checked device memory and remove verified dead compact-size/title helpers without changing rendering or bundle size gates.
 
 - Check Humidifier view contracts, cancel tentative drags, preserve optimistic deadlines and own mode-panel work; share animation cleanup and panel construction with Fan/Vacuum to retain the bundle size budget.

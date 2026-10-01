@@ -34,7 +34,8 @@ export function normalizeConfig(config: unknown = {}) {
     }
   }
   normalized.time_range = timeRange;
-  normalized.days_to_show = Math.min(62, Math.max(1, daysFromTimeRange(timeRange)));
+  const daysToShow = Math.min(62, Math.max(1, daysFromTimeRange(timeRange)));
+  normalized.days_to_show = daysToShow;
   delete normalized.quick_reminder_webhook;
   normalized.native_event_webhook = String(normalized.native_event_webhook ?? "").trim();
   const priorSecurity: Record<string, unknown> = isObject(normalized.security) ? normalized.security : {};
@@ -56,7 +57,8 @@ export function normalizeConfig(config: unknown = {}) {
     12,
     Math.max(1, parseFiniteNumericValue(normalized.max_visible_events) || DEFAULT_CONFIG.max_visible_events),
   );
-  normalized.refresh_interval = Math.min(3600, Math.max(30, parseFiniteNumericValue(normalized.refresh_interval) || DEFAULT_CONFIG.refresh_interval));
+  const refreshInterval = Math.min(3600, Math.max(30, parseFiniteNumericValue(normalized.refresh_interval) || DEFAULT_CONFIG.refresh_interval));
+  normalized.refresh_interval = refreshInterval;
   const rawStyles = isObject(normalized.styles) ? normalized.styles : {};
   if (!rawStyles.chip_font_size && rawStyles.chip_size) rawStyles.chip_font_size = rawStyles.chip_size;
   const card = isObject(rawStyles.card) ? rawStyles.card : {};
@@ -72,7 +74,7 @@ export function normalizeConfig(config: unknown = {}) {
   const animationDuration = parseFiniteNumericValue(rawAnimations.content_duration);
   const animations = { ...rawAnimations, enabled: rawAnimations.enabled !== false,
     content_duration: Math.max(120, animationDuration ?? DEFAULT_CONFIG.animations.content_duration) };
-  const fields = { entity: typeof normalized.entity === "string" ? normalized.entity : "", language: typeof normalized.language === "string" ? normalized.language : "auto", weather_entity: String(normalized.weather_entity), styles, animations, calendars: normalizeCalendarEntries(normalized.calendars),
+  const fields = { days_to_show: daysToShow, refresh_interval: refreshInterval, security: { ...security, allow_webhooks_for_non_admin: security.allow_webhooks_for_non_admin === true }, entity: typeof normalized.entity === "string" ? normalized.entity : "", language: typeof normalized.language === "string" ? normalized.language : "auto", weather_entity: String(normalized.weather_entity), styles, animations, calendars: normalizeCalendarEntries(normalized.calendars),
     haptics: { ...haptics, enabled: haptics.enabled === true, fallback_vibrate: haptics.fallback_vibrate === true,
       style: Object.prototype.hasOwnProperty.call(HAPTIC_PATTERNS, hapticStyle) ? hapticStyle : DEFAULT_CONFIG.haptics.style } };
   const configFields: typeof fields & Record<string, unknown> = { ...normalized, ...fields };

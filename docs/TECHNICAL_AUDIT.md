@@ -1540,3 +1540,44 @@ case waits for the first measured width before interacting, retaining both
 keyboard/action assertions. Full local suite: 614 passed, one existing skip.
 Remaining unchecked modules: 11. Hold publication until all source/runtime
 migration and final audit validation complete.
+
+## 2026-10-02 — Calendar view contracts and owned asynchronous work
+
+- Remove Calendar's suppression with real normalized config, HA API/auth/native
+  event, date, forecast, grouping, DOM/control and lifecycle contracts. Preserve
+  optional services, unavailable/malformed values, real zero, public helpers, YAML,
+  lazy initialization and standalone filenames. Debt falls from 11 to 10.
+- Invalidate old refreshes on calendar/range/weather/security/HA context changes
+  and detach. A stale finally cannot clear a new run or consume its queued refresh;
+  stale API failures cannot trigger fallback calls against another HA connection.
+- Retain the native weather connection receiver and own callback generation,
+  pending unsubscribe and failure retry. Live empty forecasts are authoritative;
+  late polling and obsolete subscriptions cannot resurrect old temperatures.
+- Keep native composer drafts, toggles, repeat fields, colour and caret through
+  rerenders. Restore modal focus to that field and bind traps only while open.
+  Guard duplicate writes and isolate results/errors after close/reopen, entity,
+  user/permission/connection change or disconnect; deletion follows the same
+  context rule. Use local day arithmetic through the autumn clock change.
+- Include real calendar names/delete capabilities and displayed event details in
+  render signatures. Remove the unused name-signature method, redundant visible
+  event cache, richer-forecast preservation branch and generic reminder-error
+  path. Share identical signature hashing, detail buttons and create-event field
+  projection within Calendar. Remove verified uncalled Scenes/News/Cover private
+  forwarding methods and an unused Calendar button selector.
+- Extract the native composer stylesheet and embed whitespace-compacted CSS in
+  both builds, retaining declarations/selectors/prefixes and inherited title
+  styling. This keeps the unchanged raw/gzip gates with no auxiliary CSS request.
+- Strict types, lint and 750 unit tests pass. Compare 3,000 valid markup/style/size
+  outputs against the prior view; 24 Calendar browser cases pass in Chromium,
+  WebKit and iPhone, including computed styles. The full local browser suite
+  passes 626 cases with one existing skip. CI remains required before integration;
+  no prerelease has been published.
+
+
+Calendar review follow-up: creation success owns the calendar/HA context
+separately from the composer generation. Closing/reopening a composer still
+refreshes its current event list after service, WebSocket or webhook success;
+newer drafts stay open and unchanged. Obsolete contexts still cause no refresh
+or UI mutation. The new native browser case checks all three routes. Strict/lint
+and 750 unit tests pass; all 15 lifecycle browser cases pass, and the full local
+suite passes 629 cases with one existing skip.
