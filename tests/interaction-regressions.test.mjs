@@ -619,9 +619,9 @@ test("navigation editor persists secondary media-player picker changes", () => {
 
   assert.ok(playerBranch >= 0 && genericBranch > playerBranch, "player picker metadata must win over the generic field added by the HA picker");
   assert.match(inputBlock, /_isHomeAssistantPicker\(playerField\) && event\.type !== "value-changed"/);
-  assert.match(inputBlock, /event\.type === "value-changed" && eventValue !== (?:undefined|void 0)/);
-  assert.match(inputBlock, /playerField\.value = eventValue \?\? ""/);
-  assert.match(inputBlock, /this\._applyFieldValue\(player, playerField\.dataset\.playerField, playerField\)/);
+  assert.match(inputBlock, /event\.type === "value-changed" && typeof eventValue === "string"/);
+  assert.match(inputBlock, /Object\.assign\(playerField, \{ value: eventValue \}\)/);
+  assert.match(inputBlock, /this\._applyFieldValue\(player, playerField\.dataset\.playerField \|\| "", playerField\)/);
   assert.match(source, /`media_player\.players\.\$\{playerIndex\}\.\$\{playerField\}`/);
   assert.match(source, /dataset\.editorAction === "add-player"[\s\S]*?entity: ""/);
   assert.doesNotMatch(source, /entity: "media_player\.nuevo"/);

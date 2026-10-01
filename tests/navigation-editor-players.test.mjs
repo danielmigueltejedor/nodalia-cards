@@ -96,7 +96,11 @@ function loadNavigationEditor() {
 
   const EditorClass = registry.get("nodalia-navigation-bar-editor");
   assert.ok(EditorClass, "NodaliaNavigationBarEditor should register");
-  return { EditorClass, FakeHTMLElement, FakeHTMLInputElement };
+  return { EditorClass, FakeHTMLElement, FakeHTMLInputElement, pickerEvent(picker, type, detail) {
+    const event = new sandbox.CustomEvent(type, { detail });
+    Object.assign(event, { composedPath: () => [picker], stopPropagation() {} });
+    return event;
+  } };
 }
 
 function createEditor(EditorClass) {
@@ -111,17 +115,9 @@ function createEditor(EditorClass) {
   return editor;
 }
 
-function pickerEvent(picker, type, detail) {
-  return {
-    type,
-    detail,
-    composedPath: () => [picker],
-    stopPropagation() {},
-  };
-}
 
 test("Navigation editor keeps an existing player when HA picker blurs before selecting another entity", () => {
-  const { EditorClass, FakeHTMLElement } = loadNavigationEditor();
+  const { EditorClass, FakeHTMLElement, pickerEvent } = loadNavigationEditor();
   const editor = createEditor(EditorClass);
   const picker = new FakeHTMLElement();
   picker.tagName = "HA-ENTITY-PICKER";
@@ -145,7 +141,7 @@ test("Navigation editor keeps an existing player when HA picker blurs before sel
 });
 
 test("Navigation editor accepts another media player, a light, or an input_select from the HA picker", () => {
-  const { EditorClass, FakeHTMLElement } = loadNavigationEditor();
+  const { EditorClass, FakeHTMLElement, pickerEvent } = loadNavigationEditor();
   const editor = createEditor(EditorClass);
   const picker = new FakeHTMLElement();
   picker.tagName = "HA-ENTITY-PICKER";
@@ -164,7 +160,7 @@ test("Navigation editor accepts another media player, a light, or an input_selec
 });
 
 test("Navigation editor still commits native text-input player changes", () => {
-  const { EditorClass, FakeHTMLInputElement } = loadNavigationEditor();
+  const { EditorClass, FakeHTMLInputElement, pickerEvent } = loadNavigationEditor();
   const editor = createEditor(EditorClass);
   const input = new FakeHTMLInputElement();
   input.dataset.playerIndex = "0";

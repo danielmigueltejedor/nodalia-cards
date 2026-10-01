@@ -358,13 +358,13 @@
     const media = { ...DEFAULT_CONFIG.media_player, ...isObject(mergedConfig.media_player) ? mergedConfig.media_player : {} };
     const artwork = isObject(media.artwork) ? media.artwork : {};
     const artworkMode = String(artwork.mode || "").trim().toLowerCase();
-    const mediaPlayer = {
-      ...media,
+    const mediaFields = {
       players: Array.isArray(media.players) ? media.players.filter(isObject) : [],
       artwork: {
         mode: artworkMode === "blur" ? "blur" : "immersive"
       }
     };
+    const mediaPlayer = { ...media, ...mediaFields };
     const security = window.NodaliaUtils.normalizeSecurityConfig?.(mergedConfig.security, DEFAULT_CONFIG.security) ?? { ...DEFAULT_CONFIG.security, ...isObject(mergedConfig.security) ? mergedConfig.security : {} };
     const rawStyles = isObject(mergedConfig.styles) ? mergedConfig.styles : {};
     const projected = normalizeControlStyles(rawStyles, DEFAULT_CONFIG.styles);
@@ -379,7 +379,9 @@
     };
     const layout = { ...DEFAULT_CONFIG.layout, ...isObject(mergedConfig.layout) ? mergedConfig.layout : {} };
     const routes = (Array.isArray(mergedConfig.routes) ? mergedConfig.routes.filter(isObject) : []).map((route) => route.popup === void 0 ? route : { ...route, popup: Array.isArray(route.popup) ? route.popup.filter(isObject) : [] });
-    return { ...mergedConfig, routes, media_player: mediaPlayer, security, styles, layout };
+    const fields = { routes, media_player: mediaPlayer, security, styles, layout };
+    const normalized = { ...mergedConfig, ...fields };
+    return normalized;
   }
 
   // src/shared/url-query.ts
@@ -4160,6 +4162,20 @@
     return NodaliaNavigationBarCard;
   }
 
+  // src/shared/editor-controls.ts
+  function editorControlValue(event, control) {
+    const detail = event instanceof CustomEvent ? event.detail : void 0;
+    if (detail && typeof detail === "object" && "value" in detail && typeof detail.value === "string") return detail.value;
+    return "value" in control ? control.value : void 0;
+  }
+
+  // src/shared/numeric-values.ts
+  function parseFiniteNumericValue(value) {
+    if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
   // src/cards/navigation/navigation-editor.ts
   var _lazyNodaliaNavigationBarEditor;
   function loadNodaliaNavigationBarEditor() {
@@ -4173,7 +4189,7 @@
       }
       _nodaliaConstruct() {
         this.attachShadow({ mode: "open" });
-        this._config = deepClone(STUB_CONFIG);
+        this._config = this._prepareEditorConfig(deepClone(STUB_CONFIG));
         this._hass = null;
         this._showStyleSection = false;
         this._showAnimationSection = false;
@@ -4202,7 +4218,7 @@
         this._hass = hass;
         this.shadowRoot?.querySelectorAll("ha-entity-picker, ha-selector, ha-icon-picker").forEach((el) => {
           if ("hass" in el) {
-            el.hass = hass;
+            Object.assign(el, { hass });
           }
         });
       }
@@ -4210,8 +4226,8 @@
         if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
           return s;
         }
-        const hass = this._hass ?? this.hass;
-        return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+        const hass = this._hass;
+        return window.NodaliaI18n.editorStr(hass, String(this._config.language ?? "auto"), s);
       }
       _L(s) {
         return escapeHtml(this._editorLabel(s));
@@ -4258,7 +4274,7 @@
         const playerField = host.dataset.playerField;
         const playerIndex = host.dataset.playerIndex;
         const field = host.dataset.field || (playerField && playerIndex !== void 0 ? `media_player.players.${playerIndex}.${playerField}` : "entity");
-        window.NodaliaUtils.mountEntityPickerHost(host, {
+        window.NodaliaUtils.mountEntityPickerHost?.(host, {
           hass: this._hass,
           field,
           value: host.dataset.value || "",
@@ -4269,7 +4285,7 @@
         });
       }
       _mountIconPicker(host) {
-        window.NodaliaUtils.mountIconPickerHost(host, {
+        window.NodaliaUtils.mountIconPickerHost?.(host, {
           hass: this._hass,
           value: host.dataset.value || "",
           placeholder: host.dataset.placeholder || "",
@@ -4278,29 +4294,24 @@
           copyDatasetFromHost: true
         });
       }
-      _prepareEditorConfig(config) {
-        if (!Array.isArray(config.routes)) {
-          config.routes = [];
-        }
-        if (!isObject(config.layout)) {
-          config.layout = {};
-        }
-        if (!isObject(config.haptics)) {
-          config.haptics = {};
-        }
-        if (!isObject(config.animations)) {
-          config.animations = {};
-        }
-        if (!isObject(config.media_player)) {
-          config.media_player = {};
-        }
-        if (!Array.isArray(config.media_player.players)) {
-          config.media_player.players = [];
-        }
-        return config;
+      _prepareEditorConfig(raw) {
+        const config = isObject(raw) ? raw : {};
+        const routes = (Array.isArray(config.routes) ? config.routes : []).filter(isObject).map((route) => {
+          if (route.popup === void 0) return { ...route };
+          return { ...route, popup: (Array.isArray(route.popup) ? route.popup : []).filter(isObject) };
+        });
+        const media = isObject(config.media_player) ? config.media_player : {};
+        return {
+          ...config,
+          routes,
+          layout: isObject(config.layout) ? config.layout : {},
+          haptics: isObject(config.haptics) ? config.haptics : {},
+          animations: isObject(config.animations) ? config.animations : {},
+          media_player: { ...media, players: (Array.isArray(media.players) ? media.players : []).filter(isObject) }
+        };
       }
       setConfig(config) {
-        const nextConfig = deepClone(config || STUB_CONFIG);
+        const nextConfig = deepClone(isObject(config) ? config : STUB_CONFIG);
         if (!Array.isArray(nextConfig.routes) && Array.isArray(nextConfig.items)) {
           nextConfig.routes = nextConfig.items;
           delete nextConfig.items;
@@ -4327,7 +4338,7 @@
         if (!selector) {
           return null;
         }
-        const supportsSelection = typeof activeElement.selectionStart === "number" && typeof activeElement.selectionEnd === "number";
+        const supportsSelection = (activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement) && typeof activeElement.selectionStart === "number" && typeof activeElement.selectionEnd === "number";
         return {
           selector,
           selectionEnd: supportsSelection ? activeElement.selectionEnd : null,
@@ -4348,7 +4359,7 @@
         } catch (_error) {
           target.focus();
         }
-        const canRestoreSelection = focusState.type !== "checkbox" && typeof focusState.selectionStart === "number" && typeof focusState.selectionEnd === "number" && typeof target.setSelectionRange === "function";
+        const canRestoreSelection = focusState.type !== "checkbox" && typeof focusState.selectionStart === "number" && typeof focusState.selectionEnd === "number" && (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement);
         if (!canRestoreSelection) {
           return;
         }
@@ -4360,16 +4371,16 @@
       _emitConfig(nextConfig) {
         const focusState = this._captureFocusState();
         const prepared2 = this._prepareEditorConfig(deepClone(nextConfig));
-        this._config = compactConfig(prepared2);
+        this._config = this._prepareEditorConfig(compactConfig(prepared2));
         this._render();
         this._restoreFocusState(focusState);
         const merged = mergeConfig(DEFAULT_CONFIG, prepared2);
         fireEvent(this, "config-changed", {
-          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(merged, DEFAULT_CONFIG) ?? {})
+          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults?.(merged, DEFAULT_CONFIG) ?? {})
         });
       }
       _setEditorConfig(nextConfig) {
-        this._config = compactConfig(this._prepareEditorConfig(nextConfig));
+        this._config = this._prepareEditorConfig(compactConfig(nextConfig));
       }
       _commitEditorConfig(nextConfig, shouldEmit) {
         if (shouldEmit) {
@@ -4385,8 +4396,13 @@
         if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
           return;
         }
-        if (field.type === "checkbox" && field.dataset.checkedValue !== void 0) {
-          if (field.checked) {
+        const allowedFields = field.dataset.playerField ? ["entity", "icon", "label", "title", "subtitle", "image", "browse_path", "show", "show_states"] : field.dataset.popupField ? ["icon", "label", "description", "path", "active_paths", "users", "match"] : ["icon", "label", "path", "active_paths", "users", "match", "popup_layout"];
+        if (!allowedFields.includes(key)) return;
+        const nativeInput = field instanceof HTMLInputElement ? field : null;
+        const type = nativeInput?.type || "";
+        const value = "value" in field ? field.value : void 0;
+        if (type === "checkbox" && field.dataset.checkedValue !== void 0) {
+          if (nativeInput?.checked) {
             target[key] = parsePrimitiveValue(field.dataset.checkedValue);
           } else if (field.dataset.uncheckedDelete === "true") {
             delete target[key];
@@ -4398,7 +4414,7 @@
           return;
         }
         if (field.dataset.csv === "true") {
-          const values = arrayFromCsv(field.value);
+          const values = arrayFromCsv(value);
           if (values.length > 0) {
             target[key] = values;
           } else {
@@ -4406,19 +4422,21 @@
           }
           return;
         }
-        if (field.type === "checkbox") {
-          target[key] = field.checked;
+        if (field instanceof HTMLInputElement && field.type === "checkbox") {
+          target[key] = nativeInput?.checked === true;
           return;
         }
-        if (field.value === "" && field.dataset.optional === "true") {
+        if (value === "" && field.dataset.optional === "true") {
           delete target[key];
           return;
         }
-        if (field.type === "number") {
-          target[key] = Number(field.value);
+        if (type === "number") {
+          const numericValue = parseFiniteNumericValue(value);
+          if (numericValue === null) delete target[key];
+          else target[key] = numericValue;
           return;
         }
-        target[key] = field.value;
+        target[key] = value;
       }
       _isHomeAssistantPicker(node) {
         const tag = String(node?.tagName || "").toUpperCase();
@@ -4426,17 +4444,16 @@
       }
       _onShadowInput(event) {
         const shouldEmit = event.type === "change" || event.type === "value-changed";
-        const playerField = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.playerField);
+        const playerField = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.playerField));
         if (playerField) {
           if (this._isHomeAssistantPicker(playerField) && event.type !== "value-changed") {
             return;
           }
           event.stopPropagation();
-          const nextConfig2 = deepClone(this._config);
-          this._prepareEditorConfig(nextConfig2);
-          const playerIndex = Number(playerField.dataset.playerIndex);
+          const nextConfig2 = this._prepareEditorConfig(deepClone(this._config));
+          const playerIndex = parseFiniteNumericValue(playerField.dataset.playerIndex) ?? -1;
           const player = nextConfig2.media_player.players[playerIndex];
-          if (!player) {
+          if (!player || !Number.isInteger(playerIndex)) {
             return;
           }
           if (playerField.dataset.playerField === "label") {
@@ -4445,69 +4462,81 @@
           if (playerField.dataset.playerField === "browse_path") {
             delete player.media_browser_path;
           }
-          const eventValue = event.detail?.value;
-          if (event.type === "value-changed" && eventValue !== void 0) {
-            playerField.value = eventValue ?? "";
+          const eventValue = editorControlValue(event, playerField);
+          if (event.type === "value-changed" && typeof eventValue === "string") {
+            Object.assign(playerField, { value: eventValue });
             playerField.dataset.value = String(eventValue ?? "");
           }
-          this._applyFieldValue(player, playerField.dataset.playerField, playerField);
+          this._applyFieldValue(player, playerField.dataset.playerField || "", playerField);
           this._commitEditorConfig(nextConfig2, shouldEmit);
           return;
         }
-        const field = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+        const field = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.field));
         if (field) {
-          const nextConfig2 = deepClone(this._config);
-          const eventValue = event.detail?.value;
+          const rootPath = field.dataset.field || "";
+          if (rootPath.startsWith("routes.") || rootPath.startsWith("media_player.players.")) return;
+          const nextConfig2 = this._prepareEditorConfig(deepClone(this._config));
+          const eventValue = editorControlValue(event, field);
           if (field.dataset.field === "media_player.artwork.blur_gradient") {
-            setByPath(nextConfig2, "media_player.artwork.mode", field.checked ? "blur" : "immersive");
+            setByPath(nextConfig2, "media_player.artwork.mode", field instanceof HTMLInputElement && field.checked ? "blur" : "immersive");
             this._commitEditorConfig(nextConfig2, shouldEmit);
             return;
           }
-          const value = field.type === "checkbox" ? field.checked : event.type === "value-changed" && eventValue !== void 0 ? eventValue ?? "" : field.value;
+          const value = field instanceof HTMLInputElement && field.type === "checkbox" ? field.checked : event.type === "value-changed" && eventValue !== void 0 ? eventValue ?? "" : "value" in field ? field.value : void 0;
           if (value === "" && field.dataset.optional === "true") {
             deleteByPath(nextConfig2, field.dataset.field);
-          } else if (field.type === "number") {
-            setByPath(nextConfig2, field.dataset.field, Number(value));
+          } else if (field instanceof HTMLInputElement && field.type === "number") {
+            const numericValue = parseFiniteNumericValue(value);
+            if (numericValue === null) deleteByPath(nextConfig2, field.dataset.field || "");
+            else setByPath(nextConfig2, field.dataset.field || "", numericValue);
           } else {
             setByPath(nextConfig2, field.dataset.field, value);
           }
           this._commitEditorConfig(nextConfig2, shouldEmit);
           return;
         }
-        const routeField = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.routeField);
+        const routeField = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.routeField));
         if (routeField) {
-          const routeIndex2 = Number(routeField.dataset.routeIndex);
-          const nextConfig2 = deepClone(this._config);
-          this._prepareEditorConfig(nextConfig2);
+          const routeIndex2 = parseFiniteNumericValue(routeField.dataset.routeIndex) ?? -1;
+          const nextConfig2 = this._prepareEditorConfig(deepClone(this._config));
           const route2 = nextConfig2.routes[routeIndex2];
-          if (!route2) {
+          if (!route2 || !Number.isInteger(routeIndex2)) {
             return;
           }
-          this._applyFieldValue(route2, routeField.dataset.routeField, routeField);
+          if (event.type === "value-changed") {
+            const value = editorControlValue(event, routeField);
+            if (typeof value !== "string") return;
+            Object.assign(routeField, { value });
+          }
+          this._applyFieldValue(route2, routeField.dataset.routeField || "", routeField);
           this._commitEditorConfig(nextConfig2, shouldEmit);
           return;
         }
-        const popupField = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.popupField);
+        const popupField = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.popupField));
         if (!popupField) {
           return;
         }
-        const nextConfig = deepClone(this._config);
-        this._prepareEditorConfig(nextConfig);
-        const routeIndex = Number(popupField.dataset.routeIndex);
-        const popupIndex = Number(popupField.dataset.popupIndex);
+        const nextConfig = this._prepareEditorConfig(deepClone(this._config));
+        const routeIndex = parseFiniteNumericValue(popupField.dataset.routeIndex) ?? -1;
+        const popupIndex = parseFiniteNumericValue(popupField.dataset.popupIndex) ?? -1;
         const route = nextConfig.routes[routeIndex];
         if (!route || !Array.isArray(route.popup)) {
           return;
         }
         const popupItem = route.popup[popupIndex];
-        if (!popupItem) {
+        if (!isObject(popupItem) || !Number.isInteger(popupIndex)) {
           return;
         }
-        this._applyFieldValue(popupItem, popupField.dataset.popupField, popupField);
+        if (event.type === "value-changed") {
+          const value = editorControlValue(event, popupField);
+          if (typeof value !== "string") return;
+          Object.assign(popupField, { value });
+        }
+        this._applyFieldValue(popupItem, popupField.dataset.popupField || "", popupField);
         this._commitEditorConfig(nextConfig, shouldEmit);
       }
       _onShadowClick(event) {
-        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
+        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.editorToggle));
         if (toggleButton) {
           if (toggleButton.dataset.editorToggle === "styles") {
             this._showStyleSection = !this._showStyleSection;
@@ -4520,12 +4549,11 @@
           }
           return;
         }
-        const actionButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorAction);
+        const actionButton = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.editorAction));
         if (!actionButton) {
           return;
         }
-        const nextConfig = deepClone(this._config);
-        this._prepareEditorConfig(nextConfig);
+        const nextConfig = this._prepareEditorConfig(deepClone(this._config));
         if (actionButton.dataset.editorAction === "add-route") {
           nextConfig.routes.push({
             icon: "mdi:circle-outline",
@@ -4536,13 +4564,14 @@
           return;
         }
         if (actionButton.dataset.editorAction === "remove-route") {
-          const index = Number(actionButton.dataset.routeIndex);
+          const index = parseFiniteNumericValue(actionButton.dataset.routeIndex) ?? -1;
+          if (!Number.isInteger(index) || index < 0 || index >= nextConfig.routes.length) return;
           nextConfig.routes.splice(index, 1);
           this._emitConfig(nextConfig);
           return;
         }
         if (actionButton.dataset.editorAction === "move-route-up") {
-          const index = Number(actionButton.dataset.routeIndex);
+          const index = parseFiniteNumericValue(actionButton.dataset.routeIndex) ?? -1;
           if (index <= 0 || index >= nextConfig.routes.length) {
             return;
           }
@@ -4551,7 +4580,7 @@
           return;
         }
         if (actionButton.dataset.editorAction === "move-route-down") {
-          const index = Number(actionButton.dataset.routeIndex);
+          const index = parseFiniteNumericValue(actionButton.dataset.routeIndex) ?? -1;
           if (index < 0 || index >= nextConfig.routes.length - 1) {
             return;
           }
@@ -4560,9 +4589,9 @@
           return;
         }
         if (actionButton.dataset.editorAction === "add-popup-item") {
-          const routeIndex = Number(actionButton.dataset.routeIndex);
+          const routeIndex = parseFiniteNumericValue(actionButton.dataset.routeIndex) ?? -1;
           const route = nextConfig.routes[routeIndex];
-          if (!route) {
+          if (!route || !Number.isInteger(routeIndex)) {
             return;
           }
           if (!Array.isArray(route.popup)) {
@@ -4576,12 +4605,13 @@
           return;
         }
         if (actionButton.dataset.editorAction === "remove-popup-item") {
-          const routeIndex = Number(actionButton.dataset.routeIndex);
-          const popupIndex = Number(actionButton.dataset.popupIndex);
+          const routeIndex = parseFiniteNumericValue(actionButton.dataset.routeIndex) ?? -1;
+          const popupIndex = parseFiniteNumericValue(actionButton.dataset.popupIndex) ?? -1;
           const route = nextConfig.routes[routeIndex];
           if (!route || !Array.isArray(route.popup)) {
             return;
           }
+          if (!Number.isInteger(popupIndex) || popupIndex < 0 || popupIndex >= route.popup.length) return;
           route.popup.splice(popupIndex, 1);
           if (route.popup.length === 0) {
             delete route.popup;
@@ -4590,8 +4620,8 @@
           return;
         }
         if (actionButton.dataset.editorAction === "move-popup-item-up") {
-          const routeIndex = Number(actionButton.dataset.routeIndex);
-          const popupIndex = Number(actionButton.dataset.popupIndex);
+          const routeIndex = parseFiniteNumericValue(actionButton.dataset.routeIndex) ?? -1;
+          const popupIndex = parseFiniteNumericValue(actionButton.dataset.popupIndex) ?? -1;
           const route = nextConfig.routes[routeIndex];
           if (!route || !Array.isArray(route.popup) || popupIndex <= 0 || popupIndex >= route.popup.length) {
             return;
@@ -4601,8 +4631,8 @@
           return;
         }
         if (actionButton.dataset.editorAction === "move-popup-item-down") {
-          const routeIndex = Number(actionButton.dataset.routeIndex);
-          const popupIndex = Number(actionButton.dataset.popupIndex);
+          const routeIndex = parseFiniteNumericValue(actionButton.dataset.routeIndex) ?? -1;
+          const popupIndex = parseFiniteNumericValue(actionButton.dataset.popupIndex) ?? -1;
           const route = nextConfig.routes[routeIndex];
           if (!route || !Array.isArray(route.popup) || popupIndex < 0 || popupIndex >= route.popup.length - 1) {
             return;
@@ -4619,7 +4649,8 @@
           return;
         }
         if (actionButton.dataset.editorAction === "remove-player") {
-          const playerIndex = Number(actionButton.dataset.playerIndex);
+          const playerIndex = parseFiniteNumericValue(actionButton.dataset.playerIndex) ?? -1;
+          if (!Number.isInteger(playerIndex) || playerIndex < 0 || playerIndex >= nextConfig.media_player.players.length) return;
           nextConfig.media_player.players.splice(playerIndex, 1);
           this._emitConfig(nextConfig);
         }
@@ -4713,7 +4744,7 @@
               data-popup-field="users"
               data-csv="true"
               data-optional="true"
-              value="${escapeHtml((popupItem.users || []).join(", "))}"
+              value="${escapeHtml((Array.isArray(popupItem.users) ? popupItem.users : []).join(", "))}"
               placeholder="id1, id2"
             />
           </label>
@@ -4726,7 +4757,7 @@
               data-popup-field="active_paths"
               data-csv="true"
               data-optional="true"
-              value="${escapeHtml((popupItem.active_paths || []).join(", "))}"
+              value="${escapeHtml((Array.isArray(popupItem.active_paths) ? popupItem.active_paths : []).join(", "))}"
               placeholder="/lovelace/seguridad/camaras"
             />
           </label>
@@ -4836,7 +4867,7 @@
               data-player-field="show_states"
               data-csv="true"
               data-optional="true"
-              value="${escapeHtml((player.show_states || []).join(", "))}"
+              value="${escapeHtml((Array.isArray(player.show_states) ? player.show_states : []).join(", "))}"
               placeholder="playing, paused"
             />
           </label>
@@ -4857,7 +4888,8 @@
     `;
       }
       _renderRoute(route, index, totalRoutes) {
-        const popupMarkup = Array.isArray(route.popup) && route.popup.length > 0 ? route.popup.map((popupItem, popupIndex) => this._renderPopupItem(index, popupItem, popupIndex, route.popup.length)).join("") : `<p class="hint">${this._L("ed.nav.no_route_popup")}</p>`;
+        const popup = route.popup;
+        const popupMarkup = Array.isArray(popup) && popup.length > 0 ? popup.map((popupItem, popupIndex) => this._renderPopupItem(index, popupItem, popupIndex, popup.length)).join("") : `<p class="hint">${this._L("ed.nav.no_route_popup")}</p>`;
         return `
       <div class="route-card">
         <div class="route-head">
@@ -4911,7 +4943,7 @@
               data-route-field="active_paths"
               data-csv="true"
               data-optional="true"
-              value="${escapeHtml((route.active_paths || []).join(", "))}"
+              value="${escapeHtml((Array.isArray(route.active_paths) ? route.active_paths : []).join(", "))}"
               placeholder="/lovelace/principal/subvista"
             />
           </label>
@@ -4923,7 +4955,7 @@
               data-route-field="users"
               data-csv="true"
               data-optional="true"
-              value="${escapeHtml((route.users || []).join(", "))}"
+              value="${escapeHtml((Array.isArray(route.users) ? route.users : []).join(", "))}"
               placeholder="id1, id2"
             />
           </label>
@@ -4964,7 +4996,10 @@
         const config = normalizeConfig(this._config || STUB_CONFIG);
         const routesMarkup = config.routes.map((route, index) => this._renderRoute(route, index, config.routes.length)).join("");
         const playersMarkup = (config.media_player?.players || []).map((player, index) => this._renderMediaPlayerPlayer(player, index)).join("");
-        const animationEnabled = config.animations?.enabled !== false;
+        const haptics = isObject(config.haptics) ? config.haptics : {};
+        const animations = isObject(config.animations) ? config.animations : DEFAULT_CONFIG.animations;
+        const animationEnabled = animations.enabled !== false;
+        if (!this.shadowRoot) return;
         this.shadowRoot.innerHTML = `
       <style>
         :host {
@@ -5226,24 +5261,24 @@
               <input type="text" data-field="title" data-optional="true" value="${escapeHtml(config.title || "")}" />
             </label>
             <label class="checkbox">
-              <input type="checkbox" data-field="haptics.enabled" ${config.haptics.enabled ? "checked" : ""} />
+              <input type="checkbox" data-field="haptics.enabled" ${haptics.enabled ? "checked" : ""} />
               <span class="toggle-switch" aria-hidden="true"></span>
               <span>${this._L("ed.nav.haptic_response")}</span>
             </label>
             <label>
               <span>${this._L("ed.nav.haptic_style")}</span>
               <select data-field="haptics.style">
-                <option value="selection" ${config.haptics.style === "selection" ? "selected" : ""}>${this._L("ed.weather.haptic_selection")}</option>
-                <option value="light" ${config.haptics.style === "light" ? "selected" : ""}>${this._L("ed.weather.haptic_light")}</option>
-                <option value="medium" ${config.haptics.style === "medium" ? "selected" : ""}>${this._L("ed.weather.haptic_medium")}</option>
-                <option value="heavy" ${config.haptics.style === "heavy" ? "selected" : ""}>${this._L("ed.weather.haptic_heavy")}</option>
-                <option value="success" ${config.haptics.style === "success" ? "selected" : ""}>${this._L("ed.weather.haptic_success")}</option>
-                <option value="warning" ${config.haptics.style === "warning" ? "selected" : ""}>${this._L("ed.weather.haptic_warning")}</option>
-                <option value="failure" ${config.haptics.style === "failure" ? "selected" : ""}>${this._L("ed.weather.haptic_failure")}</option>
+                <option value="selection" ${haptics.style === "selection" ? "selected" : ""}>${this._L("ed.weather.haptic_selection")}</option>
+                <option value="light" ${haptics.style === "light" ? "selected" : ""}>${this._L("ed.weather.haptic_light")}</option>
+                <option value="medium" ${haptics.style === "medium" ? "selected" : ""}>${this._L("ed.weather.haptic_medium")}</option>
+                <option value="heavy" ${haptics.style === "heavy" ? "selected" : ""}>${this._L("ed.weather.haptic_heavy")}</option>
+                <option value="success" ${haptics.style === "success" ? "selected" : ""}>${this._L("ed.weather.haptic_success")}</option>
+                <option value="warning" ${haptics.style === "warning" ? "selected" : ""}>${this._L("ed.weather.haptic_warning")}</option>
+                <option value="failure" ${haptics.style === "failure" ? "selected" : ""}>${this._L("ed.weather.haptic_failure")}</option>
               </select>
             </label>
             <label class="checkbox">
-              <input type="checkbox" data-field="haptics.fallback_vibrate" ${config.haptics.fallback_vibrate ? "checked" : ""} />
+              <input type="checkbox" data-field="haptics.fallback_vibrate" ${haptics.fallback_vibrate ? "checked" : ""} />
               <span class="toggle-switch" aria-hidden="true"></span>
               <span>${this._L("ed.nav.vibrate_fallback")}</span>
             </label>
@@ -5334,23 +5369,23 @@
                   </label>
                   <label>
                     <span>${this._L("ed.nav.anim_bar_hover_ms")}</span>
-                    <input type="number" data-field="animations.bar_duration" value="${escapeHtml(config.animations.bar_duration || DEFAULT_CONFIG.animations.bar_duration)}" />
+                    <input type="number" data-field="animations.bar_duration" value="${escapeHtml(animations.bar_duration ?? DEFAULT_CONFIG.animations.bar_duration)}" />
                   </label>
                   <label>
                     <span>${this._L("ed.nav.anim_bar_enter_ms")}</span>
-                    <input type="number" data-field="animations.dock_entrance_duration" value="${escapeHtml(config.animations.dock_entrance_duration ?? DEFAULT_CONFIG.animations.dock_entrance_duration)}" />
+                    <input type="number" data-field="animations.dock_entrance_duration" value="${escapeHtml(animations.dock_entrance_duration ?? DEFAULT_CONFIG.animations.dock_entrance_duration)}" />
                   </label>
                   <label>
                     <span>${this._L("ed.nav.anim_popup_ms")}</span>
-                    <input type="number" data-field="animations.popup_duration" value="${escapeHtml(config.animations.popup_duration || DEFAULT_CONFIG.animations.popup_duration)}" />
+                    <input type="number" data-field="animations.popup_duration" value="${escapeHtml(animations.popup_duration ?? DEFAULT_CONFIG.animations.popup_duration)}" />
                   </label>
                   <label>
                     <span>${this._L("ed.nav.anim_media_ms")}</span>
-                    <input type="number" data-field="animations.media_duration" value="${escapeHtml(config.animations.media_duration || DEFAULT_CONFIG.animations.media_duration)}" />
+                    <input type="number" data-field="animations.media_duration" value="${escapeHtml(animations.media_duration ?? DEFAULT_CONFIG.animations.media_duration)}" />
                   </label>
                   <label>
                     <span>${this._L("ed.nav.anim_button_ms")}</span>
-                    <input type="number" data-field="animations.button_bounce_duration" value="${escapeHtml(config.animations.button_bounce_duration || DEFAULT_CONFIG.animations.button_bounce_duration)}" />
+                    <input type="number" data-field="animations.button_bounce_duration" value="${escapeHtml(animations.button_bounce_duration ?? DEFAULT_CONFIG.animations.button_bounce_duration)}" />
                   </label>
                 </div>
               ` : ""}
