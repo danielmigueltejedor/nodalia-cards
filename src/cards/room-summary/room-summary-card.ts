@@ -1,5 +1,4 @@
-// @ts-nocheck
-/* Large HTMLElement view/controller: typed incrementally as methods are extracted. */
+import roomMetricStyles from "./room-summary-metrics.css";
 import {
   CARD_TAG,
   EDITOR_TAG,
@@ -32,12 +31,37 @@ import {
   normalizeTextKey,
 } from "./room-summary-helpers";
 
-let _lazyNodaliaRoomSummaryCard;
+import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
+import { isLovelaceEditorElement } from "../../shared/card-elements";
+import type { LovelaceEditorElement } from "../../shared/card-elements";
+import { invokeHassService } from "../../shared/home-assistant-services";
+type RoomConfig = ReturnType<typeof normalizeConfig>;
+type RoomSummary = ReturnType<typeof buildRoomSummary>;
+type RoomStyles = RoomConfig["styles"];
+type HubAction = { id: string; icon: string; label: string; active?: boolean | null; warn?: boolean };
+const roomActionElement = (node: EventTarget): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.roomAction);
+let _lazyNodaliaRoomSummaryCard: CustomElementConstructor | undefined;
 export function loadNodaliaRoomSummaryCard() {
   if (_lazyNodaliaRoomSummaryCard) {
     return _lazyNodaliaRoomSummaryCard;
   }
 class NodaliaRoomSummaryCard extends HTMLElement {
+  declare private _config: RoomConfig;
+  declare private _configSignature: string;
+  declare private _hass: HomeAssistant | null;
+  declare private _lastRenderSignature: string;
+  declare private _animateContentOnNextRender: boolean;
+  declare private _activePanel: string;
+  declare private _hubExpanded: boolean;
+  declare private _hubEmbedCache: Map<string,LovelaceEditorElement>;
+  declare private _hubEmbedConfigSignatures: WeakMap<LovelaceEditorElement,string>;
+  declare private _hubEmbedStash: DocumentFragment | null;
+  declare private _hubShellConfigSignature: string;
+  declare private _suppressNextPrimaryClick: boolean;
+  declare private _detachPrimaryHold: ()=>void;
+  declare private _hassContextOwner: unknown;
+  declare private _hassUserKey: string;
+
   static async getConfigElement() { return document.createElement(EDITOR_TAG); }
   static getStubConfig() { return deepClone(STUB_CONFIG); }
 
@@ -50,6 +74,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     this._config = normalizeConfig(STUB_CONFIG);
     this._configSignature = JSON.stringify(this._config);
     this._hass = null;
+    this._hassContextOwner = null; this._hassUserKey = "";
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._activePanel = "home";
@@ -61,25 +86,29 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     this._suppressNextPrimaryClick = false;
     this._detachPrimaryHold = () => {};
     this._onShadowClick = this._onShadowClick.bind(this);
-    this._onShadowInput = this._onShadowInput.bind(this);
     this._onEmbeddedOverlayChange = this._onEmbeddedOverlayChange.bind(this);
     this._onHubBodyAnimationEnd = this._onHubBodyAnimationEnd.bind(this);
     }
 
   connectedCallback() {
     this.shadowRoot?.addEventListener("click", this._onShadowClick);
-    this.shadowRoot?.addEventListener("input", this._onShadowInput);
     this.shadowRoot?.addEventListener("animationend", this._onHubBodyAnimationEnd);
     this.addEventListener("nodalia-overlay-change", this._onEmbeddedOverlayChange);
-    this._detachPrimaryHold?.();
+    this._bindPrimaryHold();
+    this._animateContentOnNextRender = true;
+    if (this._hass) { this._lastRenderSignature = ""; this._render(); }
+  }
+
+  _bindPrimaryHold() {
+    this._detachPrimaryHold();
+    this._detachPrimaryHold = () => {};
+    if (!this.isConnected) return;
     this._detachPrimaryHold =
       typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function"
         ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
             resolveZone: event => {
-              const actionTarget = event.composedPath().find(
-                node => node instanceof HTMLElement && node.dataset?.roomAction === "primary",
-              );
-              return actionTarget ? "primary" : null;
+              const actionTarget = event.composedPath().find(roomActionElement);
+              return actionTarget?.dataset.roomAction === "primary" ? "primary" : null;
             },
             shouldBeginHold: () => String(this._config?.hold_action || "none") !== "none",
             onHold: () => this._performCardAction("hold"),
@@ -89,60 +118,89 @@ class NodaliaRoomSummaryCard extends HTMLElement {
             },
           })
         : () => {};
-    this._animateContentOnNextRender = true;
-    if (this._hass) { this._lastRenderSignature = ""; this._render(); }
+  }
+
+  _clearHubEmbeds() {
+    this._hubEmbedCache.forEach(card => card.remove());
+    this._hubEmbedCache.clear();
+    this._hubEmbedConfigSignatures = new WeakMap();
+    this._hubEmbedStash = null;
+    this.shadowRoot?.querySelector(".room-hub")?.classList.remove("room-hub--camera-expanded");
+  }
+
+  _captureHubFocus() {
+    const active = this.shadowRoot?.activeElement;
+    const action = active instanceof HTMLElement ? active.dataset.roomAction : "";
+    return () => {
+      if (!action || active?.isConnected) return;
+      const candidates = Array.from(this.shadowRoot?.querySelectorAll("[data-room-action]") || []);
+      const target = candidates.find(node => node instanceof HTMLElement && node.dataset.roomAction === action)
+        || candidates.find(node => node instanceof HTMLElement && node.dataset.roomAction === (action.startsWith("nav:") ? "nav:home" : "primary"))
+        || candidates.find(node => node instanceof HTMLElement && node.dataset.roomAction === "primary");
+      if (target instanceof HTMLElement) target.focus({ preventScroll: true });
+    };
   }
 
   disconnectedCallback() {
     this.shadowRoot?.removeEventListener("click", this._onShadowClick);
-    this.shadowRoot?.removeEventListener("input", this._onShadowInput);
     this.shadowRoot?.removeEventListener("animationend", this._onHubBodyAnimationEnd);
     this.removeEventListener("nodalia-overlay-change", this._onEmbeddedOverlayChange);
     this._detachPrimaryHold?.();
     this._detachPrimaryHold = () => {};
     this._suppressNextPrimaryClick = false;
-    this._parkHubEmbeddedCards();
-    this._hubEmbedCache?.clear();
-    this._hubEmbedConfigSignatures = new WeakMap();
-    this._hubEmbedStash = null;
+    this._clearHubEmbeds();
     this._lastRenderSignature = "";
     this._hubShellConfigSignature = "";
     window.NodaliaUtils?.clearDeferTimers?.(this);
   }
 
-  _onHubBodyAnimationEnd(event) {
+  _onHubBodyAnimationEnd(event: Event) {
     const body = event.target;
     if (!(body instanceof HTMLElement) || !body.classList.contains("room-hub__body--enter")) return;
-    if (event.animationName && event.animationName !== "room-hub-slide") return;
+    if (event instanceof AnimationEvent && event.animationName && event.animationName !== "room-hub-slide") return;
     body.classList.remove("room-hub__body--enter");
     body.style.removeProperty("transform");
   }
 
-  _onEmbeddedOverlayChange(event) {
+  _onEmbeddedOverlayChange(event: Event) {
     const hub = this.shadowRoot?.querySelector(".room-hub");
     if (!(hub instanceof HTMLElement)) return;
-    const open = Boolean(event?.detail?.open);
+    const detail: unknown = event instanceof CustomEvent ? event.detail : null;
+    const open = isObject(detail) && detail.open === true;
     hub.classList.toggle("room-hub--camera-expanded", open);
   }
 
-  setConfig(config) {
+  setConfig(config: unknown) {
+    this._detachPrimaryHold(); this._suppressNextPrimaryClick = false;
+    this._clearHubEmbeds();
     this._config = normalizeConfig(config || {});
+    const navItems = this._getHubNavItems(this._config, buildRoomSummary(this._hass, this._config));
+    if (this._activePanel !== "home" && !navItems.some(item => item.id === this._activePanel)) this._activePanel = "home";
+    this._bindPrimaryHold();
     this._configSignature = JSON.stringify(this._config);
     if (this._config.collapsible !== true) this._hubExpanded = false;
     this._lastRenderSignature = "";
     this._hubShellConfigSignature = "";
     this._animateContentOnNextRender = true;
-    this._hubEmbedCache?.clear();
-    this._hubEmbedConfigSignatures = new WeakMap();
     if (this.isConnected) this._render();
   }
 
-  set hass(hass) {
+  set hass(hass: HomeAssistant | null) {
     const prev = this._hass;
+    const owner = hass?.connection || hass?.auth || null;
+    const userKey = `${Boolean(hass)}:${hass?.user?.id || ""}:${hass?.user?.is_admin === true}`;
+    const changedContext = owner !== this._hassContextOwner || userKey !== this._hassUserKey;
+    if (changedContext) {
+      this._detachPrimaryHold(); this._suppressNextPrimaryClick = false;
+      this._clearHubEmbeds(); window.NodaliaUtils.cancelCardZoneTap?.(this);
+      this._lastRenderSignature = "";
+    }
+    this._hassContextOwner = owner; this._hassUserKey = userKey;
     this._hass = hass;
+    if (changedContext) this._bindPrimaryHold();
     if (!this.isConnected) return;
     const sig = this._getRenderSignature(hass);
-    if (prev && sig === this._lastRenderSignature && this.shadowRoot?.innerHTML) return;
+    if (prev && sig === this._lastRenderSignature && this.shadowRoot?.innerHTML) { this._mountHubEmbeddedCards(); return; }
     this._lastRenderSignature = sig;
     if (prev && this._patchHubState()) return;
     this._render();
@@ -153,12 +211,12 @@ class NodaliaRoomSummaryCard extends HTMLElement {
   }
   getGridOptions() { return { rows: "auto", columns: "full", min_rows: this.getCardSize() }; }
 
-  _t(key, fallback, values = {}) {
+  _t(key: string, fallback: string, values: Record<string, unknown> = {}) {
     const lang = window.NodaliaI18n?.resolveLanguage?.(this._hass, this._config?.language) ?? "en";
     const pack = window.NodaliaI18n?.strings?.(lang)?.roomSummaryCard || window.NodaliaI18n?.strings?.("en")?.roomSummaryCard || {};
-    const raw = key.split(".").reduce((cur, part) => (cur && cur[part] !== undefined ? cur[part] : undefined), pack);
+    const raw = key.split(".").reduce<unknown>((cur, part) => isObject(cur) && Object.prototype.hasOwnProperty.call(cur, part) ? cur[part] : undefined, pack);
     const text = raw ?? fallback;
-    return window.NodaliaI18n?.format?.(text, values) ?? String(text).replace(/\{(\w+)\}/g, (_, t) => String(values[t] ?? ""));
+    return String(text).replace(/\{(\w+)\}/g, (_, t) => String(values[t] ?? ""));
   }
 
   _getRenderSignature(hass = this._hass) {
@@ -174,32 +232,25 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     ].filter(Boolean);
     const states = [...new Set(ids)].map(id => {
       const state = hass?.states?.[id];
-      return state ? `${id}:${state.state}:${state.last_updated || state.last_changed}` : `${id}:missing`;
+      return state ? JSON.stringify([id, state.state, state.last_updated || state.last_changed, state.attributes]) : `${id}:missing`;
     }).join("|");
-    return `${this._activePanel}|${this._hubExpanded ? 1 : 0}|${states}|${this._configSignature}`;
+    return `${this._activePanel}|${this._hubExpanded ? 1 : 0}|${states}|${hass?.locale?.language || hass?.language || ""}|${this._configSignature}`;
   }
 
-  _entityLabel(entityId) {
+  _entityLabel(entityId: string) {
     const state = getState(this._hass, entityId);
     return String(state?.attributes?.friendly_name || entityId || "").trim() || entityId;
   }
 
-  _entityIcon(entityId, fallback = "mdi:help-circle-outline") {
+  _entityIcon(entityId: string, fallback = "mdi:help-circle-outline") {
     const state = getState(this._hass, entityId);
     return String(state?.attributes?.icon || fallback).trim() || fallback;
   }
 
-  _lightBrightnessPct(state) {
-    if (!state || typeof state.attributes?.brightness !== "number") return 0;
-    return Math.max(1, Math.min(100, Math.round((state.attributes.brightness / 255) * 100)));
-  }
 
-  _supportsLightBrightness(state) {
-    return Boolean(state && typeof state.attributes?.brightness === "number");
-  }
 
-  _getHubNavItems(config, summary) {
-    const items = [];
+  _getHubNavItems(config: RoomConfig, summary: RoomSummary) {
+    const items: HubAction[] = [];
     if (config.show_lights !== false && config.lights?.length) {
       items.push({
         id: "lights",
@@ -283,9 +334,9 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     return items;
   }
 
-  _getContextualActions(summary, config) {
+  _getContextualActions(summary: RoomSummary, config: RoomConfig) {
     if (config.show_quick_actions === false) return [];
-    const actions = [];
+    const actions: HubAction[] = [];
     if (config.lights?.length) {
       actions.push({
         id: summary.lights_on ? "lights_off" : "lights_on",
@@ -364,7 +415,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     return actions;
   }
 
-  _setHubPanel(panel) {
+  _setHubPanel(panel: string) {
     const next = HUB_PANELS.has(panel) ? panel : "home";
     if (next === this._activePanel) return;
     this._activePanel = next;
@@ -386,7 +437,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     const stash = this._ensureHubEmbedStash();
     for (const card of this._hubEmbedCache.values()) {
       if (card instanceof HTMLElement && card.parentNode !== stash) {
-        if (typeof card._closeExpanded === "function") {
+        if ("_closeExpanded" in card && typeof card._closeExpanded === "function") {
           try { card._closeExpanded(); } catch (_error) { /* ignore */ }
         }
         stash.appendChild(card);
@@ -394,7 +445,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     }
   }
 
-  _hubViewMarkup(panel, config, summary, styles, accentColor, collapsed) {
+  _hubViewMarkup(panel: string, config: RoomConfig, summary: RoomSummary, styles: RoomStyles, accentColor: string, collapsed: boolean) {
     return `<section class="room-hub__view" data-hub-panel="${escapeHtml(panel)}" aria-hidden="false">
       ${panel === "home"
     ? this._renderHubHome(config, summary, styles, accentColor, collapsed)
@@ -402,12 +453,14 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     </section>`;
   }
 
-  _syncHubChrome(config, summary, styles, collapsed, activePanel) {
+  _syncHubChrome(config: RoomConfig, summary: RoomSummary, styles: RoomStyles, collapsed: boolean, activePanel: string) {
+    const restoreFocus = this._captureHubFocus();
+    if (!this.shadowRoot) return false;
     const header = this.shadowRoot.querySelector(".room-hub__header");
     if (!header) return false;
     header.outerHTML = this._renderHubHeader(config, summary, styles, collapsed);
     const contextActions = this.shadowRoot.querySelector("[data-hub-context-actions]");
-    if (contextActions) {
+    if (contextActions instanceof HTMLElement) {
       const contextual = this._getContextualActions(summary, config);
       contextActions.innerHTML = this._renderHubContextActions(contextual);
       contextActions.hidden = contextual.length === 0;
@@ -422,10 +475,12 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     } else {
       rail?.remove();
     }
+    restoreFocus();
     return true;
   }
 
-  _activateHubPanel(panel) {
+  _activateHubPanel(panel: string) {
+    const restoreFocus = this._captureHubFocus();
     const body = this.shadowRoot?.querySelector(".room-hub__body");
     if (!body) return false;
     const config = normalizeConfig(this._config || {});
@@ -440,10 +495,12 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     this._syncHubChrome(config, summary, styles, collapsed, panel);
     this._mountHubEmbeddedCards();
     this._lastRenderSignature = this._getRenderSignature(this._hass);
+    restoreFocus();
     return true;
   }
 
   _patchHubState() {
+    const restoreFocus = this._captureHubFocus();
     if (!this.shadowRoot?.querySelector("ha-card.room-summary-card--hub")) return false;
     const config = normalizeConfig(this._config || {});
     const summary = buildRoomSummary(this._hass, config);
@@ -453,18 +510,19 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     const activePanel = collapsed ? "home" : HUB_PANELS.has(this._activePanel) ? this._activePanel : "home";
     if (!this._syncHubChrome(config, summary, styles, collapsed, activePanel)) return false;
 
-    const patchPanel = (panel, markup) => {
-      const view = this.shadowRoot.querySelector(`[data-hub-panel="${panel}"]`);
+    const patchPanel = (panel: string, markup: string) => {
+      const view = this.shadowRoot?.querySelector(`[data-hub-panel="${panel}"]`);
       if (view) view.innerHTML = markup;
     };
     if (activePanel === "covers" && config.covers?.length) {
       patchPanel("covers", this._renderHubCoverPanel(config));
     }
     this._mountHubEmbeddedCards();
+    restoreFocus();
     return true;
   }
 
-  _toggleEntity(entityId) {
+  _toggleEntity(entityId: string) {
     const state = getState(this._hass, entityId);
     const domain = entityDomain(entityId);
     if (!state || !domain) return;
@@ -486,13 +544,8 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     }
   }
 
-  _runVacuumService(entityId, service) {
-    if (!entityId) return;
-    this._triggerHaptic();
-    void this._invoke("vacuum", service, { entity_id: entityId });
-  }
 
-  _runClimateDelta(entityId, delta) {
+  _runClimateDelta(entityId: string, delta: number) {
     const state = getState(this._hass, entityId);
     if (!state) return;
     const current = finiteNumber(state.attributes?.temperature);
@@ -501,7 +554,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     void this._invoke("climate", "set_temperature", { entity_id: entityId, temperature: current + delta });
   }
 
-  _runMediaControl(control) {
+  _runMediaControl(control: string) {
     const entityId = this._config?.media_player;
     if (!entityId) return;
     this._triggerHaptic();
@@ -515,33 +568,17 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     if (control === "prev") void this._invoke("media_player", "media_previous_track", { entity_id: entityId });
   }
 
-  _onShadowInput(event) {
-    const el = event.target;
-    if (!(el instanceof HTMLInputElement) || el.type !== "range") return;
-    const entityId = String(el.dataset.entityId || "").trim();
-    if (!entityId) return;
-    const pct = Number(el.value);
-    if (!Number.isFinite(pct)) return;
-    void this._invoke("light", "turn_on", {
-      entity_id: entityId,
-      brightness: Math.max(1, Math.min(255, Math.round((pct / 100) * 255))),
-    });
-  }
 
   _triggerHaptic() {
     if (this._config?.haptics?.enabled !== true) return;
     fireEvent(this, "haptic", this._config.haptics.style || "medium", { bubbles: true, composed: true });
   }
 
-  _invoke(domain, service, data = {}, target = null) {
-    const fn = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils);
-    if (typeof fn === "function") return fn(this, this._hass, domain, service, data, target);
-    return Promise.resolve().then(() => (
-      this._hass?.callService?.(domain, service, data, target || undefined)
-    ));
+  _invoke(domain: string, service: string, data: Record<string, unknown> = {}, target: Record<string, unknown> | null = null) {
+    return invokeHassService(this, this._hass, domain, service, data, target);
   }
 
-  _parseActionObject(value) {
+  _parseActionObject(value: unknown) {
     if (isObject(value)) return deepClone(value);
     const source = String(value || "").trim();
     if (!source) return {};
@@ -553,8 +590,8 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     }
   }
 
-  _isConfiguredServiceAllowed(serviceValue) {
-    const security = this._config?.security || DEFAULT_CONFIG.security;
+  _isConfiguredServiceAllowed(serviceValue: unknown) {
+    const security = isObject(this._config.security) ? this._config.security : DEFAULT_CONFIG.security;
     if (security.strict_service_actions === false) return true;
     const normalizedService = String(serviceValue || "").trim().toLowerCase();
     const separator = normalizedService.indexOf(".");
@@ -569,7 +606,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     return allowedServices.includes(normalizedService) || allowedDomains.includes(domain);
   }
 
-  _runConfiguredService(prefix) {
+  _runConfiguredService(prefix: string) {
     const serviceValue = String(this._config?.[`${prefix}_service`] || "").trim();
     const separator = serviceValue.indexOf(".");
     if (separator <= 0 || separator >= serviceValue.length - 1) return;
@@ -589,7 +626,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     return cfg.climate || cfg.temperature || cfg.camera || cfg.media_player || cfg.lights?.[0] || "";
   }
 
-  _performCardAction(prefix) {
+  _performCardAction(prefix: string) {
     const cfg = this._config || {};
     const action = String(cfg[`${prefix}_action`] || "none");
     if (action === "none") return;
@@ -619,9 +656,8 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     }
   }
 
-  _runQuickAction(action) {
+  _runQuickAction(action: string) {
     const cfg = this._config || {};
-    const summary = buildRoomSummary(this._hass, cfg);
     this._triggerHaptic();
     if (action === "lights_on" && cfg.lights?.length) {
       void this._invoke("light", "turn_on", { entity_id: cfg.lights });
@@ -684,8 +720,8 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     }
   }
 
-  _onShadowClick(event) {
-    const el = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.roomAction);
+  _onShadowClick(event: Event) {
+    const el = event.composedPath().find(roomActionElement);
     if (!el) return;
     event.preventDefault();
     event.stopPropagation();
@@ -714,25 +750,11 @@ class NodaliaRoomSummaryCard extends HTMLElement {
       this._toggleEntity(action.slice(7));
       return;
     }
-    if (action?.startsWith("vacuum:")) {
-      const [, service, entityId] = action.split(":");
-      this._runVacuumService(entityId, service);
-      return;
-    }
     if (action?.startsWith("cover:")) {
-      const [, service, entityId] = action.split(":");
+      const [, service = "", entityId = ""] = action.split(":");
       if (!entityId) return;
       this._triggerHaptic();
       void this._invoke("cover", service, { entity_id: entityId });
-      return;
-    }
-    if (action?.startsWith("climate:")) {
-      const [, delta, entityId] = action.split(":");
-      this._runClimateDelta(entityId, Number(delta));
-      return;
-    }
-    if (action?.startsWith("media:")) {
-      this._runMediaControl(action.slice(6));
       return;
     }
     if (action?.startsWith("more-info:")) {
@@ -746,7 +768,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     if (action?.startsWith("quick:")) this._runQuickAction(action.slice(6));
   }
 
-  _renderHubBubble(icon, action, { active = false, large = false, label = "" } = {}) {
+  _renderHubBubble(icon: string, action: string, { active = false, large = false, label = "" }: {active?: boolean | null; large?: boolean; label?: string} = {}) {
     const classes = [
       "room-hub__bubble",
       active ? "room-hub__bubble--active" : "",
@@ -757,7 +779,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     </button>`;
   }
 
-  _renderHubRail(navItems, activePanel) {
+  _renderHubRail(navItems: HubAction[], activePanel: string) {
     const bubbles = [];
     if (activePanel !== "home") {
       bubbles.push(this._renderHubBubble("mdi:home", "nav:home", {
@@ -778,19 +800,19 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     </aside>`;
   }
 
-  _renderHubHomeMedia(config) {
+  _renderHubHomeMedia(config: RoomConfig) {
     if (config.show_media === false) return "";
     const ids = hubMediaPlayerIds(config);
     if (!ids.length) return "";
     return `<div class="room-hub__embed-host room-hub__embed-host--media" data-hub-embed="media" data-hub-slot="group" data-hub-media="group" data-entity="${escapeHtml(ids[0])}"></div>`;
   }
 
-  _renderHubHomeCamera(config) {
+  _renderHubHomeCamera(config: RoomConfig) {
     if (config.show_camera === false || !config.camera) return "";
     return `<div class="room-hub__embed-host room-hub__embed-host--camera" data-hub-embed="camera" data-hub-slot="live" data-entity="${escapeHtml(config.camera)}"></div>`;
   }
 
-  _hubEmbedStylePack(config) {
+  _hubEmbedStylePack(config: RoomConfig) {
     const base = normalizeConfig(config);
     return {
       language: base.language,
@@ -799,7 +821,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     };
   }
 
-  _hubEmbeddedAccentPack(config) {
+  _hubEmbeddedAccentPack(config: RoomConfig) {
     const parent = deepClone(normalizeConfig(config).styles);
     const hub = parent.hub || {};
     const hubDefaults = DEFAULT_CONFIG.styles.hub;
@@ -818,8 +840,8 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     };
   }
 
-  _hubEmbedCustomization(config, host) {
-    const listKeyByType = {
+  _hubEmbedCustomization(config: RoomConfig, host: HTMLElement) {
+    const listKeyByType: Record<string, string> = {
       light: "lights",
       vacuum: "vacuums",
       fan: "fans",
@@ -833,7 +855,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     if (host?.dataset?.hubEmbed === "lock" && !config.others?.includes(entityId)) return {};
     const index = Number(host?.dataset?.hubIndex);
     const options = config.embed_options?.[listKey] || [];
-    const option = options.find(item => String(item?.entity || "").trim() === entityId)
+    const option: Record<string, unknown> = options.find(item => String(item?.entity || "").trim() === entityId)
       || (Number.isInteger(index) ? options[index] : null)
       || {};
     return {
@@ -842,18 +864,18 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     };
   }
 
-  _hubMediaEmbedConfig(config, host) {
-    const native = isObject(config.media_config) ? deepClone(config.media_config) : {};
+  _hubMediaEmbedConfig(config: RoomConfig, host: HTMLElement) {
+    const native: Record<string, unknown> = isObject(config.media_config) ? deepClone(config.media_config) : {};
     const entityId = String(host?.dataset?.entity || "").trim();
     const scope = String(host?.dataset?.hubMedia || "single");
     const ids = hubMediaPlayerIds(config);
-    const nativePlayers = Array.isArray(native.players) ? native.players.filter(player => player?.entity) : [];
+    const nativePlayers = Array.isArray(native.players) ? native.players.filter(isObject).filter(player => player.entity) : [];
     const matchingPlayer = nativePlayers.find(player => String(player.entity || "").trim() === entityId);
     const groupedPlayers = nativePlayers.length
       ? nativePlayers
       : ids.map(entity => ({ entity }));
-    const players = (scope === "group" ? groupedPlayers : [matchingPlayer || { entity: entityId }])
-      .filter(player => player?.entity)
+    const selectedPlayers: Record<string, unknown>[] = scope === "group" ? groupedPlayers : [matchingPlayer || { entity: entityId }];
+    const players = selectedPlayers.filter(player => player.entity)
       .map(player => ({ ...player, show: player.show !== false }));
     const nativeAnimations = isObject(native.animations) ? native.animations : config.animations;
     const nativeLayout = isObject(native.layout) ? native.layout : {};
@@ -886,9 +908,9 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     };
   }
 
-  _hubCameraEmbedConfig(config, host) {
+  _hubCameraEmbedConfig(config: RoomConfig, host: HTMLElement) {
     const entityId = String(host?.dataset?.entity || "").trim();
-    const native = isObject(config.camera_config) ? deepClone(config.camera_config) : {};
+    const native: Record<string, unknown> = isObject(config.camera_config) ? deepClone(config.camera_config) : {};
     const embeddedStyles = this._hubEmbeddedAccentPack(config);
     const cameras = Array.isArray(native.cameras)
       ? native.cameras.map(id => String(id || "").trim()).filter(Boolean)
@@ -896,6 +918,8 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     if (entityId && !cameras.includes(entityId)) {
       cameras.unshift(entityId);
     }
+    const nativeStyles: Record<string, unknown> = isObject(native.styles) ? native.styles : {};
+    const nativeCardStyles = isObject(nativeStyles.card) ? nativeStyles.card : {};
     return {
       ...native,
       entity: entityId || native.entity || cameras[0] || "",
@@ -905,25 +929,25 @@ class NodaliaRoomSummaryCard extends HTMLElement {
       show_status_chips: native.show_status_chips === true,
       styles: {
         ...embeddedStyles,
-        ...(isObject(native.styles) ? native.styles : {}),
+        ...nativeStyles,
         card: {
           ...(embeddedStyles.card || {}),
-          ...(isObject(native.styles?.card) ? native.styles.card : {}),
-          padding: native.styles?.card?.padding || "8px",
+          ...nativeCardStyles,
+          padding: nativeCardStyles.padding || "8px",
         },
         preview: {
           aspect_ratio: "16 / 9",
           min_height: "140px",
           border_radius: "18px",
-          ...(isObject(native.styles?.preview) ? native.styles.preview : {}),
+          ...(isObject(nativeStyles.preview) ? nativeStyles.preview : {}),
         },
       },
     };
   }
 
-  _hubConfiguredEmbedKeys(config) {
+  _hubConfiguredEmbedKeys(config: RoomConfig) {
     const keys = new Set();
-    const add = (type, id, slot) => {
+    const add = (type: string, id: string, slot: string) => {
       const entityId = String(id || "").trim();
       if (entityId) keys.add(`${type === "entity" && entityId.startsWith("lock.") ? "lock" : type}:${entityId}:${slot}`);
     };
@@ -946,14 +970,14 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     const config = normalizeConfig(this._config || {});
     const pack = this._hubEmbedStylePack(config);
     const embeddedStyles = this._hubEmbeddedAccentPack(config);
-    const cacheKeyForHost = host => {
+    const cacheKeyForHost = (host: HTMLElement) => {
       const entityId = String(host?.dataset?.entity || "").trim();
       const embedType = String(host?.dataset?.hubEmbed || "").trim();
       const slot = String(host?.dataset?.hubSlot || "panel").trim();
       return entityId && embedType ? `${embedType}:${entityId}:${slot}` : "";
     };
 
-    const mount = (host, tagName, extra = {}) => {
+    const mount = (host: Element, tagName: string, extra: Record<string, unknown> = {}) => {
       if (!(host instanceof HTMLElement)) return;
       const entityId = String(host.dataset.entity || "").trim();
       if (!entityId) return;
@@ -961,7 +985,9 @@ class NodaliaRoomSummaryCard extends HTMLElement {
       const cacheKey = cacheKeyForHost(host);
       let card = this._hubEmbedCache?.get(cacheKey);
       if (!card) {
-        card = document.createElement(tagName);
+        const node = document.createElement(tagName);
+        if (!isLovelaceEditorElement(node)) return;
+        card = node;
         this._hubEmbedCache?.set(cacheKey, card);
       }
       if (card.parentElement !== host) {
@@ -970,7 +996,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
       const cardConfig = { entity: entityId, ...pack, ...extra, ...this._hubEmbedCustomization(config, host) };
       const configSignature = JSON.stringify(cardConfig);
       const configChanged = this._hubEmbedConfigSignatures.get(card) !== configSignature;
-      if (this._hass) card._hass = this._hass;
+      if (this._hass) Object.assign(card, { _hass: this._hass });
       if (configChanged) {
         try {
           card.setConfig(cardConfig);
@@ -1057,10 +1083,10 @@ class NodaliaRoomSummaryCard extends HTMLElement {
       });
     });
     this.shadowRoot.querySelectorAll('[data-hub-embed="media"]').forEach(host => {
-      mount(host, "nodalia-media-player", this._hubMediaEmbedConfig(config, host));
+      if (host instanceof HTMLElement) mount(host, "nodalia-media-player", this._hubMediaEmbedConfig(config, host));
     });
     this.shadowRoot.querySelectorAll('[data-hub-embed="camera"]').forEach(host => {
-      mount(host, "nodalia-camera-card", this._hubCameraEmbedConfig(config, host));
+      if (host instanceof HTMLElement) mount(host, "nodalia-camera-card", this._hubCameraEmbedConfig(config, host));
     });
     const configuredKeys = this._hubConfiguredEmbedKeys(config);
     for (const [key, card] of this._hubEmbedCache || []) {
@@ -1071,19 +1097,19 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     }
   }
 
-  _renderHubEmbedHosts(entityIds, embedType, slot = "panel") {
+  _renderHubEmbedHosts(entityIds: string[], embedType: string, slot = "panel") {
     return `<div class="room-hub__embed-list">${(entityIds || []).map((entityId, index) => `
       <div class="room-hub__embed-host" data-hub-embed="${escapeHtml(embedType === "entity" && entityId.startsWith("lock.") ? "lock" : embedType)}" data-hub-slot="${escapeHtml(slot)}" data-hub-index="${index}" data-entity="${escapeHtml(entityId)}"></div>
     `).join("")}</div>`;
   }
 
-  _renderHubRoomIcon(icon, title, styles) {
+  _renderHubRoomIcon(icon: string, title: string, styles: RoomStyles) {
     return `<button type="button" class="room-hub__room-icon" data-room-action="primary" aria-label="${escapeHtml(title)}" title="${escapeHtml(title)}">
       <ha-icon icon="${escapeHtml(icon || "mdi:floor-plan")}"></ha-icon>
     </button>`;
   }
 
-  _renderHubHeader(config, summary, styles, collapsed = false) {
+  _renderHubHeader(config: RoomConfig, summary: RoomSummary, styles: RoomStyles, collapsed = false) {
     const title = config.name || this._t("defaultName", "Room");
     const statusChips = this._renderHubStatusChips(config, summary);
     const collapsible = config.collapsible === true;
@@ -1108,15 +1134,15 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     </header>`;
   }
 
-  _renderHubStatusChips(config, summary) {
-    const chips = [];
-    const pushChip = (className, icon, label, entityId) => {
+  _renderHubStatusChips(config: RoomConfig, summary: RoomSummary) {
+    const chips: string[] = [];
+    const pushChip = (className: string, icon: string, label: string, entityId: string) => {
       if (!entityId) return;
       chips.push(`<button type="button" class="room-hub__metric-bubble ${className}" data-room-action="more-info:${escapeHtml(entityId)}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}">
         <ha-icon icon="${escapeHtml(icon)}"></ha-icon><span>${escapeHtml(label)}</span>
       </button>`);
     };
-    const pushIconChip = (className, icon, label, entityId) => {
+    const pushIconChip = (className: string, icon: string, label: string, entityId: string) => {
       if (!entityId) return;
       chips.push(`<button type="button" class="room-hub__metric-bubble room-hub__metric-bubble--icon-only ${className}" data-room-action="more-info:${escapeHtml(entityId)}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}">
         <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
@@ -1225,7 +1251,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     return chips.join("");
   }
 
-  _renderHubHome(config, summary, styles, accentColor, collapsed = false) {
+  _renderHubHome(config: RoomConfig, summary: RoomSummary, styles: RoomStyles, accentColor: string, collapsed = false) {
     const image = collapsed ? "" : window.NodaliaUtils?.sanitizeActionUrl?.(config.image, { allowRelative: true }) || "";
     const contextual = this._getContextualActions(summary, config);
     const homeClass = image ? "room-hub__home room-hub__home--image" : "room-hub__home";
@@ -1239,7 +1265,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     </div>`;
   }
 
-  _renderHubContextActions(contextual) {
+  _renderHubContextActions(contextual: HubAction[]) {
     return contextual.map(action => `
       <button type="button" class="room-hub__context-action ${action.active ? "room-hub__context-action--active" : ""} ${action.warn ? "room-hub__context-action--warn" : ""}"
         data-room-action="quick:${escapeHtml(action.id)}"
@@ -1248,23 +1274,23 @@ class NodaliaRoomSummaryCard extends HTMLElement {
       </button>`).join("");
   }
 
-  _renderHubLightPanel(config) {
+  _renderHubLightPanel(config: RoomConfig) {
     return `<div class="room-hub__panel room-hub__panel--embed">${this._renderHubEmbedHosts(config.lights, "light")}</div>`;
   }
 
-  _renderHubFanPanel(config) {
+  _renderHubFanPanel(config: RoomConfig) {
     return `<div class="room-hub__panel room-hub__panel--embed">${this._renderHubEmbedHosts(config.fans, "fan")}</div>`;
   }
 
-  _renderHubHumidifierPanel(config) {
+  _renderHubHumidifierPanel(config: RoomConfig) {
     return `<div class="room-hub__panel room-hub__panel--embed">${this._renderHubEmbedHosts(config.humidifiers, "humidifier")}</div>`;
   }
 
-  _renderHubOthersPanel(config) {
+  _renderHubOthersPanel(config: RoomConfig) {
     return `<div class="room-hub__panel room-hub__panel--embed">${this._renderHubEmbedHosts(config.others, "entity")}</div>`;
   }
 
-  _renderHubCoverPanel(config) {
+  _renderHubCoverPanel(config: RoomConfig) {
     return `<div class="room-hub__panel room-hub__panel--covers">
       <div class="room-hub__device-list">${(config.covers || []).map(entityId => {
     const state = getState(this._hass, entityId);
@@ -1289,21 +1315,21 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     </div>`;
   }
 
-  _renderHubClimatePanel(config) {
+  _renderHubClimatePanel(config: RoomConfig) {
     if (!config.climate) return "";
     return `<div class="room-hub__panel room-hub__panel--embed">${this._renderHubEmbedHosts([config.climate], "climate")}</div>`;
   }
 
-  _renderHubVacuumPanel(config) {
+  _renderHubVacuumPanel(config: RoomConfig) {
     return `<div class="room-hub__panel room-hub__panel--embed">${this._renderHubEmbedHosts(config.vacuums, "vacuum")}</div>`;
   }
 
-  _renderHubCameraPanel(config) {
+  _renderHubCameraPanel(config: RoomConfig) {
     if (!config.camera) return "";
     return `<div class="room-hub__panel room-hub__panel--embed">${this._renderHubEmbedHosts([config.camera], "camera", "live")}</div>`;
   }
 
-  _renderHubSecurityPanel(config) {
+  _renderHubSecurityPanel(config: RoomConfig) {
     const alarmIds = hubAlarmEntityIds(config);
     const sensorIds = hubSecurityEntityIds(config);
     return `<div class="room-hub__panel room-hub__panel--embed">
@@ -1312,7 +1338,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     </div>`;
   }
 
-  _renderHubPanelContent(panel, config, summary, styles, accentColor) {
+  _renderHubPanelContent(panel: string, config: RoomConfig, summary: RoomSummary, styles: RoomStyles, accentColor: string) {
     if (panel === "lights") return this._renderHubLightPanel(config);
     if (panel === "covers") return this._renderHubCoverPanel(config);
     if (panel === "climate") return this._renderHubClimatePanel(config);
@@ -1326,6 +1352,8 @@ class NodaliaRoomSummaryCard extends HTMLElement {
   }
 
   _renderHub() {
+    const restoreFocus = this._captureHubFocus();
+    if (!this.shadowRoot) return ;
     const config = normalizeConfig(this._config || {});
     const summary = buildRoomSummary(this._hass, config);
     const styles = config.styles || DEFAULT_CONFIG.styles;
@@ -1362,6 +1390,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
       this._syncHubChrome(config, summary, styles, collapsed, activePanel);
       this._animateContentOnNextRender = false;
       this._mountHubEmbeddedCards();
+      restoreFocus();
       return;
     }
     this._parkHubEmbeddedCards();
@@ -1465,50 +1494,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
         }
         .room-hub__metric-bubble ha-icon { --mdc-icon-size:${hubMetricIcon}; flex:0 0 auto; }
         .room-hub__metric-bubble--icon-only { justify-content:center; min-width:${hubMetricHeight}; padding:0; width:${hubMetricHeight}; }
-        .room-hub__metric-bubble:active { transform:scale(0.97); }
-        .room-hub__metric-bubble--temperature {
-          background:color-mix(in srgb, var(--warning-color, #f6b73c) 18%, var(--ha-card-background));
-          border-color:color-mix(in srgb, var(--warning-color, #f6b73c) 28%, transparent);
-          color:color-mix(in srgb, var(--warning-color, #f6b73c) 88%, var(--primary-text-color));
-        }
-        .room-hub__metric-bubble--humidity {
-          background:color-mix(in srgb, #5aa7ff 18%, var(--ha-card-background));
-          border-color:color-mix(in srgb, #5aa7ff 28%, transparent);
-          color:color-mix(in srgb, #5aa7ff 88%, var(--primary-text-color));
-        }
-        .room-hub__metric-bubble--presence-occupied {
-          background:color-mix(in srgb, var(--success-color, #4caf50) 18%, var(--ha-card-background));
-          border-color:color-mix(in srgb, var(--success-color, #4caf50) 28%, transparent);
-          color:color-mix(in srgb, var(--success-color, #4caf50) 88%, var(--primary-text-color));
-        }
-        .room-hub__metric-bubble--presence-vacant {
-          background:color-mix(in srgb, var(--primary-text-color) 8%, var(--ha-card-background));
-          border-color:color-mix(in srgb, var(--primary-text-color) 12%, transparent);
-          color:var(--secondary-text-color);
-        }
-        .room-hub__metric-bubble--power {
-          background:color-mix(in srgb, var(--warning-color, #f6b73c) 16%, var(--ha-card-background));
-          border-color:color-mix(in srgb, var(--warning-color, #f6b73c) 24%, transparent);
-          color:color-mix(in srgb, var(--warning-color, #f6b73c) 86%, var(--primary-text-color));
-        }
-        .room-hub__metric-bubble--air {
-          background:color-mix(in srgb, #7c9cff 16%, var(--ha-card-background));
-          border-color:color-mix(in srgb, #7c9cff 24%, transparent);
-          color:color-mix(in srgb, #7c9cff 86%, var(--primary-text-color));
-        }
-        .room-hub__metric-bubble--camera {
-          background:color-mix(in srgb, var(--primary-text-color) 8%, var(--ha-card-background));
-          border-color:color-mix(in srgb, var(--primary-text-color) 12%, transparent);
-          color:var(--primary-text-color);
-        }
-        .room-hub__metric-bubble--camera-offline,
-        .room-hub__metric-bubble--security {
-          background:color-mix(in srgb, var(--warning-color,#f59e0b) 16%, var(--ha-card-background));
-          border-color:color-mix(in srgb, var(--warning-color,#f59e0b) 26%, transparent);
-          color:var(--warning-color,#f59e0b);
-        }
-        .room-hub__context-actions { display:flex; flex-wrap:wrap; gap:8px; }
-        .room-hub__context-actions[hidden] { display:none; }
+        ${roomMetricStyles}
         .room-hub__context-action {
           align-items:center; appearance:none; background:color-mix(in srgb, var(--primary-text-color) 5%, transparent);
           border:1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent); border-radius:999px; color:var(--primary-text-color);
@@ -1595,6 +1581,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
       </ha-card>`;
     this._animateContentOnNextRender = false;
     this._mountHubEmbeddedCards();
+    restoreFocus();
   }
 
   _renderEmpty() {
