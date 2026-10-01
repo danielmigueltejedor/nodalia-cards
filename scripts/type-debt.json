@@ -29,8 +29,6 @@
   "src/cards/navigation/navigation-editor.ts",
   "src/cards/notifications/notifications-card.ts",
   "src/cards/notifications/notifications-editor.ts",
-  "src/cards/person/person-card.ts",
-  "src/cards/person/person-editor.ts",
   "src/cards/power-flow/power-flow-card.ts",
   "src/cards/power-flow/power-flow-editor.ts",
   "src/cards/room-summary/room-summary-card.ts",

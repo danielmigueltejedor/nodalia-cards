@@ -193,7 +193,30 @@
       config[`${prefix}_action_entity`] = String(configuredEntity ?? "").trim();
     });
     const security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? mergeConfig(DEFAULT_CONFIG.security, config.security);
-    return { ...config, security, styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles) };
+    const fields = { entity: typeof config.entity === "string" ? config.entity : "", security, styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles) };
+    const normalized = { ...config, ...fields };
+    return normalized;
+  }
+
+  // src/shared/numeric-values.ts
+  function parseFiniteNumericValue(value) {
+    if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
+  // src/shared/home-assistant-services.ts
+  function isServiceDataObject(value) {
+    return value !== null && typeof value === "object" && !Array.isArray(value);
+  }
+  function parseServiceData(value) {
+    if (typeof value !== "string" || !value) return {};
+    try {
+      const parsed = JSON.parse(value);
+      return isServiceDataObject(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
   }
 
   // src/shared/editor-entity-helpers.ts
@@ -333,6 +356,10 @@
         this._readyImageUrls = /* @__PURE__ */ new Set();
         this._failedImageUrls = /* @__PURE__ */ new Set();
         this._pendingImagePreloads = /* @__PURE__ */ new Map();
+        this._imagePreloadCancels = /* @__PURE__ */ new Map();
+        this._fallbackAnimationTimers = /* @__PURE__ */ new Set();
+        this._cachedZoneTarget = "";
+        this._cachedZoneEntityId = "";
         this._displayPictureUrl = "";
         this._onShadowClick = this._onShadowClick.bind(this);
         this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
@@ -378,11 +405,22 @@
           this._entranceAnimationResetTimer = 0;
         }
         window.NodaliaUtils?.clearDeferTimers?.(this);
+        this._fallbackAnimationTimers.forEach((timer) => window.clearTimeout(timer));
+        this._fallbackAnimationTimers.clear();
+        this._imagePreloadCancels.forEach((cancel) => cancel());
+        this._imagePreloadCancels.clear();
         this._animateContentOnNextRender = true;
         this._lastRenderSignature = "";
       }
       setConfig(config) {
-        this._config = normalizeConfig(config || {});
+        const nextConfig = normalizeConfig(config || {});
+        if (nextConfig.entity !== this._config.entity) {
+          this._imagePreloadCancels.forEach((cancel) => cancel());
+          this._displayPictureUrl = "";
+        }
+        window.NodaliaUtils?.cancelCardZoneTap?.(this);
+        this._suppressNextPersonTap = false;
+        this._config = nextConfig;
         window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
         this._cachedZoneTarget = "";
         this._cachedZoneEntityId = "";
@@ -411,7 +449,7 @@
         };
       }
       _getState() {
-        return this._hass?.states?.[this._config?.entity] || null;
+        return this._hass?.states?.[this._config.entity] || null;
       }
       _getTitle(state) {
         const fallback = this._personUiCopy().defaultName;
@@ -446,7 +484,7 @@
         const existing = this._pendingImagePreloads.get(url);
         if (existing) {
           if (onSettled) {
-            existing.then(onSettled);
+            void existing.then(onSettled).catch((error) => console.warn("Nodalia Person: image callback failed", error));
           }
           return existing;
         }
@@ -458,22 +496,45 @@
         const preloadPromise = new Promise((resolve) => {
           const image = new Image();
           image.decoding = "async";
-          const settle = (loaded) => {
+          let settled = false;
+          let timeout = 0;
+          const settle = (loaded, cache = true) => {
+            if (settled) return;
+            settled = true;
+            window.clearTimeout(timeout);
+            image.onload = null;
+            image.onerror = null;
+            this._imagePreloadCancels.delete(url);
             this._pendingImagePreloads.delete(url);
+            if (!cache) {
+              image.removeAttribute("src");
+              resolve(false);
+              return;
+            }
             if (loaded) {
               this._readyImageUrls.add(url);
               this._failedImageUrls.delete(url);
             } else {
+              image.removeAttribute("src");
               this._failedImageUrls.add(url);
+            }
+            for (const urls of [this._readyImageUrls, this._failedImageUrls]) {
+              while (urls.size > 64) {
+                const oldest = urls.values().next().value;
+                if (oldest === void 0) break;
+                urls.delete(oldest);
+              }
             }
             resolve(loaded);
             onSettled?.(loaded);
           };
           image.onload = () => settle(true);
           image.onerror = () => settle(false);
+          this._imagePreloadCancels.set(url, () => settle(false, false));
+          timeout = window.setTimeout(() => settle(false), 4e3);
           image.src = url;
         });
-        this._pendingImagePreloads.set(url, preloadPromise);
+        if (this._imagePreloadCancels.has(url)) this._pendingImagePreloads.set(url, preloadPromise);
         return preloadPromise;
       }
       _ensurePersonPictureReady(url) {
@@ -489,15 +550,15 @@
           this._displayPictureUrl = "";
           return true;
         }
-        this._preloadImageUrl(url, () => {
+        void this._preloadImageUrl(url, () => {
           const currentPicture = this._getPersonPicture(this._getState());
-          if (currentPicture !== url) {
+          if (!this.isConnected || currentPicture !== url) {
             return;
           }
           this._displayPictureUrl = this._isImageUrlReady(url) ? url : "";
           this._lastRenderSignature = "";
           this._render();
-        });
+        }).catch((error) => console.warn("Nodalia Person: image preload failed", error));
         return false;
       }
       _getRenderablePersonPicture(state) {
@@ -533,8 +594,10 @@
           };
         }
         const hass = NI.resolveHass?.(this._hass) ?? this._hass;
-        const lang = NI.resolveLanguage(hass, this._config?.language ?? "auto");
-        return NI.strings(lang).person || NI.strings("en").person || {};
+        const lang = NI.resolveLanguage?.(hass, String(this._config.language || "auto")) || "en";
+        const local = NI.strings(lang).person;
+        const english = NI.strings("en").person;
+        return isObject(local) ? local : isObject(english) ? english : {};
       }
       _translateState(state) {
         const person = this._personStrings();
@@ -543,16 +606,16 @@
         const NI = window.NodaliaI18n;
         if (NI?.translateEntityState && state && this._config?.entity) {
           const hass = NI.resolveHass?.(this._hass) ?? this._hass;
-          const lang = NI.resolveLanguage(hass, this._config?.language ?? "auto");
+          const lang = NI.resolveLanguage?.(hass, String(this._config.language || "auto")) || "en";
           const translated = NI.translateEntityState(
             lang,
             { ...state, entity_id: state.entity_id || this._config.entity },
             2,
-            (v, u, d) => `${v}${u}`,
+            (v, u) => `${v}${u}`,
             (v) => String(v),
             () => null
           );
-          if (translated && translated !== raw) {
+          if (typeof translated === "string" && translated && translated !== raw) {
             return translated;
           }
         }
@@ -596,7 +659,8 @@
         if (this._cachedZoneTarget === target) {
           if (this._cachedZoneEntityId) {
             const cachedZone = this._hass.states[this._cachedZoneEntityId] || null;
-            if (cachedZone) {
+            const cachedObjectId = this._cachedZoneEntityId.split(".")[1] || "";
+            if (cachedZone && (normalizeTextKey(cachedObjectId) === target || normalizeTextKey(cachedZone.attributes.friendly_name) === target)) {
               return cachedZone;
             }
           }
@@ -684,7 +748,7 @@
           zoneState?.entity_id || "",
           zoneState?.attributes?.friendly_name || "",
           zoneState?.attributes?.icon || "",
-          String(window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") || "en"),
+          String(window.NodaliaI18n?.resolveLanguage?.(hass, String(this._config.language || "auto")) || "en"),
           this._config.show_state !== false,
           this._config.show_name !== false,
           this._config.show_zone_badge !== false,
@@ -741,22 +805,25 @@
         return ["tap", "hold", "double_tap"].some((kind) => this._canRunPersonAction(kind));
       }
       _triggerHaptic(styleOverride = null) {
-        const haptics = this._config?.haptics || {};
+        const haptics = isObject(this._config.haptics) ? this._config.haptics : {};
         if (haptics.enabled !== true) {
           return;
         }
-        const style = styleOverride || haptics.style || "medium";
+        const style = styleOverride || String(haptics.style || "medium");
         fireEvent(this, "haptic", style, {
           bubbles: true,
           cancelable: false,
           composed: true
         });
         if (haptics.fallback_vibrate && typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
-          navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
+          try {
+            navigator.vibrate(Object.entries(HAPTIC_PATTERNS).find(([key]) => key === style)?.[1] || HAPTIC_PATTERNS.selection);
+          } catch {
+          }
         }
       }
       _getAnimationSettings() {
-        const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+        const configuredAnimations = isObject(this._config.animations) ? this._config.animations : DEFAULT_CONFIG.animations;
         return {
           enabled: configuredAnimations.enabled !== false,
           buttonBounceDuration: clamp(
@@ -792,7 +859,11 @@
         if (typeof schedule === "function") {
           schedule(this, done, animations.buttonBounceDuration + 40);
         } else {
-          window.setTimeout(done, animations.buttonBounceDuration + 40);
+          const timer = window.setTimeout(() => {
+            this._fallbackAnimationTimers.delete(timer);
+            done();
+          }, animations.buttonBounceDuration + 40);
+          this._fallbackAnimationTimers.add(timer);
         }
       }
       _scheduleEntranceAnimationReset(delay) {
@@ -821,12 +892,7 @@
         if (!source) {
           return {};
         }
-        try {
-          const parsed = JSON.parse(source);
-          return isObject(parsed) ? parsed : {};
-        } catch (_error) {
-          return {};
-        }
+        return parseServiceData(source);
       }
       _isConfiguredPersonServiceAllowed(serviceValue) {
         const security = this._config?.security || DEFAULT_CONFIG.security;
@@ -844,11 +910,14 @@
         return allowedServices.includes(normalizedService) || allowedDomains.includes(domain);
       }
       _invokePersonService(domain, service, data = {}, target = null) {
-        const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils);
-        if (typeof invoke === "function") {
-          return invoke(this, this._hass, domain, service, data, target);
+        const failure = (error) => console.warn("Nodalia Person: service call failed", `${domain}.${service}`, error);
+        try {
+          const invoke = window.NodaliaUtils.invokeHomeAssistantService;
+          const result = invoke ? invoke(this, this._hass, domain, service, data, target) : target ? this._hass?.callService?.(domain, service, data, target) : this._hass?.callService?.(domain, service, data);
+          void Promise.resolve(result).catch(failure);
+        } catch (error) {
+          failure(error);
         }
-        return Promise.resolve(this._hass?.callService?.(domain, service, data, target || void 0));
       }
       _runConfiguredPersonService(prefix) {
         const serviceValue = String(this._config?.[`${prefix}_service`] || "").trim();
@@ -1011,7 +1080,7 @@
         if (!this.shadowRoot) {
           return;
         }
-        const config = this._config || {};
+        const config = this._config;
         const entityGuard = window.NodaliaUtils?.renderLovelaceEntityGuardCardHtml?.(
           this._hass,
           config.entity,
@@ -1032,8 +1101,9 @@
           return;
         }
         const styles = config.styles || DEFAULT_CONFIG.styles;
-        const configuredRows = Number(this._config?.grid_options?.rows);
-        const singleRowLayout = Number.isFinite(configuredRows) && configuredRows <= 1;
+        const grid = this._config.grid_options;
+        const configuredRows = parseFiniteNumericValue(isObject(grid) ? grid.rows : void 0);
+        const singleRowLayout = configuredRows !== null && configuredRows <= 1;
         const title = this._getTitle(state);
         const showName = config.show_name !== false;
         const subtitle = config.show_state !== false ? this._translateState(state) : "";
@@ -1422,6 +1492,16 @@
     return NodaliaPersonCard;
   }
 
+  // src/shared/editor-controls.ts
+  function isNativeEditorInput(node) {
+    return node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement;
+  }
+  function editorControlValue(event, control) {
+    const detail = event instanceof CustomEvent ? event.detail : void 0;
+    if (detail && typeof detail === "object" && "value" in detail && typeof detail.value === "string") return detail.value;
+    return "value" in control ? control.value : void 0;
+  }
+
   // src/cards/person/person-editor.ts
   var _lazyNodaliaPersonCardEditor;
   function loadNodaliaPersonCardEditor() {
@@ -1485,11 +1565,11 @@
         this._restoreFocusState(focusState);
       }
       _getEntityOptionsSignature(hass = this._hass) {
-        return window.NodaliaUtils.editorFilteredStatesSignature(
+        return window.NodaliaUtils.editorFilteredStatesSignature?.(
           hass,
-          this._config?.language,
+          String(this._config.language || "auto"),
           (id) => id.startsWith("person.") || id.startsWith("device_tracker.")
-        );
+        ) || "";
       }
       _watchEditorControlTag(tagName) {
         if (!tagName || this._pendingEditorControlTags.has(tagName)) {
@@ -1518,7 +1598,7 @@
       }
       _getDomainEntityOptions(domains = [], path = "entity") {
         const normalizedDomains = Array.isArray(domains) ? domains.filter(Boolean) : String(domains || "").split(",").map((domain) => domain.trim()).filter(Boolean);
-        const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
+        const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, String(this._config.language || "auto")) ?? "en";
         const options = Object.entries(this._hass?.states || {}).filter(([entityId]) => normalizedDomains.some((domain) => entityId.startsWith(`${domain}.`))).map(([entityId, state]) => {
           const friendlyName = String(state?.attributes?.friendly_name || "").trim();
           return {
@@ -1550,7 +1630,7 @@
         this._render();
         this._restoreFocusState(focusState);
         fireEvent(this, "config-changed", {
-          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {})
+          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults?.(nextConfig, DEFAULT_CONFIG) ?? {})
         });
       }
       _setEditorConfig() {
@@ -1567,7 +1647,7 @@
         const valueType = input.dataset.valueType || "string";
         switch (valueType) {
           case "boolean":
-            return Boolean(input.checked);
+            return input instanceof HTMLInputElement && input.checked;
           case "color":
             return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
           case "csv": {
@@ -1579,7 +1659,7 @@
         }
       }
       _onShadowInput(event) {
-        const input = event.composedPath().find((node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+        const input = event.composedPath().find(isNativeEditorInput);
         if (!input?.dataset?.field) {
           return;
         }
@@ -1592,12 +1672,12 @@
         }
       }
       _onShadowValueChanged(event) {
-        const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+        const control = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.field));
         if (!control?.dataset?.field) {
           return;
         }
         event.stopPropagation();
-        const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+        const nextValue = editorControlValue(event, control);
         if (typeof control.dataset?.value === "string") {
           control.dataset.value = String(nextValue || "");
         }
@@ -1611,7 +1691,7 @@
         this._emitConfig();
       }
       _onShadowClick(event) {
-        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
+        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.editorToggle));
         if (!toggleButton) {
           return;
         }
@@ -1632,8 +1712,8 @@
         if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
           return s;
         }
-        const hass = this._hass ?? this.hass;
-        return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+        const hass = this._hass;
+        return window.NodaliaI18n.editorStr(hass, String(this._config.language || "auto"), s);
       }
       _renderTextField(label, field, value, options = {}) {
         const tLabel = this._editorLabel(label);
@@ -1762,20 +1842,18 @@
         const nextValue = host.dataset.value || "";
         const placeholder = host.dataset.placeholder || "";
         const domains = String(host.dataset.domains || "").split(",").map((domain) => domain.trim()).filter(Boolean);
-        let control = null;
+        let control;
         if (customElements.get("ha-entity-picker")) {
           control = document.createElement("ha-entity-picker");
-          control.includeDomains = domains;
-          control.allowCustomEntity = true;
-          control.entityFilter = (stateObj) => domains.some((domain) => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+          Object.assign(control, { includeDomains: domains, allowCustomEntity: true, entityFilter: (stateObj) => domains.some((domain) => String(stateObj?.entity_id || "").startsWith(`${domain}.`)) });
           if (placeholder) {
             control.setAttribute("placeholder", placeholder);
           }
         } else if (customElements.get("ha-selector")) {
           control = document.createElement("ha-selector");
-          control.selector = {
+          Object.assign(control, { selector: {
             entity: domains.length === 1 ? { domain: domains[0] } : {}
-          };
+          } });
         } else {
           control = document.createElement("select");
           const emptyOption = document.createElement("option");
@@ -1803,8 +1881,10 @@
         if (!this.shadowRoot) {
           return;
         }
-        const config = this._config || normalizeConfig({});
-        const hapticStyle = config.haptics?.style || "medium";
+        const config = this._config;
+        const haptics = isObject(config.haptics) ? config.haptics : {};
+        const security = isObject(config.security) ? config.security : {};
+        const hapticStyle = haptics.style || "medium";
         const tapAction = config.tap_action || "more-info";
         const holdAction = config.hold_action || "none";
         const doubleTapAction = config.double_tap_action || "none";
@@ -1817,7 +1897,7 @@
           { value: "none", label: "ed.entity.tap_none" }
         ];
         const showServiceSecurity = [tapAction, holdAction, doubleTapAction].includes("service");
-        const animations = config.animations || DEFAULT_CONFIG.animations;
+        const animations = isObject(config.animations) ? config.animations : DEFAULT_CONFIG.animations;
         this.shadowRoot.innerHTML = `
       <style>
         :host {
@@ -2244,19 +2324,19 @@
                 ${this._renderCheckboxField(
           "ed.entity.security_strict",
           "security.strict_service_actions",
-          config.security?.strict_service_actions !== false
+          security.strict_service_actions !== false
         )}
-                ${config.security?.strict_service_actions !== false ? `
+                ${security.strict_service_actions !== false ? `
                     ${this._renderTextField(
           "ed.entity.allowed_services_csv",
           "security.allowed_services",
-          Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
+          Array.isArray(security.allowed_services) ? security.allowed_services.join(", ") : "",
           { placeholder: "light.turn_on, script.person_action", valueType: "csv", fullWidth: true }
         )}
                     ${this._renderTextField(
           "ed.notifications.security_allowed_domains",
           "security.allowed_service_domains",
-          Array.isArray(config.security?.allowed_service_domains) ? config.security.allowed_service_domains.join(", ") : "",
+          Array.isArray(security.allowed_service_domains) ? security.allowed_service_domains.join(", ") : "",
           { placeholder: "light, script", valueType: "csv", fullWidth: true }
         )}
                   ` : ""}
@@ -2300,8 +2380,8 @@
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.person.haptics_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("ed.person.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.person.fallback_vibrate", "haptics.fallback_vibrate", haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
           "ed.person.haptic_style",
           "haptics.style",
@@ -2384,8 +2464,7 @@
     `;
         this.shadowRoot.querySelectorAll('.editor-control-host[data-mounted-control="entity"]').forEach((host) => this._mountEntityPicker(host));
         this.shadowRoot.querySelectorAll("ha-icon-picker[data-field]").forEach((control) => {
-          control.hass = this._hass;
-          control.value = control.dataset.value || "";
+          Object.assign(control, { hass: this._hass, value: control.dataset.value || "" });
         });
         this._ensureEditorControlsReady();
         window.NodaliaUtils?.clampEditorDialogScroll?.(this);

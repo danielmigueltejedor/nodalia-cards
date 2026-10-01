@@ -1,17 +1,14 @@
-// @ts-nocheck
-/* Visual editor surface: typed incrementally after the card runtime split. */
+import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
+import type { EditorFocusState } from "../../core/types/nodalia-utils";
+import { editorControlValue, isNativeEditorInput, type NativeEditorInput } from "../../shared/editor-controls";
 import {
-  clamp,
   compactConfig,
   deepClone,
   deleteByPath,
   escapeHtml,
-  escapeSelectorValue,
   fireEvent,
   getByPath,
   isObject,
-  mergeConfig,
-  normalizeTextKey,
   setByPath,
 } from "./person-runtime";
 import { DEFAULT_CONFIG, STUB_CONFIG, normalizeConfig } from "./person-config";
@@ -21,12 +18,20 @@ import {
   getEditorColorModel,
 } from "./person-helpers";
 
-let _lazyNodaliaPersonCardEditor;
-export function loadNodaliaPersonCardEditor() {
+interface FieldOptions { fullWidth?: boolean; type?: string; valueType?: string; placeholder?: string; fallbackValue?: string; domains?: readonly string[]; }
+let _lazyNodaliaPersonCardEditor: CustomElementConstructor | undefined;
+export function loadNodaliaPersonCardEditor(): CustomElementConstructor {
   if (_lazyNodaliaPersonCardEditor) {
     return _lazyNodaliaPersonCardEditor;
   }
 class NodaliaPersonCardEditor extends HTMLElement {
+  private _config!: ReturnType<typeof normalizeConfig>;
+  private _hass!: HomeAssistant | null;
+  private _entityOptionsSignature!: string;
+  private _pendingEditorControlTags!: Set<string>;
+  private _showStyleSection!: boolean;
+  private _showTapActionsSection!: boolean;
+  private _showAnimationSection!: boolean;
   constructor() {
     super();
     this._nodaliaConstruct();
@@ -68,7 +73,7 @@ class NodaliaPersonCardEditor extends HTMLElement {
     window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
   }
 
-  set hass(hass) {
+  set hass(hass: HomeAssistant) {
     const nextSignature = this._getEntityOptionsSignature(hass);
     const shouldRender =
       !this._hass ||
@@ -87,7 +92,7 @@ class NodaliaPersonCardEditor extends HTMLElement {
     this._restoreFocusState(focusState);
   }
 
-  setConfig(config) {
+  setConfig(config: unknown) {
     const focusState = this._captureFocusState();
     this._config = normalizeConfig(config || {});
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
@@ -96,15 +101,15 @@ class NodaliaPersonCardEditor extends HTMLElement {
   }
 
   _getEntityOptionsSignature(hass = this._hass) {
-    return window.NodaliaUtils.editorFilteredStatesSignature(
+    return window.NodaliaUtils.editorFilteredStatesSignature?.(
       hass,
-      this._config?.language,
+      String(this._config.language || "auto"),
       id =>
         id.startsWith("person.") || id.startsWith("device_tracker."),
-    );
+    ) || "";
   }
 
-  _watchEditorControlTag(tagName) {
+  _watchEditorControlTag(tagName: string) {
     if (!tagName || this._pendingEditorControlTags.has(tagName)) {
       return;
     }
@@ -137,12 +142,12 @@ class NodaliaPersonCardEditor extends HTMLElement {
     this._watchEditorControlTag("ha-icon-picker");
   }
 
-  _getDomainEntityOptions(domains = [], path = "entity") {
+  _getDomainEntityOptions(domains: readonly string[] | string = [], path = "entity") {
     const normalizedDomains = Array.isArray(domains)
       ? domains.filter(Boolean)
       : String(domains || "").split(",").map(domain => domain.trim()).filter(Boolean);
 
-    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
+    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, String(this._config.language || "auto")) ?? "en";
     const options = Object.entries(this._hass?.states || {})
       .filter(([entityId]) => normalizedDomains.some(domain => entityId.startsWith(`${domain}.`)))
       .map(([entityId, state]) => {
@@ -176,7 +181,7 @@ class NodaliaPersonCardEditor extends HTMLElement {
     return window.NodaliaUtils.captureEditorFocusState(this);
   }
 
-  _restoreFocusState(focusState) {
+  _restoreFocusState(focusState: EditorFocusState | null) {
     window.NodaliaUtils.restoreEditorFocusState(this, focusState);
   }
 
@@ -187,7 +192,7 @@ class NodaliaPersonCardEditor extends HTMLElement {
     this._render();
     this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
-      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
+      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults?.(nextConfig, DEFAULT_CONFIG) ?? {}),
     });
   }
 
@@ -195,7 +200,7 @@ class NodaliaPersonCardEditor extends HTMLElement {
     this._config = normalizeConfig(compactConfig(this._config));
   }
 
-  _setFieldValue(path, value) {
+  _setFieldValue(path: string, value: unknown) {
     if (value === undefined || value === null || value === "") {
       deleteByPath(this._config, path);
       return;
@@ -204,12 +209,12 @@ class NodaliaPersonCardEditor extends HTMLElement {
     setByPath(this._config, path, value);
   }
 
-  _readFieldValue(input) {
+  _readFieldValue(input: NativeEditorInput) {
     const valueType = input.dataset.valueType || "string";
 
     switch (valueType) {
       case "boolean":
-        return Boolean(input.checked);
+        return input instanceof HTMLInputElement && input.checked;
       case "color":
         return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
       case "csv": {
@@ -224,10 +229,10 @@ class NodaliaPersonCardEditor extends HTMLElement {
     }
   }
 
-  _onShadowInput(event) {
+  _onShadowInput(event: Event) {
     const input = event
       .composedPath()
-      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+      .find(isNativeEditorInput);
 
     if (!input?.dataset?.field) {
       return;
@@ -244,10 +249,10 @@ class NodaliaPersonCardEditor extends HTMLElement {
     }
   }
 
-  _onShadowValueChanged(event) {
+  _onShadowValueChanged(event: Event) {
     const control = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.field);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.field));
 
     if (!control?.dataset?.field) {
       return;
@@ -255,9 +260,7 @@ class NodaliaPersonCardEditor extends HTMLElement {
 
     event.stopPropagation();
 
-    const nextValue = typeof event.detail?.value === "string"
-      ? event.detail.value
-      : control.value;
+    const nextValue = editorControlValue(event, control);
     if (typeof control.dataset?.value === "string") {
       control.dataset.value = String(nextValue || "");
     }
@@ -272,10 +275,10 @@ class NodaliaPersonCardEditor extends HTMLElement {
     this._emitConfig();
   }
 
-  _onShadowClick(event) {
+  _onShadowClick(event: Event) {
     const toggleButton = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.editorToggle));
 
     if (!toggleButton) {
       return;
@@ -298,15 +301,15 @@ class NodaliaPersonCardEditor extends HTMLElement {
     this._restoreFocusState(focusState);
   }
 
-  _editorLabel(s) {
+  _editorLabel(s: string) {
     if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
       return s;
     }
-    const hass = this._hass ?? this.hass;
-    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+    const hass = this._hass;
+    return window.NodaliaI18n.editorStr(hass, String(this._config.language || "auto"), s);
   }
 
-  _renderTextField(label, field, value, options = {}) {
+  _renderTextField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
@@ -326,7 +329,7 @@ class NodaliaPersonCardEditor extends HTMLElement {
     `;
   }
 
-  _renderTextareaField(label, field, value, options = {}) {
+  _renderTextareaField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
@@ -339,7 +342,7 @@ class NodaliaPersonCardEditor extends HTMLElement {
     `;
   }
 
-  _renderColorField(label, field, value, options = {}) {
+  _renderColorField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const tColorCustom = this._editorLabel("ed.person.custom_color");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
@@ -368,7 +371,7 @@ class NodaliaPersonCardEditor extends HTMLElement {
     `;
   }
 
-  _renderCheckboxField(label, field, checked) {
+  _renderCheckboxField(label: string, field: string, checked: boolean) {
     const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
@@ -384,7 +387,7 @@ class NodaliaPersonCardEditor extends HTMLElement {
     `;
   }
 
-  _renderSelectField(label, field, value, options, renderOptions = {}) {
+  _renderSelectField(label: string, field: string, value: unknown, options: readonly { value: string; label: string }[], renderOptions: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field ${renderOptions.fullWidth ? "editor-field--full" : ""}">
@@ -400,7 +403,7 @@ class NodaliaPersonCardEditor extends HTMLElement {
     `;
   }
 
-  _renderEntityPickerField(label, field, value, options = {}) {
+  _renderEntityPickerField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder || "";
@@ -423,7 +426,7 @@ class NodaliaPersonCardEditor extends HTMLElement {
     `;
   }
 
-  _renderIconPickerField(label, field, value, options = {}) {
+  _renderIconPickerField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
@@ -441,7 +444,7 @@ class NodaliaPersonCardEditor extends HTMLElement {
     `;
   }
 
-  _mountEntityPicker(host) {
+  _mountEntityPicker(host: HTMLElement) {
     if (!(host instanceof HTMLElement)) {
       return;
     }
@@ -453,23 +456,21 @@ class NodaliaPersonCardEditor extends HTMLElement {
       .split(",")
       .map(domain => domain.trim())
       .filter(Boolean);
-    let control = null;
+    let control: HTMLElement;
 
     if (customElements.get("ha-entity-picker")) {
       control = document.createElement("ha-entity-picker");
-      control.includeDomains = domains;
-      control.allowCustomEntity = true;
-      control.entityFilter = stateObj => domains.some(domain => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+      Object.assign(control, { includeDomains: domains, allowCustomEntity: true, entityFilter: (stateObj: HassEntity | null | undefined) => domains.some(domain => String(stateObj?.entity_id || "").startsWith(`${domain}.`)) });
       if (placeholder) {
         control.setAttribute("placeholder", placeholder);
       }
     } else if (customElements.get("ha-selector")) {
       control = document.createElement("ha-selector");
-      control.selector = {
+      Object.assign(control, { selector: {
         entity: domains.length === 1
           ? { domain: domains[0] }
           : {},
-      };
+      } });
     } else {
       control = document.createElement("select");
       const emptyOption = document.createElement("option");
@@ -503,8 +504,10 @@ class NodaliaPersonCardEditor extends HTMLElement {
       return;
     }
 
-    const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "medium";
+    const config = this._config;
+    const haptics = isObject(config.haptics) ? config.haptics : {};
+    const security = isObject(config.security) ? config.security : {};
+    const hapticStyle = haptics.style || "medium";
     const tapAction = config.tap_action || "more-info";
     const holdAction = config.hold_action || "none";
     const doubleTapAction = config.double_tap_action || "none";
@@ -517,7 +520,7 @@ class NodaliaPersonCardEditor extends HTMLElement {
       { value: "none", label: "ed.entity.tap_none" },
     ];
     const showServiceSecurity = [tapAction, holdAction, doubleTapAction].includes("service");
-    const animations = config.animations || DEFAULT_CONFIG.animations;
+    const animations = isObject(config.animations) ? config.animations : DEFAULT_CONFIG.animations;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -966,20 +969,20 @@ class NodaliaPersonCardEditor extends HTMLElement {
                 ${this._renderCheckboxField(
                   "ed.entity.security_strict",
                   "security.strict_service_actions",
-                  config.security?.strict_service_actions !== false,
+                  security.strict_service_actions !== false,
                 )}
-                ${config.security?.strict_service_actions !== false
+                ${security.strict_service_actions !== false
                   ? `
                     ${this._renderTextField(
                       "ed.entity.allowed_services_csv",
                       "security.allowed_services",
-                      Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
+                      Array.isArray(security.allowed_services) ? security.allowed_services.join(", ") : "",
                       { placeholder: "light.turn_on, script.person_action", valueType: "csv", fullWidth: true },
                     )}
                     ${this._renderTextField(
                       "ed.notifications.security_allowed_domains",
                       "security.allowed_service_domains",
-                      Array.isArray(config.security?.allowed_service_domains) ? config.security.allowed_service_domains.join(", ") : "",
+                      Array.isArray(security.allowed_service_domains) ? security.allowed_service_domains.join(", ") : "",
                       { placeholder: "light, script", valueType: "csv", fullWidth: true },
                     )}
                   `
@@ -1031,8 +1034,8 @@ class NodaliaPersonCardEditor extends HTMLElement {
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.person.haptics_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("ed.person.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.person.fallback_vibrate", "haptics.fallback_vibrate", haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
               "ed.person.haptic_style",
               "haptics.style",
@@ -1119,14 +1122,13 @@ class NodaliaPersonCardEditor extends HTMLElement {
     `;
 
     this.shadowRoot
-      .querySelectorAll('.editor-control-host[data-mounted-control="entity"]')
+      .querySelectorAll<HTMLElement>('.editor-control-host[data-mounted-control="entity"]')
       .forEach(host => this._mountEntityPicker(host));
 
     this.shadowRoot
-      .querySelectorAll("ha-icon-picker[data-field]")
+      .querySelectorAll<HTMLElement>("ha-icon-picker[data-field]")
       .forEach(control => {
-        control.hass = this._hass;
-        control.value = control.dataset.value || "";
+        Object.assign(control, { hass: this._hass, value: control.dataset.value || "" });
       });
 
     this._ensureEditorControlsReady();

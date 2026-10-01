@@ -1,5 +1,6 @@
-// @ts-nocheck
-/* Large HTMLElement view/controller: typed incrementally as methods are extracted. */
+import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
+import { parseFiniteNumericValue } from "../../shared/numeric-values";
+import { parseServiceData } from "../../shared/home-assistant-services";
 import {
   CARD_TAG,
   EDITOR_TAG,
@@ -7,17 +8,11 @@ import {
 } from "./person-constants";
 import {
   clamp,
-  compactConfig,
   deepClone,
-  deleteByPath,
   escapeHtml,
-  escapeSelectorValue,
   fireEvent,
-  getByPath,
   isObject,
-  mergeConfig,
   normalizeTextKey,
-  setByPath,
 } from "./person-runtime";
 import { DEFAULT_CONFIG, STUB_CONFIG, normalizeConfig } from "./person-config";
 import {
@@ -26,21 +21,38 @@ import {
   parseSizeToPixels,
 } from "./person-helpers";
 
-let _lazyNodaliaPersonCard;
-export function loadNodaliaPersonCard() {
+type PersonConfig = ReturnType<typeof normalizeConfig>;
+type PersonActionPrefix = "tap" | "hold" | "double_tap";
+let _lazyNodaliaPersonCard: CustomElementConstructor | undefined;
+export function loadNodaliaPersonCard(): CustomElementConstructor {
   if (_lazyNodaliaPersonCard) {
     return _lazyNodaliaPersonCard;
   }
 class NodaliaPersonCard extends HTMLElement {
+  private _config!: PersonConfig;
+  private _hass!: HomeAssistant | null;
+  private _lastRenderSignature!: string;
+  private _animateContentOnNextRender!: boolean;
+  private _entranceAnimationResetTimer!: number;
+  private _readyImageUrls!: Set<string>;
+  private _failedImageUrls!: Set<string>;
+  private _pendingImagePreloads!: Map<string, Promise<boolean>>;
+  private _imagePreloadCancels!: Map<string, () => void>;
+  private _fallbackAnimationTimers!: Set<number>;
+  private _displayPictureUrl!: string;
+  private _detachHostHold!: () => void;
+  private _suppressNextPersonTap!: boolean;
+  private _cachedZoneTarget!: string;
+  private _cachedZoneEntityId!: string;
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig(hass, entities = [], entitiesFallback = []) {
+  static getStubConfig(hass: HomeAssistant | null | undefined, entities: unknown = [], entitiesFallback: unknown = []) {
     return applyStubEntity(deepClone(STUB_CONFIG), hass, ["person"], entities, entitiesFallback);
   }
 
-  static getEntitySuggestion(hass, entityId) {
+  static getEntitySuggestion(hass: HomeAssistant, entityId: string) {
     return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, { domains: ["person"] });
   }
 
@@ -59,6 +71,10 @@ class NodaliaPersonCard extends HTMLElement {
     this._readyImageUrls = new Set();
     this._failedImageUrls = new Set();
     this._pendingImagePreloads = new Map();
+    this._imagePreloadCancels = new Map();
+    this._fallbackAnimationTimers = new Set();
+    this._cachedZoneTarget = "";
+    this._cachedZoneEntityId = "";
     this._displayPictureUrl = "";
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
@@ -106,12 +122,23 @@ class NodaliaPersonCard extends HTMLElement {
       this._entranceAnimationResetTimer = 0;
     }
     window.NodaliaUtils?.clearDeferTimers?.(this);
+    this._fallbackAnimationTimers.forEach(timer => window.clearTimeout(timer));
+    this._fallbackAnimationTimers.clear();
+    this._imagePreloadCancels.forEach(cancel => cancel());
+    this._imagePreloadCancels.clear();
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
   }
 
-  setConfig(config) {
-    this._config = normalizeConfig(config || {});
+  setConfig(config: unknown) {
+    const nextConfig = normalizeConfig(config || {});
+    if (nextConfig.entity !== this._config.entity) {
+      this._imagePreloadCancels.forEach(cancel => cancel());
+      this._displayPictureUrl = "";
+    }
+    window.NodaliaUtils?.cancelCardZoneTap?.(this);
+    this._suppressNextPersonTap = false;
+    this._config = nextConfig;
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
     this._cachedZoneTarget = "";
     this._cachedZoneEntityId = "";
@@ -120,7 +147,7 @@ class NodaliaPersonCard extends HTMLElement {
     this._render();
   }
 
-  set hass(hass) {
+  set hass(hass: HomeAssistant) {
     this._hass = hass;
 
     const nextSignature = this._getRenderSignature(hass);
@@ -146,15 +173,15 @@ class NodaliaPersonCard extends HTMLElement {
   }
 
   _getState() {
-    return this._hass?.states?.[this._config?.entity] || null;
+    return this._hass?.states?.[this._config.entity] || null;
   }
 
-  _getTitle(state) {
+  _getTitle(state: HassEntity | null) {
     const fallback = this._personUiCopy().defaultName;
     return this._config?.name || state?.attributes?.friendly_name || this._config?.entity || fallback;
   }
 
-  _getPersonPicture(state) {
+  _getPersonPicture(state: HassEntity | null) {
     if (this._config?.use_entity_picture === false) {
       return "";
     }
@@ -166,15 +193,15 @@ class NodaliaPersonCard extends HTMLElement {
     ).trim();
   }
 
-  _isImageUrlReady(url) {
+  _isImageUrlReady(url: string) {
     return Boolean(url) && this._readyImageUrls.has(url);
   }
 
-  _isImageUrlFailed(url) {
+  _isImageUrlFailed(url: string) {
     return Boolean(url) && this._failedImageUrls.has(url);
   }
 
-  _preloadImageUrl(url, onSettled = null) {
+  _preloadImageUrl(url: string, onSettled: ((loaded: boolean) => void) | null = null): Promise<boolean> {
     if (!url) {
       return Promise.resolve(false);
     }
@@ -192,7 +219,7 @@ class NodaliaPersonCard extends HTMLElement {
     const existing = this._pendingImagePreloads.get(url);
     if (existing) {
       if (onSettled) {
-        existing.then(onSettled);
+        void existing.then(onSettled).catch(error => console.warn("Nodalia Person: image callback failed", error));
       }
       return existing;
     }
@@ -203,17 +230,38 @@ class NodaliaPersonCard extends HTMLElement {
       return Promise.resolve(true);
     }
 
-    const preloadPromise = new Promise(resolve => {
+    const preloadPromise = new Promise<boolean>(resolve => {
       const image = new Image();
       image.decoding = "async";
 
-      const settle = loaded => {
+      let settled = false;
+      let timeout = 0;
+      const settle = (loaded: boolean, cache = true) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timeout);
+        image.onload = null;
+        image.onerror = null;
+        this._imagePreloadCancels.delete(url);
         this._pendingImagePreloads.delete(url);
+        if (!cache) {
+          image.removeAttribute("src");
+          resolve(false);
+          return;
+        }
         if (loaded) {
           this._readyImageUrls.add(url);
           this._failedImageUrls.delete(url);
         } else {
+          image.removeAttribute("src");
           this._failedImageUrls.add(url);
+        }
+        for (const urls of [this._readyImageUrls, this._failedImageUrls]) {
+          while (urls.size > 64) {
+            const oldest = urls.values().next().value;
+            if (oldest === undefined) break;
+            urls.delete(oldest);
+          }
         }
         resolve(loaded);
         onSettled?.(loaded);
@@ -221,14 +269,16 @@ class NodaliaPersonCard extends HTMLElement {
 
       image.onload = () => settle(true);
       image.onerror = () => settle(false);
+      this._imagePreloadCancels.set(url, () => settle(false, false));
+      timeout = window.setTimeout(() => settle(false), 4000);
       image.src = url;
     });
 
-    this._pendingImagePreloads.set(url, preloadPromise);
+    if (this._imagePreloadCancels.has(url)) this._pendingImagePreloads.set(url, preloadPromise);
     return preloadPromise;
   }
 
-  _ensurePersonPictureReady(url) {
+  _ensurePersonPictureReady(url: string) {
     if (!url) {
       this._displayPictureUrl = "";
       return true;
@@ -244,21 +294,21 @@ class NodaliaPersonCard extends HTMLElement {
       return true;
     }
 
-    this._preloadImageUrl(url, () => {
+    void this._preloadImageUrl(url, () => {
       const currentPicture = this._getPersonPicture(this._getState());
-      if (currentPicture !== url) {
+      if (!this.isConnected || currentPicture !== url) {
         return;
       }
 
       this._displayPictureUrl = this._isImageUrlReady(url) ? url : "";
       this._lastRenderSignature = "";
       this._render();
-    });
+    }).catch(error => console.warn("Nodalia Person: image preload failed", error));
 
     return false;
   }
 
-  _getRenderablePersonPicture(state) {
+  _getRenderablePersonPicture(state: HassEntity | null) {
     const desiredPicture = this._getPersonPicture(state);
     if (!desiredPicture) {
       this._displayPictureUrl = "";
@@ -278,7 +328,7 @@ class NodaliaPersonCard extends HTMLElement {
     return this._displayPictureUrl || "";
   }
 
-  _getFallbackIcon(state) {
+  _getFallbackIcon(state: HassEntity | null) {
     return this._config?.icon || state?.attributes?.icon || "mdi:account";
   }
 
@@ -296,11 +346,13 @@ class NodaliaPersonCard extends HTMLElement {
       };
     }
     const hass = NI.resolveHass?.(this._hass) ?? this._hass;
-    const lang = NI.resolveLanguage(hass, this._config?.language ?? "auto");
-    return NI.strings(lang).person || NI.strings("en").person || {};
+    const lang = NI.resolveLanguage?.(hass, String(this._config.language || "auto")) || "en";
+    const local = NI.strings(lang).person;
+    const english = NI.strings("en").person;
+    return isObject(local) ? local : isObject(english) ? english : {};
   }
 
-  _translateState(state) {
+  _translateState(state: HassEntity | null) {
     const person = this._personStrings();
     const raw = String(state?.state || "").trim();
     const key = normalizeTextKey(raw);
@@ -308,16 +360,16 @@ class NodaliaPersonCard extends HTMLElement {
     const NI = window.NodaliaI18n;
     if (NI?.translateEntityState && state && this._config?.entity) {
       const hass = NI.resolveHass?.(this._hass) ?? this._hass;
-      const lang = NI.resolveLanguage(hass, this._config?.language ?? "auto");
+      const lang = NI.resolveLanguage?.(hass, String(this._config.language || "auto")) || "en";
       const translated = NI.translateEntityState(
         lang,
         { ...state, entity_id: state.entity_id || this._config.entity },
         2,
-        (v, u, d) => `${v}${u}`,
+        (v, u) => `${v}${u}`,
         (v) => String(v),
         () => null,
       );
-      if (translated && translated !== raw) {
+      if (typeof translated === "string" && translated && translated !== raw) {
         return translated;
       }
     }
@@ -355,7 +407,7 @@ class NodaliaPersonCard extends HTMLElement {
     }
   }
 
-  _getMatchingZoneState(state) {
+  _getMatchingZoneState(state: HassEntity | null) {
     const target = normalizeTextKey(state?.state);
     if (!target || !this._hass?.states) {
       return null;
@@ -364,7 +416,8 @@ class NodaliaPersonCard extends HTMLElement {
     if (this._cachedZoneTarget === target) {
       if (this._cachedZoneEntityId) {
         const cachedZone = this._hass.states[this._cachedZoneEntityId] || null;
-        if (cachedZone) {
+        const cachedObjectId = this._cachedZoneEntityId.split(".")[1] || "";
+        if (cachedZone && (normalizeTextKey(cachedObjectId) === target || normalizeTextKey(cachedZone.attributes.friendly_name) === target)) {
           return cachedZone;
         }
       }
@@ -386,7 +439,7 @@ class NodaliaPersonCard extends HTMLElement {
     return zoneEntry?.[1] || null;
   }
 
-  _getBadgeDescriptor(state) {
+  _getBadgeDescriptor(state: HassEntity | null) {
     if (this._config?.show_zone_badge === false) {
       return null;
     }
@@ -440,7 +493,7 @@ class NodaliaPersonCard extends HTMLElement {
     return null;
   }
 
-  _getAccentColor(state) {
+  _getAccentColor(state: HassEntity | null) {
     return this._getBadgeDescriptor(state)?.color || "var(--info-color, #71c0ff)";
   }
 
@@ -466,7 +519,7 @@ class NodaliaPersonCard extends HTMLElement {
       zoneState?.entity_id || "",
       zoneState?.attributes?.friendly_name || "",
       zoneState?.attributes?.icon || "",
-      String(window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") || "en"),
+      String(window.NodaliaI18n?.resolveLanguage?.(hass, String(this._config.language || "auto")) || "en"),
       this._config.show_state !== false,
       this._config.show_name !== false,
       this._config.show_zone_badge !== false,
@@ -490,15 +543,15 @@ class NodaliaPersonCard extends HTMLElement {
     return values.join("::");
   }
 
-  _personActionPrefix(kind = "tap") {
+  _personActionPrefix(kind = "tap"): PersonActionPrefix {
     return kind === "double" || kind === "double_tap" ? "double_tap" : kind === "hold" ? "hold" : "tap";
   }
 
-  _personActionNavigationKey(prefix) {
+  _personActionNavigationKey(prefix: PersonActionPrefix) {
     return prefix === "tap" ? "navigation_path" : `${prefix}_navigation_path`;
   }
 
-  _personActionEntity(prefix) {
+  _personActionEntity(prefix: PersonActionPrefix) {
     return String(this._config?.[`${prefix}_action_entity`] || this._config?.entity || "").trim();
   }
 
@@ -529,13 +582,13 @@ class NodaliaPersonCard extends HTMLElement {
     return ["tap", "hold", "double_tap"].some(kind => this._canRunPersonAction(kind));
   }
 
-  _triggerHaptic(styleOverride = null) {
-    const haptics = this._config?.haptics || {};
+  _triggerHaptic(styleOverride: string | null = null) {
+    const haptics = isObject(this._config.haptics) ? this._config.haptics : {};
     if (haptics.enabled !== true) {
       return;
     }
 
-    const style = styleOverride || haptics.style || "medium";
+    const style = styleOverride || String(haptics.style || "medium");
     fireEvent(this, "haptic", style, {
       bubbles: true,
       cancelable: false,
@@ -543,12 +596,12 @@ class NodaliaPersonCard extends HTMLElement {
     });
 
     if (haptics.fallback_vibrate && typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
-      navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
+      try { navigator.vibrate(Object.entries(HAPTIC_PATTERNS).find(([key]) => key === style)?.[1] || HAPTIC_PATTERNS.selection); } catch { /* Unsupported vibration. */ }
     }
   }
 
   _getAnimationSettings() {
-    const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+    const configuredAnimations = isObject(this._config.animations) ? this._config.animations : DEFAULT_CONFIG.animations;
 
     return {
       enabled: configuredAnimations.enabled !== false,
@@ -565,7 +618,7 @@ class NodaliaPersonCard extends HTMLElement {
     };
   }
 
-  _triggerPressAnimation(element, className = "is-pressing") {
+  _triggerPressAnimation(element: Element | null | undefined, className = "is-pressing") {
     if (!(element instanceof HTMLElement)) {
       return;
     }
@@ -589,11 +642,12 @@ class NodaliaPersonCard extends HTMLElement {
     if (typeof schedule === "function") {
       schedule(this, done, animations.buttonBounceDuration + 40);
     } else {
-      window.setTimeout(done, animations.buttonBounceDuration + 40);
+      const timer = window.setTimeout(() => { this._fallbackAnimationTimers.delete(timer); done(); }, animations.buttonBounceDuration + 40);
+      this._fallbackAnimationTimers.add(timer);
     }
   }
 
-  _scheduleEntranceAnimationReset(delay) {
+  _scheduleEntranceAnimationReset(delay: number) {
     if (this._entranceAnimationResetTimer) {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
@@ -614,7 +668,7 @@ class NodaliaPersonCard extends HTMLElement {
     }, safeDelay);
   }
 
-  _parsePersonActionObject(value) {
+  _parsePersonActionObject(value: unknown) {
     if (isObject(value)) {
       return deepClone(value);
     }
@@ -622,15 +676,10 @@ class NodaliaPersonCard extends HTMLElement {
     if (!source) {
       return {};
     }
-    try {
-      const parsed = JSON.parse(source);
-      return isObject(parsed) ? parsed : {};
-    } catch (_error) {
-      return {};
-    }
+    return parseServiceData(source);
   }
 
-  _isConfiguredPersonServiceAllowed(serviceValue) {
+  _isConfiguredPersonServiceAllowed(serviceValue: unknown) {
     const security = this._config?.security || DEFAULT_CONFIG.security;
     if (security.strict_service_actions === false) {
       return true;
@@ -650,15 +699,17 @@ class NodaliaPersonCard extends HTMLElement {
     return allowedServices.includes(normalizedService) || allowedDomains.includes(domain);
   }
 
-  _invokePersonService(domain, service, data = {}, target = null) {
-    const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils);
-    if (typeof invoke === "function") {
-      return invoke(this, this._hass, domain, service, data, target);
-    }
-    return Promise.resolve(this._hass?.callService?.(domain, service, data, target || undefined));
+  _invokePersonService(domain: string, service: string, data: Record<string, unknown> = {}, target: Record<string, unknown> | null = null): void {
+    const failure = (error: unknown) => console.warn("Nodalia Person: service call failed", `${domain}.${service}`, error);
+    try {
+      const invoke = window.NodaliaUtils.invokeHomeAssistantService;
+      const result = invoke ? invoke(this, this._hass, domain, service, data, target)
+        : target ? this._hass?.callService?.(domain, service, data, target) : this._hass?.callService?.(domain, service, data);
+      void Promise.resolve(result).catch(failure);
+    } catch (error) { failure(error); }
   }
 
-  _runConfiguredPersonService(prefix) {
+  _runConfiguredPersonService(prefix: PersonActionPrefix) {
     const serviceValue = String(this._config?.[`${prefix}_service`] || "").trim();
     const separator = serviceValue.indexOf(".");
     if (separator <= 0 || separator >= serviceValue.length - 1) {
@@ -678,7 +729,7 @@ class NodaliaPersonCard extends HTMLElement {
     );
   }
 
-  _openPersonNavigation(value) {
+  _openPersonNavigation(value: unknown) {
     const path = window.NodaliaUtils?.sanitizeActionUrl?.(value, { allowRelative: true, allowHash: true }) || "";
     if (!path || path.includes("://")) {
       return;
@@ -700,7 +751,7 @@ class NodaliaPersonCard extends HTMLElement {
     fireEvent(this, "hass-navigate", { path });
   }
 
-  _openPersonUrl(value, newTab = false) {
+  _openPersonUrl(value: unknown, newTab = false) {
     const url = window.NodaliaUtils?.sanitizeActionUrl?.(value, { allowRelative: true, allowHash: true }) || "";
     if (!url) {
       return;
@@ -755,7 +806,7 @@ class NodaliaPersonCard extends HTMLElement {
     this._triggerPressAnimation(this.shadowRoot?.querySelector(".person-card__avatar"));
   }
 
-  _onShadowClick(event) {
+  _onShadowClick(event: Event) {
     const card = event
       .composedPath()
       .find(node => node instanceof HTMLElement && node.dataset?.personAction === "primary");
@@ -798,7 +849,7 @@ class NodaliaPersonCard extends HTMLElement {
     runTap();
   }
 
-  _onShadowKeyDown(event) {
+  _onShadowKeyDown(event: Event) {
     if (window.NodaliaUtils?.isKeyboardActivationEvent?.(event) !== true) {
       return;
     }
@@ -842,7 +893,7 @@ class NodaliaPersonCard extends HTMLElement {
       return;
     }
 
-    const config = this._config || {};
+    const config = this._config;
     const entityGuard = window.NodaliaUtils?.renderLovelaceEntityGuardCardHtml?.(
       this._hass,
       config.entity,
@@ -865,8 +916,9 @@ class NodaliaPersonCard extends HTMLElement {
     }
 
     const styles = config.styles || DEFAULT_CONFIG.styles;
-    const configuredRows = Number(this._config?.grid_options?.rows);
-    const singleRowLayout = Number.isFinite(configuredRows) && configuredRows <= 1;
+    const grid = this._config.grid_options;
+    const configuredRows = parseFiniteNumericValue(isObject(grid) ? grid.rows : undefined);
+    const singleRowLayout = configuredRows !== null && configuredRows <= 1;
     const title = this._getTitle(state);
     const showName = config.show_name !== false;
     const subtitle = config.show_state !== false ? this._translateState(state) : "";

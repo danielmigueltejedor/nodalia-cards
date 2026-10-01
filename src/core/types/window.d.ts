@@ -30,6 +30,9 @@ import type { RoomSummaryPublicApi } from "../../cards/room-summary/room-summary
 import type { AdvanceVacuumPublicApi } from "../../cards/advance-vacuum/advance-vacuum-types";
 
 interface NodaliaI18nApi {
+  translateEntityState?: (language: string, state: import("./home-assistant").HassEntity | null, decimals: number,
+    formatWithUnit: (value: string, unit: string, decimals: number) => string,
+    formatNumber: (value: string, decimals: number) => string, parseNumber: (value: unknown) => number | null) => unknown;
   translateFavState?: (language: string, key: string) => string;
   translateEntityStateChip?: (hass: unknown, language: string, key: string) => string;
   translateNewsUi?: (hass: unknown, language: string, key: string, fallback?: string, values?: Record<string, unknown>) => string;

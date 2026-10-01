@@ -698,7 +698,7 @@ test("person defaults to the family card proportions and keeps compact mode expl
   const source = read("nodalia-person-card.js");
   assert.match(source, /getCardSize\(\) \{\s*return 3;/);
   assert.match(source, /getGridOptions\(\) \{[\s\S]*min_rows: 2/);
-  assert.match(source, /const singleRowLayout = Number\.isFinite\(configuredRows\) && configuredRows <= 1;/);
+  assert.match(source, /const singleRowLayout = configuredRows !== null && configuredRows <= 1;/);
   assert.match(source, /avatar:\s*\{\s*size: "38px",\s*background: "rgba\(255, 255, 255, 0\.06\)"/);
   assert.match(source, /title_size: "12px",\s*subtitle_size: "9px"/);
 });

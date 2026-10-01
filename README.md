@@ -83,7 +83,7 @@ Every card is registered with the `custom:nodalia-…` prefix. The complete set 
 - `custom:nodalia-entity-card`
 - [`custom:nodalia-fav-card`](docs/cards/fav-card.md)
 - [`custom:nodalia-insignia-card`](docs/cards/insignia-card.md)
-- `custom:nodalia-person-card`
+- [`custom:nodalia-person-card`](docs/cards/person-card.md)
 - [`custom:nodalia-scenes-card`](docs/cards/scenes-card.md)
 - `custom:nodalia-weather-card`
 - `custom:nodalia-calendar-card`
