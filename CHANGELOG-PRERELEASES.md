@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+- Check Insignia view/editor boundaries; refresh changed pictures, units and semantic tint, handle failed service calls and retain custom names and YAML extensions.
+
 - Check the Scenes card and visual editor, own fallback animation timers, handle failed scene activation and preserve editable draft rows and focus.
 
 - Check the Summary visual editor, validate native child editor events and preserve entity/name/icon alignment when lists are reordered.

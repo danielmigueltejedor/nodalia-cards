@@ -31,8 +31,12 @@ export function normalizeConfig(rawConfig: unknown = {}) {
   }
   const HOLD_ACTIONS = new Set(["auto", "toggle", "more-info", "service", "navigate", "url", "none"]);
   const h = String(merged.hold_action ?? "none").trim().toLowerCase();
-  return {
-    ...merged,
+  const fields = {
+    entity: typeof merged.entity === "string" ? merged.entity : "",
+    state_attribute: typeof merged.state_attribute === "string" ? merged.state_attribute : "",
+    tap_service: typeof merged.tap_service === "string" ? merged.tap_service : "",
+    tap_service_data: typeof merged.tap_service_data === "string" ? merged.tap_service_data : "",
+    tap_url: typeof merged.tap_url === "string" ? merged.tap_url : "",
     styles: { ...styles, tint },
     hold_action: HOLD_ACTIONS.has(h) ? h : "none",
     hold_service: String(merged.hold_service ?? "").trim(),
@@ -40,4 +44,6 @@ export function normalizeConfig(rawConfig: unknown = {}) {
     hold_url: String(merged.hold_url ?? "").trim(),
     hold_new_tab: merged.hold_new_tab === true,
   };
+  const normalized: typeof fields & Record<string, unknown> = { ...merged, ...fields };
+  return normalized;
 }

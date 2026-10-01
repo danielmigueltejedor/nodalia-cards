@@ -1,6 +1,7 @@
-// @ts-nocheck
-/* Large HTMLElement view/controller: typed incrementally as methods are extracted. */
-import { CARD_TAG, EDITOR_TAG, HAPTIC_PATTERNS } from "./insignia-constants";
+import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
+import type { HostPointerHoldBinding } from "../../core/types/nodalia-utils";
+import { callHassService, parseServiceData } from "../../shared/home-assistant-services";
+import { EDITOR_TAG, HAPTIC_PATTERNS } from "./insignia-constants";
 import {
   deepClone,
   escapeHtml,
@@ -20,17 +21,22 @@ import {
   sanitizeCssValue,
 } from "./insignia-helpers";
 
-let _lazyNodaliaInsigniaCard;
-export function loadNodaliaInsigniaCard() {
+let _lazyNodaliaInsigniaCard: CustomElementConstructor | undefined;
+export function loadNodaliaInsigniaCard(): CustomElementConstructor {
   if (_lazyNodaliaInsigniaCard) {
     return _lazyNodaliaInsigniaCard;
   }
 class NodaliaInsigniaCard extends HTMLElement {
+  private _config!: ReturnType<typeof normalizeConfig>;
+  private _hass!: HomeAssistant | null;
+  private _lastRenderSignature!: string;
+  private _suppressNextInsigniaTap!: boolean;
+  private _detachHostHold?: HostPointerHoldBinding;
   static getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig(hass, entities = [], entitiesFallback = []) {
+  static getStubConfig(hass: HomeAssistant | null | undefined, entities: unknown = [], entitiesFallback: unknown = []) {
     return applyStubEntity(
       deepClone(STUB_CONFIG),
       hass,
@@ -55,8 +61,8 @@ class NodaliaInsigniaCard extends HTMLElement {
     }
 
   connectedCallback() {
-    this.shadowRoot.addEventListener("click", this._onClick);
-    this.shadowRoot.addEventListener("keydown", this._onKeyDown);
+    this.shadowRoot?.addEventListener("click", this._onClick);
+    this.shadowRoot?.addEventListener("keydown", this._onKeyDown);
     this._detachHostHold =
       typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function"
         ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
@@ -79,18 +85,22 @@ class NodaliaInsigniaCard extends HTMLElement {
 
   disconnectedCallback() {
     this._detachHostHold?.();
-    this.shadowRoot.removeEventListener("click", this._onClick);
-    this.shadowRoot.removeEventListener("keydown", this._onKeyDown);
+    this._suppressNextInsigniaTap = false;
+    this.shadowRoot?.removeEventListener("click", this._onClick);
+    this.shadowRoot?.removeEventListener("keydown", this._onKeyDown);
   }
 
-  setConfig(config) {
+  setConfig(config: unknown) {
+    this._detachHostHold?.();
+    if (this.isConnected) this._detachHostHold?.reconnect?.();
+    this._suppressNextInsigniaTap = false;
     this._config = normalizeConfig(config || {});
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
     this._lastRenderSignature = "";
     this._render();
   }
 
-  set hass(hass) {
+  set hass(hass: HomeAssistant) {
     const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
 
@@ -126,6 +136,9 @@ class NodaliaInsigniaCard extends HTMLElement {
       String(state?.state || ""),
       String(attrs.friendly_name || ""),
       String(attrs.icon || ""),
+      String(attrs.entity_picture || ""),
+      String(attrs.unit_of_measurement || ""),
+      String(attrs.device_class || ""),
       this._config?.state_attribute ? String(attrs[this._config.state_attribute] ?? "") : "",
       String(this._config?.name || ""),
       String(this._config?.icon || ""),
@@ -135,7 +148,7 @@ class NodaliaInsigniaCard extends HTMLElement {
       this._config?.use_entity_picture !== false,
       this._config?.tint_auto !== false,
       visibilityCount,
-      String(this._config?.styles?.tint?.color || ""),
+      String(this._config.styles.tint.color || ""),
       `${this._config?.tap_action || ""}|${this._config?.hold_action || ""}`,
     ];
     if (typeof joinParts === "function") {
@@ -144,13 +157,13 @@ class NodaliaInsigniaCard extends HTMLElement {
     return values.join("::");
   }
 
-  _triggerHaptic(styleOverride = null) {
-    const haptics = this._config?.haptics || {};
+  _triggerHaptic(styleOverride: string | null = null) {
+    const haptics = isObject(this._config.haptics) ? this._config.haptics : {};
     if (haptics.enabled !== true) {
       return;
     }
 
-    const style = styleOverride || haptics.style || "medium";
+    const style = styleOverride || String(haptics.style || "medium");
     fireEvent(this, "haptic", style, {
       bubbles: true,
       cancelable: false,
@@ -158,18 +171,18 @@ class NodaliaInsigniaCard extends HTMLElement {
     });
 
     if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
-      navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
+      try { navigator.vibrate(Object.entries(HAPTIC_PATTERNS).find(([key]) => key === style)?.[1] || HAPTIC_PATTERNS.selection); } catch { /* Unsupported vibration. */ }
     }
   }
 
-  _getResolvedName(state) {
+  _getResolvedName(state: HassEntity | null | undefined) {
     return this._config.name
       || state?.attributes?.friendly_name
       || this._config.entity
       || "Insignia";
   }
 
-  _getResolvedValue(state) {
+  _getResolvedValue(state: HassEntity | null | undefined) {
     if (this._config.state_attribute) {
       const attrValue = state?.attributes?.[this._config.state_attribute];
       return attrValue === undefined || attrValue === null ? "" : formatNumericString(attrValue);
@@ -184,7 +197,7 @@ class NodaliaInsigniaCard extends HTMLElement {
     return unit ? `${formatted} ${unit}` : formatted;
   }
 
-  _isActiveState(state) {
+  _isActiveState(state: HassEntity | null | undefined) {
     const stateKey = normalizeTextKey(state?.state);
 
     if (!stateKey || ["off", "closed", "locked", "unavailable", "unknown", "none", "idle", "standby"].includes(stateKey)) {
@@ -194,8 +207,8 @@ class NodaliaInsigniaCard extends HTMLElement {
     return true;
   }
 
-  _getResolvedIcon(state) {
-    const trimIcon = value => (typeof value === "string" ? value.trim() : "");
+  _getResolvedIcon(state: HassEntity | null | undefined) {
+    const trimIcon = (value: unknown) => (typeof value === "string" ? value.trim() : "");
     const iconActive = trimIcon(this._config?.icon_active);
     const iconInactive = trimIcon(this._config?.icon_inactive);
 
@@ -213,7 +226,7 @@ class NodaliaInsigniaCard extends HTMLElement {
     return trimIcon(this._config?.icon) || state?.attributes?.icon || "mdi:star-four-points-circle";
   }
 
-  _getResolvedPicture(state) {
+  _getResolvedPicture(state: HassEntity | null | undefined) {
     if (!this._config.use_entity_picture) {
       return "";
     }
@@ -229,7 +242,7 @@ class NodaliaInsigniaCard extends HTMLElement {
     }
 
     for (const rule of rules) {
-      if (!rule || rule.condition !== "template") {
+      if (!isObject(rule) || rule.condition !== "template") {
         continue;
       }
       const rawValue = String(rule.value ?? "").trim();
@@ -245,8 +258,8 @@ class NodaliaInsigniaCard extends HTMLElement {
           main?.shadowRoot?.querySelector("[drawer]") ||
           main?.shadowRoot?.querySelector(".mdc-drawer");
         const isOpen =
-          drawer?.opened === true ||
-          drawer?.open === true ||
+          (drawer && "opened" in drawer && drawer.opened === true) ||
+          (drawer && "open" in drawer && drawer.open === true) ||
           drawer?.hasAttribute?.("open") ||
           drawer?.classList?.contains("mdc-drawer--open");
         if (isOpen) {
@@ -259,7 +272,7 @@ class NodaliaInsigniaCard extends HTMLElement {
     return true;
   }
 
-  _isActive(state) {
+  _isActive(state: HassEntity | null | undefined) {
     const stateKey = normalizeTextKey(state?.state);
     if (!state) {
       return false;
@@ -272,7 +285,7 @@ class NodaliaInsigniaCard extends HTMLElement {
    * Match Entity card–level tint strength: numeric sensors (temperature, etc.) are never "active"
    * but should still read a clear semantic tint; manual tint mode always wins visibility.
    */
-  _shouldApplyStrongCardTint(state) {
+  _shouldApplyStrongCardTint(state: HassEntity | null | undefined) {
     if (!state) {
       return false;
     }
@@ -282,16 +295,16 @@ class NodaliaInsigniaCard extends HTMLElement {
     if (this._isActive(state)) {
       return true;
     }
-    const domain = getEntityDomain(state);
+    const domain = getEntityDomain(state) || "";
     return domain === "sensor" || domain === "weather";
   }
 
-  _shouldDimIcon(state) {
+  _shouldDimIcon(state: HassEntity | null | undefined) {
     if (!state) {
       return false;
     }
 
-    const domain = getEntityDomain(state);
+    const domain = getEntityDomain(state) || "";
     if (["sensor", "input_number", "input_datetime", "input_text", "number"].includes(domain)) {
       return false;
     }
@@ -313,12 +326,12 @@ class NodaliaInsigniaCard extends HTMLElement {
     ].includes(domain);
   }
 
-  _getTintColor(state) {
+  _getTintColor(state: HassEntity | null | undefined) {
     if (this._config?.tint_auto === false) {
-      return sanitizeCssValue(this._config?.styles?.tint?.color, DEFAULT_CONFIG.styles.tint.color);
+      return sanitizeCssValue(this._config.styles.tint.color, DEFAULT_CONFIG.styles.tint.color);
     }
 
-    const domain = getEntityDomain(state);
+    const domain = getEntityDomain(state) || "";
     const stateKey = normalizeTextKey(state?.state);
     const deviceClass = normalizeTextKey(state?.attributes?.device_class);
     const rawUnit = String(state?.attributes?.unit_of_measurement || "").trim().toLowerCase();
@@ -354,8 +367,8 @@ class NodaliaInsigniaCard extends HTMLElement {
     return "var(--info-color, #71c0ff)";
   }
 
-  _isServiceAllowed(serviceValue) {
-    const security = this._config?.security || {};
+  _isServiceAllowed(serviceValue: unknown) {
+    const security = isObject(this._config.security) ? this._config.security : {};
     if (security.strict_service_actions === false) {
       return true;
     }
@@ -373,10 +386,10 @@ class NodaliaInsigniaCard extends HTMLElement {
     if (!domains.length && !services.length) {
       return false;
     }
-    return services.includes(normalizedService) || domains.includes(domain);
+    return services.includes(normalizedService) || domains.includes(domain || "");
   }
 
-  _onClick(event) {
+  _onClick(event: Event) {
     const trigger = event
       .composedPath()
       .find(node => node instanceof HTMLElement && node.dataset?.insigniaAction === "primary");
@@ -397,7 +410,7 @@ class NodaliaInsigniaCard extends HTMLElement {
     this._handlePrimaryAction();
   }
 
-  _onKeyDown(event) {
+  _onKeyDown(event: Event) {
     if (window.NodaliaUtils?.isKeyboardActivationEvent?.(event) !== true) {
       return;
     }
@@ -448,7 +461,7 @@ class NodaliaInsigniaCard extends HTMLElement {
     }
 
     if (action === "toggle") {
-      this._hass?.callService("homeassistant", "toggle", { entity_id: this._config.entity });
+      callHassService(this._hass, "homeassistant", "toggle", { entity_id: this._config.entity });
       return;
     }
 
@@ -459,21 +472,14 @@ class NodaliaInsigniaCard extends HTMLElement {
       }
       const [domain, service] = this._config.hold_service.split(".");
       if (domain && service) {
-        let serviceData = {};
-        if (this._config.hold_service_data) {
-          try {
-            serviceData = JSON.parse(this._config.hold_service_data);
-          } catch (_error) {
-            serviceData = {};
-          }
-        }
-        this._hass?.callService(domain, service, serviceData);
+        callHassService(this._hass, domain, service, parseServiceData(this._config.hold_service_data));
       }
       return;
     }
 
     if (action === "navigate" && navigationPath) {
-      const path = navigationPath;
+      const path = window.NodaliaUtils.sanitizeActionUrl(navigationPath, { allowRelative: true });
+      if (!path) return;
       if (this._hass?.navigate) {
         this._hass.navigate(path);
         return;
@@ -519,7 +525,7 @@ class NodaliaInsigniaCard extends HTMLElement {
     }
 
     if (action === "toggle") {
-      this._hass?.callService("homeassistant", "toggle", { entity_id: this._config.entity });
+      callHassService(this._hass, "homeassistant", "toggle", { entity_id: this._config.entity });
       return;
     }
 
@@ -530,21 +536,14 @@ class NodaliaInsigniaCard extends HTMLElement {
       }
       const [domain, service] = this._config.tap_service.split(".");
       if (domain && service) {
-        let serviceData = {};
-        if (this._config.tap_service_data) {
-          try {
-            serviceData = JSON.parse(this._config.tap_service_data);
-          } catch (_error) {
-            serviceData = {};
-          }
-        }
-        this._hass?.callService(domain, service, serviceData);
+        callHassService(this._hass, domain, service, parseServiceData(this._config.tap_service_data));
       }
       return;
     }
 
     if (action === "navigate" && navigationPath) {
-      const path = navigationPath;
+      const path = window.NodaliaUtils.sanitizeActionUrl(navigationPath, { allowRelative: true });
+      if (!path) return;
       if (this._hass?.navigate) {
         this._hass.navigate(path);
         return;
@@ -571,11 +570,13 @@ class NodaliaInsigniaCard extends HTMLElement {
     }
   }
 
-  _insigniaCardUi(key, fallback = "") {
+  _insigniaCardUi(key: string, fallback = "") {
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-    const pack = window.NodaliaI18n?.strings?.(lang)?.insigniaCard;
-    const enPack = window.NodaliaI18n?.strings?.("en")?.insigniaCard;
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, String(this._config?.language || "auto")) ?? "en";
+    const rawPack = window.NodaliaI18n?.strings?.(lang)?.insigniaCard;
+    const rawEnPack = window.NodaliaI18n?.strings?.("en")?.insigniaCard;
+    const pack = isObject(rawPack) ? rawPack : {};
+    const enPack = isObject(rawEnPack) ? rawEnPack : {};
     const raw = pack?.[key] ?? enPack?.[key];
     return String(raw != null && raw !== "" ? raw : fallback);
   }

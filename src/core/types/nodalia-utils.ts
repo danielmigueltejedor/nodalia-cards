@@ -7,6 +7,10 @@ import type { HomeAssistant } from "./home-assistant";
  */
 export interface HostPointerHoldBinding { (): void; reconnect?: () => void; }
 export interface NodaliaUtilsApi {
+  isKeyboardActivationEvent?: (event: Event) => boolean;
+  warnStrictServiceDenied?: (label: string, service: unknown) => void;
+  applyDefaultConfigNameFromEntity?: <Config extends Record<string, unknown>>(config: Config, hass: HomeAssistant | null | undefined, options?: { previousEntity?: string }) => Config;
+  renderEditorCollapsibleToggleHtml: (options: { toggleId: string; expanded: boolean; showLabel: string; hideLabel: string; escapeHtml: (value: unknown) => string }) => string;
   renderReducedMotionStyles?: () => string;
   bindHostPointerHoldGesture?: <Zone>(host: HTMLElement, options: {
     resolveZone: (event: PointerEvent) => Zone | null;
@@ -17,7 +21,7 @@ export interface NodaliaUtilsApi {
   }) => HostPointerHoldBinding;
   editorStatesSignature?: (hass: HomeAssistant | null | undefined, language?: string) => string;
   mountIconPickerHost?: (host: HTMLElement, options: {
-    hass: HomeAssistant | null | undefined; field?: string; value?: unknown;
+    hass: HomeAssistant | null | undefined; field?: string; value?: unknown; placeholder?: string;
     onShadowInput?: EventListener; onShadowValueChanged?: EventListener; copyDatasetFromHost?: boolean;
   }) => void;
   captureEditorFocusState: (host: HTMLElement) => EditorFocusState | null;

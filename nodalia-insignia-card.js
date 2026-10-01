@@ -437,8 +437,12 @@
     }
     const HOLD_ACTIONS = /* @__PURE__ */ new Set(["auto", "toggle", "more-info", "service", "navigate", "url", "none"]);
     const h = String(merged.hold_action ?? "none").trim().toLowerCase();
-    return {
-      ...merged,
+    const fields = {
+      entity: typeof merged.entity === "string" ? merged.entity : "",
+      state_attribute: typeof merged.state_attribute === "string" ? merged.state_attribute : "",
+      tap_service: typeof merged.tap_service === "string" ? merged.tap_service : "",
+      tap_service_data: typeof merged.tap_service_data === "string" ? merged.tap_service_data : "",
+      tap_url: typeof merged.tap_url === "string" ? merged.tap_url : "",
       styles: { ...styles, tint },
       hold_action: HOLD_ACTIONS.has(h) ? h : "none",
       hold_service: String(merged.hold_service ?? "").trim(),
@@ -446,6 +450,31 @@
       hold_url: String(merged.hold_url ?? "").trim(),
       hold_new_tab: merged.hold_new_tab === true
     };
+    const normalized = { ...merged, ...fields };
+    return normalized;
+  }
+
+  // src/shared/home-assistant-services.ts
+  function isServiceDataObject(value) {
+    return value !== null && typeof value === "object" && !Array.isArray(value);
+  }
+  function parseServiceData(value) {
+    if (typeof value !== "string" || !value) return {};
+    try {
+      const parsed = JSON.parse(value);
+      return isServiceDataObject(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  function callHassService(hass, domain, service, data = {}) {
+    if (!hass?.callService) return;
+    const failure = (error) => console.warn("Nodalia Cards: service call failed", `${domain}.${service}`, error);
+    try {
+      void Promise.resolve(hass.callService(domain, service, data)).catch(failure);
+    } catch (error) {
+      failure(error);
+    }
   }
 
   // src/cards/insignia/insignia-card.ts
@@ -481,8 +510,8 @@
         this._onKeyDown = this._onKeyDown.bind(this);
       }
       connectedCallback() {
-        this.shadowRoot.addEventListener("click", this._onClick);
-        this.shadowRoot.addEventListener("keydown", this._onKeyDown);
+        this.shadowRoot?.addEventListener("click", this._onClick);
+        this.shadowRoot?.addEventListener("keydown", this._onKeyDown);
         this._detachHostHold = typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function" ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
           resolveZone: (event) => {
             const trigger = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.insigniaAction === "primary");
@@ -500,10 +529,14 @@
       }
       disconnectedCallback() {
         this._detachHostHold?.();
-        this.shadowRoot.removeEventListener("click", this._onClick);
-        this.shadowRoot.removeEventListener("keydown", this._onKeyDown);
+        this._suppressNextInsigniaTap = false;
+        this.shadowRoot?.removeEventListener("click", this._onClick);
+        this.shadowRoot?.removeEventListener("keydown", this._onKeyDown);
       }
       setConfig(config) {
+        this._detachHostHold?.();
+        if (this.isConnected) this._detachHostHold?.reconnect?.();
+        this._suppressNextInsigniaTap = false;
         this._config = normalizeConfig(config || {});
         window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
         this._lastRenderSignature = "";
@@ -540,6 +573,9 @@
           String(state?.state || ""),
           String(attrs.friendly_name || ""),
           String(attrs.icon || ""),
+          String(attrs.entity_picture || ""),
+          String(attrs.unit_of_measurement || ""),
+          String(attrs.device_class || ""),
           this._config?.state_attribute ? String(attrs[this._config.state_attribute] ?? "") : "",
           String(this._config?.name || ""),
           String(this._config?.icon || ""),
@@ -549,7 +585,7 @@
           this._config?.use_entity_picture !== false,
           this._config?.tint_auto !== false,
           visibilityCount,
-          String(this._config?.styles?.tint?.color || ""),
+          String(this._config.styles.tint.color || ""),
           `${this._config?.tap_action || ""}|${this._config?.hold_action || ""}`
         ];
         if (typeof joinParts === "function") {
@@ -558,18 +594,21 @@
         return values.join("::");
       }
       _triggerHaptic(styleOverride = null) {
-        const haptics = this._config?.haptics || {};
+        const haptics = isObject(this._config.haptics) ? this._config.haptics : {};
         if (haptics.enabled !== true) {
           return;
         }
-        const style = styleOverride || haptics.style || "medium";
+        const style = styleOverride || String(haptics.style || "medium");
         fireEvent(this, "haptic", style, {
           bubbles: true,
           cancelable: false,
           composed: true
         });
         if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
-          navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
+          try {
+            navigator.vibrate(Object.entries(HAPTIC_PATTERNS).find(([key]) => key === style)?.[1] || HAPTIC_PATTERNS.selection);
+          } catch {
+          }
         }
       }
       _getResolvedName(state) {
@@ -622,7 +661,7 @@
           return true;
         }
         for (const rule of rules) {
-          if (!rule || rule.condition !== "template") {
+          if (!isObject(rule) || rule.condition !== "template") {
             continue;
           }
           const rawValue = String(rule.value ?? "").trim();
@@ -630,7 +669,7 @@
           if (hasDrawerLogic) {
             const main = document.querySelector("body > home-assistant")?.shadowRoot?.querySelector("home-assistant-main");
             const drawer = main?.shadowRoot?.querySelector("ha-drawer") || main?.shadowRoot?.querySelector("[drawer]") || main?.shadowRoot?.querySelector(".mdc-drawer");
-            const isOpen = drawer?.opened === true || drawer?.open === true || drawer?.hasAttribute?.("open") || drawer?.classList?.contains("mdc-drawer--open");
+            const isOpen = drawer && "opened" in drawer && drawer.opened === true || drawer && "open" in drawer && drawer.open === true || drawer?.hasAttribute?.("open") || drawer?.classList?.contains("mdc-drawer--open");
             if (isOpen) {
               return false;
             }
@@ -660,14 +699,14 @@
         if (this._isActive(state)) {
           return true;
         }
-        const domain = getEntityDomain(state);
+        const domain = getEntityDomain(state) || "";
         return domain === "sensor" || domain === "weather";
       }
       _shouldDimIcon(state) {
         if (!state) {
           return false;
         }
-        const domain = getEntityDomain(state);
+        const domain = getEntityDomain(state) || "";
         if (["sensor", "input_number", "input_datetime", "input_text", "number"].includes(domain)) {
           return false;
         }
@@ -689,9 +728,9 @@
       }
       _getTintColor(state) {
         if (this._config?.tint_auto === false) {
-          return sanitizeCssValue(this._config?.styles?.tint?.color, DEFAULT_CONFIG.styles.tint.color);
+          return sanitizeCssValue(this._config.styles.tint.color, DEFAULT_CONFIG.styles.tint.color);
         }
-        const domain = getEntityDomain(state);
+        const domain = getEntityDomain(state) || "";
         const stateKey = normalizeTextKey(state?.state);
         const deviceClass = normalizeTextKey(state?.attributes?.device_class);
         const rawUnit = String(state?.attributes?.unit_of_measurement || "").trim().toLowerCase();
@@ -725,7 +764,7 @@
         return "var(--info-color, #71c0ff)";
       }
       _isServiceAllowed(serviceValue) {
-        const security = this._config?.security || {};
+        const security = isObject(this._config.security) ? this._config.security : {};
         if (security.strict_service_actions === false) {
           return true;
         }
@@ -739,7 +778,7 @@
         if (!domains.length && !services.length) {
           return false;
         }
-        return services.includes(normalizedService) || domains.includes(domain);
+        return services.includes(normalizedService) || domains.includes(domain || "");
       }
       _onClick(event) {
         const trigger = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.insigniaAction === "primary");
@@ -801,7 +840,7 @@
           return;
         }
         if (action === "toggle") {
-          this._hass?.callService("homeassistant", "toggle", { entity_id: this._config.entity });
+          callHassService(this._hass, "homeassistant", "toggle", { entity_id: this._config.entity });
           return;
         }
         if (action === "service" && this._config.hold_service) {
@@ -811,20 +850,13 @@
           }
           const [domain, service] = this._config.hold_service.split(".");
           if (domain && service) {
-            let serviceData = {};
-            if (this._config.hold_service_data) {
-              try {
-                serviceData = JSON.parse(this._config.hold_service_data);
-              } catch (_error) {
-                serviceData = {};
-              }
-            }
-            this._hass?.callService(domain, service, serviceData);
+            callHassService(this._hass, domain, service, parseServiceData(this._config.hold_service_data));
           }
           return;
         }
         if (action === "navigate" && navigationPath) {
-          const path = navigationPath;
+          const path = window.NodaliaUtils.sanitizeActionUrl(navigationPath, { allowRelative: true });
+          if (!path) return;
           if (this._hass?.navigate) {
             this._hass.navigate(path);
             return;
@@ -864,7 +896,7 @@
           return;
         }
         if (action === "toggle") {
-          this._hass?.callService("homeassistant", "toggle", { entity_id: this._config.entity });
+          callHassService(this._hass, "homeassistant", "toggle", { entity_id: this._config.entity });
           return;
         }
         if (action === "service" && this._config.tap_service) {
@@ -874,20 +906,13 @@
           }
           const [domain, service] = this._config.tap_service.split(".");
           if (domain && service) {
-            let serviceData = {};
-            if (this._config.tap_service_data) {
-              try {
-                serviceData = JSON.parse(this._config.tap_service_data);
-              } catch (_error) {
-                serviceData = {};
-              }
-            }
-            this._hass?.callService(domain, service, serviceData);
+            callHassService(this._hass, domain, service, parseServiceData(this._config.tap_service_data));
           }
           return;
         }
         if (action === "navigate" && navigationPath) {
-          const path = navigationPath;
+          const path = window.NodaliaUtils.sanitizeActionUrl(navigationPath, { allowRelative: true });
+          if (!path) return;
           if (this._hass?.navigate) {
             this._hass.navigate(path);
             return;
@@ -914,9 +939,11 @@
       }
       _insigniaCardUi(key, fallback = "") {
         const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-        const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-        const pack = window.NodaliaI18n?.strings?.(lang)?.insigniaCard;
-        const enPack = window.NodaliaI18n?.strings?.("en")?.insigniaCard;
+        const lang = window.NodaliaI18n?.resolveLanguage?.(hass, String(this._config?.language || "auto")) ?? "en";
+        const rawPack = window.NodaliaI18n?.strings?.(lang)?.insigniaCard;
+        const rawEnPack = window.NodaliaI18n?.strings?.("en")?.insigniaCard;
+        const pack = isObject(rawPack) ? rawPack : {};
+        const enPack = isObject(rawEnPack) ? rawEnPack : {};
         const raw = pack?.[key] ?? enPack?.[key];
         return String(raw != null && raw !== "" ? raw : fallback);
       }
@@ -1222,6 +1249,16 @@
     return NodaliaInsigniaCard;
   }
 
+  // src/shared/editor-controls.ts
+  function isNativeEditorInput(node) {
+    return node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement;
+  }
+  function editorControlValue(event, control) {
+    const detail = event instanceof CustomEvent ? event.detail : void 0;
+    if (detail && typeof detail === "object" && "value" in detail && typeof detail.value === "string") return detail.value;
+    return "value" in control ? control.value : void 0;
+  }
+
   // src/cards/insignia/insignia-editor.ts
   var _lazyNodaliaInsigniaCardEditor;
   function loadNodaliaInsigniaCardEditor() {
@@ -1284,7 +1321,7 @@
         this._restoreFocusState(focusState);
       }
       _getEntityOptionsSignature(hass = this._hass) {
-        return window.NodaliaUtils.editorStatesSignature(hass, this._config?.language ?? "auto");
+        return window.NodaliaUtils.editorStatesSignature?.(hass, String(this._config?.language || "auto")) || "";
       }
       _watchEditorControlTag(tagName) {
         if (!tagName || this._pendingEditorControlTags.has(tagName)) {
@@ -1324,7 +1361,7 @@
         this._render();
         this._restoreFocusState(focusState);
         fireEvent(this, "config-changed", {
-          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {})
+          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults?.(nextConfig, DEFAULT_CONFIG) ?? {})
         });
       }
       _setEditorConfig() {
@@ -1341,7 +1378,7 @@
         const valueType = input.dataset.valueType || "string";
         switch (valueType) {
           case "boolean":
-            return Boolean(input.checked);
+            return input instanceof HTMLInputElement && input.checked;
           case "color":
             return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
           case "csv": {
@@ -1353,7 +1390,7 @@
         }
       }
       _onShadowInput(event) {
-        const input = event.composedPath().find((node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+        const input = event.composedPath().find(isNativeEditorInput);
         if (!input?.dataset?.field) {
           return;
         }
@@ -1366,12 +1403,12 @@
         }
       }
       _onShadowValueChanged(event) {
-        const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+        const control = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.field));
         if (!control?.dataset?.field) {
           return;
         }
         event.stopPropagation();
-        const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+        const nextValue = editorControlValue(event, control);
         if (typeof control.dataset?.value === "string") {
           control.dataset.value = String(nextValue || "");
         }
@@ -1385,7 +1422,7 @@
         this._emitConfig();
       }
       _onShadowClick(event) {
-        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
+        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.editorToggle));
         if (!toggleButton) {
           return;
         }
@@ -1406,7 +1443,7 @@
           return s;
         }
         const hass = this._hass ?? this.hass;
-        return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+        return window.NodaliaI18n.editorStr(hass, String(this._config?.language || "auto"), s);
       }
       _renderTextField(label, field, value, options = {}) {
         const tLabel = this._editorLabel(label);
@@ -1529,7 +1566,7 @@
     `;
       }
       _mountEntityPicker(host) {
-        window.NodaliaUtils.mountEntityPickerHost(host, {
+        window.NodaliaUtils.mountEntityPickerHost?.(host, {
           hass: this._hass,
           field: host.dataset.field || "entity",
           value: host.dataset.value || "",
@@ -1539,7 +1576,7 @@
         });
       }
       _mountIconPicker(host) {
-        window.NodaliaUtils.mountIconPickerHost(host, {
+        window.NodaliaUtils.mountIconPickerHost?.(host, {
           hass: this._hass,
           value: host.dataset.value || "",
           placeholder: host.dataset.placeholder || "",
@@ -1552,11 +1589,14 @@
         if (!this.shadowRoot) {
           return;
         }
-        const config = this._config || normalizeConfig({});
+        const config = this._config;
+        const styles = getSafeStyles(config.styles);
+        const haptics = isObject(config.haptics) ? config.haptics : {};
+        const security = isObject(config.security) ? config.security : {};
         const rawTap = config.tap_action;
         const tapAction = typeof rawTap === "string" ? rawTap : isObject(rawTap) ? String(rawTap.action || "auto") : "auto";
         const holdActionStr = typeof config.hold_action === "string" ? config.hold_action : "none";
-        const hapticStyle = config.haptics?.style || "medium";
+        const hapticStyle = haptics.style || "medium";
         this.shadowRoot.innerHTML = `
       <style>
         :host {
@@ -1849,8 +1889,8 @@
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.insignia.haptics_hint"))}</div>
           </div>
           <div class="editor-grid editor-grid--stacked">
-            ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", config.haptics?.enabled === true)}
-            ${this._renderCheckboxField("ed.entity.fallback_vibrate", "haptics.fallback_vibrate", config.haptics?.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.entity.fallback_vibrate", "haptics.fallback_vibrate", haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
           "ed.vacuum.haptic_style",
           "haptics.style",
@@ -1924,12 +1964,12 @@
                   ${this._renderCheckboxField(
           "ed.entity.security_strict",
           "security.strict_service_actions",
-          config.security?.strict_service_actions !== false
+          security.strict_service_actions !== false
         )}
-                  ${config.security?.strict_service_actions !== false ? this._renderTextField(
+                  ${security.strict_service_actions !== false ? this._renderTextField(
           "ed.entity.allowed_services_csv",
           "security.allowed_services",
-          Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
+          Array.isArray(security.allowed_services) ? security.allowed_services.join(", ") : "",
           {
             placeholder: "browser_mod.javascript, light.turn_on",
             valueType: "csv",
@@ -1997,16 +2037,16 @@
           ${this._showStyleSection ? `
             <div class="editor-grid editor-grid--stacked">
               ${this._renderCheckboxField("ed.insignia.tint_auto", "tint_auto", config.tint_auto !== false)}
-              ${this._renderColorField("ed.insignia.manual_tint_color", "styles.tint.color", config.styles?.tint?.color || DEFAULT_CONFIG.styles.tint.color, { fullWidth: true })}
-              ${this._renderTextField("ed.entity.style_main_button_size", "styles.icon.size", config.styles?.icon?.size || DEFAULT_CONFIG.styles.icon.size)}
-              ${this._renderTextField("ed.person.style_title_size", "styles.title_size", config.styles?.title_size || DEFAULT_CONFIG.styles.title_size)}
-              ${this._renderTextField("ed.circular_gauge.value_size", "styles.value_size", config.styles?.value_size || DEFAULT_CONFIG.styles.value_size)}
-              ${this._renderTextField("ed.person.style_card_padding", "styles.card.padding", config.styles?.card?.padding || DEFAULT_CONFIG.styles.card.padding)}
-              ${this._renderTextField("ed.person.style_card_gap", "styles.card.gap", config.styles?.card?.gap || DEFAULT_CONFIG.styles.card.gap)}
-              ${this._renderTextField("ed.insignia.icon_only_offset_y", "styles.icon.icon_only_offset_y", config.styles?.icon?.icon_only_offset_y || DEFAULT_CONFIG.styles.icon.icon_only_offset_y)}
-              ${this._renderColorField("ed.entity.style_main_bubble_bg", "styles.icon.background", config.styles?.icon?.background || DEFAULT_CONFIG.styles.icon.background, { fullWidth: true })}
-              ${this._renderColorField("ed.entity.style_icon_on", "styles.icon.on_color", config.styles?.icon?.on_color || DEFAULT_CONFIG.styles.icon.on_color, { fullWidth: true })}
-              ${this._renderColorField("ed.entity.style_icon_off", "styles.icon.off_color", config.styles?.icon?.off_color || DEFAULT_CONFIG.styles.icon.off_color, { fullWidth: true })}
+              ${this._renderColorField("ed.insignia.manual_tint_color", "styles.tint.color", styles.tint?.color || DEFAULT_CONFIG.styles.tint.color, { fullWidth: true })}
+              ${this._renderTextField("ed.entity.style_main_button_size", "styles.icon.size", styles.icon?.size || DEFAULT_CONFIG.styles.icon.size)}
+              ${this._renderTextField("ed.person.style_title_size", "styles.title_size", styles.title_size || DEFAULT_CONFIG.styles.title_size)}
+              ${this._renderTextField("ed.circular_gauge.value_size", "styles.value_size", styles.value_size || DEFAULT_CONFIG.styles.value_size)}
+              ${this._renderTextField("ed.person.style_card_padding", "styles.card.padding", styles.card?.padding || DEFAULT_CONFIG.styles.card.padding)}
+              ${this._renderTextField("ed.person.style_card_gap", "styles.card.gap", styles.card?.gap || DEFAULT_CONFIG.styles.card.gap)}
+              ${this._renderTextField("ed.insignia.icon_only_offset_y", "styles.icon.icon_only_offset_y", styles.icon?.icon_only_offset_y || DEFAULT_CONFIG.styles.icon.icon_only_offset_y)}
+              ${this._renderColorField("ed.entity.style_main_bubble_bg", "styles.icon.background", styles.icon?.background || DEFAULT_CONFIG.styles.icon.background, { fullWidth: true })}
+              ${this._renderColorField("ed.entity.style_icon_on", "styles.icon.on_color", styles.icon?.on_color || DEFAULT_CONFIG.styles.icon.on_color, { fullWidth: true })}
+              ${this._renderColorField("ed.entity.style_icon_off", "styles.icon.off_color", styles.icon?.off_color || DEFAULT_CONFIG.styles.icon.off_color, { fullWidth: true })}
             </div>
           ` : ""}
 
