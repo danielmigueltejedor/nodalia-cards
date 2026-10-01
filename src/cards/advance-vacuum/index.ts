@@ -25,6 +25,6 @@ const publicApi = {
   DEFAULT_CONFIG,
   STUB_CONFIG,
   normalizeConfig,
-} as AdvanceVacuumPublicApi;
+} satisfies AdvanceVacuumPublicApi;
 
 window.__NODALIA_ADVANCE_VACUUM__ = publicApi;

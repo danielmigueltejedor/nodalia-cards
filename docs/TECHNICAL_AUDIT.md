@@ -776,3 +776,32 @@ ingestion and legacy fallback. 4,800 valid template/registry/forecast/profile/
 chunk/hash outputs match main. All 731 unit tests and three targeted real
 browser cases pass; full local browser suite: 287 passed, one existing platform
 skip. Remaining unchecked modules: 50. Hold 3.0.0-alpha.1 until full migration.
+
+## Advanced Vacuum helper/config findings — 2026-10-01
+
+Map/session/calibration helpers and merged config still suppress checking.
+Missing coordinates coerce to zero; malformed room/selection rows are dereferenced,
+linear algebra accepts ragged/nonfinite matrices, and URL query updates can write
+after fragments. Narrow actual map geometry and calibration data, preserve valid
+affine/projective transforms and session codecs, share equivalent style/stub/
+compaction/query helpers, and reconstruct the normalized config/public contract.
+
+Advanced Vacuum config and helpers now pass strict checking and typed lint.
+Checked map point/rectangle/room types narrow raw geometry, calibration and
+selection records. Missing coordinates remain absent, valid zero coordinates
+are retained, ragged/nonfinite/singular systems cannot calibrate, and geometry
+overflow yields finite fallback values. A regression found nested rectangle
+collections classified as point tuples; distinguish them so room outlines remain
+visible. Nested label/icon fields normalize to strings. Session codecs keep
+valid identifiers and zones; missing encoded coordinates are rejected. Equivalent
+shared style/stub/compaction/query helpers replace duplicates, including the
+unused legacy style-tree export/import. Public config derives from source.
+
+Seven new unit cases cover geometry, affine/projective/inverse transforms,
+invalid systems, session/URL codecs, map selections and config/editor styles.
+9,200 valid geometry/calibration/session/selection/style/config outputs match
+main; nested rectangle classification deliberately changes to restore missing
+rooms. All 738 unit tests and three targeted real room-mode browser cases pass;
+full local browser suite: 290 passed, one existing platform skip. Remaining
+unchecked modules: 48 (views/editors). Shared handwritten utility/i18n runtime
+also remains pending. Hold 3.0.0-alpha.1 until the full migration is complete.

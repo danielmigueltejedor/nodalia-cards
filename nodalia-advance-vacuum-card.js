@@ -255,6 +255,99 @@
   var escapeHtml = utils.escapeHtml.bind(utils);
   var fireEvent = utils.fireEvent.bind(utils);
 
+  // src/shared/numeric-values.ts
+  function parseFiniteNumericValue(value) {
+    if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
+  // src/shared/control-config.ts
+  function normalizeControlStyles(candidate, defaults, sanitize = window.NodaliaUtils.sanitizeCssValue) {
+    const utils2 = window.NodaliaUtils;
+    const source = utils2.isObject(candidate) ? candidate : {};
+    const result = {};
+    for (const [key, fallback] of Object.entries(defaults)) {
+      if (utils2.isUnsafeConfigPathKey(key)) continue;
+      result[key] = typeof fallback === "string" ? sanitize(source[key], fallback) : normalizeControlStyles(source[key], fallback, sanitize);
+    }
+    return result;
+  }
+  var actionFields = (prefix, fallback, navigationKey = `${prefix}_navigation_path`) => ({
+    actionKey: `${prefix}_action`,
+    serviceKey: `${prefix}_service`,
+    serviceDataKey: `${prefix}_service_data`,
+    serviceTargetKey: `${prefix}_service_target`,
+    urlKey: `${prefix}_url`,
+    navigationKey,
+    newTabKey: `${prefix}_new_tab`,
+    fallback
+  });
+  var FIELDS = [
+    actionFields("tap", "toggle", "navigation_path"),
+    actionFields("icon_tap", "", "icon_navigation_path"),
+    actionFields("hold", "more-info", "hold_navigation_path"),
+    actionFields("icon_hold", ""),
+    actionFields("double_tap", "none"),
+    actionFields("icon_double_tap", "")
+  ];
+
+  // src/shared/url-query.ts
+  function appendUrlQueryParam(url, key, value, replaceExisting = false) {
+    const rawUrl = String(url || "").trim();
+    if (!rawUrl || value === null || value === void 0 || value === "") {
+      return rawUrl;
+    }
+    const fragmentIndex = rawUrl.indexOf("#");
+    const base = fragmentIndex < 0 ? rawUrl : rawUrl.slice(0, fragmentIndex);
+    const fragment = fragmentIndex < 0 ? "" : rawUrl.slice(fragmentIndex);
+    const encodedKey = encodeURIComponent(String(key));
+    const encodedValue = encodeURIComponent(String(value));
+    const escapedKey = encodedKey.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const existingPattern = new RegExp(`([?&])${escapedKey}=[^&]*`);
+    if (replaceExisting && existingPattern.test(base)) {
+      return base.replace(existingPattern, `$1${encodedKey}=${encodedValue}`) + fragment;
+    }
+    return `${base}${base.includes("?") ? "&" : "?"}${encodedKey}=${encodedValue}${fragment}`;
+  }
+
+  // src/shared/config-values.ts
+  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var unsafeKeys = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
+  function compactConfig(value, preserveEmptyKeys = []) {
+    if (Array.isArray(value)) return value.map((item) => compactConfig(item, preserveEmptyKeys)).filter((item) => item !== void 0);
+    if (isRecord(value)) {
+      const result = {};
+      for (const [key, item] of Object.entries(value)) {
+        if (unsafeKeys.has(key)) continue;
+        if (item === "" && preserveEmptyKeys.includes(key)) {
+          result[key] = "";
+          continue;
+        }
+        const cleaned = compactConfig(item, preserveEmptyKeys);
+        if (cleaned !== void 0 && !(isRecord(cleaned) && Object.keys(cleaned).length === 0)) result[key] = cleaned;
+      }
+      return result;
+    }
+    return value === "" || value === null || value === void 0 ? void 0 : value;
+  }
+
+  // src/shared/editor-entity-helpers.ts
+  function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
+    return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
+  }
+  function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
+    const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
+    if (!entityId) return config;
+    config.entity = entityId;
+    config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
+    return config;
+  }
+  function parseSizeToPixels(value, fallback = 0) {
+    const numeric = Number.parseFloat(String(value ?? ""));
+    return Number.isFinite(numeric) ? numeric : fallback;
+  }
+
   // src/cards/advance-vacuum/advance-vacuum-defaults.ts
   var DEFAULT_CONFIG = {
     entity: "",
@@ -372,8 +465,10 @@
   };
 
   // src/cards/advance-vacuum/advance-vacuum-helpers.ts
+  var record = (value) => isObject(value) ? value : {};
+  var finitePoint = (value) => value !== null;
   function listVacuumObjectIds(states = {}) {
-    return Object.keys(states || {}).filter((id) => id.startsWith("vacuum.")).map((id) => normalizeTextKey(id.split(".").slice(1).join("_"))).filter(Boolean);
+    return Object.keys(isObject(states) ? states : {}).filter((id) => id.startsWith("vacuum.")).map((id) => normalizeTextKey(id.split(".").slice(1).join("_"))).filter(Boolean);
   }
   function isHelperRelatedToConfiguredVacuum({
     candidateId,
@@ -395,55 +490,19 @@
     const claimedByLongerSibling = (vacuumObjectIds || []).some((siblingId) => siblingId && siblingId !== objectId && siblingId.length > objectId.length && siblingId.includes(objectId) && haystack.includes(siblingId));
     return !claimedByLongerSibling;
   }
-  function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
-    return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
-  }
-  function applyStubEntity(config, hass, domains, entities = [], entitiesFallback = []) {
-    const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
-    if (!entityId) {
-      return config;
-    }
-    config.entity = entityId;
-    config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
-    return config;
-  }
-  function compactConfig(value) {
-    if (Array.isArray(value)) {
-      return value.map((item) => compactConfig(item)).filter((item) => item !== void 0);
-    }
-    if (isObject(value)) {
-      const compacted = {};
-      Object.entries(value).forEach(([key, item]) => {
-        if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
-          return;
-        }
-        const cleaned = compactConfig(item);
-        const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
-        if (cleaned !== void 0 && !isEmptyObject) {
-          compacted[key] = cleaned;
-        }
-      });
-      return compacted;
-    }
-    if (value === "" || value === null || value === void 0) {
-      return void 0;
-    }
-    return value;
-  }
   function getByPath(target, path) {
-    return path.split(".").reduce((cursor, key) => cursor === void 0 || cursor === null ? void 0 : cursor[key], target);
-  }
-  function parseSizeToPixels(value, fallback = 0) {
-    const numeric = Number.parseFloat(String(value ?? ""));
-    return Number.isFinite(numeric) ? numeric : fallback;
+    if (path.split(".").some((key) => window.NodaliaUtils.isUnsafeConfigPathKey(key))) return void 0;
+    return path.split(".").reduce((cursor, key) => {
+      if (Array.isArray(cursor)) return /^\d+$/.test(key) && Object.prototype.hasOwnProperty.call(cursor, key) ? cursor[Number(key)] : void 0;
+      return isObject(cursor) && Object.prototype.hasOwnProperty.call(cursor, key) ? cursor[key] : void 0;
+    }, target);
   }
   function isUnavailableState(state) {
     const key = normalizeTextKey(state?.state);
     return ["unavailable", "unknown", "none"].includes(key);
   }
   function parseNumber(value) {
-    const numeric = Number(String(value ?? "").replace(",", "."));
-    return Number.isFinite(numeric) ? numeric : null;
+    return parseFiniteNumericValue(typeof value === "string" ? value.replace(",", ".") : value);
   }
   function sanitizeCssValue(value, fallback) {
     const raw = String(value ?? "").trim();
@@ -451,47 +510,24 @@
     if (!raw) {
       return safeFallback;
     }
-    if (/[\u0000-\u001f\u007f<>;"'{}]/.test(raw) || raw.includes("/*") || raw.includes("*/")) {
+    if (/[<>;"'{}]/.test(raw) || [...raw].some((character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127) || raw.includes("/*") || raw.includes("*/")) {
       return safeFallback;
     }
     return raw;
   }
-  function sanitizeStyleTree(candidate, fallback) {
-    if (Array.isArray(fallback)) {
-      return deepClone(fallback);
-    }
-    if (isObject(fallback)) {
-      const out = {};
-      Object.keys(fallback).forEach((key) => {
-        const nextCandidate = isObject(candidate) ? candidate[key] : void 0;
-        out[key] = sanitizeStyleTree(nextCandidate, fallback[key]);
-      });
-      return out;
-    }
-    if (typeof fallback === "string") {
-      return sanitizeCssValue(candidate, fallback);
-    }
-    if (typeof fallback === "number") {
-      return Number.isFinite(Number(candidate)) ? Number(candidate) : fallback;
-    }
-    if (typeof fallback === "boolean") {
-      return typeof candidate === "boolean" ? candidate : fallback;
-    }
-    return candidate === void 0 ? deepClone(fallback) : candidate;
-  }
   function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
-    return sanitizeStyleTree(styles, DEFAULT_CONFIG.styles);
+    return normalizeControlStyles(styles, DEFAULT_CONFIG.styles, sanitizeCssValue);
   }
   function parsePoint(value) {
     if (Array.isArray(value) && value.length >= 2) {
-      const x = Number(value[0]);
-      const y = Number(value[1]);
-      return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : null;
+      const x = parseFiniteNumericValue(value[0]);
+      const y = parseFiniteNumericValue(value[1]);
+      return x !== null && y !== null ? { x, y } : null;
     }
     if (isObject(value)) {
-      const x = Number(value.x);
-      const y = Number(value.y);
-      return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : null;
+      const x = parseFiniteNumericValue(value.x);
+      const y = parseFiniteNumericValue(value.y);
+      return x !== null && y !== null ? { x, y } : null;
     }
     return null;
   }
@@ -499,6 +535,7 @@
     if (Array.isArray(value)) {
       if (value.length >= 4 && value.slice(0, 4).every(isFiniteScalar)) {
         const [rawX12, rawY12, rawX22, rawY22] = value.slice(0, 4).map(Number);
+        if (rawX12 === void 0 || rawY12 === void 0 || rawX22 === void 0 || rawY22 === void 0) return null;
         if (rawX12 === rawX22 || rawY12 === rawY22) {
           return null;
         }
@@ -541,15 +578,17 @@
     let y2Candidate = value.y2 ?? value.bottom ?? value.max_y ?? value.end_y;
     const width = parseNumber(value.width ?? value.w);
     const height = parseNumber(value.height ?? value.h);
-    if ((x2Candidate === void 0 || y2Candidate === void 0) && Number.isFinite(width) && Number.isFinite(height)) {
-      x2Candidate = Number(x1Candidate) + width;
-      y2Candidate = Number(y1Candidate) + height;
+    if ((x2Candidate === void 0 || y2Candidate === void 0) && width !== null && height !== null) {
+      const startX = parseFiniteNumericValue(x1Candidate), startY = parseFiniteNumericValue(y1Candidate);
+      if (startX === null || startY === null) return null;
+      x2Candidate = startX + width;
+      y2Candidate = startY + height;
     }
-    const rawX1 = Number(x1Candidate);
-    const rawY1 = Number(y1Candidate);
-    const rawX2 = Number(x2Candidate);
-    const rawY2 = Number(y2Candidate);
-    if (![rawX1, rawY1, rawX2, rawY2].every(Number.isFinite)) {
+    const rawX1 = parseFiniteNumericValue(x1Candidate);
+    const rawY1 = parseFiniteNumericValue(y1Candidate);
+    const rawX2 = parseFiniteNumericValue(x2Candidate);
+    const rawY2 = parseFiniteNumericValue(y2Candidate);
+    if (rawX1 === null || rawY1 === null || rawX2 === null || rawY2 === null) {
       return null;
     }
     if (rawX1 === rawX2 || rawY1 === rawY2) {
@@ -563,17 +602,7 @@
     };
   }
   function appendQueryParam(url, key, value) {
-    const rawUrl = String(url || "").trim();
-    if (!rawUrl || value === null || value === void 0 || value === "") {
-      return rawUrl;
-    }
-    const encodedKey = encodeURIComponent(String(key));
-    const encodedValue = encodeURIComponent(String(value));
-    const existingPattern = new RegExp(`([?&])${encodedKey}=[^&]*`);
-    if (existingPattern.test(rawUrl)) {
-      return rawUrl.replace(existingPattern, `$1${encodedKey}=${encodedValue}`);
-    }
-    return `${rawUrl}${rawUrl.includes("?") ? "&" : "?"}${encodedKey}=${encodedValue}`;
+    return appendUrlQueryParam(url, key, value, true);
   }
   function stripMapCacheBuster(raw) {
     const s = String(raw || "").trim();
@@ -594,12 +623,12 @@
     if (!isObject(value)) {
       return [];
     }
-    const hasLegacyBounds = [value.x0, value.y0, value.x1, value.y1].every((item) => Number.isFinite(Number(item)));
-    const x1 = Number(hasLegacyBounds ? value.x0 : value.x1 ?? value.left ?? value.min_x ?? value.start_x);
-    const y1 = Number(hasLegacyBounds ? value.y0 : value.y1 ?? value.top ?? value.min_y ?? value.start_y);
-    const x2 = Number(hasLegacyBounds ? value.x1 : value.x2 ?? value.right ?? value.max_x ?? value.end_x);
-    const y2 = Number(hasLegacyBounds ? value.y1 : value.y2 ?? value.bottom ?? value.max_y ?? value.end_y);
-    if (![x1, y1, x2, y2].every(Number.isFinite)) {
+    const hasLegacyBounds = [value.x0, value.y0, value.x1, value.y1].every(isFiniteScalar);
+    const x1 = parseFiniteNumericValue(hasLegacyBounds ? value.x0 : value.x1 ?? value.left ?? value.min_x ?? value.start_x);
+    const y1 = parseFiniteNumericValue(hasLegacyBounds ? value.y0 : value.y1 ?? value.top ?? value.min_y ?? value.start_y);
+    const x2 = parseFiniteNumericValue(hasLegacyBounds ? value.x1 : value.x2 ?? value.right ?? value.max_x ?? value.end_x);
+    const y2 = parseFiniteNumericValue(hasLegacyBounds ? value.y1 : value.y2 ?? value.bottom ?? value.max_y ?? value.end_y);
+    if (x1 === null || y1 === null || x2 === null || y2 === null) {
       return [];
     }
     return [
@@ -609,11 +638,17 @@
       { x: x1, y: y2 }
     ];
   }
+  function parseOutline(value) {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+    return value.map((point) => parsePoint(point)).filter(finitePoint);
+  }
   function isFiniteScalar(value) {
-    return Number.isFinite(Number(value));
+    return parseFiniteNumericValue(value) !== null;
   }
   function isPointLike(value) {
-    return Boolean(parsePoint(value));
+    return (!Array.isArray(value) || value.length === 2) && Boolean(parsePoint(value));
   }
   function isRectangleOutline(value) {
     return Array.isArray(value) && value.length === 4 && value.every(isFiniteScalar);
@@ -633,6 +668,7 @@
     }
     if (isRectangleOutline(value)) {
       const [x1, y1, x2, y2] = value.map(Number);
+      if (x1 === void 0 || y1 === void 0 || x2 === void 0 || y2 === void 0) return [];
       return [
         { x: x1, y: y1 },
         { x: x2, y: y1 },
@@ -640,7 +676,7 @@
         { x: x1, y: y2 }
       ];
     }
-    const scalarPolygon = value.every(isFiniteScalar);
+    const scalarPolygon = Array.from(value).every(isFiniteScalar);
     if (scalarPolygon && value.length >= 6 && value.length % 2 === 0) {
       const points = [];
       for (let index = 0; index < value.length; index += 2) {
@@ -651,7 +687,7 @@
       }
       return points;
     }
-    return value.map((point) => parsePoint(point)).filter(Boolean);
+    return value.map((point) => parsePoint(point)).filter(finitePoint);
   }
   function parseOutlines(value) {
     if (!Array.isArray(value) || !value.length) {
@@ -670,7 +706,7 @@
     return polygon.length >= 3 ? [polygon] : [];
   }
   function flattenPolygons(polygons) {
-    return arrayFromMaybe(polygons).flatMap((polygon) => arrayFromMaybe(polygon));
+    return arrayFromMaybe(polygons).flatMap((polygon) => parseOutline(polygon));
   }
   function pickShapeSource(...sources) {
     return sources.find((source) => {
@@ -680,7 +716,8 @@
       return isObject(source);
     });
   }
-  function centroid(points) {
+  function centroid(raw) {
+    const points = parseOutline(raw);
     if (!Array.isArray(points) || !points.length) {
       return { x: 0, y: 0 };
     }
@@ -688,12 +725,10 @@
       x: acc.x + point.x,
       y: acc.y + point.y
     }), { x: 0, y: 0 });
-    return {
-      x: sum.x / points.length,
-      y: sum.y / points.length
-    };
+    return Number.isFinite(sum.x) && Number.isFinite(sum.y) ? { x: sum.x / points.length, y: sum.y / points.length } : { x: 0, y: 0 };
   }
-  function polygonArea(points) {
+  function polygonArea(raw) {
+    const points = parseOutline(raw);
     if (!Array.isArray(points) || points.length < 3) {
       return 0;
     }
@@ -701,11 +736,13 @@
     for (let index = 0; index < points.length; index += 1) {
       const current = points[index];
       const next = points[(index + 1) % points.length];
+      if (!current || !next) return 0;
       area += current.x * next.y - next.x * current.y;
     }
-    return Math.abs(area) / 2;
+    return Number.isFinite(area) ? Math.abs(area) / 2 : 0;
   }
-  function polygonBounds(points) {
+  function polygonBounds(raw) {
+    const points = parseOutline(raw);
     if (!Array.isArray(points) || !points.length) {
       return {
         minX: 0,
@@ -729,11 +766,13 @@
     });
     return {
       ...bounds,
-      width: Math.max(0, bounds.maxX - bounds.minX),
-      height: Math.max(0, bounds.maxY - bounds.minY)
+      width: Number.isFinite(bounds.maxX - bounds.minX) ? Math.max(0, bounds.maxX - bounds.minX) : 0,
+      height: Number.isFinite(bounds.maxY - bounds.minY) ? Math.max(0, bounds.maxY - bounds.minY) : 0
     };
   }
-  function pointInPolygon(point, polygon) {
+  function pointInPolygon(rawPoint, rawPolygon) {
+    const point = parsePoint(rawPoint);
+    const polygon = parseOutline(rawPolygon);
     if (!point || !Array.isArray(polygon) || polygon.length < 3) {
       return false;
     }
@@ -741,6 +780,7 @@
     for (let index = 0, previous = polygon.length - 1; index < polygon.length; previous = index, index += 1) {
       const currentPoint = polygon[index];
       const previousPoint = polygon[previous];
+      if (!currentPoint || !previousPoint) return false;
       const minX = Math.min(currentPoint.x, previousPoint.x);
       const maxX = Math.max(currentPoint.x, previousPoint.x);
       const minY = Math.min(currentPoint.y, previousPoint.y);
@@ -756,13 +796,18 @@
     }
     return inside;
   }
-  function rectIntersectionArea(firstRect, secondRect) {
+  function rectIntersectionArea(rawFirst, rawSecond) {
+    const firstRect = record(rawFirst), secondRect = record(rawSecond);
+    const first = [firstRect.left, firstRect.right, firstRect.top, firstRect.bottom].map(parseFiniteNumericValue);
+    const second = [secondRect.left, secondRect.right, secondRect.top, secondRect.bottom].map(parseFiniteNumericValue);
+    const [fl, fr, ft, fb] = first, [sl, sr, st, sb] = second;
+    if (fl == null || fr == null || ft == null || fb == null || sl == null || sr == null || st == null || sb == null) return 0;
     if (!firstRect || !secondRect) {
       return 0;
     }
-    const width = Math.max(0, Math.min(firstRect.right, secondRect.right) - Math.max(firstRect.left, secondRect.left));
-    const height = Math.max(0, Math.min(firstRect.bottom, secondRect.bottom) - Math.max(firstRect.top, secondRect.top));
-    return width * height;
+    const width = Math.max(0, Math.min(fr, sr) - Math.max(fl, sl));
+    const height = Math.max(0, Math.min(fb, sb) - Math.max(ft, st));
+    return Number.isFinite(width * height) ? width * height : 0;
   }
   function arrayFromMaybe(value) {
     return Array.isArray(value) ? value : [];
@@ -780,13 +825,13 @@
     }).filter(Boolean);
   }
   function encodeSharedSessionZones(zones = []) {
-    return arrayFromMaybe(zones).map((zone) => parseZoneRect(zone)).filter(Boolean).map((zone) => `${Math.round(zone.x1)}:${Math.round(zone.y1)}:${Math.round(zone.x2)}:${Math.round(zone.y2)}`).join(";");
+    return arrayFromMaybe(zones).map((zone) => parseZoneRect(zone)).filter((zone) => zone !== null).map((zone) => `${Math.round(zone.x1)}:${Math.round(zone.y1)}:${Math.round(zone.x2)}:${Math.round(zone.y2)}`).join(";");
   }
   function decodeSharedSessionZones(value = "") {
-    return String(value || "").split(";").map((item) => item.trim()).filter(Boolean).map((item) => parseZoneRect(item.split(":").map((part) => Number(part)))).filter(Boolean);
+    return String(value || "").split(";").map((item) => item.trim()).filter(Boolean).map((item) => parseZoneRect(item.split(":"))).filter(Boolean);
   }
   function sortByOrder(items) {
-    return [...items].sort((left, right) => Number(left.order || 0) - Number(right.order || 0));
+    return [...items].sort((left, right) => (parseFiniteNumericValue(left.order) ?? 0) - (parseFiniteNumericValue(right.order) ?? 0));
   }
   function humanizeModeLabel(value, kind = "generic", hass = null, configLang = null) {
     if (window.NodaliaI18n?.translateAdvanceVacuumVacuumMode) {
@@ -801,9 +846,8 @@
     if (key === "off" && kind === "suction") {
       return "Off";
     }
-    if (VACUUM_MODE_LABELS[key]) {
-      return VACUUM_MODE_LABELS[key];
-    }
+    const label = Object.entries(VACUUM_MODE_LABELS).find(([name]) => name === key)?.[1];
+    if (label) return label;
     return raw.replaceAll("_", " ").replace(/\bplus\b/gi, "+").replace(/\b\w/g, (match) => match.toUpperCase());
   }
   function humanizeSelectOptionLabel(value, kind = "generic", hass = null, configLang = null) {
@@ -828,8 +872,8 @@
   }
   function normalizeRoutineItems(items) {
     return sortByOrder(
-      arrayFromMaybe(items).map((item) => typeof item === "string" ? { entity: item } : item).filter((item) => typeof item === "string" || isObject(item)).map((item) => ({
-        order: Number(item.order || 0),
+      arrayFromMaybe(items).map((item) => typeof item === "string" ? { entity: item } : item).filter(isObject).map((item) => ({
+        order: parseFiniteNumericValue(item.order) ?? 0,
         label: String(item.label || item.name || "").trim(),
         icon: String(item.icon || "").trim(),
         entity: String(item.entity || item.entity_id || "").trim(),
@@ -841,82 +885,93 @@
       })).filter((item) => item.entity || item.service || item.tap_action)
     );
   }
-  function solveLinearSystem(matrix, vector) {
-    const size = matrix.length;
-    const augmented = matrix.map((row, index) => [...row, vector[index]]);
+  var finiteNumberArray = (value) => Array.isArray(value) && Array.from(value).every((item) => typeof item === "number" && Number.isFinite(item));
+  function solveLinearSystem(rawMatrix, rawVector) {
+    if (!Array.isArray(rawMatrix) || !rawMatrix.every(finiteNumberArray) || !finiteNumberArray(rawVector)) return null;
+    const size = rawMatrix.length;
+    if (!size || size > 64 || rawVector.length !== size || rawMatrix.some((row) => row.length !== size)) return null;
+    const augmented = rawMatrix.map((row, index) => [...row, rawVector[index]]);
     for (let column = 0; column < size; column += 1) {
       let pivotRow = column;
-      let pivotValue = Math.abs(augmented[column][column]);
+      const initial = augmented[column]?.[column];
+      if (initial === void 0) return null;
+      let pivotValue = Math.abs(initial);
       for (let row = column + 1; row < size; row += 1) {
-        const candidate = Math.abs(augmented[row][column]);
+        const value = augmented[row]?.[column];
+        if (value === void 0) return null;
+        const candidate = Math.abs(value);
         if (candidate > pivotValue) {
           pivotValue = candidate;
           pivotRow = row;
         }
       }
-      if (pivotValue < 1e-10) {
-        return null;
-      }
+      if (!Number.isFinite(pivotValue) || pivotValue < 1e-10) return null;
+      const pivot = augmented[pivotRow], displaced = augmented[column];
+      if (!pivot || !displaced) return null;
       if (pivotRow !== column) {
-        const tmp = augmented[column];
-        augmented[column] = augmented[pivotRow];
-        augmented[pivotRow] = tmp;
+        augmented[column] = pivot;
+        augmented[pivotRow] = displaced;
       }
-      const divisor = augmented[column][column];
+      const divisor = pivot[column];
+      if (divisor === void 0) return null;
       for (let k = column; k <= size; k += 1) {
-        augmented[column][k] /= divisor;
+        const value = pivot[k];
+        if (value === void 0) return null;
+        pivot[k] = value / divisor;
       }
       for (let row = 0; row < size; row += 1) {
-        if (row === column) {
-          continue;
-        }
-        const factor = augmented[row][column];
+        if (row === column) continue;
+        const target = augmented[row];
+        const factor = target?.[column];
+        if (!target || factor === void 0) return null;
         for (let k = column; k <= size; k += 1) {
-          augmented[row][k] -= factor * augmented[column][k];
+          const value = target[k], pivotEntry = pivot[k];
+          if (value === void 0 || pivotEntry === void 0) return null;
+          target[k] = value - factor * pivotEntry;
         }
       }
     }
-    return augmented.map((row) => row[size]);
+    const result = augmented.map((row) => row[size]);
+    return finiteNumberArray(result) ? result : null;
   }
   function applyHomography(matrix, x, y) {
-    const denominator = matrix[6] * x + matrix[7] * y + matrix[8];
-    if (Math.abs(denominator) < 1e-10) {
-      return { x, y };
-    }
-    return {
-      x: (matrix[0] * x + matrix[1] * y + matrix[2]) / denominator,
-      y: (matrix[3] * x + matrix[4] * y + matrix[5]) / denominator
-    };
+    if (!finiteNumberArray(matrix) || matrix.length !== 9) return { x, y };
+    const [a, b, c, d, e, f, g, h, i] = matrix;
+    if (a === void 0 || b === void 0 || c === void 0 || d === void 0 || e === void 0 || f === void 0 || g === void 0 || h === void 0 || i === void 0) return { x, y };
+    const denominator = g * x + h * y + i;
+    if (!Number.isFinite(denominator) || Math.abs(denominator) < 1e-10) return { x, y };
+    const result = { x: (a * x + b * y + c) / denominator, y: (d * x + e * y + f) / denominator };
+    return Number.isFinite(result.x) && Number.isFinite(result.y) ? result : { x, y };
   }
-  function createAffineMatrix(fromPoints, toPoints) {
-    const matrix = [];
-    const vector = [];
+  function createAffineMatrix(rawFrom, rawTo) {
+    const fromPoints = parseOutline(rawFrom), toPoints = parseOutline(rawTo);
+    if (!Array.isArray(rawFrom) || !Array.isArray(rawTo) || fromPoints.length !== rawFrom.length || toPoints.length !== rawTo.length) return null;
+    const matrix = [], vector = [];
     for (let index = 0; index < 3; index += 1) {
-      const from = fromPoints[index];
-      const to = toPoints[index];
-      matrix.push([from.x, from.y, 1, 0, 0, 0]);
-      matrix.push([0, 0, 0, from.x, from.y, 1]);
-      vector.push(to.x);
-      vector.push(to.y);
+      const from = fromPoints[index], to = toPoints[index];
+      if (!from || !to) return null;
+      matrix.push([from.x, from.y, 1, 0, 0, 0], [0, 0, 0, from.x, from.y, 1]);
+      vector.push(to.x, to.y);
     }
     return solveLinearSystem(matrix, vector);
   }
   function applyAffineMatrix(matrix, x, y) {
-    return {
-      x: matrix[0] * x + matrix[1] * y + matrix[2],
-      y: matrix[3] * x + matrix[4] * y + matrix[5]
-    };
+    if (!finiteNumberArray(matrix) || matrix.length !== 6) return { x, y };
+    const [a, b, c, d, e, f] = matrix;
+    if (a === void 0 || b === void 0 || c === void 0 || d === void 0 || e === void 0 || f === void 0) return { x, y };
+    const result = { x: a * x + b * y + c, y: d * x + e * y + f };
+    return Number.isFinite(result.x) && Number.isFinite(result.y) ? result : { x, y };
   }
-  function createHomographyMatrix(fromPoints, toPoints) {
-    const matrix = [];
-    const vector = [];
+  function createHomographyMatrix(rawFrom, rawTo) {
+    const fromPoints = parseOutline(rawFrom), toPoints = parseOutline(rawTo);
+    if (!Array.isArray(rawFrom) || !Array.isArray(rawTo) || fromPoints.length !== rawFrom.length || toPoints.length !== rawTo.length) return null;
+    const matrix = [], vector = [];
     for (let index = 0; index < 4; index += 1) {
-      const from = fromPoints[index];
-      const to = toPoints[index];
-      matrix.push([from.x, from.y, 1, 0, 0, 0, -(to.x * from.x), -(to.x * from.y)]);
-      matrix.push([0, 0, 0, from.x, from.y, 1, -(to.y * from.x), -(to.y * from.y)]);
-      vector.push(to.x);
-      vector.push(to.y);
+      const from = fromPoints[index], to = toPoints[index];
+      if (!from || !to) return null;
+      matrix.push([from.x, from.y, 1, 0, 0, 0, -to.x * from.x, -to.x * from.y]);
+      matrix.push([0, 0, 0, from.x, from.y, 1, -to.y * from.x, -to.y * from.y]);
+      vector.push(to.x, to.y);
     }
     const solved = solveLinearSystem(matrix, vector);
     return solved ? [...solved, 1] : null;
@@ -927,10 +982,15 @@
       this.mode = "";
       this.vacuumToMapMatrix = null;
       this.mapToVacuumMatrix = null;
-      const points = arrayFromMaybe(calibrationPoints).map((point) => ({
+      this.calibrated = false;
+      this.mode = "";
+      this.vacuumToMapMatrix = null;
+      this.mapToVacuumMatrix = null;
+      const points = arrayFromMaybe(calibrationPoints).filter(isObject).map((point) => ({
         map: parsePoint(point?.map),
         vacuum: parsePoint(point?.vacuum)
-      })).filter((point) => point.map && point.vacuum);
+      })).filter((point) => point.map !== null && point.vacuum !== null);
+      if (points.length !== arrayFromMaybe(calibrationPoints).length) return;
       if (points.length === 3) {
         const vacuumPoints = points.map((point) => point.vacuum);
         const mapPoints = points.map((point) => point.map);
@@ -976,32 +1036,35 @@
       return applyHomography(this.mapToVacuumMatrix, x, y);
     }
   };
-  function parseCalibrationPoints(config, hass) {
-    const directPoints = arrayFromMaybe(config?.calibration_source?.calibration_points);
+  function parseCalibrationPoints(raw, hass) {
+    const config = record(raw);
+    const calibration = record(config.calibration_source);
+    const directPoints = arrayFromMaybe(calibration.calibration_points);
     if (directPoints.length) {
       return directPoints;
     }
-    const calibrationEntityId = config?.calibration_source?.entity;
+    const calibrationEntityId = String(calibration.entity || "");
     if (calibrationEntityId && hass?.states?.[calibrationEntityId]?.attributes?.calibration_points) {
-      return hass.states[calibrationEntityId].attributes.calibration_points;
+      return arrayFromMaybe(hass.states[calibrationEntityId]?.attributes.calibration_points);
     }
-    if (config?.calibration_source?.camera === true) {
-      const mapEntityId = config?.map_source?.camera || config?.map_camera || "";
-      return hass?.states?.[mapEntityId]?.attributes?.calibration_points || [];
+    if (calibration.camera === true) {
+      const mapEntityId = String(record(config.map_source).camera || config.map_camera || "");
+      return arrayFromMaybe(hass?.states?.[mapEntityId]?.attributes?.calibration_points);
     }
     return [];
   }
-  function resolveLegacyMode(config, templateName) {
-    return arrayFromMaybe(config?.map_modes).find((mode) => normalizeTextKey(mode?.template) === normalizeTextKey(templateName));
+  function resolveLegacyMode(raw, templateName) {
+    const config = record(raw);
+    return arrayFromMaybe(config?.map_modes).filter(isObject).find((mode) => normalizeTextKey(mode.template) === normalizeTextKey(templateName));
   }
   function resolveRoomsFromVacuumState(hass, entityId) {
     const vacuumState = entityId ? hass?.states?.[entityId] || null : null;
-    const maps = arrayFromMaybe(vacuumState?.attributes?.maps);
+    const maps = arrayFromMaybe(vacuumState?.attributes?.maps).filter(isObject);
     const mapWithRooms = maps.find((map) => isObject(map?.rooms) && Object.keys(map.rooms).length > 0);
     if (!mapWithRooms) {
       return [];
     }
-    return Object.entries(mapWithRooms.rooms).map(([id, label]) => ({
+    return Object.entries(record(mapWithRooms.rooms)).map(([id, label]) => ({
       id: String(id ?? ""),
       label: String(label || id || "").trim(),
       icon: "mdi:broom",
@@ -1018,7 +1081,8 @@
     if (!isObject(rooms) || !Object.keys(rooms).length) {
       return [];
     }
-    return Object.entries(rooms).map(([id, room]) => {
+    return Object.entries(rooms).filter(([, room]) => isObject(room) || Array.isArray(room)).map(([id, rawRoom]) => {
+      const room = record(rawRoom);
       const shapeSource = pickShapeSource(
         room?.outlines,
         room?.outline,
@@ -1027,7 +1091,7 @@
         room?.segments,
         room?.areas,
         room?.polygons,
-        room
+        rawRoom
       );
       const outlines = Array.isArray(shapeSource) ? parseOutlines(shapeSource) : (() => {
         const polygon = parsePolygon(shapeSource);
@@ -1043,14 +1107,15 @@
         icon: "mdi:broom",
         outlines,
         outline,
-        iconPoint: Number.isFinite(centerX) && Number.isFinite(centerY) ? { x: centerX, y: centerY } : fallbackCenter,
-        labelPoint: Number.isFinite(centerX) && Number.isFinite(centerY) ? { x: centerX, y: centerY } : fallbackCenter,
+        iconPoint: centerX !== null && centerY !== null ? { x: centerX, y: centerY } : fallbackCenter,
+        labelPoint: centerX !== null && centerY !== null ? { x: centerX, y: centerY } : fallbackCenter,
         labelOffsetY: 0
       };
     }).filter((room) => room.id);
   }
-  function resolveRoomSegments(config, hass = null, entityId = "", mapEntityId = "") {
-    const directRooms = arrayFromMaybe(config?.room_segments);
+  function resolveRoomSegments(raw, hass = null, entityId = "", mapEntityId = "") {
+    const config = record(raw);
+    const directRooms = arrayFromMaybe(config?.room_segments).filter(isObject);
     if (directRooms.length) {
       return directRooms.map((room) => {
         const outlines = parseOutlines(pickShapeSource(
@@ -1064,18 +1129,18 @@
         ));
         return {
           id: String(room.id ?? ""),
-          label: room.label || room.name || room?.label?.text || "",
-          icon: room.icon || room?.icon?.name || "mdi:broom",
+          label: String(typeof room.label === "string" ? room.label : room.name || record(room.label).text || ""),
+          icon: String(typeof room.icon === "string" ? room.icon : record(room.icon).name || "mdi:broom"),
           outlines,
           outline: flattenPolygons(outlines),
           iconPoint: parsePoint(room.iconPoint || room.icon || room.position),
           labelPoint: parsePoint(room.labelPoint || room.label || room.position),
-          labelOffsetY: Number(room.labelOffsetY ?? room?.label?.offset_y ?? 0) || 0
+          labelOffsetY: parseFiniteNumericValue(room.labelOffsetY ?? record(room.label).offset_y) ?? 0
         };
       }).filter((room) => room.id && room.outlines.length);
     }
     const segmentMode = resolveLegacyMode(config, "vacuum_clean_segment");
-    const legacyRooms = arrayFromMaybe(segmentMode?.predefined_selections).map((selection) => {
+    const legacyRooms = arrayFromMaybe(segmentMode?.predefined_selections).filter(isObject).map((selection) => {
       const outlines = parseOutlines(pickShapeSource(
         selection?.outlines,
         selection?.outline,
@@ -1087,13 +1152,13 @@
       ));
       return {
         id: String(selection.id ?? ""),
-        label: String(selection?.label?.text || selection?.label || selection?.text || selection.id || "").trim(),
-        icon: String(selection?.icon?.name || selection?.icon || "mdi:broom").trim(),
+        label: String(record(selection.label).text || selection?.label || selection?.text || selection.id || "").trim(),
+        icon: String(record(selection.icon).name || selection?.icon || "mdi:broom").trim(),
         outlines,
         outline: flattenPolygons(outlines),
         iconPoint: parsePoint(selection?.icon),
         labelPoint: parsePoint(selection?.label),
-        labelOffsetY: Number(selection?.label?.offset_y ?? 0) || 0
+        labelOffsetY: parseFiniteNumericValue(record(selection.label).offset_y) ?? 0
       };
     }).filter((room) => room.id && room.outlines.length);
     if (legacyRooms.length) {
@@ -1105,50 +1170,53 @@
     }
     return resolveRoomsFromVacuumState(hass, entityId);
   }
-  function resolveGotoPoints(config) {
-    const directPoints = arrayFromMaybe(config?.goto_points);
+  function resolveGotoPoints(raw) {
+    const config = record(raw);
+    const directPoints = arrayFromMaybe(config?.goto_points).filter(isObject);
     if (directPoints.length) {
       return directPoints.map((point) => ({
         id: String(point.id || point.label || point.name || ""),
-        label: point.label || point.name || point?.label?.text || "",
-        icon: point.icon || point?.icon?.name || "mdi:map-marker",
+        label: String(typeof point.label === "string" ? point.label : point.name || record(point.label).text || ""),
+        icon: String(typeof point.icon === "string" ? point.icon : record(point.icon).name || "mdi:map-marker"),
         position: parsePoint(point.position)
       })).filter((point) => point.position);
     }
     const gotoMode = resolveLegacyMode(config, "vacuum_goto_predefined");
-    return arrayFromMaybe(gotoMode?.predefined_selections).map((point) => ({
-      id: String(point.id || point?.label?.text || point?.icon?.name || "goto"),
-      label: String(point?.label?.text || point?.label || "").trim(),
-      icon: String(point?.icon?.name || point?.icon || "mdi:map-marker").trim(),
+    return arrayFromMaybe(gotoMode?.predefined_selections).filter(isObject).map((point) => ({
+      id: String(point.id || record(point.label).text || record(point.icon).name || "goto"),
+      label: String(record(point.label).text || point?.label || "").trim(),
+      icon: String(record(point.icon).name || point?.icon || "mdi:map-marker").trim(),
       position: parsePoint(point.position)
     })).filter((point) => point.position);
   }
-  function resolvePredefinedZones(config) {
-    const directZones = arrayFromMaybe(config?.predefined_zones);
+  function resolvePredefinedZones(raw) {
+    const config = record(raw);
+    const directZones = arrayFromMaybe(config?.predefined_zones).filter(isObject);
     if (directZones.length) {
       return directZones.map((zone) => ({
         id: String(zone.id || zone.label || zone.name || ""),
-        label: zone.label || zone.name || zone?.label?.text || "",
-        icon: zone.icon || zone?.icon?.name || "mdi:vector-rectangle",
-        zones: arrayFromMaybe(zone.zones).map((item) => arrayFromMaybe(item).map(Number)).filter((item) => item.length >= 4),
+        label: String(typeof zone.label === "string" ? zone.label : zone.name || record(zone.label).text || ""),
+        icon: String(typeof zone.icon === "string" ? zone.icon : record(zone.icon).name || "mdi:vector-rectangle"),
+        zones: arrayFromMaybe(zone.zones).map((item) => arrayFromMaybe(item).every(isFiniteScalar) ? arrayFromMaybe(item).map(Number) : []).filter((item) => item.length >= 4),
         position: parsePoint(zone.position || zone.icon || zone.label)
       })).filter((zone) => zone.zones.length);
     }
     const zoneMode = resolveLegacyMode(config, "vacuum_clean_zone_predefined");
-    return arrayFromMaybe(zoneMode?.predefined_selections).map((zone) => ({
-      id: String(zone.id || zone?.label?.text || zone?.icon?.name || "zone"),
-      label: String(zone?.label?.text || zone?.label || "").trim(),
-      icon: String(zone?.icon?.name || zone?.icon || "mdi:vector-rectangle").trim(),
-      zones: arrayFromMaybe(zone.zones).map((item) => arrayFromMaybe(item).map(Number)).filter((item) => item.length >= 4),
+    return arrayFromMaybe(zoneMode?.predefined_selections).filter(isObject).map((zone) => ({
+      id: String(zone.id || record(zone.label).text || record(zone.icon).name || "zone"),
+      label: String(record(zone.label).text || zone?.label || "").trim(),
+      icon: String(record(zone.icon).name || zone?.icon || "mdi:vector-rectangle").trim(),
+      zones: arrayFromMaybe(zone.zones).map((item) => arrayFromMaybe(item).every(isFiniteScalar) ? arrayFromMaybe(item).map(Number) : []).filter((item) => item.length >= 4),
       position: parsePoint(zone?.icon || zone?.label)
     })).filter((zone) => zone.zones.length);
   }
-  function resolveHeaderIcons(config) {
-    return sortByOrder(arrayFromMaybe(config?.icons)).map((item, index) => ({
+  function resolveHeaderIcons(raw) {
+    const config = record(raw);
+    return sortByOrder(arrayFromMaybe(config?.icons).filter(isObject)).map((item, index) => ({
       id: String(item.id || item.icon_id || index),
       icon: String(item.icon || "mdi:gesture-tap-button").trim(),
       tooltip: String(item.tooltip || item.label || "").trim(),
-      order: Number(item.order || index),
+      order: parseFiniteNumericValue(item.order) || index,
       tap_action: isObject(item.tap_action) ? item.tap_action : {}
     }));
   }
@@ -1159,28 +1227,35 @@
     name: "Roborock Qrevo S",
     vacuum_platform: "auto"
   };
-  function normalizeConfig(rawConfig) {
+  function normalizeConfig(rawConfig = {}) {
     const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-    config.custom_menu = mergeConfig(DEFAULT_CONFIG.custom_menu, config.custom_menu || {});
-    config.room_tracking = mergeConfig(DEFAULT_CONFIG.room_tracking, config.room_tracking || {});
-    config.room_tracking.entity = String(config.room_tracking.entity ?? "").trim();
-    config.room_tracking.attribute = String(config.room_tracking.attribute ?? "").trim();
-    config.room_tracking.activity_entity = String(config.room_tracking.activity_entity ?? "").trim();
-    config.room_tracking.auto_detect = config.room_tracking.auto_detect !== false;
-    config.vacuum_platform = String(config.vacuum_platform || "auto").trim() || "auto";
-    config.vacuum_mqtt_topic = String(config.vacuum_mqtt_topic ?? "").trim().replace(/\/+$/, "");
-    config.custom_menu.items = normalizeCustomMenuItems(config.custom_menu.items);
-    config.routines = normalizeRoutineItems(config.routines);
-    config.shared_cleaning_session_webhook = String(config.shared_cleaning_session_webhook ?? "").trim();
-    config.security = {
-      ...DEFAULT_CONFIG.security,
-      ...isObject(config.security) ? config.security : {}
+    const menu = mergeConfig(DEFAULT_CONFIG.custom_menu, config.custom_menu || {});
+    const tracking = mergeConfig(DEFAULT_CONFIG.room_tracking, config.room_tracking || {});
+    const room_tracking = {
+      ...tracking,
+      entity: String(tracking.entity ?? "").trim(),
+      attribute: String(tracking.attribute ?? "").trim(),
+      activity_entity: String(tracking.activity_entity ?? "").trim(),
+      auto_detect: tracking.auto_detect !== false
     };
-    if (config.security.allow_webhooks_for_non_admin === void 0) {
-      config.security.allow_webhooks_for_non_admin = DEFAULT_CONFIG.security.allow_webhooks_for_non_admin;
-    }
-    config.security.allow_webhooks_for_non_admin = config.security.allow_webhooks_for_non_admin === true;
-    return config;
+    const custom_menu = { ...menu, items: normalizeCustomMenuItems(menu.items) };
+    const security = {
+      ...DEFAULT_CONFIG.security,
+      ...isObject(config.security) ? config.security : {},
+      allow_webhooks_for_non_admin: config.security && isObject(config.security) ? config.security.allow_webhooks_for_non_admin === true : DEFAULT_CONFIG.security.allow_webhooks_for_non_admin
+    };
+    return {
+      ...config,
+      entity: String(config.entity ?? "").trim(),
+      name: String(config.name ?? "").trim(),
+      custom_menu,
+      room_tracking,
+      security,
+      vacuum_platform: String(config.vacuum_platform || "auto").trim() || "auto",
+      vacuum_mqtt_topic: String(config.vacuum_mqtt_topic ?? "").trim().replace(/\/+$/, ""),
+      routines: normalizeRoutineItems(config.routines),
+      shared_cleaning_session_webhook: String(config.shared_cleaning_session_webhook ?? "").trim()
+    };
   }
 
   // src/cards/advance-vacuum/advance-vacuum-card.ts

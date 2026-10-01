@@ -69,7 +69,6 @@ import {
   resolveRoomsFromMapState,
   resolveRoomsFromVacuumState,
   sanitizeCssValue,
-  sanitizeStyleTree,
   stripMapCacheBuster,
 } from "./advance-vacuum-helpers";
 
