@@ -1,3 +1,4 @@
+import { parseFiniteNumericValue } from "../../shared/numeric-values";
 import { LEGACY_ICON_OFF_COLOR_VALUES } from "./light-constants";
 import { clamp, deepClone, isObject, mergeConfig } from "./light-runtime";
 import { normalizeHexColorForLightPreset } from "./light-helpers";
@@ -146,8 +147,8 @@ export function normalizeConfig(rawConfig: unknown = {}) {
 
   const rawBrightness = Array.isArray(config.quick_brightness) && config.quick_brightness.length
     ? config.quick_brightness : DEFAULT_CONFIG.quick_brightness;
-  let quickBrightness = rawBrightness.map(value => Number(value))
-    .filter(value => Number.isFinite(value))
+  let quickBrightness = rawBrightness.map((value: unknown) => parseFiniteNumericValue(value))
+    .filter(value => value !== null)
     .map(value => clamp(Math.round(value), 1, 100));
   if (!quickBrightness.length) quickBrightness = deepClone(DEFAULT_CONFIG.quick_brightness);
 
@@ -170,22 +171,22 @@ export function normalizeConfig(rawConfig: unknown = {}) {
   const colorPresets = normalizedPresets.length ? normalizedPresets : deepClone(DEFAULT_CONFIG.color_presets);
 
   const rawAnimations = isObject(config.animations) ? config.animations : {};
-  const numericPowerDuration = Number(rawAnimations.power_duration);
-  const numericControlsDuration = Number(rawAnimations.controls_duration);
-  const numericModeSwitchDuration = Number(rawAnimations.mode_switch_duration);
-  const numericButtonBounceDuration = Number(rawAnimations.button_bounce_duration);
+  const numericPowerDuration = parseFiniteNumericValue(rawAnimations.power_duration);
+  const numericControlsDuration = parseFiniteNumericValue(rawAnimations.controls_duration);
+  const numericModeSwitchDuration = parseFiniteNumericValue(rawAnimations.mode_switch_duration);
+  const numericButtonBounceDuration = parseFiniteNumericValue(rawAnimations.button_bounce_duration);
   const animations = {
     enabled: rawAnimations.enabled !== false,
-    power_duration: Number.isFinite(numericPowerDuration)
+    power_duration: numericPowerDuration !== null
       ? clamp(Math.round(numericPowerDuration), 120, 4000)
       : DEFAULT_CONFIG.animations.power_duration,
-    controls_duration: Number.isFinite(numericControlsDuration)
+    controls_duration: numericControlsDuration !== null
       ? clamp(Math.round(numericControlsDuration), 120, 2400)
       : DEFAULT_CONFIG.animations.controls_duration,
-    mode_switch_duration: Number.isFinite(numericModeSwitchDuration)
+    mode_switch_duration: numericModeSwitchDuration !== null
       ? clamp(Math.round(numericModeSwitchDuration), 120, 2400)
       : DEFAULT_CONFIG.animations.mode_switch_duration,
-    button_bounce_duration: Number.isFinite(numericButtonBounceDuration)
+    button_bounce_duration: numericButtonBounceDuration !== null
       ? clamp(Math.round(numericButtonBounceDuration), 120, 1200)
       : DEFAULT_CONFIG.animations.button_bounce_duration,
     mode_switch_horizontal: rawAnimations.mode_switch_horizontal !== false,
@@ -271,8 +272,9 @@ export function normalizeConfig(rawConfig: unknown = {}) {
   }
   const security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
     ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
-  return {
-    ...config,
+  const fields = {
+    entity: typeof config.entity === "string" ? config.entity : "",
+    language: typeof config.language === "string" ? config.language : "auto",
     state_position: normalizedStatePosition === "below" ? "below" : "right",
     quick_brightness: quickBrightness,
     color_presets: colorPresets,
@@ -282,4 +284,6 @@ export function normalizeConfig(rawConfig: unknown = {}) {
     security,
     styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles),
   };
+  const normalized: typeof fields & Record<string, unknown> = { ...config, ...fields };
+  return normalized;
 }

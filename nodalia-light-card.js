@@ -34,6 +34,13 @@
     "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))"
   ];
 
+  // src/shared/numeric-values.ts
+  function parseFiniteNumericValue(value) {
+    if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
   // src/cards/light/light-runtime.ts
   var utils = window.NodaliaUtils;
   var isObject = utils.isObject.bind(utils);
@@ -430,7 +437,7 @@
     const normalizedStatePosition = String(config.state_position || "").toLowerCase();
     config.state_position = normalizedStatePosition === "below" ? "below" : "right";
     const rawBrightness = Array.isArray(config.quick_brightness) && config.quick_brightness.length ? config.quick_brightness : DEFAULT_CONFIG.quick_brightness;
-    let quickBrightness = rawBrightness.map((value) => Number(value)).filter((value) => Number.isFinite(value)).map((value) => clamp(Math.round(value), 1, 100));
+    let quickBrightness = rawBrightness.map((value) => parseFiniteNumericValue(value)).filter((value) => value !== null).map((value) => clamp(Math.round(value), 1, 100));
     if (!quickBrightness.length) quickBrightness = deepClone(DEFAULT_CONFIG.quick_brightness);
     const rawPresets = Array.isArray(config.color_presets) ? config.color_presets : [];
     const normalizedPresets = [];
@@ -450,16 +457,16 @@
     }
     const colorPresets = normalizedPresets.length ? normalizedPresets : deepClone(DEFAULT_CONFIG.color_presets);
     const rawAnimations = isObject(config.animations) ? config.animations : {};
-    const numericPowerDuration = Number(rawAnimations.power_duration);
-    const numericControlsDuration = Number(rawAnimations.controls_duration);
-    const numericModeSwitchDuration = Number(rawAnimations.mode_switch_duration);
-    const numericButtonBounceDuration = Number(rawAnimations.button_bounce_duration);
+    const numericPowerDuration = parseFiniteNumericValue(rawAnimations.power_duration);
+    const numericControlsDuration = parseFiniteNumericValue(rawAnimations.controls_duration);
+    const numericModeSwitchDuration = parseFiniteNumericValue(rawAnimations.mode_switch_duration);
+    const numericButtonBounceDuration = parseFiniteNumericValue(rawAnimations.button_bounce_duration);
     const animations = {
       enabled: rawAnimations.enabled !== false,
-      power_duration: Number.isFinite(numericPowerDuration) ? clamp(Math.round(numericPowerDuration), 120, 4e3) : DEFAULT_CONFIG.animations.power_duration,
-      controls_duration: Number.isFinite(numericControlsDuration) ? clamp(Math.round(numericControlsDuration), 120, 2400) : DEFAULT_CONFIG.animations.controls_duration,
-      mode_switch_duration: Number.isFinite(numericModeSwitchDuration) ? clamp(Math.round(numericModeSwitchDuration), 120, 2400) : DEFAULT_CONFIG.animations.mode_switch_duration,
-      button_bounce_duration: Number.isFinite(numericButtonBounceDuration) ? clamp(Math.round(numericButtonBounceDuration), 120, 1200) : DEFAULT_CONFIG.animations.button_bounce_duration,
+      power_duration: numericPowerDuration !== null ? clamp(Math.round(numericPowerDuration), 120, 4e3) : DEFAULT_CONFIG.animations.power_duration,
+      controls_duration: numericControlsDuration !== null ? clamp(Math.round(numericControlsDuration), 120, 2400) : DEFAULT_CONFIG.animations.controls_duration,
+      mode_switch_duration: numericModeSwitchDuration !== null ? clamp(Math.round(numericModeSwitchDuration), 120, 2400) : DEFAULT_CONFIG.animations.mode_switch_duration,
+      button_bounce_duration: numericButtonBounceDuration !== null ? clamp(Math.round(numericButtonBounceDuration), 120, 1200) : DEFAULT_CONFIG.animations.button_bounce_duration,
       mode_switch_horizontal: rawAnimations.mode_switch_horizontal !== false
     };
     const rawStyles = isObject(config.styles) ? config.styles : {};
@@ -552,8 +559,9 @@
       config.hold_navigation_path = config.hold_url;
     }
     const security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? { ...DEFAULT_CONFIG.security, ...isObject(config.security) ? config.security : {} };
-    return {
-      ...config,
+    const fields = {
+      entity: typeof config.entity === "string" ? config.entity : "",
+      language: typeof config.language === "string" ? config.language : "auto",
       state_position: normalizedStatePosition === "below" ? "below" : "right",
       quick_brightness: quickBrightness,
       color_presets: colorPresets,
@@ -563,6 +571,8 @@
       security,
       styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles)
     };
+    const normalized = { ...config, ...fields };
+    return normalized;
   }
 
   // src/cards/light/light-card.ts
@@ -3959,6 +3969,16 @@
     return NodaliaLightCard;
   }
 
+  // src/shared/editor-controls.ts
+  function isNativeEditorInput(node) {
+    return node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement;
+  }
+  function editorControlValue(event, control) {
+    const detail = event instanceof CustomEvent ? event.detail : void 0;
+    if (detail && typeof detail === "object" && "value" in detail && typeof detail.value === "string") return detail.value;
+    return "value" in control ? control.value : void 0;
+  }
+
   // src/cards/light/light-editor.ts
   var _lazyNodaliaLightCardEditor;
   function loadNodaliaLightCardEditor() {
@@ -4047,7 +4067,7 @@
         this._watchEditorControlTag("ha-icon-picker");
       }
       _getEntityOptionsSignature(hass = this._hass) {
-        return window.NodaliaUtils.editorFilteredStatesSignature(hass, this._config?.language, (id) => id.startsWith("light."));
+        return window.NodaliaUtils.editorFilteredStatesSignature?.(hass, this._config?.language, (id) => id.startsWith("light.")) ?? "";
       }
       _getLightEntityOptions() {
         const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
@@ -4082,7 +4102,7 @@
         this._render();
         this._restoreFocusState(focusState);
         fireEvent(this, "config-changed", {
-          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {})
+          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults?.(nextConfig, DEFAULT_CONFIG) ?? {})
         });
       }
       _setEditorConfig() {
@@ -4099,7 +4119,7 @@
         const valueType = input.dataset.valueType || "string";
         switch (valueType) {
           case "boolean":
-            return Boolean(input.checked);
+            return input instanceof HTMLInputElement && input.checked;
           case "color":
             return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
           case "csv": {
@@ -4107,8 +4127,8 @@
             return values.length ? values : void 0;
           }
           case "number": {
-            const numericValue = Number(input.value);
-            return Number.isFinite(numericValue) ? Math.round(numericValue) : void 0;
+            const numericValue = parseFiniteNumericValue(input.value);
+            return numericValue !== null ? Math.round(numericValue) : void 0;
           }
           case "csv_string": {
             const values = String(input.value || "").split(",").map((item) => item.trim().toLowerCase()).filter(Boolean);
@@ -4119,7 +4139,7 @@
         }
       }
       _onShadowInput(event) {
-        const input = event.composedPath().find((node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+        const input = event.composedPath().find(isNativeEditorInput);
         if (!input?.dataset?.field) {
           return;
         }
@@ -4132,12 +4152,12 @@
         }
       }
       _onShadowValueChanged(event) {
-        const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+        const control = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.field));
         if (!control?.dataset?.field) {
           return;
         }
         event.stopPropagation();
-        const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+        const nextValue = editorControlValue(event, control);
         if (typeof control.dataset?.value === "string") {
           control.dataset.value = String(nextValue || "");
         }
@@ -4151,7 +4171,7 @@
         this._emitConfig();
       }
       _onShadowClick(event) {
-        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
+        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.editorToggle));
         if (!toggleButton) {
           return;
         }
@@ -4304,37 +4324,23 @@
       </div>
     `;
       }
-      _getEntityOptionsMarkup() {
-        const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
-        const entityIds = Object.keys(this._hass?.states || {}).filter((entityId) => entityId.startsWith("light.")).sort((left, right) => left.localeCompare(right, sortLoc));
-        if (!entityIds.length) {
-          return "";
-        }
-        return `
-      <datalist id="light-card-entities">
-        ${entityIds.map((entityId) => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
-      </datalist>
-    `;
-      }
       _mountLightEntityPicker(host) {
         if (!(host instanceof HTMLElement)) {
           return;
         }
         const field = host.dataset.field || "entity";
         const nextValue = host.dataset.value || "";
-        let control = null;
+        let control;
         if (customElements.get("ha-entity-picker")) {
           control = document.createElement("ha-entity-picker");
-          control.includeDomains = ["light"];
-          control.allowCustomEntity = true;
-          control.entityFilter = (stateObj) => String(stateObj?.entity_id || "").startsWith("light.");
+          Object.assign(control, {
+            includeDomains: ["light"],
+            allowCustomEntity: true,
+            entityFilter: (stateObj) => String(stateObj?.entity_id || "").startsWith("light.")
+          });
         } else if (customElements.get("ha-selector")) {
           control = document.createElement("ha-selector");
-          control.selector = {
-            entity: {
-              domain: "light"
-            }
-          };
+          Object.assign(control, { selector: { entity: { domain: "light" } } });
         } else {
           control = document.createElement("select");
           this._getLightEntityOptions().forEach((option) => {
@@ -4363,7 +4369,9 @@
           return;
         }
         const config = this._config || normalizeConfig({});
-        const hapticStyle = config.haptics?.style || "medium";
+        const haptics = isObject(config.haptics) ? config.haptics : DEFAULT_CONFIG.haptics;
+        const scrolls = isObject(haptics.scrolls) ? haptics.scrolls : {};
+        const hapticStyle = haptics.style || "medium";
         const phLightName = this._editorLabel("ed.light.name_placeholder");
         const tapAction = config.tap_action || "toggle";
         const iconTapAction = config.icon_tap_action || "toggle";
@@ -4700,7 +4708,6 @@
         })}
             ${this._renderIconPickerField("ed.entity.icon", "icon", config.icon, {
           placeholder: "mdi:lightbulb",
-          fallbackIcon: "mdi:lightbulb",
           fullWidth: true
         })}
             ${this._renderTextField("ed.entity.name", "name", config.name, {
@@ -4960,11 +4967,11 @@
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.vacuum.haptics_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("ed.vacuum.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("ed.vacuum.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
-            ${this._renderCheckboxField("ed.haptics.slider_brightness", "haptics.scrolls.brightness", config.haptics.scrolls?.brightness !== false)}
-            ${this._renderCheckboxField("ed.haptics.slider_temperature", "haptics.scrolls.temperature", config.haptics.scrolls?.temperature !== false)}
-            ${this._renderCheckboxField("ed.haptics.slider_color", "haptics.scrolls.color", config.haptics.scrolls?.color !== false)}
+            ${this._renderCheckboxField("ed.vacuum.enable_haptics", "haptics.enabled", haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.vacuum.fallback_vibrate", "haptics.fallback_vibrate", haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.haptics.slider_brightness", "haptics.scrolls.brightness", scrolls.brightness !== false)}
+            ${this._renderCheckboxField("ed.haptics.slider_temperature", "haptics.scrolls.temperature", scrolls.temperature !== false)}
+            ${this._renderCheckboxField("ed.haptics.slider_color", "haptics.scrolls.color", scrolls.color !== false)}
             ${this._renderSelectField(
           "ed.vacuum.haptic_style",
           "haptics.style",
@@ -5102,8 +5109,7 @@
     `;
         this.shadowRoot.querySelectorAll('[data-mounted-control="light-entity"]').forEach((host) => this._mountLightEntityPicker(host));
         this.shadowRoot.querySelectorAll("ha-icon-picker[data-field]").forEach((control) => {
-          control.hass = this._hass;
-          control.value = control.dataset.value || "";
+          Object.assign(control, { hass: this._hass, value: control.dataset.value || "" });
           control.addEventListener("value-changed", this._onShadowValueChanged);
         });
         this._ensureEditorControlsReady();

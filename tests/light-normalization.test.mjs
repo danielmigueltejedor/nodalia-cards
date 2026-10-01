@@ -27,7 +27,7 @@ test("Light normalizes unknown YAML and primitive style/animation branches witho
 
 test("Light preserves brightness bounds, four preset slots and empty-list fallbacks", () => {
   const config = api.normalizeConfig({ quick_brightness: [-10, "35.4", "bad", 120, null], color_presets: [{ color: "F00", label: " Red " }, { color: "#abc" }, null, { color: "bad!" }, { color: "#00ff00" }] });
-  assert.deepEqual(plain(config.quick_brightness), [1, 35, 100, 1]);
+  assert.deepEqual(plain(config.quick_brightness), [1, 35, 100]);
   assert.deepEqual(plain(config.color_presets), [{ color: "#ff0000", label: "Red" }, { color: "#aabbcc", label: "" }]);
   assert.deepEqual(plain(api.normalizeConfig({ quick_brightness: ["bad"], color_presets: [] }).quick_brightness), [10, 35, 65, 100]);
   assert.deepEqual(plain(api.normalizeConfig({ color_presets: true }).color_presets), plain(api.DEFAULT_CONFIG.color_presets));
@@ -89,4 +89,16 @@ test("Light Kelvin/mired conversion and track direction preserve warm/cool seman
   }
   assert.match(helpers.getTemperatureSliderTrackGradient("mired"), /^linear-gradient\(90deg, #8fd3ff 0%/);
   assert.match(helpers.getTemperatureSliderTrackGradient("kelvin"), /^linear-gradient\(90deg, #f4b55f 0%/);
+});
+
+
+test("Light absent brightness and animation overrides restore defaults while actual zero retains bounds", () => {
+  for (const value of [undefined, null, "", "  ", Infinity, "bad"]) {
+    const config = api.normalizeConfig({ quick_brightness: [value], animations: { power_duration: value, controls_duration: value, mode_switch_duration: value, button_bounce_duration: value } });
+    assert.deepEqual(plain(config.quick_brightness), [10, 35, 65, 100]);
+    assert.deepEqual(plain(config.animations), plain(api.DEFAULT_CONFIG.animations));
+  }
+  const zero = api.normalizeConfig({ quick_brightness: [0, "0", " 35.4 "], animations: { power_duration: 0, controls_duration: "0", mode_switch_duration: "240", button_bounce_duration: "420" } });
+  assert.deepEqual(plain(zero.quick_brightness), [1, 1, 35]);
+  assert.deepEqual(plain(zero.animations), { enabled: true, power_duration: 120, controls_duration: 120, mode_switch_duration: 240, button_bounce_duration: 420, mode_switch_horizontal: true });
 });

@@ -69,7 +69,7 @@ Every card is registered with the `custom:nodalia-…` prefix. The complete set 
 
 - `custom:nodalia-navigation-bar`
 - `custom:nodalia-media-player`
-- `custom:nodalia-light-card`
+- [`custom:nodalia-light-card`](docs/cards/light-card.md)
 - [`custom:nodalia-fan-card`](docs/cards/fan-card.md)
 - [`custom:nodalia-humidifier-card`](docs/cards/humidifier-card.md)
 - [`custom:nodalia-circular-gauge-card`](docs/cards/circular-gauge-card.md)
