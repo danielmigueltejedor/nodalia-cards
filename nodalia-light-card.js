@@ -16,7 +16,6 @@
     warning: [20, 50, 12],
     failure: [12, 40, 12, 40, 18]
   };
-  var COMPACT_LAYOUT_THRESHOLD = 150;
   var OPTIMISTIC_TURN_ON_TIMEOUT = 3200;
   var OPTIMISTIC_TURN_OFF_TIMEOUT = 3200;
   var OPTIMISTIC_VISUAL_SETTLE_MS = 420;
@@ -575,6 +574,76 @@
     return normalized;
   }
 
+  // src/shared/device-state-memory.ts
+  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  function snapshotDeviceState(state) {
+    return state ? { ...state, attributes: { ...state.attributes } } : null;
+  }
+  function readDeviceStateMemory(storageKey) {
+    if (typeof window === "undefined") return {};
+    try {
+      const parsed = JSON.parse(window.localStorage.getItem(storageKey) || "{}");
+      return isRecord(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  function readDeviceStateSnapshot(storageKey, entityId) {
+    if (!entityId) return null;
+    const stored = readDeviceStateMemory(storageKey)[entityId];
+    if (!isRecord(stored) || !isRecord(stored.attributes)) return null;
+    const timestamp = typeof stored.last_changed === "string" ? stored.last_changed : (/* @__PURE__ */ new Date()).toISOString();
+    return { entity_id: entityId, state: "on", attributes: { ...stored.attributes }, last_changed: timestamp, last_updated: timestamp };
+  }
+
+  // src/shared/home-assistant-services.ts
+  function callHassService(hass, domain, service, data = {}, target = null) {
+    if (!hass?.callService) return;
+    const failure = (error) => console.warn("Nodalia Cards: service call failed", `${domain}.${service}`, error);
+    try {
+      void Promise.resolve(target !== null ? hass.callService(domain, service, data, target) : hass.callService(domain, service, data)).catch(failure);
+    } catch (error) {
+      failure(error);
+    }
+  }
+  function invokeHassService(host, hass, domain, service, data = {}, target = null) {
+    const utils2 = window.NodaliaUtils;
+    const invoke = utils2?.invokeHomeAssistantService;
+    if (!invoke) {
+      callHassService(hass, domain, service, data, target);
+      return;
+    }
+    const failure = (error) => console.warn("Nodalia Cards: service call failed", `${domain}.${service}`, error);
+    try {
+      void Promise.resolve(invoke.call(utils2, host, hass, domain, service, data, target)).catch(failure);
+    } catch (error) {
+      failure(error);
+    }
+  }
+
+  // src/shared/view-animation-work.ts
+  function createViewAnimationWork() {
+    return { generation: 0, timers: /* @__PURE__ */ new Set(), cancels: /* @__PURE__ */ new Set() };
+  }
+  function scheduleViewFallback(work, callback, delay) {
+    const timer = window.setTimeout(() => {
+      work.timers.delete(timer);
+      callback();
+    }, delay);
+    work.timers.add(timer);
+    return timer;
+  }
+  function cancelViewPanelAnimations(work) {
+    ++work.generation;
+    work.cancels.forEach((cancel) => cancel());
+    work.cancels.clear();
+  }
+  function releaseViewAnimationWork(work) {
+    cancelViewPanelAnimations(work);
+    work.timers.forEach((timer) => window.clearTimeout(timer));
+    work.timers.clear();
+  }
+
   // src/cards/light/light-card.ts
   var _lazyNodaliaLightCard;
   function loadNodaliaLightCard() {
@@ -608,7 +677,7 @@
       }
       _nodaliaConstruct() {
         this.attachShadow({ mode: "open" });
-        this._config = null;
+        this._config = normalizeConfig({});
         this._hass = null;
         this._draftBrightness = /* @__PURE__ */ new Map();
         this._draftTemperature = /* @__PURE__ */ new Map();
@@ -620,8 +689,6 @@
         this._activeSliderDrag = null;
         this._pendingRenderAfterDrag = false;
         this._skipNextSliderChange = null;
-        this._dragFrame = 0;
-        this._pendingDragUpdate = null;
         this._dragWindowListenersAttached = false;
         this._lastRenderSignature = "";
         this._lastEntityRevision = "";
@@ -643,32 +710,45 @@
         this._modeSwitchPressTimer = 0;
         this._modeTransition = null;
         this._controlsPanelUserOpen = false;
+        this._resizeFrame = 0;
+        this._modeFrames = /* @__PURE__ */ new Set();
+        this._modeGeneration = 0;
+        this._optimisticVisualSettleTimer = 0;
+        this._lastIdleSliderHapticValue = void 0;
+        this._panelWork = createViewAnimationWork();
         this._resizeObserver = new ResizeObserver((entries) => {
-          const entry = entries[0];
-          if (!entry) {
-            return;
-          }
-          const nextWidth = Math.round(entry.contentRect?.width || this.clientWidth || 0);
-          if (nextWidth < 48) {
-            return;
-          }
-          const nextCompact = this._shouldUseCompactLayout(nextWidth);
-          if (nextWidth === this._cardWidth && nextCompact === this._isCompactLayout) {
-            return;
-          }
-          this._cardWidth = nextWidth;
-          this._isCompactLayout = nextCompact;
-          if (this._activeSliderDrag) {
-            this._pendingRenderAfterDrag = true;
-            return;
-          }
-          const signature = this._getRenderSignature();
-          if (signature === this._lastRenderSignature) {
-            return;
-          }
-          this._lastRenderSignature = signature;
-          this._render();
+          if (this._resizeFrame) window.cancelAnimationFrame(this._resizeFrame);
+          this._resizeFrame = window.requestAnimationFrame(() => {
+            this._resizeFrame = 0;
+            if (!this.isConnected) return;
+            const entry = entries[0];
+            if (!entry) {
+              return;
+            }
+            const nextWidth = Math.round(entry.contentRect?.width || this.clientWidth || 0);
+            if (nextWidth < 48) {
+              return;
+            }
+            const nextCompact = this._shouldUseCompactLayout(nextWidth);
+            if (nextWidth === this._cardWidth && nextCompact === this._isCompactLayout) {
+              return;
+            }
+            this._cardWidth = nextWidth;
+            this._isCompactLayout = nextCompact;
+            if (this._activeSliderDrag) {
+              this._pendingRenderAfterDrag = true;
+              return;
+            }
+            const signature = this._getRenderSignature();
+            if (signature === this._lastRenderSignature) {
+              return;
+            }
+            this._lastRenderSignature = signature;
+            this._render();
+          });
         });
+        this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
+        this.shadowRoot?.addEventListener("keydown", this._onShadowKeyDown);
         this._onShadowClick = this._onShadowClick.bind(this);
         this._onShadowInput = this._onShadowInput.bind(this);
         this._onShadowChange = this._onShadowChange.bind(this);
@@ -682,25 +762,25 @@
         this._onWindowTouchStartCapture = this._onWindowTouchStartCapture.bind(this);
         this._onWindowTouchMove = this._onWindowTouchMove.bind(this);
         this._onWindowTouchEnd = this._onWindowTouchEnd.bind(this);
-        this.shadowRoot.addEventListener("click", this._onShadowClick);
-        this.shadowRoot.addEventListener("input", this._onShadowInput);
-        this.shadowRoot.addEventListener("change", this._onShadowChange);
-        this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
-        this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown);
-        if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
-          this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
+        this.shadowRoot?.addEventListener("click", this._onShadowClick);
+        this.shadowRoot?.addEventListener("input", this._onShadowInput);
+        this.shadowRoot?.addEventListener("change", this._onShadowChange);
+        this.shadowRoot?.addEventListener("pointerdown", this._onShadowPointerDown);
+        this.shadowRoot?.addEventListener("mousedown", this._onShadowMouseDown);
+        if (typeof PointerEvent !== "function") {
+          this.shadowRoot?.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
         }
         this._detachHostHold = typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function" ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
           resolveZone: (event) => {
             const path = event.composedPath();
-            if (path.some((node) => node instanceof HTMLInputElement && node.dataset?.lightControl)) {
+            if (path.some((node) => node instanceof HTMLInputElement && Boolean(node.dataset.lightControl))) {
               return null;
             }
             if (window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
               return null;
             }
             const actionButton = path.find(
-              (node) => node instanceof HTMLElement && node.dataset?.lightAction
+              (node) => node instanceof HTMLElement && Boolean(node.dataset.lightAction)
             );
             const zone = actionButton?.dataset?.lightAction;
             return zone === "body" || zone === "icon" ? zone : null;
@@ -735,11 +815,15 @@
       disconnectedCallback() {
         this._detachHostHold?.();
         this._resizeObserver?.disconnect();
-        this._detachWindowDragListeners();
-        if (this._dragFrame) {
-          window.cancelAnimationFrame(this._dragFrame);
-          this._dragFrame = 0;
-        }
+        if (this._resizeFrame) window.cancelAnimationFrame(this._resizeFrame);
+        this._resizeFrame = 0;
+        this._releaseViewWork();
+        this._cancelSliderDrag(false);
+        this._skipNextSliderChange = null;
+        this._suppressNextLightTap = false;
+        window.NodaliaUtils?.cancelCardZoneTap?.(this);
+        this._clearModeSwitchTransition();
+        this._clearOptimisticVisualSettle();
         if (this._animationCleanupTimer) {
           window.clearTimeout(this._animationCleanupTimer);
           this._animationCleanupTimer = 0;
@@ -752,23 +836,30 @@
         }
         this._powerTransition = null;
         this._controlsTransition = null;
-        if (this._modeSwitchTimer) {
-          window.clearTimeout(this._modeSwitchTimer);
-          this._modeSwitchTimer = 0;
-        }
-        if (this._modeSwitchPressTimer) {
-          window.clearTimeout(this._modeSwitchPressTimer);
-          this._modeSwitchPressTimer = 0;
-        }
-        this._modeTransition = null;
-        this._pendingDragUpdate = null;
-        window.NodaliaUtils?.clearDeferTimers?.(this);
         this._animateContentOnNextRender = true;
         this._lastRenderSignature = "";
       }
       setConfig(config) {
         const previousEntityId = this._config?.entity || "";
-        if (previousEntityId && previousEntityId !== config?.entity) {
+        const nextConfig = normalizeConfig(config || {});
+        if (previousEntityId !== nextConfig.entity) {
+          this._releaseViewWork();
+          this._cancelSliderDrag(false);
+          this._skipNextSliderChange = null;
+          this._suppressNextLightTap = false;
+          window.NodaliaUtils?.cancelCardZoneTap?.(this);
+          this._clearModeSwitchTransition();
+          this._clearOptimisticVisualSettle();
+          window.clearTimeout(this._animationCleanupTimer);
+          window.clearTimeout(this._entranceAnimationResetTimer);
+          this._animationCleanupTimer = 0;
+          this._entranceAnimationResetTimer = 0;
+          this._powerTransition = null;
+          this._controlsTransition = null;
+          this._lastRenderedIsOn = null;
+          this._lastControlsMarkup = "";
+          this._lastEntityRevision = "";
+          this._activeControlMode = "brightness";
           this._lastKnownOnState.delete(previousEntityId);
           this._clearDraftValues(previousEntityId);
           this._clearOptimisticTurnOnState();
@@ -776,7 +867,7 @@
           this._controlsPanelUserOpen = false;
           this._lastRenderedShowDetailedControls = null;
         }
-        this._config = normalizeConfig(config || {});
+        this._config = nextConfig;
         window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
         this._isCompactLayout = this._shouldUseCompactLayout(
           Math.round(this._cardWidth || this.clientWidth || 0)
@@ -813,7 +904,7 @@
           this._lastEntityRevision = entityRevision;
         }
         let nextSignature = this._getRenderSignature();
-        const hasPendingOptimistic = Boolean(this._optimisticTurnOn || this._optimisticTurnOff);
+        const hasPendingOptimistic = Boolean(this._optimisticTurnOn || this._optimisticTurnOff || this._optimisticVisualSettle);
         const signatureUnchanged = Boolean(
           this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature
         );
@@ -863,6 +954,10 @@
           Number(attrs.brightness ?? -1),
           Number(attrs.color_temp ?? -1),
           Number(attrs.color_temp_kelvin ?? -1),
+          String(attrs.min_mireds ?? ""),
+          String(attrs.max_mireds ?? ""),
+          String(attrs.min_color_temp_kelvin ?? ""),
+          String(attrs.max_color_temp_kelvin ?? ""),
           Array.isArray(attrs.hs_color) ? attrs.hs_color.join(",") : "",
           Array.isArray(attrs.rgb_color) ? attrs.rgb_color.join(",") : "",
           String(attrs.effect || ""),
@@ -932,18 +1027,8 @@
         return fallback;
       }
       _getConfiguredGridColumns() {
-        const numericColumns = Number(this._config?.grid_options?.columns);
+        const numericColumns = Number(isObject(this._config.grid_options) ? this._config.grid_options.columns : void 0);
         return Number.isFinite(numericColumns) && numericColumns > 0 ? numericColumns : null;
-      }
-      _getCompactLayoutThreshold() {
-        const styles = this._config?.styles || DEFAULT_CONFIG.styles;
-        const iconSize = parseSizeToPixels(styles?.icon?.size, 58);
-        const cardPadding = parseSizeToPixels(styles?.card?.padding, 14);
-        const cardGap = parseSizeToPixels(styles?.card?.gap, 12);
-        return Math.max(
-          COMPACT_LAYOUT_THRESHOLD,
-          Math.round(iconSize + cardPadding * 2 + cardGap + 24)
-        );
       }
       _getQuickColorPresetRows(config = this._config) {
         const rows = Array.isArray(config?.color_presets) ? config.color_presets : [];
@@ -993,19 +1078,21 @@
       _shouldShowCompactTitle(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
         return window.NodaliaUtils.shouldShowCompactCardTitle({ width });
       }
-      _triggerHaptic(style = this._config?.haptics?.style) {
-        if (!this._config?.haptics?.enabled) {
+      _triggerHaptic(style = void 0) {
+        const haptics = isObject(this._config.haptics) ? this._config.haptics : {};
+        if (!haptics.enabled) {
           return;
         }
-        const hapticStyle = String(style || "medium");
+        const hapticStyle = String(style || haptics.style || "medium");
         try {
           fireEvent(this, "haptic", hapticStyle);
         } catch (_error) {
         }
-        if (!this._config.haptics.fallback_vibrate || typeof navigator === "undefined" || typeof navigator.vibrate !== "function") {
+        if (!haptics.fallback_vibrate || typeof navigator === "undefined" || typeof navigator.vibrate !== "function") {
           return;
         }
-        navigator.vibrate(HAPTIC_PATTERNS[hapticStyle] || HAPTIC_PATTERNS.selection);
+        const patterns = HAPTIC_PATTERNS;
+        navigator.vibrate(patterns[hapticStyle] || HAPTIC_PATTERNS.selection);
       }
       _getState() {
         const actualState = this._getActualState();
@@ -1026,30 +1113,11 @@
         }
         return this._hass.states[this._config.entity] || null;
       }
-      _createStateSnapshot(state) {
-        if (!state) {
-          return null;
-        }
-        return {
-          ...state,
-          attributes: {
-            ...state.attributes || {}
-          }
-        };
-      }
       _getStoredLightMemory() {
-        if (typeof window === "undefined" || !window.localStorage) {
-          return {};
-        }
-        try {
-          const parsed = JSON.parse(window.localStorage.getItem(LIGHT_MEMORY_STORAGE_KEY) || "{}");
-          return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
-        } catch (_error) {
-          return {};
-        }
+        return readDeviceStateMemory(LIGHT_MEMORY_STORAGE_KEY);
       }
       _storeLightMemory(entityId, snapshot) {
-        if (!entityId || !snapshot || typeof window === "undefined" || !window.localStorage) {
+        if (!entityId || !snapshot || typeof window === "undefined") {
           return;
         }
         const attrs = snapshot.attributes || {};
@@ -1073,30 +1141,16 @@
         } catch (_error) {
         }
       }
-      _getStoredLightSnapshot(entityId = this._config?.entity || "") {
-        if (!entityId) {
-          return null;
-        }
-        const stored = this._getStoredLightMemory()[entityId];
-        if (!stored?.attributes || typeof stored.attributes !== "object") {
-          return null;
-        }
-        return {
-          entity_id: entityId,
-          state: "on",
-          attributes: {
-            ...stored.attributes || {}
-          },
-          last_changed: stored.last_changed || (/* @__PURE__ */ new Date()).toISOString(),
-          last_updated: stored.last_changed || (/* @__PURE__ */ new Date()).toISOString()
-        };
+      _getStoredLightSnapshot(entityId) {
+        return readDeviceStateSnapshot(LIGHT_MEMORY_STORAGE_KEY, entityId);
       }
       _syncLastKnownOnState(actualState) {
         const entityId = this._config?.entity || "";
         if (!entityId || !actualState) {
           return;
         }
-        const snapshot = this._createStateSnapshot(actualState);
+        const snapshot = snapshotDeviceState(actualState);
+        if (!snapshot) return;
         if (actualState.state === "on") {
           this._lastKnownOnState.set(entityId, snapshot);
           this._storeLightMemory(entityId, snapshot);
@@ -1121,7 +1175,7 @@
         }
         const stored = this._getStoredLightSnapshot(entityId);
         if (stored) {
-          this._lastKnownOnState.set(entityId, this._createStateSnapshot(stored));
+          this._lastKnownOnState.set(entityId, stored);
         }
         return stored;
       }
@@ -1148,17 +1202,30 @@
           this._clearDraftValues(entityId);
         }
       }
+      _clearOptimisticVisualSettle() {
+        window.clearTimeout(this._optimisticVisualSettleTimer);
+        this._optimisticVisualSettleTimer = 0;
+        this._optimisticVisualSettle = null;
+      }
       _startOptimisticVisualSettle(actualState, optimisticState) {
         const entityId = this._config?.entity || "";
         if (!entityId || !actualState || actualState.state !== "on" || !optimisticState) {
-          this._optimisticVisualSettle = null;
+          this._clearOptimisticVisualSettle();
           return;
         }
+        this._clearOptimisticVisualSettle();
         this._optimisticVisualSettle = {
           entityId,
           expiresAt: Date.now() + OPTIMISTIC_VISUAL_SETTLE_MS,
-          stateSnapshot: this._createStateSnapshot(optimisticState)
+          stateSnapshot: snapshotDeviceState(optimisticState)
         };
+        this._optimisticVisualSettleTimer = window.setTimeout(() => {
+          this._clearOptimisticVisualSettle();
+          if (this.isConnected) {
+            this._lastRenderSignature = "";
+            this._render();
+          }
+        }, OPTIMISTIC_VISUAL_SETTLE_MS);
       }
       _hasUsefulColorAttributes(state) {
         const attrs = state?.attributes || {};
@@ -1169,16 +1236,16 @@
           return false;
         }
         if (this._optimisticVisualSettle.entityId !== (this._config?.entity || "")) {
-          this._optimisticVisualSettle = null;
+          this._clearOptimisticVisualSettle();
           return false;
         }
         if (actualState?.state !== "on" || Date.now() >= this._optimisticVisualSettle.expiresAt) {
-          this._optimisticVisualSettle = null;
+          this._clearOptimisticVisualSettle();
           return false;
         }
         const settledSnapshot = this._optimisticVisualSettle.stateSnapshot;
         if (this._hasUsefulColorAttributes(actualState) && this._hasUsefulColorAttributes(settledSnapshot)) {
-          this._optimisticVisualSettle = null;
+          this._clearOptimisticVisualSettle();
           return false;
         }
         return true;
@@ -1228,12 +1295,10 @@
         }
         const remaining = Math.max(0, this._optimisticTurnOn.expiresAt - Date.now());
         if (!remaining || typeof window === "undefined") {
-          if (this._isOptimisticTurnOnPending(this._getActualState())) {
-            this._flushOptimisticTurnOnQueue();
-          }
           if (!this.isConnected) {
             return;
           }
+          if (this._optimisticTurnOn?.entityId === this._config.entity && this._getActualState()?.state === "off") this._flushOptimisticTurnOnQueue();
           this._clearOptimisticTurnOnState({ clearDrafts: true });
           this._render();
           return;
@@ -1243,10 +1308,7 @@
           if (!this.isConnected) {
             return;
           }
-          if (!this._isOptimisticTurnOnPending(this._getActualState())) {
-            return;
-          }
-          this._flushOptimisticTurnOnQueue();
+          if (this._optimisticTurnOn?.entityId === this._config.entity && this._getActualState()?.state === "off") this._flushOptimisticTurnOnQueue();
           this._clearOptimisticTurnOnState({ clearDrafts: true });
           this._render();
         }, remaining);
@@ -1260,7 +1322,7 @@
           entityId: this._config.entity,
           expiresAt: Date.now() + OPTIMISTIC_TURN_ON_TIMEOUT,
           queuedData: {},
-          stateSnapshot: this._createStateSnapshot(cachedState || actualState)
+          stateSnapshot: snapshotDeviceState(cachedState || actualState)
         };
         this._scheduleOptimisticTurnOnTimeout();
       }
@@ -1347,7 +1409,7 @@
           }
           return;
         }
-        if (["unavailable", "unknown"].includes(actualState?.state)) {
+        if (["unavailable", "unknown"].includes(actualState?.state || "")) {
           this._clearOptimisticTurnOnState({ clearDrafts: true });
           return;
         }
@@ -1386,9 +1448,6 @@
           if (!this.isConnected) {
             return;
           }
-          if (!this._isOptimisticTurnOffPending(this._getActualState())) {
-            return;
-          }
           this._clearOptimisticTurnOffState();
           this._render();
         }, remaining);
@@ -1401,7 +1460,7 @@
         this._optimisticTurnOff = {
           entityId: this._config.entity,
           expiresAt: Date.now() + OPTIMISTIC_TURN_OFF_TIMEOUT,
-          stateSnapshot: this._createStateSnapshot(stateSnapshotSource)
+          stateSnapshot: snapshotDeviceState(stateSnapshotSource)
         };
         this._scheduleOptimisticTurnOffTimeout();
       }
@@ -1431,7 +1490,7 @@
           this._clearOptimisticTurnOffState();
           return;
         }
-        if (["unavailable", "unknown"].includes(actualState?.state)) {
+        if (["unavailable", "unknown"].includes(actualState?.state || "")) {
           this._clearOptimisticTurnOffState();
           return;
         }
@@ -1526,9 +1585,8 @@
       }
       _getCurrentKelvin(state) {
         const entityId = this._config?.entity;
-        if (entityId && this._draftTemperature.has(entityId)) {
-          return this._draftTemperature.get(entityId);
-        }
+        const draft = entityId ? this._draftTemperature.get(entityId) : void 0;
+        if (draft !== void 0) return draft;
         if (typeof state?.attributes?.color_temp_kelvin === "number") {
           return Math.round(state.attributes.color_temp_kelvin);
         }
@@ -1540,15 +1598,14 @@
       }
       _getCurrentHue(state) {
         const entityId = this._config?.entity;
-        if (entityId && this._draftHue.has(entityId)) {
-          return this._draftHue.get(entityId);
-        }
+        const draft = entityId ? this._draftHue.get(entityId) : void 0;
+        if (draft !== void 0) return draft;
         const hsColor = Array.isArray(state?.attributes?.hs_color) ? state.attributes.hs_color : null;
-        if (hsColor?.length === 2 && hsColor.every((value) => Number.isFinite(Number(value)))) {
+        if (hsColor?.length === 2 && hsColor.every((value) => parseFiniteNumericValue(value) !== null)) {
           return clamp(Math.round(Number(hsColor[0])), 0, 360);
         }
         const rgbColor = Array.isArray(state?.attributes?.rgb_color) ? state.attributes.rgb_color : null;
-        const derivedHs = rgbToHs(rgbColor);
+        const derivedHs = rgbColor?.every((value) => parseFiniteNumericValue(value) !== null) ? rgbToHs(rgbColor) : null;
         if (derivedHs) {
           return clamp(derivedHs[0], 0, 360);
         }
@@ -1556,11 +1613,11 @@
       }
       _getCurrentSaturation(state) {
         const hsColor = Array.isArray(state?.attributes?.hs_color) ? state.attributes.hs_color : null;
-        if (hsColor?.length === 2 && hsColor.every((value) => Number.isFinite(Number(value)))) {
+        if (hsColor?.length === 2 && hsColor.every((value) => parseFiniteNumericValue(value) !== null)) {
           return clamp(Math.round(Number(hsColor[1])), 0, 100);
         }
         const rgbColor = Array.isArray(state?.attributes?.rgb_color) ? state.attributes.rgb_color : null;
-        const derivedHs = rgbToHs(rgbColor);
+        const derivedHs = rgbColor?.every((value) => parseFiniteNumericValue(value) !== null) ? rgbToHs(rgbColor) : null;
         if (derivedHs) {
           return clamp(derivedHs[1], 0, 100);
         }
@@ -1578,7 +1635,10 @@
       _getStateLabel(state) {
         const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
         const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-        const entityStates = window.NodaliaI18n?.strings?.(lang)?.entityCard?.states;
+        const pack = window.NodaliaI18n?.strings?.(lang);
+        const entityCard = isObject(pack?.entityCard) ? pack.entityCard : {};
+        const entityStates = isObject(entityCard.states) ? entityCard.states : {};
+        const alarmPanel = isObject(pack?.alarmPanel) ? pack.alarmPanel : {};
         if (state?.attributes?._nodalia_optimistic_off === true) {
           return entityStates?.closing || "Apagando";
         }
@@ -1595,7 +1655,7 @@
           case "unknown":
             return entityStates?.unknown || "Unknown";
           default:
-            return state?.state ? String(state.state) : window.NodaliaI18n?.strings?.(lang)?.alarmPanel?.noState || "No state";
+            return state?.state ? String(state.state) : alarmPanel.noState || "No state";
         }
       }
       _getLightName(state) {
@@ -1636,7 +1696,7 @@
         return this._config?.styles?.icon?.off_color || "var(--primary-text-color)";
       }
       _getAnimationSettings() {
-        const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+        const configuredAnimations = isObject(this._config.animations) ? this._config.animations : DEFAULT_CONFIG.animations;
         return {
           enabled: configuredAnimations.enabled !== false,
           powerDuration: clamp(Number(configuredAnimations.power_duration) || DEFAULT_CONFIG.animations.power_duration, 120, 4e3),
@@ -1672,6 +1732,9 @@
         }, safeDelay);
       }
       _clearModeSwitchTransition() {
+        ++this._modeGeneration;
+        this._modeFrames.forEach((frame) => window.cancelAnimationFrame(frame));
+        this._modeFrames.clear();
         if (this._modeSwitchTimer) {
           window.clearTimeout(this._modeSwitchTimer);
           this._modeSwitchTimer = 0;
@@ -1681,6 +1744,17 @@
           this._modeSwitchPressTimer = 0;
         }
         this._modeTransition = null;
+      }
+      _releaseViewWork() {
+        releaseViewAnimationWork(this._panelWork);
+        window.NodaliaUtils?.clearDeferTimers?.(this);
+      }
+      _scheduleModeFrame(callback, generation) {
+        const frame = window.requestAnimationFrame(() => {
+          this._modeFrames.delete(frame);
+          if (generation === this._modeGeneration && this.isConnected) callback();
+        });
+        this._modeFrames.add(frame);
       }
       _triggerButtonBounce(button) {
         if (!(button instanceof HTMLElement)) {
@@ -1703,20 +1777,21 @@
         if (typeof schedule === "function") {
           schedule(this, done, animations.buttonBounceDuration + 40);
         } else {
-          window.setTimeout(done, animations.buttonBounceDuration + 40);
+          scheduleViewFallback(this._panelWork, done, animations.buttonBounceDuration + 40);
         }
       }
       _startModeSwitchTransition(nextMode, state = this._getState()) {
         const animations = this._getAnimationSettings();
         const availableModes = this._getAvailableControlModes(state);
         const currentMode = this._getActiveControlMode(state);
-        if (!animations.enabled || !state || !nextMode || nextMode === currentMode || !availableModes.includes(nextMode) || !availableModes.includes(currentMode)) {
+        if (!animations.enabled || !state || !nextMode || !currentMode || nextMode === currentMode || !availableModes.includes(nextMode) || !availableModes.includes(currentMode)) {
           this._clearModeSwitchTransition();
           this._activeControlMode = nextMode || currentMode || "brightness";
           this._render();
           return;
         }
         this._clearModeSwitchTransition();
+        const generation = this._modeGeneration;
         const phaseDuration = Math.max(100, Math.round(animations.modeSwitchDuration / 2));
         const settleDuration = phaseDuration + 34;
         const fromMode = currentMode;
@@ -1729,6 +1804,7 @@
         this._render();
         this._modeSwitchTimer = window.setTimeout(() => {
           this._modeSwitchTimer = 0;
+          if (generation !== this._modeGeneration || !this.isConnected) return;
           this._activeControlMode = toMode;
           this._modeTransition = {
             from: fromMode,
@@ -1739,9 +1815,7 @@
           this._modeSwitchTimer = window.setTimeout(() => {
             this._modeSwitchTimer = 0;
             const finalizeTransition = () => {
-              if (!this.isConnected) {
-                return;
-              }
+              if (!this.isConnected || generation !== this._modeGeneration) return;
               if (!this._modeTransition || this._modeTransition.phase !== "expanding" || this._modeTransition.to !== toMode) {
                 return;
               }
@@ -1749,9 +1823,7 @@
               this._render();
             };
             if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
-              window.requestAnimationFrame(() => {
-                window.requestAnimationFrame(finalizeTransition);
-              });
+              this._scheduleModeFrame(() => this._scheduleModeFrame(finalizeTransition, generation), generation);
               return;
             }
             finalizeTransition();
@@ -1762,7 +1834,7 @@
         if (!this._hass || !this._config?.entity) {
           return;
         }
-        this._hass.callService("light", "turn_on", {
+        invokeHassService(this, this._hass, "light", "turn_on", {
           entity_id: this._config.entity,
           ...data
         });
@@ -1771,7 +1843,7 @@
         if (!this._hass || !this._config?.entity) {
           return;
         }
-        this._hass.callService("light", "turn_off", {
+        invokeHassService(this, this._hass, "light", "turn_off", {
           entity_id: this._config.entity
         });
       }
@@ -1809,6 +1881,7 @@
           return deepClone(rawValue);
         }
         try {
+          if (typeof rawValue !== "string") return {};
           const parsed = JSON.parse(rawValue);
           return isObject(parsed) ? parsed : {};
         } catch (_error) {
@@ -1830,9 +1903,9 @@
         if (!domains.length && !services.length) {
           return false;
         }
-        return services.includes(normalizedService) || domains.includes(domain);
+        return services.includes(normalizedService) || Boolean(domain && domains.includes(domain));
       }
-      _callConfiguredService(serviceValue, entityId = this._config?.entity, rawData = "", rawTarget = "") {
+      _callConfiguredService(serviceValue, entityId = this._config.entity, rawData = "", rawTarget = "") {
         if (!this._hass || !serviceValue) {
           return;
         }
@@ -1850,7 +1923,7 @@
         if (!hasTarget && entityId && payload.entity_id === void 0) {
           payload.entity_id = entityId;
         }
-        this._hass.callService(domain, service, payload, hasTarget ? target : void 0);
+        invokeHassService(this, this._hass, domain, service, payload, hasTarget ? target : void 0);
       }
       _openConfiguredUrl(urlValue, newTab = false) {
         const url = window.NodaliaUtils?.sanitizeActionUrl(urlValue, { allowRelative: true }) || "";
@@ -2065,7 +2138,9 @@
         }
       }
       _hapticOnSliderStep(kind, steppedValue, { commit = false } = {}) {
-        if (this._config?.haptics?.scrolls?.[kind] === false) {
+        const haptics = isObject(this._config.haptics) ? this._config.haptics : {};
+        const scrolls = isObject(haptics.scrolls) ? haptics.scrolls : {};
+        if (scrolls[kind] === false) {
           return;
         }
         const next = Number(steppedValue);
@@ -2104,7 +2179,7 @@
       }
       _applySliderValue(slider, value, options = {}) {
         const commit = options.commit === true;
-        const kind = slider.dataset.lightControl;
+        const kind = slider.dataset.lightControl || "";
         switch (kind) {
           case "brightness": {
             const nextValue = clamp(Number(value), 1, 100);
@@ -2148,8 +2223,9 @@
         }
       }
       _onShadowPointerDown(event) {
+        if (!(event instanceof PointerEvent)) return;
         const slider = event.composedPath().find(
-          (node) => node instanceof HTMLInputElement && node.type === "range" && node.dataset?.lightControl
+          (node) => node instanceof HTMLInputElement && node.type === "range" && Boolean(node.dataset.lightControl)
         );
         if (this._activeSliderDrag || !slider || typeof event.button === "number" && event.button !== 0) {
           return;
@@ -2172,7 +2248,7 @@
         if (!slider) {
           return;
         }
-        const kind = slider.dataset.lightControl;
+        const kind = slider.dataset.lightControl || "";
         const seedValue = kind === "temperature" ? this._temperatureSliderValueToKelvin(Number(slider.value), this._getState()) : Number(slider.value);
         this._activeSliderDrag = {
           pointerId,
@@ -2185,11 +2261,6 @@
           event.preventDefault();
           event.stopPropagation();
         }
-        this._pendingDragUpdate = null;
-        if (this._dragFrame) {
-          window.cancelAnimationFrame(this._dragFrame);
-          this._dragFrame = 0;
-        }
         this._setSliderDragVisualState(slider, true);
         const nextValue = getRangeValueFromGeometry(this._activeSliderDrag.geometry, slider.value, clientX);
         slider.value = String(nextValue);
@@ -2200,13 +2271,9 @@
         if (!drag) {
           return;
         }
+        if (pointerId !== null && drag.pointerId !== pointerId) return;
         if (event) {
           event.preventDefault();
-        }
-        this._pendingDragUpdate = null;
-        if (this._dragFrame) {
-          window.cancelAnimationFrame(this._dragFrame);
-          this._dragFrame = 0;
         }
         const nextValue = getRangeValueFromGeometry(drag.geometry, drag.slider.value, clientX);
         drag.slider.value = String(nextValue);
@@ -2222,8 +2289,9 @@
         }
       }
       _onShadowMouseDown(event) {
+        if (!(event instanceof MouseEvent)) return;
         const slider = event.composedPath().find(
-          (node) => node instanceof HTMLInputElement && node.type === "range" && node.dataset?.lightControl
+          (node) => node instanceof HTMLInputElement && node.type === "range" && Boolean(node.dataset.lightControl)
         );
         if (this._activeSliderDrag || !slider || event.button !== 0) {
           return;
@@ -2231,15 +2299,17 @@
         this._startSliderDrag(slider, event.clientX, event);
       }
       _onShadowTouchStart(event) {
+        if (!(event instanceof TouchEvent)) return;
         const slider = event.composedPath().find(
-          (node) => node instanceof HTMLInputElement && node.type === "range" && node.dataset?.lightControl
+          (node) => node instanceof HTMLInputElement && node.type === "range" && Boolean(node.dataset.lightControl)
         );
         if (this._activeSliderDrag || !slider || !event.touches?.length) {
           return;
         }
-        this._startSliderDrag(slider, event.touches[0].clientX, event);
+        this._startSliderDrag(slider, event.touches[0]?.clientX ?? 0, event);
       }
       _onWindowPointerMove(event) {
+        if (!(event instanceof PointerEvent)) return;
         const drag = this._activeSliderDrag;
         if (!drag || drag.pointerId !== event.pointerId) {
           return;
@@ -2247,14 +2317,34 @@
         event.preventDefault();
         this._queueSliderDragUpdate(drag.slider, event.clientX);
       }
+      _cancelSliderDrag(render = true) {
+        const drag = this._activeSliderDrag;
+        if (drag) this._setSliderDragVisualState(drag.slider, false);
+        this._activeSliderDrag = null;
+        this._detachWindowDragListeners();
+        this._clearDraftValues();
+        this._skipNextSliderChange = drag?.slider || null;
+        this._pendingRenderAfterDrag = false;
+        this._lastIdleSliderHapticValue = void 0;
+        if (render && this.isConnected) {
+          this._lastRenderSignature = "";
+          this._render();
+        }
+      }
       _onWindowPointerUp(event) {
+        if (!(event instanceof PointerEvent)) return;
         const drag = this._activeSliderDrag;
         if (!drag || drag.pointerId !== event.pointerId) {
+          return;
+        }
+        if (event.type === "pointercancel") {
+          this._cancelSliderDrag();
           return;
         }
         this._commitSliderDrag(event.clientX, event, event.pointerId);
       }
       _onWindowMouseMove(event) {
+        if (!(event instanceof MouseEvent)) return;
         if (!this._activeSliderDrag || typeof event.buttons === "number" && (event.buttons & 1) === 0) {
           return;
         }
@@ -2262,19 +2352,22 @@
         this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.clientX);
       }
       _onWindowMouseUp(event) {
+        if (!(event instanceof MouseEvent)) return;
         if (!this._activeSliderDrag) {
           return;
         }
         this._commitSliderDrag(event.clientX, event);
       }
       _onWindowTouchMove(event) {
+        if (!(event instanceof TouchEvent)) return;
         if (!this._activeSliderDrag || !event.touches?.length) {
           return;
         }
         event.preventDefault();
-        this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.touches[0].clientX);
+        this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.touches[0]?.clientX ?? 0);
       }
       _onWindowTouchStartCapture(event) {
+        if (!(event instanceof TouchEvent)) return;
         const drag = this._activeSliderDrag;
         if (!drag) {
           return;
@@ -2283,32 +2376,21 @@
         if (path.includes(drag.slider)) {
           return;
         }
-        this._setSliderDragVisualState(drag.slider, false);
-        this._activeSliderDrag = null;
-        this._detachWindowDragListeners();
-        this._pendingDragUpdate = null;
-        if (this._dragFrame) {
-          window.cancelAnimationFrame(this._dragFrame);
-          this._dragFrame = 0;
-        }
-        if (this._pendingRenderAfterDrag) {
-          this._pendingRenderAfterDrag = false;
-          this._render();
-        }
+        this._cancelSliderDrag();
       }
       _onWindowTouchEnd(event) {
+        if (!(event instanceof TouchEvent)) return;
         if (!this._activeSliderDrag) {
           return;
         }
+        if (event.type === "touchcancel") {
+          this._cancelSliderDrag();
+          return;
+        }
         const clientX = event.changedTouches?.[0]?.clientX;
-        if (!Number.isFinite(clientX)) {
+        if (clientX === void 0 || !Number.isFinite(clientX)) {
           this._setSliderDragVisualState(this._activeSliderDrag.slider, false);
-          this._activeSliderDrag = null;
-          this._detachWindowDragListeners();
-          if (this._pendingRenderAfterDrag) {
-            this._pendingRenderAfterDrag = false;
-            this._render();
-          }
+          this._cancelSliderDrag();
           return;
         }
         this._commitSliderDrag(clientX, event);
@@ -2323,7 +2405,7 @@
         window.addEventListener("pointercancel", this._onWindowPointerUp);
         window.addEventListener("mousemove", this._onWindowMouseMove);
         window.addEventListener("mouseup", this._onWindowMouseUp);
-        if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+        if (typeof PointerEvent !== "function") {
           window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
           window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
           window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
@@ -2340,7 +2422,7 @@
         window.removeEventListener("pointercancel", this._onWindowPointerUp);
         window.removeEventListener("mousemove", this._onWindowMouseMove);
         window.removeEventListener("mouseup", this._onWindowMouseUp);
-        if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+        if (typeof PointerEvent !== "function") {
           window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
           window.removeEventListener("touchmove", this._onWindowTouchMove);
           window.removeEventListener("touchend", this._onWindowTouchEnd);
@@ -2368,7 +2450,7 @@
         if (availableModes.includes(this._activeControlMode)) {
           return this._activeControlMode;
         }
-        this._activeControlMode = availableModes[0];
+        this._activeControlMode = availableModes[0] || "brightness";
         return this._activeControlMode;
       }
       _getControlModeIcon(mode) {
@@ -2383,7 +2465,7 @@
         }
       }
       _onShadowInput(event) {
-        const slider = event.composedPath().find((node) => node instanceof HTMLInputElement && node.dataset?.lightControl);
+        const slider = event.composedPath().find((node) => node instanceof HTMLInputElement && Boolean(node.dataset.lightControl));
         if (!slider) {
           return;
         }
@@ -2394,7 +2476,7 @@
         this._applySliderValue(slider, slider.value, { commit: false });
       }
       _onShadowChange(event) {
-        const slider = event.composedPath().find((node) => node instanceof HTMLInputElement && node.dataset?.lightControl);
+        const slider = event.composedPath().find((node) => node instanceof HTMLInputElement && Boolean(node.dataset.lightControl));
         if (!slider) {
           return;
         }
@@ -2405,15 +2487,20 @@
         }
         this._applySliderValue(slider, slider.value, { commit: true });
       }
+      _onShadowKeyDown(event) {
+        if (!(event instanceof KeyboardEvent) || !["Enter", " "].includes(event.key)) return;
+        const target = event.composedPath()[0];
+        if (target instanceof HTMLElement && !(target instanceof HTMLButtonElement) && target.dataset.lightAction === "body") this._onShadowClick(event);
+      }
       _onShadowClick(event) {
         const path = event.composedPath();
         const slider = path.find(
-          (node) => node instanceof HTMLInputElement && node.dataset?.lightControl
+          (node) => node instanceof HTMLInputElement && Boolean(node.dataset.lightControl)
         );
         if (slider) {
           return;
         }
-        const actionButton = path.find((node) => node instanceof HTMLElement && node.dataset?.lightAction);
+        const actionButton = path.find((node) => node instanceof HTMLElement && Boolean(node.dataset.lightAction));
         if (!actionButton) {
           return;
         }
@@ -2461,7 +2548,7 @@
           }
           case "color": {
             const hs = String(actionButton.dataset.hs || "").split(",").map((value) => Number(value));
-            if (hs.length === 2 && hs.every((value) => Number.isFinite(value))) {
+            if (hs.length === 2 && hs[0] !== void 0 && hs.every((value) => Number.isFinite(value))) {
               this._draftHue.set(this._config.entity, clamp(Math.round(hs[0]), 0, 360));
               this._commitColorPreset(hs);
               this._render();
@@ -2534,7 +2621,7 @@
         const brightnessPercent = this._getBrightnessPercent(state);
         const currentKelvin = this._getCurrentKelvin(state);
         const accentColor = this._getAccentColor(state);
-        const darkenBubbleIconGlyph = isOn && Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(state, accentColor));
+        const darkenBubbleIconGlyph = isOn && Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph?.(state, accentColor));
         const configuredOnIconColor = String(styles?.icon?.on_color ?? "").trim();
         const defaultOnIconColor = String(DEFAULT_CONFIG?.styles?.icon?.on_color ?? "").trim();
         const lightIconColor = isOn ? configuredOnIconColor && configuredOnIconColor !== defaultOnIconColor ? configuredOnIconColor : `color-mix(in srgb, ${accentColor} ${darkenBubbleIconGlyph ? 42 : 72}%, var(--primary-text-color))` : styles?.icon?.off_color;
@@ -2556,7 +2643,6 @@
         const useSliderModeButtons = config.show_slider_mode_buttons !== false && availableControlModes.length > 1;
         const activeControlMode = isOn ? this._getActiveControlMode(state) : "brightness";
         const currentHue = this._getCurrentHue(state);
-        const temperatureRange = this._getTemperatureRange(state);
         const temperatureControlDomain = this._getTemperatureControlDomain(state);
         const temperatureTrackGradient = getTemperatureSliderTrackGradient(temperatureControlDomain.unit);
         const currentTemperatureSliderValue = this._kelvinToTemperatureSliderValue(currentKelvin, state);
@@ -2609,18 +2695,18 @@
             this._controlsTransition = null;
           }
         } else {
-          if (this._powerTransition?.endsAt > now) {
-            powerAnimationState = this._powerTransition.state;
+          if ((this._powerTransition?.endsAt ?? 0) > now) {
+            powerAnimationState = this._powerTransition?.state || "";
           } else {
             this._powerTransition = null;
           }
-          if (!isMiniLayout && this._controlsTransition?.endsAt > now) {
-            controlsAnimationState = this._controlsTransition.state;
+          if (!isMiniLayout && (this._controlsTransition?.endsAt ?? 0) > now) {
+            controlsAnimationState = this._controlsTransition?.state || "";
           } else {
             this._controlsTransition = null;
           }
         }
-        const controlsTransitionStillActive = Boolean(this._controlsTransition?.endsAt > now);
+        const controlsTransitionStillActive = Boolean((this._controlsTransition?.endsAt ?? 0) > now);
         if (animations.enabled && !isMiniLayout && isOn && this._lastRenderedShowDetailedControls === true && !showDetailedControls && String(this._lastControlsMarkup || "").trim() !== "" && !controlsTransitionStillActive) {
           controlsAnimationState = "leaving";
           this._controlsTransition = {
@@ -3923,7 +4009,7 @@
       </style>
       <ha-card
         class="light-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "light-card--compact" : ""} ${isMiniLayout ? "light-card--mini" : ""} ${showCopyBlock ? "light-card--with-copy" : ""} ${powerAnimationState ? `light-card--${powerAnimationState}` : ""}"
-        data-light-action="body"
+        data-light-action="body" role="button" tabindex="0"
         style="--accent-color:${escapeHtml(accentColor)};"
       >
         <div class="light-card__content ${shouldAnimateEntrance ? "light-card__content--entering" : ""}">

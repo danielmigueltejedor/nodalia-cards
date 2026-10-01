@@ -1,9 +1,6 @@
-// @ts-nocheck
-/* Large HTMLElement view/controller: typed incrementally as methods are extracted. */
 import {
   CARD_TAG,
   COLOR_PRESETS,
-  COMPACT_LAYOUT_THRESHOLD,
   EDITOR_TAG,
   HAPTIC_PATTERNS,
   LIGHT_MEMORY_STORAGE_KEY,
@@ -13,15 +10,11 @@ import {
 } from "./light-constants";
 import {
   clamp,
-  compactConfig,
   deepClone,
-  deleteByPath,
   escapeHtml,
   escapeSelectorValue,
   fireEvent,
   isObject,
-  mergeConfig,
-  setByPath,
 } from "./light-runtime";
 
 import { DEFAULT_CONFIG, STUB_CONFIG, normalizeConfig } from "./light-config";
@@ -39,21 +32,77 @@ import {
   rgbToHs,
 } from "./light-helpers";
 
-let _lazyNodaliaLightCard;
-export function loadNodaliaLightCard() {
+import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
+import type { HostPointerHoldBinding } from "../../core/types/nodalia-utils";
+import type { SliderDragGeometry } from "../../shared/device-control-geometry";
+import { parseFiniteNumericValue } from "../../shared/numeric-values";
+import { snapshotDeviceState, readDeviceStateMemory, readDeviceStateSnapshot } from "../../shared/device-state-memory";
+import { invokeHassService } from "../../shared/home-assistant-services";
+import { createViewAnimationWork, scheduleViewFallback, releaseViewAnimationWork } from "../../shared/view-animation-work";
+
+type LightOn = { entityId: string; expiresAt: number; queuedData: Record<string, unknown>; stateSnapshot: HassEntity | null };
+type LightOff = { entityId: string; expiresAt: number; stateSnapshot: HassEntity | null };
+type LightSettle = { entityId: string; expiresAt: number; stateSnapshot: HassEntity | null };
+type LightTransition = { state: string; startedAt: number; endsAt: number };
+type LightModeTransition = { from: string; to: string; phase: "collapsing" | "expanding" };
+type LightDrag = { slider: HTMLInputElement; geometry: SliderDragGeometry; pointerId: number | null; lastHapticValue: number };
+let _lazyNodaliaLightCard: CustomElementConstructor | undefined;
+export function loadNodaliaLightCard(): CustomElementConstructor {
   if (_lazyNodaliaLightCard) {
     return _lazyNodaliaLightCard;
   }
 class NodaliaLightCard extends HTMLElement {
+  private _config!: ReturnType<typeof normalizeConfig>;
+  private _hass!: HomeAssistant | null;
+  private _draftBrightness!: Map<string, number>;
+  private _draftTemperature!: Map<string, number>;
+  private _draftHue!: Map<string, number>;
+  private _lastKnownOnState!: Map<string, HassEntity>;
+  private _activeControlMode!: string;
+  private _cardWidth!: number;
+  private _isCompactLayout!: boolean;
+  private _activeSliderDrag!: LightDrag | null;
+  private _pendingRenderAfterDrag!: boolean;
+  private _skipNextSliderChange!: HTMLInputElement | null;
+  private _dragWindowListenersAttached!: boolean;
+  private _lastRenderSignature!: string;
+  private _lastEntityRevision!: string;
+  private _lastRenderedIsOn!: boolean | null;
+  private _lastRenderedShowDetailedControls!: boolean | null;
+  private _lastControlsMarkup!: string;
+  private _optimisticTurnOn!: LightOn | null;
+  private _optimisticTurnOnTimer!: number;
+  private _optimisticTurnOff!: LightOff | null;
+  private _optimisticTurnOffTimer!: number;
+  private _optimisticVisualSettle!: LightSettle | null;
+  private _animationCleanupTimer!: number;
+  private _entranceAnimationResetTimer!: number;
+  private _animateContentOnNextRender!: boolean;
+  private _suppressNextLightTap!: boolean;
+  private _powerTransition!: LightTransition | null;
+  private _controlsTransition!: LightTransition | null;
+  private _modeSwitchTimer!: number;
+  private _modeSwitchPressTimer!: number;
+  private _modeTransition!: LightModeTransition | null;
+  private _controlsPanelUserOpen!: boolean;
+  private _resizeObserver!: ResizeObserver;
+  private _detachHostHold!: HostPointerHoldBinding;
+  private _lastIdleSliderHapticValue!: number | undefined;
+  private _resizeFrame!: number;
+  private _modeGeneration!: number;
+  private _optimisticVisualSettleTimer!: number;
+  private _modeFrames!: Set<number>;
+  private _panelWork!: ReturnType<typeof createViewAnimationWork>;
+
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig(hass, entities = [], entitiesFallback = []) {
+  static getStubConfig(hass: HomeAssistant | null | undefined, entities: unknown = [], entitiesFallback: unknown = []) {
     return applyStubEntity(deepClone(STUB_CONFIG), hass, ["light"], entities, entitiesFallback);
   }
 
-  static getEntitySuggestion(hass, entityId) {
+  static getEntitySuggestion(hass: HomeAssistant, entityId: string) {
     return [
       window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
         domains: ["light"],
@@ -74,7 +123,7 @@ class NodaliaLightCard extends HTMLElement {
   }
 
   _nodaliaConstruct() {this.attachShadow({ mode: "open" });
-    this._config = null;
+    this._config = normalizeConfig({});
     this._hass = null;
     this._draftBrightness = new Map();
     this._draftTemperature = new Map();
@@ -86,8 +135,7 @@ class NodaliaLightCard extends HTMLElement {
     this._activeSliderDrag = null;
     this._pendingRenderAfterDrag = false;
     this._skipNextSliderChange = null;
-    this._dragFrame = 0;
-    this._pendingDragUpdate = null;
+
     this._dragWindowListenersAttached = false;
     this._lastRenderSignature = "";
     this._lastEntityRevision = "";
@@ -109,7 +157,17 @@ class NodaliaLightCard extends HTMLElement {
     this._modeSwitchPressTimer = 0;
     this._modeTransition = null;
     this._controlsPanelUserOpen = false;
+    this._resizeFrame = 0;
+    this._modeFrames = new Set();
+    this._modeGeneration = 0;
+    this._optimisticVisualSettleTimer = 0;
+    this._lastIdleSliderHapticValue = undefined;
+    this._panelWork = createViewAnimationWork();
     this._resizeObserver = new ResizeObserver(entries => {
+      if (this._resizeFrame) window.cancelAnimationFrame(this._resizeFrame);
+      this._resizeFrame = window.requestAnimationFrame(() => {
+        this._resizeFrame = 0;
+        if (!this.isConnected) return;
       const entry = entries[0];
       if (!entry) {
         return;
@@ -142,7 +200,10 @@ class NodaliaLightCard extends HTMLElement {
 
       this._lastRenderSignature = signature;
       this._render();
+      });
     });
+    this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
+    this.shadowRoot?.addEventListener("keydown", this._onShadowKeyDown);
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowChange = this._onShadowChange.bind(this);
@@ -156,27 +217,27 @@ class NodaliaLightCard extends HTMLElement {
     this._onWindowTouchStartCapture = this._onWindowTouchStartCapture.bind(this);
     this._onWindowTouchMove = this._onWindowTouchMove.bind(this);
     this._onWindowTouchEnd = this._onWindowTouchEnd.bind(this);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("change", this._onShadowChange);
-    this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
-    this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown);
-    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
-      this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
+    this.shadowRoot?.addEventListener("click", this._onShadowClick);
+    this.shadowRoot?.addEventListener("input", this._onShadowInput);
+    this.shadowRoot?.addEventListener("change", this._onShadowChange);
+    this.shadowRoot?.addEventListener("pointerdown", this._onShadowPointerDown);
+    this.shadowRoot?.addEventListener("mousedown", this._onShadowMouseDown);
+    if (typeof PointerEvent !== "function") {
+      this.shadowRoot?.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
     }
     this._detachHostHold =
       typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function"
         ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
             resolveZone: event => {
               const path = event.composedPath();
-              if (path.some(node => node instanceof HTMLInputElement && node.dataset?.lightControl)) {
+              if (path.some(node => node instanceof HTMLInputElement && Boolean(node.dataset.lightControl))) {
                 return null;
               }
               if (window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
                 return null;
               }
               const actionButton = path.find(
-                node => node instanceof HTMLElement && node.dataset?.lightAction,
+                (node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.lightAction),
               );
               const zone = actionButton?.dataset?.lightAction;
               return zone === "body" || zone === "icon" ? zone : null;
@@ -213,11 +274,16 @@ class NodaliaLightCard extends HTMLElement {
   disconnectedCallback() {
     this._detachHostHold?.();
     this._resizeObserver?.disconnect();
-    this._detachWindowDragListeners();
-    if (this._dragFrame) {
-      window.cancelAnimationFrame(this._dragFrame);
-      this._dragFrame = 0;
-    }
+    if (this._resizeFrame) window.cancelAnimationFrame(this._resizeFrame);
+    this._resizeFrame = 0;
+    this._releaseViewWork();
+    this._cancelSliderDrag(false);
+    this._skipNextSliderChange = null;
+    this._suppressNextLightTap = false;
+    window.NodaliaUtils?.cancelCardZoneTap?.(this);
+    this._clearModeSwitchTransition();
+    this._clearOptimisticVisualSettle();
+
     if (this._animationCleanupTimer) {
       window.clearTimeout(this._animationCleanupTimer);
       this._animationCleanupTimer = 0;
@@ -230,24 +296,31 @@ class NodaliaLightCard extends HTMLElement {
     }
     this._powerTransition = null;
     this._controlsTransition = null;
-    if (this._modeSwitchTimer) {
-      window.clearTimeout(this._modeSwitchTimer);
-      this._modeSwitchTimer = 0;
-    }
-    if (this._modeSwitchPressTimer) {
-      window.clearTimeout(this._modeSwitchPressTimer);
-      this._modeSwitchPressTimer = 0;
-    }
-    this._modeTransition = null;
-    this._pendingDragUpdate = null;
-    window.NodaliaUtils?.clearDeferTimers?.(this);
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
   }
 
-  setConfig(config) {
+  setConfig(config: unknown) {
     const previousEntityId = this._config?.entity || "";
-    if (previousEntityId && previousEntityId !== config?.entity) {
+    const nextConfig = normalizeConfig(config || {});
+    if (previousEntityId !== nextConfig.entity) {
+      this._releaseViewWork();
+      this._cancelSliderDrag(false);
+      this._skipNextSliderChange = null;
+      this._suppressNextLightTap = false;
+      window.NodaliaUtils?.cancelCardZoneTap?.(this);
+      this._clearModeSwitchTransition();
+      this._clearOptimisticVisualSettle();
+      window.clearTimeout(this._animationCleanupTimer);
+      window.clearTimeout(this._entranceAnimationResetTimer);
+      this._animationCleanupTimer = 0;
+      this._entranceAnimationResetTimer = 0;
+      this._powerTransition = null;
+      this._controlsTransition = null;
+      this._lastRenderedIsOn = null;
+      this._lastControlsMarkup = "";
+      this._lastEntityRevision = "";
+      this._activeControlMode = "brightness";
       this._lastKnownOnState.delete(previousEntityId);
       this._clearDraftValues(previousEntityId);
       this._clearOptimisticTurnOnState();
@@ -255,7 +328,7 @@ class NodaliaLightCard extends HTMLElement {
       this._controlsPanelUserOpen = false;
       this._lastRenderedShowDetailedControls = null;
     }
-    this._config = normalizeConfig(config || {});
+    this._config = nextConfig;
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
     this._isCompactLayout = this._shouldUseCompactLayout(
       Math.round(this._cardWidth || this.clientWidth || 0),
@@ -265,7 +338,7 @@ class NodaliaLightCard extends HTMLElement {
     this._render();
   }
 
-  _scheduleEntranceAnimationReset(delay) {
+  _scheduleEntranceAnimationReset(delay: unknown) {
     if (this._entranceAnimationResetTimer) {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
@@ -286,7 +359,7 @@ class NodaliaLightCard extends HTMLElement {
     }, safeDelay);
   }
 
-  set hass(hass) {
+  set hass(hass: HomeAssistant) {
     this._hass = hass;
     const actualState = this._getActualState();
     const entityId = this._config?.entity || "";
@@ -298,7 +371,7 @@ class NodaliaLightCard extends HTMLElement {
       this._lastEntityRevision = entityRevision;
     }
     let nextSignature = this._getRenderSignature();
-    const hasPendingOptimistic = Boolean(this._optimisticTurnOn || this._optimisticTurnOff);
+    const hasPendingOptimistic = Boolean(this._optimisticTurnOn || this._optimisticTurnOff || this._optimisticVisualSettle);
     const signatureUnchanged = Boolean(
       this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature,
     );
@@ -359,6 +432,8 @@ class NodaliaLightCard extends HTMLElement {
       Number(attrs.brightness ?? -1),
       Number(attrs.color_temp ?? -1),
       Number(attrs.color_temp_kelvin ?? -1),
+      String(attrs.min_mireds ?? ""), String(attrs.max_mireds ?? ""),
+      String(attrs.min_color_temp_kelvin ?? ""), String(attrs.max_color_temp_kelvin ?? ""),
       Array.isArray(attrs.hs_color) ? attrs.hs_color.join(",") : "",
       Array.isArray(attrs.rgb_color) ? attrs.rgb_color.join(",") : "",
       String(attrs.effect || ""),
@@ -413,7 +488,7 @@ class NodaliaLightCard extends HTMLElement {
     return values.join("|");
   }
 
-  _controlsEditorStr(key) {
+  _controlsEditorStr(key: string) {
     const hass = this._hass;
     if (typeof key !== "string" || !window.NodaliaI18n?.editorStr) {
       return key;
@@ -421,7 +496,7 @@ class NodaliaLightCard extends HTMLElement {
     return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", key);
   }
 
-  _lightCardUi(path, fallback = "", values = {}) {
+  _lightCardUi(path: string, fallback = "", values: Record<string, unknown> = {}) {
     if (typeof window.NodaliaI18n?.translateLightUi === "function") {
       return window.NodaliaI18n.translateLightUi(
         this._hass,
@@ -435,21 +510,10 @@ class NodaliaLightCard extends HTMLElement {
   }
 
   _getConfiguredGridColumns() {
-    const numericColumns = Number(this._config?.grid_options?.columns);
+    const numericColumns = Number(isObject(this._config.grid_options) ? this._config.grid_options.columns : undefined);
     return Number.isFinite(numericColumns) && numericColumns > 0 ? numericColumns : null;
   }
 
-  _getCompactLayoutThreshold() {
-    const styles = this._config?.styles || DEFAULT_CONFIG.styles;
-    const iconSize = parseSizeToPixels(styles?.icon?.size, 58);
-    const cardPadding = parseSizeToPixels(styles?.card?.padding, 14);
-    const cardGap = parseSizeToPixels(styles?.card?.gap, 12);
-
-    return Math.max(
-      COMPACT_LAYOUT_THRESHOLD,
-      Math.round(iconSize + (cardPadding * 2) + cardGap + 24),
-    );
-  }
 
   _getQuickColorPresetRows(config = this._config) {
     const rows = Array.isArray(config?.color_presets) ? config.color_presets : [];
@@ -506,12 +570,13 @@ class NodaliaLightCard extends HTMLElement {
     return window.NodaliaUtils.shouldShowCompactCardTitle({ width });
   }
 
-  _triggerHaptic(style = this._config?.haptics?.style) {
-    if (!this._config?.haptics?.enabled) {
+  _triggerHaptic(style: unknown = undefined) {
+    const haptics = isObject(this._config.haptics) ? this._config.haptics : {};
+    if (!haptics.enabled) {
       return;
     }
 
-    const hapticStyle = String(style || "medium");
+    const hapticStyle = String(style || haptics.style || "medium");
 
     try {
       fireEvent(this, "haptic", hapticStyle);
@@ -520,17 +585,18 @@ class NodaliaLightCard extends HTMLElement {
     }
 
     if (
-      !this._config.haptics.fallback_vibrate ||
+      !haptics.fallback_vibrate ||
       typeof navigator === "undefined" ||
       typeof navigator.vibrate !== "function"
     ) {
       return;
     }
 
-    navigator.vibrate(HAPTIC_PATTERNS[hapticStyle] || HAPTIC_PATTERNS.selection);
+    const patterns: Record<string, number | number[]> = HAPTIC_PATTERNS;
+    navigator.vibrate(patterns[hapticStyle] || HAPTIC_PATTERNS.selection);
   }
 
-  _getState() {
+  _getState(): HassEntity | null {
     const actualState = this._getActualState();
     if (this._isOptimisticTurnOffPending(actualState)) {
       return this._buildOptimisticTurnOffState(actualState);
@@ -555,34 +621,13 @@ class NodaliaLightCard extends HTMLElement {
     return this._hass.states[this._config.entity] || null;
   }
 
-  _createStateSnapshot(state) {
-    if (!state) {
-      return null;
-    }
-
-    return {
-      ...state,
-      attributes: {
-        ...(state.attributes || {}),
-      },
-    };
-  }
 
   _getStoredLightMemory() {
-    if (typeof window === "undefined" || !window.localStorage) {
-      return {};
-    }
-
-    try {
-      const parsed = JSON.parse(window.localStorage.getItem(LIGHT_MEMORY_STORAGE_KEY) || "{}");
-      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
-    } catch (_error) {
-      return {};
-    }
+    return readDeviceStateMemory(LIGHT_MEMORY_STORAGE_KEY);
   }
 
-  _storeLightMemory(entityId, snapshot) {
-    if (!entityId || !snapshot || typeof window === "undefined" || !window.localStorage) {
+  _storeLightMemory(entityId: string, snapshot: HassEntity | null) {
+    if (!entityId || !snapshot || typeof window === "undefined") {
       return;
     }
 
@@ -616,34 +661,18 @@ class NodaliaLightCard extends HTMLElement {
     }
   }
 
-  _getStoredLightSnapshot(entityId = this._config?.entity || "") {
-    if (!entityId) {
-      return null;
-    }
-
-    const stored = this._getStoredLightMemory()[entityId];
-    if (!stored?.attributes || typeof stored.attributes !== "object") {
-      return null;
-    }
-
-    return {
-      entity_id: entityId,
-      state: "on",
-      attributes: {
-        ...(stored.attributes || {}),
-      },
-      last_changed: stored.last_changed || new Date().toISOString(),
-      last_updated: stored.last_changed || new Date().toISOString(),
-    };
+  _getStoredLightSnapshot(entityId: string): HassEntity | null {
+    return readDeviceStateSnapshot(LIGHT_MEMORY_STORAGE_KEY, entityId);
   }
 
-  _syncLastKnownOnState(actualState) {
+  _syncLastKnownOnState(actualState: HassEntity | null) {
     const entityId = this._config?.entity || "";
     if (!entityId || !actualState) {
       return;
     }
 
-    const snapshot = this._createStateSnapshot(actualState);
+    const snapshot = snapshotDeviceState(actualState);
+    if (!snapshot) return;
 
     if (actualState.state === "on") {
       this._lastKnownOnState.set(entityId, snapshot);
@@ -679,7 +708,7 @@ class NodaliaLightCard extends HTMLElement {
 
     const stored = this._getStoredLightSnapshot(entityId);
     if (stored) {
-      this._lastKnownOnState.set(entityId, this._createStateSnapshot(stored));
+      this._lastKnownOnState.set(entityId, stored);
     }
 
     return stored;
@@ -702,7 +731,7 @@ class NodaliaLightCard extends HTMLElement {
     }
   }
 
-  _clearOptimisticTurnOnState(options = {}) {
+  _clearOptimisticTurnOnState(options: { clearDrafts?: boolean } = {}) {
     const clearDrafts = options.clearDrafts === true;
     const entityId = this._optimisticTurnOn?.entityId || this._config?.entity;
 
@@ -714,21 +743,32 @@ class NodaliaLightCard extends HTMLElement {
     }
   }
 
-  _startOptimisticVisualSettle(actualState, optimisticState) {
+  _clearOptimisticVisualSettle() {
+    window.clearTimeout(this._optimisticVisualSettleTimer);
+    this._optimisticVisualSettleTimer = 0;
+    this._optimisticVisualSettle = null;
+  }
+
+  _startOptimisticVisualSettle(actualState: HassEntity | null, optimisticState: HassEntity | null) {
     const entityId = this._config?.entity || "";
     if (!entityId || !actualState || actualState.state !== "on" || !optimisticState) {
-      this._optimisticVisualSettle = null;
+      this._clearOptimisticVisualSettle();
       return;
     }
 
+    this._clearOptimisticVisualSettle();
     this._optimisticVisualSettle = {
       entityId,
       expiresAt: Date.now() + OPTIMISTIC_VISUAL_SETTLE_MS,
-      stateSnapshot: this._createStateSnapshot(optimisticState),
+      stateSnapshot: snapshotDeviceState(optimisticState),
     };
+    this._optimisticVisualSettleTimer = window.setTimeout(() => {
+      this._clearOptimisticVisualSettle();
+      if (this.isConnected) { this._lastRenderSignature = ""; this._render(); }
+    }, OPTIMISTIC_VISUAL_SETTLE_MS);
   }
 
-  _hasUsefulColorAttributes(state) {
+  _hasUsefulColorAttributes(state: HassEntity | null) {
     const attrs = state?.attributes || {};
     return (
       Array.isArray(attrs.rgb_color) ||
@@ -744,18 +784,18 @@ class NodaliaLightCard extends HTMLElement {
     }
 
     if (this._optimisticVisualSettle.entityId !== (this._config?.entity || "")) {
-      this._optimisticVisualSettle = null;
+      this._clearOptimisticVisualSettle();
       return false;
     }
 
     if (actualState?.state !== "on" || Date.now() >= this._optimisticVisualSettle.expiresAt) {
-      this._optimisticVisualSettle = null;
+      this._clearOptimisticVisualSettle();
       return false;
     }
 
     const settledSnapshot = this._optimisticVisualSettle.stateSnapshot;
     if (this._hasUsefulColorAttributes(actualState) && this._hasUsefulColorAttributes(settledSnapshot)) {
-      this._optimisticVisualSettle = null;
+      this._clearOptimisticVisualSettle();
       return false;
     }
 
@@ -816,12 +856,10 @@ class NodaliaLightCard extends HTMLElement {
 
     const remaining = Math.max(0, this._optimisticTurnOn.expiresAt - Date.now());
     if (!remaining || typeof window === "undefined") {
-      if (this._isOptimisticTurnOnPending(this._getActualState())) {
-        this._flushOptimisticTurnOnQueue();
-      }
       if (!this.isConnected) {
         return;
       }
+      if (this._optimisticTurnOn?.entityId === this._config.entity && this._getActualState()?.state === "off") this._flushOptimisticTurnOnQueue();
       this._clearOptimisticTurnOnState({ clearDrafts: true });
       this._render();
       return;
@@ -833,11 +871,7 @@ class NodaliaLightCard extends HTMLElement {
         return;
       }
 
-      if (!this._isOptimisticTurnOnPending(this._getActualState())) {
-        return;
-      }
-
-      this._flushOptimisticTurnOnQueue();
+      if (this._optimisticTurnOn?.entityId === this._config.entity && this._getActualState()?.state === "off") this._flushOptimisticTurnOnQueue();
       this._clearOptimisticTurnOnState({ clearDrafts: true });
       this._render();
     }, remaining);
@@ -853,13 +887,13 @@ class NodaliaLightCard extends HTMLElement {
       entityId: this._config.entity,
       expiresAt: Date.now() + OPTIMISTIC_TURN_ON_TIMEOUT,
       queuedData: {},
-      stateSnapshot: this._createStateSnapshot(cachedState || actualState),
+      stateSnapshot: snapshotDeviceState(cachedState || actualState),
     };
 
     this._scheduleOptimisticTurnOnTimeout();
   }
 
-  _queueOptimisticTurnOnChange(data = {}) {
+  _queueOptimisticTurnOnChange(data: Record<string, unknown> = {}) {
     if (!this._isOptimisticTurnOnPending(this._getActualState()) || !this._optimisticTurnOn) {
       return false;
     }
@@ -889,7 +923,7 @@ class NodaliaLightCard extends HTMLElement {
     return true;
   }
 
-  _buildOptimisticTurnOnState(actualState = this._getActualState()) {
+  _buildOptimisticTurnOnState(actualState = this._getActualState()): HassEntity | null {
     const snapshot = this._optimisticTurnOn?.stateSnapshot || this._getLastKnownOnState() || null;
     const baseState = snapshot || actualState;
     if (!baseState) {
@@ -937,7 +971,7 @@ class NodaliaLightCard extends HTMLElement {
     this._setLightState(queuedData);
   }
 
-  _syncOptimisticTurnOnState(actualState) {
+  _syncOptimisticTurnOnState(actualState: HassEntity | null) {
     if (!this._optimisticTurnOn) {
       return;
     }
@@ -961,7 +995,7 @@ class NodaliaLightCard extends HTMLElement {
       return;
     }
 
-    if (["unavailable", "unknown"].includes(actualState?.state)) {
+    if (["unavailable", "unknown"].includes(actualState?.state || "")) {
       this._clearOptimisticTurnOnState({ clearDrafts: true });
       return;
     }
@@ -1010,10 +1044,6 @@ class NodaliaLightCard extends HTMLElement {
         return;
       }
 
-      if (!this._isOptimisticTurnOffPending(this._getActualState())) {
-        return;
-      }
-
       this._clearOptimisticTurnOffState();
       this._render();
     }, remaining);
@@ -1031,13 +1061,13 @@ class NodaliaLightCard extends HTMLElement {
     this._optimisticTurnOff = {
       entityId: this._config.entity,
       expiresAt: Date.now() + OPTIMISTIC_TURN_OFF_TIMEOUT,
-      stateSnapshot: this._createStateSnapshot(stateSnapshotSource),
+      stateSnapshot: snapshotDeviceState(stateSnapshotSource),
     };
 
     this._scheduleOptimisticTurnOffTimeout();
   }
 
-  _buildOptimisticTurnOffState(actualState = this._getActualState()) {
+  _buildOptimisticTurnOffState(actualState = this._getActualState()): HassEntity | null {
     const baseState = this._optimisticTurnOff?.stateSnapshot || actualState || this._getLastKnownOnState();
     if (!baseState) {
       return actualState;
@@ -1053,7 +1083,7 @@ class NodaliaLightCard extends HTMLElement {
     };
   }
 
-  _syncOptimisticTurnOffState(actualState) {
+  _syncOptimisticTurnOffState(actualState: HassEntity | null) {
     if (!this._optimisticTurnOff) {
       return;
     }
@@ -1068,7 +1098,7 @@ class NodaliaLightCard extends HTMLElement {
       return;
     }
 
-    if (["unavailable", "unknown"].includes(actualState?.state)) {
+    if (["unavailable", "unknown"].includes(actualState?.state || "")) {
       this._clearOptimisticTurnOffState();
       return;
     }
@@ -1081,7 +1111,7 @@ class NodaliaLightCard extends HTMLElement {
     this._scheduleOptimisticTurnOffTimeout();
   }
 
-  _supportsBrightness(state) {
+  _supportsBrightness(state: HassEntity | null) {
     if (typeof state?.attributes?.brightness === "number") {
       return true;
     }
@@ -1095,7 +1125,7 @@ class NodaliaLightCard extends HTMLElement {
     );
   }
 
-  _supportsColor(state) {
+  _supportsColor(state: HassEntity | null) {
     const supportedColorModes = Array.isArray(state?.attributes?.supported_color_modes)
       ? state.attributes.supported_color_modes
       : [];
@@ -1105,7 +1135,7 @@ class NodaliaLightCard extends HTMLElement {
     );
   }
 
-  _supportsColorTemperature(state) {
+  _supportsColorTemperature(state: HassEntity | null) {
     const supportedColorModes = Array.isArray(state?.attributes?.supported_color_modes)
       ? state.attributes.supported_color_modes
       : [];
@@ -1117,7 +1147,7 @@ class NodaliaLightCard extends HTMLElement {
     );
   }
 
-  _getBrightnessPercent(state) {
+  _getBrightnessPercent(state: HassEntity | null) {
     const entityId = this._config?.entity;
     if (entityId && this._draftBrightness.has(entityId)) {
       return clamp(Number(this._draftBrightness.get(entityId)), 1, 100);
@@ -1130,7 +1160,7 @@ class NodaliaLightCard extends HTMLElement {
     return state?.state === "on" ? 100 : 50;
   }
 
-  _getTemperatureRange(state) {
+  _getTemperatureRange(state: HassEntity | null) {
     const minKelvin = Number(state?.attributes?.min_color_temp_kelvin);
     const maxKelvin = Number(state?.attributes?.max_color_temp_kelvin);
 
@@ -1159,7 +1189,7 @@ class NodaliaLightCard extends HTMLElement {
     };
   }
 
-  _getTemperatureControlDomain(state) {
+  _getTemperatureControlDomain(state: HassEntity | null) {
     const minMireds = Number(state?.attributes?.min_mireds);
     const maxMireds = Number(state?.attributes?.max_mireds);
 
@@ -1181,24 +1211,23 @@ class NodaliaLightCard extends HTMLElement {
     };
   }
 
-  _temperatureSliderValueToKelvin(value, state) {
+  _temperatureSliderValueToKelvin(value: unknown, state: HassEntity | null) {
     const domain = this._getTemperatureControlDomain(state);
     const boundedValue = clamp(Math.round(Number(value)), domain.min, domain.max);
     return domain.unit === "mired" ? miredToKelvin(boundedValue) : boundedValue;
   }
 
-  _kelvinToTemperatureSliderValue(kelvin, state) {
+  _kelvinToTemperatureSliderValue(kelvin: unknown, state: HassEntity | null) {
     const domain = this._getTemperatureControlDomain(state);
     const numericKelvin = clamp(Math.round(Number(kelvin)), 1, 100000);
     const nextValue = domain.unit === "mired" ? kelvinToMired(numericKelvin) : numericKelvin;
     return clamp(Math.round(nextValue), domain.min, domain.max);
   }
 
-  _getCurrentKelvin(state) {
+  _getCurrentKelvin(state: HassEntity | null) {
     const entityId = this._config?.entity;
-    if (entityId && this._draftTemperature.has(entityId)) {
-      return this._draftTemperature.get(entityId);
-    }
+    const draft = entityId ? this._draftTemperature.get(entityId) : undefined;
+    if (draft !== undefined) return draft;
 
     if (typeof state?.attributes?.color_temp_kelvin === "number") {
       return Math.round(state.attributes.color_temp_kelvin);
@@ -1212,19 +1241,18 @@ class NodaliaLightCard extends HTMLElement {
     return Math.round((range.min + range.max) / 2);
   }
 
-  _getCurrentHue(state) {
+  _getCurrentHue(state: HassEntity | null) {
     const entityId = this._config?.entity;
-    if (entityId && this._draftHue.has(entityId)) {
-      return this._draftHue.get(entityId);
-    }
+    const draft = entityId ? this._draftHue.get(entityId) : undefined;
+    if (draft !== undefined) return draft;
 
     const hsColor = Array.isArray(state?.attributes?.hs_color) ? state.attributes.hs_color : null;
-    if (hsColor?.length === 2 && hsColor.every(value => Number.isFinite(Number(value)))) {
+    if (hsColor?.length === 2 && hsColor.every(value => parseFiniteNumericValue(value) !== null)) {
       return clamp(Math.round(Number(hsColor[0])), 0, 360);
     }
 
     const rgbColor = Array.isArray(state?.attributes?.rgb_color) ? state.attributes.rgb_color : null;
-    const derivedHs = rgbToHs(rgbColor);
+    const derivedHs = rgbColor?.every(value => parseFiniteNumericValue(value) !== null) ? rgbToHs(rgbColor) : null;
     if (derivedHs) {
       return clamp(derivedHs[0], 0, 360);
     }
@@ -1232,14 +1260,14 @@ class NodaliaLightCard extends HTMLElement {
     return 42;
   }
 
-  _getCurrentSaturation(state) {
+  _getCurrentSaturation(state: HassEntity | null) {
     const hsColor = Array.isArray(state?.attributes?.hs_color) ? state.attributes.hs_color : null;
-    if (hsColor?.length === 2 && hsColor.every(value => Number.isFinite(Number(value)))) {
+    if (hsColor?.length === 2 && hsColor.every(value => parseFiniteNumericValue(value) !== null)) {
       return clamp(Math.round(Number(hsColor[1])), 0, 100);
     }
 
     const rgbColor = Array.isArray(state?.attributes?.rgb_color) ? state.attributes.rgb_color : null;
-    const derivedHs = rgbToHs(rgbColor);
+    const derivedHs = rgbColor?.every(value => parseFiniteNumericValue(value) !== null) ? rgbToHs(rgbColor) : null;
     if (derivedHs) {
       return clamp(derivedHs[1], 0, 100);
     }
@@ -1247,7 +1275,7 @@ class NodaliaLightCard extends HTMLElement {
     return 75;
   }
 
-  _getTemperaturePresets(state) {
+  _getTemperaturePresets(state: HassEntity | null) {
     const range = this._getTemperatureRange(state);
     const middle = Math.round((range.min + range.max) / 2);
 
@@ -1258,10 +1286,13 @@ class NodaliaLightCard extends HTMLElement {
     ];
   }
 
-  _getStateLabel(state) {
+  _getStateLabel(state: HassEntity | null) {
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-    const entityStates = window.NodaliaI18n?.strings?.(lang)?.entityCard?.states;
+    const pack = window.NodaliaI18n?.strings?.(lang);
+    const entityCard = isObject(pack?.entityCard) ? pack.entityCard : {};
+    const entityStates = isObject(entityCard.states) ? entityCard.states : {};
+    const alarmPanel = isObject(pack?.alarmPanel) ? pack.alarmPanel : {};
 
     if (state?.attributes?._nodalia_optimistic_off === true) {
       return entityStates?.closing || "Apagando";
@@ -1281,11 +1312,11 @@ class NodaliaLightCard extends HTMLElement {
       case "unknown":
         return entityStates?.unknown || "Unknown";
       default:
-        return state?.state ? String(state.state) : (window.NodaliaI18n?.strings?.(lang)?.alarmPanel?.noState || "No state");
+        return state?.state ? String(state.state) : (alarmPanel.noState || "No state");
     }
   }
 
-  _getLightName(state) {
+  _getLightName(state: HassEntity | null) {
     if (this._config?.name) {
       return this._config.name;
     }
@@ -1297,11 +1328,11 @@ class NodaliaLightCard extends HTMLElement {
     return this._config?.entity || "Luz";
   }
 
-  _getLightIcon(state) {
+  _getLightIcon(state: HassEntity | null) {
     return this._config?.icon || state?.attributes?.icon || "mdi:lightbulb";
   }
 
-  _getEntityPicture(state) {
+  _getEntityPicture(state: HassEntity | null) {
     if (this._config?.show_entity_picture !== true) {
       return "";
     }
@@ -1313,7 +1344,7 @@ class NodaliaLightCard extends HTMLElement {
     ).trim();
   }
 
-  _getAccentColor(state) {
+  _getAccentColor(state: HassEntity | null) {
     const rgbColor = Array.isArray(state?.attributes?.rgb_color) ? state.attributes.rgb_color : null;
     if (state?.state === "on" && rgbColor?.length === 3) {
       return `rgb(${rgbColor[0]}, ${rgbColor[1]}, ${rgbColor[2]})`;
@@ -1336,7 +1367,7 @@ class NodaliaLightCard extends HTMLElement {
   }
 
   _getAnimationSettings() {
-    const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+    const configuredAnimations = isObject(this._config.animations) ? this._config.animations : DEFAULT_CONFIG.animations;
     return {
       enabled: configuredAnimations.enabled !== false,
       powerDuration: clamp(Number(configuredAnimations.power_duration) || DEFAULT_CONFIG.animations.power_duration, 120, 4000),
@@ -1347,7 +1378,7 @@ class NodaliaLightCard extends HTMLElement {
     };
   }
 
-  _scheduleAnimationCleanup(delay) {
+  _scheduleAnimationCleanup(delay: unknown) {
     if (this._animationCleanupTimer) {
       window.clearTimeout(this._animationCleanupTimer);
       this._animationCleanupTimer = 0;
@@ -1376,6 +1407,9 @@ class NodaliaLightCard extends HTMLElement {
   }
 
   _clearModeSwitchTransition() {
+    ++this._modeGeneration;
+    this._modeFrames.forEach(frame => window.cancelAnimationFrame(frame));
+    this._modeFrames.clear();
     if (this._modeSwitchTimer) {
       window.clearTimeout(this._modeSwitchTimer);
       this._modeSwitchTimer = 0;
@@ -1389,7 +1423,20 @@ class NodaliaLightCard extends HTMLElement {
     this._modeTransition = null;
   }
 
-  _triggerButtonBounce(button) {
+  _releaseViewWork() {
+    releaseViewAnimationWork(this._panelWork);
+    window.NodaliaUtils?.clearDeferTimers?.(this);
+  }
+
+  _scheduleModeFrame(callback: () => void, generation: number) {
+    const frame = window.requestAnimationFrame(() => {
+      this._modeFrames.delete(frame);
+      if (generation === this._modeGeneration && this.isConnected) callback();
+    });
+    this._modeFrames.add(frame);
+  }
+
+  _triggerButtonBounce(button: Element | null | undefined) {
     if (!(button instanceof HTMLElement)) {
       return;
     }
@@ -1413,11 +1460,11 @@ class NodaliaLightCard extends HTMLElement {
     if (typeof schedule === "function") {
       schedule(this, done, animations.buttonBounceDuration + 40);
     } else {
-      window.setTimeout(done, animations.buttonBounceDuration + 40);
+      scheduleViewFallback(this._panelWork, done, animations.buttonBounceDuration + 40);
     }
   }
 
-  _startModeSwitchTransition(nextMode, state = this._getState()) {
+  _startModeSwitchTransition(nextMode: string, state = this._getState()) {
     const animations = this._getAnimationSettings();
     const availableModes = this._getAvailableControlModes(state);
     const currentMode = this._getActiveControlMode(state);
@@ -1426,6 +1473,7 @@ class NodaliaLightCard extends HTMLElement {
       !animations.enabled ||
       !state ||
       !nextMode ||
+      !currentMode ||
       nextMode === currentMode ||
       !availableModes.includes(nextMode) ||
       !availableModes.includes(currentMode)
@@ -1438,6 +1486,7 @@ class NodaliaLightCard extends HTMLElement {
 
     this._clearModeSwitchTransition();
 
+    const generation = this._modeGeneration;
     const phaseDuration = Math.max(100, Math.round(animations.modeSwitchDuration / 2));
     const settleDuration = phaseDuration + 34;
     const fromMode = currentMode;
@@ -1452,6 +1501,7 @@ class NodaliaLightCard extends HTMLElement {
 
     this._modeSwitchTimer = window.setTimeout(() => {
       this._modeSwitchTimer = 0;
+      if (generation !== this._modeGeneration || !this.isConnected) return;
       this._activeControlMode = toMode;
       this._modeTransition = {
         from: fromMode,
@@ -1464,9 +1514,7 @@ class NodaliaLightCard extends HTMLElement {
         this._modeSwitchTimer = 0;
 
         const finalizeTransition = () => {
-          if (!this.isConnected) {
-            return;
-          }
+          if (!this.isConnected || generation !== this._modeGeneration) return;
           if (
             !this._modeTransition ||
             this._modeTransition.phase !== "expanding" ||
@@ -1480,9 +1528,7 @@ class NodaliaLightCard extends HTMLElement {
         };
 
         if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
-          window.requestAnimationFrame(() => {
-            window.requestAnimationFrame(finalizeTransition);
-          });
+          this._scheduleModeFrame(() => this._scheduleModeFrame(finalizeTransition, generation), generation);
           return;
         }
 
@@ -1491,12 +1537,12 @@ class NodaliaLightCard extends HTMLElement {
     }, phaseDuration);
   }
 
-  _setLightState(data = {}) {
+  _setLightState(data: Record<string, unknown> = {}) {
     if (!this._hass || !this._config?.entity) {
       return;
     }
 
-    this._hass.callService("light", "turn_on", {
+    invokeHassService(this, this._hass, "light", "turn_on", {
       entity_id: this._config.entity,
       ...data,
     });
@@ -1507,17 +1553,17 @@ class NodaliaLightCard extends HTMLElement {
       return;
     }
 
-    this._hass.callService("light", "turn_off", {
+    invokeHassService(this, this._hass, "light", "turn_off", {
       entity_id: this._config.entity,
     });
   }
 
-  _isLightToggleableState(state) {
+  _isLightToggleableState(state: HassEntity | null) {
     const key = String(state?.state || "").trim().toLowerCase();
     return key === "on" || key === "off";
   }
 
-  _resolveTapEffect(zone) {
+  _resolveTapEffect(zone: string) {
     const raw =
       zone === "icon"
         ? this._config?.icon_tap_action || "toggle"
@@ -1544,7 +1590,7 @@ class NodaliaLightCard extends HTMLElement {
     });
   }
 
-  _parseServiceData(rawValue) {
+  _parseServiceData(rawValue: unknown) {
     if (!rawValue) {
       return {};
     }
@@ -1552,14 +1598,15 @@ class NodaliaLightCard extends HTMLElement {
       return deepClone(rawValue);
     }
     try {
-      const parsed = JSON.parse(rawValue);
+      if (typeof rawValue !== "string") return {};
+      const parsed: unknown = JSON.parse(rawValue);
       return isObject(parsed) ? parsed : {};
     } catch (_error) {
       return {};
     }
   }
 
-  _isServiceAllowed(serviceValue) {
+  _isServiceAllowed(serviceValue: unknown) {
     const security = this._config?.security || {};
     if (security.strict_service_actions === false) {
       return true;
@@ -1578,10 +1625,10 @@ class NodaliaLightCard extends HTMLElement {
     if (!domains.length && !services.length) {
       return false;
     }
-    return services.includes(normalizedService) || domains.includes(domain);
+    return services.includes(normalizedService) || Boolean(domain && domains.includes(domain));
   }
 
-  _callConfiguredService(serviceValue, entityId = this._config?.entity, rawData = "", rawTarget = "") {
+  _callConfiguredService(serviceValue: unknown, entityId = this._config.entity, rawData: unknown = "", rawTarget: unknown = "") {
     if (!this._hass || !serviceValue) {
       return;
     }
@@ -1599,10 +1646,10 @@ class NodaliaLightCard extends HTMLElement {
     if (!hasTarget && entityId && payload.entity_id === undefined) {
       payload.entity_id = entityId;
     }
-    this._hass.callService(domain, service, payload, hasTarget ? target : undefined);
+    invokeHassService(this, this._hass, domain, service, payload, hasTarget ? target : undefined);
   }
 
-  _openConfiguredUrl(urlValue, newTab = false) {
+  _openConfiguredUrl(urlValue: unknown, newTab: unknown = false) {
     const url = window.NodaliaUtils?.sanitizeActionUrl(urlValue, { allowRelative: true }) || "";
     if (!url) {
       return;
@@ -1614,7 +1661,7 @@ class NodaliaLightCard extends HTMLElement {
     window.location.href = url;
   }
 
-  _openConfiguredNavigation(pathValue) {
+  _openConfiguredNavigation(pathValue: unknown) {
     const path = window.NodaliaUtils?.sanitizeActionUrl?.(pathValue, { allowRelative: true }) || "";
     if (!path || path.includes("://")) {
       return;
@@ -1622,7 +1669,7 @@ class NodaliaLightCard extends HTMLElement {
     fireEvent(this, "hass-navigate", { path });
   }
 
-  _executeTapEffect(zone, effect) {
+  _executeTapEffect(zone: string, effect: string) {
     const isIcon = zone === "icon";
     switch (effect) {
       case "toggle":
@@ -1652,7 +1699,7 @@ class NodaliaLightCard extends HTMLElement {
     }
   }
 
-  _resolveHoldEffect(zone) {
+  _resolveHoldEffect(zone: string) {
     const inheritIcon = zone === "icon" && String(this._config?.icon_hold_action ?? "").trim() === "";
     const raw = inheritIcon
       ? String(this._config?.hold_action ?? "none").trim()
@@ -1669,7 +1716,7 @@ class NodaliaLightCard extends HTMLElement {
     return effect;
   }
 
-  _executeHoldEffect(zone, effect) {
+  _executeHoldEffect(zone: string, effect: string) {
     const isIcon = zone === "icon";
     switch (effect) {
       case "toggle":
@@ -1746,7 +1793,7 @@ class NodaliaLightCard extends HTMLElement {
     this._render();
   }
 
-  _commitBrightness(percent) {
+  _commitBrightness(percent: unknown) {
     const nextBrightness = clamp(Math.round(Number(percent)), 1, 100);
     if (!Number.isFinite(nextBrightness)) {
       return;
@@ -1761,7 +1808,7 @@ class NodaliaLightCard extends HTMLElement {
     });
   }
 
-  _commitColorPreset(hs) {
+  _commitColorPreset(hs: unknown) {
     if (this._queueOptimisticTurnOnChange({ hs_color: hs })) {
       return;
     }
@@ -1771,7 +1818,7 @@ class NodaliaLightCard extends HTMLElement {
     });
   }
 
-  _commitColorHue(hue, state) {
+  _commitColorHue(hue: unknown, state: HassEntity | null) {
     const numericHue = clamp(Math.round(Number(hue)), 0, 360);
     if (!Number.isFinite(numericHue)) {
       return;
@@ -1787,7 +1834,7 @@ class NodaliaLightCard extends HTMLElement {
     });
   }
 
-  _commitTemperaturePreset(kelvin) {
+  _commitTemperaturePreset(kelvin: unknown) {
     const range = this._getTemperatureRange(this._getState());
     const numericKelvin = clamp(Math.round(Number(kelvin)), range.min, range.max);
     if (!Number.isFinite(numericKelvin) || numericKelvin <= 0) {
@@ -1803,17 +1850,17 @@ class NodaliaLightCard extends HTMLElement {
     });
   }
 
-  _updateBrightnessPreview(value) {
+  _updateBrightnessPreview(value: unknown) {
     const slider = this.shadowRoot?.querySelector('.light-card__slider[data-light-control="brightness"]');
     const nextValue = clamp(Number(value), 1, 100);
 
     if (slider instanceof HTMLInputElement) {
       slider.style.setProperty("--brightness", String(nextValue));
-      slider.closest(".light-card__slider-shell")?.style.setProperty("--brightness", String(nextValue));
+      slider.closest<HTMLElement>(".light-card__slider-shell")?.style.setProperty("--brightness", String(nextValue));
     }
   }
 
-  _updateTemperaturePreview(value, state) {
+  _updateTemperaturePreview(value: unknown, state: HassEntity | null) {
     const slider = this.shadowRoot?.querySelector('.light-card__slider[data-light-control="temperature"]');
     const domain = this._getTemperatureControlDomain(state);
     const boundedValue = clamp(Number(value), domain.min, domain.max);
@@ -1823,30 +1870,32 @@ class NodaliaLightCard extends HTMLElement {
 
     if (slider instanceof HTMLInputElement) {
       slider.style.setProperty("--temperature-progress", String(clamp(percent, 0, 100)));
-      slider.closest(".light-card__slider-shell")?.style.setProperty("--temperature-progress", String(clamp(percent, 0, 100)));
+      slider.closest<HTMLElement>(".light-card__slider-shell")?.style.setProperty("--temperature-progress", String(clamp(percent, 0, 100)));
     }
   }
 
-  _updateColorPreview(value) {
+  _updateColorPreview(value: unknown) {
     const slider = this.shadowRoot?.querySelector('.light-card__slider[data-light-control="color"]');
     const nextValue = clamp(Math.round(Number(value)), 0, 360);
     const percent = (nextValue / 360) * 100;
 
     if (slider instanceof HTMLInputElement) {
       slider.style.setProperty("--color-progress", String(clamp(percent, 0, 100)));
-      slider.closest(".light-card__slider-shell")?.style.setProperty("--color-progress", String(clamp(percent, 0, 100)));
+      slider.closest<HTMLElement>(".light-card__slider-shell")?.style.setProperty("--color-progress", String(clamp(percent, 0, 100)));
     }
   }
 
-  _patchLightActiveChip(sliderKind, text) {
+  _patchLightActiveChip(sliderKind: string, text: string) {
     const chip = this.shadowRoot?.querySelector(`[data-light-chip="${escapeSelectorValue(sliderKind)}"]`);
     if (chip instanceof HTMLElement) {
       chip.textContent = text;
     }
   }
 
-  _hapticOnSliderStep(kind, steppedValue, { commit = false } = {}) {
-    if (this._config?.haptics?.scrolls?.[kind] === false) {
+  _hapticOnSliderStep(kind: string, steppedValue: unknown, { commit = false }: { commit?: boolean } = {}) {
+    const haptics = isObject(this._config.haptics) ? this._config.haptics : {};
+    const scrolls = isObject(haptics.scrolls) ? haptics.scrolls : {};
+    if (scrolls[kind] === false) {
       return;
     }
     const next = Number(steppedValue);
@@ -1874,7 +1923,7 @@ class NodaliaLightCard extends HTMLElement {
     this._triggerHaptic("selection");
   }
 
-  _lightSliderHapticStep(kind, value) {
+  _lightSliderHapticStep(kind: string, value: unknown) {
     const numeric = Number(value);
     if (!Number.isFinite(numeric)) {
       return Number.NaN;
@@ -1886,9 +1935,9 @@ class NodaliaLightCard extends HTMLElement {
     return Math.round(numeric);
   }
 
-  _applySliderValue(slider, value, options = {}) {
+  _applySliderValue(slider: HTMLInputElement, value: unknown, options: { commit?: boolean } = {}) {
     const commit = options.commit === true;
-    const kind = slider.dataset.lightControl;
+    const kind = slider.dataset.lightControl || "";
 
     switch (kind) {
       case "brightness": {
@@ -1933,13 +1982,14 @@ class NodaliaLightCard extends HTMLElement {
     }
   }
 
-  _onShadowPointerDown(event) {
+  _onShadowPointerDown(event: Event) {
+    if (!(event instanceof PointerEvent)) return;
     const slider = event
       .composedPath()
-      .find(node =>
-        node instanceof HTMLInputElement &&
+      .find((node): node is HTMLInputElement =>
+      node instanceof HTMLInputElement &&
         node.type === "range" &&
-        node.dataset?.lightControl,
+        Boolean(node.dataset.lightControl),
       );
 
     if (this._activeSliderDrag || !slider || (typeof event.button === "number" && event.button !== 0)) {
@@ -1949,13 +1999,13 @@ class NodaliaLightCard extends HTMLElement {
     this._startSliderDrag(slider, event.clientX, event, event.pointerId);
   }
 
-  _queueSliderDragUpdate(slider, clientX) {
+  _queueSliderDragUpdate(slider: HTMLInputElement, clientX: number) {
     const nextValue = getRangeValueFromGeometry(this._activeSliderDrag?.geometry, slider.value, clientX);
     slider.value = String(nextValue);
     this._applySliderValue(slider, nextValue, { commit: false });
   }
 
-  _setSliderDragVisualState(slider, isDragging) {
+  _setSliderDragVisualState(slider: HTMLInputElement | null, isDragging: boolean) {
     const sliderShell = slider?.closest?.(".light-card__slider-shell");
     if (!(sliderShell instanceof HTMLElement)) {
       return;
@@ -1964,12 +2014,12 @@ class NodaliaLightCard extends HTMLElement {
     sliderShell.classList.toggle("is-dragging", isDragging === true);
   }
 
-  _startSliderDrag(slider, clientX, event = null, pointerId = null) {
+  _startSliderDrag(slider: HTMLInputElement, clientX: number, event: Event | null = null, pointerId: number | null = null) {
     if (!slider) {
       return;
     }
 
-    const kind = slider.dataset.lightControl;
+    const kind = slider.dataset.lightControl || "";
     const seedValue = kind === "temperature"
       ? this._temperatureSliderValueToKelvin(Number(slider.value), this._getState())
       : Number(slider.value);
@@ -1986,11 +2036,6 @@ class NodaliaLightCard extends HTMLElement {
       event.stopPropagation();
     }
 
-    this._pendingDragUpdate = null;
-    if (this._dragFrame) {
-      window.cancelAnimationFrame(this._dragFrame);
-      this._dragFrame = 0;
-    }
 
     this._setSliderDragVisualState(slider, true);
     const nextValue = getRangeValueFromGeometry(this._activeSliderDrag.geometry, slider.value, clientX);
@@ -1998,20 +2043,15 @@ class NodaliaLightCard extends HTMLElement {
     this._applySliderValue(slider, nextValue, { commit: false });
   }
 
-  _commitSliderDrag(clientX, event = null, pointerId = null) {
+  _commitSliderDrag(clientX: number, event: Event | null = null, pointerId: number | null = null) {
     const drag = this._activeSliderDrag;
     if (!drag) {
       return;
     }
 
+    if (pointerId !== null && drag.pointerId !== pointerId) return;
     if (event) {
       event.preventDefault();
-    }
-
-    this._pendingDragUpdate = null;
-    if (this._dragFrame) {
-      window.cancelAnimationFrame(this._dragFrame);
-      this._dragFrame = 0;
     }
 
     const nextValue = getRangeValueFromGeometry(drag.geometry, drag.slider.value, clientX);
@@ -2030,13 +2070,14 @@ class NodaliaLightCard extends HTMLElement {
     }
   }
 
-  _onShadowMouseDown(event) {
+  _onShadowMouseDown(event: Event) {
+    if (!(event instanceof MouseEvent)) return;
     const slider = event
       .composedPath()
-      .find(node =>
-        node instanceof HTMLInputElement &&
+      .find((node): node is HTMLInputElement =>
+      node instanceof HTMLInputElement &&
         node.type === "range" &&
-        node.dataset?.lightControl,
+        Boolean(node.dataset.lightControl),
       );
 
     if (this._activeSliderDrag || !slider || event.button !== 0) {
@@ -2046,23 +2087,25 @@ class NodaliaLightCard extends HTMLElement {
     this._startSliderDrag(slider, event.clientX, event);
   }
 
-  _onShadowTouchStart(event) {
+  _onShadowTouchStart(event: Event) {
+    if (!(event instanceof TouchEvent)) return;
     const slider = event
       .composedPath()
-      .find(node =>
-        node instanceof HTMLInputElement &&
+      .find((node): node is HTMLInputElement =>
+      node instanceof HTMLInputElement &&
         node.type === "range" &&
-        node.dataset?.lightControl,
+        Boolean(node.dataset.lightControl),
       );
 
     if (this._activeSliderDrag || !slider || !event.touches?.length) {
       return;
     }
 
-    this._startSliderDrag(slider, event.touches[0].clientX, event);
+    this._startSliderDrag(slider, (event.touches[0]?.clientX ?? 0), event);
   }
 
-  _onWindowPointerMove(event) {
+  _onWindowPointerMove(event: Event) {
+    if (!(event instanceof PointerEvent)) return;
     const drag = this._activeSliderDrag;
     if (!drag || drag.pointerId !== event.pointerId) {
       return;
@@ -2072,16 +2115,31 @@ class NodaliaLightCard extends HTMLElement {
     this._queueSliderDragUpdate(drag.slider, event.clientX);
   }
 
-  _onWindowPointerUp(event) {
+  _cancelSliderDrag(render = true) {
+    const drag = this._activeSliderDrag;
+    if (drag) this._setSliderDragVisualState(drag.slider, false);
+    this._activeSliderDrag = null;
+    this._detachWindowDragListeners();
+    this._clearDraftValues();
+    this._skipNextSliderChange = drag?.slider || null;
+    this._pendingRenderAfterDrag = false;
+    this._lastIdleSliderHapticValue = undefined;
+    if (render && this.isConnected) { this._lastRenderSignature = ""; this._render(); }
+  }
+
+  _onWindowPointerUp(event: Event) {
+    if (!(event instanceof PointerEvent)) return;
     const drag = this._activeSliderDrag;
     if (!drag || drag.pointerId !== event.pointerId) {
       return;
     }
 
+    if (event.type === "pointercancel") { this._cancelSliderDrag(); return; }
     this._commitSliderDrag(event.clientX, event, event.pointerId);
   }
 
-  _onWindowMouseMove(event) {
+  _onWindowMouseMove(event: Event) {
+    if (!(event instanceof MouseEvent)) return;
     if (!this._activeSliderDrag || (typeof event.buttons === "number" && (event.buttons & 1) === 0)) {
       return;
     }
@@ -2090,7 +2148,8 @@ class NodaliaLightCard extends HTMLElement {
     this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.clientX);
   }
 
-  _onWindowMouseUp(event) {
+  _onWindowMouseUp(event: Event) {
+    if (!(event instanceof MouseEvent)) return;
     if (!this._activeSliderDrag) {
       return;
     }
@@ -2098,16 +2157,18 @@ class NodaliaLightCard extends HTMLElement {
     this._commitSliderDrag(event.clientX, event);
   }
 
-  _onWindowTouchMove(event) {
+  _onWindowTouchMove(event: Event) {
+    if (!(event instanceof TouchEvent)) return;
     if (!this._activeSliderDrag || !event.touches?.length) {
       return;
     }
 
     event.preventDefault();
-    this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.touches[0].clientX);
+    this._queueSliderDragUpdate(this._activeSliderDrag.slider, (event.touches[0]?.clientX ?? 0));
   }
 
-  _onWindowTouchStartCapture(event) {
+  _onWindowTouchStartCapture(event: Event) {
+    if (!(event instanceof TouchEvent)) return;
     const drag = this._activeSliderDrag;
     if (!drag) {
       return;
@@ -2118,38 +2179,22 @@ class NodaliaLightCard extends HTMLElement {
       return;
     }
 
-    this._setSliderDragVisualState(drag.slider, false);
-    this._activeSliderDrag = null;
-    this._detachWindowDragListeners();
-    this._pendingDragUpdate = null;
-    if (this._dragFrame) {
-      window.cancelAnimationFrame(this._dragFrame);
-      this._dragFrame = 0;
-    }
-
-    if (this._pendingRenderAfterDrag) {
-      this._pendingRenderAfterDrag = false;
-      this._render();
-    }
+    this._cancelSliderDrag();
   }
 
-  _onWindowTouchEnd(event) {
+  _onWindowTouchEnd(event: Event) {
+    if (!(event instanceof TouchEvent)) return;
     if (!this._activeSliderDrag) {
       return;
     }
 
+    if (event.type === "touchcancel") { this._cancelSliderDrag(); return; }
     const clientX = event.changedTouches?.[0]?.clientX;
-    if (!Number.isFinite(clientX)) {
+    if (clientX === undefined || !Number.isFinite(clientX)) {
       this._setSliderDragVisualState(this._activeSliderDrag.slider, false);
-      this._activeSliderDrag = null;
-      this._detachWindowDragListeners();
-      if (this._pendingRenderAfterDrag) {
-        this._pendingRenderAfterDrag = false;
-        this._render();
-      }
+      this._cancelSliderDrag();
       return;
     }
-
     this._commitSliderDrag(clientX, event);
   }
 
@@ -2163,7 +2208,7 @@ class NodaliaLightCard extends HTMLElement {
     window.addEventListener("pointercancel", this._onWindowPointerUp);
     window.addEventListener("mousemove", this._onWindowMouseMove);
     window.addEventListener("mouseup", this._onWindowMouseUp);
-    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+    if (typeof PointerEvent !== "function") {
       window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
       window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
       window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
@@ -2181,7 +2226,7 @@ class NodaliaLightCard extends HTMLElement {
     window.removeEventListener("pointercancel", this._onWindowPointerUp);
     window.removeEventListener("mousemove", this._onWindowMouseMove);
     window.removeEventListener("mouseup", this._onWindowMouseUp);
-    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+    if (typeof PointerEvent !== "function") {
       window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
       window.removeEventListener("touchmove", this._onWindowTouchMove);
       window.removeEventListener("touchend", this._onWindowTouchEnd);
@@ -2189,7 +2234,7 @@ class NodaliaLightCard extends HTMLElement {
     }
   }
 
-  _getAvailableControlModes(state) {
+  _getAvailableControlModes(state: HassEntity | null) {
     const modes = [];
 
     if (this._config?.show_brightness !== false && this._supportsBrightness(state)) {
@@ -2207,7 +2252,7 @@ class NodaliaLightCard extends HTMLElement {
     return modes;
   }
 
-  _getActiveControlMode(state) {
+  _getActiveControlMode(state: HassEntity | null) {
     const availableModes = this._getAvailableControlModes(state);
     if (!availableModes.length) {
       return null;
@@ -2217,11 +2262,11 @@ class NodaliaLightCard extends HTMLElement {
       return this._activeControlMode;
     }
 
-    this._activeControlMode = availableModes[0];
+    this._activeControlMode = availableModes[0] || "brightness";
     return this._activeControlMode;
   }
 
-  _getControlModeIcon(mode) {
+  _getControlModeIcon(mode: string) {
     switch (mode) {
       case "temperature":
         return "mdi:thermometer";
@@ -2233,10 +2278,11 @@ class NodaliaLightCard extends HTMLElement {
     }
   }
 
-  _onShadowInput(event) {
+  _onShadowInput(event: Event) {
     const slider = event
       .composedPath()
-      .find(node => node instanceof HTMLInputElement && node.dataset?.lightControl);
+      .find((node): node is HTMLInputElement =>
+      node instanceof HTMLInputElement && Boolean(node.dataset.lightControl));
 
     if (!slider) {
       return;
@@ -2251,10 +2297,11 @@ class NodaliaLightCard extends HTMLElement {
     this._applySliderValue(slider, slider.value, { commit: false });
   }
 
-  _onShadowChange(event) {
+  _onShadowChange(event: Event) {
     const slider = event
       .composedPath()
-      .find(node => node instanceof HTMLInputElement && node.dataset?.lightControl);
+      .find((node): node is HTMLInputElement =>
+      node instanceof HTMLInputElement && Boolean(node.dataset.lightControl));
 
     if (!slider) {
       return;
@@ -2269,17 +2316,22 @@ class NodaliaLightCard extends HTMLElement {
     this._applySliderValue(slider, slider.value, { commit: true });
   }
 
-  _onShadowClick(event) {
+  _onShadowKeyDown(event: Event) {
+    if (!(event instanceof KeyboardEvent) || !["Enter", " "].includes(event.key)) return;
+    const target = event.composedPath()[0];
+    if (target instanceof HTMLElement && !(target instanceof HTMLButtonElement) && target.dataset.lightAction === "body") this._onShadowClick(event);
+  }
+
+  _onShadowClick(event: Event) {
     const path = event.composedPath();
-    const slider = path.find(
-      node => node instanceof HTMLInputElement && node.dataset?.lightControl,
+    const slider = path.find((node): node is HTMLInputElement => node instanceof HTMLInputElement && Boolean(node.dataset.lightControl),
     );
 
     if (slider) {
       return;
     }
 
-    const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.lightAction);
+    const actionButton = path.find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.lightAction));
 
     if (!actionButton) {
       return;
@@ -2334,7 +2386,7 @@ class NodaliaLightCard extends HTMLElement {
         const hs = String(actionButton.dataset.hs || "")
           .split(",")
           .map(value => Number(value));
-        if (hs.length === 2 && hs.every(value => Number.isFinite(value))) {
+        if (hs.length === 2 && hs[0] !== undefined && hs.every(value => Number.isFinite(value))) {
           this._draftHue.set(this._config.entity, clamp(Math.round(hs[0]), 0, 360));
           this._commitColorPreset(hs);
           this._render();
@@ -2415,7 +2467,7 @@ class NodaliaLightCard extends HTMLElement {
     const currentKelvin = this._getCurrentKelvin(state);
     const accentColor = this._getAccentColor(state);
     const darkenBubbleIconGlyph =
-      isOn && Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(state, accentColor));
+      isOn && Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph?.(state, accentColor));
     const configuredOnIconColor = String(styles?.icon?.on_color ?? "").trim();
     const defaultOnIconColor = String(DEFAULT_CONFIG?.styles?.icon?.on_color ?? "").trim();
     const lightIconColor = isOn
@@ -2443,7 +2495,6 @@ class NodaliaLightCard extends HTMLElement {
     const useSliderModeButtons = config.show_slider_mode_buttons !== false && availableControlModes.length > 1;
     const activeControlMode = isOn ? this._getActiveControlMode(state) : "brightness";
     const currentHue = this._getCurrentHue(state);
-    const temperatureRange = this._getTemperatureRange(state);
     const temperatureControlDomain = this._getTemperatureControlDomain(state);
     const temperatureTrackGradient = getTemperatureSliderTrackGradient(temperatureControlDomain.unit);
     const currentTemperatureSliderValue = this._kelvinToTemperatureSliderValue(currentKelvin, state);
@@ -2502,20 +2553,20 @@ class NodaliaLightCard extends HTMLElement {
         this._controlsTransition = null;
       }
     } else {
-      if (this._powerTransition?.endsAt > now) {
-        powerAnimationState = this._powerTransition.state;
+      if ((this._powerTransition?.endsAt ?? 0) > now) {
+        powerAnimationState = this._powerTransition?.state || "";
       } else {
         this._powerTransition = null;
       }
 
-      if (!isMiniLayout && this._controlsTransition?.endsAt > now) {
-        controlsAnimationState = this._controlsTransition.state;
+      if (!isMiniLayout && (this._controlsTransition?.endsAt ?? 0) > now) {
+        controlsAnimationState = this._controlsTransition?.state || "";
       } else {
         this._controlsTransition = null;
       }
     }
 
-    const controlsTransitionStillActive = Boolean(this._controlsTransition?.endsAt > now);
+    const controlsTransitionStillActive = Boolean((this._controlsTransition?.endsAt ?? 0) > now);
     if (
       animations.enabled
       && !isMiniLayout
@@ -2543,7 +2594,7 @@ class NodaliaLightCard extends HTMLElement {
     const displayedControlMode = modeTransition
       ? (modeTransition.phase === "collapsing" ? modeTransition.from : modeTransition.to)
       : activeControlMode;
-    const controlModeLabel = mode => {
+    const controlModeLabel = (mode: string | null) => {
       const fallback = mode === "temperature"
         ? "Show temperature"
         : mode === "color"
@@ -3945,7 +3996,7 @@ class NodaliaLightCard extends HTMLElement {
       </style>
       <ha-card
         class="light-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "light-card--compact" : ""} ${isMiniLayout ? "light-card--mini" : ""} ${showCopyBlock ? "light-card--with-copy" : ""} ${powerAnimationState ? `light-card--${powerAnimationState}` : ""}"
-        data-light-action="body"
+        data-light-action="body" role="button" tabindex="0"
         style="--accent-color:${escapeHtml(accentColor)};"
       >
         <div class="light-card__content ${shouldAnimateEntrance ? "light-card__content--entering" : ""}">

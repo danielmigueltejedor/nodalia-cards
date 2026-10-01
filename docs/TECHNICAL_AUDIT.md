@@ -1506,3 +1506,37 @@ outside keyboard attributes. Full local suite: 602 passed, one existing skip.
 Native touch lifecycle fixtures enable a real touch context for Firefox too;
 remote Firefox checks remain required. Remaining unchecked modules: 12.
 Hold publication until the complete source/runtime migration.
+
+## Light view findings — 2026-10-01
+
+At the exact optimistic deadline, the pending predicate was already false;
+timer callbacks returned without clearing on/off state or flushing queued
+changes. Visual settle had no timer. Pointer/touch cancellation committed
+drafts, changing lights retained drag/mode work, mode transitions scheduled
+unowned nested frames, and temperature-limit changes were absent from render
+signatures. Nullable color channels could manufacture a hue.
+
+Check actual HA/native/DOM/config/snapshot/queue/drag/transition contracts. Own
+resize, mode frames, fallback and 420-ms settle work. Finish the original
+3.2-second on/off deadlines and deliver queued changes once when confirmed or
+when the same light remains off at expiry. Cancel drafts without commands,
+reset entity-specific work, preserve disabled individual haptics and add
+main-card keyboard activation. Guard malformed stored records, nullable color
+channels and service failures with targets and false/zero data intact.
+
+Share checked device-memory readers/snapshots across Light/Fan/Humidifier.
+Remove five unused Light imports, two dead queue fields and one unused range
+calculation; four unused compact-threshold methods and three unused compact
+title methods across Light/Fan/Humidifier/Vacuum. Remove redundant cleanup
+branches already completed by the owning methods. All 749 unit tests and 48
+focused browser cases pass. 3,000 equivalent presentation/sizing outputs per
+card (12,000 total) match main outside restored keyboard attributes. Raw/gzip
+bundle gates remain unchanged and pass.
+
+Safari's native TouchEvent cannot construct a populated TouchList in this
+fixture: native cancellation is covered in all three local engines, with
+changed coordinates additionally checked in Chromium. The Vacuum keyboard
+case waits for the first measured width before interacting, retaining both
+keyboard/action assertions. Full local suite: 614 passed, one existing skip.
+Remaining unchecked modules: 11. Hold publication until all source/runtime
+migration and final audit validation complete.

@@ -1,6 +1,5 @@
 import {
   CARD_TAG,
-  COMPACT_LAYOUT_THRESHOLD,
   EDITOR_TAG,
   HAPTIC_PATTERNS,
   HUMIDIFIER_MEMORY_STORAGE_KEY,
@@ -23,7 +22,6 @@ import {
   getRangeValueFromGeometry,
   getSliderDragGeometry,
   isUnavailableState,
-  parseSizeToPixels,
   translateModeLabel,
 } from "./humidifier-helpers";
 
@@ -32,6 +30,7 @@ import type { HostPointerHoldBinding } from "../../core/types/nodalia-utils";
 import type { SliderDragGeometry, DialGeometry, DialRange } from "../../shared/device-control-geometry";
 import { parseFiniteNumericValue } from "../../shared/numeric-values";
 import { createMarkupElement } from "../../shared/view-markup";
+import { snapshotDeviceState, readDeviceStateMemory, readDeviceStateSnapshot } from "../../shared/device-state-memory";
 import { invokeHassService } from "../../shared/home-assistant-services";
 import { createViewAnimationWork, scheduleViewFallback, cancelViewPanelAnimations, releaseViewAnimationWork, waitForViewPanelAnimation } from "../../shared/view-animation-work";
 
@@ -464,17 +463,6 @@ class NodaliaHumidifierCard extends HTMLElement {
     return Number.isFinite(numericColumns) && numericColumns > 0 ? numericColumns : null;
   }
 
-  _getCompactLayoutThreshold() {
-    const styles = getSafeStyles(this._config?.styles);
-    const iconSize = parseSizeToPixels(styles?.icon?.size, 58);
-    const cardPadding = parseSizeToPixels(styles?.card?.padding, 14);
-    const cardGap = parseSizeToPixels(styles?.card?.gap, 12);
-
-    return Math.max(
-      COMPACT_LAYOUT_THRESHOLD,
-      Math.round(iconSize + (cardPadding * 2) + cardGap + 24),
-    );
-  }
 
   _shouldUseCompactLayout(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
     return window.NodaliaUtils.shouldUseCompactCardLayout({
@@ -485,9 +473,6 @@ class NodaliaHumidifierCard extends HTMLElement {
     });
   }
 
-  _shouldShowCompactTitle(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
-    return window.NodaliaUtils.shouldShowCompactCardTitle({ width });
-  }
 
   _getState() {
     const actualState = this._getActualState();
@@ -502,26 +487,9 @@ class NodaliaHumidifierCard extends HTMLElement {
     return this._config?.entity ? hass?.states?.[this._config.entity] || null : null;
   }
 
-  _createStateSnapshot(state: HassEntity | null): HassEntity | null {
-    if (!state) {
-      return null;
-    }
-    return {
-      ...state,
-      attributes: { ...(state.attributes || {}) },
-    };
-  }
 
-  _getStoredHumidifierMemory(): Record<string, unknown> {
-    if (typeof window === "undefined") {
-      return {};
-    }
-    try {
-      const parsed: unknown = JSON.parse(window.localStorage.getItem(HUMIDIFIER_MEMORY_STORAGE_KEY) || "{}");
-      return isObject(parsed) ? parsed : {};
-    } catch {
-      return {};
-    }
+  _getStoredHumidifierMemory() {
+    return readDeviceStateMemory(HUMIDIFIER_MEMORY_STORAGE_KEY);
   }
 
   _storeHumidifierMemory(entityId: string, snapshot: HassEntity | null) {
@@ -541,17 +509,7 @@ class NodaliaHumidifierCard extends HTMLElement {
   }
 
   _getStoredHumidifierSnapshot(entityId: string): HassEntity | null {
-    const stored = this._getStoredHumidifierMemory()[entityId];
-    if (!isObject(stored) || !isObject(stored.attributes)) {
-      return null;
-    }
-    return {
-      entity_id: entityId,
-      state: "on",
-      attributes: { ...(stored.attributes || {}) },
-      last_changed: typeof stored.last_changed === "string" ? stored.last_changed : new Date().toISOString(),
-      last_updated: typeof stored.last_changed === "string" ? stored.last_changed : new Date().toISOString(),
-    };
+    return readDeviceStateSnapshot(HUMIDIFIER_MEMORY_STORAGE_KEY, entityId);
   }
 
   _syncLastKnownOnState(actualState: HassEntity | null) {
@@ -560,7 +518,7 @@ class NodaliaHumidifierCard extends HTMLElement {
       return;
     }
 
-    const snapshot = this._createStateSnapshot(actualState);
+    const snapshot = snapshotDeviceState(actualState);
     if (!snapshot) return;
     if (actualState.state === "on") {
       this._lastKnownOnState.set(entityId, snapshot);
@@ -607,7 +565,7 @@ class NodaliaHumidifierCard extends HTMLElement {
     this._optimisticVisualSettle = {
       entityId,
       expiresAt: Date.now() + OPTIMISTIC_VISUAL_SETTLE_MS,
-      stateSnapshot: this._createStateSnapshot(optimisticState),
+      stateSnapshot: snapshotDeviceState(optimisticState),
     };
     this._scheduleOptimisticVisualSettleTimeout();
   }
@@ -795,7 +753,7 @@ class NodaliaHumidifierCard extends HTMLElement {
       entityId,
       expectedState,
       expiresAt: Date.now() + OPTIMISTIC_TOGGLE_TIMEOUT,
-      stateSnapshot: this._createStateSnapshot(snapshotSource),
+      stateSnapshot: snapshotDeviceState(snapshotSource),
     };
     this._scheduleOptimisticToggleTimeout();
   }

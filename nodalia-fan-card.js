@@ -91,7 +91,6 @@
     warning: [20, 50, 12],
     failure: [12, 40, 12, 40, 18]
   };
-  var COMPACT_LAYOUT_THRESHOLD = 150;
   var OPTIMISTIC_TOGGLE_TIMEOUT = 3200;
   var OPTIMISTIC_VISUAL_SETTLE_MS = 420;
   var FAN_MEMORY_STORAGE_KEY = "nodalia-fan-card:last-visual-state:v1";
@@ -323,10 +322,6 @@
     config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
     return config;
   }
-  function parseSizeToPixels(value, fallback = 0) {
-    const numeric = Number.parseFloat(String(value ?? ""));
-    return Number.isFinite(numeric) ? numeric : fallback;
-  }
 
   // src/shared/editor-color.ts
   var clamp2 = (value, max) => Math.max(0, Math.min(max, value));
@@ -477,6 +472,28 @@
     template.innerHTML = markup.trim();
     const node = template.content.firstElementChild;
     return node instanceof HTMLElement ? node : null;
+  }
+
+  // src/shared/device-state-memory.ts
+  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  function snapshotDeviceState(state) {
+    return state ? { ...state, attributes: { ...state.attributes } } : null;
+  }
+  function readDeviceStateMemory(storageKey) {
+    if (typeof window === "undefined") return {};
+    try {
+      const parsed = JSON.parse(window.localStorage.getItem(storageKey) || "{}");
+      return isRecord(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  function readDeviceStateSnapshot(storageKey, entityId) {
+    if (!entityId) return null;
+    const stored = readDeviceStateMemory(storageKey)[entityId];
+    if (!isRecord(stored) || !isRecord(stored.attributes)) return null;
+    const timestamp = typeof stored.last_changed === "string" ? stored.last_changed : (/* @__PURE__ */ new Date()).toISOString();
+    return { entity_id: entityId, state: "on", attributes: { ...stored.attributes }, last_changed: timestamp, last_updated: timestamp };
   }
 
   // src/shared/home-assistant-services.ts
@@ -713,11 +730,6 @@
         window.NodaliaUtils?.cancelCardZoneTap?.(this);
         this._suppressNextFanTap = false;
         this._skipNextSliderChange = null;
-        if (this._activeSliderDrag) {
-          this._activeSliderDrag.dial?.classList?.remove("is-dragging");
-          this._activeSliderDrag = null;
-        }
-        this._detachWindowDragListeners();
         if (this._animationCleanupTimer) {
           window.clearTimeout(this._animationCleanupTimer);
           this._animationCleanupTimer = 0;
@@ -844,16 +856,6 @@
         const numericColumns = Number(isObject(this._config.grid_options) ? this._config.grid_options.columns : void 0);
         return Number.isFinite(numericColumns) && numericColumns > 0 ? numericColumns : null;
       }
-      _getCompactLayoutThreshold() {
-        const styles = getSafeStyles(this._config?.styles);
-        const iconSize = parseSizeToPixels(styles?.icon?.size, 58);
-        const cardPadding = parseSizeToPixels(styles?.card?.padding, 14);
-        const cardGap = parseSizeToPixels(styles?.card?.gap, 12);
-        return Math.max(
-          COMPACT_LAYOUT_THRESHOLD,
-          Math.round(iconSize + cardPadding * 2 + cardGap + 24)
-        );
-      }
       _shouldUseCompactLayout(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
         return window.NodaliaUtils.shouldUseCompactCardLayout({
           mode: this._config?.compact_layout_mode,
@@ -861,9 +863,6 @@
           gridColumns: this._getConfiguredGridColumns(),
           parentWidth: window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0
         });
-      }
-      _shouldShowCompactTitle(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
-        return window.NodaliaUtils.shouldShowCompactCardTitle({ width });
       }
       _triggerHaptic(style = void 0) {
         const haptics = isObject(this._config.haptics) ? this._config.haptics : {};
@@ -896,25 +895,8 @@
       _getActualState(hass = this._hass) {
         return this._config?.entity ? hass?.states?.[this._config.entity] || null : null;
       }
-      _createStateSnapshot(state) {
-        if (!state) {
-          return null;
-        }
-        return {
-          ...state,
-          attributes: { ...state.attributes || {} }
-        };
-      }
       _getStoredFanMemory() {
-        if (typeof window === "undefined") {
-          return {};
-        }
-        try {
-          const parsed = JSON.parse(window.localStorage.getItem(FAN_MEMORY_STORAGE_KEY) || "{}");
-          return isObject(parsed) ? parsed : {};
-        } catch {
-          return {};
-        }
+        return readDeviceStateMemory(FAN_MEMORY_STORAGE_KEY);
       }
       _storeFanMemory(entityId, snapshot) {
         if (!entityId || !snapshot || typeof window === "undefined") {
@@ -931,24 +913,14 @@
         }
       }
       _getStoredFanSnapshot(entityId) {
-        const stored = this._getStoredFanMemory()[entityId];
-        if (!isObject(stored) || !isObject(stored.attributes)) {
-          return null;
-        }
-        return {
-          entity_id: entityId,
-          state: "on",
-          attributes: { ...stored.attributes || {} },
-          last_changed: typeof stored.last_changed === "string" ? stored.last_changed : (/* @__PURE__ */ new Date()).toISOString(),
-          last_updated: typeof stored.last_changed === "string" ? stored.last_changed : (/* @__PURE__ */ new Date()).toISOString()
-        };
+        return readDeviceStateSnapshot(FAN_MEMORY_STORAGE_KEY, entityId);
       }
       _syncLastKnownOnState(actualState) {
         const entityId = this._config?.entity || "";
         if (!entityId || !actualState) {
           return;
         }
-        const snapshot = this._createStateSnapshot(actualState);
+        const snapshot = snapshotDeviceState(actualState);
         if (!snapshot) return;
         if (actualState.state === "on") {
           this._lastKnownOnState.set(entityId, snapshot);
@@ -987,7 +959,7 @@
         this._optimisticVisualSettle = {
           entityId,
           expiresAt: Date.now() + OPTIMISTIC_VISUAL_SETTLE_MS,
-          stateSnapshot: this._createStateSnapshot(optimisticState)
+          stateSnapshot: snapshotDeviceState(optimisticState)
         };
         this._scheduleOptimisticVisualSettleTimeout();
       }
@@ -1136,7 +1108,7 @@
           entityId,
           expectedState,
           expiresAt: Date.now() + OPTIMISTIC_TOGGLE_TIMEOUT,
-          stateSnapshot: this._createStateSnapshot(snapshotSource)
+          stateSnapshot: snapshotDeviceState(snapshotSource)
         };
         this._scheduleOptimisticToggleTimeout();
       }

@@ -1,6 +1,5 @@
 import {
   CARD_TAG,
-  COMPACT_LAYOUT_THRESHOLD,
   EDITOR_TAG,
   HAPTIC_PATTERNS,
   MOP_MODE_PATTERNS,
@@ -22,7 +21,6 @@ import {
   isHelperRelatedToConfiguredVacuum,
   isUnavailableState,
   listVacuumObjectIds,
-  parseSizeToPixels,
 } from "./vacuum-helpers";
 
 import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
@@ -447,17 +445,6 @@ class NodaliaVacuumCard extends HTMLElement {
     return Number.isFinite(numericColumns) && numericColumns > 0 ? numericColumns : null;
   }
 
-  _getCompactLayoutThreshold() {
-    const styles = getSafeStyles(this._config?.styles);
-    const iconSize = parseSizeToPixels(styles?.icon?.size, 58);
-    const cardPadding = parseSizeToPixels(styles?.card?.padding, 14);
-    const cardGap = parseSizeToPixels(styles?.card?.gap, 12);
-
-    return Math.max(
-      COMPACT_LAYOUT_THRESHOLD,
-      Math.round(iconSize + (cardPadding * 2) + (cardGap * 2) + 48),
-    );
-  }
 
   _shouldUseCompactLayout(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
     return window.NodaliaUtils.shouldUseCompactCardLayout({
@@ -468,9 +455,6 @@ class NodaliaVacuumCard extends HTMLElement {
     });
   }
 
-  _shouldShowCompactTitle(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
-    return window.NodaliaUtils.shouldShowCompactCardTitle({ width });
-  }
 
   _triggerHaptic(style: unknown = undefined) {
     const haptics = isObject(this._config.haptics) ? this._config.haptics : {};

@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+- Check Light view contracts, cancel draft brightness/color/temperature without commands, finish optimistic queues at their original deadlines and own mode/settle/resize work. Share checked device memory and remove verified dead compact-size/title helpers without changing rendering or bundle size gates.
+
 - Check Humidifier view contracts, cancel tentative drags, preserve optimistic deadlines and own mode-panel work; share animation cleanup and panel construction with Fan/Vacuum to retain the bundle size budget.
 
 - Check the Fan view, cancel pointer/touch drags without sending tentative speeds, own preset/resize/fallback work and retain keyboard access. Keep render signatures pure so acknowledged toggles preserve the remembered percentage during the existing visual-settle deadline. Guard stored memory, missing numeric capability data and HA service failures; remove dead drag queue fields.

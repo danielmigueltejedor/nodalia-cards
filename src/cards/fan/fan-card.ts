@@ -1,7 +1,6 @@
 import {
   ALLOWED_DOUBLE_TAP_ACTIONS,
   CARD_TAG,
-  COMPACT_LAYOUT_THRESHOLD,
   EDITOR_TAG,
   FAN_MEMORY_STORAGE_KEY,
   HAPTIC_PATTERNS,
@@ -24,7 +23,6 @@ import {
   getRangeValueFromGeometry,
   getSliderDragGeometry,
   isUnavailableState,
-  parseSizeToPixels,
   translatePresetLabel,
 } from "./fan-helpers";
 
@@ -33,6 +31,7 @@ import type { HostPointerHoldBinding } from "../../core/types/nodalia-utils";
 import type { SliderDragGeometry, DialGeometry, DialRange } from "../../shared/device-control-geometry";
 import { parseFiniteNumericValue } from "../../shared/numeric-values";
 import { createMarkupElement } from "../../shared/view-markup";
+import { snapshotDeviceState, readDeviceStateMemory, readDeviceStateSnapshot } from "../../shared/device-state-memory";
 import { invokeHassService } from "../../shared/home-assistant-services";
 import { createViewAnimationWork, scheduleViewFallback, cancelViewPanelAnimations, releaseViewAnimationWork, waitForViewPanelAnimation } from "../../shared/view-animation-work";
 
@@ -251,12 +250,6 @@ class NodaliaFanCard extends HTMLElement {
     window.NodaliaUtils?.cancelCardZoneTap?.(this);
     this._suppressNextFanTap = false;
     this._skipNextSliderChange = null;
-    if (this._activeSliderDrag) {
-      this._activeSliderDrag.dial?.classList?.remove("is-dragging");
-      this._activeSliderDrag = null;
-    }
-    this._detachWindowDragListeners();
-
     if (this._animationCleanupTimer) {
       window.clearTimeout(this._animationCleanupTimer);
       this._animationCleanupTimer = 0;
@@ -416,17 +409,6 @@ class NodaliaFanCard extends HTMLElement {
     return Number.isFinite(numericColumns) && numericColumns > 0 ? numericColumns : null;
   }
 
-  _getCompactLayoutThreshold() {
-    const styles = getSafeStyles(this._config?.styles);
-    const iconSize = parseSizeToPixels(styles?.icon?.size, 58);
-    const cardPadding = parseSizeToPixels(styles?.card?.padding, 14);
-    const cardGap = parseSizeToPixels(styles?.card?.gap, 12);
-
-    return Math.max(
-      COMPACT_LAYOUT_THRESHOLD,
-      Math.round(iconSize + (cardPadding * 2) + cardGap + 24),
-    );
-  }
 
   _shouldUseCompactLayout(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
     return window.NodaliaUtils.shouldUseCompactCardLayout({
@@ -437,9 +419,6 @@ class NodaliaFanCard extends HTMLElement {
     });
   }
 
-  _shouldShowCompactTitle(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
-    return window.NodaliaUtils.shouldShowCompactCardTitle({ width });
-  }
 
   _triggerHaptic(style: unknown = undefined) {
     const haptics = isObject(this._config.haptics) ? this._config.haptics : {};
@@ -478,26 +457,9 @@ class NodaliaFanCard extends HTMLElement {
     return this._config?.entity ? hass?.states?.[this._config.entity] || null : null;
   }
 
-  _createStateSnapshot(state: HassEntity | null): HassEntity | null {
-    if (!state) {
-      return null;
-    }
-    return {
-      ...state,
-      attributes: { ...(state.attributes || {}) },
-    };
-  }
 
-  _getStoredFanMemory(): Record<string, unknown> {
-    if (typeof window === "undefined") {
-      return {};
-    }
-    try {
-      const parsed: unknown = JSON.parse(window.localStorage.getItem(FAN_MEMORY_STORAGE_KEY) || "{}");
-      return isObject(parsed) ? parsed : {};
-    } catch {
-      return {};
-    }
+  _getStoredFanMemory() {
+    return readDeviceStateMemory(FAN_MEMORY_STORAGE_KEY);
   }
 
   _storeFanMemory(entityId: string, snapshot: HassEntity | null) {
@@ -517,17 +479,7 @@ class NodaliaFanCard extends HTMLElement {
   }
 
   _getStoredFanSnapshot(entityId: string): HassEntity | null {
-    const stored = this._getStoredFanMemory()[entityId];
-    if (!isObject(stored) || !isObject(stored.attributes)) {
-      return null;
-    }
-    return {
-      entity_id: entityId,
-      state: "on",
-      attributes: { ...(stored.attributes || {}) },
-      last_changed: typeof stored.last_changed === "string" ? stored.last_changed : new Date().toISOString(),
-      last_updated: typeof stored.last_changed === "string" ? stored.last_changed : new Date().toISOString(),
-    };
+    return readDeviceStateSnapshot(FAN_MEMORY_STORAGE_KEY, entityId);
   }
 
   _syncLastKnownOnState(actualState: HassEntity | null) {
@@ -536,7 +488,7 @@ class NodaliaFanCard extends HTMLElement {
       return;
     }
 
-    const snapshot = this._createStateSnapshot(actualState);
+    const snapshot = snapshotDeviceState(actualState);
     if (!snapshot) return;
     if (actualState.state === "on") {
       this._lastKnownOnState.set(entityId, snapshot);
@@ -582,7 +534,7 @@ class NodaliaFanCard extends HTMLElement {
     this._optimisticVisualSettle = {
       entityId,
       expiresAt: Date.now() + OPTIMISTIC_VISUAL_SETTLE_MS,
-      stateSnapshot: this._createStateSnapshot(optimisticState),
+      stateSnapshot: snapshotDeviceState(optimisticState),
     };
     this._scheduleOptimisticVisualSettleTimeout();
   }
@@ -759,7 +711,7 @@ class NodaliaFanCard extends HTMLElement {
       entityId,
       expectedState,
       expiresAt: Date.now() + OPTIMISTIC_TOGGLE_TIMEOUT,
-      stateSnapshot: this._createStateSnapshot(snapshotSource),
+      stateSnapshot: snapshotDeviceState(snapshotSource),
     };
     this._scheduleOptimisticToggleTimeout();
   }
