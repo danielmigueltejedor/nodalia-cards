@@ -12,7 +12,6 @@
   "src/cards/light/light-card.ts",
   "src/cards/media-player/media-player-card.ts",
   "src/cards/navigation/navigation-card.ts",
-  "src/cards/navigation/navigation-editor.ts",
   "src/cards/notifications/notifications-card.ts",
   "src/cards/notifications/notifications-editor.ts",
   "src/cards/power-flow/power-flow-card.ts",

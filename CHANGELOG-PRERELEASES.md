@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+- Check Navigation visual editor boundaries, retain paired routes/popups and committed HA picker values, bound row changes and restore blank numeric defaults while keeping explicit zeros.
+
 - Check Media Player visual editor boundaries, preserve paired player actions and JSON validation, clear legacy action aliases when fields are emptied and share typed stub generation with the view.
 
 - Check Graph visual editor boundaries, preserve draft/legacy series and paired metadata, bound row edits and remove its unregistered historical editor.

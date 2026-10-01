@@ -1282,3 +1282,25 @@ outputs pass. Full local suite: 500 passed, one existing skip. Initial new brows
 assertions expected default values in compact emitted YAML; assert the normalized
 values instead, keeping the existing default-stripping contract. Remaining
 unchecked modules: 21. Keep publication held until the entire migration finishes.
+
+## Navigation editor findings — 2026-10-01
+
+The unchecked draft editor accepted missing/negative removal indices, parsed
+blank numeric values as zero and assumed CSV filters were arrays. Route/popup
+icon handlers also depended on the control property instead of committed event
+data.
+
+Check real HA, draft rows, native controls, picker events, DOM and focus contracts.
+Prepare actual draft groups while filtering malformed rows; bound removal and row
+fields before mutation, and reject distant indexed root paths. Preserve routes,
+paired popup descriptions/filters, legacy items, players, labels, aliases and YAML
+false/zero extensions. HA picker search blur does not commit; route/popup icon
+updates use string event values. Clear numeric overrides to defaults and retain
+actual zero in animation fields. Guard malformed settings and CSV groups; retain
+shared styles and translucent colors. Update older VM fixtures to use actual
+CustomEvents and retain the static committed-player contract with native property
+assignment. Add the Navigation guide and README link.
+
+All 748 unit tests, nine specific browser cases and 1,400 equivalent editor HTML
+outputs pass. Full local suite: 509 passed, one existing skip. Remaining unchecked
+modules: 20. Publication stays held until the complete source/runtime migration.
