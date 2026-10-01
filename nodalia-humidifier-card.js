@@ -288,8 +288,11 @@
     migrateControlIconOffColor(sourceStyles.icon, DEFAULT_CONFIG.styles.icon.off_color);
     normalizeControlActions(config, rawConfig, false);
     const security = window.NodaliaUtils.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? { ...DEFAULT_CONFIG.security, ...isObject(config.security) ? config.security : {} };
-    return {
-      ...config,
+    const fields = {
+      entity: typeof config.entity === "string" ? config.entity : "",
+      language: typeof config.language === "string" ? config.language : "auto",
+      mode_entity: typeof config.mode_entity === "string" ? config.mode_entity : "",
+      fan_mode_entity: typeof config.fan_mode_entity === "string" ? config.fan_mode_entity : "",
       layout,
       hidden_modes: normalizeControlList(config.hidden_modes),
       hidden_fan_modes: normalizeControlList(config.hidden_fan_modes),
@@ -298,6 +301,8 @@
       security,
       styles: getSafeStyles(config.styles)
     };
+    const normalized = { ...config, ...fields };
+    return normalized;
   }
 
   // src/shared/editor-entity-helpers.ts
@@ -3891,6 +3896,16 @@
     return NodaliaHumidifierCard;
   }
 
+  // src/shared/editor-controls.ts
+  function isNativeEditorInput(node) {
+    return node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement;
+  }
+  function editorControlValue(event, control) {
+    const detail = event instanceof CustomEvent ? event.detail : void 0;
+    if (detail && typeof detail === "object" && "value" in detail && typeof detail.value === "string") return detail.value;
+    return "value" in control ? control.value : void 0;
+  }
+
   // src/cards/humidifier/humidifier-editor.ts
   var _lazyNodaliaHumidifierCardEditor;
   function loadNodaliaHumidifierCardEditor() {
@@ -3979,11 +3994,11 @@
         this._watchEditorControlTag("ha-icon-picker");
       }
       _getEntityOptionsSignature(hass = this._hass) {
-        return window.NodaliaUtils.editorFilteredStatesSignature(
+        return window.NodaliaUtils.editorFilteredStatesSignature?.(
           hass,
           this._config?.language,
           (id) => id.startsWith("humidifier.") || id.startsWith("select.") || id.startsWith("input_select.")
-        );
+        ) ?? "";
       }
       _getHumidifierEntityOptions() {
         const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
@@ -4038,7 +4053,7 @@
         this._render();
         this._restoreFocusState(focusState);
         fireEvent(this, "config-changed", {
-          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {})
+          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults?.(nextConfig, DEFAULT_CONFIG) ?? {})
         });
       }
       _setEditorConfig() {
@@ -4055,7 +4070,7 @@
         const valueType = input.dataset.valueType || "string";
         switch (valueType) {
           case "boolean":
-            return Boolean(input.checked);
+            return input instanceof HTMLInputElement && input.checked;
           case "number": {
             if (input.value === "") {
               return "";
@@ -4070,11 +4085,11 @@
         }
       }
       _onShadowInput(event) {
-        const input = event.composedPath().find((node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+        const input = event.composedPath().find(isNativeEditorInput);
         if (!input?.dataset?.field) {
           if (input?.dataset?.modeListField && input.dataset.modeValue !== void 0) {
             event.stopPropagation();
-            this._setModeVisibility(input.dataset.modeListField, input.dataset.modeValue, input.checked);
+            this._setModeVisibility(input.dataset.modeListField, input.dataset.modeValue, input instanceof HTMLInputElement && input.checked);
             this._setEditorConfig();
             if (event.type === "change") {
               this._emitConfig();
@@ -4091,12 +4106,12 @@
         }
       }
       _onShadowValueChanged(event) {
-        const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+        const control = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.field));
         if (!control?.dataset?.field) {
           return;
         }
         event.stopPropagation();
-        const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+        const nextValue = editorControlValue(event, control);
         if (typeof control.dataset?.value === "string") {
           control.dataset.value = String(nextValue || "");
         }
@@ -4110,7 +4125,7 @@
         this._emitConfig();
       }
       _onShadowClick(event) {
-        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
+        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.editorToggle));
         if (!toggleButton) {
           return;
         }
@@ -4162,6 +4177,13 @@
         />
       </label>
     `;
+      }
+      _renderTextareaField(label, field, value, options = {}) {
+        const textValue = isObject(value) ? JSON.stringify(value, null, 2) : value ?? "";
+        return `<label class="editor-field editor-field--full">
+      <span>${escapeHtml(this._editorLabel(label))}</span>
+      <textarea data-field="${escapeHtml(field)}" placeholder="${escapeHtml(options.placeholder || "")}">${escapeHtml(textValue)}</textarea>
+    </label>`;
       }
       _renderColorField(label, field, value, options = {}) {
         const tLabel = this._editorLabel(label);
@@ -4267,7 +4289,7 @@
       </label>
     `;
       }
-      _renderSelectField(label, field, value, options) {
+      _renderSelectField(label, field, value, options, _renderOptions = {}) {
         const tLabel = this._editorLabel(label);
         return `
       <label class="editor-field">
@@ -4334,19 +4356,17 @@
         }
         const field = host.dataset.field || "entity";
         const nextValue = host.dataset.value || "";
-        let control = null;
+        let control;
         if (customElements.get("ha-entity-picker")) {
           control = document.createElement("ha-entity-picker");
-          control.includeDomains = ["humidifier"];
-          control.allowCustomEntity = true;
-          control.entityFilter = (stateObj) => String(stateObj?.entity_id || "").startsWith("humidifier.");
+          Object.assign(control, {
+            includeDomains: ["humidifier"],
+            allowCustomEntity: true,
+            entityFilter: (stateObj) => String(stateObj?.entity_id || "").startsWith("humidifier.")
+          });
         } else if (customElements.get("ha-selector")) {
           control = document.createElement("ha-selector");
-          control.selector = {
-            entity: {
-              domain: "humidifier"
-            }
-          };
+          Object.assign(control, { selector: { entity: { domain: "humidifier" } } });
         } else {
           control = document.createElement("select");
           this._getHumidifierEntityOptions().forEach((option) => {
@@ -4376,15 +4396,17 @@
         }
         const field = host.dataset.field || "mode_entity";
         const nextValue = host.dataset.value || "";
-        let control = null;
+        let control;
         if (customElements.get("ha-entity-picker")) {
           control = document.createElement("ha-entity-picker");
-          control.includeDomains = ["select", "input_select"];
-          control.allowCustomEntity = true;
-          control.entityFilter = (stateObj) => {
-            const entityId = String(stateObj?.entity_id || "");
-            return entityId.startsWith("select.") || entityId.startsWith("input_select.");
-          };
+          Object.assign(control, {
+            includeDomains: ["select", "input_select"],
+            allowCustomEntity: true,
+            entityFilter: (stateObj) => {
+              const entityId = String(stateObj?.entity_id || "");
+              return entityId.startsWith("select.") || entityId.startsWith("input_select.");
+            }
+          });
         } else {
           control = document.createElement("select");
           this._getSelectEntityOptions(field).forEach((option) => {
@@ -4413,7 +4435,10 @@
           return;
         }
         const config = this._config || normalizeConfig({});
-        const hapticStyle = config.haptics?.style || "medium";
+        const haptics = isObject(config.haptics) ? config.haptics : DEFAULT_CONFIG.haptics;
+        const scrolls = isObject(haptics.scrolls) ? haptics.scrolls : {};
+        const animations = isObject(config.animations) ? config.animations : DEFAULT_CONFIG.animations;
+        const hapticStyle = haptics.style || "medium";
         const modeVisibilityOptions = this._getModeVisibilityOptions();
         const fanModeVisibilityOptions = this._getFanModeVisibilityOptions();
         const phHumName = this._editorLabel("ed.humidifier.name_placeholder");
@@ -5013,9 +5038,9 @@
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.humidifier.haptics_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("ed.person.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
-            ${this._renderCheckboxField("ed.haptics.slider_humidity", "haptics.scrolls.humidity", config.haptics.scrolls?.humidity !== false)}
+            ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.person.fallback_vibrate", "haptics.fallback_vibrate", haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.haptics.slider_humidity", "haptics.scrolls.humidity", scrolls.humidity !== false)}
             ${this._renderSelectField(
           "ed.vacuum.haptic_style",
           "haptics.style",
@@ -5051,30 +5076,30 @@
           </div>
           ${this._showAnimationSection ? `
                 <div class="editor-grid">
-                  ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", config.animations.enabled !== false)}
-                  ${this._renderCheckboxField("ed.vacuum.icon_animation_active", "animations.icon_animation", config.animations.icon_animation !== false)}
-                  ${this._renderTextField("ed.light.anim_power_ms", "animations.power_duration", config.animations.power_duration, {
+                  ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", animations.enabled !== false)}
+                  ${this._renderCheckboxField("ed.vacuum.icon_animation_active", "animations.icon_animation", animations.icon_animation !== false)}
+                  ${this._renderTextField("ed.light.anim_power_ms", "animations.power_duration", animations.power_duration, {
           type: "number",
           valueType: "number",
           min: 120,
           max: 4e3,
           step: 10
         })}
-                  ${this._renderTextField("ed.light.anim_controls_ms", "animations.controls_duration", config.animations.controls_duration, {
+                  ${this._renderTextField("ed.light.anim_controls_ms", "animations.controls_duration", animations.controls_duration, {
           type: "number",
           valueType: "number",
           min: 120,
           max: 2400,
           step: 10
         })}
-                  ${this._renderTextField("ed.humidifier.anim_panel_ms", "animations.panel_duration", config.animations.panel_duration, {
+                  ${this._renderTextField("ed.humidifier.anim_panel_ms", "animations.panel_duration", animations.panel_duration, {
           type: "number",
           valueType: "number",
           min: 120,
           max: 2400,
           step: 10
         })}
-                  ${this._renderTextField("ed.vacuum.button_bounce_ms", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
+                  ${this._renderTextField("ed.vacuum.button_bounce_ms", "animations.button_bounce_duration", animations.button_bounce_duration, {
           type: "number",
           valueType: "number",
           min: 120,
@@ -5154,8 +5179,7 @@
         this.shadowRoot.querySelectorAll('[data-mounted-control="humidifier-entity"]').forEach((host) => this._mountHumidifierEntityPicker(host));
         this.shadowRoot.querySelectorAll('[data-mounted-control="select-entity"]').forEach((host) => this._mountSelectEntityPicker(host));
         this.shadowRoot.querySelectorAll("ha-icon-picker[data-field]").forEach((control) => {
-          control.hass = this._hass;
-          control.value = control.dataset.value || "";
+          Object.assign(control, { hass: this._hass, value: control.dataset.value || "" });
           control.addEventListener("value-changed", this._onShadowValueChanged);
         });
         this._ensureEditorControlsReady();

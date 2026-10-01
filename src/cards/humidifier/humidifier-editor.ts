@@ -1,16 +1,14 @@
-// @ts-nocheck
-/* Visual editor surface: typed incrementally after the card runtime split. */
+import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
+import type { EditorFocusState } from "../../core/types/nodalia-utils";
+import { editorControlValue, isNativeEditorInput, type NativeEditorInput } from "../../shared/editor-controls";
 import {
-  clamp,
   compactConfig,
   deepClone,
   deleteByPath,
   escapeHtml,
-  escapeSelectorValue,
   fireEvent,
   getByPath,
   isObject,
-  mergeConfig,
   normalizeTextKey,
   setByPath,
 } from "./humidifier-runtime";
@@ -22,12 +20,20 @@ import {
   translateModeLabel,
 } from "./humidifier-helpers";
 
-let _lazyNodaliaHumidifierCardEditor;
-export function loadNodaliaHumidifierCardEditor() {
+interface FieldOptions { fullWidth?: boolean; type?: string; valueType?: string; placeholder?: string; fallbackValue?: string; min?: number; max?: number; step?: number; }
+let _lazyNodaliaHumidifierCardEditor: CustomElementConstructor | undefined;
+export function loadNodaliaHumidifierCardEditor(): CustomElementConstructor {
   if (_lazyNodaliaHumidifierCardEditor) {
     return _lazyNodaliaHumidifierCardEditor;
   }
 class NodaliaHumidifierCardEditor extends HTMLElement {
+  private _config!: ReturnType<typeof normalizeConfig>;
+  private _hass!: HomeAssistant | null;
+  private _entityOptionsSignature!: string;
+  private _showAnimationSection!: boolean;
+  private _showStyleSection!: boolean;
+  private _showTapActionsSection!: boolean;
+  private _pendingEditorControlTags!: Set<string>;
   constructor() {
     super();
     this._nodaliaConstruct();
@@ -69,7 +75,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
   }
 
-  set hass(hass) {
+  set hass(hass: HomeAssistant) {
     const nextSignature = this._getEntityOptionsSignature(hass);
     const shouldRender =
       !this._hass ||
@@ -88,7 +94,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     this._restoreFocusState(focusState);
   }
 
-  setConfig(config) {
+  setConfig(config: unknown) {
     const focusState = this._captureFocusState();
     this._config = normalizeConfig(config || {});
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
@@ -96,7 +102,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     this._restoreFocusState(focusState);
   }
 
-  _watchEditorControlTag(tagName) {
+  _watchEditorControlTag(tagName: string) {
     if (!tagName || this._pendingEditorControlTags.has(tagName)) {
       return;
     }
@@ -130,12 +136,12 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
   }
 
   _getEntityOptionsSignature(hass = this._hass) {
-    return window.NodaliaUtils.editorFilteredStatesSignature(
+    return window.NodaliaUtils.editorFilteredStatesSignature?.(
       hass,
       this._config?.language,
       id =>
         id.startsWith("humidifier.") || id.startsWith("select.") || id.startsWith("input_select."),
-    );
+    ) ?? "";
   }
 
   _getHumidifierEntityOptions() {
@@ -169,7 +175,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     return options;
   }
 
-  _getSelectEntityOptions(path) {
+  _getSelectEntityOptions(path: string) {
     const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
     const options = Object.entries(this._hass?.states || {})
       .filter(([entityId]) => entityId.startsWith("select.") || entityId.startsWith("input_select."))
@@ -204,7 +210,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     return window.NodaliaUtils.captureEditorFocusState(this);
   }
 
-  _restoreFocusState(focusState) {
+  _restoreFocusState(focusState: EditorFocusState | null) {
     window.NodaliaUtils.restoreEditorFocusState(this, focusState);
   }
 
@@ -215,7 +221,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     this._render();
     this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
-      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
+      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults?.(nextConfig, DEFAULT_CONFIG) ?? {}),
     });
   }
 
@@ -223,7 +229,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     this._config = normalizeConfig(compactConfig(this._config));
   }
 
-  _setFieldValue(path, value) {
+  _setFieldValue(path: string, value: unknown) {
     if (value === undefined || value === null || value === "") {
       deleteByPath(this._config, path);
       return;
@@ -232,12 +238,12 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     setByPath(this._config, path, value);
   }
 
-  _readFieldValue(input) {
+  _readFieldValue(input: NativeEditorInput) {
     const valueType = input.dataset.valueType || "string";
 
     switch (valueType) {
       case "boolean":
-        return Boolean(input.checked);
+        return input instanceof HTMLInputElement && input.checked;
       case "number": {
         if (input.value === "") {
           return "";
@@ -253,15 +259,15 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     }
   }
 
-  _onShadowInput(event) {
+  _onShadowInput(event: Event) {
     const input = event
       .composedPath()
-      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+      .find(isNativeEditorInput);
 
     if (!input?.dataset?.field) {
       if (input?.dataset?.modeListField && input.dataset.modeValue !== undefined) {
         event.stopPropagation();
-        this._setModeVisibility(input.dataset.modeListField, input.dataset.modeValue, input.checked);
+        this._setModeVisibility(input.dataset.modeListField, input.dataset.modeValue, input instanceof HTMLInputElement && input.checked);
         this._setEditorConfig();
 
         if (event.type === "change") {
@@ -282,10 +288,10 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     }
   }
 
-  _onShadowValueChanged(event) {
+  _onShadowValueChanged(event: Event) {
     const control = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.field);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.field));
 
     if (!control?.dataset?.field) {
       return;
@@ -293,9 +299,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
 
     event.stopPropagation();
 
-    const nextValue = typeof event.detail?.value === "string"
-      ? event.detail.value
-      : control.value;
+    const nextValue = editorControlValue(event, control);
     if (typeof control.dataset?.value === "string") {
       control.dataset.value = String(nextValue || "");
     }
@@ -310,10 +314,10 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     this._emitConfig();
   }
 
-  _onShadowClick(event) {
+  _onShadowClick(event: Event) {
     const toggleButton = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.editorToggle));
 
     if (!toggleButton) {
       return;
@@ -340,7 +344,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     }
   }
 
-  _editorLabel(s) {
+  _editorLabel(s: string) {
     if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
       return s;
     }
@@ -348,7 +352,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
   }
 
-  _renderTextField(label, field, value, options = {}) {
+  _renderTextField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
@@ -375,7 +379,15 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     `;
   }
 
-  _renderColorField(label, field, value, options = {}) {
+  _renderTextareaField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
+    const textValue = isObject(value) ? JSON.stringify(value, null, 2) : value ?? "";
+    return `<label class="editor-field editor-field--full">
+      <span>${escapeHtml(this._editorLabel(label))}</span>
+      <textarea data-field="${escapeHtml(field)}" placeholder="${escapeHtml(options.placeholder || "")}">${escapeHtml(textValue)}</textarea>
+    </label>`;
+  }
+
+  _renderColorField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const tColorCustom = this._editorLabel("ed.weather.custom_color");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
@@ -404,7 +416,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     `;
   }
 
-  _renderCheckboxField(label, field, checked) {
+  _renderCheckboxField(label: string, field: string, checked: boolean) {
     const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
@@ -437,11 +449,11 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     const humidifierState = this._getHumidifierState();
 
     if (Array.isArray(modeEntity?.attributes?.options)) {
-      return modeEntity.attributes.options.map(item => String(item || "").trim()).filter(Boolean);
+      return modeEntity.attributes.options.map((item: unknown) => String(item || "").trim()).filter(Boolean);
     }
 
     if (Array.isArray(humidifierState?.attributes?.available_modes)) {
-      return humidifierState.attributes.available_modes.map(item => String(item || "").trim()).filter(Boolean);
+      return humidifierState.attributes.available_modes.map((item: unknown) => String(item || "").trim()).filter(Boolean);
     }
 
     return [];
@@ -450,22 +462,22 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
   _getFanModeVisibilityOptions() {
     const fanModeEntity = this._getFanModeEntityState();
     return Array.isArray(fanModeEntity?.attributes?.options)
-      ? fanModeEntity.attributes.options.map(item => String(item || "").trim()).filter(Boolean)
+      ? fanModeEntity.attributes.options.map((item: unknown) => String(item || "").trim()).filter(Boolean)
       : [];
   }
 
-  _getHiddenModeList(field) {
+  _getHiddenModeList(field: string): string[] {
     return Array.isArray(this._config?.[field])
-      ? this._config[field].map(item => String(item || "").trim()).filter(Boolean)
+      ? this._config[field].map((item: unknown) => String(item || "").trim()).filter(Boolean)
       : [];
   }
 
-  _isModeVisible(field, value) {
+  _isModeVisible(field: string, value: string) {
     const expectedKey = normalizeTextKey(value);
     return !this._getHiddenModeList(field).some(item => normalizeTextKey(item) === expectedKey);
   }
 
-  _setModeVisibility(field, value, visible) {
+  _setModeVisibility(field: string, value: string, visible: boolean) {
     const rawValue = String(value || "").trim();
     if (!rawValue) {
       return;
@@ -484,7 +496,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     deleteByPath(this._config, field);
   }
 
-  _renderModeVisibilityField(field, modeValue) {
+  _renderModeVisibilityField(field: string, modeValue: string) {
     const hass = this._hass ?? this.hass;
     const translatedLabel = translateModeLabel(modeValue, hass, this._config?.language ?? "auto");
     const showRawValue = normalizeTextKey(translatedLabel) !== normalizeTextKey(modeValue);
@@ -504,7 +516,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     `;
   }
 
-  _renderSelectField(label, field, value, options) {
+  _renderSelectField(label: string, field: string, value: unknown, options: { value: string; label: string }[], _renderOptions: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field">
@@ -522,7 +534,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     `;
   }
 
-  _renderHumidifierEntityField(label, field, value, options = {}) {
+  _renderHumidifierEntityField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
@@ -538,7 +550,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     `;
   }
 
-  _renderSelectEntityField(label, field, value, options = {}) {
+  _renderSelectEntityField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
@@ -554,7 +566,7 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     `;
   }
 
-  _renderIconPickerField(label, field, value, options = {}) {
+  _renderIconPickerField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
@@ -571,27 +583,22 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     `;
   }
 
-  _mountHumidifierEntityPicker(host) {
+  _mountHumidifierEntityPicker(host: HTMLElement) {
     if (!(host instanceof HTMLElement)) {
       return;
     }
 
     const field = host.dataset.field || "entity";
     const nextValue = host.dataset.value || "";
-    let control = null;
+    let control: HTMLElement;
 
     if (customElements.get("ha-entity-picker")) {
       control = document.createElement("ha-entity-picker");
-      control.includeDomains = ["humidifier"];
-      control.allowCustomEntity = true;
-      control.entityFilter = stateObj => String(stateObj?.entity_id || "").startsWith("humidifier.");
+      Object.assign(control, { includeDomains: ["humidifier"], allowCustomEntity: true,
+        entityFilter: (stateObj: HassEntity) => String(stateObj?.entity_id || "").startsWith("humidifier.") });
     } else if (customElements.get("ha-selector")) {
       control = document.createElement("ha-selector");
-      control.selector = {
-        entity: {
-          domain: "humidifier",
-        },
-      };
+      Object.assign(control, { selector: { entity: { domain: "humidifier" } } });
     } else {
       control = document.createElement("select");
       this._getHumidifierEntityOptions().forEach(option => {
@@ -621,23 +628,22 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     host.replaceChildren(control);
   }
 
-  _mountSelectEntityPicker(host) {
+  _mountSelectEntityPicker(host: HTMLElement) {
     if (!(host instanceof HTMLElement)) {
       return;
     }
 
     const field = host.dataset.field || "mode_entity";
     const nextValue = host.dataset.value || "";
-    let control = null;
+    let control: HTMLElement;
 
     if (customElements.get("ha-entity-picker")) {
       control = document.createElement("ha-entity-picker");
-      control.includeDomains = ["select", "input_select"];
-      control.allowCustomEntity = true;
-      control.entityFilter = stateObj => {
+      Object.assign(control, { includeDomains: ["select", "input_select"], allowCustomEntity: true,
+      entityFilter: (stateObj: HassEntity) => {
         const entityId = String(stateObj?.entity_id || "");
         return entityId.startsWith("select.") || entityId.startsWith("input_select.");
-      };
+      } });
     } else {
       control = document.createElement("select");
       this._getSelectEntityOptions(field).forEach(option => {
@@ -673,7 +679,10 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "medium";
+    const haptics = isObject(config.haptics) ? config.haptics : DEFAULT_CONFIG.haptics;
+    const scrolls = isObject(haptics.scrolls) ? haptics.scrolls : {};
+    const animations = isObject(config.animations) ? config.animations : DEFAULT_CONFIG.animations;
+    const hapticStyle = haptics.style || "medium";
     const modeVisibilityOptions = this._getModeVisibilityOptions();
     const fanModeVisibilityOptions = this._getFanModeVisibilityOptions();
     const phHumName = this._editorLabel("ed.humidifier.name_placeholder");
@@ -1327,9 +1336,9 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.humidifier.haptics_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("ed.person.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
-            ${this._renderCheckboxField("ed.haptics.slider_humidity", "haptics.scrolls.humidity", config.haptics.scrolls?.humidity !== false)}
+            ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.person.fallback_vibrate", "haptics.fallback_vibrate", haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.haptics.slider_humidity", "haptics.scrolls.humidity", scrolls.humidity !== false)}
             ${this._renderSelectField(
               "ed.vacuum.haptic_style",
               "haptics.style",
@@ -1367,30 +1376,30 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
             this._showAnimationSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", config.animations.enabled !== false)}
-                  ${this._renderCheckboxField("ed.vacuum.icon_animation_active", "animations.icon_animation", config.animations.icon_animation !== false)}
-                  ${this._renderTextField("ed.light.anim_power_ms", "animations.power_duration", config.animations.power_duration, {
+                  ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", animations.enabled !== false)}
+                  ${this._renderCheckboxField("ed.vacuum.icon_animation_active", "animations.icon_animation", animations.icon_animation !== false)}
+                  ${this._renderTextField("ed.light.anim_power_ms", "animations.power_duration", animations.power_duration, {
                     type: "number",
                     valueType: "number",
                     min: 120,
                     max: 4000,
                     step: 10,
                   })}
-                  ${this._renderTextField("ed.light.anim_controls_ms", "animations.controls_duration", config.animations.controls_duration, {
+                  ${this._renderTextField("ed.light.anim_controls_ms", "animations.controls_duration", animations.controls_duration, {
                     type: "number",
                     valueType: "number",
                     min: 120,
                     max: 2400,
                     step: 10,
                   })}
-                  ${this._renderTextField("ed.humidifier.anim_panel_ms", "animations.panel_duration", config.animations.panel_duration, {
+                  ${this._renderTextField("ed.humidifier.anim_panel_ms", "animations.panel_duration", animations.panel_duration, {
                     type: "number",
                     valueType: "number",
                     min: 120,
                     max: 2400,
                     step: 10,
                   })}
-                  ${this._renderTextField("ed.vacuum.button_bounce_ms", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
+                  ${this._renderTextField("ed.vacuum.button_bounce_ms", "animations.button_bounce_duration", animations.button_bounce_duration, {
                     type: "number",
                     valueType: "number",
                     min: 120,
@@ -1475,18 +1484,17 @@ class NodaliaHumidifierCardEditor extends HTMLElement {
     `;
 
     this.shadowRoot
-      .querySelectorAll('[data-mounted-control="humidifier-entity"]')
+      .querySelectorAll<HTMLElement>('[data-mounted-control="humidifier-entity"]')
       .forEach(host => this._mountHumidifierEntityPicker(host));
 
     this.shadowRoot
-      .querySelectorAll('[data-mounted-control="select-entity"]')
+      .querySelectorAll<HTMLElement>('[data-mounted-control="select-entity"]')
       .forEach(host => this._mountSelectEntityPicker(host));
 
     this.shadowRoot
-      .querySelectorAll("ha-icon-picker[data-field]")
+      .querySelectorAll<HTMLElement>("ha-icon-picker[data-field]")
       .forEach(control => {
-        control.hass = this._hass;
-        control.value = control.dataset.value || "";
+        Object.assign(control, { hass: this._hass, value: control.dataset.value || "" });
         control.addEventListener("value-changed", this._onShadowValueChanged);
       });
 
