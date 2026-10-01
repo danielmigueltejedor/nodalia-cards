@@ -1442,3 +1442,31 @@ deferred measurement could replace a label while the old truncation test
 resolved it; poll the live label with the same ellipsis/clipping assertions.
 Full local suite: 575 passed, one existing skip. Remaining unchecked modules:
 14. Hold publication until the complete migration.
+
+## Fan view findings — 2026-10-01
+
+Pointer/touch cancellation used the successful drag-release handler, sending the
+tentative speed. Entity changes and outside touches could retain stale drafts.
+The render signature consumed a power-toggle acknowledgement before the setter
+captured its remembered display; cache updates could overwrite that snapshot.
+Preset animation listeners/fallback timers were unowned. Stored JSON and nullable
+numeric capability fields were trusted, and command failures escaped the UI.
+
+Check actual HA, snapshots, optimistic deadlines, native events, DOM, linear/
+circular drag unions, geometry, transitions and config contracts. Separate cancel
+from commit and own panel/resize/fallback work. Make signatures pure and capture
+the pending display before refreshing remembered state. Preserve the existing
+3.2-second toggle and 420-ms visual-settle deadlines through HA feedback. Guard
+stored memory, omit missing numeric capabilities while retaining actual zero,
+catch service failures with targets/data preserved and add main-card keyboard
+activation. Keep disabled individual slider haptics. Remove five unused imports
+and two dead drag-queue fields that never held updates or scheduled frames.
+
+All 749 unit tests, 12 targeted browser cases and 3,000 equivalent presentation/
+sizing outputs outside restored keyboard attributes pass. The existing haptic
+source assertion now checks the guarded scrolls object; browser coverage retains
+the disabled-slider behavior. The dial geometry test waits for a visible,
+measured dial after Safari replaces it during initial sizing, retaining its
+single-command and midpoint assertions. Full local suite: 587 passed, one
+existing skip. Remaining unchecked modules: 13. Hold publication until the
+complete source/runtime migration.

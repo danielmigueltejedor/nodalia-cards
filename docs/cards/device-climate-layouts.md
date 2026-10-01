@@ -90,3 +90,17 @@ the full editor width. Cleared animation durations restore defaults while an
 explicit zero stays a value, and translucent CSS colors retain their alpha.
 Unchanged Engine status keeps existing controls; replies from a previous
 connection/user or detached editor cannot replace the current schedule UI.
+
+## Fan drag cancellation and remembered speed
+
+Canceling a pointer/touch drag, starting a new touch outside the control, changing
+fans or removing the card discards the tentative speed without sending a command.
+Successful releases retain the existing slider/dial geometry and commit path.
+The main card supports Enter/Space; native controls retain their interactions.
+
+Pending power toggles use the original 3.2-second deadline. When HA confirms
+turn-on before publishing the new percentage, the remembered display lasts for
+the existing 420 ms. Repeated HA updates do not extend either deadline. Render
+signatures do not consume the acknowledgement before that display is captured.
+Malformed stored memory is ignored, actual zero remains valid, and missing
+percentage/step values do not fabricate slider support.

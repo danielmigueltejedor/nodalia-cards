@@ -20,8 +20,13 @@ for (const config of cards) {
       document.querySelector("#fixture").append(card);
     }, config);
     const dial = page.locator(`nodalia-${config.card}-card`).locator(`.${config.prefix}-card__circular-dial`);
-    const box = await dial.boundingBox();
-    expect(box).not.toBeNull();
+    await expect(dial).toBeVisible();
+    let box;
+    // The deferred initial resize can replace the dial between layout reads.
+    await expect.poll(async () => {
+      box = await dial.boundingBox();
+      return Boolean(box && box.width > 0 && box.height > 0);
+    }).toBe(true);
     // The arc's midpoint is at the top of the circle (270 degrees).
     await page.mouse.move(box.x + box.width / 2, box.y + box.height * (0.5 - 86 / 240));
     await page.mouse.down();

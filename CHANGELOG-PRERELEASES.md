@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+- Check the Fan view, cancel pointer/touch drags without sending tentative speeds, own preset/resize/fallback work and retain keyboard access. Keep render signatures pure so acknowledged toggles preserve the remembered percentage during the existing visual-settle deadline. Guard stored memory, missing numeric capability data and HA service failures; remove dead drag queue fields.
+
 - Check the Vacuum view, isolate optimistic modes/rooms across robots, complete panel transitions once and discard stale callbacks. Own resize/fallback work, distinguish absent battery from actual zero, activate the card from the keyboard and catch HA command failures.
 
 - Check the Weather view and forecast contracts, discard abandoned subscriptions, keep empty live forecasts authoritative, refresh legacy forecast/unit/alert changes and activate SVG chart points from the keyboard. Own fallback animations and release modal focus when weather entities disappear.

@@ -2793,7 +2793,7 @@ test("visual editors expose individual haptic controls for every slider and dial
   }
 
   assert.match(read("nodalia-light-card.js"), /haptics\?\.scrolls\?\.\[kind\] === false/);
-  assert.match(read("nodalia-fan-card.js"), /haptics\?\.scrolls\?\.percentage === false/);
+  assert.match(read("nodalia-fan-card.js"), /const scrolls = isObject\(haptics.scrolls\) \? haptics.scrolls : \{\};[\s\S]*scrolls.percentage === false/);
   assert.match(read("nodalia-humidifier-card.js"), /haptics\?\.scrolls\?\.humidity === false/);
   assert.match(read("nodalia-climate-card.js"), /haptics\?\.scrolls\?\.temperature_dial === false/);
   assert.match(read("nodalia-cover-card.js"), /const scrolls = isObject\(haptics.scrolls\) \? haptics.scrolls : \{\};[\s\S]*scrolls\[sliderKind\] !== false/);
