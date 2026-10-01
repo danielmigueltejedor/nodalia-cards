@@ -61,3 +61,19 @@ layout: compact
 ```
 
 The compact Climate layout provides a horizontal target-temperature slider, HVAC mode controls and the existing step and schedule actions. In `heat_cool` mode it renders separate low and high sliders and continues to send `target_temp_low` and `target_temp_high` together. Engine schedule overrides remain available in both layouts.
+
+### Climate schedule storage
+
+Climate retains the weekly agenda and existing Engine/webhook integration.
+Native schedule helpers can read the legacy row format (v1), packed JSON (v2)
+and binary base64 (v3). Compact storage retains five-minute time quantization
+and quarter-degree temperature precision. The `input_text` limit is 255
+characters; the existing save flow checks that limit before sending a helper
+update. Corrupt packed values/base64 do not create schedule slots.
+
+A missing or blank slot temperature defaults to 21; an actual zero remains a
+value. Optional low/high bounds are retained only when both are numeric and low
+does not exceed high. Missing bounds do not become zero. Existing HVAC/fan/preset
+fields remain in the normalized schedule and webhook body. Blank or malformed
+style/security/display groups fall back through the same checked configuration
+projection used by the card; service and webhook authorization policies remain.

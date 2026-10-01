@@ -4,12 +4,14 @@ import {
   LEGACY_CLIMATE_DIAL_TRACK_COLOR,
   LEGACY_CLIMATE_ICON_OFF_COLORS,
 } from "./climate-constants";
-import { deepClone, isObject, mergeConfig, normalizeTextKey } from "./climate-runtime";
+import { isObject, mergeConfig, normalizeTextKey } from "./climate-runtime";
 import { normalizeSetpointScheduleWeekStartsOn } from "./climate-schedule";
-import type { ClimateConfig, ClimateStyleConfig } from "./climate-types";
-import type { HomeAssistant } from "../../core/types/home-assistant";
+import type { ClimateConfig } from "./climate-types";
+import { normalizeControlStyles } from "../../shared/control-config";
+import { parseFiniteNumericValue } from "../../shared/numeric-values";
+export { getStubEntityId, applyStubEntity } from "../../shared/editor-entity-helpers";
 
-export const DEFAULT_CONFIG: ClimateConfig = {
+export const DEFAULT_CONFIG = {
   entity: "",
   name: "",
   layout: "circular",
@@ -101,88 +103,90 @@ export const DEFAULT_CONFIG: ClimateConfig = {
       size: "50px",
     },
   },
-};
+} satisfies ClimateConfig;
 
 export const STUB_CONFIG = {
   entity: "climate.salon",
   name: "Salon",
 };
 
-export function getStubEntityId(
-  hass: HomeAssistant | null | undefined,
-  domains: string[] = [],
-  entities: unknown = [],
-  entitiesFallback: unknown = [],
-): string {
-  return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
-}
-
-export function applyStubEntity(
-  config: ClimateConfig,
-  hass: HomeAssistant | null | undefined,
-  domains: string[],
-  entities: unknown = [],
-  entitiesFallback: unknown = [],
-): ClimateConfig {
-  const entityId = getStubEntityId(hass, domains, entities, entitiesFallback);
-  if (!entityId) {
-    return config;
-  }
-
-  config.entity = entityId;
-  config.name = hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
-  return config;
-}
-
-export function migrateLegacyClimateOffColors(styles: ClimateStyleConfig | undefined): void {
-  if (!styles?.icon) {
-    return;
-  }
+export function migrateLegacyClimateOffColors(styles: unknown): void {
+  if (!isObject(styles) || !isObject(styles.icon)) return;
   const iconOff = String(styles.icon.off_color ?? "").trim();
   if (iconOff && (LEGACY_CLIMATE_ICON_OFF_COLORS.includes(iconOff) || /^var\(\s*--state-inactive-color/i.test(iconOff))) {
     styles.icon.off_color = DEFAULT_CONFIG.styles.icon.off_color;
   }
-  if (styles.dial) {
+  if (isObject(styles.dial)) {
     const dialOff = String(styles.dial.off_color ?? "").trim();
-    if (dialOff === LEGACY_CLIMATE_DIAL_OFF_COLOR) {
-      styles.dial.off_color = DEFAULT_CONFIG.styles.dial.off_color;
-    }
+    if (dialOff === LEGACY_CLIMATE_DIAL_OFF_COLOR) styles.dial.off_color = DEFAULT_CONFIG.styles.dial.off_color;
     const track = String(styles.dial.track_color ?? "").trim().replace(/\s+/g, " ");
-    if (track === LEGACY_CLIMATE_DIAL_TRACK_COLOR.replace(/\s+/g, " ")) {
-      styles.dial.track_color = DEFAULT_CONFIG.styles.dial.track_color;
-    }
+    if (track === LEGACY_CLIMATE_DIAL_TRACK_COLOR.replace(/\s+/g, " ")) styles.dial.track_color = DEFAULT_CONFIG.styles.dial.track_color;
     const dialBg = String(styles.dial.background ?? "").trim().replace(/\s+/g, " ");
-    if (dialBg === LEGACY_CLIMATE_DIAL_BACKGROUND.replace(/\s+/g, " ")) {
-      styles.dial.background = DEFAULT_CONFIG.styles.dial.background;
-    }
+    if (dialBg === LEGACY_CLIMATE_DIAL_BACKGROUND.replace(/\s+/g, " ")) styles.dial.background = DEFAULT_CONFIG.styles.dial.background;
   }
 }
 
-export function normalizeConfig(rawConfig?: unknown): ClimateConfig {
-  const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-  const CLIMATE_ACTIONS = new Set(["more-info", "none"]);
-  const norm = (value: unknown, fallback: string): string => {
+export function normalizeConfig(rawConfig: unknown = {}): ClimateConfig {
+  const raw = isObject(rawConfig) ? rawConfig : {};
+  const defaults: Record<string, unknown> = DEFAULT_CONFIG;
+  const config = mergeConfig(defaults, raw);
+  const norm = (value: unknown, fallback: "more-info" | "none"): "more-info" | "none" => {
     const key = String(value ?? fallback).trim().toLowerCase();
-    return CLIMATE_ACTIONS.has(key) ? key : fallback;
+    return key === "more-info" || key === "none" ? key : fallback;
   };
-  config.tap_action = norm(config.tap_action, "more-info");
-  config.hold_action = norm(config.hold_action, "more-info");
-  config.double_tap_action = norm(config.double_tap_action, "none");
-  config.layout = normalizeTextKey(config.layout) === "compact" ? "compact" : "circular";
-  config.entity_picture = String(config.entity_picture ?? "").trim();
-  config.show_entity_picture = config.show_entity_picture === true;
   migrateLegacyClimateOffColors(config.styles);
-  config.setpoint_schedule_webhook = String(config.setpoint_schedule_webhook ?? "").trim();
-  config.setpoint_schedule_helper = String(config.setpoint_schedule_helper ?? "").trim();
-  config.setpoint_schedule_week_starts_on = normalizeSetpointScheduleWeekStartsOn(
-    config.setpoint_schedule_week_starts_on,
-  );
-  config.show_schedule_button = config.show_schedule_button !== false;
-  const allowWebhooksForNonAdmin = config.security?.allow_webhooks_for_non_admin === true;
-  config.security = (window.NodaliaUtils.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
-    ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) }) as unknown as ClimateConfig["security"];
-  config.security.allow_webhooks_for_non_admin = allowWebhooksForNonAdmin;
-  config.styles = (window.NodaliaUtils.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles)
-    ?? deepClone(DEFAULT_CONFIG.styles)) as ClimateStyleConfig;
-  return config;
+  const rawSecurity = isObject(config.security) ? config.security : {};
+  const security = window.NodaliaUtils.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
+    ?? { ...DEFAULT_CONFIG.security, ...rawSecurity };
+  const list = (value: unknown, fallback: readonly string[]): string[] => Array.isArray(value)
+    ? value.map((item: unknown) => String(item || "").trim().toLowerCase()).filter(Boolean) : [...fallback];
+  const display = isObject(config.display) ? config.display : {};
+  const haptics = isObject(config.haptics) ? config.haptics : {};
+  const scrolls = isObject(haptics.scrolls) ? haptics.scrolls : {};
+  const animations = isObject(config.animations) ? config.animations : {};
+  return {
+    ...config,
+    entity: String(config.entity ?? ""),
+    name: String(config.name ?? ""),
+    icon: String(config.icon ?? ""),
+    tap_action: norm(config.tap_action, "more-info"),
+    hold_action: norm(config.hold_action, "more-info"),
+    double_tap_action: norm(config.double_tap_action, "none"),
+    layout: normalizeTextKey(config.layout) === "compact" ? "compact" : "circular",
+    entity_picture: String(config.entity_picture ?? "").trim(),
+    show_entity_picture: config.show_entity_picture === true,
+    show_state_chip: config.show_state_chip !== false,
+    show_current_temperature_chip: config.show_current_temperature_chip !== false,
+    show_humidity_chip: config.show_humidity_chip !== false,
+    show_mode_buttons: config.show_mode_buttons !== false,
+    show_step_controls: config.show_step_controls !== false,
+    show_schedule_button: config.show_schedule_button !== false,
+    show_unavailable_badge: config.show_unavailable_badge !== false,
+    setpoint_schedule_webhook: String(config.setpoint_schedule_webhook ?? "").trim(),
+    setpoint_schedule_helper: String(config.setpoint_schedule_helper ?? "").trim(),
+    setpoint_schedule_week_starts_on: normalizeSetpointScheduleWeekStartsOn(config.setpoint_schedule_week_starts_on),
+    security: {
+      ...security,
+      allow_webhooks_for_non_admin: rawSecurity.allow_webhooks_for_non_admin === true,
+      strict_service_actions: security.strict_service_actions === true,
+      allowed_services: list(security.allowed_services, DEFAULT_CONFIG.security.allowed_services),
+      allowed_service_domains: list(security.allowed_service_domains, DEFAULT_CONFIG.security.allowed_service_domains),
+    },
+    display: { ...display, main_temperature: normalizeTextKey(display.main_temperature) === "current" ? "current" : "target" },
+    haptics: {
+      ...haptics,
+      enabled: haptics.enabled === true,
+      style: String(haptics.style ?? DEFAULT_CONFIG.haptics.style),
+      fallback_vibrate: haptics.fallback_vibrate === true,
+      scrolls: { ...scrolls, temperature_dial: scrolls.temperature_dial !== false },
+    },
+    animations: {
+      ...animations,
+      enabled: animations.enabled !== false,
+      dial_duration: parseFiniteNumericValue(animations.dial_duration) ?? DEFAULT_CONFIG.animations.dial_duration,
+      button_bounce_duration: parseFiniteNumericValue(animations.button_bounce_duration) ?? DEFAULT_CONFIG.animations.button_bounce_duration,
+      content_duration: parseFiniteNumericValue(animations.content_duration) ?? DEFAULT_CONFIG.animations.content_duration,
+    },
+    styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles),
+  };
 }

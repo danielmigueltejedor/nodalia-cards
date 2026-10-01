@@ -5,6 +5,10 @@ claim that the earlier filename migration completed TypeScript checking.
 The findings below describe that baseline; dated implementation sections record
 completed work and current remaining debt.
 
+Release target: **3.0.0-alpha.1**, as requested on 2026-10-01. Publish only
+after the entire migration is checked and validated; do not issue another
+2.3.0 alpha or treat the remaining unchecked modules as complete.
+
 ## Critical / release safety
 
 - The tag release workflow runs unit validation but publishes without browser
@@ -694,3 +698,33 @@ outputs match main. All 713 unit tests and three targeted real browser cases
 pass; full local browser suite: 278 passed, one existing platform skip. Remaining
 unchecked modules: 53. Schedule and view/editor still require migration; the
 next alpha remains held.
+
+## Climate schedule findings — 2026-10-01
+
+Schedule normalization/storage, agenda geometry and webhook builders still
+suppress checking. Unknown records are dereferenced by several helpers; empty
+temperatures and target bounds coerce to zero. Direct base64 decoding throws on
+malformed input and packed numeric corruption decodes into plausible schedule
+slots. Check these boundaries while retaining valid v1/v2/v3 encoding, five-
+minute quantization, quarter-degree temperatures, size limits and action shape.
+Climate config already checks but asserts unknown security/styles and trusts the
+merged YAML as a ClimateConfig; replace those assertions with actual projection.
+
+Climate schedule now passes strict checking and typed lint. Actual schedule
+slot/config types replace unguarded record access; packed numeric ranges, base64
+errors and legacy row times are validated. Missing temperatures default to 21,
+real zeros remain values, and absent dual bounds are not synthesized as zero.
+Normalize agenda and webhook inputs, guard track geometry and keep valid storage
+quantization, versions, payload/action shape and the helper length policy.
+Climate config now projects unknown YAML into its declared fields, security
+lists and CSS groups without asserting security/styles; legacy color migration
+and equivalent shared stub/size helpers remain. Public methods derive from
+checked source; week-start metadata is represented in the schedule contract.
+
+Six new unit cases cover malformed/valid codecs, all weekdays and quarter-degree
+values, agenda/hover geometry, nested config/security and webhook payloads.
+4,500 valid schedule/codec/agenda/webhook/config outputs match main. All 719 unit
+tests and three real malformed-config/zero browser cases pass; full local
+browser suite: 281 passed, one existing platform skip. Remaining unchecked
+modules: 52. Publish **3.0.0-alpha.1** only after migration completion; package
+version stays at the latest published build during migration.

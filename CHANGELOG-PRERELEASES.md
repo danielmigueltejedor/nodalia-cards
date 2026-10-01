@@ -10,7 +10,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+The next prerelease is **3.0.0-alpha.1** and starts the 3.0.0 line. Publish it only after the complete
+TypeScript migration and its validation are finished; alpha.49 remains the
+latest published version during this work.
+
 ### Fixed
+
+- Reject corrupt Climate schedule storage, guard agenda/webhook inputs and keep absent schedule temperatures/bounds separate from zero; project nested Climate settings without assertions.
 
 - Resolve Climate theme colors inside its shadow root, support modern translucent RGB, clean up color probes and preserve missing temperatures/locales safely.
 
@@ -54,6 +60,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Remove Camera portal listeners from their owning shadow root.
 
 ### Maintenance
+
+- Check Climate schedule codecs and public methods, retain v1/v2/v3 valid storage behavior and document the 3.0.0-alpha.1 publication target.
 
 - Strictly check Climate model and share finite number, size and color helpers.
 
