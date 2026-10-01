@@ -13,7 +13,6 @@
   "src/cards/circular-gauge/circular-gauge-editor.ts",
   "src/cards/climate/climate-card.ts",
   "src/cards/climate/climate-editor.ts",
-  "src/cards/climate/climate-model.ts",
   "src/cards/climate/climate-schedule.ts",
   "src/cards/cover/cover-card.ts",
   "src/cards/cover/cover-editor.ts",

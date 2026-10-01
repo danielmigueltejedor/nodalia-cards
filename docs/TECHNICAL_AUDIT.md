@@ -670,3 +670,27 @@ merged main. All 708 unit tests pass; real malformed-style/zero browser cases
 pass in all three local projects. Full suite: 275 passed, one existing platform
 skip. Remaining unchecked modules: 54; Entity view/editor remain in migration.
 Add an Entity guide and README link. Publication stays held until completion.
+
+## Climate model findings — 2026-10-01
+
+Climate's extracted model still disables checking despite unknown public
+signatures. It duplicates size, RGB and luminance helpers, only parses comma
+RGB, leaves temporary color probes behind on resolution failure, and accepts
+boolean/object numeric coercion as temperature. Narrow the HA/DOM boundary,
+reuse checked color/numeric helpers and preserve valid temperature, unit and
+mode behavior. Reject malformed locales safely without changing valid ones.
+The actual browser regression found Chromium gives an empty computed color
+for an unslotted light-DOM probe; attach it inside the existing shadow root.
+
+Climate model now passes strict checking and typed lint. Shared finite number,
+size, RGB and luminance helpers preserve valid temperature/unit/dial behavior;
+boolean/object coercions remain absent. Locale validation falls back to English
+only for malformed locale tags. Color probes use the existing shadow root on a
+card host and are removed in finally; this fixes the real Chromium empty-color
+regression, with modern translucent CSS colors supported across browsers.
+Five new unit cases cover numeric/range/unit data, locales, override timestamps,
+color resolution cleanup and HVAC mode precedence. 2,500 valid format/dial/color
+outputs match main. All 713 unit tests and three targeted real browser cases
+pass; full local browser suite: 278 passed, one existing platform skip. Remaining
+unchecked modules: 53. Schedule and view/editor still require migration; the
+next alpha remains held.
