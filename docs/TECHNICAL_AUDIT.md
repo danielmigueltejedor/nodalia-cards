@@ -1639,3 +1639,13 @@ suite passes 629 cases with one existing skip.
   computed portal styles. The full local suite passes 662 cases with one existing
   skip; CI remains required before merging.
   No prerelease has been published.
+
+
+Camera review follow-up: synchronize the current Summary portal before mounting
+its player and related controls. A same-camera configuration change or a current
+preview-image error no longer mounts into an outgoing dialog that is subsequently
+removed. The new native browser case reproduces both paths, checks retained player
+and related cards, verifies old-player disconnect and current loaded events, and
+closes the current portal. Strict/lint and 750 unit tests pass; all 24 focused
+browser cases pass. The full local suite passes 665 cases with one existing skip;
+CI and review remain required before integration.

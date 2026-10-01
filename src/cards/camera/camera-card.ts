@@ -1869,9 +1869,9 @@ class NodaliaCameraCard extends HTMLElement {
       }, { once: true });
     });
 
+    this._syncExpandedPortal();
     this._mountExpandedCards();
     this._mountExpandedStream();
-    this._syncExpandedPortal();
     const expandedDialog = (this._expandedPortal?.shadowRoot || this.shadowRoot)
       ?.querySelector('.camera-card__expanded[role="dialog"]');
     if (expandedDialog instanceof HTMLElement) {

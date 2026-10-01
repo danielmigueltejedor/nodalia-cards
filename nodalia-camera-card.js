@@ -3383,9 +3383,9 @@
             node.hidden = true;
           }, { once: true });
         });
+        this._syncExpandedPortal();
         this._mountExpandedCards();
         this._mountExpandedStream();
-        this._syncExpandedPortal();
         const expandedDialog = (this._expandedPortal?.shadowRoot || this.shadowRoot)?.querySelector('.camera-card__expanded[role="dialog"]');
         if (expandedDialog instanceof HTMLElement) {
           window.NodaliaUtils?.bindModalFocus?.(this, expandedDialog, {
