@@ -1,12 +1,12 @@
-// @ts-nocheck
-/* Visual editor surface: typed incrementally after the card runtime split. */
+import type { HomeAssistant } from "../../core/types/home-assistant";
+import type { EditorFocusState } from "../../core/types/nodalia-utils";
+import { isLovelaceEditorElement } from "../../shared/card-elements";
 import { CUSTOMIZABLE_EMBED_LISTS } from "./room-summary-constants";
 import {
   deepClone,
   escapeHtml,
   getByPath,
   isObject,
-  mergeConfig,
 } from "./room-summary-runtime";
 import { DEFAULT_CONFIG, hubMediaPlayerIds, normalizeConfig } from "./room-summary-config";
 import {
@@ -19,23 +19,36 @@ import {
   stripEqualToDefaults,
 } from "./room-summary-helpers";
 
-let _lazyNodaliaRoomSummaryCardEditor;
-export function loadNodaliaRoomSummaryCardEditor() {
+const EDITOR_LIST_KEYS = ["lights", "covers", "vacuums", "fans", "humidifiers", "others", "doors", "windows", "locks", "alerts", "alarms"] as const;
+type EditorListKey = typeof EDITOR_LIST_KEYS[number];
+function isEditorListKey(value: unknown): value is EditorListKey {
+  return EDITOR_LIST_KEYS.some(key => key === value);
+}
+function isCustomizableList(value: string) {
+  return Array.from(CUSTOMIZABLE_EMBED_LISTS).some(key => key === value);
+}
+
+let _lazyNodaliaRoomSummaryCardEditor: CustomElementConstructor | undefined;
+export function loadNodaliaRoomSummaryCardEditor(): CustomElementConstructor {
   if (_lazyNodaliaRoomSummaryCardEditor) {
     return _lazyNodaliaRoomSummaryCardEditor;
   }
 class NodaliaRoomSummaryCardEditor extends HTMLElement {
+  private _config!: ReturnType<typeof normalizeConfig>;
+  private _hass!: HomeAssistant | null;
+  private _entityOptionsSignature!: string;
+  private _showStyleSection!: boolean;
+  private _pendingEditorControlTags!: Set<string>;
   constructor() {
     super();
     this._nodaliaConstruct();
   }
 
   _nodaliaConstruct() {this.attachShadow({ mode: "open" });
-    this._config = mergeConfig(DEFAULT_CONFIG, {});
+    this._config = normalizeConfig({});
     this._hass = null;
     this._entityOptionsSignature = "";
     this._showStyleSection = false;
-    this._editorShadowListenersAttached = false;
     this._pendingEditorControlTags = new Set();
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowClick = this._onShadowClick.bind(this);
@@ -67,22 +80,22 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     window.NodaliaUtils.releaseShadowListeners(this, "editor");
   }
 
-  setConfig(config) {
+  setConfig(config: unknown) {
     const focusState = this._captureFocusState();
     this._config = normalizeConfig(config || {});
     this._render();
     this._restoreFocusState(focusState);
   }
 
-  set hass(hass) {
+  set hass(hass: HomeAssistant) {
     const nextSignature = this._getEntityOptionsSignature(hass);
     const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
     this._hass = hass;
     this._entityOptionsSignature = nextSignature;
     if (!shouldRender) {
-      this.shadowRoot?.querySelectorAll('[data-mounted-control="entity"]').forEach(host => this._mountEntityPicker(host));
-      this.shadowRoot?.querySelectorAll("nodalia-media-player-editor").forEach(editor => { editor.hass = hass; });
-      this.shadowRoot?.querySelectorAll("nodalia-camera-card-editor").forEach(editor => { editor.hass = hass; });
+      this.shadowRoot?.querySelectorAll<HTMLElement>('[data-mounted-control="entity"]').forEach(host => this._mountEntityPicker(host));
+      this.shadowRoot?.querySelectorAll("nodalia-media-player-editor").forEach(editor => { if (isLovelaceEditorElement(editor)) editor.hass = hass; });
+      this.shadowRoot?.querySelectorAll("nodalia-camera-card-editor").forEach(editor => { if (isLovelaceEditorElement(editor)) editor.hass = hass; });
       return;
     }
     const focusState = this._captureFocusState();
@@ -98,11 +111,11 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     return window.NodaliaUtils.captureEditorFocusState(this);
   }
 
-  _restoreFocusState(focusState) {
+  _restoreFocusState(focusState: EditorFocusState | null) {
     window.NodaliaUtils.restoreEditorFocusState(this, focusState);
   }
 
-  _watchEditorControlTag(tagName) {
+  _watchEditorControlTag(tagName: string) {
     if (!tagName || this._pendingEditorControlTags.has(tagName)) {
       return;
     }
@@ -134,7 +147,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     this._watchEditorControlTag("nodalia-camera-card-editor");
   }
 
-  _editorLabel(key) {
+  _editorLabel(key: string) {
     return window.NodaliaI18n?.editorStr?.(this._hass, this._config?.language ?? "auto", key) || key;
   }
 
@@ -146,11 +159,11 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     }
   }
 
-  _onShadowInput(e) {
-    const input = e.composedPath().find(n => n instanceof HTMLInputElement || n instanceof HTMLSelectElement || n instanceof HTMLTextAreaElement);
+  _onShadowInput(e: Event) {
+    const input = e.composedPath().find((n): n is HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement => n instanceof HTMLInputElement || n instanceof HTMLSelectElement || n instanceof HTMLTextAreaElement);
     if (!input?.dataset?.field) return;
     e.stopPropagation();
-    let value = input.type === "checkbox" ? input.checked : input.value;
+    let value = input instanceof HTMLInputElement && input.type === "checkbox" ? input.checked : input.value;
     if (input.dataset.valueType === "color" && input instanceof HTMLInputElement) {
       value = formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
     }
@@ -158,18 +171,18 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     if (e.type === "change") this._emitConfig(false);
   }
 
-  _onShadowValueChanged(e) {
+  _onShadowValueChanged(e: Event) {
     const nestedEditor = e.composedPath().find(node =>
       node instanceof HTMLElement
       && (node.localName === "nodalia-media-player-editor" || node.localName === "nodalia-camera-card-editor")
     );
     if (nestedEditor) return;
-    const host = e.composedPath().find(node => node instanceof HTMLElement && node.dataset?.field);
+    const host = e.composedPath().find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.field));
     if (!host?.dataset?.field) {
       return;
     }
     e.stopPropagation();
-    setByPath(this._config, host.dataset.field, String(e.detail?.value || "").trim());
+    setByPath(this._config, host.dataset.field, String(this._eventDetail(e).value || "").trim());
     if (host.dataset.field === "camera") {
       const camera = String(this._config.camera || "").trim();
       if (!isObject(this._config.camera_config)) this._config.camera_config = {};
@@ -186,47 +199,30 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     this._emitConfig(false);
   }
 
-  _onShadowClick(e) {
-    const btn = e.composedPath().find(n => n instanceof HTMLElement && n.dataset?.act);
+  _onShadowClick(e: Event) {
+    const btn = e.composedPath().find((n): n is HTMLElement => n instanceof HTMLElement && Boolean(n.dataset.act));
     if (!btn) return;
     e.preventDefault();
     e.stopPropagation();
     const list = btn.dataset.list;
     const idx = Number(btn.dataset.index);
-    if (btn.dataset.act === "add" && list) {
-      if (!Array.isArray(this._config[list])) this._config[list] = [];
-      this._config[list].push("");
-      if (CUSTOMIZABLE_EMBED_LISTS.has(list)) {
-        if (!Array.isArray(this._config.embed_options?.[list])) this._config.embed_options[list] = [];
-        this._config.embed_options[list].push({ entity: "", name: "", icon: "" });
-      }
-      this._emitConfig(true);
-      return;
-    }
-    if (btn.dataset.act === "remove" && list && Number.isInteger(idx)) {
-      if (!Array.isArray(this._config[list])) this._config[list] = [];
-      this._config[list].splice(idx, 1);
-      if (CUSTOMIZABLE_EMBED_LISTS.has(list) && Array.isArray(this._config.embed_options?.[list])) {
-        this._config.embed_options[list].splice(idx, 1);
-      }
-      this._emitConfig(true);
-      return;
-    }
-    if (btn.dataset.act === "move-up" && list && Number.isInteger(idx)) {
-      if (!Array.isArray(this._config[list])) this._config[list] = [];
-      moveListItem(this._config[list], idx, idx - 1);
-      if (CUSTOMIZABLE_EMBED_LISTS.has(list) && Array.isArray(this._config.embed_options?.[list])) {
-        moveListItem(this._config.embed_options[list], idx, idx - 1);
-      }
-      this._emitConfig(true);
-      return;
-    }
-    if (btn.dataset.act === "move-down" && list && Number.isInteger(idx)) {
-      if (!Array.isArray(this._config[list])) this._config[list] = [];
-      moveListItem(this._config[list], idx, idx + 1);
-      if (CUSTOMIZABLE_EMBED_LISTS.has(list) && Array.isArray(this._config.embed_options?.[list])) {
-        moveListItem(this._config.embed_options[list], idx, idx + 1);
-      }
+    const action = btn.dataset.act;
+    if (isEditorListKey(list)) {
+      const items = this._config[list];
+      const options = isCustomizableList(list) ? this._config.embed_options[list] : undefined;
+      if (action === "add") {
+        items.push("");
+        options?.push({ entity: "", name: "", icon: "" });
+      } else if (Number.isInteger(idx) && idx >= 0 && idx < items.length) {
+        if (action === "remove") {
+          items.splice(idx, 1);
+          options?.splice(idx, 1);
+        } else if (action === "move-up" || action === "move-down") {
+          const target = idx + (action === "move-up" ? -1 : 1);
+          moveListItem(items, idx, target);
+          if (options) moveListItem(options, idx, target);
+        } else return;
+      } else return;
       this._emitConfig(true);
       return;
     }
@@ -236,23 +232,32 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     }
   }
 
-  _editorList(listKey) {
-    return Array.isArray(this._config[listKey]) ? this._config[listKey] : [];
+  _editorList(listKey: string): unknown[] {
+    const list = this._config[listKey];
+    return Array.isArray(list) ? list : [];
+  }
+
+  _eventDetail(event: Event): Record<string, unknown> {
+    const detail: unknown = event instanceof CustomEvent ? event.detail : undefined;
+    return isObject(detail) ? detail : {};
   }
 
   _mediaEditorConfig() {
-    const native = isObject(this._config?.media_config) ? deepClone(this._config.media_config) : {};
+    const native: Record<string, unknown> = deepClone(this._config.media_config);
     if (!Array.isArray(native.players) || !native.players.length) {
       native.players = hubMediaPlayerIds(this._config).map(entity => ({ entity }));
     }
     return native;
   }
 
-  _onMediaConfigChanged(event) {
+  _onMediaConfigChanged(event: Event) {
     event.stopPropagation();
-    const mediaConfig = isObject(event.detail?.config) ? deepClone(event.detail.config) : {};
-    const ids = (mediaConfig.players || []).map(player => String(player?.entity || "").trim()).filter(Boolean);
-    this._config.media_config = mediaConfig;
+    const detail = this._eventDetail(event);
+    const mediaConfig = isObject(detail.config) ? deepClone(detail.config) : {};
+    const players = Array.isArray(mediaConfig.players) ? mediaConfig.players.filter(isObject) : [];
+    const ids = players.map(player => String(player.entity || "").trim()).filter(Boolean);
+    mediaConfig.players = players;
+    this._config.media_config = { ...mediaConfig, players };
     this._config.media_player = ids[0] || "";
     this._config.media_players = ids.slice(1);
     this._emitConfig(false);
@@ -273,9 +278,10 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     return native;
   }
 
-  _onCameraConfigChanged(event) {
+  _onCameraConfigChanged(event: Event) {
     event.stopPropagation();
-    const cameraConfig = isObject(event.detail?.config) ? deepClone(event.detail.config) : {};
+    const detail = this._eventDetail(event);
+    const cameraConfig = isObject(detail.config) ? deepClone(detail.config) : {};
     this._config.camera_config = cameraConfig;
     this._config.camera = String(
       cameraConfig.entity
@@ -285,7 +291,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     this._emitConfig(false);
   }
 
-  _entityLabel(entityId) {
+  _entityLabel(entityId: unknown) {
     const id = String(entityId || "").trim();
     if (!id) {
       return this._editorLabel("ed.room_summary.entity");
@@ -294,12 +300,12 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     return friendly && friendly !== id ? `${friendly} (${id})` : id;
   }
 
-  _field(label, field, value, opts = {}) {
+  _field(label: string, field: string, value: unknown, opts: { full?: boolean; ph?: string } = {}) {
     return `<label class="editor-field ${opts.full ? "editor-field--full" : ""}"><span>${escapeHtml(this._editorLabel(label))}</span>
       <input data-field="${escapeHtml(field)}" value="${escapeHtml(value ?? "")}" placeholder="${escapeHtml(opts.ph ? this._editorLabel(opts.ph) : "")}" /></label>`;
   }
 
-  _check(label, field, checked) {
+  _check(label: string, field: string, checked: unknown) {
     return `<label class="editor-toggle">
       <input type="checkbox" data-field="${escapeHtml(field)}" ${checked ? "checked" : ""} />
       <span class="editor-toggle__switch" aria-hidden="true"></span>
@@ -307,13 +313,13 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     </label>`;
   }
 
-  _select(label, field, value, options) {
+  _select(label: string, field: string, value: unknown, options: readonly { v: string; l: string }[]) {
     return `<label class="editor-field"><span>${escapeHtml(this._editorLabel(label))}</span><select data-field="${escapeHtml(field)}">
       ${options.map(o => `<option value="${escapeHtml(o.v)}" ${String(value) === o.v ? "selected" : ""}>${escapeHtml(this._editorLabel(o.l))}</option>`).join("")}
     </select></label>`;
   }
 
-  _entity(label, field, value, domains = []) {
+  _entity(label: string, field: string, value: unknown, domains: readonly string[] = []) {
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `<label class="editor-field editor-field--full"><span>${escapeHtml(this._editorLabel(label))}</span>
       <div
@@ -325,7 +331,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
       ></div></label>`;
   }
 
-  _iconField(label, field, value) {
+  _iconField(label: string, field: string, value: unknown) {
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `<div class="editor-field">
       <span>${escapeHtml(this._editorLabel(label))}</span>
@@ -338,7 +344,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     </div>`;
   }
 
-  _renderColorField(label, field, value, options = {}) {
+  _renderColorField(label: string, field: string, value: unknown, options: { fallbackValue?: string; fullWidth?: boolean } = {}) {
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
     const currentValue = value === undefined || value === null || value === ""
       ? fallbackValue
@@ -363,7 +369,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
       </div>`;
   }
 
-  _listSection(title, hint, listKey, domains, customizable = false) {
+  _listSection(title: string, hint: string, listKey: string, domains: readonly string[], customizable = false) {
     const rows = this._editorList(listKey);
     const total = rows.length;
     const moveUp = this._editorLabel("ed.notifications.move_up");
@@ -373,7 +379,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
       <div class="editor-section__hint">${escapeHtml(this._editorLabel(hint))}</div></div>
       <button type="button" data-act="add" data-list="${escapeHtml(listKey)}">${escapeHtml(this._editorLabel("ed.room_summary.add_entity"))}</button></div>
       ${rows.length ? rows.map((id, i) => {
-    const option = this._config.embed_options?.[listKey]?.[i] || {};
+    const option: Record<string, unknown> = this._config.embed_options[listKey]?.[i] || {};
     return `<div class="item-card"><div class="item-card__header">
         <span class="item-card__title">${escapeHtml(this._entityLabel(id))}</span>
         <div class="item-card__actions">
@@ -410,7 +416,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     </section>`;
   }
 
-  _mountEntityPicker(host) {
+  _mountEntityPicker(host: HTMLElement) {
     if (!(host instanceof HTMLElement)) return;
     window.NodaliaUtils?.mountEntityPickerHost?.(host, {
       hass: this._hass,
@@ -423,11 +429,11 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     const domains = String(host.dataset.includeDomains || "").split(",").map(item => item.trim()).filter(Boolean);
     const picker = host.querySelector("ha-entity-picker");
     if (picker && domains.length) {
-      picker.includeDomains = domains;
+      Object.assign(picker, { includeDomains: domains });
     }
   }
 
-  _mountIconPicker(host) {
+  _mountIconPicker(host: HTMLElement) {
     window.NodaliaUtils?.mountIconPickerHost?.(host, {
       hass: this._hass,
       value: host.dataset.value || getByPath(this._config, host.dataset.field || "") || "",
@@ -437,7 +443,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     });
   }
 
-  _mountMediaConfigEditor(host) {
+  _mountMediaConfigEditor(host: HTMLElement) {
     if (!(host instanceof HTMLElement)) return;
     if (!customElements.get("nodalia-media-player-editor")) {
       this._watchEditorControlTag("nodalia-media-player-editor");
@@ -445,6 +451,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     }
     try {
       const editor = document.createElement("nodalia-media-player-editor");
+      if (!isLovelaceEditorElement(editor)) return;
       editor.addEventListener("config-changed", this._onMediaConfigChanged);
       editor.hass = this._hass;
       editor.setConfig(this._mediaEditorConfig());
@@ -454,7 +461,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     }
   }
 
-  _mountCameraConfigEditor(host) {
+  _mountCameraConfigEditor(host: HTMLElement) {
     if (!(host instanceof HTMLElement)) return;
     if (!customElements.get("nodalia-camera-card-editor")) {
       this._watchEditorControlTag("nodalia-camera-card-editor");
@@ -462,6 +469,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     }
     try {
       const editor = document.createElement("nodalia-camera-card-editor");
+      if (!isLovelaceEditorElement(editor)) return;
       editor.addEventListener("config-changed", this._onCameraConfigChanged);
       editor.hass = this._hass;
       editor.setConfig(this._cameraEditorConfig());
@@ -472,7 +480,8 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
   }
 
   _render() {
-    const c = this._config || {};
+    if (!this.shadowRoot) return;
+    const c = this._config;
     this.shadowRoot.innerHTML = `<style>
       :host { display: block; overflow-anchor: none; }
       * { box-sizing: border-box; }
@@ -726,10 +735,10 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     </div>`;
     this._detachEditorShadowListeners();
     this._attachEditorShadowListeners();
-    this.shadowRoot.querySelectorAll('[data-mounted-control="entity"]').forEach(host => this._mountEntityPicker(host));
-    this.shadowRoot.querySelectorAll('[data-mounted-control="icon-picker"]').forEach(host => this._mountIconPicker(host));
-    this.shadowRoot.querySelectorAll('[data-mounted-control="media-config-editor"]').forEach(host => this._mountMediaConfigEditor(host));
-    this.shadowRoot.querySelectorAll('[data-mounted-control="camera-config-editor"]').forEach(host => this._mountCameraConfigEditor(host));
+    this.shadowRoot.querySelectorAll<HTMLElement>('[data-mounted-control="entity"]').forEach(host => this._mountEntityPicker(host));
+    this.shadowRoot.querySelectorAll<HTMLElement>('[data-mounted-control="icon-picker"]').forEach(host => this._mountIconPicker(host));
+    this.shadowRoot.querySelectorAll<HTMLElement>('[data-mounted-control="media-config-editor"]').forEach(host => this._mountMediaConfigEditor(host));
+    this.shadowRoot.querySelectorAll<HTMLElement>('[data-mounted-control="camera-config-editor"]').forEach(host => this._mountCameraConfigEditor(host));
     this._ensureEditorControlsReady();
     window.NodaliaUtils?.clampEditorDialogScroll?.(this);
   }

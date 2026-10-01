@@ -12,6 +12,36 @@
   var CUSTOMIZABLE_EMBED_LISTS = /* @__PURE__ */ new Set(["lights", "vacuums", "fans", "humidifiers", "others"]);
   var NORMALIZED_ROOM_CONFIG = /* @__PURE__ */ Symbol("nodalia-room-summary-normalized");
 
+  // src/shared/control-config.ts
+  function normalizeControlStyles(candidate, defaults, sanitize = window.NodaliaUtils.sanitizeCssValue) {
+    const utils2 = window.NodaliaUtils;
+    const source = utils2.isObject(candidate) ? candidate : {};
+    const result = {};
+    for (const [key, fallback] of Object.entries(defaults)) {
+      if (utils2.isUnsafeConfigPathKey(key)) continue;
+      result[key] = typeof fallback === "string" ? sanitize(source[key], fallback) : normalizeControlStyles(source[key], fallback, sanitize);
+    }
+    return result;
+  }
+  var actionFields = (prefix, fallback, navigationKey = `${prefix}_navigation_path`) => ({
+    actionKey: `${prefix}_action`,
+    serviceKey: `${prefix}_service`,
+    serviceDataKey: `${prefix}_service_data`,
+    serviceTargetKey: `${prefix}_service_target`,
+    urlKey: `${prefix}_url`,
+    navigationKey,
+    newTabKey: `${prefix}_new_tab`,
+    fallback
+  });
+  var FIELDS = [
+    actionFields("tap", "toggle", "navigation_path"),
+    actionFields("icon_tap", "", "icon_navigation_path"),
+    actionFields("hold", "more-info", "hold_navigation_path"),
+    actionFields("icon_hold", ""),
+    actionFields("double_tap", "none"),
+    actionFields("icon_double_tap", "")
+  ];
+
   // src/cards/room-summary/room-summary-runtime.ts
   var utils = window.NodaliaUtils;
   var isObject = utils.isObject.bind(utils);
@@ -361,6 +391,12 @@
       const cached = normalizedRoomConfigs.get(rawConfig);
       if (cached) return cached;
     }
+    const normalized = buildRoomConfig(rawConfig);
+    Object.defineProperty(normalized, NORMALIZED_ROOM_CONFIG, { configurable: false, enumerable: false, value: true });
+    normalizedRoomConfigs.set(normalized, normalized);
+    return normalized;
+  }
+  function buildRoomConfig(rawConfig = {}) {
     const raw = isObject(rawConfig) ? rawConfig : {};
     const config = mergeConfig(DEFAULT_CONFIG, raw);
     config.name = String(config.name ?? "").trim();
@@ -460,9 +496,24 @@
     config.animations = mergeConfig(DEFAULT_CONFIG.animations, config.animations || {});
     config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? mergeConfig(DEFAULT_CONFIG.security, config.security || {});
     config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles) ?? deepClone(DEFAULT_CONFIG.styles);
-    const normalized = {
-      ...config,
+    const fields = {
       ...lists,
+      language: String(config.language || "auto"),
+      icon: String(config.icon),
+      image: String(config.image),
+      navigation_path: String(config.navigation_path),
+      show_temperature: config.show_temperature === true,
+      show_humidity: config.show_humidity === true,
+      show_presence: config.show_presence === true,
+      show_lights: config.show_lights === true,
+      show_covers: config.show_covers === true,
+      show_climate: config.show_climate === true,
+      show_camera: config.show_camera === true,
+      show_media: config.show_media === true,
+      show_security: config.show_security === true,
+      show_power: config.show_power === true,
+      show_quick_actions: config.show_quick_actions === true,
+      styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles),
       name: String(config.name ?? "").trim(),
       temperature: entityScalar(config.temperature),
       humidity: entityScalar(config.humidity),
@@ -478,8 +529,7 @@
       media_config: mediaConfig,
       embed_options: embedOptions
     };
-    Object.defineProperty(normalized, NORMALIZED_ROOM_CONFIG, { configurable: false, enumerable: false, value: true });
-    normalizedRoomConfigs.set(normalized, normalized);
+    const normalized = { ...config, ...fields };
     return normalized;
   }
   function hasRoomContent(config = {}) {
@@ -2002,7 +2052,19 @@
     return NodaliaRoomSummaryCard;
   }
 
+  // src/shared/card-elements.ts
+  function isLovelaceEditorElement(element) {
+    return element instanceof HTMLElement && "setConfig" in element && typeof element.setConfig === "function";
+  }
+
   // src/cards/room-summary/room-summary-editor.ts
+  var EDITOR_LIST_KEYS = ["lights", "covers", "vacuums", "fans", "humidifiers", "others", "doors", "windows", "locks", "alerts", "alarms"];
+  function isEditorListKey(value) {
+    return EDITOR_LIST_KEYS.some((key) => key === value);
+  }
+  function isCustomizableList(value) {
+    return Array.from(CUSTOMIZABLE_EMBED_LISTS).some((key) => key === value);
+  }
   var _lazyNodaliaRoomSummaryCardEditor;
   function loadNodaliaRoomSummaryCardEditor() {
     if (_lazyNodaliaRoomSummaryCardEditor) {
@@ -2015,11 +2077,10 @@
       }
       _nodaliaConstruct() {
         this.attachShadow({ mode: "open" });
-        this._config = mergeConfig(DEFAULT_CONFIG, {});
+        this._config = normalizeConfig({});
         this._hass = null;
         this._entityOptionsSignature = "";
         this._showStyleSection = false;
-        this._editorShadowListenersAttached = false;
         this._pendingEditorControlTags = /* @__PURE__ */ new Set();
         this._onShadowInput = this._onShadowInput.bind(this);
         this._onShadowClick = this._onShadowClick.bind(this);
@@ -2060,10 +2121,10 @@
         if (!shouldRender) {
           this.shadowRoot?.querySelectorAll('[data-mounted-control="entity"]').forEach((host) => this._mountEntityPicker(host));
           this.shadowRoot?.querySelectorAll("nodalia-media-player-editor").forEach((editor) => {
-            editor.hass = hass;
+            if (isLovelaceEditorElement(editor)) editor.hass = hass;
           });
           this.shadowRoot?.querySelectorAll("nodalia-camera-card-editor").forEach((editor) => {
-            editor.hass = hass;
+            if (isLovelaceEditorElement(editor)) editor.hass = hass;
           });
           return;
         }
@@ -2121,7 +2182,7 @@
         const input = e.composedPath().find((n) => n instanceof HTMLInputElement || n instanceof HTMLSelectElement || n instanceof HTMLTextAreaElement);
         if (!input?.dataset?.field) return;
         e.stopPropagation();
-        let value = input.type === "checkbox" ? input.checked : input.value;
+        let value = input instanceof HTMLInputElement && input.type === "checkbox" ? input.checked : input.value;
         if (input.dataset.valueType === "color" && input instanceof HTMLInputElement) {
           value = formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
         }
@@ -2133,12 +2194,12 @@
           (node) => node instanceof HTMLElement && (node.localName === "nodalia-media-player-editor" || node.localName === "nodalia-camera-card-editor")
         );
         if (nestedEditor) return;
-        const host = e.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+        const host = e.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.field));
         if (!host?.dataset?.field) {
           return;
         }
         e.stopPropagation();
-        setByPath(this._config, host.dataset.field, String(e.detail?.value || "").trim());
+        setByPath(this._config, host.dataset.field, String(this._eventDetail(e).value || "").trim());
         if (host.dataset.field === "camera") {
           const camera = String(this._config.camera || "").trim();
           if (!isObject(this._config.camera_config)) this._config.camera_config = {};
@@ -2153,46 +2214,29 @@
         this._emitConfig(false);
       }
       _onShadowClick(e) {
-        const btn = e.composedPath().find((n) => n instanceof HTMLElement && n.dataset?.act);
+        const btn = e.composedPath().find((n) => n instanceof HTMLElement && Boolean(n.dataset.act));
         if (!btn) return;
         e.preventDefault();
         e.stopPropagation();
         const list = btn.dataset.list;
         const idx = Number(btn.dataset.index);
-        if (btn.dataset.act === "add" && list) {
-          if (!Array.isArray(this._config[list])) this._config[list] = [];
-          this._config[list].push("");
-          if (CUSTOMIZABLE_EMBED_LISTS.has(list)) {
-            if (!Array.isArray(this._config.embed_options?.[list])) this._config.embed_options[list] = [];
-            this._config.embed_options[list].push({ entity: "", name: "", icon: "" });
-          }
-          this._emitConfig(true);
-          return;
-        }
-        if (btn.dataset.act === "remove" && list && Number.isInteger(idx)) {
-          if (!Array.isArray(this._config[list])) this._config[list] = [];
-          this._config[list].splice(idx, 1);
-          if (CUSTOMIZABLE_EMBED_LISTS.has(list) && Array.isArray(this._config.embed_options?.[list])) {
-            this._config.embed_options[list].splice(idx, 1);
-          }
-          this._emitConfig(true);
-          return;
-        }
-        if (btn.dataset.act === "move-up" && list && Number.isInteger(idx)) {
-          if (!Array.isArray(this._config[list])) this._config[list] = [];
-          moveListItem(this._config[list], idx, idx - 1);
-          if (CUSTOMIZABLE_EMBED_LISTS.has(list) && Array.isArray(this._config.embed_options?.[list])) {
-            moveListItem(this._config.embed_options[list], idx, idx - 1);
-          }
-          this._emitConfig(true);
-          return;
-        }
-        if (btn.dataset.act === "move-down" && list && Number.isInteger(idx)) {
-          if (!Array.isArray(this._config[list])) this._config[list] = [];
-          moveListItem(this._config[list], idx, idx + 1);
-          if (CUSTOMIZABLE_EMBED_LISTS.has(list) && Array.isArray(this._config.embed_options?.[list])) {
-            moveListItem(this._config.embed_options[list], idx, idx + 1);
-          }
+        const action = btn.dataset.act;
+        if (isEditorListKey(list)) {
+          const items = this._config[list];
+          const options = isCustomizableList(list) ? this._config.embed_options[list] : void 0;
+          if (action === "add") {
+            items.push("");
+            options?.push({ entity: "", name: "", icon: "" });
+          } else if (Number.isInteger(idx) && idx >= 0 && idx < items.length) {
+            if (action === "remove") {
+              items.splice(idx, 1);
+              options?.splice(idx, 1);
+            } else if (action === "move-up" || action === "move-down") {
+              const target = idx + (action === "move-up" ? -1 : 1);
+              moveListItem(items, idx, target);
+              if (options) moveListItem(options, idx, target);
+            } else return;
+          } else return;
           this._emitConfig(true);
           return;
         }
@@ -2202,10 +2246,15 @@
         }
       }
       _editorList(listKey) {
-        return Array.isArray(this._config[listKey]) ? this._config[listKey] : [];
+        const list = this._config[listKey];
+        return Array.isArray(list) ? list : [];
+      }
+      _eventDetail(event) {
+        const detail = event instanceof CustomEvent ? event.detail : void 0;
+        return isObject(detail) ? detail : {};
       }
       _mediaEditorConfig() {
-        const native = isObject(this._config?.media_config) ? deepClone(this._config.media_config) : {};
+        const native = deepClone(this._config.media_config);
         if (!Array.isArray(native.players) || !native.players.length) {
           native.players = hubMediaPlayerIds(this._config).map((entity) => ({ entity }));
         }
@@ -2213,9 +2262,12 @@
       }
       _onMediaConfigChanged(event) {
         event.stopPropagation();
-        const mediaConfig = isObject(event.detail?.config) ? deepClone(event.detail.config) : {};
-        const ids = (mediaConfig.players || []).map((player) => String(player?.entity || "").trim()).filter(Boolean);
-        this._config.media_config = mediaConfig;
+        const detail = this._eventDetail(event);
+        const mediaConfig = isObject(detail.config) ? deepClone(detail.config) : {};
+        const players = Array.isArray(mediaConfig.players) ? mediaConfig.players.filter(isObject) : [];
+        const ids = players.map((player) => String(player.entity || "").trim()).filter(Boolean);
+        mediaConfig.players = players;
+        this._config.media_config = { ...mediaConfig, players };
         this._config.media_player = ids[0] || "";
         this._config.media_players = ids.slice(1);
         this._emitConfig(false);
@@ -2234,7 +2286,8 @@
       }
       _onCameraConfigChanged(event) {
         event.stopPropagation();
-        const cameraConfig = isObject(event.detail?.config) ? deepClone(event.detail.config) : {};
+        const detail = this._eventDetail(event);
+        const cameraConfig = isObject(detail.config) ? deepClone(detail.config) : {};
         this._config.camera_config = cameraConfig;
         this._config.camera = String(
           cameraConfig.entity || (Array.isArray(cameraConfig.cameras) ? cameraConfig.cameras[0] : "") || ""
@@ -2320,7 +2373,7 @@
       <div class="editor-section__hint">${escapeHtml(this._editorLabel(hint))}</div></div>
       <button type="button" data-act="add" data-list="${escapeHtml(listKey)}">${escapeHtml(this._editorLabel("ed.room_summary.add_entity"))}</button></div>
       ${rows.length ? rows.map((id, i) => {
-          const option = this._config.embed_options?.[listKey]?.[i] || {};
+          const option = this._config.embed_options[listKey]?.[i] || {};
           return `<div class="item-card"><div class="item-card__header">
         <span class="item-card__title">${escapeHtml(this._entityLabel(id))}</span>
         <div class="item-card__actions">
@@ -2367,7 +2420,7 @@
         const domains = String(host.dataset.includeDomains || "").split(",").map((item) => item.trim()).filter(Boolean);
         const picker = host.querySelector("ha-entity-picker");
         if (picker && domains.length) {
-          picker.includeDomains = domains;
+          Object.assign(picker, { includeDomains: domains });
         }
       }
       _mountIconPicker(host) {
@@ -2387,6 +2440,7 @@
         }
         try {
           const editor = document.createElement("nodalia-media-player-editor");
+          if (!isLovelaceEditorElement(editor)) return;
           editor.addEventListener("config-changed", this._onMediaConfigChanged);
           editor.hass = this._hass;
           editor.setConfig(this._mediaEditorConfig());
@@ -2403,6 +2457,7 @@
         }
         try {
           const editor = document.createElement("nodalia-camera-card-editor");
+          if (!isLovelaceEditorElement(editor)) return;
           editor.addEventListener("config-changed", this._onCameraConfigChanged);
           editor.hass = this._hass;
           editor.setConfig(this._cameraEditorConfig());
@@ -2412,7 +2467,8 @@
         }
       }
       _render() {
-        const c = this._config || {};
+        if (!this.shadowRoot) return;
+        const c = this._config;
         this.shadowRoot.innerHTML = `<style>
       :host { display: block; overflow-anchor: none; }
       * { box-sizing: border-box; }
