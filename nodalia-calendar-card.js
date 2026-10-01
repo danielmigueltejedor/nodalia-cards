@@ -2254,7 +2254,8 @@ ${metadata}` : metadata;
         const context = this._contextGeneration;
         const generation = this._composerGeneration;
         if (this._composerSavingGeneration === generation) return;
-        const current = () => this.isConnected && this._nativeEventComposerOpen && context === this._contextGeneration && generation === this._composerGeneration;
+        const currentContext = () => this.isConnected && context === this._contextGeneration;
+        const current = () => currentContext() && this._nativeEventComposerOpen && generation === this._composerGeneration;
         this._setComposerError("");
         const calendarId = String(this._nativeComposerCalendarValue || this._nativeFieldValue("calendar")).trim();
         const title = this._nativeFieldValue("title");
@@ -2375,19 +2376,20 @@ ${metadata}` : metadata;
               nativeWebhookId,
               this._buildNativeCalendarCreateEventWebhookBody(payload, allDay ? "all_day" : "timed", calendarEventPayload)
             );
-            if (!current()) return;
             if (!ok) {
-              this._setComposerError(this._uiText("errors.createEvent", "Could not create the event."));
+              if (current()) this._setComposerError(this._uiText("errors.createEvent", "Could not create the event."));
               return;
             }
           } else {
             if (!hass.callService) throw new Error("calendar/create_event unavailable");
             await hass.callService("calendar", "create_event", payload);
           }
-          if (!current()) return;
-          this._nativeComposerError = "";
-          this._composerGeneration += 1;
-          this._nativeEventComposerOpen = false;
+          if (!currentContext()) return;
+          if (current()) {
+            this._nativeComposerError = "";
+            this._composerGeneration += 1;
+            this._nativeEventComposerOpen = false;
+          }
           void this._refreshEvents();
         } catch (error) {
           if (!current()) return;

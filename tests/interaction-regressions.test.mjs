@@ -644,7 +644,7 @@ test("notifications mobile sent state only marks successful deliveries", () => {
 
 test("calendar native webhook failures show composer errors", () => {
   const source = read("nodalia-calendar-card.js");
-  assert.match(source, /if \(!ok\) \{\s*this\._setComposerError\(this\._uiText\("errors\.createEvent"/);
+  assert.match(source, /if \(!ok\) \{\s*if \(current\(\)\) this\._setComposerError\(this\._uiText\("errors\.createEvent"/);
 });
 
 test("person card translates location state with runtime i18n", () => {

@@ -1572,3 +1572,12 @@ migration and final audit validation complete.
   WebKit and iPhone, including computed styles. The full local browser suite
   passes 626 cases with one existing skip. CI remains required before integration;
   no prerelease has been published.
+
+
+Calendar review follow-up: creation success owns the calendar/HA context
+separately from the composer generation. Closing/reopening a composer still
+refreshes its current event list after service, WebSocket or webhook success;
+newer drafts stay open and unchanged. Obsolete contexts still cause no refresh
+or UI mutation. The new native browser case checks all three routes. Strict/lint
+and 750 unit tests pass; all 15 lifecycle browser cases pass, and the full local
+suite passes 629 cases with one existing skip.

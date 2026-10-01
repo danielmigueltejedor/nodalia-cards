@@ -138,3 +138,45 @@ test('Calendar creates day and overnight events correctly through the autumn clo
   await page.evaluate(()=>{ window.calendarWriteMode='defer'; window.calendarCard.shadowRoot.querySelector('ha-card [data-action="delete-event"]').click(); window.calendarCard.setConfig({...window.calendarConfig,calendars:['calendar.two']}); window.calendarWrites.at(-1).reject(new Error('Obsolete delete')); });
   expect(await page.evaluate(()=>window.calendarCard._deleteRecurrenceError)).toBe(''); expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
 });
+
+
+test('Calendar refreshes completed creates after composer close/reopen, without changing newer drafts or obsolete contexts', async ({page}) => {
+  for (const route of ['service','ws','webhook']) {
+    const card=await mount(page); await expect(card.locator('ha-card .calendar-event__summary')).toBeVisible();
+    await page.evaluate(route=>{
+      window.calendarReads=0;
+      window.calendarHass.callApi=async(_method,path)=>{
+        if(!path.startsWith('calendars/')) return [];
+        window.calendarReads++;
+        return [{uid:'created',summary:'Created '+route,start:{date:'2026-10-01'},end:{date:'2026-10-02'}}];
+      };
+      if(route==='webhook'){
+        window.calendarCard.setConfig({...window.calendarConfig,native_event_webhook:'create-calendar'});
+        window.NodaliaUtils.postHomeAssistantWebhook=(_id,body)=>window.calendarWrite('webhook',body);
+      }
+    },route);
+    await composer(card); await card.locator('[data-native-field="title"]').fill('Pending');
+    if(route==='ws') await card.locator('[data-native-field="repeatKind"]').selectOption('weekly');
+    await page.evaluate(()=>{window.calendarWriteMode='defer';void window.calendarCard._submitNativeEventComposer();window.calendarReads=0;});
+    await card.locator('button[data-action="close-native-composer"]').click();
+    if(route!=='service') {await card.locator('[data-action="add-native-event"]').click();await card.locator('[data-native-field="title"]').fill('New draft');}
+    await page.evaluate(()=>window.calendarWrites.at(-1).resolve(true));
+    await expect.poll(()=>page.evaluate(()=>window.calendarReads)).toBe(1);
+    await expect(card.locator('ha-card .calendar-event__summary')).toContainText('Created '+route);
+    if(route==='service') await expect(card.locator('[data-native-field="title"]')).toHaveCount(0);
+    else {await expect(card.locator('[data-native-field="title"]')).toHaveValue('New draft');await expect(card.locator('[data-native-field="title"]')).toBeVisible();}
+    if(route==='service') await card.locator('[data-action="add-native-event"]').click();
+    await card.locator('[data-native-field="title"]').fill('Obsolete');
+    await page.evaluate(()=>{
+      void window.calendarCard._submitNativeEventComposer();
+      window.calendarCard.setConfig({...window.calendarConfig,calendars:['calendar.two']});
+    });
+    await expect.poll(()=>page.evaluate(()=>window.calendarCard._refreshInFlight)).toBe(false);
+    const reads=await page.evaluate(()=>window.calendarReads);
+    await page.evaluate(()=>window.calendarWrites.at(-1).resolve(true));
+    await page.evaluate(()=>Promise.resolve());
+    expect(await page.evaluate(()=>window.calendarReads)).toBe(reads);
+    expect(await page.evaluate(()=>window.calendarCard._nativeComposerError)).toBe('');
+    expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+  }
+});
