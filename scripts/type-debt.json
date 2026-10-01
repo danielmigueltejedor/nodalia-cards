@@ -31,8 +31,6 @@
   "src/cards/media-player/media-player-editor.ts",
   "src/cards/navigation/navigation-card.ts",
   "src/cards/navigation/navigation-editor.ts",
-  "src/cards/news/news-card.ts",
-  "src/cards/news/news-editor.ts",
   "src/cards/notifications/notifications-card.ts",
   "src/cards/notifications/notifications-editor.ts",
   "src/cards/person/person-card.ts",

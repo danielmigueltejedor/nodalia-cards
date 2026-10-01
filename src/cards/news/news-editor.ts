@@ -1,5 +1,6 @@
-// @ts-nocheck
-/* Visual editor surface: typed incrementally after the card runtime split. */
+import type { HomeAssistant } from "../../core/types/home-assistant";
+import type { EditorFocusState } from "../../core/types/nodalia-utils";
+import { parseFiniteNumericValue } from "../../shared/numeric-values";
 import { deepClone } from "./news-runtime";
 import { DEFAULT_CONFIG, STUB_CONFIG, normalizeConfig } from "./news-config";
 import {
@@ -10,12 +11,16 @@ import {
   setByPath,
 } from "./news-helpers";
 
-let _lazyNodaliaNewsCardEditor;
-export function loadNodaliaNewsCardEditor() {
+let _lazyNodaliaNewsCardEditor: CustomElementConstructor | undefined;
+export function loadNodaliaNewsCardEditor(): CustomElementConstructor {
   if (_lazyNodaliaNewsCardEditor) {
     return _lazyNodaliaNewsCardEditor;
   }
 class NodaliaNewsCardEditor extends HTMLElement {
+  private _config!: ReturnType<typeof normalizeConfig>;
+  private _hass!: HomeAssistant | null;
+  private _entityOptionsSignature!: string;
+  private _pendingEditorControlTags!: Set<string>;
   constructor() {
     super();
     this._nodaliaConstruct();
@@ -52,14 +57,14 @@ class NodaliaNewsCardEditor extends HTMLElement {
     window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
   }
 
-  setConfig(config) {
+  setConfig(config: unknown) {
     const focusState = this._captureFocusState();
     this._config = normalizeConfig(config || {});
     this._render();
     this._restoreFocusState(focusState);
   }
 
-  set hass(hass) {
+  set hass(hass: HomeAssistant) {
     const nextSignature = window.NodaliaUtils?.editorFilteredStatesSignature?.(
       hass,
       this._config?.language,
@@ -76,7 +81,7 @@ class NodaliaNewsCardEditor extends HTMLElement {
     this._restoreFocusState(focusState);
   }
 
-  _watchEditorControlTag(tagName) {
+  _watchEditorControlTag(tagName: string) {
     if (!tagName || this._pendingEditorControlTags.has(tagName)) {
       return;
     }
@@ -108,7 +113,7 @@ class NodaliaNewsCardEditor extends HTMLElement {
     return window.NodaliaUtils.captureEditorFocusState(this);
   }
 
-  _restoreFocusState(focusState) {
+  _restoreFocusState(focusState: EditorFocusState | null) {
     window.NodaliaUtils.restoreEditorFocusState(this, focusState);
   }
 
@@ -123,7 +128,7 @@ class NodaliaNewsCardEditor extends HTMLElement {
     });
   }
 
-  _setFieldValue(path, value) {
+  _setFieldValue(path: string, value: unknown) {
     if (value === undefined || value === null || value === "") {
       deleteByPath(this._config, path);
       return;
@@ -131,20 +136,19 @@ class NodaliaNewsCardEditor extends HTMLElement {
     setByPath(this._config, path, value);
   }
 
-  _readFieldValue(input) {
+  _readFieldValue(input: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement) {
     const valueType = input.dataset.valueType || "string";
     if (valueType === "boolean") {
-      return Boolean(input.checked);
+      return input instanceof HTMLInputElement && input.checked;
     }
     if (valueType === "number") {
-      const numeric = Number(input.value);
-      return Number.isFinite(numeric) ? numeric : input.value;
+      return parseFiniteNumericValue(input.value) ?? input.value;
     }
     return input.value;
   }
 
-  _onShadowInput(event) {
-    const input = event.composedPath().find(node => (
+  _onShadowInput(event: Event) {
+    const input = event.composedPath().find((node): node is HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement => (
       node instanceof HTMLInputElement
       || node instanceof HTMLSelectElement
       || node instanceof HTMLTextAreaElement
@@ -160,13 +164,15 @@ class NodaliaNewsCardEditor extends HTMLElement {
     }
   }
 
-  _onShadowValueChanged(event) {
-    const control = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.field);
+  _onShadowValueChanged(event: Event) {
+    const control = event.composedPath().find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.field));
     if (!control?.dataset?.field) {
       return;
     }
     event.stopPropagation();
-    const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+    const detail: unknown = event instanceof CustomEvent ? event.detail : undefined;
+    const nextValue = window.NodaliaUtils.isObject(detail) && Object.prototype.hasOwnProperty.call(detail, "value")
+      ? detail.value : "value" in control ? control.value : undefined;
     if (typeof control.dataset?.value === "string") {
       control.dataset.value = String(nextValue || "");
     }
@@ -175,14 +181,14 @@ class NodaliaNewsCardEditor extends HTMLElement {
     this._emitConfig();
   }
 
-  _editorLabel(key) {
+  _editorLabel(key: string) {
     if (typeof key !== "string" || !window.NodaliaI18n?.editorStr) {
       return key;
     }
     return window.NodaliaI18n.editorStr(this._hass, this._config?.language ?? "auto", key);
   }
 
-  _renderTextField(label, field, value, options = {}) {
+  _renderTextField(label: string, field: string, value: unknown, options: { type?: string; placeholder?: string; valueType?: string; fullWidth?: boolean } = {}) {
     const tLabel = this._editorLabel(label);
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
@@ -201,7 +207,7 @@ class NodaliaNewsCardEditor extends HTMLElement {
     `;
   }
 
-  _renderCheckboxField(label, field, checked) {
+  _renderCheckboxField(label: string, field: string, checked: boolean) {
     const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
@@ -212,7 +218,7 @@ class NodaliaNewsCardEditor extends HTMLElement {
     `;
   }
 
-  _renderSelectField(label, field, value, options, renderOptions = {}) {
+  _renderSelectField(label: string, field: string, value: unknown, options: readonly { value: string; label: string }[], renderOptions: { fullWidth?: boolean } = {}) {
     const tLabel = this._editorLabel(label);
     const strValue = String(value ?? "");
     return `
@@ -229,7 +235,7 @@ class NodaliaNewsCardEditor extends HTMLElement {
     `;
   }
 
-  _renderEntityPickerField(label, field, value) {
+  _renderEntityPickerField(label: string, field: string, value: unknown) {
     const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
@@ -245,7 +251,7 @@ class NodaliaNewsCardEditor extends HTMLElement {
     `;
   }
 
-  _mountEntityPicker(host) {
+  _mountEntityPicker(host: HTMLElement) {
     window.NodaliaUtils?.mountEntityPickerHost?.(host, {
       hass: this._hass,
       field: host.dataset.field || "entity",
@@ -418,7 +424,7 @@ class NodaliaNewsCardEditor extends HTMLElement {
       </div>
     `;
 
-    this.shadowRoot.querySelectorAll('[data-mounted-control="entity"]').forEach(host => {
+    this.shadowRoot.querySelectorAll<HTMLElement>('[data-mounted-control="entity"]').forEach(host => {
       this._mountEntityPicker(host);
     });
     this._ensureEditorControlsReady();
