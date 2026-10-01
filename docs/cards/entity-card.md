@@ -40,3 +40,15 @@ See the [air quality example](../../examples/entity-card-air-quality.yaml),
 
 For a dedicated lock interaction, use the [Lock Card](./lock-card.md). Summary
 embeds that card in its security section.
+
+The visual editor preserves missing selected entities, typed drafts and focus
+during Home Assistant updates. Quick actions keep their icon, label, entity and
+service data together when moved or removed; service data supplied as YAML objects
+becomes editable JSON without losing false or zero. Overview rows keep names,
+icons and network roles paired. Invalid row indices or unsupported fields cannot
+modify or grow either list.
+
+The double-tap section includes separate card/icon actions and their navigation,
+URL and service-data fields. An empty icon action inherits the card action. YAML
+service targets and unrelated extension fields survive these visual edits. Style
+controls retain translucent colors.

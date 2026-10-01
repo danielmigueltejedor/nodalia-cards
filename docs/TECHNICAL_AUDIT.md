@@ -1215,3 +1215,24 @@ card documentation includes translated/truncated status chips.
 browser cases and the full local suite (473 passed, one existing skip) pass.
 Remaining unchecked modules: 24. Hold 3.0.0-alpha.1 until complete migration,
 including handwritten shared runtimes.
+
+## Entity editor findings — 2026-10-01
+
+The unchecked editor exposed a double-tap selector without navigation, URL or
+service details. Quick-service YAML objects became `[object Object]` text. Row
+mutations accepted negative removal and distant indices; reordering an absent
+source could damage another row.
+
+Restore separate card/icon double-tap details and encode service-data objects as
+JSON, preserving false/zero values. Bound removal, swaps and path edits to existing
+action/overview rows and supported fields before mutation. Preserve paired entity,
+name, icon and network role, missing selections, typed drafts, focus, service
+targets and YAML extensions. Native/HA events, normalized config and DOM contracts
+now pass strict checking and typed lint; malformed settings and unavailable picker
+capabilities use native fallbacks. Remove five verified unused imports.
+
+All 747 unit tests and nine targeted browser cases pass. 1,400 valid editor HTML
+outputs across all four layouts, collapsed actions and expanded style/animation
+sections match main; restored double-tap details have browser coverage. The full
+local suite passes 482 cases with one existing skip. Remaining unchecked modules:
+23. Keep publication held until the entire migration and shared runtimes finish.
