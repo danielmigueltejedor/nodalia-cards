@@ -24,6 +24,6 @@ const publicApi = {
   CARD_VERSION,
   DEFAULT_CONFIG,
   normalizeConfig,
-} as PowerFlowPublicApi;
+} satisfies PowerFlowPublicApi;
 
 window.__NODALIA_POWER_FLOW__ = publicApi;

@@ -79,6 +79,68 @@
   var fireEvent = utils.fireEvent.bind(utils);
   var normalizeTextKey = utils.normalizeTextKey.bind(utils);
 
+  // src/shared/numeric-values.ts
+  function parseFiniteNumericValue(value) {
+    if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+  function formatFiniteNumericValue(value, decimals = 0, locale = void 0) {
+    const numeric = parseFiniteNumericValue(value);
+    if (numeric === null) {
+      return "--";
+    }
+    const digits = Number.isFinite(decimals) ? Math.min(20, Math.max(0, Math.floor(decimals))) : 0;
+    return numeric.toLocaleString(locale, {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits
+    });
+  }
+
+  // src/shared/editor-entity-helpers.ts
+  function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
+    return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
+  }
+  function parseSizeToPixels(value, fallback = 0) {
+    const numeric = Number.parseFloat(String(value ?? ""));
+    return Number.isFinite(numeric) ? numeric : fallback;
+  }
+
+  // src/shared/config-values.ts
+  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var unsafeKeys = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
+  function compactConfig(value, preserveEmptyKeys = []) {
+    if (Array.isArray(value)) return value.map((item) => compactConfig(item, preserveEmptyKeys)).filter((item) => item !== void 0);
+    if (isRecord(value)) {
+      const result = {};
+      for (const [key, item] of Object.entries(value)) {
+        if (unsafeKeys.has(key)) continue;
+        if (item === "" && preserveEmptyKeys.includes(key)) {
+          result[key] = "";
+          continue;
+        }
+        const cleaned = compactConfig(item, preserveEmptyKeys);
+        if (cleaned !== void 0 && !(isRecord(cleaned) && Object.keys(cleaned).length === 0)) result[key] = cleaned;
+      }
+      return result;
+    }
+    return value === "" || value === null || value === void 0 ? void 0 : value;
+  }
+
+  // src/shared/editor-lists.ts
+  var isUnknownArray = (value) => Array.isArray(value);
+  function moveItem(array, fromIndex, toIndex) {
+    if (!isUnknownArray(array)) {
+      return array;
+    }
+    if (!Number.isInteger(fromIndex) || !Number.isInteger(toIndex) || fromIndex < 0 || toIndex < 0 || fromIndex >= array.length || toIndex >= array.length || fromIndex === toIndex) {
+      return array;
+    }
+    const removed = array.splice(fromIndex, 1);
+    array.splice(toIndex, 0, ...removed);
+    return array;
+  }
+
   // src/shared/editor-color.ts
   var clamp2 = (value, max) => Math.max(0, Math.min(max, value));
   var component = (value, scale) => {
@@ -151,49 +213,91 @@
     return { alpha: channels.alpha, hex, label: source, resolved, source, value: formatEditorColorFromHex(hex, channels.alpha) };
   }
 
+  // src/cards/power-flow/power-flow-defaults.ts
+  var DEFAULT_CONFIG = {
+    title: "",
+    name: "",
+    entities: {
+      grid: deepClone(NODE_DEFAULTS.grid),
+      home: deepClone(NODE_DEFAULTS.home),
+      solar: deepClone(NODE_DEFAULTS.solar),
+      battery: deepClone(NODE_DEFAULTS.battery),
+      water: deepClone(NODE_DEFAULTS.water),
+      gas: deepClone(NODE_DEFAULTS.gas),
+      individual: []
+    },
+    display_zero_lines: {
+      mode: "show",
+      transparency: 50,
+      grey_color: [189, 189, 189]
+    },
+    dashboard_link: "",
+    dashboard_link_label: "Energy",
+    consumption_chips: {
+      day_entity: "",
+      month_entity: "",
+      day_label: "",
+      month_label: ""
+    },
+    show_home_device_popup: true,
+    show_header: true,
+    show_dashboard_link_button: true,
+    show_labels: true,
+    show_values: true,
+    show_secondary_info: true,
+    show_unavailable_badge: true,
+    clickable_entities: true,
+    tap_action: "none",
+    min_flow_rate: 1.4,
+    max_flow_rate: 5.8,
+    haptics: {
+      enabled: true,
+      style: "medium",
+      fallback_vibrate: false
+    },
+    animations: {
+      enabled: true,
+      content_duration: 460,
+      button_bounce_duration: 320
+    },
+    grid_options: {
+      rows: "auto",
+      columns: "full",
+      min_rows: 1,
+      min_columns: 6
+    },
+    styles: {
+      card: {
+        background: "var(--ha-card-background)",
+        border: "1px solid var(--divider-color)",
+        border_radius: "32px",
+        box_shadow: "var(--ha-card-box-shadow)",
+        padding: "12px",
+        gap: "10px"
+      },
+      icon: {
+        node_size: "48px",
+        home_size: "96px",
+        individual_size: "40px",
+        color: "var(--primary-text-color)"
+      },
+      title_size: "15px",
+      chip_height: "21px",
+      chip_font_size: "10px",
+      chip_padding: "0 9px",
+      chip_border_radius: "999px",
+      home_value_size: "22px",
+      home_unit_size: "14px",
+      node_value_size: "11px",
+      secondary_size: "10px",
+      flow_width: "1px"
+    }
+  };
+
   // src/cards/power-flow/power-flow-helpers.ts
-  function deepCloneNode(value) {
-    return JSON.parse(JSON.stringify(value));
-  }
-  function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
-    return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
-  }
-  function compactConfig(value) {
-    if (Array.isArray(value)) {
-      return value.map((item) => compactConfig(item)).filter((item) => item !== void 0);
-    }
-    if (isObject(value)) {
-      const compacted = {};
-      Object.entries(value).forEach(([key, item]) => {
-        if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
-          return;
-        }
-        const cleaned = compactConfig(item);
-        const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
-        if (cleaned !== void 0 && !isEmptyObject) {
-          compacted[key] = cleaned;
-        }
-      });
-      return compacted;
-    }
-    if (value === "" || value === null || value === void 0) {
-      return void 0;
-    }
-    return value;
-  }
-  function moveItem(list, fromIndex, toIndex) {
-    if (!Array.isArray(list) || fromIndex === toIndex || fromIndex < 0 || toIndex < 0) {
-      return;
-    }
-    if (fromIndex >= list.length || toIndex >= list.length) {
-      return;
-    }
-    const [item] = list.splice(fromIndex, 1);
-    list.splice(toIndex, 0, item);
-  }
-  function parseSizeToPixels(value, fallback = 0) {
-    const numeric = Number.parseFloat(String(value ?? ""));
-    return Number.isFinite(numeric) ? numeric : fallback;
+  var isFlowPoint = (value) => value !== null && typeof value === "object" && "x" in value && "y" in value && typeof value.x === "number" && typeof value.y === "number" && Number.isFinite(value.x) && Number.isFinite(value.y);
+  function moveItem2(list, fromIndex, toIndex) {
+    moveItem(list, fromIndex, toIndex);
   }
   function formatSvgMotionNumber(value) {
     const number = Number(value);
@@ -216,7 +320,7 @@
         return index;
       },
       set index(value) {
-        index = value;
+        index = Number.isInteger(value) ? Math.max(0, Math.min(tokens.length, value)) : tokens.length;
       },
       hasMore() {
         return index < tokens.length;
@@ -228,7 +332,7 @@
         return tokens[index];
       },
       readCommand() {
-        return isSvgPathCommand(tokens[index]) ? tokens[index++] : "";
+        return isSvgPathCommand(tokens[index]) ? tokens[index++] ?? "" : "";
       },
       readNumber() {
         if (index >= tokens.length || isSvgPathCommand(tokens[index])) {
@@ -303,6 +407,7 @@
       const absolute = command === upper;
       if (upper === "Z") {
         output.push(command);
+        if (reader.hasNumber()) return { start, path: "M 0 0" };
         continue;
       }
       if (upper === "M") {
@@ -373,8 +478,8 @@
           output.push(command);
           for (let valueIndex = 0; valueIndex < values.length; valueIndex += 2) {
             output.push(
-              formatSvgMotionNumber(absolute ? values[valueIndex] - start.x : values[valueIndex]),
-              formatSvgMotionNumber(absolute ? values[valueIndex + 1] - start.y : values[valueIndex + 1])
+              formatSvgMotionNumber(absolute ? (values[valueIndex] ?? 0) - start.x : values[valueIndex]),
+              formatSvgMotionNumber(absolute ? (values[valueIndex + 1] ?? 0) - start.y : values[valueIndex + 1])
             );
           }
         }
@@ -394,8 +499,8 @@
           output.push(command);
           for (let valueIndex = 0; valueIndex < values.length; valueIndex += 2) {
             output.push(
-              formatSvgMotionNumber(absolute ? values[valueIndex] - start.x : values[valueIndex]),
-              formatSvgMotionNumber(absolute ? values[valueIndex + 1] - start.y : values[valueIndex + 1])
+              formatSvgMotionNumber(absolute ? (values[valueIndex] ?? 0) - start.x : values[valueIndex]),
+              formatSvgMotionNumber(absolute ? (values[valueIndex + 1] ?? 0) - start.y : values[valueIndex + 1])
             );
           }
         }
@@ -442,7 +547,9 @@
     }
     const nodeColorMatch = normalizedField.match(/entities\.(grid|home|solar|battery|water|gas)\.color$/);
     if (nodeColorMatch) {
-      return NODE_DEFAULTS[nodeColorMatch[1]]?.color || "#71c0ff";
+      const defaults = NODE_DEFAULTS;
+      const key = nodeColorMatch[1];
+      return (key === void 0 ? void 0 : defaults[key]?.color) || "#71c0ff";
     }
     if (normalizedField.endsWith("display_zero_lines.grey_color")) {
       return rgbArrayToColor(DEFAULT_CONFIG.display_zero_lines.grey_color);
@@ -453,56 +560,47 @@
     return "var(--info-color, #71c0ff)";
   }
   function parseNumber(value) {
-    const numeric = Number(String(value ?? "").replace(",", "."));
-    return Number.isFinite(numeric) ? numeric : null;
+    return parseFiniteNumericValue(typeof value === "string" ? value.replace(",", ".") : value);
   }
   function getHassLocaleTag(hass, language = "auto") {
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, language);
-    return window.NodaliaI18n?.localeTag?.(lang) || hass?.locale?.language || void 0;
+    return (lang === void 0 ? void 0 : window.NodaliaI18n?.localeTag?.(lang)) || hass?.locale?.language || void 0;
   }
   function isUnavailableState(state) {
     const key = normalizeTextKey(state?.state);
     return key === "unavailable" || key === "unknown";
   }
-  function formatRawValue(value, decimals = 0, locale = void 0) {
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric)) {
-      return "--";
-    }
-    return numeric.toLocaleString(locale, {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals
-    });
-  }
   function formatDisplayValue(value, unit = "", locale = void 0) {
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric)) {
+    const numeric = parseFiniteNumericValue(value);
+    if (numeric === null) {
       return { value: "--", unit: unit || "" };
     }
     const normalizedUnit = String(unit || "").trim();
     const key = normalizeTextKey(normalizedUnit);
     if (["w", "watt", "watts"].includes(key) && Math.abs(numeric) >= 1e3) {
       return {
-        value: formatRawValue(numeric / 1e3, 2, locale).replace(/[.,]00$/, "").replace(/0$/, ""),
+        value: formatFiniteNumericValue(numeric / 1e3, 2, locale).replace(/([.,]\d*?)0+$/, "$1").replace(/[.,]$/, ""),
         unit: "kW"
       };
     }
     const decimals = Math.abs(numeric - Math.round(numeric)) < 0.01 ? 0 : Math.abs(numeric) >= 100 ? 0 : Math.abs(numeric) >= 10 ? 1 : 2;
     return {
-      value: formatRawValue(numeric, decimals, locale),
+      value: formatFiniteNumericValue(numeric, decimals, locale),
       unit: normalizedUnit
     };
   }
   function rgbArrayToColor(value, fallback = [189, 189, 189]) {
     const source = Array.isArray(value) && value.length >= 3 ? value : fallback;
-    const [r, g, b] = source.map((item) => clamp(Number(item) || 0, 0, 255));
+    const [r, g, b] = [0, 1, 2].map((index) => clamp(parseFiniteNumericValue(source[index]) ?? 0, 0, 255));
     return `rgb(${r}, ${g}, ${b})`;
   }
   function arrayFromMaybe(value) {
     return Array.isArray(value) ? value : [];
   }
   function resolveNodeConfig(kind, config) {
-    return mergeConfig(NODE_DEFAULTS[kind] || {}, config?.entities?.[kind] || {});
+    const defaults = NODE_DEFAULTS;
+    const source = isObject(config) && isObject(config.entities) ? config.entities : {};
+    return mergeConfig(isObject(defaults[kind]) ? defaults[kind] : {}, isObject(source[kind]) ? source[kind] : {});
   }
   function isEntitySourceConfigured(entity) {
     if (entity == null || entity === false) {
@@ -522,7 +620,7 @@
     return sanitizeIndividualEntries(config).filter((item) => item.entity);
   }
   function sanitizeIndividualEntries(config) {
-    return arrayFromMaybe(config?.entities?.individual).filter(isObject).map((item, index) => ({
+    return arrayFromMaybe(isObject(config) && isObject(config.entities) ? config.entities.individual : void 0).filter(isObject).map((item, index) => ({
       entity: String(item.entity || "").trim(),
       name: String(item.name || "").trim(),
       icon: String(item.icon || "mdi:flash").trim() || "mdi:flash",
@@ -538,10 +636,10 @@
     return configuredCount;
   }
   function isHomeDevicePopupEnabled(config) {
-    return config?.show_home_device_popup !== false;
+    return !isObject(config) || config.show_home_device_popup !== false;
   }
   function getFlowLayoutFlagsFromConfig(config) {
-    const c = config || {};
+    const c = isObject(config) ? config : {};
     const homeConfigured = isEntitySourceConfigured(resolveNodeConfig("home", c)?.entity);
     const activeTopKinds = ["grid", "solar", "battery"].filter((kind) => {
       const node = resolveNodeConfig(kind, c);
@@ -576,7 +674,9 @@
     return "full";
   }
   function getNodePositionForLayout(kind, index = 0, total = 0, hasBottomUtilities = false, layoutPreset = "full", flowFlags = {}) {
-    const flags = flowFlags && typeof flowFlags === "object" ? flowFlags : {};
+    index = Number.isFinite(index) ? index : 0;
+    total = Number.isFinite(total) ? total : 0;
+    const flags = isObject(flowFlags) ? flowFlags : {};
     const topN = Number(flags.topCount) || 0;
     const bottomN = Number(flags.bottomUtilities) || 0;
     const bottomSpread = bottomN >= 2 ? 6 : 0;
@@ -650,6 +750,7 @@
     };
   }
   function buildFlowPath(from, to, fromRadius = 0, toRadius = 0, hints = {}) {
+    if (!isFlowPoint(from) || !isFlowPoint(to) || !Number.isFinite(fromRadius) || !Number.isFinite(toRadius)) return "";
     const start = offsetPoint(from, to, fromRadius);
     const end = offsetPoint(to, from, toRadius);
     const dx = end.x - start.x;
@@ -691,91 +792,13 @@
     return `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} L ${paX.toFixed(2)} ${paY.toFixed(2)} A ${r.toFixed(2)} ${r.toFixed(2)} 0 0 ${sweep} ${pbX.toFixed(2)} ${pbY.toFixed(2)} L ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
   }
   function buildStraightFlowPath(from, to, fromRadius = 0, toRadius = 0) {
+    if (!isFlowPoint(from) || !isFlowPoint(to) || !Number.isFinite(fromRadius) || !Number.isFinite(toRadius)) return "";
     const start = offsetPoint(from, to, fromRadius);
     const end = offsetPoint(to, from, toRadius);
     return `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} L ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
   }
 
   // src/cards/power-flow/power-flow-config.ts
-  var DEFAULT_CONFIG2 = {
-    title: "",
-    name: "",
-    entities: {
-      grid: deepCloneNode(NODE_DEFAULTS.grid),
-      home: deepCloneNode(NODE_DEFAULTS.home),
-      solar: deepCloneNode(NODE_DEFAULTS.solar),
-      battery: deepCloneNode(NODE_DEFAULTS.battery),
-      water: deepCloneNode(NODE_DEFAULTS.water),
-      gas: deepCloneNode(NODE_DEFAULTS.gas),
-      individual: []
-    },
-    display_zero_lines: {
-      mode: "show",
-      transparency: 50,
-      grey_color: [189, 189, 189]
-    },
-    dashboard_link: "",
-    dashboard_link_label: "Energy",
-    consumption_chips: {
-      day_entity: "",
-      month_entity: "",
-      day_label: "",
-      month_label: ""
-    },
-    show_home_device_popup: true,
-    show_header: true,
-    show_dashboard_link_button: true,
-    show_labels: true,
-    show_values: true,
-    show_secondary_info: true,
-    show_unavailable_badge: true,
-    clickable_entities: true,
-    tap_action: "none",
-    min_flow_rate: 1.4,
-    max_flow_rate: 5.8,
-    haptics: {
-      enabled: true,
-      style: "medium",
-      fallback_vibrate: false
-    },
-    animations: {
-      enabled: true,
-      content_duration: 460,
-      button_bounce_duration: 320
-    },
-    grid_options: {
-      rows: "auto",
-      columns: "full",
-      min_rows: 1,
-      min_columns: 6
-    },
-    styles: {
-      card: {
-        background: "var(--ha-card-background)",
-        border: "1px solid var(--divider-color)",
-        border_radius: "32px",
-        box_shadow: "var(--ha-card-box-shadow)",
-        padding: "12px",
-        gap: "10px"
-      },
-      icon: {
-        node_size: "48px",
-        home_size: "96px",
-        individual_size: "40px",
-        color: "var(--primary-text-color)"
-      },
-      title_size: "15px",
-      chip_height: "21px",
-      chip_font_size: "10px",
-      chip_padding: "0 9px",
-      chip_border_radius: "999px",
-      home_value_size: "22px",
-      home_unit_size: "14px",
-      node_value_size: "11px",
-      secondary_size: "10px",
-      flow_width: "1px"
-    }
-  };
   var STUB_CONFIG = {
     title: "Energy",
     entities: {
@@ -795,21 +818,15 @@
     },
     dashboard_link: "/energy/overview"
   };
-  function normalizeConfig(rawConfig) {
-    const merged = mergeConfig(DEFAULT_CONFIG2, rawConfig || {});
-    merged.entities = merged.entities || {};
-    merged.entities.individual = sanitizeIndividualEntries(merged);
-    merged.consumption_chips = {
-      ...DEFAULT_CONFIG2.consumption_chips,
-      ...isObject(merged.consumption_chips) ? merged.consumption_chips : {}
-    };
-    merged.consumption_chips.day_entity = String(merged.consumption_chips.day_entity ?? "").trim();
-    merged.consumption_chips.month_entity = String(merged.consumption_chips.month_entity ?? "").trim();
-    merged.consumption_chips.day_label = String(merged.consumption_chips.day_label ?? "").trim();
-    merged.consumption_chips.month_label = String(merged.consumption_chips.month_label ?? "").trim();
+  function normalizeConfig(rawConfig = {}) {
+    const merged = mergeConfig(DEFAULT_CONFIG, isObject(rawConfig) ? rawConfig : {});
+    const entities = { ...deepClone(DEFAULT_CONFIG.entities), ...isObject(merged.entities) ? merged.entities : {} };
+    entities.individual = sanitizeIndividualEntries({ entities });
+    const chips = { ...DEFAULT_CONFIG.consumption_chips, ...isObject(merged.consumption_chips) ? merged.consumption_chips : {} };
+    const consumptionChips = { ...chips, day_entity: String(chips.day_entity ?? "").trim(), month_entity: String(chips.month_entity ?? "").trim(), day_label: String(chips.day_label ?? "").trim(), month_label: String(chips.month_label ?? "").trim() };
     merged.show_home_device_popup = merged.show_home_device_popup !== false;
-    merged.styles = window.NodaliaUtils?.sanitizeStyleTree?.(merged.styles, DEFAULT_CONFIG2.styles) ?? deepClone(DEFAULT_CONFIG2.styles);
-    return merged;
+    merged.styles = window.NodaliaUtils?.sanitizeStyleTree?.(merged.styles, DEFAULT_CONFIG.styles) ?? deepClone(DEFAULT_CONFIG.styles);
+    return { ...merged, entities, consumption_chips: consumptionChips };
   }
 
   // src/cards/power-flow/power-flow-editor.ts
@@ -922,7 +939,7 @@
           persisted.entities.individual = sanitizeIndividualEntries(persisted).filter((item) => item.entity);
         }
         fireEvent(this, "config-changed", {
-          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(persisted, DEFAULT_CONFIG2) ?? {})
+          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(persisted, DEFAULT_CONFIG) ?? {})
         });
       }
       _setEditorConfig() {
@@ -1622,7 +1639,7 @@
           persisted.entities.individual = sanitizeIndividualEntries(persisted).filter((item) => item.entity);
         }
         fireEvent(this, "config-changed", {
-          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(persisted, DEFAULT_CONFIG2) ?? {})
+          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(persisted, DEFAULT_CONFIG) ?? {})
         });
       }
       _setEditorConfig() {
@@ -1751,12 +1768,12 @@
           return;
         }
         if (action === "move-individual-up") {
-          moveItem(this._config.entities.individual, index, index - 1);
+          moveItem2(this._config.entities.individual, index, index - 1);
           this._emitConfig();
           return;
         }
         if (action === "move-individual-down") {
-          moveItem(this._config.entities.individual, index, index + 1);
+          moveItem2(this._config.entities.individual, index, index + 1);
           this._emitConfig();
         }
       }
@@ -1829,7 +1846,7 @@
       _renderRgbArrayColorField(label, field, value, options = {}) {
         const tLabel = this._editorLabel(label);
         const tColorCustom = this._editorLabel("ed.weather.custom_color");
-        const fallbackValue = arrayFromMaybe(options.fallbackValue || DEFAULT_CONFIG2.display_zero_lines.grey_color);
+        const fallbackValue = arrayFromMaybe(options.fallbackValue || DEFAULT_CONFIG.display_zero_lines.grey_color);
         const sourceValue = arrayFromMaybe(value);
         const rgbValue = sourceValue.length >= 3 ? sourceValue : fallbackValue;
         const hexValue = `#${rgbValue.slice(0, 3).map((channel) => formatEditorHexChannel(channel)).join("")}`;
@@ -2053,7 +2070,7 @@
         const config = this._config || normalizeConfig(STUB_CONFIG);
         const hapticStyle = config.haptics?.style || "medium";
         const tapAction2 = config.tap_action || "none";
-        const animations = config.animations || DEFAULT_CONFIG2.animations;
+        const animations = config.animations || DEFAULT_CONFIG.animations;
         const grid = resolveNodeConfig("grid", config);
         const home = resolveNodeConfig("home", config);
         const solar = resolveNodeConfig("solar", config);
@@ -2897,7 +2914,7 @@
           bottom: flowFlags.bottomUtilities,
           individual: flowFlags.individualCount
         });
-        const base = mergeConfig(DEFAULT_CONFIG2.grid_options || {}, this._config?.grid_options || {});
+        const base = mergeConfig(DEFAULT_CONFIG.grid_options || {}, this._config?.grid_options || {});
         const minRows = Math.max(1, Number(base.min_rows) || 1);
         return {
           rows: base.rows === void 0 || base.rows === "" ? "auto" : base.rows,
@@ -2950,16 +2967,16 @@
         }, safeDelay);
       }
       _getAnimationSettings() {
-        const configuredAnimations = this._config?.animations || DEFAULT_CONFIG2.animations;
+        const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
         return {
           enabled: configuredAnimations.enabled !== false,
           buttonBounceDuration: clamp(
-            Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG2.animations.button_bounce_duration,
+            Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration,
             120,
             1200
           ),
           contentDuration: clamp(
-            Number(configuredAnimations.content_duration) || DEFAULT_CONFIG2.animations.content_duration,
+            Number(configuredAnimations.content_duration) || DEFAULT_CONFIG.animations.content_duration,
             160,
             1800
           )
@@ -2990,7 +3007,7 @@
         }
       }
       _getNodeIconGlyphColor(node) {
-        const defaultColor = this._config?.styles?.icon?.color || DEFAULT_CONFIG2.styles.icon.color;
+        const defaultColor = this._config?.styles?.icon?.color || DEFAULT_CONFIG.styles.icon.color;
         const accent = String(node?.color || "").trim();
         if (!accent) {
           return defaultColor;
@@ -3117,7 +3134,7 @@
           return String(infoState.state || "");
         }
         const decimals = Number.isFinite(Number(info.decimals)) ? Number(info.decimals) : 0;
-        return `${formatRawValue(rawValue, decimals, this._getLocaleTag())}${unit ? ` ${unit}` : ""}`;
+        return `${formatFiniteNumericValue(rawValue, decimals, this._getLocaleTag())}${unit ? ` ${unit}` : ""}`;
       }
       _resolveNodeDescriptor(kind, configOverride = null, index = 0, total = 0, hasBottomUtilities = false, flowFlags = {}) {
         const nodeConfig = configOverride || resolveNodeConfig(kind, this._config);
@@ -3619,8 +3636,8 @@
         return Math.abs(value);
       }
       _flowDuration(magnitude, maxMagnitude) {
-        const minFlowRate = Math.max(0.6, Number(this._config?.min_flow_rate) || DEFAULT_CONFIG2.min_flow_rate);
-        const maxFlowRate = Math.max(minFlowRate + 0.1, Number(this._config?.max_flow_rate) || DEFAULT_CONFIG2.max_flow_rate);
+        const minFlowRate = Math.max(0.6, Number(this._config?.min_flow_rate) || DEFAULT_CONFIG.min_flow_rate);
+        const maxFlowRate = Math.max(minFlowRate + 0.1, Number(this._config?.max_flow_rate) || DEFAULT_CONFIG.max_flow_rate);
         const safeMax = Math.max(maxMagnitude, 1);
         const ratio = clamp(magnitude / safeMax, 0, 1);
         return maxFlowRate - (maxFlowRate - minFlowRate) * ratio;
@@ -3801,8 +3818,8 @@
         return node?.kind === "individual" ? baseDelay + Math.max(0, Number(index) || 0) * 34 : baseDelay;
       }
       _renderNode(node, options = {}) {
-        const styles = this._config?.styles || DEFAULT_CONFIG2.styles;
-        const iconSizes = styles.icon || DEFAULT_CONFIG2.styles.icon;
+        const styles = this._config?.styles || DEFAULT_CONFIG.styles;
+        const iconSizes = styles.icon || DEFAULT_CONFIG.styles.icon;
         const layoutPreset = options.layoutPreset || "full";
         const animateEntrance = options.animateEntrance === true;
         const enterDelay = Math.max(0, Number(options.enterDelay) || 0);
@@ -3977,7 +3994,7 @@
         this._render();
       }
       _formatConsumptionChipValue(value, unit = "") {
-        const numeric = Number(value);
+        const numeric = parseNumber(value);
         const locale = this._getLocaleTag();
         if (!Number.isFinite(numeric)) {
           return { value: "--", unit: unit || "" };
@@ -3986,13 +4003,13 @@
         if (["kwh", "mwh"].includes(unitKey)) {
           const decimals = Math.abs(numeric) >= 100 ? 0 : Math.abs(numeric) >= 10 ? 1 : 2;
           return {
-            value: formatRawValue(numeric, decimals, locale),
+            value: formatFiniteNumericValue(numeric, decimals, locale),
             unit: unit || "kWh"
           };
         }
         if (["wh", "watt", "watts"].includes(unitKey) && Math.abs(numeric) >= 1e3) {
           return {
-            value: formatRawValue(numeric / 1e3, Math.abs(numeric) >= 1e4 ? 0 : 1, locale),
+            value: formatFiniteNumericValue(numeric / 1e3, Math.abs(numeric) >= 1e4 ? 0 : 1, locale),
             unit: "kWh"
           };
         }
@@ -4048,8 +4065,8 @@
     `;
       }
       _renderHomePopupDeviceRow(node, options = {}) {
-        const styles = this._config?.styles || DEFAULT_CONFIG2.styles;
-        const iconStyles = styles.icon || DEFAULT_CONFIG2.styles.icon;
+        const styles = this._config?.styles || DEFAULT_CONFIG.styles;
+        const iconStyles = styles.icon || DEFAULT_CONFIG.styles.icon;
         const deviceSize = Math.round(Math.max(38, parseSizeToPixels(iconStyles.individual_size, 40)));
         const chipHeight = Math.max(22, parseSizeToPixels(styles.chip_height, 24));
         const chipFontSize = Math.max(11, parseSizeToPixels(styles.chip_font_size, 11));
@@ -4104,7 +4121,7 @@
         const popupIndividuals = individualConfigs.map(
           (config, index) => this._resolveNodeDescriptor("individual", config, index, individualConfigs.length, hasBottom, flowFlags)
         );
-        const styles = this._config?.styles || DEFAULT_CONFIG2.styles;
+        const styles = this._config?.styles || DEFAULT_CONFIG.styles;
         const home = nodes.home;
         const homeClickable = this._config?.clickable_entities !== false && home.entityId;
         const homeUnavailableBadge = this._config?.show_unavailable_badge !== false && home.unavailable ? `<span class="power-flow-card__unavailable"><ha-icon icon="mdi:help"></ha-icon></span>` : "";
@@ -4210,7 +4227,7 @@
         const sourceUnavailableBadge = this._config?.show_unavailable_badge !== false && sourceNode.unavailable ? `<span class="power-flow-card__unavailable"><ha-icon icon="mdi:help"></ha-icon></span>` : "";
         const homeUnavailableBadge = this._config?.show_unavailable_badge !== false && nodes.home.unavailable ? `<span class="power-flow-card__unavailable"><ha-icon icon="mdi:help"></ha-icon></span>` : "";
         const showDashboardButton = this._config?.show_dashboard_link_button !== false && Boolean(this._config?.dashboard_link);
-        const dashboardLabel = this._config?.dashboard_link_label && this._config.dashboard_link_label !== DEFAULT_CONFIG2.dashboard_link_label ? this._config.dashboard_link_label : this._powerFlowUi("energy", "Energy");
+        const dashboardLabel = this._config?.dashboard_link_label && this._config.dashboard_link_label !== DEFAULT_CONFIG.dashboard_link_label ? this._config.dashboard_link_label : this._powerFlowUi("energy", "Energy");
         return `
       <div class="power-flow-card__simple-layout ${showDashboardButton ? "has-footer" : ""} ${animateEntrance ? "power-flow-card__simple-layout--entering" : ""}">
         <div
@@ -4407,7 +4424,7 @@
             return;
           }
         }
-        const styles = this._config?.styles || DEFAULT_CONFIG2.styles;
+        const styles = this._config?.styles || DEFAULT_CONFIG.styles;
         const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
         const nodes = this._getNodes();
         const lines = this._buildLines(nodes);
@@ -5654,9 +5671,9 @@
                 <div class="power-flow-card__header-main">
                   <div class="power-flow-card__title">${escapeHtml(titleText)}</div>
                   ${showDashboardButton && layoutPreset !== "simple" ? `
-                        <button class="power-flow-card__dashboard-button" data-dashboard-action="navigate" title="${escapeHtml(this._config?.dashboard_link_label && this._config.dashboard_link_label !== DEFAULT_CONFIG2.dashboard_link_label ? this._config.dashboard_link_label : this._powerFlowUi("energy", "Energy"))}">
+                        <button class="power-flow-card__dashboard-button" data-dashboard-action="navigate" title="${escapeHtml(this._config?.dashboard_link_label && this._config.dashboard_link_label !== DEFAULT_CONFIG.dashboard_link_label ? this._config.dashboard_link_label : this._powerFlowUi("energy", "Energy"))}">
                           <ha-icon icon="mdi:lightning-bolt-circle"></ha-icon>
-                          <span>${escapeHtml(this._config?.dashboard_link_label && this._config.dashboard_link_label !== DEFAULT_CONFIG2.dashboard_link_label ? this._config.dashboard_link_label : this._powerFlowUi("energy", "Energy"))}</span>
+                          <span>${escapeHtml(this._config?.dashboard_link_label && this._config.dashboard_link_label !== DEFAULT_CONFIG.dashboard_link_label ? this._config.dashboard_link_label : this._powerFlowUi("energy", "Energy"))}</span>
                         </button>
                       ` : ""}
                 </div>
@@ -5761,7 +5778,7 @@
     CARD_TAG,
     EDITOR_TAG,
     CARD_VERSION,
-    DEFAULT_CONFIG: DEFAULT_CONFIG2,
+    DEFAULT_CONFIG,
     normalizeConfig
   };
   window.__NODALIA_POWER_FLOW__ = publicApi;

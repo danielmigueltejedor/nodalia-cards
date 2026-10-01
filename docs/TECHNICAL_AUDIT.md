@@ -575,3 +575,36 @@ match merged main. All 692 unit tests and three targeted browser cases pass.
 Remaining unchecked modules: 59; both views/editors remain in the migration.
 Full local browser suite: 266 passed, one existing platform skip. Publication
 remains held until the complete migration is checked.
+
+## Power Flow configuration/helper findings — 2026-10-01
+
+Power Flow still suppresses config, SVG parsing/layout, node and formatting
+helpers. A close-path command followed by numeric tokens never advances the
+reader, so malformed input can loop forever. Guard progress and retain exact
+valid SVG geometry, including compressed arc flags. Missing numeric values
+become zero, large whole kilowatt values lose a trailing zero, invalid
+coordinates generate NaN paths, and malformed entities can receive property
+writes. Type token/point/record boundaries, share checked editor utilities and
+protect config blocks without changing valid energy/layout rules.
+
+Power Flow config/helpers pass strict checking and typed lint. Defaults are
+extracted into a cycle-free module with actual clone bindings; the editor's
+previous missing DEFAULT_CONFIG reference is removed. Guard entities/chips
+records, retain independently cloned defaults, and keep empty individual editor
+rows. Shared helpers provide stub selection, size parsing, recursive compaction,
+list reordering (retaining Power Flow's void return) and finite formatting.
+
+SVG close-path handling returns its existing safe fallback when stray numeric
+tokens follow it; token reader indices are bounded. Guard point/radius inputs
+and nonfinite individual positions without changing valid connector geometry.
+Fix kilowatt trimming to remove decimal zeros only; single missing readings and
+the actual consumption-chip formatter stay absent, while split-source fallback
+math retains its existing zero semantics. Six new unit cases include a bounded
+VM timeout for malformed paths, every supported command family, packed arc
+flags, config/numeric/layout boundaries and editor defaults. 4,800 valid
+SVG/config/layout/format outputs match merged main. All 698 unit tests and three
+real rendered kilowatt/blank/zero browser cases pass. Remaining unchecked
+modules: 57; Power Flow view/editor remain in the migration. Add a current Power
+Flow guide and link it, Graph and Lock in the README.
+Full local browser suite: 269 passed, one existing platform skip. Publication
+remains held until the complete migration is checked.

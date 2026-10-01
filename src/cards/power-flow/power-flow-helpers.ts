@@ -1,72 +1,25 @@
-// @ts-nocheck -- SVG layout and editor color helpers stay loosely typed until remaining unknowns are narrowed.
+import type { HassEntity, HomeAssistant } from "../../core/types/home-assistant";
+import { parseFiniteNumericValue, formatFiniteNumericValue } from "../../shared/numeric-values";
+export { getStubEntityId, parseSizeToPixels } from "../../shared/editor-entity-helpers";
+export { compactConfig } from "../../shared/config-values";
+import { moveItem as moveEditorItem } from "../../shared/editor-lists";
+export interface FlowPoint { x: number; y: number }
+const isFlowPoint = (value: unknown): value is FlowPoint => value !== null && typeof value === "object" && "x" in value && "y" in value && typeof value.x === "number" && typeof value.y === "number" && Number.isFinite(value.x) && Number.isFinite(value.y);
 export { resolveEditorColorValue, formatEditorHexChannel, formatEditorColorFromHex, getEditorColorModel } from "../../shared/editor-color";
 import { NODE_DEFAULTS } from "./power-flow-constants";
-import { clamp, isObject, isUnsafeConfigPathKey, mergeConfig, normalizeTextKey } from "./power-flow-runtime";
+import { DEFAULT_CONFIG } from "./power-flow-defaults";
+import { clamp, deepClone, isObject, mergeConfig, normalizeTextKey } from "./power-flow-runtime";
 
-export function deepCloneNode(value) {
-  return JSON.parse(JSON.stringify(value));
-}
+export function deepCloneNode<T>(value: T): T { return deepClone(value); }
 
-export function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
-  return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
-}
-
-
-export function compactConfig(value) {
-  if (Array.isArray(value)) {
-    return value.map(item => compactConfig(item)).filter(item => item !== undefined);
-  }
-
-  if (isObject(value)) {
-    const compacted = {};
-
-    Object.entries(value).forEach(([key, item]) => {
-      if (window.NodaliaUtils?.isUnsafeConfigPathKey?.(key)) {
-        return;
-      }
-      const cleaned = compactConfig(item);
-      const isEmptyObject = isObject(cleaned) && Object.keys(cleaned).length === 0;
-
-      if (cleaned !== undefined && !isEmptyObject) {
-        compacted[key] = cleaned;
-      }
-    });
-
-    return compacted;
-  }
-
-  if (value === "" || value === null || value === undefined) {
-    return undefined;
-  }
-
-  return value;
-}
-
-
-
-
-
-
-
-export function moveItem(list, fromIndex, toIndex) {
-  if (!Array.isArray(list) || fromIndex === toIndex || fromIndex < 0 || toIndex < 0) {
-    return;
-  }
-  if (fromIndex >= list.length || toIndex >= list.length) {
-    return;
-  }
-  const [item] = list.splice(fromIndex, 1);
-  list.splice(toIndex, 0, item);
+/** The Power Flow editor keeps its original void-returning move contract. */
+export function moveItem(list: unknown, fromIndex: number, toIndex: number): void {
+  moveEditorItem(list, fromIndex, toIndex);
 }
 
 export const POWER_FLOW_ENTITY_DOMAINS = ["sensor", "number", "input_number"];
 
-export function parseSizeToPixels(value, fallback = 0) {
-  const numeric = Number.parseFloat(String(value ?? ""));
-  return Number.isFinite(numeric) ? numeric : fallback;
-}
-
-export function formatSvgMotionNumber(value) {
+export function formatSvgMotionNumber(value: unknown) {
   const number = Number(value);
   if (!Number.isFinite(number)) {
     return "0";
@@ -76,23 +29,23 @@ export function formatSvgMotionNumber(value) {
 
 export const SVG_PATH_TOKEN_RE = /[AaCcHhLlMmQqSsTtVvZz]|[+-]?(?:(?:\d*\.\d+)|(?:\d+\.?))(?:[eE][+-]?\d+)?/g;
 
-export function tokenizeSvgPath(pathD) {
+export function tokenizeSvgPath(pathD: unknown) {
   return String(pathD || "").match(SVG_PATH_TOKEN_RE) || [];
 }
 
-export function isSvgPathCommand(token) {
+export function isSvgPathCommand(token: unknown) {
   return /^[AaCcHhLlMmQqSsTtVvZz]$/.test(String(token || ""));
 }
 
-export function createSvgTokenReader(tokens) {
+export function createSvgTokenReader(tokens: string[]) {
   let index = 0;
 
   return {
     get index() {
       return index;
     },
-    set index(value) {
-      index = value;
+    set index(value: number) {
+      index = Number.isInteger(value) ? Math.max(0, Math.min(tokens.length, value)) : tokens.length;
     },
     hasMore() {
       return index < tokens.length;
@@ -104,7 +57,7 @@ export function createSvgTokenReader(tokens) {
       return tokens[index];
     },
     readCommand() {
-      return isSvgPathCommand(tokens[index]) ? tokens[index++] : "";
+      return isSvgPathCommand(tokens[index]) ? tokens[index++] ?? "" : "";
     },
     readNumber() {
       if (index >= tokens.length || isSvgPathCommand(tokens[index])) {
@@ -134,7 +87,7 @@ export function createSvgTokenReader(tokens) {
   };
 }
 
-export function getSvgPathMotionStart(pathD) {
+export function getSvgPathMotionStart(pathD: unknown) {
   const tokens = tokenizeSvgPath(pathD);
   const reader = createSvgTokenReader(tokens);
   const command = reader.readCommand();
@@ -148,7 +101,7 @@ export function getSvgPathMotionStart(pathD) {
     : { x: 0, y: 0 };
 }
 
-export function pushSvgPoint(output, command, x, y, start, absolute) {
+export function pushSvgPoint(output: string[], command: string, x: number, y: number, start: FlowPoint, absolute: boolean) {
   if (!Number.isFinite(x) || !Number.isFinite(y)) {
     return false;
   }
@@ -160,7 +113,7 @@ export function pushSvgPoint(output, command, x, y, start, absolute) {
   return true;
 }
 
-export function getSvgRelativeMotionPath(pathD) {
+export function getSvgRelativeMotionPath(pathD: unknown) {
   const source = String(pathD || "").trim();
   const start = getSvgPathMotionStart(source);
   if (!source) {
@@ -173,7 +126,7 @@ export function getSvgRelativeMotionPath(pathD) {
   }
 
   const reader = createSvgTokenReader(tokens);
-  const output = [];
+  const output: string[] = [];
   let command = "";
   let firstMove = true;
 
@@ -189,6 +142,7 @@ export function getSvgRelativeMotionPath(pathD) {
 
     if (upper === "Z") {
       output.push(command);
+      if (reader.hasNumber()) return { start, path: "M 0 0" };
       continue;
     }
 
@@ -264,8 +218,8 @@ export function getSvgRelativeMotionPath(pathD) {
         output.push(command);
         for (let valueIndex = 0; valueIndex < values.length; valueIndex += 2) {
           output.push(
-            formatSvgMotionNumber(absolute ? values[valueIndex] - start.x : values[valueIndex]),
-            formatSvgMotionNumber(absolute ? values[valueIndex + 1] - start.y : values[valueIndex + 1]),
+            formatSvgMotionNumber(absolute ? (values[valueIndex] ?? 0) - start.x : values[valueIndex]),
+            formatSvgMotionNumber(absolute ? (values[valueIndex + 1] ?? 0) - start.y : values[valueIndex + 1]),
           );
         }
       }
@@ -286,8 +240,8 @@ export function getSvgRelativeMotionPath(pathD) {
         output.push(command);
         for (let valueIndex = 0; valueIndex < values.length; valueIndex += 2) {
           output.push(
-            formatSvgMotionNumber(absolute ? values[valueIndex] - start.x : values[valueIndex]),
-            formatSvgMotionNumber(absolute ? values[valueIndex + 1] - start.y : values[valueIndex + 1]),
+            formatSvgMotionNumber(absolute ? (values[valueIndex] ?? 0) - start.x : values[valueIndex]),
+            formatSvgMotionNumber(absolute ? (values[valueIndex + 1] ?? 0) - start.y : values[valueIndex + 1]),
           );
         }
       }
@@ -339,17 +293,7 @@ export function getSvgRelativeMotionPath(pathD) {
   };
 }
 
-
-
-
-
-
-
-
-
-
-
-export function getEditorColorFallbackValue(field) {
+export function getEditorColorFallbackValue(field: unknown) {
   const normalizedField = String(field ?? "");
   if (normalizedField.endsWith("entities.grid.export_color")) {
     return NODE_DEFAULTS.grid.export_color;
@@ -358,7 +302,9 @@ export function getEditorColorFallbackValue(field) {
   const nodeColorMatch = normalizedField.match(/entities\.(grid|home|solar|battery|water|gas)\.color$/);
 
   if (nodeColorMatch) {
-    return NODE_DEFAULTS[nodeColorMatch[1]]?.color || "#71c0ff";
+    const defaults: Record<string, { color: string }> = NODE_DEFAULTS;
+    const key = nodeColorMatch[1];
+    return (key === undefined ? undefined : defaults[key]?.color) || "#71c0ff";
   }
 
   if (normalizedField.endsWith("display_zero_lines.grey_color")) {
@@ -372,38 +318,25 @@ export function getEditorColorFallbackValue(field) {
   return "var(--info-color, #71c0ff)";
 }
 
-
-
-export function parseNumber(value) {
-  const numeric = Number(String(value ?? "").replace(",", "."));
-  return Number.isFinite(numeric) ? numeric : null;
+export function parseNumber(value: unknown) {
+  return parseFiniteNumericValue(typeof value === "string" ? value.replace(",", ".") : value);
 }
 
-export function getHassLocaleTag(hass, language = "auto") {
+export function getHassLocaleTag(hass: HomeAssistant | null | undefined, language = "auto") {
   const lang = window.NodaliaI18n?.resolveLanguage?.(hass, language);
-  return window.NodaliaI18n?.localeTag?.(lang) || hass?.locale?.language || undefined;
+  return (lang === undefined ? undefined : window.NodaliaI18n?.localeTag?.(lang)) || hass?.locale?.language || undefined;
 }
 
-export function isUnavailableState(state) {
+export function isUnavailableState(state: HassEntity | null | undefined) {
   const key = normalizeTextKey(state?.state);
   return key === "unavailable" || key === "unknown";
 }
 
-export function formatRawValue(value, decimals = 0, locale = undefined) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
-    return "--";
-  }
+export { formatFiniteNumericValue as formatRawValue } from "../../shared/numeric-values";
 
-  return numeric.toLocaleString(locale, {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  });
-}
-
-export function formatDisplayValue(value, unit = "", locale = undefined) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
+export function formatDisplayValue(value: unknown, unit = "", locale: string | undefined = undefined) {
+  const numeric = parseFiniteNumericValue(value);
+  if (numeric === null) {
     return { value: "--", unit: unit || "" };
   }
 
@@ -411,34 +344,36 @@ export function formatDisplayValue(value, unit = "", locale = undefined) {
   const key = normalizeTextKey(normalizedUnit);
   if (["w", "watt", "watts"].includes(key) && Math.abs(numeric) >= 1000) {
     return {
-      value: formatRawValue(numeric / 1000, 2, locale).replace(/[.,]00$/, "").replace(/0$/, ""),
+      value: formatFiniteNumericValue(numeric / 1000, 2, locale).replace(/([.,]\d*?)0+$/, "$1").replace(/[.,]$/, ""),
       unit: "kW",
     };
   }
 
   const decimals = Math.abs(numeric - Math.round(numeric)) < 0.01 ? 0 : Math.abs(numeric) >= 100 ? 0 : Math.abs(numeric) >= 10 ? 1 : 2;
   return {
-    value: formatRawValue(numeric, decimals, locale),
+    value: formatFiniteNumericValue(numeric, decimals, locale),
     unit: normalizedUnit,
   };
 }
 
-export function rgbArrayToColor(value, fallback = [189, 189, 189]) {
+export function rgbArrayToColor(value: unknown, fallback: readonly number[] = [189, 189, 189]) {
   const source = Array.isArray(value) && value.length >= 3 ? value : fallback;
-  const [r, g, b] = source.map(item => clamp(Number(item) || 0, 0, 255));
+  const [r, g, b] = [0, 1, 2].map(index => clamp(parseFiniteNumericValue(source[index]) ?? 0, 0, 255));
   return `rgb(${r}, ${g}, ${b})`;
 }
 
-export function arrayFromMaybe(value) {
+export function arrayFromMaybe(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
-export function resolveNodeConfig(kind, config) {
-  return mergeConfig(NODE_DEFAULTS[kind] || {}, config?.entities?.[kind] || {});
+export function resolveNodeConfig(kind: string, config: unknown): Record<string, unknown> {
+  const defaults: Record<string, unknown> = NODE_DEFAULTS;
+  const source = isObject(config) && isObject(config.entities) ? config.entities : {};
+  return mergeConfig<Record<string, unknown>>(isObject(defaults[kind]) ? defaults[kind] : {}, isObject(source[kind]) ? source[kind] : {});
 }
 
 /** True if the YAML `entity` field is set (string id or split consumption/production object). */
-export function isEntitySourceConfigured(entity) {
+export function isEntitySourceConfigured(entity: unknown) {
   if (entity == null || entity === false) {
     return false;
   }
@@ -455,12 +390,12 @@ export function isEntitySourceConfigured(entity) {
   return false;
 }
 
-export function resolveIndividualConfigs(config) {
+export function resolveIndividualConfigs(config: unknown) {
   return sanitizeIndividualEntries(config).filter(item => item.entity);
 }
 
-export function sanitizeIndividualEntries(config) {
-  return arrayFromMaybe(config?.entities?.individual)
+export function sanitizeIndividualEntries(config: unknown) {
+  return arrayFromMaybe(isObject(config) && isObject(config.entities) ? config.entities.individual : undefined)
     .filter(isObject)
     .map((item, index) => ({
       entity: String(item.entity || "").trim(),
@@ -471,7 +406,7 @@ export function sanitizeIndividualEntries(config) {
     }));
 }
 
-export function getDiagramIndividualCount(config) {
+export function getDiagramIndividualCount(config: unknown) {
   const configuredCount = resolveIndividualConfigs(config).length;
   if (configuredCount && isHomeDevicePopupEnabled(config)) {
     return 0;
@@ -479,17 +414,17 @@ export function getDiagramIndividualCount(config) {
   return configuredCount;
 }
 
-export function isHomeDevicePopupEnabled(config) {
-  return config?.show_home_device_popup !== false;
+export function isHomeDevicePopupEnabled(config: unknown) {
+  return !isObject(config) || config.show_home_device_popup !== false;
 }
 
-export function getNodePosition(kind, index = 0, total = 0, hasBottomUtilities = false) {
+export function getNodePosition(kind: string, index = 0, total = 0, hasBottomUtilities = false) {
   return getNodePositionForLayout(kind, index, total, hasBottomUtilities, "full", {});
 }
 
 /** Active grid / solar / battery branches so %-layout can spread vertically when several sources exist. */
-export function getFlowLayoutFlagsFromConfig(config) {
-  const c = config || {};
+export function getFlowLayoutFlagsFromConfig(config: unknown) {
+  const c = isObject(config) ? config : {};
   const homeConfigured = isEntitySourceConfigured(resolveNodeConfig("home", c)?.entity);
   const activeTopKinds = ["grid", "solar", "battery"].filter(kind => {
     const node = resolveNodeConfig(kind, c);
@@ -515,7 +450,7 @@ export function getFlowLayoutFlagsFromConfig(config) {
   };
 }
 
-export function getLayoutPreset(nodeCounts = {}) {
+export function getLayoutPreset(nodeCounts: { top?: unknown; bottom?: unknown; individual?: unknown } = {}) {
   const topCount = Number(nodeCounts.top || 0);
   const bottomCount = Number(nodeCounts.bottom || 0);
   const individualCount = Number(nodeCounts.individual || 0);
@@ -531,8 +466,10 @@ export function getLayoutPreset(nodeCounts = {}) {
   return "full";
 }
 
-export function getNodePositionForLayout(kind, index = 0, total = 0, hasBottomUtilities = false, layoutPreset = "full", flowFlags = {}) {
-  const flags = flowFlags && typeof flowFlags === "object" ? flowFlags : {};
+export function getNodePositionForLayout(kind: string, index = 0, total = 0, hasBottomUtilities = false, layoutPreset = "full", flowFlags: unknown = {}) {
+  index = Number.isFinite(index) ? index : 0;
+  total = Number.isFinite(total) ? total : 0;
+  const flags = isObject(flowFlags) ? flowFlags : {};
   const topN = Number(flags.topCount) || 0;
   const bottomN = Number(flags.bottomUtilities) || 0;
   const bottomSpread = bottomN >= 2 ? 6 : 0;
@@ -609,7 +546,7 @@ export function getNodePositionForLayout(kind, index = 0, total = 0, hasBottomUt
   return { x: 50, y: 50 };
 }
 
-export function offsetPoint(from, to, distance) {
+export function offsetPoint(from: FlowPoint, to: FlowPoint, distance: number) {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const len = Math.max(Math.hypot(dx, dy), 0.0001);
@@ -624,7 +561,8 @@ export function offsetPoint(from, to, distance) {
  * Chooses horizontal-first vs vertical-first from the trimmed chord unless `hints.preferVerticalFirst`
  * forces vertical-first (solar→home / solar→grid, and battery→home / battery↔grid when |dx|≈|dy|).
  */
-export function buildFlowPath(from, to, fromRadius = 0, toRadius = 0, hints = {}) {
+export function buildFlowPath(from: unknown, to: unknown, fromRadius = 0, toRadius = 0, hints: { preferVerticalFirst?: boolean } = {}) {
+  if (!isFlowPoint(from) || !isFlowPoint(to) || !Number.isFinite(fromRadius) || !Number.isFinite(toRadius)) return "";
   const start = offsetPoint(from, to, fromRadius);
   const end = offsetPoint(to, from, toRadius);
   const dx = end.x - start.x;
@@ -671,7 +609,8 @@ export function buildFlowPath(from, to, fromRadius = 0, toRadius = 0, hints = {}
 }
 
 /** Straight segment between trimmed endpoints (short grid–home or similar runs). */
-export function buildStraightFlowPath(from, to, fromRadius = 0, toRadius = 0) {
+export function buildStraightFlowPath(from: unknown, to: unknown, fromRadius = 0, toRadius = 0) {
+  if (!isFlowPoint(from) || !isFlowPoint(to) || !Number.isFinite(fromRadius) || !Number.isFinite(toRadius)) return "";
   const start = offsetPoint(from, to, fromRadius);
   const end = offsetPoint(to, from, toRadius);
   return `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} L ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
