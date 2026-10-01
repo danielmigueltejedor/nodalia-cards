@@ -90,7 +90,7 @@ Every card is registered with the `custom:nodalia-…` prefix. The complete set 
 - `custom:nodalia-notifications-card`
 - `custom:nodalia-vacuum-card`
 - `custom:nodalia-news-card`
-- `custom:nodalia-camera-card`
+- [`custom:nodalia-camera-card`](docs/cards/camera-card.md)
 - `custom:nodalia-room-summary-card`
 
 </details>
