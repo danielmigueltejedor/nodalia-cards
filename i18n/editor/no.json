@@ -12,6 +12,7 @@
   "ed.advance_vacuum.custom_menu_label": "Høyre menyetikett",
   "ed.advance_vacuum.general_section_hint": "Robotenhet og hovedkartkilde. Hvis etiketter ikke samsvarer med profilspråket ditt, velg Automatisk på kortspråk (eldre konfigurasjoner kan ha spansk lagret).",
   "ed.advance_vacuum.goto_mode": "Gå-til-punkt-modus",
+  "ed.advance_vacuum.invalid_json_array": "Skriv inn en gyldig JSON-liste.",
   "ed.advance_vacuum.lang_auto_ha_profile": "Automatisk (Home Assistant-profil)",
   "ed.advance_vacuum.map_label_size": "Etikettstørrelse",
   "ed.advance_vacuum.map_locked": "Kartet er låst",

@@ -12,6 +12,7 @@
   "ed.advance_vacuum.custom_menu_label": "Etiqueta menú derecho",
   "ed.advance_vacuum.general_section_hint": "Entidad del robot y fuente principal del mapa. Si el texto no coincide con el idioma del perfil, elige Automático en Idioma de la tarjeta (configuraciones antiguas pueden tener español guardado).",
   "ed.advance_vacuum.goto_mode": "Modo ir a punto",
+  "ed.advance_vacuum.invalid_json_array": "Introduce una lista JSON válida.",
   "ed.advance_vacuum.lang_auto_ha_profile": "Automático (perfil Home Assistant)",
   "ed.advance_vacuum.map_label_size": "Tamaño de texto de marcadores",
   "ed.advance_vacuum.map_locked": "Mapa bloqueado",

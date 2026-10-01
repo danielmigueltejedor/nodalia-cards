@@ -12,6 +12,7 @@
   "ed.advance_vacuum.custom_menu_label": "Label rechtermenu",
   "ed.advance_vacuum.general_section_hint": "Robotentiteit en primaire kaartbron. Als de tekst niet overeenkomt met de profieltaal, kies Automatisch bij Kaartaal (oudere configs kunnen Spaans bevatten).",
   "ed.advance_vacuum.goto_mode": "Ga-naar-puntmodus",
+  "ed.advance_vacuum.invalid_json_array": "Voer een geldige JSON-array in.",
   "ed.advance_vacuum.lang_auto_ha_profile": "Automatisch (Home Assistant-profiel)",
   "ed.advance_vacuum.map_label_size": "Labeltekstgrootte",
   "ed.advance_vacuum.map_locked": "Kaart vergrendeld",

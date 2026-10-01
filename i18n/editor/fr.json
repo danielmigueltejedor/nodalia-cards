@@ -12,6 +12,7 @@
   "ed.advance_vacuum.custom_menu_label": "Libellé du menu droit",
   "ed.advance_vacuum.general_section_hint": "Entité du robot et source principale de la carte. Si le texte ne correspond pas à la langue du profil, choisissez Automatique dans Langue de la carte (d’anciennes configs peuvent être en espagnol).",
   "ed.advance_vacuum.goto_mode": "Mode aller au point",
+  "ed.advance_vacuum.invalid_json_array": "Saisissez un tableau JSON valide.",
   "ed.advance_vacuum.lang_auto_ha_profile": "Automatique (profil Home Assistant)",
   "ed.advance_vacuum.map_label_size": "Taille du texte des marqueurs",
   "ed.advance_vacuum.map_locked": "Carte verrouillée",

@@ -1,5 +1,3 @@
-// @ts-nocheck
-/* Visual editor surface: typed incrementally after the card runtime split. */
 import {
   deleteByPath,
   deepClone,
@@ -16,12 +14,24 @@ import {
   getByPath,
 } from "./advance-vacuum-helpers";
 
-let _lazyNodaliaAdvanceVacuumCardEditor;
-export function loadNodaliaAdvanceVacuumCardEditor() {
+import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
+import type { EditorFocusState } from "../../core/types/nodalia-utils";
+import { editorControlValue, isNativeEditorInput, type NativeEditorInput } from "../../shared/editor-controls";
+import { parseFiniteNumericValue } from "../../shared/numeric-values";
+interface FieldOptions { fullWidth?: boolean; rows?: number; placeholder?: string; hint?: string; type?: string; valueType?: string; domains?: string[]; }
+let _lazyNodaliaAdvanceVacuumCardEditor: CustomElementConstructor | undefined;
+export function loadNodaliaAdvanceVacuumCardEditor(): CustomElementConstructor {
   if (_lazyNodaliaAdvanceVacuumCardEditor) {
     return _lazyNodaliaAdvanceVacuumCardEditor;
   }
 class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
+  private _config!: ReturnType<typeof normalizeConfig>;
+  private _hass!: HomeAssistant | null;
+  private _entityOptionsSignature!: string;
+  private _pendingEditorControlTags!: Set<string>;
+  private _showStyleSection!: boolean;
+  private _draftValues!: Map<string, string>;
+  private _rendering!: boolean;
   static get properties() {
     return {
       hass: {},
@@ -36,6 +46,9 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
 
   _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig({});
+    this._hass = null;
+    this._draftValues = new Map();
+    this._rendering = false;
     this._entityOptionsSignature = "";
     this._pendingEditorControlTags = new Set();
     this._showStyleSection = false;
@@ -63,17 +76,20 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
   disconnectedCallback() {
     this._detachEditorShadowListeners();
     window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
+    this._draftValues.clear();
   }
 
-  setConfig(config) {
+  setConfig(config: unknown) {
     const focusState = this._captureFocusState();
-    this._config = normalizeConfig(config || {});
+    const next = normalizeConfig(config || {});
+    if (next.entity !== this._config.entity) this._draftValues.clear();
+    this._config = next;
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
     this._render();
     this._restoreFocusState(focusState);
   }
 
-  set hass(hass) {
+  set hass(hass: HomeAssistant) {
     const nextSignature = this._getEntityOptionsSignature(hass);
     const shouldRender =
       !this._hass ||
@@ -92,29 +108,29 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     this._restoreFocusState(focusState);
   }
 
-  _getEntityOptionsSignature(hass = this._hass) {
-    return window.NodaliaUtils.editorStatesSignature(hass, this._config?.language);
+  _getEntityOptionsSignature(hass: HomeAssistant | null = this._hass) {
+    return window.NodaliaUtils.editorStatesSignature?.(hass, this._config?.language) ?? "";
   }
 
   _captureFocusState() {
     return window.NodaliaUtils.captureEditorFocusState(this);
   }
 
-  _restoreFocusState(focusState) {
+  _restoreFocusState(focusState: EditorFocusState | null) {
     window.NodaliaUtils.restoreEditorFocusState(this, focusState);
   }
 
-  _notifyConfigChange(nextConfig) {
+  _notifyConfigChange(nextConfig: ReturnType<typeof normalizeConfig>) {
     const focusState = this._captureFocusState();
     this._config = normalizeConfig(nextConfig);
     this._render();
     this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
-      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(deepClone(this._config), DEFAULT_CONFIG) ?? {}),
+      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults?.(deepClone(this._config), DEFAULT_CONFIG) ?? {}),
     });
   }
 
-  _watchEditorControlTag(tagName) {
+  _watchEditorControlTag(tagName: string) {
     if (!tagName || this._pendingEditorControlTags.has(tagName)) {
       return;
     }
@@ -147,10 +163,11 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     this._watchEditorControlTag("ha-icon-picker");
   }
 
-  _onValueChanged(event) {
+  _onValueChanged(event: Event) {
+    if (this._rendering) return;
     const control = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.field);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.field));
 
     if (!control?.dataset?.field) {
       return;
@@ -158,9 +175,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
 
     event.stopPropagation();
 
-    const nextValue = typeof event.detail?.value === "string"
-      ? event.detail.value
-      : control.value;
+    const nextValue = editorControlValue(event, control);
     const nextConfig = deepClone(this._config);
 
     if (nextValue === "" || nextValue === null || nextValue === undefined) {
@@ -172,10 +187,10 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     this._notifyConfigChange(nextConfig);
   }
 
-  _onEditorClick(event) {
+  _onEditorClick(event: Event) {
     const toggleButton = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.editorToggle));
 
     if (!toggleButton) {
       return;
@@ -190,11 +205,18 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     }
   }
 
-  _onInputChange(event) {
+  _onInputChange(event: Event) {
+    // Chromium may dispatch change from the old focused field while innerHTML
+    // removes it. That teardown must not commit or rerender a stale control.
+    if (this._rendering) return;
     const target = event.currentTarget;
+    if (!target || !isNativeEditorInput(target)) return;
     const field = target.dataset.field;
+    if (!field) return;
     const valueType = target.dataset.valueType || "string";
-    const checked = target.type === "checkbox" ? target.checked : undefined;
+    const checked = target instanceof HTMLInputElement && target.type === "checkbox" ? target.checked : undefined;
+
+    if (!(target instanceof HTMLSelectElement) && target.type !== "checkbox") this._draftValues.set(field, target.value);
 
     // Keep typing stable in Home Assistant's editor by only committing
     // free-text fields on change/blur, not on every keystroke.
@@ -207,12 +229,12 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     }
 
     const nextConfig = deepClone(this._config);
-    let nextValue = target.value;
+    let nextValue: unknown = target.value;
 
     if (target.type === "checkbox") {
       nextValue = checked;
     } else if (valueType === "number") {
-      nextValue = target.value === "" ? "" : Number(target.value);
+      nextValue = parseFiniteNumericValue(target.value) ?? undefined;
     } else if (valueType === "csv") {
       const values = String(target.value || "")
         .split(",")
@@ -220,17 +242,13 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
         .filter(Boolean);
       nextValue = values.length ? values : "";
     } else if (valueType === "json") {
-      if (target.value.trim() === "") {
-        nextValue = "";
-      } else {
-        try {
-          nextValue = JSON.parse(target.value);
-        } catch (_error) {
-          return;
-        }
-      }
+      nextValue = this._readJsonArray(target);
+      if (nextValue === null) return;
     }
 
+    target.setCustomValidity("");
+    target.removeAttribute("aria-invalid");
+    this._draftValues.delete(field);
     if (nextValue === "" || nextValue === null || nextValue === undefined) {
       deleteByPath(nextConfig, field);
     } else {
@@ -240,15 +258,34 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     this._notifyConfigChange(nextConfig);
   }
 
-  _editorLabel(s) {
+  _readJsonArray(input: NativeEditorInput): unknown[] | undefined | null {
+    if (!input.value.trim()) {
+      input.setCustomValidity("");
+      input.removeAttribute("aria-invalid");
+      return undefined;
+    }
+    try {
+      const value: unknown = JSON.parse(input.value);
+      if (Array.isArray(value)) {
+        input.setCustomValidity("");
+        input.removeAttribute("aria-invalid");
+        return value;
+      }
+    } catch (_error) { /* Keep the last valid config while the draft is corrected. */ }
+    input.setCustomValidity(this._editorLabel("ed.advance_vacuum.invalid_json_array"));
+    input.setAttribute("aria-invalid", "true");
+    return null;
+  }
+
+  _editorLabel(s: string) {
     if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
       return s;
     }
-    const hass = this._hass ?? this.hass;
+    const hass = this._hass;
     return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
   }
 
-  _renderTextField(label, field, value, options = {}) {
+  _renderTextField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const hintRaw = options.hint ? String(options.hint) : "";
     const hintHtml = hintRaw
@@ -269,7 +306,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     `;
   }
 
-  _renderTextareaField(label, field, value, options = {}) {
+  _renderTextareaField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
@@ -284,7 +321,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     `;
   }
 
-  _renderEntityPickerField(label, field, value, options = {}) {
+  _renderEntityPickerField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder || "";
@@ -305,7 +342,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     `;
   }
 
-  _getEntityOptions(field = "entity", domains = []) {
+  _getEntityOptions(field = "entity", domains: string[] = []) {
     const normalizedDomains = domains.map(domain => String(domain).trim()).filter(Boolean);
     const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
     const options = Object.entries(this._hass?.states || {})
@@ -337,7 +374,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     return options;
   }
 
-  _mountEntityPicker(host) {
+  _mountEntityPicker(host: HTMLElement) {
     if (!(host instanceof HTMLElement)) {
       return;
     }
@@ -349,16 +386,16 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
       .split(",")
       .map(domain => domain.trim())
       .filter(Boolean);
-    let control = null;
+    let control: HTMLElement;
 
     if (customElements.get("ha-entity-picker")) {
       control = document.createElement("ha-entity-picker");
       if (domains.length) {
-        control.includeDomains = domains;
-        control.entityFilter = stateObj =>
-          domains.some(domain => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+        Object.assign(control, { includeDomains: domains });
+        Object.assign(control, { entityFilter: (stateObj: HassEntity) =>
+          domains.some(domain => String(stateObj?.entity_id || "").startsWith(`${domain}.`)) });
       }
-      control.allowCustomEntity = true;
+      Object.assign(control, { allowCustomEntity: true });
       if (placeholder) {
         control.setAttribute("placeholder", placeholder);
       }
@@ -370,7 +407,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
           : domains.length > 1
             ? { domain: domains }
             : {};
-      control.selector = { entity: entitySelector };
+      Object.assign(control, { selector: { entity: entitySelector } });
       if (placeholder) {
         control.setAttribute("label", placeholder);
       }
@@ -391,11 +428,11 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     control.dataset.field = field;
     control.dataset.value = nextValue;
     if ("hass" in control) {
-      control.hass = this._hass;
+      Object.assign(control, { hass: this._hass });
     }
 
     if ("value" in control) {
-      control.value = nextValue;
+      Object.assign(control, { value: nextValue });
     }
 
     if (control instanceof HTMLSelectElement) {
@@ -405,7 +442,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     host.replaceChildren(control);
   }
 
-  _renderIconPickerField(label, field, value, options = {}) {
+  _renderIconPickerField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     return `
       <div class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
@@ -420,14 +457,14 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     `;
   }
 
-  _renderSelectField(label, field, value, items, options = {}) {
+  _renderSelectField(label: string, field: string, value: unknown, items: ({value: string; label: string} | {value: string; labelKey: string})[], options: FieldOptions = {}) {
     const tLabel = typeof label === "string" ? this._editorLabel(label) : label;
     return `
       <label class="editor-field ${options.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
           ${items.map(item => {
-            const optLabel = item.labelKey ? this._editorLabel(item.labelKey) : item.label;
+            const optLabel = "labelKey" in item ? this._editorLabel(item.labelKey) : item.label;
             return `
             <option value="${escapeHtml(item.value)}" ${String(value ?? "") === String(item.value) ? "selected" : ""}>
               ${escapeHtml(optLabel)}
@@ -439,7 +476,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     `;
   }
 
-  _renderCheckboxField(label, field, checked) {
+  _renderCheckboxField(label: string, field: string, checked: unknown) {
     const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
@@ -450,33 +487,6 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     `;
   }
 
-  _getEntityOptionsMarkup() {
-    const states = this._hass?.states || {};
-    const allEntities = Object.keys(states).sort();
-    const vacuumEntities = allEntities.filter(entityId => entityId.startsWith("vacuum."));
-    const mapEntities = allEntities.filter(entityId => entityId.startsWith("camera.") || entityId.startsWith("image."));
-    const helperEntities = allEntities.filter(entityId => entityId.startsWith("sensor.") || entityId.startsWith("image.") || entityId.startsWith("camera."));
-    const selectEntities = allEntities.filter(entityId => entityId.startsWith("select."));
-    const inputTextEntities = allEntities.filter(entityId => entityId.startsWith("input_text."));
-
-    return `
-      <datalist id="advance-vacuum-card-vacuum-entities">
-        ${vacuumEntities.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
-      </datalist>
-      <datalist id="advance-vacuum-card-map-entities">
-        ${mapEntities.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
-      </datalist>
-      <datalist id="advance-vacuum-card-helper-entities">
-        ${helperEntities.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
-      </datalist>
-      <datalist id="advance-vacuum-card-select-entities">
-        ${selectEntities.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
-      </datalist>
-      <datalist id="advance-vacuum-card-input-text-entities">
-        ${inputTextEntities.map(entityId => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
-      </datalist>
-    `;
-  }
 
   _render() {
     if (!this.shadowRoot) {
@@ -484,10 +494,13 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "medium";
-    const animations = config.animations || DEFAULT_CONFIG.animations;
+    const haptics: Record<string, unknown> = isObject(config.haptics) ? config.haptics : {};
+    const hapticStyle = haptics.style || "medium";
+    const animations = isObject(config.animations) ? config.animations : DEFAULT_CONFIG.animations;
     this._ensureEditorControlsReady();
 
+    this._rendering = true;
+    try {
     this.shadowRoot.innerHTML = `
       <style>
         :host {
@@ -990,31 +1003,32 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
             </div>
           ` : ""}
         </section>
-        ${this._getEntityOptionsMarkup()}
       </div>
     `;
 
     this.shadowRoot.querySelectorAll("input, select, textarea").forEach(input => {
+      if (!isNativeEditorInput(input)) return;
+      if (input.dataset.field && this._draftValues.has(input.dataset.field)) input.value = this._draftValues.get(input.dataset.field) ?? "";
+      if (input.dataset.valueType === "json") this._readJsonArray(input);
       input.addEventListener("change", this._onInputChange);
       if (
-        (input.tagName === "INPUT" && input.type !== "checkbox") ||
+        (input.tagName === "INPUT" && !(input instanceof HTMLInputElement && input.type === "checkbox")) ||
         input.tagName === "TEXTAREA"
       ) {
         input.addEventListener("input", this._onInputChange);
       }
     });
 
-    this.shadowRoot.querySelectorAll('[data-mounted-control="entity"]').forEach(host => this._mountEntityPicker(host));
+    this.shadowRoot.querySelectorAll<HTMLElement>('[data-mounted-control="entity"]').forEach(host => this._mountEntityPicker(host));
 
-    this.shadowRoot.querySelectorAll("ha-icon-picker").forEach(control => {
-      control.hass = this._hass;
+    this.shadowRoot.querySelectorAll<HTMLElement>("ha-icon-picker").forEach(control => {
+      Object.assign(control, { hass: this._hass });
     });
 
-    this.shadowRoot.querySelectorAll('input[data-field="entity"]').forEach(input => input.setAttribute("list", "advance-vacuum-card-vacuum-entities"));
-    this.shadowRoot.querySelectorAll('input[data-field="map_source.camera"]').forEach(input => input.setAttribute("list", "advance-vacuum-card-map-entities"));
-    this.shadowRoot.querySelectorAll('input[data-field="calibration_source.entity"]').forEach(input => input.setAttribute("list", "advance-vacuum-card-helper-entities"));
-    this.shadowRoot.querySelectorAll('input[data-field="shared_cleaning_session_entity"]').forEach(input => input.setAttribute("list", "advance-vacuum-card-input-text-entities"));
-    this.shadowRoot.querySelectorAll('input[data-field="suction_select_entity"], input[data-field="mop_select_entity"], input[data-field="mop_mode_select_entity"]').forEach(input => input.setAttribute("list", "advance-vacuum-card-select-entities"));
+
+    } finally {
+      this._rendering = false;
+    }
   }
 }
   _lazyNodaliaAdvanceVacuumCardEditor = NodaliaAdvanceVacuumCardEditor;

@@ -242,26 +242,6 @@
     rapido: "Fast"
   };
 
-  // src/cards/advance-vacuum/advance-vacuum-runtime.ts
-  var utils = window.NodaliaUtils;
-  var isObject = utils.isObject.bind(utils);
-  var deepClone = utils.deepClone.bind(utils);
-  var mergeConfig = utils.mergeDeep.bind(utils);
-  var isUnsafeConfigPathKey = utils.isUnsafeConfigPathKey.bind(utils);
-  var setByPath = utils.setByPath.bind(utils);
-  var deleteByPath = utils.deleteByPath.bind(utils);
-  var clamp = utils.clamp.bind(utils);
-  var normalizeTextKey = utils.normalizeTextKey.bind(utils);
-  var escapeHtml = utils.escapeHtml.bind(utils);
-  var fireEvent = utils.fireEvent.bind(utils);
-
-  // src/shared/numeric-values.ts
-  function parseFiniteNumericValue(value) {
-    if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
-    const numeric = Number(value);
-    return Number.isFinite(numeric) ? numeric : null;
-  }
-
   // src/shared/control-config.ts
   function normalizeControlStyles(candidate, defaults, sanitize = window.NodaliaUtils.sanitizeCssValue) {
     const utils2 = window.NodaliaUtils;
@@ -291,6 +271,26 @@
     actionFields("double_tap", "none"),
     actionFields("icon_double_tap", "")
   ];
+
+  // src/cards/advance-vacuum/advance-vacuum-runtime.ts
+  var utils = window.NodaliaUtils;
+  var isObject = utils.isObject.bind(utils);
+  var deepClone = utils.deepClone.bind(utils);
+  var mergeConfig = utils.mergeDeep.bind(utils);
+  var isUnsafeConfigPathKey = utils.isUnsafeConfigPathKey.bind(utils);
+  var setByPath = utils.setByPath.bind(utils);
+  var deleteByPath = utils.deleteByPath.bind(utils);
+  var clamp = utils.clamp.bind(utils);
+  var normalizeTextKey = utils.normalizeTextKey.bind(utils);
+  var escapeHtml = utils.escapeHtml.bind(utils);
+  var fireEvent = utils.fireEvent.bind(utils);
+
+  // src/shared/numeric-values.ts
+  function parseFiniteNumericValue(value) {
+    if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
 
   // src/shared/url-query.ts
   function appendUrlQueryParam(url, key, value, replaceExisting = false) {
@@ -1244,8 +1244,10 @@
       ...isObject(config.security) ? config.security : {},
       allow_webhooks_for_non_admin: config.security && isObject(config.security) ? config.security.allow_webhooks_for_non_admin === true : DEFAULT_CONFIG.security.allow_webhooks_for_non_admin
     };
-    return {
+    const fields = {
       ...config,
+      language: typeof config.language === "string" ? config.language : "auto",
+      styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles),
       entity: String(config.entity ?? "").trim(),
       name: String(config.name ?? "").trim(),
       custom_menu,
@@ -1256,6 +1258,8 @@
       routines: normalizeRoutineItems(config.routines),
       shared_cleaning_session_webhook: String(config.shared_cleaning_session_webhook ?? "").trim()
     };
+    const normalized = fields;
+    return normalized;
   }
 
   // src/cards/advance-vacuum/advance-vacuum-card.ts
@@ -7620,6 +7624,16 @@
     return NodaliaAdvanceVacuumCard;
   }
 
+  // src/shared/editor-controls.ts
+  function isNativeEditorInput(node) {
+    return node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement;
+  }
+  function editorControlValue(event, control) {
+    const detail = event instanceof CustomEvent ? event.detail : void 0;
+    if (detail && typeof detail === "object" && "value" in detail && typeof detail.value === "string") return detail.value;
+    return "value" in control ? control.value : void 0;
+  }
+
   // src/cards/advance-vacuum/advance-vacuum-editor.ts
   var _lazyNodaliaAdvanceVacuumCardEditor;
   function loadNodaliaAdvanceVacuumCardEditor() {
@@ -7640,6 +7654,9 @@
       _nodaliaConstruct() {
         this.attachShadow({ mode: "open" });
         this._config = normalizeConfig({});
+        this._hass = null;
+        this._draftValues = /* @__PURE__ */ new Map();
+        this._rendering = false;
         this._entityOptionsSignature = "";
         this._pendingEditorControlTags = /* @__PURE__ */ new Set();
         this._showStyleSection = false;
@@ -7663,10 +7680,13 @@
       disconnectedCallback() {
         this._detachEditorShadowListeners();
         window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
+        this._draftValues.clear();
       }
       setConfig(config) {
         const focusState = this._captureFocusState();
-        this._config = normalizeConfig(config || {});
+        const next = normalizeConfig(config || {});
+        if (next.entity !== this._config.entity) this._draftValues.clear();
+        this._config = next;
         window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
         this._render();
         this._restoreFocusState(focusState);
@@ -7684,7 +7704,7 @@
         this._restoreFocusState(focusState);
       }
       _getEntityOptionsSignature(hass = this._hass) {
-        return window.NodaliaUtils.editorStatesSignature(hass, this._config?.language);
+        return window.NodaliaUtils.editorStatesSignature?.(hass, this._config?.language) ?? "";
       }
       _captureFocusState() {
         return window.NodaliaUtils.captureEditorFocusState(this);
@@ -7698,7 +7718,7 @@
         this._render();
         this._restoreFocusState(focusState);
         fireEvent(this, "config-changed", {
-          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(deepClone(this._config), DEFAULT_CONFIG) ?? {})
+          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults?.(deepClone(this._config), DEFAULT_CONFIG) ?? {})
         });
       }
       _watchEditorControlTag(tagName) {
@@ -7727,12 +7747,13 @@
         this._watchEditorControlTag("ha-icon-picker");
       }
       _onValueChanged(event) {
-        const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+        if (this._rendering) return;
+        const control = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.field));
         if (!control?.dataset?.field) {
           return;
         }
         event.stopPropagation();
-        const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+        const nextValue = editorControlValue(event, control);
         const nextConfig = deepClone(this._config);
         if (nextValue === "" || nextValue === null || nextValue === void 0) {
           deleteByPath(nextConfig, control.dataset.field);
@@ -7742,7 +7763,7 @@
         this._notifyConfigChange(nextConfig);
       }
       _onEditorClick(event) {
-        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
+        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.editorToggle));
         if (!toggleButton) {
           return;
         }
@@ -7754,10 +7775,14 @@
         }
       }
       _onInputChange(event) {
+        if (this._rendering) return;
         const target = event.currentTarget;
+        if (!target || !isNativeEditorInput(target)) return;
         const field = target.dataset.field;
+        if (!field) return;
         const valueType = target.dataset.valueType || "string";
-        const checked = target.type === "checkbox" ? target.checked : void 0;
+        const checked = target instanceof HTMLInputElement && target.type === "checkbox" ? target.checked : void 0;
+        if (!(target instanceof HTMLSelectElement) && target.type !== "checkbox") this._draftValues.set(field, target.value);
         if (event.type === "input" && target.type !== "checkbox" && target.tagName !== "SELECT") {
           return;
         }
@@ -7766,21 +7791,17 @@
         if (target.type === "checkbox") {
           nextValue = checked;
         } else if (valueType === "number") {
-          nextValue = target.value === "" ? "" : Number(target.value);
+          nextValue = parseFiniteNumericValue(target.value) ?? void 0;
         } else if (valueType === "csv") {
           const values = String(target.value || "").split(",").map((item) => item.trim().toLowerCase()).filter(Boolean);
           nextValue = values.length ? values : "";
         } else if (valueType === "json") {
-          if (target.value.trim() === "") {
-            nextValue = "";
-          } else {
-            try {
-              nextValue = JSON.parse(target.value);
-            } catch (_error) {
-              return;
-            }
-          }
+          nextValue = this._readJsonArray(target);
+          if (nextValue === null) return;
         }
+        target.setCustomValidity("");
+        target.removeAttribute("aria-invalid");
+        this._draftValues.delete(field);
         if (nextValue === "" || nextValue === null || nextValue === void 0) {
           deleteByPath(nextConfig, field);
         } else {
@@ -7788,11 +7809,30 @@
         }
         this._notifyConfigChange(nextConfig);
       }
+      _readJsonArray(input) {
+        if (!input.value.trim()) {
+          input.setCustomValidity("");
+          input.removeAttribute("aria-invalid");
+          return void 0;
+        }
+        try {
+          const value = JSON.parse(input.value);
+          if (Array.isArray(value)) {
+            input.setCustomValidity("");
+            input.removeAttribute("aria-invalid");
+            return value;
+          }
+        } catch (_error) {
+        }
+        input.setCustomValidity(this._editorLabel("ed.advance_vacuum.invalid_json_array"));
+        input.setAttribute("aria-invalid", "true");
+        return null;
+      }
       _editorLabel(s) {
         if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
           return s;
         }
-        const hass = this._hass ?? this.hass;
+        const hass = this._hass;
         return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
       }
       _renderTextField(label, field, value, options = {}) {
@@ -7875,21 +7915,21 @@
         const nextValue = host.dataset.value || "";
         const placeholder = host.dataset.placeholder || "";
         const domains = String(host.dataset.domains || "").split(",").map((domain) => domain.trim()).filter(Boolean);
-        let control = null;
+        let control;
         if (customElements.get("ha-entity-picker")) {
           control = document.createElement("ha-entity-picker");
           if (domains.length) {
-            control.includeDomains = domains;
-            control.entityFilter = (stateObj) => domains.some((domain) => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+            Object.assign(control, { includeDomains: domains });
+            Object.assign(control, { entityFilter: (stateObj) => domains.some((domain) => String(stateObj?.entity_id || "").startsWith(`${domain}.`)) });
           }
-          control.allowCustomEntity = true;
+          Object.assign(control, { allowCustomEntity: true });
           if (placeholder) {
             control.setAttribute("placeholder", placeholder);
           }
         } else if (customElements.get("ha-selector")) {
           control = document.createElement("ha-selector");
           const entitySelector = domains.length === 1 ? { domain: domains[0] } : domains.length > 1 ? { domain: domains } : {};
-          control.selector = { entity: entitySelector };
+          Object.assign(control, { selector: { entity: entitySelector } });
           if (placeholder) {
             control.setAttribute("label", placeholder);
           }
@@ -7909,10 +7949,10 @@
         control.dataset.field = field;
         control.dataset.value = nextValue;
         if ("hass" in control) {
-          control.hass = this._hass;
+          Object.assign(control, { hass: this._hass });
         }
         if ("value" in control) {
-          control.value = nextValue;
+          Object.assign(control, { value: nextValue });
         }
         if (control instanceof HTMLSelectElement) {
           control.addEventListener("change", this._onInputChange);
@@ -7940,7 +7980,7 @@
         <span>${escapeHtml(tLabel)}</span>
         <select data-field="${escapeHtml(field)}">
           ${items.map((item) => {
-          const optLabel = item.labelKey ? this._editorLabel(item.labelKey) : item.label;
+          const optLabel = "labelKey" in item ? this._editorLabel(item.labelKey) : item.label;
           return `
             <option value="${escapeHtml(item.value)}" ${String(value ?? "") === String(item.value) ? "selected" : ""}>
               ${escapeHtml(optLabel)}
@@ -7961,41 +8001,18 @@
       </label>
     `;
       }
-      _getEntityOptionsMarkup() {
-        const states = this._hass?.states || {};
-        const allEntities = Object.keys(states).sort();
-        const vacuumEntities = allEntities.filter((entityId) => entityId.startsWith("vacuum."));
-        const mapEntities = allEntities.filter((entityId) => entityId.startsWith("camera.") || entityId.startsWith("image."));
-        const helperEntities = allEntities.filter((entityId) => entityId.startsWith("sensor.") || entityId.startsWith("image.") || entityId.startsWith("camera."));
-        const selectEntities = allEntities.filter((entityId) => entityId.startsWith("select."));
-        const inputTextEntities = allEntities.filter((entityId) => entityId.startsWith("input_text."));
-        return `
-      <datalist id="advance-vacuum-card-vacuum-entities">
-        ${vacuumEntities.map((entityId) => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
-      </datalist>
-      <datalist id="advance-vacuum-card-map-entities">
-        ${mapEntities.map((entityId) => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
-      </datalist>
-      <datalist id="advance-vacuum-card-helper-entities">
-        ${helperEntities.map((entityId) => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
-      </datalist>
-      <datalist id="advance-vacuum-card-select-entities">
-        ${selectEntities.map((entityId) => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
-      </datalist>
-      <datalist id="advance-vacuum-card-input-text-entities">
-        ${inputTextEntities.map((entityId) => `<option value="${escapeHtml(entityId)}"></option>`).join("")}
-      </datalist>
-    `;
-      }
       _render() {
         if (!this.shadowRoot) {
           return;
         }
         const config = this._config || normalizeConfig({});
-        const hapticStyle = config.haptics?.style || "medium";
-        const animations = config.animations || DEFAULT_CONFIG.animations;
+        const haptics = isObject(config.haptics) ? config.haptics : {};
+        const hapticStyle = haptics.style || "medium";
+        const animations = isObject(config.animations) ? config.animations : DEFAULT_CONFIG.animations;
         this._ensureEditorControlsReady();
-        this.shadowRoot.innerHTML = `
+        this._rendering = true;
+        try {
+          this.shadowRoot.innerHTML = `
       <style>
         :host {
           display: block;
@@ -8248,42 +8265,42 @@
           </div>
           <div class="editor-grid">
             ${this._renderSelectField("ed.advance_vacuum.card_language", "language", config.language ?? "auto", [
-          { value: "auto", labelKey: "ed.advance_vacuum.lang_auto_ha_profile" },
-          { value: "es", label: "Español" },
-          { value: "en", label: "English" },
-          { value: "de", label: "Deutsch" },
-          { value: "fr", label: "Français" },
-          { value: "it", label: "Italiano" },
-          { value: "nl", label: "Nederlands" },
-          { value: "no", label: "Norsk" }
-        ], { fullWidth: true })}
+            { value: "auto", labelKey: "ed.advance_vacuum.lang_auto_ha_profile" },
+            { value: "es", label: "Español" },
+            { value: "en", label: "English" },
+            { value: "de", label: "Deutsch" },
+            { value: "fr", label: "Français" },
+            { value: "it", label: "Italiano" },
+            { value: "nl", label: "Nederlands" },
+            { value: "no", label: "Norsk" }
+          ], { fullWidth: true })}
             ${this._renderEntityPickerField("ed.vacuum.robot_entity", "entity", config.entity, { domains: ["vacuum"] })}
             ${this._renderTextField("ed.entity.name", "name", config.name, { placeholder: "Roborock Qrevo S" })}
             ${this._renderIconPickerField("ed.entity.icon", "icon", config.icon, { placeholder: "mdi:robot-vacuum" })}
             ${this._renderEntityPickerField("ed.advance_vacuum.map_source_entity", "map_source.camera", config.map_source?.camera, { domains: ["camera", "image"] })}
             ${this._renderSelectField("ed.advance_vacuum.platform", "vacuum_platform", config.vacuum_platform || "auto", [
-          { value: "auto", label: "Auto (Home Assistant)" },
-          { value: "Roborock", label: "Roborock" },
-          { value: "Tasshack/dreame-vacuum", label: "Dreame Vacuum" },
-          { value: "Xiaomi Miio", label: "Xiaomi Miio" },
-          { value: "Ecovacs", label: "Ecovacs (Home Assistant)" },
-          { value: "DeebotUniverse/Deebot-4-Home-Assistant", label: "Deebot Universe (legacy)" },
-          { value: "Matter", label: "Matter / vacuum.clean_area" },
-          { value: "Hypfer/Valetudo", label: "Valetudo" },
-          { value: "send_command", label: "Generic send_command" }
-        ], { fullWidth: true })}
+            { value: "auto", label: "Auto (Home Assistant)" },
+            { value: "Roborock", label: "Roborock" },
+            { value: "Tasshack/dreame-vacuum", label: "Dreame Vacuum" },
+            { value: "Xiaomi Miio", label: "Xiaomi Miio" },
+            { value: "Ecovacs", label: "Ecovacs (Home Assistant)" },
+            { value: "DeebotUniverse/Deebot-4-Home-Assistant", label: "Deebot Universe (legacy)" },
+            { value: "Matter", label: "Matter / vacuum.clean_area" },
+            { value: "Hypfer/Valetudo", label: "Valetudo" },
+            { value: "send_command", label: "Generic send_command" }
+          ], { fullWidth: true })}
             ${normalizeTextKey(config.vacuum_platform || "auto").includes("valetudo") ? this._renderTextField("ed.advance_vacuum.mqtt_topic", "vacuum_mqtt_topic", config.vacuum_mqtt_topic || "", {
-          fullWidth: true,
-          placeholder: "valetudo/robot",
-          hint: "ed.advance_vacuum.mqtt_topic_hint"
-        }) : ""}
+            fullWidth: true,
+            placeholder: "valetudo/robot",
+            hint: "ed.advance_vacuum.mqtt_topic_hint"
+          }) : ""}
             ${this._renderEntityPickerField("ed.advance_vacuum.calibration_entity", "calibration_source.entity", config.calibration_source?.entity, { domains: ["camera", "image", "sensor"] })}
             ${this._renderEntityPickerField("ed.advance_vacuum.room_tracking_entity", "room_tracking.entity", config.room_tracking?.entity, { domains: ["sensor", "select", "text", "input_text"] })}
             ${this._renderEntityPickerField("ed.advance_vacuum.room_tracking_activity_entity", "room_tracking.activity_entity", config.room_tracking?.activity_entity, { domains: ["sensor", "binary_sensor", "select", "text", "input_text"] })}
             ${this._renderTextField("ed.advance_vacuum.room_tracking_attribute", "room_tracking.attribute", config.room_tracking?.attribute || "", {
-          placeholder: "active_segments",
-          hint: "ed.advance_vacuum.room_tracking_attribute_hint"
-        })}
+            placeholder: "active_segments",
+            hint: "ed.advance_vacuum.room_tracking_attribute_hint"
+          })}
             ${this._renderCheckboxField("ed.advance_vacuum.room_tracking_auto", "room_tracking.auto_detect", config.room_tracking?.auto_detect !== false)}
             <div class="editor-field editor-field--full">
               <span>${escapeHtml(this._editorLabel("ed.advance_vacuum.shared_session_helper_label"))}</span>
@@ -8296,16 +8313,16 @@
                 data-placeholder="${escapeHtml("input_text.roborock_session")}"
               ></div>
               <span class="editor-field__hint">${escapeHtml(
-          this._editorLabel(
-            "ed.advance_vacuum.shared_session_helper_hint"
-          )
-        )}</span>
+            this._editorLabel(
+              "ed.advance_vacuum.shared_session_helper_hint"
+            )
+          )}</span>
             </div>
             ${this._renderTextField("ed.advance_vacuum.shared_session_webhook", "shared_cleaning_session_webhook", config.shared_cleaning_session_webhook || "", {
-          fullWidth: true,
-          placeholder: "nodalia_advance_vacuum_session",
-          hint: "ed.advance_vacuum.shared_session_webhook_hint"
-        })}
+            fullWidth: true,
+            placeholder: "nodalia_advance_vacuum_session",
+            hint: "ed.advance_vacuum.shared_session_webhook_hint"
+          })}
           </div>
         </section>
 
@@ -8338,23 +8355,23 @@
             ${this._renderEntityPickerField("ed.vacuum.mop_select", "mop_select_entity", config.mop_select_entity, { domains: ["select"] })}
             ${this._renderEntityPickerField("ed.advance_vacuum.mop_mode_select", "mop_mode_select_entity", config.mop_mode_select_entity, { domains: ["select"] })}
             ${this._renderTextField("ed.advance_vacuum.custom_menu_label", "custom_menu.label", config.custom_menu?.label, {
-          placeholder: "Base"
-        })}
+            placeholder: "Base"
+          })}
             ${this._renderIconPickerField("ed.advance_vacuum.custom_menu_icon", "custom_menu.icon", config.custom_menu?.icon, {
-          placeholder: "mdi:home-import-outline"
-        })}
+            placeholder: "mdi:home-import-outline"
+          })}
             ${this._renderTextareaField("ed.advance_vacuum.custom_menu_items_json", "custom_menu.items", JSON.stringify(config.custom_menu?.items || [], null, 2), {
-          fullWidth: true,
-          rows: 10,
-          valueType: "json",
-          placeholder: '[\n  {\n    "label": "Vaciar deposito",\n    "icon": "mdi:delete-empty",\n    "visible_when": "docked",\n    "tap_action": {\n      "action": "perform-action",\n      "perform_action": "vacuum.send_command",\n      "service_data": {\n        "entity_id": "vacuum.roborock_qrevo_s",\n        "command": "app_start_emptying"\n      }\n    }\n  },\n  {\n    "label": "Volver a base",\n    "icon": "mdi:home-import-outline",\n    "visible_when": "active",\n    "builtin_action": "return_to_base"\n  }\n]'
-        })}
+            fullWidth: true,
+            rows: 10,
+            valueType: "json",
+            placeholder: '[\n  {\n    "label": "Vaciar deposito",\n    "icon": "mdi:delete-empty",\n    "visible_when": "docked",\n    "tap_action": {\n      "action": "perform-action",\n      "perform_action": "vacuum.send_command",\n      "service_data": {\n        "entity_id": "vacuum.roborock_qrevo_s",\n        "command": "app_start_emptying"\n      }\n    }\n  },\n  {\n    "label": "Volver a base",\n    "icon": "mdi:home-import-outline",\n    "visible_when": "active",\n    "builtin_action": "return_to_base"\n  }\n]'
+          })}
             ${this._renderTextareaField("ed.advance_vacuum.routines_json", "routines", JSON.stringify(config.routines || [], null, 2), {
-          fullWidth: true,
-          rows: 12,
-          valueType: "json",
-          placeholder: '[\n  {\n    "entity": "button.roborock_qrevo_s_barrido_intensivo",\n    "label": "Barrido intensivo",\n    "icon": "mdi:weather-windy"\n  },\n  {\n    "entity": "button.roborock_qrevo_s_fregar_tras_aspirar",\n    "label": "Fregar tras aspirar",\n    "icon": "mdi:water"\n  },\n  {\n    "entity": "script.limpieza_rapida_cocina",\n    "label": "Cocina rapida",\n    "icon": "mdi:script-text-play"\n  }\n]'
-        })}
+            fullWidth: true,
+            rows: 12,
+            valueType: "json",
+            placeholder: '[\n  {\n    "entity": "button.roborock_qrevo_s_barrido_intensivo",\n    "label": "Barrido intensivo",\n    "icon": "mdi:weather-windy"\n  },\n  {\n    "entity": "button.roborock_qrevo_s_fregar_tras_aspirar",\n    "label": "Fregar tras aspirar",\n    "icon": "mdi:water"\n  },\n  {\n    "entity": "script.limpieza_rapida_cocina",\n    "label": "Cocina rapida",\n    "icon": "mdi:script-text-play"\n  }\n]'
+          })}
           </div>
         </section>
 
@@ -8382,14 +8399,14 @@
             ${this._renderCheckboxField("ed.vacuum.enable_haptics", "haptics.enabled", config.haptics?.enabled === true)}
             ${this._renderCheckboxField("ed.vacuum.fallback_vibrate", "haptics.fallback_vibrate", config.haptics?.fallback_vibrate === true)}
             ${this._renderSelectField("ed.entity.haptic_style", "haptics.style", hapticStyle, [
-          { value: "selection", label: "Selection" },
-          { value: "light", label: "Light" },
-          { value: "medium", label: "Medium" },
-          { value: "heavy", label: "Heavy" },
-          { value: "success", label: "Success" },
-          { value: "warning", label: "Warning" },
-          { value: "failure", label: "Failure" }
-        ])}
+            { value: "selection", label: "Selection" },
+            { value: "light", label: "Light" },
+            { value: "medium", label: "Medium" },
+            { value: "heavy", label: "Heavy" },
+            { value: "success", label: "Success" },
+            { value: "warning", label: "Warning" },
+            { value: "failure", label: "Failure" }
+          ])}
           </div>
         </section>
 
@@ -8400,25 +8417,25 @@
           </div>
           <div class="editor-grid">
             ${this._renderCheckboxField(
-          "ed.entity.security_strict",
-          "security.strict_service_actions",
-          config.security?.strict_service_actions === true
-        )}
+            "ed.entity.security_strict",
+            "security.strict_service_actions",
+            config.security?.strict_service_actions === true
+          )}
             ${this._renderCheckboxField(
-          "ed.calendar.allow_webhooks_non_admin",
-          "security.allow_webhooks_for_non_admin",
-          config.security?.allow_webhooks_for_non_admin === true
-        )}
+            "ed.calendar.allow_webhooks_non_admin",
+            "security.allow_webhooks_for_non_admin",
+            config.security?.allow_webhooks_for_non_admin === true
+          )}
             ${config.security?.strict_service_actions === true ? this._renderTextField(
-          "ed.entity.allowed_services_csv",
-          "security.allowed_services",
-          Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
-          {
-            placeholder: "vacuum.send_command, script.run",
-            valueType: "csv",
-            fullWidth: true
-          }
-        ) : ""}
+            "ed.entity.allowed_services_csv",
+            "security.allowed_services",
+            Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
+            {
+              placeholder: "vacuum.send_command, script.run",
+              valueType: "csv",
+              fullWidth: true
+            }
+          ) : ""}
           </div>
         </section>
 
@@ -8431,17 +8448,17 @@
             ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", animations.enabled !== false)}
             ${this._renderCheckboxField("ed.vacuum.icon_animation_active", "animations.icon_animation", animations.icon_animation !== false)}
             ${this._renderTextField("ed.advance_vacuum.content_duration_ms", "animations.content_duration", animations.content_duration, {
-          type: "number",
-          valueType: "number"
-        })}
+            type: "number",
+            valueType: "number"
+          })}
             ${this._renderTextField("ed.vacuum.panel_duration_ms", "animations.panel_duration", animations.panel_duration, {
-          type: "number",
-          valueType: "number"
-        })}
+            type: "number",
+            valueType: "number"
+          })}
             ${this._renderTextField("ed.vacuum.button_bounce_ms", "animations.button_bounce_duration", animations.button_bounce_duration, {
-          type: "number",
-          valueType: "number"
-        })}
+            type: "number",
+            valueType: "number"
+          })}
           </div>
         </section>
 
@@ -8465,17 +8482,17 @@
               ${this._renderTextField("ed.entity.style_card_bg", "styles.card.background", config.styles?.card?.background)}
               ${this._renderTextField("ed.entity.style_card_border", "styles.card.border", config.styles?.card?.border)}
               ${window.NodaliaUtils.renderEditorCardBorderRadiusHtml({
-          escapeHtml,
-          field: "styles.card.border_radius",
-          value: config.styles?.card?.border_radius,
-          tHeading: this._editorLabel("ed.entity.style_card_radius_presets"),
-          labels: {
-            pill: this._editorLabel("ed.entity.chip_radius_pill"),
-            soft: this._editorLabel("ed.entity.chip_radius_soft"),
-            round: this._editorLabel("ed.entity.chip_radius_round"),
-            square: this._editorLabel("ed.entity.chip_radius_square")
-          }
-        })}
+            escapeHtml,
+            field: "styles.card.border_radius",
+            value: config.styles?.card?.border_radius,
+            tHeading: this._editorLabel("ed.entity.style_card_radius_presets"),
+            labels: {
+              pill: this._editorLabel("ed.entity.chip_radius_pill"),
+              soft: this._editorLabel("ed.entity.chip_radius_soft"),
+              round: this._editorLabel("ed.entity.chip_radius_round"),
+              square: this._editorLabel("ed.entity.chip_radius_square")
+            }
+          })}
               <div class="editor-section__hint editor-field--full" style="margin-top: -6px;">${escapeHtml(this._editorLabel("ed.entity.style_card_radius_yaml_hint"))}</div>
               ${this._renderTextField("ed.entity.style_card_shadow", "styles.card.box_shadow", config.styles?.card?.box_shadow)}
               ${this._renderTextField("ed.entity.style_card_padding", "styles.card.padding", config.styles?.card?.padding)}
@@ -8491,24 +8508,24 @@
             </div>
           ` : ""}
         </section>
-        ${this._getEntityOptionsMarkup()}
       </div>
     `;
-        this.shadowRoot.querySelectorAll("input, select, textarea").forEach((input) => {
-          input.addEventListener("change", this._onInputChange);
-          if (input.tagName === "INPUT" && input.type !== "checkbox" || input.tagName === "TEXTAREA") {
-            input.addEventListener("input", this._onInputChange);
-          }
-        });
-        this.shadowRoot.querySelectorAll('[data-mounted-control="entity"]').forEach((host) => this._mountEntityPicker(host));
-        this.shadowRoot.querySelectorAll("ha-icon-picker").forEach((control) => {
-          control.hass = this._hass;
-        });
-        this.shadowRoot.querySelectorAll('input[data-field="entity"]').forEach((input) => input.setAttribute("list", "advance-vacuum-card-vacuum-entities"));
-        this.shadowRoot.querySelectorAll('input[data-field="map_source.camera"]').forEach((input) => input.setAttribute("list", "advance-vacuum-card-map-entities"));
-        this.shadowRoot.querySelectorAll('input[data-field="calibration_source.entity"]').forEach((input) => input.setAttribute("list", "advance-vacuum-card-helper-entities"));
-        this.shadowRoot.querySelectorAll('input[data-field="shared_cleaning_session_entity"]').forEach((input) => input.setAttribute("list", "advance-vacuum-card-input-text-entities"));
-        this.shadowRoot.querySelectorAll('input[data-field="suction_select_entity"], input[data-field="mop_select_entity"], input[data-field="mop_mode_select_entity"]').forEach((input) => input.setAttribute("list", "advance-vacuum-card-select-entities"));
+          this.shadowRoot.querySelectorAll("input, select, textarea").forEach((input) => {
+            if (!isNativeEditorInput(input)) return;
+            if (input.dataset.field && this._draftValues.has(input.dataset.field)) input.value = this._draftValues.get(input.dataset.field) ?? "";
+            if (input.dataset.valueType === "json") this._readJsonArray(input);
+            input.addEventListener("change", this._onInputChange);
+            if (input.tagName === "INPUT" && !(input instanceof HTMLInputElement && input.type === "checkbox") || input.tagName === "TEXTAREA") {
+              input.addEventListener("input", this._onInputChange);
+            }
+          });
+          this.shadowRoot.querySelectorAll('[data-mounted-control="entity"]').forEach((host) => this._mountEntityPicker(host));
+          this.shadowRoot.querySelectorAll("ha-icon-picker").forEach((control) => {
+            Object.assign(control, { hass: this._hass });
+          });
+        } finally {
+          this._rendering = false;
+        }
       }
     }
     _lazyNodaliaAdvanceVacuumCardEditor = NodaliaAdvanceVacuumCardEditor;
