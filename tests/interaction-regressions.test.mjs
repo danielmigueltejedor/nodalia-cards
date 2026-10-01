@@ -1351,9 +1351,9 @@ test("cover editor uses domain-filtered pickers and fan-style editor controls", 
 
 test("scenes card scene buttons avoid focus-driven dashboard scroll jumps", () => {
   const source = read("nodalia-scenes-card.js");
-  assert.match(source, /this\.shadowRoot\.addEventListener\("pointerdown", this\._onShadowPointerDown, true\)/);
-  assert.match(source, /this\.shadowRoot\.addEventListener\("mousedown", this\._onShadowMouseDown, true\)/);
-  assert.match(source, /this\.shadowRoot\.addEventListener\("touchstart", this\._onShadowTouchStart, \{ passive: false, capture: true \}\)/);
+  assert.match(source, /(?:this\.shadowRoot|shadow)\.addEventListener\("pointerdown", this\._onShadowPointerDown, true\)/);
+  assert.match(source, /(?:this\.shadowRoot|shadow)\.addEventListener\("mousedown", this\._onShadowMouseDown, true\)/);
+  assert.match(source, /(?:this\.shadowRoot|shadow)\.addEventListener\("touchstart", this\._onShadowTouchStart, \{ passive: false, capture: true \}\)/);
   assert.match(source, /role="button"/);
   assert.match(source, /tabindex="-1"/);
   assert.match(source, /_triggerLaunchAnimation/);

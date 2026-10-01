@@ -1,11 +1,15 @@
-// @ts-nocheck
-/* Visual editor surface: typed incrementally after the card runtime split. */
+import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
+import type { EditorFocusState } from "../../core/types/nodalia-utils";
+import type { SceneRow } from "./scenes-types";
+import { editorControlValue, isNativeEditorInput, type NativeEditorInput } from "../../shared/editor-controls";
+import { parseFiniteNumericValue } from "../../shared/numeric-values";
 import {
   deepClone,
   deleteByPath,
   escapeHtml,
   fireEvent,
   getByPath,
+  isObject,
   setByPath,
 } from "./scenes-runtime";
 import { DEFAULT_CONFIG, STUB_CONFIG, normalizeConfig } from "./scenes-config";
@@ -14,16 +18,24 @@ import {
   formatEditorColorFromHex,
   getEditorColorFallbackValue,
   getEditorColorModel,
+  getSafeStyles,
   moveItem,
   normalizeSceneRows,
 } from "./scenes-helpers";
 
-let _lazyNodaliaScenesCardEditor;
-export function loadNodaliaScenesCardEditor() {
+interface FieldOptions { fullWidth?: boolean; type?: string; valueType?: string; placeholder?: string; fallbackValue?: string; }
+let _lazyNodaliaScenesCardEditor: CustomElementConstructor | undefined;
+export function loadNodaliaScenesCardEditor(): CustomElementConstructor {
   if (_lazyNodaliaScenesCardEditor) {
     return _lazyNodaliaScenesCardEditor;
   }
 class NodaliaScenesCardEditor extends HTMLElement {
+  private _config!: ReturnType<typeof normalizeConfig>;
+  private _hass!: HomeAssistant | null;
+  private _entityOptionsSignature!: string;
+  private _pendingEditorControlTags!: Set<string>;
+  private _showStyleSection!: boolean;
+  private _showActionsSection!: boolean;
   constructor() {
     super();
     this._nodaliaConstruct();
@@ -64,7 +76,7 @@ class NodaliaScenesCardEditor extends HTMLElement {
     window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
   }
 
-  set hass(hass) {
+  set hass(hass: HomeAssistant) {
     const nextSignature = this._getEntityOptionsSignature(hass);
     const shouldRender =
       !this._hass ||
@@ -84,7 +96,7 @@ class NodaliaScenesCardEditor extends HTMLElement {
     this._restoreFocusState(focusState);
   }
 
-  setConfig(config) {
+  setConfig(config: unknown) {
     const focusState = this._captureFocusState();
     this._config = normalizeConfig(config || {}, { keepEmpty: true });
     this._render();
@@ -94,12 +106,12 @@ class NodaliaScenesCardEditor extends HTMLElement {
   _getEntityOptionsSignature(hass = this._hass) {
     return window.NodaliaUtils?.editorFilteredStatesSignature?.(
       hass,
-      this._config?.language,
+      String(this._config?.language || "auto"),
       id => id.startsWith("scene."),
     ) ?? "";
   }
 
-  _watchEditorControlTag(tagName) {
+  _watchEditorControlTag(tagName: string) {
     if (!tagName || this._pendingEditorControlTags.has(tagName)) {
       return;
     }
@@ -148,16 +160,16 @@ class NodaliaScenesCardEditor extends HTMLElement {
     return window.NodaliaUtils.captureEditorFocusState(this);
   }
 
-  _restoreFocusState(focusState) {
+  _restoreFocusState(focusState: EditorFocusState | null) {
     window.NodaliaUtils.restoreEditorFocusState(this, focusState);
   }
 
-  _editorLabel(s) {
+  _editorLabel(s: string) {
     if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
       return s;
     }
     const hass = this._hass ?? this.hass;
-    return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+    return window.NodaliaI18n.editorStr(hass, String(this._config?.language || "auto"), s);
   }
 
   _emitConfig() {
@@ -176,7 +188,7 @@ class NodaliaScenesCardEditor extends HTMLElement {
     });
   }
 
-  _setFieldValue(path, value) {
+  _setFieldValue(path: string, value: unknown) {
     if (value === undefined || value === null || value === "") {
       deleteByPath(this._config, path);
       return;
@@ -184,14 +196,13 @@ class NodaliaScenesCardEditor extends HTMLElement {
     setByPath(this._config, path, value);
   }
 
-  _readFieldValue(input) {
+  _readFieldValue(input: NativeEditorInput) {
     const valueType = input.dataset.valueType || "string";
     if (valueType === "boolean") {
-      return Boolean(input.checked);
+      return input instanceof HTMLInputElement && input.checked;
     }
     if (valueType === "number") {
-      const numeric = Number(input.value);
-      return Number.isFinite(numeric) ? numeric : input.value;
+      return parseFiniteNumericValue(input.value) ?? input.value;
     }
     if (valueType === "color") {
       return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
@@ -199,10 +210,10 @@ class NodaliaScenesCardEditor extends HTMLElement {
     return input.value;
   }
 
-  _onShadowInput(event) {
+  _onShadowInput(event: Event) {
     const input = event
       .composedPath()
-      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+      .find(isNativeEditorInput);
     if (!input?.dataset?.field) {
       return;
     }
@@ -214,14 +225,14 @@ class NodaliaScenesCardEditor extends HTMLElement {
     }
   }
 
-  _onShadowValueChanged(event) {
-    const control = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.field);
+  _onShadowValueChanged(event: Event) {
+    const control = event.composedPath().find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.field));
     if (!control?.dataset?.field) {
       return;
     }
     event.stopPropagation();
     const field = control.dataset.field;
-    const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+    const nextValue = editorControlValue(event, control);
     const previousValue = getByPath(this._config, field);
     if (String(nextValue ?? "") === String(previousValue ?? "")) {
       return;
@@ -234,8 +245,8 @@ class NodaliaScenesCardEditor extends HTMLElement {
     this._emitConfig();
   }
 
-  _onShadowClick(event) {
-    const toggleButton = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
+  _onShadowClick(event: Event) {
+    const toggleButton = event.composedPath().find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.editorToggle));
     if (toggleButton) {
       event.preventDefault();
       event.stopPropagation();
@@ -250,7 +261,7 @@ class NodaliaScenesCardEditor extends HTMLElement {
       return;
     }
 
-    const button = event.composedPath().find(node => node instanceof HTMLButtonElement && node.dataset?.action);
+    const button = event.composedPath().find((node): node is HTMLButtonElement => node instanceof HTMLButtonElement && Boolean(node.dataset.action));
     if (!button) {
       return;
     }
@@ -288,7 +299,7 @@ class NodaliaScenesCardEditor extends HTMLElement {
     }
   }
 
-  _renderTextField(label, field, value, options = {}) {
+  _renderTextField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
@@ -306,7 +317,7 @@ class NodaliaScenesCardEditor extends HTMLElement {
     `;
   }
 
-  _renderCheckboxField(label, field, checked) {
+  _renderCheckboxField(label: string, field: string, checked: boolean) {
     const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
@@ -317,7 +328,7 @@ class NodaliaScenesCardEditor extends HTMLElement {
     `;
   }
 
-  _renderSelectField(label, field, value, options, renderOptions = {}) {
+  _renderSelectField(label: string, field: string, value: unknown, options: readonly { value: string; label: string }[], renderOptions: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field ${renderOptions.fullWidth ? "editor-field--full" : ""}">
@@ -333,7 +344,7 @@ class NodaliaScenesCardEditor extends HTMLElement {
     `;
   }
 
-  _renderColorField(label, field, value, options = {}) {
+  _renderColorField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const tColorCustom = this._editorLabel("ed.person.custom_color");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
@@ -361,10 +372,9 @@ class NodaliaScenesCardEditor extends HTMLElement {
     `;
   }
 
-  _renderEntityPickerField(label, field, value, options = {}) {
+  _renderEntityPickerField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
-    const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     return `
       <label class="editor-field editor-field--full">
         <span>${escapeHtml(tLabel)}</span>
@@ -379,7 +389,7 @@ class NodaliaScenesCardEditor extends HTMLElement {
     `;
   }
 
-  _renderIconPickerField(label, field, value, options = {}) {
+  _renderIconPickerField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
@@ -396,7 +406,7 @@ class NodaliaScenesCardEditor extends HTMLElement {
     `;
   }
 
-  _mountSceneEntityPicker(host) {
+  _mountSceneEntityPicker(host: HTMLElement) {
     if (!(host instanceof HTMLElement)) {
       return;
     }
@@ -404,29 +414,26 @@ class NodaliaScenesCardEditor extends HTMLElement {
     const field = host.dataset.field || "entity";
     const nextValue = host.dataset.value || "";
     const placeholder = host.dataset.placeholder || "";
-    let control = null;
+    let control: HTMLElement;
 
     if (customElements.get("ha-entity-picker")) {
       control = document.createElement("ha-entity-picker");
-      control.includeDomains = ["scene"];
-      control.allowCustomEntity = true;
-      control.entityFilter = stateObj => String(stateObj?.entity_id || "").startsWith("scene.");
+      Object.assign(control, { includeDomains: ["scene"], allowCustomEntity: true, entityFilter: (stateObj: HassEntity | null | undefined) => String(stateObj?.entity_id || "").startsWith("scene.") });
       if (placeholder) {
         control.setAttribute("placeholder", placeholder);
       }
     } else if (customElements.get("ha-selector")) {
       control = document.createElement("ha-selector");
-      control.selector = {
+      Object.assign(control, { selector: {
         entity: {
           domain: "scene",
         },
-      };
+      } });
     } else {
-      control = document.createElement("input");
-      control.type = "text";
-      if (placeholder) {
-        control.placeholder = placeholder;
-      }
+      const input = document.createElement("input");
+      input.type = "text";
+      if (placeholder) input.placeholder = placeholder;
+      control = input;
     }
 
     control.dataset.field = field;
@@ -449,7 +456,7 @@ class NodaliaScenesCardEditor extends HTMLElement {
     host.replaceChildren(control);
   }
 
-  _renderSceneEditorCard(item, index, total) {
+  _renderSceneEditorCard(item: SceneRow, index: number, total: number) {
     return `
       <div class="scene-editor-card">
         <div class="scene-editor-card__header">
@@ -473,7 +480,10 @@ class NodaliaScenesCardEditor extends HTMLElement {
       return;
     }
 
-    const config = this._config || {};
+    const config = this._config;
+    const styles = getSafeStyles(config.styles);
+    const haptics = isObject(config.haptics) ? config.haptics : {};
+    const animations = isObject(config.animations) ? config.animations : {};
     const scenes = Array.isArray(config.scenes) ? config.scenes : [];
     const isSingle = config.layout === "single";
     const visibleScenes = isSingle ? scenes.slice(0, 1) : scenes;
@@ -754,12 +764,12 @@ class NodaliaScenesCardEditor extends HTMLElement {
           <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.person.haptics_section_title"))}</div>
           <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.person.haptics_section_hint"))}</div>
           <div class="editor-grid editor-grid--stacked">
-            ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", config.haptics?.enabled !== false)}
-            ${this._renderCheckboxField("ed.person.fallback_vibrate", "haptics.fallback_vibrate", config.haptics?.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", haptics.enabled !== false)}
+            ${this._renderCheckboxField("ed.person.fallback_vibrate", "haptics.fallback_vibrate", haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
               "ed.person.haptic_style",
               "haptics.style",
-              config.haptics?.style || "medium",
+              haptics.style || "medium",
               [
                 { value: "selection", label: "ed.person.haptic_selection" },
                 { value: "light", label: "ed.person.haptic_light" },
@@ -788,19 +798,19 @@ class NodaliaScenesCardEditor extends HTMLElement {
             this._showStyleSection
               ? `
             <div class="editor-grid editor-grid--stacked">
-              ${this._renderColorField("ed.scenes.styles_accent", "styles.accent", config.styles?.accent || DEFAULT_CONFIG.styles.accent, { fullWidth: true })}
+              ${this._renderColorField("ed.scenes.styles_accent", "styles.accent", styles.accent || DEFAULT_CONFIG.styles.accent, { fullWidth: true })}
               <div class="editor-styles-subgroup editor-field--full">
                 <div class="editor-styles-subgroup__title">${escapeHtml(this._editorLabel("ed.scenes.styles_card_section"))}</div>
                 <div class="editor-styles-subgroup__hint">${escapeHtml(this._editorLabel("ed.scenes.styles_card_hint"))}</div>
-                ${this._renderColorField("ed.entity.style_card_bg", "styles.card.background", config.styles?.card?.background, { fullWidth: true })}
-                ${this._renderTextField("ed.entity.style_card_border", "styles.card.border", config.styles?.card?.border, { fullWidth: true })}
-                ${this._renderTextField("ed.entity.style_card_shadow", "styles.card.box_shadow", config.styles?.card?.box_shadow, { fullWidth: true })}
-                ${this._renderTextField("ed.person.style_card_padding", "styles.card.padding", config.styles?.card?.padding || DEFAULT_CONFIG.styles.card.padding)}
-                ${this._renderTextField("ed.person.style_card_gap", "styles.card.gap", config.styles?.card?.gap || DEFAULT_CONFIG.styles.card.gap)}
+                ${this._renderColorField("ed.entity.style_card_bg", "styles.card.background", styles.card?.background, { fullWidth: true })}
+                ${this._renderTextField("ed.entity.style_card_border", "styles.card.border", styles.card?.border, { fullWidth: true })}
+                ${this._renderTextField("ed.entity.style_card_shadow", "styles.card.box_shadow", styles.card?.box_shadow, { fullWidth: true })}
+                ${this._renderTextField("ed.person.style_card_padding", "styles.card.padding", styles.card?.padding || DEFAULT_CONFIG.styles.card.padding)}
+                ${this._renderTextField("ed.person.style_card_gap", "styles.card.gap", styles.card?.gap || DEFAULT_CONFIG.styles.card.gap)}
                 ${window.NodaliaUtils.renderEditorCardBorderRadiusHtml({
                   escapeHtml,
                   field: "styles.card.border_radius",
-                  value: config.styles?.card?.border_radius || DEFAULT_CONFIG.styles.card.border_radius,
+                  value: styles.card?.border_radius || DEFAULT_CONFIG.styles.card.border_radius,
                   tHeading: this._editorLabel("ed.entity.style_card_radius_presets"),
                   labels: {
                     pill: this._editorLabel("ed.entity.chip_radius_pill"),
@@ -814,25 +824,25 @@ class NodaliaScenesCardEditor extends HTMLElement {
               <div class="editor-styles-subgroup editor-field--full">
                 <div class="editor-styles-subgroup__title">${escapeHtml(this._editorLabel("ed.scenes.styles_icon_section"))}</div>
                 <div class="editor-styles-subgroup__hint">${escapeHtml(this._editorLabel("ed.scenes.styles_icon_hint"))}</div>
-                ${this._renderTextField("ed.person.style_title_size", "styles.icon.size", config.styles?.icon?.size || DEFAULT_CONFIG.styles.icon.size)}
-                ${this._renderColorField("ed.entity.style_main_bubble_bg", "styles.icon.background", config.styles?.icon?.background, { fullWidth: true })}
-                ${this._renderColorField("ed.person.style_avatar_color", "styles.icon.color", config.styles?.icon?.color, { fullWidth: true })}
-                ${this._renderColorField("ed.entity.style_icon_on", "styles.icon.on_color", config.styles?.icon?.on_color, { fullWidth: true })}
+                ${this._renderTextField("ed.person.style_title_size", "styles.icon.size", styles.icon?.size || DEFAULT_CONFIG.styles.icon.size)}
+                ${this._renderColorField("ed.entity.style_main_bubble_bg", "styles.icon.background", styles.icon?.background, { fullWidth: true })}
+                ${this._renderColorField("ed.person.style_avatar_color", "styles.icon.color", styles.icon?.color, { fullWidth: true })}
+                ${this._renderColorField("ed.entity.style_icon_on", "styles.icon.on_color", styles.icon?.on_color, { fullWidth: true })}
               </div>
 
               <div class="editor-styles-subgroup editor-field--full">
                 <div class="editor-styles-subgroup__title">${escapeHtml(this._editorLabel("ed.scenes.styles_buttons_section"))}</div>
                 <div class="editor-styles-subgroup__hint">${escapeHtml(this._editorLabel("ed.scenes.styles_buttons_hint"))}</div>
-                ${this._renderColorField("ed.scenes.style_button_bg", "styles.button.background", config.styles?.button?.background, { fullWidth: true })}
-                ${this._renderTextField("ed.scenes.style_button_border", "styles.button.border", config.styles?.button?.border, { fullWidth: true })}
-                ${this._renderTextField("ed.scenes.style_button_min_height", "styles.button.min_height", config.styles?.button?.min_height || DEFAULT_CONFIG.styles.button.min_height)}
-                ${this._renderTextField("ed.entity.style_main_button_size", "styles.button.icon_size", config.styles?.button?.icon_size || DEFAULT_CONFIG.styles.button.icon_size)}
-                ${this._renderTextField("ed.circular_gauge.value_size", "styles.button.label_size", config.styles?.button?.label_size || DEFAULT_CONFIG.styles.button.label_size)}
-                ${this._renderTextField("ed.person.style_title_size", "styles.title_size", config.styles?.title_size || DEFAULT_CONFIG.styles.title_size)}
+                ${this._renderColorField("ed.scenes.style_button_bg", "styles.button.background", styles.button?.background, { fullWidth: true })}
+                ${this._renderTextField("ed.scenes.style_button_border", "styles.button.border", styles.button?.border, { fullWidth: true })}
+                ${this._renderTextField("ed.scenes.style_button_min_height", "styles.button.min_height", styles.button?.min_height || DEFAULT_CONFIG.styles.button.min_height)}
+                ${this._renderTextField("ed.entity.style_main_button_size", "styles.button.icon_size", styles.button?.icon_size || DEFAULT_CONFIG.styles.button.icon_size)}
+                ${this._renderTextField("ed.circular_gauge.value_size", "styles.button.label_size", styles.button?.label_size || DEFAULT_CONFIG.styles.button.label_size)}
+                ${this._renderTextField("ed.person.style_title_size", "styles.title_size", styles.title_size || DEFAULT_CONFIG.styles.title_size)}
                 ${window.NodaliaUtils.renderEditorChipBorderRadiusHtml({
                   escapeHtml,
                   field: "styles.button.border_radius",
-                  value: config.styles?.button?.border_radius || DEFAULT_CONFIG.styles.button.border_radius,
+                  value: styles.button?.border_radius || DEFAULT_CONFIG.styles.button.border_radius,
                   tHeading: this._editorLabel("ed.entity.style_chip_radius"),
                   labels: {
                     pill: this._editorLabel("ed.entity.chip_radius_pill"),
@@ -846,7 +856,7 @@ class NodaliaScenesCardEditor extends HTMLElement {
               <div class="editor-styles-subgroup editor-field--full">
                 <div class="editor-styles-subgroup__title">${escapeHtml(this._editorLabel("ed.scenes.styles_launch_section"))}</div>
                 <div class="editor-styles-subgroup__hint">${escapeHtml(this._editorLabel("ed.scenes.styles_launch_hint"))}</div>
-                ${this._renderTextField("ed.scenes.launch_duration", "animations.launch_duration", config.animations?.launch_duration || DEFAULT_CONFIG.animations.launch_duration, { type: "number", valueType: "number" })}
+                ${this._renderTextField("ed.scenes.launch_duration", "animations.launch_duration", animations.launch_duration || DEFAULT_CONFIG.animations.launch_duration, { type: "number", valueType: "number" })}
               </div>
             </div>
           `
@@ -856,10 +866,9 @@ class NodaliaScenesCardEditor extends HTMLElement {
       </div>
     `;
 
-    this.shadowRoot.querySelectorAll('[data-mounted-control="scene-entity"]').forEach(host => this._mountSceneEntityPicker(host));
-    this.shadowRoot.querySelectorAll("ha-icon-picker[data-field]").forEach(control => {
-      control.hass = this._hass;
-      control.value = control.dataset.value || "";
+    this.shadowRoot.querySelectorAll<HTMLElement>('[data-mounted-control="scene-entity"]').forEach(host => this._mountSceneEntityPicker(host));
+    this.shadowRoot.querySelectorAll<HTMLElement>("ha-icon-picker[data-field]").forEach(control => {
+      Object.assign(control, { hass: this._hass, value: control.dataset.value || "" });
       control.addEventListener("value-changed", this._onShadowValueChanged);
     });
     this._ensureEditorControlsReady();

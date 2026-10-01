@@ -1,4 +1,5 @@
 import type { HassEntity } from "../core/types/home-assistant";
+type BubbleTintEntity = Pick<HassEntity, "entity_id"> & Partial<Pick<HassEntity, "attributes">>;
 import { parseEditorColorChannels } from "./editor-color";
 
 function normalizeTextKey(value: unknown) {
@@ -10,7 +11,7 @@ function normalizeTextKey(value: unknown) {
     .replace(/^_+|_+$/g, "");
 }
 
-function getEntityDomain(state: HassEntity | null | undefined) {
+function getEntityDomain(state: BubbleTintEntity | null | undefined) {
   const entityId = String(state?.entity_id || "");
   return entityId.includes(".") ? (entityId.split(".")[0] ?? "") : "";
 }
@@ -131,7 +132,7 @@ function isHueCoolTintPoorContrast(hue: number | null) {
   return false;
 }
 
-function inferCoolTintFromEntity(state: HassEntity | null | undefined) {
+function inferCoolTintFromEntity(state: BubbleTintEntity | null | undefined) {
   if (!state) {
     return false;
   }
@@ -159,7 +160,7 @@ function inferCoolTintFromEntity(state: HassEntity | null | undefined) {
   return false;
 }
 
-export function shouldDarkenBubbleIconGlyph(state: HassEntity | null | undefined, accentColor: unknown) {
+export function shouldDarkenBubbleIconGlyph(state: BubbleTintEntity | null | undefined, accentColor: unknown) {
   if (!state) {
     return false;
   }
@@ -170,7 +171,7 @@ export function shouldDarkenBubbleIconGlyph(state: HassEntity | null | undefined
   return inferCoolTintFromEntity(state);
 }
 
-export function resolveBubbleIconGlyphColor(state: HassEntity | null | undefined, accentColor: unknown) {
+export function resolveBubbleIconGlyphColor(state: BubbleTintEntity | null | undefined, accentColor: unknown) {
   const accent = String(accentColor || "").trim() || "var(--primary-color)";
   const accentWeight = shouldDarkenBubbleIconGlyph(state, accent) ? 42 : 72;
   return `color-mix(in srgb, ${accent} ${accentWeight}%, var(--primary-text-color))`;

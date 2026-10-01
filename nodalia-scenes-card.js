@@ -521,13 +521,12 @@
         this._nodaliaConstruct();
       }
       _nodaliaConstruct() {
-        this.attachShadow({ mode: "open" });
+        const shadow = this.attachShadow({ mode: "open" });
         this._config = normalizeConfig(STUB_CONFIG);
         this._hass = null;
         this._lastRenderSignature = "";
         this._animateContentOnNextRender = true;
-        this._launchAnimationTimers = /* @__PURE__ */ new Map();
-        this._pressAnimationTimers = /* @__PURE__ */ new Map();
+        this._fallbackAnimationTimers = /* @__PURE__ */ new Set();
         this._cancelScrollRestore = null;
         this._suppressNextSceneTap = false;
         this._interactionScrollSnapshot = null;
@@ -536,13 +535,13 @@
         this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
         this._onShadowMouseDown = this._onShadowMouseDown.bind(this);
         this._onShadowTouchStart = this._onShadowTouchStart.bind(this);
-        this.shadowRoot.addEventListener("click", this._onShadowClick);
-        this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown, true);
-        this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown, true);
-        this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false, capture: true });
+        shadow.addEventListener("click", this._onShadowClick);
+        shadow.addEventListener("pointerdown", this._onShadowPointerDown, true);
+        shadow.addEventListener("mousedown", this._onShadowMouseDown, true);
+        shadow.addEventListener("touchstart", this._onShadowTouchStart, { passive: false, capture: true });
         this._detachHostHold = typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function" ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
           resolveZone: (event) => {
-            const button = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.sceneEntity);
+            const button = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.sceneEntity));
             return button?.dataset?.sceneEntity || null;
           },
           shouldBeginHold: (entityId) => this._canRunHoldAction(entityId),
@@ -567,6 +566,11 @@
       disconnectedCallback() {
         this._detachHostHold?.();
         window.NodaliaUtils?.clearDeferTimers?.(this);
+        this._fallbackAnimationTimers.forEach((timer) => window.clearTimeout(timer));
+        this._fallbackAnimationTimers.clear();
+        this._suppressNextSceneTap = false;
+        this._interactionScrollSnapshot = null;
+        this._sceneInteractionScrollUntil = 0;
         this._cancelScrollRestore?.();
         this._cancelScrollRestore = null;
         cancelDashboardScrollRestore();
@@ -574,6 +578,9 @@
         this._lastRenderSignature = "";
       }
       setConfig(config) {
+        this._detachHostHold?.();
+        if (this.isConnected) this._detachHostHold?.reconnect?.();
+        this._suppressNextSceneTap = false;
         this._config = normalizeConfig(config || {});
         this._lastRenderSignature = "";
         this._animateContentOnNextRender = true;
@@ -604,7 +611,7 @@
         return { columns: "full", min_columns: 2, min_rows: 2, rows: "auto" };
       }
       _getAnimationSettings() {
-        const animations = this._config?.animations || DEFAULT_CONFIG.animations;
+        const animations = isObject(this._config.animations) ? this._config.animations : DEFAULT_CONFIG.animations;
         return {
           enabled: animations.enabled !== false,
           contentDuration: clamp(Math.round(Number(animations.content_duration) || 420), 0, 2e3),
@@ -624,22 +631,25 @@
             moods: "moods"
           };
         }
-        const lang = NI.resolveLanguage(this._hass, this._config?.language);
-        const scenes = NI.strings(lang).scenes || {};
+        const lang = NI.resolveLanguage(this._hass, String(this._config.language || "auto"));
+        const rawScenes = NI.strings(lang).scenes;
+        const scenes = isObject(rawScenes) ? rawScenes : {};
+        const text = (key, fallback) => typeof scenes[key] === "string" && scenes[key] ? scenes[key] : fallback;
         return {
-          emptyTitle: scenes.emptyTitle || "Nodalia Scenes Card",
-          emptyBody: scenes.emptyBody || "Add scene entities in the card editor.",
-          defaultName: scenes.defaultName || "Scenes",
-          unavailable: scenes.unavailable || "Unavailable",
-          subtitle: scenes.subtitle || "Tap a mood to launch",
-          moods: scenes.moods || "moods"
+          emptyTitle: text("emptyTitle", "Nodalia Scenes Card"),
+          emptyBody: text("emptyBody", "Add scene entities in the card editor."),
+          defaultName: text("defaultName", "Scenes"),
+          unavailable: text("unavailable", "Unavailable"),
+          subtitle: text("subtitle", "Tap a mood to launch"),
+          moods: text("moods", "moods")
         };
       }
       _getRenderSignature() {
-        const config = this._config || {};
+        const config = this._config;
         const entries = resolveSceneEntries(config, this._hass);
-        const sceneStamp = (Array.isArray(config.scenes) ? config.scenes : []).map((item) => typeof item === "string" ? item : `${item?.entity || ""}:${item?.tint || ""}`).join("|");
-        const styles = config.styles || {};
+        const sceneStamp = (Array.isArray(config.scenes) ? config.scenes : []).map((item) => `${item.entity}:${item.color}`).join("|");
+        const styles = isObject(config.styles) ? config.styles : {};
+        const iconStyles = isObject(styles.icon) ? styles.icon : {};
         return [
           CARD_VERSION,
           config.layout || "grid",
@@ -648,7 +658,7 @@
           config.language || "auto",
           config.show_title !== false,
           styles.accent || "",
-          styles.icon?.size || "",
+          iconStyles.size || "",
           sceneStamp,
           JSON.stringify(entries)
         ].join("::");
@@ -658,19 +668,31 @@
         return Boolean(entityId) && action !== "none";
       }
       _triggerHaptic(styleOverride) {
-        const haptics = this._config?.haptics || DEFAULT_CONFIG.haptics;
+        const haptics = isObject(this._config.haptics) ? this._config.haptics : DEFAULT_CONFIG.haptics;
         if (haptics.enabled === false) {
           return;
         }
-        const style = styleOverride || haptics.style || "medium";
+        const style = styleOverride || String(haptics.style || "medium");
         fireEvent(this, "haptic", style, { bubbles: true, composed: true });
         if (haptics.fallback_vibrate && typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
-          const pattern = HAPTIC_PATTERNS[style] ?? HAPTIC_PATTERNS.medium;
+          const pattern = Object.entries(HAPTIC_PATTERNS).find(([key]) => key === style)?.[1] ?? HAPTIC_PATTERNS.medium;
           try {
             navigator.vibrate(pattern);
           } catch (_error) {
           }
         }
+      }
+      _scheduleAnimation(done, delay) {
+        const schedule = window.NodaliaUtils.scheduleDeferTimer;
+        if (schedule) {
+          schedule(this, done, delay);
+          return;
+        }
+        const timer = window.setTimeout(() => {
+          this._fallbackAnimationTimers.delete(timer);
+          done();
+        }, delay);
+        this._fallbackAnimationTimers.add(timer);
       }
       _triggerPressAnimation(tile) {
         if (!(tile instanceof HTMLElement)) {
@@ -680,18 +702,13 @@
         tile.classList.remove("is-pressing");
         void tile.offsetWidth;
         tile.classList.add("is-pressing");
-        const schedule = window.NodaliaUtils?.scheduleDeferTimer;
         const done = () => {
           if (!tile.isConnected) {
             return;
           }
           tile.classList.remove("is-pressing");
         };
-        if (typeof schedule === "function") {
-          schedule(this, done, animations.buttonBounceDuration);
-        } else {
-          window.setTimeout(done, animations.buttonBounceDuration);
-        }
+        this._scheduleAnimation(done, animations.buttonBounceDuration);
       }
       _triggerLaunchAnimation(tile) {
         if (!(tile instanceof HTMLElement)) {
@@ -708,7 +725,6 @@
         if (icon instanceof HTMLElement) {
           icon.classList.add("scenes-card__tile-icon--launching");
         }
-        const schedule = window.NodaliaUtils?.scheduleDeferTimer;
         const done = () => {
           if (!tile.isConnected) {
             return;
@@ -718,11 +734,7 @@
             icon.classList.remove("scenes-card__tile-icon--launching");
           }
         };
-        if (typeof schedule === "function") {
-          schedule(this, done, duration);
-        } else {
-          window.setTimeout(done, duration);
-        }
+        this._scheduleAnimation(done, duration);
       }
       _openMoreInfo(entityId) {
         if (!entityId) {
@@ -748,11 +760,16 @@
         }
       }
       _activateScene(entityId) {
-        if (!this._hass || !entityId) {
+        if (!this._hass?.callService || !entityId) {
           return;
         }
         this._triggerHaptic("success");
-        this._hass.callService("scene", "turn_on", { entity_id: entityId });
+        try {
+          void Promise.resolve(this._hass.callService("scene", "turn_on", { entity_id: entityId })).catch((error) => console.warn("Nodalia Scenes: scene activation failed", error));
+        } catch (error) {
+          console.warn("Nodalia Scenes: scene activation failed", error);
+          return;
+        }
         const tile = this.shadowRoot?.querySelector(`[data-scene-entity="${escapeSelectorValue(entityId)}"]`);
         this._triggerLaunchAnimation(tile);
         this._scheduleDashboardScrollRestore(this._interactionScrollSnapshot);
@@ -783,7 +800,7 @@
         this._activateScene(entityId);
       }
       _findSceneButtonFromEvent(event) {
-        const button = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.sceneEntity);
+        const button = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.sceneEntity));
         if (!button || button.dataset.unavailable === "true" || button.getAttribute("aria-disabled") === "true") {
           return null;
         }
@@ -795,6 +812,7 @@
         this._blurSceneInteractionFocus();
       }
       _onShadowPointerDown(event) {
+        if (!(event instanceof PointerEvent)) return;
         const button = this._findSceneButtonFromEvent(event);
         if (!button) {
           return;
@@ -811,6 +829,7 @@
         this._triggerPressAnimation(button);
       }
       _onShadowMouseDown(event) {
+        if (!(event instanceof MouseEvent)) return;
         const button = this._findSceneButtonFromEvent(event);
         if (!button || event.button !== 0) {
           return;
@@ -818,6 +837,7 @@
         this._prepareSceneInteraction(event, button);
       }
       _onShadowTouchStart(event) {
+        if (!(event instanceof TouchEvent)) return;
         const button = this._findSceneButtonFromEvent(event);
         if (!button) {
           return;
@@ -830,7 +850,7 @@
           this._suppressNextSceneTap = false;
           return;
         }
-        const button = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.sceneEntity);
+        const button = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.sceneEntity));
         if (!button) {
           return;
         }
@@ -877,7 +897,7 @@
         const listIconSize = Math.max(42, iconSize - 2);
         const bubbleSize = layout === "single" ? Math.max(56, iconSize + 12) : layout === "list" ? listIconSize : Math.max(46, iconSize + 2);
         const darkenBubbleIconGlyph = Boolean(
-          window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(
+          window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph?.(
             { entity_id: entry.entity || "scene.placeholder" },
             entry.accent
           )
@@ -926,7 +946,7 @@
         if (!this.shadowRoot) {
           return;
         }
-        const config = this._config || {};
+        const config = this._config;
         const entries = resolveSceneEntries(config, this._hass);
         if (!entries.length) {
           this.shadowRoot.innerHTML = this._renderEmptyState();
@@ -1440,13 +1460,13 @@
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <ha-card
-        class="scenes-card ${isSingle ? `scenes-card--single ${singlePresentation.tileClass}` : ""}"
+        class="scenes-card ${isSingle ? `scenes-card--single ${singlePresentation?.tileClass || ""}` : ""}"
         ${isSingle ? 'role="button" tabindex="-1"' : ""}
         ${singleEntry ? `data-scene-entity="${escapeHtml(singleEntry.entity)}" data-unavailable="${singleEntry.unavailable ? "true" : "false"}" aria-label="${escapeHtml(singleEntry.label)}"` : ""}
         ${singleEntry?.unavailable ? 'aria-disabled="true"' : ""}
         ${singlePresentation ? `style="${singlePresentation.style}"` : ""}
       >
-        ${isSingle ? this._renderSceneTileContent(singleEntry, ui) : `
+        ${singleEntry ? this._renderSceneTileContent(singleEntry, ui) : `
             ${showTitle ? `<div class="scenes-card__header ${shouldAnimate ? "scenes-card__header--entering" : ""}">
                     <div class="scenes-card__brand">
                       <span class="scenes-card__brand-icon" aria-hidden="true">
@@ -1473,6 +1493,23 @@
     }
     _lazyNodaliaScenesCard = NodaliaScenesCard;
     return NodaliaScenesCard;
+  }
+
+  // src/shared/editor-controls.ts
+  function isNativeEditorInput(node) {
+    return node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement;
+  }
+  function editorControlValue(event, control) {
+    const detail = event instanceof CustomEvent ? event.detail : void 0;
+    if (detail && typeof detail === "object" && "value" in detail && typeof detail.value === "string") return detail.value;
+    return "value" in control ? control.value : void 0;
+  }
+
+  // src/shared/numeric-values.ts
+  function parseFiniteNumericValue(value) {
+    if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
   }
 
   // src/cards/scenes/scenes-editor.ts
@@ -1539,7 +1576,7 @@
       _getEntityOptionsSignature(hass = this._hass) {
         return window.NodaliaUtils?.editorFilteredStatesSignature?.(
           hass,
-          this._config?.language,
+          String(this._config?.language || "auto"),
           (id) => id.startsWith("scene.")
         ) ?? "";
       }
@@ -1589,7 +1626,7 @@
           return s;
         }
         const hass = this._hass ?? this.hass;
-        return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+        return window.NodaliaI18n.editorStr(hass, String(this._config?.language || "auto"), s);
       }
       _emitConfig() {
         const focusState = this._captureFocusState();
@@ -1616,11 +1653,10 @@
       _readFieldValue(input) {
         const valueType = input.dataset.valueType || "string";
         if (valueType === "boolean") {
-          return Boolean(input.checked);
+          return input instanceof HTMLInputElement && input.checked;
         }
         if (valueType === "number") {
-          const numeric = Number(input.value);
-          return Number.isFinite(numeric) ? numeric : input.value;
+          return parseFiniteNumericValue(input.value) ?? input.value;
         }
         if (valueType === "color") {
           return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
@@ -1628,7 +1664,7 @@
         return input.value;
       }
       _onShadowInput(event) {
-        const input = event.composedPath().find((node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+        const input = event.composedPath().find(isNativeEditorInput);
         if (!input?.dataset?.field) {
           return;
         }
@@ -1640,13 +1676,13 @@
         }
       }
       _onShadowValueChanged(event) {
-        const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+        const control = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.field));
         if (!control?.dataset?.field) {
           return;
         }
         event.stopPropagation();
         const field = control.dataset.field;
-        const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+        const nextValue = editorControlValue(event, control);
         const previousValue = getByPath(this._config, field);
         if (String(nextValue ?? "") === String(previousValue ?? "")) {
           return;
@@ -1659,7 +1695,7 @@
         this._emitConfig();
       }
       _onShadowClick(event) {
-        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
+        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.editorToggle));
         if (toggleButton) {
           event.preventDefault();
           event.stopPropagation();
@@ -1673,7 +1709,7 @@
           this._restoreFocusState(focusState);
           return;
         }
-        const button = event.composedPath().find((node) => node instanceof HTMLButtonElement && node.dataset?.action);
+        const button = event.composedPath().find((node) => node instanceof HTMLButtonElement && Boolean(node.dataset.action));
         if (!button) {
           return;
         }
@@ -1775,7 +1811,6 @@
       _renderEntityPickerField(label, field, value, options = {}) {
         const tLabel = this._editorLabel(label);
         const inputValue = value === void 0 || value === null ? "" : String(value);
-        const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
         return `
       <label class="editor-field editor-field--full">
         <span>${escapeHtml(tLabel)}</span>
@@ -1812,28 +1847,25 @@
         const field = host.dataset.field || "entity";
         const nextValue = host.dataset.value || "";
         const placeholder = host.dataset.placeholder || "";
-        let control = null;
+        let control;
         if (customElements.get("ha-entity-picker")) {
           control = document.createElement("ha-entity-picker");
-          control.includeDomains = ["scene"];
-          control.allowCustomEntity = true;
-          control.entityFilter = (stateObj) => String(stateObj?.entity_id || "").startsWith("scene.");
+          Object.assign(control, { includeDomains: ["scene"], allowCustomEntity: true, entityFilter: (stateObj) => String(stateObj?.entity_id || "").startsWith("scene.") });
           if (placeholder) {
             control.setAttribute("placeholder", placeholder);
           }
         } else if (customElements.get("ha-selector")) {
           control = document.createElement("ha-selector");
-          control.selector = {
+          Object.assign(control, { selector: {
             entity: {
               domain: "scene"
             }
-          };
+          } });
         } else {
-          control = document.createElement("input");
-          control.type = "text";
-          if (placeholder) {
-            control.placeholder = placeholder;
-          }
+          const input = document.createElement("input");
+          input.type = "text";
+          if (placeholder) input.placeholder = placeholder;
+          control = input;
         }
         control.dataset.field = field;
         control.dataset.value = nextValue;
@@ -1872,7 +1904,10 @@
         if (!this.shadowRoot) {
           return;
         }
-        const config = this._config || {};
+        const config = this._config;
+        const styles = getSafeStyles(config.styles);
+        const haptics = isObject(config.haptics) ? config.haptics : {};
+        const animations = isObject(config.animations) ? config.animations : {};
         const scenes = Array.isArray(config.scenes) ? config.scenes : [];
         const isSingle = config.layout === "single";
         const visibleScenes = isSingle ? scenes.slice(0, 1) : scenes;
@@ -2144,12 +2179,12 @@
           <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.person.haptics_section_title"))}</div>
           <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.person.haptics_section_hint"))}</div>
           <div class="editor-grid editor-grid--stacked">
-            ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", config.haptics?.enabled !== false)}
-            ${this._renderCheckboxField("ed.person.fallback_vibrate", "haptics.fallback_vibrate", config.haptics?.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", haptics.enabled !== false)}
+            ${this._renderCheckboxField("ed.person.fallback_vibrate", "haptics.fallback_vibrate", haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
           "ed.person.haptic_style",
           "haptics.style",
-          config.haptics?.style || "medium",
+          haptics.style || "medium",
           [
             { value: "selection", label: "ed.person.haptic_selection" },
             { value: "light", label: "ed.person.haptic_light" },
@@ -2176,19 +2211,19 @@
           </div>
           ${this._showStyleSection ? `
             <div class="editor-grid editor-grid--stacked">
-              ${this._renderColorField("ed.scenes.styles_accent", "styles.accent", config.styles?.accent || DEFAULT_CONFIG.styles.accent, { fullWidth: true })}
+              ${this._renderColorField("ed.scenes.styles_accent", "styles.accent", styles.accent || DEFAULT_CONFIG.styles.accent, { fullWidth: true })}
               <div class="editor-styles-subgroup editor-field--full">
                 <div class="editor-styles-subgroup__title">${escapeHtml(this._editorLabel("ed.scenes.styles_card_section"))}</div>
                 <div class="editor-styles-subgroup__hint">${escapeHtml(this._editorLabel("ed.scenes.styles_card_hint"))}</div>
-                ${this._renderColorField("ed.entity.style_card_bg", "styles.card.background", config.styles?.card?.background, { fullWidth: true })}
-                ${this._renderTextField("ed.entity.style_card_border", "styles.card.border", config.styles?.card?.border, { fullWidth: true })}
-                ${this._renderTextField("ed.entity.style_card_shadow", "styles.card.box_shadow", config.styles?.card?.box_shadow, { fullWidth: true })}
-                ${this._renderTextField("ed.person.style_card_padding", "styles.card.padding", config.styles?.card?.padding || DEFAULT_CONFIG.styles.card.padding)}
-                ${this._renderTextField("ed.person.style_card_gap", "styles.card.gap", config.styles?.card?.gap || DEFAULT_CONFIG.styles.card.gap)}
+                ${this._renderColorField("ed.entity.style_card_bg", "styles.card.background", styles.card?.background, { fullWidth: true })}
+                ${this._renderTextField("ed.entity.style_card_border", "styles.card.border", styles.card?.border, { fullWidth: true })}
+                ${this._renderTextField("ed.entity.style_card_shadow", "styles.card.box_shadow", styles.card?.box_shadow, { fullWidth: true })}
+                ${this._renderTextField("ed.person.style_card_padding", "styles.card.padding", styles.card?.padding || DEFAULT_CONFIG.styles.card.padding)}
+                ${this._renderTextField("ed.person.style_card_gap", "styles.card.gap", styles.card?.gap || DEFAULT_CONFIG.styles.card.gap)}
                 ${window.NodaliaUtils.renderEditorCardBorderRadiusHtml({
           escapeHtml,
           field: "styles.card.border_radius",
-          value: config.styles?.card?.border_radius || DEFAULT_CONFIG.styles.card.border_radius,
+          value: styles.card?.border_radius || DEFAULT_CONFIG.styles.card.border_radius,
           tHeading: this._editorLabel("ed.entity.style_card_radius_presets"),
           labels: {
             pill: this._editorLabel("ed.entity.chip_radius_pill"),
@@ -2202,25 +2237,25 @@
               <div class="editor-styles-subgroup editor-field--full">
                 <div class="editor-styles-subgroup__title">${escapeHtml(this._editorLabel("ed.scenes.styles_icon_section"))}</div>
                 <div class="editor-styles-subgroup__hint">${escapeHtml(this._editorLabel("ed.scenes.styles_icon_hint"))}</div>
-                ${this._renderTextField("ed.person.style_title_size", "styles.icon.size", config.styles?.icon?.size || DEFAULT_CONFIG.styles.icon.size)}
-                ${this._renderColorField("ed.entity.style_main_bubble_bg", "styles.icon.background", config.styles?.icon?.background, { fullWidth: true })}
-                ${this._renderColorField("ed.person.style_avatar_color", "styles.icon.color", config.styles?.icon?.color, { fullWidth: true })}
-                ${this._renderColorField("ed.entity.style_icon_on", "styles.icon.on_color", config.styles?.icon?.on_color, { fullWidth: true })}
+                ${this._renderTextField("ed.person.style_title_size", "styles.icon.size", styles.icon?.size || DEFAULT_CONFIG.styles.icon.size)}
+                ${this._renderColorField("ed.entity.style_main_bubble_bg", "styles.icon.background", styles.icon?.background, { fullWidth: true })}
+                ${this._renderColorField("ed.person.style_avatar_color", "styles.icon.color", styles.icon?.color, { fullWidth: true })}
+                ${this._renderColorField("ed.entity.style_icon_on", "styles.icon.on_color", styles.icon?.on_color, { fullWidth: true })}
               </div>
 
               <div class="editor-styles-subgroup editor-field--full">
                 <div class="editor-styles-subgroup__title">${escapeHtml(this._editorLabel("ed.scenes.styles_buttons_section"))}</div>
                 <div class="editor-styles-subgroup__hint">${escapeHtml(this._editorLabel("ed.scenes.styles_buttons_hint"))}</div>
-                ${this._renderColorField("ed.scenes.style_button_bg", "styles.button.background", config.styles?.button?.background, { fullWidth: true })}
-                ${this._renderTextField("ed.scenes.style_button_border", "styles.button.border", config.styles?.button?.border, { fullWidth: true })}
-                ${this._renderTextField("ed.scenes.style_button_min_height", "styles.button.min_height", config.styles?.button?.min_height || DEFAULT_CONFIG.styles.button.min_height)}
-                ${this._renderTextField("ed.entity.style_main_button_size", "styles.button.icon_size", config.styles?.button?.icon_size || DEFAULT_CONFIG.styles.button.icon_size)}
-                ${this._renderTextField("ed.circular_gauge.value_size", "styles.button.label_size", config.styles?.button?.label_size || DEFAULT_CONFIG.styles.button.label_size)}
-                ${this._renderTextField("ed.person.style_title_size", "styles.title_size", config.styles?.title_size || DEFAULT_CONFIG.styles.title_size)}
+                ${this._renderColorField("ed.scenes.style_button_bg", "styles.button.background", styles.button?.background, { fullWidth: true })}
+                ${this._renderTextField("ed.scenes.style_button_border", "styles.button.border", styles.button?.border, { fullWidth: true })}
+                ${this._renderTextField("ed.scenes.style_button_min_height", "styles.button.min_height", styles.button?.min_height || DEFAULT_CONFIG.styles.button.min_height)}
+                ${this._renderTextField("ed.entity.style_main_button_size", "styles.button.icon_size", styles.button?.icon_size || DEFAULT_CONFIG.styles.button.icon_size)}
+                ${this._renderTextField("ed.circular_gauge.value_size", "styles.button.label_size", styles.button?.label_size || DEFAULT_CONFIG.styles.button.label_size)}
+                ${this._renderTextField("ed.person.style_title_size", "styles.title_size", styles.title_size || DEFAULT_CONFIG.styles.title_size)}
                 ${window.NodaliaUtils.renderEditorChipBorderRadiusHtml({
           escapeHtml,
           field: "styles.button.border_radius",
-          value: config.styles?.button?.border_radius || DEFAULT_CONFIG.styles.button.border_radius,
+          value: styles.button?.border_radius || DEFAULT_CONFIG.styles.button.border_radius,
           tHeading: this._editorLabel("ed.entity.style_chip_radius"),
           labels: {
             pill: this._editorLabel("ed.entity.chip_radius_pill"),
@@ -2234,7 +2269,7 @@
               <div class="editor-styles-subgroup editor-field--full">
                 <div class="editor-styles-subgroup__title">${escapeHtml(this._editorLabel("ed.scenes.styles_launch_section"))}</div>
                 <div class="editor-styles-subgroup__hint">${escapeHtml(this._editorLabel("ed.scenes.styles_launch_hint"))}</div>
-                ${this._renderTextField("ed.scenes.launch_duration", "animations.launch_duration", config.animations?.launch_duration || DEFAULT_CONFIG.animations.launch_duration, { type: "number", valueType: "number" })}
+                ${this._renderTextField("ed.scenes.launch_duration", "animations.launch_duration", animations.launch_duration || DEFAULT_CONFIG.animations.launch_duration, { type: "number", valueType: "number" })}
               </div>
             </div>
           ` : ""}
@@ -2243,8 +2278,7 @@
     `;
         this.shadowRoot.querySelectorAll('[data-mounted-control="scene-entity"]').forEach((host) => this._mountSceneEntityPicker(host));
         this.shadowRoot.querySelectorAll("ha-icon-picker[data-field]").forEach((control) => {
-          control.hass = this._hass;
-          control.value = control.dataset.value || "";
+          Object.assign(control, { hass: this._hass, value: control.dataset.value || "" });
           control.addEventListener("value-changed", this._onShadowValueChanged);
         });
         this._ensureEditorControlsReady();
