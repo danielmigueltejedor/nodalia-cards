@@ -931,3 +931,31 @@ PIN/helper/action/missing-entity/focus cases pass. Full local browser suite:
 329 passed, one existing platform skip. Remaining unchecked modules:
 40. Hold 3.0.0-alpha.1 until full migration, including the shared handwritten
 utility/i18n runtime sources.
+
+## Fav view findings — 2026-10-01
+
+The Fav view still suppresses checking for responsive geometry, alarm modes/PIN,
+HA state, translations and service targets. Render signatures omit selected
+attribute values, light RGB/temperature and alarm feature/code fields. Fallback
+layout timers/frames lack ownership and raw service promises can reject. Check
+actual contracts, preserve targets/PIN semantics, clear abandoned work/PIN state,
+and distinguish absent grid sizing from zero.
+
+Fav view now passes strict checking and typed lint. Config projects known entity,
+attribute and security fields while preserving YAML extensions. Render signatures
+include selected attributes, light colour/temperature and alarm capabilities/PIN
+requirements. Numeric RGB channels cannot insert CSS/HTML, real zero channels are
+retained, and blank grid sizing remains absent. Service calls preserve explicit
+targets and catch synchronous/rejected failures. Layout timers/frames are owned;
+draft PINs survive style updates and clear on entity changes/disconnect. Switching
+to a missing entity also releases the expanded parent span. Ten verified unused
+imports and one never-written click suppression field were removed.
+
+1,540 valid view HTML/grid outputs and 1,400 valid editor outputs match main.
+All 740 unit tests pass; eighteen targeted browser cases passed before the final
+parent-span regression was added. Full local browser suite, including that
+regression: 341 passed, one existing platform skip. The service test initially
+read a setter-only HA property; correcting the fixture resolved all three failures.
+One older source assertion now checks the new service wrapper with the same
+explicit-target condition. Remaining unchecked modules: 39. Hold 3.0.0-alpha.1
+until the full migration, including shared utility/i18n runtime sources.

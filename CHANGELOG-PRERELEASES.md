@@ -10,7 +10,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
-- Check the Fav visual editor, preserve alarm PIN/helper settings, custom YAML fields and missing entity selections, and guard native/HA picker payloads.
+- Check the Fav view and visual editor, refresh selected attributes/light colours/alarm capabilities immediately, own layout work, preserve PIN/helper settings, service targets and custom YAML fields, and guard malformed inputs.
 
 - Check Insignia view/editor boundaries; refresh changed pictures, units and semantic tint, handle failed service calls and retain custom names and YAML extensions.
 

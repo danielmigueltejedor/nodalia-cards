@@ -81,7 +81,7 @@ Every card is registered with the `custom:nodalia-…` prefix. The complete set 
 - `custom:nodalia-lock-card`
 - `custom:nodalia-advance-vacuum-card`
 - `custom:nodalia-entity-card`
-- `custom:nodalia-fav-card`
+- [`custom:nodalia-fav-card`](docs/cards/fav-card.md)
 - [`custom:nodalia-insignia-card`](docs/cards/insignia-card.md)
 - `custom:nodalia-person-card`
 - [`custom:nodalia-scenes-card`](docs/cards/scenes-card.md)

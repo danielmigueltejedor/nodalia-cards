@@ -94,6 +94,10 @@ export function normalizeConfig(rawConfig: unknown = {}) {
     isObject(value) ? JSON.stringify(value) : String(value ?? "").trim()
   );
   const fields = {
+    entity: typeof config.entity === "string" ? config.entity : "",
+    alarm_code_entity: typeof config.alarm_code_entity === "string" ? config.alarm_code_entity : "",
+    state_attribute: typeof config.state_attribute === "string" ? config.state_attribute : "",
+    security: isObject(config.security) ? config.security : {},
     styles,
     tap_action: String(config.tap_action ?? "auto").trim() || "auto",
     tap_service: String(config.tap_service ?? "").trim(),
