@@ -27,3 +27,16 @@ being selected; runtime configuration omits empty rows.
 
 See [styling](../STYLING.md) for the shared card appearance and
 [testing](../testing.md) for the four-browser release gate.
+
+The visual editor keeps an empty series through Home Assistant configuration
+feedback. It converts the legacy single `entity` into the editable `entities`
+list and preserves each name and color when reordering or removing rows. Missing
+selected entities remain available. Invalid indices and unsupported row paths
+are ignored before extending or modifying the list. Draft names and focus survive
+HA updates, and unrelated YAML extensions retain false/zero values.
+
+Clearing numeric fields restores their defaults; an explicit zero range remains
+zero. Shared style and action sections retain translucent colors. Malformed
+haptic or animation settings use guarded editor controls. The unused historical
+editor, which was never registered, has been removed from source and standalone
+output; the registered editor and public card API keep their existing names.

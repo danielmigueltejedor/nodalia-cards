@@ -1236,3 +1236,25 @@ outputs across all four layouts, collapsed actions and expanded style/animation
 sections match main; restored double-tap details have browser coverage. The full
 local suite passes 482 cases with one existing skip. Remaining unchecked modules:
 23. Keep publication held until the entire migration and shared runtimes finish.
+
+## Graph editor findings — 2026-10-01
+
+The editor suppressed checking and the standalone entry deliberately retained
+633 lines of a historical editor. Reference inspection confirms that editor was
+never registered and the retention expression was its only consumer; remove the
+class, loader and retention expression while keeping the registered editor/API.
+
+The real editor now checks actual HA, normalized config, native events, DOM,
+series and focus contracts. Guard malformed haptic/animation groups and missing
+optional helpers. Bound series paths to existing rows and supported fields; blank
+button indices cannot delete row zero. Preserve draft series through HA feedback,
+legacy single-entity conversion, paired names/colors, missing selections, focused
+drafts, translucent styles and root YAML false/zero extensions. Automatic language
+is an explicit removable default. Update the older VM fixture to construct an
+actual CustomEvent for its picker event.
+
+All 747 unit tests and nine targeted browser cases pass. 1,400 valid editor HTML
+outputs match main. Full local suite: 491 passed, one existing skip. The initial
+new browser assertion used a color from the stub rather than the actual second
+series default; correct the fixture to #42a5f5. Remaining unchecked modules: 22.
+Publication stays held until the entire migration and shared runtimes finish.

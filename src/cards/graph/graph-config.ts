@@ -5,6 +5,7 @@ import { resolveEntityEntries, normalizeGraphPointCount } from "./graph-helpers"
 
 export const DEFAULT_CONFIG = {
   entity: "",
+  language: "auto",
   entities: [],
   name: "Temperature",
   icon: "mdi:thermometer",
@@ -75,8 +76,12 @@ export const STUB_CONFIG = {
 export function normalizeConfig(rawConfig: unknown = {}, { preserveEmptyEntities = false } = {}) {
   const defaults: Record<string, unknown> = DEFAULT_CONFIG;
   const merged = mergeConfig(defaults, isObject(rawConfig) ? rawConfig : {});
-  return { ...merged, entities: resolveEntityEntries(merged, { preserveEmpty: preserveEmptyEntities }),
+  const fields = { entity: typeof merged.entity === "string" ? merged.entity : "",
+    language: typeof merged.language === "string" ? merged.language : "auto",
+    entities: resolveEntityEntries(merged, { preserveEmpty: preserveEmptyEntities }),
     points: normalizeGraphPointCount(merged.points), styles: normalizeControlStyles(merged.styles, DEFAULT_CONFIG.styles) };
+  const normalized: typeof fields & Record<string, unknown> = { ...merged, ...fields };
+  return normalized;
 
 }
 
