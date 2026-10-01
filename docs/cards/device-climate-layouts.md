@@ -104,3 +104,19 @@ the existing 420 ms. Repeated HA updates do not extend either deadline. Render
 signatures do not consume the acknowledgement before that display is captured.
 Malformed stored memory is ignored, actual zero remains valid, and missing
 percentage/step values do not fabricate slider support.
+
+
+### Humidifier interaction ownership
+
+Cancelling a pointer/touch drag, touching outside, changing humidifiers or
+removing the card discards the draft without sending a humidity command.
+Successful releases retain the configured range and existing dial geometry.
+Rapid mode/fan-mode panel switches discard callbacks from older transitions.
+Panel animation events and deadlines complete once; entity changes and
+disconnection release their timers, listeners and deferred button frames.
+
+Repeated HA updates preserve the existing 3.2-second toggle and 420-ms
+visual-settle deadlines. Missing/null humidity and range values are ignored;
+actual zero remains a supported value and a missing target falls back to the
+range midpoint. External select/input-select mode controls and hidden options
+remain supported. The main card accepts Enter/Space.

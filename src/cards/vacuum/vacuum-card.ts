@@ -28,7 +28,9 @@ import {
 import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
 import type { HostPointerHoldBinding } from "../../core/types/nodalia-utils";
 import { parseFiniteNumericValue } from "../../shared/numeric-values";
+import { createMarkupElement } from "../../shared/view-markup";
 import { invokeHassService } from "../../shared/home-assistant-services";
+import { createViewAnimationWork, scheduleViewFallback, cancelViewPanelAnimations, releaseViewAnimationWork, waitForViewPanelAnimation } from "../../shared/view-animation-work";
 
 type ModeKind = "suction" | "mop";
 type RoomMapping = { cleaningAreaId: string; id: string; name: string };
@@ -62,7 +64,7 @@ class NodaliaVacuumCard extends HTMLElement {
   private _resizeFrame!: number;
   private _detachHostHold!: HostPointerHoldBinding;
   private _fallbackTimers!: Set<number>;
-  private _panelGeneration!: number;
+  private _panelWork!: ReturnType<typeof createViewAnimationWork>;
   private _panelAnimationCancels!: Set<() => void>;
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
@@ -96,9 +98,9 @@ class NodaliaVacuumCard extends HTMLElement {
     this._config = normalizeConfig({});
     this._hass = null;
     this._resizeFrame = 0;
-    this._fallbackTimers = new Set();
-    this._panelGeneration = 0;
-    this._panelAnimationCancels = new Set();
+    this._panelWork = createViewAnimationWork();
+    this._fallbackTimers = this._panelWork.timers;
+    this._panelAnimationCancels = this._panelWork.cancels;
     this._cardWidth = 0;
     this._isCompactLayout = false;
     this._activeModePanel = null;
@@ -1668,56 +1670,27 @@ class NodaliaVacuumCard extends HTMLElement {
       });
   }
 
-  _createMarkupNode(markup: string) {
-    if (!markup || typeof document === "undefined") {
-      return null;
-    }
-
-    const template = document.createElement("template");
-    template.innerHTML = String(markup).trim();
-    const node = template.content.firstElementChild;
-    return node instanceof HTMLElement ? node : null;
-  }
 
   _scheduleFallback(callback: () => void, delay: number) {
-    const timer = window.setTimeout(() => { this._fallbackTimers.delete(timer); callback(); }, delay);
-    this._fallbackTimers.add(timer);
-    return timer;
+    return scheduleViewFallback(this._panelWork, callback, delay);
   }
 
   _cancelPanelAnimations() {
-    ++this._panelGeneration;
-    this._panelAnimationCancels.forEach(cancel => cancel());
-    this._panelAnimationCancels.clear();
+    cancelViewPanelAnimations(this._panelWork);
   }
 
   _releaseViewWork() {
-    this._cancelPanelAnimations();
-    this._fallbackTimers.forEach(timer => window.clearTimeout(timer));
-    this._fallbackTimers.clear();
+    releaseViewAnimationWork(this._panelWork);
     window.NodaliaUtils?.clearDeferTimers?.(this);
   }
 
   _waitForPanelAnimation(panel: HTMLElement, callback: () => void, delay: number) {
-    let done = false;
-    let timer = 0;
-    const cancel = () => {
-      done = true;
-      panel.removeEventListener("animationend", onEnd);
-      window.clearTimeout(timer);
-      this._fallbackTimers.delete(timer);
-      this._panelAnimationCancels.delete(cancel);
-    };
-    const finish = () => { if (!done) { cancel(); callback(); } };
-    const onEnd = (event: Event) => { if (event.target === panel) finish(); };
-    panel.addEventListener("animationend", onEnd);
-    timer = this._scheduleFallback(finish, delay);
-    this._panelAnimationCancels.add(cancel);
+    waitForViewPanelAnimation(this._panelWork, panel, callback, delay);
   }
 
   _setVisiblePanelKey(panelKey: string, state = this._getState()) {
     this._cancelPanelAnimations();
-    const generation = this._panelGeneration;
+    const generation = this._panelWork.generation;
     const nextPanelKey = panelKey === "room"
       ? (this._canSelectRooms(state) ? "room" : "")
       : this._getActiveModeDescriptor(state, panelKey)?.kind || "";
@@ -1743,7 +1716,7 @@ class NodaliaVacuumCard extends HTMLElement {
       }
 
       if (panelMarkup) {
-        const panelNode = this._createMarkupNode(`
+        const panelNode = createMarkupElement(`
           <div class="vacuum-card__panel-shell" data-panel-key="${nextPanelKey}">
             <div class="vacuum-card__panel-inner">
               ${panelMarkup}
@@ -1775,7 +1748,7 @@ class NodaliaVacuumCard extends HTMLElement {
       panel.classList.add("vacuum-card__panel-shell--leaving");
 
       const finalizeRemoval = () => {
-        if (generation !== this._panelGeneration || !this.isConnected || !panelsHost.isConnected) return;
+        if (generation !== this._panelWork.generation || !this.isConnected || !panelsHost.isConnected) return;
         if (panel.isConnected) {
           panel.remove();
         }
@@ -1789,14 +1762,14 @@ class NodaliaVacuumCard extends HTMLElement {
     };
 
     const appendPanel = () => {
-      if (generation !== this._panelGeneration || !this.isConnected || !panelsHost.isConnected) return;
+      if (generation !== this._panelWork.generation || !this.isConnected || !panelsHost.isConnected) return;
       if (!panelMarkup) {
         panelsHost.replaceChildren();
         this._notifyLayoutChange();
         return;
       }
 
-      const panelNode = this._createMarkupNode(`
+      const panelNode = createMarkupElement(`
         <div class="vacuum-card__panel-shell vacuum-card__panel-shell--entering" data-panel-key="${nextPanelKey}">
           <div class="vacuum-card__panel-inner">
             ${panelMarkup}

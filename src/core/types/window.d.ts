@@ -45,6 +45,8 @@ interface NodaliaI18nApi {
   translateWeatherForecastUi?: (hass: unknown, language: string, key: string) => string;
   translateWeatherCondition?: (hass: unknown, language: string, value: unknown) => string;
   translateMeteoalarmTerm?: (hass: unknown, language: string, value: unknown) => string;
+  translateHumidifierAria?: (hass: unknown, language: string, key: string, fallback?: string) => string;
+  translateHumidifierDeviceState?: (hass: unknown, language: string, value: unknown) => string;
   translateHumidifierMode?: (hass: unknown, language: string, value: unknown) => string;
   translateAdvanceVacuumVacuumMode?: (hass: unknown, language: string, value: unknown, kind?: string) => string;
   translateAdvanceVacuumReportedState?: (hass: unknown, language: string, key: unknown, fallback?: unknown) => string;

@@ -5,7 +5,6 @@
   "src/cards/climate/climate-card.ts",
   "src/cards/entity/entity-card.ts",
   "src/cards/graph/graph-card.ts",
-  "src/cards/humidifier/humidifier-card.ts",
   "src/cards/light/light-card.ts",
   "src/cards/media-player/media-player-card.ts",
   "src/cards/navigation/navigation-card.ts",

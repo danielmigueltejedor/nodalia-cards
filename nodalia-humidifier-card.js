@@ -464,6 +464,93 @@
     }
   }
 
+  // src/shared/numeric-values.ts
+  function parseFiniteNumericValue(value) {
+    if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
+  // src/shared/view-markup.ts
+  function createMarkupElement(markup) {
+    if (!markup || typeof document === "undefined") return null;
+    const template = document.createElement("template");
+    template.innerHTML = markup.trim();
+    const node = template.content.firstElementChild;
+    return node instanceof HTMLElement ? node : null;
+  }
+
+  // src/shared/home-assistant-services.ts
+  function callHassService(hass, domain, service, data = {}, target = null) {
+    if (!hass?.callService) return;
+    const failure = (error) => console.warn("Nodalia Cards: service call failed", `${domain}.${service}`, error);
+    try {
+      void Promise.resolve(target !== null ? hass.callService(domain, service, data, target) : hass.callService(domain, service, data)).catch(failure);
+    } catch (error) {
+      failure(error);
+    }
+  }
+  function invokeHassService(host, hass, domain, service, data = {}, target = null) {
+    const utils2 = window.NodaliaUtils;
+    const invoke = utils2?.invokeHomeAssistantService;
+    if (!invoke) {
+      callHassService(hass, domain, service, data, target);
+      return;
+    }
+    const failure = (error) => console.warn("Nodalia Cards: service call failed", `${domain}.${service}`, error);
+    try {
+      void Promise.resolve(invoke.call(utils2, host, hass, domain, service, data, target)).catch(failure);
+    } catch (error) {
+      failure(error);
+    }
+  }
+
+  // src/shared/view-animation-work.ts
+  function createViewAnimationWork() {
+    return { generation: 0, timers: /* @__PURE__ */ new Set(), cancels: /* @__PURE__ */ new Set() };
+  }
+  function scheduleViewFallback(work, callback, delay) {
+    const timer = window.setTimeout(() => {
+      work.timers.delete(timer);
+      callback();
+    }, delay);
+    work.timers.add(timer);
+    return timer;
+  }
+  function cancelViewPanelAnimations(work) {
+    ++work.generation;
+    work.cancels.forEach((cancel) => cancel());
+    work.cancels.clear();
+  }
+  function releaseViewAnimationWork(work) {
+    cancelViewPanelAnimations(work);
+    work.timers.forEach((timer) => window.clearTimeout(timer));
+    work.timers.clear();
+  }
+  function waitForViewPanelAnimation(work, panel, callback, delay) {
+    let done = false;
+    let timer = 0;
+    const cancel = () => {
+      done = true;
+      panel.removeEventListener("animationend", onEnd);
+      window.clearTimeout(timer);
+      work.timers.delete(timer);
+      work.cancels.delete(cancel);
+    };
+    const finish = () => {
+      if (!done) {
+        cancel();
+        callback();
+      }
+    };
+    const onEnd = (event) => {
+      if (event.target === panel) finish();
+    };
+    panel.addEventListener("animationend", onEnd);
+    timer = scheduleViewFallback(work, finish, delay);
+    work.cancels.add(cancel);
+  }
+
   // src/cards/humidifier/humidifier-card.ts
   var _lazyNodaliaHumidifierCard;
   function loadNodaliaHumidifierCard() {
@@ -486,7 +573,7 @@
       }
       _nodaliaConstruct() {
         this.attachShadow({ mode: "open" });
-        this._config = null;
+        this._config = normalizeConfig({});
         this._hass = null;
         this._optimisticToggle = null;
         this._optimisticToggleTimer = 0;
@@ -501,9 +588,7 @@
         this._activeSliderDrag = null;
         this._pendingRenderAfterDrag = false;
         this._skipNextSliderChange = null;
-        this._dragFrame = 0;
         window.NodaliaUtils?.clearDeferTimers?.(this);
-        this._pendingDragUpdate = null;
         this._dragWindowListenersAttached = false;
         this._lastRenderSignature = "";
         this._lastEntityRevision = "";
@@ -518,32 +603,44 @@
         this._controlsTransition = null;
         this._panelTransition = null;
         this._suppressNextHumidifierTap = false;
+        this._resizeFrame = 0;
+        this._bounceFrames = /* @__PURE__ */ new Set();
+        this._panelWork = createViewAnimationWork();
+        this._fallbackTimers = this._panelWork.timers;
+        this._panelAnimationCancels = this._panelWork.cancels;
         this._resizeObserver = new ResizeObserver((entries) => {
-          const entry = entries[0];
-          if (!entry) {
-            return;
-          }
-          const nextWidth = Math.round(entry.contentRect?.width || this.clientWidth || 0);
-          if (nextWidth < 48) {
-            return;
-          }
-          const nextCompact = this._shouldUseCompactLayout(nextWidth);
-          if (nextWidth === this._cardWidth && nextCompact === this._isCompactLayout) {
-            return;
-          }
-          this._cardWidth = nextWidth;
-          this._isCompactLayout = nextCompact;
-          if (this._activeSliderDrag) {
-            this._pendingRenderAfterDrag = true;
-            return;
-          }
-          const signature = this._getRenderSignature();
-          if (signature === this._lastRenderSignature) {
-            return;
-          }
-          this._lastRenderSignature = signature;
-          this._render();
+          if (this._resizeFrame) window.cancelAnimationFrame(this._resizeFrame);
+          this._resizeFrame = window.requestAnimationFrame(() => {
+            this._resizeFrame = 0;
+            if (!this.isConnected) return;
+            const entry = entries[0];
+            if (!entry) {
+              return;
+            }
+            const nextWidth = Math.round(entry.contentRect?.width || this.clientWidth || 0);
+            if (nextWidth < 48) {
+              return;
+            }
+            const nextCompact = this._shouldUseCompactLayout(nextWidth);
+            if (nextWidth === this._cardWidth && nextCompact === this._isCompactLayout) {
+              return;
+            }
+            this._cardWidth = nextWidth;
+            this._isCompactLayout = nextCompact;
+            if (this._activeSliderDrag) {
+              this._pendingRenderAfterDrag = true;
+              return;
+            }
+            const signature = this._getRenderSignature();
+            if (signature === this._lastRenderSignature) {
+              return;
+            }
+            this._lastRenderSignature = signature;
+            this._render();
+          });
         });
+        this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
+        this.shadowRoot?.addEventListener("keydown", this._onShadowKeyDown);
         this._onShadowClick = this._onShadowClick.bind(this);
         this._onShadowInput = this._onShadowInput.bind(this);
         this._onShadowChange = this._onShadowChange.bind(this);
@@ -557,24 +654,24 @@
         this._onWindowTouchStartCapture = this._onWindowTouchStartCapture.bind(this);
         this._onWindowTouchMove = this._onWindowTouchMove.bind(this);
         this._onWindowTouchEnd = this._onWindowTouchEnd.bind(this);
-        this.shadowRoot.addEventListener("click", this._onShadowClick);
-        this.shadowRoot.addEventListener("input", this._onShadowInput);
-        this.shadowRoot.addEventListener("change", this._onShadowChange);
-        this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
-        this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown);
-        if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
-          this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
+        this.shadowRoot?.addEventListener("click", this._onShadowClick);
+        this.shadowRoot?.addEventListener("input", this._onShadowInput);
+        this.shadowRoot?.addEventListener("change", this._onShadowChange);
+        this.shadowRoot?.addEventListener("pointerdown", this._onShadowPointerDown);
+        this.shadowRoot?.addEventListener("mousedown", this._onShadowMouseDown);
+        if (typeof PointerEvent !== "function") {
+          this.shadowRoot?.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
         }
         this._detachHostHold = typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function" ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
           resolveZone: (event) => {
             const path = event.composedPath();
-            if (path.some((node) => node instanceof HTMLInputElement && node.dataset?.humidifierControl)) {
+            if (path.some((node) => node instanceof HTMLInputElement && Boolean(node.dataset.humidifierControl))) {
               return null;
             }
             if (window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
               return null;
             }
-            const actionButton = path.find((node) => node instanceof HTMLElement && node.dataset?.humidifierAction);
+            const actionButton = path.find((node) => node instanceof HTMLElement && Boolean(node.dataset.humidifierAction));
             const zone = actionButton?.dataset?.humidifierAction;
             return zone === "body" || zone === "icon" ? zone : null;
           },
@@ -607,15 +704,13 @@
       disconnectedCallback() {
         this._detachHostHold?.();
         this._resizeObserver?.disconnect();
-        if (this._activeSliderDrag) {
-          this._activeSliderDrag.dial?.classList?.remove("is-dragging");
-          this._activeSliderDrag = null;
-        }
-        this._detachWindowDragListeners();
-        if (this._dragFrame) {
-          window.cancelAnimationFrame(this._dragFrame);
-          this._dragFrame = 0;
-        }
+        if (this._resizeFrame) window.cancelAnimationFrame(this._resizeFrame);
+        this._resizeFrame = 0;
+        this._releaseViewWork();
+        this._cancelSliderDrag(false);
+        this._skipNextSliderChange = null;
+        window.NodaliaUtils?.cancelCardZoneTap?.(this);
+        this._suppressNextHumidifierTap = false;
         if (this._animationCleanupTimer) {
           window.clearTimeout(this._animationCleanupTimer);
           this._animationCleanupTimer = 0;
@@ -627,7 +722,6 @@
         this._powerTransition = null;
         this._controlsTransition = null;
         this._panelTransition = null;
-        this._pendingDragUpdate = null;
         this._animateContentOnNextRender = true;
         this._lastRenderSignature = "";
         this._clearOptimisticToggleTimer();
@@ -638,7 +732,26 @@
         const previousEntity = this._config?.entity || "";
         this._config = normalizeConfig(config || {});
         window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
-        if (previousEntity && previousEntity !== this._config.entity) {
+        if (previousEntity !== this._config.entity) {
+          this._releaseViewWork();
+          window.clearTimeout(this._animationCleanupTimer);
+          window.clearTimeout(this._entranceAnimationResetTimer);
+          this._animationCleanupTimer = 0;
+          this._entranceAnimationResetTimer = 0;
+          this._powerTransition = null;
+          this._controlsTransition = null;
+          this._panelTransition = null;
+          this._lastRenderedIsOn = null;
+          this._lastRenderedPanelKey = "";
+          this._lastControlsMarkup = "";
+          this._lastPanelMarkup = "";
+          this._lastEntityRevision = "";
+          this._cancelSliderDrag(false);
+          window.NodaliaUtils?.cancelCardZoneTap?.(this);
+          this._suppressNextHumidifierTap = false;
+          this._skipNextSliderChange = null;
+          this._modePanelOpen = false;
+          this._fanModePanelOpen = false;
           this._draftHumidity.delete(previousEntity);
           this._lastKnownOnState.delete(previousEntity);
           this._clearOptimisticVisualSettle();
@@ -695,8 +808,8 @@
         }
         const hadOptimisticToggle = Boolean(this._optimisticToggle);
         if (!revisionUnchanged || hasPendingOptimistic) {
-          this._syncLastKnownOnState(actualState);
           this._syncOptimisticToggleState(actualState);
+          this._syncLastKnownOnState(actualState);
         }
         nextSignature = this._getRenderSignature();
         const optimisticJustConfirmed = hadOptimisticToggle && !this._optimisticToggle;
@@ -729,7 +842,9 @@
         const modeEntityId = this._config?.mode_entity || "";
         const helperEntityId = this._config?.fan_mode_entity || "";
         const actualState = entityId ? hass?.states?.[entityId] || null : null;
-        const state = hass === this._hass ? this._buildOptimisticToggleState(actualState) : actualState;
+        const toggle = this._optimisticToggle;
+        const pending = hass === this._hass && toggle && toggle.entityId === entityId && Date.now() < toggle.expiresAt && this._isHumidifierToggleableState(actualState) && normalizeTextKey(actualState?.state) !== normalizeTextKey(toggle.expectedState);
+        const state = pending ? this._composeOptimisticToggleState(actualState, toggle) : actualState;
         const modeEntityState = modeEntityId ? hass?.states?.[modeEntityId] || null : null;
         const helperState = helperEntityId ? hass?.states?.[helperEntityId] || null : null;
         const attrs = state?.attributes || {};
@@ -740,6 +855,7 @@
           String(attrs._nodalia_optimistic_toggle || ""),
           String(attrs.friendly_name || ""),
           String(attrs.icon || ""),
+          String(attrs.device_class || ""),
           this._config?.show_entity_picture === true,
           String(this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || ""),
           Number(attrs.humidity ?? -1),
@@ -767,7 +883,7 @@
         return values.join("::");
       }
       _getConfiguredGridColumns() {
-        const numericColumns = Number(this._config?.grid_options?.columns);
+        const numericColumns = Number(isObject(this._config.grid_options) ? this._config.grid_options.columns : void 0);
         return Number.isFinite(numericColumns) && numericColumns > 0 ? numericColumns : null;
       }
       _getCompactLayoutThreshold() {
@@ -812,17 +928,18 @@
         };
       }
       _getStoredHumidifierMemory() {
-        if (typeof window === "undefined" || !window.localStorage) {
+        if (typeof window === "undefined") {
           return {};
         }
         try {
-          return JSON.parse(window.localStorage.getItem(HUMIDIFIER_MEMORY_STORAGE_KEY) || "{}");
+          const parsed = JSON.parse(window.localStorage.getItem(HUMIDIFIER_MEMORY_STORAGE_KEY) || "{}");
+          return isObject(parsed) ? parsed : {};
         } catch {
           return {};
         }
       }
       _storeHumidifierMemory(entityId, snapshot) {
-        if (!entityId || !snapshot || typeof window === "undefined" || !window.localStorage) {
+        if (!entityId || !snapshot || typeof window === "undefined") {
           return;
         }
         try {
@@ -837,15 +954,15 @@
       }
       _getStoredHumidifierSnapshot(entityId) {
         const stored = this._getStoredHumidifierMemory()[entityId];
-        if (!stored?.attributes || typeof stored.attributes !== "object") {
+        if (!isObject(stored) || !isObject(stored.attributes)) {
           return null;
         }
         return {
           entity_id: entityId,
           state: "on",
           attributes: { ...stored.attributes || {} },
-          last_changed: stored.last_changed || (/* @__PURE__ */ new Date()).toISOString(),
-          last_updated: stored.last_changed || (/* @__PURE__ */ new Date()).toISOString()
+          last_changed: typeof stored.last_changed === "string" ? stored.last_changed : (/* @__PURE__ */ new Date()).toISOString(),
+          last_updated: typeof stored.last_changed === "string" ? stored.last_changed : (/* @__PURE__ */ new Date()).toISOString()
         };
       }
       _syncLastKnownOnState(actualState) {
@@ -854,16 +971,15 @@
           return;
         }
         const snapshot = this._createStateSnapshot(actualState);
+        if (!snapshot) return;
         if (actualState.state === "on") {
           this._lastKnownOnState.set(entityId, snapshot);
           this._storeHumidifierMemory(entityId, snapshot);
           return;
         }
         const attrs = actualState.attributes || {};
-        const rememberedHumidity = Number(
-          Number.isFinite(Number(attrs.humidity)) ? attrs.humidity : attrs.target_humidity
-        );
-        if (Number.isFinite(rememberedHumidity) && rememberedHumidity > 0) {
+        const rememberedHumidity = parseFiniteNumericValue(attrs.humidity) ?? parseFiniteNumericValue(attrs.target_humidity);
+        if (rememberedHumidity !== null && rememberedHumidity > 0) {
           this._lastKnownOnState.set(entityId, {
             ...snapshot,
             state: "on"
@@ -881,7 +997,7 @@
         }
         const stored = this._getStoredHumidifierSnapshot(entityId);
         if (stored) {
-          this._lastKnownOnState.set(entityId, this._createStateSnapshot(stored));
+          this._lastKnownOnState.set(entityId, stored);
         }
         return stored;
       }
@@ -1114,12 +1230,13 @@
         return String(state?.state || "") === "on";
       }
       _supportsTargetHumidity(state) {
-        return Number.isFinite(Number(state?.attributes?.humidity)) || Number.isFinite(Number(state?.attributes?.target_humidity)) || Number.isFinite(Number(state?.attributes?.min_humidity)) && Number.isFinite(Number(state?.attributes?.max_humidity));
+        const attrs = state?.attributes || {};
+        return parseFiniteNumericValue(attrs.humidity) !== null || parseFiniteNumericValue(attrs.target_humidity) !== null || parseFiniteNumericValue(attrs.min_humidity) !== null && parseFiniteNumericValue(attrs.max_humidity) !== null;
       }
       _getHumidityRange(state) {
-        const min = Number(state?.attributes?.min_humidity);
-        const max = Number(state?.attributes?.max_humidity);
-        if (Number.isFinite(min) && Number.isFinite(max) && min < max) {
+        const min = parseFiniteNumericValue(state?.attributes?.min_humidity);
+        const max = parseFiniteNumericValue(state?.attributes?.max_humidity);
+        if (min !== null && max !== null && min < max) {
           return {
             min,
             max
@@ -1135,13 +1252,13 @@
         if (entityId && this._draftHumidity.has(entityId)) {
           return clamp(Number(this._draftHumidity.get(entityId)), this._getHumidityRange(state).min, this._getHumidityRange(state).max);
         }
-        const rawHumidity = Number(state?.attributes?.humidity);
-        if (Number.isFinite(rawHumidity)) {
+        const rawHumidity = parseFiniteNumericValue(state?.attributes?.humidity);
+        if (rawHumidity !== null) {
           const range2 = this._getHumidityRange(state);
           return clamp(rawHumidity, range2.min, range2.max);
         }
-        const rawTargetHumidity = Number(state?.attributes?.target_humidity);
-        if (Number.isFinite(rawTargetHumidity)) {
+        const rawTargetHumidity = parseFiniteNumericValue(state?.attributes?.target_humidity);
+        if (rawTargetHumidity !== null) {
           const range2 = this._getHumidityRange(state);
           return clamp(rawTargetHumidity, range2.min, range2.max);
         }
@@ -1154,12 +1271,12 @@
         if (!entityId || !state || !this._draftHumidity.has(entityId)) {
           return;
         }
-        const rawHumidity = Number(state.attributes?.humidity);
-        const rawTargetHumidity = Number(state.attributes?.target_humidity);
-        const actualHumidity = Number.isFinite(rawHumidity) ? rawHumidity : rawTargetHumidity;
+        const rawHumidity = parseFiniteNumericValue(state.attributes?.humidity);
+        const rawTargetHumidity = parseFiniteNumericValue(state.attributes?.target_humidity);
+        const actualHumidity = rawHumidity ?? rawTargetHumidity;
         const draftHumidity = Number(this._draftHumidity.get(entityId));
         const tolerance = Math.max(1, 1 / 2);
-        if (Number.isFinite(actualHumidity) && Number.isFinite(draftHumidity) && Math.abs(actualHumidity - draftHumidity) <= tolerance) {
+        if (actualHumidity !== null && Number.isFinite(draftHumidity) && Math.abs(actualHumidity - draftHumidity) <= tolerance) {
           this._draftHumidity.delete(entityId);
         }
       }
@@ -1249,7 +1366,7 @@
         return this._isOn(state) ? styles?.icon?.on_color || DEFAULT_CONFIG.styles.icon.on_color : styles?.icon?.off_color || DEFAULT_CONFIG.styles.icon.off_color;
       }
       _getAnimationSettings() {
-        const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+        const configuredAnimations = isObject(this._config.animations) ? this._config.animations : DEFAULT_CONFIG.animations;
         return {
           enabled: configuredAnimations.enabled !== false,
           iconAnimation: configuredAnimations.icon_animation !== false,
@@ -1261,7 +1378,7 @@
       }
       _isTransitionAnimationActive(now = Date.now()) {
         return Boolean(
-          this._powerTransition?.endsAt > now || this._controlsTransition?.endsAt > now || this._panelTransition?.endsAt > now
+          (this._powerTransition?.endsAt ?? 0) > now || (this._controlsTransition?.endsAt ?? 0) > now || (this._panelTransition?.endsAt ?? 0) > now
         );
       }
       _shouldSkipRenderForUnchangedSignature() {
@@ -1323,26 +1440,29 @@
         if (typeof schedule === "function") {
           schedule(this, done, animations.buttonBounceDuration + 40);
         } else {
-          window.setTimeout(done, animations.buttonBounceDuration + 40);
+          this._scheduleFallback(done, animations.buttonBounceDuration + 40);
         }
       }
       _triggerRenderedButtonBounce(selector) {
         if (!selector || !this.shadowRoot || typeof window === "undefined") {
           return;
         }
-        window.requestAnimationFrame(() => {
+        const frame = window.requestAnimationFrame(() => {
+          this._bounceFrames.delete(frame);
+          if (!this.isConnected) return;
           const button = this.shadowRoot?.querySelector(selector);
           if (!(button instanceof HTMLElement)) {
             return;
           }
           this._triggerButtonBounce(button);
         });
+        this._bounceFrames.add(frame);
       }
       _setHumidifierService(service, data = {}) {
         if (!this._hass || !this._config?.entity) {
           return;
         }
-        this._hass.callService("humidifier", service, {
+        invokeHassService(this, this._hass, "humidifier", service, {
           entity_id: this._config.entity,
           ...data
         });
@@ -1353,14 +1473,14 @@
         }
         const [domain] = entityId.split(".");
         if (domain === "select") {
-          this._hass.callService("select", "select_option", {
+          invokeHassService(this, this._hass, "select", "select_option", {
             entity_id: entityId,
             option
           });
           return;
         }
         if (domain === "input_select") {
-          this._hass.callService("input_select", "select_option", {
+          invokeHassService(this, this._hass, "input_select", "select_option", {
             entity_id: entityId,
             option
           });
@@ -1415,6 +1535,7 @@
           return deepClone(rawValue);
         }
         try {
+          if (typeof rawValue !== "string") return {};
           const parsed = JSON.parse(rawValue);
           return isObject(parsed) ? parsed : {};
         } catch (_error) {
@@ -1436,9 +1557,9 @@
         if (!domains.length && !services.length) {
           return false;
         }
-        return services.includes(normalizedService) || domains.includes(domain);
+        return services.includes(normalizedService) || Boolean(domain && domains.includes(domain));
       }
-      _callConfiguredService(serviceValue, entityId = this._config?.entity, rawData = "", rawTarget = "") {
+      _callConfiguredService(serviceValue, entityId = this._config.entity, rawData = "", rawTarget = "") {
         if (!this._hass || !serviceValue) {
           return;
         }
@@ -1456,7 +1577,7 @@
         if (!hasTarget && entityId && payload.entity_id === void 0) {
           payload.entity_id = entityId;
         }
-        this._hass.callService(domain, service, payload, hasTarget ? target : void 0);
+        invokeHassService(this, this._hass, domain, service, payload, hasTarget ? target : null);
       }
       _openConfiguredUrl(urlValue, newTab = false) {
         const url = window.NodaliaUtils?.sanitizeActionUrl(urlValue, { allowRelative: true }) || "";
@@ -1664,16 +1785,24 @@
           }
         });
       }
-      _createMarkupNode(markup) {
-        if (!markup || typeof document === "undefined") {
-          return null;
-        }
-        const template = document.createElement("template");
-        template.innerHTML = String(markup).trim();
-        const node = template.content.firstElementChild;
-        return node instanceof HTMLElement ? node : null;
+      _scheduleFallback(callback, delay) {
+        return scheduleViewFallback(this._panelWork, callback, delay);
+      }
+      _cancelPanelAnimations() {
+        cancelViewPanelAnimations(this._panelWork);
+      }
+      _releaseViewWork() {
+        releaseViewAnimationWork(this._panelWork);
+        this._bounceFrames.forEach((frame) => window.cancelAnimationFrame(frame));
+        this._bounceFrames.clear();
+        window.NodaliaUtils?.clearDeferTimers?.(this);
+      }
+      _waitForPanelAnimation(panel, callback, delay) {
+        waitForViewPanelAnimation(this._panelWork, panel, callback, delay);
       }
       _setVisiblePanelKey(panelKey, state = this._getState()) {
+        this._cancelPanelAnimations();
+        const generation = this._panelWork.generation;
         const nextPanelKey = panelKey === "mode" || panelKey === "fan" ? panelKey : "";
         this._modePanelOpen = nextPanelKey === "mode";
         this._fanModePanelOpen = nextPanelKey === "fan";
@@ -1695,7 +1824,7 @@
             existingPanel.remove();
           }
           if (panelMarkup) {
-            const panelNode = this._createMarkupNode(`
+            const panelNode = createMarkupElement(`
           <div class="humidifier-card__panel-shell" data-panel-key="${nextPanelKey}">
             <div class="humidifier-card__panel-inner">
               ${panelMarkup}
@@ -1720,6 +1849,7 @@
           panel.classList.remove("humidifier-card__panel-shell--entering");
           panel.classList.add("humidifier-card__panel-shell--leaving");
           const finalizeRemoval = () => {
+            if (generation !== this._panelWork.generation || !this.isConnected) return;
             if (panel.isConnected) {
               panel.remove();
             }
@@ -1727,19 +1857,14 @@
               onDone();
             }
           };
-          panel.addEventListener("animationend", finalizeRemoval, { once: true });
-          const schedule = window.NodaliaUtils?.scheduleDeferTimer;
-          if (typeof schedule === "function") {
-            schedule(this, finalizeRemoval, animations.panelDuration + 80);
-          } else {
-            window.setTimeout(finalizeRemoval, animations.panelDuration + 80);
-          }
+          this._waitForPanelAnimation(panel, finalizeRemoval, animations.panelDuration + 80);
         };
         const appendPanel = () => {
+          if (generation !== this._panelWork.generation || !this.isConnected) return;
           if (!panelMarkup) {
             return;
           }
-          const panelNode = this._createMarkupNode(`
+          const panelNode = createMarkupElement(`
         <div class="humidifier-card__panel-shell humidifier-card__panel-shell--entering" data-panel-key="${nextPanelKey}">
           <div class="humidifier-card__panel-inner">
             ${panelMarkup}
@@ -1751,17 +1876,13 @@
             return;
           }
           controlsInner.appendChild(panelNode);
-          const schedule = window.NodaliaUtils?.scheduleDeferTimer;
           const finalizeEnter = () => {
+            if (generation !== this._panelWork.generation || !this.isConnected) return;
             if (panelNode.isConnected) {
               panelNode.classList.remove("humidifier-card__panel-shell--entering");
             }
           };
-          if (typeof schedule === "function") {
-            schedule(this, finalizeEnter, animations.panelDuration + 80);
-          } else {
-            window.setTimeout(finalizeEnter, animations.panelDuration + 80);
-          }
+          this._waitForPanelAnimation(panelNode, finalizeEnter, animations.panelDuration + 80);
         };
         if (!nextPanelKey) {
           if (existingPanel instanceof HTMLElement) {
@@ -1784,6 +1905,11 @@
             if (panelInner instanceof HTMLElement) {
               panelInner.innerHTML = panelMarkup;
             }
+            if (existingPanel.classList.contains("humidifier-card__panel-shell--entering")) {
+              this._waitForPanelAnimation(existingPanel, () => {
+                if (generation === this._panelWork.generation) existingPanel.classList.remove("humidifier-card__panel-shell--entering");
+              }, animations.panelDuration + 80);
+            }
             return;
           }
         }
@@ -1794,18 +1920,19 @@
         appendPanel();
       }
       _triggerHaptic(styleOverride = null) {
-        const haptics = this._config?.haptics || {};
+        const haptics = isObject(this._config.haptics) ? this._config.haptics : {};
         if (haptics.enabled !== true) {
           return;
         }
-        const style = styleOverride || haptics.style || "medium";
+        const style = String(styleOverride || haptics.style || "medium");
         fireEvent(this, "haptic", style, {
           bubbles: true,
           cancelable: false,
           composed: true
         });
         if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
-          navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
+          const patterns = HAPTIC_PATTERNS;
+          navigator.vibrate(patterns[style] || HAPTIC_PATTERNS.selection);
         }
       }
       _updateHumidityPreview(value) {
@@ -1831,7 +1958,9 @@
         }
       }
       _hapticOnSliderStep(steppedValue, { commit = false } = {}) {
-        if (this._config?.haptics?.scrolls?.humidity === false) {
+        const haptics = isObject(this._config.haptics) ? this._config.haptics : {};
+        const scrolls = isObject(haptics.scrolls) ? haptics.scrolls : {};
+        if (scrolls.humidity === false) {
           return;
         }
         const next = Number(steppedValue);
@@ -1888,9 +2017,10 @@
         }
       }
       _onShadowPointerDown(event) {
+        if (!(event instanceof PointerEvent)) return;
         const path = event.composedPath();
         const slider = path.find(
-          (node) => node instanceof HTMLInputElement && node.type === "range" && node.dataset?.humidifierControl
+          (node) => node instanceof HTMLInputElement && node.type === "range" && Boolean(node.dataset.humidifierControl)
         );
         if (!this._activeSliderDrag && slider && (typeof event.button !== "number" || event.button === 0)) {
           this._startSliderDrag(slider, event.clientX, event, event.pointerId);
@@ -1905,7 +2035,7 @@
         if (controlAction) {
           return;
         }
-        const dial = path.find((node) => node instanceof HTMLElement && node.classList?.contains("humidifier-card__circular-dial"));
+        const dial = path.find((node) => node instanceof HTMLElement && node.classList.contains("humidifier-card__circular-dial"));
         if (!dial || !this._supportsTargetHumidity(this._getState())) {
           return;
         }
@@ -1928,7 +2058,8 @@
           this._applyCircularDialValue(nextValue2, { commit: false });
           return;
         }
-        const nextValue = getRangeValueFromGeometry(drag?.geometry, slider.value, clientX);
+        if (!slider || drag?.kind !== "linear") return;
+        const nextValue = getRangeValueFromGeometry(drag.geometry, slider.value, clientX);
         slider.value = String(nextValue);
         this._applySliderValue(slider, nextValue, { commit: false });
       }
@@ -1960,11 +2091,6 @@
           event.preventDefault();
           event.stopPropagation();
         }
-        this._pendingDragUpdate = null;
-        if (this._dragFrame) {
-          window.cancelAnimationFrame(this._dragFrame);
-          this._dragFrame = 0;
-        }
         const nextValue = getCircularLayoutDialValueFromPoint(
           dial,
           clientX,
@@ -1993,11 +2119,6 @@
           event.preventDefault();
           event.stopPropagation();
         }
-        this._pendingDragUpdate = null;
-        if (this._dragFrame) {
-          window.cancelAnimationFrame(this._dragFrame);
-          this._dragFrame = 0;
-        }
         const nextValue = getRangeValueFromGeometry(this._activeSliderDrag.geometry, slider.value, clientX);
         slider.value = String(nextValue);
         this._applySliderValue(slider, nextValue, { commit: false });
@@ -2007,13 +2128,9 @@
         if (!drag) {
           return;
         }
+        if (pointerId !== null && drag.pointerId !== pointerId) return;
         if (event) {
           event.preventDefault();
-        }
-        this._pendingDragUpdate = null;
-        if (this._dragFrame) {
-          window.cancelAnimationFrame(this._dragFrame);
-          this._dragFrame = 0;
         }
         if (drag.kind === "circular") {
           const nextValue2 = getCircularLayoutDialValueFromPoint(
@@ -2049,9 +2166,10 @@
         }
       }
       _onShadowMouseDown(event) {
+        if (!(event instanceof MouseEvent)) return;
         const path = event.composedPath();
         const slider = path.find(
-          (node) => node instanceof HTMLInputElement && node.type === "range" && node.dataset?.humidifierControl
+          (node) => node instanceof HTMLInputElement && node.type === "range" && Boolean(node.dataset.humidifierControl)
         );
         if (!this._activeSliderDrag && slider && event.button === 0) {
           this._startSliderDrag(slider, event.clientX, event);
@@ -2066,19 +2184,20 @@
         if (controlAction) {
           return;
         }
-        const dial = path.find((node) => node instanceof HTMLElement && node.classList?.contains("humidifier-card__circular-dial"));
+        const dial = path.find((node) => node instanceof HTMLElement && node.classList.contains("humidifier-card__circular-dial"));
         if (!dial || !this._supportsTargetHumidity(this._getState())) {
           return;
         }
         this._startCircularDialDrag(dial, event.clientX, event.clientY, event);
       }
       _onShadowTouchStart(event) {
+        if (!(event instanceof TouchEvent)) return;
         const path = event.composedPath();
         const slider = path.find(
-          (node) => node instanceof HTMLInputElement && node.type === "range" && node.dataset?.humidifierControl
+          (node) => node instanceof HTMLInputElement && node.type === "range" && Boolean(node.dataset.humidifierControl)
         );
         if (!this._activeSliderDrag && slider && event.touches?.length) {
-          this._startSliderDrag(slider, event.touches[0].clientX, event);
+          this._startSliderDrag(slider, event.touches[0]?.clientX ?? 0, event);
           return;
         }
         if (this._activeSliderDrag || !event.touches?.length) {
@@ -2090,13 +2209,14 @@
         if (controlAction) {
           return;
         }
-        const dial = path.find((node) => node instanceof HTMLElement && node.classList?.contains("humidifier-card__circular-dial"));
+        const dial = path.find((node) => node instanceof HTMLElement && node.classList.contains("humidifier-card__circular-dial"));
         if (!dial || !this._supportsTargetHumidity(this._getState())) {
           return;
         }
-        this._startCircularDialDrag(dial, event.touches[0].clientX, event.touches[0].clientY, event);
+        this._startCircularDialDrag(dial, event.touches[0]?.clientX ?? 0, event.touches[0]?.clientY ?? 0, event);
       }
       _onWindowPointerMove(event) {
+        if (!(event instanceof PointerEvent)) return;
         const drag = this._activeSliderDrag;
         if (!drag || drag.pointerId !== event.pointerId) {
           return;
@@ -2104,14 +2224,34 @@
         event.preventDefault();
         this._queueSliderDragUpdate(drag.slider, event.clientX, event.clientY);
       }
+      _cancelSliderDrag(render = true) {
+        const drag = this._activeSliderDrag;
+        if (drag?.kind === "circular") drag.dial.classList.remove("is-dragging");
+        this._activeSliderDrag = null;
+        this._detachWindowDragListeners();
+        this._draftHumidity.delete(this._config.entity);
+        this._skipNextSliderChange = drag?.kind === "linear" ? drag.slider : null;
+        this._pendingRenderAfterDrag = false;
+        this._lastIdleSliderHapticValue = void 0;
+        if (render && this.isConnected) {
+          this._lastRenderSignature = "";
+          this._render();
+        }
+      }
       _onWindowPointerUp(event) {
+        if (!(event instanceof PointerEvent)) return;
         const drag = this._activeSliderDrag;
         if (!drag || drag.pointerId !== event.pointerId) {
+          return;
+        }
+        if (event.type === "pointercancel") {
+          this._cancelSliderDrag();
           return;
         }
         this._commitSliderDrag(event.clientX, event, event.pointerId, event.clientY);
       }
       _onWindowMouseMove(event) {
+        if (!(event instanceof MouseEvent)) return;
         if (!this._activeSliderDrag || typeof event.buttons === "number" && (event.buttons & 1) === 0) {
           return;
         }
@@ -2119,23 +2259,26 @@
         this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.clientX, event.clientY);
       }
       _onWindowMouseUp(event) {
+        if (!(event instanceof MouseEvent)) return;
         if (!this._activeSliderDrag) {
           return;
         }
         this._commitSliderDrag(event.clientX, event, null, event.clientY);
       }
       _onWindowTouchMove(event) {
+        if (!(event instanceof TouchEvent)) return;
         if (!this._activeSliderDrag || !event.touches?.length) {
           return;
         }
         event.preventDefault();
         this._queueSliderDragUpdate(
           this._activeSliderDrag.slider,
-          event.touches[0].clientX,
-          event.touches[0].clientY
+          event.touches[0]?.clientX ?? 0,
+          event.touches[0]?.clientY ?? 0
         );
       }
       _onWindowTouchStartCapture(event) {
+        if (!(event instanceof TouchEvent)) return;
         const drag = this._activeSliderDrag;
         if (!drag) {
           return;
@@ -2144,33 +2287,21 @@
         if (drag.kind === "circular" ? path.includes(drag.dial) : path.includes(drag.slider)) {
           return;
         }
-        drag.dial?.classList?.remove("is-dragging");
-        this._activeSliderDrag = null;
-        this._detachWindowDragListeners();
-        this._pendingDragUpdate = null;
-        if (this._dragFrame) {
-          window.cancelAnimationFrame(this._dragFrame);
-          this._dragFrame = 0;
-        }
-        if (this._pendingRenderAfterDrag) {
-          this._pendingRenderAfterDrag = false;
-          this._render();
-        }
+        this._cancelSliderDrag();
       }
       _onWindowTouchEnd(event) {
+        if (!(event instanceof TouchEvent)) return;
         if (!this._activeSliderDrag) {
+          return;
+        }
+        if (event.type === "touchcancel") {
+          this._cancelSliderDrag();
           return;
         }
         const touch = event.changedTouches?.[0];
         const clientX = touch?.clientX;
-        if (!Number.isFinite(clientX)) {
-          this._activeSliderDrag.dial?.classList?.remove("is-dragging");
-          this._activeSliderDrag = null;
-          this._detachWindowDragListeners();
-          if (this._pendingRenderAfterDrag) {
-            this._pendingRenderAfterDrag = false;
-            this._render();
-          }
+        if (clientX === void 0 || !Number.isFinite(clientX)) {
+          this._cancelSliderDrag();
           return;
         }
         this._commitSliderDrag(clientX, event, null, touch?.clientY);
@@ -2183,7 +2314,7 @@
         window.addEventListener("pointermove", this._onWindowPointerMove);
         window.addEventListener("pointerup", this._onWindowPointerUp);
         window.addEventListener("pointercancel", this._onWindowPointerUp);
-        if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+        if (typeof PointerEvent !== "function") {
           window.addEventListener("mousemove", this._onWindowMouseMove);
           window.addEventListener("mouseup", this._onWindowMouseUp);
           window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
@@ -2200,7 +2331,7 @@
         window.removeEventListener("pointermove", this._onWindowPointerMove);
         window.removeEventListener("pointerup", this._onWindowPointerUp);
         window.removeEventListener("pointercancel", this._onWindowPointerUp);
-        if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+        if (typeof PointerEvent !== "function") {
           window.removeEventListener("mousemove", this._onWindowMouseMove);
           window.removeEventListener("mouseup", this._onWindowMouseUp);
           window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
@@ -2210,7 +2341,7 @@
         }
       }
       _onShadowInput(event) {
-        const slider = event.composedPath().find((node) => node instanceof HTMLInputElement && node.dataset?.humidifierControl);
+        const slider = event.composedPath().find((node) => node instanceof HTMLInputElement && Boolean(node.dataset.humidifierControl));
         if (!slider) {
           return;
         }
@@ -2221,7 +2352,7 @@
         this._applySliderValue(slider, slider.value, { commit: false });
       }
       _onShadowChange(event) {
-        const slider = event.composedPath().find((node) => node instanceof HTMLInputElement && node.dataset?.humidifierControl);
+        const slider = event.composedPath().find((node) => node instanceof HTMLInputElement && Boolean(node.dataset.humidifierControl));
         if (!slider) {
           return;
         }
@@ -2232,15 +2363,20 @@
         }
         this._applySliderValue(slider, slider.value, { commit: true });
       }
+      _onShadowKeyDown(event) {
+        if (!(event instanceof KeyboardEvent) || !["Enter", " "].includes(event.key)) return;
+        const target = event.composedPath()[0];
+        if (target instanceof HTMLElement && !(target instanceof HTMLButtonElement) && target.dataset.humidifierAction === "body") this._onShadowClick(event);
+      }
       _onShadowClick(event) {
         const path = event.composedPath();
         const slider = path.find(
-          (node) => node instanceof HTMLInputElement && node.dataset?.humidifierControl
+          (node) => node instanceof HTMLInputElement && Boolean(node.dataset.humidifierControl)
         );
         if (slider) {
           return;
         }
-        const actionButton = path.find((node) => node instanceof HTMLElement && node.dataset?.humidifierAction);
+        const actionButton = path.find((node) => node instanceof HTMLElement && Boolean(node.dataset.humidifierAction));
         if (!actionButton) {
           return;
         }
@@ -2304,7 +2440,7 @@
         const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
         const pack = window.NodaliaI18n?.strings?.(lang)?.humidifierCard;
         const enPack = window.NodaliaI18n?.strings?.("en")?.humidifierCard;
-        const raw = pack?.[key] ?? enPack?.[key];
+        const raw = (isObject(pack) ? pack[key] : void 0) ?? (isObject(enPack) ? enPack[key] : void 0);
         return String(raw != null && raw !== "" ? raw : fallback);
       }
       _humidifierAria(key, fallback = "") {
@@ -2323,6 +2459,7 @@
     `;
       }
       _render() {
+        this._cancelPanelAnimations();
         if (!this.shadowRoot) {
           return;
         }
@@ -2352,7 +2489,7 @@
         const entityPicture = this._getEntityPicture(state);
         const accentColor = this._getAccentColor(state);
         const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
-        const darkenBubbleIconGlyph = isOn && Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(state, accentColor));
+        const darkenBubbleIconGlyph = isOn && Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph?.(state, accentColor));
         const showUnavailableBadge = isUnavailableState(state);
         const supportsHumidity = config.show_slider !== false && this._supportsTargetHumidity(state);
         const humidityRange = this._getHumidityRange(state);
@@ -2419,13 +2556,13 @@
           }
           this._panelTransition = null;
         } else {
-          if (this._powerTransition?.endsAt > now) {
-            powerAnimationState = this._powerTransition.state;
+          if ((this._powerTransition?.endsAt ?? 0) > now) {
+            powerAnimationState = this._powerTransition?.state || "";
           } else {
             this._powerTransition = null;
           }
-          if (this._controlsTransition?.endsAt > now) {
-            controlsAnimationState = this._controlsTransition.state;
+          if ((this._controlsTransition?.endsAt ?? 0) > now) {
+            controlsAnimationState = this._controlsTransition?.state || "";
           } else {
             this._controlsTransition = null;
           }
@@ -2436,8 +2573,8 @@
               startedAt: now,
               state: panelAnimationState
             };
-          } else if (this._panelTransition?.endsAt > now) {
-            panelAnimationState = this._panelTransition.state;
+          } else if ((this._panelTransition?.endsAt ?? 0) > now) {
+            panelAnimationState = this._panelTransition?.state || "";
           } else {
             this._panelTransition = null;
           }
@@ -3851,7 +3988,7 @@
         }
       </style>
       <ha-card
-        data-humidifier-action="body"
+        data-humidifier-action="body" role="button" tabindex="0"
         class="humidifier-card ${isOn ? "is-on" : "is-off"} ${isCircularLayout ? "humidifier-card--circular" : ""} ${!isCircularLayout && isCompactLayout ? "humidifier-card--compact" : ""} ${showCopyBlock ? "humidifier-card--with-copy" : ""} ${powerAnimationState ? `humidifier-card--${powerAnimationState}` : ""}"
         style="--accent-color:${escapeHtml(accentColor)};"
       >
