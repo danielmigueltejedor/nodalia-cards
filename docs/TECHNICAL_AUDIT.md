@@ -1304,3 +1304,25 @@ assignment. Add the Navigation guide and README link.
 All 748 unit tests, nine specific browser cases and 1,400 equivalent editor HTML
 outputs pass. Full local suite: 509 passed, one existing skip. Remaining unchecked
 modules: 20. Publication stays held until the complete source/runtime migration.
+
+## Power Flow editor findings — 2026-10-01
+
+The unchecked visual editor referenced selector domains without importing their
+existing shared constant. Saving an individual's name before selecting its entity
+discarded the row from emitted configuration. Its standalone entry also retained
+a 761-line historical editor whose only consumer was the retention expression;
+remove that unregistered editor and keep the actual visual editor loader.
+
+Import the shared domains, retain blank individual drafts through HA feedback and
+bound edits/removals to existing rows and supported fields. Preserve paired
+names/icons/colors/secondary information and the grid, home, export and consumption
+branches. Check actual HA, native events, normalized config, DOM and focus
+contracts; guard malformed nested settings and keep cleared numbers distinct from
+real zero. Retain translucent CSS styles and YAML false/zero extensions.
+
+All 748 unit tests, nine targeted browser cases and 1,400 equivalent editor HTML
+outputs pass. A new browser assertion initially expected a color picker for the
+existing free-text CSS style control; correct the fixture to its actual contract.
+Full local suite: 518 passed, one existing skip. Remaining unchecked modules: 19.
+Hold publication until the entire migration and
+shared runtimes finish.

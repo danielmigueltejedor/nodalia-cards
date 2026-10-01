@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+- Check the Power Flow visual editor, import its actual selector domains, preserve draft individuals through HA feedback and bound row changes without losing energy branches or paired metadata. Remove its unregistered historical editor.
+
 - Check Navigation visual editor boundaries, retain paired routes/popups and committed HA picker values, bound row changes and restore blank numeric defaults while keeping explicit zeros.
 
 - Check Media Player visual editor boundaries, preserve paired player actions and JSON validation, clear legacy action aliases when fields are emptied and share typed stub generation with the view.
