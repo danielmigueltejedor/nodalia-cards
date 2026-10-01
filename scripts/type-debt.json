@@ -22,6 +22,5 @@
   "src/cards/power-flow/power-flow-editor.ts",
   "src/cards/room-summary/room-summary-card.ts",
   "src/cards/vacuum/vacuum-card.ts",
-  "src/cards/vacuum/vacuum-editor.ts",
   "src/cards/weather/weather-card.ts"
 ]

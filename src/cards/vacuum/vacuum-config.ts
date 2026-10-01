@@ -2,6 +2,7 @@ import { isObject, mergeConfig, normalizeTextKey } from "./vacuum-runtime";
 import { normalizeControlList, normalizeControlStyles } from "../../shared/control-config";
 
 export const DEFAULT_CONFIG = {
+  language: "auto",
   entity: "",
   name: "",
   icon: "",
@@ -122,8 +123,12 @@ export function normalizeConfig(rawConfig: unknown = {}) {
     ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
   security.strict_service_actions = security.strict_service_actions === true;
 
-  return {
-    ...config,
+  const fields = {
+    entity: typeof config.entity === "string" ? config.entity : "",
+    language: typeof config.language === "string" ? config.language : "auto",
+    suction_select_entity: typeof config.suction_select_entity === "string" ? config.suction_select_entity : "",
+    mop_select_entity: typeof config.mop_select_entity === "string" ? config.mop_select_entity : "",
+    error_entity: typeof config.error_entity === "string" ? config.error_entity : "",
     fan_presets: fanPresets,
     hidden_suction_modes: hiddenSuctionModes,
     hidden_mop_modes: hiddenMopModes,
@@ -136,4 +141,6 @@ export function normalizeConfig(rawConfig: unknown = {}) {
     security,
     styles: getSafeStyles(config.styles),
   };
+  const normalized: typeof fields & Record<string, unknown> = { ...config, ...fields };
+  return normalized;
 }
