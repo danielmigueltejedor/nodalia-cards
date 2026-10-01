@@ -56,6 +56,7 @@ type NodaliaCameraStreamModelApi = typeof import("../../cards/camera/camera-stre
 
 declare global {
   interface Window {
+    hass?: import("./home-assistant").HomeAssistant;
     __NODALIA_LOCK__: Pick<typeof import("../../cards/lock/lock-config"), "CARD_TAG" | "EDITOR_TAG" | "CARD_VERSION" | "normalizeConfig">;
     NodaliaUtils: NodaliaUtilsApi;
     NodaliaI18n?: NodaliaI18nApi;

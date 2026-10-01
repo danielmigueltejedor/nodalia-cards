@@ -29,7 +29,7 @@ export const AIR_QUALITY_METRIC_KEYS = [
   "co2",
   "temperature",
   "humidity",
-];
+] as const;
 
 export const AIR_QUALITY_GRAPH_SERIES_COLORS = Object.freeze({
   pm1: "#f29f05",

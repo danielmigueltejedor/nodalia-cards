@@ -34,6 +34,7 @@ export interface HassConfig {
 }
 
 export interface HomeAssistant {
+  formatEntityState?: (state: HassEntity) => unknown;
   states: Record<string, HassEntity | undefined>;
   locale?: HassLocale;
   language?: string;

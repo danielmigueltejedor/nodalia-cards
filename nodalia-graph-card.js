@@ -149,12 +149,94 @@
     return array;
   }
 
+  // src/shared/history-geometry.ts
+  var MAX_SAMPLES = 1e4;
+  var clamp2 = (value, min, max) => Math.min(max, Math.max(min, value));
+  var isObject2 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  function parseHistoryTimestamp(value) {
+    if (typeof value === "number" && Number.isFinite(value)) return value > 1e12 ? value : value * 1e3;
+    const parsed = Date.parse(String(value ?? ""));
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  function validPoints(value) {
+    if (!Array.isArray(value)) return [];
+    const points = Array.from(value);
+    return points.every((point) => isObject2(point) && typeof point.x === "number" && Number.isFinite(point.x) && typeof point.y === "number" && Number.isFinite(point.y)) ? points : [];
+  }
+  function buildSmoothPath(value) {
+    const points = validPoints(value);
+    const first = points[0];
+    if (!first) return "";
+    if (points.length === 1) {
+      return `M ${first.x.toFixed(2)} ${first.y.toFixed(2)}`;
+    }
+    let path = `M ${first.x.toFixed(2)} ${first.y.toFixed(2)}`;
+    for (let index = 0; index < points.length - 1; index += 1) {
+      const p0 = points[index - 1] || points[index];
+      const p1 = points[index];
+      const p2 = points[index + 1];
+      const p3 = points[index + 2] || p2;
+      if (!p0 || !p1 || !p2 || !p3) return "";
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = p2.y - (p3.y - p1.y) / 6;
+      path += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)}, ${cp2x.toFixed(2)} ${cp2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+    }
+    return path;
+  }
+  function buildAreaPath(value, bottomY) {
+    const points = validPoints(value);
+    if (!Array.isArray(points) || points.length === 0) {
+      return "";
+    }
+    const linePath = buildSmoothPath(points);
+    const first = points[0];
+    const last = points[points.length - 1];
+    if (!first || !last || !Number.isFinite(bottomY)) return "";
+    return `${linePath} L ${last.x.toFixed(2)} ${bottomY.toFixed(2)} L ${first.x.toFixed(2)} ${bottomY.toFixed(2)} Z`;
+  }
+  function buildInterpolatedSamples(value, startMs, endMs, pointsCount, fallbackValue = null) {
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs < startMs || !Number.isFinite(pointsCount) || pointsCount < 1) return [];
+    pointsCount = Math.min(MAX_SAMPLES, Math.floor(pointsCount));
+    const events = Array.isArray(value) ? value.filter((event) => isObject2(event) && typeof event.ts === "number" && Number.isFinite(event.ts) && typeof event.value === "number" && Number.isFinite(event.value)) : [];
+    if (!events.length) {
+      if (fallbackValue === null || !Number.isFinite(fallbackValue)) {
+        return [];
+      }
+      return Array.from({ length: pointsCount }, (_item, index) => ({
+        ts: startMs + (endMs - startMs) * index / Math.max(pointsCount - 1, 1),
+        value: fallbackValue
+      }));
+    }
+    const spanMs = Math.max(endMs - startMs, 1);
+    const bucketSize = spanMs / Math.max(pointsCount - 1, 1);
+    const buckets = Array.from({ length: pointsCount }, () => []);
+    events.forEach((event) => {
+      const clampedTs = clamp2(event.ts, startMs, endMs);
+      const rawIndex = Math.floor((clampedTs - startMs) / Math.max(bucketSize, 1));
+      const bucketIndex = clamp2(rawIndex, 0, pointsCount - 1);
+      buckets[bucketIndex]?.push(event.value);
+    });
+    let lastValue = fallbackValue !== null && Number.isFinite(fallbackValue) ? fallbackValue : buckets.flat().find(Number.isFinite);
+    return buckets.map((bucket, index) => {
+      const sampleTs = startMs + (endMs - startMs) * index / Math.max(pointsCount - 1, 1);
+      if (bucket.length) {
+        lastValue = bucket.reduce((sum, value2) => sum + value2, 0) / bucket.length;
+      }
+      return {
+        ts: sampleTs,
+        value: lastValue !== void 0 && Number.isFinite(lastValue) ? lastValue : 0
+      };
+    });
+  }
+
   // src/shared/editor-color.ts
-  var clamp2 = (value, max) => Math.max(0, Math.min(max, value));
+  var clamp3 = (value, max) => Math.max(0, Math.min(max, value));
   var component = (value, scale) => {
     if (!value || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?%?$/i.test(value)) return null;
     const numeric = Number(value.replace(/%$/, ""));
-    return Number.isFinite(numeric) ? clamp2(value.endsWith("%") ? numeric * scale / 100 : numeric, scale) : null;
+    return Number.isFinite(numeric) ? clamp3(value.endsWith("%") ? numeric * scale / 100 : numeric, scale) : null;
   };
   function parseEditorColorChannels(value) {
     const raw = String(value ?? "").trim();
@@ -180,13 +262,13 @@
   }
   function formatEditorHexChannel(value) {
     const numeric = Number(value);
-    return clamp2(Math.round(Number.isFinite(numeric) ? numeric : 0), 255).toString(16).padStart(2, "0");
+    return clamp3(Math.round(Number.isFinite(numeric) ? numeric : 0), 255).toString(16).padStart(2, "0");
   }
   function formatEditorColorFromHex(hex, alpha = 1) {
     const normalized = String(hex ?? "").trim().replace(/^#/, "").toLowerCase();
     if (!/^[0-9a-f]{6}$/.test(normalized)) return String(hex ?? "");
     const numeric = Number(alpha);
-    const safeAlpha = clamp2(Number.isFinite(numeric) ? numeric : 1, 1);
+    const safeAlpha = clamp3(Number.isFinite(numeric) ? numeric : 1, 1);
     if (safeAlpha >= 0.999) return `#${normalized}`;
     const red = parseInt(normalized.slice(0, 2), 16), green = parseInt(normalized.slice(2, 4), 16), blue = parseInt(normalized.slice(4, 6), 16);
     return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
@@ -245,13 +327,6 @@
   function normalizeGraphPointCount(value) {
     const numeric = parseFiniteNumericValue(value) || DEFAULT_HISTORY_POINTS;
     return Math.min(MAX_HISTORY_POINTS, Math.max(20, Math.floor(numeric)));
-  }
-  function parseHistoryTimestamp(value) {
-    if (typeof value === "number" && Number.isFinite(value)) {
-      return value > 1e12 ? value : value * 1e3;
-    }
-    const parsed = Date.parse(String(value ?? ""));
-    return Number.isFinite(parsed) ? parsed : null;
   }
   function getHassLocaleTag(hass, language = "auto") {
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, language);
@@ -344,78 +419,6 @@
         color: String(entry.color || (SERIES_COLORS[index % SERIES_COLORS.length] ?? "#f29f05")).trim()
       };
     }).filter((entry) => entry !== null).filter((entry) => preserveEmpty || entry.entity);
-  }
-  function validPoints(value) {
-    if (!Array.isArray(value)) return [];
-    const points = Array.from(value);
-    return points.every((point) => isObject(point) && typeof point.x === "number" && Number.isFinite(point.x) && typeof point.y === "number" && Number.isFinite(point.y)) ? points : [];
-  }
-  function buildSmoothPath(value) {
-    const points = validPoints(value);
-    const first = points[0];
-    if (!first) return "";
-    if (points.length === 1) {
-      return `M ${first.x.toFixed(2)} ${first.y.toFixed(2)}`;
-    }
-    let path = `M ${first.x.toFixed(2)} ${first.y.toFixed(2)}`;
-    for (let index = 0; index < points.length - 1; index += 1) {
-      const p0 = points[index - 1] || points[index];
-      const p1 = points[index];
-      const p2 = points[index + 1];
-      const p3 = points[index + 2] || p2;
-      if (!p0 || !p1 || !p2 || !p3) return "";
-      const cp1x = p1.x + (p2.x - p0.x) / 6;
-      const cp1y = p1.y + (p2.y - p0.y) / 6;
-      const cp2x = p2.x - (p3.x - p1.x) / 6;
-      const cp2y = p2.y - (p3.y - p1.y) / 6;
-      path += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)}, ${cp2x.toFixed(2)} ${cp2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
-    }
-    return path;
-  }
-  function buildAreaPath(value, bottomY) {
-    const points = validPoints(value);
-    if (!Array.isArray(points) || points.length === 0) {
-      return "";
-    }
-    const linePath = buildSmoothPath(points);
-    const first = points[0];
-    const last = points[points.length - 1];
-    if (!first || !last || !Number.isFinite(bottomY)) return "";
-    return `${linePath} L ${last.x.toFixed(2)} ${bottomY.toFixed(2)} L ${first.x.toFixed(2)} ${bottomY.toFixed(2)} Z`;
-  }
-  function buildInterpolatedSamples(value, startMs, endMs, pointsCount, fallbackValue = null) {
-    if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs < startMs || !Number.isFinite(pointsCount) || pointsCount < 1) return [];
-    pointsCount = Math.min(MAX_HISTORY_POINTS, Math.floor(pointsCount));
-    const events = Array.isArray(value) ? value.filter((event) => isObject(event) && typeof event.ts === "number" && Number.isFinite(event.ts) && typeof event.value === "number" && Number.isFinite(event.value)) : [];
-    if (!events.length) {
-      if (fallbackValue === null || !Number.isFinite(fallbackValue)) {
-        return [];
-      }
-      return Array.from({ length: pointsCount }, (_item, index) => ({
-        ts: startMs + (endMs - startMs) * index / Math.max(pointsCount - 1, 1),
-        value: fallbackValue
-      }));
-    }
-    const spanMs = Math.max(endMs - startMs, 1);
-    const bucketSize = spanMs / Math.max(pointsCount - 1, 1);
-    const buckets = Array.from({ length: pointsCount }, () => []);
-    events.forEach((event) => {
-      const clampedTs = clamp(event.ts, startMs, endMs);
-      const rawIndex = Math.floor((clampedTs - startMs) / Math.max(bucketSize, 1));
-      const bucketIndex = clamp(rawIndex, 0, pointsCount - 1);
-      buckets[bucketIndex]?.push(event.value);
-    });
-    let lastValue = fallbackValue !== null && Number.isFinite(fallbackValue) ? fallbackValue : buckets.flat().find(Number.isFinite);
-    return buckets.map((bucket, index) => {
-      const sampleTs = startMs + (endMs - startMs) * index / Math.max(pointsCount - 1, 1);
-      if (bucket.length) {
-        lastValue = bucket.reduce((sum, value2) => sum + value2, 0) / bucket.length;
-      }
-      return {
-        ts: sampleTs,
-        value: lastValue !== void 0 && Number.isFinite(lastValue) ? lastValue : 0
-      };
-    });
   }
 
   // src/cards/graph/graph-config.ts

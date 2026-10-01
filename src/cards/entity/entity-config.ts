@@ -1,6 +1,9 @@
-// @ts-nocheck -- merged Lovelace YAML is projected into the runtime entity config.
+import { normalizeControlStyles } from "../../shared/control-config";
+import { parseFiniteNumericValue } from "../../shared/numeric-values";
 import {
   AIR_QUALITY_GRAPH_SERIES_COLORS,
+  AIR_QUALITY_COMFORT_KEYS,
+  AIR_QUALITY_HISTORY_REFRESH_MS,
   AIR_QUALITY_METRIC_KEYS,
   LEGACY_ICON_OFF_COLOR_VALUES,
   NETWORK_ROLES,
@@ -178,8 +181,8 @@ export const STUB_CONFIG = {
 };
 
 
-export function migrateLegacyIconOffColor(iconStyles, canonicalOffColor) {
-  if (!iconStyles) {
+export function migrateLegacyIconOffColor(iconStyles: unknown, canonicalOffColor: string) {
+  if (!isObject(iconStyles)) {
     return;
   }
   const raw = String(iconStyles.off_color ?? "").trim();
@@ -195,19 +198,19 @@ export function migrateLegacyIconOffColor(iconStyles, canonicalOffColor) {
   }
 }
 
-export function entityScalar(value) {
+export function entityScalar(value: unknown) {
   return String(value ?? "").trim();
 }
 
-export function normalizeAirQualityBlock(raw) {
+export function normalizeAirQualityBlock(raw: unknown = {}) {
   const source = isObject(raw) ? raw : {};
-  const hours = Number(source.graph_hours);
-  const points = Number(source.graph_points);
+  const hours = parseFiniteNumericValue(source.graph_hours);
+  const points = parseFiniteNumericValue(source.graph_points);
   const graphSeries = isObject(source.graph_series) ? source.graph_series : {};
   const graphColors = isObject(source.graph_colors) ? source.graph_colors : {};
   return {
     pm1: entityScalar(source.pm1),
-    pm25: entityScalar(source.pm25 ?? source.pm2_5 ?? source["pm2.5"]),
+    pm25: entityScalar(source.pm25) || entityScalar(source.pm2_5 ?? source["pm2.5"]),
     pm4: entityScalar(source.pm4),
     pm10: entityScalar(source.pm10),
     tvoc: entityScalar(source.tvoc),
@@ -216,8 +219,8 @@ export function normalizeAirQualityBlock(raw) {
     co2: entityScalar(source.co2),
     guidelines: String(source.guidelines ?? "who").trim().toLowerCase() === "none" ? "none" : "who",
     show_graphs: source.show_graphs === true,
-    graph_hours: Number.isFinite(hours) ? clamp(Math.round(hours), 1, 168) : 24,
-    graph_points: Number.isFinite(points) ? clamp(Math.round(points), 8, 96) : 96,
+    graph_hours: hours !== null ? clamp(Math.round(hours), 1, 168) : 24,
+    graph_points: points !== null ? clamp(Math.round(points), 8, 96) : 96,
     graph_series: Object.fromEntries(AIR_QUALITY_METRIC_KEYS.map(kind => [
       kind,
       graphSeries[kind] !== false,
@@ -229,18 +232,15 @@ export function normalizeAirQualityBlock(raw) {
   };
 }
 
-export const AIR_QUALITY_COMFORT_KEYS = new Set(["temperature", "humidity"]);
-export const AIR_QUALITY_HISTORY_REFRESH_MS = 180000;
-export const OVERVIEW_LAYOUTS = new Set(["battery", "network"]);
-export const NETWORK_ROLES = new Set(["auto", "status", "download", "upload", "latency", "signal", "traffic"]);
+export { AIR_QUALITY_COMFORT_KEYS, AIR_QUALITY_HISTORY_REFRESH_MS, OVERVIEW_LAYOUTS, NETWORK_ROLES };
 
-export function normalizeOverviewEntities(raw, options = {}) {
+export function normalizeOverviewEntities(raw: unknown, options: { network?: boolean } = {}) {
   const entries = Array.isArray(raw) ? raw : [];
   return entries
     .filter(item => typeof item === "string" || isObject(item))
     .map(item => {
       const source = typeof item === "string" ? { entity: item } : item;
-      const normalized = {
+      const normalized: { entity: string; name: string; icon: string; role?: string } = {
         entity: entityScalar(source.entity),
         name: String(source.name ?? "").trim(),
         icon: String(source.icon ?? "").trim(),
@@ -255,22 +255,28 @@ export function normalizeOverviewEntities(raw, options = {}) {
     .slice(0, 16);
 }
 
-export function normalizeBatteryBlock(raw) {
+export function normalizeBatteryBlock(raw: unknown) {
   const source = isObject(raw) ? raw : {};
   return { entities: normalizeOverviewEntities(source.entities) };
 }
 
-export function normalizeNetworkBlock(raw) {
+export function normalizeNetworkBlock(raw: unknown) {
   const source = isObject(raw) ? raw : {};
   return { entities: normalizeOverviewEntities(source.entities, { network: true }) };
 }
 
-export function normalizeConfig(rawConfig) {
-  const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
-  config.styles.icon.background = window.NodaliaBubbleContrast?.normalizeNeutralBubbleBackground?.(
-    config.styles.icon.background,
+export function normalizeConfig(rawConfig: unknown = {}) {
+  const raw = isObject(rawConfig) ? rawConfig : {};
+  const defaults: Record<string, unknown> = DEFAULT_CONFIG;
+  const config = mergeConfig(defaults, raw);
+  const rawStyles = isObject(config.styles) ? config.styles : {};
+  const iconStyles = isObject(rawStyles.icon) ? rawStyles.icon : deepClone(DEFAULT_CONFIG.styles.icon);
+  rawStyles.icon = iconStyles;
+  config.styles = rawStyles;
+  iconStyles.background = window.NodaliaBubbleContrast?.normalizeNeutralBubbleBackground?.(
+    iconStyles.background,
     DEFAULT_CONFIG.styles.icon.background,
-  ) || config.styles.icon.background;
+  ) || iconStyles.background;
   const normalizedStatePosition = String(config.state_position || "").toLowerCase();
   if (normalizedStatePosition === "right" || normalizedStatePosition === "below") {
     config.state_position = normalizedStatePosition;
@@ -291,7 +297,7 @@ export function normalizeConfig(rawConfig) {
       }))
     : [];
 
-  migrateLegacyIconOffColor(config.styles?.icon, DEFAULT_CONFIG.styles.icon.off_color);
+  migrateLegacyIconOffColor(iconStyles, DEFAULT_CONFIG.styles.icon.off_color);
 
   const applyTap = window.NodaliaUtils?.applyCardTapActionField?.bind(window.NodaliaUtils);
   if (typeof applyTap === "function") {
@@ -303,7 +309,7 @@ export function normalizeConfig(rawConfig) {
       urlKey: "tap_url",
       navigationKey: "navigation_path",
       newTabKey: "tap_new_tab",
-    }, rawConfig?.tap_action ?? config.tap_action, "auto");
+    }, raw.tap_action ?? config.tap_action, "auto");
     applyTap(config, {
       actionKey: "hold_action",
       serviceKey: "hold_service",
@@ -312,7 +318,7 @@ export function normalizeConfig(rawConfig) {
       urlKey: "hold_url",
       navigationKey: "hold_navigation_path",
       newTabKey: "hold_new_tab",
-    }, rawConfig?.hold_action ?? config.hold_action, "none");
+    }, raw.hold_action ?? config.hold_action, "none");
     applyTap(config, {
       actionKey: "icon_tap_action",
       serviceKey: "icon_tap_service",
@@ -321,7 +327,7 @@ export function normalizeConfig(rawConfig) {
       urlKey: "icon_tap_url",
       navigationKey: "icon_navigation_path",
       newTabKey: "icon_tap_new_tab",
-    }, rawConfig?.icon_tap_action ?? config.icon_tap_action, "");
+    }, raw.icon_tap_action ?? config.icon_tap_action, "");
     applyTap(config, {
       actionKey: "icon_hold_action",
       serviceKey: "icon_hold_service",
@@ -330,7 +336,7 @@ export function normalizeConfig(rawConfig) {
       urlKey: "icon_hold_url",
       navigationKey: "icon_hold_navigation_path",
       newTabKey: "icon_hold_new_tab",
-    }, rawConfig?.icon_hold_action ?? config.icon_hold_action, "");
+    }, raw.icon_hold_action ?? config.icon_hold_action, "");
     applyTap(config, {
       actionKey: "double_tap_action",
       serviceKey: "double_tap_service",
@@ -339,7 +345,7 @@ export function normalizeConfig(rawConfig) {
       urlKey: "double_tap_url",
       navigationKey: "double_tap_navigation_path",
       newTabKey: "double_tap_new_tab",
-    }, rawConfig?.double_tap_action ?? config.double_tap_action, "none");
+    }, raw.double_tap_action ?? config.double_tap_action, "none");
     applyTap(config, {
       actionKey: "icon_double_tap_action",
       serviceKey: "icon_double_tap_service",
@@ -348,7 +354,7 @@ export function normalizeConfig(rawConfig) {
       urlKey: "icon_double_tap_url",
       navigationKey: "icon_double_tap_navigation_path",
       newTabKey: "icon_double_tap_new_tab",
-    }, rawConfig?.icon_double_tap_action ?? config.icon_double_tap_action, "");
+    }, raw.icon_double_tap_action ?? config.icon_double_tap_action, "");
   }
   if (String(config.icon_tap_action || "").trim() === "") {
     config.icon_tap_action = "";
@@ -359,7 +365,7 @@ export function normalizeConfig(rawConfig) {
   if (String(config.icon_double_tap_action || "").trim() === "") {
     config.icon_double_tap_action = "";
   }
-  const serializeActionObject = value => (
+  const serializeActionObject = (value: unknown) => (
     isObject(value) ? JSON.stringify(value) : String(value ?? "").trim()
   );
   config.tap_service = String(config.tap_service ?? "").trim();
@@ -412,13 +418,13 @@ export function normalizeConfig(rawConfig) {
   config.show_entity_picture = config.show_entity_picture === true;
   const layoutKey = String(config.layout ?? "default").trim().toLowerCase();
   config.layout = layoutKey === "air_quality" || OVERVIEW_LAYOUTS.has(layoutKey) ? layoutKey : "default";
-  config.air_quality = normalizeAirQualityBlock(config.air_quality);
-  config.battery = normalizeBatteryBlock(config.battery);
-  config.network = normalizeNetworkBlock(config.network);
   config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
     ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
-  config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles)
-    ?? deepClone(DEFAULT_CONFIG.styles);
-
-  return config;
+  return {
+    ...config,
+    air_quality: normalizeAirQualityBlock(config.air_quality),
+    battery: normalizeBatteryBlock(config.battery),
+    network: normalizeNetworkBlock(config.network),
+    styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles),
+  };
 }
