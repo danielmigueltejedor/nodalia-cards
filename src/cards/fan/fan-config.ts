@@ -133,8 +133,9 @@ export function normalizeConfig(rawConfig: unknown = {}) {
   normalizeControlActions(config, rawConfig, true);
   const security = window.NodaliaUtils.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
     ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
-  return {
-    ...config,
+  const fields = {
+    entity: typeof config.entity === "string" ? config.entity : "",
+    language: typeof config.language === "string" ? config.language : "auto",
     layout,
     hidden_preset_modes: normalizeControlList(config.hidden_preset_modes),
     entity_picture: String(config.entity_picture ?? "").trim(),
@@ -142,4 +143,6 @@ export function normalizeConfig(rawConfig: unknown = {}) {
     security,
     styles: getSafeStyles(config.styles),
   };
+  const normalized: typeof fields & Record<string, unknown> = { ...config, ...fields };
+  return normalized;
 }

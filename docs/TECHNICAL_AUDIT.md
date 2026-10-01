@@ -1104,3 +1104,25 @@ the full local suite (419 passed, one existing skip) pass. An initial browser
 fixture omitted its configuration argument; fixing the fixture resolved all three
 failures. Remaining unchecked modules: 30. Hold 3.0.0-alpha.1 until full migration,
 including handwritten utility/i18n runtime sources.
+
+## Fan and Humidifier editor findings — 2026-10-01
+
+Both editors suppressed checking across HA/native controls, mode/helper lists and
+nested settings. Their service action sections called a nonexistent textarea
+renderer, so opening configured service-data fields could crash the editor.
+
+Both now pass strict checking and typed lint using actual HA/DOM/config/focus
+contracts. The missing service-data renderer now mounts real editable textareas.
+Known entity/language/helper fields are projected while YAML extensions remain;
+mode visibility, unavailable selections, auxiliary select helpers and focus
+survive edits. Malformed haptic/scroll/animation groups and picker payloads are
+guarded. Explicit service targets, false/zero data, reset defaults and translucent
+styles remain intact. Six verified unused imports were removed.
+
+1,400 valid HTML outputs per editor match main; newly working service textareas
+are separately tested. All 743 unit tests, twelve specific browser cases and the
+full local suite (431 passed, one existing skip) pass. An initial test clicked the
+hidden checkbox directly; using its visible labelled switch verifies actual user
+interaction and resolves the six fixture timeouts. Remaining unchecked modules:
+28. Hold 3.0.0-alpha.1 until full migration, including handwritten utility/i18n
+runtime sources.

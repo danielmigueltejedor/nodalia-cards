@@ -1,15 +1,13 @@
-// @ts-nocheck
-/* Visual editor surface: typed incrementally after the card runtime split. */
+import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
+import type { EditorFocusState } from "../../core/types/nodalia-utils";
+import { editorControlValue, isNativeEditorInput, type NativeEditorInput } from "../../shared/editor-controls";
 import {
-  clamp,
   compactConfig,
   deepClone,
   deleteByPath,
   escapeHtml,
-  escapeSelectorValue,
   fireEvent,
   isObject,
-  mergeConfig,
   normalizeTextKey,
   setByPath,
 } from "./fan-runtime";
@@ -21,12 +19,20 @@ import {
   translatePresetLabel,
 } from "./fan-helpers";
 
-let _lazyNodaliaFanCardEditor;
-export function loadNodaliaFanCardEditor() {
+interface FieldOptions { fullWidth?: boolean; type?: string; valueType?: string; placeholder?: string; fallbackValue?: string; min?: number; max?: number; step?: number; }
+let _lazyNodaliaFanCardEditor: CustomElementConstructor | undefined;
+export function loadNodaliaFanCardEditor(): CustomElementConstructor {
   if (_lazyNodaliaFanCardEditor) {
     return _lazyNodaliaFanCardEditor;
   }
 class NodaliaFanCardEditor extends HTMLElement {
+  private _config!: ReturnType<typeof normalizeConfig>;
+  private _hass!: HomeAssistant | null;
+  private _entityOptionsSignature!: string;
+  private _showAnimationSection!: boolean;
+  private _showStyleSection!: boolean;
+  private _showTapActionsSection!: boolean;
+  private _pendingEditorControlTags!: Set<string>;
   constructor() {
     super();
     this._nodaliaConstruct();
@@ -68,7 +74,7 @@ class NodaliaFanCardEditor extends HTMLElement {
     window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
   }
 
-  set hass(hass) {
+  set hass(hass: HomeAssistant) {
     const nextSignature = this._getEntityOptionsSignature(hass);
     const shouldRender =
       !this._hass ||
@@ -87,7 +93,7 @@ class NodaliaFanCardEditor extends HTMLElement {
     this._restoreFocusState(focusState);
   }
 
-  setConfig(config) {
+  setConfig(config: unknown) {
     const focusState = this._captureFocusState();
     this._config = normalizeConfig(config || {});
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
@@ -95,7 +101,7 @@ class NodaliaFanCardEditor extends HTMLElement {
     this._restoreFocusState(focusState);
   }
 
-  _watchEditorControlTag(tagName) {
+  _watchEditorControlTag(tagName: string) {
     if (!tagName || this._pendingEditorControlTags.has(tagName)) {
       return;
     }
@@ -129,7 +135,7 @@ class NodaliaFanCardEditor extends HTMLElement {
   }
 
   _getEntityOptionsSignature(hass = this._hass) {
-    return window.NodaliaUtils.editorFilteredStatesSignature(hass, this._config?.language, id => id.startsWith("fan."));
+    return window.NodaliaUtils.editorFilteredStatesSignature?.(hass, this._config?.language, id => id.startsWith("fan.")) ?? "";
   }
 
   _getFanEntityOptions() {
@@ -167,7 +173,7 @@ class NodaliaFanCardEditor extends HTMLElement {
     return window.NodaliaUtils.captureEditorFocusState(this);
   }
 
-  _restoreFocusState(focusState) {
+  _restoreFocusState(focusState: EditorFocusState | null) {
     window.NodaliaUtils.restoreEditorFocusState(this, focusState);
   }
 
@@ -178,7 +184,7 @@ class NodaliaFanCardEditor extends HTMLElement {
     this._render();
     this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
-      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
+      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults?.(nextConfig, DEFAULT_CONFIG) ?? {}),
     });
   }
 
@@ -186,7 +192,7 @@ class NodaliaFanCardEditor extends HTMLElement {
     this._config = normalizeConfig(compactConfig(this._config));
   }
 
-  _setFieldValue(path, value) {
+  _setFieldValue(path: string, value: unknown) {
     if (value === undefined || value === null || value === "") {
       deleteByPath(this._config, path);
       return;
@@ -195,12 +201,12 @@ class NodaliaFanCardEditor extends HTMLElement {
     setByPath(this._config, path, value);
   }
 
-  _readFieldValue(input) {
+  _readFieldValue(input: NativeEditorInput) {
     const valueType = input.dataset.valueType || "string";
 
     switch (valueType) {
       case "boolean":
-        return Boolean(input.checked);
+        return input instanceof HTMLInputElement && input.checked;
       case "number": {
         if (input.value === "") {
           return "";
@@ -216,15 +222,15 @@ class NodaliaFanCardEditor extends HTMLElement {
     }
   }
 
-  _onShadowInput(event) {
+  _onShadowInput(event: Event) {
     const input = event
       .composedPath()
-      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+      .find(isNativeEditorInput);
 
     if (!input?.dataset?.field) {
       if (input?.dataset?.modeListField && input.dataset.modeValue !== undefined) {
         event.stopPropagation();
-        this._setPresetModeVisibility(input.dataset.modeValue, input.checked);
+        this._setPresetModeVisibility(input.dataset.modeValue, input instanceof HTMLInputElement && input.checked);
         this._setEditorConfig();
 
         if (event.type === "change") {
@@ -245,10 +251,10 @@ class NodaliaFanCardEditor extends HTMLElement {
     }
   }
 
-  _onShadowValueChanged(event) {
+  _onShadowValueChanged(event: Event) {
     const control = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.field);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.field));
 
     if (!control?.dataset?.field) {
       return;
@@ -256,9 +262,7 @@ class NodaliaFanCardEditor extends HTMLElement {
 
     event.stopPropagation();
 
-    const nextValue = typeof event.detail?.value === "string"
-      ? event.detail.value
-      : control.value;
+    const nextValue = editorControlValue(event, control);
     if (typeof control.dataset?.value === "string") {
       control.dataset.value = String(nextValue || "");
     }
@@ -273,10 +277,10 @@ class NodaliaFanCardEditor extends HTMLElement {
     this._emitConfig();
   }
 
-  _onShadowClick(event) {
+  _onShadowClick(event: Event) {
     const toggleButton = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.editorToggle));
 
     if (!toggleButton) {
       return;
@@ -303,7 +307,7 @@ class NodaliaFanCardEditor extends HTMLElement {
     }
   }
 
-  _editorLabel(s) {
+  _editorLabel(s: string) {
     if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
       return s;
     }
@@ -311,7 +315,7 @@ class NodaliaFanCardEditor extends HTMLElement {
     return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
   }
 
-  _renderTextField(label, field, value, options = {}) {
+  _renderTextField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
@@ -338,7 +342,15 @@ class NodaliaFanCardEditor extends HTMLElement {
     `;
   }
 
-  _renderColorField(label, field, value, options = {}) {
+  _renderTextareaField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
+    const textValue = isObject(value) ? JSON.stringify(value, null, 2) : value ?? "";
+    return `<label class="editor-field editor-field--full">
+      <span>${escapeHtml(this._editorLabel(label))}</span>
+      <textarea data-field="${escapeHtml(field)}" placeholder="${escapeHtml(options.placeholder || "")}">${escapeHtml(textValue)}</textarea>
+    </label>`;
+  }
+
+  _renderColorField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const tColorCustom = this._editorLabel("ed.weather.custom_color");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
@@ -367,7 +379,7 @@ class NodaliaFanCardEditor extends HTMLElement {
     `;
   }
 
-  _renderCheckboxField(label, field, checked) {
+  _renderCheckboxField(label: string, field: string, checked: boolean) {
     const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
@@ -390,22 +402,22 @@ class NodaliaFanCardEditor extends HTMLElement {
   _getPresetModeVisibilityOptions() {
     const fanState = this._getFanState();
     return Array.isArray(fanState?.attributes?.preset_modes)
-      ? fanState.attributes.preset_modes.map(item => String(item || "").trim()).filter(Boolean)
+      ? fanState.attributes.preset_modes.map((item: unknown) => String(item || "").trim()).filter(Boolean)
       : [];
   }
 
   _getHiddenPresetModes() {
     return Array.isArray(this._config?.hidden_preset_modes)
-      ? this._config.hidden_preset_modes.map(item => String(item || "").trim()).filter(Boolean)
+      ? this._config.hidden_preset_modes.map((item: unknown) => String(item || "").trim()).filter(Boolean)
       : [];
   }
 
-  _isPresetModeVisible(value) {
+  _isPresetModeVisible(value: string) {
     const expectedKey = normalizeTextKey(value);
     return !this._getHiddenPresetModes().some(item => normalizeTextKey(item) === expectedKey);
   }
 
-  _setPresetModeVisibility(value, visible) {
+  _setPresetModeVisibility(value: string, visible: boolean) {
     const rawValue = String(value || "").trim();
     if (!rawValue) {
       return;
@@ -424,7 +436,7 @@ class NodaliaFanCardEditor extends HTMLElement {
     deleteByPath(this._config, "hidden_preset_modes");
   }
 
-  _renderPresetModeVisibilityField(modeValue) {
+  _renderPresetModeVisibilityField(modeValue: string) {
     const translatedLabel = translatePresetLabel(modeValue);
     const showRawValue = normalizeTextKey(translatedLabel) !== normalizeTextKey(modeValue);
     const label = showRawValue ? `${translatedLabel} (${modeValue})` : translatedLabel;
@@ -443,7 +455,7 @@ class NodaliaFanCardEditor extends HTMLElement {
     `;
   }
 
-  _renderSelectField(label, field, value, options) {
+  _renderSelectField(label: string, field: string, value: unknown, options: { value: string; label: string }[], _renderOptions: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field">
@@ -461,7 +473,7 @@ class NodaliaFanCardEditor extends HTMLElement {
     `;
   }
 
-  _renderFanEntityField(label, field, value, options = {}) {
+  _renderFanEntityField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
@@ -477,7 +489,7 @@ class NodaliaFanCardEditor extends HTMLElement {
     `;
   }
 
-  _renderIconPickerField(label, field, value, options = {}) {
+  _renderIconPickerField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
@@ -494,27 +506,22 @@ class NodaliaFanCardEditor extends HTMLElement {
     `;
   }
 
-  _mountFanEntityPicker(host) {
+  _mountFanEntityPicker(host: HTMLElement) {
     if (!(host instanceof HTMLElement)) {
       return;
     }
 
     const field = host.dataset.field || "entity";
     const nextValue = host.dataset.value || "";
-    let control = null;
+    let control: HTMLElement;
 
     if (customElements.get("ha-entity-picker")) {
       control = document.createElement("ha-entity-picker");
-      control.includeDomains = ["fan"];
-      control.allowCustomEntity = true;
-      control.entityFilter = stateObj => String(stateObj?.entity_id || "").startsWith("fan.");
+      Object.assign(control, { includeDomains: ["fan"], allowCustomEntity: true,
+        entityFilter: (stateObj: HassEntity) => String(stateObj?.entity_id || "").startsWith("fan.") });
     } else if (customElements.get("ha-selector")) {
       control = document.createElement("ha-selector");
-      control.selector = {
-        entity: {
-          domain: "fan",
-        },
-      };
+      Object.assign(control, { selector: { entity: { domain: "fan" } } });
     } else {
       control = document.createElement("select");
       this._getFanEntityOptions().forEach(option => {
@@ -550,7 +557,10 @@ class NodaliaFanCardEditor extends HTMLElement {
     }
 
     const config = this._config || normalizeConfig({});
-    const hapticStyle = config.haptics?.style || "medium";
+    const haptics = isObject(config.haptics) ? config.haptics : DEFAULT_CONFIG.haptics;
+    const scrolls = isObject(haptics.scrolls) ? haptics.scrolls : {};
+    const animations = isObject(config.animations) ? config.animations : DEFAULT_CONFIG.animations;
+    const hapticStyle = haptics.style || "medium";
     const presetModeVisibilityOptions = this._getPresetModeVisibilityOptions();
     const phFanName = this._editorLabel("ed.light.name_placeholder");
     const tapAction = config.tap_action || "toggle";
@@ -1171,9 +1181,9 @@ class NodaliaFanCardEditor extends HTMLElement {
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.vacuum.haptics_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("ed.vacuum.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("ed.vacuum.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
-            ${this._renderCheckboxField("ed.haptics.slider_percentage", "haptics.scrolls.percentage", config.haptics.scrolls?.percentage !== false)}
+            ${this._renderCheckboxField("ed.vacuum.enable_haptics", "haptics.enabled", haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.vacuum.fallback_vibrate", "haptics.fallback_vibrate", haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.haptics.slider_percentage", "haptics.scrolls.percentage", scrolls.percentage !== false)}
             ${this._renderSelectField(
               "ed.vacuum.haptic_style",
               "haptics.style",
@@ -1211,30 +1221,30 @@ class NodaliaFanCardEditor extends HTMLElement {
             this._showAnimationSection
               ? `
                 <div class="editor-grid">
-                  ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", config.animations.enabled !== false)}
-                  ${this._renderCheckboxField("ed.vacuum.icon_animation_active", "animations.icon_animation", config.animations.icon_animation !== false)}
-                  ${this._renderTextField("ed.light.anim_power_ms", "animations.power_duration", config.animations.power_duration, {
+                  ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", animations.enabled !== false)}
+                  ${this._renderCheckboxField("ed.vacuum.icon_animation_active", "animations.icon_animation", animations.icon_animation !== false)}
+                  ${this._renderTextField("ed.light.anim_power_ms", "animations.power_duration", animations.power_duration, {
                     type: "number",
                     valueType: "number",
                     min: 120,
                     max: 4000,
                     step: 10,
                   })}
-                  ${this._renderTextField("ed.light.anim_controls_ms", "animations.controls_duration", config.animations.controls_duration, {
+                  ${this._renderTextField("ed.light.anim_controls_ms", "animations.controls_duration", animations.controls_duration, {
                     type: "number",
                     valueType: "number",
                     min: 120,
                     max: 2400,
                     step: 10,
                   })}
-                  ${this._renderTextField("ed.fan.anim_preset_ms", "animations.preset_duration", config.animations.preset_duration, {
+                  ${this._renderTextField("ed.fan.anim_preset_ms", "animations.preset_duration", animations.preset_duration, {
                     type: "number",
                     valueType: "number",
                     min: 120,
                     max: 2400,
                     step: 10,
                   })}
-                  ${this._renderTextField("ed.vacuum.button_bounce_ms", "animations.button_bounce_duration", config.animations.button_bounce_duration, {
+                  ${this._renderTextField("ed.vacuum.button_bounce_ms", "animations.button_bounce_duration", animations.button_bounce_duration, {
                     type: "number",
                     valueType: "number",
                     min: 120,
@@ -1319,14 +1329,13 @@ class NodaliaFanCardEditor extends HTMLElement {
     `;
 
     this.shadowRoot
-      .querySelectorAll('[data-mounted-control="fan-entity"]')
+      .querySelectorAll<HTMLElement>('[data-mounted-control="fan-entity"]')
       .forEach(host => this._mountFanEntityPicker(host));
 
     this.shadowRoot
-      .querySelectorAll("ha-icon-picker[data-field]")
+      .querySelectorAll<HTMLElement>("ha-icon-picker[data-field]")
       .forEach(control => {
-        control.hass = this._hass;
-        control.value = control.dataset.value || "";
+        Object.assign(control, { hass: this._hass, value: control.dataset.value || "" });
         control.addEventListener("value-changed", this._onShadowValueChanged);
       });
 

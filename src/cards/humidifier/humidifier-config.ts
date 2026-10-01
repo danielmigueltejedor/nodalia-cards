@@ -123,8 +123,11 @@ export function normalizeConfig(rawConfig: unknown = {}) {
   normalizeControlActions(config, rawConfig, false);
   const security = window.NodaliaUtils.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
     ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
-  return {
-    ...config,
+  const fields = {
+    entity: typeof config.entity === "string" ? config.entity : "",
+    language: typeof config.language === "string" ? config.language : "auto",
+    mode_entity: typeof config.mode_entity === "string" ? config.mode_entity : "",
+    fan_mode_entity: typeof config.fan_mode_entity === "string" ? config.fan_mode_entity : "",
     layout,
     hidden_modes: normalizeControlList(config.hidden_modes),
     hidden_fan_modes: normalizeControlList(config.hidden_fan_modes),
@@ -133,4 +136,6 @@ export function normalizeConfig(rawConfig: unknown = {}) {
     security,
     styles: getSafeStyles(config.styles),
   };
+  const normalized: typeof fields & Record<string, unknown> = { ...config, ...fields };
+  return normalized;
 }
