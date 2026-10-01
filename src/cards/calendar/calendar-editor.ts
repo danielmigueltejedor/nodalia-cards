@@ -1,6 +1,8 @@
-// @ts-nocheck
-/* Visual editor surface: typed incrementally after the card runtime split. */
-import { escapeHtml } from "./calendar-runtime";
+import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
+import type { EditorFocusState } from "../../core/types/nodalia-utils";
+import { editorControlValue, isNativeEditorInput, type NativeEditorInput } from "../../shared/editor-controls";
+import { parseFiniteNumericValue } from "../../shared/numeric-values";
+import { escapeHtml, isObject } from "./calendar-runtime";
 import { DEFAULT_CONFIG, normalizeConfig } from "./calendar-config";
 import {
   compactCalendarConfig,
@@ -11,12 +13,22 @@ import {
   sanitizeCalendarTint,
 } from "./calendar-helpers";
 
-let _lazyNodaliaCalendarCardEditor;
-export function loadNodaliaCalendarCardEditor() {
+type CalendarEntry = ReturnType<typeof normalizeConfig>["calendars"][number];
+interface FieldOptions { fullWidth?: boolean; type?: string; valueType?: string; placeholder?: string; hint?: string; fallbackValue?: string; options?: { value: string; label: string }[]; }
+let _lazyNodaliaCalendarCardEditor: CustomElementConstructor | undefined;
+export function loadNodaliaCalendarCardEditor(): CustomElementConstructor {
   if (_lazyNodaliaCalendarCardEditor) {
     return _lazyNodaliaCalendarCardEditor;
   }
 class NodaliaCalendarCardEditor extends HTMLElement {
+  private _config!: ReturnType<typeof normalizeConfig>;
+  private _hass!: HomeAssistant | null;
+  private _showHapticsSection!: boolean;
+  private _showAnimationSection!: boolean;
+  private _showStyleSection!: boolean;
+  private _entityOptionsSignature!: string;
+  private _pendingEditorControlTags!: Set<string>;
+
   constructor() {
     super();
     this._nodaliaConstruct();
@@ -58,7 +70,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
     window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
   }
 
-  set hass(hass) {
+  set hass(hass: HomeAssistant) {
     const nextSignature = this._getEntityOptionsSignature(hass);
     const shouldRender =
       !this._hass ||
@@ -82,7 +94,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
     });
   }
 
-  setConfig(config) {
+  setConfig(config: unknown) {
     const focusState = this._captureFocusState();
     this._config = normalizeConfig(config || {});
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
@@ -103,7 +115,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
       .join("|");
   }
 
-  _editorLabel(s) {
+  _editorLabel(s: string) {
     if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
       return s;
     }
@@ -132,11 +144,11 @@ class NodaliaCalendarCardEditor extends HTMLElement {
     return window.NodaliaUtils.captureEditorFocusState(this);
   }
 
-  _restoreFocusState(focusState) {
+  _restoreFocusState(focusState: EditorFocusState | null) {
     window.NodaliaUtils.restoreEditorFocusState(this, focusState);
   }
 
-  _watchEditorControlTag(tagName) {
+  _watchEditorControlTag(tagName: string) {
     if (!tagName || this._pendingEditorControlTags.has(tagName)) {
       return;
     }
@@ -165,7 +177,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
     this._watchEditorControlTag("ha-icon-picker");
   }
 
-  _setFieldValue(targetConfig, field, value) {
+  _setFieldValue(targetConfig: ReturnType<typeof normalizeConfig>, field: string, value: unknown) {
     if (!field) {
       return;
     }
@@ -181,30 +193,16 @@ class NodaliaCalendarCardEditor extends HTMLElement {
     if (field.startsWith("calendars.")) {
       const parts = field.split(".");
       const index = Number(parts[1]);
-      if (!Number.isFinite(index) || index < 0) {
+      if (!Number.isInteger(index) || index < 0 || !parts[1]?.trim()
+          || index > targetConfig.calendars.length || parts.length > 3) {
         return;
       }
-      if (!Array.isArray(targetConfig.calendars)) {
-        targetConfig.calendars = [];
-      }
+      const key = parts.length >= 3 ? parts[2] : null;
+      if (parts.length >= 3 && (!key || !["entity", "label", "tint"].includes(key))) return;
       while (targetConfig.calendars.length <= index) {
         targetConfig.calendars.push({ entity: "", label: "", tint: "" });
       }
-      if (parts.length >= 3) {
-        const key = parts[2];
-        const unsafeKey =
-          typeof window !== "undefined"
-          && window.NodaliaUtils
-          && typeof window.NodaliaUtils.isUnsafeConfigPathKey === "function"
-          && window.NodaliaUtils.isUnsafeConfigPathKey(key);
-        if (
-          key === "__proto__"
-          || key === "constructor"
-          || key === "prototype"
-          || unsafeKey
-        ) {
-          return;
-        }
+      if (key) {
         let entry = targetConfig.calendars[index];
         if (typeof entry === "string") {
           entry = { entity: String(entry).trim(), label: "", tint: "" };
@@ -230,13 +228,13 @@ class NodaliaCalendarCardEditor extends HTMLElement {
     }
   }
 
-  _readFieldValue(input) {
+  _readFieldValue(input: NativeEditorInput) {
     const valueType = input.dataset.valueType || "string";
     if (valueType === "boolean") {
-      return Boolean(input.checked);
+      return input instanceof HTMLInputElement && input.checked;
     }
     if (valueType === "number") {
-      return Number(input.value || 0);
+      return parseFiniteNumericValue(input.value) ?? undefined;
     }
     if (valueType === "color") {
       return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
@@ -244,22 +242,14 @@ class NodaliaCalendarCardEditor extends HTMLElement {
     return input.value;
   }
 
-  _onShadowInput(event) {
+  _onShadowInput(event: Event) {
     const input = event
       .composedPath()
-      .find(
-        node =>
-          node instanceof HTMLInputElement ||
-          node instanceof HTMLSelectElement ||
-          node instanceof HTMLTextAreaElement,
-      );
+      .find(isNativeEditorInput);
     if (!input?.dataset?.field) {
       return;
     }
     event.stopPropagation();
-    if (event.type === "input" && input.type !== "checkbox") {
-      return;
-    }
     if (input.type === "checkbox" && event.type === "input") {
       return;
     }
@@ -276,18 +266,17 @@ class NodaliaCalendarCardEditor extends HTMLElement {
     }
   }
 
-  _onShadowValueChanged(event) {
+  _onShadowValueChanged(event: Event) {
     const control = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.field);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.field));
     if (!control?.dataset?.field) {
       return;
     }
     event.stopPropagation();
     const field = control.dataset.field;
     const next = deepClone(this._config || DEFAULT_CONFIG);
-    const raw = event.detail?.value;
-    const value = typeof raw === "string" ? raw : control.value;
+    const value = editorControlValue(event, control);
     this._setFieldValue(next, field, value);
     this._config = normalizeConfig(next);
     this._emitConfig();
@@ -296,14 +285,17 @@ class NodaliaCalendarCardEditor extends HTMLElement {
     this._restoreFocusState(focusState);
   }
 
-  _moveCalendar(index, delta) {
+  _moveCalendar(index: number, delta: number) {
     const next = deepClone(this._config || DEFAULT_CONFIG);
     const list = Array.isArray(next.calendars) ? [...next.calendars] : [];
     const j = index + delta;
-    if (!Number.isFinite(index) || index < 0 || !Number.isFinite(j) || j < 0 || j >= list.length) {
+    if (!Number.isInteger(index) || index < 0 || index >= list.length || !Number.isInteger(j) || j < 0 || j >= list.length) {
       return;
     }
-    [list[index], list[j]] = [list[j], list[index]];
+    const source = list[index], target = list[j];
+    if (!source || !target) return;
+    list[index] = target;
+    list[j] = source;
     next.calendars = list;
     this._config = normalizeConfig(next);
     this._emitConfig();
@@ -312,9 +304,9 @@ class NodaliaCalendarCardEditor extends HTMLElement {
     this._restoreFocusState(focusState);
   }
 
-  _onShadowClick(event) {
+  _onShadowClick(event: Event) {
     const rootTarget = event.target instanceof Element ? event.target : null;
-    const toggleButton = rootTarget?.closest?.("[data-editor-toggle]");
+    const toggleButton = rootTarget?.closest<HTMLElement>("[data-editor-toggle]");
     if (toggleButton) {
       event.preventDefault();
       event.stopPropagation();
@@ -331,7 +323,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
       return;
     }
 
-    const button = rootTarget?.closest?.("[data-editor-action]");
+    const button = rootTarget?.closest<HTMLElement>("[data-editor-action]");
     if (!button) {
       return;
     }
@@ -351,12 +343,13 @@ class NodaliaCalendarCardEditor extends HTMLElement {
       next.calendars = [];
     }
     if (action === "add-calendar") {
+      // The empty-list view already exposes one editable placeholder row.
+      if (!next.calendars.length) next.calendars.push({ entity: "", label: "", tint: "" });
       next.calendars.push({ entity: "", label: "", tint: "" });
     } else if (action === "remove-calendar") {
       const index = Number(button.dataset.index || -1);
-      if (Number.isFinite(index) && index >= 0 && index < next.calendars.length) {
-        next.calendars.splice(index, 1);
-      }
+      if (!Number.isInteger(index) || index < 0 || index >= next.calendars.length) return;
+      next.calendars.splice(index, 1);
     } else {
       return;
     }
@@ -367,7 +360,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
     this._restoreFocusState(focusState);
   }
 
-  _mountCalendarEntityHost(host) {
+  _mountCalendarEntityHost(host: HTMLElement) {
     if (!(host instanceof HTMLElement)) {
       return;
     }
@@ -378,19 +371,19 @@ class NodaliaCalendarCardEditor extends HTMLElement {
       .split(",")
       .map(domain => domain.trim())
       .filter(Boolean);
-    let control = null;
+    let control: HTMLElement;
 
     if (customElements.get("ha-entity-picker")) {
       control = document.createElement("ha-entity-picker");
       if (allowedDomains.length) {
-        control.includeDomains = allowedDomains;
-        control.entityFilter = stateObj =>
-          allowedDomains.some(domain => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+        Object.assign(control, { includeDomains: allowedDomains });
+        Object.assign(control, { entityFilter: (stateObj: HassEntity) =>
+          allowedDomains.some(domain => String(stateObj.entity_id || "").startsWith(`${domain}.`)) });
       }
       if (placeholder) {
         control.setAttribute("placeholder", placeholder);
       }
-      control.allowCustomEntity = true;
+      Object.assign(control, { allowCustomEntity: true });
     } else if (customElements.get("ha-selector")) {
       control = document.createElement("ha-selector");
       const entitySelector =
@@ -399,11 +392,10 @@ class NodaliaCalendarCardEditor extends HTMLElement {
           : allowedDomains.length > 1
             ? { domain: allowedDomains }
             : {};
-      control.selector = { entity: entitySelector };
+      Object.assign(control, { selector: { entity: entitySelector } });
     } else {
       control = document.createElement("input");
-      control.type = "text";
-      control.placeholder = placeholder || "calendar.ejemplo";
+      Object.assign(control, { type: "text", placeholder: placeholder || "calendar.ejemplo" });
       control.addEventListener("change", this._onShadowInput);
     }
 
@@ -424,7 +416,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
     host.replaceChildren(control);
   }
 
-  _renderCheckboxField(label, field, checked) {
+  _renderCheckboxField(label: string, field: string, checked: boolean) {
     const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
@@ -440,7 +432,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
     `;
   }
 
-  _renderTintAutoToggle(checked) {
+  _renderTintAutoToggle(checked: boolean) {
     const tTitle = this._editorLabel("ed.calendar.tint_auto_title");
     const tHint = this._editorLabel("ed.calendar.tint_auto_hint");
     const aria = escapeHtml(`${tTitle}. ${tHint}`);
@@ -465,7 +457,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
     `;
   }
 
-  _renderSelectField(label, field, value, options = {}) {
+  _renderSelectField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const opts = options.options || [];
     const current = String(value ?? "");
@@ -486,7 +478,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
     `;
   }
 
-  _renderTextField(label, field, value, options = {}) {
+  _renderTextField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
@@ -511,7 +503,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
     `;
   }
 
-  _renderIconPickerField(label, field, value, options = {}) {
+  _renderIconPickerField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
@@ -528,7 +520,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
     `;
   }
 
-  _renderColorField(label, field, value, options = {}) {
+  _renderColorField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const tColorCustom = this._editorLabel("Color personalizado");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
@@ -557,7 +549,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
     `;
   }
 
-  _renderCalendarCard(entry, index, total) {
+  _renderCalendarCard(entry: CalendarEntry, index: number, total: number) {
     const ent =
       entry && typeof entry === "object" && !Array.isArray(entry)
         ? entry
@@ -614,7 +606,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
         ? config.calendars
         : [{ entity: "", label: "", tint: "" }];
     const hapticStyle = config.haptics?.style || DEFAULT_CONFIG.haptics.style;
-    const animations = config.animations || DEFAULT_CONFIG.animations;
+    const animations = isObject(config.animations) ? config.animations : DEFAULT_CONFIG.animations;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -1090,7 +1082,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
             ${this._renderCheckboxField(
               "ed.calendar.allow_webhooks_non_admin",
               "security.allow_webhooks_for_non_admin",
-              config.security?.allow_webhooks_for_non_admin === true,
+              isObject(config.security) && config.security.allow_webhooks_for_non_admin === true,
             )}
           </div>
         </section>
@@ -1269,7 +1261,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
     `;
 
     this.shadowRoot
-      .querySelectorAll(
+      .querySelectorAll<HTMLElement>(
         '[data-mounted-control="calendar-entity"], [data-mounted-control="weather-entity"]',
       )
       .forEach(host => {

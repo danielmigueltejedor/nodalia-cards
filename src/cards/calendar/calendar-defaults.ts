@@ -1,4 +1,5 @@
 export const DEFAULT_CONFIG = {
+  language: "auto",
   title: "Calendar",
   icon: "mdi:calendar-month",
   calendars: [],
