@@ -1,0 +1,199 @@
+.camera-card__expanded {
+  display: none;
+  inset: 0;
+  position: fixed;
+  z-index: 2147483001;
+}
+
+.camera-card__expanded.is-open {
+  display: block;
+}
+
+.camera-card__expanded-backdrop {
+  background: rgba(0, 0, 0, 0.62);
+  border: 0;
+  cursor: pointer;
+  height: 100%;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  position: absolute;
+  width: 100%;
+}
+
+.camera-card__expanded-panel {
+  background: var(--ha-card-background, #1c1c1c);
+  border: 1px solid var(--divider-color);
+  border-radius: 24px;
+  box-shadow: var(--ha-card-box-shadow, 0 18px 48px rgba(0, 0, 0, 0.35));
+  display: grid;
+  gap: 12px;
+  inset: auto;
+  left: 50%;
+  max-height: min(88vh, 920px);
+  max-width: min(96vw, 1080px);
+  overflow: auto;
+  padding: 14px;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(96vw, 1080px);
+}
+
+.camera-card__expanded-toolbar {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.camera-card__expanded-title {
+  font-size: 16px;
+  font-weight: 700;
+  min-width: 0;
+}
+
+.camera-card__expanded-close {
+  align-items: center;
+  background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+  border: 0;
+  border-radius: 999px;
+  color: var(--primary-text-color);
+  cursor: pointer;
+  display: inline-flex;
+  height: 36px;
+  justify-content: center;
+  width: 36px;
+}
+
+.camera-card__expanded-stage {
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: 18px;
+  overflow: hidden;
+  position: relative;
+}
+
+.camera-card__expanded-poster,
+.camera-card__expanded-stream,
+.camera-card__expanded-stream-frame {
+  inset: 0;
+  position: absolute;
+}
+
+.camera-card__expanded-poster {
+  height: 100%;
+  object-fit: contain;
+  width: 100%;
+}
+
+.camera-card__expanded-stream,
+.camera-card__expanded-stream > *,
+.camera-card__expanded-stream-frame {
+  border: 0;
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.camera-card__expanded-stream ha-camera-stream {
+  background: #000;
+  object-fit: contain;
+}
+
+.camera-card__stream-status {
+  align-items: center;
+  backdrop-filter: blur(12px);
+  background: color-mix(in srgb, #111 76%, transparent);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  bottom: 14px;
+  color: #fff;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 650;
+  gap: 7px;
+  left: 14px;
+  max-width: calc(100% - 28px);
+  padding: 7px 10px;
+  position: absolute;
+  z-index: 2;
+}
+
+.camera-card__stream-status[hidden] {
+  display: none;
+}
+
+.camera-card__stream-indicator {
+  display: grid;
+  flex: 0 0 auto;
+  height: 17px;
+  place-items: center;
+  width: 17px;
+}
+
+.camera-card__stream-spinner {
+  animation: camera-card-stream-spin 760ms linear infinite;
+  background: conic-gradient(from 0deg, transparent 0 62%, currentColor 84% 100%);
+  border-radius: 50%;
+  height: 16px;
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 0);
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 0);
+  transform-origin: 50% 50%;
+  width: 16px;
+}
+
+.camera-card__stream-indicator ha-icon {
+  height: 17px;
+  width: 17px;
+}
+
+.camera-card__stream-indicator ha-icon[hidden],
+.camera-card__stream-status.is-error .camera-card__stream-spinner {
+  display: none;
+}
+
+.camera-card__stream-status.is-error .camera-card__stream-indicator ha-icon {
+  color: var(--error-color, #db4437);
+}
+
+.camera-card__stream-status [data-camera-stream-status-label] {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.camera-card__expanded-actions {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+}
+
+.camera-card__expanded-card-host,
+.camera-card__expanded-card-host > * {
+  display: block;
+  min-width: 0;
+  width: 100%;
+}
+
+@keyframes camera-card-fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes camera-card-stream-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 720px) {
+  .camera-card__expanded-panel {
+    border-radius: 18px 18px 0 0;
+    bottom: 0;
+    max-height: 92vh;
+    max-height: 92dvh;
+    top: auto;
+    transform: translateX(-50%);
+    width: 100%;
+  }
+}

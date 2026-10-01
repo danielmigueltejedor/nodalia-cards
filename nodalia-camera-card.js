@@ -1617,10 +1617,14 @@
     config.entity = cameraIds[0] || String(config.entity ?? "").trim();
     config.layout = CAMERA_LAYOUT;
     config.presentation = CAMERA_PRESENTATION;
-    config.camera_streams = normalizeCameraStreams(config.camera_streams, cameraIds);
-    config.camera_tap_actions = normalizeCameraTapActions(config.camera_tap_actions, cameraIds);
-    config.camera_actions = normalizeCameraActions(config.camera_actions, cameraIds);
-    config.expanded_actions = normalizeExpandedActions(config.expanded_actions);
+    const camera_streams = normalizeCameraStreams(config.camera_streams, cameraIds);
+    config.camera_streams = camera_streams;
+    const camera_tap_actions = normalizeCameraTapActions(config.camera_tap_actions, cameraIds);
+    config.camera_tap_actions = camera_tap_actions;
+    const camera_actions = normalizeCameraActions(config.camera_actions, cameraIds);
+    config.camera_actions = camera_actions;
+    const expanded_actions = normalizeExpandedActions(config.expanded_actions);
+    config.expanded_actions = expanded_actions;
     config.language = String(config.language ?? "auto").trim() || "auto";
     config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? { ...DEFAULT_CONFIG.security, ...isObject(config.security) ? config.security : {} };
     const applyTap = window.NodaliaUtils?.applyCardTapActionField?.bind(window.NodaliaUtils);
@@ -1663,11 +1667,60 @@
     if (config.hold_action === "navigate" && !config.hold_navigation_path && config.hold_url) {
       config.hold_navigation_path = config.hold_url;
     }
-    config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles) ?? deepClone(DEFAULT_CONFIG.styles);
-    return config;
+    const styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles) ?? deepClone(DEFAULT_CONFIG.styles);
+    const fields = {
+      entity: String(config.entity),
+      language: String(config.language),
+      layout: CAMERA_LAYOUT,
+      presentation: CAMERA_PRESENTATION,
+      cameras: cameraIds,
+      camera_streams,
+      camera_tap_actions,
+      camera_actions,
+      expanded_actions,
+      styles,
+      security: isObject(config.security) ? config.security : { ...DEFAULT_CONFIG.security }
+    };
+    const normalized = { ...config, ...fields };
+    return normalized;
+  }
+
+  // src/cards/camera/camera-expanded.css
+  var camera_expanded_default = ".camera-card__expanded{display:none;inset:0;position:fixed;z-index:2147483001}.camera-card__expanded.is-open{display:block}.camera-card__expanded-backdrop{background:rgba(0,0,0,0.62);border:0;cursor:pointer;height:100%;inset:0;margin:0;padding:0;position:absolute;width:100%}.camera-card__expanded-panel{background:var(--ha-card-background, #1c1c1c);border:1px solid var(--divider-color);border-radius:24px;box-shadow:var(--ha-card-box-shadow, 0 18px 48px rgba(0, 0, 0, 0.35));display:grid;gap:12px;inset:auto;left:50%;max-height:min(88vh,920px);max-width:min(96vw,1080px);overflow:auto;padding:14px;position:absolute;top:50%;transform:translate(-50%,-50%);width:min(96vw,1080px)}.camera-card__expanded-toolbar{align-items:center;display:flex;gap:12px;justify-content:space-between}.camera-card__expanded-title{font-size:16px;font-weight:700;min-width:0}.camera-card__expanded-close{align-items:center;background:color-mix(in srgb,var(--primary-text-color) 8%,transparent);border:0;border-radius:999px;color:var(--primary-text-color);cursor:pointer;display:inline-flex;height:36px;justify-content:center;width:36px}.camera-card__expanded-stage{aspect-ratio:16 / 9;background:#000;border-radius:18px;overflow:hidden;position:relative}.camera-card__expanded-poster,.camera-card__expanded-stream,.camera-card__expanded-stream-frame{inset:0;position:absolute}.camera-card__expanded-poster{height:100%;object-fit:contain;width:100%}.camera-card__expanded-stream,.camera-card__expanded-stream>*,.camera-card__expanded-stream-frame{border:0;display:block;height:100%;width:100%}.camera-card__expanded-stream ha-camera-stream{background:#000;object-fit:contain}.camera-card__stream-status{align-items:center;backdrop-filter:blur(12px);background:color-mix(in srgb,#111 76%,transparent);border:1px solid rgba(255,255,255,0.18);border-radius:999px;bottom:14px;color:#fff;display:inline-flex;font-size:12px;font-weight:650;gap:7px;left:14px;max-width:calc(100% - 28px);padding:7px 10px;position:absolute;z-index:2}.camera-card__stream-status[hidden]{display:none}.camera-card__stream-indicator{display:grid;flex:0 0 auto;height:17px;place-items:center;width:17px}.camera-card__stream-spinner{animation:camera-card-stream-spin 760ms linear infinite;background:conic-gradient(from 0deg,transparent 0 62%,currentColor 84% 100%);border-radius:50%;height:16px;-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 0);mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 0);transform-origin:50% 50%;width:16px}.camera-card__stream-indicator ha-icon{height:17px;width:17px}.camera-card__stream-indicator ha-icon[hidden],.camera-card__stream-status.is-error .camera-card__stream-spinner{display:none}.camera-card__stream-status.is-error .camera-card__stream-indicator ha-icon{color:var(--error-color, #db4437)}.camera-card__stream-status [data-camera-stream-status-label]{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.camera-card__expanded-actions{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr))}.camera-card__expanded-card-host,.camera-card__expanded-card-host>*{display:block;min-width:0;width:100%}@keyframes camera-card-fade-up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}@keyframes camera-card-stream-spin{to{transform:rotate(360deg)}}@media(max-width:720px){.camera-card__expanded-panel{border-radius:18px 18px 0 0;bottom:0;max-height:92vh;max-height:92dvh;top:auto;transform:translateX(-50%);width:100%}}";
+
+  // src/shared/home-assistant-services.ts
+  function callHassService(hass, domain, service, data = {}, target = null) {
+    if (!hass?.callService) return;
+    const failure = (error) => console.warn("Nodalia Cards: service call failed", `${domain}.${service}`, error);
+    try {
+      void Promise.resolve(target !== null ? hass.callService(domain, service, data, target) : hass.callService(domain, service, data)).catch(failure);
+    } catch (error) {
+      failure(error);
+    }
+  }
+  function invokeHassService(host, hass, domain, service, data = {}, target = null) {
+    const utils2 = window.NodaliaUtils;
+    const invoke = utils2?.invokeHomeAssistantService;
+    if (!invoke) {
+      callHassService(hass, domain, service, data, target);
+      return;
+    }
+    const failure = (error) => console.warn("Nodalia Cards: service call failed", `${domain}.${service}`, error);
+    try {
+      void Promise.resolve(invoke.call(utils2, host, hass, domain, service, data, target)).catch(failure);
+    } catch (error) {
+      failure(error);
+    }
+  }
+
+  // src/shared/card-elements.ts
+  function isLovelaceEditorElement(element) {
+    return element instanceof HTMLElement && "setConfig" in element && typeof element.setConfig === "function";
   }
 
   // src/cards/camera/camera-card.ts
+  var isGo2rtcPlayer = (node) => "configure" in node && typeof node.configure === "function";
+  var cameraActionElement = (node) => node instanceof HTMLElement && Boolean(node.dataset.cameraAction);
   var _lazyNodaliaCameraCard;
   function loadNodaliaCameraCard() {
     if (_lazyNodaliaCameraCard) {
@@ -1691,6 +1744,15 @@
         this.attachShadow({ mode: "open" });
         this._config = normalizeConfig(STUB_CONFIG);
         this._hass = null;
+        this._contextGeneration = 0;
+        this._viewGeneration = 0;
+        this._prefetchGeneration = 0;
+        this._retryTimers = /* @__PURE__ */ new Map();
+        this._hassContextOwner = null;
+        this._hassUserKey = "";
+        this._detachPrimaryHold = () => {
+        };
+        this._suppressNextPrimaryClick = false;
         this._lastRenderSignature = "";
         this._staticRenderSignature = "";
         this._animateContentOnNextRender = true;
@@ -1716,6 +1778,7 @@
         this.shadowRoot?.addEventListener("click", this._onShadowClick);
         this.shadowRoot?.addEventListener("keydown", this._onShadowKeyDown);
         window.addEventListener("keydown", this._onWindowKeyDown);
+        this._bindPrimaryHold();
         this._animateContentOnNextRender = true;
         this._prefetchGo2rtcSources();
         if (this._hass && this._config) {
@@ -1724,6 +1787,8 @@
         }
       }
       disconnectedCallback() {
+        this._invalidateCameraContext();
+        this._detachPrimaryHold();
         window.NodaliaUtils?.releaseModalFocus?.(this);
         this.shadowRoot?.removeEventListener("click", this._onShadowClick);
         this.shadowRoot?.removeEventListener("keydown", this._onShadowKeyDown);
@@ -1742,7 +1807,9 @@
         this._lastRenderSignature = "";
       }
       setConfig(config) {
+        this._invalidateCameraContext();
         this._config = normalizeConfig(config || {});
+        this._bindPrimaryHold();
         this._staticRenderSignature = JSON.stringify([
           this._config.camera_streams || [],
           this._config.camera_tap_actions || [],
@@ -1753,15 +1820,32 @@
         this._lastRenderSignature = "";
         this._go2rtcPrefetchSignature = "";
         this._animateContentOnNextRender = true;
+        if (this._expandedOpen && !this._getCameraIds().includes(this._expandedEntityId)) this._closeExpanded();
         this._prefetchGo2rtcSources();
-        if (!this.isConnected) {
-          return;
-        }
+        if (!this.isConnected) return;
         this._render();
       }
       set hass(hass) {
         const previousHass = this._hass;
+        const owner = hass?.connection || hass?.auth || null;
+        const userKey = `${Boolean(hass)}:${hass?.user?.id || ""}:${hass?.user?.is_admin === true}`;
+        const changedContext = owner !== this._hassContextOwner || userKey !== this._hassUserKey;
+        if (changedContext) {
+          this._invalidateCameraContext();
+          this._failedImageUrls.clear();
+          this._failedCameraTokens.clear();
+          if (this._expandedOpen) {
+            this._expandedOpen = false;
+            this._expandedEntityId = "";
+            this._teardownExpandedPortal();
+            this._emitOverlayChange(false);
+            window.NodaliaUtils.releaseModalFocus?.(this);
+          }
+        }
+        this._hassContextOwner = owner;
+        this._hassUserKey = userKey;
         this._hass = hass;
+        if (changedContext) this._bindPrimaryHold();
         const prefetchOwner = hass?.connection || hass?.auth || hass || null;
         if (prefetchOwner !== this._go2rtcPrefetchOwner) {
           this._go2rtcPrefetchOwner = prefetchOwner;
@@ -1772,13 +1856,13 @@
           return;
         }
         const nextSignature = this._getRenderSignature(hass);
-        if (previousHass && this._expandedOpen && this.shadowRoot?.innerHTML) {
+        if (!changedContext && previousHass && this._expandedOpen && this.shadowRoot?.innerHTML) {
           this._lastRenderSignature = nextSignature;
           this._updateExpandedCardsHass();
           this._updateExpandedStreamState();
           return;
         }
-        if (previousHass && nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
+        if (!changedContext && previousHass && nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
           this._updateExpandedCardsHass();
           return;
         }
@@ -1795,6 +1879,54 @@
           min_rows: 3,
           min_columns: 3
         };
+      }
+      _bindPrimaryHold() {
+        this._detachPrimaryHold();
+        if (!this.isConnected) return;
+        this._detachPrimaryHold = window.NodaliaUtils.bindHostPointerHoldGesture?.(this, {
+          resolveZone: (event) => {
+            const node = event.composedPath().find(cameraActionElement);
+            return node?.dataset.cameraAction === "camera-tap" ? node.dataset.cameraEntity || this._config.entity : null;
+          },
+          shouldBeginHold: () => normalizeTextKey(this._config.hold_action || "none") !== "none",
+          onHold: (entityId) => {
+            this._triggerHaptic();
+            this._performHoldAction(entityId);
+          },
+          markHoldConsumedClick: () => {
+            this._suppressNextPrimaryClick = true;
+          }
+        }) || (() => {
+        });
+      }
+      _cancelStreamRetries() {
+        this._retryTimers.forEach((resolve, timer) => {
+          window.clearTimeout(timer);
+          resolve();
+        });
+        this._retryTimers.clear();
+      }
+      _invalidateCameraContext() {
+        this._detachPrimaryHold();
+        ++this._contextGeneration;
+        ++this._prefetchGeneration;
+        ++this._expandedStreamMountId;
+        this._go2rtcPrefetchSignature = "";
+        this._suppressNextPrimaryClick = false;
+        this._cancelStreamRetries();
+        this._disposeExpandedStream();
+        this._expandedCardCache.forEach((card) => card.remove());
+        this._expandedCardCache.clear();
+        window.NodaliaUtils.clearDeferTimers?.(this);
+      }
+      _waitForStreamRetry() {
+        return new Promise((resolve) => {
+          const timer = window.setTimeout(() => {
+            this._retryTimers.delete(timer);
+            resolve();
+          }, 350);
+          this._retryTimers.set(timer, resolve);
+        });
       }
       _getCameraIds() {
         return normalizeCameras(this._config || {});
@@ -1815,7 +1947,7 @@
       _cameraUi(path, fallback = "", values = {}) {
         const lang = this._resolveLanguage();
         const pack = window.NodaliaI18n?.strings?.(lang)?.cameraCard || window.NodaliaI18n?.strings?.("en")?.cameraCard || {};
-        const value = path.split(".").reduce((cursor, key) => cursor && cursor[key] !== void 0 ? cursor[key] : void 0, pack);
+        const value = path.split(".").reduce((cursor, key) => isObject(cursor) && Object.prototype.hasOwnProperty.call(cursor, key) ? cursor[key] : void 0, pack);
         if (value === void 0 || value === null) {
           return fallback;
         }
@@ -1831,7 +1963,9 @@
             state?.last_updated || "",
             state?.attributes?.entity_picture || "",
             state?.attributes?.access_token || "",
-            state?.attributes?.frontend_stream_type || ""
+            state?.attributes?.frontend_stream_type || "",
+            state?.attributes?.friendly_name || "",
+            state?.last_changed || ""
           ].join(":");
         });
         const joinParts = window.NodaliaRenderSignature?.joinParts;
@@ -1858,7 +1992,7 @@
         }
         return values.join("|");
       }
-      _getTitle(state, entityId = this._config?.entity) {
+      _getTitle(state, entityId = this._config.entity) {
         const configuredName = String(this._config?.name ?? "").trim();
         const primaryEntity = this._getCameraIds()[0] || this._config?.entity;
         return (entityId === primaryEntity ? configuredName : "") || state?.attributes?.friendly_name || entityId || this._config?.entity || this._cameraUi("defaultName", "Camera");
@@ -1913,7 +2047,9 @@
         this._failedImageUrls.delete(value);
         this._failedImageUrls.add(value);
         while (this._failedImageUrls.size > MAX_FAILED_IMAGE_URLS) {
-          this._failedImageUrls.delete(this._failedImageUrls.values().next().value);
+          const oldest = this._failedImageUrls.values().next().value;
+          if (oldest === void 0) break;
+          this._failedImageUrls.delete(oldest);
         }
         const parsed = parseCameraProxyAuth(value);
         if (!parsed.entityId || !isUsableCameraAccessToken(parsed.accessToken)) {
@@ -1929,11 +2065,6 @@
         if (this._failedCameraTokens.get(id) === accessToken) {
           this._failedCameraTokens.delete(id);
         }
-      }
-      _getStreamProviderHint(state = this._getState()) {
-        return String(
-          state?.attributes?.frontend_stream_type || state?.attributes?.stream_type || state?.attributes?.model_name || ""
-        ).trim();
       }
       _formatLastChanged(state) {
         if (!state?.last_changed) {
@@ -1972,6 +2103,7 @@
           return;
         }
         this.shadowRoot.querySelectorAll("[data-camera-preview-age]").forEach((node) => {
+          if (!(node instanceof HTMLElement)) return;
           const entityId = String(node.dataset?.cameraEntity || "").trim();
           const label = this._formatPreviewAge(this._getState(entityId));
           if (!label) {
@@ -1986,6 +2118,7 @@
       _previewAgeRefreshDelay() {
         const now = Date.now();
         const hasSubMinutePreview = Array.from(this.shadowRoot?.querySelectorAll("[data-camera-preview-age]") || []).some((node) => {
+          if (!(node instanceof HTMLElement)) return false;
           const state = this._getState(String(node.dataset?.cameraEntity || "").trim());
           const updatedAt = new Date(state?.last_updated || state?.last_changed || "").getTime();
           return Number.isFinite(updatedAt) && Math.max(0, now - updatedAt) < 6e4;
@@ -2032,7 +2165,7 @@
         return chips;
       }
       _triggerHaptic(styleOverride = null) {
-        const haptics = this._config?.haptics || {};
+        const haptics = isObject(this._config.haptics) ? this._config.haptics : {};
         if (haptics.enabled !== true) {
           return;
         }
@@ -2082,7 +2215,7 @@
         window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } }));
       }
       _isServiceAllowed(serviceValue) {
-        const security = this._config?.security || {};
+        const security = this._config.security;
         if (security.strict_service_actions === false) {
           return true;
         }
@@ -2096,7 +2229,7 @@
         if (!domains.length && !services.length) {
           return false;
         }
-        return services.includes(normalizedService) || domains.includes(domain);
+        return services.includes(normalizedService) || domains.includes(domain || "");
       }
       _callConfiguredService(serviceValue, rawData = "", rawTarget = "", fallbackEntityId = "") {
         if (!this._hass || !serviceValue) {
@@ -2117,10 +2250,7 @@
         if (entityId && payload.entity_id === void 0 && !hasExplicitTarget) {
           payload.entity_id = entityId;
         }
-        const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils) || ((host, hass, svcDomain, svc, data, svcTarget) => Promise.resolve(
-          svcTarget != null ? hass?.callService?.(svcDomain, svc, data, svcTarget) : hass?.callService?.(svcDomain, svc, data)
-        ));
-        invoke(this, this._hass, domain, service, payload, hasExplicitTarget ? target : null);
+        invokeHassService(this, this._hass, domain, service, payload, hasExplicitTarget ? target : null);
       }
       _getCameraTapAction(entityId = this._config?.entity) {
         const camera = String(entityId || this._config?.entity || "").trim();
@@ -2139,7 +2269,7 @@
           tap_new_tab: this._config?.tap_new_tab === true
         };
       }
-      _performCameraTapAction(entityId = this._config?.entity, returnTarget = null) {
+      _performCameraTapAction(entityId = this._config.entity, returnTarget = null) {
         const camera = String(entityId || this._config?.entity || "").trim();
         const actionConfig = this._getCameraTapAction(camera);
         const action = normalizeTextKey(actionConfig.tap_action || "toggle");
@@ -2176,20 +2306,21 @@
       _performTapAction(returnTarget = null) {
         this._performCameraTapAction(this._config?.entity, returnTarget);
       }
-      _performHoldAction() {
+      _performHoldAction(entityId = this._config.entity) {
         const action = normalizeTextKey(this._config?.hold_action || "none");
         switch (action) {
           case "toggle":
-            this._openExpanded();
+            this._openExpanded(entityId);
             return;
           case "more-info":
-            this._openMoreInfo();
+            this._openMoreInfo(entityId);
             return;
           case "service":
             this._callConfiguredService(
               this._config?.hold_service,
               this._config?.hold_service_data,
-              this._config?.hold_service_target
+              this._config?.hold_service_target,
+              entityId
             );
             return;
           case "url":
@@ -2204,7 +2335,7 @@
             return;
         }
       }
-      _openExpanded(entityId = this._config?.entity, returnTarget = null) {
+      _openExpanded(entityId = this._config.entity, returnTarget = null) {
         if (this._expandedOpen) {
           return;
         }
@@ -2213,8 +2344,8 @@
         const returnEntity = active instanceof HTMLElement ? String(active.dataset?.cameraEntity || "") : "";
         this._expandedReturnFocus = () => {
           const candidates = returnAction === "camera-tap" ? Array.from(this.shadowRoot?.querySelectorAll('[data-camera-action="camera-tap"]') || []) : Array.from(this.shadowRoot?.querySelectorAll('[data-camera-action="body"]') || []);
-          const target = returnEntity ? candidates.find((element) => element.dataset?.cameraEntity === returnEntity) : candidates[0];
-          target?.focus?.({ preventScroll: true });
+          const target = returnEntity ? candidates.find((element) => element instanceof HTMLElement && element.dataset.cameraEntity === returnEntity) : candidates[0];
+          if (target instanceof HTMLElement) target.focus({ preventScroll: true });
         };
         this._expandedEntityId = String(entityId || this._config?.entity || "").trim();
         this._expandedOpen = true;
@@ -2229,6 +2360,7 @@
         this._expandedOpen = false;
         this._expandedEntityId = "";
         this._expandedStreamMountId += 1;
+        this._cancelStreamRetries();
         this._disposeExpandedStream();
         this._teardownExpandedPortal();
         this._lastRenderSignature = "";
@@ -2253,7 +2385,13 @@
         portal.remove();
       }
       _shouldPortalExpanded() {
-        return Boolean(this.closest?.("nodalia-room-summary-card"));
+        let node = this;
+        while (true) {
+          if (node.closest?.("nodalia-room-summary-card")) return true;
+          const root = node.getRootNode();
+          if (!(root instanceof ShadowRoot) || !(root.host instanceof HTMLElement)) return false;
+          node = root.host;
+        }
       }
       _syncExpandedPortal() {
         if (!this._expandedOpen || !this.shadowRoot) {
@@ -2301,42 +2439,6 @@
           root.appendChild(dialog);
         }
       }
-      _performExpandedAction(actionConfig) {
-        if (!actionConfig) {
-          return;
-        }
-        const action = normalizeTextKey(actionConfig.tap_action || "toggle");
-        const entityId = actionConfig.entity;
-        switch (action) {
-          case "none":
-            return;
-          case "toggle":
-            if (entityId && this._hass?.states?.[entityId]) {
-              const domain = entityId.split(".")[0];
-              this._callConfiguredService(`${domain}.toggle`, "", "", entityId);
-            }
-            return;
-          case "more-info":
-            this._openMoreInfo(entityId);
-            return;
-          case "service":
-            this._callConfiguredService(
-              actionConfig.tap_service,
-              actionConfig.tap_service_data,
-              actionConfig.tap_service_target,
-              entityId
-            );
-            return;
-          case "url":
-            this._openConfiguredUrl(actionConfig.tap_url, actionConfig.tap_new_tab === true);
-            return;
-          case "navigate":
-            this._navigateToPath(actionConfig.navigation_path || actionConfig.tap_url);
-            return;
-          default:
-            this._openMoreInfo(entityId);
-        }
-      }
       _onWindowKeyDown(event) {
         if (!this.isConnected || !this._expandedOpen) {
           return;
@@ -2349,12 +2451,18 @@
       }
       _onShadowClick(event) {
         const path = event.composedPath();
-        const button = path.find((node) => node instanceof HTMLElement && node.dataset?.cameraAction);
+        const button = path.find(cameraActionElement);
         if (!button) {
           return;
         }
         const action = button.dataset.cameraAction;
         if (action === "camera-tap") {
+          if (this._suppressNextPrimaryClick) {
+            this._suppressNextPrimaryClick = false;
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+          }
           event.preventDefault();
           event.stopPropagation();
           this._triggerHaptic();
@@ -2388,7 +2496,7 @@
       </ha-card>
     `;
       }
-      _renderPreviewMarkup(state, imageUrl, layout, entityId = this._config?.entity) {
+      _renderPreviewMarkup(state, imageUrl, layout, entityId = this._config.entity) {
         const unavailable = isUnavailableState(state);
         const imageFailed = imageUrl && this._failedImageUrls.has(imageUrl);
         const showImage = Boolean(imageUrl) && !unavailable && !imageFailed;
@@ -2476,8 +2584,10 @@
           return;
         }
         this._go2rtcPrefetchSignature = signature;
-        void Promise.allSettled(streamConfigs.map((streamConfig) => resolveGo2rtcPlayerSource(this._hass, streamConfig))).then((results) => {
-          if (this._go2rtcPrefetchSignature === signature && results.some((result) => result.status === "rejected" || !result.value)) {
+        const generation = ++this._prefetchGeneration;
+        const hass = this._hass;
+        void Promise.allSettled(streamConfigs.map((streamConfig) => resolveGo2rtcPlayerSource(hass, streamConfig))).then((results) => {
+          if (generation === this._prefetchGeneration && this._go2rtcPrefetchSignature === signature && results.some((result) => result.status === "rejected" || !result.value)) {
             this._go2rtcPrefetchSignature = "";
           }
         });
@@ -2488,16 +2598,14 @@
           return;
         }
         if (node.localName === "ha-camera-stream") {
-          node.hass = this._hass;
-          node.stateObj = this._getState(this._expandedEntityId);
+          Object.assign(node, { hass: this._hass, stateObj: this._getState(this._expandedEntityId) });
         } else if (node.localName !== "nodalia-go2rtc-player") {
-          node.hass = this._hass;
+          Object.assign(node, { hass: this._hass });
         }
       }
       _disposeExpandedStream() {
-        if (typeof this._expandedStreamNode?.disconnect === "function") {
-          this._expandedStreamNode.disconnect();
-        }
+        const node = this._expandedStreamNode;
+        if (node && "disconnect" in node && typeof node.disconnect === "function") node.disconnect();
         this._expandedStreamNode = null;
       }
       _setExpandedStreamStatus(state, detail = "") {
@@ -2540,13 +2648,19 @@
           return;
         }
         const mountId = ++this._expandedStreamMountId;
+        const hass = this._hass;
+        this._cancelStreamRetries();
+        this._disposeExpandedStream();
+        const current = () => mountId === this._expandedStreamMountId && this.isConnected && this._expandedOpen && host.isConnected;
         if (nativeGo2rtc) {
           this._setExpandedStreamStatus("loading");
-          const player = document.createElement("nodalia-go2rtc-player");
+          const node = document.createElement("nodalia-go2rtc-player");
+          if (!isGo2rtcPlayer(node)) {
+            this._setExpandedStreamStatus("error", "The native go2rtc player is not registered");
+            return;
+          }
+          const player = node;
           try {
-            if (typeof player.configure !== "function") {
-              throw new Error("The native go2rtc player is not registered");
-            }
             player.classList.add("camera-card__expanded-go2rtc");
             const playbackMode = streamConfig.provider === "frigate_go2rtc" && streamConfig.mode === "auto" ? "auto-mse" : streamConfig.mode;
             player.configure({
@@ -2566,16 +2680,20 @@
             };
             let source;
             try {
-              source = await resolveGo2rtcPlayerSource(this._hass, sourceConfig);
+              source = await resolveGo2rtcPlayerSource(hass, sourceConfig);
             } catch (_firstError) {
-              await new Promise((resolve) => window.setTimeout(resolve, 350));
-              if (mountId !== this._expandedStreamMountId || !this._expandedOpen || !host.isConnected) {
+              if (!current()) {
                 player.disconnect?.();
                 return;
               }
-              source = await resolveGo2rtcPlayerSource(this._hass, sourceConfig);
+              await this._waitForStreamRetry();
+              if (!current()) {
+                player.disconnect?.();
+                return;
+              }
+              source = await resolveGo2rtcPlayerSource(hass, sourceConfig);
             }
-            if (mountId !== this._expandedStreamMountId || !this._expandedOpen || !host.isConnected) {
+            if (!current()) {
               player.disconnect?.();
               return;
             }
@@ -2583,25 +2701,28 @@
               throw new Error("No usable go2rtc WebSocket endpoint was resolved");
             }
             player.addEventListener("nodalia-go2rtc-loaded", () => {
-              if (mountId !== this._expandedStreamMountId) {
+              if (!current()) {
                 return;
               }
               this._setExpandedStreamStatus("loaded");
-              const poster = this.shadowRoot?.querySelector('[data-camera-poster="true"]');
+              const poster = this._expandedRoot()?.querySelector('[data-camera-poster="true"]');
               if (poster instanceof HTMLElement) {
                 poster.hidden = true;
               }
             }, { once: true });
             player.addEventListener("nodalia-go2rtc-state", (event) => {
-              if (mountId === this._expandedStreamMountId && (event.detail?.state === "connecting" || event.detail?.state === "retrying")) {
-                this._setExpandedStreamStatus("loading", event.detail?.message || "");
+              const detail = event instanceof CustomEvent ? event.detail : null;
+              if (!isObject(detail)) return;
+              if (current() && (detail.state === "connecting" || detail.state === "retrying")) {
+                this._setExpandedStreamStatus("loading", String(detail.message ?? ""));
               }
             });
             player.addEventListener("nodalia-go2rtc-error", (event) => {
-              if (mountId !== this._expandedStreamMountId) {
+              const detail = event instanceof CustomEvent ? event.detail : null;
+              if (!current()) {
                 return;
               }
-              this._setExpandedStreamStatus("error", event.detail?.message || "go2rtc error");
+              this._setExpandedStreamStatus("error", isObject(detail) ? String(detail.message || "go2rtc error") : "go2rtc error");
             });
             player.configure({
               source,
@@ -2611,22 +2732,25 @@
             });
           } catch (error) {
             player.disconnect?.();
-            this._setExpandedStreamStatus("error", error?.message || String(error));
+            if (!current()) return;
+            this._setExpandedStreamStatus("error", error instanceof Error ? error.message : String(error));
             console.warn("[nodalia-camera-card] Unable to start the go2rtc stream", error);
           }
           return;
         }
         const mountNativeStream = () => {
-          if (mountId !== this._expandedStreamMountId || !this._expandedOpen || !host.isConnected) {
+          if (!current()) {
             return false;
           }
           const stream = document.createElement("ha-camera-stream");
-          stream.hass = this._hass;
-          stream.stateObj = this._getState(entityId);
-          stream.controls = streamConfig.controls === true;
-          stream.muted = streamConfig.muted !== false;
-          stream.fitMode = "contain";
-          stream.aspectRatio = "16:9";
+          Object.assign(stream, {
+            hass: this._hass,
+            stateObj: this._getState(entityId),
+            controls: streamConfig.controls === true,
+            muted: streamConfig.muted !== false,
+            fitMode: "contain",
+            aspectRatio: "16:9"
+          });
           host.replaceChildren(stream);
           this._expandedStreamNode = stream;
           return true;
@@ -2637,7 +2761,7 @@
         }
         try {
           const helpers = await window.loadCardHelpers?.();
-          if (mountId !== this._expandedStreamMountId || !this._expandedOpen || !host.isConnected) {
+          if (!current()) {
             return;
           }
           if (customElements.get("ha-camera-stream") && mountNativeStream()) {
@@ -2654,10 +2778,10 @@
             show_state: false,
             fit_mode: "contain"
           });
-          if (mountId !== this._expandedStreamMountId || !this._expandedOpen || !host.isConnected) {
+          if (!current()) {
             return;
           }
-          fallback.hass = this._hass;
+          Object.assign(fallback, { hass: this._hass });
           fallback.classList.add("camera-card__expanded-native-fallback");
           host.replaceChildren(fallback);
           this._expandedStreamNode = fallback;
@@ -2666,14 +2790,15 @@
       }
       _expandedCardTag(entityId) {
         const domain = String(entityId || "").split(".")[0];
-        return {
+        const tags = {
           light: "nodalia-light-card",
           fan: "nodalia-fan-card",
           humidifier: "nodalia-humidifier-card",
           vacuum: "nodalia-vacuum-card",
           cover: "nodalia-cover-card",
           climate: "nodalia-climate-card"
-        }[domain] || "nodalia-entity-card";
+        };
+        return tags[domain || ""] || "nodalia-entity-card";
       }
       _expandedCardConfig(action) {
         const domain = String(action.entity || "").split(".")[0];
@@ -2691,7 +2816,7 @@
           security,
           haptics: deepClone(this._config?.haptics || DEFAULT_CONFIG.haptics),
           animations: {
-            ...deepClone(this._config?.animations || DEFAULT_CONFIG.animations),
+            ...deepClone(isObject(this._config.animations) ? this._config.animations : DEFAULT_CONFIG.animations),
             content_duration: 0,
             panel_duration: 0
           },
@@ -2782,7 +2907,9 @@
           validKeys.add(cacheKey);
           let card = this._expandedCardCache.get(cacheKey);
           if (!card) {
-            card = document.createElement(tagName);
+            const node = document.createElement(tagName);
+            if (!isLovelaceEditorElement(node)) return;
+            card = node;
             this._expandedCardCache.set(cacheKey, card);
           }
           if (card.parentElement !== host) {
@@ -2823,7 +2950,7 @@
       </div>
     `;
       }
-      _renderExpandedOverlay(state, imageUrl, entityId = this._expandedEntityId || this._config?.entity) {
+      _renderExpandedOverlay(state, imageUrl, entityId = this._expandedEntityId || this._config.entity) {
         if (!this._expandedOpen) {
           return "";
         }
@@ -2871,6 +2998,9 @@
           return;
         }
         this._clearPreviewAgeTimer();
+        const generation = ++this._viewGeneration;
+        const context = this._contextGeneration;
+        const currentImage = (node) => node.isConnected && context === this._contextGeneration && generation === this._viewGeneration;
         const config = this._config || {};
         const cameraIds = this._getCameraIds();
         if (!cameraIds.length) {
@@ -2909,10 +3039,11 @@
         const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
         const unavailable = state ? isUnavailableState(state) : false;
         const securityLayout = layout === "security";
+        const configuredAnimations = isObject(config.animations) ? config.animations : {};
         const animations = {
-          enabled: config.animations?.enabled !== false,
-          contentDuration: Number(config.animations?.content_duration) || DEFAULT_CONFIG.animations.content_duration,
-          buttonBounceDuration: Number(config.animations?.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration
+          enabled: configuredAnimations.enabled !== false,
+          contentDuration: Number(configuredAnimations.content_duration) || DEFAULT_CONFIG.animations.content_duration,
+          buttonBounceDuration: Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration
         };
         const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
         const overlayStrength = clamp(Number(styles.preview?.overlay_strength) || DEFAULT_CONFIG.styles.preview.overlay_strength, 0.1, 0.8);
@@ -3194,205 +3325,7 @@
           text-transform: none;
         }
 
-        .camera-card__expanded {
-          display: none;
-          inset: 0;
-          position: fixed;
-          z-index: 2147483001;
-        }
-
-        .camera-card__expanded.is-open {
-          display: block;
-        }
-
-        .camera-card__expanded-backdrop {
-          background: rgba(0, 0, 0, 0.62);
-          border: 0;
-          cursor: pointer;
-          height: 100%;
-          inset: 0;
-          margin: 0;
-          padding: 0;
-          position: absolute;
-          width: 100%;
-        }
-
-        .camera-card__expanded-panel {
-          background: var(--ha-card-background, #1c1c1c);
-          border: 1px solid var(--divider-color);
-          border-radius: 24px;
-          box-shadow: var(--ha-card-box-shadow, 0 18px 48px rgba(0, 0, 0, 0.35));
-          display: grid;
-          gap: 12px;
-          inset: auto;
-          left: 50%;
-          max-height: min(88vh, 920px);
-          max-width: min(96vw, 1080px);
-          overflow: auto;
-          padding: 14px;
-          position: absolute;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          width: min(96vw, 1080px);
-        }
-
-        .camera-card__expanded-toolbar {
-          align-items: center;
-          display: flex;
-          gap: 12px;
-          justify-content: space-between;
-        }
-
-        .camera-card__expanded-title {
-          font-size: 16px;
-          font-weight: 700;
-          min-width: 0;
-        }
-
-        .camera-card__expanded-close {
-          align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border: 0;
-          border-radius: 999px;
-          color: var(--primary-text-color);
-          cursor: pointer;
-          display: inline-flex;
-          height: 36px;
-          justify-content: center;
-          width: 36px;
-        }
-
-        .camera-card__expanded-stage {
-          aspect-ratio: 16 / 9;
-          background: #000;
-          border-radius: 18px;
-          overflow: hidden;
-          position: relative;
-        }
-
-        .camera-card__expanded-poster,
-        .camera-card__expanded-stream,
-        .camera-card__expanded-stream-frame {
-          inset: 0;
-          position: absolute;
-        }
-
-        .camera-card__expanded-poster {
-          height: 100%;
-          object-fit: contain;
-          width: 100%;
-        }
-
-        .camera-card__expanded-stream,
-        .camera-card__expanded-stream > *,
-        .camera-card__expanded-stream-frame {
-          border: 0;
-          display: block;
-          height: 100%;
-          width: 100%;
-        }
-
-        .camera-card__expanded-stream ha-camera-stream {
-          background: #000;
-          object-fit: contain;
-        }
-
-        .camera-card__stream-status {
-          align-items: center;
-          backdrop-filter: blur(12px);
-          background: color-mix(in srgb, #111 76%, transparent);
-          border: 1px solid rgba(255, 255, 255, 0.18);
-          border-radius: 999px;
-          bottom: 14px;
-          color: #fff;
-          display: inline-flex;
-          font-size: 12px;
-          font-weight: 650;
-          gap: 7px;
-          left: 14px;
-          max-width: calc(100% - 28px);
-          padding: 7px 10px;
-          position: absolute;
-          z-index: 2;
-        }
-
-        .camera-card__stream-status[hidden] {
-          display: none;
-        }
-
-        .camera-card__stream-indicator {
-          display: grid;
-          flex: 0 0 auto;
-          height: 17px;
-          place-items: center;
-          width: 17px;
-        }
-
-        .camera-card__stream-spinner {
-          animation: camera-card-stream-spin 760ms linear infinite;
-          background: conic-gradient(from 0deg, transparent 0 62%, currentColor 84% 100%);
-          border-radius: 50%;
-          height: 16px;
-          -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 0);
-          mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 0);
-          transform-origin: 50% 50%;
-          width: 16px;
-        }
-
-        .camera-card__stream-indicator ha-icon {
-          height: 17px;
-          width: 17px;
-        }
-
-        .camera-card__stream-indicator ha-icon[hidden],
-        .camera-card__stream-status.is-error .camera-card__stream-spinner {
-          display: none;
-        }
-
-        .camera-card__stream-status.is-error .camera-card__stream-indicator ha-icon {
-          color: var(--error-color, #db4437);
-        }
-
-        .camera-card__stream-status [data-camera-stream-status-label] {
-          min-width: 0;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .camera-card__expanded-actions {
-          display: grid;
-          gap: 10px;
-          grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
-        }
-
-        .camera-card__expanded-card-host,
-        .camera-card__expanded-card-host > * {
-          display: block;
-          min-width: 0;
-          width: 100%;
-        }
-
-        @keyframes camera-card-fade-up {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes camera-card-stream-spin {
-          to { transform: rotate(360deg); }
-        }
-
-        @media (max-width: 720px) {
-          .camera-card__expanded-panel {
-            border-radius: 18px 18px 0 0;
-            bottom: 0;
-            max-height: 92vh;
-            max-height: 92dvh;
-            top: auto;
-            transform: translateX(-50%);
-            width: 100%;
-          }
-        }
+        ${camera_expanded_default}
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <ha-card class="camera-card camera-card--${escapeHtml(layout)} ${feedLayout ? "camera-card--feed" : ""}">
@@ -3420,6 +3353,7 @@
             return;
           }
           node.addEventListener("error", () => {
+            if (!currentImage(node)) return;
             const src = node.getAttribute("src");
             if (src) {
               this._rememberFailedImageUrl(src);
@@ -3428,6 +3362,7 @@
             }
           }, { once: true });
           node.addEventListener("load", () => {
+            if (!currentImage(node)) return;
             const src = node.getAttribute("src");
             if (!src) {
               return;
@@ -3438,7 +3373,9 @@
           }, { once: true });
         });
         this.shadowRoot.querySelectorAll('img[data-camera-poster="true"]').forEach((node) => {
+          if (!(node instanceof HTMLImageElement)) return;
           node.addEventListener("error", () => {
+            if (!currentImage(node)) return;
             const src = node.getAttribute("src");
             if (src) {
               this._rememberFailedImageUrl(src);
@@ -3462,11 +3399,7 @@
         } else {
           window.NodaliaUtils?.releaseModalFocus?.(this);
         }
-        if (shouldAnimateEntrance) {
-          this._animateContentOnNextRender = false;
-          window.NodaliaUtils?.scheduleDeferTimer?.(this, () => {
-          }, animations.contentDuration + 80);
-        }
+        if (shouldAnimateEntrance) this._animateContentOnNextRender = false;
         this._schedulePreviewAgeRefresh();
       }
     }
@@ -3580,12 +3513,11 @@
       }
       _emitConfig(reRender = false) {
         const normalized = normalizeConfig(this._config);
-        normalized.camera_streams = compactCameraStreams(normalized.camera_streams);
-        normalized.camera_tap_actions = compactCameraTapActions(
-          normalized.camera_tap_actions,
-          normalized
-        );
-        const outgoing = stripEqualToDefaults(normalized);
+        const outgoing = stripEqualToDefaults({
+          ...normalized,
+          camera_streams: compactCameraStreams(normalized.camera_streams),
+          camera_tap_actions: compactCameraTapActions(normalized.camera_tap_actions, normalized)
+        });
         fireEvent(this, "config-changed", {
           config: outgoing
         });

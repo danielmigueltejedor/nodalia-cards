@@ -29,6 +29,7 @@ export interface HassUser {
 }
 
 export interface HassConfig {
+  components?: unknown;
   language?: string;
   unit_system?: {
     temperature?: string;
@@ -63,6 +64,7 @@ export interface HomeAssistant {
     subscribeMessage?: (callback: (event: unknown) => void, message: Record<string, unknown>) => Promise<(() => void) | void>;
     sendMessagePromise?: (message: Record<string, unknown>) => Promise<unknown>;
   };
+  hassUrl?: (path: string) => string;
   navigate?: (path: string) => void;
 }
 

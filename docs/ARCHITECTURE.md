@@ -356,7 +356,7 @@ Six config/helper cycles were removed through checked defaults and normalization
 Do not place defaults in modules that import their own normalizers.
 Notifications normalization now lives below the config and presentation helpers;
 no runtime import cycles remain.
-9 legacy modules still suppress typechecking; see `scripts/type-debt.json`.
+8 legacy modules still suppress typechecking; see `scripts/type-debt.json`.
 **The full TypeScript migration is not complete.** Checked modules and extracted
 contracts must grow without adding suppressions or casts to hide errors. The
 architecture guard prevents new unchecked files and new runtime cycles.
@@ -443,3 +443,10 @@ The source remains readable and browser tests check native input/select sizing.
 Graph hover/tooltip CSS is likewise colocated in `src/cards/graph/graph-hover.css`
 and embedded as a compact string by the same build plugin. Its view is checked
 with actual numeric/history, native input and owned request/frame contracts.
+
+Camera's complete view now uses checked HA/config/native DOM and player
+contracts. Each stream mount, image view and Frigate prefetch owns its generation;
+configuration, connection/user changes and detach invalidate pending callbacks
+and cancel owned retries. Camera expanded CSS is embedded without an auxiliary
+request. Summary detection walks shadow hosts so its body portal actually opens
+for embedded cameras. Standalone APIs and resource filenames remain unchanged.
