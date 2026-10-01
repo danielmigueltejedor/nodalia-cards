@@ -1,5 +1,4 @@
-// @ts-nocheck
-/* Large HTMLElement view/controller: typed incrementally as methods are extracted. */
+import cameraExpandedStyles from "./camera-expanded.css";
 import {
   CAMERA_LAYOUT,
   CAMERA_PRESENTATION,
@@ -31,21 +30,59 @@ import {
   resolveGo2rtcPlayerSource,
 } from "./camera-helpers";
 
-let _lazyNodaliaCameraCard;
-export function loadNodaliaCameraCard() {
+import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
+import { invokeHassService } from "../../shared/home-assistant-services";
+import type { CameraHass } from "./camera-helpers";
+import { isLovelaceEditorElement } from "../../shared/card-elements";
+import type { LovelaceEditorElement } from "../../shared/card-elements";
+
+type ExpandedAction = ReturnType<typeof import("./camera-helpers").normalizeExpandedActions>[number];
+type CameraStream = ReturnType<typeof import("./camera-helpers").normalizeCameraStreams>[number];
+type Go2rtcPlayer = HTMLElement & { configure(options: { source: string; mode: string; muted: boolean; controls: boolean }): void; disconnect?(): void; primeAudioFromUserGesture?(): void };
+const isGo2rtcPlayer = (node: HTMLElement): node is Go2rtcPlayer => "configure" in node && typeof node.configure === "function";
+const cameraActionElement = (node: EventTarget): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.cameraAction);
+let _lazyNodaliaCameraCard: CustomElementConstructor | undefined;
+export function loadNodaliaCameraCard(): CustomElementConstructor {
   if (_lazyNodaliaCameraCard) {
     return _lazyNodaliaCameraCard;
   }
 class NodaliaCameraCard extends HTMLElement {
+  declare private _config: ReturnType<typeof normalizeConfig>;
+  declare private _hass: HomeAssistant | null;
+  declare private _lastRenderSignature: string;
+  declare private _staticRenderSignature: string;
+  declare private _animateContentOnNextRender: boolean;
+  declare private _expandedOpen: boolean;
+  declare private _expandedEntityId: string;
+  declare private _expandedReturnFocus: (() => void) | null;
+  declare private _failedImageUrls: Set<string>;
+  declare private _failedCameraTokens: Map<string,string>;
+  declare private _previewAgeTimer: number;
+  declare private _expandedCardCache: Map<string,LovelaceEditorElement>;
+  declare private _expandedCardConfigSignatures: WeakMap<LovelaceEditorElement,string>;
+  declare private _expandedStreamMountId: number;
+  declare private _expandedStreamNode: HTMLElement | null;
+  declare private _expandedPortal: HTMLElement | null;
+  declare private _go2rtcPrefetchOwner: CameraHass["connection"] | null;
+  declare private _go2rtcPrefetchSignature: string;
+  declare private _contextGeneration: number;
+  declare private _viewGeneration: number;
+  declare private _prefetchGeneration: number;
+  declare private _retryTimers: Map<number, () => void>;
+  declare private _hassContextOwner: unknown;
+  declare private _hassUserKey: string;
+  declare private _detachPrimaryHold: () => void;
+  declare private _suppressNextPrimaryClick: boolean;
+
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig(hass, entities = [], entitiesFallback = []) {
+  static getStubConfig(hass: HomeAssistant | null | undefined, entities: unknown = [], entitiesFallback: unknown = []) {
     return applyStubEntity(deepClone(STUB_CONFIG), hass, ["camera"], entities, entitiesFallback);
   }
 
-  static getEntitySuggestion(hass, entityId) {
+  static getEntitySuggestion(hass: HomeAssistant, entityId: string) {
     return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, { domains: ["camera"] });
   }
 
@@ -57,6 +94,14 @@ class NodaliaCameraCard extends HTMLElement {
   _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
+    this._contextGeneration = 0;
+    this._viewGeneration = 0;
+    this._prefetchGeneration = 0;
+    this._retryTimers = new Map();
+    this._hassContextOwner = null;
+    this._hassUserKey = "";
+    this._detachPrimaryHold = () => {};
+    this._suppressNextPrimaryClick = false;
     this._lastRenderSignature = "";
     this._staticRenderSignature = "";
     this._animateContentOnNextRender = true;
@@ -85,6 +130,7 @@ class NodaliaCameraCard extends HTMLElement {
     this.shadowRoot?.addEventListener("click", this._onShadowClick);
     this.shadowRoot?.addEventListener("keydown", this._onShadowKeyDown);
     window.addEventListener("keydown", this._onWindowKeyDown);
+    this._bindPrimaryHold();
     this._animateContentOnNextRender = true;
     this._prefetchGo2rtcSources();
     if (this._hass && this._config) {
@@ -94,6 +140,8 @@ class NodaliaCameraCard extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this._invalidateCameraContext();
+    this._detachPrimaryHold();
     window.NodaliaUtils?.releaseModalFocus?.(this);
     this.shadowRoot?.removeEventListener("click", this._onShadowClick);
     this.shadowRoot?.removeEventListener("keydown", this._onShadowKeyDown);
@@ -112,8 +160,10 @@ class NodaliaCameraCard extends HTMLElement {
     this._lastRenderSignature = "";
   }
 
-  setConfig(config) {
+  setConfig(config: unknown) {
+    this._invalidateCameraContext();
     this._config = normalizeConfig(config || {});
+    this._bindPrimaryHold();
     this._staticRenderSignature = JSON.stringify([
       this._config.camera_streams || [],
       this._config.camera_tap_actions || [],
@@ -124,16 +174,30 @@ class NodaliaCameraCard extends HTMLElement {
     this._lastRenderSignature = "";
     this._go2rtcPrefetchSignature = "";
     this._animateContentOnNextRender = true;
+    if (this._expandedOpen && !this._getCameraIds().includes(this._expandedEntityId)) this._closeExpanded();
     this._prefetchGo2rtcSources();
-    if (!this.isConnected) {
-      return;
-    }
+    if (!this.isConnected) return;
     this._render();
   }
 
-  set hass(hass) {
+  set hass(hass: HomeAssistant | null) {
     const previousHass = this._hass;
+    const owner = hass?.connection || hass?.auth || null;
+    const userKey = `${Boolean(hass)}:${hass?.user?.id || ""}:${hass?.user?.is_admin === true}`;
+    const changedContext = owner !== this._hassContextOwner || userKey !== this._hassUserKey;
+    if (changedContext) {
+      this._invalidateCameraContext();
+      this._failedImageUrls.clear(); this._failedCameraTokens.clear();
+      if (this._expandedOpen) {
+        this._expandedOpen = false; this._expandedEntityId = "";
+        this._teardownExpandedPortal(); this._emitOverlayChange(false);
+        window.NodaliaUtils.releaseModalFocus?.(this);
+      }
+    }
+    this._hassContextOwner = owner;
+    this._hassUserKey = userKey;
     this._hass = hass;
+    if (changedContext) this._bindPrimaryHold();
     const prefetchOwner = hass?.connection || hass?.auth || hass || null;
     if (prefetchOwner !== this._go2rtcPrefetchOwner) {
       this._go2rtcPrefetchOwner = prefetchOwner;
@@ -144,13 +208,13 @@ class NodaliaCameraCard extends HTMLElement {
       return;
     }
     const nextSignature = this._getRenderSignature(hass);
-    if (previousHass && this._expandedOpen && this.shadowRoot?.innerHTML) {
+    if (!changedContext && previousHass && this._expandedOpen && this.shadowRoot?.innerHTML) {
       this._lastRenderSignature = nextSignature;
       this._updateExpandedCardsHass();
       this._updateExpandedStreamState();
       return;
     }
-    if (previousHass && nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
+    if (!changedContext && previousHass && nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
       this._updateExpandedCardsHass();
       return;
     }
@@ -169,6 +233,46 @@ class NodaliaCameraCard extends HTMLElement {
       min_rows: 3,
       min_columns: 3,
     };
+  }
+
+  _bindPrimaryHold() {
+    this._detachPrimaryHold();
+    if (!this.isConnected) return;
+    this._detachPrimaryHold = window.NodaliaUtils.bindHostPointerHoldGesture?.(this, {
+      resolveZone: event => {
+        const node = event.composedPath().find(cameraActionElement);
+        return node?.dataset.cameraAction === "camera-tap" ? node.dataset.cameraEntity || this._config.entity : null;
+      },
+      shouldBeginHold: () => normalizeTextKey(this._config.hold_action || "none") !== "none",
+      onHold: entityId => { this._triggerHaptic(); this._performHoldAction(entityId); },
+      markHoldConsumedClick: () => { this._suppressNextPrimaryClick = true; },
+    }) || (() => {});
+  }
+
+  _cancelStreamRetries() {
+    this._retryTimers.forEach((resolve, timer) => { window.clearTimeout(timer); resolve(); });
+    this._retryTimers.clear();
+  }
+
+  _invalidateCameraContext() {
+    this._detachPrimaryHold();
+    ++this._contextGeneration;
+    ++this._prefetchGeneration;
+    ++this._expandedStreamMountId;
+    this._go2rtcPrefetchSignature = "";
+    this._suppressNextPrimaryClick = false;
+    this._cancelStreamRetries();
+    this._disposeExpandedStream();
+    this._expandedCardCache.forEach(card => card.remove());
+    this._expandedCardCache.clear();
+    window.NodaliaUtils.clearDeferTimers?.(this);
+  }
+
+  _waitForStreamRetry() {
+    return new Promise<void>(resolve => {
+      const timer = window.setTimeout(() => { this._retryTimers.delete(timer); resolve(); }, 350);
+      this._retryTimers.set(timer, resolve);
+    });
   }
 
   _getCameraIds() {
@@ -192,12 +296,12 @@ class NodaliaCameraCard extends HTMLElement {
     return window.NodaliaI18n?.resolveLanguage?.(this._hass, this._config?.language ?? "auto") ?? "en";
   }
 
-  _cameraUi(path, fallback = "", values = {}) {
+  _cameraUi(path: string, fallback = "", values: Record<string, unknown> = {}) {
     const lang = this._resolveLanguage();
     const pack = window.NodaliaI18n?.strings?.(lang)?.cameraCard
       || window.NodaliaI18n?.strings?.("en")?.cameraCard
       || {};
-    const value = path.split(".").reduce((cursor, key) => (cursor && cursor[key] !== undefined ? cursor[key] : undefined), pack);
+    const value = path.split(".").reduce<unknown>((cursor, key) => isObject(cursor) && Object.prototype.hasOwnProperty.call(cursor, key) ? cursor[key] : undefined, pack);
     if (value === undefined || value === null) {
       return fallback;
     }
@@ -217,6 +321,8 @@ class NodaliaCameraCard extends HTMLElement {
         state?.attributes?.entity_picture || "",
         state?.attributes?.access_token || "",
         state?.attributes?.frontend_stream_type || "",
+        state?.attributes?.friendly_name || "",
+        state?.last_changed || "",
       ].join(":");
     });
     const joinParts = window.NodaliaRenderSignature?.joinParts;
@@ -244,7 +350,7 @@ class NodaliaCameraCard extends HTMLElement {
     return values.join("|");
   }
 
-  _getTitle(state, entityId = this._config?.entity) {
+  _getTitle(state: HassEntity | null, entityId = this._config.entity) {
     const configuredName = String(this._config?.name ?? "").trim();
     const primaryEntity = this._getCameraIds()[0] || this._config?.entity;
     return (entityId === primaryEntity ? configuredName : "")
@@ -254,7 +360,7 @@ class NodaliaCameraCard extends HTMLElement {
       || this._cameraUi("defaultName", "Camera");
   }
 
-  _translateState(state) {
+  _translateState(state: HassEntity | null) {
     const key = normalizeTextKey(state?.state);
     if (key === "streaming") {
       return this._cameraUi("live", "Live");
@@ -274,13 +380,13 @@ class NodaliaCameraCard extends HTMLElement {
     return String(state?.state || this._cameraUi("unknown", "Unknown"));
   }
 
-  _isRecording(state) {
+  _isRecording(state: HassEntity | null) {
     return normalizeTextKey(state?.state) === "recording"
       || state?.attributes?.recording === true
       || state?.attributes?.is_recording === true;
   }
 
-  _isStreaming(state) {
+  _isStreaming(state: HassEntity | null) {
     const key = normalizeTextKey(state?.state);
     return key === "streaming" || key === "recording" || this._isRecording(state);
   }
@@ -309,7 +415,7 @@ class NodaliaCameraCard extends HTMLElement {
     return appendQueryParam(resolved, "nodalia_ts", refreshToken);
   }
 
-  _rememberFailedImageUrl(url) {
+  _rememberFailedImageUrl(url: unknown) {
     const value = String(url || "").trim();
     if (!value) {
       return;
@@ -317,7 +423,9 @@ class NodaliaCameraCard extends HTMLElement {
     this._failedImageUrls.delete(value);
     this._failedImageUrls.add(value);
     while (this._failedImageUrls.size > MAX_FAILED_IMAGE_URLS) {
-      this._failedImageUrls.delete(this._failedImageUrls.values().next().value);
+      const oldest = this._failedImageUrls.values().next().value;
+      if (oldest === undefined) break;
+      this._failedImageUrls.delete(oldest);
     }
 
     const parsed = parseCameraProxyAuth(value);
@@ -327,7 +435,7 @@ class NodaliaCameraCard extends HTMLElement {
     this._failedCameraTokens.set(parsed.entityId, parsed.accessToken);
   }
 
-  _clearFailedCameraToken(entityId, accessToken) {
+  _clearFailedCameraToken(entityId: unknown, accessToken: unknown) {
     const id = String(entityId || "").trim();
     if (!id || !isUsableCameraAccessToken(accessToken)) {
       return;
@@ -337,16 +445,7 @@ class NodaliaCameraCard extends HTMLElement {
     }
   }
 
-  _getStreamProviderHint(state = this._getState()) {
-    return String(
-      state?.attributes?.frontend_stream_type
-      || state?.attributes?.stream_type
-      || state?.attributes?.model_name
-      || "",
-    ).trim();
-  }
-
-  _formatLastChanged(state) {
+  _formatLastChanged(state: HassEntity | null) {
     if (!state?.last_changed) {
       return "";
     }
@@ -366,7 +465,7 @@ class NodaliaCameraCard extends HTMLElement {
     }
   }
 
-  _formatPreviewAge(state) {
+  _formatPreviewAge(state: HassEntity | null) {
     return formatRelativeAge(
       state?.last_updated || state?.last_changed,
       this._resolveLanguage(),
@@ -386,6 +485,7 @@ class NodaliaCameraCard extends HTMLElement {
       return;
     }
     this.shadowRoot.querySelectorAll("[data-camera-preview-age]").forEach(node => {
+      if (!(node instanceof HTMLElement)) return;
       const entityId = String(node.dataset?.cameraEntity || "").trim();
       const label = this._formatPreviewAge(this._getState(entityId));
       if (!label) {
@@ -402,6 +502,7 @@ class NodaliaCameraCard extends HTMLElement {
     const now = Date.now();
     const hasSubMinutePreview = Array.from(this.shadowRoot?.querySelectorAll("[data-camera-preview-age]") || [])
       .some(node => {
+        if (!(node instanceof HTMLElement)) return false;
         const state = this._getState(String(node.dataset?.cameraEntity || "").trim());
         const updatedAt = new Date(state?.last_updated || state?.last_changed || "").getTime();
         return Number.isFinite(updatedAt) && Math.max(0, now - updatedAt) < 60000;
@@ -425,7 +526,7 @@ class NodaliaCameraCard extends HTMLElement {
     }, this._previewAgeRefreshDelay());
   }
 
-  _getStatusChips(state) {
+  _getStatusChips(state: HassEntity | null) {
     if (this._config?.show_status_chips === false || !state) {
       return [];
     }
@@ -458,8 +559,8 @@ class NodaliaCameraCard extends HTMLElement {
     return chips;
   }
 
-  _triggerHaptic(styleOverride = null) {
-    const haptics = this._config?.haptics || {};
+  _triggerHaptic(styleOverride: string | null = null) {
+    const haptics = isObject(this._config.haptics) ? this._config.haptics : {};
     if (haptics.enabled !== true) {
       return;
     }
@@ -473,7 +574,7 @@ class NodaliaCameraCard extends HTMLElement {
     }
   }
 
-  _navigateToPath(pathValue) {
+  _navigateToPath(pathValue: unknown) {
     const navigationPath = window.NodaliaUtils?.sanitizeActionUrl?.(pathValue, {
       allowRelative: true,
       allowHash: true,
@@ -498,7 +599,7 @@ class NodaliaCameraCard extends HTMLElement {
     fireEvent(this, "hass-navigate", { path: navigationPath });
   }
 
-  _openConfiguredUrl(urlValue, newTab = false) {
+  _openConfiguredUrl(urlValue: unknown, newTab = false) {
     const url = window.NodaliaUtils?.sanitizeActionUrl?.(urlValue, { allowRelative: true }) || "";
     if (!url) {
       return;
@@ -515,8 +616,8 @@ class NodaliaCameraCard extends HTMLElement {
     window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } }));
   }
 
-  _isServiceAllowed(serviceValue) {
-    const security = this._config?.security || {};
+  _isServiceAllowed(serviceValue: unknown) {
+    const security = this._config.security;
     if (security.strict_service_actions === false) {
       return true;
     }
@@ -534,10 +635,10 @@ class NodaliaCameraCard extends HTMLElement {
     if (!domains.length && !services.length) {
       return false;
     }
-    return services.includes(normalizedService) || domains.includes(domain);
+    return services.includes(normalizedService) || domains.includes(domain || "");
   }
 
-  _callConfiguredService(serviceValue, rawData = "", rawTarget = "", fallbackEntityId = "") {
+  _callConfiguredService(serviceValue: unknown, rawData: unknown = "", rawTarget: unknown = "", fallbackEntityId = "") {
     if (!this._hass || !serviceValue) {
       return;
     }
@@ -556,13 +657,7 @@ class NodaliaCameraCard extends HTMLElement {
     if (entityId && payload.entity_id === undefined && !hasExplicitTarget) {
       payload.entity_id = entityId;
     }
-    const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils)
-      || ((host, hass, svcDomain, svc, data, svcTarget) => Promise.resolve(
-        svcTarget != null
-          ? hass?.callService?.(svcDomain, svc, data, svcTarget)
-          : hass?.callService?.(svcDomain, svc, data),
-      ));
-    invoke(this, this._hass, domain, service, payload, hasExplicitTarget ? target : null);
+    invokeHassService(this, this._hass, domain, service, payload, hasExplicitTarget ? target : null);
   }
 
   _getCameraTapAction(entityId = this._config?.entity) {
@@ -583,7 +678,7 @@ class NodaliaCameraCard extends HTMLElement {
     };
   }
 
-  _performCameraTapAction(entityId = this._config?.entity, returnTarget = null) {
+  _performCameraTapAction(entityId = this._config.entity, returnTarget: HTMLElement | null = null) {
     const camera = String(entityId || this._config?.entity || "").trim();
     const actionConfig = this._getCameraTapAction(camera);
     const action = normalizeTextKey(actionConfig.tap_action || "toggle");
@@ -618,24 +713,25 @@ class NodaliaCameraCard extends HTMLElement {
     }
   }
 
-  _performTapAction(returnTarget = null) {
+  _performTapAction(returnTarget: HTMLElement | null = null) {
     this._performCameraTapAction(this._config?.entity, returnTarget);
   }
 
-  _performHoldAction() {
+  _performHoldAction(entityId = this._config.entity) {
     const action = normalizeTextKey(this._config?.hold_action || "none");
     switch (action) {
       case "toggle":
-        this._openExpanded();
+        this._openExpanded(entityId);
         return;
       case "more-info":
-        this._openMoreInfo();
+        this._openMoreInfo(entityId);
         return;
       case "service":
         this._callConfiguredService(
           this._config?.hold_service,
           this._config?.hold_service_data,
           this._config?.hold_service_target,
+          entityId,
         );
         return;
       case "url":
@@ -651,7 +747,7 @@ class NodaliaCameraCard extends HTMLElement {
     }
   }
 
-  _openExpanded(entityId = this._config?.entity, returnTarget = null) {
+  _openExpanded(entityId = this._config.entity, returnTarget: HTMLElement | null = null) {
     if (this._expandedOpen) {
       return;
     }
@@ -663,9 +759,9 @@ class NodaliaCameraCard extends HTMLElement {
         ? Array.from(this.shadowRoot?.querySelectorAll('[data-camera-action="camera-tap"]') || [])
         : Array.from(this.shadowRoot?.querySelectorAll('[data-camera-action="body"]') || []);
       const target = returnEntity
-        ? candidates.find(element => element.dataset?.cameraEntity === returnEntity)
+        ? candidates.find(element => element instanceof HTMLElement && element.dataset.cameraEntity === returnEntity)
         : candidates[0];
-      target?.focus?.({ preventScroll: true });
+      if (target instanceof HTMLElement) target.focus({ preventScroll: true });
     };
     this._expandedEntityId = String(entityId || this._config?.entity || "").trim();
     this._expandedOpen = true;
@@ -681,6 +777,7 @@ class NodaliaCameraCard extends HTMLElement {
     this._expandedOpen = false;
     this._expandedEntityId = "";
     this._expandedStreamMountId += 1;
+    this._cancelStreamRetries();
     this._disposeExpandedStream();
     this._teardownExpandedPortal();
     this._lastRenderSignature = "";
@@ -688,7 +785,7 @@ class NodaliaCameraCard extends HTMLElement {
     this._emitOverlayChange(false);
   }
 
-  _emitOverlayChange(open) {
+  _emitOverlayChange(open: boolean) {
     this.dispatchEvent(new CustomEvent("nodalia-overlay-change", {
       bubbles: true,
       composed: true,
@@ -710,7 +807,13 @@ class NodaliaCameraCard extends HTMLElement {
   _shouldPortalExpanded() {
     // Only escape Room Summary stacking. Standalone cards keep the dialog in
     // their shadow root so focus-trap browser tests and SPA taps keep working.
-    return Boolean(this.closest?.("nodalia-room-summary-card"));
+    let node: HTMLElement = this;
+    while (true) {
+      if (node.closest?.("nodalia-room-summary-card")) return true;
+      const root = node.getRootNode();
+      if (!(root instanceof ShadowRoot) || !(root.host instanceof HTMLElement)) return false;
+      node = root.host;
+    }
   }
 
   _syncExpandedPortal() {
@@ -761,44 +864,7 @@ class NodaliaCameraCard extends HTMLElement {
     }
   }
 
-  _performExpandedAction(actionConfig) {
-    if (!actionConfig) {
-      return;
-    }
-    const action = normalizeTextKey(actionConfig.tap_action || "toggle");
-    const entityId = actionConfig.entity;
-    switch (action) {
-      case "none":
-        return;
-      case "toggle":
-        if (entityId && this._hass?.states?.[entityId]) {
-          const domain = entityId.split(".")[0];
-          this._callConfiguredService(`${domain}.toggle`, "", "", entityId);
-        }
-        return;
-      case "more-info":
-        this._openMoreInfo(entityId);
-        return;
-      case "service":
-        this._callConfiguredService(
-          actionConfig.tap_service,
-          actionConfig.tap_service_data,
-          actionConfig.tap_service_target,
-          entityId,
-        );
-        return;
-      case "url":
-        this._openConfiguredUrl(actionConfig.tap_url, actionConfig.tap_new_tab === true);
-        return;
-      case "navigate":
-        this._navigateToPath(actionConfig.navigation_path || actionConfig.tap_url);
-        return;
-      default:
-        this._openMoreInfo(entityId);
-    }
-  }
-
-  _onWindowKeyDown(event) {
+  _onWindowKeyDown(event: KeyboardEvent) {
     if (!this.isConnected || !this._expandedOpen) {
       return;
     }
@@ -809,15 +875,16 @@ class NodaliaCameraCard extends HTMLElement {
     }
   }
 
-  _onShadowClick(event) {
+  _onShadowClick(event: Event) {
     const path = event.composedPath();
-    const button = path.find(node => node instanceof HTMLElement && node.dataset?.cameraAction);
+    const button = path.find(cameraActionElement);
     if (!button) {
       return;
     }
 
     const action = button.dataset.cameraAction;
     if (action === "camera-tap") {
+      if (this._suppressNextPrimaryClick) { this._suppressNextPrimaryClick = false; event.preventDefault(); event.stopPropagation(); return; }
       event.preventDefault();
       event.stopPropagation();
       this._triggerHaptic();
@@ -838,7 +905,7 @@ class NodaliaCameraCard extends HTMLElement {
     }
   }
 
-  _onShadowKeyDown(event) {
+  _onShadowKeyDown(event: Event) {
     if (window.NodaliaUtils?.isKeyboardActivationEvent?.(event) !== true) {
       return;
     }
@@ -854,7 +921,7 @@ class NodaliaCameraCard extends HTMLElement {
     `;
   }
 
-  _renderPreviewMarkup(state, imageUrl, layout, entityId = this._config?.entity) {
+  _renderPreviewMarkup(state: HassEntity | null, imageUrl: string, layout: string, entityId = this._config.entity) {
     const unavailable = isUnavailableState(state);
     const imageFailed = imageUrl && this._failedImageUrls.has(imageUrl);
     const showImage = Boolean(imageUrl) && !unavailable && !imageFailed;
@@ -894,7 +961,7 @@ class NodaliaCameraCard extends HTMLElement {
     `;
   }
 
-  _renderMosaicMarkup(cameraIds, layout) {
+  _renderMosaicMarkup(cameraIds: string[], layout: string) {
     const count = cameraIds.length;
     const mosaicClass = count === 2 ? "camera-card__mosaic--two"
       : count === 3 ? "camera-card__mosaic--three"
@@ -961,11 +1028,13 @@ class NodaliaCameraCard extends HTMLElement {
       return;
     }
     this._go2rtcPrefetchSignature = signature;
+    const generation = ++this._prefetchGeneration;
+    const hass = this._hass;
     void Promise.allSettled(streamConfigs.map(streamConfig => (
-      resolveGo2rtcPlayerSource(this._hass, streamConfig)
+      resolveGo2rtcPlayerSource(hass, streamConfig)
     ))).then(results => {
       if (
-        this._go2rtcPrefetchSignature === signature
+        generation === this._prefetchGeneration && this._go2rtcPrefetchSignature === signature
         && results.some(result => result.status === "rejected" || !result.value)
       ) {
         this._go2rtcPrefetchSignature = "";
@@ -979,21 +1048,19 @@ class NodaliaCameraCard extends HTMLElement {
       return;
     }
     if (node.localName === "ha-camera-stream") {
-      node.hass = this._hass;
-      node.stateObj = this._getState(this._expandedEntityId);
+      Object.assign(node, { hass: this._hass, stateObj: this._getState(this._expandedEntityId) });
     } else if (node.localName !== "nodalia-go2rtc-player") {
-      node.hass = this._hass;
+      Object.assign(node, { hass: this._hass });
     }
   }
 
   _disposeExpandedStream() {
-    if (typeof this._expandedStreamNode?.disconnect === "function") {
-      this._expandedStreamNode.disconnect();
-    }
+    const node = this._expandedStreamNode;
+    if (node && "disconnect" in node && typeof node.disconnect === "function") node.disconnect();
     this._expandedStreamNode = null;
   }
 
-  _setExpandedStreamStatus(state, detail = "") {
+  _setExpandedStreamStatus(state: string, detail = "") {
     const root = this._expandedRoot();
     if (!root) {
       return;
@@ -1036,13 +1103,16 @@ class NodaliaCameraCard extends HTMLElement {
       return;
     }
     const mountId = ++this._expandedStreamMountId;
+    const hass = this._hass;
+    this._cancelStreamRetries();
+    this._disposeExpandedStream();
+    const current = () => mountId === this._expandedStreamMountId && this.isConnected && this._expandedOpen && host.isConnected;
     if (nativeGo2rtc) {
       this._setExpandedStreamStatus("loading");
-      const player = document.createElement("nodalia-go2rtc-player");
+      const node = document.createElement("nodalia-go2rtc-player");
+      if (!isGo2rtcPlayer(node)) { this._setExpandedStreamStatus("error", "The native go2rtc player is not registered"); return; }
+      const player = node;
       try {
-        if (typeof player.configure !== "function") {
-          throw new Error("The native go2rtc player is not registered");
-        }
         player.classList.add("camera-card__expanded-go2rtc");
         const playbackMode = streamConfig.provider === "frigate_go2rtc" && streamConfig.mode === "auto"
           ? "auto-mse"
@@ -1064,20 +1134,17 @@ class NodaliaCameraCard extends HTMLElement {
         };
         let source;
         try {
-          source = await resolveGo2rtcPlayerSource(this._hass, sourceConfig);
+          source = await resolveGo2rtcPlayerSource(hass, sourceConfig);
         } catch (_firstError) {
-          await new Promise(resolve => window.setTimeout(resolve, 350));
-          if (mountId !== this._expandedStreamMountId || !this._expandedOpen || !host.isConnected) {
+          if (!current()) { player.disconnect?.(); return; }
+          await this._waitForStreamRetry();
+          if (!current()) {
             player.disconnect?.();
             return;
           }
-          source = await resolveGo2rtcPlayerSource(this._hass, sourceConfig);
+          source = await resolveGo2rtcPlayerSource(hass, sourceConfig);
         }
-        if (
-          mountId !== this._expandedStreamMountId
-          || !this._expandedOpen
-          || !host.isConnected
-        ) {
+        if (!current()) {
           player.disconnect?.();
           return;
         }
@@ -1085,28 +1152,31 @@ class NodaliaCameraCard extends HTMLElement {
           throw new Error("No usable go2rtc WebSocket endpoint was resolved");
         }
         player.addEventListener("nodalia-go2rtc-loaded", () => {
-          if (mountId !== this._expandedStreamMountId) {
+          if (!current()) {
             return;
           }
           this._setExpandedStreamStatus("loaded");
-          const poster = this.shadowRoot?.querySelector('[data-camera-poster="true"]');
+          const poster = this._expandedRoot()?.querySelector('[data-camera-poster="true"]');
           if (poster instanceof HTMLElement) {
             poster.hidden = true;
           }
         }, { once: true });
         player.addEventListener("nodalia-go2rtc-state", event => {
+          const detail: unknown = event instanceof CustomEvent ? event.detail : null;
+          if (!isObject(detail)) return;
           if (
-            mountId === this._expandedStreamMountId
-            && (event.detail?.state === "connecting" || event.detail?.state === "retrying")
+            current()
+            && (detail.state === "connecting" || detail.state === "retrying")
           ) {
-            this._setExpandedStreamStatus("loading", event.detail?.message || "");
+            this._setExpandedStreamStatus("loading", String(detail.message ?? ""));
           }
         });
         player.addEventListener("nodalia-go2rtc-error", event => {
-          if (mountId !== this._expandedStreamMountId) {
+          const detail: unknown = event instanceof CustomEvent ? event.detail : null;
+          if (!current()) {
             return;
           }
-          this._setExpandedStreamStatus("error", event.detail?.message || "go2rtc error");
+          this._setExpandedStreamStatus("error", isObject(detail) ? String(detail.message || "go2rtc error") : "go2rtc error");
         });
         player.configure({
           source,
@@ -1116,22 +1186,20 @@ class NodaliaCameraCard extends HTMLElement {
         });
       } catch (error) {
         player.disconnect?.();
-        this._setExpandedStreamStatus("error", error?.message || String(error));
+        if (!current()) return;
+        this._setExpandedStreamStatus("error", error instanceof Error ? error.message : String(error));
         console.warn("[nodalia-camera-card] Unable to start the go2rtc stream", error);
       }
       return;
     }
     const mountNativeStream = () => {
-      if (mountId !== this._expandedStreamMountId || !this._expandedOpen || !host.isConnected) {
+      if (!current()) {
         return false;
       }
       const stream = document.createElement("ha-camera-stream");
-      stream.hass = this._hass;
-      stream.stateObj = this._getState(entityId);
-      stream.controls = streamConfig.controls === true;
-      stream.muted = streamConfig.muted !== false;
-      stream.fitMode = "contain";
-      stream.aspectRatio = "16:9";
+      Object.assign(stream, { hass: this._hass, stateObj: this._getState(entityId),
+        controls: streamConfig.controls === true, muted: streamConfig.muted !== false,
+        fitMode: "contain", aspectRatio: "16:9" });
       host.replaceChildren(stream);
       this._expandedStreamNode = stream;
       return true;
@@ -1143,7 +1211,7 @@ class NodaliaCameraCard extends HTMLElement {
     }
     try {
       const helpers = await window.loadCardHelpers?.();
-      if (mountId !== this._expandedStreamMountId || !this._expandedOpen || !host.isConnected) {
+      if (!current()) {
         return;
       }
       if (customElements.get("ha-camera-stream") && mountNativeStream()) {
@@ -1160,10 +1228,10 @@ class NodaliaCameraCard extends HTMLElement {
         show_state: false,
         fit_mode: "contain",
       });
-      if (mountId !== this._expandedStreamMountId || !this._expandedOpen || !host.isConnected) {
+      if (!current()) {
         return;
       }
-      fallback.hass = this._hass;
+      Object.assign(fallback, { hass: this._hass });
       fallback.classList.add("camera-card__expanded-native-fallback");
       host.replaceChildren(fallback);
       this._expandedStreamNode = fallback;
@@ -1172,19 +1240,20 @@ class NodaliaCameraCard extends HTMLElement {
     }
   }
 
-  _expandedCardTag(entityId) {
+  _expandedCardTag(entityId: string) {
     const domain = String(entityId || "").split(".")[0];
-    return {
+    const tags: Record<string, string> = {
       light: "nodalia-light-card",
       fan: "nodalia-fan-card",
       humidifier: "nodalia-humidifier-card",
       vacuum: "nodalia-vacuum-card",
       cover: "nodalia-cover-card",
       climate: "nodalia-climate-card",
-    }[domain] || "nodalia-entity-card";
+    };
+    return tags[domain || ""] || "nodalia-entity-card";
   }
 
-  _expandedCardConfig(action) {
+  _expandedCardConfig(action: ExpandedAction) {
     const domain = String(action.entity || "").split(".")[0];
     const security = deepClone(this._config?.security || DEFAULT_CONFIG.security);
     if (action.tap_action === "service" && action.tap_service) {
@@ -1193,20 +1262,20 @@ class NodaliaCameraCard extends HTMLElement {
         action.tap_service,
       ]));
     }
-    const config = {
+    const config: Record<string, unknown> = {
       entity: action.entity,
       tap_action: action.tap_action || "toggle",
       tap_new_tab: action.tap_new_tab === true,
       security,
       haptics: deepClone(this._config?.haptics || DEFAULT_CONFIG.haptics),
       animations: {
-        ...deepClone(this._config?.animations || DEFAULT_CONFIG.animations),
+        ...deepClone(isObject(this._config.animations) ? this._config.animations : DEFAULT_CONFIG.animations),
         content_duration: 0,
         panel_duration: 0,
       },
       compact_layout_mode: domain === "lock" || domain === "switch" || domain === "input_boolean" ? "always" : "never",
     };
-    ["name", "icon", "tap_service", "tap_service_data", "tap_service_target", "tap_url", "navigation_path"].forEach(key => {
+    (["name", "icon", "tap_service", "tap_service_data", "tap_service_target", "tap_url", "navigation_path"] as const).forEach(key => {
       if (action[key]) {
         config[key] = (key === "tap_service_data" || key === "tap_service_target") && isObject(action[key])
           ? JSON.stringify(action[key])
@@ -1295,7 +1364,9 @@ class NodaliaCameraCard extends HTMLElement {
       validKeys.add(cacheKey);
       let card = this._expandedCardCache.get(cacheKey);
       if (!card) {
-        card = document.createElement(tagName);
+        const node = document.createElement(tagName);
+        if (!isLovelaceEditorElement(node)) return;
+        card = node;
         this._expandedCardCache.set(cacheKey, card);
       }
       if (card.parentElement !== host) {
@@ -1319,7 +1390,7 @@ class NodaliaCameraCard extends HTMLElement {
     }
   }
 
-  _renderExpandedActionsMarkup(entityId) {
+  _renderExpandedActionsMarkup(entityId: string) {
     const actions = this._getExpandedActionsForCamera(entityId);
     if (!actions.length) {
       return "";
@@ -1338,7 +1409,7 @@ class NodaliaCameraCard extends HTMLElement {
     `;
   }
 
-  _renderExpandedOverlay(state, imageUrl, entityId = this._expandedEntityId || this._config?.entity) {
+  _renderExpandedOverlay(state: HassEntity | null, imageUrl: string, entityId = this._expandedEntityId || this._config.entity) {
     if (!this._expandedOpen) {
       return "";
     }
@@ -1396,6 +1467,9 @@ class NodaliaCameraCard extends HTMLElement {
     }
     this._clearPreviewAgeTimer();
 
+    const generation = ++this._viewGeneration;
+    const context = this._contextGeneration;
+    const currentImage = (node: HTMLImageElement) => node.isConnected && context === this._contextGeneration && generation === this._viewGeneration;
     const config = this._config || {};
     const cameraIds = this._getCameraIds();
     if (!cameraIds.length) {
@@ -1437,10 +1511,11 @@ class NodaliaCameraCard extends HTMLElement {
     const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
     const unavailable = state ? isUnavailableState(state) : false;
     const securityLayout = layout === "security";
+    const configuredAnimations = isObject(config.animations) ? config.animations : {};
     const animations = {
-      enabled: config.animations?.enabled !== false,
-      contentDuration: Number(config.animations?.content_duration) || DEFAULT_CONFIG.animations.content_duration,
-      buttonBounceDuration: Number(config.animations?.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration,
+      enabled: configuredAnimations.enabled !== false,
+      contentDuration: Number(configuredAnimations.content_duration) || DEFAULT_CONFIG.animations.content_duration,
+      buttonBounceDuration: Number(configuredAnimations.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration,
     };
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
     const overlayStrength = clamp(Number(styles.preview?.overlay_strength) || DEFAULT_CONFIG.styles.preview.overlay_strength, 0.1, 0.8);
@@ -1733,205 +1808,7 @@ class NodaliaCameraCard extends HTMLElement {
           text-transform: none;
         }
 
-        .camera-card__expanded {
-          display: none;
-          inset: 0;
-          position: fixed;
-          z-index: 2147483001;
-        }
-
-        .camera-card__expanded.is-open {
-          display: block;
-        }
-
-        .camera-card__expanded-backdrop {
-          background: rgba(0, 0, 0, 0.62);
-          border: 0;
-          cursor: pointer;
-          height: 100%;
-          inset: 0;
-          margin: 0;
-          padding: 0;
-          position: absolute;
-          width: 100%;
-        }
-
-        .camera-card__expanded-panel {
-          background: var(--ha-card-background, #1c1c1c);
-          border: 1px solid var(--divider-color);
-          border-radius: 24px;
-          box-shadow: var(--ha-card-box-shadow, 0 18px 48px rgba(0, 0, 0, 0.35));
-          display: grid;
-          gap: 12px;
-          inset: auto;
-          left: 50%;
-          max-height: min(88vh, 920px);
-          max-width: min(96vw, 1080px);
-          overflow: auto;
-          padding: 14px;
-          position: absolute;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          width: min(96vw, 1080px);
-        }
-
-        .camera-card__expanded-toolbar {
-          align-items: center;
-          display: flex;
-          gap: 12px;
-          justify-content: space-between;
-        }
-
-        .camera-card__expanded-title {
-          font-size: 16px;
-          font-weight: 700;
-          min-width: 0;
-        }
-
-        .camera-card__expanded-close {
-          align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border: 0;
-          border-radius: 999px;
-          color: var(--primary-text-color);
-          cursor: pointer;
-          display: inline-flex;
-          height: 36px;
-          justify-content: center;
-          width: 36px;
-        }
-
-        .camera-card__expanded-stage {
-          aspect-ratio: 16 / 9;
-          background: #000;
-          border-radius: 18px;
-          overflow: hidden;
-          position: relative;
-        }
-
-        .camera-card__expanded-poster,
-        .camera-card__expanded-stream,
-        .camera-card__expanded-stream-frame {
-          inset: 0;
-          position: absolute;
-        }
-
-        .camera-card__expanded-poster {
-          height: 100%;
-          object-fit: contain;
-          width: 100%;
-        }
-
-        .camera-card__expanded-stream,
-        .camera-card__expanded-stream > *,
-        .camera-card__expanded-stream-frame {
-          border: 0;
-          display: block;
-          height: 100%;
-          width: 100%;
-        }
-
-        .camera-card__expanded-stream ha-camera-stream {
-          background: #000;
-          object-fit: contain;
-        }
-
-        .camera-card__stream-status {
-          align-items: center;
-          backdrop-filter: blur(12px);
-          background: color-mix(in srgb, #111 76%, transparent);
-          border: 1px solid rgba(255, 255, 255, 0.18);
-          border-radius: 999px;
-          bottom: 14px;
-          color: #fff;
-          display: inline-flex;
-          font-size: 12px;
-          font-weight: 650;
-          gap: 7px;
-          left: 14px;
-          max-width: calc(100% - 28px);
-          padding: 7px 10px;
-          position: absolute;
-          z-index: 2;
-        }
-
-        .camera-card__stream-status[hidden] {
-          display: none;
-        }
-
-        .camera-card__stream-indicator {
-          display: grid;
-          flex: 0 0 auto;
-          height: 17px;
-          place-items: center;
-          width: 17px;
-        }
-
-        .camera-card__stream-spinner {
-          animation: camera-card-stream-spin 760ms linear infinite;
-          background: conic-gradient(from 0deg, transparent 0 62%, currentColor 84% 100%);
-          border-radius: 50%;
-          height: 16px;
-          -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 0);
-          mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 0);
-          transform-origin: 50% 50%;
-          width: 16px;
-        }
-
-        .camera-card__stream-indicator ha-icon {
-          height: 17px;
-          width: 17px;
-        }
-
-        .camera-card__stream-indicator ha-icon[hidden],
-        .camera-card__stream-status.is-error .camera-card__stream-spinner {
-          display: none;
-        }
-
-        .camera-card__stream-status.is-error .camera-card__stream-indicator ha-icon {
-          color: var(--error-color, #db4437);
-        }
-
-        .camera-card__stream-status [data-camera-stream-status-label] {
-          min-width: 0;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .camera-card__expanded-actions {
-          display: grid;
-          gap: 10px;
-          grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
-        }
-
-        .camera-card__expanded-card-host,
-        .camera-card__expanded-card-host > * {
-          display: block;
-          min-width: 0;
-          width: 100%;
-        }
-
-        @keyframes camera-card-fade-up {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes camera-card-stream-spin {
-          to { transform: rotate(360deg); }
-        }
-
-        @media (max-width: 720px) {
-          .camera-card__expanded-panel {
-            border-radius: 18px 18px 0 0;
-            bottom: 0;
-            max-height: 92vh;
-            max-height: 92dvh;
-            top: auto;
-            transform: translateX(-50%);
-            width: 100%;
-          }
-        }
+        ${cameraExpandedStyles}
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <ha-card class="camera-card camera-card--${escapeHtml(layout)} ${feedLayout ? "camera-card--feed" : ""}">
@@ -1960,6 +1837,7 @@ class NodaliaCameraCard extends HTMLElement {
         return;
       }
       node.addEventListener("error", () => {
+        if (!currentImage(node)) return;
         const src = node.getAttribute("src");
         if (src) {
           this._rememberFailedImageUrl(src);
@@ -1968,6 +1846,7 @@ class NodaliaCameraCard extends HTMLElement {
         }
       }, { once: true });
       node.addEventListener("load", () => {
+        if (!currentImage(node)) return;
         const src = node.getAttribute("src");
         if (!src) {
           return;
@@ -1979,7 +1858,9 @@ class NodaliaCameraCard extends HTMLElement {
     });
 
     this.shadowRoot.querySelectorAll('img[data-camera-poster="true"]').forEach(node => {
+      if (!(node instanceof HTMLImageElement)) return;
       node.addEventListener("error", () => {
+        if (!currentImage(node)) return;
         const src = node.getAttribute("src");
         if (src) {
           this._rememberFailedImageUrl(src);
@@ -1988,9 +1869,9 @@ class NodaliaCameraCard extends HTMLElement {
       }, { once: true });
     });
 
+    this._syncExpandedPortal();
     this._mountExpandedCards();
     this._mountExpandedStream();
-    this._syncExpandedPortal();
     const expandedDialog = (this._expandedPortal?.shadowRoot || this.shadowRoot)
       ?.querySelector('.camera-card__expanded[role="dialog"]');
     if (expandedDialog instanceof HTMLElement) {
@@ -2006,10 +1887,7 @@ class NodaliaCameraCard extends HTMLElement {
       window.NodaliaUtils?.releaseModalFocus?.(this);
     }
 
-    if (shouldAnimateEntrance) {
-      this._animateContentOnNextRender = false;
-      window.NodaliaUtils?.scheduleDeferTimer?.(this, () => {}, animations.contentDuration + 80);
-    }
+    if (shouldAnimateEntrance) this._animateContentOnNextRender = false;
     this._schedulePreviewAgeRefresh();
   }
 }

@@ -127,12 +127,11 @@ class NodaliaCameraCardEditor extends HTMLElement {
 
   _emitConfig(reRender = false) {
     const normalized = normalizeConfig(this._config);
-    normalized.camera_streams = compactCameraStreams(normalized.camera_streams);
-    normalized.camera_tap_actions = compactCameraTapActions(
-      normalized.camera_tap_actions,
-      normalized,
-    );
-    const outgoing = stripEqualToDefaults(normalized);
+    const outgoing = stripEqualToDefaults({
+      ...normalized,
+      camera_streams: compactCameraStreams(normalized.camera_streams),
+      camera_tap_actions: compactCameraTapActions(normalized.camera_tap_actions, normalized),
+    });
     fireEvent(this, "config-changed", {
       config: outgoing,
     });

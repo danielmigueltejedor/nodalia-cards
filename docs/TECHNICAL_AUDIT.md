@@ -1608,3 +1608,44 @@ suite passes 629 cases with one existing skip.
   integration. Current labels/units also update through cached history, and hold
   movement cancels even when the media query reports no hover. No prerelease is
   published.
+
+
+## 2026-10-02 — Camera view contracts and owned playback work
+
+- Remove Camera's suppression with actual normalized config, HA/auth/helpers,
+  native DOM/event, embedded-card and go2rtc-player contracts. Declare and
+  initialize fields through the lazy constructor. Debt falls from 9 to 8.
+- Capture each stream's HA and mount generation, own the one 350 ms signing
+  retry and cancel it on close/config/context/detach. Obsolete source failures,
+  native helper results and player events cannot affect a replacement stream.
+  Ordinary HA updates keep the current player and refresh its native state.
+- Own Frigate prefetch generations even when configurations have identical
+  signatures across connections. Ignore obsolete preview/poster errors and
+  loads; clear failed-token quarantine when the HA connection/user changes.
+  Retain bounded failed-image storage and genuine access-token rotation.
+- Bind configured hold actions to the actual preview entity; native movement,
+  cancellation, context/config changes and detach cancel pending holds. Retain
+  keyboard activation and modal focus. Include displayed names/last-changed in
+  signatures. Service failures use the shared checked invocation boundary.
+- Fix Summary detection through actual shadow hosts: Camera's expanded body
+  portal now opens for a camera embedded in Summary, retains its stylesheet,
+  handles current loaded/error events and removes its host on close/detach.
+- Remove verified uncalled stream-provider and expanded-action methods. Embed
+  readable static expanded CSS through the whitespace-only build plugin;
+  preserve standalone filenames and the unchanged raw/gzip budgets.
+- Strict/lint and all 750 unit tests pass; 3,000 valid markup/style/sizing outputs
+  match the prior view. All 21 focused Chromium/WebKit/iPhone cases pass, including
+  native holds/keys, obsolete/current signing, helper races, token errors and
+  computed portal styles. The full local suite passes 662 cases with one existing
+  skip; CI remains required before merging.
+  No prerelease has been published.
+
+
+Camera review follow-up: synchronize the current Summary portal before mounting
+its player and related controls. A same-camera configuration change or a current
+preview-image error no longer mounts into an outgoing dialog that is subsequently
+removed. The new native browser case reproduces both paths, checks retained player
+and related cards, verifies old-player disconnect and current loaded events, and
+closes the current portal. Strict/lint and 750 unit tests pass; all 24 focused
+browser cases pass. The full local suite passes 665 cases with one existing skip;
+CI and review remain required before integration.

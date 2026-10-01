@@ -26,10 +26,14 @@ export function normalizeConfig(rawConfig: unknown = {}) {
   config.entity = cameraIds[0] || String(config.entity ?? "").trim();
   config.layout = CAMERA_LAYOUT;
   config.presentation = CAMERA_PRESENTATION;
-  config.camera_streams = normalizeCameraStreams(config.camera_streams, cameraIds);
-  config.camera_tap_actions = normalizeCameraTapActions(config.camera_tap_actions, cameraIds);
-  config.camera_actions = normalizeCameraActions(config.camera_actions, cameraIds);
-  config.expanded_actions = normalizeExpandedActions(config.expanded_actions);
+  const camera_streams = normalizeCameraStreams(config.camera_streams, cameraIds);
+  config.camera_streams = camera_streams;
+  const camera_tap_actions = normalizeCameraTapActions(config.camera_tap_actions, cameraIds);
+  config.camera_tap_actions = camera_tap_actions;
+  const camera_actions = normalizeCameraActions(config.camera_actions, cameraIds);
+  config.camera_actions = camera_actions;
+  const expanded_actions = normalizeExpandedActions(config.expanded_actions);
+  config.expanded_actions = expanded_actions;
   config.language = String(config.language ?? "auto").trim() || "auto";
   config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
     ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
@@ -81,7 +85,11 @@ export function normalizeConfig(rawConfig: unknown = {}) {
   if (config.hold_action === "navigate" && !config.hold_navigation_path && config.hold_url) {
     config.hold_navigation_path = config.hold_url;
   }
-  config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles)
+  const styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles)
     ?? deepClone(DEFAULT_CONFIG.styles);
-  return config;
+  const fields = { entity: String(config.entity), language: String(config.language), layout: CAMERA_LAYOUT, presentation: CAMERA_PRESENTATION,
+    cameras: cameraIds, camera_streams, camera_tap_actions, camera_actions, expanded_actions, styles,
+    security: isObject(config.security) ? config.security : { ...DEFAULT_CONFIG.security } };
+  const normalized: typeof fields & Record<string, unknown> = { ...config, ...fields };
+  return normalized;
 }

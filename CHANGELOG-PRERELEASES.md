@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+- Check the Camera view, isolate pending streams/images/signing retries across HA contexts, connect configured hold actions and open its Summary portal across shadow hosts. Preserve native playback and standalone APIs while embedding expanded CSS within the existing size gates.
+
 - Check the Graph view, coalesce owned history requests, preserve absent/zero readings, and restore keyboard/focus plus correct in-place hover markers.
 
 - Check Calendar view contracts, isolate pending refreshes/subscriptions/writes, preserve composer drafts and caret, and calculate next-day events across clock changes. Embed readable composer CSS without extra resources or relaxing bundle size limits; remove verified unused private methods.

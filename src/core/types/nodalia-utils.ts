@@ -5,6 +5,8 @@ import type { HomeAssistant } from "./home-assistant";
  * Only the members TypeScript modules call are typed; remaining helpers stay
  * available at runtime on the compatibility global.
  */
+/** The runtime reconstructs default object keys and converts primitive leaves. */
+export type SanitizedStyleTree<T> = T extends string ? string : T extends number ? number : T extends boolean ? boolean : T extends readonly unknown[] ? unknown[] : T extends object ? { [K in keyof T]: SanitizedStyleTree<T[K]> } : T;
 export interface HostPointerHoldBinding { (): void; reconnect?: () => void; }
 export interface NodaliaUtilsApi {
   bindModalFocus?: (host: HTMLElement, dialog: HTMLElement, options?: { initialFocusSelector?: string; restoreFocus?: () => void }) => () => void;
@@ -86,7 +88,7 @@ export interface NodaliaUtilsApi {
     limit?: number,
   ): string[];
   normalizeSecurityConfig?: (security: unknown, defaults?: unknown) => Record<string, unknown>;
-  sanitizeStyleTree?: (candidate: unknown, fallback: unknown) => unknown;
+  sanitizeStyleTree?: <T>(candidate: unknown, fallback: T) => SanitizedStyleTree<T>;
   stripEqualToDefaults?: (config: unknown, defaults: unknown) => unknown;
   createEntitySuggestion: (cardType: string, hass: HomeAssistant, entityId: string, options?: {
     domains?: string[];

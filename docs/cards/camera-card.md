@@ -28,3 +28,15 @@ camera. New camera/action rows remain editable before an entity is selected.
 Malformed rows and invalid removal indices are ignored. Expanded actions can
 control related entities, including locks, using toggle, more-info or service.
 Service data and explicit targets preserve false and zero object values.
+
+Camera hold actions run on the preview, with movement/cancellation and detach
+cancelling an unfinished hold. Native Enter/Space opens playback once, Escape
+closes it and returns focus to the preview. Connection or user changes close
+playback; ordinary state updates retain the current player.
+
+Old image failures cannot quarantine a newer token or another HA connection.
+Signed Frigate endpoints are prefetched for the owning connection; an initial
+playback signing failure retries once while that mount remains current. Closing
+or removing the card cancels that retry. Native HA helper results and player
+events from older mounts are ignored. Embedded Summary cameras use a body portal
+across shadow roots, retain their styles and remove the portal on close/detach.

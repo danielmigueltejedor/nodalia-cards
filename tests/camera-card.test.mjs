@@ -119,6 +119,8 @@ test("camera card loads and accepts setConfig without a preloaded stream model",
     constructor() {
       this.isConnected = false;
     }
+    addEventListener() {}
+    removeEventListener() {}
     attachShadow() {
       this.shadowRoot = {
         innerHTML: "",
@@ -692,7 +694,7 @@ test("camera configured services respect strict security and explicit targets", 
   assert.match(source, /_isServiceAllowed/);
   assert.match(source, /invokeHomeAssistantService/);
   assert.match(source, /hasExplicitTarget/);
-  assert.match(source, /_performExpandedAction/);
+  assert.match(source, /_expandedCardConfig/);
 });
 
 test("camera visual editor normalizes config and mounts camera entity picker", () => {
