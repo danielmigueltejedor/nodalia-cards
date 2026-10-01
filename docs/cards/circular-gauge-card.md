@@ -21,3 +21,8 @@ The editor includes the bundle's shared style, haptic and animation switches,
 gauge tint colours, translucent backgrounds and tap action (more-info or none).
 Custom YAML fields, focus, unavailable selections and native/HA control fallbacks
 are retained. Malformed nested settings and picker payloads are guarded.
+
+Frequent HA updates retain the original entrance-animation deadline and finish
+at the latest displayed value. Removing the card or reconfiguring it releases
+pending animation frames and both shared/fallback timers. Blank responsive grid
+sizing remains automatic; actual zero rows/columns retain explicit compact sizing.

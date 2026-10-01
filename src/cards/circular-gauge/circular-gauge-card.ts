@@ -1,5 +1,4 @@
-// @ts-nocheck
-/* Large HTMLElement view/controller: typed incrementally as methods are extracted. */
+import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
 import {
   CARD_TAG,
   DIAL_CIRCLE_RADIUS,
@@ -15,15 +14,10 @@ import {
 } from "./circular-gauge-constants";
 import {
   clamp,
-  compactConfig,
   deepClone,
-  deleteByPath,
   escapeHtml,
   fireEvent,
   isObject,
-  mergeConfig,
-  normalizeTextKey,
-  setByPath,
 } from "./circular-gauge-runtime";
 import { DEFAULT_CONFIG, STUB_CONFIG, normalizeConfig } from "./circular-gauge-config";
 import {
@@ -49,17 +43,28 @@ import {
   sanitizeCssValue,
 } from "./circular-gauge-helpers";
 
-let _lazyNodaliaCircularGaugeCard;
-export function loadNodaliaCircularGaugeCard() {
+interface GaugeRange { min: number; max: number; }
+interface GaugeVisualState { progressLength: number; ratio: number; dialAngle: number; thumbRotate: number; }
+let _lazyNodaliaCircularGaugeCard: CustomElementConstructor | undefined;
+export function loadNodaliaCircularGaugeCard(): CustomElementConstructor {
   if (_lazyNodaliaCircularGaugeCard) {
     return _lazyNodaliaCircularGaugeCard;
   }
 class NodaliaCircularGaugeCard extends HTMLElement {
+  private _config!: ReturnType<typeof normalizeConfig>;
+  private _hass!: HomeAssistant | null;
+  private _lastRenderSignature!: string;
+  private _lastGaugeVisualState!: GaugeVisualState | null;
+  private _gaugeVisualFrame!: number;
+  private _animateContentOnNextRender!: boolean;
+  private _entranceAnimationResetTimer!: number;
+  private _gaugeSvgColorCache!: Map<string, string>;
+  private _fallbackAnimationTimers!: Set<number>;
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig(hass, entities = [], entitiesFallback = []) {
+  static getStubConfig(hass: HomeAssistant | null | undefined, entities: unknown = [], entitiesFallback: unknown = []) {
     return applyStubEntity(
       deepClone(STUB_CONFIG),
       hass,
@@ -69,7 +74,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     );
   }
 
-  static getEntitySuggestion(hass, entityId) {
+  static getEntitySuggestion(hass: HomeAssistant, entityId: string) {
     return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
       domains: ["sensor", "number", "input_number"],
     });
@@ -83,6 +88,8 @@ class NodaliaCircularGaugeCard extends HTMLElement {
   _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
+    this._gaugeSvgColorCache = new Map();
+    this._fallbackAnimationTimers = new Set();
     window.NodaliaUtils?.clearDeferTimers?.(this);
     this._lastRenderSignature = "";
     this._lastGaugeVisualState = null;
@@ -91,8 +98,8 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     this._entranceAnimationResetTimer = 0;
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this.shadowRoot.addEventListener("keydown", this._onShadowKeyDown);
+    this.shadowRoot?.addEventListener("click", this._onShadowClick);
+    this.shadowRoot?.addEventListener("keydown", this._onShadowKeyDown);
     }
 
   connectedCallback() {
@@ -103,7 +110,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     }
   }
 
-  disconnectedCallback() {
+  _releaseGaugeWork() {
     if (this._gaugeVisualFrame) {
       window.cancelAnimationFrame(this._gaugeVisualFrame);
       this._gaugeVisualFrame = 0;
@@ -112,20 +119,30 @@ class NodaliaCircularGaugeCard extends HTMLElement {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
     }
+    for (const timer of this._fallbackAnimationTimers) window.clearTimeout(timer);
+    this._fallbackAnimationTimers.clear();
     window.NodaliaUtils?.clearDeferTimers?.(this);
-    this._animateContentOnNextRender = true;
-    this._lastRenderSignature = "";
   }
 
-  setConfig(config) {
+  disconnectedCallback() {
+    this._releaseGaugeWork();
+    this._animateContentOnNextRender = true;
+    this._lastRenderSignature = "";
+    this._lastGaugeVisualState = null;
+  }
+
+  setConfig(config: unknown) {
+    const previousEntity = this._config.entity;
+    this._releaseGaugeWork();
     this._config = normalizeConfig(config || {});
+    if (previousEntity !== this._config.entity) this._lastGaugeVisualState = null;
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._render();
   }
 
-  set hass(hass) {
+  set hass(hass: HomeAssistant) {
     const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
@@ -168,8 +185,8 @@ class NodaliaCircularGaugeCard extends HTMLElement {
       String(attrs.min ?? ""),
       String(attrs.max ?? ""),
       String(getHassLocaleTag(hass, this._config?.language ?? "auto") || ""),
-      Number(this._config?.grid_options?.rows || 0),
-      Number(this._config?.grid_options?.columns || 0),
+      this._getConfiguredGridRows(),
+      this._getConfiguredGridColumns(),
     ];
     if (typeof joinParts === "function") {
       return joinParts([{ prefix: "gauge:", values }]);
@@ -178,13 +195,13 @@ class NodaliaCircularGaugeCard extends HTMLElement {
   }
 
   _getConfiguredGridRows() {
-    const numericRows = Number(this._config?.grid_options?.rows);
-    return Number.isFinite(numericRows) ? numericRows : null;
+    const grid = isObject(this._config.grid_options) ? this._config.grid_options : {};
+    return parseFiniteNumericValue(grid.rows);
   }
 
   _getConfiguredGridColumns() {
-    const numericColumns = Number(this._config?.grid_options?.columns);
-    return Number.isFinite(numericColumns) ? numericColumns : null;
+    const grid = isObject(this._config.grid_options) ? this._config.grid_options : {};
+    return parseFiniteNumericValue(grid.columns);
   }
 
   _getCompactLevel() {
@@ -201,20 +218,20 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     return "default";
   }
 
-  _getTitle(state) {
+  _getTitle(state: HassEntity | null) {
     return this._config?.name
       || state?.attributes?.friendly_name
       || this._config?.entity
       || "Gauge";
   }
 
-  _getIcon(state) {
+  _getIcon(state: HassEntity | null) {
     return this._config?.icon
       || state?.attributes?.icon
       || "mdi:gauge";
   }
 
-  _getUnit(state) {
+  _getUnit(state: HassEntity | null) {
     return String(
       this._config?.unit
       || state?.attributes?.unit_of_measurement
@@ -223,7 +240,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     ).trim();
   }
 
-  _getNumericValue(state) {
+  _getNumericValue(state: HassEntity | null) {
     const direct = parseFiniteNumericValue(String(state?.state ?? "").replace(",", "."));
     if (direct !== null) {
       return direct;
@@ -232,7 +249,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     return parseFiniteNumericValue(state?.attributes?.native_value);
   }
 
-  _getDecimals(state) {
+  _getDecimals(state: HassEntity | null) {
     const configured = parseFiniteNumericValue(this._config?.decimals);
     if (configured !== null && configured >= 0) {
       return Math.min(3, Math.floor(configured));
@@ -242,7 +259,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     return inferDecimals(rawState);
   }
 
-  _getRange(state, currentValue) {
+  _getRange(state: HassEntity | null, currentValue: number | null): GaugeRange {
     const configuredMin = parseFiniteNumericValue(this._config?.min);
     const configuredMax = parseFiniteNumericValue(this._config?.max);
     const attrMin = parseFiniteNumericValue(state?.attributes?.min);
@@ -253,7 +270,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
       ? configuredMin
       : attrMin !== null
         ? attrMin
-        : this._config?.start_from_zero === false && Number.isFinite(currentValue) && currentValue < 0
+        : this._config?.start_from_zero === false && typeof currentValue === "number" && Number.isFinite(currentValue) && currentValue < 0
           ? Math.floor(currentValue)
           : 0;
 
@@ -270,7 +287,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     return { min, max };
   }
 
-  _getRangeLabel(boundary, range, state) {
+  _getRangeLabel(boundary: "min" | "max", range: GaugeRange, state: HassEntity | null) {
     const configuredLabel = String(
       boundary === "min" ? this._config?.min_label ?? "" : this._config?.max_label ?? "",
     ).trim();
@@ -287,18 +304,17 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     return buildGaugeTintScale(gaugeStyles.min_tint_color, gaugeStyles.max_tint_color);
   }
 
-  _resolveGaugeSvgStrokeColor(value, fallback) {
+  _resolveGaugeSvgStrokeColor(value: unknown, fallback: string) {
     const cacheKey = `${value}\u0000${fallback}`;
-    if (this._gaugeSvgColorCache?.has(cacheKey)) {
-      return this._gaugeSvgColorCache.get(cacheKey);
-    }
+    const cached = this._gaugeSvgColorCache.get(cacheKey);
+    if (cached !== undefined) return cached;
 
     const resolved = resolveGaugeSvgStrokeColor(value, fallback);
     this._gaugeSvgColorCache?.set(cacheKey, resolved);
     return resolved;
   }
 
-  _getGaugeProgressSegments(ratio, tintScale) {
+  _getGaugeProgressSegments(ratio: number, tintScale: ReturnType<typeof buildGaugeTintScale>) {
     const safeRatio = clamp(Number(ratio) || 0, 0, 1);
     const configuredColor = String(this._config?.styles?.gauge?.foreground_color || "").trim();
     const segmentLength = DIAL_VISIBLE_LENGTH / GAUGE_TINT_SEGMENT_COUNT;
@@ -320,7 +336,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     });
   }
 
-  _getAccentColor(state, ratio) {
+  _getAccentColor(_state: HassEntity | null, ratio: number) {
     const styles = this._config?.styles || DEFAULT_CONFIG.styles;
     const configuredColor = String(styles?.gauge?.foreground_color || "").trim();
     if (configuredColor) {
@@ -330,7 +346,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     return resolveGaugeTintColor(this._getGaugeTintScale(), ratio);
   }
 
-  _formatValue(value, state, withUnit = false) {
+  _formatValue(value: number | null, state: HassEntity | null, withUnit = false) {
     const decimals = this._getDecimals(state);
     const formatted = formatNumberValue(value, decimals, this._getLocaleTag());
     if (!withUnit) {
@@ -346,7 +362,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
   }
 
   _getAnimationSettings() {
-    const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+    const configuredAnimations = isObject(this._config.animations) ? this._config.animations : DEFAULT_CONFIG.animations;
 
     return {
       enabled: configuredAnimations.enabled !== false,
@@ -389,13 +405,13 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     return (this._config?.tap_action || "more-info") !== "none" && Boolean(this._config?.entity);
   }
 
-  _triggerHaptic(styleOverride = null) {
-    const haptics = this._config?.haptics || {};
+  _triggerHaptic(styleOverride: string | null = null) {
+    const haptics = isObject(this._config.haptics) ? this._config.haptics : {};
     if (haptics.enabled !== true) {
       return;
     }
 
-    const style = styleOverride || haptics.style || "medium";
+    const style = String(styleOverride || haptics.style || "medium");
     fireEvent(this, "haptic", style, {
       bubbles: true,
       cancelable: false,
@@ -403,11 +419,12 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     });
 
     if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
-      navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
+      const patterns: Record<string, number | number[]> = HAPTIC_PATTERNS;
+      try { navigator.vibrate(patterns[style] ?? HAPTIC_PATTERNS.selection); } catch { /* Unsupported vibration must not block the action. */ }
     }
   }
 
-  _triggerContentBounce(content) {
+  _triggerContentBounce(content: HTMLElement) {
     if (!(content instanceof HTMLElement)) {
       return;
     }
@@ -431,15 +448,16 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     if (typeof schedule === "function") {
       schedule(this, done, animations.buttonBounceDuration + 40);
     } else {
-      window.setTimeout(done, animations.buttonBounceDuration + 40);
+      const timer = window.setTimeout(() => {
+        this._fallbackAnimationTimers.delete(timer);
+        done();
+      }, animations.buttonBounceDuration + 40);
+      this._fallbackAnimationTimers.add(timer);
     }
   }
 
-  _scheduleEntranceAnimationReset(delay) {
-    if (this._entranceAnimationResetTimer) {
-      window.clearTimeout(this._entranceAnimationResetTimer);
-      this._entranceAnimationResetTimer = 0;
-    }
+  _scheduleEntranceAnimationReset(delay: number) {
+    if (this._entranceAnimationResetTimer) return;
 
     const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3000);
     if (!safeDelay || typeof window === "undefined") {
@@ -510,10 +528,10 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     });
   }
 
-  _onShadowClick(event) {
+  _onShadowClick(event: Event) {
     const target = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.gaugeAction === "primary");
+      .find((node): node is HTMLElement => node instanceof HTMLElement && node.dataset.gaugeAction === "primary");
 
     if (!target || !this._canRunTapAction()) {
       return;
@@ -526,19 +544,19 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     this._openMoreInfo();
   }
 
-  _onShadowKeyDown(event) {
+  _onShadowKeyDown(event: Event) {
     if (window.NodaliaUtils?.isKeyboardActivationEvent?.(event) !== true) {
       return;
     }
     this._onShadowClick(event);
   }
 
-  _circularGaugeCardUi(key, fallback = "") {
+  _circularGaugeCardUi(key: string, fallback = "") {
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
     const pack = window.NodaliaI18n?.strings?.(lang)?.circularGaugeCard;
     const enPack = window.NodaliaI18n?.strings?.("en")?.circularGaugeCard;
-    const raw = pack?.[key] ?? enPack?.[key];
+    const raw = (isObject(pack) ? pack[key] : undefined) ?? (isObject(enPack) ? enPack[key] : undefined);
     return String(raw != null && raw !== "" ? raw : fallback);
   }
 
@@ -601,12 +619,16 @@ class NodaliaCircularGaugeCard extends HTMLElement {
       { cardClass: "gauge-card" },
     );
     if (entityGuard) {
+      this._releaseGaugeWork();
+      this._lastGaugeVisualState = null;
       this.shadowRoot.innerHTML = entityGuard;
       return;
     }
 
     const state = this._getState();
     if (!state) {
+      this._releaseGaugeWork();
+      this._lastGaugeVisualState = null;
       this.shadowRoot.innerHTML = window.NodaliaUtils?.renderCardEmptyStateDocument?.(
         this._renderEmptyState(),
         { card: (config || DEFAULT_CONFIG).styles?.card },
@@ -1381,6 +1403,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
       const dial = this.shadowRoot.querySelector(".gauge-card__dial");
       if (dial instanceof HTMLElement) {
         this._gaugeVisualFrame = window.requestAnimationFrame(() => {
+          if (!this.isConnected || !dial.isConnected) { this._gaugeVisualFrame = 0; return; }
           dial.style.setProperty("--gauge-progress-length", `${progressLength}`);
           dial.style.setProperty("--gauge-thumb-rotate", `${targetThumbRotate}deg`);
 

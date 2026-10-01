@@ -1059,3 +1059,24 @@ specific browser cases and the full local browser suite (401 passed, one existin
 skip) pass. No type suppressions, broad casts or weaker flags were added.
 Remaining unchecked modules: 32. Hold 3.0.0-alpha.1 until full migration, including
 handwritten utility/i18n runtime sources.
+
+## Circular Gauge view findings — 2026-10-01
+
+Gauge view suppressed checking across HA values, responsive sizing, SVG colour
+cache/geometry and animation ownership. Blank sizing became zero and selected
+compact mode. Frequent HA updates restarted the entrance deadline continuously;
+fallback bounce timers were not owned and missing-entity renders left old work.
+
+The view now passes strict checking and typed lint with actual HA/geometry/cache
+contracts. Nullable finite sizing separates absence from real zero. Frequent
+updates retain the initial entrance deadline and finalize the latest ratio.
+Removing/reconfiguring the card or showing a missing entity cancels animation
+frames and shared/fallback timers; stale disconnected frame callbacks are ignored.
+Malformed nested haptic/animation/translation values are guarded and vibration
+failure cannot block keyboard activation. Five verified unused imports were removed.
+
+3,000 valid view/grid outputs match main. All 742 unit tests, eighteen specific
+Gauge browser cases and the full local suite (410 passed, one existing skip)
+pass. The lifecycle source assertion now follows the explicit cleanup helper.
+Remaining unchecked modules: 31. Hold 3.0.0-alpha.1 until full migration, including
+handwritten utility/i18n runtime sources.

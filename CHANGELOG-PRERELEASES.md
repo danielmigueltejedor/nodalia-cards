@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+- Check Circular Gauge view boundaries, finish entrance animations during frequent updates, release abandoned animation work and keep blank responsive sizing distinct from zero.
+
 - Check Weather and Circular Gauge visual editors, guard malformed nested settings and HA/native events, preserve missing entities and focus, and retain forecast/unit options, automatic bounds, actual zeros and translucent styles.
 
 - Check Camera visual editor boundaries, ignore malformed rows and removal indices, preserve the original camera when adding a draft row, and retain camera-specific actions, streams, YAML fields and focus.

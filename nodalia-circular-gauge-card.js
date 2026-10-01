@@ -557,6 +557,8 @@
         this.attachShadow({ mode: "open" });
         this._config = normalizeConfig(STUB_CONFIG);
         this._hass = null;
+        this._gaugeSvgColorCache = /* @__PURE__ */ new Map();
+        this._fallbackAnimationTimers = /* @__PURE__ */ new Set();
         window.NodaliaUtils?.clearDeferTimers?.(this);
         this._lastRenderSignature = "";
         this._lastGaugeVisualState = null;
@@ -565,8 +567,8 @@
         this._entranceAnimationResetTimer = 0;
         this._onShadowClick = this._onShadowClick.bind(this);
         this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
-        this.shadowRoot.addEventListener("click", this._onShadowClick);
-        this.shadowRoot.addEventListener("keydown", this._onShadowKeyDown);
+        this.shadowRoot?.addEventListener("click", this._onShadowClick);
+        this.shadowRoot?.addEventListener("keydown", this._onShadowKeyDown);
       }
       connectedCallback() {
         this._animateContentOnNextRender = true;
@@ -575,7 +577,7 @@
           this._render();
         }
       }
-      disconnectedCallback() {
+      _releaseGaugeWork() {
         if (this._gaugeVisualFrame) {
           window.cancelAnimationFrame(this._gaugeVisualFrame);
           this._gaugeVisualFrame = 0;
@@ -584,12 +586,21 @@
           window.clearTimeout(this._entranceAnimationResetTimer);
           this._entranceAnimationResetTimer = 0;
         }
+        for (const timer of this._fallbackAnimationTimers) window.clearTimeout(timer);
+        this._fallbackAnimationTimers.clear();
         window.NodaliaUtils?.clearDeferTimers?.(this);
+      }
+      disconnectedCallback() {
+        this._releaseGaugeWork();
         this._animateContentOnNextRender = true;
         this._lastRenderSignature = "";
+        this._lastGaugeVisualState = null;
       }
       setConfig(config) {
+        const previousEntity = this._config.entity;
+        this._releaseGaugeWork();
         this._config = normalizeConfig(config || {});
+        if (previousEntity !== this._config.entity) this._lastGaugeVisualState = null;
         window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
         this._lastRenderSignature = "";
         this._animateContentOnNextRender = true;
@@ -634,8 +645,8 @@
           String(attrs.min ?? ""),
           String(attrs.max ?? ""),
           String(getHassLocaleTag(hass, this._config?.language ?? "auto") || ""),
-          Number(this._config?.grid_options?.rows || 0),
-          Number(this._config?.grid_options?.columns || 0)
+          this._getConfiguredGridRows(),
+          this._getConfiguredGridColumns()
         ];
         if (typeof joinParts === "function") {
           return joinParts([{ prefix: "gauge:", values }]);
@@ -643,12 +654,12 @@
         return values.join("::");
       }
       _getConfiguredGridRows() {
-        const numericRows = Number(this._config?.grid_options?.rows);
-        return Number.isFinite(numericRows) ? numericRows : null;
+        const grid = isObject(this._config.grid_options) ? this._config.grid_options : {};
+        return parseFiniteNumericValue(grid.rows);
       }
       _getConfiguredGridColumns() {
-        const numericColumns = Number(this._config?.grid_options?.columns);
-        return Number.isFinite(numericColumns) ? numericColumns : null;
+        const grid = isObject(this._config.grid_options) ? this._config.grid_options : {};
+        return parseFiniteNumericValue(grid.columns);
       }
       _getCompactLevel() {
         const configuredRows = this._getConfiguredGridRows();
@@ -690,7 +701,7 @@
         const attrMin = parseFiniteNumericValue(state?.attributes?.min);
         const attrMax = parseFiniteNumericValue(state?.attributes?.max);
         const unit = this._getUnit(state);
-        const min = configuredMin !== null ? configuredMin : attrMin !== null ? attrMin : this._config?.start_from_zero === false && Number.isFinite(currentValue) && currentValue < 0 ? Math.floor(currentValue) : 0;
+        const min = configuredMin !== null ? configuredMin : attrMin !== null ? attrMin : this._config?.start_from_zero === false && typeof currentValue === "number" && Number.isFinite(currentValue) && currentValue < 0 ? Math.floor(currentValue) : 0;
         let max = configuredMax !== null ? configuredMax : attrMax !== null ? attrMax : inferReasonableMax(currentValue, unit, state);
         if (!Number.isFinite(max) || max <= min) {
           max = min + 100;
@@ -712,9 +723,8 @@
       }
       _resolveGaugeSvgStrokeColor(value, fallback) {
         const cacheKey = `${value}\0${fallback}`;
-        if (this._gaugeSvgColorCache?.has(cacheKey)) {
-          return this._gaugeSvgColorCache.get(cacheKey);
-        }
+        const cached = this._gaugeSvgColorCache.get(cacheKey);
+        if (cached !== void 0) return cached;
         const resolved = resolveGaugeSvgStrokeColor(value, fallback);
         this._gaugeSvgColorCache?.set(cacheKey, resolved);
         return resolved;
@@ -738,7 +748,7 @@
           };
         });
       }
-      _getAccentColor(state, ratio) {
+      _getAccentColor(_state, ratio) {
         const styles = this._config?.styles || DEFAULT_CONFIG.styles;
         const configuredColor = String(styles?.gauge?.foreground_color || "").trim();
         if (configuredColor) {
@@ -759,7 +769,7 @@
         return getHassLocaleTag(this._hass, this._config?.language ?? "auto");
       }
       _getAnimationSettings() {
-        const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+        const configuredAnimations = isObject(this._config.animations) ? this._config.animations : DEFAULT_CONFIG.animations;
         return {
           enabled: configuredAnimations.enabled !== false,
           dialDuration: clamp(
@@ -796,18 +806,22 @@
         return (this._config?.tap_action || "more-info") !== "none" && Boolean(this._config?.entity);
       }
       _triggerHaptic(styleOverride = null) {
-        const haptics = this._config?.haptics || {};
+        const haptics = isObject(this._config.haptics) ? this._config.haptics : {};
         if (haptics.enabled !== true) {
           return;
         }
-        const style = styleOverride || haptics.style || "medium";
+        const style = String(styleOverride || haptics.style || "medium");
         fireEvent(this, "haptic", style, {
           bubbles: true,
           cancelable: false,
           composed: true
         });
         if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
-          navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
+          const patterns = HAPTIC_PATTERNS;
+          try {
+            navigator.vibrate(patterns[style] ?? HAPTIC_PATTERNS.selection);
+          } catch {
+          }
         }
       }
       _triggerContentBounce(content) {
@@ -831,14 +845,15 @@
         if (typeof schedule === "function") {
           schedule(this, done, animations.buttonBounceDuration + 40);
         } else {
-          window.setTimeout(done, animations.buttonBounceDuration + 40);
+          const timer = window.setTimeout(() => {
+            this._fallbackAnimationTimers.delete(timer);
+            done();
+          }, animations.buttonBounceDuration + 40);
+          this._fallbackAnimationTimers.add(timer);
         }
       }
       _scheduleEntranceAnimationReset(delay) {
-        if (this._entranceAnimationResetTimer) {
-          window.clearTimeout(this._entranceAnimationResetTimer);
-          this._entranceAnimationResetTimer = 0;
-        }
+        if (this._entranceAnimationResetTimer) return;
         const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3e3);
         if (!safeDelay || typeof window === "undefined") {
           this._animateContentOnNextRender = false;
@@ -896,7 +911,7 @@
         });
       }
       _onShadowClick(event) {
-        const target = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.gaugeAction === "primary");
+        const target = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset.gaugeAction === "primary");
         if (!target || !this._canRunTapAction()) {
           return;
         }
@@ -917,7 +932,7 @@
         const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
         const pack = window.NodaliaI18n?.strings?.(lang)?.circularGaugeCard;
         const enPack = window.NodaliaI18n?.strings?.("en")?.circularGaugeCard;
-        const raw = pack?.[key] ?? enPack?.[key];
+        const raw = (isObject(pack) ? pack[key] : void 0) ?? (isObject(enPack) ? enPack[key] : void 0);
         return String(raw != null && raw !== "" ? raw : fallback);
       }
       _renderEmptyState() {
@@ -976,11 +991,15 @@
           { cardClass: "gauge-card" }
         );
         if (entityGuard) {
+          this._releaseGaugeWork();
+          this._lastGaugeVisualState = null;
           this.shadowRoot.innerHTML = entityGuard;
           return;
         }
         const state = this._getState();
         if (!state) {
+          this._releaseGaugeWork();
+          this._lastGaugeVisualState = null;
           this.shadowRoot.innerHTML = window.NodaliaUtils?.renderCardEmptyStateDocument?.(
             this._renderEmptyState(),
             { card: (config || DEFAULT_CONFIG).styles?.card }
@@ -1713,6 +1732,10 @@
           const dial = this.shadowRoot.querySelector(".gauge-card__dial");
           if (dial instanceof HTMLElement) {
             this._gaugeVisualFrame = window.requestAnimationFrame(() => {
+              if (!this.isConnected || !dial.isConnected) {
+                this._gaugeVisualFrame = 0;
+                return;
+              }
               dial.style.setProperty("--gauge-progress-length", `${progressLength}`);
               dial.style.setProperty("--gauge-thumb-rotate", `${targetThumbRotate}deg`);
               if (shouldAnimateEntrance) {
