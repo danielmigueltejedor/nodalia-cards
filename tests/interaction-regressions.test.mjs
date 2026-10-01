@@ -2385,7 +2385,9 @@ test("notifications defers side effects until render signature changes", () => {
 
 test("alpha.7 lifecycle defer cleanup and viewport observer guards", () => {
   assert.match(read("nodalia-person-card.js"), /disconnectedCallback\(\) \{[\s\S]*clearDeferTimers/);
-  assert.match(read("nodalia-circular-gauge-card.js"), /disconnectedCallback\(\) \{[\s\S]*clearDeferTimers/);
+  const gaugeSource = read("nodalia-circular-gauge-card.js");
+  assert.match(gaugeSource, /disconnectedCallback\(\) \{\s*this\._releaseGaugeWork\(\)/);
+  assert.match(gaugeSource, /_releaseGaugeWork\(\) \{[\s\S]*clearDeferTimers/);
   assert.match(read("nodalia-vacuum-card.js"), /scheduleDeferTimer/);
   assert.match(read("nodalia-calendar-card.js"), /IntersectionObserver\([\s\S]*if \(!this\.isConnected\)/);
   assert.match(read("nodalia-notifications-card.js"), /IntersectionObserver\([\s\S]*if \(!this\.isConnected\)/);
