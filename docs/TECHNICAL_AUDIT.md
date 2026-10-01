@@ -1581,3 +1581,30 @@ newer drafts stay open and unchanged. Obsolete contexts still cause no refresh
 or UI mutation. The new native browser case checks all three routes. Strict/lint
 and 750 unit tests pass; all 15 lifecycle browser cases pass, and the full local
 suite passes 629 cases with one existing skip.
+
+
+## 2026-10-02 — Graph view contracts and owned history/interaction work
+
+- Remove Graph's suppression with real HA/config/history/chart/native-event/DOM
+  contracts and explicit lazy initialization. Debt falls from 10 to 9.
+- Coalesce active requests by key, capture HA/period for history/statistics calls,
+  retain the HA receiver and stop aborted WS failures before REST fallback. Reset
+  ownership/cache on connection/user/config changes. Cache successful empty loads
+  and preserve usable history/current readings when statistics are insufficient.
+- Keep absent values/ranges nullable, retain genuine zero and epoch-zero records,
+  and track used icon/device/state-class/locale attributes in render signatures.
+- Fix the SVG selector used by hover patching; update each entity's marker and
+  tooltip in place, including equal series names, and remove closed overlays.
+  Add keyboard actions/chart navigation with focus retention. Native cancellation
+  and context/detach cleanup release holds, animation work, document watchers and
+  hover/tooltip frames.
+- Remove the uncalled empty-state renderer and never-assigned selected-series
+  signature field; share identical legend templates. Colocate static hover CSS,
+  retaining exact presentation through whitespace-only self-contained embedding.
+- Strict/lint and all 750 unit tests pass. 3,000 equivalent valid presentation,
+  style and sizing outputs match the prior view outside restored keyboard and
+  marker attributes. All 12 focused Chromium/WebKit/iPhone cases pass. The full
+  suite passes 638 cases with one existing skip; CI remains required before
+  integration. Current labels/units also update through cached history, and hold
+  movement cancels even when the media query reports no hover. No prerelease is
+  published.
