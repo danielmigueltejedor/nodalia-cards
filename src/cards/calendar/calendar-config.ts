@@ -68,7 +68,13 @@ export function normalizeConfig(config: unknown = {}) {
   normalized.styles = styles;
   const haptics = mergeConfig<Record<string, unknown>>(DEFAULT_CONFIG.haptics, isObject(normalized.haptics) ? normalized.haptics : {});
   const hapticStyle = String(haptics.style ?? "");
-  return { ...normalized, styles, calendars: normalizeCalendarEntries(normalized.calendars),
+  const rawAnimations = isObject(normalized.animations) ? normalized.animations : {};
+  const animationDuration = parseFiniteNumericValue(rawAnimations.content_duration);
+  const animations = { ...rawAnimations, enabled: rawAnimations.enabled !== false,
+    content_duration: Math.max(120, animationDuration ?? DEFAULT_CONFIG.animations.content_duration) };
+  const fields = { entity: typeof normalized.entity === "string" ? normalized.entity : "", language: typeof normalized.language === "string" ? normalized.language : "auto", weather_entity: String(normalized.weather_entity), styles, animations, calendars: normalizeCalendarEntries(normalized.calendars),
     haptics: { ...haptics, enabled: haptics.enabled === true, fallback_vibrate: haptics.fallback_vibrate === true,
       style: Object.prototype.hasOwnProperty.call(HAPTIC_PATTERNS, hapticStyle) ? hapticStyle : DEFAULT_CONFIG.haptics.style } };
+  const configFields: typeof fields & Record<string, unknown> = { ...normalized, ...fields };
+  return configFields;
 }

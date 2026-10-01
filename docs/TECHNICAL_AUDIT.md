@@ -1171,3 +1171,26 @@ limits without depending on wall-clock scheduling. A source assertion now follow
 the awaitable invocation while retaining the PIN-watch contract.
 Remaining unchecked modules: 26. Hold 3.0.0-alpha.1 until complete migration,
 including handwritten utility/i18n runtime sources.
+
+## Calendar editor findings — 2026-10-01
+
+The editor suppressed checking over native/HA controls, rows and nested settings.
+Row edits could extend the array to an arbitrary index, reordering did not bound
+the source index, adding to an empty list did not create a second visible row,
+and text drafts were ignored until change so HA updates discarded current typing.
+
+The editor now passes strict checking and typed lint with actual HA/DOM/config/
+focus/row contracts. Indices are integer-bounded and supported row keys are
+validated before mutation. Labels and translucent tints remain paired on move,
+alpha survives colour edits and missing selections/draft rows remain editable.
+Adding to an empty list retains its visible placeholder and creates a second row.
+Input updates retain local drafts without premature config emissions. Cleared
+numeric overrides restore defaults; animation absence differs from real zero and
+malformed groups are guarded. YAML/security/animation/style extension fields retain
+false and zero, and automatic language is an explicit removable default.
+
+1,400 valid editor HTML outputs match main. All 746 unit tests, nine specific
+browser cases and the full local suite (464 passed, one existing skip) pass.
+The first target run exposed the production text-draft loss above; the corrected
+input handling resolves all three cases. Remaining unchecked modules: 25.
+Hold 3.0.0-alpha.1 until complete migration, including handwritten shared runtimes.

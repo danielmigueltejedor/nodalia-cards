@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+- Check Calendar visual editor boundaries, keep typed drafts during HA updates, add a real second placeholder row, bound row edits/reordering and restore cleared animation defaults while retaining paired labels and translucent tints.
+
 - Check Alarm Panel view boundaries, preserve touched actions through queued renders, prevent Safari resize loops, discard obsolete action failures, clear PINs across entities and own countdown/animation work.
 
 - Check Light visual editor boundaries, preserve independent actions and named colour presets, and restore brightness/animation defaults for absent values while retaining real zero bounds.

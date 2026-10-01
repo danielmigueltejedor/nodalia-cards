@@ -91,3 +91,14 @@ test("Calendar color fallback is available without a config/helper cycle and for
   assert.notEqual(api.getDateTimeFormatter("en", { year: "numeric" }), initial);
   assert.equal(api.formatDateLabel(new Date(2026, 9, 1), "en").includes("Oct"), true);
 });
+
+test("Calendar animation overrides separate absence from actual zero and retain extensions", () => {
+  const configApi = load("calendar-config");
+  for (const value of [undefined, null, "", "  ", "bad", Infinity]) {
+    assert.equal(configApi.normalizeConfig({ animations: { content_duration: value } }).animations.content_duration, 260);
+  }
+  for (const value of [0, "0", -10]) assert.equal(configApi.normalizeConfig({ animations: { content_duration: value } }).animations.content_duration, 120);
+  const config = configApi.normalizeConfig({ animations: { enabled: false, content_duration: "420", extension: 0 }, extension: { flag: false } });
+  assert.deepEqual(plain(config.animations), { enabled: false, content_duration: 420, extension: 0 });
+  assert.deepEqual(plain(config.extension), { flag: false });
+});

@@ -128,6 +128,7 @@
 
   // src/cards/calendar/calendar-defaults.ts
   var DEFAULT_CONFIG = {
+    language: "auto",
     title: "Calendar",
     icon: "mdi:calendar-month",
     calendars: [],
@@ -575,9 +576,19 @@ ${metadata}` : metadata;
     normalized.styles = styles;
     const haptics = mergeConfig(DEFAULT_CONFIG.haptics, isObject(normalized.haptics) ? normalized.haptics : {});
     const hapticStyle = String(haptics.style ?? "");
-    return {
-      ...normalized,
+    const rawAnimations = isObject(normalized.animations) ? normalized.animations : {};
+    const animationDuration = parseFiniteNumericValue(rawAnimations.content_duration);
+    const animations = {
+      ...rawAnimations,
+      enabled: rawAnimations.enabled !== false,
+      content_duration: Math.max(120, animationDuration ?? DEFAULT_CONFIG.animations.content_duration)
+    };
+    const fields = {
+      entity: typeof normalized.entity === "string" ? normalized.entity : "",
+      language: typeof normalized.language === "string" ? normalized.language : "auto",
+      weather_entity: String(normalized.weather_entity),
       styles,
+      animations,
       calendars: normalizeCalendarEntries(normalized.calendars),
       haptics: {
         ...haptics,
@@ -586,6 +597,8 @@ ${metadata}` : metadata;
         style: Object.prototype.hasOwnProperty.call(HAPTIC_PATTERNS, hapticStyle) ? hapticStyle : DEFAULT_CONFIG.haptics.style
       }
     };
+    const configFields = { ...normalized, ...fields };
+    return configFields;
   }
 
   // src/cards/calendar/calendar-card.ts
@@ -4129,6 +4142,16 @@ ${metadata}` : metadata;
     return NodaliaCalendarCard;
   }
 
+  // src/shared/editor-controls.ts
+  function isNativeEditorInput(node) {
+    return node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement;
+  }
+  function editorControlValue(event, control) {
+    const detail = event instanceof CustomEvent ? event.detail : void 0;
+    if (detail && typeof detail === "object" && "value" in detail && typeof detail.value === "string") return detail.value;
+    return "value" in control ? control.value : void 0;
+  }
+
   // src/cards/calendar/calendar-editor.ts
   var _lazyNodaliaCalendarCardEditor;
   function loadNodaliaCalendarCardEditor() {
@@ -4268,21 +4291,15 @@ ${metadata}` : metadata;
         if (field.startsWith("calendars.")) {
           const parts = field.split(".");
           const index = Number(parts[1]);
-          if (!Number.isFinite(index) || index < 0) {
+          if (!Number.isInteger(index) || index < 0 || !parts[1]?.trim() || index > targetConfig.calendars.length || parts.length > 3) {
             return;
           }
-          if (!Array.isArray(targetConfig.calendars)) {
-            targetConfig.calendars = [];
-          }
+          const key = parts.length >= 3 ? parts[2] : null;
+          if (parts.length >= 3 && (!key || !["entity", "label", "tint"].includes(key))) return;
           while (targetConfig.calendars.length <= index) {
             targetConfig.calendars.push({ entity: "", label: "", tint: "" });
           }
-          if (parts.length >= 3) {
-            const key = parts[2];
-            const unsafeKey = typeof window !== "undefined" && window.NodaliaUtils && typeof window.NodaliaUtils.isUnsafeConfigPathKey === "function" && window.NodaliaUtils.isUnsafeConfigPathKey(key);
-            if (key === "__proto__" || key === "constructor" || key === "prototype" || unsafeKey) {
-              return;
-            }
+          if (key) {
             let entry = targetConfig.calendars[index];
             if (typeof entry === "string") {
               entry = { entity: String(entry).trim(), label: "", tint: "" };
@@ -4310,10 +4327,10 @@ ${metadata}` : metadata;
       _readFieldValue(input) {
         const valueType = input.dataset.valueType || "string";
         if (valueType === "boolean") {
-          return Boolean(input.checked);
+          return input instanceof HTMLInputElement && input.checked;
         }
         if (valueType === "number") {
-          return Number(input.value || 0);
+          return parseFiniteNumericValue(input.value) ?? void 0;
         }
         if (valueType === "color") {
           return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
@@ -4321,16 +4338,11 @@ ${metadata}` : metadata;
         return input.value;
       }
       _onShadowInput(event) {
-        const input = event.composedPath().find(
-          (node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement
-        );
+        const input = event.composedPath().find(isNativeEditorInput);
         if (!input?.dataset?.field) {
           return;
         }
         event.stopPropagation();
-        if (event.type === "input" && input.type !== "checkbox") {
-          return;
-        }
         if (input.type === "checkbox" && event.type === "input") {
           return;
         }
@@ -4347,15 +4359,14 @@ ${metadata}` : metadata;
         }
       }
       _onShadowValueChanged(event) {
-        const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+        const control = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.field));
         if (!control?.dataset?.field) {
           return;
         }
         event.stopPropagation();
         const field = control.dataset.field;
         const next = deepClone(this._config || DEFAULT_CONFIG);
-        const raw = event.detail?.value;
-        const value = typeof raw === "string" ? raw : control.value;
+        const value = editorControlValue(event, control);
         this._setFieldValue(next, field, value);
         this._config = normalizeConfig(next);
         this._emitConfig();
@@ -4367,10 +4378,13 @@ ${metadata}` : metadata;
         const next = deepClone(this._config || DEFAULT_CONFIG);
         const list = Array.isArray(next.calendars) ? [...next.calendars] : [];
         const j = index + delta;
-        if (!Number.isFinite(index) || index < 0 || !Number.isFinite(j) || j < 0 || j >= list.length) {
+        if (!Number.isInteger(index) || index < 0 || index >= list.length || !Number.isInteger(j) || j < 0 || j >= list.length) {
           return;
         }
-        [list[index], list[j]] = [list[j], list[index]];
+        const source = list[index], target = list[j];
+        if (!source || !target) return;
+        list[index] = target;
+        list[j] = source;
         next.calendars = list;
         this._config = normalizeConfig(next);
         this._emitConfig();
@@ -4380,7 +4394,7 @@ ${metadata}` : metadata;
       }
       _onShadowClick(event) {
         const rootTarget = event.target instanceof Element ? event.target : null;
-        const toggleButton = rootTarget?.closest?.("[data-editor-toggle]");
+        const toggleButton = rootTarget?.closest("[data-editor-toggle]");
         if (toggleButton) {
           event.preventDefault();
           event.stopPropagation();
@@ -4396,7 +4410,7 @@ ${metadata}` : metadata;
           this._restoreFocusState(focusState2);
           return;
         }
-        const button = rootTarget?.closest?.("[data-editor-action]");
+        const button = rootTarget?.closest("[data-editor-action]");
         if (!button) {
           return;
         }
@@ -4416,12 +4430,12 @@ ${metadata}` : metadata;
           next.calendars = [];
         }
         if (action === "add-calendar") {
+          if (!next.calendars.length) next.calendars.push({ entity: "", label: "", tint: "" });
           next.calendars.push({ entity: "", label: "", tint: "" });
         } else if (action === "remove-calendar") {
           const index = Number(button.dataset.index || -1);
-          if (Number.isFinite(index) && index >= 0 && index < next.calendars.length) {
-            next.calendars.splice(index, 1);
-          }
+          if (!Number.isInteger(index) || index < 0 || index >= next.calendars.length) return;
+          next.calendars.splice(index, 1);
         } else {
           return;
         }
@@ -4439,25 +4453,24 @@ ${metadata}` : metadata;
         const nextValue = host.dataset.value || "";
         const placeholder = host.dataset.placeholder || "";
         const allowedDomains = String(host.dataset.domains || "").split(",").map((domain) => domain.trim()).filter(Boolean);
-        let control = null;
+        let control;
         if (customElements.get("ha-entity-picker")) {
           control = document.createElement("ha-entity-picker");
           if (allowedDomains.length) {
-            control.includeDomains = allowedDomains;
-            control.entityFilter = (stateObj) => allowedDomains.some((domain) => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+            Object.assign(control, { includeDomains: allowedDomains });
+            Object.assign(control, { entityFilter: (stateObj) => allowedDomains.some((domain) => String(stateObj.entity_id || "").startsWith(`${domain}.`)) });
           }
           if (placeholder) {
             control.setAttribute("placeholder", placeholder);
           }
-          control.allowCustomEntity = true;
+          Object.assign(control, { allowCustomEntity: true });
         } else if (customElements.get("ha-selector")) {
           control = document.createElement("ha-selector");
           const entitySelector = allowedDomains.length === 1 ? { domain: allowedDomains[0] } : allowedDomains.length > 1 ? { domain: allowedDomains } : {};
-          control.selector = { entity: entitySelector };
+          Object.assign(control, { selector: { entity: entitySelector } });
         } else {
           control = document.createElement("input");
-          control.type = "text";
-          control.placeholder = placeholder || "calendar.ejemplo";
+          Object.assign(control, { type: "text", placeholder: placeholder || "calendar.ejemplo" });
           control.addEventListener("change", this._onShadowInput);
         }
         control.dataset.field = field;
@@ -4642,7 +4655,7 @@ ${metadata}` : metadata;
         const config = normalizeConfig(this._config || DEFAULT_CONFIG);
         const calendars = Array.isArray(config.calendars) && config.calendars.length ? config.calendars : [{ entity: "", label: "", tint: "" }];
         const hapticStyle = config.haptics?.style || DEFAULT_CONFIG.haptics.style;
-        const animations = config.animations || DEFAULT_CONFIG.animations;
+        const animations = isObject(config.animations) ? config.animations : DEFAULT_CONFIG.animations;
         this.shadowRoot.innerHTML = `
       <style>
         :host {
@@ -5117,7 +5130,7 @@ ${metadata}` : metadata;
             ${this._renderCheckboxField(
           "ed.calendar.allow_webhooks_non_admin",
           "security.allow_webhooks_for_non_admin",
-          config.security?.allow_webhooks_for_non_admin === true
+          isObject(config.security) && config.security.allow_webhooks_for_non_admin === true
         )}
           </div>
         </section>

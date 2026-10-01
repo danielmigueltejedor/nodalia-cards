@@ -2,7 +2,6 @@
   "src/cards/advance-vacuum/advance-vacuum-card.ts",
   "src/cards/advance-vacuum/advance-vacuum-editor.ts",
   "src/cards/calendar/calendar-card.ts",
-  "src/cards/calendar/calendar-editor.ts",
   "src/cards/camera/camera-card.ts",
   "src/cards/climate/climate-card.ts",
   "src/cards/climate/climate-editor.ts",
