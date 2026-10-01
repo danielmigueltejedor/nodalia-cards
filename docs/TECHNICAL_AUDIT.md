@@ -1305,6 +1305,15 @@ All 748 unit tests, nine specific browser cases and 1,400 equivalent editor HTML
 outputs pass. Full local suite: 509 passed, one existing skip. Remaining unchecked
 modules: 20. Publication stays held until the complete source/runtime migration.
 
+The Firefox CI job exposed a test-fixture issue: desktop contexts do not
+provide `TouchEvent` until touch support is enabled. Use Playwright
+`hasTouch: true` for these lifecycle cases, exercising the native constructor
+without a polyfill or skipped assertions. The same 21 focused Chromium/
+WebKit/iPhone cases pass; Firefox remains a required remote gate. Local
+Firefox cannot start its temporary profile on this host, including a direct
+`/private/tmp` profile path.
+
+
 ## Power Flow editor findings — 2026-10-01
 
 The unchecked visual editor referenced selector domains without importing their

@@ -1,4 +1,6 @@
 import {expect,test} from '@playwright/test';
+// Exercise real touch events in desktop engines as well as mobile Safari.
+test.use({hasTouch:true});
 async function mount(page,config={},states={}){
  await page.goto('/tests/fixtures/browser.html');await page.waitForFunction(()=>customElements.get('nodalia-fan-card'));
  await page.evaluate(({config,states})=>{
