@@ -28,3 +28,9 @@ test('Entity malformed SVG and series samples never produce nonfinite paths',()=
 test('Entity HA state formatter retains its receiver, fallback text, icons and numeric formatting',()=>{
  const state={entity_id:'lock.front',state:'jammed',attributes:{state_translated:'Blocked'}};const hass={states:{},formatEntityState(){assert.equal(this,hass);return 'Translated';}};assert.equal(api.getHomeAssistantStateDisplayValue(state,hass),'Translated');assert.equal(api.getHomeAssistantStateDisplayValue(state,{states:{},formatEntityState(){throw Error('unavailable');}}),'Blocked');assert.equal(api.getDynamicEntityIcon(state),'mdi:lock-alert');assert.equal(api.formatNumericValue('12,500',Infinity),'12.5');assert.equal(api.formatNumericValueWithUnit('0','°C'),'0°C');assert.equal(api.parseNumericValue('12 watts'),null);assert.equal(api.getSelectEntityOptions({state:'one',attributes:{options:[' one ',null,'two']}}).join(','),'one,two');
 });
+
+
+test('Entity quick service actions retain YAML objects and false/zero values as usable JSON',()=>{
+ const data={enabled:false,level:0,nested:{count:0}};const config=configApi.normalizeConfig({quick_actions:[null,false,{type:'service',entity:'light.one',service:'light.turn_on',service_data:data},{icon:42,type:7,entity:[],service:null,service_data:'{"brightness":0}'}]});
+ assert.equal(config.quick_actions.length,2);assert.deepEqual(plain(JSON.parse(config.quick_actions[0].service_data)),data);assert.equal(config.quick_actions[1].icon,'mdi:flash');assert.equal(config.quick_actions[1].type,'toggle');assert.equal(config.quick_actions[1].entity,'');assert.equal(config.quick_actions[1].service,'');assert.equal(config.quick_actions[1].service_data,'{"brightness":0}');assert.deepEqual(data,{enabled:false,level:0,nested:{count:0}});
+});

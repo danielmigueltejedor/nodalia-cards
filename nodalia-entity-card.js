@@ -428,6 +428,9 @@
     const source = isObject(raw) ? raw : {};
     return { entities: normalizeOverviewEntities(source.entities, { network: true }) };
   }
+  function serializeActionObject(value) {
+    return isObject(value) ? JSON.stringify(value) : String(value ?? "").trim();
+  }
   function normalizeConfig(rawConfig = {}) {
     const raw = isObject(rawConfig) ? rawConfig : {};
     const defaults = DEFAULT_CONFIG;
@@ -446,13 +449,13 @@
     } else {
       config.state_position = config.state_chip_on_title_row === true ? "right" : "below";
     }
-    config.quick_actions = Array.isArray(config.quick_actions) ? config.quick_actions.filter((action) => isObject(action)).map((action) => ({
-      icon: action.icon || "mdi:flash",
-      type: action.type || "toggle",
-      label: action.label || "",
-      entity: action.entity || "",
-      service: action.service || "",
-      service_data: action.service_data || ""
+    const quickActions = Array.isArray(config.quick_actions) ? config.quick_actions.filter(isObject).map((action) => ({
+      icon: typeof action.icon === "string" && action.icon ? action.icon : "mdi:flash",
+      type: typeof action.type === "string" && action.type ? action.type : "toggle",
+      label: typeof action.label === "string" ? action.label : "",
+      entity: typeof action.entity === "string" ? action.entity : "",
+      service: typeof action.service === "string" ? action.service : "",
+      service_data: serializeActionObject(action.service_data)
     })) : [];
     migrateLegacyIconOffColor(iconStyles, DEFAULT_CONFIG.styles.icon.off_color);
     const applyTap = window.NodaliaUtils?.applyCardTapActionField?.bind(window.NodaliaUtils);
@@ -521,7 +524,6 @@
     if (String(config.icon_double_tap_action || "").trim() === "") {
       config.icon_double_tap_action = "";
     }
-    const serializeActionObject = (value) => isObject(value) ? JSON.stringify(value) : String(value ?? "").trim();
     config.tap_service = String(config.tap_service ?? "").trim();
     config.tap_service_data = serializeActionObject(config.tap_service_data);
     config.tap_service_target = serializeActionObject(config.tap_service_target);
@@ -573,13 +575,18 @@
     const layoutKey = String(config.layout ?? "default").trim().toLowerCase();
     config.layout = layoutKey === "air_quality" || OVERVIEW_LAYOUTS.has(layoutKey) ? layoutKey : "default";
     config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? { ...DEFAULT_CONFIG.security, ...isObject(config.security) ? config.security : {} };
-    return {
-      ...config,
+    const fields = {
+      entity: typeof config.entity === "string" ? config.entity : "",
+      language: String(config.language),
+      layout: String(config.layout),
+      quick_actions: quickActions,
       air_quality: normalizeAirQualityBlock(config.air_quality),
       battery: normalizeBatteryBlock(config.battery),
       network: normalizeNetworkBlock(config.network),
       styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles)
     };
+    const normalized = { ...config, ...fields };
+    return normalized;
   }
 
   // src/shared/history-geometry.ts
@@ -4936,6 +4943,16 @@
     return NodaliaEntityCard;
   }
 
+  // src/shared/editor-controls.ts
+  function isNativeEditorInput(node) {
+    return node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement;
+  }
+  function editorControlValue(event, control) {
+    const detail = event instanceof CustomEvent ? event.detail : void 0;
+    if (detail && typeof detail === "object" && "value" in detail && typeof detail.value === "string") return detail.value;
+    return "value" in control ? control.value : void 0;
+  }
+
   // src/shared/editor-toggle-styles.ts
   var EDITOR_TOGGLE_STYLES = `
 :is(.editor-toggle, .editor-checkbox) {
@@ -5180,7 +5197,7 @@ padding: 0 12px;
         this._restoreFocusState(focusState);
       }
       _getEntityOptionsSignature(hass = this._hass) {
-        return window.NodaliaUtils.editorStatesSignature(hass, this._config?.language);
+        return window.NodaliaUtils.editorStatesSignature?.(hass, this._config?.language) ?? "";
       }
       _watchEditorControlTag(tagName) {
         if (!tagName || this._pendingEditorControlTags.has(tagName)) {
@@ -5240,13 +5257,22 @@ padding: 0 12px;
         this._render();
         this._restoreFocusState(focusState);
         fireEvent(this, "config-changed", {
-          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {})
+          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults?.(nextConfig, DEFAULT_CONFIG) ?? {})
         });
       }
       _setEditorConfig() {
         this._config = normalizeConfig(compactConfig(this._config));
       }
       _setFieldValue(path, value) {
+        const parts = path.split(".");
+        if (parts[0] === "quick_actions" && parts.length > 1) {
+          const index = parseFiniteNumericValue(parts[1]);
+          if (index === null || !Number.isInteger(index) || index < 0 || index >= this._config.quick_actions.length || parts.length !== 3 || !["icon", "type", "label", "entity", "service", "service_data"].includes(parts[2] || "")) return;
+        }
+        if ((parts[0] === "battery" || parts[0] === "network") && parts[1] === "entities" && parts.length > 2) {
+          const index = parseFiniteNumericValue(parts[2]);
+          if (index === null || !Number.isInteger(index) || index < 0 || index >= this._config[parts[0]].entities.length || parts.length !== 4 || !["entity", "name", "icon", ...parts[0] === "network" ? ["role"] : []].includes(parts[3] || "")) return;
+        }
         if (value === void 0 || value === null || value === "") {
           deleteByPath(this._config, path);
           return;
@@ -5257,7 +5283,7 @@ padding: 0 12px;
         const valueType = input.dataset.valueType || "string";
         switch (valueType) {
           case "boolean":
-            return Boolean(input.checked);
+            return input instanceof HTMLInputElement && input.checked;
           case "color":
             return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
           case "csv": {
@@ -5269,21 +5295,20 @@ padding: 0 12px;
         }
       }
       _moveAction(index, direction) {
-        const nextIndex = index + direction;
-        if (!Array.isArray(this._config.quick_actions) || nextIndex < 0 || nextIndex >= this._config.quick_actions.length) {
-          return;
-        }
-        const [action] = this._config.quick_actions.splice(index, 1);
-        this._config.quick_actions.splice(nextIndex, 0, action);
+        const list = this._config.quick_actions, nextIndex = index + direction;
+        if (!Number.isInteger(index) || index < 0 || index >= list.length || !Number.isInteger(nextIndex) || nextIndex < 0 || nextIndex >= list.length) return;
+        const action = list[index], target = list[nextIndex];
+        if (!action || !target) return;
+        list[index] = target;
+        list[nextIndex] = action;
       }
       _moveOverviewEntity(layout, index, direction) {
-        const entries = this._config?.[layout]?.entities;
-        const nextIndex = index + direction;
-        if (!Array.isArray(entries) || nextIndex < 0 || nextIndex >= entries.length) {
-          return;
-        }
-        const [entry] = entries.splice(index, 1);
-        entries.splice(nextIndex, 0, entry);
+        const entries = this._config[layout].entities, nextIndex = index + direction;
+        if (!Number.isInteger(index) || index < 0 || index >= entries.length || !Number.isInteger(nextIndex) || nextIndex < 0 || nextIndex >= entries.length) return;
+        const entry = entries[index], target = entries[nextIndex];
+        if (!entry || !target) return;
+        entries[index] = target;
+        entries[nextIndex] = entry;
       }
       _findOverviewDefaultEntity(layout) {
         const states = Object.entries(this._hass?.states || {});
@@ -5298,7 +5323,7 @@ padding: 0 12px;
         return match?.[0] || states[0]?.[0] || "sensor.entity";
       }
       _onShadowInput(event) {
-        const input = event.composedPath().find((node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+        const input = event.composedPath().find(isNativeEditorInput);
         if (!input?.dataset?.field) {
           return;
         }
@@ -5311,12 +5336,12 @@ padding: 0 12px;
         }
       }
       _onShadowValueChanged(event) {
-        const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+        const control = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.field));
         if (!control?.dataset?.field) {
           return;
         }
         event.stopPropagation();
-        const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+        const nextValue = editorControlValue(event, control);
         if (typeof control.dataset?.value === "string") {
           control.dataset.value = String(nextValue || "");
         }
@@ -5330,7 +5355,7 @@ padding: 0 12px;
         this._emitConfig();
       }
       _onShadowClick(event) {
-        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
+        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.editorToggle));
         if (toggleButton) {
           event.preventDefault();
           event.stopPropagation();
@@ -5346,14 +5371,14 @@ padding: 0 12px;
           }
           return;
         }
-        const button = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorAction);
+        const button = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.editorAction));
         if (!button) {
           return;
         }
         event.preventDefault();
         event.stopPropagation();
         const action = button.dataset.editorAction;
-        const index = Number(button.dataset.index);
+        const index = parseFiniteNumericValue(button.dataset.index) ?? -1;
         if (!Array.isArray(this._config.quick_actions)) {
           this._config.quick_actions = [];
         }
@@ -5376,7 +5401,7 @@ padding: 0 12px;
           }
           case "remove-overview-entity": {
             const layout = String(button.dataset.layout || "");
-            if (OVERVIEW_LAYOUTS.has(layout) && Number.isInteger(index)) {
+            if ((layout === "battery" || layout === "network") && Number.isInteger(index) && index >= 0 && index < this._config[layout].entities.length) {
               this._config[layout].entities.splice(index, 1);
               this._emitConfig();
             }
@@ -5385,7 +5410,7 @@ padding: 0 12px;
           case "move-overview-entity-up":
           case "move-overview-entity-down": {
             const layout = String(button.dataset.layout || "");
-            if (OVERVIEW_LAYOUTS.has(layout) && Number.isInteger(index)) {
+            if ((layout === "battery" || layout === "network") && Number.isInteger(index) && index >= 0 && index < this._config[layout].entities.length) {
               this._moveOverviewEntity(layout, index, action.endsWith("up") ? -1 : 1);
               this._emitConfig();
             }
@@ -5403,19 +5428,19 @@ padding: 0 12px;
             this._emitConfig();
             break;
           case "remove-action":
-            if (Number.isInteger(index)) {
+            if (Number.isInteger(index) && index >= 0 && index < this._config.quick_actions.length) {
               this._config.quick_actions.splice(index, 1);
               this._emitConfig();
             }
             break;
           case "move-action-up":
-            if (Number.isInteger(index)) {
+            if (Number.isInteger(index) && index >= 0 && index < this._config.quick_actions.length) {
               this._moveAction(index, -1);
               this._emitConfig();
             }
             break;
           case "move-action-down":
-            if (Number.isInteger(index)) {
+            if (Number.isInteger(index) && index >= 0 && index < this._config.quick_actions.length) {
               this._moveAction(index, 1);
               this._emitConfig();
             }
@@ -5551,7 +5576,7 @@ padding: 0 12px;
         if (!(host instanceof HTMLElement)) {
           return;
         }
-        if (customElements.get("ha-entity-picker") || customElements.get("ha-selector")) {
+        if ((customElements.get("ha-entity-picker") || customElements.get("ha-selector")) && typeof window.NodaliaUtils.mountEntityPickerHost === "function") {
           window.NodaliaUtils.mountEntityPickerHost(host, {
             hass: this._hass,
             field: host.dataset.field || "entity",
@@ -5635,6 +5660,7 @@ padding: 0 12px;
         }).join("");
       }
       _renderOverviewEntities(layout, config) {
+        if (layout !== "battery" && layout !== "network") return "";
         const entries = config?.[layout]?.entities || [];
         if (!entries.length) {
           return `<div class="editor-empty">${escapeHtml(this._editorLabel("ed.entity.overview_entities_empty"))}</div>`;
@@ -5672,7 +5698,8 @@ padding: 0 12px;
         const isDefaultLayout = config.layout === "default";
         const isAirQualityLayout = config.layout === "air_quality";
         const isOverviewLayout = OVERVIEW_LAYOUTS.has(config.layout);
-        const hapticStyle = config.haptics?.style || "medium";
+        const haptics = isObject(config.haptics) ? config.haptics : {};
+        const hapticStyle = haptics.style || "medium";
         const tapAction = config.tap_action || "auto";
         const iconTapActionRaw = String(config.icon_tap_action ?? "").trim();
         const iconTapSelectValue = iconTapActionRaw;
@@ -5692,8 +5719,9 @@ padding: 0 12px;
         const showCardDoubleTapNavigate = doubleTapAction === "navigate";
         const showCardDoubleTapService = doubleTapAction === "service";
         const showIconDoubleTapService = iconDoubleTapSelect === "service" || iconDoubleTapSelect === "" && doubleTapAction === "service";
+        const security = isObject(config.security) ? config.security : {};
         const showTapServiceSecurity = showIconTapService || showCardTapService || showCardHoldService || showIconHoldService || showCardDoubleTapService || showIconDoubleTapService;
-        const animations = config.animations || DEFAULT_CONFIG.animations;
+        const animations = isObject(config.animations) ? config.animations : DEFAULT_CONFIG.animations;
         this.shadowRoot.innerHTML = `
       <style>
         :host {
@@ -6080,12 +6108,12 @@ padding: 0 12px;
                   ${this._renderCheckboxField(
           "ed.entity.security_strict",
           "security.strict_service_actions",
-          config.security?.strict_service_actions !== false
+          security.strict_service_actions !== false
         )}
-                  ${config.security?.strict_service_actions !== false ? this._renderTextField(
+                  ${security.strict_service_actions !== false ? this._renderTextField(
           "ed.entity.allowed_services_csv",
           "security.allowed_services",
-          Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
+          Array.isArray(security.allowed_services) ? security.allowed_services.join(", ") : "",
           {
             placeholder: "browser_mod.javascript, light.turn_on",
             valueType: "csv",
@@ -6202,6 +6230,27 @@ padding: 0 12px;
           ],
           { fullWidth: true }
         )}
+            ${this._renderSelectField(
+          "ed.light.icon_double_tap_action",
+          "icon_double_tap_action",
+          iconDoubleTapSelect,
+          [
+            { value: "", label: "ed.entity.icon_tap_inherit" },
+            { value: "none", label: "ed.entity.tap_none" },
+            { value: "more-info", label: "ed.entity.tap_more_info" },
+            { value: "toggle", label: "ed.entity.tap_toggle" },
+            { value: "navigate", label: "ed.entity.tap_navigate" },
+            { value: "url", label: "ed.entity.tap_open_url" },
+            { value: "service", label: "ed.entity.tap_service" }
+          ],
+          { fullWidth: true }
+        )}
+            ${showCardDoubleTapNavigate ? this._renderTextField("ed.entity.double_tap_navigation_path", "double_tap_navigation_path", config.double_tap_navigation_path, { fullWidth: true, placeholder: "/home-page/details" }) : ""}
+            ${showIconDoubleTapNavigate || iconDoubleTapSelect === "" && showCardDoubleTapNavigate ? this._renderTextField("ed.entity.icon_double_tap_navigation_path", "icon_double_tap_navigation_path", config.icon_double_tap_navigation_path, { fullWidth: true, placeholder: "/home-page/details" }) : ""}
+            ${showCardDoubleTapService ? this._renderTextField("ed.entity.tap_service_field", "double_tap_service", config.double_tap_service, { fullWidth: true, placeholder: "light.turn_on" }) + this._renderTextareaField("ed.entity.tap_service_data_json", "double_tap_service_data", config.double_tap_service_data, { placeholder: '{"brightness_pct": 50}' }) : ""}
+            ${showIconDoubleTapService ? this._renderTextField("ed.entity.tap_service_field", "icon_double_tap_service", config.icon_double_tap_service, { fullWidth: true, placeholder: "light.turn_on" }) + this._renderTextareaField("ed.entity.tap_service_data_json", "icon_double_tap_service_data", config.icon_double_tap_service_data, { placeholder: '{"brightness_pct": 50}' }) : ""}
+            ${doubleTapAction === "url" ? this._renderTextField("ed.entity.tap_url_field", "double_tap_url", config.double_tap_url, { fullWidth: true, placeholder: "https://example.com" }) + this._renderCheckboxField("ed.entity.tap_new_tab", "double_tap_new_tab", config.double_tap_new_tab === true) : ""}
+            ${iconDoubleTapSelect === "url" || iconDoubleTapSelect === "" && doubleTapAction === "url" ? this._renderTextField("ed.entity.tap_url_field", "icon_double_tap_url", config.icon_double_tap_url, { fullWidth: true, placeholder: "https://example.com" }) + this._renderCheckboxField("ed.entity.tap_new_tab", "icon_double_tap_new_tab", config.icon_double_tap_new_tab === true) : ""}
           </div>
               ` : ""}
         </section>
@@ -6299,8 +6348,8 @@ padding: 0 12px;
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.entity.haptics_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("ed.entity.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("ed.entity.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.entity.enable_haptics", "haptics.enabled", haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.entity.fallback_vibrate", "haptics.fallback_vibrate", haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
           "ed.weather.haptic_style",
           "haptics.style",
@@ -6394,8 +6443,7 @@ padding: 0 12px;
     `;
         this.shadowRoot.querySelectorAll('[data-mounted-control="entity"]').forEach((host) => this._mountEntityPicker(host));
         this.shadowRoot.querySelectorAll("ha-icon-picker[data-field]").forEach((control) => {
-          control.hass = this._hass;
-          control.value = control.dataset.value || "";
+          Object.assign(control, { hass: this._hass, value: control.dataset.value || "" });
           control.addEventListener("value-changed", this._onShadowValueChanged);
         });
         this._ensureEditorControlsReady();

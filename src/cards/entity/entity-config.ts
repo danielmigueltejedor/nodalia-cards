@@ -265,6 +265,10 @@ export function normalizeNetworkBlock(raw: unknown) {
   return { entities: normalizeOverviewEntities(source.entities, { network: true }) };
 }
 
+function serializeActionObject(value: unknown) {
+  return isObject(value) ? JSON.stringify(value) : String(value ?? "").trim();
+}
+
 export function normalizeConfig(rawConfig: unknown = {}) {
   const raw = isObject(rawConfig) ? rawConfig : {};
   const defaults: Record<string, unknown> = DEFAULT_CONFIG;
@@ -284,18 +288,15 @@ export function normalizeConfig(rawConfig: unknown = {}) {
     config.state_position = config.state_chip_on_title_row === true ? "right" : "below";
   }
 
-  config.quick_actions = Array.isArray(config.quick_actions)
-    ? config.quick_actions
-      .filter(action => isObject(action))
-      .map(action => ({
-        icon: action.icon || "mdi:flash",
-        type: action.type || "toggle",
-        label: action.label || "",
-        entity: action.entity || "",
-        service: action.service || "",
-        service_data: action.service_data || "",
-      }))
-    : [];
+  const quickActions = Array.isArray(config.quick_actions)
+    ? config.quick_actions.filter(isObject).map(action => ({
+      icon: typeof action.icon === "string" && action.icon ? action.icon : "mdi:flash",
+      type: typeof action.type === "string" && action.type ? action.type : "toggle",
+      label: typeof action.label === "string" ? action.label : "",
+      entity: typeof action.entity === "string" ? action.entity : "",
+      service: typeof action.service === "string" ? action.service : "",
+      service_data: serializeActionObject(action.service_data),
+    })) : [];
 
   migrateLegacyIconOffColor(iconStyles, DEFAULT_CONFIG.styles.icon.off_color);
 
@@ -365,9 +366,6 @@ export function normalizeConfig(rawConfig: unknown = {}) {
   if (String(config.icon_double_tap_action || "").trim() === "") {
     config.icon_double_tap_action = "";
   }
-  const serializeActionObject = (value: unknown) => (
-    isObject(value) ? JSON.stringify(value) : String(value ?? "").trim()
-  );
   config.tap_service = String(config.tap_service ?? "").trim();
   config.tap_service_data = serializeActionObject(config.tap_service_data);
   config.tap_service_target = serializeActionObject(config.tap_service_target);
@@ -420,11 +418,16 @@ export function normalizeConfig(rawConfig: unknown = {}) {
   config.layout = layoutKey === "air_quality" || OVERVIEW_LAYOUTS.has(layoutKey) ? layoutKey : "default";
   config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
     ?? { ...DEFAULT_CONFIG.security, ...(isObject(config.security) ? config.security : {}) };
-  return {
-    ...config,
+  const fields = {
+    entity: typeof config.entity === "string" ? config.entity : "",
+    language: String(config.language),
+    layout: String(config.layout),
+    quick_actions: quickActions,
     air_quality: normalizeAirQualityBlock(config.air_quality),
     battery: normalizeBatteryBlock(config.battery),
     network: normalizeNetworkBlock(config.network),
     styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles),
   };
+  const normalized: typeof fields & Record<string, unknown> = { ...config, ...fields };
+  return normalized;
 }

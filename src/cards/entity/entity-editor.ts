@@ -1,24 +1,21 @@
-// @ts-nocheck
+import type { HomeAssistant } from "../../core/types/home-assistant";
+import type { EditorFocusState } from "../../core/types/nodalia-utils";
+import { editorControlValue, isNativeEditorInput, type NativeEditorInput } from "../../shared/editor-controls";
+import { parseFiniteNumericValue } from "../../shared/numeric-values";
 import { EDITOR_TOGGLE_STYLES, EDITOR_RADIUS_STYLES, EDITOR_COLOR_STYLES, EDITOR_SECTION_ACTION_STYLES } from "../../shared/editor-toggle-styles";
-/* Visual editor surface: typed incrementally after the card runtime split. */
 import {
   AIR_QUALITY_GRAPH_SERIES_COLORS,
   AIR_QUALITY_METRIC_KEYS,
   OVERVIEW_LAYOUTS,
 } from "./entity-constants";
 import {
-  clamp,
   compactConfig,
   deepClone,
   deleteByPath,
   escapeHtml,
-  escapeSelectorValue,
   fireEvent,
   getByPath,
   isObject,
-  mergeConfig,
-  normalizeTextKey,
-  sanitizeCssValue,
   setByPath,
 } from "./entity-runtime";
 import { DEFAULT_CONFIG, STUB_CONFIG, normalizeConfig } from "./entity-config";
@@ -28,12 +25,22 @@ import {
   getEditorColorModel,
 } from "./entity-helpers";
 
-let _lazyNodaliaEntityCardEditor;
-export function loadNodaliaEntityCardEditor() {
+type OverviewLayout = "battery" | "network";
+interface FieldOptions { fullWidth?: boolean; type?: string; valueType?: string; placeholder?: string; fallbackValue?: string; }
+let _lazyNodaliaEntityCardEditor: CustomElementConstructor | undefined;
+export function loadNodaliaEntityCardEditor(): CustomElementConstructor {
   if (_lazyNodaliaEntityCardEditor) {
     return _lazyNodaliaEntityCardEditor;
   }
 class NodaliaEntityCardEditor extends HTMLElement {
+  private _config!: ReturnType<typeof normalizeConfig>;
+  private _hass!: HomeAssistant | null;
+  private _showAnimationSection!: boolean;
+  private _showStyleSection!: boolean;
+  private _showTapActionsSection!: boolean;
+  private _entityOptionsSignature!: string;
+  private _pendingEditorControlTags!: Set<string>;
+
   constructor() {
     super();
     this._nodaliaConstruct();
@@ -75,7 +82,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
     window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
   }
 
-  set hass(hass) {
+  set hass(hass: HomeAssistant) {
     const nextSignature = this._getEntityOptionsSignature(hass);
     const shouldRender =
       !this._hass ||
@@ -94,7 +101,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
     this._restoreFocusState(focusState);
   }
 
-  setConfig(config) {
+  setConfig(config: unknown) {
     const focusState = this._captureFocusState();
     this._config = normalizeConfig(config || {});
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
@@ -103,10 +110,10 @@ class NodaliaEntityCardEditor extends HTMLElement {
   }
 
   _getEntityOptionsSignature(hass = this._hass) {
-    return window.NodaliaUtils.editorStatesSignature(hass, this._config?.language);
+    return window.NodaliaUtils.editorStatesSignature?.(hass, this._config?.language) ?? "";
   }
 
-  _watchEditorControlTag(tagName) {
+  _watchEditorControlTag(tagName: string) {
     if (!tagName || this._pendingEditorControlTags.has(tagName)) {
       return;
     }
@@ -173,7 +180,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
     return window.NodaliaUtils.captureEditorFocusState(this);
   }
 
-  _restoreFocusState(focusState) {
+  _restoreFocusState(focusState: EditorFocusState | null) {
     window.NodaliaUtils.restoreEditorFocusState(this, focusState);
   }
 
@@ -184,7 +191,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
     this._render();
     this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
-      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
+      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults?.(nextConfig, DEFAULT_CONFIG) ?? {}),
     });
   }
 
@@ -192,7 +199,18 @@ class NodaliaEntityCardEditor extends HTMLElement {
     this._config = normalizeConfig(compactConfig(this._config));
   }
 
-  _setFieldValue(path, value) {
+  _setFieldValue(path: string, value: unknown) {
+    const parts = path.split(".");
+    if (parts[0] === "quick_actions" && parts.length > 1) {
+      const index = parseFiniteNumericValue(parts[1]);
+      if (index === null || !Number.isInteger(index) || index < 0 || index >= this._config.quick_actions.length
+          || parts.length !== 3 || !["icon", "type", "label", "entity", "service", "service_data"].includes(parts[2] || "")) return;
+    }
+    if ((parts[0] === "battery" || parts[0] === "network") && parts[1] === "entities" && parts.length > 2) {
+      const index = parseFiniteNumericValue(parts[2]);
+      if (index === null || !Number.isInteger(index) || index < 0 || index >= this._config[parts[0]].entities.length
+          || parts.length !== 4 || !["entity", "name", "icon", ...(parts[0] === "network" ? ["role"] : [])].includes(parts[3] || "")) return;
+    }
     if (value === undefined || value === null || value === "") {
       deleteByPath(this._config, path);
       return;
@@ -201,12 +219,12 @@ class NodaliaEntityCardEditor extends HTMLElement {
     setByPath(this._config, path, value);
   }
 
-  _readFieldValue(input) {
+  _readFieldValue(input: NativeEditorInput) {
     const valueType = input.dataset.valueType || "string";
 
     switch (valueType) {
       case "boolean":
-        return Boolean(input.checked);
+        return input instanceof HTMLInputElement && input.checked;
       case "color":
         return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
       case "csv": {
@@ -221,31 +239,27 @@ class NodaliaEntityCardEditor extends HTMLElement {
     }
   }
 
-  _moveAction(index, direction) {
-    const nextIndex = index + direction;
-    if (
-      !Array.isArray(this._config.quick_actions) ||
-      nextIndex < 0 ||
-      nextIndex >= this._config.quick_actions.length
-    ) {
-      return;
-    }
-
-    const [action] = this._config.quick_actions.splice(index, 1);
-    this._config.quick_actions.splice(nextIndex, 0, action);
+  _moveAction(index: number, direction: number) {
+    const list = this._config.quick_actions, nextIndex = index + direction;
+    if (!Number.isInteger(index) || index < 0 || index >= list.length
+        || !Number.isInteger(nextIndex) || nextIndex < 0 || nextIndex >= list.length) return;
+    const action = list[index], target = list[nextIndex];
+    if (!action || !target) return;
+    list[index] = target;
+    list[nextIndex] = action;
   }
 
-  _moveOverviewEntity(layout, index, direction) {
-    const entries = this._config?.[layout]?.entities;
-    const nextIndex = index + direction;
-    if (!Array.isArray(entries) || nextIndex < 0 || nextIndex >= entries.length) {
-      return;
-    }
-    const [entry] = entries.splice(index, 1);
-    entries.splice(nextIndex, 0, entry);
+  _moveOverviewEntity(layout: OverviewLayout, index: number, direction: number) {
+    const entries = this._config[layout].entities, nextIndex = index + direction;
+    if (!Number.isInteger(index) || index < 0 || index >= entries.length
+        || !Number.isInteger(nextIndex) || nextIndex < 0 || nextIndex >= entries.length) return;
+    const entry = entries[index], target = entries[nextIndex];
+    if (!entry || !target) return;
+    entries[index] = target;
+    entries[nextIndex] = entry;
   }
 
-  _findOverviewDefaultEntity(layout) {
+  _findOverviewDefaultEntity(layout: OverviewLayout) {
     const states = Object.entries(this._hass?.states || {});
     const match = states.find(([entityId, state]) => {
       const deviceClass = String(state?.attributes?.device_class || "").toLowerCase();
@@ -259,10 +273,10 @@ class NodaliaEntityCardEditor extends HTMLElement {
     return match?.[0] || states[0]?.[0] || "sensor.entity";
   }
 
-  _onShadowInput(event) {
+  _onShadowInput(event: Event) {
     const input = event
       .composedPath()
-      .find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+      .find(isNativeEditorInput);
 
     if (!input?.dataset?.field) {
       return;
@@ -279,10 +293,10 @@ class NodaliaEntityCardEditor extends HTMLElement {
     }
   }
 
-  _onShadowValueChanged(event) {
+  _onShadowValueChanged(event: Event) {
     const control = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.field);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.field));
 
     if (!control?.dataset?.field) {
       return;
@@ -290,9 +304,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
 
     event.stopPropagation();
 
-    const nextValue = typeof event.detail?.value === "string"
-      ? event.detail.value
-      : control.value;
+    const nextValue = editorControlValue(event, control);
     if (typeof control.dataset?.value === "string") {
       control.dataset.value = String(nextValue || "");
     }
@@ -307,10 +319,10 @@ class NodaliaEntityCardEditor extends HTMLElement {
     this._emitConfig();
   }
 
-  _onShadowClick(event) {
+  _onShadowClick(event: Event) {
     const toggleButton = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.editorToggle));
 
     if (toggleButton) {
       event.preventDefault();
@@ -331,7 +343,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
 
     const button = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.editorAction);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.editorAction));
 
     if (!button) {
       return;
@@ -341,7 +353,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
     event.stopPropagation();
 
     const action = button.dataset.editorAction;
-    const index = Number(button.dataset.index);
+    const index = parseFiniteNumericValue(button.dataset.index) ?? -1;
 
     if (!Array.isArray(this._config.quick_actions)) {
       this._config.quick_actions = [];
@@ -366,7 +378,8 @@ class NodaliaEntityCardEditor extends HTMLElement {
       }
       case "remove-overview-entity": {
         const layout = String(button.dataset.layout || "");
-        if (OVERVIEW_LAYOUTS.has(layout) && Number.isInteger(index)) {
+        if ((layout === "battery" || layout === "network") && Number.isInteger(index)
+            && index >= 0 && index < this._config[layout].entities.length) {
           this._config[layout].entities.splice(index, 1);
           this._emitConfig();
         }
@@ -375,7 +388,8 @@ class NodaliaEntityCardEditor extends HTMLElement {
       case "move-overview-entity-up":
       case "move-overview-entity-down": {
         const layout = String(button.dataset.layout || "");
-        if (OVERVIEW_LAYOUTS.has(layout) && Number.isInteger(index)) {
+        if ((layout === "battery" || layout === "network") && Number.isInteger(index)
+            && index >= 0 && index < this._config[layout].entities.length) {
           this._moveOverviewEntity(layout, index, action.endsWith("up") ? -1 : 1);
           this._emitConfig();
         }
@@ -393,19 +407,19 @@ class NodaliaEntityCardEditor extends HTMLElement {
         this._emitConfig();
         break;
       case "remove-action":
-        if (Number.isInteger(index)) {
+        if (Number.isInteger(index) && index >= 0 && index < this._config.quick_actions.length) {
           this._config.quick_actions.splice(index, 1);
           this._emitConfig();
         }
         break;
       case "move-action-up":
-        if (Number.isInteger(index)) {
+        if (Number.isInteger(index) && index >= 0 && index < this._config.quick_actions.length) {
           this._moveAction(index, -1);
           this._emitConfig();
         }
         break;
       case "move-action-down":
-        if (Number.isInteger(index)) {
+        if (Number.isInteger(index) && index >= 0 && index < this._config.quick_actions.length) {
           this._moveAction(index, 1);
           this._emitConfig();
         }
@@ -415,7 +429,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
     }
   }
 
-  _editorLabel(s) {
+  _editorLabel(s: string) {
     if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
       return s;
     }
@@ -423,7 +437,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
     return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
   }
 
-  _renderTextField(label, field, value, options = {}) {
+  _renderTextField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const inputType = options.type || "text";
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
@@ -444,7 +458,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
     `;
   }
 
-  _renderTextareaField(label, field, value, options = {}) {
+  _renderTextareaField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
@@ -457,7 +471,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
     `;
   }
 
-  _renderColorField(label, field, value, options = {}) {
+  _renderColorField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const tColorCustom = this._editorLabel("ed.entity.custom_color");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
@@ -486,7 +500,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
     `;
   }
 
-  _renderCheckboxField(label, field, checked) {
+  _renderCheckboxField(label: string, field: string, checked: boolean) {
     const tLabel = this._editorLabel(label);
     return `
       <label class="editor-toggle">
@@ -502,7 +516,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
     `;
   }
 
-  _renderSelectField(label, field, value, options, renderOptions = {}) {
+  _renderSelectField(label: string, field: string, value: unknown, options: { value: string; label: string }[], renderOptions: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field ${renderOptions.fullWidth ? "editor-field--full" : ""}">
@@ -520,7 +534,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
     `;
   }
 
-  _renderEntityPickerField(label, field, value, options = {}) {
+  _renderEntityPickerField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
@@ -536,7 +550,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
     `;
   }
 
-  _renderIconPickerField(label, field, value, options = {}) {
+  _renderIconPickerField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
@@ -553,12 +567,13 @@ class NodaliaEntityCardEditor extends HTMLElement {
     `;
   }
 
-  _mountEntityPicker(host) {
+  _mountEntityPicker(host: HTMLElement) {
     if (!(host instanceof HTMLElement)) {
       return;
     }
 
-    if (customElements.get("ha-entity-picker") || customElements.get("ha-selector")) {
+    if ((customElements.get("ha-entity-picker") || customElements.get("ha-selector"))
+        && typeof window.NodaliaUtils.mountEntityPickerHost === "function") {
       window.NodaliaUtils.mountEntityPickerHost(host, {
         hass: this._hass,
         field: host.dataset.field || "entity",
@@ -595,7 +610,7 @@ class NodaliaEntityCardEditor extends HTMLElement {
     host.replaceChildren(control);
   }
 
-  _renderQuickActions(config) {
+  _renderQuickActions(config: ReturnType<typeof normalizeConfig>) {
     if (!Array.isArray(config.quick_actions) || !config.quick_actions.length) {
       return `
         <div class="editor-empty">${escapeHtml(this._editorLabel("ed.entity.quick_actions_empty"))}</div>
@@ -656,7 +671,8 @@ class NodaliaEntityCardEditor extends HTMLElement {
       .join("");
   }
 
-  _renderOverviewEntities(layout, config) {
+  _renderOverviewEntities(layout: string, config: ReturnType<typeof normalizeConfig>) {
+    if (layout !== "battery" && layout !== "network") return "";
     const entries = config?.[layout]?.entities || [];
     if (!entries.length) {
       return `<div class="editor-empty">${escapeHtml(this._editorLabel("ed.entity.overview_entities_empty"))}</div>`;
@@ -696,7 +712,8 @@ class NodaliaEntityCardEditor extends HTMLElement {
     const isDefaultLayout = config.layout === "default";
     const isAirQualityLayout = config.layout === "air_quality";
     const isOverviewLayout = OVERVIEW_LAYOUTS.has(config.layout);
-    const hapticStyle = config.haptics?.style || "medium";
+    const haptics = isObject(config.haptics) ? config.haptics : {};
+    const hapticStyle = haptics.style || "medium";
     const tapAction = config.tap_action || "auto";
     const iconTapActionRaw = String(config.icon_tap_action ?? "").trim();
     const iconTapSelectValue = iconTapActionRaw;
@@ -716,8 +733,9 @@ class NodaliaEntityCardEditor extends HTMLElement {
     const showCardDoubleTapNavigate = doubleTapAction === "navigate";
     const showCardDoubleTapService = doubleTapAction === "service";
     const showIconDoubleTapService = iconDoubleTapSelect === "service" || (iconDoubleTapSelect === "" && doubleTapAction === "service");
+    const security = isObject(config.security) ? config.security : {};
     const showTapServiceSecurity = showIconTapService || showCardTapService || showCardHoldService || showIconHoldService || showCardDoubleTapService || showIconDoubleTapService;
-    const animations = config.animations || DEFAULT_CONFIG.animations;
+    const animations = isObject(config.animations) ? config.animations : DEFAULT_CONFIG.animations;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -1125,14 +1143,14 @@ class NodaliaEntityCardEditor extends HTMLElement {
                   ${this._renderCheckboxField(
                     "ed.entity.security_strict",
                     "security.strict_service_actions",
-                    config.security?.strict_service_actions !== false,
+                    security.strict_service_actions !== false,
                   )}
                   ${
-                    config.security?.strict_service_actions !== false
+                    security.strict_service_actions !== false
                       ? this._renderTextField(
                           "ed.entity.allowed_services_csv",
                           "security.allowed_services",
-                          Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
+                          Array.isArray(security.allowed_services) ? security.allowed_services.join(", ") : "",
                           {
                             placeholder: "browser_mod.javascript, light.turn_on",
                             valueType: "csv",
@@ -1293,6 +1311,24 @@ class NodaliaEntityCardEditor extends HTMLElement {
               ],
               { fullWidth: true },
             )}
+            ${this._renderSelectField(
+              "ed.light.icon_double_tap_action", "icon_double_tap_action", iconDoubleTapSelect,
+              [
+                { value: "", label: "ed.entity.icon_tap_inherit" },
+                { value: "none", label: "ed.entity.tap_none" },
+                { value: "more-info", label: "ed.entity.tap_more_info" },
+                { value: "toggle", label: "ed.entity.tap_toggle" },
+                { value: "navigate", label: "ed.entity.tap_navigate" },
+                { value: "url", label: "ed.entity.tap_open_url" },
+                { value: "service", label: "ed.entity.tap_service" },
+              ], { fullWidth: true },
+            )}
+            ${showCardDoubleTapNavigate ? this._renderTextField("ed.entity.double_tap_navigation_path", "double_tap_navigation_path", config.double_tap_navigation_path, { fullWidth: true, placeholder: "/home-page/details" }) : ""}
+            ${showIconDoubleTapNavigate || (iconDoubleTapSelect === "" && showCardDoubleTapNavigate) ? this._renderTextField("ed.entity.icon_double_tap_navigation_path", "icon_double_tap_navigation_path", config.icon_double_tap_navigation_path, { fullWidth: true, placeholder: "/home-page/details" }) : ""}
+            ${showCardDoubleTapService ? this._renderTextField("ed.entity.tap_service_field", "double_tap_service", config.double_tap_service, { fullWidth: true, placeholder: "light.turn_on" }) + this._renderTextareaField("ed.entity.tap_service_data_json", "double_tap_service_data", config.double_tap_service_data, { placeholder: '{"brightness_pct": 50}' }) : ""}
+            ${showIconDoubleTapService ? this._renderTextField("ed.entity.tap_service_field", "icon_double_tap_service", config.icon_double_tap_service, { fullWidth: true, placeholder: "light.turn_on" }) + this._renderTextareaField("ed.entity.tap_service_data_json", "icon_double_tap_service_data", config.icon_double_tap_service_data, { placeholder: '{"brightness_pct": 50}' }) : ""}
+            ${doubleTapAction === "url" ? this._renderTextField("ed.entity.tap_url_field", "double_tap_url", config.double_tap_url, { fullWidth: true, placeholder: "https://example.com" }) + this._renderCheckboxField("ed.entity.tap_new_tab", "double_tap_new_tab", config.double_tap_new_tab === true) : ""}
+            ${iconDoubleTapSelect === "url" || (iconDoubleTapSelect === "" && doubleTapAction === "url") ? this._renderTextField("ed.entity.tap_url_field", "icon_double_tap_url", config.icon_double_tap_url, { fullWidth: true, placeholder: "https://example.com" }) + this._renderCheckboxField("ed.entity.tap_new_tab", "icon_double_tap_new_tab", config.icon_double_tap_new_tab === true) : ""}
           </div>
               `
               : ""
@@ -1396,8 +1432,8 @@ class NodaliaEntityCardEditor extends HTMLElement {
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.entity.haptics_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("ed.entity.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("ed.entity.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.entity.enable_haptics", "haptics.enabled", haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.entity.fallback_vibrate", "haptics.fallback_vibrate", haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
               "ed.weather.haptic_style",
               "haptics.style",
@@ -1495,14 +1531,13 @@ class NodaliaEntityCardEditor extends HTMLElement {
     `;
 
     this.shadowRoot
-      .querySelectorAll('[data-mounted-control="entity"]')
+      .querySelectorAll<HTMLElement>('[data-mounted-control="entity"]')
       .forEach(host => this._mountEntityPicker(host));
 
     this.shadowRoot
-      .querySelectorAll("ha-icon-picker[data-field]")
+      .querySelectorAll<HTMLElement>("ha-icon-picker[data-field]")
       .forEach(control => {
-        control.hass = this._hass;
-        control.value = control.dataset.value || "";
+        Object.assign(control, { hass: this._hass, value: control.dataset.value || "" });
         control.addEventListener("value-changed", this._onShadowValueChanged);
       });
 

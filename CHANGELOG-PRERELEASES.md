@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+- Check Entity visual editor boundaries, expose missing double-tap details, keep YAML quick-service data as editable JSON and bound row changes while preserving paired metadata, missing entities and focus.
+
 - Check Vacuum visual editor boundaries, guard malformed HA registry/settings, retain device-related suction/mop modes and missing helpers, and preserve navigation actions, presets, focus and translucent styles.
 
 - Check Calendar visual editor boundaries, keep typed drafts during HA updates, add a real second placeholder row, bound row edits/reordering and restore cleared animation defaults while retaining paired labels and translucent tints.
