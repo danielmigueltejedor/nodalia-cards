@@ -40,7 +40,7 @@ test("Alarm code-input aliases and feedback delays retain their supported behavi
   for (const value of [true, "true", "always"]) assert.equal(api.normalizeConfig({ show_code_input: value }).show_code_input, true);
   for (const value of [false, "false", "never"]) assert.equal(api.normalizeConfig({ show_code_input: value }).show_code_input, false);
   for (const value of [null, "auto", "bad"]) assert.equal(api.normalizeConfig({ show_code_input: value }).show_code_input, "auto");
-  for (const [raw, expected] of [[50, 2000], [90000, 30000], [7500.6, 7501], ["bad", 5000]]) {
+  for (const [raw, expected] of [[50, 2000], [0, 2000], [90000, 30000], [7500.6, 7501], ["bad", 5000], [undefined, 5000], [null, 5000], ["", 5000], ["  ", 5000], [Infinity, 5000]]) {
     assert.equal(api.normalizeConfig({ wrong_code_feedback_ms: raw }).wrong_code_feedback_ms, expected);
   }
 });
@@ -106,4 +106,15 @@ test("Room helper editor paths preserve arrays and reject unsafe prototype paths
   const reduced = api.stripEqualToDefaults(input, { styles: { card: { padding: "12px" } } });
   assert.deepEqual(plain(reduced), { styles: { card: { color: "red" } }, rooms: [{ entity: "light.room" }] });
   assert.equal(input.styles.card.padding, "12px");
+});
+
+test("Alarm state tints retain custom translucent colours while rejecting unsafe CSS and malformed groups", () => {
+  const api = load("alarm-panel");
+  const raw = { styles: { state_tints: { disarmed: "rgba(10, 20, 30, 0.3)", armed_home: "red;display:none" } }, extension: { value: 0 } };
+  const config = api.normalizeConfig(raw);
+  assert.equal(config.styles.state_tints.disarmed, "rgba(10, 20, 30, 0.3)");
+  assert.equal(config.styles.state_tints.armed_home, api.DEFAULT_CONFIG.styles.state_tints.armed_home);
+  config.styles.state_tints.disarmed = "#ffffff";
+  assert.equal(raw.styles.state_tints.disarmed, "rgba(10, 20, 30, 0.3)");
+  for (const value of [null, false, 42, [], "bad"]) assert.deepEqual(plain(api.normalizeConfig({ styles: { state_tints: value } }).styles.state_tints), plain(api.DEFAULT_CONFIG.styles.state_tints));
 });

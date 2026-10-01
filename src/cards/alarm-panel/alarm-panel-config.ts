@@ -1,3 +1,5 @@
+import { ALARM_STATE_TINT_FALLBACKS } from "./alarm-panel-constants";
+import { parseFiniteNumericValue } from "../../shared/numeric-values";
 import { clamp, isObject, mergeConfig, normalizeTextKey } from "./alarm-panel-runtime";
 import { normalizeControlStyles } from "../../shared/control-config";
 
@@ -31,6 +33,7 @@ export const DEFAULT_CONFIG = {
     button_bounce_duration: 320,
   },
   styles: {
+    state_tints: { ...ALARM_STATE_TINT_FALLBACKS },
     card: {
       background: "var(--ha-card-background)",
       border: "1px solid var(--divider-color)",
@@ -81,16 +84,19 @@ export function normalizeConfig(rawConfig: unknown = {}) {
   } else {
     config.show_code_input = "auto";
   }
-  const wcfb = Number(config.wrong_code_feedback_ms);
-  config.wrong_code_feedback_ms = Number.isFinite(wcfb)
+  const wcfb = parseFiniteNumericValue(config.wrong_code_feedback_ms);
+  config.wrong_code_feedback_ms = wcfb !== null
     ? clamp(Math.round(wcfb), 2000, 30000)
     : DEFAULT_CONFIG.wrong_code_feedback_ms;
-  return {
-    ...config,
+  const fields = {
+    entity: typeof config.entity === "string" ? config.entity : "",
+    language: typeof config.language === "string" ? config.language : "auto",
     entity_picture: String(config.entity_picture),
     show_entity_picture: config.show_entity_picture === true,
     show_code_input: config.show_code_input === "auto" ? "auto" : config.show_code_input === true,
     wrong_code_feedback_ms: Number(config.wrong_code_feedback_ms),
     styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles),
   };
+  const normalized: typeof fields & Record<string, unknown> = { ...config, ...fields };
+  return normalized;
 }

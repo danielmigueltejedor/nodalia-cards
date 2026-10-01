@@ -1080,3 +1080,27 @@ Gauge browser cases and the full local suite (410 passed, one existing skip)
 pass. The lifecycle source assertion now follows the explicit cleanup helper.
 Remaining unchecked modules: 31. Hold 3.0.0-alpha.1 until full migration, including
 handwritten utility/i18n runtime sources.
+
+## Alarm editor findings — 2026-10-01
+
+Alarm editor suppressed checking over HA/native picker payloads, PIN/helper fields,
+nested settings and deferred emissions. Cleared numeric fields became zero,
+configuration replacement left deferred emissions queued, and abandoned pointer
+state could suppress a later keyboard toggle. Strict checking also exposed that
+custom state tints were dropped because their group was missing from style defaults.
+
+The editor now passes strict checking and typed lint. Guarded HA/native controls
+preserve missing entities, PIN/helper settings, focus and YAML extensions. Clearing
+numeric overrides restores defaults; absent feedback delays remain absent until
+the default is applied, with finite explicit values retaining their bounds. Deferred
+emissions cancel on replacement/disconnect, consumed toggle state clears on removal,
+and keyboard toggles work after an abandoned pointer sequence. State tint defaults
+now project and sanitize every supported state while retaining custom translucent
+colours. Four verified unused editor imports were removed.
+
+1,400 valid editor HTML outputs match main (custom tints separately verify the
+intentional restored behavior). All 743 unit tests, nine editor browser cases and
+the full local suite (419 passed, one existing skip) pass. An initial browser
+fixture omitted its configuration argument; fixing the fixture resolved all three
+failures. Remaining unchecked modules: 30. Hold 3.0.0-alpha.1 until full migration,
+including handwritten utility/i18n runtime sources.

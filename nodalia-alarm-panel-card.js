@@ -35,6 +35,13 @@
     triggered: "#ff7474"
   });
 
+  // src/shared/numeric-values.ts
+  function parseFiniteNumericValue(value) {
+    if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
   // src/cards/alarm-panel/alarm-panel-runtime.ts
   var utils = window.NodaliaUtils;
   var isObject = utils.isObject.bind(utils);
@@ -112,6 +119,7 @@
       button_bounce_duration: 320
     },
     styles: {
+      state_tints: { ...ALARM_STATE_TINT_FALLBACKS },
       card: {
         background: "var(--ha-card-background)",
         border: "1px solid var(--divider-color)",
@@ -158,16 +166,19 @@
     } else {
       config.show_code_input = "auto";
     }
-    const wcfb = Number(config.wrong_code_feedback_ms);
-    config.wrong_code_feedback_ms = Number.isFinite(wcfb) ? clamp(Math.round(wcfb), 2e3, 3e4) : DEFAULT_CONFIG.wrong_code_feedback_ms;
-    return {
-      ...config,
+    const wcfb = parseFiniteNumericValue(config.wrong_code_feedback_ms);
+    config.wrong_code_feedback_ms = wcfb !== null ? clamp(Math.round(wcfb), 2e3, 3e4) : DEFAULT_CONFIG.wrong_code_feedback_ms;
+    const fields = {
+      entity: typeof config.entity === "string" ? config.entity : "",
+      language: typeof config.language === "string" ? config.language : "auto",
       entity_picture: String(config.entity_picture),
       show_entity_picture: config.show_entity_picture === true,
       show_code_input: config.show_code_input === "auto" ? "auto" : config.show_code_input === true,
       wrong_code_feedback_ms: Number(config.wrong_code_feedback_ms),
       styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles)
     };
+    const normalized = { ...config, ...fields };
+    return normalized;
   }
 
   // src/shared/editor-entity-helpers.ts
@@ -1601,6 +1612,16 @@
     return NodaliaAlarmPanelCard;
   }
 
+  // src/shared/editor-controls.ts
+  function isNativeEditorInput(node) {
+    return node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement;
+  }
+  function editorControlValue(event, control) {
+    const detail = event instanceof CustomEvent ? event.detail : void 0;
+    if (detail && typeof detail === "object" && "value" in detail && typeof detail.value === "string") return detail.value;
+    return "value" in control ? control.value : void 0;
+  }
+
   // src/cards/alarm-panel/alarm-panel-editor.ts
   var _lazyNodaliaAlarmPanelCardEditor;
   function loadNodaliaAlarmPanelCardEditor() {
@@ -1646,10 +1667,8 @@
       disconnectedCallback() {
         this._detachEditorShadowListeners();
         window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
-        if (this._emitConfigTimer) {
-          window.clearTimeout(this._emitConfigTimer);
-          this._emitConfigTimer = 0;
-        }
+        this._cancelEmitConfig();
+        this._suppressEditorToggleClickFor = null;
       }
       set hass(hass) {
         const nextSignature = this._getEntityOptionsSignature(hass);
@@ -1664,6 +1683,7 @@
         this._restoreFocusState(focusState);
       }
       setConfig(config) {
+        this._cancelEmitConfig();
         const focusState = this._captureFocusState();
         this._config = normalizeConfig(config || {});
         window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
@@ -1671,11 +1691,11 @@
         this._restoreFocusState(focusState);
       }
       _getEntityOptionsSignature(hass = this._hass) {
-        return window.NodaliaUtils.editorFilteredStatesSignature(
+        return window.NodaliaUtils.editorFilteredStatesSignature?.(
           hass,
           this._config?.language,
           (id) => id.startsWith("alarm_control_panel.") || id.startsWith("input_text.")
-        );
+        ) ?? "";
       }
       _watchEditorControlTag(tagName) {
         if (!tagName || this._pendingEditorControlTags.has(tagName)) {
@@ -1729,14 +1749,19 @@
       _restoreFocusState(focusState) {
         window.NodaliaUtils.restoreEditorFocusState(this, focusState);
       }
+      _cancelEmitConfig() {
+        if (this._emitConfigTimer) window.clearTimeout(this._emitConfigTimer);
+        this._emitConfigTimer = 0;
+      }
       _emitConfig() {
+        this._cancelEmitConfig();
         const focusState = this._captureFocusState();
         const nextConfig = deepClone(this._config);
         this._config = normalizeConfig(compactConfig(nextConfig));
         this._render();
         this._restoreFocusState(focusState);
         fireEvent(this, "config-changed", {
-          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {})
+          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults?.(nextConfig, DEFAULT_CONFIG) ?? {})
         });
       }
       _scheduleEmitConfig() {
@@ -1762,19 +1787,17 @@
         const valueType = input.dataset.valueType || "string";
         switch (valueType) {
           case "boolean":
-            return Boolean(input.checked);
+            return input instanceof HTMLInputElement && input.checked;
           case "color":
             return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
-          case "number": {
-            const n = Number(input.value);
-            return Number.isFinite(n) ? n : void 0;
-          }
+          case "number":
+            return parseFiniteNumericValue(input.value) ?? void 0;
           default:
             return input.value;
         }
       }
       _onShadowInput(event) {
-        const input = event.composedPath().find((node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+        const input = event.composedPath().find(isNativeEditorInput);
         if (!input?.dataset?.field) {
           return;
         }
@@ -1787,12 +1810,12 @@
         }
       }
       _onShadowValueChanged(event) {
-        const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+        const control = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.field));
         if (!control?.dataset?.field) {
           return;
         }
         event.stopPropagation();
-        const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+        const nextValue = editorControlValue(event, control);
         if (typeof control.dataset?.value === "string") {
           control.dataset.value = String(nextValue || "");
         }
@@ -1806,7 +1829,7 @@
         this._emitConfig();
       }
       _onShadowClick(event) {
-        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
+        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.editorToggle));
         if (!toggleButton) {
           return;
         }
@@ -1814,6 +1837,7 @@
         if (toggleId !== "styles" && toggleId !== "animations") {
           return;
         }
+        if (event instanceof MouseEvent && event.detail === 0) this._suppressEditorToggleClickFor = null;
         if (this._suppressEditorToggleClickFor) {
           if (toggleId === this._suppressEditorToggleClickFor) {
             this._suppressEditorToggleClickFor = null;
@@ -1835,7 +1859,7 @@
         this._restoreFocusState(focusState);
       }
       _onShadowPointerDown(event) {
-        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
+        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.editorToggle));
         if (!toggleButton) {
           return;
         }
@@ -1988,20 +2012,20 @@
         const nextValue = host.dataset.value || "";
         const placeholder = host.dataset.placeholder || "";
         const domains = String(host.dataset.domains || "").split(",").map((domain) => domain.trim()).filter(Boolean);
-        let control = null;
+        let control;
         if (customElements.get("ha-entity-picker")) {
           control = document.createElement("ha-entity-picker");
-          control.includeDomains = domains;
-          control.allowCustomEntity = true;
-          control.entityFilter = (stateObj) => domains.some((domain) => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+          Object.assign(control, {
+            includeDomains: domains,
+            allowCustomEntity: true,
+            entityFilter: (stateObj) => domains.some((domain) => String(stateObj?.entity_id || "").startsWith(`${domain}.`))
+          });
           if (placeholder) {
             control.setAttribute("placeholder", placeholder);
           }
         } else if (customElements.get("ha-selector")) {
           control = document.createElement("ha-selector");
-          control.selector = {
-            entity: domains.length === 1 ? { domain: domains[0] } : {}
-          };
+          Object.assign(control, { selector: { entity: domains.length === 1 ? { domain: domains[0] } : {} } });
         } else {
           control = document.createElement("select");
           const emptyOption = document.createElement("option");
@@ -2030,8 +2054,9 @@
           return;
         }
         const config = this._config || normalizeConfig({});
-        const hapticStyle = config.haptics?.style || "medium";
-        const animations = config.animations || DEFAULT_CONFIG.animations;
+        const haptics = isObject(config.haptics) ? config.haptics : DEFAULT_CONFIG.haptics;
+        const hapticStyle = haptics.style || "medium";
+        const animations = isObject(config.animations) ? config.animations : DEFAULT_CONFIG.animations;
         this.shadowRoot.innerHTML = `
       <style>
         :host {
@@ -2441,8 +2466,8 @@
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.alarm_panel.haptics_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("ed.entity.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("ed.entity.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.entity.enable_haptics", "haptics.enabled", haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.entity.fallback_vibrate", "haptics.fallback_vibrate", haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
           "ed.entity.haptic_style",
           "haptics.style",
@@ -2563,7 +2588,7 @@
       </div>
     `;
         this.shadowRoot.querySelectorAll('.editor-control-host[data-mounted-control="entity"]').forEach((host) => this._mountEntityPicker(host));
-        this.shadowRoot.querySelectorAll('.editor-control-host[data-mounted-control="icon-picker"]').forEach((host) => window.NodaliaUtils.mountIconPickerHost(host, {
+        this.shadowRoot.querySelectorAll('.editor-control-host[data-mounted-control="icon-picker"]').forEach((host) => window.NodaliaUtils.mountIconPickerHost?.(host, {
           hass: this._hass,
           onShadowInput: this._onShadowInput,
           onShadowValueChanged: this._onShadowValueChanged
