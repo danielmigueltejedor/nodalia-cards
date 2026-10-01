@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+- Check the Weather view and forecast contracts, discard abandoned subscriptions, keep empty live forecasts authoritative, refresh legacy forecast/unit/alert changes and activate SVG chart points from the keyboard. Own fallback animations and release modal focus when weather entities disappear.
+
 - Check the Advance Vacuum visual editor, preserve text/JSON drafts through HA updates and Chromium control replacement, validate list-shaped JSON with translated feedback, retain zero/default settings and remove five unused historical datalists.
 
 - Check the Climate visual editor, restore full-width action controls, preserve schedule fallback fields and stop replacing controls for unchanged Engine status. Discard replies belonging to previous editor connections/lifetimes.

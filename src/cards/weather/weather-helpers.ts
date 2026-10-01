@@ -405,7 +405,7 @@ export function getConditionReadableIconColor(value: unknown, accentColor = getC
   return `color-mix(in srgb, ${accentColor} ${accentWeight}%, var(--primary-text-color))`;
 }
 
-export function getForecastIconColor(accentColor: string, conditionValue = "") {
+export function getForecastIconColor(accentColor: string, conditionValue: unknown = "") {
   return getConditionReadableIconColor(conditionValue, accentColor);
 }
 

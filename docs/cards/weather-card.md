@@ -23,3 +23,16 @@ its default, including five daily slots and 420 ms content animation.
 Custom YAML fields and focus survive editor updates. Malformed nested animation,
 haptic and picker values fall back safely. Absent measurements remain absent;
 actual zero values remain visible.
+
+## Forecast updates and interaction
+
+Live forecasts belong to the current weather entity, forecast type and Home
+Assistant connection. Changing these or removing the card discards obsolete
+callbacks and releases subscriptions, including subscriptions that finish
+connecting later. A current empty live forecast shows the empty state; legacy
+forecast attributes remain a fallback until a live list arrives.
+
+Native forecast chart points support Enter and Space to open details, and Escape
+to close them. Unit labels, legacy forecast changes and Meteoalarm descriptions
+refresh with HA updates. Missing numeric values remain absent; actual zero
+temperature, humidity, wind and forecast lows remain visible.

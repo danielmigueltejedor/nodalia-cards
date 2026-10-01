@@ -703,6 +703,8 @@
   }
 
   // src/cards/weather/weather-card.ts
+  var weatherActionElement = (node) => (node instanceof HTMLElement || node instanceof SVGElement) && Boolean(node.dataset.weatherAction);
+  var forecastRows = (value) => Array.isArray(value) ? value.filter(isObject) : [];
   var _lazyNodaliaWeatherCard;
   function loadNodaliaWeatherCard() {
     if (_lazyNodaliaWeatherCard) {
@@ -730,16 +732,20 @@
         this._animateContentOnNextRender = true;
         this._entranceAnimationResetTimer = 0;
         this._forecastExpanded = false;
-        this._activeForecastView = DEFAULT_CONFIG.forecast_view;
-        this._activeForecastType = DEFAULT_CONFIG.forecast_type;
+        this._activeForecastView = normalizeForecastView(DEFAULT_CONFIG.forecast_view);
+        this._activeForecastType = normalizeForecastType(DEFAULT_CONFIG.forecast_type);
         this._forecastEvents = {};
         this._forecastSubscription = null;
         this._forecastSubscriptionKey = "";
+        this._forecastConnection = null;
+        this._forecastGeneration = 0;
+        this._fallbackAnimationTimers = /* @__PURE__ */ new Set();
         this._animateForecastOnNextRender = false;
         this._meteoalarmPopupOpen = false;
         this._forecastPopup = null;
         this._forecastHoverPreview = null;
         this._onShadowClick = this._onShadowClick.bind(this);
+        this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
         this._onShadowPointerMove = this._onShadowPointerMove.bind(this);
         this._onShadowPointerLeave = this._onShadowPointerLeave.bind(this);
         this._onWindowKeyDown = (event) => {
@@ -781,6 +787,7 @@
         }) : () => {
         };
         this.shadowRoot?.addEventListener("click", this._onShadowClick);
+        this.shadowRoot?.addEventListener("keydown", this._onShadowKeyDown);
         this.shadowRoot?.addEventListener("pointermove", this._onShadowPointerMove);
         this.shadowRoot?.addEventListener("pointerleave", this._onShadowPointerLeave);
         window.addEventListener("keydown", this._onWindowKeyDown);
@@ -798,6 +805,7 @@
         };
         window.NodaliaUtils?.cancelCardZoneTap?.(this);
         this.shadowRoot?.removeEventListener("click", this._onShadowClick);
+        this.shadowRoot?.removeEventListener("keydown", this._onShadowKeyDown);
         this.shadowRoot?.removeEventListener("pointermove", this._onShadowPointerMove);
         this.shadowRoot?.removeEventListener("pointerleave", this._onShadowPointerLeave);
         window.removeEventListener("keydown", this._onWindowKeyDown);
@@ -807,10 +815,16 @@
         }
         window.NodaliaUtils?.clearDeferTimers?.(this);
         this._unsubscribeForecast();
+        this._fallbackAnimationTimers.forEach((timer) => window.clearTimeout(timer));
+        this._fallbackAnimationTimers.clear();
+        this._suppressNextWeatherTap = false;
         this._animateContentOnNextRender = true;
         this._lastRenderSignature = "";
       }
       setConfig(config) {
+        window.NodaliaUtils?.cancelCardZoneTap?.(this);
+        this._suppressNextWeatherTap = false;
+        this._meteoalarmPopupOpen = false;
         this._config = normalizeConfig(config || {});
         window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
         this._activeForecastType = normalizeForecastType(this._config.forecast_type);
@@ -825,12 +839,18 @@
         this._render();
       }
       set hass(hass) {
+        if (hass.connection !== this._hass?.connection) {
+          this._forecastEvents = {};
+          this._forecastPopup = null;
+          this._forecastHoverPreview = null;
+          this._lastRenderSignature = "";
+        }
         const nextSignature = this._getRenderSignature(hass);
         this._hass = hass;
+        this._ensureForecastSubscription();
         if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
           return;
         }
-        this._ensureForecastSubscription();
         this._lastRenderSignature = nextSignature;
         this._render();
       }
@@ -862,6 +882,13 @@
           Number(attrs.humidity ?? -1),
           Number(attrs.pressure ?? -1),
           Number(attrs.wind_speed ?? -1),
+          String(attrs.temperature_unit || ""),
+          String(attrs.wind_speed_unit || ""),
+          String(attrs.pressure_unit || ""),
+          String(attrs.precipitation_unit || ""),
+          String(attrs.supported_features ?? ""),
+          window.NodaliaI18n?.resolveLanguage?.(hass, this._config.language) || this._config.language,
+          forecastRows(attrs.forecast).map((row) => ["datetime", "condition", "temperature", "templow", "humidity", "wind_speed", "wind_speed_unit", "precipitation", "precipitation_probability"].map((key) => String(row[key] ?? "")).join("|")).join(";"),
           normalizeUnitSystem(this._config?.unit_system),
           normalizeTemperatureUnitPreference(this._config?.temperature_unit),
           normalizeWindUnitPreference(this._config?.wind_speed_unit),
@@ -901,65 +928,67 @@
           String(attrs.event || ""),
           String(attrs.expires || ""),
           String(attrs.headline || ""),
-          String(attrs.severity || "")
+          String(attrs.severity || ""),
+          String(attrs.description || ""),
+          String(attrs.instruction || ""),
+          String(attrs.onset || ""),
+          String(attrs.effective || ""),
+          String(attrs.urgency || ""),
+          String(attrs.certainty || "")
         ].join("|");
       }
       _unsubscribeForecast() {
-        if (!this._forecastSubscription) {
-          return;
-        }
-        this._forecastSubscription.then((unsubscribe) => {
-          if (typeof unsubscribe === "function") {
-            unsubscribe();
-          }
-        }).catch(() => {
-        });
+        ++this._forecastGeneration;
+        const subscription = this._forecastSubscription;
         this._forecastSubscription = null;
         this._forecastSubscriptionKey = "";
+        this._forecastConnection = null;
+        subscription?.then((unsubscribe) => {
+          if (typeof unsubscribe === "function") unsubscribe();
+        }).catch(() => {
+        });
       }
       _ensureForecastSubscription() {
-        if (!this.isConnected || !this._hass || !this._config?.entity || this._config.show_forecast_details !== true) {
+        const hass = this._hass;
+        const connection = hass?.connection;
+        if (!this.isConnected || !hass || !this._config.entity || this._config.show_forecast_details !== true) {
           this._unsubscribeForecast();
           return;
         }
-        const state = this._hass.states?.[this._config.entity];
+        const state = hass.states[this._config.entity];
         if (!state) {
           this._unsubscribeForecast();
           return;
         }
         const supportedTypes = getSupportedForecastTypes(state);
         const forecastType = supportedTypes.includes(this._activeForecastType) ? this._activeForecastType : supportedTypes[0] || "daily";
-        if (forecastType !== this._activeForecastType) {
-          this._activeForecastType = forecastType;
-        }
+        this._activeForecastType = forecastType;
         const subscriptionKey = `${this._config.entity}:${forecastType}`;
-        if (subscriptionKey === this._forecastSubscriptionKey && this._forecastSubscription) {
-          return;
-        }
+        if (subscriptionKey === this._forecastSubscriptionKey && connection === this._forecastConnection && this._forecastSubscription) return;
         this._unsubscribeForecast();
-        if (!this._hass.connection?.subscribeMessage) {
-          return;
-        }
+        if (!connection?.subscribeMessage) return;
+        const generation = this._forecastGeneration;
         this._forecastSubscriptionKey = subscriptionKey;
-        this._forecastSubscription = this._hass.connection.subscribeMessage((event) => {
-          if (!this.isConnected) {
-            return;
+        this._forecastConnection = connection;
+        const onFailure = () => {
+          if (generation === this._forecastGeneration) {
+            this._forecastSubscription = null;
+            this._forecastSubscriptionKey = "";
+            this._forecastConnection = null;
           }
-          this._forecastEvents = {
-            ...this._forecastEvents,
-            [forecastType]: event
-          };
-          this._animateForecastOnNextRender = true;
-          this._lastRenderSignature = "";
-          this._render();
-        }, {
-          type: "weather/subscribe_forecast",
-          entity_id: this._config.entity,
-          forecast_type: forecastType
-        }).catch(() => {
-          this._forecastSubscription = null;
-          this._forecastSubscriptionKey = "";
-        });
+        };
+        try {
+          this._forecastSubscription = connection.subscribeMessage((event) => {
+            if (!this.isConnected || generation !== this._forecastGeneration || this._hass?.connection !== connection) return;
+            if (!isObject(event) || !Array.isArray(event.forecast)) return;
+            this._forecastEvents = { ...this._forecastEvents, [forecastType]: { forecast: forecastRows(event.forecast) } };
+            this._animateForecastOnNextRender = true;
+            this._lastRenderSignature = "";
+            this._render();
+          }, { type: "weather/subscribe_forecast", entity_id: this._config.entity, forecast_type: forecastType }).catch(onFailure);
+        } catch (_error) {
+          onFailure();
+        }
       }
       _getTitle(state) {
         const customName = String(this._config?.name || "").trim();
@@ -1100,18 +1129,19 @@
         return `${high}${unitLabel}`;
       }
       _triggerHaptic(styleOverride = null) {
-        const haptics = this._config?.haptics || {};
+        const haptics = isObject(this._config.haptics) ? this._config.haptics : {};
         if (haptics.enabled !== true) {
           return;
         }
-        const style = styleOverride || haptics.style || "medium";
+        const style = styleOverride || String(haptics.style || "medium");
         fireEvent(this, "haptic", style, {
           bubbles: true,
           cancelable: false,
           composed: true
         });
         if (haptics.fallback_vibrate && typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
-          navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
+          const patterns = HAPTIC_PATTERNS;
+          navigator.vibrate(patterns[style] || HAPTIC_PATTERNS.selection);
         }
       }
       _scheduleEntranceAnimationReset(delay) {
@@ -1133,7 +1163,7 @@
         }, safeDelay);
       }
       _getAnimationSettings() {
-        const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+        const configuredAnimations = isObject(this._config.animations) ? this._config.animations : DEFAULT_CONFIG.animations;
         return {
           enabled: configuredAnimations.enabled !== false,
           iconAnimation: configuredAnimations.icon_animation !== false,
@@ -1170,7 +1200,11 @@
         if (typeof schedule === "function") {
           schedule(this, done, animations.buttonBounceDuration + 40);
         } else {
-          window.setTimeout(done, animations.buttonBounceDuration + 40);
+          const timer = window.setTimeout(() => {
+            this._fallbackAnimationTimers.delete(timer);
+            done();
+          }, animations.buttonBounceDuration + 40);
+          this._fallbackAnimationTimers.add(timer);
         }
       }
       _performWeatherCardAction(actionKind) {
@@ -1281,10 +1315,11 @@
         this._render();
       }
       _onShadowPointerMove(event) {
+        if (!(event instanceof PointerEvent)) return;
         if (event.pointerType && event.pointerType !== "mouse") {
           return;
         }
-        const actionButton = event.composedPath().find((node) => node instanceof Element && node.dataset?.weatherAction === "open-forecast-point");
+        const actionButton = event.composedPath().find((node) => weatherActionElement(node) && node.dataset.weatherAction === "open-forecast-point");
         if (!actionButton) {
           this._clearForecastHoverPreview();
           return;
@@ -1294,8 +1329,21 @@
       _onShadowPointerLeave() {
         this._clearForecastHoverPreview();
       }
+      _onShadowKeyDown(event) {
+        if (!(event instanceof KeyboardEvent)) return;
+        if (event.key === "Escape" && this._forecastPopup) {
+          event.preventDefault();
+          this._forecastPopup = null;
+          this._forecastHoverPreview = null;
+          this._lastRenderSignature = "";
+          this._render();
+          return;
+        }
+        const control = event.composedPath().find(weatherActionElement);
+        if (control instanceof SVGElement && (event.key === "Enter" || event.key === " ")) this._onShadowClick(event);
+      }
       _onShadowClick(event) {
-        const actionButton = event.composedPath().find((node) => node instanceof Element && node.dataset?.weatherAction);
+        const actionButton = event.composedPath().find(weatherActionElement);
         if (actionButton) {
           event.preventDefault();
           event.stopPropagation();
@@ -1358,16 +1406,16 @@
           if (tapAction === "none") {
             return;
           }
-          this._triggerPressAnimation(this.shadowRoot.querySelector(".weather-card__content"));
-          this._triggerPressAnimation(this.shadowRoot.querySelector(".weather-card__icon"));
+          this._triggerPressAnimation(this.shadowRoot?.querySelector(".weather-card__content"));
+          this._triggerPressAnimation(this.shadowRoot?.querySelector(".weather-card__icon"));
           this._performTapAction();
         };
         const runDouble = () => {
           if (doubleAction === "none") {
             return;
           }
-          this._triggerPressAnimation(this.shadowRoot.querySelector(".weather-card__content"));
-          this._triggerPressAnimation(this.shadowRoot.querySelector(".weather-card__icon"));
+          this._triggerPressAnimation(this.shadowRoot?.querySelector(".weather-card__content"));
+          this._triggerPressAnimation(this.shadowRoot?.querySelector(".weather-card__icon"));
           this._performDoubleTapAction();
         };
         if (doubleAction !== "none" && typeof window.NodaliaUtils?.scheduleCardZoneTap === "function") {
@@ -1403,7 +1451,9 @@
         const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
         const langCfg = this._config?.language ?? "auto";
         const lang = window.NodaliaI18n?.resolveLanguage?.(hass, langCfg) ?? "en";
-        const wm = window.NodaliaI18n?.strings?.(lang)?.weatherCard?.meteoalarm;
+        const pack = window.NodaliaI18n?.strings?.(lang)?.weatherCard;
+        const meteoalarm = isObject(pack) ? pack.meteoalarm : void 0;
+        const wm = isObject(meteoalarm) ? meteoalarm : {};
         const ev = String(attrs.event || "").trim();
         const headline = String(attrs.headline || "").trim();
         const awareLabel = String(awareness.label || "").trim();
@@ -1439,7 +1489,9 @@
         const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
         const langCfg = this._config?.language ?? "auto";
         const lang = window.NodaliaI18n?.resolveLanguage?.(hass, langCfg) ?? "en";
-        const wm = window.NodaliaI18n?.strings?.(lang)?.weatherCard?.meteoalarm;
+        const pack = window.NodaliaI18n?.strings?.(lang)?.weatherCard;
+        const meteoalarm = isObject(pack) ? pack.meteoalarm : void 0;
+        const wm = isObject(meteoalarm) ? meteoalarm : {};
         const title = state?.state === "on" ? String(attrs.headline || attrs.event || wm?.weatherAlert || "Weather alert").trim() : state?.state === "off" ? wm?.noWeatherAlerts || "No weather alerts" : wm?.name || "Meteoalarm";
         const rows = [
           [wm?.level || "Level", translateMeteoalarmValue(awareness.label || attrs.severity || "", hass, langCfg)],
@@ -1481,11 +1533,11 @@
       }
       _getForecastItems(type, state) {
         const eventForecast = this._forecastEvents?.[type]?.forecast;
-        if (Array.isArray(eventForecast) && eventForecast.length) {
+        if (Array.isArray(eventForecast)) {
           return eventForecast;
         }
         const legacyForecast = state?.attributes?.forecast;
-        return Array.isArray(legacyForecast) ? legacyForecast : [];
+        return forecastRows(legacyForecast);
       }
       _renderForecastChart(items, type, state, forecastLocale = void 0, unitPrefs = null) {
         const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
@@ -1496,15 +1548,15 @@
           const emptyChart = wf("chartInsufficientData") || "Not enough data to display the chart.";
           return `<div class="weather-card__forecast-empty">${escapeHtml(emptyChart)}</div>`;
         }
-        const hasDailyLow = type === "daily" && sourcePoints.some((point) => Number.isFinite(Number(point.item?.templow)));
+        const hasDailyLow = type === "daily" && sourcePoints.some((point) => parseFiniteNumericValue(point.item.templow) !== null);
         const rawHighPoints = sourcePoints.map((point) => ({
           ...point,
           value: getForecastTemperatureSeriesValue(point.item, "high")
-        })).filter((point) => Number.isFinite(point.value));
+        })).filter((point) => point.value !== null && Number.isFinite(point.value));
         const rawLowPoints = hasDailyLow ? sourcePoints.map((point) => ({
           ...point,
           value: getForecastTemperatureSeriesValue(point.item, "low")
-        })).filter((point) => Number.isFinite(point.value)) : [];
+        })).filter((point) => point.value !== null && Number.isFinite(point.value)) : [];
         const highPoints = rawHighPoints.length >= 2 ? rawHighPoints : rawLowPoints;
         const lowPoints = rawHighPoints.length >= 2 ? rawLowPoints : [];
         if (highPoints.length < 2) {
@@ -1544,14 +1596,18 @@
               return `M ${point.x.toFixed(1)} ${point.y.toFixed(1)}`;
             }
             const previous = coordinates[index - 1];
+            if (!previous) return path;
             const controlOffset = Math.max(18, Math.min(54, (point.x - previous.x) * 0.42));
             return `${path} C ${(previous.x + controlOffset).toFixed(1)} ${previous.y.toFixed(1)} ${(point.x - controlOffset).toFixed(1)} ${point.y.toFixed(1)} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`;
           }, "");
         };
         const highPath = smoothPathFromCoordinates(highCoordinates);
         const lowPath = smoothPathFromCoordinates(lowCoordinates);
-        const areaPath = `${highPath} L ${highCoordinates[highCoordinates.length - 1].x.toFixed(1)} ${height - padding.bottom} L ${highCoordinates[0].x.toFixed(1)} ${height - padding.bottom} Z`;
-        const lowAreaPath = lowPath ? `${lowPath} L ${lowCoordinates[lowCoordinates.length - 1].x.toFixed(1)} ${height - padding.bottom} L ${lowCoordinates[0].x.toFixed(1)} ${height - padding.bottom} Z` : "";
+        const firstHigh = highCoordinates[0], lastHigh = highCoordinates[highCoordinates.length - 1];
+        if (!firstHigh || !lastHigh) return "";
+        const firstLow = lowCoordinates[0], lastLow = lowCoordinates[lowCoordinates.length - 1];
+        const areaPath = `${highPath} L ${lastHigh.x.toFixed(1)} ${height - padding.bottom} L ${firstHigh.x.toFixed(1)} ${height - padding.bottom} Z`;
+        const lowAreaPath = lowPath && firstLow && lastLow ? `${lowPath} L ${lastLow.x.toFixed(1)} ${height - padding.bottom} L ${firstLow.x.toFixed(1)} ${height - padding.bottom} Z` : "";
         const chartAccent = getConditionAccent(state?.state);
         const chartFillId = `weather-chart-fill-${type}`;
         const colorChartEnabled = this._config?.forecast_chart_color_enabled === true;
@@ -1605,7 +1661,7 @@
             precipitationLabel ? [wf("rainLabel") || "Rain", precipitationLabel] : null,
             humidityLabel ? [wf("humidityLabel") || "Humidity", `${humidityLabel}%`] : null,
             windLabel ? [wf("windLabel") || "Wind", windUnit ? `${windLabel} ${windUnit}` : windLabel] : null
-          ].filter(Boolean);
+          ].filter((row) => row !== null);
           const vertical = this._forecastPopup?.vertical === "below" ? "below" : "above";
           const popupLeft = this._forecastPopup?.left || "50%";
           const popupTop = this._forecastPopup?.top || "50%";
@@ -1801,7 +1857,7 @@
         const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
         const pack = window.NodaliaI18n?.strings?.(lang)?.weatherCard;
         const enPack = window.NodaliaI18n?.strings?.("en")?.weatherCard;
-        const raw = pack?.[key] ?? enPack?.[key];
+        const raw = (isObject(pack) ? pack[key] : void 0) ?? (isObject(enPack) ? enPack[key] : void 0);
         return String(raw != null && raw !== "" ? raw : fallback);
       }
       _renderEmptyState() {
@@ -1824,11 +1880,13 @@
           { cardClass: "weather-card" }
         );
         if (entityGuard) {
+          window.NodaliaUtils?.releaseModalFocus?.(this);
           this.shadowRoot.innerHTML = entityGuard;
           return;
         }
         const state = this._getState();
         if (!state) {
+          window.NodaliaUtils?.releaseModalFocus?.(this);
           this.shadowRoot.innerHTML = window.NodaliaUtils?.renderCardEmptyStateDocument?.(
             this._renderEmptyState(),
             { card: (this._config || DEFAULT_CONFIG).styles?.card }

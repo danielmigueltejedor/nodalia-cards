@@ -1,12 +1,10 @@
-// @ts-nocheck
-/* Large HTMLElement view/controller: typed incrementally as methods are extracted. */
 import { CARD_TAG, EDITOR_TAG, HAPTIC_PATTERNS } from "./weather-constants";
 import {
   clamp,
   deepClone,
   escapeHtml,
   fireEvent,
-  normalizeTextKey,
+  isObject,
 } from "./weather-runtime";
 import { DEFAULT_CONFIG, STUB_CONFIG, normalizeConfig } from "./weather-config";
 import {
@@ -42,21 +40,52 @@ import {
   translateMeteoalarmValue,
 } from "./weather-helpers";
 
-let _lazyNodaliaWeatherCard;
-export function loadNodaliaWeatherCard() {
+import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
+
+type ForecastType = ReturnType<typeof normalizeForecastType>;
+type ForecastItem = Record<string, unknown>;
+type ForecastPoint = { index: number; item: ForecastItem; value: number };
+type ForecastCoordinate = ForecastPoint & { x: number; y: number };
+type ForecastOverlay = { key: string; forecastType: ForecastType; index: number; left: string; top: string; vertical: string; series: string };
+type UnitPreferences = { sourceTemperatureUnit: string; targetTemperatureUnit: string; sourceWindUnit: string; targetWindUnit: string };
+const weatherActionElement = (node: EventTarget): node is HTMLElement | SVGElement => (node instanceof HTMLElement || node instanceof SVGElement) && Boolean(node.dataset.weatherAction);
+const forecastRows = (value: unknown): ForecastItem[] => Array.isArray(value) ? value.filter(isObject) : [];
+let _lazyNodaliaWeatherCard: CustomElementConstructor | undefined;
+export function loadNodaliaWeatherCard(): CustomElementConstructor {
   if (_lazyNodaliaWeatherCard) {
     return _lazyNodaliaWeatherCard;
   }
 class NodaliaWeatherCard extends HTMLElement {
+  private _config!: ReturnType<typeof normalizeConfig>;
+  private _hass!: HomeAssistant | null;
+  private _lastRenderSignature!: string;
+  private _animateContentOnNextRender!: boolean;
+  private _entranceAnimationResetTimer!: number;
+  private _forecastExpanded!: boolean;
+  private _activeForecastView!: ReturnType<typeof normalizeForecastView>;
+  private _activeForecastType!: ForecastType;
+  private _forecastEvents!: Partial<Record<ForecastType, { forecast: ForecastItem[] }>>;
+  private _forecastSubscription!: Promise<(() => void) | void> | null;
+  private _forecastSubscriptionKey!: string;
+  private _forecastConnection!: HomeAssistant["connection"] | null;
+  private _forecastGeneration!: number;
+  private _animateForecastOnNextRender!: boolean;
+  private _meteoalarmPopupOpen!: boolean;
+  private _forecastPopup!: ForecastOverlay | null;
+  private _forecastHoverPreview!: ForecastOverlay | null;
+  private _onWindowKeyDown!: (event: KeyboardEvent) => void;
+  private _detachHostHold!: () => void;
+  private _suppressNextWeatherTap!: boolean;
+  private _fallbackAnimationTimers!: Set<number>;
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig(hass, entities = [], entitiesFallback = []) {
+  static getStubConfig(hass: HomeAssistant | null | undefined, entities: unknown = [], entitiesFallback: unknown = []) {
     return applyStubEntity(deepClone(STUB_CONFIG), hass, ["weather"], entities, entitiesFallback);
   }
 
-  static getEntitySuggestion(hass, entityId) {
+  static getEntitySuggestion(hass: HomeAssistant, entityId: string) {
     return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, { domains: ["weather"] });
   }
 
@@ -72,16 +101,20 @@ class NodaliaWeatherCard extends HTMLElement {
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
     this._forecastExpanded = false;
-    this._activeForecastView = DEFAULT_CONFIG.forecast_view;
-    this._activeForecastType = DEFAULT_CONFIG.forecast_type;
+    this._activeForecastView = normalizeForecastView(DEFAULT_CONFIG.forecast_view);
+    this._activeForecastType = normalizeForecastType(DEFAULT_CONFIG.forecast_type);
     this._forecastEvents = {};
     this._forecastSubscription = null;
     this._forecastSubscriptionKey = "";
+    this._forecastConnection = null;
+    this._forecastGeneration = 0;
+    this._fallbackAnimationTimers = new Set();
     this._animateForecastOnNextRender = false;
     this._meteoalarmPopupOpen = false;
     this._forecastPopup = null;
     this._forecastHoverPreview = null;
     this._onShadowClick = this._onShadowClick.bind(this);
+    this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
     this._onShadowPointerMove = this._onShadowPointerMove.bind(this);
     this._onShadowPointerLeave = this._onShadowPointerLeave.bind(this);
     this._onWindowKeyDown = event => {
@@ -127,6 +160,7 @@ class NodaliaWeatherCard extends HTMLElement {
           })
         : () => {};
     this.shadowRoot?.addEventListener("click", this._onShadowClick);
+    this.shadowRoot?.addEventListener("keydown", this._onShadowKeyDown);
     this.shadowRoot?.addEventListener("pointermove", this._onShadowPointerMove);
     this.shadowRoot?.addEventListener("pointerleave", this._onShadowPointerLeave);
     window.addEventListener("keydown", this._onWindowKeyDown);
@@ -144,6 +178,7 @@ class NodaliaWeatherCard extends HTMLElement {
     this._detachHostHold = () => {};
     window.NodaliaUtils?.cancelCardZoneTap?.(this);
     this.shadowRoot?.removeEventListener("click", this._onShadowClick);
+    this.shadowRoot?.removeEventListener("keydown", this._onShadowKeyDown);
     this.shadowRoot?.removeEventListener("pointermove", this._onShadowPointerMove);
     this.shadowRoot?.removeEventListener("pointerleave", this._onShadowPointerLeave);
     window.removeEventListener("keydown", this._onWindowKeyDown);
@@ -153,11 +188,17 @@ class NodaliaWeatherCard extends HTMLElement {
     }
     window.NodaliaUtils?.clearDeferTimers?.(this);
     this._unsubscribeForecast();
+    this._fallbackAnimationTimers.forEach(timer => window.clearTimeout(timer));
+    this._fallbackAnimationTimers.clear();
+    this._suppressNextWeatherTap = false;
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
   }
 
-  setConfig(config) {
+  setConfig(config: unknown) {
+    window.NodaliaUtils?.cancelCardZoneTap?.(this);
+    this._suppressNextWeatherTap = false;
+    this._meteoalarmPopupOpen = false;
     this._config = normalizeConfig(config || {});
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
     this._activeForecastType = normalizeForecastType(this._config.forecast_type);
@@ -172,15 +213,21 @@ class NodaliaWeatherCard extends HTMLElement {
     this._render();
   }
 
-  set hass(hass) {
+  set hass(hass: HomeAssistant) {
+    if (hass.connection !== this._hass?.connection) {
+      this._forecastEvents = {};
+      this._forecastPopup = null;
+      this._forecastHoverPreview = null;
+      this._lastRenderSignature = "";
+    }
     const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
+    this._ensureForecastSubscription();
 
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
       return;
     }
 
-    this._ensureForecastSubscription();
     this._lastRenderSignature = nextSignature;
     this._render();
   }
@@ -216,6 +263,13 @@ class NodaliaWeatherCard extends HTMLElement {
       Number(attrs.humidity ?? -1),
       Number(attrs.pressure ?? -1),
       Number(attrs.wind_speed ?? -1),
+      String(attrs.temperature_unit || ""),
+      String(attrs.wind_speed_unit || ""),
+      String(attrs.pressure_unit || ""),
+      String(attrs.precipitation_unit || ""),
+      String(attrs.supported_features ?? ""),
+      window.NodaliaI18n?.resolveLanguage?.(hass, this._config.language) || this._config.language,
+      forecastRows(attrs.forecast).map(row => ["datetime", "condition", "temperature", "templow", "humidity", "wind_speed", "wind_speed_unit", "precipitation", "precipitation_probability"].map(key => String(row[key] ?? "")).join("|")).join(";"),
       normalizeUnitSystem(this._config?.unit_system),
       normalizeTemperatureUnitPreference(this._config?.temperature_unit),
       normalizeWindUnitPreference(this._config?.wind_speed_unit),
@@ -259,76 +313,63 @@ class NodaliaWeatherCard extends HTMLElement {
       String(attrs.expires || ""),
       String(attrs.headline || ""),
       String(attrs.severity || ""),
+      String(attrs.description || ""),
+      String(attrs.instruction || ""),
+      String(attrs.onset || ""),
+      String(attrs.effective || ""),
+      String(attrs.urgency || ""),
+      String(attrs.certainty || ""),
     ].join("|");
   }
 
   _unsubscribeForecast() {
-    if (!this._forecastSubscription) {
-      return;
-    }
-
-    this._forecastSubscription.then(unsubscribe => {
-      if (typeof unsubscribe === "function") {
-        unsubscribe();
-      }
-    }).catch(() => {});
+    ++this._forecastGeneration;
+    const subscription = this._forecastSubscription;
     this._forecastSubscription = null;
     this._forecastSubscriptionKey = "";
+    this._forecastConnection = null;
+    subscription?.then(unsubscribe => { if (typeof unsubscribe === "function") unsubscribe(); }).catch(() => {});
   }
 
   _ensureForecastSubscription() {
-    if (!this.isConnected || !this._hass || !this._config?.entity || this._config.show_forecast_details !== true) {
+    const hass = this._hass;
+    const connection = hass?.connection;
+    if (!this.isConnected || !hass || !this._config.entity || this._config.show_forecast_details !== true) {
       this._unsubscribeForecast();
       return;
     }
-
-    const state = this._hass.states?.[this._config.entity];
-    if (!state) {
-      this._unsubscribeForecast();
-      return;
-    }
-
+    const state = hass.states[this._config.entity];
+    if (!state) { this._unsubscribeForecast(); return; }
     const supportedTypes = getSupportedForecastTypes(state);
-    const forecastType = supportedTypes.includes(this._activeForecastType)
-      ? this._activeForecastType
-      : supportedTypes[0] || "daily";
-    if (forecastType !== this._activeForecastType) {
-      this._activeForecastType = forecastType;
-    }
-
+    const forecastType = supportedTypes.includes(this._activeForecastType) ? this._activeForecastType : supportedTypes[0] || "daily";
+    this._activeForecastType = forecastType;
     const subscriptionKey = `${this._config.entity}:${forecastType}`;
-    if (subscriptionKey === this._forecastSubscriptionKey && this._forecastSubscription) {
-      return;
-    }
-
+    if (subscriptionKey === this._forecastSubscriptionKey && connection === this._forecastConnection && this._forecastSubscription) return;
     this._unsubscribeForecast();
-    if (!this._hass.connection?.subscribeMessage) {
-      return;
-    }
-
+    if (!connection?.subscribeMessage) return;
+    const generation = this._forecastGeneration;
     this._forecastSubscriptionKey = subscriptionKey;
-    this._forecastSubscription = this._hass.connection.subscribeMessage(event => {
-      if (!this.isConnected) {
-        return;
+    this._forecastConnection = connection;
+    const onFailure = () => {
+      if (generation === this._forecastGeneration) {
+        this._forecastSubscription = null;
+        this._forecastSubscriptionKey = "";
+        this._forecastConnection = null;
       }
-      this._forecastEvents = {
-        ...this._forecastEvents,
-        [forecastType]: event,
-      };
-      this._animateForecastOnNextRender = true;
-      this._lastRenderSignature = "";
-      this._render();
-    }, {
-      type: "weather/subscribe_forecast",
-      entity_id: this._config.entity,
-      forecast_type: forecastType,
-    }).catch(() => {
-      this._forecastSubscription = null;
-      this._forecastSubscriptionKey = "";
-    });
+    };
+    try {
+      this._forecastSubscription = connection.subscribeMessage(event => {
+        if (!this.isConnected || generation !== this._forecastGeneration || this._hass?.connection !== connection) return;
+        if (!isObject(event) || !Array.isArray(event.forecast)) return;
+        this._forecastEvents = { ...this._forecastEvents, [forecastType]: { forecast: forecastRows(event.forecast) } };
+        this._animateForecastOnNextRender = true;
+        this._lastRenderSignature = "";
+        this._render();
+      }, { type: "weather/subscribe_forecast", entity_id: this._config.entity, forecast_type: forecastType }).catch(onFailure);
+    } catch (_error) { onFailure(); }
   }
 
-  _getTitle(state) {
+  _getTitle(state: HassEntity | null) {
     const customName = String(this._config?.name || "").trim();
     if (customName) {
       return customName;
@@ -338,7 +379,7 @@ class NodaliaWeatherCard extends HTMLElement {
     return friendlyName || "Weather";
   }
 
-  _getIcon(state) {
+  _getIcon(state: HassEntity | null) {
     const customIcon = String(this._config?.icon || "").trim();
     if (customIcon) {
       return customIcon;
@@ -347,11 +388,11 @@ class NodaliaWeatherCard extends HTMLElement {
     return getConditionIcon(state?.state);
   }
 
-  _getAccentColor(state) {
+  _getAccentColor(state: HassEntity | null) {
     return getConditionAccent(state?.state);
   }
 
-  _formatTemperature(state) {
+  _formatTemperature(state: HassEntity | null) {
     const prefs = this._getUnitPreferences(state);
     const converted = this._convertTemperatureValue(
       state?.attributes?.temperature,
@@ -365,12 +406,12 @@ class NodaliaWeatherCard extends HTMLElement {
     return `${value}${this._temperatureUnitLabel(prefs.targetTemperatureUnit)}`;
   }
 
-  _formatHumidity(state) {
+  _formatHumidity(state: HassEntity | null) {
     const value = formatNumber(state?.attributes?.humidity);
     return value ? `${value}%` : null;
   }
 
-  _formatWind(state) {
+  _formatWind(state: HassEntity | null) {
     const prefs = this._getUnitPreferences(state);
     const converted = this._convertWindSpeedValue(
       state?.attributes?.wind_speed,
@@ -384,7 +425,7 @@ class NodaliaWeatherCard extends HTMLElement {
     return `${value} ${this._windUnitLabel(prefs.targetWindUnit)}`;
   }
 
-  _formatPressure(state) {
+  _formatPressure(state: HassEntity | null) {
     const value = formatNumber(state?.attributes?.pressure);
     const unit = String(state?.attributes?.pressure_unit || "").trim();
 
@@ -395,7 +436,7 @@ class NodaliaWeatherCard extends HTMLElement {
     return unit ? `${value} ${unit}` : value;
   }
 
-  _getUnitPreferences(state) {
+  _getUnitPreferences(state: HassEntity | null): UnitPreferences {
     const attrs = state?.attributes || {};
     const unitSystem = normalizeUnitSystem(this._config?.unit_system);
     let temperaturePreference = normalizeTemperatureUnitPreference(this._config?.temperature_unit);
@@ -418,15 +459,15 @@ class NodaliaWeatherCard extends HTMLElement {
     };
   }
 
-  _temperatureUnitLabel(unit) {
+  _temperatureUnitLabel(unit: string) {
     return unit === "f" ? "°F" : "°C";
   }
 
-  _windUnitLabel(unit) {
+  _windUnitLabel(unit: string) {
     return unit === "mph" ? "mph" : "km/h";
   }
 
-  _convertTemperatureValue(value, fromUnit, toUnit) {
+  _convertTemperatureValue(value: unknown, fromUnit: string, toUnit: string) {
     const numeric = parseWeatherNumericValue(value);
     if (numeric === null) {
       return null;
@@ -443,7 +484,7 @@ class NodaliaWeatherCard extends HTMLElement {
     return numeric;
   }
 
-  _convertWindSpeedValue(value, fromUnit, toUnit) {
+  _convertWindSpeedValue(value: unknown, fromUnit: string, toUnit: string) {
     const numeric = parseWeatherNumericValue(value);
     if (numeric === null) {
       return null;
@@ -463,7 +504,7 @@ class NodaliaWeatherCard extends HTMLElement {
     return kmh;
   }
 
-  _formatForecastTemperature(item, type, targetTemperatureUnit) {
+  _formatForecastTemperature(item: ForecastItem, type: ForecastType, targetTemperatureUnit: string) {
     const sourceUnit = normalizeTemperatureUnitFromState(this._getState()?.attributes?.temperature_unit);
     const high = formatNumber(this._convertTemperatureValue(
       getForecastTemperatureSeriesValue(item, "high"),
@@ -485,13 +526,13 @@ class NodaliaWeatherCard extends HTMLElement {
     return `${high}${unitLabel}`;
   }
 
-  _triggerHaptic(styleOverride = null) {
-    const haptics = this._config?.haptics || {};
+  _triggerHaptic(styleOverride: string | null = null) {
+    const haptics = isObject(this._config.haptics) ? this._config.haptics : {};
     if (haptics.enabled !== true) {
       return;
     }
 
-    const style = styleOverride || haptics.style || "medium";
+    const style = styleOverride || String(haptics.style || "medium");
     fireEvent(this, "haptic", style, {
       bubbles: true,
       cancelable: false,
@@ -499,11 +540,12 @@ class NodaliaWeatherCard extends HTMLElement {
     });
 
     if (haptics.fallback_vibrate && typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
-      navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
+      const patterns: Record<string, number | number[]> = HAPTIC_PATTERNS;
+      navigator.vibrate(patterns[style] || HAPTIC_PATTERNS.selection);
     }
   }
 
-  _scheduleEntranceAnimationReset(delay) {
+  _scheduleEntranceAnimationReset(delay: unknown) {
     if (this._entranceAnimationResetTimer) {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
@@ -525,7 +567,7 @@ class NodaliaWeatherCard extends HTMLElement {
   }
 
   _getAnimationSettings() {
-    const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+    const configuredAnimations = isObject(this._config.animations) ? this._config.animations : DEFAULT_CONFIG.animations;
 
     return {
       enabled: configuredAnimations.enabled !== false,
@@ -543,7 +585,7 @@ class NodaliaWeatherCard extends HTMLElement {
     };
   }
 
-  _triggerPressAnimation(element, className = "is-pressing") {
+  _triggerPressAnimation(element: Element | null | undefined, className = "is-pressing") {
     if (!(element instanceof HTMLElement)) {
       return;
     }
@@ -567,11 +609,12 @@ class NodaliaWeatherCard extends HTMLElement {
     if (typeof schedule === "function") {
       schedule(this, done, animations.buttonBounceDuration + 40);
     } else {
-      window.setTimeout(done, animations.buttonBounceDuration + 40);
+      const timer = window.setTimeout(() => { this._fallbackAnimationTimers.delete(timer); done(); }, animations.buttonBounceDuration + 40);
+      this._fallbackAnimationTimers.add(timer);
     }
   }
 
-  _performWeatherCardAction(actionKind) {
+  _performWeatherCardAction(actionKind: "tap" | "hold" | "double_tap") {
     const key = actionKind === "hold"
       ? "hold_action"
       : actionKind === "double_tap"
@@ -603,7 +646,7 @@ class NodaliaWeatherCard extends HTMLElement {
     this._performWeatherCardAction("double_tap");
   }
 
-  _getForecastPointOverlayPosition(actionButton, width, height) {
+  _getForecastPointOverlayPosition(actionButton: HTMLElement | SVGElement, width: number, height: number) {
     const chartElement = actionButton.closest?.(".weather-card__forecast-chart");
     const pointElement = actionButton.querySelector?.(".weather-card__forecast-chart-point");
     const bounds = (pointElement instanceof Element ? pointElement : actionButton).getBoundingClientRect();
@@ -626,7 +669,7 @@ class NodaliaWeatherCard extends HTMLElement {
     };
   }
 
-  _setForecastPopupFromPoint(actionButton, options = {}) {
+  _setForecastPopupFromPoint(actionButton: HTMLElement | SVGElement, options: { toggle?: boolean } = {}) {
     if (!(actionButton instanceof Element)) {
       return;
     }
@@ -667,7 +710,7 @@ class NodaliaWeatherCard extends HTMLElement {
     this._render();
   }
 
-  _setForecastHoverPreviewFromPoint(actionButton) {
+  _setForecastHoverPreviewFromPoint(actionButton: HTMLElement | SVGElement) {
     if (!(actionButton instanceof Element) || this._forecastPopup) {
       return;
     }
@@ -705,14 +748,13 @@ class NodaliaWeatherCard extends HTMLElement {
     this._render();
   }
 
-  _onShadowPointerMove(event) {
+  _onShadowPointerMove(event: Event) {
+    if (!(event instanceof PointerEvent)) return;
     if (event.pointerType && event.pointerType !== "mouse") {
       return;
     }
 
-    const actionButton = event.composedPath().find(node => (
-      node instanceof Element && node.dataset?.weatherAction === "open-forecast-point"
-    ));
+    const actionButton = event.composedPath().find((node): node is HTMLElement | SVGElement => weatherActionElement(node) && node.dataset.weatherAction === "open-forecast-point");
     if (!actionButton) {
       this._clearForecastHoverPreview();
       return;
@@ -725,8 +767,23 @@ class NodaliaWeatherCard extends HTMLElement {
     this._clearForecastHoverPreview();
   }
 
-  _onShadowClick(event) {
-    const actionButton = event.composedPath().find(node => node instanceof Element && node.dataset?.weatherAction);
+  _onShadowKeyDown(event: Event) {
+    if (!(event instanceof KeyboardEvent)) return;
+    if (event.key === "Escape" && this._forecastPopup) {
+      event.preventDefault();
+      this._forecastPopup = null;
+      this._forecastHoverPreview = null;
+      this._lastRenderSignature = "";
+      this._render();
+      return;
+    }
+    const control = event.composedPath().find(weatherActionElement);
+    // Native buttons already synthesize clicks. SVG chart points need keyboard activation.
+    if (control instanceof SVGElement && (event.key === "Enter" || event.key === " ")) this._onShadowClick(event);
+  }
+
+  _onShadowClick(event: Event) {
+    const actionButton = event.composedPath().find(weatherActionElement);
     if (actionButton) {
       event.preventDefault();
       event.stopPropagation();
@@ -796,16 +853,16 @@ class NodaliaWeatherCard extends HTMLElement {
       if (tapAction === "none") {
         return;
       }
-      this._triggerPressAnimation(this.shadowRoot.querySelector(".weather-card__content"));
-      this._triggerPressAnimation(this.shadowRoot.querySelector(".weather-card__icon"));
+      this._triggerPressAnimation(this.shadowRoot?.querySelector(".weather-card__content"));
+      this._triggerPressAnimation(this.shadowRoot?.querySelector(".weather-card__icon"));
       this._performTapAction();
     };
     const runDouble = () => {
       if (doubleAction === "none") {
         return;
       }
-      this._triggerPressAnimation(this.shadowRoot.querySelector(".weather-card__content"));
-      this._triggerPressAnimation(this.shadowRoot.querySelector(".weather-card__icon"));
+      this._triggerPressAnimation(this.shadowRoot?.querySelector(".weather-card__content"));
+      this._triggerPressAnimation(this.shadowRoot?.querySelector(".weather-card__icon"));
       this._performDoubleTapAction();
     };
 
@@ -821,7 +878,7 @@ class NodaliaWeatherCard extends HTMLElement {
     runTap();
   }
 
-  _renderChip(icon, label, accentColor, iconColor = getMetricReadableIconColor(accentColor)) {
+  _renderChip(icon: string, label: string | null, accentColor: string, iconColor = getMetricReadableIconColor(accentColor)) {
     if (!label) {
       return "";
     }
@@ -847,7 +904,9 @@ class NodaliaWeatherCard extends HTMLElement {
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const langCfg = this._config?.language ?? "auto";
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, langCfg) ?? "en";
-    const wm = window.NodaliaI18n?.strings?.(lang)?.weatherCard?.meteoalarm;
+    const pack = window.NodaliaI18n?.strings?.(lang)?.weatherCard;
+    const meteoalarm = isObject(pack) ? pack.meteoalarm : undefined;
+    const wm = isObject(meteoalarm) ? meteoalarm : {};
     const ev = String(attrs.event || "").trim();
     const headline = String(attrs.headline || "").trim();
     const awareLabel = String(awareness.label || "").trim();
@@ -877,7 +936,7 @@ class NodaliaWeatherCard extends HTMLElement {
     `;
   }
 
-  _renderMeteoalarmChipRow(shouldAnimateEntrance) {
+  _renderMeteoalarmChipRow(shouldAnimateEntrance: boolean) {
     const chipMarkup = this._renderMeteoalarmChip();
     if (!chipMarkup) {
       return "";
@@ -898,7 +957,9 @@ class NodaliaWeatherCard extends HTMLElement {
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const langCfg = this._config?.language ?? "auto";
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, langCfg) ?? "en";
-    const wm = window.NodaliaI18n?.strings?.(lang)?.weatherCard?.meteoalarm;
+    const pack = window.NodaliaI18n?.strings?.(lang)?.weatherCard;
+    const meteoalarm = isObject(pack) ? pack.meteoalarm : undefined;
+    const wm = isObject(meteoalarm) ? meteoalarm : {};
     const title = state?.state === "on"
       ? String(attrs.headline || attrs.event || wm?.weatherAlert || "Weather alert").trim()
       : state?.state === "off"
@@ -948,20 +1009,20 @@ class NodaliaWeatherCard extends HTMLElement {
     `;
   }
 
-  _getForecastItems(type, state) {
+  _getForecastItems(type: ForecastType, state: HassEntity | null): ForecastItem[] {
     const eventForecast = this._forecastEvents?.[type]?.forecast;
-    if (Array.isArray(eventForecast) && eventForecast.length) {
+    if (Array.isArray(eventForecast)) {
       return eventForecast;
     }
 
     const legacyForecast = state?.attributes?.forecast;
-    return Array.isArray(legacyForecast) ? legacyForecast : [];
+    return forecastRows(legacyForecast);
   }
 
-  _renderForecastChart(items, type, state, forecastLocale = undefined, unitPrefs = null) {
+  _renderForecastChart(items: ForecastItem[], type: ForecastType, state: HassEntity | null, forecastLocale: string | undefined = undefined, unitPrefs: UnitPreferences | null = null) {
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const cfgLang = this._config?.language ?? "auto";
-    const wf = key => (window.NodaliaI18n?.translateWeatherForecastUi
+    const wf = (key: string) => (window.NodaliaI18n?.translateWeatherForecastUi
       ? window.NodaliaI18n.translateWeatherForecastUi(hass, cfgLang, key)
       : "");
 
@@ -974,16 +1035,16 @@ class NodaliaWeatherCard extends HTMLElement {
       return `<div class="weather-card__forecast-empty">${escapeHtml(emptyChart)}</div>`;
     }
 
-    const hasDailyLow = type === "daily" && sourcePoints.some(point => Number.isFinite(Number(point.item?.templow)));
+    const hasDailyLow = type === "daily" && sourcePoints.some(point => parseWeatherNumericValue(point.item.templow) !== null);
     const rawHighPoints = sourcePoints.map(point => ({
       ...point,
       value: getForecastTemperatureSeriesValue(point.item, "high"),
-    })).filter(point => Number.isFinite(point.value));
+    })).filter((point): point is ForecastPoint => point.value !== null && Number.isFinite(point.value));
     const rawLowPoints = hasDailyLow
       ? sourcePoints.map(point => ({
         ...point,
         value: getForecastTemperatureSeriesValue(point.item, "low"),
-      })).filter(point => Number.isFinite(point.value))
+      })).filter((point): point is ForecastPoint => point.value !== null && Number.isFinite(point.value))
       : [];
     const highPoints = rawHighPoints.length >= 2 ? rawHighPoints : rawLowPoints;
     const lowPoints = rawHighPoints.length >= 2 ? rawLowPoints : [];
@@ -1008,7 +1069,7 @@ class NodaliaWeatherCard extends HTMLElement {
     const dateLabelY = height - 10;
     const lowLabelY = dateLabelY - 18;
 
-    const getCoordinates = points => points.map((point, pointIndex) => {
+    const getCoordinates = (points: ForecastPoint[]) => points.map((point, pointIndex) => {
       const x = padding.left + (points.length === 1 ? plotWidth / 2 : (plotWidth * pointIndex) / (points.length - 1));
       const y = padding.top + plotHeight - ((point.value - minValue) / valueRange) * plotHeight;
       return {
@@ -1020,10 +1081,10 @@ class NodaliaWeatherCard extends HTMLElement {
 
     const highCoordinates = getCoordinates(highPoints);
     const lowCoordinates = getCoordinates(lowPoints);
-    const pathFromCoordinates = coordinates => coordinates
+    const pathFromCoordinates = (coordinates: ForecastCoordinate[]) => coordinates
       .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`)
       .join(" ");
-    const smoothPathFromCoordinates = coordinates => {
+    const smoothPathFromCoordinates = (coordinates: ForecastCoordinate[]) => {
       if (coordinates.length < 3) {
         return pathFromCoordinates(coordinates);
       }
@@ -1034,15 +1095,19 @@ class NodaliaWeatherCard extends HTMLElement {
         }
 
         const previous = coordinates[index - 1];
+        if (!previous) return path;
         const controlOffset = Math.max(18, Math.min(54, (point.x - previous.x) * 0.42));
         return `${path} C ${(previous.x + controlOffset).toFixed(1)} ${previous.y.toFixed(1)} ${(point.x - controlOffset).toFixed(1)} ${point.y.toFixed(1)} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`;
       }, "");
     };
     const highPath = smoothPathFromCoordinates(highCoordinates);
     const lowPath = smoothPathFromCoordinates(lowCoordinates);
-    const areaPath = `${highPath} L ${highCoordinates[highCoordinates.length - 1].x.toFixed(1)} ${height - padding.bottom} L ${highCoordinates[0].x.toFixed(1)} ${height - padding.bottom} Z`;
-    const lowAreaPath = lowPath
-      ? `${lowPath} L ${lowCoordinates[lowCoordinates.length - 1].x.toFixed(1)} ${height - padding.bottom} L ${lowCoordinates[0].x.toFixed(1)} ${height - padding.bottom} Z`
+    const firstHigh = highCoordinates[0], lastHigh = highCoordinates[highCoordinates.length - 1];
+    if (!firstHigh || !lastHigh) return "";
+    const firstLow = lowCoordinates[0], lastLow = lowCoordinates[lowCoordinates.length - 1];
+    const areaPath = `${highPath} L ${lastHigh.x.toFixed(1)} ${height - padding.bottom} L ${firstHigh.x.toFixed(1)} ${height - padding.bottom} Z`;
+    const lowAreaPath = lowPath && firstLow && lastLow
+      ? `${lowPath} L ${lastLow.x.toFixed(1)} ${height - padding.bottom} L ${firstLow.x.toFixed(1)} ${height - padding.bottom} Z`
       : "";
     const chartAccent = getConditionAccent(state?.state);
     const chartFillId = `weather-chart-fill-${type}`;
@@ -1060,7 +1125,7 @@ class NodaliaWeatherCard extends HTMLElement {
       ...highCoordinates.map(point => ({ ...point, series: "high" })),
       ...lowCoordinates.map(point => ({ ...point, series: "low" })),
     ];
-    const renderGradientStops = (coordinates, opacity = "") => coordinates.map((point, index) => {
+    const renderGradientStops = (coordinates: ForecastCoordinate[], opacity = "") => coordinates.map((point, index) => {
       const offset = coordinates.length <= 1 ? 0 : (index / (coordinates.length - 1)) * 100;
       const color = getForecastChartPointColor(point, colorChartMode, state?.state);
       return `<stop offset="${offset.toFixed(2)}%" stop-color="${escapeHtml(color)}"${opacity ? ` stop-opacity="${opacity}"` : ""}></stop>`;
@@ -1107,7 +1172,7 @@ class NodaliaWeatherCard extends HTMLElement {
         precipitationLabel ? [wf("rainLabel") || "Rain", precipitationLabel] : null,
         humidityLabel ? [wf("humidityLabel") || "Humidity", `${humidityLabel}%`] : null,
         windLabel ? [wf("windLabel") || "Wind", windUnit ? `${windLabel} ${windUnit}` : windLabel] : null,
-      ].filter(Boolean);
+      ].filter((row): row is string[] => row !== null);
       const vertical = this._forecastPopup?.vertical === "below" ? "below" : "above";
       const popupLeft = this._forecastPopup?.left || "50%";
       const popupTop = this._forecastPopup?.top || "50%";
@@ -1242,7 +1307,7 @@ class NodaliaWeatherCard extends HTMLElement {
     `;
   }
 
-  _renderForecastDetails(state, accentColor, shouldAnimateEntrance, shouldAnimateForecast = false) {
+  _renderForecastDetails(state: HassEntity | null, accentColor: string, shouldAnimateEntrance: boolean, shouldAnimateForecast = false) {
     if (this._config?.show_forecast_details !== true) {
       return "";
     }
@@ -1260,7 +1325,7 @@ class NodaliaWeatherCard extends HTMLElement {
     const activeView = normalizeForecastView(this._activeForecastView);
     const hassFc = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const cfgLangFc = this._config?.language ?? "auto";
-    const wfFc = key => (window.NodaliaI18n?.translateWeatherForecastUi
+    const wfFc = (key: string) => (window.NodaliaI18n?.translateWeatherForecastUi
       ? window.NodaliaI18n.translateWeatherForecastUi(hassFc, cfgLangFc, key)
       : "");
     const langFc = window.NodaliaI18n?.resolveLanguage?.(hassFc, cfgLangFc) ?? "en";
@@ -1341,12 +1406,12 @@ class NodaliaWeatherCard extends HTMLElement {
     `;
   }
 
-  _weatherCardUi(key, fallback = "") {
+  _weatherCardUi(key: string, fallback = "") {
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
     const pack = window.NodaliaI18n?.strings?.(lang)?.weatherCard;
     const enPack = window.NodaliaI18n?.strings?.("en")?.weatherCard;
-    const raw = pack?.[key] ?? enPack?.[key];
+    const raw = (isObject(pack) ? pack[key] : undefined) ?? (isObject(enPack) ? enPack[key] : undefined);
     return String(raw != null && raw !== "" ? raw : fallback);
   }
 
@@ -1372,12 +1437,14 @@ class NodaliaWeatherCard extends HTMLElement {
       { cardClass: "weather-card" },
     );
     if (entityGuard) {
+      window.NodaliaUtils?.releaseModalFocus?.(this);
       this.shadowRoot.innerHTML = entityGuard;
       return;
     }
 
     const state = this._getState();
     if (!state) {
+      window.NodaliaUtils?.releaseModalFocus?.(this);
       this.shadowRoot.innerHTML = window.NodaliaUtils?.renderCardEmptyStateDocument?.(
         this._renderEmptyState(),
         { card: (this._config || DEFAULT_CONFIG).styles?.card },

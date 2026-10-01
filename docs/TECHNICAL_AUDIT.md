@@ -1394,3 +1394,25 @@ and their dead population/attachment paths; the actual selectors remain intact.
 All 749 unit tests, nine targeted browser cases and 1,400 equivalent editor HTML
 outputs outside the removed unused datalists pass. Full local suite: 554 passed,
 one existing skip. Remaining unchecked modules: 16. Publication remains held until the complete source/runtime migration.
+
+## Weather view findings — 2026-10-01
+
+Forecast subscriptions were keyed only by entity/type, allowing obsolete
+callbacks and failed requests to affect a later subscription. Empty live lists
+fell back to stale legacy forecasts. Render signatures omitted legacy forecast
+contents, unit labels and alert descriptions. SVG chart points exposed button
+roles without keyboard activation. Fallback animation timers were not owned.
+
+Check actual HA, forecast, event, DOM, chart geometry, popup and config contracts.
+Track connection/request generations, release pending subscriptions and ignore
+obsolete events/failures. Guard malformed forecast rows and retain authoritative
+empty live lists. Refresh signatures for displayed forecasts, units, supported
+features, language and alert details. Activate SVG points via Enter/Space and
+close detail with Escape. Own fallback timers and release modal focus when the
+weather entity disappears. Retain conversions, real zeros, missing metrics,
+existing chart colours, translucent CSS and sizing. Remove one unused import.
+
+All 749 unit tests, 15 targeted browser cases and 3,000 equivalent Weather
+presentation/sizing outputs pass. Full local suite: 566 passed, one existing skip.
+Remaining unchecked modules: 15. Publication
+remains held until the complete source/runtime migration.
