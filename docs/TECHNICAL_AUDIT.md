@@ -608,3 +608,34 @@ modules: 57; Power Flow view/editor remain in the migration. Add a current Power
 Flow guide and link it, Graph and Lock in the README.
 Full local browser suite: 269 passed, one existing platform skip. Publication
 remains held until the complete migration is checked.
+
+## Room Summary configuration findings — 2026-10-01
+
+Summary's projection/model and helpers are checked, but configuration still
+suppresses checking and its public methods are declared as arbitrary unknown
+argument lists. Narrow camera/media/embed records, return actual string/list
+projection fields, and preserve the private normalization marker plus cached
+object identity without asserting an unknown marker-bearing object has a typed
+shape. Media player IDs are normalized by the model from unknown values; reflect
+that actual boundary in its input contract. Preserve Home-only media and native
+Lock embedding. The model numeric helper currently coerces blank metrics to
+zero; keep blank metrics absent without changing actual zeros or comfort rules.
+
+Summary config passes strict checking and typed lint. Camera/media/embed
+records and actual string/list projection fields are checked; defaults/aliases,
+independent nested clones, native Lock IDs and Home media behavior remain.
+Retain the private non-enumerable marker and normalized object identity through
+a typed weak cache; a forged or foreign marker does not bypass normalization.
+The model's player-ID contract accepts unknown IDs because its existing add
+function normalizes them, rather than asserting configuration rows are strings.
+Public methods now derive directly from checked modules and registration uses
+satisfies. Blank metrics remain absent with the shared finite parser; nonblank
+nonnumeric state text, actual zeros and comfort/security calculations remain.
+
+Five new unit cases cover aliases, cloned nested blocks, media IDs, embed
+matching, normalization cache/forged markers and metric absence. 1,500 valid
+config/projection outputs match merged main. All 703 unit tests and three real
+rendered metric cases pass. Remaining unchecked modules: 56; Summary view and
+editor remain in the migration.
+Full local browser suite: 272 passed, one existing platform skip. Publication
+remains held until the complete migration is checked.

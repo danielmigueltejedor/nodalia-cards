@@ -47,7 +47,7 @@ const publicApi = {
   hasRoomContent,
   formatMetric,
   getState,
-} as RoomSummaryPublicApi;
+} satisfies RoomSummaryPublicApi;
 
 const globalScope = globalThis as typeof globalThis & {
   __NODALIA_ROOM_SUMMARY__?: RoomSummaryPublicApi;

@@ -1,9 +1,10 @@
+import { parseFiniteNumericValue } from "../../shared/numeric-values";
 import type { HassEntity, HomeAssistant } from "../../core/types/home-assistant";
 
 /** Pure projection input; configuration normalization remains owned by the card. */
 export type RoomProjectionConfig = Partial<Record<"name" | "temperature" | "humidity" | "presence" | "occupancy" | "climate" | "camera" | "media_player" | "power" | "air_quality", string>>
   & Partial<Record<"media_players" | "lights" | "covers" | "locks" | "vacuums" | "fans" | "humidifiers" | "others" | "doors" | "windows" | "alerts" | "alarms", readonly string[]>>
-  & { media_config?: { players?: readonly { entity?: string }[] } };
+  & { media_config?: { players?: readonly { entity?: unknown }[] } };
 
 export function normalizeTextKey(value: unknown) {
   return String(value ?? "").trim().toLowerCase();
@@ -37,8 +38,7 @@ export function hubMediaPlayerIds(config?: RoomProjectionConfig | null) {
 }
 
 export function finiteNumber(value: unknown) {
-  const number = Number(value);
-  return Number.isFinite(number) ? number : null;
+  return parseFiniteNumericValue(value);
 }
 
 export function isUnavailable(state?: HassEntity | null) {
@@ -68,7 +68,8 @@ export function formatMetric(state?: HassEntity | null, unitFallback = "") {
   const unit = String(state.attributes?.unit_of_measurement || unitFallback || "").trim();
   const number = finiteNumber(state.state);
   if (number !== null) return `${Number.isInteger(number) ? number : number.toFixed(1)}${unit}`;
-  return String(state.state ?? "—");
+  const text = String(state.state ?? "");
+  return text.trim() ? text : "—";
 }
 
 export function getState(hass: Pick<HomeAssistant, "states"> | null | undefined, entityId: unknown) {
