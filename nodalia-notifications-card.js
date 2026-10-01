@@ -47,6 +47,13 @@
   var resolveMobileDeliveryState = mobile.resolveMobileDeliveryState;
   var legacyMobilePolicyLabel = mobile.legacyMobilePolicyLabel;
 
+  // src/shared/numeric-values.ts
+  function parseFiniteNumericValue(value) {
+    if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
   // src/cards/notifications/notifications-defaults.ts
   var DEFAULT_CONFIG = {
     title: "Notifications",
@@ -397,8 +404,7 @@
     });
   }
   function finiteNumber(value, fallback) {
-    const number = Number(value);
-    return Number.isFinite(number) ? number : fallback;
+    return parseFiniteNumericValue(value) ?? fallback;
   }
   function normalizeMatchText(value) {
     return String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ");
@@ -411,83 +417,81 @@
   // src/cards/notifications/notifications-config.ts
   function normalizeConfig(rawConfig = {}, options = {}) {
     const config = mergeDeep(DEFAULT_CONFIG, rawConfig);
-    config.calendar_entities = normalizeEntityList(config.calendar_entities, ["calendar"]);
-    config.vacuum_entities = normalizeEntityList(config.vacuum_entities, ["vacuum"]);
-    config.vacuum_error_entities = normalizeEntityList(config.vacuum_error_entities, ["sensor"]);
-    config.fan_entities = normalizeEntityList(config.fan_entities, ["fan"]);
-    config.climate_entities = normalizeEntityList(config.climate_entities, ["climate"]);
-    config.humidifier_entities = normalizeEntityList(config.humidifier_entities, ["humidifier"]);
-    config.media_player_entities = normalizeEntityList(config.media_player_entities, ["media_player"]);
-    config.weather_entities = normalizeEntityList(config.weather_entities, ["weather"]);
-    config.motion_entities = normalizeEntityList(config.motion_entities, ["binary_sensor"]);
-    config.door_entities = normalizeEntityList(config.door_entities, ["binary_sensor"]);
-    config.window_entities = normalizeEntityList(config.window_entities, ["binary_sensor"]);
-    config.temperature_entities = normalizeEntityList(config.temperature_entities, ["sensor"]);
-    config.humidity_entities = normalizeEntityList(config.humidity_entities, ["sensor"]);
-    config.outdoor_temperature_entities = normalizeEntityList(config.outdoor_temperature_entities, ["sensor"]);
-    config.outdoor_humidity_entities = normalizeEntityList(config.outdoor_humidity_entities, ["sensor"]);
-    config.battery_entities = normalizeEntityList(config.battery_entities, ["sensor"]);
-    config.humidifier_fill_entities = normalizeEntityList(config.humidifier_fill_entities, ["sensor"]);
-    config.humidifier_full_entities = normalizeEntityList(config.humidifier_full_entities, ["sensor"]);
-    config.ink_entities = normalizeEntityList(config.ink_entities, ["sensor"]);
-    config.custom_notifications = normalizeCustomNotifications(config.custom_notifications, {
+    const calendar_entities = normalizeEntityList(config.calendar_entities, ["calendar"]);
+    const vacuum_entities = normalizeEntityList(config.vacuum_entities, ["vacuum"]);
+    const vacuum_error_entities = normalizeEntityList(config.vacuum_error_entities, ["sensor"]);
+    const fan_entities = normalizeEntityList(config.fan_entities, ["fan"]);
+    const climate_entities = normalizeEntityList(config.climate_entities, ["climate"]);
+    const humidifier_entities = normalizeEntityList(config.humidifier_entities, ["humidifier"]);
+    const media_player_entities = normalizeEntityList(config.media_player_entities, ["media_player"]);
+    const weather_entities = normalizeEntityList(config.weather_entities, ["weather"]);
+    const motion_entities = normalizeEntityList(config.motion_entities, ["binary_sensor"]);
+    const door_entities = normalizeEntityList(config.door_entities, ["binary_sensor"]);
+    const window_entities = normalizeEntityList(config.window_entities, ["binary_sensor"]);
+    const temperature_entities = normalizeEntityList(config.temperature_entities, ["sensor"]);
+    const humidity_entities = normalizeEntityList(config.humidity_entities, ["sensor"]);
+    const outdoor_temperature_entities = normalizeEntityList(config.outdoor_temperature_entities, ["sensor"]);
+    const outdoor_humidity_entities = normalizeEntityList(config.outdoor_humidity_entities, ["sensor"]);
+    const battery_entities = normalizeEntityList(config.battery_entities, ["sensor"]);
+    const humidifier_fill_entities = normalizeEntityList(config.humidifier_fill_entities, ["sensor"]);
+    const humidifier_full_entities = normalizeEntityList(config.humidifier_full_entities, ["sensor"]);
+    const ink_entities = normalizeEntityList(config.ink_entities, ["sensor"]);
+    const custom_notifications = normalizeCustomNotifications(config.custom_notifications, {
       keepDrafts: options.keepDrafts === true
     });
-    config.max_visible = Math.max(1, Math.min(8, Number(config.max_visible) || 1));
-    config.refresh_interval = Math.max(30, Math.min(3600, Number(config.refresh_interval) || 300));
-    config.storage_key = String(config.storage_key || STORAGE_KEY).trim() || STORAGE_KEY;
-    config.dismissed_entity = entityDomain(config.dismissed_entity) === "input_text" ? String(config.dismissed_entity).trim() : "";
-    config.smart_recommendations = config.smart_recommendations !== false;
-    config.language = String(config.language || "auto").trim() || "auto";
-    const thresholds = isObject(config.thresholds) ? config.thresholds : {};
-    config.thresholds = {
-      hot_temperature: finiteNumber(thresholds.hot_temperature, DEFAULT_CONFIG.thresholds.hot_temperature),
-      cold_temperature: finiteNumber(thresholds.cold_temperature, DEFAULT_CONFIG.thresholds.cold_temperature),
-      humidity_high: finiteNumber(thresholds.humidity_high, DEFAULT_CONFIG.thresholds.humidity_high),
-      humidity_low: finiteNumber(thresholds.humidity_low, DEFAULT_CONFIG.thresholds.humidity_low),
-      rain_probability: Math.max(0, Math.min(100, finiteNumber(thresholds.rain_probability, DEFAULT_CONFIG.thresholds.rain_probability))),
-      rain_lookahead_hours: Math.max(1, Math.min(24, finiteNumber(thresholds.rain_lookahead_hours, DEFAULT_CONFIG.thresholds.rain_lookahead_hours))),
-      media_absence_minutes: Math.max(1, Math.min(240, finiteNumber(thresholds.media_absence_minutes, DEFAULT_CONFIG.thresholds.media_absence_minutes))),
-      battery_low: Math.max(0, Math.min(100, finiteNumber(thresholds.battery_low, DEFAULT_CONFIG.thresholds.battery_low))),
-      humidifier_fill_low: Math.max(0, Math.min(100, finiteNumber(thresholds.humidifier_fill_low, DEFAULT_CONFIG.thresholds.humidifier_fill_low))),
-      humidifier_fill_full: Math.max(0, Math.min(100, finiteNumber(thresholds.humidifier_fill_full, DEFAULT_CONFIG.thresholds.humidifier_fill_full))),
-      ink_low: Math.max(0, Math.min(100, finiteNumber(thresholds.ink_low, DEFAULT_CONFIG.thresholds.ink_low)))
+    const max_visible = Math.max(1, Math.min(8, Number(config.max_visible) || 1));
+    const refresh_interval = Math.max(30, Math.min(3600, Number(config.refresh_interval) || 300));
+    const storage_key = String(config.storage_key || STORAGE_KEY).trim() || STORAGE_KEY;
+    const dismissed_entity = entityDomain(config.dismissed_entity) === "input_text" ? String(config.dismissed_entity).trim() : "";
+    const smart_recommendations = config.smart_recommendations !== false;
+    const language = String(config.language || "auto").trim() || "auto";
+    const rawThresholds = isObject(config.thresholds) ? config.thresholds : {};
+    const thresholds = {
+      hot_temperature: finiteNumber(rawThresholds.hot_temperature, DEFAULT_CONFIG.thresholds.hot_temperature),
+      cold_temperature: finiteNumber(rawThresholds.cold_temperature, DEFAULT_CONFIG.thresholds.cold_temperature),
+      humidity_high: finiteNumber(rawThresholds.humidity_high, DEFAULT_CONFIG.thresholds.humidity_high),
+      humidity_low: finiteNumber(rawThresholds.humidity_low, DEFAULT_CONFIG.thresholds.humidity_low),
+      rain_probability: Math.max(0, Math.min(100, finiteNumber(rawThresholds.rain_probability, DEFAULT_CONFIG.thresholds.rain_probability))),
+      rain_lookahead_hours: Math.max(1, Math.min(24, finiteNumber(rawThresholds.rain_lookahead_hours, DEFAULT_CONFIG.thresholds.rain_lookahead_hours))),
+      media_absence_minutes: Math.max(1, Math.min(240, finiteNumber(rawThresholds.media_absence_minutes, DEFAULT_CONFIG.thresholds.media_absence_minutes))),
+      battery_low: Math.max(0, Math.min(100, finiteNumber(rawThresholds.battery_low, DEFAULT_CONFIG.thresholds.battery_low))),
+      humidifier_fill_low: Math.max(0, Math.min(100, finiteNumber(rawThresholds.humidifier_fill_low, DEFAULT_CONFIG.thresholds.humidifier_fill_low))),
+      humidifier_fill_full: Math.max(0, Math.min(100, finiteNumber(rawThresholds.humidifier_fill_full, DEFAULT_CONFIG.thresholds.humidifier_fill_full))),
+      ink_low: Math.max(0, Math.min(100, finiteNumber(rawThresholds.ink_low, DEFAULT_CONFIG.thresholds.ink_low)))
     };
-    config.smart_notifications = normalizeSmartNotifications(config.smart_notifications);
-    config.smart_entity_overrides = normalizeSmartEntityOverrides(config.smart_entity_overrides);
-    config.presence_entity = String(config.presence_entity || "").trim();
-    config.mobile_context = normalizeMobileContext(config.mobile_context);
-    config.external_alerts = normalizeExternalAlerts(config.external_alerts, {
+    const smart_notifications = normalizeSmartNotifications(config.smart_notifications);
+    const smart_entity_overrides = normalizeSmartEntityOverrides(config.smart_entity_overrides);
+    const presence_entity = String(config.presence_entity || "").trim();
+    const mobile_context = normalizeMobileContext(config.mobile_context);
+    const external_alerts = normalizeExternalAlerts(config.external_alerts, {
       keepDrafts: options.keepDrafts === true
     });
-    const mobile_notifications = mergeDeep(DEFAULT_CONFIG.mobile_notifications, config.mobile_notifications || {});
-    mobile_notifications.enabled = mobile_notifications.enabled === true;
-    mobile_notifications.entities = normalizeEntityList(mobile_notifications.entities, ["notify"]);
-    mobile_notifications.services = normalizeNotifyServices(mobile_notifications.services);
-    mobile_notifications.critical_alerts = mobile_notifications.critical_alerts === true;
-    mobile_notifications.default_policy = normalizeMobilePolicy(
-      mobile_notifications.default_policy ?? "auto"
-    );
-    mobile_notifications.cooldown_minutes = Math.max(
-      0,
-      Math.min(1440, Number(mobile_notifications.cooldown_minutes) || DEFAULT_CONFIG.mobile_notifications.cooldown_minutes)
-    );
-    mobile_notifications.group_similar = mobile_notifications.group_similar !== false;
-    mobile_notifications.min_severity = ["info", "success", "warning", "critical"].includes(String(mobile_notifications.min_severity || "").toLowerCase()) ? String(mobile_notifications.min_severity).toLowerCase() : DEFAULT_CONFIG.mobile_notifications.min_severity;
-    const background_mobile = mergeDeep(DEFAULT_CONFIG.background_mobile, config.background_mobile || {});
-    background_mobile.enabled = background_mobile.enabled === true;
-    background_mobile.profile_id = String(background_mobile.profile_id || "default").trim() || "default";
-    background_mobile.webhook = String(background_mobile.webhook || "").trim();
-    background_mobile.chunk_size = Math.max(
-      120,
-      Math.min(240, Number(background_mobile.chunk_size) || DEFAULT_CONFIG.background_mobile.chunk_size)
-    );
+    const rawMobile = mergeDeep(DEFAULT_CONFIG.mobile_notifications, config.mobile_notifications || {});
+    const mobile_notifications = {
+      ...rawMobile,
+      enabled: rawMobile.enabled === true,
+      entities: normalizeEntityList(rawMobile.entities, ["notify"]),
+      services: normalizeNotifyServices(rawMobile.services),
+      critical_alerts: rawMobile.critical_alerts === true,
+      default_policy: normalizeMobilePolicy(rawMobile.default_policy ?? "auto"),
+      cooldown_minutes: Math.max(0, Math.min(1440, finiteNumber(rawMobile.cooldown_minutes, DEFAULT_CONFIG.mobile_notifications.cooldown_minutes) || DEFAULT_CONFIG.mobile_notifications.cooldown_minutes)),
+      group_similar: rawMobile.group_similar !== false,
+      min_severity: ["info", "success", "warning", "critical"].includes(String(rawMobile.min_severity || "").toLowerCase()) ? String(rawMobile.min_severity).toLowerCase() : DEFAULT_CONFIG.mobile_notifications.min_severity
+    };
+    const rawBackground = mergeDeep(DEFAULT_CONFIG.background_mobile, config.background_mobile || {});
+    const background_mobile = {
+      ...rawBackground,
+      enabled: rawBackground.enabled === true,
+      profile_id: String(rawBackground.profile_id || "default").trim() || "default",
+      webhook: String(rawBackground.webhook || "").trim(),
+      chunk_size: Math.max(120, Math.min(240, finiteNumber(rawBackground.chunk_size, DEFAULT_CONFIG.background_mobile.chunk_size) || DEFAULT_CONFIG.background_mobile.chunk_size))
+    };
     const security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? mergeDeep(DEFAULT_CONFIG.security, config.security || {});
     if (security.allow_webhooks_for_non_admin === void 0) {
       security.allow_webhooks_for_non_admin = DEFAULT_CONFIG.security.allow_webhooks_for_non_admin;
     }
     security.allow_webhooks_for_non_admin = security.allow_webhooks_for_non_admin === true;
-    config.haptics = mergeDeep(DEFAULT_CONFIG.haptics, config.haptics || {});
+    const haptics = mergeDeep(DEFAULT_CONFIG.haptics, config.haptics || {});
     const animations = mergeDeep(DEFAULT_CONFIG.animations, config.animations || {});
     animations.enabled = animations.enabled !== false;
     animations.content_duration = Math.max(120, Math.min(1800, Number(animations.content_duration) || DEFAULT_CONFIG.animations.content_duration));
@@ -503,7 +507,86 @@
     if (itemRadius === "18px" || itemRadius === "28px") {
       styles.item_radius = familyRadius;
     }
-    return { ...config, mobile_notifications, background_mobile, security, animations, styles };
+    return {
+      ...config,
+      calendar_entities,
+      vacuum_entities,
+      vacuum_error_entities,
+      fan_entities,
+      climate_entities,
+      humidifier_entities,
+      media_player_entities,
+      weather_entities,
+      motion_entities,
+      door_entities,
+      window_entities,
+      temperature_entities,
+      humidity_entities,
+      outdoor_temperature_entities,
+      outdoor_humidity_entities,
+      battery_entities,
+      humidifier_fill_entities,
+      humidifier_full_entities,
+      ink_entities,
+      custom_notifications,
+      max_visible,
+      refresh_interval,
+      storage_key,
+      dismissed_entity,
+      smart_recommendations,
+      language,
+      thresholds,
+      smart_notifications,
+      smart_entity_overrides,
+      presence_entity,
+      mobile_context,
+      external_alerts,
+      haptics,
+      mobile_notifications,
+      background_mobile,
+      security,
+      animations,
+      styles
+    };
+  }
+
+  // src/shared/editor-array-paths.ts
+  var isObject2 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var isUnsafeConfigPathKey2 = (key) => key === "__proto__" || key === "constructor" || key === "prototype";
+  var readNode = (node, key) => {
+    if (!Object.prototype.hasOwnProperty.call(node, key)) return void 0;
+    return Array.isArray(node) ? /^\d+$/.test(key) ? node[Number(key)] : void 0 : node[key];
+  };
+  function writeNode(node, key, value) {
+    if (!Array.isArray(node)) {
+      Object.defineProperty(node, key, { configurable: true, enumerable: true, writable: true, value });
+      return true;
+    }
+    if (!/^\d+$/.test(key)) return false;
+    const index = Number(key);
+    if (!Number.isSafeInteger(index) || index >= 4294967295) return false;
+    node[index] = value;
+    return true;
+  }
+  function setByPath(target, path, value) {
+    if (!isObject2(target) && !Array.isArray(target) || typeof path !== "string") return;
+    const parts = String(path || "").split(".");
+    if (!parts.length || parts.some(isUnsafeConfigPathKey2)) return;
+    let cursor = target;
+    for (let index = 0; index < parts.length - 1; index += 1) {
+      const key = parts[index];
+      if (key === void 0) return;
+      const child = readNode(cursor, key);
+      if (isObject2(child) || Array.isArray(child)) {
+        cursor = child;
+      } else {
+        const next = /^\d+$/.test(parts[index + 1] ?? "") ? [] : {};
+        if (!writeNode(cursor, key, next)) return;
+        cursor = next;
+      }
+    }
+    const leaf = parts[parts.length - 1];
+    if (leaf !== void 0) writeNode(cursor, leaf, value);
   }
 
   // src/shared/editor-color.ts
@@ -646,41 +729,32 @@
       detail
     }));
   }
-  function setByPath(target, path, value) {
+  function setByPath2(target, path, value) {
     const parts = String(path || "").split(".").filter(Boolean);
-    if (parts.some(isUnsafeConfigPathKey)) {
-      return;
-    }
+    if (parts.length) setByPath(target, parts.join("."), value);
+  }
+  function getByPath(target, path) {
+    const parts = String(path || "").split(".").filter(Boolean);
+    if (parts.some(isUnsafeConfigPathKey)) return void 0;
     let cursor = target;
-    parts.forEach((part, index) => {
-      if (index === parts.length - 1) {
-        cursor[part] = value;
-        return;
-      }
-      if (!isObject(cursor[part]) && !Array.isArray(cursor[part])) {
-        cursor[part] = /^\d+$/.test(parts[index + 1]) ? [] : {};
-      }
-      cursor = cursor[part];
-    });
+    for (const part of parts) {
+      if (Array.isArray(cursor)) {
+        cursor = /^\d+$/.test(part) && Object.prototype.hasOwnProperty.call(cursor, part) ? cursor[Number(part)] : void 0;
+      } else if (isObject(cursor) && Object.prototype.hasOwnProperty.call(cursor, part)) {
+        cursor = cursor[part];
+      } else return void 0;
+    }
+    return cursor;
   }
   function deleteByPath(target, path) {
     const parts = String(path || "").split(".").filter(Boolean);
-    if (parts.some(isUnsafeConfigPathKey)) {
-      return;
-    }
-    let cursor = target;
-    for (let i = 0; i < parts.length - 1; i += 1) {
-      cursor = cursor?.[parts[i]];
-      if (!cursor) {
-        return;
-      }
-    }
-    if (cursor) {
-      delete cursor[parts[parts.length - 1]];
-    }
-  }
-  function getByPath(target, path) {
-    return String(path || "").split(".").filter(Boolean).reduce((cursor, part) => cursor?.[part], target);
+    if (!parts.length || parts.some(isUnsafeConfigPathKey)) return;
+    const leaf = parts.pop();
+    const cursor = parts.length ? getByPath(target, parts.join(".")) : target;
+    if (leaf === void 0) return;
+    if (Array.isArray(cursor)) {
+      if (/^\d+$/.test(leaf)) delete cursor[Number(leaf)];
+    } else if (isObject(cursor)) delete cursor[leaf];
   }
   function parseServiceData(value) {
     if (!value) {
@@ -707,14 +781,18 @@
     }
     const areas = hass?.areas;
     if (Array.isArray(areas)) {
-      const area2 = areas.find((item) => String(item?.area_id || item?.id || "") === rawId);
+      const area2 = areas.filter(isObject).find((item) => String(item.area_id || item.id || "") === rawId);
       return String(area2?.name || rawId).trim();
     }
-    const area = areas?.[rawId];
+    const area = isObject(areas) && isObject(areas[rawId]) ? areas[rawId] : null;
     return String(area?.name || rawId).trim();
   }
   function entityRegistryEntry(hass, entityId) {
-    return hass?.entities?.[entityId] || hass?.entityRegistry?.[entityId] || hass?.entity_registry?.[entityId] || null;
+    for (const registry of [hass?.entities, hass?.entityRegistry, hass?.entity_registry]) {
+      const entry = isObject(registry) ? registry[entityId] : void 0;
+      if (isObject(entry)) return entry;
+    }
+    return null;
   }
   function deviceRegistryEntry(hass, deviceId) {
     const rawId = String(deviceId || "").trim();
@@ -723,9 +801,9 @@
     }
     const devices = hass?.devices;
     if (Array.isArray(devices)) {
-      return devices.find((item) => String(item?.id || item?.device_id || "") === rawId) || null;
+      return devices.filter(isObject).find((item) => String(item.id || item.device_id || "") === rawId) || null;
     }
-    return devices?.[rawId] || null;
+    return isObject(devices) && isObject(devices[rawId]) ? devices[rawId] : null;
   }
   function entityAreaName(hass, entityId) {
     const state = hass?.states?.[entityId];
@@ -742,7 +820,7 @@
     }
     const searchable = normalizeMatchText(`${entityId} ${friendlyName(hass, entityId)}`);
     const areas = hass?.areas;
-    const areaList = Array.isArray(areas) ? areas : Object.values(areas || {});
+    const areaList = (Array.isArray(areas) ? areas : isObject(areas) ? Object.values(areas) : []).filter(isObject);
     const matched = areaList.find((area) => {
       const name = normalizeMatchText(area?.name || area?.area_id || area?.id || "");
       return name && searchable.includes(name);
@@ -791,7 +869,7 @@
     const entities = /* @__PURE__ */ new Set();
     for (const match of String(template || "").matchAll(NOTIFICATION_TEMPLATE_TOKEN_PATTERN)) {
       const entityMatch = String(match[1] || "").trim().match(NOTIFICATION_TEMPLATE_ENTITY_PATTERN);
-      if (entityMatch) {
+      if (entityMatch?.[1]) {
         entities.add(entityMatch[1]);
       }
     }
@@ -803,6 +881,7 @@
       return void 0;
     }
     const [, entityId, attribute] = match;
+    if (!entityId) return "";
     const stateObj = hass?.states?.[entityId];
     if (!stateObj) {
       return "";
@@ -822,7 +901,7 @@
     }
     const rawValue = stateObj.state;
     const unit = stateObj.attributes?.unit_of_measurement || "";
-    return Number.isFinite(Number(rawValue)) ? notificationTemplateMeasurement(rawValue, unit) : rawValue;
+    return parseFiniteNumericValue(rawValue) !== null ? notificationTemplateMeasurement(rawValue, unit) : rawValue;
   }
   function formatNotificationTemplate(template, hass, values = {}) {
     return String(template || "").replace(NOTIFICATION_TEMPLATE_TOKEN_PATTERN, (_match, rawKey) => {
@@ -833,13 +912,14 @@
       return stringifyNotificationTemplateValue(entityNotificationTemplateValue(hass, key));
     });
   }
-  function customNotificationTemplateValues(hass, item = {}, fanEntityId = "") {
-    const entityId = String(item?.entity || "").trim();
+  function customNotificationTemplateValues(hass, rawItem = {}, fanEntityId = "") {
+    const item = isObject(rawItem) ? rawItem : {};
+    const entityId = String(item.entity || "").trim();
     const stateObj = hass?.states?.[entityId];
-    const rawValue = stateValue(stateObj, item?.attribute);
+    const rawValue = stateValue(stateObj, String(item.attribute || ""));
     const unit = stateObj?.attributes?.unit_of_measurement || "";
-    const value = Number.isFinite(Number(rawValue)) ? notificationTemplateMeasurement(rawValue, unit) : stringifyNotificationTemplateValue(rawValue);
-    const threshold = Number.isFinite(Number(item?.value)) ? notificationTemplateMeasurement(item.value, unit) : String(item?.value || "");
+    const value = parseFiniteNumericValue(rawValue) !== null ? notificationTemplateMeasurement(rawValue, unit) : stringifyNotificationTemplateValue(rawValue);
+    const threshold = parseFiniteNumericValue(item?.value) !== null ? notificationTemplateMeasurement(item.value, unit) : String(item?.value || "");
     const changedAt = new Date(stateObj?.last_changed || stateObj?.last_updated || "");
     return {
       ...stateObj?.attributes || {},
@@ -854,8 +934,7 @@
   }
   function numericState(stateObj, attribute = "") {
     const raw = stateValue(stateObj, attribute);
-    const number = Number(raw);
-    return Number.isFinite(number) ? number : null;
+    return parseFiniteNumericValue(raw);
   }
   function stateIsOn(stateObj) {
     const state = String(stateObj?.state || "").toLowerCase();
@@ -874,8 +953,8 @@
     return Number.isFinite(changed) ? (Date.now() - changed) / 6e4 : 0;
   }
   function formatNumber(value, unit = "") {
-    const number = Number(value);
-    if (!Number.isFinite(number)) {
+    const number = parseFiniteNumericValue(value);
+    if (number === null) {
       return "";
     }
     const formatted = new Intl.NumberFormat(void 0, { maximumFractionDigits: 1 }).format(number);
@@ -887,7 +966,12 @@
     }
     if (typeof value === "string") {
       const date = new Date(value.length <= 10 ? `${value}T00:00:00` : value);
-      return Number.isNaN(date.getTime()) ? null : date;
+      if (Number.isNaN(date.getTime())) return null;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        const [year, month, day] = value.split("-").map(Number);
+        if (date.getFullYear() !== year || date.getMonth() + 1 !== month || date.getDate() !== day) return null;
+      }
+      return date;
     }
     if (isObject(value)) {
       return calendarEventDate(value.dateTime || value.date || value.datetime);
@@ -908,42 +992,48 @@
   }
   function normalizeCalendarFetchResult(raw) {
     if (Array.isArray(raw)) {
-      return raw;
+      return raw.filter(isObject);
     }
-    if (Array.isArray(raw?.events)) {
-      return raw.events;
+    if (!isObject(raw)) return [];
+    if (Array.isArray(raw.events)) {
+      return raw.events.filter(isObject);
     }
     if (Array.isArray(raw?.calendar_events)) {
-      return raw.calendar_events;
+      return raw.calendar_events.filter(isObject);
     }
     return [];
   }
   function normalizeWeatherForecastResult(raw, entityId) {
     if (Array.isArray(raw)) {
-      return raw;
+      return raw.filter(isObject);
     }
-    if (Array.isArray(raw?.forecast)) {
-      return raw.forecast;
+    if (!isObject(raw)) return [];
+    if (Array.isArray(raw.forecast)) {
+      return raw.forecast.filter(isObject);
     }
-    if (Array.isArray(raw?.[entityId]?.forecast)) {
-      return raw[entityId].forecast;
+    const nested = raw[entityId];
+    if (isObject(nested) && Array.isArray(nested.forecast)) {
+      return nested.forecast.filter(isObject);
     }
     return [];
   }
-  function forecastDate(value) {
+  function forecastDate(raw) {
+    const value = isObject(raw) ? raw : {};
     return calendarEventDate(value?.datetime || value?.dateTime || value?.date || value?.time || value?.start);
   }
-  function forecastNumber(value, fields) {
+  function forecastNumber(rawValue, fields) {
+    const value = isObject(rawValue) ? rawValue : {};
     for (const field of fields) {
       const raw = value?.[field];
-      const number = Number(raw);
-      if (Number.isFinite(number)) {
+      const number = parseFiniteNumericValue(raw);
+      if (number !== null) {
         return number;
       }
     }
     return null;
   }
-  function forecastLooksRainy(row) {
+  function forecastLooksRainy(raw) {
+    const row = isObject(raw) ? raw : {};
     const condition = normalizeMatchText(row?.condition || row?.state || row?.weather || "");
     if (condition.includes("rain") || condition.includes("lluv") || condition.includes("pouring") || condition.includes("storm")) {
       return true;
@@ -960,7 +1050,8 @@
     }
     return (hash >>> 0).toString(36);
   }
-  function resolveBackgroundMobileLanguage(config, hass = null) {
+  function resolveBackgroundMobileLanguage(rawConfig, hass = null) {
+    const config = isObject(rawConfig) ? rawConfig : {};
     const configured = String(config?.language || "auto").trim();
     const translated = typeof window !== "undefined" ? window.NodaliaI18n?.resolveLanguage?.(hass, configured) : "";
     const candidates = [
@@ -1152,16 +1243,19 @@
           available: true,
           synced: true,
           signature,
-          dismissed: Array.isArray(current2?.dismissed) ? current2.dismissed : []
+          dismissed: isObject(current2) && Array.isArray(current2.dismissed) ? current2.dismissed : []
         };
       }
       const current = await backend.getNotificationProfile(hass, profileId);
-      const active = current?.profile?.enabled === true && current?.profile?.notify?.enabled === true;
+      const currentRecord = isObject(current) ? current : {};
+      const activeProfile = isObject(currentRecord.profile) ? currentRecord.profile : {};
+      const notify = isObject(activeProfile.notify) ? activeProfile.notify : {};
+      const active = activeProfile.enabled === true && notify.enabled === true;
       return {
         available: true,
         synced: active,
         signature: active ? `active:${profileId}` : "",
-        dismissed: Array.isArray(current?.dismissed) ? current.dismissed : []
+        dismissed: isObject(current) && Array.isArray(current.dismissed) ? current.dismissed : []
       };
     } catch (error) {
       if (typeof console !== "undefined" && typeof console.warn === "function") {
@@ -1198,6 +1292,12 @@
       }
       return false;
     }
+  }
+  function pushExternalAlerts(target, alerts = []) {
+    if ((target === null || typeof target !== "object") && typeof target !== "function") return false;
+    if (!("_ingestRuntimeExternalAlerts" in target) || typeof target._ingestRuntimeExternalAlerts !== "function") return false;
+    target._ingestRuntimeExternalAlerts(alerts);
+    return true;
   }
 
   // src/cards/notifications/notifications-card.ts
@@ -1899,11 +1999,7 @@
         };
       }
       static pushExternalAlerts(target, alerts = []) {
-        if (!target || typeof target._ingestRuntimeExternalAlerts !== "function") {
-          return false;
-        }
-        target._ingestRuntimeExternalAlerts(alerts);
-        return true;
+        return pushExternalAlerts(target, alerts);
       }
       _ingestRuntimeExternalAlerts(alerts = []) {
         this._runtimeExternalAlerts = normalizeExternalAlerts(alerts);
@@ -4492,7 +4588,7 @@
           if (value === "" || value === void 0 || value === null) {
             deleteByPath(this._config.smart_entity_overrides[overrideIndex], relativePath);
           } else {
-            setByPath(this._config.smart_entity_overrides[overrideIndex], relativePath, value);
+            setByPath2(this._config.smart_entity_overrides[overrideIndex], relativePath, value);
           }
           return;
         }
@@ -4500,7 +4596,7 @@
           deleteByPath(this._config, path);
           return;
         }
-        setByPath(this._config, path, value);
+        setByPath2(this._config, path, value);
       }
       _setEntityListItem(field, index, value) {
         const key = String(field || "");
@@ -4525,7 +4621,7 @@
         }
         const current = normalizeEntityList(getByPath(this._config, key), this._entityDomainsForListField(key));
         current.push("");
-        setByPath(this._config, key, current);
+        setByPath2(this._config, key, current);
         this._emitConfig();
       }
       _removeEntityListItem(field, index) {
@@ -5835,7 +5931,7 @@
     BACKGROUND_MOBILE_MAX_CHUNKS,
     resolveSmartEntityMobilePolicy,
     isExplicitSmartEntityMobile,
-    pushExternalAlerts: (...args) => loadNodaliaNotificationsCard().pushExternalAlerts(...args)
+    pushExternalAlerts
   };
   var publicApi = {
     CARD_TAG,

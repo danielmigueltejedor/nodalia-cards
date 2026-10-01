@@ -37,7 +37,6 @@
   "src/cards/news/news-editor.ts",
   "src/cards/notifications/notifications-card.ts",
   "src/cards/notifications/notifications-editor.ts",
-  "src/cards/notifications/notifications-helpers.ts",
   "src/cards/person/person-card.ts",
   "src/cards/person/person-editor.ts",
   "src/cards/power-flow/power-flow-card.ts",

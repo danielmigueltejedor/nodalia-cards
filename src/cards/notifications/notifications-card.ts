@@ -59,6 +59,7 @@ import {
   notificationHash,
   numericState,
   parseServiceData,
+  pushExternalAlerts,
   referencedNotificationTemplateEntities,
   sanitizeCssRuntimeValue,
   shouldDarkenNotificationIconGlyph,
@@ -847,11 +848,7 @@ class NodaliaNotificationsCard extends HTMLElement {
   }
 
   static pushExternalAlerts(target, alerts = []) {
-    if (!target || typeof target._ingestRuntimeExternalAlerts !== "function") {
-      return false;
-    }
-    target._ingestRuntimeExternalAlerts(alerts);
-    return true;
+    return pushExternalAlerts(target, alerts);
   }
 
   _ingestRuntimeExternalAlerts(alerts = []) {

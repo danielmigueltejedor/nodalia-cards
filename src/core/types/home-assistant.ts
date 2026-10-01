@@ -28,6 +28,7 @@ export interface HassUser {
 }
 
 export interface HassConfig {
+  language?: string;
   unit_system?: {
     temperature?: string;
   };
@@ -36,6 +37,11 @@ export interface HassConfig {
 export interface HomeAssistant {
   formatEntityState?: (state: HassEntity) => unknown;
   states: Record<string, HassEntity | undefined>;
+  areas?: unknown;
+  devices?: unknown;
+  entities?: unknown;
+  entityRegistry?: unknown;
+  entity_registry?: unknown;
   locale?: HassLocale;
   language?: string;
   selectedLanguage?: string;
