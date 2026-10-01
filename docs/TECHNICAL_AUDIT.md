@@ -959,3 +959,33 @@ read a setter-only HA property; correcting the fixture resolved all three failur
 One older source assertion now checks the new service wrapper with the same
 explicit-target condition. Remaining unchecked modules: 39. Hold 3.0.0-alpha.1
 until the full migration, including shared utility/i18n runtime sources.
+
+## Person view/editor findings — 2026-10-01
+
+The Person view/editor suppress checking across photo preloads, location/action
+logic, native/HA pickers and nested settings. Image loads have no deadline or
+cancellation, ready/failed caches grow indefinitely, cached zones can survive
+a rename that no longer matches the current location, and rejected service
+calls are unhandled. Check the actual lifecycle/HA/DOM/action/config contracts,
+preserve root YAML extensions and use guarded native/custom control payloads.
+
+Person view/editor now pass strict checking and typed lint. Pending photo loads
+are cancelled on disconnect/entity changes and have a four-second deadline;
+completed/failed caches each retain at most 64 URLs. Stale callbacks do not
+replace newer photos, cancelled loads can retry on remount, and renamed zones
+are re-resolved. Fallback animation timers and consumed/pending taps are owned
+and released. Explicit service targets and false/zero object data remain intact;
+synchronous/rejected failures are handled. Malformed nested editor settings and
+translation packs fall back safely; unavailable selections, focus, actions and
+translucent styles are preserved. Ten verified unused imports were removed.
+
+1,600 valid card markup/sizing outputs and 1,400 valid editor outputs match main.
+All 740 unit tests and eighteen targeted browser cases pass. An initial browser
+run exposed that lazy registration uses `_nodaliaConstruct` rather than class
+field initializers; the new ownership maps now initialize in that real entry
+point. A later photo fixture used a whitespace-only URL change that the card
+correctly trims; using a genuinely new URL verifies cancellation and retry.
+The existing source assertion now checks the nullable finite grid parser and
+the same compact threshold. Full local browser suite: 359 passed, one existing
+platform skip. Remaining unchecked modules: 37. Hold 3.0.0-alpha.1 until full migration, including shared
+handwritten utility/i18n runtime sources.

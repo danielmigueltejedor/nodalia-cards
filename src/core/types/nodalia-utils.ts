@@ -7,6 +7,8 @@ import type { HomeAssistant } from "./home-assistant";
  */
 export interface HostPointerHoldBinding { (): void; reconnect?: () => void; }
 export interface NodaliaUtilsApi {
+  cancelCardZoneTap?: (host: HTMLElement) => void;
+  scheduleCardZoneTap?: (host: HTMLElement, options: { zone?: string; doubleTapMs?: number; onSingle: () => void; onDouble?: () => void }) => void;
   renderEditorCollapsibleSectionHeaderHtml: (options: {
     escapeHtml: (value: unknown) => string; editorLabel: (key: string) => string;
     expanded: boolean; toggleId?: string; titleKey?: string; hintKey?: string;
