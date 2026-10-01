@@ -160,8 +160,11 @@
       }, raw.tap_action ?? config.tap_action, "auto");
     }
     const serializeActionObject = (value) => isObject(value) ? JSON.stringify(value) : String(value ?? "").trim();
-    return {
-      ...config,
+    const fields = {
+      entity: typeof config.entity === "string" ? config.entity : "",
+      alarm_code_entity: typeof config.alarm_code_entity === "string" ? config.alarm_code_entity : "",
+      state_attribute: typeof config.state_attribute === "string" ? config.state_attribute : "",
+      security: isObject(config.security) ? config.security : {},
       styles,
       tap_action: String(config.tap_action ?? "auto").trim() || "auto",
       tap_service: String(config.tap_service ?? "").trim(),
@@ -170,6 +173,29 @@
       tap_url: String(config.tap_url ?? "").trim(),
       tap_new_tab: config.tap_new_tab === true
     };
+    const normalized = { ...config, ...fields };
+    return normalized;
+  }
+
+  // src/shared/numeric-values.ts
+  function parseFiniteNumericValue(value) {
+    if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
+  // src/shared/home-assistant-services.ts
+  function isServiceDataObject(value) {
+    return value !== null && typeof value === "object" && !Array.isArray(value);
+  }
+  function parseServiceData(value) {
+    if (typeof value !== "string" || !value) return {};
+    try {
+      const parsed = JSON.parse(value);
+      return isServiceDataObject(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
   }
 
   // src/shared/editor-entity-helpers.ts
@@ -546,7 +572,8 @@
         this._layout = "inline";
         this._alarmMenuOpen = false;
         this._alarmCodeInput = "";
-        this._ignoreNextPrimaryClickUntil = 0;
+        this._fallbackLayoutTimers = /* @__PURE__ */ new Set();
+        this._layoutFrame = 0;
         this._lastAlarmPanelRenderedOpen = null;
         this._lastRenderSignature = "";
         this._resizeObserver = new ResizeObserver((entries) => {
@@ -573,8 +600,8 @@
         });
         this._onShadowClick = this._onShadowClick.bind(this);
         this._onShadowInput = this._onShadowInput.bind(this);
-        this.shadowRoot.addEventListener("click", this._onShadowClick);
-        this.shadowRoot.addEventListener("input", this._onShadowInput);
+        this.shadowRoot?.addEventListener("click", this._onShadowClick);
+        this.shadowRoot?.addEventListener("input", this._onShadowInput);
       }
       connectedCallback() {
         this._resizeObserver?.observe(this);
@@ -586,9 +613,24 @@
         this._alarmMenuOpen = false;
         this._applyHostGridSpan(false);
         window.NodaliaUtils?.clearDeferTimers?.(this);
+        this._fallbackLayoutTimers.forEach((timer) => window.clearTimeout(timer));
+        this._fallbackLayoutTimers.clear();
+        if (this._layoutFrame) cancelAnimationFrame(this._layoutFrame);
+        this._layoutFrame = 0;
+        this._alarmCodeInput = "";
+        this._lastAlarmPanelRenderedOpen = null;
       }
       setConfig(config) {
-        this._config = normalizeConfig(config || {});
+        const nextConfig = normalizeConfig(config || {});
+        if (this._config?.entity !== nextConfig.entity) {
+          this._applyHostGridSpan(false);
+          this._alarmMenuOpen = false;
+          this._alarmCodeInput = "";
+        }
+        if (this._layoutFrame) cancelAnimationFrame(this._layoutFrame);
+        this._layoutFrame = 0;
+        this._lastAlarmPanelRenderedOpen = null;
+        this._config = nextConfig;
         window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
         this._layout = this._getResolvedLayout(Math.round(this._cardWidth || this.clientWidth || 0));
         this._lastRenderSignature = "";
@@ -633,6 +675,8 @@
           attrs.friendly_name || "",
           attrs.icon || "",
           attrs.device_class || "",
+          this._config?.state_attribute ? attrs[this._config.state_attribute] : "",
+          JSON.stringify([attrs.rgb_color, attrs.color_temp_kelvin, attrs.color_temp, attrs.supported_features, attrs.code_format, attrs.next_state, attrs.post_pending_state, attrs.post_delay_state, attrs.arm_mode, attrs.arming_mode]),
           attrs.unit_of_measurement || attrs.native_unit_of_measurement || "",
           helperEntityId,
           helperState?.state || "",
@@ -654,12 +698,12 @@
         return values.join("::");
       }
       _getConfiguredGridColumns() {
-        const numericColumns = Number(this._config?.grid_options?.columns);
-        return Number.isFinite(numericColumns) ? numericColumns : null;
+        const options = this._config?.grid_options;
+        return parseFiniteNumericValue(isObject(options) ? options.columns : void 0);
       }
       _getConfiguredGridRows() {
-        const numericRows = Number(this._config?.grid_options?.rows);
-        return Number.isFinite(numericRows) ? numericRows : null;
+        const options = this._config?.grid_options;
+        return parseFiniteNumericValue(isObject(options) ? options.rows : void 0);
       }
       _getResolvedLayout(width) {
         const mode = this._config?.layout_mode || "auto";
@@ -688,7 +732,7 @@
         return "inline";
       }
       _getState() {
-        return this._hass?.states?.[this._config?.entity] || null;
+        return this._hass?.states?.[this._config?.entity || ""] || null;
       }
       _getDomain(entityId = this._config?.entity) {
         return String(entityId || "").split(".")[0] || "";
@@ -740,12 +784,18 @@
         const domain = this._getDomain(state?.entity_id);
         return domain === "cover" || domain === "lock";
       }
+      _invokeService(domain, service, data, target = null) {
+        const failure = (error) => console.warn("Nodalia Fav: service call failed", `${domain}.${service}`, error);
+        try {
+          const invoke = window.NodaliaUtils.invokeHomeAssistantService;
+          const result = invoke ? invoke(this, this._hass, domain, service, data, target) : target ? this._hass?.callService?.(domain, service, data, target) : this._hass?.callService?.(domain, service, data);
+          void Promise.resolve(result).catch(failure);
+        } catch (error) {
+          failure(error);
+        }
+      }
       _invokeEntityService(domain, service, entityId, serviceData = {}) {
-        const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils) || ((host, hass, svcDomain, svc, data) => Promise.resolve(hass?.callService?.(svcDomain, svc, data)));
-        return invoke(this, this._hass, domain, service, {
-          entity_id: entityId,
-          ...serviceData
-        });
+        this._invokeService(domain, service, { entity_id: entityId, ...serviceData });
       }
       _toggleCoverEntity(state, entityId) {
         if (coverEntityIsOpen(state)) {
@@ -779,7 +829,7 @@
         }
       }
       _toggleEntity(entityId = this._config?.entity) {
-        const state = this._hass?.states?.[entityId];
+        const state = this._hass?.states?.[entityId || ""];
         if (!this._hass || !entityId || !state) {
           return;
         }
@@ -831,11 +881,12 @@
       }
       _getLightAccentColor(state) {
         const rgbColor = Array.isArray(state?.attributes?.rgb_color) ? state.attributes.rgb_color : null;
-        if (this._isActiveState(state) && rgbColor?.length === 3) {
-          return `rgb(${rgbColor[0]}, ${rgbColor[1]}, ${rgbColor[2]})`;
+        const channels = rgbColor?.map(parseFiniteNumericValue);
+        if (this._isActiveState(state) && channels?.length === 3 && channels.every((channel) => channel !== null && channel >= 0 && channel <= 255)) {
+          return `rgb(${channels.join(", ")})`;
         }
         if (this._isActiveState(state)) {
-          const kelvin = typeof state?.attributes?.color_temp_kelvin === "number" ? Math.round(state.attributes.color_temp_kelvin) : typeof state?.attributes?.color_temp === "number" ? miredToKelvin(state.attributes.color_temp) : 0;
+          const kelvin = typeof state?.attributes?.color_temp_kelvin === "number" && Number.isFinite(state.attributes.color_temp_kelvin) ? Math.round(state.attributes.color_temp_kelvin) : typeof state?.attributes?.color_temp === "number" ? miredToKelvin(state.attributes.color_temp) : 0;
           if (kelvin >= 5200) {
             return "#8fd3ff";
           }
@@ -912,7 +963,7 @@
           return `${rawState} ${unit}`;
         }
         const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-        const langCfg = this._config?.language ?? "auto";
+        const langCfg = String(this._config?.language || "auto");
         const lang = window.NodaliaI18n?.resolveLanguage?.(hass, langCfg) ?? "en";
         if (window.NodaliaI18n?.translateFavState) {
           const translated = window.NodaliaI18n.translateFavState(lang, key);
@@ -938,11 +989,13 @@
         }
         const key = normalizeTextKey(attributeName);
         if (typeof value === "boolean") {
-          const lang = window.NodaliaI18n?.resolveLanguage?.(this._hass, this._config?.language ?? "auto") || "en";
+          const lang = window.NodaliaI18n?.resolveLanguage?.(this._hass, String(this._config?.language || "auto")) || "en";
           const pack = window.NodaliaI18n?.strings?.(lang) || window.NodaliaI18n?.strings?.("en") || {};
-          return value ? pack.boolean?.yes || "Yes" : pack.boolean?.no || "No";
+          const copy = isObject(pack.boolean) ? pack.boolean : {};
+          return String(value ? copy.yes || "Yes" : copy.no || "No");
         }
         if (typeof value === "number") {
+          if (!Number.isFinite(value)) return null;
           if (["battery", "battery_level", "humidity", "current_humidity"].includes(key)) {
             return `${Math.round(value)}%`;
           }
@@ -1051,24 +1104,15 @@
       }
       _getAlarmActionLabel(modeKey) {
         const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-        const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-        const actions = window.NodaliaI18n?.strings?.(lang)?.alarmPanel?.actions;
-        const map = {
-          disarm: "disarm",
-          home: "arm_home",
-          away: "arm_away",
-          night: "arm_night",
-          vacation: "arm_vacation",
-          custom_bypass: "arm_custom_bypass"
-        };
+        const lang = window.NodaliaI18n?.resolveLanguage?.(hass, String(this._config?.language || "auto")) ?? "en";
+        const alarm = window.NodaliaI18n?.strings?.(lang)?.alarmPanel;
+        const actions = isObject(alarm) && isObject(alarm.actions) ? alarm.actions : {};
+        const map = { disarm: "disarm", home: "arm_home", away: "arm_away", night: "arm_night", vacation: "arm_vacation", custom_bypass: "arm_custom_bypass" };
         const actionKey = map[modeKey];
-        if (actionKey && actions?.[actionKey]) {
-          return actions[actionKey];
-        }
-        const enActions = window.NodaliaI18n?.strings?.("en")?.alarmPanel?.actions || {};
-        if (actionKey && enActions?.[actionKey]) {
-          return enActions[actionKey];
-        }
+        if (actionKey && actions[actionKey]) return String(actions[actionKey]);
+        const englishAlarm = window.NodaliaI18n?.strings?.("en")?.alarmPanel;
+        const enActions = isObject(englishAlarm) && isObject(englishAlarm.actions) ? englishAlarm.actions : {};
+        if (actionKey && enActions[actionKey]) return String(enActions[actionKey]);
         return modeKey;
       }
       _matchesAlarmMode(state, ...keys) {
@@ -1194,9 +1238,7 @@
         if (!this._hass || !this._config?.entity || !service || !state) {
           return;
         }
-        const payload = {
-          entity_id: this._config.entity
-        };
+        const payload = { entity_id: this._config.entity };
         const requiresManualPin = this._shouldShowAlarmCodeInput(state);
         const manualPin = String(this._alarmCodeInput || "").trim();
         if (requiresManualPin && !manualPin) {
@@ -1212,8 +1254,7 @@
           payload.code = code;
         }
         this._triggerHaptic();
-        const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils) || ((host, hass, domain, service2, data) => Promise.resolve(hass?.callService?.(domain, service2, data)));
-        invoke(this, this._hass, "alarm_control_panel", service, payload);
+        this._invokeService("alarm_control_panel", service, payload);
         this._alarmMenuOpen = false;
         this._applyHostGridSpan(false);
         this._render();
@@ -1235,12 +1276,7 @@
         if (isObject(rawValue)) {
           return deepClone(rawValue);
         }
-        try {
-          const parsed = JSON.parse(rawValue);
-          return isObject(parsed) ? parsed : {};
-        } catch (_error) {
-          return {};
-        }
+        return parseServiceData(rawValue);
       }
       _isServiceAllowed(serviceValue) {
         const security = this._config?.security || {};
@@ -1257,7 +1293,7 @@
         if (!domains.length && !services.length) {
           return normalizedService === "homeassistant.toggle" || normalizedService === "homeassistant.turn_on" || normalizedService === "homeassistant.turn_off";
         }
-        return services.includes(normalizedService) || domains.includes(domain);
+        return services.includes(normalizedService) || domains.includes(domain || "");
       }
       _callConfiguredService(serviceValue, entityId = this._config?.entity, rawData = "", rawTarget = "") {
         if (!this._hass || !serviceValue) {
@@ -1277,10 +1313,7 @@
         if (entityId && payload.entity_id === void 0 && !hasExplicitTarget) {
           payload.entity_id = entityId;
         }
-        const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils) || ((host, hass, svcDomain, svc, data, svcTarget) => Promise.resolve(
-          svcTarget != null ? hass?.callService?.(svcDomain, svc, data, svcTarget) : hass?.callService?.(svcDomain, svc, data)
-        ));
-        invoke(this, this._hass, domain, service, payload, hasExplicitTarget ? target : null);
+        this._invokeService(domain, service, payload, hasExplicitTarget ? target : null);
       }
       _openConfiguredUrl(urlValue = this._config?.tap_url, newTab = this._config?.tap_new_tab === true) {
         const url = window.NodaliaUtils?.sanitizeActionUrl(urlValue, { allowRelative: true }) || "";
@@ -1314,7 +1347,11 @@
         if (typeof schedule === "function") {
           schedule(this, done, safeDelay);
         } else {
-          window.setTimeout(done, safeDelay);
+          const timer = window.setTimeout(() => {
+            this._fallbackLayoutTimers.delete(timer);
+            done();
+          }, safeDelay);
+          this._fallbackLayoutTimers.add(timer);
         }
       }
       _getAlarmGridSpan() {
@@ -1339,7 +1376,7 @@
         if (alarmInput) {
           return null;
         }
-        const alarmButton = path.find((node) => node instanceof HTMLButtonElement && node.dataset?.favAlarmAction);
+        const alarmButton = path.find((node) => node instanceof HTMLButtonElement && Boolean(node.dataset.favAlarmAction));
         if (alarmButton) {
           return null;
         }
@@ -1402,34 +1439,30 @@
         }
       }
       _triggerHaptic(styleOverride = null) {
-        const haptics = this._config?.haptics || {};
+        const rawHaptics = this._config?.haptics;
+        const haptics = isObject(rawHaptics) ? rawHaptics : {};
         if (haptics.enabled !== true) {
           return;
         }
-        const style = styleOverride || haptics.style || "medium";
+        const style = styleOverride || String(haptics.style || "medium");
         fireEvent(this, "haptic", style, {
           bubbles: true,
           cancelable: false,
           composed: true
         });
         if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
-          navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
+          try {
+            navigator.vibrate(Object.entries(HAPTIC_PATTERNS).find(([key]) => key === style)?.[1] || HAPTIC_PATTERNS.selection);
+          } catch {
+          }
         }
       }
       _onShadowClick(event) {
-        if (Date.now() < this._ignoreNextPrimaryClickUntil) {
-          const actionTarget = this._getPrimaryActionTarget(event);
-          if (actionTarget) {
-            event.preventDefault();
-            event.stopPropagation();
-            return;
-          }
-        }
         const alarmInput = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.favAlarmIgnore === "true");
         if (alarmInput) {
           return;
         }
-        const alarmButton = event.composedPath().find((node) => node instanceof HTMLButtonElement && node.dataset?.favAlarmAction);
+        const alarmButton = event.composedPath().find((node) => node instanceof HTMLButtonElement && Boolean(node.dataset.favAlarmAction));
         if (alarmButton) {
           event.preventDefault();
           event.stopPropagation();
@@ -1439,7 +1472,7 @@
         this._activatePrimaryFromEvent(event);
       }
       _onShadowInput(event) {
-        const input = event.composedPath().find((node) => node instanceof HTMLInputElement && node.dataset?.favAlarmField === "alarm-code");
+        const input = event.composedPath().find((node) => node instanceof HTMLInputElement && node.dataset.favAlarmField === "alarm-code");
         if (!input) {
           return;
         }
@@ -1457,17 +1490,21 @@
       }
       _favCardUi(key, fallback = "") {
         const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-        const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-        const pack = window.NodaliaI18n?.strings?.(lang)?.favCard;
-        const enPack = window.NodaliaI18n?.strings?.("en")?.favCard;
+        const lang = window.NodaliaI18n?.resolveLanguage?.(hass, String(this._config?.language || "auto")) ?? "en";
+        const rawPack = window.NodaliaI18n?.strings?.(lang)?.favCard;
+        const rawEnPack = window.NodaliaI18n?.strings?.("en")?.favCard;
+        const pack = isObject(rawPack) ? rawPack : {};
+        const enPack = isObject(rawEnPack) ? rawEnPack : {};
         const raw = pack?.[key] ?? enPack?.[key];
         return String(raw != null && raw !== "" ? raw : fallback);
       }
       _commonAria(key, fallback = "") {
         const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-        const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-        const pack = window.NodaliaI18n?.strings?.(lang)?.common?.aria;
-        const enPack = window.NodaliaI18n?.strings?.("en")?.common?.aria;
+        const lang = window.NodaliaI18n?.resolveLanguage?.(hass, String(this._config?.language || "auto")) ?? "en";
+        const common = window.NodaliaI18n?.strings?.(lang)?.common;
+        const enCommon = window.NodaliaI18n?.strings?.("en")?.common;
+        const pack = isObject(common) && isObject(common.aria) ? common.aria : {};
+        const enPack = isObject(enCommon) && isObject(enCommon.aria) ? enCommon.aria : {};
         return String(pack?.[key] ?? enPack?.[key] ?? fallback);
       }
       _renderEmptyState() {
@@ -1502,7 +1539,7 @@
         if (!this.shadowRoot) {
           return;
         }
-        const config = this._config || {};
+        const config = this._config || normalizeConfig({});
         const entityGuard = window.NodaliaUtils?.renderLovelaceEntityGuardCardHtml?.(
           this._hass,
           config.entity,
@@ -1966,7 +2003,9 @@
     `;
         if (isAlarmPanel && this._lastAlarmPanelRenderedOpen !== showAlarmPanel) {
           this._lastAlarmPanelRenderedOpen = showAlarmPanel;
-          requestAnimationFrame(() => {
+          if (this._layoutFrame) cancelAnimationFrame(this._layoutFrame);
+          this._layoutFrame = requestAnimationFrame(() => {
+            this._layoutFrame = 0;
             if (!this.isConnected) {
               return;
             }
@@ -1983,6 +2022,16 @@
     }
     _lazyNodaliaFavCard = NodaliaFavCard;
     return NodaliaFavCard;
+  }
+
+  // src/shared/editor-controls.ts
+  function isNativeEditorInput(node) {
+    return node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement;
+  }
+  function editorControlValue(event, control) {
+    const detail = event instanceof CustomEvent ? event.detail : void 0;
+    if (detail && typeof detail === "object" && "value" in detail && typeof detail.value === "string") return detail.value;
+    return "value" in control ? control.value : void 0;
   }
 
   // src/cards/fav/fav-editor.ts
@@ -2072,11 +2121,11 @@
         this._watchEditorControlTag("ha-icon-picker");
       }
       _getEntityOptionsSignature(hass = this._hass) {
-        return window.NodaliaUtils.editorStatesSignature(hass, this._config?.language);
+        return window.NodaliaUtils.editorStatesSignature?.(hass, String(this._config?.language || "auto")) || "";
       }
       _getEntityOptions(field = "entity", domains = []) {
         const normalizedDomains = Array.isArray(domains) ? domains.map((domain) => String(domain || "").trim()).filter(Boolean) : [];
-        const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
+        const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, String(this._config?.language || "auto")) ?? "en";
         const options = Object.entries(this._hass?.states || {}).filter(([entityId]) => !normalizedDomains.length || normalizedDomains.some((domain) => entityId.startsWith(`${domain}.`))).map(([entityId, state]) => {
           const friendlyName = String(state?.attributes?.friendly_name || "").trim();
           return {
@@ -2108,7 +2157,7 @@
         this._render();
         this._restoreFocusState(focusState);
         fireEvent(this, "config-changed", {
-          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {})
+          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults?.(nextConfig, DEFAULT_CONFIG) ?? {})
         });
       }
       _setEditorConfig() {
@@ -2125,7 +2174,7 @@
         const valueType = input.dataset.valueType || "string";
         switch (valueType) {
           case "boolean":
-            return Boolean(input.checked);
+            return input instanceof HTMLInputElement && input.checked;
           case "color":
             return formatEditorColorFromHex(input.value, Number(input.dataset.alpha || 1));
           case "csv": {
@@ -2137,7 +2186,7 @@
         }
       }
       _onShadowInput(event) {
-        const input = event.composedPath().find((node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+        const input = event.composedPath().find(isNativeEditorInput);
         if (!input?.dataset?.field) {
           return;
         }
@@ -2163,12 +2212,12 @@
         }
       }
       _onShadowValueChanged(event) {
-        const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+        const control = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.field));
         if (!control?.dataset?.field) {
           return;
         }
         event.stopPropagation();
-        const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+        const nextValue = editorControlValue(event, control);
         if (typeof control.dataset?.value === "string") {
           control.dataset.value = String(nextValue || "");
         }
@@ -2182,7 +2231,7 @@
         this._emitConfig();
       }
       _onShadowClick(event) {
-        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
+        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.editorToggle));
         if (!toggleButton) {
           return;
         }
@@ -2203,7 +2252,7 @@
           return s;
         }
         const hass = this._hass ?? this.hass;
-        return window.NodaliaI18n.editorStr(hass, this._config?.language ?? "auto", s);
+        return window.NodaliaI18n.editorStr(hass, String(this._config?.language || "auto"), s);
       }
       _renderTextField(label, field, value, options = {}) {
         const tLabel = this._editorLabel(label);
@@ -2330,19 +2379,18 @@
         const field = host.dataset.field || "entity";
         const nextValue = host.dataset.value || "";
         const allowedDomains = String(host.dataset.domains || "").split(",").map((domain) => domain.trim()).filter(Boolean);
-        let control = null;
+        let control;
         if (customElements.get("ha-entity-picker")) {
           control = document.createElement("ha-entity-picker");
           if (allowedDomains.length) {
-            control.includeDomains = allowedDomains;
-            control.entityFilter = (stateObj) => allowedDomains.some((domain) => String(stateObj?.entity_id || "").startsWith(`${domain}.`));
+            Object.assign(control, { includeDomains: allowedDomains, entityFilter: (stateObj) => allowedDomains.some((domain) => String(stateObj?.entity_id || "").startsWith(`${domain}.`)) });
           }
-          control.allowCustomEntity = true;
+          Object.assign(control, { allowCustomEntity: true });
         } else if (customElements.get("ha-selector")) {
           control = document.createElement("ha-selector");
-          control.selector = {
+          Object.assign(control, { selector: {
             entity: allowedDomains.length === 1 ? { domain: allowedDomains[0] } : {}
-          };
+          } });
         } else {
           control = document.createElement("select");
           this._getEntityOptions(field, allowedDomains).forEach((option) => {
@@ -2373,7 +2421,7 @@
         const field = host.dataset.field || "icon";
         const nextValue = host.dataset.value || "";
         const placeholder = host.dataset.placeholder || "";
-        let control = null;
+        let control;
         if (customElements.get("ha-icon-picker")) {
           control = document.createElement("ha-icon-picker");
           if (placeholder) {
@@ -2381,13 +2429,12 @@
           }
         } else if (customElements.get("ha-selector")) {
           control = document.createElement("ha-selector");
-          control.selector = {
-            icon: {}
-          };
+          Object.assign(control, { selector: { icon: {} } });
         } else {
-          control = document.createElement("input");
-          control.type = "text";
-          control.placeholder = placeholder;
+          const input = document.createElement("input");
+          input.type = "text";
+          input.placeholder = placeholder;
+          control = input;
           control.addEventListener("input", this._onShadowInput);
           control.addEventListener("change", this._onShadowInput);
         }
@@ -2408,8 +2455,10 @@
         if (!this.shadowRoot) {
           return;
         }
-        const config = this._config || normalizeConfig({});
-        const hapticStyle = config.haptics?.style || "medium";
+        const config = this._config;
+        const haptics = isObject(config.haptics) ? config.haptics : {};
+        const security = isObject(config.security) ? config.security : {};
+        const hapticStyle = haptics.style || "medium";
         const phFavName = this._editorLabel("ed.fav.name_placeholder");
         this.shadowRoot.innerHTML = `
       <style>
@@ -2807,12 +2856,12 @@
             ${this._renderCheckboxField(
           "ed.entity.security_strict",
           "security.strict_service_actions",
-          config.security?.strict_service_actions !== false
+          security.strict_service_actions !== false
         )}
-            ${config.security?.strict_service_actions !== false ? this._renderTextField(
+            ${security.strict_service_actions !== false ? this._renderTextField(
           "ed.entity.allowed_services_csv",
           "security.allowed_services",
-          Array.isArray(config.security?.allowed_services) ? config.security.allowed_services.join(", ") : "",
+          Array.isArray(security.allowed_services) ? security.allowed_services.join(", ") : "",
           {
             placeholder: "browser_mod.javascript, light.turn_on",
             valueType: "csv",
@@ -2873,8 +2922,8 @@
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.person.haptics_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("ed.person.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.person.enable_haptics", "haptics.enabled", haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.person.fallback_vibrate", "haptics.fallback_vibrate", haptics.fallback_vibrate === true)}
             ${this._renderSelectField(
           "ed.vacuum.haptic_style",
           "haptics.style",

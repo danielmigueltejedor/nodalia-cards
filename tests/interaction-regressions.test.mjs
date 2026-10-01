@@ -2648,7 +2648,7 @@ test("fav card preserves Lovelace service target for configured tap actions", ()
   assert.match(source, /serviceTargetKey: "tap_service_target"/);
   assert.match(source, /tap_service_target/);
   assert.match(source, /hasExplicitTarget/);
-  assert.match(source, /invoke\(this, this\._hass, domain, service, payload, hasExplicitTarget \? target : null\)/);
+  assert.match(source, /this\._invokeService\(domain, service, payload, hasExplicitTarget \? target : null\)/);
 });
 
 test("entity card keeps built-in controls usable while gating configured services", () => {

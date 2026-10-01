@@ -910,3 +910,52 @@ action; after correcting the fixture, all six editor cases passed. Full local
 browser suite: 323 passed, one existing platform skip. Remaining
 unchecked modules: 41. Hold 3.0.0-alpha.1 until full migration, including shared
 handwritten utility/i18n runtime sources.
+
+## Fav editor findings — 2026-10-01
+
+The Fav visual editor suppresses checking for native/HA pickers, fallback entity
+options, alarm/actions and raw nested haptic/security groups. Check actual
+config/DOM/picker contracts, retain custom YAML extensions and focus, and guard
+malformed custom event and nested group payloads.
+
+Fav editor now passes strict checking and typed lint. Config preserves known
+normalized style/action fields and root YAML extensions. Checked native/custom
+picker payloads, entity option filtering, focus and field contracts preserve
+native/HA control fallbacks, alarm PIN/helper fields and information-only actions.
+Malformed haptic/security groups fall back safely. Four verified unused imports
+are removed, and shared sort/collapsible-header contracts match the runtime.
+
+1,400 valid editor HTML outputs (open/closed styles/actions, all layouts and
+entity modes) match main. All 740 unit tests and six targeted real-browser
+PIN/helper/action/missing-entity/focus cases pass. Full local browser suite:
+329 passed, one existing platform skip. Remaining unchecked modules:
+40. Hold 3.0.0-alpha.1 until full migration, including the shared handwritten
+utility/i18n runtime sources.
+
+## Fav view findings — 2026-10-01
+
+The Fav view still suppresses checking for responsive geometry, alarm modes/PIN,
+HA state, translations and service targets. Render signatures omit selected
+attribute values, light RGB/temperature and alarm feature/code fields. Fallback
+layout timers/frames lack ownership and raw service promises can reject. Check
+actual contracts, preserve targets/PIN semantics, clear abandoned work/PIN state,
+and distinguish absent grid sizing from zero.
+
+Fav view now passes strict checking and typed lint. Config projects known entity,
+attribute and security fields while preserving YAML extensions. Render signatures
+include selected attributes, light colour/temperature and alarm capabilities/PIN
+requirements. Numeric RGB channels cannot insert CSS/HTML, real zero channels are
+retained, and blank grid sizing remains absent. Service calls preserve explicit
+targets and catch synchronous/rejected failures. Layout timers/frames are owned;
+draft PINs survive style updates and clear on entity changes/disconnect. Switching
+to a missing entity also releases the expanded parent span. Ten verified unused
+imports and one never-written click suppression field were removed.
+
+1,540 valid view HTML/grid outputs and 1,400 valid editor outputs match main.
+All 740 unit tests pass; eighteen targeted browser cases passed before the final
+parent-span regression was added. Full local browser suite, including that
+regression: 341 passed, one existing platform skip. The service test initially
+read a setter-only HA property; correcting the fixture resolved all three failures.
+One older source assertion now checks the new service wrapper with the same
+explicit-target condition. Remaining unchecked modules: 39. Hold 3.0.0-alpha.1
+until the full migration, including shared utility/i18n runtime sources.
