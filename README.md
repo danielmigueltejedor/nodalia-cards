@@ -77,7 +77,7 @@ Every card is registered with the `custom:nodalia-…` prefix. The complete set 
 - `custom:nodalia-power-flow-card`
 - [`custom:nodalia-cover-card`](docs/cards/cover-card.md)
 - `custom:nodalia-climate-card`
-- `custom:nodalia-alarm-panel-card`
+- [`custom:nodalia-alarm-panel-card`](docs/cards/alarm-panel-card.md)
 - `custom:nodalia-lock-card`
 - `custom:nodalia-advance-vacuum-card`
 - `custom:nodalia-entity-card`

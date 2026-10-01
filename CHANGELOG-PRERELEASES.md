@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+- Check Alarm visual editor boundaries, restore custom translucent state tints, distinguish cleared feedback durations from zero and cancel abandoned deferred updates and toggle state.
+
 - Check Circular Gauge view boundaries, finish entrance animations during frequent updates, release abandoned animation work and keep blank responsive sizing distinct from zero.
 
 - Check Weather and Circular Gauge visual editors, guard malformed nested settings and HA/native events, preserve missing entities and focus, and retain forecast/unit options, automatic bounds, actual zeros and translucent styles.
