@@ -320,7 +320,41 @@
     if (config.hold_action === "navigate" && !config.hold_navigation_path && config.hold_url) {
       config.hold_navigation_path = config.hold_url;
     }
-    return { ...config, security, styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles) };
+    const fields = { entity: typeof config.entity === "string" ? config.entity : "", security, styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles) };
+    const normalized = { ...config, ...fields };
+    return normalized;
+  }
+
+  // src/shared/home-assistant-services.ts
+  function callHassService(hass, domain, service, data = {}, target = null) {
+    if (!hass?.callService) return;
+    const failure = (error) => console.warn("Nodalia Cards: service call failed", `${domain}.${service}`, error);
+    try {
+      void Promise.resolve(target !== null ? hass.callService(domain, service, data, target) : hass.callService(domain, service, data)).catch(failure);
+    } catch (error) {
+      failure(error);
+    }
+  }
+  function invokeHassService(host, hass, domain, service, data = {}, target = null) {
+    const utils2 = window.NodaliaUtils;
+    const invoke = utils2?.invokeHomeAssistantService;
+    if (!invoke) {
+      callHassService(hass, domain, service, data, target);
+      return;
+    }
+    const failure = (error) => console.warn("Nodalia Cards: service call failed", `${domain}.${service}`, error);
+    try {
+      void Promise.resolve(invoke.call(utils2, host, hass, domain, service, data, target)).catch(failure);
+    } catch (error) {
+      failure(error);
+    }
+  }
+
+  // src/shared/numeric-values.ts
+  function parseFiniteNumericValue(value) {
+    if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
   }
 
   // src/shared/editor-entity-helpers.ts
@@ -517,16 +551,13 @@
         this._config = normalizeConfig(STUB_CONFIG);
         this._hass = null;
         this._lastRenderSignature = "";
-        this._lastRenderedIsActive = null;
-        this._controlsTransition = null;
-        this._powerTransition = null;
-        this._animationCleanupTimer = 0;
         this._activeSliderDrag = null;
         this._skipNextSliderChange = null;
         this._dragWindowListenersAttached = false;
         this._pendingRenderAfterDrag = false;
         this._suppressNextCoverTap = false;
         this._cardWidth = 0;
+        this._fallbackAnimationTimers = /* @__PURE__ */ new Set();
         this._resizeObserver = typeof ResizeObserver === "function" ? new ResizeObserver((entries) => {
           const entry = entries[0];
           if (!entry) {
@@ -566,13 +597,13 @@
         this._onWindowTouchStartCapture = this._onWindowTouchStartCapture.bind(this);
         this._onWindowTouchMove = this._onWindowTouchMove.bind(this);
         this._onWindowTouchEnd = this._onWindowTouchEnd.bind(this);
-        this.shadowRoot.addEventListener("click", this._onShadowClick);
-        this.shadowRoot.addEventListener("input", this._onShadowInput);
-        this.shadowRoot.addEventListener("change", this._onShadowChange);
-        this.shadowRoot.addEventListener("pointerdown", this._onPointerDown);
-        this.shadowRoot.addEventListener("mousedown", this._onMouseDown);
-        if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
-          this.shadowRoot.addEventListener("touchstart", this._onTouchStart, { passive: false });
+        this.shadowRoot?.addEventListener("click", this._onShadowClick);
+        this.shadowRoot?.addEventListener("input", this._onShadowInput);
+        this.shadowRoot?.addEventListener("change", this._onShadowChange);
+        this.shadowRoot?.addEventListener("pointerdown", this._onPointerDown);
+        this.shadowRoot?.addEventListener("mousedown", this._onMouseDown);
+        if (!this._hasPointerEvents()) {
+          this.shadowRoot?.addEventListener("touchstart", this._onTouchStart, { passive: false });
         }
         this._detachHostHold = typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function" ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
           resolveZone: (event) => {
@@ -583,7 +614,7 @@
             if (window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
               return null;
             }
-            const actionButton = path.find((node) => node instanceof HTMLElement && node.dataset?.coverAction);
+            const actionButton = path.find((node) => node instanceof HTMLElement && Boolean(node.dataset.coverAction));
             const zone = actionButton?.dataset?.coverAction;
             return zone === "body" || zone === "icon" ? zone : null;
           },
@@ -611,18 +642,15 @@
       disconnectedCallback() {
         this._resizeObserver?.disconnect();
         this._detachHostHold?.();
-        if (this._activeSliderDrag) {
-          this._activeSliderDrag.dial?.classList?.remove("is-dragging");
-          this._activeSliderDrag = null;
-        }
-        this._detachWindowDragListeners();
-        if (this._animationCleanupTimer) {
-          window.clearTimeout(this._animationCleanupTimer);
-          this._animationCleanupTimer = 0;
-        }
+        this._cancelSliderDrag(false);
+        this._suppressNextCoverTap = false;
         window.NodaliaUtils?.clearDeferTimers?.(this);
+        this._fallbackAnimationTimers.forEach((timer) => window.clearTimeout(timer));
+        this._fallbackAnimationTimers.clear();
       }
       setConfig(config) {
+        this._cancelSliderDrag(false);
+        this._suppressNextCoverTap = false;
         this._config = normalizeConfig(config || {});
         window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
         this._coverControlsViewMode = "slider";
@@ -663,8 +691,9 @@
         };
       }
       _getConfiguredGridColumns() {
-        const numericColumns = Number(this._config?.grid_options?.columns);
-        return Number.isFinite(numericColumns) && numericColumns > 0 ? numericColumns : null;
+        const grid = this._config.grid_options;
+        const numericColumns = parseFiniteNumericValue(isObject(grid) ? grid.columns : void 0);
+        return numericColumns !== null && numericColumns > 0 ? numericColumns : null;
       }
       _shouldReserveCoverToggleLane(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
         const gridColumns = this._getConfiguredGridColumns();
@@ -674,7 +703,7 @@
         return width > 0 && width <= COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH;
       }
       _getState(hass = this._hass) {
-        return hass?.states?.[this._config?.entity] || null;
+        return hass?.states?.[this._config.entity] || null;
       }
       _getRenderSignature(hass = this._hass) {
         const state = this._getState(hass);
@@ -731,9 +760,11 @@
       }
       _coverCardUi(key, fallback = "") {
         const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-        const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-        const pack = window.NodaliaI18n?.strings?.(lang)?.coverCard;
-        const enPack = window.NodaliaI18n?.strings?.("en")?.coverCard;
+        const lang = window.NodaliaI18n?.resolveLanguage?.(hass, String(this._config.language || "auto")) ?? "en";
+        const local = window.NodaliaI18n?.strings?.(lang)?.coverCard;
+        const english = window.NodaliaI18n?.strings?.("en")?.coverCard;
+        const pack = isObject(local) ? local : {};
+        const enPack = isObject(english) ? english : {};
         const raw = pack?.[key] ?? enPack?.[key];
         return String(raw != null && raw !== "" ? raw : fallback);
       }
@@ -744,7 +775,7 @@
       _stateLabel(state = this._getState()) {
         const key = normalizeTextKey(state?.state);
         const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-        const lang = this._config?.language ?? "auto";
+        const lang = String(this._config.language || "auto");
         const translated = window.NodaliaI18n?.translateEntityStateChip?.(hass, lang, key);
         if (translated) {
           return translated;
@@ -762,7 +793,7 @@
         return this._isActive(state) ? styles.icon.on_color || DEFAULT_CONFIG.styles.icon.on_color : styles.icon.off_color || DEFAULT_CONFIG.styles.icon.off_color;
       }
       _getAnimationSettings() {
-        const animations = this._config?.animations || DEFAULT_CONFIG.animations;
+        const animations = isObject(this._config.animations) ? this._config.animations : DEFAULT_CONFIG.animations;
         return {
           enabled: animations.enabled !== false,
           iconAnimation: animations.icon_animation !== false,
@@ -795,12 +826,15 @@
     `;
       }
       _triggerHaptic(styleOverride = null) {
-        const haptics = this._config?.haptics || {};
+        const haptics = isObject(this._config.haptics) ? this._config.haptics : {};
         if (haptics.enabled !== true) return;
-        const style = styleOverride || haptics.style || "medium";
+        const style = styleOverride || String(haptics.style || "medium");
         fireEvent(this, "haptic", style);
         if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
-          navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
+          try {
+            navigator.vibrate(Object.entries(HAPTIC_PATTERNS).find(([key]) => key === style)?.[1] || HAPTIC_PATTERNS.selection);
+          } catch {
+          }
         }
       }
       _triggerButtonBounce(element) {
@@ -820,7 +854,11 @@
         if (typeof schedule === "function") {
           schedule(this, done, animations.buttonBounceDuration + 40);
         } else {
-          window.setTimeout(done, animations.buttonBounceDuration + 40);
+          const timer = window.setTimeout(() => {
+            this._fallbackAnimationTimers.delete(timer);
+            done();
+          }, animations.buttonBounceDuration + 40);
+          this._fallbackAnimationTimers.add(timer);
         }
       }
       _isServiceAllowed(serviceValue) {
@@ -838,7 +876,10 @@
         if (!domains.length && !services.length) {
           return false;
         }
-        return services.includes(normalizedService) || domains.includes(domain);
+        return services.includes(normalizedService) || domains.includes(domain || "");
+      }
+      _invokeService(domain, service, data, target = null) {
+        invokeHassService(this, this._hass, domain, service, data, target);
       }
       _callNamedService(service, data = {}, target = null) {
         if (!this._hass || !service) return;
@@ -848,14 +889,11 @@
         }
         const [domain, serviceName] = String(service || "").split(".");
         if (!domain || !serviceName) return;
-        const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils) || ((host, hass, svcDomain, svc, payload, svcTarget) => Promise.resolve(
-          svcTarget != null ? hass?.callService?.(svcDomain, svc, payload, svcTarget) : hass?.callService?.(svcDomain, svc, payload)
-        ));
-        invoke(this, this._hass, domain, serviceName, data, target);
+        this._invokeService(domain, serviceName, data, target);
       }
       _callCover(service, data = {}) {
         if (!this._hass || !this._config?.entity) return;
-        this._hass.callService("cover", service, { entity_id: this._config.entity, ...data });
+        this._invokeService("cover", service, { entity_id: this._config.entity, ...data });
       }
       _openMoreInfo(entityId = this._config?.entity) {
         if (entityId) fireEvent(this, "hass-more-info", { entityId });
@@ -937,8 +975,9 @@
         return action;
       }
       _runAction(zone, interaction = "tap", resolvedAction = null) {
-        const isIcon = zone === "icon";
         const isHold = interaction === "hold";
+        const iconAction = isHold ? this._config.icon_hold_action : this._config.icon_tap_action;
+        const isIcon = zone === "icon" && String(iconAction || "").trim() !== "";
         const action = resolvedAction || (isHold ? this._resolveHoldAction(zone) : this._resolveTapAction(zone));
         if (action === "none") return;
         if (action === "more_info" || action === "more-info") {
@@ -985,9 +1024,9 @@
       }
       _onShadowClick(event) {
         const path = event.composedPath();
-        const slider = path.find((node) => node instanceof HTMLInputElement && node.dataset?.coverControl);
+        const slider = path.find((node) => node instanceof HTMLInputElement && Boolean(node.dataset.coverControl));
         if (slider) return;
-        const button = path.find((node) => node instanceof HTMLElement && node.dataset?.coverAction);
+        const button = path.find((node) => node instanceof HTMLElement && Boolean(node.dataset.coverAction));
         if (!button) return;
         event.preventDefault();
         event.stopPropagation();
@@ -1086,9 +1125,10 @@
         );
       }
       _onPointerDown(event) {
+        if (!(event instanceof PointerEvent)) return;
         const path = event.composedPath();
         const slider = path.find(
-          (node) => node instanceof HTMLInputElement && node.type === "range" && node.dataset?.coverControl
+          (node) => node instanceof HTMLInputElement && node.type === "range" && Boolean(node.dataset.coverControl)
         );
         if (!this._activeSliderDrag && slider && (typeof event.button !== "number" || event.button === 0)) {
           this._startSliderDrag(slider, event.clientX, event, event.pointerId);
@@ -1103,16 +1143,17 @@
         if (controlAction) {
           return;
         }
-        const dial = path.find((node) => node instanceof HTMLElement && node.classList?.contains("fan-card__circular-dial"));
+        const dial = path.find((node) => node instanceof HTMLElement && node.classList.contains("fan-card__circular-dial"));
         if (!dial || !this._canSetPosition(this._getState())) {
           return;
         }
         this._startCircularDialDrag(dial, event.clientX, event.clientY, event, event.pointerId);
       }
       _onMouseDown(event) {
+        if (!(event instanceof MouseEvent)) return;
         const path = event.composedPath();
         const slider = path.find(
-          (node) => node instanceof HTMLInputElement && node.type === "range" && node.dataset?.coverControl
+          (node) => node instanceof HTMLInputElement && node.type === "range" && Boolean(node.dataset.coverControl)
         );
         if (!this._activeSliderDrag && slider && event.button === 0) {
           this._startSliderDrag(slider, event.clientX, event);
@@ -1127,19 +1168,22 @@
         if (controlAction) {
           return;
         }
-        const dial = path.find((node) => node instanceof HTMLElement && node.classList?.contains("fan-card__circular-dial"));
+        const dial = path.find((node) => node instanceof HTMLElement && node.classList.contains("fan-card__circular-dial"));
         if (!dial || !this._canSetPosition(this._getState())) {
           return;
         }
         this._startCircularDialDrag(dial, event.clientX, event.clientY, event);
       }
       _onTouchStart(event) {
+        if (!(event instanceof TouchEvent)) return;
         const path = event.composedPath();
+        const touch = event.touches[0];
+        if (!touch) return;
         const slider = path.find(
-          (node) => node instanceof HTMLInputElement && node.type === "range" && node.dataset?.coverControl
+          (node) => node instanceof HTMLInputElement && node.type === "range" && Boolean(node.dataset.coverControl)
         );
         if (!this._activeSliderDrag && slider && event.touches?.length) {
-          this._startSliderDrag(slider, event.touches[0].clientX, event);
+          this._startSliderDrag(slider, touch.clientX, event);
           return;
         }
         if (this._activeSliderDrag || !event.touches?.length) {
@@ -1151,11 +1195,11 @@
         if (controlAction) {
           return;
         }
-        const dial = path.find((node) => node instanceof HTMLElement && node.classList?.contains("fan-card__circular-dial"));
+        const dial = path.find((node) => node instanceof HTMLElement && node.classList.contains("fan-card__circular-dial"));
         if (!dial || !this._canSetPosition(this._getState())) {
           return;
         }
-        this._startCircularDialDrag(dial, event.touches[0].clientX, event.touches[0].clientY, event);
+        this._startCircularDialDrag(dial, touch.clientX, touch.clientY, event);
       }
       _canSetPosition(state = this._getState()) {
         return this._config?.show_position_slider !== false && this._supports(COVER_FEATURES.SET_POSITION, state);
@@ -1164,7 +1208,9 @@
         return this._getCommandablePosition(state) ?? 0;
       }
       _updatePositionPreview(value) {
-        const nextValue = clamp(Math.round(Number(value)), 0, 100);
+        const numericValue = parseFiniteNumericValue(value);
+        if (numericValue === null) return;
+        const nextValue = clamp(Math.round(numericValue), 0, 100);
         if (!Number.isFinite(nextValue)) {
           return;
         }
@@ -1191,7 +1237,9 @@
         return 5;
       }
       _hapticOnPositionStep(steppedValue, { commit = false } = {}) {
-        if (this._config?.haptics?.scrolls?.position === false) {
+        const haptics = isObject(this._config.haptics) ? this._config.haptics : {};
+        const scrolls = isObject(haptics.scrolls) ? haptics.scrolls : {};
+        if (scrolls.position === false) {
           return;
         }
         const next = Number(steppedValue);
@@ -1213,7 +1261,9 @@
       }
       _applyCircularDialValue(value, options = {}) {
         const commit = options.commit === true;
-        const nextValue = clamp(Math.round(Number(value)), 0, 100);
+        const numericValue = parseFiniteNumericValue(value);
+        if (numericValue === null) return;
+        const nextValue = clamp(Math.round(numericValue), 0, 100);
         if (!Number.isFinite(nextValue)) {
           return;
         }
@@ -1282,9 +1332,10 @@
         slider.value = String(nextValue);
         this._applySliderValue(slider, nextValue, { commit: false });
       }
-      _queueSliderDragUpdate(slider, clientX, clientY = null) {
+      _queueSliderDragUpdate(clientX, clientY = null) {
         const drag = this._activeSliderDrag;
-        if (drag?.kind === "circular") {
+        if (!drag) return;
+        if (drag.kind === "circular") {
           const nextValue2 = getCircularLayoutDialValueFromPoint(
             drag.dial,
             clientX,
@@ -1299,9 +1350,19 @@
           this._applyCircularDialValue(nextValue2, { commit: false });
           return;
         }
-        const nextValue = getRangeValueFromGeometry(drag?.geometry, slider.value, clientX);
+        const slider = drag.slider;
+        const nextValue = getRangeValueFromGeometry(drag.geometry, slider.value, clientX);
         slider.value = String(nextValue);
         this._applySliderValue(slider, nextValue, { commit: false });
+      }
+      _cancelSliderDrag(refresh = true) {
+        const drag = this._activeSliderDrag;
+        if (drag?.kind === "circular") drag.dial.classList.remove("is-dragging");
+        this._activeSliderDrag = null;
+        this._skipNextSliderChange = null;
+        this._pendingRenderAfterDrag = false;
+        this._detachWindowDragListeners();
+        if (refresh && this.isConnected) this._render();
       }
       _commitSliderDrag(clientX, event = null, pointerId = null, clientY = null) {
         const drag = this._activeSliderDrag;
@@ -1346,17 +1407,21 @@
         const drag = this._activeSliderDrag;
         if (!drag || drag.pointerId !== event.pointerId) return;
         event.preventDefault();
-        this._queueSliderDragUpdate(drag.slider, event.clientX, event.clientY);
+        this._queueSliderDragUpdate(event.clientX, event.clientY);
       }
       _onWindowPointerUp(event) {
         const drag = this._activeSliderDrag;
         if (!drag || drag.pointerId !== event.pointerId) return;
+        if (event.type === "pointercancel") {
+          this._cancelSliderDrag();
+          return;
+        }
         this._commitSliderDrag(event.clientX, event, event.pointerId, event.clientY);
       }
       _onWindowMouseMove(event) {
         if (!this._activeSliderDrag || typeof event.buttons === "number" && (event.buttons & 1) === 0) return;
         event.preventDefault();
-        this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.clientX, event.clientY);
+        this._queueSliderDragUpdate(event.clientX, event.clientY);
       }
       _onWindowMouseUp(event) {
         if (!this._activeSliderDrag) return;
@@ -1365,11 +1430,9 @@
       _onWindowTouchMove(event) {
         if (!this._activeSliderDrag || !event.touches?.length) return;
         event.preventDefault();
-        this._queueSliderDragUpdate(
-          this._activeSliderDrag.slider,
-          event.touches[0].clientX,
-          event.touches[0].clientY
-        );
+        const touch = event.touches[0];
+        if (!touch) return;
+        this._queueSliderDragUpdate(touch.clientX, touch.clientY);
       }
       _onWindowTouchStartCapture(event) {
         const drag = this._activeSliderDrag;
@@ -1380,29 +1443,23 @@
         if (drag.kind === "circular" ? path.includes(drag.dial) : path.includes(drag.slider)) {
           return;
         }
-        drag.dial?.classList?.remove("is-dragging");
-        this._activeSliderDrag = null;
-        this._detachWindowDragListeners();
-        if (this._pendingRenderAfterDrag) {
-          this._pendingRenderAfterDrag = false;
-          this._render();
-        }
+        this._cancelSliderDrag();
       }
       _onWindowTouchEnd(event) {
         if (!this._activeSliderDrag) return;
-        const touch = event.changedTouches?.[0];
-        const clientX = touch?.clientX;
-        if (!Number.isFinite(clientX)) {
-          this._activeSliderDrag.dial?.classList?.remove("is-dragging");
-          this._activeSliderDrag = null;
-          this._detachWindowDragListeners();
-          if (this._pendingRenderAfterDrag) {
-            this._pendingRenderAfterDrag = false;
-            this._render();
-          }
+        if (event.type === "touchcancel") {
+          this._cancelSliderDrag();
           return;
         }
-        this._commitSliderDrag(clientX, event, null, touch?.clientY);
+        const touch = event.changedTouches[0];
+        if (!touch || !Number.isFinite(touch.clientX)) {
+          this._cancelSliderDrag();
+          return;
+        }
+        this._commitSliderDrag(touch.clientX, event, null, touch.clientY);
+      }
+      _hasPointerEvents() {
+        return typeof window.PointerEvent === "function";
       }
       _attachWindowDragListeners() {
         if (this._dragWindowListenersAttached) return;
@@ -1410,7 +1467,7 @@
         window.addEventListener("pointermove", this._onWindowPointerMove);
         window.addEventListener("pointerup", this._onWindowPointerUp);
         window.addEventListener("pointercancel", this._onWindowPointerUp);
-        if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+        if (!this._hasPointerEvents()) {
           window.addEventListener("mousemove", this._onWindowMouseMove);
           window.addEventListener("mouseup", this._onWindowMouseUp);
           window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
@@ -1425,7 +1482,7 @@
         window.removeEventListener("pointermove", this._onWindowPointerMove);
         window.removeEventListener("pointerup", this._onWindowPointerUp);
         window.removeEventListener("pointercancel", this._onWindowPointerUp);
-        if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+        if (!this._hasPointerEvents()) {
           window.removeEventListener("mousemove", this._onWindowMouseMove);
           window.removeEventListener("mouseup", this._onWindowMouseUp);
           window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
@@ -1435,16 +1492,16 @@
         }
       }
       _onShadowInput(event) {
-        const slider = event.composedPath().find((node) => node instanceof HTMLInputElement && node.dataset?.coverControl);
+        const slider = event.composedPath().find((node) => node instanceof HTMLInputElement && Boolean(node.dataset.coverControl));
         if (!slider) return;
         event.stopPropagation();
-        if (this._activeSliderDrag?.slider === slider) {
+        if (this._activeSliderDrag?.kind === "linear" && this._activeSliderDrag.slider === slider) {
           return;
         }
         this._applySliderValue(slider, slider.value, { commit: false });
       }
       _onShadowChange(event) {
-        const slider = event.composedPath().find((node) => node instanceof HTMLInputElement && node.dataset?.coverControl);
+        const slider = event.composedPath().find((node) => node instanceof HTMLInputElement && Boolean(node.dataset.coverControl));
         if (!slider) return;
         event.stopPropagation();
         if (this._skipNextSliderChange === slider) {
@@ -1456,7 +1513,9 @@
         this._detachWindowDragListeners?.();
       }
       _applySliderValue(slider, rawValue, options = {}) {
-        const nextValue = clamp(Math.round(Number(rawValue)), 0, 100);
+        const numericValue = parseFiniteNumericValue(rawValue);
+        if (numericValue === null) return;
+        const nextValue = clamp(Math.round(numericValue), 0, 100);
         if (!Number.isFinite(nextValue)) return;
         const sliderKind = String(slider.dataset.coverControl || "").trim();
         slider.style.setProperty("--percentage", String(nextValue));
@@ -1466,7 +1525,9 @@
           chip.textContent = sliderKind === "tilt" ? this._coverTiltChipText(nextValue) : `${nextValue}%`;
         }
         if (options.commit !== true) return;
-        if (this._config?.haptics?.scrolls?.[sliderKind] !== false) {
+        const haptics = isObject(this._config.haptics) ? this._config.haptics : {};
+        const scrolls = isObject(haptics.scrolls) ? haptics.scrolls : {};
+        if (scrolls[sliderKind] !== false) {
           this._triggerHaptic("selection");
         }
         if (sliderKind === "position") {
@@ -1476,7 +1537,6 @@
         }
       }
       _renderSlider(kind, label, value, options = {}) {
-        const styles = this._config.styles;
         const percentage = clamp(Math.round(Number(value) || 0), 0, 100);
         const rowClass = options.variant === "stack" ? "fan-card__slider-row fan-card__slider-row--stack" : "fan-card__slider-row fan-card__slider-row--solo";
         return `
@@ -2240,11 +2300,20 @@
         </div>
       </ha-card>
     `;
-        this._lastRenderedIsActive = isActive;
       }
     }
     _lazyNodaliaCoverCard = NodaliaCoverCard;
     return NodaliaCoverCard;
+  }
+
+  // src/shared/editor-controls.ts
+  function isNativeEditorInput(node) {
+    return node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement;
+  }
+  function editorControlValue(event, control) {
+    const detail = event instanceof CustomEvent ? event.detail : void 0;
+    if (detail && typeof detail === "object" && "value" in detail && typeof detail.value === "string") return detail.value;
+    return "value" in control ? control.value : void 0;
   }
 
   // src/cards/cover/cover-editor.ts
@@ -2325,10 +2394,10 @@
         this._watchEditorControlTag("ha-icon-picker");
       }
       _getEntityOptionsSignature(hass = this._hass) {
-        return window.NodaliaUtils.editorFilteredStatesSignature(hass, this._config?.language, (id) => id.startsWith("cover."));
+        return window.NodaliaUtils.editorFilteredStatesSignature?.(hass, String(this._config.language || "auto"), (id) => id.startsWith("cover.")) || "";
       }
       _getCoverEntityOptions() {
-        const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
+        const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, String(this._config.language || "auto")) ?? "en";
         const options = Object.entries(this._hass?.states || {}).filter(([entityId]) => entityId.startsWith("cover.")).map(([entityId, state]) => {
           const friendlyName = String(state?.attributes?.friendly_name || "").trim();
           return {
@@ -2360,7 +2429,7 @@
         this._render();
         this._restoreFocusState(focusState);
         fireEvent(this, "config-changed", {
-          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {})
+          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults?.(nextConfig, DEFAULT_CONFIG) ?? {})
         });
       }
       _setEditorConfig() {
@@ -2376,7 +2445,7 @@
       _readFieldValue(input) {
         switch (input.dataset.valueType || "string") {
           case "boolean":
-            return Boolean(input.checked);
+            return input instanceof HTMLInputElement && input.checked;
           case "number": {
             if (input.value === "") {
               return "";
@@ -2393,7 +2462,7 @@
         }
       }
       _onShadowInput(event) {
-        const input = event.composedPath().find((node) => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+        const input = event.composedPath().find(isNativeEditorInput);
         if (!input?.dataset?.field) return;
         event.stopPropagation();
         this._setFieldValue(input.dataset.field, this._readFieldValue(input));
@@ -2401,11 +2470,11 @@
         if (event.type === "change") this._emitConfig();
       }
       _onShadowValueChanged(event) {
-        const control = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.field);
+        const control = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.field));
         if (!control?.dataset?.field) return;
         event.stopPropagation();
         const field = control.dataset.field;
-        const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+        const nextValue = editorControlValue(event, control);
         if (typeof control.dataset?.value === "string") control.dataset.value = String(nextValue || "");
         const previousEntity = field === "entity" ? String(this._config?.entity || "").trim() : "";
         this._setFieldValue(field, nextValue);
@@ -2416,7 +2485,7 @@
         this._emitConfig();
       }
       _onShadowClick(event) {
-        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.editorToggle);
+        const toggleButton = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.editorToggle));
         if (!toggleButton) return;
         event.preventDefault();
         event.stopPropagation();
@@ -2427,7 +2496,7 @@
       }
       _editorLabel(value) {
         if (typeof value !== "string" || !window.NodaliaI18n?.editorStr) return value;
-        return window.NodaliaI18n.editorStr(this._hass, this._config?.language ?? "auto", value);
+        return window.NodaliaI18n.editorStr(this._hass, String(this._config.language || "auto"), value);
       }
       _renderTextField(label, field, value, options = {}) {
         const tLabel = this._editorLabel(label);
@@ -2541,19 +2610,13 @@
         }
         const field = host.dataset.field || "entity";
         const nextValue = host.dataset.value || "";
-        let control = null;
+        let control;
         if (customElements.get("ha-entity-picker")) {
           control = document.createElement("ha-entity-picker");
-          control.includeDomains = ["cover"];
-          control.allowCustomEntity = true;
-          control.entityFilter = (stateObj) => String(stateObj?.entity_id || "").startsWith("cover.");
+          Object.assign(control, { includeDomains: ["cover"], allowCustomEntity: true, entityFilter: (stateObj) => String(stateObj?.entity_id || "").startsWith("cover.") });
         } else if (customElements.get("ha-selector")) {
           control = document.createElement("ha-selector");
-          control.selector = {
-            entity: {
-              domain: "cover"
-            }
-          };
+          Object.assign(control, { selector: { entity: { domain: "cover" } } });
         } else {
           control = document.createElement("select");
           this._getCoverEntityOptions().forEach((option) => {
@@ -2579,12 +2642,15 @@
       }
       _render() {
         if (!this.shadowRoot) return;
-        const config = normalizeConfig(this._config || {});
+        const config = normalizeConfig(this._config);
+        const haptics = isObject(config.haptics) ? config.haptics : {};
+        const scrolls = isObject(haptics.scrolls) ? haptics.scrolls : {};
+        const animations = isObject(config.animations) ? config.animations : DEFAULT_CONFIG.animations;
         const iconTap = String(config.icon_tap_action || "");
         const tapAction = String(config.tap_action || "toggle");
         const iconHold = String(config.icon_hold_action || "");
         const holdAction = String(config.hold_action || "none");
-        const hapticStyle = config.haptics?.style || "medium";
+        const hapticStyle = haptics.style || "medium";
         const showTapServiceSecurity = iconTap === "service" || tapAction === "service" || iconHold === "service" || holdAction === "service";
         const showIconHoldService = iconHold === "service" || iconHold === "" && holdAction === "service";
         const showIconHoldUrl = iconHold === "url" || iconHold === "" && holdAction === "url";
@@ -2991,10 +3057,10 @@
             </div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("ed.vacuum.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("ed.vacuum.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
-            ${this._renderCheckboxField("ed.haptics.slider_position", "haptics.scrolls.position", config.haptics.scrolls?.position !== false)}
-            ${this._renderCheckboxField("ed.haptics.slider_tilt", "haptics.scrolls.tilt", config.haptics.scrolls?.tilt !== false)}
+            ${this._renderCheckboxField("ed.vacuum.enable_haptics", "haptics.enabled", haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.vacuum.fallback_vibrate", "haptics.fallback_vibrate", haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.haptics.slider_position", "haptics.scrolls.position", scrolls.position !== false)}
+            ${this._renderCheckboxField("ed.haptics.slider_tilt", "haptics.scrolls.tilt", scrolls.tilt !== false)}
             ${this._renderSelectField("ed.vacuum.haptic_style", "haptics.style", hapticStyle, [
           { value: "selection", label: "ed.weather.haptic_selection" },
           { value: "light", label: "ed.weather.haptic_light" },
@@ -3019,11 +3085,11 @@
           </div>
           ${this._showAnimationSection ? `
             <div class="editor-grid">
-              ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", config.animations.enabled !== false)}
-              ${this._renderCheckboxField("ed.vacuum.icon_animation_active", "animations.icon_animation", config.animations.icon_animation !== false)}
-              ${this._renderTextField("ed.light.anim_power_ms", "animations.power_duration", config.animations.power_duration, { type: "number", valueType: "number", min: 120, max: 4e3, step: 10 })}
-              ${this._renderTextField("ed.light.anim_controls_ms", "animations.controls_duration", config.animations.controls_duration, { type: "number", valueType: "number", min: 120, max: 2400, step: 10 })}
-              ${this._renderTextField("ed.vacuum.button_bounce_ms", "animations.button_bounce_duration", config.animations.button_bounce_duration, { type: "number", valueType: "number", min: 120, max: 1200, step: 10 })}
+              ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", animations.enabled !== false)}
+              ${this._renderCheckboxField("ed.vacuum.icon_animation_active", "animations.icon_animation", animations.icon_animation !== false)}
+              ${this._renderTextField("ed.light.anim_power_ms", "animations.power_duration", animations.power_duration, { type: "number", valueType: "number", min: 120, max: 4e3, step: 10 })}
+              ${this._renderTextField("ed.light.anim_controls_ms", "animations.controls_duration", animations.controls_duration, { type: "number", valueType: "number", min: 120, max: 2400, step: 10 })}
+              ${this._renderTextField("ed.vacuum.button_bounce_ms", "animations.button_bounce_duration", animations.button_bounce_duration, { type: "number", valueType: "number", min: 120, max: 1200, step: 10 })}
             </div>
           ` : ""}
         </section>
@@ -3090,8 +3156,7 @@
     `;
         this.shadowRoot.querySelectorAll('[data-mounted-control="cover-entity"]').forEach((host) => this._mountCoverEntityPicker(host));
         this.shadowRoot.querySelectorAll("ha-icon-picker[data-field]").forEach((control) => {
-          control.hass = this._hass;
-          control.value = control.dataset.value || "";
+          Object.assign(control, { hass: this._hass, value: control.dataset.value || "" });
           control.addEventListener("value-changed", this._onShadowValueChanged);
         });
         this._ensureEditorControlsReady();

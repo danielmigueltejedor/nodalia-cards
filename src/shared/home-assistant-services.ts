@@ -12,9 +12,22 @@ export function parseServiceData(value: unknown): Record<string, unknown> {
 }
 
 /** Catch both synchronous HA failures and rejected service promises at the UI boundary. */
-export function callHassService(hass: HomeAssistant | null | undefined, domain: string, service: string, data: Record<string, unknown> = {}): void {
+export function callHassService(hass: HomeAssistant | null | undefined, domain: string, service: string, data: Record<string, unknown> = {}, target: Record<string, unknown> | null = null): void {
   if (!hass?.callService) return;
   const failure = (error: unknown) => console.warn("Nodalia Cards: service call failed", `${domain}.${service}`, error);
-  try { void Promise.resolve(hass.callService(domain, service, data)).catch(failure); }
+  try { void Promise.resolve(target !== null ? hass.callService(domain, service, data, target) : hass.callService(domain, service, data)).catch(failure); }
+  catch (error) { failure(error); }
+}
+
+/** Preserve the compatibility event fallback and explicit targets at a card UI boundary. */
+export function invokeHassService(host: HTMLElement, hass: HomeAssistant | null | undefined, domain: string, service: string, data: Record<string, unknown> = {}, target: Record<string, unknown> | null = null): void {
+  const utils = window.NodaliaUtils;
+  const invoke = utils?.invokeHomeAssistantService;
+  if (!invoke) {
+    callHassService(hass, domain, service, data, target);
+    return;
+  }
+  const failure = (error: unknown) => console.warn("Nodalia Cards: service call failed", `${domain}.${service}`, error);
+  try { void Promise.resolve(invoke.call(utils, host, hass, domain, service, data, target)).catch(failure); }
   catch (error) { failure(error); }
 }

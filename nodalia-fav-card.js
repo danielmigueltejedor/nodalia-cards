@@ -197,6 +197,29 @@
       return {};
     }
   }
+  function callHassService(hass, domain, service, data = {}, target = null) {
+    if (!hass?.callService) return;
+    const failure = (error) => console.warn("Nodalia Cards: service call failed", `${domain}.${service}`, error);
+    try {
+      void Promise.resolve(target !== null ? hass.callService(domain, service, data, target) : hass.callService(domain, service, data)).catch(failure);
+    } catch (error) {
+      failure(error);
+    }
+  }
+  function invokeHassService(host, hass, domain, service, data = {}, target = null) {
+    const utils2 = window.NodaliaUtils;
+    const invoke = utils2?.invokeHomeAssistantService;
+    if (!invoke) {
+      callHassService(hass, domain, service, data, target);
+      return;
+    }
+    const failure = (error) => console.warn("Nodalia Cards: service call failed", `${domain}.${service}`, error);
+    try {
+      void Promise.resolve(invoke.call(utils2, host, hass, domain, service, data, target)).catch(failure);
+    } catch (error) {
+      failure(error);
+    }
+  }
 
   // src/shared/editor-entity-helpers.ts
   function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
@@ -785,14 +808,7 @@
         return domain === "cover" || domain === "lock";
       }
       _invokeService(domain, service, data, target = null) {
-        const failure = (error) => console.warn("Nodalia Fav: service call failed", `${domain}.${service}`, error);
-        try {
-          const invoke = window.NodaliaUtils.invokeHomeAssistantService;
-          const result = invoke ? invoke(this, this._hass, domain, service, data, target) : target ? this._hass?.callService?.(domain, service, data, target) : this._hass?.callService?.(domain, service, data);
-          void Promise.resolve(result).catch(failure);
-        } catch (error) {
-          failure(error);
-        }
+        invokeHassService(this, this._hass, domain, service, data, target);
       }
       _invokeEntityService(domain, service, entityId, serviceData = {}) {
         this._invokeService(domain, service, { entity_id: entityId, ...serviceData });

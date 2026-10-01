@@ -1,6 +1,6 @@
 import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
 import { parseFiniteNumericValue } from "../../shared/numeric-values";
-import { parseServiceData } from "../../shared/home-assistant-services";
+import { parseServiceData, invokeHassService } from "../../shared/home-assistant-services";
 import {
   CARD_TAG,
   COVER_SET_POSITION,
@@ -335,13 +335,7 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   _invokeService(domain: string, service: string, data: Record<string, unknown>, target: Record<string, unknown> | null = null): void {
-    const failure = (error: unknown) => console.warn("Nodalia Fav: service call failed", `${domain}.${service}`, error);
-    try {
-      const invoke = window.NodaliaUtils.invokeHomeAssistantService;
-      const result = invoke ? invoke(this, this._hass, domain, service, data, target)
-        : target ? this._hass?.callService?.(domain, service, data, target) : this._hass?.callService?.(domain, service, data);
-      void Promise.resolve(result).catch(failure);
-    } catch (error) { failure(error); }
+    invokeHassService(this, this._hass, domain, service, data, target);
   }
 
   _invokeEntityService(domain: string, service: string, entityId: string, serviceData: Record<string, unknown> = {}) {

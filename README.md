@@ -75,7 +75,7 @@ Every card is registered with the `custom:nodalia-…` prefix. The complete set 
 - `custom:nodalia-circular-gauge-card`
 - `custom:nodalia-graph-card`
 - `custom:nodalia-power-flow-card`
-- `custom:nodalia-cover-card`
+- [`custom:nodalia-cover-card`](docs/cards/cover-card.md)
 - `custom:nodalia-climate-card`
 - `custom:nodalia-alarm-panel-card`
 - `custom:nodalia-lock-card`

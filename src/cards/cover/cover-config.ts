@@ -177,5 +177,7 @@ export function normalizeConfig(rawConfig: unknown = {}) {
   if (config.hold_action === "navigate" && !config.hold_navigation_path && config.hold_url) {
     config.hold_navigation_path = config.hold_url;
   }
-  return { ...config, security, styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles) };
+  const fields = { entity: typeof config.entity === "string" ? config.entity : "", security, styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles) };
+  const normalized: typeof fields & Record<string, unknown> = { ...config, ...fields };
+  return normalized;
 }

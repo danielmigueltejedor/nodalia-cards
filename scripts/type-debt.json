@@ -11,8 +11,6 @@
   "src/cards/circular-gauge/circular-gauge-editor.ts",
   "src/cards/climate/climate-card.ts",
   "src/cards/climate/climate-editor.ts",
-  "src/cards/cover/cover-card.ts",
-  "src/cards/cover/cover-editor.ts",
   "src/cards/entity/entity-card.ts",
   "src/cards/entity/entity-editor.ts",
   "src/cards/fan/fan-card.ts",

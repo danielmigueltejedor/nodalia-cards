@@ -7,6 +7,7 @@ import type { HomeAssistant } from "./home-assistant";
  */
 export interface HostPointerHoldBinding { (): void; reconnect?: () => void; }
 export interface NodaliaUtilsApi {
+  isNodaliaSliderChromeHit?: (event: Event) => boolean;
   cancelCardZoneTap?: (host: HTMLElement) => void;
   scheduleCardZoneTap?: (host: HTMLElement, options: { zone?: string; doubleTapMs?: number; onSingle: () => void; onDouble?: () => void }) => void;
   renderEditorCollapsibleSectionHeaderHtml: (options: {

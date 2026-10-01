@@ -1,16 +1,13 @@
-// @ts-nocheck
-/* Visual editor surface: typed incrementally after the card runtime split. */
+import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
+import type { EditorFocusState } from "../../core/types/nodalia-utils";
+import { editorControlValue, isNativeEditorInput, type NativeEditorInput } from "../../shared/editor-controls";
 import {
-  clamp,
   compactConfig,
   deepClone,
   deleteByPath,
   escapeHtml,
-  escapeSelectorValue,
   fireEvent,
   isObject,
-  mergeConfig,
-  normalizeTextKey,
   setByPath,
 } from "./cover-runtime";
 import { DEFAULT_CONFIG, STUB_CONFIG, normalizeConfig, normalizeList } from "./cover-config";
@@ -20,12 +17,20 @@ import {
   getEditorColorModel,
 } from "./cover-helpers";
 
-let _lazyNodaliaCoverCardEditor;
-export function loadNodaliaCoverCardEditor() {
+interface FieldOptions { fullWidth?: boolean; type?: string; valueType?: string; placeholder?: string; fallbackValue?: string; min?: number; max?: number; step?: number; }
+let _lazyNodaliaCoverCardEditor: CustomElementConstructor | undefined;
+export function loadNodaliaCoverCardEditor(): CustomElementConstructor {
   if (_lazyNodaliaCoverCardEditor) {
     return _lazyNodaliaCoverCardEditor;
   }
 class NodaliaCoverCardEditor extends HTMLElement {
+  private _config!: ReturnType<typeof normalizeConfig>;
+  private _hass!: HomeAssistant | null;
+  private _entityOptionsSignature!: string;
+  private _pendingEditorControlTags!: Set<string>;
+  private _showStyleSection!: boolean;
+  private _showTapActionsSection!: boolean;
+  private _showAnimationSection!: boolean;
   constructor() {
     super();
     this._nodaliaConstruct();
@@ -67,7 +72,7 @@ class NodaliaCoverCardEditor extends HTMLElement {
     window.NodaliaUtils?.releaseEditorDialogLayoutFix?.(this);
   }
 
-  set hass(hass) {
+  set hass(hass: HomeAssistant) {
     const nextSignature = this._getEntityOptionsSignature(hass);
     const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
     this._hass = hass;
@@ -78,7 +83,7 @@ class NodaliaCoverCardEditor extends HTMLElement {
     this._restoreFocusState(focusState);
   }
 
-  setConfig(config) {
+  setConfig(config: unknown) {
     const focusState = this._captureFocusState();
     this._config = normalizeConfig(config || {});
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
@@ -86,7 +91,7 @@ class NodaliaCoverCardEditor extends HTMLElement {
     this._restoreFocusState(focusState);
   }
 
-  _watchEditorControlTag(tagName) {
+  _watchEditorControlTag(tagName: string) {
     if (!tagName || this._pendingEditorControlTags.has(tagName)) return;
     if (typeof customElements?.whenDefined !== "function" || customElements.get(tagName)) return;
     this._pendingEditorControlTags.add(tagName);
@@ -106,11 +111,11 @@ class NodaliaCoverCardEditor extends HTMLElement {
   }
 
   _getEntityOptionsSignature(hass = this._hass) {
-    return window.NodaliaUtils.editorFilteredStatesSignature(hass, this._config?.language, id => id.startsWith("cover."));
+    return window.NodaliaUtils.editorFilteredStatesSignature?.(hass, String(this._config.language || "auto"), id => id.startsWith("cover.")) || "";
   }
 
   _getCoverEntityOptions() {
-    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
+    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, String(this._config.language || "auto")) ?? "en";
     const options = Object.entries(this._hass?.states || {})
       .filter(([entityId]) => entityId.startsWith("cover."))
       .map(([entityId, state]) => {
@@ -144,7 +149,7 @@ class NodaliaCoverCardEditor extends HTMLElement {
     return window.NodaliaUtils.captureEditorFocusState(this);
   }
 
-  _restoreFocusState(focusState) {
+  _restoreFocusState(focusState: EditorFocusState | null) {
     window.NodaliaUtils.restoreEditorFocusState(this, focusState);
   }
 
@@ -155,7 +160,7 @@ class NodaliaCoverCardEditor extends HTMLElement {
     this._render();
     this._restoreFocusState(focusState);
     fireEvent(this, "config-changed", {
-      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults(nextConfig, DEFAULT_CONFIG) ?? {}),
+      config: compactConfig(window.NodaliaUtils.stripEqualToDefaults?.(nextConfig, DEFAULT_CONFIG) ?? {}),
     });
   }
 
@@ -163,7 +168,7 @@ class NodaliaCoverCardEditor extends HTMLElement {
     this._config = normalizeConfig(compactConfig(this._config));
   }
 
-  _setFieldValue(path, value) {
+  _setFieldValue(path: string, value: unknown) {
     if (value === undefined || value === null || value === "") {
       deleteByPath(this._config, path);
       return;
@@ -171,9 +176,9 @@ class NodaliaCoverCardEditor extends HTMLElement {
     setByPath(this._config, path, value);
   }
 
-  _readFieldValue(input) {
+  _readFieldValue(input: NativeEditorInput) {
     switch (input.dataset.valueType || "string") {
-      case "boolean": return Boolean(input.checked);
+      case "boolean": return input instanceof HTMLInputElement && input.checked;
       case "number": {
         if (input.value === "") {
           return "";
@@ -187,8 +192,8 @@ class NodaliaCoverCardEditor extends HTMLElement {
     }
   }
 
-  _onShadowInput(event) {
-    const input = event.composedPath().find(node => node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement);
+  _onShadowInput(event: Event) {
+    const input = event.composedPath().find(isNativeEditorInput);
     if (!input?.dataset?.field) return;
     event.stopPropagation();
     this._setFieldValue(input.dataset.field, this._readFieldValue(input));
@@ -196,12 +201,12 @@ class NodaliaCoverCardEditor extends HTMLElement {
     if (event.type === "change") this._emitConfig();
   }
 
-  _onShadowValueChanged(event) {
-    const control = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.field);
+  _onShadowValueChanged(event: Event) {
+    const control = event.composedPath().find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.field));
     if (!control?.dataset?.field) return;
     event.stopPropagation();
     const field = control.dataset.field;
-    const nextValue = typeof event.detail?.value === "string" ? event.detail.value : control.value;
+    const nextValue = editorControlValue(event, control);
     if (typeof control.dataset?.value === "string") control.dataset.value = String(nextValue || "");
     const previousEntity = field === "entity" ? String(this._config?.entity || "").trim() : "";
     this._setFieldValue(field, nextValue);
@@ -212,8 +217,8 @@ class NodaliaCoverCardEditor extends HTMLElement {
     this._emitConfig();
   }
 
-  _onShadowClick(event) {
-    const toggleButton = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.editorToggle);
+  _onShadowClick(event: Event) {
+    const toggleButton = event.composedPath().find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.editorToggle));
     if (!toggleButton) return;
     event.preventDefault();
     event.stopPropagation();
@@ -223,12 +228,12 @@ class NodaliaCoverCardEditor extends HTMLElement {
     this._render();
   }
 
-  _editorLabel(value) {
+  _editorLabel(value: string) {
     if (typeof value !== "string" || !window.NodaliaI18n?.editorStr) return value;
-    return window.NodaliaI18n.editorStr(this._hass, this._config?.language ?? "auto", value);
+    return window.NodaliaI18n.editorStr(this._hass, String(this._config.language || "auto"), value);
   }
 
-  _renderTextField(label, field, value, options = {}) {
+  _renderTextField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
@@ -252,7 +257,7 @@ class NodaliaCoverCardEditor extends HTMLElement {
     `;
   }
 
-  _renderTextareaField(label, field, value, options = {}) {
+  _renderTextareaField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     return `
       <label class="editor-field editor-field--full">
         <span>${escapeHtml(this._editorLabel(label))}</span>
@@ -261,7 +266,7 @@ class NodaliaCoverCardEditor extends HTMLElement {
     `;
   }
 
-  _renderSelectField(label, field, value, options, fieldOptions = {}) {
+  _renderSelectField(label: string, field: string, value: unknown, options: readonly { value: string; label: string }[], fieldOptions: FieldOptions = {}) {
     return `
       <label class="editor-field ${fieldOptions.fullWidth ? "editor-field--full" : ""}">
         <span>${escapeHtml(this._editorLabel(label))}</span>
@@ -272,7 +277,7 @@ class NodaliaCoverCardEditor extends HTMLElement {
     `;
   }
 
-  _renderCheckboxField(label, field, checked) {
+  _renderCheckboxField(label: string, field: string, checked: boolean) {
     return `
       <label class="editor-toggle">
         <input type="checkbox" data-field="${escapeHtml(field)}" data-value-type="boolean" ${checked ? "checked" : ""} />
@@ -282,7 +287,7 @@ class NodaliaCoverCardEditor extends HTMLElement {
     `;
   }
 
-  _renderColorField(label, field, value, options = {}) {
+  _renderColorField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const tColorCustom = this._editorLabel("ed.weather.custom_color");
     const fallbackValue = options.fallbackValue || getEditorColorFallbackValue(field);
@@ -310,7 +315,7 @@ class NodaliaCoverCardEditor extends HTMLElement {
     `;
   }
 
-  _renderCoverEntityField(label, field, value, options = {}) {
+  _renderCoverEntityField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const inputValue = value === undefined || value === null ? "" : String(value);
     return `
@@ -326,7 +331,7 @@ class NodaliaCoverCardEditor extends HTMLElement {
     `;
   }
 
-  _renderIconPickerField(label, field, value, options = {}) {
+  _renderIconPickerField(label: string, field: string, value: unknown, options: FieldOptions = {}) {
     const tLabel = this._editorLabel(label);
     const placeholder = options.placeholder ? `placeholder="${escapeHtml(options.placeholder)}"` : "";
     const inputValue = value === undefined || value === null ? "" : String(value);
@@ -343,27 +348,21 @@ class NodaliaCoverCardEditor extends HTMLElement {
     `;
   }
 
-  _mountCoverEntityPicker(host) {
+  _mountCoverEntityPicker(host: HTMLElement) {
     if (!(host instanceof HTMLElement)) {
       return;
     }
 
     const field = host.dataset.field || "entity";
     const nextValue = host.dataset.value || "";
-    let control = null;
+    let control: HTMLElement;
 
     if (customElements.get("ha-entity-picker")) {
       control = document.createElement("ha-entity-picker");
-      control.includeDomains = ["cover"];
-      control.allowCustomEntity = true;
-      control.entityFilter = stateObj => String(stateObj?.entity_id || "").startsWith("cover.");
+      Object.assign(control, { includeDomains: ["cover"], allowCustomEntity: true, entityFilter: (stateObj: HassEntity | null | undefined) => String(stateObj?.entity_id || "").startsWith("cover.") });
     } else if (customElements.get("ha-selector")) {
       control = document.createElement("ha-selector");
-      control.selector = {
-        entity: {
-          domain: "cover",
-        },
-      };
+      Object.assign(control, { selector: { entity: { domain: "cover" } } });
     } else {
       control = document.createElement("select");
       this._getCoverEntityOptions().forEach(option => {
@@ -395,12 +394,15 @@ class NodaliaCoverCardEditor extends HTMLElement {
 
   _render() {
     if (!this.shadowRoot) return;
-    const config = normalizeConfig(this._config || {});
+    const config = normalizeConfig(this._config);
+    const haptics = isObject(config.haptics) ? config.haptics : {};
+    const scrolls = isObject(haptics.scrolls) ? haptics.scrolls : {};
+    const animations = isObject(config.animations) ? config.animations : DEFAULT_CONFIG.animations;
     const iconTap = String(config.icon_tap_action || "");
     const tapAction = String(config.tap_action || "toggle");
     const iconHold = String(config.icon_hold_action || "");
     const holdAction = String(config.hold_action || "none");
-    const hapticStyle = config.haptics?.style || "medium";
+    const hapticStyle = haptics.style || "medium";
     const showTapServiceSecurity = iconTap === "service" || tapAction === "service" || iconHold === "service" || holdAction === "service";
     const showIconHoldService = iconHold === "service" || (iconHold === "" && holdAction === "service");
     const showIconHoldUrl = iconHold === "url" || (iconHold === "" && holdAction === "url");
@@ -811,10 +813,10 @@ class NodaliaCoverCardEditor extends HTMLElement {
             </div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("ed.vacuum.enable_haptics", "haptics.enabled", config.haptics.enabled === true)}
-            ${this._renderCheckboxField("ed.vacuum.fallback_vibrate", "haptics.fallback_vibrate", config.haptics.fallback_vibrate === true)}
-            ${this._renderCheckboxField("ed.haptics.slider_position", "haptics.scrolls.position", config.haptics.scrolls?.position !== false)}
-            ${this._renderCheckboxField("ed.haptics.slider_tilt", "haptics.scrolls.tilt", config.haptics.scrolls?.tilt !== false)}
+            ${this._renderCheckboxField("ed.vacuum.enable_haptics", "haptics.enabled", haptics.enabled === true)}
+            ${this._renderCheckboxField("ed.vacuum.fallback_vibrate", "haptics.fallback_vibrate", haptics.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.haptics.slider_position", "haptics.scrolls.position", scrolls.position !== false)}
+            ${this._renderCheckboxField("ed.haptics.slider_tilt", "haptics.scrolls.tilt", scrolls.tilt !== false)}
             ${this._renderSelectField("ed.vacuum.haptic_style", "haptics.style", hapticStyle, [
               { value: "selection", label: "ed.weather.haptic_selection" },
               { value: "light", label: "ed.weather.haptic_light" },
@@ -839,11 +841,11 @@ class NodaliaCoverCardEditor extends HTMLElement {
           </div>
           ${this._showAnimationSection ? `
             <div class="editor-grid">
-              ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", config.animations.enabled !== false)}
-              ${this._renderCheckboxField("ed.vacuum.icon_animation_active", "animations.icon_animation", config.animations.icon_animation !== false)}
-              ${this._renderTextField("ed.light.anim_power_ms", "animations.power_duration", config.animations.power_duration, { type: "number", valueType: "number", min: 120, max: 4000, step: 10 })}
-              ${this._renderTextField("ed.light.anim_controls_ms", "animations.controls_duration", config.animations.controls_duration, { type: "number", valueType: "number", min: 120, max: 2400, step: 10 })}
-              ${this._renderTextField("ed.vacuum.button_bounce_ms", "animations.button_bounce_duration", config.animations.button_bounce_duration, { type: "number", valueType: "number", min: 120, max: 1200, step: 10 })}
+              ${this._renderCheckboxField("ed.vacuum.enable_animations", "animations.enabled", animations.enabled !== false)}
+              ${this._renderCheckboxField("ed.vacuum.icon_animation_active", "animations.icon_animation", animations.icon_animation !== false)}
+              ${this._renderTextField("ed.light.anim_power_ms", "animations.power_duration", animations.power_duration, { type: "number", valueType: "number", min: 120, max: 4000, step: 10 })}
+              ${this._renderTextField("ed.light.anim_controls_ms", "animations.controls_duration", animations.controls_duration, { type: "number", valueType: "number", min: 120, max: 2400, step: 10 })}
+              ${this._renderTextField("ed.vacuum.button_bounce_ms", "animations.button_bounce_duration", animations.button_bounce_duration, { type: "number", valueType: "number", min: 120, max: 1200, step: 10 })}
             </div>
           ` : ""}
         </section>
@@ -908,10 +910,9 @@ class NodaliaCoverCardEditor extends HTMLElement {
         </section>
       </div>
     `;
-    this.shadowRoot.querySelectorAll('[data-mounted-control="cover-entity"]').forEach(host => this._mountCoverEntityPicker(host));
-    this.shadowRoot.querySelectorAll("ha-icon-picker[data-field]").forEach(control => {
-      control.hass = this._hass;
-      control.value = control.dataset.value || "";
+    this.shadowRoot.querySelectorAll<HTMLElement>('[data-mounted-control="cover-entity"]').forEach(host => this._mountCoverEntityPicker(host));
+    this.shadowRoot.querySelectorAll<HTMLElement>("ha-icon-picker[data-field]").forEach(control => {
+      Object.assign(control, { hass: this._hass, value: control.dataset.value || "" });
       control.addEventListener("value-changed", this._onShadowValueChanged);
     });
     this._ensureEditorControlsReady();
