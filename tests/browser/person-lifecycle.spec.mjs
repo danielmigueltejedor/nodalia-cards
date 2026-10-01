@@ -18,8 +18,12 @@ test('Person ignores stale pictures, cancels pending preloads on disconnect and 
  await page.evaluate(()=>window.personImages.at(-1).onload());await expect(card.locator('img')).toHaveAttribute('src',red.replace('red','green'));expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
 });
 test('Person times out stalled images and bounds completed URL caches',async({page})=>{
+ await page.clock.install({time:new Date('2026-10-01T10:00:00Z')});
+ await page.clock.pauseAt(new Date('2026-10-01T10:00:01Z'));
  await mount(page,{entity:'person.one'},{'person.one':{state:'home',attributes:{entity_picture:red}}},true);
- await expect.poll(()=>page.evaluate(()=>window.personLifecycleCard._pendingImagePreloads.size),{timeout:6000}).toBe(0);
+ expect(await page.evaluate(()=>window.personLifecycleCard._pendingImagePreloads.size)).toBe(1);
+ await page.clock.fastForward(3999);expect(await page.evaluate(()=>window.personLifecycleCard._pendingImagePreloads.size)).toBe(1);
+ await page.clock.fastForward(1);expect(await page.evaluate(()=>window.personLifecycleCard._pendingImagePreloads.size)).toBe(0);
  expect(await page.evaluate(()=>window.personLifecycleCard._failedImageUrls.has(window.personImages[0].url))).toBe(true);
  const sizes=await page.evaluate(async()=>{const card=window.personLifecycleCard;for(let i=0;i<70;i++){const promise=card._preloadImageUrl('success-'+i);window.personImages.at(-1).onload();await promise;const failure=card._preloadImageUrl('failure-'+i);window.personImages.at(-1).onerror();await failure;}return [card._readyImageUrls.size,card._failedImageUrls.size,card._pendingImagePreloads.size];});
  expect(sizes).toEqual([64,64,0]);expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);

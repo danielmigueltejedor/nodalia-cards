@@ -28,3 +28,12 @@ updates are cancelled when replacing configuration or removing the editor;
 keyboard toggles work after an abandoned pointer interaction.
 
 The card requests a minimum of four dashboard columns.
+
+The view refreshes pending arm modes when HA attributes change. PIN verification
+continues after a service request resolves and ends when HA confirms a state
+change. Rejected or synchronous failures show native feedback only for the
+current action and entity. Switching entities, losing the entity or removing the
+card clears typed PINs and owned timers. Live updates preserve PIN focus and keep
+a pressed action mounted until its native click; pointer cancellation releases
+deferred rendering. Resize rendering runs outside the observer callback to avoid
+Safari mobile resize loops.

@@ -1144,3 +1144,30 @@ its unused icon option were removed.
 browser cases and the full local suite (440 passed, one existing skip) pass.
 Remaining unchecked modules: 27. Hold 3.0.0-alpha.1 until full migration,
 including handwritten utility/i18n runtime sources.
+
+## Alarm Panel view findings — 2026-10-01
+
+The view suppressed checking over state/PIN/native controls and asynchronous
+work. Pending arm attributes were absent from invalidation; stale failures could
+show feedback after entity/state replacement. Safari mobile exposed resize
+observer loops and button replacement between PIN blur and native click.
+
+The view now passes strict checking and typed lint with actual HA/DOM/config/
+focus/timer contracts. Resize renders run outside the observer; touched buttons
+remain mounted until click or pointer cancellation. Mode attributes invalidate
+the view, entrance deadlines remain stable and countdown/animation work is owned.
+Typed PINs clear across entities, missing entities and removal. The checked
+awaitable service boundary exposes sync/rejected failures and preserves direct
+arity and compatibility fallback. Immutable snapshots and action generations
+reject obsolete feedback and retain a newer PIN watch. Six unused imports were
+removed and card documentation updated.
+
+3,000 valid view/grid outputs match main. All 745 unit tests, 27 specific Alarm/
+Person cases and the full local suite (455 passed, one existing skip) pass.
+Initial mobile failures exposed the production resize and touch races above.
+The first full suite also hit background timer throttling in the Person deadline
+test; its controlled clock now proves the exact 3,999/4,000 ms boundary and cache
+limits without depending on wall-clock scheduling. A source assertion now follows
+the awaitable invocation while retaining the PIN-watch contract.
+Remaining unchecked modules: 26. Hold 3.0.0-alpha.1 until complete migration,
+including handwritten utility/i18n runtime sources.
