@@ -7,6 +7,8 @@ import type { HomeAssistant } from "./home-assistant";
  */
 export interface HostPointerHoldBinding { (): void; reconnect?: () => void; }
 export interface NodaliaUtilsApi {
+  bindModalFocus?: (host: HTMLElement, dialog: HTMLElement, options?: { initialFocusSelector?: string; restoreFocus?: () => void }) => () => void;
+  releaseModalFocus?: (host: HTMLElement) => void;
   isNodaliaSliderChromeHit?: (event: Event) => boolean;
   cancelCardZoneTap?: (host: HTMLElement) => void;
   scheduleCardZoneTap?: (host: HTMLElement, options: { zone?: string; doubleTapMs?: number; onSingle: () => void; onDouble?: () => void }) => void;

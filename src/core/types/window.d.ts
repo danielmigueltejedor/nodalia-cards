@@ -40,6 +40,7 @@ interface NodaliaI18nApi {
   resolveLanguage?: (hass: unknown, language?: string) => string;
   strings?: (language: string) => Record<string, unknown>;
   editorStr?: (hass: unknown, language: string, key: string) => string;
+  translateWeatherForecastUi?: (hass: unknown, language: string, key: string) => string;
   translateWeatherCondition?: (hass: unknown, language: string, value: unknown) => string;
   translateMeteoalarmTerm?: (hass: unknown, language: string, value: unknown) => string;
   translateHumidifierMode?: (hass: unknown, language: string, value: unknown) => string;

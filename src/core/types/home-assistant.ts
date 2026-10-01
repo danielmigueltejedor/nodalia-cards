@@ -56,6 +56,7 @@ export interface HomeAssistant {
   ) => unknown;
   callWS?: (message: Record<string, unknown>) => Promise<unknown>;
   connection?: {
+    subscribeMessage?: (callback: (event: unknown) => void, message: Record<string, unknown>) => Promise<(() => void) | void>;
     sendMessagePromise?: (message: Record<string, unknown>) => Promise<unknown>;
   };
   navigate?: (path: string) => void;
