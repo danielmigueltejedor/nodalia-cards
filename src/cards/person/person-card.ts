@@ -332,7 +332,7 @@ class NodaliaPersonCard extends HTMLElement {
     return this._config?.icon || state?.attributes?.icon || "mdi:account";
   }
 
-  _personStrings() {
+  _personStrings():Record<string,unknown> {
     const NI = window.NodaliaI18n;
     if (!NI?.strings || !NI.resolveLanguage) {
       return {

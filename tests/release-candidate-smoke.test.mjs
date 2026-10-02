@@ -1,3 +1,4 @@
+import {loadRuntimeI18n} from "./helpers/runtime-i18n.mjs";
 import {readGeneratedString} from "./helpers/generated-literals.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -578,15 +579,19 @@ test("calendar all-day labels use shared locale text", () => {
   assert.doesNotMatch(source, /Todo el dia/);
   assert.match(i18n, /function translateCalendarUi/);
   assert.match(i18n, /calendarCard/);
-  assert.match(i18n, /allDay: "Ganztägig"/);
-  assert.match(i18n, /fields:\s*\{[\s\S]*?calendar:\s*"Kalender"[\s\S]*?title:\s*"Titel"/);
-  assert.match(i18n, /buttons:\s*\{[\s\S]*?month:\s*"Mois"[\s\S]*?create:\s*"Créer"/);
-  assert.match(i18n, /repeat:\s*\{[\s\S]*?none:\s*"不重复"[\s\S]*?custom:\s*"自定义"/);
-  assert.match(i18n, /repeatFrequency:\s*"Frequency"/);
-  assert.match(i18n, /selectRepeatFrequency:\s*"Select a frequency for custom repeat\."/);
-  assert.match(i18n, /createEventWithMessage:\s*"Nu s-a putut crea evenimentul: \{message\}"/);
-  assert.match(i18n, /allDay:\s*"Toute la journée"/);
-  assert.match(i18n, /allDay:\s*"全天"/);
+  const api=loadRuntimeI18n();
+  assert.equal(api.translateCalendarUi(null,"de","allDay"),"Ganztägig");
+  assert.equal(api.translateCalendarUi(null,"de","fields.calendar"),"Kalender");
+  assert.equal(api.translateCalendarUi(null,"de","fields.title"),"Titel");
+  assert.equal(api.translateCalendarUi(null,"fr","buttons.month"),"Mois");
+  assert.equal(api.translateCalendarUi(null,"fr","buttons.create"),"Créer");
+  assert.equal(api.translateCalendarUi(null,"zh","repeat.none"),"不重复");
+  assert.equal(api.translateCalendarUi(null,"zh","repeat.custom"),"自定义");
+  assert.equal(api.translateCalendarUi(null,"en","fields.repeatFrequency"),"Frequency");
+  assert.equal(api.translateCalendarUi(null,"en","errors.selectRepeatFrequency"),"Select a frequency for custom repeat.");
+  assert.equal(api.translateCalendarUi(null,"ro","errors.createEventWithMessage","",{message:"error"}),"Nu s-a putut crea evenimentul: error");
+  assert.equal(api.translateCalendarUi(null,"fr","allDay"),"Toute la journée");
+  assert.equal(api.translateCalendarUi(null,"zh","allDay"),"全天");
 });
 
 test("calendar editor signature only scans relevant entity domains", () => {
@@ -719,10 +724,12 @@ test("graph mobile legend chips avoid clipped active shadows", () => {
 });
 
 test("Norwegian language aliases resolve to official no locale", () => {
-  const source = read("nodalia-i18n.js");
-  assert.match(source, /const alias = \{ nb: "no", nn: "no" \}\[two\]/);
-  assert.match(source, /no: "nb-NO"/);
-  assert.match(source, /no:\s*function \(\) \{\s*return \{[\s\S]*vacuumErrorLabels:/);
+  const api=loadRuntimeI18n();
+  for(const language of ["nb","nn","nb-NO","nn-NO"]){
+    assert.equal(api.resolveLanguage(null,language),"no");
+    assert.equal(api.localeTag(api.resolveLanguage(null,language)),"nb-NO");
+  }
+  assert.ok(Object.keys(api.strings("no").vacuumErrorLabels).length>10);
 });
 
 test("shared visual editor ROWS map covers all supported editor languages", () => {
@@ -798,8 +805,8 @@ test("light card runtime preset labels use i18n", () => {
   assert.match(light, /temperaturePresets\.cool/);
   assert.doesNotMatch(light, /\{ label: "Warm", kelvin: range\.min \}/);
   assert.match(i18n, /function translateLightUi\(hass, configLang, path, fallback = "", values = \{\}\)/);
-  assert.match(i18n, /lightCard:\s*\{[\s\S]*?temperaturePresets:\s*\{[\s\S]*?warm:\s*"Warm"/);
-  assert.match(i18n, /lightCard:\s*\{[\s\S]*?temperaturePresets:\s*\{[\s\S]*?warm:\s*"Cálida"/);
+  assert.equal(loadRuntimeI18n().translateLightUi(null,"en","temperaturePresets.warm"),"Warm");
+  assert.equal(loadRuntimeI18n().translateLightUi(null,"es","temperaturePresets.warm"),"Cálida");
 });
 
 test("notifications translate vacuum cleaning state in smart messages", () => {
@@ -809,7 +816,7 @@ test("notifications translate vacuum cleaning state in smart messages", () => {
   assert.match(source, /state: stateLabel/);
   assert.doesNotMatch(source, /state: state\.state/);
   assert.match(i18n, /translateVacuumErrorState/);
-  assert.match(i18n, /main_brush_jammed: "Cepillo principal bloqueado"/);
+  assert.equal(loadRuntimeI18n().translateVacuumErrorState(null,"es","main_brush_jammed"),"Cepillo principal bloqueado");
   assert.match(source, /vacuum_error_entities/);
   assert.match(source, /_getVacuumErrorState\(entityId\)/);
   assert.match(source, /media_player_entities/);
@@ -1177,13 +1184,14 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /editorFilteredStatesSignature/);
   assert.match(source, /sanitizeCssRuntimeValue/);
   assert.match(i18n, /notificationsCard/);
-  assert.match(i18n, /<nodalia-runtime-i18n-pack>/);
-  assert.match(i18n, /\bde:\s*function \(\) \{[\s\S]*?fallbackEvent:\s*"Termin"/);
-  assert.match(i18n, /\bfr:\s*function \(\) \{[\s\S]*?fallbackEvent:\s*"Événement"/);
-  assert.match(i18n, /\bzh:\s*function \(\) \{[\s\S]*?fallbackEvent:\s*"事件"/);
-  assert.match(i18n, /mediaLeftOn: "Multimedia ohne Anwesenheit eingeschaltet"/);
-  assert.match(i18n, /hotClimate: "\{source\} zeigt \{value\}\. Du kannst Kühlung auf \{climate\} einschalten\."/);
-  assert.match(i18n, /Borrar notificación/);
+  assert.match(i18n,/Generated from src\/shared\/runtime-i18n-runtime.ts/);
+  const api=loadRuntimeI18n();
+  for(const [language,label] of [["de","Termin"],["fr","Événement"],["zh","事件"]]){
+    assert.equal(api.translateNotificationsUi(null,language,"fallbackEvent"),label);
+  }
+  assert.equal(api.translateNotificationsUi(null,"de","titles.mediaLeftOn"),"Multimedia ohne Anwesenheit eingeschaltet");
+  assert.equal(api.translateNotificationsUi(null,"de","messages.hotClimate","",{source:"Sensor",value:0,climate:"AC"}),"Sensor zeigt 0. Du kannst Kühlung auf AC einschalten.");
+  assert.ok(JSON.stringify(api.strings("es").notificationsCard).includes("Borrar notificación"));
   const editorUi = read("nodalia-editor-ui.js");
   const { rows: editorRows } = editorRowsFromGeneratedSource(editorUi);
   assert.equal(editorRowBySpanish(editorRows, "Borde tarjeta")[2], "Kartenrand");

@@ -188,7 +188,7 @@ class NodaliaScenesCard extends HTMLElement {
     }
     const lang = NI.resolveLanguage(this._hass, String(this._config.language || "auto"));
     const rawScenes = NI.strings(lang).scenes;
-    const scenes = isObject(rawScenes) ? rawScenes : {};
+    const scenes:Record<string,unknown> = isObject(rawScenes) ? rawScenes : {};
     const text = (key: string, fallback: string) => typeof scenes[key] === "string" && scenes[key] ? scenes[key] : fallback;
     return {
       emptyTitle: text("emptyTitle", "Nodalia Scenes Card"),

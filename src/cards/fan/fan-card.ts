@@ -826,7 +826,7 @@ class NodaliaFanCard extends HTMLElement {
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
     const pack = window.NodaliaI18n?.strings?.(lang)?.fan;
-    const fanStrings = isObject(pack) ? pack : {};
+    const fanStrings:Record<string,unknown> = isObject(pack) ? pack : {};
     if (fanStrings?.[stateValue]) {
       return fanStrings[stateValue];
     }

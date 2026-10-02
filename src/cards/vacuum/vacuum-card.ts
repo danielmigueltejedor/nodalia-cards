@@ -1422,7 +1422,7 @@ class NodaliaVacuumCard extends HTMLElement {
     const enPack = window.NodaliaI18n?.strings?.("en")?.advanceVacuum;
     const localized = isObject(pack) ? pack.descriptorLabels : undefined;
     const fallback = isObject(enPack) ? enPack.descriptorLabels : undefined;
-    const labels = isObject(localized) ? localized : isObject(fallback) ? fallback : {};
+    const labels:Record<string,unknown> = isObject(localized) ? localized : isObject(fallback) ? fallback : {};
     return String(kind === "mop" ? (labels.mop || "Mop") : (labels.suction || "Vacuum"));
   }
 

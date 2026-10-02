@@ -905,7 +905,7 @@ class NodaliaWeatherCard extends HTMLElement {
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, langCfg) ?? "en";
     const pack = window.NodaliaI18n?.strings?.(lang)?.weatherCard;
     const meteoalarm = isObject(pack) ? pack.meteoalarm : undefined;
-    const wm = isObject(meteoalarm) ? meteoalarm : {};
+    const wm:Record<string,unknown> = isObject(meteoalarm) ? meteoalarm : {};
     const ev = String(attrs.event || "").trim();
     const headline = String(attrs.headline || "").trim();
     const awareLabel = String(awareness.label || "").trim();
@@ -958,7 +958,7 @@ class NodaliaWeatherCard extends HTMLElement {
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, langCfg) ?? "en";
     const pack = window.NodaliaI18n?.strings?.(lang)?.weatherCard;
     const meteoalarm = isObject(pack) ? pack.meteoalarm : undefined;
-    const wm = isObject(meteoalarm) ? meteoalarm : {};
+    const wm:Record<string,unknown> = isObject(meteoalarm) ? meteoalarm : {};
     const title = state?.state === "on"
       ? String(attrs.headline || attrs.event || wm?.weatherAlert || "Weather alert").trim()
       : state?.state === "off"

@@ -1291,9 +1291,9 @@ class NodaliaLightCard extends HTMLElement {
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
     const pack = window.NodaliaI18n?.strings?.(lang);
-    const entityCard = isObject(pack?.entityCard) ? pack.entityCard : {};
-    const entityStates = isObject(entityCard.states) ? entityCard.states : {};
-    const alarmPanel = isObject(pack?.alarmPanel) ? pack.alarmPanel : {};
+    const entityCard:Record<string,unknown> = isObject(pack?.entityCard) ? pack.entityCard : {};
+    const entityStates:Record<string,unknown> = isObject(entityCard.states) ? entityCard.states : {};
+    const alarmPanel:Record<string,unknown> = isObject(pack?.alarmPanel) ? pack.alarmPanel : {};
 
     if (state?.attributes?._nodalia_optimistic_off === true) {
       return entityStates?.closing || "Apagando";

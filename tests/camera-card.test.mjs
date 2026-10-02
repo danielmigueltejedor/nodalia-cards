@@ -1,3 +1,4 @@
+import {loadRuntimeI18n} from "./helpers/runtime-i18n.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -1076,12 +1077,11 @@ test("camera preview age bubble updates without re-rendering the image", () => {
 
 test("camera card uses runtime i18n pack for states and expanded controls", () => {
   const source = read("nodalia-camera-card.js");
-  const i18n = read("nodalia-i18n.js");
   assert.match(source, /_cameraUi\(/);
   assert.match(source, /cameraCard/);
-  assert.match(i18n, /cameraCard:\s*\{[\s\S]*?live:\s*"Live"/);
-  assert.match(i18n, /cameraCard:\s*\{[\s\S]*?expand:\s*"Expandir"/);
-  assert.match(i18n, /cameraCard:\s*\{[\s\S]*?connectingLive:\s*"Conectando al directo"/);
+  assert.equal(loadRuntimeI18n().strings("en").cameraCard.live,"Live");
+  assert.equal(loadRuntimeI18n().strings("es").cameraCard.expand,"Expandir");
+  assert.equal(loadRuntimeI18n().strings("es").cameraCard.connectingLive,"Conectando al directo");
 });
 
 test("go2rtc blank stream sources do not connect to the dashboard websocket URL", () => {
