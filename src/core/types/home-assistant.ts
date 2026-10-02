@@ -39,6 +39,7 @@ export interface HassConfig {
 export interface HomeAssistant {
   formatEntityState?: (state: HassEntity) => unknown;
   states: Record<string, HassEntity | undefined>;
+  services?: Record<string,Record<string,unknown>>;
   areas?: unknown;
   devices?: unknown;
   entities?: unknown;

@@ -1262,7 +1262,62 @@
     return normalized;
   }
 
+  // src/cards/advance-vacuum/advance-vacuum-static-map-2.css
+  var advance_vacuum_static_map_2_default = ".advance-vacuum-card--entering{animation:advance-vacuum-card-enter var(--advance-vacuum-card-content-duration) cubic-bezier(0.22,0.84,0.26,1) both}.advance-vacuum-card--entering .advance-vacuum-card__map{animation:advance-vacuum-map-enter var(--advance-vacuum-card-content-duration) cubic-bezier(0.2,0.85,0.25,1) 60ms both}.advance-vacuum-card--entering .advance-vacuum-card__footer{animation:advance-vacuum-footer-enter var(--advance-vacuum-card-content-duration) cubic-bezier(0.22,0.84,0.26,1) 100ms both}.advance-vacuum-card__footer{align-items:center;display:flex;flex-direction:column;gap:12px;width:100%}.advance-vacuum-card__header,.advance-vacuum-card__icon,.advance-vacuum-card__unavailable,.advance-vacuum-card__header-main,.advance-vacuum-card__title,.advance-vacuum-card__chips,.advance-vacuum-card__chip,.advance-vacuum-card__header-actions,.advance-vacuum-card__header-action{display:none!important}.advance-vacuum-card__control,.advance-vacuum-card__mode-button,.advance-vacuum-card__goto-marker,.advance-vacuum-card__room-marker{appearance:none;background:none;border:none;color:inherit;cursor:pointer;font:inherit;margin:0;padding:0}";
+
+  // src/cards/advance-vacuum/advance-vacuum-static-map-1.css
+  var advance_vacuum_static_map_1_default = ".advance-vacuum-card__map-tool{align-items:center;background:var(--av-surface-raised);border:1px solid var(--av-border-strong);border-radius:999px;box-shadow:inset 0 1px 0 var(--av-inset),var(--av-float);color:var(--primary-text-color);display:inline-flex;gap:6px;justify-content:center;min-height:44px;min-width:44px;padding:0 14px;pointer-events:auto;transition:transform 180ms cubic-bezier(0.22,0.84,0.26,1),box-shadow 180ms ease,border-color 180ms ease,background 180ms ease,filter 180ms ease}.advance-vacuum-card__map-tool--add{background:var(--av-selected-bg);border-color:var(--av-selected-border);box-shadow:inset 0 1px 0 var(--av-selected-inset),var(--av-selected-glow);font-size:12px;font-weight:700}.advance-vacuum-card__map-tool-label{line-height:1}.advance-vacuum-card__map-tool.is-disabled{opacity:0.45}.advance-vacuum-card__map-tool:not(.advance-vacuum-card__map-tool--status):not(.advance-vacuum-card__map-tool--add):not(.is-disabled):hover{background:var(--av-accent-hover);border-color:var(--av-border);box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-accent-hover-shadow)}.advance-vacuum-card__map-tool--add:not(.is-disabled):hover{filter:brightness(1.05);transform:translateY(-1px)}.advance-vacuum-card__room-marker,.advance-vacuum-card__goto-marker{align-items:center;background:var(--av-surface-raised);border:1px solid var(--av-border);border-radius:999px;box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-float);color:var(--primary-text-color);display:inline-flex;gap:var(--room-marker-gap, 8px);justify-content:center;left:0;min-height:var(--marker-size, 34px);min-width:var(--marker-size, 34px);padding:var(--room-marker-padding, 0 12px);pointer-events:auto;position:absolute;top:0;touch-action:manipulation;transform:translate(-50%,-50%);white-space:nowrap;z-index:2}.advance-vacuum-card__room-marker.is-icon-only{border-radius:999px;padding:0;width:var(--marker-size, 34px)}.advance-vacuum-card__room-marker.is-readonly,.advance-vacuum-card__room-chip.is-readonly{cursor:default;opacity:0.96}.advance-vacuum-card__room-marker.is-selected,.advance-vacuum-card__goto-marker.is-selected{background:var(--av-selected-bg);border-color:var(--av-selected-border);box-shadow:inset 0 1px 0 var(--av-selected-inset),var(--av-selected-glow)}.advance-vacuum-card__room-marker ha-icon,.advance-vacuum-card__goto-marker ha-icon{--mdc-icon-size: var(--room-icon-size, 16px)}";
+
+  // src/cards/advance-vacuum/advance-vacuum-static-map-0.css
+  var advance_vacuum_static_map_0_default = ".advance-vacuum-card__goto-marker{height:38px;width:38px}.advance-vacuum-card__room-list{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%}.advance-vacuum-card__room-chip{align-items:center;background:var(--av-surface);border:1px solid var(--av-border);border-radius:999px;box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-float-subtle);color:var(--secondary-text-color);cursor:pointer;display:inline-flex;gap:8px;min-height:36px;padding:0 14px;touch-action:manipulation;transition:background 180ms ease,border-color 180ms ease,box-shadow 180ms ease,color 180ms ease,transform 180ms cubic-bezier(0.22,0.84,0.26,1)}.advance-vacuum-card__room-chip.is-selected{background:var(--av-selected-bg);border-color:var(--av-selected-border);box-shadow:inset 0 1px 0 var(--av-selected-inset),var(--av-selected-glow);color:var(--primary-text-color)}.advance-vacuum-card__room-chip:not(.is-readonly):not(.is-selected):hover{background:var(--av-accent-hover);border-color:var(--av-border);box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-accent-hover-shadow)}.advance-vacuum-card__room-chip ha-icon{--mdc-icon-size: 16px}.advance-vacuum-card__room-chip span{font-size:12px;font-weight:600}.advance-vacuum-card__controls{align-items:center;display:grid;gap:10px;justify-items:center;width:100%}.advance-vacuum-card__controls-row{align-items:center;column-gap:14px;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);width:100%}";
+
+  // src/cards/advance-vacuum/advance-vacuum-map-surface.css
+  var advance_vacuum_map_surface_default = ".advance-vacuum-card__map-canvas{height:100%;inset:0;position:absolute;transform-origin:top left;width:100%}.advance-vacuum-card__map-image{display:block;height:100%;inset:0;object-fit:cover;opacity:1;position:absolute;transition:opacity 220ms ease-out;width:100%;z-index:0}.advance-vacuum-card__map-image[data-map-image-previous=true]{z-index:0}.advance-vacuum-card__map-image[data-map-image]{z-index:1}.advance-vacuum-card__map-image.is-pending,.advance-vacuum-card__map-image.is-fading-out{opacity:0}.advance-vacuum-card__map-room-dim,.advance-vacuum-card__room-highlight-layer,.advance-vacuum-card__map-svg,.advance-vacuum-card__map-markers,.advance-vacuum-card__map-overlays{inset:0;position:absolute}.advance-vacuum-card__map-room-dim{background:rgba(8,12,20,0.5);pointer-events:none;z-index:1}.advance-vacuum-card__room-highlight-layer{pointer-events:none;z-index:2}.advance-vacuum-card__room-highlight-image{display:block;height:100%;inset:0;object-fit:cover;pointer-events:none;position:absolute;width:100%}.advance-vacuum-card__map-svg{height:100%;pointer-events:none;width:100%;z-index:3}.advance-vacuum-card__map-markers{pointer-events:none}.advance-vacuum-card__map-overlays{pointer-events:none;z-index:4}";
+
+  // src/cards/advance-vacuum/advance-vacuum-motion.css
+  var advance_vacuum_motion_default = ".advance-vacuum-card__selection-chip{align-items:center;background:var(--av-surface);border:1px solid var(--av-border);border-radius:999px;box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-float-subtle);color:var(--secondary-text-color);display:inline-flex;font-size:12px;font-weight:600;gap:8px;min-height:34px;padding:0 12px}.advance-vacuum-card__selection-chip strong{color:var(--primary-text-color)}.advance-vacuum-card__selection-chip:hover{background:var(--av-accent-hover);border-color:var(--av-border);box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-accent-hover-shadow)}.advance-vacuum-card__routines{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));width:100%}.advance-vacuum-card__routine-button{align-items:center;appearance:none;background:var(--av-surface);border:1px solid var(--av-border);border-radius:18px;box-shadow:inset 0 1px 0 var(--av-inset),var(--av-float);color:var(--primary-text-color);cursor:pointer;display:grid;gap:10px;justify-items:center;min-height:118px;padding:16px 14px;text-align:center;transition:transform 180ms cubic-bezier(0.22,0.84,0.26,1),box-shadow 180ms ease,border-color 180ms ease;width:100%}.advance-vacuum-card__routine-button:hover{transform:translateY(-1px);box-shadow:inset 0 1px 0 var(--av-inset),var(--av-float-lift)}.advance-vacuum-card__routine-button.is-disabled{cursor:default;opacity:0.5}.advance-vacuum-card__routine-icon{align-items:center;background:var(--av-accent-tile-bg);border:1px solid var(--av-accent-tile-border);border-radius:999px;box-shadow:inset 0 1px 0 var(--av-accent-tile-inset);display:inline-flex;height:46px;justify-content:center;width:46px}.advance-vacuum-card__routine-icon ha-icon{--mdc-icon-size: 22px}.advance-vacuum-card__routine-label{font-size:12px;font-weight:700;line-height:1.35;text-wrap:balance}@keyframes advance-vacuum-utility-panel-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}@keyframes advance-vacuum-card-enter{0%{opacity:0;transform:translateY(8px) scale(0.992)}100%{opacity:1;transform:translateY(0) scale(1)}}@keyframes advance-vacuum-map-enter{0%{opacity:0;transform:translateY(12px) scale(0.988)}100%{opacity:1;transform:translateY(0) scale(1)}}@keyframes advance-vacuum-footer-enter{0%{opacity:0;transform:translateY(10px)}100%{opacity:1;transform:translateY(0)}}@keyframes advance-vacuum-button-bounce{0%{transform:scale(1)}38%{transform:scale(0.935)}72%{transform:scale(1.035)}100%{transform:scale(1)}}@keyframes advance-vacuum-button-bounce-subtle{0%{transform:scale(1)}40%{transform:scale(0.965)}72%{transform:scale(1.02)}100%{transform:scale(1)}}@keyframes advance-vacuum-icon-sweep{0%,100%{transform:translateX(-3px) rotate(-10deg)}50%{transform:translateX(4px) rotate(12deg)}}@media(prefers-reduced-motion:reduce){.advance-vacuum-card,.advance-vacuum-card *,.advance-vacuum-card__control--active-motion ha-icon{animation:none!important;transition:none!important}}";
+
+  // src/cards/advance-vacuum/advance-vacuum-utilities.css
+  var advance_vacuum_utilities_default = ".advance-vacuum-card__control--active-motion ha-icon{animation:advance-vacuum-icon-sweep 1.45s ease-in-out infinite;transform-origin:50% 70%}.advance-vacuum-card__modes{display:flex;justify-content:center;width:100%}.advance-vacuum-card__modes-bubble{background:var(--av-surface);border:1px solid var(--av-border);border-radius:999px;box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-float-subtle);display:inline-flex;flex-wrap:wrap;gap:4px;justify-content:center;max-width:100%;padding:4px}.advance-vacuum-card__mode-button{align-items:center;background:transparent;border:1px solid transparent;border-radius:999px;box-shadow:none;color:var(--secondary-text-color);display:inline-flex;font-size:12px;font-weight:600;gap:8px;min-height:30px;padding:0 11px;transition:background 180ms ease,border-color 180ms ease,box-shadow 180ms ease,color 180ms ease,transform 180ms cubic-bezier(0.2,0.9,0.24,1)}.advance-vacuum-card__mode-button:hover{background:var(--av-accent-hover);box-shadow:var(--av-accent-hover-shadow)}.advance-vacuum-card__mode-button.is-active{background:var(--av-selected-bg);border-color:var(--av-selected-border);box-shadow:inset 0 1px 0 var(--av-selected-inset),var(--av-selected-glow);color:var(--primary-text-color);font-weight:700}.advance-vacuum-card__mode-button ha-icon{--mdc-icon-size: 15px}.advance-vacuum-card__utility-panel{animation:advance-vacuum-utility-panel-in var(--advance-vacuum-card-panel-duration) cubic-bezier(0.22,0.84,0.26,1) forwards;display:grid;gap:10px;justify-items:center;opacity:0;transform:translateY(-6px);transform-origin:top center;width:100%}.advance-vacuum-card__utility-panel-slot{display:flex;justify-content:center;width:100%}.advance-vacuum-card__utility-group{display:grid;gap:8px;justify-items:center;width:100%}.advance-vacuum-card__utility-label{color:var(--secondary-text-color);font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase}.advance-vacuum-card__utility-options{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%}.advance-vacuum-card__utility-options--menu{max-width:100%}.advance-vacuum-card__utility-options--presets{justify-content:center}.advance-vacuum-card__utility-option{align-items:center;appearance:none;background:var(--av-surface);border:1px solid var(--av-border);border-radius:999px;box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-float-subtle);color:var(--primary-text-color);cursor:pointer;display:inline-flex;font:inherit;gap:8px;justify-content:center;margin:0;min-height:34px;padding:0 12px;transition:background 180ms ease,border-color 180ms ease,box-shadow 180ms ease,color 180ms ease,transform 180ms cubic-bezier(0.22,0.84,0.26,1)}.advance-vacuum-card__utility-option.is-active{background:var(--av-selected-bg);border-color:var(--av-selected-border);box-shadow:inset 0 1px 0 var(--av-selected-inset),var(--av-selected-ring),var(--av-selected-glow);color:var(--primary-text-color);font-weight:700}.advance-vacuum-card__utility-option:not(.is-active):hover{background:var(--av-accent-hover);border-color:var(--av-border);box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-accent-hover-shadow)}.advance-vacuum-card__utility-option--menu ha-icon{--mdc-icon-size: 16px}.advance-vacuum-card__utility-field{display:grid;gap:8px;justify-items:center;max-width:340px;width:min(100%,340px)}.advance-vacuum-card__utility-select{appearance:none;background:var(--av-surface);border:1px solid var(--av-border);border-radius:16px;box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-float-subtle);color:var(--primary-text-color);cursor:pointer;font:inherit;min-height:42px;padding:0 14px;text-align:center;width:100%}.advance-vacuum-card__utility-meta{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%}.advance-vacuum-card__utility-chip-group{display:grid;gap:6px;justify-items:center}";
+
+  // src/shared/home-assistant-services.ts
+  function callHassService(hass, domain, service, data = {}, target = null) {
+    if (!hass?.callService) return;
+    const failure = (error) => console.warn("Nodalia Cards: service call failed", `${domain}.${service}`, error);
+    try {
+      void Promise.resolve(target !== null ? hass.callService(domain, service, data, target) : hass.callService(domain, service, data)).catch(failure);
+    } catch (error) {
+      failure(error);
+    }
+  }
+  async function requestHassService(host, hass, domain, service, data = {}, target = null) {
+    if (hass?.callService) return target !== null ? hass.callService(domain, service, data, target) : hass.callService(domain, service, data);
+    const utils2 = window.NodaliaUtils;
+    return utils2?.invokeHomeAssistantService?.call(utils2, host, hass, domain, service, data, target);
+  }
+  function invokeHassService(host, hass, domain, service, data = {}, target = null) {
+    const utils2 = window.NodaliaUtils;
+    const invoke = utils2?.invokeHomeAssistantService;
+    if (!invoke) {
+      callHassService(hass, domain, service, data, target);
+      return;
+    }
+    const failure = (error) => console.warn("Nodalia Cards: service call failed", `${domain}.${service}`, error);
+    try {
+      void Promise.resolve(invoke.call(utils2, host, hass, domain, service, data, target)).catch(failure);
+    } catch (error) {
+      failure(error);
+    }
+  }
+
   // src/cards/advance-vacuum/advance-vacuum-card.ts
+  var vacuumStrings = (value) => {
+    const result = {};
+    for (const [key, item] of Object.entries(vacuumRecord(value))) if (typeof item === "string") result[key] = item;
+    return result;
+  };
+  var vacuumRecord = (value) => isObject(value) ? value : {};
+  var vacuumText = (value) => String(value ?? "");
   var _lazyNodaliaAdvanceVacuumCard;
   function loadNodaliaAdvanceVacuumCard() {
     if (_lazyNodaliaAdvanceVacuumCard) {
@@ -1276,6 +1331,7 @@
         return applyStubEntity(deepClone(STUB_CONFIG), hass, ["vacuum"], entities, entitiesFallback);
       }
       static getEntitySuggestion(hass, entityId) {
+        if (!hass) return null;
         return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
           domains: ["vacuum"],
           label: "Vacuum — Advanced"
@@ -1287,6 +1343,17 @@
       }
       _nodaliaConstruct() {
         this.attachShadow({ mode: "open" });
+        this._generation = 0;
+        this._contextConnection = void 0;
+        this._contextAuth = void 0;
+        this._contextUser = "";
+        this._contextAdmin = false;
+        this._contextServer = "";
+        this._waits = /* @__PURE__ */ new Map();
+        this._localeFrames = /* @__PURE__ */ new Set();
+        this._zoneBeforeDrag = null;
+        this._gesturePointers = /* @__PURE__ */ new Set();
+        this._resumeToken = null;
         this._config = normalizeConfig(DEFAULT_CONFIG);
         this._hass = null;
         this._mapImageWidth = 1024;
@@ -1346,6 +1413,9 @@
         this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
         this._onShadowPointerMove = this._onShadowPointerMove.bind(this);
         this._onShadowPointerUp = this._onShadowPointerUp.bind(this);
+        this._onShadowCancel = this._onShadowCancel.bind(this);
+        this._onWindowBlur = this._onWindowBlur.bind(this);
+        this._onVisibility = this._onVisibility.bind(this);
         this._onShadowTouchStart = this._onShadowTouchStart.bind(this);
         this._onShadowTouchMove = this._onShadowTouchMove.bind(this);
         this._onShadowTouchEnd = this._onShadowTouchEnd.bind(this);
@@ -1353,17 +1423,16 @@
         this._onMapBackClick = this._onMapBackClick.bind(this);
         this._onNodaliaI18nReady = this._onNodaliaI18nReady.bind(this);
         this._localeReconciliationTimeouts = null;
-        this.shadowRoot.addEventListener("click", this._onShadowClick);
-        this.shadowRoot.addEventListener("change", this._onShadowChange);
-        this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
-        this.shadowRoot.addEventListener("pointermove", this._onShadowPointerMove);
-        this.shadowRoot.addEventListener("pointerup", this._onShadowPointerUp);
-        this.shadowRoot.addEventListener("pointercancel", this._onShadowPointerUp);
-        this.shadowRoot.addEventListener("pointerleave", this._onShadowPointerUp);
-        this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
-        this.shadowRoot.addEventListener("touchmove", this._onShadowTouchMove, { passive: false });
-        this.shadowRoot.addEventListener("touchend", this._onShadowTouchEnd, { passive: false });
-        this.shadowRoot.addEventListener("touchcancel", this._onShadowTouchEnd, { passive: false });
+        this.shadowRoot?.addEventListener("click", this._onShadowClick);
+        this.shadowRoot?.addEventListener("change", this._onShadowChange);
+        this.shadowRoot?.addEventListener("pointerdown", this._onShadowPointerDown);
+        this.shadowRoot?.addEventListener("pointermove", this._onShadowPointerMove);
+        this.shadowRoot?.addEventListener("pointerup", this._onShadowPointerUp);
+        this.shadowRoot?.addEventListener("pointercancel", this._onShadowCancel);
+        this.shadowRoot?.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
+        this.shadowRoot?.addEventListener("touchmove", this._onShadowTouchMove, { passive: false });
+        this.shadowRoot?.addEventListener("touchend", this._onShadowTouchEnd, { passive: false });
+        this.shadowRoot?.addEventListener("touchcancel", this._onShadowCancel, { passive: false });
       }
       connectedCallback() {
         this._animateContentOnNextRender = true;
@@ -1371,14 +1440,18 @@
         this._render();
         if (typeof window !== "undefined") {
           window.addEventListener("nodalia-i18n-ready", this._onNodaliaI18nReady);
+          window.addEventListener("blur", this._onWindowBlur);
+          document.addEventListener("visibilitychange", this._onVisibility);
         }
         this._scheduleLocaleReconciliation();
       }
       disconnectedCallback() {
         if (typeof window !== "undefined") {
           window.removeEventListener("nodalia-i18n-ready", this._onNodaliaI18nReady);
+          window.removeEventListener("blur", this._onWindowBlur);
+          document.removeEventListener("visibilitychange", this._onVisibility);
         }
-        this._clearLocaleReconciliation();
+        this._releaseViewWork();
         const image = this.shadowRoot?.querySelector("[data-map-image]");
         if (image) {
           image.removeEventListener("load", this._onMapImageLoad);
@@ -1389,6 +1462,123 @@
         }
         this._mapActionInFlight = false;
         window.NodaliaUtils?.clearDeferTimers?.(this);
+      }
+      _isCurrent(generation) {
+        return this.isConnected && generation === this._generation;
+      }
+      _serverIdentity(hass) {
+        try {
+          return hass?.hassUrl?.("/") || window.location?.origin || "";
+        } catch {
+          return "";
+        }
+      }
+      _onWindowBlur() {
+        this._cancelMapGesture();
+      }
+      _onVisibility() {
+        if (document.hidden) this._cancelMapGesture();
+      }
+      _onShadowCancel(event) {
+        event.stopPropagation();
+        this._cancelMapGesture();
+      }
+      _cancelMapGesture(render = true) {
+        if (this._pendingRoomSelectionTap) this._markSuppressedRoomSelectionClick(this._pendingRoomSelectionTap.roomId);
+        const surface = this.shadowRoot?.querySelector("[data-map-surface='main']");
+        for (const pointerId of this._gesturePointers) {
+          try {
+            surface?.releasePointerCapture(pointerId);
+          } catch {
+          }
+        }
+        this._gesturePointers.clear();
+        if (this._zoneBeforeDrag) this._manualZones = this._manualZones.map((zone, index) => index === this._zoneBeforeDrag?.index ? { ...this._zoneBeforeDrag.zone } : zone);
+        this._zoneBeforeDrag = null;
+        this._zoneHandleDrag = null;
+        this._draftZone = null;
+        this._pointerStart = null;
+        this._pointerSurfaceRect = null;
+        this._pendingTouchZoneStart = null;
+        this._pendingRoomSelectionTap = null;
+        this._activeMapPointers.clear();
+        this._pinchGesture = null;
+        this._touchPinchGesture = null;
+        if (render && this.isConnected) this._render();
+      }
+      _releaseViewWork() {
+        this._generation += 1;
+        this._cancelMapGesture(false);
+        this._clearLocaleReconciliation();
+        for (const id of this._localeFrames) window.cancelAnimationFrame(id);
+        this._localeFrames.clear();
+        for (const [id, resolve] of this._waits) {
+          window.clearTimeout(id);
+          resolve();
+        }
+        this._waits.clear();
+        if (this._entranceAnimationResetTimer) window.clearTimeout(this._entranceAnimationResetTimer);
+        this._entranceAnimationResetTimer = 0;
+        window.NodaliaUtils?.clearDeferTimers?.(this);
+        this._mapActionInFlight = false;
+        this._roomCleaningResumeInFlight = false;
+        this._resumeToken = null;
+        this._lastRenderSignature = "";
+        this.shadowRoot?.querySelector("[data-map-image]")?.removeEventListener("load", this._onMapImageLoad);
+      }
+      _resetContext() {
+        this._releaseViewWork();
+        this._repeats = clamp(parseNumber(this._config.max_repeats) ?? 1, 1, 9);
+        this._selectedRoomIds = [];
+        this._selectedPredefinedZoneIds = [];
+        this._manualZones = [];
+        this._selectedManualZoneIndex = -1;
+        this._activeCleaningRoomIds = [];
+        this._activeCleaningZones = [];
+        this._activeCleaningSessionMode = "";
+        this._transientZoneReturnMode = "";
+        this._activeUtilityPanel = null;
+        this._activeModePanelPreset = "";
+        this._lastResolvedModePanelPreset = "";
+        this._dockedModePanelPreset = "";
+        this._activeDockPanelSection = DOCK_PANEL_SECTIONS[0]?.id || "control";
+        this._lastNonSmartModeSelection = { suction: "", mop: "" };
+        this._pendingRoomCleaningResumeRoomIds = [];
+        this._pendingRoomCleaningResumeRepeats = 1;
+        this._pendingCleaningSessionStartAt = 0;
+        this._hasLoadedPersistedCleaningSessionState = false;
+        this._lastSubmittedSharedCleaningSessionValue = null;
+        this._lastSharedCleaningSessionOverflowFingerprint = null;
+        this._selectionUpdatedAt = 0;
+        this._wasCleaningSessionActive = false;
+        this._roomTrackingEntityCache = null;
+        this._calibrationSignatureStamp = "";
+        this._mapImageWidth = 1024;
+        this._mapImageHeight = 1024;
+        this._converter = new CoordinatesConverter([]);
+        this._resetMapTransform();
+        this._animateContentOnNextRender = true;
+        this.shadowRoot?.replaceChildren();
+        this._activeMode = this._getAvailableModes()[0]?.id || "all";
+      }
+      _scheduleOwnedTimer(callback, delay) {
+        const generation = this._generation;
+        const id = window.setTimeout(() => {
+          this._waits.delete(id);
+          if (this._isCurrent(generation)) callback();
+        }, delay);
+        this._waits.set(id, () => {
+        });
+      }
+      _waitForMapAction(delay, generation) {
+        if (!this._isCurrent(generation)) return Promise.resolve();
+        return new Promise((resolve) => {
+          const id = window.setTimeout(() => {
+            this._waits.delete(id);
+            resolve();
+          }, delay);
+          this._waits.set(id, resolve);
+        });
       }
       _onNodaliaI18nReady() {
         this._reconcileI18nOrLocaleIfNeeded();
@@ -1425,24 +1615,38 @@
           return;
         }
         this._clearLocaleReconciliation();
+        const generation = this._generation;
         const run = () => {
-          if (!this.isConnected) {
+          if (!this._isCurrent(generation)) {
             return;
           }
           this._reconcileI18nOrLocaleIfNeeded();
         };
         queueMicrotask(run);
-        window.requestAnimationFrame(() => {
-          window.requestAnimationFrame(run);
+        const first = window.requestAnimationFrame(() => {
+          this._localeFrames.delete(first);
+          if (!this._isCurrent(generation)) return;
+          const second = window.requestAnimationFrame(() => {
+            this._localeFrames.delete(second);
+            run();
+          });
+          this._localeFrames.add(second);
         });
+        this._localeFrames.add(first);
         const delaysMs = [0, 200, 600, 1600, 4e3];
         this._localeReconciliationTimeouts = delaysMs.map((ms) => window.setTimeout(run, ms));
       }
       setConfig(config) {
+        this._releaseViewWork();
+        this._mapImageWidth = 1024;
+        this._mapImageHeight = 1024;
+        this._converter = new CoordinatesConverter([]);
+        this._lastNonSmartModeSelection = { suction: "", mop: "" };
+        this.shadowRoot?.replaceChildren();
         this._config = normalizeConfig(config || {});
         window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
         this._lastRenderSignature = "";
-        this._repeats = clamp(Number(this._config.max_repeats || 1), 1, 9);
+        this._repeats = clamp(parseNumber(this._config.max_repeats) ?? 1, 1, 9);
         this._selectedRoomIds = [];
         this._activeCleaningRoomIds = [];
         this._activeCleaningZones = [];
@@ -1482,10 +1686,21 @@
         this._ensurePersistedCleaningSessionStateLoaded();
         this._syncCalibrationIfNeeded();
         this._render();
+        if (this.isConnected) this._scheduleLocaleReconciliation();
       }
       set hass(hass) {
         try {
+          const server = this._serverIdentity(hass);
+          const contextChanged = this._contextConnection !== hass?.connection || this._contextAuth !== hass?.auth || this._contextUser !== (hass?.user?.id || "") || this._contextAdmin !== (hass?.user?.is_admin === true) || this._contextServer !== server;
           this._hass = hass;
+          this._contextConnection = hass?.connection;
+          this._contextAuth = hass?.auth;
+          this._contextUser = hass?.user?.id || "";
+          this._contextAdmin = hass?.user?.is_admin === true;
+          this._contextServer = server;
+          if (contextChanged) this._resetContext();
+          if (!this.isConnected) return;
+          if (contextChanged) this._scheduleLocaleReconciliation();
           const nextSignature = this._getRenderSignature(hass);
           if (nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
             this._lastRenderSignature = nextSignature;
@@ -1515,14 +1730,15 @@
         if (haptics.enabled !== true) {
           return;
         }
-        const style = styleOverride || haptics.style || "medium";
+        const style = vacuumText(styleOverride || haptics.style || "medium");
         fireEvent(this, "haptic", style, {
           bubbles: true,
           cancelable: false,
           composed: true
         });
         if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
-          navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
+          const pattern = vacuumRecord(HAPTIC_PATTERNS)[style];
+          navigator.vibrate(typeof pattern === "number" ? pattern : Array.isArray(pattern) && pattern.every((item) => typeof item === "number") ? pattern : HAPTIC_PATTERNS.selection);
         }
       }
       _getAnimationSettings() {
@@ -1540,12 +1756,14 @@
           clearTimeout(this._entranceAnimationResetTimer);
           this._entranceAnimationResetTimer = 0;
         }
+        const generation = this._generation;
         const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3e3);
         if (!safeDelay || typeof window === "undefined") {
           this._animateContentOnNextRender = false;
           return;
         }
         this._entranceAnimationResetTimer = window.setTimeout(() => {
+          if (!this._isCurrent(generation)) return;
           this._entranceAnimationResetTimer = 0;
           if (!this.isConnected) {
             return;
@@ -1565,8 +1783,9 @@
         element.getBoundingClientRect();
         element.classList.add("is-pressing");
         const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+        const generation = this._generation;
         const done = () => {
-          if (!element.isConnected) {
+          if (!this._isCurrent(generation) || !element.isConnected) {
             return;
           }
           element.classList.remove("is-pressing");
@@ -1574,7 +1793,7 @@
         if (typeof schedule === "function") {
           schedule(this, done, animations.buttonBounceDuration + 40);
         } else {
-          window.setTimeout(done, animations.buttonBounceDuration + 40);
+          this._scheduleOwnedTimer(done, animations.buttonBounceDuration + 40);
         }
       }
       _getPressTargetFromEvent(event) {
@@ -1626,7 +1845,7 @@
       }
       _matchesActivity(state, values) {
         const key = this._getReportedStateKey(state);
-        return values.map((item) => normalizeTextKey(item)).includes(key);
+        return arrayFromMaybe(values).map((item) => normalizeTextKey(item)).includes(key);
       }
       _isCleaning(state) {
         return this._matchesActivity(state, [
@@ -1671,7 +1890,7 @@
       }
       _getStateLabel(state) {
         const key = this._getReportedStateKey(state);
-        const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+        const hass = this._hass;
         const langCfg = this._config?.language ?? "auto";
         if (window.NodaliaI18n?.translateAdvanceVacuumReportedState) {
           return window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, langCfg, key, state?.state);
@@ -1705,7 +1924,7 @@
         return labels[key] || (state?.state ? String(state.state) : "Unknown");
       }
       _descriptorLabel(kind) {
-        const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+        const hass = this._hass;
         const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
         if (!window.NodaliaI18n?.strings) {
           if (kind === "mop_mode") {
@@ -1713,16 +1932,20 @@
           }
           return kind === "mop" ? "Mop" : "Vacuum";
         }
-        const d = window.NodaliaI18n.strings(lang).advanceVacuum.descriptorLabels;
+        const d = this._advanceVacuumStrings()?.descriptorLabels || {};
         if (kind === "mop_mode") {
-          return d.mop_mode;
+          return d.mop_mode || "Mop mode";
         }
-        return kind === "mop" ? d.mop : d.suction;
+        return kind === "mop" ? d.mop || "Mop" : d.suction || "Vacuum";
       }
       _advanceVacuumStrings() {
-        const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+        const hass = this._hass;
         const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-        return window.NodaliaI18n?.strings?.(lang)?.advanceVacuum || null;
+        const pack = window.NodaliaI18n?.strings?.(lang)?.advanceVacuum;
+        if (!isObject(pack)) return null;
+        const dockControls = {};
+        for (const [key, value] of Object.entries(vacuumRecord(pack.dockControls))) dockControls[key] = vacuumStrings(value);
+        return { modeLabels: vacuumStrings(pack.modeLabels), aria: vacuumStrings(pack.aria), panelModes: vacuumStrings(pack.panelModes), dockSections: vacuumStrings(pack.dockSections), dockSettings: vacuumStrings(pack.dockSettings), dockControls, descriptorLabels: vacuumStrings(pack.descriptorLabels), mapStatus: vacuumStrings(pack.mapStatus), utility: vacuumStrings(pack.utility), actions: vacuumStrings(pack.actions), handles: vacuumStrings(pack.handles), titles: vacuumStrings(pack.titles) };
       }
       _getAccentColor(state) {
         const styles = getSafeStyles(this._config?.styles);
@@ -1747,29 +1970,17 @@
         return styles.icon.docked_color || "rgba(255, 255, 255, 0.56)";
       }
       _getBatteryLevel(state) {
-        const direct = Number(state?.attributes?.battery_level);
-        if (Number.isFinite(direct)) {
+        const direct = parseNumber(state?.attributes?.battery_level);
+        if (direct !== null) {
           return clamp(Math.round(direct), 0, 100);
         }
         return null;
       }
-      _getBatteryColor(level) {
-        if (!Number.isFinite(level)) {
-          return "rgba(255,255,255,0.62)";
-        }
-        if (level >= 70) {
-          return "#61c97a";
-        }
-        if (level >= 35) {
-          return "#f1c24c";
-        }
-        return "#ff8c69";
-      }
       _getMapStatusIndicator(state = this._getVacuumState()) {
-        const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+        const hass = this._hass;
         const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-        const ms = window.NodaliaI18n?.strings?.(lang)?.advanceVacuum?.mapStatus;
-        const activeDockControlIds = DOCK_CONTROL_DEFINITIONS.map((definition) => this._getDockControlDescriptor(definition, state)).filter((descriptor) => descriptor?.active).map((descriptor) => descriptor.id);
+        const ms = this._advanceVacuumStrings()?.mapStatus;
+        const activeDockControlIds = DOCK_CONTROL_DEFINITIONS.map((definition) => this._getDockControlDescriptor(definition, state)).filter((descriptor) => Boolean(descriptor?.active)).map((descriptor) => descriptor.id);
         if (activeDockControlIds.includes("wash") || this._isWashingMops(state)) {
           return {
             icon: "mdi:water",
@@ -1792,7 +2003,7 @@
           };
         }
         const batteryLevel = this._getBatteryLevel(state);
-        if (this._isDocked(state) && Number.isFinite(batteryLevel) && batteryLevel < 100) {
+        if (this._isDocked(state) && batteryLevel !== null && batteryLevel < 100) {
           return {
             icon: "mdi:lightning-bolt",
             title: ms?.charging ?? "Charging",
@@ -1802,7 +2013,7 @@
         return null;
       }
       _getMapEntityId() {
-        return this._config?.map_source?.camera || this._config?.map_source?.image || this._config?.map_camera || "";
+        return vacuumText(this._config?.map_source?.camera || this._config?.map_source?.image || this._config?.map_camera || "");
       }
       _getMapState() {
         const entityId = this._getMapEntityId();
@@ -1810,7 +2021,7 @@
       }
       _getCleaningSessionStorageKey() {
         const entityId = String(this._config?.entity || "").trim();
-        return entityId ? `nodalia-advance-vacuum-card:cleaning-session:${entityId}` : "";
+        return entityId ? `nodalia-advance-vacuum-card:cleaning-session:${encodeURIComponent(this._serverIdentity(this._hass))}:${encodeURIComponent(this._hass?.user?.id || "anonymous")}:${entityId}` : "";
       }
       _getSharedCleaningSessionEntityId() {
         const entityId = String(this._config?.shared_cleaning_session_entity || "").trim();
@@ -1960,12 +2171,16 @@
           return false;
         }
         try {
-          return Boolean(await post(id, body, this._hass));
+          const utils2 = window.NodaliaUtils;
+          const hass = this._hass;
+          return Boolean(await post.call(utils2, id, body, hass));
         } catch (_error) {
           return false;
         }
       }
       _persistSharedCleaningSession(session) {
+        if (!this.isConnected) return;
+        const generation = this._generation;
         const webhookId = String(this._config?.shared_cleaning_session_webhook ?? "").trim();
         const entityId = this._getSharedCleaningSessionEntityId();
         if (!webhookId && !entityId) {
@@ -2003,7 +2218,7 @@
         this._lastSubmittedSharedCleaningSessionValue = serializedTrim;
         if (webhookId) {
           void this._postSharedCleaningSessionWebhook(webhookId, { value: serializedTrim }).then((ok) => {
-            if (!this.isConnected) {
+            if (!this._isCurrent(generation)) {
               return;
             }
             if (!ok) {
@@ -2022,7 +2237,8 @@
           value: serializedTrim
         });
         if (pending && typeof pending.then === "function") {
-          pending.catch((err) => {
+          void pending.catch((err) => {
+            if (!this._isCurrent(generation)) return;
             this._lastSubmittedSharedCleaningSessionValue = null;
             if (typeof console !== "undefined" && typeof console.warn === "function") {
               console.warn("Nodalia Advance Vacuum Card: input_text.set_value failed", err);
@@ -2034,6 +2250,8 @@
         }
       }
       _clearSharedCleaningSession() {
+        if (!this.isConnected) return;
+        const generation = this._generation;
         const webhookId = String(this._config?.shared_cleaning_session_webhook ?? "").trim();
         const entityId = this._getSharedCleaningSessionEntityId();
         if (!webhookId && !entityId) {
@@ -2043,7 +2261,7 @@
         if (webhookId) {
           this._lastSubmittedSharedCleaningSessionValue = "";
           void this._postSharedCleaningSessionWebhook(webhookId, { value: "" }).then((ok) => {
-            if (!this.isConnected) {
+            if (!this._isCurrent(generation)) {
               return;
             }
             if (!ok && typeof console !== "undefined" && typeof console.warn === "function") {
@@ -2066,18 +2284,18 @@
         if (!isObject(session)) {
           return null;
         }
-        const mode = ["rooms", "zone"].includes(session.mode) ? session.mode : "";
-        const activeMode = ["all", "rooms", "zone", "goto", "routines"].includes(session.activeMode) ? session.activeMode : "";
+        const mode = typeof session.mode === "string" && ["rooms", "zone"].includes(session.mode) ? session.mode : "";
+        const activeMode = typeof session.activeMode === "string" && ["all", "rooms", "zone", "goto", "routines"].includes(session.activeMode) ? session.activeMode : "";
         const activeRoomIds = arrayFromMaybe(session.activeRoomIds).map((item) => String(item || "").trim()).filter(Boolean);
-        const activeZones = arrayFromMaybe(session.activeZones).map((zone) => parseZoneRect(zone)).filter(Boolean);
+        const activeZones = arrayFromMaybe(session.activeZones).map((zone) => parseZoneRect(zone)).filter((zone) => zone !== null);
         const selectedRoomIds = arrayFromMaybe(session.selectedRoomIds).map((item) => String(item || "").trim()).filter(Boolean);
         const selectedPredefinedZoneIds = arrayFromMaybe(session.selectedPredefinedZoneIds).map((item) => String(item || "").trim()).filter(Boolean);
-        const manualZones = arrayFromMaybe(session.manualZones).map((zone) => parseZoneRect(zone)).filter(Boolean);
-        const repeats = clamp(Number(session.repeats || 1), 1, 9);
-        const selectionUpdatedAt = Number(session.selectionUpdatedAt || 0);
-        const pendingStartAt = Number(session.pendingStartAt || 0);
+        const manualZones = arrayFromMaybe(session.manualZones).map((zone) => parseZoneRect(zone)).filter((zone) => zone !== null);
+        const repeats = clamp(parseNumber(session.repeats) ?? 1, 1, 9);
+        const selectionUpdatedAt = Math.max(0, parseNumber(session.selectionUpdatedAt) ?? 0);
+        const pendingStartAt = Math.max(0, parseNumber(session.pendingStartAt) ?? 0);
         const resumeRoomIdsAfterZone = arrayFromMaybe(session.resumeRoomIdsAfterZone).map((item) => String(item || "").trim()).filter(Boolean);
-        const resumeRepeatsAfterZone = clamp(Number(session.resumeRepeatsAfterZone || repeats || 1), 1, 9);
+        const resumeRepeatsAfterZone = clamp(parseNumber(session.resumeRepeatsAfterZone) ?? repeats, 1, 9);
         const modePanelPreset = String(session.modePanelPreset ?? "").trim().slice(0, 64);
         const utilityPanel = String(session.utilityPanel ?? "").trim().slice(0, 64);
         if (!mode && !activeMode && !activeRoomIds.length && !activeZones.length && !selectedRoomIds.length && !selectedPredefinedZoneIds.length && !manualZones.length && !selectionUpdatedAt && !pendingStartAt && !resumeRoomIdsAfterZone.length && !modePanelPreset && !utilityPanel) {
@@ -2144,7 +2362,7 @@
         return this._restorePersistedCleaningSessionState();
       }
       _markSelectionInteraction(timestamp = Date.now()) {
-        const nextTimestamp = Math.max(0, Math.round(Number(timestamp) || Date.now()));
+        const nextTimestamp = Math.max(0, Math.round(parseNumber(timestamp) ?? Date.now()));
         this._selectionUpdatedAt = Math.max(this._selectionUpdatedAt || 0, nextTimestamp);
         return this._selectionUpdatedAt;
       }
@@ -2337,9 +2555,9 @@
       }
       _normalizeReportedRoomIds(values = []) {
         const rooms = this._getRoomSegments();
-        const configuredRooms = arrayFromMaybe(this._config?.room_segments);
+        const configuredRooms = arrayFromMaybe(this._config?.room_segments).map(vacuumRecord);
         const byId = new Map(rooms.map((room) => [String(room.id), String(room.id)]));
-        const byLabel = new Map(rooms.map((room) => [normalizeTextKey(room.label), String(room.id)]).filter(([label]) => label));
+        const byLabel = new Map(rooms.map((room) => [normalizeTextKey(room.label), String(room.id)]).filter(([label]) => Boolean(label)));
         const byAreaId = new Map(configuredRooms.flatMap((room) => [
           room?.cleaning_area_id,
           room?.area_id,
@@ -2368,29 +2586,17 @@
         const explicitRoomEntityId = String(this._config?.room_tracking?.entity || "");
         const explicitActivityEntityId = String(this._config?.room_tracking?.activity_entity || "");
         const autoDetect = this._config?.room_tracking?.auto_detect !== false;
-        const registry = hass?.entities || {};
+        const registry = vacuumRecord(hass?.entities);
         const states = hass?.states || {};
-        if (this._roomTrackingEntityCache?.hass === hass && this._roomTrackingEntityCache?.states === states && this._roomTrackingEntityCache?.registry === registry && this._roomTrackingEntityCache?.entityId === entityId && this._roomTrackingEntityCache?.explicitRoomEntityId === explicitRoomEntityId && this._roomTrackingEntityCache?.explicitActivityEntityId === explicitActivityEntityId && this._roomTrackingEntityCache?.autoDetect === autoDetect) {
-          return this._roomTrackingEntityCache;
-        }
-        const cacheKey = [
-          entityId,
-          explicitRoomEntityId,
-          explicitActivityEntityId,
-          autoDetect ? "1" : "0",
-          Object.keys(registry).length,
-          Object.keys(states).length
-        ].join("|");
-        if (this._roomTrackingEntityCache?.key === cacheKey) {
-          this._roomTrackingEntityCache.hass = hass;
-          this._roomTrackingEntityCache.states = states;
-          this._roomTrackingEntityCache.registry = registry;
-          return this._roomTrackingEntityCache;
-        }
+        const cacheKey = JSON.stringify([entityId, explicitRoomEntityId, explicitActivityEntityId, autoDetect, Object.entries(states).map(([id, state]) => {
+          const entry = vacuumRecord(registry[id]);
+          return [id, state?.attributes?.friendly_name, entry.device_id, entry.original_name, entry.translation_key];
+        })]);
+        if (this._roomTrackingEntityCache?.key === cacheKey) return this._roomTrackingEntityCache;
         const roomIds = new Set(explicitRoomEntityId ? [explicitRoomEntityId] : []);
         const activityIds = new Set(explicitActivityEntityId ? [explicitActivityEntityId] : []);
         if (autoDetect && entityId) {
-          const vacuumRegistryEntry = registry[entityId] || null;
+          const vacuumRegistryEntry = vacuumRecord(registry[entityId]);
           const vacuumDeviceId = vacuumRegistryEntry?.device_id || "";
           const objectId = normalizeTextKey(entityId.split(".").slice(1).join("_"));
           const vacuumObjectIds = listVacuumObjectIds(states);
@@ -2399,12 +2605,12 @@
               return;
             }
             const domain = candidateId.split(".")[0];
-            const supportsRoomTracking = ["sensor", "select", "text", "input_text"].includes(domain);
+            const supportsRoomTracking = ["sensor", "select", "text", "input_text"].includes(domain || "");
             const supportsActivityTracking = supportsRoomTracking || domain === "binary_sensor";
             if (!supportsActivityTracking) {
               return;
             }
-            const candidateRegistryEntry = registry[candidateId] || null;
+            const candidateRegistryEntry = vacuumRecord(registry[candidateId]);
             const isSameDevice = Boolean(vacuumDeviceId && candidateRegistryEntry?.device_id === vacuumDeviceId);
             const candidateState = states[candidateId];
             const searchable = normalizeTextKey([
@@ -2624,6 +2830,8 @@
         );
       }
       _attemptPendingRoomCleaningResume(state = this._getVacuumState(), persistedSession = this._readStoredCleaningSession()) {
+        if (!this.isConnected) return false;
+        const generation = this._generation;
         const pendingResume = this._getPendingRoomCleaningResumeState(persistedSession);
         if (!pendingResume.roomIds.length || this._roomCleaningResumeInFlight) {
           return false;
@@ -2643,6 +2851,9 @@
           this._persistCurrentCleaningSessionState(this._activeMode);
           return false;
         }
+        const token = /* @__PURE__ */ Symbol("room-resume");
+        this._resumeToken = token;
+        const current = () => this._isCurrent(generation) && this._resumeToken === token;
         this._roomCleaningResumeInFlight = true;
         this._clearPendingRoomCleaningResume();
         this._activeCleaningRoomIds = pendingResume.roomIds;
@@ -2650,9 +2861,11 @@
         this._activeCleaningSessionMode = "rooms";
         this._markCleaningSessionPendingStart();
         this._persistCurrentCleaningSessionState("rooms");
-        Promise.resolve().then(() => this._callRoomCleaningService(roomIds, pendingResume.repeats)).then(() => {
+        Promise.resolve().then(() => current() ? this._callRoomCleaningService(roomIds, pendingResume.repeats) : void 0).then(() => {
+          if (!current()) return;
           this._persistCurrentCleaningSessionState("rooms");
         }).catch((error) => {
+          if (!current()) return;
           this._clearCleaningSessionPendingStart();
           this._setPendingRoomCleaningResume(pendingResume.roomIds, pendingResume.repeats);
           this._persistCurrentCleaningSessionState("rooms");
@@ -2660,6 +2873,8 @@
             console.error("Nodalia Advance Vacuum Card room resume error", error);
           }
         }).finally(() => {
+          if (!current()) return;
+          this._resumeToken = null;
           this._roomCleaningResumeInFlight = false;
           this._render();
         });
@@ -2794,10 +3009,10 @@
         const refreshToken = String(mapState?.last_updated || mapState?.last_changed || "");
         const fromPicture = mapState.attributes?.entity_picture;
         if (fromPicture) {
-          return appendQueryParam(this._hass.hassUrl(fromPicture), "nodalia_ts", refreshToken);
+          return appendQueryParam(this._hass.hassUrl?.(fromPicture) || fromPicture, "nodalia_ts", refreshToken);
         }
         if (normalizeTextKey(entityId.split(".")[0]) === "image") {
-          return appendQueryParam(this._hass.hassUrl(`/api/image_proxy/${entityId}`), "nodalia_ts", refreshToken);
+          return appendQueryParam(this._hass.hassUrl?.(`/api/image_proxy/${entityId}`) || `/api/image_proxy/${entityId}`, "nodalia_ts", refreshToken);
         }
         return "";
       }
@@ -2815,9 +3030,10 @@
             fingerprint: JSON.stringify(directPoints)
           };
         }
-        const calibrationEntityId = config?.calibration_source?.entity;
+        const calibrationEntityId = vacuumText(config?.calibration_source?.entity);
         if (calibrationEntityId && hass?.states?.[calibrationEntityId]) {
           const st = hass.states[calibrationEntityId];
+          if (!st) return { kind: "none", len: 0 };
           const pts = st.attributes?.calibration_points;
           const len = Array.isArray(pts) ? pts.length : 0;
           return {
@@ -2878,7 +3094,7 @@
           ...relatedVacuumEntities.activityIds
         ])].map((trackedEntityId) => {
           const trackedState = hass?.states?.[trackedEntityId] || null;
-          return `${trackedEntityId}:${String(trackedState?.state || "")}:${String(trackedState?.last_updated || trackedState?.last_changed || "")}`;
+          return JSON.stringify([trackedEntityId, trackedState?.state, trackedState?.last_updated, trackedState?.last_changed, trackedState?.attributes]);
         }).join("|");
         const currentRoomId = this._getCurrentVacuumRoomId(state);
         const displayModeId = this._getDisplayCleaningModeId();
@@ -2993,7 +3209,7 @@
         const modeLabels = strings?.modeLabels || MODE_LABELS;
         return modes.find((mode) => mode.id === preferredModeId) || (["rooms", "zone", "goto"].includes(preferredModeId) ? {
           id: preferredModeId,
-          label: modeLabels[preferredModeId] || MODE_LABELS[preferredModeId],
+          label: modeLabels[preferredModeId] || vacuumRecord(MODE_LABELS)[preferredModeId],
           icon: preferredModeId === "rooms" ? "mdi:floor-plan" : preferredModeId === "zone" ? "mdi:vector-rectangle" : "mdi:map-marker"
         } : null) || modes[0] || { id: "all", label: modeLabels.all || MODE_LABELS.all, icon: "mdi:home" };
       }
@@ -3035,7 +3251,8 @@
         }
         return modes;
       }
-      _getSelectOptions(entityId) {
+      _getSelectOptions(rawEntityId) {
+        const entityId = vacuumText(rawEntityId);
         const selectState = entityId ? this._hass?.states?.[entityId] || null : null;
         const options = Array.isArray(selectState?.attributes?.options) ? selectState.attributes.options.map((item) => String(item || "").trim()).filter(Boolean) : [];
         return {
@@ -3103,14 +3320,14 @@
           return [];
         }
         const states = this._hass.states;
-        const registry = this._hass.entities || {};
+        const registry = vacuumRecord(this._hass.entities);
         const vacuumObjectIds = listVacuumObjectIds(states);
-        const vacuumDeviceId = registry[this._config.entity]?.device_id || "";
+        const vacuumDeviceId = vacuumRecord(registry[this._config.entity]).device_id || "";
         const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
         return Object.keys(states).filter((entityId) => entityId.startsWith(`${domain}.`)).filter((entityId) => isHelperRelatedToConfiguredVacuum({
           candidateId: entityId,
           searchable: states[entityId]?.attributes?.friendly_name || "",
-          isSameDevice: Boolean(vacuumDeviceId && registry[entityId]?.device_id === vacuumDeviceId),
+          isSameDevice: Boolean(vacuumDeviceId && vacuumRecord(registry[entityId]).device_id === vacuumDeviceId),
           objectId,
           vacuumObjectIds
         })).filter((entityId) => !excludedEntities.includes(entityId)).map((entityId) => ({
@@ -3121,9 +3338,6 @@
       _guessRelatedSelectEntityByPatterns(patterns, excludedEntities = []) {
         return this._guessRelatedEntityByPatterns("select", patterns, excludedEntities);
       }
-      _guessRelatedButtonEntityByPatterns(patterns, excludedEntities = []) {
-        return this._guessRelatedEntityByPatterns("button", patterns, excludedEntities);
-      }
       _guessGlobalEntityByPatterns(domains, patterns, excludedEntities = []) {
         if (!this._hass?.states || !Array.isArray(patterns) || !patterns.length) {
           return "";
@@ -3133,10 +3347,10 @@
           return "";
         }
         const states = this._hass.states;
-        const registry = this._hass.entities || {};
+        const registry = vacuumRecord(this._hass.entities);
         const objectId = normalizeTextKey(String(this._config?.entity || "").split(".").slice(1).join("_"));
         const vacuumObjectIds = listVacuumObjectIds(states);
-        const vacuumDeviceId = registry[this._config?.entity]?.device_id || "";
+        const vacuumDeviceId = vacuumRecord(registry[this._config?.entity]).device_id || "";
         const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
         const candidates = Object.keys(states).filter((entityId) => domainList.some((domain) => entityId.startsWith(`${domain}.`))).filter((entityId) => !excludedEntities.includes(entityId)).map((entityId) => ({
           entityId,
@@ -3145,16 +3359,17 @@
         const related = candidates.filter((candidate) => isHelperRelatedToConfiguredVacuum({
           candidateId: candidate.entityId,
           searchable: states[candidate.entityId]?.attributes?.friendly_name || "",
-          isSameDevice: Boolean(vacuumDeviceId && registry[candidate.entityId]?.device_id === vacuumDeviceId),
+          isSameDevice: Boolean(vacuumDeviceId && vacuumRecord(registry[candidate.entityId]).device_id === vacuumDeviceId),
           objectId,
           vacuumObjectIds
         }));
         if (related.length) {
-          return related[0].entityId;
+          return related[0]?.entityId || "";
         }
         return vacuumObjectIds.length > 1 ? "" : candidates[0]?.entityId || "";
       }
-      _getEntityState(entityId) {
+      _getEntityState(rawEntityId) {
+        const entityId = vacuumText(rawEntityId);
         return entityId ? this._hass?.states?.[entityId] || null : null;
       }
       _getEntityDomain(entityId) {
@@ -3164,7 +3379,7 @@
         if (!this._hass?.states) {
           return "";
         }
-        return arrayFromMaybe(entityIds).map((entityId) => String(entityId || "").trim()).find((entityId) => entityId && !excludedEntities.includes(entityId) && this._hass.states[entityId]) || "";
+        return arrayFromMaybe(entityIds).map((entityId) => String(entityId || "").trim()).find((entityId) => entityId && !excludedEntities.includes(entityId) && this._hass?.states[entityId]) || "";
       }
       _isBooleanEntityOn(entityId) {
         return normalizeTextKey(this._getEntityState(entityId)?.state) === "on";
@@ -3249,10 +3464,10 @@
         return Boolean(descriptor?.options?.some((option) => this._getCleaningComboModeFromValue(option)));
       }
       _getCleaningComboOptionForPreset(descriptor, presetId) {
-        if (!this._descriptorSupportsCleaningCombo(descriptor)) {
+        if (!descriptor || !this._descriptorSupportsCleaningCombo(descriptor)) {
           return "";
         }
-        const targetMode = ["vacuum_mop", "vacuum", "mop"].includes(presetId) ? presetId : "";
+        const targetMode = ["vacuum_mop", "vacuum", "mop"].includes(presetId || "") ? presetId : "";
         if (!targetMode) {
           return "";
         }
@@ -3339,12 +3554,12 @@
         };
       }
       _getModeDescriptors(state = this._getVacuumState()) {
-        return ["suction", "mop", "mop_mode"].map((kind) => this._getModeDescriptorById(kind, state)).filter(Boolean);
+        return ["suction", "mop", "mop_mode"].map((kind) => this._getModeDescriptorById(kind, state)).filter((descriptor) => descriptor !== null);
       }
       _getMopModeDescriptor(state = this._getVacuumState()) {
         const explicitEntity = this._config?.mop_mode_select_entity || (this._config?.mop_select_entity && !this._isMopIntensityDescriptor(this._getSelectOptions(this._config?.mop_select_entity)) ? this._config.mop_select_entity : "");
         const explicitDescriptor = explicitEntity ? this._getSelectOptions(explicitEntity) : null;
-        const excludedEntities = [this._getModeDescriptor("mop", state)?.target].filter(Boolean);
+        const excludedEntities = [this._getModeDescriptor("mop", state)?.target].filter((value) => typeof value === "string" && Boolean(value));
         const guessedEntity = explicitDescriptor?.entityId ? explicitDescriptor.entityId : this._guessRelatedSelectEntityByPatterns(this._getMopModeEntityPatterns(), excludedEntities);
         const descriptor = explicitDescriptor?.entityId === guessedEntity ? explicitDescriptor : this._getSelectOptions(guessedEntity);
         if (!descriptor?.entityId || !descriptor.options?.length) {
@@ -3363,7 +3578,7 @@
         if (descriptorId === "mop_mode") {
           return this._getMopModeDescriptor(state);
         }
-        return this._getModeDescriptor(descriptorId, state);
+        return this._getModeDescriptor(descriptorId || "", state);
       }
       _getDockPanelSectionConfig(sectionId = this._activeDockPanelSection) {
         return DOCK_PANEL_SECTIONS.find((section) => section.id === sectionId) || DOCK_PANEL_SECTIONS[0];
@@ -3446,7 +3661,7 @@
           }
           return descriptors;
         }
-        return DOCK_CONTROL_DEFINITIONS.map((definition) => this._getDockControlDescriptor(definition, state)).filter(Boolean);
+        return DOCK_CONTROL_DEFINITIONS.map((definition) => this._getDockControlDescriptor(definition, state)).filter((descriptor) => descriptor !== null);
       }
       _getDockSettingDescriptor(definition, state = this._getVacuumState()) {
         if (!definition) {
@@ -3478,7 +3693,7 @@
         return null;
       }
       _getDockSettingDescriptors(state = this._getVacuumState()) {
-        return DOCK_SETTING_DEFINITIONS.map((definition) => this._getDockSettingDescriptor(definition, state)).filter(Boolean);
+        return DOCK_SETTING_DEFINITIONS.map((definition) => this._getDockSettingDescriptor(definition, state)).filter((descriptor) => descriptor !== null);
       }
       _getRoutineEntityState(item) {
         const entityId = String(item?.entity || "").trim();
@@ -3495,11 +3710,11 @@
         }
         const entityId = String(item?.entity || "").trim();
         const objectId = entityId.includes(".") ? entityId.split(".").slice(1).join(".") : entityId;
-        const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+        const hass = this._hass;
         const langCfg = this._config?.language ?? "auto";
         if (!String(objectId || "").trim()) {
           const lang = window.NodaliaI18n?.resolveLanguage?.(hass, langCfg) ?? "en";
-          return window.NodaliaI18n?.strings?.(lang)?.advanceVacuum?.utility?.routineDefault || "Routine";
+          return this._advanceVacuumStrings()?.utility.routineDefault || "Routine";
         }
         return humanizeModeLabel(objectId, "generic", hass, langCfg);
       }
@@ -3540,7 +3755,7 @@
         if (!this._hass || !entityId) {
           return;
         }
-        this._hass.callService("button", "press", {
+        invokeHassService(this, this._hass, "button", "press", {
           entity_id: entityId
         });
       }
@@ -3579,7 +3794,7 @@
           if (entityId && !serviceData.entity_id) {
             serviceData.entity_id = entityId;
           }
-          this._callNamedService(item.service, serviceData, item.target || null);
+          this._callNamedService(vacuumText(item.service), serviceData, isObject(item.target) ? item.target : null);
           this._triggerHaptic("selection");
           return;
         }
@@ -3644,7 +3859,7 @@
         }
         const remembered = this._findMatchingModeOption(
           descriptor.options,
-          this._lastNonSmartModeSelection[kind]
+          this._lastNonSmartModeSelection[kind === "mop" ? "mop" : "suction"]
         );
         if (remembered && !this._isSharedSmartMode(remembered)) {
           return remembered;
@@ -3666,7 +3881,7 @@
         if (!kind || !value || this._isSharedSmartMode(value)) {
           return;
         }
-        this._lastNonSmartModeSelection[kind] = value;
+        this._lastNonSmartModeSelection[kind === "mop" ? "mop" : "suction"] = vacuumText(value);
       }
       _syncRememberedModeSelections(state) {
         if (this._isDocked(state) || this._isReturning(state)) {
@@ -3722,6 +3937,7 @@
         }
       }
       _setModeOption(kind, value, state = this._getVacuumState(), options = {}) {
+        if (!kind) return;
         const triggerHaptic = options.triggerHaptic !== false;
         if (!this._hass || !value) {
           return;
@@ -3928,6 +4144,7 @@
         return PANEL_MODE_PRESETS.find((preset) => preset.id === activePreset) || PANEL_MODE_PRESETS[0];
       }
       _selectModePanelPreset(presetId, state = this._getVacuumState()) {
+        if (!presetId) return;
         this._activeModePanelPreset = presetId;
         this._lastResolvedModePanelPreset = presetId;
         const selection = this._getModePanelPresetSelection(presetId, state);
@@ -3995,7 +4212,7 @@
           this._getModeDescriptor("suction", state),
           this._getModeDescriptor("mop", state),
           this._getMopModeDescriptor(state)
-        ].filter(Boolean).map((descriptor) => ({
+        ].filter((descriptor) => descriptor !== null).map((descriptor) => ({
           ...descriptor,
           options: this._filterModePanelOptions(descriptor, presetId)
         })).filter((descriptor) => descriptor.options.length > 0);
@@ -4045,10 +4262,11 @@
         return sourceItems.filter((item) => this._isMenuItemVisible(item, state));
       }
       _getMapSurfaceRect() {
-        return this.shadowRoot?.querySelector("[data-map-surface]")?.getBoundingClientRect() || null;
+        const rect = this.shadowRoot?.querySelector("[data-map-surface]")?.getBoundingClientRect();
+        return rect && Number.isFinite(rect.width) && Number.isFinite(rect.height) && rect.width > 0 && rect.height > 0 ? rect : null;
       }
       _getMapViewportPoint(event, rect = this._getMapSurfaceRect()) {
-        if (!rect) {
+        if (!rect || !Number.isFinite(event.clientX) || !Number.isFinite(event.clientY)) {
           return null;
         }
         return {
@@ -4057,7 +4275,7 @@
         };
       }
       _clampMapTransform(scale = this._mapScale, offset = this._mapOffset, rect = this._getMapSurfaceRect()) {
-        const safeScale = clamp(Number(scale || 1), 1, 3);
+        const safeScale = clamp(parseNumber(scale) ?? 1, 1, 3);
         if (!rect || safeScale <= 1) {
           return {
             scale: 1,
@@ -4069,8 +4287,8 @@
         return {
           scale: safeScale,
           offset: {
-            x: clamp(Number(offset?.x || 0), minOffsetX, 0),
-            y: clamp(Number(offset?.y || 0), minOffsetY, 0)
+            x: clamp(parseNumber(offset?.x) ?? 0, minOffsetX, 0),
+            y: clamp(parseNumber(offset?.y) ?? 0, minOffsetY, 0)
           }
         };
       }
@@ -4104,13 +4322,6 @@
       _eventToVacuumPoint(event) {
         const mapPoint = this._eventToMapPoint(event);
         return mapPoint ? this._converter.mapToVacuum(mapPoint.x, mapPoint.y) : null;
-      }
-      _vacuumToPercent(point) {
-        const mapped = this._converter.vacuumToMap(point.x, point.y);
-        return {
-          left: clamp(mapped.x / this._mapImageWidth * 100, 0, 100),
-          top: clamp(mapped.y / this._mapImageHeight * 100, 0, 100)
-        };
       }
       _mapToViewportPercent(point) {
         if (!point) {
@@ -4180,7 +4391,7 @@
         };
       }
       _getManualZoneCountLimit() {
-        return clamp(Number(this._config?.max_zone_selections || 5), 1, 10);
+        return clamp(parseNumber(this._config?.max_zone_selections) ?? 5, 1, 10);
       }
       _sanitizeSelectedManualZoneIndex() {
         if (this._selectedManualZoneIndex >= this._manualZones.length) {
@@ -4330,6 +4541,7 @@
           return;
         }
         const [first, second] = [...this._activeMapPointers.values()];
+        if (!first || !second) return false;
         const midpoint = {
           x: (first.clientX + second.clientX) / 2 - rect.left,
           y: (first.clientY + second.clientY) / 2 - rect.top
@@ -4355,6 +4567,7 @@
           return false;
         }
         const [first, second] = [...this._activeMapPointers.values()];
+        if (!first || !second) return false;
         const midpoint = {
           x: (first.clientX + second.clientX) / 2 - rect.left,
           y: (first.clientY + second.clientY) / 2 - rect.top
@@ -4374,6 +4587,7 @@
           return 0;
         }
         const [first, second] = Array.from(touches);
+        if (!first || !second) return 0;
         return Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY);
       }
       _getTouchMidpoint(touches, rect = this._getMapSurfaceRect()) {
@@ -4381,6 +4595,7 @@
           return null;
         }
         const [first, second] = Array.from(touches);
+        if (!first || !second) return null;
         return {
           x: clamp((first.clientX + second.clientX) / 2 - rect.left, 0, rect.width),
           y: clamp((first.clientY + second.clientY) / 2 - rect.top, 0, rect.height)
@@ -4414,14 +4629,15 @@
         return true;
       }
       _onShadowTouchStart(event) {
-        const zoneHandleTarget = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.zoneHandleIndex && node.dataset?.zoneHandleAction === "delete");
+        if (!(event instanceof TouchEvent)) return;
+        const zoneHandleTarget = event.composedPath().find((node) => Boolean(node instanceof HTMLElement && node.dataset?.zoneHandleIndex && node.dataset?.zoneHandleAction === "delete"));
         if (zoneHandleTarget && event.touches.length === 1) {
           event.preventDefault();
           event.stopPropagation();
           this._deleteManualZone(Number(zoneHandleTarget.dataset.zoneHandleIndex));
           return;
         }
-        const surface = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.mapSurface === "main");
+        const surface = event.composedPath().find((node) => Boolean(node instanceof HTMLElement && node.dataset?.mapSurface === "main"));
         if (!surface || event.touches.length < 2) {
           return;
         }
@@ -4432,6 +4648,7 @@
         }
       }
       _onShadowTouchMove(event) {
+        if (!(event instanceof TouchEvent)) return;
         if (!this._touchPinchGesture) {
           return;
         }
@@ -4456,6 +4673,7 @@
         event.stopPropagation();
       }
       _onShadowTouchEnd(event) {
+        if (!(event instanceof TouchEvent)) return;
         if (!this._touchPinchGesture) {
           return;
         }
@@ -4468,7 +4686,8 @@
           event.stopPropagation();
         }
       }
-      _navigate(path) {
+      _navigate(rawPath) {
+        const path = typeof rawPath === "string" ? rawPath : "";
         if (!path) {
           return;
         }
@@ -4483,7 +4702,8 @@
         }
         fireEvent(this, "hass-navigate", { path });
       }
-      _runExternalAction(actionConfig = {}) {
+      _runExternalAction(rawAction = {}) {
+        const actionConfig = vacuumRecord(rawAction);
         const action = normalizeTextKey(actionConfig.action);
         if (!action || action === "none") {
           return;
@@ -4524,7 +4744,7 @@
           if (!domain || !serviceName) {
             return;
           }
-          this._hass.callService(domain, serviceName, actionConfig.service_data || {}, actionConfig.target);
+          invokeHassService(this, this._hass, domain, serviceName, vacuumRecord(actionConfig.service_data), isObject(actionConfig.target) ? actionConfig.target : null);
         }
       }
       _callVacuumService(service, data = {}) {
@@ -4551,7 +4771,7 @@
         if (!domains.length && !services.length) {
           return false;
         }
-        return services.includes(normalizedService) || domains.includes(domain);
+        return services.includes(normalizedService) || domains.includes(domain || "");
       }
       _callNamedService(service, data = {}, target = null) {
         if (!this._hass || !service) {
@@ -4565,7 +4785,9 @@
         if (!domain || !serviceName) {
           return;
         }
-        return this._hass.callService(domain, serviceName, data, target || void 0);
+        const pending = requestHassService(this, this._hass, domain, serviceName, data, target);
+        void pending.catch((error) => console.warn("Nodalia Advance Vacuum Card: service failed", service, error));
+        return pending;
       }
       /**
        * Fixed, card-owned service calls that must not be blocked by strict allowlists.
@@ -4579,7 +4801,9 @@
         if (!domain || !serviceName) {
           return;
         }
-        return this._hass.callService(domain, serviceName, data, target || void 0);
+        const pending = requestHassService(this, this._hass, domain, serviceName, data, target);
+        void pending.catch((error) => console.warn("Nodalia Advance Vacuum Card: service failed", service, error));
+        return pending;
       }
       _getVacuumPlatformProfile() {
         const configured = normalizeTextKey(this._config?.vacuum_platform || "auto");
@@ -4587,7 +4811,7 @@
         if (["", "auto", "automatic", "default", "home_assistant_auto"].includes(key)) {
           const entityId = String(this._config?.entity || "");
           key = normalizeTextKey(
-            this._hass?.entities?.[entityId]?.platform || this._getVacuumState()?.attributes?.integration || "roborock"
+            vacuumRecord(vacuumRecord(this._hass?.entities)[entityId]).platform || this._getVacuumState()?.attributes?.integration || "roborock"
           );
         }
         if (key.includes("dreame")) {
@@ -4676,7 +4900,7 @@
       }
       _callConfiguredMapModeService(actionKind, selection, repeats = 1, point = null) {
         const mode = this._getConfiguredMapMode(actionKind);
-        const schema = mode?.service_call_schema;
+        const schema = vacuumRecord(mode?.service_call_schema);
         const service = String(schema?.service || "").trim();
         if (!service) {
           return null;
@@ -4704,8 +4928,9 @@
           point_x: Math.round(Number(point?.x || 0)),
           point_y: Math.round(Number(point?.y || 0))
         };
-        const serviceData = this._resolveMapActionTemplateValue(schema.service_data || {}, context);
-        const target = this._resolveMapActionTemplateValue(schema.target || null, context);
+        const serviceData = vacuumRecord(this._resolveMapActionTemplateValue(schema.service_data || {}, context));
+        const targetValue = this._resolveMapActionTemplateValue(schema.target || null, context);
+        const target = isObject(targetValue) ? targetValue : null;
         if (this._isBuiltInMapService(service, serviceData, target)) {
           return Promise.resolve(this._callInternalService(service, serviceData, target));
         }
@@ -4718,9 +4943,9 @@
       _getCleaningAreaIdsForRooms(roomIds) {
         const selectedIds = new Set(roomIds.map((id) => String(id)));
         const rooms = this._getRoomSegments().filter((room) => selectedIds.has(String(room.id)));
-        const configuredRooms = arrayFromMaybe(this._config?.room_segments);
+        const configuredRooms = arrayFromMaybe(this._config?.room_segments).map(vacuumRecord);
         const areaRegistry = this._hass?.areas || {};
-        const areas = Array.isArray(areaRegistry) ? areaRegistry : Object.values(areaRegistry);
+        const areas = (Array.isArray(areaRegistry) ? areaRegistry : Object.values(vacuumRecord(areaRegistry))).map(vacuumRecord);
         return [...new Set(rooms.map((room) => {
           const configuredRoom = configuredRooms.find((item) => String(item?.id ?? "") === String(room.id));
           const explicitAreaId = configuredRoom?.cleaning_area_id || configuredRoom?.area_id || configuredRoom?.ha_area_id;
@@ -4729,7 +4954,7 @@
           }
           const labelKey = normalizeTextKey(room.label);
           const areaMatch = areas.find((area) => normalizeTextKey(area?.name) === labelKey);
-          return areaMatch?.area_id || areaMatch?.id || "";
+          return vacuumText(areaMatch?.area_id || areaMatch?.id || "");
         }).filter(Boolean))];
       }
       _callRoomCleaningService(roomIds, repeats = 1) {
@@ -4881,6 +5106,7 @@
         });
       }
       _toggleRoomSelection(roomId) {
+        if (!roomId) return;
         roomId = String(roomId || "").trim();
         if (!roomId) {
           return;
@@ -4900,6 +5126,7 @@
         return this._isCleaningSessionActive(state) && (this._activeMode === "rooms" || this._activeCleaningSessionMode === "rooms" || persistedSession?.mode === "rooms");
       }
       _togglePredefinedZone(zoneId) {
+        if (!zoneId) return;
         this._selectedPredefinedZoneIds = this._selectedPredefinedZoneIds.includes(zoneId) ? this._selectedPredefinedZoneIds.filter((id) => id !== zoneId) : [...this._selectedPredefinedZoneIds, zoneId];
         this._selectedManualZoneIndex = -1;
         this._persistCurrentCleaningSessionState(this._activeMode, {
@@ -4941,6 +5168,8 @@
         this._addManualZone();
       }
       _setActiveMode(modeId) {
+        this._cancelMapGesture(false);
+        if (!modeId) return;
         if (!modeId) {
           return;
         }
@@ -4970,6 +5199,8 @@
         this._render();
       }
       _toggleUtilityPanel(panelId) {
+        this._cancelMapGesture(false);
+        if (!panelId) return;
         this._activeUtilityPanel = this._activeUtilityPanel === panelId ? null : panelId;
         this._persistCurrentCleaningSessionState(this._activeMode, {
           markSelectionChange: true
@@ -4986,60 +5217,21 @@
         this._triggerHaptic("selection");
         this._render();
       }
-      _clearSelection() {
-        this._selectedRoomIds = [];
-        this._selectedPredefinedZoneIds = [];
-        this._manualZones = [];
-        this._selectedManualZoneIndex = -1;
-        this._draftZone = null;
-        this._gotoPoint = null;
-        this._persistCurrentCleaningSessionState(this._activeMode, {
-          markSelectionChange: true
-        });
-        this._triggerHaptic("selection");
-        this._render();
-      }
-      _goBack() {
-        if (this._restoreTransientZoneMode()) {
-          this._persistCurrentCleaningSessionState(this._activeMode, {
-            markSelectionChange: true
-          });
-          this._triggerHaptic("selection");
-          this._render();
-          return;
-        }
-        const shouldReturnToAll = this._activeMode !== "all";
-        this._selectedRoomIds = [];
-        this._selectedPredefinedZoneIds = [];
-        this._manualZones = [];
-        this._selectedManualZoneIndex = -1;
-        this._draftZone = null;
-        this._gotoPoint = null;
-        this._zoneHandleDrag = null;
-        this._activeUtilityPanel = null;
-        if (shouldReturnToAll) {
-          this._activeMode = "all";
-        }
-        this._persistCurrentCleaningSessionState(this._activeMode, {
-          markSelectionChange: true
-        });
-        this._triggerHaptic("selection");
-        this._render();
-      }
       async _runMapAction() {
-        if (this._mapActionInFlight) {
+        if (!this.isConnected || this._mapActionInFlight) {
           return;
         }
+        const generation = this._generation;
         this._mapActionInFlight = true;
         try {
           const state = this._getVacuumState();
           const selectedPredefinedZones = this._getPredefinedZones().filter((zone) => this._selectedPredefinedZoneIds.includes(zone.id)).flatMap((zone) => zone.zones.map((item) => [...item, this._repeats]));
           const manualZones = this._manualZones.map((zone) => [zone.x1, zone.y1, zone.x2, zone.y2, this._repeats]);
-          const selectedZones = [...selectedPredefinedZones, ...manualZones].slice(0, clamp(Number(this._config?.max_zone_selections || 5), 1, 10));
+          const selectedZones = [...selectedPredefinedZones, ...manualZones].slice(0, clamp(parseNumber(this._config?.max_zone_selections) ?? 5, 1, 10));
           const canRunZoneAction = this._activeMode === "zone" && selectedZones.length > 0;
           if ((this._isCleaning(state) || this._isPaused(state)) && !canRunZoneAction) {
             await this._callVacuumService(this._isCleaning(state) ? "pause" : "start");
-            if (!this.isConnected) {
+            if (!this._isCurrent(generation)) {
               return;
             }
             this._triggerHaptic("selection");
@@ -5060,7 +5252,7 @@
               markSelectionChange: true
             });
             await this._callRoomCleaningService(roomIds, this._repeats);
-            if (!this.isConnected) {
+            if (!this._isCurrent(generation)) {
               return;
             }
             this._persistCurrentCleaningSessionState("rooms");
@@ -5092,13 +5284,14 @@
             });
             if (isTransientZoneAddition && this._isCleaning(state)) {
               await this._callVacuumService("pause");
-              await new Promise((resolve) => window.setTimeout(resolve, 450));
-              if (!this.isConnected) {
+              if (!this._isCurrent(generation)) return;
+              await this._waitForMapAction(450, generation);
+              if (!this._isCurrent(generation)) {
                 return;
               }
             }
             await this._callZoneCleaningService(selectedZones, this._repeats);
-            if (!this.isConnected) {
+            if (!this._isCurrent(generation)) {
               return;
             }
             const latestState = this._getVacuumState();
@@ -5122,7 +5315,7 @@
             this._clearCleaningSessionPendingStart();
             this._clearPersistedCleaningSession();
             await this._callGotoService(this._gotoPoint);
-            if (!this.isConnected) {
+            if (!this._isCurrent(generation)) {
               return;
             }
             this._triggerHaptic("success");
@@ -5136,12 +5329,14 @@
           this._clearCleaningSessionPendingStart();
           this._clearPersistedCleaningSession();
           await this._callVacuumService("start");
-          if (!this.isConnected) {
+          if (!this._isCurrent(generation)) {
             return;
           }
           this._triggerHaptic("selection");
+        } catch (error) {
+          if (this._isCurrent(generation)) throw error;
         } finally {
-          this._mapActionInFlight = false;
+          if (this._isCurrent(generation)) this._mapActionInFlight = false;
         }
       }
       _runCustomMenuItem(item) {
@@ -5149,7 +5344,7 @@
           return;
         }
         if (item.builtin_action) {
-          this._handleControlAction(item.builtin_action);
+          this._handleControlAction(vacuumText(item.builtin_action));
         } else {
           this._triggerHaptic("selection");
           this._runExternalAction(item.tap_action || {});
@@ -5175,7 +5370,7 @@
         if (!this.shadowRoot || this.shadowRoot.innerHTML) {
           return;
         }
-        const message = error?.message ? escapeHtml(error.message) : "No se ha podido actualizar la tarjeta.";
+        const message = error instanceof Error ? escapeHtml(error.message) : "No se ha podido actualizar la tarjeta.";
         this.shadowRoot.innerHTML = `
       <ha-card style="padding:16px;border-radius:20px;">
         <div style="color:var(--error-color);font-weight:700;margin-bottom:8px;">Nodalia Advance Vacuum Card</div>
@@ -5202,10 +5397,14 @@
       }
       _handleControlAction(action) {
         switch (action) {
-          case "primary":
+          case "primary": {
+            const generation = this._generation;
             this._triggerHaptic("selection");
-            this._runMapAction().catch((error) => this._handleMapActionError(error));
+            void this._runMapAction().catch((error) => {
+              if (this._isCurrent(generation)) this._handleMapActionError(error);
+            });
             break;
+          }
           case "toggle_modes":
             this._toggleUtilityPanel("modes");
             break;
@@ -5263,7 +5462,7 @@
         }
       }
       _getRoomSelectionTarget(event) {
-        return event?.composedPath?.().find((node) => node instanceof Element && typeof node.getAttribute === "function" && node.getAttribute("data-room-id")) || null;
+        return event?.composedPath?.().find((node) => Boolean(node instanceof Element && typeof node.getAttribute === "function" && node.getAttribute("data-room-id"))) || null;
       }
       _clearPendingRoomSelectionTap(pointerId = null) {
         if (pointerId === null || pointerId === void 0 || this._pendingRoomSelectionTap?.pointerId === pointerId) {
@@ -5294,7 +5493,7 @@
       }
       _onShadowClick(event) {
         this._triggerPressAnimation(this._getPressTargetFromEvent(event));
-        const zoneHandleTarget = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.zoneHandleIndex && node.dataset?.zoneHandleAction);
+        const zoneHandleTarget = event.composedPath().find((node) => Boolean(node instanceof HTMLElement && node.dataset?.zoneHandleIndex && node.dataset?.zoneHandleAction));
         if (zoneHandleTarget) {
           event.preventDefault();
           event.stopPropagation();
@@ -5321,14 +5520,14 @@
           this._toggleRoomSelection(roomId);
           return;
         }
-        const zoneTarget = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.zoneId);
+        const zoneTarget = event.composedPath().find((node) => Boolean(node instanceof HTMLElement && node.dataset?.zoneId));
         if (zoneTarget) {
           event.preventDefault();
           event.stopPropagation();
           this._togglePredefinedZone(zoneTarget.dataset.zoneId);
           return;
         }
-        const gotoTarget = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.gotoId);
+        const gotoTarget = event.composedPath().find((node) => Boolean(node instanceof HTMLElement && node.dataset?.gotoId));
         if (gotoTarget) {
           const gotoPoint = this._getGotoPoints().find((point) => point.id === gotoTarget.dataset.gotoId);
           if (gotoPoint?.position) {
@@ -5340,14 +5539,14 @@
           }
           return;
         }
-        const modeTarget = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.modeId);
+        const modeTarget = event.composedPath().find((node) => Boolean(node instanceof HTMLElement && node.dataset?.modeId));
         if (modeTarget) {
           event.preventDefault();
           event.stopPropagation();
           this._setActiveMode(modeTarget.dataset.modeId);
           return;
         }
-        const headerAction = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.headerActionIndex);
+        const headerAction = event.composedPath().find((node) => Boolean(node instanceof HTMLElement && node.dataset?.headerActionIndex));
         if (headerAction) {
           const action = this._getHeaderIcons()[Number(headerAction.dataset.headerActionIndex)];
           if (action) {
@@ -5358,28 +5557,28 @@
           }
           return;
         }
-        const manualZoneTarget = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.manualZoneIndex);
+        const manualZoneTarget = event.composedPath().find((node) => Boolean(node instanceof HTMLElement && node.dataset?.manualZoneIndex));
         if (manualZoneTarget) {
           event.preventDefault();
           event.stopPropagation();
           this._selectManualZone(Number(manualZoneTarget.dataset.manualZoneIndex), { triggerHaptic: true });
           return;
         }
-        const controlTarget = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.controlAction);
+        const controlTarget = event.composedPath().find((node) => Boolean(node instanceof HTMLElement && node.dataset?.controlAction));
         if (controlTarget) {
           event.preventDefault();
           event.stopPropagation();
           this._handleControlAction(controlTarget.dataset.controlAction);
           return;
         }
-        const modePresetTarget = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.modePresetId);
+        const modePresetTarget = event.composedPath().find((node) => Boolean(node instanceof HTMLElement && node.dataset?.modePresetId));
         if (modePresetTarget) {
           event.preventDefault();
           event.stopPropagation();
           this._selectModePanelPreset(modePresetTarget.dataset.modePresetId, this._getVacuumState());
           return;
         }
-        const modeOptionTarget = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.modeOptionKind && node.dataset?.modeOptionValue);
+        const modeOptionTarget = event.composedPath().find((node) => Boolean(node instanceof HTMLElement && node.dataset?.modeOptionKind && node.dataset?.modeOptionValue));
         if (modeOptionTarget) {
           event.preventDefault();
           event.stopPropagation();
@@ -5390,21 +5589,21 @@
           );
           return;
         }
-        const dockSectionTarget = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.dockSectionId);
+        const dockSectionTarget = event.composedPath().find((node) => Boolean(node instanceof HTMLElement && node.dataset?.dockSectionId));
         if (dockSectionTarget) {
           event.preventDefault();
           event.stopPropagation();
           this._setActiveDockPanelSection(dockSectionTarget.dataset.dockSectionId);
           return;
         }
-        const dockActionTarget = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.dockActionId);
+        const dockActionTarget = event.composedPath().find((node) => Boolean(node instanceof HTMLElement && node.dataset?.dockActionId));
         if (dockActionTarget) {
           event.preventDefault();
           event.stopPropagation();
           this._runDockControlAction(dockActionTarget.dataset.dockActionId, this._getVacuumState());
           return;
         }
-        const routineTarget = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.routineIndex);
+        const routineTarget = event.composedPath().find((node) => Boolean(node instanceof HTMLElement && node.dataset?.routineIndex));
         if (routineTarget) {
           const items = this._getRoutineItems(this._getVacuumState());
           const item = items[Number(routineTarget.dataset.routineIndex)];
@@ -5415,7 +5614,7 @@
           }
           return;
         }
-        const customMenuItemTarget = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.customMenuIndex);
+        const customMenuItemTarget = event.composedPath().find((node) => Boolean(node instanceof HTMLElement && node.dataset?.customMenuIndex));
         if (customMenuItemTarget) {
           const items = this._getVisibleCustomMenuItems(this._getVacuumState());
           const item = items[Number(customMenuItemTarget.dataset.customMenuIndex)];
@@ -5427,7 +5626,7 @@
         }
       }
       _onShadowChange(event) {
-        const selectTarget = event.composedPath().find((node) => node instanceof HTMLSelectElement && node.dataset?.dockSettingId);
+        const selectTarget = event.composedPath().find((node) => Boolean(node instanceof HTMLSelectElement && node.dataset?.dockSettingId));
         if (!selectTarget) {
           return;
         }
@@ -5436,6 +5635,8 @@
         this._setDockSettingOption(selectTarget.dataset.dockSettingId, selectTarget.value, this._getVacuumState());
       }
       _onShadowPointerDown(event) {
+        if (!this.isConnected || !(event instanceof PointerEvent)) return;
+        this._gesturePointers.add(event.pointerId);
         this._triggerPressAnimation(this._getPressTargetFromEvent(event));
         if (this._touchPinchGesture && event.pointerType === "touch") {
           event.preventDefault();
@@ -5464,11 +5665,11 @@
           };
           return;
         }
-        const surface = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.mapSurface === "main");
+        const surface = event.composedPath().find((node) => Boolean(node instanceof HTMLElement && node.dataset?.mapSurface === "main"));
         if (!surface) {
           return;
         }
-        const interactiveTarget = event.composedPath().find((node) => node instanceof Element && typeof node.getAttribute === "function" && (node.getAttribute("data-room-id") || node.getAttribute("data-zone-id") || node.getAttribute("data-goto-id") || node.getAttribute("data-control-action") || node.getAttribute("data-mode-id") || node.getAttribute("data-header-action-index") || node.getAttribute("data-mode-option-kind") || node.getAttribute("data-custom-menu-index") || node.getAttribute("data-dock-section-id") || node.getAttribute("data-dock-action-id") || node.getAttribute("data-dock-setting-id") || node.getAttribute("data-manual-zone-index")));
+        const interactiveTarget = event.composedPath().find((node) => Boolean(node instanceof Element && typeof node.getAttribute === "function" && (node.getAttribute("data-room-id") || node.getAttribute("data-zone-id") || node.getAttribute("data-goto-id") || node.getAttribute("data-control-action") || node.getAttribute("data-mode-id") || node.getAttribute("data-header-action-index") || node.getAttribute("data-mode-option-kind") || node.getAttribute("data-custom-menu-index") || node.getAttribute("data-dock-section-id") || node.getAttribute("data-dock-action-id") || node.getAttribute("data-dock-setting-id") || node.getAttribute("data-manual-zone-index"))));
         if (interactiveTarget) {
           return;
         }
@@ -5478,13 +5679,13 @@
         if (event.button !== 0) {
           return;
         }
-        const zoneHandleTarget = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.zoneHandleIndex && node.dataset?.zoneHandleAction);
+        const zoneHandleTarget = event.composedPath().find((node) => Boolean(node instanceof HTMLElement && node.dataset?.zoneHandleIndex && node.dataset?.zoneHandleAction));
         if (zoneHandleTarget) {
           const index = Number(zoneHandleTarget.dataset.zoneHandleIndex);
           const zone = this._manualZones[index];
           const handlePoints = zone ? this._getZoneHandlePoints(zone) : null;
           const selectedHandle = handlePoints?.handles?.find((handle) => handle.id === zoneHandleTarget.dataset.zoneHandleAction);
-          if (!zone || !selectedHandle) {
+          if (!zone || !handlePoints || !selectedHandle) {
             return;
           }
           this._selectedManualZoneIndex = index;
@@ -5502,6 +5703,7 @@
           }
           const rect = handlePoints.rect;
           const mapPoint = this._eventToMapPoint(event);
+          this._zoneBeforeDrag = { index, zone: { ...zone } };
           this._zoneHandleDrag = selectedHandle.id === "move" ? {
             pointerId: event.pointerId,
             index,
@@ -5538,7 +5740,7 @@
           event.stopPropagation();
           return;
         }
-        const skip = event.composedPath().find((node) => node instanceof HTMLElement && (node.dataset?.roomId || node.dataset?.zoneId || node.dataset?.gotoId || node.dataset?.controlAction || node.dataset?.modeId || node.dataset?.headerActionIndex || node.dataset?.modeOptionKind || node.dataset?.customMenuIndex || node.dataset?.dockSectionId || node.dataset?.dockActionId || node.dataset?.dockSettingId || node.dataset?.manualZoneIndex));
+        const skip = event.composedPath().find((node) => Boolean(node instanceof HTMLElement && (node.dataset?.roomId || node.dataset?.zoneId || node.dataset?.gotoId || node.dataset?.controlAction || node.dataset?.modeId || node.dataset?.headerActionIndex || node.dataset?.modeOptionKind || node.dataset?.customMenuIndex || node.dataset?.dockSectionId || node.dataset?.dockActionId || node.dataset?.dockSettingId || node.dataset?.manualZoneIndex)));
         if (skip) {
           return;
         }
@@ -5574,6 +5776,7 @@
         this._render();
       }
       _onShadowPointerMove(event) {
+        if (!(event instanceof PointerEvent)) return;
         if (this._touchPinchGesture && event.pointerType === "touch") {
           event.preventDefault();
           event.stopPropagation();
@@ -5625,7 +5828,7 @@
           };
           this._pendingTouchZoneStart = null;
         }
-        if (!this._draftZone || this._activeMode !== "zone") {
+        if (!this._draftZone || !this._pointerStart || this._activeMode !== "zone") {
           return;
         }
         const vacuumPoint = this._eventToVacuumPoint(event);
@@ -5643,6 +5846,8 @@
         event.stopPropagation();
       }
       _onShadowPointerUp(event) {
+        if (!this.isConnected || !(event instanceof PointerEvent) || !this._gesturePointers.has(event.pointerId)) return;
+        this._gesturePointers.delete(event.pointerId);
         if (this._touchPinchGesture && event.pointerType === "touch") {
           event.preventDefault();
           event.stopPropagation();
@@ -5681,6 +5886,7 @@
           return;
         }
         if (this._zoneHandleDrag?.pointerId === event.pointerId) {
+          this._zoneBeforeDrag = null;
           this._zoneHandleDrag = null;
           this._persistCurrentCleaningSessionState(this._activeMode, {
             markSelectionChange: true
@@ -5696,8 +5902,8 @@
           return;
         }
         if (this._activeMode === "goto") {
-          const skip = event.composedPath().find((node) => node instanceof HTMLElement && (node.dataset?.roomId || node.dataset?.zoneId || node.dataset?.gotoId || node.dataset?.controlAction || node.dataset?.modeId || node.dataset?.headerActionIndex || node.dataset?.modeOptionKind || node.dataset?.customMenuIndex || node.dataset?.dockSectionId || node.dataset?.dockActionId || node.dataset?.dockSettingId || node.dataset?.manualZoneIndex || node.dataset?.zoneHandleIndex));
-          const surface2 = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.mapSurface === "main");
+          const skip = event.composedPath().find((node) => Boolean(node instanceof HTMLElement && (node.dataset?.roomId || node.dataset?.zoneId || node.dataset?.gotoId || node.dataset?.controlAction || node.dataset?.modeId || node.dataset?.headerActionIndex || node.dataset?.modeOptionKind || node.dataset?.customMenuIndex || node.dataset?.dockSectionId || node.dataset?.dockActionId || node.dataset?.dockSettingId || node.dataset?.manualZoneIndex || node.dataset?.zoneHandleIndex)));
+          const surface2 = event.composedPath().find((node) => Boolean(node instanceof HTMLElement && node.dataset?.mapSurface === "main"));
           if (!skip && surface2) {
             const point = this._eventToVacuumPoint(event);
             if (point) {
@@ -5711,7 +5917,7 @@
           }
           return;
         }
-        if (!this._draftZone || this._activeMode !== "zone") {
+        if (!this._draftZone || !this._pointerStart || this._activeMode !== "zone") {
           return;
         }
         const zone = this._draftZone;
@@ -5737,6 +5943,7 @@
       }
       _onMapImageLoad(event) {
         const image = event.currentTarget;
+        if (!this.isConnected || !(image instanceof HTMLImageElement) || image !== this.shadowRoot?.querySelector("[data-map-image]")) return;
         const width = Number(image?.naturalWidth || image?.width || 0);
         const height = Number(image?.naturalHeight || image?.height || 0);
         const staleImages = this.shadowRoot?.querySelectorAll("[data-map-image-previous='true']") || [];
@@ -5745,15 +5952,16 @@
         staleImages.forEach((staleImage) => {
           staleImage.classList.add("is-fading-out");
           const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+          const generation = this._generation;
           const removeStale = () => {
-            if (staleImage.isConnected) {
+            if (this._isCurrent(generation) && staleImage.isConnected) {
               staleImage.remove();
             }
           };
           if (typeof schedule === "function") {
             schedule(this, removeStale, 260);
           } else {
-            window.setTimeout(removeStale, 260);
+            this._scheduleOwnedTimer(removeStale, 260);
           }
         });
         if (width > 0 && height > 0) {
@@ -5785,7 +5993,7 @@
       _getPrimaryRoomOutline(room) {
         const outlines = arrayFromMaybe(room?.outlines).filter((outline) => Array.isArray(outline) && outline.length >= 3).sort((left, right) => polygonArea(right) - polygonArea(left));
         if (outlines.length) {
-          return outlines[0];
+          return outlines[0] || [];
         }
         const legacyOutline = arrayFromMaybe(room?.outline);
         return legacyOutline.length >= 3 ? legacyOutline : [];
@@ -5827,7 +6035,7 @@
           rightCenter,
           room?.iconPoint,
           overallCenter
-        ].filter((point) => point && Number.isFinite(point.x) && Number.isFinite(point.y)).filter((point, index, items) => items.findIndex((item) => Math.abs(item.x - point.x) < 1 && Math.abs(item.y - point.y) < 1) === index);
+        ].filter((point) => point !== null && Number.isFinite(point.x) && Number.isFinite(point.y)).filter((point, index, items) => items.findIndex((item) => Math.abs(item.x - point.x) < 1 && Math.abs(item.y - point.y) < 1) === index);
         return candidates.filter((point) => this._isPointInsideRoom(point, room));
       }
       _getRoomMarkerPlacements(rooms, markerSize, labelSize, iconSize) {
@@ -5853,7 +6061,7 @@
           }
           let bestPlacement = null;
           let bestScore = Number.POSITIVE_INFINITY;
-          candidates.forEach((candidate, index) => {
+          for (const [index, candidate] of candidates.entries()) {
             const percent = this._vacuumToViewportPercent(candidate);
             const centerX = percent.left / 100 * viewportWidth;
             const centerY = percent.top / 100 * viewportHeight + Number(room.labelOffsetY || 0);
@@ -5883,7 +6091,7 @@
                 rect
               };
             }
-          });
+          }
           if (bestPlacement) {
             placements.set(String(room.id), bestPlacement);
             placedRects.push(bestPlacement.rect);
@@ -6006,6 +6214,7 @@
           return "";
         }
         return points.map((point) => {
+          if (!point.position) return "";
           const percent = this._vacuumToViewportPercent(point.position);
           const selected = this._gotoPoint && Math.round(this._gotoPoint.x) === Math.round(point.position.x) && Math.round(this._gotoPoint.y) === Math.round(point.position.y);
           return `
@@ -6109,34 +6318,12 @@
       </div>
     `;
       }
-      _renderStateChip(state) {
-        if (this._config?.show_state_chip === false) {
-          return "";
-        }
-        return `
-      <span class="advance-vacuum-card__chip">
-        ${escapeHtml(this._getStateLabel(state))}
-      </span>
-    `;
-      }
-      _renderBatteryChip(state) {
-        const level = this._getBatteryLevel(state);
-        if (this._config?.show_battery_chip === false || level === null) {
-          return "";
-        }
-        return `
-      <span class="advance-vacuum-card__chip advance-vacuum-card__chip--battery" style="--battery-color:${escapeHtml(this._getBatteryColor(level))};">
-        <ha-icon icon="mdi:battery"></ha-icon>
-        <span>${level}%</span>
-      </span>
-    `;
-      }
       _renderModePanel(state) {
         const activePreset = this._getActiveModePanelPreset(state);
         const descriptors = this._getVisibleModePanelDescriptors(state, activePreset);
-        const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+        const hass = this._hass;
         const langCfg = this._config?.language ?? "auto";
-        const u = window.NodaliaI18n?.strings?.(window.NodaliaI18n?.resolveLanguage?.(hass, langCfg))?.advanceVacuum?.utility;
+        const u = this._advanceVacuumStrings()?.utility;
         const utilityMetaContent = [
           ["smart", "custom"].includes(activePreset) ? "" : `
           <div class="advance-vacuum-card__utility-chip-group">
@@ -6194,7 +6381,7 @@
         }
         return `
       <div class="advance-vacuum-card__utility-group">
-        <div class="advance-vacuum-card__utility-label">${escapeHtml(window.NodaliaI18n?.strings?.(window.NodaliaI18n?.resolveLanguage?.(this._hass ?? window.NodaliaI18n?.resolveHass?.(null), this._config?.language ?? "auto"))?.advanceVacuum?.utility?.dockActions ?? "Dock actions")}</div>
+        <div class="advance-vacuum-card__utility-label">${escapeHtml(this._advanceVacuumStrings()?.utility?.dockActions ?? "Dock actions")}</div>
         <div class="advance-vacuum-card__utility-options advance-vacuum-card__utility-options--menu">
           ${descriptors.map((descriptor) => `
             <button
@@ -6214,7 +6401,7 @@
         if (!descriptors.length) {
           return "";
         }
-        const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+        const hass = this._hass;
         const langCfg = this._config?.language ?? "auto";
         return descriptors.map((descriptor) => `
       <label class="advance-vacuum-card__utility-field">
@@ -6237,6 +6424,7 @@
           return "";
         }
         const activeSection = availableSections.find((section) => section.id === this._activeDockPanelSection) || availableSections[0];
+        if (!activeSection) return "";
         if (activeSection.id !== this._activeDockPanelSection) {
           this._activeDockPanelSection = activeSection.id;
         }
@@ -6256,24 +6444,6 @@
           </div>
         </div>
         ${activeSection.id === "control" ? this._renderDockControlSection(state) : this._renderDockSettingsSection(state)}
-      </div>
-    `;
-      }
-      _renderCustomMenuPanel(state) {
-        const items = this._getVisibleCustomMenuItems(state);
-        if (!items.length) {
-          return "";
-        }
-        return `
-      <div class="advance-vacuum-card__utility-panel">
-        <div class="advance-vacuum-card__utility-options advance-vacuum-card__utility-options--menu">
-          ${items.map((item, index) => `
-            <button class="advance-vacuum-card__utility-option advance-vacuum-card__utility-option--menu" data-custom-menu-index="${index}">
-              <ha-icon icon="${escapeHtml(item.icon || "mdi:flash")}"></ha-icon>
-              <span>${escapeHtml(item.label)}</span>
-            </button>
-          `).join("")}
-        </div>
       </div>
     `;
       }
@@ -6339,15 +6509,40 @@
           styleEl = this.shadowRoot.querySelector("[data-vacuum-style]");
           card = this.shadowRoot.querySelector("ha-card.advance-vacuum-card");
         }
+        if (!(styleEl instanceof HTMLStyleElement) || !(card instanceof HTMLElement)) return;
         if (styleEl.textContent !== css) {
           styleEl.textContent = css;
         }
         const classMatch = cardAttrs.match(/class="([^"]*)"/);
-        card.className = classMatch ? classMatch[1] : "advance-vacuum-card";
+        card.className = classMatch?.[1] || "advance-vacuum-card";
         card.setAttribute("data-vacuum-surface", "true");
+        const surface = card.querySelector("[data-map-surface='main']");
+        const map = surface?.parentElement;
+        if (this._gesturePointers.size && surface && map && map.parentElement === card) {
+          const template = document.createElement("template");
+          template.innerHTML = inner;
+          const nextMap = template.content.querySelector(".advance-vacuum-card__map");
+          const nextSurface = nextMap?.querySelector("[data-map-surface='main']");
+          if (nextMap && nextSurface) {
+            surface.innerHTML = nextSurface.innerHTML;
+            for (const node of Array.from(card.childNodes)) if (node !== map) node.remove();
+            for (const node of Array.from(template.content.childNodes)) if (node !== nextMap) card.append(node);
+            return;
+          }
+        }
         card.innerHTML = inner;
       }
       _render() {
+        if (!this.isConnected || !this.shadowRoot) return;
+        const active = this.shadowRoot.activeElement;
+        const attributes = active instanceof HTMLElement ? Array.from(active.attributes).filter((item) => item.name.startsWith("data-")).map((item) => [item.name, item.value]) : [];
+        this._renderView();
+        if (attributes.length && active && !active.isConnected) {
+          const replacement = Array.from(this.shadowRoot.querySelectorAll("button,select")).find((node) => node.tagName === active.tagName && attributes.every(([name, value]) => name !== void 0 && node.getAttribute(name) === value));
+          replacement?.focus({ preventScroll: true });
+        }
+      }
+      _renderView() {
         if (!this.shadowRoot) {
           return;
         }
@@ -6362,6 +6557,7 @@
             { cardClass: "advance-vacuum-card" }
           );
           if (advanceVacuumGuard) {
+            this._releaseViewWork();
             this.shadowRoot.innerHTML = advanceVacuumGuard;
             this._lastRenderSignature = `guard:${config.entity || ""}`;
             return;
@@ -6493,52 +6689,8 @@
           padding: ${styles.card.padding};
           position: relative;
         }
+        ${advance_vacuum_static_map_2_default}
 
-        .advance-vacuum-card--entering {
-          animation: advance-vacuum-card-enter var(--advance-vacuum-card-content-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
-        }
-
-        .advance-vacuum-card--entering .advance-vacuum-card__map {
-          animation: advance-vacuum-map-enter var(--advance-vacuum-card-content-duration) cubic-bezier(0.2, 0.85, 0.25, 1) 60ms both;
-        }
-
-        .advance-vacuum-card--entering .advance-vacuum-card__footer {
-          animation: advance-vacuum-footer-enter var(--advance-vacuum-card-content-duration) cubic-bezier(0.22, 0.84, 0.26, 1) 100ms both;
-        }
-
-        .advance-vacuum-card__footer {
-          align-items: center;
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          width: 100%;
-        }
-
-        .advance-vacuum-card__header,
-        .advance-vacuum-card__icon,
-        .advance-vacuum-card__unavailable,
-        .advance-vacuum-card__header-main,
-        .advance-vacuum-card__title,
-        .advance-vacuum-card__chips,
-        .advance-vacuum-card__chip,
-        .advance-vacuum-card__header-actions,
-        .advance-vacuum-card__header-action {
-          display: none !important;
-        }
-
-        .advance-vacuum-card__control,
-        .advance-vacuum-card__mode-button,
-        .advance-vacuum-card__goto-marker,
-        .advance-vacuum-card__room-marker {
-          appearance: none;
-          background: none;
-          border: none;
-          color: inherit;
-          cursor: pointer;
-          font: inherit;
-          margin: 0;
-          padding: 0;
-        }
 
         .advance-vacuum-card__control {
           align-items: center;
@@ -6586,198 +6738,7 @@
           --mdc-icon-size: ${Math.round(controlSize * 0.48)}px;
         }
 
-        .advance-vacuum-card__control--active-motion ha-icon {
-          animation: advance-vacuum-icon-sweep 1.45s ease-in-out infinite;
-          transform-origin: 50% 70%;
-        }
-
-        .advance-vacuum-card__modes {
-          display: flex;
-          justify-content: center;
-          width: 100%;
-        }
-
-        .advance-vacuum-card__modes-bubble {
-          background: var(--av-surface);
-          border: 1px solid var(--av-border);
-          border-radius: 999px;
-          box-shadow:
-            inset 0 1px 0 var(--av-inset-soft),
-            var(--av-float-subtle);
-          display: inline-flex;
-          flex-wrap: wrap;
-          gap: 4px;
-          justify-content: center;
-          max-width: 100%;
-          padding: 4px;
-        }
-
-        .advance-vacuum-card__mode-button {
-          align-items: center;
-          background: transparent;
-          border: 1px solid transparent;
-          border-radius: 999px;
-          box-shadow: none;
-          color: var(--secondary-text-color);
-          display: inline-flex;
-          font-size: 12px;
-          font-weight: 600;
-          gap: 8px;
-          min-height: 30px;
-          padding: 0 11px;
-          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, color 180ms ease, transform 180ms cubic-bezier(0.2, 0.9, 0.24, 1);
-        }
-
-        .advance-vacuum-card__mode-button:hover {
-          background: var(--av-accent-hover);
-          box-shadow: var(--av-accent-hover-shadow);
-        }
-
-        .advance-vacuum-card__mode-button.is-active {
-          background: var(--av-selected-bg);
-          border-color: var(--av-selected-border);
-          box-shadow:
-            inset 0 1px 0 var(--av-selected-inset),
-            var(--av-selected-glow);
-          color: var(--primary-text-color);
-          font-weight: 700;
-        }
-
-        .advance-vacuum-card__mode-button ha-icon {
-          --mdc-icon-size: 15px;
-        }
-
-        .advance-vacuum-card__utility-panel {
-          animation: advance-vacuum-utility-panel-in var(--advance-vacuum-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) forwards;
-          display: grid;
-          gap: 10px;
-          justify-items: center;
-          opacity: 0;
-          transform: translateY(-6px);
-          transform-origin: top center;
-          width: 100%;
-        }
-
-        .advance-vacuum-card__utility-panel-slot {
-          display: flex;
-          justify-content: center;
-          width: 100%;
-        }
-
-        .advance-vacuum-card__utility-group {
-          display: grid;
-          gap: 8px;
-          justify-items: center;
-          width: 100%;
-        }
-
-        .advance-vacuum-card__utility-label {
-          color: var(--secondary-text-color);
-          font-size: 11px;
-          font-weight: 700;
-          letter-spacing: 0.04em;
-          text-transform: uppercase;
-        }
-
-        .advance-vacuum-card__utility-options {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          justify-content: center;
-          width: 100%;
-        }
-
-        .advance-vacuum-card__utility-options--menu {
-          max-width: 100%;
-        }
-
-        .advance-vacuum-card__utility-options--presets {
-          justify-content: center;
-        }
-
-        .advance-vacuum-card__utility-option {
-          align-items: center;
-          appearance: none;
-          background: var(--av-surface);
-          border: 1px solid var(--av-border);
-          border-radius: 999px;
-          box-shadow:
-            inset 0 1px 0 var(--av-inset-soft),
-            var(--av-float-subtle);
-          color: var(--primary-text-color);
-          cursor: pointer;
-          display: inline-flex;
-          font: inherit;
-          gap: 8px;
-          justify-content: center;
-          margin: 0;
-          min-height: 34px;
-          padding: 0 12px;
-          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, color 180ms ease, transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1);
-        }
-
-        .advance-vacuum-card__utility-option.is-active {
-          background: var(--av-selected-bg);
-          border-color: var(--av-selected-border);
-          box-shadow:
-            inset 0 1px 0 var(--av-selected-inset),
-            var(--av-selected-ring),
-            var(--av-selected-glow);
-          color: var(--primary-text-color);
-          font-weight: 700;
-        }
-
-        .advance-vacuum-card__utility-option:not(.is-active):hover {
-          background: var(--av-accent-hover);
-          border-color: var(--av-border);
-          box-shadow:
-            inset 0 1px 0 var(--av-inset-soft),
-            var(--av-accent-hover-shadow);
-        }
-
-        .advance-vacuum-card__utility-option--menu ha-icon {
-          --mdc-icon-size: 16px;
-        }
-
-        .advance-vacuum-card__utility-field {
-          display: grid;
-          gap: 8px;
-          justify-items: center;
-          max-width: 340px;
-          width: min(100%, 340px);
-        }
-
-        .advance-vacuum-card__utility-select {
-          appearance: none;
-          background: var(--av-surface);
-          border: 1px solid var(--av-border);
-          border-radius: 16px;
-          box-shadow:
-            inset 0 1px 0 var(--av-inset-soft),
-            var(--av-float-subtle);
-          color: var(--primary-text-color);
-          cursor: pointer;
-          font: inherit;
-          min-height: 42px;
-          padding: 0 14px;
-          text-align: center;
-          width: 100%;
-        }
-
-        .advance-vacuum-card__utility-meta {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          justify-content: center;
-          width: 100%;
-        }
-
-        .advance-vacuum-card__utility-chip-group {
-          display: grid;
-          gap: 6px;
-          justify-items: center;
-        }
-
+        ${advance_vacuum_utilities_default}
         .advance-vacuum-card__map {
           background:
             linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent) 0%, color-mix(in srgb, var(--primary-text-color) 2%, transparent) 100%),
@@ -6804,85 +6765,7 @@
           position: absolute;
         }
 
-        .advance-vacuum-card__map-canvas {
-          height: 100%;
-          inset: 0;
-          position: absolute;
-          transform-origin: top left;
-          width: 100%;
-        }
-
-        .advance-vacuum-card__map-image {
-          display: block;
-          height: 100%;
-          inset: 0;
-          object-fit: cover;
-          opacity: 1;
-          position: absolute;
-          transition: opacity 220ms ease-out;
-          width: 100%;
-          z-index: 0;
-        }
-
-        .advance-vacuum-card__map-image[data-map-image-previous="true"] {
-          z-index: 0;
-        }
-
-        .advance-vacuum-card__map-image[data-map-image] {
-          z-index: 1;
-        }
-
-        .advance-vacuum-card__map-image.is-pending,
-        .advance-vacuum-card__map-image.is-fading-out {
-          opacity: 0;
-        }
-
-        .advance-vacuum-card__map-room-dim,
-        .advance-vacuum-card__room-highlight-layer,
-        .advance-vacuum-card__map-svg,
-        .advance-vacuum-card__map-markers,
-        .advance-vacuum-card__map-overlays {
-          inset: 0;
-          position: absolute;
-        }
-
-        .advance-vacuum-card__map-room-dim {
-          background: rgba(8, 12, 20, 0.5);
-          pointer-events: none;
-          z-index: 1;
-        }
-
-        .advance-vacuum-card__room-highlight-layer {
-          pointer-events: none;
-          z-index: 2;
-        }
-
-        .advance-vacuum-card__room-highlight-image {
-          display: block;
-          height: 100%;
-          inset: 0;
-          object-fit: cover;
-          pointer-events: none;
-          position: absolute;
-          width: 100%;
-        }
-
-        .advance-vacuum-card__map-svg {
-          height: 100%;
-          pointer-events: none;
-          width: 100%;
-          z-index: 3;
-        }
-
-        .advance-vacuum-card__map-markers {
-          pointer-events: none;
-        }
-
-        .advance-vacuum-card__map-overlays {
-          pointer-events: none;
-          z-index: 4;
-        }
-
+        ${advance_vacuum_map_surface_default}
         .advance-vacuum-card__room-polygon {
           cursor: pointer;
           fill: rgba(255, 255, 255, 0.01);
@@ -7050,186 +6933,15 @@
         .advance-vacuum-card__map-tool--status-empty {
           color: ${styles.icon.emptying_color || "#9b6b4a"};
         }
+        ${advance_vacuum_static_map_1_default}
 
-        .advance-vacuum-card__map-tool {
-          align-items: center;
-          background: var(--av-surface-raised);
-          border: 1px solid var(--av-border-strong);
-          border-radius: 999px;
-          box-shadow:
-            inset 0 1px 0 var(--av-inset),
-            var(--av-float);
-          color: var(--primary-text-color);
-          display: inline-flex;
-          gap: 6px;
-          justify-content: center;
-          min-height: 44px;
-          min-width: 44px;
-          padding: 0 14px;
-          pointer-events: auto;
-          transition: transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1), box-shadow 180ms ease, border-color 180ms ease, background 180ms ease, filter 180ms ease;
-        }
-
-        .advance-vacuum-card__map-tool--add {
-          background: var(--av-selected-bg);
-          border-color: var(--av-selected-border);
-          box-shadow:
-            inset 0 1px 0 var(--av-selected-inset),
-            var(--av-selected-glow);
-          font-size: 12px;
-          font-weight: 700;
-        }
-
-        .advance-vacuum-card__map-tool-label {
-          line-height: 1;
-        }
-
-        .advance-vacuum-card__map-tool.is-disabled {
-          opacity: 0.45;
-        }
-
-        .advance-vacuum-card__map-tool:not(.advance-vacuum-card__map-tool--status):not(.advance-vacuum-card__map-tool--add):not(.is-disabled):hover {
-          background: var(--av-accent-hover);
-          border-color: var(--av-border);
-          box-shadow:
-            inset 0 1px 0 var(--av-inset-soft),
-            var(--av-accent-hover-shadow);
-        }
-
-        .advance-vacuum-card__map-tool--add:not(.is-disabled):hover {
-          filter: brightness(1.05);
-          transform: translateY(-1px);
-        }
-
-        .advance-vacuum-card__room-marker,
-        .advance-vacuum-card__goto-marker {
-          align-items: center;
-          background: var(--av-surface-raised);
-          border: 1px solid var(--av-border);
-          border-radius: 999px;
-          box-shadow:
-            inset 0 1px 0 var(--av-inset-soft),
-            var(--av-float);
-          color: var(--primary-text-color);
-          display: inline-flex;
-          gap: var(--room-marker-gap, 8px);
-          justify-content: center;
-          left: 0;
-          min-height: var(--marker-size, 34px);
-          min-width: var(--marker-size, 34px);
-          padding: var(--room-marker-padding, 0 12px);
-          pointer-events: auto;
-          position: absolute;
-          top: 0;
-          touch-action: manipulation;
-          transform: translate(-50%, -50%);
-          white-space: nowrap;
-          z-index: 2;
-        }
-
-        .advance-vacuum-card__room-marker.is-icon-only {
-          border-radius: 999px;
-          padding: 0;
-          width: var(--marker-size, 34px);
-        }
-
-        .advance-vacuum-card__room-marker.is-readonly,
-        .advance-vacuum-card__room-chip.is-readonly {
-          cursor: default;
-          opacity: 0.96;
-        }
-
-        .advance-vacuum-card__room-marker.is-selected,
-        .advance-vacuum-card__goto-marker.is-selected {
-          background: var(--av-selected-bg);
-          border-color: var(--av-selected-border);
-          box-shadow:
-            inset 0 1px 0 var(--av-selected-inset),
-            var(--av-selected-glow);
-        }
-
-        .advance-vacuum-card__room-marker ha-icon,
-        .advance-vacuum-card__goto-marker ha-icon {
-          --mdc-icon-size: var(--room-icon-size, 16px);
-        }
 
         .advance-vacuum-card__room-marker span {
           font-size: var(--room-label-size, ${Math.max(11, parseSizeToPixels(styles.map.label_size, 12))}px);
           font-weight: 600;
         }
+        ${advance_vacuum_static_map_0_default}
 
-        .advance-vacuum-card__goto-marker {
-          height: 38px;
-          width: 38px;
-        }
-
-        .advance-vacuum-card__room-list {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          justify-content: center;
-          width: 100%;
-        }
-
-        .advance-vacuum-card__room-chip {
-          align-items: center;
-          background: var(--av-surface);
-          border: 1px solid var(--av-border);
-          border-radius: 999px;
-          box-shadow:
-            inset 0 1px 0 var(--av-inset-soft),
-            var(--av-float-subtle);
-          color: var(--secondary-text-color);
-          cursor: pointer;
-          display: inline-flex;
-          gap: 8px;
-          min-height: 36px;
-          padding: 0 14px;
-          touch-action: manipulation;
-          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, color 180ms ease, transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1);
-        }
-
-        .advance-vacuum-card__room-chip.is-selected {
-          background: var(--av-selected-bg);
-          border-color: var(--av-selected-border);
-          box-shadow:
-            inset 0 1px 0 var(--av-selected-inset),
-            var(--av-selected-glow);
-          color: var(--primary-text-color);
-        }
-
-        .advance-vacuum-card__room-chip:not(.is-readonly):not(.is-selected):hover {
-          background: var(--av-accent-hover);
-          border-color: var(--av-border);
-          box-shadow:
-            inset 0 1px 0 var(--av-inset-soft),
-            var(--av-accent-hover-shadow);
-        }
-
-        .advance-vacuum-card__room-chip ha-icon {
-          --mdc-icon-size: 16px;
-        }
-
-        .advance-vacuum-card__room-chip span {
-          font-size: 12px;
-          font-weight: 600;
-        }
-
-        .advance-vacuum-card__controls {
-          align-items: center;
-          display: grid;
-          gap: 10px;
-          justify-items: center;
-          width: 100%;
-        }
-
-        .advance-vacuum-card__controls-row {
-          align-items: center;
-          column-gap: 14px;
-          display: grid;
-          grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-          width: 100%;
-        }
 
         .advance-vacuum-card__controls-slot {
           align-items: center;
@@ -7279,170 +6991,7 @@
           --mdc-icon-size: ${Math.round(controlSize * 1.16 * 0.48)}px;
         }
 
-        .advance-vacuum-card__selection-chip {
-          align-items: center;
-          background: var(--av-surface);
-          border: 1px solid var(--av-border);
-          border-radius: 999px;
-          box-shadow:
-            inset 0 1px 0 var(--av-inset-soft),
-            var(--av-float-subtle);
-          color: var(--secondary-text-color);
-          display: inline-flex;
-          font-size: 12px;
-          font-weight: 600;
-          gap: 8px;
-          min-height: 34px;
-          padding: 0 12px;
-        }
-
-        .advance-vacuum-card__selection-chip strong {
-          color: var(--primary-text-color);
-        }
-
-        .advance-vacuum-card__selection-chip:hover {
-          background: var(--av-accent-hover);
-          border-color: var(--av-border);
-          box-shadow:
-            inset 0 1px 0 var(--av-inset-soft),
-            var(--av-accent-hover-shadow);
-        }
-
-        .advance-vacuum-card__routines {
-          display: grid;
-          gap: 10px;
-          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-          width: 100%;
-        }
-
-        .advance-vacuum-card__routine-button {
-          align-items: center;
-          appearance: none;
-          background: var(--av-surface);
-          border: 1px solid var(--av-border);
-          border-radius: 18px;
-          box-shadow:
-            inset 0 1px 0 var(--av-inset),
-            var(--av-float);
-          color: var(--primary-text-color);
-          cursor: pointer;
-          display: grid;
-          gap: 10px;
-          justify-items: center;
-          min-height: 118px;
-          padding: 16px 14px;
-          text-align: center;
-          transition: transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1), box-shadow 180ms ease, border-color 180ms ease;
-          width: 100%;
-        }
-
-        .advance-vacuum-card__routine-button:hover {
-          transform: translateY(-1px);
-          box-shadow:
-            inset 0 1px 0 var(--av-inset),
-            var(--av-float-lift);
-        }
-
-        .advance-vacuum-card__routine-button.is-disabled {
-          cursor: default;
-          opacity: 0.5;
-        }
-
-        .advance-vacuum-card__routine-icon {
-          align-items: center;
-          background: var(--av-accent-tile-bg);
-          border: 1px solid var(--av-accent-tile-border);
-          border-radius: 999px;
-          box-shadow: inset 0 1px 0 var(--av-accent-tile-inset);
-          display: inline-flex;
-          height: 46px;
-          justify-content: center;
-          width: 46px;
-        }
-
-        .advance-vacuum-card__routine-icon ha-icon {
-          --mdc-icon-size: 22px;
-        }
-
-        .advance-vacuum-card__routine-label {
-          font-size: 12px;
-          font-weight: 700;
-          line-height: 1.35;
-          text-wrap: balance;
-        }
-
-        @keyframes advance-vacuum-utility-panel-in {
-          from {
-            opacity: 0;
-            transform: translateY(-6px);
-          }
-
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        @keyframes advance-vacuum-card-enter {
-          0% {
-            opacity: 0;
-            transform: translateY(8px) scale(0.992);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-
-        @keyframes advance-vacuum-map-enter {
-          0% {
-            opacity: 0;
-            transform: translateY(12px) scale(0.988);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-
-        @keyframes advance-vacuum-footer-enter {
-          0% {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        @keyframes advance-vacuum-button-bounce {
-          0% { transform: scale(1); }
-          38% { transform: scale(0.935); }
-          72% { transform: scale(1.035); }
-          100% { transform: scale(1); }
-        }
-
-        @keyframes advance-vacuum-button-bounce-subtle {
-          0% { transform: scale(1); }
-          40% { transform: scale(0.965); }
-          72% { transform: scale(1.02); }
-          100% { transform: scale(1); }
-        }
-
-        @keyframes advance-vacuum-icon-sweep {
-          0%, 100% { transform: translateX(-3px) rotate(-10deg); }
-          50% { transform: translateX(4px) rotate(12deg); }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .advance-vacuum-card,
-          .advance-vacuum-card *,
-          .advance-vacuum-card__control--active-motion ha-icon {
-            animation: none !important;
-            transition: none !important;
-          }
-        }
+        ${advance_vacuum_motion_default}
       </style>
       <ha-card class="advance-vacuum-card ${shouldAnimateEntrance ? "advance-vacuum-card--entering" : ""}">
         <div class="advance-vacuum-card__map">
@@ -7481,7 +7030,7 @@
             const rect = this._zoneToSvgRect(zone);
             return `
                       <rect
-                        class="advance-vacuum-card__zone-rect ${zone.draft ? "is-draft" : ""}"
+                        class="advance-vacuum-card__zone-rect ${"draft" in zone && zone.draft ? "is-draft" : ""}"
                         x="${rect.x.toFixed(1)}"
                         y="${rect.y.toFixed(1)}"
                         width="${rect.width.toFixed(1)}"

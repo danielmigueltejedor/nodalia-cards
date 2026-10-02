@@ -63,6 +63,8 @@ function createCard({ platform = "auto", states = {}, entities = {}, areas = {},
   const Card = loadAdvanceVacuumCard();
   const calls = [];
   const card = new Card();
+  card.isConnected=true;
+  card._render=()=>{};
   card._config = {
     entity: "vacuum.robot",
     vacuum_platform: platform,

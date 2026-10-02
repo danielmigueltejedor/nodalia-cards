@@ -50,7 +50,7 @@ test("advance vacuum setConfig renders without missing helper imports", () => {
     constructor() { this.isConnected = true; }
     attachShadow() {
       this.shadowRoot = {
-        addEventListener() {}, removeEventListener() {}, innerHTML: "",
+        addEventListener() {}, removeEventListener() {}, innerHTML: "", replaceChildren() {this.innerHTML="";},
         querySelector() { return null; }, querySelectorAll() { return []; },
       };
       return this.shadowRoot;
@@ -66,6 +66,7 @@ test("advance vacuum setConfig renders without missing helper imports", () => {
       get(name) { return registry.get(name); },
     },
     HTMLElement: FakeHTMLElement,
+    queueMicrotask,requestAnimationFrame(){return 0;},cancelAnimationFrame(){},setTimeout(){return 0;},clearTimeout(){},
   };
   sandbox.window = sandbox;
   vm.createContext(sandbox);
@@ -74,6 +75,7 @@ test("advance vacuum setConfig renders without missing helper imports", () => {
   const Host = registry.get("nodalia-advance-vacuum-card");
   assert.ok(Host, "advance vacuum host should register");
   const card = new Host();
+  card._commitPersistentVacuumShadow=markup=>{card.shadowRoot.innerHTML=markup;};
   assert.doesNotThrow(() => card.setConfig({ entity: "vacuum.test" }));
   card.hass = {
     language: "es",
