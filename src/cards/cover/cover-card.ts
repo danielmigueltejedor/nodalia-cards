@@ -311,8 +311,8 @@ class NodaliaCoverCard extends HTMLElement {
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, String(this._config.language || "auto")) ?? "en";
     const local = window.NodaliaI18n?.strings?.(lang)?.coverCard;
     const english = window.NodaliaI18n?.strings?.("en")?.coverCard;
-    const pack = isObject(local) ? local : {};
-    const enPack = isObject(english) ? english : {};
+    const pack:Record<string,unknown> = isObject(local) ? local : {};
+    const enPack:Record<string,unknown> = isObject(english) ? english : {};
     const raw = pack?.[key] ?? enPack?.[key];
     return String(raw != null && raw !== "" ? raw : fallback);
   }

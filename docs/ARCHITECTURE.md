@@ -49,7 +49,7 @@ nodalia-utils.js              Generated checked shared runtime helpers (window.N
 nodalia-backend.js            Generated optional Nodalia Engine client
 nodalia-render-signature.js   Render-signature helpers
 nodalia-bubble-contrast.js    Icon contrast helpers
-nodalia-i18n.js               Generated runtime i18n
+nodalia-i18n.js               Generated checked runtime lookup and lazy locale data
 nodalia-editor-ui.js          Generated checked editor lookup with lazy JSON catalogs
 nodalia-*-card.js             Card artifacts (migrated cards generated)
 nodalia-cards.js              Minified HACS single-file bundle
@@ -63,9 +63,10 @@ TS sources and generated compatibility adapters. Notifications mobile policy is
 also generated from checked, side-effect-free TS with an idempotent global adapter.
 Engine client also has checked TS source and a generated compatibility adapter.
 Bubble contrast now has checked source and a generated adapter as well. Generic utils now have checked source in `src/shared/utils-runtime.ts` with a
-generated compatibility adapter. The i18n pack is generated from JSON while its
-editor lookup has checked source in `src/shared/editor-i18n-runtime.ts`, with
-generated data in `editor-i18n-data.ts`. Runtime lookup still requires migration.
+generated compatibility adapter. Runtime and editor lookup have checked source
+in `src/shared/runtime-i18n-runtime.ts` and `src/shared/editor-i18n-runtime.ts`.
+Their locale/row/catalog data are generated from JSON into the corresponding
+`*-i18n-data.ts` modules. Published root files are generated compatibility artifacts.
 
 ## Large controller responsibilities
 
@@ -76,8 +77,10 @@ Static CSS is embedded from readable files; dynamic styles remain in the view.
 
 `scripts/type-debt.json` is empty. Go2rtc playback now has checked source in
 `src/shared/go2rtc-player.ts`; Camera imports it directly and the standalone
-ES-module player is generated from the same source. The runtime translation lookup logic still requires its own migration;
-an empty suppression inventory does not mean handwritten JavaScript is checked.
+ES-module player is generated from the same source. All shipped runtime lookup
+logic now has checked TypeScript source; the empty suppression inventory and
+canonical runtime entry list are both enforced. Final audit and release validation
+remain required before publishing 3.0.0-alpha.1.
 
 ## Dependency relationships
 

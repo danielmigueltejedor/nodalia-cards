@@ -29,45 +29,11 @@ import type { NavigationPublicApi } from "../../cards/navigation/navigation-type
 import type { RoomSummaryPublicApi } from "../../cards/room-summary/room-summary-types";
 import type { AdvanceVacuumPublicApi } from "../../cards/advance-vacuum/advance-vacuum-types";
 
-interface NodaliaI18nApi {
+type NodaliaI18nApi=Partial<ReturnType<typeof import("../../shared/runtime-i18n-runtime").createRuntimeI18n>>&{
   editorUiMaps?:Record<string,Record<string,string>>|null;
   editorCatalog?:Record<string,Record<string,string>>|null;
-  translateClimateSchedule?: (hass:unknown,language:string,key:string,fallback?:string)=>string;
-  translateClimateHvacLabel?: (hass:unknown,language:string,value:unknown,fromAction:boolean)=>string;
-  translateClimateAria?: (hass:unknown,language:string,key:string,fallback?:string)=>string;
-  translateClimateDialAria?: (hass:unknown,language:string,variant:string)=>string;
-  translateClimateDialNoSetpointHint?: (hass:unknown,language:string)=>string;
-  translateNotificationsUi?: (hass:HomeAssistant|null|undefined, language:string, path:string, fallback?:string, values?:Record<string,unknown>)=>string;
-  translateMediaPlayerState?: (hass: unknown, language: string, state: unknown) => string;
-  translateMediaBrowserUi?: (hass: unknown, language: string, key: string, fallback?: string, values?: Record<string,unknown>) => string;
-  translateMediaPlayerAria?: (hass: unknown, language: string, key: string, fallback?: string, values?: Record<string,unknown>) => string;
-  translateEntityState?: (language: string, state: import("./home-assistant").HassEntity | null, decimals: number,
-    formatWithUnit: (value: string, unit: string, decimals: number) => string,
-    formatNumber: (value: string, decimals: number) => string, parseNumber: (value: unknown) => number | null) => unknown;
-  translateFavState?: (language: string, key: string) => string;
-  translateEntityStateChip?: (hass: unknown, language: string, key: string) => string;
-  translateNewsUi?: (hass: unknown, language: string, key: string, fallback?: string, values?: Record<string, unknown>) => string;
-  resolveHass?: (hass: unknown) => unknown;
-  resolveLanguage?: (hass: unknown, language?: string) => string;
-  strings?: (language: string) => Record<string, unknown>;
-  editorStr?: (hass: unknown, language: string, key: string) => string;
-  translateFanAria?: (hass: unknown, language: string, key: string, fallback?: string) => string;
-  translateCommonAria?: (hass: unknown, language: string, key: string, fallback?: string) => string;
-  translateWeatherForecastUi?: (hass: unknown, language: string, key: string) => string;
-  translateWeatherCondition?: (hass: unknown, language: string, value: unknown) => string;
-  translateMeteoalarmTerm?: (hass: unknown, language: string, value: unknown) => string;
-  translateHumidifierAria?: (hass: unknown, language: string, key: string, fallback?: string) => string;
-  translateHumidifierDeviceState?: (hass: unknown, language: string, value: unknown) => string;
-  translateGraphEmptyHistory?: (hass: unknown, language: string) => string;
-  translateCalendarUi?: (hass: unknown, language: string, path: string, fallback?: string, values?: Record<string, unknown>) => string;
-  translateLightUi?: (hass: unknown, language: string, path: string, fallback?: string, values?: Record<string, unknown>) => string;
-  translateHumidifierMode?: (hass: unknown, language: string, value: unknown) => string;
-  translateAdvanceVacuumVacuumMode?: (hass: unknown, language: string, value: unknown, kind?: string) => string;
-  translateAdvanceVacuumReportedState?: (hass: unknown, language: string, key: unknown, fallback?: unknown) => string;
-  translateVacuumErrorState?: (hass: unknown, language: string, value: unknown, fallback?: unknown) => string;
-  isVacuumErrorState?: (value: unknown) => boolean;
-  localeTag?: (language: string) => string;
-}
+  editorStr?:(hass:unknown,language:string,key:unknown)=>string;
+};
 
 type NodaliaBubbleContrastApi = Partial<typeof import("../../shared/bubble-contrast").bubbleContrast>;
 

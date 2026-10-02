@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+- Check the complete runtime translation lookup, generate lazy typed locale factories, derive the public API from its implementation and guard partial or malformed locale overrides. Preserve all twelve locale trees and public lookup behavior, and translate boolean Fav attributes through the correct entity catalog.
+
 - Check editor translation lookup against guarded lazy JSON catalogs, preserve all twelve locales and Spanish label normalization, generate the compatibility artifact from TypeScript, and refresh the Lock editor when the Home Assistant profile language changes.
 
 - Check the complete shared utility runtime, guard reconstructed JSON configuration roots, cancel retired editor layout frames and deferred actions, keep modal cleanup scoped to its own dialog, and release shadow listeners from their original roots. Preserve public helpers and existing configuration behavior.

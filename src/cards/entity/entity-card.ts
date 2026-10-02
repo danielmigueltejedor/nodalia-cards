@@ -1029,7 +1029,7 @@ class NodaliaEntityCard extends HTMLElement {
       const hass = window.NodaliaI18n?.resolveHass?.(this._hass) ?? this._hass;
       const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
       const pack = window.NodaliaI18n?.strings?.(lang)?.entityCard;
-      const labels = isObject(pack) && isObject(pack.boolean) ? pack.boolean : {};
+      const labels:Record<string,unknown> = isObject(pack) && isObject(pack.boolean) ? pack.boolean : {};
       return String(value ? labels.yes ?? "Yes" : labels.no ?? "No");
     }
 
@@ -1905,8 +1905,8 @@ class NodaliaEntityCard extends HTMLElement {
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
     const candidate = window.NodaliaI18n?.strings?.(lang)?.entityCard;
     const fallbackPack = window.NodaliaI18n?.strings?.("en")?.entityCard;
-    const pack = isObject(candidate) ? candidate : {};
-    const enPack = isObject(fallbackPack) ? fallbackPack : {};
+    const pack:Record<string,unknown> = isObject(candidate) ? candidate : {};
+    const enPack:Record<string,unknown> = isObject(fallbackPack) ? fallbackPack : {};
     const nested = key.includes(".") ? getByPath(pack, key) ?? getByPath(enPack, key) : undefined;
     const raw = nested ?? pack?.[key] ?? enPack?.[key];
     return String(raw != null && raw !== "" ? raw : fallback);
@@ -2025,8 +2025,8 @@ class NodaliaEntityCard extends HTMLElement {
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
     const pack = window.NodaliaI18n?.strings?.(lang)?.common;
     const enPack = window.NodaliaI18n?.strings?.("en")?.common;
-    const aria = isObject(pack) && isObject(pack.aria) ? pack.aria : {};
-    const enAria = isObject(enPack) && isObject(enPack.aria) ? enPack.aria : {};
+    const aria:Record<string,unknown> = isObject(pack) && isObject(pack.aria) ? pack.aria : {};
+    const enAria:Record<string,unknown> = isObject(enPack) && isObject(enPack.aria) ? enPack.aria : {};
     return String(aria[key] ?? enAria[key] ?? fallback);
   }
 

@@ -1014,8 +1014,8 @@
         const key = normalizeTextKey(attributeName);
         if (typeof value === "boolean") {
           const lang = window.NodaliaI18n?.resolveLanguage?.(this._hass, String(this._config?.language || "auto")) || "en";
-          const pack = window.NodaliaI18n?.strings?.(lang) || window.NodaliaI18n?.strings?.("en") || {};
-          const copy = isObject(pack.boolean) ? pack.boolean : {};
+          const pack = window.NodaliaI18n?.strings?.(lang)?.entityCard || window.NodaliaI18n?.strings?.("en")?.entityCard;
+          const copy = isObject(pack?.boolean) ? pack.boolean : {};
           return String(value ? copy.yes || "Yes" : copy.no || "No");
         }
         if (typeof value === "number") {

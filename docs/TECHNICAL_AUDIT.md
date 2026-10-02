@@ -2005,3 +2005,31 @@ the unchanged limits.
 - Utils PR #289 passed all remote browser, static/HACS/CodeQL/security gates and
   review before normal integration. Runtime translation lookup remains handwritten
   and must migrate before release.
+
+## Runtime translation lookup — final handwritten runtime migrated
+
+- Move the complete runtime lookup into `src/shared/runtime-i18n-runtime.ts` and
+  generate lazy locale factories in `runtime-i18n-data.ts`. Every shipped locale
+  matches the English tree at compile time. Derive the public window API from
+  its implementation, retaining optional boot-time registration and nullable
+  state translations. All published runtime entries now have checked TS source.
+- Preserve public PACK factories, cache identity, twelve complete locale trees,
+  profile-language priority, aliases, unit formatting and zero/false substitutions.
+  Merge partial public overrides with English at an unknown boundary and guard
+  the reconstructed tree before treating it as typed strings. Define own JSON
+  properties without changing prototypes. Deduplicate four identical path lookup
+  implementations without relaxing the bundle limits.
+- The checked catalog exposes an existing Fav bug: boolean attributes looked for
+  `boolean` at the locale root instead of `entityCard.boolean`. Use the actual
+  catalog, with a native Spanish true/false attribute regression.
+- All 13,876 baseline translations, complete locale trees, public methods and
+  profile-resolution comparisons match. All 773 unit tests and strict/lint/
+  architecture/distribution/translation checks pass; six new tests cover readiness,
+  partial and malformed data, prototype keys, storage failures and numeric zero.
+- Source-format fixtures now assert actual lookup results and lazy factories
+  instead of depending on handwritten object syntax or obsolete pack markers.
+  Editor PR #290 passed all remote browser, static/HACS/CodeQL/security gates and
+  review before normal integration. Final audit and release validation remain.
+- The full Chromium/WebKit/iPhone suite passes 878 cases with one existing
+  exclusion, including all nine new native runtime/Fav checks. Raw/gzipSync:
+  4,324,600 / 967,639 bytes; existing limits unchanged.

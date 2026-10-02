@@ -574,8 +574,8 @@ class NodaliaInsigniaCard extends HTMLElement {
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, String(this._config?.language || "auto")) ?? "en";
     const rawPack = window.NodaliaI18n?.strings?.(lang)?.insigniaCard;
     const rawEnPack = window.NodaliaI18n?.strings?.("en")?.insigniaCard;
-    const pack = isObject(rawPack) ? rawPack : {};
-    const enPack = isObject(rawEnPack) ? rawEnPack : {};
+    const pack:Record<string,unknown> = isObject(rawPack) ? rawPack : {};
+    const enPack:Record<string,unknown> = isObject(rawEnPack) ? rawEnPack : {};
     const raw = pack?.[key] ?? enPack?.[key];
     return String(raw != null && raw !== "" ? raw : fallback);
   }

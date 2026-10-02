@@ -431,8 +431,8 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, langCfg) ?? "en";
     const pack = window.NodaliaI18n?.strings?.(lang)?.alarmPanel;
     const enPack = window.NodaliaI18n?.strings?.("en")?.alarmPanel;
-    const alarmStrings = isObject(pack) ? pack : {};
-    const enAlarm = isObject(enPack) ? enPack : {};
+    const alarmStrings:Record<string,unknown> = isObject(pack) ? pack : {};
+    const enAlarm:Record<string,unknown> = isObject(enPack) ? enPack : {};
     const translated = (isObject(alarmStrings.states) ? alarmStrings.states[key] : undefined)
       || (isObject(enAlarm.states) ? enAlarm.states[key] : undefined);
     if (translated) {
@@ -582,7 +582,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
     const pack = window.NodaliaI18n?.strings?.(lang)?.alarmPanel;
     const labels = isObject(pack) ? pack.actions : undefined;
-    const actionLabels = isObject(labels) ? labels : {};
+    const actionLabels:Record<string,unknown> = isObject(labels) ? labels : {};
     const modes = [
       {
         key: "disarm",

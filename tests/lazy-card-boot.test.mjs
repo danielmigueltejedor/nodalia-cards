@@ -1,3 +1,4 @@
+import {loadRuntimeI18n} from "./helpers/runtime-i18n.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -118,10 +119,14 @@ test("lazy host definition keeps lifecycle forwarders for Safari CE reactions", 
 });
 
 test("runtime i18n keeps unused locale packs as factories", () => {
-  const source = read("nodalia-i18n.js");
-  assert.match(source, /en: function \(\) \{\s*return \{/);
-  assert.match(source, /es: function \(\) \{\s*return \{/);
-  assert.match(source, /function localePack\(/);
+  const api=loadRuntimeI18n();
+  assert.equal(Object.keys(api.PACK).length,12);
+  for(const value of Object.values(api.PACK)) assert.equal(typeof value,"function");
+  const spanish=api.strings("es");
+  assert.equal(typeof api.PACK.es,"object");
+  assert.equal(typeof api.PACK.en,"object");
+  assert.equal(typeof api.PACK.de,"function");
+  assert.equal(api.strings("es"),spanish);
 });
 
 test("calendar and camera elevate host stacking while expanded overlays are open", () => {

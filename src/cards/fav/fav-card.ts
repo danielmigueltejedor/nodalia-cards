@@ -578,8 +578,8 @@ class NodaliaFavCard extends HTMLElement {
 
     if (typeof value === "boolean") {
       const lang = window.NodaliaI18n?.resolveLanguage?.(this._hass, String(this._config?.language || "auto")) || "en";
-      const pack = window.NodaliaI18n?.strings?.(lang) || window.NodaliaI18n?.strings?.("en") || {};
-      const copy = isObject(pack.boolean) ? pack.boolean : {};
+      const pack = window.NodaliaI18n?.strings?.(lang)?.entityCard || window.NodaliaI18n?.strings?.("en")?.entityCard;
+      const copy:Record<string,unknown> = isObject(pack?.boolean) ? pack.boolean : {};
       return String(value ? (copy.yes || "Yes") : (copy.no || "No"));
     }
 
@@ -719,12 +719,12 @@ class NodaliaFavCard extends HTMLElement {
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, String(this._config?.language || "auto")) ?? "en";
     const alarm = window.NodaliaI18n?.strings?.(lang)?.alarmPanel;
-    const actions = isObject(alarm) && isObject(alarm.actions) ? alarm.actions : {};
+    const actions:Record<string,unknown> = isObject(alarm) && isObject(alarm.actions) ? alarm.actions : {};
     const map: Record<string, string> = { disarm: "disarm", home: "arm_home", away: "arm_away", night: "arm_night", vacation: "arm_vacation", custom_bypass: "arm_custom_bypass" };
     const actionKey = map[modeKey];
     if (actionKey && actions[actionKey]) return String(actions[actionKey]);
     const englishAlarm = window.NodaliaI18n?.strings?.("en")?.alarmPanel;
-    const enActions = isObject(englishAlarm) && isObject(englishAlarm.actions) ? englishAlarm.actions : {};
+    const enActions:Record<string,unknown> = isObject(englishAlarm) && isObject(englishAlarm.actions) ? englishAlarm.actions : {};
     if (actionKey && enActions[actionKey]) return String(enActions[actionKey]);
     return modeKey;
   }
@@ -1191,8 +1191,8 @@ class NodaliaFavCard extends HTMLElement {
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, String(this._config?.language || "auto")) ?? "en";
     const rawPack = window.NodaliaI18n?.strings?.(lang)?.favCard;
     const rawEnPack = window.NodaliaI18n?.strings?.("en")?.favCard;
-    const pack = isObject(rawPack) ? rawPack : {};
-    const enPack = isObject(rawEnPack) ? rawEnPack : {};
+    const pack:Record<string,unknown> = isObject(rawPack) ? rawPack : {};
+    const enPack:Record<string,unknown> = isObject(rawEnPack) ? rawEnPack : {};
     const raw = pack?.[key] ?? enPack?.[key];
     return String(raw != null && raw !== "" ? raw : fallback);
   }
@@ -1202,8 +1202,8 @@ class NodaliaFavCard extends HTMLElement {
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, String(this._config?.language || "auto")) ?? "en";
     const common = window.NodaliaI18n?.strings?.(lang)?.common;
     const enCommon = window.NodaliaI18n?.strings?.("en")?.common;
-    const pack = isObject(common) && isObject(common.aria) ? common.aria : {};
-    const enPack = isObject(enCommon) && isObject(enCommon.aria) ? enCommon.aria : {};
+    const pack:Record<string,unknown> = isObject(common) && isObject(common.aria) ? common.aria : {};
+    const enPack:Record<string,unknown> = isObject(enCommon) && isObject(enCommon.aria) ? enCommon.aria : {};
     return String(pack?.[key] ?? enPack?.[key] ?? fallback);
   }
 
