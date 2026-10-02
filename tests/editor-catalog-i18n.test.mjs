@@ -1,3 +1,4 @@
+import {readGeneratedString} from "./helpers/generated-literals.mjs";
 import { spawnSync } from "child_process";
 import fs from "fs";
 import path from "path";
@@ -63,13 +64,13 @@ test("Cover and Calendar visual editors do not bypass catalog keys with English 
 
 test("nodalia-editor-ui embeds editorCatalog for ed.* keys", () => {
   const src = fs.readFileSync(path.join(root, "nodalia-editor-ui.js"), "utf8");
-  assert.match(src, /window\.NodaliaI18n\.editorCatalog\s*=/);
+  assert.match(src, /i18n\.editorCatalog\s*=/);
   assert.match(src, /EDITOR_CATALOG_JSON/);
   assert.match(src, /rawInput\.startsWith\("ed\."\)/);
-  assert.match(src, /\\"ed\.calendar\.visible_range\\"/);
-  assert.match(src, /\\"ed\.light\.color_presets_section_title\\"/);
-  assert.match(src, /\\"ed\.light\.show_quick_color_presets\\"/);
-  assert.match(src, /\\"ed\.light\.show_quick_temperature_presets\\"/);
+  assert.ok(JSON.parse(readGeneratedString(src,"EDITOR_CATALOG_JSON")).keys.includes("ed.calendar.visible_range"));
+  assert.ok(JSON.parse(readGeneratedString(src,"EDITOR_CATALOG_JSON")).keys.includes("ed.light.color_presets_section_title"));
+  assert.ok(JSON.parse(readGeneratedString(src,"EDITOR_CATALOG_JSON")).keys.includes("ed.light.show_quick_color_presets"));
+  assert.ok(JSON.parse(readGeneratedString(src,"EDITOR_CATALOG_JSON")).keys.includes("ed.light.show_quick_temperature_presets"));
 });
 
 test("Weblate docs exist and locale inventories stay aligned", () => {

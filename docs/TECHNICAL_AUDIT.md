@@ -1978,3 +1978,30 @@ the unchanged limits.
   before normal integration. Cursor Bugbot reported its account usage limit;
   do not describe the unavailable review as an approval. Runtime/editor translation
   lookup code still requires migration before 3.0.0-alpha.1 can be released.
+
+## Editor translation lookup — checked lazy data boundaries
+
+- Move all editor lookup, fallback, folding and Spanish normalization logic from
+  the generator's JavaScript template into `src/shared/editor-i18n-runtime.ts`.
+  Generate only typed data constants in `editor-i18n-data.ts` and build the
+  compatibility artifact with the shared source builder. Keep row/catalog JSON
+  parsing lazy; guard unknown decoded language/key/label arrays without casts.
+- Preserve the twelve locales, legacy Spanish keys, ed.* keys, cache identity and
+  current language resolver. All 27,264 translation comparisons and complete
+  materialized catalogs match the pre-migration runtime. Four new unit tests
+  cover canonical generation, separate lazy caches, malformed data and replacing
+  the language resolver. Tests read generated string literals through the JS AST
+  so compiler-selected quoting does not change behavioral assertions.
+- Native tests expose a Lock editor profile-language bug: comparing old and new
+  hass after localStorage changes resolves both to the new locale. Store the
+  language actually rendered and refresh when it differs. Preserve picker updates.
+- Extract complete static empty-state CSS rules and retain sanitized custom card
+  values. Native computed-style tests cover display, spacing, colors, radius and
+  typography; no external style resource is required. Keep existing bundle caps.
+- All 767 unit tests and strict/lint/architecture/distribution/translation gates
+  pass. The full Chromium/WebKit/iPhone suite passes 869 cases with one existing
+  exclusion, including all nine focused translation/Lock/empty-style cases.
+  Raw/gzipSync: 4,325,348 / 967,746 bytes; unchanged limits.
+- Utils PR #289 passed all remote browser, static/HACS/CodeQL/security gates and
+  review before normal integration. Runtime translation lookup remains handwritten
+  and must migrate before release.

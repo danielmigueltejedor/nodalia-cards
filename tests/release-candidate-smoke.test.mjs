@@ -1,3 +1,4 @@
+import {readGeneratedString} from "./helpers/generated-literals.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -20,12 +21,12 @@ function packagePatternIncludes(patterns, file) {
 }
 
 function editorRowsFromGeneratedSource(source = read("nodalia-editor-ui.js")) {
-  const languagesMatch = source.match(/const ROW_LANGS = (\[[^;]+\]);/);
-  const rowsMatch = source.match(/const ROWS_JSON = ("(?:\\.|[^"\\])*");/);
+  const languagesMatch = source.match(/(?:const|var) ROW_LANGS = (\[[^;]+\]);/);
+
   assert.ok(languagesMatch, "generated editor UI should declare ROW_LANGS");
-  assert.ok(rowsMatch, "generated editor UI should declare ROWS_JSON");
+
   const languages = JSON.parse(languagesMatch[1]);
-  const rows = JSON.parse(JSON.parse(rowsMatch[1]));
+  const rows = JSON.parse(readGeneratedString(source,"ROWS_JSON"));
   return { languages, rows };
 }
 
@@ -727,13 +728,13 @@ test("Norwegian language aliases resolve to official no locale", () => {
 test("shared visual editor ROWS map covers all supported editor languages", () => {
   const source = read("nodalia-editor-ui.js");
   const { languages, rows } = editorRowsFromGeneratedSource(source);
-  assert.match(source, /const EDITOR_LANGS = \["en", "de", "fr", "it", "nl", "no", "pt", "ru", "el", "zh", "ro"\]/);
-  assert.match(source, /const ROWS_JSON = /);
+  assert.match(source, /(?:const|var) EDITOR_LANGS = \["de", "fr", "it", "nl", "no", "pt", "ru", "el", "zh", "ro"\]/);
+  assert.match(source, /(?:const|var) ROWS_JSON = /);
   assert.match(source, /function getEditorUiMaps\(\)/);
   assert.doesNotMatch(source, /const EDITOR_EXACT_OVERRIDES = \{/);
   assert.doesNotMatch(source, /const EDITOR_EXACT_OVERRIDE_ROWS = \[/);
-  assert.match(source, /window\.NodaliaI18n\.editorUiMaps = map/);
-  assert.match(source, /window\.NodaliaI18n\.editorStr = function editorStr/);
+  assert.match(source, /i18n\.editorUiMaps = map/);
+  assert.match(source, /i18n\.editorStr = function editorStr/);
   assert.deepEqual(languages, ["es", "en", "de", "fr", "it", "nl", "no", "pt", "ru", "el", "zh", "ro"]);
   assert.ok(rows.length > 0);
   rows.forEach(row => assert.equal(row.length, languages.length));

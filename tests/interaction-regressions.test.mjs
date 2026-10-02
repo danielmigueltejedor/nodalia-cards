@@ -843,7 +843,7 @@ test("NodaliaUtils rejects CSS and markup injection in style values", () => {
     card: { background: "red;} </style><script>alert(1)</script>" },
   });
   assert.doesNotMatch(document, /<script\b[^>]*>/i);
-  assert.match(document, /background: var\(--ha-card-background\)/);
+  assert.match(document, /background:\s*var\(--ha-card-background\)/);
 });
 
 test("light, fan, and humidifier normalize native Lovelace service action objects", () => {

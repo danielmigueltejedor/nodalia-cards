@@ -1,0 +1,24 @@
+:host {
+  display: block;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+[class$="--empty"] {
+  display: grid;
+  gap: 8px;
+}
+
+[class$="__empty-title"] {
+  color: var(--primary-text-color);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+[class$="__empty-text"] {
+  color: var(--secondary-text-color);
+  font-size: 13px;
+  line-height: 1.5;
+}

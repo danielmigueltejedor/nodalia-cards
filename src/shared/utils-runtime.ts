@@ -1,3 +1,4 @@
+import emptyStateStyles from "./utils-empty-state.css";
 import {compactConfig as compactConfigValue} from "./config-values";
 import reducedMotionStyles from "./utils-reduced-motion.css";
 import engineBannerStyles from "./utils-engine-banner.css";
@@ -1382,40 +1383,7 @@ import type {NodaliaUtilsApi,CssStyleDefaults,SanitizedCssStyles,EditorFocusStat
     const borderRadius = sanitizeCssValue(card.border_radius, "var(--ha-card-border-radius, 12px)");
     const boxShadow = sanitizeCssValue(card.box_shadow, "var(--ha-card-box-shadow, none)");
     const padding = sanitizeCssValue(card.padding, "16px");
-    return `
-      <style>
-        :host {
-          display: block;
-        }
-
-        * {
-          box-sizing: border-box;
-        }
-
-        [class$="--empty"] {
-          background: ${background};
-          border: ${border};
-          border-radius: ${borderRadius};
-          box-shadow: ${boxShadow};
-          display: grid;
-          gap: 8px;
-          padding: ${padding};
-        }
-
-        [class$="__empty-title"] {
-          color: var(--primary-text-color);
-          font-size: 15px;
-          font-weight: 700;
-        }
-
-        [class$="__empty-text"] {
-          color: var(--secondary-text-color);
-          font-size: 13px;
-          line-height: 1.5;
-        }
-      </style>
-      ${markup}
-    `;
+    return `<style>${emptyStateStyles}[class$="--empty"]{background:${background};border:${border};border-radius:${borderRadius};box-shadow:${boxShadow};padding:${padding};}</style>${markup}`;
   }
 
   function renderLovelaceEntityGuardCardHtml(hass:HomeAssistant|null|undefined, entityId:unknown, options:Record<string,unknown> = {}) {
