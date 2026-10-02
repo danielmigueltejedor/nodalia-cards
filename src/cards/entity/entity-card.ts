@@ -10,8 +10,7 @@ import {
   EDITOR_TAG,
   HAPTIC_PATTERNS,
   LOCK_LOCK,
-  OPTIMISTIC_TOGGLE_TIMEOUT,
-  OVERVIEW_LAYOUTS,
+  OPTIMISTIC_TOGGLE_TIMEOUT
 } from "./entity-constants";
 import {
   clamp,
@@ -34,7 +33,6 @@ import {
   formatNumericValueWithUnit,
   getAirQualityHoverPayload,
   getDynamicEntityIcon,
-  getEntityDomain,
   getHomeAssistantStateDisplayValue,
   getSelectEntityCurrentValue,
   getSelectEntityOptions,
@@ -52,7 +50,7 @@ import {
   resolveEntityBubbleIconGlyphColor,
   resolveMetricGuidelineBands,
   shouldDarkenEntityBubbleIconGlyph,
-  worseAirQualityLevel,
+  worseAirQualityLevel
 } from "./entity-helpers";
 
 import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
@@ -2630,7 +2628,7 @@ class NodaliaEntityCard extends HTMLElement {
       this._aqHistoryCache = null;
       this._aqHistoryKey = key;
     }
-    this._requestAirQualityHistory(series);
+    void this._requestAirQualityHistory(series);
   }
 
   async _requestAirQualityHistory(series: GraphSeries[] = []) {

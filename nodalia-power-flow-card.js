@@ -1767,13 +1767,12 @@
         const batteryToHome = Math.min(batteryDischarge, remainingHomeDemand);
         remainingHomeDemand = Math.max(0, remainingHomeDemand - batteryToHome);
         const gridToHome = Math.min(gridImport, remainingHomeDemand);
-        let remainingGridImport = Math.max(0, gridImport - gridToHome);
+        const remainingGridImport = Math.max(0, gridImport - gridToHome);
         let remainingSolar = Math.max(0, solarProduction - solarToHome);
         const solarToBattery = Math.min(remainingSolar, batteryCharge);
         remainingSolar = Math.max(0, remainingSolar - solarToBattery);
         const remainingBatteryCharge = Math.max(0, batteryCharge - solarToBattery);
         const gridToBattery = Math.min(remainingGridImport, remainingBatteryCharge);
-        remainingGridImport = Math.max(0, remainingGridImport - gridToBattery);
         let remainingGridExport = gridExport;
         let solarToGrid = Math.min(remainingSolar, remainingGridExport);
         remainingGridExport = Math.max(0, remainingGridExport - solarToGrid);
@@ -2433,8 +2432,8 @@
           });
           return;
         }
-        const homeConfig = resolveNodeConfig("home", this._config);
-        if ((this._config.tap_action || "none") === "more-info" && homeConfig.entity) {
+        const homeEntity = this._resolveSourceValue(resolveNodeConfig("home", this._config).entity, "home").entityId;
+        if ((this._config.tap_action || "none") === "more-info" && homeEntity) {
           const content = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.cardAction === "primary");
           if (content) {
             event.preventDefault();
@@ -2443,7 +2442,7 @@
             if (contentNode) this._triggerPressAnimation(contentNode);
             this._triggerHaptic("selection");
             fireEvent(this, "hass-more-info", {
-              entityId: homeConfig.entity
+              entityId: homeEntity
             });
           }
         }

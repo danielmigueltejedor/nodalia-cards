@@ -742,7 +742,7 @@ ${metadata}` : metadata;
         if (!this._hass || !(this._config.calendars || []).some((c) => c && c.entity)) {
           return;
         }
-        this._refreshEvents();
+        void this._refreshEvents();
       }
       _triggerHaptic(styleOverride = null) {
         const haptics = this._config?.haptics || DEFAULT_CONFIG.haptics;
@@ -831,7 +831,7 @@ ${metadata}` : metadata;
           this._renderIfChanged(true);
         }
         this._ensureWeatherForecastSubscription();
-        this._refreshEvents();
+        void this._refreshEvents();
       }
       disconnectedCallback() {
         window.NodaliaUtils?.releaseModalFocus?.(this);
@@ -1359,7 +1359,7 @@ ${metadata}` : metadata;
         }
         this._refreshTimer = window.setTimeout(() => {
           this._refreshTimer = 0;
-          this._refreshEvents();
+          void this._refreshEvents();
         }, this._config.refresh_interval * 1e3);
       }
       _getRenderSignature() {
@@ -1516,21 +1516,21 @@ ${metadata}` : metadata;
             this._events = [];
             this._error = this._uiText("errors.loadEvents", "Could not load calendar events.");
           } finally {
-            if (refreshRunId !== this._refreshRunId || !this.isConnected) {
-              return;
-            }
-            this._loading = false;
-            this._renderIfChanged(true);
-            if (this.isConnected) {
-              this._scheduleRefresh();
+            if (refreshRunId === this._refreshRunId && this.isConnected) {
+              this._loading = false;
+              this._renderIfChanged(true);
+              if (this.isConnected) {
+                this._scheduleRefresh();
+              }
             }
           }
         } finally {
-          if (refreshRunId !== this._refreshRunId) return;
-          this._refreshInFlight = false;
-          if (this._refreshQueued && this.isConnected) {
-            this._refreshQueued = false;
-            this._refreshEvents();
+          if (refreshRunId === this._refreshRunId) {
+            this._refreshInFlight = false;
+            if (this._refreshQueued && this.isConnected) {
+              this._refreshQueued = false;
+              void this._refreshEvents();
+            }
           }
         }
       }
@@ -1672,7 +1672,7 @@ ${metadata}` : metadata;
           }
           this._collapseExpandedIfOpenedOnlyForRecurrenceDelete();
           this._renderIfChanged(true);
-          this._refreshEvents();
+          void this._refreshEvents();
         } catch (err) {
           if (!current()) return;
           const fromWs = String(err instanceof Error ? err.message : isObject(err) ? err.message ?? "" : "").trim();
@@ -1994,26 +1994,30 @@ ${metadata}` : metadata;
         ];
         for (const candidate of candidates) {
           const normalized = this._normalizeForecastRows(candidate);
-          if (normalized.length) {
+          if (Array.isArray(candidate) || isObject(candidate) && Array.isArray(candidate.forecast) || normalized.length) {
             return normalized;
           }
         }
-        return [];
+        return null;
       }
       async _fetchForecastViaWebSocket(entityId, forecastType, hass = this._hass) {
         if (typeof hass?.callWS !== "function") {
-          return [];
+          return null;
         }
         const response = await hass.callWS({
-          type: "weather/get_forecasts",
-          entity_ids: [entityId],
-          forecast_type: forecastType
+          type: "call_service",
+          domain: "weather",
+          service: "get_forecasts",
+          service_data: { type: forecastType },
+          target: { entity_id: entityId },
+          return_response: true
         });
-        return this._tagForecastRows(this._extractForecastRowsFromResponse(response, entityId), forecastType);
+        const rows = this._extractForecastRowsFromResponse(response, entityId);
+        return rows === null ? null : this._tagForecastRows(rows, forecastType);
       }
       async _fetchForecastViaService(entityId, forecastType, hass = this._hass) {
         if (typeof hass?.callService !== "function") {
-          return [];
+          return null;
         }
         const response = await hass.callService(
           "weather",
@@ -2023,7 +2027,8 @@ ${metadata}` : metadata;
           false,
           true
         );
-        return this._tagForecastRows(this._extractForecastRowsFromResponse(response, entityId), forecastType);
+        const rows = this._extractForecastRowsFromResponse(response, entityId);
+        return rows === null ? null : this._tagForecastRows(rows, forecastType);
       }
       _getCachedForecastRows(forecastTypes) {
         return (Array.isArray(forecastTypes) ? forecastTypes : []).flatMap((forecastType) => this._tagForecastRows(this._weatherForecastEvents[forecastType], forecastType));
@@ -2043,6 +2048,7 @@ ${metadata}` : metadata;
         const stateObj = hass.states[entityId];
         const forecastTypes = supportedWeatherForecastTypes(stateObj);
         const forecastCandidates = [];
+        const serviceForecasts = [];
         const addForecastCandidate = (rows) => {
           const normalized = this._normalizeForecastRows(rows);
           if (normalized.length) {
@@ -2054,42 +2060,45 @@ ${metadata}` : metadata;
           if (refreshRunId !== this._refreshRunId || subscriptionGeneration !== this._weatherSubscriptionGeneration || !this.isConnected) {
             return;
           }
-          try {
-            addForecastCandidate(await this._fetchForecastViaWebSocket(entityId, forecastType, hass));
-          } catch (_error) {
-          }
-          if (refreshRunId !== this._refreshRunId || subscriptionGeneration !== this._weatherSubscriptionGeneration || !this.isConnected) {
-            return;
-          }
-          try {
-            addForecastCandidate(await this._fetchForecastViaService(entityId, forecastType, hass));
-          } catch (_error) {
-          }
-        }
-        addForecastCandidate(this._tagForecastRows(stateObj.attributes?.forecast, "daily"));
-        addForecastCandidate(this._tagForecastRows(stateObj.attributes?.forecast_daily, "daily"));
-        addForecastCandidate(this._tagForecastRows(stateObj.attributes?.daily_forecast, "daily"));
-        if (typeof hass?.callApi === "function") {
-          try {
-            const restDaily = await hass.callApi(
-              "GET",
-              `weather/forecast/${encodeURIComponent(entityId)}?type=daily`
-            );
-            if (refreshRunId !== this._refreshRunId || subscriptionGeneration !== this._weatherSubscriptionGeneration || !this.isConnected) {
-              return;
+          for (const fetch of [this._fetchForecastViaWebSocket, this._fetchForecastViaService]) {
+            try {
+              const rows = await fetch.call(this, entityId, forecastType, hass);
+              if (refreshRunId !== this._refreshRunId || subscriptionGeneration !== this._weatherSubscriptionGeneration || !this.isConnected) return;
+              if (rows !== null) {
+                serviceForecasts.push(rows);
+                break;
+              }
+            } catch (_error) {
             }
-            addForecastCandidate(this._tagForecastRows(restDaily, "daily"));
-          } catch (_error) {
+            if (refreshRunId !== this._refreshRunId || subscriptionGeneration !== this._weatherSubscriptionGeneration || !this.isConnected) return;
           }
         }
-        const forecastRows = this._selectBestForecastRows(forecastCandidates);
+        if (!serviceForecasts.length) {
+          addForecastCandidate(this._tagForecastRows(stateObj.attributes?.forecast, "daily"));
+          addForecastCandidate(this._tagForecastRows(stateObj.attributes?.forecast_daily, "daily"));
+          addForecastCandidate(this._tagForecastRows(stateObj.attributes?.daily_forecast, "daily"));
+          if (typeof hass?.callApi === "function") {
+            try {
+              const restDaily = await hass.callApi(
+                "GET",
+                `weather/forecast/${encodeURIComponent(entityId)}?type=daily`
+              );
+              if (refreshRunId !== this._refreshRunId || subscriptionGeneration !== this._weatherSubscriptionGeneration || !this.isConnected) {
+                return;
+              }
+              addForecastCandidate(this._tagForecastRows(restDaily, "daily"));
+            } catch (_error) {
+            }
+          }
+        }
+        const forecastRows = this._selectBestForecastRows(serviceForecasts.length ? serviceForecasts : forecastCandidates);
         if (refreshRunId !== this._refreshRunId || subscriptionGeneration !== this._weatherSubscriptionGeneration) {
           return;
         }
         if (revision !== this._weatherForecastRevision || Object.keys(this._weatherForecastEvents).length) {
           this._applyWeatherForecastRows(Object.values(this._weatherForecastEvents).flat(), { allowFallback: false });
         } else {
-          this._applyWeatherForecastRows(forecastRows);
+          this._applyWeatherForecastRows(forecastRows, { allowFallback: !serviceForecasts.length });
         }
       }
       _buildWeatherForecastByDay() {

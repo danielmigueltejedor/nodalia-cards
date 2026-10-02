@@ -65,6 +65,7 @@ export function loadNodaliaMediaPlayer() {
     return _lazyNodaliaMediaPlayer;
   }
 class NodaliaMediaPlayer extends HTMLElement {
+  declare private _artworkWatches:Map<string,{url:string;rerender:boolean}>;
   declare private _artworkPreloadCancels:Map<string,()=>void>;
   declare private _generation:number;
   declare private _contextConnection:HomeAssistant["connection"];
@@ -155,6 +156,7 @@ class NodaliaMediaPlayer extends HTMLElement {
   }
 
   _nodaliaConstruct() {this.attachShadow({ mode: "open" });
+    this._artworkWatches=new Map();
     this._artworkPreloadCancels = new Map();
     this._generation = 0;
     this._contextConnection = undefined;
@@ -303,6 +305,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._artworkPreloadCancels.forEach(cancel => cancel());
     this._artworkPreloadCancels.clear();
     this._pendingArtworkPreloads.clear();
+    this._artworkWatches.clear();
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
   }
@@ -741,33 +744,26 @@ class NodaliaMediaPlayer extends HTMLElement {
     return typeof url === "string" && this._failedArtworkUrls.has(url);
   }
 
-  _preloadArtworkUrl(url:string, onSettled:((ready:boolean)=>void)|null = null) {
+  _preloadArtworkUrl(url:string) {
     if (!url) {
       return Promise.resolve(false);
     }
 
     if (this._isArtworkUrlReady(url)) {
-      onSettled?.(true);
       return Promise.resolve(true);
     }
 
     if (this._isArtworkUrlFailed(url)) {
-      onSettled?.(false);
       return Promise.resolve(false);
     }
 
     const existing = this._pendingArtworkPreloads.get(url);
     if (existing) {
-      if (onSettled) {
-        const generation = this._generation;
-        existing.then(ready => {if (this._isCurrent(generation)) onSettled(ready);});
-      }
       return existing;
     }
 
     if (typeof Image === "undefined") {
       this._readyArtworkUrls.add(url);
-      onSettled?.(true);
       return Promise.resolve(true);
     }
 
@@ -793,7 +789,6 @@ class NodaliaMediaPlayer extends HTMLElement {
         while (this._readyArtworkUrls.size > 64) this._readyArtworkUrls.delete(this._readyArtworkUrls.values().next().value || "");
         while (this._failedArtworkUrls.size > 64) this._failedArtworkUrls.delete(this._failedArtworkUrls.values().next().value || "");
         resolve(loaded);
-        onSettled?.(loaded);
       };
 
       this._artworkPreloadCancels.set(url, () => {if (settled) return;settled = true;image.onload = image.onerror = null;resolve(false);});
@@ -833,9 +828,13 @@ class NodaliaMediaPlayer extends HTMLElement {
       return true;
     }
 
+    const previous=this._artworkWatches.get(entityId);
+    if(previous?.url===url) {previous.rerender ||= rerenderOnReady;return false;}
+    const watch={url,rerender:rerenderOnReady};this._artworkWatches.set(entityId,watch);
     const generation = this._generation;
-    this._preloadArtworkUrl(url, () => {
-      if (!this._isCurrent(generation)) return;
+    void this._preloadArtworkUrl(url).then(() => {
+      if (!this._isCurrent(generation) || this._artworkWatches.get(entityId)!==watch) return;
+      this._artworkWatches.delete(entityId);
       const currentPlayer = this._findPlayerConfig(entityId) || { entity: entityId };
       const currentState = this._hass?.states?.[entityId];
       const currentArtwork = currentState ? this._getPlayerArtwork(currentPlayer, currentState) : null;
@@ -849,7 +848,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         this._displayArtworkByEntity.delete(entityId);
       }
 
-      if (!rerenderOnReady || !this.isConnected) {
+      if (!watch.rerender || !this.isConnected || this._getVisiblePlayers()[this._activePlayerIndex]?.entity!==entityId) {
         return;
       }
 
@@ -1487,7 +1486,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     return chips.slice(0, 4);
   }
 
-  _getTvPlayerChips(player:Player, state:HassEntity|null|undefined, progress:PlaybackProgress|null, title:unknown, subtitle:unknown, sourceOptions:string[] = []) {
+  _getTvPlayerChips(player:Player, state:HassEntity|null|undefined, progress:PlaybackProgress|null, title:unknown, subtitle:unknown, _sourceOptions:string[] = []) {
     const chips:{label:string;tone:string}[] = [];
     const seen = new Set();
     const titleKey = normalizeTextKey(title);
@@ -1866,7 +1865,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         break;
       }
       case "browse-media":
-        this._openMediaBrowser(entityId, options.path || "");
+        void this._openMediaBrowser(entityId, options.path || "");
         break;
       default:
         break;
@@ -1954,7 +1953,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
   }
 
-  _commitSliderDrag(clientX:number, event:Event|null = null, pointerId:number|null = null) {
+  _commitSliderDrag(clientX:number, event:Event|null = null, _pointerId:number|null = null) {
     const drag = this._activeSliderDrag;
     if (!drag) {
       return;
@@ -2701,7 +2700,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       const mediaContentId = mediaBrowserActionButton.dataset.mediaContentId || "";
 
       if (action === "browse") {
-        this._browseMediaBrowserItem(mediaContentType, mediaContentId);
+        void this._browseMediaBrowserItem(mediaContentType, mediaContentId);
         return;
       }
 
@@ -2905,7 +2904,7 @@ class NodaliaMediaPlayer extends HTMLElement {
 
     players.forEach((visiblePlayer, index) => {
       const visibleState = this._hass?.states?.[visiblePlayer.entity];
-      if (!visibleState) {
+      if (!visibleState || index===this._activePlayerIndex) {
         return;
       }
 
@@ -2914,9 +2913,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         return;
       }
 
-      this._ensureArtworkReady(visiblePlayer.entity, visibleArtwork, {
-        rerenderOnReady: index === this._activePlayerIndex,
-      });
+      this._ensureArtworkReady(visiblePlayer.entity, visibleArtwork);
     });
 
     const desiredArtwork = this._getPlayerArtwork(player, state);
@@ -2975,7 +2972,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     const volumeLevel = Number(state?.attributes.volume_level ?? 0);
     const currentVolumePercent = this._getPlayerVolumePercent(player.entity, state);
     const volumeSupported = this._supportsVolumeControl(state);
-    const playerStyles = this._config.styles.player;
+
     const hasAlbumBackground = isAlbumCoverFillEnabled(this._config) && Boolean(backgroundArtwork);
     const useActiveTint = isTvPlayer && this._isPlayerActive(state) && !hasAlbumBackground;
     const showUnavailableBadge = this._config.show_unavailable_badge !== false && isUnavailableState(state);
@@ -5086,7 +5083,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     if (artworkUrl) {
       this._artworkController.remember(artworkUrl, idleConfig.max_items, entityId);
       this._artworkController.stopSlideshow();
-      this._artworkController.show(artworkUrl, {
+      void this._artworkController.show(artworkUrl, {
         crossfade: config.artwork?.crossfade !== false,
         duration: config.artwork?.crossfade_duration,
         idle: Boolean(artOptions.idle) && idleConfig.animation === "subtle",
@@ -5106,7 +5103,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       ? this._idleSlideshowUrl
       : entityRecent[0]) || "";
     if (first) {
-      this._artworkController.show(first, {
+      void this._artworkController.show(first, {
         crossfade: config.artwork?.crossfade !== false,
         duration: Math.max(config.artwork?.crossfade_duration || 500, 700),
         idle: true,
@@ -5121,7 +5118,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         return;
       }
       this._idleSlideshowUrl = url;
-      this._artworkController.show(url, {
+      void this._artworkController.show(url, {
         crossfade: true,
         duration: Math.max(config.artwork?.crossfade_duration || 500, 700),
         idle: true,
@@ -5189,7 +5186,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     if (!drag) {
       return;
     }
-    const state = this._hass?.states?.[drag.entityId];
+
     if (!this._validProgressDrag(drag)) {this._cancelDrag();return;}
     const duration = drag.duration;
     drag.percent = progressPercentFromClientX(drag.track, clientX);
@@ -5201,7 +5198,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     if (!drag) {
       return;
     }
-    const state = this._hass?.states?.[drag.entityId];
+
     if (!this._validProgressDrag(drag)) {this._cancelDrag();return;}
     const duration = drag.duration;
     const seekPosition = seekPositionFromPercent(drag.percent, duration);

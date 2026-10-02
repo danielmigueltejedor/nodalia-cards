@@ -5,7 +5,8 @@ Install with `pnpm install --frozen-lockfile`.
 
 - `pnpm build`: regenerate standalone card/support artifacts and the HACS bundle.
 - `pnpm validate:fast`: version and dependency-graph checks, strict typecheck,
-  lint, distributed JavaScript syntax, translations, build and Node tests.
+  typed lint for every source module, distributed JavaScript syntax, translations,
+  build and Node tests.
 - `pnpm validate`: fast validation plus all four Playwright projects.
 - `pnpm test:browser`: build and run Chromium, Firefox, WebKit and iPhone WebKit.
 - `pnpm dev`: build and serve the fixture at localhost:4173; rerun build after edits.
@@ -41,6 +42,8 @@ are still installed. The cache action uses Node 24 on GitHub-hosted runners; the
 project itself builds/tests with Node 22. Static validation
 regenerates translations and bundles and fails on `git diff --exit-code`.
 Never edit root generated JS or generated fixtures by hand.
+`tests/lint-coverage.test.mjs` verifies typed lint coverage across all source modules
+and confirms every runtime artifact has a canonical TypeScript entry.
 
 Animation trajectory tests must control both CSS animation time and JS lifecycle
 timers. Install the [Playwright clock](https://playwright.dev/docs/clock) before

@@ -1592,7 +1592,7 @@
       <div class="room-hub__embed-host" data-hub-embed="${escapeHtml(embedType === "entity" && entityId.startsWith("lock.") ? "lock" : embedType)}" data-hub-slot="${escapeHtml(slot)}" data-hub-index="${index}" data-entity="${escapeHtml(entityId)}"></div>
     `).join("")}</div>`;
       }
-      _renderHubRoomIcon(icon, title, styles) {
+      _renderHubRoomIcon(icon, title, _styles) {
         return `<button type="button" class="room-hub__room-icon" data-room-action="primary" aria-label="${escapeHtml(title)}" title="${escapeHtml(title)}">
       <ha-icon icon="${escapeHtml(icon || "mdi:floor-plan")}"></ha-icon>
     </button>`;

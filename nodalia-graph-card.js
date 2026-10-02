@@ -716,7 +716,7 @@
         this._lastRenderSignature = "";
         this._attachViewVisibilityObserver();
         this._scheduleHistoryRefresh();
-        this._requestHistory();
+        void this._requestHistory();
         if (this._hass && this._config) {
           this._render();
         }
@@ -742,7 +742,7 @@
             this._animateChartOnNextRender = true;
             this._lastRenderSignature = "";
             if (this._hass && this._config) {
-              this._requestHistory();
+              void this._requestHistory();
               this._render();
             }
           },
@@ -769,7 +769,7 @@
             return;
           }
           if (!this._viewVisibilityObserver || this._wasInViewport) {
-            this._requestHistory();
+            void this._requestHistory();
           }
           this._scheduleHistoryRefresh();
         }, HISTORY_REFRESH_INTERVAL);
@@ -787,7 +787,7 @@
         this._animateContentOnNextRender = true;
         this._animateChartOnNextRender = true;
         this._lastRenderSignature = "";
-        this._requestHistory();
+        void this._requestHistory();
         this._render();
       }
       set hass(hass) {
@@ -809,7 +809,7 @@
           return;
         }
         this._lastRenderSignature = nextSignature;
-        this._requestHistory();
+        void this._requestHistory();
         this._render();
       }
       getCardSize() {
@@ -1474,14 +1474,14 @@
           return false;
         }
         const hoverLineX = clamp(hover.x, 0, chart.width);
-        let hoverLine = svg.querySelector(".graph-card__hover-line");
+        const hoverLine = svg.querySelector(".graph-card__hover-line");
         if (hoverLine) {
           hoverLine.setAttribute("x1", hoverLineX.toFixed(2));
           hoverLine.setAttribute("x2", hoverLineX.toFixed(2));
         } else {
           return false;
         }
-        let tooltip = this.shadowRoot.querySelector(".graph-card__tooltip");
+        const tooltip = this.shadowRoot.querySelector(".graph-card__tooltip");
         if (!(tooltip instanceof HTMLElement)) {
           return false;
         }

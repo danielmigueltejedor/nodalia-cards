@@ -1929,8 +1929,6 @@
         return labels[key] || (state?.state ? String(state.state) : "Unknown");
       }
       _descriptorLabel(kind) {
-        const hass = this._hass;
-        const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
         if (!window.NodaliaI18n?.strings) {
           if (kind === "mop_mode") {
             return "Mop mode";
@@ -1982,8 +1980,6 @@
         return null;
       }
       _getMapStatusIndicator(state = this._getVacuumState()) {
-        const hass = this._hass;
-        const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
         const ms = this._advanceVacuumStrings()?.mapStatus;
         const activeDockControlIds = DOCK_CONTROL_DEFINITIONS.map((definition) => this._getDockControlDescriptor(definition, state)).filter((descriptor) => Boolean(descriptor?.active)).map((descriptor) => descriptor.id);
         if (activeDockControlIds.includes("wash") || this._isWashingMops(state)) {
@@ -2223,7 +2219,7 @@
         this._lastSubmittedSharedCleaningSessionValue = serializedTrim;
         if (webhookId) {
           void this._postSharedCleaningSessionWebhook(webhookId, { value: serializedTrim }).then((ok) => {
-            if (!this._isCurrent(generation)) {
+            if (!this._isCurrent(generation) || this._lastSubmittedSharedCleaningSessionValue !== serializedTrim) {
               return;
             }
             if (!ok) {
@@ -2243,7 +2239,7 @@
         });
         if (pending && typeof pending.then === "function") {
           void pending.catch((err) => {
-            if (!this._isCurrent(generation)) return;
+            if (!this._isCurrent(generation) || this._lastSubmittedSharedCleaningSessionValue !== serializedTrim) return;
             this._lastSubmittedSharedCleaningSessionValue = null;
             if (typeof console !== "undefined" && typeof console.warn === "function") {
               console.warn("Nodalia Advance Vacuum Card: input_text.set_value failed", err);
@@ -2280,7 +2276,7 @@
           return;
         }
         this._lastSubmittedSharedCleaningSessionValue = "";
-        this._callInternalService("input_text.set_value", {
+        void this._callInternalService("input_text.set_value", {
           entity_id: entityId,
           value: ""
         });
@@ -3005,7 +3001,7 @@
         }
         return [...highlighted];
       }
-      _getMapImageUrl(state = this._getVacuumState()) {
+      _getMapImageUrl(_state = this._getVacuumState()) {
         const mapState = this._getMapState();
         const entityId = this._getMapEntityId();
         if (!mapState || !this._hass) {
@@ -3393,7 +3389,7 @@
         if (!this._hass || !entityId) {
           return;
         }
-        this._callInternalService(
+        void this._callInternalService(
           `homeassistant.${this._isBooleanEntityOn(entityId) ? "turn_off" : "turn_on"}`,
           { entity_id: entityId }
         );
@@ -3404,7 +3400,7 @@
         }
         const domain = this._getEntityDomain(entityId);
         const serviceName = domain === "input_select" ? "input_select.select_option" : "select.select_option";
-        this._callInternalService(serviceName, {
+        void this._callInternalService(serviceName, {
           entity_id: entityId,
           option: value
         });
@@ -3718,7 +3714,6 @@
         const hass = this._hass;
         const langCfg = this._config?.language ?? "auto";
         if (!String(objectId || "").trim()) {
-          const lang = window.NodaliaI18n?.resolveLanguage?.(hass, langCfg) ?? "en";
           return this._advanceVacuumStrings()?.utility.routineDefault || "Routine";
         }
         return humanizeModeLabel(objectId, "generic", hass, langCfg);
@@ -3799,7 +3794,7 @@
           if (entityId && !serviceData.entity_id) {
             serviceData.entity_id = entityId;
           }
-          this._callNamedService(vacuumText(item.service), serviceData, isObject(item.target) ? item.target : null);
+          void this._callNamedService(vacuumText(item.service), serviceData, isObject(item.target) ? item.target : null);
           this._triggerHaptic("selection");
           return;
         }
@@ -3807,19 +3802,19 @@
         if (domain === "button") {
           this._pressButtonEntity(entityId);
         } else if (domain === "input_button") {
-          this._callNamedService("input_button.press", {
+          void this._callNamedService("input_button.press", {
             entity_id: entityId
           });
         } else if (domain === "script") {
-          this._callNamedService("script.turn_on", {
+          void this._callNamedService("script.turn_on", {
             entity_id: entityId
           });
         } else if (domain === "scene") {
-          this._callNamedService("scene.turn_on", {
+          void this._callNamedService("scene.turn_on", {
             entity_id: entityId
           });
         } else if (domain === "automation") {
-          this._callNamedService("automation.trigger", {
+          void this._callNamedService("automation.trigger", {
             entity_id: entityId
           });
         } else if (entityId) {
@@ -3904,12 +3899,12 @@
         const otherKind = kind === "mop" ? "suction" : "mop";
         const otherDescriptor = this._getModeDescriptor(otherKind, state);
         if (descriptor?.service === "select" && descriptor.target && value) {
-          this._callInternalService("select.select_option", {
+          void this._callInternalService("select.select_option", {
             entity_id: descriptor.target,
             option: value
           });
         } else if (descriptor?.service === "fan" && value) {
-          this._callVacuumService("set_fan_speed", {
+          void this._callVacuumService("set_fan_speed", {
             fan_speed: value
           });
           return;
@@ -3923,7 +3918,7 @@
         if (this._isSharedSmartMode(value)) {
           const sharedSmartOption = this._findSharedSmartOption(otherDescriptor.options);
           if (sharedSmartOption && normalizeTextKey(sharedSmartOption) !== normalizeTextKey(otherDescriptor.current)) {
-            this._callInternalService("select.select_option", {
+            void this._callInternalService("select.select_option", {
               entity_id: otherDescriptor.target,
               option: sharedSmartOption
             });
@@ -3935,7 +3930,7 @@
         }
         const fallbackOption = this._getModeFallbackOption(otherKind, otherDescriptor);
         if (fallbackOption && normalizeTextKey(fallbackOption) !== normalizeTextKey(otherDescriptor.current)) {
-          this._callInternalService("select.select_option", {
+          void this._callInternalService("select.select_option", {
             entity_id: otherDescriptor.target,
             option: fallbackOption
           });
@@ -3952,7 +3947,7 @@
           if (!descriptor2?.target) {
             return;
           }
-          this._callInternalService("select.select_option", {
+          void this._callInternalService("select.select_option", {
             entity_id: descriptor2.target,
             option: value
           });
@@ -5423,7 +5418,7 @@
             this._freezeCurrentModePanelPreset(this._getVacuumState());
             this._clearPendingRoomCleaningResume();
             this._persistCurrentCleaningSessionState(this._activeMode);
-            this._callVacuumService("return_to_base");
+            void this._callVacuumService("return_to_base");
             this._triggerHaptic("selection");
             break;
           case "stop":
@@ -5441,12 +5436,12 @@
             this._clearPendingRoomCleaningResume();
             this._roomCleaningResumeInFlight = false;
             this._clearPersistedCleaningSession();
-            this._callVacuumService("stop");
+            void this._callVacuumService("stop");
             this._triggerHaptic("selection");
             this._render();
             break;
           case "locate":
-            this._callVacuumService("locate");
+            void this._callVacuumService("locate");
             this._triggerHaptic("selection");
             break;
           case "clear":
@@ -6581,23 +6576,17 @@
           const modes = this._getAvailableModes();
           const currentMode = this._resolveDisplayMode(modes, advanceVacuumStrings);
           const isCleaningSessionActive = this._isCleaningSessionActive(state);
-          const iconSize = Math.max(54, parseSizeToPixels(styles.icon.size, 64));
           const controlSize = Math.max(38, parseSizeToPixels(styles.control.size, 42));
-          const titleSize = Math.max(15, parseSizeToPixels(styles.title_size, 16));
           const mapRadius = Math.max(22, parseSizeToPixels(styles.map.radius, 26));
           const cardRadius = Math.max(mapRadius, parseSizeToPixels(styles.card.border_radius, 32));
           const cardPaddingPx = Math.max(0, parseSizeToPixels(styles.card.padding, 16));
           const mapHorizontalBleed = Math.max(0, Math.round(cardPaddingPx));
           const mapTopBleed = Math.max(0, Math.round(cardPaddingPx));
           const mapMinHeight = Math.max(320, Math.round(controlSize * 7.4));
-          const chipHeight = Math.max(24, parseSizeToPixels(styles.chip_height, 26));
-          const chipPadding = styles.chip_padding || "0 10px";
-          const chipFontSize = Math.max(11, parseSizeToPixels(styles.chip_font_size, 11));
           const mapImageUrl = this._getMapImageUrl(state);
           const previousMapNorm = stripMapCacheBuster(previousImageSrc);
           const nextMapNorm = stripMapCacheBuster(mapImageUrl || "");
           const mapImageStartsPending = Boolean(mapImageUrl) && previousImage?.tagName === "IMG" && Boolean(previousMapNorm) && Boolean(nextMapNorm) && previousMapNorm !== nextMapNorm;
-          const unavailable = isUnavailableState(state) || !mapImageUrl;
           this._syncRememberedModeSelections(state);
           this._sanitizeSelectedManualZoneIndex();
           const roomColor = styles.map.room_color || "rgba(97, 201, 122, 0.18)";

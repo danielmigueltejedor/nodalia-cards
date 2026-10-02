@@ -1,10 +1,8 @@
 import {
-  CARD_TAG,
-  CARD_VERSION,
   EDITOR_TAG,
   HAPTIC_PATTERNS,
   MUSIC_ASSISTANT_BROWSER_EXCLUDE_PATTERNS,
-  MUSIC_ASSISTANT_DIRECTORY_ICON_RULES,
+  MUSIC_ASSISTANT_DIRECTORY_ICON_RULES
 } from "./navigation-constants";
 import {
   clamp,
@@ -483,7 +481,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
       const mediaContentId = mediaBrowserActionButton.dataset.mediaContentId || "";
 
       if (action === "browse") {
-        this._browseMediaBrowserItem(mediaContentType, mediaContentId);
+        void this._browseMediaBrowserItem(mediaContentType, mediaContentId);
         return;
       }
 
@@ -1515,7 +1513,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
   }
 
   _showEntityMediaBrowser(entityId: string, fallbackPath = "") {
-    this._openMediaBrowser(entityId, fallbackPath);
+    void this._openMediaBrowser(entityId, fallbackPath);
     return true;
   }
 

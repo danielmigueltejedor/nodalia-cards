@@ -1,8 +1,7 @@
 import {
-  CARD_TAG,
   EDITOR_TAG,
   HAPTIC_PATTERNS,
-  NODE_DEFAULTS,
+  NODE_DEFAULTS
 } from "./power-flow-constants";
 import {
   clamp,
@@ -15,12 +14,10 @@ import {
 } from "./power-flow-runtime";
 import { DEFAULT_CONFIG, STUB_CONFIG, normalizeConfig } from "./power-flow-config";
 import {
-  arrayFromMaybe,
   buildFlowPath,
   buildStraightFlowPath,
   formatDisplayValue,
   formatRawValue,
-  formatSvgMotionNumber,
   getDiagramIndividualCount,
   getFlowLayoutFlagsFromConfig,
   getHassLocaleTag,
@@ -35,7 +32,7 @@ import {
   parseSizeToPixels,
   resolveIndividualConfigs,
   resolveNodeConfig,
-  rgbArrayToColor,
+  rgbArrayToColor
 } from "./power-flow-helpers";
 
 import { createViewAnimationWork, releaseViewAnimationWork, scheduleViewFallback } from "../../shared/view-animation-work";
@@ -1069,14 +1066,13 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const batteryToHome = Math.min(batteryDischarge, remainingHomeDemand);
     remainingHomeDemand = Math.max(0, remainingHomeDemand - batteryToHome);
     const gridToHome = Math.min(gridImport, remainingHomeDemand);
-    let remainingGridImport = Math.max(0, gridImport - gridToHome);
+    const remainingGridImport = Math.max(0, gridImport - gridToHome);
 
     let remainingSolar = Math.max(0, solarProduction - solarToHome);
     const solarToBattery = Math.min(remainingSolar, batteryCharge);
     remainingSolar = Math.max(0, remainingSolar - solarToBattery);
     const remainingBatteryCharge = Math.max(0, batteryCharge - solarToBattery);
     const gridToBattery = Math.min(remainingGridImport, remainingBatteryCharge);
-    remainingGridImport = Math.max(0, remainingGridImport - gridToBattery);
 
     let remainingGridExport = gridExport;
     let solarToGrid = Math.min(remainingSolar, remainingGridExport);
@@ -1880,8 +1876,8 @@ class NodaliaPowerFlowCard extends HTMLElement {
       return;
     }
 
-    const homeConfig = resolveNodeConfig("home", this._config);
-    if ((this._config.tap_action || "none") === "more-info" && homeConfig.entity) {
+    const homeEntity=this._resolveSourceValue(resolveNodeConfig("home",this._config).entity,"home").entityId;
+    if ((this._config.tap_action || "none") === "more-info" && homeEntity) {
       const content = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.cardAction === "primary");
       if (content) {
         event.preventDefault();
@@ -1890,7 +1886,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         if (contentNode) this._triggerPressAnimation(contentNode);
         this._triggerHaptic("selection");
         fireEvent(this, "hass-more-info", {
-          entityId: homeConfig.entity,
+          entityId: homeEntity,
         });
       }
     }

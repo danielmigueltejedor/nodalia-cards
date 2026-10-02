@@ -24,7 +24,7 @@ async function mount(page, { deferred = false, weather = false } = {}) {
         ? new Promise((resolve, reject) => window.calendarRequests.push({ path, resolve, reject }))
         : Promise.resolve(path.startsWith('calendars/') ? [{uid:'first',summary:'Initial event',start:{date:'2026-10-01'},end:{date:'2026-10-02'}}] : []),
       auth: { fetchWithAuth: async path => { window.calendarRestCalls.push(path); return new Response('[]', {status:200}); } },
-      callWS: async message => { if (message.type.startsWith('weather/')) return []; return window.calendarWrite('ws',message); },
+      callWS: async message => { if (message.type.startsWith('weather/') || (message.type==='call_service' && message.domain==='weather')) return []; return window.calendarWrite('ws',message); },
       callService: async (domain, service, data, target) => domain === 'weather' ? [] : window.calendarWrite('service',{domain,service,data,target}),
     } });
     window.calendarWrite = (kind, payload) => {
@@ -179,4 +179,31 @@ test('Calendar refreshes completed creates after composer close/reopen, without 
     expect(await page.evaluate(()=>window.calendarCard._nativeComposerError)).toBe('');
     expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
   }
+});
+
+test('Calendar uses the official forecast service and clears stale forecasts after an authoritative empty response',async({page})=>{
+ await mount(page,{weather:true});
+ const result=await page.evaluate(async()=>{
+  const card=window.calendarCard,hass=window.calendarHass;window.forecastCalls=[];let empty=false;
+  hass.callWS=async message=>{window.forecastCalls.push(message);return {response:{'weather.one':{forecast:empty?[]:[{datetime:'2026-10-01T12:00:00Z',temperature:0,templow:0,condition:'sunny'}]}}};};
+  hass.callService=async()=>{throw new Error('Duplicate service request');};
+  card._weatherForecastEvents={};card._weatherForecastRevision+=1;
+  await card._refreshWeatherForecastByDay();const first=[...card._weatherForecastByDay.values()];
+  empty=true;await card._refreshWeatherForecastByDay();
+  return {first,remaining:card._weatherForecastByDay.size,calls:window.forecastCalls};
+ });
+ expect(result.first).toHaveLength(1);expect(result.first[0].tempMax).toBe(0);expect(result.remaining).toBe(0);
+ expect(result.calls.length).toBeGreaterThan(0);
+ for(const message of result.calls)expect(message).toEqual({type:'call_service',domain:'weather',service:'get_forecasts',service_data:{type:'daily'},target:{entity_id:'weather.one'},return_response:true});
+ expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+});
+test('Calendar falls back to the compatible service wrapper after a rejected forecast WebSocket request',async({page})=>{
+ await mount(page,{weather:true});const result=await page.evaluate(async()=>{
+  const card=window.calendarCard,hass=window.calendarHass,calls=[];card._weatherForecastEvents={};
+  hass.callWS=async()=>{throw new Error('Transport unavailable');};
+  hass.callService=async(...args)=>{calls.push(args);return {'weather.one':{forecast:[]}};};
+  await card._refreshWeatherForecastByDay();return {calls,remaining:card._weatherForecastByDay.size};
+ });
+ expect(result.calls).toEqual([['weather','get_forecasts',{type:'daily'},{entity_id:'weather.one'},false,true]]);expect(result.remaining).toBe(0);
+ expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
 });

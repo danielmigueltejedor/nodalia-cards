@@ -1,8 +1,7 @@
 import roomMetricStyles from "./room-summary-metrics.css";
 import {
-  CARD_TAG,
   EDITOR_TAG,
-  HUB_PANELS,
+  HUB_PANELS
 } from "./room-summary-constants";
 import {
   deepClone,
@@ -31,7 +30,9 @@ import {
   normalizeTextKey,
 } from "./room-summary-helpers";
 
-import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
+import type {
+  HomeAssistant
+} from "../../core/types/home-assistant";
 import { isLovelaceEditorElement } from "../../shared/card-elements";
 import type { LovelaceEditorElement } from "../../shared/card-elements";
 import { invokeHassService } from "../../shared/home-assistant-services";
@@ -1104,7 +1105,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     `).join("")}</div>`;
   }
 
-  _renderHubRoomIcon(icon: string, title: string, styles: RoomStyles) {
+  _renderHubRoomIcon(icon: string, title: string, _styles: RoomStyles) {
     return `<button type="button" class="room-hub__room-icon" data-room-action="primary" aria-label="${escapeHtml(title)}" title="${escapeHtml(title)}">
       <ha-icon icon="${escapeHtml(icon || "mdi:floor-plan")}"></ha-icon>
     </button>`;

@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+- Apply typed lint to every source module, remove obsolete locale migration tools and unused declarations, use the official Calendar forecast service with authoritative empty results, resolve split Power Flow actions to entity ids, preserve newer shared robot writes and coalesce/cancel retired cover work.
+
 - Check the complete runtime translation lookup, generate lazy typed locale factories, derive the public API from its implementation and guard partial or malformed locale overrides. Preserve all twelve locale trees and public lookup behavior, and translate boolean Fav attributes through the correct entity catalog.
 
 - Check editor translation lookup against guarded lazy JSON catalogs, preserve all twelve locales and Spanish label normalization, generate the compatibility artifact from TypeScript, and refresh the Lock editor when the Home Assistant profile language changes.
