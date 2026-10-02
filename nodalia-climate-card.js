@@ -3033,7 +3033,7 @@ ${weekdayYaml}
         if (!mode) {
           return;
         }
-        this._setClimateService("set_hvac_mode", {
+        void this._setClimateService("set_hvac_mode", {
           hvac_mode: mode
         });
       }
@@ -3070,7 +3070,7 @@ ${weekdayYaml}
           this._render();
         }
         if (options.immediate === true) {
-          this._flushQueuedTemperatureCommit();
+          void this._flushQueuedTemperatureCommit();
           return normalized;
         }
         if (this._temperatureCommitDebounceTimer) {
@@ -3078,7 +3078,7 @@ ${weekdayYaml}
         }
         this._temperatureCommitDebounceTimer = this._setTimer(() => {
           this._temperatureCommitDebounceTimer = 0;
-          this._flushQueuedTemperatureCommit();
+          void this._flushQueuedTemperatureCommit();
         }, STEP_BUTTON_COMMIT_DEBOUNCE);
         this._scheduleDraftReset();
         return normalized;
@@ -3146,19 +3146,19 @@ ${weekdayYaml}
             if (serviceFailed) {
               this._temperatureCommitRequiresHvacWake = Boolean(hvacWake);
               this._scheduleDraftReset();
-              return;
-            }
-            const queuedRaw = this._temperatureCommitQueuedValue;
-            const queuedValue = queuedRaw === null || queuedRaw === void 0 ? NaN : Number(queuedRaw);
-            if (climateFinite(queuedValue) && Math.abs(queuedValue - target) > 1e-3) {
-              this._flushQueuedTemperatureCommit();
-              return;
-            }
-            if (climateFinite(queuedValue) && Math.abs(queuedValue - target) <= 1e-3) {
-              this._temperatureCommitQueuedValue = null;
-            }
-            if (this._draftTemperature.has(entityId)) {
-              this._scheduleDraftReset();
+            } else {
+              const queuedRaw = this._temperatureCommitQueuedValue;
+              const queuedValue = queuedRaw === null || queuedRaw === void 0 ? NaN : Number(queuedRaw);
+              if (climateFinite(queuedValue) && Math.abs(queuedValue - target) > 1e-3) {
+                void this._flushQueuedTemperatureCommit();
+              } else {
+                if (climateFinite(queuedValue) && Math.abs(queuedValue - target) <= 1e-3) {
+                  this._temperatureCommitQueuedValue = null;
+                }
+                if (this._draftTemperature.has(entityId)) {
+                  this._scheduleDraftReset();
+                }
+              }
             }
           }
         }
@@ -3187,7 +3187,7 @@ ${weekdayYaml}
           this._render();
         }
         if (options.immediate === true) {
-          this._flushQueuedRangeCommit();
+          void this._flushQueuedRangeCommit();
           return normalized;
         }
         if (this._rangeCommitDebounceTimer) {
@@ -3195,7 +3195,7 @@ ${weekdayYaml}
         }
         this._rangeCommitDebounceTimer = this._setTimer(() => {
           this._rangeCommitDebounceTimer = 0;
-          this._flushQueuedRangeCommit();
+          void this._flushQueuedRangeCommit();
         }, STEP_BUTTON_COMMIT_DEBOUNCE);
         this._scheduleDraftReset();
         return normalized;
@@ -3242,18 +3242,18 @@ ${weekdayYaml}
             this._rangeCommitInFlight = false;
             if (serviceFailed) {
               this._scheduleDraftReset();
-              return;
-            }
-            const queued = this._rangeCommitQueuedValue;
-            if (queued && climateFinite(queued.low) && climateFinite(queued.high) && (Math.abs(queued.low - pending.low) > 1e-3 || Math.abs(queued.high - pending.high) > 1e-3)) {
-              this._flushQueuedRangeCommit();
-              return;
-            }
-            if (queued && climateFinite(queued.low) && climateFinite(queued.high) && Math.abs(queued.low - pending.low) <= 1e-3 && Math.abs(queued.high - pending.high) <= 1e-3) {
-              this._rangeCommitQueuedValue = null;
-            }
-            if (this._draftTempRange.has(entityId)) {
-              this._scheduleDraftReset();
+            } else {
+              const queued = this._rangeCommitQueuedValue;
+              if (queued && climateFinite(queued.low) && climateFinite(queued.high) && (Math.abs(queued.low - pending.low) > 1e-3 || Math.abs(queued.high - pending.high) > 1e-3)) {
+                void this._flushQueuedRangeCommit();
+              } else {
+                if (queued && climateFinite(queued.low) && climateFinite(queued.high) && Math.abs(queued.low - pending.low) <= 1e-3 && Math.abs(queued.high - pending.high) <= 1e-3) {
+                  this._rangeCommitQueuedValue = null;
+                }
+                if (this._draftTempRange.has(entityId)) {
+                  this._scheduleDraftReset();
+                }
+              }
             }
           }
         }
@@ -3341,7 +3341,7 @@ ${weekdayYaml}
             if (this._rangeCommitRetryCount < DRAFT_CONFIRMATION_RETRY_LIMIT && draft) {
               this._rangeCommitRetryCount += 1;
               this._rangeCommitQueuedValue = draft;
-              this._flushQueuedRangeCommit();
+              void this._flushQueuedRangeCommit();
               return;
             }
             this._clearTemperatureDraft(entityId);
@@ -3366,7 +3366,7 @@ ${weekdayYaml}
           if (this._temperatureCommitRetryCount < DRAFT_CONFIRMATION_RETRY_LIMIT && climateFinite(draftTemperature)) {
             this._temperatureCommitRetryCount += 1;
             this._temperatureCommitQueuedValue = draftTemperature;
-            this._flushQueuedTemperatureCommit();
+            void this._flushQueuedTemperatureCommit();
             return;
           }
           this._clearTemperatureDraft(entityId);
@@ -3379,7 +3379,7 @@ ${weekdayYaml}
           return;
         }
         if (this._supportsNullSetpointCreation(state)) {
-          this._createSetpointFromCurrentBy(delta);
+          void this._createSetpointFromCurrentBy(delta);
           return;
         }
         const step = this._getTemperatureStep(state);
@@ -3394,7 +3394,7 @@ ${weekdayYaml}
           const range = this._getTemperatureRange(state);
           const deltaTemp = Number(delta) * step;
           const sel = this._selectedRangeThumb;
-          let pair = null;
+          let pair;
           if (sel === "low") {
             const newLowRaw = low + deltaTemp;
             const newLow = this._clampRangeLowCandidate(newLowRaw, high, state);
@@ -4982,7 +4982,7 @@ ${weekdayYaml}
         const targetBlockPaddingTop = modeDialButtonCount >= 3 ? "0.12em" : "0";
         const tempSpan = Math.max(temperatureRange.max - temperatureRange.min, temperatureStep);
         const chips = [];
-        let ratio = 0;
+        let ratio;
         let dialAngle = DIAL_START_ANGLE;
         let progressLength = 0;
         let thumbPosition = { left: 50, top: 50 };

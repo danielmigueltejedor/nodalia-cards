@@ -1,4 +1,4 @@
-Editor visual i18n (new path)
+Visual editor i18n
 ==============================
 
 Weblate (self-hosted community translations): https://translate.getnodalia.com
@@ -18,17 +18,18 @@ In card editors, use the same helper as before:
 
 Build pipeline:
   1) node scripts/validate-editor-i18n.mjs   — all locale files must list the same keys as en.json
-  2) node scripts/gen-editor-ui.mjs          — embeds window.NodaliaI18n.editorCatalog + legacy ROWS map
+  2) node scripts/gen-editor-ui.mjs          — generates editor-i18n-data.ts and compiles checked editor lookup
   3) pnpm run bundle
 
 Adding a new language (e.g. Japanese):
-  - Add "ja" to EDITOR_CATALOG_LANGS in scripts/gen-editor-ui.mjs and ensure nodalia-i18n PACK supports "ja" for resolveLanguage.
+  - Add "ja" to EDITOR_CATALOG_LANGS and EDITOR_ROW_LANGS in scripts/gen-editor-ui.mjs and the editor lookup language list in src/shared/editor-i18n-runtime.ts.
+  - Copy i18n/runtime/en.json to i18n/runtime/ja.json and translate values; update localeTag() in src/shared/runtime-i18n-runtime.ts if needed.
   - Copy i18n/editor/en.json to i18n/editor/ja.json and translate values.
   - Register the language in Weblate (editor + runtime components).
   - Run validate + gen-editor + bundle.
 
 Legacy: strings without the "ed." prefix still use the generated ROWS table (Spanish keys → locales) until migrated card-by-card.
 
-Migrated editors (ed.* + JSON): calendar, weather, notifications, entity, person, vacuum, light, fav, media player.
+All 25 visual editors use checked TypeScript and share the lazy catalog/legacy row lookup.
 
 Catalog shards (merged by scripts/merge-editor-catalog-additions.mjs): scripts/data/editor-catalog-*.json

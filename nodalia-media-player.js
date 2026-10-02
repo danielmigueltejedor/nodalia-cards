@@ -787,16 +787,28 @@
       this.palette = null;
       this.activeEntity = "";
       this.recentByEntity = /* @__PURE__ */ new Map();
+      this.transitionFrame = 0;
+      this.transitionTimer = 0;
       this.slideshowTimer = 0;
       this.slideshowIndex = 0;
       this.generation = 0;
       this.host = null;
       this.idleActive = false;
     }
+    cancelTransition() {
+      if (this.transitionFrame) window.cancelAnimationFrame(this.transitionFrame);
+      if (this.transitionTimer) window.clearTimeout(this.transitionTimer);
+      this.transitionFrame = this.transitionTimer = 0;
+    }
     attach(host) {
+      if (this.host && this.host.stage !== host.stage) {
+        this.cancelTransition();
+        this.generation += 1;
+      }
       this.host = host;
     }
     detach() {
+      this.cancelTransition();
       this.stopSlideshow();
       this.host = null;
       this.generation += 1;
@@ -821,6 +833,7 @@
       }
     }
     clear() {
+      this.cancelTransition();
       this.generation += 1;
       this.currentUrl = "";
       this.stopSlideshow();
@@ -852,11 +865,14 @@
         this.clear();
         return false;
       }
+      const token = ++this.generation;
+      this.cancelTransition();
       if (nextUrl === this.currentUrl && host.current.style.backgroundImage) {
+        host.incoming.classList.remove("is-visible", "is-ready");
+        host.incoming.style.backgroundImage = "";
         this.applyIdleAnimation(Boolean(options.idle), options.animation);
         return true;
       }
-      const token = ++this.generation;
       const loaded = await preloadArtworkUrl(nextUrl);
       if (token !== this.generation || options.connected === false) {
         return false;
@@ -866,6 +882,7 @@
       }
       const reduceMotion = prefersReducedMotion() || options.crossfade === false;
       const duration = Math.max(0, Number(options.duration) || 500);
+      host.incoming.classList.remove("is-ready");
       host.incoming.style.backgroundImage = `url("${nextUrl.replace(/"/g, "%22")}")`;
       host.incoming.classList.add("is-visible");
       if (reduceMotion || !this.currentUrl) {
@@ -877,13 +894,15 @@
         return true;
       }
       host.incoming.style.transitionDuration = `${duration}ms`;
-      requestAnimationFrame(() => {
-        host.incoming.classList.add("is-ready");
+      this.transitionFrame = window.requestAnimationFrame(() => {
+        this.transitionFrame = 0;
+        if (token === this.generation && host.stage === this.host?.stage) host.incoming.classList.add("is-ready");
       });
-      window.setTimeout(() => {
+      this.transitionTimer = window.setTimeout(() => {
         if (token !== this.generation) {
           return;
         }
+        this.transitionTimer = 0;
         host.current.style.backgroundImage = host.incoming.style.backgroundImage;
         host.incoming.classList.remove("is-visible", "is-ready");
         host.incoming.style.backgroundImage = "";
@@ -1489,6 +1508,7 @@
       }
       _nodaliaConstruct() {
         this.attachShadow({ mode: "open" });
+        this._artworkWatches = /* @__PURE__ */ new Map();
         this._artworkPreloadCancels = /* @__PURE__ */ new Map();
         this._generation = 0;
         this._contextConnection = void 0;
@@ -1637,6 +1657,7 @@
         this._artworkPreloadCancels.forEach((cancel) => cancel());
         this._artworkPreloadCancels.clear();
         this._pendingArtworkPreloads.clear();
+        this._artworkWatches.clear();
         this._animateContentOnNextRender = true;
         this._lastRenderSignature = "";
       }
@@ -2001,31 +2022,22 @@
       _isArtworkUrlFailed(url) {
         return typeof url === "string" && this._failedArtworkUrls.has(url);
       }
-      _preloadArtworkUrl(url, onSettled = null) {
+      _preloadArtworkUrl(url) {
         if (!url) {
           return Promise.resolve(false);
         }
         if (this._isArtworkUrlReady(url)) {
-          onSettled?.(true);
           return Promise.resolve(true);
         }
         if (this._isArtworkUrlFailed(url)) {
-          onSettled?.(false);
           return Promise.resolve(false);
         }
         const existing = this._pendingArtworkPreloads.get(url);
         if (existing) {
-          if (onSettled) {
-            const generation2 = this._generation;
-            existing.then((ready) => {
-              if (this._isCurrent(generation2)) onSettled(ready);
-            });
-          }
           return existing;
         }
         if (typeof Image === "undefined") {
           this._readyArtworkUrls.add(url);
-          onSettled?.(true);
           return Promise.resolve(true);
         }
         const generation = this._generation;
@@ -2052,7 +2064,6 @@
             while (this._readyArtworkUrls.size > 64) this._readyArtworkUrls.delete(this._readyArtworkUrls.values().next().value || "");
             while (this._failedArtworkUrls.size > 64) this._failedArtworkUrls.delete(this._failedArtworkUrls.values().next().value || "");
             resolve(loaded);
-            onSettled?.(loaded);
           };
           this._artworkPreloadCancels.set(url, () => {
             if (settled) return;
@@ -2090,9 +2101,17 @@
           this._displayArtworkByEntity.delete(entityId);
           return true;
         }
+        const previous = this._artworkWatches.get(entityId);
+        if (previous?.url === url) {
+          previous.rerender || (previous.rerender = rerenderOnReady);
+          return false;
+        }
+        const watch = { url, rerender: rerenderOnReady };
+        this._artworkWatches.set(entityId, watch);
         const generation = this._generation;
-        this._preloadArtworkUrl(url, () => {
-          if (!this._isCurrent(generation)) return;
+        void this._preloadArtworkUrl(url).then(() => {
+          if (!this._isCurrent(generation) || this._artworkWatches.get(entityId) !== watch) return;
+          this._artworkWatches.delete(entityId);
           const currentPlayer = this._findPlayerConfig(entityId) || { entity: entityId };
           const currentState = this._hass?.states?.[entityId];
           const currentArtwork = currentState ? this._getPlayerArtwork(currentPlayer, currentState) : null;
@@ -2104,7 +2123,7 @@
           } else {
             this._displayArtworkByEntity.delete(entityId);
           }
-          if (!rerenderOnReady || !this.isConnected) {
+          if (!watch.rerender || !this.isConnected || this._getVisiblePlayers()[this._activePlayerIndex]?.entity !== entityId) {
             return;
           }
           this._lastRenderSignature = "";
@@ -2584,7 +2603,7 @@
         }
         return chips.slice(0, 4);
       }
-      _getTvPlayerChips(player, state, progress, title, subtitle, sourceOptions = []) {
+      _getTvPlayerChips(player, state, progress, title, subtitle, _sourceOptions = []) {
         const chips = [];
         const seen = /* @__PURE__ */ new Set();
         const titleKey = normalizeTextKey2(title);
@@ -2914,7 +2933,7 @@
             break;
           }
           case "browse-media":
-            this._openMediaBrowser(entityId, options.path || "");
+            void this._openMediaBrowser(entityId, options.path || "");
             break;
           default:
             break;
@@ -2980,7 +2999,7 @@
           this._updatePlayerVolumePreview(slider.dataset.entity || "", nextValue);
         }
       }
-      _commitSliderDrag(clientX, event = null, pointerId = null) {
+      _commitSliderDrag(clientX, event = null, _pointerId = null) {
         const drag = this._activeSliderDrag;
         if (!drag) {
           return;
@@ -3584,7 +3603,7 @@
           const mediaContentType = mediaBrowserActionButton.dataset.mediaContentType || "";
           const mediaContentId = mediaBrowserActionButton.dataset.mediaContentId || "";
           if (action === "browse") {
-            this._browseMediaBrowserItem(mediaContentType, mediaContentId);
+            void this._browseMediaBrowserItem(mediaContentType, mediaContentId);
             return;
           }
           if (action === "play") {
@@ -3744,16 +3763,14 @@
         }
         players.forEach((visiblePlayer, index) => {
           const visibleState = this._hass?.states?.[visiblePlayer.entity];
-          if (!visibleState) {
+          if (!visibleState || index === this._activePlayerIndex) {
             return;
           }
           const visibleArtwork = this._getPlayerArtwork(visiblePlayer, visibleState);
           if (!visibleArtwork) {
             return;
           }
-          this._ensureArtworkReady(visiblePlayer.entity, visibleArtwork, {
-            rerenderOnReady: index === this._activePlayerIndex
-          });
+          this._ensureArtworkReady(visiblePlayer.entity, visibleArtwork);
         });
         const desiredArtwork = this._getPlayerArtwork(player, state);
         const artworkReady = !desiredArtwork || this._ensureArtworkReady(player.entity, desiredArtwork, {
@@ -3787,7 +3804,6 @@
         const volumeLevel = Number(state?.attributes.volume_level ?? 0);
         const currentVolumePercent = this._getPlayerVolumePercent(player.entity, state);
         const volumeSupported = this._supportsVolumeControl(state);
-        const playerStyles = this._config.styles.player;
         const hasAlbumBackground = isAlbumCoverFillEnabled(this._config) && Boolean(backgroundArtwork);
         const useActiveTint = isTvPlayer && this._isPlayerActive(state) && !hasAlbumBackground;
         const showUnavailableBadge = this._config.show_unavailable_badge !== false && isUnavailableState(state);
@@ -5768,7 +5784,7 @@
         if (artworkUrl) {
           this._artworkController.remember(artworkUrl, idleConfig.max_items, entityId);
           this._artworkController.stopSlideshow();
-          this._artworkController.show(artworkUrl, {
+          void this._artworkController.show(artworkUrl, {
             crossfade: config.artwork?.crossfade !== false,
             duration: config.artwork?.crossfade_duration,
             idle: Boolean(artOptions.idle) && idleConfig.animation === "subtle",
@@ -5784,7 +5800,7 @@
         }
         const first = (this._idleSlideshowUrl && entityRecent.includes(this._idleSlideshowUrl) ? this._idleSlideshowUrl : entityRecent[0]) || "";
         if (first) {
-          this._artworkController.show(first, {
+          void this._artworkController.show(first, {
             crossfade: config.artwork?.crossfade !== false,
             duration: Math.max(config.artwork?.crossfade_duration || 500, 700),
             idle: true,
@@ -5799,7 +5815,7 @@
             return;
           }
           this._idleSlideshowUrl = url;
-          this._artworkController.show(url, {
+          void this._artworkController.show(url, {
             crossfade: true,
             duration: Math.max(config.artwork?.crossfade_duration || 500, 700),
             idle: true,
@@ -5862,7 +5878,6 @@
         if (!drag) {
           return;
         }
-        const state = this._hass?.states?.[drag.entityId];
         if (!this._validProgressDrag(drag)) {
           this._cancelDrag();
           return;
@@ -5876,7 +5891,6 @@
         if (!drag) {
           return;
         }
-        const state = this._hass?.states?.[drag.entityId];
         if (!this._validProgressDrag(drag)) {
           this._cancelDrag();
           return;

@@ -1,10 +1,8 @@
 import cameraExpandedStyles from "./camera-expanded.css";
 import {
-  CAMERA_LAYOUT,
-  CAMERA_PRESENTATION,
   CARD_TAG,
   EDITOR_TAG,
-  MAX_FAILED_IMAGE_URLS,
+  MAX_FAILED_IMAGE_URLS
 } from "./camera-constants";
 import {
   clamp,
@@ -37,7 +35,7 @@ import { isLovelaceEditorElement } from "../../shared/card-elements";
 import type { LovelaceEditorElement } from "../../shared/card-elements";
 
 type ExpandedAction = ReturnType<typeof import("./camera-helpers").normalizeExpandedActions>[number];
-type CameraStream = ReturnType<typeof import("./camera-helpers").normalizeCameraStreams>[number];
+
 type Go2rtcPlayer = HTMLElement & { configure(options: { source: string; mode: string; muted: boolean; controls: boolean }): void; disconnect?(): void; primeAudioFromUserGesture?(): void };
 const isGo2rtcPlayer = (node: HTMLElement): node is Go2rtcPlayer => "configure" in node && typeof node.configure === "function";
 const cameraActionElement = (node: EventTarget): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.cameraAction);
@@ -807,13 +805,12 @@ class NodaliaCameraCard extends HTMLElement {
   _shouldPortalExpanded() {
     // Only escape Room Summary stacking. Standalone cards keep the dialog in
     // their shadow root so focus-trap browser tests and SPA taps keep working.
-    let node: HTMLElement = this;
-    while (true) {
-      if (node.closest?.("nodalia-room-summary-card")) return true;
-      const root = node.getRootNode();
-      if (!(root instanceof ShadowRoot) || !(root.host instanceof HTMLElement)) return false;
-      node = root.host;
-    }
+    const inSummary=(node:HTMLElement):boolean=>{
+      if(node.closest("nodalia-room-summary-card")) return true;
+      const root=node.getRootNode();
+      return root instanceof ShadowRoot && root.host instanceof HTMLElement && inSummary(root.host);
+    };
+    return inSummary(this);
   }
 
   _syncExpandedPortal() {
@@ -1871,7 +1868,7 @@ class NodaliaCameraCard extends HTMLElement {
 
     this._syncExpandedPortal();
     this._mountExpandedCards();
-    this._mountExpandedStream();
+    void this._mountExpandedStream();
     const expandedDialog = (this._expandedPortal?.shadowRoot || this.shadowRoot)
       ?.querySelector('.camera-card__expanded[role="dialog"]');
     if (expandedDialog instanceof HTMLElement) {

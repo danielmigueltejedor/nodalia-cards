@@ -3461,7 +3461,7 @@
           this._aqHistoryCache = null;
           this._aqHistoryKey = key;
         }
-        this._requestAirQualityHistory(series);
+        void this._requestAirQualityHistory(series);
       }
       async _requestAirQualityHistory(series = []) {
         if (!series.length || !this._hass || !this.isConnected) {

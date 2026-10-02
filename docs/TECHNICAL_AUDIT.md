@@ -9,7 +9,16 @@ Release target: **3.0.0-alpha.1**, as requested on 2026-10-01. Publish only
 after the entire migration is checked and validated; do not issue another
 2.3.0 alpha or treat the remaining unchecked modules as complete.
 
-## Critical / release safety
+## Current completion status — 2026-10-02
+
+All shipped runtime implementations, 25 cards and their editors now have checked
+TypeScript source, with zero suppression or runtime-cycle debt. The final audit
+removes the eleven legacy ESLint view exclusions: typed promise rules cover every
+source module, and a regression checks that coverage. Historical findings and
+intermediate debt counts below describe their recorded checkpoints. Final runtime
+corrections and release validation are recorded at the end of this document.
+
+## Baseline: critical / release safety
 
 - The tag release workflow runs unit validation but publishes without browser
   validation or waiting for CI at the same commit. A failing interaction or
@@ -2033,3 +2042,39 @@ the unchanged limits.
 - The full Chromium/WebKit/iPhone suite passes 878 cases with one existing
   exclusion, including all nine new native runtime/Fav checks. Raw/gzipSync:
   4,324,600 / 967,639 bytes; existing limits unchanged.
+
+## Final audit — full lint coverage and asynchronous regression fixes
+
+- Remove the eleven stale view exclusions from ESLint and apply typed promise
+  rules to all source modules. Reject unchecked-file and ignored-error shortcuts.
+  Remove unused imports, variables and a dead Power Flow clone helper. Intentional
+  asynchronous UI calls explicitly discard completion only where their existing
+  service/history/browser boundaries already handle failures. Rewrite Calendar
+  and Climate cleanup guards without return statements that override completion.
+- Use the official `call_service` weather/get_forecasts command, retain the HA
+  service-wrapper fallback after rejected/malformed transport, and distinguish
+  valid empty forecasts from an unsupported result. Successful service forecasts
+  take precedence over old attributes/caches; live subscriptions remain authoritative.
+  Protocol verified against Home Assistant's weather websocket registration and
+  core websocket command implementation on 2026-10-02.
+- Resolve Power Flow's whole-card split home action to the actual consumption or
+  production entity id, matching the source used by the node. Ignore an old failed
+  robot persistence write if a newer serialized selection was submitted within
+  the same HA generation. Preserve retry behavior for the current failed write.
+- Coalesce pending Media Player readiness watchers per entity/URL and generation,
+  prefetch inactive players once, and rerender active chrome once after readiness.
+  Own cover crossfade frame/timer callbacks and cancel on replacement, clear or
+  detach. Returning to the current cover retires a pending different cover.
+- Delete five unreferenced legacy locale export/gap/merge scripts and their three
+  obsolete data packs. Current runtime/editor JSON sources, live generators and
+  catalog shards remain canonical; update their contributor instructions.
+- All 774 unit tests and strict/lint/architecture/distribution/locale gates pass.
+  A new guard verifies lint coverage for every TS module and canonical runtime
+  entries. Five focused native regression scenarios pass within the 90-case
+  affected-card run; the added crossfade-retirement case receives a full rerun.
+  Runtime i18n PR #291 passed all four remote browser projects, static/HACS/
+  CodeQL/security/review checks before normal integration.
+- The final full Chromium/WebKit/iPhone suite passes 896 cases with one existing
+  exclusion, including all eighteen new affected-card regressions. Raw/gzipSync:
+  4,325,331 / 967,858 bytes; limits unchanged. Production dependency count is zero;
+  the full 130-package development dependency audit reports zero vulnerabilities.

@@ -46,3 +46,12 @@ test('Advance Vacuum configured services retain targets and zero/false data, and
 test('Advance Vacuum detachment releases gesture, locale, animation and delay work and ignores an old map image',async({page})=>{
  await mount(page);await page.clock.install();await page.evaluate(()=>{window.avOldImage=window.avCard.shadowRoot.querySelector('[data-map-image]');window.avCard._scheduleEntranceAnimationReset(600);window.avCard._scheduleLocaleReconciliation();window.avCard._waitForMapAction(450,window.avCard._generation);window.avCard.remove();window.avCard._onMapImageLoad({currentTarget:window.avOldImage});});expect(await page.evaluate(()=>({waits:window.avCard._waits.size,frames:window.avCard._localeFrames.size,locale:window.avCard._localeReconciliationTimeouts,entrance:window.avCard._entranceAnimationResetTimer,pointers:window.avCard._gesturePointers.size}))).toEqual({waits:0,frames:0,locale:null,entrance:0,pointers:0});await page.clock.runFor(2000);expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
 });
+
+test('Advance Vacuum ignores an older failed helper write after a newer selection in the same HA context',async({page})=>{
+ await mount(page,{shared_cleaning_session_entity:'input_text.session'});
+ await page.evaluate(()=>{window.avCalls=[];window.avHass.states['input_text.session']={entity_id:'input_text.session',state:'',attributes:{max:255}};window.avDefer=true;window.avCard._persistSharedCleaningSession({activeMode:'rooms',selectedRoomIds:['1']});window.avCard._persistSharedCleaningSession({activeMode:'rooms',selectedRoomIds:['2']});window.avLatest=window.avCard._lastSubmittedSharedCleaningSessionValue;window.avCalls[0].reject(new Error('older helper failed'));});
+ await expect.poll(()=>page.evaluate(()=>window.avCalls.length)).toBe(2);
+ expect(await page.evaluate(()=>window.avCard._lastSubmittedSharedCleaningSessionValue)).toBe(await page.evaluate(()=>window.avLatest));
+ await page.evaluate(()=>{window.avCard._persistSharedCleaningSession({activeMode:'rooms',selectedRoomIds:['2']});window.avCalls[1].resolve();});
+ expect(await page.evaluate(()=>window.avCalls.length)).toBe(2);expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+});

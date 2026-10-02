@@ -43,7 +43,6 @@ import {
   decodeSharedSessionZones,
   encodeSharedSessionList,
   encodeSharedSessionZones,
-  flattenPolygons,
   getSafeStyles,
   humanizeModeLabel,
   humanizeSelectOptionLabel,
@@ -53,14 +52,9 @@ import {
   normalizeCustomMenuItems,
   normalizeRoutineItems,
   parseCalibrationPoints,
-  parseInteger,
   parseNumber,
-  parseOutlines,
-  parsePoint,
-  parsePolygon,
   parseSizeToPixels,
   parseZoneRect,
-  pickShapeSource,
   pointInPolygon,
   polygonArea,
   polygonBounds,
@@ -70,10 +64,7 @@ import {
   resolveLegacyMode,
   resolvePredefinedZones,
   resolveRoomSegments,
-  resolveRoomsFromMapState,
-  resolveRoomsFromVacuumState,
-  sanitizeCssValue,
-  stripMapCacheBuster,
+  stripMapCacheBuster
 } from "./advance-vacuum-helpers";
 
 import type {HomeAssistant,HassEntity} from "../../core/types/home-assistant";
@@ -754,8 +745,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _descriptorLabel(kind:string) {
-    const hass = this._hass;
-    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+
     if (!window.NodaliaI18n?.strings) {
       if (kind === "mop_mode") {
         return "Mop mode";
@@ -813,8 +803,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
 
   _getMapStatusIndicator(state = this._getVacuumState()) {
-    const hass = this._hass;
-    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+
     const ms = this._advanceVacuumStrings()?.mapStatus;
     const activeDockControlIds = DOCK_CONTROL_DEFINITIONS
       .map(definition => this._getDockControlDescriptor(definition, state))
@@ -1109,7 +1098,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     if (webhookId) {
       void this._postSharedCleaningSessionWebhook(webhookId, { value: serializedTrim }).then(ok => {
-        if (!this._isCurrent(generation)) {
+        if (!this._isCurrent(generation) || this._lastSubmittedSharedCleaningSessionValue!==serializedTrim) {
           return;
         }
         if (!ok) {
@@ -1130,7 +1119,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     });
     if (pending && typeof pending.then === "function") {
       void pending.catch(err => {
-        if(!this._isCurrent(generation)) return;
+        if(!this._isCurrent(generation) || this._lastSubmittedSharedCleaningSessionValue!==serializedTrim) return;
         this._lastSubmittedSharedCleaningSessionValue = null;
         if (typeof console !== "undefined" && typeof console.warn === "function") {
           console.warn("Nodalia Advance Vacuum Card: input_text.set_value failed", err);
@@ -1174,7 +1163,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     this._lastSubmittedSharedCleaningSessionValue = "";
-    this._callInternalService("input_text.set_value", {
+    void this._callInternalService("input_text.set_value", {
       entity_id: entityId,
       value: "",
     });
@@ -2104,7 +2093,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     return [...highlighted];
   }
 
-  _getMapImageUrl(state = this._getVacuumState()) {
+  _getMapImageUrl(_state = this._getVacuumState()) {
     const mapState = this._getMapState();
     const entityId = this._getMapEntityId();
     if (!mapState || !this._hass) {
@@ -2588,7 +2577,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return;
     }
 
-    this._callInternalService(
+    void this._callInternalService(
       `homeassistant.${this._isBooleanEntityOn(entityId) ? "turn_off" : "turn_on"}`,
       { entity_id: entityId },
     );
@@ -2601,7 +2590,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     const domain = this._getEntityDomain(entityId);
     const serviceName = domain === "input_select" ? "input_select.select_option" : "select.select_option";
-    this._callInternalService(serviceName, {
+    void this._callInternalService(serviceName, {
       entity_id: entityId,
       option: value,
     });
@@ -3008,7 +2997,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const hass = this._hass;
     const langCfg = this._config?.language ?? "auto";
     if (!String(objectId || "").trim()) {
-      const lang = window.NodaliaI18n?.resolveLanguage?.(hass, langCfg) ?? "en";
+
       return this._advanceVacuumStrings()?.utility.routineDefault || "Routine";
     }
     return humanizeModeLabel(objectId, "generic", hass, langCfg);
@@ -3103,7 +3092,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       if (entityId && !serviceData.entity_id) {
         serviceData.entity_id = entityId;
       }
-      this._callNamedService(vacuumText(item.service), serviceData, isObject(item.target)?item.target:null);
+      void this._callNamedService(vacuumText(item.service), serviceData, isObject(item.target)?item.target:null);
       this._triggerHaptic("selection");
       return;
     }
@@ -3112,19 +3101,19 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     if (domain === "button") {
       this._pressButtonEntity(entityId);
     } else if (domain === "input_button") {
-      this._callNamedService("input_button.press", {
+      void this._callNamedService("input_button.press", {
         entity_id: entityId,
       });
     } else if (domain === "script") {
-      this._callNamedService("script.turn_on", {
+      void this._callNamedService("script.turn_on", {
         entity_id: entityId,
       });
     } else if (domain === "scene") {
-      this._callNamedService("scene.turn_on", {
+      void this._callNamedService("scene.turn_on", {
         entity_id: entityId,
       });
     } else if (domain === "automation") {
-      this._callNamedService("automation.trigger", {
+      void this._callNamedService("automation.trigger", {
         entity_id: entityId,
       });
     } else if (entityId) {
@@ -3232,12 +3221,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const otherDescriptor = this._getModeDescriptor(otherKind, state);
 
     if (descriptor?.service === "select" && descriptor.target && value) {
-      this._callInternalService("select.select_option", {
+      void this._callInternalService("select.select_option", {
         entity_id: descriptor.target,
         option: value,
       });
     } else if (descriptor?.service === "fan" && value) {
-      this._callVacuumService("set_fan_speed", {
+      void this._callVacuumService("set_fan_speed", {
         fan_speed: value,
       });
       return;
@@ -3257,7 +3246,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         sharedSmartOption &&
         normalizeTextKey(sharedSmartOption) !== normalizeTextKey(otherDescriptor.current)
       ) {
-        this._callInternalService("select.select_option", {
+        void this._callInternalService("select.select_option", {
           entity_id: otherDescriptor.target,
           option: sharedSmartOption,
         });
@@ -3274,7 +3263,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       fallbackOption &&
       normalizeTextKey(fallbackOption) !== normalizeTextKey(otherDescriptor.current)
     ) {
-      this._callInternalService("select.select_option", {
+      void this._callInternalService("select.select_option", {
         entity_id: otherDescriptor.target,
         option: fallbackOption,
       });
@@ -3294,7 +3283,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         return;
       }
 
-      this._callInternalService("select.select_option", {
+      void this._callInternalService("select.select_option", {
         entity_id: descriptor.target,
         option: value,
       });
@@ -5060,7 +5049,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         this._freezeCurrentModePanelPreset(this._getVacuumState());
         this._clearPendingRoomCleaningResume();
         this._persistCurrentCleaningSessionState(this._activeMode);
-        this._callVacuumService("return_to_base");
+        void this._callVacuumService("return_to_base");
         this._triggerHaptic("selection");
         break;
       case "stop":
@@ -5078,12 +5067,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         this._clearPendingRoomCleaningResume();
         this._roomCleaningResumeInFlight = false;
         this._clearPersistedCleaningSession();
-        this._callVacuumService("stop");
+        void this._callVacuumService("stop");
         this._triggerHaptic("selection");
         this._render();
         break;
       case "locate":
-        this._callVacuumService("locate");
+        void this._callVacuumService("locate");
         this._triggerHaptic("selection");
         break;
       case "clear":
@@ -6468,18 +6457,18 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       const modes = this._getAvailableModes();
       const currentMode = this._resolveDisplayMode(modes, advanceVacuumStrings);
       const isCleaningSessionActive = this._isCleaningSessionActive(state);
-      const iconSize = Math.max(54, parseSizeToPixels(styles.icon.size, 64));
+
       const controlSize = Math.max(38, parseSizeToPixels(styles.control.size, 42));
-      const titleSize = Math.max(15, parseSizeToPixels(styles.title_size, 16));
+
       const mapRadius = Math.max(22, parseSizeToPixels(styles.map.radius, 26));
       const cardRadius = Math.max(mapRadius, parseSizeToPixels(styles.card.border_radius, 32));
       const cardPaddingPx = Math.max(0, parseSizeToPixels(styles.card.padding, 16));
       const mapHorizontalBleed = Math.max(0, Math.round(cardPaddingPx));
       const mapTopBleed = Math.max(0, Math.round(cardPaddingPx));
       const mapMinHeight = Math.max(320, Math.round(controlSize * 7.4));
-      const chipHeight = Math.max(24, parseSizeToPixels(styles.chip_height, 26));
-      const chipPadding = styles.chip_padding || "0 10px";
-      const chipFontSize = Math.max(11, parseSizeToPixels(styles.chip_font_size, 11));
+
+
+
       const mapImageUrl = this._getMapImageUrl(state);
       const previousMapNorm = stripMapCacheBuster(previousImageSrc);
       const nextMapNorm = stripMapCacheBuster(mapImageUrl || "");
@@ -6489,7 +6478,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         Boolean(previousMapNorm) &&
         Boolean(nextMapNorm) &&
         previousMapNorm !== nextMapNorm;
-      const unavailable = isUnavailableState(state) || !mapImageUrl;
+
       this._syncRememberedModeSelections(state);
       this._sanitizeSelectedManualZoneIndex();
       const roomColor = styles.map.room_color || "rgba(97, 201, 122, 0.18)";

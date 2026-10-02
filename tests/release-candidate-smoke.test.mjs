@@ -469,8 +469,9 @@ test("calendar weather forecast normalization keeps date-keyed and tabular daily
   assert.match(source, /_ensureWeatherForecastSubscription\(\)/);
   assert.match(source, /_weatherForecastEvents/);
   assert.match(source, /supportedWeatherForecastTypes\(stateObj\)/);
-  assert.match(source, /_fetchForecastViaService\(entityId, forecastType, hass\)/);
-  assert.match(source, /_selectBestForecastRows\(forecastCandidates\)/);
+  assert.match(source, /\[this\._fetchForecastViaWebSocket, this\._fetchForecastViaService\]/);
+  assert.match(source, /fetch\.call\(this, entityId, forecastType, hass\)/);
+  assert.match(source, /_selectBestForecastRows\(serviceForecasts\.length \? serviceForecasts : forecastCandidates\)/);
   assert.match(source, /allowFallback: false/);
   assert.match(source, /_nodaliaForecastType === "hourly"/);
   assert.match(source, /_tagForecastRows\(value, forecastType\)/);

@@ -2458,13 +2458,12 @@
         portal.remove();
       }
       _shouldPortalExpanded() {
-        let node = this;
-        while (true) {
-          if (node.closest?.("nodalia-room-summary-card")) return true;
+        const inSummary = (node) => {
+          if (node.closest("nodalia-room-summary-card")) return true;
           const root = node.getRootNode();
-          if (!(root instanceof ShadowRoot) || !(root.host instanceof HTMLElement)) return false;
-          node = root.host;
-        }
+          return root instanceof ShadowRoot && root.host instanceof HTMLElement && inSummary(root.host);
+        };
+        return inSummary(this);
       }
       _syncExpandedPortal() {
         if (!this._expandedOpen || !this.shadowRoot) {
@@ -3458,7 +3457,7 @@
         });
         this._syncExpandedPortal();
         this._mountExpandedCards();
-        this._mountExpandedStream();
+        void this._mountExpandedStream();
         const expandedDialog = (this._expandedPortal?.shadowRoot || this.shadowRoot)?.querySelector('.camera-card__expanded[role="dialog"]');
         if (expandedDialog instanceof HTMLElement) {
           window.NodaliaUtils?.bindModalFocus?.(this, expandedDialog, {

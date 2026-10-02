@@ -30,7 +30,6 @@ import {
   entityAreaKey,
   entityMatchTokens,
   escapeHtml,
-  escapeSelectorValue,
   fireEvent,
   forecastDate,
   forecastLooksRainy,
@@ -42,7 +41,6 @@ import {
   getBackgroundMobileNativeSignature,
   hasNotificationTapAction,
   isSameLocalDay,
-  matchTextIncludes,
   minutesSinceChanged,
   normalizeCalendarFetchResult,
   normalizeEntityList,
@@ -61,10 +59,9 @@ import {
   stateIsOff,
   stateIsOn,
   stateIsVacant,
-  stateLooksActive,
   stateValue,
   setLegacyBackgroundMobileFallback,
-  syncBackgroundMobileNative,
+  syncBackgroundMobileNative
 } from "./notifications-helpers";
 
 import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";

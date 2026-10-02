@@ -236,17 +236,20 @@ src/
 Do not invent extra layers just to fill this tree. Split by responsibility
 when a file is large *and* mixed.
 
-## Phased migration plan
+## Completed migration stages
 
 1. **Infrastructure (this preview)** — `tsconfig.json`, ESLint, esbuild TS,
    `src/`, `pnpm run typecheck` / `lint` in `validate`.
 2. **Shared core** — move utils/backend/render-signature/bubble-contrast into
    `src/core/` with window adapters at the bundle edge.
 3. **Climate pilot (this preview)** — split Climate; keep Lovelace behavior.
-4. **Remaining large cards** — source split complete; strict migration remains open.
-5. **Smaller cards** — source split complete; strict migration remains open.
-6. **Cleanup** — drop obsolete internals, reduce globals, type remaining
-   `@ts-nocheck` files, replace regex tests with behavioral tests where safe.
+4. **Remaining large cards** — checked views, configuration, helpers and editors.
+5. **Smaller cards** — checked views, configuration, helpers and editors.
+6. **Cleanup** — zero unchecked modules or import cycles; generated runtime
+   adapters, guarded data boundaries and behavioral lifecycle regressions.
+
+ESLint applies typed promise rules to every `src/**/*.ts` module, without card
+exclusions. New `any`, `@ts-nocheck` and `@ts-ignore` shortcuts are rejected.
 
 ## Build pipeline
 

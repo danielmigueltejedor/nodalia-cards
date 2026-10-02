@@ -46,3 +46,33 @@ test('Media Player custom power actions keep service targets and false/zero data
  const card=await mount(page,{tv:true});await page.evaluate(()=>window.mpCard.setConfig({...window.mpConfig,players:[{...window.mpConfig.players[0],power_action_on:{action:'call-service',service:'switch.turn_on',service_data:'{"enabled":false,"brightness":0}',target:{area_id:'room'}}}]}));await card.locator('[data-media-control="power-toggle"]').press('Enter');expect(await page.evaluate(()=>{const {domain,service,data,target}=window.mpCommands.at(-1);return {domain,service,data,target};})).toEqual({domain:'switch',service:'turn_on',data:{enabled:false,brightness:0},target:{area_id:'room'}});
  await page.evaluate(()=>window.mpCard.setConfig({...window.mpConfig,players:[{...window.mpConfig.players[0],power_action_on:{action:'call-service',service:'light.turn_on',service_data:{brightness:0}}}]}));await card.locator('[data-media-control="power-toggle"]').press('Enter');expect(await page.evaluate(()=>window.mpCommands.length)).toBe(1);expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
 });
+
+test('Media Player coalesces repeated pending artwork requests into one chrome refresh',async({page})=>{
+ let release;const ready=new Promise(resolve=>release=resolve);let requests=0;
+ await page.route('**/local/final-audit.svg*',async route=>{requests++;await ready;await route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#347"/></svg>'});});
+ await mount(page);await page.evaluate(()=>{
+  const card=window.mpCard;window.mpHass.states['media_player.one'].attributes.entity_picture='/local/final-audit.svg';card.hass={...window.mpHass};
+  for(let i=0;i<8;i++)card._render();
+  window.mpChromeRefreshes=0;const render=card._render;card._render=function(){window.mpChromeRefreshes++;return render.call(this);};
+ });
+ await expect.poll(()=>requests).toBeGreaterThan(0);release();
+ await expect.poll(()=>page.evaluate(()=>window.mpCard._artworkWatches.size)).toBe(0);
+ expect(await page.evaluate(()=>window.mpChromeRefreshes)).toBe(1);
+ expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+});
+
+test('Media Player retires an in-flight cover crossfade when returning to the current cover or detaching',async({page})=>{
+ await mount(page);await page.clock.install();
+ await page.evaluate(async()=>{
+  const controller=window.mpCard._artworkController,stage=document.createElement('div'),current=document.createElement('div'),incoming=document.createElement('div');stage.append(current,incoming);document.querySelector('#fixture').append(stage);
+  controller.attach({stage,current,incoming});window.mpTransition={controller,stage,current,incoming};
+  window.mpFirstCover='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"><rect width="2" height="2" fill="red"/></svg>');
+  window.mpSecondCover='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"><rect width="2" height="2" fill="blue"/></svg>');
+  await controller.show(window.mpFirstCover,{crossfade:false});await controller.show(window.mpSecondCover,{duration:1000});await controller.show(window.mpFirstCover);
+ });
+ await page.clock.runFor(1200);
+ expect(await page.evaluate(()=>({current:window.mpTransition.controller.currentUrl===window.mpFirstCover,incoming:window.mpTransition.incoming.style.backgroundImage,ready:window.mpTransition.incoming.classList.contains('is-ready')}))).toEqual({current:true,incoming:'',ready:false});
+ await page.evaluate(async()=>{await window.mpTransition.controller.show(window.mpSecondCover,{duration:1000});window.mpTransition.controller.detach();window.mpTransition.incoming.classList.remove('is-ready');});
+ await page.clock.runFor(1200);expect(await page.evaluate(()=>window.mpTransition.controller.currentUrl===window.mpFirstCover)).toBe(true);expect(await page.evaluate(()=>window.mpTransition.incoming.classList.contains('is-ready'))).toBe(false);
+ expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+});

@@ -8,9 +8,7 @@ const isFlowPoint = (value: unknown): value is FlowPoint => value !== null && ty
 export { resolveEditorColorValue, formatEditorHexChannel, formatEditorColorFromHex, getEditorColorModel } from "../../shared/editor-color";
 import { NODE_DEFAULTS } from "./power-flow-constants";
 import { DEFAULT_CONFIG } from "./power-flow-defaults";
-import { clamp, deepClone, isObject, mergeConfig, normalizeTextKey } from "./power-flow-runtime";
-
-export function deepCloneNode(value: unknown): unknown { return deepClone(value); }
+import { clamp, isObject, mergeConfig, normalizeTextKey } from "./power-flow-runtime";
 
 /** The Power Flow editor keeps its original void-returning move contract. */
 export function moveItem(list: unknown, fromIndex: number, toIndex: number): void {

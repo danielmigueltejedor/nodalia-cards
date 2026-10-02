@@ -233,17 +233,26 @@ export class MediaPlayerArtworkController {
   palette: ArtworkPalette | null = null;
   activeEntity = "";
   private recentByEntity = new Map<string, string[]>();
+  private transitionFrame=0;
+  private transitionTimer=0;
   private slideshowTimer = 0;
   private slideshowIndex = 0;
   private generation = 0;
   private host: ArtworkLayerHost | null = null;
   private idleActive = false;
 
+  private cancelTransition():void {
+    if(this.transitionFrame) window.cancelAnimationFrame(this.transitionFrame);
+    if(this.transitionTimer) window.clearTimeout(this.transitionTimer);
+    this.transitionFrame=this.transitionTimer=0;
+  }
   attach(host: ArtworkLayerHost): void {
+    if(this.host && this.host.stage!==host.stage) {this.cancelTransition();this.generation+=1;}
     this.host = host;
   }
 
   detach(): void {
+    this.cancelTransition();
     this.stopSlideshow();
     this.host = null;
     this.generation += 1;
@@ -272,6 +281,7 @@ export class MediaPlayerArtworkController {
   }
 
   clear(): void {
+    this.cancelTransition();
     this.generation += 1;
     this.currentUrl = "";
     this.stopSlideshow();
@@ -315,12 +325,15 @@ export class MediaPlayerArtworkController {
       this.clear();
       return false;
     }
+    const token = ++this.generation;
+    this.cancelTransition();
     if (nextUrl === this.currentUrl && host.current.style.backgroundImage) {
+      host.incoming.classList.remove("is-visible","is-ready");
+      host.incoming.style.backgroundImage="";
       this.applyIdleAnimation(Boolean(options.idle), options.animation);
       return true;
     }
 
-    const token = ++this.generation;
     const loaded = await preloadArtworkUrl(nextUrl);
     if (token !== this.generation || options.connected === false) {
       return false;
@@ -331,6 +344,7 @@ export class MediaPlayerArtworkController {
 
     const reduceMotion = prefersReducedMotion() || options.crossfade === false;
     const duration = Math.max(0, Number(options.duration) || 500);
+    host.incoming.classList.remove("is-ready");
     host.incoming.style.backgroundImage = `url("${nextUrl.replace(/"/g, "%22")}")`;
     host.incoming.classList.add("is-visible");
     if (reduceMotion || !this.currentUrl) {
@@ -343,14 +357,16 @@ export class MediaPlayerArtworkController {
     }
 
     host.incoming.style.transitionDuration = `${duration}ms`;
-    requestAnimationFrame(() => {
-      host.incoming.classList.add("is-ready");
+    this.transitionFrame=window.requestAnimationFrame(() => {
+      this.transitionFrame=0;
+      if(token===this.generation && host.stage===this.host?.stage) host.incoming.classList.add("is-ready");
     });
 
-    window.setTimeout(() => {
+    this.transitionTimer=window.setTimeout(() => {
       if (token !== this.generation) {
         return;
       }
+      this.transitionTimer=0;
       host.current.style.backgroundImage = host.incoming.style.backgroundImage;
       host.incoming.classList.remove("is-visible", "is-ready");
       host.incoming.style.backgroundImage = "";

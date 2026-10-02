@@ -1213,7 +1213,7 @@
           const mediaContentType = mediaBrowserActionButton.dataset.mediaContentType || "";
           const mediaContentId = mediaBrowserActionButton.dataset.mediaContentId || "";
           if (action === "browse") {
-            this._browseMediaBrowserItem(mediaContentType, mediaContentId);
+            void this._browseMediaBrowserItem(mediaContentType, mediaContentId);
             return;
           }
           if (action === "play") {
@@ -2001,7 +2001,7 @@
         return this._normalizeMediaBrowserNode(result, entityId);
       }
       _showEntityMediaBrowser(entityId, fallbackPath = "") {
-        this._openMediaBrowser(entityId, fallbackPath);
+        void this._openMediaBrowser(entityId, fallbackPath);
         return true;
       }
       _closeMediaBrowser(shouldRender = true) {
