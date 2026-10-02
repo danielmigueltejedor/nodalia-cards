@@ -1,7 +1,7 @@
 /* Generated from src/cards/camera. Do not edit. */
 "use strict";
 (() => {
-  // nodalia-go2rtc-player.js
+  // src/shared/go2rtc-player.ts
   /*!
    * Nodalia go2rtc player
    * Adapted from go2rtc VideoRTC v1.6.0. Copyright (c) 2022 Alexey Khit.
@@ -21,7 +21,9 @@
   };
   function toWebSocketUrl(rawValue) {
     try {
-      const url = new URL(String(rawValue || ""), window.location.href);
+      const source = String(rawValue || "").trim();
+      if (!source) return "";
+      const url = new URL(source, window.location.href);
       if (url.protocol === "http:") {
         url.protocol = "ws:";
       } else if (url.protocol === "https:") {
@@ -32,9 +34,16 @@
       return "";
     }
   }
+  var isGo2rtcRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var go2rtcRecord = (value) => isGo2rtcRecord(value) ? value : {};
+  var go2rtcErrorMessage = (error) => String(go2rtcRecord(error).message ?? error ?? "");
   var NodaliaGo2RTCPlayer = class extends HTMLElement {
     constructor() {
       super();
+      this._transportGeneration = 0;
+      this._playRevision = 0;
+      this._displayRevision = 0;
+      this._audioTrackRevision = 0;
       this._source = "";
       this._mode = "auto";
       this._muted = true;
@@ -84,16 +93,18 @@
     }
     configure({ source, mode = "auto", muted = true, controls = false } = {}) {
       const nextSource = toWebSocketUrl(source);
-      const changed = nextSource !== this._source || mode !== this._mode;
+      const nextMode = String(mode || "auto").toLowerCase();
+      const changed = nextSource !== this._source || nextMode !== this._mode;
+      if (this._muted !== (muted !== false)) this._playRevision++;
       const hasTransport = Boolean(this._socket || this._peer || this._mediaSource);
       this._source = nextSource;
-      this._mode = String(mode || "auto").toLowerCase();
+      this._mode = nextMode;
       this._muted = muted !== false;
       this._controls = controls === true;
       this._autoplayMuted = false;
       this._applyVideoOptions();
       if (changed && this.isConnected) {
-        if (hasTransport) {
+        if (hasTransport || this._video) {
           this.disconnect();
         }
         this._connect();
@@ -119,6 +130,9 @@
       this.disconnect();
     }
     disconnect() {
+      this._transportGeneration++;
+      this._playRevision++;
+      this._displayRevision++;
       window.clearTimeout(this._reconnectTimer);
       window.clearTimeout(this._modeTimer);
       window.clearTimeout(this._socketOpenTimer);
@@ -195,18 +209,21 @@
       video.style.height = "100%";
       video.style.objectFit = "contain";
       video.addEventListener("loadeddata", () => {
+        if (video !== this._video || !this.isConnected) return;
         const mediaStream = video.srcObject;
-        if (this._activeMode === "webrtc" && typeof mediaStream?.getVideoTracks === "function" && !mediaStream.getVideoTracks().length) {
+        if (this._activeMode === "webrtc" && mediaStream instanceof MediaStream && !mediaStream.getVideoTracks().length) {
           return;
         }
         this._markLoaded();
       });
       video.addEventListener("error", () => {
-        if (!this._intentionalClose && (video.currentSrc || video.srcObject)) {
+        if (video === this._video && this.isConnected && !this._intentionalClose && (video.currentSrc || video.srcObject)) {
           this._fallback(new Error("go2rtc video decode failed"));
         }
       });
-      video.addEventListener("volumechange", () => this._handleVideoVolumeChange());
+      video.addEventListener("volumechange", () => {
+        if (video === this._video && this.isConnected) this._handleVideoVolumeChange();
+      });
       video.addEventListener("webkitbeginfullscreen", this._onDisplayEnvironmentChange);
       video.addEventListener("webkitendfullscreen", this._onDisplayEnvironmentChange);
       this._video = video;
@@ -243,6 +260,8 @@
       if (!video || !this.isConnected) {
         return false;
       }
+      const generation = this._transportGeneration;
+      const revision = ++this._displayRevision;
       const previousTransform = video.style?.transform || "";
       const previousWillChange = video.style?.willChange || "";
       if (video.style) {
@@ -251,10 +270,10 @@
       }
       video.getBoundingClientRect?.();
       const finishRecovery = () => {
-        this._displayRecoveryFrame = 0;
-        if (video !== this._video || !this.isConnected) {
+        if (video !== this._video || !this.isConnected || generation !== this._transportGeneration || revision !== this._displayRevision) {
           return;
         }
+        this._displayRecoveryFrame = 0;
         const shouldReattachWebRtc = this._activeMode === "webrtc" && /orientationchange|fullscreen/i.test(reason) && this._playbackStream && typeof this._playbackStream.getVideoTracks === "function" && this._playbackStream.getVideoTracks().some((track) => track?.readyState !== "ended");
         if (shouldReattachWebRtc) {
           video.srcObject = null;
@@ -279,6 +298,8 @@
       return true;
     }
     _verifyVideoDisplayRecovery(video) {
+      const generation = this._transportGeneration;
+      const revision = ++this._displayRevision;
       window.clearTimeout(this._displayHealthTimer);
       if (this._displayFrameCallback && typeof video.cancelVideoFrameCallback === "function") {
         video.cancelVideoFrameCallback(this._displayFrameCallback);
@@ -287,16 +308,17 @@
       let receivedFrame = false;
       if (typeof video.requestVideoFrameCallback === "function") {
         this._displayFrameCallback = video.requestVideoFrameCallback(() => {
+          if (video !== this._video || !this.isConnected || generation !== this._transportGeneration || revision !== this._displayRevision) return;
           this._displayFrameCallback = 0;
           receivedFrame = true;
           this._hasDecodedFrameOnce = true;
         });
       }
       this._displayHealthTimer = window.setTimeout(() => {
-        this._displayHealthTimer = 0;
-        if (video !== this._video || !this.isConnected) {
+        if (video !== this._video || !this.isConnected || generation !== this._transportGeneration || revision !== this._displayRevision) {
           return;
         }
+        this._displayHealthTimer = 0;
         const hasDecodedFrame = receivedFrame || Number(video.readyState) >= 2 && Number(video.videoWidth) > 0 && Number(video.videoHeight) > 0;
         if (hasDecodedFrame) {
           this._hasDecodedFrameOnce = true;
@@ -356,7 +378,9 @@
       this._ensureAudioOutput();
       this._resumeAudioOutput();
       this._syncAudioOutput();
-      this._video.play().catch(() => {
+      const video = this._video;
+      if (!video) return false;
+      video.play().catch(() => {
       });
       return true;
     }
@@ -364,18 +388,25 @@
       if (this._audioContext && this._audioElementSource && this._audioOutputGain) {
         return true;
       }
+      const video = this._video;
+      if (!video) return false;
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
       if (!AudioContextClass || typeof AudioContextClass !== "function") {
         return false;
       }
       try {
         const context = new AudioContextClass();
-        const source = context.createMediaElementSource(this._video);
+        this._audioContext = context;
+        const source = context.createMediaElementSource(video);
+        this._audioElementSource = source;
         const outputGain = context.createGain();
+        this._audioOutputGain = outputGain;
         source.connect(outputGain);
         outputGain.connect(context.destination);
         const oscillator = context.createOscillator();
+        this._audioPrimeOscillator = oscillator;
         const primeGain = context.createGain();
+        this._audioPrimeGain = primeGain;
         primeGain.gain.value = 0;
         oscillator.connect(primeGain);
         primeGain.connect(context.destination);
@@ -403,8 +434,9 @@
       if (!this._audioOutputGain) {
         return;
       }
-      const volume = this._audioTrackSource && Number.isFinite(this._video?.volume) ? this._video.volume : 1;
-      this._audioOutputGain.gain.value = this._muted ? 0 : volume;
+      const volume = this._video?.volume;
+      const outputVolume = this._audioTrackSource && volume !== void 0 && Number.isFinite(volume) ? volume : 1;
+      this._audioOutputGain.gain.value = this._muted ? 0 : outputVolume;
     }
     _disconnectAudioTrackOutput() {
       this._audioTrackSource?.disconnect?.();
@@ -468,6 +500,7 @@
       this._audioContext = null;
     }
     _clearAudioTrackListeners() {
+      this._audioTrackRevision++;
       this._audioTrackListeners.forEach((removeListener) => removeListener());
       this._audioTrackListeners = [];
       this._lastAudioState = "";
@@ -492,8 +525,12 @@
     }
     _watchAudioTracks(tracks) {
       this._clearAudioTrackListeners();
+      const revision = this._audioTrackRevision;
+      const generation = this._transportGeneration;
       tracks.filter((track) => track?.kind === "audio").forEach((track) => {
-        const update = () => this._emitAudioState(tracks, "webrtc");
+        const update = () => {
+          if (this.isConnected && revision === this._audioTrackRevision && generation === this._transportGeneration) this._emitAudioState(tracks, "webrtc");
+        };
         track.addEventListener?.("mute", update);
         track.addEventListener?.("unmute", update);
         track.addEventListener?.("ended", update);
@@ -573,9 +610,12 @@
           } catch (_error) {
             return;
           }
-          this._messageHandlers.forEach((handler) => handler(message));
+          const record = go2rtcRecord(message);
+          if (typeof record.type !== "string") return;
+          const decoded = { type: record.type, ...record.value === void 0 ? {} : { value: record.value } };
+          this._messageHandlers.forEach((handler) => handler(decoded));
         } else {
-          this._binaryHandler?.(event.data);
+          if (event.data instanceof ArrayBuffer) this._binaryHandler?.(event.data);
         }
       });
       socket.addEventListener("close", () => {
@@ -672,7 +712,7 @@
         this._reportError(error);
         return;
       }
-      this._emitState("retrying", error?.message || String(error || "go2rtc retrying"));
+      this._emitState("retrying", go2rtcErrorMessage(error) || "go2rtc retrying");
       this._scheduleReconnect();
     }
     _emitState(state, message = "") {
@@ -690,10 +730,13 @@
       this.dispatchEvent(new CustomEvent("nodalia-go2rtc-error", {
         bubbles: true,
         composed: true,
-        detail: { message: error?.message || String(error || "go2rtc error") }
+        detail: { message: go2rtcErrorMessage(error) || "go2rtc error" }
       }));
     }
     _resetModeTransport() {
+      this._transportGeneration++;
+      this._playRevision++;
+      this._displayRevision++;
       if (this._peer) {
         this._peer.close();
         this._peer = null;
@@ -725,30 +768,37 @@
       this._playbackStream = null;
     }
     async _play() {
-      if (!this._video) {
-        return false;
-      }
+      const video = this._video;
+      if (!video || !this.isConnected) return false;
+      const generation = this._transportGeneration;
+      const revision = ++this._playRevision;
+      const current = () => video === this._video && this.isConnected && generation === this._transportGeneration && revision === this._playRevision;
       this._setVideoMuted(this._muted);
       this._resumeAudioOutput();
       this._syncAudioOutput();
       try {
-        await this._video.play();
+        await video.play();
+        if (!current()) return false;
         this._autoplayMuted = false;
         return true;
       } catch (_error) {
+        if (!current()) return false;
         if (!this._muted) {
           this._setVideoMuted(true);
           try {
-            await this._video.play();
+            await video.play();
+            if (!current()) return false;
             this._autoplayMuted = true;
             if (this._audioContext) {
               this._resumeAudioOutput();
               this._setVideoMuted(false);
               this._syncAudioOutput();
               try {
-                await this._video.play();
-                this._autoplayMuted = this._video.muted;
+                await video.play();
+                if (!current()) return false;
+                this._autoplayMuted = video.muted;
               } catch (_audioError) {
+                if (!current()) return false;
                 this._setVideoMuted(true);
                 this._autoplayMuted = true;
               }
@@ -772,7 +822,7 @@
       if (!peer?.getTransceivers) {
         return [];
       }
-      return peer.getTransceivers().filter((transceiver) => ["recvonly", "sendrecv"].includes(transceiver.currentDirection)).map((transceiver) => transceiver.receiver?.track).filter((track) => track && track.readyState !== "ended");
+      return peer.getTransceivers().filter((transceiver) => ["recvonly", "sendrecv"].includes(transceiver.currentDirection ?? "")).map((transceiver) => transceiver.receiver?.track).filter((track) => track && track.readyState !== "ended");
     }
     _attachConnectedWebRtcStream(peer) {
       if (peer !== this._peer || !this._video) {
@@ -789,7 +839,7 @@
       this._playbackStream = mediaStream;
       this._video.srcObject = mediaStream;
       this._watchAudioTracks(tracks);
-      this._play();
+      void this._play();
       return true;
     }
     _startWebRtc() {
@@ -798,7 +848,7 @@
         iceServers: [
           { urls: ["stun:stun.cloudflare.com:3478", "stun:stun.l.google.com:19302"] }
         ],
-        sdpSemantics: "unified-plan"
+        ...{ sdpSemantics: "unified-plan" }
       });
       peer.addEventListener("track", () => {
         if (peer === this._peer && peer.connectionState === "connected") {
@@ -806,6 +856,7 @@
         }
       });
       peer.addEventListener("icecandidate", (event) => {
+        if (peer !== this._peer || !this.isConnected) return;
         const candidate = event.candidate?.toJSON?.().candidate || "";
         this._send({ type: "webrtc/candidate", value: candidate });
       });
@@ -823,12 +874,13 @@
         }
       });
       this._messageHandlers.set("webrtc", (message) => {
+        if (peer !== this._peer || !this.isConnected) return;
         if (message.type === "webrtc/candidate" && message.value) {
-          peer.addIceCandidate({ candidate: message.value, sdpMid: "0" }).catch(() => {
+          peer.addIceCandidate({ candidate: String(message.value), sdpMid: "0" }).catch(() => {
           });
         } else if (message.type === "webrtc/answer") {
           this._armModeTimeout("webrtc", GO2RTC_WEBRTC_PROGRESS_TIMEOUT);
-          peer.setRemoteDescription({ type: "answer", sdp: message.value }).catch((error) => {
+          peer.setRemoteDescription({ type: "answer", sdp: String(message.value ?? "") }).catch((error) => {
             if (peer === this._peer) {
               this._fallback(error);
             }
@@ -840,8 +892,8 @@
       this._peer = peer;
       peer.addTransceiver("video", { direction: "recvonly" });
       peer.addTransceiver("audio", { direction: "recvonly" });
-      peer.createOffer().then((offer) => peer.setLocalDescription(offer).then(() => offer)).then((offer) => {
-        if (peer === this._peer) {
+      peer.createOffer().then((offer) => peer === this._peer && this.isConnected ? peer.setLocalDescription(offer).then(() => offer) : void 0).then((offer) => {
+        if (offer && peer === this._peer && this.isConnected) {
           this._send({ type: "webrtc/offer", value: offer.sdp });
         }
       }).catch((error) => {
@@ -870,6 +922,8 @@
       return codecs.filter((codec) => isSupported(`video/mp4; codecs="${codec}"`)).join();
     }
     _startMse() {
+      const video = this._video;
+      if (!video) return;
       const MediaSourceClass = window.ManagedMediaSource || window.MediaSource;
       const mediaSource = new MediaSourceClass();
       this._mediaSource = mediaSource;
@@ -883,15 +937,15 @@
       if (window.ManagedMediaSource) {
         this._stopAudioPrime();
         this._playbackStream = null;
-        this._video.disableRemotePlayback = true;
-        this._video.srcObject = mediaSource;
+        video.disableRemotePlayback = true;
+        video.srcObject = mediaSource;
       } else {
         this._stopAudioPrime();
         this._playbackStream = null;
-        this._video.srcObject = null;
-        this._video.src = URL.createObjectURL(mediaSource);
+        video.srcObject = null;
+        video.src = URL.createObjectURL(mediaSource);
       }
-      this._play();
+      void this._play();
       this._messageHandlers.set("mse", (message) => {
         if (mediaSource !== this._mediaSource) {
           return;
@@ -907,9 +961,11 @@
           this._mseCodecs = String(message.value || "");
           const hasAudio = /(?:mp4a|opus|flac|pcma|pcmu)/i.test(this._mseCodecs);
           this._emitAudioState(hasAudio ? [{ kind: "audio", muted: false }] : [], "mse");
-          const sourceBuffer = mediaSource.addSourceBuffer(message.value);
+          const sourceBuffer = mediaSource.addSourceBuffer(String(message.value ?? ""));
           sourceBuffer.mode = "segments";
-          sourceBuffer.addEventListener("updateend", () => this._flushMseQueue());
+          sourceBuffer.addEventListener("updateend", () => {
+            if (sourceBuffer === this._sourceBuffer && mediaSource === this._mediaSource) this._flushMseQueue();
+          });
           this._sourceBuffer = sourceBuffer;
           this._binaryHandler = (data) => {
             if (mediaSource !== this._mediaSource) {
@@ -948,6 +1004,7 @@
         }
         if (this._bufferQueue.length) {
           const data = this._bufferQueue.shift();
+          if (!data) return;
           this._bufferQueueBytes = Math.max(0, this._bufferQueueBytes - (Number(data?.byteLength) || 0));
           sourceBuffer.appendBuffer(data);
         }
@@ -956,7 +1013,11 @@
       }
     }
     _startHls() {
+      const video = this._video;
+      const generation = this._transportGeneration;
+      if (!video) return;
       this._messageHandlers.set("hls", (message) => {
+        if (video !== this._video || generation !== this._transportGeneration || !this.isConnected) return;
         if (message.type === "error" && String(message.value || "").startsWith("hls")) {
           this._fallback(new Error(String(message.value)));
           return;
@@ -972,19 +1033,23 @@
         this._stopAudioPrime();
         this._connectElementAudioOutput();
         this._playbackStream = null;
-        this._video.srcObject = null;
-        this._video.src = `data:application/vnd.apple.mpegurl;base64,${window.btoa(playlist)}`;
-        this._play();
+        video.srcObject = null;
+        video.src = `data:application/vnd.apple.mpegurl;base64,${window.btoa(playlist)}`;
+        void this._play();
       });
-      this._send({ type: "hls", value: this._supportedCodecs((type) => this._video.canPlayType(type)) });
+      this._send({ type: "hls", value: this._supportedCodecs((type) => video.canPlayType(type)) });
     }
     _startMjpeg() {
+      const video = this._video;
+      const generation = this._transportGeneration;
+      if (!video) return;
       let loaded = false;
-      this._video.controls = false;
+      video.controls = false;
       this._binaryHandler = (data) => {
+        if (video !== this._video || generation !== this._transportGeneration || !this.isConnected) return;
         this._revokePosterObjectUrl();
         this._posterObjectUrl = URL.createObjectURL(new Blob([data], { type: "image/jpeg" }));
-        this._video.poster = this._posterObjectUrl;
+        video.poster = this._posterObjectUrl;
         if (!loaded) {
           loaded = true;
           this._stopAudioPrime();

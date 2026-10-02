@@ -1,5 +1,5 @@
 // Side-effect: register nodalia-go2rtc-player for standalone and HACS bundles.
-import "../../../nodalia-go2rtc-player.js";
+import "../../shared/go2rtc-player";
 import {
   CAMERA_LAYOUT,
   CAMERA_PRESENTATION,
