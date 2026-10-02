@@ -6,7 +6,7 @@ import vm from "node:vm";
 import { fileURLToPath } from "node:url";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
-const read = file => fs.readFileSync(path.join(root, file), "utf8");
+const read = file => fs.readFileSync(path.join(root, file), "utf8") + (file.endsWith("media-player-card.ts") ? ["media-player-browser.css", "media-player-presentations.css"].map(css => fs.readFileSync(path.join(root,"src/cards/media-player",css),"utf8")).join("\n") : "");
 
 function loadMediaPlayerApi() {
   const sandbox = {
@@ -343,4 +343,15 @@ test("media player re-renders chrome when artwork preload finishes with an exist
     ensureReady,
     /_syncArtworkLayer\([\s\S]*?\}\);\n\s*return;\n\s*\}\n\s*this\._lastRenderSignature/,
   );
+});
+
+
+test("playback progress rejects infinite durations and resets non-finite positions without losing zero", () => {
+  const api = loadMediaPlayerApi();
+  assert.equal(api.interpolatePlaybackProgress({attributes:{media_duration:Infinity}}),null);
+  assert.equal(api.interpolatePlaybackProgress({attributes:{media_duration:NaN}}),null);
+  same(api.interpolatePlaybackProgress({state:"paused",attributes:{media_duration:120,media_position:NaN}}),{duration:120,position:0,percent:0});
+  same(api.interpolatePlaybackProgress({state:"playing",attributes:{media_duration:120,media_position:0,media_position_updated_at:"invalid"}}),{duration:120,position:0,percent:0});
+  assert.equal(api.supportsMediaSeek(null),false);
+  assert.equal(api.supportsMediaSeek({attributes:{supported_features:Infinity}}),false);
 });

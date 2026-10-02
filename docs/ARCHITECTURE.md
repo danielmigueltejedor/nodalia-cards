@@ -76,7 +76,6 @@ visual editors now pass strict checking:
 |---|---|
 | `src/cards/advance-vacuum/advance-vacuum-card.ts` | Map, rooms, dock and sessions |
 | `src/cards/climate/climate-card.ts` | Climate rendering and interactions |
-| `src/cards/media-player/media-player-card.ts` | Artwork, playback and layouts |
 
 The exact suppression inventory is `scripts/type-debt.json`; use the source
 files, not generated JS size, to plan coherent typed extractions.
@@ -299,8 +298,7 @@ standalone.ts          Standalone entry for nodalia-light-card.js
 `exactOptionalPropertyTypes`, `noFallthroughCasesInSwitch`, `noImplicitOverride`
 and `useUnknownInCatchVariables`.
 
-Three legacy suppressions remain in the Advance Vacuum, Climate and Media
-Player views. Their configs, helpers and editors are already checked. The
+Two legacy suppressions remain in the Advance Vacuum and Climate views. Their configs, helpers and editors are already checked. The
 exact current inventory is
 `scripts/type-debt.json`; `pnpm architecture:check` reports it and rejects new debt.
 A `.ts` filename or passing `tsc` does not imply suppressed modules were checked.
@@ -427,7 +425,7 @@ Weather, Circular Gauge and News configuration now passes strict checking and
 typed lint. Weather retains its two allowed actions; Gauge keeps its numeric or
 string bounds and optional foreground tint; News preserves source aliases,
 layout/filter/history semantics. All three use the checked CSS projection and
-retain unknown root extension fields. Their helpers/views still need migration.
+retain unknown root extension fields. Their helpers, views and editors are also checked.
 
 ### Component styles
 
@@ -478,3 +476,12 @@ Static motion CSS is embedded with whitespace-only compaction, without another
 browser resource. Browser-local dismissal/mobile keys use the configured prefix
 plus server/user identity; explicit shared helpers and Engine profiles retain
 their shared semantics.
+
+Media Player's complete view now uses actual normalized config, HA/browser-node and
+native DOM contracts. Artwork preloads, browser requests, TV volume steps, resize
+work and progress gestures belong to their view context. Reconfiguration or HA
+connection/auth/user changes retire that work and clear private cover history.
+Native transport/dialog focus survives refreshes, paused progress updates in place,
+and seek supports keyboard controls and cancels when the track changes. Browser
+and presentation CSS is embedded with whitespace-only compaction; declarations
+and order are retained without additional HA resources.

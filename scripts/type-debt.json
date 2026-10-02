@@ -1,5 +1,4 @@
 [
   "src/cards/advance-vacuum/advance-vacuum-card.ts",
-  "src/cards/climate/climate-card.ts",
-  "src/cards/media-player/media-player-card.ts"
+  "src/cards/climate/climate-card.ts"
 ]

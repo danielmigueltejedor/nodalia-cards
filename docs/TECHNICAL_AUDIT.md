@@ -1804,3 +1804,39 @@ CI and review remain required before integration.
   feedback and queued Engine updates. Raw/gzip bundle: 4,320,203 / 960,606 bytes within unchanged limits.
   All 743 browser cases pass (one existing skip). Three unchecked views and manual support
   runtimes still precede 3.0.0-alpha.1.
+
+## 2026-10-02 — Media Player view, gesture and artwork ownership
+
+- Replace the view suppression with real normalized config, validated player and
+  media-browser records, HA contracts and native DOM/gesture types. Playback
+  helpers now narrow unknown records instead of asserting fabricated entity
+  shapes; non-finite duration/position/volume values cannot corrupt controls.
+- Reconfiguration, connection/auth/user changes and detach retire browser,
+  palette/preload, stepped TV-volume and resize work. Capture the original HA
+  receiver during awaitable TV steps; rapid commits supersede previous loops.
+  Release delay promises and pending image handlers; bound cover caches and
+  folder-scroll memory to 64 entries. Clear private cover history on a new context.
+- Cancel volume/seek gestures on pointer cancellation, blur, hidden pages and
+  disconnect. Seek gestures retire if the song identity or seek capability changes.
+  Add Left/Right/Home/End keyboard seek support. Preserve native action and dialog
+  focus through HA updates and browse/play; paused progress patches the same DOM.
+- Configured services retain explicit targets and false/zero JSON fields inside
+  the allowlist. Catch rejected or synchronous service failures at the UI boundary.
+  Static browser/presentation CSS is embedded with whitespace-only compaction,
+  retaining declaration order without additional resources or relaxed size caps.
+- All 751 unit tests, strict/lint and architecture gates pass. All 3,000 valid
+  view/style/model/sizing comparisons match the previous checked-stage baseline.
+  All 24 focused Media Player cases and the 39 Entity/Notifications cases pass.
+  Remove 12 unused view imports and obsolete unassigned drag/volume-fallback state;
+  public helper exports remain unchanged. The first full run exposes a fixture
+  assuming notification delivery order; match the action by identity. Five repeated
+  Safari selector checks pass, with explicit open-state assertions added. The new
+  power-action fixture explicitly enables strict mode (the actual default is off).
+  A second full run exposes wall-clock-dependent Camera retry and Entity closing
+  checks. Await the actual mounted Camera operation, check its retry timer and
+  advance the installed browser clock; likewise advance Entity closing deadlines.
+  Both cases pass 18 repeated checks across the three browsers. The final full
+  run passes 767 cases with one existing exclusion across Chromium, WebKit and
+  iPhone WebKit, using three workers. Raw/gzip: 4,321,900 / 962,936 bytes,
+  below unchanged 4,325,376 / 972,800 limits. Two unchecked
+  views and manual support runtimes remain before 3.0.0-alpha.1.
