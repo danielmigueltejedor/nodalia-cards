@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+- Check Room Summary, retain native action focus and current HA updates in visible children, clear connected/parked cards on config or HA context changes, reset removed panels and remove unrendered legacy controls. Embed metric CSS without extra resources or relaxing size limits.
+
 - Check the Camera view, isolate pending streams/images/signing retries across HA contexts, connect configured hold actions and open its Summary portal across shadow hosts. Preserve native playback and standalone APIs while embedding expanded CSS within the existing size gates.
 
 - Check the Graph view, coalesce owned history requests, preserve absent/zero readings, and restore keyboard/focus plus correct in-place hover markers.

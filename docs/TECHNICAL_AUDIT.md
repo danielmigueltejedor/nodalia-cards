@@ -1649,3 +1649,30 @@ and related cards, verifies old-player disconnect and current loaded events, and
 closes the current portal. Strict/lint and 750 unit tests pass; all 24 focused
 browser cases pass. The full local suite passes 665 cases with one existing skip;
 CI and review remain required before integration.
+
+
+## 2026-10-02 — Room Summary view and embedded-card ownership
+
+- Remove the complete view suppression with actual HA/config/projection/style,
+  embedded-card and native event/DOM contracts plus lazy initialized fields.
+  Debt falls from 8 to 7. Preserve native Lock, home media and public filenames.
+- Pass current HA to visible embedded cards even when the parent signature is
+  unchanged. Track actual attributes and locale; retain child identity through
+  ordinary updates. Remove connected and parked cards on configuration, HA
+  connection/user change and detach, clearing old fragment references. Reset
+  removed active panels to Home and cancel old holds across these boundaries.
+- Preserve native parent action focus through header, navigation and cover
+  refreshes. When active navigation disappears, focus Home; if that panel is
+  removed, focus the room action. Use shared checked service invocation to catch
+  rejected/synchronous calls while retaining strict allowlists and explicit
+  false/zero data/targets. Missing metrics and real zero remain distinct.
+- Remove two uncalled brightness helpers, the unrendered legacy range input
+  listener/handler, obsolete vacuum handler/service method and unused climate/
+  media action dispatch branches plus an unused quick-action projection. Remove
+  the never-published I18n format fallback; use existing own-key translation and
+  interpolation. Colocate readable metric CSS with whitespace-only embedding
+  inside the unchanged raw/gzip limits.
+- Strict/lint and 750 unit tests pass; 3,000 valid presentation/style/sizing outputs
+  match the prior view. All 12 focused Chromium/WebKit/iPhone cases pass. The full
+  local suite passes 677 cases with one existing skip; CI remains required before
+  integration. No prerelease has been published.

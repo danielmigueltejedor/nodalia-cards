@@ -15,6 +15,8 @@ function loadRoomSummaryHelpers() {
       this.isConnected = true;
     }
 
+    addEventListener() {}
+    removeEventListener() {}
     attachShadow() {
       this.shadowRoot = {
         addEventListener() {},
@@ -32,6 +34,8 @@ function loadRoomSummaryHelpers() {
   }
   const sandbox = {
     console,
+    addEventListener() {},
+    removeEventListener() {},
     URL,
     window: null,
     customElements: {
@@ -514,7 +518,7 @@ test("room summary status chips and smart actions use raised bubble styling", ()
   assert.match(source, /\.room-hub__metric-bubble \{[\s\S]*box-shadow:inset 0 1px 0[\s\S]*0 8px 18px/);
   assert.match(source, /\.room-hub__context-action \{[\s\S]*box-shadow:inset 0 1px 0[\s\S]*0 10px 24px/);
   assert.match(source, /data-hub-context-actions/);
-  assert.match(source, /\.room-hub__context-actions\[hidden\] \{ display:none; \}/);
+  assert.match(source, /\.room-hub__context-actions\[hidden\]\s*\{\s*display:\s*none;?\s*\}/);
 });
 
 test("room summary hub protects the full room name and top-aligns sparse panels", () => {

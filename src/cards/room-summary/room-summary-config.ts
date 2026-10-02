@@ -77,7 +77,7 @@ function buildRoomConfig(rawConfig: unknown = {}) {
       cameraConfig.cameras = [camera, ...cameras];
     }
   }
-  const mediaSource = isObject(config.media_config) ? deepClone(config.media_config) : {};
+  const mediaSource: Record<string, unknown> = isObject(config.media_config) ? deepClone(config.media_config) : {};
   const players = Array.isArray(mediaSource.players) ? mediaSource.players.filter(isObject).map(player => deepClone(player)) : [];
   const mediaConfig = { ...mediaSource, players };
   const nativeMediaIds = players.map(player => String(player.entity || "").trim()).filter(Boolean);
@@ -134,13 +134,16 @@ function buildRoomConfig(rawConfig: unknown = {}) {
     }, raw.hold_action ?? config.hold_action, "none");
   }
 
-  config.haptics = mergeConfig(DEFAULT_CONFIG.haptics, config.haptics || {});
-  config.animations = mergeConfig(DEFAULT_CONFIG.animations, config.animations || {});
+  const haptics = mergeConfig(DEFAULT_CONFIG.haptics, config.haptics || {});
+  config.haptics = haptics;
+  const animations = mergeConfig(DEFAULT_CONFIG.animations, config.animations || {});
+  config.animations = animations;
   config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
     ?? mergeConfig(DEFAULT_CONFIG.security, config.security || {});
   config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles)
     ?? deepClone(DEFAULT_CONFIG.styles);
   const fields = { ...lists,
+    haptics, animations,
     language: String(config.language || "auto"),
     icon: String(config.icon), image: String(config.image), navigation_path: String(config.navigation_path),
     show_temperature: config.show_temperature === true, show_humidity: config.show_humidity === true,

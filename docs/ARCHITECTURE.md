@@ -356,7 +356,7 @@ Six config/helper cycles were removed through checked defaults and normalization
 Do not place defaults in modules that import their own normalizers.
 Notifications normalization now lives below the config and presentation helpers;
 no runtime import cycles remain.
-8 legacy modules still suppress typechecking; see `scripts/type-debt.json`.
+7 legacy modules still suppress typechecking; see `scripts/type-debt.json`.
 **The full TypeScript migration is not complete.** Checked modules and extracted
 contracts must grow without adding suppressions or casts to hide errors. The
 architecture guard prevents new unchecked files and new runtime cycles.
@@ -450,3 +450,9 @@ configuration, connection/user changes and detach invalidate pending callbacks
 and cancel owned retries. Camera expanded CSS is embedded without an auxiliary
 request. Summary detection walks shadow hosts so its body portal actually opens
 for embedded cameras. Standalone APIs and resource filenames remain unchanged.
+
+Room Summary's complete view is checked. Config/HA user/connection changes clear
+connected and parked embedded cards; ordinary updates retain their identity and
+pass current HA through unchanged parent signatures. Native parent action focus
+survives header/rail/cover refreshes. Readable metric CSS is embedded with the
+same whitespace-only plugin; no additional browser resource is required.

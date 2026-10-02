@@ -1,0 +1,44 @@
+.room-hub__metric-bubble:active { transform:scale(0.97); }
+.room-hub__metric-bubble--temperature {
+  background:color-mix(in srgb, var(--warning-color, #f6b73c) 18%, var(--ha-card-background));
+  border-color:color-mix(in srgb, var(--warning-color, #f6b73c) 28%, transparent);
+  color:color-mix(in srgb, var(--warning-color, #f6b73c) 88%, var(--primary-text-color));
+}
+.room-hub__metric-bubble--humidity {
+  background:color-mix(in srgb, #5aa7ff 18%, var(--ha-card-background));
+  border-color:color-mix(in srgb, #5aa7ff 28%, transparent);
+  color:color-mix(in srgb, #5aa7ff 88%, var(--primary-text-color));
+}
+.room-hub__metric-bubble--presence-occupied {
+  background:color-mix(in srgb, var(--success-color, #4caf50) 18%, var(--ha-card-background));
+  border-color:color-mix(in srgb, var(--success-color, #4caf50) 28%, transparent);
+  color:color-mix(in srgb, var(--success-color, #4caf50) 88%, var(--primary-text-color));
+}
+.room-hub__metric-bubble--presence-vacant {
+  background:color-mix(in srgb, var(--primary-text-color) 8%, var(--ha-card-background));
+  border-color:color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+  color:var(--secondary-text-color);
+}
+.room-hub__metric-bubble--power {
+  background:color-mix(in srgb, var(--warning-color, #f6b73c) 16%, var(--ha-card-background));
+  border-color:color-mix(in srgb, var(--warning-color, #f6b73c) 24%, transparent);
+  color:color-mix(in srgb, var(--warning-color, #f6b73c) 86%, var(--primary-text-color));
+}
+.room-hub__metric-bubble--air {
+  background:color-mix(in srgb, #7c9cff 16%, var(--ha-card-background));
+  border-color:color-mix(in srgb, #7c9cff 24%, transparent);
+  color:color-mix(in srgb, #7c9cff 86%, var(--primary-text-color));
+}
+.room-hub__metric-bubble--camera {
+  background:color-mix(in srgb, var(--primary-text-color) 8%, var(--ha-card-background));
+  border-color:color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+  color:var(--primary-text-color);
+}
+.room-hub__metric-bubble--camera-offline,
+.room-hub__metric-bubble--security {
+  background:color-mix(in srgb, var(--warning-color,#f59e0b) 16%, var(--ha-card-background));
+  border-color:color-mix(in srgb, var(--warning-color,#f59e0b) 26%, transparent);
+  color:var(--warning-color,#f59e0b);
+}
+.room-hub__context-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.room-hub__context-actions[hidden] { display:none; }

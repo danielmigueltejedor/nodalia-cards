@@ -492,12 +492,16 @@
         newTabKey: "hold_new_tab"
       }, raw.hold_action ?? config.hold_action, "none");
     }
-    config.haptics = mergeConfig(DEFAULT_CONFIG.haptics, config.haptics || {});
-    config.animations = mergeConfig(DEFAULT_CONFIG.animations, config.animations || {});
+    const haptics = mergeConfig(DEFAULT_CONFIG.haptics, config.haptics || {});
+    config.haptics = haptics;
+    const animations = mergeConfig(DEFAULT_CONFIG.animations, config.animations || {});
+    config.animations = animations;
     config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? mergeConfig(DEFAULT_CONFIG.security, config.security || {});
     config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles) ?? deepClone(DEFAULT_CONFIG.styles);
     const fields = {
       ...lists,
+      haptics,
+      animations,
       language: String(config.language || "auto"),
       icon: String(config.icon),
       image: String(config.image),
@@ -541,7 +545,41 @@
     return buildNormalizedRoomSummary(hass, c, COMFORT);
   }
 
+  // src/cards/room-summary/room-summary-metrics.css
+  var room_summary_metrics_default = ".room-hub__metric-bubble:active{transform:scale(0.97)}.room-hub__metric-bubble--temperature{background:color-mix(in srgb,var(--warning-color, #f6b73c) 18%,var(--ha-card-background));border-color:color-mix(in srgb,var(--warning-color, #f6b73c) 28%,transparent);color:color-mix(in srgb,var(--warning-color, #f6b73c) 88%,var(--primary-text-color))}.room-hub__metric-bubble--humidity{background:color-mix(in srgb,#5aa7ff 18%,var(--ha-card-background));border-color:color-mix(in srgb,#5aa7ff 28%,transparent);color:color-mix(in srgb,#5aa7ff 88%,var(--primary-text-color))}.room-hub__metric-bubble--presence-occupied{background:color-mix(in srgb,var(--success-color, #4caf50) 18%,var(--ha-card-background));border-color:color-mix(in srgb,var(--success-color, #4caf50) 28%,transparent);color:color-mix(in srgb,var(--success-color, #4caf50) 88%,var(--primary-text-color))}.room-hub__metric-bubble--presence-vacant{background:color-mix(in srgb,var(--primary-text-color) 8%,var(--ha-card-background));border-color:color-mix(in srgb,var(--primary-text-color) 12%,transparent);color:var(--secondary-text-color)}.room-hub__metric-bubble--power{background:color-mix(in srgb,var(--warning-color, #f6b73c) 16%,var(--ha-card-background));border-color:color-mix(in srgb,var(--warning-color, #f6b73c) 24%,transparent);color:color-mix(in srgb,var(--warning-color, #f6b73c) 86%,var(--primary-text-color))}.room-hub__metric-bubble--air{background:color-mix(in srgb,#7c9cff 16%,var(--ha-card-background));border-color:color-mix(in srgb,#7c9cff 24%,transparent);color:color-mix(in srgb,#7c9cff 86%,var(--primary-text-color))}.room-hub__metric-bubble--camera{background:color-mix(in srgb,var(--primary-text-color) 8%,var(--ha-card-background));border-color:color-mix(in srgb,var(--primary-text-color) 12%,transparent);color:var(--primary-text-color)}.room-hub__metric-bubble--camera-offline,.room-hub__metric-bubble--security{background:color-mix(in srgb,var(--warning-color,#f59e0b) 16%,var(--ha-card-background));border-color:color-mix(in srgb,var(--warning-color,#f59e0b) 26%,transparent);color:var(--warning-color,#f59e0b)}.room-hub__context-actions{display:flex;flex-wrap:wrap;gap:8px}.room-hub__context-actions[hidden]{display:none}";
+
+  // src/shared/card-elements.ts
+  function isLovelaceEditorElement(element) {
+    return element instanceof HTMLElement && "setConfig" in element && typeof element.setConfig === "function";
+  }
+
+  // src/shared/home-assistant-services.ts
+  function callHassService(hass, domain, service, data = {}, target = null) {
+    if (!hass?.callService) return;
+    const failure = (error) => console.warn("Nodalia Cards: service call failed", `${domain}.${service}`, error);
+    try {
+      void Promise.resolve(target !== null ? hass.callService(domain, service, data, target) : hass.callService(domain, service, data)).catch(failure);
+    } catch (error) {
+      failure(error);
+    }
+  }
+  function invokeHassService(host, hass, domain, service, data = {}, target = null) {
+    const utils2 = window.NodaliaUtils;
+    const invoke = utils2?.invokeHomeAssistantService;
+    if (!invoke) {
+      callHassService(hass, domain, service, data, target);
+      return;
+    }
+    const failure = (error) => console.warn("Nodalia Cards: service call failed", `${domain}.${service}`, error);
+    try {
+      void Promise.resolve(invoke.call(utils2, host, hass, domain, service, data, target)).catch(failure);
+    } catch (error) {
+      failure(error);
+    }
+  }
+
   // src/cards/room-summary/room-summary-card.ts
+  var roomActionElement = (node) => node instanceof HTMLElement && Boolean(node.dataset.roomAction);
   var _lazyNodaliaRoomSummaryCard;
   function loadNodaliaRoomSummaryCard() {
     if (_lazyNodaliaRoomSummaryCard) {
@@ -563,6 +601,8 @@
         this._config = normalizeConfig(STUB_CONFIG);
         this._configSignature = JSON.stringify(this._config);
         this._hass = null;
+        this._hassContextOwner = null;
+        this._hassUserKey = "";
         this._lastRenderSignature = "";
         this._animateContentOnNextRender = true;
         this._activePanel = "home";
@@ -575,22 +615,29 @@
         this._detachPrimaryHold = () => {
         };
         this._onShadowClick = this._onShadowClick.bind(this);
-        this._onShadowInput = this._onShadowInput.bind(this);
         this._onEmbeddedOverlayChange = this._onEmbeddedOverlayChange.bind(this);
         this._onHubBodyAnimationEnd = this._onHubBodyAnimationEnd.bind(this);
       }
       connectedCallback() {
         this.shadowRoot?.addEventListener("click", this._onShadowClick);
-        this.shadowRoot?.addEventListener("input", this._onShadowInput);
         this.shadowRoot?.addEventListener("animationend", this._onHubBodyAnimationEnd);
         this.addEventListener("nodalia-overlay-change", this._onEmbeddedOverlayChange);
-        this._detachPrimaryHold?.();
+        this._bindPrimaryHold();
+        this._animateContentOnNextRender = true;
+        if (this._hass) {
+          this._lastRenderSignature = "";
+          this._render();
+        }
+      }
+      _bindPrimaryHold() {
+        this._detachPrimaryHold();
+        this._detachPrimaryHold = () => {
+        };
+        if (!this.isConnected) return;
         this._detachPrimaryHold = typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function" ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
           resolveZone: (event) => {
-            const actionTarget = event.composedPath().find(
-              (node) => node instanceof HTMLElement && node.dataset?.roomAction === "primary"
-            );
-            return actionTarget ? "primary" : null;
+            const actionTarget = event.composedPath().find(roomActionElement);
+            return actionTarget?.dataset.roomAction === "primary" ? "primary" : null;
           },
           shouldBeginHold: () => String(this._config?.hold_action || "none") !== "none",
           onHold: () => this._performCardAction("hold"),
@@ -600,25 +647,33 @@
           }
         }) : () => {
         };
-        this._animateContentOnNextRender = true;
-        if (this._hass) {
-          this._lastRenderSignature = "";
-          this._render();
-        }
+      }
+      _clearHubEmbeds() {
+        this._hubEmbedCache.forEach((card) => card.remove());
+        this._hubEmbedCache.clear();
+        this._hubEmbedConfigSignatures = /* @__PURE__ */ new WeakMap();
+        this._hubEmbedStash = null;
+        this.shadowRoot?.querySelector(".room-hub")?.classList.remove("room-hub--camera-expanded");
+      }
+      _captureHubFocus() {
+        const active = this.shadowRoot?.activeElement;
+        const action = active instanceof HTMLElement ? active.dataset.roomAction : "";
+        return () => {
+          if (!action || active?.isConnected) return;
+          const candidates = Array.from(this.shadowRoot?.querySelectorAll("[data-room-action]") || []);
+          const target = candidates.find((node) => node instanceof HTMLElement && node.dataset.roomAction === action) || candidates.find((node) => node instanceof HTMLElement && node.dataset.roomAction === (action.startsWith("nav:") ? "nav:home" : "primary")) || candidates.find((node) => node instanceof HTMLElement && node.dataset.roomAction === "primary");
+          if (target instanceof HTMLElement) target.focus({ preventScroll: true });
+        };
       }
       disconnectedCallback() {
         this.shadowRoot?.removeEventListener("click", this._onShadowClick);
-        this.shadowRoot?.removeEventListener("input", this._onShadowInput);
         this.shadowRoot?.removeEventListener("animationend", this._onHubBodyAnimationEnd);
         this.removeEventListener("nodalia-overlay-change", this._onEmbeddedOverlayChange);
         this._detachPrimaryHold?.();
         this._detachPrimaryHold = () => {
         };
         this._suppressNextPrimaryClick = false;
-        this._parkHubEmbeddedCards();
-        this._hubEmbedCache?.clear();
-        this._hubEmbedConfigSignatures = /* @__PURE__ */ new WeakMap();
-        this._hubEmbedStash = null;
+        this._clearHubEmbeds();
         this._lastRenderSignature = "";
         this._hubShellConfigSignature = "";
         window.NodaliaUtils?.clearDeferTimers?.(this);
@@ -626,33 +681,54 @@
       _onHubBodyAnimationEnd(event) {
         const body = event.target;
         if (!(body instanceof HTMLElement) || !body.classList.contains("room-hub__body--enter")) return;
-        if (event.animationName && event.animationName !== "room-hub-slide") return;
+        if (event instanceof AnimationEvent && event.animationName && event.animationName !== "room-hub-slide") return;
         body.classList.remove("room-hub__body--enter");
         body.style.removeProperty("transform");
       }
       _onEmbeddedOverlayChange(event) {
         const hub = this.shadowRoot?.querySelector(".room-hub");
         if (!(hub instanceof HTMLElement)) return;
-        const open = Boolean(event?.detail?.open);
+        const detail = event instanceof CustomEvent ? event.detail : null;
+        const open = isObject(detail) && detail.open === true;
         hub.classList.toggle("room-hub--camera-expanded", open);
       }
       setConfig(config) {
+        this._detachPrimaryHold();
+        this._suppressNextPrimaryClick = false;
+        this._clearHubEmbeds();
         this._config = normalizeConfig(config || {});
+        const navItems = this._getHubNavItems(this._config, buildRoomSummary(this._hass, this._config));
+        if (this._activePanel !== "home" && !navItems.some((item) => item.id === this._activePanel)) this._activePanel = "home";
+        this._bindPrimaryHold();
         this._configSignature = JSON.stringify(this._config);
         if (this._config.collapsible !== true) this._hubExpanded = false;
         this._lastRenderSignature = "";
         this._hubShellConfigSignature = "";
         this._animateContentOnNextRender = true;
-        this._hubEmbedCache?.clear();
-        this._hubEmbedConfigSignatures = /* @__PURE__ */ new WeakMap();
         if (this.isConnected) this._render();
       }
       set hass(hass) {
         const prev = this._hass;
+        const owner = hass?.connection || hass?.auth || null;
+        const userKey = `${Boolean(hass)}:${hass?.user?.id || ""}:${hass?.user?.is_admin === true}`;
+        const changedContext = owner !== this._hassContextOwner || userKey !== this._hassUserKey;
+        if (changedContext) {
+          this._detachPrimaryHold();
+          this._suppressNextPrimaryClick = false;
+          this._clearHubEmbeds();
+          window.NodaliaUtils.cancelCardZoneTap?.(this);
+          this._lastRenderSignature = "";
+        }
+        this._hassContextOwner = owner;
+        this._hassUserKey = userKey;
         this._hass = hass;
+        if (changedContext) this._bindPrimaryHold();
         if (!this.isConnected) return;
         const sig = this._getRenderSignature(hass);
-        if (prev && sig === this._lastRenderSignature && this.shadowRoot?.innerHTML) return;
+        if (prev && sig === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
+          this._mountHubEmbeddedCards();
+          return;
+        }
         this._lastRenderSignature = sig;
         if (prev && this._patchHubState()) return;
         this._render();
@@ -666,9 +742,9 @@
       _t(key, fallback, values = {}) {
         const lang = window.NodaliaI18n?.resolveLanguage?.(this._hass, this._config?.language) ?? "en";
         const pack = window.NodaliaI18n?.strings?.(lang)?.roomSummaryCard || window.NodaliaI18n?.strings?.("en")?.roomSummaryCard || {};
-        const raw = key.split(".").reduce((cur, part) => cur && cur[part] !== void 0 ? cur[part] : void 0, pack);
+        const raw = key.split(".").reduce((cur, part) => isObject(cur) && Object.prototype.hasOwnProperty.call(cur, part) ? cur[part] : void 0, pack);
         const text = raw ?? fallback;
-        return window.NodaliaI18n?.format?.(text, values) ?? String(text).replace(/\{(\w+)\}/g, (_, t) => String(values[t] ?? ""));
+        return String(text).replace(/\{(\w+)\}/g, (_, t) => String(values[t] ?? ""));
       }
       _getRenderSignature(hass = this._hass) {
         const config = normalizeConfig(this._config);
@@ -695,9 +771,9 @@
         ].filter(Boolean);
         const states = [...new Set(ids)].map((id) => {
           const state = hass?.states?.[id];
-          return state ? `${id}:${state.state}:${state.last_updated || state.last_changed}` : `${id}:missing`;
+          return state ? JSON.stringify([id, state.state, state.last_updated || state.last_changed, state.attributes]) : `${id}:missing`;
         }).join("|");
-        return `${this._activePanel}|${this._hubExpanded ? 1 : 0}|${states}|${this._configSignature}`;
+        return `${this._activePanel}|${this._hubExpanded ? 1 : 0}|${states}|${hass?.locale?.language || hass?.language || ""}|${this._configSignature}`;
       }
       _entityLabel(entityId) {
         const state = getState(this._hass, entityId);
@@ -706,13 +782,6 @@
       _entityIcon(entityId, fallback = "mdi:help-circle-outline") {
         const state = getState(this._hass, entityId);
         return String(state?.attributes?.icon || fallback).trim() || fallback;
-      }
-      _lightBrightnessPct(state) {
-        if (!state || typeof state.attributes?.brightness !== "number") return 0;
-        return Math.max(1, Math.min(100, Math.round(state.attributes.brightness / 255 * 100)));
-      }
-      _supportsLightBrightness(state) {
-        return Boolean(state && typeof state.attributes?.brightness === "number");
       }
       _getHubNavItems(config, summary) {
         const items = [];
@@ -896,7 +965,7 @@
         const stash = this._ensureHubEmbedStash();
         for (const card of this._hubEmbedCache.values()) {
           if (card instanceof HTMLElement && card.parentNode !== stash) {
-            if (typeof card._closeExpanded === "function") {
+            if ("_closeExpanded" in card && typeof card._closeExpanded === "function") {
               try {
                 card._closeExpanded();
               } catch (_error) {
@@ -912,11 +981,13 @@
     </section>`;
       }
       _syncHubChrome(config, summary, styles, collapsed, activePanel) {
+        const restoreFocus = this._captureHubFocus();
+        if (!this.shadowRoot) return false;
         const header = this.shadowRoot.querySelector(".room-hub__header");
         if (!header) return false;
         header.outerHTML = this._renderHubHeader(config, summary, styles, collapsed);
         const contextActions = this.shadowRoot.querySelector("[data-hub-context-actions]");
-        if (contextActions) {
+        if (contextActions instanceof HTMLElement) {
           const contextual = this._getContextualActions(summary, config);
           contextActions.innerHTML = this._renderHubContextActions(contextual);
           contextActions.hidden = contextual.length === 0;
@@ -931,9 +1002,11 @@
         } else {
           rail?.remove();
         }
+        restoreFocus();
         return true;
       }
       _activateHubPanel(panel) {
+        const restoreFocus = this._captureHubFocus();
         const body = this.shadowRoot?.querySelector(".room-hub__body");
         if (!body) return false;
         const config = normalizeConfig(this._config || {});
@@ -948,9 +1021,11 @@
         this._syncHubChrome(config, summary, styles, collapsed, panel);
         this._mountHubEmbeddedCards();
         this._lastRenderSignature = this._getRenderSignature(this._hass);
+        restoreFocus();
         return true;
       }
       _patchHubState() {
+        const restoreFocus = this._captureHubFocus();
         if (!this.shadowRoot?.querySelector("ha-card.room-summary-card--hub")) return false;
         const config = normalizeConfig(this._config || {});
         const summary = buildRoomSummary(this._hass, config);
@@ -960,13 +1035,14 @@
         const activePanel = collapsed ? "home" : HUB_PANELS.has(this._activePanel) ? this._activePanel : "home";
         if (!this._syncHubChrome(config, summary, styles, collapsed, activePanel)) return false;
         const patchPanel = (panel, markup) => {
-          const view = this.shadowRoot.querySelector(`[data-hub-panel="${panel}"]`);
+          const view = this.shadowRoot?.querySelector(`[data-hub-panel="${panel}"]`);
           if (view) view.innerHTML = markup;
         };
         if (activePanel === "covers" && config.covers?.length) {
           patchPanel("covers", this._renderHubCoverPanel(config));
         }
         this._mountHubEmbeddedCards();
+        restoreFocus();
         return true;
       }
       _toggleEntity(entityId) {
@@ -990,11 +1066,6 @@
           void this._invoke("switch", stateIsOn(state) ? "turn_off" : "turn_on", { entity_id: entityId });
         }
       }
-      _runVacuumService(entityId, service) {
-        if (!entityId) return;
-        this._triggerHaptic();
-        void this._invoke("vacuum", service, { entity_id: entityId });
-      }
       _runClimateDelta(entityId, delta) {
         const state = getState(this._hass, entityId);
         if (!state) return;
@@ -1016,26 +1087,12 @@
         if (control === "next") void this._invoke("media_player", "media_next_track", { entity_id: entityId });
         if (control === "prev") void this._invoke("media_player", "media_previous_track", { entity_id: entityId });
       }
-      _onShadowInput(event) {
-        const el = event.target;
-        if (!(el instanceof HTMLInputElement) || el.type !== "range") return;
-        const entityId = String(el.dataset.entityId || "").trim();
-        if (!entityId) return;
-        const pct = Number(el.value);
-        if (!Number.isFinite(pct)) return;
-        void this._invoke("light", "turn_on", {
-          entity_id: entityId,
-          brightness: Math.max(1, Math.min(255, Math.round(pct / 100 * 255)))
-        });
-      }
       _triggerHaptic() {
         if (this._config?.haptics?.enabled !== true) return;
         fireEvent(this, "haptic", this._config.haptics.style || "medium", { bubbles: true, composed: true });
       }
       _invoke(domain, service, data = {}, target = null) {
-        const fn = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils);
-        if (typeof fn === "function") return fn(this, this._hass, domain, service, data, target);
-        return Promise.resolve().then(() => this._hass?.callService?.(domain, service, data, target || void 0));
+        return invokeHassService(this, this._hass, domain, service, data, target);
       }
       _parseActionObject(value) {
         if (isObject(value)) return deepClone(value);
@@ -1049,7 +1106,7 @@
         }
       }
       _isConfiguredServiceAllowed(serviceValue) {
-        const security = this._config?.security || DEFAULT_CONFIG.security;
+        const security = isObject(this._config.security) ? this._config.security : DEFAULT_CONFIG.security;
         if (security.strict_service_actions === false) return true;
         const normalizedService = String(serviceValue || "").trim().toLowerCase();
         const separator = normalizedService.indexOf(".");
@@ -1108,7 +1165,6 @@
       }
       _runQuickAction(action) {
         const cfg = this._config || {};
-        const summary = buildRoomSummary(this._hass, cfg);
         this._triggerHaptic();
         if (action === "lights_on" && cfg.lights?.length) {
           void this._invoke("light", "turn_on", { entity_id: cfg.lights });
@@ -1171,7 +1227,7 @@
         }
       }
       _onShadowClick(event) {
-        const el = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.roomAction);
+        const el = event.composedPath().find(roomActionElement);
         if (!el) return;
         event.preventDefault();
         event.stopPropagation();
@@ -1200,25 +1256,11 @@
           this._toggleEntity(action.slice(7));
           return;
         }
-        if (action?.startsWith("vacuum:")) {
-          const [, service, entityId] = action.split(":");
-          this._runVacuumService(entityId, service);
-          return;
-        }
         if (action?.startsWith("cover:")) {
-          const [, service, entityId] = action.split(":");
+          const [, service = "", entityId = ""] = action.split(":");
           if (!entityId) return;
           this._triggerHaptic();
           void this._invoke("cover", service, { entity_id: entityId });
-          return;
-        }
-        if (action?.startsWith("climate:")) {
-          const [, delta, entityId] = action.split(":");
-          this._runClimateDelta(entityId, Number(delta));
-          return;
-        }
-        if (action?.startsWith("media:")) {
-          this._runMediaControl(action.slice(6));
           return;
         }
         if (action?.startsWith("more-info:")) {
@@ -1321,10 +1363,11 @@
         const entityId = String(host?.dataset?.entity || "").trim();
         const scope = String(host?.dataset?.hubMedia || "single");
         const ids = hubMediaPlayerIds(config);
-        const nativePlayers = Array.isArray(native.players) ? native.players.filter((player) => player?.entity) : [];
+        const nativePlayers = Array.isArray(native.players) ? native.players.filter(isObject).filter((player) => player.entity) : [];
         const matchingPlayer = nativePlayers.find((player) => String(player.entity || "").trim() === entityId);
         const groupedPlayers = nativePlayers.length ? nativePlayers : ids.map((entity) => ({ entity }));
-        const players = (scope === "group" ? groupedPlayers : [matchingPlayer || { entity: entityId }]).filter((player) => player?.entity).map((player) => ({ ...player, show: player.show !== false }));
+        const selectedPlayers = scope === "group" ? groupedPlayers : [matchingPlayer || { entity: entityId }];
+        const players = selectedPlayers.filter((player) => player.entity).map((player) => ({ ...player, show: player.show !== false }));
         const nativeAnimations = isObject(native.animations) ? native.animations : config.animations;
         const nativeLayout = isObject(native.layout) ? native.layout : {};
         const requestedMode = String(nativeLayout.mode || "auto").trim().toLowerCase();
@@ -1361,6 +1404,8 @@
         if (entityId && !cameras.includes(entityId)) {
           cameras.unshift(entityId);
         }
+        const nativeStyles = isObject(native.styles) ? native.styles : {};
+        const nativeCardStyles = isObject(nativeStyles.card) ? nativeStyles.card : {};
         return {
           ...native,
           entity: entityId || native.entity || cameras[0] || "",
@@ -1370,17 +1415,17 @@
           show_status_chips: native.show_status_chips === true,
           styles: {
             ...embeddedStyles,
-            ...isObject(native.styles) ? native.styles : {},
+            ...nativeStyles,
             card: {
               ...embeddedStyles.card || {},
-              ...isObject(native.styles?.card) ? native.styles.card : {},
-              padding: native.styles?.card?.padding || "8px"
+              ...nativeCardStyles,
+              padding: nativeCardStyles.padding || "8px"
             },
             preview: {
               aspect_ratio: "16 / 9",
               min_height: "140px",
               border_radius: "18px",
-              ...isObject(native.styles?.preview) ? native.styles.preview : {}
+              ...isObject(nativeStyles.preview) ? nativeStyles.preview : {}
             }
           }
         };
@@ -1423,7 +1468,9 @@
           const cacheKey = cacheKeyForHost(host);
           let card = this._hubEmbedCache?.get(cacheKey);
           if (!card) {
-            card = document.createElement(tagName);
+            const node = document.createElement(tagName);
+            if (!isLovelaceEditorElement(node)) return;
+            card = node;
             this._hubEmbedCache?.set(cacheKey, card);
           }
           if (card.parentElement !== host) {
@@ -1432,7 +1479,7 @@
           const cardConfig = { entity: entityId, ...pack, ...extra, ...this._hubEmbedCustomization(config, host) };
           const configSignature = JSON.stringify(cardConfig);
           const configChanged = this._hubEmbedConfigSignatures.get(card) !== configSignature;
-          if (this._hass) card._hass = this._hass;
+          if (this._hass) Object.assign(card, { _hass: this._hass });
           if (configChanged) {
             try {
               card.setConfig(cardConfig);
@@ -1518,10 +1565,10 @@
           });
         });
         this.shadowRoot.querySelectorAll('[data-hub-embed="media"]').forEach((host) => {
-          mount(host, "nodalia-media-player", this._hubMediaEmbedConfig(config, host));
+          if (host instanceof HTMLElement) mount(host, "nodalia-media-player", this._hubMediaEmbedConfig(config, host));
         });
         this.shadowRoot.querySelectorAll('[data-hub-embed="camera"]').forEach((host) => {
-          mount(host, "nodalia-camera-card", this._hubCameraEmbedConfig(config, host));
+          if (host instanceof HTMLElement) mount(host, "nodalia-camera-card", this._hubCameraEmbedConfig(config, host));
         });
         const configuredKeys = this._hubConfiguredEmbedKeys(config);
         for (const [key, card] of this._hubEmbedCache || []) {
@@ -1766,6 +1813,8 @@
         return this._renderHubHome(config, summary, styles, accentColor);
       }
       _renderHub() {
+        const restoreFocus = this._captureHubFocus();
+        if (!this.shadowRoot) return;
         const config = normalizeConfig(this._config || {});
         const summary = buildRoomSummary(this._hass, config);
         const styles = config.styles || DEFAULT_CONFIG.styles;
@@ -1800,6 +1849,7 @@
           this._syncHubChrome(config, summary, styles, collapsed, activePanel);
           this._animateContentOnNextRender = false;
           this._mountHubEmbeddedCards();
+          restoreFocus();
           return;
         }
         this._parkHubEmbeddedCards();
@@ -1902,50 +1952,7 @@
         }
         .room-hub__metric-bubble ha-icon { --mdc-icon-size:${hubMetricIcon}; flex:0 0 auto; }
         .room-hub__metric-bubble--icon-only { justify-content:center; min-width:${hubMetricHeight}; padding:0; width:${hubMetricHeight}; }
-        .room-hub__metric-bubble:active { transform:scale(0.97); }
-        .room-hub__metric-bubble--temperature {
-          background:color-mix(in srgb, var(--warning-color, #f6b73c) 18%, var(--ha-card-background));
-          border-color:color-mix(in srgb, var(--warning-color, #f6b73c) 28%, transparent);
-          color:color-mix(in srgb, var(--warning-color, #f6b73c) 88%, var(--primary-text-color));
-        }
-        .room-hub__metric-bubble--humidity {
-          background:color-mix(in srgb, #5aa7ff 18%, var(--ha-card-background));
-          border-color:color-mix(in srgb, #5aa7ff 28%, transparent);
-          color:color-mix(in srgb, #5aa7ff 88%, var(--primary-text-color));
-        }
-        .room-hub__metric-bubble--presence-occupied {
-          background:color-mix(in srgb, var(--success-color, #4caf50) 18%, var(--ha-card-background));
-          border-color:color-mix(in srgb, var(--success-color, #4caf50) 28%, transparent);
-          color:color-mix(in srgb, var(--success-color, #4caf50) 88%, var(--primary-text-color));
-        }
-        .room-hub__metric-bubble--presence-vacant {
-          background:color-mix(in srgb, var(--primary-text-color) 8%, var(--ha-card-background));
-          border-color:color-mix(in srgb, var(--primary-text-color) 12%, transparent);
-          color:var(--secondary-text-color);
-        }
-        .room-hub__metric-bubble--power {
-          background:color-mix(in srgb, var(--warning-color, #f6b73c) 16%, var(--ha-card-background));
-          border-color:color-mix(in srgb, var(--warning-color, #f6b73c) 24%, transparent);
-          color:color-mix(in srgb, var(--warning-color, #f6b73c) 86%, var(--primary-text-color));
-        }
-        .room-hub__metric-bubble--air {
-          background:color-mix(in srgb, #7c9cff 16%, var(--ha-card-background));
-          border-color:color-mix(in srgb, #7c9cff 24%, transparent);
-          color:color-mix(in srgb, #7c9cff 86%, var(--primary-text-color));
-        }
-        .room-hub__metric-bubble--camera {
-          background:color-mix(in srgb, var(--primary-text-color) 8%, var(--ha-card-background));
-          border-color:color-mix(in srgb, var(--primary-text-color) 12%, transparent);
-          color:var(--primary-text-color);
-        }
-        .room-hub__metric-bubble--camera-offline,
-        .room-hub__metric-bubble--security {
-          background:color-mix(in srgb, var(--warning-color,#f59e0b) 16%, var(--ha-card-background));
-          border-color:color-mix(in srgb, var(--warning-color,#f59e0b) 26%, transparent);
-          color:var(--warning-color,#f59e0b);
-        }
-        .room-hub__context-actions { display:flex; flex-wrap:wrap; gap:8px; }
-        .room-hub__context-actions[hidden] { display:none; }
+        ${room_summary_metrics_default}
         .room-hub__context-action {
           align-items:center; appearance:none; background:color-mix(in srgb, var(--primary-text-color) 5%, transparent);
           border:1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent); border-radius:999px; color:var(--primary-text-color);
@@ -2030,6 +2037,7 @@
       </ha-card>`;
         this._animateContentOnNextRender = false;
         this._mountHubEmbeddedCards();
+        restoreFocus();
       }
       _renderEmpty() {
         return `<ha-card class="room-summary-card room-summary-card--empty">
@@ -2050,11 +2058,6 @@
     }
     _lazyNodaliaRoomSummaryCard = NodaliaRoomSummaryCard;
     return NodaliaRoomSummaryCard;
-  }
-
-  // src/shared/card-elements.ts
-  function isLovelaceEditorElement(element) {
-    return element instanceof HTMLElement && "setConfig" in element && typeof element.setConfig === "function";
   }
 
   // src/cards/room-summary/room-summary-editor.ts
