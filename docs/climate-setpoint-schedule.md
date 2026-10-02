@@ -57,3 +57,16 @@ Do not configure both systems intentionally. When the Engine is available, the c
 | Wrong day or time | Check Home Assistant's configured timezone. |
 
 Privacy-safe counts and the next schedule boundary are available from the Engine diagnostics.
+
+## Pending controls and schedule drafts
+
+Cancelling a dial or schedule drag, hiding the page or losing window focus restores
+the previous preview and sends no command. The dial can be dragged from its SVG
+track or thumb; step buttons remain available from the keyboard.
+
+Focused unfinished schedule fields remain editable during Home Assistant updates,
+including Safari. Switching entity, configuration, HA connection or user retires
+pending HVAC wake, temperature queues, Engine reads/overrides and schedule writes.
+Replies from a previous context cannot close the current composer or continue a
+shared helper write. A thermostat becoming unavailable retires pending controls.
+Explicit helper/webhook schedules keep their existing shared payload formats.

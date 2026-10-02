@@ -1870,3 +1870,43 @@ CI and review remain required before integration.
   4,320,661 / 964,692 bytes below unchanged 4,325,376 / 972,800 limits.
   One unchecked view (Climate) and manual support runtimes remain before
   3.0.0-alpha.1 publication.
+
+## 2026-10-02 — Climate view and schedule/setpoint ownership
+
+- Replace the last card-view suppression with actual normalized config, HA, Engine,
+  schedule and native DOM/gesture contracts. Narrow unknown Engine/translation
+  records and finite values without any shortcuts or changing strict flags. All
+  card views/configs/helpers/editors now check; manual support JS migration remains.
+- Capture the originating HA/configuration generation for schedule loads/saves,
+  overrides and single-flight temperature/range queues. Guard between HVAC wake
+  and temperature commands and between status/read/write steps. Old replies,
+  catches and finally blocks cannot reset newer queues, close a replacement
+  composer or continue shared helper writes. Preserve explicit helper/webhook
+  formats and dual heat/cool override bounds. Retire controls on unavailable states.
+- Pointer/touch cancellation, blur and hidden pages restore original dial drafts
+  and schedule slots without commands. Capture and release native pointer ids.
+  Activate the existing SVG hit track as well as HTML thumbs. Preserve action
+  focus and unfinished schedule fields across refreshes, including Safari; pending
+  numeric/time input changes retire older schedule loads. Own all timer/frame
+  fallbacks and release them across detach/reconnect.
+- Remove 22 unused view imports, an unused translation wrapper/type import and
+  the obsolete global commit-aborted flag. Retain the theme helper used by native
+  compatibility tests. Embed three static CSS sections with whitespace-only
+  compaction, preserving selector/declaration order and both size caps.
+- All 751 unit tests and strict/lint/architecture/distribution gates pass. Command
+  unit fixtures now model mounted hosts and actual listener cleanup; native cases
+  verify rendering. All 3,000 valid markup/style/model/sizing/service comparisons
+  match the previous view; valid service comparisons use an available thermostat,
+  while the new native case separately verifies retirement on unavailable states.
+- All 33 focused cases pass on Chromium, WebKit and iPhone. Early native checks
+  exposed duplicate hit-track markup, an always-mounted hidden composer and
+  lost Safari input; target the actual SVG track, assert its closed state and
+  preserve the unfinished field value. The full suite passes 824 cases with one
+  existing exclusion. Raw/gzipSync: 4,322,123 / 966,830 bytes below unchanged
+  4,325,376 / 972,800 limits. No unchecked card modules remain; hold publication
+  for manual runtime migration and final audit.
+
+Advance Vacuum integration also passes Firefox after replacing a test's hardcoded
+mouse pointer id with the id of the actual native pointerdown event. The nine
+repeated local drag/capture/rollback checks pass; remote static, HACS, security,
+CodeQL and all four browser gates pass before normal integration.
