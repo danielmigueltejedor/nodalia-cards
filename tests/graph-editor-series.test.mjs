@@ -71,7 +71,8 @@ function loadGraphEditor() {
     HTMLSelectElement: FakeHTMLSelectElement,
     HTMLTextAreaElement: FakeHTMLTextAreaElement,
     navigator: {},
-    requestAnimationFrame(callback) { callback(); },
+    requestAnimationFrame(callback) { return setTimeout(callback, 0); },
+    cancelAnimationFrame: clearTimeout,
     setTimeout,
     window: null,
   };

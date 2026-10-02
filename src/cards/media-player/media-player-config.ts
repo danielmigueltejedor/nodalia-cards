@@ -166,7 +166,7 @@ export function normalizeConfig(rawConfig?: unknown) {
   const layoutOverride = typeof raw.layout === "string"
     ? { mode: normalizePresentationMode(raw.layout) }
     : raw.layout;
-  const config = mergeConfig<Record<string, unknown>>(DEFAULT_CONFIG, {
+  const config = mergeConfig(DEFAULT_CONFIG, {
     ...raw,
     layout: layoutOverride,
   });

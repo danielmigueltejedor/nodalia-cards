@@ -48,10 +48,36 @@
     actionFields("icon_double_tap", "")
   ];
 
+  // src/shared/config-values.ts
+  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var unsafeKeys = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
+  function compactConfig(value, preserveEmptyKeys = []) {
+    if (Array.isArray(value)) return value.map((item) => compactConfig(item, preserveEmptyKeys)).filter((item) => item !== void 0);
+    if (isRecord(value)) {
+      const result = {};
+      for (const [key, item] of Object.entries(value)) {
+        if (unsafeKeys.has(key)) continue;
+        if (item === "" && preserveEmptyKeys.includes(key)) {
+          result[key] = "";
+          continue;
+        }
+        const cleaned = compactConfig(item, preserveEmptyKeys);
+        if (cleaned !== void 0 && !(isRecord(cleaned) && Object.keys(cleaned).length === 0)) result[key] = cleaned;
+      }
+      return result;
+    }
+    return value === "" || value === null || value === void 0 ? void 0 : value;
+  }
+  function cloneConfigValue(value) {
+    const cloned = window.NodaliaUtils.deepClone(value);
+    if (Array.isArray(value)) return Array.isArray(cloned) ? cloned : [];
+    if (isRecord(value)) return isRecord(cloned) ? cloned : {};
+    return cloned;
+  }
+
   // src/cards/news/news-runtime.ts
   var utils = window.NodaliaUtils;
   var isObject = utils.isObject.bind(utils);
-  var deepClone = utils.deepClone.bind(utils);
   var mergeConfig = utils.mergeDeep.bind(utils);
   var isUnsafeConfigPathKey = utils.isUnsafeConfigPathKey.bind(utils);
 
@@ -162,27 +188,6 @@
     if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
     const numeric = Number(value);
     return Number.isFinite(numeric) ? numeric : null;
-  }
-
-  // src/shared/config-values.ts
-  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
-  var unsafeKeys = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
-  function compactConfig(value, preserveEmptyKeys = []) {
-    if (Array.isArray(value)) return value.map((item) => compactConfig(item, preserveEmptyKeys)).filter((item) => item !== void 0);
-    if (isRecord(value)) {
-      const result = {};
-      for (const [key, item] of Object.entries(value)) {
-        if (unsafeKeys.has(key)) continue;
-        if (item === "" && preserveEmptyKeys.includes(key)) {
-          result[key] = "";
-          continue;
-        }
-        const cleaned = compactConfig(item, preserveEmptyKeys);
-        if (cleaned !== void 0 && !(isRecord(cleaned) && Object.keys(cleaned).length === 0)) result[key] = cleaned;
-      }
-      return result;
-    }
-    return value === "" || value === null || value === void 0 ? void 0 : value;
   }
 
   // src/shared/editor-object-paths.ts
@@ -837,7 +842,7 @@
       }
       static getStubConfig(hass, entities = [], entitiesFallback = []) {
         const sources = [];
-        const config = { ...deepClone(STUB_CONFIG), sources };
+        const config = { ...cloneConfigValue(STUB_CONFIG), sources };
         const entityId = window.NodaliaUtils.findStubEntityIds(
           hass,
           entities,
@@ -2097,7 +2102,7 @@
       }
       _emitConfig() {
         const focusState = this._captureFocusState();
-        const nextConfig = deepClone(this._config);
+        const nextConfig = cloneConfigValue(this._config);
         this._config = normalizeConfig(compactConfig(nextConfig));
         this._render();
         this._restoreFocusState(focusState);

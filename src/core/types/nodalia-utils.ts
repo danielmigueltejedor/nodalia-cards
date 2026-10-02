@@ -6,7 +6,8 @@ import type { HomeAssistant } from "./home-assistant";
  * available at runtime on the compatibility global.
  */
 /** The runtime reconstructs default object keys and converts primitive leaves. */
-export type SanitizedStyleTree<T> = T extends string ? string : T extends number ? number : T extends boolean ? boolean : T extends readonly unknown[] ? unknown[] : T extends object ? { [K in keyof T]: SanitizedStyleTree<T[K]> } : T;
+export interface CssStyleDefaults { [key:string]:string|number|boolean|CssStyleDefaults }
+export type SanitizedCssStyles<T extends CssStyleDefaults> = { [K in keyof T]:T[K] extends CssStyleDefaults?SanitizedCssStyles<T[K]>:T[K] extends number?number:T[K] extends boolean?boolean:string };
 export interface HostPointerHoldBinding { (): void; reconnect?: () => void; }
 export interface NodaliaUtilsApi {
   composeCardSurfaceBackground?: (options?: {base?:unknown;accentColor?:unknown;glazeStrength?:unknown;glazeNeutralStrength?:unknown;glazeMode?:"neutral"|"none"|"accent";extraLayers?:unknown[];glazeTextWash?:unknown}) => string;
@@ -23,7 +24,7 @@ export interface NodaliaUtilsApi {
   editorSortLocale?: (hass: HomeAssistant | null | undefined, language?: string) => string;
   isKeyboardActivationEvent?: (event: Event) => boolean;
   warnStrictServiceDenied?: (label: string, service: unknown) => void;
-  applyDefaultConfigNameFromEntity?: <Config extends Record<string, unknown>>(config: Config, hass: HomeAssistant | null | undefined, options?: { previousEntity?: string }) => Config;
+  applyDefaultConfigNameFromEntity?: (config: Record<string,unknown>, hass: HomeAssistant | null | undefined, options?: { previousEntity?: string }) => Record<string,unknown>;
   renderEditorCollapsibleToggleHtml: (options: { toggleId: string; expanded: boolean; showLabel: string; hideLabel: string; escapeHtml: (value: unknown) => string }) => string;
   renderReducedMotionStyles?: () => string;
   bindHostPointerHoldGesture?: <Zone>(host: HTMLElement, options: {
@@ -40,7 +41,7 @@ export interface NodaliaUtilsApi {
   }) => void;
   captureEditorFocusState: (host: HTMLElement) => EditorFocusState | null;
   restoreEditorFocusState: (host: HTMLElement, state: EditorFocusState | null) => void;
-  bindShadowListeners: (host: HTMLElement, listeners: readonly (readonly [string, EventListener, (boolean | AddEventListenerOptions)?])[], key?: string) => boolean;
+  bindShadowListeners: (host: HTMLElement, listeners: readonly (readonly [string, EventListener, (boolean | AddEventListenerOptions)?] | {type:string;listener:EventListener;options?:boolean|AddEventListenerOptions})[], key?: string) => boolean;
   releaseShadowListeners: (host: HTMLElement, key?: string) => boolean;
   bindEditorDialogLayoutFix?: (host: HTMLElement) => void;
   releaseEditorDialogLayoutFix?: (host: HTMLElement) => void;
@@ -52,9 +53,12 @@ export interface NodaliaUtilsApi {
   }) => void;
   isLovelaceHassStatesHydrated?: (hass: HomeAssistant | null | undefined) => boolean;
   isObject(value: unknown): value is Record<string, unknown>;
-  deepClone<T>(value: T): T;
-  mergeDeep<T>(base: T, override?: unknown): T;
-  compactConfig<T>(value: T): T;
+  deepClone(value: unknown): unknown;
+  mergeDeep(base: Record<string,unknown>, override?: unknown): Record<string,unknown>;
+  mergeDeep(base: unknown, override?: unknown): unknown;
+  compactConfig(value: Record<string,unknown>): Record<string,unknown>;
+  compactConfig(value: readonly unknown[]): unknown[];
+  compactConfig(value: unknown): unknown;
   getByPath(target: object, path: string): unknown;
   shouldUseCompactCardLayout(options?: {
     mode?: unknown;
@@ -73,11 +77,11 @@ export interface NodaliaUtilsApi {
   escapeHtml(value: unknown): string;
   escapeSelectorValue(value: unknown): string;
   fireEvent(
-    node: EventTarget | null | undefined,
+    node: EventTarget,
     type: string,
     detail?: unknown,
-    options?: Record<string, unknown>,
-  ): void;
+    options?: CustomEventInit,
+  ): CustomEvent;
   normalizeTextKey(value: unknown): string;
   sanitizeActionUrl(value: unknown, options?: { allowRelative?: boolean; allowHash?: boolean }): string;
   getEntityFriendlyName(hass: HomeAssistant | null | undefined, entityId: unknown): string;
@@ -89,7 +93,8 @@ export interface NodaliaUtilsApi {
     limit?: number,
   ): string[];
   normalizeSecurityConfig?: (security: unknown, defaults?: unknown) => Record<string, unknown>;
-  sanitizeStyleTree?: <T>(candidate: unknown, fallback: T) => SanitizedStyleTree<T>;
+  sanitizeStyleTree<T extends CssStyleDefaults>(candidate:unknown,fallback:T):SanitizedCssStyles<T>;
+  sanitizeStyleTree(candidate:unknown,fallback:unknown):unknown;
   stripEqualToDefaults?: (config: unknown, defaults: unknown) => unknown;
   createEntitySuggestion: (cardType: string, hass: HomeAssistant, entityId: string, options?: {
     domains?: string[];
@@ -110,11 +115,11 @@ export interface NodaliaUtilsApi {
     options?: { editorTag?: string },
   ) => void;
   renderLovelaceEntityGuardCardHtml?: (
-    hass: unknown,
+    hass: HomeAssistant|null|undefined,
     entityId: unknown,
     options?: Record<string, unknown>,
   ) => string | null;
-  renderLovelaceEntityGuardForEntities?: (hass: unknown, entityIds: unknown, options?: Record<string, unknown>) => string | null;
+  renderLovelaceEntityGuardForEntities?: (hass: HomeAssistant|null|undefined, entityIds: unknown, options?: Record<string, unknown>) => string | null;
   renderCardEmptyStateDocument?: (innerHtml: string, options?: Record<string, unknown>) => string;
   scheduleDeferTimer?: (host: object, callback: () => void, delayMs: number) => number;
   clearDeferTimers?: (host: object) => void;
@@ -122,16 +127,16 @@ export interface NodaliaUtilsApi {
   renderEditorEngineBannerStyles?: () => string;
   engineStatusSignature?: (engine: unknown) => string;
   renderEditorEngineBannerHtml?: (options: Record<string, unknown>) => string;
-  postHomeAssistantWebhook?: (webhookId: string, body: unknown, hass?: unknown) => Promise<unknown>;
+  postHomeAssistantWebhook?: (webhookId: string, body: unknown, hass?: HomeAssistant|null) => Promise<unknown>;
   invokeHomeAssistantService?: (
-    host: object,
-    hass: unknown,
+    host: HTMLElement,
+    hass: HomeAssistant|null|undefined,
     domain: string,
     service: string,
     serviceData?: Record<string, unknown>,
     target?: Record<string, unknown> | null,
   ) => unknown;
-  clampEditorDialogScroll?: (editorHost: object) => void;
+  clampEditorDialogScroll?: (editorHost: HTMLElement) => void;
   renderEditorCardBorderRadiusHtml(options: EditorRadiusOptions): string;
   renderEditorChipBorderRadiusHtml(options: EditorRadiusOptions): string;
   sanitizeCssValue(value: unknown, fallback?: unknown): string;

@@ -37,6 +37,8 @@ export interface HassConfig {
 }
 
 export interface HomeAssistant {
+  connected?:boolean;
+  localize?:(key:string, replacements?:Record<string,string>)=>string;
   formatEntityState?: (state: HassEntity) => unknown;
   states: Record<string, HassEntity | undefined>;
   services?: Record<string,Record<string,unknown>>;

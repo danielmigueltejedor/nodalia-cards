@@ -320,12 +320,38 @@
     return { rows: "auto", columns: 6, min_rows: 1, min_columns: 2 };
   }
 
+  // src/shared/config-values.ts
+  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var unsafeKeys = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
+  function compactConfig(value, preserveEmptyKeys = []) {
+    if (Array.isArray(value)) return value.map((item) => compactConfig(item, preserveEmptyKeys)).filter((item) => item !== void 0);
+    if (isRecord(value)) {
+      const result = {};
+      for (const [key, item] of Object.entries(value)) {
+        if (unsafeKeys.has(key)) continue;
+        if (item === "" && preserveEmptyKeys.includes(key)) {
+          result[key] = "";
+          continue;
+        }
+        const cleaned = compactConfig(item, preserveEmptyKeys);
+        if (cleaned !== void 0 && !(isRecord(cleaned) && Object.keys(cleaned).length === 0)) result[key] = cleaned;
+      }
+      return result;
+    }
+    return value === "" || value === null || value === void 0 ? void 0 : value;
+  }
+  function cloneConfigValue(value) {
+    const cloned = window.NodaliaUtils.deepClone(value);
+    if (Array.isArray(value)) return Array.isArray(cloned) ? cloned : [];
+    if (isRecord(value)) return isRecord(cloned) ? cloned : {};
+    return cloned;
+  }
+
   // src/cards/media-player/media-player-runtime.ts
   var utils = window.NodaliaUtils;
   var isObject = utils.isObject.bind(utils);
-  var deepClone = utils.deepClone.bind(utils);
   var mergeConfig = utils.mergeDeep.bind(utils);
-  var compactConfig = utils.compactConfig.bind(utils);
+  var compactConfig2 = utils.compactConfig.bind(utils);
   var isUnsafeConfigPathKey = utils.isUnsafeConfigPathKey.bind(utils);
   var setByPath = utils.setByPath.bind(utils);
   var deleteByPath = utils.deleteByPath.bind(utils);
@@ -506,7 +532,7 @@
         layout.show_desktop = mediaConfig.show_desktop;
       }
       if (Array.isArray(mediaConfig.players) && mediaConfig.players.length > 0 && (!Array.isArray(raw.players) || raw.players.length === 0)) {
-        config.players = deepClone(mediaConfig.players);
+        config.players = cloneConfigValue(mediaConfig.players);
       }
     }
     if ((!Array.isArray(config.players) || config.players.length === 0) && typeof config.entity === "string" && config.entity) {
@@ -915,11 +941,11 @@
   function clamp2(value, min, max) {
     return Math.min(max, Math.max(min, value));
   }
-  function isRecord(value) {
+  function isRecord2(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value);
   }
   function record(value) {
-    return isRecord(value) ? value : {};
+    return isRecord2(value) ? value : {};
   }
   function supportsMediaSeek(state) {
     const features = Number(record(record(state).attributes).supported_features || 0);
@@ -1024,27 +1050,6 @@
     const channels = parseEditorColorChannels(resolved) || parseEditorColorChannels(source) || browserColorChannels(resolved) || parseEditorColorChannels(resolveEditorColorValue(fallbackValue)) || parseEditorColorChannels(fallbackValue) || { red: 113, green: 192, blue: 255, alpha: 1 };
     const hex = `#${formatEditorHexChannel(channels.red)}${formatEditorHexChannel(channels.green)}${formatEditorHexChannel(channels.blue)}`;
     return { alpha: channels.alpha, hex, label: source, resolved, source, value: formatEditorColorFromHex(hex, channels.alpha) };
-  }
-
-  // src/shared/config-values.ts
-  var isRecord2 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
-  var unsafeKeys = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
-  function compactConfig2(value, preserveEmptyKeys = []) {
-    if (Array.isArray(value)) return value.map((item) => compactConfig2(item, preserveEmptyKeys)).filter((item) => item !== void 0);
-    if (isRecord2(value)) {
-      const result = {};
-      for (const [key, item] of Object.entries(value)) {
-        if (unsafeKeys.has(key)) continue;
-        if (item === "" && preserveEmptyKeys.includes(key)) {
-          result[key] = "";
-          continue;
-        }
-        const cleaned = compactConfig2(item, preserveEmptyKeys);
-        if (cleaned !== void 0 && !(isRecord2(cleaned) && Object.keys(cleaned).length === 0)) result[key] = cleaned;
-      }
-      return result;
-    }
-    return value === "" || value === null || value === void 0 ? void 0 : value;
   }
 
   // src/shared/url-query.ts
@@ -1176,7 +1181,7 @@
     return hass?.states?.[entityId]?.attributes?.friendly_name || entityId;
   }
   function compactConfig3(value) {
-    return compactConfig2(value, ["entity"]);
+    return compactConfig(value, ["entity"]);
   }
   function formatEditorJsonValue(value) {
     if (value === void 0 || value === null || value === "") {
@@ -6025,7 +6030,7 @@
       }
       _emitConfig() {
         const focusState = this._captureFocusState();
-        const nextConfig = deepClone(this._config);
+        const nextConfig = cloneConfigValue(this._config);
         if (!Array.isArray(nextConfig.players)) {
           nextConfig.players = [];
         }

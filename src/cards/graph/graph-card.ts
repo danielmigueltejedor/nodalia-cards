@@ -109,7 +109,7 @@ class NodaliaGraphCard extends HTMLElement {
   }
 
   static getStubConfig(hass: HomeAssistant | null | undefined, entities: unknown = [], entitiesFallback: unknown = []) {
-    const config: Omit<typeof STUB_CONFIG, "entities"> & { entities: { entity: string; name: string; color?: string }[] } = deepClone(STUB_CONFIG);
+    const config: Omit<typeof STUB_CONFIG, "entities"> & { entities: { entity: string; name: string; color?: string }[] } = { ...STUB_CONFIG, entities: STUB_CONFIG.entities.map(entry=>({...entry})) };
     const entityIds = getStubEntityIds(
       hass,
       ["sensor", "number", "input_number"],

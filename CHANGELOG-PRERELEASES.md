@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+- Check the complete shared utility runtime, guard reconstructed JSON configuration roots, cancel retired editor layout frames and deferred actions, keep modal cleanup scoped to its own dialog, and release shadow listeners from their original roots. Preserve public helpers and existing configuration behavior.
+
 - Check the go2rtc playback runtime, discard retired autoplay/WebRTC/frame/audio callbacks, close partially created audio contexts and keep blank stream sources disconnected. Generate its standalone ES module from the same source used by Camera.
 
 - Flush queued Light brightness/color exactly once when an HA update arrives after the optimistic turn-on deadline.

@@ -120,7 +120,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     window.NodaliaUtils.restoreEditorFocusState(this, focusState);
   }
 
-  _notifyConfigChange(nextConfig: ReturnType<typeof normalizeConfig>) {
+  _notifyConfigChange(nextConfig: unknown) {
     const focusState = this._captureFocusState();
     this._config = normalizeConfig(nextConfig);
     this._render();
@@ -766,7 +766,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
             ${this._renderEntityPickerField("ed.vacuum.robot_entity", "entity", config.entity, { domains: ["vacuum"] })}
             ${this._renderTextField("ed.entity.name", "name", config.name, { placeholder: "Roborock Qrevo S" })}
             ${this._renderIconPickerField("ed.entity.icon", "icon", config.icon, { placeholder: "mdi:robot-vacuum" })}
-            ${this._renderEntityPickerField("ed.advance_vacuum.map_source_entity", "map_source.camera", config.map_source?.camera, { domains: ["camera", "image"] })}
+            ${this._renderEntityPickerField("ed.advance_vacuum.map_source_entity", "map_source.camera", (isObject(config.map_source)?config.map_source:{}).camera, { domains: ["camera", "image"] })}
             ${this._renderSelectField("ed.advance_vacuum.platform", "vacuum_platform", config.vacuum_platform || "auto", [
               { value: "auto", label: "Auto (Home Assistant)" },
               { value: "Roborock", label: "Roborock" },
@@ -785,7 +785,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
                   hint: "ed.advance_vacuum.mqtt_topic_hint",
                 })
               : ""}
-            ${this._renderEntityPickerField("ed.advance_vacuum.calibration_entity", "calibration_source.entity", config.calibration_source?.entity, { domains: ["camera", "image", "sensor"] })}
+            ${this._renderEntityPickerField("ed.advance_vacuum.calibration_entity", "calibration_source.entity", (isObject(config.calibration_source)?config.calibration_source:{}).entity, { domains: ["camera", "image", "sensor"] })}
             ${this._renderEntityPickerField("ed.advance_vacuum.room_tracking_entity", "room_tracking.entity", config.room_tracking?.entity, { domains: ["sensor", "select", "text", "input_text"] })}
             ${this._renderEntityPickerField("ed.advance_vacuum.room_tracking_activity_entity", "room_tracking.activity_entity", config.room_tracking?.activity_entity, { domains: ["sensor", "binary_sensor", "select", "text", "input_text"] })}
             ${this._renderTextField("ed.advance_vacuum.room_tracking_attribute", "room_tracking.attribute", config.room_tracking?.attribute || "", {
@@ -823,7 +823,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.advance_vacuum.map_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("ed.advance_vacuum.calibration_from_camera", "calibration_source.camera", config.calibration_source?.camera !== false)}
+            ${this._renderCheckboxField("ed.advance_vacuum.calibration_from_camera", "calibration_source.camera", (isObject(config.calibration_source)?config.calibration_source:{}).camera !== false)}
             ${this._renderCheckboxField("ed.advance_vacuum.map_locked", "map_locked", config.map_locked !== false)}
             ${this._renderCheckboxField("ed.advance_vacuum.show_room_labels", "show_room_labels", config.show_room_labels !== false)}
             ${this._renderCheckboxField("ed.advance_vacuum.show_room_markers", "show_room_markers", config.show_room_markers !== false)}
@@ -887,8 +887,8 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.entity.haptics_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("ed.vacuum.enable_haptics", "haptics.enabled", config.haptics?.enabled === true)}
-            ${this._renderCheckboxField("ed.vacuum.fallback_vibrate", "haptics.fallback_vibrate", config.haptics?.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.vacuum.enable_haptics", "haptics.enabled", (isObject(config.haptics)?config.haptics:{}).enabled === true)}
+            ${this._renderCheckboxField("ed.vacuum.fallback_vibrate", "haptics.fallback_vibrate", (isObject(config.haptics)?config.haptics:{}).fallback_vibrate === true)}
             ${this._renderSelectField("ed.entity.haptic_style", "haptics.style", hapticStyle, [
               { value: "selection", label: "Selection" },
               { value: "light", label: "Light" },

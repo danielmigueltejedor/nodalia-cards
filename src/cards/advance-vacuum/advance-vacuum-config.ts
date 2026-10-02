@@ -22,7 +22,7 @@ export function normalizeConfig(rawConfig: unknown = {}) {
     activity_entity: String(tracking.activity_entity ?? "").trim(),
     auto_detect: tracking.auto_detect !== false,
   };
-  const custom_menu = { ...menu, items: normalizeCustomMenuItems(menu.items) };
+  const custom_menu:Record<string,unknown>&{items:ReturnType<typeof normalizeCustomMenuItems>} = { ...menu, items: normalizeCustomMenuItems(menu.items) };
   const security = {
     ...DEFAULT_CONFIG.security,
     ...(isObject(config.security) ? config.security : {}),

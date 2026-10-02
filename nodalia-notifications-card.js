@@ -20,9 +20,17 @@
     failure: [12, 40, 12, 40, 18]
   };
 
+  // src/shared/config-values.ts
+  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  function cloneConfigValue(value) {
+    const cloned = window.NodaliaUtils.deepClone(value);
+    if (Array.isArray(value)) return Array.isArray(cloned) ? cloned : [];
+    if (isRecord(value)) return isRecord(cloned) ? cloned : {};
+    return cloned;
+  }
+
   // src/cards/notifications/notifications-runtime.ts
   var utils = window.NodaliaUtils;
-  var deepClone = utils.deepClone.bind(utils);
   var isObject = utils.isObject.bind(utils);
   var clamp = utils.clamp.bind(utils);
   var isUnsafeConfigPathKey = utils.isUnsafeConfigPathKey.bind(utils);
@@ -178,7 +186,7 @@
 
   // src/cards/notifications/notifications-normalization.ts
   function mergeDeep(base, override) {
-    const out = deepClone(base);
+    const out = cloneConfigValue(base);
     if (!isObject(override)) {
       return out;
     }
@@ -190,7 +198,7 @@
       if (isObject(value) && isObject(previous)) {
         out[key] = mergeDeep(previous, value);
       } else if (value !== void 0) {
-        out[key] = deepClone(value);
+        out[key] = cloneConfigValue(value);
       }
     });
     return out;
@@ -767,7 +775,7 @@
       return {};
     }
     if (isObject(value)) {
-      return deepClone(value);
+      return cloneConfigValue(value);
     }
     try {
       const parsed = JSON.parse(String(value));

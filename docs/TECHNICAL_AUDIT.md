@@ -1946,3 +1946,35 @@ the unchanged limits.
 - Climate PR #287 passed static/HACS/CodeQL/security/review and every remote
   browser gate, including Firefox, before normal integration. Generic utility
   and runtime/editor translation lookup source migration remains before release.
+
+## Shared utility runtime — checked source and owned native work
+
+- Move the complete utility runtime into `src/shared/utils-runtime.ts` and
+  generate the existing `window.NodaliaUtils` compatibility artifact. Keep all
+  public helpers, lazy custom elements, picker callbacks and native DOM contracts.
+  Embed readable Engine/reduced-motion CSS without adding published resources.
+- Replace incorrect generic JSON-copy promises with unknown results. Configuration
+  copies guard reconstructed object/array roots; merge and compaction overloads
+  describe actual reconstructed roots. Preserve Date/toJSON JSON behavior on the
+  public deepClone helper. Guard nested configuration fields in real consumers.
+- Old modal cleanup cannot release a newer dialog. Release shadow event groups
+  from the root that owned the binding. Cancel pointer holds on blur/hidden state,
+  pending taps after host detachment, cleared defer callbacks and editor layout
+  frames after dialog closure. Coalesce editor layout requests and restore styles.
+- CSS default reconstruction uses own properties without mutating prototypes;
+  configuration stripping and path mutation reject unsafe keys. Numeric and
+  boolean style leaves retain their actual types, including Camera overlay strength.
+- Strict typecheck, typed lint, architecture/distribution/translation checks and
+  all 763 unit tests pass. Six new tests cover generated source, JSON root guards,
+  prototype keys, retired deferred callbacks and original-root event cleanup.
+  All 16,808 valid helper comparisons and 3,000 configurations across all 25
+  public card APIs match the previous runtime. Five focused
+  browser scenarios pass within the full three-browser run: 860 passing cases and
+  one existing exclusion. Raw/gzipSync: 4,325,178 / 967,616 bytes; caps unchanged.
+- Fixture corrections reflect native asynchronous animation frames and the actual
+  document.hidden property. Source-text checks accept generated parenthesized
+  callbacks and extracted CSS; behavioral assertions remain intact.
+- Go2rtc PR #288 passed static/HACS/CodeQL/security and all four remote browsers
+  before normal integration. Cursor Bugbot reported its account usage limit;
+  do not describe the unavailable review as an approval. Runtime/editor translation
+  lookup code still requires migration before 3.0.0-alpha.1 can be released.

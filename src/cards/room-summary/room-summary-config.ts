@@ -47,7 +47,7 @@ export function normalizeConfig(rawConfig: unknown = {}) {
 
 function buildRoomConfig(rawConfig: unknown = {}) {
   const raw = isObject(rawConfig) ? rawConfig : {};
-  const config = mergeConfig<Record<string, unknown>>(DEFAULT_CONFIG, raw);
+  const config = mergeConfig(DEFAULT_CONFIG, raw);
 
   config.name = String(config.name ?? "").trim();
   config.icon = String(config.icon ?? DEFAULT_CONFIG.icon).trim() || DEFAULT_CONFIG.icon;

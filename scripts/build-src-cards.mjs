@@ -9,6 +9,7 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const SRC_CARD_ENTRIES = CARD_REGISTRY.map(card => ({ entry: card.standalone, outfile: card.artifact }));
 
 export const RUNTIME_ENTRIES = [
+  { entry: "src/shared/utils-runtime.ts", outfile: "nodalia-utils.js" },
   { entry: "src/shared/go2rtc-player.ts", outfile: "nodalia-go2rtc-player.js", format: "esm" },
   { entry: "src/shared/bubble-contrast-runtime.ts", outfile: "nodalia-bubble-contrast.js" },
   { entry: "src/core/engine-client-runtime.ts", outfile: "nodalia-backend.js" },

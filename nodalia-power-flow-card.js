@@ -94,10 +94,36 @@
     actionFields("icon_double_tap", "")
   ];
 
+  // src/shared/config-values.ts
+  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var unsafeKeys = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
+  function compactConfig(value, preserveEmptyKeys = []) {
+    if (Array.isArray(value)) return value.map((item) => compactConfig(item, preserveEmptyKeys)).filter((item) => item !== void 0);
+    if (isRecord(value)) {
+      const result = {};
+      for (const [key, item] of Object.entries(value)) {
+        if (unsafeKeys.has(key)) continue;
+        if (item === "" && preserveEmptyKeys.includes(key)) {
+          result[key] = "";
+          continue;
+        }
+        const cleaned = compactConfig(item, preserveEmptyKeys);
+        if (cleaned !== void 0 && !(isRecord(cleaned) && Object.keys(cleaned).length === 0)) result[key] = cleaned;
+      }
+      return result;
+    }
+    return value === "" || value === null || value === void 0 ? void 0 : value;
+  }
+  function cloneConfigValue(value) {
+    const cloned = window.NodaliaUtils.deepClone(value);
+    if (Array.isArray(value)) return Array.isArray(cloned) ? cloned : [];
+    if (isRecord(value)) return isRecord(cloned) ? cloned : {};
+    return cloned;
+  }
+
   // src/cards/power-flow/power-flow-runtime.ts
   var utils = window.NodaliaUtils;
   var isObject = utils.isObject.bind(utils);
-  var deepClone = utils.deepClone.bind(utils);
   var mergeConfig = utils.mergeDeep.bind(utils);
   var isUnsafeConfigPathKey = utils.isUnsafeConfigPathKey.bind(utils);
   var setByPath = utils.setByPath.bind(utils);
@@ -134,27 +160,6 @@
   function parseSizeToPixels(value, fallback = 0) {
     const numeric = Number.parseFloat(String(value ?? ""));
     return Number.isFinite(numeric) ? numeric : fallback;
-  }
-
-  // src/shared/config-values.ts
-  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
-  var unsafeKeys = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
-  function compactConfig(value, preserveEmptyKeys = []) {
-    if (Array.isArray(value)) return value.map((item) => compactConfig(item, preserveEmptyKeys)).filter((item) => item !== void 0);
-    if (isRecord(value)) {
-      const result = {};
-      for (const [key, item] of Object.entries(value)) {
-        if (unsafeKeys.has(key)) continue;
-        if (item === "" && preserveEmptyKeys.includes(key)) {
-          result[key] = "";
-          continue;
-        }
-        const cleaned = compactConfig(item, preserveEmptyKeys);
-        if (cleaned !== void 0 && !(isRecord(cleaned) && Object.keys(cleaned).length === 0)) result[key] = cleaned;
-      }
-      return result;
-    }
-    return value === "" || value === null || value === void 0 ? void 0 : value;
   }
 
   // src/shared/editor-lists.ts
@@ -249,12 +254,12 @@
     language: "auto",
     name: "",
     entities: {
-      grid: deepClone(NODE_DEFAULTS.grid),
-      home: deepClone(NODE_DEFAULTS.home),
-      solar: deepClone(NODE_DEFAULTS.solar),
-      battery: deepClone(NODE_DEFAULTS.battery),
-      water: deepClone(NODE_DEFAULTS.water),
-      gas: deepClone(NODE_DEFAULTS.gas),
+      grid: cloneConfigValue(NODE_DEFAULTS.grid),
+      home: cloneConfigValue(NODE_DEFAULTS.home),
+      solar: cloneConfigValue(NODE_DEFAULTS.solar),
+      battery: cloneConfigValue(NODE_DEFAULTS.battery),
+      water: cloneConfigValue(NODE_DEFAULTS.water),
+      gas: cloneConfigValue(NODE_DEFAULTS.gas),
       individual: []
     },
     display_zero_lines: {
@@ -852,13 +857,13 @@
   };
   function normalizeConfig(rawConfig = {}) {
     const merged = mergeConfig(DEFAULT_CONFIG, isObject(rawConfig) ? rawConfig : {});
-    const entities = { ...deepClone(DEFAULT_CONFIG.entities), ...isObject(merged.entities) ? merged.entities : {} };
+    const entities = { ...cloneConfigValue(DEFAULT_CONFIG.entities), ...isObject(merged.entities) ? merged.entities : {} };
     const entityFields = { individual: sanitizeIndividualEntries({ entities }) };
     const normalizedEntities = { ...entities, ...entityFields };
     const chips = { ...DEFAULT_CONFIG.consumption_chips, ...isObject(merged.consumption_chips) ? merged.consumption_chips : {} };
     const consumptionChips = { ...chips, day_entity: String(chips.day_entity ?? "").trim(), month_entity: String(chips.month_entity ?? "").trim(), day_label: String(chips.day_label ?? "").trim(), month_label: String(chips.month_label ?? "").trim() };
     merged.show_home_device_popup = merged.show_home_device_popup !== false;
-    merged.styles = window.NodaliaUtils?.sanitizeStyleTree?.(merged.styles, DEFAULT_CONFIG.styles) ?? deepClone(DEFAULT_CONFIG.styles);
+    merged.styles = window.NodaliaUtils?.sanitizeStyleTree?.(merged.styles, DEFAULT_CONFIG.styles) ?? cloneConfigValue(DEFAULT_CONFIG.styles);
     const fields = {
       entities: normalizedEntities,
       consumption_chips: consumptionChips,
@@ -906,7 +911,7 @@
         return document.createElement(EDITOR_TAG);
       }
       static getStubConfig(hass, entities = [], entitiesFallback = []) {
-        const config = deepClone(STUB_CONFIG);
+        const config = { ...cloneConfigValue(STUB_CONFIG), entities: { ...STUB_CONFIG.entities, grid: { ...STUB_CONFIG.entities.grid }, home: { ...STUB_CONFIG.entities.home } } };
         const entityId = getStubEntityId(hass, ["sensor"], entities, entitiesFallback);
         if (!entityId) {
           return config;
@@ -3764,11 +3769,11 @@
       }
       _emitConfig() {
         const focusState = this._captureFocusState();
-        const nextConfig = deepClone(this._config);
+        const nextConfig = cloneConfigValue(this._config);
         this._config = normalizeConfig(compactConfig(nextConfig));
         this._render();
         this._restoreFocusState(focusState);
-        const persisted = deepClone(this._config);
+        const persisted = cloneConfigValue(this._config);
         fireEvent(this, "config-changed", {
           config: compactConfig(window.NodaliaUtils.stripEqualToDefaults?.(persisted, DEFAULT_CONFIG) ?? {})
         });

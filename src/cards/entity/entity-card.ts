@@ -117,7 +117,7 @@ class NodaliaEntityCard extends HTMLElement {
   }
 
   static getStubConfig(hass: HomeAssistant|null|undefined, entities: unknown = [], entitiesFallback: unknown = []) {
-    return applyStubEntity(deepClone(STUB_CONFIG), hass, [], entities, entitiesFallback);
+    return applyStubEntity({ ...STUB_CONFIG }, hass, [], entities, entitiesFallback);
   }
 
   static getEntitySuggestion(hass: HomeAssistant|null|undefined, entityId: string) {

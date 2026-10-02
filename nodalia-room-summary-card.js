@@ -42,10 +42,18 @@
     actionFields("icon_double_tap", "")
   ];
 
+  // src/shared/config-values.ts
+  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  function cloneConfigValue(value) {
+    const cloned = window.NodaliaUtils.deepClone(value);
+    if (Array.isArray(value)) return Array.isArray(cloned) ? cloned : [];
+    if (isRecord(value)) return isRecord(cloned) ? cloned : {};
+    return cloned;
+  }
+
   // src/cards/room-summary/room-summary-runtime.ts
   var utils = window.NodaliaUtils;
   var isObject = utils.isObject.bind(utils);
-  var deepClone = utils.deepClone.bind(utils);
   var mergeConfig = utils.mergeDeep.bind(utils);
   var escapeHtml = utils.escapeHtml.bind(utils);
   var clamp = utils.clamp.bind(utils);
@@ -335,7 +343,7 @@
     return "var(--info-color, #71c0ff)";
   }
   function stripEqualToDefaults(config, defaults = DEFAULT_CONFIG) {
-    const result = deepClone(isObject(config) ? config : {});
+    const result = cloneConfigValue(isObject(config) ? config : {});
     const walk = (cur, base) => {
       if (!isObject(cur) || !isObject(base)) return;
       Object.keys(cur).forEach((key) => {
@@ -410,7 +418,7 @@
     config.presence = entityScalar(config.presence, config.occupancy_entity, config.occupancy);
     config.occupancy = entityScalar(config.occupancy, config.presence);
     config.climate = entityScalar(config.climate, config.climate_entity);
-    const cameraConfig = isObject(config.camera_config) ? deepClone(config.camera_config) : {};
+    const cameraConfig = isObject(config.camera_config) ? cloneConfigValue(config.camera_config) : {};
     const camera = entityScalar(
       config.camera,
       cameraConfig.entity,
@@ -424,8 +432,8 @@
         cameraConfig.cameras = [camera, ...cameras];
       }
     }
-    const mediaSource = isObject(config.media_config) ? deepClone(config.media_config) : {};
-    const players = Array.isArray(mediaSource.players) ? mediaSource.players.filter(isObject).map((player) => deepClone(player)) : [];
+    const mediaSource = isObject(config.media_config) ? cloneConfigValue(config.media_config) : {};
+    const players = Array.isArray(mediaSource.players) ? mediaSource.players.filter(isObject).map((player) => cloneConfigValue(player)) : [];
     const mediaConfig = { ...mediaSource, players };
     const nativeMediaIds = players.map((player) => String(player.entity || "").trim()).filter(Boolean);
     const mediaPlayer = entityScalar(config.media_player, nativeMediaIds[0]);
@@ -452,7 +460,7 @@
         const byEntity = options.find((option) => String(option.entity || "").trim() === entity);
         const source = byEntity || options[index] || {};
         return {
-          ...deepClone(source),
+          ...cloneConfigValue(source),
           entity,
           name: String(source.name || "").trim(),
           icon: String(source.icon || "").trim()
@@ -497,7 +505,7 @@
     const animations = mergeConfig(DEFAULT_CONFIG.animations, config.animations || {});
     config.animations = animations;
     config.security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security) ?? mergeConfig(DEFAULT_CONFIG.security, config.security || {});
-    config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles) ?? deepClone(DEFAULT_CONFIG.styles);
+    config.styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles) ?? cloneConfigValue(DEFAULT_CONFIG.styles);
     const fields = {
       ...lists,
       haptics,
@@ -590,7 +598,7 @@
         return document.createElement(EDITOR_TAG);
       }
       static getStubConfig() {
-        return deepClone(STUB_CONFIG);
+        return cloneConfigValue(STUB_CONFIG);
       }
       constructor() {
         super();
@@ -1095,7 +1103,7 @@
         return invokeHassService(this, this._hass, domain, service, data, target);
       }
       _parseActionObject(value) {
-        if (isObject(value)) return deepClone(value);
+        if (isObject(value)) return cloneConfigValue(value);
         const source = String(value || "").trim();
         if (!source) return {};
         try {
@@ -1315,15 +1323,16 @@
         const base = normalizeConfig(config);
         return {
           language: base.language,
-          animations: { ...deepClone(base.animations), content_duration: 0 },
-          haptics: deepClone(base.haptics)
+          animations: { ...cloneConfigValue(base.animations), content_duration: 0 },
+          haptics: cloneConfigValue(base.haptics)
         };
       }
       _hubEmbeddedAccentPack(config) {
-        const parent = deepClone(normalizeConfig(config).styles);
+        const normalizedStyles = normalizeConfig(config).styles;
+        const parent = { ...cloneConfigValue(normalizedStyles), card: { ...normalizedStyles.card }, hub: { ...normalizedStyles.hub }, control: { ...normalizedStyles.control } };
         const hub = parent.hub || {};
         const hubDefaults = DEFAULT_CONFIG.styles.hub;
-        const accent = parent.accent || "var(--primary-color)";
+        const accent = normalizedStyles.accent || "var(--primary-color)";
         return {
           ...parent,
           title_size: hub.embed_title_size || hubDefaults.embed_title_size,
@@ -1359,7 +1368,7 @@
         };
       }
       _hubMediaEmbedConfig(config, host) {
-        const native = isObject(config.media_config) ? deepClone(config.media_config) : {};
+        const native = isObject(config.media_config) ? cloneConfigValue(config.media_config) : {};
         const entityId = String(host?.dataset?.entity || "").trim();
         const scope = String(host?.dataset?.hubMedia || "single");
         const ids = hubMediaPlayerIds(config);
@@ -1382,7 +1391,7 @@
           show_device_chip: native.show_device_chip ?? true,
           album_cover_background: native.album_cover_background !== false,
           players,
-          animations: { ...deepClone(nativeAnimations), content_duration: 0, panel_duration: 0 },
+          animations: { ...cloneConfigValue(nativeAnimations), content_duration: 0, panel_duration: 0 },
           layout: {
             ...nativeLayout,
             mode: layoutMode,
@@ -1398,7 +1407,7 @@
       }
       _hubCameraEmbedConfig(config, host) {
         const entityId = String(host?.dataset?.entity || "").trim();
-        const native = isObject(config.camera_config) ? deepClone(config.camera_config) : {};
+        const native = isObject(config.camera_config) ? cloneConfigValue(config.camera_config) : {};
         const embeddedStyles = this._hubEmbeddedAccentPack(config);
         const cameras = Array.isArray(native.cameras) ? native.cameras.map((id) => String(id || "").trim()).filter(Boolean) : [];
         if (entityId && !cameras.includes(entityId)) {
@@ -2175,7 +2184,7 @@
         return window.NodaliaI18n?.editorStr?.(this._hass, this._config?.language ?? "auto", key) || key;
       }
       _emitConfig(reRender = false) {
-        const outgoing = stripEqualToDefaults(normalizeConfig(deepClone(this._config)), DEFAULT_CONFIG);
+        const outgoing = stripEqualToDefaults(normalizeConfig(cloneConfigValue(this._config)), DEFAULT_CONFIG);
         fireEvent(this, "config-changed", { config: outgoing || {} });
         if (reRender) {
           this._render();
@@ -2257,7 +2266,7 @@
         return isObject(detail) ? detail : {};
       }
       _mediaEditorConfig() {
-        const native = deepClone(this._config.media_config);
+        const native = cloneConfigValue(this._config.media_config);
         if (!Array.isArray(native.players) || !native.players.length) {
           native.players = hubMediaPlayerIds(this._config).map((entity) => ({ entity }));
         }
@@ -2266,7 +2275,7 @@
       _onMediaConfigChanged(event) {
         event.stopPropagation();
         const detail = this._eventDetail(event);
-        const mediaConfig = isObject(detail.config) ? deepClone(detail.config) : {};
+        const mediaConfig = isObject(detail.config) ? cloneConfigValue(detail.config) : {};
         const players = Array.isArray(mediaConfig.players) ? mediaConfig.players.filter(isObject) : [];
         const ids = players.map((player) => String(player.entity || "").trim()).filter(Boolean);
         mediaConfig.players = players;
@@ -2276,7 +2285,7 @@
         this._emitConfig(false);
       }
       _cameraEditorConfig() {
-        const native = isObject(this._config?.camera_config) ? deepClone(this._config.camera_config) : {};
+        const native = isObject(this._config?.camera_config) ? cloneConfigValue(this._config.camera_config) : {};
         const camera = String(this._config?.camera || native.entity || "").trim();
         if (camera) {
           native.entity = camera;
@@ -2290,7 +2299,7 @@
       _onCameraConfigChanged(event) {
         event.stopPropagation();
         const detail = this._eventDetail(event);
-        const cameraConfig = isObject(detail.config) ? deepClone(detail.config) : {};
+        const cameraConfig = isObject(detail.config) ? cloneConfigValue(detail.config) : {};
         this._config.camera_config = cameraConfig;
         this._config.camera = String(
           cameraConfig.entity || (Array.isArray(cameraConfig.cameras) ? cameraConfig.cameras[0] : "") || ""

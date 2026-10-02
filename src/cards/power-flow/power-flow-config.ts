@@ -26,7 +26,7 @@ export const STUB_CONFIG = {
 };
 
 export function normalizeConfig(rawConfig: unknown = {}) {
-  const merged = mergeConfig<Record<string, unknown>>(DEFAULT_CONFIG, isObject(rawConfig) ? rawConfig : {});
+  const merged = mergeConfig(DEFAULT_CONFIG, isObject(rawConfig) ? rawConfig : {});
   const entities: Record<string, unknown> = { ...deepClone(DEFAULT_CONFIG.entities), ...(isObject(merged.entities) ? merged.entities : {}) };
   const entityFields = { individual: sanitizeIndividualEntries({ entities }) };
   const normalizedEntities: typeof entityFields & Record<string, unknown> = { ...entities, ...entityFields };

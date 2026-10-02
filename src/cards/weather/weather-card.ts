@@ -1,7 +1,6 @@
 import { CARD_TAG, EDITOR_TAG, HAPTIC_PATTERNS } from "./weather-constants";
 import {
   clamp,
-  deepClone,
   escapeHtml,
   fireEvent,
   isObject,
@@ -82,7 +81,7 @@ class NodaliaWeatherCard extends HTMLElement {
   }
 
   static getStubConfig(hass: HomeAssistant | null | undefined, entities: unknown = [], entitiesFallback: unknown = []) {
-    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["weather"], entities, entitiesFallback);
+    return applyStubEntity({ ...STUB_CONFIG }, hass, ["weather"], entities, entitiesFallback);
   }
 
   static getEntitySuggestion(hass: HomeAssistant, entityId: string) {

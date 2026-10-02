@@ -160,7 +160,7 @@ export function normalizeConfig(config: unknown = {}) {
     throw new Error('"routes" is required and must be an array');
   }
 
-  const mergedConfig = mergeConfig<Record<string, unknown>>(DEFAULT_CONFIG, baseConfig);
+  const mergedConfig = mergeConfig(DEFAULT_CONFIG, baseConfig);
   const media: Record<string, unknown> = { ...DEFAULT_CONFIG.media_player, ...(isObject(mergedConfig.media_player) ? mergedConfig.media_player : {}) };
   const artwork: Record<string, unknown> = isObject(media.artwork) ? media.artwork : {};
   const artworkMode = String(artwork.mode || "").trim().toLowerCase();
