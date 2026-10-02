@@ -1,7 +1,7 @@
 # Adding a Nodalia card
 
-Use Lock as the small checked example; preserve the existing public resource
-contract rather than copying a large unchecked view/controller.
+Use Lock as a small checked example and preserve the existing public resource
+contract. All existing cards and editors have checked TypeScript source.
 
 1. Create `src/cards/<id>/`: `<id>-card.ts`, `<id>-editor.ts`,
    `<id>-config.ts`, `<id>-types.ts` when needed, `index.ts`, `standalone.ts`.
@@ -40,4 +40,4 @@ contract rather than copying a large unchecked view/controller.
     the registry, package, documentation and regression tests.
 
 No new `@ts-nocheck`, `any`, unsafe casts or runtime import cycles are permitted
-as a shortcut. `scripts/type-debt.json` tracks old debt, not a template for new code.
+as a shortcut. `scripts/type-debt.json` must remain empty. Typed lint applies to every source module.
