@@ -1,0 +1,59 @@
+import {expect,test} from '@playwright/test';
+async function mount(page,{layout='default',deferred=false,animations=false}={}) {
+ await page.goto('/tests/fixtures/browser.html');await page.waitForFunction(()=>customElements.get('nodalia-entity-card'));
+ await page.evaluate(({layout,deferred,animations})=>{
+  window.entityRequests=[];window.entityRest=[];window.entityCommands=[];window.entityInfo=[];
+  window.entityConfig={entity:layout==='air_quality'?'sensor.aqi':'select.mode',layout,language:'en',animations:{enabled:animations},air_quality:{pm25:'sensor.pm',co2:'sensor.co2',show_graphs:true,graph_points:20}};
+  window.entityRows=id=>[[{entity_id:id,state:'0',last_changed:new Date(Date.now()-7200000).toISOString()},{entity_id:id,state:id==='sensor.pm'?'20':'800',last_changed:new Date(Date.now()-3600000).toISOString()}]];
+  const hass=window.createHassFixture({entities:{'select.mode':{state:'one',attributes:{friendly_name:'Mode',options:['one','two']}},'switch.lamp':{state:'off',attributes:{friendly_name:'Lamp'}},'sensor.aqi':{state:'30',attributes:{friendly_name:'Air',device_class:'aqi'}},'sensor.pm':{state:'12',attributes:{unit_of_measurement:'µg/m³'}},'sensor.co2':{state:'650',attributes:{unit_of_measurement:'ppm'}}},overrides:{connection:{},user:{id:'first',is_admin:true},callService(domain,service,data,target){window.entityCommands.push({domain,service,data,target});return Promise.resolve();},callWS(message){if(this!==window.entityHass)throw new Error('Lost HA receiver');const entry={message};window.entityRequests.push(entry);return deferred?new Promise((resolve,reject)=>Object.assign(entry,{resolve,reject})):Promise.resolve(window.entityRows(message.entity_ids[0]));},auth:{fetchWithAuth:async path=>{window.entityRest.push(path);return new Response('[]',{status:200});}}}});
+  window.entityHass=hass;const card=document.createElement('nodalia-entity-card');card.setConfig(window.entityConfig);card.hass=hass;card.addEventListener('hass-more-info',event=>window.entityInfo.push(event.detail.entityId));document.querySelector('#fixture').append(card);window.entityCard=card;
+ },{layout,deferred,animations});return page.locator('nodalia-entity-card');
+}
+async function resolveHistory(page,start=0) {
+ await page.evaluate(start=>window.entityRequests.slice(start).filter(entry=>entry.resolve).forEach(entry=>entry.resolve(window.entityRows(entry.message.entity_ids[0]))),start);
+ await expect.poll(()=>page.evaluate(()=>window.entityCard._aqHistoryAbort===null)).toBe(true);
+}
+test('Entity selector survives HA updates during opening, retains focus and closes with Escape',async({page})=>{
+ const card=await mount(page,{animations:true});const body=card.locator('[data-entity-action="body"]');await body.focus();await body.press('Enter');
+ await page.evaluate(()=>{window.entityHass.states['select.mode'].attributes.options.push('three');window.entityCard.hass={...window.entityHass};});
+ await expect(card.locator('[data-entity-action="select-option"]')).toHaveCount(3);
+ const option=card.locator('[data-select-value="two"]');await option.focus();await page.evaluate(()=>{window.entityHass.states['select.mode'].attributes.friendly_name='New mode';window.entityCard.hass={...window.entityHass};});await expect(option).toBeFocused();
+ await option.press('Escape');await expect(card.locator('.entity-card__select-picker-shell')).toHaveCount(0);await expect(body).toBeFocused();
+ await body.press('Enter');await expect(option).toBeVisible();await option.focus();await option.press('Enter');
+ await expect.poll(()=>page.evaluate(()=>window.entityCommands.length)).toBe(1);
+ expect(await page.evaluate(()=>window.entityCommands[0])).toMatchObject({domain:'select',service:'select_option',data:{entity_id:'select.mode',option:'two'}});
+ await expect(card.locator('.entity-card__select-picker-shell')).toHaveCount(0);await expect(body).toBeFocused();expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+});
+test('Entity history coalesces, ignores stale connections and refreshes expired reconnects',async({page})=>{
+ const card=await mount(page,{layout:'air_quality',deferred:true});await expect.poll(()=>page.evaluate(()=>window.entityRequests.length)).toBe(2);
+ await page.evaluate(()=>{for(let n=0;n<8;n++){window.entityHass.states['sensor.pm'].state=String(n);window.entityCard.hass={...window.entityHass};}});expect(await page.evaluate(()=>window.entityRequests.length)).toBe(2);
+ await page.evaluate(()=>{window.entityHass={...window.entityHass,connection:{},user:{id:'second',is_admin:true}};window.entityCard.hass=window.entityHass;window.entityRequests[0].reject(new Error('Old connection'));window.entityRequests[1].resolve(window.entityRows('sensor.co2'));});
+ await expect.poll(()=>page.evaluate(()=>window.entityRequests.length)).toBe(4);expect(await page.evaluate(()=>({rest:window.entityRest.length,pending:window.entityCard._aqHistoryLoading}))).toEqual({rest:0,pending:true});await resolveHistory(page,2);await expect(card.locator('[data-air-quality-chart]')).toBeVisible();
+ await page.evaluate(()=>{window.entityCard._aqHistoryCache.endMs=0;window.entityCard._aqHistoryKey='';window.entityCard._scheduleAirQualityHistory(window.entityCard._getAirQualityGraphSeries(window.entityCard._collectAirQualityMetrics(window.entityCard._getState()).metrics));window.entityCard.remove();document.querySelector('#fixture').append(window.entityCard);});
+ await expect.poll(()=>page.evaluate(()=>window.entityRequests.length)).toBe(8);await page.evaluate(()=>{window.entityRequests[4].reject(new Error('Detached'));window.entityRequests[5].resolve(window.entityRows('sensor.co2'));});expect(await page.evaluate(()=>window.entityCard._aqHistoryLoading)).toBe(true);await resolveHistory(page,6);expect(await page.evaluate(()=>window.entityRest.length)).toBe(0);expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+});
+test('Entity history keyboard patches overlays in place and metadata updates retain focus',async({page})=>{
+ const card=await mount(page,{layout:'air_quality'});const chart=card.locator('[data-air-quality-chart]');await expect(chart).toBeVisible();await chart.focus();await chart.press('Home');await expect(card.locator('.entity-card__aq-hover-chip')).toBeVisible();
+ await page.evaluate(()=>{window.entityChart=window.entityCard.shadowRoot.querySelector('[data-air-quality-chart]');window.entityTooltip=window.entityCard.shadowRoot.querySelector('.entity-card__aq-hover-chip');window.entityLine=window.entityCard.shadowRoot.querySelector('.entity-card__aq-hover-line');});
+ await chart.press('End');expect(await page.evaluate(()=>({position:window.entityCard._aqHoverPreview.position,chart:window.entityChart===window.entityCard.shadowRoot.querySelector('[data-air-quality-chart]'),tooltip:window.entityTooltip===window.entityCard.shadowRoot.querySelector('.entity-card__aq-hover-chip'),line:window.entityLine===window.entityCard.shadowRoot.querySelector('.entity-card__aq-hover-line')}))).toEqual({position:19,chart:true,tooltip:true,line:true});
+ await chart.press('ArrowLeft');expect(await page.evaluate(()=>window.entityCard._aqHoverPreview.position)).toBe(18);
+ await page.evaluate(()=>{window.entityHass.states['sensor.pm'].attributes.unit_of_measurement='mg/m³';window.entityCard.hass={...window.entityHass};});await expect(chart).toBeFocused();await expect(card.locator('[data-aq-hover-value]')).toContainText('mg/m³');await chart.press('Escape');await expect(card.locator('.entity-card__aq-hover-chip')).not.toBeVisible();expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+});
+test('Entity owns optimistic deadlines and cancels held or queued actions across context changes',async({page})=>{
+ const card=await mount(page);await page.clock.install();await page.evaluate(()=>window.entityCard.setConfig({...window.entityConfig,entity:'switch.lamp',double_tap_action:'none'}));
+ const body=card.locator('[data-entity-action="body"]');await body.focus();await body.press('Enter');expect(await page.evaluate(()=>window.entityCard._getState().state)).toBe('on');const deadline=await page.evaluate(()=>window.entityCard._optimisticToggle.expiresAt);
+ await page.clock.runFor(700);await page.evaluate(()=>{window.entityCard.hass={...window.entityHass};window.entityCard.remove();document.querySelector('#fixture').append(window.entityCard);});expect(await page.evaluate(()=>window.entityCard._optimisticToggle.expiresAt)).toBe(deadline);await page.clock.runFor(3000);expect(await page.evaluate(()=>window.entityCard._getState().state)).toBe('off');
+ await page.evaluate(()=>{window.entityCard.setConfig({...window.entityConfig,entity:'switch.lamp',double_tap_action:'more-info',hold_action:'more-info'});const node=window.entityCard.shadowRoot.querySelector('[data-entity-action="body"]');node.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,composed:true,pointerId:22,pointerType:'mouse',clientX:50,clientY:50}));node.click();window.entityCard.hass={...window.entityHass,user:{id:'other',is_admin:true}};});await page.clock.runFor(1000);expect(await page.evaluate(()=>window.entityInfo)).toEqual([]);expect(await page.evaluate(()=>window.entityCommands.length)).toBe(1);
+ await page.evaluate(()=>{window.entityCard.setConfig({...window.entityConfig,entity:'switch.lamp',tap_action:'service',security:{allowed_service_domains:['switch']},tap_service:'switch.turn_on',tap_service_data:'{"brightness":0,"enabled":false}',tap_service_target:'{"area_id":"room"}'});window.entityCard.shadowRoot.querySelector('[data-entity-action="body"]').click();window.entityCard.remove();});await page.clock.runFor(1000);expect(await page.evaluate(()=>window.entityCommands[1])).toMatchObject({domain:'switch',service:'turn_on',data:{brightness:0,enabled:false},target:{area_id:'room'}});expect(await page.evaluate(()=>({history:window.entityCard._aqHistoryAbort,timers:window.entityCard._animationWork.timers.size,optimistic:window.entityCard._optimisticToggleTimer}))).toEqual({history:null,timers:0,optimistic:0});expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+});
+test('Entity caches empty transport history and distinguishes missing metric and battery readings from zero',async({page})=>{
+ const card=await mount(page,{layout:'air_quality',deferred:true});await expect.poll(()=>page.evaluate(()=>window.entityRequests.length)).toBe(2);
+ await page.evaluate(()=>window.entityRequests.forEach(entry=>entry.resolve({})));await expect.poll(()=>page.evaluate(()=>window.entityCard._aqHistoryLoading)).toBe(false);
+ await page.evaluate(()=>{window.entityCard.remove();document.querySelector('#fixture').append(window.entityCard);window.entityCard.hass={...window.entityHass};});expect(await page.evaluate(()=>window.entityRequests.length)).toBe(2);
+ const readings=await page.evaluate(()=>{
+  window.entityHass.states['sensor.pm'].state='0';window.entityHass.states['sensor.co2'].state='unavailable';window.entityCard.hass={...window.entityHass};
+  const metrics=window.entityCard._collectAirQualityMetrics(window.entityCard._getState()).metrics.map(row=>({kind:row.kind,value:row.numeric}));
+  window.entityCard.setConfig({layout:'battery',battery:{entities:['sensor.pm','sensor.co2','sensor.absent']},animations:{enabled:false}});
+  return {metrics,zero:window.entityCard._resolveBatteryPercent(window.entityHass.states['sensor.pm']),missing:window.entityCard._resolveBatteryPercent(window.entityHass.states['sensor.co2'])};
+ });expect(readings).toEqual({metrics:[{kind:'pm25',value:0}],zero:0,missing:null});await expect(card.locator('ha-card')).toContainText('0');expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+});

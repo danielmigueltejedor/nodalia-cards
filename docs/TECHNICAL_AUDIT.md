@@ -1704,3 +1704,33 @@ CI and review remain required before integration.
   The HACS bundle is 4,311,570 raw / 956,888 gzip bytes, below the unchanged
   4,325,376 / 972,800 limits. CI and review remain required before integration.
   No prerelease has been published.
+
+## 2026-10-02 — Entity view, selector and history ownership
+
+- Remove the complete view suppression using actual normalized config, HA states,
+  native DOM/SVG, finite metric values and checked history geometry. No `any`,
+  assertion-based data conversion or weaker compiler flags are introduced.
+  Remove eleven unused view imports while retaining public helper exports.
+- Configuration, HA connection/auth/user changes and detach cancel owned panel,
+  hold, deferred tap, entrance and history work. Retired resize observations
+  cannot alter a reattached card. Binary optimistic toggles retain their original
+  deadline across ordinary HA updates and temporary removal; new contexts clear
+  them. Displayed attributes and locale refresh without timestamp changes.
+- Selector opening survives HA refreshes; option focus is retained and Escape or
+  selection returns it to the card. Shared animation completion owns both native
+  listeners and fallback timers. Keyboard graph inspection uses Left/Right,
+  Home/End and Escape and patches the existing line and value overlay in place.
+- History requests coalesce, retain successful empty responses for three minutes,
+  capture the requesting HA instance and ignore stale results/fallbacks/finalizers.
+  Cache metadata follows current units and labels. Real zero readings and epoch
+  timestamps survive; absent readings do not become zero. Explicit service targets
+  and false/zero data survive; rejected or synchronous service failures are caught.
+- All 3,000 valid markup/style/sizing comparisons match the prior view. Strict/lint
+  and all 750 unit tests pass. The HACS bundle is 4,314,290 raw / 958,047 gzip bytes,
+  within the unchanged 4,325,376 / 972,800 limits. Five source views and the manual
+  support runtimes remain to migrate before publishing 3.0.0-alpha.1.
+- All 15 focused browser cases pass. The complete Chromium/WebKit/iPhone suite
+  passes 704 cases with one existing skip. The first run exposed a wrong private
+  method name in the new fixture and one existing Safari keyboard timing failure;
+  correcting the fixture and repeating the complete suite passes. Remote CI and
+  review remain required before integration. No prerelease has been published.

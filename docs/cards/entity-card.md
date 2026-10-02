@@ -52,3 +52,16 @@ The double-tap section includes separate card/icon actions and their navigation,
 URL and service-data fields. An empty icon action inherits the card action. YAML
 service targets and unrelated extension fields survive these visual edits. Style
 controls retain translucent colors.
+
+The select picker keeps its current options and native keyboard focus during HA
+updates, including while it opens. Escape closes it and returns focus to the
+card. Air-quality charts support Left/Right, Home/End and Escape; the hover
+marker and value update in place. History refreshes share pending requests and
+retain successful empty responses for three minutes. Responses from an earlier
+configuration, HA connection or user cannot update a new view or start a fallback
+request on its connection.
+
+A pending binary toggle retains its original deadline through ordinary updates
+and temporary removal. Configuration or HA context changes discard it, together
+with pending holds, double taps, panel work and cached history. Displayed entity
+attributes and locale refresh without requiring an updated state timestamp.

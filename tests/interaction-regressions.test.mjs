@@ -1454,7 +1454,7 @@ test("entity card preserves Lovelace action data and target for configured servi
   const entitySource = read("nodalia-entity-card.js");
   assert.match(entitySource, /tap_service_target/);
   assert.match(entitySource, /hasExplicitTarget/);
-  assert.match(entitySource, /invoke\(this, this\._hass, domain, service, payload, hasExplicitTarget \? target : null\)/);
+  assert.match(entitySource, /invokeHassService\(this, this\._hass, domain, service, payload, hasExplicitTarget \? target : null\)/);
 });
 
 test("cover card respects navigate and service tap actions from Lovelace objects", () => {
@@ -1999,7 +1999,7 @@ test("calendar card re-renders on hass updates when render signature changes", (
 
 test("entity card configured services use invokeHomeAssistantService", () => {
   const source = read("nodalia-entity-card.js");
-  assert.match(source, /_callConfiguredService[\s\S]*invokeHomeAssistantService/);
+  assert.match(source, /_callConfiguredService[\s\S]*invokeHassService/);
 });
 
 test("entity card toggle uses domain services for cover and lock entities", () => {
@@ -2031,17 +2031,16 @@ test("entity card opens inline select picker for select and input_select entitie
   assert.match(source, /data-entity-action="select-option"/);
   assert.match(source, /_onShadowPointerDown/);
   assert.match(source, /_triggerEntityPressFeedback/);
-  assert.match(source, /_clearSelectPickerAnimationTimer\(timerKey\)/);
-  assert.match(source, /this\._nodaliaDeferTimers\?\.delete\?\.\(timer\)/);
+  assert.match(source, /cancelViewPanelAnimations\(this\._animationWork\)/);
   assert.match(source, /_selectPickerAnimationToken/);
   assert.match(source, /animationToken !== this\._selectPickerAnimationToken/);
-  assert.match(source, /finalizeRemoval[\s\S]*_clearSelectPickerAnimationTimer\("_selectPickerCloseTimer"\)/);
-  assert.match(source, /finalizeEnter[\s\S]*_clearSelectPickerAnimationTimer\("_selectPickerEnterTimer"\)/);
+  assert.match(source, /waitForViewPanelAnimation\(this\._animationWork, shell, finalizeRemoval, panelDuration \+ 80\)/);
+  assert.match(source, /waitForViewPanelAnimation\(this\._animationWork, shellNode, finalizeEnter, panelDuration \+ 80\)/);
   const feedbackStart = source.indexOf("_triggerEntityPressFeedback(action, actionTarget)");
   const feedbackEnd = source.indexOf("_onShadowPointerDown(event)", feedbackStart);
   const feedbackSource = source.slice(feedbackStart, feedbackEnd);
-  assert.match(feedbackSource, /querySelector\("\.entity-card__content"\)/);
-  assert.match(feedbackSource, /querySelector\("\.entity-card__icon"\)/);
+  assert.match(feedbackSource, /querySelector(?:\?\.)?\("\.entity-card__content"\)/);
+  assert.match(feedbackSource, /querySelector(?:\?\.)?\("\.entity-card__icon"\)/);
   assert.match(feedbackSource, /const opensSelectPicker = this\._shouldOpenSelectPickerOnTap\(this\._getState\(\), action\)/);
   assert.match(feedbackSource, /if \(!opensSelectPicker\) \{[\s\S]*querySelector\("\.entity-card__content"\)/);
   assert.match(source, /_triggerPressAnimation\(element[\s\S]*element\.classList\.remove\(className\);[\s\S]*element\.classList\.add\(className\)/);
@@ -2418,7 +2417,7 @@ test("entity person weather and alarm use deferred press timers", () => {
     "nodalia-alarm-panel-card.js",
   ]) {
     const source = read(file);
-    assert.match(source, /scheduleDeferTimer/, `${file} should schedule defer timers`);
+    assert.match(source, file === "nodalia-entity-card.js" ? /scheduleViewFallback/ : /scheduleDeferTimer/, `${file} should own deferred timers`);
     assert.match(source, /clearDeferTimers/, `${file} should clear defer timers on disconnect`);
   }
 });

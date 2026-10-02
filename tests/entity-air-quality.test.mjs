@@ -13,7 +13,7 @@ function loadAirQualityHelpers() {
   class FakeHTMLElement {
     constructor() {
       this.isConnected = true;
-      this.classList = { add() {}, remove() {}, contains() { return false; } };
+      this.classList = { add() {}, remove() {}, toggle() {}, contains() { return false; } };
     }
 
     addEventListener() {}
@@ -37,6 +37,8 @@ function loadAirQualityHelpers() {
 
   const sandbox = {
     console,
+    addEventListener() {},
+    removeEventListener() {},
     clearTimeout,
     setTimeout,
     CustomEvent: class {
@@ -51,6 +53,8 @@ function loadAirQualityHelpers() {
       whenDefined() { return Promise.resolve(); },
     },
     document: {
+      addEventListener() {},
+      removeEventListener() {},
       createElement() { return {}; },
       documentElement: { getAttribute() { return ""; } },
       querySelector() { return null; },
@@ -111,13 +115,14 @@ function loadAirQualityHelpers() {
   vm.runInContext(read("nodalia-bubble-contrast.js"), sandbox);
   vm.runInContext(read("nodalia-entity-card.js"), sandbox);
   return {
+    Element: FakeHTMLElement,
     helpers: sandbox.__NODALIA_ENTITY_AIR_QUALITY__,
     Card: registry.get("nodalia-entity-card"),
     Editor: registry.get("nodalia-entity-card-editor"),
   };
 }
 
-const { helpers, Card, Editor } = loadAirQualityHelpers();
+const { helpers, Card, Editor, Element } = loadAirQualityHelpers();
 
 test("entity card air quality helpers classify WHO PM and AQI bands", () => {
   assert.equal(helpers.resolveAirQualityLevelFromBands(12, helpers.AIR_QUALITY_WHO_BANDS.pm25), "good");
@@ -356,7 +361,7 @@ test("entity card air quality chart geometry resolves the hovered sample", () =>
 test("entity card air quality patches continuous hover overlays without rebuilding the card", () => {
   const card = new Card();
   const attributes = new Map();
-  const makeOverlay = () => ({
+  const makeOverlay = () => Object.assign(new Element(), {
     hidden: true,
     style: {
       values: new Map(),
@@ -370,7 +375,7 @@ test("entity card air quality patches continuous hover overlays without rebuildi
   const label = { textContent: "" };
   const value = { textContent: "" };
   const time = { textContent: "" };
-  const chip = {
+  const chip = Object.assign(new Element(), {
     ...makeOverlay(),
     dataset: {},
     querySelector(selector) {
@@ -380,7 +385,7 @@ test("entity card air quality patches continuous hover overlays without rebuildi
         "[data-aq-hover-time]": time,
       }[selector] || null;
     },
-  };
+  });
   card.shadowRoot.querySelector = selector => ({
     ".entity-card__aq-hover-line": line,
     ".entity-card__aq-hover-point": point,
