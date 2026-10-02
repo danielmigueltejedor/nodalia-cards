@@ -9,6 +9,7 @@ import type { HomeAssistant } from "./home-assistant";
 export type SanitizedStyleTree<T> = T extends string ? string : T extends number ? number : T extends boolean ? boolean : T extends readonly unknown[] ? unknown[] : T extends object ? { [K in keyof T]: SanitizedStyleTree<T[K]> } : T;
 export interface HostPointerHoldBinding { (): void; reconnect?: () => void; }
 export interface NodaliaUtilsApi {
+  composeCardSurfaceBackground?: (options?: {base?:unknown;accentColor?:unknown;glazeStrength?:unknown;glazeNeutralStrength?:unknown;glazeMode?:"neutral"|"none"|"accent";extraLayers?:unknown[];glazeTextWash?:unknown}) => string;
   bindModalFocus?: (host: HTMLElement, dialog: HTMLElement, options?: { initialFocusSelector?: string; restoreFocus?: () => void }) => () => void;
   releaseModalFocus?: (host: HTMLElement) => void;
   isNodaliaSliderChromeHit?: (event: Event) => boolean;

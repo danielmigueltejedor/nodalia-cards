@@ -32,6 +32,7 @@ test("late artwork responses cannot overwrite a newer palette or a reset", async
   const images = [];
   const sandbox = {
     setTimeout, clearTimeout,
+    ShadowRoot: class { constructor(host) { this.host = host; } },
     Image: class { constructor() { images.push(this); } },
     document: { createElement: () => {
       let image;
@@ -43,7 +44,7 @@ test("late artwork responses cannot overwrite a newer palette or a reset", async
   vm.createContext(sandbox); vm.runInContext(themeSource, sandbox);
   const properties = new Map(), attributes = new Set();
   const owner = {};
-  const host = { getRootNode: () => ({ host: owner }), isConnected: true, style: { setProperty: (k, v) => properties.set(k, v), removeProperty: k => properties.delete(k) }, setAttribute: k => attributes.add(k), removeAttribute: k => attributes.delete(k) };
+  const host = { getRootNode: () => new sandbox.ShadowRoot(owner), isConnected: true, style: { setProperty: (k, v) => properties.set(k, v), removeProperty: k => properties.delete(k) }, setAttribute: k => attributes.add(k), removeAttribute: k => attributes.delete(k) };
   const old = sandbox.theme.applyArtworkControlTheme(host, "old");
   const fresh = sandbox.theme.applyArtworkControlTheme(host, "new");
   images[1].onload(); await fresh;
@@ -98,6 +99,12 @@ test("replacement artwork waits for its palette, ignores stale requests and reco
   owner.isConnected = false;
   images[3].onerror(); await flush();
   assert.equal(renders, 2, "disconnected cards are not rerendered");
+  owner.isConnected = true;
+  assert.equal(prepare("prior-context"), false);
+  sandbox.theme.releaseArtworkTheme(owner);
+  images[4].onload(); await flush();
+  assert.equal(renders, 2, "a released context cannot commit a deferred cover on the reconnected owner");
+  assert.equal(prepare("prior-context"), true, "the shared sampled palette remains reusable by the new context");
 });
 
 test("artwork identity survives volume and progress updates but changes with the track", () => {

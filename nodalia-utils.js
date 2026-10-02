@@ -1836,6 +1836,12 @@
     ));
   }
 
+  function modalActiveElement() {
+    let active = document.activeElement;
+    while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+    return active;
+  }
+
   function bindModalFocus(host, dialog, options = {}) {
     if (!(host instanceof HTMLElement) || !(dialog instanceof HTMLElement)) {
       return () => {};
@@ -1843,7 +1849,7 @@
 
     const previousState = modalFocusState.get(host);
     const previousFocus = previousState?.previousFocus
-      || (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+      || (modalActiveElement() instanceof HTMLElement ? modalActiveElement() : null);
     if (previousState) {
       previousState.dialog.removeEventListener("keydown", previousState.onKeyDown);
       if (previousState.focusTimer) {
@@ -1861,16 +1867,14 @@
         dialog.focus({ preventScroll: true });
         return;
       }
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      const active = document.activeElement;
-      if (event.shiftKey && (active === first || !dialog.contains(active))) {
-        event.preventDefault();
-        last.focus({ preventScroll: true });
-      } else if (!event.shiftKey && (active === last || !dialog.contains(active))) {
-        event.preventDefault();
-        first.focus({ preventScroll: true });
-      }
+      const root = dialog.getRootNode();
+      const active = root instanceof ShadowRoot ? root.activeElement : document.activeElement;
+      const index = focusable.indexOf(active);
+      const next = index < 0
+        ? (event.shiftKey ? focusable.length - 1 : 0)
+        : (index + (event.shiftKey ? -1 : 1) + focusable.length) % focusable.length;
+      event.preventDefault();
+      focusable[next].focus({ preventScroll: true });
     };
 
     if (!dialog.hasAttribute("tabindex")) {

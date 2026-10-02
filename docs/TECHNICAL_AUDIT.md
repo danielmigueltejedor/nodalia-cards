@@ -1734,3 +1734,36 @@ CI and review remain required before integration.
   method name in the new fixture and one existing Safari keyboard timing failure;
   correcting the fixture and repeating the complete suite passes. Remote CI and
   review remain required before integration. No prerelease has been published.
+
+## 2026-10-02 — Navigation view and native dialog focus
+
+- Remove the view suppression using the actual normalized config, guarded route/
+  action records, finite playback fields, validated media-browser nodes, HA and
+  native DOM contracts. Add declarations only for three existing I18n functions
+  and the actual shared surface composer; no invented runtime APIs or data casts.
+- Configuration and HA connection/auth/user changes clear open panels and current
+  player state, cancel pending media/palette commits and release frames, resize
+  timers, tickers and modal listeners. Detach/hidden layouts also release work;
+  retired callbacks cannot mutate a reattached instance. Old browse failures
+  cannot navigate the next context to their fallback path.
+- Restore native focus through ordinary HA updates and browse/play transitions.
+  Route/media dialogs trap Tab/Shift+Tab and restore their opening control on
+  Escape or action completion. Native browser cases expose Safari skipping
+  interior buttons: shared modal handling now advances to the actual next
+  focusable control and reads the active element in the dialog's shadow root.
+- Paused progress/volume feedback patches existing controls; artwork/device
+  metadata participates in signatures. Player metadata gains keyboard activation.
+  Shared service calls catch rejection/synchronous failure and retain explicit
+  targets and false/zero values. Media thumbnails share artwork URL validation.
+- Remove two unused private methods (tracked-ID collection and the old media-picker
+  forwarder) and an unassigned browser-label fallback. Preserve public tags/YAML/
+  standalone APIs. All 3,000 valid markup/style/sizing comparisons match the prior
+  view after excluding only new dialog/metadata keyboard attributes.
+- Strict/lint and all 750 unit tests pass, including released-context palette
+  ownership. All 15 focused browser cases pass. The initial fixture omitted the
+  browse path required for a generic player; correct that fixture without enabling
+  the control for unrelated users. The full browser suite passes 719 cases with one existing skip. Keep exact
+  glass styles while allowing subpixel rectangle rounding in WebKit geometry
+  comparisons. Raw/gzip bundle: 4,317,866 / 959,256 bytes within
+  the unchanged 4,325,376 / 972,800 limits. Four source views plus manual support
+  runtimes remain before publishing 3.0.0-alpha.1.
