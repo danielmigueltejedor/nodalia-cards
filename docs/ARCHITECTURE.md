@@ -74,7 +74,6 @@ visual editors now pass strict checking:
 
 | Source | Responsibilities |
 |---|---|
-| `src/cards/advance-vacuum/advance-vacuum-card.ts` | Map, rooms, dock and sessions |
 | `src/cards/climate/climate-card.ts` | Climate rendering and interactions |
 
 The exact suppression inventory is `scripts/type-debt.json`; use the source
@@ -298,7 +297,7 @@ standalone.ts          Standalone entry for nodalia-light-card.js
 `exactOptionalPropertyTypes`, `noFallthroughCasesInSwitch`, `noImplicitOverride`
 and `useUnknownInCatchVariables`.
 
-Two legacy suppressions remain in the Advance Vacuum and Climate views. Their configs, helpers and editors are already checked. The
+One legacy suppression remains in the Climate view. All other card views, configs, helpers and editors are checked. The
 exact current inventory is
 `scripts/type-debt.json`; `pnpm architecture:check` reports it and rejects new debt.
 A `.ts` filename or passing `tsc` does not imply suppressed modules were checked.
@@ -485,3 +484,11 @@ Native transport/dialog focus survives refreshes, paused progress updates in pla
 and seek supports keyboard controls and cancels when the track changes. Browser
 and presentation CSS is embedded with whitespace-only compaction; declarations
 and order are retained without additional HA resources.
+
+Advance Vacuum now checks actual map, room, dock, session and native gesture
+contracts. Commands, shared persistence, room-resume callbacks, timers and image
+loads belong to their originating HA/configuration context. A persistent map
+surface retains native pointer capture during preview updates; cancellation
+restores a moved zone without issuing commands or saving its preview. Local
+session keys include server, user and robot; explicit shared helpers remain shared.
+Static map/motion CSS is embedded without changing declarations or adding resources.

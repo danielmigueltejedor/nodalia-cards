@@ -1,0 +1,45 @@
+.advance-vacuum-card--entering {
+          animation: advance-vacuum-card-enter var(--advance-vacuum-card-content-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        }
+
+        .advance-vacuum-card--entering .advance-vacuum-card__map {
+          animation: advance-vacuum-map-enter var(--advance-vacuum-card-content-duration) cubic-bezier(0.2, 0.85, 0.25, 1) 60ms both;
+        }
+
+        .advance-vacuum-card--entering .advance-vacuum-card__footer {
+          animation: advance-vacuum-footer-enter var(--advance-vacuum-card-content-duration) cubic-bezier(0.22, 0.84, 0.26, 1) 100ms both;
+        }
+
+        .advance-vacuum-card__footer {
+          align-items: center;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          width: 100%;
+        }
+
+        .advance-vacuum-card__header,
+        .advance-vacuum-card__icon,
+        .advance-vacuum-card__unavailable,
+        .advance-vacuum-card__header-main,
+        .advance-vacuum-card__title,
+        .advance-vacuum-card__chips,
+        .advance-vacuum-card__chip,
+        .advance-vacuum-card__header-actions,
+        .advance-vacuum-card__header-action {
+          display: none !important;
+        }
+
+        .advance-vacuum-card__control,
+        .advance-vacuum-card__mode-button,
+        .advance-vacuum-card__goto-marker,
+        .advance-vacuum-card__room-marker {
+          appearance: none;
+          background: none;
+          border: none;
+          color: inherit;
+          cursor: pointer;
+          font: inherit;
+          margin: 0;
+          padding: 0;
+        }

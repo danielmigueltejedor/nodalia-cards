@@ -456,6 +456,8 @@ export function rectIntersectionArea(rawFirst: unknown, rawSecond: unknown): num
   return Number.isFinite(width * height) ? width * height : 0;
 }
 
+export function arrayFromMaybe<T>(value:T[]):T[];
+export function arrayFromMaybe(value:unknown):unknown[];
 export function arrayFromMaybe(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }

@@ -1,0 +1,101 @@
+.advance-vacuum-card__map-tool {
+          align-items: center;
+          background: var(--av-surface-raised);
+          border: 1px solid var(--av-border-strong);
+          border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 var(--av-inset),
+            var(--av-float);
+          color: var(--primary-text-color);
+          display: inline-flex;
+          gap: 6px;
+          justify-content: center;
+          min-height: 44px;
+          min-width: 44px;
+          padding: 0 14px;
+          pointer-events: auto;
+          transition: transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1), box-shadow 180ms ease, border-color 180ms ease, background 180ms ease, filter 180ms ease;
+        }
+
+        .advance-vacuum-card__map-tool--add {
+          background: var(--av-selected-bg);
+          border-color: var(--av-selected-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-selected-inset),
+            var(--av-selected-glow);
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .advance-vacuum-card__map-tool-label {
+          line-height: 1;
+        }
+
+        .advance-vacuum-card__map-tool.is-disabled {
+          opacity: 0.45;
+        }
+
+        .advance-vacuum-card__map-tool:not(.advance-vacuum-card__map-tool--status):not(.advance-vacuum-card__map-tool--add):not(.is-disabled):hover {
+          background: var(--av-accent-hover);
+          border-color: var(--av-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-accent-hover-shadow);
+        }
+
+        .advance-vacuum-card__map-tool--add:not(.is-disabled):hover {
+          filter: brightness(1.05);
+          transform: translateY(-1px);
+        }
+
+        .advance-vacuum-card__room-marker,
+        .advance-vacuum-card__goto-marker {
+          align-items: center;
+          background: var(--av-surface-raised);
+          border: 1px solid var(--av-border);
+          border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-float);
+          color: var(--primary-text-color);
+          display: inline-flex;
+          gap: var(--room-marker-gap, 8px);
+          justify-content: center;
+          left: 0;
+          min-height: var(--marker-size, 34px);
+          min-width: var(--marker-size, 34px);
+          padding: var(--room-marker-padding, 0 12px);
+          pointer-events: auto;
+          position: absolute;
+          top: 0;
+          touch-action: manipulation;
+          transform: translate(-50%, -50%);
+          white-space: nowrap;
+          z-index: 2;
+        }
+
+        .advance-vacuum-card__room-marker.is-icon-only {
+          border-radius: 999px;
+          padding: 0;
+          width: var(--marker-size, 34px);
+        }
+
+        .advance-vacuum-card__room-marker.is-readonly,
+        .advance-vacuum-card__room-chip.is-readonly {
+          cursor: default;
+          opacity: 0.96;
+        }
+
+        .advance-vacuum-card__room-marker.is-selected,
+        .advance-vacuum-card__goto-marker.is-selected {
+          background: var(--av-selected-bg);
+          border-color: var(--av-selected-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-selected-inset),
+            var(--av-selected-glow);
+        }
+
+        .advance-vacuum-card__room-marker ha-icon,
+        .advance-vacuum-card__goto-marker ha-icon {
+          --mdc-icon-size: var(--room-icon-size, 16px);
+        }

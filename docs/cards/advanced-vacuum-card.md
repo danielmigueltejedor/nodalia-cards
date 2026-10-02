@@ -85,3 +85,19 @@ Explicit zero durations remain valid, and translucent CSS colours retain alpha.
 Missing configured entities remain selectable. Robot, map and helper fields use
 the shared Home Assistant pickers with native fallbacks. Changing robots or
 closing the editor releases unfinished drafts.
+
+## Map gestures and session ownership
+
+Room controls support Enter and Space and retain focus during Home Assistant
+updates. Map previews keep pointer capture when dragged outside their surface.
+Cancelling a gesture, hiding the page or losing window focus discards tentative
+selection; moving or resizing an existing zone restores its previous geometry.
+Cancellation sends no robot command and does not persist the preview.
+
+Changing configuration, robot, HA connection or user retires pending commands,
+room-resume callbacks, image loads and shared-session feedback. A delayed reply
+cannot update the replacement card or continue a queued zone command.
+
+Browser-local session history is scoped to server, user and robot. Older unscoped
+private entries are not imported. Explicit `shared_cleaning_session_entity` and
+webhook persistence retain their documented shared semantics and payload formats.
