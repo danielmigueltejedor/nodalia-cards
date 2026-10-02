@@ -8,215 +8,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## Unreleased
+## [3.0.0-alpha.1] - 2026-10-02
 
-- Apply typed lint to every source module, remove obsolete locale migration tools and unused declarations, use the official Calendar forecast service with authoritative empty results, resolve split Power Flow actions to entity ids, preserve newer shared robot writes and coalesce/cancel retired cover work.
+### Changed
 
-- Check the complete runtime translation lookup, generate lazy typed locale factories, derive the public API from its implementation and guard partial or malformed locale overrides. Preserve all twelve locale trees and public lookup behavior, and translate boolean Fav attributes through the correct entity catalog.
-
-- Check editor translation lookup against guarded lazy JSON catalogs, preserve all twelve locales and Spanish label normalization, generate the compatibility artifact from TypeScript, and refresh the Lock editor when the Home Assistant profile language changes.
-
-- Check the complete shared utility runtime, guard reconstructed JSON configuration roots, cancel retired editor layout frames and deferred actions, keep modal cleanup scoped to its own dialog, and release shadow listeners from their original roots. Preserve public helpers and existing configuration behavior.
-
-- Check the go2rtc playback runtime, discard retired autoplay/WebRTC/frame/audio callbacks, close partially created audio contexts and keep blank stream sources disconnected. Generate its standalone ES module from the same source used by Camera.
-
-- Flush queued Light brightness/color exactly once when an HA update arrives after the optimistic turn-on deadline.
-
-- Check the complete Climate view, preserve focused unfinished schedule fields on Safari, activate dragging from the SVG dial track, cancel tentative dial/schedule edits without commands, and retire queued HVAC/Engine/webhook work on reconfiguration, user changes or detachment. Keep service and schedule formats compatible and retire pending controls when the entity becomes unavailable.
-
-- Check Advance Vacuum view contracts, retain native map pointer capture and room keyboard focus, cancel tentative gestures without commands, retire asynchronous commands and shared-session callbacks on context changes, and scope private browser sessions by server/user/robot. Preserve existing service profiles and embed static CSS within unchanged bundle limits.
-
-- Check Media Player view contracts, retain native transport/dialog focus and paused progress, support keyboard seeking, cancel retired gestures/browser/artwork/TV-volume work and clear private cover history on context changes. Preserve centered translucent controls and embed readable static CSS within existing size limits.
-
-- Check Notifications view contracts, isolate retired calendar/weather/Engine/mobile work, serialize foreground batches, preserve native focus and scope browser dismissal history by server/user. Use the current weather forecast service and keep authoritative empty results.
-
-- Check Navigation view contracts, isolate pending media/palette work across HA contexts, preserve native keyboard focus and paused progress updates, and fix shared modal Tab traversal inside shadow roots on Safari.
-
-- Check Entity view contracts, own select/history/animation work across configuration and HA context changes, retain optimistic deadlines and keyboard focus, and add in-place keyboard inspection to air-quality charts.
-
-- Check Power Flow, retain native keyboard/modal focus, distinguish unavailable split readings from actual zero and release owned viewport/frame/animation work. Remove the unreachable simple rail renderer while preserving compact/full layouts and the existing size limits.
-
-- Check Room Summary, retain native action focus and current HA updates in visible children, clear connected/parked cards on config or HA context changes, reset removed panels and remove unrendered legacy controls. Embed metric CSS without extra resources or relaxing size limits.
-
-- Check the Camera view, isolate pending streams/images/signing retries across HA contexts, connect configured hold actions and open its Summary portal across shadow hosts. Preserve native playback and standalone APIs while embedding expanded CSS within the existing size gates.
-
-- Check the Graph view, coalesce owned history requests, preserve absent/zero readings, and restore keyboard/focus plus correct in-place hover markers.
-
-- Check Calendar view contracts, isolate pending refreshes/subscriptions/writes, preserve composer drafts and caret, and calculate next-day events across clock changes. Embed readable composer CSS without extra resources or relaxing bundle size limits; remove verified unused private methods.
-- Check Light view contracts, cancel draft brightness/color/temperature without commands, finish optimistic queues at their original deadlines and own mode/settle/resize work. Share checked device memory and remove verified dead compact-size/title helpers without changing rendering or bundle size gates.
-
-- Check Humidifier view contracts, cancel tentative drags, preserve optimistic deadlines and own mode-panel work; share animation cleanup and panel construction with Fan/Vacuum to retain the bundle size budget.
-
-- Check the Fan view, cancel pointer/touch drags without sending tentative speeds, own preset/resize/fallback work and retain keyboard access. Keep render signatures pure so acknowledged toggles preserve the remembered percentage during the existing visual-settle deadline. Guard stored memory, missing numeric capability data and HA service failures; remove dead drag queue fields.
-
-- Check the Vacuum view, isolate optimistic modes/rooms across robots, complete panel transitions once and discard stale callbacks. Own resize/fallback work, distinguish absent battery from actual zero, activate the card from the keyboard and catch HA command failures.
-
-- Check the Weather view and forecast contracts, discard abandoned subscriptions, keep empty live forecasts authoritative, refresh legacy forecast/unit/alert changes and activate SVG chart points from the keyboard. Own fallback animations and release modal focus when weather entities disappear.
-
-- Check the Advance Vacuum visual editor, preserve text/JSON drafts through HA updates and Chromium control replacement, validate list-shaped JSON with translated feedback, retain zero/default settings and remove five unused historical datalists.
-
-- Check the Climate visual editor, restore full-width action controls, preserve schedule fallback fields and stop replacing controls for unchanged Engine status. Discard replies belonging to previous editor connections/lifetimes.
-
-- Check the Notifications visual editor, retain unfinished custom/external rows during HA feedback, bound list changes and discard obsolete Engine replies/profile writes while preserving the latest queued sync and explicit disabled profiles.
-
-- Check the Power Flow visual editor, import its actual selector domains, preserve draft individuals through HA feedback and bound row changes without losing energy branches or paired metadata. Remove its unregistered historical editor.
-
-- Check Navigation visual editor boundaries, retain paired routes/popups and committed HA picker values, bound row changes and restore blank numeric defaults while keeping explicit zeros.
-
-- Check Media Player visual editor boundaries, preserve paired player actions and JSON validation, clear legacy action aliases when fields are emptied and share typed stub generation with the view.
-
-- Check Graph visual editor boundaries, preserve draft/legacy series and paired metadata, bound row edits and remove its unregistered historical editor.
-
-- Check Entity visual editor boundaries, expose missing double-tap details, keep YAML quick-service data as editable JSON and bound row changes while preserving paired metadata, missing entities and focus.
-
-- Check Vacuum visual editor boundaries, guard malformed HA registry/settings, retain device-related suction/mop modes and missing helpers, and preserve navigation actions, presets, focus and translucent styles.
-
-- Check Calendar visual editor boundaries, keep typed drafts during HA updates, add a real second placeholder row, bound row edits/reordering and restore cleared animation defaults while retaining paired labels and translucent tints.
-
-- Check Alarm Panel view boundaries, preserve touched actions through queued renders, prevent Safari resize loops, discard obsolete action failures, clear PINs across entities and own countdown/animation work.
-
-- Check Light visual editor boundaries, preserve independent actions and named colour presets, and restore brightness/animation defaults for absent values while retaining real zero bounds.
-
-- Check Fan and Humidifier visual editors, restore missing service-data textareas, retain mode visibility and auxiliary selectors, and guard malformed nested settings while preserving focus and translucent styles.
-
-- Check Alarm visual editor boundaries, restore custom translucent state tints, distinguish cleared feedback durations from zero and cancel abandoned deferred updates and toggle state.
-
-- Check Circular Gauge view boundaries, finish entrance animations during frequent updates, release abandoned animation work and keep blank responsive sizing distinct from zero.
-
-- Check Weather and Circular Gauge visual editors, guard malformed nested settings and HA/native events, preserve missing entities and focus, and retain forecast/unit options, automatic bounds, actual zeros and translucent styles.
-
-- Check Camera visual editor boundaries, ignore malformed rows and removal indices, preserve the original camera when adding a draft row, and retain camera-specific actions, streams, YAML fields and focus.
-
-- Check Cover view/editor boundaries, cancel abandoned position/tilt drags without sending commands, retain inherited icon action parameters and handle service failures through the shared checked invocation boundary.
-
-- Check Person view/editor boundaries, cancel stalled or abandoned picture loads, bound image caches, refresh renamed zones and handle service failures while retaining separate actions and editor focus.
-
-- Check the Fav view and visual editor, refresh selected attributes/light colours/alarm capabilities immediately, own layout work, preserve PIN/helper settings, service targets and custom YAML fields, and guard malformed inputs.
-
-- Check Insignia view/editor boundaries; refresh changed pictures, units and semantic tint, handle failed service calls and retain custom names and YAML extensions.
-
-- Check the Scenes card and visual editor, own fallback animation timers, handle failed scene activation and preserve editable draft rows and focus.
-
-- Check the Summary visual editor, validate native child editor events and preserve entity/name/icon alignment when lists are reordered.
-
-- News: migrate the view/editor to strict checking; cancel abandoned swipe gestures and own their timeout, and restore default limits when a numeric editor field is cleared.
-
-- Advanced Vacuum: check map/session/calibration helpers and config; reject absent coordinates and invalid matrices, retain nested rectangle rooms, and preserve query fragments.
-
-- Notifications: distinguish missing measurements/forecasts from actual zero, reject impossible calendar dates and check registry/editor/background profile boundaries. Public helper contracts now derive from strict source.
-
-The next prerelease is **3.0.0-alpha.1** and starts the 3.0.0 line. Publish it only after the complete
-TypeScript migration and its validation are finished; alpha.49 remains the
-latest published version during this work.
+- Complete the strict TypeScript migration of all 25 cards, visual editors and shared runtimes, including playback, utilities and translation lookup. All source receives typed lint; runtime boundaries guard malformed data and asynchronous work is scoped to its current Home Assistant context.
+- Preserve existing custom element names, YAML configuration, visual editors, optional Engine support and the single `nodalia-cards.js` HACS resource. No dashboard YAML migration is required.
+- Remove obsolete migration tools, duplicate artifacts and unused assets/code; update architecture, contribution, translation, testing and release documentation.
 
 ### Fixed
 
-- Refresh News summary/image/URL and all visible articles when content changes; reject out-of-range publication dates, retain epoch zero and validate identified history rows.
+- Media Player and Navigation keep Previous/Play/Next centered in a translucent artwork-tinted capsule, with circular controls, matching icon chips and legible translucent stacked-player selectors. Play has the same styling as its neighbours. Cached artwork and atomic palette updates prevent opaque flashes; repeated pending covers cause one refresh and retired crossfades cannot overwrite a newer cover.
+- Lock Card uses centered glyphs and the shared card/editor appearance, including its Styles section and confirmation toggles. It appears in entity-first suggestions, updates editor language with the Home Assistant profile and is embedded as a native Lock Card in Room Summary.
+- Room Summary removes the duplicate media-player subsection; media players remain on its main screen. Sections minimum widths are four columns for Alarm Panel/Entity and six for Weather/Calendar.
+- Vacuum translates Charger Disconnected in all twelve locales and truncates long status chips with an ellipsis. Fav boolean attributes use the translated entity catalog.
+- Fix stale requests, cancelled gestures, retained native focus, queued device commands and context-bound private state throughout the bundle. Calendar uses the supported weather forecast service and respects empty results; split Power Flow actions open an actual entity; old robot persistence failures cannot erase newer selections.
 
-- Reject corrupt Climate schedule storage, guard agenda/webhook inputs and keep absent schedule temperatures/bounds separate from zero; project nested Climate settings without assertions.
+### Validation
 
-- Resolve Climate theme colors inside its shadow root, support modern translucent RGB, clean up color probes and preserve missing temperatures/locales safely.
-
-- Guard Entity style/graph boundaries, preserve missing AQ readings as unknown, restore PM2.5 aliases and use bounded finite shared history geometry.
-
-- Keep blank Summary metrics absent while displaying real zeros and preserving comfort, media and security calculations.
-
-- Terminate malformed Power Flow SVG paths, preserve whole kilowatt digits, keep absent readings separate from zero, guard invalid connector coordinates and restore cycle-free editor color defaults.
-
-- Guard malformed Media Player/Navigation layout, media, route and style blocks; retain defaults for absent artwork numbers, real zero options and all legacy aliases.
-
-- Read modern translucent Media Player theme colors immediately and keep artwork query keys/fragments intact; block inherited editor paths and clean up color probes on failure.
-
-- Preserve Calendar forecast alternatives and real zero temperatures, correct current-day forecast keys and scoring, reject impossible date-only inputs, and share HA hyphenated weather icons.
-
-- Keep blank Graph readings out of current values/history, ignore malformed history/statistics rows, and guard SVG geometry and integral bounded sample allocation.
-
-- Prevent Camera signed-path caches from outliving short signed URL expiry, retry malformed responses, and protect array-aware editor paths from unsafe or inherited branches.
-
-- Restore Gauge automatic ranges and state precision when bounds/decimals are blank; keep absent readings distinct from zero and give physical units priority over names. Read modern translucent theme colors correctly.
-
-- Keep Navigation artwork query parameters before URL fragments and match parameter names literally; guard malformed duration and editor move inputs.
-
-- Keep missing Weather temperatures, dates and rain probabilities absent; preserve real zeros and show precipitation amounts when probability is unavailable.
-
-- Refresh colors based on theme variables immediately after theme changes; recognize modern translucent sRGB colors when choosing icon contrast.
-
-- Translate Vacuum’s charger-disconnected status and error sensor in every language; truncate long chips with an ellipsis while preserving the full label.
-
-- Show correct CSS Color 4 tints in the visual editors; changing a Lock color now retains its existing translucency.
-
-- Malformed Fan and Humidifier icon styles no longer prevent configuration loading; shared control normalization retains HA actions and service restrictions.
-
-- Match Lock’s visual editor to the bundle with shared switches, color controls and corner presets; apply its configurable card/icon styles.
-- Keep Room Summary media players on Home only and embed the native Lock Card for locks, including correct first-state delivery.
-- Request at least 4 columns for Alarm Panel/Entity and 6 for Weather/Calendar.
-
-- Keep the playback capsule centered regardless of auxiliary controls; apply cached artwork tints synchronously without color transitions.
-- Present replacement artwork and its tint together; keep cached artwork through volume/progress updates and bound stalled requests and cache growth.
-- Refresh Scene labels and icons when Home Assistant changes an entity.
-- Remove Camera portal listeners from their owning shadow root.
-
-### Maintenance
-
-- Check News helpers and source-derived public methods, share compaction/editor paths and observe asynchronous history-write failures.
-
-- Check Climate schedule codecs and public methods, retain v1/v2/v3 valid storage behavior and document the 3.0.0-alpha.1 publication target.
-
-- Strictly check Climate model and share finite number, size and color helpers.
-
-- Strictly check Entity configuration and helpers, derive public AQ methods from source, retire duplicate constants/graph/stub helpers and share equivalent Graph history algorithms.
-
-- Check Summary configuration, derive its public methods from checked source, and retain normalization identity through a typed weak cache.
-
-- Check Power Flow configuration/SVG/node helpers, share checked editor/numeric utilities and document source, unit and diagram behavior.
-
-- Check Media Player/Navigation configuration and derive public normalizer contracts from source; sanitize known styles while preserving YAML extensions.
-
-- Check Media Player helpers, share duration/artwork/color/slider/list boundaries, preserve empty entity editor placeholders, and replace a source-shape row test with a real editor regression.
-
-- Check Calendar configuration/helpers, share compaction/styles/weather icons while retaining Calendar’s CSS policy, and extract cycle-free editor color defaults.
-
-- Check Graph configuration/helpers, share numeric formatting with Gauge and list reordering with Navigation, and document history sampling behavior.
-
-- Check Camera configuration and helpers, derive public method declarations from source, and share protected array paths and fragment-preserving URL query construction.
-
-- Remove unused original demo GIFs while preserving the referenced optimized demos; refresh historical audit links and current build/validation instructions.
-
-- Check Gauge helpers, reuse shared style/color/numeric boundaries and clean up temporary color probes on failure.
-
-- Check Navigation helpers, reuse the shared render-signature fallback and share object-only editor paths with Insignia.
-
-- Check Weather forecast/unit helpers and share editor compaction with Insignia without changing valid forecast or unit behavior.
-
-- Check Weather, Circular Gauge and News configuration, preserving forecast/actions, gauge bounds and News source/history aliases while guarding nested styles.
-
-- Update TypeScript ESLint to 8.71.0 and the official CI cache action to v6.1.0 after compatibility review; retain TypeScript 6 until its next major is supported by the toolchain.
-
-- Generate Bubble Contrast from checked TypeScript and share canonical runtime entries and CSS color parsing with the HACS build.
-
-- Generate the Engine client from checked TypeScript and derive runtime method declarations from its actual API; preserve transport, version checks and retry/cache behavior.
-
-- Generate the Notifications mobile policy from checked TypeScript, preserving its public API, delivery rules and idempotent global adapter.
-
-- Check Fav/Insignia configuration and helpers while retaining domain-specific icons, legacy tints and actions; guard malformed nested YAML styles.
-
-- Remove Climate’s unregistered legacy visual editor and eager standalone lookup; retain the registered editor and legacy YAML schedule fallback.
-
-- Check Light configuration and color/temperature helpers, reuse typed slider/stub helpers and reject nonfinite RGB channels.
-
-- Check Alarm Panel/Person configuration and helpers plus Summary editor helpers; share typed stub selection and include Lock in registry-driven standalone embedding.
-
-- Check Fan, Humidifier and Cover helpers and share their typed pointer geometry; prevent invalid dial markers from malformed range/value data.
-
-- Check Vacuum configuration and helpers with TypeScript; remove obsolete source-extraction/editor mutation scripts and update build/contribution guidance.
-
-- Control animation and lifecycle time together in browser regressions, including slow-worker stalls, to avoid sampling detached controls.
-
-- Check Fan, Humidifier and Cover YAML normalization with TypeScript; share control normalization and editor color models while retaining legacy helper exports.
-
-- Centralize all 25 cards (including Lock) in the build/test registry and derive card versions from package.json.
-- Gate release publishing on shared strict validation and four browser projects; check every distributed JavaScript file.
-- Add safe local release preparation, typed shared models/defaults and Home Assistant fixtures, cycle/debt guards and developer guides.
+- Strict TypeScript, typed lint on every source module, zero unchecked modules/import cycles, distribution/translation checks and unit regressions. All four browser projects are required remotely, including Firefox; Chromium, WebKit and iPhone WebKit also pass locally.
+- Preserve the existing raw and gzip bundle limits. There are no production npm dependencies; the complete development dependency audit reports zero known vulnerabilities.
+- Detailed migration checkpoints, comparisons and native regression results are recorded in [the technical audit](./docs/TECHNICAL_AUDIT.md).
 
 ## [2.3.0-alpha.49] - 2026-09-29
 

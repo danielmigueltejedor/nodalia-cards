@@ -1,11 +1,12 @@
 # Nodalia Cards architecture
 
-This document describes the TypeScript migration that starts in `2.3.0-alpha.3b`.
+This document describes the complete checked architecture introduced in `3.0.0`.
+The migration began in `2.3.0-alpha.3b`.
 The public Lovelace/HACS contract is unchanged: custom element tags, YAML keys,
 defaults, editors, translations, and the single-file `nodalia-cards.js` install
 path stay the same.
 
-## Current architecture map (main after 2.3.0-alpha.49)
+## Current architecture map (3.0.0-alpha.1)
 
 The project is a Home Assistant Lovelace plugin. Handwritten cards historically
 lived as root `nodalia-*.js` files that were both source and published artifacts.
@@ -79,8 +80,8 @@ Static CSS is embedded from readable files; dynamic styles remain in the view.
 `src/shared/go2rtc-player.ts`; Camera imports it directly and the standalone
 ES-module player is generated from the same source. All shipped runtime lookup
 logic now has checked TypeScript source; the empty suppression inventory and
-canonical runtime entry list are both enforced. Final audit and release validation
-remain required before publishing 3.0.0-alpha.1.
+canonical runtime entry list are both enforced. The release workflow validates
+the exact tagged commit before publication.
 
 ## Dependency relationships
 

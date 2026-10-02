@@ -20,6 +20,7 @@ test('release notes promote only curated Unreleased notes', () => {
   const output = promoteChangelog(text, '2.3.0-alpha.50', '2026-09-30');
   assert.ok(output.includes('## [2.3.0-alpha.50] - 2026-09-30'));
   assert.ok(output.endsWith(old));
+  assert.ok(output.includes('2026-09-30\n\n### Fixed'));
   assert.throws(() => promoteChangelog('## Unreleased\n\n', '2.3.0', '2026-09-30'), /curated/);
 });
 test('dry-run is read-only and missing notes never partially bump a version', () => {
@@ -55,4 +56,30 @@ test('stable promotion retires the preview and advances the stable roadmap', () 
   assert.match(next, /Current preview release:\s+```text\s+2\.3\.1-alpha\.1\s+```/);
   assert.match(next, /Stable \*\*`2\.3\.0`\*\* remains/);
   assert.throws(() => updateRoadmap('# Missing sections', '2.3.0', 'stable'), /sections are missing/);
+});
+
+
+test('Explicit major release preparation preserves channel and version ordering',()=>{
+  assert.equal(nextVersion('2.3.0-alpha.49','alpha','3.0.0-alpha.1'),'3.0.0-alpha.1');
+  assert.equal(nextVersion('2.3.0-rc.2','alpha','3.0.0-alpha.1'),'3.0.0-alpha.1');
+  assert.equal(nextVersion('3.0.0-alpha.1','alpha','3.0.0-alpha.2'),'3.0.0-alpha.2');
+  for(const version of ['3.0.0','3.0.0-beta.1'])assert.throws(()=>nextVersion('2.3.0-alpha.49','alpha',version),/channel/);
+  for(const version of ['2.3.0-alpha.49','2.3.0-alpha.1','2.2.9-alpha.1'])assert.throws(()=>nextVersion('2.3.0-alpha.49','alpha',version),/advance/);
+  assert.throws(()=>nextVersion('3.0.0','alpha','3.0.0-alpha.1'),/advance/);
+  for(const version of ['3.0.0-alpha.0','03.0.0-alpha.1','invalid','3.0.0-alpha.01'])assert.throws(()=>nextVersion('2.3.0-alpha.49','alpha',version),/Unsupported/);
+});
+test('An explicit major dry-run is read-only and invalid versions cannot partially update release files',()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'nodalia-major-release-test-'));
+  try {
+    const pkg='{"name":"example","version":"2.3.0-alpha.49"}\n';
+    fs.writeFileSync(path.join(root,'package.json'),pkg);
+    fs.writeFileSync(path.join(root,'CHANGELOG-PRERELEASES.md'),'## Unreleased\n\n### Changed\n- Complete migration.\n');
+    assert.equal(prepareRelease(root,'alpha',{version:'3.0.0-alpha.1',dryRun:true}).version,'3.0.0-alpha.1');
+    assert.equal(fs.readFileSync(path.join(root,'package.json'),'utf8'),pkg);
+    assert.throws(()=>prepareRelease(root,'alpha',{version:'2.3.0-alpha.48'}),/advance/);
+    assert.equal(fs.readFileSync(path.join(root,'package.json'),'utf8'),pkg);
+    assert.equal(prepareRelease(root,'alpha',{version:'3.0.0-alpha.1',date:'2026-10-02'}).version,'3.0.0-alpha.1');
+    assert.equal(JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version,'3.0.0-alpha.1');
+    assert.match(fs.readFileSync(path.join(root,'CHANGELOG-PRERELEASES.md'),'utf8'),/## \[3\.0\.0-alpha\.1\] - 2026-10-02/);
+  }finally{fs.rmSync(root,{recursive:true,force:true});}
 });

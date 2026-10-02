@@ -4,7 +4,9 @@
 `pnpm version:sync`; cards re-export it. Public generated JS embeds the same value.
 
 1. Add concise user-facing changes under `## Unreleased` in
-   `CHANGELOG-PRERELEASES.md` (previews) or `CHANGELOG.md` (stable).
+   `CHANGELOG-PRERELEASES.md` (previews) or `CHANGELOG.md` (stable). Include a
+   `### Added`, `### Changed` or `### Fixed` section; keep technical audit detail in
+   the audit document.
 2. Run `pnpm release:alpha --dry-run`, `pnpm release:beta --dry-run`,
    `pnpm release:rc --dry-run` or `pnpm release --dry-run` to inspect the next version.
 3. Run without `--dry-run` to update package/version references, promote the
@@ -22,7 +24,10 @@
 Channel progression is alpha → beta → rc → stable. The same channel increments
 its number; promotion starts at 1, stable removes the suffix, and a new preview
 from stable starts the next patch. A major/minor release is an explicit product
-version decision: edit package.version deliberately and curate the matching notes.
+version decision: use an explicit target, for example
+`pnpm release:alpha --version=3.0.0-alpha.1 --dry-run`, review it, then run without
+`--dry-run`. The target must advance the existing version and match the requested
+channel; invalid targets fail before any files are changed.
 Do not silently infer a major upgrade from dependency availability.
 
 HACS continues to load only `nodalia-cards.js`. Source TS, tooling and tests are

@@ -5,11 +5,25 @@ import { spawnSync } from 'node:child_process';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const channels = ['alpha', 'beta', 'rc', 'stable'];
-export function nextVersion(current, channel) {
+export function nextVersion(current, channel, requestedVersion) {
   if (!channels.includes(channel)) throw new Error(`Unknown release channel: ${channel}`);
   const match = /^(\d+)\.(\d+)\.(\d+)(?:-(alpha|beta|rc)\.(\d+))?$/.exec(current);
   if (!match) throw new Error(`Unsupported current version: ${current}`);
   const [, major, minor, patch, previous, count] = match;
+  if (requestedVersion !== undefined) {
+    const requested = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(alpha|beta|rc)\.([1-9]\d*))?$/.exec(requestedVersion);
+    if (!requested || requested.slice(1,4).some(value=>!Number.isSafeInteger(Number(value)))) throw new Error(`Unsupported requested version: ${requestedVersion}`);
+    if ((requested[4] || 'stable') !== channel) throw new Error('Requested version must match the release channel');
+    const oldBase=[major,minor,patch].map(Number),newBase=requested.slice(1,4).map(Number);
+    let order=0;
+    for(let index=0;index<3;index++) {if(newBase[index]!==oldBase[index]) {order=newBase[index]>oldBase[index]?1:-1;break;}}
+    if(!order) {
+      const oldChannel=channels.indexOf(previous || 'stable'),newChannel=channels.indexOf(channel);
+      order=newChannel===oldChannel?Number(requested[5] || 0)-Number(count || 0):newChannel-oldChannel;
+    }
+    if(order<=0) throw new Error('Requested version must advance the current version');
+    return requestedVersion;
+  }
   if (previous && channels.indexOf(channel) < channels.indexOf(previous)) throw new Error('Cannot downgrade a prerelease channel');
   const base = `${major}.${minor}.${previous ? patch : Number(patch) + 1}`;
   return channel === 'stable' ? base : `${base}-${channel}.${previous === channel ? Number(count) + 1 : 1}`;
@@ -18,7 +32,7 @@ export function promoteChangelog(source, version, date) {
   const match = /^## (?:\[Unreleased\]|Unreleased)\s*\n([\s\S]*?)(?=^## |$(?![\s\S]))/m.exec(source);
   if (!match || !/^[-*] .+/m.test(match[1]) || !/^###\s+/m.test(match[1])) throw new Error('Add curated user-facing notes under Unreleased before preparing a release');
   if (source.includes(`## [${version}]`)) throw new Error(`Changelog already contains ${version}`);
-  return source.slice(0, match.index) + `## [${version}] - ${date}\n${match[1]}` + source.slice(match.index + match[0].length);
+  return source.slice(0, match.index) + `## [${version}] - ${date}\n\n${match[1].trimStart()}` + source.slice(match.index + match[0].length);
 }
 export function updateRoadmap(source, version, channel) {
   const preview = /^## Current preview release[\s\S]*?(?=^## Current stable release)/m;
@@ -38,10 +52,10 @@ export function updateRoadmap(source, version, channel) {
   }
   return result;
 }
-export function prepareRelease(directory, channel, { dryRun = false, date = new Date().toISOString().slice(0, 10) } = {}) {
+export function prepareRelease(directory, channel, { dryRun = false, date = new Date().toISOString().slice(0, 10), version: requestedVersion } = {}) {
   const packagePath = path.join(directory, 'package.json');
   const pkg = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
-  const version = nextVersion(pkg.version, channel);
+  const version = nextVersion(pkg.version, channel, requestedVersion);
   const changelog = channel === 'stable' ? 'CHANGELOG.md' : 'CHANGELOG-PRERELEASES.md';
   const files = new Map([[changelog, promoteChangelog(fs.readFileSync(path.join(directory, changelog), 'utf8'), version, date)]]);
   for (const name of ['ROADMAP.md', 'docs/ARCHITECTURE.md', 'docs/nodalia-integration.md', '.github/ISSUE_TEMPLATE/bug_report.yml', '.github/ISSUE_TEMPLATE/question.yml', '.github/ISSUE_TEMPLATE/translation.yml']) {
@@ -58,7 +72,8 @@ export function prepareRelease(directory, channel, { dryRun = false, date = new 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const channel = process.argv[2] || 'stable';
   const dryRun = process.argv.includes('--dry-run');
-  const result = prepareRelease(root, channel, { dryRun });
+  const requestedVersion=process.argv.find(value=>value.startsWith("--version="))?.slice("--version=".length);
+  const result = prepareRelease(root, channel, { dryRun, version: requestedVersion });
   console.log(`${dryRun ? 'Would prepare' : 'Prepared'} ${result.version}: ${result.files.join(', ')}`);
   if (!dryRun) {
     for (const script of ['scripts/sync-card-version.mjs', 'scripts/build-bundle.mjs']) {
