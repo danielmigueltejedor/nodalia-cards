@@ -2078,3 +2078,24 @@ the unchanged limits.
   exclusion, including all eighteen new affected-card regressions. Raw/gzipSync:
   4,325,331 / 967,858 bytes; limits unchanged. Production dependency count is zero;
   the full 130-package development dependency audit reports zero vulnerabilities.
+
+## 3.0.0-alpha.1 release preparation
+
+- Prepare the explicitly requested major preview after the complete migration.
+  Add a validated explicit target to local release preparation; reject channel
+  mismatches, identical/older versions and malformed numbering before any writes.
+  Keep dry-runs read-only. Two additional regressions cover major transitions,
+  version ordering and actual file promotion; formatted notes retain heading spacing.
+- Curate user-facing release notes and update README, roadmap, architecture,
+  Engine compatibility guide, issue templates and all 26 version declarations.
+  Existing YAML/tags/resources and the optional Engine API generation are unchanged.
+- Frozen installation, regenerated translations, strict types, full typed lint,
+  architecture/distribution/locale gates and all 776 unit tests pass. The exact
+  3.0.0-alpha.1 bundle passes 896 local browser cases with one existing exclusion.
+  Raw/gzipSync: 4,325,326 / 967,857 bytes. Metadata validates eight repository
+  files and queues the single HACS asset. Remote review/quality gates and the
+  tagged release workflow must complete before publication is confirmed.
+- Dependency audit reports no known vulnerabilities and no production dependencies.
+  The only newer dependency is the next major TypeScript compiler; retain the
+  validated 6.0.3 toolchain rather than introduce an untested compiler migration
+  into the release. All dependencies are current within their declared ranges.

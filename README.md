@@ -31,6 +31,14 @@ Nodalia Cards is a custom Home Assistant frontend card suite built as one visual
 > [!TIP]
 > **Nodalia Cards Engine is optional.** Install it when you want background notifications, shared dismissals, a notification inbox or native Climate schedules. The cards and visual editors continue to work without it.
 
+## Version 3 preview
+
+The `3.0.0` alpha line completes strict TypeScript migration across all 25 cards,
+editors and shared runtimes. It includes the media-control, Lock, Summary and
+Vacuum refinements described in the [prerelease notes](./CHANGELOG-PRERELEASES.md).
+Existing YAML, custom element names and the HACS resource path remain compatible.
+Enable prereleases in HACS to select an alpha; stable `2.2.10` remains available.
+
 ## Preview
 
 <p align="center">
@@ -128,7 +136,7 @@ This is the single resource HACS installs. The repository also provides standalo
 
 ### Optional companion: Nodalia Cards Engine
 
-Nodalia Cards Engine is a separate HACS **Integration** that runs advanced features inside Home Assistant even when no dashboard is open. Stable Engine **`2.0.2`** is the recommended companion for Nodalia Cards **`2.2.10`** and the current `2.3.0` preview.
+Nodalia Cards Engine is a separate HACS **Integration** that runs advanced features inside Home Assistant even when no dashboard is open. Stable Engine **`2.0.2`** is the recommended companion for Nodalia Cards **`2.2.10`** and the current `3.0.0` preview.
 
 [![Add Nodalia Cards Engine to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards-engine&category=integration)
 

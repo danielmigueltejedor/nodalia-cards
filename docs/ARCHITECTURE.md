@@ -1,11 +1,12 @@
 # Nodalia Cards architecture
 
-This document describes the TypeScript migration that starts in `2.3.0-alpha.3b`.
+This document describes the complete checked architecture introduced in `3.0.0`.
+The migration began in `2.3.0-alpha.3b`.
 The public Lovelace/HACS contract is unchanged: custom element tags, YAML keys,
 defaults, editors, translations, and the single-file `nodalia-cards.js` install
 path stay the same.
 
-## Current architecture map (main after 2.3.0-alpha.49)
+## Current architecture map (3.0.0-alpha.1)
 
 The project is a Home Assistant Lovelace plugin. Handwritten cards historically
 lived as root `nodalia-*.js` files that were both source and published artifacts.
@@ -79,8 +80,8 @@ Static CSS is embedded from readable files; dynamic styles remain in the view.
 `src/shared/go2rtc-player.ts`; Camera imports it directly and the standalone
 ES-module player is generated from the same source. All shipped runtime lookup
 logic now has checked TypeScript source; the empty suppression inventory and
-canonical runtime entry list are both enforced. Final audit and release validation
-remain required before publishing 3.0.0-alpha.1.
+canonical runtime entry list are both enforced. The release workflow validates
+the exact tagged commit before publication.
 
 ## Dependency relationships
 
@@ -186,7 +187,7 @@ boundaries so standalone `<script>` loading still works.
 | `nodalia-room-summary-card.js` | Generated from `src/cards/room-summary/standalone.ts` (unminified IIFE) |
 | `nodalia-advance-vacuum-card.js` | Generated from `src/cards/advance-vacuum/standalone.ts` (unminified IIFE) |
 | `nodalia-cards.manifest.js` | Version/hash metadata |
-| `nodalia-i18n.js` / `nodalia-editor-ui.js` | Generated from `i18n/` JSON |
+| `nodalia-i18n.js` / `nodalia-editor-ui.js` | Compiled checked lookup with generated `i18n/` JSON data |
 
 Community translations are curated on self-hosted Weblate
 ([translate.getnodalia.com](https://translate.getnodalia.com)); see
@@ -256,8 +257,8 @@ exclusions. New `any`, `@ts-nocheck` and `@ts-ignore` shortcuts are rejected.
 1. `pnpm run typecheck` — `tsc --noEmit` with strict TypeScript.
 2. `pnpm run lint` — ESLint on `src/**/*.ts`.
 3. `scripts/build-src-cards.mjs` — esbuild TypeScript cards to root JS.
-4. `scripts/build-bundle.mjs` — esbuild HACS bundle from published JS parts,
-   compiling migrated cards from `src/cards/*/index.ts`.
+4. `scripts/build-bundle.mjs` — esbuild HACS bundle from canonical card/runtime
+   TypeScript entries. Generated root JS preserves standalone compatibility.
 
 `pnpm validate:fast` checks versions, tracked architecture debt, strict types, lint,
 distribution syntax, translations, build and unit tests. `pnpm validate` adds the
@@ -325,18 +326,23 @@ existing `-editor` custom element tag and `config-changed` event shape.
 
 ## Adding shared functionality
 
-Put identical helpers in `src/core/` (or `nodalia-utils.js` during the
-transition). Do not centralize look-alike code with different semantics.
+Put shared protocol functionality in `src/core/` and reusable domain/DOM helpers
+in `src/shared/`. Generated `nodalia-utils.js` is a compatibility artifact.
+Do not centralize look-alike code with different semantics.
 
-## Remaining migration
+## Continuing maintenance
 
-1. Shared core → `src/core/`
-2. Type remaining `@ts-nocheck` files and replace regex tests with behavioral tests where safe
-3. Remove obsolete globals once every consumer imports modules
+The strict migration is complete. Keep typed lint and the debt inventory enforced.
+Split large controllers further only when a distinct responsibility benefits from
+its own module. Prefer behavioral regressions to source-format assertions and
+reuse direct shared imports while retaining public standalone/global APIs.
 
 See `docs/REFACTOR_ALPHA47.md` for the earlier JS-layer helper centralization.
 
-## 2026-09-30 audit implementation
+## Historical checkpoint — 2026-09-30
+
+This checkpoint precedes the completed migration. Its debt counts below describe
+that date; the current zero-debt inventory is described above.
 
 The build-time source inventory is `src/cards/registry.json` (25 cards, including
 Lock). Build and architecture tests consume it; registration still belongs to each
