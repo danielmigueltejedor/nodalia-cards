@@ -1,0 +1,192 @@
+        .advance-vacuum-card__control--active-motion ha-icon {
+          animation: advance-vacuum-icon-sweep 1.45s ease-in-out infinite;
+          transform-origin: 50% 70%;
+        }
+
+        .advance-vacuum-card__modes {
+          display: flex;
+          justify-content: center;
+          width: 100%;
+        }
+
+        .advance-vacuum-card__modes-bubble {
+          background: var(--av-surface);
+          border: 1px solid var(--av-border);
+          border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-float-subtle);
+          display: inline-flex;
+          flex-wrap: wrap;
+          gap: 4px;
+          justify-content: center;
+          max-width: 100%;
+          padding: 4px;
+        }
+
+        .advance-vacuum-card__mode-button {
+          align-items: center;
+          background: transparent;
+          border: 1px solid transparent;
+          border-radius: 999px;
+          box-shadow: none;
+          color: var(--secondary-text-color);
+          display: inline-flex;
+          font-size: 12px;
+          font-weight: 600;
+          gap: 8px;
+          min-height: 30px;
+          padding: 0 11px;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, color 180ms ease, transform 180ms cubic-bezier(0.2, 0.9, 0.24, 1);
+        }
+
+        .advance-vacuum-card__mode-button:hover {
+          background: var(--av-accent-hover);
+          box-shadow: var(--av-accent-hover-shadow);
+        }
+
+        .advance-vacuum-card__mode-button.is-active {
+          background: var(--av-selected-bg);
+          border-color: var(--av-selected-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-selected-inset),
+            var(--av-selected-glow);
+          color: var(--primary-text-color);
+          font-weight: 700;
+        }
+
+        .advance-vacuum-card__mode-button ha-icon {
+          --mdc-icon-size: 15px;
+        }
+
+        .advance-vacuum-card__utility-panel {
+          animation: advance-vacuum-utility-panel-in var(--advance-vacuum-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) forwards;
+          display: grid;
+          gap: 10px;
+          justify-items: center;
+          opacity: 0;
+          transform: translateY(-6px);
+          transform-origin: top center;
+          width: 100%;
+        }
+
+        .advance-vacuum-card__utility-panel-slot {
+          display: flex;
+          justify-content: center;
+          width: 100%;
+        }
+
+        .advance-vacuum-card__utility-group {
+          display: grid;
+          gap: 8px;
+          justify-items: center;
+          width: 100%;
+        }
+
+        .advance-vacuum-card__utility-label {
+          color: var(--secondary-text-color);
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+        }
+
+        .advance-vacuum-card__utility-options {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          justify-content: center;
+          width: 100%;
+        }
+
+        .advance-vacuum-card__utility-options--menu {
+          max-width: 100%;
+        }
+
+        .advance-vacuum-card__utility-options--presets {
+          justify-content: center;
+        }
+
+        .advance-vacuum-card__utility-option {
+          align-items: center;
+          appearance: none;
+          background: var(--av-surface);
+          border: 1px solid var(--av-border);
+          border-radius: 999px;
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-float-subtle);
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          font: inherit;
+          gap: 8px;
+          justify-content: center;
+          margin: 0;
+          min-height: 34px;
+          padding: 0 12px;
+          transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, color 180ms ease, transform 180ms cubic-bezier(0.22, 0.84, 0.26, 1);
+        }
+
+        .advance-vacuum-card__utility-option.is-active {
+          background: var(--av-selected-bg);
+          border-color: var(--av-selected-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-selected-inset),
+            var(--av-selected-ring),
+            var(--av-selected-glow);
+          color: var(--primary-text-color);
+          font-weight: 700;
+        }
+
+        .advance-vacuum-card__utility-option:not(.is-active):hover {
+          background: var(--av-accent-hover);
+          border-color: var(--av-border);
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-accent-hover-shadow);
+        }
+
+        .advance-vacuum-card__utility-option--menu ha-icon {
+          --mdc-icon-size: 16px;
+        }
+
+        .advance-vacuum-card__utility-field {
+          display: grid;
+          gap: 8px;
+          justify-items: center;
+          max-width: 340px;
+          width: min(100%, 340px);
+        }
+
+        .advance-vacuum-card__utility-select {
+          appearance: none;
+          background: var(--av-surface);
+          border: 1px solid var(--av-border);
+          border-radius: 16px;
+          box-shadow:
+            inset 0 1px 0 var(--av-inset-soft),
+            var(--av-float-subtle);
+          color: var(--primary-text-color);
+          cursor: pointer;
+          font: inherit;
+          min-height: 42px;
+          padding: 0 14px;
+          text-align: center;
+          width: 100%;
+        }
+
+        .advance-vacuum-card__utility-meta {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          justify-content: center;
+          width: 100%;
+        }
+
+        .advance-vacuum-card__utility-chip-group {
+          display: grid;
+          gap: 6px;
+          justify-items: center;
+        }
+

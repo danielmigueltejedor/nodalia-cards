@@ -520,7 +520,7 @@ test("advanced vacuum internal service calls bypass strict external allowlist", 
   assert.match(source, /_callInternalService\("input_text\.set_value"/);
   assert.match(source, /_callInternalService\("vacuum\.send_command"/);
   assert.match(source, /_callInternalService\("roborock\.set_vacuum_goto_position"/);
-  assert.match(source, /_callNamedService\(item\.service, serviceData, item\.target \|\| null\)/);
+  assert.match(source, /_callNamedService\(vacuumText\(item\.service\), serviceData, isObject\(item\.target\) \? item\.target : null\)/);
 });
 
 test("advanced vacuum webhook-only persistence deduplicates empty sessions", () => {
@@ -879,7 +879,7 @@ test("advanced vacuum calibration signature includes direct point values", () =>
   const source = read("nodalia-advance-vacuum-card.js");
   assert.match(source, /fingerprint: JSON\.stringify\(directPoints\)/);
   assert.match(source, /this\._calibrationSignatureStamp = "";[\s\S]*this\._syncCalibrationIfNeeded\(\)/);
-  assert.match(source, /Promise\.resolve\(\)\.then\(\(\) => this\._callRoomCleaningService/);
+  assert.match(source, /Promise\.resolve\(\)\.then\(\(\) => current\(\) \? this\._callRoomCleaningService/);
 });
 
 test("i18n automatic language prefers localStorage selectedLanguage over stale hass.language", () => {
@@ -1734,7 +1734,7 @@ test("advance vacuum card defaults shared session webhook access to admin-only",
   assert.match(source, /allow_webhooks_for_non_admin: false/);
   assert.match(source, /_postSharedCleaningSessionWebhook/);
   assert.match(source, /webhook blocked for non-admin user/);
-  assert.match(source, /async _runMapAction\(\)[\s\S]*if \(!this\.isConnected\) \{\s*return;\s*\}/);
+  assert.match(source, /async _runMapAction\(\)[\s\S]*if \(!this\._isCurrent\(generation\)\) \{\s*return;\s*\}/);
   assert.match(source, /strict_service_actions === true/);
 });
 

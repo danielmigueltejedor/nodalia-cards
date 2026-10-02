@@ -1840,3 +1840,33 @@ CI and review remain required before integration.
   iPhone WebKit, using three workers. Raw/gzip: 4,321,900 / 962,936 bytes,
   below unchanged 4,325,376 / 972,800 limits. Two unchecked
   views and manual support runtimes remain before 3.0.0-alpha.1.
+
+## 2026-10-02 — Advance Vacuum view and map/session ownership
+
+- Replace the view suppression with actual normalized config, HA, dock, room,
+  geometry, session, translation and native DOM/gesture contracts. Guard unknown
+  records and finite numeric values; preserve real zero and absent battery values.
+  Keep strict flags, service profiles, helper exports and bundle caps unchanged.
+- Capture HA/configuration generations for map commands, room resume and shared
+  persistence. Reconfiguration, connection/auth/user changes and detach retire
+  waits, locale frames, image handlers and entrance work. Old failures cannot
+  alter replacement feedback or continue pause-to-zone commands. Private local
+  history includes server/user/robot; explicit shared helpers retain their formats.
+- Keep the map surface connected through active previews so native pointer capture
+  survives updates. Pointer/touch cancellation, blur and hidden pages issue no
+  selection or command; cancelled zone edits restore original geometry. Preserve
+  keyboard room activation and native focus through HA updates. Registry changes
+  participate in related-entity discovery even when HA mutates records in place.
+- Remove eight verified unused private methods. Embed static utility, motion and
+  map CSS with whitespace-only compaction, preserving declaration order. Update
+  unit fixtures to implement actual native contracts rather than weakened view
+  types. The first native fixture assumed one repetition despite the actual
+  default of three and retained an earlier helper call; correct both fixtures.
+- All 751 unit tests, strict/lint and architecture checks pass. All 3,000 valid
+  markup/style/model/sizing/service-profile comparisons match the previous view.
+  All 24 focused native cases pass across Chromium, WebKit and iPhone, including
+  real pointer capture during zone dragging and rollback. The full local browser
+  suite passes 791 cases with one existing exclusion. Raw/gzipSync bundle:
+  4,320,661 / 964,692 bytes below unchanged 4,325,376 / 972,800 limits.
+  One unchecked view (Climate) and manual support runtimes remain before
+  3.0.0-alpha.1 publication.
