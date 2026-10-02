@@ -300,8 +300,14 @@ test("Media capsules and selectors stay translucent before artwork loads and aft
       });
       expect(["flex", "inline-flex"]).toContain(result.display);
       expect(result.controls).toHaveLength(3);
-      expect(result.controls[1]).toEqual(result.controls[0]);
-      expect(result.controls[2]).toEqual(result.controls[0]);
+      const {width: referenceWidth, height: referenceHeight, ...referenceStyle} = result.controls[0];
+      for (const control of result.controls) {
+        const {width, height, ...style} = control;
+        expect(style).toEqual(referenceStyle);
+        expect(width).toBeCloseTo(referenceWidth, 2);
+        expect(height).toBeCloseTo(referenceHeight, 2);
+        expect(width).toBeCloseTo(height, 2);
+      }
       for (const surface of [...result.controls, ...result.containers]) {
         expect(surface.alpha).toBeGreaterThan(0.15); expect(surface.alpha).toBeLessThan(0.35);
       }

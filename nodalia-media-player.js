@@ -1321,7 +1321,8 @@
   }
   async function applyArtworkControlTheme(host, url) {
     if (!host) return;
-    const owner = host.getRootNode?.()?.host || host;
+    const root = host.getRootNode();
+    const owner = root instanceof ShadowRoot ? root.host : host;
     const token = {};
     requests.set(host, token);
     if (!url) {

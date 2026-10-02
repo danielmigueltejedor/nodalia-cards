@@ -32,10 +32,20 @@ export function prepareArtworkTheme(owner: HTMLElement, url: string, hasCurrentC
   return false;
 }
 
+/** Invalidate deferred owner rendering and palette carry-over at context boundaries. */
+export function releaseArtworkTheme(owner: HTMLElement): void {
+  renderRequests.delete(owner);
+  displayedArtwork.delete(owner);
+  themes.delete(owner);
+  const root = owner.shadowRoot;
+  root?.querySelectorAll(".media-player-card").forEach(host => {if (host instanceof HTMLElement) requests.delete(host);});
+}
+
 /** Apply to the controls' ancestor, never to the sibling artwork layer. */
 export async function applyArtworkControlTheme(host: HTMLElement | null, url: string): Promise<void> {
   if (!host) return;
-  const owner = (host.getRootNode?.() as ShadowRoot)?.host || host;
+  const root = host.getRootNode();
+  const owner = root instanceof ShadowRoot ? root.host : host;
   const token = {};
   requests.set(host, token);
   if (!url) {

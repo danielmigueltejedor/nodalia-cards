@@ -1,5 +1,3 @@
-// @ts-nocheck
-/* Large HTMLElement view/controller: typed incrementally as methods are extracted. */
 import {
   CARD_TAG,
   CARD_VERSION,
@@ -29,26 +27,64 @@ import {
 } from "./navigation-helpers";
 
 import { artworkCacheToken } from "../media-player/media-player-artwork";
-import { applyArtworkControlTheme, prepareArtworkTheme, MEDIA_CONTROL_STYLES } from "../media-player/media-player-control-theme";
+import { applyArtworkControlTheme, prepareArtworkTheme, releaseArtworkTheme, MEDIA_CONTROL_STYLES } from "../media-player/media-player-control-theme";
 
-let _lazyNodaliaNavigationBarCard;
+import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
+import { invokeHassService } from "../../shared/home-assistant-services";
+type NavigationConfig = ReturnType<typeof normalizeConfig>;
+type NavItem = Record<string,unknown>;
+type NavPlayer = NavItem & {entity:string};
+type NavAction = Record<string,unknown>;
+type MediaItem = {title:string;media_class:string;media_content_id:string;media_content_type:string;can_play:boolean;can_expand:boolean;thumbnail:string;children:MediaItem[]};
+type MediaBrowserState = {entityId:string;fallbackPath:string;isMusicAssistant:boolean;loading:boolean;error:string;stack:MediaItem[]};
+type PopupState = {columns:number;direction:string;itemMinWidth:string;layout:string;left:string;top:string;route:NavItem;routeIndex:number;width:string};
+type MediaProgress = {duration:number;percent:number;position:number};
+type RunActionOptions = {defaultAction?:NavAction|null;anchorElement?:HTMLElement;closePopup?:boolean};
+const navRecord = (value:unknown): Record<string,unknown> => isObject(value) ? value : {};
+const navText = (value:unknown): string => String(value ?? "");
+let _lazyNodaliaNavigationBarCard: CustomElementConstructor | undefined;
 export function loadNodaliaNavigationBarCard() {
   if (_lazyNodaliaNavigationBarCard) {
     return _lazyNodaliaNavigationBarCard;
   }
 class NodaliaNavigationBarCard extends HTMLElement {
-  static getStubConfig(hass, entities = [], entitiesFallback = []) {
+  declare private _generation: number;
+  declare private _contextConnection: HomeAssistant["connection"];
+  declare private _contextAuth: HomeAssistant["auth"];
+  declare private _contextUser: string;
+  declare private _modalRestoreSelector: string;
+  declare private _modalKind: string;
+  declare private _config: NavigationConfig;
+  declare private _configured: boolean;
+  declare private _hass: HomeAssistant|null;
+  declare private _renderedRoutes: NavItem[];
+  declare private _popupState: PopupState|null;
+  declare private _mediaBrowserState: MediaBrowserState|null;
+  declare private _mediaBrowserRequestToken: number;
+  declare private _popupPositionFrame: number|null;
+  declare private _activeMediaPlayerIndex: number;
+  declare private _activeMediaPlayerEntity: string;
+  declare private _mediaPlayerExpanded: boolean;
+  declare private _mediaTicker: number|null;
+  declare private _lastRenderSignature: string;
+  declare private _animateDockEntranceNext: boolean;
+  declare private _dockEntrancePlayed: boolean;
+  declare private _dockEntranceResetFrame: number;
+  declare private _lastShouldHide: boolean;
+  declare private _playDockEntrance: boolean;
+  declare private _lastMediaToggleVisible: boolean;
+  declare private _playPopupEntrance: boolean;
+  declare private _lastMediaPlayerCardVisible: boolean;
+  declare private _resizeSyncTimer: number;
+  declare private _onResize: ()=>void;
+  declare private _onLocationChange: ()=>void;
+  declare private _onWindowKeyDown: (event:KeyboardEvent)=>void;
+  declare private _onVisibilityChange: ()=>void;
+
+  static getStubConfig(hass: HomeAssistant|null|undefined, entities: unknown = [], entitiesFallback: unknown = []) {
     const config = deepClone(STUB_CONFIG);
     const entityId = window.NodaliaUtils?.findStubEntityIds?.(hass, entities, entitiesFallback, ["media_player"], 1)[0] || "";
-    if (entityId) {
-      config.media_player = {
-        players: [{
-          entity: entityId,
-          label: hass?.states?.[entityId]?.attributes?.friendly_name || "",
-        }],
-      };
-    }
-    return config;
+    return entityId ? {...config, media_player:{players:[{entity:entityId,label:hass?.states?.[entityId]?.attributes?.friendly_name || ""}]}} : config;
   }
 
   static async getConfigElement() {
@@ -61,7 +97,14 @@ class NodaliaNavigationBarCard extends HTMLElement {
   }
 
   _nodaliaConstruct() {this.attachShadow({ mode: "open" });
-    this._config = null;
+    this._generation = 0;
+    this._contextConnection = undefined;
+    this._contextAuth = undefined;
+    this._contextUser = "";
+    this._modalRestoreSelector = "";
+    this._modalKind = "";
+    this._config = normalizeConfig({routes:[]});
+    this._configured = false;
     this._hass = null;
     this._renderedRoutes = [];
     this._popupState = null;
@@ -86,7 +129,9 @@ class NodaliaNavigationBarCard extends HTMLElement {
       if (this._resizeSyncTimer) {
         window.clearTimeout(this._resizeSyncTimer);
       }
+      const generation = this._generation;
       this._resizeSyncTimer = window.setTimeout(() => {
+        if (generation !== this._generation) return;
         this._resizeSyncTimer = 0;
         if (!this.isConnected) {
           return;
@@ -125,7 +170,13 @@ class NodaliaNavigationBarCard extends HTMLElement {
       this._render();
     };
     this._onShadowClick = this._onShadowClick.bind(this);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
+    this.shadowRoot?.addEventListener("click", this._onShadowClick);
+    this.shadowRoot?.addEventListener("keydown", event => {
+      if (window.NodaliaUtils?.isKeyboardActivationEvent?.(event) && event.target instanceof HTMLElement && event.target.dataset.navMediaInfo === "true") {
+        event.preventDefault();
+        this._onShadowClick(event);
+      }
+    });
     }
 
   connectedCallback() {
@@ -143,6 +194,11 @@ class NodaliaNavigationBarCard extends HTMLElement {
     window.removeEventListener("location-changed", this._onLocationChange);
     window.removeEventListener("keydown", this._onWindowKeyDown);
     document.removeEventListener("visibilitychange", this._onVisibilityChange);
+    this._releaseViewWork();
+  }
+
+  _releaseViewWork() {
+    ++this._generation;
     this._mediaBrowserRequestToken += 1;
     this._mediaBrowserState = null;
     if (this._popupPositionFrame) {
@@ -162,22 +218,44 @@ class NodaliaNavigationBarCard extends HTMLElement {
       this._resizeSyncTimer = 0;
     }
     window.NodaliaUtils?.clearDeferTimers?.(this);
+    this._popupState = null;
+    this._modalRestoreSelector = "";
+    this._modalKind = "";
+    window.NodaliaUtils?.releaseModalFocus?.(this);
+    releaseArtworkTheme(this);
   }
 
-  setConfig(config) {
+  _resetContextView() {
+    this._releaseViewWork();
+    this._mediaPlayerExpanded = false;
+    this._activeMediaPlayerIndex = 0;
+    this._activeMediaPlayerEntity = "";
+    this._lastRenderSignature = "";
+    this.shadowRoot?.replaceChildren();
+  }
+
+  setConfig(config: unknown) {
+    this._resetContextView();
     this._config = normalizeConfig(config);
+    this._configured = true;
     this._lastRenderSignature = "";
     this._render();
   }
 
-  set hass(hass) {
-    const nextSignature = this._getRenderSignature(hass);
-    this._hass = hass;
-    if (!this.isConnected) {
-      return;
+  set hass(hass: HomeAssistant|null) {
+    const user = `${hass?.user?.id ?? ""}:${hass?.user?.is_admin === true}`;
+    if (this._contextConnection !== hass?.connection || this._contextAuth !== hass?.auth || this._contextUser !== user) {
+      this._resetContextView();
+      this._contextConnection = hass?.connection;
+      this._contextAuth = hass?.auth;
+      this._contextUser = user;
     }
+    this._hass = hass;
+    if (!this.isConnected) return;
+    const nextSignature = this._getRenderSignature(hass);
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
       this._patchMediaVolumeControls();
+      this._refreshMediaProgress();
       return;
     }
     this._lastRenderSignature = nextSignature;
@@ -197,28 +275,8 @@ class NodaliaNavigationBarCard extends HTMLElement {
     };
   }
 
-  _getTrackedEntityIds() {
-    const entityIds = new Set();
-
-    (this._config?.routes || []).forEach(route => {
-      if (route?.badge?.entity) {
-        entityIds.add(route.badge.entity);
-      }
-      (route?.popup || []).forEach(item => {
-        if (item?.badge?.entity) {
-          entityIds.add(item.badge.entity);
-        }
-      });
-    });
-
-    (this._config?.media_player?.players || []).forEach(player => {
-      if (player?.entity) {
-        entityIds.add(player.entity);
-      }
-    });
-
-    const tag = window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(this._hass, this._config?.language));
-    return [...entityIds].sort((left, right) => left.localeCompare(right, tag));
+  _language(hass = this._hass) {
+    return window.NodaliaI18n?.resolveLanguage?.(hass, navText(this._config.language || "auto")) ?? "en";
   }
 
   _getRenderSignature(hass = this._hass) {
@@ -229,7 +287,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     return runtime.joinParts([
       {
         prefix: "l:",
-        values: [window.NodaliaI18n.resolveLanguage(hass, this._config?.language)],
+        values: [this._language(hass)],
       },
       { prefix: "u:", values: [hass?.user?.id || ""] },
       { prefix: "r:", values: [routeBadgeStates.join("|")] },
@@ -241,23 +299,23 @@ class NodaliaNavigationBarCard extends HTMLElement {
     ]);
   }
 
-  _getRouteBadgeSignatureRows(hass, runtime) {
+  _getRouteBadgeSignatureRows(hass: HomeAssistant|null, runtime: ReturnType<typeof getRenderSignatureRuntime>) {
     return (this._config?.routes || []).flatMap((route, routeIndex) => {
       const items = [{ badge: route?.badge, scope: `route:${routeIndex}` }];
-      (route?.popup || []).forEach((item, popupIndex) => {
+      this._getPopupItems(route).forEach((item, popupIndex) => {
         items.push({ badge: item?.badge, scope: `popup:${routeIndex}:${popupIndex}` });
       });
 
       return items
-        .filter(item => item?.badge?.entity)
+        .filter(item => navRecord(item?.badge).entity)
         .map(item => {
-          const state = hass?.states?.[item.badge.entity] || null;
-          const attribute = String(item.badge.attribute || "");
+          const state = hass?.states?.[navText(navRecord(item.badge).entity)] || null;
+          const attribute = String(navRecord(item.badge).attribute || "");
           return runtime.joinParts([
             {
               values: [
                 item.scope,
-                item.badge.entity || "",
+                navText(navRecord(item.badge).entity) || "",
                 state?.state || "",
                 attribute,
                 attribute ? state?.attributes?.[attribute] ?? "" : state?.state || "",
@@ -268,11 +326,11 @@ class NodaliaNavigationBarCard extends HTMLElement {
     });
   }
 
-  _getMediaPlayerSignatureRows(hass, runtime) {
+  _getMediaPlayerSignatureRows(hass: HomeAssistant|null, runtime: ReturnType<typeof getRenderSignatureRuntime>) {
     return (this._config?.media_player?.players || [])
       .filter(player => player?.entity)
       .map(player => {
-        const state = hass?.states?.[player.entity] || null;
+        const state = hass?.states?.[navText(player?.entity)] || null;
         const attrs = state?.attributes || {};
         return runtime.joinParts([
           {
@@ -281,6 +339,10 @@ class NodaliaNavigationBarCard extends HTMLElement {
               state?.state || "",
               attrs.friendly_name || "",
               attrs.entity_picture || "",
+              attrs.entity_picture_local || "",
+              attrs.media_content_id || "",
+              attrs.media_content_type || "",
+              attrs.device_class || "",
               attrs.media_title || "",
               attrs.media_artist || "",
               attrs.media_series_title || "",
@@ -298,8 +360,8 @@ class NodaliaNavigationBarCard extends HTMLElement {
       });
   }
 
-  _triggerHaptic(style = this._config?.haptics?.style) {
-    if (!this._config?.haptics?.enabled) {
+  _triggerHaptic(style: unknown = navRecord(this._config.haptics).style) {
+    if (!navRecord(this._config.haptics).enabled) {
       return;
     }
 
@@ -312,20 +374,20 @@ class NodaliaNavigationBarCard extends HTMLElement {
     }
 
     if (
-      !this._config.haptics.fallback_vibrate ||
+      !navRecord(this._config.haptics).fallback_vibrate ||
       typeof navigator === "undefined" ||
       typeof navigator.vibrate !== "function"
     ) {
       return;
     }
 
-    navigator.vibrate(HAPTIC_PATTERNS[hapticStyle] || HAPTIC_PATTERNS.selection);
+    navigator.vibrate(Object.entries(HAPTIC_PATTERNS).find(([key])=>key === hapticStyle)?.[1] || HAPTIC_PATTERNS.selection);
   }
 
-  _onShadowClick(event) {
+  _onShadowClick(event: Event) {
     const popupCloseTrigger = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.popupClose === "true");
+      .find((node): node is HTMLElement => node instanceof HTMLElement && node.dataset?.popupClose === "true");
 
     if (popupCloseTrigger) {
       event.preventDefault();
@@ -336,7 +398,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
     const mediaControlButton = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.mediaControl);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset?.mediaControl));
 
     if (mediaControlButton) {
       event.preventDefault();
@@ -356,7 +418,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
     const mediaToggleButton = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.mediaToggle);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset?.mediaToggle));
 
     if (mediaToggleButton) {
       event.preventDefault();
@@ -369,7 +431,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
     const mediaDotButton = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.mediaIndex !== undefined);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && node.dataset?.mediaIndex !== undefined);
 
     if (mediaDotButton) {
       event.preventDefault();
@@ -388,7 +450,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
     const mediaBrowserCloseButton = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.mediaBrowserClose === "true");
+      .find((node): node is HTMLElement => node instanceof HTMLElement && node.dataset?.mediaBrowserClose === "true");
 
     if (mediaBrowserCloseButton) {
       event.preventDefault();
@@ -399,7 +461,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
     const mediaBrowserBackButton = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.mediaBrowserBack === "true");
+      .find((node): node is HTMLElement => node instanceof HTMLElement && node.dataset?.mediaBrowserBack === "true");
 
     if (mediaBrowserBackButton) {
       event.preventDefault();
@@ -410,7 +472,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
     const mediaBrowserActionButton = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.mediaBrowserAction);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset?.mediaBrowserAction));
 
     if (mediaBrowserActionButton) {
       event.preventDefault();
@@ -433,7 +495,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
     const mediaCard = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.mediaCardIndex !== undefined);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && node.dataset?.mediaCardIndex !== undefined);
 
     if (mediaCard) {
       const visiblePlayers = this._getVisibleMediaPlayers();
@@ -456,7 +518,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
     const popupButton = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.popupItemIndex !== undefined);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && node.dataset?.popupItemIndex !== undefined);
 
     if (popupButton) {
       const routeIndex = Number(popupButton.dataset.popupRouteIndex);
@@ -478,7 +540,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
     const routeButton = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.routeIndex !== undefined);
+      .find((node): node is HTMLElement => node instanceof HTMLElement && node.dataset?.routeIndex !== undefined);
 
     if (!routeButton) {
       return;
@@ -513,7 +575,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     return inEditDashboardMode || inPreviewMode || inEditCardMode;
   }
 
-  _shouldHideForScreen(config) {
+  _shouldHideForScreen(config: NavigationConfig) {
     if (this._isInEditMode()) {
       return false;
     }
@@ -525,7 +587,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     return window.innerWidth > Number(config.layout.mobile_breakpoint || 1279);
   }
 
-  _isItemVisible(item) {
+  _isItemVisible(item: NavItem|null|undefined) {
     if (!item || item.hidden === true || item.show === false) {
       return false;
     }
@@ -550,27 +612,27 @@ class NodaliaNavigationBarCard extends HTMLElement {
     return this._config.routes.filter(route => this._isItemVisible(route));
   }
 
-  _getPopupItems(route) {
+  _getPopupItems(route: NavItem|null|undefined) {
     if (!route || !Array.isArray(route.popup)) {
       return [];
     }
 
-    return route.popup.filter(item => this._isItemVisible(item));
+    return route.popup.filter(isObject).filter(item => this._isItemVisible(item));
   }
 
-  _getRoutePath(route) {
+  _getRoutePath(route: NavItem) {
     if (typeof route.path === "string" && route.path) {
       return route.path;
     }
 
-    if (route.tap_action?.action === "navigate" && route.tap_action.navigation_path) {
-      return route.tap_action.navigation_path;
+    if (navRecord(route.tap_action).action === "navigate" && navText(navRecord(route.tap_action).navigation_path)) {
+      return navText(navRecord(route.tap_action).navigation_path);
     }
 
     return null;
   }
 
-  _isNavItemActive(item, currentPath) {
+  _isNavItemActive(item: NavItem|null|undefined, currentPath: string) {
     if (!item) {
       return false;
     }
@@ -579,7 +641,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
       return true;
     }
 
-    const candidates = [];
+    const candidates: string[] = [];
     const mainPath = normalizePath(this._getRoutePath(item));
     if (mainPath) {
       candidates.push(mainPath);
@@ -597,7 +659,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     return candidates.some(path => matchPath(currentPath, path, item.match || "exact"));
   }
 
-  _isRouteActive(route, currentPath) {
+  _isRouteActive(route: NavItem, currentPath: string) {
     if (this._isNavItemActive(route, currentPath)) {
       return true;
     }
@@ -605,16 +667,17 @@ class NodaliaNavigationBarCard extends HTMLElement {
     return this._getPopupItems(route).some(item => this._isNavItemActive(item, currentPath));
   }
 
-  _getBadge(route) {
-    const badge = route.badge;
+  _getBadge(route: NavItem) {
+    const rawBadge = route.badge;
+    const badge = navRecord(rawBadge);
 
-    if (badge === undefined || badge === null || badge === false) {
+    if (rawBadge === undefined || rawBadge === null || rawBadge === false) {
       return null;
     }
 
-    if (typeof badge === "string" || typeof badge === "number") {
+    if (typeof rawBadge === "string" || typeof rawBadge === "number") {
       return {
-        content: String(badge),
+        content: String(rawBadge),
         background: this._config.styles.badge.background,
         color: this._config.styles.badge.color,
       };
@@ -624,11 +687,11 @@ class NodaliaNavigationBarCard extends HTMLElement {
       return null;
     }
 
-    let content = badge.content;
+    let content: unknown = badge.content;
 
-    if (content === undefined && badge.entity && this._hass?.states?.[badge.entity]) {
-      const stateObject = this._hass.states[badge.entity];
-      content = badge.attribute ? stateObject.attributes?.[badge.attribute] : stateObject.state;
+    if (content === undefined && badge.entity && this._hass?.states?.[navText(badge.entity)]) {
+      const stateObject = this._hass.states[navText(badge.entity)];
+      content = badge.attribute ? stateObject?.attributes?.[navText(badge.attribute)] : stateObject?.state;
     }
 
     if (content === undefined || content === null || content === "") {
@@ -654,11 +717,11 @@ class NodaliaNavigationBarCard extends HTMLElement {
     };
   }
 
-  _getRouteLabel(route) {
+  _getRouteLabel(route: NavItem|null|undefined) {
     return route?.label || route?.name || route?.title || "";
   }
 
-  _shouldShowRouteLabels(routes) {
+  _shouldShowRouteLabels(routes: NavItem[]) {
     if (!this._config?.show_labels) {
       return false;
     }
@@ -666,12 +729,12 @@ class NodaliaNavigationBarCard extends HTMLElement {
     return routes.some(route => Boolean(this._getRouteLabel(route)));
   }
 
-  _getPopupLayout(route) {
+  _getPopupLayout(route: NavItem) {
     const layout = route?.popup_layout || this._config?.styles?.popup?.layout || "auto";
-    return ["auto", "vertical", "horizontal"].includes(layout) ? layout : "auto";
+    return ["auto", "vertical", "horizontal"].includes(navText(layout)) ? navText(layout) : "auto";
   }
 
-  _getPopupMetrics(route, items) {
+  _getPopupMetrics(route: NavItem, items: NavItem[]) {
     const popupStyles = this._config?.styles?.popup || {};
     const popupMinWidth = Number.parseFloat(popupStyles.min_width || "220") || 220;
     const popupMaxWidth =
@@ -728,7 +791,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     };
   }
 
-  _renderIcon(route, isActive) {
+  _renderIcon(route: NavItem, isActive: boolean) {
     const image = isActive ? route.image_active || route.image : route.image || route.image_active;
 
     if (image) {
@@ -743,12 +806,12 @@ class NodaliaNavigationBarCard extends HTMLElement {
     return `<ha-icon class="nav-icon" icon="${escapeHtml(icon)}"></ha-icon>`;
   }
 
-  _getRouteAction(route, defaultAction = null) {
+  _getRouteAction(route: NavItem, defaultAction: NavAction|null = null): NavAction|null {
     if (!route) {
       return defaultAction;
     }
 
-    if (route.tap_action) {
+    if (isObject(route.tap_action)) {
       return route.tap_action;
     }
 
@@ -768,16 +831,16 @@ class NodaliaNavigationBarCard extends HTMLElement {
     return defaultAction;
   }
 
-  _navigate(path) {
+  _navigate(path: unknown) {
     if (!path) {
       return;
     }
 
-    window.history.pushState(null, "", path);
+    window.history.pushState(null, "", navText(path));
     window.dispatchEvent(new Event("location-changed"));
   }
 
-  _callService(action) {
+  _callService(action: NavAction) {
     if (!this._hass || !action?.service) {
       return;
     }
@@ -792,10 +855,10 @@ class NodaliaNavigationBarCard extends HTMLElement {
       return;
     }
 
-    this._hass.callService(domain, service, action.service_data || {}, action.target);
+    invokeHassService(this, this._hass, domain, service, navRecord(action.service_data), isObject(action.target) ? action.target : null);
   }
 
-  _isServiceAllowed(serviceValue) {
+  _isServiceAllowed(serviceValue: unknown) {
     const security = this._config?.security || {};
     if (security.strict_service_actions === false) {
       return true;
@@ -814,15 +877,15 @@ class NodaliaNavigationBarCard extends HTMLElement {
     if (!domains.length && !services.length) {
       return false;
     }
-    return services.includes(normalizedService) || domains.includes(domain);
+    return services.includes(normalizedService) || domains.includes(domain ?? "");
   }
 
-  _applyRouteRuntimeStyles(visibleRoutes, playDockEntrance) {
+  _applyRouteRuntimeStyles(visibleRoutes: NavItem[], playDockEntrance: boolean) {
     if (!this.shadowRoot) {
       return;
     }
     visibleRoutes.forEach((route, index) => {
-      const node = this.shadowRoot.querySelector(`.nav-item[data-route-index="${index}"]`);
+      const node = this.shadowRoot?.querySelector(`.nav-item[data-route-index="${index}"]`);
       if (!(node instanceof HTMLElement)) {
         return;
       }
@@ -839,7 +902,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
       if (routeActiveBackground) node.style.setProperty("--route-active-background", routeActiveBackground);
       const badge = this._getBadge(route);
       const badgeNode = node.querySelector(".nav-badge");
-      if (badgeNode instanceof HTMLElement) {
+      if (badge && badgeNode instanceof HTMLElement) {
         const badgeBackground = sanitizeCssRuntimeValue(badge.background);
         const badgeColor = sanitizeCssRuntimeValue(badge.color);
         if (badgeBackground) badgeNode.style.setProperty("--badge-background", badgeBackground);
@@ -868,7 +931,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     }
     const popupItems = this._getPopupItems(this._popupState.route);
     popupItems.forEach((item, popupIndex) => {
-      const node = this.shadowRoot.querySelector(`.popup-item[data-popup-item-index="${popupIndex}"]`);
+      const node = this.shadowRoot?.querySelector(`.popup-item[data-popup-item-index="${popupIndex}"]`);
       if (!(node instanceof HTMLElement)) {
         return;
       }
@@ -882,7 +945,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
       if (itemActiveBackground) node.style.setProperty("--popup-route-active-background", itemActiveBackground);
       const badge = this._getBadge(item);
       const badgeNode = node.querySelector(".nav-badge");
-      if (badgeNode instanceof HTMLElement) {
+      if (badge && badgeNode instanceof HTMLElement) {
         const badgeBackground = sanitizeCssRuntimeValue(badge.background);
         const badgeColor = sanitizeCssRuntimeValue(badge.color);
         if (badgeBackground) badgeNode.style.setProperty("--badge-background", badgeBackground);
@@ -916,7 +979,9 @@ class NodaliaNavigationBarCard extends HTMLElement {
       cancelAnimationFrame(this._popupPositionFrame);
     }
 
+    const generation = this._generation;
     this._popupPositionFrame = requestAnimationFrame(() => {
+      if (generation !== this._generation || !this.isConnected) return;
       this._popupPositionFrame = null;
       this._syncPopupPosition();
     });
@@ -981,7 +1046,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     panel.style.top = nextTop;
   }
 
-  _openPopup(route, anchorElement) {
+  _openPopup(route: NavItem, anchorElement: HTMLElement|undefined) {
     const items = this._getPopupItems(route);
     if (!items.length || !anchorElement) {
       return;
@@ -1022,6 +1087,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
       return;
     }
 
+    this._modalRestoreSelector = `[data-route-index="${routeIndex}"]`;
     this._popupState = {
       columns: popupMetrics.columns,
       direction,
@@ -1037,7 +1103,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     this._render();
   }
 
-  _getReservedHeight(showMediaPlayer, showMediaPlayerToggle = false) {
+  _getReservedHeight(showMediaPlayer: boolean, showMediaPlayerToggle = false) {
     const baseHeight = this._config.layout.reserve_height;
     const mediaGap = this._config.media_player.gap || "0px";
 
@@ -1078,7 +1144,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
       return [];
     }
 
-    return this._config.media_player.players.filter(player => {
+    return this._config.media_player.players.filter((player): player is NavPlayer => typeof player.entity === "string" && Boolean(player.entity)).filter(player => {
       if (!player || !player.entity) {
         return false;
       }
@@ -1087,7 +1153,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
         return false;
       }
 
-      const state = this._hass?.states?.[player.entity];
+      const state = this._hass?.states?.[navText(player?.entity)];
       if (!state) {
         return false;
       }
@@ -1104,7 +1170,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     });
   }
 
-  _resolveActiveMediaPlayerIndex(players) {
+  _resolveActiveMediaPlayerIndex(players: NavPlayer[]) {
     if (!Array.isArray(players) || players.length === 0) {
       this._activeMediaPlayerIndex = 0;
       this._activeMediaPlayerEntity = "";
@@ -1123,38 +1189,38 @@ class NodaliaNavigationBarCard extends HTMLElement {
     return nextIndex;
   }
 
-  _getMediaPlayerTitle(player, state) {
+  _getMediaPlayerTitle(player: NavItem, state: HassEntity|null|undefined) {
     if (player.title) {
       return player.title;
     }
 
-    return state.attributes.media_title || state.attributes.friendly_name || player.entity;
+    return state?.attributes?.media_title || state?.attributes?.friendly_name || player.entity;
   }
 
-  _getMediaPlayerPlayerLabel(player, state) {
+  _getMediaPlayerPlayerLabel(player: NavItem, state: HassEntity|null|undefined) {
     return (
       player.label ||
       player.name ||
-      state.attributes.friendly_name ||
+      state?.attributes?.friendly_name ||
       player.entity
     );
   }
 
-  _getMediaPlayerSubtitle(player, state) {
+  _getMediaPlayerSubtitle(player: NavItem, state: HassEntity|null|undefined) {
     if (player.subtitle) {
       return player.subtitle;
     }
 
     return (
-      state.attributes.media_artist ||
-      state.attributes.media_series_title ||
-      state.attributes.media_album_name ||
-      state.attributes.app_name ||
-      this._getMediaPlayerStateLabel(state.state)
+      state?.attributes?.media_artist ||
+      state?.attributes?.media_series_title ||
+      state?.attributes?.media_album_name ||
+      state?.attributes?.app_name ||
+      this._getMediaPlayerStateLabel(state?.state)
     );
   }
 
-  _resolveMediaUrl(value, options = {}) {
+  _resolveMediaUrl(value: unknown, options: {allowRelative?:boolean;cacheToken?:unknown} = {}) {
     const baseUrl = sanitizeMediaArtworkUrl(value, this._hass);
     if (!baseUrl) {
       return "";
@@ -1162,11 +1228,11 @@ class NodaliaNavigationBarCard extends HTMLElement {
     return appendQueryParam(baseUrl, "nodalia_ts", options.cacheToken);
   }
 
-  _getArtworkCacheToken(state) {
+  _getArtworkCacheToken(state: HassEntity|null|undefined) {
     return artworkCacheToken(state);
   }
 
-  _isAppleTvPlayer(player, state) {
+  _isAppleTvPlayer(player: NavItem, state: HassEntity|null|undefined) {
     const candidates = [
       player?.entity,
       player?.label,
@@ -1181,7 +1247,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     return candidates.some(candidate => normalizeTextKey(candidate).includes("apple tv"));
   }
 
-  _getPlayerDeviceType(player, state) {
+  _getPlayerDeviceType(player: NavItem, state: HassEntity|null|undefined) {
     if (player?.tv_mode === true) {
       return "tv";
     }
@@ -1226,7 +1292,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     return "music";
   }
 
-  _shouldShowTvArtwork(player, state) {
+  _shouldShowTvArtwork(player: NavItem, state: HassEntity|null|undefined) {
     const deviceType = this._getPlayerDeviceType(player, state);
     if (deviceType !== "tv") {
       return true;
@@ -1244,7 +1310,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     return plexSignals.some(value => value.includes("plex"));
   }
 
-  _getMediaPlayerArtwork(player, state) {
+  _getMediaPlayerArtwork(player: NavItem, state: HassEntity|null|undefined) {
     if (player.image) {
       return this._resolveMediaUrl(player.image);
     }
@@ -1254,8 +1320,8 @@ class NodaliaNavigationBarCard extends HTMLElement {
     }
 
     const artwork =
-      state.attributes.entity_picture_local ||
-      state.attributes.entity_picture ||
+      state?.attributes?.entity_picture_local ||
+      state?.attributes?.entity_picture ||
       "";
 
     return artwork
@@ -1265,9 +1331,9 @@ class NodaliaNavigationBarCard extends HTMLElement {
       : null;
   }
 
-  _getMediaPlayerStateLabel(stateValue) {
+  _getMediaPlayerStateLabel(stateValue: unknown) {
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-    const langCfg = this._config?.language ?? "auto";
+    const langCfg = navText(this._config.language || "auto");
     if (window.NodaliaI18n?.translateMediaPlayerState) {
       return window.NodaliaI18n.translateMediaPlayerState(hass, langCfg, stateValue);
     }
@@ -1291,18 +1357,19 @@ class NodaliaNavigationBarCard extends HTMLElement {
     }
   }
 
-  _getMediaPlayerProgress(state) {
+  _getMediaPlayerProgress(state: HassEntity|null|undefined) {
     const duration = Number(state?.attributes?.media_duration || 0);
 
-    if (!(duration > 0)) {
+    if (!Number.isFinite(duration) || !(duration > 0)) {
       return null;
     }
 
-    let position = Number(state.attributes.media_position || 0);
-    const updatedAt = state.attributes.media_position_updated_at;
+    const rawPosition = Number(state?.attributes?.media_position || 0);
+    let position = Number.isFinite(rawPosition) ? rawPosition : 0;
+    const updatedAt = state?.attributes?.media_position_updated_at;
 
-    if (state.state === "playing" && updatedAt) {
-      const updatedAtTime = new Date(updatedAt).getTime();
+    if (state?.state === "playing" && updatedAt) {
+      const updatedAtTime = new Date(typeof updatedAt === "number" ? updatedAt : navText(updatedAt)).getTime();
 
       if (!Number.isNaN(updatedAtTime)) {
         position += Math.max(0, (Date.now() - updatedAtTime) / 1000);
@@ -1318,12 +1385,12 @@ class NodaliaNavigationBarCard extends HTMLElement {
     };
   }
 
-  _getMediaPlayerSourceLabel(state) {
+  _getMediaPlayerSourceLabel(state: HassEntity|null|undefined) {
     const sourceLabel =
-      state.attributes.source ||
-      state.attributes.app_name ||
-      state.attributes.media_album_name ||
-      state.attributes.media_channel;
+      state?.attributes?.source ||
+      state?.attributes?.app_name ||
+      state?.attributes?.media_album_name ||
+      state?.attributes?.media_channel;
 
     const sourceKey = normalizeTextKey(sourceLabel);
 
@@ -1339,7 +1406,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     return sourceLabel;
   }
 
-  _isMusicAssistantPlayer(player, state) {
+  _isMusicAssistantPlayer(player: NavItem, state: HassEntity|null|undefined) {
     const candidates = [
       player?.entity,
       player?.label,
@@ -1355,7 +1422,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     return candidates.some(candidate => normalizeTextKey(candidate).includes("music assistant"));
   }
 
-  _getMediaPlayerBrowsePath(player, state) {
+  _getMediaPlayerBrowsePath(player: NavItem, state: HassEntity|null|undefined) {
     if (player?.browse_path) {
       return player.browse_path;
     }
@@ -1367,23 +1434,8 @@ class NodaliaNavigationBarCard extends HTMLElement {
     return this._isMusicAssistantPlayer(player, state) ? "/media-browser/browser" : "";
   }
 
-  _supportsVolumeControl(state) {
-    return typeof state?.attributes?.volume_level === "number";
-  }
-
-  _playPickedMedia(entityId, pickedMedia) {
-    const mediaContentId = pickedMedia?.item?.media_content_id;
-    const mediaContentType = pickedMedia?.item?.media_content_type;
-
-    if (!this._hass || !entityId || !mediaContentId || !mediaContentType) {
-      return;
-    }
-
-    this._hass.callService("media_player", "play_media", {
-      entity_id: entityId,
-      media_content_id: mediaContentId,
-      media_content_type: mediaContentType,
-    });
+  _supportsVolumeControl(state: HassEntity|null|undefined) {
+    return typeof state?.attributes?.volume_level === "number" && Number.isFinite(state.attributes.volume_level);
   }
 
   _getMediaBrowserClient() {
@@ -1398,33 +1450,33 @@ class NodaliaNavigationBarCard extends HTMLElement {
     return null;
   }
 
-  _normalizeMediaBrowserItem(item) {
-    if (!item || typeof item !== "object") {
+  _normalizeMediaBrowserItem(item: unknown): MediaItem|null {
+    if (!isObject(item)) {
       return null;
     }
 
     return {
-      title: item.title || item.name || "Elemento",
-      media_class: item.media_class || "",
-      media_content_id: item.media_content_id || "",
-      media_content_type: item.media_content_type || "",
+      title: navText(item.title || item.name || "Elemento"),
+      media_class: navText(item.media_class || ""),
+      media_content_id: navText(item.media_content_id || ""),
+      media_content_type: navText(item.media_content_type || ""),
       can_play: item.can_play === true,
       can_expand: item.can_expand === true,
-      thumbnail: item.thumbnail || item.thumbnail_url || "",
+      thumbnail: this._resolveMediaUrl(item.thumbnail || item.thumbnail_url || ""),
       children: Array.isArray(item.children)
-        ? item.children.map(child => this._normalizeMediaBrowserItem(child)).filter(Boolean)
+        ? item.children.map(child => this._normalizeMediaBrowserItem(child)).filter((child): child is MediaItem => child !== null)
         : [],
     };
   }
 
-  _normalizeMediaBrowserNode(result, entityId) {
-    let node = result;
+  _normalizeMediaBrowserNode(result: unknown, entityId: string) {
+    let node: unknown = result;
 
-    if (node?.result && typeof node.result === "object") {
+    if (isObject(node) && isObject(node.result)) {
       node = node.result;
     }
 
-    if (node && entityId && typeof node[entityId] === "object") {
+    if (isObject(node) && entityId && isObject(node[entityId])) {
       node = node[entityId];
     }
 
@@ -1439,13 +1491,13 @@ class NodaliaNavigationBarCard extends HTMLElement {
     };
   }
 
-  async _fetchMediaBrowserNode(entityId, mediaContentType = "", mediaContentId = "") {
+  async _fetchMediaBrowserNode(entityId: string, mediaContentType = "", mediaContentId = "") {
     const client = this._getMediaBrowserClient();
     if (!client || !entityId) {
       return null;
     }
 
-    const payload = {
+    const payload: Record<string,unknown> = {
       type: "media_player/browse_media",
       entity_id: entityId,
     };
@@ -1462,7 +1514,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     return this._normalizeMediaBrowserNode(result, entityId);
   }
 
-  _showEntityMediaBrowser(entityId, fallbackPath = "") {
+  _showEntityMediaBrowser(entityId: string, fallbackPath = "") {
     this._openMediaBrowser(entityId, fallbackPath);
     return true;
   }
@@ -1480,12 +1532,13 @@ class NodaliaNavigationBarCard extends HTMLElement {
     }
   }
 
-  async _openMediaBrowser(entityId, fallbackPath = "") {
+  async _openMediaBrowser(entityId: string, fallbackPath = "") {
     if (!entityId) {
       return;
     }
 
     this._closePopup(false);
+    this._modalRestoreSelector = `[data-media-control="browse-media"][data-entity="${escapeSelectorValue(entityId)}"]`;
     const token = this._mediaBrowserRequestToken + 1;
     this._mediaBrowserRequestToken = token;
     this._mediaBrowserState = {
@@ -1550,7 +1603,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     }
   }
 
-  async _browseMediaBrowserItem(mediaContentType, mediaContentId) {
+  async _browseMediaBrowserItem(mediaContentType: string, mediaContentId: string) {
     if (!this._mediaBrowserState?.entityId) {
       return;
     }
@@ -1620,14 +1673,14 @@ class NodaliaNavigationBarCard extends HTMLElement {
     this._render();
   }
 
-  _playMediaBrowserItem(mediaContentType, mediaContentId) {
+  _playMediaBrowserItem(mediaContentType: string, mediaContentId: string) {
     const entityId = this._mediaBrowserState?.entityId;
 
     if (!this._hass || !entityId || !mediaContentType || !mediaContentId) {
       return;
     }
 
-    this._hass.callService("media_player", "play_media", {
+    invokeHassService(this, this._hass, "media_player", "play_media", {
       entity_id: entityId,
       media_content_id: mediaContentId,
       media_content_type: mediaContentType,
@@ -1635,7 +1688,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     this._closeMediaBrowser();
   }
 
-  _getMusicAssistantDirectoryIcon(item) {
+  _getMusicAssistantDirectoryIcon(item: MediaItem) {
     const haystack = normalizeTextKey([
       item?.title,
       item?.media_content_type,
@@ -1649,24 +1702,24 @@ class NodaliaNavigationBarCard extends HTMLElement {
     return match?.icon || "";
   }
 
-  _commonAria(key, fallback = "") {
-    return window.NodaliaI18n?.translateCommonAria?.(this._hass, this._config?.language ?? "auto", key, fallback) || fallback;
+  _commonAria(key: string, fallback = "") {
+    return window.NodaliaI18n?.translateCommonAria?.(this._hass, navText(this._config.language || "auto"), key, fallback) || fallback;
   }
 
-  _mediaBrowserUi(key, fallback = "", values = {}) {
-    return window.NodaliaI18n?.translateMediaBrowserUi?.(this._hass, this._config?.language ?? "auto", key, fallback, values) || fallback;
+  _mediaBrowserUi(key: string, fallback = "", values: Record<string,unknown> = {}) {
+    return window.NodaliaI18n?.translateMediaBrowserUi?.(this._hass, navText(this._config.language || "auto"), key, fallback, values) || fallback;
   }
 
-  _mediaPlayerAria(key, fallback = "", values = {}) {
-    return window.NodaliaI18n?.translateMediaPlayerAria?.(this._hass, this._config?.language ?? "auto", key, fallback, values) || fallback;
+  _mediaPlayerAria(key: string, fallback = "", values: Record<string,unknown> = {}) {
+    return window.NodaliaI18n?.translateMediaPlayerAria?.(this._hass, navText(this._config.language || "auto"), key, fallback, values) || fallback;
   }
 
-  _getMediaBrowserDisplayTitle(value) {
-    const label = typeof value === "string" ? value : value?.title;
+  _getMediaBrowserDisplayTitle(value: unknown) {
+    const label = typeof value === "string" ? value : navRecord(value).title;
     const fallback = String(label || "").trim();
-    const lang = window.NodaliaI18n.resolveLanguage(this._hass, this._config?.language ?? "auto");
-    const dict = window.NodaliaI18n.strings(lang).navigationMusicAssist || {};
-    const enDict = window.NodaliaI18n.strings("en").navigationMusicAssist || {};
+    const lang = this._language();
+    const dict = navRecord(window.NodaliaI18n?.strings?.(lang)?.navigationMusicAssist);
+    const enDict = navRecord(window.NodaliaI18n?.strings?.("en")?.navigationMusicAssist);
 
     if (!fallback) {
       return dict.browseFallback || enDict.browseFallback || "Item";
@@ -1680,7 +1733,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     return dict[key] || enDict[key] || fallback;
   }
 
-  _getMediaBrowserIcon(item) {
+  _getMediaBrowserIcon(item: MediaItem) {
     const musicAssistantDirectoryIcon =
       item?.media_class === "directory" ? this._getMusicAssistantDirectoryIcon(item) : "";
 
@@ -1722,7 +1775,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     );
   }
 
-  _shouldHideMediaBrowserItem(item) {
+  _shouldHideMediaBrowserItem(item: MediaItem) {
     if (!this._shouldFilterMusicAssistantBrowserItems() || !item) {
       return false;
     }
@@ -1737,13 +1790,13 @@ class NodaliaNavigationBarCard extends HTMLElement {
     return MUSIC_ASSISTANT_BROWSER_EXCLUDE_PATTERNS.some(pattern => haystack.includes(pattern));
   }
 
-  _getMediaPlayerChips(player, state, progress, title, subtitle) {
-    const chips = [];
+  _getMediaPlayerChips(player: NavItem, state: HassEntity|null|undefined, progress: MediaProgress|null, title: unknown, subtitle: unknown) {
+    const chips: {label:string;tone:string}[] = [];
     const seen = new Set();
     const subtitleKey = normalizeTextKey(subtitle);
     const titleKey = normalizeTextKey(title);
 
-    const addChip = (label, tone = "default") => {
+    const addChip = (label: unknown, tone = "default") => {
       const text = String(label || "").trim();
 
       if (!text) {
@@ -1768,7 +1821,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     return chips.slice(0, 4);
   }
 
-  _syncMediaTicker(visiblePlayers) {
+  _syncMediaTicker(visiblePlayers: NavPlayer[]) {
     if (typeof document !== "undefined" && document.hidden) {
       if (this._mediaTicker) {
         window.clearInterval(this._mediaTicker);
@@ -1777,14 +1830,16 @@ class NodaliaNavigationBarCard extends HTMLElement {
       return;
     }
 
-    const shouldTick = visiblePlayers.some(player => {
-      const state = this._hass?.states?.[player.entity];
+    const shouldTick = this.isConnected && visiblePlayers.some(player => {
+      const state = this._hass?.states?.[navText(player?.entity)];
       const progress = state ? this._getMediaPlayerProgress(state) : null;
       return state?.state === "playing" && progress;
     });
 
     if (shouldTick && !this._mediaTicker) {
+      const generation = this._generation;
       this._mediaTicker = window.setInterval(() => {
+        if (generation !== this._generation || !this.isConnected) return;
         if (typeof document !== "undefined" && document.hidden) {
           return;
         }
@@ -1811,14 +1866,14 @@ class NodaliaNavigationBarCard extends HTMLElement {
     }
 
     const player = visiblePlayers[this._resolveActiveMediaPlayerIndex(visiblePlayers)];
-    const state = this._hass?.states?.[player.entity];
+    const state = this._hass?.states?.[navText(player?.entity)];
     const progress = state ? this._getMediaPlayerProgress(state) : null;
     if (!progress) {
       return;
     }
 
     const progressFill = this.shadowRoot.querySelector(".media-player__progress-fill");
-    if (progressFill) {
+    if (progressFill instanceof HTMLElement) {
       progressFill.style.width = `${progress.percent}%`;
     }
 
@@ -1853,36 +1908,36 @@ class NodaliaNavigationBarCard extends HTMLElement {
       });
   }
 
-  _handleMediaControl(control, entityId, options = {}) {
+  _handleMediaControl(control: string|undefined, entityId: string|undefined, options: {volume?:number;path?:string|undefined;muted?:boolean} = {}) {
     if (!this._hass || !entityId) {
       return;
     }
 
     switch (control) {
       case "previous":
-        this._hass.callService("media_player", "media_previous_track", { entity_id: entityId });
+        invokeHassService(this, this._hass, "media_player", "media_previous_track", { entity_id: entityId });
         break;
       case "next":
-        this._hass.callService("media_player", "media_next_track", { entity_id: entityId });
+        invokeHassService(this, this._hass, "media_player", "media_next_track", { entity_id: entityId });
         break;
       case "play-pause":
-        this._hass.callService("media_player", "media_play_pause", { entity_id: entityId });
+        invokeHassService(this, this._hass, "media_player", "media_play_pause", { entity_id: entityId });
         break;
       case "volume-down": {
-        const currentVolume = Number.isFinite(options.volume) ? options.volume : 0;
+        const currentVolume = typeof options.volume === "number" && Number.isFinite(options.volume) ? options.volume : 0;
         const nextVolume = clamp(currentVolume - 0.08, 0, 1);
         this._patchMediaVolumeControls(entityId, nextVolume);
-        this._hass.callService("media_player", "volume_set", {
+        invokeHassService(this, this._hass, "media_player", "volume_set", {
           entity_id: entityId,
           volume_level: nextVolume,
         });
         break;
       }
       case "volume-up": {
-        const currentVolume = Number.isFinite(options.volume) ? options.volume : 0;
+        const currentVolume = typeof options.volume === "number" && Number.isFinite(options.volume) ? options.volume : 0;
         const nextVolume = clamp(currentVolume + 0.08, 0, 1);
         this._patchMediaVolumeControls(entityId, nextVolume);
-        this._hass.callService("media_player", "volume_set", {
+        invokeHassService(this, this._hass, "media_player", "volume_set", {
           entity_id: entityId,
           volume_level: nextVolume,
         });
@@ -1896,7 +1951,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     }
   }
 
-  _runAction(route, options = {}) {
+  _runAction(route: NavItem, options: RunActionOptions = {}) {
     const action = this._getRouteAction(route, options.defaultAction || null);
 
     if (!action || action.action === "none") {
@@ -1932,7 +1987,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
           return;
         }
 
-        this._hass.callService("homeassistant", "toggle", { entity_id: entityId });
+        invokeHassService(this, this._hass, "homeassistant", "toggle", { entity_id: entityId });
         break;
       }
       case "more-info": {
@@ -1954,12 +2009,12 @@ class NodaliaNavigationBarCard extends HTMLElement {
     }
   }
 
-  _renderPopup(currentPath, playPopupEntrance = false) {
+  _renderPopup(currentPath: string, playPopupEntrance = false) {
     if (!this._popupState?.route) {
       return "";
     }
 
-    if (this._popupState.routeIndex < 0 || !this._renderedRoutes[this._popupState.routeIndex]) {
+    if (this._popupState.routeIndex < 0 || this._renderedRoutes[this._popupState.routeIndex] !== this._popupState.route) {
       this._popupState = null;
       return "";
     }
@@ -1985,7 +2040,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
           <button
             class="popup-item ${isActive ? "active" : ""} ${isIconOnly ? "icon-only" : ""}"
             type="button"
-            data-popup-route-index="${this._popupState.routeIndex}"
+            data-popup-route-index="${this._popupState?.routeIndex ?? -1}"
             data-popup-item-index="${popupIndex}"
             aria-label="${escapeHtml(ariaLabel)}"
           >
@@ -2025,6 +2080,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     return `
       <div class="popup-backdrop" data-popup-close="true"></div>
       <div
+        role="dialog" aria-modal="true" aria-label="${escapeHtml(this._getRouteLabel(this._popupState.route) || this._commonAria("navigationBar", "Navigation bar"))}"
         class="popup-panel popup-panel--${this._popupState.direction} popup-panel--layout-${this._popupState.layout || "auto"} ${popupHasText ? "popup-panel--with-text" : "popup-panel--icon-only"} ${isCompactPopup ? "popup-panel--compact" : ""}${playPopupEntrance ? " popup-panel--entering" : ""}"
       >
         <div class="popup-items">
@@ -2122,7 +2178,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
             <ha-icon icon="mdi:chevron-left"></ha-icon>
           </button>
           <div class="media-browser__header-copy">
-            <div class="media-browser__eyebrow">${escapeHtml(this._mediaBrowserState?.browserLabel || this._mediaBrowserUi("eyebrow", "Media Browser"))}</div>
+            <div class="media-browser__eyebrow">${escapeHtml(this._mediaBrowserUi("eyebrow", "Media Browser"))}</div>
             <div class="media-browser__title">${escapeHtml(this._getMediaBrowserDisplayTitle(currentNode?.title || "Media"))}</div>
           </div>
           <button
@@ -2139,15 +2195,15 @@ class NodaliaNavigationBarCard extends HTMLElement {
     `;
   }
 
-  _renderMediaPlayer(visiblePlayers, animateCardEntrance = false) {
+  _renderMediaPlayer(visiblePlayers: NavPlayer[], animateCardEntrance = false) {
     if (!visiblePlayers.length) {
       return "";
     }
 
     const player = visiblePlayers[this._resolveActiveMediaPlayerIndex(visiblePlayers)];
-    const state = this._hass?.states?.[player.entity];
+    const state = this._hass?.states?.[navText(player?.entity)];
 
-    if (!state) {
+    if (!player || !state) {
       return "";
     }
 
@@ -2162,9 +2218,9 @@ class NodaliaNavigationBarCard extends HTMLElement {
     const albumCoverBlur = albumCoverBackground && this._config.media_player.artwork?.mode === "blur";
     const chips = this._getMediaPlayerChips(player, state, progress, title, subtitle);
     const playerName = this._getMediaPlayerPlayerLabel(player, state);
-    const statusLabel = this._getMediaPlayerStateLabel(state.state);
+    const statusLabel = this._getMediaPlayerStateLabel(state?.state);
     const browsePath = this._getMediaPlayerBrowsePath(player, state);
-    const volumeLevel = Number(state.attributes.volume_level ?? 0);
+    const volumeLevel = Number(state?.attributes?.volume_level ?? 0);
     const volumeSupported = this._supportsVolumeControl(state);
     const volumeDownMarkup = volumeSupported
       ? `
@@ -2311,7 +2367,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
                   : `<ha-icon icon="${escapeHtml(player.icon || "mdi:music")}"></ha-icon>`
               }
             </div>
-            <div class="media-player__meta">
+            <div class="media-player__meta" data-nav-media-info="true" data-media-card-index="${this._activeMediaPlayerIndex}" role="button" tabindex="0" aria-label="${escapeHtml(this._commonAria("moreInfo", "More information"))}">
               <div class="media-player__title-row">
                 <div class="media-player__title">${escapeHtml(title)}</div>
                 ${statusMarkup}
@@ -2342,7 +2398,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
                       data-entity="${escapeHtml(player.entity)}"
                       aria-label="${escapeHtml(this._commonAria("playPause", "Play or pause"))}"
                     >
-                      <ha-icon icon="${escapeHtml(state.state === "playing" ? "mdi:pause" : "mdi:play")}"></ha-icon>
+                      <ha-icon icon="${escapeHtml(state?.state === "playing" ? "mdi:pause" : "mdi:play")}"></ha-icon>
                     </button>
                     <button
                       type="button"
@@ -2367,21 +2423,21 @@ class NodaliaNavigationBarCard extends HTMLElement {
     `;
   }
 
-  _renderMediaPlayerToggle(visiblePlayers, playToggleEntrance = false) {
+  _renderMediaPlayerToggle(visiblePlayers: NavPlayer[], playToggleEntrance = false) {
     if (!visiblePlayers.length) {
       return "";
     }
 
     const player = visiblePlayers[this._resolveActiveMediaPlayerIndex(visiblePlayers)];
-    const state = this._hass?.states?.[player.entity];
+    const state = this._hass?.states?.[navText(player?.entity)];
 
-    if (!state) {
+    if (!player || !state) {
       return "";
     }
 
     const artwork = this._getMediaPlayerArtwork(player, state);
     const title = this._getMediaPlayerTitle(player, state);
-    const subtitle = this._getMediaPlayerStateLabel(state.state);
+    const subtitle = this._getMediaPlayerStateLabel(state?.state);
 
     return `
       <div class="media-player-toggle-wrap${this._playDockEntrance ? " media-player-toggle-wrap--entering" : ""}">
@@ -2409,11 +2465,44 @@ class NodaliaNavigationBarCard extends HTMLElement {
   }
 
   _render() {
+    const focused = this.shadowRoot?.activeElement;
+    const attributes = ["data-route-index", "data-popup-route-index", "data-popup-item-index", "data-media-control", "data-entity", "data-media-toggle", "data-media-index", "data-media-browser-action", "data-media-content-type", "data-media-content-id", "data-media-browser-close", "data-media-browser-back", "data-media-card-index", "data-nav-media-info"];
+    const selector = attributes.map(key=>`[${key}]`).join(",");
+    const values = focused instanceof HTMLElement && focused.matches(selector) ? attributes.map(key=>focused.getAttribute(key)) : null;
+    this._renderView();
+    if (values) {
+      const target = [...(this.shadowRoot?.querySelectorAll(selector) ?? [])].find(element=>element.tagName === focused?.tagName && attributes.every((key,index)=>element.getAttribute(key) === values[index]));
+      if (target instanceof HTMLElement) {target.focus({preventScroll:true});target.setAttribute("data-nav-retained-focus", "");}
+    }
+  }
+
+  _syncModalFocus() {
+    const dialog = this.shadowRoot?.querySelector(".media-browser-panel, .popup-panel");
+    if (!(dialog instanceof HTMLElement)) {
+      this._modalKind = "";
+      window.NodaliaUtils?.releaseModalFocus?.(this);
+      return;
+    }
+    const kind = this._mediaBrowserState ? "media" : "route";
+    const initialFocusSelector = this._modalKind === kind ? "[data-nav-retained-focus]" : undefined;
+    this._modalKind = kind;
+    window.NodaliaUtils?.bindModalFocus?.(this, dialog, {
+      ...(initialFocusSelector ? {initialFocusSelector} : {}),
+      restoreFocus: () => {
+        if (!this.isConnected || !this._modalRestoreSelector) return;
+        const target = this.shadowRoot?.querySelector(this._modalRestoreSelector);
+        if (target instanceof HTMLElement) target.focus({preventScroll:true});
+        this._modalRestoreSelector = "";
+      },
+    });
+  }
+
+  _renderView() {
     if (!this.shadowRoot) {
       return;
     }
 
-    if (!this._config) {
+    if (!this._configured) {
       this.shadowRoot.innerHTML = "";
       return;
     }
@@ -2432,13 +2521,13 @@ class NodaliaNavigationBarCard extends HTMLElement {
       || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.box_shadow)
       || "inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent), 0 10px 24px rgba(0, 0, 0, 0.16)";
     const animations = {
-      enabled: config.animations?.enabled !== false,
-      barDuration: clamp(Number(config.animations?.bar_duration) || DEFAULT_CONFIG.animations.bar_duration, 120, 1600),
-      popupDuration: clamp(Number(config.animations?.popup_duration) || DEFAULT_CONFIG.animations.popup_duration, 120, 2400),
-      mediaDuration: clamp(Number(config.animations?.media_duration) || DEFAULT_CONFIG.animations.media_duration, 120, 2400),
-      buttonBounceDuration: clamp(Number(config.animations?.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration, 120, 1600),
+      enabled: navRecord(config.animations).enabled !== false,
+      barDuration: clamp(Number(navRecord(config.animations).bar_duration) || DEFAULT_CONFIG.animations.bar_duration, 120, 1600),
+      popupDuration: clamp(Number(navRecord(config.animations).popup_duration) || DEFAULT_CONFIG.animations.popup_duration, 120, 2400),
+      mediaDuration: clamp(Number(navRecord(config.animations).media_duration) || DEFAULT_CONFIG.animations.media_duration, 120, 2400),
+      buttonBounceDuration: clamp(Number(navRecord(config.animations).button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration, 120, 1600),
       dockEntranceDuration: clamp(
-        Number(config.animations?.dock_entrance_duration) || DEFAULT_CONFIG.animations.dock_entrance_duration,
+        Number(navRecord(config.animations).dock_entrance_duration) || DEFAULT_CONFIG.animations.dock_entrance_duration,
         180,
         1400,
       ),
@@ -2448,6 +2537,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
     if (shouldHide && !inEditMode) {
       this._renderedRoutes = [];
+      this._releaseViewWork();
       this.shadowRoot.innerHTML = "";
       this._lastShouldHide = true;
       return;
@@ -2475,7 +2565,9 @@ class NodaliaNavigationBarCard extends HTMLElement {
         if (this._dockEntranceResetFrame) {
           window.cancelAnimationFrame(this._dockEntranceResetFrame);
         }
+        const generation = this._generation;
         this._dockEntranceResetFrame = window.requestAnimationFrame(() => {
+          if (generation !== this._generation) return;
           this._dockEntranceResetFrame = 0;
           if (!this.isConnected) {
             return;
@@ -2495,14 +2587,15 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
     if (!hasVisiblePlayers) {
       this._mediaPlayerExpanded = false;
+      this._closeMediaBrowser(false);
     }
 
     const showMediaPlayerCard = hasVisiblePlayers && (inEditMode || this._mediaPlayerExpanded === true);
     const showMediaPlayerToggle = hasVisiblePlayers && !showMediaPlayerCard;
     const themePlayer = visiblePlayers[this._resolveActiveMediaPlayerIndex(visiblePlayers)];
     const themeState = themePlayer && this._hass?.states?.[themePlayer.entity];
-    const themeUrl = showMediaPlayerCard && themeState ? this._getMediaPlayerArtwork(themePlayer, themeState) : "";
-    if (!prepareArtworkTheme(this, themeUrl, Boolean(this.shadowRoot.querySelector(".media-player-card")), () => this._render())) return;
+    const themeUrl = showMediaPlayerCard && themePlayer && themeState ? this._getMediaPlayerArtwork(themePlayer, themeState) : "";
+    if (!prepareArtworkTheme(this, themeUrl || "", Boolean(this.shadowRoot.querySelector(".media-player-card")), () => this._render())) return;
     const playMediaToggleEntrance = animations.enabled && showMediaPlayerToggle && !this._lastMediaToggleVisible;
     this._lastMediaToggleVisible = showMediaPlayerToggle;
     const playMediaCardEntrance = animations.enabled && showMediaPlayerCard && !this._lastMediaPlayerCardVisible;
@@ -2549,8 +2642,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
       base: navbarSurfaceBase,
       glazeMode: "neutral",
       glazeNeutralStrength: 5,
-      ambient: false,
-    }) || `linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0)), ${navbarSurfaceBase}`;
+          }) || `linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0)), ${navbarSurfaceBase}`;
     const popupMarkup = this._renderPopup(currentPath, Boolean(this._popupState) && this._playPopupEntrance);
     const mediaBrowserMarkup = this._renderMediaBrowser();
 
@@ -3910,7 +4002,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
 
     const mediaCard = this.shadowRoot.querySelector(".media-player-card");
     const artworkUrl = mediaCard?.querySelector(".media-player__artwork img")?.getAttribute("src") || "";
-    void applyArtworkControlTheme(mediaCard, artworkUrl);
+    void applyArtworkControlTheme(mediaCard instanceof HTMLElement ? mediaCard : null, artworkUrl);
     this._applyRouteRuntimeStyles(visibleRoutes, playDockEntrance);
     this._applyPopupRuntimeStyles();
     this._playPopupEntrance = false;
@@ -3918,6 +4010,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     if (this._popupState) {
       this._schedulePopupPositionSync();
     }
+    this._syncModalFocus();
     this._lastRenderSignature = this._getRenderSignature(this._hass);
   }
 }

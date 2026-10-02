@@ -741,9 +741,19 @@
     });
     return false;
   }
+  function releaseArtworkTheme(owner) {
+    renderRequests.delete(owner);
+    displayedArtwork.delete(owner);
+    themes.delete(owner);
+    const root = owner.shadowRoot;
+    root?.querySelectorAll(".media-player-card").forEach((host) => {
+      if (host instanceof HTMLElement) requests.delete(host);
+    });
+  }
   async function applyArtworkControlTheme(host, url) {
     if (!host) return;
-    const owner = host.getRootNode?.()?.host || host;
+    const root = host.getRootNode();
+    const owner = root instanceof ShadowRoot ? root.host : host;
     const token = {};
     requests.set(host, token);
     if (!url) {
@@ -820,7 +830,34 @@
   }
 `;
 
+  // src/shared/home-assistant-services.ts
+  function callHassService(hass, domain, service, data = {}, target = null) {
+    if (!hass?.callService) return;
+    const failure = (error) => console.warn("Nodalia Cards: service call failed", `${domain}.${service}`, error);
+    try {
+      void Promise.resolve(target !== null ? hass.callService(domain, service, data, target) : hass.callService(domain, service, data)).catch(failure);
+    } catch (error) {
+      failure(error);
+    }
+  }
+  function invokeHassService(host, hass, domain, service, data = {}, target = null) {
+    const utils2 = window.NodaliaUtils;
+    const invoke = utils2?.invokeHomeAssistantService;
+    if (!invoke) {
+      callHassService(hass, domain, service, data, target);
+      return;
+    }
+    const failure = (error) => console.warn("Nodalia Cards: service call failed", `${domain}.${service}`, error);
+    try {
+      void Promise.resolve(invoke.call(utils2, host, hass, domain, service, data, target)).catch(failure);
+    } catch (error) {
+      failure(error);
+    }
+  }
+
   // src/cards/navigation/navigation-card.ts
+  var navRecord = (value) => isObject(value) ? value : {};
+  var navText = (value) => String(value ?? "");
   var _lazyNodaliaNavigationBarCard;
   function loadNodaliaNavigationBarCard() {
     if (_lazyNodaliaNavigationBarCard) {
@@ -830,15 +867,7 @@
       static getStubConfig(hass, entities = [], entitiesFallback = []) {
         const config = deepClone(STUB_CONFIG);
         const entityId = window.NodaliaUtils?.findStubEntityIds?.(hass, entities, entitiesFallback, ["media_player"], 1)[0] || "";
-        if (entityId) {
-          config.media_player = {
-            players: [{
-              entity: entityId,
-              label: hass?.states?.[entityId]?.attributes?.friendly_name || ""
-            }]
-          };
-        }
-        return config;
+        return entityId ? { ...config, media_player: { players: [{ entity: entityId, label: hass?.states?.[entityId]?.attributes?.friendly_name || "" }] } } : config;
       }
       static async getConfigElement() {
         return document.createElement(EDITOR_TAG);
@@ -849,7 +878,14 @@
       }
       _nodaliaConstruct() {
         this.attachShadow({ mode: "open" });
-        this._config = null;
+        this._generation = 0;
+        this._contextConnection = void 0;
+        this._contextAuth = void 0;
+        this._contextUser = "";
+        this._modalRestoreSelector = "";
+        this._modalKind = "";
+        this._config = normalizeConfig({ routes: [] });
+        this._configured = false;
         this._hass = null;
         this._renderedRoutes = [];
         this._popupState = null;
@@ -874,7 +910,9 @@
           if (this._resizeSyncTimer) {
             window.clearTimeout(this._resizeSyncTimer);
           }
+          const generation = this._generation;
           this._resizeSyncTimer = window.setTimeout(() => {
+            if (generation !== this._generation) return;
             this._resizeSyncTimer = 0;
             if (!this.isConnected) {
               return;
@@ -911,7 +949,13 @@
           this._render();
         };
         this._onShadowClick = this._onShadowClick.bind(this);
-        this.shadowRoot.addEventListener("click", this._onShadowClick);
+        this.shadowRoot?.addEventListener("click", this._onShadowClick);
+        this.shadowRoot?.addEventListener("keydown", (event) => {
+          if (window.NodaliaUtils?.isKeyboardActivationEvent?.(event) && event.target instanceof HTMLElement && event.target.dataset.navMediaInfo === "true") {
+            event.preventDefault();
+            this._onShadowClick(event);
+          }
+        });
       }
       connectedCallback() {
         window.addEventListener("resize", this._onResize);
@@ -927,6 +971,10 @@
         window.removeEventListener("location-changed", this._onLocationChange);
         window.removeEventListener("keydown", this._onWindowKeyDown);
         document.removeEventListener("visibilitychange", this._onVisibilityChange);
+        this._releaseViewWork();
+      }
+      _releaseViewWork() {
+        ++this._generation;
         this._mediaBrowserRequestToken += 1;
         this._mediaBrowserState = null;
         if (this._popupPositionFrame) {
@@ -946,20 +994,41 @@
           this._resizeSyncTimer = 0;
         }
         window.NodaliaUtils?.clearDeferTimers?.(this);
+        this._popupState = null;
+        this._modalRestoreSelector = "";
+        this._modalKind = "";
+        window.NodaliaUtils?.releaseModalFocus?.(this);
+        releaseArtworkTheme(this);
+      }
+      _resetContextView() {
+        this._releaseViewWork();
+        this._mediaPlayerExpanded = false;
+        this._activeMediaPlayerIndex = 0;
+        this._activeMediaPlayerEntity = "";
+        this._lastRenderSignature = "";
+        this.shadowRoot?.replaceChildren();
       }
       setConfig(config) {
+        this._resetContextView();
         this._config = normalizeConfig(config);
+        this._configured = true;
         this._lastRenderSignature = "";
         this._render();
       }
       set hass(hass) {
-        const nextSignature = this._getRenderSignature(hass);
-        this._hass = hass;
-        if (!this.isConnected) {
-          return;
+        const user = `${hass?.user?.id ?? ""}:${hass?.user?.is_admin === true}`;
+        if (this._contextConnection !== hass?.connection || this._contextAuth !== hass?.auth || this._contextUser !== user) {
+          this._resetContextView();
+          this._contextConnection = hass?.connection;
+          this._contextAuth = hass?.auth;
+          this._contextUser = user;
         }
+        this._hass = hass;
+        if (!this.isConnected) return;
+        const nextSignature = this._getRenderSignature(hass);
         if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
           this._patchMediaVolumeControls();
+          this._refreshMediaProgress();
           return;
         }
         this._lastRenderSignature = nextSignature;
@@ -976,25 +1045,8 @@
           min_columns: 4
         };
       }
-      _getTrackedEntityIds() {
-        const entityIds = /* @__PURE__ */ new Set();
-        (this._config?.routes || []).forEach((route) => {
-          if (route?.badge?.entity) {
-            entityIds.add(route.badge.entity);
-          }
-          (route?.popup || []).forEach((item) => {
-            if (item?.badge?.entity) {
-              entityIds.add(item.badge.entity);
-            }
-          });
-        });
-        (this._config?.media_player?.players || []).forEach((player) => {
-          if (player?.entity) {
-            entityIds.add(player.entity);
-          }
-        });
-        const tag = window.NodaliaI18n.localeTag(window.NodaliaI18n.resolveLanguage(this._hass, this._config?.language));
-        return [...entityIds].sort((left, right) => left.localeCompare(right, tag));
+      _language(hass = this._hass) {
+        return window.NodaliaI18n?.resolveLanguage?.(hass, navText(this._config.language || "auto")) ?? "en";
       }
       _getRenderSignature(hass = this._hass) {
         const runtime = getRenderSignatureRuntime();
@@ -1003,7 +1055,7 @@
         return runtime.joinParts([
           {
             prefix: "l:",
-            values: [window.NodaliaI18n.resolveLanguage(hass, this._config?.language)]
+            values: [this._language(hass)]
           },
           { prefix: "u:", values: [hass?.user?.id || ""] },
           { prefix: "r:", values: [routeBadgeStates.join("|")] },
@@ -1017,17 +1069,17 @@
       _getRouteBadgeSignatureRows(hass, runtime) {
         return (this._config?.routes || []).flatMap((route, routeIndex) => {
           const items = [{ badge: route?.badge, scope: `route:${routeIndex}` }];
-          (route?.popup || []).forEach((item, popupIndex) => {
+          this._getPopupItems(route).forEach((item, popupIndex) => {
             items.push({ badge: item?.badge, scope: `popup:${routeIndex}:${popupIndex}` });
           });
-          return items.filter((item) => item?.badge?.entity).map((item) => {
-            const state = hass?.states?.[item.badge.entity] || null;
-            const attribute = String(item.badge.attribute || "");
+          return items.filter((item) => navRecord(item?.badge).entity).map((item) => {
+            const state = hass?.states?.[navText(navRecord(item.badge).entity)] || null;
+            const attribute = String(navRecord(item.badge).attribute || "");
             return runtime.joinParts([
               {
                 values: [
                   item.scope,
-                  item.badge.entity || "",
+                  navText(navRecord(item.badge).entity) || "",
                   state?.state || "",
                   attribute,
                   attribute ? state?.attributes?.[attribute] ?? "" : state?.state || ""
@@ -1039,7 +1091,7 @@
       }
       _getMediaPlayerSignatureRows(hass, runtime) {
         return (this._config?.media_player?.players || []).filter((player) => player?.entity).map((player) => {
-          const state = hass?.states?.[player.entity] || null;
+          const state = hass?.states?.[navText(player?.entity)] || null;
           const attrs = state?.attributes || {};
           return runtime.joinParts([
             {
@@ -1048,6 +1100,10 @@
                 state?.state || "",
                 attrs.friendly_name || "",
                 attrs.entity_picture || "",
+                attrs.entity_picture_local || "",
+                attrs.media_content_id || "",
+                attrs.media_content_type || "",
+                attrs.device_class || "",
                 attrs.media_title || "",
                 attrs.media_artist || "",
                 attrs.media_series_title || "",
@@ -1064,8 +1120,8 @@
           ], "", "::");
         });
       }
-      _triggerHaptic(style = this._config?.haptics?.style) {
-        if (!this._config?.haptics?.enabled) {
+      _triggerHaptic(style = navRecord(this._config.haptics).style) {
+        if (!navRecord(this._config.haptics).enabled) {
           return;
         }
         const hapticStyle = String(style || "medium");
@@ -1073,10 +1129,10 @@
           fireEvent(this, "haptic", hapticStyle);
         } catch (_error) {
         }
-        if (!this._config.haptics.fallback_vibrate || typeof navigator === "undefined" || typeof navigator.vibrate !== "function") {
+        if (!navRecord(this._config.haptics).fallback_vibrate || typeof navigator === "undefined" || typeof navigator.vibrate !== "function") {
           return;
         }
-        navigator.vibrate(HAPTIC_PATTERNS[hapticStyle] || HAPTIC_PATTERNS.selection);
+        navigator.vibrate(Object.entries(HAPTIC_PATTERNS).find(([key]) => key === hapticStyle)?.[1] || HAPTIC_PATTERNS.selection);
       }
       _onShadowClick(event) {
         const popupCloseTrigger = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.popupClose === "true");
@@ -1086,7 +1142,7 @@
           this._closePopup();
           return;
         }
-        const mediaControlButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.mediaControl);
+        const mediaControlButton = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset?.mediaControl));
         if (mediaControlButton) {
           event.preventDefault();
           event.stopPropagation();
@@ -1102,7 +1158,7 @@
           );
           return;
         }
-        const mediaToggleButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.mediaToggle);
+        const mediaToggleButton = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset?.mediaToggle));
         if (mediaToggleButton) {
           event.preventDefault();
           event.stopPropagation();
@@ -1140,7 +1196,7 @@
           this._goBackMediaBrowser();
           return;
         }
-        const mediaBrowserActionButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.mediaBrowserAction);
+        const mediaBrowserActionButton = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset?.mediaBrowserAction));
         if (mediaBrowserActionButton) {
           event.preventDefault();
           event.stopPropagation();
@@ -1249,14 +1305,14 @@
         if (!route || !Array.isArray(route.popup)) {
           return [];
         }
-        return route.popup.filter((item) => this._isItemVisible(item));
+        return route.popup.filter(isObject).filter((item) => this._isItemVisible(item));
       }
       _getRoutePath(route) {
         if (typeof route.path === "string" && route.path) {
           return route.path;
         }
-        if (route.tap_action?.action === "navigate" && route.tap_action.navigation_path) {
-          return route.tap_action.navigation_path;
+        if (navRecord(route.tap_action).action === "navigate" && navText(navRecord(route.tap_action).navigation_path)) {
+          return navText(navRecord(route.tap_action).navigation_path);
         }
         return null;
       }
@@ -1289,13 +1345,14 @@
         return this._getPopupItems(route).some((item) => this._isNavItemActive(item, currentPath));
       }
       _getBadge(route) {
-        const badge = route.badge;
-        if (badge === void 0 || badge === null || badge === false) {
+        const rawBadge = route.badge;
+        const badge = navRecord(rawBadge);
+        if (rawBadge === void 0 || rawBadge === null || rawBadge === false) {
           return null;
         }
-        if (typeof badge === "string" || typeof badge === "number") {
+        if (typeof rawBadge === "string" || typeof rawBadge === "number") {
           return {
-            content: String(badge),
+            content: String(rawBadge),
             background: this._config.styles.badge.background,
             color: this._config.styles.badge.color
           };
@@ -1304,9 +1361,9 @@
           return null;
         }
         let content = badge.content;
-        if (content === void 0 && badge.entity && this._hass?.states?.[badge.entity]) {
-          const stateObject = this._hass.states[badge.entity];
-          content = badge.attribute ? stateObject.attributes?.[badge.attribute] : stateObject.state;
+        if (content === void 0 && badge.entity && this._hass?.states?.[navText(badge.entity)]) {
+          const stateObject = this._hass.states[navText(badge.entity)];
+          content = badge.attribute ? stateObject?.attributes?.[navText(badge.attribute)] : stateObject?.state;
         }
         if (content === void 0 || content === null || content === "") {
           return null;
@@ -1337,7 +1394,7 @@
       }
       _getPopupLayout(route) {
         const layout = route?.popup_layout || this._config?.styles?.popup?.layout || "auto";
-        return ["auto", "vertical", "horizontal"].includes(layout) ? layout : "auto";
+        return ["auto", "vertical", "horizontal"].includes(navText(layout)) ? navText(layout) : "auto";
       }
       _getPopupMetrics(route, items) {
         const popupStyles = this._config?.styles?.popup || {};
@@ -1403,7 +1460,7 @@
         if (!route) {
           return defaultAction;
         }
-        if (route.tap_action) {
+        if (isObject(route.tap_action)) {
           return route.tap_action;
         }
         if (Array.isArray(route.popup) && route.popup.length > 0) {
@@ -1423,7 +1480,7 @@
         if (!path) {
           return;
         }
-        window.history.pushState(null, "", path);
+        window.history.pushState(null, "", navText(path));
         window.dispatchEvent(new Event("location-changed"));
       }
       _callService(action) {
@@ -1438,7 +1495,7 @@
         if (!domain || !service) {
           return;
         }
-        this._hass.callService(domain, service, action.service_data || {}, action.target);
+        invokeHassService(this, this._hass, domain, service, navRecord(action.service_data), isObject(action.target) ? action.target : null);
       }
       _isServiceAllowed(serviceValue) {
         const security = this._config?.security || {};
@@ -1455,14 +1512,14 @@
         if (!domains.length && !services.length) {
           return false;
         }
-        return services.includes(normalizedService) || domains.includes(domain);
+        return services.includes(normalizedService) || domains.includes(domain ?? "");
       }
       _applyRouteRuntimeStyles(visibleRoutes, playDockEntrance) {
         if (!this.shadowRoot) {
           return;
         }
         visibleRoutes.forEach((route, index) => {
-          const node = this.shadowRoot.querySelector(`.nav-item[data-route-index="${index}"]`);
+          const node = this.shadowRoot?.querySelector(`.nav-item[data-route-index="${index}"]`);
           if (!(node instanceof HTMLElement)) {
             return;
           }
@@ -1479,7 +1536,7 @@
           if (routeActiveBackground) node.style.setProperty("--route-active-background", routeActiveBackground);
           const badge = this._getBadge(route);
           const badgeNode = node.querySelector(".nav-badge");
-          if (badgeNode instanceof HTMLElement) {
+          if (badge && badgeNode instanceof HTMLElement) {
             const badgeBackground = sanitizeCssRuntimeValue(badge.background);
             const badgeColor = sanitizeCssRuntimeValue(badge.color);
             if (badgeBackground) badgeNode.style.setProperty("--badge-background", badgeBackground);
@@ -1507,7 +1564,7 @@
         }
         const popupItems = this._getPopupItems(this._popupState.route);
         popupItems.forEach((item, popupIndex) => {
-          const node = this.shadowRoot.querySelector(`.popup-item[data-popup-item-index="${popupIndex}"]`);
+          const node = this.shadowRoot?.querySelector(`.popup-item[data-popup-item-index="${popupIndex}"]`);
           if (!(node instanceof HTMLElement)) {
             return;
           }
@@ -1521,7 +1578,7 @@
           if (itemActiveBackground) node.style.setProperty("--popup-route-active-background", itemActiveBackground);
           const badge = this._getBadge(item);
           const badgeNode = node.querySelector(".nav-badge");
-          if (badgeNode instanceof HTMLElement) {
+          if (badge && badgeNode instanceof HTMLElement) {
             const badgeBackground = sanitizeCssRuntimeValue(badge.background);
             const badgeColor = sanitizeCssRuntimeValue(badge.color);
             if (badgeBackground) badgeNode.style.setProperty("--badge-background", badgeBackground);
@@ -1549,7 +1606,9 @@
         if (this._popupPositionFrame) {
           cancelAnimationFrame(this._popupPositionFrame);
         }
+        const generation = this._generation;
         this._popupPositionFrame = requestAnimationFrame(() => {
+          if (generation !== this._generation || !this.isConnected) return;
           this._popupPositionFrame = null;
           this._syncPopupPosition();
         });
@@ -1627,6 +1686,7 @@
         if (routeIndex < 0) {
           return;
         }
+        this._modalRestoreSelector = `[data-route-index="${routeIndex}"]`;
         this._popupState = {
           columns: popupMetrics.columns,
           direction,
@@ -1670,14 +1730,14 @@
         if (!this._shouldShowMediaPlayerOnCurrentScreen()) {
           return [];
         }
-        return this._config.media_player.players.filter((player) => {
+        return this._config.media_player.players.filter((player) => typeof player.entity === "string" && Boolean(player.entity)).filter((player) => {
           if (!player || !player.entity) {
             return false;
           }
           if (player.show === false) {
             return false;
           }
-          const state = this._hass?.states?.[player.entity];
+          const state = this._hass?.states?.[navText(player?.entity)];
           if (!state) {
             return false;
           }
@@ -1704,16 +1764,16 @@
         if (player.title) {
           return player.title;
         }
-        return state.attributes.media_title || state.attributes.friendly_name || player.entity;
+        return state?.attributes?.media_title || state?.attributes?.friendly_name || player.entity;
       }
       _getMediaPlayerPlayerLabel(player, state) {
-        return player.label || player.name || state.attributes.friendly_name || player.entity;
+        return player.label || player.name || state?.attributes?.friendly_name || player.entity;
       }
       _getMediaPlayerSubtitle(player, state) {
         if (player.subtitle) {
           return player.subtitle;
         }
-        return state.attributes.media_artist || state.attributes.media_series_title || state.attributes.media_album_name || state.attributes.app_name || this._getMediaPlayerStateLabel(state.state);
+        return state?.attributes?.media_artist || state?.attributes?.media_series_title || state?.attributes?.media_album_name || state?.attributes?.app_name || this._getMediaPlayerStateLabel(state?.state);
       }
       _resolveMediaUrl(value, options = {}) {
         const baseUrl = sanitizeMediaArtworkUrl(value, this._hass);
@@ -1788,14 +1848,14 @@
         if (!this._shouldShowTvArtwork(player, state)) {
           return null;
         }
-        const artwork = state.attributes.entity_picture_local || state.attributes.entity_picture || "";
+        const artwork = state?.attributes?.entity_picture_local || state?.attributes?.entity_picture || "";
         return artwork ? this._resolveMediaUrl(artwork, {
           cacheToken: this._getArtworkCacheToken(state)
         }) : null;
       }
       _getMediaPlayerStateLabel(stateValue) {
         const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
-        const langCfg = this._config?.language ?? "auto";
+        const langCfg = navText(this._config.language || "auto");
         if (window.NodaliaI18n?.translateMediaPlayerState) {
           return window.NodaliaI18n.translateMediaPlayerState(hass, langCfg, stateValue);
         }
@@ -1820,13 +1880,14 @@
       }
       _getMediaPlayerProgress(state) {
         const duration = Number(state?.attributes?.media_duration || 0);
-        if (!(duration > 0)) {
+        if (!Number.isFinite(duration) || !(duration > 0)) {
           return null;
         }
-        let position = Number(state.attributes.media_position || 0);
-        const updatedAt = state.attributes.media_position_updated_at;
-        if (state.state === "playing" && updatedAt) {
-          const updatedAtTime = new Date(updatedAt).getTime();
+        const rawPosition = Number(state?.attributes?.media_position || 0);
+        let position = Number.isFinite(rawPosition) ? rawPosition : 0;
+        const updatedAt = state?.attributes?.media_position_updated_at;
+        if (state?.state === "playing" && updatedAt) {
+          const updatedAtTime = new Date(typeof updatedAt === "number" ? updatedAt : navText(updatedAt)).getTime();
           if (!Number.isNaN(updatedAtTime)) {
             position += Math.max(0, (Date.now() - updatedAtTime) / 1e3);
           }
@@ -1839,7 +1900,7 @@
         };
       }
       _getMediaPlayerSourceLabel(state) {
-        const sourceLabel = state.attributes.source || state.attributes.app_name || state.attributes.media_album_name || state.attributes.media_channel;
+        const sourceLabel = state?.attributes?.source || state?.attributes?.app_name || state?.attributes?.media_album_name || state?.attributes?.media_channel;
         const sourceKey = normalizeTextKey(sourceLabel);
         if (!sourceKey || sourceKey.includes("music assistant") || sourceKey === "airmusic" || sourceKey.startsWith("airmusic ")) {
           return null;
@@ -1870,19 +1931,7 @@
         return this._isMusicAssistantPlayer(player, state) ? "/media-browser/browser" : "";
       }
       _supportsVolumeControl(state) {
-        return typeof state?.attributes?.volume_level === "number";
-      }
-      _playPickedMedia(entityId, pickedMedia) {
-        const mediaContentId = pickedMedia?.item?.media_content_id;
-        const mediaContentType = pickedMedia?.item?.media_content_type;
-        if (!this._hass || !entityId || !mediaContentId || !mediaContentType) {
-          return;
-        }
-        this._hass.callService("media_player", "play_media", {
-          entity_id: entityId,
-          media_content_id: mediaContentId,
-          media_content_type: mediaContentType
-        });
+        return typeof state?.attributes?.volume_level === "number" && Number.isFinite(state.attributes.volume_level);
       }
       _getMediaBrowserClient() {
         if (typeof this._hass?.callWS === "function") {
@@ -1894,26 +1943,26 @@
         return null;
       }
       _normalizeMediaBrowserItem(item) {
-        if (!item || typeof item !== "object") {
+        if (!isObject(item)) {
           return null;
         }
         return {
-          title: item.title || item.name || "Elemento",
-          media_class: item.media_class || "",
-          media_content_id: item.media_content_id || "",
-          media_content_type: item.media_content_type || "",
+          title: navText(item.title || item.name || "Elemento"),
+          media_class: navText(item.media_class || ""),
+          media_content_id: navText(item.media_content_id || ""),
+          media_content_type: navText(item.media_content_type || ""),
           can_play: item.can_play === true,
           can_expand: item.can_expand === true,
-          thumbnail: item.thumbnail || item.thumbnail_url || "",
-          children: Array.isArray(item.children) ? item.children.map((child) => this._normalizeMediaBrowserItem(child)).filter(Boolean) : []
+          thumbnail: this._resolveMediaUrl(item.thumbnail || item.thumbnail_url || ""),
+          children: Array.isArray(item.children) ? item.children.map((child) => this._normalizeMediaBrowserItem(child)).filter((child) => child !== null) : []
         };
       }
       _normalizeMediaBrowserNode(result, entityId) {
         let node = result;
-        if (node?.result && typeof node.result === "object") {
+        if (isObject(node) && isObject(node.result)) {
           node = node.result;
         }
-        if (node && entityId && typeof node[entityId] === "object") {
+        if (isObject(node) && entityId && isObject(node[entityId])) {
           node = node[entityId];
         }
         const normalized = this._normalizeMediaBrowserItem(node);
@@ -1962,6 +2011,7 @@
           return;
         }
         this._closePopup(false);
+        this._modalRestoreSelector = `[data-media-control="browse-media"][data-entity="${escapeSelectorValue(entityId)}"]`;
         const token = this._mediaBrowserRequestToken + 1;
         this._mediaBrowserRequestToken = token;
         this._mediaBrowserState = {
@@ -2084,7 +2134,7 @@
         if (!this._hass || !entityId || !mediaContentType || !mediaContentId) {
           return;
         }
-        this._hass.callService("media_player", "play_media", {
+        invokeHassService(this, this._hass, "media_player", "play_media", {
           entity_id: entityId,
           media_content_id: mediaContentId,
           media_content_type: mediaContentType
@@ -2103,20 +2153,20 @@
         return match?.icon || "";
       }
       _commonAria(key, fallback = "") {
-        return window.NodaliaI18n?.translateCommonAria?.(this._hass, this._config?.language ?? "auto", key, fallback) || fallback;
+        return window.NodaliaI18n?.translateCommonAria?.(this._hass, navText(this._config.language || "auto"), key, fallback) || fallback;
       }
       _mediaBrowserUi(key, fallback = "", values = {}) {
-        return window.NodaliaI18n?.translateMediaBrowserUi?.(this._hass, this._config?.language ?? "auto", key, fallback, values) || fallback;
+        return window.NodaliaI18n?.translateMediaBrowserUi?.(this._hass, navText(this._config.language || "auto"), key, fallback, values) || fallback;
       }
       _mediaPlayerAria(key, fallback = "", values = {}) {
-        return window.NodaliaI18n?.translateMediaPlayerAria?.(this._hass, this._config?.language ?? "auto", key, fallback, values) || fallback;
+        return window.NodaliaI18n?.translateMediaPlayerAria?.(this._hass, navText(this._config.language || "auto"), key, fallback, values) || fallback;
       }
       _getMediaBrowserDisplayTitle(value) {
-        const label = typeof value === "string" ? value : value?.title;
+        const label = typeof value === "string" ? value : navRecord(value).title;
         const fallback = String(label || "").trim();
-        const lang = window.NodaliaI18n.resolveLanguage(this._hass, this._config?.language ?? "auto");
-        const dict = window.NodaliaI18n.strings(lang).navigationMusicAssist || {};
-        const enDict = window.NodaliaI18n.strings("en").navigationMusicAssist || {};
+        const lang = this._language();
+        const dict = navRecord(window.NodaliaI18n?.strings?.(lang)?.navigationMusicAssist);
+        const enDict = navRecord(window.NodaliaI18n?.strings?.("en")?.navigationMusicAssist);
         if (!fallback) {
           return dict.browseFallback || enDict.browseFallback || "Item";
         }
@@ -2204,13 +2254,15 @@
           }
           return;
         }
-        const shouldTick = visiblePlayers.some((player) => {
-          const state = this._hass?.states?.[player.entity];
+        const shouldTick = this.isConnected && visiblePlayers.some((player) => {
+          const state = this._hass?.states?.[navText(player?.entity)];
           const progress = state ? this._getMediaPlayerProgress(state) : null;
           return state?.state === "playing" && progress;
         });
         if (shouldTick && !this._mediaTicker) {
+          const generation = this._generation;
           this._mediaTicker = window.setInterval(() => {
+            if (generation !== this._generation || !this.isConnected) return;
             if (typeof document !== "undefined" && document.hidden) {
               return;
             }
@@ -2232,13 +2284,13 @@
           return;
         }
         const player = visiblePlayers[this._resolveActiveMediaPlayerIndex(visiblePlayers)];
-        const state = this._hass?.states?.[player.entity];
+        const state = this._hass?.states?.[navText(player?.entity)];
         const progress = state ? this._getMediaPlayerProgress(state) : null;
         if (!progress) {
           return;
         }
         const progressFill = this.shadowRoot.querySelector(".media-player__progress-fill");
-        if (progressFill) {
+        if (progressFill instanceof HTMLElement) {
           progressFill.style.width = `${progress.percent}%`;
         }
         const timeChip = this.shadowRoot.querySelector('[data-media-chip="time"]');
@@ -2274,29 +2326,29 @@
         }
         switch (control) {
           case "previous":
-            this._hass.callService("media_player", "media_previous_track", { entity_id: entityId });
+            invokeHassService(this, this._hass, "media_player", "media_previous_track", { entity_id: entityId });
             break;
           case "next":
-            this._hass.callService("media_player", "media_next_track", { entity_id: entityId });
+            invokeHassService(this, this._hass, "media_player", "media_next_track", { entity_id: entityId });
             break;
           case "play-pause":
-            this._hass.callService("media_player", "media_play_pause", { entity_id: entityId });
+            invokeHassService(this, this._hass, "media_player", "media_play_pause", { entity_id: entityId });
             break;
           case "volume-down": {
-            const currentVolume = Number.isFinite(options.volume) ? options.volume : 0;
+            const currentVolume = typeof options.volume === "number" && Number.isFinite(options.volume) ? options.volume : 0;
             const nextVolume = clamp(currentVolume - 0.08, 0, 1);
             this._patchMediaVolumeControls(entityId, nextVolume);
-            this._hass.callService("media_player", "volume_set", {
+            invokeHassService(this, this._hass, "media_player", "volume_set", {
               entity_id: entityId,
               volume_level: nextVolume
             });
             break;
           }
           case "volume-up": {
-            const currentVolume = Number.isFinite(options.volume) ? options.volume : 0;
+            const currentVolume = typeof options.volume === "number" && Number.isFinite(options.volume) ? options.volume : 0;
             const nextVolume = clamp(currentVolume + 0.08, 0, 1);
             this._patchMediaVolumeControls(entityId, nextVolume);
-            this._hass.callService("media_player", "volume_set", {
+            invokeHassService(this, this._hass, "media_player", "volume_set", {
               entity_id: entityId,
               volume_level: nextVolume
             });
@@ -2341,7 +2393,7 @@
             if (!entityId || !this._hass) {
               return;
             }
-            this._hass.callService("homeassistant", "toggle", { entity_id: entityId });
+            invokeHassService(this, this._hass, "homeassistant", "toggle", { entity_id: entityId });
             break;
           }
           case "more-info": {
@@ -2363,7 +2415,7 @@
         if (!this._popupState?.route) {
           return "";
         }
-        if (this._popupState.routeIndex < 0 || !this._renderedRoutes[this._popupState.routeIndex]) {
+        if (this._popupState.routeIndex < 0 || this._renderedRoutes[this._popupState.routeIndex] !== this._popupState.route) {
           this._popupState = null;
           return "";
         }
@@ -2386,7 +2438,7 @@
           <button
             class="popup-item ${isActive ? "active" : ""} ${isIconOnly ? "icon-only" : ""}"
             type="button"
-            data-popup-route-index="${this._popupState.routeIndex}"
+            data-popup-route-index="${this._popupState?.routeIndex ?? -1}"
             data-popup-item-index="${popupIndex}"
             aria-label="${escapeHtml(ariaLabel)}"
           >
@@ -2408,6 +2460,7 @@
         return `
       <div class="popup-backdrop" data-popup-close="true"></div>
       <div
+        role="dialog" aria-modal="true" aria-label="${escapeHtml(this._getRouteLabel(this._popupState.route) || this._commonAria("navigationBar", "Navigation bar"))}"
         class="popup-panel popup-panel--${this._popupState.direction} popup-panel--layout-${this._popupState.layout || "auto"} ${popupHasText ? "popup-panel--with-text" : "popup-panel--icon-only"} ${isCompactPopup ? "popup-panel--compact" : ""}${playPopupEntrance ? " popup-panel--entering" : ""}"
       >
         <div class="popup-items">
@@ -2479,7 +2532,7 @@
             <ha-icon icon="mdi:chevron-left"></ha-icon>
           </button>
           <div class="media-browser__header-copy">
-            <div class="media-browser__eyebrow">${escapeHtml(this._mediaBrowserState?.browserLabel || this._mediaBrowserUi("eyebrow", "Media Browser"))}</div>
+            <div class="media-browser__eyebrow">${escapeHtml(this._mediaBrowserUi("eyebrow", "Media Browser"))}</div>
             <div class="media-browser__title">${escapeHtml(this._getMediaBrowserDisplayTitle(currentNode?.title || "Media"))}</div>
           </div>
           <button
@@ -2500,8 +2553,8 @@
           return "";
         }
         const player = visiblePlayers[this._resolveActiveMediaPlayerIndex(visiblePlayers)];
-        const state = this._hass?.states?.[player.entity];
-        if (!state) {
+        const state = this._hass?.states?.[navText(player?.entity)];
+        if (!player || !state) {
           return "";
         }
         const artwork = this._getMediaPlayerArtwork(player, state);
@@ -2513,9 +2566,9 @@
         const albumCoverBlur = albumCoverBackground && this._config.media_player.artwork?.mode === "blur";
         const chips = this._getMediaPlayerChips(player, state, progress, title, subtitle);
         const playerName = this._getMediaPlayerPlayerLabel(player, state);
-        const statusLabel = this._getMediaPlayerStateLabel(state.state);
+        const statusLabel = this._getMediaPlayerStateLabel(state?.state);
         const browsePath = this._getMediaPlayerBrowsePath(player, state);
-        const volumeLevel = Number(state.attributes.volume_level ?? 0);
+        const volumeLevel = Number(state?.attributes?.volume_level ?? 0);
         const volumeSupported = this._supportsVolumeControl(state);
         const volumeDownMarkup = volumeSupported ? `
         <button
@@ -2628,7 +2681,7 @@
             <div class="media-player__artwork">
               ${artwork ? `<img src="${escapeHtml(artwork)}" alt="${escapeHtml(title)}" />` : `<ha-icon icon="${escapeHtml(player.icon || "mdi:music")}"></ha-icon>`}
             </div>
-            <div class="media-player__meta">
+            <div class="media-player__meta" data-nav-media-info="true" data-media-card-index="${this._activeMediaPlayerIndex}" role="button" tabindex="0" aria-label="${escapeHtml(this._commonAria("moreInfo", "More information"))}">
               <div class="media-player__title-row">
                 <div class="media-player__title">${escapeHtml(title)}</div>
                 ${statusMarkup}
@@ -2659,7 +2712,7 @@
                       data-entity="${escapeHtml(player.entity)}"
                       aria-label="${escapeHtml(this._commonAria("playPause", "Play or pause"))}"
                     >
-                      <ha-icon icon="${escapeHtml(state.state === "playing" ? "mdi:pause" : "mdi:play")}"></ha-icon>
+                      <ha-icon icon="${escapeHtml(state?.state === "playing" ? "mdi:pause" : "mdi:play")}"></ha-icon>
                     </button>
                     <button
                       type="button"
@@ -2688,13 +2741,13 @@
           return "";
         }
         const player = visiblePlayers[this._resolveActiveMediaPlayerIndex(visiblePlayers)];
-        const state = this._hass?.states?.[player.entity];
-        if (!state) {
+        const state = this._hass?.states?.[navText(player?.entity)];
+        if (!player || !state) {
           return "";
         }
         const artwork = this._getMediaPlayerArtwork(player, state);
         const title = this._getMediaPlayerTitle(player, state);
-        const subtitle = this._getMediaPlayerStateLabel(state.state);
+        const subtitle = this._getMediaPlayerStateLabel(state?.state);
         return `
       <div class="media-player-toggle-wrap${this._playDockEntrance ? " media-player-toggle-wrap--entering" : ""}">
         <button
@@ -2716,10 +2769,44 @@
     `;
       }
       _render() {
+        const focused = this.shadowRoot?.activeElement;
+        const attributes = ["data-route-index", "data-popup-route-index", "data-popup-item-index", "data-media-control", "data-entity", "data-media-toggle", "data-media-index", "data-media-browser-action", "data-media-content-type", "data-media-content-id", "data-media-browser-close", "data-media-browser-back", "data-media-card-index", "data-nav-media-info"];
+        const selector = attributes.map((key) => `[${key}]`).join(",");
+        const values = focused instanceof HTMLElement && focused.matches(selector) ? attributes.map((key) => focused.getAttribute(key)) : null;
+        this._renderView();
+        if (values) {
+          const target = [...this.shadowRoot?.querySelectorAll(selector) ?? []].find((element) => element.tagName === focused?.tagName && attributes.every((key, index) => element.getAttribute(key) === values[index]));
+          if (target instanceof HTMLElement) {
+            target.focus({ preventScroll: true });
+            target.setAttribute("data-nav-retained-focus", "");
+          }
+        }
+      }
+      _syncModalFocus() {
+        const dialog = this.shadowRoot?.querySelector(".media-browser-panel, .popup-panel");
+        if (!(dialog instanceof HTMLElement)) {
+          this._modalKind = "";
+          window.NodaliaUtils?.releaseModalFocus?.(this);
+          return;
+        }
+        const kind = this._mediaBrowserState ? "media" : "route";
+        const initialFocusSelector = this._modalKind === kind ? "[data-nav-retained-focus]" : void 0;
+        this._modalKind = kind;
+        window.NodaliaUtils?.bindModalFocus?.(this, dialog, {
+          ...initialFocusSelector ? { initialFocusSelector } : {},
+          restoreFocus: () => {
+            if (!this.isConnected || !this._modalRestoreSelector) return;
+            const target = this.shadowRoot?.querySelector(this._modalRestoreSelector);
+            if (target instanceof HTMLElement) target.focus({ preventScroll: true });
+            this._modalRestoreSelector = "";
+          }
+        });
+      }
+      _renderView() {
         if (!this.shadowRoot) {
           return;
         }
-        if (!this._config) {
+        if (!this._configured) {
           this.shadowRoot.innerHTML = "";
           return;
         }
@@ -2729,13 +2816,13 @@
         const mediaToggleBorderRadius = sanitizeCssRuntimeValue(config.styles.media_player.border_radius) || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.border_radius) || "18px";
         const mediaToggleBoxShadow = sanitizeCssRuntimeValue(config.styles.media_player.box_shadow) || sanitizeCssRuntimeValue(DEFAULT_CONFIG.styles.media_player.box_shadow) || "inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent), 0 10px 24px rgba(0, 0, 0, 0.16)";
         const animations = {
-          enabled: config.animations?.enabled !== false,
-          barDuration: clamp(Number(config.animations?.bar_duration) || DEFAULT_CONFIG.animations.bar_duration, 120, 1600),
-          popupDuration: clamp(Number(config.animations?.popup_duration) || DEFAULT_CONFIG.animations.popup_duration, 120, 2400),
-          mediaDuration: clamp(Number(config.animations?.media_duration) || DEFAULT_CONFIG.animations.media_duration, 120, 2400),
-          buttonBounceDuration: clamp(Number(config.animations?.button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration, 120, 1600),
+          enabled: navRecord(config.animations).enabled !== false,
+          barDuration: clamp(Number(navRecord(config.animations).bar_duration) || DEFAULT_CONFIG.animations.bar_duration, 120, 1600),
+          popupDuration: clamp(Number(navRecord(config.animations).popup_duration) || DEFAULT_CONFIG.animations.popup_duration, 120, 2400),
+          mediaDuration: clamp(Number(navRecord(config.animations).media_duration) || DEFAULT_CONFIG.animations.media_duration, 120, 2400),
+          buttonBounceDuration: clamp(Number(navRecord(config.animations).button_bounce_duration) || DEFAULT_CONFIG.animations.button_bounce_duration, 120, 1600),
           dockEntranceDuration: clamp(
-            Number(config.animations?.dock_entrance_duration) || DEFAULT_CONFIG.animations.dock_entrance_duration,
+            Number(navRecord(config.animations).dock_entrance_duration) || DEFAULT_CONFIG.animations.dock_entrance_duration,
             180,
             1400
           )
@@ -2744,6 +2831,7 @@
         const shouldHide = this._shouldHideForScreen(config);
         if (shouldHide && !inEditMode) {
           this._renderedRoutes = [];
+          this._releaseViewWork();
           this.shadowRoot.innerHTML = "";
           this._lastShouldHide = true;
           return;
@@ -2762,7 +2850,9 @@
             if (this._dockEntranceResetFrame) {
               window.cancelAnimationFrame(this._dockEntranceResetFrame);
             }
+            const generation = this._generation;
             this._dockEntranceResetFrame = window.requestAnimationFrame(() => {
+              if (generation !== this._generation) return;
               this._dockEntranceResetFrame = 0;
               if (!this.isConnected) {
                 return;
@@ -2780,13 +2870,14 @@
         const hasVisiblePlayers = visiblePlayers.length > 0;
         if (!hasVisiblePlayers) {
           this._mediaPlayerExpanded = false;
+          this._closeMediaBrowser(false);
         }
         const showMediaPlayerCard = hasVisiblePlayers && (inEditMode || this._mediaPlayerExpanded === true);
         const showMediaPlayerToggle = hasVisiblePlayers && !showMediaPlayerCard;
         const themePlayer = visiblePlayers[this._resolveActiveMediaPlayerIndex(visiblePlayers)];
         const themeState = themePlayer && this._hass?.states?.[themePlayer.entity];
-        const themeUrl = showMediaPlayerCard && themeState ? this._getMediaPlayerArtwork(themePlayer, themeState) : "";
-        if (!prepareArtworkTheme(this, themeUrl, Boolean(this.shadowRoot.querySelector(".media-player-card")), () => this._render())) return;
+        const themeUrl = showMediaPlayerCard && themePlayer && themeState ? this._getMediaPlayerArtwork(themePlayer, themeState) : "";
+        if (!prepareArtworkTheme(this, themeUrl || "", Boolean(this.shadowRoot.querySelector(".media-player-card")), () => this._render())) return;
         const playMediaToggleEntrance = animations.enabled && showMediaPlayerToggle && !this._lastMediaToggleVisible;
         this._lastMediaToggleVisible = showMediaPlayerToggle;
         const playMediaCardEntrance = animations.enabled && showMediaPlayerCard && !this._lastMediaPlayerCardVisible;
@@ -2811,8 +2902,7 @@
         const navbarSurfaceBackground = window.NodaliaUtils?.composeCardSurfaceBackground?.({
           base: navbarSurfaceBase,
           glazeMode: "neutral",
-          glazeNeutralStrength: 5,
-          ambient: false
+          glazeNeutralStrength: 5
         }) || `linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), rgba(255, 255, 255, 0)), ${navbarSurfaceBase}`;
         const popupMarkup = this._renderPopup(currentPath, Boolean(this._popupState) && this._playPopupEntrance);
         const mediaBrowserMarkup = this._renderMediaBrowser();
@@ -4148,13 +4238,14 @@
     `;
         const mediaCard = this.shadowRoot.querySelector(".media-player-card");
         const artworkUrl = mediaCard?.querySelector(".media-player__artwork img")?.getAttribute("src") || "";
-        void applyArtworkControlTheme(mediaCard, artworkUrl);
+        void applyArtworkControlTheme(mediaCard instanceof HTMLElement ? mediaCard : null, artworkUrl);
         this._applyRouteRuntimeStyles(visibleRoutes, playDockEntrance);
         this._applyPopupRuntimeStyles();
         this._playPopupEntrance = false;
         if (this._popupState) {
           this._schedulePopupPositionSync();
         }
+        this._syncModalFocus();
         this._lastRenderSignature = this._getRenderSignature(this._hass);
       }
     }
