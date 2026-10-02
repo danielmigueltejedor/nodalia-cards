@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+- Flush queued Light brightness/color exactly once when an HA update arrives after the optimistic turn-on deadline.
+
 - Check the complete Climate view, preserve focused unfinished schedule fields on Safari, activate dragging from the SVG dial track, cancel tentative dial/schedule edits without commands, and retire queued HVAC/Engine/webhook work on reconfiguration, user changes or detachment. Keep service and schedule formats compatible and retire pending controls when the entity becomes unavailable.
 
 - Check Advance Vacuum view contracts, retain native map pointer capture and room keyboard focus, cancel tentative gestures without commands, retire asynchronous commands and shared-session callbacks on context changes, and scope private browser sessions by server/user/robot. Preserve existing service profiles and embed static CSS within unchanged bundle limits.

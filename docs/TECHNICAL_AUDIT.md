@@ -1910,3 +1910,10 @@ Advance Vacuum integration also passes Firefox after replacing a test's hardcode
 mouse pointer id with the id of the actual native pointerdown event. The nine
 repeated local drag/capture/rollback checks pass; remote static, HACS, security,
 CodeQL and all four browser gates pass before normal integration.
+
+Light PR #285 is integrated after resolving generated-file conflicts by rebuilding.
+An expired optimistic turn-on deadline now flushes queued brightness/color before
+a late HA update clears it, exactly once. All CI gates pass, including four browser
+projects. The combined Climate/Light branch passes all 751 unit tests and 48
+focused browser cases. Combined raw/gzipSync: 4,322,176 / 966,835 bytes, below
+the unchanged limits.
