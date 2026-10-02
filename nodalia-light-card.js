@@ -1414,6 +1414,7 @@
           return;
         }
         if (!this._isOptimisticTurnOnPending(actualState)) {
+          if (actualState?.state === "off") this._flushOptimisticTurnOnQueue();
           this._clearOptimisticTurnOnState({ clearDrafts: true });
           return;
         }
