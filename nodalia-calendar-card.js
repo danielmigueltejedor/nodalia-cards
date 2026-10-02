@@ -60,14 +60,6 @@
     return Number.isFinite(numeric) ? numeric : null;
   }
 
-  // src/cards/calendar/calendar-runtime.ts
-  var utils = window.NodaliaUtils;
-  var isObject = utils.isObject.bind(utils);
-  var clamp = utils.clamp.bind(utils);
-  var escapeHtml = utils.escapeHtml.bind(utils);
-  var deepClone = utils.deepClone.bind(utils);
-  var mergeConfig = utils.mergeDeep.bind(utils);
-
   // src/shared/config-values.ts
   var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
   var unsafeKeys = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
@@ -88,6 +80,19 @@
     }
     return value === "" || value === null || value === void 0 ? void 0 : value;
   }
+  function cloneConfigValue(value) {
+    const cloned = window.NodaliaUtils.deepClone(value);
+    if (Array.isArray(value)) return Array.isArray(cloned) ? cloned : [];
+    if (isRecord(value)) return isRecord(cloned) ? cloned : {};
+    return cloned;
+  }
+
+  // src/cards/calendar/calendar-runtime.ts
+  var utils = window.NodaliaUtils;
+  var isObject = utils.isObject.bind(utils);
+  var clamp = utils.clamp.bind(utils);
+  var escapeHtml = utils.escapeHtml.bind(utils);
+  var mergeConfig = utils.mergeDeep.bind(utils);
 
   // src/shared/weather-condition-icons.ts
   function weatherConditionIcon(value) {
@@ -638,7 +643,7 @@ ${metadata}` : metadata;
           ["calendar"],
           1
         )[0];
-        return { ...deepClone(DEFAULT_CONFIG), calendars: entityId ? [{ entity: entityId }] : [] };
+        return { ...cloneConfigValue(DEFAULT_CONFIG), calendars: entityId ? [{ entity: entityId }] : [] };
       }
       static getConfigElement() {
         return document.createElement(EDITOR_TAG);
@@ -3938,7 +3943,7 @@ ${metadata}` : metadata;
         return window.NodaliaI18n.editorStr(this._hass, this._config?.language ?? "auto", s);
       }
       _emitConfig() {
-        const raw = deepClone(this._config || DEFAULT_CONFIG);
+        const raw = cloneConfigValue(this._config || DEFAULT_CONFIG);
         const stripped = typeof window !== "undefined" && window.NodaliaUtils?.stripEqualToDefaults ? window.NodaliaUtils.stripEqualToDefaults(raw, DEFAULT_CONFIG) : raw;
         const payload = compactConfig(
           stripped !== void 0 && stripped !== null ? stripped : {}
@@ -3991,21 +3996,23 @@ ${metadata}` : metadata;
           return;
         }
         if (field.startsWith("calendars.")) {
+          const calendars = Array.isArray(targetConfig.calendars) ? targetConfig.calendars : [];
+          targetConfig.calendars = calendars;
           const parts = field.split(".");
           const index = Number(parts[1]);
-          if (!Number.isInteger(index) || index < 0 || !parts[1]?.trim() || index > targetConfig.calendars.length || parts.length > 3) {
+          if (!Number.isInteger(index) || index < 0 || !parts[1]?.trim() || index > calendars.length || parts.length > 3) {
             return;
           }
           const key = parts.length >= 3 ? parts[2] : null;
           if (parts.length >= 3 && (!key || !["entity", "label", "tint"].includes(key))) return;
-          while (targetConfig.calendars.length <= index) {
-            targetConfig.calendars.push({ entity: "", label: "", tint: "" });
+          while (calendars.length <= index) {
+            calendars.push({ entity: "", label: "", tint: "" });
           }
           if (key) {
-            let entry = targetConfig.calendars[index];
+            let entry = calendars[index];
             if (typeof entry === "string") {
               entry = { entity: String(entry).trim(), label: "", tint: "" };
-            } else if (!entry || typeof entry !== "object") {
+            } else if (!isObject(entry)) {
               entry = { entity: "", label: "", tint: "" };
             }
             if (key === "entity") {
@@ -4015,10 +4022,10 @@ ${metadata}` : metadata;
             } else if (key === "tint") {
               entry.tint = sanitizeCalendarTint(value);
             }
-            targetConfig.calendars[index] = entry;
+            calendars[index] = entry;
             return;
           }
-          targetConfig.calendars[index] = {
+          calendars[index] = {
             entity: String(value ?? "").trim(),
             label: "",
             tint: ""
@@ -4048,7 +4055,7 @@ ${metadata}` : metadata;
         if (input.type === "checkbox" && event.type === "input") {
           return;
         }
-        const next = deepClone(this._config || DEFAULT_CONFIG);
+        const next = cloneConfigValue(this._config || DEFAULT_CONFIG);
         const field = input.dataset.field || "";
         const value = this._readFieldValue(input);
         this._setFieldValue(next, field, value);
@@ -4067,7 +4074,7 @@ ${metadata}` : metadata;
         }
         event.stopPropagation();
         const field = control.dataset.field;
-        const next = deepClone(this._config || DEFAULT_CONFIG);
+        const next = cloneConfigValue(this._config || DEFAULT_CONFIG);
         const value = editorControlValue(event, control);
         this._setFieldValue(next, field, value);
         this._config = normalizeConfig(next);
@@ -4077,7 +4084,7 @@ ${metadata}` : metadata;
         this._restoreFocusState(focusState);
       }
       _moveCalendar(index, delta) {
-        const next = deepClone(this._config || DEFAULT_CONFIG);
+        const next = cloneConfigValue(this._config || DEFAULT_CONFIG);
         const list = Array.isArray(next.calendars) ? [...next.calendars] : [];
         const j = index + delta;
         if (!Number.isInteger(index) || index < 0 || index >= list.length || !Number.isInteger(j) || j < 0 || j >= list.length) {
@@ -4127,17 +4134,16 @@ ${metadata}` : metadata;
           this._moveCalendar(Number(button.dataset.index || -1), 1);
           return;
         }
-        const next = deepClone(this._config || DEFAULT_CONFIG);
-        if (!Array.isArray(next.calendars)) {
-          next.calendars = [];
-        }
+        const next = cloneConfigValue(this._config || DEFAULT_CONFIG);
+        const calendars = Array.isArray(next.calendars) ? next.calendars : [];
+        next.calendars = calendars;
         if (action === "add-calendar") {
-          if (!next.calendars.length) next.calendars.push({ entity: "", label: "", tint: "" });
-          next.calendars.push({ entity: "", label: "", tint: "" });
+          if (!calendars.length) calendars.push({ entity: "", label: "", tint: "" });
+          calendars.push({ entity: "", label: "", tint: "" });
         } else if (action === "remove-calendar") {
           const index = Number(button.dataset.index || -1);
-          if (!Number.isInteger(index) || index < 0 || index >= next.calendars.length) return;
-          next.calendars.splice(index, 1);
+          if (!Number.isInteger(index) || index < 0 || index >= calendars.length) return;
+          calendars.splice(index, 1);
         } else {
           return;
         }

@@ -361,6 +361,15 @@
     return NodaliaLockCard;
   }
 
+  // src/shared/config-values.ts
+  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  function cloneConfigValue(value) {
+    const cloned = window.NodaliaUtils.deepClone(value);
+    if (Array.isArray(value)) return Array.isArray(cloned) ? cloned : [];
+    if (isRecord(value)) return isRecord(cloned) ? cloned : {};
+    return cloned;
+  }
+
   // src/shared/editor-color.ts
   var clamp = (value, max) => Math.max(0, Math.min(max, value));
   var component = (value, scale) => {
@@ -637,7 +646,8 @@ padding: 0 12px;
         });
       }
       setConfig(config) {
-        this.config = window.NodaliaUtils.deepClone(config);
+        const cloned = cloneConfigValue(config);
+        this.config = window.NodaliaUtils.isObject(cloned) ? cloned : {};
         this.render();
       }
       set hass(hass) {
@@ -653,11 +663,11 @@ padding: 0 12px;
         const field = target.dataset.field;
         if (!field) return;
         let value;
-        if (event instanceof CustomEvent && event.type === "value-changed") value = event.detail?.value;
+        if (event instanceof CustomEvent && event.type === "value-changed") value = window.NodaliaUtils.isObject(event.detail) ? event.detail.value : void 0;
         else if (target instanceof HTMLInputElement) value = target.type === "checkbox" ? target.checked : target.type === "color" ? formatEditorColorFromHex(target.value, target.dataset.alpha ?? 1) : target.value;
         else if (target instanceof HTMLSelectElement) value = target.value;
         else return;
-        const next = window.NodaliaUtils.deepClone(this.config);
+        const next = cloneConfigValue(this.config);
         window.NodaliaUtils.setByPath(next, field, value);
         this.config = next;
         if (target instanceof HTMLInputElement && target.type === "color") {

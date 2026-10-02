@@ -164,7 +164,7 @@ class NodaliaClimateCard extends HTMLElement {
   }
 
   static getStubConfig(hass:HomeAssistant|null, entities:unknown = [], entitiesFallback:unknown = []) {
-    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["climate"], entities, entitiesFallback);
+    return applyStubEntity({ ...STUB_CONFIG }, hass, ["climate"], entities, entitiesFallback);
   }
 
   static getEntitySuggestion(hass:HomeAssistant|null, entityId:string) {

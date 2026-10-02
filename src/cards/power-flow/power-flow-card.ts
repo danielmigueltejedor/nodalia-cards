@@ -85,7 +85,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
   }
 
   static getStubConfig(hass: HomeAssistant | null | undefined, entities: unknown = [], entitiesFallback: unknown = []) {
-    const config = deepClone(STUB_CONFIG);
+    const config = { ...deepClone(STUB_CONFIG), entities: { ...STUB_CONFIG.entities, grid:{...STUB_CONFIG.entities.grid}, home:{...STUB_CONFIG.entities.home} } };
     const entityId = getStubEntityId(hass, ["sensor"], entities, entitiesFallback);
     if (!entityId) {
       return config;

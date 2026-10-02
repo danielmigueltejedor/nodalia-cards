@@ -95,10 +95,18 @@
   var OPTIMISTIC_VISUAL_SETTLE_MS = 420;
   var HUMIDIFIER_MEMORY_STORAGE_KEY = "nodalia-humidifier-card:last-visual-state:v1";
 
+  // src/shared/config-values.ts
+  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  function cloneConfigValue(value) {
+    const cloned = window.NodaliaUtils.deepClone(value);
+    if (Array.isArray(value)) return Array.isArray(cloned) ? cloned : [];
+    if (isRecord(value)) return isRecord(cloned) ? cloned : {};
+    return cloned;
+  }
+
   // src/cards/humidifier/humidifier-runtime.ts
   var utils = window.NodaliaUtils;
   var isObject = utils.isObject.bind(utils);
-  var deepClone = utils.deepClone.bind(utils);
   var mergeConfig = utils.mergeDeep.bind(utils);
   var compactConfig = utils.compactConfig.bind(utils);
   var isUnsafeConfigPathKey = utils.isUnsafeConfigPathKey.bind(utils);
@@ -476,7 +484,7 @@
   }
 
   // src/shared/device-state-memory.ts
-  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var isRecord2 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
   function snapshotDeviceState(state) {
     return state ? { ...state, attributes: { ...state.attributes } } : null;
   }
@@ -484,7 +492,7 @@
     if (typeof window === "undefined") return {};
     try {
       const parsed = JSON.parse(window.localStorage.getItem(storageKey) || "{}");
-      return isRecord(parsed) ? parsed : {};
+      return isRecord2(parsed) ? parsed : {};
     } catch {
       return {};
     }
@@ -492,7 +500,7 @@
   function readDeviceStateSnapshot(storageKey, entityId) {
     if (!entityId) return null;
     const stored = readDeviceStateMemory(storageKey)[entityId];
-    if (!isRecord(stored) || !isRecord(stored.attributes)) return null;
+    if (!isRecord2(stored) || !isRecord2(stored.attributes)) return null;
     const timestamp = typeof stored.last_changed === "string" ? stored.last_changed : (/* @__PURE__ */ new Date()).toISOString();
     return { entity_id: entityId, state: "on", attributes: { ...stored.attributes }, last_changed: timestamp, last_updated: timestamp };
   }
@@ -579,7 +587,7 @@
         return document.createElement(EDITOR_TAG);
       }
       static getStubConfig(hass, entities = [], entitiesFallback = []) {
-        return applyStubEntity(deepClone(STUB_CONFIG), hass, ["humidifier"], entities, entitiesFallback);
+        return applyStubEntity({ ...STUB_CONFIG }, hass, ["humidifier"], entities, entitiesFallback);
       }
       static getEntitySuggestion(hass, entityId) {
         return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, { domains: ["humidifier"] });
@@ -1509,7 +1517,7 @@
           return {};
         }
         if (isObject(rawValue)) {
-          return deepClone(rawValue);
+          return cloneConfigValue(rawValue);
         }
         try {
           if (typeof rawValue !== "string") return {};
@@ -4162,7 +4170,7 @@
       }
       _emitConfig() {
         const focusState = this._captureFocusState();
-        const nextConfig = deepClone(this._config);
+        const nextConfig = cloneConfigValue(this._config);
         this._config = normalizeConfig(compactConfig(nextConfig));
         this._render();
         this._restoreFocusState(focusState);

@@ -135,7 +135,7 @@ export function normalizeConfig(rawConfig: unknown = {}) {
     config[`${prefix}_action_entity`] = String(configuredEntity ?? "").trim();
   });
   const security = window.NodaliaUtils?.normalizeSecurityConfig?.(config.security, DEFAULT_CONFIG.security)
-    ?? mergeConfig<Record<string, unknown>>(DEFAULT_CONFIG.security, config.security);
+    ?? mergeConfig(DEFAULT_CONFIG.security, config.security);
   const fields = { entity: typeof config.entity === "string" ? config.entity : "", security, styles: normalizeControlStyles(config.styles, DEFAULT_CONFIG.styles) };
   const normalized: typeof fields & Record<string, unknown> = { ...config, ...fields };
   return normalized;

@@ -10,7 +10,7 @@ import { NODE_DEFAULTS } from "./power-flow-constants";
 import { DEFAULT_CONFIG } from "./power-flow-defaults";
 import { clamp, deepClone, isObject, mergeConfig, normalizeTextKey } from "./power-flow-runtime";
 
-export function deepCloneNode<T>(value: T): T { return deepClone(value); }
+export function deepCloneNode(value: unknown): unknown { return deepClone(value); }
 
 /** The Power Flow editor keeps its original void-returning move contract. */
 export function moveItem(list: unknown, fromIndex: number, toIndex: number): void {
@@ -369,7 +369,7 @@ export function arrayFromMaybe(value: unknown): unknown[] {
 export function resolveNodeConfig(kind: string, config: unknown): Record<string, unknown> {
   const defaults: Record<string, unknown> = NODE_DEFAULTS;
   const source = isObject(config) && isObject(config.entities) ? config.entities : {};
-  return mergeConfig<Record<string, unknown>>(isObject(defaults[kind]) ? defaults[kind] : {}, isObject(source[kind]) ? source[kind] : {});
+  return mergeConfig(isObject(defaults[kind]) ? defaults[kind] : {}, isObject(source[kind]) ? source[kind] : {});
 }
 
 /** True if the YAML `entity` field is set (string id or split consumption/production object). */

@@ -188,10 +188,18 @@
     actionFields("icon_double_tap", "")
   ];
 
+  // src/shared/config-values.ts
+  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  function cloneConfigValue(value) {
+    const cloned = window.NodaliaUtils.deepClone(value);
+    if (Array.isArray(value)) return Array.isArray(cloned) ? cloned : [];
+    if (isRecord(value)) return isRecord(cloned) ? cloned : {};
+    return cloned;
+  }
+
   // src/cards/navigation/navigation-runtime.ts
   var utils = window.NodaliaUtils;
   var isObject = utils.isObject.bind(utils);
-  var deepClone = utils.deepClone.bind(utils);
   var mergeConfig = utils.mergeDeep.bind(utils);
   var compactConfig = utils.compactConfig.bind(utils);
   var isUnsafeConfigPathKey = utils.isUnsafeConfigPathKey.bind(utils);
@@ -865,7 +873,7 @@
     }
     class NodaliaNavigationBarCard extends HTMLElement {
       static getStubConfig(hass, entities = [], entitiesFallback = []) {
-        const config = deepClone(STUB_CONFIG);
+        const config = cloneConfigValue(STUB_CONFIG);
         const entityId = window.NodaliaUtils?.findStubEntityIds?.(hass, entities, entitiesFallback, ["media_player"], 1)[0] || "";
         return entityId ? { ...config, media_player: { players: [{ entity: entityId, label: hass?.states?.[entityId]?.attributes?.friendly_name || "" }] } } : config;
       }
@@ -4280,7 +4288,7 @@
       }
       _nodaliaConstruct() {
         this.attachShadow({ mode: "open" });
-        this._config = this._prepareEditorConfig(deepClone(STUB_CONFIG));
+        this._config = this._prepareEditorConfig(cloneConfigValue(STUB_CONFIG));
         this._hass = null;
         this._showStyleSection = false;
         this._showAnimationSection = false;
@@ -4402,7 +4410,7 @@
         };
       }
       setConfig(config) {
-        const nextConfig = deepClone(isObject(config) ? config : STUB_CONFIG);
+        const nextConfig = cloneConfigValue(isObject(config) ? config : STUB_CONFIG);
         if (!Array.isArray(nextConfig.routes) && Array.isArray(nextConfig.items)) {
           nextConfig.routes = nextConfig.items;
           delete nextConfig.items;
@@ -4461,7 +4469,7 @@
       }
       _emitConfig(nextConfig) {
         const focusState = this._captureFocusState();
-        const prepared2 = this._prepareEditorConfig(deepClone(nextConfig));
+        const prepared2 = this._prepareEditorConfig(cloneConfigValue(nextConfig));
         this._config = this._prepareEditorConfig(compactConfig(prepared2));
         this._render();
         this._restoreFocusState(focusState);
@@ -4541,7 +4549,7 @@
             return;
           }
           event.stopPropagation();
-          const nextConfig2 = this._prepareEditorConfig(deepClone(this._config));
+          const nextConfig2 = this._prepareEditorConfig(cloneConfigValue(this._config));
           const playerIndex = parseFiniteNumericValue(playerField.dataset.playerIndex) ?? -1;
           const player = nextConfig2.media_player.players[playerIndex];
           if (!player || !Number.isInteger(playerIndex)) {
@@ -4566,7 +4574,7 @@
         if (field) {
           const rootPath = field.dataset.field || "";
           if (rootPath.startsWith("routes.") || rootPath.startsWith("media_player.players.")) return;
-          const nextConfig2 = this._prepareEditorConfig(deepClone(this._config));
+          const nextConfig2 = this._prepareEditorConfig(cloneConfigValue(this._config));
           const eventValue = editorControlValue(event, field);
           if (field.dataset.field === "media_player.artwork.blur_gradient") {
             setByPath(nextConfig2, "media_player.artwork.mode", field instanceof HTMLInputElement && field.checked ? "blur" : "immersive");
@@ -4589,7 +4597,7 @@
         const routeField = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.routeField));
         if (routeField) {
           const routeIndex2 = parseFiniteNumericValue(routeField.dataset.routeIndex) ?? -1;
-          const nextConfig2 = this._prepareEditorConfig(deepClone(this._config));
+          const nextConfig2 = this._prepareEditorConfig(cloneConfigValue(this._config));
           const route2 = nextConfig2.routes[routeIndex2];
           if (!route2 || !Number.isInteger(routeIndex2)) {
             return;
@@ -4607,7 +4615,7 @@
         if (!popupField) {
           return;
         }
-        const nextConfig = this._prepareEditorConfig(deepClone(this._config));
+        const nextConfig = this._prepareEditorConfig(cloneConfigValue(this._config));
         const routeIndex = parseFiniteNumericValue(popupField.dataset.routeIndex) ?? -1;
         const popupIndex = parseFiniteNumericValue(popupField.dataset.popupIndex) ?? -1;
         const route = nextConfig.routes[routeIndex];
@@ -4644,7 +4652,7 @@
         if (!actionButton) {
           return;
         }
-        const nextConfig = this._prepareEditorConfig(deepClone(this._config));
+        const nextConfig = this._prepareEditorConfig(cloneConfigValue(this._config));
         if (actionButton.dataset.editorAction === "add-route") {
           nextConfig.routes.push({
             icon: "mdi:circle-outline",

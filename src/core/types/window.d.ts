@@ -79,6 +79,7 @@ type NodaliaCameraStreamModelApi = typeof import("../../cards/camera/camera-stre
 
 declare global {
   interface Window {
+    __nodaliaPointerFocusRingGuardInstalled?:boolean;
     webkitAudioContext?: typeof AudioContext;
     ManagedMediaSource?: typeof MediaSource;
     loadCardHelpers?: () => Promise<{ createCardElement?: (config: Record<string, unknown>) => HTMLElement | Promise<HTMLElement> }>;

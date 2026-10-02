@@ -47,10 +47,36 @@
     actionFields("icon_double_tap", "")
   ];
 
+  // src/shared/config-values.ts
+  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var unsafeKeys = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
+  function compactConfig(value, preserveEmptyKeys = []) {
+    if (Array.isArray(value)) return value.map((item) => compactConfig(item, preserveEmptyKeys)).filter((item) => item !== void 0);
+    if (isRecord(value)) {
+      const result = {};
+      for (const [key, item] of Object.entries(value)) {
+        if (unsafeKeys.has(key)) continue;
+        if (item === "" && preserveEmptyKeys.includes(key)) {
+          result[key] = "";
+          continue;
+        }
+        const cleaned = compactConfig(item, preserveEmptyKeys);
+        if (cleaned !== void 0 && !(isRecord(cleaned) && Object.keys(cleaned).length === 0)) result[key] = cleaned;
+      }
+      return result;
+    }
+    return value === "" || value === null || value === void 0 ? void 0 : value;
+  }
+  function cloneConfigValue(value) {
+    const cloned = window.NodaliaUtils.deepClone(value);
+    if (Array.isArray(value)) return Array.isArray(cloned) ? cloned : [];
+    if (isRecord(value)) return isRecord(cloned) ? cloned : {};
+    return cloned;
+  }
+
   // src/cards/weather/weather-runtime.ts
   var utils = window.NodaliaUtils;
   var isObject = utils.isObject.bind(utils);
-  var deepClone = utils.deepClone.bind(utils);
   var mergeConfig = utils.mergeDeep.bind(utils);
   var isUnsafeConfigPathKey = utils.isUnsafeConfigPathKey.bind(utils);
   var setByPath = utils.setByPath.bind(utils);
@@ -144,27 +170,6 @@
     };
     const normalized = { ...config, ...fields };
     return normalized;
-  }
-
-  // src/shared/config-values.ts
-  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
-  var unsafeKeys = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
-  function compactConfig(value, preserveEmptyKeys = []) {
-    if (Array.isArray(value)) return value.map((item) => compactConfig(item, preserveEmptyKeys)).filter((item) => item !== void 0);
-    if (isRecord(value)) {
-      const result = {};
-      for (const [key, item] of Object.entries(value)) {
-        if (unsafeKeys.has(key)) continue;
-        if (item === "" && preserveEmptyKeys.includes(key)) {
-          result[key] = "";
-          continue;
-        }
-        const cleaned = compactConfig(item, preserveEmptyKeys);
-        if (cleaned !== void 0 && !(isRecord(cleaned) && Object.keys(cleaned).length === 0)) result[key] = cleaned;
-      }
-      return result;
-    }
-    return value === "" || value === null || value === void 0 ? void 0 : value;
   }
 
   // src/shared/editor-entity-helpers.ts
@@ -715,7 +720,7 @@
         return document.createElement(EDITOR_TAG);
       }
       static getStubConfig(hass, entities = [], entitiesFallback = []) {
-        return applyStubEntity(deepClone(STUB_CONFIG), hass, ["weather"], entities, entitiesFallback);
+        return applyStubEntity({ ...STUB_CONFIG }, hass, ["weather"], entities, entitiesFallback);
       }
       static getEntitySuggestion(hass, entityId) {
         return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, { domains: ["weather"] });
@@ -3389,7 +3394,7 @@
       }
       _emitConfig() {
         const focusState = this._captureFocusState();
-        const nextConfig = deepClone(this._config);
+        const nextConfig = cloneConfigValue(this._config);
         this._config = normalizeConfig(compactConfig(nextConfig));
         this._render();
         this._restoreFocusState(focusState);

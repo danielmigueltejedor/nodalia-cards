@@ -79,7 +79,7 @@ class NodaliaCameraCard extends HTMLElement {
   }
 
   static getStubConfig(hass: HomeAssistant | null | undefined, entities: unknown = [], entitiesFallback: unknown = []) {
-    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["camera"], entities, entitiesFallback);
+    return applyStubEntity({ ...STUB_CONFIG }, hass, ["camera"], entities, entitiesFallback);
   }
 
   static getEntitySuggestion(hass: HomeAssistant, entityId: string) {

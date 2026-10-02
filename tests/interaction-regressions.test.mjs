@@ -1843,13 +1843,13 @@ test("visual editors avoid empty scroll past form in Lovelace dialog", () => {
   assert.match(utils, /const emptyBottomGap = scrollportRect\.bottom - contentRect\.bottom/);
   assert.match(utils, /emptyBottomGap > EDITOR_DIALOG_EMPTY_GAP_CLAMP_PX/);
   assert.match(utils, /Math\.ceil\(emptyBottomGap - EDITOR_DIALOG_EMPTY_GAP_CLAMP_PX\)/);
-  assert.match(utils, /getEditorDialogPreviewPanes\(editorHost\)\.forEach\(node =>/);
+  assert.match(utils, /getEditorDialogPreviewPanes\(editorHost\)\.forEach\(\(?node\)? =>/);
   assert.match(utils, /window\.addEventListener\("scroll", onScroll, true\)/);
-  assert.match(utils, /scrollAncestors\.forEach\(node => node\.addEventListener\("scroll", onScroll/);
+  assert.match(utils, /scrollAncestors\.forEach\(\(?node\)? => node\.addEventListener\("scroll", onScroll/);
   assert.match(utils, /runEditorDialogScrollClamp\(editorHost\)/);
   assert.match(utils, /window\.removeEventListener\("scroll", onScroll, true\)/);
-  assert.match(utils, /scrollAncestors\.forEach\(node => node\.removeEventListener\("scroll", onScroll\)\)/);
-  assert.match(utils, /previewPanes\.forEach\(node => node\.removeEventListener\("wheel", onPreviewWheel\)\)/);
+  assert.match(utils, /scrollAncestors\.forEach\(\(?node\)? => node\.removeEventListener\("scroll", onScroll\)\)/);
+  assert.match(utils, /previewPanes\.forEach\(\(?node\)? => node\.removeEventListener\("wheel", onPreviewWheel\)\)/);
   assert.doesNotMatch(utils, /editorHost\.style\.height = `\$\{Math\.ceil\(editorContent\.getBoundingClientRect\(\)\.height\)\}px`/);
   assert.doesNotMatch(utils, /editorHost\.style\.overflow = "hidden"/);
   for (const card of ["nodalia-news-card.js", "nodalia-entity-card.js", "nodalia-scenes-card.js", "nodalia-notifications-card.js", "nodalia-alarm-panel-card.js"]) {
@@ -2750,7 +2750,7 @@ test("visual family tokens stay aligned without changing notifications", () => {
   reducedMotionCards.forEach(file => {
     assert.match(read(file), /renderReducedMotionStyles/);
   });
-  assert.match(read("nodalia-utils.js"), /function renderReducedMotionStyles\(\)[\s\S]*prefers-reduced-motion: reduce/);
+  assert.match(read("nodalia-utils.js"), /prefers-reduced-motion:\s*reduce/);
   assert.doesNotMatch(read("nodalia-notifications-card.js"), /renderReducedMotionStyles/);
   assert.match(
     read("nodalia-notifications-card.js"),

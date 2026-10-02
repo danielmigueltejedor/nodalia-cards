@@ -21,10 +21,18 @@
   var TAP_ACTIONS = /* @__PURE__ */ new Set(["activate", "more-info", "none"]);
   var HOLD_ACTIONS = /* @__PURE__ */ new Set(["activate", "more-info", "none"]);
 
+  // src/shared/config-values.ts
+  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  function cloneConfigValue(value) {
+    const cloned = window.NodaliaUtils.deepClone(value);
+    if (Array.isArray(value)) return Array.isArray(cloned) ? cloned : [];
+    if (isRecord(value)) return isRecord(cloned) ? cloned : {};
+    return cloned;
+  }
+
   // src/cards/scenes/scenes-runtime.ts
   var utils = window.NodaliaUtils;
   var isObject = utils.isObject.bind(utils);
-  var deepClone = utils.deepClone.bind(utils);
   var getByPath = utils.getByPath.bind(utils);
   var isUnsafeConfigPathKey = utils.isUnsafeConfigPathKey.bind(utils);
   var setByPath = utils.setByPath.bind(utils);
@@ -166,7 +174,7 @@
       return window.NodaliaUtils.mergeDeep(base, override || {});
     }
     if (Array.isArray(base)) {
-      return Array.isArray(override) ? override.map((item) => deepClone(item)) : deepClone(base);
+      return Array.isArray(override) ? override.map((item) => cloneConfigValue(item)) : cloneConfigValue(base);
     }
     if (!isObject(base)) {
       return override === void 0 ? base : override;
@@ -181,11 +189,11 @@
       const baseValue = base[key];
       const overrideValue = overrides[key];
       if (overrideValue === void 0) {
-        result[key] = deepClone(baseValue);
+        result[key] = cloneConfigValue(baseValue);
         return;
       }
       if (Array.isArray(overrideValue)) {
-        result[key] = deepClone(overrideValue);
+        result[key] = cloneConfigValue(overrideValue);
         return;
       }
       if (isObject(baseValue) && isObject(overrideValue)) {
@@ -428,7 +436,7 @@
     return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, ["scene"], limit).map((entity) => ({ entity }));
   }
   function applyStubConfig(config, hass, entities = [], entitiesFallback = []) {
-    const next = deepClone(config);
+    const next = cloneConfigValue(config);
     const scenes = getStubSceneEntities(hass, 4, entities, entitiesFallback);
     if (scenes.length) {
       next.scenes = scenes;
@@ -505,7 +513,7 @@
         return document.createElement(EDITOR_TAG);
       }
       static getStubConfig(hass, entities = [], entitiesFallback = []) {
-        return applyStubConfig(deepClone(STUB_CONFIG), hass, entities, entitiesFallback);
+        return applyStubConfig(cloneConfigValue(STUB_CONFIG), hass, entities, entitiesFallback);
       }
       static getEntitySuggestion(hass, entityId) {
         return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
@@ -1627,7 +1635,7 @@
       }
       _emitConfig() {
         const focusState = this._captureFocusState();
-        const nextConfig = deepClone(this._config);
+        const nextConfig = cloneConfigValue(this._config);
         this._config = normalizeConfig(nextConfig, { keepEmpty: true });
         this._render();
         this._restoreFocusState(focusState);

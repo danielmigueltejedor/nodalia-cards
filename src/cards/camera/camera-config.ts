@@ -1,5 +1,5 @@
 import { CAMERA_LAYOUT, CAMERA_PRESENTATION, HOLD_ACTIONS, TAP_ACTIONS } from "./camera-constants";
-import { deepClone, isObject } from "./camera-runtime";
+import { isObject } from "./camera-runtime";
 import {
   mergeConfig,
   normalizeCameraActions,
@@ -85,8 +85,7 @@ export function normalizeConfig(rawConfig: unknown = {}) {
   if (config.hold_action === "navigate" && !config.hold_navigation_path && config.hold_url) {
     config.hold_navigation_path = config.hold_url;
   }
-  const styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles)
-    ?? deepClone(DEFAULT_CONFIG.styles);
+  const styles = window.NodaliaUtils.sanitizeStyleTree(config.styles, DEFAULT_CONFIG.styles);
   const fields = { entity: String(config.entity), language: String(config.language), layout: CAMERA_LAYOUT, presentation: CAMERA_PRESENTATION,
     cameras: cameraIds, camera_streams, camera_tap_actions, camera_actions, expanded_actions, styles,
     security: isObject(config.security) ? config.security : { ...DEFAULT_CONFIG.security } };

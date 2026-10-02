@@ -45,7 +45,7 @@ src/
   cards/room-summary/         Room Summary TypeScript split
   cards/advance-vacuum/       Advance Vacuum TypeScript split
 
-nodalia-utils.js              Shared runtime helpers (window.NodaliaUtils), including compact density
+nodalia-utils.js              Generated checked shared runtime helpers (window.NodaliaUtils)
 nodalia-backend.js            Generated optional Nodalia Engine client
 nodalia-render-signature.js   Render-signature helpers
 nodalia-bubble-contrast.js    Icon contrast helpers
@@ -62,9 +62,9 @@ artifacts. Camera stream, Room Summary and render signatures also have checked
 TS sources and generated compatibility adapters. Notifications mobile policy is
 also generated from checked, side-effect-free TS with an idempotent global adapter.
 Engine client also has checked TS source and a generated compatibility adapter.
-Bubble contrast now has checked source and a generated adapter as well. Generic
-utils remain handwritten compatibility code;
-the i18n pack is generated from JSON while its lookup logic remains root JS.
+Bubble contrast now has checked source and a generated adapter as well. Generic utils now have checked source in `src/shared/utils-runtime.ts` with a
+generated compatibility adapter. The i18n pack is generated from JSON while its
+runtime/editor lookup logic still requires source migration.
 
 ## Large controller responsibilities
 
@@ -75,8 +75,7 @@ Static CSS is embedded from readable files; dynamic styles remain in the view.
 
 `scripts/type-debt.json` is empty. Go2rtc playback now has checked source in
 `src/shared/go2rtc-player.ts`; Camera imports it directly and the standalone
-ES-module player is generated from the same source. The generic utility runtime
-and runtime/editor translation lookup logic still require their own migration;
+ES-module player is generated from the same source. The runtime/editor translation lookup logic still requires its own migration;
 an empty suppression inventory does not mean handwritten JavaScript is checked.
 
 ## Dependency relationships

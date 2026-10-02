@@ -17,7 +17,7 @@ test("shared utils expose the editor Engine banner helpers", () => {
   assert.match(utils, /renderEditorEngineBannerHtml/);
   assert.match(utils, /renderEditorEngineBannerStyles/);
   assert.match(utils, /engineStatusSignature/);
-  assert.match(utils, /\.editor-engine-banner \{/);
+  assert.match(utils, /\.editor-engine-banner\s*\{/);
 });
 
 test("notifications editor loads Engine status and renders the Engine banner", () => {

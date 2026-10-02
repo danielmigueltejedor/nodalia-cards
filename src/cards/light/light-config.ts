@@ -1,6 +1,6 @@
 import { parseFiniteNumericValue } from "../../shared/numeric-values";
 import { LEGACY_ICON_OFF_COLOR_VALUES } from "./light-constants";
-import { clamp, deepClone, isObject, mergeConfig } from "./light-runtime";
+import { clamp, isObject, mergeConfig } from "./light-runtime";
 import { normalizeHexColorForLightPreset } from "./light-helpers";
 import { normalizeControlStyles } from "../../shared/control-config";
 
@@ -150,7 +150,7 @@ export function normalizeConfig(rawConfig: unknown = {}) {
   let quickBrightness = rawBrightness.map((value: unknown) => parseFiniteNumericValue(value))
     .filter(value => value !== null)
     .map(value => clamp(Math.round(value), 1, 100));
-  if (!quickBrightness.length) quickBrightness = deepClone(DEFAULT_CONFIG.quick_brightness);
+  if (!quickBrightness.length) quickBrightness = [...DEFAULT_CONFIG.quick_brightness];
 
   const rawPresets = Array.isArray(config.color_presets) ? config.color_presets : [];
   const normalizedPresets: { color: string; label: string }[] = [];
@@ -168,7 +168,7 @@ export function normalizeConfig(rawConfig: unknown = {}) {
       label: String(entry.label ?? "").trim(),
     });
   }
-  const colorPresets = normalizedPresets.length ? normalizedPresets : deepClone(DEFAULT_CONFIG.color_presets);
+  const colorPresets = normalizedPresets.length ? normalizedPresets : DEFAULT_CONFIG.color_presets.map(preset=>({...preset}));
 
   const rawAnimations = isObject(config.animations) ? config.animations : {};
   const numericPowerDuration = parseFiniteNumericValue(rawAnimations.power_duration);

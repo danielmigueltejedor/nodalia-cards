@@ -822,10 +822,11 @@ class NodaliaRoomSummaryCard extends HTMLElement {
   }
 
   _hubEmbeddedAccentPack(config: RoomConfig) {
-    const parent = deepClone(normalizeConfig(config).styles);
+    const normalizedStyles=normalizeConfig(config).styles;
+    const parent = {...deepClone(normalizedStyles),card:{...normalizedStyles.card},hub:{...normalizedStyles.hub},control:{...normalizedStyles.control}};
     const hub = parent.hub || {};
     const hubDefaults = DEFAULT_CONFIG.styles.hub;
-    const accent = parent.accent || "var(--primary-color)";
+    const accent = normalizedStyles.accent || "var(--primary-color)";
     return {
       ...parent,
       title_size: hub.embed_title_size || hubDefaults.embed_title_size,

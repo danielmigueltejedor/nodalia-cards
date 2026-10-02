@@ -171,10 +171,18 @@
     return Number.isFinite(numeric) ? numeric : null;
   }
 
+  // src/shared/config-values.ts
+  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  function cloneConfigValue(value) {
+    const cloned = window.NodaliaUtils.deepClone(value);
+    if (Array.isArray(value)) return Array.isArray(cloned) ? cloned : [];
+    if (isRecord(value)) return isRecord(cloned) ? cloned : {};
+    return cloned;
+  }
+
   // src/cards/entity/entity-runtime.ts
   var utils = window.NodaliaUtils;
   var isObject = utils.isObject.bind(utils);
-  var deepClone = utils.deepClone.bind(utils);
   var mergeConfig = utils.mergeDeep.bind(utils);
   var compactConfig = utils.compactConfig.bind(utils);
   var isUnsafeConfigPathKey = utils.isUnsafeConfigPathKey.bind(utils);
@@ -436,7 +444,7 @@
     const defaults = DEFAULT_CONFIG;
     const config = mergeConfig(defaults, raw);
     const rawStyles = isObject(config.styles) ? config.styles : {};
-    const iconStyles = isObject(rawStyles.icon) ? rawStyles.icon : deepClone(DEFAULT_CONFIG.styles.icon);
+    const iconStyles = isObject(rawStyles.icon) ? rawStyles.icon : cloneConfigValue(DEFAULT_CONFIG.styles.icon);
     rawStyles.icon = iconStyles;
     config.styles = rawStyles;
     iconStyles.background = window.NodaliaBubbleContrast?.normalizeNeutralBubbleBackground?.(
@@ -1267,7 +1275,7 @@
         return document.createElement(EDITOR_TAG);
       }
       static getStubConfig(hass, entities = [], entitiesFallback = []) {
-        return applyStubEntity(deepClone(STUB_CONFIG), hass, [], entities, entitiesFallback);
+        return applyStubEntity({ ...STUB_CONFIG }, hass, [], entities, entitiesFallback);
       }
       static getEntitySuggestion(hass, entityId) {
         if (!hass) return [];
@@ -2349,7 +2357,7 @@
           return {};
         }
         if (isObject(rawValue)) {
-          return deepClone(rawValue);
+          return cloneConfigValue(rawValue);
         }
         try {
           const parsed = JSON.parse(String(rawValue));
@@ -5408,7 +5416,7 @@ padding: 0 12px;
       }
       _emitConfig() {
         const focusState = this._captureFocusState();
-        const nextConfig = deepClone(this._config);
+        const nextConfig = cloneConfigValue(this._config);
         this._config = normalizeConfig(compactConfig(nextConfig));
         this._render();
         this._restoreFocusState(focusState);

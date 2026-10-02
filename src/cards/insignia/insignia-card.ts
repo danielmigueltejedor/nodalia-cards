@@ -3,7 +3,6 @@ import type { HostPointerHoldBinding } from "../../core/types/nodalia-utils";
 import { callHassService, parseServiceData } from "../../shared/home-assistant-services";
 import { EDITOR_TAG, HAPTIC_PATTERNS } from "./insignia-constants";
 import {
-  deepClone,
   escapeHtml,
   fireEvent,
   isObject,
@@ -38,7 +37,7 @@ class NodaliaInsigniaCard extends HTMLElement {
 
   static getStubConfig(hass: HomeAssistant | null | undefined, entities: unknown = [], entitiesFallback: unknown = []) {
     return applyStubEntity(
-      deepClone(STUB_CONFIG),
+      { ...STUB_CONFIG },
       hass,
       ["sensor", "binary_sensor"],
       entities,

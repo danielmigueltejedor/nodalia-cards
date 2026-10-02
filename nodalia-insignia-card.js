@@ -17,10 +17,36 @@
     failure: [12, 40, 12, 40, 18]
   };
 
+  // src/shared/config-values.ts
+  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var unsafeKeys = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
+  function compactConfig(value, preserveEmptyKeys = []) {
+    if (Array.isArray(value)) return value.map((item) => compactConfig(item, preserveEmptyKeys)).filter((item) => item !== void 0);
+    if (isRecord(value)) {
+      const result = {};
+      for (const [key, item] of Object.entries(value)) {
+        if (unsafeKeys.has(key)) continue;
+        if (item === "" && preserveEmptyKeys.includes(key)) {
+          result[key] = "";
+          continue;
+        }
+        const cleaned = compactConfig(item, preserveEmptyKeys);
+        if (cleaned !== void 0 && !(isRecord(cleaned) && Object.keys(cleaned).length === 0)) result[key] = cleaned;
+      }
+      return result;
+    }
+    return value === "" || value === null || value === void 0 ? void 0 : value;
+  }
+  function cloneConfigValue(value) {
+    const cloned = window.NodaliaUtils.deepClone(value);
+    if (Array.isArray(value)) return Array.isArray(cloned) ? cloned : [];
+    if (isRecord(value)) return isRecord(cloned) ? cloned : {};
+    return cloned;
+  }
+
   // src/cards/insignia/insignia-runtime.ts
   var utils = window.NodaliaUtils;
   var isObject = utils.isObject.bind(utils);
-  var deepClone = utils.deepClone.bind(utils);
   var mergeConfig = utils.mergeDeep.bind(utils);
   var isUnsafeConfigPathKey = utils.isUnsafeConfigPathKey.bind(utils);
   var normalizeTextKey = utils.normalizeTextKey.bind(utils);
@@ -202,27 +228,6 @@
     },
     tint_auto: true
   };
-
-  // src/shared/config-values.ts
-  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
-  var unsafeKeys = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
-  function compactConfig(value, preserveEmptyKeys = []) {
-    if (Array.isArray(value)) return value.map((item) => compactConfig(item, preserveEmptyKeys)).filter((item) => item !== void 0);
-    if (isRecord(value)) {
-      const result = {};
-      for (const [key, item] of Object.entries(value)) {
-        if (unsafeKeys.has(key)) continue;
-        if (item === "" && preserveEmptyKeys.includes(key)) {
-          result[key] = "";
-          continue;
-        }
-        const cleaned = compactConfig(item, preserveEmptyKeys);
-        if (cleaned !== void 0 && !(isRecord(cleaned) && Object.keys(cleaned).length === 0)) result[key] = cleaned;
-      }
-      return result;
-    }
-    return value === "" || value === null || value === void 0 ? void 0 : value;
-  }
 
   // src/shared/editor-object-paths.ts
   var isObject2 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
@@ -422,8 +427,8 @@
     const raw = isObject(rawConfig) ? rawConfig : {};
     const defaults = DEFAULT_CONFIG;
     const merged = mergeConfig(defaults, raw);
-    const styles = isObject(merged.styles) ? merged.styles : deepClone(DEFAULT_CONFIG.styles);
-    const tint = isObject(styles.tint) ? styles.tint : deepClone(DEFAULT_CONFIG.styles.tint);
+    const styles = isObject(merged.styles) ? merged.styles : cloneConfigValue(DEFAULT_CONFIG.styles);
+    const tint = isObject(styles.tint) ? styles.tint : cloneConfigValue(DEFAULT_CONFIG.styles.tint);
     const rawStyles = isObject(raw.styles) ? raw.styles : {};
     const rawTint = isObject(rawStyles.tint) ? rawStyles.tint : {};
     const legacyPreset = normalizeTintPreset(raw.tint_preset || raw.color);
@@ -489,7 +494,7 @@
       }
       static getStubConfig(hass, entities = [], entitiesFallback = []) {
         return applyStubEntity(
-          deepClone(STUB_CONFIG),
+          { ...STUB_CONFIG },
           hass,
           ["sensor", "binary_sensor"],
           entities,
@@ -1356,7 +1361,7 @@
       }
       _emitConfig() {
         const focusState = this._captureFocusState();
-        const nextConfig = deepClone(this._config);
+        const nextConfig = cloneConfigValue(this._config);
         this._config = normalizeConfig(compactConfig(nextConfig));
         this._render();
         this._restoreFocusState(focusState);

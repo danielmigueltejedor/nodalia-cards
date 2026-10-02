@@ -287,7 +287,7 @@ test("room summary reuses normalized config and caches its render signature", ()
   assert.match(source, /(?:const|let|var) NORMALIZED_ROOM_CONFIG = (?:\/\* @__PURE__ \*\/ )?Symbol/);
   assert.match(source, /this\._configSignature = JSON\.stringify\(this\._config\)/);
   assert.match(source, /\|\$\{this\._configSignature\}`/);
-  assert.match(source, /normalizeConfig\(deepClone\(this\._config\)\)/);
+  assert.match(source, /normalizeConfig\((?:deepClone|cloneConfigValue)\(this\._config\)\)/);
 });
 
 test("room summary hub layout exposes navigation rail and panels", () => {
@@ -424,7 +424,7 @@ test("room summary hub layout uses embedded nodalia cards and flat home header",
   assert.match(source, /nodalia-overlay-change/);
   assert.match(source, /transform:none/);
   assert.doesNotMatch(source, /room-hub-slide[^\n]* both/);
-  assert.match(source, /animations: \{ \.\.\.deepClone\(base\.animations\), content_duration: 0 \}/);
+  assert.match(source, /animations: \{ \.\.\.(?:deepClone|cloneConfigValue)\(base\.animations\), content_duration: 0 \}/);
   assert.match(source, /panel_duration: 0/);
   assert.match(source, /nodalia-media-player-editor/);
   assert.match(source, /nodalia-camera-card-editor/);

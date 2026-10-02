@@ -86,7 +86,7 @@ class NodaliaHumidifierCard extends HTMLElement {
   }
 
   static getStubConfig(hass: HomeAssistant | null | undefined, entities: unknown = [], entitiesFallback: unknown = []) {
-    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["humidifier"], entities, entitiesFallback);
+    return applyStubEntity({ ...STUB_CONFIG }, hass, ["humidifier"], entities, entitiesFallback);
   }
 
   static getEntitySuggestion(hass: HomeAssistant, entityId: string) {

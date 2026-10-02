@@ -1080,10 +1080,18 @@
   var TAP_ACTIONS = /* @__PURE__ */ new Set(["auto", "more-info", "none", "navigate", "url", "service", "toggle"]);
   var HOLD_ACTIONS = /* @__PURE__ */ new Set(["auto", "more-info", "none", "navigate", "url", "service", "toggle"]);
 
+  // src/shared/config-values.ts
+  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  function cloneConfigValue(value) {
+    const cloned = window.NodaliaUtils.deepClone(value);
+    if (Array.isArray(value)) return Array.isArray(cloned) ? cloned : [];
+    if (isRecord(value)) return isRecord(cloned) ? cloned : {};
+    return cloned;
+  }
+
   // src/cards/camera/camera-runtime.ts
   var utils = window.NodaliaUtils;
   var isObject = utils.isObject.bind(utils);
-  var deepClone = utils.deepClone.bind(utils);
   var getByPath = utils.getByPath.bind(utils);
   var clamp = utils.clamp.bind(utils);
   var escapeHtml = utils.escapeHtml.bind(utils);
@@ -1237,7 +1245,7 @@
   // src/cards/camera/camera-helpers.ts
   function mergeConfig(base, override) {
     if (Array.isArray(base)) {
-      return Array.isArray(override) ? override.map((item) => deepClone(item)) : deepClone(base);
+      return Array.isArray(override) ? override.map((item) => cloneConfigValue(item)) : cloneConfigValue(base);
     }
     if (!isObject(base)) {
       return override === void 0 ? base : override;
@@ -1253,7 +1261,7 @@
         result[key] = mergeConfig(base[key], source[key]);
         return;
       }
-      result[key] = source[key] === void 0 ? deepClone(base[key]) : deepClone(source[key]);
+      result[key] = source[key] === void 0 ? cloneConfigValue(base[key]) : cloneConfigValue(source[key]);
     });
     return result;
   }
@@ -1317,7 +1325,7 @@
       return {};
     }
     if (isObject(rawValue)) {
-      return deepClone(rawValue);
+      return cloneConfigValue(rawValue);
     }
     try {
       const parsed = typeof rawValue === "string" ? JSON.parse(rawValue) : void 0;
@@ -1335,7 +1343,7 @@
     }));
   }
   function stripEqualToDefaults(config, defaults = DEFAULT_CONFIG) {
-    const result = deepClone(isObject(config) ? config : {});
+    const result = cloneConfigValue(isObject(config) ? config : {});
     const walk = (current, base, path = "") => {
       if (!isObject(current) || !isObject(base)) {
         return;
@@ -1403,8 +1411,8 @@
         icon_color: String(item.icon_color ?? item.iconColor ?? "").trim(),
         tap_action: TAP_ACTIONS.has(action) ? action : "toggle",
         tap_service: String(item.tap_service ?? "").trim(),
-        tap_service_data: isObject(item.tap_service_data) ? deepClone(item.tap_service_data) : String(item.tap_service_data ?? "").trim(),
-        tap_service_target: isObject(item.tap_service_target) ? deepClone(item.tap_service_target) : String(item.tap_service_target ?? "").trim(),
+        tap_service_data: isObject(item.tap_service_data) ? cloneConfigValue(item.tap_service_data) : String(item.tap_service_data ?? "").trim(),
+        tap_service_target: isObject(item.tap_service_target) ? cloneConfigValue(item.tap_service_target) : String(item.tap_service_target ?? "").trim(),
         tap_url: String(item.tap_url ?? "").trim(),
         navigation_path: String(item.navigation_path ?? "").trim(),
         tap_new_tab: item.tap_new_tab === true
@@ -1732,7 +1740,7 @@
     if (config.hold_action === "navigate" && !config.hold_navigation_path && config.hold_url) {
       config.hold_navigation_path = config.hold_url;
     }
-    const styles = window.NodaliaUtils?.sanitizeStyleTree?.(config.styles, DEFAULT_CONFIG.styles) ?? deepClone(DEFAULT_CONFIG.styles);
+    const styles = window.NodaliaUtils.sanitizeStyleTree(config.styles, DEFAULT_CONFIG.styles);
     const fields = {
       entity: String(config.entity),
       language: String(config.language),
@@ -1796,7 +1804,7 @@
         return document.createElement(EDITOR_TAG);
       }
       static getStubConfig(hass, entities = [], entitiesFallback = []) {
-        return applyStubEntity(deepClone(STUB_CONFIG), hass, ["camera"], entities, entitiesFallback);
+        return applyStubEntity({ ...STUB_CONFIG }, hass, ["camera"], entities, entitiesFallback);
       }
       static getEntitySuggestion(hass, entityId) {
         return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, { domains: ["camera"] });
@@ -2867,7 +2875,7 @@
       }
       _expandedCardConfig(action) {
         const domain = String(action.entity || "").split(".")[0];
-        const security = deepClone(this._config?.security || DEFAULT_CONFIG.security);
+        const security = cloneConfigValue(this._config?.security || DEFAULT_CONFIG.security);
         if (action.tap_action === "service" && action.tap_service) {
           security.allowed_services = Array.from(/* @__PURE__ */ new Set([
             ...Array.isArray(security.allowed_services) ? security.allowed_services : [],
@@ -2879,9 +2887,9 @@
           tap_action: action.tap_action || "toggle",
           tap_new_tab: action.tap_new_tab === true,
           security,
-          haptics: deepClone(this._config?.haptics || DEFAULT_CONFIG.haptics),
+          haptics: cloneConfigValue(this._config?.haptics || DEFAULT_CONFIG.haptics),
           animations: {
-            ...deepClone(isObject(this._config.animations) ? this._config.animations : DEFAULT_CONFIG.animations),
+            ...cloneConfigValue(isObject(this._config.animations) ? this._config.animations : DEFAULT_CONFIG.animations),
             content_duration: 0,
             panel_duration: 0
           },
@@ -2889,7 +2897,7 @@
         };
         ["name", "icon", "tap_service", "tap_service_data", "tap_service_target", "tap_url", "navigation_path"].forEach((key) => {
           if (action[key]) {
-            config[key] = (key === "tap_service_data" || key === "tap_service_target") && isObject(action[key]) ? JSON.stringify(action[key]) : deepClone(action[key]);
+            config[key] = (key === "tap_service_data" || key === "tap_service_target") && isObject(action[key]) ? JSON.stringify(action[key]) : cloneConfigValue(action[key]);
           }
         });
         if (action.icon_color) {

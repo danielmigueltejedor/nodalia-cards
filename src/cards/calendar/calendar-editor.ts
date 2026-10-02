@@ -177,7 +177,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
     this._watchEditorControlTag("ha-icon-picker");
   }
 
-  _setFieldValue(targetConfig: ReturnType<typeof normalizeConfig>, field: string, value: unknown) {
+  _setFieldValue(targetConfig: Record<string,unknown>, field: string, value: unknown) {
     if (!field) {
       return;
     }
@@ -191,22 +191,24 @@ class NodaliaCalendarCardEditor extends HTMLElement {
       return;
     }
     if (field.startsWith("calendars.")) {
+      const calendars=Array.isArray(targetConfig.calendars)?targetConfig.calendars:[];
+      targetConfig.calendars=calendars;
       const parts = field.split(".");
       const index = Number(parts[1]);
       if (!Number.isInteger(index) || index < 0 || !parts[1]?.trim()
-          || index > targetConfig.calendars.length || parts.length > 3) {
+          || index > calendars.length || parts.length > 3) {
         return;
       }
       const key = parts.length >= 3 ? parts[2] : null;
       if (parts.length >= 3 && (!key || !["entity", "label", "tint"].includes(key))) return;
-      while (targetConfig.calendars.length <= index) {
-        targetConfig.calendars.push({ entity: "", label: "", tint: "" });
+      while (calendars.length <= index) {
+        calendars.push({ entity: "", label: "", tint: "" });
       }
       if (key) {
-        let entry = targetConfig.calendars[index];
+        let entry = calendars[index];
         if (typeof entry === "string") {
           entry = { entity: String(entry).trim(), label: "", tint: "" };
-        } else if (!entry || typeof entry !== "object") {
+        } else if (!isObject(entry)) {
           entry = { entity: "", label: "", tint: "" };
         }
         if (key === "entity") {
@@ -216,10 +218,10 @@ class NodaliaCalendarCardEditor extends HTMLElement {
         } else if (key === "tint") {
           entry.tint = sanitizeCalendarTint(value);
         }
-        targetConfig.calendars[index] = entry;
+        calendars[index] = entry;
         return;
       }
-      targetConfig.calendars[index] = {
+      calendars[index] = {
         entity: String(value ?? "").trim(),
         label: "",
         tint: "",
@@ -339,17 +341,16 @@ class NodaliaCalendarCardEditor extends HTMLElement {
       return;
     }
     const next = deepClone(this._config || DEFAULT_CONFIG);
-    if (!Array.isArray(next.calendars)) {
-      next.calendars = [];
-    }
+    const calendars = Array.isArray(next.calendars)?next.calendars:[];
+    next.calendars=calendars;
     if (action === "add-calendar") {
       // The empty-list view already exposes one editable placeholder row.
-      if (!next.calendars.length) next.calendars.push({ entity: "", label: "", tint: "" });
-      next.calendars.push({ entity: "", label: "", tint: "" });
+      if (!calendars.length) calendars.push({ entity: "", label: "", tint: "" });
+      calendars.push({ entity: "", label: "", tint: "" });
     } else if (action === "remove-calendar") {
       const index = Number(button.dataset.index || -1);
-      if (!Number.isInteger(index) || index < 0 || index >= next.calendars.length) return;
-      next.calendars.splice(index, 1);
+      if (!Number.isInteger(index) || index < 0 || index >= calendars.length) return;
+      calendars.splice(index, 1);
     } else {
       return;
     }

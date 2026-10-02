@@ -172,7 +172,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   static getStubConfig(hass:HomeAssistant|null, entities:unknown = [], entitiesFallback:unknown = []) {
-    return applyStubEntity(deepClone(STUB_CONFIG), hass, ["vacuum"], entities, entitiesFallback);
+    return applyStubEntity({ ...STUB_CONFIG }, hass, ["vacuum"], entities, entitiesFallback);
   }
 
   static getEntitySuggestion(hass:HomeAssistant|null, entityId:string) {
@@ -502,7 +502,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _triggerHaptic(styleOverride:unknown = null) {
-    const haptics = this._config?.haptics || {};
+    const haptics = vacuumRecord(this._config?.haptics);
     if (haptics.enabled !== true) {
       return;
     }
@@ -521,7 +521,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _getAnimationSettings() {
-    const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+    const configuredAnimations = isObject(this._config?.animations)?this._config.animations:DEFAULT_CONFIG.animations;
 
     return {
       enabled: configuredAnimations.enabled !== false,
@@ -858,7 +858,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _getMapEntityId() {
-    return vacuumText(this._config?.map_source?.camera || this._config?.map_source?.image || this._config?.map_camera || "");
+    return vacuumText(vacuumRecord(this._config?.map_source).camera || vacuumRecord(this._config?.map_source).image || this._config?.map_camera || "");
   }
 
   _getMapState() {
@@ -2131,7 +2131,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
    */
   _getCalibrationSignatureFragment(hass = this._hass) {
     const config = this._config;
-    const directPoints = arrayFromMaybe(config?.calibration_source?.calibration_points);
+    const directPoints = arrayFromMaybe(vacuumRecord(config?.calibration_source).calibration_points);
     if (directPoints.length) {
       return {
         kind: "direct",
@@ -2139,7 +2139,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         fingerprint: JSON.stringify(directPoints),
       };
     }
-    const calibrationEntityId = vacuumText(config?.calibration_source?.entity);
+    const calibrationEntityId = vacuumText(vacuumRecord(config?.calibration_source).entity);
     if (calibrationEntityId && hass?.states?.[calibrationEntityId]) {
       const st = hass.states[calibrationEntityId];
       if (!st) return {kind:"none",len:0};
@@ -2152,8 +2152,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         lu: String(st.last_updated || st.last_changed || ""),
       };
     }
-    if (config?.calibration_source?.camera === true) {
-      const mapEntityId = String(config?.map_source?.camera || config?.map_camera || "");
+    if (vacuumRecord(config?.calibration_source).camera === true) {
+      const mapEntityId = String(vacuumRecord(config?.map_source).camera || config?.map_camera || "");
       const st = mapEntityId ? hass?.states?.[mapEntityId] : null;
       const pts = st?.attributes?.calibration_points;
       const len = Array.isArray(pts) ? pts.length : 0;

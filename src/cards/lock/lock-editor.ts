@@ -1,5 +1,5 @@
 import type { HomeAssistant } from "../../core/types/home-assistant";
-import type { LockConfig } from "./lock-config";
+import { cloneConfigValue } from "../../shared/config-values";
 import { normalizeLockStyles } from "./lock-styles";
 import { getEditorColorModel, formatEditorColorFromHex } from "../../shared/editor-color";
 import { lockText } from "./lock-strings";
@@ -7,7 +7,7 @@ import { EDITOR_TOGGLE_STYLES, EDITOR_RADIUS_STYLES, EDITOR_COLOR_STYLES, EDITOR
 
 export function loadNodaliaLockCardEditor(): CustomElementConstructor {
   class NodaliaLockCardEditor extends HTMLElement {
-    private config!: Partial<LockConfig>;
+    private config!: Record<string,unknown>;
     private stateHass!: HomeAssistant | null;
     private showStyles = false;
     constructor() { super(); this._nodaliaConstruct(); }
@@ -23,7 +23,7 @@ export function loadNodaliaLockCardEditor(): CustomElementConstructor {
         this.shadowRoot?.querySelector<HTMLButtonElement>('[data-editor-toggle="styles"]')?.focus();
       });
     }
-    setConfig(config: Partial<LockConfig>): void { this.config = window.NodaliaUtils.deepClone(config); this.render(); }
+    setConfig(config: unknown): void { const cloned=cloneConfigValue(config);this.config = window.NodaliaUtils.isObject(cloned)?cloned:{}; this.render(); }
     set hass(hass: HomeAssistant) {
       const languageChanged = window.NodaliaI18n?.resolveLanguage?.(this.stateHass) !== window.NodaliaI18n?.resolveLanguage?.(hass);
       this.stateHass = hass;
@@ -37,12 +37,12 @@ export function loadNodaliaLockCardEditor(): CustomElementConstructor {
       const field = target.dataset.field;
       if (!field) return;
       let value: unknown;
-      if (event instanceof CustomEvent && event.type === "value-changed") value = (event.detail as { value?: unknown } | undefined)?.value;
+      if (event instanceof CustomEvent && event.type === "value-changed") value = window.NodaliaUtils.isObject(event.detail)?event.detail.value:undefined;
       else if (target instanceof HTMLInputElement) value = target.type === "checkbox" ? target.checked
         : target.type === "color" ? formatEditorColorFromHex(target.value, target.dataset.alpha ?? 1) : target.value;
       else if (target instanceof HTMLSelectElement) value = target.value;
       else return;
-      const next = window.NodaliaUtils.deepClone(this.config);
+      const next = cloneConfigValue(this.config);
       window.NodaliaUtils.setByPath(next, field, value);
       this.config = next;
       if (target instanceof HTMLInputElement && target.type === "color") {

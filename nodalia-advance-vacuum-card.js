@@ -272,10 +272,36 @@
     actionFields("icon_double_tap", "")
   ];
 
+  // src/shared/config-values.ts
+  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var unsafeKeys = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
+  function compactConfig(value, preserveEmptyKeys = []) {
+    if (Array.isArray(value)) return value.map((item) => compactConfig(item, preserveEmptyKeys)).filter((item) => item !== void 0);
+    if (isRecord(value)) {
+      const result = {};
+      for (const [key, item] of Object.entries(value)) {
+        if (unsafeKeys.has(key)) continue;
+        if (item === "" && preserveEmptyKeys.includes(key)) {
+          result[key] = "";
+          continue;
+        }
+        const cleaned = compactConfig(item, preserveEmptyKeys);
+        if (cleaned !== void 0 && !(isRecord(cleaned) && Object.keys(cleaned).length === 0)) result[key] = cleaned;
+      }
+      return result;
+    }
+    return value === "" || value === null || value === void 0 ? void 0 : value;
+  }
+  function cloneConfigValue(value) {
+    const cloned = window.NodaliaUtils.deepClone(value);
+    if (Array.isArray(value)) return Array.isArray(cloned) ? cloned : [];
+    if (isRecord(value)) return isRecord(cloned) ? cloned : {};
+    return cloned;
+  }
+
   // src/cards/advance-vacuum/advance-vacuum-runtime.ts
   var utils = window.NodaliaUtils;
   var isObject = utils.isObject.bind(utils);
-  var deepClone = utils.deepClone.bind(utils);
   var mergeConfig = utils.mergeDeep.bind(utils);
   var isUnsafeConfigPathKey = utils.isUnsafeConfigPathKey.bind(utils);
   var setByPath = utils.setByPath.bind(utils);
@@ -309,27 +335,6 @@
       return base.replace(existingPattern, `$1${encodedKey}=${encodedValue}`) + fragment;
     }
     return `${base}${base.includes("?") ? "&" : "?"}${encodedKey}=${encodedValue}${fragment}`;
-  }
-
-  // src/shared/config-values.ts
-  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
-  var unsafeKeys = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
-  function compactConfig(value, preserveEmptyKeys = []) {
-    if (Array.isArray(value)) return value.map((item) => compactConfig(item, preserveEmptyKeys)).filter((item) => item !== void 0);
-    if (isRecord(value)) {
-      const result = {};
-      for (const [key, item] of Object.entries(value)) {
-        if (unsafeKeys.has(key)) continue;
-        if (item === "" && preserveEmptyKeys.includes(key)) {
-          result[key] = "";
-          continue;
-        }
-        const cleaned = compactConfig(item, preserveEmptyKeys);
-        if (cleaned !== void 0 && !(isRecord(cleaned) && Object.keys(cleaned).length === 0)) result[key] = cleaned;
-      }
-      return result;
-    }
-    return value === "" || value === null || value === void 0 ? void 0 : value;
   }
 
   // src/shared/editor-entity-helpers.ts
@@ -866,7 +871,7 @@
       label: String(item.label || item.name || "").trim(),
       icon: String(item.icon || "mdi:flash").trim(),
       visible_when: String(item.visible_when || "always").trim(),
-      tap_action: isObject(item.tap_action) ? deepClone(item.tap_action) : null,
+      tap_action: isObject(item.tap_action) ? cloneConfigValue(item.tap_action) : null,
       builtin_action: String(item.builtin_action || "").trim()
     })).filter((item) => item.label && (item.tap_action || item.builtin_action));
   }
@@ -878,10 +883,10 @@
         icon: String(item.icon || "").trim(),
         entity: String(item.entity || item.entity_id || "").trim(),
         service: String(item.service || item.perform_action || "").trim(),
-        service_data: isObject(item.service_data) ? deepClone(item.service_data) : {},
-        target: isObject(item.target) ? deepClone(item.target) : null,
+        service_data: isObject(item.service_data) ? cloneConfigValue(item.service_data) : {},
+        target: isObject(item.target) ? cloneConfigValue(item.target) : null,
         visible_when: String(item.visible_when || "always").trim(),
-        tap_action: isObject(item.tap_action) ? deepClone(item.tap_action) : null
+        tap_action: isObject(item.tap_action) ? cloneConfigValue(item.tap_action) : null
       })).filter((item) => item.entity || item.service || item.tap_action)
     );
   }
@@ -1328,7 +1333,7 @@
         return document.createElement(EDITOR_TAG);
       }
       static getStubConfig(hass, entities = [], entitiesFallback = []) {
-        return applyStubEntity(deepClone(STUB_CONFIG), hass, ["vacuum"], entities, entitiesFallback);
+        return applyStubEntity({ ...STUB_CONFIG }, hass, ["vacuum"], entities, entitiesFallback);
       }
       static getEntitySuggestion(hass, entityId) {
         if (!hass) return null;
@@ -1726,7 +1731,7 @@
         };
       }
       _triggerHaptic(styleOverride = null) {
-        const haptics = this._config?.haptics || {};
+        const haptics = vacuumRecord(this._config?.haptics);
         if (haptics.enabled !== true) {
           return;
         }
@@ -1742,7 +1747,7 @@
         }
       }
       _getAnimationSettings() {
-        const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+        const configuredAnimations = isObject(this._config?.animations) ? this._config.animations : DEFAULT_CONFIG.animations;
         return {
           enabled: configuredAnimations.enabled !== false,
           iconAnimation: configuredAnimations.icon_animation !== false,
@@ -2013,7 +2018,7 @@
         return null;
       }
       _getMapEntityId() {
-        return vacuumText(this._config?.map_source?.camera || this._config?.map_source?.image || this._config?.map_camera || "");
+        return vacuumText(vacuumRecord(this._config?.map_source).camera || vacuumRecord(this._config?.map_source).image || this._config?.map_camera || "");
       }
       _getMapState() {
         const entityId = this._getMapEntityId();
@@ -3022,7 +3027,7 @@
        */
       _getCalibrationSignatureFragment(hass = this._hass) {
         const config = this._config;
-        const directPoints = arrayFromMaybe(config?.calibration_source?.calibration_points);
+        const directPoints = arrayFromMaybe(vacuumRecord(config?.calibration_source).calibration_points);
         if (directPoints.length) {
           return {
             kind: "direct",
@@ -3030,7 +3035,7 @@
             fingerprint: JSON.stringify(directPoints)
           };
         }
-        const calibrationEntityId = vacuumText(config?.calibration_source?.entity);
+        const calibrationEntityId = vacuumText(vacuumRecord(config?.calibration_source).entity);
         if (calibrationEntityId && hass?.states?.[calibrationEntityId]) {
           const st = hass.states[calibrationEntityId];
           if (!st) return { kind: "none", len: 0 };
@@ -3043,8 +3048,8 @@
             lu: String(st.last_updated || st.last_changed || "")
           };
         }
-        if (config?.calibration_source?.camera === true) {
-          const mapEntityId = String(config?.map_source?.camera || config?.map_camera || "");
+        if (vacuumRecord(config?.calibration_source).camera === true) {
+          const mapEntityId = String(vacuumRecord(config?.map_source).camera || config?.map_camera || "");
           const st = mapEntityId ? hass?.states?.[mapEntityId] : null;
           const pts = st?.attributes?.calibration_points;
           const len = Array.isArray(pts) ? pts.length : 0;
@@ -3790,7 +3795,7 @@
           return;
         }
         if (item.service) {
-          const serviceData = isObject(item.service_data) ? deepClone(item.service_data) : {};
+          const serviceData = isObject(item.service_data) ? cloneConfigValue(item.service_data) : {};
           if (entityId && !serviceData.entity_id) {
             serviceData.entity_id = entityId;
           }
@@ -4856,7 +4861,7 @@
         }
         const exactToken = value.match(/^\[\[([a-zA-Z0-9_]+)\]\]$/)?.[1];
         if (exactToken && Object.prototype.hasOwnProperty.call(context, exactToken)) {
-          return deepClone(context[exactToken]);
+          return cloneConfigValue(context[exactToken]);
         }
         return value.replace(/\[\[([a-zA-Z0-9_]+)\]\]/g, (match, token) => {
           if (!Object.prototype.hasOwnProperty.call(context, token)) {
@@ -7267,7 +7272,7 @@
         this._render();
         this._restoreFocusState(focusState);
         fireEvent(this, "config-changed", {
-          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults?.(deepClone(this._config), DEFAULT_CONFIG) ?? {})
+          config: compactConfig(window.NodaliaUtils.stripEqualToDefaults?.(cloneConfigValue(this._config), DEFAULT_CONFIG) ?? {})
         });
       }
       _watchEditorControlTag(tagName) {
@@ -7303,7 +7308,7 @@
         }
         event.stopPropagation();
         const nextValue = editorControlValue(event, control);
-        const nextConfig = deepClone(this._config);
+        const nextConfig = cloneConfigValue(this._config);
         if (nextValue === "" || nextValue === null || nextValue === void 0) {
           deleteByPath(nextConfig, control.dataset.field);
         } else {
@@ -7335,7 +7340,7 @@
         if (event.type === "input" && target.type !== "checkbox" && target.tagName !== "SELECT") {
           return;
         }
-        const nextConfig = deepClone(this._config);
+        const nextConfig = cloneConfigValue(this._config);
         let nextValue = target.value;
         if (target.type === "checkbox") {
           nextValue = checked;
@@ -7826,7 +7831,7 @@
             ${this._renderEntityPickerField("ed.vacuum.robot_entity", "entity", config.entity, { domains: ["vacuum"] })}
             ${this._renderTextField("ed.entity.name", "name", config.name, { placeholder: "Roborock Qrevo S" })}
             ${this._renderIconPickerField("ed.entity.icon", "icon", config.icon, { placeholder: "mdi:robot-vacuum" })}
-            ${this._renderEntityPickerField("ed.advance_vacuum.map_source_entity", "map_source.camera", config.map_source?.camera, { domains: ["camera", "image"] })}
+            ${this._renderEntityPickerField("ed.advance_vacuum.map_source_entity", "map_source.camera", (isObject(config.map_source) ? config.map_source : {}).camera, { domains: ["camera", "image"] })}
             ${this._renderSelectField("ed.advance_vacuum.platform", "vacuum_platform", config.vacuum_platform || "auto", [
             { value: "auto", label: "Auto (Home Assistant)" },
             { value: "Roborock", label: "Roborock" },
@@ -7843,7 +7848,7 @@
             placeholder: "valetudo/robot",
             hint: "ed.advance_vacuum.mqtt_topic_hint"
           }) : ""}
-            ${this._renderEntityPickerField("ed.advance_vacuum.calibration_entity", "calibration_source.entity", config.calibration_source?.entity, { domains: ["camera", "image", "sensor"] })}
+            ${this._renderEntityPickerField("ed.advance_vacuum.calibration_entity", "calibration_source.entity", (isObject(config.calibration_source) ? config.calibration_source : {}).entity, { domains: ["camera", "image", "sensor"] })}
             ${this._renderEntityPickerField("ed.advance_vacuum.room_tracking_entity", "room_tracking.entity", config.room_tracking?.entity, { domains: ["sensor", "select", "text", "input_text"] })}
             ${this._renderEntityPickerField("ed.advance_vacuum.room_tracking_activity_entity", "room_tracking.activity_entity", config.room_tracking?.activity_entity, { domains: ["sensor", "binary_sensor", "select", "text", "input_text"] })}
             ${this._renderTextField("ed.advance_vacuum.room_tracking_attribute", "room_tracking.attribute", config.room_tracking?.attribute || "", {
@@ -7881,7 +7886,7 @@
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.advance_vacuum.map_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("ed.advance_vacuum.calibration_from_camera", "calibration_source.camera", config.calibration_source?.camera !== false)}
+            ${this._renderCheckboxField("ed.advance_vacuum.calibration_from_camera", "calibration_source.camera", (isObject(config.calibration_source) ? config.calibration_source : {}).camera !== false)}
             ${this._renderCheckboxField("ed.advance_vacuum.map_locked", "map_locked", config.map_locked !== false)}
             ${this._renderCheckboxField("ed.advance_vacuum.show_room_labels", "show_room_labels", config.show_room_labels !== false)}
             ${this._renderCheckboxField("ed.advance_vacuum.show_room_markers", "show_room_markers", config.show_room_markers !== false)}
@@ -7945,8 +7950,8 @@
             <div class="editor-section__hint">${escapeHtml(this._editorLabel("ed.entity.haptics_section_hint"))}</div>
           </div>
           <div class="editor-grid">
-            ${this._renderCheckboxField("ed.vacuum.enable_haptics", "haptics.enabled", config.haptics?.enabled === true)}
-            ${this._renderCheckboxField("ed.vacuum.fallback_vibrate", "haptics.fallback_vibrate", config.haptics?.fallback_vibrate === true)}
+            ${this._renderCheckboxField("ed.vacuum.enable_haptics", "haptics.enabled", (isObject(config.haptics) ? config.haptics : {}).enabled === true)}
+            ${this._renderCheckboxField("ed.vacuum.fallback_vibrate", "haptics.fallback_vibrate", (isObject(config.haptics) ? config.haptics : {}).fallback_vibrate === true)}
             ${this._renderSelectField("ed.entity.haptic_style", "haptics.style", hapticStyle, [
             { value: "selection", label: "Selection" },
             { value: "light", label: "Light" },
