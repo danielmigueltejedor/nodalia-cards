@@ -66,6 +66,24 @@ test('Light turn-on queue and turn-off UI finish at their original deadlines and
   expect(await page.evaluate(() => window.bundleErrors)).toEqual([]);
 });
 
+test('Light delivers a queued turn-on when HA updates after the deadline and before the timeout', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-01T10:00:00Z') });
+  await page.clock.pauseAt(new Date('2026-10-01T10:00:01Z'));
+  await mount(page, {}, { 'light.one': { state: 'off', attributes: { brightness: 128, hs_color: [42, 60], supported_color_modes: ['hs', 'color_temp'] } } });
+  await page.evaluate(() => { window.lightCard._toggleLight(); window.lightCard._commitBrightness(75); window.lightCard._commitColorPreset([0, 0]); });
+  expect(await page.evaluate(() => window.lightCalls)).toEqual([['light', 'turn_on', { entity_id: 'light.one' }]]);
+  await page.evaluate(() => {
+    window.lightCard._optimisticTurnOn.expiresAt = Date.now() - 1;
+    window.lightCard.hass = { ...window.lightHass };
+  });
+  expect(await page.evaluate(() => window.lightCard._optimisticTurnOn)).toBe(null);
+  expect(await page.evaluate(() => window.lightCalls.at(-1))).toEqual(['light', 'turn_on', { entity_id: 'light.one', brightness_pct: 75, hs_color: [0, 0] }]);
+  const count = await page.evaluate(() => window.lightCalls.length);
+  await page.clock.fastForward(5000);
+  expect(await page.evaluate(() => window.lightCalls.length)).toBe(count);
+  expect(await page.evaluate(() => window.bundleErrors)).toEqual([]);
+});
+
 test('Light settle and mode transitions own timers and frames and discard work on entity changes or detach', async ({ page }) => {
   await page.clock.install({ time: new Date('2026-10-01T10:00:00Z') }); await page.clock.pauseAt(new Date('2026-10-01T10:00:01Z'));
   await mount(page, { animations: { enabled: true, mode_switch_duration: 200 } });
