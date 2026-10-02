@@ -23,7 +23,9 @@ Source entities may be a sensor ID or an object containing `entity`, or separate
 `consumption` and `production` IDs. Split grid values use consumption minus
 production: positive means import. Split battery values use production minus
 consumption: positive means discharge and negative means charge. The existing
-split-source calculation treats a missing component as zero.
+split-source calculation uses zero only for a component that is not configured.
+If a configured component is missing, blank, unknown or unavailable, the split
+reading displays `--` with an unavailable badge; a real zero remains valid.
 
 Single missing/blank readings display `--`; actual zero remains visible. Comma
 numeric states are accepted. Values in W become kW at an absolute value of
@@ -58,3 +60,17 @@ choices to sensors, numbers and input numbers. Home Assistant selectors commit
 their event value. Clearing a numeric override restores its default; an explicit
 zero remains a value. Custom translucent CSS colors and focused drafts survive
 editor updates.
+
+
+The view, editor, configuration and helpers now pass strict TypeScript checking.
+The obsolete simple rail renderer has been removed: the existing selector chooses
+only full or compact layouts. Current positions, styles, sizing and SVG motion
+paths remain unchanged.
+
+Consumption chips can be activated with Enter or Space. Native action focus
+survives displayed reading/attribute updates. Escape closes the Home device dialog
+and returns focus to its Home button. Configuration, HA connection/user changes
+and disconnect close the dialog and release modal, press, entrance and frame work.
+Detached cards accept current HA without rendering until they reconnect. Retired
+viewport observer/frame callbacks cannot modify the reattached view. Displayed
+units, battery level and secondary attributes refresh even when timestamps do not.

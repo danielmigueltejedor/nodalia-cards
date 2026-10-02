@@ -263,6 +263,8 @@ function loadClimateCardClass() {
 function loadPowerFlowCardClass() {
   const registry = new Map();
   class FakeHTMLElement {
+    isConnected = true;
+    toggleAttribute() {}
     attachShadow() {
       this.shadowRoot = {
         addEventListener() {},
@@ -2178,9 +2180,6 @@ test("power flow flow dots avoid origin flash before motion starts", () => {
   assert.doesNotMatch(source, /offsetWidth/);
   assert.match(source, /\.power-flow-card__dot-group \{[\s\S]*opacity: 0;/);
   assert.match(source, /\.power-flow-card:not\(\.power-flow-card--motion-paused\) \.power-flow-card__dot-group/);
-  assert.match(source, /\.power-flow-card__simple-dot \{[\s\S]*opacity: 0;/);
-  assert.match(source, /animation: power-flow-card-simple-dot linear infinite both;/);
-  assert.match(source, /\.power-flow-card__simple-rail--entering \.power-flow-card__simple-dot/);
 });
 
 test("circular gauge thumb follows dial arc via rotate orbit transform", () => {
@@ -2271,7 +2270,7 @@ test("fav and vacuum resize observers skip render when signature is unchanged", 
 
 test("power flow refreshes its tracked entity stamp before render gating", () => {
   const source = read("nodalia-power-flow-card.js");
-  assert.match(source, /set hass\(hass\) \{\s*this\._hass = hass;\s*this\._syncTrackedEntitiesStamp\(hass\);\s*const nextSignature/);
+  assert.match(source, /this\._syncTrackedEntitiesStamp\(hass\);\s*const nextSignature/);
   assert.match(source, /NodaliaRenderSignature\?\.joinParts/);
   assert.match(source, /prefix: "states:", values: \[this\._trackedEntitiesStamp\]/);
 

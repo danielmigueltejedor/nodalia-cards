@@ -4,6 +4,5 @@
   "src/cards/entity/entity-card.ts",
   "src/cards/media-player/media-player-card.ts",
   "src/cards/navigation/navigation-card.ts",
-  "src/cards/notifications/notifications-card.ts",
-  "src/cards/power-flow/power-flow-card.ts"
+  "src/cards/notifications/notifications-card.ts"
 ]
