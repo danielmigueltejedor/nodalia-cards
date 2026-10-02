@@ -69,17 +69,14 @@ the i18n pack is generated from JSON while its lookup logic remains root JS.
 ## Large controller responsibilities
 
 Size snapshots from the initial source split are obsolete. The main remaining
-responsibilities live in these controllers; their strict migration is still open:
+unchecked views are listed below. All other card views, configs, helpers and
+visual editors now pass strict checking:
 
 | Source | Responsibilities |
 |---|---|
 | `src/cards/advance-vacuum/advance-vacuum-card.ts` | Map, rooms, dock and sessions |
 | `src/cards/climate/climate-card.ts` | Climate rendering and interactions |
-| `src/cards/entity/entity-card.ts` | Entity domains and air quality |
 | `src/cards/media-player/media-player-card.ts` | Artwork, playback and layouts |
-| `src/cards/notifications/notifications-card.ts` | Inbox, mobile policy and Engine sync |
-| `src/cards/power-flow/power-flow-card.ts` | Energy graph, nodes and popups |
-| `src/cards/room-summary/room-summary-card.ts` | Room navigation and embedded card lifecycle |
 
 The exact suppression inventory is `scripts/type-debt.json`; use the source
 files, not generated JS size, to plan coherent typed extractions.
@@ -302,8 +299,9 @@ standalone.ts          Standalone entry for nodalia-light-card.js
 `exactOptionalPropertyTypes`, `noFallthroughCasesInSwitch`, `noImplicitOverride`
 and `useUnknownInCatchVariables`.
 
-Legacy suppressions remain in large views/editors and some helpers/configs,
-plus Climate's model and schedule. The exact current inventory is
+Three legacy suppressions remain in the Advance Vacuum, Climate and Media
+Player views. Their configs, helpers and editors are already checked. The
+exact current inventory is
 `scripts/type-debt.json`; `pnpm architecture:check` reports it and rejects new debt.
 A `.ts` filename or passing `tsc` does not imply suppressed modules were checked.
 
@@ -464,3 +462,19 @@ from configured unavailable sensors. Owned observer, frame, press and entrance w
 is released across view lifetimes; native keyboard action/modal focus is retained.
 The unused simple rail design and its 45 exclusive style rules have been removed;
 compact/full presentation and both distribution size budgets remain unchanged.
+
+
+Navigation's complete view uses guarded route/action/media-node records and native
+DOM/HA contracts. Pending browser, palette and layout work belongs to its view
+generation; native dialog focus survives refreshes. Shared modal Tab traversal
+reads the dialog shadow root and advances through every actual focusable control
+on Safari as well as Chromium and Firefox.
+
+Notifications now checks its view contracts too. Calendar/forecast batches, Engine
+profile/inbox/dismissal work, legacy sync and foreground drains capture their HA
+context and reject retired results. Empty native forecasts are authoritative,
+and query failures use bounded retries. Native focus is preserved across updates.
+Static motion CSS is embedded with whitespace-only compaction, without another
+browser resource. Browser-local dismissal/mobile keys use the configured prefix
+plus server/user identity; explicit shared helpers and Engine profiles retain
+their shared semantics.

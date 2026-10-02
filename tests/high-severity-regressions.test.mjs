@@ -40,6 +40,7 @@ function loadNotificationsCard() {
           addEventListener() {},
           removeEventListener() {},
           innerHTML: "",
+          replaceChildren() {this.innerHTML = "";},
           querySelector() { return null; },
           querySelectorAll() { return []; },
         };
@@ -97,6 +98,7 @@ function loadClimateCard() {
         this.shadowRoot = {
           addEventListener() {},
           innerHTML: "",
+          replaceChildren() {this.innerHTML = "";},
           querySelector() { return null; },
           querySelectorAll() { return []; },
         };
@@ -379,6 +381,7 @@ function loadCoverCard() {
           addEventListener() {},
           removeEventListener() {},
           innerHTML: "",
+          replaceChildren() {this.innerHTML = "";},
           querySelector() { return null; },
           querySelectorAll() { return []; },
         };
@@ -513,6 +516,7 @@ function loadVacuumCard() {
           addEventListener() {},
           removeEventListener() {},
           innerHTML: "",
+          replaceChildren() {this.innerHTML = "";},
           querySelector() { return null; },
           querySelectorAll() { return []; },
         };

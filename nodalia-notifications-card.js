@@ -553,6 +553,9 @@
     return normalized;
   }
 
+  // src/cards/notifications/notifications-motion.css
+  var notifications_motion_default = ".notifications-footer{align-items:center;display:flex;justify-content:center;margin-top:-7px;position:relative;z-index:8}.notifications-stack-toggle{background:color-mix(in srgb,var(--primary-text-color) 12%,var(--nodalia-user-card-bg, var(--nodalia-surface-soft)));border-color:color-mix(in srgb,var(--primary-text-color) 14%,var(--nodalia-border, rgba(255, 255, 255, 0.12)));box-shadow:0 8px 18px rgba(0,0,0,0.16);gap:4px;font-size:11px;font-weight:700;height:28px;min-height:28px;padding:0 9px}.notifications-stack-toggle ha-icon{--mdc-icon-size: 16px}.notifications-card--animated.notifications-card--enter .notifications-empty-inline,.notifications-card--animated.notifications-card--enter .notification-item{animation:notifications-card-fade-up calc(var(--notifications-content-duration, 420ms) * 0.96) cubic-bezier(0.22,0.84,0.26,1) both;animation-delay:calc(70ms + (var(--notification-index, 0) * 40ms))}.notifications-card--animated.notifications-card--enter .notification-item__icon{animation:notifications-card-bubble-bloom calc(var(--notifications-content-duration, 420ms) * 0.92) cubic-bezier(0.2,0.9,0.24,1) both;animation-delay:calc(40ms + (var(--notification-index, 0) * 40ms))}.notifications-card--animated.notifications-card--enter .notification-item__title,.notifications-card--animated.notifications-card--enter .notification-item__message,.notifications-card--animated.notifications-card--enter .notification-item__actions{animation:notifications-card-fade-up calc(var(--notifications-content-duration, 420ms) * 0.72) cubic-bezier(0.22,0.84,0.26,1) both;animation-delay:calc(92ms + (var(--notification-index, 0) * 40ms))}.notifications-card--animated.notifications-card--enter .notification-item__chip{animation:notifications-card-chip-pop calc(var(--notifications-content-duration, 420ms) * 0.58) cubic-bezier(0.18,0.9,0.22,1.18) both;animation-delay:calc(116ms + (var(--notification-index, 0) * 40ms))}.notifications-card--animated.notifications-card--stack-expand .notifications-list,.notifications-card--animated.notifications-card--stack-collapse-final .notifications-list{animation:notifications-stack-reflow calc(var(--notifications-content-duration, 420ms) * 0.72) cubic-bezier(0.18,0.9,0.22,1.08) both}.notifications-card--animated.notifications-card--stack-expand .notification-item{animation:notifications-card-item-rise calc(var(--notifications-content-duration, 420ms) * 0.74) cubic-bezier(0.18,0.9,0.22,1.08) both;animation-delay:calc(var(--notification-index, 0) * 34ms)}.notifications-card--animated.notifications-card--stack-collapse .notification-item--collapsing-tail{animation:notifications-stack-tail-out calc(var(--notifications-content-duration, 420ms) * 0.62) cubic-bezier(0.22,0.84,0.26,1) both;animation-delay:calc(var(--notification-exit-index, 0) * 28ms);transform-origin:center top}.notifications-card--animated.notifications-card--stack-collapse-final .notification-stack-card,.notifications-card--animated.notifications-card--stack-collapse-final .notifications-stack-toggle{animation:notifications-stack-collapse calc(var(--notifications-content-duration, 420ms) * 0.66) cubic-bezier(0.22,0.84,0.26,1) both}.notifications-card--animated .notifications-stack-toggle.is-pressing,.notifications-card--animated .notification-item__dismiss.is-pressing,.notifications-card--animated .notification-item__action.is-pressing{animation:notifications-button-bounce var(--notifications-button-bounce-duration, 320ms) cubic-bezier(0.2,0.9,0.25,1.35) both}@keyframes notifications-card-fade-up{0%{opacity:0;transform:translateY(12px) scale(0.97)}100%{opacity:1;transform:translateY(0) scale(1)}}@keyframes notifications-card-item-rise{0%{opacity:0;transform:translateY(8px) scale(0.94)}62%{opacity:1;transform:translateY(0) scale(1.018)}100%{opacity:1;transform:translateY(0) scale(1)}}@keyframes notifications-card-chip-pop{0%{opacity:0;transform:translateY(-4px) scale(0.86)}70%{opacity:1;transform:translateY(1px) scale(1.05)}100%{opacity:1;transform:translateY(0) scale(1)}}@keyframes notifications-card-bubble-bloom{0%{opacity:0;transform:scale(0.92)}58%{opacity:1;transform:scale(1.04)}100%{opacity:1;transform:scale(1)}}@keyframes notifications-stack-reflow{0%{opacity:0.7;transform:translateY(-6px) scaleY(0.985)}100%{opacity:1;transform:translateY(0) scaleY(1)}}@keyframes notifications-stack-collapse{0%{opacity:0;transform:translateY(8px) scale(0.94)}100%{opacity:1;transform:translateY(0) scale(1)}}@keyframes notifications-stack-tail-out{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-10px) scale(0.965)}}@keyframes notifications-button-bounce{0%{transform:scale(1)}45%{transform:scale(0.94)}100%{transform:scale(1)}}";
+
   // src/shared/editor-array-paths.ts
   var isObject2 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
   var isUnsafeConfigPathKey2 = (key) => key === "__proto__" || key === "constructor" || key === "prototype";
@@ -1305,7 +1308,15 @@
     return true;
   }
 
+  // src/shared/home-assistant-services.ts
+  async function requestHassService(host, hass, domain, service, data = {}, target = null) {
+    if (hass?.callService) return target !== null ? hass.callService(domain, service, data, target) : hass.callService(domain, service, data);
+    const utils2 = window.NodaliaUtils;
+    return utils2?.invokeHomeAssistantService?.call(utils2, host, hass, domain, service, data, target);
+  }
+
   // src/cards/notifications/notifications-card.ts
+  var notificationRecord = (value) => isObject(value) ? value : {};
   var _lazyNodaliaNotificationsCard;
   function loadNodaliaNotificationsCard() {
     if (_lazyNodaliaNotificationsCard) {
@@ -1330,6 +1341,14 @@
         this._nodaliaConstruct();
       }
       _nodaliaConstruct() {
+        this._generation = 0;
+        this._contextConnection = void 0;
+        this._contextAuth = void 0;
+        this._contextUser = "";
+        this._contextAdmin = false;
+        this._mobileDraining = false;
+        this._backgroundSyncInFlight = false;
+        this._backgroundSyncQueued = false;
         this.attachShadow({ mode: "open" });
         this._config = normalizeConfig({});
         this._hass = null;
@@ -1384,7 +1403,57 @@
         this._onDocVisibility = this._onDocVisibility.bind(this);
         this._onClick = this._onClick.bind(this);
         this._onViewportResize = this._onViewportResize.bind(this);
-        this.shadowRoot.addEventListener("click", this._onClick);
+        this.shadowRoot?.addEventListener("click", this._onClick);
+      }
+      _isCurrent(generation) {
+        return this.isConnected && generation === this._generation;
+      }
+      _releaseViewWork() {
+        this._generation++;
+        for (const key of ["_stackCollapseTimer", "_viewportResizeTimer", "_calendarRefreshTimer", "_weatherRefreshTimer", "_mobileNotifyTimer", "_quietHoursWakeTimer", "_backgroundMobileSyncTimer", "_entranceAnimationTimer"]) {
+          if (this[key]) window.clearTimeout(this[key]);
+          this[key] = 0;
+        }
+        this._detachViewVisibilityObserver();
+        window.NodaliaUtils?.clearDeferTimers?.(this);
+        this._renderPendingAfterEntrance = false;
+        this._collapsingStack = false;
+        this._stackTransition = "";
+        this._calendarRefreshInFlight = false;
+        this._weatherRefreshInFlight = false;
+        this._backgroundSyncInFlight = false;
+        this._backgroundSyncQueued = false;
+        this._mobileDraining = false;
+        this._mobileNotifyQueue = [];
+      }
+      _resetContext() {
+        this._releaseViewWork();
+        this._expanded = false;
+        this._calendarEvents = [];
+        this._calendarLoading = false;
+        this._calendarError = "";
+        this._calendarEventsSignature = "";
+        this._lastCalendarRefresh = 0;
+        this._weatherForecasts = {};
+        this._weatherForecastsSignature = "";
+        this._lastWeatherRefresh = 0;
+        this._runtimeExternalAlerts = [];
+        this._engineInbox = [];
+        this._lastNotifications = [];
+        this._lastDismissedHelperState = "";
+        this._lastBackgroundMobileSyncSignature = "";
+        this._lastBackgroundMobileNativeSignature = "";
+        this._lastBackgroundMobileNativeCheckAt = 0;
+        this._pendingBackgroundMobileSync = false;
+        this._forceNextBackgroundMobileSync = false;
+        this._lastNotificationIdsSignature = "";
+        this._invalidateTrackedEntityStampCache();
+        this._lastRenderSignature = "";
+        this._loadDismissed();
+        this._loadMobileSent();
+        this._loadMobileCooldown();
+        this.shadowRoot?.replaceChildren();
+        if (this.isConnected) this._attachViewVisibilityObserver();
       }
       connectedCallback() {
         if (typeof document !== "undefined") {
@@ -1398,7 +1467,7 @@
         this._lastRouteKey = this._getRouteKey();
         this._animateContentOnNextRender = true;
         this._lastRenderSignature = "";
-        if (this._hass) {
+        if (this._hass && this.isConnected) {
           this._renderIfChanged(true);
         }
         this._scheduleBackgroundMobileSync(this._pendingBackgroundMobileSync ? 0 : 320);
@@ -1409,49 +1478,10 @@
         window.addEventListener("orientationchange", this._onViewportResize, { passive: true });
       }
       disconnectedCallback() {
-        if (typeof document !== "undefined") {
-          document.removeEventListener("visibilitychange", this._onDocVisibility);
-        }
-        this._detachViewVisibilityObserver();
+        this._releaseViewWork();
+        document.removeEventListener("visibilitychange", this._onDocVisibility);
         window.removeEventListener("resize", this._onViewportResize);
         window.removeEventListener("orientationchange", this._onViewportResize);
-        if (this._stackCollapseTimer) {
-          window.clearTimeout(this._stackCollapseTimer);
-          this._stackCollapseTimer = 0;
-        }
-        if (this._viewportResizeTimer) {
-          window.clearTimeout(this._viewportResizeTimer);
-          this._viewportResizeTimer = 0;
-        }
-        if (this._calendarRefreshTimer) {
-          window.clearTimeout(this._calendarRefreshTimer);
-          this._calendarRefreshTimer = 0;
-        }
-        if (this._weatherRefreshTimer) {
-          window.clearTimeout(this._weatherRefreshTimer);
-          this._weatherRefreshTimer = 0;
-        }
-        if (this._mobileNotifyTimer) {
-          window.clearTimeout(this._mobileNotifyTimer);
-          this._mobileNotifyTimer = 0;
-        }
-        this._mobileNotifyQueue = [];
-        if (this._quietHoursWakeTimer) {
-          window.clearTimeout(this._quietHoursWakeTimer);
-          this._quietHoursWakeTimer = 0;
-        }
-        if (this._backgroundMobileSyncTimer) {
-          window.clearTimeout(this._backgroundMobileSyncTimer);
-          this._backgroundMobileSyncTimer = 0;
-        }
-        if (this._entranceAnimationTimer) {
-          window.clearTimeout(this._entranceAnimationTimer);
-          this._entranceAnimationTimer = 0;
-        }
-        this._renderPendingAfterEntrance = false;
-        this._calendarRefreshInFlight = false;
-        this._weatherRefreshInFlight = false;
-        window.NodaliaUtils?.clearDeferTimers?.(this);
       }
       _scheduleEntranceAnimationReset(delay) {
         if (this._entranceAnimationTimer) {
@@ -1463,7 +1493,9 @@
           this._animateContentOnNextRender = false;
           return;
         }
+        const generation = this._generation;
         this._entranceAnimationTimer = window.setTimeout(() => {
+          if (!this._isCurrent(generation)) return;
           this._entranceAnimationTimer = 0;
           if (!this.isConnected) {
             return;
@@ -1490,7 +1522,7 @@
         this._animateContentOnNextRender = true;
         this._lastNotificationIdsSignature = "";
         this._lastRenderSignature = "";
-        if (this._hass) {
+        if (this._hass && this.isConnected) {
           this._renderIfChanged(true);
         }
       }
@@ -1511,8 +1543,10 @@
         if (this._viewVisibilityObserver || typeof IntersectionObserver !== "function") {
           return;
         }
-        this._viewVisibilityObserver = new IntersectionObserver(
+        const generation = this._generation;
+        const observer = new IntersectionObserver(
           (entries) => {
+            if (!this._isCurrent(generation) || this._viewVisibilityObserver !== observer) return;
             if (!this.isConnected) {
               return;
             }
@@ -1538,7 +1572,8 @@
           },
           { threshold: [0, 0.01] }
         );
-        this._viewVisibilityObserver.observe(this);
+        this._viewVisibilityObserver = observer;
+        observer.observe(this);
       }
       _detachViewVisibilityObserver() {
         if (!this._viewVisibilityObserver) {
@@ -1554,7 +1589,9 @@
         if (this._viewportResizeTimer) {
           window.clearTimeout(this._viewportResizeTimer);
         }
+        const generation = this._generation;
         this._viewportResizeTimer = window.setTimeout(() => {
+          if (!this._isCurrent(generation)) return;
           this._viewportResizeTimer = 0;
           if (!this.isConnected) {
             return;
@@ -1571,6 +1608,7 @@
       }
       setConfig(config) {
         this._config = normalizeConfig(config || {});
+        this._resetContext();
         window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
         this._expanded = false;
         this._animateContentOnNextRender = true;
@@ -1580,7 +1618,7 @@
         this._syncSharedDismissedFromHass(true);
         this._invalidateTrackedEntityStampCache();
         this._lastRenderSignature = "";
-        if (this._hass) {
+        if (this._hass && this.isConnected) {
           this._renderIfChanged(true);
         }
         this._scheduleBackgroundMobileSync(320, { force: true });
@@ -1589,7 +1627,13 @@
         this._scheduleQuietHoursWake();
       }
       set hass(hass) {
+        const changed = this._contextConnection !== hass?.connection || this._contextAuth !== hass?.auth || this._contextUser !== (hass?.user?.id || "") || this._contextAdmin !== Boolean(hass?.user?.is_admin);
         this._hass = hass;
+        this._contextConnection = hass?.connection;
+        this._contextAuth = hass?.auth;
+        this._contextUser = hass?.user?.id || "";
+        this._contextAdmin = Boolean(hass?.user?.is_admin);
+        if (changed) this._resetContext();
         if (!this.isConnected) {
           return;
         }
@@ -1625,9 +1669,6 @@
           rows: "auto"
         };
       }
-      _getBackgroundMobileConfigPayload() {
-        return getBackgroundMobileConfigPayload(this._config, this._hass);
-      }
       _buildBackgroundMobileWebhookPayload(options = {}) {
         return buildBackgroundMobileWebhookPayload(this._config, this._hass, options);
       }
@@ -1641,105 +1682,148 @@
           return;
         }
         this._pendingBackgroundMobileSync = false;
+        if (this._backgroundSyncInFlight) {
+          this._backgroundSyncQueued = true;
+          return;
+        }
         if (this._backgroundMobileSyncTimer) {
           window.clearTimeout(this._backgroundMobileSyncTimer);
         }
+        const generation = this._generation;
         this._backgroundMobileSyncTimer = window.setTimeout(() => {
+          if (!this._isCurrent(generation)) return;
           this._backgroundMobileSyncTimer = 0;
           void this._syncBackgroundMobileConfig();
         }, Math.max(0, Math.min(3e3, Number(delay) || 0)));
       }
       async _syncBackgroundMobileConfig() {
-        const webhookId = String(this._config?.background_mobile?.webhook || "").trim();
-        if (this._config?.background_mobile?.enabled !== true || !this.isConnected) {
+        const generation = this._generation;
+        const hass = this._hass;
+        const config = this._config;
+        if (!hass || !this._isCurrent(generation)) return false;
+        if (this._backgroundSyncInFlight) {
+          this._backgroundSyncQueued = true;
           return false;
         }
-        const expectedNative = getBackgroundMobileNativeSignature(this._config, this._hass);
-        const previousNative = String(this._lastBackgroundMobileNativeSignature || "");
-        const force = this._forceNextBackgroundMobileSync === true;
-        this._forceNextBackgroundMobileSync = false;
-        const nativeRecentlyChecked = Date.now() - this._lastBackgroundMobileNativeCheckAt < BACKGROUND_MOBILE_NATIVE_HEALTH_TTL_MS;
-        if (!force && nativeRecentlyChecked && (previousNative === expectedNative.signature || previousNative === `active:${expectedNative.profileId}`)) {
-          const helperStandby = await setLegacyBackgroundMobileFallback(this._hass, false);
-          const webhookStandby = webhookId ? await this._syncLegacyBackgroundMobileFallback(webhookId, false) : true;
-          const legacyStandby = helperStandby && webhookStandby;
-          this._pendingBackgroundMobileSync = !legacyStandby;
-          return true;
-        }
-        this._lastBackgroundMobileNativeCheckAt = Date.now();
-        const native = await syncBackgroundMobileNative(this._hass, this._config);
-        if (native.synced) {
-          const dismissalsChanged = this._mergeNativeDismissed(native.dismissed);
-          this._lastBackgroundMobileNativeSignature = native.signature;
-          const helperStandby = await setLegacyBackgroundMobileFallback(this._hass, false);
-          const webhookStandby = webhookId ? await this._syncLegacyBackgroundMobileFallback(webhookId, false, force) : true;
-          const legacyStandby = helperStandby && webhookStandby;
-          this._pendingBackgroundMobileSync = !legacyStandby;
-          void this._loadEngineInbox();
-          if (dismissalsChanged) {
-            this._renderIfChanged(true);
-          }
-          return true;
-        }
-        if (native.transient === true || native.available === true) {
-          this._pendingBackgroundMobileSync = true;
-          return false;
-        }
-        this._lastBackgroundMobileNativeSignature = "";
-        if (!webhookId) {
-          await setLegacyBackgroundMobileFallback(this._hass, true);
-          this._pendingBackgroundMobileSync = true;
-          return false;
-        }
-        if (this._config?.security?.allow_webhooks_for_non_admin === false && !this._hass?.user?.is_admin) {
-          if (typeof console !== "undefined" && typeof console.warn === "function") {
-            console.warn("Nodalia Notifications Card: background mobile sync webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false).");
-          }
-          await setLegacyBackgroundMobileFallback(this._hass, true);
-          return false;
-        }
-        const payload = this._buildBackgroundMobileWebhookPayload({ enabled: true });
-        if (backgroundMobilePayloadOverLimit(payload)) {
-          if (typeof console !== "undefined" && typeof console.warn === "function") {
-            console.warn(
-              `Nodalia Notifications Card: background mobile config exceeds ${BACKGROUND_MOBILE_MAX_CHUNKS} chunks (${payload.chunk_count}); sync skipped.`
-            );
-          }
-          this._lastBackgroundMobileSyncSignature = "";
-          this._pendingBackgroundMobileSync = true;
-          await setLegacyBackgroundMobileFallback(this._hass, true);
-          return false;
-        }
-        const signature = `${webhookId}:${payload.config_hash}:${payload.chunk_count}`;
-        if (!force && signature === this._lastBackgroundMobileSyncSignature) {
-          await setLegacyBackgroundMobileFallback(this._hass, true);
-          return true;
-        }
-        const post = typeof window !== "undefined" && window.NodaliaUtils?.postHomeAssistantWebhook;
-        if (typeof post !== "function") {
-          this._pendingBackgroundMobileSync = true;
-          return false;
-        }
+        this._backgroundSyncInFlight = true;
         try {
-          const ok = Boolean(await post(webhookId, payload, this._hass));
-          if (ok) {
-            this._lastBackgroundMobileSyncSignature = signature;
-            this._pendingBackgroundMobileSync = false;
-            await setLegacyBackgroundMobileFallback(this._hass, true);
-          } else {
-            this._pendingBackgroundMobileSync = true;
+          const webhookId = String(config?.background_mobile?.webhook || "").trim();
+          if (config?.background_mobile?.enabled !== true || !this.isConnected) {
+            return false;
           }
-          return ok;
-        } catch (_error) {
-          this._pendingBackgroundMobileSync = true;
+          const expectedNative = getBackgroundMobileNativeSignature(config, hass);
+          const previousNative = String(this._lastBackgroundMobileNativeSignature || "");
+          const force = this._forceNextBackgroundMobileSync === true;
+          this._forceNextBackgroundMobileSync = false;
+          const nativeRecentlyChecked = Date.now() - this._lastBackgroundMobileNativeCheckAt < BACKGROUND_MOBILE_NATIVE_HEALTH_TTL_MS;
+          if (!force && nativeRecentlyChecked && (previousNative === expectedNative.signature || previousNative === `active:${expectedNative.profileId}`)) {
+            const helperStandby = await setLegacyBackgroundMobileFallback(hass, false);
+            if (!this._isCurrent(generation)) return false;
+            const webhookStandby = webhookId ? await this._syncLegacyBackgroundMobileFallback(webhookId, false) : true;
+            if (!this._isCurrent(generation)) return false;
+            const legacyStandby = helperStandby && webhookStandby;
+            this._pendingBackgroundMobileSync = !legacyStandby;
+            return true;
+          }
+          this._lastBackgroundMobileNativeCheckAt = Date.now();
+          const native = await syncBackgroundMobileNative(hass, config, { isCurrent: () => this._isCurrent(generation) });
+          if (!this._isCurrent(generation)) return false;
+          if (native.synced) {
+            const dismissalsChanged = this._mergeNativeDismissed(native.dismissed);
+            this._lastBackgroundMobileNativeSignature = native.signature;
+            const helperStandby = await setLegacyBackgroundMobileFallback(hass, false);
+            if (!this._isCurrent(generation)) return false;
+            const webhookStandby = webhookId ? await this._syncLegacyBackgroundMobileFallback(webhookId, false, force) : true;
+            if (!this._isCurrent(generation)) return false;
+            const legacyStandby = helperStandby && webhookStandby;
+            this._pendingBackgroundMobileSync = !legacyStandby;
+            void this._loadEngineInbox();
+            if (dismissalsChanged) {
+              this._renderIfChanged(true);
+            }
+            return true;
+          }
+          if (native.transient === true || native.available === true) {
+            if (!this._isCurrent(generation)) return false;
+            this._pendingBackgroundMobileSync = true;
+            return false;
+          }
+          this._lastBackgroundMobileNativeSignature = "";
+          if (!webhookId) {
+            await setLegacyBackgroundMobileFallback(hass, true);
+            if (!this._isCurrent(generation)) return false;
+            this._pendingBackgroundMobileSync = true;
+            return false;
+          }
+          if (config?.security?.allow_webhooks_for_non_admin === false && !hass?.user?.is_admin) {
+            if (typeof console !== "undefined" && typeof console.warn === "function") {
+              console.warn("Nodalia Notifications Card: background mobile sync webhook blocked for non-admin user (security.allow_webhooks_for_non_admin=false).");
+            }
+            await setLegacyBackgroundMobileFallback(hass, true);
+            return false;
+          }
+          const payload = buildBackgroundMobileWebhookPayload(config, hass, { enabled: true });
+          if (backgroundMobilePayloadOverLimit(payload)) {
+            if (typeof console !== "undefined" && typeof console.warn === "function") {
+              console.warn(
+                `Nodalia Notifications Card: background mobile config exceeds ${BACKGROUND_MOBILE_MAX_CHUNKS} chunks (${payload.chunk_count}); sync skipped.`
+              );
+            }
+            this._lastBackgroundMobileSyncSignature = "";
+            if (!this._isCurrent(generation)) return false;
+            this._pendingBackgroundMobileSync = true;
+            await setLegacyBackgroundMobileFallback(hass, true);
+            return false;
+          }
+          const signature = `${webhookId}:${payload.config_hash}:${payload.chunk_count}`;
+          if (!force && signature === this._lastBackgroundMobileSyncSignature) {
+            await setLegacyBackgroundMobileFallback(hass, true);
+            return true;
+          }
+          const post = typeof window !== "undefined" && window.NodaliaUtils?.postHomeAssistantWebhook;
+          if (typeof post !== "function") {
+            if (!this._isCurrent(generation)) return false;
+            this._pendingBackgroundMobileSync = true;
+            return false;
+          }
+          try {
+            const ok = Boolean(await post(webhookId, payload, hass));
+            if (!this._isCurrent(generation)) return false;
+            if (ok) {
+              this._lastBackgroundMobileSyncSignature = signature;
+              this._pendingBackgroundMobileSync = false;
+              await setLegacyBackgroundMobileFallback(hass, true);
+            } else {
+              if (!this._isCurrent(generation)) return false;
+              this._pendingBackgroundMobileSync = true;
+            }
+            return ok;
+          } catch (_error) {
+            if (!this._isCurrent(generation)) return false;
+            this._pendingBackgroundMobileSync = true;
+            return false;
+          }
+        } catch {
           return false;
+        } finally {
+          if (this._isCurrent(generation)) {
+            this._backgroundSyncInFlight = false;
+            if (this._backgroundSyncQueued) {
+              this._backgroundSyncQueued = false;
+              this._scheduleBackgroundMobileSync(320);
+            }
+          }
         }
       }
       async _syncLegacyBackgroundMobileFallback(webhookId, enabled, force = false) {
-        if (this._config?.security?.allow_webhooks_for_non_admin === false && !this._hass?.user?.is_admin) {
+        const hass = this._hass;
+        const config = this._config;
+        const generation = this._generation;
+        if (!this._isCurrent(generation)) return false;
+        if (this._config?.security?.allow_webhooks_for_non_admin === false && !hass?.user?.is_admin) {
           return false;
         }
-        const payload = this._buildBackgroundMobileWebhookPayload({ enabled });
+        const payload = buildBackgroundMobileWebhookPayload(config, hass, { enabled });
         if (backgroundMobilePayloadOverLimit(payload)) {
           return false;
         }
@@ -1752,7 +1836,8 @@
           return false;
         }
         try {
-          const ok = Boolean(await post(webhookId, payload, this._hass));
+          const ok = Boolean(await post(webhookId, payload, hass));
+          if (!this._isCurrent(generation)) return false;
           if (ok) {
             this._lastBackgroundMobileSyncSignature = signature;
           }
@@ -1766,29 +1851,30 @@
        * devices are reflected here. The Engine remains the authority for delivered-alert history.
        */
       async _loadEngineInbox() {
-        const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
-        if (!backend || typeof backend.listNotificationInbox !== "function" || !this._hass) {
-          return false;
-        }
+        const backend = window.NodaliaBackend;
+        const hass = this._hass;
+        const generation = this._generation;
+        if (!backend || typeof backend.listNotificationInbox !== "function" || !hass || !this._isCurrent(generation)) return false;
+        const profileId = backend.notificationProfileId(this._config);
         try {
-          const status = await backend.status(this._hass, { silent: true });
-          if (!backend.hasCapability(status, "notifications_inbox")) {
-            return false;
-          }
-          const result = await backend.listNotificationInbox(this._hass, backend.notificationProfileId(this._config));
-          const inbox = Array.isArray(result?.inbox) ? result.inbox : [];
+          const status = await backend.status(hass, { silent: true });
+          if (!this._isCurrent(generation) || !backend.hasCapability(status, "notifications_inbox")) return false;
+          const result = await backend.listNotificationInbox(hass, profileId);
+          if (!this._isCurrent(generation)) return false;
+          const rawInbox = notificationRecord(result).inbox;
+          const inbox = Array.isArray(rawInbox) ? rawInbox.filter(isObject) : [];
           this._engineInbox = inbox;
-          const dismissed = inbox.filter((entry) => entry?.dismissed === true).map((entry) => String(entry?.alert_id || entry?.id || "")).filter(Boolean);
-          if (this._mergeNativeDismissed(dismissed)) {
-            this._renderIfChanged(true);
-          }
+          if (this._mergeNativeDismissed(inbox.filter((entry) => entry.dismissed === true).map((entry) => String(entry.alert_id || entry.id || "")).filter(Boolean))) this._renderIfChanged(true);
           return true;
-        } catch (_error) {
+        } catch {
           return false;
         }
       }
       _getStorageKey() {
-        return this._config.storage_key || STORAGE_KEY;
+        const prefix = this._config.storage_key || STORAGE_KEY;
+        const server = this._hass?.hassUrl?.("") || (typeof window !== "undefined" ? window.location?.origin : "") || "local";
+        const user = this._hass?.user?.id || "anonymous";
+        return `${prefix}:${encodeURIComponent(server)}:${encodeURIComponent(user)}`;
       }
       _getMobileStorageKey() {
         return `${this._getStorageKey()}:mobile_sent`;
@@ -1839,19 +1925,16 @@
         return changed;
       }
       _saveNativeDismissed(ids) {
-        const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
-        if (!backend || !this._hass) {
-          return;
-        }
+        const backend = window.NodaliaBackend;
+        const hass = this._hass;
+        const generation = this._generation;
+        if (!backend || !hass) return;
         const profileId = backend.notificationProfileId(this._config);
-        [...new Set((Array.isArray(ids) ? ids : [ids]).flatMap((id) => this._nativeDismissalIds(id)))].forEach((id) => {
-          void backend.status(this._hass, { silent: true }).then((status) => {
-            if (status?.available && status.capabilities?.includes("notifications_shared_dismissals")) {
-              return backend.dismissNotification(this._hass, id, profileId);
-            }
-            return null;
-          }).catch(() => {
-          });
+        const tokens = [...new Set((Array.isArray(ids) ? ids : [ids]).flatMap((id) => this._nativeDismissalIds(id)))];
+        void backend.status(hass, { silent: true }).then((status) => {
+          if (!this._isCurrent(generation) || !backend.hasCapability(status, "notifications_shared_dismissals")) return;
+          return Promise.all(tokens.map((id) => backend.dismissNotification(hass, id, profileId)));
+        }).catch(() => {
         });
       }
       _parseDismissedTokens(value) {
@@ -2041,19 +2124,14 @@
       }
       _saveSharedDismissed() {
         const entityId = this._config.dismissed_entity;
-        if (!entityId || !this._hass || typeof this._hass.callService !== "function") {
-          return;
-        }
-        const hashes = [...new Set([...this._dismissed].map((id) => String(id).includes(":") ? this._dismissKey(id) : String(id)).filter(Boolean))].slice(-30);
+        const hass = this._hass;
+        const generation = this._generation;
+        if (!entityId || !hass?.callService) return;
+        const hashes = [...new Set([...this._dismissed].map((id) => id.includes(":") ? this._dismissKey(id) : id).filter(Boolean))].slice(-30);
         const value = hashes.length ? `v1:${hashes.join("|")}` : "";
-        if (value === this._lastDismissedHelperState) {
-          return;
-        }
+        if (value === this._lastDismissedHelperState) return;
         this._lastDismissedHelperState = value;
-        Promise.resolve().then(() => this._hass.callService("input_text", "set_value", {
-          entity_id: entityId,
-          value
-        })).catch(() => {
+        void Promise.resolve().then(() => this._isCurrent(generation) ? hass.callService?.("input_text", "set_value", { entity_id: entityId, value }) : void 0).catch(() => {
         });
       }
       _calendarDismissalsHydrated() {
@@ -2105,149 +2183,124 @@
         return this._dismissed.has(item.id) || this._dismissed.has(this._dismissKey(item.id)) || this._nativeDismissalIds(item.id).some((id) => this._dismissed.has(id));
       }
       _refreshCalendarEventsSoon(delay = null) {
-        if (!this.isConnected || !this._hass || !this._config.calendar_entities.length) {
-          return;
-        }
-        if (this._calendarRefreshTimer && delay === null) {
-          return;
-        }
+        if (!this.isConnected || !this._hass || !this._config.calendar_entities.length || this._calendarRefreshInFlight) return;
+        if (this._calendarRefreshTimer && delay === null) return;
+        const generation = this._generation;
+        const now = /* @__PURE__ */ new Date();
+        const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime();
         const intervalMs = this._config.refresh_interval * 1e3;
-        const elapsed = Date.now() - this._lastCalendarRefresh;
-        const nextDelay = delay === null ? Math.max(0, intervalMs - elapsed) : Math.max(0, delay);
-        if (this._calendarRefreshTimer) {
-          window.clearTimeout(this._calendarRefreshTimer);
-        }
+        const nextDelay = delay === null ? Math.min(Math.max(0, intervalMs - (Date.now() - this._lastCalendarRefresh)), Math.max(0, midnight - Date.now() + 50)) : Math.max(0, delay);
+        if (this._calendarRefreshTimer) window.clearTimeout(this._calendarRefreshTimer);
         this._calendarRefreshTimer = window.setTimeout(() => {
+          if (!this._isCurrent(generation)) return;
           this._calendarRefreshTimer = 0;
-          this._refreshCalendarEvents();
+          void this._refreshCalendarEvents();
         }, nextDelay);
       }
       async _refreshCalendarEvents() {
-        if (!this._hass || !this._config.calendar_entities.length || this._calendarRefreshInFlight) {
-          return;
-        }
-        if (typeof this._hass.callApi !== "function") {
+        const hass = this._hass;
+        const generation = this._generation;
+        const config = this._config;
+        if (!hass || !config.calendar_entities.length || this._calendarRefreshInFlight || !this._isCurrent(generation)) return;
+        if (this._calendarRefreshTimer) window.clearTimeout(this._calendarRefreshTimer);
+        this._calendarRefreshTimer = 0;
+        if (!hass.callApi) {
           this._calendarEvents = [];
+          this._rebuildCalendarEventsSignature();
           this._calendarError = this._text("messages.calendarQueryFailed", "Could not query calendars.");
           this._renderIfChanged(true);
           return;
         }
+        const query = hass.callApi.bind(hass);
         this._calendarRefreshInFlight = true;
         this._calendarLoading = true;
         this._renderIfChanged(true);
         const now = /* @__PURE__ */ new Date();
-        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-        const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
         const events = [];
         try {
-          for (const entityId of this._config.calendar_entities) {
-            if (!this.isConnected) {
-              return;
-            }
+          for (const entityId of config.calendar_entities) {
+            if (!this._isCurrent(generation)) return;
             const path = `calendars/${encodeURIComponent(entityId)}?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`;
-            const raw = await this._hass.callApi("GET", path);
-            if (!this.isConnected) {
-              return;
-            }
-            normalizeCalendarFetchResult(raw).forEach((event) => {
-              events.push({ ...event, _entity: entityId });
-            });
+            const raw = await query("GET", path);
+            if (!this._isCurrent(generation)) return;
+            normalizeCalendarFetchResult(raw).forEach((event) => events.push({ ...event, _entity: entityId }));
           }
-          events.sort((left, right) => {
-            const a = calendarEventDate(left.start)?.getTime() || 0;
-            const b = calendarEventDate(right.start)?.getTime() || 0;
-            return a - b;
-          });
+          events.sort((a, b) => (calendarEventDate(a.start)?.getTime() ?? 0) - (calendarEventDate(b.start)?.getTime() ?? 0));
           this._calendarEvents = events;
           this._calendarError = "";
-          this._lastCalendarRefresh = Date.now();
-          this._rebuildCalendarEventsSignature();
-        } catch (_error) {
+        } catch {
+          if (!this._isCurrent(generation)) return;
           this._calendarEvents = [];
           this._calendarError = this._text("messages.calendarTodayLoadFailed", "Could not load today's calendar events.");
         } finally {
-          this._calendarLoading = false;
-          this._calendarRefreshInFlight = false;
-          if (!this.isConnected) {
-            return;
+          if (this._isCurrent(generation)) {
+            if (Date.now() >= end.getTime()) {
+              this._calendarEvents = [];
+              this._calendarError = "";
+              this._lastCalendarRefresh = 0;
+            } else this._lastCalendarRefresh = Date.now();
+            this._rebuildCalendarEventsSignature();
+            this._calendarLoading = false;
+            this._calendarRefreshInFlight = false;
+            this._renderIfChanged(true);
+            this._refreshCalendarEventsSoon();
           }
-          this._renderIfChanged(true);
-          this._refreshCalendarEventsSoon();
         }
       }
       _refreshWeatherForecastsSoon(delay = null) {
-        if (!this.isConnected || !this._hass || !this._config.weather_entities.length) {
-          return;
-        }
-        if (this._weatherRefreshTimer && delay === null) {
-          return;
-        }
+        if (!this.isConnected || !this._hass || !this._config.weather_entities.length || this._weatherRefreshInFlight) return;
+        if (this._weatherRefreshTimer && delay === null) return;
+        const generation = this._generation;
         const intervalMs = Math.max(this._config.refresh_interval * 1e3, 10 * 60 * 1e3);
-        const elapsed = Date.now() - this._lastWeatherRefresh;
-        const nextDelay = delay === null ? Math.max(0, intervalMs - elapsed) : Math.max(0, delay);
-        if (this._weatherRefreshTimer) {
-          window.clearTimeout(this._weatherRefreshTimer);
-        }
+        const nextDelay = delay === null ? Math.max(0, intervalMs - (Date.now() - this._lastWeatherRefresh)) : Math.max(0, delay);
+        if (this._weatherRefreshTimer) window.clearTimeout(this._weatherRefreshTimer);
         this._weatherRefreshTimer = window.setTimeout(() => {
+          if (!this._isCurrent(generation)) return;
           this._weatherRefreshTimer = 0;
-          this._refreshWeatherForecasts();
+          void this._refreshWeatherForecasts();
         }, nextDelay);
       }
       async _refreshWeatherForecasts() {
-        if (!this._hass || !this._config.weather_entities.length || this._weatherRefreshInFlight) {
-          return;
-        }
+        const hass = this._hass;
+        const config = this._config;
+        const generation = this._generation;
+        if (!hass || !config.weather_entities.length || this._weatherRefreshInFlight || !this._isCurrent(generation)) return;
+        if (this._weatherRefreshTimer) window.clearTimeout(this._weatherRefreshTimer);
+        this._weatherRefreshTimer = 0;
         this._weatherRefreshInFlight = true;
         const next = {};
-        const legacyForecasts = () => {
-          this._config.weather_entities.forEach((entityId) => {
-            const rows = normalizeWeatherForecastResult(this._hass.states?.[entityId]?.attributes?.forecast, entityId);
-            if (rows.length && !next[entityId]?.length) {
-              next[entityId] = rows;
-            }
-          });
-        };
         try {
-          if (typeof this._hass.callWS === "function") {
+          for (const entityId of config.weather_entities) {
             for (const forecastType of ["hourly", "daily"]) {
-              if (!this.isConnected) {
-                return;
-              }
+              if (!this._isCurrent(generation)) return;
               try {
-                const response = await this._hass.callWS({
-                  type: "weather/get_forecasts",
-                  entity_ids: this._config.weather_entities,
-                  forecast_type: forecastType
-                });
-                this._config.weather_entities.forEach((entityId) => {
-                  const rows = normalizeWeatherForecastResult(response, entityId);
-                  if (rows.length && !next[entityId]?.length) {
-                    next[entityId] = rows;
-                  }
-                });
-                if (this._config.weather_entities.every((entityId) => next[entityId]?.length)) {
+                const response = hass.callWS ? await hass.callWS({ type: "call_service", domain: "weather", service: "get_forecasts", service_data: { type: forecastType }, target: { entity_id: entityId }, return_response: true }) : hass.callService ? await hass.callService("weather", "get_forecasts", { type: forecastType }, { entity_id: entityId }, false, true) : null;
+                if (!this._isCurrent(generation)) return;
+                const root = notificationRecord(response);
+                const data = isObject(root.response) ? root.response : root;
+                const row = notificationRecord(data[entityId]);
+                if (Array.isArray(row.forecast)) {
+                  next[entityId] = normalizeWeatherForecastResult(row.forecast, entityId);
                   break;
                 }
-              } catch (_error) {
+              } catch {
+                if (!this._isCurrent(generation)) return;
               }
             }
+            if (!this._isCurrent(generation)) return;
+            if (next[entityId] === void 0) next[entityId] = normalizeWeatherForecastResult(hass.states[entityId]?.attributes.forecast, entityId);
           }
-          legacyForecasts();
-          this._weatherForecasts = next;
-          this._lastWeatherRefresh = Date.now();
-          this._rebuildWeatherForecastsSignature();
-        } catch (_error) {
-          legacyForecasts();
           this._weatherForecasts = next;
           this._lastWeatherRefresh = Date.now();
           this._rebuildWeatherForecastsSignature();
         } finally {
-          this._weatherRefreshInFlight = false;
-          if (!this.isConnected) {
-            return;
+          if (this._isCurrent(generation)) {
+            this._weatherRefreshInFlight = false;
+            this._renderIfChanged(true);
+            this._refreshWeatherForecastsSoon();
           }
-          this._renderIfChanged(true);
-          this._refreshWeatherForecastsSoon();
         }
       }
       _getRawNotifications() {
@@ -2276,7 +2329,7 @@
             return;
           }
           const summary = String(event.summary || event.title || this._text("fallbackEvent", "Event")).trim();
-          const allDay = String(event.start?.date || "").length > 0 || typeof event.start === "string" && event.start.length <= 10;
+          const allDay = String(notificationRecord(event.start).date || "").length > 0 || typeof event.start === "string" && event.start.length <= 10;
           const timeText = allDay ? this._text("allDay", "All day") : formatTime(start);
           const startsSoon = !allDay && start.getTime() - now.getTime() <= 90 * 60 * 1e3 && start.getTime() >= now.getTime();
           const eventKey = `${event._entity || ""}|${event.uid || event.id || ""}|${start.toISOString()}|${summary}`;
@@ -2369,7 +2422,7 @@
         });
         this._config.motion_entities.forEach((entityId) => {
           const state = hass?.states?.[entityId];
-          if (stateIsOn(state)) {
+          if (state && stateIsOn(state)) {
             const sourceName = friendlyName(hass, entityId);
             add({
               id: `motion:${entityId}:${state.state}`,
@@ -2386,13 +2439,14 @@
             });
           }
         });
-        [
+        const openings = [
           ["door", this._config.door_entities, "titles.doorOpen", "Door open", "mdi:door-open"],
           ["window", this._config.window_entities, "titles.windowOpen", "Window open", "mdi:window-open-variant"]
-        ].forEach(([kind, entities, titleKey, fallbackTitle, icon]) => {
+        ];
+        openings.forEach(([kind, entities, titleKey, fallbackTitle, icon]) => {
           entities.forEach((entityId) => {
             const state = hass?.states?.[entityId];
-            if (stateIsOn(state)) {
+            if (state && stateIsOn(state)) {
               const sourceName = friendlyName(hass, entityId);
               add({
                 id: `${kind}:${entityId}:${state.state}`,
@@ -2425,19 +2479,20 @@
         if (!this._config.smart_recommendations || !this._hass) {
           return;
         }
+        const hass = this._hass;
         const tempSources = [
           ...this._config.temperature_entities.map((entityId) => ({
             entityId,
-            state: this._hass.states?.[entityId],
-            value: numericState(this._hass.states?.[entityId]),
-            unit: this._hass.states?.[entityId]?.attributes?.unit_of_measurement || "°"
+            state: hass.states?.[entityId],
+            value: numericState(hass.states?.[entityId]),
+            unit: hass.states?.[entityId]?.attributes?.unit_of_measurement || "°"
           }))
-        ].filter((item) => item.state && item.value !== null);
+        ].filter((item) => Boolean(item.state) && item.value !== null);
         const hotCandidates = tempSources.filter((item) => item.value >= this._config.thresholds.hot_temperature).filter((item) => this._presenceAllowsComfortNotification(item.entityId)).map((item) => ({ ...item, fanTarget: this._getFanTargetForSource(item.entityId) })).filter((item) => item.fanTarget).sort((left, right) => right.value - left.value);
-        const hottest = hotCandidates[0] || [...tempSources].filter((item) => item.value >= this._config.thresholds.hot_temperature).filter((item) => this._presenceAllowsComfortNotification(item.entityId)).sort((left, right) => right.value - left.value)[0];
-        const coolingClimateTarget = hottest?.value >= this._config.thresholds.hot_temperature ? this._getClimateTargetForSource(hottest.entityId, "cool") : null;
+        const hottest = hotCandidates[0] || [...tempSources].filter((item) => item.value >= this._config.thresholds.hot_temperature).filter((item) => this._presenceAllowsComfortNotification(item.entityId)).sort((left, right) => right.value - left.value).map((item) => ({ ...item, fanTarget: null }))[0];
+        const coolingClimateTarget = hottest && hottest.value >= this._config.thresholds.hot_temperature ? this._getClimateTargetForSource(hottest.entityId, "cool") : null;
         const coldest = [...tempSources].sort((left, right) => left.value - right.value)[0];
-        const heatingClimateTarget = coldest?.value <= this._config.thresholds.cold_temperature ? this._getClimateTargetForSource(coldest.entityId, "heat") : null;
+        const heatingClimateTarget = coldest && coldest.value <= this._config.thresholds.cold_temperature ? this._getClimateTargetForSource(coldest.entityId, "heat") : null;
         if (hottest && hottest.value >= this._config.thresholds.hot_temperature && hottest.fanTarget) {
           const sourceName = friendlyName(this._hass, hottest.entityId);
           const fanName = friendlyName(this._hass, hottest.fanTarget);
@@ -2499,9 +2554,9 @@
           });
         }
         this._config.humidity_entities.forEach((entityId) => {
-          const state = this._hass.states?.[entityId];
+          const state = hass.states?.[entityId];
           const value = numericState(state);
-          if (value === null) {
+          if (!state || value === null) {
             return;
           }
           if (value >= this._config.thresholds.humidity_high || value <= this._config.thresholds.humidity_low) {
@@ -2557,7 +2612,8 @@
         }
         const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
         const candidates = Object.keys(this._hass.states).filter((entityId) => entityId.startsWith("sensor.")).filter((entityId) => entityId.includes(vacuumObject) || entityId.includes("roborock")).filter((entityId) => ["error", "fault", "fallo", "erro"].some((token) => entityId.includes(token))).sort((left, right) => left.localeCompare(right, sortLoc));
-        return candidates.map((entityId) => this._hass.states[entityId]).find((stateObj) => this._getVacuumErrorValue(stateObj)) || null;
+        const hass = this._hass;
+        return candidates.map((entityId) => hass.states[entityId]).find((stateObj) => this._getVacuumErrorValue(stateObj)) || null;
       }
       _getPresenceSensorForSource(sourceEntityId) {
         const sensors = this._config.motion_entities.filter((entityId) => this._hass?.states?.[entityId]);
@@ -2628,7 +2684,8 @@
         if (!this._config.smart_recommendations || !this._hass || !this._config.media_player_entities.length || !this._config.motion_entities.length) {
           return;
         }
-        const vacantSensors = this._config.motion_entities.map((entityId) => ({ entityId, state: this._hass.states?.[entityId] })).filter((item) => stateIsVacant(item.state) && minutesSinceChanged(item.state) >= this._config.thresholds.media_absence_minutes);
+        const hass = this._hass;
+        const vacantSensors = this._config.motion_entities.map((entityId) => ({ entityId, state: hass.states?.[entityId] })).filter((item) => stateIsVacant(item.state) && minutesSinceChanged(item.state) >= this._config.thresholds.media_absence_minutes);
         vacantSensors.forEach((sensor) => {
           const mediaTarget = this._sameAreaTarget(sensor.entityId, this._config.media_player_entities, (_entityId, stateObj) => {
             const state = String(stateObj?.state || "").toLowerCase();
@@ -2640,7 +2697,7 @@
           const sourceName = friendlyName(this._hass, sensor.entityId);
           const mediaName = friendlyName(this._hass, mediaTarget);
           add({
-            id: `media-left-on:${sensor.entityId}:${mediaTarget}:${String(this._hass.states?.[mediaTarget]?.state || "")}`,
+            id: `media-left-on:${sensor.entityId}:${mediaTarget}:${String(hass.states?.[mediaTarget]?.state || "")}`,
             title: this._smartTitle("media_left_on", "titles.mediaLeftOn", "Media on with no presence", { source: sourceName, media: mediaName }, mediaTarget),
             message: this._smartMessage("media_left_on", "messages.mediaLeftOn", "{media} is still on and {source} shows no presence.", { source: sourceName, media: mediaName }, mediaTarget),
             icon: "mdi:television-off",
@@ -2665,7 +2722,7 @@
         return (this._config.smart_entity_overrides || []).find((item) => item.entity === target) || null;
       }
       _smartConfig(kind, entityId = "") {
-        const base = this._config.smart_notifications?.[kind] || {};
+        const base = notificationRecord(this._config.smart_notifications[kind]);
         const override = this._smartEntityOverride(entityId);
         if (!override) {
           return base;
@@ -2694,7 +2751,7 @@
         const config = this._smartConfig(kind, entityId);
         const tapAction = this._buildNativeNotificationAction(config.tap_action, {
           entityId,
-          label: config.action_label || fallbackUrlLabel || this._text("actions.open", "Open")
+          label: String(config.action_label || fallbackUrlLabel || this._text("actions.open", "Open"))
         });
         if (tapAction) {
           return tapAction;
@@ -2702,7 +2759,7 @@
         const url = window.NodaliaUtils?.sanitizeActionUrl?.(config.url, { allowRelative: true }) || "";
         if (url) {
           return {
-            label: config.action_label || fallbackUrlLabel || this._text("actions.open", "Open"),
+            label: String(config.action_label || fallbackUrlLabel || this._text("actions.open", "Open")),
             type: "url",
             url,
             newTab: true
@@ -2741,10 +2798,6 @@
           };
         }
         return null;
-      }
-      _smartMobilePolicy(entityId) {
-        const override = this._smartEntityOverride(entityId);
-        return normalizeMobilePolicy(override?.mobile ?? "auto");
       }
       _smartMobilePolicyForKind(kind, entityId = "") {
         return normalizeMobilePolicy(this._smartConfig(kind, entityId).mobile ?? "auto");
@@ -2787,10 +2840,11 @@
         if (!this._config.smart_recommendations || !this._hass || !this._config.weather_entities.length) {
           return;
         }
+        const hass = this._hass;
         const now = Date.now();
         const lookaheadMs = this._config.thresholds.rain_lookahead_hours * 60 * 60 * 1e3;
         this._config.weather_entities.forEach((entityId) => {
-          const rows = (this._weatherForecasts?.[entityId] || normalizeWeatherForecastResult(this._hass.states?.[entityId]?.attributes?.forecast, entityId)).map((row) => ({ row, date: forecastDate(row) })).filter((item) => item.date && item.date.getTime() >= now && item.date.getTime() <= now + lookaheadMs).sort((left, right) => left.date.getTime() - right.date.getTime());
+          const rows = (this._weatherForecasts?.[entityId] || normalizeWeatherForecastResult(hass.states?.[entityId]?.attributes?.forecast, entityId)).map((row) => ({ row, date: forecastDate(row) })).filter((item) => Boolean(item.date) && (item.date?.getTime() ?? -Infinity) >= now && (item.date?.getTime() ?? Infinity) <= now + lookaheadMs).sort((left, right) => left.date.getTime() - right.date.getTime());
           const rainy = rows.find(({ row }) => {
             const probability = forecastNumber(row, [
               "precipitation_probability",
@@ -2826,6 +2880,7 @@
         if (!this._config.smart_recommendations || !this._hass) {
           return;
         }
+        const hass = this._hass;
         const groups = [
           {
             entities: this._config.battery_entities,
@@ -2875,10 +2930,11 @@
         ];
         groups.forEach((group) => {
           group.entities.forEach((entityId) => {
-            const state = this._hass.states?.[entityId];
+            const state = hass.states?.[entityId];
             const value = numericState(state);
+            if (!state || value === null) return;
             const matchesThreshold = group.mode === "above" ? value >= group.threshold : value <= group.threshold;
-            if (!state || value === null || !matchesThreshold) {
+            if (!matchesThreshold) {
               return;
             }
             const sourceName = friendlyName(this._hass, entityId);
@@ -2999,9 +3055,6 @@
           newTab: true
         };
       }
-      _severityScore(severity) {
-        return { critical: 4, warning: 3, success: 2, info: 1 }[normalizeSeverity(severity)] || 1;
-      }
       _backgroundMobileSuppressesForeground() {
         const background = this._config?.background_mobile || {};
         if (background.enabled !== true) {
@@ -3051,18 +3104,23 @@
         }
       }
       _scheduleMobileNotifyDrain() {
-        if (this._mobileNotifyTimer || !this._mobileNotifyQueue?.length) {
+        if (!this.isConnected || this._mobileDraining || this._mobileNotifyTimer || !this._mobileNotifyQueue?.length) {
           return;
         }
+        const generation = this._generation;
         this._mobileNotifyTimer = window.setTimeout(() => {
+          if (!this._isCurrent(generation)) return;
           this._mobileNotifyTimer = 0;
           const batch = this._mobileNotifyQueue.splice(0, 4);
           if (!batch.length) {
             return;
           }
-          Promise.resolve().then(() => this._flushMobileNotifications(batch)).catch((error) => {
+          this._mobileDraining = true;
+          Promise.resolve().then(() => this._isCurrent(generation) ? this._flushMobileNotifications(batch) : void 0).catch((error) => {
             console.warn("Nodalia Notifications Card: mobile notification batch failed.", error);
           }).finally(() => {
+            if (!this._isCurrent(generation)) return;
+            this._mobileDraining = false;
             if (this._mobileNotifyQueue.length) {
               this._scheduleMobileNotifyDrain();
             }
@@ -3104,11 +3162,14 @@
         return payload;
       }
       async _flushMobileNotifications(items) {
-        if (!this._hass || typeof this._hass.callService !== "function" || !this.isConnected) {
+        const hass = this._hass;
+        const generation = this._generation;
+        const config = this._config;
+        if (!hass || typeof hass.callService !== "function" || !this.isConnected) {
           return;
         }
         for (const item of items) {
-          if (!this.isConnected) {
+          if (!this._isCurrent(generation)) {
             return;
           }
           if (!this._shouldSendMobileNotification(item)) {
@@ -3119,17 +3180,18 @@
             continue;
           }
           const legacyPayload = this._buildLegacyMobilePayload(item, hash);
-          const notifyEntities = Array.isArray(this._config.mobile_notifications.entities) ? this._config.mobile_notifications.entities : [];
-          const legacyServices = Array.isArray(this._config.mobile_notifications.services) ? this._config.mobile_notifications.services : [];
+          const notifyEntities = Array.isArray(config.mobile_notifications.entities) ? config.mobile_notifications.entities : [];
+          const legacyServices = Array.isArray(config.mobile_notifications.services) ? config.mobile_notifications.services : [];
           const entityPayload = {
             entity_id: notifyEntities,
             title: legacyPayload.title,
             message: legacyPayload.message
           };
           await Promise.all([
-            notifyEntities.length ? Promise.resolve().then(() => this._hass.callService("notify", "send_message", entityPayload)).then(() => true, () => false) : Promise.resolve(false),
-            ...legacyServices.map((service) => Promise.resolve().then(() => this._callInternalService(service, legacyPayload)).then(() => true, () => false))
+            notifyEntities.length ? Promise.resolve().then(() => this._isCurrent(generation) ? hass.callService?.("notify", "send_message", entityPayload) : Promise.reject(new Error("Retired notification context"))).then(() => true, () => false) : Promise.resolve(false),
+            ...legacyServices.map((service) => Promise.resolve().then(() => this._isCurrent(generation) ? this._callInternalService(service, legacyPayload) : Promise.reject(new Error("Retired notification context"))).then(() => true, () => false))
           ]).then((results) => {
+            if (!this._isCurrent(generation)) return;
             const delivered = results.some(Boolean);
             if (delivered) {
               this._mobileSent.add(hash);
@@ -3137,7 +3199,7 @@
             }
           });
         }
-        this._saveMobileSent();
+        if (this._isCurrent(generation)) this._saveMobileSent();
       }
       _getNotifications(options = {}) {
         const raw = this._getRawNotifications();
@@ -3183,7 +3245,11 @@
           ...this._config.custom_notifications.map((item) => item.entity).filter(Boolean),
           ...this._config.external_alerts.map((item) => item.entity).filter(Boolean)
         ];
-        const templateEntities = this._config.custom_notifications.flatMap((item) => [
+        const templateEntities = [
+          ...this._config.custom_notifications,
+          ...this._config.smart_entity_overrides,
+          ...Object.values(this._config.smart_notifications).map(notificationRecord)
+        ].flatMap((item) => [
           item.title,
           item.message,
           item.action_label,
@@ -3199,7 +3265,7 @@
         const chunks = [];
         for (const entityId of this._getTrackedEntityIds()) {
           const state = hass.states?.[entityId];
-          chunks.push(`${entityId}:${state?.state ?? ""}:${state?.last_updated ?? state?.last_changed ?? ""}`);
+          chunks.push(`${entityId}:${state?.state ?? ""}:${state?.last_updated ?? state?.last_changed ?? ""}:${JSON.stringify(state?.attributes ?? {})}`);
         }
         for (const entityId of this._config.vacuum_entities) {
           const errorState = this._getVacuumErrorState(entityId);
@@ -3220,7 +3286,7 @@
         if (!dirty) {
           for (const entityId of ids) {
             const state = hass.states?.[entityId];
-            const revision = `${state?.state ?? ""}:${state?.last_updated ?? state?.last_changed ?? ""}`;
+            const revision = `${state?.state ?? ""}:${state?.last_updated ?? state?.last_changed ?? ""}:${JSON.stringify(state?.attributes ?? {})}`;
             if (this._trackedEntityRevision.get(entityId) !== revision) {
               this._trackedEntityRevision.set(entityId, revision);
               dirty = true;
@@ -3243,7 +3309,7 @@
             const state = hass.states?.[entityId];
             this._trackedEntityRevision.set(
               entityId,
-              `${state?.state ?? ""}:${state?.last_updated ?? state?.last_changed ?? ""}`
+              `${state?.state ?? ""}:${state?.last_updated ?? state?.last_changed ?? ""}:${JSON.stringify(state?.attributes ?? {})}`
             );
           }
           for (const entityId of this._config.vacuum_entities) {
@@ -3292,6 +3358,7 @@
           this._syncTrackedEntitiesStamp(hass);
         }
         parts.push(this._trackedEntitiesStamp);
+        parts.push(JSON.stringify(hass?.entities ?? hass?.entityRegistry ?? hass?.entity_registry ?? {}), JSON.stringify(hass?.devices ?? {}), JSON.stringify(hass?.locale ?? {}));
         return parts.join("||");
       }
       _scheduleQuietHoursWake(now = /* @__PURE__ */ new Date()) {
@@ -3303,7 +3370,9 @@
         if (!Number.isFinite(delay) || delay === null || !this.isConnected) {
           return;
         }
+        const generation = this._generation;
         this._quietHoursWakeTimer = window.setTimeout(() => {
+          if (!this._isCurrent(generation)) return;
           this._quietHoursWakeTimer = 0;
           if (!this.isConnected) {
             return;
@@ -3338,7 +3407,7 @@
         } catch (_error) {
         }
         if (this._config.haptics?.fallback_vibrate && typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
-          navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.medium);
+          navigator.vibrate(Object.entries(HAPTIC_PATTERNS).find(([key]) => key === style)?.[1] ?? HAPTIC_PATTERNS.medium);
         }
       }
       _getAnimationSettings() {
@@ -3369,7 +3438,9 @@
         element.getBoundingClientRect();
         element.classList.add("is-pressing");
         const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+        const generation = this._generation;
         const done = () => {
+          if (!this._isCurrent(generation)) return;
           if (!element.isConnected) {
             return;
           }
@@ -3392,7 +3463,7 @@
         });
       }
       _onClick(event) {
-        const button = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.action);
+        const button = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.action));
         if (!button) {
           return;
         }
@@ -3412,7 +3483,9 @@
             this._triggerHaptic("selection");
             this._renderIfChanged(true);
             const collapseMs = Math.max(140, Math.round(animations.contentDuration * 0.68));
+            const generation = this._generation;
             this._stackCollapseTimer = window.setTimeout(() => {
+              if (!this._isCurrent(generation)) return;
               this._stackCollapseTimer = 0;
               this._expanded = false;
               this._collapsingStack = false;
@@ -3450,7 +3523,7 @@
         }
         if (action === "run-notification") {
           const notification = this._lastNotifications.find((item) => item.id === button.dataset.id);
-          this._runNotificationAction(notification);
+          void this._runNotificationAction(notification).catch((error) => console.warn("Nodalia Notifications Card: action failed.", error));
         }
       }
       async _runNotificationAction(notification) {
@@ -3536,12 +3609,12 @@
           return false;
         }
         const [domain] = normalizedService.split(".");
-        const domains = security.allowed_service_domains || [];
-        const services = security.allowed_services || [];
+        const domains = Array.isArray(security.allowed_service_domains) ? security.allowed_service_domains : [];
+        const services = Array.isArray(security.allowed_services) ? security.allowed_services : [];
         if (!domains.length && !services.length) {
           return false;
         }
-        return services.includes(normalizedService) || domains.includes(domain);
+        return services.includes(normalizedService) || domains.includes(domain || "");
       }
       _callNamedService(serviceValue, data = {}, target = null) {
         if (!this._hass || typeof this._hass.callService !== "function") {
@@ -3555,7 +3628,7 @@
         if (!domain || !service) {
           return Promise.resolve();
         }
-        return this._hass.callService(domain, service, data, target || void 0);
+        return requestHassService(this, this._hass, domain, service, data, target);
       }
       _callInternalService(serviceValue, data = {}, target = null) {
         if (!this._hass || typeof this._hass.callService !== "function") {
@@ -3565,7 +3638,7 @@
         if (!domain || !service) {
           return Promise.resolve();
         }
-        return this._hass.callService(domain, service, data, target || void 0);
+        return requestHassService(this, this._hass, domain, service, data, target);
       }
       _mobileDeliveryHint(item) {
         const state = String(item?.mobileDeliveryState || "");
@@ -3619,7 +3692,8 @@
         const chips = this._notificationChips(item);
         const mobileHint = this._mobileDeliveryHint(item);
         const accent = tint || this._severityAccent(item.severity);
-        const stateForIcon = this._hass?.states?.[item.entity || action?.entity];
+        const entityId = item.entity || action?.entity;
+        const stateForIcon = entityId ? this._hass?.states[entityId] : void 0;
         const darkenIcon = shouldDarkenNotificationIconGlyph(stateForIcon, accent);
         const iconColor = darkenIcon ? `color-mix(in srgb, var(--primary-text-color) 60%, ${accent})` : "var(--notification-accent)";
         const index = Math.max(0, Number(options.index) || 0);
@@ -3688,23 +3762,35 @@
         }
       }
       _render() {
+        const root = this.shadowRoot;
+        const active = root?.activeElement;
+        const action = active instanceof HTMLElement ? active.dataset.action : void 0;
+        const id = active instanceof HTMLElement ? active.dataset.id : void 0;
+        this._renderContent();
+        if (action && root) {
+          const controls = [...root.querySelectorAll("[data-action]")];
+          const restored = controls.find((node) => node.dataset.action === action && node.dataset.id === id);
+          (restored ?? controls.find((node) => node.dataset.action === action) ?? controls[0])?.focus({ preventScroll: true });
+        }
+      }
+      _renderContent() {
         if (!this.shadowRoot) {
           return;
         }
         const config = this._config;
         const styles = {
           card: {
-            background: sanitizeCssRuntimeValue(config.styles.card.background, DEFAULT_CONFIG.styles.card.background),
-            border: sanitizeCssRuntimeValue(config.styles.card.border, DEFAULT_CONFIG.styles.card.border),
-            border_radius: sanitizeCssRuntimeValue(config.styles.card.border_radius, DEFAULT_CONFIG.styles.card.border_radius),
-            box_shadow: sanitizeCssRuntimeValue(config.styles.card.box_shadow, DEFAULT_CONFIG.styles.card.box_shadow),
-            padding: sanitizeCssRuntimeValue(config.styles.card.padding, DEFAULT_CONFIG.styles.card.padding),
-            gap: sanitizeCssRuntimeValue(config.styles.card.gap, DEFAULT_CONFIG.styles.card.gap)
+            background: sanitizeCssRuntimeValue(notificationRecord(config.styles.card).background, DEFAULT_CONFIG.styles.card.background),
+            border: sanitizeCssRuntimeValue(notificationRecord(config.styles.card).border, DEFAULT_CONFIG.styles.card.border),
+            border_radius: sanitizeCssRuntimeValue(notificationRecord(config.styles.card).border_radius, DEFAULT_CONFIG.styles.card.border_radius),
+            box_shadow: sanitizeCssRuntimeValue(notificationRecord(config.styles.card).box_shadow, DEFAULT_CONFIG.styles.card.box_shadow),
+            padding: sanitizeCssRuntimeValue(notificationRecord(config.styles.card).padding, DEFAULT_CONFIG.styles.card.padding),
+            gap: sanitizeCssRuntimeValue(notificationRecord(config.styles.card).gap, DEFAULT_CONFIG.styles.card.gap)
           },
           icon: {
-            background: sanitizeCssRuntimeValue(config.styles.icon.background, DEFAULT_CONFIG.styles.icon.background),
-            color: sanitizeCssRuntimeValue(config.styles.icon.color, DEFAULT_CONFIG.styles.icon.color),
-            size: sanitizeCssRuntimeValue(config.styles.icon.size, DEFAULT_CONFIG.styles.icon.size)
+            background: sanitizeCssRuntimeValue(notificationRecord(config.styles.icon).background, DEFAULT_CONFIG.styles.icon.background),
+            color: sanitizeCssRuntimeValue(notificationRecord(config.styles.icon).color, DEFAULT_CONFIG.styles.icon.color),
+            size: sanitizeCssRuntimeValue(notificationRecord(config.styles.icon).size, DEFAULT_CONFIG.styles.icon.size)
           },
           title_size: sanitizeCssRuntimeValue(config.styles.title_size, DEFAULT_CONFIG.styles.title_size),
           item_radius: sanitizeCssRuntimeValue(config.styles.item_radius, DEFAULT_CONFIG.styles.item_radius),
@@ -4053,162 +4139,7 @@
           top: var(--stack-offset, 7px);
           z-index: calc(var(--stack-z, 2) - 8);
         }
-        .notifications-footer {
-          align-items: center;
-          display: flex;
-          justify-content: center;
-          margin-top: -7px;
-          position: relative;
-          z-index: 8;
-        }
-        .notifications-stack-toggle {
-          background: color-mix(in srgb, var(--primary-text-color) 12%, var(--nodalia-user-card-bg, var(--nodalia-surface-soft)));
-          border-color: color-mix(in srgb, var(--primary-text-color) 14%, var(--nodalia-border, rgba(255, 255, 255, 0.12)));
-          box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
-          gap: 4px;
-          font-size: 11px;
-          font-weight: 700;
-          height: 28px;
-          min-height: 28px;
-          padding: 0 9px;
-        }
-        .notifications-stack-toggle ha-icon {
-          --mdc-icon-size: 16px;
-        }
-        .notifications-card--animated.notifications-card--enter .notifications-empty-inline,
-        .notifications-card--animated.notifications-card--enter .notification-item {
-          animation: notifications-card-fade-up calc(var(--notifications-content-duration, 420ms) * 0.96) cubic-bezier(0.22, 0.84, 0.26, 1) both;
-          animation-delay: calc(70ms + (var(--notification-index, 0) * 40ms));
-        }
-        .notifications-card--animated.notifications-card--enter .notification-item__icon {
-          animation: notifications-card-bubble-bloom calc(var(--notifications-content-duration, 420ms) * 0.92) cubic-bezier(0.2, 0.9, 0.24, 1) both;
-          animation-delay: calc(40ms + (var(--notification-index, 0) * 40ms));
-        }
-        .notifications-card--animated.notifications-card--enter .notification-item__title,
-        .notifications-card--animated.notifications-card--enter .notification-item__message,
-        .notifications-card--animated.notifications-card--enter .notification-item__actions {
-          animation: notifications-card-fade-up calc(var(--notifications-content-duration, 420ms) * 0.72) cubic-bezier(0.22, 0.84, 0.26, 1) both;
-          animation-delay: calc(92ms + (var(--notification-index, 0) * 40ms));
-        }
-        .notifications-card--animated.notifications-card--enter .notification-item__chip {
-          animation: notifications-card-chip-pop calc(var(--notifications-content-duration, 420ms) * 0.58) cubic-bezier(0.18, 0.9, 0.22, 1.18) both;
-          animation-delay: calc(116ms + (var(--notification-index, 0) * 40ms));
-        }
-        .notifications-card--animated.notifications-card--stack-expand .notifications-list,
-        .notifications-card--animated.notifications-card--stack-collapse-final .notifications-list {
-          animation: notifications-stack-reflow calc(var(--notifications-content-duration, 420ms) * 0.72) cubic-bezier(0.18, 0.9, 0.22, 1.08) both;
-        }
-        .notifications-card--animated.notifications-card--stack-expand .notification-item {
-          animation: notifications-card-item-rise calc(var(--notifications-content-duration, 420ms) * 0.74) cubic-bezier(0.18, 0.9, 0.22, 1.08) both;
-          animation-delay: calc(var(--notification-index, 0) * 34ms);
-        }
-        .notifications-card--animated.notifications-card--stack-collapse .notification-item--collapsing-tail {
-          animation: notifications-stack-tail-out calc(var(--notifications-content-duration, 420ms) * 0.62) cubic-bezier(0.22, 0.84, 0.26, 1) both;
-          animation-delay: calc(var(--notification-exit-index, 0) * 28ms);
-          transform-origin: center top;
-        }
-        .notifications-card--animated.notifications-card--stack-collapse-final .notification-stack-card,
-        .notifications-card--animated.notifications-card--stack-collapse-final .notifications-stack-toggle {
-          animation: notifications-stack-collapse calc(var(--notifications-content-duration, 420ms) * 0.66) cubic-bezier(0.22, 0.84, 0.26, 1) both;
-        }
-        .notifications-card--animated .notifications-stack-toggle.is-pressing,
-        .notifications-card--animated .notification-item__dismiss.is-pressing,
-        .notifications-card--animated .notification-item__action.is-pressing {
-          animation: notifications-button-bounce var(--notifications-button-bounce-duration, 320ms) cubic-bezier(0.2, 0.9, 0.25, 1.35) both;
-        }
-        @keyframes notifications-card-fade-up {
-          0% {
-            opacity: 0;
-            transform: translateY(12px) scale(0.97);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-        @keyframes notifications-card-item-rise {
-          0% {
-            opacity: 0;
-            transform: translateY(8px) scale(0.94);
-          }
-          62% {
-            opacity: 1;
-            transform: translateY(0) scale(1.018);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-        @keyframes notifications-card-chip-pop {
-          0% {
-            opacity: 0;
-            transform: translateY(-4px) scale(0.86);
-          }
-          70% {
-            opacity: 1;
-            transform: translateY(1px) scale(1.05);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-        @keyframes notifications-card-bubble-bloom {
-          0% {
-            opacity: 0;
-            transform: scale(0.92);
-          }
-          58% {
-            opacity: 1;
-            transform: scale(1.04);
-          }
-          100% {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
-        @keyframes notifications-stack-reflow {
-          0% {
-            opacity: 0.7;
-            transform: translateY(-6px) scaleY(0.985);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0) scaleY(1);
-          }
-        }
-        @keyframes notifications-stack-collapse {
-          0% {
-            opacity: 0;
-            transform: translateY(8px) scale(0.94);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-        @keyframes notifications-stack-tail-out {
-          0% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-          100% {
-            opacity: 0;
-            transform: translateY(-10px) scale(0.965);
-          }
-        }
-        @keyframes notifications-button-bounce {
-          0% {
-            transform: scale(1);
-          }
-          45% {
-            transform: scale(0.94);
-          }
-          100% {
-            transform: scale(1);
-          }
-        }
+        ${notifications_motion_default}
       </style>
       <ha-card
         class="notifications-card ${hasNotifications ? "notifications-card--list" : "notifications-card--empty"} ${animations.enabled ? "notifications-card--animated" : ""} ${animateEntrance ? "notifications-card--enter" : ""} ${stackTransition ? `notifications-card--stack-${stackTransition}` : ""}"

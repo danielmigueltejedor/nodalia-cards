@@ -945,7 +945,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /_scheduleEntranceAnimationReset\(animations\.contentDuration \+ 120\)/);
   assert.match(
     source,
-    /this\._entranceAnimationTimer = window\.setTimeout\(\(\) => \{\s*this\._entranceAnimationTimer = 0;\s*if \(!this\.isConnected\) \{\s*return;\s*\}\s*this\._animateContentOnNextRender = false;/,
+    /this\._entranceAnimationTimer = window\.setTimeout\(\(\) => \{\s*if \(!this\._isCurrent\(generation\)\)\s*return;\s*this\._entranceAnimationTimer = 0;\s*if \(!this\.isConnected\) \{\s*return;\s*\}\s*this\._animateContentOnNextRender = false;/,
   );
   assert.doesNotMatch(source, /this\._animateContentOnNextRender = false;\s*this\._stackTransition = "";/);
   assert.match(source, /_renderCollapsedStackCards\(notifications, startIndex\)/);
@@ -1020,7 +1020,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /buildBackgroundMobileWebhookPayload\(normalized, hass, \{ enabled: true \}\)/);
   assert.match(source, /_syncLegacyBackgroundMobileFallback(?:FromEditor)?\([^)]*false/);
   assert.match(source, /await post\(webhookId, payload, hass\)/);
-  assert.match(source, /callService\("notify", "send_message"/);
+  assert.match(source, /callService\?\.\("notify", "send_message"/);
   assert.match(source, /_buildLegacyMobilePayload\(item, hash\)/);
   assert.match(source, /group:\s*"nodalia_notifications"/);
   assert.match(source, /channel:\s*"alarm_stream"/);
@@ -1031,7 +1031,7 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(source, /data-editor-toggle="connections"/);
   assert.match(source, /type: "calendar-popup"/);
   assert.match(source, /nodalia-calendar-card-open/);
-  assert.match(source, /weather\/get_forecasts/);
+  assert.match(source, /type: "call_service",[\s\S]*domain: "weather",[\s\S]*service: "get_forecasts"/);
   assert.match(source, /rain_probability/);
   assert.match(source, /rain_lookahead_hours/);
   assert.match(source, /function entityAreaKey/);
@@ -1162,8 +1162,8 @@ test("notifications card is bundled and supports smart dismissible notifications
   assert.match(i18n, /viewWeather/);
   assert.match(source, /_callNamedService\(serviceValue, data = \{\}, target = null\)/);
   assert.match(source, /_callInternalService\(serviceValue, data = \{\}, target = null\)/);
-  assert.match(source, /const domains = security\.allowed_service_domains \|\| \[\]/);
-  assert.match(source, /const services = security\.allowed_services \|\| \[\]/);
+  assert.match(source, /const domains = Array\.isArray\(security\.allowed_service_domains\) \? security\.allowed_service_domains : \[\]/);
+  assert.match(source, /const services = Array\.isArray\(security\.allowed_services\) \? security\.allowed_services : \[\]/);
   assert.match(source, /\.slice\(-30\)/);
   assert.doesNotMatch(source, /\.slice\(-40\)/);
   assert.match(source, /const hasContent = item\.title \|\| item\.message \|\| item\.entity/);

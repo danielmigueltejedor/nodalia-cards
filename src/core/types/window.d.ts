@@ -30,6 +30,7 @@ import type { RoomSummaryPublicApi } from "../../cards/room-summary/room-summary
 import type { AdvanceVacuumPublicApi } from "../../cards/advance-vacuum/advance-vacuum-types";
 
 interface NodaliaI18nApi {
+  translateNotificationsUi?: (hass:HomeAssistant|null|undefined, language:string, path:string, fallback?:string, values?:Record<string,unknown>)=>string;
   translateMediaPlayerState?: (hass: unknown, language: string, state: unknown) => string;
   translateMediaBrowserUi?: (hass: unknown, language: string, key: string, fallback?: string, values?: Record<string,unknown>) => string;
   translateMediaPlayerAria?: (hass: unknown, language: string, key: string, fallback?: string, values?: Record<string,unknown>) => string;

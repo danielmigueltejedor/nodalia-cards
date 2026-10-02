@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+- Check Notifications view contracts, isolate retired calendar/weather/Engine/mobile work, serialize foreground batches, preserve native focus and scope browser dismissal history by server/user. Use the current weather forecast service and keep authoritative empty results.
+
 - Check Navigation view contracts, isolate pending media/palette work across HA contexts, preserve native keyboard focus and paused progress updates, and fix shared modal Tab traversal inside shadow roots on Safari.
 
 - Check Entity view contracts, own select/history/animation work across configuration and HA context changes, retain optimistic deadlines and keyboard focus, and add in-place keyboard inspection to air-quality charts.
