@@ -94,6 +94,7 @@ function loadClimateCard() {
       querySelector() { return null; },
     },
     HTMLElement: class {
+      isConnected=true;
       attachShadow() {
         this.shadowRoot = {
           addEventListener() {},
@@ -248,13 +249,14 @@ test("advanced vacuum rooms mode cannot fall through to whole-house cleaning", (
 test("climate popup viewport constraints remain valid CSS functions", () => {
   const source = read("nodalia-climate-card.js");
   assert.doesNotMatch(source, /min\(100vw\s*-\s*\d+px,/);
-  assert.match(source, /min\(calc\(100vw - 24px\), 920px\)/);
-  assert.match(source, /min\(calc\(100vw - 16px\), 920px\)/);
+  assert.match(source, /min\(calc\(100vw\s*-\s*24px\),\s*920px\)/);
+  assert.match(source, /min\(calc\(100vw\s*-\s*16px\),\s*920px\)/);
 });
 
 test("Engine climate hold preserves dual heat/cool range instead of midpoint temperature", async () => {
   const { CardClass, sandbox } = loadClimateCard();
   const card = new CardClass();
+  card._render=()=>{}; // Actual command/model boundary; browsers exercise native DOM.
   card.setConfig({ entity: "climate.ecobee" });
   card._hass = {
     states: {

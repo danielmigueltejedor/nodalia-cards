@@ -1,0 +1,454 @@
+.climate-schedule-expanded {
+          --climate-schedule-accent: var(--primary-color);
+          inset: 0;
+          opacity: 0;
+          pointer-events: none;
+          position: fixed;
+          transition: opacity 220ms cubic-bezier(0.16, 0.84, 0.22, 1);
+          z-index: 120;
+        }
+
+        .climate-schedule-expanded.is-open {
+          opacity: 1;
+          pointer-events: auto;
+        }
+
+        .climate-schedule-expanded__backdrop {
+          -webkit-backdrop-filter: blur(12px);
+          backdrop-filter: blur(12px);
+          background: rgba(0, 0, 0, 0.32);
+          inset: 0;
+          position: absolute;
+        }
+
+        .climate-schedule-expanded__panel {
+          background:
+            linear-gradient(180deg, color-mix(in srgb, var(--climate-schedule-accent) 18%, rgba(255, 255, 255, 0.08)), rgba(255, 255, 255, 0.02)),
+            color-mix(in srgb, var(--ha-card-background, var(--card-background-color)) 94%, rgba(255, 255, 255, 0.02));
+          border: 1px solid color-mix(in srgb, var(--climate-schedule-accent) 34%, color-mix(in srgb, var(--primary-text-color) 9%, transparent));
+          border-radius: 16px;
+          box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
+          color: var(--primary-text-color);
+          display: grid;
+          gap: 12px;
+          isolation: isolate;
+          left: 50%;
+          max-height: min(92vh, 920px);
+          max-height: min(92dvh, 920px);
+          max-width: min(calc(100vw - 24px), 920px);
+          overflow: hidden;
+          padding: 14px;
+          position: absolute;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: min(calc(100vw - 24px), 920px);
+          z-index: 1;
+        }
+
+        .climate-schedule-expanded__toolbar {
+          align-items: flex-start;
+          display: flex;
+          gap: 10px;
+          justify-content: space-between;
+        }
+
+        .climate-schedule-expanded__toolbar-copy {
+          display: grid;
+          flex: 1 1 auto;
+          gap: 4px;
+          min-width: 0;
+        }
+
+        .climate-schedule-expanded__title {
+          font-size: 16px;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+        }
+
+        .climate-schedule-expanded__hint {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          line-height: 1.45;
+        }
+
+        .climate-schedule-expanded__close {
+          align-items: center;
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 7%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          color: var(--secondary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          flex: 0 0 auto;
+          height: 32px;
+          justify-content: center;
+          margin: 0;
+          padding: 0;
+          width: 32px;
+        }
+
+        .climate-schedule-expanded__close ha-icon {
+          --mdc-icon-size: 18px;
+        }
+
+        .climate-schedule-expanded__error {
+          align-items: flex-start;
+          background: color-mix(in srgb, var(--error-color, #db4437) 12%, transparent);
+          border: 1px solid color-mix(in srgb, var(--error-color, #db4437) 35%, transparent);
+          border-radius: 10px;
+          color: var(--error-color, #db4437);
+          display: flex;
+          font-size: 12px;
+          gap: 8px;
+          line-height: 1.4;
+          padding: 8px 10px;
+        }
+
+        .climate-schedule-expanded__error ha-icon {
+          --mdc-icon-size: 16px;
+          flex: 0 0 auto;
+          margin-top: 1px;
+        }
+
+        .climate-schedule-expanded__enabled {
+          align-items: center;
+          cursor: pointer;
+          display: inline-flex;
+          gap: 10px;
+          min-height: 34px;
+        }
+
+        .climate-schedule-expanded__enabled input {
+          block-size: 1px;
+          inline-size: 1px;
+          margin: 0;
+          opacity: 0;
+          pointer-events: none;
+          position: absolute;
+        }
+
+        .climate-schedule-expanded__enabled-switch {
+          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+          border-radius: 999px;
+          display: inline-flex;
+          height: 22px;
+          position: relative;
+          width: 40px;
+        }
+
+        .climate-schedule-expanded__enabled-switch::before {
+          background: rgba(255, 255, 255, 0.92);
+          border-radius: 999px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
+          content: "";
+          height: 18px;
+          left: 1px;
+          position: absolute;
+          top: 1px;
+          transition: transform 160ms ease;
+          width: 18px;
+        }
+
+        .climate-schedule-expanded__enabled input:checked + .climate-schedule-expanded__enabled-switch {
+          background: var(--primary-color);
+          border-color: var(--primary-color);
+        }
+
+        .climate-schedule-expanded__enabled input:checked + .climate-schedule-expanded__enabled-switch::before {
+          transform: translateX(18px);
+        }
+
+        .climate-schedule-agenda {
+          display: grid;
+          gap: 12px;
+          max-height: min(58vh, 560px);
+          overflow: auto;
+          overscroll-behavior: contain;
+          padding-right: 2px;
+          touch-action: pan-y;
+          -webkit-overflow-scrolling: touch;
+        }
+
+        .climate-schedule-agenda__row {
+          display: grid;
+          gap: 8px;
+        }
+
+        .climate-schedule-agenda__row-head {
+          align-items: center;
+          display: grid;
+          gap: 8px;
+          grid-template-columns: minmax(72px, 92px) minmax(0, 1fr);
+        }
+
+        .climate-schedule-agenda__day-label {
+          font-size: 13px;
+          font-weight: 800;
+          text-transform: capitalize;
+        }
+
+        .climate-schedule-agenda__day-add {
+          align-items: center;
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: inline-flex;
+          height: 30px;
+          justify-content: center;
+          justify-self: end;
+          margin: 0;
+          padding: 0;
+          width: 30px;
+        }
+
+        .climate-schedule-agenda__day-add ha-icon {
+          --mdc-icon-size: 18px;
+        }
+
+        .climate-schedule-agenda__timeline-wrap {
+          display: grid;
+          gap: 4px;
+          grid-column: 1 / -1;
+        }
+
+        .climate-schedule-agenda__track {
+          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 12px;
+          height: 56px;
+          overflow: hidden;
+          position: relative;
+          touch-action: none;
+          user-select: none;
+        }
+
+        .climate-schedule-agenda__track-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          height: 100%;
+          inset: 0;
+          pointer-events: none;
+          position: absolute;
+          z-index: 0;
+        }
+
+        .climate-schedule-agenda__track-grid span {
+          border-right: 1px dashed color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+        }
+
+        .climate-schedule-agenda__track-grid span:last-child {
+          border-right: 0;
+        }
+
+        .climate-schedule-agenda__blocks {
+          height: 100%;
+          inset: 0;
+          position: absolute;
+          z-index: 1;
+        }
+
+        .climate-schedule-agenda__track-empty {
+          color: var(--secondary-text-color);
+          font-size: 11px;
+          font-weight: 600;
+          left: 50%;
+          position: absolute;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          white-space: nowrap;
+        }
+
+        .climate-schedule-agenda__axis {
+          color: var(--secondary-text-color);
+          display: grid;
+          font-size: 10px;
+          font-weight: 700;
+          grid-template-columns: repeat(5, 1fr);
+          letter-spacing: 0.02em;
+          text-align: center;
+        }
+
+        .climate-schedule-agenda__block {
+          align-items: stretch;
+          background: color-mix(in srgb, var(--schedule-accent, var(--climate-schedule-accent)) 78%, transparent);
+          border: 1px solid color-mix(in srgb, var(--schedule-accent, var(--climate-schedule-accent)) 42%, transparent);
+          border-radius: 10px;
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+          cursor: pointer;
+          display: grid;
+          grid-template-columns: 8px minmax(0, 1fr) 8px;
+          height: calc(100% - 8px);
+          left: var(--block-left, 0%);
+          min-width: 44px;
+          overflow: hidden;
+          position: absolute;
+          top: 4px;
+          touch-action: none;
+          width: var(--block-width, 20%);
+          z-index: 1;
+        }
+
+        .climate-schedule-agenda__block.is-selected {
+          border-color: color-mix(in srgb, var(--primary-text-color) 28%, var(--schedule-accent, var(--climate-schedule-accent)));
+          box-shadow:
+            0 0 0 2px color-mix(in srgb, var(--schedule-accent, var(--climate-schedule-accent)) 35%, transparent),
+            inset 0 1px 0 rgba(255, 255, 255, 0.24);
+          z-index: 2;
+        }
+
+        .climate-schedule-agenda__block:active {
+          cursor: grabbing;
+        }
+
+        .climate-schedule-agenda__block-grip {
+          cursor: ew-resize;
+          display: block;
+          flex: 0 0 10px;
+          min-height: 100%;
+          touch-action: none;
+          z-index: 2;
+        }
+
+        .climate-schedule-agenda__block-body {
+          align-items: center;
+          display: flex;
+          flex-direction: column;
+          gap: 1px;
+          justify-content: center;
+          min-width: 0;
+          overflow: hidden;
+          padding: 0 2px;
+          pointer-events: none;
+        }
+
+        .climate-schedule-agenda__block-time {
+          font-size: 9px;
+          font-weight: 800;
+          line-height: 1.1;
+          max-width: 100%;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .climate-schedule-agenda__block-temp {
+          font-size: 10px;
+          font-weight: 700;
+          line-height: 1.1;
+          opacity: 0.92;
+        }
+
+        .climate-schedule-agenda__editor {
+          display: none;
+          gap: 8px;
+          grid-column: 1 / -1;
+          grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+        }
+
+        .climate-schedule-agenda__editor.is-visible {
+          display: grid;
+        }
+
+        .climate-schedule-agenda__editor-field {
+          display: grid;
+          gap: 4px;
+          min-width: 0;
+        }
+
+        .climate-schedule-agenda__editor-field--temp {
+          grid-column: 1 / -1;
+        }
+
+        .climate-schedule-agenda__editor-field > span {
+          color: var(--secondary-text-color);
+          font-size: 10px;
+          font-weight: 700;
+        }
+
+        .climate-schedule-agenda__editor-field input {
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 10px;
+          color: var(--primary-text-color);
+          font: inherit;
+          font-size: 12px;
+          font-weight: 700;
+          min-height: 36px;
+          padding: 6px 8px;
+          width: 100%;
+        }
+
+        .climate-schedule-agenda__editor-remove {
+          align-items: center;
+          appearance: none;
+          align-self: end;
+          background: color-mix(in srgb, var(--error-color, #db4437) 10%, transparent);
+          border: 1px solid color-mix(in srgb, var(--error-color, #db4437) 28%, transparent);
+          border-radius: 999px;
+          color: var(--error-color, #db4437);
+          cursor: pointer;
+          display: inline-flex;
+          height: 36px;
+          justify-content: center;
+          margin: 0;
+          padding: 0;
+          width: 36px;
+        }
+
+        .climate-schedule-agenda__editor-remove ha-icon {
+          --mdc-icon-size: 18px;
+        }
+
+        .climate-schedule-expanded__actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          justify-content: flex-end;
+        }
+
+        .climate-schedule-expanded__btn {
+          appearance: none;
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border-radius: 999px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 700;
+          min-height: 36px;
+          padding: 0 14px;
+        }
+
+        .climate-schedule-expanded__btn:disabled {
+          cursor: default;
+          opacity: 0.5;
+        }
+
+        .climate-schedule-expanded__btn--primary {
+          background: color-mix(in srgb, var(--climate-schedule-accent) 22%, transparent);
+          border-color: color-mix(in srgb, var(--climate-schedule-accent) 38%, var(--divider-color));
+        }
+
+        @media (max-width: 640px) {
+          .climate-schedule-expanded__panel {
+            border-radius: 14px;
+            max-height: 94vh;
+            max-height: 94dvh;
+            max-width: min(calc(100vw - 16px), 920px);
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: min(calc(100vw - 16px), 920px);
+          }
+
+          .climate-schedule-agenda__row-head {
+            grid-template-columns: minmax(64px, 80px) minmax(0, 1fr);
+          }
+        }

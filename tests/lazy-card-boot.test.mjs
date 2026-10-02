@@ -34,6 +34,7 @@ test("lazy host upgrades on first instance without compiling sibling cards", () 
         addEventListener() {},
         removeEventListener() {},
         innerHTML: "",
+        replaceChildren() {this.innerHTML="";},
         querySelector() { return null; },
         querySelectorAll() { return []; },
       };
@@ -49,6 +50,7 @@ test("lazy host upgrades on first instance without compiling sibling cards", () 
   }
 
   const sandbox = {
+    addEventListener() {},removeEventListener() {},
     console,
     URL,
     CustomEvent: class {},
@@ -58,6 +60,7 @@ test("lazy host upgrades on first instance without compiling sibling cards", () 
     },
     HTMLElement: FakeHTMLElement,
     document: {
+      addEventListener() {},removeEventListener() {},
       createElement() { return {}; },
       documentElement: { getAttribute() { return ""; } },
       querySelector() { return null; },

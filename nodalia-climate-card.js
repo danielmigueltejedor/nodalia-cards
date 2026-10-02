@@ -778,6 +778,15 @@ ${weekdayYaml}
     };
   }
 
+  // src/cards/climate/climate-static-2.css
+  var climate_static_2_default = ".climate-card--layout-compact .climate-card__copy{gap:10px}.climate-card--layout-compact .climate-card__headline{gap:10px}.climate-card--layout-compact .climate-card__title{font-size:12px;line-height:1.15}.climate-card--layout-compact .climate-card__chips{gap:10px}.climate-card--layout-compact .climate-card__chip{font-size:11px;height:24px;padding:0 9px}.climate-card__compact-degree{font-size:.42em;font-weight:600;margin-left:2px;vertical-align:top}.climate-card__chip--target .climate-card__compact-degree{font-size:1em;margin-left:1px;vertical-align:baseline}.climate-card__compact-controls-shell{display:grid;grid-template-rows:1fr;margin-top:16px;min-width:0;overflow:visible}.climate-card__compact-controls-inner{display:grid;gap:10px;min-width:0}.climate-card__compact-slider-row{align-items:center;display:grid;gap:14px;grid-template-columns:minmax(0,1fr) auto;min-width:0;overflow:visible;padding-inline:4px}.climate-card__compact-sliders{display:grid;gap:8px;min-width:0}.climate-card__compact-slider{align-items:center;display:grid;gap:8px;grid-template-columns:minmax(0,1fr);min-width:0}.climate-card__compact-slider-label,.climate-card__compact-slider>strong{color:var(--secondary-text-color);font-size:11px;font-weight:700;white-space:nowrap}.climate-card__compact-sliders--single :is(.climate-card__compact-slider-label,.climate-card__compact-slider>strong){display:none}.climate-card__compact-sliders--range .climate-card__compact-slider{grid-template-columns:auto minmax(80px,1fr) auto}.climate-card__compact-slider>strong{color:var(--primary-text-color);min-width:42px;text-align:right}.climate-card__compact-slider-shell{align-items:center;background:color-mix(in srgb,var(--primary-text-color) 4%,transparent);border:1px solid color-mix(in srgb,var(--primary-text-color) 6%,transparent);border-radius:999px;box-shadow:inset 0 1px 0 color-mix(in srgb,var(--primary-text-color) 4%,transparent);display:flex;height:48px;min-width:0;padding:0 14px;position:relative}.climate-card__compact-slider-track{background:color-mix(in srgb,var(--primary-text-color) 10%,transparent);border-radius:999px;height:22px;inset:50% 14px auto;overflow:hidden;pointer-events:none;position:absolute;transform:translateY(-50%)}";
+
+  // src/cards/climate/climate-static-1.css
+  var climate_static_1_default = '.climate-schedule-expanded{--climate-schedule-accent: var(--primary-color);inset:0;opacity:0;pointer-events:none;position:fixed;transition:opacity 220ms cubic-bezier(0.16,0.84,0.22,1);z-index:120}.climate-schedule-expanded.is-open{opacity:1;pointer-events:auto}.climate-schedule-expanded__backdrop{-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);background:rgba(0,0,0,0.32);inset:0;position:absolute}.climate-schedule-expanded__panel{background:linear-gradient(180deg,color-mix(in srgb,var(--climate-schedule-accent) 18%,rgba(255,255,255,0.08)),rgba(255,255,255,0.02)),color-mix(in srgb,var(--ha-card-background, var(--card-background-color)) 94%,rgba(255,255,255,0.02));border:1px solid color-mix(in srgb,var(--climate-schedule-accent) 34%,color-mix(in srgb,var(--primary-text-color) 9%,transparent));border-radius:16px;box-shadow:0 16px 34px rgba(0,0,0,0.28);color:var(--primary-text-color);display:grid;gap:12px;isolation:isolate;left:50%;max-height:min(92vh,920px);max-height:min(92dvh,920px);max-width:min(calc(100vw - 24px),920px);overflow:hidden;padding:14px;position:absolute;top:50%;transform:translate(-50%,-50%);width:min(calc(100vw - 24px),920px);z-index:1}.climate-schedule-expanded__toolbar{align-items:flex-start;display:flex;gap:10px;justify-content:space-between}.climate-schedule-expanded__toolbar-copy{display:grid;flex:1 1 auto;gap:4px;min-width:0}.climate-schedule-expanded__title{font-size:16px;font-weight:800;letter-spacing:-0.02em}.climate-schedule-expanded__hint{color:var(--secondary-text-color);font-size:12px;line-height:1.45}.climate-schedule-expanded__close{align-items:center;appearance:none;background:color-mix(in srgb,var(--primary-text-color) 7%,transparent);border:1px solid color-mix(in srgb,var(--primary-text-color) 8%,transparent);border-radius:999px;color:var(--secondary-text-color);cursor:pointer;display:inline-flex;flex:0 0 auto;height:32px;justify-content:center;margin:0;padding:0;width:32px}.climate-schedule-expanded__close ha-icon{--mdc-icon-size: 18px}.climate-schedule-expanded__error{align-items:flex-start;background:color-mix(in srgb,var(--error-color, #db4437) 12%,transparent);border:1px solid color-mix(in srgb,var(--error-color, #db4437) 35%,transparent);border-radius:10px;color:var(--error-color, #db4437);display:flex;font-size:12px;gap:8px;line-height:1.4;padding:8px 10px}.climate-schedule-expanded__error ha-icon{--mdc-icon-size: 16px;flex:0 0 auto;margin-top:1px}.climate-schedule-expanded__enabled{align-items:center;cursor:pointer;display:inline-flex;gap:10px;min-height:34px}.climate-schedule-expanded__enabled input{block-size:1px;inline-size:1px;margin:0;opacity:0;pointer-events:none;position:absolute}.climate-schedule-expanded__enabled-switch{background:color-mix(in srgb,var(--primary-text-color) 8%,transparent);border:1px solid color-mix(in srgb,var(--primary-text-color) 12%,transparent);border-radius:999px;display:inline-flex;height:22px;position:relative;width:40px}.climate-schedule-expanded__enabled-switch::before{background:rgba(255,255,255,0.92);border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,0.24);content:"";height:18px;left:1px;position:absolute;top:1px;transition:transform 160ms ease;width:18px}.climate-schedule-expanded__enabled input:checked+.climate-schedule-expanded__enabled-switch{background:var(--primary-color);border-color:var(--primary-color)}.climate-schedule-expanded__enabled input:checked+.climate-schedule-expanded__enabled-switch::before{transform:translateX(18px)}.climate-schedule-agenda{display:grid;gap:12px;max-height:min(58vh,560px);overflow:auto;overscroll-behavior:contain;padding-right:2px;touch-action:pan-y;-webkit-overflow-scrolling:touch}.climate-schedule-agenda__row{display:grid;gap:8px}.climate-schedule-agenda__row-head{align-items:center;display:grid;gap:8px;grid-template-columns:minmax(72px,92px) minmax(0,1fr)}.climate-schedule-agenda__day-label{font-size:13px;font-weight:800;text-transform:capitalize}.climate-schedule-agenda__day-add{align-items:center;appearance:none;background:color-mix(in srgb,var(--primary-text-color) 5%,transparent);border:1px solid color-mix(in srgb,var(--primary-text-color) 8%,transparent);border-radius:999px;color:var(--primary-text-color);cursor:pointer;display:inline-flex;height:30px;justify-content:center;justify-self:end;margin:0;padding:0;width:30px}.climate-schedule-agenda__day-add ha-icon{--mdc-icon-size: 18px}.climate-schedule-agenda__timeline-wrap{display:grid;gap:4px;grid-column:1 / -1}.climate-schedule-agenda__track{background:color-mix(in srgb,var(--primary-text-color) 4%,transparent);border:1px solid color-mix(in srgb,var(--primary-text-color) 8%,transparent);border-radius:12px;height:56px;overflow:hidden;position:relative;touch-action:none;user-select:none}.climate-schedule-agenda__track-grid{display:grid;grid-template-columns:repeat(4,1fr);height:100%;inset:0;pointer-events:none;position:absolute;z-index:0}.climate-schedule-agenda__track-grid span{border-right:1px dashed color-mix(in srgb,var(--primary-text-color) 10%,transparent)}.climate-schedule-agenda__track-grid span:last-child{border-right:0}.climate-schedule-agenda__blocks{height:100%;inset:0;position:absolute;z-index:1}.climate-schedule-agenda__track-empty{color:var(--secondary-text-color);font-size:11px;font-weight:600;left:50%;position:absolute;top:50%;transform:translate(-50%,-50%);white-space:nowrap}.climate-schedule-agenda__axis{color:var(--secondary-text-color);display:grid;font-size:10px;font-weight:700;grid-template-columns:repeat(5,1fr);letter-spacing:0.02em;text-align:center}.climate-schedule-agenda__block{align-items:stretch;background:color-mix(in srgb,var(--schedule-accent, var(--climate-schedule-accent)) 78%,transparent);border:1px solid color-mix(in srgb,var(--schedule-accent, var(--climate-schedule-accent)) 42%,transparent);border-radius:10px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.2);cursor:pointer;display:grid;grid-template-columns:8px minmax(0,1fr) 8px;height:calc(100% - 8px);left:var(--block-left, 0%);min-width:44px;overflow:hidden;position:absolute;top:4px;touch-action:none;width:var(--block-width, 20%);z-index:1}.climate-schedule-agenda__block.is-selected{border-color:color-mix(in srgb,var(--primary-text-color) 28%,var(--schedule-accent, var(--climate-schedule-accent)));box-shadow:0 0 0 2px color-mix(in srgb,var(--schedule-accent, var(--climate-schedule-accent)) 35%,transparent),inset 0 1px 0 rgba(255,255,255,0.24);z-index:2}.climate-schedule-agenda__block:active{cursor:grabbing}.climate-schedule-agenda__block-grip{cursor:ew-resize;display:block;flex:0 0 10px;min-height:100%;touch-action:none;z-index:2}.climate-schedule-agenda__block-body{align-items:center;display:flex;flex-direction:column;gap:1px;justify-content:center;min-width:0;overflow:hidden;padding:0 2px;pointer-events:none}.climate-schedule-agenda__block-time{font-size:9px;font-weight:800;line-height:1.1;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.climate-schedule-agenda__block-temp{font-size:10px;font-weight:700;line-height:1.1;opacity:0.92}.climate-schedule-agenda__editor{display:none;gap:8px;grid-column:1 / -1;grid-template-columns:repeat(2,minmax(0,1fr)) auto}.climate-schedule-agenda__editor.is-visible{display:grid}.climate-schedule-agenda__editor-field{display:grid;gap:4px;min-width:0}.climate-schedule-agenda__editor-field--temp{grid-column:1 / -1}.climate-schedule-agenda__editor-field>span{color:var(--secondary-text-color);font-size:10px;font-weight:700}.climate-schedule-agenda__editor-field input{appearance:none;background:color-mix(in srgb,var(--primary-text-color) 5%,transparent);border:1px solid color-mix(in srgb,var(--primary-text-color) 8%,transparent);border-radius:10px;color:var(--primary-text-color);font:inherit;font-size:12px;font-weight:700;min-height:36px;padding:6px 8px;width:100%}.climate-schedule-agenda__editor-remove{align-items:center;appearance:none;align-self:end;background:color-mix(in srgb,var(--error-color, #db4437) 10%,transparent);border:1px solid color-mix(in srgb,var(--error-color, #db4437) 28%,transparent);border-radius:999px;color:var(--error-color, #db4437);cursor:pointer;display:inline-flex;height:36px;justify-content:center;margin:0;padding:0;width:36px}.climate-schedule-agenda__editor-remove ha-icon{--mdc-icon-size: 18px}.climate-schedule-expanded__actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}.climate-schedule-expanded__btn{appearance:none;background:color-mix(in srgb,var(--primary-text-color) 5%,transparent);border:1px solid color-mix(in srgb,var(--primary-text-color) 8%,transparent);border-radius:999px;color:var(--primary-text-color);cursor:pointer;font:inherit;font-size:12px;font-weight:700;min-height:36px;padding:0 14px}.climate-schedule-expanded__btn:disabled{cursor:default;opacity:0.5}.climate-schedule-expanded__btn--primary{background:color-mix(in srgb,var(--climate-schedule-accent) 22%,transparent);border-color:color-mix(in srgb,var(--climate-schedule-accent) 38%,var(--divider-color))}@media(max-width:640px){.climate-schedule-expanded__panel{border-radius:14px;max-height:94vh;max-height:94dvh;max-width:min(calc(100vw - 16px),920px);left:50%;top:50%;transform:translate(-50%,-50%);width:min(calc(100vw - 16px),920px)}.climate-schedule-agenda__row-head{grid-template-columns:minmax(64px,80px) minmax(0,1fr)}}';
+
+  // src/cards/climate/climate-static-0.css
+  var climate_static_0_default = "@keyframes climate-card-button-bounce{0%{transform:scale(1)}45%{transform:scale(1.1)}72%{transform:scale(1.03)}100%{transform:scale(1)}}@keyframes climate-card-fade-up{0%{opacity:0;transform:translateY(14px) scale(0.965)}100%{opacity:1;transform:translateY(0) scale(1)}}@keyframes climate-card-dial-bloom{0%{opacity:0;transform:translateZ(0) scale(0.95);box-shadow:inset 0 1px 0 color-mix(in srgb,var(--primary-text-color) 2%,transparent),0 10px 24px rgba(0,0,0,0.08)}55%{opacity:1;transform:translateZ(0) scale(1.015);box-shadow:inset 0 1px 0 color-mix(in srgb,var(--primary-text-color) 6%,transparent),0 22px 42px rgba(0,0,0,0.16)}100%{opacity:1;transform:translateZ(0) scale(1);box-shadow:inset 0 1px 0 color-mix(in srgb,var(--primary-text-color) 5%,transparent),0 18px 38px rgba(0,0,0,0.16)}}@keyframes climate-card-dial-center-bloom{0%{opacity:0;transform:scale(0.96)}100%{opacity:1;transform:scale(1)}}@keyframes climate-card-dial-thumb-pop{0%{transform:translate(-50%,-50%) scale(1)}48%{transform:translate(-50%,-50%) scale(1.24)}72%{transform:translate(-50%,-50%) scale(1.09)}100%{transform:translate(-50%,-50%) scale(1.15)}}";
+
   // src/shared/editor-color.ts
   var clamp2 = (value, max) => Math.max(0, Math.min(max, value));
   var component = (value, scale) => {
@@ -1138,7 +1147,22 @@ ${weekdayYaml}
     };
   }
 
+  // src/shared/home-assistant-services.ts
+  async function requestHassService(host, hass, domain, service, data = {}, target = null) {
+    if (hass?.callService) return target !== null ? hass.callService(domain, service, data, target) : hass.callService(domain, service, data);
+    const utils2 = window.NodaliaUtils;
+    return utils2?.invokeHomeAssistantService?.call(utils2, host, hass, domain, service, data, target);
+  }
+
   // src/cards/climate/climate-card.ts
+  var climateFinite = (value) => typeof value === "number" && Number.isFinite(value);
+  var climateRecord = (value) => isObject(value) ? value : {};
+  var climateDisplayHass = (value) => {
+    if (!isObject(value)) return null;
+    const locale = climateRecord(value.locale), config = climateRecord(value.config), units = climateRecord(config.unit_system);
+    return { states: {}, ...typeof value.language === "string" ? { language: value.language } : {}, ...typeof value.selectedLanguage === "string" ? { selectedLanguage: value.selectedLanguage } : {}, locale: { ...typeof locale.language === "string" ? { language: locale.language } : {} }, config: { ...typeof config.language === "string" ? { language: config.language } : {}, unit_system: { ...typeof units.temperature === "string" ? { temperature: units.temperature } : {} } } };
+  };
+  var climatePointerId = (event) => event instanceof PointerEvent ? event.pointerId : null;
   var _lazyNodaliaClimateCard;
   function loadNodaliaClimateCard() {
     if (_lazyNodaliaClimateCard) {
@@ -1155,6 +1179,7 @@ ${weekdayYaml}
         return applyStubEntity(deepClone(STUB_CONFIG), hass, ["climate"], entities, entitiesFallback);
       }
       static getEntitySuggestion(hass, entityId) {
+        if (!hass) return [];
         return [
           window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
             domains: ["climate"],
@@ -1173,6 +1198,16 @@ ${weekdayYaml}
         this._nodaliaConstruct();
       }
       _nodaliaConstruct() {
+        this._generation = 0;
+        this._timers = /* @__PURE__ */ new Set();
+        this._frames = /* @__PURE__ */ new Set();
+        this._scheduleSaveToken = 0;
+        this._contextConnection = void 0;
+        this._contextAuth = void 0;
+        this._contextUser = "";
+        this._contextServer = "";
+        this._onCancelGesture = this._onCancelGesture.bind(this);
+        this._onVisibility = this._onVisibility.bind(this);
         this.attachShadow({ mode: "open" });
         this._config = normalizeConfig(STUB_CONFIG);
         this._hass = null;
@@ -1218,8 +1253,9 @@ ${weekdayYaml}
         this._scheduleComposerError = "";
         this._scheduleComposerSaving = false;
         this._scheduleDraftRevision = 0;
-        this._commitAborted = false;
         this._scheduleComposerSelectedSlotId = "";
+        this._scheduleDragListenersActive = false;
+        this._scheduleBlockDragPendingListenersActive = false;
         this._activeScheduleDrag = null;
         this._scheduleBlockDragPending = null;
         this._engineOverride = null;
@@ -1234,18 +1270,144 @@ ${weekdayYaml}
         this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
         this._onShadowInput = this._onShadowInput.bind(this);
         this._onShadowBlur = this._onShadowBlur.bind(this);
-        this.shadowRoot.addEventListener("click", this._onShadowClick);
-        this.shadowRoot.addEventListener("input", this._onShadowInput);
-        this.shadowRoot.addEventListener("change", this._onShadowInput);
-        this.shadowRoot.addEventListener("blur", this._onShadowBlur, true);
-        this.shadowRoot.addEventListener("keydown", this._onShadowKeyDown);
-        this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
-        this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown);
-        if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
-          this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
+        this.shadowRoot?.addEventListener("click", this._onShadowClick);
+        this.shadowRoot?.addEventListener("input", this._onShadowInput);
+        this.shadowRoot?.addEventListener("change", this._onShadowInput);
+        this.shadowRoot?.addEventListener("blur", this._onShadowBlur, true);
+        this.shadowRoot?.addEventListener("keydown", this._onShadowKeyDown);
+        this.shadowRoot?.addEventListener("pointerdown", this._onShadowPointerDown);
+        this.shadowRoot?.addEventListener("mousedown", this._onShadowMouseDown);
+        if (!(typeof window !== "undefined" && typeof window.PointerEvent === "function")) {
+          this.shadowRoot?.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
         }
       }
+      _isCurrent(generation) {
+        return this.isConnected && generation === this._generation;
+      }
+      _setTimer(callback, delay) {
+        const generation = this._generation;
+        const id = window.setTimeout(() => {
+          this._timers.delete(id);
+          if (this._isCurrent(generation)) callback();
+        }, delay);
+        this._timers.add(id);
+        return id;
+      }
+      _clearTimer(id) {
+        window.clearTimeout(id);
+        this._timers.delete(id);
+      }
+      _requestFrame(callback) {
+        const generation = this._generation;
+        const id = window.requestAnimationFrame(() => {
+          this._frames.delete(id);
+          if (this._isCurrent(generation)) callback();
+        });
+        this._frames.add(id);
+        return id;
+      }
+      _cancelFrame(id) {
+        window.cancelAnimationFrame(id);
+        this._frames.delete(id);
+      }
+      _releasePointer(element, id) {
+        if (element && id !== null) try {
+          if (element.hasPointerCapture(id)) element.releasePointerCapture(id);
+        } catch {
+        }
+      }
+      _cancelGestures(render = true) {
+        const drag = this._activeDialDrag;
+        if (drag) {
+          this._activeDialDrag = null;
+          this._setDialDraggingState(false, drag.dial);
+          this._releasePointer(drag.capture, drag.pointerId);
+          const entityId = this._config.entity;
+          if (drag.originalTemperature === void 0) this._draftTemperature.delete(entityId);
+          else this._draftTemperature.set(entityId, drag.originalTemperature);
+          if (drag.originalRange === void 0) this._draftTempRange.delete(entityId);
+          else this._draftTempRange.set(entityId, { ...drag.originalRange });
+        }
+        const scheduleDrag = this._activeScheduleDrag;
+        if (scheduleDrag) {
+          this._activeScheduleDrag = null;
+          this._releasePointer(scheduleDrag.track, scheduleDrag.pointerId);
+          const schedule = this._getScheduleComposerDraft();
+          const index = schedule.slots.findIndex((slot) => slot.id === scheduleDrag.slotId);
+          if (index >= 0) schedule.slots[index] = { ...scheduleDrag.original };
+          this._scheduleComposerDraft = normalizeSetpointScheduleConfig(schedule);
+          this._touchScheduleDraftRevision();
+        }
+        this._scheduleBlockDragPending = null;
+        this._setDragWindowListeners(false);
+        this._setScheduleDragWindowListeners(false);
+        this._setScheduleBlockDragPendingListeners(false);
+        if (this._dialDragFrame) this._cancelFrame(this._dialDragFrame);
+        this._dialDragFrame = 0;
+        this._pendingDialDragPoint = null;
+        this._pendingRenderAfterDrag = false;
+        this._pendingRenderAfterScheduleDrag = false;
+        if (render && (drag || scheduleDrag) && this.isConnected) {
+          this._lastRenderSignature = "";
+          this._render();
+        }
+      }
+      _onCancelGesture(event) {
+        if (event instanceof PointerEvent) {
+          const pointer = this._activeDialDrag?.pointerId ?? this._activeScheduleDrag?.pointerId ?? this._scheduleBlockDragPending?.pointerId;
+          if (pointer !== null && pointer !== void 0 && pointer !== event.pointerId) return;
+        }
+        this._cancelGestures();
+      }
+      _onVisibility() {
+        if (document.hidden) this._cancelGestures();
+      }
+      _releaseViewWork() {
+        this._generation++;
+        this._scheduleSaveToken++;
+        this._cancelGestures(false);
+        for (const id of this._timers) window.clearTimeout(id);
+        this._timers.clear();
+        for (const id of this._frames) window.cancelAnimationFrame(id);
+        this._frames.clear();
+        this._draftResetTimer = 0;
+        this._temperatureCommitDebounceTimer = 0;
+        this._rangeCommitDebounceTimer = 0;
+        this._entranceAnimationResetTimer = 0;
+        this._temperatureCommitInFlight = false;
+        this._rangeCommitInFlight = false;
+        this._temperatureCommitQueuedValue = null;
+        this._rangeCommitQueuedValue = null;
+        this._temperatureCommitRequiresHvacWake = false;
+        this._engineOverrideInFlight = false;
+        this._engineOverrideBusy = false;
+        this._scheduleComposerSaving = false;
+        window.NodaliaUtils?.clearDeferTimers?.(this);
+        window.NodaliaUtils?.cancelCardZoneTap?.(this);
+      }
+      _resetContext() {
+        this._releaseViewWork();
+        this._draftTemperature.clear();
+        this._draftTempRange.clear();
+        this._temperatureCommitRetryCount = 0;
+        this._rangeCommitRetryCount = 0;
+        this._selectedRangeThumb = null;
+        this._lastDualRangeModeKey = null;
+        this._scheduleComposerOpen = false;
+        this._scheduleComposerDraft = normalizeSetpointScheduleConfig({ enabled: true, slots: [] });
+        this._scheduleComposerError = "";
+        this._scheduleComposerSelectedSlotId = "";
+        this._touchScheduleDraftRevision();
+        this._engineOverride = null;
+        this._engineOverrideSignature = "";
+        this._lastEngineOverrideCheck = 0;
+        this._lastRenderSignature = "";
+        this._animateContentOnNextRender = true;
+        this.shadowRoot?.replaceChildren();
+      }
       connectedCallback() {
+        window.addEventListener("blur", this._onCancelGesture);
+        document.addEventListener("visibilitychange", this._onVisibility);
         this._detachHostHold?.();
         this._detachHostHold = typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function" ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
           resolveZone: (event) => {
@@ -1279,13 +1441,16 @@ ${weekdayYaml}
         }) : () => {
         };
         this._animateContentOnNextRender = true;
-        this._commitAborted = false;
         if (this._hass && this._config) {
           this._lastRenderSignature = "";
           this._render();
+          void this._refreshEngineOverrideState();
         }
       }
       disconnectedCallback() {
+        window.removeEventListener("blur", this._onCancelGesture);
+        document.removeEventListener("visibilitychange", this._onVisibility);
+        this._resetContext();
         this._detachHostHold?.();
         this._detachHostHold = () => {
         };
@@ -1300,32 +1465,32 @@ ${weekdayYaml}
           this._activeDialDrag = null;
         }
         if (this._draftResetTimer) {
-          window.clearTimeout(this._draftResetTimer);
+          this._clearTimer(this._draftResetTimer);
           this._draftResetTimer = 0;
         }
         if (this._temperatureCommitDebounceTimer) {
-          window.clearTimeout(this._temperatureCommitDebounceTimer);
+          this._clearTimer(this._temperatureCommitDebounceTimer);
           this._temperatureCommitDebounceTimer = 0;
         }
         if (this._rangeCommitDebounceTimer) {
-          window.clearTimeout(this._rangeCommitDebounceTimer);
+          this._clearTimer(this._rangeCommitDebounceTimer);
           this._rangeCommitDebounceTimer = 0;
         }
         if (this._entranceAnimationResetTimer) {
-          window.clearTimeout(this._entranceAnimationResetTimer);
+          this._clearTimer(this._entranceAnimationResetTimer);
           this._entranceAnimationResetTimer = 0;
         }
         if (this._dialDragFrame) {
-          window.cancelAnimationFrame(this._dialDragFrame);
+          this._cancelFrame(this._dialDragFrame);
           this._dialDragFrame = 0;
         }
         this._pendingDialDragPoint = null;
         this._animateContentOnNextRender = true;
         this._lastRenderSignature = "";
-        this._commitAborted = true;
         window.NodaliaUtils?.clearDeferTimers?.(this);
       }
       setConfig(config) {
+        this._resetContext();
         const prevEntity = this._config?.entity;
         this._config = normalizeConfig(config || {});
         window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
@@ -1335,11 +1500,11 @@ ${weekdayYaml}
           this._temperatureCommitQueuedValue = null;
           this._rangeCommitQueuedValue = null;
           if (this._temperatureCommitDebounceTimer) {
-            window.clearTimeout(this._temperatureCommitDebounceTimer);
+            this._clearTimer(this._temperatureCommitDebounceTimer);
             this._temperatureCommitDebounceTimer = 0;
           }
           if (this._rangeCommitDebounceTimer) {
-            window.clearTimeout(this._rangeCommitDebounceTimer);
+            this._clearTimer(this._rangeCommitDebounceTimer);
             this._rangeCommitDebounceTimer = 0;
           }
           this._selectedRangeThumb = null;
@@ -1355,7 +1520,26 @@ ${weekdayYaml}
         void this._refreshEngineOverrideState();
       }
       set hass(hass) {
+        const connection = hass?.connection, auth = hass?.auth, user = `${hass?.user?.id ?? ""}:${hass?.user?.is_admin === true}`;
+        let server = window.location?.origin ?? "";
+        try {
+          server = hass?.hassUrl?.("/") ?? server;
+        } catch {
+        }
+        if (connection !== this._contextConnection || auth !== this._contextAuth || user !== this._contextUser || server !== this._contextServer) this._resetContext();
+        this._contextConnection = connection;
+        this._contextAuth = auth;
+        this._contextUser = user;
+        this._contextServer = server;
         this._hass = hass;
+        if (!this.isConnected) return;
+        const currentState = this._getState();
+        if (!currentState || isUnavailableState(currentState)) {
+          this._releaseViewWork();
+          this._draftTemperature.clear();
+          this._draftTempRange.clear();
+          this._lastRenderSignature = "";
+        } else if (this._activeDialDrag && (this._activeDialDrag.kind === "range" !== this._isDualSetpointRange(currentState) || !this._supportsTargetTemperature(currentState))) this._cancelGestures(false);
         void this._refreshEngineOverrideState();
         const entityId = this._config?.entity || "";
         if (entityId && (this._draftTemperature.has(entityId) || this._draftTempRange.has(entityId))) {
@@ -1409,6 +1593,14 @@ ${weekdayYaml}
           attrs.preset_mode || "",
           attrs.fan_mode || "",
           attrs.swing_mode || "",
+          attrs.min_temp,
+          attrs.max_temp,
+          attrs.target_temp_step,
+          attrs.supported_features,
+          JSON.stringify(attrs.hvac_modes),
+          getHassLocale(hass),
+          getClimateTemperatureUnit(hass),
+          this._config.language,
           this._config?.layout || "circular",
           `${this._config?.tap_action || ""}|${this._config?.hold_action || ""}|${this._config?.double_tap_action || ""}`,
           Boolean(entityId && (this._draftTemperature.has(entityId) || this._draftTempRange.has(entityId))),
@@ -1469,7 +1661,7 @@ ${weekdayYaml}
         return agenda.scrollTop;
       }
       _restoreScheduleAgendaScrollState(scrollTop) {
-        if (typeof scrollTop !== "number" || !Number.isFinite(scrollTop) || scrollTop <= 0) {
+        if (typeof scrollTop !== "number" || !climateFinite(scrollTop) || scrollTop <= 0) {
           return;
         }
         const apply = () => {
@@ -1479,8 +1671,8 @@ ${weekdayYaml}
           }
         };
         if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
-          window.requestAnimationFrame(() => {
-            window.requestAnimationFrame(apply);
+          this._requestFrame(() => {
+            this._requestFrame(apply);
           });
           return;
         }
@@ -1493,9 +1685,9 @@ ${weekdayYaml}
         );
         const rawState = storageEntityId ? String(this._hass?.states?.[storageEntityId]?.state ?? "").trim() : "";
         if (rawState && rawState !== "unknown" && rawState !== "unavailable") {
-          return decodeSetpointScheduleStorageState(rawState);
+          return normalizeSetpointScheduleConfig(decodeSetpointScheduleStorageState(rawState));
         }
-        const legacy = this._config?.setpoint_schedule;
+        const legacy = climateRecord(this._config?.setpoint_schedule);
         if (legacy && (Array.isArray(legacy.slots) ? legacy.slots.length : 0) > 0) {
           return normalizeSetpointScheduleConfig(legacy);
         }
@@ -1517,12 +1709,16 @@ ${weekdayYaml}
         if (!backend || !entityId || !this._hass) {
           return false;
         }
+        const generation = this._generation, hass = this._hass;
+        if (!this._isCurrent(generation)) return false;
         try {
-          const status = await backend.status(this._hass, { silent: true });
+          const status = await backend.status(hass, { silent: true });
+          if (!this._isCurrent(generation)) return false;
           if (!status?.available || !status.capabilities?.includes("climate_schedules")) {
             return false;
           }
-          const result = await backend.getClimateSchedule(this._hass, entityId);
+          const result = climateRecord(await backend.getClimateSchedule(hass, entityId));
+          if (!this._isCurrent(generation)) return false;
           if (!this._scheduleComposerOpen || entityId !== String(this._config?.entity || "").trim() || loadRevision !== (this._scheduleDraftRevision || 0) || !result?.schedule) {
             return false;
           }
@@ -1542,7 +1738,7 @@ ${weekdayYaml}
       async _refreshEngineOverrideState(options = {}) {
         const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
         const entityId = String(this._config?.entity || "").trim();
-        if (!backend || !this._hass || !entityId || this._engineOverrideInFlight) {
+        if (!this.isConnected || !backend || !this._hass || !entityId || this._engineOverrideInFlight) {
           return false;
         }
         const now = Date.now();
@@ -1551,25 +1747,29 @@ ${weekdayYaml}
         }
         this._engineOverrideInFlight = true;
         this._lastEngineOverrideCheck = now;
+        const generation = this._generation, hass = this._hass;
+        if (!this._isCurrent(generation)) return false;
         try {
-          const status = await backend.status(this._hass, { silent: true });
+          const status = await backend.status(hass, { silent: true });
+          if (!this._isCurrent(generation)) return false;
           if (!backend.hasCapability(status, "climate_overrides")) {
             return this._applyEngineOverrideState(null);
           }
-          const result = await backend.getClimateSchedule(this._hass, entityId);
-          const schedule = result?.schedule;
-          if (!schedule || typeof schedule !== "object") {
+          const result = climateRecord(await backend.getClimateSchedule(hass, entityId));
+          if (!this._isCurrent(generation)) return false;
+          const schedule = climateRecord(result.schedule);
+          if (!isObject(result.schedule)) {
             return this._applyEngineOverrideState(null);
           }
-          const until = parseEngineOverrideUntil(schedule.override?.until);
+          const until = parseEngineOverrideUntil(climateRecord(schedule.override).until);
           return this._applyEngineOverrideState({
             available: true,
             until: until && until.getTime() > Date.now() ? until.toISOString() : ""
           });
         } catch (_error) {
-          return this._applyEngineOverrideState(null);
+          return this._isCurrent(generation) ? this._applyEngineOverrideState(null) : false;
         } finally {
-          this._engineOverrideInFlight = false;
+          if (this._isCurrent(generation)) this._engineOverrideInFlight = false;
         }
       }
       _applyEngineOverrideState(next) {
@@ -1609,11 +1809,12 @@ ${weekdayYaml}
           }
         } else {
           const target = parseFiniteClimateNumber(this._getTargetTemperature(state));
-          if (Number.isFinite(target)) {
+          if (climateFinite(target)) {
             override.temperature = Number(target);
           }
         }
-        return this._runEngineOverrideRequest(() => backend.setClimateOverride(this._hass, entityId, override));
+        const hass = this._hass;
+        return this._runEngineOverrideRequest(() => backend.setClimateOverride(hass, entityId, override));
       }
       async _clearEngineOverride() {
         const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
@@ -1621,27 +1822,34 @@ ${weekdayYaml}
         if (!backend || !this._hass || !entityId || this._engineOverrideBusy) {
           return false;
         }
-        return this._runEngineOverrideRequest(() => backend.clearClimateOverride(this._hass, entityId));
+        const hass = this._hass;
+        return this._runEngineOverrideRequest(() => backend.clearClimateOverride(hass, entityId));
       }
       async _runEngineOverrideRequest(request) {
+        const generation = this._generation;
+        if (!this._isCurrent(generation)) return false;
         this._engineOverrideBusy = true;
         this._lastRenderSignature = "";
         this._render();
         try {
           await request();
+          if (!this._isCurrent(generation)) return false;
           this._triggerHaptic("success");
           return true;
         } catch (error) {
+          if (!this._isCurrent(generation)) return false;
           if (typeof console !== "undefined" && typeof console.warn === "function") {
             console.warn("Nodalia Climate Card: the Engine rejected the override change.", error);
           }
           return false;
         } finally {
-          this._engineOverrideBusy = false;
-          await this._refreshEngineOverrideState({ force: true });
-          if (this.isConnected && this.shadowRoot) {
-            this._lastRenderSignature = "";
-            this._render();
+          if (this._isCurrent(generation)) {
+            this._engineOverrideBusy = false;
+            await this._refreshEngineOverrideState({ force: true });
+            if (this._isCurrent(generation) && this.shadowRoot) {
+              this._lastRenderSignature = "";
+              this._render();
+            }
           }
         }
       }
@@ -1694,6 +1902,8 @@ ${weekdayYaml}
     `;
       }
       _closeScheduleComposer() {
+        this._scheduleSaveToken++;
+        this._cancelGestures(false);
         this._scheduleComposerOpen = false;
         this._scheduleComposerError = "";
         this._scheduleComposerSaving = false;
@@ -1740,7 +1950,9 @@ ${weekdayYaml}
           return false;
         }
         try {
-          return Boolean(await post(id, body, this._hass));
+          const generation = this._generation, hass = this._hass, utils2 = window.NodaliaUtils;
+          const result = await post.call(utils2, id, body, hass);
+          return this._isCurrent(generation) && Boolean(result);
         } catch (_error) {
           return false;
         }
@@ -1805,7 +2017,7 @@ ${weekdayYaml}
         let value = active.value;
         if (field === "temperature") {
           value = Number(value);
-          if (!Number.isFinite(value)) {
+          if (!climateFinite(value)) {
             return;
           }
         }
@@ -1815,6 +2027,10 @@ ${weekdayYaml}
         if (!this.isConnected || !this._hass || !this.shadowRoot) {
           return;
         }
+        if (this._scheduleComposerSaving) return;
+        const generation = this._generation, hass = this._hass, config = this._config;
+        const token = ++this._scheduleSaveToken;
+        const current = () => this._isCurrent(generation) && token === this._scheduleSaveToken;
         const entityId = String(this._config?.entity || "").trim();
         if (!entityId) {
           this._setScheduleComposerError(
@@ -1842,14 +2058,17 @@ ${weekdayYaml}
         let nativeSaveError = null;
         if (backend) {
           try {
-            const status = await backend.status(this._hass, { silent: true });
+            const status = await backend.status(hass, { silent: true });
+            if (!current()) return;
             if (status?.available && status.capabilities?.includes("climate_schedules")) {
-              await backend.setClimateSchedule(this._hass, entityId, {
+              await backend.setClimateSchedule(hass, entityId, {
                 ...schedule,
-                week_starts_on: this._config?.setpoint_schedule_week_starts_on === "sunday" ? "sunday" : "monday"
+                week_starts_on: config.setpoint_schedule_week_starts_on === "sunday" ? "sunday" : "monday"
               });
+              if (!current()) return;
               this._scheduleComposerSaving = false;
               if (this.isConnected && this.shadowRoot) {
+                if (!current()) return;
                 this._scheduleComposerDraft = schedule;
                 this._triggerHaptic("success");
                 this._closeScheduleComposer();
@@ -1857,13 +2076,14 @@ ${weekdayYaml}
               return;
             }
           } catch (error) {
+            if (!current()) return;
             nativeSaveError = error;
             if (typeof console !== "undefined" && typeof console.warn === "function") {
               console.warn("Nodalia Climate Card: native schedule synchronization failed; trying the legacy webhook.", error);
             }
           }
         }
-        const webhookId = String(this._config?.setpoint_schedule_webhook || "").trim();
+        const webhookId = String(config.setpoint_schedule_webhook || "").trim();
         if (!webhookId) {
           this._scheduleComposerSaving = false;
           this._setScheduleComposerError(
@@ -1879,7 +2099,7 @@ ${weekdayYaml}
         }
         const storageEntityId = getClimateScheduleStorageEntityId(
           entityId,
-          this._config?.setpoint_schedule_helper
+          config.setpoint_schedule_helper
         );
         const body = buildClimateSetpointScheduleWebhookBody({
           entityId,
@@ -1889,6 +2109,7 @@ ${weekdayYaml}
           cardVersion: CARD_VERSION
         });
         if (!isSetpointScheduleStorageStateWithinLimit(body.storage_state)) {
+          this._scheduleComposerSaving = false;
           this._setScheduleComposerError(
             this._climateScheduleText(
               "errors.storageTooLarge",
@@ -1897,7 +2118,9 @@ ${weekdayYaml}
           );
           return;
         }
+        if (!current()) return;
         const ok = await this._postScheduleWebhookPayload(webhookId, body);
+        if (!current()) return;
         this._scheduleComposerSaving = false;
         if (!this.isConnected || !this.shadowRoot) {
           return;
@@ -1908,10 +2131,10 @@ ${weekdayYaml}
           );
           return;
         }
-        if (storageEntityId && typeof this._hass?.callService === "function") {
+        if (storageEntityId && typeof hass.callService === "function") {
           try {
             await Promise.resolve(
-              this._hass.callService("input_text", "set_value", {
+              hass.callService?.("input_text", "set_value", {
                 entity_id: storageEntityId,
                 value: body.storage_state
               })
@@ -1919,6 +2142,7 @@ ${weekdayYaml}
           } catch (_error) {
           }
         }
+        if (!current()) return;
         this._scheduleComposerDraft = schedule;
         this._triggerHaptic("success");
         this._closeScheduleComposer();
@@ -2026,7 +2250,7 @@ ${weekdayYaml}
         const schedule = this._getScheduleComposerDraft();
         const gap = findScheduleGapForDay(schedule.slots, day);
         const daySlots = schedule.slots.filter((slot2) => slot2.day === day);
-        const fallbackTemp = daySlots.length ? daySlots[daySlots.length - 1].temperature : 21;
+        const fallbackTemp = daySlots.length ? daySlots[daySlots.length - 1]?.temperature ?? 21 : 21;
         const slot = normalizeSetpointScheduleSlot({
           day,
           start: formatScheduleClockMinutes(gap.start),
@@ -2059,7 +2283,7 @@ ${weekdayYaml}
           }
           window.addEventListener("pointermove", this._onWindowScheduleBlockDragMove);
           window.addEventListener("pointerup", this._onWindowScheduleBlockDragUp);
-          window.addEventListener("pointercancel", this._onWindowScheduleBlockDragUp);
+          window.addEventListener("pointercancel", this._onCancelGesture);
           this._scheduleBlockDragPendingListenersActive = true;
           return;
         }
@@ -2068,15 +2292,16 @@ ${weekdayYaml}
         }
         window.removeEventListener("pointermove", this._onWindowScheduleBlockDragMove);
         window.removeEventListener("pointerup", this._onWindowScheduleBlockDragUp);
-        window.removeEventListener("pointercancel", this._onWindowScheduleBlockDragUp);
+        window.removeEventListener("pointercancel", this._onCancelGesture);
         this._scheduleBlockDragPendingListenersActive = false;
       }
       _onWindowScheduleBlockDragMove(event) {
+        if (!(event instanceof PointerEvent)) return;
         const pending = this._scheduleBlockDragPending;
         if (!pending) {
           return;
         }
-        if (pending.pointerId != null && event.pointerId != null && pending.pointerId !== event.pointerId) {
+        if (pending.pointerId != null && climatePointerId(event) != null && pending.pointerId !== climatePointerId(event)) {
           return;
         }
         const deltaX = Math.abs(event.clientX - pending.startClientX);
@@ -2099,11 +2324,12 @@ ${weekdayYaml}
         this._applyScheduleDragAtClientX(event.clientX);
       }
       _onWindowScheduleBlockDragUp(event) {
+        if (!(event instanceof PointerEvent)) return;
         const pending = this._scheduleBlockDragPending;
         if (!pending) {
           return;
         }
-        if (pending.pointerId != null && event.pointerId != null && pending.pointerId !== event.pointerId) {
+        if (pending.pointerId != null && climatePointerId(event) != null && pending.pointerId !== climatePointerId(event)) {
           return;
         }
         this._scheduleBlockDragPending = null;
@@ -2119,7 +2345,7 @@ ${weekdayYaml}
           }
           window.addEventListener("pointermove", this._onWindowSchedulePointerMove);
           window.addEventListener("pointerup", this._onWindowSchedulePointerUp);
-          window.addEventListener("pointercancel", this._onWindowSchedulePointerUp);
+          window.addEventListener("pointercancel", this._onCancelGesture);
           this._scheduleDragListenersActive = true;
           return;
         }
@@ -2128,7 +2354,7 @@ ${weekdayYaml}
         }
         window.removeEventListener("pointermove", this._onWindowSchedulePointerMove);
         window.removeEventListener("pointerup", this._onWindowSchedulePointerUp);
-        window.removeEventListener("pointercancel", this._onWindowSchedulePointerUp);
+        window.removeEventListener("pointercancel", this._onCancelGesture);
         this._scheduleDragListenersActive = false;
       }
       _applyScheduleDragAtClientX(clientX) {
@@ -2182,7 +2408,7 @@ ${weekdayYaml}
         }
         this._updateScheduleComposerSlot(drag.slotId, dragPatch, { render: false });
       }
-      _startScheduleDrag(options = {}) {
+      _startScheduleDrag(options) {
         const {
           slotId,
           mode,
@@ -2208,14 +2434,15 @@ ${weekdayYaml}
           pointerId,
           initialStart: layout.start,
           initialEnd: layout.end,
-          pointerOffsetMinutes: mode === "move" ? pointerMinutes - layout.start : 0
+          pointerOffsetMinutes: mode === "move" ? pointerMinutes - layout.start : 0,
+          original: { ...slot }
         };
         this._scheduleComposerSelectedSlotId = slotId;
         this._syncScheduleComposerSelectionDom();
         this._setScheduleDragWindowListeners(true);
-        if (event && typeof resolvedTrack.setPointerCapture === "function" && event.pointerId != null) {
+        if (event && typeof resolvedTrack.setPointerCapture === "function" && climatePointerId(event) != null) {
           try {
-            resolvedTrack.setPointerCapture(event.pointerId);
+            resolvedTrack.setPointerCapture(event instanceof PointerEvent ? event.pointerId : 0);
           } catch (_error) {
           }
         }
@@ -2227,7 +2454,7 @@ ${weekdayYaml}
           return;
         }
         const track = drag.track instanceof HTMLElement ? drag.track : this._getScheduleDayTrackElement(drag.day);
-        if (track instanceof HTMLElement && event?.pointerId != null && typeof track.releasePointerCapture === "function") {
+        if (track instanceof HTMLElement && event instanceof PointerEvent && typeof track.releasePointerCapture === "function") {
           try {
             if (track.hasPointerCapture?.(event.pointerId)) {
               track.releasePointerCapture(event.pointerId);
@@ -2247,22 +2474,24 @@ ${weekdayYaml}
         this._render();
       }
       _onWindowSchedulePointerMove(event) {
+        if (!(event instanceof PointerEvent)) return;
         const drag = this._activeScheduleDrag;
         if (!drag) {
           return;
         }
-        if (drag.pointerId != null && event.pointerId != null && drag.pointerId !== event.pointerId) {
+        if (drag.pointerId != null && climatePointerId(event) != null && drag.pointerId !== climatePointerId(event)) {
           return;
         }
         event.preventDefault();
         this._applyScheduleDragAtClientX(event.clientX);
       }
       _onWindowSchedulePointerUp(event) {
+        if (!(event instanceof PointerEvent)) return;
         const drag = this._activeScheduleDrag;
         if (!drag) {
           return;
         }
-        if (drag.pointerId != null && event.pointerId != null && drag.pointerId !== event.pointerId) {
+        if (drag.pointerId != null && climatePointerId(event) != null && drag.pointerId !== climatePointerId(event)) {
           return;
         }
         this._applyScheduleDragAtClientX(event.clientX);
@@ -2278,16 +2507,16 @@ ${weekdayYaml}
           return false;
         }
         const resizeHandle = path.find(
-          (node) => node instanceof HTMLElement && node.dataset?.scheduleResize
+          (node) => node instanceof HTMLElement && Boolean(node.dataset?.scheduleResize)
         );
-        if (resizeHandle) {
+        if (resizeHandle instanceof HTMLElement) {
           const slotId = String(resizeHandle.dataset.scheduleSlotId || "").trim();
           const mode = String(resizeHandle.dataset.scheduleResize || "").trim();
           const track = path.find(
-            (node) => node instanceof HTMLElement && node.dataset?.scheduleDayTrack
+            (node) => node instanceof HTMLElement && Boolean(node.dataset?.scheduleDayTrack)
           );
-          const day = String(track?.dataset?.scheduleDayTrack || "").trim();
-          if (slotId && track && day && (mode === "start" || mode === "end")) {
+          const day = String((track instanceof HTMLElement ? track.dataset.scheduleDayTrack : "") || "").trim();
+          if (slotId && track instanceof HTMLElement && day && (mode === "start" || mode === "end")) {
             event.preventDefault();
             event.stopPropagation();
             this._scheduleBlockDragPending = null;
@@ -2298,22 +2527,22 @@ ${weekdayYaml}
               day,
               track,
               clientX: event.clientX,
-              pointerId: event.pointerId,
+              pointerId: climatePointerId(event),
               event
             });
             return true;
           }
         }
         const block = path.find(
-          (node) => node instanceof HTMLElement && node.dataset?.scheduleBlockId
+          (node) => node instanceof HTMLElement && Boolean(node.dataset?.scheduleBlockId)
         );
-        if (block) {
+        if (block instanceof HTMLElement) {
           const slotId = String(block.dataset.scheduleBlockId || "").trim();
           const track = path.find(
-            (node) => node instanceof HTMLElement && node.dataset?.scheduleDayTrack
+            (node) => node instanceof HTMLElement && Boolean(node.dataset?.scheduleDayTrack)
           );
-          const day = String(track?.dataset?.scheduleDayTrack || "").trim();
-          if (slotId && track && day) {
+          const day = String((track instanceof HTMLElement ? track.dataset.scheduleDayTrack : "") || "").trim();
+          if (slotId && track instanceof HTMLElement && day) {
             event.preventDefault();
             event.stopPropagation();
             this._setScheduleComposerSelectedSlot(slotId);
@@ -2323,7 +2552,7 @@ ${weekdayYaml}
               track,
               startClientX: event.clientX,
               startClientY: event.clientY,
-              pointerId: event.pointerId
+              pointerId: climatePointerId(event)
             };
             this._setScheduleBlockDragPendingListeners(true);
             return true;
@@ -2362,12 +2591,12 @@ ${weekdayYaml}
         };
       }
       _getConfiguredGridRows() {
-        const numericRows = Number(this._config?.grid_options?.rows);
-        return Number.isFinite(numericRows) ? numericRows : null;
+        const numericRows = Number(climateRecord(this._config?.grid_options).rows);
+        return climateFinite(numericRows) ? numericRows : null;
       }
       _getConfiguredGridColumns() {
-        const numericColumns = Number(this._config?.grid_options?.columns);
-        return Number.isFinite(numericColumns) ? numericColumns : null;
+        const numericColumns = Number(climateRecord(this._config?.grid_options).columns);
+        return climateFinite(numericColumns) ? numericColumns : null;
       }
       _getCompactLevel() {
         const configuredRows = this._getConfiguredGridRows();
@@ -2399,7 +2628,7 @@ ${weekdayYaml}
           const draft = this._draftTempRange.get(entityId);
           const al = parseFiniteClimateNumber(state.attributes?.target_temp_low);
           const ah = parseFiniteClimateNumber(state.attributes?.target_temp_high);
-          if (Number.isFinite(al) && Number.isFinite(ah) && Number.isFinite(draft?.low) && Number.isFinite(draft?.high) && Math.abs(al - draft.low) <= tol && Math.abs(ah - draft.high) <= tol) {
+          if (climateFinite(al) && climateFinite(ah) && draft && climateFinite(draft.low) && climateFinite(draft.high) && Math.abs(al - draft.low) <= tol && Math.abs(ah - draft.high) <= tol) {
             this._clearTemperatureDraft(entityId);
           }
           this._draftTemperature.delete(entityId);
@@ -2412,7 +2641,7 @@ ${weekdayYaml}
         const actualTemperature = parseFiniteClimateNumber(state.attributes?.temperature);
         const draftTemperature = Number(this._draftTemperature.get(entityId));
         const tolerance = this._getTemperatureSyncTolerance(state);
-        if (Number.isFinite(actualTemperature) && Math.abs(actualTemperature - draftTemperature) <= tolerance) {
+        if (climateFinite(actualTemperature) && Math.abs(actualTemperature - draftTemperature) <= tolerance) {
           this._clearTemperatureDraft(entityId);
         }
       }
@@ -2427,15 +2656,15 @@ ${weekdayYaml}
         this._rangeCommitRetryCount = 0;
         this._temperatureCommitRequiresHvacWake = false;
         if (this._draftResetTimer) {
-          window.clearTimeout(this._draftResetTimer);
+          this._clearTimer(this._draftResetTimer);
           this._draftResetTimer = 0;
         }
         if (this._temperatureCommitDebounceTimer) {
-          window.clearTimeout(this._temperatureCommitDebounceTimer);
+          this._clearTimer(this._temperatureCommitDebounceTimer);
           this._temperatureCommitDebounceTimer = 0;
         }
         if (this._rangeCommitDebounceTimer) {
-          window.clearTimeout(this._rangeCommitDebounceTimer);
+          this._clearTimer(this._rangeCommitDebounceTimer);
           this._rangeCommitDebounceTimer = 0;
         }
       }
@@ -2456,7 +2685,7 @@ ${weekdayYaml}
       _getTemperatureRange(state) {
         const min = parseFiniteClimateNumber(state?.attributes?.min_temp);
         const max = parseFiniteClimateNumber(state?.attributes?.max_temp);
-        if (Number.isFinite(min) && Number.isFinite(max) && min < max) {
+        if (climateFinite(min) && climateFinite(max) && min < max) {
           return {
             min,
             max
@@ -2469,7 +2698,7 @@ ${weekdayYaml}
       }
       _getTemperatureStep(state) {
         const step = Number(state?.attributes?.target_temp_step);
-        return Number.isFinite(step) && step > 0 ? step : 0.5;
+        return climateFinite(step) && step > 0 ? step : 0.5;
       }
       /**
        * `heat_cool` with both range bounds and no single `temperature` (Ecobee-style): dual-handle dial.
@@ -2481,7 +2710,7 @@ ${weekdayYaml}
           return false;
         }
         const attrs = state.attributes;
-        if (Number.isFinite(parseFiniteClimateNumber(attrs.temperature))) {
+        if (climateFinite(parseFiniteClimateNumber(attrs.temperature))) {
           return false;
         }
         if (normalizeTextKey(this._getCurrentMode(state)) !== "heat_cool") {
@@ -2489,7 +2718,7 @@ ${weekdayYaml}
         }
         const low = parseFiniteClimateNumber(attrs.target_temp_low);
         const high = parseFiniteClimateNumber(attrs.target_temp_high);
-        return Number.isFinite(low) && Number.isFinite(high);
+        return climateFinite(low) && climateFinite(high);
       }
       /** Minimum span between low and high (at least 1° in entity units, never below `target_temp_step`). */
       _getHeatCoolMinGap(state) {
@@ -2497,26 +2726,26 @@ ${weekdayYaml}
         return Math.max(1, step);
       }
       _clampRangeLowCandidate(rawValue, high, state) {
-        if (!state || !Number.isFinite(high)) {
+        if (!state || !climateFinite(high)) {
           return null;
         }
         const range = this._getTemperatureRange(state);
         const gap = this._getHeatCoolMinGap(state);
         const maxLow = high - gap;
-        if (!Number.isFinite(maxLow) || maxLow < range.min) {
+        if (!climateFinite(maxLow) || maxLow < range.min) {
           return null;
         }
         const n = this._normalizeTemperatureValue(rawValue, state);
         return clamp(n, range.min, maxLow);
       }
       _clampRangeHighCandidate(rawValue, low, state) {
-        if (!state || !Number.isFinite(low)) {
+        if (!state || !climateFinite(low)) {
           return null;
         }
         const range = this._getTemperatureRange(state);
         const gap = this._getHeatCoolMinGap(state);
         const minHigh = low + gap;
-        if (!Number.isFinite(minHigh) || minHigh > range.max) {
+        if (!climateFinite(minHigh) || minHigh > range.max) {
           return null;
         }
         const n = this._normalizeTemperatureValue(rawValue, state);
@@ -2524,9 +2753,8 @@ ${weekdayYaml}
       }
       _getEffectiveTargetLowHigh(state) {
         const entityId = this._config?.entity;
-        if (entityId && this._draftTempRange.has(entityId)) {
-          return { ...this._draftTempRange.get(entityId) };
-        }
+        const draft = entityId ? this._draftTempRange.get(entityId) : void 0;
+        if (draft) return { ...draft };
         const attrs = state?.attributes || {};
         return {
           low: parseFiniteClimateNumber(attrs.target_temp_low),
@@ -2536,7 +2764,7 @@ ${weekdayYaml}
       _normalizeLowHighPair(low, high, state) {
         const lo = this._normalizeTemperatureValue(low, state);
         const hi = this._normalizeTemperatureValue(high, state);
-        if (!Number.isFinite(lo) || !Number.isFinite(hi)) {
+        if (!climateFinite(lo) || !climateFinite(hi)) {
           return null;
         }
         let a = lo;
@@ -2572,17 +2800,17 @@ ${weekdayYaml}
       }
       _supportsTargetTemperature(state) {
         const attrs = state?.attributes || {};
-        if (Number.isFinite(parseFiniteClimateNumber(attrs.temperature))) {
+        if (climateFinite(parseFiniteClimateNumber(attrs.temperature))) {
           return true;
         }
         if (this._isDualSetpointRange(state)) {
           return true;
         }
-        return Number.isFinite(parseFiniteClimateNumber(attrs.min_temp)) && Number.isFinite(parseFiniteClimateNumber(attrs.max_temp));
+        return climateFinite(parseFiniteClimateNumber(attrs.min_temp)) && climateFinite(parseFiniteClimateNumber(attrs.max_temp));
       }
       _supportsTargetTemperatureControl(state) {
         const features = Number(state?.attributes?.supported_features);
-        if (Number.isFinite(features)) {
+        if (climateFinite(features)) {
           return Boolean(features & 1 || features & 2);
         }
         return this._supportsTargetTemperature(state);
@@ -2599,29 +2827,29 @@ ${weekdayYaml}
         }
         if (entityId && this._isDualSetpointRange(state) && this._draftTempRange.has(entityId)) {
           const pair = this._draftTempRange.get(entityId);
-          if (Number.isFinite(pair?.low) && Number.isFinite(pair?.high)) {
+          if (pair && climateFinite(pair.low) && climateFinite(pair.high)) {
             return Number(((pair.high + pair.low) / 2).toFixed(2));
           }
         }
         const attrs = state?.attributes || {};
         const direct = parseFiniteClimateNumber(attrs.temperature);
-        if (Number.isFinite(direct)) {
+        if (climateFinite(direct)) {
           return direct;
         }
         const high = parseFiniteClimateNumber(attrs.target_temp_high);
         const low = parseFiniteClimateNumber(attrs.target_temp_low);
-        if (Number.isFinite(high) && Number.isFinite(low)) {
+        if (climateFinite(high) && climateFinite(low)) {
           return Number(((high + low) / 2).toFixed(1));
         }
         return null;
       }
       _getCurrentTemperature(state) {
         const current = parseFiniteClimateNumber(state?.attributes?.current_temperature);
-        return Number.isFinite(current) ? current : null;
+        return climateFinite(current) ? current : null;
       }
       _getCurrentHumidity(state) {
         const humidity = Number(state?.attributes?.current_humidity);
-        return Number.isFinite(humidity) ? humidity : null;
+        return climateFinite(humidity) ? humidity : null;
       }
       _getCurrentMode(state) {
         return String(state?.attributes?.hvac_mode || state?.state || "").trim();
@@ -2690,15 +2918,15 @@ ${weekdayYaml}
           return false;
         }
         const attrs = state.attributes;
-        if (Number.isFinite(parseFiniteClimateNumber(attrs.temperature))) {
+        if (climateFinite(parseFiniteClimateNumber(attrs.temperature))) {
           return false;
         }
         const low = parseFiniteClimateNumber(attrs.target_temp_low);
         const high = parseFiniteClimateNumber(attrs.target_temp_high);
-        if (Number.isFinite(low) || Number.isFinite(high)) {
+        if (climateFinite(low) || climateFinite(high)) {
           return false;
         }
-        return Number.isFinite(parseFiniteClimateNumber(attrs.current_temperature));
+        return climateFinite(parseFiniteClimateNumber(attrs.current_temperature));
       }
       _isOffNullSetpointState(state) {
         return this._isEffectiveClimateOff(state) && this._isNullSetpointFromCurrentState(state);
@@ -2726,14 +2954,14 @@ ${weekdayYaml}
           return false;
         }
         const { min, max } = this._getTemperatureRange(state);
-        return Number.isFinite(min) && Number.isFinite(max) && min < max;
+        return climateFinite(min) && climateFinite(max) && min < max;
       }
       _supportsOffNullSetpointWake(state) {
         return this._isOffNullSetpointState(state) && this._supportsNullSetpointCreation(state);
       }
       _getStateLabel(state) {
         const action = this._getCurrentAction(state);
-        const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+        const hass = this._hass ?? climateDisplayHass(window.NodaliaI18n?.resolveHass?.(null));
         const langCfg = this._config?.language ?? "auto";
         if (window.NodaliaI18n?.translateClimateHvacLabel) {
           const raw = action || this._getCurrentMode(state);
@@ -2763,8 +2991,8 @@ ${weekdayYaml}
             return dialStyles.off_color;
         }
       }
-      _setClimateService(service, data = {}) {
-        if (!this._hass || !this._config?.entity) {
+      _setClimateService(service, data = {}, hass = this._hass, entityId = this._config.entity) {
+        if (!this.isConnected || !hass || !entityId || isUnavailableState(hass.states[entityId])) {
           return Promise.resolve();
         }
         const fullService = `climate.${service}`;
@@ -2772,10 +3000,9 @@ ${weekdayYaml}
           window.NodaliaUtils?.warnStrictServiceDenied?.("Nodalia Climate Card", fullService);
           return Promise.resolve();
         }
-        return this._hass.callService("climate", service, {
-          entity_id: this._config.entity,
-          ...data
-        });
+        const promise = requestHassService(this, hass, "climate", service, { entity_id: entityId, ...data });
+        void promise.catch((error) => console.warn("Nodalia Climate Card: service failed", service, error));
+        return promise;
       }
       _isServiceAllowed(serviceValue) {
         const security = this._config?.security || {};
@@ -2792,7 +3019,7 @@ ${weekdayYaml}
         if (!domains.length && !services.length) {
           return false;
         }
-        return services.includes(normalizedService) || domains.includes(domain);
+        return services.includes(normalizedService) || domains.includes(domain ?? "");
       }
       _setHvacMode(mode) {
         if (!mode) {
@@ -2811,7 +3038,7 @@ ${weekdayYaml}
       }
       _queueTemperatureCommit(value, options = {}) {
         const state = this._getState();
-        if (!state || this._isDualSetpointRange(state)) {
+        if (!state || isUnavailableState(state) || this._isDualSetpointRange(state)) {
           return null;
         }
         const offNullWake = options.hvacWake === true && this._isOffNullSetpointState(state) && this._supportsOffNullSetpointWake(state);
@@ -2821,11 +3048,11 @@ ${weekdayYaml}
         this._temperatureCommitRequiresHvacWake = Boolean(offNullWake);
         const normalized = this._normalizeTemperatureValue(value, state);
         const entityId = this._config?.entity;
-        if (!entityId || !Number.isFinite(normalized)) {
+        if (!entityId || !climateFinite(normalized)) {
           return null;
         }
         if (this._rangeCommitDebounceTimer) {
-          window.clearTimeout(this._rangeCommitDebounceTimer);
+          this._clearTimer(this._rangeCommitDebounceTimer);
           this._rangeCommitDebounceTimer = 0;
         }
         this._draftTemperature.set(entityId, normalized);
@@ -2839,9 +3066,9 @@ ${weekdayYaml}
           return normalized;
         }
         if (this._temperatureCommitDebounceTimer) {
-          window.clearTimeout(this._temperatureCommitDebounceTimer);
+          this._clearTimer(this._temperatureCommitDebounceTimer);
         }
-        this._temperatureCommitDebounceTimer = window.setTimeout(() => {
+        this._temperatureCommitDebounceTimer = this._setTimer(() => {
           this._temperatureCommitDebounceTimer = 0;
           this._flushQueuedTemperatureCommit();
         }, STEP_BUTTON_COMMIT_DEBOUNCE);
@@ -2853,12 +3080,14 @@ ${weekdayYaml}
         if (!entityId) {
           return;
         }
+        const generation = this._generation, hass = this._hass;
+        if (!this._isCurrent(generation)) return;
         const state = this._getState();
-        if (!state || this._isDualSetpointRange(state)) {
+        if (!state || isUnavailableState(state) || this._isDualSetpointRange(state)) {
           return;
         }
         if (this._temperatureCommitDebounceTimer) {
-          window.clearTimeout(this._temperatureCommitDebounceTimer);
+          this._clearTimer(this._temperatureCommitDebounceTimer);
           this._temperatureCommitDebounceTimer = 0;
         }
         if (this._temperatureCommitInFlight) {
@@ -2867,7 +3096,7 @@ ${weekdayYaml}
         const target = Number(
           this._temperatureCommitQueuedValue ?? this._draftTemperature.get(entityId)
         );
-        if (!Number.isFinite(target)) {
+        if (!climateFinite(target)) {
           return;
         }
         this._temperatureCommitQueuedValue = null;
@@ -2882,8 +3111,8 @@ ${weekdayYaml}
             if (wakeMode) {
               await Promise.resolve(this._setClimateService("set_hvac_mode", {
                 hvac_mode: wakeMode
-              }));
-              if (this._commitAborted) {
+              }, hass, entityId));
+              if (!this._isCurrent(generation)) {
                 return;
               }
             } else if (typeof console !== "undefined" && typeof console.debug === "function") {
@@ -2894,38 +3123,41 @@ ${weekdayYaml}
             await Promise.resolve(this._setClimateService("set_temperature", {
               temperature: target,
               ...wakeMode ? { hvac_mode: wakeMode } : {}
-            }));
-            if (this._commitAborted) {
+            }, hass, entityId));
+            if (!this._isCurrent(generation)) {
               return;
             }
           }
         } catch (_error) {
+          if (!this._isCurrent(generation)) return;
           serviceFailed = true;
           this._temperatureCommitQueuedValue = target;
         } finally {
-          this._temperatureCommitInFlight = false;
-          if (serviceFailed) {
-            this._temperatureCommitRequiresHvacWake = Boolean(hvacWake);
-            this._scheduleDraftReset();
-            return;
-          }
-          const queuedRaw = this._temperatureCommitQueuedValue;
-          const queuedValue = queuedRaw === null || queuedRaw === void 0 ? NaN : Number(queuedRaw);
-          if (Number.isFinite(queuedValue) && Math.abs(queuedValue - target) > 1e-3) {
-            this._flushQueuedTemperatureCommit();
-            return;
-          }
-          if (Number.isFinite(queuedValue) && Math.abs(queuedValue - target) <= 1e-3) {
-            this._temperatureCommitQueuedValue = null;
-          }
-          if (this._draftTemperature.has(entityId)) {
-            this._scheduleDraftReset();
+          if (this._isCurrent(generation)) {
+            this._temperatureCommitInFlight = false;
+            if (serviceFailed) {
+              this._temperatureCommitRequiresHvacWake = Boolean(hvacWake);
+              this._scheduleDraftReset();
+              return;
+            }
+            const queuedRaw = this._temperatureCommitQueuedValue;
+            const queuedValue = queuedRaw === null || queuedRaw === void 0 ? NaN : Number(queuedRaw);
+            if (climateFinite(queuedValue) && Math.abs(queuedValue - target) > 1e-3) {
+              this._flushQueuedTemperatureCommit();
+              return;
+            }
+            if (climateFinite(queuedValue) && Math.abs(queuedValue - target) <= 1e-3) {
+              this._temperatureCommitQueuedValue = null;
+            }
+            if (this._draftTemperature.has(entityId)) {
+              this._scheduleDraftReset();
+            }
           }
         }
       }
       _queueRangeCommit(pair, options = {}) {
         const state = this._getState();
-        if (!state || !this._isDualSetpointRange(state)) {
+        if (!state || isUnavailableState(state) || !this._isDualSetpointRange(state)) {
           return null;
         }
         const normalized = this._normalizeLowHighPair(pair.low, pair.high, state);
@@ -2937,7 +3169,7 @@ ${weekdayYaml}
           return null;
         }
         if (this._temperatureCommitDebounceTimer) {
-          window.clearTimeout(this._temperatureCommitDebounceTimer);
+          this._clearTimer(this._temperatureCommitDebounceTimer);
           this._temperatureCommitDebounceTimer = 0;
         }
         this._draftTempRange.set(entityId, normalized);
@@ -2951,9 +3183,9 @@ ${weekdayYaml}
           return normalized;
         }
         if (this._rangeCommitDebounceTimer) {
-          window.clearTimeout(this._rangeCommitDebounceTimer);
+          this._clearTimer(this._rangeCommitDebounceTimer);
         }
-        this._rangeCommitDebounceTimer = window.setTimeout(() => {
+        this._rangeCommitDebounceTimer = this._setTimer(() => {
           this._rangeCommitDebounceTimer = 0;
           this._flushQueuedRangeCommit();
         }, STEP_BUTTON_COMMIT_DEBOUNCE);
@@ -2965,19 +3197,21 @@ ${weekdayYaml}
         if (!entityId) {
           return;
         }
+        const generation = this._generation, hass = this._hass;
+        if (!this._isCurrent(generation)) return;
         const state = this._getState();
-        if (!state || !this._isDualSetpointRange(state)) {
+        if (!state || isUnavailableState(state) || !this._isDualSetpointRange(state)) {
           return;
         }
         if (this._rangeCommitDebounceTimer) {
-          window.clearTimeout(this._rangeCommitDebounceTimer);
+          this._clearTimer(this._rangeCommitDebounceTimer);
           this._rangeCommitDebounceTimer = 0;
         }
         if (this._rangeCommitInFlight) {
           return;
         }
         const pending = this._rangeCommitQueuedValue ?? this._draftTempRange.get(entityId);
-        if (!pending || !Number.isFinite(pending.low) || !Number.isFinite(pending.high)) {
+        if (!pending || !climateFinite(pending.low) || !climateFinite(pending.high)) {
           return;
         }
         this._rangeCommitQueuedValue = null;
@@ -2987,55 +3221,61 @@ ${weekdayYaml}
           await Promise.resolve(this._setClimateService("set_temperature", {
             target_temp_low: pending.low,
             target_temp_high: pending.high
-          }));
-          if (this._commitAborted) {
+          }, hass, entityId));
+          if (!this._isCurrent(generation)) {
             return;
           }
         } catch (_error) {
+          if (!this._isCurrent(generation)) return;
           serviceFailed = true;
           this._rangeCommitQueuedValue = pending;
         } finally {
-          this._rangeCommitInFlight = false;
-          if (serviceFailed) {
-            this._scheduleDraftReset();
-            return;
-          }
-          const queued = this._rangeCommitQueuedValue;
-          if (queued && Number.isFinite(queued.low) && Number.isFinite(queued.high) && (Math.abs(queued.low - pending.low) > 1e-3 || Math.abs(queued.high - pending.high) > 1e-3)) {
-            this._flushQueuedRangeCommit();
-            return;
-          }
-          if (queued && Number.isFinite(queued.low) && Number.isFinite(queued.high) && Math.abs(queued.low - pending.low) <= 1e-3 && Math.abs(queued.high - pending.high) <= 1e-3) {
-            this._rangeCommitQueuedValue = null;
-          }
-          if (this._draftTempRange.has(entityId)) {
-            this._scheduleDraftReset();
+          if (this._isCurrent(generation)) {
+            this._rangeCommitInFlight = false;
+            if (serviceFailed) {
+              this._scheduleDraftReset();
+              return;
+            }
+            const queued = this._rangeCommitQueuedValue;
+            if (queued && climateFinite(queued.low) && climateFinite(queued.high) && (Math.abs(queued.low - pending.low) > 1e-3 || Math.abs(queued.high - pending.high) > 1e-3)) {
+              this._flushQueuedRangeCommit();
+              return;
+            }
+            if (queued && climateFinite(queued.low) && climateFinite(queued.high) && Math.abs(queued.low - pending.low) <= 1e-3 && Math.abs(queued.high - pending.high) <= 1e-3) {
+              this._rangeCommitQueuedValue = null;
+            }
+            if (this._draftTempRange.has(entityId)) {
+              this._scheduleDraftReset();
+            }
           }
         }
       }
       _commitTemperature(value, options = {}) {
         const normalized = this._queueTemperatureCommit(value, {
           immediate: options.immediate !== false,
-          render: options.render
+          ...options.render === void 0 ? {} : { render: options.render }
         });
-        if (!Number.isFinite(normalized)) {
+        if (!climateFinite(normalized)) {
           return null;
         }
         this._scheduleDraftReset();
         return normalized;
       }
       async _createSetpointFromCurrentBy(delta) {
+        const entityId = this._config.entity;
+        const generation = this._generation, hass = this._hass;
+        if (!this._isCurrent(generation)) return;
         const state = this._getState();
         if (!state || !this._supportsNullSetpointCreation(state)) {
           return false;
         }
         const baseline = this._getCurrentTemperature(state);
-        if (!Number.isFinite(baseline)) {
+        if (!climateFinite(baseline)) {
           return false;
         }
         const step = this._getTemperatureStep(state);
         const next = this._normalizeTemperatureValue(Number(baseline) + Number(delta) * step, state);
-        if (!Number.isFinite(next)) {
+        if (!climateFinite(next)) {
           return false;
         }
         this._triggerHaptic("selection");
@@ -3044,15 +3284,17 @@ ${weekdayYaml}
           if (wakeMode) {
             await Promise.resolve(this._setClimateService("set_hvac_mode", {
               hvac_mode: wakeMode
-            }));
+            }, hass, entityId));
           } else if (typeof console !== "undefined" && typeof console.debug === "function") {
             console.debug("Nodalia Climate Card: creating setpoint without HVAC wake mode.");
           }
+          if (!this._isCurrent(generation)) return false;
           await Promise.resolve(this._setClimateService("set_temperature", {
             temperature: next,
             ...wakeMode ? { hvac_mode: wakeMode } : {}
-          }));
+          }, hass, entityId));
         } catch (error) {
+          if (!this._isCurrent(generation)) return;
           if (typeof console !== "undefined" && typeof console.debug === "function") {
             console.debug("Nodalia Climate Card: failed to create setpoint from current temperature.", error);
           }
@@ -3061,9 +3303,9 @@ ${weekdayYaml}
       }
       _scheduleDraftReset() {
         if (this._draftResetTimer) {
-          window.clearTimeout(this._draftResetTimer);
+          this._clearTimer(this._draftResetTimer);
         }
-        this._draftResetTimer = window.setTimeout(() => {
+        this._draftResetTimer = this._setTimer(() => {
           this._draftResetTimer = 0;
           const entityId = this._config?.entity;
           const state = this._getState();
@@ -3083,7 +3325,7 @@ ${weekdayYaml}
             const draft = this._draftTempRange.get(entityId);
             const al = parseFiniteClimateNumber(state.attributes?.target_temp_low);
             const ah = parseFiniteClimateNumber(state.attributes?.target_temp_high);
-            if (Number.isFinite(al) && Number.isFinite(ah) && Number.isFinite(draft?.low) && Number.isFinite(draft?.high) && Math.abs(al - draft.low) <= tol && Math.abs(ah - draft.high) <= tol) {
+            if (climateFinite(al) && climateFinite(ah) && draft && climateFinite(draft.low) && climateFinite(draft.high) && Math.abs(al - draft.low) <= tol && Math.abs(ah - draft.high) <= tol) {
               this._clearTemperatureDraft(entityId);
               this._render();
               return;
@@ -3108,12 +3350,12 @@ ${weekdayYaml}
           const actualTemperature = parseFiniteClimateNumber(state.attributes?.temperature);
           const draftTemperature = Number(this._draftTemperature.get(entityId));
           const tolerance = this._getTemperatureSyncTolerance(state);
-          if (Number.isFinite(actualTemperature) && Math.abs(actualTemperature - draftTemperature) <= tolerance) {
+          if (climateFinite(actualTemperature) && Math.abs(actualTemperature - draftTemperature) <= tolerance) {
             this._clearTemperatureDraft(entityId);
             this._render();
             return;
           }
-          if (this._temperatureCommitRetryCount < DRAFT_CONFIRMATION_RETRY_LIMIT && Number.isFinite(draftTemperature)) {
+          if (this._temperatureCommitRetryCount < DRAFT_CONFIRMATION_RETRY_LIMIT && climateFinite(draftTemperature)) {
             this._temperatureCommitRetryCount += 1;
             this._temperatureCommitQueuedValue = draftTemperature;
             this._flushQueuedTemperatureCommit();
@@ -3138,7 +3380,7 @@ ${weekdayYaml}
             return;
           }
           const { low, high } = this._getEffectiveTargetLowHigh(state);
-          if (!Number.isFinite(low) || !Number.isFinite(high)) {
+          if (!climateFinite(low) || !climateFinite(high)) {
             return;
           }
           const range = this._getTemperatureRange(state);
@@ -3187,7 +3429,7 @@ ${weekdayYaml}
           return;
         }
         const current = parseFiniteClimateNumber(this._getTargetTemperature(state));
-        if (!Number.isFinite(current)) {
+        if (!climateFinite(current)) {
           return;
         }
         const next = this._normalizeTemperatureValue(current + Number(delta) * step, state);
@@ -3202,14 +3444,15 @@ ${weekdayYaml}
         if (haptics.enabled !== true) {
           return;
         }
-        const style = styleOverride || haptics.style || "medium";
+        const style = String(styleOverride || haptics.style || "medium");
         fireEvent(this, "haptic", style, {
           bubbles: true,
           cancelable: false,
           composed: true
         });
         if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
-          navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
+          const pattern = climateRecord(HAPTIC_PATTERNS)[style];
+          navigator.vibrate(typeof pattern === "number" ? pattern : Array.isArray(pattern) ? pattern.filter((value) => typeof value === "number") : HAPTIC_PATTERNS.selection);
         }
       }
       _getAnimationSettings() {
@@ -3258,8 +3501,9 @@ ${weekdayYaml}
         button.getBoundingClientRect();
         button.classList.add("is-pressing");
         const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+        const generation = this._generation;
         const done = () => {
-          if (!button.isConnected) {
+          if (!this._isCurrent(generation) || !button.isConnected) {
             return;
           }
           button.classList.remove("is-pressing");
@@ -3267,12 +3511,12 @@ ${weekdayYaml}
         if (typeof schedule === "function") {
           schedule(this, done, animations.buttonBounceDuration + 40);
         } else {
-          window.setTimeout(done, animations.buttonBounceDuration + 40);
+          this._setTimer(done, animations.buttonBounceDuration + 40);
         }
       }
       _scheduleEntranceAnimationReset(delay) {
         if (this._entranceAnimationResetTimer) {
-          window.clearTimeout(this._entranceAnimationResetTimer);
+          this._clearTimer(this._entranceAnimationResetTimer);
           this._entranceAnimationResetTimer = 0;
         }
         const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3e3);
@@ -3280,7 +3524,7 @@ ${weekdayYaml}
           this._animateContentOnNextRender = false;
           return;
         }
-        this._entranceAnimationResetTimer = window.setTimeout(() => {
+        this._entranceAnimationResetTimer = this._setTimer(() => {
           this._entranceAnimationResetTimer = 0;
           if (!this.isConnected) {
             return;
@@ -3306,27 +3550,27 @@ ${weekdayYaml}
         if (shouldAttach) {
           window.addEventListener("pointermove", this._onWindowPointerMove);
           window.addEventListener("pointerup", this._onWindowPointerUp);
-          window.addEventListener("pointercancel", this._onWindowPointerUp);
+          window.addEventListener("pointercancel", this._onCancelGesture);
           window.addEventListener("mousemove", this._onWindowMouseMove);
           window.addEventListener("mouseup", this._onWindowMouseUp);
-          if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+          if (!(typeof window !== "undefined" && typeof window.PointerEvent === "function")) {
             window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
             window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
             window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
-            window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
+            window.addEventListener("touchcancel", this._onCancelGesture, { passive: false });
           }
           return;
         }
         window.removeEventListener("pointermove", this._onWindowPointerMove);
         window.removeEventListener("pointerup", this._onWindowPointerUp);
-        window.removeEventListener("pointercancel", this._onWindowPointerUp);
+        window.removeEventListener("pointercancel", this._onCancelGesture);
         window.removeEventListener("mousemove", this._onWindowMouseMove);
         window.removeEventListener("mouseup", this._onWindowMouseUp);
-        if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+        if (!(typeof window !== "undefined" && typeof window.PointerEvent === "function")) {
           window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
           window.removeEventListener("touchmove", this._onWindowTouchMove);
           window.removeEventListener("touchend", this._onWindowTouchEnd);
-          window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+          window.removeEventListener("touchcancel", this._onCancelGesture);
         }
       }
       _updateDialRangePreview(low, high) {
@@ -3335,7 +3579,7 @@ ${weekdayYaml}
         if (!(dial instanceof HTMLElement) || !state || !this._isDualSetpointRange(state)) {
           return;
         }
-        if (!Number.isFinite(low) || !Number.isFinite(high)) {
+        if (!climateFinite(low) || !climateFinite(high)) {
           return;
         }
         const temperatureRange = this._getTemperatureRange(state);
@@ -3387,7 +3631,7 @@ ${weekdayYaml}
           return;
         }
         const next = Number(steppedValue);
-        if (!Number.isFinite(next)) {
+        if (!climateFinite(next)) {
           return;
         }
         const drag = this._activeDialDrag;
@@ -3428,14 +3672,17 @@ ${weekdayYaml}
         const seedState = this._getState();
         const seedStep = seedState ? this._getTemperatureStep(seedState) : 1;
         const seedDraft = seedState ? this._draftTemperature.get(this._config.entity) : null;
-        const seedValue = Number.isFinite(Number(seedDraft)) ? Number(seedDraft) : Number(dial.getAttribute("aria-valuenow"));
+        const seedValue = seedDraft !== null && seedDraft !== void 0 && climateFinite(Number(seedDraft)) ? Number(seedDraft) : Number(dial.getAttribute("aria-valuenow"));
         this._activeDialDrag = {
+          originalTemperature: this._draftTemperature.get(this._config.entity),
+          originalRange: this._draftTempRange.get(this._config.entity),
+          capture: event?.target instanceof Element ? event.target : null,
           kind: "single",
           dial,
           geometry: dial.getBoundingClientRect(),
           pointerId,
           lastValue: null,
-          lastHapticValue: Number.isFinite(seedValue) ? Number(seedValue.toFixed(Math.max(1, getStepPrecision(seedStep)))) : null
+          lastHapticValue: climateFinite(seedValue) ? Number(seedValue.toFixed(Math.max(1, getStepPrecision(seedStep)))) : null
         };
         this._setDragWindowListeners(true);
         this._setDialDraggingState(true, dial);
@@ -3466,6 +3713,10 @@ ${weekdayYaml}
           this._activeDialDrag.geometry
         );
         this._activeDialDrag.lastValue = nextValue;
+        if (event?.target instanceof Element && pointerId !== null) try {
+          event.target.setPointerCapture(pointerId);
+        } catch {
+        }
         this._applyDialValue(nextValue, { commit: false });
       }
       _moveDialDrag(clientX, clientY, event = null) {
@@ -3498,7 +3749,7 @@ ${weekdayYaml}
         if (this._dialDragFrame) {
           return;
         }
-        this._dialDragFrame = window.requestAnimationFrame(() => {
+        this._dialDragFrame = this._requestFrame(() => {
           this._dialDragFrame = 0;
           const pending = this._pendingDialDragPoint;
           this._pendingDialDragPoint = null;
@@ -3522,7 +3773,7 @@ ${weekdayYaml}
           event.preventDefault();
         }
         if (this._dialDragFrame) {
-          window.cancelAnimationFrame(this._dialDragFrame);
+          this._cancelFrame(this._dialDragFrame);
           this._dialDragFrame = 0;
         }
         this._pendingDialDragPoint = null;
@@ -3539,6 +3790,7 @@ ${weekdayYaml}
         this._applyDialValue(nextValue, { commit: true });
         this._setDialDraggingState(false, drag.dial);
         this._activeDialDrag = null;
+        this._releasePointer(drag.capture, drag.pointerId);
         this._setDragWindowListeners(false);
         if (this._pendingRenderAfterDrag) {
           this._pendingRenderAfterDrag = false;
@@ -3550,11 +3802,14 @@ ${weekdayYaml}
           return;
         }
         const state = this._getState();
-        if (!state || !this._isDualSetpointRange(state)) {
+        if (!state || isUnavailableState(state) || !this._isDualSetpointRange(state)) {
           return;
         }
         const pairSeed = this._getEffectiveTargetLowHigh(state);
         this._activeDialDrag = {
+          originalTemperature: this._draftTemperature.get(this._config.entity),
+          originalRange: this._draftTempRange.get(this._config.entity),
+          capture: event?.target instanceof Element ? event.target : null,
           kind: "range",
           handle,
           dial,
@@ -3565,7 +3820,7 @@ ${weekdayYaml}
           startClientX: clientX,
           startClientY: clientY,
           rangeThumbDragStarted: false,
-          lastHapticValue: handle === "low" ? pairSeed.low : pairSeed.high
+          lastHapticValue: (handle === "low" ? pairSeed.low : pairSeed.high) ?? null
         };
         this._setDragWindowListeners(true);
         this._setDialDraggingState(true, dial);
@@ -3574,21 +3829,23 @@ ${weekdayYaml}
           event.stopPropagation();
         }
         const pair = this._getEffectiveTargetLowHigh(state);
-        if (!Number.isFinite(pair.low) || !Number.isFinite(pair.high)) {
+        if (!climateFinite(pair.low) || !climateFinite(pair.high)) {
           this._setDialDraggingState(false, dial);
           this._activeDialDrag = null;
           this._setDragWindowListeners(false);
           return;
         }
-        this._activeDialDrag.lastLow = pair.low;
-        this._activeDialDrag.lastHigh = pair.high;
-        this._activeDialDrag.lastHapticValue = handle === "low" ? pair.low : pair.high;
+        const drag = this._activeDialDrag;
+        if (!drag || drag.kind !== "range") return;
+        drag.lastLow = pair.low;
+        drag.lastHigh = pair.high;
+        drag.lastHapticValue = handle === "low" ? pair.low : pair.high;
         const entityId = this._config.entity;
         if (entityId) {
           this._draftTempRange.set(entityId, { low: pair.low, high: pair.high });
         }
         this._updateDialRangePreview(pair.low, pair.high);
-        if (event?.target?.setPointerCapture && pointerId != null && event.target instanceof Element) {
+        if (event?.target instanceof Element && pointerId != null && typeof event.target.setPointerCapture === "function") {
           try {
             event.target.setPointerCapture(pointerId);
           } catch (_e) {
@@ -3649,7 +3906,7 @@ ${weekdayYaml}
           event.preventDefault();
         }
         if (this._dialDragFrame) {
-          window.cancelAnimationFrame(this._dialDragFrame);
+          this._cancelFrame(this._dialDragFrame);
           this._dialDragFrame = 0;
         }
         this._pendingDialDragPoint = null;
@@ -3661,10 +3918,10 @@ ${weekdayYaml}
           this._setDragWindowListeners(false);
           const entityId = this._config.entity;
           const pairEff = this._getEffectiveTargetLowHigh(state);
-          if (entityId && Number.isFinite(pairEff.low) && Number.isFinite(pairEff.high)) {
+          if (entityId && climateFinite(pairEff.low) && climateFinite(pairEff.high)) {
             this._draftTempRange.set(entityId, { low: pairEff.low, high: pairEff.high });
           }
-          if (Number.isFinite(pairEff.low) && Number.isFinite(pairEff.high)) {
+          if (climateFinite(pairEff.low) && climateFinite(pairEff.high)) {
             this._updateDialRangePreview(pairEff.low, pairEff.high);
           }
           if (this._pendingRenderAfterDrag) {
@@ -3697,6 +3954,7 @@ ${weekdayYaml}
         }
         this._setDialDraggingState(false, drag.dial);
         this._activeDialDrag = null;
+        this._releasePointer(drag.capture, drag.pointerId);
         this._setDragWindowListeners(false);
         this._selectedRangeThumb = drag.handle;
         if (normalized) {
@@ -3708,18 +3966,19 @@ ${weekdayYaml}
         }
       }
       _onShadowPointerDown(event) {
+        if (!(event instanceof PointerEvent)) return;
         const path = event.composedPath();
         if (this._handleScheduleComposerPointerDown(event, path)) {
           return;
         }
-        const actionButton = path.find((node) => node instanceof HTMLElement && node.dataset?.climateAction);
-        if (actionButton) {
+        const actionButton = path.find((node) => node instanceof HTMLElement && Boolean(node.dataset?.climateAction));
+        if (actionButton instanceof HTMLElement) {
           return;
         }
         const stateEarly = this._getState();
         if (!this._activeDialDrag && stateEarly && this._isDualSetpointRange(stateEarly) && this._selectedRangeThumb) {
           const onRangeThumb = path.some(
-            (n) => n instanceof Element && (n.dataset?.climateControl === "dial-range-low" || n.dataset?.climateControl === "dial-range-high")
+            (n) => n instanceof HTMLElement && (n.dataset?.climateControl === "dial-range-low" || n.dataset?.climateControl === "dial-range-high")
           );
           if (!onRangeThumb) {
             const dialDual = path.find(
@@ -3731,8 +3990,8 @@ ${weekdayYaml}
             }
           }
         }
-        const rangeLow = path.find((node) => node instanceof Element && node.dataset?.climateControl === "dial-range-low");
-        const rangeHigh = path.find((node) => node instanceof Element && node.dataset?.climateControl === "dial-range-high");
+        const rangeLow = path.find((node) => node instanceof HTMLElement && node.dataset?.climateControl === "dial-range-low");
+        const rangeHigh = path.find((node) => node instanceof HTMLElement && node.dataset?.climateControl === "dial-range-high");
         if ((rangeLow || rangeHigh) && this._isDualSetpointRange(this._getState())) {
           const dial2 = path.find((node) => node instanceof HTMLElement && node.classList?.contains("climate-card__dial"));
           if (!this._activeDialDrag && dial2 && (typeof event.button !== "number" || event.button === 0)) {
@@ -3742,30 +4001,31 @@ ${weekdayYaml}
               event.clientX,
               event.clientY,
               event,
-              event.pointerId
+              climatePointerId(event)
             );
           }
           return;
         }
         const dialHandle = path.find(
-          (node) => node instanceof Element && node.dataset?.climateControl === "dial-hit"
+          (node) => (node instanceof HTMLElement || node instanceof SVGElement) && node.dataset?.climateControl === "dial-hit"
         );
         const dial = dialHandle ? path.find((node) => node instanceof HTMLElement && node.classList?.contains("climate-card__dial")) : null;
         if (this._activeDialDrag || !dial || typeof event.button === "number" && event.button !== 0) {
           return;
         }
-        this._startDialDrag(dial, event.clientX, event.clientY, event, event.pointerId);
+        this._startDialDrag(dial, event.clientX, event.clientY, event, climatePointerId(event));
       }
       _onShadowMouseDown(event) {
+        if (!(event instanceof MouseEvent)) return;
         const path = event.composedPath();
-        const actionButton = path.find((node) => node instanceof HTMLElement && node.dataset?.climateAction);
-        if (actionButton) {
+        const actionButton = path.find((node) => node instanceof HTMLElement && Boolean(node.dataset?.climateAction));
+        if (actionButton instanceof HTMLElement) {
           return;
         }
         const stateEarly = this._getState();
         if (!this._activeDialDrag && stateEarly && this._isDualSetpointRange(stateEarly) && this._selectedRangeThumb) {
           const onRangeThumb = path.some(
-            (n) => n instanceof Element && (n.dataset?.climateControl === "dial-range-low" || n.dataset?.climateControl === "dial-range-high")
+            (n) => n instanceof HTMLElement && (n.dataset?.climateControl === "dial-range-low" || n.dataset?.climateControl === "dial-range-high")
           );
           if (!onRangeThumb) {
             const dialDual = path.find(
@@ -3777,8 +4037,8 @@ ${weekdayYaml}
             }
           }
         }
-        const rangeLow = path.find((node) => node instanceof Element && node.dataset?.climateControl === "dial-range-low");
-        const rangeHigh = path.find((node) => node instanceof Element && node.dataset?.climateControl === "dial-range-high");
+        const rangeLow = path.find((node) => node instanceof HTMLElement && node.dataset?.climateControl === "dial-range-low");
+        const rangeHigh = path.find((node) => node instanceof HTMLElement && node.dataset?.climateControl === "dial-range-high");
         if ((rangeLow || rangeHigh) && this._isDualSetpointRange(this._getState())) {
           const dial2 = path.find((node) => node instanceof HTMLElement && node.classList?.contains("climate-card__dial"));
           if (!this._activeDialDrag && dial2 && event.button === 0) {
@@ -3787,7 +4047,7 @@ ${weekdayYaml}
           return;
         }
         const dialHandle = path.find(
-          (node) => node instanceof Element && node.dataset?.climateControl === "dial-hit"
+          (node) => (node instanceof HTMLElement || node instanceof SVGElement) && node.dataset?.climateControl === "dial-hit"
         );
         const dial = dialHandle ? path.find((node) => node instanceof HTMLElement && node.classList?.contains("climate-card__dial")) : null;
         if (this._activeDialDrag || !dial || event.button !== 0) {
@@ -3796,15 +4056,16 @@ ${weekdayYaml}
         this._startDialDrag(dial, event.clientX, event.clientY, event);
       }
       _onShadowTouchStart(event) {
+        if (!(event instanceof TouchEvent)) return;
         const path = event.composedPath();
-        const actionButton = path.find((node) => node instanceof HTMLElement && node.dataset?.climateAction);
-        if (actionButton) {
+        const actionButton = path.find((node) => node instanceof HTMLElement && Boolean(node.dataset?.climateAction));
+        if (actionButton instanceof HTMLElement) {
           return;
         }
         const stateEarly = this._getState();
         if (!this._activeDialDrag && stateEarly && this._isDualSetpointRange(stateEarly) && this._selectedRangeThumb) {
           const onRangeThumb = path.some(
-            (n) => n instanceof Element && (n.dataset?.climateControl === "dial-range-low" || n.dataset?.climateControl === "dial-range-high")
+            (n) => n instanceof HTMLElement && (n.dataset?.climateControl === "dial-range-low" || n.dataset?.climateControl === "dial-range-high")
           );
           if (!onRangeThumb) {
             const dialDual = path.find(
@@ -3816,64 +4077,73 @@ ${weekdayYaml}
             }
           }
         }
-        const rangeLow = path.find((node) => node instanceof Element && node.dataset?.climateControl === "dial-range-low");
-        const rangeHigh = path.find((node) => node instanceof Element && node.dataset?.climateControl === "dial-range-high");
+        const rangeLow = path.find((node) => node instanceof HTMLElement && node.dataset?.climateControl === "dial-range-low");
+        const rangeHigh = path.find((node) => node instanceof HTMLElement && node.dataset?.climateControl === "dial-range-high");
         if ((rangeLow || rangeHigh) && this._isDualSetpointRange(this._getState()) && event.touches?.length) {
           const dial2 = path.find((node) => node instanceof HTMLElement && node.classList?.contains("climate-card__dial"));
           if (!this._activeDialDrag && dial2) {
             const t = event.touches[0];
+            if (!t) return;
             this._startRangeDialDrag(dial2, rangeLow ? "low" : "high", t.clientX, t.clientY, event, null);
           }
           return;
         }
         const dialHandle = path.find(
-          (node) => node instanceof Element && node.dataset?.climateControl === "dial-hit"
+          (node) => (node instanceof HTMLElement || node instanceof SVGElement) && node.dataset?.climateControl === "dial-hit"
         );
         const dial = dialHandle ? path.find((node) => node instanceof HTMLElement && node.classList?.contains("climate-card__dial")) : null;
         if (this._activeDialDrag || !dial || !event.touches?.length) {
           return;
         }
-        this._startDialDrag(dial, event.touches[0].clientX, event.touches[0].clientY, event);
+        const touch = event.touches[0];
+        if (touch) this._startDialDrag(dial, touch.clientX, touch.clientY, event);
       }
       _onWindowPointerMove(event) {
+        if (!(event instanceof PointerEvent)) return;
         const drag = this._activeDialDrag;
         if (!drag) {
           return;
         }
-        if (drag.pointerId != null && event.pointerId != null && drag.pointerId !== event.pointerId) {
+        if (drag.pointerId != null && climatePointerId(event) != null && drag.pointerId !== climatePointerId(event)) {
           return;
         }
         this._queueDialDragMove(event.clientX, event.clientY, event);
       }
       _onWindowPointerUp(event) {
+        if (!(event instanceof PointerEvent)) return;
         const drag = this._activeDialDrag;
         if (!drag) {
           return;
         }
-        if (drag.pointerId != null && event.pointerId != null && drag.pointerId !== event.pointerId) {
+        if (drag.pointerId != null && climatePointerId(event) != null && drag.pointerId !== climatePointerId(event)) {
           return;
         }
-        this._commitDialDrag(event.clientX, event.clientY, event, event.pointerId);
+        this._commitDialDrag(event.clientX, event.clientY, event, climatePointerId(event));
       }
       _onWindowMouseMove(event) {
+        if (!(event instanceof MouseEvent)) return;
         if (!this._activeDialDrag || typeof event.buttons === "number" && (event.buttons & 1) === 0) {
           return;
         }
         this._queueDialDragMove(event.clientX, event.clientY, event);
       }
       _onWindowMouseUp(event) {
+        if (!(event instanceof MouseEvent)) return;
         if (!this._activeDialDrag) {
           return;
         }
         this._commitDialDrag(event.clientX, event.clientY, event);
       }
       _onWindowTouchMove(event) {
+        if (!(event instanceof TouchEvent)) return;
         if (!this._activeDialDrag || !event.touches?.length) {
           return;
         }
-        this._queueDialDragMove(event.touches[0].clientX, event.touches[0].clientY, event);
+        const touch = event.touches[0];
+        if (touch) this._queueDialDragMove(touch.clientX, touch.clientY, event);
       }
       _onWindowTouchStartCapture(event) {
+        if (!(event instanceof TouchEvent)) return;
         const drag = this._activeDialDrag;
         if (!drag) {
           return;
@@ -3882,15 +4152,10 @@ ${weekdayYaml}
         if (path.includes(drag.dial)) {
           return;
         }
-        this._setDialDraggingState(false, drag.dial);
-        this._activeDialDrag = null;
-        this._setDragWindowListeners(false);
-        if (this._pendingRenderAfterDrag) {
-          this._pendingRenderAfterDrag = false;
-          this._render();
-        }
+        this._cancelGestures();
       }
       _onWindowTouchEnd(event) {
+        if (!(event instanceof TouchEvent)) return;
         if (!this._activeDialDrag) {
           return;
         }
@@ -3946,8 +4211,9 @@ ${weekdayYaml}
         element.getBoundingClientRect();
         element.classList.add(className);
         const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+        const generation = this._generation;
         const done = () => {
-          if (!element.isConnected) {
+          if (!this._isCurrent(generation) || !element.isConnected) {
             return;
           }
           element.classList.remove(className);
@@ -3955,13 +4221,13 @@ ${weekdayYaml}
         if (typeof schedule === "function") {
           schedule(this, done, duration + 40);
         } else {
-          window.setTimeout(done, duration + 40);
+          this._setTimer(done, duration + 40);
         }
       }
       _onShadowClick(event) {
         const path = event.composedPath();
-        const actionButton = path.find((node) => node instanceof HTMLElement && node.dataset?.climateAction);
-        if (actionButton) {
+        const actionButton = path.find((node) => node instanceof HTMLElement && Boolean(node.dataset?.climateAction));
+        if (actionButton instanceof HTMLElement) {
           event.preventDefault();
           event.stopPropagation();
           const climateAction = actionButton.dataset.climateAction;
@@ -3970,7 +4236,7 @@ ${weekdayYaml}
             event.stopPropagation();
             if (climateAction === "schedule-open") {
               this._triggerHaptic("selection");
-              if (event.detail === 0) {
+              if (event instanceof UIEvent && event.detail === 0) {
                 this._triggerButtonBounce(actionButton);
               }
               this._openScheduleComposer();
@@ -3998,7 +4264,7 @@ ${weekdayYaml}
           }
           if (climateAction === "override-hold" || climateAction === "override-clear") {
             this._triggerHaptic("selection");
-            if (event.detail === 0) {
+            if (event instanceof UIEvent && event.detail === 0) {
               this._triggerButtonBounce(actionButton);
             }
             if (climateAction === "override-hold") {
@@ -4012,7 +4278,7 @@ ${weekdayYaml}
           if (!state) {
             return;
           }
-          if (event.detail === 0) {
+          if (event instanceof UIEvent && event.detail === 0) {
             this._triggerButtonBounce(actionButton);
           }
           switch (climateAction) {
@@ -4099,6 +4365,7 @@ ${weekdayYaml}
         runTap();
       }
       _onShadowKeyDown(event) {
+        if (!(event instanceof KeyboardEvent)) return;
         if (!this._scheduleComposerOpen) {
           return;
         }
@@ -4112,13 +4379,13 @@ ${weekdayYaml}
         }
       }
       _onShadowInput(event) {
-        const compactInput = event.composedPath().find((node) => node instanceof HTMLInputElement && node.dataset?.climateCompactField);
-        if (compactInput) {
+        const compactInput = event.composedPath().find((node) => node instanceof HTMLInputElement && Boolean(node.dataset?.climateCompactField));
+        if (compactInput instanceof HTMLInputElement) {
           event.stopPropagation();
           const state = this._getState();
           const field2 = compactInput.dataset.climateCompactField;
           let value2 = Number(compactInput.value);
-          if (!state || !Number.isFinite(value2)) {
+          if (!state || !climateFinite(value2)) {
             return;
           }
           const range = this._getTemperatureRange(state);
@@ -4141,12 +4408,12 @@ ${weekdayYaml}
             return;
           }
           const pair = this._getEffectiveTargetLowHigh(state);
-          if (!Number.isFinite(pair.low) || !Number.isFinite(pair.high)) {
+          if (!climateFinite(pair.low) || !climateFinite(pair.high)) {
             return;
           }
           this._selectedRangeThumb = field2 === "low" ? "low" : "high";
           const constrainedValue = field2 === "low" ? this._clampRangeLowCandidate(value2, pair.high, state) : this._clampRangeHighCandidate(value2, pair.low, state);
-          if (!Number.isFinite(constrainedValue)) {
+          if (!climateFinite(constrainedValue)) {
             return;
           }
           if (constrainedValue !== value2) {
@@ -4166,7 +4433,7 @@ ${weekdayYaml}
           return;
         }
         const input = event.composedPath().find((node) => (node instanceof HTMLInputElement || node instanceof HTMLSelectElement) && node.dataset?.climateScheduleField);
-        if (!input) {
+        if (!(input instanceof HTMLInputElement || input instanceof HTMLSelectElement)) {
           return;
         }
         event.stopPropagation();
@@ -4174,7 +4441,7 @@ ${weekdayYaml}
           if (event.type === "input") {
             return;
           }
-          this._setScheduleComposerEnabled(Boolean(input.checked));
+          this._setScheduleComposerEnabled(input instanceof HTMLInputElement && input.checked);
           return;
         }
         const slotId = String(input.dataset.scheduleSlotId || "").trim();
@@ -4183,12 +4450,14 @@ ${weekdayYaml}
           return;
         }
         if ((input.type === "time" || input.type === "number") && event.type === "input") {
+          this._touchScheduleDraftRevision();
+          this._syncRenderSignature();
           return;
         }
         let value = input.value;
         if (field === "temperature") {
           value = Number(value);
-          if (!Number.isFinite(value)) {
+          if (!climateFinite(value)) {
             return;
           }
         }
@@ -4207,7 +4476,7 @@ ${weekdayYaml}
         let value = input.value;
         if (field === "temperature") {
           value = Number(value);
-          if (!Number.isFinite(value)) {
+          if (!climateFinite(value)) {
             return;
           }
         }
@@ -4382,7 +4651,7 @@ ${weekdayYaml}
         const {
           accentColor,
           temperatureStep,
-          temperatureRange,
+          temperatureRange = { min: 10, max: 30 },
           hass
         } = options;
         const schedule = this._getScheduleComposerDraft();
@@ -4403,7 +4672,7 @@ ${weekdayYaml}
         const removeLabel = this._climateScheduleText("remove", "Remove");
         const minTemp = temperatureRange.min;
         const maxTemp = temperatureRange.max;
-        const stepAttr = temperatureStep > 0 ? temperatureStep : 0.5;
+        const stepAttr = typeof temperatureStep === "number" && temperatureStep > 0 ? temperatureStep : 0.5;
         const isSaving = this._scheduleComposerSaving === true;
         const closeLabel = this._climateScheduleText("close", "Close");
         const dayOrder = this._getScheduleComposerDayOrder();
@@ -4488,18 +4757,18 @@ ${weekdayYaml}
     `;
       }
       _climateCardUi(key, fallback = "") {
-        const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+        const hass = this._hass ?? climateDisplayHass(window.NodaliaI18n?.resolveHass?.(null));
         const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-        const pack = window.NodaliaI18n?.strings?.(lang)?.climateCard;
-        const enPack = window.NodaliaI18n?.strings?.("en")?.climateCard;
+        const pack = climateRecord(window.NodaliaI18n?.strings?.(lang)?.climateCard);
+        const enPack = climateRecord(window.NodaliaI18n?.strings?.("en")?.climateCard);
         const raw = pack?.[key] ?? enPack?.[key];
         return String(raw != null && raw !== "" ? raw : fallback);
       }
       _climateCardAria(key, fallback = "") {
-        const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+        const hass = this._hass ?? climateDisplayHass(window.NodaliaI18n?.resolveHass?.(null));
         const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-        const pack = window.NodaliaI18n?.strings?.(lang)?.climateCard?.aria;
-        const enPack = window.NodaliaI18n?.strings?.("en")?.climateCard?.aria;
+        const pack = climateRecord(climateRecord(window.NodaliaI18n?.strings?.(lang)?.climateCard).aria);
+        const enPack = climateRecord(climateRecord(window.NodaliaI18n?.strings?.("en")?.climateCard).aria);
         const raw = pack?.[key] ?? enPack?.[key];
         return String(raw != null && raw !== "" ? raw : fallback);
       }
@@ -4516,6 +4785,23 @@ ${weekdayYaml}
     `;
       }
       _render() {
+        if (!this.isConnected) return;
+        const active = this.shadowRoot?.activeElement;
+        const native = active instanceof HTMLElement ? active : null;
+        const attrs = native ? Array.from(native.attributes).filter((attr) => attr.name.startsWith("data-")).map((attr) => [attr.name, attr.value]) : [];
+        const pendingValue = active instanceof HTMLInputElement && active.dataset.climateScheduleField && active.type !== "checkbox" ? active.value : null;
+        const caret = active instanceof HTMLInputElement && ["text", "search", "tel", "url", "password"].includes(active.type) ? [active.selectionStart, active.selectionEnd] : null;
+        this._renderView();
+        if (native && attrs.length) {
+          const next = Array.from(this.shadowRoot?.querySelectorAll(native.tagName.toLowerCase()) ?? []).find((node) => attrs.every(([key, value]) => node.getAttribute(key) === value));
+          if (next instanceof HTMLElement) {
+            if (next instanceof HTMLInputElement && pendingValue !== null) next.value = pendingValue;
+            next.focus({ preventScroll: true });
+            if (next instanceof HTMLInputElement && caret && caret[0] !== null && caret[1] !== null && caret[0] !== void 0 && caret[1] !== void 0) next.setSelectionRange(caret[0], caret[1]);
+          }
+        }
+      }
+      _renderView() {
         if (!this.shadowRoot) {
           return;
         }
@@ -4559,7 +4845,7 @@ ${weekdayYaml}
         const visibleModeOptions = modeOptions.filter((mode) => normalizeTextKey(mode) !== normalizedCurrentMode);
         const showUnavailableBadge = config.show_unavailable_badge !== false && isUnavailableState(state);
         const isOff = this._isEffectiveClimateOff(state) || isUnavailableState(state);
-        const darkenBubbleIconGlyph = !isOff && Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(state, accentColor));
+        const darkenBubbleIconGlyph = !isOff && Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph?.(state, accentColor));
         const modeDialButtonCount = (isOff ? 0 : 1) + visibleModeOptions.length;
         const isRangeMode = !isOff && this._isDualSetpointRange(state);
         if (!isRangeMode) {
@@ -4573,25 +4859,25 @@ ${weekdayYaml}
           this._lastDualRangeModeKey = modeKey;
         }
         const rangeBand = isRangeMode ? this._getEffectiveTargetLowHigh(state) : { low: NaN, high: NaN };
-        const hasNumericTarget = targetTemperature !== null && targetTemperature !== void 0 && Number.isFinite(Number(targetTemperature));
+        const hasNumericTarget = targetTemperature !== null && targetTemperature !== void 0 && climateFinite(Number(targetTemperature));
         const hasPublishedSingleTarget = !isRangeMode && supportsTargetTemperature && hasNumericTarget;
         const mainTemperaturePref = normalizeTextKey(String(config.display?.main_temperature ?? "").trim()) === "current" ? "current" : "target";
-        const currentFin = currentTemperature !== null && Number.isFinite(Number(currentTemperature)) ? Number(currentTemperature) : NaN;
+        const currentFin = currentTemperature !== null && climateFinite(Number(currentTemperature)) ? Number(currentTemperature) : NaN;
         const targetFin = hasPublishedSingleTarget ? Number(targetTemperature) : NaN;
         const dialThumbValue = isRangeMode ? NaN : supportsTargetTemperature && hasNumericTarget ? Number(targetTemperature) : NaN;
         let dialPrimaryReadoutValue;
         if (isRangeMode) {
           dialPrimaryReadoutValue = currentTemperature !== null ? currentTemperature : NaN;
         } else if (mainTemperaturePref === "current") {
-          dialPrimaryReadoutValue = Number.isFinite(currentFin) ? currentFin : Number.isFinite(targetFin) ? targetFin : NaN;
-        } else if (Number.isFinite(targetFin)) {
+          dialPrimaryReadoutValue = climateFinite(currentFin) ? currentFin : climateFinite(targetFin) ? targetFin : NaN;
+        } else if (climateFinite(targetFin)) {
           dialPrimaryReadoutValue = targetFin;
-        } else if (Number.isFinite(currentFin)) {
+        } else if (climateFinite(currentFin)) {
           dialPrimaryReadoutValue = currentFin;
         } else {
           dialPrimaryReadoutValue = NaN;
         }
-        const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+        const hass = this._hass ?? climateDisplayHass(window.NodaliaI18n?.resolveHass?.(null));
         const i18nLang = config.language ?? "auto";
         const toggleAriaLabel = window.NodaliaI18n?.translateClimateAria ? window.NodaliaI18n.translateClimateAria(hass, i18nLang, "togglePower", "Turn on or off") : "Turn on or off";
         const noSetpointDial = !isRangeMode && !(supportsTargetTemperature && hasNumericTarget);
@@ -4667,7 +4953,7 @@ ${weekdayYaml}
         const overrideChipPx = showEngineOverride ? isCompactCardLayout ? 36 : Math.max(40, parseSizeToPixels(effectiveChipHeight, 24) + 12) : 0;
         const overrideStatusPx = showEngineOverride && this._engineOverride?.until ? tightLayout ? 18 : 20 : 0;
         const overrideBlockPx = showEngineOverride ? overrideChipPx + overrideStatusPx + interBlockGapPx : 0;
-        const compactSliderCount = isRangeMode ? 2 : supportsTargetTemperature && Number.isFinite(targetFin) ? 1 : 0;
+        const compactSliderCount = isRangeMode ? 2 : supportsTargetTemperature && climateFinite(targetFin) ? 1 : 0;
         const compactControlRowCount = compactSliderCount || showStepControls ? Math.max(1, compactSliderCount) : 0;
         const climateCardMinHeightPx = isCompactCardLayout ? Math.max(
           94,
@@ -4697,7 +4983,7 @@ ${weekdayYaml}
         let coolDashOffsetPx = 0;
         let thumbHeatPosition = { left: 50, top: 50 };
         let thumbCoolPosition = { left: 50, top: 50 };
-        if (isRangeMode && Number.isFinite(rangeBand.low) && Number.isFinite(rangeBand.high)) {
+        if (isRangeMode && climateFinite(rangeBand.low) && climateFinite(rangeBand.high)) {
           const ratioL = clamp((rangeBand.low - temperatureRange.min) / tempSpan, 0, 1);
           const ratioH = clamp((rangeBand.high - temperatureRange.min) / tempSpan, 0, 1);
           heatArcLen = Number((ratioL * DIAL_VISIBLE_LENGTH).toFixed(3));
@@ -4707,7 +4993,7 @@ ${weekdayYaml}
           const angleH = DIAL_START_ANGLE + ratioH * DIAL_SWEEP;
           thumbHeatPosition = getDialMarkerPosition(angleL);
           thumbCoolPosition = getDialMarkerPosition(angleH);
-        } else if (supportsTargetTemperature && Number.isFinite(dialThumbValue)) {
+        } else if (supportsTargetTemperature && climateFinite(dialThumbValue)) {
           ratio = (dialThumbValue - temperatureRange.min) / tempSpan;
           dialAngle = DIAL_START_ANGLE + clamp(ratio, 0, 1) * DIAL_SWEEP;
           progressLength = Number((DIAL_VISIBLE_LENGTH * clamp(ratio, 0, 1)).toFixed(3));
@@ -4779,15 +5065,15 @@ ${weekdayYaml}
           currentTemperature !== null ? formatTemperature(currentTemperature, temperatureStep, false, hass) : formatTemperature(null, temperatureStep, false, hass)
         ) : escapeHtml(formatTemperature(dialPrimaryReadoutValue, temperatureStep, false, hass));
         const dialNoSetpointHint = window.NodaliaI18n?.translateClimateDialNoSetpointHint != null ? window.NodaliaI18n.translateClimateDialNoSetpointHint(hass, i18nLang) : "No active setpoint";
-        const dialMetaHtml = isRangeMode ? `<span class="climate-card__dial-range">${escapeHtml(formatTemperatureRangeSummary(rangeBand.low, rangeBand.high, temperatureStep, hass))}</span>` : noSetpointDial ? `<span class="climate-card__dial-no-setpoint">${escapeHtml(dialNoSetpointHint)}</span>` : mainTemperaturePref === "current" && hasPublishedSingleTarget && Number.isFinite(targetFin) ? `<span>${escapeHtml(formatTemperature(targetFin, temperatureStep, true, hass))}</span>` : currentTemperature !== null ? `<span>${escapeHtml(formatTemperature(currentTemperature, temperatureStep, true, hass))}</span>` : "";
+        const dialMetaHtml = isRangeMode ? `<span class="climate-card__dial-range">${escapeHtml(formatTemperatureRangeSummary(rangeBand.low, rangeBand.high, temperatureStep, hass))}</span>` : noSetpointDial ? `<span class="climate-card__dial-no-setpoint">${escapeHtml(dialNoSetpointHint)}</span>` : mainTemperaturePref === "current" && hasPublishedSingleTarget && climateFinite(targetFin) ? `<span>${escapeHtml(formatTemperature(targetFin, temperatureStep, true, hass))}</span>` : currentTemperature !== null ? `<span>${escapeHtml(formatTemperature(currentTemperature, temperatureStep, true, hass))}</span>` : "";
         const dialActionHtml = noSetpointDial && isOff ? "" : `<span class="climate-card__dial-action">
                     <ha-icon icon="${escapeHtml(currentActionMeta.icon)}"></ha-icon>
                   </span>`;
         const dialAriaLabelVariant = isRangeMode ? "rangeGroup" : noSetpointDial ? "noSetpoint" : "targetSlider";
         const dialAriaFallback = dialAriaLabelVariant === "rangeGroup" ? "Comfort range and indoor temperature" : dialAriaLabelVariant === "noSetpoint" ? "Indoor temperature; thermostat has no active target yet" : "Target temperature";
         const dialAriaLabel = window.NodaliaI18n?.translateClimateDialAria != null ? window.NodaliaI18n.translateClimateDialAria(hass, i18nLang, dialAriaLabelVariant) : dialAriaFallback;
-        const ariaDialSemanticValue = Number.isFinite(targetFin) ? targetFin : dialPrimaryReadoutValue;
-        const ariaDialValue = !isRangeMode && !noSetpointDial && Number.isFinite(ariaDialSemanticValue) ? ariaDialSemanticValue : null;
+        const ariaDialSemanticValue = climateFinite(targetFin) ? targetFin : dialPrimaryReadoutValue;
+        const ariaDialValue = !isRangeMode && !noSetpointDial && climateFinite(ariaDialSemanticValue) ? ariaDialSemanticValue : null;
         const cardBackground = isOff ? styles.card.background : `
         linear-gradient(135deg, color-mix(in srgb, ${accentColor} 22%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 12%, ${styles.card.background}) 56%, ${styles.card.background} 100%)
       `.trim();
@@ -4857,7 +5143,7 @@ ${weekdayYaml}
                   ${dialModeButtonFragments.join("")}
                 </div>`;
         const compactSlider = ({ field, label, value, color = accentColor }) => {
-          if (!Number.isFinite(value)) {
+          if (!climateFinite(value)) {
             return "";
           }
           const compactRatio = clamp(
@@ -4878,9 +5164,9 @@ ${weekdayYaml}
         const compactSlidersMarkup = isRangeMode ? `
           ${compactSlider({ field: "low", label: translateClimateMode("heat"), value: rangeBand.low, color: dialHeatStroke })}
           ${compactSlider({ field: "high", label: translateClimateMode("cool"), value: rangeBand.high, color: dialCoolStroke })}
-        ` : supportsTargetTemperature && Number.isFinite(targetFin) ? compactSlider({ field: "temperature", label: dialAriaLabel, value: targetFin }) : "";
+        ` : supportsTargetTemperature && climateFinite(targetFin) ? compactSlider({ field: "temperature", label: dialAriaLabel, value: targetFin }) : "";
         const compactTargetReadout = isRangeMode ? escapeHtml(formatTemperatureRangeSummary(rangeBand.low, rangeBand.high, temperatureStep, hass)) : `<span data-climate-readout="compact-target">${dialPrimaryReadoutHtml}</span><span class="climate-card__compact-degree">°${escapeHtml(tempScale)}</span>`;
-        if (isCompactCardLayout && (isRangeMode || Number.isFinite(dialPrimaryReadoutValue))) {
+        if (isCompactCardLayout && (isRangeMode || climateFinite(dialPrimaryReadoutValue))) {
           chips.push(`<div class="climate-card__chip climate-card__chip--target">${compactTargetReadout}</div>`);
         }
         const compactStepActionsMarkup = showStepControls ? `
@@ -5145,76 +5431,8 @@ ${weekdayYaml}
           height: 38px;
           width: 38px;
         }
-        .climate-card--layout-compact .climate-card__copy { gap: 10px; }
-        .climate-card--layout-compact .climate-card__headline { gap: 10px; }
-        .climate-card--layout-compact .climate-card__title { font-size: 12px; line-height: 1.15; }
-        .climate-card--layout-compact .climate-card__chips { gap: 10px; }
-        .climate-card--layout-compact .climate-card__chip {
-          font-size: 11px;
-          height: 24px;
-          padding: 0 9px;
-        }
-        .climate-card__compact-degree { font-size: .42em; font-weight: 600; margin-left: 2px; vertical-align: top; }
-        .climate-card__chip--target .climate-card__compact-degree { font-size: 1em; margin-left: 1px; vertical-align: baseline; }
-        .climate-card__compact-controls-shell {
-          display: grid;
-          grid-template-rows: 1fr;
-          margin-top: 16px;
-          min-width: 0;
-          overflow: visible;
-        }
-        .climate-card__compact-controls-inner { display: grid; gap: 10px; min-width: 0; }
-        .climate-card__compact-slider-row {
-          align-items: center;
-          display: grid;
-          gap: 14px;
-          grid-template-columns: minmax(0, 1fr) auto;
-          min-width: 0;
-          overflow: visible;
-          padding-inline: 4px;
-        }
-        .climate-card__compact-sliders { display: grid; gap: 8px; min-width: 0; }
-        .climate-card__compact-slider {
-          align-items: center;
-          display: grid;
-          gap: 8px;
-          grid-template-columns: minmax(0, 1fr);
-          min-width: 0;
-        }
-        .climate-card__compact-slider-label,
-        .climate-card__compact-slider > strong {
-          color: var(--secondary-text-color);
-          font-size: 11px;
-          font-weight: 700;
-          white-space: nowrap;
-        }
-        .climate-card__compact-sliders--single :is(.climate-card__compact-slider-label, .climate-card__compact-slider > strong) { display: none; }
-        .climate-card__compact-sliders--range .climate-card__compact-slider {
-          grid-template-columns: auto minmax(80px, 1fr) auto;
-        }
-        .climate-card__compact-slider > strong { color: var(--primary-text-color); min-width: 42px; text-align: right; }
-        .climate-card__compact-slider-shell {
-          align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
-          border-radius: 999px;
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent);
-          display: flex;
-          height: 48px;
-          min-width: 0;
-          padding: 0 14px;
-          position: relative;
-        }
-        .climate-card__compact-slider-track {
-          background: color-mix(in srgb, var(--primary-text-color) 10%, transparent);
-          border-radius: 999px;
-          height: 22px;
-          inset: 50% 14px auto;
-          overflow: hidden;
-          pointer-events: none;
-          position: absolute;
-          transform: translateY(-50%);
-        }
+        ${climate_static_2_default}
+
         .climate-card__compact-slider-track::before {
           background: var(--compact-slider-color, ${accentColor});
           border-radius: inherit;
@@ -5506,461 +5724,8 @@ ${weekdayYaml}
           height: 7px;
           width: 7px;
         }
+        ${climate_static_1_default}
 
-        .climate-schedule-expanded {
-          --climate-schedule-accent: var(--primary-color);
-          inset: 0;
-          opacity: 0;
-          pointer-events: none;
-          position: fixed;
-          transition: opacity 220ms cubic-bezier(0.16, 0.84, 0.22, 1);
-          z-index: 120;
-        }
-
-        .climate-schedule-expanded.is-open {
-          opacity: 1;
-          pointer-events: auto;
-        }
-
-        .climate-schedule-expanded__backdrop {
-          -webkit-backdrop-filter: blur(12px);
-          backdrop-filter: blur(12px);
-          background: rgba(0, 0, 0, 0.32);
-          inset: 0;
-          position: absolute;
-        }
-
-        .climate-schedule-expanded__panel {
-          background:
-            linear-gradient(180deg, color-mix(in srgb, var(--climate-schedule-accent) 18%, rgba(255, 255, 255, 0.08)), rgba(255, 255, 255, 0.02)),
-            color-mix(in srgb, var(--ha-card-background, var(--card-background-color)) 94%, rgba(255, 255, 255, 0.02));
-          border: 1px solid color-mix(in srgb, var(--climate-schedule-accent) 34%, color-mix(in srgb, var(--primary-text-color) 9%, transparent));
-          border-radius: 16px;
-          box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
-          color: var(--primary-text-color);
-          display: grid;
-          gap: 12px;
-          isolation: isolate;
-          left: 50%;
-          max-height: min(92vh, 920px);
-          max-height: min(92dvh, 920px);
-          max-width: min(calc(100vw - 24px), 920px);
-          overflow: hidden;
-          padding: 14px;
-          position: absolute;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          width: min(calc(100vw - 24px), 920px);
-          z-index: 1;
-        }
-
-        .climate-schedule-expanded__toolbar {
-          align-items: flex-start;
-          display: flex;
-          gap: 10px;
-          justify-content: space-between;
-        }
-
-        .climate-schedule-expanded__toolbar-copy {
-          display: grid;
-          flex: 1 1 auto;
-          gap: 4px;
-          min-width: 0;
-        }
-
-        .climate-schedule-expanded__title {
-          font-size: 16px;
-          font-weight: 800;
-          letter-spacing: -0.02em;
-        }
-
-        .climate-schedule-expanded__hint {
-          color: var(--secondary-text-color);
-          font-size: 12px;
-          line-height: 1.45;
-        }
-
-        .climate-schedule-expanded__close {
-          align-items: center;
-          appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 7%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 999px;
-          color: var(--secondary-text-color);
-          cursor: pointer;
-          display: inline-flex;
-          flex: 0 0 auto;
-          height: 32px;
-          justify-content: center;
-          margin: 0;
-          padding: 0;
-          width: 32px;
-        }
-
-        .climate-schedule-expanded__close ha-icon {
-          --mdc-icon-size: 18px;
-        }
-
-        .climate-schedule-expanded__error {
-          align-items: flex-start;
-          background: color-mix(in srgb, var(--error-color, #db4437) 12%, transparent);
-          border: 1px solid color-mix(in srgb, var(--error-color, #db4437) 35%, transparent);
-          border-radius: 10px;
-          color: var(--error-color, #db4437);
-          display: flex;
-          font-size: 12px;
-          gap: 8px;
-          line-height: 1.4;
-          padding: 8px 10px;
-        }
-
-        .climate-schedule-expanded__error ha-icon {
-          --mdc-icon-size: 16px;
-          flex: 0 0 auto;
-          margin-top: 1px;
-        }
-
-        .climate-schedule-expanded__enabled {
-          align-items: center;
-          cursor: pointer;
-          display: inline-flex;
-          gap: 10px;
-          min-height: 34px;
-        }
-
-        .climate-schedule-expanded__enabled input {
-          block-size: 1px;
-          inline-size: 1px;
-          margin: 0;
-          opacity: 0;
-          pointer-events: none;
-          position: absolute;
-        }
-
-        .climate-schedule-expanded__enabled-switch {
-          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
-          border-radius: 999px;
-          display: inline-flex;
-          height: 22px;
-          position: relative;
-          width: 40px;
-        }
-
-        .climate-schedule-expanded__enabled-switch::before {
-          background: rgba(255, 255, 255, 0.92);
-          border-radius: 999px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
-          content: "";
-          height: 18px;
-          left: 1px;
-          position: absolute;
-          top: 1px;
-          transition: transform 160ms ease;
-          width: 18px;
-        }
-
-        .climate-schedule-expanded__enabled input:checked + .climate-schedule-expanded__enabled-switch {
-          background: var(--primary-color);
-          border-color: var(--primary-color);
-        }
-
-        .climate-schedule-expanded__enabled input:checked + .climate-schedule-expanded__enabled-switch::before {
-          transform: translateX(18px);
-        }
-
-        .climate-schedule-agenda {
-          display: grid;
-          gap: 12px;
-          max-height: min(58vh, 560px);
-          overflow: auto;
-          overscroll-behavior: contain;
-          padding-right: 2px;
-          touch-action: pan-y;
-          -webkit-overflow-scrolling: touch;
-        }
-
-        .climate-schedule-agenda__row {
-          display: grid;
-          gap: 8px;
-        }
-
-        .climate-schedule-agenda__row-head {
-          align-items: center;
-          display: grid;
-          gap: 8px;
-          grid-template-columns: minmax(72px, 92px) minmax(0, 1fr);
-        }
-
-        .climate-schedule-agenda__day-label {
-          font-size: 13px;
-          font-weight: 800;
-          text-transform: capitalize;
-        }
-
-        .climate-schedule-agenda__day-add {
-          align-items: center;
-          appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 999px;
-          color: var(--primary-text-color);
-          cursor: pointer;
-          display: inline-flex;
-          height: 30px;
-          justify-content: center;
-          justify-self: end;
-          margin: 0;
-          padding: 0;
-          width: 30px;
-        }
-
-        .climate-schedule-agenda__day-add ha-icon {
-          --mdc-icon-size: 18px;
-        }
-
-        .climate-schedule-agenda__timeline-wrap {
-          display: grid;
-          gap: 4px;
-          grid-column: 1 / -1;
-        }
-
-        .climate-schedule-agenda__track {
-          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 12px;
-          height: 56px;
-          overflow: hidden;
-          position: relative;
-          touch-action: none;
-          user-select: none;
-        }
-
-        .climate-schedule-agenda__track-grid {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          height: 100%;
-          inset: 0;
-          pointer-events: none;
-          position: absolute;
-          z-index: 0;
-        }
-
-        .climate-schedule-agenda__track-grid span {
-          border-right: 1px dashed color-mix(in srgb, var(--primary-text-color) 10%, transparent);
-        }
-
-        .climate-schedule-agenda__track-grid span:last-child {
-          border-right: 0;
-        }
-
-        .climate-schedule-agenda__blocks {
-          height: 100%;
-          inset: 0;
-          position: absolute;
-          z-index: 1;
-        }
-
-        .climate-schedule-agenda__track-empty {
-          color: var(--secondary-text-color);
-          font-size: 11px;
-          font-weight: 600;
-          left: 50%;
-          position: absolute;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          white-space: nowrap;
-        }
-
-        .climate-schedule-agenda__axis {
-          color: var(--secondary-text-color);
-          display: grid;
-          font-size: 10px;
-          font-weight: 700;
-          grid-template-columns: repeat(5, 1fr);
-          letter-spacing: 0.02em;
-          text-align: center;
-        }
-
-        .climate-schedule-agenda__block {
-          align-items: stretch;
-          background: color-mix(in srgb, var(--schedule-accent, var(--climate-schedule-accent)) 78%, transparent);
-          border: 1px solid color-mix(in srgb, var(--schedule-accent, var(--climate-schedule-accent)) 42%, transparent);
-          border-radius: 10px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
-          cursor: pointer;
-          display: grid;
-          grid-template-columns: 8px minmax(0, 1fr) 8px;
-          height: calc(100% - 8px);
-          left: var(--block-left, 0%);
-          min-width: 44px;
-          overflow: hidden;
-          position: absolute;
-          top: 4px;
-          touch-action: none;
-          width: var(--block-width, 20%);
-          z-index: 1;
-        }
-
-        .climate-schedule-agenda__block.is-selected {
-          border-color: color-mix(in srgb, var(--primary-text-color) 28%, var(--schedule-accent, var(--climate-schedule-accent)));
-          box-shadow:
-            0 0 0 2px color-mix(in srgb, var(--schedule-accent, var(--climate-schedule-accent)) 35%, transparent),
-            inset 0 1px 0 rgba(255, 255, 255, 0.24);
-          z-index: 2;
-        }
-
-        .climate-schedule-agenda__block:active {
-          cursor: grabbing;
-        }
-
-        .climate-schedule-agenda__block-grip {
-          cursor: ew-resize;
-          display: block;
-          flex: 0 0 10px;
-          min-height: 100%;
-          touch-action: none;
-          z-index: 2;
-        }
-
-        .climate-schedule-agenda__block-body {
-          align-items: center;
-          display: flex;
-          flex-direction: column;
-          gap: 1px;
-          justify-content: center;
-          min-width: 0;
-          overflow: hidden;
-          padding: 0 2px;
-          pointer-events: none;
-        }
-
-        .climate-schedule-agenda__block-time {
-          font-size: 9px;
-          font-weight: 800;
-          line-height: 1.1;
-          max-width: 100%;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .climate-schedule-agenda__block-temp {
-          font-size: 10px;
-          font-weight: 700;
-          line-height: 1.1;
-          opacity: 0.92;
-        }
-
-        .climate-schedule-agenda__editor {
-          display: none;
-          gap: 8px;
-          grid-column: 1 / -1;
-          grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
-        }
-
-        .climate-schedule-agenda__editor.is-visible {
-          display: grid;
-        }
-
-        .climate-schedule-agenda__editor-field {
-          display: grid;
-          gap: 4px;
-          min-width: 0;
-        }
-
-        .climate-schedule-agenda__editor-field--temp {
-          grid-column: 1 / -1;
-        }
-
-        .climate-schedule-agenda__editor-field > span {
-          color: var(--secondary-text-color);
-          font-size: 10px;
-          font-weight: 700;
-        }
-
-        .climate-schedule-agenda__editor-field input {
-          appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 10px;
-          color: var(--primary-text-color);
-          font: inherit;
-          font-size: 12px;
-          font-weight: 700;
-          min-height: 36px;
-          padding: 6px 8px;
-          width: 100%;
-        }
-
-        .climate-schedule-agenda__editor-remove {
-          align-items: center;
-          appearance: none;
-          align-self: end;
-          background: color-mix(in srgb, var(--error-color, #db4437) 10%, transparent);
-          border: 1px solid color-mix(in srgb, var(--error-color, #db4437) 28%, transparent);
-          border-radius: 999px;
-          color: var(--error-color, #db4437);
-          cursor: pointer;
-          display: inline-flex;
-          height: 36px;
-          justify-content: center;
-          margin: 0;
-          padding: 0;
-          width: 36px;
-        }
-
-        .climate-schedule-agenda__editor-remove ha-icon {
-          --mdc-icon-size: 18px;
-        }
-
-        .climate-schedule-expanded__actions {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          justify-content: flex-end;
-        }
-
-        .climate-schedule-expanded__btn {
-          appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 999px;
-          color: var(--primary-text-color);
-          cursor: pointer;
-          font: inherit;
-          font-size: 12px;
-          font-weight: 700;
-          min-height: 36px;
-          padding: 0 14px;
-        }
-
-        .climate-schedule-expanded__btn:disabled {
-          cursor: default;
-          opacity: 0.5;
-        }
-
-        .climate-schedule-expanded__btn--primary {
-          background: color-mix(in srgb, var(--climate-schedule-accent) 22%, transparent);
-          border-color: color-mix(in srgb, var(--climate-schedule-accent) 38%, var(--divider-color));
-        }
-
-        @media (max-width: 640px) {
-          .climate-schedule-expanded__panel {
-            border-radius: 14px;
-            max-height: 94vh;
-            max-height: 94dvh;
-            max-width: min(calc(100vw - 16px), 920px);
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            width: min(calc(100vw - 16px), 920px);
-          }
-
-          .climate-schedule-agenda__row-head {
-            grid-template-columns: minmax(64px, 80px) minmax(0, 1fr);
-          }
-        }
 
         .climate-card__dial {
           --climate-angle: ${dialAngle}deg;
@@ -6534,82 +6299,8 @@ ${weekdayYaml}
           transform: translateY(-0.04em);
           width: 100%;
         }
+        ${climate_static_0_default}
 
-        @keyframes climate-card-button-bounce {
-          0% {
-            transform: scale(1);
-          }
-          45% {
-            transform: scale(1.1);
-          }
-          72% {
-            transform: scale(1.03);
-          }
-          100% {
-            transform: scale(1);
-          }
-        }
-
-        @keyframes climate-card-fade-up {
-          0% {
-            opacity: 0;
-            transform: translateY(14px) scale(0.965);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-
-        @keyframes climate-card-dial-bloom {
-          0% {
-            opacity: 0;
-            transform: translateZ(0) scale(0.95);
-            box-shadow:
-              inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 2%, transparent),
-              0 10px 24px rgba(0, 0, 0, 0.08);
-          }
-          55% {
-            opacity: 1;
-            transform: translateZ(0) scale(1.015);
-            box-shadow:
-              inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
-              0 22px 42px rgba(0, 0, 0, 0.16);
-          }
-          100% {
-            opacity: 1;
-            transform: translateZ(0) scale(1);
-            box-shadow:
-              inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent),
-              0 18px 38px rgba(0, 0, 0, 0.16);
-          }
-        }
-
-        @keyframes climate-card-dial-center-bloom {
-          0% {
-            opacity: 0;
-            transform: scale(0.96);
-          }
-          100% {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
-
-        @keyframes climate-card-dial-thumb-pop {
-          0% {
-            transform: translate(-50%, -50%) scale(1);
-          }
-          48% {
-            transform: translate(-50%, -50%) scale(1.24);
-          }
-          72% {
-            transform: translate(-50%, -50%) scale(1.09);
-          }
-          100% {
-            transform: translate(-50%, -50%) scale(1.15);
-          }
-        }
 
         ${animations.enabled ? "" : `
         ha-card,

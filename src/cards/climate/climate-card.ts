@@ -1,11 +1,11 @@
-// @ts-nocheck
-/* Large HTMLElement view/controller: typed incrementally as methods are extracted. */
+import climateStatic2Styles from "./climate-static-2.css";
+import climateStatic1Styles from "./climate-static-1.css";
+import climateStatic0Styles from "./climate-static-0.css";
 import {
   CARD_TAG,
   CARD_VERSION,
   DIAL_CIRCLE_RADIUS,
   DIAL_CIRCUMFERENCE,
-  DIAL_END_ANGLE,
   DIAL_HIDDEN_LENGTH,
   DIAL_START_ANGLE,
   DIAL_SWEEP,
@@ -17,38 +17,25 @@ import {
   ENGINE_OVERRIDE_HOLD_HOURS,
   ENGINE_OVERRIDE_REFRESH_MS,
   HAPTIC_PATTERNS,
-  LEGACY_CLIMATE_DIAL_BACKGROUND,
-  LEGACY_CLIMATE_DIAL_OFF_COLOR,
-  LEGACY_CLIMATE_DIAL_TRACK_COLOR,
-  LEGACY_CLIMATE_ICON_OFF_COLORS,
   RANGE_THUMB_DRAG_THRESHOLD_PX,
   SCHEDULE_BLOCK_DRAG_THRESHOLD_PX,
   SCHEDULE_MIN_BLOCK_MINUTES,
-  SCHEDULE_TIMELINE_SNAP_MINUTES,
-  SETPOINT_SCHEDULE_DAY_ORDER,
-  SETPOINT_SCHEDULE_DAY_TO_JS,
   SETPOINT_SCHEDULE_MINUTES_PER_DAY,
   STEP_BUTTON_COMMIT_DEBOUNCE,
 } from "./climate-constants";
 import {
   clamp,
-  compactConfig,
   deepClone,
-  deleteByPath,
   escapeHtml,
   fireEvent,
   isObject,
-  isUnsafeConfigPathKey,
-  mergeConfig,
   normalizeTextKey,
-  setByPath,
 } from "./climate-runtime";
 
 import { DEFAULT_CONFIG, STUB_CONFIG, applyStubEntity, normalizeConfig } from "./climate-config";
 import {
   climateDialActionMeta,
   escapeSelectorValue,
-  formatEditorColorFromHex,
   formatEngineOverrideTime,
   formatTemperature,
   formatTemperatureRangeSummary,
@@ -65,7 +52,6 @@ import {
   parseRgbColor,
   parseSizeToPixels,
   resolveColorInContext,
-  resolveEditorColorValue,
 } from "./climate-model";
 import {
   buildClimateDialModeButtonRows,
@@ -74,15 +60,10 @@ import {
   getDialValueFromPoint,
 } from "./climate-dial";
 import {
-  buildClimateSetpointScheduleAutomationId,
-  buildClimateSetpointScheduleAutomationSpecs,
-  buildClimateSetpointScheduleAutomationsYaml,
   buildClimateSetpointScheduleWebhookBody,
   decodeSetpointScheduleStorageState,
-  encodeSetpointScheduleStorageState,
   findScheduleGapForDay,
   formatScheduleClockMinutes,
-  getActiveSetpointScheduleSlot,
   getClimateScheduleStorageEntityId,
   getSetpointScheduleBlockLayout,
   getSetpointScheduleDayOrder,
@@ -92,15 +73,88 @@ import {
   parseScheduleClockMinutes,
   scheduleMinutesFromTrackClientX,
   snapScheduleTimelineMinutes,
-  createSetpointScheduleSlotId,
 } from "./climate-schedule";
 
-let _lazyNodaliaClimateCard;
+import type {HomeAssistant,HassEntity} from "../../core/types/home-assistant";
+import type {ClimateConfig,ClimateScheduleSlot} from "./climate-types";
+import {requestHassService} from "../../shared/home-assistant-services";
+type ClimateSchedule=ReturnType<typeof normalizeSetpointScheduleConfig>;
+type ClimatePair={low:number;high:number};
+type DialDragBase={originalTemperature:number|undefined;originalRange:ClimatePair|undefined;capture:Element|null;dial:HTMLElement;geometry:DOMRect;pointerId:number|null;lastHapticValue:number|null};
+type DialDrag=(DialDragBase & {kind:"single";lastValue:number|null}) | (DialDragBase & {kind:"range";handle:"low"|"high";lastLow:number;lastHigh:number;startClientX:number;startClientY:number;rangeThumbDragStarted:boolean});
+type ScheduleDrag={slotId:string;mode:"move"|"resize-start"|"resize-end";day:string;track:HTMLElement;pointerId:number|null;initialStart:number;initialEnd:number;pointerOffsetMinutes:number;original:ClimateScheduleSlot};
+type SchedulePending={slotId:string;day:string;track:HTMLElement;startClientX:number;startClientY:number;pointerId:number|null};
+type ClimateCommitOptions={immediate?:boolean;render?:boolean;hvacWake?:boolean;commit?:boolean};
+type StartScheduleOptions={slotId:string;mode:ScheduleDrag["mode"];day?:string;track?:HTMLElement;clientX:number;pointerId?:number|null;event?:Event|null};
+type SlotEditorOptions={startLabel?:string|undefined;endLabel?:string|undefined;tempLabel?:string|undefined;removeLabel?:string|undefined;minTemp?:number|undefined;maxTemp?:number|undefined;stepAttr?:number|undefined};
+type DayAgendaOptions=SlotEditorOptions & {dayLabel?:string;addLabel?:string;emptyLabel?:string;accentColor?:string|undefined;temperatureStep?:number|undefined;hass?:HomeAssistant|null|undefined};
+type ComposerOptions={accentColor?:string|undefined;temperatureStep?:number;temperatureRange?:{min:number;max:number};hass?:HomeAssistant|null};
+type EngineOverride={available:true;until:string};
+const climateFinite=(value:unknown):value is number=>typeof value==="number"&&Number.isFinite(value);
+const climateRecord=(value:unknown):Record<string,unknown>=>isObject(value)?value:{};
+const climateDisplayHass=(value:unknown):HomeAssistant|null=>{
+  if (!isObject(value)) return null;
+  const locale=climateRecord(value.locale),config=climateRecord(value.config),units=climateRecord(config.unit_system);
+  return {states:{},...(typeof value.language==="string"?{language:value.language}:{}),...(typeof value.selectedLanguage==="string"?{selectedLanguage:value.selectedLanguage}:{}),locale:{...(typeof locale.language==="string"?{language:locale.language}:{})},config:{...(typeof config.language==="string"?{language:config.language}:{}),unit_system:{...(typeof units.temperature==="string"?{temperature:units.temperature}:{})}}};
+};
+const climatePointerId=(event:Event|null)=>event instanceof PointerEvent?event.pointerId:null;
+let _lazyNodaliaClimateCard:CustomElementConstructor|undefined;
 export function loadNodaliaClimateCard() {
   if (_lazyNodaliaClimateCard) {
     return _lazyNodaliaClimateCard;
   }
 class NodaliaClimateCard extends HTMLElement {
+  declare private _generation:number;
+  declare private _contextConnection:HomeAssistant["connection"];
+  declare private _contextAuth:HomeAssistant["auth"];
+  declare private _contextUser:string;
+  declare private _contextServer:string;
+  declare private _timers:Set<number>;
+  declare private _frames:Set<number>;
+  declare private _scheduleSaveToken:number;
+  declare private _config:ClimateConfig;
+  declare private _hass:HomeAssistant|null;
+  declare private _draftTemperature:Map<string,number>;
+  declare private _draftTempRange:Map<string,ClimatePair>;
+  declare private _temperatureCommitQueuedValue:number|null;
+  declare private _rangeCommitQueuedValue:ClimatePair|null;
+  declare private _activeDialDrag:DialDrag|null;
+  declare private _pendingDialDragPoint:{clientX:number;clientY:number;event:Event|null}|null;
+  declare private _selectedRangeThumb:"low"|"high"|null;
+  declare private _lastDualRangeModeKey:string|null;
+  declare private _detachHostHold:()=>void;
+  declare private _scheduleComposerDraft:ClimateSchedule;
+  declare private _activeScheduleDrag:ScheduleDrag|null;
+  declare private _scheduleBlockDragPending:SchedulePending|null;
+  declare private _engineOverride:EngineOverride|null;
+  declare private _scheduleBlockDragPendingListenersActive:boolean;
+  declare private _scheduleDragListenersActive:boolean;
+  declare private _draftResetTimer:number;
+  declare private _temperatureCommitDebounceTimer:number;
+  declare private _temperatureCommitInFlight:boolean;
+  declare private _temperatureCommitRequiresHvacWake:boolean;
+  declare private _temperatureCommitRetryCount:number;
+  declare private _rangeCommitDebounceTimer:number;
+  declare private _rangeCommitInFlight:boolean;
+  declare private _rangeCommitRetryCount:number;
+  declare private _dragWindowListenersAttached:boolean;
+  declare private _dialDragFrame:number;
+  declare private _pendingRenderAfterDrag:boolean;
+  declare private _pendingRenderAfterScheduleDrag:boolean;
+  declare private _lastRenderSignature:string;
+  declare private _animateContentOnNextRender:boolean;
+  declare private _entranceAnimationResetTimer:number;
+  declare private _suppressNextClimateTap:boolean;
+  declare private _scheduleComposerOpen:boolean;
+  declare private _scheduleComposerError:string;
+  declare private _scheduleComposerSaving:boolean;
+  declare private _scheduleDraftRevision:number;
+  declare private _scheduleComposerSelectedSlotId:string;
+  declare private _engineOverrideSignature:string;
+  declare private _engineOverrideInFlight:boolean;
+  declare private _engineOverrideBusy:boolean;
+  declare private _lastEngineOverrideCheck:number;
+
   static async getConfigElement() {
     if (!customElements.get(EDITOR_TAG) && typeof customElements?.whenDefined === "function") {
       await customElements.whenDefined(EDITOR_TAG);
@@ -109,11 +163,12 @@ class NodaliaClimateCard extends HTMLElement {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig(hass, entities = [], entitiesFallback = []) {
+  static getStubConfig(hass:HomeAssistant|null, entities:unknown = [], entitiesFallback:unknown = []) {
     return applyStubEntity(deepClone(STUB_CONFIG), hass, ["climate"], entities, entitiesFallback);
   }
 
-  static getEntitySuggestion(hass, entityId) {
+  static getEntitySuggestion(hass:HomeAssistant|null, entityId:string) {
+    if(!hass) return [];
     return [
       window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
         domains: ["climate"],
@@ -133,7 +188,12 @@ class NodaliaClimateCard extends HTMLElement {
     this._nodaliaConstruct();
   }
 
-  _nodaliaConstruct() {this.attachShadow({ mode: "open" });
+  _nodaliaConstruct() {
+    this._generation=0;this._timers=new Set();this._frames=new Set();this._scheduleSaveToken=0;
+    this._contextConnection=undefined;this._contextAuth=undefined;this._contextUser="";this._contextServer="";
+    this._onCancelGesture=this._onCancelGesture.bind(this);
+    this._onVisibility=this._onVisibility.bind(this);
+    this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
     this._draftTemperature = new Map();
@@ -178,8 +238,9 @@ class NodaliaClimateCard extends HTMLElement {
     this._scheduleComposerError = "";
     this._scheduleComposerSaving = false;
     this._scheduleDraftRevision = 0;
-    this._commitAborted = false;
     this._scheduleComposerSelectedSlotId = "";
+    this._scheduleDragListenersActive=false;
+    this._scheduleBlockDragPendingListenersActive=false;
     this._activeScheduleDrag = null;
     this._scheduleBlockDragPending = null;
     this._engineOverride = null;
@@ -194,19 +255,92 @@ class NodaliaClimateCard extends HTMLElement {
     this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
     this._onShadowInput = this._onShadowInput.bind(this);
     this._onShadowBlur = this._onShadowBlur.bind(this);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("change", this._onShadowInput);
-    this.shadowRoot.addEventListener("blur", this._onShadowBlur, true);
-    this.shadowRoot.addEventListener("keydown", this._onShadowKeyDown);
-    this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
-    this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown);
-    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
-      this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
+    this.shadowRoot?.addEventListener("click", this._onShadowClick);
+    this.shadowRoot?.addEventListener("input", this._onShadowInput);
+    this.shadowRoot?.addEventListener("change", this._onShadowInput);
+    this.shadowRoot?.addEventListener("blur", this._onShadowBlur, true);
+    this.shadowRoot?.addEventListener("keydown", this._onShadowKeyDown);
+    this.shadowRoot?.addEventListener("pointerdown", this._onShadowPointerDown);
+    this.shadowRoot?.addEventListener("mousedown", this._onShadowMouseDown);
+    if (!(typeof window !== "undefined" && typeof window.PointerEvent === "function")) {
+      this.shadowRoot?.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
     }
     }
 
+  _isCurrent(generation:number) {return this.isConnected&&generation===this._generation;}
+  _setTimer(callback:()=>void,delay:number) {
+    const generation=this._generation;
+    const id=window.setTimeout(()=>{this._timers.delete(id);if(this._isCurrent(generation)) callback();},delay);
+    this._timers.add(id);return id;
+  }
+  _clearTimer(id:number) {window.clearTimeout(id);this._timers.delete(id);}
+  _requestFrame(callback:()=>void) {
+    const generation=this._generation;
+    const id=window.requestAnimationFrame(()=>{this._frames.delete(id);if(this._isCurrent(generation)) callback();});
+    this._frames.add(id);return id;
+  }
+  _cancelFrame(id:number) {window.cancelAnimationFrame(id);this._frames.delete(id);}
+  _releasePointer(element:Element|null,id:number|null) {
+    if(element&&id!==null) try {if(element.hasPointerCapture(id)) element.releasePointerCapture(id);} catch {}
+  }
+  _cancelGestures(render=true) {
+    const drag=this._activeDialDrag;
+    if(drag) {
+      this._activeDialDrag=null;
+      this._setDialDraggingState(false,drag.dial);
+      this._releasePointer(drag.capture,drag.pointerId);
+      const entityId=this._config.entity;
+      if(drag.originalTemperature===undefined) this._draftTemperature.delete(entityId);else this._draftTemperature.set(entityId,drag.originalTemperature);
+      if(drag.originalRange===undefined) this._draftTempRange.delete(entityId);else this._draftTempRange.set(entityId,{...drag.originalRange});
+    }
+    const scheduleDrag=this._activeScheduleDrag;
+    if(scheduleDrag) {
+      this._activeScheduleDrag=null;
+      this._releasePointer(scheduleDrag.track,scheduleDrag.pointerId);
+      const schedule=this._getScheduleComposerDraft();
+      const index=schedule.slots.findIndex(slot=>slot.id===scheduleDrag.slotId);
+      if(index>=0) schedule.slots[index]={...scheduleDrag.original};
+      this._scheduleComposerDraft=normalizeSetpointScheduleConfig(schedule);
+      this._touchScheduleDraftRevision();
+    }
+    this._scheduleBlockDragPending=null;
+    this._setDragWindowListeners(false);this._setScheduleDragWindowListeners(false);this._setScheduleBlockDragPendingListeners(false);
+    if(this._dialDragFrame) this._cancelFrame(this._dialDragFrame);
+    this._dialDragFrame=0;this._pendingDialDragPoint=null;
+    this._pendingRenderAfterDrag=false;this._pendingRenderAfterScheduleDrag=false;
+    if(render&&(drag||scheduleDrag)&&this.isConnected) {this._lastRenderSignature="";this._render();}
+  }
+  _onCancelGesture(event:Event) {
+    if(event instanceof PointerEvent) {
+      const pointer=this._activeDialDrag?.pointerId??this._activeScheduleDrag?.pointerId??this._scheduleBlockDragPending?.pointerId;
+      if(pointer!==null&&pointer!==undefined&&pointer!==event.pointerId) return;
+    }
+    this._cancelGestures();
+  }
+  _onVisibility() {if(document.hidden) this._cancelGestures();}
+  _releaseViewWork() {
+    this._generation++;this._scheduleSaveToken++;this._cancelGestures(false);
+    for(const id of this._timers) window.clearTimeout(id);this._timers.clear();
+    for(const id of this._frames) window.cancelAnimationFrame(id);this._frames.clear();
+    this._draftResetTimer=0;this._temperatureCommitDebounceTimer=0;this._rangeCommitDebounceTimer=0;this._entranceAnimationResetTimer=0;
+    this._temperatureCommitInFlight=false;this._rangeCommitInFlight=false;
+    this._temperatureCommitQueuedValue=null;this._rangeCommitQueuedValue=null;this._temperatureCommitRequiresHvacWake=false;
+    this._engineOverrideInFlight=false;this._engineOverrideBusy=false;this._scheduleComposerSaving=false;
+    window.NodaliaUtils?.clearDeferTimers?.(this);window.NodaliaUtils?.cancelCardZoneTap?.(this);
+  }
+  _resetContext() {
+    this._releaseViewWork();this._draftTemperature.clear();this._draftTempRange.clear();
+    this._temperatureCommitRetryCount=0;this._rangeCommitRetryCount=0;
+    this._selectedRangeThumb=null;this._lastDualRangeModeKey=null;
+    this._scheduleComposerOpen=false;this._scheduleComposerDraft=normalizeSetpointScheduleConfig({enabled:true,slots:[]});
+    this._scheduleComposerError="";this._scheduleComposerSelectedSlotId="";this._touchScheduleDraftRevision();
+    this._engineOverride=null;this._engineOverrideSignature="";this._lastEngineOverrideCheck=0;
+    this._lastRenderSignature="";this._animateContentOnNextRender=true;this.shadowRoot?.replaceChildren();
+  }
+
   connectedCallback() {
+    window.addEventListener("blur",this._onCancelGesture);
+    document.addEventListener("visibilitychange",this._onVisibility);
     this._detachHostHold?.();
     this._detachHostHold =
       typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function"
@@ -253,14 +387,17 @@ class NodaliaClimateCard extends HTMLElement {
           })
         : () => {};
     this._animateContentOnNextRender = true;
-    this._commitAborted = false;
     if (this._hass && this._config) {
       this._lastRenderSignature = "";
       this._render();
+      void this._refreshEngineOverrideState();
     }
   }
 
   disconnectedCallback() {
+    window.removeEventListener("blur",this._onCancelGesture);
+    document.removeEventListener("visibilitychange",this._onVisibility);
+    this._resetContext();
     this._detachHostHold?.();
     this._detachHostHold = () => {};
     window.NodaliaUtils?.cancelCardZoneTap?.(this);
@@ -276,34 +413,34 @@ class NodaliaClimateCard extends HTMLElement {
     }
 
     if (this._draftResetTimer) {
-      window.clearTimeout(this._draftResetTimer);
+      this._clearTimer(this._draftResetTimer);
       this._draftResetTimer = 0;
     }
 
     if (this._temperatureCommitDebounceTimer) {
-      window.clearTimeout(this._temperatureCommitDebounceTimer);
+      this._clearTimer(this._temperatureCommitDebounceTimer);
       this._temperatureCommitDebounceTimer = 0;
     }
     if (this._rangeCommitDebounceTimer) {
-      window.clearTimeout(this._rangeCommitDebounceTimer);
+      this._clearTimer(this._rangeCommitDebounceTimer);
       this._rangeCommitDebounceTimer = 0;
     }
     if (this._entranceAnimationResetTimer) {
-      window.clearTimeout(this._entranceAnimationResetTimer);
+      this._clearTimer(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
     }
     if (this._dialDragFrame) {
-      window.cancelAnimationFrame(this._dialDragFrame);
+      this._cancelFrame(this._dialDragFrame);
       this._dialDragFrame = 0;
     }
     this._pendingDialDragPoint = null;
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
-    this._commitAborted = true;
     window.NodaliaUtils?.clearDeferTimers?.(this);
   }
 
-  setConfig(config) {
+  setConfig(config:unknown) {
+    this._resetContext();
     const prevEntity = this._config?.entity;
     this._config = normalizeConfig(config || {});
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
@@ -313,11 +450,11 @@ class NodaliaClimateCard extends HTMLElement {
       this._temperatureCommitQueuedValue = null;
       this._rangeCommitQueuedValue = null;
       if (this._temperatureCommitDebounceTimer) {
-        window.clearTimeout(this._temperatureCommitDebounceTimer);
+        this._clearTimer(this._temperatureCommitDebounceTimer);
         this._temperatureCommitDebounceTimer = 0;
       }
       if (this._rangeCommitDebounceTimer) {
-        window.clearTimeout(this._rangeCommitDebounceTimer);
+        this._clearTimer(this._rangeCommitDebounceTimer);
         this._rangeCommitDebounceTimer = 0;
       }
       this._selectedRangeThumb = null;
@@ -333,8 +470,18 @@ class NodaliaClimateCard extends HTMLElement {
     void this._refreshEngineOverrideState();
   }
 
-  set hass(hass) {
+  set hass(hass:HomeAssistant|null) {
+    const connection=hass?.connection,auth=hass?.auth,user=`${hass?.user?.id??""}:${hass?.user?.is_admin===true}`;
+    let server=window.location?.origin??"";try{server=hass?.hassUrl?.("/")??server;}catch{}
+    if(connection!==this._contextConnection||auth!==this._contextAuth||user!==this._contextUser||server!==this._contextServer) this._resetContext();
+    this._contextConnection=connection;this._contextAuth=auth;this._contextUser=user;this._contextServer=server;
     this._hass = hass;
+    if(!this.isConnected) return;
+    const currentState=this._getState();
+    if(!currentState||isUnavailableState(currentState)) {
+      this._releaseViewWork();this._draftTemperature.clear();this._draftTempRange.clear();
+      this._lastRenderSignature="";
+    } else if(this._activeDialDrag&&((this._activeDialDrag.kind==="range")!==this._isDualSetpointRange(currentState)||!this._supportsTargetTemperature(currentState))) this._cancelGestures(false);
     void this._refreshEngineOverrideState();
     const entityId = this._config?.entity || "";
     if (
@@ -399,6 +546,8 @@ class NodaliaClimateCard extends HTMLElement {
       attrs.preset_mode || "",
       attrs.fan_mode || "",
       attrs.swing_mode || "",
+      attrs.min_temp,attrs.max_temp,attrs.target_temp_step,attrs.supported_features,
+      JSON.stringify(attrs.hvac_modes),getHassLocale(hass),getClimateTemperatureUnit(hass),this._config.language,
       this._config?.layout || "circular",
       `${this._config?.tap_action || ""}|${this._config?.hold_action || ""}|${this._config?.double_tap_action || ""}`,
       Boolean(entityId && (this._draftTemperature.has(entityId) || this._draftTempRange.has(entityId))),
@@ -418,7 +567,7 @@ class NodaliaClimateCard extends HTMLElement {
     return values.join("::");
   }
 
-  _climateScheduleText(key, fallback = "") {
+  _climateScheduleText(key:string, fallback = "") {
     if (typeof window.NodaliaI18n?.translateClimateSchedule === "function") {
       return window.NodaliaI18n.translateClimateSchedule(
         this._hass,
@@ -438,7 +587,7 @@ class NodaliaClimateCard extends HTMLElement {
     return normalizeSetpointScheduleConfig(this._scheduleComposerDraft);
   }
 
-  _setScheduleComposerDraft(schedule, options = {}) {
+  _setScheduleComposerDraft(schedule:unknown, options:{touchRevision?:boolean;render?:boolean} = {}) {
     this._scheduleComposerDraft = normalizeSetpointScheduleConfig(schedule);
     this._touchScheduleDraftRevision();
     if (options.render !== false) {
@@ -468,8 +617,8 @@ class NodaliaClimateCard extends HTMLElement {
     return agenda.scrollTop;
   }
 
-  _restoreScheduleAgendaScrollState(scrollTop) {
-    if (typeof scrollTop !== "number" || !Number.isFinite(scrollTop) || scrollTop <= 0) {
+  _restoreScheduleAgendaScrollState(scrollTop:number|null) {
+    if (typeof scrollTop !== "number" || !climateFinite(scrollTop) || scrollTop <= 0) {
       return;
     }
 
@@ -481,8 +630,8 @@ class NodaliaClimateCard extends HTMLElement {
     };
 
     if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
-      window.requestAnimationFrame(() => {
-        window.requestAnimationFrame(apply);
+      this._requestFrame(() => {
+        this._requestFrame(apply);
       });
       return;
     }
@@ -497,10 +646,10 @@ class NodaliaClimateCard extends HTMLElement {
     );
     const rawState = storageEntityId ? String(this._hass?.states?.[storageEntityId]?.state ?? "").trim() : "";
     if (rawState && rawState !== "unknown" && rawState !== "unavailable") {
-      return decodeSetpointScheduleStorageState(rawState);
+      return normalizeSetpointScheduleConfig(decodeSetpointScheduleStorageState(rawState));
     }
 
-    const legacy = this._config?.setpoint_schedule;
+    const legacy = climateRecord(this._config?.setpoint_schedule);
     if (legacy && (Array.isArray(legacy.slots) ? legacy.slots.length : 0) > 0) {
       return normalizeSetpointScheduleConfig(legacy);
     }
@@ -520,17 +669,21 @@ class NodaliaClimateCard extends HTMLElement {
     void this._loadNativeScheduleDraft(entityId, loadRevision);
   }
 
-  async _loadNativeScheduleDraft(entityId, loadRevision) {
+  async _loadNativeScheduleDraft(entityId:string, loadRevision:number) {
     const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
     if (!backend || !entityId || !this._hass) {
       return false;
     }
+    const generation=this._generation,hass=this._hass;
+    if(!this._isCurrent(generation)) return false;
     try {
-      const status = await backend.status(this._hass, { silent: true });
+      const status = await backend.status(hass, { silent: true });
+      if (!this._isCurrent(generation)) return false;
       if (!status?.available || !status.capabilities?.includes("climate_schedules")) {
         return false;
       }
-      const result = await backend.getClimateSchedule(this._hass, entityId);
+      const result = climateRecord(await backend.getClimateSchedule(hass, entityId));
+      if (!this._isCurrent(generation)) return false;
       if (
         !this._scheduleComposerOpen
         || entityId !== String(this._config?.entity || "").trim()
@@ -553,10 +706,10 @@ class NodaliaClimateCard extends HTMLElement {
    * Keeps the live override chips in sync with the Engine. Only entities that already have a
    * stored schedule expose them, so plugin-only installs render the card unchanged.
    */
-  async _refreshEngineOverrideState(options = {}) {
+  async _refreshEngineOverrideState(options:{force?:boolean} = {}) {
     const backend = typeof window !== "undefined" ? window.NodaliaBackend : null;
     const entityId = String(this._config?.entity || "").trim();
-    if (!backend || !this._hass || !entityId || this._engineOverrideInFlight) {
+    if (!this.isConnected || !backend || !this._hass || !entityId || this._engineOverrideInFlight) {
       return false;
     }
     const now = Date.now();
@@ -565,29 +718,33 @@ class NodaliaClimateCard extends HTMLElement {
     }
     this._engineOverrideInFlight = true;
     this._lastEngineOverrideCheck = now;
+    const generation=this._generation,hass=this._hass;
+    if(!this._isCurrent(generation)) return false;
     try {
-      const status = await backend.status(this._hass, { silent: true });
+      const status = await backend.status(hass, { silent: true });
+      if (!this._isCurrent(generation)) return false;
       if (!backend.hasCapability(status, "climate_overrides")) {
         return this._applyEngineOverrideState(null);
       }
-      const result = await backend.getClimateSchedule(this._hass, entityId);
-      const schedule = result?.schedule;
-      if (!schedule || typeof schedule !== "object") {
+      const result = climateRecord(await backend.getClimateSchedule(hass, entityId));
+      if (!this._isCurrent(generation)) return false;
+      const schedule = climateRecord(result.schedule);
+      if (!isObject(result.schedule)) {
         return this._applyEngineOverrideState(null);
       }
-      const until = parseEngineOverrideUntil(schedule.override?.until);
+      const until = parseEngineOverrideUntil(climateRecord(schedule.override).until);
       return this._applyEngineOverrideState({
         available: true,
         until: until && until.getTime() > Date.now() ? until.toISOString() : "",
       });
     } catch (_error) {
-      return this._applyEngineOverrideState(null);
+      return this._isCurrent(generation)?this._applyEngineOverrideState(null):false;
     } finally {
-      this._engineOverrideInFlight = false;
+      if(this._isCurrent(generation)) this._engineOverrideInFlight = false;
     }
   }
 
-  _applyEngineOverrideState(next) {
+  _applyEngineOverrideState(next:EngineOverride|null) {
     const signature = next?.available === true ? `1:${next.until || ""}` : "0";
     if (signature === this._engineOverrideSignature) {
       return false;
@@ -615,7 +772,7 @@ class NodaliaClimateCard extends HTMLElement {
       return false;
     }
     const state = this._getState();
-    const override = { until: new Date(Date.now() + hours * 3_600_000).toISOString() };
+    const override:{until:string;temperature?:number;target_temp_low?:number;target_temp_high?:number} = { until: new Date(Date.now() + hours * 3_600_000).toISOString() };
     // Engine treats `temperature` as a single setpoint, so preserve both ends of a live range.
     if (this._isDualSetpointRange(state)) {
       const range = this._getEffectiveTargetLowHigh(state);
@@ -626,11 +783,12 @@ class NodaliaClimateCard extends HTMLElement {
       }
     } else {
       const target = parseFiniteClimateNumber(this._getTargetTemperature(state));
-      if (Number.isFinite(target)) {
+      if (climateFinite(target)) {
         override.temperature = Number(target);
       }
     }
-    return this._runEngineOverrideRequest(() => backend.setClimateOverride(this._hass, entityId, override));
+    const hass=this._hass;
+    return this._runEngineOverrideRequest(() => backend.setClimateOverride(hass, entityId, override));
   }
 
   async _clearEngineOverride() {
@@ -639,28 +797,35 @@ class NodaliaClimateCard extends HTMLElement {
     if (!backend || !this._hass || !entityId || this._engineOverrideBusy) {
       return false;
     }
-    return this._runEngineOverrideRequest(() => backend.clearClimateOverride(this._hass, entityId));
+    const hass=this._hass;
+    return this._runEngineOverrideRequest(() => backend.clearClimateOverride(hass, entityId));
   }
 
-  async _runEngineOverrideRequest(request) {
+  async _runEngineOverrideRequest(request:()=>Promise<unknown>) {
+    const generation=this._generation;
+    if(!this._isCurrent(generation)) return false;
     this._engineOverrideBusy = true;
     this._lastRenderSignature = "";
     this._render();
     try {
       await request();
+      if(!this._isCurrent(generation)) return false;
       this._triggerHaptic("success");
       return true;
     } catch (error) {
+      if(!this._isCurrent(generation)) return false;
       if (typeof console !== "undefined" && typeof console.warn === "function") {
         console.warn("Nodalia Climate Card: the Engine rejected the override change.", error);
       }
       return false;
     } finally {
+      if(this._isCurrent(generation)) {
       this._engineOverrideBusy = false;
       await this._refreshEngineOverrideState({ force: true });
-      if (this.isConnected && this.shadowRoot) {
+      if (this._isCurrent(generation) && this.shadowRoot) {
         this._lastRenderSignature = "";
         this._render();
+      }
       }
     }
   }
@@ -728,6 +893,7 @@ class NodaliaClimateCard extends HTMLElement {
   }
 
   _closeScheduleComposer() {
+    this._scheduleSaveToken++;this._cancelGestures(false);
     this._scheduleComposerOpen = false;
     this._scheduleComposerError = "";
     this._scheduleComposerSaving = false;
@@ -760,7 +926,7 @@ class NodaliaClimateCard extends HTMLElement {
     `;
   }
 
-  async _postScheduleWebhookPayload(webhookId, body) {
+  async _postScheduleWebhookPayload(webhookId:string, body:Record<string,unknown>) {
     const id = String(webhookId ?? "").trim();
     if (!id) {
       return false;
@@ -789,7 +955,9 @@ class NodaliaClimateCard extends HTMLElement {
     }
 
     try {
-      return Boolean(await post(id, body, this._hass));
+      const generation=this._generation,hass=this._hass,utils=window.NodaliaUtils;
+      const result=await post.call(utils,id,body,hass);
+      return this._isCurrent(generation)&&Boolean(result);
     } catch (_error) {
       return false;
     }
@@ -802,19 +970,19 @@ class NodaliaClimateCard extends HTMLElement {
 
     const schedule = this._getScheduleComposerDraft();
     schedule.enabled = Boolean(
-      this.shadowRoot.querySelector('[data-climate-schedule-field="enabled"]')?.checked,
+      this.shadowRoot.querySelector<HTMLInputElement>('[data-climate-schedule-field="enabled"]')?.checked,
     );
 
-    const domPatchById = new Map();
+    const domPatchById = new Map<string,{start:string;end:string;temperature:number}>();
     this.shadowRoot.querySelectorAll("[data-schedule-slot-editor]").forEach(editor => {
       const slotId = String(editor.getAttribute("data-schedule-slot-editor") || "").trim();
       if (!slotId) {
         return;
       }
 
-      const start = String(editor.querySelector('[data-climate-schedule-field="start"]')?.value || "").trim();
-      const end = String(editor.querySelector('[data-climate-schedule-field="end"]')?.value || "").trim();
-      const temperatureRaw = Number(editor.querySelector('[data-climate-schedule-field="temperature"]')?.value);
+      const start = String(editor.querySelector<HTMLInputElement>('[data-climate-schedule-field="start"]')?.value || "").trim();
+      const end = String(editor.querySelector<HTMLInputElement>('[data-climate-schedule-field="end"]')?.value || "").trim();
+      const temperatureRaw = Number(editor.querySelector<HTMLInputElement>('[data-climate-schedule-field="temperature"]')?.value);
       domPatchById.set(slotId, {
         start,
         end,
@@ -865,10 +1033,10 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
-    let value = active.value;
+    let value:string|number = active.value;
     if (field === "temperature") {
       value = Number(value);
-      if (!Number.isFinite(value)) {
+      if (!climateFinite(value)) {
         return;
       }
     }
@@ -881,6 +1049,10 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
+    if(this._scheduleComposerSaving) return;
+    const generation=this._generation,hass=this._hass,config=this._config;
+    const token=++this._scheduleSaveToken;
+    const current=()=>this._isCurrent(generation)&&token===this._scheduleSaveToken;
     const entityId = String(this._config?.entity || "").trim();
     if (!entityId) {
       this._setScheduleComposerError(
@@ -911,21 +1083,25 @@ class NodaliaClimateCard extends HTMLElement {
     let nativeSaveError = null;
     if (backend) {
       try {
-        const status = await backend.status(this._hass, { silent: true });
+        const status = await backend.status(hass, { silent: true });
+        if(!current()) return;
         if (status?.available && status.capabilities?.includes("climate_schedules")) {
-          await backend.setClimateSchedule(this._hass, entityId, {
+          await backend.setClimateSchedule(hass, entityId, {
             ...schedule,
-            week_starts_on: this._config?.setpoint_schedule_week_starts_on === "sunday" ? "sunday" : "monday",
+            week_starts_on: config.setpoint_schedule_week_starts_on === "sunday" ? "sunday" : "monday",
           });
+          if(!current()) return;
           this._scheduleComposerSaving = false;
           if (this.isConnected && this.shadowRoot) {
-            this._scheduleComposerDraft = schedule;
+            if(!current()) return;
+    this._scheduleComposerDraft = schedule;
             this._triggerHaptic("success");
             this._closeScheduleComposer();
           }
           return;
         }
       } catch (error) {
+        if(!current()) return;
         nativeSaveError = error;
         if (typeof console !== "undefined" && typeof console.warn === "function") {
           console.warn("Nodalia Climate Card: native schedule synchronization failed; trying the legacy webhook.", error);
@@ -933,7 +1109,7 @@ class NodaliaClimateCard extends HTMLElement {
       }
     }
 
-    const webhookId = String(this._config?.setpoint_schedule_webhook || "").trim();
+    const webhookId = String(config.setpoint_schedule_webhook || "").trim();
     if (!webhookId) {
       this._scheduleComposerSaving = false;
       this._setScheduleComposerError(
@@ -951,7 +1127,7 @@ class NodaliaClimateCard extends HTMLElement {
     }
     const storageEntityId = getClimateScheduleStorageEntityId(
       entityId,
-      this._config?.setpoint_schedule_helper,
+      config.setpoint_schedule_helper,
     );
     const body = buildClimateSetpointScheduleWebhookBody({
       entityId,
@@ -962,6 +1138,7 @@ class NodaliaClimateCard extends HTMLElement {
     });
 
     if (!isSetpointScheduleStorageStateWithinLimit(body.storage_state)) {
+      this._scheduleComposerSaving=false;
       this._setScheduleComposerError(
         this._climateScheduleText(
           "errors.storageTooLarge",
@@ -971,7 +1148,9 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
+    if(!current()) return;
     const ok = await this._postScheduleWebhookPayload(webhookId, body);
+    if(!current()) return;
     this._scheduleComposerSaving = false;
 
     if (!this.isConnected || !this.shadowRoot) {
@@ -985,10 +1164,10 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
-    if (storageEntityId && typeof this._hass?.callService === "function") {
+    if (storageEntityId && typeof hass.callService === "function") {
       try {
         await Promise.resolve(
-          this._hass.callService("input_text", "set_value", {
+          hass.callService?.("input_text", "set_value", {
             entity_id: storageEntityId,
             value: body.storage_state,
           }),
@@ -998,12 +1177,13 @@ class NodaliaClimateCard extends HTMLElement {
       }
     }
 
+    if(!current()) return;
     this._scheduleComposerDraft = schedule;
     this._triggerHaptic("success");
     this._closeScheduleComposer();
   }
 
-  _updateScheduleComposerSlot(slotId, patch = {}, options = {}) {
+  _updateScheduleComposerSlot(slotId:string|undefined, patch:Partial<ClimateScheduleSlot> = {}, options:{render?:boolean} = {}) {
     const schedule = this._getScheduleComposerDraft();
     const index = schedule.slots.findIndex(slot => slot.id === slotId);
     if (index === -1) {
@@ -1026,7 +1206,7 @@ class NodaliaClimateCard extends HTMLElement {
     this._syncRenderSignature();
   }
 
-  _getScheduleDayTrackElement(day) {
+  _getScheduleDayTrackElement(day:string|undefined) {
     const dayKey = String(day ?? "").trim();
     if (!dayKey || !this.shadowRoot) {
       return null;
@@ -1036,7 +1216,7 @@ class NodaliaClimateCard extends HTMLElement {
     return track instanceof HTMLElement ? track : null;
   }
 
-  _patchScheduleBlockDom(slotId) {
+  _patchScheduleBlockDom(slotId:string|undefined) {
     if (!this.shadowRoot || !slotId) {
       return;
     }
@@ -1077,9 +1257,9 @@ class NodaliaClimateCard extends HTMLElement {
       `[data-schedule-slot-editor="${escapeSelectorValue(slotId)}"]`,
     );
     if (editor instanceof HTMLElement) {
-      const startInput = editor.querySelector('[data-climate-schedule-field="start"]');
-      const endInput = editor.querySelector('[data-climate-schedule-field="end"]');
-      const tempInput = editor.querySelector('[data-climate-schedule-field="temperature"]');
+      const startInput = editor.querySelector<HTMLInputElement>('[data-climate-schedule-field="start"]');
+      const endInput = editor.querySelector<HTMLInputElement>('[data-climate-schedule-field="end"]');
+      const tempInput = editor.querySelector<HTMLInputElement>('[data-climate-schedule-field="temperature"]');
       const activeEl = this.shadowRoot?.activeElement;
       if (startInput instanceof HTMLInputElement && activeEl !== startInput) {
         startInput.value = slot.start;
@@ -1117,7 +1297,7 @@ class NodaliaClimateCard extends HTMLElement {
     const schedule = this._getScheduleComposerDraft();
     const gap = findScheduleGapForDay(schedule.slots, day);
     const daySlots = schedule.slots.filter(slot => slot.day === day);
-    const fallbackTemp = daySlots.length ? daySlots[daySlots.length - 1].temperature : 21;
+    const fallbackTemp = daySlots.length ? daySlots[daySlots.length - 1]?.temperature ?? 21 : 21;
     const slot = normalizeSetpointScheduleSlot({
       day,
       start: formatScheduleClockMinutes(gap.start),
@@ -1133,7 +1313,7 @@ class NodaliaClimateCard extends HTMLElement {
     return getSetpointScheduleDayOrder(this._config?.setpoint_schedule_week_starts_on);
   }
 
-  _setScheduleComposerSelectedSlot(slotId) {
+  _setScheduleComposerSelectedSlot(slotId:string|undefined) {
     this._scheduleComposerSelectedSlotId = String(slotId ?? "").trim();
     if (this._scheduleComposerOpen && this.shadowRoot?.querySelector("[data-schedule-day-track]")) {
       this._syncScheduleComposerSelectionDom();
@@ -1144,7 +1324,7 @@ class NodaliaClimateCard extends HTMLElement {
     this._render();
   }
 
-  _setScheduleBlockDragPendingListeners(active) {
+  _setScheduleBlockDragPendingListeners(active:boolean) {
     if (typeof window === "undefined") {
       return;
     }
@@ -1155,7 +1335,7 @@ class NodaliaClimateCard extends HTMLElement {
       }
       window.addEventListener("pointermove", this._onWindowScheduleBlockDragMove);
       window.addEventListener("pointerup", this._onWindowScheduleBlockDragUp);
-      window.addEventListener("pointercancel", this._onWindowScheduleBlockDragUp);
+      window.addEventListener("pointercancel", this._onCancelGesture);
       this._scheduleBlockDragPendingListenersActive = true;
       return;
     }
@@ -1165,16 +1345,17 @@ class NodaliaClimateCard extends HTMLElement {
     }
     window.removeEventListener("pointermove", this._onWindowScheduleBlockDragMove);
     window.removeEventListener("pointerup", this._onWindowScheduleBlockDragUp);
-    window.removeEventListener("pointercancel", this._onWindowScheduleBlockDragUp);
+    window.removeEventListener("pointercancel", this._onCancelGesture);
     this._scheduleBlockDragPendingListenersActive = false;
   }
 
-  _onWindowScheduleBlockDragMove(event) {
+  _onWindowScheduleBlockDragMove(event:Event) {
+    if (!(event instanceof PointerEvent)) return;
     const pending = this._scheduleBlockDragPending;
     if (!pending) {
       return;
     }
-    if (pending.pointerId != null && event.pointerId != null && pending.pointerId !== event.pointerId) {
+    if (pending.pointerId != null && climatePointerId(event) != null && pending.pointerId !== climatePointerId(event)) {
       return;
     }
 
@@ -1199,12 +1380,13 @@ class NodaliaClimateCard extends HTMLElement {
     this._applyScheduleDragAtClientX(event.clientX);
   }
 
-  _onWindowScheduleBlockDragUp(event) {
+  _onWindowScheduleBlockDragUp(event:Event) {
+    if (!(event instanceof PointerEvent)) return;
     const pending = this._scheduleBlockDragPending;
     if (!pending) {
       return;
     }
-    if (pending.pointerId != null && event.pointerId != null && pending.pointerId !== event.pointerId) {
+    if (pending.pointerId != null && climatePointerId(event) != null && pending.pointerId !== climatePointerId(event)) {
       return;
     }
 
@@ -1212,7 +1394,7 @@ class NodaliaClimateCard extends HTMLElement {
     this._setScheduleBlockDragPendingListeners(false);
   }
 
-  _setScheduleDragWindowListeners(active) {
+  _setScheduleDragWindowListeners(active:boolean) {
     if (typeof window === "undefined") {
       return;
     }
@@ -1223,7 +1405,7 @@ class NodaliaClimateCard extends HTMLElement {
       }
       window.addEventListener("pointermove", this._onWindowSchedulePointerMove);
       window.addEventListener("pointerup", this._onWindowSchedulePointerUp);
-      window.addEventListener("pointercancel", this._onWindowSchedulePointerUp);
+      window.addEventListener("pointercancel", this._onCancelGesture);
       this._scheduleDragListenersActive = true;
       return;
     }
@@ -1233,11 +1415,11 @@ class NodaliaClimateCard extends HTMLElement {
     }
     window.removeEventListener("pointermove", this._onWindowSchedulePointerMove);
     window.removeEventListener("pointerup", this._onWindowSchedulePointerUp);
-    window.removeEventListener("pointercancel", this._onWindowSchedulePointerUp);
+    window.removeEventListener("pointercancel", this._onCancelGesture);
     this._scheduleDragListenersActive = false;
   }
 
-  _applyScheduleDragAtClientX(clientX) {
+  _applyScheduleDragAtClientX(clientX:number) {
     const drag = this._activeScheduleDrag;
     if (!drag?.slotId) {
       return;
@@ -1260,7 +1442,7 @@ class NodaliaClimateCard extends HTMLElement {
     const initialStart = drag.initialStart;
     const initialEnd = drag.initialEnd;
     const duration = Math.max(initialEnd - initialStart, SCHEDULE_MIN_BLOCK_MINUTES);
-    const dragPatch = {};
+    const dragPatch:Partial<ClimateScheduleSlot> = {};
 
     if (drag.mode === "move") {
       let start = snapScheduleTimelineMinutes(pointerMinutes - drag.pointerOffsetMinutes);
@@ -1296,7 +1478,7 @@ class NodaliaClimateCard extends HTMLElement {
     this._updateScheduleComposerSlot(drag.slotId, dragPatch, { render: false });
   }
 
-  _startScheduleDrag(options = {}) {
+  _startScheduleDrag(options:StartScheduleOptions) {
     const {
       slotId,
       mode,
@@ -1323,15 +1505,15 @@ class NodaliaClimateCard extends HTMLElement {
       pointerId,
       initialStart: layout.start,
       initialEnd: layout.end,
-      pointerOffsetMinutes: mode === "move" ? pointerMinutes - layout.start : 0,
+      pointerOffsetMinutes: mode === "move" ? pointerMinutes - layout.start : 0,original:{...slot},
     };
     this._scheduleComposerSelectedSlotId = slotId;
     this._syncScheduleComposerSelectionDom();
     this._setScheduleDragWindowListeners(true);
 
-    if (event && typeof resolvedTrack.setPointerCapture === "function" && event.pointerId != null) {
+    if (event && typeof resolvedTrack.setPointerCapture === "function" && climatePointerId(event) != null) {
       try {
-        resolvedTrack.setPointerCapture(event.pointerId);
+        resolvedTrack.setPointerCapture(event instanceof PointerEvent?event.pointerId:0);
       } catch (_error) {
         // Ignore capture failures on synthetic pointers.
       }
@@ -1340,7 +1522,7 @@ class NodaliaClimateCard extends HTMLElement {
     return true;
   }
 
-  _finishScheduleDrag(event = null) {
+  _finishScheduleDrag(event:Event|null = null) {
     const drag = this._activeScheduleDrag;
     if (!drag) {
       return;
@@ -1349,7 +1531,7 @@ class NodaliaClimateCard extends HTMLElement {
     const track = drag.track instanceof HTMLElement ? drag.track : this._getScheduleDayTrackElement(drag.day);
     if (
       track instanceof HTMLElement &&
-      event?.pointerId != null &&
+      event instanceof PointerEvent &&
       typeof track.releasePointerCapture === "function"
     ) {
       try {
@@ -1373,31 +1555,33 @@ class NodaliaClimateCard extends HTMLElement {
     this._render();
   }
 
-  _onWindowSchedulePointerMove(event) {
+  _onWindowSchedulePointerMove(event:Event) {
+    if (!(event instanceof PointerEvent)) return;
     const drag = this._activeScheduleDrag;
     if (!drag) {
       return;
     }
-    if (drag.pointerId != null && event.pointerId != null && drag.pointerId !== event.pointerId) {
+    if (drag.pointerId != null && climatePointerId(event) != null && drag.pointerId !== climatePointerId(event)) {
       return;
     }
     event.preventDefault();
     this._applyScheduleDragAtClientX(event.clientX);
   }
 
-  _onWindowSchedulePointerUp(event) {
+  _onWindowSchedulePointerUp(event:Event) {
+    if (!(event instanceof PointerEvent)) return;
     const drag = this._activeScheduleDrag;
     if (!drag) {
       return;
     }
-    if (drag.pointerId != null && event.pointerId != null && drag.pointerId !== event.pointerId) {
+    if (drag.pointerId != null && climatePointerId(event) != null && drag.pointerId !== climatePointerId(event)) {
       return;
     }
     this._applyScheduleDragAtClientX(event.clientX);
     this._finishScheduleDrag(event);
   }
 
-  _handleScheduleComposerPointerDown(event, path) {
+  _handleScheduleComposerPointerDown(event:PointerEvent, path:EventTarget[]) {
     if (!this._scheduleComposerOpen || event.button !== 0) {
       return false;
     }
@@ -1415,16 +1599,16 @@ class NodaliaClimateCard extends HTMLElement {
     }
 
     const resizeHandle = path.find(
-      node => node instanceof HTMLElement && node.dataset?.scheduleResize,
+      (node):node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset?.scheduleResize),
     );
-    if (resizeHandle) {
+    if (resizeHandle instanceof HTMLElement) {
       const slotId = String(resizeHandle.dataset.scheduleSlotId || "").trim();
       const mode = String(resizeHandle.dataset.scheduleResize || "").trim();
       const track = path.find(
-        node => node instanceof HTMLElement && node.dataset?.scheduleDayTrack,
+        (node):node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset?.scheduleDayTrack),
       );
-      const day = String(track?.dataset?.scheduleDayTrack || "").trim();
-      if (slotId && track && day && (mode === "start" || mode === "end")) {
+      const day = String((track instanceof HTMLElement?track.dataset.scheduleDayTrack:"") || "").trim();
+      if (slotId && track instanceof HTMLElement && day && (mode === "start" || mode === "end")) {
         event.preventDefault();
         event.stopPropagation();
         this._scheduleBlockDragPending = null;
@@ -1435,7 +1619,7 @@ class NodaliaClimateCard extends HTMLElement {
           day,
           track,
           clientX: event.clientX,
-          pointerId: event.pointerId,
+          pointerId: climatePointerId(event),
           event,
         });
         return true;
@@ -1443,15 +1627,15 @@ class NodaliaClimateCard extends HTMLElement {
     }
 
     const block = path.find(
-      node => node instanceof HTMLElement && node.dataset?.scheduleBlockId,
+      (node):node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset?.scheduleBlockId),
     );
-    if (block) {
+    if (block instanceof HTMLElement) {
       const slotId = String(block.dataset.scheduleBlockId || "").trim();
       const track = path.find(
-        node => node instanceof HTMLElement && node.dataset?.scheduleDayTrack,
+        (node):node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset?.scheduleDayTrack),
       );
-      const day = String(track?.dataset?.scheduleDayTrack || "").trim();
-      if (slotId && track && day) {
+      const day = String((track instanceof HTMLElement?track.dataset.scheduleDayTrack:"") || "").trim();
+      if (slotId && track instanceof HTMLElement && day) {
         event.preventDefault();
         event.stopPropagation();
         this._setScheduleComposerSelectedSlot(slotId);
@@ -1461,7 +1645,7 @@ class NodaliaClimateCard extends HTMLElement {
           track,
           startClientX: event.clientX,
           startClientY: event.clientY,
-          pointerId: event.pointerId,
+          pointerId: climatePointerId(event),
         };
         this._setScheduleBlockDragPendingListeners(true);
         return true;
@@ -1471,7 +1655,7 @@ class NodaliaClimateCard extends HTMLElement {
     return false;
   }
 
-  _removeScheduleComposerSlot(slotId) {
+  _removeScheduleComposerSlot(slotId:string|undefined) {
     const schedule = this._getScheduleComposerDraft();
     schedule.slots = schedule.slots.filter(slot => slot.id !== slotId);
     if (this._scheduleComposerSelectedSlotId === slotId) {
@@ -1480,7 +1664,7 @@ class NodaliaClimateCard extends HTMLElement {
     this._setScheduleComposerDraft(schedule);
   }
 
-  _setScheduleComposerEnabled(enabled) {
+  _setScheduleComposerEnabled(enabled:boolean) {
     const schedule = this._getScheduleComposerDraft();
     schedule.enabled = enabled === true;
     this._setScheduleComposerDraft(schedule);
@@ -1506,13 +1690,13 @@ class NodaliaClimateCard extends HTMLElement {
   }
 
   _getConfiguredGridRows() {
-    const numericRows = Number(this._config?.grid_options?.rows);
-    return Number.isFinite(numericRows) ? numericRows : null;
+    const numericRows = Number(climateRecord(this._config?.grid_options).rows);
+    return climateFinite(numericRows) ? numericRows : null;
   }
 
   _getConfiguredGridColumns() {
-    const numericColumns = Number(this._config?.grid_options?.columns);
-    return Number.isFinite(numericColumns) ? numericColumns : null;
+    const numericColumns = Number(climateRecord(this._config?.grid_options).columns);
+    return climateFinite(numericColumns) ? numericColumns : null;
   }
 
   _getCompactLevel() {
@@ -1558,8 +1742,8 @@ class NodaliaClimateCard extends HTMLElement {
       const al = parseFiniteClimateNumber(state.attributes?.target_temp_low);
       const ah = parseFiniteClimateNumber(state.attributes?.target_temp_high);
       if (
-        Number.isFinite(al) && Number.isFinite(ah) &&
-        Number.isFinite(draft?.low) && Number.isFinite(draft?.high) &&
+        climateFinite(al) && climateFinite(ah) &&
+        draft && climateFinite(draft.low) && climateFinite(draft.high) &&
         Math.abs(al - draft.low) <= tol &&
         Math.abs(ah - draft.high) <= tol
       ) {
@@ -1579,7 +1763,7 @@ class NodaliaClimateCard extends HTMLElement {
     const draftTemperature = Number(this._draftTemperature.get(entityId));
     const tolerance = this._getTemperatureSyncTolerance(state);
 
-    if (Number.isFinite(actualTemperature) && Math.abs(actualTemperature - draftTemperature) <= tolerance) {
+    if (climateFinite(actualTemperature) && Math.abs(actualTemperature - draftTemperature) <= tolerance) {
       this._clearTemperatureDraft(entityId);
     }
   }
@@ -1597,34 +1781,34 @@ class NodaliaClimateCard extends HTMLElement {
     this._temperatureCommitRequiresHvacWake = false;
 
     if (this._draftResetTimer) {
-      window.clearTimeout(this._draftResetTimer);
+      this._clearTimer(this._draftResetTimer);
       this._draftResetTimer = 0;
     }
 
     if (this._temperatureCommitDebounceTimer) {
-      window.clearTimeout(this._temperatureCommitDebounceTimer);
+      this._clearTimer(this._temperatureCommitDebounceTimer);
       this._temperatureCommitDebounceTimer = 0;
     }
     if (this._rangeCommitDebounceTimer) {
-      window.clearTimeout(this._rangeCommitDebounceTimer);
+      this._clearTimer(this._rangeCommitDebounceTimer);
       this._rangeCommitDebounceTimer = 0;
     }
   }
 
-  _getClimateName(state) {
+  _getClimateName(state:HassEntity|null|undefined) {
     return this._config?.name
       || state?.attributes?.friendly_name
       || this._config?.entity
       || "Climate";
   }
 
-  _getClimateIcon(state) {
+  _getClimateIcon(state:HassEntity|null|undefined) {
     return this._config?.icon
       || state?.attributes?.icon
       || "mdi:thermostat";
   }
 
-  _getEntityPicture(state) {
+  _getEntityPicture(state:HassEntity|null|undefined) {
     if (this._config?.show_entity_picture !== true) {
       return "";
     }
@@ -1636,11 +1820,11 @@ class NodaliaClimateCard extends HTMLElement {
     ).trim();
   }
 
-  _getTemperatureRange(state) {
+  _getTemperatureRange(state:HassEntity|null|undefined) {
     const min = parseFiniteClimateNumber(state?.attributes?.min_temp);
     const max = parseFiniteClimateNumber(state?.attributes?.max_temp);
 
-    if (Number.isFinite(min) && Number.isFinite(max) && min < max) {
+    if (climateFinite(min) && climateFinite(max) && min < max) {
       return {
         min,
         max,
@@ -1653,9 +1837,9 @@ class NodaliaClimateCard extends HTMLElement {
     };
   }
 
-  _getTemperatureStep(state) {
+  _getTemperatureStep(state:HassEntity|null|undefined) {
     const step = Number(state?.attributes?.target_temp_step);
-    return Number.isFinite(step) && step > 0 ? step : 0.5;
+    return climateFinite(step) && step > 0 ? step : 0.5;
   }
 
   /**
@@ -1663,12 +1847,12 @@ class NodaliaClimateCard extends HTMLElement {
    * If only one of low/high is finite, falls back to single-setpoint behaviour (`_isDualSetpointRange` false).
    * Inverted low/high from an integration is still detected here; `_normalizeLowHighPair` swaps before commit.
    */
-  _isDualSetpointRange(state) {
+  _isDualSetpointRange(state:HassEntity|null|undefined) {
     if (!state?.attributes) {
       return false;
     }
     const attrs = state.attributes;
-    if (Number.isFinite(parseFiniteClimateNumber(attrs.temperature))) {
+    if (climateFinite(parseFiniteClimateNumber(attrs.temperature))) {
       return false;
     }
     if (normalizeTextKey(this._getCurrentMode(state)) !== "heat_cool") {
@@ -1676,48 +1860,47 @@ class NodaliaClimateCard extends HTMLElement {
     }
     const low = parseFiniteClimateNumber(attrs.target_temp_low);
     const high = parseFiniteClimateNumber(attrs.target_temp_high);
-    return Number.isFinite(low) && Number.isFinite(high);
+    return climateFinite(low) && climateFinite(high);
   }
 
   /** Minimum span between low and high (at least 1° in entity units, never below `target_temp_step`). */
-  _getHeatCoolMinGap(state) {
+  _getHeatCoolMinGap(state:HassEntity|null|undefined) {
     const step = this._getTemperatureStep(state);
     return Math.max(1, step);
   }
 
-  _clampRangeLowCandidate(rawValue, high, state) {
-    if (!state || !Number.isFinite(high)) {
+  _clampRangeLowCandidate(rawValue:unknown, high:unknown, state:HassEntity|null|undefined) {
+    if (!state || !climateFinite(high)) {
       return null;
     }
     const range = this._getTemperatureRange(state);
     const gap = this._getHeatCoolMinGap(state);
     const maxLow = high - gap;
-    if (!Number.isFinite(maxLow) || maxLow < range.min) {
+    if (!climateFinite(maxLow) || maxLow < range.min) {
       return null;
     }
     const n = this._normalizeTemperatureValue(rawValue, state);
     return clamp(n, range.min, maxLow);
   }
 
-  _clampRangeHighCandidate(rawValue, low, state) {
-    if (!state || !Number.isFinite(low)) {
+  _clampRangeHighCandidate(rawValue:unknown, low:unknown, state:HassEntity|null|undefined) {
+    if (!state || !climateFinite(low)) {
       return null;
     }
     const range = this._getTemperatureRange(state);
     const gap = this._getHeatCoolMinGap(state);
     const minHigh = low + gap;
-    if (!Number.isFinite(minHigh) || minHigh > range.max) {
+    if (!climateFinite(minHigh) || minHigh > range.max) {
       return null;
     }
     const n = this._normalizeTemperatureValue(rawValue, state);
     return clamp(n, minHigh, range.max);
   }
 
-  _getEffectiveTargetLowHigh(state) {
+  _getEffectiveTargetLowHigh(state:HassEntity|null|undefined) {
     const entityId = this._config?.entity;
-    if (entityId && this._draftTempRange.has(entityId)) {
-      return { ...this._draftTempRange.get(entityId) };
-    }
+    const draft=entityId?this._draftTempRange.get(entityId):undefined;
+    if(draft) return {...draft};
     const attrs = state?.attributes || {};
     return {
       low: parseFiniteClimateNumber(attrs.target_temp_low),
@@ -1725,10 +1908,10 @@ class NodaliaClimateCard extends HTMLElement {
     };
   }
 
-  _normalizeLowHighPair(low, high, state) {
+  _normalizeLowHighPair(low:unknown, high:unknown, state:HassEntity|null|undefined) {
     const lo = this._normalizeTemperatureValue(low, state);
     const hi = this._normalizeTemperatureValue(high, state);
-    if (!Number.isFinite(lo) || !Number.isFinite(hi)) {
+    if (!climateFinite(lo) || !climateFinite(hi)) {
       return null;
     }
     let a = lo;
@@ -1749,12 +1932,12 @@ class NodaliaClimateCard extends HTMLElement {
     return { low: a, high: b };
   }
 
-  _getTemperatureSyncTolerance(state) {
+  _getTemperatureSyncTolerance(state:HassEntity|null|undefined) {
     const step = this._getTemperatureStep(state);
     return Math.max(0.05, Math.min(step / 2, 0.2));
   }
 
-  _normalizeTemperatureValue(value, state = this._getState()) {
+  _normalizeTemperatureValue(value:unknown, state = this._getState()) {
     if (!state) {
       return Number(value);
     }
@@ -1766,23 +1949,23 @@ class NodaliaClimateCard extends HTMLElement {
     return Number(rounded.toFixed(Math.max(1, getStepPrecision(step))));
   }
 
-  _supportsTargetTemperature(state) {
+  _supportsTargetTemperature(state:HassEntity|null|undefined) {
     const attrs = state?.attributes || {};
-    if (Number.isFinite(parseFiniteClimateNumber(attrs.temperature))) {
+    if (climateFinite(parseFiniteClimateNumber(attrs.temperature))) {
       return true;
     }
     if (this._isDualSetpointRange(state)) {
       return true;
     }
     return (
-      Number.isFinite(parseFiniteClimateNumber(attrs.min_temp)) &&
-      Number.isFinite(parseFiniteClimateNumber(attrs.max_temp))
+      climateFinite(parseFiniteClimateNumber(attrs.min_temp)) &&
+      climateFinite(parseFiniteClimateNumber(attrs.max_temp))
     );
   }
 
-  _supportsTargetTemperatureControl(state) {
+  _supportsTargetTemperatureControl(state:HassEntity|null|undefined) {
     const features = Number(state?.attributes?.supported_features);
-    if (Number.isFinite(features)) {
+    if (climateFinite(features)) {
       return Boolean((features & 1) || (features & 2));
     }
     return this._supportsTargetTemperature(state);
@@ -1793,7 +1976,7 @@ class NodaliaClimateCard extends HTMLElement {
    * Returns `null` when the integration exposes no active setpoint (e.g. Ecobee `heat_cool` with
    * `temperature` / `target_temp_low` / `target_temp_high` all unset) — callers must not invent a fallback.
    */
-  _getTargetTemperature(state) {
+  _getTargetTemperature(state:HassEntity|null|undefined) {
     const entityId = this._config?.entity;
     if (entityId && this._draftTemperature.has(entityId)) {
       return Number(this._draftTemperature.get(entityId));
@@ -1801,45 +1984,45 @@ class NodaliaClimateCard extends HTMLElement {
 
     if (entityId && this._isDualSetpointRange(state) && this._draftTempRange.has(entityId)) {
       const pair = this._draftTempRange.get(entityId);
-      if (Number.isFinite(pair?.low) && Number.isFinite(pair?.high)) {
+      if (pair && climateFinite(pair.low) && climateFinite(pair.high)) {
         return Number((((pair.high + pair.low) / 2)).toFixed(2));
       }
     }
 
     const attrs = state?.attributes || {};
     const direct = parseFiniteClimateNumber(attrs.temperature);
-    if (Number.isFinite(direct)) {
+    if (climateFinite(direct)) {
       return direct;
     }
 
     const high = parseFiniteClimateNumber(attrs.target_temp_high);
     const low = parseFiniteClimateNumber(attrs.target_temp_low);
-    if (Number.isFinite(high) && Number.isFinite(low)) {
+    if (climateFinite(high) && climateFinite(low)) {
       return Number(((high + low) / 2).toFixed(1));
     }
 
     return null;
   }
 
-  _getCurrentTemperature(state) {
+  _getCurrentTemperature(state:HassEntity|null|undefined) {
     const current = parseFiniteClimateNumber(state?.attributes?.current_temperature);
-    return Number.isFinite(current) ? current : null;
+    return climateFinite(current) ? current : null;
   }
 
-  _getCurrentHumidity(state) {
+  _getCurrentHumidity(state:HassEntity|null|undefined) {
     const humidity = Number(state?.attributes?.current_humidity);
-    return Number.isFinite(humidity) ? humidity : null;
+    return climateFinite(humidity) ? humidity : null;
   }
 
-  _getCurrentMode(state) {
+  _getCurrentMode(state:HassEntity|null|undefined) {
     return String(state?.attributes?.hvac_mode || state?.state || "").trim();
   }
 
-  _getCurrentAction(state) {
+  _getCurrentAction(state:HassEntity|null|undefined) {
     return String(state?.attributes?.hvac_action || "").trim();
   }
 
-  _getOrderedModeOptions(state) {
+  _getOrderedModeOptions(state:HassEntity|null|undefined) {
     const rawModes = Array.isArray(state?.attributes?.hvac_modes)
       ? state.attributes.hvac_modes.map(item => String(item || "").trim()).filter(Boolean)
       : [];
@@ -1858,7 +2041,7 @@ class NodaliaClimateCard extends HTMLElement {
       });
   }
 
-  _getPreferredOnMode(state) {
+  _getPreferredOnMode(state:HassEntity|null|undefined) {
     const allModes = Array.isArray(state?.attributes?.hvac_modes)
       ? state.attributes.hvac_modes.map(item => String(item || "").trim()).filter(Boolean)
       : [];
@@ -1886,7 +2069,7 @@ class NodaliaClimateCard extends HTMLElement {
     return allModes.find(mode => normalizeTextKey(mode) !== "off") || "heat";
   }
 
-  _isOff(state) {
+  _isOff(state:HassEntity|null|undefined) {
     return normalizeTextKey(this._getCurrentMode(state)) === "off";
   }
 
@@ -1894,7 +2077,7 @@ class NodaliaClimateCard extends HTMLElement {
    * Some integrations leave `attributes.hvac_mode` non-off while `state` is already `off`.
    * Off-null setpoint wake and similar paths must still treat the entity as shut off.
    */
-  _isEffectiveClimateOff(state) {
+  _isEffectiveClimateOff(state:HassEntity|null|undefined) {
     if (!state) {
       return false;
     }
@@ -1908,23 +2091,23 @@ class NodaliaClimateCard extends HTMLElement {
    * Ecobee-style: indoor temp known, but no published single or dual setpoints yet.
    * Used by step buttons without treating `current_temperature` as a visible target.
    */
-  _isNullSetpointFromCurrentState(state) {
+  _isNullSetpointFromCurrentState(state:HassEntity|null|undefined) {
     if (!state?.attributes || isUnavailableState(state)) {
       return false;
     }
     const attrs = state.attributes;
-    if (Number.isFinite(parseFiniteClimateNumber(attrs.temperature))) {
+    if (climateFinite(parseFiniteClimateNumber(attrs.temperature))) {
       return false;
     }
     const low = parseFiniteClimateNumber(attrs.target_temp_low);
     const high = parseFiniteClimateNumber(attrs.target_temp_high);
-    if (Number.isFinite(low) || Number.isFinite(high)) {
+    if (climateFinite(low) || climateFinite(high)) {
       return false;
     }
-    return Number.isFinite(parseFiniteClimateNumber(attrs.current_temperature));
+    return climateFinite(parseFiniteClimateNumber(attrs.current_temperature));
   }
 
-  _isOffNullSetpointState(state) {
+  _isOffNullSetpointState(state:HassEntity|null|undefined) {
     return this._isEffectiveClimateOff(state) && this._isNullSetpointFromCurrentState(state);
   }
 
@@ -1932,7 +2115,7 @@ class NodaliaClimateCard extends HTMLElement {
    * HVAC mode to enable before `set_temperature` when creating a setpoint from current temperature.
    * Order: heat → cool → heat_cool (Better Thermostat / Ecobee-friendly; differs from `_getPreferredOnMode` toggle order).
    */
-  _getSetpointWakeHvacMode(state) {
+  _getSetpointWakeHvacMode(state:HassEntity|null|undefined) {
     const modeSet = new Set(
       (Array.isArray(state?.attributes?.hvac_modes) ? state.attributes.hvac_modes : [])
         .map(item => normalizeTextKey(String(item || "").trim()))
@@ -1946,7 +2129,7 @@ class NodaliaClimateCard extends HTMLElement {
     return null;
   }
 
-  _supportsNullSetpointCreation(state) {
+  _supportsNullSetpointCreation(state:HassEntity|null|undefined) {
     if (!this._isNullSetpointFromCurrentState(state)) {
       return false;
     }
@@ -1954,16 +2137,16 @@ class NodaliaClimateCard extends HTMLElement {
       return false;
     }
     const { min, max } = this._getTemperatureRange(state);
-    return Number.isFinite(min) && Number.isFinite(max) && min < max;
+    return climateFinite(min) && climateFinite(max) && min < max;
   }
 
-  _supportsOffNullSetpointWake(state) {
+  _supportsOffNullSetpointWake(state:HassEntity|null|undefined) {
     return this._isOffNullSetpointState(state) && this._supportsNullSetpointCreation(state);
   }
 
-  _getStateLabel(state) {
+  _getStateLabel(state:HassEntity|null|undefined) {
     const action = this._getCurrentAction(state);
-    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const hass = this._hass ?? climateDisplayHass(window.NodaliaI18n?.resolveHass?.(null));
     const langCfg = this._config?.language ?? "auto";
     if (window.NodaliaI18n?.translateClimateHvacLabel) {
       const raw = action || this._getCurrentMode(state);
@@ -1975,7 +2158,7 @@ class NodaliaClimateCard extends HTMLElement {
     return getModeMeta(this._getCurrentMode(state)).label;
   }
 
-  _getAccentColor(state) {
+  _getAccentColor(state:HassEntity|null|undefined) {
     const styles = this._config?.styles || DEFAULT_CONFIG.styles;
     const dialStyles = styles.dial || DEFAULT_CONFIG.styles.dial;
     const { accent } = climateDialActionMeta(this._getCurrentAction(state), this._getCurrentMode(state));
@@ -1996,8 +2179,8 @@ class NodaliaClimateCard extends HTMLElement {
     }
   }
 
-  _setClimateService(service, data = {}) {
-    if (!this._hass || !this._config?.entity) {
+  _setClimateService(service:string, data:Record<string,unknown> = {}, hass=this._hass, entityId=this._config.entity) {
+    if (!this.isConnected || !hass || !entityId || isUnavailableState(hass.states[entityId])) {
       return Promise.resolve();
     }
 
@@ -2007,13 +2190,12 @@ class NodaliaClimateCard extends HTMLElement {
       return Promise.resolve();
     }
 
-    return this._hass.callService("climate", service, {
-      entity_id: this._config.entity,
-      ...data,
-    });
+    const promise=requestHassService(this,hass,"climate",service,{entity_id:entityId,...data});
+    void promise.catch(error=>console.warn("Nodalia Climate Card: service failed",service,error));
+    return promise;
   }
 
-  _isServiceAllowed(serviceValue) {
+  _isServiceAllowed(serviceValue:unknown) {
     const security = this._config?.security || {};
     if (security.strict_service_actions !== true) {
       return true;
@@ -2032,10 +2214,10 @@ class NodaliaClimateCard extends HTMLElement {
     if (!domains.length && !services.length) {
       return false;
     }
-    return services.includes(normalizedService) || domains.includes(domain);
+    return services.includes(normalizedService) || domains.includes(domain??"");
   }
 
-  _setHvacMode(mode) {
+  _setHvacMode(mode:string) {
     if (!mode) {
       return;
     }
@@ -2045,7 +2227,7 @@ class NodaliaClimateCard extends HTMLElement {
     });
   }
 
-  _toggleClimate(state) {
+  _toggleClimate(state:HassEntity|null|undefined) {
     if (this._isOff(state) || isUnavailableState(state)) {
       this._setHvacMode(this._getPreferredOnMode(state));
       return;
@@ -2054,9 +2236,9 @@ class NodaliaClimateCard extends HTMLElement {
     this._setHvacMode("off");
   }
 
-  _queueTemperatureCommit(value, options = {}) {
+  _queueTemperatureCommit(value:unknown, options:ClimateCommitOptions = {}) {
     const state = this._getState();
-    if (!state || this._isDualSetpointRange(state)) {
+    if (!state || isUnavailableState(state) || this._isDualSetpointRange(state)) {
       return null;
     }
 
@@ -2074,12 +2256,12 @@ class NodaliaClimateCard extends HTMLElement {
     const normalized = this._normalizeTemperatureValue(value, state);
     const entityId = this._config?.entity;
 
-    if (!entityId || !Number.isFinite(normalized)) {
+    if (!entityId || !climateFinite(normalized)) {
       return null;
     }
 
     if (this._rangeCommitDebounceTimer) {
-      window.clearTimeout(this._rangeCommitDebounceTimer);
+      this._clearTimer(this._rangeCommitDebounceTimer);
       this._rangeCommitDebounceTimer = 0;
     }
 
@@ -2097,10 +2279,10 @@ class NodaliaClimateCard extends HTMLElement {
     }
 
     if (this._temperatureCommitDebounceTimer) {
-      window.clearTimeout(this._temperatureCommitDebounceTimer);
+      this._clearTimer(this._temperatureCommitDebounceTimer);
     }
 
-    this._temperatureCommitDebounceTimer = window.setTimeout(() => {
+    this._temperatureCommitDebounceTimer = this._setTimer(() => {
       this._temperatureCommitDebounceTimer = 0;
       this._flushQueuedTemperatureCommit();
     }, STEP_BUTTON_COMMIT_DEBOUNCE);
@@ -2115,13 +2297,15 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
+    const generation=this._generation,hass=this._hass;
+    if(!this._isCurrent(generation)) return;
     const state = this._getState();
-    if (!state || this._isDualSetpointRange(state)) {
+    if (!state || isUnavailableState(state) || this._isDualSetpointRange(state)) {
       return;
     }
 
     if (this._temperatureCommitDebounceTimer) {
-      window.clearTimeout(this._temperatureCommitDebounceTimer);
+      this._clearTimer(this._temperatureCommitDebounceTimer);
       this._temperatureCommitDebounceTimer = 0;
     }
 
@@ -2132,7 +2316,7 @@ class NodaliaClimateCard extends HTMLElement {
     const target = Number(
       this._temperatureCommitQueuedValue ?? this._draftTemperature.get(entityId),
     );
-    if (!Number.isFinite(target)) {
+    if (!climateFinite(target)) {
       return;
     }
 
@@ -2150,8 +2334,8 @@ class NodaliaClimateCard extends HTMLElement {
         if (wakeMode) {
           await Promise.resolve(this._setClimateService("set_hvac_mode", {
             hvac_mode: wakeMode,
-          }));
-          if (this._commitAborted) {
+          },hass,entityId));
+          if (!this._isCurrent(generation)) {
             return;
           }
         } else if (typeof console !== "undefined" && typeof console.debug === "function") {
@@ -2162,15 +2346,17 @@ class NodaliaClimateCard extends HTMLElement {
         await Promise.resolve(this._setClimateService("set_temperature", {
           temperature: target,
           ...(wakeMode ? { hvac_mode: wakeMode } : {}),
-        }));
-        if (this._commitAborted) {
+        },hass,entityId));
+        if (!this._isCurrent(generation)) {
           return;
         }
       }
     } catch (_error) {
+      if(!this._isCurrent(generation)) return;
       serviceFailed = true;
       this._temperatureCommitQueuedValue = target;
     } finally {
+      if(this._isCurrent(generation)) {
       this._temperatureCommitInFlight = false;
 
       if (serviceFailed) {
@@ -2181,24 +2367,25 @@ class NodaliaClimateCard extends HTMLElement {
 
       const queuedRaw = this._temperatureCommitQueuedValue;
       const queuedValue = queuedRaw === null || queuedRaw === undefined ? NaN : Number(queuedRaw);
-      if (Number.isFinite(queuedValue) && Math.abs(queuedValue - target) > 0.001) {
+      if (climateFinite(queuedValue) && Math.abs(queuedValue - target) > 0.001) {
         this._flushQueuedTemperatureCommit();
         return;
       }
 
-      if (Number.isFinite(queuedValue) && Math.abs(queuedValue - target) <= 0.001) {
+      if (climateFinite(queuedValue) && Math.abs(queuedValue - target) <= 0.001) {
         this._temperatureCommitQueuedValue = null;
       }
 
       if (this._draftTemperature.has(entityId)) {
         this._scheduleDraftReset();
       }
+      }
     }
   }
 
-  _queueRangeCommit(pair, options = {}) {
+  _queueRangeCommit(pair:ClimatePair, options:ClimateCommitOptions = {}) {
     const state = this._getState();
-    if (!state || !this._isDualSetpointRange(state)) {
+    if (!state || isUnavailableState(state) || !this._isDualSetpointRange(state)) {
       return null;
     }
 
@@ -2213,7 +2400,7 @@ class NodaliaClimateCard extends HTMLElement {
     }
 
     if (this._temperatureCommitDebounceTimer) {
-      window.clearTimeout(this._temperatureCommitDebounceTimer);
+      this._clearTimer(this._temperatureCommitDebounceTimer);
       this._temperatureCommitDebounceTimer = 0;
     }
 
@@ -2231,10 +2418,10 @@ class NodaliaClimateCard extends HTMLElement {
     }
 
     if (this._rangeCommitDebounceTimer) {
-      window.clearTimeout(this._rangeCommitDebounceTimer);
+      this._clearTimer(this._rangeCommitDebounceTimer);
     }
 
-    this._rangeCommitDebounceTimer = window.setTimeout(() => {
+    this._rangeCommitDebounceTimer = this._setTimer(() => {
       this._rangeCommitDebounceTimer = 0;
       this._flushQueuedRangeCommit();
     }, STEP_BUTTON_COMMIT_DEBOUNCE);
@@ -2249,13 +2436,15 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
+    const generation=this._generation,hass=this._hass;
+    if(!this._isCurrent(generation)) return;
     const state = this._getState();
-    if (!state || !this._isDualSetpointRange(state)) {
+    if (!state || isUnavailableState(state) || !this._isDualSetpointRange(state)) {
       return;
     }
 
     if (this._rangeCommitDebounceTimer) {
-      window.clearTimeout(this._rangeCommitDebounceTimer);
+      this._clearTimer(this._rangeCommitDebounceTimer);
       this._rangeCommitDebounceTimer = 0;
     }
 
@@ -2264,7 +2453,7 @@ class NodaliaClimateCard extends HTMLElement {
     }
 
     const pending = this._rangeCommitQueuedValue ?? this._draftTempRange.get(entityId);
-    if (!pending || !Number.isFinite(pending.low) || !Number.isFinite(pending.high)) {
+    if (!pending || !climateFinite(pending.low) || !climateFinite(pending.high)) {
       return;
     }
 
@@ -2276,14 +2465,16 @@ class NodaliaClimateCard extends HTMLElement {
       await Promise.resolve(this._setClimateService("set_temperature", {
         target_temp_low: pending.low,
         target_temp_high: pending.high,
-      }));
-      if (this._commitAborted) {
+      },hass,entityId));
+      if (!this._isCurrent(generation)) {
         return;
       }
     } catch (_error) {
+      if(!this._isCurrent(generation)) return;
       serviceFailed = true;
       this._rangeCommitQueuedValue = pending;
     } finally {
+      if(this._isCurrent(generation)) {
       this._rangeCommitInFlight = false;
 
       if (serviceFailed) {
@@ -2294,8 +2485,8 @@ class NodaliaClimateCard extends HTMLElement {
       const queued = this._rangeCommitQueuedValue;
       if (
         queued &&
-        Number.isFinite(queued.low) &&
-        Number.isFinite(queued.high) &&
+        climateFinite(queued.low) &&
+        climateFinite(queued.high) &&
         (Math.abs(queued.low - pending.low) > 0.001 || Math.abs(queued.high - pending.high) > 0.001)
       ) {
         this._flushQueuedRangeCommit();
@@ -2304,8 +2495,8 @@ class NodaliaClimateCard extends HTMLElement {
 
       if (
         queued &&
-        Number.isFinite(queued.low) &&
-        Number.isFinite(queued.high) &&
+        climateFinite(queued.low) &&
+        climateFinite(queued.high) &&
         Math.abs(queued.low - pending.low) <= 0.001 &&
         Math.abs(queued.high - pending.high) <= 0.001
       ) {
@@ -2315,16 +2506,17 @@ class NodaliaClimateCard extends HTMLElement {
       if (this._draftTempRange.has(entityId)) {
         this._scheduleDraftReset();
       }
+      }
     }
   }
 
-  _commitTemperature(value, options = {}) {
+  _commitTemperature(value:unknown, options:ClimateCommitOptions = {}) {
     const normalized = this._queueTemperatureCommit(value, {
       immediate: options.immediate !== false,
-      render: options.render,
+      ...(options.render===undefined?{}:{render:options.render}),
     });
 
-    if (!Number.isFinite(normalized)) {
+    if (!climateFinite(normalized)) {
       return null;
     }
 
@@ -2332,20 +2524,23 @@ class NodaliaClimateCard extends HTMLElement {
     return normalized;
   }
 
-  async _createSetpointFromCurrentBy(delta) {
+  async _createSetpointFromCurrentBy(delta:number) {
+    const entityId=this._config.entity;
+    const generation=this._generation,hass=this._hass;
+    if(!this._isCurrent(generation)) return;
     const state = this._getState();
     if (!state || !this._supportsNullSetpointCreation(state)) {
       return false;
     }
 
     const baseline = this._getCurrentTemperature(state);
-    if (!Number.isFinite(baseline)) {
+    if (!climateFinite(baseline)) {
       return false;
     }
 
     const step = this._getTemperatureStep(state);
     const next = this._normalizeTemperatureValue(Number(baseline) + (Number(delta) * step), state);
-    if (!Number.isFinite(next)) {
+    if (!climateFinite(next)) {
       return false;
     }
 
@@ -2356,16 +2551,18 @@ class NodaliaClimateCard extends HTMLElement {
       if (wakeMode) {
         await Promise.resolve(this._setClimateService("set_hvac_mode", {
           hvac_mode: wakeMode,
-        }));
+        },hass,entityId));
       } else if (typeof console !== "undefined" && typeof console.debug === "function") {
         console.debug("Nodalia Climate Card: creating setpoint without HVAC wake mode.");
       }
 
+      if(!this._isCurrent(generation)) return false;
       await Promise.resolve(this._setClimateService("set_temperature", {
         temperature: next,
         ...(wakeMode ? { hvac_mode: wakeMode } : {}),
-      }));
+      },hass,entityId));
     } catch (error) {
+      if(!this._isCurrent(generation)) return;
       if (typeof console !== "undefined" && typeof console.debug === "function") {
         console.debug("Nodalia Climate Card: failed to create setpoint from current temperature.", error);
       }
@@ -2376,10 +2573,10 @@ class NodaliaClimateCard extends HTMLElement {
 
   _scheduleDraftReset() {
     if (this._draftResetTimer) {
-      window.clearTimeout(this._draftResetTimer);
+      this._clearTimer(this._draftResetTimer);
     }
 
-    this._draftResetTimer = window.setTimeout(() => {
+    this._draftResetTimer = this._setTimer(() => {
       this._draftResetTimer = 0;
 
       const entityId = this._config?.entity;
@@ -2402,8 +2599,8 @@ class NodaliaClimateCard extends HTMLElement {
         const al = parseFiniteClimateNumber(state.attributes?.target_temp_low);
         const ah = parseFiniteClimateNumber(state.attributes?.target_temp_high);
         if (
-          Number.isFinite(al) && Number.isFinite(ah) &&
-          Number.isFinite(draft?.low) && Number.isFinite(draft?.high) &&
+          climateFinite(al) && climateFinite(ah) &&
+          draft && climateFinite(draft.low) && climateFinite(draft.high) &&
           Math.abs(al - draft.low) <= tol &&
           Math.abs(ah - draft.high) <= tol
         ) {
@@ -2437,13 +2634,13 @@ class NodaliaClimateCard extends HTMLElement {
       const draftTemperature = Number(this._draftTemperature.get(entityId));
       const tolerance = this._getTemperatureSyncTolerance(state);
 
-      if (Number.isFinite(actualTemperature) && Math.abs(actualTemperature - draftTemperature) <= tolerance) {
+      if (climateFinite(actualTemperature) && Math.abs(actualTemperature - draftTemperature) <= tolerance) {
         this._clearTemperatureDraft(entityId);
         this._render();
         return;
       }
 
-      if (this._temperatureCommitRetryCount < DRAFT_CONFIRMATION_RETRY_LIMIT && Number.isFinite(draftTemperature)) {
+      if (this._temperatureCommitRetryCount < DRAFT_CONFIRMATION_RETRY_LIMIT && climateFinite(draftTemperature)) {
         this._temperatureCommitRetryCount += 1;
         this._temperatureCommitQueuedValue = draftTemperature;
         this._flushQueuedTemperatureCommit();
@@ -2455,7 +2652,7 @@ class NodaliaClimateCard extends HTMLElement {
     }, DRAFT_CONFIRMATION_TIMEOUT);
   }
 
-  _changeTemperatureBy(delta) {
+  _changeTemperatureBy(delta:number) {
     const state = this._getState();
     if (!state) {
       return;
@@ -2473,7 +2670,7 @@ class NodaliaClimateCard extends HTMLElement {
         return;
       }
       const { low, high } = this._getEffectiveTargetLowHigh(state);
-      if (!Number.isFinite(low) || !Number.isFinite(high)) {
+      if (!climateFinite(low) || !climateFinite(high)) {
         return;
       }
       const range = this._getTemperatureRange(state);
@@ -2526,7 +2723,7 @@ class NodaliaClimateCard extends HTMLElement {
     }
 
     const current = parseFiniteClimateNumber(this._getTargetTemperature(state));
-    if (!Number.isFinite(current)) {
+    if (!climateFinite(current)) {
       return;
     }
     const next = this._normalizeTemperatureValue(current + (Number(delta) * step), state);
@@ -2537,13 +2734,13 @@ class NodaliaClimateCard extends HTMLElement {
     });
   }
 
-  _triggerHaptic(styleOverride = null) {
+  _triggerHaptic(styleOverride:unknown = null) {
     const haptics = this._config?.haptics || {};
     if (haptics.enabled !== true) {
       return;
     }
 
-    const style = styleOverride || haptics.style || "medium";
+    const style = String(styleOverride || haptics.style || "medium");
     fireEvent(this, "haptic", style, {
       bubbles: true,
       cancelable: false,
@@ -2551,7 +2748,8 @@ class NodaliaClimateCard extends HTMLElement {
     });
 
     if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
-      navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
+      const pattern=climateRecord(HAPTIC_PATTERNS)[style];
+      navigator.vibrate(typeof pattern==="number"?pattern:Array.isArray(pattern)?pattern.filter((value):value is number=>typeof value==="number"):HAPTIC_PATTERNS.selection);
     }
   }
 
@@ -2595,7 +2793,7 @@ class NodaliaClimateCard extends HTMLElement {
     return false;
   }
 
-  _triggerButtonBounce(button) {
+  _triggerButtonBounce(button:unknown) {
     if (!(button instanceof HTMLElement)) {
       return;
     }
@@ -2610,8 +2808,9 @@ class NodaliaClimateCard extends HTMLElement {
     button.classList.add("is-pressing");
 
     const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const generation=this._generation;
     const done = () => {
-      if (!button.isConnected) {
+      if (!this._isCurrent(generation) || !button.isConnected) {
         return;
       }
       button.classList.remove("is-pressing");
@@ -2619,13 +2818,13 @@ class NodaliaClimateCard extends HTMLElement {
     if (typeof schedule === "function") {
       schedule(this, done, animations.buttonBounceDuration + 40);
     } else {
-      window.setTimeout(done, animations.buttonBounceDuration + 40);
+      this._setTimer(done, animations.buttonBounceDuration + 40);
     }
   }
 
-  _scheduleEntranceAnimationReset(delay) {
+  _scheduleEntranceAnimationReset(delay:number) {
     if (this._entranceAnimationResetTimer) {
-      window.clearTimeout(this._entranceAnimationResetTimer);
+      this._clearTimer(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
     }
 
@@ -2635,7 +2834,7 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
-    this._entranceAnimationResetTimer = window.setTimeout(() => {
+    this._entranceAnimationResetTimer = this._setTimer(() => {
       this._entranceAnimationResetTimer = 0;
       if (!this.isConnected) {
         return;
@@ -2644,7 +2843,7 @@ class NodaliaClimateCard extends HTMLElement {
     }, safeDelay);
   }
 
-  _setDialDraggingState(isDragging, dial = this._activeDialDrag?.dial || null) {
+  _setDialDraggingState(isDragging:boolean, dial = this._activeDialDrag?.dial || null) {
     if (!(dial instanceof HTMLElement)) {
       return;
     }
@@ -2652,7 +2851,7 @@ class NodaliaClimateCard extends HTMLElement {
     dial.classList.toggle("is-dragging", Boolean(isDragging));
   }
 
-  _setDragWindowListeners(enabled) {
+  _setDragWindowListeners(enabled:boolean) {
     if (typeof window === "undefined") {
       return;
     }
@@ -2664,37 +2863,37 @@ class NodaliaClimateCard extends HTMLElement {
     if (shouldAttach) {
       window.addEventListener("pointermove", this._onWindowPointerMove);
       window.addEventListener("pointerup", this._onWindowPointerUp);
-      window.addEventListener("pointercancel", this._onWindowPointerUp);
+      window.addEventListener("pointercancel", this._onCancelGesture);
       window.addEventListener("mousemove", this._onWindowMouseMove);
       window.addEventListener("mouseup", this._onWindowMouseUp);
-      if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+      if (!(typeof window !== "undefined" && typeof window.PointerEvent === "function")) {
         window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
         window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
         window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
-        window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
+        window.addEventListener("touchcancel", this._onCancelGesture, { passive: false });
       }
       return;
     }
     window.removeEventListener("pointermove", this._onWindowPointerMove);
     window.removeEventListener("pointerup", this._onWindowPointerUp);
-    window.removeEventListener("pointercancel", this._onWindowPointerUp);
+    window.removeEventListener("pointercancel", this._onCancelGesture);
     window.removeEventListener("mousemove", this._onWindowMouseMove);
     window.removeEventListener("mouseup", this._onWindowMouseUp);
-    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+    if (!(typeof window !== "undefined" && typeof window.PointerEvent === "function")) {
       window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
       window.removeEventListener("touchmove", this._onWindowTouchMove);
       window.removeEventListener("touchend", this._onWindowTouchEnd);
-      window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+      window.removeEventListener("touchcancel", this._onCancelGesture);
     }
   }
 
-  _updateDialRangePreview(low, high) {
+  _updateDialRangePreview(low:unknown, high:unknown) {
     const dial = this.shadowRoot?.querySelector(".climate-card__dial");
     const state = this._getState();
     if (!(dial instanceof HTMLElement) || !state || !this._isDualSetpointRange(state)) {
       return;
     }
-    if (!Number.isFinite(low) || !Number.isFinite(high)) {
+    if (!climateFinite(low) || !climateFinite(high)) {
       return;
     }
     const temperatureRange = this._getTemperatureRange(state);
@@ -2716,7 +2915,7 @@ class NodaliaClimateCard extends HTMLElement {
     dial.style.setProperty("--climate-thumb-cool-top", `${posH.top}%`);
   }
 
-  _updateDialPreview(value) {
+  _updateDialPreview(value:unknown) {
     const state = this._getState();
     if (!state || !this._supportsTargetTemperature(state) || this._isDualSetpointRange(state)) {
       return;
@@ -2747,12 +2946,12 @@ class NodaliaClimateCard extends HTMLElement {
     }
   }
 
-  _hapticOnDialStep(steppedValue, { commit = false } = {}) {
+  _hapticOnDialStep(steppedValue:number, { commit = false }:{commit?:boolean} = {}) {
     if (this._config?.haptics?.scrolls?.temperature_dial === false) {
       return;
     }
     const next = Number(steppedValue);
-    if (!Number.isFinite(next)) {
+    if (!climateFinite(next)) {
       return;
     }
     const drag = this._activeDialDrag;
@@ -2770,7 +2969,7 @@ class NodaliaClimateCard extends HTMLElement {
     }
   }
 
-  _applyDialValue(value, options = {}) {
+  _applyDialValue(value:unknown, options:ClimateCommitOptions = {}) {
     const state = this._getState();
     if (!state || !this._supportsTargetTemperature(state) || this._isDualSetpointRange(state)) {
       return;
@@ -2790,7 +2989,7 @@ class NodaliaClimateCard extends HTMLElement {
     }
   }
 
-  _startDialDrag(dial, clientX, clientY, event = null, pointerId = null) {
+  _startDialDrag(dial:unknown, clientX:number, clientY:number, event:Event|null = null, pointerId:number|null = null) {
     if (!(dial instanceof HTMLElement)) {
       return;
     }
@@ -2798,16 +2997,17 @@ class NodaliaClimateCard extends HTMLElement {
     const seedState = this._getState();
     const seedStep = seedState ? this._getTemperatureStep(seedState) : 1;
     const seedDraft = seedState ? this._draftTemperature.get(this._config.entity) : null;
-    const seedValue = Number.isFinite(Number(seedDraft))
+    const seedValue = seedDraft!==null&&seedDraft!==undefined&&climateFinite(Number(seedDraft))
       ? Number(seedDraft)
       : Number(dial.getAttribute("aria-valuenow"));
     this._activeDialDrag = {
+      originalTemperature:this._draftTemperature.get(this._config.entity),originalRange:this._draftTempRange.get(this._config.entity),capture:event?.target instanceof Element?event.target:null,
       kind: "single",
       dial,
       geometry: dial.getBoundingClientRect(),
       pointerId,
       lastValue: null,
-      lastHapticValue: Number.isFinite(seedValue)
+      lastHapticValue: climateFinite(seedValue)
         ? Number(seedValue.toFixed(Math.max(1, getStepPrecision(seedStep))))
         : null,
     };
@@ -2844,10 +3044,11 @@ class NodaliaClimateCard extends HTMLElement {
       this._activeDialDrag.geometry,
     );
     this._activeDialDrag.lastValue = nextValue;
+    if(event?.target instanceof Element&&pointerId!==null) try{event.target.setPointerCapture(pointerId);}catch{}
     this._applyDialValue(nextValue, { commit: false });
   }
 
-  _moveDialDrag(clientX, clientY, event = null) {
+  _moveDialDrag(clientX:number, clientY:number, event:Event|null = null) {
     const drag = this._activeDialDrag;
     const state = this._getState();
 
@@ -2877,12 +3078,12 @@ class NodaliaClimateCard extends HTMLElement {
     this._applyDialValue(nextValue, { commit: false });
   }
 
-  _queueDialDragMove(clientX, clientY, event = null) {
+  _queueDialDragMove(clientX:number, clientY:number, event:Event|null = null) {
     this._pendingDialDragPoint = { clientX, clientY, event };
     if (this._dialDragFrame) {
       return;
     }
-    this._dialDragFrame = window.requestAnimationFrame(() => {
+    this._dialDragFrame = this._requestFrame(() => {
       this._dialDragFrame = 0;
       const pending = this._pendingDialDragPoint;
       this._pendingDialDragPoint = null;
@@ -2893,7 +3094,7 @@ class NodaliaClimateCard extends HTMLElement {
     });
   }
 
-  _commitDialDrag(clientX, clientY, event = null, pointerId = null) {
+  _commitDialDrag(clientX:number, clientY:number, event:Event|null = null, pointerId:number|null = null) {
     const drag = this._activeDialDrag;
     const state = this._getState();
 
@@ -2910,7 +3111,7 @@ class NodaliaClimateCard extends HTMLElement {
       event.preventDefault();
     }
     if (this._dialDragFrame) {
-      window.cancelAnimationFrame(this._dialDragFrame);
+      this._cancelFrame(this._dialDragFrame);
       this._dialDragFrame = 0;
     }
     this._pendingDialDragPoint = null;
@@ -2929,6 +3130,7 @@ class NodaliaClimateCard extends HTMLElement {
 
     this._setDialDraggingState(false, drag.dial);
     this._activeDialDrag = null;
+    this._releasePointer(drag.capture,drag.pointerId);
     this._setDragWindowListeners(false);
 
     if (this._pendingRenderAfterDrag) {
@@ -2937,17 +3139,18 @@ class NodaliaClimateCard extends HTMLElement {
     }
   }
 
-  _startRangeDialDrag(dial, handle, clientX, clientY, event = null, pointerId = null) {
+  _startRangeDialDrag(dial:unknown, handle:unknown, clientX:number, clientY:number, event:Event|null = null, pointerId:number|null = null) {
     if (!(dial instanceof HTMLElement) || (handle !== "low" && handle !== "high")) {
       return;
     }
     const state = this._getState();
-    if (!state || !this._isDualSetpointRange(state)) {
+    if (!state || isUnavailableState(state) || !this._isDualSetpointRange(state)) {
       return;
     }
 
     const pairSeed = this._getEffectiveTargetLowHigh(state);
     this._activeDialDrag = {
+      originalTemperature:this._draftTemperature.get(this._config.entity),originalRange:this._draftTempRange.get(this._config.entity),capture:event?.target instanceof Element?event.target:null,
       kind: "range",
       handle,
       dial,
@@ -2958,7 +3161,7 @@ class NodaliaClimateCard extends HTMLElement {
       startClientX: clientX,
       startClientY: clientY,
       rangeThumbDragStarted: false,
-      lastHapticValue: handle === "low" ? pairSeed.low : pairSeed.high,
+      lastHapticValue: (handle === "low" ? pairSeed.low : pairSeed.high)??null,
     };
     this._setDragWindowListeners(true);
     this._setDialDraggingState(true, dial);
@@ -2969,16 +3172,18 @@ class NodaliaClimateCard extends HTMLElement {
     }
 
     const pair = this._getEffectiveTargetLowHigh(state);
-    if (!Number.isFinite(pair.low) || !Number.isFinite(pair.high)) {
+    if (!climateFinite(pair.low) || !climateFinite(pair.high)) {
       this._setDialDraggingState(false, dial);
       this._activeDialDrag = null;
       this._setDragWindowListeners(false);
       return;
     }
 
-    this._activeDialDrag.lastLow = pair.low;
-    this._activeDialDrag.lastHigh = pair.high;
-    this._activeDialDrag.lastHapticValue = handle === "low" ? pair.low : pair.high;
+    const drag=this._activeDialDrag;
+    if(!drag||drag.kind!=="range") return;
+    drag.lastLow = pair.low;
+    drag.lastHigh = pair.high;
+    drag.lastHapticValue = handle === "low" ? pair.low : pair.high;
 
     const entityId = this._config.entity;
     if (entityId) {
@@ -2986,7 +3191,7 @@ class NodaliaClimateCard extends HTMLElement {
     }
     this._updateDialRangePreview(pair.low, pair.high);
 
-    if (event?.target?.setPointerCapture && pointerId != null && event.target instanceof Element) {
+    if (event?.target instanceof Element && pointerId != null && typeof event.target.setPointerCapture==="function") {
       try {
         event.target.setPointerCapture(pointerId);
       } catch (_e) {
@@ -2995,7 +3200,7 @@ class NodaliaClimateCard extends HTMLElement {
     }
   }
 
-  _moveRangeDialDrag(clientX, clientY, event = null) {
+  _moveRangeDialDrag(clientX:number, clientY:number, event:Event|null = null) {
     const drag = this._activeDialDrag;
     const state = this._getState();
     if (!drag || drag.kind !== "range" || !state) {
@@ -3043,7 +3248,7 @@ class NodaliaClimateCard extends HTMLElement {
     this._updateDialRangePreview(low, high);
   }
 
-  _commitRangeDialDrag(clientX, clientY, event = null, _pointerId = null) {
+  _commitRangeDialDrag(clientX:number, clientY:number, event:Event|null = null, _pointerId:number|null = null) {
     const drag = this._activeDialDrag;
     const state = this._getState();
     if (!drag || drag.kind !== "range" || !state) {
@@ -3053,7 +3258,7 @@ class NodaliaClimateCard extends HTMLElement {
       event.preventDefault();
     }
     if (this._dialDragFrame) {
-      window.cancelAnimationFrame(this._dialDragFrame);
+      this._cancelFrame(this._dialDragFrame);
       this._dialDragFrame = 0;
     }
     this._pendingDialDragPoint = null;
@@ -3066,10 +3271,10 @@ class NodaliaClimateCard extends HTMLElement {
       this._setDragWindowListeners(false);
       const entityId = this._config.entity;
       const pairEff = this._getEffectiveTargetLowHigh(state);
-      if (entityId && Number.isFinite(pairEff.low) && Number.isFinite(pairEff.high)) {
+      if (entityId && climateFinite(pairEff.low) && climateFinite(pairEff.high)) {
         this._draftTempRange.set(entityId, { low: pairEff.low, high: pairEff.high });
       }
-      if (Number.isFinite(pairEff.low) && Number.isFinite(pairEff.high)) {
+      if (climateFinite(pairEff.low) && climateFinite(pairEff.high)) {
         this._updateDialRangePreview(pairEff.low, pairEff.high);
       }
       if (this._pendingRenderAfterDrag) {
@@ -3105,6 +3310,7 @@ class NodaliaClimateCard extends HTMLElement {
 
     this._setDialDraggingState(false, drag.dial);
     this._activeDialDrag = null;
+    this._releasePointer(drag.capture,drag.pointerId);
     this._setDragWindowListeners(false);
 
     this._selectedRangeThumb = drag.handle;
@@ -3119,14 +3325,15 @@ class NodaliaClimateCard extends HTMLElement {
     }
   }
 
-  _onShadowPointerDown(event) {
+  _onShadowPointerDown(event:Event) {
+    if (!(event instanceof PointerEvent)) return;
     const path = event.composedPath();
 
     if (this._handleScheduleComposerPointerDown(event, path)) {
       return;
     }
-    const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.climateAction);
-    if (actionButton) {
+    const actionButton = path.find((node):node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset?.climateAction));
+    if (actionButton instanceof HTMLElement) {
       return;
     }
 
@@ -3139,7 +3346,7 @@ class NodaliaClimateCard extends HTMLElement {
     ) {
       const onRangeThumb = path.some(
         n =>
-          n instanceof Element &&
+          n instanceof HTMLElement &&
           (n.dataset?.climateControl === "dial-range-low" || n.dataset?.climateControl === "dial-range-high"),
       );
       if (!onRangeThumb) {
@@ -3156,10 +3363,10 @@ class NodaliaClimateCard extends HTMLElement {
       }
     }
 
-    const rangeLow = path.find(node => node instanceof Element && node.dataset?.climateControl === "dial-range-low");
-    const rangeHigh = path.find(node => node instanceof Element && node.dataset?.climateControl === "dial-range-high");
+    const rangeLow = path.find((node):node is HTMLElement => node instanceof HTMLElement && node.dataset?.climateControl === "dial-range-low");
+    const rangeHigh = path.find((node):node is HTMLElement => node instanceof HTMLElement && node.dataset?.climateControl === "dial-range-high");
     if ((rangeLow || rangeHigh) && this._isDualSetpointRange(this._getState())) {
-      const dial = path.find(node => node instanceof HTMLElement && node.classList?.contains("climate-card__dial"));
+      const dial = path.find((node):node is HTMLElement => node instanceof HTMLElement && node.classList?.contains("climate-card__dial"));
       if (
         !this._activeDialDrag &&
         dial &&
@@ -3171,17 +3378,17 @@ class NodaliaClimateCard extends HTMLElement {
           event.clientX,
           event.clientY,
           event,
-          event.pointerId,
+          climatePointerId(event),
         );
       }
       return;
     }
 
     const dialHandle = path.find(
-      node => node instanceof Element && node.dataset?.climateControl === "dial-hit",
+      (node):node is HTMLElement|SVGElement => (node instanceof HTMLElement||node instanceof SVGElement) && node.dataset?.climateControl === "dial-hit",
     );
     const dial = dialHandle
-      ? path.find(node => node instanceof HTMLElement && node.classList?.contains("climate-card__dial"))
+      ? path.find((node):node is HTMLElement => node instanceof HTMLElement && node.classList?.contains("climate-card__dial"))
       : null;
 
     if (
@@ -3192,13 +3399,14 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
-    this._startDialDrag(dial, event.clientX, event.clientY, event, event.pointerId);
+    this._startDialDrag(dial, event.clientX, event.clientY, event, climatePointerId(event));
   }
 
-  _onShadowMouseDown(event) {
+  _onShadowMouseDown(event:Event) {
+    if (!(event instanceof MouseEvent)) return;
     const path = event.composedPath();
-    const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.climateAction);
-    if (actionButton) {
+    const actionButton = path.find((node):node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset?.climateAction));
+    if (actionButton instanceof HTMLElement) {
       return;
     }
 
@@ -3211,7 +3419,7 @@ class NodaliaClimateCard extends HTMLElement {
     ) {
       const onRangeThumb = path.some(
         n =>
-          n instanceof Element &&
+          n instanceof HTMLElement &&
           (n.dataset?.climateControl === "dial-range-low" || n.dataset?.climateControl === "dial-range-high"),
       );
       if (!onRangeThumb) {
@@ -3228,10 +3436,10 @@ class NodaliaClimateCard extends HTMLElement {
       }
     }
 
-    const rangeLow = path.find(node => node instanceof Element && node.dataset?.climateControl === "dial-range-low");
-    const rangeHigh = path.find(node => node instanceof Element && node.dataset?.climateControl === "dial-range-high");
+    const rangeLow = path.find((node):node is HTMLElement => node instanceof HTMLElement && node.dataset?.climateControl === "dial-range-low");
+    const rangeHigh = path.find((node):node is HTMLElement => node instanceof HTMLElement && node.dataset?.climateControl === "dial-range-high");
     if ((rangeLow || rangeHigh) && this._isDualSetpointRange(this._getState())) {
-      const dial = path.find(node => node instanceof HTMLElement && node.classList?.contains("climate-card__dial"));
+      const dial = path.find((node):node is HTMLElement => node instanceof HTMLElement && node.classList?.contains("climate-card__dial"));
       if (!this._activeDialDrag && dial && event.button === 0) {
         this._startRangeDialDrag(dial, rangeLow ? "low" : "high", event.clientX, event.clientY, event, null);
       }
@@ -3239,10 +3447,10 @@ class NodaliaClimateCard extends HTMLElement {
     }
 
     const dialHandle = path.find(
-      node => node instanceof Element && node.dataset?.climateControl === "dial-hit",
+      (node):node is HTMLElement|SVGElement => (node instanceof HTMLElement||node instanceof SVGElement) && node.dataset?.climateControl === "dial-hit",
     );
     const dial = dialHandle
-      ? path.find(node => node instanceof HTMLElement && node.classList?.contains("climate-card__dial"))
+      ? path.find((node):node is HTMLElement => node instanceof HTMLElement && node.classList?.contains("climate-card__dial"))
       : null;
 
     if (this._activeDialDrag || !dial || event.button !== 0) {
@@ -3252,10 +3460,11 @@ class NodaliaClimateCard extends HTMLElement {
     this._startDialDrag(dial, event.clientX, event.clientY, event);
   }
 
-  _onShadowTouchStart(event) {
+  _onShadowTouchStart(event:Event) {
+    if (!(event instanceof TouchEvent)) return;
     const path = event.composedPath();
-    const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.climateAction);
-    if (actionButton) {
+    const actionButton = path.find((node):node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset?.climateAction));
+    if (actionButton instanceof HTMLElement) {
       return;
     }
 
@@ -3268,7 +3477,7 @@ class NodaliaClimateCard extends HTMLElement {
     ) {
       const onRangeThumb = path.some(
         n =>
-          n instanceof Element &&
+          n instanceof HTMLElement &&
           (n.dataset?.climateControl === "dial-range-low" || n.dataset?.climateControl === "dial-range-high"),
       );
       if (!onRangeThumb) {
@@ -3285,40 +3494,43 @@ class NodaliaClimateCard extends HTMLElement {
       }
     }
 
-    const rangeLow = path.find(node => node instanceof Element && node.dataset?.climateControl === "dial-range-low");
-    const rangeHigh = path.find(node => node instanceof Element && node.dataset?.climateControl === "dial-range-high");
+    const rangeLow = path.find((node):node is HTMLElement => node instanceof HTMLElement && node.dataset?.climateControl === "dial-range-low");
+    const rangeHigh = path.find((node):node is HTMLElement => node instanceof HTMLElement && node.dataset?.climateControl === "dial-range-high");
     if ((rangeLow || rangeHigh) && this._isDualSetpointRange(this._getState()) && event.touches?.length) {
-      const dial = path.find(node => node instanceof HTMLElement && node.classList?.contains("climate-card__dial"));
+      const dial = path.find((node):node is HTMLElement => node instanceof HTMLElement && node.classList?.contains("climate-card__dial"));
       if (!this._activeDialDrag && dial) {
         const t = event.touches[0];
+        if(!t) return;
         this._startRangeDialDrag(dial, rangeLow ? "low" : "high", t.clientX, t.clientY, event, null);
       }
       return;
     }
 
     const dialHandle = path.find(
-      node => node instanceof Element && node.dataset?.climateControl === "dial-hit",
+      (node):node is HTMLElement|SVGElement => (node instanceof HTMLElement||node instanceof SVGElement) && node.dataset?.climateControl === "dial-hit",
     );
     const dial = dialHandle
-      ? path.find(node => node instanceof HTMLElement && node.classList?.contains("climate-card__dial"))
+      ? path.find((node):node is HTMLElement => node instanceof HTMLElement && node.classList?.contains("climate-card__dial"))
       : null;
 
     if (this._activeDialDrag || !dial || !event.touches?.length) {
       return;
     }
 
-    this._startDialDrag(dial, event.touches[0].clientX, event.touches[0].clientY, event);
+    const touch=event.touches[0];
+    if(touch) this._startDialDrag(dial,touch.clientX,touch.clientY,event);
   }
 
-  _onWindowPointerMove(event) {
+  _onWindowPointerMove(event:Event) {
+    if (!(event instanceof PointerEvent)) return;
     const drag = this._activeDialDrag;
     if (!drag) {
       return;
     }
     if (
       drag.pointerId != null &&
-      event.pointerId != null &&
-      drag.pointerId !== event.pointerId
+      climatePointerId(event) != null &&
+      drag.pointerId !== climatePointerId(event)
     ) {
       return;
     }
@@ -3326,23 +3538,25 @@ class NodaliaClimateCard extends HTMLElement {
     this._queueDialDragMove(event.clientX, event.clientY, event);
   }
 
-  _onWindowPointerUp(event) {
+  _onWindowPointerUp(event:Event) {
+    if (!(event instanceof PointerEvent)) return;
     const drag = this._activeDialDrag;
     if (!drag) {
       return;
     }
     if (
       drag.pointerId != null &&
-      event.pointerId != null &&
-      drag.pointerId !== event.pointerId
+      climatePointerId(event) != null &&
+      drag.pointerId !== climatePointerId(event)
     ) {
       return;
     }
 
-    this._commitDialDrag(event.clientX, event.clientY, event, event.pointerId);
+    this._commitDialDrag(event.clientX, event.clientY, event, climatePointerId(event));
   }
 
-  _onWindowMouseMove(event) {
+  _onWindowMouseMove(event:Event) {
+    if (!(event instanceof MouseEvent)) return;
     if (!this._activeDialDrag || (typeof event.buttons === "number" && (event.buttons & 1) === 0)) {
       return;
     }
@@ -3350,7 +3564,8 @@ class NodaliaClimateCard extends HTMLElement {
     this._queueDialDragMove(event.clientX, event.clientY, event);
   }
 
-  _onWindowMouseUp(event) {
+  _onWindowMouseUp(event:Event) {
+    if (!(event instanceof MouseEvent)) return;
     if (!this._activeDialDrag) {
       return;
     }
@@ -3358,15 +3573,18 @@ class NodaliaClimateCard extends HTMLElement {
     this._commitDialDrag(event.clientX, event.clientY, event);
   }
 
-  _onWindowTouchMove(event) {
+  _onWindowTouchMove(event:Event) {
+    if (!(event instanceof TouchEvent)) return;
     if (!this._activeDialDrag || !event.touches?.length) {
       return;
     }
 
-    this._queueDialDragMove(event.touches[0].clientX, event.touches[0].clientY, event);
+    const touch=event.touches[0];
+    if(touch) this._queueDialDragMove(touch.clientX,touch.clientY,event);
   }
 
-  _onWindowTouchStartCapture(event) {
+  _onWindowTouchStartCapture(event:Event) {
+    if (!(event instanceof TouchEvent)) return;
     const drag = this._activeDialDrag;
     if (!drag) {
       return;
@@ -3377,17 +3595,11 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
-    this._setDialDraggingState(false, drag.dial);
-    this._activeDialDrag = null;
-    this._setDragWindowListeners(false);
-
-    if (this._pendingRenderAfterDrag) {
-      this._pendingRenderAfterDrag = false;
-      this._render();
-    }
+    this._cancelGestures();
   }
 
-  _onWindowTouchEnd(event) {
+  _onWindowTouchEnd(event:Event) {
+    if (!(event instanceof TouchEvent)) return;
     if (!this._activeDialDrag) {
       return;
     }
@@ -3407,7 +3619,7 @@ class NodaliaClimateCard extends HTMLElement {
     this._commitDialDrag(touch.clientX, touch.clientY, event);
   }
 
-  _performClimateCardAction(actionKind) {
+  _performClimateCardAction(actionKind:unknown) {
     const key = actionKind === "hold"
       ? "hold_action"
       : actionKind === "double_tap"
@@ -3439,7 +3651,7 @@ class NodaliaClimateCard extends HTMLElement {
     this._performClimateCardAction("double_tap");
   }
 
-  _triggerPressAnimation(element, className = "is-pressing") {
+  _triggerPressAnimation(element:unknown, className = "is-pressing") {
     if (!(element instanceof HTMLElement)) {
       return;
     }
@@ -3458,8 +3670,9 @@ class NodaliaClimateCard extends HTMLElement {
     element.getBoundingClientRect();
     element.classList.add(className);
     const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const generation=this._generation;
     const done = () => {
-      if (!element.isConnected) {
+      if (!this._isCurrent(generation)||!element.isConnected) {
         return;
       }
       element.classList.remove(className);
@@ -3467,14 +3680,14 @@ class NodaliaClimateCard extends HTMLElement {
     if (typeof schedule === "function") {
       schedule(this, done, duration + 40);
     } else {
-      window.setTimeout(done, duration + 40);
+      this._setTimer(done, duration + 40);
     }
   }
 
-  _onShadowClick(event) {
+  _onShadowClick(event:Event) {
     const path = event.composedPath();
-    const actionButton = path.find(node => node instanceof HTMLElement && node.dataset?.climateAction);
-    if (actionButton) {
+    const actionButton = path.find((node):node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset?.climateAction));
+    if (actionButton instanceof HTMLElement) {
       event.preventDefault();
       event.stopPropagation();
 
@@ -3484,7 +3697,7 @@ class NodaliaClimateCard extends HTMLElement {
         event.stopPropagation();
         if (climateAction === "schedule-open") {
           this._triggerHaptic("selection");
-          if (event.detail === 0) {
+          if (event instanceof UIEvent && event.detail === 0) {
             this._triggerButtonBounce(actionButton);
           }
           this._openScheduleComposer();
@@ -3516,7 +3729,7 @@ class NodaliaClimateCard extends HTMLElement {
 
       if (climateAction === "override-hold" || climateAction === "override-clear") {
         this._triggerHaptic("selection");
-        if (event.detail === 0) {
+        if (event instanceof UIEvent && event.detail === 0) {
           this._triggerButtonBounce(actionButton);
         }
         if (climateAction === "override-hold") {
@@ -3532,7 +3745,7 @@ class NodaliaClimateCard extends HTMLElement {
         return;
       }
 
-      if (event.detail === 0) {
+      if (event instanceof UIEvent && event.detail === 0) {
         this._triggerButtonBounce(actionButton);
       }
 
@@ -3562,7 +3775,7 @@ class NodaliaClimateCard extends HTMLElement {
     }
 
     const scheduleBackdrop = path.find(
-      node => node instanceof HTMLElement && node.dataset?.climateScheduleBackdrop === "true",
+      (node):node is HTMLElement => node instanceof HTMLElement && node.dataset?.climateScheduleBackdrop === "true",
     );
     if (scheduleBackdrop) {
       event.preventDefault();
@@ -3579,7 +3792,7 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
-    const cardRoot = path.find(node => node instanceof HTMLElement && node.dataset?.climateCard === "root");
+    const cardRoot = path.find((node):node is HTMLElement => node instanceof HTMLElement && node.dataset?.climateCard === "root");
     if (!cardRoot) {
       return;
     }
@@ -3633,7 +3846,8 @@ class NodaliaClimateCard extends HTMLElement {
     runTap();
   }
 
-  _onShadowKeyDown(event) {
+  _onShadowKeyDown(event:Event) {
+    if (!(event instanceof KeyboardEvent)) return;
     if (!this._scheduleComposerOpen) {
       return;
     }
@@ -3652,24 +3866,24 @@ class NodaliaClimateCard extends HTMLElement {
     }
   }
 
-  _onShadowInput(event) {
+  _onShadowInput(event:Event) {
     const compactInput = event
       .composedPath()
-      .find(node => node instanceof HTMLInputElement && node.dataset?.climateCompactField);
+      .find((node):node is HTMLInputElement => node instanceof HTMLInputElement && Boolean(node.dataset?.climateCompactField));
 
-    if (compactInput) {
+    if (compactInput instanceof HTMLInputElement) {
       event.stopPropagation();
       const state = this._getState();
       const field = compactInput.dataset.climateCompactField;
       let value = Number(compactInput.value);
-      if (!state || !Number.isFinite(value)) {
+      if (!state || !climateFinite(value)) {
         return;
       }
 
       const range = this._getTemperatureRange(state);
       const step = this._getTemperatureStep(state);
       const ratio = clamp((value - range.min) / Math.max(range.max - range.min, step), 0, 1);
-      compactInput.closest(".climate-card__compact-slider")?.style.setProperty("--compact-progress", String(ratio));
+      compactInput.closest<HTMLElement>(".climate-card__compact-slider")?.style.setProperty("--compact-progress", String(ratio));
       const valueNode = compactInput.closest(".climate-card__compact-slider")?.querySelector("[data-climate-compact-value]");
       if (valueNode instanceof HTMLElement) {
         valueNode.textContent = formatTemperature(value, step, true, this._hass);
@@ -3688,21 +3902,21 @@ class NodaliaClimateCard extends HTMLElement {
       }
 
       const pair = this._getEffectiveTargetLowHigh(state);
-      if (!Number.isFinite(pair.low) || !Number.isFinite(pair.high)) {
+      if (!climateFinite(pair.low) || !climateFinite(pair.high)) {
         return;
       }
       this._selectedRangeThumb = field === "low" ? "low" : "high";
       const constrainedValue = field === "low"
         ? this._clampRangeLowCandidate(value, pair.high, state)
         : this._clampRangeHighCandidate(value, pair.low, state);
-      if (!Number.isFinite(constrainedValue)) {
+      if (!climateFinite(constrainedValue)) {
         return;
       }
       if (constrainedValue !== value) {
         value = constrainedValue;
         compactInput.value = String(value);
         const constrainedRatio = clamp((value - range.min) / Math.max(range.max - range.min, step), 0, 1);
-        compactInput.closest(".climate-card__compact-slider")?.style.setProperty("--compact-progress", String(constrainedRatio));
+        compactInput.closest<HTMLElement>(".climate-card__compact-slider")?.style.setProperty("--compact-progress", String(constrainedRatio));
         if (valueNode instanceof HTMLElement) {
           valueNode.textContent = formatTemperature(value, step, true, this._hass);
         }
@@ -3724,7 +3938,7 @@ class NodaliaClimateCard extends HTMLElement {
         || node instanceof HTMLSelectElement
       ) && node.dataset?.climateScheduleField);
 
-    if (!input) {
+    if (!(input instanceof HTMLInputElement||input instanceof HTMLSelectElement)) {
       return;
     }
 
@@ -3734,7 +3948,7 @@ class NodaliaClimateCard extends HTMLElement {
       if (event.type === "input") {
         return;
       }
-      this._setScheduleComposerEnabled(Boolean(input.checked));
+      this._setScheduleComposerEnabled(input instanceof HTMLInputElement&&input.checked);
       return;
     }
 
@@ -3745,13 +3959,14 @@ class NodaliaClimateCard extends HTMLElement {
     }
 
     if ((input.type === "time" || input.type === "number") && event.type === "input") {
+      this._touchScheduleDraftRevision();this._syncRenderSignature();
       return;
     }
 
-    let value = input.value;
+    let value:string|number = input.value;
     if (field === "temperature") {
       value = Number(value);
-      if (!Number.isFinite(value)) {
+      if (!climateFinite(value)) {
         return;
       }
     }
@@ -3759,7 +3974,7 @@ class NodaliaClimateCard extends HTMLElement {
     this._updateScheduleComposerSlot(slotId, { [field]: value }, { render: false });
   }
 
-  _onShadowBlur(event) {
+  _onShadowBlur(event:Event) {
     const input = event.composedPath()[0];
     if (
       !(input instanceof HTMLInputElement)
@@ -3775,10 +3990,10 @@ class NodaliaClimateCard extends HTMLElement {
       return;
     }
 
-    let value = input.value;
+    let value:string|number = input.value;
     if (field === "temperature") {
       value = Number(value);
-      if (!Number.isFinite(value)) {
+      if (!climateFinite(value)) {
         return;
       }
     }
@@ -3786,7 +4001,7 @@ class NodaliaClimateCard extends HTMLElement {
     this._updateScheduleComposerSlot(slotId, { [field]: value }, { render: false });
   }
 
-  _renderSetpointScheduleButtonHtml(options = {}) {
+  _renderSetpointScheduleButtonHtml(options:{placement?:string} = {}) {
     const scheduleLabel = this._climateScheduleText(
       "openButton",
       "Weekly setpoint schedule",
@@ -3806,7 +4021,7 @@ class NodaliaClimateCard extends HTMLElement {
     `;
   }
 
-  _renderSetpointScheduleSlotEditorHtml(slot, options = {}) {
+  _renderSetpointScheduleSlotEditorHtml(slot:ClimateScheduleSlot, options:SlotEditorOptions = {}) {
     const {
       startLabel,
       endLabel,
@@ -3864,7 +4079,7 @@ class NodaliaClimateCard extends HTMLElement {
     `;
   }
 
-  _renderSetpointScheduleDayAgendaRowHtml(day, slots, options = {}) {
+  _renderSetpointScheduleDayAgendaRowHtml(day:string|undefined, slots:ClimateScheduleSlot[], options:DayAgendaOptions = {}) {
     const {
       dayLabel,
       addLabel,
@@ -3965,11 +4180,11 @@ class NodaliaClimateCard extends HTMLElement {
     `;
   }
 
-  _renderScheduleComposerHtml(options = {}) {
+  _renderScheduleComposerHtml(options:ComposerOptions = {}) {
     const {
       accentColor,
       temperatureStep,
-      temperatureRange,
+      temperatureRange={min:10,max:30},
       hass,
     } = options;
     const schedule = this._getScheduleComposerDraft();
@@ -3990,7 +4205,7 @@ class NodaliaClimateCard extends HTMLElement {
     const removeLabel = this._climateScheduleText("remove", "Remove");
     const minTemp = temperatureRange.min;
     const maxTemp = temperatureRange.max;
-    const stepAttr = temperatureStep > 0 ? temperatureStep : 0.5;
+    const stepAttr = typeof temperatureStep==="number"&&temperatureStep > 0 ? temperatureStep : 0.5;
     const isSaving = this._scheduleComposerSaving === true;
 
     const closeLabel = this._climateScheduleText("close", "Close");
@@ -4079,20 +4294,20 @@ class NodaliaClimateCard extends HTMLElement {
     `;
   }
 
-  _climateCardUi(key, fallback = "") {
-    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+  _climateCardUi(key:string, fallback = "") {
+    const hass = this._hass ?? climateDisplayHass(window.NodaliaI18n?.resolveHass?.(null));
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-    const pack = window.NodaliaI18n?.strings?.(lang)?.climateCard;
-    const enPack = window.NodaliaI18n?.strings?.("en")?.climateCard;
+    const pack = climateRecord(window.NodaliaI18n?.strings?.(lang)?.climateCard);
+    const enPack = climateRecord(window.NodaliaI18n?.strings?.("en")?.climateCard);
     const raw = pack?.[key] ?? enPack?.[key];
     return String(raw != null && raw !== "" ? raw : fallback);
   }
 
-  _climateCardAria(key, fallback = "") {
-    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+  _climateCardAria(key:string, fallback = "") {
+    const hass = this._hass ?? climateDisplayHass(window.NodaliaI18n?.resolveHass?.(null));
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-    const pack = window.NodaliaI18n?.strings?.(lang)?.climateCard?.aria;
-    const enPack = window.NodaliaI18n?.strings?.("en")?.climateCard?.aria;
+    const pack = climateRecord(climateRecord(window.NodaliaI18n?.strings?.(lang)?.climateCard).aria);
+    const enPack = climateRecord(climateRecord(window.NodaliaI18n?.strings?.("en")?.climateCard).aria);
     const raw = pack?.[key] ?? enPack?.[key];
     return String(raw != null && raw !== "" ? raw : fallback);
   }
@@ -4111,6 +4326,19 @@ class NodaliaClimateCard extends HTMLElement {
   }
 
   _render() {
+    if(!this.isConnected) return;
+    const active=this.shadowRoot?.activeElement;
+    const native=active instanceof HTMLElement?active:null;
+    const attrs=native?Array.from(native.attributes).filter(attr=>attr.name.startsWith("data-")).map(attr=>[attr.name,attr.value] as const):[];
+    const pendingValue=active instanceof HTMLInputElement&&active.dataset.climateScheduleField&&active.type!=="checkbox"?active.value:null;
+    const caret=active instanceof HTMLInputElement&&["text","search","tel","url","password"].includes(active.type)?[active.selectionStart,active.selectionEnd]:null;
+    this._renderView();
+    if(native&&attrs.length) {
+      const next=Array.from(this.shadowRoot?.querySelectorAll(native.tagName.toLowerCase())??[]).find(node=>attrs.every(([key,value])=>node.getAttribute(key)===value));
+      if(next instanceof HTMLElement) {if(next instanceof HTMLInputElement&&pendingValue!==null) next.value=pendingValue;next.focus({preventScroll:true});if(next instanceof HTMLInputElement&&caret&&caret[0]!==null&&caret[1]!==null&&caret[0]!==undefined&&caret[1]!==undefined) next.setSelectionRange(caret[0],caret[1]);}
+    }
+  }
+  _renderView() {
     if (!this.shadowRoot) {
       return;
     }
@@ -4160,7 +4388,7 @@ class NodaliaClimateCard extends HTMLElement {
     const showUnavailableBadge = config.show_unavailable_badge !== false && isUnavailableState(state);
     const isOff = this._isEffectiveClimateOff(state) || isUnavailableState(state);
     const darkenBubbleIconGlyph =
-      !isOff && Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(state, accentColor));
+      !isOff && Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph?.(state, accentColor));
     const modeDialButtonCount = (isOff ? 0 : 1) + visibleModeOptions.length;
     const isRangeMode = !isOff && this._isDualSetpointRange(state);
     if (!isRangeMode) {
@@ -4175,12 +4403,12 @@ class NodaliaClimateCard extends HTMLElement {
     }
     const rangeBand = isRangeMode ? this._getEffectiveTargetLowHigh(state) : { low: NaN, high: NaN };
     const hasNumericTarget =
-      targetTemperature !== null && targetTemperature !== undefined && Number.isFinite(Number(targetTemperature));
+      targetTemperature !== null && targetTemperature !== undefined && climateFinite(Number(targetTemperature));
     const hasPublishedSingleTarget = !isRangeMode && supportsTargetTemperature && hasNumericTarget;
     const mainTemperaturePref =
       normalizeTextKey(String(config.display?.main_temperature ?? "").trim()) === "current" ? "current" : "target";
     const currentFin =
-      currentTemperature !== null && Number.isFinite(Number(currentTemperature))
+      currentTemperature !== null && climateFinite(Number(currentTemperature))
         ? Number(currentTemperature)
         : NaN;
     const targetFin = hasPublishedSingleTarget ? Number(targetTemperature) : NaN;
@@ -4189,24 +4417,24 @@ class NodaliaClimateCard extends HTMLElement {
     if (isRangeMode) {
       dialPrimaryReadoutValue = currentTemperature !== null ? currentTemperature : NaN;
     } else if (mainTemperaturePref === "current") {
-      dialPrimaryReadoutValue = Number.isFinite(currentFin)
+      dialPrimaryReadoutValue = climateFinite(currentFin)
         ? currentFin
-        : (Number.isFinite(targetFin) ? targetFin : NaN);
-    } else if (Number.isFinite(targetFin)) {
+        : (climateFinite(targetFin) ? targetFin : NaN);
+    } else if (climateFinite(targetFin)) {
       dialPrimaryReadoutValue = targetFin;
-    } else if (Number.isFinite(currentFin)) {
+    } else if (climateFinite(currentFin)) {
       dialPrimaryReadoutValue = currentFin;
     } else {
       dialPrimaryReadoutValue = NaN;
     }
-    const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
+    const hass = this._hass ?? climateDisplayHass(window.NodaliaI18n?.resolveHass?.(null));
     const i18nLang = config.language ?? "auto";
     const toggleAriaLabel = window.NodaliaI18n?.translateClimateAria
       ? window.NodaliaI18n.translateClimateAria(hass, i18nLang, "togglePower", "Turn on or off")
       : "Turn on or off";
     const noSetpointDial = !isRangeMode && !(supportsTargetTemperature && hasNumericTarget);
     const tempScale = getClimateTemperatureScaleLetter(hass);
-    const translateClimateMode = mode => (
+    const translateClimateMode = (mode:string) => (
       window.NodaliaI18n?.translateClimateHvacLabel
         ? window.NodaliaI18n.translateClimateHvacLabel(hass, i18nLang, mode, false)
         : getModeMeta(mode).label
@@ -4313,7 +4541,7 @@ class NodaliaClimateCard extends HTMLElement {
     const overrideBlockPx = showEngineOverride
       ? overrideChipPx + overrideStatusPx + interBlockGapPx
       : 0;
-    const compactSliderCount = isRangeMode ? 2 : (supportsTargetTemperature && Number.isFinite(targetFin) ? 1 : 0);
+    const compactSliderCount = isRangeMode ? 2 : (supportsTargetTemperature && climateFinite(targetFin) ? 1 : 0);
     const compactControlRowCount = compactSliderCount || showStepControls ? Math.max(1, compactSliderCount) : 0;
     const climateCardMinHeightPx = isCompactCardLayout
       ? Math.max(
@@ -4360,7 +4588,7 @@ class NodaliaClimateCard extends HTMLElement {
     let coolDashOffsetPx = 0;
     let thumbHeatPosition = { left: 50, top: 50 };
     let thumbCoolPosition = { left: 50, top: 50 };
-    if (isRangeMode && Number.isFinite(rangeBand.low) && Number.isFinite(rangeBand.high)) {
+    if (isRangeMode && climateFinite(rangeBand.low) && climateFinite(rangeBand.high)) {
       const ratioL = clamp((rangeBand.low - temperatureRange.min) / tempSpan, 0, 1);
       const ratioH = clamp((rangeBand.high - temperatureRange.min) / tempSpan, 0, 1);
       heatArcLen = Number((ratioL * DIAL_VISIBLE_LENGTH).toFixed(3));
@@ -4370,7 +4598,7 @@ class NodaliaClimateCard extends HTMLElement {
       const angleH = DIAL_START_ANGLE + (ratioH * DIAL_SWEEP);
       thumbHeatPosition = getDialMarkerPosition(angleL);
       thumbCoolPosition = getDialMarkerPosition(angleH);
-    } else if (supportsTargetTemperature && Number.isFinite(dialThumbValue)) {
+    } else if (supportsTargetTemperature && climateFinite(dialThumbValue)) {
       ratio = (dialThumbValue - temperatureRange.min) / tempSpan;
       dialAngle = DIAL_START_ANGLE + (clamp(ratio, 0, 1) * DIAL_SWEEP);
       progressLength = Number((DIAL_VISIBLE_LENGTH * clamp(ratio, 0, 1)).toFixed(3));
@@ -4467,7 +4695,7 @@ class NodaliaClimateCard extends HTMLElement {
       ? `<span class="climate-card__dial-range">${escapeHtml(formatTemperatureRangeSummary(rangeBand.low, rangeBand.high, temperatureStep, hass))}</span>`
       : noSetpointDial
         ? `<span class="climate-card__dial-no-setpoint">${escapeHtml(dialNoSetpointHint)}</span>`
-        : mainTemperaturePref === "current" && hasPublishedSingleTarget && Number.isFinite(targetFin)
+        : mainTemperaturePref === "current" && hasPublishedSingleTarget && climateFinite(targetFin)
           ? `<span>${escapeHtml(formatTemperature(targetFin, temperatureStep, true, hass))}</span>`
           : (currentTemperature !== null
             ? `<span>${escapeHtml(formatTemperature(currentTemperature, temperatureStep, true, hass))}</span>`
@@ -4489,9 +4717,9 @@ class NodaliaClimateCard extends HTMLElement {
       window.NodaliaI18n?.translateClimateDialAria != null
         ? window.NodaliaI18n.translateClimateDialAria(hass, i18nLang, dialAriaLabelVariant)
         : dialAriaFallback;
-    const ariaDialSemanticValue = Number.isFinite(targetFin) ? targetFin : dialPrimaryReadoutValue;
+    const ariaDialSemanticValue = climateFinite(targetFin) ? targetFin : dialPrimaryReadoutValue;
     const ariaDialValue =
-      !isRangeMode && !noSetpointDial && Number.isFinite(ariaDialSemanticValue)
+      !isRangeMode && !noSetpointDial && climateFinite(ariaDialSemanticValue)
         ? ariaDialSemanticValue
         : null;
     const cardBackground = isOff
@@ -4582,8 +4810,8 @@ class NodaliaClimateCard extends HTMLElement {
                   ${dialModeButtonFragments.join("")}
                 </div>`;
 
-    const compactSlider = ({ field, label, value, color = accentColor }) => {
-      if (!Number.isFinite(value)) {
+    const compactSlider = ({ field, label, value, color = accentColor }:{field:string;label:string;value:number|null|undefined;color?:string}) => {
+      if (!climateFinite(value)) {
         return "";
       }
       const compactRatio = clamp(
@@ -4606,13 +4834,13 @@ class NodaliaClimateCard extends HTMLElement {
           ${compactSlider({ field: "low", label: translateClimateMode("heat"), value: rangeBand.low, color: dialHeatStroke })}
           ${compactSlider({ field: "high", label: translateClimateMode("cool"), value: rangeBand.high, color: dialCoolStroke })}
         `
-      : (supportsTargetTemperature && Number.isFinite(targetFin)
+      : (supportsTargetTemperature && climateFinite(targetFin)
         ? compactSlider({ field: "temperature", label: dialAriaLabel, value: targetFin })
         : "");
     const compactTargetReadout = isRangeMode
       ? escapeHtml(formatTemperatureRangeSummary(rangeBand.low, rangeBand.high, temperatureStep, hass))
       : `<span data-climate-readout="compact-target">${dialPrimaryReadoutHtml}</span><span class="climate-card__compact-degree">°${escapeHtml(tempScale)}</span>`;
-    if (isCompactCardLayout && (isRangeMode || Number.isFinite(dialPrimaryReadoutValue))) {
+    if (isCompactCardLayout && (isRangeMode || climateFinite(dialPrimaryReadoutValue))) {
       chips.push(`<div class="climate-card__chip climate-card__chip--target">${compactTargetReadout}</div>`);
     }
     const compactStepActionsMarkup = showStepControls
@@ -4892,76 +5120,8 @@ class NodaliaClimateCard extends HTMLElement {
           height: 38px;
           width: 38px;
         }
-        .climate-card--layout-compact .climate-card__copy { gap: 10px; }
-        .climate-card--layout-compact .climate-card__headline { gap: 10px; }
-        .climate-card--layout-compact .climate-card__title { font-size: 12px; line-height: 1.15; }
-        .climate-card--layout-compact .climate-card__chips { gap: 10px; }
-        .climate-card--layout-compact .climate-card__chip {
-          font-size: 11px;
-          height: 24px;
-          padding: 0 9px;
-        }
-        .climate-card__compact-degree { font-size: .42em; font-weight: 600; margin-left: 2px; vertical-align: top; }
-        .climate-card__chip--target .climate-card__compact-degree { font-size: 1em; margin-left: 1px; vertical-align: baseline; }
-        .climate-card__compact-controls-shell {
-          display: grid;
-          grid-template-rows: 1fr;
-          margin-top: 16px;
-          min-width: 0;
-          overflow: visible;
-        }
-        .climate-card__compact-controls-inner { display: grid; gap: 10px; min-width: 0; }
-        .climate-card__compact-slider-row {
-          align-items: center;
-          display: grid;
-          gap: 14px;
-          grid-template-columns: minmax(0, 1fr) auto;
-          min-width: 0;
-          overflow: visible;
-          padding-inline: 4px;
-        }
-        .climate-card__compact-sliders { display: grid; gap: 8px; min-width: 0; }
-        .climate-card__compact-slider {
-          align-items: center;
-          display: grid;
-          gap: 8px;
-          grid-template-columns: minmax(0, 1fr);
-          min-width: 0;
-        }
-        .climate-card__compact-slider-label,
-        .climate-card__compact-slider > strong {
-          color: var(--secondary-text-color);
-          font-size: 11px;
-          font-weight: 700;
-          white-space: nowrap;
-        }
-        .climate-card__compact-sliders--single :is(.climate-card__compact-slider-label, .climate-card__compact-slider > strong) { display: none; }
-        .climate-card__compact-sliders--range .climate-card__compact-slider {
-          grid-template-columns: auto minmax(80px, 1fr) auto;
-        }
-        .climate-card__compact-slider > strong { color: var(--primary-text-color); min-width: 42px; text-align: right; }
-        .climate-card__compact-slider-shell {
-          align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
-          border-radius: 999px;
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 4%, transparent);
-          display: flex;
-          height: 48px;
-          min-width: 0;
-          padding: 0 14px;
-          position: relative;
-        }
-        .climate-card__compact-slider-track {
-          background: color-mix(in srgb, var(--primary-text-color) 10%, transparent);
-          border-radius: 999px;
-          height: 22px;
-          inset: 50% 14px auto;
-          overflow: hidden;
-          pointer-events: none;
-          position: absolute;
-          transform: translateY(-50%);
-        }
+        ${climateStatic2Styles}
+
         .climate-card__compact-slider-track::before {
           background: var(--compact-slider-color, ${accentColor});
           border-radius: inherit;
@@ -5253,461 +5413,8 @@ class NodaliaClimateCard extends HTMLElement {
           height: 7px;
           width: 7px;
         }
+        ${climateStatic1Styles}
 
-        .climate-schedule-expanded {
-          --climate-schedule-accent: var(--primary-color);
-          inset: 0;
-          opacity: 0;
-          pointer-events: none;
-          position: fixed;
-          transition: opacity 220ms cubic-bezier(0.16, 0.84, 0.22, 1);
-          z-index: 120;
-        }
-
-        .climate-schedule-expanded.is-open {
-          opacity: 1;
-          pointer-events: auto;
-        }
-
-        .climate-schedule-expanded__backdrop {
-          -webkit-backdrop-filter: blur(12px);
-          backdrop-filter: blur(12px);
-          background: rgba(0, 0, 0, 0.32);
-          inset: 0;
-          position: absolute;
-        }
-
-        .climate-schedule-expanded__panel {
-          background:
-            linear-gradient(180deg, color-mix(in srgb, var(--climate-schedule-accent) 18%, rgba(255, 255, 255, 0.08)), rgba(255, 255, 255, 0.02)),
-            color-mix(in srgb, var(--ha-card-background, var(--card-background-color)) 94%, rgba(255, 255, 255, 0.02));
-          border: 1px solid color-mix(in srgb, var(--climate-schedule-accent) 34%, color-mix(in srgb, var(--primary-text-color) 9%, transparent));
-          border-radius: 16px;
-          box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
-          color: var(--primary-text-color);
-          display: grid;
-          gap: 12px;
-          isolation: isolate;
-          left: 50%;
-          max-height: min(92vh, 920px);
-          max-height: min(92dvh, 920px);
-          max-width: min(calc(100vw - 24px), 920px);
-          overflow: hidden;
-          padding: 14px;
-          position: absolute;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          width: min(calc(100vw - 24px), 920px);
-          z-index: 1;
-        }
-
-        .climate-schedule-expanded__toolbar {
-          align-items: flex-start;
-          display: flex;
-          gap: 10px;
-          justify-content: space-between;
-        }
-
-        .climate-schedule-expanded__toolbar-copy {
-          display: grid;
-          flex: 1 1 auto;
-          gap: 4px;
-          min-width: 0;
-        }
-
-        .climate-schedule-expanded__title {
-          font-size: 16px;
-          font-weight: 800;
-          letter-spacing: -0.02em;
-        }
-
-        .climate-schedule-expanded__hint {
-          color: var(--secondary-text-color);
-          font-size: 12px;
-          line-height: 1.45;
-        }
-
-        .climate-schedule-expanded__close {
-          align-items: center;
-          appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 7%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 999px;
-          color: var(--secondary-text-color);
-          cursor: pointer;
-          display: inline-flex;
-          flex: 0 0 auto;
-          height: 32px;
-          justify-content: center;
-          margin: 0;
-          padding: 0;
-          width: 32px;
-        }
-
-        .climate-schedule-expanded__close ha-icon {
-          --mdc-icon-size: 18px;
-        }
-
-        .climate-schedule-expanded__error {
-          align-items: flex-start;
-          background: color-mix(in srgb, var(--error-color, #db4437) 12%, transparent);
-          border: 1px solid color-mix(in srgb, var(--error-color, #db4437) 35%, transparent);
-          border-radius: 10px;
-          color: var(--error-color, #db4437);
-          display: flex;
-          font-size: 12px;
-          gap: 8px;
-          line-height: 1.4;
-          padding: 8px 10px;
-        }
-
-        .climate-schedule-expanded__error ha-icon {
-          --mdc-icon-size: 16px;
-          flex: 0 0 auto;
-          margin-top: 1px;
-        }
-
-        .climate-schedule-expanded__enabled {
-          align-items: center;
-          cursor: pointer;
-          display: inline-flex;
-          gap: 10px;
-          min-height: 34px;
-        }
-
-        .climate-schedule-expanded__enabled input {
-          block-size: 1px;
-          inline-size: 1px;
-          margin: 0;
-          opacity: 0;
-          pointer-events: none;
-          position: absolute;
-        }
-
-        .climate-schedule-expanded__enabled-switch {
-          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
-          border-radius: 999px;
-          display: inline-flex;
-          height: 22px;
-          position: relative;
-          width: 40px;
-        }
-
-        .climate-schedule-expanded__enabled-switch::before {
-          background: rgba(255, 255, 255, 0.92);
-          border-radius: 999px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
-          content: "";
-          height: 18px;
-          left: 1px;
-          position: absolute;
-          top: 1px;
-          transition: transform 160ms ease;
-          width: 18px;
-        }
-
-        .climate-schedule-expanded__enabled input:checked + .climate-schedule-expanded__enabled-switch {
-          background: var(--primary-color);
-          border-color: var(--primary-color);
-        }
-
-        .climate-schedule-expanded__enabled input:checked + .climate-schedule-expanded__enabled-switch::before {
-          transform: translateX(18px);
-        }
-
-        .climate-schedule-agenda {
-          display: grid;
-          gap: 12px;
-          max-height: min(58vh, 560px);
-          overflow: auto;
-          overscroll-behavior: contain;
-          padding-right: 2px;
-          touch-action: pan-y;
-          -webkit-overflow-scrolling: touch;
-        }
-
-        .climate-schedule-agenda__row {
-          display: grid;
-          gap: 8px;
-        }
-
-        .climate-schedule-agenda__row-head {
-          align-items: center;
-          display: grid;
-          gap: 8px;
-          grid-template-columns: minmax(72px, 92px) minmax(0, 1fr);
-        }
-
-        .climate-schedule-agenda__day-label {
-          font-size: 13px;
-          font-weight: 800;
-          text-transform: capitalize;
-        }
-
-        .climate-schedule-agenda__day-add {
-          align-items: center;
-          appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 999px;
-          color: var(--primary-text-color);
-          cursor: pointer;
-          display: inline-flex;
-          height: 30px;
-          justify-content: center;
-          justify-self: end;
-          margin: 0;
-          padding: 0;
-          width: 30px;
-        }
-
-        .climate-schedule-agenda__day-add ha-icon {
-          --mdc-icon-size: 18px;
-        }
-
-        .climate-schedule-agenda__timeline-wrap {
-          display: grid;
-          gap: 4px;
-          grid-column: 1 / -1;
-        }
-
-        .climate-schedule-agenda__track {
-          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 12px;
-          height: 56px;
-          overflow: hidden;
-          position: relative;
-          touch-action: none;
-          user-select: none;
-        }
-
-        .climate-schedule-agenda__track-grid {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          height: 100%;
-          inset: 0;
-          pointer-events: none;
-          position: absolute;
-          z-index: 0;
-        }
-
-        .climate-schedule-agenda__track-grid span {
-          border-right: 1px dashed color-mix(in srgb, var(--primary-text-color) 10%, transparent);
-        }
-
-        .climate-schedule-agenda__track-grid span:last-child {
-          border-right: 0;
-        }
-
-        .climate-schedule-agenda__blocks {
-          height: 100%;
-          inset: 0;
-          position: absolute;
-          z-index: 1;
-        }
-
-        .climate-schedule-agenda__track-empty {
-          color: var(--secondary-text-color);
-          font-size: 11px;
-          font-weight: 600;
-          left: 50%;
-          position: absolute;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          white-space: nowrap;
-        }
-
-        .climate-schedule-agenda__axis {
-          color: var(--secondary-text-color);
-          display: grid;
-          font-size: 10px;
-          font-weight: 700;
-          grid-template-columns: repeat(5, 1fr);
-          letter-spacing: 0.02em;
-          text-align: center;
-        }
-
-        .climate-schedule-agenda__block {
-          align-items: stretch;
-          background: color-mix(in srgb, var(--schedule-accent, var(--climate-schedule-accent)) 78%, transparent);
-          border: 1px solid color-mix(in srgb, var(--schedule-accent, var(--climate-schedule-accent)) 42%, transparent);
-          border-radius: 10px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
-          cursor: pointer;
-          display: grid;
-          grid-template-columns: 8px minmax(0, 1fr) 8px;
-          height: calc(100% - 8px);
-          left: var(--block-left, 0%);
-          min-width: 44px;
-          overflow: hidden;
-          position: absolute;
-          top: 4px;
-          touch-action: none;
-          width: var(--block-width, 20%);
-          z-index: 1;
-        }
-
-        .climate-schedule-agenda__block.is-selected {
-          border-color: color-mix(in srgb, var(--primary-text-color) 28%, var(--schedule-accent, var(--climate-schedule-accent)));
-          box-shadow:
-            0 0 0 2px color-mix(in srgb, var(--schedule-accent, var(--climate-schedule-accent)) 35%, transparent),
-            inset 0 1px 0 rgba(255, 255, 255, 0.24);
-          z-index: 2;
-        }
-
-        .climate-schedule-agenda__block:active {
-          cursor: grabbing;
-        }
-
-        .climate-schedule-agenda__block-grip {
-          cursor: ew-resize;
-          display: block;
-          flex: 0 0 10px;
-          min-height: 100%;
-          touch-action: none;
-          z-index: 2;
-        }
-
-        .climate-schedule-agenda__block-body {
-          align-items: center;
-          display: flex;
-          flex-direction: column;
-          gap: 1px;
-          justify-content: center;
-          min-width: 0;
-          overflow: hidden;
-          padding: 0 2px;
-          pointer-events: none;
-        }
-
-        .climate-schedule-agenda__block-time {
-          font-size: 9px;
-          font-weight: 800;
-          line-height: 1.1;
-          max-width: 100%;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .climate-schedule-agenda__block-temp {
-          font-size: 10px;
-          font-weight: 700;
-          line-height: 1.1;
-          opacity: 0.92;
-        }
-
-        .climate-schedule-agenda__editor {
-          display: none;
-          gap: 8px;
-          grid-column: 1 / -1;
-          grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
-        }
-
-        .climate-schedule-agenda__editor.is-visible {
-          display: grid;
-        }
-
-        .climate-schedule-agenda__editor-field {
-          display: grid;
-          gap: 4px;
-          min-width: 0;
-        }
-
-        .climate-schedule-agenda__editor-field--temp {
-          grid-column: 1 / -1;
-        }
-
-        .climate-schedule-agenda__editor-field > span {
-          color: var(--secondary-text-color);
-          font-size: 10px;
-          font-weight: 700;
-        }
-
-        .climate-schedule-agenda__editor-field input {
-          appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 10px;
-          color: var(--primary-text-color);
-          font: inherit;
-          font-size: 12px;
-          font-weight: 700;
-          min-height: 36px;
-          padding: 6px 8px;
-          width: 100%;
-        }
-
-        .climate-schedule-agenda__editor-remove {
-          align-items: center;
-          appearance: none;
-          align-self: end;
-          background: color-mix(in srgb, var(--error-color, #db4437) 10%, transparent);
-          border: 1px solid color-mix(in srgb, var(--error-color, #db4437) 28%, transparent);
-          border-radius: 999px;
-          color: var(--error-color, #db4437);
-          cursor: pointer;
-          display: inline-flex;
-          height: 36px;
-          justify-content: center;
-          margin: 0;
-          padding: 0;
-          width: 36px;
-        }
-
-        .climate-schedule-agenda__editor-remove ha-icon {
-          --mdc-icon-size: 18px;
-        }
-
-        .climate-schedule-expanded__actions {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          justify-content: flex-end;
-        }
-
-        .climate-schedule-expanded__btn {
-          appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 999px;
-          color: var(--primary-text-color);
-          cursor: pointer;
-          font: inherit;
-          font-size: 12px;
-          font-weight: 700;
-          min-height: 36px;
-          padding: 0 14px;
-        }
-
-        .climate-schedule-expanded__btn:disabled {
-          cursor: default;
-          opacity: 0.5;
-        }
-
-        .climate-schedule-expanded__btn--primary {
-          background: color-mix(in srgb, var(--climate-schedule-accent) 22%, transparent);
-          border-color: color-mix(in srgb, var(--climate-schedule-accent) 38%, var(--divider-color));
-        }
-
-        @media (max-width: 640px) {
-          .climate-schedule-expanded__panel {
-            border-radius: 14px;
-            max-height: 94vh;
-            max-height: 94dvh;
-            max-width: min(calc(100vw - 16px), 920px);
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            width: min(calc(100vw - 16px), 920px);
-          }
-
-          .climate-schedule-agenda__row-head {
-            grid-template-columns: minmax(64px, 80px) minmax(0, 1fr);
-          }
-        }
 
         .climate-card__dial {
           --climate-angle: ${dialAngle}deg;
@@ -6281,82 +5988,8 @@ class NodaliaClimateCard extends HTMLElement {
           transform: translateY(-0.04em);
           width: 100%;
         }
+        ${climateStatic0Styles}
 
-        @keyframes climate-card-button-bounce {
-          0% {
-            transform: scale(1);
-          }
-          45% {
-            transform: scale(1.1);
-          }
-          72% {
-            transform: scale(1.03);
-          }
-          100% {
-            transform: scale(1);
-          }
-        }
-
-        @keyframes climate-card-fade-up {
-          0% {
-            opacity: 0;
-            transform: translateY(14px) scale(0.965);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-
-        @keyframes climate-card-dial-bloom {
-          0% {
-            opacity: 0;
-            transform: translateZ(0) scale(0.95);
-            box-shadow:
-              inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 2%, transparent),
-              0 10px 24px rgba(0, 0, 0, 0.08);
-          }
-          55% {
-            opacity: 1;
-            transform: translateZ(0) scale(1.015);
-            box-shadow:
-              inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
-              0 22px 42px rgba(0, 0, 0, 0.16);
-          }
-          100% {
-            opacity: 1;
-            transform: translateZ(0) scale(1);
-            box-shadow:
-              inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent),
-              0 18px 38px rgba(0, 0, 0, 0.16);
-          }
-        }
-
-        @keyframes climate-card-dial-center-bloom {
-          0% {
-            opacity: 0;
-            transform: scale(0.96);
-          }
-          100% {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
-
-        @keyframes climate-card-dial-thumb-pop {
-          0% {
-            transform: translate(-50%, -50%) scale(1);
-          }
-          48% {
-            transform: translate(-50%, -50%) scale(1.24);
-          }
-          72% {
-            transform: translate(-50%, -50%) scale(1.09);
-          }
-          100% {
-            transform: translate(-50%, -50%) scale(1.15);
-          }
-        }
 
         ${animations.enabled ? "" : `
         ha-card,

@@ -1,0 +1,75 @@
+@keyframes climate-card-button-bounce {
+          0% {
+            transform: scale(1);
+          }
+          45% {
+            transform: scale(1.1);
+          }
+          72% {
+            transform: scale(1.03);
+          }
+          100% {
+            transform: scale(1);
+          }
+        }
+
+        @keyframes climate-card-fade-up {
+          0% {
+            opacity: 0;
+            transform: translateY(14px) scale(0.965);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes climate-card-dial-bloom {
+          0% {
+            opacity: 0;
+            transform: translateZ(0) scale(0.95);
+            box-shadow:
+              inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 2%, transparent),
+              0 10px 24px rgba(0, 0, 0, 0.08);
+          }
+          55% {
+            opacity: 1;
+            transform: translateZ(0) scale(1.015);
+            box-shadow:
+              inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent),
+              0 22px 42px rgba(0, 0, 0, 0.16);
+          }
+          100% {
+            opacity: 1;
+            transform: translateZ(0) scale(1);
+            box-shadow:
+              inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 5%, transparent),
+              0 18px 38px rgba(0, 0, 0, 0.16);
+          }
+        }
+
+        @keyframes climate-card-dial-center-bloom {
+          0% {
+            opacity: 0;
+            transform: scale(0.96);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes climate-card-dial-thumb-pop {
+          0% {
+            transform: translate(-50%, -50%) scale(1);
+          }
+          48% {
+            transform: translate(-50%, -50%) scale(1.24);
+          }
+          72% {
+            transform: translate(-50%, -50%) scale(1.09);
+          }
+          100% {
+            transform: translate(-50%, -50%) scale(1.15);
+          }
+        }

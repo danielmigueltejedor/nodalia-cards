@@ -68,20 +68,14 @@ the i18n pack is generated from JSON while its lookup logic remains root JS.
 
 ## Large controller responsibilities
 
-Size snapshots from the initial source split are obsolete. The main remaining
-unchecked views are listed below. All other card views, configs, helpers and
-visual editors now pass strict checking:
+Size snapshots from the initial source split are obsolete. All card views,
+configs, helpers and visual editors now pass strict checking. Climate retains
+a large view/controller, with config, model, dial and schedule modules separated.
+Static CSS is embedded from readable files; dynamic styles remain in the view.
 
-| Source | Responsibilities |
-|---|---|
-| `src/cards/climate/climate-card.ts` | Climate rendering and interactions |
-
-The exact suppression inventory is `scripts/type-debt.json`; use the source
-files, not generated JS size, to plan coherent typed extractions.
-
-Climate still has a large view/controller. Config, model, dial, schedule and
-types are already separate. Styles, actions and controller logic remain inside
-`climate-card.ts` until a later extraction.
+`scripts/type-debt.json` is empty. The generic utility runtime, i18n lookup and
+go2rtc player still require their own source migration; an empty suppression
+inventory does not mean these handwritten JavaScript modules are checked.
 
 ## Dependency relationships
 
@@ -297,7 +291,7 @@ standalone.ts          Standalone entry for nodalia-light-card.js
 `exactOptionalPropertyTypes`, `noFallthroughCasesInSwitch`, `noImplicitOverride`
 and `useUnknownInCatchVariables`.
 
-One legacy suppression remains in the Climate view. All other card views, configs, helpers and editors are checked. The
+No legacy suppressions remain in card source. All card views, configs, helpers and editors are checked. The
 exact current inventory is
 `scripts/type-debt.json`; `pnpm architecture:check` reports it and rejects new debt.
 A `.ts` filename or passing `tsc` does not imply suppressed modules were checked.
@@ -492,3 +486,12 @@ surface retains native pointer capture during preview updates; cancellation
 restores a moved zone without issuing commands or saving its preview. Local
 session keys include server, user and robot; explicit shared helpers remain shared.
 Static map/motion CSS is embedded without changing declarations or adding resources.
+
+Climate's complete view uses actual HA/configuration, Engine, schedule and native
+DOM/gesture contracts. Owned generations retire deferred HVAC wake, setpoint
+queues, Engine reads/overrides and schedule writes across context changes.
+Pointer/touch cancellation restores original dial and schedule previews without
+commands. The SVG dial track participates in native dragging as well as its
+HTML thumb. Native action focus and unfinished composer fields survive refreshes,
+including Safari. Timer/frame ownership extends to animation fallbacks; no shared
+helper or schedule codec changes are required.

@@ -214,22 +214,28 @@ function loadCardNormalizeConfig(file, className) {
 function loadClimateCardClass() {
   const registry = new Map();
   class FakeHTMLElement {
+    isConnected=true;
     attachShadow() {
       this.shadowRoot = {
         addEventListener() {},
         innerHTML: "",
+        replaceChildren() {this.innerHTML="";},
         querySelector() { return null; },
         querySelectorAll() { return []; },
       };
       return this.shadowRoot;
     }
 
+    addEventListener() {}
+    removeEventListener() {}
     dispatchEvent() {
       return true;
     }
   }
 
   const sandbox = {
+    addEventListener() {},removeEventListener() {},
+    cancelAnimationFrame() {},
     clearTimeout,
     console,
     CustomEvent: class {
@@ -244,6 +250,7 @@ function loadClimateCardClass() {
       whenDefined() { return Promise.resolve(); },
     },
     document: {
+      addEventListener() {},removeEventListener() {},
       createElement() { return {}; },
       documentElement: { getAttribute() { return ""; } },
       querySelector() { return null; },
@@ -957,6 +964,7 @@ test("climate off null setpoint step buttons wake and create a setpoint from cur
   const buildCard = (stateValue = "off") => {
     const calls = [];
     const card = new ClimateCard();
+    card._render=()=>{};
     card._config = {
       entity: "climate.ecobee",
       haptics: { enabled: false },
@@ -1057,6 +1065,7 @@ test("climate queued wake commits include hvac_mode in set_temperature", async (
 
   const calls = [];
   const card = new ClimateCard();
+  card._render=()=>{};
   card._config = {
     entity: "climate.ecobee",
     haptics: { enabled: false },
@@ -1097,7 +1106,7 @@ test("climate queued wake commits include hvac_mode in set_temperature", async (
   card.disconnectedCallback();
 
   calls.length = 0;
-  card._commitAborted = false;
+  card.connectedCallback();
   card._hass.states["climate.ecobee"].attributes.hvac_modes = ["off"];
   const direct = card._queueTemperatureCommit(22, {
     hvacWake: true,
@@ -2848,7 +2857,7 @@ test("device and climate cards normalize interoperable compact and circular layo
   assert.match(climate, /ed\.shared\.layout_circular/);
   // Compact title metrics must stay at 12px across Climate and Fan so WebKit
   // iPhone layout parity checks do not fail when Fan applies width densification.
-  const climateSrc = read("src/cards/climate/climate-card.ts");
+  const climateSrc = read("src/cards/climate/climate-card.ts") + [0,1,2].map(index=>read(`src/cards/climate/climate-static-${index}.css`)).join("\n");
   const fanSrc = read("src/cards/fan/fan-card.ts");
   assert.match(climateSrc, /isCompactCardLayout\s*\?\s*"12px"/);
   assert.match(climateSrc, /\.climate-card--layout-compact \.climate-card__title \{ font-size: 12px;/);
