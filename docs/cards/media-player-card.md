@@ -34,3 +34,14 @@ controls at either side. Navigation uses the same translucent artwork tint for
 buttons, transport capsules and stacked-player selectors.
 
 See [styling](../STYLING.md) and the [testing guide](../testing.md).
+
+Progress sliders support Left/Right (five seconds), Home and End when the player
+supports seeking. Cancelling a drag, leaving the page or changing the song during
+a seek gesture does not send a seek command. Volume drag cancellation restores
+the reported value. Playback/volume controls and media-browser keyboard focus
+remain stable through Home Assistant updates.
+
+Changing configuration, server connection or user closes open panels and abandons
+pending browser, artwork and stepped TV-volume work. Private cover history is
+cleared for the new context. Native empty/zero values are kept; invalid infinite
+playback durations and volume readings do not create broken controls.

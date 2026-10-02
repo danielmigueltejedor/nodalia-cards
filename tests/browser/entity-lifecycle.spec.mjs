@@ -14,12 +14,12 @@ async function resolveHistory(page,start=0) {
  await expect.poll(()=>page.evaluate(()=>window.entityCard._aqHistoryAbort===null)).toBe(true);
 }
 test('Entity selector survives HA updates during opening, retains focus and closes with Escape',async({page})=>{
- const card=await mount(page,{animations:true});const body=card.locator('[data-entity-action="body"]');await body.focus();await body.press('Enter');
+ const card=await mount(page,{animations:true});await page.clock.install();const body=card.locator('[data-entity-action="body"]');await body.focus();await body.press('Enter');
  await page.evaluate(()=>{window.entityHass.states['select.mode'].attributes.options.push('three');window.entityCard.hass={...window.entityHass};});
  await expect(card.locator('[data-entity-action="select-option"]')).toHaveCount(3);
  const option=card.locator('[data-select-value="two"]');await option.focus();await page.evaluate(()=>{window.entityHass.states['select.mode'].attributes.friendly_name='New mode';window.entityCard.hass={...window.entityHass};});await expect(option).toBeFocused();
- await option.press('Escape');await expect(card.locator('.entity-card__select-picker-shell')).toHaveCount(0);await expect(body).toBeFocused();
- await body.press('Enter');await expect(option).toBeVisible();await option.focus();await option.press('Enter');
+ await option.press('Escape');await page.clock.runFor(1000);await expect.poll(()=>page.evaluate(()=>window.entityCard._selectPickerOpen)).toBe(false);await expect(card.locator('.entity-card__select-picker-shell')).toHaveCount(0);await expect(body).toBeFocused();
+ await body.press('Enter');await expect(option).toBeVisible();await option.focus();await option.press('Enter');await page.clock.runFor(1000);
  await expect.poll(()=>page.evaluate(()=>window.entityCommands.length)).toBe(1);
  expect(await page.evaluate(()=>window.entityCommands[0])).toMatchObject({domain:'select',service:'select_option',data:{entity_id:'select.mode',option:'two'}});
  await expect(card.locator('.entity-card__select-picker-shell')).toHaveCount(0);await expect(body).toBeFocused();expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);

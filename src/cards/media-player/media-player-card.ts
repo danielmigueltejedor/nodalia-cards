@@ -1,6 +1,6 @@
-// @ts-nocheck
-/* Large HTMLElement view/controller: typed incrementally as methods are extracted. */
-import { applyArtworkControlTheme, prepareArtworkTheme, MEDIA_CONTROL_STYLES } from "./media-player-control-theme";
+import MEDIA_PRESENTATION_STYLES from "./media-player-presentations.css";
+import MEDIA_BROWSER_STYLES from "./media-player-browser.css";
+import { applyArtworkControlTheme, prepareArtworkTheme, releaseArtworkTheme, MEDIA_CONTROL_STYLES } from "./media-player-control-theme";
 import {
   CARD_TAG,
   EDITOR_TAG,
@@ -32,22 +32,10 @@ import { clamp, escapeHtml, fireEvent, isObject } from "./media-player-runtime";
 import {
   getMediaPlayerStubConfig,
   getStubFriendlyName,
-  compactConfig,
-  formatEditorJsonValue,
-  parseEditorJsonObject,
-  getByPath,
-  arrayFromCsv,
   escapeSelectorValue,
-  resolveEditorColorValue,
   resolveColorInContext,
   parseRgbColor,
   getRelativeLuminance,
-  formatEditorHexChannel,
-  formatEditorColorFromHex,
-  getEditorColorModel,
-  getEditorColorFallbackValue,
-  moveItem,
-  getRangeValueFromClientX,
   getSliderDragGeometry,
   getRangeValueFromGeometry,
   formatDuration,
@@ -58,21 +46,86 @@ import {
   isUnavailableState,
 } from "./media-player-helpers";
 
-let _lazyNodaliaMediaPlayer;
+import type { HomeAssistant,HassEntity } from "../../core/types/home-assistant";
+import type { PlaybackProgress,MediaPlayerPresentationMode } from "./media-player-types";
+import { invokeHassService,requestHassService } from "../../shared/home-assistant-services";
+type MediaConfig = ReturnType<typeof normalizeConfig>;
+type Player = Record<string,unknown> & {entity:string};
+type MediaAction = Record<string,unknown>;
+type MediaNode = {title:string;media_class:string;media_content_id:string;media_content_type:string;can_play:boolean;can_expand:boolean;thumbnail:string;children:MediaNode[]};
+type BrowserState = {entityId:string;fallbackPath:string;browserLabel:string;isMusicAssistant:boolean;isTvPlayer:boolean;animateIn:boolean;loading:boolean;error:string;stack:MediaNode[]};
+type SliderDrag = {pointerId:number|null;slider:HTMLInputElement;geometry:ReturnType<typeof getSliderDragGeometry>};
+type ProgressDrag = {entityId:string;trackKey:string;duration:number;percent:number;pointerId:number|null;track:HTMLElement};
+type ArtworkOptions = {artworkUrl?:string;hasAlbumBackground?:boolean;idle?:boolean;entityId?:string};
+const mediaRecord = (value:unknown):Record<string,unknown> => isObject(value)?value:{};
+const mediaText = (value:unknown):string => String(value??"");
+let _lazyNodaliaMediaPlayer:CustomElementConstructor|undefined;
 export function loadNodaliaMediaPlayer() {
   if (_lazyNodaliaMediaPlayer) {
     return _lazyNodaliaMediaPlayer;
   }
 class NodaliaMediaPlayer extends HTMLElement {
+  declare private _artworkPreloadCancels:Map<string,()=>void>;
+  declare private _generation:number;
+  declare private _contextConnection:HomeAssistant["connection"];
+  declare private _contextAuth:HomeAssistant["auth"];
+  declare private _contextUser:string;
+  declare private _contextAdmin:boolean;
+  declare private _volumeSteps:Map<string,symbol>;
+  declare private _volumeWaits:Map<number,()=>void>;
+  declare private _layoutFrame:number;
+  declare private _modalOpen:boolean;
+
+  declare private _config: MediaConfig;
+  declare private _configured: boolean;
+  declare private _hass: HomeAssistant|null;
+  declare private _mediaBrowserState: BrowserState|null;
+  declare private _mediaBrowserScrollPositions: Map<string,number>;
+  declare private _mediaTicker: number|null;
+  declare private _draftVolume: Map<string,number>;
+  declare private _draftVolumeTimers: Map<string,number>;
+  declare private _activeSliderDrag: SliderDrag|null;
+  declare private _skipNextSliderChange: HTMLInputElement|null;
+  declare private _tvSourcePickerEntity: string|null;
+  declare private _tvVolumePickerEntity: string|null;
+  declare private _tvPanelScrollPositions: Map<string,number>;
+  declare private _tvSourcePanelAnimatingEntity: string|null;
+  declare private _tvVolumePanelAnimatingEntity: string|null;
+  declare private _readyArtworkUrls: Set<string>;
+  declare private _failedArtworkUrls: Set<string>;
+  declare private _pendingArtworkPreloads: Map<string,Promise<boolean>>;
+  declare private _displayArtworkByEntity: Map<string,string>;
+  declare private _artworkController: MediaPlayerArtworkController;
+  declare private _artworkStageEl: HTMLElement|null;
+  declare private _resolvedLayoutMode: MediaPlayerPresentationMode|"";
+  declare private _layoutObserver: ResizeObserver|null;
+  declare private _activeProgressDrag: ProgressDrag|null;
+  declare private _onResize: ()=>void;
+  declare private _onWindowKeyDown: (event:KeyboardEvent)=>void;
+  declare private _activeArtworkUrl: string;
+  declare private _activeArtworkIdle: boolean;
+  declare private _progressTickMisses: number;
+  declare private _mediaBrowserRequestToken: number;
+  declare private _activePlayerIndex: number;
+  declare private _activePlayerEntity: string;
+  declare private _lastRenderSignature: string;
+  declare private _pendingRenderAfterDrag: boolean;
+  declare private _dragWindowListenersAttached: boolean;
+  declare private _animateContentOnNextRender: boolean;
+  declare private _entranceAnimationResetTimer: number;
+  declare private _resizeSyncTimer: number;
+  declare private _presentationEntityId: string;
+  declare private _idleSlideshowUrl: string;
+
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig(hass, entities = [], entitiesFallback = []) {
+  static getStubConfig(hass:HomeAssistant|null|undefined, entities:unknown = [], entitiesFallback:unknown = []) {
     return getMediaPlayerStubConfig(hass, entities, entitiesFallback);
   }
 
-  static getEntitySuggestion(hass, entityId) {
+  static getEntitySuggestion(hass:HomeAssistant, entityId:string) {
     const player = {
       entity: entityId,
       label: getStubFriendlyName(hass, entityId),
@@ -102,7 +155,21 @@ class NodaliaMediaPlayer extends HTMLElement {
   }
 
   _nodaliaConstruct() {this.attachShadow({ mode: "open" });
-    this._config = null;
+    this._artworkPreloadCancels = new Map();
+    this._generation = 0;
+    this._contextConnection = undefined;
+    this._contextAuth = undefined;
+    this._contextUser = "";
+    this._contextAdmin = false;
+    this._volumeSteps = new Map();
+    this._volumeWaits = new Map();
+    this._layoutFrame = 0;
+    this._modalOpen = false;
+    this._config = normalizeConfig({});
+    this._configured = false;
+    this._activeArtworkUrl = "";
+    this._activeArtworkIdle = false;
+    this._progressTickMisses = 0;
     this._hass = null;
     this._mediaBrowserState = null;
     this._mediaBrowserScrollPositions = new Map();
@@ -116,10 +183,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._activeSliderDrag = null;
     this._pendingRenderAfterDrag = false;
     this._skipNextSliderChange = null;
-    this._dragFrame = 0;
-    this._pendingDragUpdate = null;
     this._dragWindowListenersAttached = false;
-    this._volumeStepFallback = new Set();
     this._tvSourcePickerEntity = null;
     this._tvVolumePickerEntity = null;
     this._tvPanelScrollPositions = new Map();
@@ -140,6 +204,8 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._activeProgressDrag = null;
     this._idleSlideshowUrl = "";
     this._onResize = () => {
+      if (!this.isConnected) return;
+      const generation = this._generation;
       if (this._activeSliderDrag || this._activeProgressDrag) {
         this._pendingRenderAfterDrag = true;
         return;
@@ -150,6 +216,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         window.clearTimeout(this._resizeSyncTimer);
       }
       this._resizeSyncTimer = window.setTimeout(() => {
+        if (!this._isCurrent(generation)) return;
         this._resizeSyncTimer = 0;
         if (!this.isConnected || this._activeSliderDrag || this._activeProgressDrag) {
           if (this._activeSliderDrag || this._activeProgressDrag) {
@@ -180,19 +247,22 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._onWindowTouchMove = this._onWindowTouchMove.bind(this);
     this._onWindowTouchEnd = this._onWindowTouchEnd.bind(this);
     this._onVisibilityChange = this._onVisibilityChange.bind(this);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this.shadowRoot.addEventListener("input", this._onShadowInput);
-    this.shadowRoot.addEventListener("change", this._onShadowChange);
-    this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
-    this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown);
-    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
-      this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
+    this._onWindowCancel = this._onWindowCancel.bind(this);
+    this.shadowRoot?.addEventListener("keydown", event => this._onShadowKeyDown(event));
+    this.shadowRoot?.addEventListener("click", this._onShadowClick);
+    this.shadowRoot?.addEventListener("input", this._onShadowInput);
+    this.shadowRoot?.addEventListener("change", this._onShadowChange);
+    this.shadowRoot?.addEventListener("pointerdown", this._onShadowPointerDown);
+    this.shadowRoot?.addEventListener("mousedown", this._onShadowMouseDown);
+    if (!(typeof PointerEvent !== "undefined")) {
+      this.shadowRoot?.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
     }
     }
 
   connectedCallback() {
     window.addEventListener("resize", this._onResize);
     window.addEventListener("keydown", this._onWindowKeyDown);
+    window.addEventListener("blur", this._onWindowCancel);
     document.addEventListener("visibilitychange", this._onVisibilityChange);
     this._observeLayout();
     this._animateContentOnNextRender = true;
@@ -200,44 +270,73 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._render();
   }
 
-  disconnectedCallback() {
+  _isCurrent(generation:number) { return this.isConnected && this._generation === generation; }
+
+  _releaseViewWork() {
+    this._generation += 1;
+    this._cancelDrag(false);
     window.NodaliaUtils?.releaseModalFocus?.(this);
-    window.removeEventListener("resize", this._onResize);
-    window.removeEventListener("keydown", this._onWindowKeyDown);
-    document.removeEventListener("visibilitychange", this._onVisibilityChange);
-    this._detachWindowDragListeners();
-    if (this._dragFrame) {
-      window.cancelAnimationFrame(this._dragFrame);
-      this._dragFrame = 0;
-    }
-    this._pendingDragUpdate = null;
-    if (this._mediaTicker) {
-      window.clearInterval(this._mediaTicker);
-      this._mediaTicker = null;
-    }
-    this._draftVolumeTimers.forEach(timerId => window.clearTimeout(timerId));
+    window.NodaliaUtils?.clearDeferTimers?.(this);
+    releaseArtworkTheme(this);
+    if (this._mediaTicker) window.clearInterval(this._mediaTicker);
+    this._mediaTicker = null;
+    this._draftVolumeTimers.forEach(timer => window.clearTimeout(timer));
     this._draftVolumeTimers.clear();
-    if (this._entranceAnimationResetTimer) {
-      window.clearTimeout(this._entranceAnimationResetTimer);
-      this._entranceAnimationResetTimer = 0;
-    }
-    if (this._resizeSyncTimer) {
-      window.clearTimeout(this._resizeSyncTimer);
-      this._resizeSyncTimer = 0;
-    }
-    this._mediaBrowserRequestToken += 1;
-    this._animateContentOnNextRender = true;
-    this._lastRenderSignature = "";
+    this._draftVolume.clear();
+    this._volumeSteps.clear();
+    this._volumeWaits.forEach((resolve,timer) => {window.clearTimeout(timer);resolve();});
+    this._volumeWaits.clear();
+    if (this._entranceAnimationResetTimer) window.clearTimeout(this._entranceAnimationResetTimer);
+    if (this._resizeSyncTimer) window.clearTimeout(this._resizeSyncTimer);
+    if (this._layoutFrame) window.cancelAnimationFrame(this._layoutFrame);
+    this._entranceAnimationResetTimer = this._resizeSyncTimer = this._layoutFrame = 0;
     this._layoutObserver?.disconnect();
     this._layoutObserver = null;
-    this._artworkController?.detach();
-    this._artworkStageEl = null;
-    this._activeProgressDrag = null;
-    window.NodaliaUtils?.clearDeferTimers?.(this);
+    this._mediaBrowserRequestToken += 1;
+    this._mediaBrowserState = null;
+    this._mediaBrowserScrollPositions.clear();
+    this._tvPanelScrollPositions.clear();
+    this._tvSourcePickerEntity = this._tvVolumePickerEntity = null;
+    this._tvSourcePanelAnimatingEntity = this._tvVolumePanelAnimatingEntity = null;
+    this._modalOpen = false;
+    this._artworkController.detach();
+    this._artworkPreloadCancels.forEach(cancel => cancel());
+    this._artworkPreloadCancels.clear();
+    this._pendingArtworkPreloads.clear();
+    this._animateContentOnNextRender = true;
+    this._lastRenderSignature = "";
   }
 
-  setConfig(config) {
+  _resetContext() {
+    this._releaseViewWork();
+    this._readyArtworkUrls.clear();
+    this._failedArtworkUrls.clear();
+    this._displayArtworkByEntity.clear();
+    this._artworkController.clear();
+    this._artworkController = new MediaPlayerArtworkController();
+    this._artworkStageEl = null;
+    this._activeArtworkUrl = this._idleSlideshowUrl = "";
+    this._activeArtworkIdle = false;
+    this._resolvedLayoutMode = "";
+    this._presentationEntityId = "";
+    this._activePlayerIndex = 0;
+    this._activePlayerEntity = "";
+    this.shadowRoot?.replaceChildren();
+    if (this.isConnected) this._observeLayout();
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener("resize", this._onResize);
+    window.removeEventListener("keydown", this._onWindowKeyDown);
+    window.removeEventListener("blur", this._onWindowCancel);
+    document.removeEventListener("visibilitychange", this._onVisibilityChange);
+    this._releaseViewWork();
+  }
+
+  setConfig(config:unknown) {
     this._config = normalizeConfig(config);
+    this._configured = true;
+    this._resetContext();
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     if (!this.isConnected) {
@@ -246,9 +345,16 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._render();
   }
 
-  set hass(hass) {
+  set hass(hass:HomeAssistant|null) {
     const previousHass = this._hass;
+    const contextChanged = this._contextConnection !== hass?.connection || this._contextAuth !== hass?.auth || this._contextUser !== (hass?.user?.id || "") || this._contextAdmin !== Boolean(hass?.user?.is_admin);
     this._hass = hass;
+    this._contextConnection = hass?.connection;
+    this._contextAuth = hass?.auth;
+    this._contextUser = hass?.user?.id || "";
+    this._contextAdmin = Boolean(hass?.user?.is_admin);
+    if (contextChanged) this._resetContext();
+    if (this._activeProgressDrag && !this._validProgressDrag(this._activeProgressDrag)) this._cancelDrag(false);
 
     if (!this.isConnected) {
       return;
@@ -260,6 +366,7 @@ class NodaliaMediaPlayer extends HTMLElement {
 
     const nextSignature = this._getRenderSignature(hass);
     if (previousHass && nextSignature === this._lastRenderSignature) {
+      if (!this._activeSliderDrag && !this._activeProgressDrag) this._updateProgressTick(this._getVisiblePlayers());
       return;
     }
 
@@ -318,8 +425,11 @@ class NodaliaMediaPlayer extends HTMLElement {
     // Fav-style: sections sometimes keeps the tall span after a shrink until a
     // window resize lands (iron-resize alone is not enough when collapsing).
     if (forceWindowResize && typeof window !== "undefined") {
-      requestAnimationFrame(() => {
-        if (!this.isConnected) {
+      const generation = this._generation;
+      if (this._layoutFrame) window.cancelAnimationFrame(this._layoutFrame);
+      this._layoutFrame = requestAnimationFrame(() => {
+        this._layoutFrame = 0;
+        if (!this._isCurrent(generation)) {
           return;
         }
         window.dispatchEvent(new Event("resize"));
@@ -333,8 +443,9 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
     const safeDelay = Math.max(0, Number(delay) || 0);
     const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const generation = this._generation;
     const done = () => {
-      if (!this.isConnected) {
+      if (!this._isCurrent(generation)) {
         return;
       }
       this._notifySectionLayoutChange({ forceWindowResize });
@@ -350,13 +461,15 @@ class NodaliaMediaPlayer extends HTMLElement {
     if (this._layoutObserver || typeof ResizeObserver === "undefined") {
       return;
     }
-    this._layoutObserver = new ResizeObserver(() => {
-      if (!this.isConnected || this._activeSliderDrag || this._activeProgressDrag) {
+    const generation = this._generation;
+    const observer = new ResizeObserver(() => {
+      if (!this._isCurrent(generation) || this._layoutObserver !== observer || this._activeSliderDrag || this._activeProgressDrag) {
         return;
       }
       this._syncPresentationMode();
     });
-    this._layoutObserver.observe(this);
+    this._layoutObserver = observer;
+    observer.observe(this);
   }
 
   _getActivePlayerContext() {
@@ -372,7 +485,7 @@ class NodaliaMediaPlayer extends HTMLElement {
   }
 
   _getConfiguredGridColumns() {
-    const numericColumns = Number(this._config?.grid_options?.columns);
+    const numericColumns = Number(mediaRecord(this._config.grid_options).columns);
     return Number.isFinite(numericColumns) && numericColumns > 0 ? numericColumns : null;
   }
 
@@ -433,16 +546,9 @@ class NodaliaMediaPlayer extends HTMLElement {
     return true;
   }
 
-  _getTrackedEntities() {
-    const configuredPlayers = Array.isArray(this._config?.players)
-      ? this._config.players.map(player => player?.entity).filter(Boolean)
-      : [];
-
-    if (configuredPlayers.length) {
-      return [...new Set(configuredPlayers)];
-    }
-
-    return this._config?.entity ? [this._config.entity] : [];
+  _getTrackedEntities():string[] {
+    const players = this._getConfiguredPlayers().map(player => player.entity);
+    return players.length ? [...new Set(players)] : typeof this._config.entity === "string" && this._config.entity ? [this._config.entity] : [];
   }
 
   _getRenderSignature(hass = this._hass) {
@@ -450,14 +556,14 @@ class NodaliaMediaPlayer extends HTMLElement {
     const entities = this._getTrackedEntities();
     const runtime = getRenderSignatureRuntime();
 
-    return entities
+    return [hass?.locale?.language, hass?.language, this._config.language, ...entities
       .map(entityId => {
         const state = states[entityId];
         if (!state) {
           return runtime.joinParts([{ values: [entityId, "missing"] }], "", "::");
         }
 
-        const attrs = state.attributes || {};
+        const attrs = state?.attributes || {};
         return runtime.joinParts([
           {
             values: [
@@ -465,6 +571,10 @@ class NodaliaMediaPlayer extends HTMLElement {
               state.state || "",
               attrs.friendly_name || "",
               attrs.entity_picture || "",
+              attrs.entity_picture_local || "",
+              attrs.media_content_id || "",
+              attrs.media_content_type || "",
+              attrs.device_class || "",
               attrs.media_title || "",
               attrs.media_artist || "",
               attrs.media_series_title || "",
@@ -479,7 +589,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           },
         ], "", "::");
       })
-      .join("||");
+      .join("||")].join("::");
   }
 
   _isInEditMode() {
@@ -508,8 +618,8 @@ class NodaliaMediaPlayer extends HTMLElement {
     return window.innerWidth > Number(this._config.layout.mobile_breakpoint || 1279);
   }
 
-  _triggerHaptic(style = this._config?.haptics?.style) {
-    if (!this._config?.haptics?.enabled) {
+  _triggerHaptic(style:unknown = mediaRecord(this._config.haptics).style) {
+    if (!mediaRecord(this._config.haptics).enabled) {
       return;
     }
 
@@ -522,18 +632,18 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     if (
-      !this._config.haptics.fallback_vibrate ||
+      !mediaRecord(this._config.haptics).fallback_vibrate ||
       typeof navigator === "undefined" ||
       typeof navigator.vibrate !== "function"
     ) {
       return;
     }
 
-    navigator.vibrate(HAPTIC_PATTERNS[hapticStyle] || HAPTIC_PATTERNS.selection);
+    navigator.vibrate((Object.entries(HAPTIC_PATTERNS).find(([key]) => key === hapticStyle)?.[1] || HAPTIC_PATTERNS.selection));
   }
 
   _getAnimationSettings() {
-    const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+    const configuredAnimations = mediaRecord(this._config.animations || DEFAULT_CONFIG.animations);
     return {
       enabled: configuredAnimations.enabled !== false,
       panelDuration: clamp(
@@ -571,7 +681,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     return false;
   }
 
-  _triggerButtonBounce(button) {
+  _triggerButtonBounce(button:unknown) {
     if (!(button instanceof HTMLElement)) {
       return;
     }
@@ -586,8 +696,9 @@ class NodaliaMediaPlayer extends HTMLElement {
     button.classList.add("is-pressing");
 
     const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+    const generation = this._generation;
     const done = () => {
-      if (!button.isConnected) {
+      if (!this._isCurrent(generation) || !button.isConnected) {
         return;
       }
       button.classList.remove("is-pressing");
@@ -599,7 +710,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
   }
 
-  _scheduleEntranceAnimationReset(delay) {
+  _scheduleEntranceAnimationReset(delay:unknown) {
     if (this._entranceAnimationResetTimer) {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
@@ -611,7 +722,9 @@ class NodaliaMediaPlayer extends HTMLElement {
       return;
     }
 
+    const generation = this._generation;
     this._entranceAnimationResetTimer = window.setTimeout(() => {
+      if (!this._isCurrent(generation)) return;
       this._entranceAnimationResetTimer = 0;
       if (!this.isConnected) {
         return;
@@ -620,15 +733,15 @@ class NodaliaMediaPlayer extends HTMLElement {
     }, safeDelay);
   }
 
-  _isArtworkUrlReady(url) {
-    return Boolean(url) && this._readyArtworkUrls.has(url);
+  _isArtworkUrlReady(url:string|null|undefined) {
+    return typeof url === "string" && this._readyArtworkUrls.has(url);
   }
 
-  _isArtworkUrlFailed(url) {
-    return Boolean(url) && this._failedArtworkUrls.has(url);
+  _isArtworkUrlFailed(url:string|null|undefined) {
+    return typeof url === "string" && this._failedArtworkUrls.has(url);
   }
 
-  _preloadArtworkUrl(url, onSettled = null) {
+  _preloadArtworkUrl(url:string, onSettled:((ready:boolean)=>void)|null = null) {
     if (!url) {
       return Promise.resolve(false);
     }
@@ -646,7 +759,8 @@ class NodaliaMediaPlayer extends HTMLElement {
     const existing = this._pendingArtworkPreloads.get(url);
     if (existing) {
       if (onSettled) {
-        existing.then(onSettled);
+        const generation = this._generation;
+        existing.then(ready => {if (this._isCurrent(generation)) onSettled(ready);});
       }
       return existing;
     }
@@ -657,11 +771,18 @@ class NodaliaMediaPlayer extends HTMLElement {
       return Promise.resolve(true);
     }
 
-    const preloadPromise = new Promise(resolve => {
+    const generation = this._generation;
+    const preloadPromise = new Promise<boolean>(resolve => {
       const image = new Image();
       image.decoding = "async";
 
-      const settle = loaded => {
+      let settled = false;
+      const settle = (loaded:boolean) => {
+        if (settled) return;
+        settled = true;
+        image.onload = image.onerror = null;
+        this._artworkPreloadCancels.delete(url);
+        if (!this._isCurrent(generation)) {resolve(false);return;}
         this._pendingArtworkPreloads.delete(url);
         if (loaded) {
           this._readyArtworkUrls.add(url);
@@ -669,20 +790,30 @@ class NodaliaMediaPlayer extends HTMLElement {
         } else {
           this._failedArtworkUrls.add(url);
         }
+        while (this._readyArtworkUrls.size > 64) this._readyArtworkUrls.delete(this._readyArtworkUrls.values().next().value || "");
+        while (this._failedArtworkUrls.size > 64) this._failedArtworkUrls.delete(this._failedArtworkUrls.values().next().value || "");
         resolve(loaded);
         onSettled?.(loaded);
       };
 
+      this._artworkPreloadCancels.set(url, () => {if (settled) return;settled = true;image.onload = image.onerror = null;resolve(false);});
       image.onload = () => settle(true);
       image.onerror = () => settle(false);
       image.src = url;
     });
 
     this._pendingArtworkPreloads.set(url, preloadPromise);
+    while (this._pendingArtworkPreloads.size > 64) {
+      const oldest = this._pendingArtworkPreloads.keys().next().value;
+      if (oldest === undefined) break;
+      this._artworkPreloadCancels.get(oldest)?.();
+      this._artworkPreloadCancels.delete(oldest);
+      this._pendingArtworkPreloads.delete(oldest);
+    }
     return preloadPromise;
   }
 
-  _ensureArtworkReady(entityId, url, { rerenderOnReady = false } = {}) {
+  _ensureArtworkReady(entityId:string, url:string, {rerenderOnReady = false}:{rerenderOnReady?:boolean} = {}) {
     if (!entityId) {
       return !url;
     }
@@ -702,7 +833,9 @@ class NodaliaMediaPlayer extends HTMLElement {
       return true;
     }
 
+    const generation = this._generation;
     this._preloadArtworkUrl(url, () => {
+      if (!this._isCurrent(generation)) return;
       const currentPlayer = this._findPlayerConfig(entityId) || { entity: entityId };
       const currentState = this._hass?.states?.[entityId];
       const currentArtwork = currentState ? this._getPlayerArtwork(currentPlayer, currentState) : null;
@@ -728,7 +861,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     return false;
   }
 
-  _getRenderableArtwork(entityId, desiredArtworkUrl) {
+  _getRenderableArtwork(entityId:string, desiredArtworkUrl:string|null) {
     if (!entityId || !desiredArtworkUrl) {
       if (entityId) {
         this._displayArtworkByEntity.delete(entityId);
@@ -749,7 +882,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     return this._displayArtworkByEntity.get(entityId) || "";
   }
 
-  _resolveMediaUrl(value, options = {}) {
+  _resolveMediaUrl(value:unknown, options:{cacheToken?:unknown} = {}) {
     const baseUrl = sanitizeMediaArtworkUrl(value, this._hass);
     if (!baseUrl) {
       return "";
@@ -757,15 +890,15 @@ class NodaliaMediaPlayer extends HTMLElement {
     return appendQueryParam(baseUrl, "nodalia_ts", options.cacheToken);
   }
 
-  _getArtworkCacheToken(state) {
+  _getArtworkCacheToken(state:HassEntity|null|undefined) {
     return artworkCacheToken(state);
   }
 
-  _getConfiguredPlayers() {
-    return Array.isArray(this._config?.players) ? this._config.players : [];
+  _getConfiguredPlayers():Player[] {
+    return this._config.players.filter((player):player is typeof player & {entity:string} => typeof player.entity === "string" && Boolean(player.entity.trim()));
   }
 
-  _resolveActivePlayerIndex(players) {
+  _resolveActivePlayerIndex(players:Player[]) {
     if (!Array.isArray(players) || players.length === 0) {
       this._activePlayerIndex = 0;
       return 0;
@@ -783,7 +916,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     return nextIndex;
   }
 
-  _findPlayerConfig(entityId) {
+  _findPlayerConfig(entityId:string) {
     return this._getConfiguredPlayers().find(player => player.entity === entityId) || null;
   }
 
@@ -819,11 +952,11 @@ class NodaliaMediaPlayer extends HTMLElement {
         ? player.show_states
         : ["playing", "paused"];
 
-      return visibleStates.includes(state.state);
+      return visibleStates.includes(state?.state);
     });
   }
 
-  _getReservedHeight(showPlayer) {
+  _getReservedHeight(showPlayer:boolean) {
     if (!this._config.layout.reserve_space) {
       return "0px";
     }
@@ -835,11 +968,11 @@ class NodaliaMediaPlayer extends HTMLElement {
     return "0px";
   }
 
-  _getPlayerLabel(player, state) {
-    return player.label || player.name || state.attributes.friendly_name || player.entity;
+  _getPlayerLabel(player:Player, state:HassEntity|null|undefined) {
+    return mediaText(player.label || player.name || state?.attributes.friendly_name || player.entity);
   }
 
-  _isAppleTvPlayer(player, state) {
+  _isAppleTvPlayer(player:Player, state:HassEntity|null|undefined) {
     const candidates = [
       player?.entity,
       player?.label,
@@ -854,7 +987,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     return candidates.some(candidate => normalizeTextKey(candidate).includes("apple tv"));
   }
 
-  _getPlayerDeviceType(player, state) {
+  _getPlayerDeviceType(player:Player, state:HassEntity|null|undefined) {
     if (player?.tv_mode === true) {
       return "tv";
     }
@@ -899,58 +1032,58 @@ class NodaliaMediaPlayer extends HTMLElement {
     return "music";
   }
 
-  _getPlayerFallbackIcon(player, state, deviceType) {
+  _getPlayerFallbackIcon(player:Player, state:HassEntity|null|undefined, deviceType:string) {
     if (player?.icon) {
-      return player.icon;
+      return mediaText(player.icon);
     }
 
     if (deviceType === "tv") {
-      return this._isAppleTvPlayer(player, state) ? "mdi:apple" : "mdi:television";
+      return mediaText(this._isAppleTvPlayer(player, state) ? "mdi:apple" : "mdi:television");
     }
 
-    return "mdi:music";
+    return mediaText("mdi:music");
   }
 
-  _getPlayerTitle(player, state) {
+  _getPlayerTitle(player:Player, state:HassEntity|null|undefined) {
     if (player.title) {
-      return player.title;
+      return mediaText(player.title);
     }
 
-    return state.attributes.media_title || state.attributes.friendly_name || player.entity;
+    return mediaText(state?.attributes.media_title || state?.attributes.friendly_name || player.entity);
   }
 
-  _getTvContentTitle(player, state) {
+  _getTvContentTitle(player:Player, state:HassEntity|null|undefined) {
     if (player.title) {
-      return player.title;
+      return mediaText(player.title);
     }
 
-    return (
+    return mediaText((
       state?.attributes?.media_title ||
       state?.attributes?.media_series_title ||
       state?.attributes?.media_channel ||
       ""
-    );
+    ));
   }
 
-  _getPlayerSubtitle(player, state) {
+  _getPlayerSubtitle(player:Player, state:HassEntity|null|undefined) {
     if (player.subtitle) {
-      return player.subtitle;
+      return mediaText(player.subtitle);
     }
 
     const fallbackState = this._config?.show_state === true
-      ? this._getPlayerStateLabel(state.state)
+      ? this._getPlayerStateLabel(state?.state)
       : "";
 
-    return (
-      state.attributes.media_artist ||
-      state.attributes.media_series_title ||
-      state.attributes.media_album_name ||
-      state.attributes.app_name ||
+    return mediaText((
+      state?.attributes.media_artist ||
+      state?.attributes.media_series_title ||
+      state?.attributes.media_album_name ||
+      state?.attributes.app_name ||
       fallbackState
-    );
+    ));
   }
 
-  _shouldShowTvArtwork(player, state) {
+  _shouldShowTvArtwork(player:Player, state:HassEntity|null|undefined) {
     const deviceType = this._getPlayerDeviceType(player, state);
     if (deviceType !== "tv") {
       return true;
@@ -968,7 +1101,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     return plexSignals.some(value => value.includes("plex"));
   }
 
-  _getPlayerArtwork(player, state) {
+  _getPlayerArtwork(player:Player, state:HassEntity|null|undefined) {
     if (player.image) {
       return this._resolveMediaUrl(player.image);
     }
@@ -978,8 +1111,8 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     const artwork =
-      state.attributes.entity_picture_local ||
-      state.attributes.entity_picture ||
+      state?.attributes.entity_picture_local ||
+      state?.attributes.entity_picture ||
       "";
 
     return artwork
@@ -989,7 +1122,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       : null;
   }
 
-  _getPlayerStateLabel(stateValue) {
+  _getPlayerStateLabel(stateValue:unknown) {
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const langCfg = this._config?.language ?? "auto";
     if (window.NodaliaI18n?.translateMediaPlayerState) {
@@ -1017,15 +1150,15 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
   }
 
-  _isPlayerActive(state) {
+  _isPlayerActive(state:HassEntity|null|undefined) {
     const stateKey = normalizeTextKey(state?.state);
     return !!stateKey && !["off", "standby", "unavailable", "unknown"].includes(stateKey);
   }
 
-  _getPlayerProgress(state) {
+  _getPlayerProgress(state:HassEntity|null|undefined) {
     if (this._activeProgressDrag?.entityId && this._hass?.states?.[this._activeProgressDrag.entityId] === state) {
       const duration = Number(state?.attributes?.media_duration || 0);
-      if (!(duration > 0)) {
+      if (!Number.isFinite(duration) || !(duration > 0)) {
         return null;
       }
       const position = seekPositionFromPercent(this._activeProgressDrag.percent, duration);
@@ -1038,7 +1171,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     return interpolatePlaybackProgress(state);
   }
 
-  _renderProgressMarkup(player, state, progress) {
+  _renderProgressMarkup(player:Player, state:HassEntity|null|undefined, progress:PlaybackProgress|null) {
     if (!progress || this._config?.progress?.show === false) {
       return "";
     }
@@ -1060,12 +1193,12 @@ class NodaliaMediaPlayer extends HTMLElement {
     `;
   }
 
-  _getPlayerSourceLabel(state) {
+  _getPlayerSourceLabel(state:HassEntity|null|undefined) {
     const sourceLabel =
-      state.attributes.source ||
-      state.attributes.app_name ||
-      state.attributes.media_album_name ||
-      state.attributes.media_channel;
+      state?.attributes.source ||
+      state?.attributes.app_name ||
+      state?.attributes.media_album_name ||
+      state?.attributes.media_channel;
 
     const sourceKey = normalizeTextKey(sourceLabel);
 
@@ -1081,13 +1214,13 @@ class NodaliaMediaPlayer extends HTMLElement {
     return sourceLabel;
   }
 
-  _getPlayerSourceOptions(player, state) {
+  _getPlayerSourceOptions(player:Player, state:HassEntity|null|undefined) {
     if (player?.show_source_controls === false) {
       return [];
     }
 
     const sources = Array.isArray(state?.attributes?.source_list)
-      ? state.attributes.source_list.filter(source => String(source || "").trim())
+      ? state?.attributes.source_list.filter(source => String(source || "").trim())
       : [];
 
     if (!sources.length) {
@@ -1095,7 +1228,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     const currentSource = String(state?.attributes?.source || "").trim();
-    const orderedSources = [];
+    const orderedSources:string[] = [];
 
     if (currentSource && sources.includes(currentSource)) {
       orderedSources.push(currentSource);
@@ -1112,22 +1245,22 @@ class NodaliaMediaPlayer extends HTMLElement {
     return orderedSources.slice(0, maxSources);
   }
 
-  _hasActiveMediaContent(state) {
+  _hasActiveMediaContent(state:HassEntity|null|undefined) {
     if (!state?.attributes) {
       return false;
     }
 
     return Boolean(
-      state.attributes.media_title ||
-      state.attributes.media_artist ||
-      state.attributes.media_album_name ||
-      state.attributes.media_series_title ||
-      state.attributes.media_channel ||
-      state.attributes.media_duration,
+      state?.attributes.media_title ||
+      state?.attributes.media_artist ||
+      state?.attributes.media_album_name ||
+      state?.attributes.media_series_title ||
+      state?.attributes.media_channel ||
+      state?.attributes.media_duration,
     );
   }
 
-  _shouldUseIdleLayout(player, state) {
+  _shouldUseIdleLayout(player:Player, state:HassEntity|null|undefined) {
     if (!state) {
       return false;
     }
@@ -1136,7 +1269,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       return false;
     }
 
-    const stateKey = normalizeTextKey(state.state);
+    const stateKey = normalizeTextKey(state?.state);
     // Apple TV / webOS often keep media_* attrs after power-off. Still collapse to
     // the idle chip so sections can drop the tall "on" footprint.
     if (
@@ -1153,7 +1286,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     return ["idle", "off", "standby", "paused", "unknown", "unavailable"].includes(stateKey);
   }
 
-  _isMusicAssistantPlayer(player, state) {
+  _isMusicAssistantPlayer(player:Player, state:HassEntity|null|undefined) {
     const candidates = [
       player?.entity,
       player?.label,
@@ -1169,19 +1302,19 @@ class NodaliaMediaPlayer extends HTMLElement {
     return candidates.some(candidate => normalizeTextKey(candidate).includes("music assistant"));
   }
 
-  _getPlayerBrowsePath(player, state) {
+  _getPlayerBrowsePath(player:Player, state:HassEntity|null|undefined) {
     if (player?.browse_path) {
-      return player.browse_path;
+      return mediaText(player.browse_path);
     }
 
     if (player?.media_browser_path) {
-      return player.media_browser_path;
+      return mediaText(player.media_browser_path);
     }
 
-    return this._isMusicAssistantPlayer(player, state) ? "/media-browser/browser" : "";
+    return mediaText(this._isMusicAssistantPlayer(player, state) ? "/media-browser/browser" : "");
   }
 
-  _supportsMediaBrowser(player, state) {
+  _supportsMediaBrowser(player:Player, state:HassEntity|null|undefined) {
     if (player?.browse_path || player?.media_browser_path) {
       return true;
     }
@@ -1190,21 +1323,24 @@ class NodaliaMediaPlayer extends HTMLElement {
     return Number.isFinite(supportedFeatures) && (supportedFeatures & MEDIA_PLAYER_FEATURE_BROWSE_MEDIA) !== 0;
   }
 
-  _supportsVolumeControl(state) {
-    return typeof state?.attributes?.volume_level === "number";
+  _supportsVolumeControl(state:HassEntity|null|undefined) {
+    return typeof state?.attributes.volume_level === "number" && Number.isFinite(state.attributes.volume_level);
   }
 
-  _getPlayerVolumePercent(entityId, state) {
+  _getPlayerVolumePercent(entityId:string, state:HassEntity|null|undefined) {
     const draftValue = this._draftVolume.get(entityId);
     if (Number.isFinite(draftValue)) {
       return clamp(Number(draftValue), 0, 100);
     }
 
-    return clamp(Math.round(Number(state?.attributes?.volume_level || 0) * 100), 0, 100);
+    const volume = Number(state?.attributes.volume_level || 0);
+    return Number.isFinite(volume) ? clamp(Math.round(volume * 100),0,100) : 0;
   }
 
-  _updatePlayerVolumePreview(entityId, value) {
-    const nextValue = clamp(Number(value), 0, 100);
+  _updatePlayerVolumePreview(entityId:string, value:unknown) {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) return;
+    const nextValue = clamp(numericValue, 0, 100);
     const normalizedEntityId = escapeSelectorValue(entityId);
     const sliders = this.shadowRoot?.querySelectorAll(
       `.media-player__volume-slider[data-entity="${normalizedEntityId}"]`,
@@ -1217,7 +1353,8 @@ class NodaliaMediaPlayer extends HTMLElement {
 
       slider.value = String(nextValue);
       slider.style.setProperty("--media-volume", String(nextValue));
-      slider.closest(".media-player__volume-slider-shell")?.style.setProperty("--media-volume", String(nextValue));
+      const shell = slider.closest(".media-player__volume-slider-shell");
+      if (shell instanceof HTMLElement) shell.style.setProperty("--media-volume", String(nextValue));
     });
 
     const volumeButtons = this.shadowRoot?.querySelectorAll(
@@ -1233,7 +1370,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     });
   }
 
-  _clearDraftVolume(entityId) {
+  _clearDraftVolume(entityId:string) {
     const timerId = this._draftVolumeTimers.get(entityId);
     if (timerId) {
       window.clearTimeout(timerId);
@@ -1251,13 +1388,13 @@ class NodaliaMediaPlayer extends HTMLElement {
     const states = hass?.states || {};
     this._getTrackedEntities().forEach(entityId => {
       const state = states[entityId];
-      if (!this._supportsVolumeControl(state)) {
+      if (!state || !this._supportsVolumeControl(state)) {
         return;
       }
 
-      const actualPercent = clamp(Math.round(Number(state.attributes?.volume_level || 0) * 100), 0, 100);
+      const actualPercent = clamp(Math.round(Number(state?.attributes?.volume_level || 0) * 100), 0, 100);
       const draftValue = this._draftVolume.get(entityId);
-      if (Number.isFinite(draftValue) && Math.abs(actualPercent - draftValue) <= 2) {
+      if (typeof draftValue === "number" && Number.isFinite(draftValue) && Math.abs(actualPercent - draftValue) <= 2) {
         this._clearDraftVolume(entityId);
       }
 
@@ -1265,14 +1402,16 @@ class NodaliaMediaPlayer extends HTMLElement {
     });
   }
 
-  _scheduleDraftVolumeClear(entityId, delay = 1400) {
+  _scheduleDraftVolumeClear(entityId:string, delay = 1400) {
     const existingTimer = this._draftVolumeTimers.get(entityId);
     if (existingTimer) {
       window.clearTimeout(existingTimer);
       this._draftVolumeTimers.delete(entityId);
     }
 
+    const generation = this._generation;
     const timerId = window.setTimeout(() => {
+      if (!this._isCurrent(generation) || this._draftVolumeTimers.get(entityId) !== timerId) return;
       this._clearDraftVolume(entityId);
       this._syncVolumeControlsFromHass(this._hass);
     }, delay);
@@ -1280,83 +1419,51 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._draftVolumeTimers.set(entityId, timerId);
   }
 
-  async _stepPlayerVolumeToTarget(entityId, targetPercent) {
-    if (!this._hass || !entityId) {
-      return;
-    }
-
-    const state = this._hass.states?.[entityId];
-    const currentPercent = clamp(Math.round(Number(state?.attributes?.volume_level || 0) * 100), 0, 100);
-    const delta = targetPercent - currentPercent;
-
-    if (Math.abs(delta) < 3) {
-      this._scheduleDraftVolumeClear(entityId, 800);
-      return;
-    }
-
-    const service = delta > 0 ? "volume_up" : "volume_down";
-    const stepCount = clamp(Math.round(Math.abs(delta) / 6), 1, 12);
-
-    for (let index = 0; index < stepCount; index += 1) {
-      if (!this.isConnected) {
-        break;
+  async _stepPlayerVolumeToTarget(entityId:string, targetPercent:number) {
+    const hass = this._hass;
+    if (!hass || !entityId || !Number.isFinite(targetPercent) || !this.isConnected) return;
+    const generation = this._generation;
+    const token = Symbol();
+    this._volumeSteps.set(entityId, token);
+    const current = Number(hass.states[entityId]?.attributes.volume_level || 0);
+    if (!Number.isFinite(current)) {this._volumeSteps.delete(entityId);return;}
+    const delta = clamp(targetPercent,0,100) - clamp(Math.round(current * 100),0,100);
+    const currentWork = () => this._isCurrent(generation) && this._volumeSteps.get(entityId) === token;
+    try {
+      if (Math.abs(delta) >= 3) {
+        for (let index = 0; index < clamp(Math.round(Math.abs(delta)/6),1,12); index += 1) {
+          if (!currentWork()) return;
+          await requestHassService(this,hass,"media_player",delta > 0 ? "volume_up" : "volume_down",{entity_id:entityId});
+          if (!currentWork()) return;
+          await new Promise<void>(resolve => {
+            const timer = window.setTimeout(() => {this._volumeWaits.delete(timer);resolve();},90);
+            this._volumeWaits.set(timer,resolve);
+          });
+        }
       }
-      try {
-        await this._callInternalMediaService(service, { entity_id: entityId });
-      } catch (_error) {
-        break;
-      }
-
-      if (!this.isConnected) {
-        break;
-      }
-
-      await new Promise(resolve => window.setTimeout(resolve, 90));
+    } catch (error) { console.warn("Nodalia Media Player: volume step failed",error); }
+    finally {
+      if (currentWork()) {this._volumeSteps.delete(entityId);this._scheduleDraftVolumeClear(entityId,1800);}
     }
-
-    this._scheduleDraftVolumeClear(entityId, 1800);
   }
 
-  _commitPlayerVolume(entityId, value) {
-    if (!this._hass || !entityId) {
-      return;
-    }
-
-    const nextValue = clamp(Math.round(Number(value)), 0, 100);
-    const state = this._hass.states?.[entityId];
-    const player = this._findPlayerConfig(entityId) || { entity: entityId };
-    const isTvPlayer = this._getPlayerDeviceType(player, state) === "tv";
-
+  _commitPlayerVolume(entityId:string, value:unknown) {
+    const nextValue = Number(value);
+    if (!this._hass || !entityId || !Number.isFinite(nextValue) || !this.isConnected) return;
+    const player = this._findPlayerConfig(entityId) || {entity:entityId};
     this._scheduleDraftVolumeClear(entityId);
-
-    if (isTvPlayer) {
-      this._volumeStepFallback.add(entityId);
-      void this._stepPlayerVolumeToTarget(entityId, nextValue);
-      return;
-    }
-
-    Promise.resolve(
-      this._callInternalMediaService("volume_set", {
-        entity_id: entityId,
-        volume_level: clamp(nextValue / 100, 0, 1),
-      }),
-    ).catch(() => {
-      if (!isTvPlayer) {
-        return;
-      }
-
-      this._volumeStepFallback.add(entityId);
-      void this._stepPlayerVolumeToTarget(entityId, nextValue);
-    });
+    if (this._getPlayerDeviceType(player,this._hass.states[entityId]) === "tv") {
+      void this._stepPlayerVolumeToTarget(entityId,clamp(Math.round(nextValue),0,100));
+    } else this._callInternalMediaService("volume_set",{entity_id:entityId,volume_level:clamp(nextValue/100,0,1)});
   }
 
-  _getPlayerChips(player, state, progress, title, subtitle) {
-    const chips = [];
+  _getPlayerChips(player:Player, state:HassEntity|null|undefined, progress:PlaybackProgress|null, title:unknown, subtitle:unknown) {
+    const chips:{label:string;tone:string}[] = [];
     const seen = new Set();
     const titleKey = normalizeTextKey(title);
     const subtitleKey = normalizeTextKey(subtitle);
 
-    const addChip = (label, tone = "default") => {
+    const addChip = (label:unknown, tone = "default") => {
       const text = String(label || "").trim();
       if (!text) {
         return;
@@ -1380,13 +1487,13 @@ class NodaliaMediaPlayer extends HTMLElement {
     return chips.slice(0, 4);
   }
 
-  _getTvPlayerChips(player, state, progress, title, subtitle, sourceOptions = []) {
-    const chips = [];
+  _getTvPlayerChips(player:Player, state:HassEntity|null|undefined, progress:PlaybackProgress|null, title:unknown, subtitle:unknown, sourceOptions:string[] = []) {
+    const chips:{label:string;tone:string}[] = [];
     const seen = new Set();
     const titleKey = normalizeTextKey(title);
     const subtitleKey = normalizeTextKey(subtitle);
 
-    const addChip = (label, tone = "default") => {
+    const addChip = (label:unknown, tone = "default") => {
       const text = String(label || "").trim();
       if (!text) {
         return;
@@ -1408,7 +1515,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     return chips.slice(0, 3);
   }
 
-  _syncTicker(players) {
+  _syncTicker(players:Player[]) {
     if (!this.isConnected) {
       if (this._mediaTicker) {
         window.clearInterval(this._mediaTicker);
@@ -1440,7 +1547,9 @@ class NodaliaMediaPlayer extends HTMLElement {
     });
 
     if (shouldTick && !this._mediaTicker) {
+      const generation = this._generation;
       this._mediaTicker = window.setInterval(() => {
+        if (!this._isCurrent(generation)) return;
         if (typeof document !== "undefined" && document.hidden) {
           return;
         }
@@ -1450,7 +1559,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           return;
         }
 
-        const updated = this._updateProgressTick(players);
+        const updated = this._updateProgressTick(this._getVisiblePlayers());
         if (!updated && this.isConnected) {
           this._progressTickMisses = (this._progressTickMisses || 0) + 1;
           if (this._progressTickMisses >= 3) {
@@ -1472,17 +1581,15 @@ class NodaliaMediaPlayer extends HTMLElement {
 
   _onVisibilityChange() {
     if (typeof document !== "undefined" && document.hidden) {
-      if (this._mediaTicker) {
-        window.clearInterval(this._mediaTicker);
-        this._mediaTicker = null;
-      }
+      this._cancelDrag();
+      if (this._mediaTicker) {window.clearInterval(this._mediaTicker);this._mediaTicker = null;}
       return;
     }
 
     this._render();
   }
 
-  _updateProgressTick(players) {
+  _updateProgressTick(players:Player[]) {
     if (!this.shadowRoot || !Array.isArray(players) || players.length === 0) {
       return false;
     }
@@ -1508,14 +1615,14 @@ class NodaliaMediaPlayer extends HTMLElement {
 
     let updated = false;
     const fill = card.querySelector(".media-player__progress-fill");
-    if (fill && this._activeProgressDrag?.entityId !== player.entity) {
+    if (fill instanceof HTMLElement && this._activeProgressDrag?.entityId !== player.entity) {
       fill.style.width = `${progress.percent}%`;
       updated = true;
     }
 
     const progressNode = card.querySelector("[data-media-progress]");
     if (progressNode instanceof HTMLElement && this._activeProgressDrag?.entityId !== player.entity) {
-      progressNode.setAttribute("aria-valuenow", String(progress.position));
+      progressNode.setAttribute("aria-valuenow", String(progressNode.dataset.mediaProgress === "seek" ? progress.position : progress.percent));
     }
 
     const timeChip = card.querySelector(".media-player__chip--time");
@@ -1527,15 +1634,15 @@ class NodaliaMediaPlayer extends HTMLElement {
     return updated;
   }
 
-  _callInternalMediaService(service, data = {}) {
+  _callInternalMediaService(service:string, data:Record<string,unknown> = {}) {
     if (!this._hass || !service) {
       return;
     }
 
-    return this._hass.callService("media_player", service, data);
+    invokeHassService(this, this._hass, "media_player", service, data);
   }
 
-  _callService(action) {
+  _callService(action:MediaAction) {
     if (!this._hass || !action?.service) {
       return;
     }
@@ -1565,10 +1672,10 @@ class NodaliaMediaPlayer extends HTMLElement {
       payload = {};
     }
 
-    this._hass.callService(domain, service, payload);
+    invokeHassService(this, this._hass, domain, service, mediaRecord(payload), isObject(action.target) ? action.target : null);
   }
 
-  _isServiceAllowed(serviceValue) {
+  _isServiceAllowed(serviceValue:unknown) {
     const security = this._config?.security || {};
     if (security.strict_service_actions === false) {
       return true;
@@ -1587,17 +1694,17 @@ class NodaliaMediaPlayer extends HTMLElement {
     if (!domains.length && !services.length) {
       return false;
     }
-    return services.includes(normalizedService) || domains.includes(domain);
+    return services.includes(normalizedService) || Boolean(domain && domains.includes(domain));
   }
 
-  _runActionDefinition(action, fallbackEntityId = "") {
+  _runActionDefinition(action:MediaAction|null|undefined, fallbackEntityId = "") {
     if (!action || action.action === "none") {
       return;
     }
 
     switch (action.action) {
       case "more-info": {
-        const entityId = action.entity || fallbackEntityId;
+        const entityId = typeof action.entity === "string" ? action.entity || fallbackEntityId : fallbackEntityId;
         if (entityId) {
           fireEvent(this, "hass-more-info", { entityId });
         }
@@ -1632,30 +1739,30 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
   }
 
-  _getPlayerPowerAction(player, currentState) {
+  _getPlayerPowerAction(player:Player, currentState:unknown) {
     const stateKey = normalizeTextKey(currentState);
 
-    if (["unavailable", "unknown"].includes(stateKey) && player?.power_action_unavailable?.action && player.power_action_unavailable.action !== "default") {
-      return player.power_action_unavailable;
+    if (["unavailable", "unknown"].includes(stateKey) && mediaRecord(player.power_action_unavailable).action && mediaRecord(player.power_action_unavailable).action !== "default") {
+      return mediaRecord(player.power_action_unavailable);
     }
 
-    if (["off", "standby"].includes(stateKey) && player?.power_action_off?.action && player.power_action_off.action !== "default") {
-      return player.power_action_off;
+    if (["off", "standby"].includes(stateKey) && mediaRecord(player.power_action_off).action && mediaRecord(player.power_action_off).action !== "default") {
+      return mediaRecord(player.power_action_off);
     }
 
-    if (player?.power_action_on?.action && player.power_action_on.action !== "default") {
-      return player.power_action_on;
+    if (mediaRecord(player.power_action_on).action && mediaRecord(player.power_action_on).action !== "default") {
+      return mediaRecord(player.power_action_on);
     }
 
     return null;
   }
 
-  _runPlayerAction(player, defaultAction = null) {
-    this._runActionDefinition(player.tap_action || defaultAction, player.entity);
+  _runPlayerAction(player:Player, defaultAction:MediaAction|null = null) {
+    this._runActionDefinition(isObject(player.tap_action) ? player.tap_action : defaultAction, player.entity);
   }
 
-  _handleMediaControl(control, entityId, options = {}) {
-    if (!this._hass || !entityId) {
+  _handleMediaControl(control:string|undefined, entityId:string|undefined, options:{path?:string|undefined;source?:string|undefined;state?:string|undefined;volume?:number} = {}) {
+    if (!this._hass || !entityId || !this.isConnected) {
       return;
     }
 
@@ -1696,7 +1803,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         this._callInternalMediaService("media_play_pause", { entity_id: entityId });
         break;
       case "volume-down": {
-        const currentVolume = Number.isFinite(options.volume) ? options.volume : 0;
+        const currentVolume = typeof options.volume === "number" && Number.isFinite(options.volume) ? options.volume : 0;
         const nextVolumeLevel = clamp(currentVolume - 0.08, 0, 1);
         this._draftVolume.set(entityId, Math.round(nextVolumeLevel * 100));
         this._updatePlayerVolumePreview(entityId, nextVolumeLevel * 100);
@@ -1711,7 +1818,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         this._callInternalMediaService("volume_down", { entity_id: entityId });
         break;
       case "volume-up": {
-        const currentVolume = Number.isFinite(options.volume) ? options.volume : 0;
+        const currentVolume = typeof options.volume === "number" && Number.isFinite(options.volume) ? options.volume : 0;
         const nextVolumeLevel = clamp(currentVolume + 0.08, 0, 1);
         this._draftVolume.set(entityId, Math.round(nextVolumeLevel * 100));
         this._updatePlayerVolumePreview(entityId, nextVolumeLevel * 100);
@@ -1766,10 +1873,10 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
   }
 
-  _onShadowInput(event) {
+  _onShadowInput(event:Event) {
     const slider = event
       .composedPath()
-      .find(node => node instanceof HTMLInputElement && node.dataset?.mediaSlider);
+      .find((node):node is HTMLInputElement => node instanceof HTMLInputElement && Boolean(node.dataset.mediaSlider));
 
     if (!slider) {
       return;
@@ -1782,24 +1889,27 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     if (slider.dataset.mediaSlider === "volume") {
-      const nextValue = clamp(Number(slider.value), 0, 100);
-      this._draftVolume.set(slider.dataset.entity, nextValue);
-      this._updatePlayerVolumePreview(slider.dataset.entity, nextValue);
+      const numericValue = Number(slider.value);
+      if (!slider.dataset.entity || !Number.isFinite(numericValue)) return;
+      const nextValue = clamp(numericValue, 0, 100);
+      this._draftVolume.set(slider.dataset.entity || "", nextValue);
+      this._updatePlayerVolumePreview(slider.dataset.entity || "", nextValue);
     }
   }
 
-  _onShadowPointerDown(event) {
+  _onShadowPointerDown(event:Event) {
+    if (!(event instanceof PointerEvent)) return;
     const path = event.composedPath();
-    const progress = path.find(node => node instanceof HTMLElement && node.dataset?.mediaProgress);
+    const progress = path.find((node):node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.mediaProgress));
     if (progress && !this._activeProgressDrag && !this._activeSliderDrag && (typeof event.button !== "number" || event.button === 0)) {
       this._startProgressDrag(progress, event.clientX, event, event.pointerId);
       return;
     }
 
-    const slider = path.find(node =>
+    const slider = path.find((node):node is HTMLInputElement =>
       node instanceof HTMLInputElement &&
       node.type === "range" &&
-      node.dataset?.mediaSlider,
+      Boolean(node.dataset.mediaSlider),
     );
 
     if (this._activeSliderDrag || this._activeProgressDrag || !slider || (typeof event.button === "number" && event.button !== 0)) {
@@ -1809,10 +1919,8 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._startSliderDrag(slider, event.clientX, event, event.pointerId);
   }
 
-  _startSliderDrag(slider, clientX, event = null, pointerId = null) {
-    if (!slider) {
-      return;
-    }
+  _startSliderDrag(slider:HTMLInputElement, clientX:number, event:Event|null = null, pointerId:number|null = null) {
+    if (!slider.dataset.entity || !this.isConnected || !Number.isFinite(clientX)) return;
 
     this._activeSliderDrag = {
       pointerId,
@@ -1826,32 +1934,27 @@ class NodaliaMediaPlayer extends HTMLElement {
       event.stopPropagation();
     }
 
-    this._pendingDragUpdate = null;
-    if (this._dragFrame) {
-      window.cancelAnimationFrame(this._dragFrame);
-      this._dragFrame = 0;
-    }
 
     const nextValue = getRangeValueFromGeometry(this._activeSliderDrag.geometry, slider.value, clientX);
     slider.value = String(nextValue);
 
     if (slider.dataset.mediaSlider === "volume") {
-      this._draftVolume.set(slider.dataset.entity, nextValue);
-      this._updatePlayerVolumePreview(slider.dataset.entity, nextValue);
+      this._draftVolume.set(slider.dataset.entity || "", nextValue);
+      this._updatePlayerVolumePreview(slider.dataset.entity || "", nextValue);
     }
   }
 
-  _queueSliderDragUpdate(slider, clientX) {
+  _queueSliderDragUpdate(slider:HTMLInputElement, clientX:number) {
     const nextValue = getRangeValueFromGeometry(this._activeSliderDrag?.geometry, slider.value, clientX);
     slider.value = String(nextValue);
 
     if (slider.dataset.mediaSlider === "volume") {
-      this._draftVolume.set(slider.dataset.entity, nextValue);
-      this._updatePlayerVolumePreview(slider.dataset.entity, nextValue);
+      this._draftVolume.set(slider.dataset.entity || "", nextValue);
+      this._updatePlayerVolumePreview(slider.dataset.entity || "", nextValue);
     }
   }
 
-  _commitSliderDrag(clientX, event = null, pointerId = null) {
+  _commitSliderDrag(clientX:number, event:Event|null = null, pointerId:number|null = null) {
     const drag = this._activeSliderDrag;
     if (!drag) {
       return;
@@ -1861,11 +1964,6 @@ class NodaliaMediaPlayer extends HTMLElement {
       event.preventDefault();
     }
 
-    this._pendingDragUpdate = null;
-    if (this._dragFrame) {
-      window.cancelAnimationFrame(this._dragFrame);
-      this._dragFrame = 0;
-    }
 
     const nextValue = getRangeValueFromGeometry(drag.geometry, drag.slider.value, clientX);
     drag.slider.value = String(nextValue);
@@ -1873,9 +1971,9 @@ class NodaliaMediaPlayer extends HTMLElement {
 
     if (drag.slider.dataset.mediaSlider === "volume") {
       this._triggerHaptic("selection");
-      this._draftVolume.set(drag.slider.dataset.entity, nextValue);
-      this._updatePlayerVolumePreview(drag.slider.dataset.entity, nextValue);
-      this._commitPlayerVolume(drag.slider.dataset.entity, nextValue);
+      this._draftVolume.set(drag.slider.dataset.entity || "", nextValue);
+      this._updatePlayerVolumePreview(drag.slider.dataset.entity || "", nextValue);
+      this._commitPlayerVolume(drag.slider.dataset.entity || "", nextValue);
     }
 
     this._activeSliderDrag = null;
@@ -1887,13 +1985,14 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
   }
 
-  _onShadowMouseDown(event) {
+  _onShadowMouseDown(event:Event) {
+    if (!(event instanceof MouseEvent)) return;
     const slider = event
       .composedPath()
-      .find(node =>
+      .find((node):node is HTMLInputElement =>
         node instanceof HTMLInputElement &&
         node.type === "range" &&
-        node.dataset?.mediaSlider,
+        Boolean(node.dataset.mediaSlider),
       );
 
     if (this._activeSliderDrag || !slider || event.button !== 0) {
@@ -1903,23 +2002,24 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._startSliderDrag(slider, event.clientX, event);
   }
 
-  _onShadowTouchStart(event) {
+  _onShadowTouchStart(event:Event) {
+    if (!(event instanceof TouchEvent)) return;
     const slider = event
       .composedPath()
-      .find(node =>
+      .find((node):node is HTMLInputElement =>
         node instanceof HTMLInputElement &&
         node.type === "range" &&
-        node.dataset?.mediaSlider,
+        Boolean(node.dataset.mediaSlider),
       );
 
-    if (this._activeSliderDrag || !slider || !event.touches?.length) {
+    if (this._activeSliderDrag || !slider || !event.touches[0]) {
       return;
     }
 
-    this._startSliderDrag(slider, event.touches[0].clientX, event);
+    this._startSliderDrag(slider, event.touches[0]?.clientX ?? 0, event);
   }
 
-  _onWindowPointerMove(event) {
+  _onWindowPointerMove(event:PointerEvent) {
     if (this._activeProgressDrag && this._activeProgressDrag.pointerId === event.pointerId) {
       event.preventDefault();
       this._moveProgressDrag(event.clientX);
@@ -1934,7 +2034,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._queueSliderDragUpdate(drag.slider, event.clientX);
   }
 
-  _onWindowPointerUp(event) {
+  _onWindowPointerUp(event:PointerEvent) {
     if (this._activeProgressDrag && this._activeProgressDrag.pointerId === event.pointerId) {
       this._commitProgressDrag();
       return;
@@ -1947,7 +2047,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._commitSliderDrag(event.clientX, event, event.pointerId);
   }
 
-  _onWindowMouseMove(event) {
+  _onWindowMouseMove(event:MouseEvent) {
     if (this._activeProgressDrag) {
       event.preventDefault();
       this._moveProgressDrag(event.clientX);
@@ -1961,7 +2061,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.clientX);
   }
 
-  _onWindowMouseUp(event) {
+  _onWindowMouseUp(event:MouseEvent) {
     if (this._activeProgressDrag) {
       this._commitProgressDrag();
       return;
@@ -1973,16 +2073,16 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._commitSliderDrag(event.clientX, event);
   }
 
-  _onWindowTouchMove(event) {
-    if (!this._activeSliderDrag || !event.touches?.length) {
+  _onWindowTouchMove(event:TouchEvent) {
+    if (!this._activeSliderDrag || !event.touches[0]) {
       return;
     }
 
     event.preventDefault();
-    this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.touches[0].clientX);
+    this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.touches[0]?.clientX ?? 0);
   }
 
-  _onWindowTouchStartCapture(event) {
+  _onWindowTouchStartCapture(event:TouchEvent) {
     const drag = this._activeSliderDrag;
     if (!drag) {
       return;
@@ -1993,27 +2093,16 @@ class NodaliaMediaPlayer extends HTMLElement {
       return;
     }
 
-    this._activeSliderDrag = null;
-    this._detachWindowDragListeners();
-    this._pendingDragUpdate = null;
-    if (this._dragFrame) {
-      window.cancelAnimationFrame(this._dragFrame);
-      this._dragFrame = 0;
-    }
-
-    if (this._pendingRenderAfterDrag) {
-      this._pendingRenderAfterDrag = false;
-      this._render();
-    }
+    this._cancelDrag();
   }
 
-  _onWindowTouchEnd(event) {
+  _onWindowTouchEnd(event:TouchEvent) {
     if (!this._activeSliderDrag) {
       return;
     }
 
     const clientX = event.changedTouches?.[0]?.clientX;
-    if (!Number.isFinite(clientX)) {
+    if (typeof clientX !== "number" || !Number.isFinite(clientX)) {
       this._activeSliderDrag = null;
       this._detachWindowDragListeners();
       if (this._pendingRenderAfterDrag) {
@@ -2033,14 +2122,14 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._dragWindowListenersAttached = true;
     window.addEventListener("pointermove", this._onWindowPointerMove);
     window.addEventListener("pointerup", this._onWindowPointerUp);
-    window.addEventListener("pointercancel", this._onWindowPointerUp);
+    window.addEventListener("pointercancel", this._onWindowCancel);
     window.addEventListener("mousemove", this._onWindowMouseMove);
     window.addEventListener("mouseup", this._onWindowMouseUp);
-    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+    if (!(typeof PointerEvent !== "undefined")) {
       window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
       window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
       window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
-      window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
+      window.addEventListener("touchcancel", this._onWindowCancel, { passive: false });
     }
   }
 
@@ -2051,21 +2140,21 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._dragWindowListenersAttached = false;
     window.removeEventListener("pointermove", this._onWindowPointerMove);
     window.removeEventListener("pointerup", this._onWindowPointerUp);
-    window.removeEventListener("pointercancel", this._onWindowPointerUp);
+    window.removeEventListener("pointercancel", this._onWindowCancel);
     window.removeEventListener("mousemove", this._onWindowMouseMove);
     window.removeEventListener("mouseup", this._onWindowMouseUp);
-    if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+    if (!(typeof PointerEvent !== "undefined")) {
       window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
       window.removeEventListener("touchmove", this._onWindowTouchMove);
       window.removeEventListener("touchend", this._onWindowTouchEnd);
-      window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+      window.removeEventListener("touchcancel", this._onWindowCancel);
     }
   }
 
-  _onShadowChange(event) {
+  _onShadowChange(event:Event) {
     const slider = event
       .composedPath()
-      .find(node => node instanceof HTMLInputElement && node.dataset?.mediaSlider);
+      .find((node):node is HTMLInputElement => node instanceof HTMLInputElement && Boolean(node.dataset.mediaSlider));
 
     if (!slider) {
       return;
@@ -2081,9 +2170,27 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._triggerHaptic("selection");
 
     if (slider.dataset.mediaSlider === "volume") {
-      const nextValue = clamp(Number(slider.value), 0, 100);
-      this._draftVolume.set(slider.dataset.entity, nextValue);
-      this._commitPlayerVolume(slider.dataset.entity, nextValue);
+      const numericValue = Number(slider.value);
+      if (!slider.dataset.entity || !Number.isFinite(numericValue)) return;
+      const nextValue = clamp(numericValue, 0, 100);
+      this._draftVolume.set(slider.dataset.entity || "", nextValue);
+      this._commitPlayerVolume(slider.dataset.entity || "", nextValue);
+    }
+  }
+
+  _onWindowCancel() { this._cancelDrag(); }
+
+  _cancelDrag(shouldRender = true) {
+    const entityId = this._activeSliderDrag?.slider.dataset.entity;
+    if (entityId) this._clearDraftVolume(entityId);
+    this._activeSliderDrag = this._activeProgressDrag = null;
+    this._skipNextSliderChange = null;
+    this._detachWindowDragListeners();
+    const pending = this._pendingRenderAfterDrag;
+    this._pendingRenderAfterDrag = false;
+    if (shouldRender && this.isConnected) {
+      if (pending) this._render();
+      else {this._syncVolumeControlsFromHass();this._updateProgressTick(this._getVisiblePlayers());}
     }
   }
 
@@ -2099,54 +2206,34 @@ class NodaliaMediaPlayer extends HTMLElement {
     return null;
   }
 
-  _normalizeMediaBrowserItem(item) {
-    if (!item || typeof item !== "object") {
-      return null;
-    }
-
+  _normalizeMediaBrowserItem(item:unknown):MediaNode|null {
+    if (!isObject(item)) return null;
     return {
-      title: item.title || item.name || "Elemento",
-      media_class: item.media_class || "",
-      media_content_id: item.media_content_id || "",
-      media_content_type: item.media_content_type || "",
+      title: mediaText(item.title || item.name || "Elemento"),
+      media_class: mediaText(item.media_class),
+      media_content_id: mediaText(item.media_content_id),
+      media_content_type: mediaText(item.media_content_type),
       can_play: item.can_play === true,
       can_expand: item.can_expand === true,
-      thumbnail: item.thumbnail || item.thumbnail_url || "",
-      children: Array.isArray(item.children)
-        ? item.children.map(child => this._normalizeMediaBrowserItem(child)).filter(Boolean)
-        : [],
+      thumbnail: mediaText(item.thumbnail || item.thumbnail_url),
+      children: Array.isArray(item.children) ? item.children.map(child => this._normalizeMediaBrowserItem(child)).filter((child):child is MediaNode => child !== null) : [],
     };
   }
 
-  _normalizeMediaBrowserNode(result, entityId) {
-    let node = result;
-
-    if (node?.result && typeof node.result === "object") {
-      node = node.result;
-    }
-
-    if (node && entityId && typeof node[entityId] === "object") {
-      node = node[entityId];
-    }
-
-    const normalized = this._normalizeMediaBrowserItem(node);
-    if (!normalized) {
-      return null;
-    }
-
-    return {
-      ...normalized,
-      title: normalized.title || "Media",
-    };
+  _normalizeMediaBrowserNode(result:unknown, entityId:string) {
+    let node = mediaRecord(result);
+    if (isObject(node.result)) node = node.result;
+    if (isObject(node[entityId])) node = node[entityId];
+    return this._normalizeMediaBrowserItem(node);
   }
 
-  async _fetchMediaBrowserNode(entityId, mediaContentType = "", mediaContentId = "") {
+  async _fetchMediaBrowserNode(entityId:string, mediaContentType = "", mediaContentId = "") {
     const client = this._getMediaBrowserClient();
     if (!client || !entityId) {
       return null;
     }
 
-    const payload = {
+    const payload:Record<string,unknown> = {
       type: "media_player/browse_media",
       entity_id: entityId,
     };
@@ -2177,11 +2264,12 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
   }
 
-  async _openMediaBrowser(entityId, fallbackPath = "") {
+  async _openMediaBrowser(entityId:string, fallbackPath = "") {
     if (!entityId) {
       return;
     }
 
+    const generation = this._generation;
     const playerConfig = this._findPlayerConfig(entityId) || { entity: entityId };
     const playerState = this._hass?.states?.[entityId];
     const isMusicAssistant = this._isMusicAssistantPlayer(playerConfig, playerState);
@@ -2199,11 +2287,12 @@ class NodaliaMediaPlayer extends HTMLElement {
       error: "",
       stack: [],
     };
+    const initialState = this._mediaBrowserState;
     this._render();
 
     try {
       const rootNode = await this._fetchMediaBrowserNode(entityId);
-      if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
+      if (this._mediaBrowserRequestToken !== token || !this._isCurrent(generation)) {
         return;
       }
 
@@ -2212,14 +2301,14 @@ class NodaliaMediaPlayer extends HTMLElement {
       }
 
       this._mediaBrowserState = {
-        ...this._mediaBrowserState,
+        ...initialState,
         loading: false,
         error: "",
         stack: [rootNode],
       };
       this._render();
     } catch (_error) {
-      if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
+      if (this._mediaBrowserRequestToken !== token || !this._isCurrent(generation)) {
         return;
       }
 
@@ -2232,7 +2321,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       }
 
       this._mediaBrowserState = {
-        ...this._mediaBrowserState,
+        ...initialState,
         loading: false,
         error: this._mediaBrowserState?.isTvPlayer
           ? "Este dispositivo no expone medios compatibles."
@@ -2243,11 +2332,12 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
   }
 
-  async _browseMediaBrowserItem(mediaContentType, mediaContentId) {
+  async _browseMediaBrowserItem(mediaContentType:string, mediaContentId:string) {
     if (!this._mediaBrowserState?.entityId) {
       return;
     }
 
+    const generation = this._generation;
     const previousState = this._mediaBrowserState;
     const token = this._mediaBrowserRequestToken + 1;
     this._mediaBrowserRequestToken = token;
@@ -2265,7 +2355,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         mediaContentId,
       );
 
-      if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
+      if (this._mediaBrowserRequestToken !== token || !this._isCurrent(generation)) {
         return;
       }
 
@@ -2281,7 +2371,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       };
       this._render();
     } catch (_error) {
-      if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
+      if (this._mediaBrowserRequestToken !== token || !this._isCurrent(generation)) {
         return;
       }
 
@@ -2304,6 +2394,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       return;
     }
 
+    this._mediaBrowserRequestToken += 1;
     this._mediaBrowserState = {
       ...this._mediaBrowserState,
       error: "",
@@ -2313,7 +2404,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._render();
   }
 
-  _playMediaBrowserItem(mediaContentType, mediaContentId) {
+  _playMediaBrowserItem(mediaContentType:string, mediaContentId:string) {
     const entityId = this._mediaBrowserState?.entityId;
 
     if (!this._hass || !entityId || !mediaContentType || !mediaContentId) {
@@ -2328,7 +2419,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._closeMediaBrowser();
   }
 
-  _getMusicAssistantDirectoryIcon(item) {
+  _getMusicAssistantDirectoryIcon(item:MediaNode) {
     const haystack = normalizeTextKey([
       item?.title,
       item?.media_content_type,
@@ -2342,16 +2433,16 @@ class NodaliaMediaPlayer extends HTMLElement {
     return match?.icon || "";
   }
 
-  _getMediaBrowserDisplayTitle(value) {
-    const label = typeof value === "string" ? value : value?.title;
+  _getMediaBrowserDisplayTitle(value:unknown) {
+    const label = typeof value === "string" ? value : mediaRecord(value).title;
     const fallback = String(label || "").trim();
     const lang =
       window.NodaliaI18n?.resolveLanguage?.(this._hass, this._config?.language ?? "auto") ?? "en";
-    const dict = window.NodaliaI18n?.strings?.(lang)?.navigationMusicAssist || {};
-    const enDict = window.NodaliaI18n?.strings?.("en")?.navigationMusicAssist || {};
+    const dict = mediaRecord(window.NodaliaI18n?.strings?.(lang)?.navigationMusicAssist);
+    const enDict = mediaRecord(window.NodaliaI18n?.strings?.("en")?.navigationMusicAssist);
 
     if (!fallback) {
-      return dict.browseFallback || enDict.browseFallback || "Item";
+      return mediaText(dict.browseFallback || enDict.browseFallback || "Item");
     }
 
     if (!this._mediaBrowserState?.isMusicAssistant) {
@@ -2359,7 +2450,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     const key = normalizeTextKey(fallback);
-    return dict[key] || enDict[key] || fallback;
+    return mediaText(dict[key] || enDict[key] || fallback);
   }
 
   _getMediaBrowserViewKey(state = this._mediaBrowserState) {
@@ -2392,6 +2483,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
 
     this._mediaBrowserScrollPositions.set(viewKey, list.scrollTop);
+    while (this._mediaBrowserScrollPositions.size > 64) {const oldest = this._mediaBrowserScrollPositions.keys().next().value;if (oldest === undefined) break;this._mediaBrowserScrollPositions.delete(oldest);}
   }
 
   _restoreMediaBrowserScrollState() {
@@ -2448,7 +2540,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     panel.scrollTop = savedScrollTop;
   }
 
-  _getMediaBrowserIcon(item) {
+  _getMediaBrowserIcon(item:MediaNode) {
     const musicAssistantDirectoryIcon =
       item?.media_class === "directory" ? this._getMusicAssistantDirectoryIcon(item) : "";
 
@@ -2498,7 +2590,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     );
   }
 
-  _shouldHideMediaBrowserItem(item) {
+  _shouldHideMediaBrowserItem(item:MediaNode) {
     if ((!this._shouldFilterMusicAssistantBrowserItems() && !this._shouldFilterTvBrowserItems()) || !item) {
       return false;
     }
@@ -2513,10 +2605,10 @@ class NodaliaMediaPlayer extends HTMLElement {
     return MUSIC_ASSISTANT_BROWSER_EXCLUDE_PATTERNS.some(pattern => haystack.includes(pattern));
   }
 
-  _onShadowClick(event) {
+  _onShadowClick(event:Event) {
     const mediaSlider = event
       .composedPath()
-      .find(node => node instanceof HTMLInputElement && node.dataset?.mediaSlider);
+      .find((node):node is HTMLInputElement => node instanceof HTMLInputElement && Boolean(node.dataset.mediaSlider));
 
     if (mediaSlider) {
       event.stopPropagation();
@@ -2525,7 +2617,7 @@ class NodaliaMediaPlayer extends HTMLElement {
 
     const mediaControlButton = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.mediaControl);
+      .find((node):node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.mediaControl));
 
     if (mediaControlButton) {
       event.preventDefault();
@@ -2543,7 +2635,7 @@ class NodaliaMediaPlayer extends HTMLElement {
 
     const mediaArtwork = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.classList?.contains("media-player__artwork"));
+      .find((node):node is HTMLElement => node instanceof HTMLElement && node.classList?.contains("media-player__artwork"));
 
     if (mediaArtwork) {
       event.preventDefault();
@@ -2553,7 +2645,7 @@ class NodaliaMediaPlayer extends HTMLElement {
 
     const mediaDotButton = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.mediaIndex !== undefined);
+      .find((node):node is HTMLElement => node instanceof HTMLElement && node.dataset?.mediaIndex !== undefined);
 
     if (mediaDotButton) {
       event.preventDefault();
@@ -2563,6 +2655,8 @@ class NodaliaMediaPlayer extends HTMLElement {
       const visiblePlayers = this._getVisiblePlayers();
       this._activePlayerIndex = clamp(Number(mediaDotButton.dataset.mediaIndex), 0, visiblePlayers.length - 1);
       this._activePlayerEntity = String(visiblePlayers[this._activePlayerIndex]?.entity || "");
+      this._cancelDrag(false);
+      this._closeMediaBrowser(false);
       this._animateContentOnNextRender = true;
       this._render();
       return;
@@ -2570,7 +2664,7 @@ class NodaliaMediaPlayer extends HTMLElement {
 
     const mediaBrowserCloseButton = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.mediaBrowserClose === "true");
+      .find((node):node is HTMLElement => node instanceof HTMLElement && node.dataset?.mediaBrowserClose === "true");
 
     if (mediaBrowserCloseButton) {
       event.preventDefault();
@@ -2582,7 +2676,7 @@ class NodaliaMediaPlayer extends HTMLElement {
 
     const mediaBrowserBackButton = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.mediaBrowserBack === "true");
+      .find((node):node is HTMLElement => node instanceof HTMLElement && node.dataset?.mediaBrowserBack === "true");
 
     if (mediaBrowserBackButton) {
       event.preventDefault();
@@ -2594,7 +2688,7 @@ class NodaliaMediaPlayer extends HTMLElement {
 
     const mediaBrowserActionButton = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.mediaBrowserAction);
+      .find((node):node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.mediaBrowserAction));
 
     if (mediaBrowserActionButton) {
       event.preventDefault();
@@ -2619,7 +2713,7 @@ class NodaliaMediaPlayer extends HTMLElement {
 
     const mediaCard = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.mediaCardIndex !== undefined);
+      .find((node):node is HTMLElement => node instanceof HTMLElement && node.dataset?.mediaCardIndex !== undefined);
 
     if (mediaCard) {
       const visiblePlayers = this._getVisiblePlayers();
@@ -2637,24 +2731,24 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
   }
 
-  _mediaPlayerCardUi(key, fallback = "") {
+  _mediaPlayerCardUi(key:string, fallback = "") {
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-    const pack = window.NodaliaI18n?.strings?.(lang)?.mediaPlayerCard;
-    const enPack = window.NodaliaI18n?.strings?.("en")?.mediaPlayerCard;
+    const pack = mediaRecord(window.NodaliaI18n?.strings?.(lang)?.mediaPlayerCard);
+    const enPack = mediaRecord(window.NodaliaI18n?.strings?.("en")?.mediaPlayerCard);
     const raw = pack?.[key] ?? enPack?.[key];
     return String(raw != null && raw !== "" ? raw : fallback);
   }
 
-  _commonAria(key, fallback = "") {
+  _commonAria(key:string, fallback = "") {
     return window.NodaliaI18n?.translateCommonAria?.(this._hass, this._config?.language ?? "auto", key, fallback) || fallback;
   }
 
-  _mediaBrowserUi(key, fallback = "", values = {}) {
+  _mediaBrowserUi(key:string, fallback = "", values:Record<string,unknown> = {}) {
     return window.NodaliaI18n?.translateMediaBrowserUi?.(this._hass, this._config?.language ?? "auto", key, fallback, values) || fallback;
   }
 
-  _mediaPlayerAria(key, fallback = "", values = {}) {
+  _mediaPlayerAria(key:string, fallback = "", values:Record<string,unknown> = {}) {
     return window.NodaliaI18n?.translateMediaPlayerAria?.(this._hass, this._config?.language ?? "auto", key, fallback, values) || fallback;
   }
 
@@ -2696,7 +2790,7 @@ class NodaliaMediaPlayer extends HTMLElement {
                   const defaultAction = canExpand ? "browse" : canPlay ? "play" : "";
                   const itemIcon = this._getMediaBrowserIcon(item);
                   const itemTitle = this._getMediaBrowserDisplayTitle(item);
-                  const itemThumbnail = this._resolveMediaUrl(item.thumbnail || item.thumbnail_url || "", {
+                  const itemThumbnail = this._resolveMediaUrl(item.thumbnail || "", {
                     cacheToken: item.media_content_id || itemTitle,
                   });
 
@@ -2790,7 +2884,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     `;
   }
 
-  _renderPlayerCard(players, { animateEntrance = false } = {}) {
+  _renderPlayerCard(players:Player[], {animateEntrance = false}:{animateEntrance?:boolean} = {}) {
     if (!players.length) {
       return {
         markup: "",
@@ -2801,8 +2895,8 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._resolveActivePlayerIndex(players);
 
     const player = players[this._activePlayerIndex];
-    const state = this._hass?.states?.[player.entity];
-    if (!state) {
+    const state = this._hass?.states?.[player?.entity || ""];
+    if (!player || !state) {
       return {
         markup: "",
         animateEntranceApplied: false,
@@ -2829,9 +2923,9 @@ class NodaliaMediaPlayer extends HTMLElement {
     const artworkReady = !desiredArtwork || this._ensureArtworkReady(player.entity, desiredArtwork, {
       rerenderOnReady: true,
     });
-    const artwork = getCachedArtworkPalette(desiredArtwork)
+    const artwork = getCachedArtworkPalette(desiredArtwork || "")
       ? desiredArtwork
-      : this._getRenderableArtwork(player.entity, desiredArtwork);
+      : this._getRenderableArtwork(player.entity, desiredArtwork || null);
     // Prefer cached/ready art, but still paint the album stage immediately with the
     // desired URL so compact tiles and CI fixtures are never blank while preloading.
     const backgroundArtwork = artwork || desiredArtwork || "";
@@ -2869,16 +2963,16 @@ class NodaliaMediaPlayer extends HTMLElement {
         ? !showPrimaryTitle || normalizeTextKey(playerLabel) !== normalizeTextKey(title)
         : !hasActiveMediaContent || normalizeTextKey(playerLabel) !== normalizeTextKey(title)
     );
-    const statusLabel = this._getPlayerStateLabel(state.state);
+    const statusLabel = this._getPlayerStateLabel(state?.state);
     const showStateLabel = this._config.show_state === true;
     const browsePath = this._getPlayerBrowsePath(player, state);
     const browseAvailable = isTvPlayer
       ? Boolean(player?.browse_path || player?.media_browser_path)
       : this._supportsMediaBrowser(player, state) || Boolean(browsePath);
     const isIdleLayout = this._shouldUseIdleLayout(player, state);
-    const isTvOff = isTvPlayer && ["off", "standby", "unavailable", "unknown"].includes(normalizeTextKey(state.state));
+    const isTvOff = isTvPlayer && ["off", "standby", "unavailable", "unknown"].includes(normalizeTextKey(state?.state));
     const useCompactIdleLayout = isIdleLayout && (!isTvPlayer || isTvOff);
-    const volumeLevel = Number(state.attributes.volume_level ?? 0);
+    const volumeLevel = Number(state?.attributes.volume_level ?? 0);
     const currentVolumePercent = this._getPlayerVolumePercent(player.entity, state);
     const volumeSupported = this._supportsVolumeControl(state);
     const playerStyles = this._config.styles.player;
@@ -2946,7 +3040,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         class="media-player__control ${state.state === "off" ? "media-player__control--primary" : ""}"
         data-media-control="power-toggle"
         data-entity="${escapeHtml(player.entity)}"
-        data-media-state="${escapeHtml(state.state)}"
+        data-media-state="${escapeHtml(state?.state)}"
         aria-label="${escapeHtml(state.state === "off" ? this._mediaPlayerAria("turnOn", "Turn on") : this._mediaPlayerAria("turnOff", "Turn off"))}"
       >
         <ha-icon icon="mdi:power"></ha-icon>
@@ -3000,7 +3094,7 @@ class NodaliaMediaPlayer extends HTMLElement {
             .map(source => `
               <button
                 type="button"
-                class="media-player__source-button ${normalizeTextKey(source) === normalizeTextKey(state.attributes.source) ? "active" : ""}"
+                class="media-player__source-button ${normalizeTextKey(source) === normalizeTextKey(state?.attributes.source) ? "active" : ""}"
                 data-media-control="select-source"
                 data-entity="${escapeHtml(player.entity)}"
                 data-media-source="${escapeHtml(source)}"
@@ -3319,6 +3413,19 @@ class NodaliaMediaPlayer extends HTMLElement {
   }
 
   _render() {
+    if (!this.isConnected) return;
+    const focused = this.shadowRoot?.activeElement;
+    const attributes = ["data-media-control","data-entity","data-media-index","data-media-browser-action","data-media-content-type","data-media-content-id","data-media-browser-close","data-media-browser-back","data-media-card-index","data-media-slider","data-media-source","data-media-progress"];
+    const selector = attributes.map(key => `[${key}]`).join(",");
+    const values = focused instanceof HTMLElement && focused.matches(selector) ? attributes.map(key => focused.getAttribute(key)) : null;
+    this._renderView();
+    if (values) {
+      const target = [...(this.shadowRoot?.querySelectorAll(selector) ?? [])].find(node => node.tagName === focused?.tagName && attributes.every((key,index) => node.getAttribute(key) === values[index]));
+      if (target instanceof HTMLElement) {target.focus({preventScroll:true});target.setAttribute("data-media-retained-focus","");}
+    }
+  }
+
+  _renderView() {
     if (!this.shadowRoot) {
       return;
     }
@@ -3326,17 +3433,19 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._captureMediaBrowserScrollState();
     this._captureTvPanelScrollState();
 
-    if (!this._config) {
+    if (!this._configured) {
+      this._releaseViewWork();
       this.shadowRoot.innerHTML = "";
       return;
     }
 
     if (this._shouldHideForScreen()) {
+      this._releaseViewWork();
       this.shadowRoot.innerHTML = "";
       return;
     }
 
-    const mediaGuardIds = [];
+    const mediaGuardIds:string[] = [];
     const mediaEntity = String(this._config?.entity ?? "").trim();
     if (mediaEntity) {
       mediaGuardIds.push(mediaEntity);
@@ -3353,6 +3462,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       { cardClass: "media-player" },
     );
     if (mediaEntityGuard) {
+      this._releaseViewWork();
       this.shadowRoot.innerHTML = mediaEntityGuard;
       return;
     }
@@ -3363,7 +3473,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     const themePlayer = players[this._resolveActivePlayerIndex(players)];
     const themeState = themePlayer && this._hass?.states?.[themePlayer.entity];
     const themeUrl = this._config.artwork?.dynamic_colors !== false && themeState
-      ? this._getPlayerArtwork(themePlayer, themeState) : "";
+      ? this._getPlayerArtwork(themePlayer, themeState) || "" : "";
     if (!prepareArtworkTheme(this, themeUrl, Boolean(this.shadowRoot.querySelector(".media-player-card")), () => this._render())) return;
     if (!hasPlayers) {
       this._activeArtworkIdle = false;
@@ -4735,211 +4845,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           z-index: ${Number(config.layout.z_index) + 11};
         }
 
-        .media-browser-panel::before {
-          background: color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 96%, transparent);
-          border-radius: inherit;
-          content: "";
-          inset: 0;
-          pointer-events: none;
-          position: absolute;
-          z-index: 0;
-        }
-
-        .media-browser-panel > * {
-          position: relative;
-          z-index: 1;
-        }
-
-        .media-browser-panel--entering {
-          animation: media-player-browser-panel-in var(--media-player-browser-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
-        }
-
-        .media-browser__header {
-          align-items: center;
-          display: grid;
-          gap: 12px;
-          grid-template-columns: 40px minmax(0, 1fr) 40px;
-        }
-
-        .media-browser__header-copy {
-          min-width: 0;
-          text-align: center;
-        }
-
-        .media-browser__eyebrow {
-          color: var(--secondary-text-color);
-          font-size: 11px;
-          font-weight: 600;
-          letter-spacing: 0.04em;
-          text-transform: uppercase;
-        }
-
-        .media-browser__title {
-          color: var(--primary-text-color);
-          font-size: 16px;
-          font-weight: 700;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .media-browser__header-button,
-        .media-browser__item-play {
-          align-items: center;
-          appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
-          border-radius: 999px;
-          color: var(--primary-text-color);
-          cursor: pointer;
-          display: inline-flex;
-          height: 40px;
-          justify-content: center;
-          padding: 0;
-          width: 40px;
-        }
-
-        .media-browser__header-button ha-icon,
-        .media-browser__item-play ha-icon {
-          font-size: 20px;
-        }
-
-        .media-browser__list {
-          display: grid;
-          gap: 10px;
-          min-height: 0;
-          overflow: auto;
-          padding-right: 2px;
-        }
-
-        .media-browser__item {
-          align-items: center;
-          display: grid;
-          gap: 8px;
-          grid-template-columns: minmax(0, 1fr) auto;
-        }
-
-        .media-browser__item-main {
-          align-items: center;
-          appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 3%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border-radius: 20px;
-          color: var(--primary-text-color);
-          cursor: pointer;
-          display: grid;
-          gap: 12px;
-          grid-template-columns: 46px minmax(0, 1fr) auto;
-          min-height: 58px;
-          padding: 8px 10px;
-          text-align: left;
-          width: 100%;
-        }
-
-        .media-browser__item-main:disabled {
-          cursor: default;
-          opacity: 0.72;
-        }
-
-        .media-browser__item-artwork {
-          align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border-radius: 14px;
-          display: inline-flex;
-          height: 46px;
-          justify-content: center;
-          overflow: hidden;
-          width: 46px;
-        }
-
-        .media-browser__item-artwork img,
-        .media-browser__item-artwork ha-icon {
-          height: 100%;
-          object-fit: cover;
-          width: 100%;
-        }
-
-        .media-browser__item-artwork ha-icon {
-          font-size: 22px;
-          padding: 11px;
-        }
-
-        .media-browser__item-copy {
-          display: grid;
-          gap: 2px;
-          min-width: 0;
-        }
-
-        .media-browser__item-title {
-          color: var(--primary-text-color);
-          font-size: 14px;
-          font-weight: 700;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .media-browser__item-chevron {
-          color: var(--secondary-text-color);
-          font-size: 20px;
-        }
-
-        .media-browser__empty {
-          align-items: center;
-          color: var(--secondary-text-color);
-          display: flex;
-          flex: 1 1 auto;
-          font-size: 13px;
-          justify-content: center;
-          line-height: 1.5;
-          min-height: 120px;
-          padding: 12px;
-          text-align: center;
-        }
-
-        @keyframes media-player-button-bounce {
-          0% { transform: scale(1); }
-          40% { transform: scale(1.08); }
-          100% { transform: scale(1); }
-        }
-
-        @keyframes media-player-panel-in {
-          0% {
-            opacity: 0;
-            transform: translateY(-8px) scaleY(0.94);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0) scaleY(1);
-          }
-        }
-
-        @keyframes media-player-fade-up {
-          0% {
-            opacity: 0;
-            transform: translateY(12px) scale(0.97);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-
-        @keyframes media-player-browser-backdrop-in {
-          0% { opacity: 0; }
-          100% { opacity: 1; }
-        }
-
-        @keyframes media-player-browser-panel-in {
-          0% {
-            opacity: 0;
-            transform: translateY(14px) scale(0.98);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
+        ${MEDIA_BROWSER_STYLES}
 
         ${animations.enabled ? "" : `
         .media-player-card,
@@ -5023,374 +4929,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           }
         }
 
-        .media-player-card--square,
-        .media-player-card--artwork {
-          align-self: start;
-          aspect-ratio: 1 / 1;
-          container-type: inline-size;
-          display: grid;
-          grid-template-rows: minmax(0, 1fr) auto;
-          height: auto;
-          max-height: 100%;
-          max-width: 100%;
-          min-height: 0;
-          padding: 14px 14px 12px;
-          width: 100%;
-        }
-
-        .media-player-card--square.has-album-background::before,
-        .media-player-card--artwork.has-album-background::before {
-          background: transparent;
-        }
-
-        .media-player-card--square.has-album-background::after,
-        .media-player-card--artwork.has-album-background::after {
-          background: linear-gradient(
-            180deg,
-            rgba(8, 8, 10, 0.46) 0%,
-            rgba(8, 8, 10, 0.1) 24%,
-            rgba(8, 8, 10, 0.08) 48%,
-            rgba(8, 8, 10, 0.52) 74%,
-            rgba(8, 8, 10, 0.78) 100%
-          );
-        }
-
-        .media-player-card--square .media-player__album-bg,
-        .media-player-card--square .media-player__art-layer,
-        .media-player-card--artwork .media-player__album-bg,
-        .media-player-card--artwork .media-player__art-layer {
-          filter: none;
-          inset: 0;
-          opacity: 1;
-          transform: none;
-        }
-
-        .media-player-card--square .media-player__art-layer.is-idle-animated,
-        .media-player-card--artwork .media-player__art-layer.is-idle-animated {
-          animation: none;
-        }
-
-        .media-player-card--square.has-album-background .media-player__title,
-        .media-player-card--square.has-album-background .media-player__subtitle,
-        .media-player-card--artwork.has-album-background .media-player__title,
-        .media-player-card--artwork.has-album-background .media-player__subtitle {
-          color: #fff;
-          text-shadow:
-            0 0 1px rgba(0, 0, 0, 0.95),
-            0 1px 2px rgba(0, 0, 0, 0.85),
-            0 2px 6px rgba(0, 0, 0, 0.65),
-            0 8px 24px rgba(0, 0, 0, 0.5);
-        }
-
-        .media-player-card--square.has-album-background .media-player__subtitle,
-        .media-player-card--artwork.has-album-background .media-player__subtitle {
-          color: rgba(255, 255, 255, 0.94);
-          font-weight: 600;
-        }
-
-        .media-player-card--square .media-player__content,
-        .media-player-card--artwork .media-player__content {
-          align-content: stretch;
-          display: grid;
-          gap: 10px;
-          grid-row: 1;
-          grid-template-rows: auto minmax(0, 1fr) auto;
-          height: 100%;
-          min-height: 0;
-          padding-top: 2px;
-          padding-bottom: 0;
-        }
-
-        .media-player-card--square .media-player__progress,
-        .media-player-card--artwork .media-player__progress {
-          grid-row: 2;
-          inset: auto;
-          margin-top: 10px;
-          position: static;
-          width: 100%;
-        }
-
-        .media-player-card--square .media-player__hero,
-        .media-player-card--artwork .media-player__hero {
-          grid-row: 1;
-          grid-template-columns: minmax(0, 1fr);
-        }
-
-        /* Full-bleed album art replaces the thumb; keep the entity icon when there is no cover. */
-        .media-player-card--square.has-album-background .media-player__artwork,
-        .media-player-card--artwork.has-album-background .media-player__artwork {
-          display: none;
-        }
-
-        .media-player-card--square:not(.has-album-background) .media-player__hero,
-        .media-player-card--artwork:not(.has-album-background) .media-player__hero {
-          grid-template-columns: 48px minmax(0, 1fr);
-        }
-
-        .media-player-card--square:not(.has-album-background) .media-player__artwork,
-        .media-player-card--artwork:not(.has-album-background) .media-player__artwork {
-          height: 48px;
-          width: 48px;
-        }
-
-        .media-player-card--square .media-player__hero-copy,
-        .media-player-card--artwork .media-player__hero-copy {
-          padding-right: 44px;
-        }
-
-        .media-player-card--square .media-player__hero-top,
-        .media-player-card--artwork .media-player__hero-top {
-          gap: 8px;
-          grid-template-columns: minmax(0, 1fr);
-        }
-
-        .media-player-card--square .media-player__info-rail,
-        .media-player-card--artwork .media-player__info-rail {
-          justify-self: start;
-          max-width: 100%;
-        }
-
-        .media-player-card--square .media-player__title {
-          font-size: 16px;
-        }
-
-        .media-player-card--square .media-player__subtitle,
-        .media-player-card--artwork .media-player__subtitle {
-          font-size: 13px;
-        }
-
-        .media-player-card--square .media-player__center-stack,
-        .media-player-card--artwork .media-player__center-stack {
-          align-content: end;
-          align-self: end;
-          grid-row: 3;
-          min-width: 0;
-          width: 100%;
-        }
-
-        .media-player-card--square .media-player__transport-row,
-        .media-player-card--artwork .media-player__transport-row {
-          align-content: end;
-          min-width: 0;
-          width: 100%;
-        }
-
-        @container (max-width: 260px) {
-          .media-player__info-rail {
-            display: none;
-          }
-
-          .media-player__title {
-            font-size: 14px;
-          }
-
-          .media-player__subtitle {
-            font-size: 12px;
-          }
-
-          .media-player-card--square .media-player__content,
-          .media-player-card--artwork .media-player__content {
-            gap: 6px;
-          }
-        }
-
-        @container (max-width: 200px) {
-          .media-player__subtitle,
-          .media-player__volume-button:not(.media-player__control):not(.media-player__volume-button--browse),
-          .media-player-card--square .media-player__volume-button:not(.media-player__volume-button--browse),
-          .media-player-card--artwork .media-player__volume-button:not(.media-player__volume-button--browse) {
-            display: none;
-          }
-
-          .media-player__title {
-            font-size: 12px;
-          }
-        }
-
-        .media-player-card--square,
-        .media-player-card--artwork {
-          container-type: inline-size;
-        }
-
-        .media-player-card--square .media-player__transport-cluster,
-        .media-player-card--artwork .media-player__transport-cluster {
-          display: flex;
-          flex-wrap: nowrap;
-          gap: 10px;
-          grid-template-columns: none;
-          justify-content: center;
-          width: 100%;
-        }
-
-        .media-player-card--square .media-player__control,
-        .media-player-card--square .media-player__volume-button:not(.media-player__volume-button--browse),
-        .media-player-card--artwork .media-player__control,
-        .media-player-card--artwork .media-player__volume-button:not(.media-player__volume-button--browse) {
-          aspect-ratio: auto;
-          flex: 0 0 auto;
-          height: 36px;
-          justify-self: center;
-          max-width: none;
-          min-width: 36px;
-          width: 36px;
-        }
-
-        .media-player-card--square .media-player__control--primary,
-        .media-player-card--artwork .media-player__control--primary {
-          height: 40px;
-          min-width: 40px;
-          width: 40px;
-        }
-
-        .media-player-card--square .media-player__control ha-icon,
-        .media-player-card--square .media-player__volume-button ha-icon,
-        .media-player-card--artwork .media-player__control ha-icon,
-        .media-player-card--artwork .media-player__volume-button ha-icon {
-          --mdc-icon-size: 16px;
-          height: 16px;
-          width: 16px;
-        }
-
-        .media-player-card--square .media-player__volume-button--browse,
-        .media-player-card--artwork .media-player__volume-button--browse {
-          height: 32px;
-          min-width: 32px;
-          position: absolute;
-          right: 10px;
-          top: 10px;
-          width: 32px;
-          z-index: 4;
-        }
-
-        .media-player-card--square .media-player__info-rail,
-        .media-player-card--artwork .media-player__info-rail,
-        .media-player-card--square .media-player__chip--top,
-        .media-player-card--artwork .media-player__chip--top,
-        .media-player-card--square .media-player__chip--device,
-        .media-player-card--artwork .media-player__chip--device {
-          display: none;
-        }
-
-        .media-player-card--chip {
-          display: grid;
-          padding: 10px 12px 16px;
-        }
-
-        .media-player-card--chip .media-player__content {
-          align-items: center;
-          gap: 8px;
-          grid-template-columns: minmax(0, 1fr) auto;
-          min-width: 0;
-          padding-bottom: 10px;
-        }
-
-        .media-player-card--chip .media-player__hero {
-          align-items: center;
-          grid-template-columns: 44px minmax(0, 1fr);
-          min-width: 0;
-        }
-
-        .media-player-card--chip .media-player__artwork {
-          height: 44px;
-          width: 44px;
-        }
-
-        .media-player-card--chip .media-player__center-stack,
-        .media-player-card--chip .media-player__transport-row,
-        .media-player-card--chip .media-player__transport-shell {
-          justify-self: end;
-          max-width: 100%;
-          min-width: 0;
-          width: auto;
-        }
-
-        .media-player-card--chip .media-player__transport-cluster {
-          flex-wrap: nowrap;
-          gap: 6px;
-          justify-content: flex-end;
-          width: auto;
-        }
-
-        .media-player-card--chip .media-player__control,
-        .media-player-card--chip .media-player__volume-button {
-          height: 28px;
-          min-width: 28px;
-          width: 28px;
-        }
-
-        .media-player-card--chip .media-player__control ha-icon,
-        .media-player-card--chip .media-player__volume-button ha-icon {
-          --mdc-icon-size: 13px;
-          height: 13px;
-          width: 13px;
-        }
-
-        .media-player-card--chip .media-player__info-rail,
-        .media-player-card--chip .media-player__volume-button--browse {
-          display: none;
-        }
-
-        .media-player-card--compact .media-player__content {
-          display: flex;
-          flex: 1 1 auto;
-          flex-direction: column;
-          gap: 8px;
-          justify-content: space-between;
-          min-height: 0;
-          padding-bottom: 0;
-        }
-
-        .media-player-card--compact.media-player-card--idle .media-player__content {
-          align-items: center;
-          flex: 1 1 auto;
-          gap: 0;
-          justify-content: center;
-          min-height: 0;
-          width: 100%;
-        }
-
-        .media-player-card--compact.media-player-card--idle .media-player__content--idle {
-          width: 100%;
-        }
-
-        .media-player-card--compact .media-player__transport-cluster {
-          gap: 6px;
-          margin-top: auto;
-        }
-
-        .media-player-card--compact .media-player__transport-row {
-          margin-top: auto;
-          max-width: 100%;
-          min-width: 0;
-          overflow: visible;
-        }
-
-        .media-player-card--chip .media-player__footer,
-        .media-player-card--square .media-player__chips-wrap,
-        .media-player-card--artwork .media-player__chips-wrap,
-        .media-player-card--compact .media-player__chips-wrap {
-          display: none;
-        }
-
-        .media-player-card--compact .media-player__hero {
-          grid-template-columns: 48px minmax(0, 1fr);
-        }
-
-        .media-player-card--compact .media-player__artwork {
-          height: 48px;
-          width: 48px;
-        }
-
-        @keyframes nodalia-media-kenburns {
-          0% { transform: scale(1.04) translate3d(-1%, 0, 0); }
-          100% { transform: scale(1.12) translate3d(1.2%, -1.1%, 0); }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .media-player__art-layer.is-idle-animated {
-            animation: none !important;
-          }
-        }
+        ${MEDIA_PRESENTATION_STYLES}
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <div class="spacer" aria-hidden="true"></div>
@@ -5429,9 +4968,16 @@ class NodaliaMediaPlayer extends HTMLElement {
     const mediaBrowserDialog = this.shadowRoot.querySelector('.media-browser-panel[role="dialog"]');
     if (mediaBrowserDialog instanceof HTMLElement) {
       window.NodaliaUtils?.bindModalFocus?.(this, mediaBrowserDialog, {
-        initialFocusSelector: '[data-media-browser-close="true"]',
+        ...(this._modalOpen ? {initialFocusSelector:"[data-media-retained-focus]"} : {}),
+        restoreFocus: () => {
+          if (!this.isConnected) return;
+          const button = this.shadowRoot?.querySelector('[data-media-control="browse-media"]');
+          if (button instanceof HTMLElement) button.focus({preventScroll:true});
+        },
       });
+      this._modalOpen = true;
     } else {
+      this._modalOpen = false;
       window.NodaliaUtils?.releaseModalFocus?.(this);
     }
     this._tvSourcePanelAnimatingEntity = null;
@@ -5449,7 +4995,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._lastRenderSignature = this._getRenderSignature(this._hass);
   }
 
-  _commitPersistentMediaShadow(markup, artOptions = {}) {
+  _commitPersistentMediaShadow(markup:string, artOptions:ArtworkOptions = {}) {
     if (!this.shadowRoot) {
       return;
     }
@@ -5480,13 +5026,14 @@ class NodaliaMediaPlayer extends HTMLElement {
         this.shadowRoot.appendChild(keptArt);
       }
     }
+    if (!(styleEl instanceof HTMLStyleElement) || !(chrome instanceof HTMLElement)) return;
     if (styleEl.textContent !== css) {
       styleEl.textContent = css;
     }
     chrome.innerHTML = body;
 
     const card = this.shadowRoot.querySelector(".media-player-card");
-    void applyArtworkControlTheme(card, this._config?.artwork?.dynamic_colors === false ? "" : artOptions.artworkUrl || "");
+    void applyArtworkControlTheme(card instanceof HTMLElement ? card : null, this._config?.artwork?.dynamic_colors === false ? "" : artOptions.artworkUrl || "");
     if (card instanceof HTMLElement && artOptions.hasAlbumBackground) {
       const stage = previousArt instanceof HTMLElement
         ? previousArt
@@ -5517,7 +5064,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     return stage;
   }
 
-  _syncArtworkLayer(stage, artOptions = {}) {
+  _syncArtworkLayer(stage:HTMLElement, artOptions:ArtworkOptions = {}) {
     if (!(stage instanceof HTMLElement)) {
       return;
     }
@@ -5568,8 +5115,9 @@ class NodaliaMediaPlayer extends HTMLElement {
         entityId,
       });
     }
+    const generation = this._generation;
     this._artworkController.startSlideshow(idleConfig, url => {
-      if (!this.isConnected) {
+      if (!this._isCurrent(generation)) {
         return;
       }
       this._idleSlideshowUrl = url;
@@ -5584,7 +5132,31 @@ class NodaliaMediaPlayer extends HTMLElement {
     }, entityId);
   }
 
-  _startProgressDrag(track, clientX, event = null, pointerId = null) {
+  _progressTrackKey(state:HassEntity|null|undefined) {
+    const attrs = state?.attributes;
+    return JSON.stringify([attrs?.media_content_id,attrs?.media_content_type,attrs?.media_title,attrs?.media_artist,attrs?.media_album_name,attrs?.media_duration]);
+  }
+
+  _validProgressDrag(drag:ProgressDrag) {
+    const state = this._hass?.states[drag.entityId];
+    return this.isConnected && supportsMediaSeek(state) && this._progressTrackKey(state) === drag.trackKey && this._getVisiblePlayers().some(player => player.entity === drag.entityId);
+  }
+
+  _onShadowKeyDown(event:Event) {
+    if (!(event instanceof KeyboardEvent)) return;
+    const track = event.composedPath().find((node):node is HTMLElement => node instanceof HTMLElement && node.dataset.mediaProgress === "seek");
+    if (!track || !["ArrowLeft","ArrowRight","Home","End"].includes(event.key)) return;
+    const entityId = track.dataset.entity || "";
+    const state = this._hass?.states[entityId];
+    const progress = this._getPlayerProgress(state);
+    if (!progress || !supportsMediaSeek(state)) return;
+    event.preventDefault();event.stopPropagation();
+    const position = event.key === "Home" ? 0 : event.key === "End" ? progress.duration : clamp(progress.position + (event.key === "ArrowRight" ? 5 : -5),0,progress.duration);
+    this._updateProgressFill(track,position/progress.duration*100,progress.duration);
+    this._callInternalMediaService("media_seek",{entity_id:entityId,seek_position:position});
+  }
+
+  _startProgressDrag(track:HTMLElement, clientX:number, event:Event|null = null, pointerId:number|null = null) {
     if (!(track instanceof HTMLElement) || track.dataset.mediaProgress !== "seek") {
       return;
     }
@@ -5595,7 +5167,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       return;
     }
     const percent = progressPercentFromClientX(track, clientX);
-    this._activeProgressDrag = { entityId, percent, pointerId, track };
+    this._activeProgressDrag = { entityId, trackKey:this._progressTrackKey(state),duration:progress.duration,percent,pointerId,track };
     this._attachWindowDragListeners();
     this._updateProgressFill(track, percent, progress.duration);
     if (event) {
@@ -5604,7 +5176,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     }
   }
 
-  _updateProgressFill(track, percent, duration) {
+  _updateProgressFill(track:HTMLElement, percent:number, duration:number) {
     const fill = track.querySelector(".media-player__progress-fill");
     if (fill instanceof HTMLElement) {
       fill.style.width = `${percent}%`;
@@ -5612,13 +5184,14 @@ class NodaliaMediaPlayer extends HTMLElement {
     track.setAttribute("aria-valuenow", String(seekPositionFromPercent(percent, duration)));
   }
 
-  _moveProgressDrag(clientX) {
+  _moveProgressDrag(clientX:number) {
     const drag = this._activeProgressDrag;
     if (!drag) {
       return;
     }
     const state = this._hass?.states?.[drag.entityId];
-    const duration = Number(state?.attributes?.media_duration || 0);
+    if (!this._validProgressDrag(drag)) {this._cancelDrag();return;}
+    const duration = drag.duration;
     drag.percent = progressPercentFromClientX(drag.track, clientX);
     this._updateProgressFill(drag.track, drag.percent, duration);
   }
@@ -5629,7 +5202,8 @@ class NodaliaMediaPlayer extends HTMLElement {
       return;
     }
     const state = this._hass?.states?.[drag.entityId];
-    const duration = Number(state?.attributes?.media_duration || 0);
+    if (!this._validProgressDrag(drag)) {this._cancelDrag();return;}
+    const duration = drag.duration;
     const seekPosition = seekPositionFromPercent(drag.percent, duration);
     this._activeProgressDrag = null;
     this._detachWindowDragListeners();

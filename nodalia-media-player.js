@@ -915,42 +915,40 @@
   function clamp2(value, min, max) {
     return Math.min(max, Math.max(min, value));
   }
+  function isRecord(value) {
+    return value !== null && typeof value === "object" && !Array.isArray(value);
+  }
+  function record(value) {
+    return isRecord(value) ? value : {};
+  }
   function supportsMediaSeek(state) {
-    const features = Number(
-      state?.attributes?.supported_features || 0
-    );
+    const features = Number(record(record(state).attributes).supported_features || 0);
     return Number.isFinite(features) && (features & MEDIA_PLAYER_FEATURE_SEEK) !== 0;
   }
   function interpolatePlaybackProgress(state, now = Date.now()) {
-    const entity = state;
-    const duration = Number(entity?.attributes?.media_duration || 0);
-    if (!(duration > 0)) {
-      return null;
-    }
-    let position = Number(entity?.attributes?.media_position || 0);
-    const updatedAt = entity?.attributes?.media_position_updated_at;
-    if (entity?.state === "playing" && updatedAt) {
-      const updatedAtTime = new Date(String(updatedAt)).getTime();
-      if (!Number.isNaN(updatedAtTime)) {
-        position += Math.max(0, (now - updatedAtTime) / 1e3);
-      }
+    const entity = record(state);
+    const attrs = record(entity.attributes);
+    const duration = Number(attrs.media_duration || 0);
+    if (!Number.isFinite(duration) || !(duration > 0)) return null;
+    const rawPosition = Number(attrs.media_position || 0);
+    let position = Number.isFinite(rawPosition) ? rawPosition : 0;
+    const updatedAt = attrs.media_position_updated_at;
+    if (entity.state === "playing" && updatedAt && Number.isFinite(now)) {
+      const timestamp = new Date(String(updatedAt)).getTime();
+      if (Number.isFinite(timestamp)) position += Math.max(0, (now - timestamp) / 1e3);
     }
     position = clamp2(position, 0, duration);
-    return {
-      duration,
-      position,
-      percent: clamp2(position / duration * 100, 0, 100)
-    };
+    return { duration, position, percent: clamp2(position / duration * 100, 0, 100) };
   }
   function progressPercentFromClientX(track, clientX) {
     const rect = track.getBoundingClientRect();
-    if (!(rect.width > 0)) {
+    if (!Number.isFinite(clientX) || !Number.isFinite(rect.left) || !Number.isFinite(rect.width) || !(rect.width > 0)) {
       return 0;
     }
     return clamp2((clientX - rect.left) / rect.width * 100, 0, 100);
   }
   function seekPositionFromPercent(percent, duration) {
-    if (!(duration > 0)) {
+    if (!Number.isFinite(percent) || !Number.isFinite(duration) || !(duration > 0)) {
       return 0;
     }
     return clamp2(Number(percent) / 100 * duration, 0, duration);
@@ -1029,11 +1027,11 @@
   }
 
   // src/shared/config-values.ts
-  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var isRecord2 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
   var unsafeKeys = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
   function compactConfig2(value, preserveEmptyKeys = []) {
     if (Array.isArray(value)) return value.map((item) => compactConfig2(item, preserveEmptyKeys)).filter((item) => item !== void 0);
-    if (isRecord(value)) {
+    if (isRecord2(value)) {
       const result = {};
       for (const [key, item] of Object.entries(value)) {
         if (unsafeKeys.has(key)) continue;
@@ -1042,7 +1040,7 @@
           continue;
         }
         const cleaned = compactConfig2(item, preserveEmptyKeys);
-        if (cleaned !== void 0 && !(isRecord(cleaned) && Object.keys(cleaned).length === 0)) result[key] = cleaned;
+        if (cleaned !== void 0 && !(isRecord2(cleaned) && Object.keys(cleaned).length === 0)) result[key] = cleaned;
       }
       return result;
     }
@@ -1291,6 +1289,12 @@
     return { players: [{ entity: entityId || "media_player.spotify", label: entityId ? getStubFriendlyName(hass, entityId) : "Spotify" }], layout: { mode: "standard", fixed: false, reserve_space: false } };
   }
 
+  // src/cards/media-player/media-player-presentations.css
+  var media_player_presentations_default = ".media-player-card--square,.media-player-card--artwork{align-self:start;aspect-ratio:1 / 1;container-type:inline-size;display:grid;grid-template-rows:minmax(0,1fr) auto;height:auto;max-height:100%;max-width:100%;min-height:0;padding:14px 14px 12px;width:100%}.media-player-card--square.has-album-background::before,.media-player-card--artwork.has-album-background::before{background:transparent}.media-player-card--square.has-album-background::after,.media-player-card--artwork.has-album-background::after{background:linear-gradient(180deg,rgba(8,8,10,0.46) 0%,rgba(8,8,10,0.1) 24%,rgba(8,8,10,0.08) 48%,rgba(8,8,10,0.52) 74%,rgba(8,8,10,0.78) 100%)}.media-player-card--square .media-player__album-bg,.media-player-card--square .media-player__art-layer,.media-player-card--artwork .media-player__album-bg,.media-player-card--artwork .media-player__art-layer{filter:none;inset:0;opacity:1;transform:none}.media-player-card--square .media-player__art-layer.is-idle-animated,.media-player-card--artwork .media-player__art-layer.is-idle-animated{animation:none}.media-player-card--square.has-album-background .media-player__title,.media-player-card--square.has-album-background .media-player__subtitle,.media-player-card--artwork.has-album-background .media-player__title,.media-player-card--artwork.has-album-background .media-player__subtitle{color:#fff;text-shadow:0 0 1px rgba(0,0,0,0.95),0 1px 2px rgba(0,0,0,0.85),0 2px 6px rgba(0,0,0,0.65),0 8px 24px rgba(0,0,0,0.5)}.media-player-card--square.has-album-background .media-player__subtitle,.media-player-card--artwork.has-album-background .media-player__subtitle{color:rgba(255,255,255,0.94);font-weight:600}.media-player-card--square .media-player__content,.media-player-card--artwork .media-player__content{align-content:stretch;display:grid;gap:10px;grid-row:1;grid-template-rows:auto minmax(0,1fr) auto;height:100%;min-height:0;padding-top:2px;padding-bottom:0}.media-player-card--square .media-player__progress,.media-player-card--artwork .media-player__progress{grid-row:2;inset:auto;margin-top:10px;position:static;width:100%}.media-player-card--square .media-player__hero,.media-player-card--artwork .media-player__hero{grid-row:1;grid-template-columns:minmax(0,1fr)}.media-player-card--square.has-album-background .media-player__artwork,.media-player-card--artwork.has-album-background .media-player__artwork{display:none}.media-player-card--square:not(.has-album-background) .media-player__hero,.media-player-card--artwork:not(.has-album-background) .media-player__hero{grid-template-columns:48px minmax(0,1fr)}.media-player-card--square:not(.has-album-background) .media-player__artwork,.media-player-card--artwork:not(.has-album-background) .media-player__artwork{height:48px;width:48px}.media-player-card--square .media-player__hero-copy,.media-player-card--artwork .media-player__hero-copy{padding-right:44px}.media-player-card--square .media-player__hero-top,.media-player-card--artwork .media-player__hero-top{gap:8px;grid-template-columns:minmax(0,1fr)}.media-player-card--square .media-player__info-rail,.media-player-card--artwork .media-player__info-rail{justify-self:start;max-width:100%}.media-player-card--square .media-player__title{font-size:16px}.media-player-card--square .media-player__subtitle,.media-player-card--artwork .media-player__subtitle{font-size:13px}.media-player-card--square .media-player__center-stack,.media-player-card--artwork .media-player__center-stack{align-content:end;align-self:end;grid-row:3;min-width:0;width:100%}.media-player-card--square .media-player__transport-row,.media-player-card--artwork .media-player__transport-row{align-content:end;min-width:0;width:100%}@container (max-width: 260px){.media-player__info-rail{display:none}.media-player__title{font-size:14px}.media-player__subtitle{font-size:12px}.media-player-card--square .media-player__content,.media-player-card--artwork .media-player__content{gap:6px}}@container (max-width: 200px){.media-player__subtitle,.media-player__volume-button:not(.media-player__control):not(.media-player__volume-button--browse),.media-player-card--square .media-player__volume-button:not(.media-player__volume-button--browse),.media-player-card--artwork .media-player__volume-button:not(.media-player__volume-button--browse){display:none}.media-player__title{font-size:12px}}.media-player-card--square,.media-player-card--artwork{container-type:inline-size}.media-player-card--square .media-player__transport-cluster,.media-player-card--artwork .media-player__transport-cluster{display:flex;flex-wrap:nowrap;gap:10px;grid-template-columns:none;justify-content:center;width:100%}.media-player-card--square .media-player__control,.media-player-card--square .media-player__volume-button:not(.media-player__volume-button--browse),.media-player-card--artwork .media-player__control,.media-player-card--artwork .media-player__volume-button:not(.media-player__volume-button--browse){aspect-ratio:auto;flex:0 0 auto;height:36px;justify-self:center;max-width:none;min-width:36px;width:36px}.media-player-card--square .media-player__control--primary,.media-player-card--artwork .media-player__control--primary{height:40px;min-width:40px;width:40px}.media-player-card--square .media-player__control ha-icon,.media-player-card--square .media-player__volume-button ha-icon,.media-player-card--artwork .media-player__control ha-icon,.media-player-card--artwork .media-player__volume-button ha-icon{--mdc-icon-size: 16px;height:16px;width:16px}.media-player-card--square .media-player__volume-button--browse,.media-player-card--artwork .media-player__volume-button--browse{height:32px;min-width:32px;position:absolute;right:10px;top:10px;width:32px;z-index:4}.media-player-card--square .media-player__info-rail,.media-player-card--artwork .media-player__info-rail,.media-player-card--square .media-player__chip--top,.media-player-card--artwork .media-player__chip--top,.media-player-card--square .media-player__chip--device,.media-player-card--artwork .media-player__chip--device{display:none}.media-player-card--chip{display:grid;padding:10px 12px 16px}.media-player-card--chip .media-player__content{align-items:center;gap:8px;grid-template-columns:minmax(0,1fr) auto;min-width:0;padding-bottom:10px}.media-player-card--chip .media-player__hero{align-items:center;grid-template-columns:44px minmax(0,1fr);min-width:0}.media-player-card--chip .media-player__artwork{height:44px;width:44px}.media-player-card--chip .media-player__center-stack,.media-player-card--chip .media-player__transport-row,.media-player-card--chip .media-player__transport-shell{justify-self:end;max-width:100%;min-width:0;width:auto}.media-player-card--chip .media-player__transport-cluster{flex-wrap:nowrap;gap:6px;justify-content:flex-end;width:auto}.media-player-card--chip .media-player__control,.media-player-card--chip .media-player__volume-button{height:28px;min-width:28px;width:28px}.media-player-card--chip .media-player__control ha-icon,.media-player-card--chip .media-player__volume-button ha-icon{--mdc-icon-size: 13px;height:13px;width:13px}.media-player-card--chip .media-player__info-rail,.media-player-card--chip .media-player__volume-button--browse{display:none}.media-player-card--compact .media-player__content{display:flex;flex:1 1 auto;flex-direction:column;gap:8px;justify-content:space-between;min-height:0;padding-bottom:0}.media-player-card--compact.media-player-card--idle .media-player__content{align-items:center;flex:1 1 auto;gap:0;justify-content:center;min-height:0;width:100%}.media-player-card--compact.media-player-card--idle .media-player__content--idle{width:100%}.media-player-card--compact .media-player__transport-cluster{gap:6px;margin-top:auto}.media-player-card--compact .media-player__transport-row{margin-top:auto;max-width:100%;min-width:0;overflow:visible}.media-player-card--chip .media-player__footer,.media-player-card--square .media-player__chips-wrap,.media-player-card--artwork .media-player__chips-wrap,.media-player-card--compact .media-player__chips-wrap{display:none}.media-player-card--compact .media-player__hero{grid-template-columns:48px minmax(0,1fr)}.media-player-card--compact .media-player__artwork{height:48px;width:48px}@keyframes nodalia-media-kenburns{0%{transform:scale(1.04) translate3d(-1%,0,0)}100%{transform:scale(1.12) translate3d(1.2%,-1.1%,0)}}@media(prefers-reduced-motion:reduce){.media-player__art-layer.is-idle-animated{animation:none!important}}";
+
+  // src/cards/media-player/media-player-browser.css
+  var media_player_browser_default = '.media-browser-panel::before{background:color-mix(in srgb,var(--ha-card-background, var(--card-background-color, #fff)) 96%,transparent);border-radius:inherit;content:"";inset:0;pointer-events:none;position:absolute;z-index:0}.media-browser-panel>*{position:relative;z-index:1}.media-browser-panel--entering{animation:media-player-browser-panel-in var(--media-player-browser-duration) cubic-bezier(0.22,0.84,0.26,1) both}.media-browser__header{align-items:center;display:grid;gap:12px;grid-template-columns:40px minmax(0,1fr) 40px}.media-browser__header-copy{min-width:0;text-align:center}.media-browser__eyebrow{color:var(--secondary-text-color);font-size:11px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase}.media-browser__title{color:var(--primary-text-color);font-size:16px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.media-browser__header-button,.media-browser__item-play{align-items:center;appearance:none;background:color-mix(in srgb,var(--primary-text-color) 5%,transparent);border:1px solid color-mix(in srgb,var(--primary-text-color) 6%,transparent);border-radius:999px;color:var(--primary-text-color);cursor:pointer;display:inline-flex;height:40px;justify-content:center;padding:0;width:40px}.media-browser__header-button ha-icon,.media-browser__item-play ha-icon{font-size:20px}.media-browser__list{display:grid;gap:10px;min-height:0;overflow:auto;padding-right:2px}.media-browser__item{align-items:center;display:grid;gap:8px;grid-template-columns:minmax(0,1fr) auto}.media-browser__item-main{align-items:center;appearance:none;background:color-mix(in srgb,var(--primary-text-color) 3%,transparent);border:1px solid color-mix(in srgb,var(--primary-text-color) 5%,transparent);border-radius:20px;color:var(--primary-text-color);cursor:pointer;display:grid;gap:12px;grid-template-columns:46px minmax(0,1fr) auto;min-height:58px;padding:8px 10px;text-align:left;width:100%}.media-browser__item-main:disabled{cursor:default;opacity:0.72}.media-browser__item-artwork{align-items:center;background:color-mix(in srgb,var(--primary-text-color) 5%,transparent);border-radius:14px;display:inline-flex;height:46px;justify-content:center;overflow:hidden;width:46px}.media-browser__item-artwork img,.media-browser__item-artwork ha-icon{height:100%;object-fit:cover;width:100%}.media-browser__item-artwork ha-icon{font-size:22px;padding:11px}.media-browser__item-copy{display:grid;gap:2px;min-width:0}.media-browser__item-title{color:var(--primary-text-color);font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.media-browser__item-chevron{color:var(--secondary-text-color);font-size:20px}.media-browser__empty{align-items:center;color:var(--secondary-text-color);display:flex;flex:1 1 auto;font-size:13px;justify-content:center;line-height:1.5;min-height:120px;padding:12px;text-align:center}@keyframes media-player-button-bounce{0%{transform:scale(1)}40%{transform:scale(1.08)}100%{transform:scale(1)}}@keyframes media-player-panel-in{0%{opacity:0;transform:translateY(-8px) scaleY(0.94)}100%{opacity:1;transform:translateY(0) scaleY(1)}}@keyframes media-player-fade-up{0%{opacity:0;transform:translateY(12px) scale(0.97)}100%{opacity:1;transform:translateY(0) scale(1)}}@keyframes media-player-browser-backdrop-in{0%{opacity:0}100%{opacity:1}}@keyframes media-player-browser-panel-in{0%{opacity:0;transform:translateY(14px) scale(0.98)}100%{opacity:1;transform:translateY(0) scale(1)}}';
+
   // src/cards/media-player/media-player-control-theme.ts
   var requests = /* @__PURE__ */ new WeakMap();
   var themes = /* @__PURE__ */ new WeakMap();
@@ -1318,6 +1322,15 @@
       if (owner.isConnected) render();
     });
     return false;
+  }
+  function releaseArtworkTheme(owner) {
+    renderRequests.delete(owner);
+    displayedArtwork.delete(owner);
+    themes.delete(owner);
+    const root = owner.shadowRoot;
+    root?.querySelectorAll(".media-player-card").forEach((host) => {
+      if (host instanceof HTMLElement) requests.delete(host);
+    });
   }
   async function applyArtworkControlTheme(host, url) {
     if (!host) return;
@@ -1399,7 +1412,39 @@
   }
 `;
 
+  // src/shared/home-assistant-services.ts
+  function callHassService(hass, domain, service, data = {}, target = null) {
+    if (!hass?.callService) return;
+    const failure = (error) => console.warn("Nodalia Cards: service call failed", `${domain}.${service}`, error);
+    try {
+      void Promise.resolve(target !== null ? hass.callService(domain, service, data, target) : hass.callService(domain, service, data)).catch(failure);
+    } catch (error) {
+      failure(error);
+    }
+  }
+  async function requestHassService(host, hass, domain, service, data = {}, target = null) {
+    if (hass?.callService) return target !== null ? hass.callService(domain, service, data, target) : hass.callService(domain, service, data);
+    const utils2 = window.NodaliaUtils;
+    return utils2?.invokeHomeAssistantService?.call(utils2, host, hass, domain, service, data, target);
+  }
+  function invokeHassService(host, hass, domain, service, data = {}, target = null) {
+    const utils2 = window.NodaliaUtils;
+    const invoke = utils2?.invokeHomeAssistantService;
+    if (!invoke) {
+      callHassService(hass, domain, service, data, target);
+      return;
+    }
+    const failure = (error) => console.warn("Nodalia Cards: service call failed", `${domain}.${service}`, error);
+    try {
+      void Promise.resolve(invoke.call(utils2, host, hass, domain, service, data, target)).catch(failure);
+    } catch (error) {
+      failure(error);
+    }
+  }
+
   // src/cards/media-player/media-player-card.ts
+  var mediaRecord = (value) => isObject(value) ? value : {};
+  var mediaText = (value) => String(value ?? "");
   var _lazyNodaliaMediaPlayer;
   function loadNodaliaMediaPlayer() {
     if (_lazyNodaliaMediaPlayer) {
@@ -1439,7 +1484,21 @@
       }
       _nodaliaConstruct() {
         this.attachShadow({ mode: "open" });
-        this._config = null;
+        this._artworkPreloadCancels = /* @__PURE__ */ new Map();
+        this._generation = 0;
+        this._contextConnection = void 0;
+        this._contextAuth = void 0;
+        this._contextUser = "";
+        this._contextAdmin = false;
+        this._volumeSteps = /* @__PURE__ */ new Map();
+        this._volumeWaits = /* @__PURE__ */ new Map();
+        this._layoutFrame = 0;
+        this._modalOpen = false;
+        this._config = normalizeConfig({});
+        this._configured = false;
+        this._activeArtworkUrl = "";
+        this._activeArtworkIdle = false;
+        this._progressTickMisses = 0;
         this._hass = null;
         this._mediaBrowserState = null;
         this._mediaBrowserScrollPositions = /* @__PURE__ */ new Map();
@@ -1453,10 +1512,7 @@
         this._activeSliderDrag = null;
         this._pendingRenderAfterDrag = false;
         this._skipNextSliderChange = null;
-        this._dragFrame = 0;
-        this._pendingDragUpdate = null;
         this._dragWindowListenersAttached = false;
-        this._volumeStepFallback = /* @__PURE__ */ new Set();
         this._tvSourcePickerEntity = null;
         this._tvVolumePickerEntity = null;
         this._tvPanelScrollPositions = /* @__PURE__ */ new Map();
@@ -1477,6 +1533,8 @@
         this._activeProgressDrag = null;
         this._idleSlideshowUrl = "";
         this._onResize = () => {
+          if (!this.isConnected) return;
+          const generation = this._generation;
           if (this._activeSliderDrag || this._activeProgressDrag) {
             this._pendingRenderAfterDrag = true;
             return;
@@ -1485,6 +1543,7 @@
             window.clearTimeout(this._resizeSyncTimer);
           }
           this._resizeSyncTimer = window.setTimeout(() => {
+            if (!this._isCurrent(generation)) return;
             this._resizeSyncTimer = 0;
             if (!this.isConnected || this._activeSliderDrag || this._activeProgressDrag) {
               if (this._activeSliderDrag || this._activeProgressDrag) {
@@ -1515,61 +1574,95 @@
         this._onWindowTouchMove = this._onWindowTouchMove.bind(this);
         this._onWindowTouchEnd = this._onWindowTouchEnd.bind(this);
         this._onVisibilityChange = this._onVisibilityChange.bind(this);
-        this.shadowRoot.addEventListener("click", this._onShadowClick);
-        this.shadowRoot.addEventListener("input", this._onShadowInput);
-        this.shadowRoot.addEventListener("change", this._onShadowChange);
-        this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
-        this.shadowRoot.addEventListener("mousedown", this._onShadowMouseDown);
-        if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
-          this.shadowRoot.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
+        this._onWindowCancel = this._onWindowCancel.bind(this);
+        this.shadowRoot?.addEventListener("keydown", (event) => this._onShadowKeyDown(event));
+        this.shadowRoot?.addEventListener("click", this._onShadowClick);
+        this.shadowRoot?.addEventListener("input", this._onShadowInput);
+        this.shadowRoot?.addEventListener("change", this._onShadowChange);
+        this.shadowRoot?.addEventListener("pointerdown", this._onShadowPointerDown);
+        this.shadowRoot?.addEventListener("mousedown", this._onShadowMouseDown);
+        if (!(typeof PointerEvent !== "undefined")) {
+          this.shadowRoot?.addEventListener("touchstart", this._onShadowTouchStart, { passive: false });
         }
       }
       connectedCallback() {
         window.addEventListener("resize", this._onResize);
         window.addEventListener("keydown", this._onWindowKeyDown);
+        window.addEventListener("blur", this._onWindowCancel);
         document.addEventListener("visibilitychange", this._onVisibilityChange);
         this._observeLayout();
         this._animateContentOnNextRender = true;
         this._lastRenderSignature = "";
         this._render();
       }
-      disconnectedCallback() {
+      _isCurrent(generation) {
+        return this.isConnected && this._generation === generation;
+      }
+      _releaseViewWork() {
+        this._generation += 1;
+        this._cancelDrag(false);
         window.NodaliaUtils?.releaseModalFocus?.(this);
-        window.removeEventListener("resize", this._onResize);
-        window.removeEventListener("keydown", this._onWindowKeyDown);
-        document.removeEventListener("visibilitychange", this._onVisibilityChange);
-        this._detachWindowDragListeners();
-        if (this._dragFrame) {
-          window.cancelAnimationFrame(this._dragFrame);
-          this._dragFrame = 0;
-        }
-        this._pendingDragUpdate = null;
-        if (this._mediaTicker) {
-          window.clearInterval(this._mediaTicker);
-          this._mediaTicker = null;
-        }
-        this._draftVolumeTimers.forEach((timerId) => window.clearTimeout(timerId));
+        window.NodaliaUtils?.clearDeferTimers?.(this);
+        releaseArtworkTheme(this);
+        if (this._mediaTicker) window.clearInterval(this._mediaTicker);
+        this._mediaTicker = null;
+        this._draftVolumeTimers.forEach((timer) => window.clearTimeout(timer));
         this._draftVolumeTimers.clear();
-        if (this._entranceAnimationResetTimer) {
-          window.clearTimeout(this._entranceAnimationResetTimer);
-          this._entranceAnimationResetTimer = 0;
-        }
-        if (this._resizeSyncTimer) {
-          window.clearTimeout(this._resizeSyncTimer);
-          this._resizeSyncTimer = 0;
-        }
-        this._mediaBrowserRequestToken += 1;
-        this._animateContentOnNextRender = true;
-        this._lastRenderSignature = "";
+        this._draftVolume.clear();
+        this._volumeSteps.clear();
+        this._volumeWaits.forEach((resolve, timer) => {
+          window.clearTimeout(timer);
+          resolve();
+        });
+        this._volumeWaits.clear();
+        if (this._entranceAnimationResetTimer) window.clearTimeout(this._entranceAnimationResetTimer);
+        if (this._resizeSyncTimer) window.clearTimeout(this._resizeSyncTimer);
+        if (this._layoutFrame) window.cancelAnimationFrame(this._layoutFrame);
+        this._entranceAnimationResetTimer = this._resizeSyncTimer = this._layoutFrame = 0;
         this._layoutObserver?.disconnect();
         this._layoutObserver = null;
-        this._artworkController?.detach();
+        this._mediaBrowserRequestToken += 1;
+        this._mediaBrowserState = null;
+        this._mediaBrowserScrollPositions.clear();
+        this._tvPanelScrollPositions.clear();
+        this._tvSourcePickerEntity = this._tvVolumePickerEntity = null;
+        this._tvSourcePanelAnimatingEntity = this._tvVolumePanelAnimatingEntity = null;
+        this._modalOpen = false;
+        this._artworkController.detach();
+        this._artworkPreloadCancels.forEach((cancel) => cancel());
+        this._artworkPreloadCancels.clear();
+        this._pendingArtworkPreloads.clear();
+        this._animateContentOnNextRender = true;
+        this._lastRenderSignature = "";
+      }
+      _resetContext() {
+        this._releaseViewWork();
+        this._readyArtworkUrls.clear();
+        this._failedArtworkUrls.clear();
+        this._displayArtworkByEntity.clear();
+        this._artworkController.clear();
+        this._artworkController = new MediaPlayerArtworkController();
         this._artworkStageEl = null;
-        this._activeProgressDrag = null;
-        window.NodaliaUtils?.clearDeferTimers?.(this);
+        this._activeArtworkUrl = this._idleSlideshowUrl = "";
+        this._activeArtworkIdle = false;
+        this._resolvedLayoutMode = "";
+        this._presentationEntityId = "";
+        this._activePlayerIndex = 0;
+        this._activePlayerEntity = "";
+        this.shadowRoot?.replaceChildren();
+        if (this.isConnected) this._observeLayout();
+      }
+      disconnectedCallback() {
+        window.removeEventListener("resize", this._onResize);
+        window.removeEventListener("keydown", this._onWindowKeyDown);
+        window.removeEventListener("blur", this._onWindowCancel);
+        document.removeEventListener("visibilitychange", this._onVisibilityChange);
+        this._releaseViewWork();
       }
       setConfig(config) {
         this._config = normalizeConfig(config);
+        this._configured = true;
+        this._resetContext();
         this._lastRenderSignature = "";
         this._animateContentOnNextRender = true;
         if (!this.isConnected) {
@@ -1579,7 +1672,14 @@
       }
       set hass(hass) {
         const previousHass = this._hass;
+        const contextChanged = this._contextConnection !== hass?.connection || this._contextAuth !== hass?.auth || this._contextUser !== (hass?.user?.id || "") || this._contextAdmin !== Boolean(hass?.user?.is_admin);
         this._hass = hass;
+        this._contextConnection = hass?.connection;
+        this._contextAuth = hass?.auth;
+        this._contextUser = hass?.user?.id || "";
+        this._contextAdmin = Boolean(hass?.user?.is_admin);
+        if (contextChanged) this._resetContext();
+        if (this._activeProgressDrag && !this._validProgressDrag(this._activeProgressDrag)) this._cancelDrag(false);
         if (!this.isConnected) {
           return;
         }
@@ -1588,6 +1688,7 @@
         }
         const nextSignature = this._getRenderSignature(hass);
         if (previousHass && nextSignature === this._lastRenderSignature) {
+          if (!this._activeSliderDrag && !this._activeProgressDrag) this._updateProgressTick(this._getVisiblePlayers());
           return;
         }
         this._lastRenderSignature = nextSignature;
@@ -1635,8 +1736,11 @@
         }
         fireEvent(this, "iron-resize", {});
         if (forceWindowResize && typeof window !== "undefined") {
-          requestAnimationFrame(() => {
-            if (!this.isConnected) {
+          const generation = this._generation;
+          if (this._layoutFrame) window.cancelAnimationFrame(this._layoutFrame);
+          this._layoutFrame = requestAnimationFrame(() => {
+            this._layoutFrame = 0;
+            if (!this._isCurrent(generation)) {
               return;
             }
             window.dispatchEvent(new Event("resize"));
@@ -1649,8 +1753,9 @@
         }
         const safeDelay = Math.max(0, Number(delay) || 0);
         const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+        const generation = this._generation;
         const done = () => {
-          if (!this.isConnected) {
+          if (!this._isCurrent(generation)) {
             return;
           }
           this._notifySectionLayoutChange({ forceWindowResize });
@@ -1665,13 +1770,15 @@
         if (this._layoutObserver || typeof ResizeObserver === "undefined") {
           return;
         }
-        this._layoutObserver = new ResizeObserver(() => {
-          if (!this.isConnected || this._activeSliderDrag || this._activeProgressDrag) {
+        const generation = this._generation;
+        const observer = new ResizeObserver(() => {
+          if (!this._isCurrent(generation) || this._layoutObserver !== observer || this._activeSliderDrag || this._activeProgressDrag) {
             return;
           }
           this._syncPresentationMode();
         });
-        this._layoutObserver.observe(this);
+        this._layoutObserver = observer;
+        observer.observe(this);
       }
       _getActivePlayerContext() {
         const players = this._getVisiblePlayers();
@@ -1685,7 +1792,7 @@
         };
       }
       _getConfiguredGridColumns() {
-        const numericColumns = Number(this._config?.grid_options?.columns);
+        const numericColumns = Number(mediaRecord(this._config.grid_options).columns);
         return Number.isFinite(numericColumns) && numericColumns > 0 ? numericColumns : null;
       }
       _getPresentationMode() {
@@ -1733,22 +1840,19 @@
         return true;
       }
       _getTrackedEntities() {
-        const configuredPlayers = Array.isArray(this._config?.players) ? this._config.players.map((player) => player?.entity).filter(Boolean) : [];
-        if (configuredPlayers.length) {
-          return [...new Set(configuredPlayers)];
-        }
-        return this._config?.entity ? [this._config.entity] : [];
+        const players = this._getConfiguredPlayers().map((player) => player.entity);
+        return players.length ? [...new Set(players)] : typeof this._config.entity === "string" && this._config.entity ? [this._config.entity] : [];
       }
       _getRenderSignature(hass = this._hass) {
         const states = hass?.states || {};
         const entities = this._getTrackedEntities();
         const runtime = getRenderSignatureRuntime();
-        return entities.map((entityId) => {
+        return [hass?.locale?.language, hass?.language, this._config.language, ...entities.map((entityId) => {
           const state = states[entityId];
           if (!state) {
             return runtime.joinParts([{ values: [entityId, "missing"] }], "", "::");
           }
-          const attrs = state.attributes || {};
+          const attrs = state?.attributes || {};
           return runtime.joinParts([
             {
               values: [
@@ -1756,6 +1860,10 @@
                 state.state || "",
                 attrs.friendly_name || "",
                 attrs.entity_picture || "",
+                attrs.entity_picture_local || "",
+                attrs.media_content_id || "",
+                attrs.media_content_type || "",
+                attrs.device_class || "",
                 attrs.media_title || "",
                 attrs.media_artist || "",
                 attrs.media_series_title || "",
@@ -1769,7 +1877,7 @@
               ]
             }
           ], "", "::");
-        }).join("||");
+        }).join("||")].join("::");
       }
       _isInEditMode() {
         const homeAssistantRoot = document.querySelector("body > home-assistant");
@@ -1789,8 +1897,8 @@
         }
         return window.innerWidth > Number(this._config.layout.mobile_breakpoint || 1279);
       }
-      _triggerHaptic(style = this._config?.haptics?.style) {
-        if (!this._config?.haptics?.enabled) {
+      _triggerHaptic(style = mediaRecord(this._config.haptics).style) {
+        if (!mediaRecord(this._config.haptics).enabled) {
           return;
         }
         const hapticStyle = String(style || "medium");
@@ -1798,13 +1906,13 @@
           fireEvent(this, "haptic", hapticStyle);
         } catch (_error) {
         }
-        if (!this._config.haptics.fallback_vibrate || typeof navigator === "undefined" || typeof navigator.vibrate !== "function") {
+        if (!mediaRecord(this._config.haptics).fallback_vibrate || typeof navigator === "undefined" || typeof navigator.vibrate !== "function") {
           return;
         }
-        navigator.vibrate(HAPTIC_PATTERNS[hapticStyle] || HAPTIC_PATTERNS.selection);
+        navigator.vibrate(Object.entries(HAPTIC_PATTERNS).find(([key]) => key === hapticStyle)?.[1] || HAPTIC_PATTERNS.selection);
       }
       _getAnimationSettings() {
-        const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+        const configuredAnimations = mediaRecord(this._config.animations || DEFAULT_CONFIG.animations);
         return {
           enabled: configuredAnimations.enabled !== false,
           panelDuration: clamp(
@@ -1849,8 +1957,9 @@
         button.getBoundingClientRect();
         button.classList.add("is-pressing");
         const schedule = window.NodaliaUtils?.scheduleDeferTimer;
+        const generation = this._generation;
         const done = () => {
-          if (!button.isConnected) {
+          if (!this._isCurrent(generation) || !button.isConnected) {
             return;
           }
           button.classList.remove("is-pressing");
@@ -1871,7 +1980,9 @@
           this._animateContentOnNextRender = false;
           return;
         }
+        const generation = this._generation;
         this._entranceAnimationResetTimer = window.setTimeout(() => {
+          if (!this._isCurrent(generation)) return;
           this._entranceAnimationResetTimer = 0;
           if (!this.isConnected) {
             return;
@@ -1880,10 +1991,10 @@
         }, safeDelay);
       }
       _isArtworkUrlReady(url) {
-        return Boolean(url) && this._readyArtworkUrls.has(url);
+        return typeof url === "string" && this._readyArtworkUrls.has(url);
       }
       _isArtworkUrlFailed(url) {
-        return Boolean(url) && this._failedArtworkUrls.has(url);
+        return typeof url === "string" && this._failedArtworkUrls.has(url);
       }
       _preloadArtworkUrl(url, onSettled = null) {
         if (!url) {
@@ -1900,7 +2011,10 @@
         const existing = this._pendingArtworkPreloads.get(url);
         if (existing) {
           if (onSettled) {
-            existing.then(onSettled);
+            const generation2 = this._generation;
+            existing.then((ready) => {
+              if (this._isCurrent(generation2)) onSettled(ready);
+            });
           }
           return existing;
         }
@@ -1909,10 +2023,20 @@
           onSettled?.(true);
           return Promise.resolve(true);
         }
+        const generation = this._generation;
         const preloadPromise = new Promise((resolve) => {
           const image = new Image();
           image.decoding = "async";
+          let settled = false;
           const settle = (loaded) => {
+            if (settled) return;
+            settled = true;
+            image.onload = image.onerror = null;
+            this._artworkPreloadCancels.delete(url);
+            if (!this._isCurrent(generation)) {
+              resolve(false);
+              return;
+            }
             this._pendingArtworkPreloads.delete(url);
             if (loaded) {
               this._readyArtworkUrls.add(url);
@@ -1920,14 +2044,29 @@
             } else {
               this._failedArtworkUrls.add(url);
             }
+            while (this._readyArtworkUrls.size > 64) this._readyArtworkUrls.delete(this._readyArtworkUrls.values().next().value || "");
+            while (this._failedArtworkUrls.size > 64) this._failedArtworkUrls.delete(this._failedArtworkUrls.values().next().value || "");
             resolve(loaded);
             onSettled?.(loaded);
           };
+          this._artworkPreloadCancels.set(url, () => {
+            if (settled) return;
+            settled = true;
+            image.onload = image.onerror = null;
+            resolve(false);
+          });
           image.onload = () => settle(true);
           image.onerror = () => settle(false);
           image.src = url;
         });
         this._pendingArtworkPreloads.set(url, preloadPromise);
+        while (this._pendingArtworkPreloads.size > 64) {
+          const oldest = this._pendingArtworkPreloads.keys().next().value;
+          if (oldest === void 0) break;
+          this._artworkPreloadCancels.get(oldest)?.();
+          this._artworkPreloadCancels.delete(oldest);
+          this._pendingArtworkPreloads.delete(oldest);
+        }
         return preloadPromise;
       }
       _ensureArtworkReady(entityId, url, { rerenderOnReady = false } = {}) {
@@ -1946,7 +2085,9 @@
           this._displayArtworkByEntity.delete(entityId);
           return true;
         }
+        const generation = this._generation;
         this._preloadArtworkUrl(url, () => {
+          if (!this._isCurrent(generation)) return;
           const currentPlayer = this._findPlayerConfig(entityId) || { entity: entityId };
           const currentState = this._hass?.states?.[entityId];
           const currentArtwork = currentState ? this._getPlayerArtwork(currentPlayer, currentState) : null;
@@ -1994,7 +2135,7 @@
         return artworkCacheToken(state);
       }
       _getConfiguredPlayers() {
-        return Array.isArray(this._config?.players) ? this._config.players : [];
+        return this._config.players.filter((player) => typeof player.entity === "string" && Boolean(player.entity.trim()));
       }
       _resolveActivePlayerIndex(players) {
         if (!Array.isArray(players) || players.length === 0) {
@@ -2033,7 +2174,7 @@
             return true;
           }
           const visibleStates = Array.isArray(player.show_states) && player.show_states.length > 0 ? player.show_states : ["playing", "paused"];
-          return visibleStates.includes(state.state);
+          return visibleStates.includes(state?.state);
         });
       }
       _getReservedHeight(showPlayer) {
@@ -2046,7 +2187,7 @@
         return "0px";
       }
       _getPlayerLabel(player, state) {
-        return player.label || player.name || state.attributes.friendly_name || player.entity;
+        return mediaText(player.label || player.name || state?.attributes.friendly_name || player.entity);
       }
       _isAppleTvPlayer(player, state) {
         const candidates = [
@@ -2093,31 +2234,31 @@
       }
       _getPlayerFallbackIcon(player, state, deviceType) {
         if (player?.icon) {
-          return player.icon;
+          return mediaText(player.icon);
         }
         if (deviceType === "tv") {
-          return this._isAppleTvPlayer(player, state) ? "mdi:apple" : "mdi:television";
+          return mediaText(this._isAppleTvPlayer(player, state) ? "mdi:apple" : "mdi:television");
         }
-        return "mdi:music";
+        return mediaText("mdi:music");
       }
       _getPlayerTitle(player, state) {
         if (player.title) {
-          return player.title;
+          return mediaText(player.title);
         }
-        return state.attributes.media_title || state.attributes.friendly_name || player.entity;
+        return mediaText(state?.attributes.media_title || state?.attributes.friendly_name || player.entity);
       }
       _getTvContentTitle(player, state) {
         if (player.title) {
-          return player.title;
+          return mediaText(player.title);
         }
-        return state?.attributes?.media_title || state?.attributes?.media_series_title || state?.attributes?.media_channel || "";
+        return mediaText(state?.attributes?.media_title || state?.attributes?.media_series_title || state?.attributes?.media_channel || "");
       }
       _getPlayerSubtitle(player, state) {
         if (player.subtitle) {
-          return player.subtitle;
+          return mediaText(player.subtitle);
         }
-        const fallbackState = this._config?.show_state === true ? this._getPlayerStateLabel(state.state) : "";
-        return state.attributes.media_artist || state.attributes.media_series_title || state.attributes.media_album_name || state.attributes.app_name || fallbackState;
+        const fallbackState = this._config?.show_state === true ? this._getPlayerStateLabel(state?.state) : "";
+        return mediaText(state?.attributes.media_artist || state?.attributes.media_series_title || state?.attributes.media_album_name || state?.attributes.app_name || fallbackState);
       }
       _shouldShowTvArtwork(player, state) {
         const deviceType = this._getPlayerDeviceType(player, state);
@@ -2139,7 +2280,7 @@
         if (!this._shouldShowTvArtwork(player, state)) {
           return null;
         }
-        const artwork = state.attributes.entity_picture_local || state.attributes.entity_picture || "";
+        const artwork = state?.attributes.entity_picture_local || state?.attributes.entity_picture || "";
         return artwork ? this._resolveMediaUrl(artwork, {
           cacheToken: this._getArtworkCacheToken(state)
         }) : null;
@@ -2178,7 +2319,7 @@
       _getPlayerProgress(state) {
         if (this._activeProgressDrag?.entityId && this._hass?.states?.[this._activeProgressDrag.entityId] === state) {
           const duration = Number(state?.attributes?.media_duration || 0);
-          if (!(duration > 0)) {
+          if (!Number.isFinite(duration) || !(duration > 0)) {
             return null;
           }
           const position = seekPositionFromPercent(this._activeProgressDrag.percent, duration);
@@ -2208,7 +2349,7 @@
     `;
       }
       _getPlayerSourceLabel(state) {
-        const sourceLabel = state.attributes.source || state.attributes.app_name || state.attributes.media_album_name || state.attributes.media_channel;
+        const sourceLabel = state?.attributes.source || state?.attributes.app_name || state?.attributes.media_album_name || state?.attributes.media_channel;
         const sourceKey = normalizeTextKey2(sourceLabel);
         if (!sourceKey || sourceKey.includes("music assistant") || sourceKey === "airmusic" || sourceKey.startsWith("airmusic ")) {
           return null;
@@ -2219,7 +2360,7 @@
         if (player?.show_source_controls === false) {
           return [];
         }
-        const sources = Array.isArray(state?.attributes?.source_list) ? state.attributes.source_list.filter((source) => String(source || "").trim()) : [];
+        const sources = Array.isArray(state?.attributes?.source_list) ? state?.attributes.source_list.filter((source) => String(source || "").trim()) : [];
         if (!sources.length) {
           return [];
         }
@@ -2242,7 +2383,7 @@
           return false;
         }
         return Boolean(
-          state.attributes.media_title || state.attributes.media_artist || state.attributes.media_album_name || state.attributes.media_series_title || state.attributes.media_channel || state.attributes.media_duration
+          state?.attributes.media_title || state?.attributes.media_artist || state?.attributes.media_album_name || state?.attributes.media_series_title || state?.attributes.media_channel || state?.attributes.media_duration
         );
       }
       _shouldUseIdleLayout(player, state) {
@@ -2252,7 +2393,7 @@
         if (player?.compact_when_idle === false) {
           return false;
         }
-        const stateKey = normalizeTextKey2(state.state);
+        const stateKey = normalizeTextKey2(state?.state);
         if (this._getPlayerDeviceType(player, state) === "tv" && ["off", "standby", "unavailable", "unknown"].includes(stateKey)) {
           return true;
         }
@@ -2277,12 +2418,12 @@
       }
       _getPlayerBrowsePath(player, state) {
         if (player?.browse_path) {
-          return player.browse_path;
+          return mediaText(player.browse_path);
         }
         if (player?.media_browser_path) {
-          return player.media_browser_path;
+          return mediaText(player.media_browser_path);
         }
-        return this._isMusicAssistantPlayer(player, state) ? "/media-browser/browser" : "";
+        return mediaText(this._isMusicAssistantPlayer(player, state) ? "/media-browser/browser" : "");
       }
       _supportsMediaBrowser(player, state) {
         if (player?.browse_path || player?.media_browser_path) {
@@ -2292,17 +2433,20 @@
         return Number.isFinite(supportedFeatures) && (supportedFeatures & MEDIA_PLAYER_FEATURE_BROWSE_MEDIA) !== 0;
       }
       _supportsVolumeControl(state) {
-        return typeof state?.attributes?.volume_level === "number";
+        return typeof state?.attributes.volume_level === "number" && Number.isFinite(state.attributes.volume_level);
       }
       _getPlayerVolumePercent(entityId, state) {
         const draftValue = this._draftVolume.get(entityId);
         if (Number.isFinite(draftValue)) {
           return clamp(Number(draftValue), 0, 100);
         }
-        return clamp(Math.round(Number(state?.attributes?.volume_level || 0) * 100), 0, 100);
+        const volume = Number(state?.attributes.volume_level || 0);
+        return Number.isFinite(volume) ? clamp(Math.round(volume * 100), 0, 100) : 0;
       }
       _updatePlayerVolumePreview(entityId, value) {
-        const nextValue = clamp(Number(value), 0, 100);
+        const numericValue = Number(value);
+        if (!Number.isFinite(numericValue)) return;
+        const nextValue = clamp(numericValue, 0, 100);
         const normalizedEntityId = escapeSelectorValue(entityId);
         const sliders = this.shadowRoot?.querySelectorAll(
           `.media-player__volume-slider[data-entity="${normalizedEntityId}"]`
@@ -2313,7 +2457,8 @@
           }
           slider.value = String(nextValue);
           slider.style.setProperty("--media-volume", String(nextValue));
-          slider.closest(".media-player__volume-slider-shell")?.style.setProperty("--media-volume", String(nextValue));
+          const shell = slider.closest(".media-player__volume-slider-shell");
+          if (shell instanceof HTMLElement) shell.style.setProperty("--media-volume", String(nextValue));
         });
         const volumeButtons = this.shadowRoot?.querySelectorAll(
           `.media-player__volume-button[data-entity="${normalizedEntityId}"][data-media-volume]`
@@ -2340,12 +2485,12 @@
         const states = hass?.states || {};
         this._getTrackedEntities().forEach((entityId) => {
           const state = states[entityId];
-          if (!this._supportsVolumeControl(state)) {
+          if (!state || !this._supportsVolumeControl(state)) {
             return;
           }
-          const actualPercent = clamp(Math.round(Number(state.attributes?.volume_level || 0) * 100), 0, 100);
+          const actualPercent = clamp(Math.round(Number(state?.attributes?.volume_level || 0) * 100), 0, 100);
           const draftValue = this._draftVolume.get(entityId);
-          if (Number.isFinite(draftValue) && Math.abs(actualPercent - draftValue) <= 2) {
+          if (typeof draftValue === "number" && Number.isFinite(draftValue) && Math.abs(actualPercent - draftValue) <= 2) {
             this._clearDraftVolume(entityId);
           }
           this._updatePlayerVolumePreview(entityId, this._getPlayerVolumePercent(entityId, state));
@@ -2357,67 +2502,59 @@
           window.clearTimeout(existingTimer);
           this._draftVolumeTimers.delete(entityId);
         }
+        const generation = this._generation;
         const timerId = window.setTimeout(() => {
+          if (!this._isCurrent(generation) || this._draftVolumeTimers.get(entityId) !== timerId) return;
           this._clearDraftVolume(entityId);
           this._syncVolumeControlsFromHass(this._hass);
         }, delay);
         this._draftVolumeTimers.set(entityId, timerId);
       }
       async _stepPlayerVolumeToTarget(entityId, targetPercent) {
-        if (!this._hass || !entityId) {
+        const hass = this._hass;
+        if (!hass || !entityId || !Number.isFinite(targetPercent) || !this.isConnected) return;
+        const generation = this._generation;
+        const token = /* @__PURE__ */ Symbol();
+        this._volumeSteps.set(entityId, token);
+        const current = Number(hass.states[entityId]?.attributes.volume_level || 0);
+        if (!Number.isFinite(current)) {
+          this._volumeSteps.delete(entityId);
           return;
         }
-        const state = this._hass.states?.[entityId];
-        const currentPercent = clamp(Math.round(Number(state?.attributes?.volume_level || 0) * 100), 0, 100);
-        const delta = targetPercent - currentPercent;
-        if (Math.abs(delta) < 3) {
-          this._scheduleDraftVolumeClear(entityId, 800);
-          return;
+        const delta = clamp(targetPercent, 0, 100) - clamp(Math.round(current * 100), 0, 100);
+        const currentWork = () => this._isCurrent(generation) && this._volumeSteps.get(entityId) === token;
+        try {
+          if (Math.abs(delta) >= 3) {
+            for (let index = 0; index < clamp(Math.round(Math.abs(delta) / 6), 1, 12); index += 1) {
+              if (!currentWork()) return;
+              await requestHassService(this, hass, "media_player", delta > 0 ? "volume_up" : "volume_down", { entity_id: entityId });
+              if (!currentWork()) return;
+              await new Promise((resolve) => {
+                const timer = window.setTimeout(() => {
+                  this._volumeWaits.delete(timer);
+                  resolve();
+                }, 90);
+                this._volumeWaits.set(timer, resolve);
+              });
+            }
+          }
+        } catch (error) {
+          console.warn("Nodalia Media Player: volume step failed", error);
+        } finally {
+          if (currentWork()) {
+            this._volumeSteps.delete(entityId);
+            this._scheduleDraftVolumeClear(entityId, 1800);
+          }
         }
-        const service = delta > 0 ? "volume_up" : "volume_down";
-        const stepCount = clamp(Math.round(Math.abs(delta) / 6), 1, 12);
-        for (let index = 0; index < stepCount; index += 1) {
-          if (!this.isConnected) {
-            break;
-          }
-          try {
-            await this._callInternalMediaService(service, { entity_id: entityId });
-          } catch (_error) {
-            break;
-          }
-          if (!this.isConnected) {
-            break;
-          }
-          await new Promise((resolve) => window.setTimeout(resolve, 90));
-        }
-        this._scheduleDraftVolumeClear(entityId, 1800);
       }
       _commitPlayerVolume(entityId, value) {
-        if (!this._hass || !entityId) {
-          return;
-        }
-        const nextValue = clamp(Math.round(Number(value)), 0, 100);
-        const state = this._hass.states?.[entityId];
+        const nextValue = Number(value);
+        if (!this._hass || !entityId || !Number.isFinite(nextValue) || !this.isConnected) return;
         const player = this._findPlayerConfig(entityId) || { entity: entityId };
-        const isTvPlayer = this._getPlayerDeviceType(player, state) === "tv";
         this._scheduleDraftVolumeClear(entityId);
-        if (isTvPlayer) {
-          this._volumeStepFallback.add(entityId);
-          void this._stepPlayerVolumeToTarget(entityId, nextValue);
-          return;
-        }
-        Promise.resolve(
-          this._callInternalMediaService("volume_set", {
-            entity_id: entityId,
-            volume_level: clamp(nextValue / 100, 0, 1)
-          })
-        ).catch(() => {
-          if (!isTvPlayer) {
-            return;
-          }
-          this._volumeStepFallback.add(entityId);
-          void this._stepPlayerVolumeToTarget(entityId, nextValue);
-        });
+        if (this._getPlayerDeviceType(player, this._hass.states[entityId]) === "tv") {
+          void this._stepPlayerVolumeToTarget(entityId, clamp(Math.round(nextValue), 0, 100));
+        } else this._callInternalMediaService("volume_set", { entity_id: entityId, volume_level: clamp(nextValue / 100, 0, 1) });
       }
       _getPlayerChips(player, state, progress, title, subtitle) {
         const chips = [];
@@ -2492,7 +2629,9 @@
           return state?.state === "playing" && progress;
         });
         if (shouldTick && !this._mediaTicker) {
+          const generation = this._generation;
           this._mediaTicker = window.setInterval(() => {
+            if (!this._isCurrent(generation)) return;
             if (typeof document !== "undefined" && document.hidden) {
               return;
             }
@@ -2500,7 +2639,7 @@
               this._pendingRenderAfterDrag = true;
               return;
             }
-            const updated = this._updateProgressTick(players);
+            const updated = this._updateProgressTick(this._getVisiblePlayers());
             if (!updated && this.isConnected) {
               this._progressTickMisses = (this._progressTickMisses || 0) + 1;
               if (this._progressTickMisses >= 3) {
@@ -2520,6 +2659,7 @@
       }
       _onVisibilityChange() {
         if (typeof document !== "undefined" && document.hidden) {
+          this._cancelDrag();
           if (this._mediaTicker) {
             window.clearInterval(this._mediaTicker);
             this._mediaTicker = null;
@@ -2550,13 +2690,13 @@
         }
         let updated = false;
         const fill = card.querySelector(".media-player__progress-fill");
-        if (fill && this._activeProgressDrag?.entityId !== player.entity) {
+        if (fill instanceof HTMLElement && this._activeProgressDrag?.entityId !== player.entity) {
           fill.style.width = `${progress.percent}%`;
           updated = true;
         }
         const progressNode = card.querySelector("[data-media-progress]");
         if (progressNode instanceof HTMLElement && this._activeProgressDrag?.entityId !== player.entity) {
-          progressNode.setAttribute("aria-valuenow", String(progress.position));
+          progressNode.setAttribute("aria-valuenow", String(progressNode.dataset.mediaProgress === "seek" ? progress.position : progress.percent));
         }
         const timeChip = card.querySelector(".media-player__chip--time");
         if (timeChip) {
@@ -2569,7 +2709,7 @@
         if (!this._hass || !service) {
           return;
         }
-        return this._hass.callService("media_player", service, data);
+        invokeHassService(this, this._hass, "media_player", service, data);
       }
       _callService(action) {
         if (!this._hass || !action?.service) {
@@ -2595,7 +2735,7 @@
         if (!isObject(payload)) {
           payload = {};
         }
-        this._hass.callService(domain, service, payload);
+        invokeHassService(this, this._hass, domain, service, mediaRecord(payload), isObject(action.target) ? action.target : null);
       }
       _isServiceAllowed(serviceValue) {
         const security = this._config?.security || {};
@@ -2612,7 +2752,7 @@
         if (!domains.length && !services.length) {
           return false;
         }
-        return services.includes(normalizedService) || domains.includes(domain);
+        return services.includes(normalizedService) || Boolean(domain && domains.includes(domain));
       }
       _runActionDefinition(action, fallbackEntityId = "") {
         if (!action || action.action === "none") {
@@ -2620,7 +2760,7 @@
         }
         switch (action.action) {
           case "more-info": {
-            const entityId = action.entity || fallbackEntityId;
+            const entityId = typeof action.entity === "string" ? action.entity || fallbackEntityId : fallbackEntityId;
             if (entityId) {
               fireEvent(this, "hass-more-info", { entityId });
             }
@@ -2655,22 +2795,22 @@
       }
       _getPlayerPowerAction(player, currentState) {
         const stateKey = normalizeTextKey2(currentState);
-        if (["unavailable", "unknown"].includes(stateKey) && player?.power_action_unavailable?.action && player.power_action_unavailable.action !== "default") {
-          return player.power_action_unavailable;
+        if (["unavailable", "unknown"].includes(stateKey) && mediaRecord(player.power_action_unavailable).action && mediaRecord(player.power_action_unavailable).action !== "default") {
+          return mediaRecord(player.power_action_unavailable);
         }
-        if (["off", "standby"].includes(stateKey) && player?.power_action_off?.action && player.power_action_off.action !== "default") {
-          return player.power_action_off;
+        if (["off", "standby"].includes(stateKey) && mediaRecord(player.power_action_off).action && mediaRecord(player.power_action_off).action !== "default") {
+          return mediaRecord(player.power_action_off);
         }
-        if (player?.power_action_on?.action && player.power_action_on.action !== "default") {
-          return player.power_action_on;
+        if (mediaRecord(player.power_action_on).action && mediaRecord(player.power_action_on).action !== "default") {
+          return mediaRecord(player.power_action_on);
         }
         return null;
       }
       _runPlayerAction(player, defaultAction = null) {
-        this._runActionDefinition(player.tap_action || defaultAction, player.entity);
+        this._runActionDefinition(isObject(player.tap_action) ? player.tap_action : defaultAction, player.entity);
       }
       _handleMediaControl(control, entityId, options = {}) {
-        if (!this._hass || !entityId) {
+        if (!this._hass || !entityId || !this.isConnected) {
           return;
         }
         switch (control) {
@@ -2706,7 +2846,7 @@
             this._callInternalMediaService("media_play_pause", { entity_id: entityId });
             break;
           case "volume-down": {
-            const currentVolume = Number.isFinite(options.volume) ? options.volume : 0;
+            const currentVolume = typeof options.volume === "number" && Number.isFinite(options.volume) ? options.volume : 0;
             const nextVolumeLevel = clamp(currentVolume - 0.08, 0, 1);
             this._draftVolume.set(entityId, Math.round(nextVolumeLevel * 100));
             this._updatePlayerVolumePreview(entityId, nextVolumeLevel * 100);
@@ -2721,7 +2861,7 @@
             this._callInternalMediaService("volume_down", { entity_id: entityId });
             break;
           case "volume-up": {
-            const currentVolume = Number.isFinite(options.volume) ? options.volume : 0;
+            const currentVolume = typeof options.volume === "number" && Number.isFinite(options.volume) ? options.volume : 0;
             const nextVolumeLevel = clamp(currentVolume + 0.08, 0, 1);
             this._draftVolume.set(entityId, Math.round(nextVolumeLevel * 100));
             this._updatePlayerVolumePreview(entityId, nextVolumeLevel * 100);
@@ -2776,7 +2916,7 @@
         }
       }
       _onShadowInput(event) {
-        const slider = event.composedPath().find((node) => node instanceof HTMLInputElement && node.dataset?.mediaSlider);
+        const slider = event.composedPath().find((node) => node instanceof HTMLInputElement && Boolean(node.dataset.mediaSlider));
         if (!slider) {
           return;
         }
@@ -2785,20 +2925,23 @@
           return;
         }
         if (slider.dataset.mediaSlider === "volume") {
-          const nextValue = clamp(Number(slider.value), 0, 100);
-          this._draftVolume.set(slider.dataset.entity, nextValue);
-          this._updatePlayerVolumePreview(slider.dataset.entity, nextValue);
+          const numericValue = Number(slider.value);
+          if (!slider.dataset.entity || !Number.isFinite(numericValue)) return;
+          const nextValue = clamp(numericValue, 0, 100);
+          this._draftVolume.set(slider.dataset.entity || "", nextValue);
+          this._updatePlayerVolumePreview(slider.dataset.entity || "", nextValue);
         }
       }
       _onShadowPointerDown(event) {
+        if (!(event instanceof PointerEvent)) return;
         const path = event.composedPath();
-        const progress = path.find((node) => node instanceof HTMLElement && node.dataset?.mediaProgress);
+        const progress = path.find((node) => node instanceof HTMLElement && Boolean(node.dataset.mediaProgress));
         if (progress && !this._activeProgressDrag && !this._activeSliderDrag && (typeof event.button !== "number" || event.button === 0)) {
           this._startProgressDrag(progress, event.clientX, event, event.pointerId);
           return;
         }
         const slider = path.find(
-          (node) => node instanceof HTMLInputElement && node.type === "range" && node.dataset?.mediaSlider
+          (node) => node instanceof HTMLInputElement && node.type === "range" && Boolean(node.dataset.mediaSlider)
         );
         if (this._activeSliderDrag || this._activeProgressDrag || !slider || typeof event.button === "number" && event.button !== 0) {
           return;
@@ -2806,9 +2949,7 @@
         this._startSliderDrag(slider, event.clientX, event, event.pointerId);
       }
       _startSliderDrag(slider, clientX, event = null, pointerId = null) {
-        if (!slider) {
-          return;
-        }
+        if (!slider.dataset.entity || !this.isConnected || !Number.isFinite(clientX)) return;
         this._activeSliderDrag = {
           pointerId,
           slider,
@@ -2819,24 +2960,19 @@
           event.preventDefault();
           event.stopPropagation();
         }
-        this._pendingDragUpdate = null;
-        if (this._dragFrame) {
-          window.cancelAnimationFrame(this._dragFrame);
-          this._dragFrame = 0;
-        }
         const nextValue = getRangeValueFromGeometry(this._activeSliderDrag.geometry, slider.value, clientX);
         slider.value = String(nextValue);
         if (slider.dataset.mediaSlider === "volume") {
-          this._draftVolume.set(slider.dataset.entity, nextValue);
-          this._updatePlayerVolumePreview(slider.dataset.entity, nextValue);
+          this._draftVolume.set(slider.dataset.entity || "", nextValue);
+          this._updatePlayerVolumePreview(slider.dataset.entity || "", nextValue);
         }
       }
       _queueSliderDragUpdate(slider, clientX) {
         const nextValue = getRangeValueFromGeometry(this._activeSliderDrag?.geometry, slider.value, clientX);
         slider.value = String(nextValue);
         if (slider.dataset.mediaSlider === "volume") {
-          this._draftVolume.set(slider.dataset.entity, nextValue);
-          this._updatePlayerVolumePreview(slider.dataset.entity, nextValue);
+          this._draftVolume.set(slider.dataset.entity || "", nextValue);
+          this._updatePlayerVolumePreview(slider.dataset.entity || "", nextValue);
         }
       }
       _commitSliderDrag(clientX, event = null, pointerId = null) {
@@ -2847,19 +2983,14 @@
         if (event) {
           event.preventDefault();
         }
-        this._pendingDragUpdate = null;
-        if (this._dragFrame) {
-          window.cancelAnimationFrame(this._dragFrame);
-          this._dragFrame = 0;
-        }
         const nextValue = getRangeValueFromGeometry(drag.geometry, drag.slider.value, clientX);
         drag.slider.value = String(nextValue);
         this._skipNextSliderChange = drag.slider;
         if (drag.slider.dataset.mediaSlider === "volume") {
           this._triggerHaptic("selection");
-          this._draftVolume.set(drag.slider.dataset.entity, nextValue);
-          this._updatePlayerVolumePreview(drag.slider.dataset.entity, nextValue);
-          this._commitPlayerVolume(drag.slider.dataset.entity, nextValue);
+          this._draftVolume.set(drag.slider.dataset.entity || "", nextValue);
+          this._updatePlayerVolumePreview(drag.slider.dataset.entity || "", nextValue);
+          this._commitPlayerVolume(drag.slider.dataset.entity || "", nextValue);
         }
         this._activeSliderDrag = null;
         this._detachWindowDragListeners();
@@ -2869,8 +3000,9 @@
         }
       }
       _onShadowMouseDown(event) {
+        if (!(event instanceof MouseEvent)) return;
         const slider = event.composedPath().find(
-          (node) => node instanceof HTMLInputElement && node.type === "range" && node.dataset?.mediaSlider
+          (node) => node instanceof HTMLInputElement && node.type === "range" && Boolean(node.dataset.mediaSlider)
         );
         if (this._activeSliderDrag || !slider || event.button !== 0) {
           return;
@@ -2878,13 +3010,14 @@
         this._startSliderDrag(slider, event.clientX, event);
       }
       _onShadowTouchStart(event) {
+        if (!(event instanceof TouchEvent)) return;
         const slider = event.composedPath().find(
-          (node) => node instanceof HTMLInputElement && node.type === "range" && node.dataset?.mediaSlider
+          (node) => node instanceof HTMLInputElement && node.type === "range" && Boolean(node.dataset.mediaSlider)
         );
-        if (this._activeSliderDrag || !slider || !event.touches?.length) {
+        if (this._activeSliderDrag || !slider || !event.touches[0]) {
           return;
         }
-        this._startSliderDrag(slider, event.touches[0].clientX, event);
+        this._startSliderDrag(slider, event.touches[0]?.clientX ?? 0, event);
       }
       _onWindowPointerMove(event) {
         if (this._activeProgressDrag && this._activeProgressDrag.pointerId === event.pointerId) {
@@ -2933,11 +3066,11 @@
         this._commitSliderDrag(event.clientX, event);
       }
       _onWindowTouchMove(event) {
-        if (!this._activeSliderDrag || !event.touches?.length) {
+        if (!this._activeSliderDrag || !event.touches[0]) {
           return;
         }
         event.preventDefault();
-        this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.touches[0].clientX);
+        this._queueSliderDragUpdate(this._activeSliderDrag.slider, event.touches[0]?.clientX ?? 0);
       }
       _onWindowTouchStartCapture(event) {
         const drag = this._activeSliderDrag;
@@ -2948,24 +3081,14 @@
         if (path.includes(drag.slider)) {
           return;
         }
-        this._activeSliderDrag = null;
-        this._detachWindowDragListeners();
-        this._pendingDragUpdate = null;
-        if (this._dragFrame) {
-          window.cancelAnimationFrame(this._dragFrame);
-          this._dragFrame = 0;
-        }
-        if (this._pendingRenderAfterDrag) {
-          this._pendingRenderAfterDrag = false;
-          this._render();
-        }
+        this._cancelDrag();
       }
       _onWindowTouchEnd(event) {
         if (!this._activeSliderDrag) {
           return;
         }
         const clientX = event.changedTouches?.[0]?.clientX;
-        if (!Number.isFinite(clientX)) {
+        if (typeof clientX !== "number" || !Number.isFinite(clientX)) {
           this._activeSliderDrag = null;
           this._detachWindowDragListeners();
           if (this._pendingRenderAfterDrag) {
@@ -2983,14 +3106,14 @@
         this._dragWindowListenersAttached = true;
         window.addEventListener("pointermove", this._onWindowPointerMove);
         window.addEventListener("pointerup", this._onWindowPointerUp);
-        window.addEventListener("pointercancel", this._onWindowPointerUp);
+        window.addEventListener("pointercancel", this._onWindowCancel);
         window.addEventListener("mousemove", this._onWindowMouseMove);
         window.addEventListener("mouseup", this._onWindowMouseUp);
-        if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+        if (!(typeof PointerEvent !== "undefined")) {
           window.addEventListener("touchstart", this._onWindowTouchStartCapture, { passive: true, capture: true });
           window.addEventListener("touchmove", this._onWindowTouchMove, { passive: false });
           window.addEventListener("touchend", this._onWindowTouchEnd, { passive: false });
-          window.addEventListener("touchcancel", this._onWindowTouchEnd, { passive: false });
+          window.addEventListener("touchcancel", this._onWindowCancel, { passive: false });
         }
       }
       _detachWindowDragListeners() {
@@ -3000,18 +3123,18 @@
         this._dragWindowListenersAttached = false;
         window.removeEventListener("pointermove", this._onWindowPointerMove);
         window.removeEventListener("pointerup", this._onWindowPointerUp);
-        window.removeEventListener("pointercancel", this._onWindowPointerUp);
+        window.removeEventListener("pointercancel", this._onWindowCancel);
         window.removeEventListener("mousemove", this._onWindowMouseMove);
         window.removeEventListener("mouseup", this._onWindowMouseUp);
-        if (!(typeof window !== "undefined" && "PointerEvent" in window)) {
+        if (!(typeof PointerEvent !== "undefined")) {
           window.removeEventListener("touchstart", this._onWindowTouchStartCapture, true);
           window.removeEventListener("touchmove", this._onWindowTouchMove);
           window.removeEventListener("touchend", this._onWindowTouchEnd);
-          window.removeEventListener("touchcancel", this._onWindowTouchEnd);
+          window.removeEventListener("touchcancel", this._onWindowCancel);
         }
       }
       _onShadowChange(event) {
-        const slider = event.composedPath().find((node) => node instanceof HTMLInputElement && node.dataset?.mediaSlider);
+        const slider = event.composedPath().find((node) => node instanceof HTMLInputElement && Boolean(node.dataset.mediaSlider));
         if (!slider) {
           return;
         }
@@ -3022,9 +3145,30 @@
         }
         this._triggerHaptic("selection");
         if (slider.dataset.mediaSlider === "volume") {
-          const nextValue = clamp(Number(slider.value), 0, 100);
-          this._draftVolume.set(slider.dataset.entity, nextValue);
-          this._commitPlayerVolume(slider.dataset.entity, nextValue);
+          const numericValue = Number(slider.value);
+          if (!slider.dataset.entity || !Number.isFinite(numericValue)) return;
+          const nextValue = clamp(numericValue, 0, 100);
+          this._draftVolume.set(slider.dataset.entity || "", nextValue);
+          this._commitPlayerVolume(slider.dataset.entity || "", nextValue);
+        }
+      }
+      _onWindowCancel() {
+        this._cancelDrag();
+      }
+      _cancelDrag(shouldRender = true) {
+        const entityId = this._activeSliderDrag?.slider.dataset.entity;
+        if (entityId) this._clearDraftVolume(entityId);
+        this._activeSliderDrag = this._activeProgressDrag = null;
+        this._skipNextSliderChange = null;
+        this._detachWindowDragListeners();
+        const pending = this._pendingRenderAfterDrag;
+        this._pendingRenderAfterDrag = false;
+        if (shouldRender && this.isConnected) {
+          if (pending) this._render();
+          else {
+            this._syncVolumeControlsFromHass();
+            this._updateProgressTick(this._getVisiblePlayers());
+          }
         }
       }
       _getMediaBrowserClient() {
@@ -3037,36 +3181,23 @@
         return null;
       }
       _normalizeMediaBrowserItem(item) {
-        if (!item || typeof item !== "object") {
-          return null;
-        }
+        if (!isObject(item)) return null;
         return {
-          title: item.title || item.name || "Elemento",
-          media_class: item.media_class || "",
-          media_content_id: item.media_content_id || "",
-          media_content_type: item.media_content_type || "",
+          title: mediaText(item.title || item.name || "Elemento"),
+          media_class: mediaText(item.media_class),
+          media_content_id: mediaText(item.media_content_id),
+          media_content_type: mediaText(item.media_content_type),
           can_play: item.can_play === true,
           can_expand: item.can_expand === true,
-          thumbnail: item.thumbnail || item.thumbnail_url || "",
-          children: Array.isArray(item.children) ? item.children.map((child) => this._normalizeMediaBrowserItem(child)).filter(Boolean) : []
+          thumbnail: mediaText(item.thumbnail || item.thumbnail_url),
+          children: Array.isArray(item.children) ? item.children.map((child) => this._normalizeMediaBrowserItem(child)).filter((child) => child !== null) : []
         };
       }
       _normalizeMediaBrowserNode(result, entityId) {
-        let node = result;
-        if (node?.result && typeof node.result === "object") {
-          node = node.result;
-        }
-        if (node && entityId && typeof node[entityId] === "object") {
-          node = node[entityId];
-        }
-        const normalized = this._normalizeMediaBrowserItem(node);
-        if (!normalized) {
-          return null;
-        }
-        return {
-          ...normalized,
-          title: normalized.title || "Media"
-        };
+        let node = mediaRecord(result);
+        if (isObject(node.result)) node = node.result;
+        if (isObject(node[entityId])) node = node[entityId];
+        return this._normalizeMediaBrowserItem(node);
       }
       async _fetchMediaBrowserNode(entityId, mediaContentType = "", mediaContentId = "") {
         const client = this._getMediaBrowserClient();
@@ -3101,6 +3232,7 @@
         if (!entityId) {
           return;
         }
+        const generation = this._generation;
         const playerConfig = this._findPlayerConfig(entityId) || { entity: entityId };
         const playerState = this._hass?.states?.[entityId];
         const isMusicAssistant = this._isMusicAssistantPlayer(playerConfig, playerState);
@@ -3118,24 +3250,25 @@
           error: "",
           stack: []
         };
+        const initialState = this._mediaBrowserState;
         this._render();
         try {
           const rootNode = await this._fetchMediaBrowserNode(entityId);
-          if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
+          if (this._mediaBrowserRequestToken !== token || !this._isCurrent(generation)) {
             return;
           }
           if (!rootNode) {
             throw new Error("Empty media browser response");
           }
           this._mediaBrowserState = {
-            ...this._mediaBrowserState,
+            ...initialState,
             loading: false,
             error: "",
             stack: [rootNode]
           };
           this._render();
         } catch (_error) {
-          if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
+          if (this._mediaBrowserRequestToken !== token || !this._isCurrent(generation)) {
             return;
           }
           const safeFallbackPath = window.NodaliaUtils?.sanitizeActionUrl(fallbackPath, { allowRelative: true }) || "";
@@ -3146,7 +3279,7 @@
             return;
           }
           this._mediaBrowserState = {
-            ...this._mediaBrowserState,
+            ...initialState,
             loading: false,
             error: this._mediaBrowserState?.isTvPlayer ? "Este dispositivo no expone medios compatibles." : "No se pudieron cargar los medios.",
             stack: []
@@ -3158,6 +3291,7 @@
         if (!this._mediaBrowserState?.entityId) {
           return;
         }
+        const generation = this._generation;
         const previousState = this._mediaBrowserState;
         const token = this._mediaBrowserRequestToken + 1;
         this._mediaBrowserRequestToken = token;
@@ -3173,7 +3307,7 @@
             mediaContentType,
             mediaContentId
           );
-          if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
+          if (this._mediaBrowserRequestToken !== token || !this._isCurrent(generation)) {
             return;
           }
           if (!nextNode) {
@@ -3187,7 +3321,7 @@
           };
           this._render();
         } catch (_error) {
-          if (this._mediaBrowserRequestToken !== token || !this.isConnected) {
+          if (this._mediaBrowserRequestToken !== token || !this._isCurrent(generation)) {
             return;
           }
           this._mediaBrowserState = {
@@ -3206,6 +3340,7 @@
           this._closeMediaBrowser();
           return;
         }
+        this._mediaBrowserRequestToken += 1;
         this._mediaBrowserState = {
           ...this._mediaBrowserState,
           error: "",
@@ -3238,19 +3373,19 @@
         return match?.icon || "";
       }
       _getMediaBrowserDisplayTitle(value) {
-        const label = typeof value === "string" ? value : value?.title;
+        const label = typeof value === "string" ? value : mediaRecord(value).title;
         const fallback = String(label || "").trim();
         const lang = window.NodaliaI18n?.resolveLanguage?.(this._hass, this._config?.language ?? "auto") ?? "en";
-        const dict = window.NodaliaI18n?.strings?.(lang)?.navigationMusicAssist || {};
-        const enDict = window.NodaliaI18n?.strings?.("en")?.navigationMusicAssist || {};
+        const dict = mediaRecord(window.NodaliaI18n?.strings?.(lang)?.navigationMusicAssist);
+        const enDict = mediaRecord(window.NodaliaI18n?.strings?.("en")?.navigationMusicAssist);
         if (!fallback) {
-          return dict.browseFallback || enDict.browseFallback || "Item";
+          return mediaText(dict.browseFallback || enDict.browseFallback || "Item");
         }
         if (!this._mediaBrowserState?.isMusicAssistant) {
           return fallback;
         }
         const key = normalizeTextKey2(fallback);
-        return dict[key] || enDict[key] || fallback;
+        return mediaText(dict[key] || enDict[key] || fallback);
       }
       _getMediaBrowserViewKey(state = this._mediaBrowserState) {
         const currentNode = state?.stack?.[state.stack.length - 1];
@@ -3277,6 +3412,11 @@
           return;
         }
         this._mediaBrowserScrollPositions.set(viewKey, list.scrollTop);
+        while (this._mediaBrowserScrollPositions.size > 64) {
+          const oldest = this._mediaBrowserScrollPositions.keys().next().value;
+          if (oldest === void 0) break;
+          this._mediaBrowserScrollPositions.delete(oldest);
+        }
       }
       _restoreMediaBrowserScrollState() {
         if (!this.shadowRoot || !this._mediaBrowserState) {
@@ -3373,12 +3513,12 @@
         return MUSIC_ASSISTANT_BROWSER_EXCLUDE_PATTERNS.some((pattern) => haystack.includes(pattern));
       }
       _onShadowClick(event) {
-        const mediaSlider = event.composedPath().find((node) => node instanceof HTMLInputElement && node.dataset?.mediaSlider);
+        const mediaSlider = event.composedPath().find((node) => node instanceof HTMLInputElement && Boolean(node.dataset.mediaSlider));
         if (mediaSlider) {
           event.stopPropagation();
           return;
         }
-        const mediaControlButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.mediaControl);
+        const mediaControlButton = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.mediaControl));
         if (mediaControlButton) {
           event.preventDefault();
           event.stopPropagation();
@@ -3407,6 +3547,8 @@
           const visiblePlayers = this._getVisiblePlayers();
           this._activePlayerIndex = clamp(Number(mediaDotButton.dataset.mediaIndex), 0, visiblePlayers.length - 1);
           this._activePlayerEntity = String(visiblePlayers[this._activePlayerIndex]?.entity || "");
+          this._cancelDrag(false);
+          this._closeMediaBrowser(false);
           this._animateContentOnNextRender = true;
           this._render();
           return;
@@ -3427,7 +3569,7 @@
           this._goBackMediaBrowser();
           return;
         }
-        const mediaBrowserActionButton = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.mediaBrowserAction);
+        const mediaBrowserActionButton = event.composedPath().find((node) => node instanceof HTMLElement && Boolean(node.dataset.mediaBrowserAction));
         if (mediaBrowserActionButton) {
           event.preventDefault();
           event.stopPropagation();
@@ -3463,8 +3605,8 @@
       _mediaPlayerCardUi(key, fallback = "") {
         const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
         const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-        const pack = window.NodaliaI18n?.strings?.(lang)?.mediaPlayerCard;
-        const enPack = window.NodaliaI18n?.strings?.("en")?.mediaPlayerCard;
+        const pack = mediaRecord(window.NodaliaI18n?.strings?.(lang)?.mediaPlayerCard);
+        const enPack = mediaRecord(window.NodaliaI18n?.strings?.("en")?.mediaPlayerCard);
         const raw = pack?.[key] ?? enPack?.[key];
         return String(raw != null && raw !== "" ? raw : fallback);
       }
@@ -3505,7 +3647,7 @@
           const defaultAction = canExpand ? "browse" : canPlay ? "play" : "";
           const itemIcon = this._getMediaBrowserIcon(item);
           const itemTitle = this._getMediaBrowserDisplayTitle(item);
-          const itemThumbnail = this._resolveMediaUrl(item.thumbnail || item.thumbnail_url || "", {
+          const itemThumbnail = this._resolveMediaUrl(item.thumbnail || "", {
             cacheToken: item.media_content_id || itemTitle
           });
           return `
@@ -3588,8 +3730,8 @@
         }
         this._resolveActivePlayerIndex(players);
         const player = players[this._activePlayerIndex];
-        const state = this._hass?.states?.[player.entity];
-        if (!state) {
+        const state = this._hass?.states?.[player?.entity || ""];
+        if (!player || !state) {
           return {
             markup: "",
             animateEntranceApplied: false
@@ -3612,7 +3754,7 @@
         const artworkReady = !desiredArtwork || this._ensureArtworkReady(player.entity, desiredArtwork, {
           rerenderOnReady: true
         });
-        const artwork = getCachedArtworkPalette(desiredArtwork) ? desiredArtwork : this._getRenderableArtwork(player.entity, desiredArtwork);
+        const artwork = getCachedArtworkPalette(desiredArtwork || "") ? desiredArtwork : this._getRenderableArtwork(player.entity, desiredArtwork || null);
         const backgroundArtwork = artwork || desiredArtwork || "";
         const renderAnimateEntrance = animateEntrance && artworkReady;
         const safeArtwork = artwork ? escapeHtml(artwork) : "";
@@ -3630,14 +3772,14 @@
         const chips = isTvPlayer ? this._getTvPlayerChips(player, state, progress, title, subtitle, sourceOptions) : this._getPlayerChips(player, state, progress, title, subtitle);
         const showPrimaryTitle = !isTvPlayer ? hasActiveMediaContent && (!playerLabel || normalizeTextKey2(title) !== normalizeTextKey2(playerLabel)) : Boolean(title) && (!playerLabel || normalizeTextKey2(title) !== normalizeTextKey2(playerLabel) || !hasActiveMediaContent);
         const showTopChip = this._config.show_device_chip !== false && !!playerLabel && (isTvPlayer ? !showPrimaryTitle || normalizeTextKey2(playerLabel) !== normalizeTextKey2(title) : !hasActiveMediaContent || normalizeTextKey2(playerLabel) !== normalizeTextKey2(title));
-        const statusLabel = this._getPlayerStateLabel(state.state);
+        const statusLabel = this._getPlayerStateLabel(state?.state);
         const showStateLabel = this._config.show_state === true;
         const browsePath = this._getPlayerBrowsePath(player, state);
         const browseAvailable = isTvPlayer ? Boolean(player?.browse_path || player?.media_browser_path) : this._supportsMediaBrowser(player, state) || Boolean(browsePath);
         const isIdleLayout = this._shouldUseIdleLayout(player, state);
-        const isTvOff = isTvPlayer && ["off", "standby", "unavailable", "unknown"].includes(normalizeTextKey2(state.state));
+        const isTvOff = isTvPlayer && ["off", "standby", "unavailable", "unknown"].includes(normalizeTextKey2(state?.state));
         const useCompactIdleLayout = isIdleLayout && (!isTvPlayer || isTvOff);
-        const volumeLevel = Number(state.attributes.volume_level ?? 0);
+        const volumeLevel = Number(state?.attributes.volume_level ?? 0);
         const currentVolumePercent = this._getPlayerVolumePercent(player.entity, state);
         const volumeSupported = this._supportsVolumeControl(state);
         const playerStyles = this._config.styles.player;
@@ -3696,7 +3838,7 @@
         class="media-player__control ${state.state === "off" ? "media-player__control--primary" : ""}"
         data-media-control="power-toggle"
         data-entity="${escapeHtml(player.entity)}"
-        data-media-state="${escapeHtml(state.state)}"
+        data-media-state="${escapeHtml(state?.state)}"
         aria-label="${escapeHtml(state.state === "off" ? this._mediaPlayerAria("turnOn", "Turn on") : this._mediaPlayerAria("turnOff", "Turn off"))}"
       >
         <ha-icon icon="mdi:power"></ha-icon>
@@ -3742,7 +3884,7 @@
           ${sourceOptions.map((source) => `
               <button
                 type="button"
-                class="media-player__source-button ${normalizeTextKey2(source) === normalizeTextKey2(state.attributes.source) ? "active" : ""}"
+                class="media-player__source-button ${normalizeTextKey2(source) === normalizeTextKey2(state?.attributes.source) ? "active" : ""}"
                 data-media-control="select-source"
                 data-entity="${escapeHtml(player.entity)}"
                 data-media-source="${escapeHtml(source)}"
@@ -3998,16 +4140,33 @@
         };
       }
       _render() {
+        if (!this.isConnected) return;
+        const focused = this.shadowRoot?.activeElement;
+        const attributes = ["data-media-control", "data-entity", "data-media-index", "data-media-browser-action", "data-media-content-type", "data-media-content-id", "data-media-browser-close", "data-media-browser-back", "data-media-card-index", "data-media-slider", "data-media-source", "data-media-progress"];
+        const selector = attributes.map((key) => `[${key}]`).join(",");
+        const values = focused instanceof HTMLElement && focused.matches(selector) ? attributes.map((key) => focused.getAttribute(key)) : null;
+        this._renderView();
+        if (values) {
+          const target = [...this.shadowRoot?.querySelectorAll(selector) ?? []].find((node) => node.tagName === focused?.tagName && attributes.every((key, index) => node.getAttribute(key) === values[index]));
+          if (target instanceof HTMLElement) {
+            target.focus({ preventScroll: true });
+            target.setAttribute("data-media-retained-focus", "");
+          }
+        }
+      }
+      _renderView() {
         if (!this.shadowRoot) {
           return;
         }
         this._captureMediaBrowserScrollState();
         this._captureTvPanelScrollState();
-        if (!this._config) {
+        if (!this._configured) {
+          this._releaseViewWork();
           this.shadowRoot.innerHTML = "";
           return;
         }
         if (this._shouldHideForScreen()) {
+          this._releaseViewWork();
           this.shadowRoot.innerHTML = "";
           return;
         }
@@ -4028,6 +4187,7 @@
           { cardClass: "media-player" }
         );
         if (mediaEntityGuard) {
+          this._releaseViewWork();
           this.shadowRoot.innerHTML = mediaEntityGuard;
           return;
         }
@@ -4036,7 +4196,7 @@
         const hasPlayers = players.length > 0;
         const themePlayer = players[this._resolveActivePlayerIndex(players)];
         const themeState = themePlayer && this._hass?.states?.[themePlayer.entity];
-        const themeUrl = this._config.artwork?.dynamic_colors !== false && themeState ? this._getPlayerArtwork(themePlayer, themeState) : "";
+        const themeUrl = this._config.artwork?.dynamic_colors !== false && themeState ? this._getPlayerArtwork(themePlayer, themeState) || "" : "";
         if (!prepareArtworkTheme(this, themeUrl, Boolean(this.shadowRoot.querySelector(".media-player-card")), () => this._render())) return;
         if (!hasPlayers) {
           this._activeArtworkIdle = false;
@@ -5381,211 +5541,7 @@
           z-index: ${Number(config.layout.z_index) + 11};
         }
 
-        .media-browser-panel::before {
-          background: color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 96%, transparent);
-          border-radius: inherit;
-          content: "";
-          inset: 0;
-          pointer-events: none;
-          position: absolute;
-          z-index: 0;
-        }
-
-        .media-browser-panel > * {
-          position: relative;
-          z-index: 1;
-        }
-
-        .media-browser-panel--entering {
-          animation: media-player-browser-panel-in var(--media-player-browser-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
-        }
-
-        .media-browser__header {
-          align-items: center;
-          display: grid;
-          gap: 12px;
-          grid-template-columns: 40px minmax(0, 1fr) 40px;
-        }
-
-        .media-browser__header-copy {
-          min-width: 0;
-          text-align: center;
-        }
-
-        .media-browser__eyebrow {
-          color: var(--secondary-text-color);
-          font-size: 11px;
-          font-weight: 600;
-          letter-spacing: 0.04em;
-          text-transform: uppercase;
-        }
-
-        .media-browser__title {
-          color: var(--primary-text-color);
-          font-size: 16px;
-          font-weight: 700;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .media-browser__header-button,
-        .media-browser__item-play {
-          align-items: center;
-          appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 6%, transparent);
-          border-radius: 999px;
-          color: var(--primary-text-color);
-          cursor: pointer;
-          display: inline-flex;
-          height: 40px;
-          justify-content: center;
-          padding: 0;
-          width: 40px;
-        }
-
-        .media-browser__header-button ha-icon,
-        .media-browser__item-play ha-icon {
-          font-size: 20px;
-        }
-
-        .media-browser__list {
-          display: grid;
-          gap: 10px;
-          min-height: 0;
-          overflow: auto;
-          padding-right: 2px;
-        }
-
-        .media-browser__item {
-          align-items: center;
-          display: grid;
-          gap: 8px;
-          grid-template-columns: minmax(0, 1fr) auto;
-        }
-
-        .media-browser__item-main {
-          align-items: center;
-          appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 3%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border-radius: 20px;
-          color: var(--primary-text-color);
-          cursor: pointer;
-          display: grid;
-          gap: 12px;
-          grid-template-columns: 46px minmax(0, 1fr) auto;
-          min-height: 58px;
-          padding: 8px 10px;
-          text-align: left;
-          width: 100%;
-        }
-
-        .media-browser__item-main:disabled {
-          cursor: default;
-          opacity: 0.72;
-        }
-
-        .media-browser__item-artwork {
-          align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border-radius: 14px;
-          display: inline-flex;
-          height: 46px;
-          justify-content: center;
-          overflow: hidden;
-          width: 46px;
-        }
-
-        .media-browser__item-artwork img,
-        .media-browser__item-artwork ha-icon {
-          height: 100%;
-          object-fit: cover;
-          width: 100%;
-        }
-
-        .media-browser__item-artwork ha-icon {
-          font-size: 22px;
-          padding: 11px;
-        }
-
-        .media-browser__item-copy {
-          display: grid;
-          gap: 2px;
-          min-width: 0;
-        }
-
-        .media-browser__item-title {
-          color: var(--primary-text-color);
-          font-size: 14px;
-          font-weight: 700;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .media-browser__item-chevron {
-          color: var(--secondary-text-color);
-          font-size: 20px;
-        }
-
-        .media-browser__empty {
-          align-items: center;
-          color: var(--secondary-text-color);
-          display: flex;
-          flex: 1 1 auto;
-          font-size: 13px;
-          justify-content: center;
-          line-height: 1.5;
-          min-height: 120px;
-          padding: 12px;
-          text-align: center;
-        }
-
-        @keyframes media-player-button-bounce {
-          0% { transform: scale(1); }
-          40% { transform: scale(1.08); }
-          100% { transform: scale(1); }
-        }
-
-        @keyframes media-player-panel-in {
-          0% {
-            opacity: 0;
-            transform: translateY(-8px) scaleY(0.94);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0) scaleY(1);
-          }
-        }
-
-        @keyframes media-player-fade-up {
-          0% {
-            opacity: 0;
-            transform: translateY(12px) scale(0.97);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-
-        @keyframes media-player-browser-backdrop-in {
-          0% { opacity: 0; }
-          100% { opacity: 1; }
-        }
-
-        @keyframes media-player-browser-panel-in {
-          0% {
-            opacity: 0;
-            transform: translateY(14px) scale(0.98);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
+        ${media_player_browser_default}
 
         ${animations.enabled ? "" : `
         .media-player-card,
@@ -5669,374 +5625,7 @@
           }
         }
 
-        .media-player-card--square,
-        .media-player-card--artwork {
-          align-self: start;
-          aspect-ratio: 1 / 1;
-          container-type: inline-size;
-          display: grid;
-          grid-template-rows: minmax(0, 1fr) auto;
-          height: auto;
-          max-height: 100%;
-          max-width: 100%;
-          min-height: 0;
-          padding: 14px 14px 12px;
-          width: 100%;
-        }
-
-        .media-player-card--square.has-album-background::before,
-        .media-player-card--artwork.has-album-background::before {
-          background: transparent;
-        }
-
-        .media-player-card--square.has-album-background::after,
-        .media-player-card--artwork.has-album-background::after {
-          background: linear-gradient(
-            180deg,
-            rgba(8, 8, 10, 0.46) 0%,
-            rgba(8, 8, 10, 0.1) 24%,
-            rgba(8, 8, 10, 0.08) 48%,
-            rgba(8, 8, 10, 0.52) 74%,
-            rgba(8, 8, 10, 0.78) 100%
-          );
-        }
-
-        .media-player-card--square .media-player__album-bg,
-        .media-player-card--square .media-player__art-layer,
-        .media-player-card--artwork .media-player__album-bg,
-        .media-player-card--artwork .media-player__art-layer {
-          filter: none;
-          inset: 0;
-          opacity: 1;
-          transform: none;
-        }
-
-        .media-player-card--square .media-player__art-layer.is-idle-animated,
-        .media-player-card--artwork .media-player__art-layer.is-idle-animated {
-          animation: none;
-        }
-
-        .media-player-card--square.has-album-background .media-player__title,
-        .media-player-card--square.has-album-background .media-player__subtitle,
-        .media-player-card--artwork.has-album-background .media-player__title,
-        .media-player-card--artwork.has-album-background .media-player__subtitle {
-          color: #fff;
-          text-shadow:
-            0 0 1px rgba(0, 0, 0, 0.95),
-            0 1px 2px rgba(0, 0, 0, 0.85),
-            0 2px 6px rgba(0, 0, 0, 0.65),
-            0 8px 24px rgba(0, 0, 0, 0.5);
-        }
-
-        .media-player-card--square.has-album-background .media-player__subtitle,
-        .media-player-card--artwork.has-album-background .media-player__subtitle {
-          color: rgba(255, 255, 255, 0.94);
-          font-weight: 600;
-        }
-
-        .media-player-card--square .media-player__content,
-        .media-player-card--artwork .media-player__content {
-          align-content: stretch;
-          display: grid;
-          gap: 10px;
-          grid-row: 1;
-          grid-template-rows: auto minmax(0, 1fr) auto;
-          height: 100%;
-          min-height: 0;
-          padding-top: 2px;
-          padding-bottom: 0;
-        }
-
-        .media-player-card--square .media-player__progress,
-        .media-player-card--artwork .media-player__progress {
-          grid-row: 2;
-          inset: auto;
-          margin-top: 10px;
-          position: static;
-          width: 100%;
-        }
-
-        .media-player-card--square .media-player__hero,
-        .media-player-card--artwork .media-player__hero {
-          grid-row: 1;
-          grid-template-columns: minmax(0, 1fr);
-        }
-
-        /* Full-bleed album art replaces the thumb; keep the entity icon when there is no cover. */
-        .media-player-card--square.has-album-background .media-player__artwork,
-        .media-player-card--artwork.has-album-background .media-player__artwork {
-          display: none;
-        }
-
-        .media-player-card--square:not(.has-album-background) .media-player__hero,
-        .media-player-card--artwork:not(.has-album-background) .media-player__hero {
-          grid-template-columns: 48px minmax(0, 1fr);
-        }
-
-        .media-player-card--square:not(.has-album-background) .media-player__artwork,
-        .media-player-card--artwork:not(.has-album-background) .media-player__artwork {
-          height: 48px;
-          width: 48px;
-        }
-
-        .media-player-card--square .media-player__hero-copy,
-        .media-player-card--artwork .media-player__hero-copy {
-          padding-right: 44px;
-        }
-
-        .media-player-card--square .media-player__hero-top,
-        .media-player-card--artwork .media-player__hero-top {
-          gap: 8px;
-          grid-template-columns: minmax(0, 1fr);
-        }
-
-        .media-player-card--square .media-player__info-rail,
-        .media-player-card--artwork .media-player__info-rail {
-          justify-self: start;
-          max-width: 100%;
-        }
-
-        .media-player-card--square .media-player__title {
-          font-size: 16px;
-        }
-
-        .media-player-card--square .media-player__subtitle,
-        .media-player-card--artwork .media-player__subtitle {
-          font-size: 13px;
-        }
-
-        .media-player-card--square .media-player__center-stack,
-        .media-player-card--artwork .media-player__center-stack {
-          align-content: end;
-          align-self: end;
-          grid-row: 3;
-          min-width: 0;
-          width: 100%;
-        }
-
-        .media-player-card--square .media-player__transport-row,
-        .media-player-card--artwork .media-player__transport-row {
-          align-content: end;
-          min-width: 0;
-          width: 100%;
-        }
-
-        @container (max-width: 260px) {
-          .media-player__info-rail {
-            display: none;
-          }
-
-          .media-player__title {
-            font-size: 14px;
-          }
-
-          .media-player__subtitle {
-            font-size: 12px;
-          }
-
-          .media-player-card--square .media-player__content,
-          .media-player-card--artwork .media-player__content {
-            gap: 6px;
-          }
-        }
-
-        @container (max-width: 200px) {
-          .media-player__subtitle,
-          .media-player__volume-button:not(.media-player__control):not(.media-player__volume-button--browse),
-          .media-player-card--square .media-player__volume-button:not(.media-player__volume-button--browse),
-          .media-player-card--artwork .media-player__volume-button:not(.media-player__volume-button--browse) {
-            display: none;
-          }
-
-          .media-player__title {
-            font-size: 12px;
-          }
-        }
-
-        .media-player-card--square,
-        .media-player-card--artwork {
-          container-type: inline-size;
-        }
-
-        .media-player-card--square .media-player__transport-cluster,
-        .media-player-card--artwork .media-player__transport-cluster {
-          display: flex;
-          flex-wrap: nowrap;
-          gap: 10px;
-          grid-template-columns: none;
-          justify-content: center;
-          width: 100%;
-        }
-
-        .media-player-card--square .media-player__control,
-        .media-player-card--square .media-player__volume-button:not(.media-player__volume-button--browse),
-        .media-player-card--artwork .media-player__control,
-        .media-player-card--artwork .media-player__volume-button:not(.media-player__volume-button--browse) {
-          aspect-ratio: auto;
-          flex: 0 0 auto;
-          height: 36px;
-          justify-self: center;
-          max-width: none;
-          min-width: 36px;
-          width: 36px;
-        }
-
-        .media-player-card--square .media-player__control--primary,
-        .media-player-card--artwork .media-player__control--primary {
-          height: 40px;
-          min-width: 40px;
-          width: 40px;
-        }
-
-        .media-player-card--square .media-player__control ha-icon,
-        .media-player-card--square .media-player__volume-button ha-icon,
-        .media-player-card--artwork .media-player__control ha-icon,
-        .media-player-card--artwork .media-player__volume-button ha-icon {
-          --mdc-icon-size: 16px;
-          height: 16px;
-          width: 16px;
-        }
-
-        .media-player-card--square .media-player__volume-button--browse,
-        .media-player-card--artwork .media-player__volume-button--browse {
-          height: 32px;
-          min-width: 32px;
-          position: absolute;
-          right: 10px;
-          top: 10px;
-          width: 32px;
-          z-index: 4;
-        }
-
-        .media-player-card--square .media-player__info-rail,
-        .media-player-card--artwork .media-player__info-rail,
-        .media-player-card--square .media-player__chip--top,
-        .media-player-card--artwork .media-player__chip--top,
-        .media-player-card--square .media-player__chip--device,
-        .media-player-card--artwork .media-player__chip--device {
-          display: none;
-        }
-
-        .media-player-card--chip {
-          display: grid;
-          padding: 10px 12px 16px;
-        }
-
-        .media-player-card--chip .media-player__content {
-          align-items: center;
-          gap: 8px;
-          grid-template-columns: minmax(0, 1fr) auto;
-          min-width: 0;
-          padding-bottom: 10px;
-        }
-
-        .media-player-card--chip .media-player__hero {
-          align-items: center;
-          grid-template-columns: 44px minmax(0, 1fr);
-          min-width: 0;
-        }
-
-        .media-player-card--chip .media-player__artwork {
-          height: 44px;
-          width: 44px;
-        }
-
-        .media-player-card--chip .media-player__center-stack,
-        .media-player-card--chip .media-player__transport-row,
-        .media-player-card--chip .media-player__transport-shell {
-          justify-self: end;
-          max-width: 100%;
-          min-width: 0;
-          width: auto;
-        }
-
-        .media-player-card--chip .media-player__transport-cluster {
-          flex-wrap: nowrap;
-          gap: 6px;
-          justify-content: flex-end;
-          width: auto;
-        }
-
-        .media-player-card--chip .media-player__control,
-        .media-player-card--chip .media-player__volume-button {
-          height: 28px;
-          min-width: 28px;
-          width: 28px;
-        }
-
-        .media-player-card--chip .media-player__control ha-icon,
-        .media-player-card--chip .media-player__volume-button ha-icon {
-          --mdc-icon-size: 13px;
-          height: 13px;
-          width: 13px;
-        }
-
-        .media-player-card--chip .media-player__info-rail,
-        .media-player-card--chip .media-player__volume-button--browse {
-          display: none;
-        }
-
-        .media-player-card--compact .media-player__content {
-          display: flex;
-          flex: 1 1 auto;
-          flex-direction: column;
-          gap: 8px;
-          justify-content: space-between;
-          min-height: 0;
-          padding-bottom: 0;
-        }
-
-        .media-player-card--compact.media-player-card--idle .media-player__content {
-          align-items: center;
-          flex: 1 1 auto;
-          gap: 0;
-          justify-content: center;
-          min-height: 0;
-          width: 100%;
-        }
-
-        .media-player-card--compact.media-player-card--idle .media-player__content--idle {
-          width: 100%;
-        }
-
-        .media-player-card--compact .media-player__transport-cluster {
-          gap: 6px;
-          margin-top: auto;
-        }
-
-        .media-player-card--compact .media-player__transport-row {
-          margin-top: auto;
-          max-width: 100%;
-          min-width: 0;
-          overflow: visible;
-        }
-
-        .media-player-card--chip .media-player__footer,
-        .media-player-card--square .media-player__chips-wrap,
-        .media-player-card--artwork .media-player__chips-wrap,
-        .media-player-card--compact .media-player__chips-wrap {
-          display: none;
-        }
-
-        .media-player-card--compact .media-player__hero {
-          grid-template-columns: 48px minmax(0, 1fr);
-        }
-
-        .media-player-card--compact .media-player__artwork {
-          height: 48px;
-          width: 48px;
-        }
-
-        @keyframes nodalia-media-kenburns {
-          0% { transform: scale(1.04) translate3d(-1%, 0, 0); }
-          100% { transform: scale(1.12) translate3d(1.2%, -1.1%, 0); }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .media-player__art-layer.is-idle-animated {
-            animation: none !important;
-          }
-        }
+        ${media_player_presentations_default}
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
       <div class="spacer" aria-hidden="true"></div>
@@ -6067,9 +5656,16 @@
         const mediaBrowserDialog = this.shadowRoot.querySelector('.media-browser-panel[role="dialog"]');
         if (mediaBrowserDialog instanceof HTMLElement) {
           window.NodaliaUtils?.bindModalFocus?.(this, mediaBrowserDialog, {
-            initialFocusSelector: '[data-media-browser-close="true"]'
+            ...this._modalOpen ? { initialFocusSelector: "[data-media-retained-focus]" } : {},
+            restoreFocus: () => {
+              if (!this.isConnected) return;
+              const button = this.shadowRoot?.querySelector('[data-media-control="browse-media"]');
+              if (button instanceof HTMLElement) button.focus({ preventScroll: true });
+            }
           });
+          this._modalOpen = true;
         } else {
+          this._modalOpen = false;
           window.NodaliaUtils?.releaseModalFocus?.(this);
         }
         this._tvSourcePanelAnimatingEntity = null;
@@ -6112,12 +5708,13 @@
             this.shadowRoot.appendChild(keptArt);
           }
         }
+        if (!(styleEl instanceof HTMLStyleElement) || !(chrome instanceof HTMLElement)) return;
         if (styleEl.textContent !== css) {
           styleEl.textContent = css;
         }
         chrome.innerHTML = body;
         const card = this.shadowRoot.querySelector(".media-player-card");
-        void applyArtworkControlTheme(card, this._config?.artwork?.dynamic_colors === false ? "" : artOptions.artworkUrl || "");
+        void applyArtworkControlTheme(card instanceof HTMLElement ? card : null, this._config?.artwork?.dynamic_colors === false ? "" : artOptions.artworkUrl || "");
         if (card instanceof HTMLElement && artOptions.hasAlbumBackground) {
           const stage = previousArt instanceof HTMLElement ? previousArt : this._createArtworkStage();
           this._artworkStageEl = stage;
@@ -6191,8 +5788,9 @@
             entityId
           });
         }
+        const generation = this._generation;
         this._artworkController.startSlideshow(idleConfig, (url) => {
-          if (!this.isConnected) {
+          if (!this._isCurrent(generation)) {
             return;
           }
           this._idleSlideshowUrl = url;
@@ -6206,6 +5804,28 @@
           });
         }, entityId);
       }
+      _progressTrackKey(state) {
+        const attrs = state?.attributes;
+        return JSON.stringify([attrs?.media_content_id, attrs?.media_content_type, attrs?.media_title, attrs?.media_artist, attrs?.media_album_name, attrs?.media_duration]);
+      }
+      _validProgressDrag(drag) {
+        const state = this._hass?.states[drag.entityId];
+        return this.isConnected && supportsMediaSeek(state) && this._progressTrackKey(state) === drag.trackKey && this._getVisiblePlayers().some((player) => player.entity === drag.entityId);
+      }
+      _onShadowKeyDown(event) {
+        if (!(event instanceof KeyboardEvent)) return;
+        const track = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset.mediaProgress === "seek");
+        if (!track || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+        const entityId = track.dataset.entity || "";
+        const state = this._hass?.states[entityId];
+        const progress = this._getPlayerProgress(state);
+        if (!progress || !supportsMediaSeek(state)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const position = event.key === "Home" ? 0 : event.key === "End" ? progress.duration : clamp(progress.position + (event.key === "ArrowRight" ? 5 : -5), 0, progress.duration);
+        this._updateProgressFill(track, position / progress.duration * 100, progress.duration);
+        this._callInternalMediaService("media_seek", { entity_id: entityId, seek_position: position });
+      }
       _startProgressDrag(track, clientX, event = null, pointerId = null) {
         if (!(track instanceof HTMLElement) || track.dataset.mediaProgress !== "seek") {
           return;
@@ -6217,7 +5837,7 @@
           return;
         }
         const percent = progressPercentFromClientX(track, clientX);
-        this._activeProgressDrag = { entityId, percent, pointerId, track };
+        this._activeProgressDrag = { entityId, trackKey: this._progressTrackKey(state), duration: progress.duration, percent, pointerId, track };
         this._attachWindowDragListeners();
         this._updateProgressFill(track, percent, progress.duration);
         if (event) {
@@ -6238,7 +5858,11 @@
           return;
         }
         const state = this._hass?.states?.[drag.entityId];
-        const duration = Number(state?.attributes?.media_duration || 0);
+        if (!this._validProgressDrag(drag)) {
+          this._cancelDrag();
+          return;
+        }
+        const duration = drag.duration;
         drag.percent = progressPercentFromClientX(drag.track, clientX);
         this._updateProgressFill(drag.track, drag.percent, duration);
       }
@@ -6248,7 +5872,11 @@
           return;
         }
         const state = this._hass?.states?.[drag.entityId];
-        const duration = Number(state?.attributes?.media_duration || 0);
+        if (!this._validProgressDrag(drag)) {
+          this._cancelDrag();
+          return;
+        }
+        const duration = drag.duration;
         const seekPosition = seekPositionFromPercent(drag.percent, duration);
         this._activeProgressDrag = null;
         this._detachWindowDragListeners();

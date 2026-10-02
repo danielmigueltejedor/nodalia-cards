@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+- Check Media Player view contracts, retain native transport/dialog focus and paused progress, support keyboard seeking, cancel retired gestures/browser/artwork/TV-volume work and clear private cover history on context changes. Preserve centered translucent controls and embed readable static CSS within existing size limits.
+
 - Check Notifications view contracts, isolate retired calendar/weather/Engine/mobile work, serialize foreground batches, preserve native focus and scope browser dismissal history by server/user. Use the current weather forecast service and keep authoritative empty results.
 
 - Check Navigation view contracts, isolate pending media/palette work across HA contexts, preserve native keyboard focus and paused progress updates, and fix shared modal Tab traversal inside shadow roots on Safari.

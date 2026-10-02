@@ -1,0 +1,368 @@
+        .media-player-card--square,
+        .media-player-card--artwork {
+          align-self: start;
+          aspect-ratio: 1 / 1;
+          container-type: inline-size;
+          display: grid;
+          grid-template-rows: minmax(0, 1fr) auto;
+          height: auto;
+          max-height: 100%;
+          max-width: 100%;
+          min-height: 0;
+          padding: 14px 14px 12px;
+          width: 100%;
+        }
+
+        .media-player-card--square.has-album-background::before,
+        .media-player-card--artwork.has-album-background::before {
+          background: transparent;
+        }
+
+        .media-player-card--square.has-album-background::after,
+        .media-player-card--artwork.has-album-background::after {
+          background: linear-gradient(
+            180deg,
+            rgba(8, 8, 10, 0.46) 0%,
+            rgba(8, 8, 10, 0.1) 24%,
+            rgba(8, 8, 10, 0.08) 48%,
+            rgba(8, 8, 10, 0.52) 74%,
+            rgba(8, 8, 10, 0.78) 100%
+          );
+        }
+
+        .media-player-card--square .media-player__album-bg,
+        .media-player-card--square .media-player__art-layer,
+        .media-player-card--artwork .media-player__album-bg,
+        .media-player-card--artwork .media-player__art-layer {
+          filter: none;
+          inset: 0;
+          opacity: 1;
+          transform: none;
+        }
+
+        .media-player-card--square .media-player__art-layer.is-idle-animated,
+        .media-player-card--artwork .media-player__art-layer.is-idle-animated {
+          animation: none;
+        }
+
+        .media-player-card--square.has-album-background .media-player__title,
+        .media-player-card--square.has-album-background .media-player__subtitle,
+        .media-player-card--artwork.has-album-background .media-player__title,
+        .media-player-card--artwork.has-album-background .media-player__subtitle {
+          color: #fff;
+          text-shadow:
+            0 0 1px rgba(0, 0, 0, 0.95),
+            0 1px 2px rgba(0, 0, 0, 0.85),
+            0 2px 6px rgba(0, 0, 0, 0.65),
+            0 8px 24px rgba(0, 0, 0, 0.5);
+        }
+
+        .media-player-card--square.has-album-background .media-player__subtitle,
+        .media-player-card--artwork.has-album-background .media-player__subtitle {
+          color: rgba(255, 255, 255, 0.94);
+          font-weight: 600;
+        }
+
+        .media-player-card--square .media-player__content,
+        .media-player-card--artwork .media-player__content {
+          align-content: stretch;
+          display: grid;
+          gap: 10px;
+          grid-row: 1;
+          grid-template-rows: auto minmax(0, 1fr) auto;
+          height: 100%;
+          min-height: 0;
+          padding-top: 2px;
+          padding-bottom: 0;
+        }
+
+        .media-player-card--square .media-player__progress,
+        .media-player-card--artwork .media-player__progress {
+          grid-row: 2;
+          inset: auto;
+          margin-top: 10px;
+          position: static;
+          width: 100%;
+        }
+
+        .media-player-card--square .media-player__hero,
+        .media-player-card--artwork .media-player__hero {
+          grid-row: 1;
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        /* Full-bleed album art replaces the thumb; keep the entity icon when there is no cover. */
+        .media-player-card--square.has-album-background .media-player__artwork,
+        .media-player-card--artwork.has-album-background .media-player__artwork {
+          display: none;
+        }
+
+        .media-player-card--square:not(.has-album-background) .media-player__hero,
+        .media-player-card--artwork:not(.has-album-background) .media-player__hero {
+          grid-template-columns: 48px minmax(0, 1fr);
+        }
+
+        .media-player-card--square:not(.has-album-background) .media-player__artwork,
+        .media-player-card--artwork:not(.has-album-background) .media-player__artwork {
+          height: 48px;
+          width: 48px;
+        }
+
+        .media-player-card--square .media-player__hero-copy,
+        .media-player-card--artwork .media-player__hero-copy {
+          padding-right: 44px;
+        }
+
+        .media-player-card--square .media-player__hero-top,
+        .media-player-card--artwork .media-player__hero-top {
+          gap: 8px;
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .media-player-card--square .media-player__info-rail,
+        .media-player-card--artwork .media-player__info-rail {
+          justify-self: start;
+          max-width: 100%;
+        }
+
+        .media-player-card--square .media-player__title {
+          font-size: 16px;
+        }
+
+        .media-player-card--square .media-player__subtitle,
+        .media-player-card--artwork .media-player__subtitle {
+          font-size: 13px;
+        }
+
+        .media-player-card--square .media-player__center-stack,
+        .media-player-card--artwork .media-player__center-stack {
+          align-content: end;
+          align-self: end;
+          grid-row: 3;
+          min-width: 0;
+          width: 100%;
+        }
+
+        .media-player-card--square .media-player__transport-row,
+        .media-player-card--artwork .media-player__transport-row {
+          align-content: end;
+          min-width: 0;
+          width: 100%;
+        }
+
+        @container (max-width: 260px) {
+          .media-player__info-rail {
+            display: none;
+          }
+
+          .media-player__title {
+            font-size: 14px;
+          }
+
+          .media-player__subtitle {
+            font-size: 12px;
+          }
+
+          .media-player-card--square .media-player__content,
+          .media-player-card--artwork .media-player__content {
+            gap: 6px;
+          }
+        }
+
+        @container (max-width: 200px) {
+          .media-player__subtitle,
+          .media-player__volume-button:not(.media-player__control):not(.media-player__volume-button--browse),
+          .media-player-card--square .media-player__volume-button:not(.media-player__volume-button--browse),
+          .media-player-card--artwork .media-player__volume-button:not(.media-player__volume-button--browse) {
+            display: none;
+          }
+
+          .media-player__title {
+            font-size: 12px;
+          }
+        }
+
+        .media-player-card--square,
+        .media-player-card--artwork {
+          container-type: inline-size;
+        }
+
+        .media-player-card--square .media-player__transport-cluster,
+        .media-player-card--artwork .media-player__transport-cluster {
+          display: flex;
+          flex-wrap: nowrap;
+          gap: 10px;
+          grid-template-columns: none;
+          justify-content: center;
+          width: 100%;
+        }
+
+        .media-player-card--square .media-player__control,
+        .media-player-card--square .media-player__volume-button:not(.media-player__volume-button--browse),
+        .media-player-card--artwork .media-player__control,
+        .media-player-card--artwork .media-player__volume-button:not(.media-player__volume-button--browse) {
+          aspect-ratio: auto;
+          flex: 0 0 auto;
+          height: 36px;
+          justify-self: center;
+          max-width: none;
+          min-width: 36px;
+          width: 36px;
+        }
+
+        .media-player-card--square .media-player__control--primary,
+        .media-player-card--artwork .media-player__control--primary {
+          height: 40px;
+          min-width: 40px;
+          width: 40px;
+        }
+
+        .media-player-card--square .media-player__control ha-icon,
+        .media-player-card--square .media-player__volume-button ha-icon,
+        .media-player-card--artwork .media-player__control ha-icon,
+        .media-player-card--artwork .media-player__volume-button ha-icon {
+          --mdc-icon-size: 16px;
+          height: 16px;
+          width: 16px;
+        }
+
+        .media-player-card--square .media-player__volume-button--browse,
+        .media-player-card--artwork .media-player__volume-button--browse {
+          height: 32px;
+          min-width: 32px;
+          position: absolute;
+          right: 10px;
+          top: 10px;
+          width: 32px;
+          z-index: 4;
+        }
+
+        .media-player-card--square .media-player__info-rail,
+        .media-player-card--artwork .media-player__info-rail,
+        .media-player-card--square .media-player__chip--top,
+        .media-player-card--artwork .media-player__chip--top,
+        .media-player-card--square .media-player__chip--device,
+        .media-player-card--artwork .media-player__chip--device {
+          display: none;
+        }
+
+        .media-player-card--chip {
+          display: grid;
+          padding: 10px 12px 16px;
+        }
+
+        .media-player-card--chip .media-player__content {
+          align-items: center;
+          gap: 8px;
+          grid-template-columns: minmax(0, 1fr) auto;
+          min-width: 0;
+          padding-bottom: 10px;
+        }
+
+        .media-player-card--chip .media-player__hero {
+          align-items: center;
+          grid-template-columns: 44px minmax(0, 1fr);
+          min-width: 0;
+        }
+
+        .media-player-card--chip .media-player__artwork {
+          height: 44px;
+          width: 44px;
+        }
+
+        .media-player-card--chip .media-player__center-stack,
+        .media-player-card--chip .media-player__transport-row,
+        .media-player-card--chip .media-player__transport-shell {
+          justify-self: end;
+          max-width: 100%;
+          min-width: 0;
+          width: auto;
+        }
+
+        .media-player-card--chip .media-player__transport-cluster {
+          flex-wrap: nowrap;
+          gap: 6px;
+          justify-content: flex-end;
+          width: auto;
+        }
+
+        .media-player-card--chip .media-player__control,
+        .media-player-card--chip .media-player__volume-button {
+          height: 28px;
+          min-width: 28px;
+          width: 28px;
+        }
+
+        .media-player-card--chip .media-player__control ha-icon,
+        .media-player-card--chip .media-player__volume-button ha-icon {
+          --mdc-icon-size: 13px;
+          height: 13px;
+          width: 13px;
+        }
+
+        .media-player-card--chip .media-player__info-rail,
+        .media-player-card--chip .media-player__volume-button--browse {
+          display: none;
+        }
+
+        .media-player-card--compact .media-player__content {
+          display: flex;
+          flex: 1 1 auto;
+          flex-direction: column;
+          gap: 8px;
+          justify-content: space-between;
+          min-height: 0;
+          padding-bottom: 0;
+        }
+
+        .media-player-card--compact.media-player-card--idle .media-player__content {
+          align-items: center;
+          flex: 1 1 auto;
+          gap: 0;
+          justify-content: center;
+          min-height: 0;
+          width: 100%;
+        }
+
+        .media-player-card--compact.media-player-card--idle .media-player__content--idle {
+          width: 100%;
+        }
+
+        .media-player-card--compact .media-player__transport-cluster {
+          gap: 6px;
+          margin-top: auto;
+        }
+
+        .media-player-card--compact .media-player__transport-row {
+          margin-top: auto;
+          max-width: 100%;
+          min-width: 0;
+          overflow: visible;
+        }
+
+        .media-player-card--chip .media-player__footer,
+        .media-player-card--square .media-player__chips-wrap,
+        .media-player-card--artwork .media-player__chips-wrap,
+        .media-player-card--compact .media-player__chips-wrap {
+          display: none;
+        }
+
+        .media-player-card--compact .media-player__hero {
+          grid-template-columns: 48px minmax(0, 1fr);
+        }
+
+        .media-player-card--compact .media-player__artwork {
+          height: 48px;
+          width: 48px;
+        }
+
+        @keyframes nodalia-media-kenburns {
+          0% { transform: scale(1.04) translate3d(-1%, 0, 0); }
+          100% { transform: scale(1.12) translate3d(1.2%, -1.1%, 0); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .media-player__art-layer.is-idle-animated {
+            animation: none !important;
+          }
+        }
