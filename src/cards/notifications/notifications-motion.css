@@ -1,0 +1,156 @@
+.notifications-footer {
+          align-items: center;
+          display: flex;
+          justify-content: center;
+          margin-top: -7px;
+          position: relative;
+          z-index: 8;
+        }
+        .notifications-stack-toggle {
+          background: color-mix(in srgb, var(--primary-text-color) 12%, var(--nodalia-user-card-bg, var(--nodalia-surface-soft)));
+          border-color: color-mix(in srgb, var(--primary-text-color) 14%, var(--nodalia-border, rgba(255, 255, 255, 0.12)));
+          box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
+          gap: 4px;
+          font-size: 11px;
+          font-weight: 700;
+          height: 28px;
+          min-height: 28px;
+          padding: 0 9px;
+        }
+        .notifications-stack-toggle ha-icon {
+          --mdc-icon-size: 16px;
+        }
+        .notifications-card--animated.notifications-card--enter .notifications-empty-inline,
+        .notifications-card--animated.notifications-card--enter .notification-item {
+          animation: notifications-card-fade-up calc(var(--notifications-content-duration, 420ms) * 0.96) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: calc(70ms + (var(--notification-index, 0) * 40ms));
+        }
+        .notifications-card--animated.notifications-card--enter .notification-item__icon {
+          animation: notifications-card-bubble-bloom calc(var(--notifications-content-duration, 420ms) * 0.92) cubic-bezier(0.2, 0.9, 0.24, 1) both;
+          animation-delay: calc(40ms + (var(--notification-index, 0) * 40ms));
+        }
+        .notifications-card--animated.notifications-card--enter .notification-item__title,
+        .notifications-card--animated.notifications-card--enter .notification-item__message,
+        .notifications-card--animated.notifications-card--enter .notification-item__actions {
+          animation: notifications-card-fade-up calc(var(--notifications-content-duration, 420ms) * 0.72) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: calc(92ms + (var(--notification-index, 0) * 40ms));
+        }
+        .notifications-card--animated.notifications-card--enter .notification-item__chip {
+          animation: notifications-card-chip-pop calc(var(--notifications-content-duration, 420ms) * 0.58) cubic-bezier(0.18, 0.9, 0.22, 1.18) both;
+          animation-delay: calc(116ms + (var(--notification-index, 0) * 40ms));
+        }
+        .notifications-card--animated.notifications-card--stack-expand .notifications-list,
+        .notifications-card--animated.notifications-card--stack-collapse-final .notifications-list {
+          animation: notifications-stack-reflow calc(var(--notifications-content-duration, 420ms) * 0.72) cubic-bezier(0.18, 0.9, 0.22, 1.08) both;
+        }
+        .notifications-card--animated.notifications-card--stack-expand .notification-item {
+          animation: notifications-card-item-rise calc(var(--notifications-content-duration, 420ms) * 0.74) cubic-bezier(0.18, 0.9, 0.22, 1.08) both;
+          animation-delay: calc(var(--notification-index, 0) * 34ms);
+        }
+        .notifications-card--animated.notifications-card--stack-collapse .notification-item--collapsing-tail {
+          animation: notifications-stack-tail-out calc(var(--notifications-content-duration, 420ms) * 0.62) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+          animation-delay: calc(var(--notification-exit-index, 0) * 28ms);
+          transform-origin: center top;
+        }
+        .notifications-card--animated.notifications-card--stack-collapse-final .notification-stack-card,
+        .notifications-card--animated.notifications-card--stack-collapse-final .notifications-stack-toggle {
+          animation: notifications-stack-collapse calc(var(--notifications-content-duration, 420ms) * 0.66) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        }
+        .notifications-card--animated .notifications-stack-toggle.is-pressing,
+        .notifications-card--animated .notification-item__dismiss.is-pressing,
+        .notifications-card--animated .notification-item__action.is-pressing {
+          animation: notifications-button-bounce var(--notifications-button-bounce-duration, 320ms) cubic-bezier(0.2, 0.9, 0.25, 1.35) both;
+        }
+        @keyframes notifications-card-fade-up {
+          0% {
+            opacity: 0;
+            transform: translateY(12px) scale(0.97);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        @keyframes notifications-card-item-rise {
+          0% {
+            opacity: 0;
+            transform: translateY(8px) scale(0.94);
+          }
+          62% {
+            opacity: 1;
+            transform: translateY(0) scale(1.018);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        @keyframes notifications-card-chip-pop {
+          0% {
+            opacity: 0;
+            transform: translateY(-4px) scale(0.86);
+          }
+          70% {
+            opacity: 1;
+            transform: translateY(1px) scale(1.05);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        @keyframes notifications-card-bubble-bloom {
+          0% {
+            opacity: 0;
+            transform: scale(0.92);
+          }
+          58% {
+            opacity: 1;
+            transform: scale(1.04);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        @keyframes notifications-stack-reflow {
+          0% {
+            opacity: 0.7;
+            transform: translateY(-6px) scaleY(0.985);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scaleY(1);
+          }
+        }
+        @keyframes notifications-stack-collapse {
+          0% {
+            opacity: 0;
+            transform: translateY(8px) scale(0.94);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        @keyframes notifications-stack-tail-out {
+          0% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(-10px) scale(0.965);
+          }
+        }
+        @keyframes notifications-button-bounce {
+          0% {
+            transform: scale(1);
+          }
+          45% {
+            transform: scale(0.94);
+          }
+          100% {
+            transform: scale(1);
+          }
+        }

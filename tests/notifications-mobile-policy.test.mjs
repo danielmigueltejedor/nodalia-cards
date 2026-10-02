@@ -53,6 +53,7 @@ function loadNotificationsRuntime() {
           addEventListener() {},
           removeEventListener() {},
           innerHTML: "",
+          replaceChildren() {this.innerHTML = "";},
           querySelector() { return null; },
           querySelectorAll() { return []; },
         };

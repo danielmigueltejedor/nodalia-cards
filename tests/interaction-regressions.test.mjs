@@ -2448,7 +2448,7 @@ test("notifications entrance animation does not rearm on list refreshes", () => 
   assert.match(source, /this\._replayEntranceAnimation\(\{ force: true \}\)/);
   assert.match(
     source,
-    /this\._animateContentOnNextRender = true;\s*this\._lastRenderSignature = "";\s*if \(this\._hass\) \{\s*this\._renderIfChanged\(true\);/,
+    /this\._animateContentOnNextRender = true;\s*this\._lastRenderSignature = "";\s*if \(this\._hass && this\.isConnected\) \{\s*this\._renderIfChanged\(true\);/,
   );
   assert.match(source, /this\._renderPendingAfterEntrance = true/);
   assert.match(source, /this\.shadowRoot\?\.querySelector\?\.\("\.notifications-card--enter"\)/);
@@ -2672,7 +2672,7 @@ test("notifications card drains pending foreground mobile queue in batches", () 
   assert.match(source, /_enqueueMobileNotifications/);
   assert.match(source, /_scheduleMobileNotifyDrain/);
   assert.match(source, /this\._mobileNotifyQueue\.splice\(0, 4\)/);
-  assert.match(source, /Promise\.resolve\(\)[\s\S]*\.then\(\(\) => this\._flushMobileNotifications\(batch\)\)[\s\S]*\.catch\(\(?error\)? =>/);
+  assert.match(source, /Promise\.resolve\(\)[\s\S]*\.then\(\(\) => this\._isCurrent\(generation\) \? this\._flushMobileNotifications\(batch\) : void 0\)[\s\S]*\.catch\(\(?error\)? =>/);
   assert.match(source, /if \(this\._mobileNotifyQueue\.length\) \{[\s\S]*_scheduleMobileNotifyDrain/);
 });
 

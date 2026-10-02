@@ -58,3 +58,21 @@ Closing the editor or changing its HA connection/user invalidates outstanding
 Engine replies and queued background work. Configuration changes also invalidate
 obsolete profile syncs before they write. Normal HA feedback keeps the latest
 queued sync, including a disabled profile that stops background delivery.
+
+## View lifecycle and remembered alerts
+
+Calendar and forecast requests, Engine sync/inbox operations and pending mobile
+batches belong to the current configuration, HA connection and user. Closing the
+card or changing that context invalidates their callbacks. One foreground batch
+runs at a time and delivery policy is rechecked before each alert. Native action
+focus survives ordinary HA updates; failed actions are caught by the card.
+
+Weather queries use `weather.get_forecasts` with a response. An empty native
+forecast is a real result and does not restore an older attribute forecast.
+Calendar refreshes stop at the next local midnight, including daylight saving
+time boundaries; a failed request waits the normal interval before retrying.
+
+`storage_key` remains the browser-storage prefix, with server and user identity
+added for local dismissals and mobile history. Earlier unscoped browser entries
+are retained in storage but are not imported into another user's private state.
+`dismissed_entity` and the Engine profile remain explicit ways to share dismissals.

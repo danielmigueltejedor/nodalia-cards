@@ -1767,3 +1767,40 @@ CI and review remain required before integration.
   comparisons. Raw/gzip bundle: 4,317,866 / 959,256 bytes within
   the unchanged 4,325,376 / 972,800 limits. Four source views plus manual support
   runtimes remain before publishing 3.0.0-alpha.1.
+
+## 2026-10-02 — Notifications view and delivery ownership
+
+- Replace the view suppression with real normalized config/notification/action/
+  calendar/forecast contracts, guarded external records and native DOM/HA types.
+  Only the actually published Notifications I18n function gains a declaration.
+  Keep strict compiler flags and both bundle limits unchanged.
+- Capture the originating HA/config/generation for calendar and forecast batches,
+  Engine profile/inbox/dismissal work, legacy sync, helper writes and foreground
+  drains. Reconfiguration, connection/auth/user changes and detach release view
+  timers/observers and invalidate old callbacks, including reconnect. Single-flight
+  foreground delivery reevaluates policy between alerts and records delivery only
+  in its originating context. Engine errors retain background ownership.
+- The official HA weather websocket source registers subscribe/convertible-units,
+  not weather/get_forecasts. Replace that request with call_service weather.
+  get_forecasts and unwrap its response. Try daily when hourly is unsupported;
+  successful empty forecasts do not restore legacy rows. Calendar failures retry
+  at the configured interval; refresh boundaries include local midnight/DST.
+  Source: https://github.com/home-assistant/core/blob/dev/homeassistant/components/weather/websocket_api.py
+- Scope browser-local dismissal/mobile history by configured prefix, server and
+  user; do not import unscoped older entries into private state. Shared helper and
+  Engine profile semantics remain explicit. Preserve native button focus through
+  refresh/dismissal and catch configured service failures with real false/zero
+  data and targets intact. Relevant state attributes/registry/locale changes and referenced smart-template
+  entities participate in render signatures. A calendar batch crossing local
+  midnight clears the previous day and queries the new day immediately.
+- Remove three unused private methods and their unused view imports. Embed static
+  motion CSS with whitespace-only compaction; all declarations/selectors are
+  preserved. Valid view/model/style/sizing comparisons match the old view in all
+  3,000 cases. Correct unit DOM fixtures to implement native replaceChildren;
+  update structural checks for actual guarded operations and the real forecast
+  API. Native fixtures target alert identity instead of assuming their sort order.
+- All 750 unit tests and strict/lint gates pass. All 24 focused browser cases pass
+  across Chromium/WebKit/iPhone, including a pending drain through repeated HA
+  feedback and queued Engine updates. Raw/gzip bundle: 4,320,203 / 960,606 bytes within unchanged limits.
+  All 743 browser cases pass (one existing skip). Three unchecked views and manual support
+  runtimes still precede 3.0.0-alpha.1.
