@@ -1,3 +1,4 @@
+import { RUNTIME_ENTRIES } from "../scripts/build-src-cards.mjs";
 import { CARD_REGISTRY } from "../scripts/card-registry.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -754,3 +755,12 @@ test("TypeScript climate, media player, light, fan and humidifier sources are ca
   assert.match(hacsBuild, /src\/cards\/room-summary\/index\.ts/);
   assert.match(hacsBuild, /src\/cards\/advance-vacuum\/index\.ts/);
 });
+
+ test("go2rtc distribution is generated from the checked runtime while preserving its ESM API", () => {
+  const runtime=RUNTIME_ENTRIES.find(entry=>entry.outfile==="nodalia-go2rtc-player.js");
+  assert.equal(runtime?.entry,"src/shared/go2rtc-player.ts");
+  assert.equal(runtime?.format,"esm");
+  assert.match(read("nodalia-go2rtc-player.js"),/Generated from src\/shared\/go2rtc-player\.ts/);
+  assert.doesNotMatch(read("src/shared/go2rtc-player.ts"),/@ts-nocheck|\bany\b/);
+  assert.match(read("src/cards/camera/index.ts"),/import "\.\.\/\.\.\/shared\/go2rtc-player"/);
+ });

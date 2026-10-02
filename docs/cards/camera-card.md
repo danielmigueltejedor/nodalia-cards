@@ -40,3 +40,13 @@ playback signing failure retries once while that mount remains current. Closing
 or removing the card cancels that retry. Native HA helper results and player
 events from older mounts are ignored. Embedded Summary cameras use a body portal
 across shadow roots, retain their styles and remove the portal on close/detach.
+
+### Playback lifecycle
+
+The native go2rtc player keeps the current playback mode's timers, WebRTC peer,
+MSE buffer and pending autoplay/frame callbacks separate from replacement modes
+or cameras. Retired replies do not mute or start a new video. Empty sources stay
+disconnected while stream signing is pending. Disconnect releases audio contexts,
+tracks, sockets and object URLs; supported mode order and recovery deadlines are
+unchanged. The root standalone ES module is generated from
+`src/shared/go2rtc-player.ts`, preserving its exported player class and MIT notice.

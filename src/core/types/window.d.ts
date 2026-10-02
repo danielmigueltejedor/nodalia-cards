@@ -79,6 +79,8 @@ type NodaliaCameraStreamModelApi = typeof import("../../cards/camera/camera-stre
 
 declare global {
   interface Window {
+    webkitAudioContext?: typeof AudioContext;
+    ManagedMediaSource?: typeof MediaSource;
     loadCardHelpers?: () => Promise<{ createCardElement?: (config: Record<string, unknown>) => HTMLElement | Promise<HTMLElement> }>;
     hass?: import("./home-assistant").HomeAssistant;
     __NODALIA_LOCK__: Pick<typeof import("../../cards/lock/lock-config"), "CARD_TAG" | "EDITOR_TAG" | "CARD_VERSION" | "normalizeConfig">;

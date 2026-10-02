@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
+import { transformSync } from "esbuild";
 import { fileURLToPath } from "node:url";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -32,9 +33,7 @@ function loadCameraHelpers() {
 }
 
 function loadGo2rtcPlayer() {
-  const source = read("nodalia-go2rtc-player.js")
-    .replace("export class NodaliaGo2RTCPlayer", "class NodaliaGo2RTCPlayer")
-    + "\nglobalThis.__NodaliaGo2RTCPlayer = NodaliaGo2RTCPlayer;\n";
+  const source = transformSync(read("nodalia-go2rtc-player.js"), {format:"iife", globalName:"go2rtcModule", target:"es2020"}).code;
   class FakeHTMLElement {
     constructor() {
       this.events = [];
@@ -94,8 +93,8 @@ function loadGo2rtcPlayer() {
   sandbox.window = sandbox;
   vm.createContext(sandbox);
   vm.runInContext(source, sandbox);
-  sandbox.__NodaliaGo2RTCPlayer.__testWindow = sandbox;
-  return sandbox.__NodaliaGo2RTCPlayer;
+  sandbox.go2rtcModule.NodaliaGo2RTCPlayer.__testWindow = sandbox;
+  return sandbox.go2rtcModule.NodaliaGo2RTCPlayer;
 }
 
 const helpers = loadCameraHelpers();
@@ -723,13 +722,13 @@ test("camera bundles the native go2rtc player protocol", () => {
   const source = read("nodalia-go2rtc-player.js");
   const build = read("scripts/build-bundle.mjs");
   const pkg = JSON.parse(read("package.json"));
-  assert.match(source, /class NodaliaGo2RTCPlayer/);
+  assert.match(source, /(?:class NodaliaGo2RTCPlayer|NodaliaGo2RTCPlayer = class)/);
   assert.match(source, /new RTCPeerConnection/);
   assert.match(source, /webrtc\/offer/);
   assert.match(source, /ManagedMediaSource/);
   assert.match(source, /nodalia-go2rtc-loaded/);
   assert.match(source, /primeAudioFromUserGesture\(\)/);
-  assert.match(source, /createMediaElementSource\(this\._video\)/);
+  assert.match(source, /createMediaElementSource\(video\)/);
   assert.match(source, /createMediaStreamSource\(stream\)/);
   assert.match(source, /GO2RTC_STARTUP_ERROR_DELAY/);
   assert.match(source, /GO2RTC_MAX_MSE_QUEUE_BYTES/);
@@ -1083,4 +1082,96 @@ test("camera card uses runtime i18n pack for states and expanded controls", () =
   assert.match(i18n, /cameraCard:\s*\{[\s\S]*?live:\s*"Live"/);
   assert.match(i18n, /cameraCard:\s*\{[\s\S]*?expand:\s*"Expandir"/);
   assert.match(i18n, /cameraCard:\s*\{[\s\S]*?connectingLive:\s*"Conectando al directo"/);
+});
+
+test("go2rtc blank stream sources do not connect to the dashboard websocket URL", () => {
+  const Player=loadGo2rtcPlayer();
+  const player=new Player();
+  let sockets=0;
+  Player.__testWindow.WebSocket=class { constructor(){sockets++;} };
+  for(const source of [undefined,null,"","   "]){
+    player.configure({source});
+    assert.equal(player._source,"");
+  }
+  assert.equal(sockets,0);
+});
+
+test("go2rtc failed audio construction closes a partially created context", async () => {
+  const Player=loadGo2rtcPlayer();
+  const player=new Player();
+  let closed=0;
+  Player.__testWindow.AudioContext=class {
+    createMediaElementSource(){throw new Error("Unavailable media source");}
+    close(){closed++;return Promise.resolve();}
+  };
+  player._video={};
+  assert.equal(player._ensureAudioOutput(),false);
+  await Promise.resolve();
+  assert.equal(closed,1);
+  assert.equal(player._audioContext,null);
+  assert.equal(player._audioElementSource,null);
+});
+
+test("go2rtc obsolete MSE buffer update cannot drain the replacement mode queue", () => {
+  const Player=loadGo2rtcPlayer();
+  const player=new Player();
+  const sources=[];
+  Player.__testWindow.ManagedMediaSource=class {
+    constructor(){sources.push(this);this.readyState="closed";}
+    addEventListener(){}
+    addSourceBuffer(){return this.buffer={mode:"",updating:false,buffered:{length:0},addEventListener(name,callback){this.updateend=callback;},appendBuffer(){}};}
+  };
+  player._video={muted:true,play:()=>Promise.resolve()};
+  player._startMse();
+  player._messageHandlers.get("mse")({type:"mse",value:'video/mp4; codecs="avc1.640029"'});
+  const oldBuffer=sources[0].buffer;
+  player._startMse();
+  player._messageHandlers.get("mse")({type:"mse",value:'video/mp4; codecs="avc1.640029"'});
+  let drains=0;
+  player._flushMseQueue=()=>{drains++;};
+  oldBuffer.updateend();
+  assert.equal(drains,0);
+  sources[1].buffer.updateend();
+  assert.equal(drains,1);
+});
+
+test("go2rtc websocket ingress rejects malformed envelopes and non-buffer binaries", () => {
+  const Player=loadGo2rtcPlayer();
+  const player=new Player();
+  let socket;
+  Player.__testWindow.ArrayBuffer=ArrayBuffer;
+  Player.__testWindow.WebSocket=class {
+    static OPEN=1;
+    constructor(){socket=this;this.listeners={};this.readyState=1;}
+    addEventListener(name,handler){this.listeners[name]=handler;}
+    close(){}
+  };
+  player._video={muted:true,canPlayType:()=>""};
+  player._source="wss://camera.example/api/ws";
+  player._mode="mjpeg";
+  player._connect();
+  const messages=[];const binaries=[];
+  player._messageHandlers.set("test",message=>messages.push(message));
+  player._binaryHandler=data=>binaries.push(data);
+  for(const data of ['null','[]','{}','{"type":12}','invalid',new Blob(['no']),{}])socket.listeners.message({data});
+  assert.equal(messages.length,0);assert.equal(binaries.length,0);
+  socket.listeners.message({data:'{"type":"mse","value":"codec"}'});
+  const buffer=new ArrayBuffer(2);socket.listeners.message({data:buffer});
+  assert.equal(messages.length,1);assert.equal(messages[0].type,"mse");assert.equal(messages[0].value,"codec");
+  assert.equal(binaries[0],buffer);
+  clearTimeout(player._socketOpenTimer);
+});
+
+test("go2rtc queued retired audio track events cannot overwrite current stream feedback", () => {
+  const Player=loadGo2rtcPlayer();
+  const player=new Player();
+  const callbacks=[];
+  const track={kind:"audio",muted:false,readyState:"live",addEventListener(name,callback){callbacks.push(callback);},removeEventListener(){}};
+  player._watchAudioTracks([track]);
+  player._clearAudioTrackListeners();
+  player._lastAudioState="current:available:1";
+  const events=player.events.length;
+  callbacks[0]();
+  assert.equal(player.events.length,events);
+  assert.equal(player._lastAudioState,"current:available:1");
 });

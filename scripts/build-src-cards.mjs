@@ -9,6 +9,7 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const SRC_CARD_ENTRIES = CARD_REGISTRY.map(card => ({ entry: card.standalone, outfile: card.artifact }));
 
 export const RUNTIME_ENTRIES = [
+  { entry: "src/shared/go2rtc-player.ts", outfile: "nodalia-go2rtc-player.js", format: "esm" },
   { entry: "src/shared/bubble-contrast-runtime.ts", outfile: "nodalia-bubble-contrast.js" },
   { entry: "src/core/engine-client-runtime.ts", outfile: "nodalia-backend.js" },
   { entry: "src/cards/notifications/notifications-mobile-policy-runtime.ts", outfile: "nodalia-notifications-mobile-policy.js" },
@@ -26,7 +27,7 @@ export async function buildSrcCards() {
       bundle: true,
       plugins: [embeddedStylesPlugin()],
       write: true,
-      format: "iife",
+      format: card.format ?? "iife",
       platform: "browser",
       target: ["es2020"],
       charset: "utf8",

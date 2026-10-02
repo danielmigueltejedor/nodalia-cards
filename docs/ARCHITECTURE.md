@@ -73,9 +73,11 @@ configs, helpers and visual editors now pass strict checking. Climate retains
 a large view/controller, with config, model, dial and schedule modules separated.
 Static CSS is embedded from readable files; dynamic styles remain in the view.
 
-`scripts/type-debt.json` is empty. The generic utility runtime, i18n lookup and
-go2rtc player still require their own source migration; an empty suppression
-inventory does not mean these handwritten JavaScript modules are checked.
+`scripts/type-debt.json` is empty. Go2rtc playback now has checked source in
+`src/shared/go2rtc-player.ts`; Camera imports it directly and the standalone
+ES-module player is generated from the same source. The generic utility runtime
+and runtime/editor translation lookup logic still require their own migration;
+an empty suppression inventory does not mean handwritten JavaScript is checked.
 
 ## Dependency relationships
 
@@ -154,6 +156,7 @@ boundaries so standalone `<script>` loading still works.
 | `nodalia-notifications-mobile-policy.js` | Generated from checked Notifications policy + global adapter |
 | `nodalia-backend.js` | Generated from checked Engine client + global adapter |
 | `nodalia-bubble-contrast.js` | Generated from checked contrast model + global adapter |
+| `nodalia-go2rtc-player.js` | Generated ES module from checked native playback runtime |
 | `nodalia-climate-card.js` | Generated from `src/cards/climate/standalone.ts` (unminified IIFE) |
 | `nodalia-media-player.js` | Generated from `src/cards/media-player/standalone.ts` (unminified IIFE) |
 | `nodalia-light-card.js` | Generated from `src/cards/light/standalone.ts` (unminified IIFE) |

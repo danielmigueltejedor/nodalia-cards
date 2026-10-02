@@ -1917,3 +1917,32 @@ a late HA update clears it, exactly once. All CI gates pass, including four brow
 projects. The combined Climate/Light branch passes all 751 unit tests and 48
 focused browser cases. Combined raw/gzipSync: 4,322,176 / 966,835 bytes, below
 the unchanged limits.
+
+## Go2rtc playback runtime — checked source and owned transport work
+
+- Move the complete licensed player into `src/shared/go2rtc-player.ts`, with
+  actual native video/audio/RTC/WebSocket/MSE contracts and unknown wire input
+  guards. Camera imports the source directly; build its standalone ESM export
+  from that source, preserving the tag, class export and upstream MIT notice.
+- Retire pending autoplay retries on replacement videos, modes and newer play
+  requests. Old WebRTC offers/candidates, frame callbacks, MSE updates and audio
+  events cannot act on replacement transports or change current playback state.
+  Close partially created audio contexts when browser construction fails.
+- Blank sources stay disconnected rather than resolving to the dashboard URL.
+  Normalize modes before comparing configuration. Preserve supported protocol
+  order, codec negotiation, queue limits and startup/recovery deadlines.
+- All 757 unit tests and strict/lint/architecture/distribution gates pass. Unit
+  regressions cover blank sources, partial audio cleanup, retired MSE/audio events
+  and malformed wire envelopes. Use the generated module's actual ESM export
+  in VM fixtures rather than rewriting an export-class declaration.
+- All 3,600 baseline configuration/mode/codec comparisons match valid sources.
+  Blank sources and retired work are separately tested intentional fixes. All
+  42 focused Camera/player cases pass on Chromium, WebKit and iPhone, using
+  native HTMLVideoElement/RTCPeerConnection and controlled deferred results.
+  Initial fixture failures came from setting audio options after connection,
+  creating native volume events before the simulated play; configure before
+  mounting, as Camera does. The full suite passes 845 cases with one existing
+  exclusion. Raw/gzipSync: 4,324,156 / 967,271 bytes, within unchanged caps.
+- Climate PR #287 passed static/HACS/CodeQL/security/review and every remote
+  browser gate, including Firefox, before normal integration. Generic utility
+  and runtime/editor translation lookup source migration remains before release.
