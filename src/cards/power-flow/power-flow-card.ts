@@ -1,5 +1,3 @@
-// @ts-nocheck
-/* Large HTMLElement view/controller: typed incrementally as methods are extracted. */
 import {
   CARD_TAG,
   EDITOR_TAG,
@@ -27,15 +25,12 @@ import {
   getFlowLayoutFlagsFromConfig,
   getHassLocaleTag,
   getLayoutPreset,
-  getNodePosition,
   getNodePositionForLayout,
   getStubEntityId,
-  getSvgPathMotionStart,
   getSvgRelativeMotionPath,
   isEntitySourceConfigured,
   isHomeDevicePopupEnabled,
   isUnavailableState,
-  offsetPoint,
   parseNumber,
   parseSizeToPixels,
   resolveIndividualConfigs,
@@ -43,17 +38,53 @@ import {
   rgbArrayToColor,
 } from "./power-flow-helpers";
 
-let _lazyNodaliaPowerFlowCard;
+import { createViewAnimationWork, releaseViewAnimationWork, scheduleViewFallback } from "../../shared/view-animation-work";
+import type { ViewAnimationWork } from "../../shared/view-animation-work";
+import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
+import type { FlowPoint } from "./power-flow-helpers";
+type PowerConfig = ReturnType<typeof normalizeConfig>;
+type NodeKind = keyof typeof NODE_DEFAULTS | "individual";
+type FlowFlags = ReturnType<typeof getFlowLayoutFlagsFromConfig>;
+type FlowValues = Record<"gridHome"|"solarHome"|"batteryHome"|"solarBattery"|"gridBattery"|"solarGrid"|"batteryGrid"|"gridImport"|"gridExport",number>;
+type SourceResult = { value: number|null; unit: string; state: HassEntity|null; entityId: string };
+type PowerNode = SourceResult & { id: string; kind: NodeKind; label: string; icon: string; color: string; valueText: string; unitText: string; isExporting: boolean; isDerived?: boolean; secondary: string; unavailable: boolean; position: FlowPoint; sourceConfig: Record<string,unknown> };
+type PowerNodes = Record<Exclude<NodeKind,"individual">,PowerNode> & { individual: PowerNode[]; _layoutPreset?: string; _flowFlags?: FlowFlags; _flowValues?: FlowValues };
+type FlowLineCandidate = { id: string; fromNode: PowerNode; toNode: PowerNode; value: number|null; unit: string; magnitude: number; active: boolean; color: string; opacity: number; fromRadius: number; toRadius: number; straight: boolean };
+type FlowLine = FlowLineCandidate & {path:string;duration:number};
+type NodeRenderOptions = {layoutPreset?:string;animateEntrance?:boolean;enterDelay?:number};
+const isFiniteValue = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
+const powerActionElement = (node: EventTarget): node is HTMLElement => node instanceof HTMLElement;
+let _lazyNodaliaPowerFlowCard: CustomElementConstructor | undefined;
 export function loadNodaliaPowerFlowCard() {
   if (_lazyNodaliaPowerFlowCard) {
     return _lazyNodaliaPowerFlowCard;
   }
 class NodaliaPowerFlowCard extends HTMLElement {
+  declare private _config: PowerConfig;
+  declare private _hass: HomeAssistant|null;
+  declare private _lastRenderSignature: string;
+  declare private _trackedEntityIdsCache: string[]|null;
+  declare private _trackedEntityRevision: Map<string,string>|null;
+  declare private _trackedEntitiesStamp: string;
+  declare private _trackedEntityIdsLength: number;
+  declare private _animateContentOnNextRender: boolean;
+  declare private _entranceAnimationResetTimer: number;
+  declare private _homePopupOpen: boolean;
+  declare private _flowViewportVisible: boolean;
+  declare private _flowViewportObserver: IntersectionObserver|null;
+  declare private _flowUnpauseRaf: number;
+  declare private _layoutPreset: string;
+  declare private _animationWork: ViewAnimationWork;
+  declare private _flowFrameGeneration: number;
+  declare private _contextConnection: HomeAssistant["connection"];
+  declare private _contextAuth: HomeAssistant["auth"];
+  declare private _contextUser: string;
+
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig(hass, entities = [], entitiesFallback = []) {
+  static getStubConfig(hass: HomeAssistant | null | undefined, entities: unknown = [], entitiesFallback: unknown = []) {
     const config = deepClone(STUB_CONFIG);
     const entityId = getStubEntityId(hass, ["sensor"], entities, entitiesFallback);
     if (!entityId) {
@@ -89,9 +120,15 @@ class NodaliaPowerFlowCard extends HTMLElement {
     this._onFlowViewport = this._onFlowViewport.bind(this);
     this._onFlowVisibility = this._onFlowVisibility.bind(this);
     this._flowUnpauseRaf = 0;
+    this._layoutPreset = "full";
+    this._animationWork = createViewAnimationWork();
+    this._flowFrameGeneration = 0;
+    this._contextConnection = undefined;
+    this._contextAuth = undefined;
+    this._contextUser = "";
     }
 
-  _onFlowViewport(entries) {
+  _onFlowViewport(entries: IntersectionObserverEntry[]) {
     if (!this.isConnected) {
       return;
     }
@@ -110,7 +147,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
       document.addEventListener("visibilitychange", this._onFlowVisibility);
     }
     if (typeof IntersectionObserver === "function") {
-      this._flowViewportObserver = new IntersectionObserver(this._onFlowViewport, {
+      this._flowViewportObserver = new IntersectionObserver((entries, observer) => {
+        if (observer === this._flowViewportObserver) this._onFlowViewport(entries);
+      }, {
         root: null,
         rootMargin: "0px",
         threshold: 0,
@@ -135,6 +174,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
   }
 
   _clearFlowUnpauseRaf() {
+    ++this._flowFrameGeneration;
     if (this._flowUnpauseRaf && typeof window !== "undefined") {
       window.cancelAnimationFrame(this._flowUnpauseRaf);
       this._flowUnpauseRaf = 0;
@@ -164,7 +204,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
     }
     haCard?.classList.remove("power-flow-card--motion-paused");
     this._clearFlowUnpauseRaf();
+    const generation = this._flowFrameGeneration;
     const runUnpause = () => {
+      if (generation !== this._flowFrameGeneration) return;
       this._flowUnpauseRaf = 0;
       if (!this.isConnected || !this.shadowRoot) {
         return;
@@ -186,6 +228,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     /** Two rAFs give freshly-rendered SVG motion paths a stable frame without forcing synchronous layout. */
     if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
       this._flowUnpauseRaf = window.requestAnimationFrame(() => {
+        if (generation !== this._flowFrameGeneration) return;
         if (!this.isConnected || !this.shadowRoot) {
           this._flowUnpauseRaf = 0;
           return;
@@ -224,16 +267,14 @@ class NodaliaPowerFlowCard extends HTMLElement {
     }
     this._homePopupOpen = false;
     this._syncHomePopupHostState();
-    if (this._entranceAnimationResetTimer) {
-      window.clearTimeout(this._entranceAnimationResetTimer);
-      this._entranceAnimationResetTimer = 0;
-    }
-    window.NodaliaUtils?.clearDeferTimers?.(this);
+    this._releaseViewWork();
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
   }
 
-  setConfig(config) {
+  setConfig(config: unknown) {
+    this._releaseViewWork();
+    window.NodaliaUtils?.releaseModalFocus?.(this);
     this._config = normalizeConfig(config || {});
     this._homePopupOpen = false;
     this._syncHomePopupHostState();
@@ -244,8 +285,21 @@ class NodaliaPowerFlowCard extends HTMLElement {
     this._render();
   }
 
-  set hass(hass) {
+  set hass(hass: HomeAssistant|null) {
+    const user = `${hass?.user?.id ?? ""}:${hass?.user?.is_admin === true}`;
+    if (this._contextConnection !== hass?.connection || this._contextAuth !== hass?.auth || this._contextUser !== user) {
+      this._releaseViewWork();
+      window.NodaliaUtils?.releaseModalFocus?.(this);
+      this._homePopupOpen = false;
+      this._syncHomePopupHostState();
+      this._invalidateTrackedEntityStampCache();
+      this._lastRenderSignature = "";
+      this._contextConnection = hass?.connection;
+      this._contextAuth = hass?.auth;
+      this._contextUser = user;
+    }
     this._hass = hass;
+    if (!this.isConnected) return;
     this._syncTrackedEntitiesStamp(hass);
     const nextSignature = this._getRenderSignature(hass);
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
@@ -255,31 +309,15 @@ class NodaliaPowerFlowCard extends HTMLElement {
     this._render();
   }
 
-  getCardSize() {
-    const flowFlags = getFlowLayoutFlagsFromConfig(this._config);
-    const layoutPreset = getLayoutPreset({
-      top: flowFlags.topCount,
-      bottom: flowFlags.bottomUtilities,
-      individual: flowFlags.individualCount,
-    });
-
-    return layoutPreset === "simple" ? 4 : 4;
-  }
+  getCardSize() { return 4; }
 
   getGridOptions() {
-    const flowFlags = getFlowLayoutFlagsFromConfig(this._config);
-    const layoutPreset = getLayoutPreset({
-      top: flowFlags.topCount,
-      bottom: flowFlags.bottomUtilities,
-      individual: flowFlags.individualCount,
-    });
-
     const base = mergeConfig(DEFAULT_CONFIG.grid_options || {}, this._config?.grid_options || {});
     const minRows = Math.max(1, Number(base.min_rows) || 1);
     return {
       rows: base.rows === undefined || base.rows === "" ? "auto" : base.rows,
       columns: base.columns === undefined || base.columns === "" ? "full" : base.columns,
-      min_rows: layoutPreset === "simple" ? Math.max(minRows, 3) : minRows,
+      min_rows: minRows,
       min_columns: Math.max(1, Number(base.min_columns) || 6),
     };
   }
@@ -288,17 +326,17 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return getHassLocaleTag(this._hass, this._config?.language ?? "auto");
   }
 
-  _powerFlowUi(path, fallback = "") {
+  _powerFlowUi(path: string, fallback = "") {
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-    const readPath = pack => String(path || "").split(".").reduce((value, key) => value?.[key], pack);
+    const readPath = (pack: unknown) => String(path || "").split(".").reduce<unknown>((value, key) => isObject(value) && Object.prototype.hasOwnProperty.call(value,key) ? value[key] : undefined, pack);
     const raw = readPath(window.NodaliaI18n?.strings?.(lang)?.powerFlowCard)
       ?? readPath(window.NodaliaI18n?.strings?.("en")?.powerFlowCard);
     return String(raw != null && raw !== "" ? raw : fallback);
   }
 
-  _triggerHaptic(styleOverride = null) {
-    const haptics = this._config?.haptics || {};
+  _triggerHaptic(styleOverride: string|null = null) {
+    const haptics: Record<string, unknown> = isObject(this._config.haptics) ? this._config.haptics : {};
     if (haptics.enabled !== true) {
       return;
     }
@@ -311,11 +349,19 @@ class NodaliaPowerFlowCard extends HTMLElement {
     });
 
     if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
-      navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
+      navigator.vibrate(Object.entries(HAPTIC_PATTERNS).find(([key]) => key === style)?.[1] || HAPTIC_PATTERNS.selection);
     }
   }
 
-  _scheduleEntranceAnimationReset(delay) {
+  _releaseViewWork() {
+    releaseViewAnimationWork(this._animationWork);
+    if (this._entranceAnimationResetTimer) window.clearTimeout(this._entranceAnimationResetTimer);
+    this._entranceAnimationResetTimer = 0;
+    this._clearFlowUnpauseRaf();
+    window.NodaliaUtils?.clearDeferTimers?.(this);
+  }
+
+  _scheduleEntranceAnimationReset(delay: unknown) {
     if (this._entranceAnimationResetTimer) {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
@@ -327,7 +373,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
       return;
     }
 
+    const generation = this._animationWork.generation;
     this._entranceAnimationResetTimer = window.setTimeout(() => {
+      if (generation !== this._animationWork.generation) return;
       this._entranceAnimationResetTimer = 0;
       if (!this.isConnected) {
         return;
@@ -337,7 +385,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
   }
 
   _getAnimationSettings() {
-    const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+    const configuredAnimations = isObject(this._config.animations) ? this._config.animations : DEFAULT_CONFIG.animations;
 
     return {
       enabled: configuredAnimations.enabled !== false,
@@ -354,7 +402,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     };
   }
 
-  _triggerPressAnimation(element, className = "is-pressing") {
+  _triggerPressAnimation(element: Element, className = "is-pressing") {
     if (!(element instanceof HTMLElement)) {
       return;
     }
@@ -368,34 +416,26 @@ class NodaliaPowerFlowCard extends HTMLElement {
     element.getBoundingClientRect();
     element.classList.add(className);
 
-    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
-    const done = () => {
-      if (!element.isConnected) {
-        return;
-      }
-      element.classList.remove(className);
-    };
-    if (typeof schedule === "function") {
-      schedule(this, done, animations.buttonBounceDuration + 40);
-    } else {
-      window.setTimeout(done, animations.buttonBounceDuration + 40);
-    }
+    const generation = this._animationWork.generation;
+    scheduleViewFallback(this._animationWork, () => {
+      if (generation === this._animationWork.generation && this.isConnected && element.isConnected) element.classList.remove(className);
+    }, animations.buttonBounceDuration + 40);
   }
 
-  _getNodeIconGlyphColor(node) {
+  _getNodeIconGlyphColor(node: PowerNode) {
     const defaultColor = this._config?.styles?.icon?.color || DEFAULT_CONFIG.styles.icon.color;
     const accent = String(node?.color || "").trim();
     if (!accent) {
       return defaultColor;
     }
     const state = node?.entityId ? this._hass?.states?.[node.entityId] : null;
-    const darken = Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph(state, accent));
+    const darken = Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph?.(state, accent));
     return darken
       ? `color-mix(in srgb, var(--primary-text-color) 56%, ${accent})`
       : defaultColor;
   }
 
-  _navigate(path) {
+  _navigate(path: string) {
     if (!path) {
       return;
     }
@@ -404,7 +444,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } }));
   }
 
-  _getNodeSourceState(source) {
+  _getNodeSourceState(source: unknown) {
     if (!this._hass?.states) {
       return null;
     }
@@ -414,14 +454,14 @@ class NodaliaPowerFlowCard extends HTMLElement {
     }
 
     if (isObject(source)) {
-      const entityId = source.entity || source.consumption || source.production || "";
+      const entityId = String(source.entity || source.consumption || source.production || "");
       return entityId ? this._hass.states[entityId] || null : null;
     }
 
     return null;
   }
 
-  _getSourceUnit(state) {
+  _getSourceUnit(state: HassEntity|null) {
     return String(state?.attributes?.unit_of_measurement || state?.attributes?.native_unit_of_measurement || "").trim();
   }
 
@@ -431,7 +471,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
    * Split **battery** entities follow HA energy semantics: `production − consumption` (positive = discharge,
    * negative = charge), matching the single-sensor convention documented on `_applyDerivedHomeAndGridDisplay`.
    */
-  _resolveSourceValue(source, kind = null) {
+  _resolveSourceValue(source: unknown, kind: NodeKind|null = null): SourceResult {
     if (!this._hass?.states || !source) {
       return { value: null, unit: "", state: null, entityId: "" };
     }
@@ -462,8 +502,8 @@ class NodaliaPowerFlowCard extends HTMLElement {
       const productionEntity = String(source.production || "").trim();
       const consumptionState = consumptionEntity ? this._hass.states[consumptionEntity] || null : null;
       const productionState = productionEntity ? this._hass.states[productionEntity] || null : null;
-      const consumptionValue = parseNumber(consumptionState?.state) || 0;
-      const productionValue = parseNumber(productionState?.state) || 0;
+      const consumptionValue = consumptionEntity ? parseNumber(consumptionState?.state) : 0;
+      const productionValue = productionEntity ? parseNumber(productionState?.state) : 0;
       const unit = String(
         consumptionState?.attributes?.unit_of_measurement
         || productionState?.attributes?.unit_of_measurement
@@ -472,10 +512,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
         || "",
       ).trim();
 
-      const net =
-        kind === "battery"
-          ? productionValue - consumptionValue
-          : consumptionValue - productionValue;
+      const net = (!consumptionEntity && !productionEntity) || consumptionValue === null || productionValue === null
+        ? null
+        : kind === "battery" ? productionValue - consumptionValue : consumptionValue - productionValue;
 
       return {
         value: net,
@@ -488,21 +527,22 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return { value: null, unit: "", state: null, entityId: "" };
   }
 
-  _resolveGridExportSource(nodeConfig, sourceResult) {
+  _resolveGridExportSource(nodeConfig: Record<string,unknown>, sourceResult: SourceResult) {
     const exportEntityId = String(nodeConfig?.export_entity || "").trim();
     const exportState = exportEntityId ? this._hass?.states?.[exportEntityId] || null : null;
     const exportValue = parseNumber(exportState?.state);
-    const splitExportActive = Number.isFinite(exportValue) && exportValue > 0.001;
+    const splitExportActive = isFiniteValue(exportValue) && exportValue > 0.001;
     const negativeExportActive =
       nodeConfig?.export_when_negative !== false &&
-      Number.isFinite(sourceResult?.value) &&
+      isFiniteValue(sourceResult?.value) &&
       sourceResult.value < -0.001;
 
     if (!splitExportActive && !negativeExportActive) {
       return null;
     }
 
-    const magnitude = splitExportActive ? exportValue : Math.abs(sourceResult.value);
+    const magnitude = splitExportActive ? exportValue : sourceResult.value !== null ? Math.abs(sourceResult.value) : null;
+    if (magnitude === null) return null;
     const unit = splitExportActive ? this._getSourceUnit(exportState) : sourceResult.unit;
     return {
       value: -Math.abs(magnitude),
@@ -513,7 +553,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     };
   }
 
-  _getSecondaryInfoText(nodeConfig, baseState) {
+  _getSecondaryInfoText(nodeConfig: Record<string,unknown>, baseState: HassEntity|null) {
     if (this._config?.show_secondary_info === false || !isObject(nodeConfig?.secondary_info)) {
       return "";
     }
@@ -545,11 +585,11 @@ class NodaliaPowerFlowCard extends HTMLElement {
       return String(infoState.state || "");
     }
 
-    const decimals = Number.isFinite(Number(info.decimals)) ? Number(info.decimals) : 0;
+    const decimals = isFiniteValue(Number(info.decimals)) ? Number(info.decimals) : 0;
     return `${formatRawValue(rawValue, decimals, this._getLocaleTag())}${unit ? ` ${unit}` : ""}`;
   }
 
-  _resolveNodeDescriptor(kind, configOverride = null, index = 0, total = 0, hasBottomUtilities = false, flowFlags = {}) {
+  _resolveNodeDescriptor(kind: NodeKind, configOverride: Record<string,unknown>|null = null, index = 0, total = 0, hasBottomUtilities = false, flowFlags: Partial<FlowFlags> = {}): PowerNode {
     const nodeConfig = configOverride || resolveNodeConfig(kind, this._config);
     let sourceResult = this._resolveSourceValue(nodeConfig.entity, kind);
     if (
@@ -560,7 +600,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       const exportEntityId = String(nodeConfig.export_entity).trim();
       const exportState = this._hass?.states?.[exportEntityId] || null;
       sourceResult = {
-        value: 0,
+        value: parseNumber(exportState?.state) === null ? null : 0,
         unit: this._getSourceUnit(exportState),
         state: exportState,
         entityId: exportEntityId,
@@ -577,20 +617,21 @@ class NodaliaPowerFlowCard extends HTMLElement {
       };
     }
     const state = sourceResult.state;
-    const unavailable = Boolean(nodeConfig.entity || nodeConfig.export_entity) && (!state || isUnavailableState(state));
-    const defaultNodeName = NODE_DEFAULTS[kind]?.name || kind;
-    const label = kind !== "individual" && nodeConfig.name === defaultNodeName
+    const unavailable = Boolean(nodeConfig.entity || nodeConfig.export_entity) && (!state || isUnavailableState(state) || sourceResult.value === null);
+    const nodeDefaults: Record<string, unknown> = kind === "individual" ? {} : NODE_DEFAULTS[kind];
+    const defaultNodeName = String(nodeDefaults.name || kind);
+    const label = String(kind !== "individual" && nodeConfig.name === defaultNodeName
       ? this._powerFlowUi(`nodes.${kind}`, defaultNodeName)
-      : (nodeConfig.name || state?.attributes?.friendly_name || defaultNodeName);
-    let icon = nodeConfig.icon || state?.attributes?.icon || NODE_DEFAULTS[kind]?.icon || "mdi:flash";
-    const color = gridExport
+      : (nodeConfig.name || state?.attributes?.friendly_name || defaultNodeName));
+    const icon = String(nodeConfig.icon || state?.attributes?.icon || nodeDefaults.icon || "mdi:flash");
+    const color = String(gridExport
       ? (nodeConfig.export_color || NODE_DEFAULTS.grid.export_color)
-      : (nodeConfig.color || NODE_DEFAULTS[kind]?.color || "#ffffff");
+      : (nodeConfig.color || nodeDefaults.color || "#ffffff"));
     const secondary = this._getSecondaryInfoText(nodeConfig, state);
     const display = formatDisplayValue(sourceResult.value, sourceResult.unit, this._getLocaleTag());
     const nodeKind = kind === "individual" ? "individual" : kind;
 
-    const descriptor = {
+    const descriptor: PowerNode = {
       id: kind === "individual" ? `${kind}-${index}` : kind,
       kind: nodeKind,
       entityId: sourceResult.entityId || String(nodeConfig.entity || ""),
@@ -616,9 +657,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return descriptor;
   }
 
-  _getBatteryLevel(node) {
-    const values = [];
-    const addCandidate = value => {
+  _getBatteryLevel(node: PowerNode) {
+    const values: number[] = [];
+    const addCandidate = (value: unknown) => {
       const parsed = parseNumber(value);
       if (parsed !== null) {
         values.push(parsed);
@@ -649,18 +690,18 @@ class NodaliaPowerFlowCard extends HTMLElement {
       }
     }
 
-    const level = values.find(value => Number.isFinite(value) && value >= 0 && value <= 100);
-    return Number.isFinite(level) ? clamp(level, 0, 100) : null;
+    const level = values.find(value => isFiniteValue(value) && value >= 0 && value <= 100);
+    return isFiniteValue(level) ? clamp(level, 0, 100) : null;
   }
 
-  _getBatteryStatusIcon(node, fallbackIcon = NODE_DEFAULTS.battery.icon) {
-    const configuredIcon = String(this._config?.entities?.battery?.icon ?? "").trim();
+  _getBatteryStatusIcon(node: PowerNode, fallbackIcon = NODE_DEFAULTS.battery.icon) {
+    const configuredIcon = String(resolveNodeConfig("battery", this._config).icon ?? "").trim();
     if (configuredIcon && configuredIcon !== NODE_DEFAULTS.battery.icon) {
       return configuredIcon;
     }
 
-    const value = Number(node?.value);
-    if (Number.isFinite(value)) {
+    const value = node.value;
+    if (isFiniteValue(value)) {
       if (value < -0.001) {
         return "mdi:battery-charging";
       }
@@ -679,9 +720,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
   _getTrackedEntityIds() {
     const config = this._config || {};
-    const entityIds = new Set();
+    const entityIds = new Set<string>();
 
-    const registerNodeEntity = nodeConfig => {
+    const registerNodeEntity = (nodeConfig: Record<string, unknown>) => {
       if (!nodeConfig) {
         return;
       }
@@ -706,7 +747,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         entityIds.add(exportEntity);
       }
 
-      const secondaryEntity = String(nodeConfig.secondary_info?.entity || "").trim();
+      const secondaryEntity = String((isObject(nodeConfig.secondary_info) ? nodeConfig.secondary_info.entity : "") || "").trim();
       if (secondaryEntity) {
         entityIds.add(secondaryEntity);
       }
@@ -752,7 +793,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return this._getCachedTrackedEntityIds()
       .map(entityId => {
         const state = hass.states?.[entityId];
-        return `${entityId}:${state?.state ?? ""}:${state?.last_updated ?? state?.last_changed ?? ""}`;
+        return `${entityId}:${state?.state ?? ""}:${state?.last_updated ?? state?.last_changed ?? ""}:${JSON.stringify(state?.attributes ?? {})}`;
       })
       .join("|");
   }
@@ -772,7 +813,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     if (!dirty) {
       for (const entityId of ids) {
         const state = hass.states?.[entityId];
-        const revision = `${state?.state ?? ""}:${state?.last_updated ?? state?.last_changed ?? ""}`;
+        const revision = `${state?.state ?? ""}:${state?.last_updated ?? state?.last_changed ?? ""}:${JSON.stringify(state?.attributes ?? {})}`;
         if (this._trackedEntityRevision.get(entityId) !== revision) {
           this._trackedEntityRevision.set(entityId, revision);
           dirty = true;
@@ -784,7 +825,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         const state = hass.states?.[entityId];
         this._trackedEntityRevision.set(
           entityId,
-          `${state?.state ?? ""}:${state?.last_updated ?? state?.last_changed ?? ""}`,
+          `${state?.state ?? ""}:${state?.last_updated ?? state?.last_changed ?? ""}:${JSON.stringify(state?.attributes ?? {})}`,
         );
       }
       this._trackedEntityIdsLength = ids.length;
@@ -837,6 +878,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           this._config?.show_values !== false,
           this._config?.show_labels !== false,
         ] },
+        { prefix: "locale:", values: [this._getLocaleTag()] },
         { prefix: "popup:", values: [this._homePopupOpen === true] },
         { prefix: "chips:", values: [chips.day_entity || "", chips.month_entity || ""] },
         { prefix: "layout:", values: [this._getLayoutConfigStamp()] },
@@ -847,6 +889,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return [
       this._config?.title || this._config?.name || "",
       this._config?.dashboard_link || "",
+      this._getLocaleTag(),
       this._homePopupOpen === true ? "1" : "0",
       `${chips.day_entity || ""}|${chips.month_entity || ""}`,
       this._getLayoutConfigStamp(),
@@ -854,7 +897,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     ].join("::");
   }
 
-  _isDiagramBranchConfigured(kind) {
+  _isDiagramBranchConfigured(kind: NodeKind) {
     const cfg = resolveNodeConfig(kind, this._config);
     if (kind === "grid") {
       return isEntitySourceConfigured(cfg?.entity) || Boolean(String(cfg?.export_entity || "").trim());
@@ -862,7 +905,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return isEntitySourceConfigured(cfg?.entity);
   }
 
-  _shouldRenderDiagramNode(kind, node) {
+  _shouldRenderDiagramNode(kind: NodeKind, node: PowerNode) {
     return Boolean(node?.entityId) || this._isDiagramBranchConfigured(kind);
   }
 
@@ -871,7 +914,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
    * red +import / -export, batería +descarga / -carga).
    * Nodo red con exportación: número en positivo y flecha integrada en el chip de valor.
    */
-  _applyDerivedHomeAndGridDisplay(nodes) {
+  _applyDerivedHomeAndGridDisplay(nodes: PowerNodes) {
     const homeCfg = resolveNodeConfig("home", this._config);
     const homeConfigured = isEntitySourceConfigured(homeCfg.entity);
     if (!homeConfigured) {
@@ -884,7 +927,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       if (canCompute) {
         let invalid = false;
         let sum = 0;
-        const add = (n) => {
+        const add = (n: PowerNode) => {
           if (!n.entityId) {
             return;
           }
@@ -892,7 +935,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
             invalid = true;
             return;
           }
-          if (!Number.isFinite(n.value)) {
+          if (!isFiniteValue(n.value)) {
             invalid = true;
             return;
           }
@@ -922,25 +965,25 @@ class NodaliaPowerFlowCard extends HTMLElement {
     }
 
     const g = nodes.grid;
-    if (g.entityId && !g.unavailable && Number.isFinite(g.value) && (g.value < -0.001 || g.isExporting)) {
+    if (g.entityId && !g.unavailable && isFiniteValue(g.value) && (g.value < -0.001 || g.isExporting)) {
       const display = formatDisplayValue(Math.abs(g.value), g.unit, this._getLocaleTag());
       g.valueText = display.value;
       g.unitText = display.unit;
     }
   }
 
-  _applyHomeDemandDerivedFlows(nodes) {
+  _applyHomeDemandDerivedFlows(nodes: PowerNodes) {
     const home = nodes.home;
     const grid = nodes.grid;
     const solar = nodes.solar;
     const battery = nodes.battery;
-    if (!home?.entityId || home.unavailable || !Number.isFinite(home.value)) {
+    if (!home?.entityId || home.unavailable || !isFiniteValue(home.value)) {
       return;
     }
 
     const hasGridSensor = Boolean(isEntitySourceConfigured(resolveNodeConfig("grid", this._config).entity) || String(resolveNodeConfig("grid", this._config).export_entity || "").trim());
-    const hasSolar = Boolean(solar?.entityId && !solar.unavailable && Number.isFinite(solar.value));
-    const hasBattery = Boolean(battery?.entityId && !battery.unavailable && Number.isFinite(battery.value));
+    const hasSolar = Boolean(solar?.entityId && !solar.unavailable && isFiniteValue(solar.value));
+    const hasBattery = Boolean(battery?.entityId && !battery.unavailable && isFiniteValue(battery.value));
     if (!hasSolar && !hasBattery && hasGridSensor) {
       return;
     }
@@ -977,7 +1020,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     grid.isExporting = gridExport > 0.001;
     if (grid.isExporting) {
       const gridCfg = resolveNodeConfig("grid", this._config);
-      grid.color = gridCfg.export_color || NODE_DEFAULTS.grid.export_color;
+      grid.color = String(gridCfg.export_color || NODE_DEFAULTS.grid.export_color);
     }
     const gridDisplay = formatDisplayValue(Math.abs(gridNet), unit, this._getLocaleTag());
     grid.valueText = gridDisplay.value;
@@ -996,7 +1039,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     };
   }
 
-  _applyMeasuredFlowValues(nodes) {
+  _applyMeasuredFlowValues(nodes: PowerNodes) {
     if (nodes._flowValues) {
       return;
     }
@@ -1005,14 +1048,14 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const grid = nodes.grid;
     const solar = nodes.solar;
     const battery = nodes.battery;
-    const hasGrid = Boolean(grid?.entityId && !grid.unavailable && Number.isFinite(grid.value));
-    const hasSolar = Boolean(solar?.entityId && !solar.unavailable && Number.isFinite(solar.value));
-    const hasBattery = Boolean(battery?.entityId && !battery.unavailable && Number.isFinite(battery.value));
+    const hasGrid = Boolean(grid?.entityId && !grid.unavailable && isFiniteValue(grid.value));
+    const hasSolar = Boolean(solar?.entityId && !solar.unavailable && isFiniteValue(solar.value));
+    const hasBattery = Boolean(battery?.entityId && !battery.unavailable && isFiniteValue(battery.value));
     if (!hasGrid && !hasSolar && !hasBattery) {
       return;
     }
 
-    const homeDemand = home && !home.unavailable && Number.isFinite(home.value) ? Math.max(0, Number(home.value)) : 0;
+    const homeDemand = home && !home.unavailable && isFiniteValue(home.value) ? Math.max(0, Number(home.value)) : 0;
     const gridNet = hasGrid ? Number(grid.value) : 0;
     const gridImport = gridNet > 0.001 ? gridNet : 0;
     const gridExport = gridNet < -0.001 || grid?.isExporting ? Math.abs(gridNet) : 0;
@@ -1065,7 +1108,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     };
   }
 
-  _getNodes() {
+  _getNodes(): PowerNodes {
     const flowFlags = getFlowLayoutFlagsFromConfig(this._config);
     const bottomUtilities = flowFlags.bottomUtilities;
     const individualConfigs = resolveIndividualConfigs(this._config);
@@ -1078,7 +1121,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     });
 
     const hasBottom = bottomUtilities > 0;
-    const nodes = {
+    const nodes: PowerNodes = {
       home: this._resolveNodeDescriptor("home", null, 0, 0, hasBottom, flowFlags),
       grid: this._resolveNodeDescriptor("grid", null, 0, 0, hasBottom, flowFlags),
       solar: this._resolveNodeDescriptor("solar", null, 0, 0, hasBottom, flowFlags),
@@ -1106,17 +1149,18 @@ class NodaliaPowerFlowCard extends HTMLElement {
   }
 
   _getLineNeutralStyle() {
-    const grey = rgbArrayToColor(this._config?.display_zero_lines?.grey_color);
-    const opacity = 1 - (clamp(Number(this._config?.display_zero_lines?.transparency ?? 50), 0, 100) / 100);
+    const zeroLines = isObject(this._config.display_zero_lines) ? this._config.display_zero_lines : DEFAULT_CONFIG.display_zero_lines;
+    const grey = rgbArrayToColor(zeroLines.grey_color);
+    const opacity = 1 - (clamp(Number(zeroLines.transparency ?? 50), 0, 100) / 100);
     return { color: grey, opacity };
   }
 
   _shouldShowZeroLines() {
-    return normalizeTextKey(this._config?.display_zero_lines?.mode) !== "hide";
+    return normalizeTextKey(isObject(this._config.display_zero_lines) ? this._config.display_zero_lines.mode : DEFAULT_CONFIG.display_zero_lines.mode) !== "hide";
   }
 
-  _toFlowMagnitude(value, unit) {
-    if (!Number.isFinite(value)) {
+  _toFlowMagnitude(value: unknown, unit: string) {
+    if (!isFiniteValue(value)) {
       return 0;
     }
 
@@ -1127,7 +1171,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return Math.abs(value);
   }
 
-  _flowDuration(magnitude, maxMagnitude) {
+  _flowDuration(magnitude: number, maxMagnitude: number) {
     const minFlowRate = Math.max(0.6, Number(this._config?.min_flow_rate) || DEFAULT_CONFIG.min_flow_rate);
     const maxFlowRate = Math.max(minFlowRate + 0.1, Number(this._config?.max_flow_rate) || DEFAULT_CONFIG.max_flow_rate);
     const safeMax = Math.max(maxMagnitude, 1);
@@ -1135,19 +1179,19 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return maxFlowRate - ((maxFlowRate - minFlowRate) * ratio);
   }
 
-  _buildLines(nodes) {
+  _buildLines(nodes: PowerNodes) {
     const home = nodes.home;
     const layoutPreset = nodes._layoutPreset || "full";
     const zeroLineVisible = this._shouldShowZeroLines();
     const neutralStyle = this._getLineNeutralStyle();
     /** In viewBox units; distance from node centre toward the other node so the stroke meets the bubble edge. */
-    const homeRadius = layoutPreset === "simple" ? 8.8 : layoutPreset === "compact" ? 10.2 : 11.8;
-    const nodeRadius = layoutPreset === "simple" ? 4.8 : layoutPreset === "compact" ? 5.5 : 6.1;
-    const individualRadius = layoutPreset === "simple" ? 4.2 : layoutPreset === "compact" ? 4.6 : 5;
-    const lineCandidates = [];
-    const flowValues = nodes._flowValues || {};
+    const homeRadius = layoutPreset === "compact" ? 10.2 : 11.8;
+    const nodeRadius = layoutPreset === "compact" ? 5.5 : 6.1;
+    const individualRadius = layoutPreset === "compact" ? 4.6 : 5;
+    const lineCandidates: FlowLineCandidate[] = [];
+    const flowValues: Partial<FlowValues> = nodes._flowValues || {};
 
-    const pushLine = (id, sourceNode, targetNode, value, unit, color, bidirectional = true, straight = false) => {
+    const pushLine = (id: string, sourceNode: PowerNode, targetNode: PowerNode, value: number|null, unit: string, color: string, bidirectional = true, straight = false) => {
       const magnitude = this._toFlowMagnitude(value, unit);
       const active = magnitude > 0.001;
       if (!active && !zeroLineVisible) {
@@ -1157,7 +1201,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       let fromNode = sourceNode;
       let toNode = targetNode;
 
-      if (active && bidirectional && value < 0) {
+      if (active && bidirectional && value !== null && value < 0) {
         fromNode = targetNode;
         toNode = sourceNode;
       }
@@ -1201,27 +1245,27 @@ class NodaliaPowerFlowCard extends HTMLElement {
     };
 
     if (nodes.grid.entityId) {
-      const value = Number.isFinite(flowValues.gridHome) ? flowValues.gridHome : nodes.grid.value;
+      const value = isFiniteValue(flowValues.gridHome) ? flowValues.gridHome : nodes.grid.value;
       pushLine("grid", nodes.grid, home, value, nodes.grid.unit, nodes.grid.color, true, true);
     }
     if (nodes.solar.entityId) {
-      const value = Number.isFinite(flowValues.solarHome) ? flowValues.solarHome : nodes.solar.value;
+      const value = isFiniteValue(flowValues.solarHome) ? flowValues.solarHome : nodes.solar.value;
       pushLine("solar", nodes.solar, home, value, nodes.solar.unit, nodes.solar.color, true);
     }
-    if (nodes.solar.entityId && nodes.grid.entityId && Number.isFinite(flowValues.solarGrid)) {
+    if (nodes.solar.entityId && nodes.grid.entityId && isFiniteValue(flowValues.solarGrid)) {
       pushLine("solar-grid", nodes.solar, nodes.grid, flowValues.solarGrid, nodes.solar.unit || nodes.grid.unit, nodes.solar.color, false);
     }
     if (nodes.battery.entityId) {
-      const value = Number.isFinite(flowValues.batteryHome) ? flowValues.batteryHome : nodes.battery.value;
+      const value = isFiniteValue(flowValues.batteryHome) ? flowValues.batteryHome : nodes.battery.value;
       pushLine("battery", nodes.battery, home, value, nodes.battery.unit, nodes.battery.color, true);
     }
-    if (nodes.battery.entityId && nodes.grid.entityId && Number.isFinite(flowValues.batteryGrid) && flowValues.batteryGrid > 0.001) {
+    if (nodes.battery.entityId && nodes.grid.entityId && isFiniteValue(flowValues.batteryGrid) && flowValues.batteryGrid > 0.001) {
       pushLine("battery-grid", nodes.battery, nodes.grid, flowValues.batteryGrid, nodes.battery.unit || nodes.grid.unit, nodes.battery.color, false);
     }
-    if (nodes.solar.entityId && nodes.battery.entityId && Number.isFinite(flowValues.solarBattery)) {
+    if (nodes.solar.entityId && nodes.battery.entityId && isFiniteValue(flowValues.solarBattery)) {
       pushLine("solar-battery", nodes.solar, nodes.battery, flowValues.solarBattery, nodes.solar.unit || nodes.battery.unit, nodes.battery.color, false, true);
     }
-    if (nodes.grid.entityId && nodes.battery.entityId && Number.isFinite(flowValues.gridBattery) && flowValues.gridBattery > 0.001) {
+    if (nodes.grid.entityId && nodes.battery.entityId && isFiniteValue(flowValues.gridBattery) && flowValues.gridBattery > 0.001) {
       pushLine("grid-battery", nodes.grid, nodes.battery, flowValues.gridBattery, nodes.grid.unit || nodes.battery.unit, nodes.battery.color, false);
     }
     if (nodes.water.entityId) {
@@ -1236,7 +1280,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     });
 
     /** Solar often shares the vertical with home; paint it last so it is not covered where paths cross. */
-    const lineStackOrder = (id) => {
+    const lineStackOrder = (id: string) => {
       if (id === "solar") {
         return 50;
       }
@@ -1268,7 +1312,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     );
 
     return lineCandidates.map(line => {
-      const pathHints = {};
+      const pathHints: {preferVerticalFirst?:boolean} = {};
       if (line.id === "solar" || line.id === "solar-grid") {
         pathHints.preferVerticalFirst = true;
       }
@@ -1287,7 +1331,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     });
   }
 
-  _getDominantColor(lines) {
+  _getDominantColor(lines: FlowLine[]) {
     const active = [...lines]
       .filter(line => line.active)
       .sort((left, right) => right.magnitude - left.magnitude);
@@ -1295,7 +1339,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return active[0]?.color || "#f6b73c";
   }
 
-  _renderFlowDots(line, dotMetrics = {}) {
+  _renderFlowDots(line: FlowLine, dotMetrics: {glowR?:number;coreR?:number;coreStroke?:number;viewAspect?:number} = {}) {
     if (!line.active) {
       return "";
     }
@@ -1326,7 +1370,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     `;
   }
 
-  _getNodeAnimationDelay(node, index = 0) {
+  _getNodeAnimationDelay(node: PowerNode, index = 0) {
     const delayByKind = {
       home: 110,
       grid: 150,
@@ -1343,7 +1387,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
       : baseDelay;
   }
 
-  _renderNode(node, options = {}) {
+  _renderNode(node: PowerNode, options: NodeRenderOptions = {}) {
     const styles = this._config?.styles || DEFAULT_CONFIG.styles;
     const iconSizes = styles.icon || DEFAULT_CONFIG.styles.icon;
     const layoutPreset = options.layoutPreset || "full";
@@ -1356,9 +1400,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         : Math.max(44, parseSizeToPixels(iconSizes.node_size, 48));
     const scaledNodeSize = Math.round(
       nodeSize * (
-        layoutPreset === "simple"
-          ? (node.kind === "home" ? 0.74 : 0.78)
-        : layoutPreset === "compact"
+        layoutPreset === "compact"
             ? (node.kind === "home" ? 0.88 : 0.92)
             : 1
       )
@@ -1369,13 +1411,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const secondarySize = Math.max(10, parseSizeToPixels(styles.secondary_size, 11));
     const isBottom = node.position.y >= 74;
     let infoClass;
-    if (layoutPreset === "simple") {
-      infoClass = node.kind === "home"
-        ? "power-flow-card__node-info--home"
-        : isBottom
-          ? "power-flow-card__node-info--above"
-          : "power-flow-card__node-info--below";
-    } else if (node.kind === "home") {
+    if (node.kind === "home") {
       infoClass = "power-flow-card__node-info--home";
     } else if (node.kind === "solar" || node.kind === "gas") {
       infoClass = "power-flow-card__node-info--above";
@@ -1477,43 +1513,14 @@ class NodaliaPowerFlowCard extends HTMLElement {
     `;
   }
 
-  _getSimpleSourceNode(nodes) {
-    return [
-      nodes.grid,
-      nodes.solar,
-      nodes.battery,
-      ...nodes.individual,
-    ].find(node => node?.entityId) || nodes.home;
-  }
 
-  _renderSimpleLabelChip(node) {
-    if (this._config?.show_labels === false) {
+
+
+  _getGridDirectionIcon(node: PowerNode) {
+    if (node?.kind !== "grid" || !isFiniteValue(node.value) || Math.abs(node.value) <= 0.001) {
       return "";
     }
-
-    return `<span class="power-flow-card__chip power-flow-card__chip--label">${escapeHtml(node.label)}</span>`;
-  }
-
-  _renderSimpleValueChip(node) {
-    if (this._config?.show_values === false) {
-      return "";
-    }
-    const gridDirectionIcon = this._getGridDirectionIcon(node);
-
-    return `
-      <span class="power-flow-card__chip power-flow-card__chip--value" style="--chip-tint:${escapeHtml(node.color)};">
-        ${gridDirectionIcon ? `<ha-icon class="power-flow-card__chip-direction" icon="${escapeHtml(gridDirectionIcon)}"></ha-icon>` : ""}
-        <span>${escapeHtml(node.valueText)}</span>
-        ${node.unitText ? `<span class="power-flow-card__chip-unit">${escapeHtml(node.unitText)}</span>` : ""}
-      </span>
-    `;
-  }
-
-  _getGridDirectionIcon(node) {
-    if (node?.kind !== "grid" || !Number.isFinite(Number(node.value)) || Math.abs(Number(node.value)) <= 0.001) {
-      return "";
-    }
-    return node.isExporting || Number(node.value) < -0.001
+    return node.isExporting || node.value < -0.001
       ? "mdi:transmission-tower-import"
       : "mdi:transmission-tower-export";
   }
@@ -1530,7 +1537,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     this.toggleAttribute("data-home-popup-open", this._homePopupOpen === true);
   }
 
-  _getNodeInteractionAction(node) {
+  _getNodeInteractionAction(node: PowerNode) {
     if (node.kind === "home" && this._shouldUseHomeDevicePopup()) {
       return "home-popup";
     }
@@ -1540,7 +1547,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return "more-info";
   }
 
-  _onHomePopupKeydown(event) {
+  _onHomePopupKeydown(event: KeyboardEvent) {
     if (!this._homePopupOpen || event.key !== "Escape") {
       return;
     }
@@ -1568,10 +1575,10 @@ class NodaliaPowerFlowCard extends HTMLElement {
     this._render();
   }
 
-  _formatConsumptionChipValue(value, unit = "") {
+  _formatConsumptionChipValue(value: unknown, unit = "") {
     const numeric = parseNumber(value);
     const locale = this._getLocaleTag();
-    if (!Number.isFinite(numeric)) {
+    if (!isFiniteValue(numeric)) {
       return { value: "--", unit: unit || "" };
     }
 
@@ -1593,7 +1600,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     return formatDisplayValue(numeric, unit, locale);
   }
 
-  _resolveConsumptionChip(period) {
+  _resolveConsumptionChip(period: "day"|"month") {
     const chips = this._config?.consumption_chips || {};
     const entityId = String(chips[`${period}_entity`] || "").trim();
     if (!entityId) {
@@ -1628,9 +1635,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
   }
 
   _renderConsumptionChips() {
-    const chips = ["day", "month"]
+    const chips = (["day", "month"] as const)
       .map(period => this._resolveConsumptionChip(period))
-      .filter(Boolean);
+      .filter(chip => chip !== null);
 
     if (!chips.length) {
       return "";
@@ -1641,7 +1648,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         ${chips.map(chip => `
           <span
             class="power-flow-card__chip power-flow-card__chip--stat ${chip.clickable ? "is-clickable" : ""}"
-            ${chip.clickable ? `data-node-entity="${escapeHtml(chip.entityId)}" data-node-action="more-info"` : ""}
+            ${chip.clickable ? `data-node-entity="${escapeHtml(chip.entityId)}" data-node-action="more-info" role="button" tabindex="0"` : ""}
             title="${escapeHtml(chip.label)}"
           >
             <ha-icon icon="${escapeHtml(chip.icon)}"></ha-icon>
@@ -1654,7 +1661,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     `;
   }
 
-  _renderHomePopupDeviceRow(node, options = {}) {
+  _renderHomePopupDeviceRow(node: PowerNode, options: NodeRenderOptions = {}) {
     const styles = this._config?.styles || DEFAULT_CONFIG.styles;
     const iconStyles = styles.icon || DEFAULT_CONFIG.styles.icon;
     const deviceSize = Math.round(Math.max(38, parseSizeToPixels(iconStyles.individual_size, 40)));
@@ -1707,7 +1714,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     `;
   }
 
-  _renderHomeDevicePopup(nodes) {
+  _renderHomeDevicePopup(nodes: PowerNodes) {
     if (!this._homePopupOpen) {
       return "";
     }
@@ -1730,11 +1737,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const homeUnavailableBadge = this._config?.show_unavailable_badge !== false && home.unavailable
       ? `<span class="power-flow-card__unavailable"><ha-icon icon="mdi:help"></ha-icon></span>`
       : "";
-    const maxMagnitude = Math.max(
-      1,
-      this._toFlowMagnitude(home.value, home.unit),
-      ...popupIndividuals.map(node => this._toFlowMagnitude(node.value, node.unit)),
-    );
+
     const deviceCountLabel = `${popupIndividuals.length} ${this._powerFlowUi(popupIndividuals.length === 1 ? "device" : "devices", popupIndividuals.length === 1 ? "device" : "devices")}`;
     const closeLabel = this._powerFlowUi("close", "Close");
     const moreInfoLabel = this._powerFlowUi("moreInfo", "More info");
@@ -1819,7 +1822,6 @@ class NodaliaPowerFlowCard extends HTMLElement {
             </div>
             <div class="power-flow-card__home-popup-list" role="list">
               ${popupIndividuals.map((node, index) => this._renderHomePopupDeviceRow(node, {
-                maxMagnitude,
                 enterDelay: 40 + (index * 36),
               })).join("")}
             </div>
@@ -1829,137 +1831,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
     `;
   }
 
-  _renderSimpleLayout(nodes, lines, options = {}) {
-    const animateEntrance = options.animateEntrance === true;
-    const sourceNode = this._getSimpleSourceNode(nodes);
-    const flowLine = lines.find(line => line.id === sourceNode.id || line.fromNode?.id === sourceNode.id || line.toNode?.id === sourceNode.id) || null;
-    const lineColor = flowLine?.color || sourceNode.color || "#6da8ff";
-    const lineOpacity = flowLine?.active ? 0.92 : (this._shouldShowZeroLines() ? this._getLineNeutralStyle().opacity : 0);
-    const lineBackground = flowLine?.active
-      ? `color-mix(in srgb, ${lineColor} 24%, rgba(255,255,255,0.12))`
-      : this._getLineNeutralStyle().color;
-    const bubbleDuration = Math.max(3.6, Number(flowLine?.duration || 4.8));
-    const homeSize = Math.round(Math.max(92, parseSizeToPixels(this._config?.styles?.icon?.home_size, 96)) * 0.72);
-    const nodeSize = Math.round(Math.max(44, parseSizeToPixels(this._config?.styles?.icon?.node_size, 48)) * 0.8);
-    const lineStartOffset = Math.max(18, Math.round(nodeSize * 0.42));
-    const lineEndOffset = Math.max(30, Math.round(homeSize * 0.38));
-    const sourceClickable = this._config?.clickable_entities !== false && sourceNode.entityId;
-    const homeClickable = this._config?.clickable_entities !== false && nodes.home.entityId;
-    const homePopupAction = this._getNodeInteractionAction(nodes.home);
-    const sourceUnavailableBadge = this._config?.show_unavailable_badge !== false && sourceNode.unavailable
-      ? `<span class="power-flow-card__unavailable"><ha-icon icon="mdi:help"></ha-icon></span>`
-      : "";
-    const homeUnavailableBadge = this._config?.show_unavailable_badge !== false && nodes.home.unavailable
-      ? `<span class="power-flow-card__unavailable"><ha-icon icon="mdi:help"></ha-icon></span>`
-      : "";
-    const showDashboardButton = this._config?.show_dashboard_link_button !== false && Boolean(this._config?.dashboard_link);
-    const dashboardLabel = this._config?.dashboard_link_label && this._config.dashboard_link_label !== DEFAULT_CONFIG.dashboard_link_label
-      ? this._config.dashboard_link_label
-      : this._powerFlowUi("energy", "Energy");
 
-    return `
-      <div class="power-flow-card__simple-layout ${showDashboardButton ? "has-footer" : ""} ${animateEntrance ? "power-flow-card__simple-layout--entering" : ""}">
-        <div
-          class="power-flow-card__simple-top ${animateEntrance ? "power-flow-card__simple-top--entering" : ""}"
-          style="--simple-source-column:${nodeSize}px; --simple-home-column:${homeSize}px;"
-        >
-          <div class="power-flow-card__simple-column power-flow-card__simple-column--source-top">
-            ${this._renderSimpleLabelChip(sourceNode)}
-          </div>
-          <div></div>
-          <div class="power-flow-card__simple-column power-flow-card__simple-column--home power-flow-card__simple-column--home-top">
-            ${this._renderSimpleLabelChip(nodes.home)}
-          </div>
-        </div>
-
-        <div
-          class="power-flow-card__simple-rail ${animateEntrance ? "power-flow-card__simple-rail--entering" : ""}"
-          style="--simple-rail-height:${Math.max(nodeSize, homeSize)}px; --simple-source-column:${nodeSize}px; --simple-home-column:${homeSize}px;"
-        >
-          <div
-            class="power-flow-card__simple-line-wrap"
-            style="--line-start-offset:${lineStartOffset}px; --line-end-offset:${lineEndOffset}px;"
-          >
-            <div
-              class="power-flow-card__simple-line ${flowLine?.active ? "is-active" : ""}"
-              style="--line-color:${escapeHtml(lineColor)}; --line-opacity:${lineOpacity}; --line-background:${escapeHtml(lineBackground)};"
-            >
-              ${flowLine?.active ? `
-                <span class="power-flow-card__simple-dot" style="animation-duration:${bubbleDuration.toFixed(2)}s;"></span>
-              ` : ""}
-            </div>
-          </div>
-
-          <div class="power-flow-card__simple-rail-node power-flow-card__simple-rail-node--source" style="--simple-node-cover-size:${nodeSize}px;">
-            <button
-              class="power-flow-card__bubble ${sourceClickable ? "is-clickable" : ""}"
-              data-node-entity="${escapeHtml(sourceNode.entityId)}"
-              data-node-action="${sourceClickable ? "more-info" : ""}"
-              style="--node-size:${nodeSize}px; --node-tint:${escapeHtml(sourceNode.color)}; --node-icon-glyph:${escapeHtml(this._getNodeIconGlyphColor(sourceNode))};"
-              title="${escapeHtml(sourceNode.label)}"
-            >
-              ${sourceUnavailableBadge}
-              <ha-icon icon="${escapeHtml(sourceNode.icon)}"></ha-icon>
-            </button>
-          </div>
-
-          <div class="power-flow-card__simple-rail-spacer"></div>
-
-          <div class="power-flow-card__simple-rail-node power-flow-card__simple-rail-node--home" style="--simple-node-cover-size:${homeSize}px;">
-            <button
-              class="power-flow-card__bubble power-flow-card__bubble--home ${homeClickable ? "is-clickable" : ""}"
-              data-node-entity="${escapeHtml(nodes.home.entityId)}"
-              data-node-action="${escapeHtml(homePopupAction)}"
-              style="--node-size:${homeSize}px; --node-tint:${escapeHtml(nodes.home.color)}; --node-icon-glyph:${escapeHtml(this._getNodeIconGlyphColor(nodes.home))};"
-              title="${escapeHtml(nodes.home.label)}"
-            >
-              ${homeUnavailableBadge}
-              <span class="power-flow-card__home-icon-wrap">
-                <ha-icon icon="${escapeHtml(nodes.home.icon)}"></ha-icon>
-              </span>
-              ${
-                this._config?.show_values === false
-                  ? ""
-                  : `
-                    <span class="power-flow-card__home-value">
-                      <span class="power-flow-card__home-value-number">${escapeHtml(nodes.home.valueText)}</span>
-                      ${nodes.home.unitText ? `<span class="power-flow-card__home-value-unit">${escapeHtml(nodes.home.unitText)}</span>` : ""}
-                    </span>
-                  `
-              }
-            </button>
-          </div>
-        </div>
-
-        <div
-          class="power-flow-card__simple-bottom ${animateEntrance ? "power-flow-card__simple-bottom--entering" : ""}"
-          style="--simple-source-column:${nodeSize}px; --simple-home-column:${homeSize}px;"
-        >
-          <div class="power-flow-card__simple-column power-flow-card__simple-column--source power-flow-card__simple-column--source-bottom">
-            ${this._renderSimpleValueChip(sourceNode)}
-            ${sourceNode.secondary ? `<span class="power-flow-card__node-secondary">${escapeHtml(sourceNode.secondary)}</span>` : ""}
-          </div>
-          <div></div>
-          <div></div>
-        </div>
-
-        ${
-          showDashboardButton
-            ? `
-              <div class="power-flow-card__simple-footer ${animateEntrance ? "power-flow-card__simple-footer--entering" : ""}">
-                <button class="power-flow-card__dashboard-button power-flow-card__dashboard-button--footer" data-dashboard-action="navigate" title="${escapeHtml(dashboardLabel)}">
-                  <ha-icon icon="mdi:lightning-bolt-circle"></ha-icon>
-                  <span>${escapeHtml(dashboardLabel)}</span>
-                </button>
-              </div>
-            `
-            : ""
-        }
-      </div>
-    `;
-  }
-
-  _onShadowClick(event) {
+  _onShadowClick(event: Event) {
+    if (!this.isConnected) return;
     const homePopupClose = event.composedPath().find(
       node => node instanceof HTMLElement && node.dataset?.homePopupAction === "close",
     );
@@ -1970,18 +1844,18 @@ class NodaliaPowerFlowCard extends HTMLElement {
       return;
     }
 
-    const dashboardButton = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.dashboardAction === "navigate");
+    const dashboardButton = event.composedPath().find((node): node is HTMLElement => powerActionElement(node) && node.dataset.dashboardAction === "navigate");
     if (dashboardButton) {
       event.preventDefault();
       event.stopPropagation();
       this._triggerPressAnimation(dashboardButton);
       this._triggerHaptic("selection");
-      this._navigate(this._config?.dashboard_link);
+      this._navigate(String(this._config.dashboard_link || ""));
       return;
     }
 
     const homePopupButton = event.composedPath().find(
-      node => node instanceof HTMLElement && node.dataset?.nodeAction === "home-popup",
+      (node): node is HTMLElement => powerActionElement(node) && node.dataset.nodeAction === "home-popup",
     );
     if (homePopupButton) {
       event.preventDefault();
@@ -1993,7 +1867,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     }
 
     const nodeAction = event.composedPath().find(
-      node => node instanceof HTMLElement && (node.dataset?.nodeAction === "more-info"),
+      (node): node is HTMLElement => powerActionElement(node) && node.dataset.nodeAction === "more-info",
     );
     if (nodeAction && nodeAction.dataset?.nodeEntity) {
       event.preventDefault();
@@ -2006,21 +1880,23 @@ class NodaliaPowerFlowCard extends HTMLElement {
       return;
     }
 
-    if ((this._config?.tap_action || "none") === "more-info" && this._config?.entities?.home?.entity) {
+    const homeConfig = resolveNodeConfig("home", this._config);
+    if ((this._config.tap_action || "none") === "more-info" && homeConfig.entity) {
       const content = event.composedPath().find(node => node instanceof HTMLElement && node.dataset?.cardAction === "primary");
       if (content) {
         event.preventDefault();
         event.stopPropagation();
-        this._triggerPressAnimation(this.shadowRoot.querySelector(".power-flow-card__content"));
+        const contentNode = this.shadowRoot?.querySelector(".power-flow-card__content");
+        if (contentNode) this._triggerPressAnimation(contentNode);
         this._triggerHaptic("selection");
         fireEvent(this, "hass-more-info", {
-          entityId: this._config.entities.home.entity,
+          entityId: homeConfig.entity,
         });
       }
     }
   }
 
-  _onShadowKeyDown(event) {
+  _onShadowKeyDown(event: Event) {
     if (window.NodaliaUtils?.isKeyboardActivationEvent?.(event) !== true) {
       return;
     }
@@ -2033,8 +1909,8 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
   _collectPowerFlowEntityIds() {
     const nodes = this._getNodes();
-    const ids = [];
-    const push = (id) => {
+    const ids: string[] = [];
+    const push = (id: unknown) => {
       const value = String(id ?? "").trim();
       if (value && !ids.includes(value)) {
         ids.push(value);
@@ -2059,6 +1935,12 @@ class NodaliaPowerFlowCard extends HTMLElement {
       return;
     }
 
+    const focused = this.shadowRoot.activeElement;
+    const focusAction = focused instanceof HTMLElement && (!this._homePopupOpen || focused.closest(".power-flow-card__home-popup-panel")) ? {
+      node: focused.dataset.nodeAction, entity: focused.dataset.nodeEntity,
+      popup: focused.dataset.homePopupAction, dashboard: focused.dataset.dashboardAction,
+      primary: focused.dataset.cardAction,
+    } : null;
     const powerFlowEntityIds = this._collectPowerFlowEntityIds();
     if (powerFlowEntityIds.length) {
       const powerFlowGuard = window.NodaliaUtils?.renderLovelaceEntityGuardForEntities?.(
@@ -2067,6 +1949,10 @@ class NodaliaPowerFlowCard extends HTMLElement {
         { cardClass: "power-flow-card" },
       );
       if (powerFlowGuard) {
+        this._releaseViewWork();
+        this._homePopupOpen = false;
+        this._syncHomePopupHostState();
+        window.NodaliaUtils?.releaseModalFocus?.(this);
         this.shadowRoot.innerHTML = powerFlowGuard;
         return;
       }
@@ -2087,31 +1973,20 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const flowDotGlowR = 2.1 * flowDotBoost;
     const flowDotCoreR = 1.12 * flowDotBoost;
     const flowDotCoreStroke = 0.26;
-    const surfaceLayoutExtras = (() => {
-      let add = 0;
-      if (layoutPreset !== "simple") {
-        add += Math.min(Math.max(0, flowFlags.individualCount - 1), 5) * 22;
-      }
-      return add;
-    })();
+    const surfaceLayoutExtras = Math.min(Math.max(0, flowFlags.individualCount - 1), 5) * 22;
     const topEnergyConfigured = [nodes.grid.entityId, nodes.solar.entityId, nodes.battery.entityId].filter(Boolean).length;
-    const minimalFlowDiagram = layoutPreset !== "simple" && topEnergyConfigured <= 1 && !hasLowerNodes;
+    const minimalFlowDiagram = topEnergyConfigured <= 1 && !hasLowerNodes;
     const stripOnlyGridHome =
-      layoutPreset !== "simple"
-      && Boolean(nodes.grid.entityId && nodes.home.entityId)
+      Boolean(nodes.grid.entityId && nodes.home.entityId)
       && !nodes.solar.entityId
       && !nodes.battery.entityId
       && !hasLowerNodes
       && diagramIndividualCount === 0;
     const upperBandHubOnly =
-      layoutPreset !== "simple"
-      && Boolean(nodes.solar.entityId && nodes.grid.entityId && nodes.home.entityId)
+      Boolean(nodes.solar.entityId && nodes.grid.entityId && nodes.home.entityId)
       && !nodes.battery.entityId
       && !hasLowerNodes;
     const baseSurfaceDiagram = (() => {
-      if (layoutPreset === "simple") {
-        return 162;
-      }
       if (stripOnlyGridHome) {
         return layoutPreset === "compact" ? 132 : 146;
       }
@@ -2124,9 +1999,6 @@ class NodaliaPowerFlowCard extends HTMLElement {
       return layoutPreset === "compact" ? (hasLowerNodes ? 306 : 264) : (hasLowerNodes ? 336 : 286);
     })();
     const surfaceFloor = (() => {
-      if (layoutPreset === "simple") {
-        return 148;
-      }
       if (stripOnlyGridHome) {
         return layoutPreset === "compact" ? 122 : 128;
       }
@@ -2140,15 +2012,12 @@ class NodaliaPowerFlowCard extends HTMLElement {
     })();
     const surfaceMinHeight = Math.min(
       Math.max(
-        (layoutPreset === "simple" ? 162 : baseSurfaceDiagram) + surfaceLayoutExtras,
+        baseSurfaceDiagram + surfaceLayoutExtras,
         surfaceFloor,
       ),
       540,
     );
     const baseSurfaceMobile = (() => {
-      if (layoutPreset === "simple") {
-        return 144;
-      }
       if (stripOnlyGridHome) {
         return layoutPreset === "compact" ? 126 : 136;
       }
@@ -2163,9 +2032,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     const surfaceMinHeightMobile = Math.min(
       Math.max(
         baseSurfaceMobile + surfaceLayoutExtras,
-        layoutPreset === "simple"
-          ? 132
-          : stripOnlyGridHome
+        stripOnlyGridHome
             ? (layoutPreset === "compact" ? 118 : 124)
             : upperBandHubOnly
               ? (layoutPreset === "compact" ? 146 : 152)
@@ -2199,12 +2066,12 @@ class NodaliaPowerFlowCard extends HTMLElement {
       viewAspect: flowDotViewAspect,
     };
     const showDashboardButton = this._config?.show_dashboard_link_button !== false && Boolean(this._config?.dashboard_link);
-    const titleText = this._config?.title || this._config?.name || (layoutPreset === "simple" ? "" : "Flujo");
+    const titleText = this._config?.title || this._config?.name || "Flujo";
     const consumptionChipsMarkup = this._renderConsumptionChips();
     const hasHeader = this._config?.show_header !== false && (
       Boolean(titleText)
       || Boolean(consumptionChipsMarkup)
-      || (showDashboardButton && layoutPreset !== "simple")
+      || (showDashboardButton)
     );
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
@@ -2620,11 +2487,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           animation-delay: 34ms;
         }
 
-        .power-flow-card--simple .power-flow-card__content {
-          align-items: stretch;
-          display: flex;
-          justify-content: flex-start;
-        }
+
 
         .power-flow-card__surface {
           background: linear-gradient(180deg, color-mix(in srgb, var(--ha-card-background, var(--card-background-color, #fff)) 18%, transparent) 0%, transparent 100%);
@@ -2751,260 +2614,79 @@ class NodaliaPowerFlowCard extends HTMLElement {
           bottom: calc(100% + 8px);
         }
 
-        .power-flow-card--simple .power-flow-card__header {
-          gap: 8px;
-        }
 
-        .power-flow-card--simple {
-          gap: 8px;
-          padding: 10px;
-        }
 
-        .power-flow-card--simple .power-flow-card__dashboard-button {
-          min-height: 38px;
-          padding: 0 15px;
-        }
 
-        .power-flow-card--simple .power-flow-card__surface {
-          min-height: 148px;
-        }
 
-        .power-flow-card--simple .power-flow-card__node-info {
-          gap: 4px;
-        }
 
-        .power-flow-card--simple .power-flow-card__chip {
-          max-width: 120px;
-        }
 
-        .power-flow-card__simple-layout {
-          align-content: space-between;
-          display: grid;
-          gap: 4px;
-          grid-template-rows: auto 1fr auto;
-          min-height: 100%;
-          position: relative;
-          width: 100%;
-        }
 
-        .power-flow-card__simple-layout.has-footer {
-          padding-bottom: 42px;
-        }
 
-        .power-flow-card__simple-top--entering {
-          animation: power-flow-card-fade-up calc(var(--power-flow-card-content-duration) * 0.74) cubic-bezier(0.22, 0.84, 0.26, 1) both;
-          animation-delay: 46ms;
-        }
 
-        .power-flow-card__simple-rail--entering {
-          animation: power-flow-card-surface-in calc(var(--power-flow-card-content-duration) * 0.88) cubic-bezier(0.2, 0.9, 0.24, 1) both;
-          animation-delay: 92ms;
-        }
 
-        .power-flow-card__simple-bottom--entering {
-          animation: power-flow-card-fade-up calc(var(--power-flow-card-content-duration) * 0.76) cubic-bezier(0.22, 0.84, 0.26, 1) both;
-          animation-delay: 132ms;
-        }
 
-        .power-flow-card__simple-top,
-        .power-flow-card__simple-bottom {
-          align-items: center;
-          display: grid;
-          gap: 0;
-          grid-template-columns: var(--simple-source-column, 48px) minmax(64px, 1fr) var(--simple-home-column, 96px);
-          width: 100%;
-        }
 
-        .power-flow-card__simple-top {
-          margin-bottom: 1px;
-        }
 
-        .power-flow-card__simple-bottom {
-          margin-top: 2px;
-        }
 
-        .power-flow-card__simple-rail {
-          align-items: center;
-          display: grid;
-          gap: 0;
-          grid-template-columns: var(--simple-source-column, 48px) minmax(64px, 1fr) var(--simple-home-column, 96px);
-          min-height: var(--simple-rail-height, 96px);
-          position: relative;
-          width: 100%;
-        }
 
-        .power-flow-card__simple-rail-node {
-          align-items: center;
-          display: flex;
-          justify-content: center;
-          min-width: 0;
-          position: relative;
-          z-index: 2;
-        }
 
-        .power-flow-card__simple-rail-node::before {
-          background:
-            radial-gradient(circle at top left, color-mix(in srgb, ${dominantColor} 9%, transparent) 0%, transparent 58%),
-            linear-gradient(180deg, rgba(255,255,255,0.018) 0%, rgba(0,0,0,0.03) 100%),
-            ${styles.card.background};
-          border-radius: 999px;
-          content: "";
-          height: calc(var(--simple-node-cover-size, 48px) + 12px);
-          left: 50%;
-          position: absolute;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          width: calc(var(--simple-node-cover-size, 48px) + 12px);
-          z-index: 0;
-        }
 
-        .power-flow-card__simple-rail-node--source {
-          grid-column: 1;
-        }
 
-        .power-flow-card__simple-rail-node--home {
-          grid-column: 3;
-        }
 
-        .power-flow-card__simple-rail-spacer {
-          grid-column: 2;
-          min-width: 64px;
-        }
 
-        .power-flow-card__simple-column {
-          align-items: center;
-          display: grid;
-          gap: 4px;
-          justify-items: center;
-          min-width: 0;
-          position: relative;
-          z-index: 1;
-        }
 
-        .power-flow-card__simple-column--home {
-          gap: 3px;
-          justify-self: center;
-          margin-bottom: 0;
-          max-width: 100%;
-          width: max-content;
-        }
 
-        .power-flow-card__simple-column--source {
-          justify-self: center;
-          margin-top: 0;
-          max-width: 100%;
-          width: max-content;
-        }
 
-        .power-flow-card__simple-column--source-top {
-          justify-self: center;
-          max-width: 100%;
-          width: max-content;
-        }
 
-        .power-flow-card__simple-column--home-top {
-          transform: translateY(-4px);
-        }
 
-        .power-flow-card__simple-column--source-top {
-          gap: 3px;
-          transform: translateY(4px);
-        }
 
-        .power-flow-card__simple-column--source-bottom {
-          gap: 3px;
-          transform: translateY(-6px);
-        }
 
-        .power-flow-card__simple-info {
-          align-items: center;
-          display: grid;
-          gap: 4px;
-          justify-items: center;
-          min-width: 0;
-        }
 
-        .power-flow-card__simple-info .power-flow-card__chip,
-        .power-flow-card__simple-info .power-flow-card__node-secondary {
-          max-width: 150px;
-        }
 
-        .power-flow-card__simple-top .power-flow-card__chip,
-        .power-flow-card__simple-bottom .power-flow-card__chip {
-          justify-self: center;
-          margin-left: auto;
-          margin-right: auto;
-        }
 
-        .power-flow-card__simple-line-wrap {
-          left: var(--line-start-offset, 18px);
-          min-width: 64px;
-          pointer-events: none;
-          position: absolute;
-          right: var(--line-end-offset, 28px);
-          top: 50%;
-          transform: translateY(-50%);
-          width: auto;
-          z-index: 1;
-        }
 
-        .power-flow-card__simple-line {
-          background: linear-gradient(180deg, color-mix(in srgb, var(--line-background) 100%, transparent) 0%, color-mix(in srgb, var(--line-background) 78%, transparent) 100%);
-          border-radius: 999px;
-          height: ${Math.max(flowWidth, 2)}px;
-          opacity: var(--line-opacity);
-          overflow: hidden;
-          position: relative;
-          width: 100%;
-        }
 
-        .power-flow-card__simple-line.is-active {
-          box-shadow: 0 0 12px color-mix(in srgb, var(--line-color) 16%, transparent);
-        }
 
-        .power-flow-card__simple-dot {
-          animation: power-flow-card-simple-dot linear infinite both;
-          background: radial-gradient(circle at 35% 35%, rgba(255,255,255,0.98) 0 35%, color-mix(in srgb, var(--line-color) 44%, rgba(255,255,255,0.92)) 36% 100%);
-          border-radius: 999px;
-          box-shadow:
-            0 0 0 3px color-mix(in srgb, var(--line-color) 14%, transparent),
-            0 0 10px color-mix(in srgb, var(--line-color) 20%, transparent);
-          height: 8px;
-          left: 0;
-          opacity: 0;
-          position: absolute;
-          top: 50%;
-          transform: translateY(-50%);
-          width: 8px;
-          will-change: left, opacity;
-        }
 
-        .power-flow-card__simple-rail--entering .power-flow-card__simple-dot {
-          animation: none;
-          opacity: 0;
-          visibility: hidden;
-        }
 
-        .power-flow-card--motion-paused .power-flow-card__simple-dot {
-          animation-play-state: paused !important;
-        }
 
-        @keyframes power-flow-card-simple-dot {
-          0% {
-            left: 0;
-            opacity: 0;
-          }
-          8% {
-            opacity: 1;
-          }
-          92% {
-            opacity: 1;
-          }
-          100% {
-            left: calc(100% - 8px);
-            opacity: 0;
-          }
-        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         .power-flow-card__bubble {
           align-items: center;
@@ -3036,18 +2718,9 @@ class NodaliaPowerFlowCard extends HTMLElement {
           transform: translateY(-1px);
         }
 
-        .power-flow-card__simple-footer {
-          display: flex;
-          inset: auto 0 0 0;
-          justify-content: center;
-          position: absolute;
-          width: 100%;
-        }
 
-        .power-flow-card__simple-footer--entering {
-          animation: power-flow-card-fade-up calc(var(--power-flow-card-content-duration) * 0.74) cubic-bezier(0.22, 0.84, 0.26, 1) both;
-          animation-delay: 168ms;
-        }
+
+
 
         .power-flow-card__dashboard-button--footer {
           min-width: 0;
@@ -3073,10 +2746,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           padding: 10px 12px;
         }
 
-        .power-flow-card--simple .power-flow-card__bubble--home {
-          gap: 4px;
-          padding: 9px 11px;
-        }
+
 
         .power-flow-card__home-icon-wrap {
           align-items: center;
@@ -3090,10 +2760,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           width: 31px;
         }
 
-        .power-flow-card--simple .power-flow-card__home-icon-wrap {
-          height: 29px;
-          width: 29px;
-        }
+
 
         .power-flow-card__home-icon-wrap ha-icon {
           --mdc-icon-size: 17px;
@@ -3107,9 +2774,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           min-width: 0;
         }
 
-        .power-flow-card--simple .power-flow-card__home-value {
-          gap: 3px;
-        }
+
 
         .power-flow-card__home-value-number {
           font-size: ${Math.max(19, parseSizeToPixels(styles.home_value_size, 22))}px;
@@ -3118,10 +2783,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           line-height: 0.9;
         }
 
-        .power-flow-card--simple .power-flow-card__home-value-number {
-          font-size: ${Math.max(16, parseSizeToPixels(styles.home_value_size, 22) - 4)}px;
-          letter-spacing: -0.035em;
-        }
+
 
         .power-flow-card__home-value-unit {
           font-size: ${Math.max(12, parseSizeToPixels(styles.home_unit_size, 14))}px;
@@ -3129,9 +2791,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           opacity: 0.84;
         }
 
-        .power-flow-card--simple .power-flow-card__home-value-unit {
-          font-size: ${Math.max(10, parseSizeToPixels(styles.home_unit_size, 14) - 2)}px;
-        }
+
 
         .power-flow-card__bubble--individual {
           border-radius: 18px;
@@ -3348,7 +3008,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
                 <div class="power-flow-card__header-main">
                   <div class="power-flow-card__title">${escapeHtml(titleText)}</div>
                   ${
-                    showDashboardButton && layoutPreset !== "simple"
+                    showDashboardButton
                       ? `
                         <button class="power-flow-card__dashboard-button" data-dashboard-action="navigate" title="${escapeHtml(this._config?.dashboard_link_label && this._config.dashboard_link_label !== DEFAULT_CONFIG.dashboard_link_label ? this._config.dashboard_link_label : this._powerFlowUi("energy", "Energy"))}">
                           <ha-icon icon="mdi:lightning-bolt-circle"></ha-icon>
@@ -3365,11 +3025,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
         <div class="power-flow-card__content ${shouldAnimateEntrance ? "power-flow-card__content--entering" : ""}" ${this._config?.tap_action === "more-info" ? `data-card-action="primary" role="button" tabindex="0" aria-label="${escapeHtml(titleText || this._powerFlowUi("energy", "Energy"))}"` : ""}>
           ${
-            layoutPreset === "simple"
-              ? this._renderSimpleLayout(nodes, lines, {
-                animateEntrance: shouldAnimateEntrance,
-              })
-              : `
+            `
                 <div class="power-flow-card__surface ${shouldAnimateEntrance ? "power-flow-card__surface--entering" : ""}">
                   <svg class="power-flow-card__svg power-flow-card__svg--lines" viewBox="0 0 100 100" preserveAspectRatio="none" shape-rendering="geometricPrecision">
                     <defs>
@@ -3440,9 +3096,28 @@ class NodaliaPowerFlowCard extends HTMLElement {
     if (homePopupDialog instanceof HTMLElement) {
       window.NodaliaUtils?.bindModalFocus?.(this, homePopupDialog, {
         initialFocusSelector: '[data-home-popup-action="close"]',
+        restoreFocus: () => {
+          if (!this.isConnected || this._homePopupOpen) return;
+          const home = this.shadowRoot?.querySelector('.power-flow-card__bubble[data-node-action="home-popup"]');
+          if (home instanceof HTMLElement) home.focus({preventScroll:true});
+        },
       });
     } else {
       window.NodaliaUtils?.releaseModalFocus?.(this);
+    }
+    if (focusAction && Object.values(focusAction).some(value => value)) {
+      const replacement = [...this.shadowRoot.querySelectorAll("[data-node-action], [data-home-popup-action], [data-dashboard-action], [data-card-action]")].find(element => element instanceof HTMLElement &&
+        element.dataset.nodeAction === focusAction.node && element.dataset.nodeEntity === focusAction.entity &&
+        element.dataset.homePopupAction === focusAction.popup && element.dataset.dashboardAction === focusAction.dashboard &&
+        element.dataset.cardAction === focusAction.primary);
+      if (replacement instanceof HTMLElement) {
+        replacement.focus({preventScroll:true});
+        // Rebinding the modal schedules initial focus; retain the user's current control afterwards.
+        const generation = this._animationWork.generation;
+        if (homePopupDialog instanceof HTMLElement) scheduleViewFallback(this._animationWork, () => {
+          if (generation === this._animationWork.generation && replacement.isConnected && this.isConnected) replacement.focus({preventScroll:true});
+        }, 0);
+      }
     }
     this._lastRenderSignature = this._getRenderSignature();
 

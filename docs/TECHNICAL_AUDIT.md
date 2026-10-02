@@ -1676,3 +1676,31 @@ CI and review remain required before integration.
   match the prior view. All 12 focused Chromium/WebKit/iPhone cases pass. The full
   local suite passes 677 cases with one existing skip; CI remains required before
   integration. No prerelease has been published.
+
+
+## 2026-10-02 — Power Flow view, missing sources and owned motion
+
+- Remove the complete view suppression with actual normalized configuration,
+  nullable source/node values, flow geometry, HA and native DOM/SVG contracts.
+  Debt falls from 7 to 6; the manual support runtimes still require migration.
+- A configured split component that is missing/blank/unknown/unavailable no
+  longer contributes an invented zero. Unconfigured components and real zeros
+  remain distinct. Export-only sensors likewise preserve unavailable readings.
+  Keep established measured/derived flow semantics and battery status icons.
+- Track displayed attributes and locale without relying on timestamps. Preserve
+  native action focus during refreshes, activate consumption chips with Enter/
+  Space and return modal focus to the actual Home button on Escape. Open dialogs
+  close across configuration, HA connection/user changes and disconnect.
+- Release owned press/entrance/frame work; retired observer/frame callbacks
+  cannot modify a reattached card. Detached HA assignments do not render until
+  reconnect. Native viewport changes pause/resume the existing SVG animations.
+- Remove four private renderer helpers and 45 exclusive style rules for the
+  unreachable simple design: the checked layout selector returns only compact
+  or full. Remove unused radius/sizing branches, row calculations and imports.
+  All 3,000 valid markup/style/sizing comparisons match the prior view after
+  excluding only those verified dead rules and added chip keyboard attributes.
+- Strict/lint and all 750 unit tests pass. All 15 focused Chromium/WebKit/iPhone
+  cases pass; the complete local suite passes 689 cases with one existing skip.
+  The HACS bundle is 4,311,570 raw / 956,888 gzip bytes, below the unchanged
+  4,325,376 / 972,800 limits. CI and review remain required before integration.
+  No prerelease has been published.

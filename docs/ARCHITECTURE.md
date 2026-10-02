@@ -356,7 +356,7 @@ Six config/helper cycles were removed through checked defaults and normalization
 Do not place defaults in modules that import their own normalizers.
 Notifications normalization now lives below the config and presentation helpers;
 no runtime import cycles remain.
-7 legacy modules still suppress typechecking; see `scripts/type-debt.json`.
+6 legacy modules still suppress typechecking; see `scripts/type-debt.json`.
 **The full TypeScript migration is not complete.** Checked modules and extracted
 contracts must grow without adding suppressions or casts to hide errors. The
 architecture guard prevents new unchecked files and new runtime cycles.
@@ -456,3 +456,11 @@ connected and parked embedded cards; ordinary updates retain their identity and
 pass current HA through unchanged parent signatures. Native parent action focus
 survives header/rail/cover refreshes. Readable metric CSS is embedded with the
 same whitespace-only plugin; no additional browser resource is required.
+
+
+Power Flow's full view is checked with nullable source readings, flow geometry and
+actual HA/native SVG contracts. Split readings distinguish unconfigured components
+from configured unavailable sensors. Owned observer, frame, press and entrance work
+is released across view lifetimes; native keyboard action/modal focus is retained.
+The unused simple rail design and its 45 exclusive style rules have been removed;
+compact/full presentation and both distribution size budgets remain unchanged.
