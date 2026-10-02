@@ -30,6 +30,8 @@ import type { RoomSummaryPublicApi } from "../../cards/room-summary/room-summary
 import type { AdvanceVacuumPublicApi } from "../../cards/advance-vacuum/advance-vacuum-types";
 
 interface NodaliaI18nApi {
+  editorUiMaps?:Record<string,Record<string,string>>|null;
+  editorCatalog?:Record<string,Record<string,string>>|null;
   translateClimateSchedule?: (hass:unknown,language:string,key:string,fallback?:string)=>string;
   translateClimateHvacLabel?: (hass:unknown,language:string,value:unknown,fromAction:boolean)=>string;
   translateClimateAria?: (hass:unknown,language:string,key:string,fallback?:string)=>string;

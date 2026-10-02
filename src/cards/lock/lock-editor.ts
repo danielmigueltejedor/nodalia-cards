@@ -9,10 +9,11 @@ export function loadNodaliaLockCardEditor(): CustomElementConstructor {
   class NodaliaLockCardEditor extends HTMLElement {
     private config!: Record<string,unknown>;
     private stateHass!: HomeAssistant | null;
+    private renderedLanguage!:string;
     private showStyles = false;
     constructor() { super(); this._nodaliaConstruct(); }
     _nodaliaConstruct(): void {
-      this.config = {}; this.stateHass = null; this.showStyles = false;
+      this.config = {}; this.stateHass = null; this.showStyles = false;this.renderedLanguage="";
       this.attachShadow({ mode: "open" });
       this.shadowRoot!.addEventListener("change", event => this.change(event));
       this.shadowRoot!.addEventListener("value-changed", event => this.change(event));
@@ -25,7 +26,7 @@ export function loadNodaliaLockCardEditor(): CustomElementConstructor {
     }
     setConfig(config: unknown): void { const cloned=cloneConfigValue(config);this.config = window.NodaliaUtils.isObject(cloned)?cloned:{}; this.render(); }
     set hass(hass: HomeAssistant) {
-      const languageChanged = window.NodaliaI18n?.resolveLanguage?.(this.stateHass) !== window.NodaliaI18n?.resolveLanguage?.(hass);
+      const languageChanged = this.renderedLanguage !== (window.NodaliaI18n?.resolveLanguage?.(hass)||"en");
       this.stateHass = hass;
       if (languageChanged || !this.shadowRoot?.querySelector(".editor")) this.render();
       const picker = this.shadowRoot?.querySelector("ha-entity-picker");
@@ -51,7 +52,7 @@ export function loadNodaliaLockCardEditor(): CustomElementConstructor {
       this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: this.config }, bubbles: true, composed: true }));
     }
     private label(key: string): string {
-      const language = window.NodaliaI18n?.resolveLanguage?.(this.stateHass) || "en";
+      const language = this.renderedLanguage;
       return window.NodaliaI18n?.editorStr?.(this.stateHass, language, key) || key;
     }
     private field(key: string, field: string, value: string, color = false): string {
@@ -65,6 +66,7 @@ export function loadNodaliaLockCardEditor(): CustomElementConstructor {
     }
     private render(): void {
       if (!this.shadowRoot) return;
+      this.renderedLanguage=window.NodaliaI18n?.resolveLanguage?.(this.stateHass)||"en";
       const text = (key: string) => window.NodaliaUtils.escapeHtml(lockText(this.stateHass, key));
       const escape = window.NodaliaUtils.escapeHtml;
       const label = (key: string) => escape(this.label(key));

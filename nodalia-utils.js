@@ -1,6 +1,9 @@
 /* Generated from src/shared/utils-runtime.ts. Do not edit. */
 "use strict";
 (() => {
+  // src/shared/utils-empty-state.css
+  var utils_empty_state_default = ":host{display:block}*{box-sizing:border-box}[class$=--empty]{display:grid;gap:8px}[class$=__empty-title]{color:var(--primary-text-color);font-size:15px;font-weight:700}[class$=__empty-text]{color:var(--secondary-text-color);font-size:13px;line-height:1.5}";
+
   // src/shared/config-values.ts
   var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
   var unsafeKeys = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
@@ -1119,40 +1122,7 @@
       const borderRadius = sanitizeCssValue(card.border_radius, "var(--ha-card-border-radius, 12px)");
       const boxShadow = sanitizeCssValue(card.box_shadow, "var(--ha-card-box-shadow, none)");
       const padding = sanitizeCssValue(card.padding, "16px");
-      return `
-      <style>
-        :host {
-          display: block;
-        }
-
-        * {
-          box-sizing: border-box;
-        }
-
-        [class$="--empty"] {
-          background: ${background};
-          border: ${border};
-          border-radius: ${borderRadius};
-          box-shadow: ${boxShadow};
-          display: grid;
-          gap: 8px;
-          padding: ${padding};
-        }
-
-        [class$="__empty-title"] {
-          color: var(--primary-text-color);
-          font-size: 15px;
-          font-weight: 700;
-        }
-
-        [class$="__empty-text"] {
-          color: var(--secondary-text-color);
-          font-size: 13px;
-          line-height: 1.5;
-        }
-      </style>
-      ${markup}
-    `;
+      return `<style>${utils_empty_state_default}[class$="--empty"]{background:${background};border:${border};border-radius:${borderRadius};box-shadow:${boxShadow};padding:${padding};}</style>${markup}`;
     }
     function renderLovelaceEntityGuardCardHtml(hass, entityId, options = {}) {
       const markup = renderLovelaceEntityWarningMarkup(hass, entityId);

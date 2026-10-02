@@ -153,7 +153,7 @@ cp i18n/editor/en.json i18n/editor/ja.json
 ```
 
 2. Translate the values in `i18n/editor/ja.json`.
-3. Add `ja` to `EDITOR_CATALOG_LANGS` in `scripts/gen-editor-ui.mjs` and to `RUNTIME_LANGS` in `scripts/gen-runtime-i18n.mjs`.
+3. Add `ja` to `EDITOR_CATALOG_LANGS` and `EDITOR_ROW_LANGS` in `scripts/gen-editor-ui.mjs`. Extend the editor lookup language list in `src/shared/editor-i18n-runtime.ts`; the runtime generator discovers locale JSON files automatically.
 4. Copy `i18n/runtime/en.json` to `i18n/runtime/ja.json`, translate it, then extend `nodalia-i18n.js` (outside the generated pack) only where needed: `localeTag()`, `baseLang()` / alias handling in `resolveLanguage`, and any card-specific language lists.
 5. Register the language in Weblate (both `runtime` and `editor` components) so translators can maintain it going forward.
 
@@ -228,7 +228,7 @@ Nodalia's `language: auto` follows the Home Assistant profile language. You can 
 - Making editor labels too long for mobile.
 - Adding a new editor language file but not adding it to `EDITOR_CATALOG_LANGS`.
 - Editing the generated `const PACK` block or the `// <nodalia-runtime-i18n-pack>` region in `nodalia-i18n.js` by hand. Edit `i18n/runtime/*.json` and run `pnpm run i18n:gen-runtime`.
-- Editing `nodalia-editor-ui.js` directly. It is generated.
+- Editing `nodalia-editor-ui.js` or `src/shared/editor-i18n-data.ts` directly. Both are generated. Editor lookup changes belong in `src/shared/editor-i18n-runtime.ts`.
 - Hardcoding user-facing strings inside a card instead of using `window.NodaliaI18n` helpers or `ed.*` keys.
 - Committing Weblate JSON updates without regenerating `nodalia-i18n.js` / `nodalia-editor-ui.js` (CI regenerates and fails the diff check if they drift).
 
