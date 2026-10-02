@@ -1181,7 +1181,82 @@
     return "";
   }
 
+  // src/shared/view-animation-work.ts
+  function createViewAnimationWork() {
+    return { generation: 0, timers: /* @__PURE__ */ new Set(), cancels: /* @__PURE__ */ new Set() };
+  }
+  function scheduleViewFallback(work, callback, delay) {
+    const timer = window.setTimeout(() => {
+      work.timers.delete(timer);
+      callback();
+    }, delay);
+    work.timers.add(timer);
+    return timer;
+  }
+  function cancelViewPanelAnimations(work) {
+    ++work.generation;
+    work.cancels.forEach((cancel) => cancel());
+    work.cancels.clear();
+  }
+  function releaseViewAnimationWork(work) {
+    cancelViewPanelAnimations(work);
+    work.timers.forEach((timer) => window.clearTimeout(timer));
+    work.timers.clear();
+  }
+  function waitForViewPanelAnimation(work, panel, callback, delay) {
+    let done = false;
+    let timer = 0;
+    const cancel = () => {
+      done = true;
+      panel.removeEventListener("animationend", onEnd);
+      window.clearTimeout(timer);
+      work.timers.delete(timer);
+      work.cancels.delete(cancel);
+    };
+    const finish = () => {
+      if (!done) {
+        cancel();
+        callback();
+      }
+    };
+    const onEnd = (event) => {
+      if (event.target === panel) finish();
+    };
+    panel.addEventListener("animationend", onEnd);
+    timer = scheduleViewFallback(work, finish, delay);
+    work.cancels.add(cancel);
+  }
+
+  // src/shared/home-assistant-services.ts
+  function callHassService(hass, domain, service, data = {}, target = null) {
+    if (!hass?.callService) return;
+    const failure = (error) => console.warn("Nodalia Cards: service call failed", `${domain}.${service}`, error);
+    try {
+      void Promise.resolve(target !== null ? hass.callService(domain, service, data, target) : hass.callService(domain, service, data)).catch(failure);
+    } catch (error) {
+      failure(error);
+    }
+  }
+  function invokeHassService(host, hass, domain, service, data = {}, target = null) {
+    const utils2 = window.NodaliaUtils;
+    const invoke = utils2?.invokeHomeAssistantService;
+    if (!invoke) {
+      callHassService(hass, domain, service, data, target);
+      return;
+    }
+    const failure = (error) => console.warn("Nodalia Cards: service call failed", `${domain}.${service}`, error);
+    try {
+      void Promise.resolve(invoke.call(utils2, host, hass, domain, service, data, target)).catch(failure);
+    } catch (error) {
+      failure(error);
+    }
+  }
+
   // src/cards/entity/entity-card.ts
+  var entityActionElement = (node) => node instanceof HTMLElement;
+  var isOverviewLayout = (value) => value === "battery" || value === "network";
+  var airLevelColors = AIR_QUALITY_LEVEL_COLORS;
+  var finiteEntityValue = (value) => typeof value === "number" && Number.isFinite(value);
   var _lazyNodaliaEntityCard;
   function loadNodaliaEntityCard() {
     if (_lazyNodaliaEntityCard) {
@@ -1195,6 +1270,7 @@
         return applyStubEntity(deepClone(STUB_CONFIG), hass, [], entities, entitiesFallback);
       }
       static getEntitySuggestion(hass, entityId) {
+        if (!hass) return [];
         const domain = String(entityId || "").split(".")[0];
         const suggestions = [
           window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
@@ -1213,7 +1289,13 @@
       }
       _nodaliaConstruct() {
         this.attachShadow({ mode: "open" });
-        this._config = null;
+        this._animationWork = createViewAnimationWork();
+        this._aqHistoryGeneration = 0;
+        this._viewGeneration = 0;
+        this._contextConnection = void 0;
+        this._contextAuth = void 0;
+        this._contextUser = "";
+        this._config = normalizeConfig({});
         this._hass = null;
         this._optimisticToggle = null;
         this._optimisticToggleTimer = 0;
@@ -1234,10 +1316,50 @@
         this._suppressNextEntityTap = false;
         this._selectPickerOpen = false;
         this._selectPickerAnimating = false;
-        this._selectPickerCloseTimer = 0;
-        this._selectPickerEnterTimer = 0;
         this._selectPickerAnimationToken = 0;
-        this._resizeObserver = new ResizeObserver((entries) => {
+        this._resizeObserver = null;
+        this._onShadowClick = this._onShadowClick.bind(this);
+        this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
+        this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
+        this._onShadowPointerMove = this._onShadowPointerMove.bind(this);
+        this._onShadowPointerLeave = this._onShadowPointerLeave.bind(this);
+        this.shadowRoot?.addEventListener("click", this._onShadowClick);
+        this.shadowRoot?.addEventListener("pointerdown", this._onShadowPointerDown);
+        this.shadowRoot?.addEventListener("pointermove", this._onShadowPointerMove);
+        this.shadowRoot?.addEventListener("pointerleave", this._onShadowPointerLeave);
+        this.shadowRoot?.addEventListener("keydown", this._onShadowKeyDown);
+        this._detachHostHold = typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function" ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
+          resolveZone: (event) => {
+            const path = event.composedPath();
+            const actionTarget = path.find(
+              (node) => entityActionElement(node) && Boolean(node.dataset.entityAction)
+            );
+            const action = actionTarget?.dataset?.entityAction;
+            return action === "body" || action === "icon" ? action : null;
+          },
+          shouldBeginHold: (zone) => {
+            const state = this._getState();
+            return Boolean(state && this._canRunHoldAction(state, zone));
+          },
+          onHold: (zone) => {
+            const state = this._getState();
+            if (!state) {
+              return;
+            }
+            this._triggerPressAnimation(this.shadowRoot?.querySelector(".entity-card__content"));
+            this._triggerPressAnimation(this.shadowRoot?.querySelector(".entity-card__icon"));
+            this._performHoldAction(state, zone);
+          },
+          markHoldConsumedClick: () => {
+            this._suppressNextEntityTap = true;
+            window.NodaliaUtils?.cancelCardZoneTap?.(this);
+          }
+        }) : () => {
+        };
+      }
+      _observeWidth() {
+        const observer = new ResizeObserver((entries) => {
+          if (!this.isConnected || this._resizeObserver !== observer) return;
           const entry = entries[0];
           if (!entry) {
             return;
@@ -1259,48 +1381,12 @@
           this._lastRenderSignature = signature;
           this._render();
         });
-        this._onShadowClick = this._onShadowClick.bind(this);
-        this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
-        this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
-        this._onShadowPointerMove = this._onShadowPointerMove.bind(this);
-        this._onShadowPointerLeave = this._onShadowPointerLeave.bind(this);
-        this.shadowRoot.addEventListener("click", this._onShadowClick);
-        this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
-        this.shadowRoot.addEventListener("pointermove", this._onShadowPointerMove);
-        this.shadowRoot.addEventListener("pointerleave", this._onShadowPointerLeave);
-        this.shadowRoot.addEventListener("keydown", this._onShadowKeyDown);
-        this._detachHostHold = typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function" ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
-          resolveZone: (event) => {
-            const path = event.composedPath();
-            const actionTarget = path.find(
-              (node) => node instanceof HTMLElement && node.dataset?.entityAction
-            );
-            const action = actionTarget?.dataset?.entityAction;
-            return action === "body" || action === "icon" ? action : null;
-          },
-          shouldBeginHold: (zone) => {
-            const state = this._getState();
-            return Boolean(state && this._canRunHoldAction(state, zone));
-          },
-          onHold: (zone) => {
-            const state = this._getState();
-            if (!state) {
-              return;
-            }
-            this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
-            this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__icon"));
-            this._performHoldAction(state, zone);
-          },
-          markHoldConsumedClick: () => {
-            this._suppressNextEntityTap = true;
-            window.NodaliaUtils?.cancelCardZoneTap?.(this);
-          }
-        }) : () => {
-        };
+        this._resizeObserver = observer;
+        observer.observe(this);
       }
       connectedCallback() {
         this._detachHostHold?.reconnect?.();
-        this._resizeObserver?.observe(this);
+        this._observeWidth();
         this._scheduleOptimisticToggleTimeout();
         this._animateContentOnNextRender = true;
         if (this._hass && this._config) {
@@ -1309,8 +1395,10 @@
         }
       }
       disconnectedCallback() {
+        this._releaseViewWork();
         this._detachHostHold?.();
         this._resizeObserver?.disconnect();
+        this._resizeObserver = null;
         if (this._entranceAnimationResetTimer) {
           window.clearTimeout(this._entranceAnimationResetTimer);
           this._entranceAnimationResetTimer = 0;
@@ -1318,8 +1406,6 @@
         this._animateContentOnNextRender = true;
         this._selectPickerOpen = false;
         this._selectPickerAnimating = false;
-        this._clearSelectPickerAnimationTimer("_selectPickerCloseTimer");
-        this._clearSelectPickerAnimationTimer("_selectPickerEnterTimer");
         this.classList.remove("entity-card-host--select-open");
         this._lastRenderSignature = "";
         window.NodaliaUtils?.clearDeferTimers?.(this);
@@ -1330,12 +1416,13 @@
         this._aqHoverTimeFormatterLocale = "";
       }
       setConfig(config) {
-        const previousEntity = this._config?.entity || "";
+        this._releaseViewWork();
+        this._clearAirQualityHistory();
+        this._aqHistoryCache = null;
+        this._aqHistoryKey = "";
+        this._clearOptimisticToggleState();
         this._config = normalizeConfig(config || {});
         window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
-        if (previousEntity && previousEntity !== this._config.entity) {
-          this._clearOptimisticToggleState();
-        }
         this._isCompactLayout = this._shouldUseCompactLayout(
           Math.round(this._cardWidth || this.clientWidth || 0)
         );
@@ -1343,13 +1430,26 @@
         this._aqHoverPreview = null;
         this._aqHiddenSeries.clear();
         this._selectPickerOpen = false;
-        this._clearSelectPickerAnimationTimer("_selectPickerCloseTimer");
-        this._clearSelectPickerAnimationTimer("_selectPickerEnterTimer");
         this._animateContentOnNextRender = true;
         this._render();
       }
       set hass(hass) {
+        const user = `${hass?.user?.id ?? ""}:${hass?.user?.is_admin === true}`;
+        if (this._contextConnection !== hass?.connection || this._contextAuth !== hass?.auth || this._contextUser !== user) {
+          this._releaseViewWork();
+          this._clearOptimisticToggleState();
+          this._clearAirQualityHistory();
+          this._aqHistoryKey = "";
+          this._aqHistoryCache = null;
+          this._aqHoverPreview = null;
+          this._aqHiddenSeries.clear();
+          this._lastRenderSignature = "";
+          this._contextConnection = hass?.connection;
+          this._contextAuth = hass?.auth;
+          this._contextUser = user;
+        }
         this._hass = hass;
+        if (!this.isConnected) return;
         let nextSignature = this._getRenderSignature();
         if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !this._optimisticToggle) {
           return;
@@ -1366,14 +1466,14 @@
         if (this._config?.layout === "air_quality") {
           return this._config?.air_quality?.show_graphs === true ? 5 : 3;
         }
-        if (OVERVIEW_LAYOUTS.has(this._config?.layout)) {
+        if (isOverviewLayout(this._config?.layout)) {
           const count = this._config?.[this._config.layout]?.entities?.length || 0;
           return Math.max(3, 2 + Math.ceil(count / 2));
         }
         return 3;
       }
       getGridOptions() {
-        if (this._config?.layout === "air_quality" || OVERVIEW_LAYOUTS.has(this._config?.layout)) {
+        if (this._config?.layout === "air_quality" || isOverviewLayout(this._config?.layout)) {
           return {
             rows: "auto",
             columns: 12,
@@ -1404,7 +1504,8 @@
             key,
             metricEntity,
             String(metricState?.state ?? ""),
-            String(metricState?.last_updated || metricState?.last_changed || "")
+            String(metricState?.last_updated || metricState?.last_changed || ""),
+            JSON.stringify(metricState?.attributes ?? {})
           ].join("=");
         });
         const overviewParts = ["battery", "network"].flatMap((layout) => (this._config?.[layout]?.entities || []).map((item, index) => {
@@ -1420,14 +1521,16 @@
             String(overviewState?.state ?? ""),
             String(attrs2.battery_level ?? attrs2.battery ?? ""),
             String(attrs2.unit_of_measurement ?? ""),
-            String(overviewState?.last_updated || overviewState?.last_changed || "")
+            String(overviewState?.last_updated || overviewState?.last_changed || ""),
+            JSON.stringify(attrs2)
           ].join("=");
         }));
         return [
-          `l:${window.NodaliaI18n.resolveLanguage(hass, this._config?.language)}`,
+          `l:${window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language)}`,
           `e:${entityId}`,
           `s:${String(state?.state || "")}`,
           `sd:${getHomeAssistantStateDisplayValue(state, hass)}`,
+          `attrs:${JSON.stringify(attrs)}`,
           `o:${String(attrs._nodalia_optimistic_toggle || "")}`,
           `lu:${String(state?.last_updated || state?.last_changed || "")}`,
           `sa:${configuredStateAttribute}`,
@@ -1474,12 +1577,12 @@
         ].join("|");
       }
       _getConfiguredGridColumns() {
-        const numericColumns = Number(this._config?.grid_options?.columns);
-        return Number.isFinite(numericColumns) ? numericColumns : null;
+        const numericColumns = Number(isObject(this._config.grid_options) ? this._config.grid_options.columns : void 0);
+        return finiteEntityValue(numericColumns) ? numericColumns : null;
       }
       _getConfiguredGridRows() {
-        const numericRows = Number(this._config?.grid_options?.rows);
-        return Number.isFinite(numericRows) ? numericRows : null;
+        const numericRows = Number(isObject(this._config.grid_options) ? this._config.grid_options.rows : void 0);
+        return finiteEntityValue(numericRows) ? numericRows : null;
       }
       _shouldUseCompactLayout(width) {
         return window.NodaliaUtils.shouldUseCompactCardLayout({
@@ -1574,18 +1677,19 @@
         if (!this._isOptimisticTogglePending(actualState)) {
           return actualState;
         }
-        const snapshot = this._optimisticToggle?.stateSnapshot || actualState;
-        if (!snapshot) {
+        const draft = this._optimisticToggle;
+        const snapshot = draft?.stateSnapshot || actualState;
+        if (!snapshot || !draft) {
           return actualState;
         }
         return {
           ...snapshot,
           entity_id: snapshot.entity_id || actualState?.entity_id || this._config?.entity,
-          state: this._optimisticToggle.expectedState,
+          state: draft.expectedState,
           attributes: {
             ...snapshot.attributes || {},
             ...actualState?.attributes || {},
-            _nodalia_optimistic_toggle: this._optimisticToggle.expectedState
+            _nodalia_optimistic_toggle: draft.expectedState
           }
         };
       }
@@ -1648,7 +1752,7 @@
         const chipLabel = window.NodaliaI18n?.translateEntityStateChip?.(
           this._hass,
           this._config?.language ?? "auto",
-          option
+          String(option ?? "")
         );
         if (chipLabel) {
           return chipLabel;
@@ -1701,7 +1805,7 @@
       </div>
     `;
       }
-      _refreshSelectPickerContent(state, accentColor, options = {}) {
+      _refreshSelectPickerContent(state, accentColor) {
         const shellHost = this._getSelectPickerShellHost();
         if (!(shellHost instanceof HTMLElement) || !this._isSelectEntity(state)) {
           return;
@@ -1737,12 +1841,18 @@
           this._render();
           return;
         }
+        const focused = this.shadowRoot?.activeElement;
+        const returnFocus = focused instanceof HTMLElement && shellHost.contains(focused);
+        const restoreFocus = () => {
+          if (!returnFocus || !this.isConnected || this._selectPickerOpen) return;
+          const primary = this.shadowRoot?.querySelector('[data-entity-action="body"]');
+          if (primary instanceof HTMLElement) primary.focus({ preventScroll: true });
+        };
         const animations = this._getAnimationSettings();
         const accentColor = this._getAccentColor(state);
         const panelDuration = this._getSelectPanelDuration(animations);
         const existingShell = shellHost.querySelector(".entity-card__select-picker-shell");
-        this._clearSelectPickerAnimationTimer("_selectPickerCloseTimer");
-        this._clearSelectPickerAnimationTimer("_selectPickerEnterTimer");
+        cancelViewPanelAnimations(this._animationWork);
         const animationToken = ++this._selectPickerAnimationToken;
         const clearShellHost = () => {
           shellHost.replaceChildren();
@@ -1763,7 +1873,6 @@
             if (animationToken !== this._selectPickerAnimationToken || this._selectPickerOpen) {
               return;
             }
-            this._clearSelectPickerAnimationTimer("_selectPickerCloseTimer");
             if (shell.isConnected) {
               shell.remove();
             }
@@ -1771,13 +1880,9 @@
               clearShellHost();
             }
             this._selectPickerAnimating = false;
+            restoreFocus();
           };
-          shell.addEventListener("animationend", finalizeRemoval, { once: true });
-          this._selectPickerCloseTimer = window.NodaliaUtils?.scheduleDeferTimer?.(
-            this,
-            finalizeRemoval,
-            panelDuration + 80
-          ) || 0;
+          waitForViewPanelAnimation(this._animationWork, shell, finalizeRemoval, panelDuration + 80);
         };
         const appendShell = () => {
           const markup = this._buildSelectPickerShellMarkup(
@@ -1802,18 +1907,12 @@
             if (animationToken !== this._selectPickerAnimationToken || !this._selectPickerOpen || shellNode.classList.contains("entity-card__select-picker-shell--leaving")) {
               return;
             }
-            this._clearSelectPickerAnimationTimer("_selectPickerEnterTimer");
             if (shellNode.isConnected) {
               shellNode.classList.remove("entity-card__select-picker-shell--entering");
             }
             this._selectPickerAnimating = false;
           };
-          shellNode.addEventListener("animationend", finalizeEnter, { once: true });
-          this._selectPickerEnterTimer = window.NodaliaUtils?.scheduleDeferTimer?.(
-            this,
-            finalizeEnter,
-            panelDuration + 80
-          ) || 0;
+          waitForViewPanelAnimation(this._animationWork, shellNode, finalizeEnter, panelDuration + 80);
         };
         if (!animations.enabled) {
           if (existingShell instanceof HTMLElement) {
@@ -1825,6 +1924,7 @@
             clearShellHost();
           }
           this._selectPickerAnimating = false;
+          restoreFocus();
           return;
         }
         if (!nextOpen) {
@@ -1863,16 +1963,6 @@
         }
         this._openSelectPicker();
       }
-      _clearSelectPickerAnimationTimer(timerKey) {
-        const timer = this[timerKey];
-        if (!timer || typeof window === "undefined") {
-          this[timerKey] = 0;
-          return;
-        }
-        window.clearTimeout(timer);
-        this._nodaliaDeferTimers?.delete?.(timer);
-        this[timerKey] = 0;
-      }
       _selectEntityOption(optionValue) {
         const entityId = this._config?.entity;
         const state = this._getActualState();
@@ -1889,8 +1979,7 @@
         this._closeSelectPicker();
       }
       _invokeEntityService(domain, service, entityId, serviceData = {}) {
-        const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils) || ((host, hass, svcDomain, svc, data) => Promise.resolve(hass?.callService?.(svcDomain, svc, data)));
-        return invoke(this, this._hass, domain, service, {
+        return invokeHassService(this, this._hass, domain, service, {
           entity_id: entityId,
           ...serviceData
         });
@@ -1943,7 +2032,7 @@
       }
       _getNumberDecimals() {
         const configuredValue = Number(this._config?.number_decimals);
-        return Number.isFinite(configuredValue) ? clamp(Math.round(configuredValue), 0, 6) : 2;
+        return finiteEntityValue(configuredValue) ? clamp(Math.round(configuredValue), 0, 6) : 2;
       }
       _translateStateValue(state) {
         const displayValue = getHomeAssistantStateDisplayValue(state, this._hass);
@@ -1951,8 +2040,8 @@
           return displayValue;
         }
         const hass = window.NodaliaI18n?.resolveHass?.(this._hass) ?? this._hass;
-        const lang = window.NodaliaI18n.resolveLanguage(hass, this._config?.language ?? "auto");
-        return window.NodaliaI18n.translateEntityState(
+        const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+        return window.NodaliaI18n?.translateEntityState?.(
           lang,
           state,
           this._getNumberDecimals(),
@@ -1965,7 +2054,7 @@
         if (!state || !attributeName) {
           return null;
         }
-        const value = state.attributes?.[attributeName];
+        const value = state.attributes?.[String(attributeName)];
         if (value === void 0 || value === null || value === "") {
           return null;
         }
@@ -1973,9 +2062,10 @@
         const numberDecimals = this._getNumberDecimals();
         if (typeof value === "boolean") {
           const hass = window.NodaliaI18n?.resolveHass?.(this._hass) ?? this._hass;
-          const lang = window.NodaliaI18n.resolveLanguage(hass, this._config?.language ?? "auto");
-          const labels = window.NodaliaI18n.strings(lang).entityCard.boolean;
-          return value ? labels.yes : labels.no;
+          const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+          const pack = window.NodaliaI18n?.strings?.(lang)?.entityCard;
+          const labels = isObject(pack) && isObject(pack.boolean) ? pack.boolean : {};
+          return String(value ? labels.yes ?? "Yes" : labels.no ?? "No");
         }
         if (Array.isArray(value)) {
           return value.map((item) => {
@@ -2174,7 +2264,7 @@
           return;
         }
         if (this._isBinaryOnOff(actualState)) {
-          const service = normalizeTextKey(effectiveState.state) === "on" ? "turn_off" : "turn_on";
+          const service = normalizeTextKey(effectiveState?.state) === "on" ? "turn_off" : "turn_on";
           if (isPrimaryEntity) {
             this._startOptimisticToggle(service === "turn_on" ? "on" : "off", actualState);
           }
@@ -2262,14 +2352,14 @@
           return deepClone(rawValue);
         }
         try {
-          const parsed = JSON.parse(rawValue);
+          const parsed = JSON.parse(String(rawValue));
           return isObject(parsed) ? parsed : {};
         } catch (_error) {
           return {};
         }
       }
       _isServiceAllowed(serviceValue) {
-        const security = this._config?.security || {};
+        const security = isObject(this._config.security) ? this._config.security : {};
         if (security.strict_service_actions === false) {
           return true;
         }
@@ -2283,7 +2373,7 @@
         if (!domains.length && !services.length) {
           return normalizedService === "homeassistant.toggle" || normalizedService === "homeassistant.turn_on" || normalizedService === "homeassistant.turn_off";
         }
-        return services.includes(normalizedService) || domains.includes(domain);
+        return services.includes(normalizedService) || domains.includes(domain ?? "");
       }
       _callConfiguredService(serviceValue, entityId = this._config?.entity, rawData = "", rawTarget = "") {
         if (!this._hass || !serviceValue) {
@@ -2303,10 +2393,7 @@
         if (entityId && payload.entity_id === void 0 && !hasExplicitTarget) {
           payload.entity_id = entityId;
         }
-        const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils) || ((host, hass, svcDomain, svc, data, svcTarget) => Promise.resolve(
-          svcTarget != null ? hass?.callService?.(svcDomain, svc, data, svcTarget) : hass?.callService?.(svcDomain, svc, data)
-        ));
-        invoke(this, this._hass, domain, service, payload, hasExplicitTarget ? target : null);
+        invokeHassService(this, this._hass, domain, service, payload, hasExplicitTarget ? target : null);
       }
       _openConfiguredUrl(urlValue = this._config?.tap_url, newTab = this._config?.tap_new_tab === true) {
         const url = window.NodaliaUtils?.sanitizeActionUrl(urlValue, { allowRelative: true }) || "";
@@ -2461,7 +2548,7 @@
         }
       }
       _triggerHaptic(styleOverride = null) {
-        const haptics = this._config?.haptics || {};
+        const haptics = isObject(this._config.haptics) ? this._config.haptics : {};
         if (haptics.enabled !== true) {
           return;
         }
@@ -2472,11 +2559,11 @@
           composed: true
         });
         if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
-          navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
+          navigator.vibrate(Object.entries(HAPTIC_PATTERNS).find(([key]) => key === style)?.[1] || HAPTIC_PATTERNS.selection);
         }
       }
       _getAnimationSettings() {
-        const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+        const configuredAnimations = isObject(this._config.animations) ? this._config.animations : DEFAULT_CONFIG.animations;
         return {
           enabled: configuredAnimations.enabled !== false,
           buttonBounceDuration: clamp(
@@ -2502,18 +2589,25 @@
         element.classList.remove(className);
         element.getBoundingClientRect();
         element.classList.add(className);
-        const schedule = window.NodaliaUtils?.scheduleDeferTimer;
-        const done = () => {
-          if (!element.isConnected) {
-            return;
-          }
-          element.classList.remove(className);
-        };
-        if (typeof schedule === "function") {
-          schedule(this, done, animations.buttonBounceDuration + 40);
-        } else {
-          window.setTimeout(done, animations.buttonBounceDuration + 40);
-        }
+        const generation = this._viewGeneration;
+        scheduleViewFallback(this._animationWork, () => {
+          if (generation === this._viewGeneration && this.isConnected && element.isConnected) element.classList.remove(className);
+        }, animations.buttonBounceDuration + 40);
+      }
+      _releaseViewWork() {
+        ++this._viewGeneration;
+        releaseViewAnimationWork(this._animationWork);
+        ++this._selectPickerAnimationToken;
+        this._selectPickerOpen = false;
+        this._selectPickerAnimating = false;
+        this._syncSelectPickerHostState(false);
+        this._detachHostHold?.();
+        if (this.isConnected) this._detachHostHold?.reconnect?.();
+        window.NodaliaUtils?.cancelCardZoneTap?.(this);
+        window.NodaliaUtils?.clearDeferTimers?.(this);
+        if (this._entranceAnimationResetTimer) window.clearTimeout(this._entranceAnimationResetTimer);
+        this._entranceAnimationResetTimer = 0;
+        this._suppressNextEntityTap = false;
       }
       _scheduleEntranceAnimationReset(delay) {
         if (this._entranceAnimationResetTimer) {
@@ -2525,7 +2619,9 @@
           this._animateContentOnNextRender = false;
           return;
         }
+        const generation = this._viewGeneration;
         this._entranceAnimationResetTimer = window.setTimeout(() => {
+          if (generation !== this._viewGeneration) return;
           this._entranceAnimationResetTimer = 0;
           if (!this.isConnected) {
             return;
@@ -2549,9 +2645,9 @@
         if (action === "body" || action === "icon") {
           const opensSelectPicker = this._shouldOpenSelectPickerOnTap(this._getState(), action);
           if (!opensSelectPicker) {
-            this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
+            this._triggerPressAnimation(this.shadowRoot?.querySelector(".entity-card__content"));
           }
-          this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__icon"));
+          this._triggerPressAnimation(this.shadowRoot?.querySelector(".entity-card__icon"));
           return;
         }
         if (actionTarget instanceof HTMLElement) {
@@ -2559,10 +2655,11 @@
         }
       }
       _onShadowPointerDown(event) {
+        if (!(event instanceof PointerEvent)) return;
         if (typeof event.button === "number" && event.button !== 0) {
           return;
         }
-        const actionTarget = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.entityAction);
+        const actionTarget = event.composedPath().find((node) => entityActionElement(node) && Boolean(node.dataset.entityAction));
         if (!actionTarget) {
           return;
         }
@@ -2579,7 +2676,8 @@
         }
       }
       _onShadowClick(event) {
-        const actionTarget = event.composedPath().find((node) => node instanceof HTMLElement && node.dataset?.entityAction);
+        if (!this.isConnected) return;
+        const actionTarget = event.composedPath().find((node) => entityActionElement(node) && Boolean(node.dataset.entityAction));
         if (!actionTarget) {
           return;
         }
@@ -2589,7 +2687,7 @@
         event.stopPropagation();
         if (action === "graph-series-toggle") {
           const kind = String(actionTarget.dataset.seriesKind || "").trim();
-          if (!AIR_QUALITY_METRIC_KEYS.includes(kind)) {
+          if (!AIR_QUALITY_METRIC_KEYS.some((key) => key === kind)) {
             return;
           }
           if (this._aqHiddenSeries.has(kind)) {
@@ -2648,6 +2746,33 @@
         }
       }
       _onShadowKeyDown(event) {
+        if (event instanceof KeyboardEvent && event.target instanceof SVGSVGElement && event.target.dataset.airQualityChart === "true") {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            this._clearAirQualityHoverPreview();
+            return;
+          }
+          if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+            event.preventDefault();
+            const series = this._getAirQualityGraphSeries(this._collectAirQualityMetrics(this._getState()).metrics);
+            const geometry = buildAirQualityChartGeometry(this._getAirQualityChartEntries(series).filter((entry) => !this._aqHiddenSeries.has(entry.kind)));
+            const path = geometry.paths.find((entry) => entry.kind === this._aqHoverPreview?.kind) ?? geometry.paths[0];
+            if (!path?.points.length) return;
+            const last = path.points.length - 1;
+            const current = this._aqHoverPreview?.position ?? 0;
+            const position = event.key === "Home" ? 0 : event.key === "End" ? last : clamp(Math.round(current) + (event.key === "ArrowRight" ? 1 : -1), 0, last);
+            const kind = String(path.kind ?? "");
+            this._aqHoverPreview = { key: `${kind}:${position.toFixed(3)}`, kind, position };
+            this._patchAirQualityHoverPreview(geometry, this._aqHoverPreview);
+            return;
+          }
+        }
+        if (event instanceof KeyboardEvent && event.key === "Escape" && this._selectPickerOpen) {
+          event.preventDefault();
+          event.stopPropagation();
+          this._closeSelectPicker();
+          return;
+        }
         if (window.NodaliaUtils?.isKeyboardActivationEvent?.(event) !== true) {
           return;
         }
@@ -2674,8 +2799,10 @@
       _entityCardUi(key, fallback = "") {
         const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
         const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-        const pack = window.NodaliaI18n?.strings?.(lang)?.entityCard;
-        const enPack = window.NodaliaI18n?.strings?.("en")?.entityCard;
+        const candidate = window.NodaliaI18n?.strings?.(lang)?.entityCard;
+        const fallbackPack = window.NodaliaI18n?.strings?.("en")?.entityCard;
+        const pack = isObject(candidate) ? candidate : {};
+        const enPack = isObject(fallbackPack) ? fallbackPack : {};
         const nested = key.includes(".") ? getByPath(pack, key) ?? getByPath(enPack, key) : void 0;
         const raw = nested ?? pack?.[key] ?? enPack?.[key];
         return String(raw != null && raw !== "" ? raw : fallback);
@@ -2724,7 +2851,7 @@
             continue;
           }
           const numeric = parseAirQualityNumeric(rawValue);
-          if (!Number.isFinite(numeric)) {
+          if (!finiteEntityValue(numeric)) {
             continue;
           }
           let level = "unknown";
@@ -2758,22 +2885,24 @@
         const primaryNumeric = parseAirQualityNumeric(primaryState?.state);
         const deviceClass = String(primaryState?.attributes?.device_class || "").toLowerCase();
         const primaryIsAqi = deviceClass === "aqi" || /aqi|air_quality_index/i.test(String(primaryState?.entity_id || "")) || /aqi|air_quality_index/i.test(String(primaryState?.attributes?.friendly_name || ""));
-        if (guidelines === "who" && primaryIsAqi && Number.isFinite(primaryNumeric)) {
+        if (guidelines === "who" && primaryIsAqi && finiteEntityValue(primaryNumeric)) {
           overall = worseAirQualityLevel(overall, resolveAirQualityLevelFromAqi(primaryNumeric));
         }
         return {
           overall,
-          primaryNumeric: Number.isFinite(primaryNumeric) ? primaryNumeric : null,
+          primaryNumeric: finiteEntityValue(primaryNumeric) ? primaryNumeric : null,
           primaryIsAqi,
-          accent: AIR_QUALITY_LEVEL_COLORS[overall] || AIR_QUALITY_LEVEL_COLORS.unknown
+          accent: airLevelColors[overall] || AIR_QUALITY_LEVEL_COLORS.unknown
         };
       }
       _commonAria(key, fallback = "") {
         const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
         const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-        const pack = window.NodaliaI18n?.strings?.(lang)?.common?.aria;
-        const enPack = window.NodaliaI18n?.strings?.("en")?.common?.aria;
-        return String(pack?.[key] ?? enPack?.[key] ?? fallback);
+        const pack = window.NodaliaI18n?.strings?.(lang)?.common;
+        const enPack = window.NodaliaI18n?.strings?.("en")?.common;
+        const aria = isObject(pack) && isObject(pack.aria) ? pack.aria : {};
+        const enAria = isObject(enPack) && isObject(enPack.aria) ? enPack.aria : {};
+        return String(aria[key] ?? enAria[key] ?? fallback);
       }
       _renderSelectPickerPanel(state, accentColor) {
         const options = this._getSelectOptions(state);
@@ -2860,7 +2989,7 @@
         ];
         for (const candidate of candidates) {
           const numeric = parseAirQualityNumeric(candidate);
-          if (Number.isFinite(numeric)) {
+          if (finiteEntityValue(numeric)) {
             return clamp(numeric, 0, 100);
           }
         }
@@ -2868,14 +2997,14 @@
       }
       _batteryIcon(percent, state) {
         const charging = String(state?.state || "").toLowerCase() === "charging" || state?.attributes?.battery_charging === true || String(state?.attributes?.charging || "").toLowerCase() === "true";
-        if (!Number.isFinite(percent)) {
+        if (!finiteEntityValue(percent)) {
           return charging ? "mdi:battery-charging" : "mdi:battery-unknown";
         }
         const level = Math.max(10, Math.min(100, Math.round(percent / 10) * 10));
         return charging ? `mdi:battery-charging-${level}` : level === 100 ? "mdi:battery" : `mdi:battery-${level}`;
       }
       _batteryColor(percent) {
-        if (!Number.isFinite(percent)) {
+        if (!finiteEntityValue(percent)) {
           return "var(--secondary-text-color)";
         }
         if (percent <= 15) {
@@ -2927,7 +3056,7 @@
       _formatOverviewState(state) {
         const numeric = parseAirQualityNumeric(state?.state);
         const unit = String(state?.attributes?.unit_of_measurement || "").trim();
-        if (Number.isFinite(numeric) && unit) {
+        if (finiteEntityValue(numeric) && unit) {
           return formatNumericValueWithUnit(numeric, unit, this._getNumberDecimals());
         }
         return this._translateStateValue(state);
@@ -2944,17 +3073,19 @@
         const available = entries.map((item, index) => ({
           item,
           index,
-          state: this._hass?.states?.[item.entity] || null
+          state: this._hass?.states?.[item.entity] || null,
+          role: ""
         }));
-        const batteryValues = layout === "battery" ? available.map(({ state }) => this._resolveBatteryPercent(state)).filter(Number.isFinite) : [];
+        const batteryValues = layout === "battery" ? available.map(({ state }) => this._resolveBatteryPercent(state)).filter(finiteEntityValue) : [];
         const average = batteryValues.length ? batteryValues.reduce((sum, value) => sum + value, 0) / batteryValues.length : null;
         const lowest = batteryValues.length ? Math.min(...batteryValues) : null;
         const lowCount = batteryValues.filter((value) => value <= 35).length;
         const networkEntries = layout === "network" ? available.map((entry) => ({ ...entry, role: this._networkRole(entry.item, entry.state) })) : [];
         const statusEntry = networkEntries.find((entry) => entry.role === "status");
-        const accent = layout === "battery" ? this._batteryColor(Number.isFinite(lowest) ? lowest : average) : statusEntry ? this._networkColor("status", statusEntry.state) : "var(--info-color, #42a5f5)";
+        const accent = layout === "battery" ? this._batteryColor(finiteEntityValue(lowest) ? lowest : average) : statusEntry ? this._networkColor("status", statusEntry.state) : "var(--info-color, #42a5f5)";
         const contrastReferenceState = available.find((entry) => entry.state)?.state || {
           entity_id: layout === "battery" ? "sensor.battery" : "binary_sensor.network",
+          state: "unknown",
           attributes: layout === "battery" ? { device_class: "battery" } : {}
         };
         const overviewIconGlyphColor = resolveEntityBubbleIconGlyphColor(accent, contrastReferenceState);
@@ -2962,7 +3093,7 @@
         const animations = this._getAnimationSettings();
         const insightMarkup = layout === "battery" ? `
         <span class="entity-card__overview-chip"><ha-icon icon="mdi:battery-multiple"></ha-icon><strong>${available.length}</strong><span>${escapeHtml(this._entityCardUi("battery.devices", "devices"))}</span></span>
-        ${Number.isFinite(average) ? `<span class="entity-card__overview-chip"><ha-icon icon="mdi:chart-donut"></ha-icon><strong>${Math.round(average)}%</strong><span>${escapeHtml(this._entityCardUi("battery.average", "average"))}</span></span>` : ""}
+        ${finiteEntityValue(average) ? `<span class="entity-card__overview-chip"><ha-icon icon="mdi:chart-donut"></ha-icon><strong>${Math.round(average)}%</strong><span>${escapeHtml(this._entityCardUi("battery.average", "average"))}</span></span>` : ""}
         ${lowCount ? `<span class="entity-card__overview-chip entity-card__overview-chip--alert"><ha-icon icon="mdi:battery-alert-variant-outline"></ha-icon><strong>${lowCount}</strong><span>${escapeHtml(this._entityCardUi("battery.low", "low"))}</span></span>` : ""}
       ` : `
         ${statusEntry ? `<span class="entity-card__overview-chip" style="--overview-chip-accent:${escapeHtml(this._networkColor("status", statusEntry.state))};"><span class="entity-card__overview-live-dot"></span><strong>${escapeHtml(statusEntry.state ? this._formatOverviewState(statusEntry.state) : this._entityCardUi("overview.unavailable", "Unavailable"))}</strong></span>` : ""}
@@ -2974,13 +3105,13 @@
           const unavailable = !state || isUnavailableState(state);
           if (layout === "battery") {
             const percent = this._resolveBatteryPercent(state);
-            const value2 = unavailable ? this._entityCardUi("overview.unavailable", "Unavailable") : Number.isFinite(percent) ? `${Math.round(percent)}%` : this._translateStateValue(state);
+            const value2 = unavailable ? this._entityCardUi("overview.unavailable", "Unavailable") : finiteEntityValue(percent) ? `${Math.round(percent)}%` : this._translateStateValue(state);
             const color2 = this._batteryColor(percent);
             const rowIcon2 = item.icon || this._batteryIcon(percent, state);
             const rowGlyphColor2 = resolveEntityBubbleIconGlyphColor(color2, state || contrastReferenceState);
-            const batteryStatus = unavailable ? this._entityCardUi("overview.unavailable", "Unavailable") : !Number.isFinite(percent) ? this._entityCardUi("overview.unconfigured", "Not configured") : percent <= 15 ? this._entityCardUi("battery.critical", "Critical") : percent <= 35 ? this._entityCardUi("battery.low", "Low") : this._entityCardUi("battery.good", "Good");
+            const batteryStatus = unavailable ? this._entityCardUi("overview.unavailable", "Unavailable") : !finiteEntityValue(percent) ? this._entityCardUi("overview.unconfigured", "Not configured") : percent <= 15 ? this._entityCardUi("battery.critical", "Critical") : percent <= 35 ? this._entityCardUi("battery.low", "Low") : this._entityCardUi("battery.good", "Good");
             return `
-          <button type="button" class="entity-card__overview-item entity-card__overview-item--battery${unavailable ? " is-unavailable" : ""}" data-entity-action="metric-info" data-entity="${escapeHtml(item.entity)}" style="--overview-accent:${escapeHtml(color2)};--overview-glyph:${escapeHtml(rowGlyphColor2)};--overview-index:${index};--battery-level:${Number.isFinite(percent) ? percent : 0};">
+          <button type="button" class="entity-card__overview-item entity-card__overview-item--battery${unavailable ? " is-unavailable" : ""}" data-entity-action="metric-info" data-entity="${escapeHtml(item.entity)}" style="--overview-accent:${escapeHtml(color2)};--overview-glyph:${escapeHtml(rowGlyphColor2)};--overview-index:${index};--battery-level:${finiteEntityValue(percent) ? percent : 0};">
             <span class="entity-card__battery-gauge" aria-hidden="true">
               <span class="entity-card__battery-gauge-ring"></span>
               <span class="entity-card__battery-gauge-inner"><ha-icon icon="${escapeHtml(rowIcon2)}"></ha-icon></span>
@@ -3270,6 +3401,7 @@
         }
       }
       _clearAirQualityHistory() {
+        ++this._aqHistoryGeneration;
         if (this._aqHistoryTimer) {
           window.clearTimeout(this._aqHistoryTimer);
           this._aqHistoryTimer = 0;
@@ -3316,9 +3448,7 @@
           return;
         }
         const key = this._getAirQualityHistoryKey(series);
-        if (key === this._aqHistoryKey && (this._aqHistoryCache || this._aqHistoryLoading)) {
-          return;
-        }
+        if (key === this._aqHistoryKey && (this._aqHistoryLoading || this._aqHistoryCache && Date.now() - this._aqHistoryCache.endMs < AIR_QUALITY_HISTORY_REFRESH_MS)) return;
         if (key !== this._aqHistoryKey) {
           this._aqHistoryCache = null;
           this._aqHistoryKey = key;
@@ -3326,11 +3456,14 @@
         this._requestAirQualityHistory(series);
       }
       async _requestAirQualityHistory(series = []) {
-        if (!series.length || !this._hass) {
+        if (!series.length || !this._hass || !this.isConnected) {
           return;
         }
         const requestKey = this._getAirQualityHistoryKey(series);
         this._clearAirQualityHistory();
+        const generation = this._aqHistoryGeneration;
+        const hass = this._hass;
+        const isCurrent = () => this.isConnected && generation === this._aqHistoryGeneration && requestKey === this._aqHistoryKey && this._config.layout === "air_quality";
         this._aqHistoryLoading = true;
         const controller = typeof AbortController === "function" ? new AbortController() : null;
         this._aqHistoryAbort = controller;
@@ -3344,27 +3477,28 @@
             start,
             end,
             series.map((item) => item.entityId),
-            controller?.signal
+            controller?.signal,
+            hass,
+            isCurrent
           );
-          if (requestKey !== this._aqHistoryKey) {
+          if (!isCurrent()) {
             return;
           }
           const startMs = start.getTime();
           const endMs = end.getTime();
           const entries = series.map((item) => {
-            const rows = Array.isArray(raw?.[item.entityId]) ? raw[item.entityId] : [];
+            const rows = raw[item.entityId] ?? [];
             const events = rows.map((row) => {
-              const ts = parseHistoryTimestamp(
-                row.last_changed ?? row.last_updated ?? row.lc ?? row.lu ?? row.last_changed
-              );
-              const value = parseAirQualityNumeric(row.state ?? row.s ?? row);
+              const fields = isObject(row) ? row : {};
+              const ts = parseHistoryTimestamp(fields.last_changed ?? fields.last_updated ?? fields.lc ?? fields.lu);
+              const value = parseAirQualityNumeric(fields.state ?? fields.s ?? row);
               return { ts, value };
-            }).filter((event) => Number.isFinite(event.ts) && Number.isFinite(event.value)).sort((left, right) => left.ts - right.ts);
+            }).filter((event) => finiteEntityValue(event.ts) && finiteEntityValue(event.value)).sort((left, right) => left.ts - right.ts);
             const live = this._hass?.states?.[item.entityId];
             const liveValue = parseAirQualityNumeric(live?.state);
-            if (Number.isFinite(liveValue)) {
+            if (finiteEntityValue(liveValue)) {
               events.push({
-                ts: parseHistoryTimestamp(live.last_changed || live.last_updated) || endMs,
+                ts: parseHistoryTimestamp(live?.last_changed ?? live?.last_updated) ?? endMs,
                 value: liveValue
               });
             }
@@ -3375,7 +3509,7 @@
                 startMs,
                 endMs,
                 pointsCount,
-                Number.isFinite(item.currentValue) ? item.currentValue : liveValue
+                finiteEntityValue(item.currentValue) ? item.currentValue : liveValue
               )
             };
           });
@@ -3386,14 +3520,15 @@
             this._render();
           }
         } catch (_error) {
-          if (requestKey === this._aqHistoryKey) {
+          if (isCurrent()) {
             this._aqHistoryLoading = false;
           }
         } finally {
-          if (this.isConnected && String(this._config?.layout || "").toLowerCase() === "air_quality") {
+          if (isCurrent()) {
+            this._aqHistoryAbort = null;
             this._aqHistoryTimer = window.setTimeout(() => {
               this._aqHistoryTimer = 0;
-              if (this.isConnected && String(this._config?.layout || "").toLowerCase() === "air_quality") {
+              if (isCurrent()) {
                 this._aqHistoryKey = "";
                 this._scheduleAirQualityHistory(series);
               }
@@ -3401,28 +3536,30 @@
           }
         }
       }
-      async _fetchAirQualityHistory(start, end, entityIds, signal) {
+      async _fetchAirQualityHistory(start, end, entityIds, signal, hass, isCurrent) {
         const groups = await Promise.all(entityIds.map(async (entityId) => {
-          if (typeof this._hass?.callWS === "function") {
+          if (typeof hass?.callWS === "function") {
             try {
-              const result = await this._hass.callWS({
+              const result = await hass.callWS({
                 type: "history/history_during_period",
                 start_time: start.toISOString(),
                 end_time: end.toISOString(),
                 entity_ids: [entityId],
                 significant_changes_only: false
               });
-              const rows = Array.isArray(result?.[0]) ? result[0] : Array.isArray(result?.[entityId]) ? result[entityId] : [];
+              const candidate = Array.isArray(result) ? result[0] : isObject(result) ? result[entityId] : null;
+              const rows = Array.isArray(candidate) ? candidate : [];
               return [entityId, rows];
             } catch (_error) {
             }
           }
-          if (typeof this._hass?.auth?.fetchWithAuth === "function") {
+          if (!isCurrent()) return [entityId, []];
+          if (typeof hass?.auth?.fetchWithAuth === "function") {
             const query = [
               `filter_entity_id=${encodeURIComponent(entityId)}`,
               `end_time=${encodeURIComponent(end.toISOString())}`
             ].join("&");
-            const response = await this._hass.auth.fetchWithAuth(
+            const response = await hass.auth.fetchWithAuth(
               `/api/history/period/${encodeURIComponent(start.toISOString())}?${query}`,
               signal ? { signal } : void 0
             );
@@ -3430,7 +3567,8 @@
               return [entityId, []];
             }
             const result = await response.json();
-            return [entityId, Array.isArray(result?.[0]) ? result[0] : []];
+            const rows = Array.isArray(result) && Array.isArray(result[0]) ? result[0] : [];
+            return [entityId, rows];
           }
           return [entityId, []];
         }));
@@ -3449,7 +3587,7 @@
       <line class="entity-card__aq-hover-line" x1="${hoverX.toFixed(2)}" x2="${hoverX.toFixed(2)}" y1="${geometry.paddingTop}" y2="${geometry.height - geometry.paddingBottom}"${hover ? "" : " hidden"}></line>
     `;
         return `
-      <svg class="entity-card__aq-chart" data-air-quality-chart="true" viewBox="0 0 ${geometry.width} ${geometry.height}" preserveAspectRatio="none" aria-hidden="true">
+      <svg class="entity-card__aq-chart" data-air-quality-chart="true" viewBox="0 0 ${geometry.width} ${geometry.height}" preserveAspectRatio="none" tabindex="0" role="img" aria-label="${escapeHtml(this._entityCardUi("airQuality.title", "Air quality"))}">
         ${fills}
         ${strokes}
         ${hoverMarker}
@@ -3461,6 +3599,8 @@
         const currentByKind = new Map(graphSeries.map((entry) => [entry.kind, entry]));
         return cached.filter((entry) => currentByKind.has(entry.kind)).map((entry) => ({
           ...entry,
+          label: currentByKind.get(entry.kind)?.label ?? entry.label,
+          unit: currentByKind.get(entry.kind)?.unit ?? entry.unit,
           color: currentByKind.get(entry.kind)?.color || entry.color
         }));
       }
@@ -3478,7 +3618,7 @@
         const line = this.shadowRoot?.querySelector?.(".entity-card__aq-hover-line");
         const point = this.shadowRoot?.querySelector?.(".entity-card__aq-hover-point");
         const chip = this.shadowRoot?.querySelector?.(".entity-card__aq-hover-chip");
-        if (!line || !point || !chip) {
+        if (!line || !(point instanceof HTMLElement) || !(chip instanceof HTMLElement)) {
           return false;
         }
         let resolvedGeometry = geometry;
@@ -3503,16 +3643,16 @@
         line.setAttribute("x2", hover.x.toFixed(3));
         point.style.setProperty("--aq-hover-left", left);
         point.style.setProperty("--aq-hover-top", top);
-        point.style.setProperty("--aq-hover-color", hover.color);
+        point.style.setProperty("--aq-hover-color", String(hover.color ?? ""));
         chip.style.setProperty("--aq-hover-left", left);
         chip.style.setProperty("--aq-hover-top", top);
-        chip.style.setProperty("--aq-hover-color", hover.color);
+        chip.style.setProperty("--aq-hover-color", String(hover.color ?? ""));
         chip.dataset.aqHoverPlacement = hover.yPercent < 50 ? "below" : "above";
         const label = chip.querySelector("[data-aq-hover-label]");
         const value = chip.querySelector("[data-aq-hover-value]");
         const time = chip.querySelector("[data-aq-hover-time]");
         if (label) {
-          label.textContent = hover.label;
+          label.textContent = String(hover.label ?? "");
         }
         if (value) {
           value.textContent = formatNumericValueWithUnit(
@@ -3527,13 +3667,14 @@
         return true;
       }
       _onShadowPointerMove(event) {
+        if (!(event instanceof PointerEvent)) return;
         if (event.pointerType && event.pointerType !== "mouse") {
           return;
         }
         if (String(this._config?.layout || "").toLowerCase() !== "air_quality") {
           return;
         }
-        const chart = event.composedPath().find((node) => node instanceof Element && node.dataset?.airQualityChart === "true");
+        const chart = event.composedPath().find((node) => node instanceof SVGSVGElement && node.dataset.airQualityChart === "true");
         if (!chart) {
           this._clearAirQualityHoverPreview();
           return;
@@ -3550,10 +3691,8 @@
         const x = clamp((event.clientX - rect.left) / rect.width * geometry.width, 0, geometry.width);
         const y = clamp((event.clientY - rect.top) / rect.height * geometry.height, 0, geometry.height);
         let nearest = null;
-        geometry.paths.forEach((path) => {
-          if (!path.points.length) {
-            return;
-          }
+        for (const path of geometry.paths) {
+          if (!path.points.length) continue;
           const position = clamp(
             (x - geometry.paddingX) / Math.max(geometry.width - geometry.paddingX * 2, 1) * (path.points.length - 1),
             0,
@@ -3564,12 +3703,13 @@
           const fraction = position - leftIndex;
           const leftPoint = path.points[leftIndex];
           const rightPoint = path.points[rightIndex] || leftPoint;
+          if (!leftPoint || !rightPoint) continue;
           const pointY = leftPoint.y + (rightPoint.y - leftPoint.y) * fraction;
           const distance = Math.abs(pointY - y);
           if (!nearest || distance < nearest.distance) {
-            nearest = { kind: path.kind, position, distance };
+            nearest = { kind: String(path.kind ?? ""), position, distance };
           }
-        });
+        }
         if (!nearest) {
           this._clearAirQualityHoverPreview();
           return;
@@ -3589,7 +3729,7 @@
       }
       _formatAirQualityHoverTime(timestamp) {
         const date = new Date(Number(timestamp));
-        if (!Number.isFinite(date.getTime())) {
+        if (!finiteEntityValue(date.getTime())) {
           return "";
         }
         const locale = window.NodaliaI18n?.resolveLanguage?.(this._hass, this._config?.language) || void 0;
@@ -3712,7 +3852,7 @@
           guidelinesLabel ? this._renderChip(guidelinesLabel, "value") : ""
         ].filter(Boolean).join("");
         const metricBubbles = pollutionMetrics.map((metric) => {
-          const metricAccent = metric.level !== "unknown" ? AIR_QUALITY_LEVEL_COLORS[metric.level] || accentColor : "var(--primary-text-color)";
+          const metricAccent = metric.level !== "unknown" ? airLevelColors[metric.level] || accentColor : "var(--primary-text-color)";
           const compactValue = `${metric.label} ${metric.display}`;
           const bubbleTitle = guidelines === "who" && AIR_QUALITY_POLLUTION_KEYS.has(metric.kind) ? `${metric.label}: ${metric.display} · ${this._airQualityLevelLabel(metric.level)}` : `${metric.label}: ${metric.display}`;
           return `
@@ -4187,6 +4327,22 @@
         }
       }
       _render() {
+        const focused = this.shadowRoot?.activeElement;
+        const selector = "[data-entity-action], [data-air-quality-chart]";
+        const keys = ["data-entity-action", "data-entity", "data-select-value", "data-index", "data-series-kind", "data-air-quality-chart"];
+        const focusValues = focused && (focused instanceof HTMLElement || focused instanceof SVGSVGElement) && focused.matches(selector) ? keys.map((key) => focused.getAttribute(key)) : null;
+        if (this._selectPickerAnimating) {
+          cancelViewPanelAnimations(this._animationWork);
+          ++this._selectPickerAnimationToken;
+          this._selectPickerAnimating = false;
+        }
+        this._renderView();
+        if (focusValues) {
+          const replacement = [...this.shadowRoot?.querySelectorAll(selector) ?? []].find((element) => keys.every((key, index) => element.getAttribute(key) === focusValues[index]));
+          if (replacement instanceof HTMLElement || replacement instanceof SVGSVGElement) replacement.focus({ preventScroll: true });
+        }
+      }
+      _renderView() {
         if (!this.shadowRoot) {
           return;
         }
@@ -4194,7 +4350,7 @@
           this._renderAirQualityLayout();
           return;
         }
-        if (OVERVIEW_LAYOUTS.has(String(this._config?.layout || "").toLowerCase())) {
+        if (isOverviewLayout(this._config.layout)) {
           this._renderOverviewLayout(this._config.layout);
           return;
         }
@@ -5697,7 +5853,7 @@ padding: 0 12px;
         const config = this._config || normalizeConfig({});
         const isDefaultLayout = config.layout === "default";
         const isAirQualityLayout = config.layout === "air_quality";
-        const isOverviewLayout = OVERVIEW_LAYOUTS.has(config.layout);
+        const isOverviewLayout2 = OVERVIEW_LAYOUTS.has(config.layout);
         const haptics = isObject(config.haptics) ? config.haptics : {};
         const hapticStyle = haptics.style || "medium";
         const tapAction = config.tap_action || "auto";
@@ -5931,7 +6087,7 @@ padding: 0 12px;
           ],
           { fullWidth: true }
         )}
-            ${!isOverviewLayout ? this._renderEntityPickerField("ed.entity.entity_main", "entity", config.entity, {
+            ${!isOverviewLayout2 ? this._renderEntityPickerField("ed.entity.entity_main", "entity", config.entity, {
           fullWidth: true
         }) : ""}
             ${this._renderIconPickerField("ed.entity.icon", "icon", config.icon, {
@@ -5942,21 +6098,21 @@ padding: 0 12px;
           placeholder: this._editorLabel("ed.entity.name_placeholder"),
           fullWidth: true
         })}
-            ${!isOverviewLayout ? this._renderCheckboxField("ed.entity.use_entity_icon", "use_entity_icon", config.use_entity_icon === true) : ""}
+            ${!isOverviewLayout2 ? this._renderCheckboxField("ed.entity.use_entity_icon", "use_entity_icon", config.use_entity_icon === true) : ""}
             ${isDefaultLayout ? this._renderCheckboxField("ed.entity.show_entity_picture", "show_entity_picture", config.show_entity_picture === true) : ""}
             ${isDefaultLayout ? this._renderTextField("ed.entity.entity_picture", "entity_picture", config.entity_picture, {
           placeholder: "/local/ikea_gu10_bulb.png",
           fullWidth: true
         }) : ""}
-            ${!isOverviewLayout ? this._renderIconPickerField("ed.entity.icon_active", "icon_active", config.icon_active, {
+            ${!isOverviewLayout2 ? this._renderIconPickerField("ed.entity.icon_active", "icon_active", config.icon_active, {
           placeholder: "mdi:door-open",
           fullWidth: true
         }) : ""}
-            ${!isOverviewLayout ? this._renderIconPickerField("ed.entity.icon_inactive", "icon_inactive", config.icon_inactive, {
+            ${!isOverviewLayout2 ? this._renderIconPickerField("ed.entity.icon_inactive", "icon_inactive", config.icon_inactive, {
           placeholder: "mdi:door-closed",
           fullWidth: true
         }) : ""}
-            ${!isOverviewLayout ? `<div class="editor-section__hint editor-field--full" style="grid-column: 1 / -1; margin-top: -4px;">
+            ${!isOverviewLayout2 ? `<div class="editor-section__hint editor-field--full" style="grid-column: 1 / -1; margin-top: -4px;">
               ${escapeHtml(this._editorLabel("ed.entity.icons_state_hint"))}
             </div>` : ""}
           </div>
@@ -6023,7 +6179,7 @@ padding: 0 12px;
         </section>
             ` : ""}
 
-        ${isOverviewLayout ? `
+        ${isOverviewLayout2 ? `
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">${escapeHtml(this._editorLabel(config.layout === "battery" ? "ed.entity.battery_section_title" : "ed.entity.network_section_title"))}</div>
@@ -6038,7 +6194,7 @@ padding: 0 12px;
           ${this._renderOverviewEntities(config.layout, config)}
         </section>` : ""}
 
-        ${!isOverviewLayout ? `
+        ${!isOverviewLayout2 ? `
         <section class="editor-section">
           <div class="editor-section__header">
             <div class="editor-section__title">${escapeHtml(this._editorLabel("ed.light.tap_actions_section_title"))}</div>
@@ -6403,7 +6559,7 @@ padding: 0 12px;
                   ${this._renderTextField("ed.entity.style_card_shadow", "styles.card.box_shadow", config.styles.card.box_shadow)}
                   ${this._renderTextField("ed.entity.style_card_padding", "styles.card.padding", config.styles.card.padding)}
                   ${this._renderTextField("ed.entity.style_card_gap", "styles.card.gap", config.styles.card.gap)}
-                  ${!isOverviewLayout ? this._renderTextField("ed.entity.style_main_button_size", "styles.icon.size", config.styles.icon.size) : ""}
+                  ${!isOverviewLayout2 ? this._renderTextField("ed.entity.style_main_button_size", "styles.icon.size", config.styles.icon.size) : ""}
                   ${isDefaultLayout ? this._renderColorField("ed.entity.style_main_bubble_bg", "styles.icon.background", config.styles.icon.background, {
           fallbackValue: "color-mix(in srgb, var(--primary-text-color) 6%, transparent)"
         }) : ""}
@@ -6420,10 +6576,10 @@ padding: 0 12px;
                   ${isDefaultLayout ? this._renderColorField("ed.entity.style_accent_color", "styles.control.accent_color", config.styles.control.accent_color, {
           fallbackValue: "var(--primary-text-color)"
         }) : ""}
-                  ${!isOverviewLayout ? this._renderTextField("ed.entity.style_chip_height", "styles.chip_height", config.styles.chip_height) : ""}
-                  ${!isOverviewLayout ? this._renderTextField("ed.entity.style_chip_font", "styles.chip_font_size", config.styles.chip_font_size) : ""}
-                  ${!isOverviewLayout ? this._renderTextField("ed.entity.style_chip_padding", "styles.chip_padding", config.styles.chip_padding) : ""}
-                  ${!isOverviewLayout ? window.NodaliaUtils.renderEditorChipBorderRadiusHtml({
+                  ${!isOverviewLayout2 ? this._renderTextField("ed.entity.style_chip_height", "styles.chip_height", config.styles.chip_height) : ""}
+                  ${!isOverviewLayout2 ? this._renderTextField("ed.entity.style_chip_font", "styles.chip_font_size", config.styles.chip_font_size) : ""}
+                  ${!isOverviewLayout2 ? this._renderTextField("ed.entity.style_chip_padding", "styles.chip_padding", config.styles.chip_padding) : ""}
+                  ${!isOverviewLayout2 ? window.NodaliaUtils.renderEditorChipBorderRadiusHtml({
           escapeHtml,
           field: "styles.chip_border_radius",
           value: config.styles?.chip_border_radius,

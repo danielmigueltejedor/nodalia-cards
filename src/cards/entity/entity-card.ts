@@ -1,5 +1,3 @@
-// @ts-nocheck
-/* Large HTMLElement view/controller: typed incrementally as methods are extracted. */
 import {
   AIR_QUALITY_COMFORT_KEYS,
   AIR_QUALITY_GRAPH_SERIES_COLORS,
@@ -7,7 +5,6 @@ import {
   AIR_QUALITY_LEVEL_COLORS,
   AIR_QUALITY_METRIC_KEYS,
   AIR_QUALITY_POLLUTION_KEYS,
-  AIR_QUALITY_WHO_BANDS,
   CARD_TAG,
   COVER_SET_POSITION,
   EDITOR_TAG,
@@ -18,26 +15,18 @@ import {
 } from "./entity-constants";
 import {
   clamp,
-  compactConfig,
   deepClone,
-  deleteByPath,
   escapeHtml,
-  escapeSelectorValue,
   fireEvent,
   getByPath,
   isObject,
-  mergeConfig,
   normalizeTextKey,
-  sanitizeCssValue,
-  setByPath,
 } from "./entity-runtime";
 import { DEFAULT_CONFIG, STUB_CONFIG, entityScalar, normalizeAirQualityBlock, normalizeConfig } from "./entity-config";
 import {
   applyStubEntity,
-  buildAirQualityAreaPath,
   buildAirQualityChartGeometry,
   buildAirQualityInterpolatedSamples,
-  buildAirQualitySmoothPath,
   coverEntityIsOpen,
   entitySupportedFeatures,
   entitySupportsFeature,
@@ -66,21 +55,73 @@ import {
   worseAirQualityLevel,
 } from "./entity-helpers";
 
-let _lazyNodaliaEntityCard;
+import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
+import type { HostPointerHoldBinding } from "../../core/types/nodalia-utils";
+import type { AirQualityGeometry, AirQualitySeries } from "./entity-helpers";
+import type { HistorySample } from "../../shared/history-geometry";
+import { createViewAnimationWork, releaseViewAnimationWork, cancelViewPanelAnimations, scheduleViewFallback, waitForViewPanelAnimation } from "../../shared/view-animation-work";
+import type { ViewAnimationWork } from "../../shared/view-animation-work";
+import { invokeHassService } from "../../shared/home-assistant-services";
+type EntityConfig = ReturnType<typeof normalizeConfig>;
+type QuickAction = EntityConfig["quick_actions"][number];
+type OverviewItem = EntityConfig["network"]["entities"][number];
+type MetricKind = typeof AIR_QUALITY_METRIC_KEYS[number];
+type AirMetric = {kind:MetricKind;entityId:string;infoEntityId:string;numeric:number;unit:string;display:string;level:string;label:string};
+type GraphSeries = {kind:MetricKind;entityId:string;label:string;unit:string;color:string;currentValue:number};
+type GraphEntry = GraphSeries & {samples:HistorySample[]};
+type HoverPreview = {key:string;kind:string;position:number};
+type ToggleDraft = {entityId:string;expectedState:string;expiresAt:number;stateSnapshot:HassEntity|null};
+const entityActionElement = (node: EventTarget): node is HTMLElement => node instanceof HTMLElement;
+const isOverviewLayout = (value: unknown): value is "battery"|"network" => value === "battery" || value === "network";
+const airLevelColors: Record<string,string> = AIR_QUALITY_LEVEL_COLORS;
+const finiteEntityValue = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
+let _lazyNodaliaEntityCard: CustomElementConstructor | undefined;
 export function loadNodaliaEntityCard() {
   if (_lazyNodaliaEntityCard) {
     return _lazyNodaliaEntityCard;
   }
 class NodaliaEntityCard extends HTMLElement {
+  declare private _config: EntityConfig;
+  declare private _hass: HomeAssistant|null;
+  declare private _optimisticToggle: ToggleDraft|null;
+  declare private _optimisticToggleTimer: number;
+  declare private _aqHistoryCache: {startMs:number;endMs:number;entries:GraphEntry[]}|null;
+  declare private _aqHistoryKey: string;
+  declare private _aqHistoryAbort: AbortController|null;
+  declare private _aqHistoryTimer: number;
+  declare private _aqHistoryLoading: boolean;
+  declare private _aqHoverPreview: HoverPreview|null;
+  declare private _aqHiddenSeries: Set<string>;
+  declare private _aqHoverTimeFormatter: Intl.DateTimeFormat|null;
+  declare private _aqHoverTimeFormatterLocale: string;
+  declare private _cardWidth: number;
+  declare private _isCompactLayout: boolean;
+  declare private _lastRenderSignature: string;
+  declare private _animateContentOnNextRender: boolean;
+  declare private _entranceAnimationResetTimer: number;
+  declare private _suppressNextEntityTap: boolean;
+  declare private _selectPickerOpen: boolean;
+  declare private _selectPickerAnimating: boolean;
+  declare private _selectPickerAnimationToken: number;
+  declare private _resizeObserver: ResizeObserver|null;
+  declare private _detachHostHold: HostPointerHoldBinding;
+  declare private _animationWork: ViewAnimationWork;
+  declare private _aqHistoryGeneration: number;
+  declare private _viewGeneration: number;
+  declare private _contextConnection: HomeAssistant["connection"];
+  declare private _contextAuth: HomeAssistant["auth"];
+  declare private _contextUser: string;
+
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
 
-  static getStubConfig(hass, entities = [], entitiesFallback = []) {
+  static getStubConfig(hass: HomeAssistant|null|undefined, entities: unknown = [], entitiesFallback: unknown = []) {
     return applyStubEntity(deepClone(STUB_CONFIG), hass, [], entities, entitiesFallback);
   }
 
-  static getEntitySuggestion(hass, entityId) {
+  static getEntitySuggestion(hass: HomeAssistant|null|undefined, entityId: string) {
+    if (!hass) return [];
     const domain = String(entityId || "").split(".")[0];
     const suggestions = [
       window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
@@ -100,7 +141,13 @@ class NodaliaEntityCard extends HTMLElement {
   }
 
   _nodaliaConstruct() {this.attachShadow({ mode: "open" });
-    this._config = null;
+    this._animationWork = createViewAnimationWork();
+    this._aqHistoryGeneration = 0;
+    this._viewGeneration = 0;
+    this._contextConnection = undefined;
+    this._contextAuth = undefined;
+    this._contextUser = "";
+    this._config = normalizeConfig({});
     this._hass = null;
     this._optimisticToggle = null;
     this._optimisticToggleTimer = 0;
@@ -121,10 +168,53 @@ class NodaliaEntityCard extends HTMLElement {
     this._suppressNextEntityTap = false;
     this._selectPickerOpen = false;
     this._selectPickerAnimating = false;
-    this._selectPickerCloseTimer = 0;
-    this._selectPickerEnterTimer = 0;
     this._selectPickerAnimationToken = 0;
-    this._resizeObserver = new ResizeObserver(entries => {
+    this._resizeObserver = null;
+    this._onShadowClick = this._onShadowClick.bind(this);
+    this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
+    this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
+    this._onShadowPointerMove = this._onShadowPointerMove.bind(this);
+    this._onShadowPointerLeave = this._onShadowPointerLeave.bind(this);
+    this.shadowRoot?.addEventListener("click", this._onShadowClick);
+    this.shadowRoot?.addEventListener("pointerdown", this._onShadowPointerDown);
+    this.shadowRoot?.addEventListener("pointermove", this._onShadowPointerMove);
+    this.shadowRoot?.addEventListener("pointerleave", this._onShadowPointerLeave);
+    this.shadowRoot?.addEventListener("keydown", this._onShadowKeyDown);
+    this._detachHostHold =
+      typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function"
+        ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
+            resolveZone: event => {
+              const path = event.composedPath();
+              const actionTarget = path.find(
+                (node): node is HTMLElement => entityActionElement(node) && Boolean(node.dataset.entityAction),
+              );
+              const action = actionTarget?.dataset?.entityAction;
+              return action === "body" || action === "icon" ? action : null;
+            },
+            shouldBeginHold: zone => {
+              const state = this._getState();
+              return Boolean(state && this._canRunHoldAction(state, zone));
+            },
+            onHold: zone => {
+              const state = this._getState();
+              if (!state) {
+                return;
+              }
+              this._triggerPressAnimation(this.shadowRoot?.querySelector(".entity-card__content"));
+              this._triggerPressAnimation(this.shadowRoot?.querySelector(".entity-card__icon"));
+              this._performHoldAction(state, zone);
+            },
+            markHoldConsumedClick: () => {
+              this._suppressNextEntityTap = true;
+              window.NodaliaUtils?.cancelCardZoneTap?.(this);
+            },
+          })
+        : () => {};
+    }
+
+  _observeWidth() {
+    const observer = new ResizeObserver(entries => {
+      if (!this.isConnected || this._resizeObserver !== observer) return;
       const entry = entries[0];
       if (!entry) {
         return;
@@ -153,51 +243,13 @@ class NodaliaEntityCard extends HTMLElement {
       this._lastRenderSignature = signature;
       this._render();
     });
-    this._onShadowClick = this._onShadowClick.bind(this);
-    this._onShadowPointerDown = this._onShadowPointerDown.bind(this);
-    this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
-    this._onShadowPointerMove = this._onShadowPointerMove.bind(this);
-    this._onShadowPointerLeave = this._onShadowPointerLeave.bind(this);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this.shadowRoot.addEventListener("pointerdown", this._onShadowPointerDown);
-    this.shadowRoot.addEventListener("pointermove", this._onShadowPointerMove);
-    this.shadowRoot.addEventListener("pointerleave", this._onShadowPointerLeave);
-    this.shadowRoot.addEventListener("keydown", this._onShadowKeyDown);
-    this._detachHostHold =
-      typeof window.NodaliaUtils?.bindHostPointerHoldGesture === "function"
-        ? window.NodaliaUtils.bindHostPointerHoldGesture(this, {
-            resolveZone: event => {
-              const path = event.composedPath();
-              const actionTarget = path.find(
-                node => node instanceof HTMLElement && node.dataset?.entityAction,
-              );
-              const action = actionTarget?.dataset?.entityAction;
-              return action === "body" || action === "icon" ? action : null;
-            },
-            shouldBeginHold: zone => {
-              const state = this._getState();
-              return Boolean(state && this._canRunHoldAction(state, zone));
-            },
-            onHold: zone => {
-              const state = this._getState();
-              if (!state) {
-                return;
-              }
-              this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
-              this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__icon"));
-              this._performHoldAction(state, zone);
-            },
-            markHoldConsumedClick: () => {
-              this._suppressNextEntityTap = true;
-              window.NodaliaUtils?.cancelCardZoneTap?.(this);
-            },
-          })
-        : () => {};
-    }
+    this._resizeObserver = observer;
+    observer.observe(this);
+  }
 
   connectedCallback() {
     this._detachHostHold?.reconnect?.();
-    this._resizeObserver?.observe(this);
+    this._observeWidth();
     this._scheduleOptimisticToggleTimeout();
     this._animateContentOnNextRender = true;
     if (this._hass && this._config) {
@@ -207,8 +259,10 @@ class NodaliaEntityCard extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this._releaseViewWork();
     this._detachHostHold?.();
     this._resizeObserver?.disconnect();
+    this._resizeObserver = null;
     if (this._entranceAnimationResetTimer) {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
@@ -216,8 +270,6 @@ class NodaliaEntityCard extends HTMLElement {
     this._animateContentOnNextRender = true;
     this._selectPickerOpen = false;
     this._selectPickerAnimating = false;
-    this._clearSelectPickerAnimationTimer("_selectPickerCloseTimer");
-    this._clearSelectPickerAnimationTimer("_selectPickerEnterTimer");
     this.classList.remove("entity-card-host--select-open");
     this._lastRenderSignature = "";
     window.NodaliaUtils?.clearDeferTimers?.(this);
@@ -228,13 +280,14 @@ class NodaliaEntityCard extends HTMLElement {
     this._aqHoverTimeFormatterLocale = "";
   }
 
-  setConfig(config) {
-    const previousEntity = this._config?.entity || "";
+  setConfig(config: unknown) {
+    this._releaseViewWork();
+    this._clearAirQualityHistory();
+    this._aqHistoryCache = null;
+    this._aqHistoryKey = "";
+    this._clearOptimisticToggleState();
     this._config = normalizeConfig(config || {});
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
-    if (previousEntity && previousEntity !== this._config.entity) {
-      this._clearOptimisticToggleState();
-    }
     this._isCompactLayout = this._shouldUseCompactLayout(
       Math.round(this._cardWidth || this.clientWidth || 0),
     );
@@ -242,14 +295,27 @@ class NodaliaEntityCard extends HTMLElement {
     this._aqHoverPreview = null;
     this._aqHiddenSeries.clear();
     this._selectPickerOpen = false;
-    this._clearSelectPickerAnimationTimer("_selectPickerCloseTimer");
-    this._clearSelectPickerAnimationTimer("_selectPickerEnterTimer");
     this._animateContentOnNextRender = true;
     this._render();
   }
 
-  set hass(hass) {
+  set hass(hass: HomeAssistant|null) {
+    const user = `${hass?.user?.id ?? ""}:${hass?.user?.is_admin === true}`;
+    if (this._contextConnection !== hass?.connection || this._contextAuth !== hass?.auth || this._contextUser !== user) {
+      this._releaseViewWork();
+      this._clearOptimisticToggleState();
+      this._clearAirQualityHistory();
+      this._aqHistoryKey = "";
+      this._aqHistoryCache = null;
+      this._aqHoverPreview = null;
+      this._aqHiddenSeries.clear();
+      this._lastRenderSignature = "";
+      this._contextConnection = hass?.connection;
+      this._contextAuth = hass?.auth;
+      this._contextUser = user;
+    }
     this._hass = hass;
+    if (!this.isConnected) return;
     let nextSignature = this._getRenderSignature();
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !this._optimisticToggle) {
       return;
@@ -270,7 +336,7 @@ class NodaliaEntityCard extends HTMLElement {
     if (this._config?.layout === "air_quality") {
       return this._config?.air_quality?.show_graphs === true ? 5 : 3;
     }
-    if (OVERVIEW_LAYOUTS.has(this._config?.layout)) {
+    if (isOverviewLayout(this._config?.layout)) {
       const count = this._config?.[this._config.layout]?.entities?.length || 0;
       return Math.max(3, 2 + Math.ceil(count / 2));
     }
@@ -278,7 +344,7 @@ class NodaliaEntityCard extends HTMLElement {
   }
 
   getGridOptions() {
-    if (this._config?.layout === "air_quality" || OVERVIEW_LAYOUTS.has(this._config?.layout)) {
+    if (this._config?.layout === "air_quality" || isOverviewLayout(this._config?.layout)) {
       return {
         rows: "auto",
         columns: 12,
@@ -311,9 +377,10 @@ class NodaliaEntityCard extends HTMLElement {
         metricEntity,
         String(metricState?.state ?? ""),
         String(metricState?.last_updated || metricState?.last_changed || ""),
+        JSON.stringify(metricState?.attributes ?? {}),
       ].join("=");
     });
-    const overviewParts = ["battery", "network"].flatMap(layout => (
+    const overviewParts = (["battery", "network"] as const).flatMap(layout => (
       (this._config?.[layout]?.entities || []).map((item, index) => {
         const overviewState = item.entity ? hass?.states?.[item.entity] : null;
         const attrs = overviewState?.attributes || {};
@@ -328,14 +395,16 @@ class NodaliaEntityCard extends HTMLElement {
           String(attrs.battery_level ?? attrs.battery ?? ""),
           String(attrs.unit_of_measurement ?? ""),
           String(overviewState?.last_updated || overviewState?.last_changed || ""),
+          JSON.stringify(attrs),
         ].join("=");
       })
     ));
     return [
-      `l:${window.NodaliaI18n.resolveLanguage(hass, this._config?.language)}`,
+      `l:${window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language)}`,
       `e:${entityId}`,
       `s:${String(state?.state || "")}`,
       `sd:${getHomeAssistantStateDisplayValue(state, hass)}`,
+      `attrs:${JSON.stringify(attrs)}`,
       `o:${String(attrs._nodalia_optimistic_toggle || "")}`,
       `lu:${String(state?.last_updated || state?.last_changed || "")}`,
       `sa:${configuredStateAttribute}`,
@@ -383,16 +452,16 @@ class NodaliaEntityCard extends HTMLElement {
   }
 
   _getConfiguredGridColumns() {
-    const numericColumns = Number(this._config?.grid_options?.columns);
-    return Number.isFinite(numericColumns) ? numericColumns : null;
+    const numericColumns = Number((isObject(this._config.grid_options) ? this._config.grid_options.columns : undefined));
+    return finiteEntityValue(numericColumns) ? numericColumns : null;
   }
 
   _getConfiguredGridRows() {
-    const numericRows = Number(this._config?.grid_options?.rows);
-    return Number.isFinite(numericRows) ? numericRows : null;
+    const numericRows = Number((isObject(this._config.grid_options) ? this._config.grid_options.rows : undefined));
+    return finiteEntityValue(numericRows) ? numericRows : null;
   }
 
-  _shouldUseCompactLayout(width) {
+  _shouldUseCompactLayout(width: number) {
     return window.NodaliaUtils.shouldUseCompactCardLayout({
       mode: this._config?.compact_layout_mode,
       width,
@@ -401,7 +470,7 @@ class NodaliaEntityCard extends HTMLElement {
     });
   }
 
-  _shouldShowCompactTitle(width) {
+  _shouldShowCompactTitle(width?: number) {
     return window.NodaliaUtils.shouldShowCompactCardTitle({
       width: Math.round(width || this._cardWidth || this.clientWidth || 0),
     });
@@ -415,7 +484,7 @@ class NodaliaEntityCard extends HTMLElement {
     return this._config?.entity ? hass?.states?.[this._config.entity] || null : null;
   }
 
-  _createStateSnapshot(state) {
+  _createStateSnapshot(state: HassEntity|null) {
     if (!state) {
       return null;
     }
@@ -480,7 +549,7 @@ class NodaliaEntityCard extends HTMLElement {
     }, remaining);
   }
 
-  _startOptimisticToggle(expectedState, actualState = this._getActualState()) {
+  _startOptimisticToggle(expectedState: string, actualState = this._getActualState()) {
     const entityId = this._config?.entity || "";
     if (!entityId || !this._isBinaryOnOff(actualState)) {
       return;
@@ -501,19 +570,20 @@ class NodaliaEntityCard extends HTMLElement {
       return actualState;
     }
 
-    const snapshot = this._optimisticToggle?.stateSnapshot || actualState;
-    if (!snapshot) {
+    const draft = this._optimisticToggle;
+    const snapshot = draft?.stateSnapshot || actualState;
+    if (!snapshot || !draft) {
       return actualState;
     }
 
     return {
       ...snapshot,
       entity_id: snapshot.entity_id || actualState?.entity_id || this._config?.entity,
-      state: this._optimisticToggle.expectedState,
+      state: draft.expectedState,
       attributes: {
         ...(snapshot.attributes || {}),
         ...(actualState?.attributes || {}),
-        _nodalia_optimistic_toggle: this._optimisticToggle.expectedState,
+        _nodalia_optimistic_toggle: draft.expectedState,
       },
     };
   }
@@ -533,7 +603,7 @@ class NodaliaEntityCard extends HTMLElement {
     return String(entityId || "").split(".")[0] || "";
   }
 
-  _isHomeAssistantToggleable(state) {
+  _isHomeAssistantToggleable(state: HassEntity|null) {
     if (!state?.entity_id) {
       return false;
     }
@@ -583,11 +653,11 @@ class NodaliaEntityCard extends HTMLElement {
     return getSelectEntityCurrentValue(state);
   }
 
-  _formatSelectOptionLabel(option) {
+  _formatSelectOptionLabel(option: unknown) {
     const chipLabel = window.NodaliaI18n?.translateEntityStateChip?.(
       this._hass,
       this._config?.language ?? "auto",
-      option,
+      String(option ?? ""),
     );
     if (chipLabel) {
       return chipLabel;
@@ -595,7 +665,7 @@ class NodaliaEntityCard extends HTMLElement {
     return humanizeSelectOptionLabel(option);
   }
 
-  _shouldOpenSelectPickerOnTap(state, zone = "body") {
+  _shouldOpenSelectPickerOnTap(state: HassEntity|null, zone = "body") {
     const tapAction = String(this._effectiveTapAction(zone) || "auto").trim().toLowerCase();
     if (tapAction !== "auto") {
       return false;
@@ -612,7 +682,7 @@ class NodaliaEntityCard extends HTMLElement {
       : 0;
   }
 
-  _createMarkupNode(markup) {
+  _createMarkupNode(markup: string) {
     if (!markup || typeof document === "undefined") {
       return null;
     }
@@ -622,7 +692,7 @@ class NodaliaEntityCard extends HTMLElement {
     return node instanceof HTMLElement ? node : null;
   }
 
-  _syncSelectPickerHostState(isOpen) {
+  _syncSelectPickerHostState(isOpen: boolean) {
     this.classList.toggle("entity-card-host--select-open", isOpen === true);
     const card = this.shadowRoot?.querySelector(".entity-card");
     if (card instanceof HTMLElement) {
@@ -634,7 +704,7 @@ class NodaliaEntityCard extends HTMLElement {
     return this.shadowRoot?.querySelector("[data-select-picker-shell]") || null;
   }
 
-  _buildSelectPickerShellMarkup(state, accentColor, animationClass = "") {
+  _buildSelectPickerShellMarkup(state: HassEntity|null, accentColor: string, animationClass = "") {
     const panelMarkup = this._renderSelectPickerPanel(state, accentColor);
     if (!panelMarkup) {
       return "";
@@ -651,7 +721,7 @@ class NodaliaEntityCard extends HTMLElement {
     `;
   }
 
-  _refreshSelectPickerContent(state, accentColor, options = {}) {
+  _refreshSelectPickerContent(state: HassEntity|null, accentColor: string) {
     const shellHost = this._getSelectPickerShellHost();
     if (!(shellHost instanceof HTMLElement) || !this._isSelectEntity(state)) {
       return;
@@ -669,7 +739,7 @@ class NodaliaEntityCard extends HTMLElement {
     shellHost.innerHTML = markup;
   }
 
-  _setSelectPickerVisibility(isOpen, state = this._getState()) {
+  _setSelectPickerVisibility(isOpen: boolean, state = this._getState()) {
     const nextOpen = isOpen === true;
     if (nextOpen === this._selectPickerOpen) {
       if (!nextOpen) {
@@ -691,13 +761,19 @@ class NodaliaEntityCard extends HTMLElement {
       return;
     }
 
+    const focused = this.shadowRoot?.activeElement;
+    const returnFocus = focused instanceof HTMLElement && shellHost.contains(focused);
+    const restoreFocus = () => {
+      if (!returnFocus || !this.isConnected || this._selectPickerOpen) return;
+      const primary = this.shadowRoot?.querySelector('[data-entity-action="body"]');
+      if (primary instanceof HTMLElement) primary.focus({preventScroll:true});
+    };
     const animations = this._getAnimationSettings();
     const accentColor = this._getAccentColor(state);
     const panelDuration = this._getSelectPanelDuration(animations);
     const existingShell = shellHost.querySelector(".entity-card__select-picker-shell");
 
-    this._clearSelectPickerAnimationTimer("_selectPickerCloseTimer");
-    this._clearSelectPickerAnimationTimer("_selectPickerEnterTimer");
+    cancelViewPanelAnimations(this._animationWork);
     const animationToken = ++this._selectPickerAnimationToken;
 
     const clearShellHost = () => {
@@ -708,7 +784,7 @@ class NodaliaEntityCard extends HTMLElement {
       this._refreshSelectPickerContent(state, accentColor);
     };
 
-    const removeShell = shell => {
+    const removeShell = (shell: Element|null) => {
       if (!(shell instanceof HTMLElement)) {
         clearShellHost();
         this._selectPickerAnimating = false;
@@ -723,22 +799,17 @@ class NodaliaEntityCard extends HTMLElement {
         if (animationToken !== this._selectPickerAnimationToken || this._selectPickerOpen) {
           return;
         }
-        this._clearSelectPickerAnimationTimer("_selectPickerCloseTimer");
-        if (shell.isConnected) {
+            if (shell.isConnected) {
           shell.remove();
         }
         if (!shellHost.querySelector(".entity-card__select-picker-shell")) {
           clearShellHost();
         }
         this._selectPickerAnimating = false;
+        restoreFocus();
       };
 
-      shell.addEventListener("animationend", finalizeRemoval, { once: true });
-      this._selectPickerCloseTimer = window.NodaliaUtils?.scheduleDeferTimer?.(
-        this,
-        finalizeRemoval,
-        panelDuration + 80,
-      ) || 0;
+      waitForViewPanelAnimation(this._animationWork, shell, finalizeRemoval, panelDuration + 80);
     };
 
     const appendShell = () => {
@@ -771,19 +842,13 @@ class NodaliaEntityCard extends HTMLElement {
         ) {
           return;
         }
-        this._clearSelectPickerAnimationTimer("_selectPickerEnterTimer");
-        if (shellNode.isConnected) {
+            if (shellNode.isConnected) {
           shellNode.classList.remove("entity-card__select-picker-shell--entering");
         }
         this._selectPickerAnimating = false;
       };
 
-      shellNode.addEventListener("animationend", finalizeEnter, { once: true });
-      this._selectPickerEnterTimer = window.NodaliaUtils?.scheduleDeferTimer?.(
-        this,
-        finalizeEnter,
-        panelDuration + 80,
-      ) || 0;
+      waitForViewPanelAnimation(this._animationWork, shellNode, finalizeEnter, panelDuration + 80);
     };
 
     if (!animations.enabled) {
@@ -796,6 +861,7 @@ class NodaliaEntityCard extends HTMLElement {
         clearShellHost();
       }
       this._selectPickerAnimating = false;
+      restoreFocus();
       return;
     }
 
@@ -841,18 +907,8 @@ class NodaliaEntityCard extends HTMLElement {
     this._openSelectPicker();
   }
 
-  _clearSelectPickerAnimationTimer(timerKey) {
-    const timer = this[timerKey];
-    if (!timer || typeof window === "undefined") {
-      this[timerKey] = 0;
-      return;
-    }
-    window.clearTimeout(timer);
-    this._nodaliaDeferTimers?.delete?.(timer);
-    this[timerKey] = 0;
-  }
 
-  _selectEntityOption(optionValue) {
+  _selectEntityOption(optionValue: unknown) {
     const entityId = this._config?.entity;
     const state = this._getActualState();
     if (!entityId || !state || isUnavailableState(state)) {
@@ -868,16 +924,14 @@ class NodaliaEntityCard extends HTMLElement {
     this._closeSelectPicker();
   }
 
-  _invokeEntityService(domain, service, entityId, serviceData = {}) {
-    const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils)
-      || ((host, hass, svcDomain, svc, data) => Promise.resolve(hass?.callService?.(svcDomain, svc, data)));
-    return invoke(this, this._hass, domain, service, {
+  _invokeEntityService(domain: string, service: string, entityId: string, serviceData: Record<string,unknown> = {}) {
+    return invokeHassService(this, this._hass, domain, service, {
       entity_id: entityId,
       ...serviceData,
     });
   }
 
-  _toggleCoverEntity(state, entityId) {
+  _toggleCoverEntity(state: HassEntity|null, entityId: string) {
     if (coverEntityIsOpen(state)) {
       if (entitySupportsFeature(state, COVER_SET_POSITION)) {
         this._invokeEntityService("cover", "set_cover_position", entityId, { position: 0 });
@@ -894,7 +948,7 @@ class NodaliaEntityCard extends HTMLElement {
     }
   }
 
-  _toggleLockEntity(state, entityId) {
+  _toggleLockEntity(state: HassEntity|null, entityId: string) {
     const stateKey = normalizeTextKey(state?.state);
     if (["locking", "unlocking", "jammed", "unavailable", "unknown"].includes(stateKey)) {
       return;
@@ -913,12 +967,12 @@ class NodaliaEntityCard extends HTMLElement {
     }
   }
 
-  _isBinaryOnOff(state) {
+  _isBinaryOnOff(state: HassEntity|null) {
     const stateKey = normalizeTextKey(state?.state);
     return stateKey === "on" || stateKey === "off";
   }
 
-  _isActiveState(state) {
+  _isActiveState(state: HassEntity|null) {
     const stateKey = normalizeTextKey(state?.state);
 
     if (!stateKey || ["off", "closed", "locked", "unavailable", "unknown", "none", "idle", "standby"].includes(stateKey)) {
@@ -928,7 +982,7 @@ class NodaliaEntityCard extends HTMLElement {
     return true;
   }
 
-  _getAccentColor(state) {
+  _getAccentColor(state: HassEntity|null) {
     const styles = this._config?.styles || DEFAULT_CONFIG.styles;
     return this._isActiveState(state)
       ? styles?.icon?.on_color || DEFAULT_CONFIG.styles.icon.on_color
@@ -937,17 +991,17 @@ class NodaliaEntityCard extends HTMLElement {
 
   _getNumberDecimals() {
     const configuredValue = Number(this._config?.number_decimals);
-    return Number.isFinite(configuredValue) ? clamp(Math.round(configuredValue), 0, 6) : 2;
+    return finiteEntityValue(configuredValue) ? clamp(Math.round(configuredValue), 0, 6) : 2;
   }
 
-  _translateStateValue(state) {
+  _translateStateValue(state: HassEntity|null) {
     const displayValue = getHomeAssistantStateDisplayValue(state, this._hass);
     if (displayValue) {
       return displayValue;
     }
     const hass = window.NodaliaI18n?.resolveHass?.(this._hass) ?? this._hass;
-    const lang = window.NodaliaI18n.resolveLanguage(hass, this._config?.language ?? "auto");
-    return window.NodaliaI18n.translateEntityState(
+    const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+    return window.NodaliaI18n?.translateEntityState?.(
       lang,
       state,
       this._getNumberDecimals(),
@@ -957,12 +1011,12 @@ class NodaliaEntityCard extends HTMLElement {
     );
   }
 
-  _formatAttributeValue(state, attributeName) {
+  _formatAttributeValue(state: HassEntity|null, attributeName: unknown) {
     if (!state || !attributeName) {
       return null;
     }
 
-    const value = state.attributes?.[attributeName];
+    const value = state.attributes?.[String(attributeName)];
 
     if (value === undefined || value === null || value === "") {
       return null;
@@ -973,9 +1027,10 @@ class NodaliaEntityCard extends HTMLElement {
 
     if (typeof value === "boolean") {
       const hass = window.NodaliaI18n?.resolveHass?.(this._hass) ?? this._hass;
-      const lang = window.NodaliaI18n.resolveLanguage(hass, this._config?.language ?? "auto");
-      const labels = window.NodaliaI18n.strings(lang).entityCard.boolean;
-      return value ? labels.yes : labels.no;
+      const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
+      const pack = window.NodaliaI18n?.strings?.(lang)?.entityCard;
+      const labels = isObject(pack) && isObject(pack.boolean) ? pack.boolean : {};
+      return String(value ? labels.yes ?? "Yes" : labels.no ?? "No");
     }
 
     if (Array.isArray(value)) {
@@ -1024,12 +1079,12 @@ class NodaliaEntityCard extends HTMLElement {
     return String(value);
   }
 
-  _getTitle(state) {
+  _getTitle(state: HassEntity|null) {
     return this._config?.name || state?.attributes?.friendly_name || this._config?.entity || "Entity";
   }
 
-  _getIcon(state) {
-    const trimIcon = value => (typeof value === "string" ? value.trim() : "");
+  _getIcon(state: HassEntity|null) {
+    const trimIcon = (value: unknown) => (typeof value === "string" ? value.trim() : "");
     const iconActive = trimIcon(this._config?.icon_active);
     const iconInactive = trimIcon(this._config?.icon_inactive);
     const configuredIcon = trimIcon(this._config?.icon);
@@ -1056,7 +1111,7 @@ class NodaliaEntityCard extends HTMLElement {
     return trimIcon(state?.attributes?.icon) || "mdi:tune";
   }
 
-  _getEntityPicture(state) {
+  _getEntityPicture(state: HassEntity|null) {
     if (this._config?.show_entity_picture !== true) {
       return "";
     }
@@ -1068,7 +1123,7 @@ class NodaliaEntityCard extends HTMLElement {
     ).trim();
   }
 
-  _effectiveTapAction(zone) {
+  _effectiveTapAction(zone: string) {
     if (zone === "icon") {
       const raw = this._config?.icon_tap_action;
       if (raw === undefined || raw === null || String(raw).trim() === "") {
@@ -1079,7 +1134,7 @@ class NodaliaEntityCard extends HTMLElement {
     return String(this._config?.tap_action || "auto").trim() || "auto";
   }
 
-  _effectiveHoldAction(zone) {
+  _effectiveHoldAction(zone: string) {
     if (zone === "icon") {
       const raw = this._config?.icon_hold_action;
       if (raw === undefined || raw === null || String(raw).trim() === "") {
@@ -1090,7 +1145,7 @@ class NodaliaEntityCard extends HTMLElement {
     return String(this._config?.hold_action || "none").trim() || "none";
   }
 
-  _canRunTapAction(state, zone = "body") {
+  _canRunTapAction(state: HassEntity|null, zone = "body") {
     const tapAction = String(this._effectiveTapAction(zone) || "auto").trim().toLowerCase();
     if (tapAction === "none") {
       return false;
@@ -1125,7 +1180,7 @@ class NodaliaEntityCard extends HTMLElement {
     return false;
   }
 
-  _canRunHoldAction(state, zone = "body") {
+  _canRunHoldAction(state: HassEntity|null, zone = "body") {
     const holdAction = String(this._effectiveHoldAction(zone) || "none").trim().toLowerCase();
     if (holdAction === "none") {
       return false;
@@ -1166,7 +1221,7 @@ class NodaliaEntityCard extends HTMLElement {
     return false;
   }
 
-  _effectiveDoubleTapAction(zone) {
+  _effectiveDoubleTapAction(zone: string) {
     if (zone === "icon") {
       const raw = this._config?.icon_double_tap_action;
       if (raw === undefined || raw === null || String(raw).trim() === "") {
@@ -1177,7 +1232,7 @@ class NodaliaEntityCard extends HTMLElement {
     return String(this._config?.double_tap_action || "none").trim() || "none";
   }
 
-  _canRunDoubleTapAction(state, zone = "body") {
+  _canRunDoubleTapAction(state: HassEntity|null, zone = "body") {
     const doubleAction = String(this._effectiveDoubleTapAction(zone) || "none").trim().toLowerCase();
     if (doubleAction === "none") {
       return false;
@@ -1224,7 +1279,7 @@ class NodaliaEntityCard extends HTMLElement {
     }
 
     if (this._isBinaryOnOff(actualState)) {
-      const service = normalizeTextKey(effectiveState.state) === "on" ? "turn_off" : "turn_on";
+      const service = normalizeTextKey(effectiveState?.state) === "on" ? "turn_off" : "turn_on";
       if (isPrimaryEntity) {
         this._startOptimisticToggle(service === "turn_on" ? "on" : "off", actualState);
       }
@@ -1306,7 +1361,7 @@ class NodaliaEntityCard extends HTMLElement {
     return String(this._config?.[urlKey] ?? "").trim();
   }
 
-  _navigateToPath(path) {
+  _navigateToPath(path: string) {
     const navigationPath = String(path || "").trim();
     if (!navigationPath) {
       return;
@@ -1326,7 +1381,7 @@ class NodaliaEntityCard extends HTMLElement {
     fireEvent(this, "hass-navigate", { path: navigationPath });
   }
 
-  _parseServiceData(rawValue) {
+  _parseServiceData(rawValue: unknown) {
     if (!rawValue) {
       return {};
     }
@@ -1335,15 +1390,15 @@ class NodaliaEntityCard extends HTMLElement {
     }
 
     try {
-      const parsed = JSON.parse(rawValue);
+      const parsed: unknown = JSON.parse(String(rawValue));
       return isObject(parsed) ? parsed : {};
     } catch (_error) {
       return {};
     }
   }
 
-  _isServiceAllowed(serviceValue) {
-    const security = this._config?.security || {};
+  _isServiceAllowed(serviceValue: unknown) {
+    const security: Record<string,unknown> = isObject(this._config.security) ? this._config.security : {};
     if (security.strict_service_actions === false) {
       return true;
     }
@@ -1363,10 +1418,10 @@ class NodaliaEntityCard extends HTMLElement {
         || normalizedService === "homeassistant.turn_on"
         || normalizedService === "homeassistant.turn_off";
     }
-    return services.includes(normalizedService) || domains.includes(domain);
+    return services.includes(normalizedService) || domains.includes(domain ?? "");
   }
 
-  _callConfiguredService(serviceValue, entityId = this._config?.entity, rawData = "", rawTarget = "") {
+  _callConfiguredService(serviceValue: unknown, entityId = this._config?.entity, rawData: unknown = "", rawTarget: unknown = "") {
     if (!this._hass || !serviceValue) {
       return;
     }
@@ -1388,13 +1443,7 @@ class NodaliaEntityCard extends HTMLElement {
       payload.entity_id = entityId;
     }
 
-    const invoke = window.NodaliaUtils?.invokeHomeAssistantService?.bind(window.NodaliaUtils)
-      || ((host, hass, svcDomain, svc, data, svcTarget) => Promise.resolve(
-        svcTarget != null
-          ? hass?.callService?.(svcDomain, svc, data, svcTarget)
-          : hass?.callService?.(svcDomain, svc, data),
-      ));
-    invoke(this, this._hass, domain, service, payload, hasExplicitTarget ? target : null);
+    invokeHassService(this, this._hass, domain, service, payload, hasExplicitTarget ? target : null);
   }
 
   _openConfiguredUrl(urlValue = this._config?.tap_url, newTab = this._config?.tap_new_tab === true) {
@@ -1411,7 +1460,7 @@ class NodaliaEntityCard extends HTMLElement {
     window.location.href = url;
   }
 
-  _performTapAction(state, zone = "body") {
+  _performTapAction(state: HassEntity|null, zone = "body") {
     const tapAction = String(this._effectiveTapAction(zone) || "auto").trim().toLowerCase();
     const tapService = zone === "icon" ? this._config?.icon_tap_service : this._config?.tap_service;
     const tapServiceData = zone === "icon" ? this._config?.icon_tap_service_data : this._config?.tap_service_data;
@@ -1451,7 +1500,7 @@ class NodaliaEntityCard extends HTMLElement {
     }
   }
 
-  _performHoldAction(state, zone = "body") {
+  _performHoldAction(state: HassEntity|null, zone = "body") {
     const holdAction = String(this._effectiveHoldAction(zone) || "none").trim().toLowerCase();
     let holdService = zone === "icon" ? this._config?.icon_hold_service : this._config?.hold_service;
     let holdServiceData = zone === "icon" ? this._config?.icon_hold_service_data : this._config?.hold_service_data;
@@ -1498,7 +1547,7 @@ class NodaliaEntityCard extends HTMLElement {
     }
   }
 
-  _performDoubleTapAction(state, zone = "body") {
+  _performDoubleTapAction(state: HassEntity|null, zone = "body") {
     const doubleAction = String(this._effectiveDoubleTapAction(zone) || "none").trim().toLowerCase();
     let doubleService = zone === "icon" ? this._config?.icon_double_tap_service : this._config?.double_tap_service;
     let doubleServiceData = zone === "icon" ? this._config?.icon_double_tap_service_data : this._config?.double_tap_service_data;
@@ -1545,7 +1594,7 @@ class NodaliaEntityCard extends HTMLElement {
     }
   }
 
-  _performQuickAction(action) {
+  _performQuickAction(action: QuickAction) {
     const targetEntity = action?.entity || this._config?.entity;
 
     switch (action?.type) {
@@ -1563,8 +1612,8 @@ class NodaliaEntityCard extends HTMLElement {
     }
   }
 
-  _triggerHaptic(styleOverride = null) {
-    const haptics = this._config?.haptics || {};
+  _triggerHaptic(styleOverride: string|null = null) {
+    const haptics: Record<string,unknown> = isObject(this._config.haptics) ? this._config.haptics : {};
     if (haptics.enabled !== true) {
       return;
     }
@@ -1577,12 +1626,12 @@ class NodaliaEntityCard extends HTMLElement {
     });
 
     if (haptics.fallback_vibrate === true && typeof navigator?.vibrate === "function") {
-      navigator.vibrate(HAPTIC_PATTERNS[style] || HAPTIC_PATTERNS.selection);
+      navigator.vibrate(Object.entries(HAPTIC_PATTERNS).find(([key])=>key === style)?.[1] || HAPTIC_PATTERNS.selection);
     }
   }
 
   _getAnimationSettings() {
-    const configuredAnimations = this._config?.animations || DEFAULT_CONFIG.animations;
+    const configuredAnimations = isObject(this._config.animations) ? this._config.animations : DEFAULT_CONFIG.animations;
 
     return {
       enabled: configuredAnimations.enabled !== false,
@@ -1599,7 +1648,7 @@ class NodaliaEntityCard extends HTMLElement {
     };
   }
 
-  _triggerPressAnimation(element, className = "is-pressing") {
+  _triggerPressAnimation(element: Element|null|undefined, className = "is-pressing") {
     if (!(element instanceof HTMLElement)) {
       return;
     }
@@ -1613,21 +1662,29 @@ class NodaliaEntityCard extends HTMLElement {
     element.getBoundingClientRect();
     element.classList.add(className);
 
-    const schedule = window.NodaliaUtils?.scheduleDeferTimer;
-    const done = () => {
-      if (!element.isConnected) {
-        return;
-      }
-      element.classList.remove(className);
-    };
-    if (typeof schedule === "function") {
-      schedule(this, done, animations.buttonBounceDuration + 40);
-    } else {
-      window.setTimeout(done, animations.buttonBounceDuration + 40);
-    }
+    const generation = this._viewGeneration;
+    scheduleViewFallback(this._animationWork, () => {
+      if (generation === this._viewGeneration && this.isConnected && element.isConnected) element.classList.remove(className);
+    }, animations.buttonBounceDuration + 40);
   }
 
-  _scheduleEntranceAnimationReset(delay) {
+  _releaseViewWork() {
+    ++this._viewGeneration;
+    releaseViewAnimationWork(this._animationWork);
+    ++this._selectPickerAnimationToken;
+    this._selectPickerOpen = false;
+    this._selectPickerAnimating = false;
+    this._syncSelectPickerHostState(false);
+    this._detachHostHold?.();
+    if (this.isConnected) this._detachHostHold?.reconnect?.();
+    window.NodaliaUtils?.cancelCardZoneTap?.(this);
+    window.NodaliaUtils?.clearDeferTimers?.(this);
+    if (this._entranceAnimationResetTimer) window.clearTimeout(this._entranceAnimationResetTimer);
+    this._entranceAnimationResetTimer = 0;
+    this._suppressNextEntityTap = false;
+  }
+
+  _scheduleEntranceAnimationReset(delay: unknown) {
     if (this._entranceAnimationResetTimer) {
       window.clearTimeout(this._entranceAnimationResetTimer);
       this._entranceAnimationResetTimer = 0;
@@ -1639,7 +1696,9 @@ class NodaliaEntityCard extends HTMLElement {
       return;
     }
 
+    const generation = this._viewGeneration;
     this._entranceAnimationResetTimer = window.setTimeout(() => {
+      if (generation !== this._viewGeneration) return;
       this._entranceAnimationResetTimer = 0;
       if (!this.isConnected) {
         return;
@@ -1658,16 +1717,16 @@ class NodaliaEntityCard extends HTMLElement {
     }, safeDelay);
   }
 
-  _triggerEntityPressFeedback(action, actionTarget) {
+  _triggerEntityPressFeedback(action: string, actionTarget: HTMLElement) {
     const hapticStyle = action === "select-option" ? "selection" : null;
     this._triggerHaptic(hapticStyle);
 
     if (action === "body" || action === "icon") {
       const opensSelectPicker = this._shouldOpenSelectPickerOnTap(this._getState(), action);
       if (!opensSelectPicker) {
-        this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__content"));
+        this._triggerPressAnimation(this.shadowRoot?.querySelector(".entity-card__content"));
       }
-      this._triggerPressAnimation(this.shadowRoot.querySelector(".entity-card__icon"));
+      this._triggerPressAnimation(this.shadowRoot?.querySelector(".entity-card__icon"));
       return;
     }
 
@@ -1676,14 +1735,15 @@ class NodaliaEntityCard extends HTMLElement {
     }
   }
 
-  _onShadowPointerDown(event) {
+  _onShadowPointerDown(event: Event) {
+    if (!(event instanceof PointerEvent)) return;
     if (typeof event.button === "number" && event.button !== 0) {
       return;
     }
 
     const actionTarget = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.entityAction);
+      .find((node): node is HTMLElement => entityActionElement(node) && Boolean(node.dataset.entityAction));
 
     if (!actionTarget) {
       return;
@@ -1703,10 +1763,11 @@ class NodaliaEntityCard extends HTMLElement {
     }
   }
 
-  _onShadowClick(event) {
+  _onShadowClick(event: Event) {
+    if (!this.isConnected) return;
     const actionTarget = event
       .composedPath()
-      .find(node => node instanceof HTMLElement && node.dataset?.entityAction);
+      .find((node): node is HTMLElement => entityActionElement(node) && Boolean(node.dataset.entityAction));
 
     if (!actionTarget) {
       return;
@@ -1720,7 +1781,7 @@ class NodaliaEntityCard extends HTMLElement {
 
     if (action === "graph-series-toggle") {
       const kind = String(actionTarget.dataset.seriesKind || "").trim();
-      if (!AIR_QUALITY_METRIC_KEYS.includes(kind)) {
+      if (!AIR_QUALITY_METRIC_KEYS.some(key=>key === kind)) {
         return;
       }
       if (this._aqHiddenSeries.has(kind)) {
@@ -1785,14 +1846,41 @@ class NodaliaEntityCard extends HTMLElement {
     }
   }
 
-  _onShadowKeyDown(event) {
+  _onShadowKeyDown(event: Event) {
+    if (event instanceof KeyboardEvent && event.target instanceof SVGSVGElement && event.target.dataset.airQualityChart === "true") {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        this._clearAirQualityHoverPreview();
+        return;
+      }
+      if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+        event.preventDefault();
+        const series = this._getAirQualityGraphSeries(this._collectAirQualityMetrics(this._getState()).metrics);
+        const geometry = buildAirQualityChartGeometry(this._getAirQualityChartEntries(series).filter(entry => !this._aqHiddenSeries.has(entry.kind)));
+        const path = geometry.paths.find(entry => entry.kind === this._aqHoverPreview?.kind) ?? geometry.paths[0];
+        if (!path?.points.length) return;
+        const last = path.points.length - 1;
+        const current = this._aqHoverPreview?.position ?? 0;
+        const position = event.key === "Home" ? 0 : event.key === "End" ? last : clamp(Math.round(current) + (event.key === "ArrowRight" ? 1 : -1), 0, last);
+        const kind = String(path.kind ?? "");
+        this._aqHoverPreview = {key: `${kind}:${position.toFixed(3)}`, kind, position};
+        this._patchAirQualityHoverPreview(geometry, this._aqHoverPreview);
+        return;
+      }
+    }
+    if (event instanceof KeyboardEvent && event.key === "Escape" && this._selectPickerOpen) {
+      event.preventDefault();
+      event.stopPropagation();
+      this._closeSelectPicker();
+      return;
+    }
     if (window.NodaliaUtils?.isKeyboardActivationEvent?.(event) !== true) {
       return;
     }
     this._onShadowClick(event);
   }
 
-  _renderChip(label, tone = "default", options = {}) {
+  _renderChip(label: unknown, tone = "default", options: {entityId?:string;ariaLabel?:string} = {}) {
     if (!label) {
       return "";
     }
@@ -1812,35 +1900,37 @@ class NodaliaEntityCard extends HTMLElement {
     return `<div class="entity-card__chip entity-card__chip--${tone}">${escapeHtml(label)}</div>`;
   }
 
-  _entityCardUi(key, fallback = "") {
+  _entityCardUi(key: string, fallback = "") {
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-    const pack = window.NodaliaI18n?.strings?.(lang)?.entityCard;
-    const enPack = window.NodaliaI18n?.strings?.("en")?.entityCard;
+    const candidate = window.NodaliaI18n?.strings?.(lang)?.entityCard;
+    const fallbackPack = window.NodaliaI18n?.strings?.("en")?.entityCard;
+    const pack = isObject(candidate) ? candidate : {};
+    const enPack = isObject(fallbackPack) ? fallbackPack : {};
     const nested = key.includes(".") ? getByPath(pack, key) ?? getByPath(enPack, key) : undefined;
     const raw = nested ?? pack?.[key] ?? enPack?.[key];
     return String(raw != null && raw !== "" ? raw : fallback);
   }
 
-  _airQualityLevelLabel(level) {
+  _airQualityLevelLabel(level: unknown) {
     const key = String(level || "unknown");
     return this._entityCardUi(`airQuality.levels.${key}`, key.replace(/_/g, " "));
   }
 
-  _airQualityMetricLabel(kind) {
+  _airQualityMetricLabel(kind: string) {
     return this._entityCardUi(`airQuality.metrics.${kind}`, kind.toUpperCase());
   }
 
-  _collectAirQualityMetrics(primaryState) {
+  _collectAirQualityMetrics(primaryState: HassEntity|null|undefined) {
     const aq = this._config?.air_quality || normalizeAirQualityBlock();
     const guidelines = aq.guidelines === "none" ? "none" : "who";
     const decimals = this._getNumberDecimals();
-    const metrics = [];
+    const metrics: AirMetric[] = [];
 
     for (const kind of AIR_QUALITY_METRIC_KEYS) {
       const entityId = entityScalar(aq[kind]);
       let stateObj = entityId ? this._hass?.states?.[entityId] : null;
-      let rawValue = stateObj ? stateObj.state : null;
+      let rawValue: unknown = stateObj ? stateObj.state : null;
       let unit = String(stateObj?.attributes?.unit_of_measurement || "");
 
       if ((rawValue === null || rawValue === undefined || rawValue === "" || rawValue === "unknown" || rawValue === "unavailable")
@@ -1873,7 +1963,7 @@ class NodaliaEntityCard extends HTMLElement {
       }
 
       const numeric = parseAirQualityNumeric(rawValue);
-      if (!Number.isFinite(numeric)) {
+      if (!finiteEntityValue(numeric)) {
         continue;
       }
 
@@ -1901,7 +1991,7 @@ class NodaliaEntityCard extends HTMLElement {
     return { metrics, guidelines };
   }
 
-  _resolveAirQualityOverall(primaryState, metrics, guidelines) {
+  _resolveAirQualityOverall(primaryState: HassEntity|null|undefined, metrics: AirMetric[], guidelines: string) {
     let overall = "unknown";
     if (guidelines === "who") {
       for (const metric of metrics) {
@@ -1918,27 +2008,29 @@ class NodaliaEntityCard extends HTMLElement {
       || /aqi|air_quality_index/i.test(String(primaryState?.entity_id || ""))
       || /aqi|air_quality_index/i.test(String(primaryState?.attributes?.friendly_name || ""));
 
-    if (guidelines === "who" && primaryIsAqi && Number.isFinite(primaryNumeric)) {
+    if (guidelines === "who" && primaryIsAqi && finiteEntityValue(primaryNumeric)) {
       overall = worseAirQualityLevel(overall, resolveAirQualityLevelFromAqi(primaryNumeric));
     }
 
     return {
       overall,
-      primaryNumeric: Number.isFinite(primaryNumeric) ? primaryNumeric : null,
+      primaryNumeric: finiteEntityValue(primaryNumeric) ? primaryNumeric : null,
       primaryIsAqi,
-      accent: AIR_QUALITY_LEVEL_COLORS[overall] || AIR_QUALITY_LEVEL_COLORS.unknown,
+      accent: airLevelColors[overall] || AIR_QUALITY_LEVEL_COLORS.unknown,
     };
   }
 
-  _commonAria(key, fallback = "") {
+  _commonAria(key: string, fallback = "") {
     const hass = this._hass ?? window.NodaliaI18n?.resolveHass?.(null);
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, this._config?.language ?? "auto") ?? "en";
-    const pack = window.NodaliaI18n?.strings?.(lang)?.common?.aria;
-    const enPack = window.NodaliaI18n?.strings?.("en")?.common?.aria;
-    return String(pack?.[key] ?? enPack?.[key] ?? fallback);
+    const pack = window.NodaliaI18n?.strings?.(lang)?.common;
+    const enPack = window.NodaliaI18n?.strings?.("en")?.common;
+    const aria = isObject(pack) && isObject(pack.aria) ? pack.aria : {};
+    const enAria = isObject(enPack) && isObject(enPack.aria) ? enPack.aria : {};
+    return String(aria[key] ?? enAria[key] ?? fallback);
   }
 
-  _renderSelectPickerPanel(state, accentColor) {
+  _renderSelectPickerPanel(state: HassEntity|null, accentColor: string) {
     const options = this._getSelectOptions(state);
     if (!options.length) {
       return "";
@@ -1988,7 +2080,7 @@ class NodaliaEntityCard extends HTMLElement {
     `;
   }
 
-  _airQualityMetricIcon(kind) {
+  _airQualityMetricIcon(kind: string) {
     switch (kind) {
       case "pm1":
         return "mdi:dots-hexagon";
@@ -2011,18 +2103,18 @@ class NodaliaEntityCard extends HTMLElement {
     }
   }
 
-  _overviewTitle(layout) {
+  _overviewTitle(layout: "battery"|"network") {
     const fallback = layout === "battery" ? "Batteries" : "Network";
     return String(this._config?.name || "").trim()
       || this._entityCardUi(`${layout}.title`, fallback);
   }
 
-  _overviewIcon(layout) {
+  _overviewIcon(layout: "battery"|"network") {
     return String(this._config?.icon || "").trim()
       || (layout === "battery" ? "mdi:battery-multiple" : "mdi:lan");
   }
 
-  _resolveBatteryPercent(state) {
+  _resolveBatteryPercent(state: HassEntity|null) {
     const candidates = [
       state?.state,
       state?.attributes?.battery_level,
@@ -2031,26 +2123,26 @@ class NodaliaEntityCard extends HTMLElement {
     ];
     for (const candidate of candidates) {
       const numeric = parseAirQualityNumeric(candidate);
-      if (Number.isFinite(numeric)) {
+      if (finiteEntityValue(numeric)) {
         return clamp(numeric, 0, 100);
       }
     }
     return null;
   }
 
-  _batteryIcon(percent, state) {
+  _batteryIcon(percent: number|null, state: HassEntity|null) {
     const charging = String(state?.state || "").toLowerCase() === "charging"
       || state?.attributes?.battery_charging === true
       || String(state?.attributes?.charging || "").toLowerCase() === "true";
-    if (!Number.isFinite(percent)) {
+    if (!finiteEntityValue(percent)) {
       return charging ? "mdi:battery-charging" : "mdi:battery-unknown";
     }
     const level = Math.max(10, Math.min(100, Math.round(percent / 10) * 10));
     return charging ? `mdi:battery-charging-${level}` : level === 100 ? "mdi:battery" : `mdi:battery-${level}`;
   }
 
-  _batteryColor(percent) {
-    if (!Number.isFinite(percent)) {
+  _batteryColor(percent: number|null) {
+    if (!finiteEntityValue(percent)) {
       return "var(--secondary-text-color)";
     }
     if (percent <= 15) {
@@ -2062,7 +2154,7 @@ class NodaliaEntityCard extends HTMLElement {
     return "var(--success-color, #55b77e)";
   }
 
-  _networkRole(item, state) {
+  _networkRole(item: OverviewItem, state: HassEntity|null) {
     if (item.role && item.role !== "auto") {
       return item.role;
     }
@@ -2078,7 +2170,7 @@ class NodaliaEntityCard extends HTMLElement {
     return "status";
   }
 
-  _networkIcon(role, state) {
+  _networkIcon(role: string, state: HassEntity|null) {
     const value = String(state?.state || "").trim().toLowerCase();
     if (role === "download") return "mdi:download-network-outline";
     if (role === "upload") return "mdi:upload-network-outline";
@@ -2090,7 +2182,7 @@ class NodaliaEntityCard extends HTMLElement {
       : "mdi:lan-disconnect";
   }
 
-  _networkColor(role, state) {
+  _networkColor(role: string, state: HassEntity|null) {
     if (!state || isUnavailableState(state)) {
       return "var(--secondary-text-color)";
     }
@@ -2107,16 +2199,16 @@ class NodaliaEntityCard extends HTMLElement {
     return "#e879b7";
   }
 
-  _formatOverviewState(state) {
+  _formatOverviewState(state: HassEntity|null) {
     const numeric = parseAirQualityNumeric(state?.state);
     const unit = String(state?.attributes?.unit_of_measurement || "").trim();
-    if (Number.isFinite(numeric) && unit) {
+    if (finiteEntityValue(numeric) && unit) {
       return formatNumericValueWithUnit(numeric, unit, this._getNumberDecimals());
     }
     return this._translateStateValue(state);
   }
 
-  _renderOverviewLayout(layout) {
+  _renderOverviewLayout(layout: "battery"|"network") {
     if (!this.shadowRoot) {
       return;
     }
@@ -2129,9 +2221,10 @@ class NodaliaEntityCard extends HTMLElement {
       item,
       index,
       state: this._hass?.states?.[item.entity] || null,
+      role: "",
     }));
     const batteryValues = layout === "battery"
-      ? available.map(({ state }) => this._resolveBatteryPercent(state)).filter(Number.isFinite)
+      ? available.map(({ state }) => this._resolveBatteryPercent(state)).filter(finiteEntityValue)
       : [];
     const average = batteryValues.length
       ? batteryValues.reduce((sum, value) => sum + value, 0) / batteryValues.length
@@ -2143,11 +2236,12 @@ class NodaliaEntityCard extends HTMLElement {
       : [];
     const statusEntry = networkEntries.find(entry => entry.role === "status");
     const accent = layout === "battery"
-      ? this._batteryColor(Number.isFinite(lowest) ? lowest : average)
+      ? this._batteryColor(finiteEntityValue(lowest) ? lowest : average)
       : statusEntry ? this._networkColor("status", statusEntry.state) : "var(--info-color, #42a5f5)";
     const contrastReferenceState = available.find(entry => entry.state)?.state
       || {
         entity_id: layout === "battery" ? "sensor.battery" : "binary_sensor.network",
+        state: "unknown",
         attributes: layout === "battery" ? { device_class: "battery" } : {},
       };
     const overviewIconGlyphColor = resolveEntityBubbleIconGlyphColor(accent, contrastReferenceState);
@@ -2156,7 +2250,7 @@ class NodaliaEntityCard extends HTMLElement {
     const insightMarkup = layout === "battery"
       ? `
         <span class="entity-card__overview-chip"><ha-icon icon="mdi:battery-multiple"></ha-icon><strong>${available.length}</strong><span>${escapeHtml(this._entityCardUi("battery.devices", "devices"))}</span></span>
-        ${Number.isFinite(average) ? `<span class="entity-card__overview-chip"><ha-icon icon="mdi:chart-donut"></ha-icon><strong>${Math.round(average)}%</strong><span>${escapeHtml(this._entityCardUi("battery.average", "average"))}</span></span>` : ""}
+        ${finiteEntityValue(average) ? `<span class="entity-card__overview-chip"><ha-icon icon="mdi:chart-donut"></ha-icon><strong>${Math.round(average)}%</strong><span>${escapeHtml(this._entityCardUi("battery.average", "average"))}</span></span>` : ""}
         ${lowCount ? `<span class="entity-card__overview-chip entity-card__overview-chip--alert"><ha-icon icon="mdi:battery-alert-variant-outline"></ha-icon><strong>${lowCount}</strong><span>${escapeHtml(this._entityCardUi("battery.low", "low"))}</span></span>` : ""}
       `
       : `
@@ -2171,13 +2265,13 @@ class NodaliaEntityCard extends HTMLElement {
         const percent = this._resolveBatteryPercent(state);
         const value = unavailable
           ? this._entityCardUi("overview.unavailable", "Unavailable")
-          : Number.isFinite(percent) ? `${Math.round(percent)}%` : this._translateStateValue(state);
+          : finiteEntityValue(percent) ? `${Math.round(percent)}%` : this._translateStateValue(state);
         const color = this._batteryColor(percent);
         const rowIcon = item.icon || this._batteryIcon(percent, state);
         const rowGlyphColor = resolveEntityBubbleIconGlyphColor(color, state || contrastReferenceState);
         const batteryStatus = unavailable
           ? this._entityCardUi("overview.unavailable", "Unavailable")
-          : !Number.isFinite(percent)
+          : !finiteEntityValue(percent)
             ? this._entityCardUi("overview.unconfigured", "Not configured")
             : percent <= 15
               ? this._entityCardUi("battery.critical", "Critical")
@@ -2185,7 +2279,7 @@ class NodaliaEntityCard extends HTMLElement {
                 ? this._entityCardUi("battery.low", "Low")
                 : this._entityCardUi("battery.good", "Good");
         return `
-          <button type="button" class="entity-card__overview-item entity-card__overview-item--battery${unavailable ? " is-unavailable" : ""}" data-entity-action="metric-info" data-entity="${escapeHtml(item.entity)}" style="--overview-accent:${escapeHtml(color)};--overview-glyph:${escapeHtml(rowGlyphColor)};--overview-index:${index};--battery-level:${Number.isFinite(percent) ? percent : 0};">
+          <button type="button" class="entity-card__overview-item entity-card__overview-item--battery${unavailable ? " is-unavailable" : ""}" data-entity-action="metric-info" data-entity="${escapeHtml(item.entity)}" style="--overview-accent:${escapeHtml(color)};--overview-glyph:${escapeHtml(rowGlyphColor)};--overview-index:${index};--battery-level:${finiteEntityValue(percent) ? percent : 0};">
             <span class="entity-card__battery-gauge" aria-hidden="true">
               <span class="entity-card__battery-gauge-ring"></span>
               <span class="entity-card__battery-gauge-inner"><ha-icon icon="${escapeHtml(rowIcon)}"></ha-icon></span>
@@ -2477,6 +2571,7 @@ class NodaliaEntityCard extends HTMLElement {
   }
 
   _clearAirQualityHistory() {
+    ++this._aqHistoryGeneration;
     if (this._aqHistoryTimer) {
       window.clearTimeout(this._aqHistoryTimer);
       this._aqHistoryTimer = 0;
@@ -2492,7 +2587,7 @@ class NodaliaEntityCard extends HTMLElement {
     this._aqHistoryLoading = false;
   }
 
-  _getAirQualityGraphSeries(metrics = []) {
+  _getAirQualityGraphSeries(metrics: AirMetric[] = []) {
     const aq = this._config?.air_quality || normalizeAirQualityBlock();
     if (aq.show_graphs !== true) {
       return [];
@@ -2510,7 +2605,7 @@ class NodaliaEntityCard extends HTMLElement {
       }));
   }
 
-  _getAirQualityHistoryKey(series = []) {
+  _getAirQualityHistoryKey(series: GraphSeries[] = []) {
     const aq = this._config?.air_quality || normalizeAirQualityBlock();
     return [
       aq.graph_hours,
@@ -2519,7 +2614,7 @@ class NodaliaEntityCard extends HTMLElement {
     ].join("|");
   }
 
-  _scheduleAirQualityHistory(series = []) {
+  _scheduleAirQualityHistory(series: GraphSeries[] = []) {
     if (!series.length) {
       this._clearAirQualityHistory();
       this._aqHistoryCache = null;
@@ -2530,9 +2625,7 @@ class NodaliaEntityCard extends HTMLElement {
       return;
     }
     const key = this._getAirQualityHistoryKey(series);
-    if (key === this._aqHistoryKey && (this._aqHistoryCache || this._aqHistoryLoading)) {
-      return;
-    }
+    if (key === this._aqHistoryKey && (this._aqHistoryLoading || this._aqHistoryCache && Date.now() - this._aqHistoryCache.endMs < AIR_QUALITY_HISTORY_REFRESH_MS)) return;
     if (key !== this._aqHistoryKey) {
       this._aqHistoryCache = null;
       this._aqHistoryKey = key;
@@ -2540,12 +2633,15 @@ class NodaliaEntityCard extends HTMLElement {
     this._requestAirQualityHistory(series);
   }
 
-  async _requestAirQualityHistory(series = []) {
-    if (!series.length || !this._hass) {
+  async _requestAirQualityHistory(series: GraphSeries[] = []) {
+    if (!series.length || !this._hass || !this.isConnected) {
       return;
     }
     const requestKey = this._getAirQualityHistoryKey(series);
     this._clearAirQualityHistory();
+    const generation = this._aqHistoryGeneration;
+    const hass = this._hass;
+    const isCurrent = () => this.isConnected && generation === this._aqHistoryGeneration && requestKey === this._aqHistoryKey && this._config.layout === "air_quality";
     this._aqHistoryLoading = true;
     const controller = typeof AbortController === "function" ? new AbortController() : null;
     this._aqHistoryAbort = controller;
@@ -2561,29 +2657,30 @@ class NodaliaEntityCard extends HTMLElement {
         end,
         series.map(item => item.entityId),
         controller?.signal,
+        hass,
+        isCurrent,
       );
-      if (requestKey !== this._aqHistoryKey) {
+      if (!isCurrent()) {
         return;
       }
       const startMs = start.getTime();
       const endMs = end.getTime();
       const entries = series.map(item => {
-        const rows = Array.isArray(raw?.[item.entityId]) ? raw[item.entityId] : [];
+        const rows = raw[item.entityId] ?? [];
         const events = rows
           .map(row => {
-            const ts = parseAirQualityHistoryTimestamp(
-              row.last_changed ?? row.last_updated ?? row.lc ?? row.lu ?? row.last_changed,
-            );
-            const value = parseAirQualityNumeric(row.state ?? row.s ?? row);
+            const fields = isObject(row) ? row : {};
+            const ts = parseAirQualityHistoryTimestamp(fields.last_changed ?? fields.last_updated ?? fields.lc ?? fields.lu);
+            const value = parseAirQualityNumeric(fields.state ?? fields.s ?? row);
             return { ts, value };
           })
-          .filter(event => Number.isFinite(event.ts) && Number.isFinite(event.value))
+          .filter((event): event is HistorySample => finiteEntityValue(event.ts) && finiteEntityValue(event.value))
           .sort((left, right) => left.ts - right.ts);
         const live = this._hass?.states?.[item.entityId];
         const liveValue = parseAirQualityNumeric(live?.state);
-        if (Number.isFinite(liveValue)) {
+        if (finiteEntityValue(liveValue)) {
           events.push({
-            ts: parseAirQualityHistoryTimestamp(live.last_changed || live.last_updated) || endMs,
+            ts: parseAirQualityHistoryTimestamp(live?.last_changed ?? live?.last_updated) ?? endMs,
             value: liveValue,
           });
         }
@@ -2594,7 +2691,7 @@ class NodaliaEntityCard extends HTMLElement {
             startMs,
             endMs,
             pointsCount,
-            Number.isFinite(item.currentValue) ? item.currentValue : liveValue,
+            finiteEntityValue(item.currentValue) ? item.currentValue : liveValue,
           ),
         };
       });
@@ -2605,14 +2702,15 @@ class NodaliaEntityCard extends HTMLElement {
         this._render();
       }
     } catch (_error) {
-      if (requestKey === this._aqHistoryKey) {
+      if (isCurrent()) {
         this._aqHistoryLoading = false;
       }
     } finally {
-      if (this.isConnected && String(this._config?.layout || "").toLowerCase() === "air_quality") {
+      if (isCurrent()) {
+        this._aqHistoryAbort = null;
         this._aqHistoryTimer = window.setTimeout(() => {
           this._aqHistoryTimer = 0;
-          if (this.isConnected && String(this._config?.layout || "").toLowerCase() === "air_quality") {
+          if (isCurrent()) {
             this._aqHistoryKey = "";
             this._scheduleAirQualityHistory(series);
           }
@@ -2621,48 +2719,47 @@ class NodaliaEntityCard extends HTMLElement {
     }
   }
 
-  async _fetchAirQualityHistory(start, end, entityIds, signal) {
+  async _fetchAirQualityHistory(start: Date, end: Date, entityIds: string[], signal: AbortSignal|undefined, hass: HomeAssistant, isCurrent: () => boolean): Promise<Record<string,readonly unknown[]>> {
     const groups = await Promise.all(entityIds.map(async entityId => {
-      if (typeof this._hass?.callWS === "function") {
+      if (typeof hass?.callWS === "function") {
         try {
-          const result = await this._hass.callWS({
+          const result: unknown = await hass.callWS({
             type: "history/history_during_period",
             start_time: start.toISOString(),
             end_time: end.toISOString(),
             entity_ids: [entityId],
             significant_changes_only: false,
           });
-          const rows = Array.isArray(result?.[0])
-            ? result[0]
-            : Array.isArray(result?.[entityId])
-              ? result[entityId]
-              : [];
-          return [entityId, rows];
+          const candidate = Array.isArray(result) ? result[0] : isObject(result) ? result[entityId] : null;
+          const rows: unknown[] = Array.isArray(candidate) ? candidate : [];
+          return [entityId, rows] as const;
         } catch (_error) {
           /* fall through */
         }
       }
-      if (typeof this._hass?.auth?.fetchWithAuth === "function") {
+      if (!isCurrent()) return [entityId, []] as const;
+      if (typeof hass?.auth?.fetchWithAuth === "function") {
         const query = [
           `filter_entity_id=${encodeURIComponent(entityId)}`,
           `end_time=${encodeURIComponent(end.toISOString())}`,
         ].join("&");
-        const response = await this._hass.auth.fetchWithAuth(
+        const response = await hass.auth.fetchWithAuth(
           `/api/history/period/${encodeURIComponent(start.toISOString())}?${query}`,
           signal ? { signal } : undefined,
         );
         if (!response.ok) {
-          return [entityId, []];
+          return [entityId, []] as const;
         }
-        const result = await response.json();
-        return [entityId, Array.isArray(result?.[0]) ? result[0] : []];
+        const result: unknown = await response.json();
+        const rows: unknown[] = Array.isArray(result) && Array.isArray(result[0]) ? result[0] : [];
+        return [entityId, rows] as const;
       }
-      return [entityId, []];
+      return [entityId, []] as const;
     }));
     return Object.fromEntries(groups);
   }
 
-  _buildAirQualityChartSvg(seriesEntries = [], hoverState = this._aqHoverPreview) {
+  _buildAirQualityChartSvg(seriesEntries: AirQualitySeries[] = [], hoverState = this._aqHoverPreview) {
     const geometry = buildAirQualityChartGeometry(seriesEntries);
     if (!geometry.paths.length) {
       return "";
@@ -2683,7 +2780,7 @@ class NodaliaEntityCard extends HTMLElement {
       <line class="entity-card__aq-hover-line" x1="${hoverX.toFixed(2)}" x2="${hoverX.toFixed(2)}" y1="${geometry.paddingTop}" y2="${geometry.height - geometry.paddingBottom}"${hover ? "" : " hidden"}></line>
     `;
     return `
-      <svg class="entity-card__aq-chart" data-air-quality-chart="true" viewBox="0 0 ${geometry.width} ${geometry.height}" preserveAspectRatio="none" aria-hidden="true">
+      <svg class="entity-card__aq-chart" data-air-quality-chart="true" viewBox="0 0 ${geometry.width} ${geometry.height}" preserveAspectRatio="none" tabindex="0" role="img" aria-label="${escapeHtml(this._entityCardUi("airQuality.title", "Air quality"))}">
         ${fills}
         ${strokes}
         ${hoverMarker}
@@ -2698,6 +2795,8 @@ class NodaliaEntityCard extends HTMLElement {
       .filter(entry => currentByKind.has(entry.kind))
       .map(entry => ({
         ...entry,
+        label: currentByKind.get(entry.kind)?.label ?? entry.label,
+        unit: currentByKind.get(entry.kind)?.unit ?? entry.unit,
         color: currentByKind.get(entry.kind)?.color || entry.color,
       }));
   }
@@ -2713,11 +2812,11 @@ class NodaliaEntityCard extends HTMLElement {
     }
   }
 
-  _patchAirQualityHoverPreview(geometry = null, hoverState = this._aqHoverPreview) {
+  _patchAirQualityHoverPreview(geometry: AirQualityGeometry|null = null, hoverState = this._aqHoverPreview) {
     const line = this.shadowRoot?.querySelector?.(".entity-card__aq-hover-line");
     const point = this.shadowRoot?.querySelector?.(".entity-card__aq-hover-point");
     const chip = this.shadowRoot?.querySelector?.(".entity-card__aq-hover-chip");
-    if (!line || !point || !chip) {
+    if (!line || !(point instanceof HTMLElement) || !(chip instanceof HTMLElement)) {
       return false;
     }
     let resolvedGeometry = geometry;
@@ -2743,16 +2842,16 @@ class NodaliaEntityCard extends HTMLElement {
     line.setAttribute("x2", hover.x.toFixed(3));
     point.style.setProperty("--aq-hover-left", left);
     point.style.setProperty("--aq-hover-top", top);
-    point.style.setProperty("--aq-hover-color", hover.color);
+    point.style.setProperty("--aq-hover-color", String(hover.color ?? ""));
     chip.style.setProperty("--aq-hover-left", left);
     chip.style.setProperty("--aq-hover-top", top);
-    chip.style.setProperty("--aq-hover-color", hover.color);
+    chip.style.setProperty("--aq-hover-color", String(hover.color ?? ""));
     chip.dataset.aqHoverPlacement = hover.yPercent < 50 ? "below" : "above";
     const label = chip.querySelector("[data-aq-hover-label]");
     const value = chip.querySelector("[data-aq-hover-value]");
     const time = chip.querySelector("[data-aq-hover-time]");
     if (label) {
-      label.textContent = hover.label;
+      label.textContent = String(hover.label ?? "");
     }
     if (value) {
       value.textContent = formatNumericValueWithUnit(
@@ -2767,16 +2866,15 @@ class NodaliaEntityCard extends HTMLElement {
     return true;
   }
 
-  _onShadowPointerMove(event) {
+  _onShadowPointerMove(event: Event) {
+    if (!(event instanceof PointerEvent)) return;
     if (event.pointerType && event.pointerType !== "mouse") {
       return;
     }
     if (String(this._config?.layout || "").toLowerCase() !== "air_quality") {
       return;
     }
-    const chart = event.composedPath().find(node => (
-      node instanceof Element && node.dataset?.airQualityChart === "true"
-    ));
+    const chart = event.composedPath().find((node): node is SVGSVGElement => node instanceof SVGSVGElement && node.dataset.airQualityChart === "true");
     if (!chart) {
       this._clearAirQualityHoverPreview();
       return;
@@ -2793,11 +2891,9 @@ class NodaliaEntityCard extends HTMLElement {
     }
     const x = clamp(((event.clientX - rect.left) / rect.width) * geometry.width, 0, geometry.width);
     const y = clamp(((event.clientY - rect.top) / rect.height) * geometry.height, 0, geometry.height);
-    let nearest = null;
-    geometry.paths.forEach(path => {
-      if (!path.points.length) {
-        return;
-      }
+    let nearest: {kind:string;position:number;distance:number}|null = null;
+    for (const path of geometry.paths) {
+      if (!path.points.length) continue;
       const position = clamp(
         ((x - geometry.paddingX) / Math.max(geometry.width - (geometry.paddingX * 2), 1)) * (path.points.length - 1),
         0,
@@ -2808,12 +2904,13 @@ class NodaliaEntityCard extends HTMLElement {
       const fraction = position - leftIndex;
       const leftPoint = path.points[leftIndex];
       const rightPoint = path.points[rightIndex] || leftPoint;
+      if (!leftPoint || !rightPoint) continue;
       const pointY = leftPoint.y + ((rightPoint.y - leftPoint.y) * fraction);
       const distance = Math.abs(pointY - y);
       if (!nearest || distance < nearest.distance) {
-        nearest = { kind: path.kind, position, distance };
+        nearest = { kind: String(path.kind ?? ""), position, distance };
       }
-    });
+    }
     if (!nearest) {
       this._clearAirQualityHoverPreview();
       return;
@@ -2833,9 +2930,9 @@ class NodaliaEntityCard extends HTMLElement {
     this._clearAirQualityHoverPreview();
   }
 
-  _formatAirQualityHoverTime(timestamp) {
+  _formatAirQualityHoverTime(timestamp: unknown) {
     const date = new Date(Number(timestamp));
-    if (!Number.isFinite(date.getTime())) {
+    if (!finiteEntityValue(date.getTime())) {
       return "";
     }
     const locale = window.NodaliaI18n?.resolveLanguage?.(this._hass, this._config?.language) || undefined;
@@ -2993,7 +3090,7 @@ class NodaliaEntityCard extends HTMLElement {
 
     const metricBubbles = pollutionMetrics.map(metric => {
       const metricAccent = metric.level !== "unknown"
-        ? (AIR_QUALITY_LEVEL_COLORS[metric.level] || accentColor)
+        ? (airLevelColors[metric.level] || accentColor)
         : "var(--primary-text-color)";
       const compactValue = `${metric.label} ${metric.display}`;
       const bubbleTitle = guidelines === "who" && AIR_QUALITY_POLLUTION_KEYS.has(metric.kind)
@@ -3487,6 +3584,23 @@ class NodaliaEntityCard extends HTMLElement {
   }
 
   _render() {
+    const focused = this.shadowRoot?.activeElement;
+    const selector = "[data-entity-action], [data-air-quality-chart]";
+    const keys = ["data-entity-action", "data-entity", "data-select-value", "data-index", "data-series-kind", "data-air-quality-chart"];
+    const focusValues = focused && (focused instanceof HTMLElement || focused instanceof SVGSVGElement) && focused.matches(selector) ? keys.map(key=>focused.getAttribute(key)) : null;
+    if (this._selectPickerAnimating) {
+      cancelViewPanelAnimations(this._animationWork);
+      ++this._selectPickerAnimationToken;
+      this._selectPickerAnimating = false;
+    }
+    this._renderView();
+    if (focusValues) {
+      const replacement = [...(this.shadowRoot?.querySelectorAll(selector) ?? [])].find(element=>keys.every((key,index)=>element.getAttribute(key) === focusValues[index]));
+      if (replacement instanceof HTMLElement || replacement instanceof SVGSVGElement) replacement.focus({preventScroll:true});
+    }
+  }
+
+  _renderView() {
     if (!this.shadowRoot) {
       return;
     }
@@ -3496,7 +3610,7 @@ class NodaliaEntityCard extends HTMLElement {
       return;
     }
 
-    if (OVERVIEW_LAYOUTS.has(String(this._config?.layout || "").toLowerCase())) {
+    if (isOverviewLayout(this._config.layout)) {
       this._renderOverviewLayout(this._config.layout);
       return;
     }

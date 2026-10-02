@@ -77,9 +77,9 @@ test("insignia render signature does not embed full config object", () => {
   assert.doesNotMatch(source, /config: this\._config/);
 });
 
-test("alpha.5 cards avoid JSON attribute signatures and use slim person stamp", () => {
+test("Entity value signatures stay compact and Person uses its slim state stamp", () => {
   const entitySource = read("nodalia-entity-card.js");
-  const getValueSignatureFn = entitySource.match(/function getValueSignature\(value\) \{[\s\S]*?\n\}/);
+  const getValueSignatureFn = entitySource.match(/function getValueSignature\(value\) \{[\s\S]*?\n  \}/);
   assert.ok(getValueSignatureFn, "expected getValueSignature helper");
   assert.doesNotMatch(getValueSignatureFn[0], /JSON\.stringify/);
   assert.match(getValueSignatureFn[0], /`a:\$\{value\.length\}/);

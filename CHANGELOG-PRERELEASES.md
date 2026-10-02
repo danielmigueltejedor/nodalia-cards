@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+- Check Entity view contracts, own select/history/animation work across configuration and HA context changes, retain optimistic deadlines and keyboard focus, and add in-place keyboard inspection to air-quality charts.
+
 - Check Power Flow, retain native keyboard/modal focus, distinguish unavailable split readings from actual zero and release owned viewport/frame/animation work. Remove the unreachable simple rail renderer while preserving compact/full layouts and the existing size limits.
 
 - Check Room Summary, retain native action focus and current HA updates in visible children, clear connected/parked cards on config or HA context changes, reset removed panels and remove unrendered legacy controls. Embed metric CSS without extra resources or relaxing size limits.
