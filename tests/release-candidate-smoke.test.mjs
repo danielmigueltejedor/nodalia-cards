@@ -4,6 +4,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import vm from "node:vm";
 import { gzipSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
 
@@ -22,12 +23,16 @@ function packagePatternIncludes(patterns, file) {
 }
 
 function editorRowsFromGeneratedSource(source = read("nodalia-editor-ui.js")) {
-  const languagesMatch = source.match(/(?:const|var) ROW_LANGS = (\[[^;]+\]);/);
-
-  assert.ok(languagesMatch, "generated editor UI should declare ROW_LANGS");
-
-  const languages = JSON.parse(languagesMatch[1]);
-  const rows = JSON.parse(readGeneratedString(source,"ROWS_JSON"));
+  const context = {};
+  context.window = context;
+  vm.createContext(context);
+  vm.runInContext(read("nodalia-i18n.js"), context);
+  vm.runInContext(source, context);
+  const api = context.NodaliaI18n;
+  api.editorStr(null, "en", "Activar animaciones");
+  const maps = api.editorUiMaps;
+  const languages = Object.keys(maps);
+  const rows = Object.keys(maps.es).map(key => languages.map(lang => maps[lang][key]));
   return { languages, rows };
 }
 
