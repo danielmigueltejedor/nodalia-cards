@@ -177,13 +177,12 @@
           }
         }
 
-        @keyframes media-player-fade-up {
+        /* Move the cover and glass together without isolating child filters. */
+        @keyframes media-player-rise-in {
           0% {
-            opacity: 0;
             transform: translateY(12px) scale(0.97);
           }
           100% {
-            opacity: 1;
             transform: translateY(0) scale(1);
           }
         }
@@ -203,4 +202,3 @@
             transform: translateY(0) scale(1);
           }
         }
-

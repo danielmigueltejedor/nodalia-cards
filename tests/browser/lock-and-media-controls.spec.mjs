@@ -447,6 +447,80 @@ test("Dashboard remounts paint tinted controls from the first animated frame", a
   expect(await page.evaluate(() => window.bundleErrors)).toEqual([]);
 });
 
+test("Dashboard entrance preserves the artwork glass while controls move into place", async ({ page, browserName }) => {
+  await page.route("**/entrance-glass.svg*", route => route.fulfill({
+    contentType: "image/svg+xml",
+    body: '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="300"><defs><pattern id="stripes" width="20" height="20" patternUnits="userSpaceOnUse"><rect width="20" height="20" fill="#f00"/><rect width="10" height="20" fill="#00f"/></pattern></defs><rect width="600" height="300" fill="url(#stripes)"/></svg>',
+  }));
+  await page.goto("/tests/fixtures/browser.html");
+  await page.waitForFunction(() => customElements.get("nodalia-media-player"));
+  await page.evaluate(() => {
+    window.glassHass = window.makeHass({ "media_player.test": { state: "playing", attributes: {
+      media_title: "Glass entrance", entity_picture: "/entrance-glass.svg",
+    } } });
+    window.mountGlassPlayer = mode => {
+      document.querySelector("#fixture").replaceChildren();
+      const card = document.createElement("nodalia-media-player");
+      card.style.width = "360px";
+      card.setConfig({ entity: "media_player.test", layout: { mode, fixed: false }, animations: { enabled: true, panel_duration: 1000 } });
+      card.hass = window.glassHass;
+      document.querySelector("#fixture").append(card);
+      return card;
+    };
+    window.mountGlassPlayer("standard");
+  });
+  await page.locator("[data-artwork-controls]").waitFor();
+  for (const mode of ["standard", "compact", "square", "chip", "artwork"]) {
+    let settledContrast;
+    for (const fraction of [1, 0.05, 0.5]) {
+      const phase = await page.evaluate(({ mode, fraction }) => {
+        const card = window.mountGlassPlayer(mode);
+        const content = card.shadowRoot.querySelector(".media-player__content");
+        const surface = card.shadowRoot.querySelector(".media-player-card");
+        const animation = surface.getAnimations()[0] || content.getAnimations()[0];
+        animation.pause();
+        animation.currentTime = Number(animation.effect.getTiming().duration) * fraction;
+        const control = card.shadowRoot.querySelector('[data-media-control="play-pause"]');
+        const ancestors = [];
+        for (let parent = control.parentElement; parent && !parent.matches(".media-player-card"); parent = parent.parentElement) {
+          const style = getComputedStyle(parent);
+          ancestors.push({ opacity: style.opacity, filter: style.filter, willChange: style.willChange });
+        }
+        return { ancestors, background: getComputedStyle(control).backgroundColor, transform: getComputedStyle(surface).transform };
+      }, { mode, fraction });
+      // Read the actual rendered pixels: without backdrop blur, the sharp cover
+      // stripes remain visible inside the button despite a correct tint variable.
+      const shot = await page.locator("nodalia-media-player").locator('[data-media-control="play-pause"]').screenshot({ animations: "allow" });
+      const contrast = await page.evaluate(async data => {
+        const image = new Image();
+        image.src = `data:image/png;base64,${data}`;
+        await image.decode();
+        const canvas = document.createElement("canvas");
+        canvas.width = image.width; canvas.height = image.height;
+        const context = canvas.getContext("2d");
+        context.drawImage(image, 0, 0);
+        const pixels = context.getImageData(Math.floor(image.width * 0.3), Math.floor(image.height * 0.3), Math.floor(image.width * 0.4), Math.floor(image.height * 0.4)).data;
+        const reds = [], blues = [];
+        for (let index = 0; index < pixels.length; index += 4) { reds.push(pixels[index]); blues.push(pixels[index + 2]); }
+        return Math.max(Math.max(...reds) - Math.min(...reds), Math.max(...blues) - Math.min(...blues));
+      }, shot.toString("base64"));
+      // Software WebKit can omit backdrop rasterization altogether. Compare its
+      // entrance to its own settled pixels; Chromium also verifies actual blur.
+      if (fraction === 1) settledContrast = contrast;
+      else expect(Math.abs(contrast - settledContrast), `${mode} at ${fraction}: rendered glass matches its settled appearance`).toBeLessThan(12);
+      if (browserName === "chromium") expect(contrast, `${mode} at ${fraction}: rendered glass blurs the cover immediately`).toBeLessThan(60);
+      for (const ancestor of phase.ancestors) {
+        expect(ancestor.opacity, `${mode} at ${fraction}: glass must keep sampling the cover`).toBe("1");
+        expect(ancestor.filter).toBe("none");
+        expect(ancestor.willChange).not.toMatch(/opacity|filter/);
+      }
+      expect(phase.background).toMatch(/0\.24/);
+      if (fraction < 1) expect(phase.transform).not.toBe("matrix(1, 0, 0, 1, 0, 0)");
+    }
+  }
+  expect(await page.evaluate(() => window.bundleErrors)).toEqual([]);
+});
+
 test("a replacement cover and its control palette are committed together", async ({ page }) => {
   await mountMedia(page, "#0000ff");
   const players = page.locator("nodalia-navigation-bar, nodalia-media-player");
