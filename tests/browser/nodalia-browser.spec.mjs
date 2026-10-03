@@ -1871,6 +1871,7 @@ test("Room Summary cover and climate controls expose accessible names", async ({
 
 test("Media Player keeps the artwork stage across unrelated state updates", async ({ page }) => {
   await loadBundle(page);
+  await page.route("**/local/cover.jpg*", route => route.fulfill({ contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><rect width="24" height="24" fill="#ac5522"/></svg>' }));
   await page.evaluate(() => {
     const picture = "/local/cover.jpg";
     const state = (volume, title = "Song") => ({
@@ -1899,9 +1900,7 @@ test("Media Player keeps the artwork stage across unrelated state updates", asyn
     window.mediaArtworkFixture = { card, state };
   });
 
-  expect(await page.evaluate(() => Boolean(
-    window.mediaArtworkFixture.card.shadowRoot.querySelector("[data-media-art-stage]"),
-  ))).toBe(true);
+  await expect(page.locator("nodalia-media-player").locator("[data-media-art-stage]")).toHaveCount(1);
 
   await page.evaluate(() => {
     const fixture = window.mediaArtworkFixture;
@@ -2084,4 +2083,3 @@ test("Advance Vacuum keeps the card surface when expanding rooms", async ({ page
   expect(persisted.hasCommit).toBe(true);
   expect(persisted.sameSurface).toBe(true);
 });
-
