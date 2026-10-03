@@ -30,3 +30,7 @@ PIN input, a manual PIN is required; otherwise `alarm_code_entity` can supply a
 helper PIN, followed by `alarm_code` as a fallback. Leading zeros are retained.
 Style changes keep a draft PIN; changing the entity or removing the card clears
 it. Disconnect also releases pending layout timers and frames.
+
+Alarm favourites use intrinsic height when open and closed. Collapsing releases
+the space below the favourite row in Sections dashboards, including rapid toggles
+and HA feedback, without resizing the entire dashboard.

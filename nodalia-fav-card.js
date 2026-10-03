@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.0-alpha.5";
+  var CARD_VERSION = "3.0.0-alpha.6";
 
   // src/cards/fav/fav-constants.ts
   var CARD_TAG = "nodalia-fav-card";
@@ -1355,6 +1355,7 @@
           return;
         }
         fireEvent(this, "iron-resize", {});
+        fireEvent(this, "card-updated", void 0);
       }
       _scheduleLayoutRefresh(delay = 0) {
         if (typeof window === "undefined") {
@@ -1635,8 +1636,8 @@
           border-radius: ${styles.card.border_radius};
           box-shadow: ${cardShadow};
           color: var(--primary-text-color);
-          height: ${showAlarmPanel ? "auto" : usesCompactRowMetrics ? `${singleRowHeightPx}px` : "100%"};
-          min-height: ${usesCompactRowMetrics ? `${singleRowHeightPx}px` : "0"};
+          height: ${isAlarmPanel ? "auto" : usesCompactRowMetrics ? `${singleRowHeightPx}px` : "100%"};
+          min-height: ${usesCompactRowMetrics || isAlarmPanel ? "68px" : "0"};
           overflow: hidden;
           position: relative;
           z-index: ${showAlarmPanel ? 2 : 1};

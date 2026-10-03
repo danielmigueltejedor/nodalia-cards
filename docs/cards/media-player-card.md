@@ -3,6 +3,10 @@
 `custom:nodalia-media-player` supports one or several players with standard,
 square, compact, horizontal (`chip`) or artwork presentation.
 
+Navigation player labels, state/time chips and the collapse button share the
+playback controls' translucent artwork tint and blur. TV source chips appear in
+a rounded transparent scroll panel without a clipped rectangular shadow.
+
 ```yaml
 type: custom:nodalia-media-player
 players:
