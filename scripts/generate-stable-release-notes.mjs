@@ -41,7 +41,11 @@ export function buildStableReleaseNotes({ version, changelogSection }) {
     .replace(/^###(#{0,3}) /gm, "##$1 ")
     .replace(/\]\(\.\/([^)]+)\)/g, `](${repositoryUrl}/blob/v${version}/$1)`);
 
-  return `# Nodalia Cards ${version}
+  const header = version === "3.0.0"
+    ? `<p align="center"><img src="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/v${version}/docs/images/nodalia-cards-3-release.png" alt="Nodalia Cards 3.0.0" width="760"></p>\n\n`
+    : "";
+
+  return `${header}# Nodalia Cards ${version}
 
 This is a **stable release** for regular HACS installations. The summary below focuses on what changes on your dashboard and anything worth reviewing before you update.
 
@@ -51,7 +55,7 @@ ${releaseSection}
 
 ## Updating from HACS
 
-1. Open **HACS → Frontend → Nodalia Cards** and select **Update**.
+1. Open **HACS → Dashboard → Nodalia Cards** and select **Update**.
 2. When the download finishes, reload Home Assistant in every open browser or Companion App view.
 3. If an older card version is still shown, clear that client's frontend cache and reload once more. You do not need to add a new Lovelace resource: HACS continues using \`/hacsfiles/nodalia-cards/nodalia-cards.js\`.
 
