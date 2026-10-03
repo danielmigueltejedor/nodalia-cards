@@ -21,6 +21,24 @@ function replaceCatalog(values, keys = ["ed.first", "ed.second", "ed.third", "ed
   return editor.slice(0, node.getStart()) + JSON.stringify(JSON.stringify(data)) + editor.slice(node.getEnd());
 }
 
+test("editor reconstruction preserves prototype-named catalog keys as own data properties", () => {
+  const api = load(replaceCatalog(["label"], ["__proto__"]));
+  api.editorStr(null, "en", "ed.first");
+  assert.ok(Object.hasOwn(api.editorCatalog.en, "__proto__"));
+  assert.equal(api.editorCatalog.en.__proto__, "label");
+});
+
+test("malformed locale columns cannot produce partial legacy maps", () => {
+  const node = findGeneratedInitializer(editor, "ROWS_JSON");
+  for (const columns of [[], [["label"]], Array.from({ length: 12 }, () => [0]),
+    Array.from({ length: 12 }, (_, index) => index ? ["label"] : [])]) {
+    const source = editor.slice(0, node.getStart()) + JSON.stringify(JSON.stringify({ columns })) + editor.slice(node.getEnd());
+    const api = load(source);
+    assert.throws(() => api.editorStr(null, "en", "Activar animaciones"), /Invalid editor translation data/);
+    assert.equal(api.editorUiMaps, null);
+  }
+});
+
 test("generated editor references round-trip quotes, Unicode, empty labels and the first index", () => {
   const labels = ["", "音楽 \"🪄\"", "", "音楽 \"🪄\""];
   const api = load(replaceCatalog(encodeLabelReferences(labels)));

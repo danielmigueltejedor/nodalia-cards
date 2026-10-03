@@ -36,14 +36,14 @@ import {ROW_LANGS,ROWS_JSON,EDITOR_CATALOG_JSON} from "./editor-i18n-data";
     }
     return labels;
   }
-  function labelRow(keys:readonly string[],raw:unknown):Labels {
-    if(!Array.isArray(raw)) return invalidData();
-    const values:unknown[]=raw;
-    return Object.fromEntries(keys.map((key,index)=>{
-      const value=values[index];
-      if(value!==undefined && typeof value!=="string") return invalidData();
-      return [key,value??""];
-    }));
+  function labelRow(keys:readonly string[],values:readonly string[]):Labels {
+    const row:Labels={};
+    keys.forEach((key,index)=>{
+      const label=values[index]??"";
+      if(key==="__proto__") Object.defineProperty(row,key,{value:label,enumerable:true,writable:true,configurable:true});
+      else row[key]=label;
+    });
+    return row;
   }
   function getRows() {
     if (!ROWS_CACHE) {
@@ -53,7 +53,11 @@ import {ROW_LANGS,ROWS_JSON,EDITOR_CATALOG_JSON} from "./editor-i18n-data";
       const columns=encoded.map(decodeLabels);
       const count=columns[0]?.length??0;
       if(columns.length!==ROW_LANGS.length || columns.some(column=>column.length!==count)) return invalidData();
-      ROWS_CACHE=Array.from({length:count},(_,index)=>labelRow(ROW_LANGS,columns.map(column=>column[index])));
+      ROWS_CACHE=Array.from({length:count},(_,index)=>{
+        const row:Labels={};
+        ROW_LANGS.forEach((lang,column)=>{row[lang]=columns[column]?.[index]??"";});
+        return row;
+      });
     }
     return ROWS_CACHE;
   }
