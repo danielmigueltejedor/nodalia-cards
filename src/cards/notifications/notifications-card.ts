@@ -1811,7 +1811,8 @@ class NodaliaNotificationsCard extends HTMLElement {
     const now = Date.now();
     const lookaheadMs = this._config.thresholds.rain_lookahead_hours * 60 * 60 * 1000;
     this._config.weather_entities.forEach(entityId => {
-      const rows = (this._weatherForecasts?.[entityId] || normalizeWeatherForecastResult(hass.states?.[entityId]?.attributes?.forecast, entityId))
+      const attributes = hass.states?.[entityId]?.attributes;
+      const rows = (this._weatherForecasts?.[entityId] || normalizeWeatherForecastResult(attributes?.forecast, entityId))
         .map(row => ({ row, date: forecastDate(row) }))
         .filter((item):item is typeof item & {date:Date} => Boolean(item.date) && (item.date?.getTime() ?? -Infinity) >= now && (item.date?.getTime() ?? Infinity) <= now + lookaheadMs)
         .sort((left, right) => left.date.getTime() - right.date.getTime());
@@ -1828,13 +1829,16 @@ class NodaliaNotificationsCard extends HTMLElement {
         return;
       }
       const sourceName = friendlyName(this._hass, entityId);
+      const templateValues = {
+        ...attributes,
+        source: sourceName,
+        time: formatTime(rainy.date),
+        value: formatNumber(attributes?.temperature, attributes?.temperature_unit),
+      };
       add({
         id: `weather:rain:${entityId}:${rainy.date.toISOString().slice(0, 13)}`,
-        title: this._smartTitle("rain", "titles.rainSoon", "Rain soon", { source: sourceName, time: formatTime(rainy.date) }, entityId),
-        message: this._smartMessage("rain", "messages.rainSoon", "{source} expects rain around {time}. If laundry is outside, it is worth checking.", {
-          source: sourceName,
-          time: formatTime(rainy.date),
-        }, entityId),
+        title: this._smartTitle("rain", "titles.rainSoon", "Rain soon", templateValues, entityId),
+        message: this._smartMessage("rain", "messages.rainSoon", "{source} expects rain around {time}. If laundry is outside, it is worth checking.", templateValues, entityId),
         icon: "mdi:weather-pouring",
         severity: "warning",
         source: sourceName,

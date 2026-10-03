@@ -1,2 +1,2 @@
 // Generated from package.json by version:sync.
-export const CARD_VERSION = "3.0.0-alpha.1";
+export const CARD_VERSION = "3.0.0-alpha.2";
