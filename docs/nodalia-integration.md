@@ -17,15 +17,15 @@ The Engine complements the plugin; it does not serve or replace the frontend bun
 |---|---|---|
 | Home Assistant | `2025.1.0` or newer | Current supported stable release |
 | Nodalia Cards | `2.0.2` or newer for Engine discovery | `3.0.0-alpha.5` |
-| Nodalia Cards Engine | WebSocket API `2` | Stable `2.0.2` |
+| Nodalia Cards Engine | WebSocket API `2` for existing operations | Stable `3.0.0` with API `3` |
 
-Cards `3.0.0-alpha.5` and Engine `2.0.2` use the same API generation. This is the currently validated pair; stable 3.0.0 publication remains separate from this compatibility statement. The Engine remains optional: ordinary controls, layouts and visual editors do not require it.
+Cards `3.0.0-alpha.5` and Engine `3.0.0` use the same API generation: API 3. This is the current validation pair; Cards remains an alpha independently of the stable Engine release. Engine `2.0.2` still supports existing operations through API 2. The Engine remains optional: ordinary controls, layouts and visual editors do not require it.
 
-## API v3 preparation
+## API v3 compatibility
 
 The Cards client now prefers API 3 and negotiates down to API 2 for existing
-Engines. The currently published stable Engine 2.0.2 uses API 2; the new optional
-operations are gated by API and capabilities. See the [API v3 bridge contract](engine-api-v3.md)
+Engines. Stable Engine 3.0.0 supports API 1–3; Engine 2.0.2 supports API 1–2.
+The new optional operations are gated by API and capabilities. See the [API v3 bridge contract](engine-api-v3.md)
 for payloads and versioned rain templates. A Cards release number alone does not
 enable an unavailable server feature.
 

@@ -21,6 +21,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Engine API v3 negotiation with API v2 fallback, explicit rain template versioning and capability-gated bridge methods for notification preview/snooze, Climate preview and private revisioned vacuum sessions. These methods prepare frontend integration; their presence does not add editor controls.
 - API v3 documentation and migration guidance for custom rain messages.
 
+### Companion Engine
+
+- Stable Engine `3.0.0` adds API v3, native background rain forecasts, notification snoozes, side-effect-free notification/Climate previews and private vacuum selection drafts. Cards exposes capability-gated bridge methods; new editor controls are a separate frontend integration. Existing Engine `2.0.2` operations remain compatible through API 2.
+
 ## [3.0.0-alpha.4] - 2026-10-03
 
 ### Changed

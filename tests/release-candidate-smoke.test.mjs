@@ -216,7 +216,7 @@ test("Cards documentation exposes the optional Engine HACS installer", () => {
   assert.match(readme, /Nodalia Cards Engine is optional/);
   assert.ok(engineGuide.includes(engineHacsUrl));
   assert.ok(climateGuide.includes(engineHacsUrl));
-  assert.match(engineGuide, new RegExp("Cards `" + escapedVersion + "` and Engine `2\\.0\\.2`"));
+  assert.match(engineGuide, new RegExp("Cards `" + escapedVersion + "` and Engine `3\\.0\\.0`"));
 });
 
 test("repository workflows pin audited external actions by immutable commit", () => {

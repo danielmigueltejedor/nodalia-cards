@@ -27,7 +27,7 @@ themselves. Existing cards continue to use their local/helper fallbacks.
 
 For rain, prefer `{precipitation_probability}` in probability messages and
 `{temperature}{temperature_unit}` in current-temperature messages. In migrated
-v3 rain profiles, `{value}` is a probability alias. Published Engine 2.0.2 uses API 2 and already reports rain probability.
+v3 rain profiles, `{value}` is a probability alias. Stable Engine 3.0.0 supports API 1–3; Engine 2.0.2 uses API 2 and already reports rain probability.
 The earlier unpublished Engine 3.0.0 preparation used a temporary temperature
 alias; the v3 implementation restores probability. Prefer explicit temperature
 fields when migrating custom messages. Ordinary
