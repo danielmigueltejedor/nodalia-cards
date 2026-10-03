@@ -1,596 +1,127 @@
-# 🤝 Contributing to Nodalia Cards
+# Contributing to Nodalia Cards 3
 
-First of all, thanks for your interest in contributing 🙌
+Nodalia Cards is a Home Assistant Dashboard plugin with 25 cards, shared visual
+controls and visual editors. Contributions should preserve existing YAML,
+custom element names, standalone resource paths and the single HACS resource.
 
-Nodalia Cards has grown from a small collection of custom cards into a much larger frontend ecosystem for Home Assistant, and community feedback continues shaping the project every day.
+## Getting started
 
-Ideas, bug reports, testing and improvements are always welcome.
-
----
-
-# 🧠 Project philosophy
-
-The goal of Nodalia Cards is not simply to create beautiful cards.
-
-The goal is building a **cohesive, polished and app-like frontend system for Home Assistant**.
-
-When contributing, keep these principles in mind:
-
-- Consistency is more important than adding features
-- UX quality is more important than feature quantity
-- Mobile-first experience
-- Smooth interactions
-- Visual coherence
-- Real usability over visual overload
-- Long-term maintainability
-- Shared systems over isolated solutions
-
----
-
-# 📄 Documentation parity (`main` / `beta` / `alpha` / release tags)
-
-The following files should remain aligned whenever possible:
-
-- `README.md`
-- `CHANGELOG.md`
-- `CHANGELOG-PRERELEASES.md`
-- `CONTRIBUTING.md`
-- `ROADMAP.md`
-- `docs/nodalia-integration.md`
-- `docs/climate-setpoint-schedule.md`
-- `.github/ISSUE_TEMPLATE/*.yml`
-- `.github/workflows/*.yml`
-
-between:
-
-- `main`
-- `beta`
-- `alpha`
-
-unless a branch intentionally documents prerelease-only behavior.
-
----
-
-## Preview branch behavior
-
-`alpha` moves much faster, while `beta` and release-candidate tags represent progressively stricter snapshots. Preview documentation may temporarily drift from:
-
-- README
-- changelog
-- roadmap
-- release examples
-
-during active development cycles.
-
-This is expected.
-
-When work is promoted:
-- `alpha` → `beta`
-- `beta` → an `rc` tag
-- an accepted `rc` → `main`
-
-documentation should be synchronized again.
-
----
-
-## Useful parity check
-
-After syncing branches:
-
-```bash
-git diff main beta -- README.md CHANGELOG.md CONTRIBUTING.md ROADMAP.md docs/nodalia-integration.md docs/climate-setpoint-schedule.md .github
-git diff beta alpha -- README.md CHANGELOG.md CONTRIBUTING.md ROADMAP.md docs/nodalia-integration.md docs/climate-setpoint-schedule.md .github
-```
-
-Ideally both results should be empty except for explicitly documented prerelease differences.
-
----
-
-# 🚀 Release notes
-
-Preview tags use the matching curated section in `CHANGELOG-PRERELEASES.md`;
-stable tags use `CHANGELOG.md`. Add user-facing Unreleased notes before running
-`pnpm release:alpha --dry-run` (or the appropriate channel). Preparation updates
-version references and artifacts locally, without committing, tagging or publishing.
-
-Follow [the release guide](docs/releasing.md). Release publication waits for the
-same static and four-browser checks used by CI, then attaches integrity and
-provenance metadata. Missing curated notes block both stable and preview releases.
-
----
-
-# 🐛 Reporting bugs
-
-If you find a bug:
-
-1. Make sure you're using the latest version
-2. Check whether the issue already exists
-3. Open a new GitHub issue using the provided template
-
-Please include:
-
-- Clear description
-- Steps to reproduce
-- Card YAML
-- Screenshots or videos
-- Home Assistant version
-- Browser / device
-- Console errors if relevant
-
-The more reproducible the issue is, the easier it is to fix.
-
----
-
-# ✨ Suggesting features
-
-Feature ideas are welcome.
-
-Before opening a feature request:
-
-- Think about how it fits the overall system
-- Avoid ideas that break visual consistency
-- Explain the actual use case
-- Prefer improvements that help real dashboards
-
-Good feature requests usually explain:
-
-- What problem exists
-- Why the current solution is insufficient
-- How the feature would improve usability
-- How it fits the Nodalia design philosophy
-
----
-
-# 🛠️ Contributing code
-
-If you want to contribute code:
-
-```bash
-git fork
-git checkout -b feature/my-feature
-```
-
-Then:
-
-1. Make your changes
-2. Keep style and structure consistent
-3. Test inside Home Assistant
-4. Ensure the bundle builds correctly
-5. Open a Pull Request
-
----
-
-# 🧩 Architecture overview
-
-Nodalia Cards is now composed of multiple shared systems:
-
-- Shared visual tokens
-- Shared utility helpers
-- Shared i18n systems
-- Shared editor systems
-- Shared popup patterns
-- Shared animation logic
-- Shared persistence helpers
-
-Contributions should prefer extending shared systems instead of duplicating logic inside individual cards.
-
----
-
-# 🎨 Design guidelines
-
-Nodalia Cards follows a defined visual language.
-
-## Core principles
-
-- Soft shadows
-- Rounded corners
-- Consistent spacing
-- Subtle gradients
-- Minimal but meaningful color
-- Smooth animations
-- Readable layouts
-- Compact mobile ergonomics
-
----
-
-## Avoid
-
-- Overcomplicated layouts
-- Excessive color usage
-- Inconsistent spacing
-- Very strong shadows
-- Large visual noise
-- Breaking animation language
-- Isolated design patterns
-
----
-
-# ⚡ Performance guidelines
-
-Performance matters a lot in large Home Assistant dashboards.
-
-Please avoid:
-
-- Unnecessary full rerenders
-- Large repeated DOM rebuilds
-- Heavy synchronous loops
-- Repeated expensive calculations
-- Layout thrashing
-- Constant animation replays
-
-Prefer:
-
-- Render signatures
-- Shared caches
-- Compositor-friendly transforms
-- Incremental updates
-- Reusable helpers
-
----
-
-# 🌍 Translations
-
-Nodalia includes both:
-
-- Runtime translations
-- Visual editor translations
-
-Current supported languages:
-
-- Spanish
-- English
-- German
-- French
-- Italian
-- Dutch
-- Norwegian
-- Portuguese
-- Russian
-- Greek
-- Chinese
-- Romanian
-
----
-
-## Translation guidelines
-
-If helping with translations:
-
-- Prefer natural wording
-- Avoid literal machine-style translations
-- Keep UI text compact
-- Preserve consistency between cards
-- Match Home Assistant terminology when possible
-
-Prefer contributing through the self-hosted **[Nodalia Weblate](https://translate.getnodalia.com)** (runtime + editor catalogs). You can also open a GitHub pull request against the locale JSON files.
-
-- Translator entry point: [https://translate.getnodalia.com](https://translate.getnodalia.com)
-- Full workflow (keys, validation, new languages): [`docs/TRANSLATIONS.md`](./docs/TRANSLATIONS.md)
-- Weblate operators / Docker example: [`docs/weblate/README.md`](./docs/weblate/README.md)
-
-For matching Nodalia’s look on **other** Lovelace cards (themes, **card-mod**, YAML), see [`docs/STYLING.md`](./docs/STYLING.md).
-
----
-
-## Translation corrections
-
-Wrong or awkward string?
-
-Prefer fixing it in **[Weblate](https://translate.getnodalia.com)**. You can also open an issue using:
-
-```text
-Translation correction
-```
-
-template under:
-
-```text
-.github/ISSUE_TEMPLATE/translation.yml
-```
-
----
-
-# 🧱 Runtime vs editor translations
-
-## Runtime
-
-Runtime strings are edited in `i18n/runtime/<lang>.json` (see `docs/TRANSLATIONS.md`). Regenerate the embedded pack in `nodalia-i18n.js` with:
-
-```bash
-pnpm run i18n:validate-runtime
-pnpm run i18n:gen-runtime
-```
-
-The `nodalia-i18n.js` file still holds all resolution helpers (`resolveLanguage`, `translate*`, …); only the `const PACK` block between `// <nodalia-runtime-i18n-pack>` and `// </nodalia-runtime-i18n-pack>` is generated from JSON.
-
-- Locale packs are deep-merged over English
-- Partial translations still work safely
-- Runtime cards use shared namespaces
-
----
-
-## Visual editors
-
-Generated through:
-
-```bash
-node scripts/gen-editor-ui.mjs
-```
-
-and bundled into:
-
-```text
-nodalia-editor-ui.js
-```
-
-When adding new locales:
-
-- Extend `FULL_LOCALE_BY_EN`
-- Update `editor-extra-locale-by-en.json` if needed
-- Rebuild the bundle afterwards
-
----
-
-# 🧩 Local toolchain
-
-Install [pnpm](https://pnpm.io/installation) (Node **22+** matches CI). The repo sets **`packageManager`** in `package.json`; with [Corepack](https://nodejs.org/api/corepack.html) enabled, that pnpm version is selected automatically:
+Use Node 22 or newer and the pnpm version declared in `package.json`.
 
 ```bash
 corepack enable
-pnpm install
+pnpm install --frozen-lockfile
+git switch -c feature/my-change
 ```
 
-Use **`pnpm test`** and **`pnpm run bundle`** before opening a PR (same as GitHub Actions). If you add a dependency that runs install scripts, approve it once with **`pnpm approve-builds`** (updates **`pnpm-workspace.yaml`** under **`allowBuilds`**, required by pnpm 11’s default security policy).
+Make focused changes on a branch based on `main` and open a pull request.
+Describe the concrete problem, resulting behavior and relevant validation.
+For bug reports, include card YAML, reproduction steps, Home Assistant version,
+browser/device and a screenshot or console error when useful. Check existing
+issues first. Feature requests should describe the dashboard use case.
 
----
+## Canonical source and generated files
 
-# 📦 Bundle architecture
+All cards and visual editors live in `src/cards/`. The checked shared runtimes
+live in `src/shared/` and `src/core/`. Change those TypeScript sources and rebuild;
+root `nodalia-*.js` files are generated compatibility artifacts.
 
-Main build command:
-
-```bash
-pnpm run bundle
-```
-
-This runs:
-
-```bash
-scripts/build-bundle.mjs
-```
-
-and generates:
-
-```text
-nodalia-cards.js
-```
-
----
-
-## Bundle order matters
-
-The runtime bundle currently loads in this order:
-
-```text
-nodalia-i18n.js
-nodalia-utils.js
-nodalia-render-signature.js
-nodalia-bubble-contrast.js
-nodalia-notifications-mobile-policy.js
-nodalia-room-summary-model.js
-nodalia-camera-stream-model.js
-card files...
-```
-
-The self-contained HACS distribution appends `nodalia-editor-ui.js` to the same `nodalia-cards.js` runtime. If changing dependencies or adding modules, preserve this initialization order and keep support models ahead of their cards. Do not add versioned, `.bundle`, core/suite or editor copies at the repository root: HACS should download one generated runtime only.
-
----
-
-# 🧰 Shared utilities (`nodalia-utils.js`)
-
-Compatibility helpers for entity guards, editor sections and service actions
-remain in **`nodalia-utils.js`** on **`window.NodaliaUtils`**. Checked shared models
-and card logic live under `src/`; runtime adapters retain existing globals and
-standalone resource names. Card JS outputs are generated from TypeScript.
+`src/cards/registry.json` defines the 25 card entries. `RUNTIME_ENTRIES` in
+`scripts/build-src-cards.mjs` maps shared runtime sources to their public artifacts.
+`package.json.version` feeds generated `src/version.ts` and per-card declarations.
 See [architecture](docs/ARCHITECTURE.md) and [adding a card](docs/adding-a-card.md).
 
-The bundle loads **`nodalia-utils.js` once** before card modules (see order above). After editing **`nodalia-utils.js`**, run **`pnpm run bundle`** and commit the updated **`nodalia-cards.js`** artifact and its small manifest.
+The HACS build initializes i18n, utils, backend, render signatures and bubble
+contrast before support models and cards, then appends editor UI. Preserve this
+order. HACS downloads `nodalia-cards.js`; split artifacts remain available to
+existing manual installations. Do not add duplicate versioned/core/suite bundles.
 
-For a **single-file** Lovelace resource (one card JS without the full bundle), run **`node scripts/sync-standalone-embed.mjs`** locally to inline utils into that file; do not commit those embed blocks to the repo.
+For local single-file standalone resources, `pnpm sync-standalone-embed` embeds
+utils; do not commit those optional embed blocks.
 
----
+## Implementation and design
 
-# 🏷️ Release channels
+Keep strict types and typed lint on all source modules. Use `unknown` with
+narrowing for external input. The empty type/cycle debt inventories are active
+regression guards; do not remove them or introduce suppressions or `any` shortcuts.
 
-Nodalia Cards uses three working branches and four release maturities.
+Prefer shared helpers when behavior actually matches between consumers. Keep
+card-specific semantics local. Preserve service-action restrictions and deliberate
+Lock unlock confirmation. Follow the existing rounded surfaces, circular controls,
+translucent chips, spacing, collapsible Styles sections and native HA selectors.
+See [styling](docs/STYLING.md) for theme and card-mod examples.
 
-| Maturity | Branch / tag | Audience | Stability |
-|---|---|---|---|
-| Stable | `main`, `vX.Y.Z` | Normal users | Production |
-| Release candidate | `vX.Y.Z-rc.N` | Final testers | Feature-frozen |
-| Beta | `beta`, `vX.Y.Z-beta.N` | Early adopters | Preview |
-| Alpha | `alpha`, `vX.Y.Z-alpha.N` | Developers / testers | Experimental |
+Avoid unnecessary full renders, repeated catalog scans and animation replays.
+Track consumed state in render signatures. Timers, requests, observers and
+listeners belong to their originating card/configuration/HA context and must be
+retired on disconnect or context change. Preserve native focus and unfinished
+editor drafts through HA updates. See [performance](docs/performance-audit.md).
 
----
+## Translations
 
-# 🚀 Stable (`main`)
-
-Production-ready releases.
-
-Examples:
-
-```text
-1.3.4
-1.3.5
-2.0.0
-```
-
-These releases should be:
-- polished
-- documented
-- safe for daily dashboards
-
----
-
-# 🧪 Beta (`beta`)
-
-Feature-preview releases.
-
-Examples:
-
-```text
-2.0.0-beta.1
-2.0.0-beta.2
-```
-
-Beta releases are expected to be usable but may still evolve before stable.
-
----
-
-# ⚠️ Alpha (`alpha`)
-
-Fast experimental development.
-
-Examples:
-
-```text
-2.0.0-alpha.49
-2.0.0-alpha.50
-```
-
-Alpha builds may:
-- break dashboards
-- change YAML behavior
-- contain unfinished systems
-- introduce regressions
-
-This is expected.
-
----
-
-# ✅ Release candidate (`rc` tag)
-
-A release candidate is feature-frozen and used for final regression, browser, Home Assistant, package and release-automation validation.
-
-Examples:
-
-```text
-2.0.0-rc.1
-2.0.0-rc.2
-```
-
-RC maturity lives in the version and Git tag. It is not a permanent branch; cut the tag only from an exact commit that has passed the full validation and release metadata checks.
-
----
-
-# 🔄 Typical release flow
-
-```text
-alpha → beta → rc → main
-```
-
-Typical progression:
-
-1. Experimental work lands in `alpha`
-2. Stable feature batches move into `beta`
-3. A feature-frozen commit is tagged as one or more release candidates
-4. The accepted candidate is promoted to `main` and tagged stable
-
-Low-risk cycles may skip `beta`, but every published version must still pass the same version, bundle, browser and release-metadata gates.
-
-For releases that change the optional backend bridge, also verify that the main README and `docs/nodalia-integration.md` contain working, category-specific HACS links for both repositories and document the tested Cards/Engine compatibility pair.
-
----
-
-# 🏷️ Versioning
-
-`package.json` version should always match the Git tag (without `v`).
-
-Examples:
-
-```text
-package.json → 2.0.0-rc.1
-git tag     → v2.0.0-rc.1
-```
-
-This keeps:
-
-- HACS
-- `__NODALIA_BUNDLE__`
-- releases
-- changelog
-
-fully aligned.
-
----
-
-# 🧪 Build & testing expectations
-
-Before opening a PR:
-
-## Validate changes
+Edit `i18n/runtime/<lang>.json` or `i18n/editor/<lang>.json`, preferably through
+[Nodalia Weblate](https://translate.getnodalia.com). All 12 supported locales must
+retain English key structure, placeholders and code spans. Lookup falls back to
+English defensively; incomplete catalogs still fail validation.
 
 ```bash
-pnpm install --frozen-lockfile
+pnpm i18n:validate-editor
+pnpm i18n:validate-runtime
+pnpm i18n:audit
+pnpm i18n:gen-editor
+pnpm i18n:gen-runtime
+pnpm bundle
+```
+
+Commit locale JSON, generated `src/shared/*-i18n-data.ts`, matching root lookup
+artifacts, the rebuilt HACS bundle and manifest. Checked lookup implementations
+are `src/shared/editor-i18n-runtime.ts` and `runtime-i18n-runtime.ts`.
+Remaining non-`ed.*` labels use the supported legacy row inputs consumed by the
+editor generator. Retired catalog shards and translation caches are not sources.
+
+For languages, key conventions and operator setup, see
+[translations](docs/TRANSLATIONS.md) and [Weblate](docs/weblate/README.md).
+
+## Verification
+
+```bash
 pnpm validate:fast
 pnpm validate
 ```
 
-The fast check includes strict types, lint, translations, build and unit tests.
-The full check adds browser tests; see [testing](docs/testing.md) for browser
-installation and project selection. Commit generated card artifacts and the
-bundle manifest after changing their TS sources. Never run retired extractors
-or edit generated card JS as canonical source.
+The fast gate checks versions, architecture, strict types, lint, distribution
+syntax, all translations, build and Node regressions. Full validation adds
+Chromium, Firefox, WebKit and iPhone WebKit. CI regenerates artifacts and rejects
+uncommitted drift. Commit generated outputs after changing canonical sources.
+See [testing](docs/testing.md) for browser installation and targeted runs.
 
----
+For UI changes, reproduce behavior in Home Assistant, including light/dark
+appearance, compact layouts, keyboard focus and relevant editor settings. Add
+behavioral regression coverage when fixing runtime bugs; avoid tests that merely
+mirror implementation text. Manual dashboard profiling complements automated
+fixtures and should record device, browser and workload.
 
-## Test inside Home Assistant
+If a new build dependency needs install scripts, approve the required package
+with `pnpm approve-builds` and review `pnpm-workspace.yaml` changes.
 
-At minimum:
-- load the dashboard
-- verify the card renders
-- verify editor behavior
-- verify no console errors
+## Version 3 release preparation
 
----
+Reviewed work lands on `main`. Maturity is represented by the package version
+and exact Git tag; separate `alpha` or `beta` branches are not required.
 
-## Check for regressions
+| Channel | Example tag | Purpose |
+|---|---|---|
+| Alpha | `v3.0.0-alpha.4` | Active regression testing |
+| Beta | `v3.0.0-beta.1` | Broader feature-complete testing |
+| Release candidate | `v3.0.0-rc.1` | Final compatibility validation |
+| Stable | `v3.0.0` | Validated daily dashboard release |
 
-Especially around:
-- animations
-- mobile layouts
-- editor rendering
-- translations
-- persistence systems
-- popup behavior
+Keep current installation status truthful until the stable tag is published.
+Stable notes belong in `CHANGELOG.md`; previews use `CHANGELOG-PRERELEASES.md`.
+Preserve historical version entries. `README.md`, `ROADMAP.md`, integration docs
+and issue templates must describe the actual published channel.
 
----
-
-# 💬 Communication
-
-Please keep discussions:
-
-- respectful
-- constructive
-- focused
-- collaborative
-
-The project grows faster when feedback stays clear and solution-oriented.
-
----
-
-# 🙌 Final note
-
-Even small contributions help a lot.
-
-That includes:
-
-- Bug reports
-- Translation fixes
-- Testing preview builds
-- UI suggestions
-- Performance feedback
-- Documentation improvements
-
-Nodalia Cards became what it is through constant iteration and real-world feedback.
-
-Thanks again for supporting the project 🙌
+Follow [releasing](docs/releasing.md). Preparation can be inspected with
+`pnpm release --dry-run`; it does not commit, tag or publish. The tagged commit
+must pass the same static and four-browser gate as PRs. Verify uploaded bundle
+integrity and the correct prerelease flag after publication.

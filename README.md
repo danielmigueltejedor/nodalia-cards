@@ -31,13 +31,13 @@ Nodalia Cards is a custom Home Assistant frontend card suite built as one visual
 > [!TIP]
 > **Nodalia Cards Engine is optional.** Install it when you want background notifications, shared dismissals, a notification inbox or native Climate schedules. The cards and visual editors continue to work without it.
 
-## Version 3 preview
+## Version 3.0.0
 
-The `3.0.0` alpha line completes strict TypeScript migration across all 25 cards,
+Version `3.0.0` completes strict TypeScript migration across all 25 cards,
 editors and shared runtimes. It includes the media-control, Lock, Summary and
 Vacuum refinements described in the [prerelease notes](./CHANGELOG-PRERELEASES.md).
 Existing YAML, custom element names and the HACS resource path remain compatible.
-Enable prereleases in HACS to select an alpha; stable `2.2.10` remains available.
+See [upgrading to version 3](./docs/upgrading-to-3.md) for installation and contributor changes. Version 3 currently remains in prerelease validation; enable prereleases in HACS to select an alpha. Stable `2.2.10` remains available until stable `3.0.0` is published.
 
 ## Preview
 
@@ -81,25 +81,25 @@ Every card is registered with the `custom:nodalia-…` prefix. The complete set 
 - [`custom:nodalia-fan-card`](docs/cards/fan-card.md)
 - [`custom:nodalia-humidifier-card`](docs/cards/humidifier-card.md)
 - [`custom:nodalia-circular-gauge-card`](docs/cards/circular-gauge-card.md)
-- `custom:nodalia-graph-card`
-- `custom:nodalia-power-flow-card`
+- [`custom:nodalia-graph-card`](docs/cards/graph-card.md)
+- [`custom:nodalia-power-flow-card`](docs/cards/power-flow-card.md)
 - [`custom:nodalia-cover-card`](docs/cards/cover-card.md)
 - `custom:nodalia-climate-card`
 - [`custom:nodalia-alarm-panel-card`](docs/cards/alarm-panel-card.md)
-- `custom:nodalia-lock-card`
-- `custom:nodalia-advance-vacuum-card`
-- `custom:nodalia-entity-card`
+- [`custom:nodalia-lock-card`](docs/cards/lock-card.md)
+- [`custom:nodalia-advance-vacuum-card`](docs/cards/advanced-vacuum-card.md)
+- [`custom:nodalia-entity-card`](docs/cards/entity-card.md)
 - [`custom:nodalia-fav-card`](docs/cards/fav-card.md)
 - [`custom:nodalia-insignia-card`](docs/cards/insignia-card.md)
 - [`custom:nodalia-person-card`](docs/cards/person-card.md)
 - [`custom:nodalia-scenes-card`](docs/cards/scenes-card.md)
 - [`custom:nodalia-weather-card`](docs/cards/weather-card.md)
 - [`custom:nodalia-calendar-card`](docs/cards/calendar-card.md)
-- `custom:nodalia-notifications-card`
+- [`custom:nodalia-notifications-card`](docs/cards/notifications-card.md)
 - [`custom:nodalia-vacuum-card`](docs/cards/vacuum-card.md)
-- `custom:nodalia-news-card`
+- [`custom:nodalia-news-card`](docs/cards/news-card.md)
 - [`custom:nodalia-camera-card`](docs/cards/camera-card.md)
-- `custom:nodalia-room-summary-card`
+- [`custom:nodalia-room-summary-card`](docs/cards/room-summary-card.md)
 
 </details>
 
@@ -240,14 +240,14 @@ The layout selector is also available in each card's visual editor. Existing YAM
 
 ## Release channels
 
-| Maturity | Branch / tag | Intended use |
+| Maturity | Tag | Intended use |
 |---|---|---|
-| Stable | `main`, `vX.Y.Z` | Recommended for daily dashboards |
+| Stable | `vX.Y.Z` | Recommended for daily dashboards |
 | Release candidate | `vX.Y.Z-rc.N` | Final compatibility and release validation |
-| Beta | `beta`, `vX.Y.Z-beta.N` | Feature-complete preview for broader testing |
-| Alpha | `alpha`, `vX.Y.Z-alpha.N` | Active development; breaking changes are possible |
+| Beta | `vX.Y.Z-beta.N` | Feature-complete preview for broader testing |
+| Alpha | `vX.Y.Z-alpha.N` | Active development; breaking changes are possible |
 
-HACS installs the latest stable release by default. To test a prerelease, open Nodalia Cards in HACS, choose **Redownload → Need a different version?**, and select the desired alpha, beta or RC tag.
+Reviewed changes land on `main`; the package version and Git tag identify release maturity. HACS installs the latest stable release by default. To test a prerelease, open Nodalia Cards in HACS, choose **Redownload → Need a different version?**, and select the desired alpha, beta or RC tag.
 
 Stable changes are documented in the [changelog](./CHANGELOG.md). Detailed prerelease notes live in [CHANGELOG-PRERELEASES.md](./CHANGELOG-PRERELEASES.md), and longer-term work is tracked in the [roadmap](./ROADMAP.md).
 

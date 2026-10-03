@@ -10,6 +10,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- Native Lock Card with deliberate slide/keyboard unlock confirmation, centered icon chips, shared visual-editor Styles controls and native embedding in Room Summary.
+- Version 3 upgrade and contributor guides covering unchanged YAML/resource paths, checked sources and release validation.
+
+### Changed
+
+- All 25 cards, visual editors and shared runtimes now build from strictly checked TypeScript, with typed lint and zero suppression/import-cycle debt. Existing custom elements, standalone artifacts and the single HACS resource remain compatible.
+- Media transport stays centered between auxiliary controls. Buttons, transport capsules and stacked-player selectors share translucent artwork tint; dashboard entrance preserves the glass reflection and warm palettes apply immediately.
+- Room Summary keeps media players on its main screen and renders lock entities with native Lock Card. Alarm Panel and Entity request four Sections columns; Weather and Calendar request six.
+- Retired migration/catalog tools, duplicate translation shards and local translation caches are removed. Architecture, audit, performance, roadmap and translation guides describe the completed version 3 implementation.
+- Weblate synchronization rebuilds checked locale data, lookup artifacts, the HACS bundle and manifest together.
+
+### Fixed
+
+- Vacuum localizes charger-disconnected states and truncates long status chips with ellipsis while preserving full title text.
+- Rain notification templates receive the weather temperature, preserving valid zero and temperature units.
+- Pending asynchronous work is retired across configuration, HA connection/user and view changes. Native focus, draft fields and cancelled gestures retain their intended behavior.
+
+
 ## [2.2.10] - 2026-09-24
 
 Stable **`2.2.10`**: Advance Vacuum shows fan speed again on newer Roborock robots that expose a `cleaning_mode` select beside `fan_speed_list`.

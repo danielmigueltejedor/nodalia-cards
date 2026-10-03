@@ -2,7 +2,7 @@
 
 This file archives detailed per-build notes for all alpha, beta and release-candidate cycles. Stable release summaries remain in [`CHANGELOG.md`](./CHANGELOG.md).
 
-Experimental **visual layout editor** work (former **alpha.2–alpha.20**) is preserved on branch **`future/2.0.0-visual-layout`** and is not part of the active `2.0.0` preview line — see [`docs/roadmap-2.0-visual-layout.md`](./docs/roadmap-2.0-visual-layout.md).
+Experimental **visual layout editor** work (former **alpha.2–alpha.20**) is preserved on branch **`future/2.0.0-visual-layout`** and is separate from the current version 3 bundle — see [ROADMAP.md](./ROADMAP.md).
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 

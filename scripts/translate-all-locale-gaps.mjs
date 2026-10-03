@@ -4,7 +4,7 @@
  * Preserves `code` and {placeholders}.
  *
  * Usage: node scripts/translate-all-locale-gaps.mjs
- * Then:  npm run i18n:gen-runtime && npm run i18n:gen-editor && npm run i18n:validate-*
+ * Then:  pnpm i18n:gen-runtime && pnpm i18n:gen-editor && pnpm i18n:validate-runtime && pnpm i18n:validate-editor
  */
 import fs from "fs";
 import path from "path";

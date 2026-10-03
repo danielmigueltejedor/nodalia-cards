@@ -136,9 +136,9 @@ Validators enforce:
 - Non-English files match the English key tree / key set
 - Unknown keys fail
 - Placeholder/`code` spans stay aligned with English
-- Generated `nodalia-editor-ui.js` / `nodalia-i18n.js` stay in sync after gen
+- Generated `src/shared/*-i18n-data.ts`, root lookup artifacts, HACS bundle and manifest stay in sync after generation/build
 
-Workflow [`.github/workflows/weblate-i18n-sync.yml`](../../.github/workflows/weblate-i18n-sync.yml) regenerates tracked i18n artifacts on pushes to the `weblate` branch so PRs into `main` are not blocked solely by stale generated files.
+Workflow [`.github/workflows/weblate-i18n-sync.yml`](../../.github/workflows/weblate-i18n-sync.yml) regenerates checked locale data and lookup artifacts, then rebuilds and commits the HACS bundle/manifest on pushes to the `weblate` branch so PRs into `main` are not blocked solely by stale generated files.
 
 ## Reverse proxy assumptions
 

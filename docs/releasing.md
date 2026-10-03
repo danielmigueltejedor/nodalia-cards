@@ -36,3 +36,15 @@ checkpoints; do not rerun an old release expecting the new workflow to apply.
 
 Stable promotion retires the active preview in the roadmap. Both stable and preview
 GitHub releases use their curated changelog sections; missing notes block publication.
+
+## Preparing stable 3.0.0
+
+The migration is complete; a preview suffix reflects release validation, not
+remaining unchecked source. Consolidated stable notes are prepared under
+`CHANGELOG.md` Unreleased. Inspect promotion with `pnpm release --dry-run`; the
+current alpha base promotes to `3.0.0`. Run preparation only once when the stable
+version change is being reviewed, then rebuild and validate its exact commit.
+
+Update README and the upgrade guide's preview status with stable promotion too;
+never describe an untagged preview as the published stable release. Keep historical
+changelog versions and archived prerelease notes intact.
