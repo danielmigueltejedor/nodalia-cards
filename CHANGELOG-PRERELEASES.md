@@ -8,6 +8,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.0.0-alpha.6] - 2026-10-04
+
+### Fixed
+
+- Navigation Media Player name, status and time chips use the same translucent artwork tint and blur as playback controls and the collapse button, from first paint and across track changes.
+- TV source chips keep a rounded, transparent scroll surface without overlapping outer shadows cut into a rectangular background.
+- Alarm favourites release their expanded height when closed in Sections dashboards, including repeated or interrupted toggles and Home Assistant state feedback. Closing updates the local layout without a global resize.
+- Advance Vacuum installs complete styles before its first mount and safely falls back from incomplete CSS functions. Mobile pinch keeps existing map/marker nodes, defers ordinary HA updates until the gesture ends and preserves Safari native touch ownership. Cleaning feedback no longer replays entrance/panel animations; Smart presets avoid duplicate services and rejected or stale commands cannot leave the controls stuck.
+
+### Changed
+
+- Shared editor translations and repeated styles reduce the HACS bundle by 191,366 raw bytes and 25,663 gzip bytes in the size audit, preserving all twelve locales, public APIs, standalone resources and existing bundle budgets.
+
 ## [3.0.0-alpha.5] - 2026-10-03
 
 ### Fixed

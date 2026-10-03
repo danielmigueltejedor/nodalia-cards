@@ -75,6 +75,7 @@
         }
 
         .media-player-card--tv .media-player__tv-source-panel {
+          border-radius: 20px;
           justify-content: center;
           max-height: 190px;
           overflow: auto;
@@ -87,6 +88,8 @@
         }
 
         .media-player-card--tv .media-player__source-button {
+          /* Outer shadows overlap and get cut into a rectangle by the scrollport. */
+          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           max-width: 100%;
           min-height: 32px;
           padding: 0 10px;

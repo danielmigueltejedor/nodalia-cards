@@ -160,7 +160,7 @@ for (const color of ["#ffffff", "#000000", "#00ff00", "#0000ff"]) {
     for (const tag of ["nodalia-navigation-bar", "nodalia-media-player"]) {
       const card = page.locator(tag);
       await expect(card.locator("[data-artwork-controls]")).toHaveCount(1);
-      const surfaces = await card.locator('.media-player__control, .media-player__volume-button, .media-player__collapse').evaluateAll(buttons => buttons.map(button => {
+      const surfaces = await card.locator('.media-player__control, .media-player__volume-button, .media-player__chip, .media-player__collapse').evaluateAll(buttons => buttons.map(button => {
         const style = getComputedStyle(button);
         const canvas = document.createElement("canvas"); canvas.width = canvas.height = 1;
         const context = canvas.getContext("2d");
@@ -293,10 +293,10 @@ test("Media capsules and selectors stay translucent from their first themed pain
           const style = getComputedStyle(node), rect = node.getBoundingClientRect();
           const canvas = document.createElement("canvas"); canvas.width = canvas.height = 1;
           const ctx = canvas.getContext("2d"); ctx.fillStyle = style.backgroundColor; ctx.fillRect(0, 0, 1, 1);
-          return { alpha: ctx.getImageData(0, 0, 1, 1).data[3] / 255, width: rect.width, height: rect.height, border: style.border, background: style.backgroundColor, shadow: style.boxShadow };
+          return { alpha: ctx.getImageData(0, 0, 1, 1).data[3] / 255, width: rect.width, height: rect.height, border: style.border, background: style.backgroundColor, shadow: style.boxShadow, blur: style.backdropFilter || style.webkitBackdropFilter, color: style.color };
         };
         const transport = root.querySelector('.media-player__transport');
-        return { controls: controls.map(read), containers: [transport, root.querySelector('.media-player__dots')].map(read), display: getComputedStyle(transport).display };
+        return { controls: controls.map(read), containers: [transport, root.querySelector('.media-player__dots'), ...root.querySelectorAll('.media-player__chip, .media-player__collapse')].map(read), display: getComputedStyle(transport).display };
       });
       expect(["flex", "inline-flex"]).toContain(result.display);
       expect(result.controls).toHaveLength(3);
@@ -310,6 +310,9 @@ test("Media capsules and selectors stay translucent from their first themed pain
       }
       for (const surface of [...result.controls, ...result.containers]) {
         expect(surface.alpha).toBeGreaterThan(0.15); expect(surface.alpha).toBeLessThan(0.35);
+        expect(surface.blur).toContain('blur(');
+        expect(surface.background).toBe(referenceStyle.background);
+        expect(surface.color).toBe(referenceStyle.color);
       }
     }
   };

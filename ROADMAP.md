@@ -11,7 +11,7 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-3.0.0-alpha.5
+3.0.0-alpha.6
 ```
 
 See [the curated prerelease notes](./CHANGELOG-PRERELEASES.md) for this build.

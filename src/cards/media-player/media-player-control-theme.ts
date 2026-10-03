@@ -94,7 +94,7 @@ export const MEDIA_CONTROL_STYLES = `
   .media-player__transport-side--end { justify-content:flex-start; }
   .media-player-card .media-player__transport-addon { position:static; transform:none; }
 
-  .media-player__control, .media-player__volume-button, .media-player__collapse, .media-player__transport, .media-player__dots {
+  .media-player__control, .media-player__volume-button, .media-player__chip, .media-player__collapse, .media-player__transport, .media-player__dots {
     -webkit-backdrop-filter: blur(22px) saturate(1.35);
     backdrop-filter: blur(22px) saturate(1.35);
     box-sizing: border-box;
