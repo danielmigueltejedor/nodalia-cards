@@ -1,5 +1,7 @@
 # Lock Card
 
+See the [complete YAML example](../../examples/lock-card.yaml).
+
 ```yaml
 type: custom:nodalia-lock-card
 entity: lock.front_door

@@ -1,7 +1,7 @@
 name: Weblate i18n sync
 
 # When Weblate pushes locale JSON to the dedicated `weblate` branch, regenerate
-# tracked catalogs so PRs into main are not blocked by stale generated files.
+# checked locale data and distribution artifacts stay aligned for PRs into main.
 # VCS credentials stay in GitHub Actions / Weblate secrets only.
 
 on:
@@ -52,19 +52,25 @@ jobs:
         run: |
           pnpm run i18n:gen-editor
           pnpm run i18n:gen-runtime
+          pnpm run bundle
 
       - name: Commit regenerated artifacts if needed
+        shell: bash
         run: |
-          if git diff --quiet -- nodalia-editor-ui.js nodalia-i18n.js; then
+          artifacts=(
+            src/shared/editor-i18n-data.ts
+            src/shared/runtime-i18n-data.ts
+            nodalia-editor-ui.js
+            nodalia-i18n.js
+            nodalia-cards.js
+            nodalia-cards.manifest.js
+          )
+          if git diff --quiet -- "${artifacts[@]}"; then
             echo "Generated i18n artifacts already current."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add nodalia-editor-ui.js nodalia-i18n.js
-          git commit -m "$(cat <<'EOF'
-          chore(i18n): regenerate catalogs after Weblate sync
-
-          EOF
-          )"
+          git add -- "${artifacts[@]}"
+          git commit -m "chore(i18n): rebuild checked catalogs and distribution after Weblate sync"
           git push

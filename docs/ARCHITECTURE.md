@@ -213,44 +213,18 @@ Do not edit generated Climate, Media Player, Light, Fan, Humidifier, Cover, Alar
 Treat existing tests as the behavior specification. Prefer adding a behavioral
 test before removing a source-regex check.
 
-## Target architecture
+## Source ownership in version 3
 
-```text
-src/
-  core/
-    types/           HA, actions, Engine, utils (started)
-    config/          merge, compact, safe paths (still nodalia-utils.js)
-    actions/         shared Lovelace action executor (not yet)
-    home-assistant/  service / webhook wrappers (not yet)
-    i18n/            still nodalia-i18n.js
-    styles/          tokens / contrast (still bubble-contrast.js)
-  cards/<name>/
-    index.ts         registration
-    <name>-card.ts   HTMLElement orchestration
-    <name>-config.ts defaults, normalize, migrations
-    <name>-model.ts  pure state projection
-    <name>-actions.ts service calls
-    <name>-editor.ts visual editor
-  entrypoints/       future HACS/standalone entries
-```
+The migration is complete: all 25 card views, configuration modules, helpers,
+visual editors and shared runtime entries are checked. Source organization follows
+actual responsibilities rather than a prescribed extra directory hierarchy.
 
-Do not invent extra layers just to fill this tree. Split by responsibility
-when a file is large *and* mixed.
-
-## Completed migration stages
-
-1. **Infrastructure (this preview)** — `tsconfig.json`, ESLint, esbuild TS,
-   `src/`, `pnpm run typecheck` / `lint` in `validate`.
-2. **Shared core** — move utils/backend/render-signature/bubble-contrast into
-   `src/core/` with window adapters at the bundle edge.
-3. **Climate pilot (this preview)** — split Climate; keep Lovelace behavior.
-4. **Remaining large cards** — checked views, configuration, helpers and editors.
-5. **Smaller cards** — checked views, configuration, helpers and editors.
-6. **Cleanup** — zero unchecked modules or import cycles; generated runtime
-   adapters, guarded data boundaries and behavioral lifecycle regressions.
-
-ESLint applies typed promise rules to every `src/**/*.ts` module, without card
-exclusions. New `any`, `@ts-nocheck` and `@ts-ignore` shortcuts are rejected.
+- `src/core/` owns shared HA/action types and the optional Engine protocol.
+- `src/shared/` owns reusable runtime/editor/config/color/geometry helpers.
+- `src/cards/<name>/` owns each card, editor, normalization and domain models.
+- Static component CSS is colocated and embedded by the build's whitespace-only
+  styles plugin, without an additional Home Assistant resource request.
+- Generated root JS retains existing standalone/global APIs.
 
 ## Build pipeline
 
@@ -265,18 +239,19 @@ distribution syntax, translations, build and unit tests. `pnpm validate` adds th
 full Playwright suite. CI also rejects generated artifact drift and validates
 Chromium, Firefox, WebKit and iPhone WebKit before release publication.
 
-## Card architecture (Climate pilot)
+## Card architecture (Climate)
 
 ```text
 climate-types.ts       Config, schedule and public API types
 climate-constants.ts   Tags, versions, dial/schedule numeric constants
 climate-runtime.ts     Explicit window.NodaliaUtils adapters
-climate-config.ts      DEFAULT_CONFIG, migrations, normalizeConfig
+climate-config.ts      Config normalization and migrations
+climate-defaults.ts    Checked defaults without config/helper import cycles
 climate-model.ts       Temperature/HVAC/display helpers
 climate-dial.ts        Dial geometry and pointer conversion
 climate-schedule.ts    Schedule parse/storage/timeline/serialization
-climate-card.ts        Web component lifecycle and render (still large)
-climate-editor.ts      Visual editor (still large)
+climate-card.ts        Web component lifecycle and render
+climate-editor.ts      Visual editor
 index.ts               Custom element registration + window.__NODALIA_CLIMATE__
 standalone.ts          Standalone entry; uses the same registered editor as HACS
 ```
@@ -337,176 +312,36 @@ Split large controllers further only when a distinct responsibility benefits fro
 its own module. Prefer behavioral regressions to source-format assertions and
 reuse direct shared imports while retaining public standalone/global APIs.
 
-See `docs/REFACTOR_ALPHA47.md` for the earlier JS-layer helper centralization.
-
-## Historical checkpoint — 2026-09-30
-
-This checkpoint precedes the completed migration. Its debt counts below describe
-that date; the current zero-debt inventory is described above.
-
-The build-time source inventory is `src/cards/registry.json` (25 cards, including
-Lock). Build and architecture tests consume it; registration still belongs to each
-card's `index.ts` so lazy custom-element behavior and public tags remain stable.
-`package.json.version` feeds generated `src/version.ts`; per-card constants
-re-export it rather than storing independent versions.
-
-Camera stream rules, Room Summary projection and render signatures now have
-checked TypeScript source with small compatibility entrypoints that retain the
-published `window.Nodalia*` APIs and root JS filenames. Pure modules do not mutate
-browser globals; their runtime adapters own that boundary. Existing consumers
-can migrate to imports without breaking users' standalone resources.
-
-Six config/helper cycles were removed through checked defaults and normalization modules.
-Do not place defaults in modules that import their own normalizers.
-Notifications normalization now lives below the config and presentation helpers;
-no runtime import cycles remain.
-4 legacy modules still suppress typechecking; see `scripts/type-debt.json`.
-**The full TypeScript migration is not complete.** Checked modules and extracted
-contracts must grow without adding suppressions or casts to hide errors. The
-architecture guard prevents new unchecked files and new runtime cycles.
+## Lifecycle and presentation contracts
 
 Room Summary parking deliberately disconnects embedded cards; their disconnect
-callbacks release streams/timers/listeners. Camera's body portal owns listeners
-on its shadow root and removes them from that same root. Preserve these ownership
-boundaries and the existing reconnect/portal browser regressions.
+callbacks release streams, timers and listeners. Configuration, HA connection or
+user changes retire connected and parked children. Ordinary updates preserve child
+identity and propagate the current HA context. Lock entities use native Lock Card;
+media players remain on the main Summary screen.
 
-Media Player shares palette sampling and transport styling with Navigation.
-Transport uses equal side columns so auxiliary controls cannot shift the center
-capsule. Cached palettes apply synchronously; sampling requests are coalesced,
-cache sizes bounded, and color transitions do not animate on reconstruction.
-An unseen artwork still needs network/image decoding; do not promise zero network
-latency or hide a failed cover request with an opaque fallback.
+Camera body portals own listeners on their shadow roots and remove them from that
+same root. Pending stream/image/prefetch work is generation-owned. Notifications
+forecast/calendar/Engine work likewise rejects results from retired contexts;
+empty native forecasts remain authoritative and failure retries are bounded.
 
-See [audit](TECHNICAL_AUDIT.md), [adding cards](adding-a-card.md),
-[testing](testing.md) and [releasing](releasing.md).
+Media Player and Navigation share artwork sampling, bounded caches and transport
+styles. Equal side columns keep the transport capsule centered independently of
+auxiliary controls. Cached colors apply synchronously. New covers and tint commit
+together; first unseen covers still require network transfer and decoding. Media
+entrance moves cover and controls together without fading a controls-only ancestor,
+preserving backdrop reflection throughout the animation.
 
-Scenes configuration and helpers are now checked without suppression, including
-normalized row contracts, CSS input boundaries and dashboard scroll snapshots.
+Climate and Advance Vacuum command queues, persistence, schedule/map gestures and
+animation fallbacks belong to their originating configuration and HA context.
+Pointer cancellation restores drafts without issuing commands. Keyboard focus and
+unfinished native composer fields survive ordinary updates.
 
-Editor color conversion now lives in checked `src/shared/editor-color.ts`. Twenty
-legacy helper modules re-export its functions for existing callers; Lock uses it
-directly. The model distinguishes RGB channels from CSS Color 4 sRGB channels,
-retains alpha and delegates wider-gamut conversion to the browser. Card-specific
-color fallback policies remain colocated with their helpers. Fan/Humidifier share
-checked control action/style normalization; Cover reuses the style projection.
+Shared editor color conversion retains alpha and distinguishes byte RGB from CSS
+Color 4 sRGB channels; wider-gamut conversion uses the browser. Theme values are
+resolved on use and fixed-color probes have a bounded cache. Vacuum status chips
+use constrained text spans with ellipsis and full title text; reported states and
+error sensors share localized `charger_disconnected` labels.
 
-Vacuum configuration and helper ownership/mode-label functions now pass strict
-checking. Reported states and error sensors share localized
-`charger_disconnected` labels. Status chips constrain both their flex row and a
-dedicated ellipsis span; full text is retained in the title.
-
-Fan, Humidifier and Cover helpers are checked. Their identical slider/dial pointer
-math lives in `src/shared/device-control-geometry.ts` with explicit DOM, rectangle
-and range contracts. Distinct unavailable policies and device icon rules remain
-local. The shared model prevents NaN markers from malformed values and retains
-quantized steps, cached drag geometry, center dead zones and bottom arc gaps.
-
-Alarm Panel and Person config/helpers are checked, as are Room Summary's editor
-list/path helpers. Stub entity selection and size parsing have six real card
-consumers in `src/shared/editor-entity-helpers.ts`. Optional standalone utils
-embedding consumes the registry too, including Lock; its embed/strip round trip
-is tested for every artifact.
-
-Light configuration and helpers are checked. Its quick brightness, preset colors,
-animation bounds, legacy inactive tint and collapsed aliases retain existing YAML
-behavior. RGB inputs require three finite channels; editor stubs and slider math
-reuse the checked shared modules. Kelvin/mired conversion and gradient direction
-remain domain-specific.
-
-
-Fav and Insignia configuration/helpers are checked without suppression, sharing
-only identical stub selection, size parsing and CSS projection. Their distinct
-domain icon policies and legacy tint/action semantics remain separate. Unknown
-YAML branches are narrowed before reading; invalid nested styles no longer crash
-configuration. Insignia still sanitizes CSS at rendering, preserving stored YAML.
-
-
-The HACS build maps every generated support runtime back to its canonical TS
-entry using `RUNTIME_ENTRIES`, as it does for card entries through the registry.
-This lets support and card code share modules such as CSS color parsing instead
-of compiling independent copies. Standalone support filenames remain public.
-Theme-dependent CSS values are resolved on every use; fixed-color probe results
-have a bounded 256-entry cache. Temporary probes are removed in a finally block.
-
-
-Weather, Circular Gauge and News configuration now passes strict checking and
-typed lint. Weather retains its two allowed actions; Gauge keeps its numeric or
-string bounds and optional foreground tint; News preserves source aliases,
-layout/filter/history semantics. All three use the checked CSS projection and
-retain unknown root extension fields. Their helpers, views and editors are also checked.
-
-### Component styles
-
-Calendar's native composer CSS lives alongside its view in
-`src/cards/calendar/calendar-composer.css`. Both distribution builders embed CSS
-imports as strings and remove whitespace at build time. Declarations, selector
-order, identifiers and browser prefixes are retained; no extra CSS resource is
-loaded by Home Assistant. Dynamic title sizing uses an inherited custom property.
-The source remains readable and browser tests check native input/select sizing.
-
-Graph hover/tooltip CSS is likewise colocated in `src/cards/graph/graph-hover.css`
-and embedded as a compact string by the same build plugin. Its view is checked
-with actual numeric/history, native input and owned request/frame contracts.
-
-Camera's complete view now uses checked HA/config/native DOM and player
-contracts. Each stream mount, image view and Frigate prefetch owns its generation;
-configuration, connection/user changes and detach invalidate pending callbacks
-and cancel owned retries. Camera expanded CSS is embedded without an auxiliary
-request. Summary detection walks shadow hosts so its body portal actually opens
-for embedded cameras. Standalone APIs and resource filenames remain unchanged.
-
-Room Summary's complete view is checked. Config/HA user/connection changes clear
-connected and parked embedded cards; ordinary updates retain their identity and
-pass current HA through unchanged parent signatures. Native parent action focus
-survives header/rail/cover refreshes. Readable metric CSS is embedded with the
-same whitespace-only plugin; no additional browser resource is required.
-
-
-Power Flow's full view is checked with nullable source readings, flow geometry and
-actual HA/native SVG contracts. Split readings distinguish unconfigured components
-from configured unavailable sensors. Owned observer, frame, press and entrance work
-is released across view lifetimes; native keyboard action/modal focus is retained.
-The unused simple rail design and its 45 exclusive style rules have been removed;
-compact/full presentation and both distribution size budgets remain unchanged.
-
-
-Navigation's complete view uses guarded route/action/media-node records and native
-DOM/HA contracts. Pending browser, palette and layout work belongs to its view
-generation; native dialog focus survives refreshes. Shared modal Tab traversal
-reads the dialog shadow root and advances through every actual focusable control
-on Safari as well as Chromium and Firefox.
-
-Notifications now checks its view contracts too. Calendar/forecast batches, Engine
-profile/inbox/dismissal work, legacy sync and foreground drains capture their HA
-context and reject retired results. Empty native forecasts are authoritative,
-and query failures use bounded retries. Native focus is preserved across updates.
-Static motion CSS is embedded with whitespace-only compaction, without another
-browser resource. Browser-local dismissal/mobile keys use the configured prefix
-plus server/user identity; explicit shared helpers and Engine profiles retain
-their shared semantics.
-
-Media Player's complete view now uses actual normalized config, HA/browser-node and
-native DOM contracts. Artwork preloads, browser requests, TV volume steps, resize
-work and progress gestures belong to their view context. Reconfiguration or HA
-connection/auth/user changes retire that work and clear private cover history.
-Native transport/dialog focus survives refreshes, paused progress updates in place,
-and seek supports keyboard controls and cancels when the track changes. Browser
-and presentation CSS is embedded with whitespace-only compaction; declarations
-and order are retained without additional HA resources.
-
-Advance Vacuum now checks actual map, room, dock, session and native gesture
-contracts. Commands, shared persistence, room-resume callbacks, timers and image
-loads belong to their originating HA/configuration context. A persistent map
-surface retains native pointer capture during preview updates; cancellation
-restores a moved zone without issuing commands or saving its preview. Local
-session keys include server, user and robot; explicit shared helpers remain shared.
-Static map/motion CSS is embedded without changing declarations or adding resources.
-
-Climate's complete view uses actual HA/configuration, Engine, schedule and native
-DOM/gesture contracts. Owned generations retire deferred HVAC wake, setpoint
-queues, Engine reads/overrides and schedule writes across context changes.
-Pointer/touch cancellation restores original dial and schedule previews without
-commands. The SVG dial track participates in native dragging as well as its
-HTML thumb. Native action focus and unfinished composer fields survive refreshes,
-including Safari. Timer/frame ownership extends to animation fallbacks; no shared
-helper or schedule codec changes are required.
+See [current audit](TECHNICAL_AUDIT.md), [testing](testing.md),
+[performance](performance-audit.md) and [releasing](releasing.md).

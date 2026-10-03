@@ -1,35 +1,25 @@
-Visual editor i18n
-==============================
+Visual editor i18n — Nodalia Cards 3
+===================================
 
-Weblate (self-hosted community translations): https://translate.getnodalia.com
+Canonical source: i18n/editor/<lang>.json.
+English uses stable ed.<card>.<slug> keys; all supported locale files must
+contain the same keys and preserve placeholders/code spans.
+
+Build:
+  pnpm i18n:validate-editor
+  pnpm i18n:gen-editor
+  pnpm i18n:audit
+  pnpm bundle
+
+The generator writes src/shared/editor-i18n-data.ts and compiles the checked
+lookup in src/shared/editor-i18n-runtime.ts into nodalia-editor-ui.js.
+All 25 editors use the same lazy catalog/legacy row lookup. Non-ed.* labels
+still use supported generator row inputs; retired catalog shards are not needed.
+Commit locale JSON, generated TS, root lookup artifacts, bundle and manifest.
+
+New languages require updating generator/runtime/audit language inventories,
+translating both runtime and editor catalogs, and registering Weblate components.
+See ../../docs/TRANSLATIONS.md for complete instructions.
+
+Community translations: https://translate.getnodalia.com
 Operator docs: ../../docs/weblate/README.md
-
-Stable keys:  ed.<card>.<slug>   (example: ed.calendar.visible_range)
-
-Source files (per language, same keys in every file):
-  i18n/editor/en.json   — canonical English (required)
-  i18n/editor/es.json   — Spanish
-  i18n/editor/zh.json   — Chinese
-  i18n/editor/de.json, fr.json, it.json, nl.json, no.json, pt.json, ru.json, el.json, ro.json — same keys (validated)
-  Any editor catalog language without a file still merges English at build time.
-
-In card editors, use the same helper as before:
-  this._editorLabel("ed.calendar.visible_range")
-
-Build pipeline:
-  1) node scripts/validate-editor-i18n.mjs   — all locale files must list the same keys as en.json
-  2) node scripts/gen-editor-ui.mjs          — generates editor-i18n-data.ts and compiles checked editor lookup
-  3) pnpm run bundle
-
-Adding a new language (e.g. Japanese):
-  - Add "ja" to EDITOR_CATALOG_LANGS and EDITOR_ROW_LANGS in scripts/gen-editor-ui.mjs and the editor lookup language list in src/shared/editor-i18n-runtime.ts.
-  - Copy i18n/runtime/en.json to i18n/runtime/ja.json and translate values; update localeTag() in src/shared/runtime-i18n-runtime.ts if needed.
-  - Copy i18n/editor/en.json to i18n/editor/ja.json and translate values.
-  - Register the language in Weblate (editor + runtime components).
-  - Run validate + gen-editor + bundle.
-
-Legacy: strings without the "ed." prefix still use the generated ROWS table (Spanish keys → locales) until migrated card-by-card.
-
-All 25 visual editors use checked TypeScript and share the lazy catalog/legacy row lookup.
-
-Catalog shards (merged by scripts/merge-editor-catalog-additions.mjs): scripts/data/editor-catalog-*.json

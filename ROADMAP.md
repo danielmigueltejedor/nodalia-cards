@@ -42,357 +42,49 @@ The project currently includes:
 
 ---
 
-# 🎯 Current focus (`2.2.x` maintenance)
-
-The current maintenance stage focuses on:
-
-- Regression-free mobile and desktop behavior on stable **`2.2.10`**
-- Lightweight single-bundle HACS installs and updates
-- Security and service-action policy consistency
-- Camera and notification delivery resilience
-- Bundle startup and render performance
-- Documentation and release automation parity
-- Ongoing cross-browser and Home Assistant compatibility testing
-- i18n and editor maturity (Phase 2)
-
-The goal is no longer “making cards exist”.
-
-The goal is making the entire system feel:
-- coherent
-- fluid
-- reliable
-- scalable
-- premium
-
----
-
-# ✅ Phase 1.5 — 2.2 stabilization (completed)
-
-Completed in stable **`2.2.0`**: unified device layouts, interactive circular dials, Entity battery/network overviews, notification failover hardening and single-bundle HACS publishing validated across Node and browser CI.
-
----
-
-# ✅ Phase 1 — 2.0 stabilization (completed)
-
-Completed in stable `2.0.0`: the shared architecture from the prerelease cycle was validated across the full automated, browser, accessibility, HACS and release pipelines.
-
-## Focus areas
-
-### Stability
-- Fix edge-case bugs
-- Improve HA compatibility
-- Improve mobile behavior
-- Reduce rendering edge cases
-- Improve persistence resilience
-
-### Performance
-- Reduce unnecessary renders
-- Improve animation efficiency
-- Reduce layout thrashing
-- Improve large-dashboard performance
-- Improve editor responsiveness
-
-### UX polish
-- Better transitions
-- More consistent popup behavior
-- Better compact layouts
-- Better tablet responsiveness
-- More coherent interaction language
-
-### Visual consistency
-- Continue unifying:
-  - spacing
-  - shadows
-  - chips
-  - tint systems
-  - buttons
-  - panels
-  - popups
-  - hover states
-  - animations
-
----
-
-# 🌍 Phase 2 — i18n and editor maturity
-
-Goal: make Nodalia feel truly international and easier to configure.
-
-## Planned work
-
-### Translation improvements
-- Continue refining existing locales via self-hosted Weblate
-  ([translate.getnodalia.com](https://translate.getnodalia.com))
-- Improve machine-translated strings (optional LibreTranslate suggestions)
-- Add missing editor translations
-- Improve runtime translation consistency
-- Expand translation coverage across all cards
-- Keep `i18n/**` JSON in Git as the build source of truth
-
-### Editor improvements
-- More native Home Assistant selectors
-- Better grouped sections
-- Cleaner advanced settings
-- Better mobile editing experience
-- Better validation feedback
-- More discoverable options
-
-### Documentation
-- More examples
-- Better screenshots
-- Per-card documentation
-- Migration guides
-- Troubleshooting documentation
-
----
-
-# 🎨 Phase 3 — Visual system refinement
-
-Goal: continue evolving Nodalia into a truly cohesive UI framework.
-
-## Planned work
-
-### Shared design system
-- Shared surface tokens
-- Shared motion system
-- Shared popup framework
-- Shared chip system
-- Shared button styles
-- Shared utility components
-
-### Theme integration
-- Better light theme behavior
-- Better dark theme behavior
-- Better dynamic tinting
-- Improved accessibility contrast
-- Improved typography scaling
-
-### Motion and interactions
-- More natural animations
-- Better reduced-motion handling
-- More tactile interactions
-- Better layered transitions
-- More fluid mobile interactions
-
----
-
-# 📊 Phase 4 — Major card redesigns
-
-Goal: audit mature cards against the current shared design tokens and interaction model, then redesign only where a material consistency or usability gap remains.
-
-> The items in this phase are directional ideas rather than committed release scope. Several original goals have already evolved during the `1.x` and `2.0.0` cycles and should be revalidated before implementation.
-
----
-
-## 📈 Graph Card redesign
-
-### Goals
-- Cleaner visual hierarchy
-- Better readability
-- Better tooltip system
-- Better multi-series rendering
-- More modern chart aesthetics
-
-### Planned improvements
-- Better interpolation
-- Better legends
-- Better mobile scaling
-- Better hover behavior
-- Better animation handling
-- Weather-card-inspired rendering style
-
----
-
-## ⚡ Power Flow Card redesign
-
-### Goals
-- Better handling of complex setups
-- More adaptive layouts
-- Cleaner energy visualization
-
-### Planned improvements
-Support improvements for:
-- Grid
-- Solar
-- Battery
-- Water
-- Gas
-- EV charging
-- Multiple consumption sources
-
-Additional goals:
-- Better node positioning
-- Better flow animations
-- Cleaner compact mode
-- Better responsive layouts
-
----
-
-## 🧭 Navigation Bar redesign
-
-### Goals
-- Feel more app-like
-- Improve visual integration
-- Improve mobile ergonomics
-
-### Planned improvements
-- Better blur/background handling
-- Better floating behavior
-- Better active indicators
-- Improved animations
-- Better responsive scaling
-
----
-
-## 🤖 Advanced Vacuum evolution
-
-### Goals
-Push the vacuum experience closer to a native Roborock-like experience directly inside Home Assistant.
-
-### Planned improvements
-- Better map interactions
-- Better room editing
-- Better zone workflows
-- Better goto handling
-- More advanced routines
-- Better multi-floor support
-- More resilient persistence
-- Better map rendering performance
-- Better mobile ergonomics
-
----
-
-# 🔔 Notifications ecosystem expansion
-
-The Notifications Card is expected to become one of the central systems in Nodalia.
-
-## Planned improvements
-
-### Smart recommendations
-- Better contextual logic
-- Presence-aware recommendations
-- Multi-device awareness
-- Climate intelligence
-- Energy-aware recommendations
-
-### Mobile integrations
-- Better actionable notifications
-- Better grouping
-- Better synchronization
-- Better persistent notification handling
-
-### Visual improvements
-- More compact modes
-- Better stack animations
-- Better filtering/grouping
-- More notification layouts
-
----
-
-# 🗓️ Calendar ecosystem expansion
-
-The Calendar Card introduced in 1.0.0 will continue evolving.
-
-## Planned improvements
-
-### Native calendar workflows
-- Better recurrence support
-- Better event editing
-- Better drag/drop interactions
-- Better month layouts
-
-### Smart integrations
-- Weather-aware events
-- Presence-aware reminders
-- Smart notification integration
-- Better timeline experiences
-
-### UI improvements
-- Better tablet layouts
-- Better compact modes
-- Better animation consistency
-- More customizable views
-
----
-
-# 🧩 New cards planned
-
-The ecosystem will continue growing slowly and carefully.
-
-Priority is quality and consistency over quantity.
-
----
-
-## 🪧 Section / Header Card
-
-A polished replacement for Home Assistant heading cards.
-
-### Possible features
-- Subtitle support
-- Action buttons
-- Better spacing control
-- Better visual hierarchy
-- Nodalia design consistency
-
----
-
-## 📦 More ecosystem cards
-
-Potential future additions:
-- Timeline card
-- Dashboard overview card
-- Statistics card
-- Device health card
-- Smart recommendation panels
-- Automation status cards
-
----
-
-# 🛡️ Long-term goals
-
-## Nodalia Cards should become:
-
-- Stable
-- Fast
-- Cohesive
-- Beautiful
-- Easy to configure
-- Pleasant to use daily
-- Consistent across all cards
-- Reliable for real homes
-
-The long-term vision is not just a set of custom cards.
-
-It is building a complete frontend experience layer for Home Assistant.
-
----
-
-# 🚀 Release workflow
-
-## Stable (`main`)
-Production-ready releases.
-
-## Beta (`beta`)
-Feature-preview releases for advanced users.
-
-## Alpha (`alpha`)
-Experimental builds with rapid iteration.
-
-## Release candidate (`vX.Y.Z-rc.N`)
-Feature-frozen builds used for final regression, compatibility and release checks. RC maturity is represented by the Git tag; a candidate may be cut from a staging branch once its exact commit is validated.
-
-New work normally progresses through `alpha`, then `beta` when broader testing is useful, then one or more RC tags before promotion to `main` as a stable release. Small, low-risk fixes may skip an intermediate branch, but never the version, bundle and release validation gates.
-
----
-
-# 🤝 Community feedback
-
-Community feedback remains one of the most important parts of the project.
-
-Real-world dashboard usage continues shaping:
-- layouts
-- animations
-- interactions
-- mobile ergonomics
-- editor UX
-- smart systems
-- overall polish
+# 🎯 Current focus (`3.0.x` maintenance)
+
+Prepare the completed version 3 migration for a stable release:
+
+- Keep all 25 cards, editors and runtime sources strictly checked with zero
+  suppression and import-cycle debt.
+- Preserve existing YAML, standalone artifacts and single-bundle HACS installs.
+- Verify desktop/mobile artwork tint, animations, native focus and editor behavior.
+- Keep source generators, Weblate sync, documentation and release automation aligned.
+- Validate the exact release commit across static and four-browser CI gates.
+- Record remaining device/integration issues honestly before stable promotion.
+
+The current package remains a preview until an explicitly prepared stable version
+passes validation and its tag is published. See [releasing](docs/releasing.md).
+
+## Completed for version 3
+
+- Canonical checked TypeScript for every card, editor and shared runtime.
+- One card registry, generated version declarations and standalone compatibility.
+- Typed lint across all source modules and empty enforced debt inventories.
+- Shared CI/release gates, curated notes and release integrity metadata.
+- Consistent Lock editor, centered icon chips and native Lock in Summary.
+- Centered translucent media transport and artwork-aware capsules/selectors.
+- Vacuum state localization and constrained status chips.
+- Context-owned asynchronous work and native focus/gesture regressions.
+- Retired migration scripts, duplicate catalogs and historical worklogs removed;
+  current contributor, architecture and audit guides replace them.
+
+The stable 2.x and version 3 preview history remains in
+[CHANGELOG.md](CHANGELOG.md) and [CHANGELOG-PRERELEASES.md](CHANGELOG-PRERELEASES.md).
+
+## Future work
+
+These are directions to revalidate against real dashboard feedback, not committed
+version 3 release scope:
+
+- Refine existing translations and compact editor hints through Weblate.
+- Improve chart, calendar and notification workflows where a reproducible gap exists.
+- Profile large dashboards on actual desktop and mobile devices before changing
+  rendering, CSS containment or animation strategies.
+- Extend shared controls only when consumers have matching behavior.
+- Consider new cards only when they address a distinct Home Assistant use case.
+
+The experimental WYSIWYG layout editor is preserved on
+`future/2.0.0-visual-layout`. It is separate from the version 3 bundle and can be
+reconsidered in a later feature cycle. Its old standalone design plan is retired.

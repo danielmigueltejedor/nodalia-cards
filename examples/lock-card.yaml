@@ -1,0 +1,7 @@
+type: custom:nodalia-lock-card
+entity: lock.front_door
+name: Front Door
+layout: standard
+unlock_action: slider
+show_name: true
+show_state: true

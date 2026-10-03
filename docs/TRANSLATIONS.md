@@ -69,7 +69,7 @@ pnpm run i18n:audit
 
 `src/shared/runtime-i18n-data.ts` contains generated lazy locale factories, with every locale checked against the English tree. Lookup, language resolution and guarded English fallback live in `src/shared/runtime-i18n-runtime.ts`. The complete `nodalia-i18n.js` artifact is compiled from that source; do not edit generated files by hand.
 
-Robot vacuum **error-code labels** live under the `vacuumErrorLabels` object in each locale file (merged with English for codes only translated in some languages).
+Robot vacuum **error-code labels** live under `vacuumErrorLabels` in each locale file, with the same keys in every supported language.
 
 Keys are grouped by card or shared feature, for example:
 
@@ -115,7 +115,7 @@ pnpm run i18n:gen-runtime
 pnpm run bundle
 ```
 
-4. Commit the JSON files, generated `src/shared/runtime-i18n-data.ts` and `nodalia-i18n.js`. Rebuild the bundle before validation.
+4. Commit the JSON files, generated `src/shared/runtime-i18n-data.ts`, `nodalia-i18n.js`, rebuilt `nodalia-cards.js` and `nodalia-cards.manifest.js`.
 
 ## 6. Editing an existing editor language
 
@@ -136,7 +136,7 @@ pnpm run i18n:audit
 pnpm run i18n:gen-editor
 ```
 
-7. Build the bundle before testing a packaged install:
+7. Build the bundle before testing a packaged install. Commit the locale JSON, generated `src/shared/editor-i18n-data.ts`, root editor artifact, bundle and manifest:
 
 ```bash
 pnpm run bundle
@@ -155,9 +155,10 @@ cp i18n/editor/en.json i18n/editor/ja.json
 2. Translate the values in `i18n/editor/ja.json`.
 3. Add `ja` to `EDITOR_CATALOG_LANGS` and `EDITOR_ROW_LANGS` in `scripts/gen-editor-ui.mjs`. Extend the editor lookup language list in `src/shared/editor-i18n-runtime.ts`; the runtime generator discovers locale JSON files automatically.
 4. Copy `i18n/runtime/en.json` to `i18n/runtime/ja.json`, translate it, then extend `src/shared/runtime-i18n-runtime.ts` only where needed: `localeTag()`, `baseLang()` / alias handling in `resolveLanguage`, and any card-specific language lists.
-5. Register the language in Weblate (both `runtime` and `editor` components) so translators can maintain it going forward.
+5. Extend the supported-language inventories in `scripts/translate-all-locale-gaps.mjs`, including translation-service mapping if fill mode is used. Run validators and tests to find any remaining explicit inventories.
+6. Register the language in Weblate (both `runtime` and `editor` components).
 
-6. Run:
+7. Run:
 
 ```bash
 pnpm run i18n:validate-editor
@@ -171,11 +172,11 @@ pnpm test
 
 ## 8. Adding runtime translation keys
 
-Add new keys to **`i18n/runtime/en.json`** first (same nested shape as sibling keys). Mirror the key path in other `i18n/runtime/<lang>.json` files when you have a translation (Weblate will also surface new English strings after the next repository pull).
+Add new keys to **`i18n/runtime/en.json`** first (same nested shape as sibling keys). Mirror the key path with translated values in every supported `i18n/runtime/<lang>.json` file. Weblate also surfaces new English strings after the next repository pull; complete translations before validation and publication.
 
 Then run `pnpm run i18n:validate-runtime`, `pnpm run i18n:audit` and `pnpm run i18n:gen-runtime` so typed locale data and `nodalia-i18n.js` are regenerated. The audit runs fully offline and fails when a locale is missing a key or still contains a suspicious copy of its English source value. Intentional universal terms and true cognates are explicitly allowlisted in the audit script.
 
-English should stay complete: locales with missing branches inherit from English via `deepMergeLocale`.
+English must stay complete. Runtime English fallback is a defensive safeguard; validators still reject missing branches in committed locale files.
 
 Use helper functions already exposed by `window.NodaliaI18n` from cards instead of hardcoding user-visible strings.
 
@@ -230,7 +231,7 @@ Nodalia's `language: auto` follows the Home Assistant profile language. You can 
 - Editing `nodalia-i18n.js` or `src/shared/runtime-i18n-data.ts` by hand. Edit `i18n/runtime/*.json` and run `pnpm run i18n:gen-runtime`; lookup changes belong in `src/shared/runtime-i18n-runtime.ts`.
 - Editing `nodalia-editor-ui.js` or `src/shared/editor-i18n-data.ts` directly. Both are generated. Editor lookup changes belong in `src/shared/editor-i18n-runtime.ts`.
 - Hardcoding user-facing strings inside a card instead of using `window.NodaliaI18n` helpers or `ed.*` keys.
-- Committing Weblate JSON updates without regenerating `nodalia-i18n.js` / `nodalia-editor-ui.js` (CI regenerates and fails the diff check if they drift).
+- Committing Weblate JSON updates without regenerating checked locale data, `nodalia-i18n.js` / `nodalia-editor-ui.js` and the HACS bundle/manifest (CI regenerates and fails the diff check if they drift).
 
 ## 12. Pull request checklist
 
