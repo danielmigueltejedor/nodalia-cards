@@ -85,6 +85,15 @@ export function sanitizeCssValue(value: unknown, fallback: unknown) {
   if ((/[<>;"'{}]/.test(raw) || [...raw].some(character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)) || raw.includes("/*") || raw.includes("*/")) {
     return safeFallback;
   }
+  // Unclosed functions can consume the rest of an interpolated stylesheet.
+  const delimiters:string[]=[];
+  for(const character of raw) {
+    if(character==="(" || character==="[") delimiters.push(character);
+    else if(character===")" || character==="]") {
+      if(delimiters.pop()!==(character===")"?"(":"[")) return safeFallback;
+    }
+  }
+  if(delimiters.length) return safeFallback;
   return raw;
 }
 

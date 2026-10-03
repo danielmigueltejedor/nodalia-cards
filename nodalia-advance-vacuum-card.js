@@ -518,6 +518,14 @@
     if (/[<>;"'{}]/.test(raw) || [...raw].some((character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127) || raw.includes("/*") || raw.includes("*/")) {
       return safeFallback;
     }
+    const delimiters = [];
+    for (const character of raw) {
+      if (character === "(" || character === "[") delimiters.push(character);
+      else if (character === ")" || character === "]") {
+        if (delimiters.pop() !== (character === ")" ? "(" : "[")) return safeFallback;
+      }
+    }
+    if (delimiters.length) return safeFallback;
     return raw;
   }
   function getSafeStyles(styles = DEFAULT_CONFIG.styles) {
@@ -1277,13 +1285,13 @@
   var advance_vacuum_static_map_0_default = ".advance-vacuum-card__goto-marker{height:38px;width:38px}.advance-vacuum-card__room-list{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%}.advance-vacuum-card__room-chip{align-items:center;background:var(--av-surface);border:1px solid var(--av-border);border-radius:999px;box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-float-subtle);color:var(--secondary-text-color);cursor:pointer;display:inline-flex;gap:8px;min-height:36px;padding:0 14px;touch-action:manipulation;transition:background 180ms ease,border-color 180ms ease,box-shadow 180ms ease,color 180ms ease,transform 180ms cubic-bezier(0.22,0.84,0.26,1)}.advance-vacuum-card__room-chip.is-selected{background:var(--av-selected-bg);border-color:var(--av-selected-border);box-shadow:inset 0 1px 0 var(--av-selected-inset),var(--av-selected-glow);color:var(--primary-text-color)}.advance-vacuum-card__room-chip:not(.is-readonly):not(.is-selected):hover{background:var(--av-accent-hover);border-color:var(--av-border);box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-accent-hover-shadow)}.advance-vacuum-card__room-chip ha-icon{--mdc-icon-size: 16px}.advance-vacuum-card__room-chip span{font-size:12px;font-weight:600}.advance-vacuum-card__controls{align-items:center;display:grid;gap:10px;justify-items:center;width:100%}.advance-vacuum-card__controls-row{align-items:center;column-gap:14px;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);width:100%}";
 
   // src/cards/advance-vacuum/advance-vacuum-map-surface.css
-  var advance_vacuum_map_surface_default = ".advance-vacuum-card__map-canvas{height:100%;inset:0;position:absolute;transform-origin:top left;width:100%}.advance-vacuum-card__map-image{display:block;height:100%;inset:0;object-fit:cover;opacity:1;position:absolute;transition:opacity 220ms ease-out;width:100%;z-index:0}.advance-vacuum-card__map-image[data-map-image-previous=true]{z-index:0}.advance-vacuum-card__map-image[data-map-image]{z-index:1}.advance-vacuum-card__map-image.is-pending,.advance-vacuum-card__map-image.is-fading-out{opacity:0}.advance-vacuum-card__map-room-dim,.advance-vacuum-card__room-highlight-layer,.advance-vacuum-card__map-svg,.advance-vacuum-card__map-markers,.advance-vacuum-card__map-overlays{inset:0;position:absolute}.advance-vacuum-card__map-room-dim{background:rgba(8,12,20,0.5);pointer-events:none;z-index:1}.advance-vacuum-card__room-highlight-layer{pointer-events:none;z-index:2}.advance-vacuum-card__room-highlight-image{display:block;height:100%;inset:0;object-fit:cover;pointer-events:none;position:absolute;width:100%}.advance-vacuum-card__map-svg{height:100%;pointer-events:none;width:100%;z-index:3}.advance-vacuum-card__map-markers{pointer-events:none}.advance-vacuum-card__map-overlays{pointer-events:none;z-index:4}.advance-vacuum-card__zone-hitbox,.advance-vacuum-card__zone-handle,.advance-vacuum-card__map-tool{appearance:none;background:none;border:none;color:inherit;cursor:pointer;font:inherit;margin:0;padding:0}.advance-vacuum-card__zone-hitbox{background:rgba(255,255,255,0.01);border:2px dashed transparent;border-radius:16px;pointer-events:auto;position:absolute;touch-action:none;z-index:2}.advance-vacuum-card__zone-handle{align-items:center;background:var(--av-surface-raised);border:1px solid var(--av-border-strong);border-radius:999px;box-shadow:inset 0 1px 0 var(--av-inset),var(--av-float);color:var(--primary-text-color);display:inline-flex;height:34px;justify-content:center;pointer-events:auto;position:absolute;touch-action:none;transform:translate(-50%,-50%);width:34px;z-index:3}.advance-vacuum-card__zone-handle[data-zone-handle-action=delete]{border-color:rgba(255,130,130,0.32);color:#ffb3b3}.advance-vacuum-card__zone-handle ha-icon,.advance-vacuum-card__map-tool ha-icon{--mdc-icon-size: 16px}.advance-vacuum-card__map-tools{align-items:flex-start;display:flex;gap:8px;justify-content:space-between;left:12px;pointer-events:none;position:absolute;right:12px;top:12px;z-index:4}.advance-vacuum-card__map-tools-group{display:flex;gap:8px}.advance-vacuum-card__map-tools-group--center{left:50%;pointer-events:none;position:absolute;top:0;transform:translateX(-50%)}.advance-vacuum-card__map-tools-group--right{justify-content:flex-end}.advance-vacuum-card__map-tool--back{padding:0;width:44px}.advance-vacuum-card__map-tool--status{padding:0;pointer-events:none;width:44px}.advance-vacuum-card__map-tool--status-charging{color:#f6b73c}";
+  var advance_vacuum_map_surface_default = ".advance-vacuum-card__map-canvas{height:100%;inset:0;position:absolute;transform-origin:top left;width:100%}.is-pinching .advance-vacuum-card__map-canvas{will-change:transform}.advance-vacuum-card__map-image{display:block;height:100%;inset:0;object-fit:cover;opacity:1;position:absolute;transition:opacity 220ms ease-out;width:100%;z-index:0}.advance-vacuum-card__map-image[data-map-image-previous=true]{z-index:0}.advance-vacuum-card__map-image[data-map-image]{z-index:1}.advance-vacuum-card__map-image.is-pending,.advance-vacuum-card__map-image.is-fading-out{opacity:0}.advance-vacuum-card__map-room-dim,.advance-vacuum-card__room-highlight-layer,.advance-vacuum-card__map-svg,.advance-vacuum-card__map-markers,.advance-vacuum-card__map-overlays{inset:0;position:absolute}.advance-vacuum-card__map-room-dim{background:rgba(8,12,20,0.5);pointer-events:none;z-index:1}.advance-vacuum-card__room-highlight-layer{pointer-events:none;z-index:2}.advance-vacuum-card__room-highlight-image{display:block;height:100%;inset:0;object-fit:cover;pointer-events:none;position:absolute;width:100%}.advance-vacuum-card__map-svg{height:100%;pointer-events:none;width:100%;z-index:3}.advance-vacuum-card__map-markers{pointer-events:none}.advance-vacuum-card__map-overlays{pointer-events:none;z-index:4}.advance-vacuum-card__zone-hitbox,.advance-vacuum-card__zone-handle,.advance-vacuum-card__map-tool{appearance:none;background:none;border:none;color:inherit;cursor:pointer;font:inherit;margin:0;padding:0}.advance-vacuum-card__zone-hitbox{background:rgba(255,255,255,0.01);border:2px dashed transparent;border-radius:16px;pointer-events:auto;position:absolute;touch-action:none;z-index:2}.advance-vacuum-card__zone-handle{align-items:center;background:var(--av-surface-raised);border:1px solid var(--av-border-strong);border-radius:999px;box-shadow:inset 0 1px 0 var(--av-inset),var(--av-float);color:var(--primary-text-color);display:inline-flex;height:34px;justify-content:center;pointer-events:auto;position:absolute;touch-action:none;transform:translate(-50%,-50%);width:34px;z-index:3}.advance-vacuum-card__zone-handle[data-zone-handle-action=delete]{border-color:rgba(255,130,130,0.32);color:#ffb3b3}.advance-vacuum-card__zone-handle ha-icon,.advance-vacuum-card__map-tool ha-icon{--mdc-icon-size: 16px}.advance-vacuum-card__map-tools{align-items:flex-start;display:flex;gap:8px;justify-content:space-between;left:12px;pointer-events:none;position:absolute;right:12px;top:12px;z-index:4}.advance-vacuum-card__map-tools-group{display:flex;gap:8px}.advance-vacuum-card__map-tools-group--center{left:50%;pointer-events:none;position:absolute;top:0;transform:translateX(-50%)}.advance-vacuum-card__map-tools-group--right{justify-content:flex-end}.advance-vacuum-card__map-tool--back{padding:0;width:44px}.advance-vacuum-card__map-tool--status{padding:0;pointer-events:none;width:44px}.advance-vacuum-card__map-tool--status-charging{color:#f6b73c}";
 
   // src/cards/advance-vacuum/advance-vacuum-motion.css
   var advance_vacuum_motion_default = ".advance-vacuum-card__selection-chip{align-items:center;background:var(--av-surface);border:1px solid var(--av-border);border-radius:999px;box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-float-subtle);color:var(--secondary-text-color);display:inline-flex;font-size:12px;font-weight:600;gap:8px;min-height:34px;padding:0 12px}.advance-vacuum-card__selection-chip strong{color:var(--primary-text-color)}.advance-vacuum-card__selection-chip:hover{background:var(--av-accent-hover);border-color:var(--av-border);box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-accent-hover-shadow)}.advance-vacuum-card__routines{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));width:100%}.advance-vacuum-card__routine-button{align-items:center;appearance:none;background:var(--av-surface);border:1px solid var(--av-border);border-radius:18px;box-shadow:inset 0 1px 0 var(--av-inset),var(--av-float);color:var(--primary-text-color);cursor:pointer;display:grid;gap:10px;justify-items:center;min-height:118px;padding:16px 14px;text-align:center;transition:transform 180ms cubic-bezier(0.22,0.84,0.26,1),box-shadow 180ms ease,border-color 180ms ease;width:100%}.advance-vacuum-card__routine-button:hover{transform:translateY(-1px);box-shadow:inset 0 1px 0 var(--av-inset),var(--av-float-lift)}.advance-vacuum-card__routine-button.is-disabled{cursor:default;opacity:0.5}.advance-vacuum-card__routine-icon{align-items:center;background:var(--av-accent-tile-bg);border:1px solid var(--av-accent-tile-border);border-radius:999px;box-shadow:inset 0 1px 0 var(--av-accent-tile-inset);display:inline-flex;height:46px;justify-content:center;width:46px}.advance-vacuum-card__routine-icon ha-icon{--mdc-icon-size: 22px}.advance-vacuum-card__routine-label{font-size:12px;font-weight:700;line-height:1.35;text-wrap:balance}@keyframes advance-vacuum-utility-panel-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}@keyframes advance-vacuum-card-enter{0%{opacity:0;transform:translateY(8px) scale(0.992)}100%{opacity:1;transform:translateY(0) scale(1)}}@keyframes advance-vacuum-map-enter{0%{opacity:0;transform:translateY(12px) scale(0.988)}100%{opacity:1;transform:translateY(0) scale(1)}}@keyframes advance-vacuum-footer-enter{0%{opacity:0;transform:translateY(10px)}100%{opacity:1;transform:translateY(0)}}@keyframes advance-vacuum-button-bounce{0%{transform:scale(1)}38%{transform:scale(0.935)}72%{transform:scale(1.035)}100%{transform:scale(1)}}@keyframes advance-vacuum-button-bounce-subtle{0%{transform:scale(1)}40%{transform:scale(0.965)}72%{transform:scale(1.02)}100%{transform:scale(1)}}@keyframes advance-vacuum-icon-sweep{0%,100%{transform:translateX(-3px) rotate(-10deg)}50%{transform:translateX(4px) rotate(12deg)}}@media(prefers-reduced-motion:reduce){.advance-vacuum-card,.advance-vacuum-card *,.advance-vacuum-card__control--active-motion ha-icon{animation:none!important;transition:none!important}}";
 
   // src/cards/advance-vacuum/advance-vacuum-utilities.css
-  var advance_vacuum_utilities_default = ".advance-vacuum-card__control--active-motion ha-icon{animation:advance-vacuum-icon-sweep 1.45s ease-in-out infinite;transform-origin:50% 70%}.advance-vacuum-card__modes{display:flex;justify-content:center;width:100%}.advance-vacuum-card__modes-bubble{background:var(--av-surface);border:1px solid var(--av-border);border-radius:999px;box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-float-subtle);display:inline-flex;flex-wrap:wrap;gap:4px;justify-content:center;max-width:100%;padding:4px}.advance-vacuum-card__mode-button{align-items:center;background:transparent;border:1px solid transparent;border-radius:999px;box-shadow:none;color:var(--secondary-text-color);display:inline-flex;font-size:12px;font-weight:600;gap:8px;min-height:30px;padding:0 11px;transition:background 180ms ease,border-color 180ms ease,box-shadow 180ms ease,color 180ms ease,transform 180ms cubic-bezier(0.2,0.9,0.24,1)}.advance-vacuum-card__mode-button:hover{background:var(--av-accent-hover);box-shadow:var(--av-accent-hover-shadow)}.advance-vacuum-card__mode-button.is-active{background:var(--av-selected-bg);border-color:var(--av-selected-border);box-shadow:inset 0 1px 0 var(--av-selected-inset),var(--av-selected-glow);color:var(--primary-text-color);font-weight:700}.advance-vacuum-card__mode-button ha-icon{--mdc-icon-size: 15px}.advance-vacuum-card__utility-panel{animation:advance-vacuum-utility-panel-in var(--advance-vacuum-card-panel-duration) cubic-bezier(0.22,0.84,0.26,1) forwards;display:grid;gap:10px;justify-items:center;opacity:0;transform:translateY(-6px);transform-origin:top center;width:100%}.advance-vacuum-card__utility-panel-slot{display:flex;justify-content:center;width:100%}.advance-vacuum-card__utility-group{display:grid;gap:8px;justify-items:center;width:100%}.advance-vacuum-card__utility-label{color:var(--secondary-text-color);font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase}.advance-vacuum-card__utility-options{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%}.advance-vacuum-card__utility-options--menu{max-width:100%}.advance-vacuum-card__utility-options--presets{justify-content:center}.advance-vacuum-card__utility-option{align-items:center;appearance:none;background:var(--av-surface);border:1px solid var(--av-border);border-radius:999px;box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-float-subtle);color:var(--primary-text-color);cursor:pointer;display:inline-flex;font:inherit;gap:8px;justify-content:center;margin:0;min-height:34px;padding:0 12px;transition:background 180ms ease,border-color 180ms ease,box-shadow 180ms ease,color 180ms ease,transform 180ms cubic-bezier(0.22,0.84,0.26,1)}.advance-vacuum-card__utility-option.is-active{background:var(--av-selected-bg);border-color:var(--av-selected-border);box-shadow:inset 0 1px 0 var(--av-selected-inset),var(--av-selected-ring),var(--av-selected-glow);color:var(--primary-text-color);font-weight:700}.advance-vacuum-card__utility-option:not(.is-active):hover{background:var(--av-accent-hover);border-color:var(--av-border);box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-accent-hover-shadow)}.advance-vacuum-card__utility-option--menu ha-icon{--mdc-icon-size: 16px}.advance-vacuum-card__utility-field{display:grid;gap:8px;justify-items:center;max-width:340px;width:min(100%,340px)}.advance-vacuum-card__utility-select{appearance:none;background:var(--av-surface);border:1px solid var(--av-border);border-radius:16px;box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-float-subtle);color:var(--primary-text-color);cursor:pointer;font:inherit;min-height:42px;padding:0 14px;text-align:center;width:100%}.advance-vacuum-card__utility-meta{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%}.advance-vacuum-card__utility-chip-group{display:grid;gap:6px;justify-items:center}";
+  var advance_vacuum_utilities_default = ".advance-vacuum-card__control--active-motion ha-icon{animation:advance-vacuum-icon-sweep 1.45s ease-in-out infinite;transform-origin:50% 70%}.advance-vacuum-card__modes{display:flex;justify-content:center;width:100%}.advance-vacuum-card__modes-bubble{background:var(--av-surface);border:1px solid var(--av-border);border-radius:999px;box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-float-subtle);display:inline-flex;flex-wrap:wrap;gap:4px;justify-content:center;max-width:100%;padding:4px}.advance-vacuum-card__mode-button{align-items:center;background:transparent;border:1px solid transparent;border-radius:999px;box-shadow:none;color:var(--secondary-text-color);display:inline-flex;font-size:12px;font-weight:600;gap:8px;min-height:30px;padding:0 11px;transition:background 180ms ease,border-color 180ms ease,box-shadow 180ms ease,color 180ms ease,transform 180ms cubic-bezier(0.2,0.9,0.24,1)}.advance-vacuum-card__mode-button:hover{background:var(--av-accent-hover);box-shadow:var(--av-accent-hover-shadow)}.advance-vacuum-card__mode-button.is-active{background:var(--av-selected-bg);border-color:var(--av-selected-border);box-shadow:inset 0 1px 0 var(--av-selected-inset),var(--av-selected-glow);color:var(--primary-text-color);font-weight:700}.advance-vacuum-card__mode-button ha-icon{--mdc-icon-size: 15px}.advance-vacuum-card__utility-panel{display:grid;gap:10px;justify-items:center;transform-origin:top center;width:100%}.advance-vacuum-card__utility-panel--entering{animation:advance-vacuum-utility-panel-in var(--advance-vacuum-card-panel-duration) cubic-bezier(0.22,0.84,0.26,1) both}.advance-vacuum-card__utility-panel-slot{display:flex;justify-content:center;width:100%}.advance-vacuum-card__utility-group{display:grid;gap:8px;justify-items:center;width:100%}.advance-vacuum-card__utility-label{color:var(--secondary-text-color);font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase}.advance-vacuum-card__utility-options{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%}.advance-vacuum-card__utility-options--menu{max-width:100%}.advance-vacuum-card__utility-options--presets{justify-content:center}.advance-vacuum-card__utility-option{align-items:center;appearance:none;background:var(--av-surface);border:1px solid var(--av-border);border-radius:999px;box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-float-subtle);color:var(--primary-text-color);cursor:pointer;display:inline-flex;font:inherit;gap:8px;justify-content:center;margin:0;min-height:34px;padding:0 12px;transition:background 180ms ease,border-color 180ms ease,box-shadow 180ms ease,color 180ms ease,transform 180ms cubic-bezier(0.22,0.84,0.26,1)}.advance-vacuum-card__utility-option.is-active{background:var(--av-selected-bg);border-color:var(--av-selected-border);box-shadow:inset 0 1px 0 var(--av-selected-inset),var(--av-selected-ring),var(--av-selected-glow);color:var(--primary-text-color);font-weight:700}.advance-vacuum-card__utility-option:not(.is-active):hover{background:var(--av-accent-hover);border-color:var(--av-border);box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-accent-hover-shadow)}.advance-vacuum-card__utility-option--menu ha-icon{--mdc-icon-size: 16px}.advance-vacuum-card__utility-field{display:grid;gap:8px;justify-items:center;max-width:340px;width:min(100%,340px)}.advance-vacuum-card__utility-select{appearance:none;background:var(--av-surface);border:1px solid var(--av-border);border-radius:16px;box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-float-subtle);color:var(--primary-text-color);cursor:pointer;font:inherit;min-height:42px;padding:0 14px;text-align:center;width:100%}.advance-vacuum-card__utility-meta{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%}.advance-vacuum-card__utility-chip-group{display:grid;gap:6px;justify-items:center}";
 
   // src/shared/home-assistant-services.ts
   function callHassService(hass, domain, service, data = {}, target = null) {
@@ -1380,6 +1388,7 @@
         this._repeats = 1;
         this._activeSeries = "";
         this._activeModePanelPreset = "";
+        this._modePresetRequest = 0;
         this._activeDockPanelSection = DOCK_PANEL_SECTIONS[0]?.id || "control";
         this._lastNonSmartModeSelection = {
           suction: "",
@@ -1394,6 +1403,9 @@
         this._pendingCleaningSessionStartAt = 0;
         this._converter = new CoordinatesConverter([]);
         this._mapScale = 1;
+        this._mapFrame = 0;
+        this._mapGestureRect = null;
+        this._mapOverlayPaint = null;
         this._mapOffset = { x: 0, y: 0 };
         this._activeMapPointers = /* @__PURE__ */ new Map();
         this._pinchGesture = null;
@@ -1488,6 +1500,10 @@
       }
       _onShadowCancel(event) {
         event.stopPropagation();
+        if (event instanceof PointerEvent && event.pointerType === "touch" && this._touchPinchGesture) {
+          this._gesturePointers.delete(event.pointerId);
+          return;
+        }
         this._cancelMapGesture();
       }
       _cancelMapGesture(render = true) {
@@ -1768,6 +1784,7 @@
         const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3e3);
         if (!safeDelay || typeof window === "undefined") {
           this._animateContentOnNextRender = false;
+          this.shadowRoot?.querySelector("ha-card")?.classList.remove("advance-vacuum-card--entering");
           return;
         }
         this._entranceAnimationResetTimer = window.setTimeout(() => {
@@ -1777,6 +1794,7 @@
             return;
           }
           this._animateContentOnNextRender = false;
+          this.shadowRoot?.querySelector("ha-card")?.classList.remove("advance-vacuum-card--entering");
         }, safeDelay);
       }
       _triggerPressAnimation(element) {
@@ -3950,24 +3968,28 @@
           if (!descriptor2?.target) {
             return;
           }
-          void this._callInternalService("select.select_option", {
+          const pending2 = this._callInternalService("select.select_option", {
             entity_id: descriptor2.target,
             option: value
           });
           if (triggerHaptic) {
             this._triggerHaptic("selection");
           }
-          return;
+          return pending2;
         }
         const descriptor = this._getModeDescriptor(kind, state);
         if (!descriptor?.target) {
           return;
         }
         this._rememberNonSmartModeSelection(kind, value);
-        this._applyLinkedSmartModeSelection(kind, value, state);
+        let pending;
+        if (options.linkSmart !== false) this._applyLinkedSmartModeSelection(kind, value, state);
+        else if (descriptor.service === "select") pending = this._callInternalService("select.select_option", { entity_id: descriptor.target, option: value });
+        else if (descriptor.service === "fan") pending = this._callVacuumService("set_fan_speed", { fan_speed: value });
         if (triggerHaptic) {
           this._triggerHaptic("selection");
         }
+        return pending;
       }
       _findOptionByCandidates(options, candidates) {
         if (!Array.isArray(options) || !options.length || !Array.isArray(candidates) || !candidates.length) {
@@ -4148,6 +4170,8 @@
       }
       _selectModePanelPreset(presetId, state = this._getVacuumState()) {
         if (!presetId) return;
+        const request = ++this._modePresetRequest, generation = this._generation;
+        const pending = [];
         this._activeModePanelPreset = presetId;
         this._lastResolvedModePanelPreset = presetId;
         const selection = this._getModePanelPresetSelection(presetId, state);
@@ -4160,19 +4184,26 @@
           return;
         }
         if (selection.suction && normalizeTextKey(selection.suction) !== normalizeTextKey(this._getModeDescriptor("suction", state)?.current)) {
-          this._setModeOption("suction", selection.suction, state, { triggerHaptic: false });
+          pending.push(this._setModeOption("suction", selection.suction, state, { triggerHaptic: false, linkSmart: false }));
         }
         if (selection.mop && normalizeTextKey(selection.mop) !== normalizeTextKey(this._getModeDescriptor("mop", state)?.current)) {
-          this._setModeOption("mop", selection.mop, state, { triggerHaptic: false });
+          pending.push(this._setModeOption("mop", selection.mop, state, { triggerHaptic: false, linkSmart: false }));
         }
         if (selection.mopMode && normalizeTextKey(selection.mopMode) !== normalizeTextKey(this._getMopModeDescriptor(state)?.current)) {
-          this._setModeOption("mop_mode", selection.mopMode, state, { triggerHaptic: false });
+          pending.push(this._setModeOption("mop_mode", selection.mopMode, state, { triggerHaptic: false }));
         }
         this._persistCurrentCleaningSessionState(this._activeMode, {
           markSelectionChange: true
         });
         this._triggerHaptic("selection");
         this._render();
+        void Promise.all(pending).catch(() => {
+          if (!this._isCurrent(generation) || request !== this._modePresetRequest) return;
+          this._activeModePanelPreset = "";
+          this._dockedModePanelPreset = this._lastResolvedModePanelPreset = "";
+          this._persistCurrentCleaningSessionState(this._activeMode, { markSelectionChange: true });
+          this._render();
+        });
       }
       _filterModePanelOptions(descriptor, presetId) {
         if (!descriptor?.options?.length) {
@@ -4305,6 +4336,18 @@
         if (this._mapFrame) window.cancelAnimationFrame(this._mapFrame);
         this._mapFrame = 0;
         this._mapGestureRect = null;
+        this._mapOverlayPaint = null;
+        this.shadowRoot?.querySelector("[data-map-surface]")?.classList.remove("is-pinching");
+      }
+      /** Capture placed controls once; pinch frames only move their existing nodes. */
+      _captureMapOverlayPaint(rect) {
+        const nodes = Array.from(this.shadowRoot?.querySelectorAll(".advance-vacuum-card__map-overlays > button") || []);
+        this._mapOverlayPaint = { rect, nodes: nodes.map((node) => {
+          const left = parseFloat(node.style.left) / 100 * rect.width, top = parseFloat(node.style.top) / 100 * rect.height;
+          const x = (left - this._mapOffset.x) / this._mapScale, y = (top - this._mapOffset.y) / this._mapScale;
+          return { node, x, y, x2: node.style.width ? x + parseFloat(node.style.width) / 100 * rect.width / this._mapScale : null, y2: node.style.height ? y + parseFloat(node.style.height) / 100 * rect.height / this._mapScale : null };
+        }) };
+        this.shadowRoot?.querySelector("[data-map-surface]")?.classList.add("is-pinching");
       }
       _scheduleMapPaint() {
         if (this._mapFrame || !this.isConnected) return;
@@ -4313,8 +4356,15 @@
           const canvas = this.shadowRoot?.querySelector(".advance-vacuum-card__map-canvas");
           const overlays = this.shadowRoot?.querySelector(".advance-vacuum-card__map-overlays");
           if (!this.isConnected || !canvas || !overlays) return;
-          canvas.style.transform = `translate(${this._mapOffset.x}px, ${this._mapOffset.y}px) scale(${this._mapScale})`;
-          overlays.innerHTML = this._renderMapOverlays();
+          canvas.style.transform = `translate3d(${this._mapOffset.x}px, ${this._mapOffset.y}px,0) scale(${this._mapScale})`;
+          const paint = this._mapOverlayPaint;
+          if (paint) for (const { node, x, y, x2, y2 } of paint.nodes) {
+            const left = clamp(x * this._mapScale + this._mapOffset.x, 0, paint.rect.width), top = clamp(y * this._mapScale + this._mapOffset.y, 0, paint.rect.height);
+            node.style.left = `${left / paint.rect.width * 100}%`;
+            node.style.top = `${top / paint.rect.height * 100}%`;
+            if (x2 !== null) node.style.width = `${Math.max(0, clamp(x2 * this._mapScale + this._mapOffset.x, 0, paint.rect.width) - left) / paint.rect.width * 100}%`;
+            if (y2 !== null) node.style.height = `${Math.max(0, clamp(y2 * this._mapScale + this._mapOffset.y, 0, paint.rect.height) - top) / paint.rect.height * 100}%`;
+          }
         });
       }
       _finishMapPinch() {
@@ -4573,6 +4623,7 @@
         };
         const distance = Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY);
         this._mapGestureRect = rect;
+        this._captureMapOverlayPaint(rect);
         this._pinchGesture = {
           startDistance: Math.max(distance, 1),
           startScale: this._mapScale,
@@ -4645,6 +4696,7 @@
         this._zoneHandleDrag = null;
         this._pointerStart = null;
         this._mapGestureRect = rect;
+        this._captureMapOverlayPaint(rect);
         this._touchPinchGesture = {
           startDistance: Math.max(distance, 1),
           startScale: this._mapScale,
@@ -5611,7 +5663,7 @@
         if (modeOptionTarget) {
           event.preventDefault();
           event.stopPropagation();
-          this._setModeOption(
+          void this._setModeOption(
             modeOptionTarget.dataset.modeOptionKind,
             modeOptionTarget.dataset.modeOptionValue,
             this._getVacuumState()
@@ -6554,6 +6606,8 @@
         }
         const cardAttrs = body.slice(cardOpen, cardOpenEnd + 1);
         const inner = body.slice(cardOpenEnd + 1, cardClose);
+        const previousPanel = this.shadowRoot.querySelector(".advance-vacuum-card__utility-panel-slot");
+        const animatePanel = Boolean(this._activeUtilityPanel && previousPanel?.dataset.utilityPanel !== this._activeUtilityPanel);
         const liveImage = this.shadowRoot.querySelector("[data-map-image]");
         if (liveImage instanceof HTMLElement) {
           liveImage.remove();
@@ -6561,7 +6615,7 @@
         let styleEl = this.shadowRoot.querySelector("[data-vacuum-style]");
         let card = this.shadowRoot.querySelector("ha-card.advance-vacuum-card");
         if (!(styleEl instanceof HTMLStyleElement) || !(card instanceof HTMLElement)) {
-          this.shadowRoot.innerHTML = `<style data-vacuum-style></style><ha-card class="advance-vacuum-card" data-vacuum-surface="true"></ha-card>`;
+          this.shadowRoot.innerHTML = `<style data-vacuum-style>${css}</style><ha-card class="advance-vacuum-card" data-vacuum-surface="true"></ha-card>`;
           styleEl = this.shadowRoot.querySelector("[data-vacuum-style]");
           card = this.shadowRoot.querySelector("ha-card.advance-vacuum-card");
         }
@@ -6569,6 +6623,11 @@
         if (styleEl.textContent !== css) {
           styleEl.textContent = css;
         }
+        const preparePanel = (root) => {
+          const slot = root.querySelector(".advance-vacuum-card__utility-panel-slot");
+          if (slot) slot.dataset.utilityPanel = this._activeUtilityPanel || "";
+          if (animatePanel) root.querySelector(".advance-vacuum-card__utility-panel")?.classList.add("advance-vacuum-card__utility-panel--entering");
+        };
         const classMatch = cardAttrs.match(/class="([^"]*)"/);
         card.className = classMatch?.[1] || "advance-vacuum-card";
         card.setAttribute("data-vacuum-surface", "true");
@@ -6577,6 +6636,7 @@
         if (this._gesturePointers.size && surface && map && map.parentElement === card) {
           const template = document.createElement("template");
           template.innerHTML = inner;
+          preparePanel(template.content);
           const nextMap = template.content.querySelector(".advance-vacuum-card__map");
           const nextSurface = nextMap?.querySelector("[data-map-surface='main']");
           if (nextMap && nextSurface) {
@@ -6587,9 +6647,14 @@
           }
         }
         card.innerHTML = inner;
+        preparePanel(card);
       }
       _render() {
         if (!this.isConnected || !this.shadowRoot) return;
+        if (this._pinchGesture || this._touchPinchGesture) {
+          this._scheduleMapPaint();
+          return;
+        }
         const active = this.shadowRoot.activeElement;
         const attributes = active instanceof HTMLElement ? Array.from(active.attributes).filter((item) => item.name.startsWith("data-")).map((item) => [item.name, item.value]) : [];
         this._renderView();
@@ -7032,6 +7097,7 @@
       </ha-card>
     `;
           this._commitPersistentVacuumShadow(vacuumMarkup);
+          this._animateContentOnNextRender = false;
           let image = this.shadowRoot.querySelector("[data-map-image]");
           const canvas = this.shadowRoot.querySelector(".advance-vacuum-card__map-canvas");
           if (previousImage && image && previousMapNorm && nextMapNorm && previousMapNorm === nextMapNorm) {

@@ -14,8 +14,9 @@ async function mount(page) {
   await card.locator('[data-mode-id="rooms"]').click();
   await page.evaluate(() => {
     const card=window.zoomCard, root=card.shadowRoot;
-    window.zoomNodes={surface:root.querySelector('[data-map-surface]'),canvas:root.querySelector('.advance-vacuum-card__map-canvas'),image:root.querySelector('[data-map-image]'),footer:root.querySelector('.advance-vacuum-card__footer')};
-    window.zoomRenders=0; const render=card._render.bind(card); card._render=()=>{window.zoomRenders++;render();};
+    window.zoomNodes={surface:root.querySelector('[data-map-surface]'),canvas:root.querySelector('.advance-vacuum-card__map-canvas'),image:root.querySelector('[data-map-image]'),footer:root.querySelector('.advance-vacuum-card__footer'),marker:root.querySelector('button[data-room-id="1"]')};
+    window.zoomOverlayBuilds=0;const overlay=card._renderMapOverlays.bind(card);card._renderMapOverlays=(...args)=>{window.zoomOverlayBuilds++;return overlay(...args);};
+    window.zoomRenders=0; const render=card._renderView.bind(card); card._renderView=()=>{window.zoomRenders++;render();};
   });
 }
 for (const nativeTouch of [false,true]) {
@@ -28,6 +29,7 @@ for (const nativeTouch of [false,true]) {
       const touchEvent=(type,points)=>{const event=new Event(type,{bubbles:true,composed:true,cancelable:true});Object.setPrototypeOf(event,TouchEvent.prototype);Object.defineProperty(event,'touches',{value:points});return event;};
       if(nativeTouch) {
         surface.dispatchEvent(touchEvent('touchstart',touches(80)));
+        surface.dispatchEvent(new PointerEvent('pointercancel',{bubbles:true,composed:true,pointerId:1,pointerType:'touch'}));
         for(let i=0;i<40;i++) surface.dispatchEvent(touchEvent('touchmove',touches(80+i*3)));
       } else {
         for(const [id,offset] of [[1,-40],[2,40]]) surface.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,composed:true,pointerId:id,pointerType:'touch',clientX:x+offset,clientY:y}));
@@ -39,9 +41,13 @@ for (const nativeTouch of [false,true]) {
     await expect.poll(()=>page.evaluate(()=>window.zoomCard._mapFrame)).toBe(0);
     const result=await page.evaluate(()=>{
       const card=window.zoomCard, root=card.shadowRoot, nodes=window.zoomNodes;
-      return {renders:window.zoomRenders,scale:card._mapScale,canvas:nodes.canvas===root.querySelector('.advance-vacuum-card__map-canvas'),image:nodes.image===root.querySelector('[data-map-image]'),footer:nodes.footer===root.querySelector('.advance-vacuum-card__footer'),transform:nodes.canvas.style.transform, marker:root.querySelector('button[data-room-id="1"]').getBoundingClientRect().width};
+      return {renders:window.zoomRenders,builds:window.zoomOverlayBuilds,sameMarker:nodes.marker===root.querySelector('button[data-room-id="1"]'),scale:card._mapScale,canvas:nodes.canvas===root.querySelector('.advance-vacuum-card__map-canvas'),image:nodes.image===root.querySelector('[data-map-image]'),footer:nodes.footer===root.querySelector('.advance-vacuum-card__footer'),transform:nodes.canvas.style.transform, marker:root.querySelector('button[data-room-id="1"]').getBoundingClientRect().width};
     });
     expect(result.renders).toBe(0); expect(result.scale).toBeCloseTo(197/80); expect(result.canvas && result.image && result.footer).toBe(true); expect(result.transform).toContain('scale(2.4625)'); expect(result.marker).toBeGreaterThan(0);
+    expect(result.builds).toBe(0);expect(result.sameMarker).toBe(true);
+    // Ordinary HA feedback during a pinch must not replace the captured map.
+    await page.evaluate(()=>{window.zoomCard.hass={...window.zoomCard._hass,states:{...window.zoomCard._hass.states,'vacuum.one':{...window.zoomCard._hass.states['vacuum.one'],state:'cleaning'}}};});
+    expect(await page.evaluate(()=>window.zoomNodes.marker===window.zoomCard.shadowRoot.querySelector('button[data-room-id="1"]'))).toBe(true);
     await page.evaluate(nativeTouch=>{
       const surface=window.zoomNodes.surface;
       if(nativeTouch) {const event=new Event('touchend',{bubbles:true,composed:true});Object.setPrototypeOf(event,TouchEvent.prototype);Object.defineProperty(event,'touches',{value:[]});surface.dispatchEvent(event);}

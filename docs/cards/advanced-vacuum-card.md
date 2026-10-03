@@ -2,6 +2,16 @@
 
 `custom:nodalia-advance-vacuum-card` supports several room-cleaning APIs while keeping the same Nodalia map interface.
 
+Pinch zoom moves the mounted image and controls once per animation frame. Ordinary
+Home Assistant feedback is applied after the gesture; entity, user or connection
+changes cancel it. Cleaning-mode updates do not replay panel entrance animations.
+If a preset command is rejected, the card restores the robot's reported mode.
+
+CSS functions in `styles` must be balanced, for example
+`error_color: var(--error-color)` or `var(--error-color, #ff6b6b)`.
+An incomplete function falls back to the default instead of invalidating the
+following card rules.
+
 ## Platform compatibility
 
 | Platform | Room cleaning | Zones | Go to point | Live room source |

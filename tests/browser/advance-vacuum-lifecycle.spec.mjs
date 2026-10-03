@@ -55,3 +55,65 @@ test('Advance Vacuum ignores an older failed helper write after a newer selectio
  await page.evaluate(()=>{window.avCard._persistSharedCleaningSession({activeMode:'rooms',selectedRoomIds:['2']});window.avCalls[1].resolve();});
  expect(await page.evaluate(()=>window.avCalls.length)).toBe(2);expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
 });
+
+test('Advance Vacuum mounts its complete stylesheet before the first HA card connection and survives malformed error-color YAML',async({page})=>{
+ await page.addInitScript(()=>{
+  window.avFirstStyles=[];
+  customElements.define('ha-card',class extends HTMLElement {connectedCallback(){const style=this.getRootNode().querySelector?.('[data-vacuum-style]');if(style) window.avFirstStyles.push(style.sheet.cssRules.length);}});
+ });
+ const card=await mount(page,{styles:{icon:{error_color:'var(--error-color,'}}});
+ expect(await page.evaluate(()=>window.avFirstStyles[0])).toBeGreaterThan(20);
+ await page.evaluate(()=>{window.avHass.states['vacuum.one']={...window.avHass.states['vacuum.one'],state:'error'};window.avCard.hass={...window.avHass};});
+ expect(await card.locator('[data-control-action="primary"]').evaluate(el=>el.getBoundingClientRect().width)).toBeGreaterThan(38);
+ expect(await card.locator('ha-card').evaluate(el=>parseFloat(getComputedStyle(el).borderRadius))).toBeGreaterThan(20);
+ expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+});
+
+test('Advance Vacuum consumes entrance once and keeps smart controls visible through rapid cleaning feedback',async({page})=>{
+ const card=await mount(page,{animations:{enabled:true,content_duration:600,panel_duration:500},suction_select_entity:'select.robot_fan',mop_select_entity:'select.robot_water',mop_mode_select_entity:'select.robot_route'});
+ await page.clock.install();
+ await page.evaluate(()=>{
+  const hass=window.avHass;hass.states['vacuum.one'].state='cleaning';
+  for(const [id,value] of [['select.robot_fan','balanced'],['select.robot_water','medium'],['select.robot_route','standard']]) hass.states[id]={entity_id:id,state:value,attributes:{options:[value,'smart']}};
+  window.avCard.hass={...hass};window.avCalls=[];
+ });
+ await card.locator('[data-control-action="toggle_modes"]').press('Enter');
+ await card.locator('[data-mode-preset-id="smart"]').press('Enter');
+ const commands=await calls(page);
+ expect(commands.filter(row=>row.domain==='select').map(row=>row.data.entity_id).sort()).toEqual(['select.robot_fan','select.robot_route','select.robot_water']);
+ for(let i=0;i<8;i++) {
+  await page.evaluate(i=>{window.avHass.states['vacuum.one'].last_updated=String(i);window.avCard.hass={...window.avHass};},i);
+  await page.clock.runFor(100);
+  expect(await card.locator('.advance-vacuum-card__utility-panel').evaluate(el=>({opacity:getComputedStyle(el).opacity,animation:getComputedStyle(el).animationName}))).toEqual({opacity:'1',animation:'none'});
+ }
+ expect(await card.locator('ha-card').evaluate(el=>el.classList.contains('advance-vacuum-card--entering'))).toBe(false);
+ expect(await page.evaluate(()=>window.avCard._getActiveModePanelPreset())).toBe('smart');
+ expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+});
+
+test('Advance Vacuum rejects failed presets without leaving smart selected and ignores failures from a retired selection',async({page})=>{
+ await mount(page,{suction_select_entity:'select.robot_fan',mop_select_entity:'select.robot_water'});
+ await page.evaluate(()=>{
+  window.avHass.states['vacuum.one'].state='cleaning';
+  for(const id of ['select.robot_fan','select.robot_water']) window.avHass.states[id]={entity_id:id,state:'balanced',attributes:{options:['balanced','smart']}};
+  window.avCard.hass={...window.avHass};window.avDefer=true;window.avCalls=[];window.avCard._selectModePanelPreset('smart');window.avCalls[0].reject(new Error('Cannot change while cleaning'));
+ });
+ await expect.poll(()=>page.evaluate(()=>window.avCard._activeModePanelPreset)).toBe('');
+ await page.evaluate(()=>{
+  for(const id of ['select.robot_fan','select.robot_water']) window.avHass.states[id].state='smart';
+  window.avCard.hass={...window.avHass};
+ });
+ expect(await page.evaluate(()=>window.avCard._getActiveModePanelPreset())).toBe('smart');
+ await page.evaluate(()=>{
+  for(const id of ['select.robot_fan','select.robot_water']) window.avHass.states[id].state='balanced';
+  window.avCalls=[];window.avCard._selectModePanelPreset('smart');const old=window.avCalls[0];window.avCard._selectModePanelPreset('vacuum_mop');old.reject(new Error('Old command failed'));
+ });
+ await page.evaluate(()=>new Promise(resolve=>setTimeout(resolve,0)));
+ expect(await page.evaluate(()=>window.avCard._activeModePanelPreset)).toBe('vacuum_mop');
+ await page.evaluate(()=>{
+  window.avCalls=[];window.avCard._selectModePanelPreset('smart');const old=window.avCalls[0];window.avCard.setConfig({...window.avConfig,entity:'vacuum.two'});old.reject(new Error('Retired robot command'));
+ });
+ await page.evaluate(()=>new Promise(resolve=>setTimeout(resolve,0)));
+ expect(await page.evaluate(()=>window.avCard._activeModePanelPreset)).toBe('');
+ expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+});

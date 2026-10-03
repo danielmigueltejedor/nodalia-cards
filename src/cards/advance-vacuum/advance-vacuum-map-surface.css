@@ -6,6 +6,10 @@
           width: 100%;
         }
 
+        .is-pinching .advance-vacuum-card__map-canvas {
+          will-change: transform;
+        }
+
         .advance-vacuum-card__map-image {
           display: block;
           height: 100%;
