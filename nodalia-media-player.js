@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.0-alpha.2";
+  var CARD_VERSION = "3.0.0-alpha.3";
 
   // src/cards/media-player/media-player-constants.ts
   var CARD_TAG = "nodalia-media-player";
@@ -1325,8 +1325,8 @@
   var prepared = /* @__PURE__ */ new Set();
   var displayedArtwork = /* @__PURE__ */ new WeakMap();
   var renderRequests = /* @__PURE__ */ new WeakMap();
-  function prepareArtworkTheme(owner, url, hasCurrentCard, render) {
-    if (!hasCurrentCard || displayedArtwork.get(owner) === url || !url || getCachedArtworkPalette(url) || prepared.has(url)) {
+  function prepareArtworkTheme(owner, url, render) {
+    if (displayedArtwork.get(owner) === url || !url || getCachedArtworkPalette(url) || prepared.has(url)) {
       displayedArtwork.set(owner, url);
       renderRequests.delete(owner);
       return true;
@@ -3773,10 +3773,11 @@
           this._ensureArtworkReady(visiblePlayer.entity, visibleArtwork);
         });
         const desiredArtwork = this._getPlayerArtwork(player, state);
-        const artworkReady = !desiredArtwork || this._ensureArtworkReady(player.entity, desiredArtwork, {
+        const cachedPalette = getCachedArtworkPalette(desiredArtwork || "");
+        const artworkReady = !desiredArtwork || Boolean(cachedPalette) || this._ensureArtworkReady(player.entity, desiredArtwork, {
           rerenderOnReady: true
         });
-        const artwork = getCachedArtworkPalette(desiredArtwork || "") ? desiredArtwork : this._getRenderableArtwork(player.entity, desiredArtwork || null);
+        const artwork = cachedPalette ? desiredArtwork : this._getRenderableArtwork(player.entity, desiredArtwork || null);
         const backgroundArtwork = artwork || desiredArtwork || "";
         const renderAnimateEntrance = animateEntrance && artworkReady;
         const safeArtwork = artwork ? escapeHtml(artwork) : "";
@@ -4218,7 +4219,7 @@
         const themePlayer = players[this._resolveActivePlayerIndex(players)];
         const themeState = themePlayer && this._hass?.states?.[themePlayer.entity];
         const themeUrl = this._config.artwork?.dynamic_colors !== false && themeState ? this._getPlayerArtwork(themePlayer, themeState) || "" : "";
-        if (!prepareArtworkTheme(this, themeUrl, Boolean(this.shadowRoot.querySelector(".media-player-card")), () => this._render())) return;
+        if (!prepareArtworkTheme(this, themeUrl, () => this._render())) return;
         if (!hasPlayers) {
           this._activeArtworkIdle = false;
         }

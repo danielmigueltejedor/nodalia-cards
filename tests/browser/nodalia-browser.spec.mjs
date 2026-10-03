@@ -1871,6 +1871,7 @@ test("Room Summary cover and climate controls expose accessible names", async ({
 
 test("Media Player keeps the artwork stage across unrelated state updates", async ({ page }) => {
   await loadBundle(page);
+  await page.route("**/local/cover.jpg*", route => route.fulfill({ contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><rect width="24" height="24" fill="#ac5522"/></svg>' }));
   await page.evaluate(() => {
     const picture = "/local/cover.jpg";
     const state = (volume, title = "Song") => ({
@@ -1899,9 +1900,7 @@ test("Media Player keeps the artwork stage across unrelated state updates", asyn
     window.mediaArtworkFixture = { card, state };
   });
 
-  expect(await page.evaluate(() => Boolean(
-    window.mediaArtworkFixture.card.shadowRoot.querySelector("[data-media-art-stage]"),
-  ))).toBe(true);
+  await expect(page.locator("nodalia-media-player").locator("[data-media-art-stage]")).toHaveCount(1);
 
   await page.evaluate(() => {
     const fixture = window.mediaArtworkFixture;
@@ -1917,7 +1916,8 @@ test("Media Player keeps the artwork stage across unrelated state updates", asyn
 
 test("Media Player control bubbles stay readable and inside square cards", async ({ page }) => {
   await loadBundle(page);
-  const metrics = await page.evaluate(() => {
+  await page.route("**/local/cover.jpg*", route => route.fulfill({ contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><rect width="24" height="24" fill="#ac5522"/></svg>' }));
+  await page.evaluate(() => {
     const state = {
       entity_id: "media_player.test",
       state: "playing",
@@ -1942,9 +1942,14 @@ test("Media Player control bubbles stay readable and inside square cards", async
     card.setConfig({
       players: [{ entity: "media_player.test", label: "HomePod mini" }],
       layout: { mode: "square", fixed: false },
+      animations: { enabled: false },
     });
     card.hass = window.makeHass({ "media_player.test": state });
     document.querySelector("#fixture").append(card);
+  });
+  await expect(page.locator("nodalia-media-player").locator(".media-player-card")).toBeVisible();
+  const metrics = await page.evaluate(() => {
+    const card = document.querySelector("nodalia-media-player");
     const root = card.shadowRoot;
     const surface = root.querySelector(".media-player-card");
     const play = root.querySelector('[data-media-control="play-pause"]');
@@ -1990,7 +1995,8 @@ test("Media Player control bubbles stay readable and inside square cards", async
 
 test("Media Player square overlay stays square in a tall phone cell", async ({ page }) => {
   await loadBundle(page);
-  const metrics = await page.evaluate(() => {
+  await page.route("**/local/cover.jpg*", route => route.fulfill({ contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><rect width="24" height="24" fill="#ac5522"/></svg>' }));
+  await page.evaluate(() => {
     const state = {
       entity_id: "media_player.test",
       state: "playing",
@@ -2015,10 +2021,15 @@ test("Media Player square overlay stays square in a tall phone cell", async ({ p
     card.setConfig({
       players: [{ entity: "media_player.test", label: "HomePod mini" }],
       layout: { mode: "square", fixed: false },
+      animations: { enabled: false },
     });
     card.hass = window.makeHass({ "media_player.test": state });
     cell.append(card);
     document.querySelector("#fixture").append(cell);
+  });
+  await expect(page.locator("nodalia-media-player").locator(".media-player-card")).toBeVisible();
+  const metrics = await page.evaluate(() => {
+    const card = document.querySelector("nodalia-media-player");
     const root = card.shadowRoot;
     const surface = root.querySelector(".media-player-card");
     const artwork = root.querySelector(".media-player__artwork");
@@ -2072,4 +2083,3 @@ test("Advance Vacuum keeps the card surface when expanding rooms", async ({ page
   expect(persisted.hasCommit).toBe(true);
   expect(persisted.sameSurface).toBe(true);
 });
-

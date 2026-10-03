@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.0-alpha.2";
+  var CARD_VERSION = "3.0.0-alpha.3";
 
   // src/cards/navigation/navigation-constants.ts
   var CARD_TAG = "nodalia-navigation-bar";
@@ -727,8 +727,8 @@
   var prepared = /* @__PURE__ */ new Set();
   var displayedArtwork = /* @__PURE__ */ new WeakMap();
   var renderRequests = /* @__PURE__ */ new WeakMap();
-  function prepareArtworkTheme(owner, url, hasCurrentCard, render) {
-    if (!hasCurrentCard || displayedArtwork.get(owner) === url || !url || getCachedArtworkPalette(url) || prepared.has(url)) {
+  function prepareArtworkTheme(owner, url, render) {
+    if (displayedArtwork.get(owner) === url || !url || getCachedArtworkPalette(url) || prepared.has(url)) {
       displayedArtwork.set(owner, url);
       renderRequests.delete(owner);
       return true;
@@ -2885,7 +2885,7 @@
         const themePlayer = visiblePlayers[this._resolveActiveMediaPlayerIndex(visiblePlayers)];
         const themeState = themePlayer && this._hass?.states?.[themePlayer.entity];
         const themeUrl = showMediaPlayerCard && themePlayer && themeState ? this._getMediaPlayerArtwork(themePlayer, themeState) : "";
-        if (!prepareArtworkTheme(this, themeUrl || "", Boolean(this.shadowRoot.querySelector(".media-player-card")), () => this._render())) return;
+        if (!prepareArtworkTheme(this, themeUrl || "", () => this._render())) return;
         const playMediaToggleEntrance = animations.enabled && showMediaPlayerToggle && !this._lastMediaToggleVisible;
         this._lastMediaToggleVisible = showMediaPlayerToggle;
         const playMediaCardEntrance = animations.enabled && showMediaPlayerCard && !this._lastMediaPlayerCardVisible;

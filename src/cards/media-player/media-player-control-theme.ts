@@ -9,8 +9,8 @@ const displayedArtwork = new WeakMap<HTMLElement, string>();
 const renderRequests = new WeakMap<HTMLElement, { url: string; token: object }>();
 
 /** Commit a replacement cover and palette together; cached covers never yield. */
-export function prepareArtworkTheme(owner: HTMLElement, url: string, hasCurrentCard: boolean, render: () => void): boolean {
-  if (!hasCurrentCard || displayedArtwork.get(owner) === url || !url || getCachedArtworkPalette(url) || prepared.has(url)) {
+export function prepareArtworkTheme(owner: HTMLElement, url: string, render: () => void): boolean {
+  if (displayedArtwork.get(owner) === url || !url || getCachedArtworkPalette(url) || prepared.has(url)) {
     displayedArtwork.set(owner, url);
     renderRequests.delete(owner);
     return true;

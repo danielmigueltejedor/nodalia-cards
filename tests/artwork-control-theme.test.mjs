@@ -64,7 +64,7 @@ test("late artwork responses cannot overwrite a newer palette or a reset", async
   assert.equal(properties.size, 0);
 });
 
-test("replacement artwork waits for its palette, ignores stale requests and recovers from stalled images", async () => {
+test("initial and replacement artwork wait for their palette, ignore stale requests and recover from stalled images", async () => {
   const images = [], timers = new Map();
   let timerId = 0;
   const sandbox = {
@@ -78,7 +78,7 @@ test("replacement artwork waits for its palette, ignores stale requests and reco
   vm.createContext(sandbox); vm.runInContext(themeSource, sandbox);
   const owner = { isConnected: true };
   let renders = 0;
-  const prepare = url => sandbox.theme.prepareArtworkTheme(owner, url, true, () => { renders++; });
+  const prepare = url => sandbox.theme.prepareArtworkTheme(owner, url, () => { renders++; });
   const flush = async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); };
   assert.equal(prepare("old"), false);
   assert.equal(prepare("old"), false);
@@ -89,6 +89,9 @@ test("replacement artwork waits for its palette, ignores stale requests and reco
   images[1].onload(); await flush();
   assert.equal(renders, 1);
   assert.equal(prepare("new"), true, "known covers never wait");
+  const revisitedOwner = { isConnected: true };
+  assert.equal(sandbox.theme.prepareArtworkTheme(revisitedOwner, "new", () => { renders++; }), true, "a newly mounted owner reuses the shared palette synchronously");
+  assert.equal(images.length, 2, "revisiting a sampled cover creates no new palette image");
   assert.equal(prepare("stalled"), false);
   for (const callback of [...timers.values()]) callback();
   await flush();

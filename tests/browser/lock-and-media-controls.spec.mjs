@@ -268,7 +268,7 @@ test("Lock and Media Player use the Nodalia icon bubble and state-chip styling",
   }
 });
 
-test("Media capsules and selectors stay translucent before artwork loads and after a track change", async ({ page }) => {
+test("Media capsules and selectors stay translucent from their first themed paint and after a track change", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   let releaseArtwork;
   const artworkReady = new Promise(resolve => { releaseArtwork = resolve; });
@@ -313,7 +313,9 @@ test("Media capsules and selectors stay translucent before artwork loads and aft
       }
     }
   };
-  await check();
+  for (const tag of ["nodalia-navigation-bar", "nodalia-media-player"]) {
+    await expect(page.locator(tag).locator('.media-player-card')).toHaveCount(0);
+  }
   releaseArtwork();
   for (const tag of ["nodalia-navigation-bar", "nodalia-media-player"]) await expect(page.locator(tag).locator('[data-artwork-controls]')).toHaveCount(1);
   await check();
@@ -387,6 +389,62 @@ test("Playback capsule stays at the card center with asymmetric auxiliary contro
       expect(result.inside).toBe(true);
     }
   }
+});
+
+test("Dashboard remounts paint tinted controls from the first animated frame", async ({ page }) => {
+  let release;
+  const ready = new Promise(resolve => { release = resolve; });
+  await page.route("**/first-view-cover.svg*", async route => {
+    await ready;
+    await route.fulfill({ contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><rect width="24" height="24" fill="#0000ff"/></svg>' });
+  });
+  await page.goto("/tests/fixtures/browser.html");
+  await page.waitForFunction(() => customElements.get("nodalia-media-player"));
+  await page.evaluate(() => {
+    window.firstPaintTints = [];
+    window.viewHass = window.makeHass({ "media_player.test": { state: "playing", attributes: { friendly_name: "Media", media_title: "Song", entity_picture: "/first-view-cover.svg" } } });
+    window.mountViewPlayers = () => {
+      for (const tag of ["nodalia-media-player", "nodalia-navigation-bar"]) {
+        const card = document.createElement(tag);
+        new MutationObserver(() => {
+          const surface = card.shadowRoot.querySelector(".media-player-card");
+          if (surface) window.firstPaintTints.push({ tag, tint: surface.style.getPropertyValue("--media-control-tint") });
+        }).observe(card.shadowRoot, { subtree: true, childList: true, attributes: true });
+        card.setConfig(tag === "nodalia-media-player"
+          ? { entity: "media_player.test", layout: { fixed: false, show_desktop: true }, animations: { enabled: true } }
+          : { layout: { fixed: false, show_desktop: true }, routes: [{ icon: "mdi:home", path: "/" }], media_player: { show: true, show_desktop: true, players: [{ entity: "media_player.test" }] }, animations: { enabled: true } });
+        card.hass = window.viewHass;
+        document.querySelector("#fixture").append(card);
+        card.shadowRoot.querySelector('[data-media-toggle="expand"]')?.click();
+      }
+    };
+    window.mountViewPlayers();
+  });
+  await page.waitForTimeout(100);
+  release();
+  const players = page.locator("nodalia-media-player, nodalia-navigation-bar");
+  await expect.poll(() => players.evaluateAll(cards => cards.every(card =>
+    card.shadowRoot.querySelector("[data-artwork-controls]")?.style.getPropertyValue("--media-control-tint") === "rgb(0, 0, 255)"
+  ))).toBe(true);
+  expect(await page.evaluate(() => window.firstPaintTints.every(row => row.tint === "rgb(0, 0, 255)"))).toBe(true);
+  const restored = await page.evaluate(() => {
+    document.querySelectorAll("nodalia-media-player, nodalia-navigation-bar").forEach(card => card.remove());
+    let imageRequests = 0;
+    const NativeImage = window.Image;
+    window.Image = class extends NativeImage { constructor(...args) { super(...args); imageRequests++; } };
+    window.firstPaintTints = [];
+    window.mountViewPlayers();
+    const result = [...document.querySelectorAll("nodalia-media-player, nodalia-navigation-bar")].map(card => ({
+      tint: card.shadowRoot.querySelector(".media-player-card")?.style.getPropertyValue("--media-control-tint"),
+      entering: Boolean(card.shadowRoot.querySelector(".media-player__content--entering")),
+    }));
+    window.Image = NativeImage;
+    return { result, imageRequests };
+  });
+  expect(restored.result.map(row => row.tint)).toEqual(["rgb(0, 0, 255)", "rgb(0, 0, 255)"]);
+  expect(restored.result[0].entering).toBe(true);
+  expect(restored.imageRequests).toBe(0);
+  expect(await page.evaluate(() => window.bundleErrors)).toEqual([]);
 });
 
 test("a replacement cover and its control palette are committed together", async ({ page }) => {
