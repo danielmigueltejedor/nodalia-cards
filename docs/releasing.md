@@ -48,3 +48,8 @@ version change is being reviewed, then rebuild and validate its exact commit.
 Update README and the upgrade guide's preview status with stable promotion too;
 never describe an untagged preview as the published stable release. Keep historical
 changelog versions and archived prerelease notes intact.
+
+The stable 3.0.0 notes generator includes `docs/images/nodalia-cards-3-release.png`
+as its centered header. The image URL points to the immutable `v3.0.0` tag, so
+the artwork must be committed before tagging. It does not add another downloadable
+release asset; HACS continues receiving only `nodalia-cards.js`.
