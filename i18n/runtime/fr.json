@@ -830,7 +830,8 @@
       "highLevel": "{source} est à {value}.",
       "sensorValue": "{source} indique {value}.",
       "hotClimate": "{source} indique {value}. Vous pouvez activer le froid sur {climate}.",
-      "mediaLeftOn": "{media} est toujours allumé et {source} ne détecte aucune présence."
+      "mediaLeftOn": "{media} est toujours allumé et {source} ne détecte aucune présence.",
+      "rainProbability": "{source} indique {precipitation_probability} de probabilité de pluie vers {time}."
     },
     "actions": {
       "openCalendar": "Ouvrir le calendrier",

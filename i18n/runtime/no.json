@@ -830,7 +830,8 @@
       "highLevel": "{source} staat op {value}.",
       "sensorValue": "{source} geeft {value} aan.",
       "hotClimate": "{source} geeft {value} aan. Je kunt koeling op {climate} inschakelen.",
-      "mediaLeftOn": "{media} staat nog aan en {source} detecteert geen aanwezigheid."
+      "mediaLeftOn": "{media} staat nog aan en {source} detecteert geen aanwezigheid.",
+      "rainProbability": "{source} melder {precipitation_probability} sannsynlighet for regn rundt {time}."
     },
     "actions": {
       "openCalendar": "Kalender openen",

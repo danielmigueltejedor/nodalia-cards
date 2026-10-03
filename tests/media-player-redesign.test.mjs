@@ -6,7 +6,7 @@ import vm from "node:vm";
 import { fileURLToPath } from "node:url";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
-const read = file => fs.readFileSync(path.join(root, file), "utf8") + (file.endsWith("media-player-card.ts") ? ["media-player-browser.css", "media-player-presentations.css"].map(css => fs.readFileSync(path.join(root,"src/cards/media-player",css),"utf8")).join("\n") : "");
+const read = file => fs.readFileSync(path.join(root, file), "utf8") + (file.endsWith("media-player-card.ts") ? ["media-player-browser.css", "media-player-presentations.css", "media-player-compact.css", "media-player-idle.css", "media-player-metadata.css", "media-player-tv.css"].map(css => fs.readFileSync(path.join(root,"src/cards/media-player",css),"utf8")).join("\n") : "");
 
 function loadMediaPlayerApi() {
   const sandbox = {

@@ -830,7 +830,8 @@
       "highLevel": "{source} liegt bei {value}.",
       "sensorValue": "{source} zeigt {value}.",
       "hotClimate": "{source} zeigt {value}. Du kannst Kühlung auf {climate} einschalten.",
-      "mediaLeftOn": "{media} ist noch eingeschaltet und {source} erkennt keine Anwesenheit."
+      "mediaLeftOn": "{media} ist noch eingeschaltet und {source} erkennt keine Anwesenheit.",
+      "rainProbability": "{source} meldet {precipitation_probability} Regenwahrscheinlichkeit gegen {time}."
     },
     "actions": {
       "openCalendar": "Kalender öffnen",

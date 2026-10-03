@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.0-alpha.4";
+  var CARD_VERSION = "3.0.0-alpha.5";
 
   // src/cards/advance-vacuum/advance-vacuum-constants.ts
   var CARD_TAG = "nodalia-advance-vacuum-card";
@@ -1268,7 +1268,7 @@
   }
 
   // src/cards/advance-vacuum/advance-vacuum-static-map-2.css
-  var advance_vacuum_static_map_2_default = ".advance-vacuum-card--entering{animation:advance-vacuum-card-enter var(--advance-vacuum-card-content-duration) cubic-bezier(0.22,0.84,0.26,1) both}.advance-vacuum-card--entering .advance-vacuum-card__map{animation:advance-vacuum-map-enter var(--advance-vacuum-card-content-duration) cubic-bezier(0.2,0.85,0.25,1) 60ms both}.advance-vacuum-card--entering .advance-vacuum-card__footer{animation:advance-vacuum-footer-enter var(--advance-vacuum-card-content-duration) cubic-bezier(0.22,0.84,0.26,1) 100ms both}.advance-vacuum-card__footer{align-items:center;display:flex;flex-direction:column;gap:12px;width:100%}.advance-vacuum-card__header,.advance-vacuum-card__icon,.advance-vacuum-card__unavailable,.advance-vacuum-card__header-main,.advance-vacuum-card__title,.advance-vacuum-card__chips,.advance-vacuum-card__chip,.advance-vacuum-card__header-actions,.advance-vacuum-card__header-action{display:none!important}.advance-vacuum-card__control,.advance-vacuum-card__mode-button,.advance-vacuum-card__goto-marker,.advance-vacuum-card__room-marker{appearance:none;background:none;border:none;color:inherit;cursor:pointer;font:inherit;margin:0;padding:0}";
+  var advance_vacuum_static_map_2_default = ".advance-vacuum-card--entering{animation:advance-vacuum-card-enter var(--advance-vacuum-card-content-duration) cubic-bezier(0.22,0.84,0.26,1) both}.advance-vacuum-card--entering .advance-vacuum-card__map{animation:advance-vacuum-map-enter var(--advance-vacuum-card-content-duration) cubic-bezier(0.2,0.85,0.25,1) 60ms both}.advance-vacuum-card--entering .advance-vacuum-card__footer{animation:advance-vacuum-footer-enter var(--advance-vacuum-card-content-duration) cubic-bezier(0.22,0.84,0.26,1) 100ms both}.advance-vacuum-card__footer{align-items:center;display:flex;flex-direction:column;gap:12px;width:100%}.advance-vacuum-card__header,.advance-vacuum-card__icon,.advance-vacuum-card__unavailable,.advance-vacuum-card__header-main,.advance-vacuum-card__title,.advance-vacuum-card__chips,.advance-vacuum-card__chip,.advance-vacuum-card__header-actions,.advance-vacuum-card__header-action{display:none!important}.advance-vacuum-card__control,.advance-vacuum-card__mode-button,.advance-vacuum-card__goto-marker,.advance-vacuum-card__room-marker{appearance:none;background:none;border:none;color:inherit;cursor:pointer;font:inherit;margin:0;padding:0}.advance-vacuum-card__control:hover{transform:translateY(-1px)}.advance-vacuum-card__mode-button:hover{transform:translateY(-1px)}:is(.advance-vacuum-card__control--primary,.advance-vacuum-card__mode-button,.advance-vacuum-card__map-tool,.advance-vacuum-card__room-marker,.advance-vacuum-card__goto-marker,.advance-vacuum-card__routine-button,.advance-vacuum-card__utility-option,.advance-vacuum-card__selection-chip,.advance-vacuum-card__zone-handle).is-pressing:not(.is-disabled):not(:disabled){animation:advance-vacuum-button-bounce var(--advance-vacuum-card-button-bounce-duration) cubic-bezier(0.2,0.9,0.24,1) both}.advance-vacuum-card__control.is-pressing:not(.is-disabled):not(:disabled):not(.advance-vacuum-card__control--primary){animation:advance-vacuum-button-bounce-subtle var(--advance-vacuum-card-button-bounce-duration) cubic-bezier(0.2,0.9,0.24,1) both}";
 
   // src/cards/advance-vacuum/advance-vacuum-static-map-1.css
   var advance_vacuum_static_map_1_default = ".advance-vacuum-card__map-tool{align-items:center;background:var(--av-surface-raised);border:1px solid var(--av-border-strong);border-radius:999px;box-shadow:inset 0 1px 0 var(--av-inset),var(--av-float);color:var(--primary-text-color);display:inline-flex;gap:6px;justify-content:center;min-height:44px;min-width:44px;padding:0 14px;pointer-events:auto;transition:transform 180ms cubic-bezier(0.22,0.84,0.26,1),box-shadow 180ms ease,border-color 180ms ease,background 180ms ease,filter 180ms ease}.advance-vacuum-card__map-tool--add{background:var(--av-selected-bg);border-color:var(--av-selected-border);box-shadow:inset 0 1px 0 var(--av-selected-inset),var(--av-selected-glow);font-size:12px;font-weight:700}.advance-vacuum-card__map-tool-label{line-height:1}.advance-vacuum-card__map-tool.is-disabled{opacity:0.45}.advance-vacuum-card__map-tool:not(.advance-vacuum-card__map-tool--status):not(.advance-vacuum-card__map-tool--add):not(.is-disabled):hover{background:var(--av-accent-hover);border-color:var(--av-border);box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-accent-hover-shadow)}.advance-vacuum-card__map-tool--add:not(.is-disabled):hover{filter:brightness(1.05);transform:translateY(-1px)}.advance-vacuum-card__room-marker,.advance-vacuum-card__goto-marker{align-items:center;background:var(--av-surface-raised);border:1px solid var(--av-border);border-radius:999px;box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-float);color:var(--primary-text-color);display:inline-flex;gap:var(--room-marker-gap, 8px);justify-content:center;left:0;min-height:var(--marker-size, 34px);min-width:var(--marker-size, 34px);padding:var(--room-marker-padding, 0 12px);pointer-events:auto;position:absolute;top:0;touch-action:manipulation;transform:translate(-50%,-50%);white-space:nowrap;z-index:2}.advance-vacuum-card__room-marker.is-icon-only{border-radius:999px;padding:0;width:var(--marker-size, 34px)}.advance-vacuum-card__room-marker.is-readonly,.advance-vacuum-card__room-chip.is-readonly{cursor:default;opacity:0.96}.advance-vacuum-card__room-marker.is-selected,.advance-vacuum-card__goto-marker.is-selected{background:var(--av-selected-bg);border-color:var(--av-selected-border);box-shadow:inset 0 1px 0 var(--av-selected-inset),var(--av-selected-glow)}.advance-vacuum-card__room-marker ha-icon,.advance-vacuum-card__goto-marker ha-icon{--mdc-icon-size: var(--room-icon-size, 16px)}";
@@ -1277,7 +1277,7 @@
   var advance_vacuum_static_map_0_default = ".advance-vacuum-card__goto-marker{height:38px;width:38px}.advance-vacuum-card__room-list{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%}.advance-vacuum-card__room-chip{align-items:center;background:var(--av-surface);border:1px solid var(--av-border);border-radius:999px;box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-float-subtle);color:var(--secondary-text-color);cursor:pointer;display:inline-flex;gap:8px;min-height:36px;padding:0 14px;touch-action:manipulation;transition:background 180ms ease,border-color 180ms ease,box-shadow 180ms ease,color 180ms ease,transform 180ms cubic-bezier(0.22,0.84,0.26,1)}.advance-vacuum-card__room-chip.is-selected{background:var(--av-selected-bg);border-color:var(--av-selected-border);box-shadow:inset 0 1px 0 var(--av-selected-inset),var(--av-selected-glow);color:var(--primary-text-color)}.advance-vacuum-card__room-chip:not(.is-readonly):not(.is-selected):hover{background:var(--av-accent-hover);border-color:var(--av-border);box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-accent-hover-shadow)}.advance-vacuum-card__room-chip ha-icon{--mdc-icon-size: 16px}.advance-vacuum-card__room-chip span{font-size:12px;font-weight:600}.advance-vacuum-card__controls{align-items:center;display:grid;gap:10px;justify-items:center;width:100%}.advance-vacuum-card__controls-row{align-items:center;column-gap:14px;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);width:100%}";
 
   // src/cards/advance-vacuum/advance-vacuum-map-surface.css
-  var advance_vacuum_map_surface_default = ".advance-vacuum-card__map-canvas{height:100%;inset:0;position:absolute;transform-origin:top left;width:100%}.advance-vacuum-card__map-image{display:block;height:100%;inset:0;object-fit:cover;opacity:1;position:absolute;transition:opacity 220ms ease-out;width:100%;z-index:0}.advance-vacuum-card__map-image[data-map-image-previous=true]{z-index:0}.advance-vacuum-card__map-image[data-map-image]{z-index:1}.advance-vacuum-card__map-image.is-pending,.advance-vacuum-card__map-image.is-fading-out{opacity:0}.advance-vacuum-card__map-room-dim,.advance-vacuum-card__room-highlight-layer,.advance-vacuum-card__map-svg,.advance-vacuum-card__map-markers,.advance-vacuum-card__map-overlays{inset:0;position:absolute}.advance-vacuum-card__map-room-dim{background:rgba(8,12,20,0.5);pointer-events:none;z-index:1}.advance-vacuum-card__room-highlight-layer{pointer-events:none;z-index:2}.advance-vacuum-card__room-highlight-image{display:block;height:100%;inset:0;object-fit:cover;pointer-events:none;position:absolute;width:100%}.advance-vacuum-card__map-svg{height:100%;pointer-events:none;width:100%;z-index:3}.advance-vacuum-card__map-markers{pointer-events:none}.advance-vacuum-card__map-overlays{pointer-events:none;z-index:4}";
+  var advance_vacuum_map_surface_default = ".advance-vacuum-card__map-canvas{height:100%;inset:0;position:absolute;transform-origin:top left;width:100%}.advance-vacuum-card__map-image{display:block;height:100%;inset:0;object-fit:cover;opacity:1;position:absolute;transition:opacity 220ms ease-out;width:100%;z-index:0}.advance-vacuum-card__map-image[data-map-image-previous=true]{z-index:0}.advance-vacuum-card__map-image[data-map-image]{z-index:1}.advance-vacuum-card__map-image.is-pending,.advance-vacuum-card__map-image.is-fading-out{opacity:0}.advance-vacuum-card__map-room-dim,.advance-vacuum-card__room-highlight-layer,.advance-vacuum-card__map-svg,.advance-vacuum-card__map-markers,.advance-vacuum-card__map-overlays{inset:0;position:absolute}.advance-vacuum-card__map-room-dim{background:rgba(8,12,20,0.5);pointer-events:none;z-index:1}.advance-vacuum-card__room-highlight-layer{pointer-events:none;z-index:2}.advance-vacuum-card__room-highlight-image{display:block;height:100%;inset:0;object-fit:cover;pointer-events:none;position:absolute;width:100%}.advance-vacuum-card__map-svg{height:100%;pointer-events:none;width:100%;z-index:3}.advance-vacuum-card__map-markers{pointer-events:none}.advance-vacuum-card__map-overlays{pointer-events:none;z-index:4}.advance-vacuum-card__zone-hitbox,.advance-vacuum-card__zone-handle,.advance-vacuum-card__map-tool{appearance:none;background:none;border:none;color:inherit;cursor:pointer;font:inherit;margin:0;padding:0}.advance-vacuum-card__zone-hitbox{background:rgba(255,255,255,0.01);border:2px dashed transparent;border-radius:16px;pointer-events:auto;position:absolute;touch-action:none;z-index:2}.advance-vacuum-card__zone-handle{align-items:center;background:var(--av-surface-raised);border:1px solid var(--av-border-strong);border-radius:999px;box-shadow:inset 0 1px 0 var(--av-inset),var(--av-float);color:var(--primary-text-color);display:inline-flex;height:34px;justify-content:center;pointer-events:auto;position:absolute;touch-action:none;transform:translate(-50%,-50%);width:34px;z-index:3}.advance-vacuum-card__zone-handle[data-zone-handle-action=delete]{border-color:rgba(255,130,130,0.32);color:#ffb3b3}.advance-vacuum-card__zone-handle ha-icon,.advance-vacuum-card__map-tool ha-icon{--mdc-icon-size: 16px}.advance-vacuum-card__map-tools{align-items:flex-start;display:flex;gap:8px;justify-content:space-between;left:12px;pointer-events:none;position:absolute;right:12px;top:12px;z-index:4}.advance-vacuum-card__map-tools-group{display:flex;gap:8px}.advance-vacuum-card__map-tools-group--center{left:50%;pointer-events:none;position:absolute;top:0;transform:translateX(-50%)}.advance-vacuum-card__map-tools-group--right{justify-content:flex-end}.advance-vacuum-card__map-tool--back{padding:0;width:44px}.advance-vacuum-card__map-tool--status{padding:0;pointer-events:none;width:44px}.advance-vacuum-card__map-tool--status-charging{color:#f6b73c}";
 
   // src/cards/advance-vacuum/advance-vacuum-motion.css
   var advance_vacuum_motion_default = ".advance-vacuum-card__selection-chip{align-items:center;background:var(--av-surface);border:1px solid var(--av-border);border-radius:999px;box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-float-subtle);color:var(--secondary-text-color);display:inline-flex;font-size:12px;font-weight:600;gap:8px;min-height:34px;padding:0 12px}.advance-vacuum-card__selection-chip strong{color:var(--primary-text-color)}.advance-vacuum-card__selection-chip:hover{background:var(--av-accent-hover);border-color:var(--av-border);box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-accent-hover-shadow)}.advance-vacuum-card__routines{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));width:100%}.advance-vacuum-card__routine-button{align-items:center;appearance:none;background:var(--av-surface);border:1px solid var(--av-border);border-radius:18px;box-shadow:inset 0 1px 0 var(--av-inset),var(--av-float);color:var(--primary-text-color);cursor:pointer;display:grid;gap:10px;justify-items:center;min-height:118px;padding:16px 14px;text-align:center;transition:transform 180ms cubic-bezier(0.22,0.84,0.26,1),box-shadow 180ms ease,border-color 180ms ease;width:100%}.advance-vacuum-card__routine-button:hover{transform:translateY(-1px);box-shadow:inset 0 1px 0 var(--av-inset),var(--av-float-lift)}.advance-vacuum-card__routine-button.is-disabled{cursor:default;opacity:0.5}.advance-vacuum-card__routine-icon{align-items:center;background:var(--av-accent-tile-bg);border:1px solid var(--av-accent-tile-border);border-radius:999px;box-shadow:inset 0 1px 0 var(--av-accent-tile-inset);display:inline-flex;height:46px;justify-content:center;width:46px}.advance-vacuum-card__routine-icon ha-icon{--mdc-icon-size: 22px}.advance-vacuum-card__routine-label{font-size:12px;font-weight:700;line-height:1.35;text-wrap:balance}@keyframes advance-vacuum-utility-panel-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}@keyframes advance-vacuum-card-enter{0%{opacity:0;transform:translateY(8px) scale(0.992)}100%{opacity:1;transform:translateY(0) scale(1)}}@keyframes advance-vacuum-map-enter{0%{opacity:0;transform:translateY(12px) scale(0.988)}100%{opacity:1;transform:translateY(0) scale(1)}}@keyframes advance-vacuum-footer-enter{0%{opacity:0;transform:translateY(10px)}100%{opacity:1;transform:translateY(0)}}@keyframes advance-vacuum-button-bounce{0%{transform:scale(1)}38%{transform:scale(0.935)}72%{transform:scale(1.035)}100%{transform:scale(1)}}@keyframes advance-vacuum-button-bounce-subtle{0%{transform:scale(1)}40%{transform:scale(0.965)}72%{transform:scale(1.02)}100%{transform:scale(1)}}@keyframes advance-vacuum-icon-sweep{0%,100%{transform:translateX(-3px) rotate(-10deg)}50%{transform:translateX(4px) rotate(12deg)}}@media(prefers-reduced-motion:reduce){.advance-vacuum-card,.advance-vacuum-card *,.advance-vacuum-card__control--active-motion ha-icon{animation:none!important;transition:none!important}}";
@@ -1329,6 +1329,12 @@
       return _lazyNodaliaAdvanceVacuumCard;
     }
     class NodaliaAdvanceVacuumCard extends HTMLElement {
+      constructor() {
+        super();
+        this._mapFrame = 0;
+        this._mapGestureRect = null;
+        this._nodaliaConstruct();
+      }
       static async getConfigElement() {
         return document.createElement(EDITOR_TAG);
       }
@@ -1341,10 +1347,6 @@
           domains: ["vacuum"],
           label: "Vacuum — Advanced"
         });
-      }
-      constructor() {
-        super();
-        this._nodaliaConstruct();
       }
       _nodaliaConstruct() {
         this.attachShadow({ mode: "open" });
@@ -1489,6 +1491,7 @@
         this._cancelMapGesture();
       }
       _cancelMapGesture(render = true) {
+        this._cancelMapFrame();
         if (this._pendingRoomSelectionTap) this._markSuppressedRoomSelectionClick(this._pendingRoomSelectionTap.roomId);
         const surface = this.shadowRoot?.querySelector("[data-map-surface='main']");
         for (const pointerId of this._gesturePointers) {
@@ -4262,6 +4265,7 @@
         return sourceItems.filter((item) => this._isMenuItemVisible(item, state));
       }
       _getMapSurfaceRect() {
+        if (this._mapGestureRect) return this._mapGestureRect;
         const rect = this.shadowRoot?.querySelector("[data-map-surface]")?.getBoundingClientRect();
         return rect && Number.isFinite(rect.width) && Number.isFinite(rect.height) && rect.width > 0 && rect.height > 0 ? rect : null;
       }
@@ -4297,7 +4301,28 @@
         this._mapScale = nextTransform.scale;
         this._mapOffset = nextTransform.offset;
       }
+      _cancelMapFrame() {
+        if (this._mapFrame) window.cancelAnimationFrame(this._mapFrame);
+        this._mapFrame = 0;
+        this._mapGestureRect = null;
+      }
+      _scheduleMapPaint() {
+        if (this._mapFrame || !this.isConnected) return;
+        this._mapFrame = window.requestAnimationFrame(() => {
+          this._mapFrame = 0;
+          const canvas = this.shadowRoot?.querySelector(".advance-vacuum-card__map-canvas");
+          const overlays = this.shadowRoot?.querySelector(".advance-vacuum-card__map-overlays");
+          if (!this.isConnected || !canvas || !overlays) return;
+          canvas.style.transform = `translate(${this._mapOffset.x}px, ${this._mapOffset.y}px) scale(${this._mapScale})`;
+          overlays.innerHTML = this._renderMapOverlays();
+        });
+      }
+      _finishMapPinch() {
+        this._cancelMapFrame();
+        if (this.isConnected) this._render();
+      }
       _resetMapTransform() {
+        this._cancelMapFrame();
         this._mapScale = 1;
         this._mapOffset = { x: 0, y: 0 };
         this._pinchGesture = null;
@@ -4547,6 +4572,7 @@
           y: (first.clientY + second.clientY) / 2 - rect.top
         };
         const distance = Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY);
+        this._mapGestureRect = rect;
         this._pinchGesture = {
           startDistance: Math.max(distance, 1),
           startScale: this._mapScale,
@@ -4573,13 +4599,13 @@
           y: (first.clientY + second.clientY) / 2 - rect.top
         };
         const distance = Math.max(Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY), 1);
-        const scale = this._pinchGesture.startScale * (distance / this._pinchGesture.startDistance);
+        const scale = clamp(this._pinchGesture.startScale * (distance / this._pinchGesture.startDistance), 1, 3);
         const offset = {
           x: midpoint.x - this._pinchGesture.anchor.x * scale,
           y: midpoint.y - this._pinchGesture.anchor.y * scale
         };
         this._setMapTransform(scale, offset);
-        this._render();
+        this._scheduleMapPaint();
         return true;
       }
       _getTouchDistance(touches) {
@@ -4618,6 +4644,7 @@
         this._draftZone = null;
         this._zoneHandleDrag = null;
         this._pointerStart = null;
+        this._mapGestureRect = rect;
         this._touchPinchGesture = {
           startDistance: Math.max(distance, 1),
           startScale: this._mapScale,
@@ -4654,6 +4681,7 @@
         }
         if (event.touches.length < 2) {
           this._touchPinchGesture = null;
+          this._finishMapPinch();
           return;
         }
         const rect = this._getMapSurfaceRect();
@@ -4662,13 +4690,13 @@
           return;
         }
         const distance = Math.max(this._getTouchDistance(event.touches), 1);
-        const scale = this._touchPinchGesture.startScale * (distance / this._touchPinchGesture.startDistance);
+        const scale = clamp(this._touchPinchGesture.startScale * (distance / this._touchPinchGesture.startDistance), 1, 3);
         const offset = {
           x: midpoint.x - this._touchPinchGesture.anchor.x * scale,
           y: midpoint.y - this._touchPinchGesture.anchor.y * scale
         };
         this._setMapTransform(scale, offset);
-        this._render();
+        this._scheduleMapPaint();
         event.preventDefault();
         event.stopPropagation();
       }
@@ -4679,6 +4707,7 @@
         }
         if (event.touches.length < 2) {
           this._touchPinchGesture = null;
+          this._finishMapPinch();
           return;
         }
         if (this._beginTouchPinchGesture(event.touches)) {
@@ -5673,6 +5702,24 @@
         if (interactiveTarget) {
           return;
         }
+        if (event.pointerId !== void 0) {
+          this._activeMapPointers.set(event.pointerId, {
+            clientX: event.clientX,
+            clientY: event.clientY
+          });
+          if (event.pointerType !== "touch") {
+            try {
+              surface.setPointerCapture(event.pointerId);
+            } catch (_error) {
+            }
+          }
+        }
+        if (this._activeMapPointers.size >= 2) {
+          this._startPinchGesture();
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
         if (this._activeMode !== "zone") {
           return;
         }
@@ -5720,24 +5767,6 @@
             }
           };
           this._render();
-          return;
-        }
-        if (event.pointerId !== void 0) {
-          this._activeMapPointers.set(event.pointerId, {
-            clientX: event.clientX,
-            clientY: event.clientY
-          });
-          if (event.pointerType !== "touch") {
-            try {
-              surface.setPointerCapture(event.pointerId);
-            } catch (_error) {
-            }
-          }
-        }
-        if (this._activeMapPointers.size >= 2) {
-          this._startPinchGesture();
-          event.preventDefault();
-          event.stopPropagation();
           return;
         }
         const skip = event.composedPath().find((node) => Boolean(node instanceof HTMLElement && (node.dataset?.roomId || node.dataset?.zoneId || node.dataset?.gotoId || node.dataset?.controlAction || node.dataset?.modeId || node.dataset?.headerActionIndex || node.dataset?.modeOptionKind || node.dataset?.customMenuIndex || node.dataset?.dockSectionId || node.dataset?.dockActionId || node.dataset?.dockSettingId || node.dataset?.manualZoneIndex)));
@@ -5882,6 +5911,7 @@
         if (wasPinching) {
           if (this._activeMapPointers.size < 2) {
             this._pinchGesture = null;
+            this._finishMapPinch();
           }
           return;
         }
@@ -6269,6 +6299,32 @@
       `;
         }).join("");
       }
+      _renderMapOverlays(modeId = this._resolveDisplayMode(this._getAvailableModes(), this._advanceVacuumStrings()).id) {
+        const rooms = this._getRoomSegments();
+        const gotoPoints = this._getGotoPoints();
+        const predefinedZones = this._getPredefinedZones();
+        return `
+              ${this._renderManualZoneEditors()}
+              ${modeId === "rooms" ? this._renderRoomMarkers(rooms) : ""}
+              ${modeId === "goto" ? this._renderGotoMarkers(gotoPoints) : ""}
+              ${modeId === "zone" ? predefinedZones.map((zone) => {
+          const position = zone.position || centroid(zone.zones.map((item) => ({ x: Number(item[0]), y: Number(item[1]) })));
+          const percent = this._vacuumToViewportPercent(position);
+          const selected = this._selectedPredefinedZoneIds.includes(zone.id);
+          return `
+                    <button
+                      class="advance-vacuum-card__room-marker ${selected ? "is-selected" : ""}"
+                      style="left:${percent.left}%; top:${percent.top}%;"
+                      data-zone-id="${escapeHtml(zone.id)}"
+                      title="${escapeHtml(zone.label || zone.id)}"
+                    >
+                      <ha-icon icon="${escapeHtml(zone.icon || "mdi:vector-rectangle")}"></ha-icon>
+                      <span>${escapeHtml(zone.label || zone.id)}</span>
+                    </button>
+                  `;
+        }).join("") : ""}
+    `;
+      }
       _renderMapTools() {
         const advanceVacuumStrings = this._advanceVacuumStrings();
         const state = this._getVacuumState();
@@ -6570,7 +6626,6 @@
           const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
           this._syncActiveCleaningSession(state);
           const rooms = this._getRoomSegments();
-          const gotoPoints = this._getGotoPoints();
           const predefinedZones = this._getPredefinedZones();
           const highlightedRoomIds = new Set(this._getHighlightedRoomIds(state));
           const modes = this._getAvailableModes();
@@ -6702,32 +6757,6 @@
           width: ${controlSize}px;
         }
 
-        .advance-vacuum-card__control:hover {
-          transform: translateY(-1px);
-        }
-
-        .advance-vacuum-card__mode-button:hover {
-          transform: translateY(-1px);
-        }
-
-        :is(
-          .advance-vacuum-card__control--primary,
-          .advance-vacuum-card__mode-button,
-          .advance-vacuum-card__map-tool,
-          .advance-vacuum-card__room-marker,
-          .advance-vacuum-card__goto-marker,
-          .advance-vacuum-card__routine-button,
-          .advance-vacuum-card__utility-option,
-          .advance-vacuum-card__selection-chip,
-          .advance-vacuum-card__zone-handle
-        ).is-pressing:not(.is-disabled):not(:disabled) {
-          animation: advance-vacuum-button-bounce var(--advance-vacuum-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
-        }
-
-        .advance-vacuum-card__control.is-pressing:not(.is-disabled):not(:disabled):not(.advance-vacuum-card__control--primary) {
-          animation: advance-vacuum-button-bounce-subtle var(--advance-vacuum-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
-        }
-
         .advance-vacuum-card__control ha-icon {
           --mdc-icon-size: ${Math.round(controlSize * 0.48)}px;
         }
@@ -6809,111 +6838,13 @@
           stroke-width: 8;
         }
 
-        .advance-vacuum-card__zone-hitbox,
-        .advance-vacuum-card__zone-handle,
-        .advance-vacuum-card__map-tool {
-          appearance: none;
-          background: none;
-          border: none;
-          color: inherit;
-          cursor: pointer;
-          font: inherit;
-          margin: 0;
-          padding: 0;
-        }
-
-        .advance-vacuum-card__zone-hitbox {
-          background: rgba(255,255,255,0.01);
-          border: 2px dashed transparent;
-          border-radius: 16px;
-          pointer-events: auto;
-          position: absolute;
-          touch-action: none;
-          z-index: 2;
-        }
-
         .advance-vacuum-card__zone-hitbox.is-selected {
           border-color: color-mix(in srgb, ${accentColor} 46%, rgba(255,255,255,0.18));
-        }
-
-        .advance-vacuum-card__zone-handle {
-          align-items: center;
-          background: var(--av-surface-raised);
-          border: 1px solid var(--av-border-strong);
-          border-radius: 999px;
-          box-shadow:
-            inset 0 1px 0 var(--av-inset),
-            var(--av-float);
-          color: var(--primary-text-color);
-          display: inline-flex;
-          height: 34px;
-          justify-content: center;
-          pointer-events: auto;
-          position: absolute;
-          touch-action: none;
-          transform: translate(-50%, -50%);
-          width: 34px;
-          z-index: 3;
         }
 
         .advance-vacuum-card__zone-handle[data-zone-handle-action="move"] {
           border-color: color-mix(in srgb, ${accentColor} 40%, color-mix(in srgb, var(--primary-text-color) 14%, transparent));
           color: color-mix(in srgb, ${accentColor} 75%, var(--primary-text-color));
-        }
-
-        .advance-vacuum-card__zone-handle[data-zone-handle-action="delete"] {
-          border-color: rgba(255, 130, 130, 0.32);
-          color: #ffb3b3;
-        }
-
-        .advance-vacuum-card__zone-handle ha-icon,
-        .advance-vacuum-card__map-tool ha-icon {
-          --mdc-icon-size: 16px;
-        }
-
-        .advance-vacuum-card__map-tools {
-          align-items: flex-start;
-          display: flex;
-          gap: 8px;
-          justify-content: space-between;
-          left: 12px;
-          pointer-events: none;
-          position: absolute;
-          right: 12px;
-          top: 12px;
-          z-index: 4;
-        }
-
-        .advance-vacuum-card__map-tools-group {
-          display: flex;
-          gap: 8px;
-        }
-
-        .advance-vacuum-card__map-tools-group--center {
-          left: 50%;
-          pointer-events: none;
-          position: absolute;
-          top: 0;
-          transform: translateX(-50%);
-        }
-
-        .advance-vacuum-card__map-tools-group--right {
-          justify-content: flex-end;
-        }
-
-        .advance-vacuum-card__map-tool--back {
-          padding: 0;
-          width: 44px;
-        }
-
-        .advance-vacuum-card__map-tool--status {
-          padding: 0;
-          pointer-events: none;
-          width: 44px;
-        }
-
-        .advance-vacuum-card__map-tool--status-charging {
-          color: #f6b73c;
         }
 
         .advance-vacuum-card__map-tool--status-wash {
@@ -7046,25 +6977,7 @@
               </div>
             </div>
             <div class="advance-vacuum-card__map-overlays">
-              ${this._renderManualZoneEditors()}
-              ${currentMode.id === "rooms" ? this._renderRoomMarkers(rooms) : ""}
-              ${currentMode.id === "goto" ? this._renderGotoMarkers(gotoPoints) : ""}
-              ${currentMode.id === "zone" ? predefinedZones.map((zone) => {
-            const position = zone.position || centroid(zone.zones.map((item) => ({ x: Number(item[0]), y: Number(item[1]) })));
-            const percent = this._vacuumToViewportPercent(position);
-            const selected = this._selectedPredefinedZoneIds.includes(zone.id);
-            return `
-                    <button
-                      class="advance-vacuum-card__room-marker ${selected ? "is-selected" : ""}"
-                      style="left:${percent.left}%; top:${percent.top}%;"
-                      data-zone-id="${escapeHtml(zone.id)}"
-                      title="${escapeHtml(zone.label || zone.id)}"
-                    >
-                      <ha-icon icon="${escapeHtml(zone.icon || "mdi:vector-rectangle")}"></ha-icon>
-                      <span>${escapeHtml(zone.label || zone.id)}</span>
-                    </button>
-                  `;
-          }).join("") : ""}
+              ${this._renderMapOverlays(currentMode.id)}
             </div>
             ${this._renderMapTools()}
           </div>

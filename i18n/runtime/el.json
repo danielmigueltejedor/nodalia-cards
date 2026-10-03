@@ -830,7 +830,8 @@
       "highLevel": "Το {source} είναι στο {value}.",
       "sensorValue": "Το {source} δείχνει {value}.",
       "hotClimate": "Το {source} δείχνει {value}. Μπορείς να ενεργοποιήσεις ψύξη στο {climate}.",
-      "mediaLeftOn": "Το {media} παραμένει ενεργό και το {source} δεν ανιχνεύει παρουσία."
+      "mediaLeftOn": "Το {media} παραμένει ενεργό και το {source} δεν ανιχνεύει παρουσία.",
+      "rainProbability": "Το {source} προβλέπει πιθανότητα βροχής {precipitation_probability} γύρω στις {time}."
     },
     "actions": {
       "openCalendar": "Άνοιγμα ημερολογίου",

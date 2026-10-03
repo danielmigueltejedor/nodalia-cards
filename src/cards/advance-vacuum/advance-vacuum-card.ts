@@ -149,6 +149,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   declare private _hasLoadedPersistedCleaningSessionState: boolean;
   declare private _pendingCleaningSessionStartAt: number;
   declare private _mapScale: number;
+  private _mapFrame = 0;
+  private _mapGestureRect: DOMRect|null = null;
   declare private _calibrationSignatureStamp: string;
   declare private _selectionUpdatedAt: number;
   declare private _wasCleaningSessionActive: boolean;
@@ -308,6 +310,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   _onShadowCancel(event:Event) {event.stopPropagation();this._cancelMapGesture();}
 
   _cancelMapGesture(render = true) {
+    this._cancelMapFrame();
     if(this._pendingRoomSelectionTap) this._markSuppressedRoomSelectionClick(this._pendingRoomSelectionTap.roomId);
     const surface=this.shadowRoot?.querySelector("[data-map-surface='main']");
     for(const pointerId of this._gesturePointers) {try {surface?.releasePointerCapture(pointerId);}catch { /* Capture may already be gone. */ }}
@@ -3701,6 +3704,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _getMapSurfaceRect() {
+    if (this._mapGestureRect) return this._mapGestureRect;
     const rect=this.shadowRoot?.querySelector("[data-map-surface]")?.getBoundingClientRect();
     return rect && Number.isFinite(rect.width) && Number.isFinite(rect.height) && rect.width>0 && rect.height>0 ? rect : null;
   }
@@ -3743,7 +3747,31 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._mapOffset = nextTransform.offset;
   }
 
+  _cancelMapFrame() {
+    if (this._mapFrame) window.cancelAnimationFrame(this._mapFrame);
+    this._mapFrame = 0;
+    this._mapGestureRect = null;
+  }
+
+  _scheduleMapPaint() {
+    if (this._mapFrame || !this.isConnected) return;
+    this._mapFrame = window.requestAnimationFrame(() => {
+      this._mapFrame = 0;
+      const canvas = this.shadowRoot?.querySelector<HTMLElement>(".advance-vacuum-card__map-canvas");
+      const overlays = this.shadowRoot?.querySelector<HTMLElement>(".advance-vacuum-card__map-overlays");
+      if (!this.isConnected || !canvas || !overlays) return;
+      canvas.style.transform = `translate(${this._mapOffset.x}px, ${this._mapOffset.y}px) scale(${this._mapScale})`;
+      overlays.innerHTML = this._renderMapOverlays();
+    });
+  }
+
+  _finishMapPinch() {
+    this._cancelMapFrame();
+    if (this.isConnected) this._render();
+  }
+
   _resetMapTransform() {
+    this._cancelMapFrame();
     this._mapScale = 1;
     this._mapOffset = { x: 0, y: 0 };
     this._pinchGesture = null;
@@ -4044,6 +4072,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     };
     const distance = Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY);
 
+    this._mapGestureRect = rect;
     this._pinchGesture = {
       startDistance: Math.max(distance, 1),
       startScale: this._mapScale,
@@ -4073,14 +4102,14 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       y: ((first.clientY + second.clientY) / 2) - rect.top,
     };
     const distance = Math.max(Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY), 1);
-    const scale = this._pinchGesture.startScale * (distance / this._pinchGesture.startDistance);
+    const scale = clamp(this._pinchGesture.startScale * (distance / this._pinchGesture.startDistance), 1, 3);
     const offset = {
       x: midpoint.x - (this._pinchGesture.anchor.x * scale),
       y: midpoint.y - (this._pinchGesture.anchor.y * scale),
     };
 
     this._setMapTransform(scale, offset);
-    this._render();
+    this._scheduleMapPaint();
     return true;
   }
 
@@ -4126,6 +4155,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._draftZone = null;
     this._zoneHandleDrag = null;
     this._pointerStart = null;
+    this._mapGestureRect = rect;
     this._touchPinchGesture = {
       startDistance: Math.max(distance, 1),
       startScale: this._mapScale,
@@ -4167,6 +4197,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     if (event.touches.length < 2) {
       this._touchPinchGesture = null;
+      this._finishMapPinch();
       return;
     }
 
@@ -4177,14 +4208,14 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     const distance = Math.max(this._getTouchDistance(event.touches), 1);
-    const scale = this._touchPinchGesture.startScale * (distance / this._touchPinchGesture.startDistance);
+    const scale = clamp(this._touchPinchGesture.startScale * (distance / this._touchPinchGesture.startDistance), 1, 3);
     const offset = {
       x: midpoint.x - (this._touchPinchGesture.anchor.x * scale),
       y: midpoint.y - (this._touchPinchGesture.anchor.y * scale),
     };
 
     this._setMapTransform(scale, offset);
-    this._render();
+    this._scheduleMapPaint();
     event.preventDefault();
     event.stopPropagation();
   }
@@ -4197,6 +4228,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     if (event.touches.length < 2) {
       this._touchPinchGesture = null;
+      this._finishMapPinch();
       return;
     }
 
@@ -5355,6 +5387,27 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return;
     }
 
+    if (event.pointerId !== undefined) {
+      this._activeMapPointers.set(event.pointerId, {
+        clientX: event.clientX,
+        clientY: event.clientY,
+      });
+      if (event.pointerType !== "touch") {
+        try {
+          surface.setPointerCapture(event.pointerId);
+        } catch (_error) {
+          // Ignore unsupported pointer capture.
+        }
+      }
+    }
+
+    if (this._activeMapPointers.size >= 2) {
+      this._startPinchGesture();
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
     if (this._activeMode !== "zone") {
       return;
     }
@@ -5413,27 +5466,6 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           };
 
       this._render();
-      return;
-    }
-
-    if (event.pointerId !== undefined) {
-      this._activeMapPointers.set(event.pointerId, {
-        clientX: event.clientX,
-        clientY: event.clientY,
-      });
-      if (event.pointerType !== "touch") {
-        try {
-          surface.setPointerCapture(event.pointerId);
-        } catch (_error) {
-          // Ignore unsupported pointer capture.
-        }
-      }
-    }
-
-    if (this._activeMapPointers.size >= 2) {
-      this._startPinchGesture();
-      event.preventDefault();
-      event.stopPropagation();
       return;
     }
 
@@ -5622,6 +5654,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     if (wasPinching) {
       if (this._activeMapPointers.size < 2) {
         this._pinchGesture = null;
+        this._finishMapPinch();
       }
       return;
     }
@@ -6116,6 +6149,35 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }).join("");
   }
 
+  _renderMapOverlays(modeId = this._resolveDisplayMode(this._getAvailableModes(), this._advanceVacuumStrings()).id) {
+    const rooms = this._getRoomSegments();
+    const gotoPoints = this._getGotoPoints();
+    const predefinedZones = this._getPredefinedZones();
+    return `
+              ${this._renderManualZoneEditors()}
+              ${modeId === "rooms" ? this._renderRoomMarkers(rooms) : ""}
+              ${modeId === "goto" ? this._renderGotoMarkers(gotoPoints) : ""}
+              ${
+                modeId === "zone" ? predefinedZones.map(zone => {
+                  const position = zone.position || centroid(zone.zones.map(item => ({ x: Number(item[0]), y: Number(item[1]) })));
+                  const percent = this._vacuumToViewportPercent(position);
+                  const selected = this._selectedPredefinedZoneIds.includes(zone.id);
+                  return `
+                    <button
+                      class="advance-vacuum-card__room-marker ${selected ? "is-selected" : ""}"
+                      style="left:${percent.left}%; top:${percent.top}%;"
+                      data-zone-id="${escapeHtml(zone.id)}"
+                      title="${escapeHtml(zone.label || zone.id)}"
+                    >
+                      <ha-icon icon="${escapeHtml(zone.icon || "mdi:vector-rectangle")}"></ha-icon>
+                      <span>${escapeHtml(zone.label || zone.id)}</span>
+                    </button>
+                  `;
+                }).join("") : ""
+              }
+    `;
+  }
+
   _renderMapTools() {
     const advanceVacuumStrings = this._advanceVacuumStrings();
     const state = this._getVacuumState();
@@ -6451,7 +6513,6 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
       this._syncActiveCleaningSession(state);
       const rooms = this._getRoomSegments();
-      const gotoPoints = this._getGotoPoints();
       const predefinedZones = this._getPredefinedZones();
       const highlightedRoomIds = new Set(this._getHighlightedRoomIds(state));
       const modes = this._getAvailableModes();
@@ -6613,32 +6674,6 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           width: ${controlSize}px;
         }
 
-        .advance-vacuum-card__control:hover {
-          transform: translateY(-1px);
-        }
-
-        .advance-vacuum-card__mode-button:hover {
-          transform: translateY(-1px);
-        }
-
-        :is(
-          .advance-vacuum-card__control--primary,
-          .advance-vacuum-card__mode-button,
-          .advance-vacuum-card__map-tool,
-          .advance-vacuum-card__room-marker,
-          .advance-vacuum-card__goto-marker,
-          .advance-vacuum-card__routine-button,
-          .advance-vacuum-card__utility-option,
-          .advance-vacuum-card__selection-chip,
-          .advance-vacuum-card__zone-handle
-        ).is-pressing:not(.is-disabled):not(:disabled) {
-          animation: advance-vacuum-button-bounce var(--advance-vacuum-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
-        }
-
-        .advance-vacuum-card__control.is-pressing:not(.is-disabled):not(:disabled):not(.advance-vacuum-card__control--primary) {
-          animation: advance-vacuum-button-bounce-subtle var(--advance-vacuum-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
-        }
-
         .advance-vacuum-card__control ha-icon {
           --mdc-icon-size: ${Math.round(controlSize * 0.48)}px;
         }
@@ -6720,111 +6755,13 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           stroke-width: 8;
         }
 
-        .advance-vacuum-card__zone-hitbox,
-        .advance-vacuum-card__zone-handle,
-        .advance-vacuum-card__map-tool {
-          appearance: none;
-          background: none;
-          border: none;
-          color: inherit;
-          cursor: pointer;
-          font: inherit;
-          margin: 0;
-          padding: 0;
-        }
-
-        .advance-vacuum-card__zone-hitbox {
-          background: rgba(255,255,255,0.01);
-          border: 2px dashed transparent;
-          border-radius: 16px;
-          pointer-events: auto;
-          position: absolute;
-          touch-action: none;
-          z-index: 2;
-        }
-
         .advance-vacuum-card__zone-hitbox.is-selected {
           border-color: color-mix(in srgb, ${accentColor} 46%, rgba(255,255,255,0.18));
-        }
-
-        .advance-vacuum-card__zone-handle {
-          align-items: center;
-          background: var(--av-surface-raised);
-          border: 1px solid var(--av-border-strong);
-          border-radius: 999px;
-          box-shadow:
-            inset 0 1px 0 var(--av-inset),
-            var(--av-float);
-          color: var(--primary-text-color);
-          display: inline-flex;
-          height: 34px;
-          justify-content: center;
-          pointer-events: auto;
-          position: absolute;
-          touch-action: none;
-          transform: translate(-50%, -50%);
-          width: 34px;
-          z-index: 3;
         }
 
         .advance-vacuum-card__zone-handle[data-zone-handle-action="move"] {
           border-color: color-mix(in srgb, ${accentColor} 40%, color-mix(in srgb, var(--primary-text-color) 14%, transparent));
           color: color-mix(in srgb, ${accentColor} 75%, var(--primary-text-color));
-        }
-
-        .advance-vacuum-card__zone-handle[data-zone-handle-action="delete"] {
-          border-color: rgba(255, 130, 130, 0.32);
-          color: #ffb3b3;
-        }
-
-        .advance-vacuum-card__zone-handle ha-icon,
-        .advance-vacuum-card__map-tool ha-icon {
-          --mdc-icon-size: 16px;
-        }
-
-        .advance-vacuum-card__map-tools {
-          align-items: flex-start;
-          display: flex;
-          gap: 8px;
-          justify-content: space-between;
-          left: 12px;
-          pointer-events: none;
-          position: absolute;
-          right: 12px;
-          top: 12px;
-          z-index: 4;
-        }
-
-        .advance-vacuum-card__map-tools-group {
-          display: flex;
-          gap: 8px;
-        }
-
-        .advance-vacuum-card__map-tools-group--center {
-          left: 50%;
-          pointer-events: none;
-          position: absolute;
-          top: 0;
-          transform: translateX(-50%);
-        }
-
-        .advance-vacuum-card__map-tools-group--right {
-          justify-content: flex-end;
-        }
-
-        .advance-vacuum-card__map-tool--back {
-          padding: 0;
-          width: 44px;
-        }
-
-        .advance-vacuum-card__map-tool--status {
-          padding: 0;
-          pointer-events: none;
-          width: 44px;
-        }
-
-        .advance-vacuum-card__map-tool--status-charging {
-          color: #f6b73c;
         }
 
         .advance-vacuum-card__map-tool--status-wash {
@@ -6965,27 +6902,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
               </div>
             </div>
             <div class="advance-vacuum-card__map-overlays">
-              ${this._renderManualZoneEditors()}
-              ${currentMode.id === "rooms" ? this._renderRoomMarkers(rooms) : ""}
-              ${currentMode.id === "goto" ? this._renderGotoMarkers(gotoPoints) : ""}
-              ${
-                currentMode.id === "zone" ? predefinedZones.map(zone => {
-                  const position = zone.position || centroid(zone.zones.map(item => ({ x: Number(item[0]), y: Number(item[1]) })));
-                  const percent = this._vacuumToViewportPercent(position);
-                  const selected = this._selectedPredefinedZoneIds.includes(zone.id);
-                  return `
-                    <button
-                      class="advance-vacuum-card__room-marker ${selected ? "is-selected" : ""}"
-                      style="left:${percent.left}%; top:${percent.top}%;"
-                      data-zone-id="${escapeHtml(zone.id)}"
-                      title="${escapeHtml(zone.label || zone.id)}"
-                    >
-                      <ha-icon icon="${escapeHtml(zone.icon || "mdi:vector-rectangle")}"></ha-icon>
-                      <span>${escapeHtml(zone.label || zone.id)}</span>
-                    </button>
-                  `;
-                }).join("") : ""
-              }
+              ${this._renderMapOverlays(currentMode.id)}
             </div>
             ${this._renderMapTools()}
           </div>

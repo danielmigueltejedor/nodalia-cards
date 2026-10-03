@@ -835,7 +835,8 @@
           "highLevel": "{source} is at {value}.",
           "sensorValue": "{source} reads {value}.",
           "hotClimate": "{source} reads {value}. You can turn on cooling on {climate}.",
-          "mediaLeftOn": "{media} is still on and {source} detects no presence."
+          "mediaLeftOn": "{media} is still on and {source} detects no presence.",
+          "rainProbability": "{source} reports a {precipitation_probability} chance of rain around {time}."
         },
         "actions": {
           "openCalendar": "Open calendar",
@@ -1915,7 +1916,8 @@
           "highLevel": "{source} liegt bei {value}.",
           "sensorValue": "{source} zeigt {value}.",
           "hotClimate": "{source} zeigt {value}. Du kannst Kühlung auf {climate} einschalten.",
-          "mediaLeftOn": "{media} ist noch eingeschaltet und {source} erkennt keine Anwesenheit."
+          "mediaLeftOn": "{media} ist noch eingeschaltet und {source} erkennt keine Anwesenheit.",
+          "rainProbability": "{source} meldet {precipitation_probability} Regenwahrscheinlichkeit gegen {time}."
         },
         "actions": {
           "openCalendar": "Kalender öffnen",
@@ -2995,7 +2997,8 @@
           "highLevel": "Το {source} είναι στο {value}.",
           "sensorValue": "Το {source} δείχνει {value}.",
           "hotClimate": "Το {source} δείχνει {value}. Μπορείς να ενεργοποιήσεις ψύξη στο {climate}.",
-          "mediaLeftOn": "Το {media} παραμένει ενεργό και το {source} δεν ανιχνεύει παρουσία."
+          "mediaLeftOn": "Το {media} παραμένει ενεργό και το {source} δεν ανιχνεύει παρουσία.",
+          "rainProbability": "Το {source} προβλέπει πιθανότητα βροχής {precipitation_probability} γύρω στις {time}."
         },
         "actions": {
           "openCalendar": "Άνοιγμα ημερολογίου",
@@ -4075,7 +4078,8 @@
           "highLevel": "{source} está al {value}.",
           "sensorValue": "{source} marca {value}.",
           "hotClimate": "{source} marca {value}. Puedes activar frío en {climate}.",
-          "mediaLeftOn": "{media} sigue encendido y {source} no detecta presencia."
+          "mediaLeftOn": "{media} sigue encendido y {source} no detecta presencia.",
+          "rainProbability": "{source} indica un {precipitation_probability} de probabilidad de lluvia sobre {time}."
         },
         "actions": {
           "openCalendar": "Abrir calendario",
@@ -5155,7 +5159,8 @@
           "highLevel": "{source} est à {value}.",
           "sensorValue": "{source} indique {value}.",
           "hotClimate": "{source} indique {value}. Vous pouvez activer le froid sur {climate}.",
-          "mediaLeftOn": "{media} est toujours allumé et {source} ne détecte aucune présence."
+          "mediaLeftOn": "{media} est toujours allumé et {source} ne détecte aucune présence.",
+          "rainProbability": "{source} indique {precipitation_probability} de probabilité de pluie vers {time}."
         },
         "actions": {
           "openCalendar": "Ouvrir le calendrier",
@@ -6235,7 +6240,8 @@
           "highLevel": "{source} è a {value}.",
           "sensorValue": "{source} segna {value}.",
           "hotClimate": "{source} segna {value}. Puoi attivare il freddo su {climate}.",
-          "mediaLeftOn": "{media} è ancora acceso e {source} non rileva presenza."
+          "mediaLeftOn": "{media} è ancora acceso e {source} non rileva presenza.",
+          "rainProbability": "{source} indica una probabilità di pioggia del {precipitation_probability} verso {time}."
         },
         "actions": {
           "openCalendar": "Apri calendario",
@@ -7315,7 +7321,8 @@
           "highLevel": "{source} staat op {value}.",
           "sensorValue": "{source} geeft {value} aan.",
           "hotClimate": "{source} geeft {value} aan. Je kunt koeling op {climate} inschakelen.",
-          "mediaLeftOn": "{media} staat nog aan en {source} detecteert geen aanwezigheid."
+          "mediaLeftOn": "{media} staat nog aan en {source} detecteert geen aanwezigheid.",
+          "rainProbability": "{source} meldt {precipitation_probability} kans op regen rond {time}."
         },
         "actions": {
           "openCalendar": "Kalender openen",
@@ -8395,7 +8402,8 @@
           "highLevel": "{source} staat op {value}.",
           "sensorValue": "{source} geeft {value} aan.",
           "hotClimate": "{source} geeft {value} aan. Je kunt koeling op {climate} inschakelen.",
-          "mediaLeftOn": "{media} staat nog aan en {source} detecteert geen aanwezigheid."
+          "mediaLeftOn": "{media} staat nog aan en {source} detecteert geen aanwezigheid.",
+          "rainProbability": "{source} melder {precipitation_probability} sannsynlighet for regn rundt {time}."
         },
         "actions": {
           "openCalendar": "Kalender openen",
@@ -9475,7 +9483,8 @@
           "highLevel": "{source} está em {value}.",
           "sensorValue": "{source} marca {value}.",
           "hotClimate": "{source} marca {value}. Podes ativar frio em {climate}.",
-          "mediaLeftOn": "{media} continua ligado e {source} não deteta presença."
+          "mediaLeftOn": "{media} continua ligado e {source} não deteta presença.",
+          "rainProbability": "{source} indica {precipitation_probability} de probabilidade de chuva por volta de {time}."
         },
         "actions": {
           "openCalendar": "Abrir calendário",
@@ -10555,7 +10564,8 @@
           "highLevel": "{source} este la {value}.",
           "sensorValue": "{source} indică {value}.",
           "hotClimate": "{source} indică {value}. Poți porni răcirea pe {climate}.",
-          "mediaLeftOn": "{media} este încă pornit, iar {source} nu detectează prezență."
+          "mediaLeftOn": "{media} este încă pornit, iar {source} nu detectează prezență.",
+          "rainProbability": "{source} indică o probabilitate de ploaie de {precipitation_probability} în jurul orei {time}."
         },
         "actions": {
           "openCalendar": "Deschide calendarul",
@@ -11635,7 +11645,8 @@
           "highLevel": "{source}: {value}.",
           "sensorValue": "{source} показывает {value}.",
           "hotClimate": "{source} показывает {value}. Можно включить охлаждение на {climate}.",
-          "mediaLeftOn": "{media} всё ещё включено, а {source} не обнаруживает присутствие."
+          "mediaLeftOn": "{media} всё ещё включено, а {source} не обнаруживает присутствие.",
+          "rainProbability": "{source} сообщает о вероятности дождя {precipitation_probability} около {time}."
         },
         "actions": {
           "openCalendar": "Открыть календарь",
@@ -12715,7 +12726,8 @@
           "highLevel": "{source} 为 {value}。",
           "sensorValue": "{source} 显示 {value}。",
           "hotClimate": "{source} 显示 {value}。可以在 {climate} 上开启制冷。",
-          "mediaLeftOn": "{media} 仍处于开启状态，{source} 未检测到有人。"
+          "mediaLeftOn": "{media} 仍处于开启状态，{source} 未检测到有人。",
+          "rainProbability": "{source} 预计 {time} 左右的降雨概率为 {precipitation_probability}。"
         },
         "actions": {
           "openCalendar": "打开日历",

@@ -43,3 +43,29 @@
           margin: 0;
           padding: 0;
         }
+
+.advance-vacuum-card__control:hover {
+          transform: translateY(-1px);
+        }
+
+        .advance-vacuum-card__mode-button:hover {
+          transform: translateY(-1px);
+        }
+
+        :is(
+          .advance-vacuum-card__control--primary,
+          .advance-vacuum-card__mode-button,
+          .advance-vacuum-card__map-tool,
+          .advance-vacuum-card__room-marker,
+          .advance-vacuum-card__goto-marker,
+          .advance-vacuum-card__routine-button,
+          .advance-vacuum-card__utility-option,
+          .advance-vacuum-card__selection-chip,
+          .advance-vacuum-card__zone-handle
+        ).is-pressing:not(.is-disabled):not(:disabled) {
+          animation: advance-vacuum-button-bounce var(--advance-vacuum-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
+        }
+
+        .advance-vacuum-card__control.is-pressing:not(.is-disabled):not(:disabled):not(.advance-vacuum-card__control--primary) {
+          animation: advance-vacuum-button-bounce-subtle var(--advance-vacuum-card-button-bounce-duration) cubic-bezier(0.2, 0.9, 0.24, 1) both;
+        }

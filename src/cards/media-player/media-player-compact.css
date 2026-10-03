@@ -1,0 +1,76 @@
+.media-player-card--chip {
+          min-height: 72px;
+          padding: 10px 12px 14px;
+        }
+
+        .media-player-card--compact {
+          display: flex;
+          flex-direction: column;
+          height: auto;
+          justify-content: space-between;
+          min-height: 0;
+          padding: 12px;
+          position: relative;
+        }
+
+        .media-player-card--compact.media-player-card--idle {
+          align-items: stretch;
+          height: auto;
+          justify-content: center;
+          min-height: 68px;
+          padding: 14px 12px;
+        }
+
+        .media-player-card--compact .media-player__volume-button:not(.media-player__volume-button--browse),
+        .media-player-card--compact .media-player__chips-wrap,
+        .media-player-card--compact .media-player__subtitle,
+        .media-player-card--compact .media-player__info-rail,
+        .media-player-card--compact .media-player__chip--top,
+        .media-player-card--compact .media-player__chip--device {
+          display: none;
+        }
+
+        .media-player-card--compact .media-player__transport-cluster {
+          display: flex;
+          flex-wrap: nowrap;
+          gap: 6px;
+          grid-template-columns: none;
+          justify-content: center;
+          max-width: 100%;
+          min-width: 0;
+          overflow: visible;
+          padding-inline: 2px;
+          width: 100%;
+        }
+
+        .media-player-card--compact .media-player__control {
+          flex: 0 0 auto;
+          height: 32px;
+          min-width: 32px;
+          width: 32px;
+        }
+
+        .media-player-card--compact .media-player__control--primary {
+          height: 36px;
+          min-width: 36px;
+          width: 36px;
+        }
+
+        .media-player-card--compact .media-player__volume-button--browse {
+          height: 28px;
+          min-width: 28px;
+          position: absolute;
+          right: 8px;
+          top: 8px;
+          width: 28px;
+          z-index: 4;
+        }
+
+        .media-player-card--compact .media-player__hero-copy,
+        .media-player-card--compact .media-player__title {
+          padding-inline-end: 36px;
+        }
+
+        .media-player-card--compact .media-player__title {
+          font-size: 13px;
+        }

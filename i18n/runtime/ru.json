@@ -830,7 +830,8 @@
       "highLevel": "{source}: {value}.",
       "sensorValue": "{source} показывает {value}.",
       "hotClimate": "{source} показывает {value}. Можно включить охлаждение на {climate}.",
-      "mediaLeftOn": "{media} всё ещё включено, а {source} не обнаруживает присутствие."
+      "mediaLeftOn": "{media} всё ещё включено, а {source} не обнаруживает присутствие.",
+      "rainProbability": "{source} сообщает о вероятности дождя {precipitation_probability} около {time}."
     },
     "actions": {
       "openCalendar": "Открыть календарь",

@@ -830,7 +830,8 @@
       "highLevel": "{source} 为 {value}。",
       "sensorValue": "{source} 显示 {value}。",
       "hotClimate": "{source} 显示 {value}。可以在 {climate} 上开启制冷。",
-      "mediaLeftOn": "{media} 仍处于开启状态，{source} 未检测到有人。"
+      "mediaLeftOn": "{media} 仍处于开启状态，{source} 未检测到有人。",
+      "rainProbability": "{source} 预计 {time} 左右的降雨概率为 {precipitation_probability}。"
     },
     "actions": {
       "openCalendar": "打开日历",
