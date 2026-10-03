@@ -60,14 +60,15 @@
         }
 
         .advance-vacuum-card__utility-panel {
-          animation: advance-vacuum-utility-panel-in var(--advance-vacuum-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) forwards;
           display: grid;
           gap: 10px;
           justify-items: center;
-          opacity: 0;
-          transform: translateY(-6px);
           transform-origin: top center;
           width: 100%;
+        }
+
+        .advance-vacuum-card__utility-panel--entering {
+          animation: advance-vacuum-utility-panel-in var(--advance-vacuum-card-panel-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
         }
 
         .advance-vacuum-card__utility-panel-slot {
@@ -189,4 +190,3 @@
           gap: 6px;
           justify-items: center;
         }
-

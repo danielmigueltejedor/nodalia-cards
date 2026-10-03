@@ -691,3 +691,16 @@ test("advanced vacuum editor keeps platform selection compact and Valetudo-speci
   assert.match(source, /"send_command", label: "Generic send_command" \},?\s*\], \{ fullWidth: true \}\)/);
   assert.match(source, /normalizeTextKey\(config\.vacuum_platform \|\| "auto"\)\.includes\("valetudo"\)/);
 });
+
+test('advance vacuum malformed CSS functions fall back without swallowing following rules', () => {
+  const {card}=createCard({states:{'vacuum.roborock_s8':{state:'error',attributes:{}}}});
+  card._config.styles={icon:{error_color:'var(--error-color,'}};
+  assert.equal(card._getAccentColor({state:'error',attributes:{}}),'var(--error-color, #ff6b6b)');
+  for(const value of ['rgb(255, 0, 0','var(--error-color))','var([--error-color))']) {
+    card._config.styles.icon.error_color=value;
+    assert.equal(card._getAccentColor({state:'error',attributes:{}}),'var(--error-color, #ff6b6b)');
+  }
+  const valid='var(--error-color, rgb(255, 0, 0))';
+  card._config.styles.icon.error_color=valid;
+  assert.equal(card._getAccentColor({state:'error',attributes:{}}),valid);
+});

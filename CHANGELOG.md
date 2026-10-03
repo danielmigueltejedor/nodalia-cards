@@ -27,6 +27,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- Advance Vacuum installs complete styles on first mount and falls back from malformed CSS functions. Pinch gestures retain their map/marker nodes through HA feedback and native touch handoff; cleaning updates no longer replay entrance/panel animations. Preset commands avoid linked duplicates and rejected or retired selections cannot leave stale mode feedback.
 - Narrow idle Music Assistant controls no longer overlap; Advanced Vacuum pinch updates preserve the mounted map and reduce rendering work. Rain templates separate probability and current temperature, and the Engine bridge negotiates API 3 with API 2 fallback.
 
 - Vacuum localizes charger-disconnected states and truncates long status chips with ellipsis while preserving full title text.
