@@ -8,6 +8,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## Unreleased
+
+### Changed
+
+- Adopt the new Nodalia Cards logo in the repository header, preserving the supplied PNG and its transparency.
+
 ## [3.0.0-alpha.3] - 2026-10-03
 
 ### Fixed
