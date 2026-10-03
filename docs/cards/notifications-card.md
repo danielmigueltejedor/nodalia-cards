@@ -33,6 +33,8 @@ custom_notifications:
 
 Standard variables include `{source}`, `{entity}`, `{state}`, `{value}`, `{threshold}`, `{fan}` and `{time}`, together with the entity's attributes. Templates can reference another entity, such as `{sensor.energy_price}`, or a specific attribute, such as `{media_player.living_room.media_title}`. A numeric entity value includes its unit; `.state` returns the raw state. Missing references produce an empty string.
 
+For smart rain alerts, `{value}` is the weather entity's **current temperature with its temperature unit**, rather than the forecast temperature. Both the title and message expose the weather attributes, so `{temperature}{temperature_unit}` also works. Per-entity overrides use the same values and update when Home Assistant updates the weather entity. Missing temperatures remain empty; an actual zero remains valid.
+
 ## Mobile delivery and Engine
 
 Mobile delivery is disabled by default. Configure notify entities/services, severity, quiet hours and presence in the editor. Policies are `auto`, `push`, `card_only` and `off`; card visibility and mobile delivery are separate decisions. Per-entity smart overrides can inherit the base policy.

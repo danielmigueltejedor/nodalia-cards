@@ -8,6 +8,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.0.0-alpha.2] - 2026-10-03
+
+### Fixed
+
+- Notifications rain-alert titles and messages now expose the current weather temperature. `{value}` includes its temperature unit; per-entity overrides such as `Fuera hacen {value}.` update with Home Assistant, preserve a real zero and leave missing measurements empty.
+
 ## [3.0.0-alpha.1] - 2026-10-02
 
 ### Changed
