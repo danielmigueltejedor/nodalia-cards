@@ -1,8 +1,8 @@
+        .media-player-card { container-type: inline-size; }
         .media-player-card--square,
         .media-player-card--artwork {
           align-self: start;
           aspect-ratio: 1 / 1;
-          container-type: inline-size;
           display: grid;
           grid-template-rows: minmax(0, 1fr) auto;
           height: auto;
@@ -151,6 +151,16 @@
         }
 
         @container (max-width: 260px) {
+          .media-player__idle-main:has(.media-player__volume-button--browse) {
+            gap: 3px;
+            grid-template-columns: minmax(0, 1fr);
+          }
+          .media-player__idle-actions:has(.media-player__volume-button--browse) .media-player__control {
+            height: 32px;
+            min-width: 32px;
+            width: 32px;
+          }
+
           .media-player__info-rail {
             display: none;
           }
@@ -182,10 +192,6 @@
           }
         }
 
-        .media-player-card--square,
-        .media-player-card--artwork {
-          container-type: inline-size;
-        }
 
         .media-player-card--square .media-player__transport-cluster,
         .media-player-card--artwork .media-player__transport-cluster {
@@ -324,10 +330,6 @@
           width: 100%;
         }
 
-        .media-player-card--compact.media-player-card--idle .media-player__content--idle {
-          width: 100%;
-        }
-
         .media-player-card--compact .media-player__transport-cluster {
           gap: 6px;
           margin-top: auto;
@@ -354,6 +356,12 @@
         .media-player-card--compact .media-player__artwork {
           height: 48px;
           width: 48px;
+        }
+
+        /* Idle controls share the action row; the artwork-corner shortcut must
+           not overlay playback when the player has no active media. */
+        .media-player-card--idle .media-player__volume-button--browse {
+          position: static;
         }
 
         @keyframes nodalia-media-kenburns {

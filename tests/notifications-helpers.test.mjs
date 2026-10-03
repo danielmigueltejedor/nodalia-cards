@@ -37,3 +37,9 @@ test('Background notification sync does not write a profile after its editor con
  current=false;resolveStatus({available:true,capabilities:['notifications_background']});
  const result=await pending;assert.equal(result.synced,false);assert.equal(result.transient,true);assert.equal(calls.length,0);
 });
+
+test('Rain probability rejects missing, nonfinite and out-of-range percentages while preserving zero and valid aliases',()=>{
+ for(const raw of [null,undefined,'',false,NaN,Infinity,-1,101]) assert.equal(api.forecastRainProbability({precipitation_probability:raw}),null);
+ assert.equal(api.forecastRainProbability({precipitation_probability:0}),0);
+ assert.equal(api.forecastRainProbability({precipitation_probability:-1,precip_probability:80}),80);
+});

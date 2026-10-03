@@ -16,8 +16,8 @@ function loadBackend(overrides = {}) {
   return sandbox.NodaliaBackend;
 }
 
-test("backend bridge targets API v2", () => {
-  assert.equal(loadBackend().API_VERSION, 2);
+test("backend bridge prefers API v3", () => {
+  assert.equal(loadBackend().API_VERSION, 3);
 });
 
 test("backend bridge detects the matching native API and caches status", async () => {
@@ -321,4 +321,28 @@ test("generated backend adapter remains idempotent and does not require a DOM", 
   vm.runInContext(source, sandbox);
   assert.equal(sandbox.window.NodaliaBackend, first);
   assert.doesNotThrow(() => vm.runInNewContext(source, { console }));
+});
+
+test('backend negotiates v3 while older Engine connections retain v2 commands', async () => {
+  const backend = loadBackend(), commands=[];
+  const modern={connection:{}, callWS:async msg=>{commands.push(msg);return msg.type==='nodalia/status'?{available:true,api_version:3,api_min_version:1,api_max_version:3,capabilities:['notifications_preview','notifications_snooze','climate_schedule_preview','vacuum_sessions']}:{ok:true};}};
+  const value=await backend.status(modern); assert.equal(value.negotiated_api_version,3);
+  await backend.setNotificationProfile(modern,{enabled:false},'home');
+  await backend.previewNotificationProfile(modern,{enabled:true},'home');
+  await backend.snoozeNotification(modern,'rain:weather.home','2026-10-04T10:00:00Z','home');
+  await backend.previewClimateSchedule(modern,'climate.room',{enabled:false,slots:[]},'2026-10-04T10:00:00Z');
+  await backend.getVacuumSession(modern,'vacuum.robot');
+  await backend.setVacuumSession(modern,'vacuum.robot',{repeats:1},0);
+  assert.equal(commands[0].api_version,2); assert.ok(commands.slice(1).every(msg=>msg.api_version===3));
+  assert.equal(commands.at(-1).expected_revision,0); assert.equal(commands[1].profile.enabled,false);
+  const legacy={connection:{},callWS:async msg=>{commands.push(msg);return {available:true,api_version:2,capabilities:['notifications_background']};}};
+  assert.equal((await backend.status(legacy)).negotiated_api_version,2);
+  await backend.setNotificationProfile(legacy,{enabled:true},'home');assert.equal(commands.at(-1).api_version,2);
+  const before=commands.length;await assert.rejects(backend.snoozeNotification(legacy,'rain','2026-10-04T10:00:00Z'),{code:'unsupported_capability'});assert.equal(commands.length,before);
+});
+test('backend declines a future-only Engine and never sends unavailable v3 commands',async()=>{
+  const backend=loadBackend(),commands=[];const hass={callWS:async msg=>{commands.push(msg);return {available:true,api_version:4,api_min_version:4,api_max_version:4,capabilities:['vacuum_sessions']};}};
+  assert.equal((await backend.status(hass)).available,false);
+  await assert.rejects(backend.getVacuumSession(hass,'vacuum.robot'),{code:'unsupported_capability'});
+  assert.equal(commands.length,1);
 });

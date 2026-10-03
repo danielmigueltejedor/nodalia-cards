@@ -830,7 +830,8 @@
       "highLevel": "{source} este la {value}.",
       "sensorValue": "{source} indică {value}.",
       "hotClimate": "{source} indică {value}. Poți porni răcirea pe {climate}.",
-      "mediaLeftOn": "{media} este încă pornit, iar {source} nu detectează prezență."
+      "mediaLeftOn": "{media} este încă pornit, iar {source} nu detectează prezență.",
+      "rainProbability": "{source} indică o probabilitate de ploaie de {precipitation_probability} în jurul orei {time}."
     },
     "actions": {
       "openCalendar": "Deschide calendarul",

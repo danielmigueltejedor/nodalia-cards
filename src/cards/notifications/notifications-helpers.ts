@@ -473,6 +473,14 @@ export function forecastNumber(rawValue: unknown, fields: readonly string[]) {
   return null;
 }
 
+export function forecastRainProbability(row: unknown) {
+  for (const field of ["precipitation_probability", "precipitationProbability", "probability_of_precipitation", "rain_probability", "precip_probability"]) {
+    const value = forecastNumber(row, [field]);
+    if (value !== null && value >= 0 && value <= 100) return value;
+  }
+  return null;
+}
+
 export function forecastLooksRainy(raw: unknown) {
   const row = isObject(raw) ? raw : {};
   const condition = normalizeMatchText(row?.condition || row?.state || row?.weather || "");
@@ -539,6 +547,7 @@ export function getBackgroundMobileConfigPayload(rawConfig: unknown, hass: HomeA
   });
   return {
     version: 2,
+    template_version: 3,
     card_version: CARD_VERSION,
     source: CARD_TAG,
     language: resolveBackgroundMobileLanguage(config, hass),
@@ -653,6 +662,7 @@ export function buildBackgroundMobileWebhookPayload(rawConfig: unknown, hass: Ho
   }
   return {
     version: 2,
+    template_version: 3,
     card_version: CARD_VERSION,
     source: CARD_TAG,
     chunk_count: chunks.length,

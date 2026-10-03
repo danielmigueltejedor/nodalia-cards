@@ -26,6 +26,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- Narrow idle Music Assistant controls no longer overlap; Advanced Vacuum pinch updates preserve the mounted map and reduce rendering work. Rain templates separate probability and current temperature, and the Engine bridge negotiates API 3 with API 2 fallback.
+
 - Vacuum localizes charger-disconnected states and truncates long status chips with ellipsis while preserving full title text.
 - Rain notification templates receive the weather temperature, preserving valid zero and temperature units.
 - Pending asynchronous work is retired across configuration, HA connection/user and view changes. Native focus, draft fields and cancelled gestures retain their intended behavior.

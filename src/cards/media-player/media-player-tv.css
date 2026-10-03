@@ -1,0 +1,93 @@
+.media-player-card--tv .media-player__subtitle--tv,
+        .media-player-card--tv .media-player__chips-wrap {
+          justify-self: end;
+          max-width: 100%;
+          text-align: right;
+        }
+
+        .media-player-card--tv:not(.media-player-card--idle) .media-player__chips-wrap {
+          margin-bottom: 4px;
+        }
+
+        .media-player-card--tv .media-player__subtitle--tv {
+          display: block;
+          max-width: 100%;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          width: 100%;
+        }
+
+        .media-player-card--tv:not(.media-player-card--idle) .media-player__center-stack {
+          gap: 6px;
+        }
+
+        .media-player-card--tv:not(.media-player-card--idle) .media-player__tv-stack {
+          gap: 5px;
+        }
+
+        .media-player-card--tv .media-player__chips,
+        .media-player-card--tv .media-player__footer {
+          justify-content: flex-end;
+        }
+
+        .media-player-card--tv.media-player-card--idle .media-player__idle-main {
+          align-items: center;
+          gap: 10px;
+          grid-template-columns: minmax(0, 1fr) auto;
+          padding-top: 0;
+          width: 100%;
+        }
+
+        .media-player-card--tv.media-player-card--idle .media-player__idle-tv-stack {
+          gap: 10px;
+          padding-top: 0;
+          width: auto;
+        }
+
+        .media-player-card--tv.media-player-card--idle .media-player__idle-hero--tv-off {
+          align-items: center;
+          gap: 12px;
+          grid-template-columns: 38px minmax(0, 1fr) auto;
+          width: 100%;
+        }
+
+        .media-player-card--tv.media-player-card--idle .media-player__idle-actions--tv-off {
+          justify-content: flex-end;
+          justify-self: end;
+          width: auto;
+        }
+
+        .media-player-card--idle .media-player__control {
+          height: 38px;
+          min-width: 38px;
+          width: 38px;
+        }
+
+        .media-player-card--idle .media-player__control ha-icon {
+          --mdc-icon-size: 18px;
+          height: 18px;
+          width: 18px;
+        }
+
+        .media-player-card--tv.media-player-card--idle .media-player__idle-hero {
+          align-items: center;
+        }
+
+        .media-player-card--tv .media-player__tv-source-panel {
+          justify-content: center;
+          max-height: 190px;
+          overflow: auto;
+          padding-right: 2px;
+        }
+
+        .media-player-card--tv .media-player__source-buttons {
+          gap: 6px;
+          justify-content: center;
+        }
+
+        .media-player-card--tv .media-player__source-button {
+          max-width: 100%;
+          min-height: 32px;
+          padding: 0 10px;
+        }

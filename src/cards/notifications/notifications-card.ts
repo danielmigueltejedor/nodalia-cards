@@ -34,6 +34,7 @@ import {
   forecastDate,
   forecastLooksRainy,
   forecastNumber,
+  forecastRainProbability,
   formatNotificationTemplate,
   formatNumber,
   formatTime,
@@ -1817,28 +1818,28 @@ class NodaliaNotificationsCard extends HTMLElement {
         .filter((item):item is typeof item & {date:Date} => Boolean(item.date) && (item.date?.getTime() ?? -Infinity) >= now && (item.date?.getTime() ?? Infinity) <= now + lookaheadMs)
         .sort((left, right) => left.date.getTime() - right.date.getTime());
       const rainy = rows.find(({ row }) => {
-        const probability = forecastNumber(row, [
-          "precipitation_probability",
-          "precipitationProbability",
-          "probability_of_precipitation",
-          "rain_probability",
-        ]);
+        const probability = forecastRainProbability(row);
         return forecastLooksRainy(row) || (probability !== null && probability >= this._config.thresholds.rain_probability);
       });
       if (!rainy) {
         return;
       }
       const sourceName = friendlyName(this._hass, entityId);
+      const probability = forecastRainProbability(rainy.row);
+      const temperature = forecastNumber(attributes, ["temperature", "native_temperature"]);
       const templateValues = {
         ...attributes,
         source: sourceName,
         time: formatTime(rainy.date),
-        value: formatNumber(attributes?.temperature, attributes?.temperature_unit),
+        value: formatNumber(probability, "%"),
+        precipitation_probability: formatNumber(probability, "%"),
+        temperature: temperature ?? "",
+        temperature_unit: temperature === null ? "" : attributes?.temperature_unit || "",
       };
       add({
         id: `weather:rain:${entityId}:${rainy.date.toISOString().slice(0, 13)}`,
         title: this._smartTitle("rain", "titles.rainSoon", "Rain soon", templateValues, entityId),
-        message: this._smartMessage("rain", "messages.rainSoon", "{source} expects rain around {time}. If laundry is outside, it is worth checking.", templateValues, entityId),
+        message: this._smartMessage("rain", probability === null ? "messages.rainSoon" : "messages.rainProbability", probability === null ? "{source} expects rain around {time}." : "{source} reports a {precipitation_probability} chance of rain around {time}.", templateValues, entityId),
         icon: "mdi:weather-pouring",
         severity: "warning",
         source: sourceName,

@@ -10,7 +10,7 @@ test('Rain notification templates show the current weather temperature and react
  await page.evaluate(()=>{
   const forecast=[{datetime:new Date(Date.now()+3600000).toISOString(),condition:'rainy',temperature:9}];
   const card=document.createElement('nodalia-notifications-card');
-  card.setConfig({language:'es',weather_entities:['weather.openweathermap'],smart_notifications:{rain:{title:'Lluvia próxima: {temperature}{temperature_unit}'}},smart_entity_overrides:[{entity:'weather.openweathermap',message:'Fuera hacen {value}.',mobile:'inherit'}],animations:{enabled:false}});
+  card.setConfig({language:'es',weather_entities:['weather.openweathermap'],smart_notifications:{rain:{title:'Lluvia próxima: {temperature}{temperature_unit}'}},smart_entity_overrides:[{entity:'weather.openweathermap',message:'Fuera hacen {temperature}{temperature_unit}.',mobile:'inherit'}],animations:{enabled:false}});
   card.hass=window.createHassFixture({entities:{'weather.openweathermap':{state:'rainy',attributes:{friendly_name:'Tiempo',temperature:15.2,temperature_unit:'°C',forecast}}},overrides:{callWS:async()=>({response:{'weather.openweathermap':{forecast}}})}});
   document.querySelector('#fixture').append(card);window.rainTemperatureCard=card;
  });
@@ -28,4 +28,22 @@ test('Rain notification templates show the current weather temperature and react
  await expect(card.locator('ha-card')).not.toContainText('Fuera hacen 0°C.');
  await expect(card.locator('ha-card')).not.toContainText('Fuera hacen 32°F.');
  expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+});
+test('Rain copy reports forecast probability separately from temperature and falls back when probability is absent',async({page})=>{
+ await page.goto('/tests/fixtures/browser.html');await page.waitForFunction(()=>customElements.get('nodalia-notifications-card'));
+ await page.evaluate(()=>{
+  const forecast=[{datetime:new Date(Date.now()+3600000).toISOString(),condition:'rainy',precipitation_probability:80}];
+  const card=document.createElement('nodalia-notifications-card');card.setConfig({language:'es',weather_entities:['weather.home'],animations:{enabled:false}});
+  card.hass=window.makeHass({'weather.home':{state:'rainy',attributes:{friendly_name:'Tiempo',temperature:0,temperature_unit:'°C',forecast}}});
+  document.querySelector('#fixture').append(card);window.probabilityCard=card;
+ });
+ const card=page.locator('nodalia-notifications-card');await expect(card.locator('ha-card')).toContainText('80% de probabilidad de lluvia');
+ await page.evaluate(()=>{const c=window.probabilityCard;c.setConfig({...c._config,smart_notifications:{rain:{message:'Lluvia {value}; probabilidad {precipitation_probability}; temperatura {temperature}{temperature_unit}'}}});});
+ await expect(card.locator('ha-card')).toContainText('Lluvia 80%; probabilidad 80%; temperatura 0°C');
+ for(const probability of [0,null]){
+  await page.evaluate(probability=>{const c=window.probabilityCard;c._weatherForecasts={'weather.home':[{datetime:new Date(Date.now()+3600000).toISOString(),condition:'rainy',precipitation_probability:probability}]};c._lastRenderSignature='';c._render();},probability);
+  await expect(card.locator('ha-card')).toContainText(probability===0?'Lluvia 0%; probabilidad 0%; temperatura 0°C':'Lluvia ; probabilidad ; temperatura 0°C');
+ }
+ await page.evaluate(()=>{const c=window.probabilityCard;c._hass.states['weather.home'].attributes.forecast=[{datetime:new Date(Date.now()+3600000).toISOString(),condition:'rainy'}];c.setConfig({...c._config,smart_notifications:{rain:{message:''}}});c._weatherForecasts={'weather.home':c._hass.states['weather.home'].attributes.forecast};c._lastRenderSignature='';c._render();});
+ await expect(card.locator('ha-card')).toContainText('prevé lluvia');await expect(card.locator('ha-card')).not.toContainText('%');expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
 });

@@ -830,7 +830,8 @@
       "highLevel": "{source} is at {value}.",
       "sensorValue": "{source} reads {value}.",
       "hotClimate": "{source} reads {value}. You can turn on cooling on {climate}.",
-      "mediaLeftOn": "{media} is still on and {source} detects no presence."
+      "mediaLeftOn": "{media} is still on and {source} detects no presence.",
+      "rainProbability": "{source} reports a {precipitation_probability} chance of rain around {time}."
     },
     "actions": {
       "openCalendar": "Open calendar",

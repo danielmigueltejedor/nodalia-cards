@@ -8,6 +8,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.0.0-alpha.5] - 2026-10-03
+
+### Fixed
+
+- Idle Music Assistant Media Players keep playback and media browsing controls separate in narrow six-column tiles, including Safari mobile. The player name remains visible.
+- Advanced Vacuum mobile pinch gestures update the map and markers once per animation frame without rebuilding the card, image or footer. Closing or changing the card context cancels queued work.
+- Rain messages use forecast probability and explicit current-temperature fields, with real zero values and coherent copy when a probability is absent.
+
+### Added
+
+- Engine API v3 negotiation with API v2 fallback, explicit rain template versioning and capability-gated bridge methods for notification preview/snooze, Climate preview and private revisioned vacuum sessions. These methods prepare frontend integration; their presence does not add editor controls.
+- API v3 documentation and migration guidance for custom rain messages.
+
 ## [3.0.0-alpha.4] - 2026-10-03
 
 ### Changed

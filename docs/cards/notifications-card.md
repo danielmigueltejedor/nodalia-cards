@@ -78,3 +78,16 @@ time boundaries; a failed request waits the normal interval before retrying.
 added for local dismissals and mobile history. Earlier unscoped browser entries
 are retained in storage but are not imported into another user's private state.
 `dismissed_entity` and the Engine profile remain explicit ways to share dismissals.
+
+## Rain message templates in API v3
+
+Rain messages report forecast probability when it is available and expected rain
+without a made-up percentage when it is absent. `{value}` and
+`{precipitation_probability}` mean the formatted probability, including `%`.
+Use `Fuera hacen {temperature}{temperature_unit}.` for the current temperature;
+zero degrees remain visible and absent measurements do not retain a unit.
+The current reading is independent of the forecast temperature.
+
+New synchronized profiles carry `template_version: 3`. The new Engine keeps the probability meaning used by published Engine 2.0.2
+and replaces the temporary temperature alias in the unpublished 3.0.0 preparation. See the [API v3 contract](../engine-api-v3.md) before updating
+custom messages or integrating the new optional Engine operations.
