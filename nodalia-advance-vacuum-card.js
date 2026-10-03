@@ -4183,14 +4183,14 @@
           this._render();
           return;
         }
-        if (selection.suction && normalizeTextKey(selection.suction) !== normalizeTextKey(this._getModeDescriptor("suction", state)?.current)) {
-          pending.push(this._setModeOption("suction", selection.suction, state, { triggerHaptic: false, linkSmart: false }));
-        }
-        if (selection.mop && normalizeTextKey(selection.mop) !== normalizeTextKey(this._getModeDescriptor("mop", state)?.current)) {
-          pending.push(this._setModeOption("mop", selection.mop, state, { triggerHaptic: false, linkSmart: false }));
-        }
-        if (selection.mopMode && normalizeTextKey(selection.mopMode) !== normalizeTextKey(this._getMopModeDescriptor(state)?.current)) {
-          pending.push(this._setModeOption("mop_mode", selection.mopMode, state, { triggerHaptic: false }));
+        const submitted = /* @__PURE__ */ new Set();
+        for (const [kind, value] of [["suction", selection.suction], ["mop", selection.mop], ["mop_mode", selection.mopMode]]) {
+          const descriptor = this._getModeDescriptorById(kind, state);
+          if (!value || !descriptor || normalizeTextKey(value) === normalizeTextKey(descriptor.current)) continue;
+          const command = JSON.stringify([descriptor.service, descriptor.target, value]);
+          if (submitted.has(command)) continue;
+          submitted.add(command);
+          pending.push(this._setModeOption(kind, value, state, { triggerHaptic: false, linkSmart: false }));
         }
         this._persistCurrentCleaningSessionState(this._activeMode, {
           markSelectionChange: true
