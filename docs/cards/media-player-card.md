@@ -33,6 +33,11 @@ buttons use equal circular shapes and a centered capsule, with volume and auxili
 controls at either side. Navigation uses the same translucent artwork tint for
 buttons, transport capsules and stacked-player selectors.
 
+The artwork tint is prepared before the first animated player paint. Returning to
+a dashboard view reuses sampled cover colors immediately, without restarting an
+image preload before the entrance animation. A new cover and its controls keep
+their colors together; failed cover sampling falls back to the theme.
+
 See [styling](../STYLING.md) and the [testing guide](../testing.md).
 
 Progress sliders support Left/Right (five seconds), Home and End when the player

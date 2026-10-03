@@ -2917,10 +2917,11 @@ class NodaliaMediaPlayer extends HTMLElement {
     });
 
     const desiredArtwork = this._getPlayerArtwork(player, state);
-    const artworkReady = !desiredArtwork || this._ensureArtworkReady(player.entity, desiredArtwork, {
+    const cachedPalette = getCachedArtworkPalette(desiredArtwork || "");
+    const artworkReady = !desiredArtwork || Boolean(cachedPalette) || this._ensureArtworkReady(player.entity, desiredArtwork, {
       rerenderOnReady: true,
     });
-    const artwork = getCachedArtworkPalette(desiredArtwork || "")
+    const artwork = cachedPalette
       ? desiredArtwork
       : this._getRenderableArtwork(player.entity, desiredArtwork || null);
     // Prefer cached/ready art, but still paint the album stage immediately with the
@@ -3471,7 +3472,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     const themeState = themePlayer && this._hass?.states?.[themePlayer.entity];
     const themeUrl = this._config.artwork?.dynamic_colors !== false && themeState
       ? this._getPlayerArtwork(themePlayer, themeState) || "" : "";
-    if (!prepareArtworkTheme(this, themeUrl, Boolean(this.shadowRoot.querySelector(".media-player-card")), () => this._render())) return;
+    if (!prepareArtworkTheme(this, themeUrl, () => this._render())) return;
     if (!hasPlayers) {
       this._activeArtworkIdle = false;
     }

@@ -2593,7 +2593,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     const themePlayer = visiblePlayers[this._resolveActiveMediaPlayerIndex(visiblePlayers)];
     const themeState = themePlayer && this._hass?.states?.[themePlayer.entity];
     const themeUrl = showMediaPlayerCard && themePlayer && themeState ? this._getMediaPlayerArtwork(themePlayer, themeState) : "";
-    if (!prepareArtworkTheme(this, themeUrl || "", Boolean(this.shadowRoot.querySelector(".media-player-card")), () => this._render())) return;
+    if (!prepareArtworkTheme(this, themeUrl || "", () => this._render())) return;
     const playMediaToggleEntrance = animations.enabled && showMediaPlayerToggle && !this._lastMediaToggleVisible;
     this._lastMediaToggleVisible = showMediaPlayerToggle;
     const playMediaCardEntrance = animations.enabled && showMediaPlayerCard && !this._lastMediaPlayerCardVisible;

@@ -8,6 +8,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.0.0-alpha.3] - 2026-10-03
+
+### Fixed
+
+- Media Player and Navigation prepare the translucent artwork tint before the first animated paint when entering a dashboard view. Newly mounted players reuse cached palettes synchronously and avoid restarting cover readiness or delaying their entrance animation. Track changes continue to commit their cover and control colors together.
+
 ## [3.0.0-alpha.2] - 2026-10-03
 
 ### Fixed
