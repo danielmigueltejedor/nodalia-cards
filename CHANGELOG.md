@@ -13,6 +13,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Added
 
 - Native Lock Card with deliberate slide/keyboard unlock confirmation, centered icon chips, shared visual-editor Styles controls and native embedding in Room Summary.
+- Dedicated Nodalia Cards 3 header artwork for the stable 3.0.0 release notes.
 - Version 3 upgrade and contributor guides covering unchanged YAML/resource paths, checked sources and release validation.
 
 ### Changed
