@@ -39,6 +39,11 @@ translations, distribution syntax, build and Node regressions. Full validation
 adds Chromium, Firefox, WebKit and iPhone WebKit. CI also checks generated drift.
 See [testing](testing.md) and [current audit](TECHNICAL_AUDIT.md).
 
+The [version 3 bundle-size audit](BUNDLE_SIZE_AUDIT.md) records the measured
+baseline, per-area savings, editor parity checks and compatibility paths retained
+after the size-only pass. Its final resource is 4,132,872 raw / 942,929 gzip bytes;
+the existing budgets remain unchanged.
+
 Distribution tests enforce unchanged raw/gzip budgets. Do not increase a budget
 or trade away translucent appearance without measuring the relevant behavior.
 CSS animation tests control lifecycle time as well as native animation time;

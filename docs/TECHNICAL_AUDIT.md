@@ -52,6 +52,13 @@ also trigger synchronization.
 
 ## Validation evidence and limits
 
+The subsequent [bundle-size audit](BUNDLE_SIZE_AUDIT.md) uses published alpha.5
+as its baseline and reduces the resource from 4,324,238 to 4,132,872 raw bytes
+and from 968,592 to 942,929 gzip bytes. It preserves all public and distribution
+contracts, validates 791 Node regressions, compares all 25 editors against the
+original bundle and retains the existing size budgets. Historical counts below
+describe the earlier migration/cleanup checkpoints.
+
 The published `3.0.0-alpha.4` runtime passed 776 Node regressions, local
 Chromium/WebKit/iPhone checks (905 passed, one platform skip), and all four Linux
 CI browser projects. Its minified bundle is 4,325,270 bytes; gzip is 967,877 bytes.
