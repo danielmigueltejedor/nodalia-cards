@@ -1,4 +1,5 @@
 import {buildSourceArtifact} from "./build-src-cards.mjs";
+import {encodeLabelReferences} from "./editor-translation-packing.mjs";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -1825,13 +1826,16 @@ for (const r of rows) {
 }
 const dedupedRows = [...rowByEs.values()];
 const EDITOR_ROW_LANGS = ["es", "en", "de", "fr", "it", "nl", "no", "pt", "ru", "el", "zh", "ro"];
-const compactRows = dedupedRows.map(row => EDITOR_ROW_LANGS.map(lang => row[lang] ?? ""));
+// Group by locale for gzip locality. Each payload remains independently lazy.
+const compactRows = {
+  columns: EDITOR_ROW_LANGS.map(lang => encodeLabelReferences(dedupedRows.map(row => row[lang] ?? ""))),
+};
 const editorCatalogKeys = Object.keys(EDITOR_CATALOG.en || {});
 const compactEditorCatalog = {
   langs: EDITOR_CATALOG_LANGS,
   keys: editorCatalogKeys,
   values: EDITOR_CATALOG_LANGS.map(lang => (
-    editorCatalogKeys.map(key => EDITOR_CATALOG[lang]?.[key] ?? EDITOR_CATALOG.en?.[key] ?? "")
+    encodeLabelReferences(editorCatalogKeys.map(key => EDITOR_CATALOG[lang]?.[key] ?? EDITOR_CATALOG.en?.[key] ?? ""))
   )),
 };
 

@@ -1,3 +1,4 @@
+import { EDITOR_SECTION_ACTION_STYLES } from "../../shared/editor-toggle-styles";
 import type { HomeAssistant } from "../../core/types/home-assistant";
 import type { EditorFocusState } from "../../core/types/nodalia-utils";
 import { editorControlValue, isNativeEditorInput, type NativeEditorInput } from "../../shared/editor-controls";
@@ -479,34 +480,7 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
           line-height: 1.45;
         }
 
-        .editor-section__actions {
-          align-items: center;
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          margin-top: 2px;
-        }
-
-        .editor-section__toggle-button {
-          align-items: center;
-          appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 999px;
-          color: var(--primary-text-color);
-          cursor: pointer;
-          display: inline-flex;
-          font: inherit;
-          font-size: 12px;
-          font-weight: 600;
-          gap: 8px;
-          min-height: 34px;
-          padding: 0 12px;
-        }
-
-        .editor-section__toggle-button ha-icon {
-          --mdc-icon-size: 16px;
-        }
+        ${EDITOR_SECTION_ACTION_STYLES}
 
         .editor-grid {
           display: grid;

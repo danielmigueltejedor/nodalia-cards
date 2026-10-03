@@ -18,6 +18,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- Editor translation data and identical editor styles are shared more compactly, reducing the HACS resource by 191,366 raw bytes and 25,663 gzip bytes while preserving all twelve locales, public APIs and standalone resources. Existing size budgets stay unchanged.
 - All 25 cards, visual editors and shared runtimes now build from strictly checked TypeScript, with typed lint and zero suppression/import-cycle debt. Existing custom elements, standalone artifacts and the single HACS resource remain compatible.
 - Media transport stays centered between auxiliary controls. Buttons, transport capsules and stacked-player selectors share translucent artwork tint; dashboard entrance preserves the glass reflection and warm palettes apply immediately.
 - Room Summary keeps media players on its main screen and renders lock entities with native Lock Card. Alarm Panel and Entity request four Sections columns; Weather and Calendar request six.

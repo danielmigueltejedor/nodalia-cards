@@ -21,20 +21,43 @@ import {ROW_LANGS,ROWS_JSON,EDITOR_CATALOG_JSON} from "./editor-i18n-data";
     if(!list.every((item):item is string=>typeof item==="string")) return invalidData();
     return list;
   }
-  function labelRow(keys:readonly string[],raw:unknown):Labels {
+  /** References may only point backwards to an already validated string. */
+  function decodeLabels(raw:unknown):string[] {
     if(!Array.isArray(raw)) return invalidData();
-    const values:unknown[]=raw;
-    return Object.fromEntries(keys.map((key,index)=>{
-      const value=values[index];
-      if(value!==undefined && typeof value!=="string") return invalidData();
-      return [key,value??""];
-    }));
+    const encoded:unknown[]=raw;
+    const labels:string[]=[];
+    for(const value of encoded) {
+      if(typeof value==="string") labels.push(value);
+      else if(typeof value==="number" && Number.isInteger(value) && value>=0 && value<labels.length) {
+        const label=labels[value];
+        if(label===undefined) return invalidData();
+        labels.push(label);
+      } else return invalidData();
+    }
+    return labels;
+  }
+  function labelRow(keys:readonly string[],values:readonly string[]):Labels {
+    const row:Labels={};
+    keys.forEach((key,index)=>{
+      const label=values[index]??"";
+      if(key==="__proto__") Object.defineProperty(row,key,{value:label,enumerable:true,writable:true,configurable:true});
+      else row[key]=label;
+    });
+    return row;
   }
   function getRows() {
     if (!ROWS_CACHE) {
       const raw:unknown=JSON.parse(ROWS_JSON);
-      if(!Array.isArray(raw)) return invalidData();
-      ROWS_CACHE=raw.map((values:unknown)=>labelRow(ROW_LANGS,values));
+      if(!isRecord(raw) || !Array.isArray(raw.columns)) return invalidData();
+      const encoded:unknown[]=raw.columns;
+      const columns=encoded.map(decodeLabels);
+      const count=columns[0]?.length??0;
+      if(columns.length!==ROW_LANGS.length || columns.some(column=>column.length!==count)) return invalidData();
+      ROWS_CACHE=Array.from({length:count},(_,index)=>{
+        const row:Labels={};
+        ROW_LANGS.forEach((lang,column)=>{row[lang]=columns[column]?.[index]??"";});
+        return row;
+      });
     }
     return ROWS_CACHE;
   }
@@ -99,7 +122,7 @@ import {ROW_LANGS,ROWS_JSON,EDITOR_CATALOG_JSON} from "./editor-i18n-data";
       const compact:unknown = JSON.parse(EDITOR_CATALOG_JSON);
       if(!isRecord(compact) || !Array.isArray(compact.values)) return invalidData();
       const langs=stringList(compact.langs),keys=stringList(compact.keys),rows:unknown[]=compact.values;
-      EDITOR_CATALOG_CACHE=Object.fromEntries(langs.map((lang,index)=>[lang,labelRow(keys,rows[index]??[])]));
+      EDITOR_CATALOG_CACHE=Object.fromEntries(langs.map((lang,index)=>[lang,labelRow(keys,decodeLabels(rows[index]??[]))]));
       i18n.editorCatalog = EDITOR_CATALOG_CACHE;
     }
     return EDITOR_CATALOG_CACHE;
