@@ -19,7 +19,7 @@ The Engine complements the plugin; it does not serve or replace the frontend bun
 | Nodalia Cards | `2.0.2` or newer for Engine discovery | `3.0.0-alpha.4` |
 | Nodalia Cards Engine | WebSocket API `2` | Stable `2.0.2` |
 
-The currently validated pair is Cards `3.0.0-alpha.4` with Engine `2.0.2`; both use the same API generation. Stable 3.0.0 publication remains separate from this compatibility statement. The Engine remains optional: ordinary controls, layouts and visual editors do not require it.
+Cards `3.0.0-alpha.4` and Engine `2.0.2` use the same API generation. This is the currently validated pair; stable 3.0.0 publication remains separate from this compatibility statement. The Engine remains optional: ordinary controls, layouts and visual editors do not require it.
 
 ## What the optional Engine makes native
 
