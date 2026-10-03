@@ -2,13 +2,15 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
-import { buildSync } from "esbuild";
+import { build } from "esbuild";
+import { embeddedStylesPlugin } from "../scripts/embedded-styles.mjs";
 
 const sandbox = {};
 sandbox.window = sandbox;
 vm.createContext(sandbox);
 vm.runInContext(fs.readFileSync("nodalia-utils.js", "utf8"), sandbox);
-vm.runInContext(buildSync({ entryPoints: ["src/cards/climate/climate-editor.ts"], bundle: true, write: false, format: "iife", globalName: "api" }).outputFiles[0].text, sandbox);
+const output = await build({ entryPoints: ["src/cards/climate/climate-editor.ts"], bundle: true, write: false, format: "iife", globalName: "api", plugins: [embeddedStylesPlugin()] });
+vm.runInContext(output.outputFiles[0].text, sandbox);
 const render = sandbox.api.renderClimateEditorScheduleSectionHtml;
 function editor(engine) {
   return {

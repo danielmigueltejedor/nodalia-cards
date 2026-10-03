@@ -1,3 +1,4 @@
+import { EDITOR_TOGGLE_STYLES, EDITOR_RADIUS_STYLES, EDITOR_SECTION_ACTION_STYLES } from "../../shared/editor-toggle-styles";
 import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
 import type { EditorFocusState } from "../../core/types/nodalia-utils";
 import { editorControlValue, isNativeEditorInput, type NativeEditorInput } from "../../shared/editor-controls";
@@ -560,34 +561,7 @@ class NodaliaLightCardEditor extends HTMLElement {
           line-height: 1.45;
         }
 
-        .editor-section__actions {
-          align-items: center;
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          margin-top: 2px;
-        }
-
-        .editor-section__toggle-button {
-          align-items: center;
-          appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 999px;
-          color: var(--primary-text-color);
-          cursor: pointer;
-          display: inline-flex;
-          font: inherit;
-          font-size: 12px;
-          font-weight: 600;
-          gap: 8px;
-          min-height: 34px;
-          padding: 0 12px;
-        }
-
-        .editor-section__toggle-button ha-icon {
-          --mdc-icon-size: 16px;
-        }
+        ${EDITOR_SECTION_ACTION_STYLES}
 
         .editor-grid {
           display: grid;
@@ -610,35 +584,7 @@ class NodaliaLightCardEditor extends HTMLElement {
           grid-column: 1 / -1;
         }
 
-        .editor-chip-radius__options {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-        }
-
-        .editor-chip-radius__option {
-          align-items: center;
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
-          border-radius: 12px;
-          cursor: pointer;
-          display: inline-flex;
-          gap: 8px;
-          padding: 8px 12px;
-        }
-
-        .editor-chip-radius__option:has(input:checked) {
-          background: color-mix(in srgb, var(--primary-color) 10%, transparent);
-          border-color: var(--primary-color);
-        }
-
-        .editor-chip-radius__option input[type="radio"] {
-          accent-color: var(--primary-color);
-          appearance: auto;
-          margin: 0;
-          min-height: auto;
-          padding: 0;
-          width: auto;
-        }
+        ${EDITOR_RADIUS_STYLES}
 
 
         .editor-field:has(> .editor-control-host[data-mounted-control="entity"]),
@@ -765,72 +711,7 @@ class NodaliaLightCardEditor extends HTMLElement {
           }
         }
       
-        :is(.editor-toggle, .editor-checkbox) {
-          align-items: center;
-          column-gap: 10px;
-          cursor: pointer;
-          grid-auto-flow: row;
-          grid-template-columns: auto minmax(0, 1fr);
-          justify-content: stretch;
-          min-height: 40px;
-          padding-top: 0;
-          position: relative;
-        }
-
-        :is(.editor-toggle, .editor-checkbox) input {
-          block-size: 1px;
-          inline-size: 1px;
-          margin: 0;
-          opacity: 0;
-          pointer-events: none;
-          position: absolute;
-        }
-
-        .editor-toggle__switch {
-          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
-          border-radius: 999px;
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent);
-          display: inline-flex;
-          font-size: 0;
-          height: 22px;
-          line-height: 0;
-          position: relative;
-          transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
-          width: 40px;
-        }
-
-        .editor-toggle__switch::before {
-          background: rgba(255, 255, 255, 0.92);
-          border-radius: 999px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
-          content: "";
-          height: 18px;
-          left: 1px;
-          position: absolute;
-          top: 1px;
-          transition: transform 160ms ease;
-          width: 18px;
-        }
-
-        .editor-toggle__label {
-          min-width: 0;
-        }
-
-        :is(.editor-toggle, .editor-checkbox) input:checked + .editor-toggle__switch {
-          background: var(--primary-color);
-          border-color: var(--primary-color);
-        }
-
-        :is(.editor-toggle, .editor-checkbox) input:checked + .editor-toggle__switch::before {
-          transform: translateX(18px);
-        }
-
-        :is(.editor-toggle, .editor-checkbox) input:focus-visible + .editor-toggle__switch {
-          box-shadow:
-            0 0 0 3px color-mix(in srgb, var(--primary-text-color) 14%, transparent),
-            inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-        }
+        ${EDITOR_TOGGLE_STYLES}
 </style>
       <div class="editor">
         <section class="editor-section">

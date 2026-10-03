@@ -1,0 +1,29 @@
+.editor-chip-radius__options {
+display: flex;
+flex-wrap: wrap;
+gap: 8px;
+}
+
+.editor-chip-radius__option {
+align-items: center;
+border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
+border-radius: 12px;
+cursor: pointer;
+display: inline-flex;
+gap: 8px;
+padding: 8px 12px;
+}
+
+.editor-chip-radius__option:has(input:checked) {
+background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+border-color: var(--primary-color);
+}
+
+.editor-chip-radius__option input[type="radio"] {
+accent-color: var(--primary-color);
+appearance: auto;
+margin: 0;
+min-height: auto;
+padding: 0;
+width: auto;
+}

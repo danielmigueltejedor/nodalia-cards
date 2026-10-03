@@ -2311,6 +2311,15 @@
     return NodaliaCoverCard;
   }
 
+  // src/shared/editor-radius.css
+  var editor_radius_default = ".editor-chip-radius__options{display:flex;flex-wrap:wrap;gap:8px}.editor-chip-radius__option{align-items:center;border:1px solid color-mix(in srgb,var(--primary-text-color) 12%,transparent);border-radius:12px;cursor:pointer;display:inline-flex;gap:8px;padding:8px 12px}.editor-chip-radius__option:has(input:checked){background:color-mix(in srgb,var(--primary-color) 10%,transparent);border-color:var(--primary-color)}.editor-chip-radius__option input[type=radio]{accent-color:var(--primary-color);appearance:auto;margin:0;min-height:auto;padding:0;width:auto}";
+
+  // src/shared/editor-color.css
+  var editor_color_default = ".editor-color-field{align-items:center;display:flex;flex-wrap:wrap;gap:10px;min-height:40px}.editor-color-picker{align-items:center;background:color-mix(in srgb,var(--primary-text-color) 4%,transparent);border:1px solid color-mix(in srgb,var(--primary-text-color) 8%,transparent);border-radius:999px;cursor:pointer;display:inline-flex;flex:0 0 auto;height:40px;justify-content:center;position:relative;width:40px}.editor-color-picker input{cursor:pointer;inset:0;opacity:0;position:absolute}.editor-color-picker:hover,.editor-color-picker:focus-within{border-color:color-mix(in srgb,var(--primary-text-color) 22%,transparent);box-shadow:inset 0 1px 0 color-mix(in srgb,var(--primary-text-color) 8%,transparent)}.editor-color-swatch{--editor-swatch: #71c0ff;background:linear-gradient(var(--editor-swatch),var(--editor-swatch)),conic-gradient(from 90deg,color-mix(in srgb,var(--primary-text-color) 6%,transparent) 25%,rgba(0,0,0,0.12) 0 50%,color-mix(in srgb,var(--primary-text-color) 6%,transparent) 0 75%,rgba(0,0,0,0.12) 0);background-position:center;background-size:cover,10px 10px;border:1px solid color-mix(in srgb,var(--primary-text-color) 14%,transparent);border-radius:999px;display:block;height:22px;width:22px}";
+
+  // src/shared/editor-section-action.css
+  var editor_section_action_default = ".editor-section__actions{align-items:center;display:flex;flex-wrap:wrap;gap:8px;margin-top:2px}.editor-section__toggle-button{align-items:center;appearance:none;background:color-mix(in srgb,var(--primary-text-color) 4%,transparent);border:1px solid color-mix(in srgb,var(--primary-text-color) 8%,transparent);border-radius:999px;color:var(--primary-text-color);cursor:pointer;display:inline-flex;font:inherit;font-size:12px;font-weight:600;gap:8px;min-height:34px;padding:0 12px}.editor-section__toggle-button ha-icon{--mdc-icon-size: 16px}";
+
   // src/shared/editor-controls.ts
   function isNativeEditorInput(node) {
     return node instanceof HTMLInputElement || node instanceof HTMLSelectElement || node instanceof HTMLTextAreaElement;
@@ -2700,34 +2709,7 @@
           line-height: 1.45;
         }
 
-        .editor-section__actions {
-          align-items: center;
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          margin-top: 2px;
-        }
-
-        .editor-section__toggle-button {
-          align-items: center;
-          appearance: none;
-          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 999px;
-          color: var(--primary-text-color);
-          cursor: pointer;
-          display: inline-flex;
-          font: inherit;
-          font-size: 12px;
-          font-weight: 600;
-          gap: 8px;
-          min-height: 34px;
-          padding: 0 12px;
-        }
-
-        .editor-section__toggle-button ha-icon {
-          --mdc-icon-size: 16px;
-        }
+        ${editor_section_action_default}
 
         .editor-grid { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .editor-grid--stacked { grid-template-columns: 1fr; }
@@ -2741,35 +2723,7 @@
 
         .editor-field--full { grid-column: 1 / -1; }
 
-        .editor-chip-radius__options {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-        }
-
-        .editor-chip-radius__option {
-          align-items: center;
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
-          border-radius: 12px;
-          cursor: pointer;
-          display: inline-flex;
-          gap: 8px;
-          padding: 8px 12px;
-        }
-
-        .editor-chip-radius__option:has(input:checked) {
-          background: color-mix(in srgb, var(--primary-color) 10%, transparent);
-          border-color: var(--primary-color);
-        }
-
-        .editor-chip-radius__option input[type="radio"] {
-          accent-color: var(--primary-color);
-          appearance: auto;
-          margin: 0;
-          min-height: auto;
-          padding: 0;
-          width: auto;
-        }
+        ${editor_radius_default}
 
         .editor-field:has(> .editor-control-host[data-mounted-control="cover-entity"]),
         .editor-field:has(> .editor-control-host[data-mounted-control="icon-picker"]),
@@ -2898,50 +2852,7 @@
             inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent);
         }
 
-        .editor-color-field {
-          align-items: center;
-          display: flex;
-          flex-wrap: wrap;
-          gap: 10px;
-          min-height: 40px;
-        }
-        .editor-color-picker {
-          align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 4%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border-radius: 999px;
-          cursor: pointer;
-          display: inline-flex;
-          flex: 0 0 auto;
-          height: 40px;
-          justify-content: center;
-          position: relative;
-          width: 40px;
-        }
-        .editor-color-picker input {
-          cursor: pointer;
-          inset: 0;
-          opacity: 0;
-          position: absolute;
-        }
-        .editor-color-picker:hover,
-        .editor-color-picker:focus-within {
-          border-color: color-mix(in srgb, var(--primary-text-color) 22%, transparent);
-          box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-        }
-        .editor-color-swatch {
-          --editor-swatch: #71c0ff;
-          background:
-            linear-gradient(var(--editor-swatch), var(--editor-swatch)),
-            conic-gradient(from 90deg, color-mix(in srgb, var(--primary-text-color) 6%, transparent) 25%, rgba(0, 0, 0, 0.12) 0 50%, color-mix(in srgb, var(--primary-text-color) 6%, transparent) 0 75%, rgba(0, 0, 0, 0.12) 0);
-          background-position: center;
-          background-size: cover, 10px 10px;
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 14%, transparent);
-          border-radius: 999px;
-          display: block;
-          height: 22px;
-          width: 22px;
-        }
+        ${editor_color_default}
         @media (max-width: 640px) { .editor-grid { grid-template-columns: 1fr; } }
       </style>
       <div class="editor">
