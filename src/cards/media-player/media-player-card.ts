@@ -3882,8 +3882,8 @@ class NodaliaMediaPlayer extends HTMLElement {
           padding-bottom: 18px;
         }
 
-        .media-player__content--entering {
-          animation: media-player-fade-up var(--media-player-content-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
+        .media-player-card:has(.media-player__content--entering) {
+          animation: media-player-rise-in var(--media-player-content-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
         }
 
         .media-player__content--idle {

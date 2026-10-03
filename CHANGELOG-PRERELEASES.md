@@ -8,11 +8,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## Unreleased
+## [3.0.0-alpha.4] - 2026-10-03
 
 ### Changed
 
 - Adopt the new Nodalia Cards logo in the repository header, preserving the supplied PNG and its transparency.
+
+### Fixed
+
+- Media Player entrance animations move the cover and controls together without fading the controls' ancestor. The translucent glass now retains its settled appearance throughout dashboard view changes; the backdrop can sample the cover immediately instead of snapping into place after the entrance. Track-change palette and cover updates remain atomic.
 
 ## [3.0.0-alpha.3] - 2026-10-03
 

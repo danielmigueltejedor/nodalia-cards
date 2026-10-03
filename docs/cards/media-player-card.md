@@ -37,6 +37,8 @@ The artwork tint is prepared before the first animated player paint. Returning t
 a dashboard view reuses sampled cover colors immediately, without restarting an
 image preload before the entrance animation. A new cover and its controls keep
 their colors together; failed cover sampling falls back to the theme.
+The entrance moves the cover and controls together without fading a controls-only
+ancestor, so the glass continues to reflect the cover throughout the animation.
 
 See [styling](../STYLING.md) and the [testing guide](../testing.md).
 
