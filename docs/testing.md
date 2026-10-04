@@ -60,3 +60,8 @@ workers. Keep geometry and final cleanup assertions; retries are not a fix.
 ### Rounded shadows and scrollports
 
 `tests/browser/rounded-shadow-clipping.spec.mjs` uses native block `ha-card` styles and a light theme to cover compact armed Alarm favourites, TV player chips standalone and inside Room Summary, long names, settled Light temperature/color sliders, narrow Graph legends and both Weather forecast views. External control shadows must reach the rounded card boundary without encountering an inner rectangular clip. Scrollable rows retain scrolling and use inset highlights; text and image clipping remain local to the label or image. Mode transitions retain temporary containment until their cleanup frame completes.
+
+
+### Graph grid height
+
+`tests/browser/graph-grid-height.spec.mjs` recreates native Sections `.card.fit-rows` cells with inline `hui-card` wrappers. Two adjacent graphs use the reported humidity/temperature styles and string point counts. Geometry checks cover automatic, four-row and eight-row layouts at desktop/mobile widths, delayed history, series selection and reconnect. The card and plot must remain inside their cell and leave the next card unobscured.

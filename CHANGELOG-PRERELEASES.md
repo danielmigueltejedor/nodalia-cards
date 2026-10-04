@@ -8,6 +8,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.0.0-alpha.9] - 2026-10-04
+
+### Fixed
+
+- Graph Cards respect fixed Sections row heights and no longer overlap adjacent graphs. Fixed rows retain Home Assistant’s inline wrapper; automatic rows keep the shared collapse correction. The chart uses its configured height independently of the SVG aspect ratio and shrinks to fit explicit rows.
+
 ## [3.0.0-alpha.8] - 2026-10-04
 
 ### Fixed

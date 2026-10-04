@@ -12,7 +12,8 @@
 .graph-card__chart {
   display: block;
   height: 100%;
-  position: relative;
+  inset: 0;
+  position: absolute;
   width: 100%;
   z-index: 1;
 }

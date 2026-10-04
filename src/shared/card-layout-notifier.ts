@@ -1,11 +1,12 @@
 /**
  * hui-card uses light DOM and defaults to inline. WebKit can retain an anonymous
  * block's intrinsic height inside an auto Sections row after sibling updates.
- * Normalize only the native direct wrapper; never change configured layouts.
+ * Normalize only automatic rows. A fixed Sections row needs the native inline
+ * wrapper so percentage-height cards resolve against the reserved grid cell.
  */
 export function normalizeCardLayoutWrapper(host: HTMLElement): () => void {
   const wrapper = host.parentElement;
-  if (wrapper?.localName !== "hui-card" || wrapper.style.display || getComputedStyle(wrapper).display !== "inline") {
+  if (wrapper?.localName !== "hui-card" || wrapper.parentElement?.matches(".card.fit-rows") || wrapper.style.display || getComputedStyle(wrapper).display !== "inline") {
     return () => {};
   }
   wrapper.style.display = "block";
