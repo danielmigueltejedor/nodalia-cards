@@ -8,6 +8,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.0.0-alpha.7] - 2026-10-04
+
+### Fixed
+
+- Collapsing an Alarm favourite after toggling a neighbouring Light favourite releases the shared grid row in Sections dashboards, including Safari and iOS. Repeated and interrupted expansion no longer leaves an empty gap before the next section.
+- Cards normalize the native Home Assistant wrapper and report settled size changes. The same shared-row correction covers animated Light, Fan and Humidifier controls while preserving explicit layouts, hidden cards and embedded editors.
+
 ## [3.0.0-alpha.6] - 2026-10-04
 
 ### Fixed
