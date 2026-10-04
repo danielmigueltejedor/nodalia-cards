@@ -1735,7 +1735,7 @@
           min-width: 0;
           padding: ${showAlarmPanel ? "8px 10px 10px" : isCompactInline ? "6px 10px" : isMini ? "0" : styles.card.padding};
           position: relative;
-          overflow: hidden;
+          overflow: visible;
           z-index: 1;
         }
 

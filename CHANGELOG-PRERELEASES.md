@@ -8,6 +8,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## Unreleased
+
+### Fixed
+
+- Fav Card icon shadows follow the rounded card boundary instead of being cut off by an inner rectangular content box, particularly visible on compact armed Alarm favourites.
+
 ## [3.0.0-alpha.7] - 2026-10-04
 
 ### Fixed
