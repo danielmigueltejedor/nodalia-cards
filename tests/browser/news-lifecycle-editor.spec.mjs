@@ -1,4 +1,34 @@
 import {expect,test} from '@playwright/test';
+test('News retires queued helper writes after configuration or HA context changes',async({page})=>{
+ await page.goto('/tests/fixtures/browser.html');await page.waitForFunction(()=>customElements.get('nodalia-news-card'));await page.clock.install();
+ await page.evaluate(()=>{
+  window.newsWrites=[];window.newsHass=window.makeHass({
+   'sensor.news':{state:'ready',attributes:{items:[{title:'Old article'}]}},
+   'input_text.history':{state:'[]',attributes:{}},
+  });window.newsHass.connection={};window.newsHass.user={id:'first',is_admin:true};window.newsHass.callService=(...args)=>{window.newsWrites.push(args);return Promise.resolve();};
+  const card=document.createElement('nodalia-news-card');card.setConfig({entity:'sensor.news',history_helper:'input_text.history',mirror_history_local:false});card.hass=window.newsHass;document.querySelector('#fixture').append(card);window.newsLifecycleFixture=card;
+ });
+ expect(await page.evaluate(()=>window.newsLifecycleFixture._historyHelperWriteTimer)).not.toBe(0);
+ await page.evaluate(()=>window.newsLifecycleFixture.setConfig({entity:'sensor.news',remember_items:false}));await page.clock.runFor(600);
+ expect(await page.evaluate(()=>window.newsWrites)).toEqual([]);
+ for(const change of ['connection','auth','user','admin']) {
+  await page.evaluate(change=>{
+   const hass=window.newsHass,card=window.newsLifecycleFixture;
+   card.setConfig({entity:'sensor.news',history_helper:'input_text.history',mirror_history_local:false});
+   // Retiring the old context must not write its article into the new user's helper.
+   hass.states={'sensor.news':{state:'ready',attributes:{items:[]}},'input_text.history':{state:'[]',attributes:{}}};
+   if(change==='connection')hass.connection={};if(change==='auth')hass.auth={};if(change==='user')hass.user.id='second';if(change==='admin')hass.user.is_admin=false;
+   card.hass={...hass};
+  },change);
+  await page.clock.runFor(600);expect(await page.evaluate(()=>window.newsWrites)).toEqual([]);
+  await expect(page.locator('nodalia-news-card').locator('ha-card')).not.toContainText('Old article');
+  await page.evaluate(()=>window.newsHass.states['sensor.news'].attributes.items=[{title:'Old article'}]);
+ }
+ // Ordinary updates with the same owner keep the debounced write alive.
+ await page.evaluate(()=>{const card=window.newsLifecycleFixture;card.hass={...window.newsHass};card.hass={...window.newsHass};});await page.clock.runFor(600);
+ expect(await page.evaluate(()=>window.newsWrites.length)).toBe(1);
+ expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+});
 test('News cancelled swipe keeps the current article and disconnection releases gesture state',async({page})=>{
  await page.goto('/tests/fixtures/browser.html');await page.waitForFunction(()=>customElements.get('nodalia-news-card'));
  await page.evaluate(()=>{const card=document.createElement('nodalia-news-card');card.setConfig({entity:'sensor.news',remember_items:false});card.hass=window.makeHass({'sensor.news':{state:'ready',attributes:{items:[{title:'One',published:'2026-10-01T00:00:00Z'},{title:'Two',published:'2026-09-30T00:00:00Z'}]}}});document.querySelector('#fixture').append(card);window.newsLifecycleFixture=card;});

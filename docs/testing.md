@@ -64,4 +64,8 @@ workers. Keep geometry and final cleanup assertions; retries are not a fix.
 
 ### Graph grid height
 
-`tests/browser/graph-grid-height.spec.mjs` recreates native Sections `.card.fit-rows` cells with inline `hui-card` wrappers. Two adjacent graphs use the reported humidity/temperature styles and string point counts. Geometry checks cover automatic, four-row and eight-row layouts at desktop/mobile widths, delayed history, series selection and reconnect. The card and plot must remain inside their cell and leave the next card unobscured.
+`tests/browser/graph-grid-height.spec.mjs` recreates native Sections `.card.fit-rows` cells with inline `hui-card` wrappers. Two adjacent graphs use the reported humidity/temperature styles and string point counts. Geometry checks cover automatic, four-row and eight-row layouts at desktop/mobile widths, delayed history, series selection, reconnect and live row-mode changes on existing cells. The card and plot must remain inside their cell and leave the next card unobscured; detached hosts release their cell observers.
+
+### Runtime audit regressions
+
+`tests/browser/advance-vacuum-lifecycle.spec.mjs` instruments state-catalog enumeration with 1700 unrelated entities. Explicit tracking must avoid enumeration while updating helper arrival/removal and live room values; existing automatic-discovery tests retain mutable registry coverage. `tests/browser/news-lifecycle-editor.spec.mjs` advances the debounce clock across configuration and HA-owner changes to ensure retired helper writes cannot execute, while ordinary updates preserve their valid write. `tests/numeric-values.test.mjs` compares native formatting and instruments formatter construction/eviction without imposing machine-dependent timing thresholds.

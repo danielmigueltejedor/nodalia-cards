@@ -1,6 +1,6 @@
 # Technical audit — version 3
 
-Updated 2026-10-04. This document describes the current implementation and release
+Updated 2026-10-05. This document describes the current implementation and release
 readiness. Historical migration checkpoints are retained in Git history and
 release notes, rather than presented as current unresolved findings.
 
@@ -20,20 +20,53 @@ public contracts. No runtime npm dependencies are introduced.
 
 | Area | Current behavior / verification |
 |---|---|
-| Sections | Native card wrapper lifecycle prevents Safari/iOS from retaining expanded automatic row height after sibling updates; existing observers report settled sizes |
+| Sections | Native wrapper ownership follows live automatic/fixed row changes and releases its local observer on detach; sibling collapse and fixed Graph heights remain covered |
 | Lock | Centered icons, shared Styles controls and deliberate unlock gestures; native Lock embedding in Summary |
 | Media | Equal side columns center transport; artwork palettes are cached and committed with covers; entrance preserves backdrop reflection |
 | Vacuum | `charger_disconnected` is localized; constrained text truncates with ellipsis and retains the full title |
 | Summary | Media remains on Home; parked embeds release owned resources; ordinary HA updates preserve child identity |
 | Async work | Requests, timers, observers and persistence callbacks reject retired configuration/HA contexts |
 | Native interaction | Focus and unfinished drafts survive updates; cancelled gestures restore previews without sending commands |
-| Notifications | Rain templates receive weather temperature, including valid zero and configured units; empty forecasts remain authoritative |
+| Notifications | API v3 rain `{value}` remains a probability alias; explicit temperature fields retain valid zero and configured units; empty forecasts remain authoritative |
 | Distribution | Both HACS and standalone builds use canonical sources; every distributed JS receives a syntax check |
 | Publication | PRs and tag releases share static and four-browser gates; curated notes and exact version/artifact metadata are required |
 
 These behaviors have Node and browser regressions in `tests/` and `tests/browser/`.
 See [architecture](ARCHITECTURE.md) for ownership boundaries and
 [testing](testing.md) for reproducible commands.
+
+## General runtime audit — 2026-10-05
+
+The review covered render invalidation, auxiliary-state discovery, async ownership,
+bounded caches, native Sections geometry, generated distribution and the existing
+interaction/lifecycle regressions across the 25 cards and shared runtimes.
+It adds focused corrections rather than replacing working render gates or
+introducing a new framework.
+
+| Finding | Correction and evidence |
+|---|---|
+| Switching an existing Sections cell between automatic and fixed rows leaves the wrapper in its old mode | Observe only that cell's class; release owned block display for fixed rows and restore it for automatic rows. Browser regressions exercise both directions, multiple row sizes and detachment without remounting the card. |
+| Explicit Advance Vacuum room/activity tracking fingerprints every HA entity even with auto-detection off | Cache only configured helper availability in this mode and read values live. A 1700-unrelated-entity fixture drops 105 catalog enumerations to zero across the same 105 discovery calls. Helper arrival/removal and mutable values remain covered; automatic discovery still detects in-place registry changes. The cache no longer retains unused HA snapshots. |
+| A News helper write can survive a configuration or HA-owner change | Cancel queued writes on configuration, connection, authentication, user and admin changes; reload helper history in the new context. Browser tests reproduce the old configuration write and exercise context changes, while ordinary same-owner updates still produce their intended write. Existing explicit local history storage remains compatible. |
+| Repeated numeric formatting creates locale formatters for every value | Graph, Gauge and Power Flow reuse a cache capped at 64 locale/precision pairs. Tests compare native formatting for grouping, zero/negative zero, six locales, precision bounds, absent data and eviction. A synthetic helper benchmark records an approximately 10× improvement; this is not a dashboard frame-rate claim. |
+
+Before source changes, the new targeted regressions reproduced both row-mode
+failures, all 105 unnecessary catalog scans and the retired News write against
+the published alpha.9 bundle. Current strict types, lint, architecture,
+distribution, translations, size budgets and **794 Node tests** pass.
+See [performance verification](performance-audit.md) for measurement conditions.
+
+Reviewed safeguards that remain in place include Summary's cached normalization
+and child reuse; Media's separate volume/progress synchronization; Camera/go2rtc
+stream disposal; Graph/history retirement; Calendar/Weather forecast ownership;
+and cancelled device/map gestures. These rely on the existing browser suite in
+addition to source inspection; they are not a guarantee for every real HA setup.
+
+Follow-up profiling targets are Notifications' full entity/device registry
+serialization and automatic vacuum discovery. Their mutable metadata affects
+source attribution and robot matching, so caching only by object identity would
+introduce stale-state bugs. Measure these paths on a representative dashboard
+before changing their invalidation contracts.
 
 ## Repository cleanup for stable preparation
 

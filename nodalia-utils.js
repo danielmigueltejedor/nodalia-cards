@@ -4,13 +4,28 @@
   // src/shared/card-layout-notifier.ts
   function normalizeCardLayoutWrapper(host) {
     const wrapper = host.parentElement;
-    if (wrapper?.localName !== "hui-card" || wrapper.parentElement?.matches(".card.fit-rows") || wrapper.style.display || getComputedStyle(wrapper).display !== "inline") {
+    if (wrapper?.localName !== "hui-card" || wrapper.style.display || getComputedStyle(wrapper).display !== "inline") {
       return () => {
       };
     }
-    wrapper.style.display = "block";
+    const cell = wrapper.parentElement;
+    let ownsDisplay = false;
+    const sync = () => {
+      if (ownsDisplay && wrapper.style.display !== "block") ownsDisplay = false;
+      if (cell?.matches(".card.fit-rows")) {
+        if (ownsDisplay) wrapper.style.removeProperty("display");
+        ownsDisplay = false;
+      } else if (!wrapper.style.display && getComputedStyle(wrapper).display === "inline") {
+        wrapper.style.display = "block";
+        ownsDisplay = true;
+      }
+    };
+    sync();
+    const observer = cell ? new MutationObserver(sync) : null;
+    if (observer && cell) observer.observe(cell, { attributes: true, attributeFilter: ["class"] });
     return () => {
-      if (wrapper.style.display === "block") wrapper.style.removeProperty("display");
+      observer?.disconnect();
+      if (ownsDisplay && wrapper.style.display === "block") wrapper.style.removeProperty("display");
     };
   }
 

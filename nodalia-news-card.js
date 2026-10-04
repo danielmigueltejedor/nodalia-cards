@@ -889,6 +889,10 @@
         this._historyHelperEntityId = "";
         this._historyHelperSignature = "";
         this._historyHelperWriteTimer = 0;
+        this._contextConnection = void 0;
+        this._contextAuth = void 0;
+        this._contextUser = "";
+        this._contextAdmin = false;
         this._magazineSlideResetTimer = 0;
         this._onShadowClick = this._onShadowClick.bind(this);
         this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
@@ -928,6 +932,8 @@
         this._lastRenderSignature = "";
       }
       setConfig(config) {
+        window.clearTimeout(this._historyHelperWriteTimer);
+        this._historyHelperWriteTimer = 0;
         this._cancelMagazineSwipe();
         this._config = normalizeConfig(config || {});
         this._lastRenderSignature = "";
@@ -941,6 +947,18 @@
         this._render();
       }
       set hass(hass) {
+        const contextChanged = this._contextConnection !== hass?.connection || this._contextAuth !== hass?.auth || this._contextUser !== (hass?.user?.id || "") || this._contextAdmin !== Boolean(hass?.user?.is_admin);
+        if (contextChanged) {
+          window.clearTimeout(this._historyHelperWriteTimer);
+          this._historyHelperWriteTimer = 0;
+          this._historyStorageKey = this._historyHelperEntityId = this._historyHelperSignature = "";
+          this._newsHistory = [];
+          this._lastRenderSignature = "";
+        }
+        this._contextConnection = hass?.connection;
+        this._contextAuth = hass?.auth;
+        this._contextUser = hass?.user?.id || "";
+        this._contextAdmin = Boolean(hass?.user?.is_admin);
         this._hass = hass;
         const nextSignature = this._getRenderSignature(hass);
         if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {

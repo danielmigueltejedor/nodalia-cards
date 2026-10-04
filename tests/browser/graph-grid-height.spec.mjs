@@ -43,3 +43,23 @@ for(const rows of ['auto',4,8])test(`Graph stays inside ${rows} Sections rows be
  await page.evaluate(()=>{for(const card of window.graphHeightCards){const wrapper=card.parentElement;card.remove();wrapper.append(card);}});await assertContained(page,rows);
  expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
 });
+
+for(const initial of ['auto',4])test(`Graph follows live Sections row changes from ${initial} without remounting`,async({page})=>{
+ await mount(page,initial);
+ for(const rows of [4,'auto',8,'auto',4]) {
+  await page.evaluate(rows=>{
+   for(const card of window.graphHeightCards) {
+    const cell=card.parentElement.parentElement;
+    cell.classList.toggle('fit-rows',rows!=='auto');
+    cell.style.height=rows==='auto'?'':`${rows*64-8}px`;
+   }
+  },rows);
+  await expect.poll(()=>page.evaluate(()=>window.graphHeightCards.map(card=>card.parentElement.style.display))).toEqual(rows==='auto'?['block','block']:['','']);
+  await assertContained(page,rows);
+ }
+ // The old cell cannot retain a live observer once the card is removed.
+ await page.evaluate(()=>{window.graphHeightOldWrappers=window.graphHeightCards.map(card=>card.parentElement);for(const card of window.graphHeightCards)card.remove();});
+ await page.evaluate(()=>{for(const wrapper of window.graphHeightOldWrappers)wrapper.parentElement.classList.remove('fit-rows');});
+ await expect.poll(()=>page.evaluate(()=>window.graphHeightOldWrappers.map(wrapper=>wrapper.style.display))).toEqual(['','']);
+ expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+});

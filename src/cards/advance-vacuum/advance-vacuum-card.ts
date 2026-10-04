@@ -87,7 +87,7 @@ type PinchGesture = {startDistance:number;startScale:number;anchor:MapPoint};
 type PointerPosition = {clientX:number;clientY:number};
 type MapOverlayPaint = {rect:DOMRect;nodes:{node:HTMLElement;x:number;y:number;x2:number|null;y2:number|null}[]};
 type ZoneHandleDrag = {pointerId:number;index:number;action:"move";startPoint:MapPoint;startRect:{x:number;y:number;width:number;height:number}} | {pointerId:number;index:number;action:"resize";fixedPoint:MapPoint};
-type RoomTrackingCache = {key:string;hass:HomeAssistant|null;states:HomeAssistant["states"];registry:unknown;entityId:string;explicitRoomEntityId:string;explicitActivityEntityId:string;autoDetect:boolean;roomIds:string[];activityIds:string[]};
+type RoomTrackingCache = {key:string;roomIds:string[];activityIds:string[]};
 const vacuumRecord = (value:unknown):Record<string,unknown> => isObject(value)?value:{};
 const vacuumText = (value:unknown) => String(value??"");
 let _lazyNodaliaAdvanceVacuumCard:CustomElementConstructor|undefined;
@@ -1586,7 +1586,15 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const autoDetect = this._config?.room_tracking?.auto_detect !== false;
     const registry = vacuumRecord(hass?.entities);
     const states = hass?.states || {};
-    const cacheKey=JSON.stringify([entityId,explicitRoomEntityId,explicitActivityEntityId,autoDetect,Object.entries(states).map(([id,state])=>{const entry=vacuumRecord(registry[id]);return [id,state?.attributes?.friendly_name,entry.device_id,entry.original_name,entry.translation_key];})]);
+    // Explicit tracking depends only on the configured helpers' availability.
+    // Their live values are read by the snapshot methods, never from this cache.
+    const catalogSignature = autoDetect && entityId
+      ? Object.entries(states).map(([id, state]) => {
+        const entry = vacuumRecord(registry[id]);
+        return [id, state?.attributes?.friendly_name, entry.device_id, entry.original_name, entry.translation_key];
+      })
+      : [Boolean(states[explicitRoomEntityId]), Boolean(states[explicitActivityEntityId])];
+    const cacheKey = JSON.stringify([entityId, explicitRoomEntityId, explicitActivityEntityId, autoDetect, catalogSignature]);
     if(this._roomTrackingEntityCache?.key === cacheKey) return this._roomTrackingEntityCache;
 
     const roomIds = new Set(explicitRoomEntityId ? [explicitRoomEntityId] : []);
@@ -1636,13 +1644,6 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     this._roomTrackingEntityCache = {
       key: cacheKey,
-      hass,
-      states,
-      registry,
-      entityId,
-      explicitRoomEntityId,
-      explicitActivityEntityId,
-      autoDetect,
       roomIds: [...roomIds].filter(id => states[id]),
       activityIds: [...activityIds].filter(id => states[id]),
     };

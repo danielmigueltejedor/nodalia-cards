@@ -18,6 +18,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Changed
 
+- Graph, Gauge and Power Flow reuse bounded locale/precision formatters instead of constructing them for every reading. Explicit Advance Vacuum room/activity tracking avoids full entity-catalog scans when auto-detection is disabled.
 - Editor translation data and identical editor styles are shared more compactly, reducing the HACS resource by 191,366 raw bytes and 25,663 gzip bytes while preserving all twelve locales, public APIs and standalone resources. Existing size budgets stay unchanged.
 - All 25 cards, visual editors and shared runtimes now build from strictly checked TypeScript, with typed lint and zero suppression/import-cycle debt. Existing custom elements, standalone artifacts and the single HACS resource remain compatible.
 - Media transport stays centered between auxiliary controls. Buttons, transport capsules and stacked-player selectors share translucent artwork tint; dashboard entrance preserves the glass reflection and warm palettes apply immediately.
@@ -27,6 +28,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- Live Sections row changes switch between automatic and fixed wrapper sizing without remounting cards. News cancels pending helper writes after configuration or HA connection/authentication/user changes and refreshes helper history for the new context.
 - Automatic Sections rows shrink after interleaved favourite and device-control updates in Safari/iOS. Native inline card wrappers are normalized during the card lifecycle; existing size observers report settled height changes without rebuilding controls or resizing the window. Explicit wrapper layouts and visibility remain intact.
 
 - Navigation Media Player name, status, time and collapse surfaces share the controls' translucent artwork tint and blur. TV source selectors scroll without overlapping shadows clipped into a rectangular background. Alarm favourites release their expanded height after collapse, including rapid toggles and HA feedback.
@@ -34,7 +36,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Narrow idle Music Assistant controls no longer overlap; Advanced Vacuum pinch updates preserve the mounted map and reduce rendering work. Rain templates separate probability and current temperature, and the Engine bridge negotiates API 3 with API 2 fallback.
 
 - Vacuum localizes charger-disconnected states and truncates long status chips with ellipsis while preserving full title text.
-- Rain notification templates receive the weather temperature, preserving valid zero and temperature units.
+- Rain templates retain forecast probability in `{value}` and expose explicit temperature fields, preserving valid zero and temperature units.
 - Pending asynchronous work is retired across configuration, HA connection/user and view changes. Native focus, draft fields and cancelled gestures retain their intended behavior.
 
 

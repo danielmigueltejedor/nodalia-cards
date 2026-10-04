@@ -2610,10 +2610,11 @@
         const autoDetect = this._config?.room_tracking?.auto_detect !== false;
         const registry = vacuumRecord(hass?.entities);
         const states = hass?.states || {};
-        const cacheKey = JSON.stringify([entityId, explicitRoomEntityId, explicitActivityEntityId, autoDetect, Object.entries(states).map(([id, state]) => {
+        const catalogSignature = autoDetect && entityId ? Object.entries(states).map(([id, state]) => {
           const entry = vacuumRecord(registry[id]);
           return [id, state?.attributes?.friendly_name, entry.device_id, entry.original_name, entry.translation_key];
-        })]);
+        }) : [Boolean(states[explicitRoomEntityId]), Boolean(states[explicitActivityEntityId])];
+        const cacheKey = JSON.stringify([entityId, explicitRoomEntityId, explicitActivityEntityId, autoDetect, catalogSignature]);
         if (this._roomTrackingEntityCache?.key === cacheKey) return this._roomTrackingEntityCache;
         const roomIds = new Set(explicitRoomEntityId ? [explicitRoomEntityId] : []);
         const activityIds = new Set(explicitActivityEntityId ? [explicitActivityEntityId] : []);
@@ -2661,13 +2662,6 @@
         }
         this._roomTrackingEntityCache = {
           key: cacheKey,
-          hass,
-          states,
-          registry,
-          entityId,
-          explicitRoomEntityId,
-          explicitActivityEntityId,
-          autoDetect,
           roomIds: [...roomIds].filter((id) => states[id]),
           activityIds: [...activityIds].filter((id) => states[id])
         };

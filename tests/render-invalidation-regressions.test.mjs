@@ -19,7 +19,7 @@ const renderSignature = file => {
 
 test("news history observes the current hass snapshot before signature side effects", () => {
   const source = read("nodalia-news-card.js");
-  assert.match(source, /set hass\(hass\) \{\n\s*this\._hass = hass;\n\s*const nextSignature = this\._getRenderSignature\(hass\);/);
+  assert.match(source, /set hass\(hass\) \{[\s\S]*?this\._hass = hass;\n\s*const nextSignature = this\._getRenderSignature\(hass\);/);
 });
 
 test("gauge signature follows native values, inferred ranges and locale", () => {
