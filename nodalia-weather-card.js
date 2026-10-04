@@ -2507,7 +2507,7 @@
         }
 
         .weather-card__forecast-item:hover {
-          box-shadow: 0 10px 22px color-mix(in srgb, var(--forecast-accent) 12%, transparent);
+          box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--forecast-accent) 24%, transparent);
           transform: translateY(-2px) scale(1.015);
         }
 
