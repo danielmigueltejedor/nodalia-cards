@@ -56,7 +56,7 @@
   }
 
   // src/version.ts
-  var CARD_VERSION = "3.0.0-alpha.7";
+  var CARD_VERSION = "3.0.0-alpha.8";
 
   // src/cards/lock/lock-config.ts
   var CARD_TAG = "nodalia-lock-card";
