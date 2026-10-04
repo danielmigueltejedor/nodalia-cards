@@ -1,3 +1,4 @@
+import { createCardLayoutNotifier } from "../../shared/card-layout-notifier";
 import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
 import { parseFiniteNumericValue } from "../../shared/numeric-values";
 import { requestHassService } from "../../shared/home-assistant-services";
@@ -36,6 +37,7 @@ export function loadNodaliaAlarmPanelCard(): CustomElementConstructor {
     return _lazyNodaliaAlarmPanelCard;
   }
 class NodaliaAlarmPanelCard extends HTMLElement {
+  private _cardLayoutNotifier?: ReturnType<typeof createCardLayoutNotifier>;
   private _config!: ReturnType<typeof normalizeConfig>;
   private _hass!: HomeAssistant | null;
   private _animateContentOnNextRender!: boolean;
@@ -199,6 +201,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     if (!this._resizeObserver) {
       this._resizeObserver = new ResizeObserver(entries => {
         const entry = entries[0];
+      (this._cardLayoutNotifier ??= createCardLayoutNotifier(this)).observe(entry);
         if (!entry) {
           return;
         }
@@ -267,6 +270,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     this.shadowRoot?.removeEventListener("input", this._onShadowInput);
     this.shadowRoot?.removeEventListener("focusin", this._onShadowFocusIn);
     this.shadowRoot?.removeEventListener("focusout", this._onShadowFocusOut);
+    this._cardLayoutNotifier?.cancel();
     this._resizeObserver?.disconnect();
     this._releaseActionWork();
     this._codeInput = "";

@@ -27,6 +27,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- Automatic Sections rows shrink after interleaved favourite and device-control updates in Safari/iOS. Native inline card wrappers are normalized during the card lifecycle; existing size observers report settled height changes without rebuilding controls or resizing the window. Explicit wrapper layouts and visibility remain intact.
+
 - Navigation Media Player name, status, time and collapse surfaces share the controls' translucent artwork tint and blur. TV source selectors scroll without overlapping shadows clipped into a rectangular background. Alarm favourites release their expanded height after collapse, including rapid toggles and HA feedback.
 - Advance Vacuum installs complete styles on first mount and falls back from malformed CSS functions. Pinch gestures retain their map/marker nodes through HA feedback and native touch handoff; cleaning updates no longer replay entrance/panel animations. Preset commands avoid linked duplicates and rejected or retired selections cannot leave stale mode feedback.
 - Narrow idle Music Assistant controls no longer overlap; Advanced Vacuum pinch updates preserve the mounted map and reduce rendering work. Rain templates separate probability and current temperature, and the Engine bridge negotiates API 3 with API 2 fallback.

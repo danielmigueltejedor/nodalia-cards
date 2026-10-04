@@ -1,3 +1,4 @@
+import { createCardLayoutNotifier } from "../../shared/card-layout-notifier";
 import {
   CARD_TAG,
   COLOR_PRESETS,
@@ -52,6 +53,7 @@ export function loadNodaliaLightCard(): CustomElementConstructor {
     return _lazyNodaliaLightCard;
   }
 class NodaliaLightCard extends HTMLElement {
+  private _cardLayoutNotifier?: ReturnType<typeof createCardLayoutNotifier>;
   private _config!: ReturnType<typeof normalizeConfig>;
   private _hass!: HomeAssistant | null;
   private _draftBrightness!: Map<string, number>;
@@ -169,6 +171,7 @@ class NodaliaLightCard extends HTMLElement {
         this._resizeFrame = 0;
         if (!this.isConnected) return;
       const entry = entries[0];
+      (this._cardLayoutNotifier ??= createCardLayoutNotifier(this)).observe(entry);
       if (!entry) {
         return;
       }
@@ -273,6 +276,7 @@ class NodaliaLightCard extends HTMLElement {
 
   disconnectedCallback() {
     this._detachHostHold?.();
+    this._cardLayoutNotifier?.cancel();
     this._resizeObserver?.disconnect();
     if (this._resizeFrame) window.cancelAnimationFrame(this._resizeFrame);
     this._resizeFrame = 0;

@@ -1,12 +1,12 @@
 # Technical audit — version 3
 
-Updated 2026-10-03. This document describes the current implementation and release
+Updated 2026-10-04. This document describes the current implementation and release
 readiness. Historical migration checkpoints are retained in Git history and
 release notes, rather than presented as current unresolved findings.
 
 ## Migration outcome
 
-All 282 source modules, including 25 cards, visual editors and shared runtimes,
+All 283 source modules, including 25 cards, visual editors and shared runtimes,
 have canonical TypeScript source. Strict compiler checks and typed ESLint apply
 across `src/`. Suppression and runtime import-cycle inventories are empty and
 remain enforced by `pnpm architecture:check`.
@@ -20,6 +20,7 @@ public contracts. No runtime npm dependencies are introduced.
 
 | Area | Current behavior / verification |
 |---|---|
+| Sections | Native card wrapper lifecycle prevents Safari/iOS from retaining expanded automatic row height after sibling updates; existing observers report settled sizes |
 | Lock | Centered icons, shared Styles controls and deliberate unlock gestures; native Lock embedding in Summary |
 | Media | Equal side columns center transport; artwork palettes are cached and committed with covers; entrance preserves backdrop reflection |
 | Vacuum | `charger_disconnected` is localized; constrained text truncates with ellipsis and retains the full title |

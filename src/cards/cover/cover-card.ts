@@ -1,3 +1,4 @@
+import { createCardLayoutNotifier } from "../../shared/card-layout-notifier";
 import { invokeHassService } from "../../shared/home-assistant-services";
 import type { HomeAssistant } from "../../core/types/home-assistant";
 import type { HostPointerHoldBinding } from "../../core/types/nodalia-utils";
@@ -42,6 +43,7 @@ export function loadNodaliaCoverCard(): CustomElementConstructor {
     return _lazyNodaliaCoverCard;
   }
 class NodaliaCoverCard extends HTMLElement {
+  private _cardLayoutNotifier?: ReturnType<typeof createCardLayoutNotifier>;
   private _config!: ReturnType<typeof normalizeConfig>;
   private _hass!: HomeAssistant | null;
   private _lastRenderSignature!: string;
@@ -87,6 +89,7 @@ class NodaliaCoverCard extends HTMLElement {
       typeof ResizeObserver === "function"
         ? new ResizeObserver(entries => {
             const entry = entries[0];
+      (this._cardLayoutNotifier ??= createCardLayoutNotifier(this)).observe(entry);
             if (!entry) {
               return;
             }
@@ -174,6 +177,7 @@ class NodaliaCoverCard extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this._cardLayoutNotifier?.cancel();
     this._resizeObserver?.disconnect();
     this._detachHostHold?.();
     this._cancelSliderDrag(false);

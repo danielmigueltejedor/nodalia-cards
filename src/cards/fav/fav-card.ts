@@ -1,3 +1,4 @@
+import { createCardLayoutNotifier } from "../../shared/card-layout-notifier";
 import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
 import { parseFiniteNumericValue } from "../../shared/numeric-values";
 import { parseServiceData, invokeHassService } from "../../shared/home-assistant-services";
@@ -43,6 +44,7 @@ export function loadNodaliaFavCard(): CustomElementConstructor {
     return _lazyNodaliaFavCard;
   }
 class NodaliaFavCard extends HTMLElement {
+  private _cardLayoutNotifier?: ReturnType<typeof createCardLayoutNotifier>;
   private _config!: FavConfig | null;
   private _hass!: HomeAssistant | null;
   private _cardWidth!: number;
@@ -86,6 +88,7 @@ class NodaliaFavCard extends HTMLElement {
     this._lastRenderSignature = "";
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
+      (this._cardLayoutNotifier ??= createCardLayoutNotifier(this)).observe(entry);
       if (!entry) {
         return;
       }
@@ -125,6 +128,7 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this._cardLayoutNotifier?.cancel();
     this._resizeObserver?.disconnect();
     this._alarmMenuOpen = false;
     this._applyHostGridSpan(false);
