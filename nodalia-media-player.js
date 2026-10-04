@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.0-alpha.7";
+  var CARD_VERSION = "3.0.0-alpha.8";
 
   // src/cards/media-player/media-player-constants.ts
   var CARD_TAG = "nodalia-media-player";
@@ -4739,7 +4739,7 @@
           align-content: start;
           gap: 6px;
           min-width: 0;
-          overflow: hidden;
+          overflow: visible;
         }
 
         .media-player-card--tv .media-player__artwork {
@@ -4778,7 +4778,7 @@
         .media-player-card--tv .media-player__meta {
           max-width: 100%;
           min-width: 0;
-          overflow: hidden;
+          overflow: visible;
           padding-left: 10px;
           justify-items: end;
           text-align: right;

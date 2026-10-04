@@ -8,11 +8,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## Unreleased
+## [3.0.0-alpha.8] - 2026-10-04
 
 ### Fixed
 
 - Fav Card icon shadows follow the rounded card boundary instead of being cut off by an inner rectangular content box, particularly visible on compact armed Alarm favourites.
+- TV Media Player name and source chips paint their soft shadows through to the rounded card boundary, including players embedded in Room Summary. Narrow Graph legends and Weather forecast hover states use inset highlights inside their scrollports; settled Light color and temperature sliders no longer cut their thumb shadows into rectangles.
 
 ## [3.0.0-alpha.7] - 2026-10-04
 

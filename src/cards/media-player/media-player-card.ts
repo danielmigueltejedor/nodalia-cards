@@ -3967,7 +3967,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           align-content: start;
           gap: 6px;
           min-width: 0;
-          overflow: hidden;
+          overflow: visible;
         }
 
         .media-player-card--tv .media-player__artwork {
@@ -4006,7 +4006,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         .media-player-card--tv .media-player__meta {
           max-width: 100%;
           min-width: 0;
-          overflow: hidden;
+          overflow: visible;
           padding-left: 10px;
           justify-items: end;
           text-align: right;

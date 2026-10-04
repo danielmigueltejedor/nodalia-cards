@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.0-alpha.7";
+  var CARD_VERSION = "3.0.0-alpha.8";
 
   // src/cards/light/light-constants.ts
   var CARD_TAG = "nodalia-light-card";
@@ -3397,9 +3397,14 @@
           backface-visibility: hidden;
           display: grid;
           min-height: var(--light-card-mode-shell-height);
-          overflow: hidden;
+          overflow: visible;
           will-change: opacity, transform;
           width: 100%;
+        }
+
+        .light-card__mode-panel:has(.light-card__mode-panel-inner--collapsing),
+        .light-card__mode-panel:has(.light-card__mode-panel-inner--expanding) {
+          overflow: hidden;
         }
 
         .light-card__mode-panel-inner {

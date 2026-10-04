@@ -56,3 +56,7 @@ workers. Keep geometry and final cleanup assertions; retries are not a fix.
 ### Shared automatic row collapse
 
 `tests/browser/shared-row-collapse.spec.mjs` reproduces the native Sections hierarchy (`.card` grid cell → inline `hui-card` → custom card), with block shadow styles on `ha-card`. An inline wrapper is significant: replacing it with a block grid item masks WebKit's retained intrinsic height. Regression coverage interleaves Alarm favourite expansion, sibling Light favourite feedback and collapse, plus animated Light/Fan/Humidifier controls, repeated cycles, detach and explicitly configured/hidden wrappers. Settled height notifications reuse existing observers and do not emit global window resize events.
+
+### Rounded shadows and scrollports
+
+`tests/browser/rounded-shadow-clipping.spec.mjs` uses native block `ha-card` styles and a light theme to cover compact armed Alarm favourites, TV player chips standalone and inside Room Summary, long names, settled Light temperature/color sliders, narrow Graph legends and both Weather forecast views. External control shadows must reach the rounded card boundary without encountering an inner rectangular clip. Scrollable rows retain scrolling and use inset highlights; text and image clipping remain local to the label or image. Mode transitions retain temporary containment until their cleanup frame completes.

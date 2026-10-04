@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.0-alpha.7";
+  var CARD_VERSION = "3.0.0-alpha.8";
 
   // src/cards/graph/graph-constants.ts
   var CARD_TAG = "nodalia-graph-card";
@@ -2657,6 +2657,7 @@
           }
 
           .graph-card__primary-row .graph-card__legend-item {
+            box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent);
             flex-shrink: 0;
             max-width: min(52vw, 160px);
           }
@@ -2665,7 +2666,7 @@
             box-shadow:
               inset 0 1px 0 color-mix(in srgb, var(--legend-color) 18%, rgba(255, 255, 255, 0.18)),
               inset 0 -1px 0 color-mix(in srgb, var(--legend-color) 12%, rgba(0, 0, 0, 0.08)),
-              0 0 0 1px color-mix(in srgb, var(--legend-color) 10%, transparent);
+              inset 0 0 0 1px color-mix(in srgb, var(--legend-color) 10%, transparent);
           }
         }
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
