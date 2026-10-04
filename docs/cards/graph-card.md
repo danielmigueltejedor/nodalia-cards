@@ -55,3 +55,10 @@ track each entity, including series with identical names, and update in place.
 Native cancellation, configuration changes and detach release holds, document
 watchers, frames and animation fallback timers. Hover styles remain embedded
 in the standalone file and HACS bundle; no additional stylesheet is fetched.
+
+
+Sections cards with numeric `grid_options.rows` fill the reserved row height,
+including a native inline `hui-card` wrapper. With `rows: auto` (the default),
+the chart uses `styles.chart_height` within its supported range rather than
+the SVG aspect ratio. The plot shrinks inside fixed rows; history updates,
+series selection and viewport resizing do not make neighbouring graphs overlap.

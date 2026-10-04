@@ -4,7 +4,7 @@
   // src/shared/card-layout-notifier.ts
   function normalizeCardLayoutWrapper(host) {
     const wrapper = host.parentElement;
-    if (wrapper?.localName !== "hui-card" || wrapper.style.display || getComputedStyle(wrapper).display !== "inline") {
+    if (wrapper?.localName !== "hui-card" || wrapper.parentElement?.matches(".card.fit-rows") || wrapper.style.display || getComputedStyle(wrapper).display !== "inline") {
       return () => {
       };
     }

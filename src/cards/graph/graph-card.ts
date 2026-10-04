@@ -2230,10 +2230,11 @@ class NodaliaGraphCard extends HTMLElement {
           border: 0;
           border-radius: 0;
           box-shadow: none;
-          flex: 1 1 auto;
+          flex: 1 1 ${chartHeight};
+          height: ${chartHeight};
           margin: 4px -${chartBleedRight}px -${chartBleedBottom}px -${chartBleedLeft}px;
           max-width: none;
-          min-height: ${chartHeight};
+          min-height: 0;
           min-width: 0;
           overflow: hidden;
           padding: 0;
