@@ -1,6 +1,19 @@
 /* Generated from src/shared/utils-runtime.ts. Do not edit. */
 "use strict";
 (() => {
+  // src/shared/card-layout-notifier.ts
+  function normalizeCardLayoutWrapper(host) {
+    const wrapper = host.parentElement;
+    if (wrapper?.localName !== "hui-card" || wrapper.style.display || getComputedStyle(wrapper).display !== "inline") {
+      return () => {
+      };
+    }
+    wrapper.style.display = "block";
+    return () => {
+      if (wrapper.style.display === "block") wrapper.style.removeProperty("display");
+    };
+  }
+
   // src/shared/utils-empty-state.css
   var utils_empty_state_default = ":host{display:block}*{box-sizing:border-box}[class$=--empty]{display:grid;gap:8px}[class$=__empty-title]{color:var(--primary-text-color);font-size:15px;font-weight:700}[class$=__empty-text]{color:var(--secondary-text-color);font-size:13px;line-height:1.5}";
 
@@ -639,6 +652,7 @@
       if (customElements.get(tag)) {
         return;
       }
+      const wrapperReleases = /* @__PURE__ */ new WeakMap();
       let realClass = null;
       const getReal = () => {
         if (!realClass) {
@@ -652,6 +666,13 @@
           enumerable: false,
           writable: true,
           value: function nodaliaLazyLifecycleForward(...args) {
+            if (options.editorTag && name === "connectedCallback") {
+              wrapperReleases.get(this)?.();
+              wrapperReleases.set(this, normalizeCardLayoutWrapper(this));
+            } else if (name === "disconnectedCallback") {
+              wrapperReleases.get(this)?.();
+              wrapperReleases.delete(this);
+            }
             const Real = getReal();
             const prototype = Real.prototype;
             const fn = isObject(prototype) ? prototype[name] : void 0;

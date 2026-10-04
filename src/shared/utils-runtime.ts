@@ -1,3 +1,4 @@
+import { normalizeCardLayoutWrapper } from "./card-layout-notifier";
 import emptyStateStyles from "./utils-empty-state.css";
 import {compactConfig as compactConfigValue} from "./config-values";
 import reducedMotionStyles from "./utils-reduced-motion.css";
@@ -805,6 +806,7 @@ import type {NodaliaUtilsApi,CssStyleDefaults,SanitizedCssStyles,EditorFocusStat
       return;
     }
 
+    const wrapperReleases = new WeakMap<HTMLElement, () => void>();
     let realClass:CustomElementConstructor|null = null;
     const getReal = () => {
       if (!realClass) {
@@ -826,6 +828,13 @@ import type {NodaliaUtilsApi,CssStyleDefaults,SanitizedCssStyles,EditorFocusStat
         enumerable: false,
         writable: true,
         value: function nodaliaLazyLifecycleForward(this:HTMLElement,...args:unknown[]) {
+          if (options.editorTag && name === "connectedCallback") {
+            wrapperReleases.get(this)?.();
+            wrapperReleases.set(this, normalizeCardLayoutWrapper(this));
+          } else if (name === "disconnectedCallback") {
+            wrapperReleases.get(this)?.();
+            wrapperReleases.delete(this);
+          }
           const Real = getReal();
           const prototype:unknown=Real.prototype;
           const fn = isObject(prototype)?prototype[name]:undefined;

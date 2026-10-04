@@ -27,6 +27,13 @@ observers, listeners, requests and persistence work. Room Summary parking invoke
 child disconnect cleanup. Native focus and in-progress fields remain stable on
 ordinary updates. Gesture cancellation restores previews without commands.
 
+Automatic Sections rows use a block native `hui-card` wrapper while mounted.
+This prevents WebKit from retaining an anonymous inline box's earlier height
+when a neighbouring favourite updates during an expansion. Explicit wrapper
+layouts and hidden state are preserved, and the owned change is released on
+detach. Device/card size notifications reuse existing observers, debounce until
+animation settles and do not rebuild controls or emit global window resize events.
+
 ## Automated verification
 
 ```bash

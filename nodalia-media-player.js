@@ -1313,6 +1313,52 @@
     return { players: [{ entity: entityId || "media_player.spotify", label: entityId ? getStubFriendlyName(hass, entityId) : "Spotify" }], layout: { mode: "standard", fixed: false, reserve_space: false } };
   }
 
+  // src/shared/card-layout-notifier.ts
+  function createCardLayoutNotifier(host) {
+    let timer = 0;
+    let frame = 0;
+    let width = 0;
+    let height = 0;
+    let reportedWidth = 0;
+    let reportedHeight = 0;
+    let generation = 0;
+    const cancel = () => {
+      ++generation;
+      window.clearTimeout(timer);
+      window.cancelAnimationFrame(frame);
+      timer = frame = 0;
+      width = height = reportedWidth = reportedHeight = 0;
+    };
+    return {
+      observe(entry) {
+        if (!entry || !host.isConnected) return;
+        const nextWidth = Math.round(entry.contentRect.width);
+        const nextHeight = Math.round(entry.contentRect.height);
+        if (nextWidth < 48 || nextHeight < 1) return;
+        if (nextWidth === width && nextHeight === height) return;
+        width = nextWidth;
+        height = nextHeight;
+        window.clearTimeout(timer);
+        window.cancelAnimationFrame(frame);
+        frame = 0;
+        const current = ++generation;
+        timer = window.setTimeout(() => {
+          timer = 0;
+          frame = window.requestAnimationFrame(() => {
+            frame = 0;
+            if (!host.isConnected || current !== generation) return;
+            if (width === reportedWidth && height === reportedHeight) return;
+            reportedWidth = width;
+            reportedHeight = height;
+            host.dispatchEvent(new CustomEvent("iron-resize", { bubbles: true, composed: true }));
+            host.dispatchEvent(new CustomEvent("card-updated", { bubbles: true, composed: true }));
+          });
+        }, 80);
+      },
+      cancel
+    };
+  }
+
   // src/cards/media-player/media-player-tv.css
   var media_player_tv_default = ".media-player-card--tv .media-player__subtitle--tv,.media-player-card--tv .media-player__chips-wrap{justify-self:end;max-width:100%;text-align:right}.media-player-card--tv:not(.media-player-card--idle) .media-player__chips-wrap{margin-bottom:4px}.media-player-card--tv .media-player__subtitle--tv{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%}.media-player-card--tv:not(.media-player-card--idle) .media-player__center-stack{gap:6px}.media-player-card--tv:not(.media-player-card--idle) .media-player__tv-stack{gap:5px}.media-player-card--tv .media-player__chips,.media-player-card--tv .media-player__footer{justify-content:flex-end}.media-player-card--tv.media-player-card--idle .media-player__idle-main{align-items:center;gap:10px;grid-template-columns:minmax(0,1fr) auto;padding-top:0;width:100%}.media-player-card--tv.media-player-card--idle .media-player__idle-tv-stack{gap:10px;padding-top:0;width:auto}.media-player-card--tv.media-player-card--idle .media-player__idle-hero--tv-off{align-items:center;gap:12px;grid-template-columns:38px minmax(0,1fr) auto;width:100%}.media-player-card--tv.media-player-card--idle .media-player__idle-actions--tv-off{justify-content:flex-end;justify-self:end;width:auto}.media-player-card--idle .media-player__control{height:38px;min-width:38px;width:38px}.media-player-card--idle .media-player__control ha-icon{--mdc-icon-size: 18px;height:18px;width:18px}.media-player-card--tv.media-player-card--idle .media-player__idle-hero{align-items:center}.media-player-card--tv .media-player__tv-source-panel{border-radius:20px;justify-content:center;max-height:190px;overflow:auto;padding-right:2px}.media-player-card--tv .media-player__source-buttons{gap:6px;justify-content:center}.media-player-card--tv .media-player__source-button{box-shadow:inset 0 1px 0 color-mix(in srgb,var(--primary-text-color) 8%,transparent);max-width:100%;min-height:32px;padding:0 10px}";
 
@@ -1656,6 +1702,7 @@
         if (this._resizeSyncTimer) window.clearTimeout(this._resizeSyncTimer);
         if (this._layoutFrame) window.cancelAnimationFrame(this._layoutFrame);
         this._entranceAnimationResetTimer = this._resizeSyncTimer = this._layoutFrame = 0;
+        this._cardLayoutNotifier?.cancel();
         this._layoutObserver?.disconnect();
         this._layoutObserver = null;
         this._mediaBrowserRequestToken += 1;
@@ -1809,10 +1856,12 @@
           return;
         }
         const generation = this._generation;
-        const observer = new ResizeObserver(() => {
-          if (!this._isCurrent(generation) || this._layoutObserver !== observer || this._activeSliderDrag || this._activeProgressDrag) {
+        const observer = new ResizeObserver((entries) => {
+          if (!this._isCurrent(generation) || this._layoutObserver !== observer) {
             return;
           }
+          (this._cardLayoutNotifier ?? (this._cardLayoutNotifier = createCardLayoutNotifier(this))).observe(entries[0]);
+          if (this._activeSliderDrag || this._activeProgressDrag) return;
           this._syncPresentationMode();
         });
         this._layoutObserver = observer;

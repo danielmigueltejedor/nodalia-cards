@@ -582,6 +582,52 @@
     return normalized;
   }
 
+  // src/shared/card-layout-notifier.ts
+  function createCardLayoutNotifier(host) {
+    let timer = 0;
+    let frame = 0;
+    let width = 0;
+    let height = 0;
+    let reportedWidth = 0;
+    let reportedHeight = 0;
+    let generation = 0;
+    const cancel = () => {
+      ++generation;
+      window.clearTimeout(timer);
+      window.cancelAnimationFrame(frame);
+      timer = frame = 0;
+      width = height = reportedWidth = reportedHeight = 0;
+    };
+    return {
+      observe(entry) {
+        if (!entry || !host.isConnected) return;
+        const nextWidth = Math.round(entry.contentRect.width);
+        const nextHeight = Math.round(entry.contentRect.height);
+        if (nextWidth < 48 || nextHeight < 1) return;
+        if (nextWidth === width && nextHeight === height) return;
+        width = nextWidth;
+        height = nextHeight;
+        window.clearTimeout(timer);
+        window.cancelAnimationFrame(frame);
+        frame = 0;
+        const current = ++generation;
+        timer = window.setTimeout(() => {
+          timer = 0;
+          frame = window.requestAnimationFrame(() => {
+            frame = 0;
+            if (!host.isConnected || current !== generation) return;
+            if (width === reportedWidth && height === reportedHeight) return;
+            reportedWidth = width;
+            reportedHeight = height;
+            host.dispatchEvent(new CustomEvent("iron-resize", { bubbles: true, composed: true }));
+            host.dispatchEvent(new CustomEvent("card-updated", { bubbles: true, composed: true }));
+          });
+        }, 80);
+      },
+      cancel
+    };
+  }
+
   // src/shared/device-state-memory.ts
   var isRecord2 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
   function snapshotDeviceState(state) {
@@ -730,6 +776,7 @@
             this._resizeFrame = 0;
             if (!this.isConnected) return;
             const entry = entries[0];
+            (this._cardLayoutNotifier ?? (this._cardLayoutNotifier = createCardLayoutNotifier(this))).observe(entry);
             if (!entry) {
               return;
             }
@@ -822,6 +869,7 @@
       }
       disconnectedCallback() {
         this._detachHostHold?.();
+        this._cardLayoutNotifier?.cancel();
         this._resizeObserver?.disconnect();
         if (this._resizeFrame) window.cancelAnimationFrame(this._resizeFrame);
         this._resizeFrame = 0;

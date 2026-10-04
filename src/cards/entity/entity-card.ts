@@ -1,3 +1,4 @@
+import { createCardLayoutNotifier } from "../../shared/card-layout-notifier";
 import {
   AIR_QUALITY_COMFORT_KEYS,
   AIR_QUALITY_GRAPH_SERIES_COLORS,
@@ -79,6 +80,7 @@ export function loadNodaliaEntityCard() {
     return _lazyNodaliaEntityCard;
   }
 class NodaliaEntityCard extends HTMLElement {
+  private _cardLayoutNotifier?: ReturnType<typeof createCardLayoutNotifier>;
   declare private _config: EntityConfig;
   declare private _hass: HomeAssistant|null;
   declare private _optimisticToggle: ToggleDraft|null;
@@ -214,6 +216,7 @@ class NodaliaEntityCard extends HTMLElement {
     const observer = new ResizeObserver(entries => {
       if (!this.isConnected || this._resizeObserver !== observer) return;
       const entry = entries[0];
+      (this._cardLayoutNotifier ??= createCardLayoutNotifier(this)).observe(entry);
       if (!entry) {
         return;
       }
@@ -259,6 +262,7 @@ class NodaliaEntityCard extends HTMLElement {
   disconnectedCallback() {
     this._releaseViewWork();
     this._detachHostHold?.();
+    this._cardLayoutNotifier?.cancel();
     this._resizeObserver?.disconnect();
     this._resizeObserver = null;
     if (this._entranceAnimationResetTimer) {

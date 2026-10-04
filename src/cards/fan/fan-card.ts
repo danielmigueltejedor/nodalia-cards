@@ -1,3 +1,4 @@
+import { createCardLayoutNotifier } from "../../shared/card-layout-notifier";
 import {
   ALLOWED_DOUBLE_TAP_ACTIONS,
   CARD_TAG,
@@ -45,6 +46,7 @@ export function loadNodaliaFanCard(): CustomElementConstructor {
     return _lazyNodaliaFanCard;
   }
 class NodaliaFanCard extends HTMLElement {
+  private _cardLayoutNotifier?: ReturnType<typeof createCardLayoutNotifier>;
   private _config!: ReturnType<typeof normalizeConfig>;
   private _hass!: HomeAssistant | null;
   private _optimisticToggle!: FanToggle | null;
@@ -141,6 +143,7 @@ class NodaliaFanCard extends HTMLElement {
     this._suppressNextFanTap = false;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
+      (this._cardLayoutNotifier ??= createCardLayoutNotifier(this)).observe(entry);
       if (!entry) {
         return;
       }
@@ -242,6 +245,7 @@ class NodaliaFanCard extends HTMLElement {
 
   disconnectedCallback() {
     this._detachHostHold?.();
+    this._cardLayoutNotifier?.cancel();
     this._resizeObserver?.disconnect();
     if (this._resizeFrame) window.cancelAnimationFrame(this._resizeFrame);
     this._resizeFrame = 0;

@@ -1,3 +1,4 @@
+import { createCardLayoutNotifier } from "../../shared/card-layout-notifier";
 import mediaPlayerTvStyles from "./media-player-tv.css";
 import mediaPlayerMetadataStyles from "./media-player-metadata.css";
 import mediaPlayerIdleStyles from "./media-player-idle.css";
@@ -69,6 +70,7 @@ export function loadNodaliaMediaPlayer() {
     return _lazyNodaliaMediaPlayer;
   }
 class NodaliaMediaPlayer extends HTMLElement {
+  private _cardLayoutNotifier?: ReturnType<typeof createCardLayoutNotifier>;
   declare private _artworkWatches:Map<string,{url:string;rerender:boolean}>;
   declare private _artworkPreloadCancels:Map<string,()=>void>;
   declare private _generation:number;
@@ -296,6 +298,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     if (this._resizeSyncTimer) window.clearTimeout(this._resizeSyncTimer);
     if (this._layoutFrame) window.cancelAnimationFrame(this._layoutFrame);
     this._entranceAnimationResetTimer = this._resizeSyncTimer = this._layoutFrame = 0;
+    this._cardLayoutNotifier?.cancel();
     this._layoutObserver?.disconnect();
     this._layoutObserver = null;
     this._mediaBrowserRequestToken += 1;
@@ -469,10 +472,12 @@ class NodaliaMediaPlayer extends HTMLElement {
       return;
     }
     const generation = this._generation;
-    const observer = new ResizeObserver(() => {
-      if (!this._isCurrent(generation) || this._layoutObserver !== observer || this._activeSliderDrag || this._activeProgressDrag) {
+    const observer = new ResizeObserver(entries => {
+      if (!this._isCurrent(generation) || this._layoutObserver !== observer) {
         return;
       }
+      (this._cardLayoutNotifier ??= createCardLayoutNotifier(this)).observe(entries[0]);
+      if (this._activeSliderDrag || this._activeProgressDrag) return;
       this._syncPresentationMode();
     });
     this._layoutObserver = observer;

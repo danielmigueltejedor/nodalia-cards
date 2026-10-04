@@ -1,3 +1,4 @@
+import { createCardLayoutNotifier } from "../../shared/card-layout-notifier";
 import {
   CARD_TAG,
   EDITOR_TAG,
@@ -41,6 +42,7 @@ export function loadNodaliaVacuumCard(): CustomElementConstructor {
     return _lazyNodaliaVacuumCard;
   }
 class NodaliaVacuumCard extends HTMLElement {
+  private _cardLayoutNotifier?: ReturnType<typeof createCardLayoutNotifier>;
   private _config!: ReturnType<typeof normalizeConfig>;
   private _hass!: HomeAssistant | null;
   private _cardWidth!: number;
@@ -124,6 +126,7 @@ class NodaliaVacuumCard extends HTMLElement {
     this._suppressNextVacuumTap = false;
     this._resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
+      (this._cardLayoutNotifier ??= createCardLayoutNotifier(this)).observe(entry);
       if (!entry) {
         return;
       }
@@ -210,6 +213,7 @@ class NodaliaVacuumCard extends HTMLElement {
 
   disconnectedCallback() {
     this._detachHostHold?.();
+    this._cardLayoutNotifier?.cancel();
     this._resizeObserver?.disconnect();
     if (this._resizeFrame) window.cancelAnimationFrame(this._resizeFrame);
     this._resizeFrame = 0;

@@ -52,3 +52,7 @@ frames with `page.clock.runFor`. Advance cleanup explicitly after sampling. See
 `tests/browser/device-expansion-animations.spec.mjs`: deliberate wall-time stalls
 and connected-element assertions guard against sampling detached nodes on slow CI
 workers. Keep geometry and final cleanup assertions; retries are not a fix.
+
+### Shared automatic row collapse
+
+`tests/browser/shared-row-collapse.spec.mjs` reproduces the native Sections hierarchy (`.card` grid cell → inline `hui-card` → custom card), with block shadow styles on `ha-card`. An inline wrapper is significant: replacing it with a block grid item masks WebKit's retained intrinsic height. Regression coverage interleaves Alarm favourite expansion, sibling Light favourite feedback and collapse, plus animated Light/Fan/Humidifier controls, repeated cycles, detach and explicitly configured/hidden wrappers. Settled height notifications reuse existing observers and do not emit global window resize events.

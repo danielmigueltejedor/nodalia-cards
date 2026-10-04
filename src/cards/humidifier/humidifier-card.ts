@@ -1,3 +1,4 @@
+import { createCardLayoutNotifier } from "../../shared/card-layout-notifier";
 import {
   CARD_TAG,
   EDITOR_TAG,
@@ -44,6 +45,7 @@ export function loadNodaliaHumidifierCard(): CustomElementConstructor {
     return _lazyNodaliaHumidifierCard;
   }
 class NodaliaHumidifierCard extends HTMLElement {
+  private _cardLayoutNotifier?: ReturnType<typeof createCardLayoutNotifier>;
   private _config!: ReturnType<typeof normalizeConfig>;
   private _hass!: HomeAssistant | null;
   private _optimisticToggle!: HumidifierToggle | null;
@@ -141,6 +143,7 @@ class NodaliaHumidifierCard extends HTMLElement {
         this._resizeFrame = 0;
         if (!this.isConnected) return;
       const entry = entries[0];
+      (this._cardLayoutNotifier ??= createCardLayoutNotifier(this)).observe(entry);
       if (!entry) {
         return;
       }
@@ -242,6 +245,7 @@ class NodaliaHumidifierCard extends HTMLElement {
 
   disconnectedCallback() {
     this._detachHostHold?.();
+    this._cardLayoutNotifier?.cancel();
     this._resizeObserver?.disconnect();
     if (this._resizeFrame) window.cancelAnimationFrame(this._resizeFrame);
     this._resizeFrame = 0;
