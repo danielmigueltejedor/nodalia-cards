@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "timestamp": "2026-10-05T17:21:18.234481+00:00",
-  "verdict": "NOT RC READY",
+  "timestamp": "2026-10-05T17:38:53.075597+00:00",
+  "verdict": "RC READY",
   "baselineHead": "1e2eb55d717279499febc56ec39872cb5a160bef",
-  "version": "3.0.0-beta.1",
-  "rcPrepared": false,
+  "version": "3.0.0-rc.1",
+  "rcPrepared": true,
   "rcPublished": false,
   "findings": [
     {
@@ -224,16 +224,12 @@
     }
   },
   "candidateBundle": {
-    "rawBytes": 4147296,
-    "gzipBytes": 946786,
-    "sha256": "fbc017b2ffce2e6db48ebfb04fcf27db7c0b7f08a308978ac3c28b92512b89ed",
-    "provenance": "working-candidate size check only"
+    "rawBytes": 4147286,
+    "gzipBytes": 937945,
+    "sha256": "4b87f160e3cffe063aca649abea9ccba1b7af89d326d34be0f0551a027735b77",
+    "provenance": "prepared RC artifact; exact published asset verification pending"
   },
-  "releaseBlockers": [
-    "Missing Apple M4 Firefox performance evidence",
-    "Fresh isolated/native-touch four-engine published-asset reference run and candidate material regression assessment",
-    "Controlled reference release runner not provisioned"
-  ],
+  "releaseBlockers": [],
   "benchmarkSchemaVersion": 1,
   "methodology": "bench/README.md",
   "productionDependenciesAdded": 0,
@@ -244,5 +240,30 @@
     "runtimeSourceBeforeFix": "1e2eb55d717279499febc56ec39872cb5a160bef",
     "downloaderSourceBeforeFix": "ae5d0f8a9e0792ec1ff6e75778ef8385642b70cf"
   },
-  "validatedSourceCommit": "09fb0ef764dfd099db7bd2ba803b8125b1ee7719"
+  "validatedSourceCommit": "09fb0ef764dfd099db7bd2ba803b8125b1ee7719",
+  "acceptanceRevision": {
+    "date": "2026-10-05",
+    "authorization": "Release owner: firefox no va a arrancar nunca en este mac asi que saltalo y termina la rc",
+    "scope": "RC only",
+    "firefoxReference": "excluded explicitly; no timings claimed",
+    "firefoxCompatibility": "Linux CI remains required",
+    "rcEvidence": "Manual controlled reference run after exact RC asset publication, Chromium/WebKit/iPhone WebKit",
+    "stablePrerequisites": [
+      "Four-engine stable asset evidence",
+      "Provisioned controlled Actions runner"
+    ],
+    "pending": [
+      "Exact-version quality gates before tagging",
+      "Exact-asset post-publication RC benchmark and material-regression assessment"
+    ]
+  },
+  "rcValidation": {
+    "version": "3.0.0-rc.1",
+    "nodePassed": 829,
+    "nodeFailed": 0,
+    "static": "passed",
+    "dependencyAudit": "zero vulnerabilities",
+    "referencePolicy": "macos-firefox-rc",
+    "exactCommitRemoteCI": "pending"
+  }
 }

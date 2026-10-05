@@ -21,3 +21,13 @@ test('stable performance section always shows raw and gzip including regressions
 test('post-release notes replace only the marked evidence section and never duplicate figures',()=>{
  const first=buildPerformanceSection(evidence(),'3.0.0');const notes=replacePerformanceSection('# Notes\n',first);const again=replacePerformanceSection(notes,first);assert.equal(notes,again);assert.throws(()=>replacePerformanceSection('<!-- nodalia-performance:start -->',first),/Malformed/);
 });
+test('RC Firefox exclusion remains explicit and cannot satisfy stable or missing-engine evidence',()=>{
+ const r=evidence(),target='3.0.0-rc.1';
+ r.versions[1]=target;for(const row of [...r.assets,...r.samples])if(row.version==='3.0.0'){row.version=target;if(row.tag)row.tag=`v${target}`;}
+ r.metadata.referenceException='macos-firefox-rc';r.config.browsers=['chromium','webkit','webkit-iphone'];
+ Object.assign(r.browsers[1],{status:'unavailable',version:null,excludedByPolicy:true,reason:'Release owner excludes Firefox on this Mac'});
+ r.samples=r.samples.filter(row=>row.browser!=='firefox');r.summary=summarize(r.samples);
+ assertOfficialEvidence(r,target);const section=buildPerformanceSection(r,target);assert.match(section,/three-engine RC/);assert.match(section,/Firefox performance is unavailable/);assert.doesNotMatch(section,/Full four-engine/);
+ for(const mutate of [x=>x.metadata.platform='linux',x=>delete x.browsers[1].excludedByPolicy,x=>x.metadata.referenceException='other',x=>x.browsers[2].status='unavailable',x=>x.config.browsers=['chromium','webkit'],x=>x.versions.push('3.0.0')]){const x=structuredClone(r);mutate(x);assert.throws(()=>assertOfficialEvidence(x,target));}
+ const stable=evidence();stable.metadata.referenceException='macos-firefox-rc';assert.throws(()=>assertOfficialEvidence(stable,'3.0.0'),/stable evidence/);
+});

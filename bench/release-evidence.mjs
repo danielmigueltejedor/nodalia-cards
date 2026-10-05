@@ -8,6 +8,18 @@ import { scenarios } from './workloads.mjs';
 export const SECTION_START='<!-- nodalia-performance:start -->';
 export const SECTION_END='<!-- nodalia-performance:end -->';
 const engines=['chromium','firefox','webkit','webkit-iphone'];
+function requiredEngines(result,target) {
+ if (!result.metadata.referenceException) return engines;
+ const excluded=result.browsers.find(b=>b.name==='firefox');
+ const required=engines.filter(name=>name!=='firefox');
+ if(result.metadata.referenceException!=='macos-firefox-rc'||result.metadata.platform!=='darwin'||
+    !/^3\.0\.0-rc\.[1-9]\d*$/.test(target)||result.versions.includes('3.0.0')||
+    excluded?.status!=='unavailable'||excluded.excludedByPolicy!==true||!excluded.reason||
+    result.samples.some(row=>row.browser==='firefox')||
+    result.config.browsers?.length!==3||!required.every(name=>result.config.browsers.includes(name)))
+   throw new Error('Invalid macOS Firefox RC exception; stable evidence still requires all four engines');
+ return required;
+}
 export function assertOfficialEvidence(result,target) {
  if(!/^3\.0\.0(?:-rc\.[1-9]\d*)?$/.test(target||''))throw new Error('Release notes evidence target must be stable 3.0.0 or its release candidate');
  validateResult(result);
@@ -15,15 +27,16 @@ export function assertOfficialEvidence(result,target) {
  if(!result.versions.includes('2.2.10')||!result.versions.includes(target))throw new Error(`Evidence must compare exact published 2.2.10 and ${target} assets`);
  if(result.errors.length)throw new Error('Benchmark has errors; release performance notes are blocked');
  if(result.config.iterations<5||result.config.warmups<1)throw new Error('Insufficient official iterations/warmups');
- for(const name of engines){const browser=result.browsers.find(b=>b.name===name);if(browser?.status!=='available'||!browser.version)throw new Error(`Official browser unavailable: ${name}`);}
- for(const browser of result.browsers){
+ const required=requiredEngines(result,target);
+ for(const name of required){const browser=result.browsers.find(b=>b.name===name);if(browser?.status!=='available'||!browser.version)throw new Error(`Official browser unavailable: ${name}`);}
+ for(const browser of result.browsers.filter(b=>required.includes(b.name))){
   if(!browser.commonCards?.length)throw new Error(`Missing comparable card intersection: ${browser.name}`);
   for(const scenario of scenarios({...result.config,commonCards:browser.commonCards}))for(const version of result.versions){
    const rows=result.samples.filter(row=>row.browser===browser.name&&row.version===version&&row.scenario===scenario.id&&row.scope===scenario.scope);
    if(rows.length!==result.config.iterations)throw new Error(`Incomplete workload coverage: ${browser.name} ${version} ${scenario.id}`);
   }
  }
- for(const browser of engines)for(const version of ['2.2.10',target])for(const scenario of ['cold-startup','dashboard/mount','dashboard/unrelated','dashboard/relevant','tracks/media/50','graph/graph/1000','lifecycle/media/100']) {
+ for(const browser of required)for(const version of ['2.2.10',target])for(const scenario of ['cold-startup','dashboard/mount','dashboard/unrelated','dashboard/relevant','tracks/media/50','graph/graph/1000','lifecycle/media/100']) {
   const row=result.summary.find(row=>row.browser===browser&&row.version===version&&row.scenario===scenario&&row.scope==='common');
   if(row?.metrics.workMs?.samples!==result.config.iterations)throw new Error(`Incomplete official sample coverage: ${browser} ${version} ${scenario}`);
  }
@@ -36,7 +49,8 @@ export function buildPerformanceSection(result,target,{reportRef='main'}={}) {
  const browser=result.browsers.find(b=>b.name==='chromium');
  const lines=[SECTION_START,'## Performance vs Nodalia Cards 2.2.10','',
   `Reference: ${result.metadata.cpu}, ${result.metadata.platform} ${result.metadata.architecture}, Chromium ${browser.version}. Values are medians from ${result.config.iterations} samples; browsers are not averaged.`,
-  '',`Measured the exact published ${target} asset. [Full four-engine report](${reportUrl}) · [Raw samples and hashes](${jsonUrl}).`,
+  '',`Measured the exact published ${target} asset. [Full ${result.metadata.referenceException?'three-engine RC':'four-engine'} report](${reportUrl}) · [Raw samples and hashes](${jsonUrl}).`,
+  ...(result.metadata.referenceException?['','Firefox performance is unavailable on this reference Mac and explicitly excluded by the release owner for RC acceptance. Linux Firefox compatibility tests remain required. This exception cannot generate stable 3.0.0 evidence.']:[]),
   '',`| Metric | 2.2.10 | ${target} | Change |`,'|---|---:|---:|---:|'];
  for(const [key,label]of [['rawBytes','Bundle raw (bytes)'],['gzipBytes','Bundle gzip (bytes)']]){const before=result.assets.find(a=>a.version==='2.2.10')[key],after=result.assets.find(a=>a.version===target)[key];lines.push(`| ${label} | ${before} | ${after} | ${delta(before,after)} |`);}
  // Fixed representative selection includes slower results; do not filter on delta.

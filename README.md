@@ -37,7 +37,7 @@ Version `3.0.0` completes strict TypeScript migration across all 25 cards,
 editors and shared runtimes. It includes the media-control, Lock, Summary and
 Vacuum refinements described in the [prerelease notes](./CHANGELOG-PRERELEASES.md).
 Existing YAML, custom element names and the HACS resource path remain compatible.
-See [upgrading to version 3](./docs/upgrading-to-3.md) for installation and contributor changes. `3.0.0-beta.1` is published after the [final alpha audit](./docs/BETA_READINESS_AUDIT.md) and freezes features, architecture and public contracts for stabilization. Enable prereleases in HACS to select a published preview; RC remains subject to the [final audit verdict](./docs/audits/rc-readiness-report.md) and [published-release performance evidence](./docs/benchmarks/README.md). Stable `2.2.10` remains available until stable `3.0.0` is published.
+See [upgrading to version 3](./docs/upgrading-to-3.md) for installation and contributor changes. `3.0.0-rc.1` is the release candidate following the [final audit](./docs/audits/rc-readiness-report.md); features, architecture, public APIs, YAML and distribution are frozen for final stabilization. Enable prereleases in HACS to select a published preview; RC reference performance explicitly excludes Firefox on the reference Mac; Linux Firefox compatibility remains tested. See [published-release performance evidence](./docs/benchmarks/README.md) for results and limitations. Stable `2.2.10` remains available until stable `3.0.0` is published.
 
 ## Preview
 

@@ -1,6 +1,8 @@
 # Nodalia Cards 3 RC readiness audit
 
-**Verdict: NOT RC READY.** This is an audit checkpoint, not a prepared RC. Package/source version remains `3.0.0-beta.1`. No RC tag or release has been created.
+**Verdict: RC READY under the release-owner acceptance revision of 2026-10-05.** The owner explicitly requested skipping Firefox on this Mac and completing RC. Firefox reference performance is unavailable; Linux Firefox compatibility remains required. RC is prepared as `3.0.0-rc.1`, subject to its exact-version quality gates before tagging. Exact published-asset performance evidence follows publication on Chromium, WebKit and iPhone WebKit; no performance result is claimed until that run completes. Manual reference execution removes the Actions-runner dependency for RC only. Stable 3.0.0 still requires the default four-engine evidence and a provisioned controlled runner.
+
+The sections below preserve the earlier **NOT RC READY** checkpoint and its evidence; the acceptance revision changes the external performance/infrastructure criteria, not the historical measurements or fixed runtime findings.
 
 ## A. Recorded baseline
 
@@ -57,7 +59,7 @@ See [machine-readable results](rc-readiness-results.json) for completed and pend
 
 Physical iOS Safari, actual HA Sections/dashboard load, robot map streams, live WebSocket/notification delivery and account-specific integrations still need real-environment confirmation; emulation/fixtures cannot prove them. Firefox's observed failure is consistent with [Playwright #42768](https://github.com/microsoft/playwright/issues/42768) and [Mozilla #2062988](https://bugzilla.mozilla.org/show_bug.cgi?id=2062988); this inference does not turn it into a passing engine.
 
-The version is not promoted while required evidence is missing. **NOT RC READY** remains the verdict until those gates complete. Architecture/features/public API/YAML/distribution stay frozen and subsequent work is stabilization only.
+At the earlier checkpoint the missing reference and runner evidence prevented promotion (**NOT RC READY**). The release-owner revision above explicitly changes those RC criteria. Architecture/features/public API/YAML/distribution stay frozen and subsequent work is stabilization only.
 
 ## Download-boundary security review
 
@@ -79,7 +81,7 @@ The map fixture was strengthened before the final run: every four moves change c
 | Dependency audit | Zero vulnerabilities; zero production dependencies |
 | HACS / CodeQL / benchmark smoke | Pass on 09fb0ef7 |
 
-The Linux Firefox compatibility pass cannot replace missing Firefox timings on the Apple M4 reference system. The pending performance and controlled-runner gates therefore still prevent RC preparation.
+The Linux Firefox compatibility pass cannot replace missing Firefox timings on the Apple M4 reference system. Those gaps blocked the earlier checkpoint. Under the owner revision, RC uses three-engine manual evidence; Firefox timings and the automated stable runner remain unavailable and are not represented as passing.
 
 Repository Actions settings were also inspected: the default token policy is read-only and automatic PR creation is disabled. The benchmark job explicitly requests only contents/PR writes. If GitHub blocks its documentation PR, verified data remains on the pushed report branch and the job summary offers a manual comparison link; the already validated release-notes update continues. No repository-wide permissions were broadened. Runner registration is still zero, so automatic measurement itself remains an external prerequisite.
 
@@ -87,7 +89,7 @@ The PR-creation setting corresponds to [GitHub’s documented repository workflo
 
 ## Captured reference and final harness correction
 
-The [reference analysis](../benchmarks/2.2.10-vs-3.0.0-beta.1-analysis.md) preserves 5,642 measured samples, 147 skips and 37 errors, with original JSON/CSV and complete per-engine tables. It is not accepted official evidence. Besides Firefox launch failure, legacy Graph tooltip frames failed to settle in 36 WebKit/iPhone warmup/measured profiles after large histories. Isolated profiles succeed, and shared persisted state also changed helper workload complexity. The final harness isolates each profile in a fresh page/import, clears fixture storage and constructs real native touch objects; the previous touch events were prototype-only simulations. No failed row is converted to a zero-cost win. A fresh isolated four-engine reference run is required.
+The [reference analysis](../benchmarks/2.2.10-vs-3.0.0-beta.1-analysis.md) preserves 5,642 measured samples, 147 skips and 37 errors, with original JSON/CSV and complete per-engine tables. It is not accepted official evidence. Besides Firefox launch failure, legacy Graph tooltip frames failed to settle in 36 WebKit/iPhone warmup/measured profiles after large histories. Isolated profiles succeed, and shared persisted state also changed helper workload complexity. The final harness isolates each profile in a fresh page/import, clears fixture storage and constructs real native touch objects; the previous touch events were prototype-only simulations. No failed row is converted to a zero-cost win. A fresh isolated reference run is required; RC now uses the explicitly authorized three-engine exception.
 
 The repeated Chromium GC data has zero residual connected/CDP DOM nodes. Heap deltas vary rather than showing a common linear trend; Media beta reaches roughly 33 KiB after 500 cycles, which alone cannot establish a leak or its absence. Synthetic/native event handling and device emulation remain separate from physical Safari. Published beta Media/embedded Summary operation regressions are reproducible; working-candidate fixes have functional/operation evidence, not official release percentages.
 
@@ -96,3 +98,7 @@ The helper correction passes 45 local lifecycle tests across the three available
 The corrected harness then completed a three-engine quick smoke against exact published 2.2.10/beta.1 assets: 1,440 measured samples, zero errors and 18 explicit generation-2 skips. This validates isolation/native event compatibility and output generation, not official performance acceptance. It cannot substitute the required seven-round four-engine reference run.
 
 Final source/harness validation: [four-engine CI](https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37346221596), [HACS](https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37346221258), [CodeQL](https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37346221302), [benchmark smoke](https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37346221237). Subsequent changes in this audit checkpoint only record evidence; the source/artifact/harness hashes remain unchanged.
+
+## RC preparation under the owner revision
+
+Prepared `3.0.0-rc.1` passes all 829 Node tests, strict types, lint, architecture, translations, distribution and build. Dependency audit reports zero vulnerabilities. Two additional regressions constrain the macOS Firefox exception to RC and reject using it for stable or incomplete remaining engines. Exact-version remote quality/HACS/security/smoke gates are required before tagging. Current prepared bundle hash and publication state are recorded in the results JSON. The runtime implementation is unchanged from the audited main except the generated release version.

@@ -11,11 +11,12 @@ function checkedVersion(version) {
 }
 const releaseAssetUrl = version => `https://github.com/${REPOSITORY}/releases/download/v${checkedVersion(version)}/nodalia-cards.js`;
 export function parseArgs(args, env = {}) {
-  const options = { versions: [], quick: env.NODALIA_BENCH_QUICK === '1', browsers: null, out: 'bench/results', publishNotes: false };
+  const options = { versions: [], quick: env.NODALIA_BENCH_QUICK === '1', browsers: null, out: 'bench/results', publishNotes: false, skipFirefoxOnMac: false };
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if (arg === '--') continue;
     if (arg === '--quick') { options.quick = true; continue; }
+    if (arg === '--skip-firefox-on-mac') { options.skipFirefoxOnMac = true; continue; }
     if (arg === '--browsers' || arg === '--out') {
       if (!args[i + 1] || args[i + 1].startsWith('--')) throw new Error(`Missing value for ${arg}`);
       options[arg.slice(2)] = arg === '--browsers' ? args[++i].split(',') : args[++i];
@@ -32,6 +33,18 @@ export function parseArgs(args, env = {}) {
   if(options.browsers&&(new Set(options.browsers).size!==options.browsers.length||options.browsers.some(name=>!['chromium','firefox','webkit','webkit-iphone'].includes(name))))throw new Error('Invalid or duplicate browser projects');
   if (options.publishNotes && options.quick) throw new Error('Quick runs cannot publish release notes');
   return options;
+}
+export function referencePolicy(options, platform) {
+  const all = ['chromium','firefox','webkit','webkit-iphone'];
+  if (options.skipFirefoxOnMac) {
+    if (platform !== 'darwin' || options.quick || options.browsers ||
+        !options.versions.some(v=>/^3\.0\.0-rc\.[1-9]\d*$/.test(v)) || options.versions.includes('3.0.0'))
+      throw new Error('Firefox exception requires an official macOS RC run; stable, quick and custom browser selection are excluded');
+    return { browsers: all.filter(name=>name!=='firefox'), referenceException: 'macos-firefox-rc' };
+  }
+  if (!options.quick && options.browsers && options.browsers.length !== 4)
+    throw new Error('Official runs require all four browser projects');
+  return { browsers: options.browsers || all, referenceException: null };
 }
 export function percentile(values, p) {
   if (!values.length) return null;
@@ -151,6 +164,7 @@ export function delta(before,after) { return before ? `${((after-before)/before*
 export function markdown(result) {
   const lines = [`# Release performance: ${result.versions.join(' vs ')}`, '', `Mode: **${result.metadata.mode}**. Harness: \`${result.metadata.harnessCommit}\`.`,
     '', `System: ${result.metadata.platform} ${result.metadata.architecture}; ${result.metadata.cpu}; ${result.metadata.ramBytes} bytes RAM.`,
+    ...(result.metadata.referenceException ? ['', 'RC reference exception: Firefox is unavailable on this Mac and excluded by explicit release-owner authorization. No Firefox timings or four-engine performance claim are made.'] : []),
     '', 'workMs is synchronous dispatch CPU wall time; settleMs is the remaining elapsed time until quiet and pending fixture work settle. totalMs = workMs + settleMs. Chromium ScriptDuration/LayoutDuration are separate CPU measurements. Timings include equal instrumentation overhead; counts do not imply cost.',
     '', '## Published assets', '', '| Version | SHA256 | Raw bytes | Gzip bytes |', '|---|---|---:|---:|'];
   for (const asset of result.assets) lines.push(`| ${asset.version} | ${asset.sha256} | ${asset.rawBytes} | ${asset.gzipBytes} |`);

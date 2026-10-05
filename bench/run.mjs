@@ -5,7 +5,7 @@ import os from 'node:os';
 import cp from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { chromium, firefox, webkit, devices } from '@playwright/test';
-import { parseArgs, loadAsset, sampleOrder, summarize, validateResult, markdown, csv, sha256 } from './core.mjs';
+import { parseArgs, referencePolicy, loadAsset, sampleOrder, summarize, validateResult, markdown, csv, sha256 } from './core.mjs';
 
 import { scenarios } from './workloads.mjs';
 export { scenarios } from './workloads.mjs';
@@ -46,13 +46,14 @@ export async function launchBrowser(engine,options){
 }
 export async function run(args=process.argv.slice(2),env=process.env) {
  const options=parseArgs(args,env),base=JSON.parse(await fs.readFile(path.join(root,'bench/benchmark.config.json'),'utf8'));
- const config={...base,...(options.quick?base.quick:{}),browsers:options.browsers||base.browsers};delete config.quick;
+ const policy=referencePolicy(options,os.platform());
+ const config={...base,...(options.quick?base.quick:{}),browsers:policy.browsers};delete config.quick;
  for(const browser of config.browsers)if(!['chromium','firefox','webkit','webkit-iphone'].includes(browser))throw new Error(`Unknown browser ${browser}`);
  if(new Set(config.browsers).size!==config.browsers.length)throw new Error('Duplicate browser projects');
- if(!options.quick&&options.browsers&&options.browsers.length!==4)throw new Error('Official runs require all four browser projects');
  const assets=[];for(const version of options.versions)assets.push(await loadAsset(version,path.join(root,'bench/releases')));
  const result={schemaVersion:1,metadata:{timestamp:new Date().toISOString(),mode:options.quick?'quick':'official',harnessCommit:versionOf('git',['-C',root,'rev-parse','HEAD']),harnessDirty:!!versionOf('git',['-C',root,'status','--porcelain','--','bench','tests/fixtures','package.json','pnpm-lock.yaml']),workingTreeDirty:!!versionOf('git',['-C',root,'status','--porcelain']),
-  harnessFilesSha256:await harnessHash(),platform:os.platform(),osRelease:os.release(),osVersion:os.platform()==='darwin'?versionOf('sw_vers',['-productVersion']):os.version(),architecture:os.arch(),cpu:os.cpus()[0]?.model||'unavailable',logicalCpus:os.cpus().length,ramBytes:os.totalmem(),node:process.version,pnpm:versionOf('pnpm',['--version']),playwright:JSON.parse(await fs.readFile(path.join(root,'node_modules/@playwright/test/package.json'),'utf8')).version},versions:options.versions,assets,bundle:assets.map(({version,rawBytes,gzipBytes,brotliBytes,sha256})=>({version,rawBytes,gzipBytes,brotliBytes,sha256})),config,browsers:[],samples:[],summary:[],skips:[],errors:[]};
+  referenceException:policy.referenceException,harnessFilesSha256:await harnessHash(),platform:os.platform(),osRelease:os.release(),osVersion:os.platform()==='darwin'?versionOf('sw_vers',['-productVersion']):os.version(),architecture:os.arch(),cpu:os.cpus()[0]?.model||'unavailable',logicalCpus:os.cpus().length,ramBytes:os.totalmem(),node:process.version,pnpm:versionOf('pnpm',['--version']),playwright:JSON.parse(await fs.readFile(path.join(root,'node_modules/@playwright/test/package.json'),'utf8')).version},versions:options.versions,assets,bundle:assets.map(({version,rawBytes,gzipBytes,brotliBytes,sha256})=>({version,rawBytes,gzipBytes,brotliBytes,sha256})),config,browsers:[],samples:[],summary:[],skips:[],errors:[]};
+ if(policy.referenceException)result.browsers.push({name:'firefox',status:'unavailable',version:null,reason:'Explicit release-owner exception: Firefox cannot launch on the reference Mac',excludedByPolicy:true});
  const server=await serve();
  try {
   for(const name of config.browsers){
