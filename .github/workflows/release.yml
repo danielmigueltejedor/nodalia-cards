@@ -81,6 +81,5 @@ jobs:
               --notes-file release/release-notes.md \
               --title "Nodalia Cards $release_title"
           fi
-      - name: Schedule official stable performance evidence
-        if: github.ref_name == 'v3.0.0'
-        run: gh workflow run benchmark-release.yml --ref main -f version=3.0.0
+      # Owner requested stable 3.0.0 promotion without repeating RC benchmarks.
+      # benchmark-release.yml remains available for future explicit measurements.

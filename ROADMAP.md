@@ -8,24 +8,17 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 
 ## Current preview release
 
-Current preview release:
-
-```text
-3.0.0-rc.1
-```
-
-See [the curated prerelease notes](./CHANGELOG-PRERELEASES.md) for this build.
-Stable **`2.2.10`** remains the recommended daily-driver release.
+No active preview. Stable **`3.0.0`** is the recommended release.
 
 ## Current stable release
 
 Current stable release:
 
 ```text
-2.2.10
+3.0.0
 ```
 
-Stable **`2.2.10`** restores Advance Vacuum fan speed on newer Roborock robots that expose a `cleaning_mode` select beside `fan_speed_list`. Stable changes are summarized in [`CHANGELOG.md`](./CHANGELOG.md); prerelease history lives in [`CHANGELOG-PRERELEASES.md`](./CHANGELOG-PRERELEASES.md).
+Stable changes and migration notes are summarized in [CHANGELOG.md](./CHANGELOG.md).
 
 The project currently includes:
 
@@ -44,22 +37,12 @@ The project currently includes:
 
 # 🎯 Current focus (`3.0.x` maintenance)
 
-Version 3 has entered feature and architecture freeze with `3.0.0-beta.1`:
-
-- No new cards, substantial features, broad refactors, YAML/public API changes,
-  major visual changes or new runtime dependencies before stable 3.0.0.
-- Accept fixes for bugs, performance, accessibility, browser compatibility,
-  lifecycle/memory, documentation and tests.
-- Keep all 25 cards, editors and runtime sources strictly checked with zero
-  suppression and import-cycle debt.
-- Preserve existing YAML, standalone artifacts and single-bundle HACS installs.
-- Verify desktop/mobile artwork tint, animations, native focus and editor behavior.
-- Keep source generators, Weblate sync, documentation and release automation aligned.
-- Validate the exact release commit across static and four-browser CI gates.
-- Record remaining device/integration issues honestly before stable promotion.
-
-The current package remains a preview until an explicitly prepared stable version
-passes validation and its tag is published. See [releasing](docs/releasing.md).
+Stable 3.0.0 promotes the validated RC runtime. The 3.0.x maintenance cycle accepts
+bug fixes, accessibility, compatibility, lifecycle/memory corrections,
+documentation and tests. Preserve YAML and resource contracts, strict types,
+typed lint, zero suppression/import-cycle debt and existing bundle budgets.
+New cards, substantial features and broad refactors belong to a later cycle.
+See [releasing](docs/releasing.md).
 
 ## Completed for version 3
 
@@ -93,6 +76,12 @@ The experimental WYSIWYG layout editor is preserved on
 `future/2.0.0-visual-layout`. It is separate from the version 3 bundle and can be
 reconsidered in a later feature cycle. Its old standalone design plan is retired.
 
-## Final RC evidence
+## Completed RC evidence
 
-The [RC audit](docs/audits/rc-readiness-report.md) and [permanent release benchmark](bench/README.md) are the next acceptance checkpoint. RC acceptance includes completed lifecycle and compatibility gates, with the release-owner exception for Firefox performance on the reference Mac. Exact published RC assets are measured manually on three engines; stable retains four-engine evidence. Published stable 3.0.0 will be measured after upload, with a reproducible performance section generated from its exact asset.
+The [RC audit](docs/audits/rc-readiness-report.md) and
+[reference assessment](docs/benchmarks/3.0.0-rc.1-analysis.md) record completed
+lifecycle, compatibility and three-engine performance evidence, with the owner
+exception for Firefox performance on this Mac. Stable promotes the same runtime;
+the owner requested no repeated benchmarks. Historical samples remain labelled
+RC and are not exact stable-asset measurements. Permanent benchmark tooling
+remains available for later explicitly requested measurements.

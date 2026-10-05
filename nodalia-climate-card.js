@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.0-rc.1";
+  var CARD_VERSION = "3.0.0";
 
   // src/cards/climate/climate-constants.ts
   var CARD_TAG = "nodalia-climate-card";

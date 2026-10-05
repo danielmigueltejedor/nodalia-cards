@@ -106,3 +106,18 @@ Published `3.0.0-rc.1` passes all 829 Node tests, strict types, lint, architectu
 ## Completed RC reference
 
 The [exact published RC analysis](../benchmarks/3.0.0-rc.1-analysis.md) supersedes the earlier pending reference checkpoint. It records complete seven-round coverage against 2.2.10/beta.1, asset/harness hashes, per-engine statistics, graph/map/native rows, controlled-GC lifecycle trends and honest materiality review. The original iPhone failed attempt remains archived; its entire engine was repeated with unchanged measured fixture/config and replaced as a whole. Firefox Mac performance remains explicitly excluded, Linux Firefox functionality passed, and the stable runner/four-engine prerequisites remain open. RC is published, validated and frozen.
+
+## Stable promotion decision (2026-10-06)
+
+The release owner explicitly requested publishing stable 3.0.0 and no repeated
+benchmarks because its runtime is the same as RC1. This supersedes the earlier
+stable publication prerequisites for new performance evidence/reference runner.
+All 37 root runtime artifacts match RC1 after normalizing only version strings
+and generated integrity identifiers; `src/version.ts` is the only source change.
+Stable promotion preserves the existing feature/architecture/YAML/API contracts
+and repeats static/unit and four-engine Linux functional quality gates. Local
+Firefox remains excluded on this Mac. The smoke benchmark is omitted for this
+promotion branch and no reference benchmark is dispatched after publication.
+Historical RC data is unchanged and remains RC evidence; no exact stable asset
+timing or four-engine reference claim is made. Permanent manual benchmark tools
+and their strict evidence validator remain available for future explicit runs.

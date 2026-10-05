@@ -7,6 +7,8 @@ permissions:
   contents: read
 jobs:
   smoke:
+    # Identical-runtime promotion: owner requested no repeated benchmarks.
+    if: github.event_name != 'pull_request' || github.head_ref != 'release/3.0.0'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
