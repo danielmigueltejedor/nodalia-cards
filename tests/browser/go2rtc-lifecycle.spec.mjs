@@ -123,3 +123,33 @@ test('Go2rtc retired native ICE events cannot send candidates on a replacement t
   });
   expect(result).toEqual([]);
 });
+
+test('Go2rtc bounds sockets, poster URLs and media nodes across 60 source changes and reconnects',async({page})=>{
+ await page.goto('/tests/fixtures/browser.html');await page.waitForFunction(()=>customElements.get('nodalia-go2rtc-player'));
+ const result=await page.evaluate(()=>{
+  const sockets=new Set(),urls=new Set(),frames=new Map();let frame=0;
+  window.WebSocket=class extends EventTarget {
+   static OPEN=1;static CONNECTING=0;static CLOSED=3;
+   constructor(){super();this.readyState=0;sockets.add(this);}
+   send(){}close(){this.readyState=3;sockets.delete(this);}
+  };
+  const create=URL.createObjectURL.bind(URL),revoke=URL.revokeObjectURL.bind(URL);
+  URL.createObjectURL=blob=>{const url=create(blob);urls.add(url);return url;};URL.revokeObjectURL=url=>{urls.delete(url);revoke(url);};
+  HTMLMediaElement.prototype.play=()=>Promise.resolve();
+  HTMLVideoElement.prototype.requestVideoFrameCallback=callback=>{frames.set(++frame,callback);return frame;};HTMLVideoElement.prototype.cancelVideoFrameCallback=id=>frames.delete(id);
+  const results=[];let socketPeak=0,urlPeak=0,framePeak=0;
+  for(let n=0;n<60;n++){
+   const player=document.createElement('nodalia-go2rtc-player');player.configure({source:`ws://127.0.0.1/stream/${n}`,mode:'mjpeg'});document.querySelector('#fixture').append(player);
+   const retired=player._socket;retired.readyState=1;retired.dispatchEvent(new Event('open'));
+   player._binaryHandler?.(new Uint8Array([1,2,3]).buffer);player._verifyVideoDisplayRecovery(player.video);
+   socketPeak=Math.max(socketPeak,sockets.size);urlPeak=Math.max(urlPeak,urls.size);framePeak=Math.max(framePeak,frames.size);
+   player.configure({source:`ws://127.0.0.1/replacement/${n}`,mode:'mjpeg'});
+   retired.dispatchEvent(new MessageEvent('message',{data:JSON.stringify({type:'error',value:'Retired socket'})}));
+   player.remove();document.querySelector('#fixture').append(player);player.remove();
+   results.push({sockets:sockets.size,urls:urls.size,frames:frames.size,media:document.querySelectorAll('video,audio,nodalia-go2rtc-player').length,queue:player._bufferQueue.length,handlers:player._messageHandlers.size,peer:player._peer});
+  }
+  return {results,socketPeak,urlPeak,framePeak,errors:window.bundleErrors};
+ });
+ expect(result.socketPeak).toBeGreaterThan(0);expect(result.urlPeak).toBeGreaterThan(0);expect(result.framePeak).toBeGreaterThan(0);
+ expect(result.results).toEqual(Array.from({length:60},()=>({sockets:0,urls:0,frames:0,media:0,queue:0,handlers:0,peer:null})));expect(result.errors).toEqual([]);
+});

@@ -8,6 +8,30 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.0.0-beta.1] - 2026-10-05
+
+### Changed
+
+- **Feature and architecture freeze for Nodalia Cards 3.** Beta.1 closes active structural migration and feature development. Subsequent prereleases focus on stabilization, performance, accessibility, browser compatibility, documentation and regression tests. Existing YAML and public APIs are frozen.
+- Strict TypeScript migration is complete for all 25 cards, visual editors and shared runtimes, with zero suppression/import-cycle debt and zero production npm dependencies. All custom elements, standalone resource paths, twelve languages and the single-file HACS resource are preserved.
+- Engine remains optional with API 2 compatibility and capability-gated API 3 negotiation. Rain templates retain coherent precipitation probability; explicit temperature fields preserve real zero values. Notification preview/snooze, Climate preview and private revisioned Vacuum session contracts remain available through the bridge.
+- Earlier bundle-size reductions are preserved within unchanged budgets. Bounded shared numeric formatters and explicit Vacuum helper discovery reduce repeated work without changing live-state correctness.
+
+### Fixed
+
+- Account/auth/connection changes retire old requests, subscriptions, editor status, pending commands and device gestures. Retired responses can no longer overwrite a newer context, and Camera signed URLs are scoped to their account with bounded caching.
+- Sections wrappers follow automatic and fixed row changes in place. Fav/Alarm and neighbouring Light/Fan/Humidifier expansions release settled space; Graphs respect fixed cell heights and configured plots without overlapping consecutive cards, including Safari/iOS.
+- Media and Navigation retain centered, circular translucent controls and coherent artwork tint across entrance, cached covers, track changes and stacked players. Shared artwork loading now bounds stalled decoding and retries failed URLs safely.
+- Advance Vacuum preserves map/marker identity during pointer and native-touch pinch, handles cancelled gestures and Smart command failures, and avoids unnecessary state-catalog scans for explicit helpers. Private robot sessions reject retired/revision-conflicting work.
+- Camera/go2rtc replaces streams cleanly, releases sockets/media/frame/poster resources, and rejects late transport events. Lock, Alarm, Fav and device controls clear private or optimistic work when the original HA identity is replaced.
+- Visual editors retain native focus, drafts and picker/list interactions during HA feedback. Climate/Notifications Engine status cannot cross accounts. Person empty-state copy refreshes with the profile language.
+- Input boundaries preserve zero/false/Unicode while rejecting unsafe paths, malformed numeric/API values, URLs, styles and external payloads. Runtime/editor catalogs retain all twelve locales and safe English fallback.
+
+### Validation
+
+- Final alpha audit adds adversarial out-of-order response regressions, all 25 standalone card/editor cold loads, 24 lifecycle cycles for each of 12 complex cards and 60 transport replacement cycles with actual resource allocation checks.
+- Exact-version static, translation, artifact, dependency, metadata, HACS, CodeQL and Chromium/Firefox/WebKit/iPhone WebKit gates are required before release. See [the release-readiness audit](./docs/BETA_READINESS_AUDIT.md) for measured budgets, regression evidence and device-testing limits.
+
 ## [3.0.0-alpha.9] - 2026-10-04
 
 ### Fixed

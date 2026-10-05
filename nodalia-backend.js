@@ -6,7 +6,14 @@
   var API_VERSION = 3;
   var LEGACY_API_VERSION = 2;
   var STATUS_TTL_MS = 3e4;
-  var statusCache = { connection: null, checkedAt: 0, value: null };
+  var contextOf = (hass) => ({ owner: hass?.connection || hass, auth: hass?.auth, user: hass?.user?.id || "", admin: hass?.user?.is_admin === true });
+  var sameContext = (a, b) => a !== null && a.owner === b.owner && a.auth === b.auth && a.user === b.user && a.admin === b.admin;
+  var statusGeneration = 0;
+  var statusCache = { context: null, checkedAt: 0, value: null };
+  var apiVersion = (value) => {
+    const number = typeof value === "number" || typeof value === "string" && value.trim() ? Number(value) : 0;
+    return Number.isSafeInteger(number) && number > 0 ? number : 0;
+  };
   function callWS(hass, message) {
     if (typeof hass?.callWS === "function") {
       return hass.callWS(message);
@@ -24,17 +31,19 @@
   }
   async function status(hass, options = {}) {
     const now = Date.now();
-    const connection = hass?.connection || hass;
-    if (options.force !== true && statusCache.connection === connection && statusCache.value && now - statusCache.checkedAt < STATUS_TTL_MS) {
+    const context = contextOf(hass);
+    if (options.force !== true && sameContext(statusCache.context, context) && statusCache.value && now - statusCache.checkedAt < STATUS_TTL_MS) {
       return statusCache.value;
     }
+    const generation = ++statusGeneration;
+    const current = () => generation === statusGeneration && sameContext(context, contextOf(hass));
     try {
       const response = await callWS(hass, { type: "nodalia/status", api_version: LEGACY_API_VERSION });
       const result = isRecord(response) ? response : {};
-      const serverVersion = Number(result?.api_version) || 0;
-      const minimumVersion = Number(result?.api_min_version) || serverVersion;
-      const maximumVersion = Number(result?.api_max_version) || serverVersion;
-      const negotiated = [API_VERSION, LEGACY_API_VERSION].find((version) => minimumVersion <= version && maximumVersion >= version) || 0;
+      const serverVersion = apiVersion(result.api_version);
+      const minimumVersion = result.api_min_version === void 0 ? serverVersion : apiVersion(result.api_min_version);
+      const maximumVersion = result.api_max_version === void 0 ? serverVersion : apiVersion(result.api_max_version);
+      const negotiated = serverVersion && minimumVersion && maximumVersion && [API_VERSION, LEGACY_API_VERSION].find((version) => minimumVersion <= version && maximumVersion >= version) || 0;
       const value = {
         available: result?.available === true && negotiated > 0,
         negotiated_api_version: negotiated,
@@ -46,7 +55,7 @@
         limits: isRecord(result.limits) ? { ...result.limits } : {},
         health: isRecord(result.health) ? { ...result.health } : {}
       };
-      statusCache = { connection, checkedAt: now, value };
+      if (current()) statusCache = { context, checkedAt: Date.now(), value };
       return value;
     } catch (error) {
       const engineMissing = isUnavailableError(error);
@@ -66,7 +75,7 @@
         transient: !engineMissing
       };
       if (engineMissing) {
-        statusCache = { connection, checkedAt: now, value };
+        if (current()) statusCache = { context, checkedAt: Date.now(), value };
       }
       return value;
     }
@@ -81,11 +90,15 @@
     return statusValue?.available === true && Array.isArray(statusValue.capabilities) && statusValue.capabilities.includes(String(capability || ""));
   }
   function commandVersion(hass) {
-    const cached = statusCache.connection === (hass?.connection || hass) ? statusCache.value : null;
+    const cached = sameContext(statusCache.context, contextOf(hass)) ? statusCache.value : null;
     return cached?.available ? cached.negotiated_api_version : LEGACY_API_VERSION;
   }
   async function v3Command(hass, capability, type, data) {
+    const context = contextOf(hass);
     const value = await status(hass);
+    if (!sameContext(context, contextOf(hass))) {
+      throw Object.assign(new Error("Engine request belongs to a retired HA context"), { code: "stale_context" });
+    }
     if (value.negotiated_api_version !== API_VERSION || !hasCapability(value, capability)) {
       throw Object.assign(new Error(`Engine capability unavailable: ${capability}`), { code: "unsupported_capability" });
     }
@@ -111,7 +124,8 @@
     },
     status,
     clearStatusCache() {
-      statusCache = { connection: null, checkedAt: 0, value: null };
+      ++statusGeneration;
+      statusCache = { context: null, checkedAt: 0, value: null };
     },
     hasCapability,
     /** Compact status snapshot used by card editors to switch between Engine and legacy fields. */

@@ -62,6 +62,9 @@ export function loadNodaliaCalendarCard() {
     return _lazyNodaliaCalendarCard;
   }
 class NodaliaCalendarCard extends HTMLElement {
+  declare private _contextConnection: HomeAssistant["connection"];
+  declare private _contextAuth: HomeAssistant["auth"];
+  declare private _contextUser: string;
   declare _contextGeneration: number;
   declare _composerGeneration: number;
   declare _composerSavingGeneration: number | null;
@@ -144,6 +147,9 @@ class NodaliaCalendarCard extends HTMLElement {
     this._weatherForecastConnection = undefined;
     this._config = normalizeConfig(DEFAULT_CONFIG);
     this._hass = null;
+    this._contextConnection = undefined;
+    this._contextAuth = undefined;
+    this._contextUser = "";
     this._events = [];
     this._loading = false;
     this._error = "";
@@ -429,9 +435,11 @@ class NodaliaCalendarCard extends HTMLElement {
   }
 
   set hass(hass: HomeAssistant | null) {
-    const previous = this._hass;
-    const changed = previous?.connection !== hass?.connection || previous?.user?.id !== hass?.user?.id ||
-      previous?.user?.is_admin !== hass?.user?.is_admin || Boolean(previous) !== Boolean(hass);
+    const user = `${Boolean(hass)}:${hass?.user?.id || ""}:${hass?.user?.is_admin === true}`;
+    const changed = this._contextConnection !== hass?.connection || this._contextAuth !== hass?.auth || this._contextUser !== user;
+    this._contextConnection = hass?.connection;
+    this._contextAuth = hass?.auth;
+    this._contextUser = user;
     this._hass = hass;
     if (changed) {
       this._contextGeneration += 1;

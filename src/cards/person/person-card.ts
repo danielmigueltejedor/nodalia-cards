@@ -1,3 +1,4 @@
+import { captureHassContext, sameHassContext } from "../../shared/hass-context";
 import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
 import { parseFiniteNumericValue } from "../../shared/numeric-values";
 import { parseServiceData, invokeHassService } from "../../shared/home-assistant-services";
@@ -31,6 +32,7 @@ export function loadNodaliaPersonCard(): CustomElementConstructor {
 class NodaliaPersonCard extends HTMLElement {
   private _config!: PersonConfig;
   private _hass!: HomeAssistant | null;
+  private _hassContext!: ReturnType<typeof captureHassContext> | null;
   private _lastRenderSignature!: string;
   private _animateContentOnNextRender!: boolean;
   private _entranceAnimationResetTimer!: number;
@@ -40,7 +42,7 @@ class NodaliaPersonCard extends HTMLElement {
   private _imagePreloadCancels!: Map<string, () => void>;
   private _fallbackAnimationTimers!: Set<number>;
   private _displayPictureUrl!: string;
-  private _detachHostHold!: () => void;
+  private _detachHostHold!: import("../../core/types/nodalia-utils").HostPointerHoldBinding;
   private _suppressNextPersonTap!: boolean;
   private _cachedZoneTarget!: string;
   private _cachedZoneEntityId!: string;
@@ -64,6 +66,7 @@ class NodaliaPersonCard extends HTMLElement {
   _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
+    this._hassContext = null;
     window.NodaliaUtils?.clearDeferTimers?.(this);
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
@@ -148,6 +151,19 @@ class NodaliaPersonCard extends HTMLElement {
   }
 
   set hass(hass: HomeAssistant) {
+    const context = captureHassContext(hass);
+    if (this._hassContext && !sameHassContext(this._hassContext, context)) {
+      this._detachHostHold?.();
+      if (this.isConnected) this._detachHostHold?.reconnect?.();
+      this._suppressNextPersonTap = false;
+      window.NodaliaUtils?.cancelCardZoneTap?.(this);
+      this._imagePreloadCancels.forEach(cancel => cancel());
+      this._displayPictureUrl = "";
+      this._readyImageUrls.clear();
+      this._failedImageUrls.clear();
+      this._lastRenderSignature = "";
+    }
+    this._hassContext = context;
     this._hass = hass;
 
     const nextSignature = this._getRenderSignature(hass);
@@ -501,7 +517,7 @@ class NodaliaPersonCard extends HTMLElement {
     const entityId = this._config?.entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
     if (!entityId || !state) {
-      return `empty:${this._config?.entity || ""}`;
+      return `empty:${this._config?.entity || ""}:${window.NodaliaI18n?.resolveLanguage?.(hass, String(this._config.language || "auto")) || "en"}`;
     }
 
     const attrs = state.attributes || {};
@@ -901,7 +917,7 @@ class NodaliaPersonCard extends HTMLElement {
 
     const state = this._getState();
     if (!state) {
-      this._lastRenderSignature = `empty:${config.entity || ""}`;
+      this._lastRenderSignature = this._getRenderSignature();
       this.shadowRoot.innerHTML = window.NodaliaUtils?.renderCardEmptyStateDocument?.(
         this._renderEmptyState(),
         { card: (config || DEFAULT_CONFIG).styles?.card },

@@ -37,7 +37,7 @@ Version `3.0.0` completes strict TypeScript migration across all 25 cards,
 editors and shared runtimes. It includes the media-control, Lock, Summary and
 Vacuum refinements described in the [prerelease notes](./CHANGELOG-PRERELEASES.md).
 Existing YAML, custom element names and the HACS resource path remain compatible.
-See [upgrading to version 3](./docs/upgrading-to-3.md) for installation and contributor changes. Version 3 currently remains in prerelease validation; enable prereleases in HACS to select an alpha. Stable `2.2.10` remains available until stable `3.0.0` is published.
+See [upgrading to version 3](./docs/upgrading-to-3.md) for installation and contributor changes. `3.0.0-beta.1` is prepared after the [final alpha audit](./docs/BETA_READINESS_AUDIT.md) and freezes features, architecture and public contracts for stabilization. Enable prereleases in HACS to select a published preview; this prepared candidate becomes available after its tag and release are published. Stable `2.2.10` remains available until stable `3.0.0` is published.
 
 ## Preview
 

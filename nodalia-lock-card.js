@@ -56,7 +56,7 @@
   }
 
   // src/version.ts
-  var CARD_VERSION = "3.0.0-alpha.9";
+  var CARD_VERSION = "3.0.0-beta.1";
 
   // src/cards/lock/lock-config.ts
   var CARD_TAG = "nodalia-lock-card";
@@ -77,6 +77,16 @@
     };
   }
 
+  // src/shared/hass-context.ts
+  var captureHassContext = (hass) => ({
+    present: Boolean(hass),
+    connection: hass?.connection,
+    auth: hass?.auth,
+    user: hass?.user?.id || "",
+    admin: hass?.user?.is_admin === true
+  });
+  var sameHassContext = (a, b) => a.present === b.present && a.connection === b.connection && a.auth === b.auth && a.user === b.user && a.admin === b.admin;
+
   // src/cards/lock/lock-strings.ts
   function lockText(hass, key) {
     const language = window.NodaliaI18n?.resolveLanguage?.(hass) || "en";
@@ -93,6 +103,7 @@
         this._nodaliaConstruct();
       }
       _nodaliaConstruct() {
+        this.context = null;
         this.config = null;
         this.stateHass = null;
         this.pending = null;
@@ -139,6 +150,14 @@
         this.render();
       }
       set hass(hass) {
+        const context = captureHassContext(hass);
+        if (this.context && !sameHassContext(this.context, context)) {
+          this.cancelGesture();
+          this.clearPending();
+          this.error = "";
+          this.signature = "";
+        }
+        this.context = context;
         this.stateHass = hass;
         const state = this.state;
         if (this.pending && (state === (this.pending === "lock" ? "locked" : "unlocked") || ["jammed", "unavailable", "unknown"].includes(state))) this.clearPending();

@@ -75,3 +75,9 @@ test("Graph attribute paths read own object/array fields and reject unsafe/inher
   assert.equal(api.getByPath({}, "__proto__.toString"), undefined);
   assert.equal(api.getByPath(null, "a.b"), undefined);
 });
+
+test('Graph reduces 100000 finite history readings to configured samples without mutating input',()=>{
+ const events=Array.from({length:100000},(_,index)=>({ts:index,value:index%5===0?0:-(index%23)}));const first=events[0],last=events.at(-1);
+ const samples=api.buildInterpolatedSamples(events,0,99999,480,0);
+ assert.equal(samples.length,480);assert.ok(samples.every(sample=>Number.isFinite(sample.ts)&&Number.isFinite(sample.value)&&sample.value<=0));assert.equal(events.length,100000);assert.equal(events[0],first);assert.equal(events.at(-1),last);
+});

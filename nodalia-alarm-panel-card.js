@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.0-alpha.9";
+  var CARD_VERSION = "3.0.0-beta.1";
 
   // src/cards/alarm-panel/alarm-panel-constants.ts
   var CARD_TAG = "nodalia-alarm-panel-card";
@@ -188,6 +188,16 @@
     const normalized = { ...config, ...fields };
     return normalized;
   }
+
+  // src/shared/hass-context.ts
+  var captureHassContext = (hass) => ({
+    present: Boolean(hass),
+    connection: hass?.connection,
+    auth: hass?.auth,
+    user: hass?.user?.id || "",
+    admin: hass?.user?.is_admin === true
+  });
+  var sameHassContext = (a, b) => a.present === b.present && a.connection === b.connection && a.auth === b.auth && a.user === b.user && a.admin === b.admin;
 
   // src/shared/card-layout-notifier.ts
   function createCardLayoutNotifier(host) {
@@ -378,6 +388,7 @@
         this.attachShadow({ mode: "open" });
         this._config = normalizeConfig(STUB_CONFIG);
         this._hass = null;
+        this._hassContext = null;
         this._focusDeferTimer = 0;
         this._fallbackAnimationTimers = /* @__PURE__ */ new Set();
         this._actionGeneration = 0;
@@ -559,6 +570,15 @@
         else this._requestRender();
       }
       set hass(hass) {
+        const context = captureHassContext(hass);
+        if (this._hassContext && !sameHassContext(this._hassContext, context)) {
+          this._releaseActionWork();
+          this._codeInput = "";
+          window.NodaliaUtils?.clearDeferTimers?.(this);
+          window.NodaliaUtils?.cancelCardZoneTap?.(this);
+          this._lastRenderSignature = "";
+        }
+        this._hassContext = context;
         const entityId = this._config?.entity || "";
         let bustSignatureCache = false;
         if (this._pinVerifyWatch && entityId) {

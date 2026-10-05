@@ -139,7 +139,12 @@ export function preloadArtworkUrl(url: string): Promise<boolean> {
   const pending = new Promise<boolean>(resolve => {
     const image = new Image();
     image.decoding = "async";
+    let settled = false;
+    const timeout = window.setTimeout(() => { settle(false); image.src = ""; }, 4000);
     const settle = (loaded: boolean) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
       image.onload = null;
       image.onerror = null;
       resolve(loaded);
@@ -157,6 +162,8 @@ export function preloadArtworkUrl(url: string): Promise<boolean> {
   });
   PRELOAD_CACHE.set(nextUrl, pending);
   boundCache(PRELOAD_CACHE);
+  // A timeout/error must not permanently poison this URL's future loads.
+  void pending.then(loaded => { if (!loaded && PRELOAD_CACHE.get(nextUrl) === pending) PRELOAD_CACHE.delete(nextUrl); });
   return pending;
 }
 
@@ -166,8 +173,11 @@ export function sampleArtworkPalette(url: string): Promise<ArtworkPalette | null
   if (cached) return Promise.resolve(cached);
   const pending = PALETTE_REQUESTS.get(key);
   if (pending) return pending;
-  const request = loadArtworkPalette(key).finally(() => PALETTE_REQUESTS.delete(key));
+  const request = loadArtworkPalette(key).finally(() => {
+    if (PALETTE_REQUESTS.get(key) === request) PALETTE_REQUESTS.delete(key);
+  });
   PALETTE_REQUESTS.set(key, request);
+  boundCache(PALETTE_REQUESTS);
   return request;
 }
 

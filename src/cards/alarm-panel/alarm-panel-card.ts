@@ -1,3 +1,5 @@
+import { captureHassContext, sameHassContext } from "../../shared/hass-context";
+import type { HassContext } from "../../shared/hass-context";
 import { createCardLayoutNotifier } from "../../shared/card-layout-notifier";
 import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
 import { parseFiniteNumericValue } from "../../shared/numeric-values";
@@ -37,6 +39,7 @@ export function loadNodaliaAlarmPanelCard(): CustomElementConstructor {
     return _lazyNodaliaAlarmPanelCard;
   }
 class NodaliaAlarmPanelCard extends HTMLElement {
+  declare private _hassContext: HassContext | null;
   private _cardLayoutNotifier?: ReturnType<typeof createCardLayoutNotifier>;
   private _config!: ReturnType<typeof normalizeConfig>;
   private _hass!: HomeAssistant | null;
@@ -81,6 +84,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
   _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
+    this._hassContext = null;
     this._focusDeferTimer = 0;
     this._fallbackAnimationTimers = new Set();
     this._actionGeneration = 0;
@@ -293,6 +297,14 @@ class NodaliaAlarmPanelCard extends HTMLElement {
   }
 
   set hass(hass: HomeAssistant) {
+    const context = captureHassContext(hass);
+    if (this._hassContext && !sameHassContext(this._hassContext, context)) {
+      this._releaseActionWork(); this._codeInput = "";
+      window.NodaliaUtils?.clearDeferTimers?.(this);
+      window.NodaliaUtils?.cancelCardZoneTap?.(this);
+      this._lastRenderSignature = "";
+    }
+    this._hassContext = context;
     const entityId = this._config?.entity || "";
     let bustSignatureCache = false;
 

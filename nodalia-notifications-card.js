@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.0-alpha.9";
+  var CARD_VERSION = "3.0.0-beta.1";
 
   // src/cards/notifications/notifications-constants.ts
   var CARD_TAG = "nodalia-notifications-card";
@@ -4206,6 +4206,16 @@
     return NodaliaNotificationsCard;
   }
 
+  // src/shared/hass-context.ts
+  var captureHassContext = (hass) => ({
+    present: Boolean(hass),
+    connection: hass?.connection,
+    auth: hass?.auth,
+    user: hass?.user?.id || "",
+    admin: hass?.user?.is_admin === true
+  });
+  var sameHassContext = (a, b) => a.present === b.present && a.connection === b.connection && a.auth === b.auth && a.user === b.user && a.admin === b.admin;
+
   // src/shared/editor-radius.css
   var editor_radius_default = ".editor-chip-radius__options{display:flex;flex-wrap:wrap;gap:8px}.editor-chip-radius__option{align-items:center;border:1px solid color-mix(in srgb,var(--primary-text-color) 12%,transparent);border-radius:12px;cursor:pointer;display:inline-flex;gap:8px;padding:8px 12px}.editor-chip-radius__option:has(input:checked){background:color-mix(in srgb,var(--primary-color) 10%,transparent);border-color:var(--primary-color)}.editor-chip-radius__option input[type=radio]{accent-color:var(--primary-color);appearance:auto;margin:0;min-height:auto;padding:0;width:auto}";
 
@@ -4237,6 +4247,7 @@
         this.attachShadow({ mode: "open" });
         this._config = normalizeConfig({});
         this._hass = null;
+        this._hassContext = null;
         this._entityOptionsSignature = "";
         this._smartEntityEditorEntities = [];
         this._showStyleSection = false;
@@ -4289,7 +4300,9 @@
         this._engineStatusInFlight = false;
       }
       set hass(hass) {
-        const changedContext = !this._hass || this._hass.connection !== hass.connection || this._hass.user?.id !== hass.user?.id || this._hass.user?.is_admin !== hass.user?.is_admin;
+        const context = captureHassContext(hass);
+        const changedContext = !this._hassContext || !sameHassContext(this._hassContext, context);
+        this._hassContext = context;
         if (changedContext) {
           this._cancelBackgroundSync();
           this._engineRequestGeneration++;

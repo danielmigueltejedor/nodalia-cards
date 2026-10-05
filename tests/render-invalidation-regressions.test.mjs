@@ -49,7 +49,7 @@ test("person retries unresolved zone matches instead of caching misses forever",
 
 test("vacuum signature follows auxiliary state, battery, mapping and mode selects", () => {
   const source = read("nodalia-vacuum-card.js");
-  assert.match(source, /set hass\(hass\) \{\n\s*this\._hass = hass;\n\s*this\._relatedEntityCacheGeneration \+= 1;\n\s*const nextSignature = this\._getRenderSignature\(hass\);/);
+  assert.match(source, /set hass\(hass\) \{[\s\S]*?this\._hass = hass;\n\s*this\._relatedEntityCacheGeneration \+= 1;\n\s*const nextSignature = this\._getRenderSignature\(hass\);/);
   const signature = renderSignature("nodalia-vacuum-card.js");
   for (const token of [
     "auxiliaryState",

@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.0-alpha.9";
+  var CARD_VERSION = "3.0.0-beta.1";
 
   // src/cards/climate/climate-constants.ts
   var CARD_TAG = "nodalia-climate-card";
@@ -6437,6 +6437,16 @@ ${weekdayYaml}
     return NodaliaClimateCard;
   }
 
+  // src/shared/hass-context.ts
+  var captureHassContext = (hass) => ({
+    present: Boolean(hass),
+    connection: hass?.connection,
+    auth: hass?.auth,
+    user: hass?.user?.id || "",
+    admin: hass?.user?.is_admin === true
+  });
+  var sameHassContext = (a, b) => a.present === b.present && a.connection === b.connection && a.auth === b.auth && a.user === b.user && a.admin === b.admin;
+
   // src/shared/editor-toggle.css
   var editor_toggle_default = ':is(.editor-toggle,.editor-checkbox){align-items:center;column-gap:10px;cursor:pointer;grid-auto-flow:row;grid-template-columns:auto minmax(0,1fr);justify-content:stretch;min-height:40px;padding-top:0;position:relative}:is(.editor-toggle,.editor-checkbox) input{block-size:1px;inline-size:1px;margin:0;opacity:0;pointer-events:none;position:absolute}.editor-toggle__switch{background:color-mix(in srgb,var(--primary-text-color) 8%,transparent);border:1px solid color-mix(in srgb,var(--primary-text-color) 12%,transparent);border-radius:999px;box-shadow:inset 0 1px 0 color-mix(in srgb,var(--primary-text-color) 6%,transparent);display:inline-flex;font-size:0;height:22px;line-height:0;position:relative;transition:background 160ms ease,border-color 160ms ease,box-shadow 160ms ease;width:40px}.editor-toggle__switch::before{background:rgba(255,255,255,0.92);border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,0.24);content:"";height:18px;left:1px;position:absolute;top:1px;transition:transform 160ms ease;width:18px}.editor-toggle__label{min-width:0}:is(.editor-toggle,.editor-checkbox) input:checked+.editor-toggle__switch{background:var(--primary-color);border-color:var(--primary-color)}:is(.editor-toggle,.editor-checkbox) input:checked+.editor-toggle__switch::before{transform:translateX(18px)}:is(.editor-toggle,.editor-checkbox) input:focus-visible+.editor-toggle__switch{box-shadow:0 0 0 3px color-mix(in srgb,var(--primary-text-color) 14%,transparent),inset 0 1px 0 color-mix(in srgb,var(--primary-text-color) 8%,transparent)}';
 
@@ -6550,6 +6560,7 @@ ${weekdayYaml}
         this.attachShadow({ mode: "open" });
         this._config = normalizeConfig(STUB_CONFIG);
         this._hass = null;
+        this._hassContext = null;
         this._entityOptionsSignature = "";
         this._showStyleSection = false;
         this._showAnimationSection = false;
@@ -6586,7 +6597,9 @@ ${weekdayYaml}
         this._engineStatusInFlight = false;
       }
       set hass(hass) {
-        const changedContext = !this._hass || this._hass.connection !== hass.connection || this._hass.user?.id !== hass.user?.id || this._hass.user?.is_admin !== hass.user?.is_admin;
+        const context = captureHassContext(hass);
+        const changedContext = !this._hassContext || !sameHassContext(this._hassContext, context);
+        this._hassContext = context;
         if (changedContext) {
           this._engineRequestGeneration++;
           this._engineStatusInFlight = false;

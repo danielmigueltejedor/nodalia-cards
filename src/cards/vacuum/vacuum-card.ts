@@ -1,3 +1,4 @@
+import { captureHassContext, sameHassContext } from "../../shared/hass-context";
 import { createCardLayoutNotifier } from "../../shared/card-layout-notifier";
 import {
   CARD_TAG,
@@ -45,6 +46,7 @@ class NodaliaVacuumCard extends HTMLElement {
   private _cardLayoutNotifier?: ReturnType<typeof createCardLayoutNotifier>;
   private _config!: ReturnType<typeof normalizeConfig>;
   private _hass!: HomeAssistant | null;
+  private _hassContext!: ReturnType<typeof captureHassContext> | null;
   private _cardWidth!: number;
   private _isCompactLayout!: boolean;
   private _activeModePanel!: ModeKind | null;
@@ -96,6 +98,7 @@ class NodaliaVacuumCard extends HTMLElement {
   _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig({});
     this._hass = null;
+    this._hassContext = null;
     this._resizeFrame = 0;
     this._panelWork = createViewAnimationWork();
     this._fallbackTimers = this._panelWork.timers;
@@ -258,6 +261,21 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   set hass(hass: HomeAssistant) {
+    const context = captureHassContext(hass);
+    if (this._hassContext && !sameHassContext(this._hassContext, context)) {
+      this._releaseViewWork();
+      this._detachHostHold?.();
+      if (this.isConnected) this._detachHostHold?.reconnect?.();
+      modeKinds.forEach(kind => this._clearPendingModeSelection(kind));
+      this._lastNonSmartModeSelection = { suction: "", mop: "" };
+      this._selectedCleaningAreas = [];
+      this._activeModePanel = null;
+      this._roomPanelOpen = false;
+      this._relatedEntityCache = null;
+      this._suppressNextVacuumTap = false;
+      this._lastRenderSignature = "";
+    }
+    this._hassContext = context;
     this._hass = hass;
     this._relatedEntityCacheGeneration += 1;
     const nextSignature = this._getRenderSignature(hass);

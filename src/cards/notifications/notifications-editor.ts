@@ -1,3 +1,5 @@
+import { captureHassContext, sameHassContext } from "../../shared/hass-context";
+import type { HassContext } from "../../shared/hass-context";
 import { EDITOR_RADIUS_STYLES, EDITOR_COLOR_STYLES } from "../../shared/editor-toggle-styles";
 import {
   BACKGROUND_MOBILE_MAX_CHUNKS,
@@ -40,6 +42,7 @@ export function loadNodaliaNotificationsCardEditor(): CustomElementConstructor {
     return _lazyNodaliaNotificationsCardEditor;
   }
 class NodaliaNotificationsCardEditor extends HTMLElement {
+  declare private _hassContext: HassContext | null;
   private _config!: EditorConfig;
   private _hass!: HomeAssistant | null;
   private _entityOptionsSignature!: string;
@@ -70,6 +73,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
   _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig({});
     this._hass = null;
+    this._hassContext = null;
     this._entityOptionsSignature = "";
     this._smartEntityEditorEntities = [];
     this._showStyleSection = false;
@@ -128,7 +132,9 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
   }
 
   set hass(hass: HomeAssistant) {
-    const changedContext = !this._hass || this._hass.connection !== hass.connection || this._hass.user?.id !== hass.user?.id || this._hass.user?.is_admin !== hass.user?.is_admin;
+    const context = captureHassContext(hass);
+    const changedContext = !this._hassContext || !sameHassContext(this._hassContext, context);
+    this._hassContext = context;
     if (changedContext) {
       this._cancelBackgroundSync();
       this._engineRequestGeneration++;

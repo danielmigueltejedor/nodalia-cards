@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.0-alpha.9";
+  var CARD_VERSION = "3.0.0-beta.1";
 
   // src/cards/weather/weather-constants.ts
   var CARD_TAG = "nodalia-weather-card";
@@ -733,6 +733,9 @@
         this.attachShadow({ mode: "open" });
         this._config = normalizeConfig(STUB_CONFIG);
         this._hass = null;
+        this._contextConnection = void 0;
+        this._contextAuth = void 0;
+        this._contextUser = "";
         this._lastRenderSignature = "";
         this._animateContentOnNextRender = true;
         this._entranceAnimationResetTimer = 0;
@@ -844,7 +847,13 @@
         this._render();
       }
       set hass(hass) {
-        if (hass.connection !== this._hass?.connection) {
+        const user = `${Boolean(hass)}:${hass?.user?.id || ""}:${hass?.user?.is_admin === true}`;
+        const changed = this._contextConnection !== hass?.connection || this._contextAuth !== hass?.auth || this._contextUser !== user;
+        this._contextConnection = hass?.connection;
+        this._contextAuth = hass?.auth;
+        this._contextUser = user;
+        if (changed) {
+          this._unsubscribeForecast();
           this._forecastEvents = {};
           this._forecastPopup = null;
           this._forecastHoverPreview = null;

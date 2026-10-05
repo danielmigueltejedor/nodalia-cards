@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.0-alpha.9";
+  var CARD_VERSION = "3.0.0-beta.1";
 
   // src/shared/device-control-geometry.ts
   var CIRCULAR_LAYOUT_DIAL_START_ANGLE = 135;
@@ -311,6 +311,16 @@
     const normalized = { ...config, ...fields };
     return normalized;
   }
+
+  // src/shared/hass-context.ts
+  var captureHassContext = (hass) => ({
+    present: Boolean(hass),
+    connection: hass?.connection,
+    auth: hass?.auth,
+    user: hass?.user?.id || "",
+    admin: hass?.user?.is_admin === true
+  });
+  var sameHassContext = (a, b) => a.present === b.present && a.connection === b.connection && a.auth === b.auth && a.user === b.user && a.admin === b.admin;
 
   // src/shared/card-layout-notifier.ts
   function createCardLayoutNotifier(host) {
@@ -646,6 +656,7 @@
         this.attachShadow({ mode: "open" });
         this._config = normalizeConfig({});
         this._hass = null;
+        this._hassContext = null;
         this._optimisticToggle = null;
         this._optimisticToggleTimer = 0;
         this._optimisticVisualSettle = null;
@@ -856,6 +867,25 @@
         }, safeDelay);
       }
       set hass(hass) {
+        const context = captureHassContext(hass);
+        if (this._hassContext && !sameHassContext(this._hassContext, context)) {
+          this._releaseViewWork();
+          this._cancelSliderDrag(false);
+          this._clearOptimisticToggleState();
+          this._clearOptimisticVisualSettle();
+          this._draftHumidity.clear();
+          this._lastKnownOnState.clear();
+          this._lastEntityRevision = "";
+          this._powerTransition = this._controlsTransition = this._panelTransition = null;
+          this._suppressNextHumidifierTap = false;
+          this._skipNextSliderChange = null;
+          window.NodaliaUtils?.clearDeferTimers?.(this);
+          window.NodaliaUtils?.cancelCardZoneTap?.(this);
+          this._detachHostHold?.();
+          if (this.isConnected) this._detachHostHold?.reconnect?.();
+          this._lastRenderSignature = "";
+        }
+        this._hassContext = context;
         this._hass = hass;
         const entityId = this._config?.entity || "";
         if (entityId && this._draftHumidity.has(entityId) && !this._activeSliderDrag) {

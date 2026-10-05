@@ -1,3 +1,5 @@
+import { captureHassContext, sameHassContext } from "../../shared/hass-context";
+import type { HassContext } from "../../shared/hass-context";
 import type { HomeAssistant } from "../../core/types/home-assistant";
 import { CARD_TAG, EDITOR_TAG, normalizeConfig } from "./lock-config";
 import type { LockConfig, NormalizedLockConfig } from "./lock-config";
@@ -14,9 +16,11 @@ export function loadNodaliaLockCard(): CustomElementConstructor {
     private gesture!: { pointer: number; x: number; y: number; travel: number; handle: HTMLElement } | null;
     private error!: string;
     private signature!: string;
+    private context!: HassContext | null;
 
     constructor() { super(); this._nodaliaConstruct(); }
     _nodaliaConstruct(): void {
+      this.context = null;
       this.config = null; this.stateHass = null; this.pending = null;
       this.timer = 0; this.generation = 0; this.progress = 0;
       this.gesture = null; this.error = ""; this.signature = "";
@@ -47,6 +51,11 @@ export function loadNodaliaLockCard(): CustomElementConstructor {
       this.config = next; this.render();
     }
     set hass(hass: HomeAssistant) {
+      const context = captureHassContext(hass);
+      if (this.context && !sameHassContext(this.context, context)) {
+        this.cancelGesture(); this.clearPending(); this.error = ""; this.signature = "";
+      }
+      this.context = context;
       this.stateHass = hass;
       const state = this.state;
       if (this.pending && (state === (this.pending === "lock" ? "locked" : "unlocked")

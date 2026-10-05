@@ -1,3 +1,4 @@
+import { captureHassContext, sameHassContext } from "../../shared/hass-context";
 import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
 import type { HostPointerHoldBinding } from "../../core/types/nodalia-utils";
 import { callHassService, parseServiceData } from "../../shared/home-assistant-services";
@@ -28,6 +29,7 @@ export function loadNodaliaInsigniaCard(): CustomElementConstructor {
 class NodaliaInsigniaCard extends HTMLElement {
   private _config!: ReturnType<typeof normalizeConfig>;
   private _hass!: HomeAssistant | null;
+  private _hassContext!: ReturnType<typeof captureHassContext> | null;
   private _lastRenderSignature!: string;
   private _suppressNextInsigniaTap!: boolean;
   private _detachHostHold?: HostPointerHoldBinding;
@@ -53,6 +55,7 @@ class NodaliaInsigniaCard extends HTMLElement {
   _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
+    this._hassContext = null;
     this._lastRenderSignature = "";
     this._suppressNextInsigniaTap = false;
     this._onClick = this._onClick.bind(this);
@@ -100,6 +103,15 @@ class NodaliaInsigniaCard extends HTMLElement {
   }
 
   set hass(hass: HomeAssistant) {
+    const context = captureHassContext(hass);
+    if (this._hassContext && !sameHassContext(this._hassContext, context)) {
+      this._detachHostHold?.();
+      if (this.isConnected) this._detachHostHold?.reconnect?.();
+      this._suppressNextInsigniaTap = false;
+
+      this._lastRenderSignature = "";
+    }
+    this._hassContext = context;
     const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
 

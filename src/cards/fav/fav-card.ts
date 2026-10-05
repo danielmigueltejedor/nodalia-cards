@@ -1,3 +1,4 @@
+import { captureHassContext, sameHassContext } from "../../shared/hass-context";
 import { createCardLayoutNotifier } from "../../shared/card-layout-notifier";
 import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
 import { parseFiniteNumericValue } from "../../shared/numeric-values";
@@ -47,6 +48,7 @@ class NodaliaFavCard extends HTMLElement {
   private _cardLayoutNotifier?: ReturnType<typeof createCardLayoutNotifier>;
   private _config!: FavConfig | null;
   private _hass!: HomeAssistant | null;
+  private _hassContext!: ReturnType<typeof captureHassContext> | null;
   private _cardWidth!: number;
   private _layout!: "mini" | "inline";
   private _alarmMenuOpen!: boolean;
@@ -78,6 +80,7 @@ class NodaliaFavCard extends HTMLElement {
   _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = null;
     this._hass = null;
+    this._hassContext = null;
     this._cardWidth = 0;
     this._layout = "inline";
     this._alarmMenuOpen = false;
@@ -159,6 +162,20 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   set hass(hass: HomeAssistant) {
+    const context = captureHassContext(hass);
+    if (this._hassContext && !sameHassContext(this._hassContext, context)) {
+      this._alarmMenuOpen = false;
+      this._alarmCodeInput = "";
+      this._lastAlarmPanelRenderedOpen = null;
+      this._applyHostGridSpan(false);
+      window.NodaliaUtils?.clearDeferTimers?.(this);
+      this._fallbackLayoutTimers.forEach(timer => window.clearTimeout(timer));
+      this._fallbackLayoutTimers.clear();
+      if (this._layoutFrame) cancelAnimationFrame(this._layoutFrame);
+      this._layoutFrame = 0;
+      this._lastRenderSignature = "";
+    }
+    this._hassContext = context;
     this._hass = hass;
     if (!this.isConnected) {
       return;

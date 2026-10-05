@@ -1,7 +1,7 @@
 import type { HomeAssistant } from "./types/home-assistant";
 
 /** WebSocket transport owned by Home Assistant; this module only builds versioned commands. */
-type EngineHass = Pick<HomeAssistant, "callWS" | "connection"> | null | undefined;
+type EngineHass = Pick<HomeAssistant, "callWS" | "connection" | "auth" | "user"> | null | undefined;
 export interface EngineStatus {
   available: boolean;
   api_version: number;
@@ -19,7 +19,16 @@ const isRecord = (value: unknown): value is Record<string, unknown> => value !==
 export const API_VERSION = 3;
 const LEGACY_API_VERSION = 2;
 const STATUS_TTL_MS = 30_000;
-let statusCache: { connection: unknown; checkedAt: number; value: EngineStatus | null } = { connection: null, checkedAt: 0, value: null };
+type EngineContext = { owner: unknown; auth: HomeAssistant["auth"]; user: string; admin: boolean };
+const contextOf = (hass: EngineHass): EngineContext => ({ owner: hass?.connection || hass, auth: hass?.auth, user: hass?.user?.id || "", admin: hass?.user?.is_admin === true });
+const sameContext = (a: EngineContext | null, b: EngineContext) => a !== null && a.owner === b.owner && a.auth === b.auth && a.user === b.user && a.admin === b.admin;
+let statusGeneration = 0;
+let statusCache: { context: EngineContext | null; checkedAt: number; value: EngineStatus | null } = { context: null, checkedAt: 0, value: null };
+// Accept numeric strings from older adapters, but never negotiate malformed ranges.
+const apiVersion = (value: unknown) => {
+  const number = typeof value === "number" || typeof value === "string" && value.trim() ? Number(value) : 0;
+  return Number.isSafeInteger(number) && number > 0 ? number : 0;
+};
 
 function callWS(hass: EngineHass, message: Record<string, unknown>): Promise<unknown> {
   if (typeof hass?.callWS === "function") {
@@ -42,22 +51,24 @@ function isUnavailableError(error: unknown) {
 
 async function status(hass: EngineHass, options: { force?: boolean; silent?: boolean } = {}): Promise<EngineStatus> {
   const now = Date.now();
-  const connection = hass?.connection || hass;
+  const context = contextOf(hass);
   if (
     options.force !== true
-    && statusCache.connection === connection
+    && sameContext(statusCache.context, context)
     && statusCache.value
     && now - statusCache.checkedAt < STATUS_TTL_MS
   ) {
     return statusCache.value;
   }
+  const generation = ++statusGeneration;
+  const current = () => generation === statusGeneration && sameContext(context, contextOf(hass));
   try {
     const response = await callWS(hass, { type: "nodalia/status", api_version: LEGACY_API_VERSION });
     const result = isRecord(response) ? response : {};
-    const serverVersion = Number(result?.api_version) || 0;
-    const minimumVersion = Number(result?.api_min_version) || serverVersion;
-    const maximumVersion = Number(result?.api_max_version) || serverVersion;
-    const negotiated = [API_VERSION, LEGACY_API_VERSION].find(version => minimumVersion <= version && maximumVersion >= version) || 0;
+    const serverVersion = apiVersion(result.api_version);
+    const minimumVersion = result.api_min_version === undefined ? serverVersion : apiVersion(result.api_min_version);
+    const maximumVersion = result.api_max_version === undefined ? serverVersion : apiVersion(result.api_max_version);
+    const negotiated = serverVersion && minimumVersion && maximumVersion && [API_VERSION, LEGACY_API_VERSION].find(version => minimumVersion <= version && maximumVersion >= version) || 0;
     const value: EngineStatus = {
       available: result?.available === true && negotiated > 0,
       negotiated_api_version: negotiated,
@@ -69,7 +80,7 @@ async function status(hass: EngineHass, options: { force?: boolean; silent?: boo
       limits: isRecord(result.limits) ? { ...result.limits } : {},
       health: isRecord(result.health) ? { ...result.health } : {},
     };
-    statusCache = { connection, checkedAt: now, value };
+    if (current()) statusCache = { context, checkedAt: Date.now(), value };
     return value;
   } catch (error) {
     const engineMissing = isUnavailableError(error);
@@ -92,7 +103,7 @@ async function status(hass: EngineHass, options: { force?: boolean; silent?: boo
     // and websocket interruptions must be retried instead of poisoning the
     // negative cache for STATUS_TTL_MS.
     if (engineMissing) {
-      statusCache = { connection, checkedAt: now, value };
+      if (current()) statusCache = { context, checkedAt: Date.now(), value };
     }
     return value;
   }
@@ -112,12 +123,16 @@ function hasCapability(value: unknown, capability: unknown) {
 }
 
 function commandVersion(hass: EngineHass) {
-  const cached = statusCache.connection === (hass?.connection || hass) ? statusCache.value : null;
+  const cached = sameContext(statusCache.context, contextOf(hass)) ? statusCache.value : null;
   return cached?.available ? cached.negotiated_api_version : LEGACY_API_VERSION;
 }
 
 async function v3Command(hass: EngineHass, capability: string, type: string, data: Record<string, unknown>) {
+  const context = contextOf(hass);
   const value = await status(hass);
+  if (!sameContext(context, contextOf(hass))) {
+    throw Object.assign(new Error("Engine request belongs to a retired HA context"), { code: "stale_context" });
+  }
   if (value.negotiated_api_version !== API_VERSION || !hasCapability(value, capability)) {
     throw Object.assign(new Error(`Engine capability unavailable: ${capability}`), { code: "unsupported_capability" });
   }
@@ -144,7 +159,8 @@ export const nodaliaBackend = Object.freeze({
   },
   status,
   clearStatusCache() {
-    statusCache = { connection: null, checkedAt: 0, value: null };
+    ++statusGeneration;
+    statusCache = { context: null, checkedAt: 0, value: null };
   },
   hasCapability,
   /** Compact status snapshot used by card editors to switch between Engine and legacy fields. */

@@ -1,3 +1,5 @@
+import { captureHassContext, sameHassContext } from "../../shared/hass-context";
+import type { HassContext } from "../../shared/hass-context";
 import { EDITOR_TOGGLE_STYLES, EDITOR_RADIUS_STYLES, EDITOR_SECTION_ACTION_STYLES } from "../../shared/editor-toggle-styles";
 import {
   compactConfig,
@@ -137,6 +139,7 @@ export function loadNodaliaClimateCardEditor(): CustomElementConstructor {
     return _lazyNodaliaClimateCardEditor;
   }
 class NodaliaClimateCardEditor extends HTMLElement {
+  declare private _hassContext: HassContext | null;
   _config!: ClimateConfig;
   _hass!: HomeAssistant | null;
   _entityOptionsSignature!: string;
@@ -157,6 +160,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
   _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
+    this._hassContext = null;
     this._entityOptionsSignature = "";
     this._showStyleSection = false;
     this._showAnimationSection = false;
@@ -198,7 +202,9 @@ class NodaliaClimateCardEditor extends HTMLElement {
   }
 
   set hass(hass: HomeAssistant) {
-    const changedContext = !this._hass || this._hass.connection !== hass.connection || this._hass.user?.id !== hass.user?.id || this._hass.user?.is_admin !== hass.user?.is_admin;
+    const context = captureHassContext(hass);
+    const changedContext = !this._hassContext || !sameHassContext(this._hassContext, context);
+    this._hassContext = context;
     if (changedContext) {
       this._engineRequestGeneration++;
       this._engineStatusInFlight = false;

@@ -69,3 +69,18 @@ workers. Keep geometry and final cleanup assertions; retries are not a fix.
 ### Runtime audit regressions
 
 `tests/browser/advance-vacuum-lifecycle.spec.mjs` instruments state-catalog enumeration with 1700 unrelated entities. Explicit tracking must avoid enumeration while updating helper arrival/removal and live room values; existing automatic-discovery tests retain mutable registry coverage. `tests/browser/news-lifecycle-editor.spec.mjs` advances the debounce clock across configuration and HA-owner changes to ensure retired helper writes cannot execute, while ordinary updates preserve their valid write. `tests/numeric-values.test.mjs` compares native formatting and instruments formatter construction/eviction without imposing machine-dependent timing thresholds.
+
+## Final alpha resource and contract audit
+
+`resource-soak.spec.mjs` tracks active owned timers/frames, observed targets,
+global listeners, live shadow DOM and fixture subscription/request counts through
+24 mount/update/interact/reconnect/entity/remount cycles per complex card.
+Summary verifies real embedded children; the camera fixture supplies successful
+images. The ledger does not measure JS heap reclamation, GPU memory or codecs.
+`go2rtc-lifecycle.spec.mjs` adds 60 transport replacement cycles with explicit
+socket, poster URL, video frame and media-node ownership checks.
+
+`standalone-contract.spec.mjs` cold-loads each of the 25 standalone cards/editors
+after the documented shared support resources, without HACS. Bundle metadata
+footers are checked separately through the HACS entrypoint. Regression evidence
+and release acceptance are recorded in [the beta audit](BETA_READINESS_AUDIT.md).

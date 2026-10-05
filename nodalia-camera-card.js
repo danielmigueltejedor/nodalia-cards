@@ -1066,7 +1066,7 @@
   }
 
   // src/version.ts
-  var CARD_VERSION = "3.0.0-alpha.9";
+  var CARD_VERSION = "3.0.0-beta.1";
 
   // src/cards/camera/camera-constants.ts
   var CARD_TAG = "nodalia-camera-card";
@@ -1100,6 +1100,16 @@
   var buildGo2rtcWebSocketEndpoint = (baseUrl, streamName) => window.NodaliaCameraStreamModel?.buildGo2rtcWebSocketEndpoint?.(baseUrl, streamName) ?? "";
   var buildFrigateGo2rtcPath = (clientId, streamName) => window.NodaliaCameraStreamModel?.buildFrigateGo2rtcPath?.(clientId, streamName) ?? "";
   var isMixedContentUrl = (rawValue, pageLocation) => window.NodaliaCameraStreamModel?.isMixedContentUrl?.(rawValue, pageLocation) ?? false;
+
+  // src/shared/hass-context.ts
+  var captureHassContext = (hass) => ({
+    present: Boolean(hass),
+    connection: hass?.connection,
+    auth: hass?.auth,
+    user: hass?.user?.id || "",
+    admin: hass?.user?.is_admin === true
+  });
+  var sameHassContext = (a, b) => a.present === b.present && a.connection === b.connection && a.auth === b.auth && a.user === b.user && a.admin === b.admin;
 
   // src/shared/url-query.ts
   function appendUrlQueryParam(url, key, value, replaceExisting = false) {
@@ -1601,13 +1611,17 @@
     }).filter((item) => item !== null);
   }
   var SIGNED_PATH_CACHE = /* @__PURE__ */ new WeakMap();
+  var signedPathContexts = /* @__PURE__ */ new WeakMap();
   function signedPathCacheForHass(hass) {
     const owner = hass?.connection || hass?.auth || hass;
     if (!owner || typeof owner !== "object" && typeof owner !== "function") {
       return null;
     }
     let cache = SIGNED_PATH_CACHE.get(owner);
-    if (!cache) {
+    const context = captureHassContext(hass);
+    const previous = signedPathContexts.get(owner);
+    if (!cache || !previous || !sameHassContext(previous, context)) {
+      signedPathContexts.set(owner, context);
       cache = /* @__PURE__ */ new Map();
       SIGNED_PATH_CACHE.set(owner, cache);
     }
@@ -1635,6 +1649,10 @@
       }
       return typeof hass?.hassUrl === "function" ? hass.hassUrl(signedPath) : new URL(signedPath, window.location.origin).toString();
     });
+    if (cache && cache.size >= 64 && !cache.has(cacheKey)) {
+      const oldest = cache.keys().next().value;
+      if (oldest !== void 0) cache.delete(oldest);
+    }
     cache?.set(cacheKey, {
       expiresAt: Date.now() + Math.max(0, Math.min(expires, Math.max(60, expires - 300))) * 1e3,
       promise
@@ -1822,6 +1840,7 @@
         this._prefetchGeneration = 0;
         this._retryTimers = /* @__PURE__ */ new Map();
         this._hassContextOwner = null;
+        this._hassContextAuth = void 0;
         this._hassUserKey = "";
         this._detachPrimaryHold = () => {
         };
@@ -1902,7 +1921,7 @@
         const previousHass = this._hass;
         const owner = hass?.connection || hass?.auth || null;
         const userKey = `${Boolean(hass)}:${hass?.user?.id || ""}:${hass?.user?.is_admin === true}`;
-        const changedContext = owner !== this._hassContextOwner || userKey !== this._hassUserKey;
+        const changedContext = owner !== this._hassContextOwner || userKey !== this._hassUserKey || this._hassContextAuth !== hass?.auth;
         if (changedContext) {
           this._invalidateCameraContext();
           this._failedImageUrls.clear();
@@ -1916,6 +1935,7 @@
           }
         }
         this._hassContextOwner = owner;
+        this._hassContextAuth = hass?.auth;
         this._hassUserKey = userKey;
         this._hass = hass;
         if (changedContext) this._bindPrimaryHold();
