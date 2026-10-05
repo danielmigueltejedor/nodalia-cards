@@ -56,6 +56,10 @@ class NodaliaNewsCard extends HTMLElement {
   private _historyHelperEntityId!: string;
   private _historyHelperSignature!: string;
   private _historyHelperWriteTimer!: number;
+  private _contextConnection!: HomeAssistant["connection"];
+  private _contextAuth!: HomeAssistant["auth"];
+  private _contextUser!: string;
+  private _contextAdmin!: boolean;
   private _magazineSlideResetTimer!: number;
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
@@ -113,6 +117,10 @@ class NodaliaNewsCard extends HTMLElement {
     this._historyHelperEntityId = "";
     this._historyHelperSignature = "";
     this._historyHelperWriteTimer = 0;
+    this._contextConnection = undefined;
+    this._contextAuth = undefined;
+    this._contextUser = "";
+    this._contextAdmin = false;
     this._magazineSlideResetTimer = 0;
     this._onShadowClick = this._onShadowClick.bind(this);
     this._onShadowKeyDown = this._onShadowKeyDown.bind(this);
@@ -155,6 +163,8 @@ class NodaliaNewsCard extends HTMLElement {
   }
 
   setConfig(config: unknown) {
+    window.clearTimeout(this._historyHelperWriteTimer);
+    this._historyHelperWriteTimer = 0;
     this._cancelMagazineSwipe();
     this._config = normalizeConfig(config || {});
     this._lastRenderSignature = "";
@@ -169,6 +179,21 @@ class NodaliaNewsCard extends HTMLElement {
   }
 
   set hass(hass: HomeAssistant) {
+    const contextChanged = this._contextConnection !== hass?.connection
+      || this._contextAuth !== hass?.auth
+      || this._contextUser !== (hass?.user?.id || "")
+      || this._contextAdmin !== Boolean(hass?.user?.is_admin);
+    if (contextChanged) {
+      window.clearTimeout(this._historyHelperWriteTimer);
+      this._historyHelperWriteTimer = 0;
+      this._historyStorageKey = this._historyHelperEntityId = this._historyHelperSignature = "";
+      this._newsHistory = [];
+      this._lastRenderSignature = "";
+    }
+    this._contextConnection = hass?.connection;
+    this._contextAuth = hass?.auth;
+    this._contextUser = hass?.user?.id || "";
+    this._contextAdmin = Boolean(hass?.user?.is_admin);
     this._hass = hass;
     const nextSignature = this._getRenderSignature(hass);
     if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {

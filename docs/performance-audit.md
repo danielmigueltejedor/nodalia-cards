@@ -31,7 +31,10 @@ Automatic Sections rows use a block native `hui-card` wrapper while mounted.
 This prevents WebKit from retaining an anonymous inline box's earlier height
 when a neighbouring favourite updates during an expansion. Explicit wrapper
 layouts and hidden state are preserved, and the owned change is released on
-detach. Device/card size notifications reuse existing observers, debounce until
+detach. A local observer follows the native cell's class when HA changes between
+automatic and fixed rows without reconnecting a card; fixed rows retain the
+native inline wrapper needed for percentage-height content. Device/card size
+notifications reuse existing observers, debounce until
 animation settles and do not rebuild controls or emit global window resize events.
 
 ## Automated verification
@@ -45,6 +48,25 @@ The fast gate includes strict types, lint, zero-debt architecture guards,
 translations, distribution syntax, build and Node regressions. Full validation
 adds Chromium, Firefox, WebKit and iPhone WebKit. CI also checks generated drift.
 See [testing](testing.md) and [current audit](TECHNICAL_AUDIT.md).
+
+## Runtime audit measurements — 2026-10-05
+
+Advance Vacuum with `room_tracking.auto_detect: false` now discovers only the
+configured room/activity helper IDs. In a fixture with 1700 unrelated entities,
+105 calls previously enumerated the full state catalog 105 times; the same calls
+now enumerate it zero times. The regression also changes helper values and
+adds/removes helpers, verifying that saved IDs do not freeze live state. This
+measurement covers room/activity discovery, not every auto-detection path in the
+card and not overall map FPS.
+
+Shared numeric formatting caches up to 64 `Intl.NumberFormat` instances by locale
+and precision. Compare the alpha.9 helper with the audited helper using identical
+inputs `formatFiniteNumericValue(i / 7, 1, "es")`, for `i = 0..19999`, taking the
+median of five rounds in each case. On Node **v24.14.0**, with both helpers bundled
+by esbuild and executed in separate VM contexts on the same Mac, results were
+**156.3 ms before / 15.7 ms after**. Output parity and bounded eviction are tested.
+This synthetic measurement includes cache lookup overhead and must not be
+interpreted as a tenfold speedup of the whole dashboard or as a mobile benchmark.
 
 The [version 3 bundle-size audit](BUNDLE_SIZE_AUDIT.md) records the measured
 baseline, per-area savings, editor parity checks and compatibility paths retained

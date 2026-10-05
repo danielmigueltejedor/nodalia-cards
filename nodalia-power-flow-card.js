@@ -136,6 +136,7 @@
   var normalizeTextKey = utils.normalizeTextKey.bind(utils);
 
   // src/shared/numeric-values.ts
+  var numberFormatters = /* @__PURE__ */ new Map();
   function parseFiniteNumericValue(value) {
     if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
     const numeric = Number(value);
@@ -147,10 +148,20 @@
       return "--";
     }
     const digits = Number.isFinite(decimals) ? Math.min(20, Math.max(0, Math.floor(decimals))) : 0;
-    return numeric.toLocaleString(locale, {
-      minimumFractionDigits: digits,
-      maximumFractionDigits: digits
-    });
+    const key = JSON.stringify([locale ?? null, digits]);
+    let formatter = numberFormatters.get(key);
+    if (!formatter) {
+      formatter = new Intl.NumberFormat(locale, {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits
+      });
+      if (numberFormatters.size >= 64) {
+        const oldest = numberFormatters.keys().next().value;
+        if (oldest !== void 0) numberFormatters.delete(oldest);
+      }
+      numberFormatters.set(key, formatter);
+    }
+    return formatter.format(numeric);
   }
 
   // src/shared/editor-entity-helpers.ts

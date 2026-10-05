@@ -12,6 +12,26 @@ async function mount(page,extra={}) {
  return page.locator('nodalia-advance-vacuum-card');
 }
 const calls=page=>page.evaluate(()=>window.avCalls.map(({domain,service,data,target})=>({domain,service,data,target})));
+test('Explicit Advance Vacuum tracking avoids catalog scans and refreshes helper availability and values',async({page})=>{
+ await mount(page,{room_tracking:{auto_detect:false,entity:'sensor.current_room',activity_entity:'sensor.activity'}});
+ const result=await page.evaluate(()=>{
+  const card=window.avCard,hass=window.avHass;
+  for(let i=0;i<1700;i++)hass.states[`sensor.unrelated_${i}`]={entity_id:`sensor.unrelated_${i}`,state:'0',attributes:{}};
+  window.avCatalogScans=0;hass.states=new Proxy(hass.states,{ownKeys(target){window.avCatalogScans++;return Reflect.ownKeys(target);}});
+  const absent=card._getRelatedVacuumEntityIds();
+  hass.states['sensor.current_room']={entity_id:'sensor.current_room',state:'1',attributes:{}};
+  hass.states['sensor.activity']={entity_id:'sensor.activity',state:'cleaning',attributes:{}};
+  const available=card._getRelatedVacuumEntityIds();
+  for(let i=0;i<100;i++)card._getRelatedVacuumEntityIds({...hass});
+  const first=card._getExternalRoomTrackingSnapshot(hass);
+  hass.states['sensor.current_room'].state='2';const second=card._getExternalRoomTrackingSnapshot(hass);
+  delete hass.states['sensor.current_room'];const removed=card._getRelatedVacuumEntityIds();
+  return {scans:window.avCatalogScans,absent:absent.roomIds,available:available.roomIds,activity:available.activityIds,first,second,removed:removed.roomIds};
+ });
+ expect(result.scans).toBe(0);expect(result.absent).toEqual([]);expect(result.available).toEqual(['sensor.current_room']);expect(result.activity).toEqual(['sensor.activity']);expect(result.removed).toEqual([]);
+ expect(result.first.currentId).toBe('1');expect(result.second.currentId).toBe('2');
+ expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+});
 test('Advance Vacuum keeps native room keyboard focus through HA updates and sends only selected rooms',async({page})=>{
  const card=await mount(page);await card.locator('[data-mode-id="rooms"]').press('Enter');const room=card.locator('button[data-room-id="1"]');await room.focus();await room.press(' ');await expect(room).toBeFocused();expect(await page.evaluate(()=>window.avCard._selectedRoomIds)).toEqual(['1']);
  await page.evaluate(()=>{window.avHass.states['vacuum.one'].attributes.battery_level=0;window.avCard.hass={...window.avHass};});await expect(room).toBeFocused();await card.locator('[data-control-action="primary"]').press('Enter');await expect.poll(()=>page.evaluate(()=>window.avCalls.length)).toBe(1);expect((await calls(page))[0]).toEqual({domain:'vacuum',service:'send_command',data:{entity_id:'vacuum.one',command:'app_segment_clean',params:[{segments:[1],repeat:1}]},target:undefined});expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
