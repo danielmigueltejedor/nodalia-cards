@@ -35,3 +35,7 @@ No official RC comparison exists until RC is published and measured. A pending o
 ## Current audit reference
 
 The [beta.1 reference analysis](2.2.10-vs-3.0.0-beta.1-analysis.md) preserves 5,642 samples from the earlier harness, with original raw JSON/CSV and all tables. It is explicitly incomplete: Firefox launch failure, legacy Graph settle errors, cross-profile saved-state effects and simulated touch limit acceptance. The current isolated, native-touch harness needs a fresh reference run before any performance claims. RC now permits the explicit macOS Firefox exception; stable does not inherit it.
+
+## Whole-engine retry
+
+If a reference run has errors confined to one engine, `node docs/benchmarks/retry-reference-engine.mjs <failed.json> <engine> <output-directory>` repeats that entire engine with the unchanged committed fixture/workloads, all versions, warmups and measured rounds. The launcher selection excludes the other engines before any measurements. Their deliberate launch exclusions remain in the raw retry file. The accepted composition retains their complete first-run samples and replaces every sample of the failed engine, never individual favourable samples. Both raw attempts are preserved; `metadata.engineRetry` records paths, timestamps, orchestration hash, fixture hash and original errors. Different assets, system/engine versions, workloads or fixture hashes reject composition, as do measured-engine errors or incomplete rounds. This command is limited to the explicit macOS RC Firefox policy and does not weaken stable evidence.
