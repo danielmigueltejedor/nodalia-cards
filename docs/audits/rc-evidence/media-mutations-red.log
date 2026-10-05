@@ -1,0 +1,75 @@
+[WebServer] 127.0.0.1 - - [05/Oct/2026 13:57:13] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+
+Running 2 tests using 1 worker
+
+(node:43078) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 13:57:14] "GET /bench/fixture.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 13:57:14] "GET /bench/fixtures/runtime.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 13:57:14] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 13:57:14] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✘  1 [chromium] › tests/browser/unrelated-hass-updates.spec.mjs:2:36 › Standalone paused Media Player does not rewrite progress DOM on unrelated HA updates (517ms)
+(node:43085) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 13:57:14] "GET /bench/fixture.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 13:57:14] "GET /bench/fixtures/runtime.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 13:57:14] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 13:57:14] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✘  2 [chromium] › tests/browser/unrelated-hass-updates.spec.mjs:2:36 › Summary embedded paused Media Player does not rewrite progress DOM on unrelated HA updates (485ms)
+
+
+  1) [chromium] › tests/browser/unrelated-hass-updates.spec.mjs:2:36 › Standalone paused Media Player does not rewrite progress DOM on unrelated HA updates 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 120
+
+       8 |  },embedded);
+       9 |  expect(result.errors).toEqual([]);
+    > 10 |  expect(result.metrics.childList).toBe(0);
+         |                                   ^
+      11 |  expect(result.metrics.attributes).toBe(0);
+      12 |  expect(result.metrics.characterData).toBe(0);
+      13 | });
+        at <repository>/tests/browser/unrelated-hass-updates.spec.mjs:10:35
+
+    Error Context: test-results/unrelated-hass-updates-Sta-624f0-DOM-on-unrelated-HA-updates-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/unrelated-hass-updates-Sta-624f0-DOM-on-unrelated-HA-updates-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/unrelated-hass-updates-Sta-624f0-DOM-on-unrelated-HA-updates-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › tests/browser/unrelated-hass-updates.spec.mjs:2:36 › Summary embedded paused Media Player does not rewrite progress DOM on unrelated HA updates 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 123
+
+       8 |  },embedded);
+       9 |  expect(result.errors).toEqual([]);
+    > 10 |  expect(result.metrics.childList).toBe(0);
+         |                                   ^
+      11 |  expect(result.metrics.attributes).toBe(0);
+      12 |  expect(result.metrics.characterData).toBe(0);
+      13 | });
+        at <repository>/tests/browser/unrelated-hass-updates.spec.mjs:10:35
+
+    Error Context: test-results/unrelated-hass-updates-Sum-3179e-DOM-on-unrelated-HA-updates-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/unrelated-hass-updates-Sum-3179e-DOM-on-unrelated-HA-updates-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/unrelated-hass-updates-Sum-3179e-DOM-on-unrelated-HA-updates-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2 failed
+    [chromium] › tests/browser/unrelated-hass-updates.spec.mjs:2:36 › Standalone paused Media Player does not rewrite progress DOM on unrelated HA updates 
+    [chromium] › tests/browser/unrelated-hass-updates.spec.mjs:2:36 › Summary embedded paused Media Player does not rewrite progress DOM on unrelated HA updates 

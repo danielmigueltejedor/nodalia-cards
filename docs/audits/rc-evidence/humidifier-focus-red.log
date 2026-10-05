@@ -1,0 +1,49 @@
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:36:35] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+
+Running 1 test using 1 worker
+
+(node:48389) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:36:35] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:36:35] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:36:35] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✘  1 [chromium] › tests/browser/humidifier-lifecycle.spec.mjs:40:1 › Humidifier keeps keyboard action focus across consumed state updates and responsive rerenders (8.3s)
+
+
+  1) [chromium] › tests/browser/humidifier-lifecycle.spec.mjs:40:1 › Humidifier keeps keyboard action focus across consumed state updates and responsive rerenders 
+
+    Error: expect(locator).toBeFocused() failed
+
+    Locator:  locator('nodalia-humidifier-card').locator('ha-card[data-humidifier-action="body"]')
+    Expected: focused
+    Received: inactive
+    Timeout:  8000ms
+
+    Call log:
+      - Expect "toBeFocused" locator('nodalia-humidifier-card').locator('ha-card[data-humidifier-action="body"]') with timeout 8000ms
+      - waiting for locator('nodalia-humidifier-card').locator('ha-card[data-humidifier-action="body"]')
+        20 × locator resolved to <ha-card tabindex="0" role="button" data-humidifier-action="body" class="humidifier-card is-on   humidifier-card--with-copy ">…</ha-card>
+           - unexpected value "inactive"
+
+
+      42 |  const body=card.locator('ha-card[data-humidifier-action="body"]');await body.focus();
+      43 |  await page.evaluate(()=>{const card=window.humidifierCard;card._hass.states['humidifier.one'].attributes.humidity=60;card.hass={...card._hass};});
+    > 44 |  await expect(body).toBeFocused();await body.press('Enter');expect(await page.evaluate(()=>window.humidifierCalls.at(-1))).toEqual(['humidifier','set_humidity',{humidity:0,entity_id:'humidifier.one'}]);
+         |                     ^
+      45 |  const slider=card.locator('input[type="range"]');await slider.focus();await page.evaluate(()=>window.humidifierCard._render());await expect(slider).toBeFocused();
+      46 |  const mode=card.locator('[data-humidifier-action="toggle-mode-panel"]');await mode.focus();await page.evaluate(()=>window.humidifierCard._render());await expect(mode).toBeFocused();
+      47 |  expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+        at <repository>/tests/browser/humidifier-lifecycle.spec.mjs:44:21
+
+    Error Context: test-results/humidifier-lifecycle-Humid-9f2f9-es-and-responsive-rerenders-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/humidifier-lifecycle-Humid-9f2f9-es-and-responsive-rerenders-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/humidifier-lifecycle-Humid-9f2f9-es-and-responsive-rerenders-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › tests/browser/humidifier-lifecycle.spec.mjs:40:1 › Humidifier keeps keyboard action focus across consumed state updates and responsive rerenders 

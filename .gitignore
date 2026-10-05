@@ -5,6 +5,8 @@ scripts/.translate-all-locale-gaps-cache.json
 release/
 test-results/
 playwright-report/
+bench/releases/
+bench/results/
 __pycache__/
 *.py[cod]
 

@@ -84,3 +84,11 @@ socket, poster URL, video frame and media-node ownership checks.
 after the documented shared support resources, without HACS. Bundle metadata
 footers are checked separately through the HACS entrypoint. Regression evidence
 and release acceptance are recorded in [the beta audit](BETA_READINESS_AUDIT.md).
+
+## Release benchmark regression checks
+
+`pnpm benchmark:quick -- --browsers chromium 2.2.10 3.0.0-beta.1` verifies the harness on exact published assets. Node regressions cover CLI separators/N versions, missing release/asset, provenance, statistics, schema, CSV/Markdown and release-evidence rejection. Browser checks cover existing/later shadow roots, runtime failures, real Graph history and Vacuum/helper/API profiles. The shared CI smoke has no percentage gate.
+
+For a longer resource ledger run use `NODALIA_SOAK_CYCLES=100 pnpm exec playwright test tests/browser/resource-soak.spec.mjs --project=chromium --workers=1`. This is a correctness check of owned resources, separate from the benchmark controlled-GC 100/250/500-cycle trend measurements.
+
+Firefox failing before loading any fixture is an unavailable browser, not a passing test. On macOS 27, [Playwright #42768](https://github.com/microsoft/playwright/issues/42768) describes the same profile-access failure; [Mozilla #2062988](https://bugzilla.mozilla.org/show_bug.cgi?id=2062988) explains the diagnostic. A fresh browser installation/profile did not resolve it on this audit machine. Linux CI can verify code compatibility but cannot supply missing Apple M4 Firefox performance figures.

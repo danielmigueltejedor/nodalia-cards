@@ -14,7 +14,7 @@ Current preview release:
 3.0.0-beta.1
 ```
 
-Prepared candidate; publication requires its validated tag.
+Published preview. RC requires the additional acceptance evidence described below.
 
 See [the curated prerelease notes](./CHANGELOG-PRERELEASES.md) for this build.
 Stable **`2.2.10`** remains the recommended daily-driver release.
@@ -94,3 +94,7 @@ version 3 release scope:
 The experimental WYSIWYG layout editor is preserved on
 `future/2.0.0-visual-layout`. It is separate from the version 3 bundle and can be
 reconsidered in a later feature cycle. Its old standalone design plan is retired.
+
+## Final RC evidence
+
+The [RC audit](docs/audits/rc-readiness-report.md) and [permanent release benchmark](bench/README.md) are the next acceptance checkpoint. RC requires completed lifecycle, compatibility and four-engine performance evidence; no suffix promotion is implied by having published beta.1. Published stable 3.0.0 will be measured after upload, with a reproducible performance section generated from its exact asset.

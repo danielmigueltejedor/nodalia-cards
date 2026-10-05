@@ -2526,6 +2526,8 @@
         if (!this.shadowRoot) {
           return;
         }
+        const focused = this.shadowRoot.activeElement;
+        const focusSelector = focused instanceof HTMLElement ? focused.localName + [...focused.attributes].filter((attribute) => attribute.name.startsWith("data-") || attribute.name === "type").map((attribute) => `[${attribute.name}="${CSS.escape(attribute.value)}"]`).join("") : "";
         const config = this._config || normalizeConfig({});
         const styles = config.styles;
         const entityGuard = window.NodaliaUtils?.renderLovelaceEntityGuardCardHtml?.(
@@ -4081,6 +4083,7 @@
     `;
         this._lastRenderedIsOn = isOn;
         this._lastRenderedPanelKey = currentPanelKey;
+        if (focusSelector) this.shadowRoot.querySelector(focusSelector)?.focus({ preventScroll: true });
         if (shouldCleanupAfterAnimation) {
           this._scheduleAnimationCleanup(cleanupDelay);
         } else if (this._animationCleanupTimer) {

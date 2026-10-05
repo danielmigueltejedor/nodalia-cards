@@ -1,0 +1,94 @@
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:36] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+
+Running 19 tests using 4 workers
+
+(node:43658) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:43659) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:43660) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:43657) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:37] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:37] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:37] "GET /bench/fixture.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:37] "GET /bench/fixture.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:37] "GET /bench/fixtures/runtime.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:37] "GET /bench/fixtures/runtime.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:37] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:37] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:37] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:37] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:37] "GET /nodalia-cards.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:37] "GET /nodalia-cards.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:37] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓   3 [chromium] › tests/browser/benchmark-framework.spec.mjs:6:1 › benchmark observes light DOM, existing Shadow DOM and shadow roots attached later (362ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:37] "GET /bench/fixture.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:37] "GET /bench/fixtures/runtime.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:37] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:37] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓   2 [chromium] › tests/browser/media-player-lifecycle.spec.mjs:12:1 › Media Player keyboard seeks and retains transport focus through metadata and paused position updates (660ms)
+  ✓   1 [chromium] › tests/browser/room-summary-lifecycle.spec.mjs:12:1 › Room Summary updates child metadata without remounting and isolates connection/user contexts (702ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:38] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:38] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:38] "GET /nodalia-cards.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:38] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:38] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:38] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓   4 [chromium] › tests/browser/unrelated-hass-updates.spec.mjs:2:36 › Standalone paused Media Player does not rewrite progress DOM on unrelated HA updates (829ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:38] "GET /bench/fixture.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:38] "GET /bench/fixtures/runtime.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:38] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:38] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓   5 [chromium] › tests/browser/benchmark-framework.spec.mjs:19:1 › benchmark distinguishes empty skips from success and records actual runtime failures (545ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:38] "GET /bench/fixture.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:38] "GET /bench/fixtures/runtime.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:38] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:38] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓   6 [chromium] › tests/browser/media-player-lifecycle.spec.mjs:18:1 › Media Player native pointer cancellation, blur and a track change cancel seek without a service (358ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:38] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:38] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:38] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓   7 [chromium] › tests/browser/room-summary-lifecycle.spec.mjs:17:1 › Room Summary parks only configured children, uses native Lock and home media, and resets removed panels (459ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:38] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:38] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:38] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓   8 [chromium] › tests/browser/unrelated-hass-updates.spec.mjs:2:36 › Summary embedded paused Media Player does not rewrite progress DOM on unrelated HA updates (519ms)
+  ✓  10 [chromium] › tests/browser/media-player-lifecycle.spec.mjs:25:1 › Media Player volume drag cancellation restores actual zero and never commits on detach (361ms)
+  ✓   9 [chromium] › tests/browser/benchmark-framework.spec.mjs:29:1 › Graph benchmark ingests real large history rather than rendering an empty series (485ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:38] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:38] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:38] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  11 [chromium] › tests/browser/room-summary-lifecycle.spec.mjs:21:1 › Room Summary retains native keyboard focus on refreshed navigation, metrics and cover controls (349ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:38] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:38] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:38] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  12 [chromium] › tests/browser/media-player-lifecycle.spec.mjs:29:1 › Media Player browser uses native keyboard focus, sanitizes thumbnails and restores its browse button (360ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:39] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:39] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:39] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  14 [chromium] › tests/browser/media-player-lifecycle.spec.mjs:33:1 › Media Player abandons deferred browser results and fallback navigation across users, configuration and reconnect (349ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:39] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:39] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:39] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  15 [chromium] › tests/browser/media-player-lifecycle.spec.mjs:37:1 › Media Player retires stepped TV volume work on a new HA context and supersedes rapid commits (240ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:39] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:39] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:39] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  16 [chromium] › tests/browser/media-player-lifecycle.spec.mjs:41:1 › Media Player owns artwork preloads, private cover history and timer work through context changes (247ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:40] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:40] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:40] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  17 [chromium] › tests/browser/media-player-lifecycle.spec.mjs:45:1 › Media Player custom power actions keep service targets and false/zero data inside the configured allowlist (244ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:40] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:40] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:40] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  18 [chromium] › tests/browser/media-player-lifecycle.spec.mjs:50:1 › Media Player coalesces repeated pending artwork requests into one chrome refresh (351ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:40] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:40] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:03:40] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  19 [chromium] › tests/browser/media-player-lifecycle.spec.mjs:64:1 › Media Player retires an in-flight cover crossfade when returning to the current cover or detaching (240ms)
+  ✓  13 [chromium] › tests/browser/room-summary-lifecycle.spec.mjs:25:1 › Room Summary cancels holds on movement/config/context/auth/detach and keeps strict service targets (4.1s)
+
+  19 passed (6.3s)

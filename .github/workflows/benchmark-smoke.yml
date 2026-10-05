@@ -1,0 +1,27 @@
+name: Benchmark harness smoke
+on:
+  pull_request:
+    paths: ['bench/**', 'tests/benchmark*.test.mjs', 'package.json', 'pnpm-lock.yaml', '.github/workflows/benchmark-smoke.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Check runner on two exact published assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: pnpm benchmark:quick -- --browsers chromium 2.2.10 3.0.0-beta.1
+      - name: Verify all output formats and schema
+        run: |
+          node --input-type=module -e 'import fs from "node:fs"; import {validateResult} from "./bench/core.mjs"; const stem="bench/results/2.2.10-vs-3.0.0-beta.1-quick"; validateResult(JSON.parse(fs.readFileSync(stem+".json"))); for(const ext of [".md",".csv"]) if(!fs.statSync(stem+ext).size) throw new Error("Empty output "+ext)'
+      # Deliberately no percent-based performance gate on shared CI hardware.

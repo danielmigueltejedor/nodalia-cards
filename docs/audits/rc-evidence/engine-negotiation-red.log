@@ -1,0 +1,37 @@
+Nodalia Cards: could not query the Nodalia integration. Error: timeout
+    at Object.callWS (file://<repository>/tests/nodalia-backend.test.mjs:422:103)
+    at callWS (evalmachine.<anonymous>:30:19)
+    at status (evalmachine.<anonymous>:52:30)
+    at v3Command (evalmachine.<anonymous>:109:23)
+    at Object.setVacuumSession (evalmachine.<anonymous>:136:14)
+    at TestContext.<anonymous> (file://<repository>/tests/nodalia-backend.test.mjs:424:32)
+    at async Test.run (node:internal/test_runner/test:1125:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+  code: 'timeout'
+}
+✖ backend v3 dispatch honors a newer completed downgrade instead of an older handshake (1.367458ms)
+✔ backend does not revive expired cached availability after a fresh v3 handshake fails transiently (1.3225ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 1
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 51.101416
+
+✖ failing tests:
+
+test at tests/nodalia-backend.test.mjs:412:1
+✖ backend v3 dispatch honors a newer completed downgrade instead of an older handshake (1.367458ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file://<repository>/tests/nodalia-backend.test.mjs:417:3)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: { code: 'unsupported_capability' },
+    operator: 'rejects',
+    diff: 'simple'
+  }

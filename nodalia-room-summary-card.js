@@ -611,6 +611,7 @@
         this._hass = null;
         this._hassContextOwner = null;
         this._hassUserKey = "";
+        this._hassContextAuth = void 0;
         this._lastRenderSignature = "";
         this._animateContentOnNextRender = true;
         this._activePanel = "home";
@@ -719,7 +720,7 @@
         const prev = this._hass;
         const owner = hass?.connection || hass?.auth || null;
         const userKey = `${Boolean(hass)}:${hass?.user?.id || ""}:${hass?.user?.is_admin === true}`;
-        const changedContext = owner !== this._hassContextOwner || userKey !== this._hassUserKey;
+        const changedContext = owner !== this._hassContextOwner || hass?.auth !== this._hassContextAuth || userKey !== this._hassUserKey;
         if (changedContext) {
           this._detachPrimaryHold();
           this._suppressNextPrimaryClick = false;
@@ -728,6 +729,7 @@
           this._lastRenderSignature = "";
         }
         this._hassContextOwner = owner;
+        this._hassContextAuth = hass?.auth;
         this._hassUserKey = userKey;
         this._hass = hass;
         if (changedContext) this._bindPrimaryHold();
@@ -2059,9 +2061,11 @@
         const config = normalizeConfig(this._config || {});
         if (!hasRoomContent(config)) {
           this.shadowRoot.innerHTML = window.NodaliaUtils?.renderCardEmptyStateDocument?.(this._renderEmpty(), { card: config.styles?.card }) ?? this._renderEmpty();
+          this._lastRenderSignature = this._getRenderSignature(this._hass);
           return;
         }
         this._renderHub();
+        this._lastRenderSignature = this._getRenderSignature(this._hass);
         return;
       }
     }

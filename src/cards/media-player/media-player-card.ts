@@ -1359,10 +1359,11 @@ class NodaliaMediaPlayer extends HTMLElement {
         return;
       }
 
-      slider.value = String(nextValue);
-      slider.style.setProperty("--media-volume", String(nextValue));
+      const valueText = String(nextValue);
+      if (slider.value !== valueText) slider.value = valueText;
+      if (slider.style.getPropertyValue("--media-volume") !== valueText) slider.style.setProperty("--media-volume", valueText);
       const shell = slider.closest(".media-player__volume-slider-shell");
-      if (shell instanceof HTMLElement) shell.style.setProperty("--media-volume", String(nextValue));
+      if (shell instanceof HTMLElement && shell.style.getPropertyValue("--media-volume") !== valueText) shell.style.setProperty("--media-volume", valueText);
     });
 
     const volumeButtons = this.shadowRoot?.querySelectorAll(
@@ -1374,7 +1375,8 @@ class NodaliaMediaPlayer extends HTMLElement {
         return;
       }
 
-      button.dataset.mediaVolume = String(clamp(nextValue / 100, 0, 1));
+      const volumeText = String(clamp(nextValue / 100, 0, 1));
+      if (button.dataset.mediaVolume !== volumeText) button.dataset.mediaVolume = volumeText;
     });
   }
 
@@ -1624,18 +1626,21 @@ class NodaliaMediaPlayer extends HTMLElement {
     let updated = false;
     const fill = card.querySelector(".media-player__progress-fill");
     if (fill instanceof HTMLElement && this._activeProgressDrag?.entityId !== player.entity) {
-      fill.style.width = `${progress.percent}%`;
+      const width = `${progress.percent}%`;
+      if (fill.style.width !== width) fill.style.width = width;
       updated = true;
     }
 
     const progressNode = card.querySelector("[data-media-progress]");
     if (progressNode instanceof HTMLElement && this._activeProgressDrag?.entityId !== player.entity) {
-      progressNode.setAttribute("aria-valuenow", String(progressNode.dataset.mediaProgress === "seek" ? progress.position : progress.percent));
+      const value = String(progressNode.dataset.mediaProgress === "seek" ? progress.position : progress.percent);
+      if (progressNode.getAttribute("aria-valuenow") !== value) progressNode.setAttribute("aria-valuenow", value);
     }
 
     const timeChip = card.querySelector(".media-player__chip--time");
     if (timeChip) {
-      timeChip.textContent = `${formatDuration(progress.position)} / ${formatDuration(progress.duration)}`;
+      const text = `${formatDuration(progress.position)} / ${formatDuration(progress.duration)}`;
+      if (timeChip.textContent?.trim() !== text) timeChip.textContent = text;
       updated = true;
     }
 

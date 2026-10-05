@@ -1,0 +1,52 @@
+Nodalia Cards: could not query the Nodalia integration. Error: timeout
+    at Object.callWS (file://<repository>/tests/nodalia-backend.test.mjs:422:103)
+    at callWS (evalmachine.<anonymous>:30:19)
+    at status (evalmachine.<anonymous>:52:30)
+    at v3Command (evalmachine.<anonymous>:109:23)
+    at Object.setVacuumSession (evalmachine.<anonymous>:137:14)
+    at TestContext.<anonymous> (file://<repository>/tests/nodalia-backend.test.mjs:424:32)
+    at async Test.run (node:internal/test_runner/test:1125:7)
+    at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+  code: 'timeout'
+}
+✔ backend bridge prefers API v3 (0.812541ms)
+✔ backend bridge detects the matching native API and caches status (0.565334ms)
+✔ backend bridge treats a v1-only server as unavailable for the v2 client (0.240208ms)
+✔ backend bridge treats missing commands as an optional unavailable backend (0.288125ms)
+✔ backend bridge retries transient websocket timeouts instead of caching Engine-missing (0.593291ms)
+✔ backend bridge keeps command-name timeouts transient (0.274875ms)
+✔ backend bridge caches a confirmed missing Engine (0.259125ms)
+✔ backend bridge sends versioned profile and schedule mutations (0.296292ms)
+✔ backend bridge accepts a server range that still supports client API v2 (0.274ms)
+✔ backend bridge exposes external alerts and immediate schedule application (0.325458ms)
+✔ backend bridge exposes the v2 discovery, inbox and override commands (0.32025ms)
+✔ backend bridge summarizes engine health and capabilities for card editors (0.241917ms)
+✔ backend bridge reports no engine capabilities when the integration is missing (0.216042ms)
+✔ backend bridge preserves transport receiver and prefers hass.callWS over connection fallback (0.328042ms)
+✔ backend bridge expires status at 30 seconds, honors force/reset and isolates connection identity (0.270958ms)
+✔ backend bridge narrows malformed handshake branches without declaring unsupported capabilities (1.329ms)
+✔ generated backend adapter remains idempotent and does not require a DOM (0.406167ms)
+✔ backend negotiates v3 while older Engine connections retain v2 commands (0.399375ms)
+✔ backend declines a future-only Engine and never sends unavailable v3 commands (0.263542ms)
+✔ backend ignores superseded status responses (0.274084ms)
+✔ backend does not repopulate a cleared in-flight cache (0.22625ms)
+✔ backend isolates in-place user context changes (0.211583ms)
+✔ backend isolates in-place auth context changes (0.210541ms)
+✔ backend declines a retired v3 mutation (0.219209ms)
+✔ backend retires pending v3 mutations when a replacement hass connection is observed (0.281083ms)
+✔ backend retires pending v3 mutations when a replacement hass auth is observed (0.222792ms)
+✔ backend retires pending v3 mutations when a replacement hass user is observed (0.223834ms)
+✔ backend retires pending v3 mutations when a replacement hass admin is observed (0.228667ms)
+✔ backend allows concurrent v3 commands in the same owner while retiring commands after cache reset (0.547084ms)
+✔ backend retires an old handshake when a replacement owner sends a legacy command before discovery (0.234917ms)
+✔ backend v3 dispatch honors a newer completed downgrade instead of an older handshake (0.2165ms)
+✔ backend does not revive expired cached availability after a fresh v3 handshake fails transiently (0.602417ms)
+✔ backend rejects malformed explicit API ranges rather than guessing v3 (1.008167ms)
+ℹ tests 33
+ℹ suites 0
+ℹ pass 33
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 53.863916

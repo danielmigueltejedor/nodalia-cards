@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
   id-token: write
   attestations: write
   artifact-metadata: write
@@ -80,3 +81,6 @@ jobs:
               --notes-file release/release-notes.md \
               --title "Nodalia Cards $release_title"
           fi
+      - name: Schedule official stable performance evidence
+        if: github.ref_name == 'v3.0.0'
+        run: gh workflow run benchmark-release.yml --ref main -f version=3.0.0

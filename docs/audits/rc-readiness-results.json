@@ -1,0 +1,248 @@
+{
+  "schemaVersion": 1,
+  "timestamp": "2026-10-05T17:21:18.234481+00:00",
+  "verdict": "NOT RC READY",
+  "baselineHead": "1e2eb55d717279499febc56ec39872cb5a160bef",
+  "version": "3.0.0-beta.1",
+  "rcPrepared": false,
+  "rcPublished": false,
+  "findings": [
+    {
+      "id": "summary-auth",
+      "severity": "high",
+      "status": "fixed",
+      "redLog": "docs/audits/rc-evidence/summary-auth-red.log",
+      "regression": "tests/browser/room-summary-lifecycle.spec.mjs"
+    },
+    {
+      "id": "media-identical-writes",
+      "severity": "medium",
+      "status": "fixed",
+      "redLog": "docs/audits/rc-evidence/media-mutations-red.log",
+      "regression": "tests/browser/unrelated-hass-updates.spec.mjs"
+    },
+    {
+      "id": "summary-first-signature",
+      "severity": "medium",
+      "status": "fixed",
+      "regression": "tests/browser/unrelated-hass-updates.spec.mjs"
+    },
+    {
+      "id": "humidifier-focus",
+      "severity": "medium",
+      "status": "fixed",
+      "redLog": "docs/audits/rc-evidence/humidifier-focus-red.log",
+      "greenLog": "docs/audits/rc-evidence/humidifier-focus-green.log",
+      "greenPassed": 18,
+      "regression": "tests/browser/humidifier-lifecycle.spec.mjs"
+    },
+    {
+      "id": "engine-replacement-owner",
+      "severity": "high",
+      "status": "fixed",
+      "redLog": "docs/audits/rc-evidence/engine-owner-red.log",
+      "greenLog": "docs/audits/rc-evidence/engine-owner-green.log",
+      "greenPassed": 31,
+      "regression": "tests/nodalia-backend.test.mjs",
+      "negotiationRedLog": "docs/audits/rc-evidence/engine-negotiation-red.log",
+      "negotiationGreenLog": "docs/audits/rc-evidence/engine-negotiation-green.log",
+      "negotiationGreenPassed": 33
+    },
+    {
+      "id": "benchmark-download-boundary",
+      "severity": "medium",
+      "status": "fixed",
+      "redLog": "docs/audits/rc-evidence/downloader-red.log",
+      "regression": "tests/benchmark-framework.test.mjs"
+    },
+    {
+      "id": "vacuum-duplicate-catalog-scan",
+      "severity": "medium",
+      "status": "fixed",
+      "regression": "tests/browser/advance-vacuum-lifecycle.spec.mjs",
+      "redLog": "docs/audits/rc-evidence/helper-scans-red.log",
+      "greenLog": "docs/audits/rc-evidence/helper-scans-green.log"
+    },
+    {
+      "id": "benchmark-profile-contamination",
+      "severity": "medium",
+      "status": "fixed; reference rerun pending",
+      "regression": "tests/browser/benchmark-framework.spec.mjs"
+    },
+    {
+      "id": "benchmark-touch-native-brand",
+      "severity": "medium",
+      "status": "fixed; reference rerun pending",
+      "regression": "tests/browser/benchmark-framework.spec.mjs"
+    }
+  ],
+  "gates": {
+    "static": "passed: version, architecture, strict types, typed lint, distribution, translations, build",
+    "unit": {
+      "passed": 827,
+      "failed": 0,
+      "skipped": 0,
+      "log": "/private/tmp/nodalia-rc-completion-fast.log"
+    },
+    "browsers": {
+      "lastFullThreeEngine": {
+        "passed": 1207,
+        "failed": 1,
+        "skipped": 1,
+        "beforeHumidifierFocusFix": true
+      },
+      "finalCommit": {
+        "commit": "09fb0ef764dfd099db7bd2ba803b8125b1ee7719",
+        "run": "https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37346221596",
+        "chromium": {
+          "passed": 408,
+          "failed": 0,
+          "skipped": 0
+        },
+        "firefox": {
+          "passed": 406,
+          "failed": 0,
+          "skipped": 2,
+          "skipReason": "Native touch construction unavailable in Firefox (zoom and native benchmark tests)"
+        },
+        "webkit": {
+          "passed": 408,
+          "failed": 0,
+          "skipped": 0
+        },
+        "webkit-iphone": {
+          "passed": 407,
+          "failed": 0,
+          "skipped": 1,
+          "skipReason": "Mobile project already covers a different DPR"
+        }
+      },
+      "firefox": {
+        "status": "unavailable",
+        "failure": "Could not find profile folder",
+        "cleanPinnedDownloadTried": true
+      },
+      "totalPassed": 1629,
+      "totalSkipped": 3
+    },
+    "soak100": {
+      "passed": 12,
+      "failed": 0,
+      "cyclesPerCard": 100,
+      "haUpdatesPerCard": 4000,
+      "project": "chromium",
+      "log": "/private/tmp/nodalia-rc-soak100.log"
+    },
+    "publishedAssetBenchmarks": {
+      "status": "incomplete diagnostic; not accepted release evidence",
+      "samples": 5642,
+      "measuredRounds": 7,
+      "warmups": 2,
+      "errors": 37,
+      "skips": 147,
+      "harnessCommit": "5f34871cd39e63b8e29589e04cf10fadcfc73cfc",
+      "rawJson": "docs/benchmarks/2.2.10-vs-3.0.0-beta.1-incomplete-reference.json",
+      "rawCsv": "docs/benchmarks/2.2.10-vs-3.0.0-beta.1-incomplete-reference.csv",
+      "analysis": "docs/benchmarks/2.2.10-vs-3.0.0-beta.1-analysis.md",
+      "limitations": [
+        "Firefox failed to launch",
+        "36 legacy Graph settle timeouts in WebKit/iPhone warmups/measured rounds",
+        "Earlier harness inherited persisted/module state across profiles",
+        "Earlier touch profile used a prototype-only synthetic event; native constructor evidence requires current harness"
+      ]
+    },
+    "referenceRunner": {
+      "registered": 0,
+      "requiredLabel": "nodalia-benchmark",
+      "actionsMayCreatePr": false,
+      "documentationPrFallback": "Verified evidence branch and job-summary comparison link; notes update remains possible"
+    },
+    "remoteCI": {
+      "status": "passed",
+      "commit": "09fb0ef764dfd099db7bd2ba803b8125b1ee7719",
+      "ci": "https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37346221596",
+      "hacs": "https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37346221258",
+      "codeQL": "https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37346221302",
+      "benchmarkSmoke": "https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37346221237"
+    },
+    "dependencyAudit": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "productionDependencies": 0,
+      "developmentDependencies": 130
+    },
+    "deterministicArtifacts": {
+      "compared": 38,
+      "changedAfterRebuild": 0
+    },
+    "codeQL": {
+      "status": "passed",
+      "run": "https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37346221302",
+      "reviewedFalsePositives": [
+        295,
+        296
+      ],
+      "rationale": "Dev-only persistence of verified assets at fixed local filenames; strict exact URL and version path regressions. No query disabled or suppression added."
+    },
+    "benchmarkFramework": {
+      "nodePassed": 14,
+      "localBrowserPassed": 21,
+      "engines": [
+        "chromium",
+        "webkit",
+        "webkit-iphone"
+      ],
+      "mapFeedback": "Consumed robot/map state every four moves; fresh pages per profile and native Touch/TouchEvent brand checks"
+    },
+    "helperRegression": {
+      "localBrowserPassed": 45,
+      "redScans": 240,
+      "greenScans": 120,
+      "assignments": 120,
+      "catalogAdditionalEntities": 1700,
+      "redLog": "docs/audits/rc-evidence/helper-scans-red.log",
+      "greenLog": "docs/audits/rc-evidence/helper-scans-green.log",
+      "diagnostic": "docs/audits/rc-evidence/helper-before-after.json"
+    },
+    "isolatedHarnessSmoke": {
+      "mode": "quick",
+      "samples": 1440,
+      "errors": 0,
+      "skips": 18,
+      "engines": [
+        "chromium",
+        "webkit",
+        "webkit-iphone"
+      ],
+      "iterations": 2,
+      "warmups": 1,
+      "provenance": "Functionality smoke only; not official reference performance",
+      "log": "/private/tmp/nodalia-rc-isolated-smoke.log"
+    }
+  },
+  "candidateBundle": {
+    "rawBytes": 4147296,
+    "gzipBytes": 946786,
+    "sha256": "fbc017b2ffce2e6db48ebfb04fcf27db7c0b7f08a308978ac3c28b92512b89ed",
+    "provenance": "working-candidate size check only"
+  },
+  "releaseBlockers": [
+    "Missing Apple M4 Firefox performance evidence",
+    "Fresh isolated/native-touch four-engine published-asset reference run and candidate material regression assessment",
+    "Controlled reference release runner not provisioned"
+  ],
+  "benchmarkSchemaVersion": 1,
+  "methodology": "bench/README.md",
+  "productionDependenciesAdded": 0,
+  "apiYamlChanges": false,
+  "evidenceTranscripts": {
+    "path": "docs/audits/rc-evidence",
+    "normalization": "ANSI colors removed; repository path replaced with <repository>; benchmark raw sample files are never normalized",
+    "runtimeSourceBeforeFix": "1e2eb55d717279499febc56ec39872cb5a160bef",
+    "downloaderSourceBeforeFix": "ae5d0f8a9e0792ec1ff6e75778ef8385642b70cf"
+  },
+  "validatedSourceCommit": "09fb0ef764dfd099db7bd2ba803b8125b1ee7719"
+}

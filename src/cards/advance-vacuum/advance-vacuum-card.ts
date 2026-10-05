@@ -134,6 +134,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   declare private _lastSubmittedSharedCleaningSessionValue: string|null;
   declare private _lastSharedCleaningSessionOverflowFingerprint: string|null;
   declare private _roomTrackingEntityCache: RoomTrackingCache|null;
+  declare private _roomTrackingLookupScope: {hass:HomeAssistant|null;value:RoomTrackingCache|null}|null;
   declare private _lastNonSmartModeSelection: {suction:string;mop:string};
   declare private _localeReconciliationTimeouts: number[]|null;
   declare private _mapImageWidth: number;
@@ -239,6 +240,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._selectionUpdatedAt = 0;
     this._wasCleaningSessionActive = false;
     this._roomTrackingEntityCache = null;
+    this._roomTrackingLookupScope = null;
     this._lastRenderSignature = "";
     this._calibrationSignatureStamp = "";
     this._animateContentOnNextRender = true;
@@ -473,6 +475,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   set hass(hass:HomeAssistant|null) {
+    // Share discovery only inside this synchronous assignment. The next update
+    // must inspect catalog metadata again, including in-place registry changes.
+    const previousLookupScope = this._roomTrackingLookupScope;
+    this._roomTrackingLookupScope = {hass,value:null};
     try {
       const server=this._serverIdentity(hass);
       const contextChanged=this._contextConnection!==hass?.connection || this._contextAuth!==hass?.auth || this._contextUser!==(hass?.user?.id || "") || this._contextAdmin!==(hass?.user?.is_admin===true) || this._contextServer!==server;
@@ -491,6 +497,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       this._render();
     } catch (error) {
       this._handleCardError(error, "set hass");
+    } finally {
+      this._roomTrackingLookupScope = previousLookupScope;
     }
   }
 
@@ -1580,6 +1588,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _getRelatedVacuumEntityIds(hass = this._hass):RoomTrackingCache {
+    const scope = this._roomTrackingLookupScope?.hass === hass ? this._roomTrackingLookupScope : null;
+    if(scope?.value) return scope.value;
     const entityId = String(this._config?.entity || "");
     const explicitRoomEntityId = String(this._config?.room_tracking?.entity || "");
     const explicitActivityEntityId = String(this._config?.room_tracking?.activity_entity || "");
@@ -1595,7 +1605,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       })
       : [Boolean(states[explicitRoomEntityId]), Boolean(states[explicitActivityEntityId])];
     const cacheKey = JSON.stringify([entityId, explicitRoomEntityId, explicitActivityEntityId, autoDetect, catalogSignature]);
-    if(this._roomTrackingEntityCache?.key === cacheKey) return this._roomTrackingEntityCache;
+    if(this._roomTrackingEntityCache?.key === cacheKey) {
+      if(scope) scope.value = this._roomTrackingEntityCache;
+      return this._roomTrackingEntityCache;
+    }
 
     const roomIds = new Set(explicitRoomEntityId ? [explicitRoomEntityId] : []);
     const activityIds = new Set(explicitActivityEntityId ? [explicitActivityEntityId] : []);
@@ -1647,6 +1660,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       roomIds: [...roomIds].filter(id => states[id]),
       activityIds: [...activityIds].filter(id => states[id]),
     };
+    if(scope) scope.value = this._roomTrackingEntityCache;
     return this._roomTrackingEntityCache;
   }
 

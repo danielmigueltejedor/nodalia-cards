@@ -12,6 +12,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- Reproducible published-asset benchmarks with per-engine raw samples, statistics, profile isolation and verified post-release performance notes. The RC audit preserves its incomplete reference evidence and explicit release gates.
 - Native Lock Card with deliberate slide/keyboard unlock confirmation, centered icon chips, shared visual-editor Styles controls and native embedding in Room Summary.
 - Dedicated Nodalia Cards 3 header artwork for the stable 3.0.0 release notes.
 - Version 3 upgrade and contributor guides covering unchanged YAML/resource paths, checked sources and release validation.
@@ -28,6 +29,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- Summary retires private holds on authentication replacement; paused Media/embedded Summary avoid identical progress writes; Humidifier restores native control focus after consumed-state renders. Engine v3 dispatch rejects retired owners and respects newer completed negotiation without reviving expired availability.
+- Automatic Advance Vacuum helper discovery shares its catalog lookup only within a synchronous HA assignment, retaining fresh availability/registry checks between updates.
 - Live Sections row changes switch between automatic and fixed wrapper sizing without remounting cards. News cancels pending helper writes after configuration or HA connection/authentication/user changes and refreshes helper history for the new context.
 - Automatic Sections rows shrink after interleaved favourite and device-control updates in Safari/iOS. Native inline card wrappers are normalized during the card lifecycle; existing size observers report settled height changes without rebuilding controls or resizing the window. Explicit wrapper layouts and visibility remain intact.
 

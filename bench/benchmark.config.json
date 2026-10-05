@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "repository": "danielmigueltejedor/nodalia-cards",
+  "assetName": "nodalia-cards.js",
+  "iterations": 7,
+  "warmups": 2,
+  "assignments": 120,
+  "trackUpdates": [50, 250],
+  "graphPoints": [100, 1000, 5000, 10000],
+  "gestureMoves": [20, 80, 200],
+  "lifecycleCycles": [100, 250, 500],
+  "quietMs": 40,
+  "settleTimeoutMs": 6000,
+  "browsers": ["chromium", "firefox", "webkit", "webkit-iphone"],
+  "quick": {
+    "iterations": 2,
+    "warmups": 1,
+    "trackUpdates": [50],
+    "graphPoints": [100, 1000],
+    "gestureMoves": [20],
+    "lifecycleCycles": [100]
+  }
+}

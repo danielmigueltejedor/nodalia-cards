@@ -34,6 +34,24 @@ HACS continues to load only `nodalia-cards.js`. Source TS, tooling and tests are
 not runtime npm dependencies. Published tags/releases are immutable historical
 checkpoints; do not rerun an old release expecting the new workflow to apply.
 
+## HACS preview channel verification
+
+On channel promotion, compare the published asset and the tagged root bundle
+with the validated build. Then check the resource URL and loaded bundle in Home
+Assistant separately: the correct release asset does not prove that a client
+has stopped using an older cached script.
+
+The [linked HACS implementation](https://github.com/hacs/integration/blob/adb7d83e33d24325535fb43b8226572405143757/custom_components/hacs/repositories/plugin.py#L137-L159)
+strips non-digits from its resource cache token. For example, `3.0.0-alpha.1`,
+`3.0.0-beta.1` and `3.0.0-rc.1` all become `3001`. Incrementing to beta.2 can
+collide with alpha.2 as well; suffix numbering alone does not prevent this.
+
+Keep semantic channel progression and immutable published tags. Include the
+[resource refresh instructions](upgrading-to-3.md#old-code-after-switching-preview-channels-in-hacs)
+when announcing a promotion affected by this collision. Verify the installed
+file before diagnosing a stale download; verify the client-loaded file before
+claiming the cache has refreshed.
+
 Stable promotion retires the active preview in the roadmap. Both stable and preview
 GitHub releases use their curated changelog sections; missing notes block publication.
 
@@ -78,3 +96,15 @@ The stable 3.0.0 notes generator includes `docs/images/nodalia-cards-3-release.p
 as its centered header. The image URL points to the immutable `v3.0.0` tag, so
 the artwork must be committed before tagging. It does not add another downloadable
 release asset; HACS continues receiving only `nodalia-cards.js`.
+
+## Official post-release performance evidence
+
+Before RC, require `RC READY` in the [RC audit](audits/rc-readiness-report.md). Do not prepare/tag RC when four-engine evidence or another acceptance gate is missing. Retain the beta freeze; after RC only bug fixes, lifecycle/memory, compatibility, accessibility, measured regressions, tests and documentation are accepted.
+
+`benchmark-smoke.yml` runs a quick two-release Chromium fixture on shared Linux CI and verifies JSON/CSV/Markdown. There is deliberately no timing percentage gate.
+
+`benchmark-release.yml` uses an operator-provisioned idle reference runner labelled `nodalia-benchmark`. This job is manual/controlled, never an untrusted PR job or a shared-CI timing substitute. Provision Node 22+, pinned pnpm, git, GitHub CLI, Bash (also on Windows) and the pinned Playwright browser binaries/system dependencies. Automatic documentation PR creation requires the corresponding Actions repository setting. If GitHub blocks that PR, the verified evidence remains committed on its report branch, the job summary provides a comparison link for manual review, and evidence-backed release notes can still be added. No reference runner is installed or registered by the source change itself: without that runner the dispatch queues and official evidence remains pending. Record reference-runner availability before stable publication.
+
+The normal release workflow dispatches this job automatically after publishing `v3.0.0` (requires `actions: write`). RC can dispatch it explicitly with `gh workflow run benchmark-release.yml --ref main -f version=3.0.0-rc.1`. The target syntax is checked before checkout; measurement checks out the exact published tag and downloads the exact 2.2.10/target assets. It executes `pnpm benchmark:releases -- 2.2.10 "$BENCH_TARGET"`, then `pnpm benchmark:evidence -- "$BENCH_TARGET" "bench/results/2.2.10-vs-$BENCH_TARGET.json" bench/results/published-notes.md "$BENCH_REPORT_BRANCH"`.
+
+The evidence command refuses quick/dirty/incomplete/error reports. It writes `docs/benchmarks/2.2.10-vs-VERSION.{json,csv,md}` and a notes section; the workflow pushes a report branch and opens a documentation PR, then adds the verified section to the existing release body. Assets and tags are unchanged. Links point to the report branch until review/merge. If a browser/runtime/evidence step fails, notes remain unchanged and the release is not eligible for stable promotion. Resolve the job failure and rerun; never fabricate a comparison or replace stable data with beta/RC samples.

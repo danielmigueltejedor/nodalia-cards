@@ -9,12 +9,23 @@
   var contextOf = (hass) => ({ owner: hass?.connection || hass, auth: hass?.auth, user: hass?.user?.id || "", admin: hass?.user?.is_admin === true });
   var sameContext = (a, b) => a !== null && a.owner === b.owner && a.auth === b.auth && a.user === b.user && a.admin === b.admin;
   var statusGeneration = 0;
+  var contextGeneration = 0;
   var statusCache = { context: null, checkedAt: 0, value: null };
+  function enterContext(hass) {
+    const context = contextOf(hass);
+    if (!sameContext(statusCache.context, context)) {
+      ++statusGeneration;
+      ++contextGeneration;
+      statusCache = { context, checkedAt: 0, value: null };
+    }
+    return context;
+  }
   var apiVersion = (value) => {
     const number = typeof value === "number" || typeof value === "string" && value.trim() ? Number(value) : 0;
     return Number.isSafeInteger(number) && number > 0 ? number : 0;
   };
   function callWS(hass, message) {
+    enterContext(hass);
     if (typeof hass?.callWS === "function") {
       return hass.callWS(message);
     }
@@ -31,7 +42,7 @@
   }
   async function status(hass, options = {}) {
     const now = Date.now();
-    const context = contextOf(hass);
+    const context = enterContext(hass);
     if (options.force !== true && sameContext(statusCache.context, context) && statusCache.value && now - statusCache.checkedAt < STATUS_TTL_MS) {
       return statusCache.value;
     }
@@ -95,10 +106,13 @@
   }
   async function v3Command(hass, capability, type, data) {
     const context = contextOf(hass);
-    const value = await status(hass);
-    if (!sameContext(context, contextOf(hass))) {
+    const handshake = status(hass);
+    const generation = contextGeneration;
+    const reply = await handshake;
+    if (generation !== contextGeneration || !sameContext(context, contextOf(hass))) {
       throw Object.assign(new Error("Engine request belongs to a retired HA context"), { code: "stale_context" });
     }
+    const value = reply.available && statusCache.value ? statusCache.value : reply;
     if (value.negotiated_api_version !== API_VERSION || !hasCapability(value, capability)) {
       throw Object.assign(new Error(`Engine capability unavailable: ${capability}`), { code: "unsupported_capability" });
     }
@@ -125,6 +139,7 @@
     status,
     clearStatusCache() {
       ++statusGeneration;
+      ++contextGeneration;
       statusCache = { context: null, checkedAt: 0, value: null };
     },
     hasCapability,
