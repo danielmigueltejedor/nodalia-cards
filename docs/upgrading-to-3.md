@@ -12,14 +12,13 @@ preserving existing dashboard configuration.
 - Nodalia Cards Engine remains an optional separate Integration; no Dashboard to
   Integration migration is required.
 
-The currently published version 3 builds are prereleases. Until stable `v3.0.0`
-is published, choose a preview deliberately in HACS; the default stable channel
-continues to use its published stable release. After an update, reload the
+Stable `v3.0.0` is available through the default HACS channel. It promotes the
+validated RC1 runtime with unchanged card behavior. After an update, reload the
 frontend cache if the installed bundle version still reports the previous build.
 
 ### Old code after switching preview channels in HACS
 
-The `v3.0.0-rc.1` release candidate contains the final audit fixes. If installing it
+Stable `v3.0.0` includes the final RC audit fixes. If installing it
 still shows alpha behavior, check the loaded resource before assuming that HACS
 downloaded the wrong release.
 
@@ -30,13 +29,13 @@ reuse the alpha resource. The same collision applies to alpha/beta/rc builds
 with matching numbers. This describes the linked HACS implementation; confirm
 the resource URL and loaded file when diagnosing an individual installation.
 
-After installing the selected preview:
+After installing the selected version:
 
 1. Open Home Assistant's dashboard Resources settings (enable Advanced Mode in
    your profile if needed).
 2. Edit the **existing** Nodalia Cards JavaScript module resource. Keep its
-   `hacstag` query and append `&v=3.0.0-rc.1`. If the URL has no query, append
-   `?v=3.0.0-rc.1` instead. Use the full installed version for future builds.
+   `hacstag` query and append `&v=3.0.0`. If the URL has no query, append
+   `?v=3.0.0` instead. Use the full installed version for future builds.
 3. Reload Home Assistant completely on each affected client. Do not add a second
    resource for the same bundle.
 
@@ -68,14 +67,15 @@ Run `pnpm validate:fast` and the four-browser validation before release. See
 [translations](TRANSLATIONS.md) and [releasing](releasing.md).
 
 Stable promotion uses the release script and exact validated tag; this guide does
-not by itself mark a prerelease build as stable. Stable changes are prepared in
+not by itself publish a release. Stable changes are recorded in
 [CHANGELOG.md](../CHANGELOG.md); preview history remains in
 [CHANGELOG-PRERELEASES.md](../CHANGELOG-PRERELEASES.md).
 
-## Beta stabilization
+## Stable maintenance
 
-The release candidate `3.0.0-rc.1` freezes features, architecture, YAML, public APIs and distribution.
-Only corrections, measured performance improvements, accessibility, compatibility,
-lifecycle/memory fixes, documentation and tests are in scope until stable 3.0.0.
-See [the release-readiness audit](BETA_READINESS_AUDIT.md) and [releasing](releasing.md).
-Preparation does not publish a tag or change which preview HACS can download.
+Stable 3.0.0 promotes the RC runtime without changing features, architecture,
+YAML, public APIs or distribution. Maintenance focuses on bug fixes,
+accessibility, compatibility and lifecycle/memory corrections. See [the final
+RC audit](audits/rc-readiness-report.md) and [releasing](releasing.md).
+The owner requested no repeated benchmarks for this identical-runtime promotion;
+existing performance data remains explicitly labelled RC evidence.

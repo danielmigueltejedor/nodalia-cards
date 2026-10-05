@@ -37,7 +37,7 @@ Version `3.0.0` completes strict TypeScript migration across all 25 cards,
 editors and shared runtimes. It includes the media-control, Lock, Summary and
 Vacuum refinements described in the [prerelease notes](./CHANGELOG-PRERELEASES.md).
 Existing YAML, custom element names and the HACS resource path remain compatible.
-See [upgrading to version 3](./docs/upgrading-to-3.md) for installation and contributor changes. `3.0.0-rc.1` is the release candidate following the [final audit](./docs/audits/rc-readiness-report.md); features, architecture, public APIs, YAML and distribution are frozen for final stabilization. Enable prereleases in HACS to select a published preview; RC reference performance explicitly excludes Firefox on the reference Mac; Linux Firefox compatibility remains tested. See [published-release performance evidence](./docs/benchmarks/README.md) for results and limitations. Stable `2.2.10` remains available until stable `3.0.0` is published.
+See [upgrading to version 3](./docs/upgrading-to-3.md). **`3.0.0` is the stable release**, promoting the validated RC runtime with unchanged card behavior, public APIs, YAML and distribution. HACS installs stable builds by default. See [the final audit](./docs/audits/rc-readiness-report.md) and [RC performance evidence](./docs/benchmarks/3.0.0-rc.1-analysis.md) for validation and limitations; measurements belong to RC and were not repeated for stable.
 
 ## Preview
 
@@ -136,7 +136,7 @@ This is the single resource HACS installs. The repository also provides standalo
 
 ### Optional companion: Nodalia Cards Engine
 
-Nodalia Cards Engine is a separate HACS **Integration** that runs advanced features inside Home Assistant even when no dashboard is open. Stable Engine **`3.0.0`** is the recommended companion for the current Nodalia Cards `3.0.0` preview. Existing Cards API 1/2 commands and Engine `2.0.2` remain compatible.
+Nodalia Cards Engine is a separate HACS **Integration** that runs advanced features inside Home Assistant even when no dashboard is open. Stable Engine **`3.0.0`** is the recommended companion for the Nodalia Cards `3.0.0` stable release. Existing Cards API 1/2 commands and Engine `2.0.2` remain compatible.
 
 [![Add Nodalia Cards Engine to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards-engine&category=integration)
 

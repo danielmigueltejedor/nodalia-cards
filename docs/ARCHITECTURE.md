@@ -8,12 +8,12 @@ path stay the same.
 
 ## Architecture freeze
 
-The prepared `3.0.0-rc.1` freezes the registry, HACS/standalone distribution,
+Stable `3.0.0` preserves the registry, HACS/standalone distribution,
 YAML and public Engine API 2/3 bridge contracts. Broad refactors/new features or
-runtime dependencies are deferred until after stable 3.0.0. A structural change
+runtime dependencies belong to a later feature cycle. A structural change
 requires a demonstrated bug and regression. See [release readiness](BETA_READINESS_AUDIT.md).
 
-## Current architecture map (3.0.0-rc.1)
+## Current architecture map (3.0.0)
 
 The project is a Home Assistant Lovelace plugin. Handwritten cards historically
 lived as root `nodalia-*.js` files that were both source and published artifacts.

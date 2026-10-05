@@ -8,11 +8,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ---
 
-## [Unreleased]
+## [3.0.0] - 2026-10-06
+
+Nodalia Cards 3 completes the checked-source migration and brings consistent media, lock and device controls to existing dashboards. Stable 3.0.0 promotes the validated RC1 runtime without card behavior changes.
 
 ### Added
 
-- Reproducible published-asset benchmarks with per-engine raw samples, statistics, profile isolation and verified post-release performance notes. The RC audit preserves its incomplete reference evidence and explicit release gates.
+- Reproducible published-asset benchmarks with per-engine raw samples, statistics, profile isolation and verified post-release performance notes. The completed RC reference preserves all raw attempts, per-engine results and explicit limitations.
 - Native Lock Card with deliberate slide/keyboard unlock confirmation, centered icon chips, shared visual-editor Styles controls and native embedding in Room Summary.
 - Dedicated Nodalia Cards 3 header artwork for the stable 3.0.0 release notes.
 - Version 3 upgrade and contributor guides covering unchanged YAML/resource paths, checked sources and release validation.
@@ -20,7 +22,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Changed
 
 - Graph, Gauge and Power Flow reuse bounded locale/precision formatters instead of constructing them for every reading. Explicit Advance Vacuum room/activity tracking avoids full entity-catalog scans when auto-detection is disabled.
-- Editor translation data and identical editor styles are shared more compactly, reducing the HACS resource by 191,366 raw bytes and 25,663 gzip bytes while preserving all twelve locales, public APIs and standalone resources. Existing size budgets stay unchanged.
+- Editor translation data and identical editor styles are shared more compactly, preserving all twelve locales, public APIs and standalone resources. Existing size budgets stay unchanged.
 - All 25 cards, visual editors and shared runtimes now build from strictly checked TypeScript, with typed lint and zero suppression/import-cycle debt. Existing custom elements, standalone artifacts and the single HACS resource remain compatible.
 - Media transport stays centered between auxiliary controls. Buttons, transport capsules and stacked-player selectors share translucent artwork tint; dashboard entrance preserves the glass reflection and warm palettes apply immediately.
 - Room Summary keeps media players on its main screen and renders lock entities with native Lock Card. Alarm Panel and Entity request four Sections columns; Weather and Calendar request six.
@@ -42,6 +44,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Rain templates retain forecast probability in `{value}` and expose explicit temperature fields, preserving valid zero and temperature units.
 - Pending asynchronous work is retired across configuration, HA connection/user and view changes. Native focus, draft fields and cancelled gestures retain their intended behavior.
 
+
+### Migration
+
+- Existing YAML, custom elements, legacy aliases and the HACS resource path remain compatible. No resource replacement or Engine installation is required.
+- Optional Nodalia Cards Engine 3.0.0 supports API 3; API 2 fallback remains available.
+- See [the upgrade guide](./docs/upgrading-to-3.md). Reload every browser or Companion App after updating.
+
+### Validation
+
+- Stable promotes the RC runtime with only release-version declarations and documentation changes. Exact stable static, strict types, lint, translation, build and four-browser functional checks run before publication.
+- The [RC performance assessment](./docs/benchmarks/3.0.0-rc.1-analysis.md) records 8,505 samples on three engines, with Firefox performance unavailable on the reference Mac. These remain RC measurements. The owner requested promotion without repeating benchmarks; no exact stable performance or global speed claim is made.
 
 ## [2.2.10] - 2026-09-24
 
