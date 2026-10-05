@@ -56,3 +56,14 @@ test('Weather owns animation fallback work and preserves conversions, missing va
  await page.evaluate(()=>{window.weatherCard.setConfig({entity:'weather.one',animations:'malformed',haptics:'malformed',show_pressure_chip:true});window.weatherStates['weather.one'].attributes.temperature=0;window.weatherStates['weather.one'].attributes.humidity=0;window.weatherStates['weather.one'].attributes.wind_speed=0;window.weatherStates['weather.one'].attributes.pressure=null;window.weatherCard.hass=window.createHassFixture({entities:window.weatherStates});document.querySelector('#fixture').append(window.weatherCard);});
  await expect(card.locator('.weather-card__temperature')).toHaveText('0°C');await expect(card.locator('.weather-card__chips')).toContainText('0%');await expect(card.locator('.weather-card__chips')).toContainText('0 km/h');await expect(card.locator('.weather-card__chips')).not.toContainText('hPa');expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
 });
+
+for(const change of ['user','auth'])test(`Weather retires forecasts on same-connection ${change} changes`,async({page})=>{
+ const card=await mount(page,{},true);await page.evaluate(()=>{window.weatherHass.user={id:'first',is_admin:true};window.weatherCard.hass=window.weatherHass;});
+ const initial=await page.evaluate(()=>window.weatherCalls.length);
+ await page.evaluate(change=>{if(change==='user')window.weatherHass.user.id='second';else window.weatherHass.auth={};window.weatherCard.hass=window.weatherHass;},change);
+ await expect.poll(()=>page.evaluate(()=>window.weatherCalls.length)).toBe(initial+1);
+ await page.evaluate(index=>{window.weatherCalls[index].callback({forecast:[{datetime:'2026-10-01T12:00:00Z',temperature:999}]});window.weatherCalls[index].resolve();},initial-1);
+ await expect(card.locator('.weather-card__forecast-temp').first()).not.toContainText('999');
+ await page.evaluate(index=>window.weatherCalls[index].callback({forecast:[{datetime:'2026-10-01T12:00:00Z',temperature:0,templow:0}]}),initial);
+ await expect(card.locator('.weather-card__forecast-temp').first()).toHaveText('0°C / 0°C');expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+});

@@ -43,3 +43,11 @@ test('Person owns fallback animation timers, resets consumed taps and catches se
  expect(cleanup.reset).toBe(false);expect(cleanup.scheduled).toBeGreaterThan(0);expect(cleanup.remaining).toBe(0);
  await card.locator('ha-card[data-person-action="primary"]').press('Enter');expect(errors).toEqual([]);expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
 });
+
+test('Person missing-entity message follows a changed profile language',async({page})=>{
+ await page.goto('/tests/fixtures/browser.html');await page.waitForFunction(()=>customElements.get('nodalia-person-card'));
+ await page.evaluate(()=>{window.missingHass=window.makeHass({});window.missingPerson=document.createElement('nodalia-person-card');window.missingPerson.setConfig({entity:'person.missing'});window.missingPerson.hass=window.missingHass;document.querySelector('#fixture').append(window.missingPerson);});
+ const card=page.locator('nodalia-person-card').locator('ha-card');await expect(card).toContainText('Configure `entity`');const english=await card.innerText();expect(english.length).toBeGreaterThan(10);
+ await page.evaluate(()=>{window.missingHass.locale.language='es';window.missingHass.language='es';window.missingPerson.hass=window.missingHass;});
+ await expect(card).not.toHaveText(english);expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+});

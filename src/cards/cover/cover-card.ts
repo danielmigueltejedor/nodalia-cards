@@ -1,3 +1,5 @@
+import { captureHassContext, sameHassContext } from "../../shared/hass-context";
+import type { HassContext } from "../../shared/hass-context";
 import { createCardLayoutNotifier } from "../../shared/card-layout-notifier";
 import { invokeHassService } from "../../shared/home-assistant-services";
 import type { HomeAssistant } from "../../core/types/home-assistant";
@@ -43,6 +45,7 @@ export function loadNodaliaCoverCard(): CustomElementConstructor {
     return _lazyNodaliaCoverCard;
   }
 class NodaliaCoverCard extends HTMLElement {
+  declare private _hassContext: HassContext | null;
   private _cardLayoutNotifier?: ReturnType<typeof createCardLayoutNotifier>;
   private _config!: ReturnType<typeof normalizeConfig>;
   private _hass!: HomeAssistant | null;
@@ -77,6 +80,7 @@ class NodaliaCoverCard extends HTMLElement {
   _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
+    this._hassContext = null;
     this._lastRenderSignature = "";
     this._activeSliderDrag = null;
     this._skipNextSliderChange = null;
@@ -198,6 +202,17 @@ class NodaliaCoverCard extends HTMLElement {
   }
 
   set hass(hass: HomeAssistant) {
+    const context = captureHassContext(hass);
+    if (this._hassContext && !sameHassContext(this._hassContext, context)) {
+      this._cancelSliderDrag(false); this._suppressNextCoverTap = false; this._skipNextSliderChange = null;
+      this._fallbackAnimationTimers.forEach(timer => window.clearTimeout(timer)); this._fallbackAnimationTimers.clear();
+      window.NodaliaUtils?.clearDeferTimers?.(this);
+      window.NodaliaUtils?.cancelCardZoneTap?.(this);
+      this._detachHostHold?.();
+      if (this.isConnected) this._detachHostHold?.reconnect?.();
+      this._lastRenderSignature = "";
+    }
+    this._hassContext = context;
     const signature = this._getRenderSignature(hass);
     this._hass = hass;
     if (this._activeSliderDrag) {

@@ -703,7 +703,15 @@
     const pending = new Promise((resolve) => {
       const image = new Image();
       image.decoding = "async";
+      let settled = false;
+      const timeout = window.setTimeout(() => {
+        settle(false);
+        image.src = "";
+      }, 4e3);
       const settle = (loaded) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timeout);
         image.onload = null;
         image.onerror = null;
         resolve(loaded);
@@ -721,6 +729,9 @@
     });
     PRELOAD_CACHE.set(nextUrl, pending);
     boundCache(PRELOAD_CACHE);
+    void pending.then((loaded) => {
+      if (!loaded && PRELOAD_CACHE.get(nextUrl) === pending) PRELOAD_CACHE.delete(nextUrl);
+    });
     return pending;
   }
   function sampleArtworkPalette(url) {
@@ -729,8 +740,11 @@
     if (cached) return Promise.resolve(cached);
     const pending = PALETTE_REQUESTS.get(key);
     if (pending) return pending;
-    const request = loadArtworkPalette(key).finally(() => PALETTE_REQUESTS.delete(key));
+    const request = loadArtworkPalette(key).finally(() => {
+      if (PALETTE_REQUESTS.get(key) === request) PALETTE_REQUESTS.delete(key);
+    });
     PALETTE_REQUESTS.set(key, request);
+    boundCache(PALETTE_REQUESTS);
     return request;
   }
   async function loadArtworkPalette(url) {

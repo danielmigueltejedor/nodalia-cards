@@ -1,3 +1,5 @@
+import {readFileSync} from "node:fs";
+const registry=JSON.parse(readFileSync(new URL("../../src/cards/registry.json",import.meta.url),"utf8"));
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
@@ -66,7 +68,7 @@ test("HACS entrypoint creates every visual editor without requesting a sidecar",
   });
 
   expect(result.editorLoaded).toBe(true);
-  expect(result.created.length).toBeGreaterThanOrEqual(24);
+  expect(result.created.map(item=>({tag:item.tag,editor:item.editor})).sort((a,b)=>a.tag.localeCompare(b.tag))).toEqual(registry.map(item=>({tag:item.tag,editor:item.editorTag})).sort((a,b)=>a.tag.localeCompare(b.tag)));
   expect(result.stalled).toEqual([]);
   expect(result.created.every(item => item.shadow)).toBe(true);
   expect(editorChunkRequests).toEqual([]);

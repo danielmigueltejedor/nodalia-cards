@@ -6,7 +6,7 @@ import vm from "node:vm";
 import { fileURLToPath } from "node:url";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
-const source = fs.readFileSync(path.join(root, "nodalia-backend.js"), "utf8");
+const source = fs.readFileSync(process.env.NODALIA_AUDIT_BACKEND_SOURCE || path.join(root, "nodalia-backend.js"), "utf8");
 
 function loadBackend(overrides = {}) {
   const sandbox = { console, window: null, ...overrides };
@@ -345,4 +345,39 @@ test('backend declines a future-only Engine and never sends unavailable v3 comma
   assert.equal((await backend.status(hass)).available,false);
   await assert.rejects(backend.getVacuumSession(hass,'vacuum.robot'),{code:'unsupported_capability'});
   assert.equal(commands.length,1);
+});
+
+const deferred = () => { let resolve, reject; const promise = new Promise((yes,no) => {resolve=yes;reject=no;}); return {promise,resolve,reject}; };
+const handshake = (api=3) => ({available:true,api_version:api,capabilities:['vacuum_sessions']});
+test('backend ignores superseded status responses', async () => {
+  const backend=loadBackend(), requests=[], commands=[];
+  const hass={connection:{},callWS(message){commands.push(message); if(message.type==='nodalia/status'){const request=deferred();requests.push(request);return request.promise;} return Promise.resolve({});}};
+  const old=backend.status(hass), fresh=backend.status(hass,{force:true});
+  requests[1].resolve(handshake());await fresh;requests[0].resolve(handshake(2));await old;
+  await backend.listClimateSchedules(hass);assert.equal(commands.at(-1).api_version,3);
+});
+test('backend does not repopulate a cleared in-flight cache',async()=>{
+ const backend=loadBackend(),request=deferred(),commands=[];
+ const hass={connection:{},callWS(message){commands.push(message);return request.promise;}};
+ const pending=backend.status(hass);backend.clearStatusCache();request.resolve(handshake());await pending;
+ await backend.listClimateSchedules(hass);assert.equal(commands.at(-1).api_version,2);
+});
+for(const change of ['user','auth'])test(`backend isolates in-place ${change} context changes`,async()=>{
+ const backend=loadBackend(),commands=[];
+ const hass={connection:{},auth:{},user:{id:'first',is_admin:true},callWS:async message=>{commands.push(message);return handshake();}};
+ await backend.status(hass);if(change==='user')hass.user.id='second';else hass.auth={};
+ await backend.listClimateSchedules(hass);assert.equal(commands.at(-1).api_version,2);
+});
+test('backend declines a retired v3 mutation', async () => {
+  const backend=loadBackend(), request=deferred(), commands=[];
+  const hass={connection:{},auth:{},user:{id:'first',is_admin:true},callWS(message){commands.push(message);return message.type==='nodalia/status'?request.promise:Promise.resolve({});}};
+  const mutation=backend.setVacuumSession(hass,'vacuum.robot',{},0);
+  hass.auth={};hass.user.is_admin=false;request.resolve(handshake());
+  await assert.rejects(mutation,{code:'stale_context'});
+  assert.equal(commands.filter(message=>message.type==='nodalia/vacuum/session/set').length,0);
+});
+test('backend rejects malformed explicit API ranges rather than guessing v3', async () => {
+  for(const range of [{api_min_version:0,api_max_version:3},{api_min_version:false,api_max_version:3},{api_min_version:2,api_max_version:Infinity},{api_min_version:2.5,api_max_version:3},{api_min_version:4,api_max_version:3}]){
+    const value=await loadBackend().status({callWS:async()=>({...handshake(),...range})});assert.equal(value.available,false,JSON.stringify(range));
+  }
 });

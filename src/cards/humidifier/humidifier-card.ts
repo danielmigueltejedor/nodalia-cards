@@ -1,3 +1,5 @@
+import { captureHassContext, sameHassContext } from "../../shared/hass-context";
+import type { HassContext } from "../../shared/hass-context";
 import { createCardLayoutNotifier } from "../../shared/card-layout-notifier";
 import {
   CARD_TAG,
@@ -45,6 +47,7 @@ export function loadNodaliaHumidifierCard(): CustomElementConstructor {
     return _lazyNodaliaHumidifierCard;
   }
 class NodaliaHumidifierCard extends HTMLElement {
+  declare private _hassContext: HassContext | null;
   private _cardLayoutNotifier?: ReturnType<typeof createCardLayoutNotifier>;
   private _config!: ReturnType<typeof normalizeConfig>;
   private _hass!: HomeAssistant | null;
@@ -103,6 +106,7 @@ class NodaliaHumidifierCard extends HTMLElement {
   _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig({});
     this._hass = null;
+    this._hassContext = null;
     this._optimisticToggle = null;
     this._optimisticToggleTimer = 0;
     this._optimisticVisualSettle = null;
@@ -332,6 +336,19 @@ class NodaliaHumidifierCard extends HTMLElement {
   }
 
   set hass(hass: HomeAssistant) {
+    const context = captureHassContext(hass);
+    if (this._hassContext && !sameHassContext(this._hassContext, context)) {
+      this._releaseViewWork(); this._cancelSliderDrag(false); this._clearOptimisticToggleState(); this._clearOptimisticVisualSettle();
+      this._draftHumidity.clear(); this._lastKnownOnState.clear(); this._lastEntityRevision = "";
+      this._powerTransition = this._controlsTransition = this._panelTransition = null;
+      this._suppressNextHumidifierTap = false; this._skipNextSliderChange = null;
+      window.NodaliaUtils?.clearDeferTimers?.(this);
+      window.NodaliaUtils?.cancelCardZoneTap?.(this);
+      this._detachHostHold?.();
+      if (this.isConnected) this._detachHostHold?.reconnect?.();
+      this._lastRenderSignature = "";
+    }
+    this._hassContext = context;
     this._hass = hass;
     const entityId = this._config?.entity || "";
     if (entityId && this._draftHumidity.has(entityId) && !this._activeSliderDrag) {

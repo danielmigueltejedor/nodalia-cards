@@ -19,14 +19,11 @@ async function mount(page,rows) {
 }
 
 async function assertContained(page,rows) {
- await expect.poll(()=>page.locator('nodalia-graph-card').evaluateAll(cards=>cards.every((host,index)=>{
+ await expect.poll(()=>page.locator('nodalia-graph-card').evaluateAll((cards,rows)=>cards.every((host,index)=>{
   const card=host.shadowRoot.querySelector('ha-card').getBoundingClientRect();const cell=host.parentElement.parentElement.getBoundingClientRect();const chart=host.shadowRoot.querySelector('.graph-card__chart-wrap').getBoundingClientRect();
   const next=cards[index+1]?.shadowRoot.querySelector('ha-card').getBoundingClientRect();
-  return card.height>150&&card.bottom<=cell.bottom+1&&chart.height>30&&chart.bottom<=card.bottom+1&&(!next||card.bottom+7<=next.top);
- }))).toBe(true);
- if(rows==='auto')for(const card of await page.locator('nodalia-graph-card').all()){
-  const height=await card.locator('.graph-card__chart-wrap').evaluate(node=>node.getBoundingClientRect().height);expect(height).toBeGreaterThanOrEqual(136);expect(height).toBeLessThanOrEqual(172);
- }
+  return card.height>150&&card.bottom<=cell.bottom+1&&chart.height>30&&chart.bottom<=card.bottom+1&&(!next||card.bottom+7<=next.top)&& (rows!=='auto'||chart.height>=136&&chart.height<=172);
+ }),rows)).toBe(true);
 }
 
 for(const rows of ['auto',4,8])test(`Graph stays inside ${rows} Sections rows before and after history, resizing and reconnect`,async({page})=>{

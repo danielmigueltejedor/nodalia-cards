@@ -624,3 +624,12 @@ test("Summary keeps media on home and embeds the native Lock card in security", 
   await expect(summary.locator("nodalia-media-player")).toHaveCount(1);
   await expect(summary.locator('[data-room-action="nav:media"]')).toHaveCount(0);
 });
+
+for(const change of ['user','auth','connection'])test(`Lock retires a pending command and gesture after ${change} changes`,async({page})=>{
+ const card=await mountLock(page,{},'unlocked');
+ await page.evaluate(()=>{window.hass.connection={};window.hass.auth={};window.hass.user={id:'first',is_admin:true};window.card.hass=window.hass;window.hass.callService=()=>new Promise((_,reject)=>window.rejectLock=reject);});
+ await card.getByRole('button',{name:'Lock',exact:true}).click();await expect(card.getByRole('button')).toBeDisabled();
+ await page.evaluate(change=>{if(change==='user')window.hass.user.id='second';else window.hass[change]={};window.card.hass=window.hass;},change);
+ await expect(card.getByRole('button')).toBeEnabled();await page.evaluate(()=>window.rejectLock(new Error('Retired command')));
+ await expect(card.locator('.error')).toHaveCount(0);expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+});

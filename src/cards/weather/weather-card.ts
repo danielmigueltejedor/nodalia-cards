@@ -55,6 +55,9 @@ export function loadNodaliaWeatherCard(): CustomElementConstructor {
     return _lazyNodaliaWeatherCard;
   }
 class NodaliaWeatherCard extends HTMLElement {
+  declare private _contextConnection: HomeAssistant["connection"];
+  declare private _contextAuth: HomeAssistant["auth"];
+  declare private _contextUser: string;
   private _config!: ReturnType<typeof normalizeConfig>;
   private _hass!: HomeAssistant | null;
   private _lastRenderSignature!: string;
@@ -96,6 +99,9 @@ class NodaliaWeatherCard extends HTMLElement {
   _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig(STUB_CONFIG);
     this._hass = null;
+    this._contextConnection = undefined;
+    this._contextAuth = undefined;
+    this._contextUser = "";
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
@@ -213,7 +219,13 @@ class NodaliaWeatherCard extends HTMLElement {
   }
 
   set hass(hass: HomeAssistant) {
-    if (hass.connection !== this._hass?.connection) {
+    const user = `${Boolean(hass)}:${hass?.user?.id || ""}:${hass?.user?.is_admin === true}`;
+    const changed = this._contextConnection !== hass?.connection || this._contextAuth !== hass?.auth || this._contextUser !== user;
+    this._contextConnection = hass?.connection;
+    this._contextAuth = hass?.auth;
+    this._contextUser = user;
+    if (changed) {
+      this._unsubscribeForecast();
       this._forecastEvents = {};
       this._forecastPopup = null;
       this._forecastHoverPreview = null;

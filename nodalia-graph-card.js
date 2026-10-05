@@ -616,6 +616,7 @@
         this._hass = null;
         this._historyConnection = void 0;
         this._historyUserKey = "";
+        this._historyAuth = void 0;
         this._hasHass = false;
         this._historySeries = [];
         this._historyKey = "";
@@ -803,10 +804,11 @@
       }
       set hass(hass) {
         const userKey = `${hass?.user?.id || ""}:${hass?.user?.is_admin === true}`;
-        const changedContext = this._hasHass !== Boolean(hass) || this._historyConnection !== hass?.connection || this._historyUserKey !== userKey;
+        const changedContext = this._hasHass !== Boolean(hass) || this._historyConnection !== hass?.connection || this._historyUserKey !== userKey || this._historyAuth !== hass?.auth;
         this._hasHass = Boolean(hass);
         this._historyConnection = hass?.connection;
         this._historyUserKey = userKey;
+        this._historyAuth = hass?.auth;
         if (changedContext) {
           this._resetViewContext();
           this._historySeries = [];

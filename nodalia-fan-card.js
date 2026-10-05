@@ -319,6 +319,16 @@
     return normalized;
   }
 
+  // src/shared/hass-context.ts
+  var captureHassContext = (hass) => ({
+    present: Boolean(hass),
+    connection: hass?.connection,
+    auth: hass?.auth,
+    user: hass?.user?.id || "",
+    admin: hass?.user?.is_admin === true
+  });
+  var sameHassContext = (a, b) => a.present === b.present && a.connection === b.connection && a.auth === b.auth && a.user === b.user && a.admin === b.admin;
+
   // src/shared/card-layout-notifier.ts
   function createCardLayoutNotifier(host) {
     let timer = 0;
@@ -656,8 +666,10 @@
         this.attachShadow({ mode: "open" });
         this._config = normalizeConfig({});
         this._hass = null;
+        this._hassContext = null;
         this._resizeFrame = 0;
         this._panelWork = createViewAnimationWork();
+        this._bounceFrames = /* @__PURE__ */ new Set();
         this._fallbackTimers = this._panelWork.timers;
         this._panelAnimationCancels = this._panelWork.cancels;
         this._optimisticToggle = null;
@@ -820,6 +832,25 @@
         this._render();
       }
       set hass(hass) {
+        const context = captureHassContext(hass);
+        if (this._hassContext && !sameHassContext(this._hassContext, context)) {
+          this._releaseViewWork();
+          this._cancelSliderDrag(false);
+          this._clearOptimisticToggleState();
+          this._clearOptimisticVisualSettle();
+          this._draftPercentage.clear();
+          this._lastKnownOnState.clear();
+          this._lastEntityRevision = "";
+          this._powerTransition = this._controlsTransition = this._presetPanelTransition = null;
+          this._suppressNextFanTap = false;
+          this._skipNextSliderChange = null;
+          window.NodaliaUtils?.clearDeferTimers?.(this);
+          window.NodaliaUtils?.cancelCardZoneTap?.(this);
+          this._detachHostHold?.();
+          if (this.isConnected) this._detachHostHold?.reconnect?.();
+          this._lastRenderSignature = "";
+        }
+        this._hassContext = context;
         this._hass = hass;
         const entityId = this._config?.entity || "";
         if (entityId && this._draftPercentage.has(entityId) && !this._activeSliderDrag) {
@@ -1401,13 +1432,17 @@
         if (!selector || !this.shadowRoot || typeof window === "undefined") {
           return;
         }
-        window.requestAnimationFrame(() => {
+        const generation = this._panelWork.generation;
+        const frame = window.requestAnimationFrame(() => {
+          this._bounceFrames.delete(frame);
+          if (!this.isConnected || generation !== this._panelWork.generation) return;
           const button = this.shadowRoot?.querySelector(selector);
           if (!(button instanceof HTMLElement)) {
             return;
           }
           this._triggerButtonBounce(button);
         });
+        this._bounceFrames.add(frame);
       }
       _setFanState(service, data = {}) {
         if (!this._hass || !this._config?.entity) {
@@ -1750,6 +1785,8 @@
         cancelViewPanelAnimations(this._panelWork);
       }
       _releaseViewWork() {
+        this._bounceFrames.forEach((frame) => window.cancelAnimationFrame(frame));
+        this._bounceFrames.clear();
         releaseViewAnimationWork(this._panelWork);
         window.NodaliaUtils?.clearDeferTimers?.(this);
       }

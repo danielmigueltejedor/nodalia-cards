@@ -675,6 +675,9 @@ ${metadata}` : metadata;
         this._weatherForecastConnection = void 0;
         this._config = normalizeConfig(DEFAULT_CONFIG);
         this._hass = null;
+        this._contextConnection = void 0;
+        this._contextAuth = void 0;
+        this._contextUser = "";
         this._events = [];
         this._loading = false;
         this._error = "";
@@ -941,8 +944,11 @@ ${metadata}` : metadata;
         void this._refreshEvents();
       }
       set hass(hass) {
-        const previous = this._hass;
-        const changed = previous?.connection !== hass?.connection || previous?.user?.id !== hass?.user?.id || previous?.user?.is_admin !== hass?.user?.is_admin || Boolean(previous) !== Boolean(hass);
+        const user = `${Boolean(hass)}:${hass?.user?.id || ""}:${hass?.user?.is_admin === true}`;
+        const changed = this._contextConnection !== hass?.connection || this._contextAuth !== hass?.auth || this._contextUser !== user;
+        this._contextConnection = hass?.connection;
+        this._contextAuth = hass?.auth;
+        this._contextUser = user;
         this._hass = hass;
         if (changed) {
           this._contextGeneration += 1;

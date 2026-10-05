@@ -1,3 +1,5 @@
+import { captureHassContext, sameHassContext } from "../../shared/hass-context";
+import type { HassContext } from "../../shared/hass-context";
 import { createCardLayoutNotifier } from "../../shared/card-layout-notifier";
 import {
   ALLOWED_DOUBLE_TAP_ACTIONS,
@@ -46,6 +48,7 @@ export function loadNodaliaFanCard(): CustomElementConstructor {
     return _lazyNodaliaFanCard;
   }
 class NodaliaFanCard extends HTMLElement {
+  declare private _hassContext: HassContext | null;
   private _cardLayoutNotifier?: ReturnType<typeof createCardLayoutNotifier>;
   private _config!: ReturnType<typeof normalizeConfig>;
   private _hass!: HomeAssistant | null;
@@ -77,6 +80,7 @@ class NodaliaFanCard extends HTMLElement {
   private _detachHostHold!: HostPointerHoldBinding;
   private _resizeFrame!: number;
   private _fallbackTimers!: Set<number>;
+  private _bounceFrames!: Set<number>;
   private _panelWork!: ReturnType<typeof createViewAnimationWork>;
   private _panelAnimationCancels!: Set<() => void>;
   private _lastIdleSliderHapticValue!: number | undefined;
@@ -111,8 +115,10 @@ class NodaliaFanCard extends HTMLElement {
   _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig({});
     this._hass = null;
+    this._hassContext = null;
     this._resizeFrame = 0;
     this._panelWork = createViewAnimationWork();
+    this._bounceFrames = new Set();
     this._fallbackTimers = this._panelWork.timers;
     this._panelAnimationCancels = this._panelWork.cancels;
     this._optimisticToggle = null;
@@ -291,6 +297,19 @@ class NodaliaFanCard extends HTMLElement {
   }
 
   set hass(hass: HomeAssistant) {
+    const context = captureHassContext(hass);
+    if (this._hassContext && !sameHassContext(this._hassContext, context)) {
+      this._releaseViewWork(); this._cancelSliderDrag(false); this._clearOptimisticToggleState(); this._clearOptimisticVisualSettle();
+      this._draftPercentage.clear(); this._lastKnownOnState.clear(); this._lastEntityRevision = "";
+      this._powerTransition = this._controlsTransition = this._presetPanelTransition = null;
+      this._suppressNextFanTap = false; this._skipNextSliderChange = null;
+      window.NodaliaUtils?.clearDeferTimers?.(this);
+      window.NodaliaUtils?.cancelCardZoneTap?.(this);
+      this._detachHostHold?.();
+      if (this.isConnected) this._detachHostHold?.reconnect?.();
+      this._lastRenderSignature = "";
+    }
+    this._hassContext = context;
     this._hass = hass;
     const entityId = this._config?.entity || "";
     if (entityId && this._draftPercentage.has(entityId) && !this._activeSliderDrag) {
@@ -1020,7 +1039,10 @@ class NodaliaFanCard extends HTMLElement {
       return;
     }
 
-    window.requestAnimationFrame(() => {
+    const generation = this._panelWork.generation;
+    const frame = window.requestAnimationFrame(() => {
+      this._bounceFrames.delete(frame);
+      if (!this.isConnected || generation !== this._panelWork.generation) return;
       const button = this.shadowRoot?.querySelector(selector);
       if (!(button instanceof HTMLElement)) {
         return;
@@ -1028,6 +1050,7 @@ class NodaliaFanCard extends HTMLElement {
 
       this._triggerButtonBounce(button);
     });
+    this._bounceFrames.add(frame);
   }
 
   _setFanState(service: string, data: Record<string, unknown> = {}) {
@@ -1420,6 +1443,8 @@ class NodaliaFanCard extends HTMLElement {
   }
 
   _releaseViewWork() {
+    this._bounceFrames.forEach(frame => window.cancelAnimationFrame(frame));
+    this._bounceFrames.clear();
     releaseViewAnimationWork(this._panelWork);
     window.NodaliaUtils?.clearDeferTimers?.(this);
   }

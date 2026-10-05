@@ -459,6 +459,16 @@
     return normalized;
   }
 
+  // src/shared/hass-context.ts
+  var captureHassContext = (hass) => ({
+    present: Boolean(hass),
+    connection: hass?.connection,
+    auth: hass?.auth,
+    user: hass?.user?.id || "",
+    admin: hass?.user?.is_admin === true
+  });
+  var sameHassContext = (a, b) => a.present === b.present && a.connection === b.connection && a.auth === b.auth && a.user === b.user && a.admin === b.admin;
+
   // src/shared/home-assistant-services.ts
   function isServiceDataObject(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -509,6 +519,7 @@
         this.attachShadow({ mode: "open" });
         this._config = normalizeConfig(STUB_CONFIG);
         this._hass = null;
+        this._hassContext = null;
         this._lastRenderSignature = "";
         this._suppressNextInsigniaTap = false;
         this._onClick = this._onClick.bind(this);
@@ -548,6 +559,14 @@
         this._render();
       }
       set hass(hass) {
+        const context = captureHassContext(hass);
+        if (this._hassContext && !sameHassContext(this._hassContext, context)) {
+          this._detachHostHold?.();
+          if (this.isConnected) this._detachHostHold?.reconnect?.();
+          this._suppressNextInsigniaTap = false;
+          this._lastRenderSignature = "";
+        }
+        this._hassContext = context;
         const nextSignature = this._getRenderSignature(hass);
         this._hass = hass;
         if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {

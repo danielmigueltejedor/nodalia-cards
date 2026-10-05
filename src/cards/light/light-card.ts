@@ -1,3 +1,5 @@
+import { captureHassContext, sameHassContext } from "../../shared/hass-context";
+import type { HassContext } from "../../shared/hass-context";
 import { createCardLayoutNotifier } from "../../shared/card-layout-notifier";
 import {
   CARD_TAG,
@@ -53,6 +55,7 @@ export function loadNodaliaLightCard(): CustomElementConstructor {
     return _lazyNodaliaLightCard;
   }
 class NodaliaLightCard extends HTMLElement {
+  declare private _hassContext: HassContext | null;
   private _cardLayoutNotifier?: ReturnType<typeof createCardLayoutNotifier>;
   private _config!: ReturnType<typeof normalizeConfig>;
   private _hass!: HomeAssistant | null;
@@ -127,6 +130,7 @@ class NodaliaLightCard extends HTMLElement {
   _nodaliaConstruct() {this.attachShadow({ mode: "open" });
     this._config = normalizeConfig({});
     this._hass = null;
+    this._hassContext = null;
     this._draftBrightness = new Map();
     this._draftTemperature = new Map();
     this._draftHue = new Map();
@@ -364,6 +368,20 @@ class NodaliaLightCard extends HTMLElement {
   }
 
   set hass(hass: HomeAssistant) {
+    const context = captureHassContext(hass);
+    if (this._hassContext && !sameHassContext(this._hassContext, context)) {
+      this._releaseViewWork(); this._cancelSliderDrag(false); this._clearModeSwitchTransition();
+      this._clearOptimisticVisualSettle(); this._clearOptimisticTurnOnState(); this._clearOptimisticTurnOffState();
+      this._draftBrightness.clear(); this._draftTemperature.clear(); this._draftHue.clear(); this._lastKnownOnState.clear();
+      this._lastEntityRevision = ""; this._powerTransition = this._controlsTransition = null;
+      this._suppressNextLightTap = false; this._skipNextSliderChange = null;
+      window.NodaliaUtils?.clearDeferTimers?.(this);
+      window.NodaliaUtils?.cancelCardZoneTap?.(this);
+      this._detachHostHold?.();
+      if (this.isConnected) this._detachHostHold?.reconnect?.();
+      this._lastRenderSignature = "";
+    }
+    this._hassContext = context;
     this._hass = hass;
     const actualState = this._getActualState();
     const entityId = this._config?.entity || "";

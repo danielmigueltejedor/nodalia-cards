@@ -97,6 +97,7 @@ class NodaliaGraphCard extends HTMLElement {
   declare private _pendingHistoryKey: string;
   declare private _historyConnection: HomeAssistant["connection"];
   declare private _historyUserKey: string;
+  declare private _historyAuth: HomeAssistant["auth"];
   declare private _hasHass: boolean;
 
   static async getConfigElement() {
@@ -153,6 +154,7 @@ class NodaliaGraphCard extends HTMLElement {
     this._hass = null;
     this._historyConnection = undefined;
     this._historyUserKey = "";
+    this._historyAuth = undefined;
     this._hasHass = false;
     this._historySeries = [];
     this._historyKey = "";
@@ -355,10 +357,11 @@ class NodaliaGraphCard extends HTMLElement {
   set hass(hass: HomeAssistant | null) {
     const userKey = `${hass?.user?.id || ""}:${hass?.user?.is_admin === true}`;
     const changedContext = this._hasHass !== Boolean(hass)
-      || this._historyConnection !== hass?.connection || this._historyUserKey !== userKey;
+      || this._historyConnection !== hass?.connection || this._historyUserKey !== userKey || this._historyAuth !== hass?.auth;
     this._hasHass = Boolean(hass);
     this._historyConnection = hass?.connection;
     this._historyUserKey = userKey;
+    this._historyAuth = hass?.auth;
     if (changedContext) {
       this._resetViewContext();
       this._historySeries = [];

@@ -333,6 +333,16 @@
     return normalized;
   }
 
+  // src/shared/hass-context.ts
+  var captureHassContext = (hass) => ({
+    present: Boolean(hass),
+    connection: hass?.connection,
+    auth: hass?.auth,
+    user: hass?.user?.id || "",
+    admin: hass?.user?.is_admin === true
+  });
+  var sameHassContext = (a, b) => a.present === b.present && a.connection === b.connection && a.auth === b.auth && a.user === b.user && a.admin === b.admin;
+
   // src/shared/card-layout-notifier.ts
   function createCardLayoutNotifier(host) {
     let timer = 0;
@@ -604,6 +614,7 @@
         this.attachShadow({ mode: "open" });
         this._config = normalizeConfig(STUB_CONFIG);
         this._hass = null;
+        this._hassContext = null;
         this._lastRenderSignature = "";
         this._activeSliderDrag = null;
         this._skipNextSliderChange = null;
@@ -714,6 +725,20 @@
         this._render();
       }
       set hass(hass) {
+        const context = captureHassContext(hass);
+        if (this._hassContext && !sameHassContext(this._hassContext, context)) {
+          this._cancelSliderDrag(false);
+          this._suppressNextCoverTap = false;
+          this._skipNextSliderChange = null;
+          this._fallbackAnimationTimers.forEach((timer) => window.clearTimeout(timer));
+          this._fallbackAnimationTimers.clear();
+          window.NodaliaUtils?.clearDeferTimers?.(this);
+          window.NodaliaUtils?.cancelCardZoneTap?.(this);
+          this._detachHostHold?.();
+          if (this.isConnected) this._detachHostHold?.reconnect?.();
+          this._lastRenderSignature = "";
+        }
+        this._hassContext = context;
         const signature = this._getRenderSignature(hass);
         this._hass = hass;
         if (this._activeSliderDrag) {

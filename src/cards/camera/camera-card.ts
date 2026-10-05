@@ -30,7 +30,6 @@ import {
 
 import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
 import { invokeHassService } from "../../shared/home-assistant-services";
-import type { CameraHass } from "./camera-helpers";
 import { isLovelaceEditorElement } from "../../shared/card-elements";
 import type { LovelaceEditorElement } from "../../shared/card-elements";
 
@@ -61,13 +60,14 @@ class NodaliaCameraCard extends HTMLElement {
   declare private _expandedStreamMountId: number;
   declare private _expandedStreamNode: HTMLElement | null;
   declare private _expandedPortal: HTMLElement | null;
-  declare private _go2rtcPrefetchOwner: CameraHass["connection"] | null;
+  declare private _go2rtcPrefetchOwner: unknown;
   declare private _go2rtcPrefetchSignature: string;
   declare private _contextGeneration: number;
   declare private _viewGeneration: number;
   declare private _prefetchGeneration: number;
   declare private _retryTimers: Map<number, () => void>;
   declare private _hassContextOwner: unknown;
+  declare private _hassContextAuth: HomeAssistant["auth"];
   declare private _hassUserKey: string;
   declare private _detachPrimaryHold: () => void;
   declare private _suppressNextPrimaryClick: boolean;
@@ -97,6 +97,7 @@ class NodaliaCameraCard extends HTMLElement {
     this._prefetchGeneration = 0;
     this._retryTimers = new Map();
     this._hassContextOwner = null;
+    this._hassContextAuth = undefined;
     this._hassUserKey = "";
     this._detachPrimaryHold = () => {};
     this._suppressNextPrimaryClick = false;
@@ -182,7 +183,7 @@ class NodaliaCameraCard extends HTMLElement {
     const previousHass = this._hass;
     const owner = hass?.connection || hass?.auth || null;
     const userKey = `${Boolean(hass)}:${hass?.user?.id || ""}:${hass?.user?.is_admin === true}`;
-    const changedContext = owner !== this._hassContextOwner || userKey !== this._hassUserKey;
+    const changedContext = owner !== this._hassContextOwner || userKey !== this._hassUserKey || this._hassContextAuth !== hass?.auth;
     if (changedContext) {
       this._invalidateCameraContext();
       this._failedImageUrls.clear(); this._failedCameraTokens.clear();
@@ -193,6 +194,7 @@ class NodaliaCameraCard extends HTMLElement {
       }
     }
     this._hassContextOwner = owner;
+    this._hassContextAuth = hass?.auth;
     this._hassUserKey = userKey;
     this._hass = hass;
     if (changedContext) this._bindPrimaryHold();

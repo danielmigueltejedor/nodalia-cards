@@ -668,8 +668,11 @@
     if (cached) return Promise.resolve(cached);
     const pending = PALETTE_REQUESTS.get(key);
     if (pending) return pending;
-    const request = loadArtworkPalette(key).finally(() => PALETTE_REQUESTS.delete(key));
+    const request = loadArtworkPalette(key).finally(() => {
+      if (PALETTE_REQUESTS.get(key) === request) PALETTE_REQUESTS.delete(key);
+    });
     PALETTE_REQUESTS.set(key, request);
+    boundCache(PALETTE_REQUESTS);
     return request;
   }
   async function loadArtworkPalette(url) {

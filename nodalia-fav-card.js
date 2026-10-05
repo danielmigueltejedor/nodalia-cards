@@ -185,6 +185,16 @@
     return normalized;
   }
 
+  // src/shared/hass-context.ts
+  var captureHassContext = (hass) => ({
+    present: Boolean(hass),
+    connection: hass?.connection,
+    auth: hass?.auth,
+    user: hass?.user?.id || "",
+    admin: hass?.user?.is_admin === true
+  });
+  var sameHassContext = (a, b) => a.present === b.present && a.connection === b.connection && a.auth === b.auth && a.user === b.user && a.admin === b.admin;
+
   // src/shared/card-layout-notifier.ts
   function createCardLayoutNotifier(host) {
     let timer = 0;
@@ -645,6 +655,7 @@
         this.attachShadow({ mode: "open" });
         this._config = null;
         this._hass = null;
+        this._hassContext = null;
         this._cardWidth = 0;
         this._layout = "inline";
         this._alarmMenuOpen = false;
@@ -716,6 +727,20 @@
         this._render();
       }
       set hass(hass) {
+        const context = captureHassContext(hass);
+        if (this._hassContext && !sameHassContext(this._hassContext, context)) {
+          this._alarmMenuOpen = false;
+          this._alarmCodeInput = "";
+          this._lastAlarmPanelRenderedOpen = null;
+          this._applyHostGridSpan(false);
+          window.NodaliaUtils?.clearDeferTimers?.(this);
+          this._fallbackLayoutTimers.forEach((timer) => window.clearTimeout(timer));
+          this._fallbackLayoutTimers.clear();
+          if (this._layoutFrame) cancelAnimationFrame(this._layoutFrame);
+          this._layoutFrame = 0;
+          this._lastRenderSignature = "";
+        }
+        this._hassContext = context;
         this._hass = hass;
         if (!this.isConnected) {
           return;

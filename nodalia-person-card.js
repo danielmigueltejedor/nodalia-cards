@@ -206,6 +206,16 @@
     return normalized;
   }
 
+  // src/shared/hass-context.ts
+  var captureHassContext = (hass) => ({
+    present: Boolean(hass),
+    connection: hass?.connection,
+    auth: hass?.auth,
+    user: hass?.user?.id || "",
+    admin: hass?.user?.is_admin === true
+  });
+  var sameHassContext = (a, b) => a.present === b.present && a.connection === b.connection && a.auth === b.auth && a.user === b.user && a.admin === b.admin;
+
   // src/shared/numeric-values.ts
   function parseFiniteNumericValue(value) {
     if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
@@ -380,6 +390,7 @@
         this.attachShadow({ mode: "open" });
         this._config = normalizeConfig(STUB_CONFIG);
         this._hass = null;
+        this._hassContext = null;
         window.NodaliaUtils?.clearDeferTimers?.(this);
         this._lastRenderSignature = "";
         this._animateContentOnNextRender = true;
@@ -460,6 +471,19 @@
         this._render();
       }
       set hass(hass) {
+        const context = captureHassContext(hass);
+        if (this._hassContext && !sameHassContext(this._hassContext, context)) {
+          this._detachHostHold?.();
+          if (this.isConnected) this._detachHostHold?.reconnect?.();
+          this._suppressNextPersonTap = false;
+          window.NodaliaUtils?.cancelCardZoneTap?.(this);
+          this._imagePreloadCancels.forEach((cancel) => cancel());
+          this._displayPictureUrl = "";
+          this._readyImageUrls.clear();
+          this._failedImageUrls.clear();
+          this._lastRenderSignature = "";
+        }
+        this._hassContext = context;
         this._hass = hass;
         const nextSignature = this._getRenderSignature(hass);
         if (nextSignature && nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
@@ -762,7 +786,7 @@
         const entityId = this._config?.entity || "";
         const state = entityId ? hass?.states?.[entityId] || null : null;
         if (!entityId || !state) {
-          return `empty:${this._config?.entity || ""}`;
+          return `empty:${this._config?.entity || ""}:${window.NodaliaI18n?.resolveLanguage?.(hass, String(this._config.language || "auto")) || "en"}`;
         }
         const attrs = state.attributes || {};
         const zoneState = this._getMatchingZoneState(state);
@@ -1117,7 +1141,7 @@
         }
         const state = this._getState();
         if (!state) {
-          this._lastRenderSignature = `empty:${config.entity || ""}`;
+          this._lastRenderSignature = this._getRenderSignature();
           this.shadowRoot.innerHTML = window.NodaliaUtils?.renderCardEmptyStateDocument?.(
             this._renderEmptyState(),
             { card: (config || DEFAULT_CONFIG).styles?.card }

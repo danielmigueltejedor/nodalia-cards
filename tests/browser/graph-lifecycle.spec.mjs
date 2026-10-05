@@ -146,3 +146,12 @@ test('Graph cancels native holds and animation fallback work on cancel, configur
   await page.clock.runFor(1000);expect(await page.evaluate(()=>window.graphActions)).toEqual([]);
   expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
 });
+
+test('Graph retires pending history on auth rotation even on the same HA connection',async({page})=>{
+ const card=await mount(page,{deferred:true});await expect.poll(()=>page.evaluate(()=>window.graphRequests.length)).toBe(2);
+ await page.evaluate(()=>{window.graphHass.auth={};window.graphCard.hass=window.graphHass;});
+ await expect.poll(()=>page.evaluate(()=>window.graphRequests.length)).toBe(4);
+ await page.evaluate(()=>{window.graphRequests[0].reject(new Error('Retired credentials'));window.graphRequests[1].resolve(window.graphRows('sensor.two'));});
+ expect(await page.evaluate(()=>window.graphRest.length)).toBe(0);await resolveHistory(page,2);
+ await expect(card.locator('.graph-card__chart-series-line')).toHaveCount(2);expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+});

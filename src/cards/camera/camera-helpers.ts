@@ -1,10 +1,13 @@
+import { captureHassContext, sameHassContext } from "../../shared/hass-context";
+import type { HassContext } from "../../shared/hass-context";
 import { appendUrlQueryParam } from "../../shared/url-query";
 import type { HassEntity, HomeAssistant } from "../../core/types/home-assistant";
 export { getStubEntityId, applyStubEntity } from "../../shared/editor-entity-helpers";
 export { setByPath } from "../../shared/editor-array-paths";
 export interface CameraHass {
-  connection?: unknown;
-  auth?: unknown;
+  connection?: HomeAssistant["connection"];
+  auth?: HomeAssistant["auth"];
+  user?: HomeAssistant["user"];
   callWS?: HomeAssistant["callWS"];
   callService?: HomeAssistant["callService"];
   hassUrl?: (path: string) => string;
@@ -415,6 +418,7 @@ export function compactCameraStreams(rawStreams: unknown = []) {
 }
 
 export const SIGNED_PATH_CACHE = new WeakMap<object, Map<string, SignedPathEntry>>();
+const signedPathContexts = new WeakMap<object, HassContext>();
 
 export function signedPathCacheForHass(hass: CameraHass | null | undefined) {
   const owner = hass?.connection || hass?.auth || hass;
@@ -422,7 +426,10 @@ export function signedPathCacheForHass(hass: CameraHass | null | undefined) {
     return null;
   }
   let cache = SIGNED_PATH_CACHE.get(owner);
-  if (!cache) {
+  const context = captureHassContext(hass);
+  const previous = signedPathContexts.get(owner);
+  if (!cache || !previous || !sameHassContext(previous, context)) {
+    signedPathContexts.set(owner, context);
     cache = new Map<string, SignedPathEntry>();
     SIGNED_PATH_CACHE.set(owner, cache);
   }
@@ -453,6 +460,10 @@ export async function signHomeAssistantPath(hass: CameraHass | null | undefined,
       ? hass.hassUrl(signedPath)
       : new URL(signedPath, window.location.origin).toString();
   });
+  if (cache && cache.size >= 64 && !cache.has(cacheKey)) {
+    const oldest = cache.keys().next().value;
+    if (oldest !== undefined) cache.delete(oldest);
+  }
   cache?.set(cacheKey, {
     expiresAt: Date.now() + Math.max(0, Math.min(expires, Math.max(60, expires - 300))) * 1000,
     promise,

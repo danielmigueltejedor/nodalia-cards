@@ -8,7 +8,7 @@ function load(extra = {}, source = "camera-helpers") {
   box.window = box; vm.createContext(box);
   vm.runInContext(fs.readFileSync("nodalia-utils.js", "utf8"), box);
   vm.runInContext(fs.readFileSync("nodalia-camera-stream-model.js", "utf8"), box);
-  vm.runInContext(buildSync({ entryPoints: [`src/cards/camera/${source}.ts`], bundle: true, write: false, format: "iife", globalName: "api" }).outputFiles[0].text, box);
+  vm.runInContext(source === "camera-helpers" && process.env.NODALIA_AUDIT_CAMERA_SOURCE ? fs.readFileSync(process.env.NODALIA_AUDIT_CAMERA_SOURCE, "utf8") : buildSync({ entryPoints: [`src/cards/camera/${source}.ts`], bundle: true, write: false, format: "iife", globalName: "api" }).outputFiles[0].text, box);
   return box.api;
 }
 const api = load();
@@ -92,4 +92,16 @@ test("Camera preview age and service-data helpers guard malformed input while pr
 test("Camera appends rather than replaces query keys while preserving URL fragments", () => {
   assert.equal(api.appendQueryParam("/preview?token=one#frame", "token", "two"), "/preview?token=one&token=two#frame");
   assert.equal(api.appendQueryParam("/preview#frame", "cache", 0), "/preview?cache=0#frame");
+});
+
+for(const change of ['user','auth'])test(`Camera signed paths never reuse a rotated ${change} context`, async () => {
+ const checked=load();let calls=0;
+ const hass={connection:{},auth:{},user:{id:'first',is_admin:true},callWS:async()=>({path:'/signed/'+(++calls)})};
+ const first=await checked.signHomeAssistantPath(hass,'/one');if(change==='user')hass.user.id='second';else hass.auth={};
+ assert.notEqual(await checked.signHomeAssistantPath(hass,'/one'),first);assert.equal(calls,2);
+});
+test('Camera signed paths keep a bounded per-owner cache',async()=>{
+ const checked=load(),hass={connection:{},callWS:async()=>({path:'/signed'})};
+ for(let n=0;n<150;n++)await checked.signHomeAssistantPath(hass,'/stream/'+n);
+ assert.ok(checked.signedPathCacheForHass(hass).size<=64);
 });

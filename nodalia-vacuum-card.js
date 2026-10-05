@@ -272,6 +272,16 @@
     return normalized;
   }
 
+  // src/shared/hass-context.ts
+  var captureHassContext = (hass) => ({
+    present: Boolean(hass),
+    connection: hass?.connection,
+    auth: hass?.auth,
+    user: hass?.user?.id || "",
+    admin: hass?.user?.is_admin === true
+  });
+  var sameHassContext = (a, b) => a.present === b.present && a.connection === b.connection && a.auth === b.auth && a.user === b.user && a.admin === b.admin;
+
   // src/shared/card-layout-notifier.ts
   function createCardLayoutNotifier(host) {
     let timer = 0;
@@ -592,6 +602,7 @@
         this.attachShadow({ mode: "open" });
         this._config = normalizeConfig({});
         this._hass = null;
+        this._hassContext = null;
         this._resizeFrame = 0;
         this._panelWork = createViewAnimationWork();
         this._fallbackTimers = this._panelWork.timers;
@@ -735,6 +746,21 @@
         this._render();
       }
       set hass(hass) {
+        const context = captureHassContext(hass);
+        if (this._hassContext && !sameHassContext(this._hassContext, context)) {
+          this._releaseViewWork();
+          this._detachHostHold?.();
+          if (this.isConnected) this._detachHostHold?.reconnect?.();
+          modeKinds.forEach((kind) => this._clearPendingModeSelection(kind));
+          this._lastNonSmartModeSelection = { suction: "", mop: "" };
+          this._selectedCleaningAreas = [];
+          this._activeModePanel = null;
+          this._roomPanelOpen = false;
+          this._relatedEntityCache = null;
+          this._suppressNextVacuumTap = false;
+          this._lastRenderSignature = "";
+        }
+        this._hassContext = context;
         this._hass = hass;
         this._relatedEntityCacheGeneration += 1;
         const nextSignature = this._getRenderSignature(hass);

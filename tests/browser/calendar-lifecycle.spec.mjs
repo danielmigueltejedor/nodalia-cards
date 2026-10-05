@@ -207,3 +207,13 @@ test('Calendar falls back to the compatible service wrapper after a rejected for
  expect(result.calls).toEqual([['weather','get_forecasts',{type:'daily'},{entity_id:'weather.one'},false,true]]);expect(result.remaining).toBe(0);
  expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
 });
+
+for(const change of ['user','auth'])test(`Calendar retires pending data when ${change} mutates on the same HA object`,async({page})=>{
+ const card=await mount(page,{deferred:true,weather:true});await expect.poll(()=>page.evaluate(()=>window.calendarRequests.length)).toBe(1);
+ await page.evaluate(change=>{if(change==='user')window.calendarHass.user.id='second';else window.calendarHass.auth={};window.calendarCard.hass=window.calendarHass;},change);
+ await expect.poll(()=>page.evaluate(()=>window.calendarRequests.length)).toBe(2);
+ await page.evaluate(()=>{window.calendarRequests[0].reject(new Error('Retired'));window.calendarSubscriptions[0].callback({forecast:[{date:'2026-10-01',temperature:999}]});window.calendarSubscriptions[0].resolve();});
+ expect(await page.evaluate(()=>window.calendarRestCalls.length)).toBe(0);await expect.poll(()=>page.evaluate(()=>window.calendarDisposed.length)).toBe(1);
+ await page.evaluate(rows=>window.calendarRequests[1].resolve(rows),event('Current account'));
+ await expect(card.locator('ha-card .calendar-event__summary')).toContainText('Current account');expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+});

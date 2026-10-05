@@ -1,0 +1,152 @@
+{
+  "date": "2026-10-05",
+  "version": "3.0.0-alpha.9",
+  "head": "ed8c915411267514e08e86bb1436793802b5eddd",
+  "modules": 283,
+  "typeDebt": [],
+  "cycleDebt": [],
+  "raw": 4138351,
+  "gzip": 944549,
+  "productionDependencies": {},
+  "tags": [
+    "nodalia-navigation-bar",
+    "nodalia-navigation-bar-editor",
+    "nodalia-media-player",
+    "nodalia-media-player-editor",
+    "nodalia-light-card",
+    "nodalia-light-card-editor",
+    "nodalia-fan-card",
+    "nodalia-fan-card-editor",
+    "nodalia-humidifier-card",
+    "nodalia-humidifier-card-editor",
+    "nodalia-circular-gauge-card",
+    "nodalia-circular-gauge-card-editor",
+    "nodalia-graph-card",
+    "nodalia-graph-card-editor",
+    "nodalia-power-flow-card",
+    "nodalia-power-flow-card-editor",
+    "nodalia-cover-card",
+    "nodalia-cover-card-editor",
+    "nodalia-climate-card",
+    "nodalia-climate-card-editor",
+    "nodalia-alarm-panel-card",
+    "nodalia-alarm-panel-card-editor",
+    "nodalia-lock-card",
+    "nodalia-lock-card-editor",
+    "nodalia-advance-vacuum-card",
+    "nodalia-advance-vacuum-card-editor",
+    "nodalia-entity-card",
+    "nodalia-entity-card-editor",
+    "nodalia-fav-card",
+    "nodalia-fav-card-editor",
+    "nodalia-insignia-card",
+    "nodalia-insignia-card-editor",
+    "nodalia-person-card",
+    "nodalia-person-card-editor",
+    "nodalia-scenes-card",
+    "nodalia-scenes-card-editor",
+    "nodalia-weather-card",
+    "nodalia-weather-card-editor",
+    "nodalia-calendar-card",
+    "nodalia-calendar-card-editor",
+    "nodalia-notifications-card",
+    "nodalia-notifications-card-editor",
+    "nodalia-vacuum-card",
+    "nodalia-vacuum-card-editor",
+    "nodalia-news-card",
+    "nodalia-news-card-editor",
+    "nodalia-camera-card",
+    "nodalia-camera-card-editor",
+    "nodalia-room-summary-card",
+    "nodalia-room-summary-card-editor"
+  ],
+  "standaloneArtifacts": [
+    "nodalia-navigation-bar.js",
+    "nodalia-media-player.js",
+    "nodalia-light-card.js",
+    "nodalia-fan-card.js",
+    "nodalia-humidifier-card.js",
+    "nodalia-circular-gauge-card.js",
+    "nodalia-graph-card.js",
+    "nodalia-power-flow-card.js",
+    "nodalia-cover-card.js",
+    "nodalia-climate-card.js",
+    "nodalia-alarm-panel-card.js",
+    "nodalia-lock-card.js",
+    "nodalia-advance-vacuum-card.js",
+    "nodalia-entity-card.js",
+    "nodalia-fav-card.js",
+    "nodalia-insignia-card.js",
+    "nodalia-person-card.js",
+    "nodalia-scenes-card.js",
+    "nodalia-weather-card.js",
+    "nodalia-calendar-card.js",
+    "nodalia-notifications-card.js",
+    "nodalia-vacuum-card.js",
+    "nodalia-news-card.js",
+    "nodalia-camera-card.js",
+    "nodalia-room-summary-card.js"
+  ],
+  "runtimeEntries": [
+    {
+      "entry": "src/shared/runtime-i18n-runtime.ts",
+      "outfile": "nodalia-i18n.js"
+    },
+    {
+      "entry": "src/shared/editor-i18n-runtime.ts",
+      "outfile": "nodalia-editor-ui.js"
+    },
+    {
+      "entry": "src/shared/utils-runtime.ts",
+      "outfile": "nodalia-utils.js"
+    },
+    {
+      "entry": "src/shared/go2rtc-player.ts",
+      "outfile": "nodalia-go2rtc-player.js",
+      "format": "esm"
+    },
+    {
+      "entry": "src/shared/bubble-contrast-runtime.ts",
+      "outfile": "nodalia-bubble-contrast.js"
+    },
+    {
+      "entry": "src/core/engine-client-runtime.ts",
+      "outfile": "nodalia-backend.js"
+    },
+    {
+      "entry": "src/cards/notifications/notifications-mobile-policy-runtime.ts",
+      "outfile": "nodalia-notifications-mobile-policy.js"
+    },
+    {
+      "entry": "src/cards/room-summary/room-summary-model-runtime.ts",
+      "outfile": "nodalia-room-summary-model.js"
+    },
+    {
+      "entry": "src/cards/camera/camera-stream-runtime.ts",
+      "outfile": "nodalia-camera-stream-model.js"
+    },
+    {
+      "entry": "src/shared/render-signature-runtime.ts",
+      "outfile": "nodalia-render-signature.js"
+    }
+  ],
+  "locales": [
+    "de.json",
+    "el.json",
+    "en.json",
+    "es.json",
+    "fr.json",
+    "it.json",
+    "nl.json",
+    "no.json",
+    "pt.json",
+    "ro.json",
+    "ru.json",
+    "zh.json"
+  ],
+  "engineApis": [
+    2,
+    3
+  ],
+  "sourceInspection": "In progress; API support will be confirmed by adversarial bridge tests."
+}

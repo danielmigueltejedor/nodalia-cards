@@ -37,3 +37,15 @@ test('Fan keyboard actions retain target/data values, catch HA failures and resp
  await page.evaluate(()=>{window.fanHaptics=[];const slider=window.fanCard.shadowRoot.querySelector('input[type="range"]');window.fanCard._applySliderValue(slider,70,{commit:false});window.fanCard._applySliderValue(slider,75,{commit:true});});expect(await page.evaluate(()=>window.fanHaptics)).toEqual([]);
  await page.evaluate(()=>{window.fanCard._hass.callService=()=>Promise.reject(new Error('offline'));window.fanCard._setFanState('turn_on');window.fanCard._callConfiguredService('fan.set_percentage','fan.one',{percentage:0,flag:false},{area_id:'living'});});await page.evaluate(()=>{window.fanCard._hass.callService=()=>{throw new Error('sync offline');};window.fanCard._setFanState('turn_off');window.fanCard._callConfiguredService('fan.set_percentage');});expect(errors).toEqual([]);expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
 });
+
+test('Fan retires bounce frames before reconnecting its view',async({page})=>{
+ await mount(page,{animations:{enabled:true}});
+ const result=await page.evaluate(()=>{
+  const card=window.fanCard;const original=window.requestAnimationFrame;const cancel=window.cancelAnimationFrame;const callbacks=[];const cancelled=[];
+  window.requestAnimationFrame=callback=>{callbacks.push(callback);return 100000+callbacks.length;};window.cancelAnimationFrame=id=>cancelled.push(id);
+  card._triggerRenderedButtonBounce('button');card.remove();document.querySelector('#fixture').append(card);
+  const button=card.shadowRoot.querySelector('button');button.classList.remove('is-pressing');callbacks[0](performance.now());
+  window.requestAnimationFrame=original;window.cancelAnimationFrame=cancel;
+  return{bounced:button.classList.contains('is-pressing'),cancelled:cancelled.includes(100001)};
+ });expect(result).toEqual({bounced:false,cancelled:true});expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+});
