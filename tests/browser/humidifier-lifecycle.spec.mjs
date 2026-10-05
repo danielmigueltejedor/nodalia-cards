@@ -37,6 +37,15 @@ test('Humidifier keyboard actions retain target/data values, catch HA failures a
  await page.evaluate(()=>{window.humidifierHaptics=[];const slider=window.humidifierCard.shadowRoot.querySelector('input[type="range"]');window.humidifierCard._applySliderValue(slider,70,{commit:false});window.humidifierCard._applySliderValue(slider,75,{commit:true});});expect(await page.evaluate(()=>window.humidifierHaptics)).toEqual([]);
  await page.evaluate(()=>{window.humidifierCard._hass.callService=()=>Promise.reject(new Error('offline'));window.humidifierCard._setHumidifierService('turn_on');window.humidifierCard._callConfiguredService('humidifier.set_humidity','humidifier.one',{humidity:0,flag:false},{area_id:'living'});});await page.evaluate(()=>{window.humidifierCard._hass.callService=()=>{throw new Error('sync offline');};window.humidifierCard._setHumidifierService('turn_off');window.humidifierCard._callConfiguredService('humidifier.set_humidity');});expect(errors).toEqual([]);expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
 });
+test('Humidifier keeps keyboard action focus across consumed state updates and responsive rerenders',async({page})=>{
+ const card=await mount(page,{tap_action:'service',tap_service:'humidifier.set_humidity',tap_service_data:{humidity:0},security:{allowed_services:['humidifier.set_humidity']}});
+ const body=card.locator('ha-card[data-humidifier-action="body"]');await body.focus();
+ await page.evaluate(()=>{const card=window.humidifierCard;card._hass.states['humidifier.one'].attributes.humidity=60;card.hass={...card._hass};});
+ await expect(body).toBeFocused();await body.press('Enter');expect(await page.evaluate(()=>window.humidifierCalls.at(-1))).toEqual(['humidifier','set_humidity',{humidity:0,entity_id:'humidifier.one'}]);
+ const slider=card.locator('input[type="range"]');await slider.focus();await page.evaluate(()=>window.humidifierCard._render());await expect(slider).toBeFocused();
+ const mode=card.locator('[data-humidifier-action="toggle-mode-panel"]');await mode.focus();await page.evaluate(()=>window.humidifierCard._render());await expect(mode).toBeFocused();
+ expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+});
 test('Humidifier mode switches reject obsolete animation callbacks and preserve external helpers and missing values',async({page})=>{
  await page.clock.install({time:new Date('2026-10-01T10:00:00Z')});await page.clock.pauseAt(new Date('2026-10-01T10:00:01Z'));
  const card=await mount(page,{mode_entity:'select.mode',fan_mode_entity:'select.fan',animations:{enabled:true},hidden_modes:['High']});

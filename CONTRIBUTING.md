@@ -143,3 +143,7 @@ Follow [releasing](docs/releasing.md). Preparation can be inspected with
 `pnpm release --dry-run`; it does not commit, tag or publish. The tagged commit
 must pass the same static and four-browser gate as PRs. Verify uploaded bundle
 integrity and the correct prerelease flag after publication.
+
+## Published-release performance evidence
+
+Use [the permanent benchmark harness](bench/README.md) for measured performance changes. Preserve raw samples, release asset hashes and per-engine results. Shared CI smoke checks correctness/output, never a small timing percentage. Official release notes accept only validated published-asset evidence. The [RC audit](docs/audits/rc-readiness-report.md) records the current verdict; beta availability alone does not authorize RC.

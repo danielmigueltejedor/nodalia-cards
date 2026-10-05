@@ -8,6 +8,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased] — RC audit in progress
+
+### Fixed
+
+- Media Player avoids repeated identical progress, time, volume CSS and accessibility writes during unrelated HA feedback, including embeds in Room Summary. Real playback/volume updates continue to refresh.
+- Room Summary retires pending holds and embeds when authentication changes on an unchanged HA connection. Its first unrelated update no longer rebuilds already rendered hub content.
+
+- Humidifier preserves semantic keyboard focus across consumed-state and responsive renders; native body actions, sliders and mode controls remain operable.
+
+### Added
+
+- Permanent N-version published-release benchmarks with verified asset hashes, four separate engines, raw JSON/CSV/Markdown, shadow DOM instrumentation, Graph/media/map/helper/session profiles and controlled-GC lifecycle trends.
+- Functional benchmark smoke CI and guarded post-publication stable 3.0.0 evidence/notes workflow on a controlled reference runner. No timing-percentage PR gate.
+
+### Validation
+
+- See [RC readiness](docs/audits/rc-readiness-report.md). These changes do not prepare or announce an RC until all required gates pass.
+
 ## [3.0.0-beta.1] - 2026-10-05
 
 ### Changed

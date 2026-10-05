@@ -1,0 +1,55 @@
+name: Official published release benchmark
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact published 3.0.0 or 3.0.0-rc.N
+        required: true
+        type: string
+permissions:
+  contents: write
+  pull-requests: write
+concurrency:
+  group: official-nodalia-benchmark
+  cancel-in-progress: false
+jobs:
+  reference:
+    defaults:
+      run:
+        shell: bash
+    # Operator-provisioned, idle reference machine. Never silently substitute shared CI.
+    runs-on: [self-hosted, nodalia-benchmark]
+    timeout-minutes: 180
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BENCH_TARGET: ${{ inputs.version }}
+      BENCH_REPORT_BRANCH: benchmark-results/v${{ inputs.version }}-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - name: Validate published target syntax
+        run: node -e 'if (!/^3\.0\.0(?:-rc\.[1-9]\d*)?$/.test(process.env.BENCH_TARGET)) throw new Error("Invalid benchmark release target")'
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: v${{ inputs.version }}
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Measure exact published assets on the reference machine
+        run: pnpm benchmark:releases -- 2.2.10 "$BENCH_TARGET"
+      - name: Generate verified report and release notes section
+        run: |
+          gh release view "v$BENCH_TARGET" --json body --jq .body > bench/results/published-notes.md
+          pnpm benchmark:evidence -- "$BENCH_TARGET" "bench/results/2.2.10-vs-$BENCH_TARGET.json" bench/results/published-notes.md "$BENCH_REPORT_BRANCH"
+      - name: Commit evidence for review
+        run: |
+          git switch -c "$BENCH_REPORT_BRANCH"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/benchmarks
+          git commit -m "Record official published $BENCH_TARGET benchmark"
+          git push origin "$BENCH_REPORT_BRANCH"
+          gh pr create --base main --head "$BENCH_REPORT_BRANCH" --title "Official performance evidence for $BENCH_TARGET" --body 'Records exact release asset hashes, raw samples, per-engine statistics and the generated release notes table. No runtime files are changed.'
+      - name: Add evidence-backed release notes without changing assets or tags
+        run: gh release edit "v$BENCH_TARGET" --notes-file bench/results/published-notes.md

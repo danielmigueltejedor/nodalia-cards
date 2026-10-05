@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "timestamp": "2026-10-05T12:43:01.725115+00:00",
+  "verdict": "NOT RC READY",
+  "baselineHead": "1e2eb55d717279499febc56ec39872cb5a160bef",
+  "version": "3.0.0-beta.1",
+  "rcPrepared": false,
+  "rcPublished": false,
+  "findings": [
+    {
+      "id": "summary-auth",
+      "severity": "high",
+      "status": "fixed",
+      "redLog": "/private/tmp/nodalia-rc-summary-auth-red.log",
+      "regression": "tests/browser/room-summary-lifecycle.spec.mjs"
+    },
+    {
+      "id": "media-identical-writes",
+      "severity": "medium",
+      "status": "fixed",
+      "redLog": "/private/tmp/nodalia-rc-media-mutations-red.log",
+      "regression": "tests/browser/unrelated-hass-updates.spec.mjs"
+    },
+    {
+      "id": "summary-first-signature",
+      "severity": "medium",
+      "status": "fixed",
+      "regression": "tests/browser/unrelated-hass-updates.spec.mjs"
+    },
+    {
+      "id": "humidifier-focus",
+      "severity": "medium",
+      "status": "fixed",
+      "redLog": "/private/tmp/nodalia-rc-humidifier-focus-red.log",
+      "greenLog": "/private/tmp/nodalia-rc-humidifier-focus-green.log",
+      "greenPassed": 18,
+      "regression": "tests/browser/humidifier-lifecycle.spec.mjs"
+    }
+  ],
+  "gates": {
+    "static": "passed: version, architecture, strict types, typed lint, distribution, translations, build",
+    "unit": {
+      "passed": 818,
+      "failed": 0,
+      "skipped": 0
+    },
+    "browsers": {
+      "lastFullThreeEngine": {
+        "passed": 1207,
+        "failed": 1,
+        "skipped": 1,
+        "beforeHumidifierFocusFix": true
+      },
+      "finalCommit": "pending",
+      "firefox": {
+        "status": "unavailable",
+        "failure": "Could not find profile folder",
+        "cleanPinnedDownloadTried": true
+      }
+    },
+    "soak100": {
+      "passed": 12,
+      "failed": 0,
+      "cyclesPerCard": 100,
+      "haUpdatesPerCard": 4000,
+      "project": "chromium",
+      "log": "/private/tmp/nodalia-rc-soak100.log"
+    },
+    "publishedAssetBenchmarks": "pending full run; Firefox unavailable",
+    "referenceRunner": {
+      "registered": 0,
+      "requiredLabel": "nodalia-benchmark"
+    },
+    "remoteCI": "pending audit branch PR",
+    "dependencyAudit": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "productionDependencies": 0,
+      "developmentDependencies": 130
+    },
+    "deterministicArtifacts": {
+      "compared": 37,
+      "changedAfterRebuild": 0
+    }
+  },
+  "candidateBundle": {
+    "rawBytes": 4146761,
+    "gzipBytes": 946624,
+    "sha256": "e4178597689cd38b2605080145a7a26ebb4655e6e6aa33a1117d2e6d5f0a92df",
+    "provenance": "working-candidate size check only"
+  },
+  "releaseBlockers": [
+    "Missing Apple M4 Firefox performance evidence",
+    "Final exact-commit validation and benchmark completion",
+    "Controlled reference release runner not provisioned"
+  ],
+  "benchmarkSchemaVersion": 1,
+  "methodology": "bench/README.md",
+  "productionDependenciesAdded": 0,
+  "apiYamlChanges": false
+}

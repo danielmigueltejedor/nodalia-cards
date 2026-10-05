@@ -2332,6 +2332,13 @@ class NodaliaHumidifierCard extends HTMLElement {
     if (!this.shadowRoot) {
       return;
     }
+    // Keep semantic focus across state/width renders without retaining an old node.
+    const focused = this.shadowRoot.activeElement;
+    const focusSelector = focused instanceof HTMLElement
+      ? focused.localName + [...focused.attributes]
+        .filter(attribute => attribute.name.startsWith("data-") || attribute.name === "type")
+        .map(attribute => `[${attribute.name}="${CSS.escape(attribute.value)}"]`).join("")
+      : "";
 
     const config = this._config || normalizeConfig({});
     const styles = config.styles;
@@ -4006,6 +4013,7 @@ class NodaliaHumidifierCard extends HTMLElement {
 
     this._lastRenderedIsOn = isOn;
     this._lastRenderedPanelKey = currentPanelKey;
+    if (focusSelector) this.shadowRoot.querySelector<HTMLElement>(focusSelector)?.focus({ preventScroll: true });
 
     if (shouldCleanupAfterAnimation) {
       this._scheduleAnimationCleanup(cleanupDelay);

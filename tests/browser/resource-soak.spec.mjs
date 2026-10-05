@@ -48,12 +48,14 @@ const cases=[
  ['nodalia-fav-card',{entity:'alarm_control_panel.one',alarm_show_code_input:false}],
  ['nodalia-room-summary-card',{name:'Room',lights:['light.one'],fans:['fan.one'],locks:['lock.one'],camera:'camera.one',media_player:'media_player.one',show_media:true,show_camera:true}],
 ];
-for(const [tag,config]of cases)test(`${tag} releases resources over 24 mount/update/interact/reconnect/entity/remount cycles`,async({page},info)=>{
- test.setTimeout(90_000);await installLedger(page);
+const cycles=Number(process.env.NODALIA_SOAK_CYCLES||24);
+if(!Number.isSafeInteger(cycles)||cycles<24||cycles>500)throw new Error('NODALIA_SOAK_CYCLES must be an integer from 24 to 500');
+for(const [tag,config]of cases)test(`${tag} releases resources over ${cycles} mount/update/interact/reconnect/entity/remount cycles`,async({page},info)=>{
+ test.setTimeout(Math.max(90_000,cycles*1000));await installLedger(page);
  await page.route('**/api/camera_proxy/**',route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="#2277bb"/></svg>'}));
  await page.route('**/soak-artwork*',route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="#2277bb"/></svg>'}));
  await page.goto('/tests/fixtures/browser.html');await page.waitForFunction(tag=>customElements.get(tag),tag);
- const results=await page.evaluate(async({tag,config})=>{
+ const results=await page.evaluate(async({tag,config,cycles})=>{
   const ledger=window.resourceLedger,root=document.querySelector('#fixture');let subscriptions=0,pending=0,updates=0;
   const base={
    'media_player.one':{state:'playing',attributes:{media_title:'Track',media_artist:'Artist',entity_picture:'/soak-artwork.svg',media_duration:240,media_position:0,volume_level:.5,supported_features:152461}},
@@ -72,7 +74,7 @@ for(const [tag,config]of cases)test(`${tag} releases resources over 24 mount/upd
   const hass=window.createHassFixture({entities:base,overrides:{connection,auth:{},user:{id:'soak',is_admin:true},callApi:async()=>[],callWS:async message=>{pending++;try{await Promise.resolve();return message.type==='nodalia/status'?{available:false}:{};}finally{pending--;}}}});
   const make=()=>{const card=document.createElement(tag);card.setConfig({...config,animations:{enabled:false}});card.hass=hass;root.append(card);return card;};
   const snapshots=[];
-  for(let cycle=0;cycle<24;cycle++){
+  for(let cycle=0;cycle<cycles;cycle++){
    let card=make();await ledger.sleep(70);
    if(tag==='nodalia-room-summary-card'){
     if(!card.shadowRoot.querySelector('nodalia-media-player'))throw new Error('Summary soak must exercise its embedded Media Player');
@@ -91,8 +93,8 @@ for(const [tag,config]of cases)test(`${tag} releases resources over 24 mount/upd
    snapshots.push({...ledger.snapshot(),subscriptions,pending});
   }
   await ledger.sleep(800);
-  return {tag,cycles:24,updates,snapshots,settled:{...ledger.snapshot(),subscriptions,pending},errors:window.bundleErrors};
- },{tag,config});
+  return {tag,cycles,updates,snapshots,settled:{...ledger.snapshot(),subscriptions,pending},errors:window.bundleErrors};
+ },{tag,config,cycles});
  const baseline=results.snapshots[0];
  // Once shared modules warm up, no retained resources may grow with remounts.
  for(const snapshot of results.snapshots.slice(1))expect(snapshot).toEqual(baseline);

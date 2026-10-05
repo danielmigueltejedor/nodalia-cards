@@ -106,3 +106,7 @@ network conditions and whether the artwork/cache is cold or warm.
 Use measurements to choose changes. CSS containment, broader sharing, partial DOM
 updates and additional code splitting need behavior-specific evidence and visual
 verification; they are not automatic consequences of the TypeScript migration.
+
+## Permanent published-release benchmark
+
+The [release harness](../bench/README.md) separates synchronous dispatch, settling time, script/layout CPU, shadow DOM mutations, Graph history stages, framed map gestures and controlled-GC memory trends. Use N-version published assets with SHA256 provenance, four separate browsers and raw samples. See [benchmark schema/results](benchmarks/README.md) and [the RC audit](audits/rc-readiness-report.md). Earlier isolated synthetic timings above are not substitutes for an official release comparison.
