@@ -41,11 +41,23 @@ test('exact release asset verification rejects missing assets, tag confusion, si
 test('automatic downloads record release provenance, cache success and fail clearly for nonexistent versions',async()=>{
  const directory=await fs.mkdtemp(path.join(os.tmpdir(),'nodalia-benchmark-test-'));
  try{
-  let calls=0;const fetcher=async url=>{calls++;return url.includes('api.github.com')?{ok:true,json:async()=>release('3.0.0')}:{ok:true,arrayBuffer:async()=>bytes};};
+  let calls=0;const fetcher=async url=>{calls++;return new URL(url).hostname==='api.github.com'?{ok:true,json:async()=>release('3.0.0')}:{ok:true,arrayBuffer:async()=>bytes};};
   const asset=await loadAsset('3.0.0',directory,fetcher);assert.equal(asset.sha256,sha256(bytes));assert.equal(calls,2);
   await loadAsset('3.0.0',directory,()=>{throw new Error('Unexpected cache network');});
   await assert.rejects(loadAsset('9.9.9',directory,async()=>({ok:false,status:404})),/HTTP 404/);
   assert.equal(await fs.stat(path.join(directory,'9.9.9')).then(()=>true,()=>false),false);
+ }finally{await fs.rm(directory,{recursive:true,force:true});}
+});
+test('download paths and destinations reject traversal and untrusted manifest URLs before asset I/O',async()=>{
+ const directory=await fs.mkdtemp(path.join(os.tmpdir(),'nodalia-benchmark-boundary-'));
+ try{
+  for(const version of ['../escape','3.0.0/../escape','https://example.com',null])await assert.rejects(loadAsset(version,directory,()=>{throw new Error('Network must not run');}),/Invalid release version/);
+  for(const url of ['https://evil.example/nodalia-cards.js','https://github.com.evil.example/nodalia-cards.js','https://github.com/danielmigueltejedor/nodalia-cards/releases/download/v3.0.0/other.js','https://github.com/danielmigueltejedor/nodalia-cards/releases/download/v3.0.0/../../other']){
+   const bad=release('3.0.0');bad.assets[0].browser_download_url=url;
+   assert.throws(()=>verifyAsset(bad,bytes,'3.0.0'),/Untrusted release asset URL/);
+   let calls=0;await assert.rejects(loadAsset('3.0.0',directory,async()=>{calls++;return {ok:true,json:async()=>bad};}),/Untrusted release asset URL/);assert.equal(calls,1);
+  }
+  assert.equal(await fs.stat(path.join(directory,'3.0.0')).then(()=>true,()=>false),false);
  }finally{await fs.rm(directory,{recursive:true,force:true});}
 });
 function result(){

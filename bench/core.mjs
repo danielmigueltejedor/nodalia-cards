@@ -5,6 +5,11 @@ import zlib from 'node:zlib';
 
 export const REPOSITORY = 'danielmigueltejedor/nodalia-cards';
 export const sha256 = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
+function checkedVersion(version) {
+  if (typeof version !== 'string' || !/^\d+\.\d+\.\d+(?:-(?:alpha|beta|rc)\.\d+)?$/.test(version)) throw new Error(`Invalid release version ${version}`);
+  return version;
+}
+const releaseAssetUrl = version => `https://github.com/${REPOSITORY}/releases/download/v${checkedVersion(version)}/nodalia-cards.js`;
 export function parseArgs(args, env = {}) {
   const options = { versions: [], quick: env.NODALIA_BENCH_QUICK === '1', browsers: null, out: 'bench/results', publishNotes: false };
   for (let i = 0; i < args.length; i++) {
@@ -58,19 +63,21 @@ export function summarize(samples) {
   });
 }
 export function verifyAsset(release, bytes, version) {
+  checkedVersion(version);
   if (release.tag_name !== `v${version}` || release.draft || !release.published_at) throw new Error(`Release ${version} is not published at its exact tag`);
   const asset = release.assets?.find(a=>a.name === 'nodalia-cards.js');
   if (!asset) throw new Error(`Release ${version} has no nodalia-cards.js asset`);
   const hash = sha256(bytes);
   if (asset.size !== bytes.length) throw new Error(`Asset size mismatch for ${version}`);
   if (asset.digest && asset.digest !== `sha256:${hash}`) throw new Error(`Asset digest mismatch for ${version}`);
-  if (!String(asset.browser_download_url).startsWith(`https://github.com/${REPOSITORY}/releases/download/v${version}/`)) throw new Error('Untrusted release asset URL');
+  if (asset.browser_download_url !== releaseAssetUrl(version)) throw new Error('Untrusted release asset URL');
   return { version, tag: release.tag_name, releaseId: release.id, assetId: asset.id, assetUrl: asset.browser_download_url,
     publishedAt: release.published_at, rawBytes: bytes.length, gzipBytes: zlib.gzipSync(bytes).length,
     brotliBytes: zlib.brotliCompressSync(bytes).length, sha256: hash, githubDigest: asset.digest || null,
     provenance: 'github-release-asset' };
 }
 export async function loadAsset(version, directory, fetcher = fetch) {
+  checkedVersion(version);
   const location = path.join(directory, version), bundlePath = path.join(location, 'nodalia-cards.js');
   const manifestPath = path.join(location, 'github-release.json');
   const headers = { Accept:'application/vnd.github+json', 'User-Agent':'nodalia-release-benchmark' };
@@ -86,10 +93,10 @@ export async function loadAsset(version, directory, fetcher = fetch) {
   if (release.tag_name !== `v${version}` || release.draft || !release.published_at) throw new Error(`Release ${version} is not published`);
   const remote = release.assets?.find(a=>a.name === 'nodalia-cards.js');
   if (!remote) throw new Error(`Release ${version} has no nodalia-cards.js asset`);
-  if (!String(remote.browser_download_url).startsWith(`https://github.com/${REPOSITORY}/releases/download/v${version}/`)) throw new Error('Untrusted release asset URL');
+  if (remote.browser_download_url !== releaseAssetUrl(version)) throw new Error('Untrusted release asset URL');
   let bytes;
   try { bytes = await fs.readFile(bundlePath); }
-  catch (error) { if (error.code !== 'ENOENT') throw error; bytes = await download(remote.browser_download_url,true); }
+  catch (error) { if (error.code !== 'ENOENT') throw error; bytes = await download(releaseAssetUrl(version),true); }
   const asset = verifyAsset(release, bytes, version);
   // Persist only after validation: an HTML/error response cannot poison the cache.
   await fs.mkdir(location,{recursive:true});
