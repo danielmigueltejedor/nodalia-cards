@@ -16,6 +16,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Room Summary retires pending holds and embeds when authentication changes on an unchanged HA connection. Its first unrelated update no longer rebuilds already rendered hub content.
 
 - Humidifier preserves semantic keyboard focus across consumed-state and responsive renders; native body actions, sliders and mode controls remain operable.
+- Engine retires pending v3 command dispatch when a replacement HA object introduces another connection, authentication, user or permission context, even before its new handshake completes. Cache resets retire pending dispatch too; concurrent same-context commands remain valid.
 
 ### Added
 

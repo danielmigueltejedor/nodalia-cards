@@ -35,14 +35,31 @@
       "greenLog": "/private/tmp/nodalia-rc-humidifier-focus-green.log",
       "greenPassed": 18,
       "regression": "tests/browser/humidifier-lifecycle.spec.mjs"
+    },
+    {
+      "id": "engine-replacement-owner",
+      "severity": "high",
+      "status": "fixed",
+      "redLog": "/private/tmp/nodalia-rc-engine-owner-red.log",
+      "greenLog": "/private/tmp/nodalia-rc-engine-owner-green.log",
+      "greenPassed": 31,
+      "regression": "tests/nodalia-backend.test.mjs"
+    },
+    {
+      "id": "benchmark-download-boundary",
+      "severity": "medium",
+      "status": "fixed",
+      "redLog": "/private/tmp/nodalia-rc-downloader-red.log",
+      "regression": "tests/benchmark-framework.test.mjs"
     }
   ],
   "gates": {
     "static": "passed: version, architecture, strict types, typed lint, distribution, translations, build",
     "unit": {
-      "passed": 818,
+      "passed": 819,
       "failed": 0,
-      "skipped": 0
+      "skipped": 0,
+      "note": "Full CI before final Engine owner fix; 31 targeted backend tests passed afterward"
     },
     "browsers": {
       "lastFullThreeEngine": {
@@ -51,7 +68,27 @@
         "skipped": 1,
         "beforeHumidifierFocusFix": true
       },
-      "finalCommit": "pending",
+      "finalCommit": {
+        "commit": "ae163b374fdfd24b33eb645aa8fbc8da60337378",
+        "run": "https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37313303680",
+        "chromium": {
+          "passed": 404,
+          "skipped": 0
+        },
+        "firefox": {
+          "passed": 403,
+          "skipped": 1
+        },
+        "webkit": {
+          "passed": 404,
+          "skipped": 0
+        },
+        "webkit-iphone": {
+          "passed": 403,
+          "skipped": 1
+        },
+        "note": "Passed before final Engine owner fix; exact final commit pending"
+      },
       "firefox": {
         "status": "unavailable",
         "failure": "Could not find profile folder",
@@ -84,12 +121,21 @@
     "deterministicArtifacts": {
       "compared": 37,
       "changedAfterRebuild": 0
+    },
+    "codeQL": {
+      "status": "passed",
+      "run": "https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37313302712",
+      "reviewedFalsePositives": [
+        295,
+        296
+      ],
+      "rationale": "Dev-only persistence of verified assets at fixed local filenames; strict exact URL and version path regressions. No query disabled or suppression added."
     }
   },
   "candidateBundle": {
-    "rawBytes": 4146761,
-    "gzipBytes": 946624,
-    "sha256": "e4178597689cd38b2605080145a7a26ebb4655e6e6aa33a1117d2e6d5f0a92df",
+    "rawBytes": 4146902,
+    "gzipBytes": 946679,
+    "sha256": "97edb7fd8856861a2668fe55d235009be6860aca4f8b6ed245b11b2e58c66924",
     "provenance": "working-candidate size check only"
   },
   "releaseBlockers": [

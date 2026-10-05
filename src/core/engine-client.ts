@@ -23,7 +23,19 @@ type EngineContext = { owner: unknown; auth: HomeAssistant["auth"]; user: string
 const contextOf = (hass: EngineHass): EngineContext => ({ owner: hass?.connection || hass, auth: hass?.auth, user: hass?.user?.id || "", admin: hass?.user?.is_admin === true });
 const sameContext = (a: EngineContext | null, b: EngineContext) => a !== null && a.owner === b.owner && a.auth === b.auth && a.user === b.user && a.admin === b.admin;
 let statusGeneration = 0;
+// Force-refresh races affect cache commits; owner retirement must also cancel
+// dispatch after a handshake, without rejecting concurrent same-owner commands.
+let contextGeneration = 0;
 let statusCache: { context: EngineContext | null; checkedAt: number; value: EngineStatus | null } = { context: null, checkedAt: 0, value: null };
+function enterContext(hass: EngineHass): EngineContext {
+  const context = contextOf(hass);
+  if (!sameContext(statusCache.context, context)) {
+    ++statusGeneration;
+    ++contextGeneration;
+    statusCache = { context, checkedAt: 0, value: null };
+  }
+  return context;
+}
 // Accept numeric strings from older adapters, but never negotiate malformed ranges.
 const apiVersion = (value: unknown) => {
   const number = typeof value === "number" || typeof value === "string" && value.trim() ? Number(value) : 0;
@@ -31,6 +43,7 @@ const apiVersion = (value: unknown) => {
 };
 
 function callWS(hass: EngineHass, message: Record<string, unknown>): Promise<unknown> {
+  enterContext(hass);
   if (typeof hass?.callWS === "function") {
     return hass.callWS(message);
   }
@@ -51,7 +64,7 @@ function isUnavailableError(error: unknown) {
 
 async function status(hass: EngineHass, options: { force?: boolean; silent?: boolean } = {}): Promise<EngineStatus> {
   const now = Date.now();
-  const context = contextOf(hass);
+  const context = enterContext(hass);
   if (
     options.force !== true
     && sameContext(statusCache.context, context)
@@ -129,8 +142,10 @@ function commandVersion(hass: EngineHass) {
 
 async function v3Command(hass: EngineHass, capability: string, type: string, data: Record<string, unknown>) {
   const context = contextOf(hass);
-  const value = await status(hass);
-  if (!sameContext(context, contextOf(hass))) {
+  const handshake = status(hass);
+  const generation = contextGeneration;
+  const value = await handshake;
+  if (generation !== contextGeneration || !sameContext(context, contextOf(hass))) {
     throw Object.assign(new Error("Engine request belongs to a retired HA context"), { code: "stale_context" });
   }
   if (value.negotiated_api_version !== API_VERSION || !hasCapability(value, capability)) {
@@ -160,6 +175,7 @@ export const nodaliaBackend = Object.freeze({
   status,
   clearStatusCache() {
     ++statusGeneration;
+    ++contextGeneration;
     statusCache = { context: null, checkedAt: 0, value: null };
   },
   hasCapability,

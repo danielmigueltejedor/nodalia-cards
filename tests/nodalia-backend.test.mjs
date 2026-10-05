@@ -376,6 +376,39 @@ test('backend declines a retired v3 mutation', async () => {
   await assert.rejects(mutation,{code:'stale_context'});
   assert.equal(commands.filter(message=>message.type==='nodalia/vacuum/session/set').length,0);
 });
+for (const replacement of ['connection', 'auth', 'user', 'admin']) test(`backend retires pending v3 mutations when a replacement hass ${replacement} is observed`, async () => {
+  const backend=loadBackend(), oldRequest=deferred(), freshRequest=deferred(), commands=[];
+  const old={connection:{},auth:{},user:{id:'first',is_admin:true},callWS(message){commands.push(message);return message.type==='nodalia/status'?oldRequest.promise:Promise.resolve({});}};
+  const fresh={...old,user:{...old.user},callWS:()=>freshRequest.promise};
+  if(replacement==='connection')fresh.connection={};
+  if(replacement==='auth')fresh.auth={};
+  if(replacement==='user')fresh.user.id='second';
+  if(replacement==='admin')fresh.user.is_admin=false;
+  const pending=backend.setVacuumSession(old,'vacuum.robot',{},0);
+  const next=backend.status(fresh);
+  oldRequest.resolve(handshake());
+  await assert.rejects(pending,{code:'stale_context'});
+  assert.equal(commands.filter(message=>message.type==='nodalia/vacuum/session/set').length,0);
+  freshRequest.resolve(handshake());await next;
+});
+test('backend allows concurrent v3 commands in the same owner while retiring commands after cache reset', async () => {
+  const backend=loadBackend(),requests=[],commands=[];
+  const hass={connection:{},callWS(message){commands.push(message);if(message.type==='nodalia/status'){const request=deferred();requests.push(request);return request.promise;}return Promise.resolve({});}};
+  const first=backend.setVacuumSession(hass,'vacuum.robot',{},0),second=backend.getVacuumSession(hass,'vacuum.robot');
+  requests[1].resolve(handshake());await second;requests[0].resolve(handshake());await first;
+  assert.equal(commands.filter(message=>message.type==='nodalia/vacuum/session/set').length,1);
+  backend.clearStatusCache();const retired=backend.setVacuumSession(hass,'vacuum.robot',{},0);backend.clearStatusCache();requests[2].resolve(handshake());
+  await assert.rejects(retired,{code:'stale_context'});
+  assert.equal(commands.filter(message=>message.type==='nodalia/vacuum/session/set').length,1);
+});
+test('backend retires an old handshake when a replacement owner sends a legacy command before discovery',async()=>{
+  const backend=loadBackend(),request=deferred(),commands=[];
+  const old={connection:{},callWS(message){commands.push(message);return message.type==='nodalia/status'?request.promise:Promise.resolve({});}};
+  const pending=backend.setVacuumSession(old,'vacuum.robot',{},0);
+  await backend.listNotificationProfiles({connection:{},callWS:async()=>({})});
+  request.resolve(handshake());await assert.rejects(pending,{code:'stale_context'});
+  assert.equal(commands.filter(message=>message.type==='nodalia/vacuum/session/set').length,0);
+});
 test('backend rejects malformed explicit API ranges rather than guessing v3', async () => {
   for(const range of [{api_min_version:0,api_max_version:3},{api_min_version:false,api_max_version:3},{api_min_version:2,api_max_version:Infinity},{api_min_version:2.5,api_max_version:3},{api_min_version:4,api_max_version:3}]){
     const value=await loadBackend().status({callWS:async()=>({...handshake(),...range})});assert.equal(value.available,false,JSON.stringify(range));
