@@ -117,7 +117,7 @@ async function measure(config,operation) {
  finally {measurement=false;}
 }
 function make(row,hass=state?.hass||hassFixture()) { const [,tag,config]=row;const card=document.createElement(tag);instrument(card);card.setConfig({...config,animations:{enabled:false}});card.hass=hass;document.querySelector('#fixture').append(card);return card; }
-async function reset() {if(state?.cards)for(const card of state.cards)card.remove();const fixture=document.querySelector('#fixture');fixture.replaceChildren();fixture.style.width='';state=null;history=[];await sleep(80);observer.disconnect();observer=observeMutations(document,mutate);}
+async function reset() {if(state?.cards)for(const card of state.cards)card.remove();const fixture=document.querySelector('#fixture');fixture.replaceChildren();fixture.style.width='';state=null;history=[];await sleep(80);localStorage.clear();sessionStorage.clear();observer.disconnect();observer=observeMutations(document,mutate);}
 function change(hass,entity,index,relevant=false) {
  const current=hass.states[entity];if(!current)return;
  const attributes={...current.attributes};let value=String(index);
@@ -127,7 +127,14 @@ function change(hass,entity,index,relevant=false) {
  hass.states[entity]={...current,state:value,attributes};
 }
 async function updates(dispatch,card,entity,count,relevant) { for(let i=0;i<count;i++){change(state.hass,entity,i,relevant);dispatch(()=>{card.hass={...state.hass};});await Promise.resolve();} }
-function touchEvent(type,target,points) {const event=new Event(type,{bubbles:true,composed:true,cancelable:true});Object.setPrototypeOf(event,TouchEvent.prototype);Object.defineProperty(event,'touches',{value:points.map((p,i)=>({identifier:i+1,target,...p}))});return event;}
+export function touchEvent(type,target,points) {
+ const legacy=typeof document.createTouch==='function' && typeof document.createTouchList==='function';
+ const touches=points.map((p,i)=>legacy
+  ? document.createTouch(window,target,i+1,p.clientX+scrollX,p.clientY+scrollY,p.clientX,p.clientY)
+  : new Touch({identifier:i+1,target,...p}));
+ const list=legacy?document.createTouchList(...touches):touches;
+ return new TouchEvent(type,{bubbles:true,composed:true,cancelable:true,touches:list,targetTouches:list,changedTouches:list});
+}
 
 window.bench = {
  cases,
@@ -161,13 +168,14 @@ window.bench = {
    state.historyGenerationMs=performance.now()-start;
   }
   if(parts[0]==='gesture'){
+   if(parts[2]==='touch')try{touchEvent('touchstart',document.body,[{clientX:1,clientY:1}]);state.nativeTouchAvailable=true;}catch(error){state.nativeTouchFailure=String(error.message);}
    const card=state.cards[0];card.shadowRoot.querySelector('[data-mode-id="rooms"]')?.click();await settle(config);
    const image=card.shadowRoot.querySelector('[data-map-image]');if(!image?.naturalWidth)throw new Error('Map fixture has not loaded');
   }
  },
  async run(scenario,config) {
   const [kind,id,arg,detail]=scenario.split('/'),card=state.cards[0],row=state.row;
-  let skipped=[];if(kind==='gesture' && arg==='touch' && typeof TouchEvent!=='function')return {metrics:{},skipped:['Native touch constructors unavailable'],errors:[]};
+  let skipped=[];if(kind==='gesture' && arg==='touch' && !state.nativeTouchAvailable)return {metrics:{},skipped:[`Native touch construction unavailable: ${state.nativeTouchFailure}`],errors:[]};
   const metrics=await measure(config,async dispatch=>{
    if(kind==='mount'){state.cards=[dispatch(()=>make(row,state.hass))];}
    else if(kind==='warm-remount'){dispatch(()=>{card.remove();document.querySelector('#fixture').append(card);});}

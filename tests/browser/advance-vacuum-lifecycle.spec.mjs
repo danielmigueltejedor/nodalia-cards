@@ -32,6 +32,24 @@ test('Explicit Advance Vacuum tracking avoids catalog scans and refreshes helper
  expect(result.first.currentId).toBe('1');expect(result.second.currentId).toBe('2');
  expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
 });
+test('Automatic Advance Vacuum discovery scans once per HA assignment and releases its lookup scope',async({page})=>{
+ await mount(page,{room_tracking:{auto_detect:true}});
+ const result=await page.evaluate(()=>{
+  const card=window.avCard,hass=window.avHass;
+  for(let i=0;i<1700;i++)hass.states[`sensor.unrelated_${i}`]={entity_id:`sensor.unrelated_${i}`,state:'0',attributes:{}};
+  let scans=0;hass.states=new Proxy(hass.states,{ownKeys(target){scans++;return Reflect.ownKeys(target);}});
+  card.hass={...hass};scans=0;
+  for(let i=0;i<120;i++){hass.states['sensor.unrelated_0']={...hass.states['sensor.unrelated_0'],state:String(i)};card.hass={...hass};}
+  const updateScans=scans,scopeReleased=card._roomTrackingLookupScope==null;
+  hass.states['sensor.one_current_room']={entity_id:'sensor.one_current_room',state:'1',attributes:{}};
+  card.hass={...hass};const added=card._getRelatedVacuumEntityIds().roomIds;
+  delete hass.states['sensor.one_current_room'];card.hass={...hass};const removed=card._getRelatedVacuumEntityIds().roomIds;
+  return {updateScans,scopeReleased,added,removed};
+ });
+ expect(result.updateScans).toBe(120);expect(result.scopeReleased).toBe(true);
+ expect(result.added).toContain('sensor.one_current_room');expect(result.removed).not.toContain('sensor.one_current_room');
+ expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+});
 test('Advance Vacuum keeps native room keyboard focus through HA updates and sends only selected rooms',async({page})=>{
  const card=await mount(page);await card.locator('[data-mode-id="rooms"]').press('Enter');const room=card.locator('button[data-room-id="1"]');await room.focus();await room.press(' ');await expect(room).toBeFocused();expect(await page.evaluate(()=>window.avCard._selectedRoomIds)).toEqual(['1']);
  await page.evaluate(()=>{window.avHass.states['vacuum.one'].attributes.battery_level=0;window.avCard.hass={...window.avHass};});await expect(room).toBeFocused();await card.locator('[data-control-action="primary"]').press('Enter');await expect.poll(()=>page.evaluate(()=>window.avCalls.length)).toBe(1);expect((await calls(page))[0]).toEqual({domain:'vacuum',service:'send_command',data:{entity_id:'vacuum.one',command:'app_segment_clean',params:[{segments:[1],repeat:1}]},target:undefined});expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);

@@ -34,6 +34,28 @@ test('Graph benchmark ingests real large history rather than rendering an empty 
  });
  expect(result.errors).toEqual([]);expect(result.metrics.historyInputPoints).toBe(1000);expect(result.metrics.historySamplesObserved).toBeGreaterThan(1);expect(result.metrics.numericProcessingMs).toBeGreaterThan(0);
 });
+test('benchmark preparation starts with empty persisted state between profiles',async({page})=>{
+ await fixture(page);await page.evaluate(()=>import('/nodalia-cards.js'));
+ const result=await page.evaluate(async()=>{
+  const config={quietMs:20,settleTimeoutMs:6000,assignments:120,commonCards:['advance-vacuum']};
+  localStorage.setItem('previous-profile','private session');sessionStorage.setItem('previous-profile','private session');
+  await window.bench.prepare('helpers/advance-vacuum/auto',config);
+  return {local:localStorage.getItem('previous-profile'),session:sessionStorage.getItem('previous-profile')};
+ });
+ expect(result).toEqual({local:null,session:null});
+});
+test('touch benchmark constructs native Touch and TouchEvent objects',async({page})=>{
+ await fixture(page);test.skip(!await page.evaluate(()=>typeof TouchEvent==='function'),'Native touch constructors unavailable');
+ const result=await page.evaluate(async()=>{
+  const {touchEvent}=await import('/bench/fixtures/runtime.mjs');
+  const event=touchEvent('touchmove',document.body,[{clientX:12,clientY:13}]);
+  // Native getters enforce the internal brand; changing an Event's prototype cannot pass.
+  const touches=Object.getOwnPropertyDescriptor(TouchEvent.prototype,'touches').get.call(event);
+  const x=Object.getOwnPropertyDescriptor(Touch.prototype,'clientX').get.call(touches[0]);
+  return {length:touches.length,x,y:touches[0].clientY,cancelable:event.cancelable};
+ });
+ expect(result).toEqual({length:1,x:12,y:13,cancelable:true});
+});
 test('vacuum profiles exercise a large helper catalog, robot switch and negotiated API v3 commands',async({page})=>{
  await fixture(page);await page.evaluate(()=>import('/nodalia-cards.js'));
  const results=await page.evaluate(async()=>{

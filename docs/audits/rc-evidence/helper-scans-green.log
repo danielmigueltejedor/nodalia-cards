@@ -1,0 +1,208 @@
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:00] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+
+Running 45 tests using 3 workers
+
+(node:56833) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:56831) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:56832) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:01] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:01] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:01] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓   2 [chromium] › tests/browser/advance-vacuum-lifecycle.spec.mjs:15:1 › Explicit Advance Vacuum tracking avoids catalog scans and refreshes helper availability and values (592ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:01] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:01] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:01] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:01] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:01] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:01] "GET /nodalia-cards.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:01] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:01] "GET /nodalia-cards.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:01] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓   3 [webkit-iphone] › tests/browser/advance-vacuum-lifecycle.spec.mjs:15:1 › Explicit Advance Vacuum tracking avoids catalog scans and refreshes helper availability and values (983ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:02] code 404, message File not found
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:02] "GET /local/vacuum-map.svg HTTP/1.1" 404 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:02] code 404, message File not found
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:02] "GET /local/vacuum-map.svg HTTP/1.1" 404 -
+  ✓   1 [webkit] › tests/browser/advance-vacuum-lifecycle.spec.mjs:15:1 › Explicit Advance Vacuum tracking avoids catalog scans and refreshes helper availability and values (1.0s)
+  ✓   4 [chromium] › tests/browser/advance-vacuum-lifecycle.spec.mjs:35:1 › Automatic Advance Vacuum discovery scans once per HA assignment and releases its lookup scope (486ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:02] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:02] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:02] "GET /nodalia-cards.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:02] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:02] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:02] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:02] "GET /nodalia-cards.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:02] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:02] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓   5 [webkit-iphone] › tests/browser/advance-vacuum-lifecycle.spec.mjs:35:1 › Automatic Advance Vacuum discovery scans once per HA assignment and releases its lookup scope (440ms)
+  ✓   6 [webkit] › tests/browser/advance-vacuum-lifecycle.spec.mjs:35:1 › Automatic Advance Vacuum discovery scans once per HA assignment and releases its lookup scope (447ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:02] code 404, message File not found
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:02] "GET /local/vacuum-map.svg HTTP/1.1" 404 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:02] code 404, message File not found
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:02] "GET /local/vacuum-map.svg HTTP/1.1" 404 -
+  ✓   7 [chromium] › tests/browser/advance-vacuum-lifecycle.spec.mjs:53:1 › Advance Vacuum keeps native room keyboard focus through HA updates and sends only selected rooms (434ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:02] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:02] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:02] "GET /nodalia-cards.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:02] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:02] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:02] "GET /nodalia-cards.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:02] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:02] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:02] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓   8 [webkit-iphone] › tests/browser/advance-vacuum-lifecycle.spec.mjs:53:1 › Advance Vacuum keeps native room keyboard focus through HA updates and sends only selected rooms (441ms)
+  ✓   9 [webkit] › tests/browser/advance-vacuum-lifecycle.spec.mjs:53:1 › Advance Vacuum keeps native room keyboard focus through HA updates and sends only selected rooms (451ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:02] code 404, message File not found
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:02] "GET /local/vacuum-map.svg HTTP/1.1" 404 -
+  ✓  10 [chromium] › tests/browser/advance-vacuum-lifecycle.spec.mjs:57:1 › Advance Vacuum cancels room taps, goto and zone gestures without persisting a cancelled selection (404ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:03] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:03] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:03] "GET /nodalia-cards.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:03] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:03] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:03] "GET /nodalia-cards.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:03] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:03] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:03] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  11 [webkit-iphone] › tests/browser/advance-vacuum-lifecycle.spec.mjs:57:1 › Advance Vacuum cancels room taps, goto and zone gestures without persisting a cancelled selection (476ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:03] code 404, message File not found
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:03] "GET /local/vacuum-map.svg HTTP/1.1" 404 -
+  ✓  12 [webkit] › tests/browser/advance-vacuum-lifecycle.spec.mjs:57:1 › Advance Vacuum cancels room taps, goto and zone gestures without persisting a cancelled selection (431ms)
+  ✓  13 [chromium] › tests/browser/advance-vacuum-lifecycle.spec.mjs:62:1 › Advance Vacuum retains real pointer capture while dragging a zone and rolls back cancellation (450ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:03] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:03] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:03] "GET /nodalia-cards.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:03] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:03] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:03] "GET /nodalia-cards.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:03] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:03] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:03] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  16 [chromium] › tests/browser/advance-vacuum-lifecycle.spec.mjs:68:1 › Advance Vacuum retires deferred pause and owned delay before a zone command on another robot or user (342ms)
+  ✓  14 [webkit-iphone] › tests/browser/advance-vacuum-lifecycle.spec.mjs:62:1 › Advance Vacuum retains real pointer capture while dragging a zone and rolls back cancellation (425ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:03] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:03] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:03] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  15 [webkit] › tests/browser/advance-vacuum-lifecycle.spec.mjs:62:1 › Advance Vacuum retains real pointer capture while dragging a zone and rolls back cancellation (455ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:03] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:03] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:03] "GET /nodalia-cards.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:03] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:04] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:04] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  17 [chromium] › tests/browser/advance-vacuum-lifecycle.spec.mjs:72:1 › Advance Vacuum guards queued room resume and stale shared helper feedback across HA contexts (290ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:04] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:04] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:04] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  18 [webkit-iphone] › tests/browser/advance-vacuum-lifecycle.spec.mjs:68:1 › Advance Vacuum retires deferred pause and owned delay before a zone command on another robot or user (385ms)
+  ✓  19 [webkit] › tests/browser/advance-vacuum-lifecycle.spec.mjs:68:1 › Advance Vacuum retires deferred pause and owned delay before a zone command on another robot or user (395ms)
+  ✓  20 [chromium] › tests/browser/advance-vacuum-lifecycle.spec.mjs:76:1 › Advance Vacuum scopes private sessions, handles malformed snapshots and refreshes mutated registries (273ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:04] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:04] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:04] "GET /nodalia-cards.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:04] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:04] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:04] "GET /nodalia-cards.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:04] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:04] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:04] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  21 [webkit-iphone] › tests/browser/advance-vacuum-lifecycle.spec.mjs:72:1 › Advance Vacuum guards queued room resume and stale shared helper feedback across HA contexts (309ms)
+  ✓  22 [webkit] › tests/browser/advance-vacuum-lifecycle.spec.mjs:72:1 › Advance Vacuum guards queued room resume and stale shared helper feedback across HA contexts (323ms)
+  ✓  23 [chromium] › tests/browser/advance-vacuum-lifecycle.spec.mjs:79:1 › Advance Vacuum configured services retain targets and zero/false data, and never fall through a denied map action (318ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:04] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:04] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:04] "GET /nodalia-cards.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:04] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:04] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:04] "GET /nodalia-cards.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:04] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:04] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:04] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  24 [webkit-iphone] › tests/browser/advance-vacuum-lifecycle.spec.mjs:76:1 › Advance Vacuum scopes private sessions, handles malformed snapshots and refreshes mutated registries (305ms)
+  ✓  25 [webkit] › tests/browser/advance-vacuum-lifecycle.spec.mjs:76:1 › Advance Vacuum scopes private sessions, handles malformed snapshots and refreshes mutated registries (310ms)
+  ✓  26 [chromium] › tests/browser/advance-vacuum-lifecycle.spec.mjs:84:1 › Advance Vacuum detachment releases gesture, locale, animation and delay work and ignores an old map image (281ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:04] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:04] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:04] "GET /nodalia-cards.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:05] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:05] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:05] "GET /nodalia-cards.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:05] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:05] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:05] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  27 [webkit-iphone] › tests/browser/advance-vacuum-lifecycle.spec.mjs:79:1 › Advance Vacuum configured services retain targets and zero/false data, and never fall through a denied map action (374ms)
+  ✓  29 [chromium] › tests/browser/advance-vacuum-lifecycle.spec.mjs:88:1 › Advance Vacuum ignores an older failed helper write after a newer selection in the same HA context (287ms)
+  ✓  28 [webkit] › tests/browser/advance-vacuum-lifecycle.spec.mjs:79:1 › Advance Vacuum configured services retain targets and zero/false data, and never fall through a denied map action (371ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:05] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:05] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:05] "GET /nodalia-cards.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:05] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:05] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:05] "GET /nodalia-cards.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:05] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:05] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:05] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  31 [chromium] › tests/browser/advance-vacuum-lifecycle.spec.mjs:97:1 › Advance Vacuum mounts its complete stylesheet before the first HA card connection and survives malformed error-color YAML (294ms)
+  ✓  30 [webkit-iphone] › tests/browser/advance-vacuum-lifecycle.spec.mjs:84:1 › Advance Vacuum detachment releases gesture, locale, animation and delay work and ignores an old map image (317ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:05] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:05] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:05] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  32 [webkit] › tests/browser/advance-vacuum-lifecycle.spec.mjs:84:1 › Advance Vacuum detachment releases gesture, locale, animation and delay work and ignores an old map image (321ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:05] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:05] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:05] "GET /nodalia-cards.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:05] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:05] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:05] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  33 [chromium] › tests/browser/advance-vacuum-lifecycle.spec.mjs:110:1 › Advance Vacuum submits one smart command when suction and water share the fan service (272ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:05] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:05] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+  ✓  34 [webkit-iphone] › tests/browser/advance-vacuum-lifecycle.spec.mjs:88:1 › Advance Vacuum ignores an older failed helper write after a newer selection in the same HA context (306ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:05] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  35 [webkit] › tests/browser/advance-vacuum-lifecycle.spec.mjs:88:1 › Advance Vacuum ignores an older failed helper write after a newer selection in the same HA context (305ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:06] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:06] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:06] "GET /nodalia-cards.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:06] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:06] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:06] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  36 [chromium] › tests/browser/advance-vacuum-lifecycle.spec.mjs:121:1 › Advance Vacuum consumes entrance once and keeps smart controls visible through rapid cleaning feedback (383ms)
+  ✓  37 [webkit-iphone] › tests/browser/advance-vacuum-lifecycle.spec.mjs:97:1 › Advance Vacuum mounts its complete stylesheet before the first HA card connection and survives malformed error-color YAML (339ms)
+  ✓  38 [webkit] › tests/browser/advance-vacuum-lifecycle.spec.mjs:97:1 › Advance Vacuum mounts its complete stylesheet before the first HA card connection and survives malformed error-color YAML (333ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:06] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:06] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:06] "GET /nodalia-cards.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:06] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:06] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:06] "GET /nodalia-cards.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:06] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:06] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:06] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  39 [chromium] › tests/browser/advance-vacuum-lifecycle.spec.mjs:143:1 › Advance Vacuum rejects failed presets without leaving smart selected and ignores failures from a retired selection (307ms)
+  ✓  40 [webkit-iphone] › tests/browser/advance-vacuum-lifecycle.spec.mjs:110:1 › Advance Vacuum submits one smart command when suction and water share the fan service (312ms)
+  ✓  41 [webkit] › tests/browser/advance-vacuum-lifecycle.spec.mjs:110:1 › Advance Vacuum submits one smart command when suction and water share the fan service (310ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:06] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:06] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:06] "GET /nodalia-cards.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:06] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:06] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:06] "GET /nodalia-cards.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:06] code 404, message File not found
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:06] "GET /local/vacuum-map.svg HTTP/1.1" 404 -
+  ✓  42 [webkit-iphone] › tests/browser/advance-vacuum-lifecycle.spec.mjs:121:1 › Advance Vacuum consumes entrance once and keeps smart controls visible through rapid cleaning feedback (452ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:07] code 404, message File not found
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:07] "GET /local/vacuum-map.svg HTTP/1.1" 404 -
+  ✓  43 [webkit] › tests/browser/advance-vacuum-lifecycle.spec.mjs:121:1 › Advance Vacuum consumes entrance once and keeps smart controls visible through rapid cleaning feedback (430ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:07] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:07] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:07] "GET /nodalia-cards.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:07] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:07] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:13:07] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  44 [webkit-iphone] › tests/browser/advance-vacuum-lifecycle.spec.mjs:143:1 › Advance Vacuum rejects failed presets without leaving smart selected and ignores failures from a retired selection (307ms)
+  ✓  45 [webkit] › tests/browser/advance-vacuum-lifecycle.spec.mjs:143:1 › Advance Vacuum rejects failed presets without leaving smart selected and ignores failures from a retired selection (305ms)
+
+  45 passed (7.0s)

@@ -409,6 +409,21 @@ test('backend retires an old handshake when a replacement owner sends a legacy c
   request.resolve(handshake());await assert.rejects(pending,{code:'stale_context'});
   assert.equal(commands.filter(message=>message.type==='nodalia/vacuum/session/set').length,0);
 });
+test('backend v3 dispatch honors a newer completed downgrade instead of an older handshake',async()=>{
+  const backend=loadBackend(),requests=[],commands=[];
+  const hass={connection:{},callWS(message){commands.push(message);if(message.type==='nodalia/status'){const request=deferred();requests.push(request);return request.promise;}return Promise.resolve({});}};
+  const mutation=backend.setVacuumSession(hass,'vacuum.robot',{},0),latest=backend.status(hass,{force:true});
+  requests[1].resolve(handshake(2));await latest;requests[0].resolve(handshake(3));
+  await assert.rejects(mutation,{code:'unsupported_capability'});
+  assert.equal(commands.filter(message=>message.type==='nodalia/vacuum/session/set').length,0);
+});
+test('backend does not revive expired cached availability after a fresh v3 handshake fails transiently',async()=>{
+  let now=0,fail=false;const commands=[],backend=loadBackend({Date:{now:()=>now}});
+  const hass={connection:{},callWS:async message=>{commands.push(message);if(fail)throw Object.assign(new Error('timeout'),{code:'timeout'});return handshake();}};
+  await backend.status(hass);now=30_001;fail=true;
+  await assert.rejects(backend.setVacuumSession(hass,'vacuum.robot',{},0),{code:'unsupported_capability'});
+  assert.equal(commands.filter(message=>message.type==='nodalia/vacuum/session/set').length,0);
+});
 test('backend rejects malformed explicit API ranges rather than guessing v3', async () => {
   for(const range of [{api_min_version:0,api_max_version:3},{api_min_version:false,api_max_version:3},{api_min_version:2,api_max_version:Infinity},{api_min_version:2.5,api_max_version:3},{api_min_version:4,api_max_version:3}]){
     const value=await loadBackend().status({callWS:async()=>({...handshake(),...range})});assert.equal(value.available,false,JSON.stringify(range));

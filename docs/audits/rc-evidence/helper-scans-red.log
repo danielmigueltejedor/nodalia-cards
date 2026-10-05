@@ -1,0 +1,40 @@
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:11:58] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+
+Running 1 test using 1 worker
+
+(node:56718) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:11:59] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:11:59] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 16:11:59] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✘  1 [chromium] › tests/browser/advance-vacuum-lifecycle.spec.mjs:35:1 › Automatic Advance Vacuum discovery scans once per HA assignment and releases its lookup scope (609ms)
+
+
+  1) [chromium] › tests/browser/advance-vacuum-lifecycle.spec.mjs:35:1 › Automatic Advance Vacuum discovery scans once per HA assignment and releases its lookup scope 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 120
+    Received: 240
+
+      47 |   return {updateScans,scopeReleased,added,removed};
+      48 |  });
+    > 49 |  expect(result.updateScans).toBe(120);expect(result.scopeReleased).toBe(true);
+         |                             ^
+      50 |  expect(result.added).toContain('sensor.one_current_room');expect(result.removed).not.toContain('sensor.one_current_room');
+      51 |  expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+      52 | });
+        at <repository>/tests/browser/advance-vacuum-lifecycle.spec.mjs:49:29
+
+    Error Context: test-results/advance-vacuum-lifecycle-A-30041-d-releases-its-lookup-scope-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/advance-vacuum-lifecycle-A-30041-d-releases-its-lookup-scope-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/advance-vacuum-lifecycle-A-30041-d-releases-its-lookup-scope-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › tests/browser/advance-vacuum-lifecycle.spec.mjs:35:1 › Automatic Advance Vacuum discovery scans once per HA assignment and releases its lookup scope 

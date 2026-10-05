@@ -31,3 +31,7 @@ The validator is `validateResult` in [`bench/core.mjs`](../../bench/core.mjs), e
 The stable release workflow schedules the controlled reference job after the exact stable asset is published. See [setup and review requirements](../releasing.md#official-post-release-performance-evidence). The resulting notes link to raw hashes/samples and a report branch so evidence is readable before its documentation PR merges. Reports are historical evidence: preserve their original metadata and never overwrite samples to make a release look faster.
 
 No official RC comparison exists until RC is published and measured. A pending or failed run must not be advertised as a completed four-engine benchmark. A CPU delta, mutation count or heap change cannot support a global “3.0 is faster” claim. See the [RC audit verdict](../audits/rc-readiness-report.md) for remaining gates.
+
+## Current audit reference
+
+The [beta.1 reference analysis](2.2.10-vs-3.0.0-beta.1-analysis.md) preserves 5,642 samples from the earlier harness, with original raw JSON/CSV and all tables. It is explicitly incomplete: Firefox launch failure, legacy Graph settle errors, cross-profile saved-state effects and simulated touch limit acceptance. The current isolated, native-touch harness needs a fresh complete reference run before any RC/stable claims.

@@ -1422,6 +1422,7 @@
         this._selectionUpdatedAt = 0;
         this._wasCleaningSessionActive = false;
         this._roomTrackingEntityCache = null;
+        this._roomTrackingLookupScope = null;
         this._lastRenderSignature = "";
         this._calibrationSignatureStamp = "";
         this._animateContentOnNextRender = true;
@@ -1713,6 +1714,8 @@
         if (this.isConnected) this._scheduleLocaleReconciliation();
       }
       set hass(hass) {
+        const previousLookupScope = this._roomTrackingLookupScope;
+        this._roomTrackingLookupScope = { hass, value: null };
         try {
           const server = this._serverIdentity(hass);
           const contextChanged = this._contextConnection !== hass?.connection || this._contextAuth !== hass?.auth || this._contextUser !== (hass?.user?.id || "") || this._contextAdmin !== (hass?.user?.is_admin === true) || this._contextServer !== server;
@@ -1736,6 +1739,8 @@
           this._render();
         } catch (error) {
           this._handleCardError(error, "set hass");
+        } finally {
+          this._roomTrackingLookupScope = previousLookupScope;
         }
       }
       getCardSize() {
@@ -2604,6 +2609,8 @@
         return [...new Set(resolved.map((item) => String(item || "").trim()).filter(Boolean))];
       }
       _getRelatedVacuumEntityIds(hass = this._hass) {
+        const scope = this._roomTrackingLookupScope?.hass === hass ? this._roomTrackingLookupScope : null;
+        if (scope?.value) return scope.value;
         const entityId = String(this._config?.entity || "");
         const explicitRoomEntityId = String(this._config?.room_tracking?.entity || "");
         const explicitActivityEntityId = String(this._config?.room_tracking?.activity_entity || "");
@@ -2615,7 +2622,10 @@
           return [id, state?.attributes?.friendly_name, entry.device_id, entry.original_name, entry.translation_key];
         }) : [Boolean(states[explicitRoomEntityId]), Boolean(states[explicitActivityEntityId])];
         const cacheKey = JSON.stringify([entityId, explicitRoomEntityId, explicitActivityEntityId, autoDetect, catalogSignature]);
-        if (this._roomTrackingEntityCache?.key === cacheKey) return this._roomTrackingEntityCache;
+        if (this._roomTrackingEntityCache?.key === cacheKey) {
+          if (scope) scope.value = this._roomTrackingEntityCache;
+          return this._roomTrackingEntityCache;
+        }
         const roomIds = new Set(explicitRoomEntityId ? [explicitRoomEntityId] : []);
         const activityIds = new Set(explicitActivityEntityId ? [explicitActivityEntityId] : []);
         if (autoDetect && entityId) {
@@ -2665,6 +2675,7 @@
           roomIds: [...roomIds].filter((id) => states[id]),
           activityIds: [...activityIds].filter((id) => states[id])
         };
+        if (scope) scope.value = this._roomTrackingEntityCache;
         return this._roomTrackingEntityCache;
       }
       _getExternalRoomTrackingSnapshot(hass = this._hass) {

@@ -71,8 +71,9 @@ export async function run(args=process.argv.slice(2),env=process.env) {
     const browserConfig={...config,commonCards};
     for(let iteration=-config.warmups;iteration<config.iterations;iteration++){
      for(const version of sampleOrder(options.versions,iteration+config.warmups)){
-      const context=await browser.newContext(descriptor),page=await context.newPage();let cdp=null,requests=0;const runtimeErrors=[];
-      page.on('pageerror',error=>runtimeErrors.push(String(error.message)));page.on('request',request=>{if(request.url().includes('/bench/artwork/'))requests++;});
+      const context=await browser.newContext(descriptor);let page=await context.newPage(),cdp=null,requests=0;const runtimeErrors=[];
+      const observePage=()=>{page.on('pageerror',error=>runtimeErrors.push(String(error.message)));page.on('request',request=>{if(request.url().includes('/bench/artwork/'))requests++;});};
+      observePage();
       try {
        if(name==='chromium'){cdp=await context.newCDPSession(page);await cdp.send('Performance.enable');}
        await page.goto(`${server.url}/bench/fixture.html`);await page.waitForFunction(()=>window.bench);
@@ -81,6 +82,12 @@ export async function run(args=process.argv.slice(2),env=process.env) {
        if(iteration>=0)result.samples.push({browser:name,version,iteration,scenario:'cold-startup',scope:'common',metrics:startup,skipped:[]});
        for(const scenario of scenarios(browserConfig)){
         try {
+         // A profile must not inherit retired frames, module caches or private
+         // card state from an earlier profile. Setup/import stays outside its timing.
+         await page.close();page=await context.newPage();observePage();
+         cdp=null;if(name==='chromium'){cdp=await context.newCDPSession(page);await cdp.send('Performance.enable');}
+         await page.goto(`${server.url}/bench/fixture.html`);await page.waitForFunction(()=>window.bench);
+         await page.evaluate(version=>window.bench.load(version),version);
          await page.evaluate(({id,config})=>window.bench.prepare(id,config),{id:scenario.id,config:browserConfig});
          const memoryBefore=scenario.id.startsWith('lifecycle/')?await heapSnapshot(cdp,page):null;
          // memoryReset clears only detached fixtures; lifecycle preparation intentionally has no mounted card.

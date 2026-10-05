@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "timestamp": "2026-10-05T13:25:52.593503+00:00",
+  "timestamp": "2026-10-05T17:05:06.116534+00:00",
   "verdict": "NOT RC READY",
   "baselineHead": "1e2eb55d717279499febc56ec39872cb5a160bef",
   "version": "3.0.0-beta.1",
@@ -43,7 +43,10 @@
       "redLog": "docs/audits/rc-evidence/engine-owner-red.log",
       "greenLog": "docs/audits/rc-evidence/engine-owner-green.log",
       "greenPassed": 31,
-      "regression": "tests/nodalia-backend.test.mjs"
+      "regression": "tests/nodalia-backend.test.mjs",
+      "negotiationRedLog": "docs/audits/rc-evidence/engine-negotiation-red.log",
+      "negotiationGreenLog": "docs/audits/rc-evidence/engine-negotiation-green.log",
+      "negotiationGreenPassed": 33
     },
     {
       "id": "benchmark-download-boundary",
@@ -51,15 +54,35 @@
       "status": "fixed",
       "redLog": "docs/audits/rc-evidence/downloader-red.log",
       "regression": "tests/benchmark-framework.test.mjs"
+    },
+    {
+      "id": "vacuum-duplicate-catalog-scan",
+      "severity": "medium",
+      "status": "fixed",
+      "regression": "tests/browser/advance-vacuum-lifecycle.spec.mjs",
+      "redLog": "docs/audits/rc-evidence/helper-scans-red.log",
+      "greenLog": "docs/audits/rc-evidence/helper-scans-green.log"
+    },
+    {
+      "id": "benchmark-profile-contamination",
+      "severity": "medium",
+      "status": "fixed; reference rerun pending",
+      "regression": "tests/browser/benchmark-framework.spec.mjs"
+    },
+    {
+      "id": "benchmark-touch-native-brand",
+      "severity": "medium",
+      "status": "fixed; reference rerun pending",
+      "regression": "tests/browser/benchmark-framework.spec.mjs"
     }
   ],
   "gates": {
     "static": "passed: version, architecture, strict types, typed lint, distribution, translations, build",
     "unit": {
-      "passed": 825,
+      "passed": 827,
       "failed": 0,
       "skipped": 0,
-      "log": "/private/tmp/nodalia-rc-final-fast-validation.log"
+      "log": "/private/tmp/nodalia-rc-completion-fast.log"
     },
     "browsers": {
       "lastFullThreeEngine": {
@@ -108,7 +131,24 @@
       "project": "chromium",
       "log": "/private/tmp/nodalia-rc-soak100.log"
     },
-    "publishedAssetBenchmarks": "pending full run; Firefox unavailable",
+    "publishedAssetBenchmarks": {
+      "status": "incomplete diagnostic; not accepted release evidence",
+      "samples": 5642,
+      "measuredRounds": 7,
+      "warmups": 2,
+      "errors": 37,
+      "skips": 147,
+      "harnessCommit": "5f34871cd39e63b8e29589e04cf10fadcfc73cfc",
+      "rawJson": "docs/benchmarks/2.2.10-vs-3.0.0-beta.1-incomplete-reference.json",
+      "rawCsv": "docs/benchmarks/2.2.10-vs-3.0.0-beta.1-incomplete-reference.csv",
+      "analysis": "docs/benchmarks/2.2.10-vs-3.0.0-beta.1-analysis.md",
+      "limitations": [
+        "Firefox failed to launch",
+        "36 legacy Graph settle timeouts in WebKit/iPhone warmups/measured rounds",
+        "Earlier harness inherited persisted/module state across profiles",
+        "Earlier touch profile used a prototype-only synthetic event; native constructor evidence requires current harness"
+      ]
+    },
     "referenceRunner": {
       "registered": 0,
       "requiredLabel": "nodalia-benchmark",
@@ -133,7 +173,7 @@
       "developmentDependencies": 130
     },
     "deterministicArtifacts": {
-      "compared": 37,
+      "compared": 38,
       "changedAfterRebuild": 0
     },
     "codeQL": {
@@ -147,24 +187,49 @@
     },
     "benchmarkFramework": {
       "nodePassed": 14,
-      "localBrowserPassed": 15,
+      "localBrowserPassed": 21,
       "engines": [
         "chromium",
         "webkit",
         "webkit-iphone"
       ],
-      "mapFeedback": "Consumed robot state and map URL change every four moves; marker/image ownership checked during real frames"
+      "mapFeedback": "Consumed robot/map state every four moves; fresh pages per profile and native Touch/TouchEvent brand checks"
+    },
+    "helperRegression": {
+      "localBrowserPassed": 45,
+      "redScans": 240,
+      "greenScans": 120,
+      "assignments": 120,
+      "catalogAdditionalEntities": 1700,
+      "redLog": "docs/audits/rc-evidence/helper-scans-red.log",
+      "greenLog": "docs/audits/rc-evidence/helper-scans-green.log",
+      "diagnostic": "docs/audits/rc-evidence/helper-before-after.json"
+    },
+    "isolatedHarnessSmoke": {
+      "mode": "quick",
+      "samples": 1440,
+      "errors": 0,
+      "skips": 18,
+      "engines": [
+        "chromium",
+        "webkit",
+        "webkit-iphone"
+      ],
+      "iterations": 2,
+      "warmups": 1,
+      "provenance": "Functionality smoke only; not official reference performance",
+      "log": "/private/tmp/nodalia-rc-isolated-smoke.log"
     }
   },
   "candidateBundle": {
-    "rawBytes": 4146902,
-    "gzipBytes": 946679,
-    "sha256": "97edb7fd8856861a2668fe55d235009be6860aca4f8b6ed245b11b2e58c66924",
+    "rawBytes": 4147296,
+    "gzipBytes": 946786,
+    "sha256": "fbc017b2ffce2e6db48ebfb04fcf27db7c0b7f08a308978ac3c28b92512b89ed",
     "provenance": "working-candidate size check only"
   },
   "releaseBlockers": [
     "Missing Apple M4 Firefox performance evidence",
-    "Published-asset baseline benchmark completion and material regression analysis",
+    "Fresh isolated/native-touch four-engine published-asset reference run and candidate material regression assessment",
     "Controlled reference release runner not provisioned"
   ],
   "benchmarkSchemaVersion": 1,

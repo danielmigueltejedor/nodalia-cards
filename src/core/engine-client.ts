@@ -144,10 +144,13 @@ async function v3Command(hass: EngineHass, capability: string, type: string, dat
   const context = contextOf(hass);
   const handshake = status(hass);
   const generation = contextGeneration;
-  const value = await handshake;
+  const reply = await handshake;
   if (generation !== contextGeneration || !sameContext(context, contextOf(hass))) {
     throw Object.assign(new Error("Engine request belongs to a retired HA context"), { code: "stale_context" });
   }
+  // A newer successful negotiation owns dispatch, even when this older request
+  // resolves later. A failed fresh lookup must not revive an expired positive cache.
+  const value = reply.available && statusCache.value ? statusCache.value : reply;
   if (value.negotiated_api_version !== API_VERSION || !hasCapability(value, capability)) {
     throw Object.assign(new Error(`Engine capability unavailable: ${capability}`), { code: "unsupported_capability" });
   }
