@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "timestamp": "2026-10-05T17:05:06.116534+00:00",
+  "timestamp": "2026-10-05T17:21:18.234481+00:00",
   "verdict": "NOT RC READY",
   "baselineHead": "1e2eb55d717279499febc56ec39872cb5a160bef",
   "version": "3.0.0-beta.1",
@@ -92,26 +92,26 @@
         "beforeHumidifierFocusFix": true
       },
       "finalCommit": {
-        "commit": "5f34871cd39e63b8e29589e04cf10fadcfc73cfc",
-        "run": "https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37315449217",
+        "commit": "09fb0ef764dfd099db7bd2ba803b8125b1ee7719",
+        "run": "https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37346221596",
         "chromium": {
-          "passed": 405,
+          "passed": 408,
           "failed": 0,
           "skipped": 0
         },
         "firefox": {
-          "passed": 404,
+          "passed": 406,
           "failed": 0,
-          "skipped": 1,
-          "skipReason": "Native touch constructors unavailable"
+          "skipped": 2,
+          "skipReason": "Native touch construction unavailable in Firefox (zoom and native benchmark tests)"
         },
         "webkit": {
-          "passed": 405,
+          "passed": 408,
           "failed": 0,
           "skipped": 0
         },
         "webkit-iphone": {
-          "passed": 404,
+          "passed": 407,
           "failed": 0,
           "skipped": 1,
           "skipReason": "Mobile project already covers a different DPR"
@@ -121,7 +121,9 @@
         "status": "unavailable",
         "failure": "Could not find profile folder",
         "cleanPinnedDownloadTried": true
-      }
+      },
+      "totalPassed": 1629,
+      "totalSkipped": 3
     },
     "soak100": {
       "passed": 12,
@@ -157,11 +159,11 @@
     },
     "remoteCI": {
       "status": "passed",
-      "commit": "5f34871cd39e63b8e29589e04cf10fadcfc73cfc",
-      "ci": "https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37315449217",
-      "hacs": "https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37315448768",
-      "codeQL": "https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37315448741",
-      "benchmarkSmoke": "https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37315448720"
+      "commit": "09fb0ef764dfd099db7bd2ba803b8125b1ee7719",
+      "ci": "https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37346221596",
+      "hacs": "https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37346221258",
+      "codeQL": "https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37346221302",
+      "benchmarkSmoke": "https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37346221237"
     },
     "dependencyAudit": {
       "info": 0,
@@ -178,7 +180,7 @@
     },
     "codeQL": {
       "status": "passed",
-      "run": "https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37315448741",
+      "run": "https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37346221302",
       "reviewedFalsePositives": [
         295,
         296
@@ -241,5 +243,6 @@
     "normalization": "ANSI colors removed; repository path replaced with <repository>; benchmark raw sample files are never normalized",
     "runtimeSourceBeforeFix": "1e2eb55d717279499febc56ec39872cb5a160bef",
     "downloaderSourceBeforeFix": "ae5d0f8a9e0792ec1ff6e75778ef8385642b70cf"
-  }
+  },
+  "validatedSourceCommit": "09fb0ef764dfd099db7bd2ba803b8125b1ee7719"
 }

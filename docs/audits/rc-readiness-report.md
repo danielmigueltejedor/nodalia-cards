@@ -39,7 +39,7 @@ The archived reference run measured 100/250/500 cycles for Media, Graph, Advance
 
 ## H–I. Compatibility, bundle and contracts
 
-Before the Humidifier focus correction, the complete three-engine suite had 1,207 passes, one Chromium failure and one existing iPhone skip. The focus correction then passed all 18 Humidifier tests in the three engines; the complete suite must be revalidated on the final commit. Four-engine Linux CI passed on final runtime/harness commit 5f34871c: Chromium/WebKit 405 each, Firefox/iPhone WebKit 404 each with one existing skip each. Final local static validation passes all 827 Node tests, strict types/lint/architecture/translations/distribution/build. Engine ownership/negotiation passes all 33 targeted backend tests. Exact-commit CI, HACS, CodeQL and benchmark smoke all pass; see the linked run IDs in the results JSON. Compatibility evidence is separate from the reference performance run.
+Before the Humidifier focus correction, the complete three-engine suite had 1,207 passes, one Chromium failure and one existing iPhone skip. The corrected source/harness is now verified on commit `09fb0ef764dfd099db7bd2ba803b8125b1ee7719` in four-engine Linux CI: Chromium/WebKit 408 each, Firefox 406 with two native-touch skips, iPhone WebKit 407 with one duplicate-DPR skip (1,629 total passes, three explicit skips). Final local static validation passes all 827 Node tests, strict types/lint/architecture/translations/distribution/build. Engine ownership/negotiation passes all 33 targeted backend tests. Exact-commit CI, HACS, CodeQL and benchmark smoke all pass; see the linked run IDs in the results JSON. Compatibility evidence is separate from the reference performance run.
 
 Current candidate bundle measurement: 4,147,296 raw / 946,786 gzip bytes, SHA256 `fbc017b2ffce2e6db48ebfb04fcf27db7c0b7f08a308978ac3c28b92512b89ed`. This is a working candidate size check, not published RC evidence. Existing budgets are unchanged. Distribution/standalone/custom elements/language tests preserve existing contracts. No production dependencies were added.
 
@@ -65,19 +65,19 @@ CodeQL identified a substring-host matcher in a test and manifest data reused as
 
 The map fixture was strengthened before the final run: every four moves change consumed robot state and the map image URL, then yield a real frame. During-gesture render/overlay counts and image/marker identity are checked separately from the settled repaint. All 21 current benchmark-framework browser tests pass across the three locally available engines. Earlier interrupted/development runs are not saved as accepted official evidence.
 
-## Exact acceptance counts
+## Exact completed validation counts
 
 | Gate | Result |
 |---|---|
 | Node / static validation | 827 pass, zero failures/skips; strict types/lint/architecture/translations/distribution/build pass |
-| Chromium | 405 pass |
-| Firefox on Linux CI | 404 pass, one native-touch constructor skip |
-| WebKit | 405 pass |
-| iPhone WebKit | 404 pass, one duplicate-DPR scenario skip |
+| Chromium | 408 pass |
+| Firefox on Linux CI | 406 pass, two native-touch constructor skips |
+| WebKit | 408 pass |
+| iPhone WebKit | 407 pass, one duplicate-DPR scenario skip |
 | Chromium resource soak | 12 cards × 100 cycles × 4,000 HA updates; no resource-ledger growth |
 | Artifact determinism | 38 root JS files, zero drift after another build |
 | Dependency audit | Zero vulnerabilities; zero production dependencies |
-| HACS / CodeQL / benchmark smoke | Pass on 5f34871c |
+| HACS / CodeQL / benchmark smoke | Pass on 09fb0ef7 |
 
 The Linux Firefox compatibility pass cannot replace missing Firefox timings on the Apple M4 reference system. The pending performance and controlled-runner gates therefore still prevent RC preparation.
 
@@ -94,3 +94,5 @@ The repeated Chromium GC data has zero residual connected/CDP DOM nodes. Heap de
 The helper correction passes 45 local lifecycle tests across the three available engines. Its separate seven-round source diagnostic reduces scans from 240 to 120 and dispatch median from 120.4 to 71.7 ms in Chromium, and 100 to 62 ms in WebKit. These are isolated unpublished-candidate diagnostics and are explicitly excluded from release-note evidence. The lookup scope is synchronous and released in finally; it does not cache a HA object across assignments.
 
 The corrected harness then completed a three-engine quick smoke against exact published 2.2.10/beta.1 assets: 1,440 measured samples, zero errors and 18 explicit generation-2 skips. This validates isolation/native event compatibility and output generation, not official performance acceptance. It cannot substitute the required seven-round four-engine reference run.
+
+Final source/harness validation: [four-engine CI](https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37346221596), [HACS](https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37346221258), [CodeQL](https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37346221302), [benchmark smoke](https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37346221237). Subsequent changes in this audit checkpoint only record evidence; the source/artifact/harness hashes remain unchanged.
