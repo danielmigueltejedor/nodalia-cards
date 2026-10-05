@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "timestamp": "2026-10-05T17:38:53.075597+00:00",
+  "timestamp": "2026-10-05T21:40:36.250258+00:00",
   "verdict": "RC READY",
   "baselineHead": "1e2eb55d717279499febc56ec39872cb5a160bef",
   "version": "3.0.0-rc.1",
   "rcPrepared": true,
-  "rcPublished": false,
+  "rcPublished": true,
   "findings": [
     {
       "id": "summary-auth",
@@ -66,13 +66,13 @@
     {
       "id": "benchmark-profile-contamination",
       "severity": "medium",
-      "status": "fixed; reference rerun pending",
+      "status": "fixed; exact published RC reference complete",
       "regression": "tests/browser/benchmark-framework.spec.mjs"
     },
     {
       "id": "benchmark-touch-native-brand",
       "severity": "medium",
-      "status": "fixed; reference rerun pending",
+      "status": "fixed; exact published RC reference complete",
       "regression": "tests/browser/benchmark-framework.spec.mjs"
     }
   ],
@@ -221,13 +221,63 @@
       "warmups": 1,
       "provenance": "Functionality smoke only; not official reference performance",
       "log": "/private/tmp/nodalia-rc-isolated-smoke.log"
+    },
+    "rcPublishedAssetBenchmarks": {
+      "status": "accepted under owner-authorized macOS Firefox RC exception",
+      "samples": 8505,
+      "errors": 0,
+      "skips": 147,
+      "measuredRounds": 7,
+      "warmups": 2,
+      "engines": [
+        "chromium",
+        "webkit",
+        "webkit-iphone"
+      ],
+      "harnessCommit": "6c2d5d635280d373e97df33c9392d7b835eee4f6",
+      "harnessFilesSha256": "fffc84a0fc90814a4486adc2db4221be0b388b12e2ca06e703f67e363e7f3a30",
+      "rawJson": "docs/benchmarks/rc1-reference/2.2.10-vs-3.0.0-beta.1-vs-3.0.0-rc.1.json",
+      "rawCsv": "docs/benchmarks/rc1-reference/2.2.10-vs-3.0.0-beta.1-vs-3.0.0-rc.1.csv",
+      "analysis": "docs/benchmarks/3.0.0-rc.1-analysis.md",
+      "engineRetry": {
+        "engine": "webkit-iphone",
+        "method": "Replace the entire failed engine; preserve both original attempts; no individual sample selection",
+        "originalFile": "original-failed.json",
+        "retryFile": "retry/2.2.10-vs-3.0.0-beta.1-vs-3.0.0-rc.1.json",
+        "orchestratorSha256": "23fd267619c74e393fc5bb3db70372b15436bb57c5f2a151d2ed9fa8e5718bf2",
+        "originalTimestamp": "2026-10-05T17:56:27.449Z",
+        "retryTimestamp": "2026-10-05T21:06:22.993Z",
+        "retryHarnessCommit": "0567b3f3cb79d633e72420715c58e3a9d5f21328",
+        "originalErrors": [
+          {
+            "browser": "webkit-iphone",
+            "version": "2.2.10",
+            "iteration": 5,
+            "scenario": "unrelated/gauge",
+            "error": "page.evaluate: TypeError: card.setConfig is not a function. (In 'card.setConfig({...config,animations:{enabled:false}})', 'card.setConfig' is undefined)"
+          },
+          {
+            "browser": "webkit-iphone",
+            "version": "2.2.10",
+            "iteration": 5,
+            "scenario": "relevant/gauge",
+            "error": "page.goto: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:63820/bench/fixture.html\", waiting until \"load\"\u001b[22m\n"
+          },
+          {
+            "browser": "webkit-iphone",
+            "stage": "suite",
+            "error": "page.evaluate: TypeError: Importing a module script failed."
+          }
+        ]
+      },
+      "materiality": "Reviewed positive and negative results; no unexpected material RC regression established; stabilization targets and physical-device limitations retained"
     }
   },
   "candidateBundle": {
     "rawBytes": 4147286,
-    "gzipBytes": 937945,
+    "gzipBytes": 946782,
     "sha256": "4b87f160e3cffe063aca649abea9ccba1b7af89d326d34be0f0551a027735b77",
-    "provenance": "prepared RC artifact; exact published asset verification pending"
+    "provenance": "Exact downloaded published v3.0.0-rc.1 asset; SHA256 matches validated root bundle"
   },
   "releaseBlockers": [],
   "benchmarkSchemaVersion": 1,
@@ -252,10 +302,7 @@
       "Four-engine stable asset evidence",
       "Provisioned controlled Actions runner"
     ],
-    "pending": [
-      "Exact-version quality gates before tagging",
-      "Exact-asset post-publication RC benchmark and material-regression assessment"
-    ]
+    "pending": []
   },
   "rcValidation": {
     "version": "3.0.0-rc.1",
@@ -264,6 +311,34 @@
     "static": "passed",
     "dependencyAudit": "zero vulnerabilities",
     "referencePolicy": "macos-firefox-rc",
-    "exactCommitRemoteCI": "pending"
+    "exactCommitRemoteCI": {
+      "status": "passed",
+      "sourceCommit": "58111d550afec1383cfef1dbbc13c71868e2d2b7",
+      "pullRequest": 313,
+      "ci": "https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37350075959",
+      "benchmarkSmoke": "https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37350075432",
+      "browserPassed": 1629,
+      "browserSkipped": 3,
+      "browserFailed": 0
+    }
+  },
+  "publishedRelease": {
+    "tag": "v3.0.0-rc.1",
+    "commit": "6c2d5d635280d373e97df33c9392d7b835eee4f6",
+    "url": "https://github.com/danielmigueltejedor/nodalia-cards/releases/tag/v3.0.0-rc.1",
+    "publishedAt": "2026-10-05T17:55:36Z",
+    "prerelease": true,
+    "assetId": 613280435,
+    "workflow": "https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37351132679",
+    "workflowConclusion": "success"
+  },
+  "postPublicationToolValidation": {
+    "commit": "0567b3f3cb79d633e72420715c58e3a9d5f21328",
+    "nodePassed": 831,
+    "nodeFailed": 0,
+    "static": "passed in remote CI",
+    "run": "https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37373871010",
+    "finalEvidenceCI": "Required before evidence PR integration",
+    "localRepeat": "Stopped after source file read stalled; not recorded as passing. No runtime edits since exact published RC gates."
   }
 }
