@@ -37,12 +37,37 @@ checkpoints; do not rerun an old release expecting the new workflow to apply.
 Stable promotion retires the active preview in the roadmap. Both stable and preview
 GitHub releases use their curated changelog sections; missing notes block publication.
 
+## Version 3 beta freeze
+
+`3.0.0-beta.1` means **feature and architecture freeze for Nodalia Cards 3**.
+The strict migration is complete. The 25 cards, public custom elements, YAML,
+standalone resource paths, HACS single resource and Engine API 2/3 contracts are
+frozen for stabilization.
+
+Until stable 3.0.0, accept bug fixes, measured performance fixes, accessibility,
+browser compatibility, lifecycle/memory corrections, documentation and tests.
+Defer new cards, substantial features, broad architectural refactors, YAML/public
+API changes, major visual changes and new runtime dependencies to a later cycle.
+An architectural change requires a reproducible bug and a failing regression.
+The unchanged bundle caps and zero type/import-cycle debt remain enforced.
+
+See [the final alpha audit](BETA_READINESS_AUDIT.md) for acceptance evidence
+and device/integration limits. A prepared beta is not a published release; the
+validated tag and release determine installation availability.
+
+Beta preparation requires the full adversarial audit, regressions that fail on
+previous code, bounded lifecycle/resource evidence, unchanged bundle budgets,
+metadata/deterministic artifacts, dependency audit, HACS, CodeQL and all four
+browser projects on Linux. Do not promote on inherited tests alone. An unresolved
+structural/behavior blocker means **NOT BETA READY**, not a cosmetic suffix change.
+Revalidate the exact versioned commit; preparing does not authorize publication.
+
 ## Preparing stable 3.0.0
 
 The migration is complete; a preview suffix reflects release validation, not
 remaining unchecked source. Consolidated stable notes are prepared under
 `CHANGELOG.md` Unreleased. Inspect promotion with `pnpm release --dry-run`; the
-current alpha base promotes to `3.0.0`. Run preparation only once when the stable
+current beta base promotes to `3.0.0`. Run preparation only once when the stable
 version change is being reviewed, then rebuild and validate its exact commit.
 
 Update README and the upgrade guide's preview status with stable promotion too;

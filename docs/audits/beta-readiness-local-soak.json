@@ -1,0 +1,942 @@
+{
+  "source": "Full local Playwright JSON report, 2026-10-05, audit SHA 4f3ef86b99235e143e8c332afda922e3a547bf34",
+  "scope": "Active owned resources/live DOM, not JS heap or GPU memory",
+  "results": [
+    {
+      "project": "chromium",
+      "card": "nodalia-media-player",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "chromium",
+      "card": "nodalia-navigation-bar",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "chromium",
+      "card": "nodalia-camera-card",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "chromium",
+      "card": "nodalia-climate-card",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "chromium",
+      "card": "nodalia-advance-vacuum-card",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "chromium",
+      "card": "nodalia-vacuum-card",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "chromium",
+      "card": "nodalia-notifications-card",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "chromium",
+      "card": "nodalia-calendar-card",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "chromium",
+      "card": "nodalia-weather-card",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "chromium",
+      "card": "nodalia-graph-card",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "chromium",
+      "card": "nodalia-fav-card",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "chromium",
+      "card": "nodalia-room-summary-card",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "webkit",
+      "card": "nodalia-media-player",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "webkit",
+      "card": "nodalia-navigation-bar",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "webkit",
+      "card": "nodalia-camera-card",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "webkit",
+      "card": "nodalia-climate-card",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "webkit",
+      "card": "nodalia-advance-vacuum-card",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "webkit",
+      "card": "nodalia-vacuum-card",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "webkit",
+      "card": "nodalia-notifications-card",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "webkit",
+      "card": "nodalia-calendar-card",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "webkit",
+      "card": "nodalia-weather-card",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "webkit",
+      "card": "nodalia-graph-card",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "webkit",
+      "card": "nodalia-fav-card",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "webkit",
+      "card": "nodalia-room-summary-card",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "webkit-iphone",
+      "card": "nodalia-media-player",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "webkit-iphone",
+      "card": "nodalia-navigation-bar",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "webkit-iphone",
+      "card": "nodalia-camera-card",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "webkit-iphone",
+      "card": "nodalia-climate-card",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "webkit-iphone",
+      "card": "nodalia-advance-vacuum-card",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "webkit-iphone",
+      "card": "nodalia-vacuum-card",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "webkit-iphone",
+      "card": "nodalia-notifications-card",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "webkit-iphone",
+      "card": "nodalia-calendar-card",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "webkit-iphone",
+      "card": "nodalia-weather-card",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "webkit-iphone",
+      "card": "nodalia-graph-card",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "webkit-iphone",
+      "card": "nodalia-fav-card",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    },
+    {
+      "project": "webkit-iphone",
+      "card": "nodalia-room-summary-card",
+      "cycles": 24,
+      "updates": 960,
+      "detachedBaseline": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "settled": {
+        "timers": 0,
+        "frames": 0,
+        "observers": 0,
+        "listeners": 3,
+        "dom": 9,
+        "subscriptions": 0,
+        "pending": 0
+      },
+      "allDetachedSnapshotsEqual": true,
+      "errors": []
+    }
+  ]
+}

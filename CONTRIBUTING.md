@@ -4,6 +4,24 @@ Nodalia Cards is a Home Assistant Dashboard plugin with 25 cards, shared visual
 controls and visual editors. Contributions should preserve existing YAML,
 custom element names, standalone resource paths and the single HACS resource.
 
+## Version 3 beta freeze
+
+`3.0.0-beta.1` means **feature and architecture freeze for Nodalia Cards 3**.
+The strict migration is complete. The 25 cards, public custom elements, YAML,
+standalone resource paths, HACS single resource and Engine API 2/3 contracts are
+frozen for stabilization.
+
+Until stable 3.0.0, accept bug fixes, measured performance fixes, accessibility,
+browser compatibility, lifecycle/memory corrections, documentation and tests.
+Defer new cards, substantial features, broad architectural refactors, YAML/public
+API changes, major visual changes and new runtime dependencies to a later cycle.
+An architectural change requires a reproducible bug and a failing regression.
+The unchanged bundle caps and zero type/import-cycle debt remain enforced.
+
+See [the final alpha audit](docs/BETA_READINESS_AUDIT.md) for acceptance evidence
+and device/integration limits. A prepared beta is not a published release; the
+validated tag and release determine installation availability.
+
 ## Getting started
 
 Use Node 22 or newer and the pnpm version declared in `package.json`.
@@ -112,7 +130,7 @@ and exact Git tag; separate `alpha` or `beta` branches are not required.
 | Channel | Example tag | Purpose |
 |---|---|---|
 | Alpha | `v3.0.0-alpha.4` | Active regression testing |
-| Beta | `v3.0.0-beta.1` | Broader feature-complete testing |
+| Beta | `v3.0.0-beta.1` | Architecture/API/feature freeze; stabilization |
 | Release candidate | `v3.0.0-rc.1` | Final compatibility validation |
 | Stable | `v3.0.0` | Validated daily dashboard release |
 

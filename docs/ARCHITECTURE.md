@@ -6,7 +6,14 @@ The public Lovelace/HACS contract is unchanged: custom element tags, YAML keys,
 defaults, editors, translations, and the single-file `nodalia-cards.js` install
 path stay the same.
 
-## Current architecture map (3.0.0-alpha.9)
+## Architecture freeze
+
+The prepared `3.0.0-beta.1` freezes the registry, HACS/standalone distribution,
+YAML and public Engine API 2/3 bridge contracts. Broad refactors/new features or
+runtime dependencies are deferred until after stable 3.0.0. A structural change
+requires a demonstrated bug and regression. See [release readiness](BETA_READINESS_AUDIT.md).
+
+## Current architecture map (3.0.0-beta.1)
 
 The project is a Home Assistant Lovelace plugin. Handwritten cards historically
 lived as root `nodalia-*.js` files that were both source and published artifacts.

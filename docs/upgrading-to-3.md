@@ -39,6 +39,14 @@ Run `pnpm validate:fast` and the four-browser validation before release. See
 [translations](TRANSLATIONS.md) and [releasing](releasing.md).
 
 Stable promotion uses the release script and exact validated tag; this guide does
-not by itself mark an alpha build as stable. Stable changes are prepared in
+not by itself mark a prerelease build as stable. Stable changes are prepared in
 [CHANGELOG.md](../CHANGELOG.md); preview history remains in
 [CHANGELOG-PRERELEASES.md](../CHANGELOG-PRERELEASES.md).
+
+## Beta stabilization
+
+The prepared `3.0.0-beta.1` freezes features, architecture, YAML and public APIs.
+Only corrections, measured performance improvements, accessibility, compatibility,
+lifecycle/memory fixes, documentation and tests are in scope until stable 3.0.0.
+See [the release-readiness audit](BETA_READINESS_AUDIT.md) and [releasing](releasing.md).
+Preparation does not publish a tag or change which preview HACS can download.

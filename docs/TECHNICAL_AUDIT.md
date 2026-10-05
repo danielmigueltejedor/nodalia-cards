@@ -6,7 +6,7 @@ release notes, rather than presented as current unresolved findings.
 
 ## Migration outcome
 
-All 283 source modules, including 25 cards, visual editors and shared runtimes,
+All 284 source modules, including 25 cards, visual editors and shared runtimes,
 have canonical TypeScript source. Strict compiler checks and typed ESLint apply
 across `src/`. Suppression and runtime import-cycle inventories are empty and
 remain enforced by `pnpm architecture:check`.
@@ -70,7 +70,7 @@ before changing their invalidation contracts.
 
 ## Repository cleanup for stable preparation
 
-A source dependency scan reaches all 282 modules from card/standalone/runtime
+At the earlier cleanup checkpoint a source dependency scan reached all 282 modules from card/standalone/runtime
 entries. None can be removed merely because it is not a root resource.
 Seven retired editor-catalog shards contain 767 entries already present in every
 canonical editor locale. Their one-shot merge/fill scripts, an outdated row-patch generator
@@ -115,8 +115,10 @@ See [performance profiling](performance-audit.md) for a manual procedure.
 
 ## Stable release readiness
 
-The TypeScript migration is complete. The current package stays on its published
-alpha version while stable preparation is reviewed. Stable notes are drafted in
+The TypeScript migration is complete. The final alpha audit prepares `3.0.0-beta.1`, freezing features, architecture
+and public contracts for stabilization. See [the release-readiness report](BETA_READINESS_AUDIT.md)
+for current measurements and exact-version gates. Publication remains a separate
+tag/release step. Stable notes are drafted in
 `CHANGELOG.md`; promotion must update package declarations, roadmap, integration
 references and generated artifacts through the release script, validate the exact
 commit, then publish and verify its tag. See [releasing](releasing.md).

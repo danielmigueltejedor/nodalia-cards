@@ -66,7 +66,7 @@ compiled module/adapter so unrelated assertions cannot mask the red result.
 
 [PR #310](https://github.com/danielmigueltejedor/nodalia-cards/pull/310) was
 reviewed against current main, not accepted solely because CI passed. Its four
-valid changes are included once: automatic↔fixed native Sections wrapper
+valid changes were merged once in main `243abb3b` and are included without duplicate patches: automatic↔fixed native Sections wrapper
 ownership, explicit Advance Vacuum helper discovery, News persistence ownership,
 and bounded shared numeric formatters. The old wrapper correction did not observe
 an existing cell's row-class change; explicit helpers still enumerated unrelated
@@ -74,6 +74,14 @@ states; a scheduled News helper write could target a retired config/account;
 and formatters were created repeatedly in numeric hot paths. Associated native
 layout, discovery-count, delayed helper-write and numeric parity/eviction
 regressions remain. Compatibility adapters were retained rather than guessed dead.
+
+| Rank | Previous bug / cause → correction | Files / regression / residual risk |
+|---|---|---|
+| High | Native Sections wrapper mode stayed stale on an existing cell's class change → observe only that class, update owned display, release observer on detach | `src/shared/utils-runtime.ts`; native row-mode browser regressions in `dashboard-collapse-and-tv-sources.spec.mjs`; fixed rows keep native HA behavior |
+| Medium | Explicit Advance Vacuum helpers scanned unrelated states → configured availability fingerprints with live values | `src/cards/advance-vacuum/advance-vacuum-card.ts`; explicit-tracking behavioral test in `advance-vacuum-lifecycle.spec.mjs`; automatic discovery remains broader |
+| High | Scheduled News writes belonged to retired config/account → captured persistence owner and cancellation | `src/cards/news/news-card.ts`; queued helper writes test in `news-lifecycle-editor.spec.mjs`; local history compatibility retained |
+| Medium | Hot numeric paths allocated a formatter every call → shared 64-entry cache | `src/shared/numeric-values.ts`; numeric parity/eviction unit tests; eviction may allocate again, formatting semantics preserved |
+
 
 ## D. Performance and resource evidence
 
@@ -112,8 +120,11 @@ Caps remain **4,325,376 raw / 972,800 gzip**, unchanged.
 Audit corrections currently measure **4,146,010 raw / 946,364 gzip**:
 **+7,659 / +1,815** from main, with **179,366 / 26,436 bytes** headroom.
 The earlier size audit's published alpha.5 baseline was 4,324,238 / 968,592;
-its reductions remain substantially preserved. Final versioned values are recorded
-in the acceptance section after release preparation.
+its reductions remain substantially preserved. The prepared beta measures **4,146,005 raw / 946,364 gzip**: **+7,654 / +1,815**
+from main, with **179,371 / 26,436 bytes** remaining. Two consecutive normal
+builds produced identical SHA-256 values for all 37 distributed JavaScript files.
+Release metadata validates all eight required repository files, matching package/
+manifest versions, checksums and a CycloneDX SBOM with no runtime dependencies.
 
 Production dependencies remain zero. The full dependency audit returned zero
 known vulnerabilities across all severities. Runtime libraries/toolchain majors
@@ -133,8 +144,17 @@ The exact 25 editor/card registry pairs are now enforced.
 New coverage includes 25 standalone cold loads, 12 resource soaks, one transport
 soak, Engine races/ranges, Camera signing ownership/bounds, retired device/editor
 contexts, Fan frame retirement, Person empty locale and large Graph histories.
-The complete Node and browser counts, platform skips and remote SHA are filled
-in after exact-commit verification; targeted runs alone are not release approval.
+The audited code at `4f3ef86b99235e143e8c332afda922e3a547bf34` passed **805 Node
+checks (0 skipped)** and Linux CI [37247418978](https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37247418978):
+**Chromium 397, Firefox 396 + 1 skip, WebKit 397, iPhone WebKit 396 + 1 skip**.
+This adds 13 Node and 66 browser cases per project versus the recorded main
+baseline, including prior PR #310. The two original platform skips are unchanged;
+no failures or flaky/retried cases were reported. Full local macOS validation
+passed 1,190 cases with one platform skip and zero failures/flaky results.
+[Soak evidence](audits/beta-readiness-local-soak.json) records all 36 local
+card/project combinations: detached snapshots return to baseline at every cycle,
+with zero pending requests/subscriptions/frames/timers/observers and no page errors.
+The exact beta version must independently pass these gates before acceptance.
 
 ## G. Compatibility and audit matrix
 
@@ -170,13 +190,19 @@ Cold artwork still depends on network and decoding. A shared cold preload owns a
 bounded deadline; disconnecting a subscriber retires its callback, not another
 card's shared download. Some source-contract tests are intentionally retained.
 Optional capability methods do not imply new visible editor controls.
+Cursor Bugbot exhausted its external usage quota and did not review PR #311;
+its neutral status is not a completed code review. CodeQL and the separate
+security check passed. No reviewer approval is claimed.
 Future profiling targets include Notifications registry serialization and
 necessary automatic vacuum discovery; they are observations, not known broken
 contracts. Account context changes now reset unfinished private interaction.
 
 ## I. Acceptance
 
-**NOT BETA READY — verification in progress.** This is a checkpoint, not the
-final verdict. Package version remains alpha.9 until the complete local and Linux
-four-project audit, HACS, CodeQL and exact artifact gates succeed. Final acceptance
-will record the validated version/SHA, test counts, reproducibility and metadata.
+The adversarial code audit passed the full local/Linux matrix, HACS and CodeQL
+before preparing `3.0.0-beta.1` through the normal release tooling. This candidate
+freezes features, architecture, YAML and public API contracts; it is not tagged or
+published. The final versioned commit still requires exact-version validation.
+
+**NOT BETA READY — final versioned acceptance gates in progress.** Final acceptance
+will record reproducibility, metadata and the beta commit's remote gates.

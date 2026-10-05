@@ -11,8 +11,10 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-3.0.0-alpha.9
+3.0.0-beta.1
 ```
+
+Prepared candidate; publication requires its validated tag.
 
 See [the curated prerelease notes](./CHANGELOG-PRERELEASES.md) for this build.
 Stable **`2.2.10`** remains the recommended daily-driver release.
@@ -44,8 +46,12 @@ The project currently includes:
 
 # 🎯 Current focus (`3.0.x` maintenance)
 
-Prepare the completed version 3 migration for a stable release:
+Version 3 has entered feature and architecture freeze with `3.0.0-beta.1`:
 
+- No new cards, substantial features, broad refactors, YAML/public API changes,
+  major visual changes or new runtime dependencies before stable 3.0.0.
+- Accept fixes for bugs, performance, accessibility, browser compatibility,
+  lifecycle/memory, documentation and tests.
 - Keep all 25 cards, editors and runtime sources strictly checked with zero
   suppression and import-cycle debt.
 - Preserve existing YAML, standalone artifacts and single-bundle HACS installs.
@@ -73,7 +79,7 @@ passes validation and its tag is published. See [releasing](docs/releasing.md).
 The stable 2.x and version 3 preview history remains in
 [CHANGELOG.md](CHANGELOG.md) and [CHANGELOG-PRERELEASES.md](CHANGELOG-PRERELEASES.md).
 
-## Future work
+## Future work (after stable 3.0.0)
 
 These are directions to revalidate against real dashboard feedback, not committed
 version 3 release scope:
