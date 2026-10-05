@@ -1,0 +1,113 @@
+{
+  "version": "3.0.0-beta.1",
+  "artifacts": 37,
+  "identical": true,
+  "raw": 4146005,
+  "gzip": 946364,
+  "hashes": {
+    "nodalia-i18n.js": "1970439bfc86fc46e15178adadb7640d79bd9fb930b84d9ed24558b8862c3c8f",
+    "nodalia-editor-ui.js": "c4f730b87471e91b81e024cb9bd46ad10ffe5e1fd2ac71cdc92a0d49d05b7811",
+    "nodalia-utils.js": "051541402d59251a39aa4152c9552c1c921bd2044f49aaee0b7c92375127288d",
+    "nodalia-backend.js": "32881f8908420f350b91929c042e5cf5f7473beb08466fdf1d2c7e495c22e601",
+    "nodalia-render-signature.js": "0fbb63023aeb62157922b3c3d89bb2cc77566c39eed70993eebce1ee516cbf9f",
+    "nodalia-bubble-contrast.js": "8d09a4c423abb91a127fed7541ec495558b4f71f094fd610f05ae6b44f3ec5ea",
+    "nodalia-cards.js": "fc7581f760ad67520dfb555c4674118dc9920e07ab9d9be11927858d500e36de",
+    "nodalia-scenes-card.js": "bb0db9b60d2b4dae3c8a13a7549f20d6557af8b671efc0afad0d61d2c35b4506",
+    "nodalia-cards.manifest.js": "9764f55ff3a70804321d7aa6c04a462560571cddacf2377252533829ff890a0c",
+    "nodalia-navigation-bar.js": "8d84e0323f471f9e0c2d41bfebe67ae42e74dfcbb0785bb4508f41fc60ad519a",
+    "nodalia-media-player.js": "36d919238eaa1f7347ce6475828e1d2f80e78fce5a66835642eb018d474d7d34",
+    "nodalia-light-card.js": "05d90f36d4c562895661daa9cb57d63cf81dab7cf002c9b0b2656ffc63f3d544",
+    "nodalia-fan-card.js": "b9c61c972a3ab6bf8fc025d14a92007a07118420e22fa15a3a275a95e1a53d3d",
+    "nodalia-humidifier-card.js": "8f75a614fbfd609f6ba5c017a47e138d2a2108a47510dd31f4b2de0d0cc5c336",
+    "nodalia-circular-gauge-card.js": "9a758806a128524a53d5626ad42ea256a6255c1835d4df1372597207f89a4abe",
+    "nodalia-graph-card.js": "45be8b05da1e74efef67ba9e1fa27346a2781049a6b09044503b89267b4a5868",
+    "nodalia-power-flow-card.js": "1315590df10955c5b39c054366490b49875627e6b0c107911bb20545e570e6ac",
+    "nodalia-cover-card.js": "f5a73be03508ad5be82aac296454f594e2edae07eb5af0aad050cc2c8ac474a1",
+    "nodalia-climate-card.js": "3997fe528493d3726b2cefc2c77ec64939db75912adb522cb6a1284c2218e26d",
+    "nodalia-alarm-panel-card.js": "a6f9f3ddd0e8ab8d3bd157bd668cc70fbb40320f2ab8119b8c99732b0212ff39",
+    "nodalia-lock-card.js": "1db77d53048875f8509ca6fe32d24a5e2671e3d9084c1aeae6c1a083d6769161",
+    "nodalia-advance-vacuum-card.js": "3c783f03c3335c02a754501f0db4dda35cb14868dae806614e884ad1f250cb2b",
+    "nodalia-entity-card.js": "204b84293c8baf9f66b83384eb709f5dbbddbbea3363d77a7d6e80083891d8d3",
+    "nodalia-fav-card.js": "27a661e5239ba21c169cd1e6beb0ac7c0888b39108647fe60fc7f3f017c983aa",
+    "nodalia-insignia-card.js": "c111785bdfebdc4f4f3698b9b54071865bd2d0be8a517fdf958122cce154d49a",
+    "nodalia-person-card.js": "97eafc57b87ccc4197a3076070f36e9c7a96150c22e80a6b04072a106d97e594",
+    "nodalia-weather-card.js": "269b543547f11c92f710c39f0a937399d8d84a71a51459751e42b107daad8ce4",
+    "nodalia-calendar-card.js": "959b7ae4d688299fc1016d7f13ed23a4136c58338be32d6347b66ef30e4aaae9",
+    "nodalia-notifications-mobile-policy.js": "218df4ca9d0cf4582761f324135a139f239d084bc0ca62db1a2ca1792242a952",
+    "nodalia-notifications-card.js": "755981419820f590c5e32146aacef63c78e5d3c892c190b3458279721e8f185f",
+    "nodalia-vacuum-card.js": "c2ac4452904ed0d52aeab0abf19f7244700c7d9868770c7ebef82b6456b522f3",
+    "nodalia-news-card.js": "4a8ad6ef99c5b6362ad38d57565ba38e491175a5d6e4ed3299884370abf27920",
+    "nodalia-camera-card.js": "82290c9a781075260219361aeb7093ee8dfb717a8dfa9b9b7fee3a8d40aba50f",
+    "nodalia-camera-stream-model.js": "b0aa50da85b61063048f4dbdeda90f4b9c5e7a216cde39db5be5af1207114fcf",
+    "nodalia-go2rtc-player.js": "1342198dc9ec8041860f4ea293deb3452c8341ee9eb826dd413bf9f342255a98",
+    "nodalia-room-summary-card.js": "841984580ab9977faacf02dc2019440e06740adba4051769a580234719f52b0b",
+    "nodalia-room-summary-model.js": "9add30a9f13c21527fa2c70b9cb77d60041d106c659a326ae5e95eca7d08fae1"
+  },
+  "productionDependencies": 0,
+  "dependencyAudit": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0
+    },
+    "dependencies": 0,
+    "devDependencies": 130,
+    "optionalDependencies": 28,
+    "totalDependencies": 130
+  },
+  "caps": {
+    "raw": 4325376,
+    "gzip": 972800
+  },
+  "headroom": {
+    "raw": 179371,
+    "gzip": 26436
+  },
+  "validation": {
+    "node": {
+      "passed": 805,
+      "skipped": 0,
+      "failed": 0
+    },
+    "frozenLockfileInstall": "passed",
+    "toolchainMajorChanged": false,
+    "source": "Normal generators/validate:fast followed by another normal build. SHA-256 identical for all 37 distributed JavaScript files. release/SHA256SUMS independently verified."
+  },
+  "validatedCommit": "9d24a3d51c724569e36aaa89efa9651388c56cad",
+  "gates": {
+    "ciRun": 37248328544,
+    "hacsRun": 37248328397,
+    "codeqlRun": 37248328395,
+    "all": "success",
+    "browsers": {
+      "chromium": {
+        "passed": 397,
+        "skipped": 0
+      },
+      "firefox": {
+        "passed": 396,
+        "skipped": 1
+      },
+      "webkit": {
+        "passed": 397,
+        "skipped": 0
+      },
+      "webkit-iphone": {
+        "passed": 396,
+        "skipped": 1
+      }
+    },
+    "skips": {
+      "firefox": "Native TouchEvent constructors unavailable; pointer coverage still runs",
+      "webkit-iphone": "Desktop DPR case duplicated by mobile project"
+    },
+    "local": {
+      "passed": 1190,
+      "skipped": 1,
+      "failed": 0,
+      "flaky": 0
+    }
+  }
+}

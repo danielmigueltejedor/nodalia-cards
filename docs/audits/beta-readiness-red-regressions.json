@@ -1,0 +1,106 @@
+{
+  "reference": "New browser regressions ran before modifying their owning source modules. Engine and Camera split unit regressions were independently rerun against compiled modules from 372122c9 (same prior audited source now integrated as 525532e8).",
+  "after": "All cases pass in the complete local and four-project Linux suites; exact versioned acceptance is recorded in BETA_READINESS_AUDIT.md.",
+  "runs": [
+    {
+      "caseGroup": "engine-split",
+      "evidenceLogSha256": "996a13abd6461d808c599bbaf207e3410fbdbca6a7ec3e1a086d4a66a6a17e85",
+      "failedBefore": [
+        "\u2716 backend ignores superseded status responses (1.216875ms)",
+        "\u2716 backend does not repopulate a cleared in-flight cache (0.312208ms)",
+        "\u2716 backend isolates in-place user context changes (0.272916ms)",
+        "\u2716 backend isolates in-place auth context changes (0.568291ms)",
+        "\u2716 backend declines a retired v3 mutation (0.359041ms)",
+        "\u2716 backend rejects malformed explicit API ranges rather than guessing v3 (0.258208ms)"
+      ]
+    },
+    {
+      "caseGroup": "camera-split",
+      "evidenceLogSha256": "f13f9fb26e55d01b9e9ae787483017f948edf982c2eea1a98a51a8a1a3b449df",
+      "failedBefore": [
+        "\u2716 Camera signed paths never reuse a rotated user context (1.053542ms)",
+        "\u2716 Camera signed paths never reuse a rotated auth context (0.516375ms)",
+        "\u2716 Camera signed paths keep a bounded per-owner cache (4.55875ms)"
+      ]
+    },
+    {
+      "caseGroup": "artwork",
+      "evidenceLogSha256": "5ec7730d586f2199a53493f187275948d413bdc14a3af4fe2211ebc3073f58e6",
+      "failedBefore": [
+        "\u2716 Shared artwork preload deduplicates, settles stalled image/decode work and allows a later retry (1.086125ms)"
+      ]
+    },
+    {
+      "caseGroup": "context",
+      "evidenceLogSha256": "d3fba6fab01f9ccebc7bc58ef9f9262c6b3971ddd740b0babc4cb56f07ccd730",
+      "failedBefore": [
+        "\u2718  2 [chromium] \u203a tests/browser/weather-lifecycle.spec.mjs:60:37 \u203a Weather retires forecasts on same-connection user changes (8.6s)",
+        "\u2718  3 [chromium] \u203a tests/browser/calendar-lifecycle.spec.mjs:211:37 \u203a Calendar retires pending data when user mutates on the same HA object (8.6s)",
+        "\u2718  1 [chromium] \u203a tests/browser/graph-lifecycle.spec.mjs:150:1 \u203a Graph retires pending history on auth rotation even on the same HA connection (8.6s)",
+        "\u2718  4 [chromium] \u203a tests/browser/weather-lifecycle.spec.mjs:60:37 \u203a Weather retires forecasts on same-connection auth changes (8.3s)",
+        "\u2718  5 [chromium] \u203a tests/browser/calendar-lifecycle.spec.mjs:211:37 \u203a Calendar retires pending data when auth mutates on the same HA object (8.3s)"
+      ]
+    },
+    {
+      "caseGroup": "context-after-camera",
+      "evidenceLogSha256": "fc320607553d1b1a6748b2d56ce7e0c2921214f036cb070c9fb1b9e3fc37f6fe",
+      "failedBefore": [
+        "\u2718  34 [chromium] \u203a tests/browser/camera-lifecycle.spec.mjs:60:1 \u203a Camera replaces pending signed streams after auth rotation on the same connection (8.3s)"
+      ]
+    },
+    {
+      "caseGroup": "devices",
+      "evidenceLogSha256": "d24b0f9cefaa21c4af662300ae676a0d04288c801d3e55eebc43d01bda90968d",
+      "failedBefore": [
+        "\u2718  2 [chromium] \u203a tests/browser/retired-device-context.spec.mjs:2:58 \u203a light cancels an in-flight slider when its account changes (477ms)",
+        "\u2718  3 [chromium] \u203a tests/browser/retired-device-context.spec.mjs:2:58 \u203a fan cancels an in-flight slider when its account changes (266ms)",
+        "\u2718  4 [chromium] \u203a tests/browser/retired-device-context.spec.mjs:2:58 \u203a humidifier cancels an in-flight slider when its account changes (260ms)",
+        "\u2718  5 [chromium] \u203a tests/browser/retired-device-context.spec.mjs:2:58 \u203a cover cancels an in-flight slider when its account changes (250ms)",
+        "\u2718  1 [chromium] \u203a tests/browser/alarm-lifecycle.spec.mjs:25:1 \u203a Alarm clears account-owned PIN and ignores an old account service failure (8.8s)"
+      ]
+    },
+    {
+      "caseGroup": "display-context",
+      "evidenceLogSha256": "a2e941cd174372494d31d073add55ad1b3e55d8c0d56c7e8efed9424516981e8",
+      "failedBefore": [
+        "\u2718  1 [chromium] \u203a tests/browser/retired-device-context.spec.mjs:30:3 \u203a nodalia-person-card cancels held actions on an in-place account change (471ms)",
+        "\u2718  3 [chromium] \u203a tests/browser/retired-device-context.spec.mjs:30:3 \u203a nodalia-insignia-card cancels held actions on an in-place account change (264ms)",
+        "\u2718  2 [chromium] \u203a tests/browser/person-lifecycle.spec.mjs:47:1 \u203a Person missing-entity message follows a changed profile language (8.5s)"
+      ]
+    },
+    {
+      "caseGroup": "editor",
+      "evidenceLogSha256": "f404c3b06560682a2a28c4f3c2c2007500dabf34e327956d3cd9f5048935d065",
+      "failedBefore": [
+        "\u2718  1 [chromium] \u203a tests/browser/editor-engine-context.spec.mjs:2:83 \u203a climate editor retires Engine status after same-object user changes (8.2s)",
+        "\u2718  2 [chromium] \u203a tests/browser/editor-engine-context.spec.mjs:2:83 \u203a climate editor retires Engine status after same-object auth changes (8.2s)",
+        "\u2718  3 [chromium] \u203a tests/browser/editor-engine-context.spec.mjs:2:83 \u203a notifications editor retires Engine status after same-object user changes (8.2s)",
+        "\u2718  4 [chromium] \u203a tests/browser/editor-engine-context.spec.mjs:2:83 \u203a notifications editor retires Engine status after same-object auth changes (8.2s)"
+      ]
+    },
+    {
+      "caseGroup": "fan-frame",
+      "evidenceLogSha256": "9c477414959e568d90269a63ad8ea22bf9397965b88d37685c52f0be5308a991",
+      "failedBefore": [
+        "\u2718  1 [chromium] \u203a tests/browser/fan-lifecycle.spec.mjs:41:1 \u203a Fan retires bounce frames before reconnecting its view (438ms)"
+      ]
+    },
+    {
+      "caseGroup": "fav-vacuum",
+      "evidenceLogSha256": "427057dff5b5f5aae99c2d25972efa657b550701ac9e000f212d4673cac8afea",
+      "failedBefore": [
+        "\u2718  1 [chromium] \u203a tests/browser/retired-device-context.spec.mjs:17:1 \u203a Fav retires its private alarm PIN and expanded panel on account replacement (422ms)",
+        "\u2718  2 [chromium] \u203a tests/browser/retired-device-context.spec.mjs:21:1 \u203a Vacuum retires optimistic mode selections on account replacement (250ms)"
+      ]
+    },
+    {
+      "caseGroup": "lock-person",
+      "evidenceLogSha256": "e541c9fac4666493d0bbcc04823b104811a3c4aac51524f43d3db1832d7ea408",
+      "failedBefore": [
+        "\u2718  2 [chromium] \u203a tests/browser/lock-and-media-controls.spec.mjs:628:50 \u203a Lock retires a pending command and gesture after user changes (8.4s)",
+        "\u2718  3 [chromium] \u203a tests/browser/lock-and-media-controls.spec.mjs:628:50 \u203a Lock retires a pending command and gesture after auth changes (8.3s)",
+        "\u2718  4 [chromium] \u203a tests/browser/lock-and-media-controls.spec.mjs:628:50 \u203a Lock retires a pending command and gesture after connection changes (8.3s)"
+      ]
+    }
+  ]
+}

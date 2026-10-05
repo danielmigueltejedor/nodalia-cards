@@ -1,5 +1,5 @@
 {
-  "source": "Full local Playwright JSON report, 2026-10-05, audit SHA 4f3ef86b99235e143e8c332afda922e3a547bf34",
+  "source": "Full local Playwright JSON report, 2026-10-05, prepared 3.0.0-beta.1 SHA 9d24a3d51c724569e36aaa89efa9651388c56cad",
   "scope": "Active owned resources/live DOM, not JS heap or GPU memory",
   "results": [
     {

@@ -44,6 +44,9 @@ ranked by their behavior, not the number of changed lines. Browser regressions
 run against the real generated runtime. New failures were reproduced before
 source changes; pure helper cases were additionally rerun against the previous
 compiled module/adapter so unrelated assertions cannot mask the red result.
+The [red regression index](audits/beta-readiness-red-regressions.json) records
+individual failing cases and hashes of the captured before logs. A coverage-only
+large-history test is not misrepresented as a newly fixed runtime bug.
 
 | Rank | Finding / previous behavior | Root cause and correction | Files / failing regression | Residual change risk |
 |---|---|---|---|---|
@@ -77,7 +80,7 @@ regressions remain. Compatibility adapters were retained rather than guessed dea
 
 | Rank | Previous bug / cause → correction | Files / regression / residual risk |
 |---|---|---|
-| High | Native Sections wrapper mode stayed stale on an existing cell's class change → observe only that class, update owned display, release observer on detach | `src/shared/utils-runtime.ts`; native row-mode browser regressions in `dashboard-collapse-and-tv-sources.spec.mjs`; fixed rows keep native HA behavior |
+| High | Native Sections wrapper mode stayed stale on an existing cell's class change → observe only that class, update owned display, release observer on detach | `src/shared/card-layout-notifier.ts`; native row-mode browser regressions in `graph-grid-height.spec.mjs`; fixed rows keep native HA behavior |
 | Medium | Explicit Advance Vacuum helpers scanned unrelated states → configured availability fingerprints with live values | `src/cards/advance-vacuum/advance-vacuum-card.ts`; explicit-tracking behavioral test in `advance-vacuum-lifecycle.spec.mjs`; automatic discovery remains broader |
 | High | Scheduled News writes belonged to retired config/account → captured persistence owner and cancellation | `src/cards/news/news-card.ts`; queued helper writes test in `news-lifecycle-editor.spec.mjs`; local history compatibility retained |
 | Medium | Hot numeric paths allocated a formatter every call → shared 64-entry cache | `src/shared/numeric-values.ts`; numeric parity/eviction unit tests; eviction may allocate again, formatting semantics preserved |
@@ -154,7 +157,7 @@ passed 1,190 cases with one platform skip and zero failures/flaky results.
 [Soak evidence](audits/beta-readiness-local-soak.json) records all 36 local
 card/project combinations: detached snapshots return to baseline at every cycle,
 with zero pending requests/subscriptions/frames/timers/observers and no page errors.
-The exact beta version must independently pass these gates before acceptance.
+The exact beta version independently passed these gates; see acceptance below.
 
 ## G. Compatibility and audit matrix
 
@@ -192,17 +195,44 @@ card's shared download. Some source-contract tests are intentionally retained.
 Optional capability methods do not imply new visible editor controls.
 Cursor Bugbot exhausted its external usage quota and did not review PR #311;
 its neutral status is not a completed code review. CodeQL and the separate
-security check passed. No reviewer approval is claimed.
+security check passed. No human reviewer approval is claimed.
 Future profiling targets include Notifications registry serialization and
 necessary automatic vacuum discovery; they are observations, not known broken
 contracts. Account context changes now reset unfinished private interaction.
 
 ## I. Acceptance
 
-The adversarial code audit passed the full local/Linux matrix, HACS and CodeQL
-before preparing `3.0.0-beta.1` through the normal release tooling. This candidate
-freezes features, architecture, YAML and public API contracts; it is not tagged or
-published. The final versioned commit still requires exact-version validation.
+**BETA READY.** No known structural/behavior blocker remains from this audit.
+The decision follows adversarial red-before/green-after regressions and resource
+soaks, not inherited suite counts alone. This is readiness for stabilization,
+not a claim that physical devices/integrations can have no further bugs.
 
-**NOT BETA READY — final versioned acceptance gates in progress.** Final acceptance
-will record reproducibility, metadata and the beta commit's remote gates.
+`3.0.0-beta.1` was prepared through normal tooling at
+`9d24a3d51c724569e36aaa89efa9651388c56cad`. Its exact versioned artifacts passed:
+
+| Gate | Exact beta result |
+|---|---|
+| Strict TypeScript / typed ESLint / architecture / debt | Passed; 284 checked modules, zero suppression/import-cycle debt |
+| Translations / distribution / generated drift / budgets | Passed; all 12 languages, 25 card/editor pairs, single HACS resource |
+| Node | 805 pass, 0 fail/skip |
+| Linux Chromium / WebKit | 397 / 397 pass |
+| Linux Firefox / iPhone WebKit | 396 / 396 pass, 1 platform skip each |
+| Local Chromium / WebKit / iPhone | 1,190 pass, 1 platform skip, 0 fail/flaky |
+| HACS | [37248328397](https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37248328397), passed |
+| CodeQL | [37248328395](https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37248328395), passed |
+| Exact beta Linux CI | [37248328544](https://github.com/danielmigueltejedor/nodalia-cards/actions/runs/37248328544), all five jobs passed |
+| Dependencies | Full audit: 0 known vulnerabilities; 0 production npm dependencies |
+| Reproducibility / metadata | Frozen lockfile; 37 identical JS SHA-256s across two builds; manifest/package parity, eight required repository assets, checksums and SBOM verified |
+| Bundle | 4,146,005 raw / 946,364 gzip; unchanged caps, 179,371 / 26,436 bytes remaining |
+
+The [exact beta build record](audits/beta-readiness-beta-build.json) and
+[resource evidence](audits/beta-readiness-local-soak.json) preserve machine-readable
+measurements. Subsequent report-only edits preserve these runtime hashes; the
+latest exact PR commit's checks are available on
+[PR #311](https://github.com/danielmigueltejedor/nodalia-cards/pull/311).
+
+Feature/architecture/YAML/public API freeze is formalized in CONTRIBUTING,
+ROADMAP, architecture, upgrade and release docs. Curated beta notes are promoted
+in CHANGELOG-PRERELEASES and generated using the existing notes tool. Stable
+2.2.10 remains the published stable recommendation. This task prepares the beta;
+**no beta tag or GitHub release is published**.
