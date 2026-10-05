@@ -8,7 +8,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [Unreleased] — RC audit in progress
+## [3.0.0-rc.1] - 2026-10-05
+
+### Changed
+
+- **Release Candidate freeze:** architecture, features, public APIs, YAML and distribution are frozen. This is the final stabilization phase; subsequent changes are bug fixes and validation.
 
 ### Fixed
 
@@ -18,6 +22,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Humidifier preserves semantic keyboard focus across consumed-state and responsive renders; native body actions, sliders and mode controls remain operable.
 - Engine retires pending v3 command dispatch when a replacement HA object introduces another connection, authentication, user or permission context, even before its new handshake completes. Cache resets retire pending dispatch too; concurrent same-context commands remain valid.
 
+- Advance Vacuum evaluates automatic related helpers once per synchronous HA assignment, retaining live registry/helper updates.
+- Engine commands respect newer completed negotiations and cannot revive expired availability after a failed refresh.
+
 ### Added
 
 - Permanent N-version published-release benchmarks with verified asset hashes, four separate engines, raw JSON/CSV/Markdown, shadow DOM instrumentation, Graph/media/map/helper/session profiles and controlled-GC lifecycle trends.
@@ -25,7 +32,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Validation
 
-- See [RC readiness](docs/audits/rc-readiness-report.md). These changes do not prepare or announce an RC until all required gates pass.
+- See [RC readiness](./docs/audits/rc-readiness-report.md). The release owner explicitly excludes Firefox performance on the reference Mac; Linux Firefox compatibility remains required. Chromium, WebKit and iPhone WebKit will measure the exact published RC asset against 2.2.10 and beta.1. Results are pending until that run completes; no global speed claim is made.
+- Automated stable comparison tooling is included, but its controlled runner still requires provisioning before stable publication. RC evidence is measured manually on the idle reference Mac.
+- HACS channel promotion can reuse an old browser cache token. Follow [resource refresh instructions](./docs/upgrading-to-3.md#old-code-after-switching-preview-channels-in-hacs) and use the full version query `v=3.0.0-rc.1` if needed.
 
 ## [3.0.0-beta.1] - 2026-10-05
 

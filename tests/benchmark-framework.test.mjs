@@ -3,7 +3,15 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { parseArgs, percentile, statistics, sampleOrder, hasSkips, summarize, csvEscape, csv, markdown, verifyAsset, loadAsset, sha256, validateResult } from '../bench/core.mjs';
+import { parseArgs, referencePolicy, percentile, statistics, sampleOrder, hasSkips, summarize, csvEscape, csv, markdown, verifyAsset, loadAsset, sha256, validateResult } from '../bench/core.mjs';
+
+test('explicit Firefox reference exception is confined to official macOS RC evidence',()=>{
+ const args=['--skip-firefox-on-mac','2.2.10','3.0.0-beta.1','3.0.0-rc.1'];
+ assert.deepEqual(referencePolicy(parseArgs(args),'darwin'),{browsers:['chromium','webkit','webkit-iphone'],referenceException:'macos-firefox-rc'});
+ for(const [input,platform] of [[args,'linux'],[[...args,'--quick'],'darwin'],[[...args,'--browsers','chromium'],'darwin'],[[...args,'3.0.0'],'darwin'],[['--skip-firefox-on-mac','2.2.10','3.0.0-beta.1'],'darwin']])assert.throws(()=>referencePolicy(parseArgs(input),platform),/exception requires/);
+ assert.throws(()=>referencePolicy(parseArgs(['2.2.10','3.0.0','--browsers','chromium']),'darwin'),/all four/);
+ assert.equal(referencePolicy(parseArgs(['2.2.10','3.0.0']),'darwin').browsers.length,4);
+});
 
 test('benchmark CLI ignores pnpm -- separator, accepts N releases and normalizes v tags',()=>{
  assert.deepEqual(parseArgs(['--','v2.2.10','3.0.0-beta.1','3.0.0-rc.1']).versions,['2.2.10','3.0.0-beta.1','3.0.0-rc.1']);

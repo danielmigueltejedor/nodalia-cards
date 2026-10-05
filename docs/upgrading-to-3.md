@@ -19,7 +19,7 @@ frontend cache if the installed bundle version still reports the previous build.
 
 ### Old code after switching preview channels in HACS
 
-The published `v3.0.0-beta.1` bundle contains the beta changes. If installing it
+The `v3.0.0-rc.1` release candidate contains the final audit fixes. If installing it
 still shows alpha behavior, check the loaded resource before assuming that HACS
 downloaded the wrong release.
 
@@ -35,8 +35,8 @@ After installing the selected preview:
 1. Open Home Assistant's dashboard Resources settings (enable Advanced Mode in
    your profile if needed).
 2. Edit the **existing** Nodalia Cards JavaScript module resource. Keep its
-   `hacstag` query and append `&v=3.0.0-beta.1`. If the URL has no query, append
-   `?v=3.0.0-beta.1` instead. Use the full installed version for future builds.
+   `hacstag` query and append `&v=3.0.0-rc.1`. If the URL has no query, append
+   `?v=3.0.0-rc.1` instead. Use the full installed version for future builds.
 3. Reload Home Assistant completely on each affected client. Do not add a second
    resource for the same bundle.
 
@@ -74,7 +74,7 @@ not by itself mark a prerelease build as stable. Stable changes are prepared in
 
 ## Beta stabilization
 
-The prepared `3.0.0-beta.1` freezes features, architecture, YAML and public APIs.
+The release candidate `3.0.0-rc.1` freezes features, architecture, YAML, public APIs and distribution.
 Only corrections, measured performance improvements, accessibility, compatibility,
 lifecycle/memory fixes, documentation and tests are in scope until stable 3.0.0.
 See [the release-readiness audit](BETA_READINESS_AUDIT.md) and [releasing](releasing.md).

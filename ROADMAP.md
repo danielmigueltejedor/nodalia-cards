@@ -11,10 +11,8 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 Current preview release:
 
 ```text
-3.0.0-beta.1
+3.0.0-rc.1
 ```
-
-Published preview. RC requires the additional acceptance evidence described below.
 
 See [the curated prerelease notes](./CHANGELOG-PRERELEASES.md) for this build.
 Stable **`2.2.10`** remains the recommended daily-driver release.
@@ -97,4 +95,4 @@ reconsidered in a later feature cycle. Its old standalone design plan is retired
 
 ## Final RC evidence
 
-The [RC audit](docs/audits/rc-readiness-report.md) and [permanent release benchmark](bench/README.md) are the next acceptance checkpoint. RC requires completed lifecycle, compatibility and four-engine performance evidence; no suffix promotion is implied by having published beta.1. Published stable 3.0.0 will be measured after upload, with a reproducible performance section generated from its exact asset.
+The [RC audit](docs/audits/rc-readiness-report.md) and [permanent release benchmark](bench/README.md) are the next acceptance checkpoint. RC acceptance includes completed lifecycle and compatibility gates, with the release-owner exception for Firefox performance on the reference Mac. Exact published RC assets are measured manually on three engines; stable retains four-engine evidence. Published stable 3.0.0 will be measured after upload, with a reproducible performance section generated from its exact asset.

@@ -22,11 +22,11 @@ The validator is `validateResult` in [`bench/core.mjs`](../../bench/core.mjs), e
 | `skips` | Reasons an operation could not be measured; `skipped: []` means success |
 | `errors` | Launch, suite, runtime, scenario and harness-change failures; a result with errors exits nonzero |
 
-`null`/zero sample counts mean unavailable, never a fabricated zero. New generation-3 capabilities are separate `3.0-only` workloads and do not enter the generation-2 delta. A report with an unavailable engine remains useful diagnostic evidence but cannot pass the release-notes evidence gate.
+`null`/zero sample counts mean unavailable, never a fabricated zero. New generation-3 capabilities are separate `3.0-only` workloads and do not enter the generation-2 delta. A report with an unavailable engine remains useful diagnostic evidence but cannot pass the release-notes evidence gate by default. The explicit release-owner macOS Firefox exception is accepted only for RC evidence; it preserves the unavailable descriptor and never supplies Firefox measurements. Stable evidence still requires four engines.
 
 ## Publication and integrity
 
-`benchmark:evidence` accepts only a clean committed harness, official mode, sufficient complete samples, all four available browsers and no errors. It requires exact published 2.2.10 and the requested stable/RC asset. Stable 3.0.0 evidence cannot substitute beta, RC or a working tree. It writes JSON/CSV/Markdown and a fixed representative notes table, showing regressions as well as improvements and both raw/gzip bytes.
+`benchmark:evidence` accepts only a clean committed harness, official mode, sufficient complete samples, all four available browsers and no errors (or the documented macOS RC-only Firefox exception with all three remaining engines). It requires exact published 2.2.10 and the requested stable/RC asset. Stable 3.0.0 evidence cannot substitute beta, RC or a working tree. It writes JSON/CSV/Markdown and a fixed representative notes table, showing regressions as well as improvements and both raw/gzip bytes.
 
 The stable release workflow schedules the controlled reference job after the exact stable asset is published. See [setup and review requirements](../releasing.md#official-post-release-performance-evidence). The resulting notes link to raw hashes/samples and a report branch so evidence is readable before its documentation PR merges. Reports are historical evidence: preserve their original metadata and never overwrite samples to make a release look faster.
 
@@ -34,4 +34,4 @@ No official RC comparison exists until RC is published and measured. A pending o
 
 ## Current audit reference
 
-The [beta.1 reference analysis](2.2.10-vs-3.0.0-beta.1-analysis.md) preserves 5,642 samples from the earlier harness, with original raw JSON/CSV and all tables. It is explicitly incomplete: Firefox launch failure, legacy Graph settle errors, cross-profile saved-state effects and simulated touch limit acceptance. The current isolated, native-touch harness needs a fresh complete reference run before any RC/stable claims.
+The [beta.1 reference analysis](2.2.10-vs-3.0.0-beta.1-analysis.md) preserves 5,642 samples from the earlier harness, with original raw JSON/CSV and all tables. It is explicitly incomplete: Firefox launch failure, legacy Graph settle errors, cross-profile saved-state effects and simulated touch limit acceptance. The current isolated, native-touch harness needs a fresh reference run before any performance claims. RC now permits the explicit macOS Firefox exception; stable does not inherit it.
