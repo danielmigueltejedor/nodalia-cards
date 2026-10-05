@@ -50,6 +50,9 @@ jobs:
           git add docs/benchmarks
           git commit -m "Record official published $BENCH_TARGET benchmark"
           git push origin "$BENCH_REPORT_BRANCH"
-          gh pr create --base main --head "$BENCH_REPORT_BRANCH" --title "Official performance evidence for $BENCH_TARGET" --body 'Records exact release asset hashes, raw samples, per-engine statistics and the generated release notes table. No runtime files are changed.'
+          if ! gh pr create --base main --head "$BENCH_REPORT_BRANCH" --title "Official performance evidence for $BENCH_TARGET" --body 'Records exact release asset hashes, raw samples, per-engine statistics and the generated release notes table. No runtime files are changed.'; then
+            echo '::warning::Evidence is committed and pushed, but documentation PR creation failed. Create it from the comparison link in the job summary.'
+            echo "Review evidence: https://github.com/danielmigueltejedor/nodalia-cards/compare/main...$BENCH_REPORT_BRANCH?expand=1" >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Add evidence-backed release notes without changing assets or tags
         run: gh release edit "v$BENCH_TARGET" --notes-file bench/results/published-notes.md

@@ -1,0 +1,39 @@
+✔ backend bridge prefers API v3 (1.44325ms)
+✔ backend bridge detects the matching native API and caches status (0.848458ms)
+✔ backend bridge treats a v1-only server as unavailable for the v2 client (0.33625ms)
+✔ backend bridge treats missing commands as an optional unavailable backend (0.367625ms)
+✔ backend bridge retries transient websocket timeouts instead of caching Engine-missing (0.767291ms)
+✔ backend bridge keeps command-name timeouts transient (0.30525ms)
+✔ backend bridge caches a confirmed missing Engine (0.241041ms)
+✔ backend bridge sends versioned profile and schedule mutations (0.312708ms)
+✔ backend bridge accepts a server range that still supports client API v2 (0.285666ms)
+✔ backend bridge exposes external alerts and immediate schedule application (0.334917ms)
+✔ backend bridge exposes the v2 discovery, inbox and override commands (0.351334ms)
+✔ backend bridge summarizes engine health and capabilities for card editors (0.336958ms)
+✔ backend bridge reports no engine capabilities when the integration is missing (0.255709ms)
+✔ backend bridge preserves transport receiver and prefers hass.callWS over connection fallback (0.377917ms)
+✔ backend bridge expires status at 30 seconds, honors force/reset and isolates connection identity (0.315541ms)
+✔ backend bridge narrows malformed handshake branches without declaring unsupported capabilities (1.417625ms)
+✔ generated backend adapter remains idempotent and does not require a DOM (0.585875ms)
+✔ backend negotiates v3 while older Engine connections retain v2 commands (0.561708ms)
+✔ backend declines a future-only Engine and never sends unavailable v3 commands (0.325417ms)
+✔ backend ignores superseded status responses (0.326125ms)
+✔ backend does not repopulate a cleared in-flight cache (0.267292ms)
+✔ backend isolates in-place user context changes (0.3795ms)
+✔ backend isolates in-place auth context changes (0.270458ms)
+✔ backend declines a retired v3 mutation (0.30425ms)
+✔ backend retires pending v3 mutations when a replacement hass connection is observed (0.427417ms)
+✔ backend retires pending v3 mutations when a replacement hass auth is observed (0.248708ms)
+✔ backend retires pending v3 mutations when a replacement hass user is observed (0.23475ms)
+✔ backend retires pending v3 mutations when a replacement hass admin is observed (0.287792ms)
+✔ backend allows concurrent v3 commands in the same owner while retiring commands after cache reset (0.718417ms)
+✔ backend retires an old handshake when a replacement owner sends a legacy command before discovery (0.291125ms)
+✔ backend rejects malformed explicit API ranges rather than guessing v3 (1.066958ms)
+ℹ tests 31
+ℹ suites 0
+ℹ pass 31
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 53.80125

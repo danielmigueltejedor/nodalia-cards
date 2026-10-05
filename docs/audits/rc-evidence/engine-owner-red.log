@@ -1,0 +1,85 @@
+✖ backend retires pending v3 mutations when a replacement hass connection is observed (1.781708ms)
+✖ backend retires pending v3 mutations when a replacement hass auth is observed (0.284ms)
+✖ backend retires pending v3 mutations when a replacement hass user is observed (0.595625ms)
+✖ backend retires pending v3 mutations when a replacement hass admin is observed (0.281833ms)
+✖ backend allows concurrent v3 commands in the same owner while retiring commands after cache reset (0.367209ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 0
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 35.625125
+
+✖ failing tests:
+
+test at tests/nodalia-backend.test.mjs:379:68
+✖ backend retires pending v3 mutations when a replacement hass connection is observed (1.781708ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file://<repository>/tests/nodalia-backend.test.mjs:390:3)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: { code: 'stale_context' },
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at tests/nodalia-backend.test.mjs:379:68
+✖ backend retires pending v3 mutations when a replacement hass auth is observed (0.284ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file://<repository>/tests/nodalia-backend.test.mjs:390:3)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: { code: 'stale_context' },
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at tests/nodalia-backend.test.mjs:379:68
+✖ backend retires pending v3 mutations when a replacement hass user is observed (0.595625ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file://<repository>/tests/nodalia-backend.test.mjs:390:3)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: { code: 'stale_context' },
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at tests/nodalia-backend.test.mjs:379:68
+✖ backend retires pending v3 mutations when a replacement hass admin is observed (0.281833ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file://<repository>/tests/nodalia-backend.test.mjs:390:3)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: { code: 'stale_context' },
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at tests/nodalia-backend.test.mjs:394:1
+✖ backend allows concurrent v3 commands in the same owner while retiring commands after cache reset (0.367209ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file://<repository>/tests/nodalia-backend.test.mjs:401:3)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: { code: 'stale_context' },
+    operator: 'rejects',
+    diff: 'simple'
+  }

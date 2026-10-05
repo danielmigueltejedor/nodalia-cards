@@ -1,0 +1,45 @@
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:02:41] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+
+Running 1 test using 1 worker
+
+(node:43561) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:02:41] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:02:41] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:02:41] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✘  1 [chromium] › tests/browser/room-summary-lifecycle.spec.mjs:25:1 › Room Summary cancels holds on movement/config/context/auth/detach and keeps strict service targets (3.4s)
+
+
+  1) [chromium] › tests/browser/room-summary-lifecycle.spec.mjs:25:1 › Room Summary cancels holds on movement/config/context/auth/detach and keeps strict service targets 
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 3
+
+    - Array []
+    + Array [
+    +   "sensor.temperature",
+    + ]
+
+      25 | test('Room Summary cancels holds on movement/config/context/auth/detach and keeps strict service targets',async({page})=>{
+      26 |  const card=await mount(page,{hold_action:'more-info',tap_action:'service',tap_service:'script.room',tap_service_data:{enabled:false,count:0},tap_service_target:{area_id:'living'},security:{allowed_services:['script.room']}});const primary=card.locator('[data-room-action="primary"]');
+    > 27 |  for(const kind of ['move','config','context','auth','detach']){await primary.dispatchEvent('pointerdown',{pointerId:3,button:0,clientX:20,clientY:20});if(kind==='move')await primary.dispatchEvent('pointermove',{pointerId:3,clientX:60,clientY:20});else await page.evaluate(kind=>{if(kind==='config')window.roomCard.setConfig(window.roomConfig);if(kind==='context'){window.roomHass.user.id+='x';window.roomCard.hass=window.roomHass;}if(kind==='auth'){window.roomHass.auth={};window.roomCard.hass=window.roomHass;}if(kind==='detach'){window.roomCard.remove();document.querySelector('#fixture').append(window.roomCard);}},kind);await page.waitForTimeout(550);}expect(await page.evaluate(()=>window.roomActions)).toEqual([]);
+         |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      ^
+      28 |  await primary.dispatchEvent('pointerdown',{pointerId:4,button:0});await expect.poll(()=>page.evaluate(()=>window.roomActions)).toEqual(['sensor.temperature']);await primary.dispatchEvent('pointerup',{pointerId:4});await primary.dispatchEvent('click');expect(await page.evaluate(()=>window.roomServices.length)).toBe(0);await primary.press('Enter');expect(await page.evaluate(()=>window.roomServices.at(-1))).toMatchObject({domain:'script',service:'room',data:{enabled:false,count:0},target:{area_id:'living'}});
+      29 |  await page.evaluate(()=>window.roomRejectService=true);await primary.click();expect(await page.evaluate(()=>window.roomHaptics)).toEqual([]);expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+      30 | });
+        at <repository>/tests/browser/room-summary-lifecycle.spec.mjs:27:710
+
+    Error Context: test-results/room-summary-lifecycle-Roo-3b3a4-eeps-strict-service-targets-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/room-summary-lifecycle-Roo-3b3a4-eeps-strict-service-targets-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/room-summary-lifecycle-Roo-3b3a4-eeps-strict-service-targets-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › tests/browser/room-summary-lifecycle.spec.mjs:25:1 › Room Summary cancels holds on movement/config/context/auth/detach and keeps strict service targets 

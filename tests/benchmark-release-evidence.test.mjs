@@ -12,9 +12,11 @@ test('release evidence rejects quick, dirty, errors, unavailable browsers, incom
  assertOfficialEvidence(evidence(),'3.0.0');
  for(const mutate of [r=>r.metadata.mode='quick',r=>r.metadata.harnessDirty=true,r=>r.errors.push('failed'),r=>r.browsers[1].status='unavailable',r=>r.config.iterations=7,r=>r.assets[1].tag='v3.0.0-beta.1']){const r=evidence();mutate(r);assert.throws(()=>assertOfficialEvidence(r,'3.0.0'));}
  assert.throws(()=>assertOfficialEvidence(evidence(),'3.0.0-rc.1'),/exact published/);
+ for(const target of ['2.2.10','3.0.0-beta.1','3.0.0-rc.0','main'])assert.throws(()=>assertOfficialEvidence(evidence(),target),/target must be stable/);
 });
 test('stable performance section always shows raw and gzip including regressions and traces official JSON',()=>{
  const section=buildPerformanceSection(evidence(),'3.0.0');assert.match(section,/\| Bundle raw \(bytes\) \| 100 \| 90 \| -10\.0%/);assert.match(section,/\| Bundle gzip \(bytes\) \| 20 \| 22 \| 10\.0%/);assert.match(section,/50\.0%/);assert.match(section,/2\.2\.10-vs-3\.0\.0\.json/);assert.match(section,/Chromium test/);
+ assert.match(section,/Dashboard mount and settle \(ms\) \| 3\.00 \| 4\.00 \| 33\.3%/);
 });
 test('post-release notes replace only the marked evidence section and never duplicate figures',()=>{
  const first=buildPerformanceSection(evidence(),'3.0.0');const notes=replacePerformanceSection('# Notes\n',first);const again=replacePerformanceSection(notes,first);assert.equal(notes,again);assert.throws(()=>replacePerformanceSection('<!-- nodalia-performance:start -->',first),/Malformed/);

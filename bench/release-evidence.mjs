@@ -9,6 +9,7 @@ export const SECTION_START='<!-- nodalia-performance:start -->';
 export const SECTION_END='<!-- nodalia-performance:end -->';
 const engines=['chromium','firefox','webkit','webkit-iphone'];
 export function assertOfficialEvidence(result,target) {
+ if(!/^3\.0\.0(?:-rc\.[1-9]\d*)?$/.test(target||''))throw new Error('Release notes evidence target must be stable 3.0.0 or its release candidate');
  validateResult(result);
  if(result.metadata.mode!=='official'||result.metadata.harnessDirty)throw new Error('Release evidence requires an official run from a clean committed harness');
  if(!result.versions.includes('2.2.10')||!result.versions.includes(target))throw new Error(`Evidence must compare exact published 2.2.10 and ${target} assets`);
@@ -22,7 +23,7 @@ export function assertOfficialEvidence(result,target) {
    if(rows.length!==result.config.iterations)throw new Error(`Incomplete workload coverage: ${browser.name} ${version} ${scenario.id}`);
   }
  }
- for(const browser of engines)for(const version of ['2.2.10',target])for(const scenario of ['cold-startup','dashboard/unrelated','dashboard/relevant','tracks/media/50','graph/graph/1000','lifecycle/media/100']) {
+ for(const browser of engines)for(const version of ['2.2.10',target])for(const scenario of ['cold-startup','dashboard/mount','dashboard/unrelated','dashboard/relevant','tracks/media/50','graph/graph/1000','lifecycle/media/100']) {
   const row=result.summary.find(row=>row.browser===browser&&row.version===version&&row.scenario===scenario&&row.scope==='common');
   if(row?.metrics.workMs?.samples!==result.config.iterations)throw new Error(`Incomplete official sample coverage: ${browser} ${version} ${scenario}`);
  }
@@ -39,7 +40,7 @@ export function buildPerformanceSection(result,target,{reportRef='main'}={}) {
   '',`| Metric | 2.2.10 | ${target} | Change |`,'|---|---:|---:|---:|'];
  for(const [key,label]of [['rawBytes','Bundle raw (bytes)'],['gzipBytes','Bundle gzip (bytes)']]){const before=result.assets.find(a=>a.version==='2.2.10')[key],after=result.assets.find(a=>a.version===target)[key];lines.push(`| ${label} | ${before} | ${after} | ${delta(before,after)} |`);}
  // Fixed representative selection includes slower results; do not filter on delta.
- for(const [scenario,metric,label]of [['cold-startup','totalMs','Fresh-context module load (ms)'],['cold-startup','scriptCpuMs','Module initialization script CPU (ms)'],['dashboard/unrelated','workMs','Unrelated HA updates, synchronous work (ms)'],['dashboard/relevant','workMs','Relevant HA updates, synchronous work (ms)'],['tracks/media/50','workMs','50 Media track updates, synchronous work (ms)'],['graph/graph/1000','workMs','Graph 1,000-point dispatch (ms)'],['graph/graph/1000','scriptCpuMs','Graph 1,000-point script CPU (ms)'],['lifecycle/media/100','workMs','Media lifecycle, 100 cycles (ms)'],['lifecycle/media/100','usedDelta','Media settled heap delta, 100 cycles (bytes)']]){
+ for(const [scenario,metric,label]of [['cold-startup','totalMs','Fresh-context module load (ms)'],['cold-startup','scriptCpuMs','Module initialization script CPU (ms)'],['dashboard/mount','totalMs','Dashboard mount and settle (ms)'],['dashboard/mount','scriptCpuMs','Dashboard mount script CPU (ms)'],['dashboard/unrelated','workMs','Unrelated HA updates, synchronous work (ms)'],['dashboard/relevant','workMs','Relevant HA updates, synchronous work (ms)'],['tracks/media/50','workMs','50 Media track updates, synchronous work (ms)'],['graph/graph/1000','workMs','Graph 1,000-point dispatch (ms)'],['graph/graph/1000','scriptCpuMs','Graph 1,000-point script CPU (ms)'],['lifecycle/media/100','workMs','Media lifecycle, 100 cycles (ms)'],['lifecycle/media/100','usedDelta','Media settled heap delta, 100 cycles (bytes)']]){
   const values=['2.2.10',target].map(version=>result.summary.find(row=>row.browser==='chromium'&&row.version===version&&row.scenario===scenario)?.metrics[metric]);
   const before=values[0]?.samples?values[0].median:null,after=values[1]?.samples?values[1].median:null;
   if(before===null||after===null){lines.push(`| ${label} | ${before??'unavailable'} | ${after??'unavailable'} | unavailable |`);continue;}

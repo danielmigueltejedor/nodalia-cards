@@ -1,0 +1,36 @@
+✖ download paths and destinations reject traversal and untrusted manifest URLs before asset I/O (3.059875ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 38.201417
+
+✖ failing tests:
+
+test at ../../../../../../../../private/tmp/nodalia-rc-downloader-regression.test.mjs:51:1
+✖ download paths and destinations reject traversal and untrusted manifest URLs before asset I/O (3.059875ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /Invalid release version/. Input:
+  
+  'Error: Network must not run'
+  
+      at async TestContext.<anonymous> (file:///private/tmp/nodalia-rc-downloader-regression.test.mjs:54:83)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: Error: Network must not run
+        at file:///private/tmp/nodalia-rc-downloader-regression.test.mjs:54:143
+        at download (file:///private/tmp/nodalia-rc-downloader-before.mjs:79:28)
+        at loadAsset (file:///private/tmp/nodalia-rc-downloader-before.mjs:85:77)
+        at async waitForActual (node:assert:646:5)
+        at async strict.rejects (node:assert:769:25)
+        at async TestContext.<anonymous> (file:///private/tmp/nodalia-rc-downloader-regression.test.mjs:54:83)
+        at async Test.run (node:internal/test_runner/test:1125:7)
+        at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3),
+    expected: /Invalid release version/,
+    operator: 'rejects',
+    diff: 'simple'
+  }

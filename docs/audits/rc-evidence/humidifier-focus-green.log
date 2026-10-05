@@ -1,0 +1,89 @@
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:54] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+
+Running 18 tests using 1 worker
+
+(node:48535) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:55] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:55] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:55] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓   1 [chromium] › tests/browser/humidifier-lifecycle.spec.mjs:13:1 › Humidifier cancels linear/circular pointer and touch drags without sending a speed, including entity changes (537ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:55] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:55] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:55] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓   2 [chromium] › tests/browser/humidifier-lifecycle.spec.mjs:21:1 › Humidifier keeps optimistic toggle and visual-settle deadlines across unchanged HA updates (257ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:55] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:55] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:55] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓   3 [chromium] › tests/browser/humidifier-lifecycle.spec.mjs:28:1 › Humidifier owns fallback and panel animation work, resets detached interactions and guards stored memory (234ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:55] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:55] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:55] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓   4 [chromium] › tests/browser/humidifier-lifecycle.spec.mjs:34:1 › Humidifier keyboard actions retain target/data values, catch HA failures and respect disabled slider haptics (266ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:56] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:56] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:56] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓   5 [chromium] › tests/browser/humidifier-lifecycle.spec.mjs:40:1 › Humidifier keeps keyboard action focus across consumed state updates and responsive rerenders (252ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:56] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:56] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:56] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓   6 [chromium] › tests/browser/humidifier-lifecycle.spec.mjs:49:1 › Humidifier mode switches reject obsolete animation callbacks and preserve external helpers and missing values (249ms)
+(node:48546) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:57] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:57] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:57] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓   7 [webkit] › tests/browser/humidifier-lifecycle.spec.mjs:13:1 › Humidifier cancels linear/circular pointer and touch drags without sending a speed, including entity changes (682ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:57] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:57] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:57] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓   8 [webkit] › tests/browser/humidifier-lifecycle.spec.mjs:21:1 › Humidifier keeps optimistic toggle and visual-settle deadlines across unchanged HA updates (330ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:58] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:58] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:58] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓   9 [webkit] › tests/browser/humidifier-lifecycle.spec.mjs:28:1 › Humidifier owns fallback and panel animation work, resets detached interactions and guards stored memory (292ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:58] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:58] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:58] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:58] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:58] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  10 [webkit] › tests/browser/humidifier-lifecycle.spec.mjs:34:1 › Humidifier keyboard actions retain target/data values, catch HA failures and respect disabled slider haptics (341ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:58] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:58] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:58] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:58] "GET /nodalia-cards.js HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:58] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:58] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  11 [webkit] › tests/browser/humidifier-lifecycle.spec.mjs:40:1 › Humidifier keeps keyboard action focus across consumed state updates and responsive rerenders (332ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:59] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:59] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:37:59] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  12 [webkit] › tests/browser/humidifier-lifecycle.spec.mjs:49:1 › Humidifier mode switches reject obsolete animation callbacks and preserve external helpers and missing values (322ms)
+(node:48608) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:38:00] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:38:00] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:38:00] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  13 [webkit-iphone] › tests/browser/humidifier-lifecycle.spec.mjs:13:1 › Humidifier cancels linear/circular pointer and touch drags without sending a speed, including entity changes (441ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:38:00] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:38:00] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:38:00] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  14 [webkit-iphone] › tests/browser/humidifier-lifecycle.spec.mjs:21:1 › Humidifier keeps optimistic toggle and visual-settle deadlines across unchanged HA updates (361ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:38:00] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:38:00] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:38:00] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  15 [webkit-iphone] › tests/browser/humidifier-lifecycle.spec.mjs:28:1 › Humidifier owns fallback and panel animation work, resets detached interactions and guards stored memory (278ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:38:01] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:38:01] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:38:01] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  16 [webkit-iphone] › tests/browser/humidifier-lifecycle.spec.mjs:34:1 › Humidifier keyboard actions retain target/data values, catch HA failures and respect disabled slider haptics (318ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:38:01] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:38:01] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:38:01] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  17 [webkit-iphone] › tests/browser/humidifier-lifecycle.spec.mjs:40:1 › Humidifier keeps keyboard action focus across consumed state updates and responsive rerenders (354ms)
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:38:01] "GET /tests/fixtures/browser.html HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:38:01] "GET /tests/fixtures/hass.mjs HTTP/1.1" 200 -
+[WebServer] 127.0.0.1 - - [05/Oct/2026 14:38:01] "GET /nodalia-cards.js HTTP/1.1" 200 -
+  ✓  18 [webkit-iphone] › tests/browser/humidifier-lifecycle.spec.mjs:49:1 › Humidifier mode switches reject obsolete animation callbacks and preserve external helpers and missing values (348ms)
+
+  18 passed (7.7s)

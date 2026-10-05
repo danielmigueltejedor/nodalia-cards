@@ -18,7 +18,7 @@
 | Release gate | Local Firefox cannot start before loading a fixture | Original installation, alternate temporary directory, explicit workspace profile and clean pinned Firefox download all failed with `Could not find profile folder` | No Apple M4 Firefox timings or local compatibility pass can be claimed |
 | Release infrastructure | No controlled reference Actions runner is registered | Repository runner API returned `total_count: 0` | Automatic stable evidence workflow must have an operator-provisioned reference runner before it can complete |
 
-Red logs are retained locally for this session and summarized in [results](rc-readiness-results.json). Quick runs made while the harness was being developed are diagnostic only and are not release comparisons. Runtime fixes add no public API, YAML, card, dependency or visual-design changes.
+[Red and targeted green transcripts](rc-evidence/) are versioned, with ANSI colors removed and the workspace path normalized; exact source commits are listed in [results](rc-readiness-results.json). Raw benchmark samples are preserved without normalization. Quick runs made while the harness was being developed are diagnostic only and are not release comparisons. Runtime fixes add no public API, YAML, card, dependency or visual-design changes.
 
 ## F. Critical review of beta ownership and runtime
 
@@ -36,7 +36,7 @@ The permanent harness runs 100/250/500 cycles for Media, Graph, Advance Vacuum a
 
 ## H–I. Compatibility, bundle and contracts
 
-Before the Humidifier focus correction, the complete three-engine suite had 1,207 passes, one Chromium failure and one existing iPhone skip. The focus correction then passed all 18 Humidifier tests in the three engines; the complete suite must be revalidated on the final commit. Four-engine Linux CI passed on ae163b37: Chromium/WebKit 404 each, Firefox/iPhone WebKit 403 each with one existing skip each. Final local static validation passes all 825 Node tests, strict types/lint/architecture/translations/distribution/build. The Engine owner fix passes all 31 targeted backend tests; exact final CI is pending. Compatibility evidence is separate from the reference performance run.
+Before the Humidifier focus correction, the complete three-engine suite had 1,207 passes, one Chromium failure and one existing iPhone skip. The focus correction then passed all 18 Humidifier tests in the three engines; the complete suite must be revalidated on the final commit. Four-engine Linux CI passed on final runtime/harness commit 5f34871c: Chromium/WebKit 405 each, Firefox/iPhone WebKit 404 each with one existing skip each. Final local static validation passes all 825 Node tests, strict types/lint/architecture/translations/distribution/build. The Engine owner fix passes all 31 targeted backend tests. Exact-commit CI, HACS, CodeQL and benchmark smoke all pass; see the linked run IDs in the results JSON. Compatibility evidence is separate from the reference performance run.
 
 Current candidate bundle measurement: 4,146,902 raw / 946,679 gzip bytes, SHA256 `97edb7fd8856861a2668fe55d235009be6860aca4f8b6ed245b11b2e58c66924`. This is a working candidate size check, not published RC evidence. Existing budgets are unchanged. Distribution/standalone/custom elements/language tests preserve existing contracts. No production dependencies were added.
 
@@ -61,3 +61,23 @@ The version is not promoted while required evidence is missing. **NOT RC READY**
 CodeQL identified a substring-host matcher in a test and manifest data reused as a download URL; use an exact parsed hostname in the mock and construct the production download URL from the fixed repository/tag/filename. Direct loader calls now validate version syntax before any path/network work, and alternate hosts/files/traversal reject before cache writes. The new regression fails against ae5d0f8 and passes after correction. CodeQL alerts [295](https://github.com/danielmigueltejedor/nodalia-cards/security/code-scanning/295) and [296](https://github.com/danielmigueltejedor/nodalia-cards/security/code-scanning/296) describe intentional dev-only network-to-cache persistence and were reviewed/dismissed as false positives: exact asset validation precedes writes to fixed local filenames; there is no arbitrary upload endpoint or network-controlled file path. No query was disabled and no source suppression was added. The updated CodeQL check passed.
 
 The map fixture was strengthened before the final run: every four moves change consumed robot state and the map image URL, then yield a real frame. During-gesture render/overlay counts and image/marker identity are checked separately from the settled repaint. All 15 benchmark-framework browser tests pass across the three locally available engines. Earlier interrupted/development runs are not saved as accepted official evidence.
+
+## Exact acceptance counts
+
+| Gate | Result |
+|---|---|
+| Node / static validation | 825 pass, zero failures/skips; strict types/lint/architecture/translations/distribution/build pass |
+| Chromium | 405 pass |
+| Firefox on Linux CI | 404 pass, one native-touch constructor skip |
+| WebKit | 405 pass |
+| iPhone WebKit | 404 pass, one duplicate-DPR scenario skip |
+| Chromium resource soak | 12 cards × 100 cycles × 4,000 HA updates; no resource-ledger growth |
+| Artifact determinism | 37 root JS files, zero drift after another build |
+| Dependency audit | Zero vulnerabilities; zero production dependencies |
+| HACS / CodeQL / benchmark smoke | Pass on 5f34871c |
+
+The Linux Firefox compatibility pass cannot replace missing Firefox timings on the Apple M4 reference system. The pending performance and controlled-runner gates therefore still prevent RC preparation.
+
+Repository Actions settings were also inspected: the default token policy is read-only and automatic PR creation is disabled. The benchmark job explicitly requests only contents/PR writes. If GitHub blocks its documentation PR, verified data remains on the pushed report branch and the job summary offers a manual comparison link; the already validated release-notes update continues. No repository-wide permissions were broadened. Runner registration is still zero, so automatic measurement itself remains an external prerequisite.
+
+The PR-creation setting corresponds to [GitHub’s documented repository workflow policy](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository#preventing-github-actions-from-creating-or-approving-pull-requests). Its observed disabled value was preserved.
