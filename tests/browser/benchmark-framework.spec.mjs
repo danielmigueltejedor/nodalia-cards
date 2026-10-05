@@ -44,3 +44,21 @@ test('vacuum profiles exercise a large helper catalog, robot switch and negotiat
  expect(results[0].metrics.catalogEntities).toBeGreaterThan(1700);expect(results[0].metrics.catalogScans).toBe(0);
  expect(results[2].metrics.engineCommands).toBe(3);expect(results[2].metrics.engineV3Commands).toBe(2);
 });
+test('framed map benchmark consumes robot and image feedback while preserving pinch ownership',async({page})=>{
+ await fixture(page);await page.evaluate(()=>import('/nodalia-cards.js'));
+ const results=await page.evaluate(async()=>{
+  const config={quietMs:20,settleTimeoutMs:6000,assignments:120,commonCards:['advance-vacuum']},results=[];
+  for(const type of ['pointer',...(typeof TouchEvent==='function'?['touch']:[])]){
+   const scenario=`gesture/advance-vacuum/${type}/20`;await window.bench.prepare(scenario,config);results.push(await window.bench.run(scenario,config));
+  }
+  return results;
+ });
+ expect(results.length).toBeGreaterThan(0);
+ for(const result of results){
+  expect(result.errors).toEqual([]);expect(result.skipped).toEqual([]);
+  expect(result.metrics.feedbackUpdates).toBe(5);expect(result.metrics.mapFeedbackUpdates).toBe(5);
+  expect(result.metrics.mapScaleAfter).toBeGreaterThan(result.metrics.mapScaleBefore);
+  expect(result.metrics.markerIdentity).toBe(1);expect(result.metrics.mapImageIdentity).toBe(1);
+  expect(result.metrics.gestureFullRenders).toBe(0);expect(result.metrics.gestureOverlayBuilds).toBe(0);expect(result.metrics.renderedFrames).toBeGreaterThan(0);
+ }
+});

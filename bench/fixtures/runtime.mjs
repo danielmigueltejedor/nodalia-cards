@@ -203,16 +203,24 @@ window.bench = {
     const points=distance=>[{clientX:x-distance/2,clientY:y},{clientX:x+distance/2,clientY:y}];
     const event=(type,p)=>arg==='touch'?touchEvent(type,surface,p):new PointerEvent(type,{bubbles:true,composed:true,cancelable:true,pointerId:p[0],pointerType:'touch',clientX:p[1],clientY:y});
     if(arg==='touch')dispatch(()=>surface.dispatchEvent(event('touchstart',points(80))));else for(const [pid,sign]of[[1,-1],[2,1]])dispatch(()=>surface.dispatchEvent(event('pointerdown',[pid,x+sign*40])));
+    let feedbackUpdates=0,mapFeedbackUpdates=0;
     for(let i=0;i<Number(detail);i++){
      if(arg==='touch')dispatch(()=>surface.dispatchEvent(event('touchmove',points(80+i/Number(detail)*80))));else for(const [pid,sign]of[[1,-1],[2,1]])dispatch(()=>surface.dispatchEvent(event('pointermove',[pid,x+sign*(40+i/Number(detail)*40)])));
-     // Feedback and a real browser frame every four moves: synchronous flooding alone cannot establish per-frame behavior.
-     if(i%4===0){dispatch(()=>{card.hass={...state.hass};});await new Promise(resolve=>nativeRaf(resolve));}
+     // Change consumed robot state and map frames, rather than sending identical
+     // HA snapshots which would only exercise unrelated-update guards.
+     if(i%4===0){
+      const robot=state.hass.states['vacuum.one'],map=state.hass.states['image.map'];
+      state.hass.states['vacuum.one']={...robot,state:'cleaning',attributes:{...robot.attributes,battery_level:50+i%50}};
+      state.hass.states['image.map']={...map,state:`frame-${i}`,attributes:{...map.attributes,entity_picture:`/bench/artwork/map.svg?frame=${i}`}};
+      feedbackUpdates++;mapFeedbackUpdates++;
+      dispatch(()=>{card.hass={...state.hass};});await new Promise(resolve=>nativeRaf(resolve));
+     }
     }
     const gestureFullRenders=typeof card._renderView==='function'?counts.fullRenders:null,gestureOverlayBuilds=typeof card._renderMapOverlays==='function'?counts.overlayBuilds:null,mapScaleAfter=card._mapScale;
     const markerStable=marker===card.shadowRoot.querySelector('button[data-room-id="1"]'),imageStable=image===card.shadowRoot.querySelector('[data-map-image]');
     if(arg==='touch')dispatch(()=>surface.dispatchEvent(event('touchend',[])));else for(const pid of [1,2])dispatch(()=>surface.dispatchEvent(event('pointerup',[pid,x])));
     if(mapScaleBefore===mapScaleAfter)skipped.push(`${arg} gesture did not change the map scale in this release; no performance delta is valid`);
-    return {gestureFullRenders,gestureOverlayBuilds,mapScaleBefore,mapScaleAfter,markerIdentity:markerStable?1:0,mapImageIdentity:imageStable?1:0};
+    return {gestureFullRenders,gestureOverlayBuilds,mapScaleBefore,mapScaleAfter,feedbackUpdates,mapFeedbackUpdates,markerIdentity:markerStable?1:0,mapImageIdentity:imageStable?1:0};
    }
    else if(kind==='lifecycle'){
     const count=Number(arg);for(let i=0;i<count;i++){const current=dispatch(()=>make(row,state.hass));dispatch(()=>{current.hass={...state.hass};current.remove();});if(i%20===0)await sleep(5);}state.cards=[];

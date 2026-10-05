@@ -56,10 +56,10 @@
   "gates": {
     "static": "passed: version, architecture, strict types, typed lint, distribution, translations, build",
     "unit": {
-      "passed": 819,
+      "passed": 825,
       "failed": 0,
       "skipped": 0,
-      "note": "Full CI before final Engine owner fix; 31 targeted backend tests passed afterward"
+      "log": "/private/tmp/nodalia-rc-final-fast-validation.log"
     },
     "browsers": {
       "lastFullThreeEngine": {
@@ -130,6 +130,16 @@
         296
       ],
       "rationale": "Dev-only persistence of verified assets at fixed local filenames; strict exact URL and version path regressions. No query disabled or suppression added."
+    },
+    "benchmarkFramework": {
+      "nodePassed": 14,
+      "localBrowserPassed": 15,
+      "engines": [
+        "chromium",
+        "webkit",
+        "webkit-iphone"
+      ],
+      "mapFeedback": "Consumed robot state and map URL change every four moves; marker/image ownership checked during real frames"
     }
   },
   "candidateBundle": {
