@@ -32,7 +32,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Validation
 
-- See [RC readiness](./docs/audits/rc-readiness-report.md). The release owner explicitly excludes Firefox performance on the reference Mac; Linux Firefox compatibility remains required. Chromium, WebKit and iPhone WebKit will measure the exact published RC asset against 2.2.10 and beta.1. Results are pending until that run completes; no global speed claim is made.
+- See [RC readiness](./docs/audits/rc-readiness-report.md). The release owner explicitly excludes Firefox performance on the reference Mac; Linux Firefox compatibility remains required. Chromium, WebKit and iPhone WebKit completed exact published-asset comparisons against 2.2.10 and beta.1: 8,505 samples, seven measured rounds and zero accepted measured-engine errors. The original failed attempt and complete iPhone retry are retained in the [assessment](./docs/benchmarks/3.0.0-rc.1-analysis.md). No global speed claim is made.
 - Automated stable comparison tooling is included, but its controlled runner still requires provisioning before stable publication. RC evidence is measured manually on the idle reference Mac.
 - HACS channel promotion can reuse an old browser cache token. Follow [resource refresh instructions](./docs/upgrading-to-3.md#old-code-after-switching-preview-channels-in-hacs) and use the full version query `v=3.0.0-rc.1` if needed.
 
