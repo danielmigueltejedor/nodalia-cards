@@ -548,6 +548,7 @@
   "ed.light.tap_actions_section_hint": "Define qué ocurre al pulsar la bombilla frente al resto de la tarjeta (título, chips o zona vacía). Más abajo, las opciones de pulsación larga.",
   "ed.light.tap_actions_section_title": "Acciones al pulsar",
   "ed.light.visibility_section_hint": "Qué bloques quieres mostrar dentro de la tarjeta.",
+  "ed.lock.animations_section_hint": "Entrada suave del contenido al aparecer la tarjeta y una breve respuesta visual cuando cambia el estado de la cerradura.",
   "ed.media_player.action_block": "Acción",
   "ed.media_player.action_default": "Por defecto",
   "ed.media_player.action_navigate": "Navegar",

@@ -548,6 +548,7 @@
   "ed.light.tap_actions_section_hint": "Velg hva som skjer når du trykker på pæren vs. resten av kortet (tittel, sjetonger, tomt område). Langt trykk (hold) alternativer er nedenfor.",
   "ed.light.tap_actions_section_title": "Trykk på handlinger",
   "ed.light.visibility_section_hint": "Hvilke blokker som skal vises inne i kortet.",
+  "ed.lock.animations_section_hint": "Myk innføring av innholdet når kortet vises, og kort visuell tilbakemelding når låsens tilstand endres.",
   "ed.media_player.action_block": "Handling",
   "ed.media_player.action_default": "Misligholde",
   "ed.media_player.action_navigate": "Navigere",

@@ -548,6 +548,7 @@
   "ed.light.tap_actions_section_hint": "Kies wat er gebeurt bij tikken op de lamp versus de rest van de kaart. Hieronder opties voor lang indrukken.",
   "ed.light.tap_actions_section_title": "Tikacties",
   "ed.light.visibility_section_hint": "Welke blokken moeten op de kaart worden weergegeven?",
+  "ed.lock.animations_section_hint": "Zachte binnenkomst van de inhoud wanneer de kaart verschijnt en korte visuele feedback wanneer de slotstatus verandert.",
   "ed.media_player.action_block": "Actie",
   "ed.media_player.action_default": "Standaard",
   "ed.media_player.action_navigate": "Navigeren",

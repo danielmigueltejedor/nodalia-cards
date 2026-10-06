@@ -548,6 +548,7 @@
   "ed.light.tap_actions_section_hint": "Legen Sie fest, was beim Tippen auf die Glühbirne vs. den übrigen Kartenbereich passiert. Darunter die Optionen für langes Drücken.",
   "ed.light.tap_actions_section_title": "Tipp-Aktionen",
   "ed.light.visibility_section_hint": "Welche Blöcke auf der Karte angezeigt werden sollen.",
+  "ed.lock.animations_section_hint": "Sanfter Inhaltseinstieg beim Erscheinen der Karte und kurzes Feedback, wenn sich der Schlosszustand ändert.",
   "ed.media_player.action_block": "Aktion",
   "ed.media_player.action_default": "Standard",
   "ed.media_player.action_navigate": "Navigieren",

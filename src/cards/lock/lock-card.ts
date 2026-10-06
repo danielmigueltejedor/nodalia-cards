@@ -5,7 +5,7 @@ import { CARD_TAG, EDITOR_TAG, normalizeConfig } from "./lock-config";
 import type { LockConfig, NormalizedLockConfig } from "./lock-config";
 import { lockText } from "./lock-strings";
 import { reconcileViewChildren } from "../../shared/view-reconcile";
-import { animateViewState, createViewAnimationWork, releaseViewAnimationWork } from "../../shared/view-animation-work";
+import { animateViewState, createViewAnimationWork, releaseViewAnimationWork, scheduleViewFallback } from "../../shared/view-animation-work";
 import type { ViewAnimationWork } from "../../shared/view-animation-work";
 
 export function loadNodaliaLockCard(): CustomElementConstructor {
@@ -22,11 +22,14 @@ export function loadNodaliaLockCard(): CustomElementConstructor {
     private context!: HassContext | null;
     private animationWork!: ViewAnimationWork;
     private visualState!: string;
+    private entering!: boolean;
+    private entranceTimer!: number;
 
     constructor() { super(); this._nodaliaConstruct(); }
     _nodaliaConstruct(): void {
       this.context = null;
       this.animationWork = createViewAnimationWork(); this.visualState = "";
+      this.entering = true; this.entranceTimer = 0;
       this.config = null; this.stateHass = null; this.pending = null;
       this.timer = 0; this.generation = 0; this.progress = 0;
       this.gesture = null; this.error = ""; this.signature = "";
@@ -49,18 +52,19 @@ export function loadNodaliaLockCard(): CustomElementConstructor {
     static getEntitySuggestion(hass: HomeAssistant, entityId: string) {
       return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, { domains: ["lock"] });
     }
-    connectedCallback(): void { this.render(); }
-    disconnectedCallback(): void { this.cancelGesture(); this.clearPending(); releaseViewAnimationWork(this.animationWork); this.visualState = ""; }
+    // Each mount is a new appearance; HA updates while mounted never replay it.
+    connectedCallback(): void { this.entering = true; this.render(); }
+    disconnectedCallback(): void { this.cancelGesture(); this.clearPending(); this.releaseAnimations(); this.visualState = ""; }
     setConfig(config: LockConfig): void {
       const next = normalizeConfig(config);
-      releaseViewAnimationWork(this.animationWork); this.visualState = "";
+      this.releaseAnimations(); this.visualState = ""; this.entering = true;
       this.cancelGesture(); this.clearPending(); this.error = "";
       this.config = next; this.render();
     }
     set hass(hass: HomeAssistant) {
       const context = captureHassContext(hass);
       if (this.context && !sameHassContext(this.context, context)) {
-        releaseViewAnimationWork(this.animationWork); this.visualState = "";
+        this.releaseAnimations(); this.visualState = "";
         this.cancelGesture(); this.clearPending(); this.error = ""; this.signature = "";
       }
       this.context = context;
@@ -124,6 +128,15 @@ export function loadNodaliaLockCard(): CustomElementConstructor {
       if (event.key === "Escape" || event.key === "Home") this.cancelGesture();
       if (event.key === "Enter" && this.progress >= 0.98) { this.cancelGesture(); void this.command("unlock"); }
     }
+    private releaseAnimations(): void {
+      releaseViewAnimationWork(this.animationWork);
+      // A released entrance deadline must not leave the entrance class owned forever.
+      this.entranceTimer = 0; this.entering = false;
+    }
+    private finishEntrance(): void {
+      this.entranceTimer = 0; this.entering = false;
+      this.shadowRoot?.querySelector("ha-card")?.classList.remove("is-entering");
+    }
     private clearPending(): void {
       window.clearTimeout(this.timer); this.timer = 0; this.pending = null; this.generation += 1;
     }
@@ -154,12 +167,15 @@ export function loadNodaliaLockCard(): CustomElementConstructor {
       const unlocked = this.state === "unlocked";
       const icon = ["jammed", "unknown", "unavailable"].includes(this.state) ? "mdi:lock-alert" : ["unlocked", "unlocking", "open", "opening"].includes(status) ? "mdi:lock-open-variant" : "mdi:lock";
       const previousStatus = this.visualState;
+      const animations = this.config.animations;
+      const entering = animations.enabled && this.entering && this.isConnected;
       const template = document.createElement("template");
       template.innerHTML = `
         <style>
           :host { display:block; }
           * { box-sizing:border-box; }
           ha-card {
+            --lock-content-duration: ${animations.content_duration}ms;
             --lock-accent: ${styles.icon.on_color};
             --lock-surface: ${styles.card.background};
             --lock-handle-size: ${styles.control.size};
@@ -246,13 +262,21 @@ export function loadNodaliaLockCard(): CustomElementConstructor {
           .help { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
           .slider:focus-visible + .help { position:static; width:auto; height:auto; margin:8px 4px 0; clip-path:none; white-space:normal; font-size:11px; color:var(--secondary-text-color, #aeb6c5); }
           .error { color:var(--error-color, #ff7777); font-size:12px; }
+          .is-entering .icon { animation:lock-bloom calc(var(--lock-content-duration) * .92) cubic-bezier(.2,.9,.24,1) 40ms both; }
+          .is-entering .header > div { animation:lock-fade-up calc(var(--lock-content-duration) * .92) cubic-bezier(.22,.84,.26,1) 75ms both; }
+          /* Translation only: the unlock gesture measures the track and must not be scaled. */
+          .is-entering [data-view-key=command] { animation:lock-rise calc(var(--lock-content-duration) * .94) cubic-bezier(.22,.84,.26,1) 110ms both; }
+          @keyframes lock-bloom { 0% { opacity:0; transform:scale(.92); } 58% { opacity:1; transform:scale(1.04); } 100% { opacity:1; transform:scale(1); } }
+          @keyframes lock-fade-up { 0% { opacity:0; transform:translateY(12px) scale(.97); } 100% { opacity:1; transform:none; } }
+          @keyframes lock-rise { 0% { opacity:0; transform:translateY(10px); } 100% { opacity:1; transform:none; } }
+          ${animations.enabled ? "" : "ha-card, ha-card *, ha-card::before, ha-card::after { animation:none !important; transition:none !important; }"}
           .compact { --lock-handle-default:38px; --lock-card-padding:10px 12px; --lock-card-gap:10px; }
           @media (max-width:600px) {
             :host { --lock-icon-size:50px; }
           }
           ${window.NodaliaUtils.renderReducedMotionStyles?.() || "@media (prefers-reduced-motion:reduce) { *, *::before, *::after { transition:none!important; animation:none!important; } }"}
         </style>
-        <ha-card data-view-key="lock" data-lock-state="${window.NodaliaUtils.escapeHtml(status)}" class="${this.config.layout} ${["locked", "locking"].includes(status) ? "is-locked" : ""} ${["jammed", "unknown", "unavailable"].includes(this.state) ? "is-unavailable" : ""}" aria-busy="${Boolean(this.pending) || ["locking", "unlocking", "opening"].includes(this.state)}">
+        <ha-card data-view-key="lock" data-lock-state="${window.NodaliaUtils.escapeHtml(status)}" class="${this.config.layout}${entering ? " is-entering" : ""} ${["locked", "locking"].includes(status) ? "is-locked" : ""} ${["jammed", "unknown", "unavailable"].includes(this.state) ? "is-unavailable" : ""}" aria-busy="${Boolean(this.pending) || ["locking", "unlocking", "opening"].includes(this.state)}">
           <div class="header" data-view-key="header"><span class="icon"><ha-icon icon="${icon}"></ha-icon></span><div>
             ${this.config.show_name ? `<div class="name">${name}</div>` : ""}
             ${this.config.show_state ? `<div class="state" role="status">${text(status)}</div>` : ""}
@@ -265,7 +289,10 @@ export function loadNodaliaLockCard(): CustomElementConstructor {
         </ha-card>`;
       reconcileViewChildren(this.shadowRoot, template.content);
       this.visualState = status;
-      if (this.isConnected && previousStatus && previousStatus !== status) {
+      if (entering && !this.entranceTimer) {
+        this.entranceTimer = scheduleViewFallback(this.animationWork, () => this.finishEntrance(), animations.content_duration + 160);
+      }
+      if (animations.enabled && this.isConnected && previousStatus && previousStatus !== status) {
         animateViewState(this.animationWork, Array.from(this.shadowRoot.querySelectorAll(".icon ha-icon, .state, .track-label")));
       }
     }

@@ -548,6 +548,7 @@
   "ed.light.tap_actions_section_hint": "Scegli cosa succede toccando la lampadina rispetto al resto della scheda. Sotto le opzioni di pressione lunga.",
   "ed.light.tap_actions_section_title": "Azioni al tocco",
   "ed.light.visibility_section_hint": "Quali blocchi mostrare all'interno della carta.",
+  "ed.lock.animations_section_hint": "Ingresso morbido dei contenuti quando appare la scheda e breve riscontro visivo quando cambia lo stato della serratura.",
   "ed.media_player.action_block": "Azione",
   "ed.media_player.action_default": "Predefinito",
   "ed.media_player.action_navigate": "Navigare",
