@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.1-alpha.1";
+  var CARD_VERSION = "3.0.1-alpha.2";
 
   // src/cards/entity/entity-constants.ts
   var CARD_TAG = "nodalia-entity-card";
@@ -1190,6 +1190,25 @@
   }
 
   // src/shared/card-layout-notifier.ts
+  var SECTIONS_CARD_OWNERS = /* @__PURE__ */ new Set(["hui-section", "hui-grid-section"]);
+  function isHostedBySections(host) {
+    let node = host.parentNode;
+    while (node) {
+      if (node instanceof ShadowRoot) {
+        node = node.host;
+        continue;
+      }
+      if (node instanceof Element && SECTIONS_CARD_OWNERS.has(node.localName)) return true;
+      node = node.parentNode;
+    }
+    return false;
+  }
+  function notifyCardLayoutChange(host) {
+    host.dispatchEvent(new CustomEvent("iron-resize", { bubbles: true, composed: true }));
+    if (isHostedBySections(host)) {
+      host.dispatchEvent(new CustomEvent("card-updated", { bubbles: true, composed: true }));
+    }
+  }
   function createCardLayoutNotifier(host) {
     let timer = 0;
     let frame = 0;
@@ -1226,8 +1245,7 @@
             if (width === reportedWidth && height === reportedHeight) return;
             reportedWidth = width;
             reportedHeight = height;
-            host.dispatchEvent(new CustomEvent("iron-resize", { bubbles: true, composed: true }));
-            host.dispatchEvent(new CustomEvent("card-updated", { bubbles: true, composed: true }));
+            notifyCardLayoutChange(host);
           });
         }, 80);
       },

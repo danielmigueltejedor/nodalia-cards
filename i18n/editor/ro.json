@@ -548,6 +548,7 @@
   "ed.light.tap_actions_section_hint": "Alege ce se întâmplă la atingerea becului față de restul cardului. Mai jos, opțiunile de apăsare lungă.",
   "ed.light.tap_actions_section_title": "Acțiuni la atingere",
   "ed.light.visibility_section_hint": "Ce blocuri să arăți în interiorul cardului.",
+  "ed.lock.animations_section_hint": "Intrare lină a conținutului la apariția cardului și un scurt răspuns vizual când se schimbă starea încuietorii.",
   "ed.media_player.action_block": "Acţiune",
   "ed.media_player.action_default": "Implicit",
   "ed.media_player.action_navigate": "Navigați",

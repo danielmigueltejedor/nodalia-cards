@@ -548,6 +548,7 @@
   "ed.light.tap_actions_section_hint": "Choisissez le comportement pour l’ampoule vs. le reste de la carte. En dessous, les options d’appui long.",
   "ed.light.tap_actions_section_title": "Actions au toucher",
   "ed.light.visibility_section_hint": "Quels blocs afficher à l’intérieur de la carte.",
+  "ed.lock.animations_section_hint": "Entrée douce du contenu à l'apparition de la carte et bref retour visuel lorsque l'état de la serrure change.",
   "ed.media_player.action_block": "Action",
   "ed.media_player.action_default": "Défaut",
   "ed.media_player.action_navigate": "Naviguer",

@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.1-alpha.1";
+  var CARD_VERSION = "3.0.1-alpha.2";
 
   // src/shared/device-control-geometry.ts
   var CIRCULAR_LAYOUT_DIAL_START_ANGLE = 135;
@@ -344,6 +344,25 @@
   var sameHassContext = (a, b) => a.present === b.present && a.connection === b.connection && a.auth === b.auth && a.user === b.user && a.admin === b.admin;
 
   // src/shared/card-layout-notifier.ts
+  var SECTIONS_CARD_OWNERS = /* @__PURE__ */ new Set(["hui-section", "hui-grid-section"]);
+  function isHostedBySections(host) {
+    let node = host.parentNode;
+    while (node) {
+      if (node instanceof ShadowRoot) {
+        node = node.host;
+        continue;
+      }
+      if (node instanceof Element && SECTIONS_CARD_OWNERS.has(node.localName)) return true;
+      node = node.parentNode;
+    }
+    return false;
+  }
+  function notifyCardLayoutChange(host) {
+    host.dispatchEvent(new CustomEvent("iron-resize", { bubbles: true, composed: true }));
+    if (isHostedBySections(host)) {
+      host.dispatchEvent(new CustomEvent("card-updated", { bubbles: true, composed: true }));
+    }
+  }
   function createCardLayoutNotifier(host) {
     let timer = 0;
     let frame = 0;
@@ -380,8 +399,7 @@
             if (width === reportedWidth && height === reportedHeight) return;
             reportedWidth = width;
             reportedHeight = height;
-            host.dispatchEvent(new CustomEvent("iron-resize", { bubbles: true, composed: true }));
-            host.dispatchEvent(new CustomEvent("card-updated", { bubbles: true, composed: true }));
+            notifyCardLayoutChange(host);
           });
         }, 80);
       },
@@ -778,10 +796,7 @@
       }
       _shouldReserveCoverToggleLane(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
         const gridColumns = this._getConfiguredGridColumns();
-        if (gridColumns !== null) {
-          return gridColumns <= COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS;
-        }
-        return width > 0 && width <= COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH;
+        return gridColumns !== null && gridColumns <= COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS || width > 0 && width <= COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH;
       }
       _getState(hass = this._hass) {
         return hass?.states?.[this._config.entity] || null;
@@ -1105,6 +1120,8 @@
       }
       _onShadowClick(event) {
         const path = event.composedPath();
+        const suppressTap = this._suppressNextCoverTap;
+        this._suppressNextCoverTap = false;
         const slider = path.find((node) => node instanceof HTMLInputElement && Boolean(node.dataset.coverControl));
         if (slider) return;
         const button = path.find((node) => node instanceof HTMLElement && Boolean(node.dataset.coverAction));
@@ -1117,8 +1134,7 @@
             if (coverAction === "body" && window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
               return;
             }
-            if (this._suppressNextCoverTap) {
-              this._suppressNextCoverTap = false;
+            if (suppressTap) {
               return;
             }
             this._triggerHaptic();
@@ -1207,6 +1223,7 @@
       }
       _onPointerDown(event) {
         if (!(event instanceof PointerEvent)) return;
+        this._suppressNextCoverTap = false;
         const path = event.composedPath();
         const slider = path.find(
           (node) => node instanceof HTMLInputElement && node.type === "range" && Boolean(node.dataset.coverControl)
@@ -1748,8 +1765,10 @@
         this.shadowRoot.innerHTML = `
       <style>
         :host {
-          container-name: cover-card;
-          container-type: inline-size;
+          /* Not a query container: WebKit scroll anchoring treats the re-rendered
+             subtree's interim layout as content growth and scrolls (#320). The
+             narrow toggle lane is a measured class instead. */
+          contain: inline-size layout style;
           display: block;
         }
         * { box-sizing: border-box; }
@@ -2178,19 +2197,6 @@
         }
         .fan-card--cover-ui-arrows.fan-card--cover-ui-toggle-lane .fan-card__view--arrows {
           justify-content: center;
-        }
-        @container cover-card (max-width: ${COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH}px) {
-          .fan-card--cover-ui-arrows .fan-card__slider-row {
-            grid-template-columns: minmax(0, 1fr) auto;
-            position: static;
-          }
-          .fan-card--cover-ui-arrows .fan-card__slider-actions {
-            inset: auto;
-            position: static;
-          }
-          .fan-card--cover-ui-arrows .fan-card__view--arrows {
-            justify-content: center;
-          }
         }
         .fan-card__control--active {
           background: color-mix(in srgb, ${accentColor} 18%, ${styles.control.accent_background});

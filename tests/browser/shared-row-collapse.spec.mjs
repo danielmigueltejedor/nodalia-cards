@@ -18,7 +18,8 @@ async function openSectionsFixture(page) {
 async function mountRow(page,{tag='nodalia-fav-card',config={},attributes={},columns=2}={}) {
  await openSectionsFixture(page);
  await page.evaluate(({tag,config,attributes,columns})=>{
-  const fixture=document.querySelector('#fixture');
+  // hui-section owns the grid; only Sections answers card-updated without re-appending cards.
+  const fixture=document.querySelector('#fixture').appendChild(document.createElement('hui-section'));
   fixture.style.cssText='display:grid;grid-template-columns:repeat(12,minmax(0,1fr));grid-auto-rows:auto;gap:8px;width:360px;max-width:100%';
   const entity=tag==='nodalia-fav-card'||tag==='nodalia-light-card'?'light.one':tag==='nodalia-fan-card'?'fan.one':'humidifier.one';
   const states={

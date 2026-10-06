@@ -1,5 +1,5 @@
 import { captureHassContext, sameHassContext } from "../../shared/hass-context";
-import { createCardLayoutNotifier } from "../../shared/card-layout-notifier";
+import { createCardLayoutNotifier, notifyCardLayoutChange } from "../../shared/card-layout-notifier";
 import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
 import { parseFiniteNumericValue } from "../../shared/numeric-values";
 import { parseServiceData, invokeHassService } from "../../shared/home-assistant-services";
@@ -1020,8 +1020,7 @@ class NodaliaFavCard extends HTMLElement {
     }
     // Prefer sections-local iron-resize. A global window resize made sibling
     // media players remeasure and re-render mid-layout.
-    fireEvent(this, "iron-resize", {});
-    fireEvent(this, "card-updated", undefined);
+    notifyCardLayoutChange(this);
   }
 
   _scheduleLayoutRefresh(delay = 0) {

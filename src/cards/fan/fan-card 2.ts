@@ -1649,8 +1649,6 @@ class NodaliaFanCard extends HTMLElement {
 
   _onShadowPointerDown(event: Event) {
     if (!(event instanceof PointerEvent)) return;
-    // A new gesture expires suppression left by one whose click never arrived.
-    this._suppressNextFanTap = false;
     const path = event.composedPath();
     const slider = path.find((node): node is HTMLInputElement =>
       node instanceof HTMLInputElement &&
@@ -2066,17 +2064,12 @@ class NodaliaFanCard extends HTMLElement {
 
   _onShadowKeyDown(event: Event) {
     if (!(event instanceof KeyboardEvent) || !["Enter", " "].includes(event.key)) return;
-    this._suppressNextFanTap = false;
     const target = event.composedPath()[0];
     if (target instanceof HTMLElement && !(target instanceof HTMLButtonElement) && target.dataset.fanAction === "body") this._onShadowClick(event);
   }
 
   _onShadowClick(event: Event) {
     const path = event.composedPath();
-    // One-shot: swallow only the click synthesized by the drag/hold that armed it,
-    // wherever it lands (slider, slider chrome, controls or the card body).
-    const suppressTap = this._suppressNextFanTap;
-    this._suppressNextFanTap = false;
     const slider = path.find((node): node is HTMLInputElement => node instanceof HTMLInputElement && Boolean(node.dataset?.fanControl),
     );
 
@@ -2101,7 +2094,8 @@ class NodaliaFanCard extends HTMLElement {
       if (zone === "body" && window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
         return;
       }
-      if (suppressTap) {
+      if (this._suppressNextFanTap) {
+        this._suppressNextFanTap = false;
         return;
       }
       const tapEffect = this._resolveFanTapEffect(zone);

@@ -548,6 +548,7 @@
   "ed.light.tap_actions_section_hint": "Escolha o que acontece ao tocar na lâmpada em relação ao resto do cartão. Abaixo, opções de pressão longa.",
   "ed.light.tap_actions_section_title": "Ações ao tocar",
   "ed.light.visibility_section_hint": "Quais blocos mostrar dentro do cartão.",
+  "ed.lock.animations_section_hint": "Entrada suave do conteúdo quando o cartão aparece e um breve retorno visual quando o estado da fechadura muda.",
   "ed.media_player.action_block": "Ação",
   "ed.media_player.action_default": "Padrão",
   "ed.media_player.action_navigate": "Navegar",

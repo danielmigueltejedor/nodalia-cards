@@ -548,6 +548,7 @@
   "ed.light.tap_actions_section_hint": "Choose what happens when you tap the bulb vs. the rest of the card (title, chips, empty area). Long-press (hold) options are below.",
   "ed.light.tap_actions_section_title": "Tap actions",
   "ed.light.visibility_section_hint": "Which blocks to show inside the card.",
+  "ed.lock.animations_section_hint": "Soft content entrance when the card appears and brief feedback when the lock state changes.",
   "ed.media_player.action_block": "Action",
   "ed.media_player.action_default": "Default",
   "ed.media_player.action_navigate": "Navigate",

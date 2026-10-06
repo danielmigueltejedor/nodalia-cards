@@ -4,7 +4,7 @@ test('Alarm favourites release their expanded height in an automatic Sections ro
  await page.goto('/tests/fixtures/browser.html');
  await page.waitForFunction(()=>customElements.get('nodalia-fav-card'));
  await page.evaluate(()=>{
-  const fixture=document.querySelector('#fixture');
+  const fixture=document.querySelector('#fixture').appendChild(document.createElement('hui-section'));
   fixture.style.cssText='display:grid;grid-template-columns:repeat(12,minmax(0,1fr));grid-auto-rows:auto;gap:8px;width:360px;max-width:100%';
   const hass=window.makeHass({'alarm_control_panel.one':{state:'disarmed',attributes:{supported_features:63,code_format:'number'}}});
   for(let i=0;i<3;i++) {

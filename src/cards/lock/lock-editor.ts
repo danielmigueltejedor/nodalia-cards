@@ -3,6 +3,7 @@ import { cloneConfigValue } from "../../shared/config-values";
 import { normalizeLockStyles } from "./lock-styles";
 import { getEditorColorModel, formatEditorColorFromHex } from "../../shared/editor-color";
 import { lockText } from "./lock-strings";
+import { LOCK_CONTENT_DURATION } from "./lock-config";
 import { EDITOR_TOGGLE_STYLES, EDITOR_RADIUS_STYLES, EDITOR_COLOR_STYLES, EDITOR_SECTION_ACTION_STYLES } from "../../shared/editor-toggle-styles";
 
 export function loadNodaliaLockCardEditor(): CustomElementConstructor {
@@ -11,17 +12,20 @@ export function loadNodaliaLockCardEditor(): CustomElementConstructor {
     private stateHass!: HomeAssistant | null;
     private renderedLanguage!:string;
     private showStyles = false;
+    private showAnimations = false;
     constructor() { super(); this._nodaliaConstruct(); }
     _nodaliaConstruct(): void {
-      this.config = {}; this.stateHass = null; this.showStyles = false;this.renderedLanguage="";
+      this.config = {}; this.stateHass = null; this.showStyles = false; this.showAnimations = false;this.renderedLanguage="";
       this.attachShadow({ mode: "open" });
       this.shadowRoot!.addEventListener("change", event => this.change(event));
       this.shadowRoot!.addEventListener("value-changed", event => this.change(event));
       this.shadowRoot!.addEventListener("click", event => {
-        if (!(event.target instanceof Element) || !event.target.closest('[data-editor-toggle="styles"]')) return;
-        this.showStyles = !this.showStyles;
+        const toggle = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-editor-toggle]")?.dataset.editorToggle : undefined;
+        if (toggle === "styles") this.showStyles = !this.showStyles;
+        else if (toggle === "animations") this.showAnimations = !this.showAnimations;
+        else return;
         this.render();
-        this.shadowRoot?.querySelector<HTMLButtonElement>('[data-editor-toggle="styles"]')?.focus();
+        this.shadowRoot?.querySelector<HTMLButtonElement>(`[data-editor-toggle="${toggle}"]`)?.focus();
       });
     }
     setConfig(config: unknown): void { const cloned=cloneConfigValue(config);this.config = window.NodaliaUtils.isObject(cloned)?cloned:{}; this.render(); }
@@ -40,11 +44,13 @@ export function loadNodaliaLockCardEditor(): CustomElementConstructor {
       let value: unknown;
       if (event instanceof CustomEvent && event.type === "value-changed") value = window.NodaliaUtils.isObject(event.detail)?event.detail.value:undefined;
       else if (target instanceof HTMLInputElement) value = target.type === "checkbox" ? target.checked
-        : target.type === "color" ? formatEditorColorFromHex(target.value, target.dataset.alpha ?? 1) : target.value;
+        : target.type === "color" ? formatEditorColorFromHex(target.value, target.dataset.alpha ?? 1)
+          : target.type === "number" ? (target.value.trim() && Number.isFinite(target.valueAsNumber) ? target.valueAsNumber : undefined) : target.value;
       else if (target instanceof HTMLSelectElement) value = target.value;
       else return;
       const next = cloneConfigValue(this.config);
-      window.NodaliaUtils.setByPath(next, field, value);
+      if (value === undefined) window.NodaliaUtils.deleteByPath(next, field);
+      else window.NodaliaUtils.setByPath(next, field, value);
       this.config = next;
       if (target instanceof HTMLInputElement && target.type === "color") {
         target.parentElement?.querySelector<HTMLElement>(".editor-color-swatch")?.style.setProperty("--editor-swatch", String(value));
@@ -71,6 +77,8 @@ export function loadNodaliaLockCardEditor(): CustomElementConstructor {
       const escape = window.NodaliaUtils.escapeHtml;
       const label = (key: string) => escape(this.label(key));
       const styles = normalizeLockStyles(this.config.styles);
+      const animations = window.NodaliaUtils.isObject(this.config.animations) ? this.config.animations : {};
+      const contentDuration = animations.content_duration ?? LOCK_CONTENT_DURATION;
       const radiusLabels = { pill: this.label("ed.entity.chip_radius_pill"), soft: this.label("ed.entity.chip_radius_soft"), round: this.label("ed.entity.chip_radius_round"), square: this.label("ed.entity.chip_radius_square") };
       this.shadowRoot.innerHTML = `<style>
         :host { display:block; }
@@ -126,6 +134,14 @@ export function loadNodaliaLockCardEditor(): CustomElementConstructor {
             ${this.field("ed.entity.style_title_size", "styles.title_size", styles.title_size)}
             ${this.field("ed.entity.style_chip_font", "styles.chip_font_size", styles.chip_font_size)}
             ${window.NodaliaUtils.renderEditorChipBorderRadiusHtml({ escapeHtml: escape, field: "styles.chip_border_radius", value: styles.chip_border_radius, tHeading: this.label("ed.entity.style_chip_radius"), labels: radiusLabels })}
+          </div>` : ""}
+        </section>
+        <section class="editor-section">
+          <div class="editor-section__header"><div class="editor-section__title">${label("ed.weather.animations_section_title")}</div><div class="editor-section__hint">${label("ed.lock.animations_section_hint")}</div>
+          <div class="editor-section__actions"><button type="button" class="editor-section__toggle-button" data-editor-toggle="animations" aria-expanded="${this.showAnimations}"><ha-icon icon="${this.showAnimations ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon><span>${label(this.showAnimations ? "ed.weather.hide_animation_settings" : "ed.weather.show_animation_settings")}</span></button></div></div>
+          ${this.showAnimations ? `<div class="editor-grid">
+            <label class="editor-toggle"><input type="checkbox" role="switch" data-field="animations.enabled" ${animations.enabled !== false ? "checked" : ""}><span class="editor-toggle__switch" aria-hidden="true"></span><span class="editor-toggle__label">${label("ed.weather.enable_animations")}</span></label>
+            <label class="editor-field"><span>${label("ed.weather.content_entrance_ms")}</span><input type="number" min="140" max="1800" step="10" data-field="animations.content_duration" value="${escape(String(contentDuration))}"></label>
           </div>` : ""}
         </section>
         <div class="editor-section__hint">${text("help")}</div>

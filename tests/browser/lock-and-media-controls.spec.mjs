@@ -345,7 +345,8 @@ test("Lock is suggested by entity and its editor keeps focus during state update
     editor.hass = window.makeHass({}); editor.setConfig({ entity: 'lock.front' }); document.querySelector('#fixture').append(editor);
   });
   const editor = page.locator('nodalia-lock-card-editor');
-  await expect(editor.locator('.editor-section')).toHaveCount(3);
+  // General, Visibility, Styles and Animations.
+  await expect(editor.locator('.editor-section')).toHaveCount(4);
   await editor.locator('[data-field="name"]').fill('My door');
   await page.evaluate(() => { document.querySelector('nodalia-lock-card-editor').hass = window.makeHass({}); });
   await expect(editor.locator('[data-field="name"]')).toBeFocused();

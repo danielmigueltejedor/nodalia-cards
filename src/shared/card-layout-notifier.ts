@@ -32,6 +32,35 @@ export function normalizeCardLayoutWrapper(host: HTMLElement): () => void {
   };
 }
 
+const SECTIONS_CARD_OWNERS = new Set(["hui-section", "hui-grid-section"]);
+
+function isHostedBySections(host: HTMLElement): boolean {
+  let node: Node | null = host.parentNode;
+  while (node) {
+    if (node instanceof ShadowRoot) {
+      node = node.host;
+      continue;
+    }
+    if (node instanceof Element && SECTIONS_CARD_OWNERS.has(node.localName)) return true;
+    node = node.parentNode;
+  }
+  return false;
+}
+
+/**
+ * `card-updated` makes HA replace the owning view's card list. Sections keeps keyed
+ * card nodes and only re-measures the row. Masonry, Sidebar and Panel views rebuild
+ * their columns and re-append every card, which reconnects this host and would report
+ * again: a continuous whole-view relayout (#321). Those layouts size cards by normal
+ * flow and need no notification.
+ */
+export function notifyCardLayoutChange(host: HTMLElement): void {
+  host.dispatchEvent(new CustomEvent("iron-resize", {bubbles: true, composed: true}));
+  if (isHostedBySections(host)) {
+    host.dispatchEvent(new CustomEvent("card-updated", {bubbles: true, composed: true}));
+  }
+}
+
 /** Report settled size changes without rebuilding the card or resizing the whole window. */
 export function createCardLayoutNotifier(host: HTMLElement) {
   let timer = 0;
@@ -71,8 +100,7 @@ export function createCardLayoutNotifier(host: HTMLElement) {
           if (width === reportedWidth && height === reportedHeight) return;
           reportedWidth = width;
           reportedHeight = height;
-          host.dispatchEvent(new CustomEvent("iron-resize", {bubbles: true, composed: true}));
-          host.dispatchEvent(new CustomEvent("card-updated", {bubbles: true, composed: true}));
+          notifyCardLayoutChange(host);
         });
       }, 80);
     },

@@ -548,6 +548,7 @@
   "ed.light.tap_actions_section_hint": "Επιλέξτε τι συμβαίνει πατώντας τη λάμπα έναντι του υπόλοιπου της κάρτας. Παρακάτω οι επιλογές παρατεταμένου πατήματος.",
   "ed.light.tap_actions_section_title": "Ενέργειες πατήματος",
   "ed.light.visibility_section_hint": "Ποια μπλοκ να εμφανίζονται μέσα στην κάρτα.",
+  "ed.lock.animations_section_hint": "Ομαλή είσοδος περιεχομένου όταν εμφανίζεται η κάρτα και σύντομη οπτική απόκριση όταν αλλάζει η κατάσταση της κλειδαριάς.",
   "ed.media_player.action_block": "Δράση",
   "ed.media_player.action_default": "Αθέτηση",
   "ed.media_player.action_navigate": "Διαπλέω",

@@ -548,6 +548,7 @@
   "ed.light.tap_actions_section_hint": "Выберите поведение при нажатии на лампочку и на остальную область карты. Ниже — варианты долгого нажатия.",
   "ed.light.tap_actions_section_title": "Действия по нажатию",
   "ed.light.visibility_section_hint": "Какие блоки показывать внутри карточки.",
+  "ed.lock.animations_section_hint": "Плавное появление содержимого при показе карточки и короткая визуальная реакция при смене состояния замка.",
   "ed.media_player.action_block": "Действие",
   "ed.media_player.action_default": "По умолчанию",
   "ed.media_player.action_navigate": "Навигация",
