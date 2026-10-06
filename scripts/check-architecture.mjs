@@ -12,6 +12,9 @@ function walk(directory) {
   }
 }
 walk(path.join(root, 'src'));
+// Sync conflict copies ("light-card 2.ts") are never imported but still type-check silently.
+const conflictCopies = files.filter(file => /\s/.test(path.basename(file))).map(file => path.relative(root, file));
+if (conflictCopies.length) throw new Error(`Source file names must not contain spaces (sync conflict copies?): ${conflictCopies.join(', ')}`);
 const baseline = new Set(JSON.parse(fs.readFileSync(path.join(root, 'scripts/type-debt.json'), 'utf8')));
 const graph = new Map();
 const unchecked = [];

@@ -19,7 +19,7 @@ Maintenance release for Nodalia Cards 3. It fixes dashboard flicker in Masonry v
 ### Changed
 
 - Lock Card state changes animate the icon, text and colors smoothly while the controls update immediately.
-- Advanced Vacuum updates its live map in place instead of rebuilding it. New map frames take about 56–65% less work in the reference browsers, and robot updates no longer touch unchanged map layers.
+- Advanced Vacuum updates its live map in place instead of rebuilding it. New map frames take 60–64% less work and robot updates finish 17–34% sooner in the reference browsers, without touching unchanged map layers. Lock state transitions add a small, bounded cost. See the [3.0.1 benchmark report](./docs/benchmarks/3.0.1-alpha.2-maintenance.md).
 
 ### Fixed
 
