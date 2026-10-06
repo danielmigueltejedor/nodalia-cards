@@ -16,6 +16,9 @@ Stable `v3.0.0` is available through the default HACS channel. It promotes the
 validated RC1 runtime with unchanged card behavior. After an update, reload the
 frontend cache if the installed bundle version still reports the previous build.
 
+Stable `v3.0.1` is a maintenance update with the same YAML, resource path and
+Engine pairing; see the [changelog](../CHANGELOG.md) for its fixes.
+
 ### Old code after switching preview channels in HACS
 
 Stable `v3.0.0` includes the final RC audit fixes. If installing it

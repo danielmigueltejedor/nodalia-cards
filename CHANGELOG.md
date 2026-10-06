@@ -8,6 +8,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ---
 
+## [3.0.1] - 2026-10-06
+
+Maintenance release for Nodalia Cards 3. It fixes dashboard flicker in Masonry views, unexpected scrolling on iPhone and iPad, and taps that were ignored after using a slider. Existing YAML, resources and Engine pairing remain unchanged.
+
+### Added
+
+- Lock Card plays the same short entrance as the other cards when the dashboard opens, and its visual editor gains an **Animations** section (`animations.enabled`, `animations.content_duration`). Home Assistant updates never replay it, reduced-motion preferences are respected and slide-to-unlock still requires the full gesture.
+
+### Changed
+
+- Lock Card state changes animate the icon, text and colors smoothly while the controls update immediately.
+- Advanced Vacuum updates its live map in place instead of rebuilding it. New map frames take about 56–65% less work in the reference browsers, and robot updates no longer touch unchanged map layers.
+
+### Fixed
+
+- Light, Fan, Humidifier, Cover, Entity, Alarm Panel, Favourite, Vacuum and Media Player cards no longer make **Masonry, Sidebar and Panel** views flicker continuously or become impossible to use. Sections dashboards keep their automatic row resizing. (#321)
+- Pressing Humidifier, Fan or Cover controls on Safari/iOS no longer scrolls the dashboard or pushes the card out of view. Layout is unchanged. (#320)
+- After moving a Light, Fan, Humidifier or Cover slider, the next tap on the power button or card works on the first try.
+- Weather rain falls below and behind the cloud. Humidifier particles move outwards and dehumidifier particles inwards, based on the entity type, action or mode. (#318)
+
 ## [3.0.0] - 2026-10-06
 
 Nodalia Cards 3 completes the checked-source migration and brings consistent media, lock and device controls to existing dashboards. Stable 3.0.0 promotes the validated RC1 runtime without card behavior changes.

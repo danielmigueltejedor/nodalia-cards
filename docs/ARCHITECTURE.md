@@ -13,7 +13,7 @@ YAML and public Engine API 2/3 bridge contracts. Broad refactors/new features or
 runtime dependencies belong to a later feature cycle. A structural change
 requires a demonstrated bug and regression. See [release readiness](BETA_READINESS_AUDIT.md).
 
-## Maintenance view updates (3.0.1-alpha.2)
+## Maintenance view updates (3.0.1)
 
 Lock and Advanced Vacuum use the small internal `shared/view-reconcile.ts`
 helper to patch their owned light DOM without detaching unchanged layers. Keys
