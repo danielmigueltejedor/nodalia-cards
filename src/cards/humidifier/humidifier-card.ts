@@ -2864,7 +2864,10 @@ class NodaliaHumidifierCard extends HTMLElement {
         }
 
         .humidifier-card--compact {
-          container-type: inline-size;
+          /* Same containment as an inline-size container, but not a query container:
+             WebKit scroll anchoring treats a re-rendered query container's interim
+             layout as content growth and scrolls the dashboard (#320). */
+          contain: inline-size layout style;
         }
 
         .humidifier-card--compact .humidifier-card__controls {

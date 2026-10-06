@@ -256,10 +256,9 @@ class NodaliaCoverCard extends HTMLElement {
 
   _shouldReserveCoverToggleLane(width = Math.round(this._cardWidth || this.clientWidth || 0)) {
     const gridColumns = this._getConfiguredGridColumns();
-    if (gridColumns !== null) {
-      return gridColumns <= COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS;
-    }
-    return width > 0 && width <= COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH;
+    // Narrow grids reserve the lane; any narrow measured card does too (wide grids on phones).
+    return (gridColumns !== null && gridColumns <= COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS)
+      || (width > 0 && width <= COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH);
   }
 
   _getState(hass = this._hass) {
@@ -1357,8 +1356,10 @@ class NodaliaCoverCard extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
         :host {
-          container-name: cover-card;
-          container-type: inline-size;
+          /* Not a query container: WebKit scroll anchoring treats the re-rendered
+             subtree's interim layout as content growth and scrolls (#320). The
+             narrow toggle lane is a measured class instead. */
+          contain: inline-size layout style;
           display: block;
         }
         * { box-sizing: border-box; }
@@ -1789,19 +1790,6 @@ class NodaliaCoverCard extends HTMLElement {
         }
         .fan-card--cover-ui-arrows.fan-card--cover-ui-toggle-lane .fan-card__view--arrows {
           justify-content: center;
-        }
-        @container cover-card (max-width: ${COVER_CONTROLS_TOGGLE_LANE_MAX_WIDTH}px) {
-          .fan-card--cover-ui-arrows .fan-card__slider-row {
-            grid-template-columns: minmax(0, 1fr) auto;
-            position: static;
-          }
-          .fan-card--cover-ui-arrows .fan-card__slider-actions {
-            inset: auto;
-            position: static;
-          }
-          .fan-card--cover-ui-arrows .fan-card__view--arrows {
-            justify-content: center;
-          }
         }
         .fan-card__control--active {
           background: color-mix(in srgb, ${accentColor} 18%, ${styles.control.accent_background});

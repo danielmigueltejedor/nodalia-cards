@@ -2672,7 +2672,10 @@ class NodaliaFanCard extends HTMLElement {
         }
 
         .fan-card--compact {
-          container-type: inline-size;
+          /* Same containment as an inline-size container, but not a query container:
+             WebKit scroll anchoring treats a re-rendered query container's interim
+             layout as content growth and scrolls the dashboard (#320). */
+          contain: inline-size layout style;
         }
 
         .fan-card--compact .fan-card__controls {

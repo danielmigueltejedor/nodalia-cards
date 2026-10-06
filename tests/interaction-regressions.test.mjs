@@ -1691,7 +1691,8 @@ test("cover card enforces six-column minimum and reserves toggle lane on narrow 
   assert.match(source, /COVER_CONTROLS_TOGGLE_LANE_MAX_COLUMNS = 6/);
   assert.match(source, /_shouldReserveCoverToggleLane\(/);
   assert.match(source, /fan-card--cover-ui-toggle-lane/);
-  assert.match(source, /@container cover-card \(max-width:/);
+  // A query container on the re-rendered card made WebKit scroll anchoring jump (#320).
+  assert.doesNotMatch(source, /container-type|@container/);
 });
 
 test("cover card combines sliders and a row toggle for open/stop/close", () => {
