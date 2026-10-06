@@ -26,9 +26,11 @@ export function combineEngineAttempt(base,retry,engine,provenance) {
  return result;
 }
 async function main(){
- const [input,engine,output]=process.argv.slice(2);
- if(!input||!output||!['chromium','webkit','webkit-iphone'].includes(engine))throw new Error('Usage: node docs/benchmarks/retry-reference-engine.mjs <failed.json> <engine> <output-directory>');
+ const [input,engine,output,...versions]=process.argv.slice(2);
+ if(!input||!output||!versions.length||!['chromium','webkit','webkit-iphone'].includes(engine))throw new Error('Usage: node docs/benchmarks/retry-reference-engine.mjs <failed.json> <engine> <output-directory> <version>...');
  const base=JSON.parse(await fs.readFile(input,'utf8'));validateResult(base);
+ // Downloads use the operator's explicit versions; the failed run file only has to match them.
+ if(JSON.stringify(versions)!==JSON.stringify(base.versions))throw new Error(`Versions must match the failed run: ${base.versions.join(' ')}`);
  if(base.metadata.referenceException!=='macos-firefox-rc'||!base.errors.some(e=>e.browser===engine)||base.errors.some(e=>e.browser!==engine))throw new Error('Require one failed engine in an explicitly authorized macOS RC run');
  await fs.mkdir(output,{recursive:true});
  const original=path.join(output,'original-failed.json');await fs.copyFile(input,original);
@@ -36,8 +38,8 @@ async function main(){
  // Selection happens at launch only. All measured fixture code/config is unchanged.
  chromium.launch=function(options){if(engine==='chromium')return launchChromium.call(this,options);throw new Error('Excluded from whole-engine retry');};
  webkit.launch=function(options){const name=webkitOrdinal++===0?'webkit':'webkit-iphone';if(name===engine)return launchWebkit.call(this,options);throw new Error('Excluded from whole-engine retry');};
- let retry;try{retry=await run(['--skip-firefox-on-mac',...base.versions,'--out',path.join(output,'retry')]);}finally{chromium.launch=launchChromium;webkit.launch=launchWebkit;}
- const retryFile=path.join(output,'retry',base.versions.join('-vs-')+'.json');
+ let retry;try{retry=await run(['--skip-firefox-on-mac',...versions,'--out',path.join(output,'retry')]);}finally{chromium.launch=launchChromium;webkit.launch=launchWebkit;}
+ const retryFile=path.join(output,'retry',versions.join('-vs-')+'.json');
  const result=combineEngineAttempt(base,retry,engine,{originalFile:'original-failed.json',retryFile:path.relative(output,retryFile),orchestratorSha256:sha256(await fs.readFile(fileURLToPath(import.meta.url)))});
  const stem=base.versions.join('-vs-');for(const [ext,data]of [['json',JSON.stringify(result,null,2)+'\n'],['csv',csv(result)],['md',markdown(result)]])await fs.writeFile(path.join(output,`${stem}.${ext}`),data);
  console.log(`${result.samples.length} accepted samples; zero measured-engine errors; original failed attempt retained`);
