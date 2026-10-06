@@ -4,6 +4,9 @@ import type { HomeAssistant } from "../../core/types/home-assistant";
 import { CARD_TAG, EDITOR_TAG, normalizeConfig } from "./lock-config";
 import type { LockConfig, NormalizedLockConfig } from "./lock-config";
 import { lockText } from "./lock-strings";
+import { reconcileViewChildren } from "../../shared/view-reconcile";
+import { animateViewState, createViewAnimationWork, releaseViewAnimationWork } from "../../shared/view-animation-work";
+import type { ViewAnimationWork } from "../../shared/view-animation-work";
 
 export function loadNodaliaLockCard(): CustomElementConstructor {
   class NodaliaLockCard extends HTMLElement {
@@ -17,10 +20,13 @@ export function loadNodaliaLockCard(): CustomElementConstructor {
     private error!: string;
     private signature!: string;
     private context!: HassContext | null;
+    private animationWork!: ViewAnimationWork;
+    private visualState!: string;
 
     constructor() { super(); this._nodaliaConstruct(); }
     _nodaliaConstruct(): void {
       this.context = null;
+      this.animationWork = createViewAnimationWork(); this.visualState = "";
       this.config = null; this.stateHass = null; this.pending = null;
       this.timer = 0; this.generation = 0; this.progress = 0;
       this.gesture = null; this.error = ""; this.signature = "";
@@ -44,15 +50,17 @@ export function loadNodaliaLockCard(): CustomElementConstructor {
       return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, { domains: ["lock"] });
     }
     connectedCallback(): void { this.render(); }
-    disconnectedCallback(): void { this.cancelGesture(); this.clearPending(); }
+    disconnectedCallback(): void { this.cancelGesture(); this.clearPending(); releaseViewAnimationWork(this.animationWork); this.visualState = ""; }
     setConfig(config: LockConfig): void {
       const next = normalizeConfig(config);
+      releaseViewAnimationWork(this.animationWork); this.visualState = "";
       this.cancelGesture(); this.clearPending(); this.error = "";
       this.config = next; this.render();
     }
     set hass(hass: HomeAssistant) {
       const context = captureHassContext(hass);
       if (this.context && !sameHassContext(this.context, context)) {
+        releaseViewAnimationWork(this.animationWork); this.visualState = "";
         this.cancelGesture(); this.clearPending(); this.error = ""; this.signature = "";
       }
       this.context = context;
@@ -144,8 +152,10 @@ export function loadNodaliaLockCard(): CustomElementConstructor {
       const status = this.pending ? (this.pending === "lock" ? "locking" : "unlocking") : this.state;
       const name = window.NodaliaUtils.escapeHtml(this.config.name || this.entity?.attributes.friendly_name || this.config.entity);
       const unlocked = this.state === "unlocked";
-      const icon = ["jammed", "unknown", "unavailable"].includes(this.state) ? "mdi:lock-alert" : unlocked ? "mdi:lock-open-variant" : "mdi:lock";
-      this.shadowRoot.innerHTML = `
+      const icon = ["jammed", "unknown", "unavailable"].includes(this.state) ? "mdi:lock-alert" : ["unlocked", "unlocking", "open", "opening"].includes(status) ? "mdi:lock-open-variant" : "mdi:lock";
+      const previousStatus = this.visualState;
+      const template = document.createElement("template");
+      template.innerHTML = `
         <style>
           :host { display:block; }
           * { box-sizing:border-box; }
@@ -159,14 +169,20 @@ export function loadNodaliaLockCard(): CustomElementConstructor {
             box-shadow:${styles.card.box_shadow};
             border:${styles.card.border};
             position:relative; overflow:hidden;
+            transition:border-color 220ms ease;
           }
           ha-card::before {
             content:""; position:absolute; inset:0; pointer-events:none;
             background:linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), transparent);
           }
           ha-card > * { position:relative; z-index:1; }
-          ha-card.is-locked {
+          ha-card::after {
+            content:""; position:absolute; inset:0; pointer-events:none; opacity:0;
             background:linear-gradient(135deg, color-mix(in srgb, var(--lock-accent) 18%, var(--lock-surface)), color-mix(in srgb, var(--lock-accent) 10%, var(--lock-surface)) 52%, var(--lock-surface));
+            transition:opacity 220ms ease;
+          }
+          ha-card.is-locked::after { opacity:1; }
+          ha-card.is-locked {
             border-color:color-mix(in srgb, var(--lock-accent) 32%, var(--divider-color, #ffffff18));
           }
           .header { display:flex; align-items:center; gap:12px; min-width:0; }
@@ -177,7 +193,7 @@ export function loadNodaliaLockCard(): CustomElementConstructor {
             border:1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
             box-shadow:inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent), 0 10px 24px rgba(0,0,0,.16);
             color:${styles.icon.off_color};
-            transition:background 180ms ease; position:relative;
+            transition:background 220ms ease, color 220ms ease; position:relative;
           }
           .is-locked .icon {
             background:color-mix(in srgb, var(--lock-accent) 24%, ${styles.icon.background});
@@ -234,19 +250,24 @@ export function loadNodaliaLockCard(): CustomElementConstructor {
           @media (max-width:600px) {
             :host { --lock-icon-size:50px; }
           }
-          @media (prefers-reduced-motion:reduce) { .handle, .icon { transition:none; } }
+          ${window.NodaliaUtils.renderReducedMotionStyles?.() || "@media (prefers-reduced-motion:reduce) { *, *::before, *::after { transition:none!important; animation:none!important; } }"}
         </style>
-        <ha-card class="${this.config.layout} ${this.state === "locked" ? "is-locked" : ""} ${["jammed", "unknown", "unavailable"].includes(this.state) ? "is-unavailable" : ""}" aria-busy="${Boolean(this.pending)}">
-          <div class="header"><span class="icon"><ha-icon icon="${icon}"></ha-icon></span><div>
+        <ha-card data-view-key="lock" data-lock-state="${window.NodaliaUtils.escapeHtml(status)}" class="${this.config.layout} ${["locked", "locking"].includes(status) ? "is-locked" : ""} ${["jammed", "unknown", "unavailable"].includes(this.state) ? "is-unavailable" : ""}" aria-busy="${Boolean(this.pending) || ["locking", "unlocking", "opening"].includes(this.state)}">
+          <div class="header" data-view-key="header"><span class="icon"><ha-icon icon="${icon}"></ha-icon></span><div>
             ${this.config.show_name ? `<div class="name">${name}</div>` : ""}
             ${this.config.show_state ? `<div class="state" role="status">${text(status)}</div>` : ""}
           </div></div>
-          ${unlocked ? `<button data-lock ${this.pending || !this.stateHass?.callService ? "disabled" : ""}>${text("lock")}</button>` : `
-            <div><div class="slider" role="slider" tabindex="${this.canUnlock ? "0" : "-1"}" aria-label="${text("slide")}" aria-describedby="unlock-help" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-disabled="${!this.canUnlock}">
+          ${unlocked ? `<button data-view-key="command" data-lock ${this.pending || !this.stateHass?.callService ? "disabled" : ""}>${text("lock")}</button>` : `
+            <div data-view-key="command"><div class="slider" role="slider" tabindex="${this.canUnlock ? "0" : "-1"}" aria-label="${text("slide")}" aria-describedby="unlock-help" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-disabled="${!this.canUnlock}">
               <span class="track-label">${text(this.pending ? status : "slide")}</span><span class="handle" data-handle><ha-icon icon="mdi:chevron-right"></ha-icon></span>
             </div><p class="help" id="unlock-help">${text("help")}</p></div>`}
           ${this.error ? `<div class="error" role="alert">${text(this.error)}</div>` : ""}
         </ha-card>`;
+      reconcileViewChildren(this.shadowRoot, template.content);
+      this.visualState = status;
+      if (this.isConnected && previousStatus && previousStatus !== status) {
+        animateViewState(this.animationWork, Array.from(this.shadowRoot.querySelectorAll(".icon ha-icon, .state, .track-label")));
+      }
     }
   }
   return NodaliaLockCard;

@@ -1,6 +1,6 @@
 {
   "name": "nodalia-cards",
-  "version": "3.0.0",
+  "version": "3.0.1-alpha.1",
   "packageManager": "pnpm@11.17.0",
   "engines": {
     "node": ">=22"
@@ -36,7 +36,8 @@
     "release:beta": "node scripts/prepare-release.mjs beta",
     "release:rc": "node scripts/prepare-release.mjs rc",
     "release": "node scripts/prepare-release.mjs stable",
-    "architecture:check": "node scripts/check-architecture.mjs"
+    "architecture:check": "node scripts/check-architecture.mjs",
+    "benchmark:maintenance": "node bench/compare-maintenance.mjs"
   },
   "files": [
     "nodalia-i18n.js",

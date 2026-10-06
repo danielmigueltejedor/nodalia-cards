@@ -17,22 +17,12 @@
           object-fit: cover;
           opacity: 1;
           position: absolute;
-          transition: opacity 220ms ease-out;
           width: 100%;
-          z-index: 0;
-        }
-
-        .advance-vacuum-card__map-image[data-map-image-previous="true"] {
           z-index: 0;
         }
 
         .advance-vacuum-card__map-image[data-map-image] {
           z-index: 1;
-        }
-
-        .advance-vacuum-card__map-image.is-pending,
-        .advance-vacuum-card__map-image.is-fading-out {
-          opacity: 0;
         }
 
         .advance-vacuum-card__map-room-dim,

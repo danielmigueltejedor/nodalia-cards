@@ -80,3 +80,10 @@ test('schema enforces published provenance, finite samples, consistent times and
 test('Markdown shows all versions, slower deltas, browser unavailability and runtime errors without browser averaging',()=>{
  const r=result(),text=markdown(r);assert.match(text,/33\.3%/);assert.match(text,/firefox \(unavailable\)/);assert.match(text,/"stage": "launch"/);assert.match(text,/p95/);assert.match(csv(r),/chromium,3.0.0,mount\/media/);
 });
+
+test('canonical benchmarks exercise independent raster, robot, selection and Lock state updates',async()=>{
+ const {scenarios}=await import('../bench/workloads.mjs');
+ const rows=scenarios({maintenanceUpdates:true,commonCards:['lock','advance-vacuum'],gestureMoves:[],lifecycleCycles:[]});
+ assert.equal(scenarios({commonCards:['lock','advance-vacuum'],gestureMoves:[],lifecycleCycles:[]}).some(r=>r.id.startsWith('map-updates')||r.id.startsWith('states/')),false);
+ for(const id of ['map-updates/advance-vacuum/robot/120','map-updates/advance-vacuum/frame/20','map-updates/advance-vacuum/selection/20','states/lock/40'])assert.equal(rows.filter(row=>row.id===id).length,1);
+});

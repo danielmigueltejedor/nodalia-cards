@@ -4,6 +4,17 @@ import type { HassEntity, HomeAssistant } from "../../core/types/home-assistant"
 export { getSliderDragGeometry, getRangeValueFromGeometry, getCircularLayoutDialModel, getCircularLayoutDialValueFromPoint, getRangeValueFromClientX } from "../../shared/device-control-geometry";
 import { normalizeTextKey } from "./humidifier-runtime";
 
+/** HA device class is authoritative; active action/mode supports dual-purpose devices. */
+export function getHumidityParticleDirection(state: HassEntity | null, mode?: unknown): "inward" | "outward" {
+  const action = normalizeTextKey(state?.attributes.action || state?.state);
+  if (["dehumidifying", "drying"].includes(action)) return "inward";
+  if (action === "humidifying") return "outward";
+  const deviceClass = normalizeTextKey(state?.attributes.device_class);
+  if (deviceClass === "dehumidifier") return "inward";
+  if (deviceClass === "humidifier") return "outward";
+  return ["dry", "dehumidify", "dehumidifying", "dehumidification", "drying"].includes(normalizeTextKey(mode ?? state?.attributes.mode)) ? "inward" : "outward";
+}
+
 export function getEditorColorFallbackValue(field: unknown) {
   const normalizedField = String(field ?? "");
 

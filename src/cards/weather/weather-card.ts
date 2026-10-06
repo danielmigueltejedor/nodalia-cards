@@ -1617,7 +1617,11 @@ class NodaliaWeatherCard extends HTMLElement {
 
         .weather-card__icon ha-icon {
           --mdc-icon-size: calc(${styles.icon.size} * 0.5);
+          position: relative;
+          z-index: 1;
         }
+
+        .weather-card__icon--rain-motion { isolation: isolate; }
 
         .weather-card__icon--rain-motion::after,
         .weather-card__icon--snow-motion::after {
@@ -1634,6 +1638,12 @@ class NodaliaWeatherCard extends HTMLElement {
           pointer-events: none;
           position: absolute;
           transform: translate3d(-1px, -8px, 0);
+        }
+
+        /* Emit rain at the lower cloud edge, behind the foreground glyph. */
+        .weather-card__icon--rain-motion::after {
+          inset: 55% 25% 8%;
+          z-index: 0;
         }
 
         .weather-card__icon--snow-motion::after {
@@ -2697,7 +2707,7 @@ class NodaliaWeatherCard extends HTMLElement {
         @keyframes weather-card-icon-rain {
           0% {
             opacity: 0;
-            transform: translate3d(-1px, -8px, 0);
+            transform: translate3d(-1px, 0, 0);
           }
           12% {
             opacity: 0.55;

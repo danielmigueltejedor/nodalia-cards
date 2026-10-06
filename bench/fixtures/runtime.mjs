@@ -167,7 +167,7 @@ window.bench = {
    history=Array.from({length:n},(_,i)=>({entity_id:'sensor.one',state:String(20+Math.sin(i/30)),last_changed:new Date(now-86400000+i*86400000/n).toISOString(),last_updated:new Date(now-86400000+i*86400000/n).toISOString(),attributes:{unit_of_measurement:'°C'}}));
    state.historyGenerationMs=performance.now()-start;
   }
-  if(parts[0]==='gesture'){
+  if(parts[0]==='gesture'||parts[0]==='map-updates'){
    if(parts[2]==='touch')try{touchEvent('touchstart',document.body,[{clientX:1,clientY:1}]);state.nativeTouchAvailable=true;}catch(error){state.nativeTouchFailure=String(error.message);}
    const card=state.cards[0];card.shadowRoot.querySelector('[data-mode-id="rooms"]')?.click();await settle(config);
    const image=card.shadowRoot.querySelector('[data-map-image]');if(!image?.naturalWidth)throw new Error('Map fixture has not loaded');
@@ -229,6 +229,36 @@ window.bench = {
     if(arg==='touch')dispatch(()=>surface.dispatchEvent(event('touchend',[])));else for(const pid of [1,2])dispatch(()=>surface.dispatchEvent(event('pointerup',[pid,x])));
     if(mapScaleBefore===mapScaleAfter)skipped.push(`${arg} gesture did not change the map scale in this release; no performance delta is valid`);
     return {gestureFullRenders,gestureOverlayBuilds,mapScaleBefore,mapScaleAfter,feedbackUpdates,mapFeedbackUpdates,markerIdentity:markerStable?1:0,mapImageIdentity:imageStable?1:0};
+   }
+   else if(kind==='states'){
+    for(let i=0;i<Number(arg);i++){const current=state.hass.states['lock.one'];state.hass.states['lock.one']={...current,state:['unlocking','unlocked','locking','locked'][i%4]};dispatch(()=>{card.hass={...state.hass};});await new Promise(nativeRaf);}
+    return {stateUpdates:Number(arg)};
+   }
+   else if(kind==='map-updates'){
+    const selectors=['[data-map-image]','.advance-vacuum-card__map-surface','.advance-vacuum-card__map-svg','button[data-room-id="1"]'];
+    const layers=selectors.map(s=>card.shadowRoot.querySelector(s));
+    let mapMutations=0,mapRemovedNodes=0;
+    const belongsToMap=node=>node instanceof Element && !!node.closest('.advance-vacuum-card__map');
+    const record=records=>{for(const r of records){if(belongsToMap(r.target)||[...r.addedNodes,...r.removedNodes].some(belongsToMap)){mapMutations++;mapRemovedNodes+=r.removedNodes.length;}}};
+    const mapObserver=new MutationObserver(record);mapObserver.observe(card.shadowRoot,{subtree:true,attributes:true,childList:true,characterData:true});
+    const count=Number(detail);
+    try {
+     for(let i=0;i<count;i++){
+      if(arg==='selection')dispatch(()=>card.shadowRoot.querySelector('button[data-room-id="1"]').click());
+      else {
+       const entity=arg==='robot'?'vacuum.one':'image.map',current=state.hass.states[entity];
+       state.hass.states[entity]={...current,last_updated:`map-update-${i}`,attributes:{...current.attributes,...(arg==='robot'?{robot_position:[i,i]}:{entity_picture:`/bench/artwork/map.svg?frame=${i}`})}};
+       dispatch(()=>{card.hass={...state.hass};});
+       if(arg==='frame'){
+        const deadline=performance.now()+config.settleTimeoutMs;
+        while(true){const image=card.shadowRoot.querySelector('[data-map-image]');if(image?.getAttribute('src')?.includes(`frame=${i}&`) && image.complete && image.naturalWidth && !card._pendingMapImage)break;if(performance.now()>deadline)throw new Error(`Map frame ${i} failed to settle`);await sleep(5);}
+       }
+      }
+      if(arg!=='robot')await new Promise(nativeRaf);
+     }
+     record(mapObserver.takeRecords());
+     return {mapUpdates:count,mapMutations,mapRemovedNodes,mapLayerIdentity:layers.filter((node,i)=>node===card.shadowRoot.querySelector(selectors[i])).length/layers.length};
+    }finally{mapObserver.disconnect();}
    }
    else if(kind==='lifecycle'){
     const count=Number(arg);for(let i=0;i<count;i++){const current=dispatch(()=>make(row,state.hass));dispatch(()=>{current.hass={...state.hass};current.remove();});if(i%20===0)await sleep(5);}state.cards=[];

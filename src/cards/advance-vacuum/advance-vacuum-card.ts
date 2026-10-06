@@ -4,6 +4,7 @@ import advanceVacuumStaticMap0Styles from "./advance-vacuum-static-map-0.css";
 import advanceVacuumMapSurfaceStyles from "./advance-vacuum-map-surface.css";
 import advanceVacuumMotionStyles from "./advance-vacuum-motion.css";
 import advanceVacuumUtilitiesStyles from "./advance-vacuum-utilities.css";
+import { reconcileViewChildren } from "../../shared/view-reconcile";
 import {
   CARD_TAG,
   CLEANING_SESSION_PENDING_TIMEOUT_MS,
@@ -64,7 +65,6 @@ import {
   resolveLegacyMode,
   resolvePredefinedZones,
   resolveRoomSegments,
-  stripMapCacheBuster
 } from "./advance-vacuum-helpers";
 
 import type {HomeAssistant,HassEntity} from "../../core/types/home-assistant";
@@ -139,6 +139,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   declare private _localeReconciliationTimeouts: number[]|null;
   declare private _mapImageWidth: number;
   declare private _mapImageHeight: number;
+  private _pendingMapImage: HTMLImageElement | null = null;
+  private _lastMapIndependentSignature = "";
   declare private _activeMode: string;
   declare private _activeCleaningSessionMode: string;
   declare private _transientZoneReturnMode: string;
@@ -224,6 +226,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._converter = new CoordinatesConverter([]);
     this._mapScale = 1;
     this._mapFrame=0;this._mapGestureRect=null;this._mapOverlayPaint=null;
+    this._pendingMapImage=null;this._lastMapIndependentSignature="";
     this._mapOffset = { x: 0, y: 0 };
     this._activeMapPointers = new Map();
     this._pinchGesture = null;
@@ -336,6 +339,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _releaseViewWork() {
+    this._retireMapImageRequest(); this._lastMapIndependentSignature = "";
     this._generation+=1;this._cancelMapGesture(false);this._clearLocaleReconciliation();
     for(const id of this._localeFrames) window.cancelAnimationFrame(id);this._localeFrames.clear();
     for(const [id,resolve] of this._waits) {window.clearTimeout(id);resolve();}this._waits.clear();
@@ -486,7 +490,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       if(contextChanged) this._resetContext();
       if(!this.isConnected) return;
       if(contextChanged) this._scheduleLocaleReconciliation();
-      const nextSignature = this._getRenderSignature(hass);
+      const signatures = this._getRenderSignatures(hass);
+      const nextSignature = signatures.all;
       if (nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
         this._lastRenderSignature = nextSignature;
         return;
@@ -494,6 +499,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       this._ensurePersistedCleaningSessionStateLoaded();
       this._syncCalibrationIfNeeded(hass);
       this._lastRenderSignature = nextSignature;
+      if (!contextChanged && signatures.content === this._lastMapIndependentSignature && this.shadowRoot?.querySelector("[data-map-image]")) {
+        // Raster providers include robot/path in the frame. Only decode that
+        // frame; keep geometry, overlays and controls mounted.
+        this._syncMapImage(this._getMapImageUrl());
+        return;
+      }
       this._render();
     } catch (error) {
       this._handleCardError(error, "set hass");
@@ -2170,7 +2181,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         kind: "entity",
         id: String(calibrationEntityId || ""),
         len,
-        lu: String(st.last_updated || st.last_changed || ""),
+        fingerprint: JSON.stringify(pts || []),
       };
     }
     if (vacuumRecord(config?.calibration_source).camera === true) {
@@ -2182,7 +2193,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         kind: "camera",
         id: mapEntityId,
         len,
-        lu: String(st?.last_updated || st?.last_changed || ""),
+        fingerprint: JSON.stringify(pts || []),
       };
     }
     return { kind: "none", len: 0 };
@@ -2195,7 +2206,6 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       fragment.kind,
       fragment.id || "",
       fragment.len,
-      fragment.lu || "",
       fragment.fingerprint || "",
     ];
     if (typeof joinParts === "function") {
@@ -2214,6 +2224,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _getRenderSignature(hass = this._hass) {
+    return this._getRenderSignatures(hass).all;
+  }
+
+  _getRenderSignatures(hass = this._hass) {
     const entityId = this._config?.entity || "";
     const state = entityId ? hass?.states?.[entityId] || null : null;
     const mapEntityId = this._getMapEntityId();
@@ -2255,7 +2269,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         prefix: "vac:",
         values: [
           state?.state || "",
-          state?.last_updated || "",
+          JSON.stringify(state?.attributes || {}),
           state?.attributes?.battery_level ?? -1,
           state?.attributes?.fan_speed || "",
           this._getIcon() || "",
@@ -2266,6 +2280,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         prefix: "map:",
         values: [mapEntityId || "", mapState?.state || "", mapState?.last_updated || "", mapPicture],
       },
+      { prefix: "map-structure:", values: [JSON.stringify(this._getRoomSegments())] },
       {
         prefix: "session:",
         values: [
@@ -2328,9 +2343,10 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       },
     ];
     if (typeof joinParts === "function") {
-      return joinParts(sections);
+      return { all: joinParts(sections), content: joinParts(sections.filter(section => section.prefix !== "map:")) };
     }
-    return sections.map(section => `${section.prefix}${section.values.map(v => String(v ?? "")).join(":")}`).join("||");
+    const serialize = (items: typeof sections) => items.map(section => `${section.prefix}${section.values.map(v => String(v ?? "")).join(":")}`).join("||");
+    return { all: serialize(sections), content: serialize(sections.filter(section => section.prefix !== "map:")) };
   }
 
   _updateCalibration() {
@@ -5790,31 +5806,43 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._render();
   }
 
+  _retireMapImageRequest() {
+    const pending = this._pendingMapImage;
+    this._pendingMapImage = null;
+    if (pending) { pending.onload = null; pending.onerror = null; pending.removeAttribute("src"); }
+  }
+
+  _syncMapImage(url: string) {
+    const image = this.shadowRoot?.querySelector<HTMLImageElement>("[data-map-image]");
+    if (!this.isConnected || !image || !url) { this._retireMapImageRequest(); return; }
+    if (image.getAttribute("src") === url) { this._retireMapImageRequest(); return; }
+    if (this._pendingMapImage?.getAttribute("src") === url) return;
+    this._retireMapImageRequest();
+    const pending = new Image();
+    const generation = this._generation;
+    this._pendingMapImage = pending;
+    pending.onerror = () => { if (this._pendingMapImage === pending) this._retireMapImageRequest(); };
+    pending.onload = () => {
+      void pending.decode().then(() => {
+        if (!this._isCurrent(generation) || this._pendingMapImage !== pending || image !== this.shadowRoot?.querySelector("[data-map-image]")) return;
+        // Keep the previous decoded frame on screen until the newest is ready.
+        // No image detach, stale-image stack, crossfade or unbounded frame cache.
+        this._pendingMapImage = null; pending.onload = null; pending.onerror = null;
+        image.setAttribute("src", url);
+        this.shadowRoot?.querySelectorAll(".advance-vacuum-card__room-highlight-image").forEach(node => {
+          if (node.getAttribute("src") !== url) node.setAttribute("src", url);
+        });
+      }, () => { if (this._pendingMapImage === pending) this._retireMapImageRequest(); });
+    };
+    pending.src = url;
+  }
+
   _onMapImageLoad(event:Pick<Event,"currentTarget">) {
     const image = event.currentTarget;
     if (!this.isConnected || !(image instanceof HTMLImageElement) || image !== this.shadowRoot?.querySelector("[data-map-image]")) return;
     const width = Number(image?.naturalWidth || image?.width || 0);
     const height = Number(image?.naturalHeight || image?.height || 0);
-    const staleImages = this.shadowRoot?.querySelectorAll("[data-map-image-previous='true']") || [];
-
-    image?.classList?.remove("is-pending");
-    image?.classList?.add("is-loaded");
-
-    staleImages.forEach(staleImage => {
-      staleImage.classList.add("is-fading-out");
-      const schedule = window.NodaliaUtils?.scheduleDeferTimer;
-      const generation=this._generation;
-      const removeStale = () => {
-        if (this._isCurrent(generation) && staleImage.isConnected) {
-          staleImage.remove();
-        }
-      };
-      if (typeof schedule === "function") {
-        schedule(this, removeStale, 260);
-      } else {
-        this._scheduleOwnedTimer(removeStale,260);
-      }
-    });
+    if (!image.classList.contains("is-loaded")) image.classList.add("is-loaded");
 
     if (width > 0 && height > 0) {
       const dimensionsChanged = width !== this._mapImageWidth || height !== this._mapImageHeight;
@@ -6052,7 +6080,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     return `
-      <div class="advance-vacuum-card__room-highlight-layer" aria-hidden="true">
+      <div class="advance-vacuum-card__room-highlight-layer" data-view-key="room-highlights" aria-hidden="true">
         ${highlights.map(highlight => `
           <img
             class="advance-vacuum-card__room-highlight-image"
@@ -6089,7 +6117,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     return `
-      <div class="advance-vacuum-card__room-highlight-layer advance-vacuum-card__room-highlight-layer--zones" aria-hidden="true">
+      <div class="advance-vacuum-card__room-highlight-layer advance-vacuum-card__room-highlight-layer--zones" data-view-key="zone-highlights" aria-hidden="true">
         ${highlights.map(highlight => `
           <img
             class="advance-vacuum-card__room-highlight-image"
@@ -6493,10 +6521,6 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const inner = body.slice(cardOpenEnd + 1, cardClose);
     const previousPanel=this.shadowRoot.querySelector<HTMLElement>(".advance-vacuum-card__utility-panel-slot");
     const animatePanel=Boolean(this._activeUtilityPanel && previousPanel?.dataset.utilityPanel!==this._activeUtilityPanel);
-    const liveImage = this.shadowRoot.querySelector<HTMLImageElement>("[data-map-image]");
-    if (liveImage instanceof HTMLElement) {
-      liveImage.remove();
-    }
     let styleEl = this.shadowRoot.querySelector("[data-vacuum-style]");
     let card = this.shadowRoot.querySelector("ha-card.advance-vacuum-card");
     if (!(styleEl instanceof HTMLStyleElement) || !(card instanceof HTMLElement)) {
@@ -6514,24 +6538,17 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       if(animatePanel) root.querySelector(".advance-vacuum-card__utility-panel")?.classList.add("advance-vacuum-card__utility-panel--entering");
     };
     const classMatch = cardAttrs.match(/class="([^"]*)"/);
-    card.className = classMatch?.[1] || "advance-vacuum-card";
-    card.setAttribute("data-vacuum-surface", "true");
-    const surface=card.querySelector<HTMLElement>("[data-map-surface='main']");
-    const map=surface?.parentElement;
-    if(this._gesturePointers.size && surface && map && map.parentElement === card) {
-      const template=document.createElement("template");template.innerHTML=inner;
-      preparePanel(template.content);
-      const nextMap=template.content.querySelector(".advance-vacuum-card__map");
-      const nextSurface=nextMap?.querySelector<HTMLElement>("[data-map-surface='main']");
-      if(nextMap && nextSurface) {
-        surface.innerHTML=nextSurface.innerHTML;
-        for(const node of Array.from(card.childNodes)) if(node !== map) node.remove();
-        for(const node of Array.from(template.content.childNodes)) if(node !== nextMap) card.append(node);
-        return;
-      }
-    }
-    card.innerHTML = inner;
-    preparePanel(card);
+    const nextClass = classMatch?.[1] || "advance-vacuum-card";
+    if (card.className !== nextClass) card.className = nextClass;
+    if (!card.hasAttribute("data-vacuum-surface")) card.setAttribute("data-vacuum-surface", "true");
+    const template = document.createElement("template");
+    template.innerHTML = inner;
+    preparePanel(template.content);
+    // Different map layers reconcile independently. The image URL is committed
+    // only after decode by _syncMapImage; unchanged layers cause no DOM writes.
+    reconcileViewChildren(card, template.content, (element, name) =>
+      (name !== "class" || !element.matches("[data-map-image]")) &&
+      (name !== "src" || !element.matches("[data-map-image], .advance-vacuum-card__room-highlight-image")));
   }
 
   _render() {
@@ -6594,14 +6611,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
 
       const mapImageUrl = this._getMapImageUrl(state);
-      const previousMapNorm = stripMapCacheBuster(previousImageSrc);
-      const nextMapNorm = stripMapCacheBuster(mapImageUrl || "");
-      const mapImageStartsPending =
-        Boolean(mapImageUrl) &&
-        previousImage?.tagName === "IMG" &&
-        Boolean(previousMapNorm) &&
-        Boolean(nextMapNorm) &&
-        previousMapNorm !== nextMapNorm;
+      const displayedMapUrl = previousImageSrc || mapImageUrl;
 
       this._syncRememberedModeSelections(state);
       this._sanitizeSelectedManualZoneIndex();
@@ -6899,19 +6909,19 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         ${advanceVacuumMotionStyles}
       </style>
       <ha-card class="advance-vacuum-card ${shouldAnimateEntrance ? "advance-vacuum-card--entering" : ""}">
-        <div class="advance-vacuum-card__map">
-          <div class="advance-vacuum-card__map-surface" data-map-surface="main">
-            <div class="advance-vacuum-card__map-viewport">
-              <div class="advance-vacuum-card__map-canvas" style="${mapTransformStyle}">
+        <div class="advance-vacuum-card__map" data-view-key="map">
+          <div class="advance-vacuum-card__map-surface" data-view-key="map-surface" data-map-surface="main">
+            <div class="advance-vacuum-card__map-viewport" data-view-key="map-viewport">
+              <div class="advance-vacuum-card__map-canvas" data-view-key="map-canvas" style="${mapTransformStyle}">
                 ${
                   mapImageUrl
-                    ? `<img class="advance-vacuum-card__map-image${mapImageStartsPending ? " is-pending" : ""}" data-map-image src="${escapeHtml(mapImageUrl)}" alt="${escapeHtml(advanceVacuumStrings?.utility?.mapImageAlt || "Robot map")}" />`
+                    ? `<img class="advance-vacuum-card__map-image" data-map-image data-view-key="base-image" src="${escapeHtml(mapImageUrl)}" alt="${escapeHtml(advanceVacuumStrings?.utility?.mapImageAlt || "Robot map")}" />`
                     : `<div class="advance-vacuum-card__map-image" style="display:flex;align-items:center;justify-content:center;color:var(--secondary-text-color);">${escapeHtml(advanceVacuumStrings?.utility?.mapUnavailable || "Map unavailable")}</div>`
                 }
-                ${showRoomSelectionDim ? `<div class="advance-vacuum-card__map-room-dim"></div>` : ""}
-                ${showRealRoomSelectionColors ? this._renderRoomSelectionHighlights(rooms, highlightedRoomIds, mapImageUrl, this._activeMode) : ""}
-                ${showRealRoomSelectionColors ? this._renderZoneSelectionHighlights(roomModeCleaningZones, mapImageUrl, this._activeMode) : ""}
-                <svg class="advance-vacuum-card__map-svg" viewBox="0 0 ${this._mapImageWidth} ${this._mapImageHeight}" preserveAspectRatio="none">
+                ${showRoomSelectionDim ? `<div class="advance-vacuum-card__map-room-dim" data-view-key="map-room-dim"></div>` : ""}
+                ${showRealRoomSelectionColors ? this._renderRoomSelectionHighlights(rooms, highlightedRoomIds, displayedMapUrl, this._activeMode) : ""}
+                ${showRealRoomSelectionColors ? this._renderZoneSelectionHighlights(roomModeCleaningZones, displayedMapUrl, this._activeMode) : ""}
+                <svg class="advance-vacuum-card__map-svg" data-view-key="map-svg" viewBox="0 0 ${this._mapImageWidth} ${this._mapImageHeight}" preserveAspectRatio="none">
                   ${currentMode.id === "rooms" ? rooms.map(room => room.outlines.map(outline => `
                     <polygon
                       class="advance-vacuum-card__room-polygon ${highlightedRoomIds.has(String(room.id)) ? (showRealRoomSelectionColors ? "is-revealed" : "is-selected") : ""} ${isRoomSelectionLocked ? "is-readonly" : ""}"
@@ -6964,7 +6974,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
                 </svg>
               </div>
             </div>
-            <div class="advance-vacuum-card__map-overlays">
+            <div class="advance-vacuum-card__map-overlays" data-view-key="map-overlays">
               ${this._renderMapOverlays(currentMode.id)}
             </div>
             ${this._renderMapTools()}
@@ -6973,7 +6983,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
         ${this._renderRoomFallbackList(rooms, this._activeMode)}
 
-        <div class="advance-vacuum-card__footer">
+        <div class="advance-vacuum-card__footer" data-view-key="footer">
 
         ${
           !isCleaningSessionActive
@@ -7042,29 +7052,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       this._commitPersistentVacuumShadow(vacuumMarkup);
       this._animateContentOnNextRender=false;
 
-      let image = this.shadowRoot.querySelector<HTMLImageElement>("[data-map-image]");
-      const canvas = this.shadowRoot.querySelector(".advance-vacuum-card__map-canvas");
-      if (previousImage && image && previousMapNorm && nextMapNorm && previousMapNorm === nextMapNorm) {
-        image.replaceWith(previousImage);
-        image = previousImage;
-        image.removeAttribute("data-map-image-previous");
-        image.setAttribute("data-map-image", "");
-        if (mapImageUrl && image.getAttribute("src") !== mapImageUrl) {
-          image.setAttribute("src", mapImageUrl);
-        }
-        image.classList.remove("is-pending", "is-fading-out");
-        image.classList.add("is-loaded");
-      } else if (previousImage && image && canvas && previousMapNorm && nextMapNorm && previousMapNorm !== nextMapNorm) {
-        previousImage.removeEventListener("load", this._onMapImageLoad);
-        previousImage.removeAttribute("data-map-image");
-        previousImage.setAttribute("data-map-image-previous", "true");
-        previousImage.classList.remove("is-pending", "is-fading-out");
-        previousImage.classList.add("is-loaded");
-        canvas.insertBefore(previousImage, image);
-      } else if (image) {
-        image.classList.remove("is-pending", "is-fading-out");
-        image.classList.add("is-loaded");
-      }
+      const image = this.shadowRoot.querySelector<HTMLImageElement>("[data-map-image]");
+      this._syncMapImage(mapImageUrl);
 
       if (image) {
         image.removeEventListener("load", this._onMapImageLoad);
@@ -7084,7 +7073,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         this._scheduleEntranceAnimationReset(animations.contentDuration + 160);
       }
 
-      this._lastRenderSignature = this._getRenderSignature();
+      const signatures = this._getRenderSignatures();
+      this._lastRenderSignature = signatures.all;
+      this._lastMapIndependentSignature = signatures.content;
     } catch (error) {
       this._handleCardError(error, "_render");
     }

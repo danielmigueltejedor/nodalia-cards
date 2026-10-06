@@ -25,6 +25,7 @@ import {
   getRangeValueFromGeometry,
   getSliderDragGeometry,
   isUnavailableState,
+  getHumidityParticleDirection,
   translateModeLabel,
 } from "./humidifier-helpers";
 
@@ -448,6 +449,7 @@ class NodaliaHumidifierCard extends HTMLElement {
       String(attrs.friendly_name || ""),
       String(attrs.icon || ""),
       String(attrs.device_class || ""),
+      String(attrs.action || ""),
       this._config?.show_entity_picture === true,
       String(this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || ""),
       Number(attrs.humidity ?? -1),
@@ -2967,6 +2969,11 @@ class NodaliaHumidifierCard extends HTMLElement {
           margin-left: 6px;
         }
 
+        .humidifier-card__icon--inward::before,
+        .humidifier-card__icon--inward::after {
+          animation-direction: reverse;
+        }
+
         .humidifier-card__picture {
           border-radius: inherit;
           height: 100%;
@@ -3986,7 +3993,7 @@ class NodaliaHumidifierCard extends HTMLElement {
           <div class="humidifier-card__hero">
             <button
               type="button"
-              class="humidifier-card__icon ${animations.enabled && animations.iconAnimation && isOn ? "humidifier-card__icon--active-motion" : ""}"
+              class="humidifier-card__icon ${animations.enabled && animations.iconAnimation && isOn ? `humidifier-card__icon--active-motion humidifier-card__icon--${getHumidityParticleDirection(state, currentMode)}` : ""}"
               data-humidifier-action="icon"
               aria-label="${escapeHtml(window.NodaliaI18n?.translateCommonAria?.(this._hass, config.language ?? "auto", "togglePower", "Turn on or off") || "Turn on or off")}"
             >

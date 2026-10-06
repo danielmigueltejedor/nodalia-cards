@@ -11,15 +11,15 @@ The Engine complements the plugin; it does not serve or replace the frontend bun
 
 [![Add Nodalia Cards Engine to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards-engine&category=integration)
 
-## Compatibility for Nodalia Cards 3.0.0
+## Compatibility for Nodalia Cards 3.0.x
 
 | Component | Supported baseline | Current version 3 validation pair |
 |---|---|---|
 | Home Assistant | `2025.1.0` or newer | Current supported stable release |
-| Nodalia Cards | `2.0.2` or newer for Engine discovery | `3.0.0` |
+| Nodalia Cards | `2.0.2` or newer for Engine discovery | `3.0.1-alpha.1` (preview) / `3.0.0` (stable) |
 | Nodalia Cards Engine | WebSocket API `2` for existing operations | Stable `3.0.0` with API `3` |
 
-Cards `3.0.0` and Engine `3.0.0` use the same API generation: API 3. This is the current validation pair; Cards and Engine have independent stable release versions. Engine `2.0.2` still supports existing operations through API 2. The Engine remains optional: ordinary controls, layouts and visual editors do not require it.
+Cards `3.0.1-alpha.1` and Engine `3.0.0` use the same API generation: API 3. This is the current validation pair; Cards and Engine have independent release versions; stable Cards `3.0.0` remains recommended. Engine `2.0.2` still supports existing operations through API 2. The Engine remains optional: ordinary controls, layouts and visual editors do not require it.
 
 ## API v3 compatibility
 

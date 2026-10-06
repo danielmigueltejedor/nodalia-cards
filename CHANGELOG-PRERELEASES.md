@@ -8,6 +8,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.0.1-alpha.1] - 2026-10-06
+
+### Changed
+
+- **Lock Card:** coordinated, finite state transitions keep the icon, text, background and colors smooth while Home Assistant state and controls update immediately. Shared animation cleanup and reduced-motion support. Closes #316.
+- **Advanced Vacuum:** reconcile the mounted map layers instead of replacing their children on each update. Unchanged images, SVG regions, markers and controls retain identity; raster-only updates skip view and overlay builds. Commit the newest decoded frame and retire stale/error requests without crossfade stacks. Closes #317.
+
+### Fixed
+
+- **Weather rain:** draw drops below and behind the cloud, with the foreground icon above the particle layer. Closes #318.
+- **Humidifier / dehumidifier:** infer particle direction from entity device class, active action or mode; humidifiers emit outwards and dehumidifiers draw particles inwards. No entity-name matching. Closes #318.
+
+### Compatibility and validation
+
+- Existing 3.0.0 YAML, tags, actions, editors and optional Engine API contracts remain compatible; no new runtime dependency.
+- Raster map providers can bake the robot and path into a single image. These frames still update as images; the card preserves its DOM and independent overlays rather than inventing separate robot/path data.
+- State, map identity, selection, base dimensions, stale/failed frames, particle direction and reduced-motion regressions have dedicated tests. See the [3.0.1 alpha audit](./docs/ALPHA_3_0_1_AUDIT.md) for validation and comparable performance measurements.
+
 ## [3.0.0-rc.1] - 2026-10-05
 
 ### Changed
