@@ -127,8 +127,13 @@
     let cursor = live.firstChild;
     for (const desired of Array.from(next.childNodes)) {
       const id = key(desired);
-      let node = id ? keyed.get(id)?.find((candidate) => candidate.parentNode === live && compatible(candidate, desired)) : cursor;
-      if (!node || !compatible(node, desired)) node = desired.cloneNode(true);
+      const node = id ? keyed.get(id)?.find((candidate) => candidate.parentNode === live && compatible(candidate, desired)) : cursor;
+      if (!node || !compatible(node, desired)) {
+        const inserted = desired.cloneNode(true);
+        live.insertBefore(inserted, cursor);
+        cursor = inserted.nextSibling;
+        continue;
+      }
       if (node !== cursor) live.insertBefore(node, cursor);
       if (id) keyed.set(id, (keyed.get(id) || []).filter((candidate) => candidate !== node));
       if (node instanceof Element && desired instanceof Element) reconcileViewElement(node, desired, allow);
