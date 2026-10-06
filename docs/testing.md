@@ -55,7 +55,7 @@ workers. Keep geometry and final cleanup assertions; retries are not a fix.
 
 ### Shared automatic row collapse
 
-`tests/browser/shared-row-collapse.spec.mjs` reproduces the native Sections hierarchy (`.card` grid cell → inline `hui-card` → custom card), with block shadow styles on `ha-card`. An inline wrapper is significant: replacing it with a block grid item masks WebKit's retained intrinsic height. Regression coverage interleaves Alarm favourite expansion, sibling Light favourite feedback and collapse, plus animated Light/Fan/Humidifier controls, repeated cycles, detach and explicitly configured/hidden wrappers. Settled height notifications reuse existing observers and do not emit global window resize events.
+`tests/browser/shared-row-collapse.spec.mjs` reproduces the native Sections hierarchy (`hui-section` → `.card` grid cell → inline `hui-card` → custom card), with block shadow styles on `ha-card`. An inline wrapper is significant: replacing it with a block grid item masks WebKit's retained intrinsic height. Regression coverage interleaves Alarm favourite expansion, sibling Light favourite feedback and collapse, plus animated Light/Fan/Humidifier controls, repeated cycles, detach and explicitly configured/hidden wrappers. Settled height notifications reuse existing observers and do not emit global window resize events.
 
 ### Rounded shadows and scrollports
 
@@ -92,3 +92,11 @@ and release acceptance are recorded in [the beta audit](BETA_READINESS_AUDIT.md)
 For a longer resource ledger run use `NODALIA_SOAK_CYCLES=100 pnpm exec playwright test tests/browser/resource-soak.spec.mjs --project=chromium --workers=1`. This is a correctness check of owned resources, separate from the benchmark controlled-GC 100/250/500-cycle trend measurements.
 
 Firefox failing before loading any fixture is an unavailable browser, not a passing test. On macOS 27, [Playwright #42768](https://github.com/microsoft/playwright/issues/42768) describes the same profile-access failure; [Mozilla #2062988](https://bugzilla.mozilla.org/show_bug.cgi?id=2062988) explains the diagnostic. A fresh browser installation/profile did not resolve it on this audit machine. Linux CI can verify code compatibility but cannot supply missing Apple M4 Firefox performance figures.
+
+### View relayout feedback
+
+`card-updated` is only sent from inside `hui-section`/`hui-grid-section`. HA Masonry, Sidebar and Panel views answer it by rebuilding their columns and re-appending every card. `tests/browser/view-layout-feedback.spec.mjs` mirrors that view behavior (#321): two reporter Light Cards in a horizontal stack, every size-reporting card, on/off states, unrelated HA updates and the responsive threshold must leave the view, card nodes and animations untouched. Sections must still receive real size changes.
+
+### Scroll stability on interaction
+
+`tests/browser/interaction-scroll-stability.spec.mjs` uses a long Sections page with a block `ha-card`. WebKit (desktop and iPhone) runs scroll anchoring; a re-rendered query container made it scroll by roughly the card's content height (#320). HA feedback, Humidifier power/mode/slider presses at several viewport sizes and positions and keyboard activation must leave the scroll position unchanged and keep focus on the re-rendered control.

@@ -55,17 +55,27 @@
     };
   }
 
+  // src/shared/numeric-values.ts
+  function parseFiniteNumericValue(value) {
+    if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
   // src/version.ts
   var CARD_VERSION = "3.0.1-alpha.1";
 
   // src/cards/lock/lock-config.ts
   var CARD_TAG = "nodalia-lock-card";
   var EDITOR_TAG = "nodalia-lock-card-editor";
+  var LOCK_CONTENT_DURATION = 420;
   function normalizeConfig(config) {
     if (!config || typeof config.entity !== "string" || !/^lock\.[a-z0-9_]+$/.test(config.entity)) {
       throw new Error("A lock entity is required");
     }
     if (config.unlock_action && config.unlock_action !== "slider") throw new Error("Unlocking requires the slider");
+    const animations = typeof config.animations === "object" && config.animations !== null ? config.animations : {};
+    const duration = parseFiniteNumericValue(animations.content_duration) || LOCK_CONTENT_DURATION;
     return {
       ...config,
       entity: config.entity,
@@ -73,6 +83,7 @@
       unlock_action: "slider",
       show_name: config.show_name !== false,
       show_state: config.show_state !== false,
+      animations: { enabled: animations.enabled !== false, content_duration: Math.min(1800, Math.max(140, Math.round(duration))) },
       styles: normalizeLockStyles(config.styles)
     };
   }
@@ -151,6 +162,14 @@
   function createViewAnimationWork() {
     return { generation: 0, timers: /* @__PURE__ */ new Set(), cancels: /* @__PURE__ */ new Set() };
   }
+  function scheduleViewFallback(work, callback, delay) {
+    const timer = window.setTimeout(() => {
+      work.timers.delete(timer);
+      callback();
+    }, delay);
+    work.timers.add(timer);
+    return timer;
+  }
   function cancelViewPanelAnimations(work) {
     ++work.generation;
     work.cancels.forEach((cancel) => cancel());
@@ -189,6 +208,8 @@
         this.context = null;
         this.animationWork = createViewAnimationWork();
         this.visualState = "";
+        this.entering = true;
+        this.entranceTimer = 0;
         this.config = null;
         this.stateHass = null;
         this.pending = null;
@@ -219,19 +240,22 @@
       static getEntitySuggestion(hass, entityId) {
         return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, { domains: ["lock"] });
       }
+      // Each mount is a new appearance; HA updates while mounted never replay it.
       connectedCallback() {
+        this.entering = true;
         this.render();
       }
       disconnectedCallback() {
         this.cancelGesture();
         this.clearPending();
-        releaseViewAnimationWork(this.animationWork);
+        this.releaseAnimations();
         this.visualState = "";
       }
       setConfig(config) {
         const next = normalizeConfig(config);
-        releaseViewAnimationWork(this.animationWork);
+        this.releaseAnimations();
         this.visualState = "";
+        this.entering = true;
         this.cancelGesture();
         this.clearPending();
         this.error = "";
@@ -241,7 +265,7 @@
       set hass(hass) {
         const context = captureHassContext(hass);
         if (this.context && !sameHassContext(this.context, context)) {
-          releaseViewAnimationWork(this.animationWork);
+          this.releaseAnimations();
           this.visualState = "";
           this.cancelGesture();
           this.clearPending();
@@ -326,6 +350,16 @@
           void this.command("unlock");
         }
       }
+      releaseAnimations() {
+        releaseViewAnimationWork(this.animationWork);
+        this.entranceTimer = 0;
+        this.entering = false;
+      }
+      finishEntrance() {
+        this.entranceTimer = 0;
+        this.entering = false;
+        this.shadowRoot?.querySelector("ha-card")?.classList.remove("is-entering");
+      }
       clearPending() {
         window.clearTimeout(this.timer);
         this.timer = 0;
@@ -365,12 +399,15 @@
         const unlocked = this.state === "unlocked";
         const icon = ["jammed", "unknown", "unavailable"].includes(this.state) ? "mdi:lock-alert" : ["unlocked", "unlocking", "open", "opening"].includes(status) ? "mdi:lock-open-variant" : "mdi:lock";
         const previousStatus = this.visualState;
+        const animations = this.config.animations;
+        const entering = animations.enabled && this.entering && this.isConnected;
         const template = document.createElement("template");
         template.innerHTML = `
         <style>
           :host { display:block; }
           * { box-sizing:border-box; }
           ha-card {
+            --lock-content-duration: ${animations.content_duration}ms;
             --lock-accent: ${styles.icon.on_color};
             --lock-surface: ${styles.card.background};
             --lock-handle-size: ${styles.control.size};
@@ -457,13 +494,21 @@
           .help { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
           .slider:focus-visible + .help { position:static; width:auto; height:auto; margin:8px 4px 0; clip-path:none; white-space:normal; font-size:11px; color:var(--secondary-text-color, #aeb6c5); }
           .error { color:var(--error-color, #ff7777); font-size:12px; }
+          .is-entering .icon { animation:lock-bloom calc(var(--lock-content-duration) * .92) cubic-bezier(.2,.9,.24,1) 40ms both; }
+          .is-entering .header > div { animation:lock-fade-up calc(var(--lock-content-duration) * .92) cubic-bezier(.22,.84,.26,1) 75ms both; }
+          /* Translation only: the unlock gesture measures the track and must not be scaled. */
+          .is-entering [data-view-key=command] { animation:lock-rise calc(var(--lock-content-duration) * .94) cubic-bezier(.22,.84,.26,1) 110ms both; }
+          @keyframes lock-bloom { 0% { opacity:0; transform:scale(.92); } 58% { opacity:1; transform:scale(1.04); } 100% { opacity:1; transform:scale(1); } }
+          @keyframes lock-fade-up { 0% { opacity:0; transform:translateY(12px) scale(.97); } 100% { opacity:1; transform:none; } }
+          @keyframes lock-rise { 0% { opacity:0; transform:translateY(10px); } 100% { opacity:1; transform:none; } }
+          ${animations.enabled ? "" : "ha-card, ha-card *, ha-card::before, ha-card::after { animation:none !important; transition:none !important; }"}
           .compact { --lock-handle-default:38px; --lock-card-padding:10px 12px; --lock-card-gap:10px; }
           @media (max-width:600px) {
             :host { --lock-icon-size:50px; }
           }
           ${window.NodaliaUtils.renderReducedMotionStyles?.() || "@media (prefers-reduced-motion:reduce) { *, *::before, *::after { transition:none!important; animation:none!important; } }"}
         </style>
-        <ha-card data-view-key="lock" data-lock-state="${window.NodaliaUtils.escapeHtml(status)}" class="${this.config.layout} ${["locked", "locking"].includes(status) ? "is-locked" : ""} ${["jammed", "unknown", "unavailable"].includes(this.state) ? "is-unavailable" : ""}" aria-busy="${Boolean(this.pending) || ["locking", "unlocking", "opening"].includes(this.state)}">
+        <ha-card data-view-key="lock" data-lock-state="${window.NodaliaUtils.escapeHtml(status)}" class="${this.config.layout}${entering ? " is-entering" : ""} ${["locked", "locking"].includes(status) ? "is-locked" : ""} ${["jammed", "unknown", "unavailable"].includes(this.state) ? "is-unavailable" : ""}" aria-busy="${Boolean(this.pending) || ["locking", "unlocking", "opening"].includes(this.state)}">
           <div class="header" data-view-key="header"><span class="icon"><ha-icon icon="${icon}"></ha-icon></span><div>
             ${this.config.show_name ? `<div class="name">${name}</div>` : ""}
             ${this.config.show_state ? `<div class="state" role="status">${text(status)}</div>` : ""}
@@ -476,7 +521,10 @@
         </ha-card>`;
         reconcileViewChildren(this.shadowRoot, template.content);
         this.visualState = status;
-        if (this.isConnected && previousStatus && previousStatus !== status) {
+        if (entering && !this.entranceTimer) {
+          this.entranceTimer = scheduleViewFallback(this.animationWork, () => this.finishEntrance(), animations.content_duration + 160);
+        }
+        if (animations.enabled && this.isConnected && previousStatus && previousStatus !== status) {
           animateViewState(this.animationWork, Array.from(this.shadowRoot.querySelectorAll(".icon ha-icon, .state, .track-label")));
         }
       }
@@ -583,21 +631,25 @@
       constructor() {
         super();
         this.showStyles = false;
+        this.showAnimations = false;
         this._nodaliaConstruct();
       }
       _nodaliaConstruct() {
         this.config = {};
         this.stateHass = null;
         this.showStyles = false;
+        this.showAnimations = false;
         this.renderedLanguage = "";
         this.attachShadow({ mode: "open" });
         this.shadowRoot.addEventListener("change", (event) => this.change(event));
         this.shadowRoot.addEventListener("value-changed", (event) => this.change(event));
         this.shadowRoot.addEventListener("click", (event) => {
-          if (!(event.target instanceof Element) || !event.target.closest('[data-editor-toggle="styles"]')) return;
-          this.showStyles = !this.showStyles;
+          const toggle = event.target instanceof Element ? event.target.closest("[data-editor-toggle]")?.dataset.editorToggle : void 0;
+          if (toggle === "styles") this.showStyles = !this.showStyles;
+          else if (toggle === "animations") this.showAnimations = !this.showAnimations;
+          else return;
           this.render();
-          this.shadowRoot?.querySelector('[data-editor-toggle="styles"]')?.focus();
+          this.shadowRoot?.querySelector(`[data-editor-toggle="${toggle}"]`)?.focus();
         });
       }
       setConfig(config) {
@@ -619,11 +671,12 @@
         if (!field) return;
         let value;
         if (event instanceof CustomEvent && event.type === "value-changed") value = window.NodaliaUtils.isObject(event.detail) ? event.detail.value : void 0;
-        else if (target instanceof HTMLInputElement) value = target.type === "checkbox" ? target.checked : target.type === "color" ? formatEditorColorFromHex(target.value, target.dataset.alpha ?? 1) : target.value;
+        else if (target instanceof HTMLInputElement) value = target.type === "checkbox" ? target.checked : target.type === "color" ? formatEditorColorFromHex(target.value, target.dataset.alpha ?? 1) : target.type === "number" ? target.value.trim() && Number.isFinite(target.valueAsNumber) ? target.valueAsNumber : void 0 : target.value;
         else if (target instanceof HTMLSelectElement) value = target.value;
         else return;
         const next = cloneConfigValue(this.config);
-        window.NodaliaUtils.setByPath(next, field, value);
+        if (value === void 0) window.NodaliaUtils.deleteByPath(next, field);
+        else window.NodaliaUtils.setByPath(next, field, value);
         this.config = next;
         if (target instanceof HTMLInputElement && target.type === "color") {
           target.parentElement?.querySelector(".editor-color-swatch")?.style.setProperty("--editor-swatch", String(value));
@@ -650,6 +703,8 @@
         const escape = window.NodaliaUtils.escapeHtml;
         const label = (key2) => escape(this.label(key2));
         const styles = normalizeLockStyles(this.config.styles);
+        const animations = window.NodaliaUtils.isObject(this.config.animations) ? this.config.animations : {};
+        const contentDuration = animations.content_duration ?? LOCK_CONTENT_DURATION;
         const radiusLabels = { pill: this.label("ed.entity.chip_radius_pill"), soft: this.label("ed.entity.chip_radius_soft"), round: this.label("ed.entity.chip_radius_round"), square: this.label("ed.entity.chip_radius_square") };
         this.shadowRoot.innerHTML = `<style>
         :host { display:block; }
@@ -705,6 +760,14 @@
             ${this.field("ed.entity.style_title_size", "styles.title_size", styles.title_size)}
             ${this.field("ed.entity.style_chip_font", "styles.chip_font_size", styles.chip_font_size)}
             ${window.NodaliaUtils.renderEditorChipBorderRadiusHtml({ escapeHtml: escape, field: "styles.chip_border_radius", value: styles.chip_border_radius, tHeading: this.label("ed.entity.style_chip_radius"), labels: radiusLabels })}
+          </div>` : ""}
+        </section>
+        <section class="editor-section">
+          <div class="editor-section__header"><div class="editor-section__title">${label("ed.weather.animations_section_title")}</div><div class="editor-section__hint">${label("ed.lock.animations_section_hint")}</div>
+          <div class="editor-section__actions"><button type="button" class="editor-section__toggle-button" data-editor-toggle="animations" aria-expanded="${this.showAnimations}"><ha-icon icon="${this.showAnimations ? "mdi:chevron-up" : "mdi:chevron-down"}"></ha-icon><span>${label(this.showAnimations ? "ed.weather.hide_animation_settings" : "ed.weather.show_animation_settings")}</span></button></div></div>
+          ${this.showAnimations ? `<div class="editor-grid">
+            <label class="editor-toggle"><input type="checkbox" role="switch" data-field="animations.enabled" ${animations.enabled !== false ? "checked" : ""}><span class="editor-toggle__switch" aria-hidden="true"></span><span class="editor-toggle__label">${label("ed.weather.enable_animations")}</span></label>
+            <label class="editor-field"><span>${label("ed.weather.content_entrance_ms")}</span><input type="number" min="140" max="1800" step="10" data-field="animations.content_duration" value="${escape(String(contentDuration))}"></label>
           </div>` : ""}
         </section>
         <div class="editor-section__hint">${text("help")}</div>

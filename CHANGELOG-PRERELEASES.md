@@ -8,6 +8,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## Unreleased
+
+### Added
+
+- **Lock Card:** entrance animation consistent with the other cards when the card is mounted, and a visual-editor Animations section (`animations.enabled`, `animations.content_duration`). HA updates never replay it; reduced motion is respected. Existing YAML without `animations` gets the default 420 ms entrance.
+
+### Fixed
+
+- **Light Card and other size-reporting cards in Masonry, Sidebar and Panel views:** settled size reports no longer rebuild the whole view. Each rebuild re-attached the cards, which reported again, so the dashboard flickered continuously and controls could not be pressed. Sections keeps its row-size updates. Closes #321.
+- **Humidifier, Fan and Cover on Safari/iOS:** pressing controls or receiving HA feedback no longer scrolls the dashboard. These cards no longer make their re-rendered content a CSS query container, which WebKit scroll anchoring treated as new content; layout and the Cover toggle lane are unchanged. Closes #320.
+
+---
+
 ## [3.0.1-alpha.1] - 2026-10-06
 
 ### Changed
