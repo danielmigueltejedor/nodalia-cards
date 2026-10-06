@@ -27,6 +27,21 @@ export function releaseViewAnimationWork(work: ViewAnimationWork): void {
   work.timers.clear();
 }
 
+/** Finite, synchronized state feedback; HA state and hit targets update first. */
+export function animateViewState(work: ViewAnimationWork, elements: readonly Element[], duration = 220): void {
+  cancelViewPanelAnimations(work);
+  if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+  for (const element of elements) {
+    const animation = element.animate([
+      { opacity: 0.45, transform: "translateY(3px) scale(.96)" },
+      { opacity: 1, transform: "translateY(0) scale(1)" },
+    ], { duration, easing: "cubic-bezier(.22,.84,.26,1)" });
+    const cancel = () => { animation.cancel(); work.cancels.delete(cancel); };
+    work.cancels.add(cancel);
+    void animation.finished.then(() => work.cancels.delete(cancel), () => work.cancels.delete(cancel));
+  }
+}
+
 /** Complete once via the panel's own event or the deadline, and detach both. */
 export function waitForViewPanelAnimation(work: ViewAnimationWork, panel: HTMLElement, callback: () => void, delay: number): void {
   let done = false;

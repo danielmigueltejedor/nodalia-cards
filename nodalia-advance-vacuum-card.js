@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.0";
+  var CARD_VERSION = "3.0.1-alpha.1";
 
   // src/cards/advance-vacuum/advance-vacuum-constants.ts
   var CARD_TAG = "nodalia-advance-vacuum-card";
@@ -247,9 +247,9 @@
     const utils2 = window.NodaliaUtils;
     const source = utils2.isObject(candidate) ? candidate : {};
     const result = {};
-    for (const [key, fallback] of Object.entries(defaults)) {
-      if (utils2.isUnsafeConfigPathKey(key)) continue;
-      result[key] = typeof fallback === "string" ? sanitize(source[key], fallback) : normalizeControlStyles(source[key], fallback, sanitize);
+    for (const [key2, fallback] of Object.entries(defaults)) {
+      if (utils2.isUnsafeConfigPathKey(key2)) continue;
+      result[key2] = typeof fallback === "string" ? sanitize(source[key2], fallback) : normalizeControlStyles(source[key2], fallback, sanitize);
     }
     return result;
   }
@@ -279,14 +279,14 @@
     if (Array.isArray(value)) return value.map((item) => compactConfig(item, preserveEmptyKeys)).filter((item) => item !== void 0);
     if (isRecord(value)) {
       const result = {};
-      for (const [key, item] of Object.entries(value)) {
-        if (unsafeKeys.has(key)) continue;
-        if (item === "" && preserveEmptyKeys.includes(key)) {
-          result[key] = "";
+      for (const [key2, item] of Object.entries(value)) {
+        if (unsafeKeys.has(key2)) continue;
+        if (item === "" && preserveEmptyKeys.includes(key2)) {
+          result[key2] = "";
           continue;
         }
         const cleaned = compactConfig(item, preserveEmptyKeys);
-        if (cleaned !== void 0 && !(isRecord(cleaned) && Object.keys(cleaned).length === 0)) result[key] = cleaned;
+        if (cleaned !== void 0 && !(isRecord(cleaned) && Object.keys(cleaned).length === 0)) result[key2] = cleaned;
       }
       return result;
     }
@@ -319,7 +319,7 @@
   }
 
   // src/shared/url-query.ts
-  function appendUrlQueryParam(url, key, value, replaceExisting = false) {
+  function appendUrlQueryParam(url, key2, value, replaceExisting = false) {
     const rawUrl = String(url || "").trim();
     if (!rawUrl || value === null || value === void 0 || value === "") {
       return rawUrl;
@@ -327,7 +327,7 @@
     const fragmentIndex = rawUrl.indexOf("#");
     const base = fragmentIndex < 0 ? rawUrl : rawUrl.slice(0, fragmentIndex);
     const fragment = fragmentIndex < 0 ? "" : rawUrl.slice(fragmentIndex);
-    const encodedKey = encodeURIComponent(String(key));
+    const encodedKey = encodeURIComponent(String(key2));
     const encodedValue = encodeURIComponent(String(value));
     const escapedKey = encodedKey.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const existingPattern = new RegExp(`([?&])${escapedKey}=[^&]*`);
@@ -496,15 +496,15 @@
     return !claimedByLongerSibling;
   }
   function getByPath(target, path) {
-    if (path.split(".").some((key) => window.NodaliaUtils.isUnsafeConfigPathKey(key))) return void 0;
-    return path.split(".").reduce((cursor, key) => {
-      if (Array.isArray(cursor)) return /^\d+$/.test(key) && Object.prototype.hasOwnProperty.call(cursor, key) ? cursor[Number(key)] : void 0;
-      return isObject(cursor) && Object.prototype.hasOwnProperty.call(cursor, key) ? cursor[key] : void 0;
+    if (path.split(".").some((key2) => window.NodaliaUtils.isUnsafeConfigPathKey(key2))) return void 0;
+    return path.split(".").reduce((cursor, key2) => {
+      if (Array.isArray(cursor)) return /^\d+$/.test(key2) && Object.prototype.hasOwnProperty.call(cursor, key2) ? cursor[Number(key2)] : void 0;
+      return isObject(cursor) && Object.prototype.hasOwnProperty.call(cursor, key2) ? cursor[key2] : void 0;
     }, target);
   }
   function isUnavailableState(state) {
-    const key = normalizeTextKey(state?.state);
-    return ["unavailable", "unknown", "none"].includes(key);
+    const key2 = normalizeTextKey(state?.state);
+    return ["unavailable", "unknown", "none"].includes(key2);
   }
   function parseNumber(value) {
     return parseFiniteNumericValue(typeof value === "string" ? value.replace(",", ".") : value);
@@ -614,23 +614,8 @@
       y2: Math.max(rawY1, rawY2)
     };
   }
-  function appendQueryParam(url, key, value) {
-    return appendUrlQueryParam(url, key, value, true);
-  }
-  function stripMapCacheBuster(raw) {
-    const s = String(raw || "").trim();
-    if (!s) {
-      return "";
-    }
-    try {
-      const origin = typeof window !== "undefined" && window.location?.origin ? window.location.origin : "http://localhost";
-      const u = new URL(s, origin);
-      u.searchParams.delete("nodalia_ts");
-      const q = u.searchParams.toString();
-      return `${u.pathname}${q ? `?${q}` : ""}${u.hash}`;
-    } catch {
-      return s;
-    }
+  function appendQueryParam(url, key2, value) {
+    return appendUrlQueryParam(url, key2, value, true);
   }
   function parseRectangleLike(value) {
     if (!isObject(value)) {
@@ -855,11 +840,11 @@
     if (!raw) {
       return "";
     }
-    const key = normalizeTextKey(raw);
-    if (key === "off" && kind === "suction") {
+    const key2 = normalizeTextKey(raw);
+    if (key2 === "off" && kind === "suction") {
       return "Off";
     }
-    const label = Object.entries(VACUUM_MODE_LABELS).find(([name]) => name === key)?.[1];
+    const label = Object.entries(VACUUM_MODE_LABELS).find(([name]) => name === key2)?.[1];
     if (label) return label;
     return raw.replaceAll("_", " ").replace(/\bplus\b/gi, "+").replace(/\b\w/g, (match) => match.toUpperCase());
   }
@@ -1285,13 +1270,65 @@
   var advance_vacuum_static_map_0_default = ".advance-vacuum-card__goto-marker{height:38px;width:38px}.advance-vacuum-card__room-list{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%}.advance-vacuum-card__room-chip{align-items:center;background:var(--av-surface);border:1px solid var(--av-border);border-radius:999px;box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-float-subtle);color:var(--secondary-text-color);cursor:pointer;display:inline-flex;gap:8px;min-height:36px;padding:0 14px;touch-action:manipulation;transition:background 180ms ease,border-color 180ms ease,box-shadow 180ms ease,color 180ms ease,transform 180ms cubic-bezier(0.22,0.84,0.26,1)}.advance-vacuum-card__room-chip.is-selected{background:var(--av-selected-bg);border-color:var(--av-selected-border);box-shadow:inset 0 1px 0 var(--av-selected-inset),var(--av-selected-glow);color:var(--primary-text-color)}.advance-vacuum-card__room-chip:not(.is-readonly):not(.is-selected):hover{background:var(--av-accent-hover);border-color:var(--av-border);box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-accent-hover-shadow)}.advance-vacuum-card__room-chip ha-icon{--mdc-icon-size: 16px}.advance-vacuum-card__room-chip span{font-size:12px;font-weight:600}.advance-vacuum-card__controls{align-items:center;display:grid;gap:10px;justify-items:center;width:100%}.advance-vacuum-card__controls-row{align-items:center;column-gap:14px;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);width:100%}";
 
   // src/cards/advance-vacuum/advance-vacuum-map-surface.css
-  var advance_vacuum_map_surface_default = ".advance-vacuum-card__map-canvas{height:100%;inset:0;position:absolute;transform-origin:top left;width:100%}.is-pinching .advance-vacuum-card__map-canvas{will-change:transform}.advance-vacuum-card__map-image{display:block;height:100%;inset:0;object-fit:cover;opacity:1;position:absolute;transition:opacity 220ms ease-out;width:100%;z-index:0}.advance-vacuum-card__map-image[data-map-image-previous=true]{z-index:0}.advance-vacuum-card__map-image[data-map-image]{z-index:1}.advance-vacuum-card__map-image.is-pending,.advance-vacuum-card__map-image.is-fading-out{opacity:0}.advance-vacuum-card__map-room-dim,.advance-vacuum-card__room-highlight-layer,.advance-vacuum-card__map-svg,.advance-vacuum-card__map-markers,.advance-vacuum-card__map-overlays{inset:0;position:absolute}.advance-vacuum-card__map-room-dim{background:rgba(8,12,20,0.5);pointer-events:none;z-index:1}.advance-vacuum-card__room-highlight-layer{pointer-events:none;z-index:2}.advance-vacuum-card__room-highlight-image{display:block;height:100%;inset:0;object-fit:cover;pointer-events:none;position:absolute;width:100%}.advance-vacuum-card__map-svg{height:100%;pointer-events:none;width:100%;z-index:3}.advance-vacuum-card__map-markers{pointer-events:none}.advance-vacuum-card__map-overlays{pointer-events:none;z-index:4}.advance-vacuum-card__zone-hitbox,.advance-vacuum-card__zone-handle,.advance-vacuum-card__map-tool{appearance:none;background:none;border:none;color:inherit;cursor:pointer;font:inherit;margin:0;padding:0}.advance-vacuum-card__zone-hitbox{background:rgba(255,255,255,0.01);border:2px dashed transparent;border-radius:16px;pointer-events:auto;position:absolute;touch-action:none;z-index:2}.advance-vacuum-card__zone-handle{align-items:center;background:var(--av-surface-raised);border:1px solid var(--av-border-strong);border-radius:999px;box-shadow:inset 0 1px 0 var(--av-inset),var(--av-float);color:var(--primary-text-color);display:inline-flex;height:34px;justify-content:center;pointer-events:auto;position:absolute;touch-action:none;transform:translate(-50%,-50%);width:34px;z-index:3}.advance-vacuum-card__zone-handle[data-zone-handle-action=delete]{border-color:rgba(255,130,130,0.32);color:#ffb3b3}.advance-vacuum-card__zone-handle ha-icon,.advance-vacuum-card__map-tool ha-icon{--mdc-icon-size: 16px}.advance-vacuum-card__map-tools{align-items:flex-start;display:flex;gap:8px;justify-content:space-between;left:12px;pointer-events:none;position:absolute;right:12px;top:12px;z-index:4}.advance-vacuum-card__map-tools-group{display:flex;gap:8px}.advance-vacuum-card__map-tools-group--center{left:50%;pointer-events:none;position:absolute;top:0;transform:translateX(-50%)}.advance-vacuum-card__map-tools-group--right{justify-content:flex-end}.advance-vacuum-card__map-tool--back{padding:0;width:44px}.advance-vacuum-card__map-tool--status{padding:0;pointer-events:none;width:44px}.advance-vacuum-card__map-tool--status-charging{color:#f6b73c}";
+  var advance_vacuum_map_surface_default = ".advance-vacuum-card__map-canvas{height:100%;inset:0;position:absolute;transform-origin:top left;width:100%}.is-pinching .advance-vacuum-card__map-canvas{will-change:transform}.advance-vacuum-card__map-image{display:block;height:100%;inset:0;object-fit:cover;opacity:1;position:absolute;width:100%;z-index:0}.advance-vacuum-card__map-image[data-map-image]{z-index:1}.advance-vacuum-card__map-room-dim,.advance-vacuum-card__room-highlight-layer,.advance-vacuum-card__map-svg,.advance-vacuum-card__map-markers,.advance-vacuum-card__map-overlays{inset:0;position:absolute}.advance-vacuum-card__map-room-dim{background:rgba(8,12,20,0.5);pointer-events:none;z-index:1}.advance-vacuum-card__room-highlight-layer{pointer-events:none;z-index:2}.advance-vacuum-card__room-highlight-image{display:block;height:100%;inset:0;object-fit:cover;pointer-events:none;position:absolute;width:100%}.advance-vacuum-card__map-svg{height:100%;pointer-events:none;width:100%;z-index:3}.advance-vacuum-card__map-markers{pointer-events:none}.advance-vacuum-card__map-overlays{pointer-events:none;z-index:4}.advance-vacuum-card__zone-hitbox,.advance-vacuum-card__zone-handle,.advance-vacuum-card__map-tool{appearance:none;background:none;border:none;color:inherit;cursor:pointer;font:inherit;margin:0;padding:0}.advance-vacuum-card__zone-hitbox{background:rgba(255,255,255,0.01);border:2px dashed transparent;border-radius:16px;pointer-events:auto;position:absolute;touch-action:none;z-index:2}.advance-vacuum-card__zone-handle{align-items:center;background:var(--av-surface-raised);border:1px solid var(--av-border-strong);border-radius:999px;box-shadow:inset 0 1px 0 var(--av-inset),var(--av-float);color:var(--primary-text-color);display:inline-flex;height:34px;justify-content:center;pointer-events:auto;position:absolute;touch-action:none;transform:translate(-50%,-50%);width:34px;z-index:3}.advance-vacuum-card__zone-handle[data-zone-handle-action=delete]{border-color:rgba(255,130,130,0.32);color:#ffb3b3}.advance-vacuum-card__zone-handle ha-icon,.advance-vacuum-card__map-tool ha-icon{--mdc-icon-size: 16px}.advance-vacuum-card__map-tools{align-items:flex-start;display:flex;gap:8px;justify-content:space-between;left:12px;pointer-events:none;position:absolute;right:12px;top:12px;z-index:4}.advance-vacuum-card__map-tools-group{display:flex;gap:8px}.advance-vacuum-card__map-tools-group--center{left:50%;pointer-events:none;position:absolute;top:0;transform:translateX(-50%)}.advance-vacuum-card__map-tools-group--right{justify-content:flex-end}.advance-vacuum-card__map-tool--back{padding:0;width:44px}.advance-vacuum-card__map-tool--status{padding:0;pointer-events:none;width:44px}.advance-vacuum-card__map-tool--status-charging{color:#f6b73c}";
 
   // src/cards/advance-vacuum/advance-vacuum-motion.css
   var advance_vacuum_motion_default = ".advance-vacuum-card__selection-chip{align-items:center;background:var(--av-surface);border:1px solid var(--av-border);border-radius:999px;box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-float-subtle);color:var(--secondary-text-color);display:inline-flex;font-size:12px;font-weight:600;gap:8px;min-height:34px;padding:0 12px}.advance-vacuum-card__selection-chip strong{color:var(--primary-text-color)}.advance-vacuum-card__selection-chip:hover{background:var(--av-accent-hover);border-color:var(--av-border);box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-accent-hover-shadow)}.advance-vacuum-card__routines{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));width:100%}.advance-vacuum-card__routine-button{align-items:center;appearance:none;background:var(--av-surface);border:1px solid var(--av-border);border-radius:18px;box-shadow:inset 0 1px 0 var(--av-inset),var(--av-float);color:var(--primary-text-color);cursor:pointer;display:grid;gap:10px;justify-items:center;min-height:118px;padding:16px 14px;text-align:center;transition:transform 180ms cubic-bezier(0.22,0.84,0.26,1),box-shadow 180ms ease,border-color 180ms ease;width:100%}.advance-vacuum-card__routine-button:hover{transform:translateY(-1px);box-shadow:inset 0 1px 0 var(--av-inset),var(--av-float-lift)}.advance-vacuum-card__routine-button.is-disabled{cursor:default;opacity:0.5}.advance-vacuum-card__routine-icon{align-items:center;background:var(--av-accent-tile-bg);border:1px solid var(--av-accent-tile-border);border-radius:999px;box-shadow:inset 0 1px 0 var(--av-accent-tile-inset);display:inline-flex;height:46px;justify-content:center;width:46px}.advance-vacuum-card__routine-icon ha-icon{--mdc-icon-size: 22px}.advance-vacuum-card__routine-label{font-size:12px;font-weight:700;line-height:1.35;text-wrap:balance}@keyframes advance-vacuum-utility-panel-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}@keyframes advance-vacuum-card-enter{0%{opacity:0;transform:translateY(8px) scale(0.992)}100%{opacity:1;transform:translateY(0) scale(1)}}@keyframes advance-vacuum-map-enter{0%{opacity:0;transform:translateY(12px) scale(0.988)}100%{opacity:1;transform:translateY(0) scale(1)}}@keyframes advance-vacuum-footer-enter{0%{opacity:0;transform:translateY(10px)}100%{opacity:1;transform:translateY(0)}}@keyframes advance-vacuum-button-bounce{0%{transform:scale(1)}38%{transform:scale(0.935)}72%{transform:scale(1.035)}100%{transform:scale(1)}}@keyframes advance-vacuum-button-bounce-subtle{0%{transform:scale(1)}40%{transform:scale(0.965)}72%{transform:scale(1.02)}100%{transform:scale(1)}}@keyframes advance-vacuum-icon-sweep{0%,100%{transform:translateX(-3px) rotate(-10deg)}50%{transform:translateX(4px) rotate(12deg)}}@media(prefers-reduced-motion:reduce){.advance-vacuum-card,.advance-vacuum-card *,.advance-vacuum-card__control--active-motion ha-icon{animation:none!important;transition:none!important}}";
 
   // src/cards/advance-vacuum/advance-vacuum-utilities.css
   var advance_vacuum_utilities_default = ".advance-vacuum-card__control--active-motion ha-icon{animation:advance-vacuum-icon-sweep 1.45s ease-in-out infinite;transform-origin:50% 70%}.advance-vacuum-card__modes{display:flex;justify-content:center;width:100%}.advance-vacuum-card__modes-bubble{background:var(--av-surface);border:1px solid var(--av-border);border-radius:999px;box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-float-subtle);display:inline-flex;flex-wrap:wrap;gap:4px;justify-content:center;max-width:100%;padding:4px}.advance-vacuum-card__mode-button{align-items:center;background:transparent;border:1px solid transparent;border-radius:999px;box-shadow:none;color:var(--secondary-text-color);display:inline-flex;font-size:12px;font-weight:600;gap:8px;min-height:30px;padding:0 11px;transition:background 180ms ease,border-color 180ms ease,box-shadow 180ms ease,color 180ms ease,transform 180ms cubic-bezier(0.2,0.9,0.24,1)}.advance-vacuum-card__mode-button:hover{background:var(--av-accent-hover);box-shadow:var(--av-accent-hover-shadow)}.advance-vacuum-card__mode-button.is-active{background:var(--av-selected-bg);border-color:var(--av-selected-border);box-shadow:inset 0 1px 0 var(--av-selected-inset),var(--av-selected-glow);color:var(--primary-text-color);font-weight:700}.advance-vacuum-card__mode-button ha-icon{--mdc-icon-size: 15px}.advance-vacuum-card__utility-panel{display:grid;gap:10px;justify-items:center;transform-origin:top center;width:100%}.advance-vacuum-card__utility-panel--entering{animation:advance-vacuum-utility-panel-in var(--advance-vacuum-card-panel-duration) cubic-bezier(0.22,0.84,0.26,1) both}.advance-vacuum-card__utility-panel-slot{display:flex;justify-content:center;width:100%}.advance-vacuum-card__utility-group{display:grid;gap:8px;justify-items:center;width:100%}.advance-vacuum-card__utility-label{color:var(--secondary-text-color);font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase}.advance-vacuum-card__utility-options{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%}.advance-vacuum-card__utility-options--menu{max-width:100%}.advance-vacuum-card__utility-options--presets{justify-content:center}.advance-vacuum-card__utility-option{align-items:center;appearance:none;background:var(--av-surface);border:1px solid var(--av-border);border-radius:999px;box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-float-subtle);color:var(--primary-text-color);cursor:pointer;display:inline-flex;font:inherit;gap:8px;justify-content:center;margin:0;min-height:34px;padding:0 12px;transition:background 180ms ease,border-color 180ms ease,box-shadow 180ms ease,color 180ms ease,transform 180ms cubic-bezier(0.22,0.84,0.26,1)}.advance-vacuum-card__utility-option.is-active{background:var(--av-selected-bg);border-color:var(--av-selected-border);box-shadow:inset 0 1px 0 var(--av-selected-inset),var(--av-selected-ring),var(--av-selected-glow);color:var(--primary-text-color);font-weight:700}.advance-vacuum-card__utility-option:not(.is-active):hover{background:var(--av-accent-hover);border-color:var(--av-border);box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-accent-hover-shadow)}.advance-vacuum-card__utility-option--menu ha-icon{--mdc-icon-size: 16px}.advance-vacuum-card__utility-field{display:grid;gap:8px;justify-items:center;max-width:340px;width:min(100%,340px)}.advance-vacuum-card__utility-select{appearance:none;background:var(--av-surface);border:1px solid var(--av-border);border-radius:16px;box-shadow:inset 0 1px 0 var(--av-inset-soft),var(--av-float-subtle);color:var(--primary-text-color);cursor:pointer;font:inherit;min-height:42px;padding:0 14px;text-align:center;width:100%}.advance-vacuum-card__utility-meta{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%}.advance-vacuum-card__utility-chip-group{display:grid;gap:6px;justify-items:center}";
+
+  // src/shared/view-reconcile.ts
+  var keyAttributes = ["data-view-key", "data-room-id", "data-zone-id", "data-manual-zone-index", "data-zone-handle-index", "data-control-action", "data-mode-id", "data-room-highlight-id", "data-zone-highlight-id"];
+  function key(node) {
+    if (!(node instanceof Element)) return "";
+    return keyAttributes.filter((name) => node.hasAttribute(name)).map((name) => `${name}:${node.getAttribute(name)}`).join("|");
+  }
+  function compatible(left, right) {
+    return left.nodeType === right.nodeType && (!(left instanceof Element) || right instanceof Element && left.localName === right.localName && left.namespaceURI === right.namespaceURI) && key(left) === key(right);
+  }
+  function reconcileViewElement(live, next, allow = () => true) {
+    for (const attribute of Array.from(live.attributes)) {
+      if (!next.hasAttribute(attribute.name) && allow(live, attribute.name)) live.removeAttribute(attribute.name);
+    }
+    for (const attribute of Array.from(next.attributes)) {
+      if (allow(live, attribute.name) && live.getAttribute(attribute.name) !== attribute.value) live.setAttribute(attribute.name, attribute.value);
+    }
+    reconcileViewChildren(live, next, allow);
+    if (live instanceof HTMLSelectElement && next instanceof HTMLSelectElement && live.value !== next.value) live.value = next.value;
+  }
+  function reconcileViewChildren(live, next, allow = () => true) {
+    const keyed = /* @__PURE__ */ new Map();
+    for (const node of Array.from(live.childNodes)) {
+      const id = key(node);
+      if (id) {
+        const group = keyed.get(id) || [];
+        group.push(node);
+        keyed.set(id, group);
+      }
+    }
+    let cursor = live.firstChild;
+    for (const desired of Array.from(next.childNodes)) {
+      const id = key(desired);
+      const node = id ? keyed.get(id)?.find((candidate) => candidate.parentNode === live && compatible(candidate, desired)) : cursor;
+      if (!node || !compatible(node, desired)) {
+        const inserted = desired.cloneNode(true);
+        live.insertBefore(inserted, cursor);
+        cursor = inserted.nextSibling;
+        continue;
+      }
+      if (node !== cursor) live.insertBefore(node, cursor);
+      if (id) keyed.set(id, (keyed.get(id) || []).filter((candidate) => candidate !== node));
+      if (node instanceof Element && desired instanceof Element) reconcileViewElement(node, desired, allow);
+      else if (node.nodeValue !== desired.nodeValue) node.nodeValue = desired.nodeValue;
+      cursor = node.nextSibling;
+    }
+    while (cursor) {
+      const obsolete = cursor;
+      cursor = cursor.nextSibling;
+      live.removeChild(obsolete);
+    }
+  }
 
   // src/shared/home-assistant-services.ts
   function callHassService(hass, domain, service, data = {}, target = null) {
@@ -1326,7 +1363,7 @@
   // src/cards/advance-vacuum/advance-vacuum-card.ts
   var vacuumStrings = (value) => {
     const result = {};
-    for (const [key, item] of Object.entries(vacuumRecord(value))) if (typeof item === "string") result[key] = item;
+    for (const [key2, item] of Object.entries(vacuumRecord(value))) if (typeof item === "string") result[key2] = item;
     return result;
   };
   var vacuumRecord = (value) => isObject(value) ? value : {};
@@ -1339,6 +1376,8 @@
     class NodaliaAdvanceVacuumCard extends HTMLElement {
       constructor() {
         super();
+        this._pendingMapImage = null;
+        this._lastMapIndependentSignature = "";
         this._mapFrame = 0;
         this._mapGestureRect = null;
         this._nodaliaConstruct();
@@ -1406,6 +1445,8 @@
         this._mapFrame = 0;
         this._mapGestureRect = null;
         this._mapOverlayPaint = null;
+        this._pendingMapImage = null;
+        this._lastMapIndependentSignature = "";
         this._mapOffset = { x: 0, y: 0 };
         this._activeMapPointers = /* @__PURE__ */ new Map();
         this._pinchGesture = null;
@@ -1532,6 +1573,8 @@
         if (render && this.isConnected) this._render();
       }
       _releaseViewWork() {
+        this._retireMapImageRequest();
+        this._lastMapIndependentSignature = "";
         this._generation += 1;
         this._cancelMapGesture(false);
         this._clearLocaleReconciliation();
@@ -1728,7 +1771,8 @@
           if (contextChanged) this._resetContext();
           if (!this.isConnected) return;
           if (contextChanged) this._scheduleLocaleReconciliation();
-          const nextSignature = this._getRenderSignature(hass);
+          const signatures = this._getRenderSignatures(hass);
+          const nextSignature = signatures.all;
           if (nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
             this._lastRenderSignature = nextSignature;
             return;
@@ -1736,6 +1780,10 @@
           this._ensurePersistedCleaningSessionStateLoaded();
           this._syncCalibrationIfNeeded(hass);
           this._lastRenderSignature = nextSignature;
+          if (!contextChanged && signatures.content === this._lastMapIndependentSignature && this.shadowRoot?.querySelector("[data-map-image]")) {
+            this._syncMapImage(this._getMapImageUrl());
+            return;
+          }
           this._render();
         } catch (error) {
           this._handleCardError(error, "set hass");
@@ -1868,15 +1916,15 @@
           ["zone_cleaning", /zone_clean|cleaning_(zone|zones)/],
           ["returning", /returning|going_to_(dock|base|charger|wash)|return_to_(dock|base)/]
         ];
-        const specific = aliases.find(([, pattern]) => candidates.some((key) => pattern.test(key)))?.[0];
+        const specific = aliases.find(([, pattern]) => candidates.some((key2) => pattern.test(key2)))?.[0];
         if (specific && ["cleaning", "docked", "charging", "returning", "paused", "idle", ""].includes(baseKey)) {
           return specific;
         }
         return baseKey || candidates[0] || "";
       }
       _matchesActivity(state, values) {
-        const key = this._getReportedStateKey(state);
-        return arrayFromMaybe(values).map((item) => normalizeTextKey(item)).includes(key);
+        const key2 = this._getReportedStateKey(state);
+        return arrayFromMaybe(values).map((item) => normalizeTextKey(item)).includes(key2);
       }
       _isCleaning(state) {
         return this._matchesActivity(state, [
@@ -1920,11 +1968,11 @@
         return this._isCleaning(state) || this._isPaused(state) || this._isReturning(state) || this._isWashingMops(state) || this._isDryingMops(state) || this._isAutoEmptying(state);
       }
       _getStateLabel(state) {
-        const key = this._getReportedStateKey(state);
+        const key2 = this._getReportedStateKey(state);
         const hass = this._hass;
         const langCfg = this._config?.language ?? "auto";
         if (window.NodaliaI18n?.translateAdvanceVacuumReportedState) {
-          return window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, langCfg, key, state?.state);
+          return window.NodaliaI18n.translateAdvanceVacuumReportedState(hass, langCfg, key2, state?.state);
         }
         const labels = {
           docked: "Docked",
@@ -1952,7 +2000,7 @@
           unknown: "Unknown",
           error: "Error"
         };
-        return labels[key] || (state?.state ? String(state.state) : "Unknown");
+        return labels[key2] || (state?.state ? String(state.state) : "Unknown");
       }
       _descriptorLabel(kind) {
         if (!window.NodaliaI18n?.strings) {
@@ -1973,7 +2021,7 @@
         const pack = window.NodaliaI18n?.strings?.(lang)?.advanceVacuum;
         if (!isObject(pack)) return null;
         const dockControls = {};
-        for (const [key, value] of Object.entries(vacuumRecord(pack.dockControls))) dockControls[key] = vacuumStrings(value);
+        for (const [key2, value] of Object.entries(vacuumRecord(pack.dockControls))) dockControls[key2] = vacuumStrings(value);
         return { modeLabels: vacuumStrings(pack.modeLabels), aria: vacuumStrings(pack.aria), panelModes: vacuumStrings(pack.panelModes), dockSections: vacuumStrings(pack.dockSections), dockSettings: vacuumStrings(pack.dockSettings), dockControls, descriptorLabels: vacuumStrings(pack.descriptorLabels), mapStatus: vacuumStrings(pack.mapStatus), utility: vacuumStrings(pack.utility), actions: vacuumStrings(pack.actions), handles: vacuumStrings(pack.handles), titles: vacuumStrings(pack.titles) };
       }
       _getAccentColor(state) {
@@ -2487,12 +2535,12 @@
         if (sharedSession) {
           return sharedSession;
         }
-        const key = this._getCleaningSessionStorageKey();
-        if (!key || typeof window === "undefined" || !window.localStorage) {
+        const key2 = this._getCleaningSessionStorageKey();
+        if (!key2 || typeof window === "undefined" || !window.localStorage) {
           return null;
         }
         try {
-          const rawValue = window.localStorage.getItem(key);
+          const rawValue = window.localStorage.getItem(key2);
           if (!rawValue) {
             return null;
           }
@@ -2503,28 +2551,28 @@
       }
       _persistCleaningSession(session) {
         this._persistSharedCleaningSession(session);
-        const key = this._getCleaningSessionStorageKey();
-        if (!key || typeof window === "undefined" || !window.localStorage) {
+        const key2 = this._getCleaningSessionStorageKey();
+        if (!key2 || typeof window === "undefined" || !window.localStorage) {
           return;
         }
         const normalizedSession = this._normalizeCleaningSession(session);
         try {
           if (!normalizedSession) {
-            window.localStorage.removeItem(key);
+            window.localStorage.removeItem(key2);
             return;
           }
-          window.localStorage.setItem(key, JSON.stringify(normalizedSession));
+          window.localStorage.setItem(key2, JSON.stringify(normalizedSession));
         } catch (_error) {
         }
       }
       _clearPersistedCleaningSession() {
         this._clearSharedCleaningSession();
-        const key = this._getCleaningSessionStorageKey();
-        if (!key || typeof window === "undefined" || !window.localStorage) {
+        const key2 = this._getCleaningSessionStorageKey();
+        if (!key2 || typeof window === "undefined" || !window.localStorage) {
           return;
         }
         try {
-          window.localStorage.removeItem(key);
+          window.localStorage.removeItem(key2);
         } catch (_error) {
         }
       }
@@ -2819,11 +2867,11 @@
         ];
         const seen = /* @__PURE__ */ new Set();
         return candidates.flatMap((value) => this._extractZoneRectsFromValue(value)).filter((zone) => {
-          const key = `${zone.x1}:${zone.y1}:${zone.x2}:${zone.y2}`;
-          if (seen.has(key)) {
+          const key2 = `${zone.x1}:${zone.y1}:${zone.x2}:${zone.y2}`;
+          if (seen.has(key2)) {
             return false;
           }
-          seen.add(key);
+          seen.add(key2);
           return true;
         });
       }
@@ -3067,7 +3115,7 @@
             kind: "entity",
             id: String(calibrationEntityId || ""),
             len,
-            lu: String(st.last_updated || st.last_changed || "")
+            fingerprint: JSON.stringify(pts || [])
           };
         }
         if (vacuumRecord(config?.calibration_source).camera === true) {
@@ -3079,7 +3127,7 @@
             kind: "camera",
             id: mapEntityId,
             len,
-            lu: String(st?.last_updated || st?.last_changed || "")
+            fingerprint: JSON.stringify(pts || [])
           };
         }
         return { kind: "none", len: 0 };
@@ -3091,7 +3139,6 @@
           fragment.kind,
           fragment.id || "",
           fragment.len,
-          fragment.lu || "",
           fragment.fingerprint || ""
         ];
         if (typeof joinParts === "function") {
@@ -3108,6 +3155,9 @@
         this._updateCalibration();
       }
       _getRenderSignature(hass = this._hass) {
+        return this._getRenderSignatures(hass).all;
+      }
+      _getRenderSignatures(hass = this._hass) {
         const entityId = this._config?.entity || "";
         const state = entityId ? hass?.states?.[entityId] || null : null;
         const mapEntityId = this._getMapEntityId();
@@ -3141,7 +3191,7 @@
             prefix: "vac:",
             values: [
               state?.state || "",
-              state?.last_updated || "",
+              JSON.stringify(state?.attributes || {}),
               state?.attributes?.battery_level ?? -1,
               state?.attributes?.fan_speed || "",
               this._getIcon() || "",
@@ -3152,6 +3202,7 @@
             prefix: "map:",
             values: [mapEntityId || "", mapState?.state || "", mapState?.last_updated || "", mapPicture]
           },
+          { prefix: "map-structure:", values: [JSON.stringify(this._getRoomSegments())] },
           {
             prefix: "session:",
             values: [
@@ -3206,9 +3257,10 @@
           }
         ];
         if (typeof joinParts === "function") {
-          return joinParts(sections);
+          return { all: joinParts(sections), content: joinParts(sections.filter((section) => section.prefix !== "map:")) };
         }
-        return sections.map((section) => `${section.prefix}${section.values.map((v) => String(v ?? "")).join(":")}`).join("||");
+        const serialize = (items) => items.map((section) => `${section.prefix}${section.values.map((v) => String(v ?? "")).join(":")}`).join("||");
+        return { all: serialize(sections), content: serialize(sections.filter((section) => section.prefix !== "map:")) };
       }
       _updateCalibration() {
         this._converter = new CoordinatesConverter(parseCalibrationPoints(this._config, this._hass));
@@ -3451,38 +3503,38 @@
         });
       }
       _categorizeModeOption(value) {
-        const key = normalizeTextKey(value);
-        if (MOP_MODE_PATTERNS.some((pattern) => key.includes(pattern))) {
+        const key2 = normalizeTextKey(value);
+        if (MOP_MODE_PATTERNS.some((pattern) => key2.includes(pattern))) {
           return "mop";
         }
-        if (SUCTION_MODE_PATTERNS.some((pattern) => key.includes(pattern))) {
+        if (SUCTION_MODE_PATTERNS.some((pattern) => key2.includes(pattern))) {
           return "suction";
         }
         return "unknown";
       }
       _isSharedSmartMode(value) {
-        const key = normalizeTextKey(value);
-        return SHARED_SMART_MODE_PATTERNS.some((pattern) => key.includes(pattern));
+        const key2 = normalizeTextKey(value);
+        return SHARED_SMART_MODE_PATTERNS.some((pattern) => key2.includes(pattern));
       }
       _isOffModeValue(value) {
         return ["off", "apagado", "disabled", "none", "sin_fregado"].includes(normalizeTextKey(value));
       }
       _isCustomModeValue(value) {
-        const key = normalizeTextKey(value);
-        return key === "custom" || key.startsWith("custom_");
+        const key2 = normalizeTextKey(value);
+        return key2 === "custom" || key2.startsWith("custom_");
       }
       _getCleaningComboModeFromValue(value) {
-        const key = normalizeTextKey(value);
-        if (!key) {
+        const key2 = normalizeTextKey(value);
+        if (!key2) {
           return "";
         }
-        if (VACUUM_MOP_COMBO_PATTERNS.some((pattern) => key === pattern || key.includes(pattern))) {
+        if (VACUUM_MOP_COMBO_PATTERNS.some((pattern) => key2 === pattern || key2.includes(pattern))) {
           return "vacuum_mop";
         }
-        if (VACUUM_ONLY_COMBO_PATTERNS.some((pattern) => key === pattern || key.includes(pattern)) || this._isOffModeValue(value)) {
+        if (VACUUM_ONLY_COMBO_PATTERNS.some((pattern) => key2 === pattern || key2.includes(pattern)) || this._isOffModeValue(value)) {
           return "vacuum";
         }
-        if (MOP_ONLY_COMBO_PATTERNS.some((pattern) => key === pattern || key.includes(pattern))) {
+        if (MOP_ONLY_COMBO_PATTERNS.some((pattern) => key2 === pattern || key2.includes(pattern))) {
           return "mop";
         }
         return "";
@@ -3505,7 +3557,7 @@
           return false;
         }
         return descriptor.options.some((option) => {
-          const key = normalizeTextKey(option);
+          const key2 = normalizeTextKey(option);
           return [
             "off",
             "apagado",
@@ -3517,7 +3569,7 @@
             "alta",
             "intense",
             "deep"
-          ].includes(key);
+          ].includes(key2);
         });
       }
       _getFanPresets(state) {
@@ -4005,15 +4057,15 @@
           value: option
         }));
         for (const candidate of candidates) {
-          const key = normalizeTextKey(candidate);
-          const exactMatch = normalizedOptions.find((option) => option.key === key);
+          const key2 = normalizeTextKey(candidate);
+          const exactMatch = normalizedOptions.find((option) => option.key === key2);
           if (exactMatch) {
             return exactMatch.value;
           }
         }
         for (const candidate of candidates) {
-          const key = normalizeTextKey(candidate);
-          const partialMatch = normalizedOptions.find((option) => option.key.includes(key) || key.includes(option.key));
+          const key2 = normalizeTextKey(candidate);
+          const partialMatch = normalizedOptions.find((option) => option.key.includes(key2) || key2.includes(option.key));
           if (partialMatch) {
             return partialMatch.value;
           }
@@ -4893,32 +4945,32 @@
       }
       _getVacuumPlatformProfile() {
         const configured = normalizeTextKey(this._config?.vacuum_platform || "auto");
-        let key = configured;
-        if (["", "auto", "automatic", "default", "home_assistant_auto"].includes(key)) {
+        let key2 = configured;
+        if (["", "auto", "automatic", "default", "home_assistant_auto"].includes(key2)) {
           const entityId = String(this._config?.entity || "");
-          key = normalizeTextKey(
+          key2 = normalizeTextKey(
             vacuumRecord(vacuumRecord(this._hass?.entities)[entityId]).platform || this._getVacuumState()?.attributes?.integration || "roborock"
           );
         }
-        if (key.includes("dreame")) {
+        if (key2.includes("dreame")) {
           return "dreame";
         }
-        if (key.includes("xiaomi_miio") || key === "xiaomi_miio" || key === "xiaomi") {
+        if (key2.includes("xiaomi_miio") || key2 === "xiaomi_miio" || key2 === "xiaomi") {
           return "xiaomi_miio";
         }
-        if (key.includes("deebot")) {
+        if (key2.includes("deebot")) {
           return "deebot";
         }
-        if (key.includes("ecovacs")) {
+        if (key2.includes("ecovacs")) {
           return "home_assistant";
         }
-        if (key.includes("valetudo")) {
+        if (key2.includes("valetudo")) {
           return "valetudo";
         }
-        if (key === "matter" || key === "home_assistant" || key === "clean_area") {
+        if (key2 === "matter" || key2 === "home_assistant" || key2 === "clean_area") {
           return "home_assistant";
         }
-        if (key === "send_command") {
+        if (key2 === "send_command") {
           return "send_command";
         }
         return "roborock";
@@ -4935,7 +4987,7 @@
           return value.map((item) => this._resolveMapActionTemplateValue(item, context, depth + 1));
         }
         if (isObject(value)) {
-          return Object.fromEntries(Object.entries(value).filter(([key]) => !isUnsafeConfigPathKey(key)).map(([key, item]) => [key, this._resolveMapActionTemplateValue(item, context, depth + 1)]));
+          return Object.fromEntries(Object.entries(value).filter(([key2]) => !isUnsafeConfigPathKey(key2)).map(([key2, item]) => [key2, this._resolveMapActionTemplateValue(item, context, depth + 1)]));
         }
         if (typeof value !== "string") {
           return value;
@@ -6028,29 +6080,55 @@
         }
         this._render();
       }
+      _retireMapImageRequest() {
+        const pending = this._pendingMapImage;
+        this._pendingMapImage = null;
+        if (pending) {
+          pending.onload = null;
+          pending.onerror = null;
+          pending.removeAttribute("src");
+        }
+      }
+      _syncMapImage(url) {
+        const image = this.shadowRoot?.querySelector("[data-map-image]");
+        if (!this.isConnected || !image || !url) {
+          this._retireMapImageRequest();
+          return;
+        }
+        if (image.getAttribute("src") === url) {
+          this._retireMapImageRequest();
+          return;
+        }
+        if (this._pendingMapImage?.getAttribute("src") === url) return;
+        this._retireMapImageRequest();
+        const pending = new Image();
+        const generation = this._generation;
+        this._pendingMapImage = pending;
+        pending.onerror = () => {
+          if (this._pendingMapImage === pending) this._retireMapImageRequest();
+        };
+        pending.onload = () => {
+          void pending.decode().then(() => {
+            if (!this._isCurrent(generation) || this._pendingMapImage !== pending || image !== this.shadowRoot?.querySelector("[data-map-image]")) return;
+            this._pendingMapImage = null;
+            pending.onload = null;
+            pending.onerror = null;
+            image.setAttribute("src", url);
+            this.shadowRoot?.querySelectorAll(".advance-vacuum-card__room-highlight-image").forEach((node) => {
+              if (node.getAttribute("src") !== url) node.setAttribute("src", url);
+            });
+          }, () => {
+            if (this._pendingMapImage === pending) this._retireMapImageRequest();
+          });
+        };
+        pending.src = url;
+      }
       _onMapImageLoad(event) {
         const image = event.currentTarget;
         if (!this.isConnected || !(image instanceof HTMLImageElement) || image !== this.shadowRoot?.querySelector("[data-map-image]")) return;
         const width = Number(image?.naturalWidth || image?.width || 0);
         const height = Number(image?.naturalHeight || image?.height || 0);
-        const staleImages = this.shadowRoot?.querySelectorAll("[data-map-image-previous='true']") || [];
-        image?.classList?.remove("is-pending");
-        image?.classList?.add("is-loaded");
-        staleImages.forEach((staleImage) => {
-          staleImage.classList.add("is-fading-out");
-          const schedule = window.NodaliaUtils?.scheduleDeferTimer;
-          const generation = this._generation;
-          const removeStale = () => {
-            if (this._isCurrent(generation) && staleImage.isConnected) {
-              staleImage.remove();
-            }
-          };
-          if (typeof schedule === "function") {
-            schedule(this, removeStale, 260);
-          } else {
-            this._scheduleOwnedTimer(removeStale, 260);
-          }
-        });
+        if (!image.classList.contains("is-loaded")) image.classList.add("is-loaded");
         if (width > 0 && height > 0) {
           const dimensionsChanged = width !== this._mapImageWidth || height !== this._mapImageHeight;
           this._mapImageWidth = width;
@@ -6229,7 +6307,7 @@
           return "";
         }
         return `
-      <div class="advance-vacuum-card__room-highlight-layer" aria-hidden="true">
+      <div class="advance-vacuum-card__room-highlight-layer" data-view-key="room-highlights" aria-hidden="true">
         ${highlights.map((highlight) => `
           <img
             class="advance-vacuum-card__room-highlight-image"
@@ -6255,7 +6333,7 @@
           return "";
         }
         return `
-      <div class="advance-vacuum-card__room-highlight-layer advance-vacuum-card__room-highlight-layer--zones" aria-hidden="true">
+      <div class="advance-vacuum-card__room-highlight-layer advance-vacuum-card__room-highlight-layer--zones" data-view-key="zone-highlights" aria-hidden="true">
         ${highlights.map((highlight) => `
           <img
             class="advance-vacuum-card__room-highlight-image"
@@ -6613,10 +6691,6 @@
         const inner = body.slice(cardOpenEnd + 1, cardClose);
         const previousPanel = this.shadowRoot.querySelector(".advance-vacuum-card__utility-panel-slot");
         const animatePanel = Boolean(this._activeUtilityPanel && previousPanel?.dataset.utilityPanel !== this._activeUtilityPanel);
-        const liveImage = this.shadowRoot.querySelector("[data-map-image]");
-        if (liveImage instanceof HTMLElement) {
-          liveImage.remove();
-        }
         let styleEl = this.shadowRoot.querySelector("[data-vacuum-style]");
         let card = this.shadowRoot.querySelector("ha-card.advance-vacuum-card");
         if (!(styleEl instanceof HTMLStyleElement) || !(card instanceof HTMLElement)) {
@@ -6634,25 +6708,13 @@
           if (animatePanel) root.querySelector(".advance-vacuum-card__utility-panel")?.classList.add("advance-vacuum-card__utility-panel--entering");
         };
         const classMatch = cardAttrs.match(/class="([^"]*)"/);
-        card.className = classMatch?.[1] || "advance-vacuum-card";
-        card.setAttribute("data-vacuum-surface", "true");
-        const surface = card.querySelector("[data-map-surface='main']");
-        const map = surface?.parentElement;
-        if (this._gesturePointers.size && surface && map && map.parentElement === card) {
-          const template = document.createElement("template");
-          template.innerHTML = inner;
-          preparePanel(template.content);
-          const nextMap = template.content.querySelector(".advance-vacuum-card__map");
-          const nextSurface = nextMap?.querySelector("[data-map-surface='main']");
-          if (nextMap && nextSurface) {
-            surface.innerHTML = nextSurface.innerHTML;
-            for (const node of Array.from(card.childNodes)) if (node !== map) node.remove();
-            for (const node of Array.from(template.content.childNodes)) if (node !== nextMap) card.append(node);
-            return;
-          }
-        }
-        card.innerHTML = inner;
-        preparePanel(card);
+        const nextClass = classMatch?.[1] || "advance-vacuum-card";
+        if (card.className !== nextClass) card.className = nextClass;
+        if (!card.hasAttribute("data-vacuum-surface")) card.setAttribute("data-vacuum-surface", "true");
+        const template = document.createElement("template");
+        template.innerHTML = inner;
+        preparePanel(template.content);
+        reconcileViewChildren(card, template.content, (element, name) => (name !== "class" || !element.matches("[data-map-image]")) && (name !== "src" || !element.matches("[data-map-image], .advance-vacuum-card__room-highlight-image")));
       }
       _render() {
         if (!this.isConnected || !this.shadowRoot) return;
@@ -6709,9 +6771,7 @@
           const mapTopBleed = Math.max(0, Math.round(cardPaddingPx));
           const mapMinHeight = Math.max(320, Math.round(controlSize * 7.4));
           const mapImageUrl = this._getMapImageUrl(state);
-          const previousMapNorm = stripMapCacheBuster(previousImageSrc);
-          const nextMapNorm = stripMapCacheBuster(mapImageUrl || "");
-          const mapImageStartsPending = Boolean(mapImageUrl) && previousImage?.tagName === "IMG" && Boolean(previousMapNorm) && Boolean(nextMapNorm) && previousMapNorm !== nextMapNorm;
+          const displayedMapUrl = previousImageSrc || mapImageUrl;
           this._syncRememberedModeSelections(state);
           this._sanitizeSelectedManualZoneIndex();
           const roomColor = styles.map.room_color || "rgba(97, 201, 122, 0.18)";
@@ -6989,15 +7049,15 @@
         ${advance_vacuum_motion_default}
       </style>
       <ha-card class="advance-vacuum-card ${shouldAnimateEntrance ? "advance-vacuum-card--entering" : ""}">
-        <div class="advance-vacuum-card__map">
-          <div class="advance-vacuum-card__map-surface" data-map-surface="main">
-            <div class="advance-vacuum-card__map-viewport">
-              <div class="advance-vacuum-card__map-canvas" style="${mapTransformStyle}">
-                ${mapImageUrl ? `<img class="advance-vacuum-card__map-image${mapImageStartsPending ? " is-pending" : ""}" data-map-image src="${escapeHtml(mapImageUrl)}" alt="${escapeHtml(advanceVacuumStrings?.utility?.mapImageAlt || "Robot map")}" />` : `<div class="advance-vacuum-card__map-image" style="display:flex;align-items:center;justify-content:center;color:var(--secondary-text-color);">${escapeHtml(advanceVacuumStrings?.utility?.mapUnavailable || "Map unavailable")}</div>`}
-                ${showRoomSelectionDim ? `<div class="advance-vacuum-card__map-room-dim"></div>` : ""}
-                ${showRealRoomSelectionColors ? this._renderRoomSelectionHighlights(rooms, highlightedRoomIds, mapImageUrl, this._activeMode) : ""}
-                ${showRealRoomSelectionColors ? this._renderZoneSelectionHighlights(roomModeCleaningZones, mapImageUrl, this._activeMode) : ""}
-                <svg class="advance-vacuum-card__map-svg" viewBox="0 0 ${this._mapImageWidth} ${this._mapImageHeight}" preserveAspectRatio="none">
+        <div class="advance-vacuum-card__map" data-view-key="map">
+          <div class="advance-vacuum-card__map-surface" data-view-key="map-surface" data-map-surface="main">
+            <div class="advance-vacuum-card__map-viewport" data-view-key="map-viewport">
+              <div class="advance-vacuum-card__map-canvas" data-view-key="map-canvas" style="${mapTransformStyle}">
+                ${mapImageUrl ? `<img class="advance-vacuum-card__map-image" data-map-image data-view-key="base-image" src="${escapeHtml(mapImageUrl)}" alt="${escapeHtml(advanceVacuumStrings?.utility?.mapImageAlt || "Robot map")}" />` : `<div class="advance-vacuum-card__map-image" style="display:flex;align-items:center;justify-content:center;color:var(--secondary-text-color);">${escapeHtml(advanceVacuumStrings?.utility?.mapUnavailable || "Map unavailable")}</div>`}
+                ${showRoomSelectionDim ? `<div class="advance-vacuum-card__map-room-dim" data-view-key="map-room-dim"></div>` : ""}
+                ${showRealRoomSelectionColors ? this._renderRoomSelectionHighlights(rooms, highlightedRoomIds, displayedMapUrl, this._activeMode) : ""}
+                ${showRealRoomSelectionColors ? this._renderZoneSelectionHighlights(roomModeCleaningZones, displayedMapUrl, this._activeMode) : ""}
+                <svg class="advance-vacuum-card__map-svg" data-view-key="map-svg" viewBox="0 0 ${this._mapImageWidth} ${this._mapImageHeight}" preserveAspectRatio="none">
                   ${currentMode.id === "rooms" ? rooms.map((room) => room.outlines.map((outline) => `
                     <polygon
                       class="advance-vacuum-card__room-polygon ${highlightedRoomIds.has(String(room.id)) ? showRealRoomSelectionColors ? "is-revealed" : "is-selected" : ""} ${isRoomSelectionLocked ? "is-readonly" : ""}"
@@ -7046,7 +7106,7 @@
                 </svg>
               </div>
             </div>
-            <div class="advance-vacuum-card__map-overlays">
+            <div class="advance-vacuum-card__map-overlays" data-view-key="map-overlays">
               ${this._renderMapOverlays(currentMode.id)}
             </div>
             ${this._renderMapTools()}
@@ -7055,7 +7115,7 @@
 
         ${this._renderRoomFallbackList(rooms, this._activeMode)}
 
-        <div class="advance-vacuum-card__footer">
+        <div class="advance-vacuum-card__footer" data-view-key="footer">
 
         ${!isCleaningSessionActive ? `
               <div class="advance-vacuum-card__modes">
@@ -7103,29 +7163,8 @@
     `;
           this._commitPersistentVacuumShadow(vacuumMarkup);
           this._animateContentOnNextRender = false;
-          let image = this.shadowRoot.querySelector("[data-map-image]");
-          const canvas = this.shadowRoot.querySelector(".advance-vacuum-card__map-canvas");
-          if (previousImage && image && previousMapNorm && nextMapNorm && previousMapNorm === nextMapNorm) {
-            image.replaceWith(previousImage);
-            image = previousImage;
-            image.removeAttribute("data-map-image-previous");
-            image.setAttribute("data-map-image", "");
-            if (mapImageUrl && image.getAttribute("src") !== mapImageUrl) {
-              image.setAttribute("src", mapImageUrl);
-            }
-            image.classList.remove("is-pending", "is-fading-out");
-            image.classList.add("is-loaded");
-          } else if (previousImage && image && canvas && previousMapNorm && nextMapNorm && previousMapNorm !== nextMapNorm) {
-            previousImage.removeEventListener("load", this._onMapImageLoad);
-            previousImage.removeAttribute("data-map-image");
-            previousImage.setAttribute("data-map-image-previous", "true");
-            previousImage.classList.remove("is-pending", "is-fading-out");
-            previousImage.classList.add("is-loaded");
-            canvas.insertBefore(previousImage, image);
-          } else if (image) {
-            image.classList.remove("is-pending", "is-fading-out");
-            image.classList.add("is-loaded");
-          }
+          const image = this.shadowRoot.querySelector("[data-map-image]");
+          this._syncMapImage(mapImageUrl);
           if (image) {
             image.removeEventListener("load", this._onMapImageLoad);
             image.addEventListener("load", this._onMapImageLoad);
@@ -7141,7 +7180,9 @@
           if (shouldAnimateEntrance) {
             this._scheduleEntranceAnimationReset(animations.contentDuration + 160);
           }
-          this._lastRenderSignature = this._getRenderSignature();
+          const signatures = this._getRenderSignatures();
+          this._lastRenderSignature = signatures.all;
+          this._lastMapIndependentSignature = signatures.content;
         } catch (error) {
           this._handleCardError(error, "_render");
         }

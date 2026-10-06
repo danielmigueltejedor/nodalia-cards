@@ -45,3 +45,24 @@ Graph history generation occurs outside timed dispatch and is reported separatel
 Instrumentation adds overhead equally but can alter workload cost; do not interpret percentages near the timer resolution or on sub-millisecond baselines as material. Median and nearest-rank p95 are accompanied by raw samples, min/max/mean/count. Seven rounds provide a coarse p95, effectively the largest sample. Inspect repeatability, absolute cost and correctness before classifying a >5% change.
 
 See [results/schema](../docs/benchmarks/README.md), [testing](../docs/testing.md) and [publication workflow](../docs/releasing.md).
+
+## 3.0.x local candidate diagnostics
+
+`pnpm benchmark:maintenance` compares the exact verified published `3.0.0`
+asset with the current locally built candidate. It uses the existing fixture,
+settling rules and per-engine median/p95 statistics, two warmups and seven
+alternating-order samples, including independent map robot/frame/selection
+updates, Lock transitions, relevant/unrelated updates, native gestures and
+Advanced Vacuum lifecycle/Chromium heap cleanup. `--smoke` checks the new
+workloads with one sample and must not be used as performance evidence.
+
+Output is `bench/results/maintenance-<candidate-version>.json`, with candidate
+provenance, bytes/hash, source commit/dirtiness, harness checksum, environment,
+raw samples, summaries and errors. The current diagnostic runs Chromium,
+WebKit and iPhone WebKit emulation; Firefox is deliberately excluded on this
+Mac under the owner's instruction. This does **not** weaken the official
+published-release evidence gate or supply a Firefox result.
+
+The canonical configuration opts into the new profiles with the internal
+`maintenanceUpdates` flag. Historical report configurations without that flag
+keep their original workload coverage and remain verifiable.

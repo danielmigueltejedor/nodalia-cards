@@ -13,6 +13,23 @@ YAML and public Engine API 2/3 bridge contracts. Broad refactors/new features or
 runtime dependencies belong to a later feature cycle. A structural change
 requires a demonstrated bug and regression. See [release readiness](BETA_READINESS_AUDIT.md).
 
+## Maintenance view updates (3.0.1-alpha.1)
+
+Lock and Advanced Vacuum use the small internal `shared/view-reconcile.ts`
+helper to patch their owned light DOM without detaching unchanged layers. Keys
+are local to siblings; it retains no DOM or entity cache between calls. Lock
+reuses `shared/view-animation-work.ts` for finite state feedback, cancellation
+on context/config/disconnect and reduced motion. HA state is committed first.
+
+Advanced Vacuum separates map-frame invalidation from controls, calibration
+and room structure. Raster-only changes load/decode one latest pending image;
+failed or retired frames cannot replace the live image. A structural change
+patches SVG geometry and overlays, retaining unchanged layers. This preserves
+the existing raster-provider contract: robot/path pixels baked into the source
+image remain part of that frame, rather than synthetic overlays.
+
+See [the alpha audit](ALPHA_3_0_1_AUDIT.md) for causes, tests and measurements.
+
 ## Current architecture map (3.0.0)
 
 The project is a Home Assistant Lovelace plugin. Handwritten cards historically

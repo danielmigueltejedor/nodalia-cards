@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.0";
+  var CARD_VERSION = "3.0.1-alpha.1";
 
   // src/shared/device-control-geometry.ts
   var CIRCULAR_LAYOUT_DIAL_START_ANGLE = 135;
@@ -453,6 +453,15 @@
   }
 
   // src/cards/humidifier/humidifier-helpers.ts
+  function getHumidityParticleDirection(state, mode) {
+    const action = normalizeTextKey(state?.attributes.action || state?.state);
+    if (["dehumidifying", "drying"].includes(action)) return "inward";
+    if (action === "humidifying") return "outward";
+    const deviceClass = normalizeTextKey(state?.attributes.device_class);
+    if (deviceClass === "dehumidifier") return "inward";
+    if (deviceClass === "humidifier") return "outward";
+    return ["dry", "dehumidify", "dehumidifying", "dehumidification", "drying"].includes(normalizeTextKey(mode ?? state?.attributes.mode)) ? "inward" : "outward";
+  }
   function getEditorColorFallbackValue(field) {
     const normalizedField = String(field ?? "");
     if (normalizedField.endsWith("off_color")) {
@@ -959,6 +968,7 @@
           String(attrs.friendly_name || ""),
           String(attrs.icon || ""),
           String(attrs.device_class || ""),
+          String(attrs.action || ""),
           this._config?.show_entity_picture === true,
           String(this._config?.entity_picture || attrs.entity_picture_local || attrs.entity_picture || ""),
           Number(attrs.humidity ?? -1),
@@ -3046,6 +3056,11 @@
           margin-left: 6px;
         }
 
+        .humidifier-card__icon--inward::before,
+        .humidifier-card__icon--inward::after {
+          animation-direction: reverse;
+        }
+
         .humidifier-card__picture {
           border-radius: inherit;
           height: 100%;
@@ -4061,7 +4076,7 @@
           <div class="humidifier-card__hero">
             <button
               type="button"
-              class="humidifier-card__icon ${animations.enabled && animations.iconAnimation && isOn ? "humidifier-card__icon--active-motion" : ""}"
+              class="humidifier-card__icon ${animations.enabled && animations.iconAnimation && isOn ? `humidifier-card__icon--active-motion humidifier-card__icon--${getHumidityParticleDirection(state, currentMode)}` : ""}"
               data-humidifier-action="icon"
               aria-label="${escapeHtml(window.NodaliaI18n?.translateCommonAria?.(this._hass, config.language ?? "auto", "togglePower", "Turn on or off") || "Turn on or off")}"
             >

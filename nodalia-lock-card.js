@@ -28,7 +28,7 @@
   function normalizeLockStyles(value) {
     const utils = window.NodaliaUtils;
     const source = utils.isObject(value) ? value : {};
-    const read = (group, key, fallback) => utils.sanitizeCssValue(utils.isObject(group) ? group[key] : void 0, fallback);
+    const read = (group, key2, fallback) => utils.sanitizeCssValue(utils.isObject(group) ? group[key2] : void 0, fallback);
     const defaults = DEFAULT_LOCK_STYLES;
     return {
       card: {
@@ -56,7 +56,7 @@
   }
 
   // src/version.ts
-  var CARD_VERSION = "3.0.0";
+  var CARD_VERSION = "3.0.1-alpha.1";
 
   // src/cards/lock/lock-config.ts
   var CARD_TAG = "nodalia-lock-card";
@@ -88,11 +88,94 @@
   var sameHassContext = (a, b) => a.present === b.present && a.connection === b.connection && a.auth === b.auth && a.user === b.user && a.admin === b.admin;
 
   // src/cards/lock/lock-strings.ts
-  function lockText(hass, key) {
+  function lockText(hass, key2) {
     const language = window.NodaliaI18n?.resolveLanguage?.(hass) || "en";
     const strings = window.NodaliaI18n?.strings?.(language)?.lock;
     const fallback = window.NodaliaI18n?.strings?.("en")?.lock;
-    return strings?.[key] || fallback?.[key] || key;
+    return strings?.[key2] || fallback?.[key2] || key2;
+  }
+
+  // src/shared/view-reconcile.ts
+  var keyAttributes = ["data-view-key", "data-room-id", "data-zone-id", "data-manual-zone-index", "data-zone-handle-index", "data-control-action", "data-mode-id", "data-room-highlight-id", "data-zone-highlight-id"];
+  function key(node) {
+    if (!(node instanceof Element)) return "";
+    return keyAttributes.filter((name) => node.hasAttribute(name)).map((name) => `${name}:${node.getAttribute(name)}`).join("|");
+  }
+  function compatible(left, right) {
+    return left.nodeType === right.nodeType && (!(left instanceof Element) || right instanceof Element && left.localName === right.localName && left.namespaceURI === right.namespaceURI) && key(left) === key(right);
+  }
+  function reconcileViewElement(live, next, allow = () => true) {
+    for (const attribute of Array.from(live.attributes)) {
+      if (!next.hasAttribute(attribute.name) && allow(live, attribute.name)) live.removeAttribute(attribute.name);
+    }
+    for (const attribute of Array.from(next.attributes)) {
+      if (allow(live, attribute.name) && live.getAttribute(attribute.name) !== attribute.value) live.setAttribute(attribute.name, attribute.value);
+    }
+    reconcileViewChildren(live, next, allow);
+    if (live instanceof HTMLSelectElement && next instanceof HTMLSelectElement && live.value !== next.value) live.value = next.value;
+  }
+  function reconcileViewChildren(live, next, allow = () => true) {
+    const keyed = /* @__PURE__ */ new Map();
+    for (const node of Array.from(live.childNodes)) {
+      const id = key(node);
+      if (id) {
+        const group = keyed.get(id) || [];
+        group.push(node);
+        keyed.set(id, group);
+      }
+    }
+    let cursor = live.firstChild;
+    for (const desired of Array.from(next.childNodes)) {
+      const id = key(desired);
+      const node = id ? keyed.get(id)?.find((candidate) => candidate.parentNode === live && compatible(candidate, desired)) : cursor;
+      if (!node || !compatible(node, desired)) {
+        const inserted = desired.cloneNode(true);
+        live.insertBefore(inserted, cursor);
+        cursor = inserted.nextSibling;
+        continue;
+      }
+      if (node !== cursor) live.insertBefore(node, cursor);
+      if (id) keyed.set(id, (keyed.get(id) || []).filter((candidate) => candidate !== node));
+      if (node instanceof Element && desired instanceof Element) reconcileViewElement(node, desired, allow);
+      else if (node.nodeValue !== desired.nodeValue) node.nodeValue = desired.nodeValue;
+      cursor = node.nextSibling;
+    }
+    while (cursor) {
+      const obsolete = cursor;
+      cursor = cursor.nextSibling;
+      live.removeChild(obsolete);
+    }
+  }
+
+  // src/shared/view-animation-work.ts
+  function createViewAnimationWork() {
+    return { generation: 0, timers: /* @__PURE__ */ new Set(), cancels: /* @__PURE__ */ new Set() };
+  }
+  function cancelViewPanelAnimations(work) {
+    ++work.generation;
+    work.cancels.forEach((cancel) => cancel());
+    work.cancels.clear();
+  }
+  function releaseViewAnimationWork(work) {
+    cancelViewPanelAnimations(work);
+    work.timers.forEach((timer) => window.clearTimeout(timer));
+    work.timers.clear();
+  }
+  function animateViewState(work, elements, duration = 220) {
+    cancelViewPanelAnimations(work);
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    for (const element of elements) {
+      const animation = element.animate([
+        { opacity: 0.45, transform: "translateY(3px) scale(.96)" },
+        { opacity: 1, transform: "translateY(0) scale(1)" }
+      ], { duration, easing: "cubic-bezier(.22,.84,.26,1)" });
+      const cancel = () => {
+        animation.cancel();
+        work.cancels.delete(cancel);
+      };
+      work.cancels.add(cancel);
+      void animation.finished.then(() => work.cancels.delete(cancel), () => work.cancels.delete(cancel));
+    }
   }
 
   // src/cards/lock/lock-card.ts
@@ -104,6 +187,8 @@
       }
       _nodaliaConstruct() {
         this.context = null;
+        this.animationWork = createViewAnimationWork();
+        this.visualState = "";
         this.config = null;
         this.stateHass = null;
         this.pending = null;
@@ -140,9 +225,13 @@
       disconnectedCallback() {
         this.cancelGesture();
         this.clearPending();
+        releaseViewAnimationWork(this.animationWork);
+        this.visualState = "";
       }
       setConfig(config) {
         const next = normalizeConfig(config);
+        releaseViewAnimationWork(this.animationWork);
+        this.visualState = "";
         this.cancelGesture();
         this.clearPending();
         this.error = "";
@@ -152,6 +241,8 @@
       set hass(hass) {
         const context = captureHassContext(hass);
         if (this.context && !sameHassContext(this.context, context)) {
+          releaseViewAnimationWork(this.animationWork);
+          this.visualState = "";
           this.cancelGesture();
           this.clearPending();
           this.error = "";
@@ -267,13 +358,15 @@
       }
       render() {
         if (!this.shadowRoot || !this.config) return;
-        const text = (key) => window.NodaliaUtils.escapeHtml(lockText(this.stateHass, key));
+        const text = (key2) => window.NodaliaUtils.escapeHtml(lockText(this.stateHass, key2));
         const styles = this.config.styles;
         const status = this.pending ? this.pending === "lock" ? "locking" : "unlocking" : this.state;
         const name = window.NodaliaUtils.escapeHtml(this.config.name || this.entity?.attributes.friendly_name || this.config.entity);
         const unlocked = this.state === "unlocked";
-        const icon = ["jammed", "unknown", "unavailable"].includes(this.state) ? "mdi:lock-alert" : unlocked ? "mdi:lock-open-variant" : "mdi:lock";
-        this.shadowRoot.innerHTML = `
+        const icon = ["jammed", "unknown", "unavailable"].includes(this.state) ? "mdi:lock-alert" : ["unlocked", "unlocking", "open", "opening"].includes(status) ? "mdi:lock-open-variant" : "mdi:lock";
+        const previousStatus = this.visualState;
+        const template = document.createElement("template");
+        template.innerHTML = `
         <style>
           :host { display:block; }
           * { box-sizing:border-box; }
@@ -287,14 +380,20 @@
             box-shadow:${styles.card.box_shadow};
             border:${styles.card.border};
             position:relative; overflow:hidden;
+            transition:border-color 220ms ease;
           }
           ha-card::before {
             content:""; position:absolute; inset:0; pointer-events:none;
             background:linear-gradient(180deg, color-mix(in srgb, var(--primary-text-color) 5%, transparent), transparent);
           }
           ha-card > * { position:relative; z-index:1; }
-          ha-card.is-locked {
+          ha-card::after {
+            content:""; position:absolute; inset:0; pointer-events:none; opacity:0;
             background:linear-gradient(135deg, color-mix(in srgb, var(--lock-accent) 18%, var(--lock-surface)), color-mix(in srgb, var(--lock-accent) 10%, var(--lock-surface)) 52%, var(--lock-surface));
+            transition:opacity 220ms ease;
+          }
+          ha-card.is-locked::after { opacity:1; }
+          ha-card.is-locked {
             border-color:color-mix(in srgb, var(--lock-accent) 32%, var(--divider-color, #ffffff18));
           }
           .header { display:flex; align-items:center; gap:12px; min-width:0; }
@@ -305,7 +404,7 @@
             border:1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
             box-shadow:inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent), 0 10px 24px rgba(0,0,0,.16);
             color:${styles.icon.off_color};
-            transition:background 180ms ease; position:relative;
+            transition:background 220ms ease, color 220ms ease; position:relative;
           }
           .is-locked .icon {
             background:color-mix(in srgb, var(--lock-accent) 24%, ${styles.icon.background});
@@ -362,19 +461,24 @@
           @media (max-width:600px) {
             :host { --lock-icon-size:50px; }
           }
-          @media (prefers-reduced-motion:reduce) { .handle, .icon { transition:none; } }
+          ${window.NodaliaUtils.renderReducedMotionStyles?.() || "@media (prefers-reduced-motion:reduce) { *, *::before, *::after { transition:none!important; animation:none!important; } }"}
         </style>
-        <ha-card class="${this.config.layout} ${this.state === "locked" ? "is-locked" : ""} ${["jammed", "unknown", "unavailable"].includes(this.state) ? "is-unavailable" : ""}" aria-busy="${Boolean(this.pending)}">
-          <div class="header"><span class="icon"><ha-icon icon="${icon}"></ha-icon></span><div>
+        <ha-card data-view-key="lock" data-lock-state="${window.NodaliaUtils.escapeHtml(status)}" class="${this.config.layout} ${["locked", "locking"].includes(status) ? "is-locked" : ""} ${["jammed", "unknown", "unavailable"].includes(this.state) ? "is-unavailable" : ""}" aria-busy="${Boolean(this.pending) || ["locking", "unlocking", "opening"].includes(this.state)}">
+          <div class="header" data-view-key="header"><span class="icon"><ha-icon icon="${icon}"></ha-icon></span><div>
             ${this.config.show_name ? `<div class="name">${name}</div>` : ""}
             ${this.config.show_state ? `<div class="state" role="status">${text(status)}</div>` : ""}
           </div></div>
-          ${unlocked ? `<button data-lock ${this.pending || !this.stateHass?.callService ? "disabled" : ""}>${text("lock")}</button>` : `
-            <div><div class="slider" role="slider" tabindex="${this.canUnlock ? "0" : "-1"}" aria-label="${text("slide")}" aria-describedby="unlock-help" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-disabled="${!this.canUnlock}">
+          ${unlocked ? `<button data-view-key="command" data-lock ${this.pending || !this.stateHass?.callService ? "disabled" : ""}>${text("lock")}</button>` : `
+            <div data-view-key="command"><div class="slider" role="slider" tabindex="${this.canUnlock ? "0" : "-1"}" aria-label="${text("slide")}" aria-describedby="unlock-help" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-disabled="${!this.canUnlock}">
               <span class="track-label">${text(this.pending ? status : "slide")}</span><span class="handle" data-handle><ha-icon icon="mdi:chevron-right"></ha-icon></span>
             </div><p class="help" id="unlock-help">${text("help")}</p></div>`}
           ${this.error ? `<div class="error" role="alert">${text(this.error)}</div>` : ""}
         </ha-card>`;
+        reconcileViewChildren(this.shadowRoot, template.content);
+        this.visualState = status;
+        if (this.isConnected && previousStatus && previousStatus !== status) {
+          animateViewState(this.animationWork, Array.from(this.shadowRoot.querySelectorAll(".icon ha-icon, .state, .track-label")));
+        }
       }
     }
     return NodaliaLockCard;
@@ -526,13 +630,13 @@
         }
         this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: this.config }, bubbles: true, composed: true }));
       }
-      label(key) {
+      label(key2) {
         const language = this.renderedLanguage;
-        return window.NodaliaI18n?.editorStr?.(this.stateHass, language, key) || key;
+        return window.NodaliaI18n?.editorStr?.(this.stateHass, language, key2) || key2;
       }
-      field(key, field, value, color = false) {
+      field(key2, field, value, color = false) {
         const escape = window.NodaliaUtils.escapeHtml;
-        const label = escape(this.label(key));
+        const label = escape(this.label(key2));
         if (!color) return `<label class="editor-field"><span>${label}</span><input data-field="${field}" value="${escape(value)}"></label>`;
         const model = getEditorColorModel(value);
         return `<div class="editor-field"><span>${label}</span><div class="editor-color-field"><label class="editor-color-picker">
@@ -542,9 +646,9 @@
       render() {
         if (!this.shadowRoot) return;
         this.renderedLanguage = window.NodaliaI18n?.resolveLanguage?.(this.stateHass) || "en";
-        const text = (key) => window.NodaliaUtils.escapeHtml(lockText(this.stateHass, key));
+        const text = (key2) => window.NodaliaUtils.escapeHtml(lockText(this.stateHass, key2));
         const escape = window.NodaliaUtils.escapeHtml;
-        const label = (key) => escape(this.label(key));
+        const label = (key2) => escape(this.label(key2));
         const styles = normalizeLockStyles(this.config.styles);
         const radiusLabels = { pill: this.label("ed.entity.chip_radius_pill"), soft: this.label("ed.entity.chip_radius_soft"), round: this.label("ed.entity.chip_radius_round"), square: this.label("ed.entity.chip_radius_square") };
         this.shadowRoot.innerHTML = `<style>
