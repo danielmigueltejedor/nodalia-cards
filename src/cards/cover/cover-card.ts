@@ -624,6 +624,10 @@ class NodaliaCoverCard extends HTMLElement {
 
   _onShadowClick(event: Event) {
     const path = event.composedPath();
+    // One-shot: swallow only the click synthesized by the drag/hold that armed it,
+    // wherever it lands (slider, slider chrome, controls or the card body).
+    const suppressTap = this._suppressNextCoverTap;
+    this._suppressNextCoverTap = false;
     const slider = path.find((node): node is HTMLInputElement => node instanceof HTMLInputElement && Boolean(node.dataset.coverControl));
     if (slider) return;
     const button = path.find((node): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.coverAction));
@@ -636,8 +640,7 @@ class NodaliaCoverCard extends HTMLElement {
         if (coverAction === "body" && window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
           return;
         }
-        if (this._suppressNextCoverTap) {
-          this._suppressNextCoverTap = false;
+        if (suppressTap) {
           return;
         }
         this._triggerHaptic();
@@ -734,6 +737,8 @@ class NodaliaCoverCard extends HTMLElement {
 
   _onPointerDown(event: Event) {
     if (!(event instanceof PointerEvent)) return;
+    // A new gesture expires suppression left by one whose click never arrived.
+    this._suppressNextCoverTap = false;
     const path = event.composedPath();
     const slider = path.find(
       (node): node is HTMLInputElement =>

@@ -1809,6 +1809,8 @@ class NodaliaHumidifierCard extends HTMLElement {
 
   _onShadowPointerDown(event: Event) {
     if (!(event instanceof PointerEvent)) return;
+    // A new gesture expires suppression left by one whose click never arrived.
+    this._suppressNextHumidifierTap = false;
     const path = event.composedPath();
     const slider = path.find((node): node is HTMLInputElement =>
       node instanceof HTMLInputElement &&
@@ -2225,11 +2227,16 @@ class NodaliaHumidifierCard extends HTMLElement {
 
   _onShadowKeyDown(event: Event) {
     if (!(event instanceof KeyboardEvent) || !["Enter", " "].includes(event.key)) return;
+    this._suppressNextHumidifierTap = false;
     const target = event.composedPath()[0];
     if (target instanceof HTMLElement && !(target instanceof HTMLButtonElement) && target.dataset.humidifierAction === "body") this._onShadowClick(event);
   }
   _onShadowClick(event: Event) {
     const path = event.composedPath();
+    // One-shot: swallow only the click synthesized by the drag/hold that armed it,
+    // wherever it lands (slider, slider chrome, controls or the card body).
+    const suppressTap = this._suppressNextHumidifierTap;
+    this._suppressNextHumidifierTap = false;
     const slider = path.find((node): node is HTMLInputElement => node instanceof HTMLInputElement && Boolean(node.dataset.humidifierControl),
     );
 
@@ -2254,8 +2261,7 @@ class NodaliaHumidifierCard extends HTMLElement {
       if (zone === "body" && window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
         return;
       }
-      if (this._suppressNextHumidifierTap) {
-        this._suppressNextHumidifierTap = false;
+      if (suppressTap) {
         return;
       }
       const effect = this._resolveHumidifierTapEffect(zone);
