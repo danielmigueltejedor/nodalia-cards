@@ -1295,6 +1295,7 @@
       if (allow(live, attribute.name) && live.getAttribute(attribute.name) !== attribute.value) live.setAttribute(attribute.name, attribute.value);
     }
     reconcileViewChildren(live, next, allow);
+    if (live instanceof HTMLSelectElement && next instanceof HTMLSelectElement && live.value !== next.value) live.value = next.value;
   }
   function reconcileViewChildren(live, next, allow = () => true) {
     const keyed = /* @__PURE__ */ new Map();

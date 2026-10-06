@@ -19,6 +19,9 @@ export function reconcileViewElement(live: Element, next: Element, allow: ViewAt
     if (allow(live, attribute.name) && live.getAttribute(attribute.name) !== attribute.value) live.setAttribute(attribute.name, attribute.value);
   }
   reconcileViewChildren(live, next, allow);
+  // Native select.selectedness can be dirty after user interaction even when
+  // the selected attributes match. This view is controlled by the HA model.
+  if (live instanceof HTMLSelectElement && next instanceof HTMLSelectElement && live.value !== next.value) live.value = next.value;
 }
 export function reconcileViewChildren(live: Element | DocumentFragment, next: Element | DocumentFragment, allow: ViewAttributeFilter = () => true): void {
   const keyed = new Map<string, Node[]>();

@@ -69,3 +69,20 @@ test('Failed/retired frames keep the last decoded image and own no stale request
   expect(await page.evaluate(()=>({pending:window.mapCard._pendingMapImage,load:window.retiredMapFrame.onload,error:window.retiredMapFrame.onerror,source:window.retiredMapFrame.getAttribute('src')}))).toEqual({pending:null,load:null,error:null,source:null});
   expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
 });
+
+test('Preserved dock selectors reconcile the live value with HA after local edits and provider updates',async({page})=>{
+  const card=await mount(page);
+  await page.evaluate(()=>{
+    const c=window.mapCard,h=window.mapHass;
+    h.states['input_select.frecuencia_lavado_mopa']={state:'low',attributes:{options:['low','high']}};c.hass=h;
+    c._activeUtilityPanel='dock';c._activeDockPanelSection='settings';c._render();
+    window.dockSelect=c.shadowRoot.querySelector('[data-dock-setting-id="mop_wash_frequency"]');
+  });
+  const select=card.locator('[data-dock-setting-id="mop_wash_frequency"]');await expect(select).toHaveValue('low');
+  await select.selectOption('high');
+  await page.evaluate(()=>{const h=window.mapHass;h.states['vacuum.one'].attributes.battery_level=99;window.mapCard.hass={...h};});
+  await expect(select).toHaveValue('low');
+  expect(await page.evaluate(()=>window.dockSelect===window.mapCard.shadowRoot.querySelector('[data-dock-setting-id="mop_wash_frequency"]'))).toBe(true);
+  await page.evaluate(()=>{const h=window.mapHass;h.states['input_select.frecuencia_lavado_mopa'].state='high';window.mapCard.hass={...h};});
+  await expect(select).toHaveValue('high');expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+});

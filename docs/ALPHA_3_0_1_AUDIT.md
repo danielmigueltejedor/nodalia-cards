@@ -36,6 +36,12 @@ explicit instruction; the full Linux Firefox CI suite remains required.
 Static validation, performance measurements and release verification are being
 completed before publication. Results will be recorded here.
 
+The audit also reproduced a native-select regression introduced by retaining
+nodes: selected attributes could match while the live value stayed dirty after
+interaction. Reconcile controlled select values with the HA model without
+replacing the focused node. A real dock-selector regression fails before this
+fix and covers both rejection/old-state feedback and a new provider value.
+
 ## Provider and measurement limits
 
 Robot/path pixels baked into a raster provider require a new frame. Cards does
