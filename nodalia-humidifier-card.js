@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.1-alpha.1";
+  var CARD_VERSION = "3.0.1-alpha.2";
 
   // src/shared/device-control-geometry.ts
   var CIRCULAR_LAYOUT_DIAL_START_ANGLE = 135;
@@ -2109,6 +2109,7 @@
       }
       _onShadowPointerDown(event) {
         if (!(event instanceof PointerEvent)) return;
+        this._suppressNextHumidifierTap = false;
         const path = event.composedPath();
         const slider = path.find(
           (node) => node instanceof HTMLInputElement && node.type === "range" && Boolean(node.dataset.humidifierControl)
@@ -2456,11 +2457,14 @@
       }
       _onShadowKeyDown(event) {
         if (!(event instanceof KeyboardEvent) || !["Enter", " "].includes(event.key)) return;
+        this._suppressNextHumidifierTap = false;
         const target = event.composedPath()[0];
         if (target instanceof HTMLElement && !(target instanceof HTMLButtonElement) && target.dataset.humidifierAction === "body") this._onShadowClick(event);
       }
       _onShadowClick(event) {
         const path = event.composedPath();
+        const suppressTap = this._suppressNextHumidifierTap;
+        this._suppressNextHumidifierTap = false;
         const slider = path.find(
           (node) => node instanceof HTMLInputElement && Boolean(node.dataset.humidifierControl)
         );
@@ -2480,8 +2484,7 @@
           if (zone === "body" && window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
             return;
           }
-          if (this._suppressNextHumidifierTap) {
-            this._suppressNextHumidifierTap = false;
+          if (suppressTap) {
             return;
           }
           const effect = this._resolveHumidifierTapEffect(zone);

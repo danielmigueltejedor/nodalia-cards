@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.1-alpha.1";
+  var CARD_VERSION = "3.0.1-alpha.2";
 
   // src/shared/device-control-geometry.ts
   var CIRCULAR_LAYOUT_DIAL_START_ANGLE = 135;
@@ -1977,6 +1977,7 @@
       }
       _onShadowPointerDown(event) {
         if (!(event instanceof PointerEvent)) return;
+        this._suppressNextFanTap = false;
         const path = event.composedPath();
         const slider = path.find(
           (node) => node instanceof HTMLInputElement && node.type === "range" && Boolean(node.dataset?.fanControl)
@@ -2323,11 +2324,14 @@
       }
       _onShadowKeyDown(event) {
         if (!(event instanceof KeyboardEvent) || !["Enter", " "].includes(event.key)) return;
+        this._suppressNextFanTap = false;
         const target = event.composedPath()[0];
         if (target instanceof HTMLElement && !(target instanceof HTMLButtonElement) && target.dataset.fanAction === "body") this._onShadowClick(event);
       }
       _onShadowClick(event) {
         const path = event.composedPath();
+        const suppressTap = this._suppressNextFanTap;
+        this._suppressNextFanTap = false;
         const slider = path.find(
           (node) => node instanceof HTMLInputElement && Boolean(node.dataset?.fanControl)
         );
@@ -2347,8 +2351,7 @@
           if (zone === "body" && window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
             return;
           }
-          if (this._suppressNextFanTap) {
-            this._suppressNextFanTap = false;
+          if (suppressTap) {
             return;
           }
           const tapEffect = this._resolveFanTapEffect(zone);

@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.1-alpha.1";
+  var CARD_VERSION = "3.0.1-alpha.2";
 
   // src/cards/light/light-constants.ts
   var CARD_TAG = "nodalia-light-card";
@@ -2333,6 +2333,7 @@
       }
       _onShadowPointerDown(event) {
         if (!(event instanceof PointerEvent)) return;
+        this._suppressNextLightTap = false;
         const slider = event.composedPath().find(
           (node) => node instanceof HTMLInputElement && node.type === "range" && Boolean(node.dataset.lightControl)
         );
@@ -2598,11 +2599,14 @@
       }
       _onShadowKeyDown(event) {
         if (!(event instanceof KeyboardEvent) || !["Enter", " "].includes(event.key)) return;
+        this._suppressNextLightTap = false;
         const target = event.composedPath()[0];
         if (target instanceof HTMLElement && !(target instanceof HTMLButtonElement) && target.dataset.lightAction === "body") this._onShadowClick(event);
       }
       _onShadowClick(event) {
         const path = event.composedPath();
+        const suppressTap = this._suppressNextLightTap;
+        this._suppressNextLightTap = false;
         const slider = path.find(
           (node) => node instanceof HTMLInputElement && Boolean(node.dataset.lightControl)
         );
@@ -2620,10 +2624,7 @@
           if (window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
             return;
           }
-          if (this._suppressNextLightTap) {
-            this._suppressNextLightTap = false;
-            event.preventDefault();
-            event.stopPropagation();
+          if (suppressTap) {
             return;
           }
           const effect = this._resolveTapEffect(zone);

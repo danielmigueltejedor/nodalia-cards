@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.1-alpha.1";
+  var CARD_VERSION = "3.0.1-alpha.2";
 
   // src/shared/device-control-geometry.ts
   var CIRCULAR_LAYOUT_DIAL_START_ANGLE = 135;
@@ -1120,6 +1120,8 @@
       }
       _onShadowClick(event) {
         const path = event.composedPath();
+        const suppressTap = this._suppressNextCoverTap;
+        this._suppressNextCoverTap = false;
         const slider = path.find((node) => node instanceof HTMLInputElement && Boolean(node.dataset.coverControl));
         if (slider) return;
         const button = path.find((node) => node instanceof HTMLElement && Boolean(node.dataset.coverAction));
@@ -1132,8 +1134,7 @@
             if (coverAction === "body" && window.NodaliaUtils?.isNodaliaSliderChromeHit?.(event)) {
               return;
             }
-            if (this._suppressNextCoverTap) {
-              this._suppressNextCoverTap = false;
+            if (suppressTap) {
               return;
             }
             this._triggerHaptic();
@@ -1222,6 +1223,7 @@
       }
       _onPointerDown(event) {
         if (!(event instanceof PointerEvent)) return;
+        this._suppressNextCoverTap = false;
         const path = event.composedPath();
         const slider = path.find(
           (node) => node instanceof HTMLInputElement && node.type === "range" && Boolean(node.dataset.coverControl)
