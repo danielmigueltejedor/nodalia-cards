@@ -26,6 +26,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Raster map providers can bake the robot and path into a single image. These frames still update as images; the card preserves its DOM and independent overlays rather than inventing separate robot/path data.
 - State, map identity, selection, base dimensions, stale/failed frames, particle direction and reduced-motion regressions have dedicated tests. See the [3.0.1 alpha audit](./docs/ALPHA_3_0_1_AUDIT.md) for validation and comparable performance measurements.
 
+### Measured map updates against 3.0.0
+
+**Twenty new map frames, synchronous work median:**
+
+| Reference browser | 3.0.0 | 3.0.1-alpha.1 | Change |
+|---|---:|---:|---:|
+| Chromium | 55.7 ms | 24.3 ms | **−56.4%** |
+| WebKit | 57 ms | 20 ms | **−64.9%** |
+| iPhone WebKit emulation | 60 ms | 22 ms | **−63.3%** |
+
+- Frame updates eliminate the twenty full view/overlay builds. In 120 robot-metadata updates, map DOM mutations fall from 960 to zero and unchanged layers retain identity.
+- 798 samples, two warmups and seven alternating rounds per profile on the reference M4 Mac; verified stable asset versus clean local alpha candidate. This is a targeted maintenance diagnostic, with Firefox compatibility checked separately on Linux.
+- No global speed claim: some Lock/metadata/selection updates have higher synchronous costs. Raw bundle grows 0.094%; gzip falls 0.38%. Full timings, p95, memory, source/asset hashes and physical-device limits are in the [transparent benchmark report](./docs/benchmarks/3.0.1-alpha.1-maintenance.md).
+
 ## [3.0.0-rc.1] - 2026-10-05
 
 ### Changed
