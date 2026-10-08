@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.1";
+  var CARD_VERSION = "3.0.2-alpha.1";
 
   // src/cards/news/news-constants.ts
   var CARD_TAG = "nodalia-news-card";
@@ -1370,12 +1370,6 @@
           startIndex: this._magazineIndex
         };
         this._attachMagazineSwipeWindowListeners();
-        if (typeof viewport.setPointerCapture === "function") {
-          try {
-            viewport.setPointerCapture(event.pointerId);
-          } catch (_err) {
-          }
-        }
       }
       _onWindowMagazinePointerMove(event) {
         if (!(event instanceof PointerEvent)) return;
@@ -1394,6 +1388,10 @@
           if (!swipe.dragging) {
             this._cancelMagazineSwipe();
             return;
+          }
+          try {
+            swipe.viewport.setPointerCapture(event.pointerId);
+          } catch (_err) {
           }
         }
         if (!swipe.dragging) {
