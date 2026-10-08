@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.1";
+  var CARD_VERSION = "3.0.2-alpha.1";
 
   // src/cards/scenes/scenes-constants.ts
   var CARD_TAG = "nodalia-scenes-card";
@@ -355,7 +355,7 @@
     dashboardScrollRestoreGeneration += 1;
   }
   function sanitizeCssValue(value, fallback) {
-    const raw = String(value ?? "").trim();
+    const raw = String(value ?? "").replace(/[\t\n\f\r]+/g, " ").trim();
     const safeFallback = String(fallback ?? "").trim();
     if (!raw) {
       return safeFallback;

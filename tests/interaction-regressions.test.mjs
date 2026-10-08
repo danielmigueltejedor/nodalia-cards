@@ -833,6 +833,9 @@ test("NodaliaUtils rejects CSS and markup injection in style values", () => {
 
   assert.equal(sanitizeCssValue("28px", "12px"), "28px");
   assert.equal(sanitizeCssValue("red;} </style><img src=x>", "var(--primary-color)"), "var(--primary-color)");
+  // Multi-line YAML (> or |) values keep working; other control characters stay rejected.
+  assert.equal(sanitizeCssValue("radial-gradient(circle, red, transparent),\n\nvar(--ha-card-background)\n", "x"), "radial-gradient(circle, red, transparent), var(--ha-card-background)");
+  assert.equal(sanitizeCssValue("red\u0000", "fallback"), "fallback");
   const safe = sanitizeStyleTree({ card: { padding: "12px; color:red", opacity: "not-a-number" } }, {
     card: { padding: "16px", opacity: 0.5 },
   });

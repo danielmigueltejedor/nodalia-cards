@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.1";
+  var CARD_VERSION = "3.0.2-alpha.1";
 
   // src/cards/advance-vacuum/advance-vacuum-constants.ts
   var CARD_TAG = "nodalia-advance-vacuum-card";
@@ -510,7 +510,7 @@
     return parseFiniteNumericValue(typeof value === "string" ? value.replace(",", ".") : value);
   }
   function sanitizeCssValue(value, fallback) {
-    const raw = String(value ?? "").trim();
+    const raw = String(value ?? "").replace(/[\t\n\f\r]+/g, " ").trim();
     const safeFallback = String(fallback ?? "").trim();
     if (!raw) {
       return safeFallback;
@@ -6793,7 +6793,7 @@
           const dockSettingDescriptors = this._getDockSettingDescriptors(state);
           const activeModePanelPresetConfig = this._getActiveModePanelPresetConfig(state);
           const activeDockPanelSectionConfig = this._getDockPanelSectionConfig();
-          const isRoutinesMode = currentMode.id === "routines";
+          const isRoutinesMode = currentMode.id === "routines" && !isCleaningSessionActive;
           const showPrimaryActionButton = !isRoutinesMode;
           const showModeMenuButton = !isRoutinesMode && (modeDescriptors.length > 0 || this._activeMode !== "all");
           const showDockMenuButton = !isRoutinesMode && (dockControlDescriptors.length > 0 || dockSettingDescriptors.length > 0);

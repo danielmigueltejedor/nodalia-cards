@@ -202,6 +202,8 @@ class NodaliaInsigniaCardEditor extends HTMLElement {
 
     const nextValue = this._readFieldValue(input);
     this._setFieldValue(input.dataset.field, nextValue);
+    // Automatic tint ignores the manual color; choosing one means using it.
+    if (input.dataset.field === "styles.tint.color") this._setFieldValue("tint_auto", false);
     this._setEditorConfig();
 
     if (event.type === "change") {

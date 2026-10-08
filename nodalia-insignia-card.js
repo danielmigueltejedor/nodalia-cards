@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.1";
+  var CARD_VERSION = "3.0.2-alpha.1";
 
   // src/cards/insignia/insignia-constants.ts
   var CARD_TAG = "nodalia-insignia-card";
@@ -1030,7 +1030,7 @@
         const dimIcon = this._shouldDimIcon(state);
         const tint = sanitizeCssValue(this._getTintColor(state), DEFAULT_CONFIG.styles.tint.color);
         const strongTint = this._shouldApplyStrongCardTint(state);
-        const cardBackground = strongTint ? `linear-gradient(135deg, color-mix(in srgb, ${tint} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${tint} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)` : styles.card.background;
+        const cardBackground = strongTint ? `linear-gradient(135deg, color-mix(in srgb, ${tint} 18%, transparent) 0%, color-mix(in srgb, ${tint} 10%, transparent) 52%, transparent 100%), ${styles.card.background}` : styles.card.background;
         const cardBorder = strongTint ? `1px solid color-mix(in srgb, ${tint} 32%, var(--divider-color))` : styles.card.border;
         const cardShadow = strongTint ? `${styles.card.box_shadow}, inset 0 1px 0 color-mix(in srgb, ${tint} 28%, rgba(255, 255, 255, 0.35))` : styles.card.box_shadow;
         const unavailable = config.entity && isUnavailableState(state);
@@ -1424,6 +1424,7 @@
         event.stopPropagation();
         const nextValue = this._readFieldValue(input);
         this._setFieldValue(input.dataset.field, nextValue);
+        if (input.dataset.field === "styles.tint.color") this._setFieldValue("tint_auto", false);
         this._setEditorConfig();
         if (event.type === "change") {
           this._emitConfig();

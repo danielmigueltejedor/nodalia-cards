@@ -6645,7 +6645,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       const dockSettingDescriptors = this._getDockSettingDescriptors(state);
       const activeModePanelPresetConfig = this._getActiveModePanelPresetConfig(state);
       const activeDockPanelSectionConfig = this._getDockPanelSectionConfig();
-      const isRoutinesMode = currentMode.id === "routines";
+      // The routines picker replaces the controls only while idle. A session hides
+      // the mode tabs and routines, so it must keep pause/return and panels (#326).
+      const isRoutinesMode = currentMode.id === "routines" && !isCleaningSessionActive;
       const showPrimaryActionButton = !isRoutinesMode;
       const showModeMenuButton = !isRoutinesMode && (modeDescriptors.length > 0 || this._activeMode !== "all");
       const showDockMenuButton = !isRoutinesMode && (dockControlDescriptors.length > 0 || dockSettingDescriptors.length > 0);

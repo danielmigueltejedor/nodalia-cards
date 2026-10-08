@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.1";
+  var CARD_VERSION = "3.0.2-alpha.1";
 
   // src/cards/circular-gauge/circular-gauge-constants.ts
   var CARD_TAG = "nodalia-circular-gauge-card";
@@ -336,7 +336,7 @@
     return config;
   }
   function sanitizeCssValue(value, fallback) {
-    const raw = String(value ?? "").trim();
+    const raw = String(value ?? "").replace(/[\t\n\f\r]+/g, " ").trim();
     const safeFallback = String(fallback ?? "").trim();
     if (!raw) {
       return safeFallback;

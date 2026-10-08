@@ -655,8 +655,10 @@ class NodaliaInsigniaCard extends HTMLElement {
     const dimIcon = this._shouldDimIcon(state);
     const tint = sanitizeCssValue(this._getTintColor(state), DEFAULT_CONFIG.styles.tint.color);
     const strongTint = this._shouldApplyStrongCardTint(state);
+    // Layer the tint over the configured background instead of color-mixing into it:
+    // identical over a solid color, and still valid when the background is a gradient.
     const cardBackground = strongTint
-      ? `linear-gradient(135deg, color-mix(in srgb, ${tint} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${tint} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`
+      ? `linear-gradient(135deg, color-mix(in srgb, ${tint} 18%, transparent) 0%, color-mix(in srgb, ${tint} 10%, transparent) 52%, transparent 100%), ${styles.card.background}`
       : styles.card.background;
     const cardBorder = strongTint
       ? `1px solid color-mix(in srgb, ${tint} 32%, var(--divider-color))`
