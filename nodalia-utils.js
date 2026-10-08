@@ -128,7 +128,7 @@
       return value !== null && typeof value === "object" && !Array.isArray(value);
     }
     function sanitizeCssValue(value, fallback = "") {
-      const raw = String(value ?? "").trim();
+      const raw = String(value ?? "").replace(/[\t\n\f\r]+/g, " ").trim();
       const safeFallback = String(fallback ?? "").trim();
       if (!raw) {
         return safeFallback;

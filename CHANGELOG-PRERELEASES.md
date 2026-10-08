@@ -14,6 +14,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **News Card:** "Read more" and the article open that item's URL again with a mouse in the default magazine layout. The carousel captured the pointer on every press, so desktop clicks never reached the article; it now captures only once a horizontal swipe starts. Touch, keyboard and swipes are unchanged. Closes #325.
 - **Advanced Vacuum:** after starting a routine, the card keeps its pause, modes and dock controls for the whole cleaning session instead of showing an empty footer, and the routine list returns when the session ends. Closes #326.
+- **Insignia:** choosing a manual tint color in the visual editor now recolors the card (it turns automatic tint off, which ignored the manual color). Gradient backgrounds are kept under the tint.
+- **All cards:** style values written as multi-line YAML (`>` or `|`), such as long gradients, are no longer discarded and replaced by the default.
 
 ---
 
