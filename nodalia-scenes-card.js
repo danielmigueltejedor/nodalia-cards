@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.1";
+  var CARD_VERSION = "3.0.2-alpha.2";
 
   // src/cards/scenes/scenes-constants.ts
   var CARD_TAG = "nodalia-scenes-card";
@@ -559,6 +559,9 @@
           },
           markHoldConsumedClick: () => {
             this._suppressNextSceneTap = true;
+          },
+          releaseHoldConsumedClick: () => {
+            this._suppressNextSceneTap = false;
           }
         }) : () => {
         };

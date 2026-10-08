@@ -1066,7 +1066,7 @@
   }
 
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.1";
+  var CARD_VERSION = "3.0.2-alpha.2";
 
   // src/cards/camera/camera-constants.ts
   var CARD_TAG = "nodalia-camera-card";
@@ -1988,6 +1988,9 @@
           },
           markHoldConsumedClick: () => {
             this._suppressNextPrimaryClick = true;
+          },
+          releaseHoldConsumedClick: () => {
+            this._suppressNextPrimaryClick = false;
           }
         }) || (() => {
         });

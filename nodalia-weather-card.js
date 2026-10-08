@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.1";
+  var CARD_VERSION = "3.0.2-alpha.2";
 
   // src/cards/weather/weather-constants.ts
   var CARD_TAG = "nodalia-weather-card";
@@ -791,6 +791,9 @@
           markHoldConsumedClick: () => {
             this._suppressNextWeatherTap = true;
             window.NodaliaUtils?.cancelCardZoneTap?.(this);
+          },
+          releaseHoldConsumedClick: () => {
+            this._suppressNextWeatherTap = false;
           }
         }) : () => {
         };

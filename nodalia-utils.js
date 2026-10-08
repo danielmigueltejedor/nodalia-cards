@@ -1305,6 +1305,9 @@
       const shouldBeginHold = typeof options.shouldBeginHold === "function" ? options.shouldBeginHold : () => true;
       const markHoldConsumedClick = typeof options.markHoldConsumedClick === "function" ? options.markHoldConsumedClick : () => {
       };
+      const releaseHoldConsumedClick = typeof options.releaseHoldConsumedClick === "function" ? options.releaseHoldConsumedClick : () => {
+      };
+      let holdClickPending = false;
       let timer = null;
       let active = null;
       function clearWindowListeners() {
@@ -1347,6 +1350,10 @@
         if (!(ev instanceof PointerEvent)) {
           return;
         }
+        if (holdClickPending && ev.isPrimary !== false) {
+          holdClickPending = false;
+          releaseHoldConsumedClick();
+        }
         if (typeof ev.button === "number" && ev.button !== 0) {
           return;
         }
@@ -1372,6 +1379,7 @@
           const z = active.zone;
           resetTracking();
           options.onHold(z);
+          holdClickPending = true;
           markHoldConsumedClick();
         }, holdMs);
         window.addEventListener("pointerup", onWindowPointerUp, true);
@@ -1393,6 +1401,7 @@
           host.removeEventListener("pointerdown", onPointerDownCapture, true);
           attached = false;
         }
+        holdClickPending = false;
         resetTracking();
       };
       disconnect.reconnect = reconnect;

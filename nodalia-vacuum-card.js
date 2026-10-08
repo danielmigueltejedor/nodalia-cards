@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.1";
+  var CARD_VERSION = "3.0.2-alpha.2";
 
   // src/cards/vacuum/vacuum-constants.ts
   var CARD_TAG = "nodalia-vacuum-card";
@@ -706,6 +706,9 @@
           },
           markHoldConsumedClick: () => {
             this._suppressNextVacuumTap = true;
+          },
+          releaseHoldConsumedClick: () => {
+            this._suppressNextVacuumTap = false;
           }
         }) : () => {
         };

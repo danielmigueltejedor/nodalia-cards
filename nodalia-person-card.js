@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.1";
+  var CARD_VERSION = "3.0.2-alpha.2";
 
   // src/cards/person/person-constants.ts
   var CARD_TAG = "nodalia-person-card";
@@ -423,6 +423,9 @@
           markHoldConsumedClick: () => {
             this._suppressNextPersonTap = true;
             window.NodaliaUtils?.cancelCardZoneTap?.(this);
+          },
+          releaseHoldConsumedClick: () => {
+            this._suppressNextPersonTap = false;
           }
         }) : () => {
         };
