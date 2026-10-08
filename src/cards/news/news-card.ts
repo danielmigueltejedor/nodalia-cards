@@ -660,12 +660,17 @@ class NodaliaNewsCard extends HTMLElement {
       startIndex: this._magazineIndex,
     };
     this._attachMagazineSwipeWindowListeners();
-    if (typeof viewport.setPointerCapture === "function") {
-      try {
-        viewport.setPointerCapture(event.pointerId);
-      } catch (_err) {
-        // Ignore capture failures on unsupported browsers.
-      }
+  }
+
+  _captureMagazineSwipe(swipe: MagazineSwipeState) {
+    const viewport = swipe.viewport;
+    if (typeof viewport.setPointerCapture !== "function") {
+      return;
+    }
+    try {
+      viewport.setPointerCapture(swipe.pointerId);
+    } catch (_err) {
+      // Ignore capture failures on unsupported browsers.
     }
   }
 
@@ -688,6 +693,10 @@ class NodaliaNewsCard extends HTMLElement {
         this._cancelMagazineSwipe();
         return;
       }
+      // Capturing on pointerdown retargets the click to the viewport, so a tap
+      // on the article never reaches its button. Capture only once the gesture
+      // is a horizontal drag.
+      this._captureMagazineSwipe(swipe);
     }
     if (!swipe.dragging) {
       return;

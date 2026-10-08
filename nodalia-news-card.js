@@ -1370,11 +1370,15 @@
           startIndex: this._magazineIndex
         };
         this._attachMagazineSwipeWindowListeners();
-        if (typeof viewport.setPointerCapture === "function") {
-          try {
-            viewport.setPointerCapture(event.pointerId);
-          } catch (_err) {
-          }
+      }
+      _captureMagazineSwipe(swipe) {
+        const viewport = swipe.viewport;
+        if (typeof viewport.setPointerCapture !== "function") {
+          return;
+        }
+        try {
+          viewport.setPointerCapture(swipe.pointerId);
+        } catch (_err) {
         }
       }
       _onWindowMagazinePointerMove(event) {
@@ -1395,6 +1399,7 @@
             this._cancelMagazineSwipe();
             return;
           }
+          this._captureMagazineSwipe(swipe);
         }
         if (!swipe.dragging) {
           return;
