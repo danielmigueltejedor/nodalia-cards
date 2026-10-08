@@ -1068,7 +1068,7 @@
         const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
         const effectiveNameChipMaxWidth = `${Math.max(120, Math.min(parseSizeToPixels(styles.name_chip_max_width, 170), compactLayout ? 148 : 170))}px`;
         const cardBackground = value === null ? styles.card.background : `
-        linear-gradient(135deg, color-mix(in srgb, ${accentColor} 22%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 12%, ${styles.card.background}) 56%, ${styles.card.background} 100%)
+        linear-gradient(135deg, color-mix(in srgb, ${accentColor} 22%, transparent) 0%, color-mix(in srgb, ${accentColor} 12%, transparent) 56%, transparent 100%), ${styles.card.background}
       `.trim();
         const cardBorder = value === null ? styles.card.border : `1px solid color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`;
         const cardShadow = value === null ? styles.card.box_shadow : `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.16))`;

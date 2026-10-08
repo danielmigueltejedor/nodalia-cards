@@ -4716,10 +4716,11 @@ class NodaliaClimateCard extends HTMLElement {
       !isRangeMode && !noSetpointDial && climateFinite(ariaDialSemanticValue)
         ? ariaDialSemanticValue
         : null;
+    // Tint layered over the configured background: color-mix() would reject a gradient.
     const cardBackground = isOff
       ? styles.card.background
       : `
-        linear-gradient(135deg, color-mix(in srgb, ${accentColor} 22%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 12%, ${styles.card.background}) 56%, ${styles.card.background} 100%)
+        linear-gradient(135deg, color-mix(in srgb, ${accentColor} 22%, transparent) 0%, color-mix(in srgb, ${accentColor} 12%, transparent) 56%, transparent 100%), ${styles.card.background}
       `.trim();
     const cardBorder = isOff
       ? styles.card.border

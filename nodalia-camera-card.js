@@ -3151,7 +3151,7 @@
         const effectivePadding = feedLayout ? "0" : styles.card.padding || DEFAULT_CONFIG.styles.card.padding;
         const effectiveGap = feedLayout ? "0" : styles.card.gap || DEFAULT_CONFIG.styles.card.gap;
         const previewRadius = feedLayout ? "0" : escapeHtml(String(styles.preview?.border_radius || DEFAULT_CONFIG.styles.preview.border_radius || "18px"));
-        const cardBackground = unavailable ? styles.card.background : securityLayout ? `linear-gradient(180deg, color-mix(in srgb, #ff4d6d 10%, ${styles.card.background}) 0%, ${styles.card.background} 100%)` : styles.card.background;
+        const cardBackground = unavailable ? styles.card.background : securityLayout ? `linear-gradient(180deg, color-mix(in srgb, #ff4d6d 10%, transparent) 0%, transparent 100%), ${styles.card.background}` : styles.card.background;
         const cardBorder = securityLayout && !unavailable ? "1px solid color-mix(in srgb, #ff4d6d 28%, var(--divider-color))" : styles.card.border;
         const showHeader = config.show_name !== false || stateLabel;
         const expandedEntity = this._expandedEntityId || primaryEntity;

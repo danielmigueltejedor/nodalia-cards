@@ -1290,7 +1290,7 @@
         ].filter(Boolean);
         const actions = this._getModeDefinitions(state);
         const showCodeInput = this._shouldShowCodeInput(state);
-        const cardBackground = isActive ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 7%, ${styles.card.background}) 56%, ${styles.card.background} 100%)` : styles.card.background;
+        const cardBackground = isActive ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, color-mix(in srgb, ${accentColor} 7%, transparent) 56%, transparent 100%), ${styles.card.background}` : styles.card.background;
         const cardBorder = isActive ? `1px solid color-mix(in srgb, ${accentColor} 24%, var(--divider-color))` : styles.card.border;
         const cardShadow = isActive ? `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))` : styles.card.box_shadow;
         const titleSize = isCompactLayout ? `${Math.max(12, Math.min(parseSizeToPixels(styles.title_size, 14), 13))}px` : styles.title_size;

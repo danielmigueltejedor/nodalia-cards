@@ -1181,7 +1181,7 @@
         const effectiveCardHeightPx = singleRowLayout ? Math.max(54, avatarSizePx + singleRowPaddingY * 2) : avatarSizePx + singleRowPaddingY * 2;
         const effectiveContentMinHeight = `${Math.max(avatarSizePx, effectiveCardHeightPx - singleRowPaddingY * 2)}px`;
         const isUnavailable = isUnavailableState(state);
-        const cardBackground = isUnavailable ? styles.card.background : `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 7%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`;
+        const cardBackground = isUnavailable ? styles.card.background : `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, color-mix(in srgb, ${accentColor} 7%, transparent) 56%, transparent 100%), ${styles.card.background}`;
         const cardBorder = isUnavailable ? styles.card.border : `1px solid color-mix(in srgb, ${accentColor} 24%, var(--divider-color))`;
         const cardShadow = isUnavailable ? styles.card.box_shadow : `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`;
         const animations = this._getAnimationSettings();

@@ -1114,8 +1114,9 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     ].filter(Boolean);
     const actions = this._getModeDefinitions(state);
     const showCodeInput = this._shouldShowCodeInput(state);
+    // Tint layered over the configured background: color-mix() would reject a gradient.
     const cardBackground = isActive
-      ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 7%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`
+      ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, color-mix(in srgb, ${accentColor} 7%, transparent) 56%, transparent 100%), ${styles.card.background}`
       : styles.card.background;
     const cardBorder = isActive
       ? `1px solid color-mix(in srgb, ${accentColor} 24%, var(--divider-color))`

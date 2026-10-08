@@ -1887,7 +1887,8 @@ class NodaliaGraphCard extends HTMLElement {
     const chartBleedLeft = Math.round(padEdges.left);
     const chartBleedRight = Math.round(padEdges.right);
     const chartBleedBottom = Math.round(padEdges.bottom);
-    const cardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`;
+    // Tint layered over the configured background: color-mix() would reject a gradient.
+    const cardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, transparent) 0%, color-mix(in srgb, ${accentColor} 10%, transparent) 52%, transparent 100%), ${styles.card.background}`;
     const computedCardBorder = `1px solid color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
     const cardBorder = String(styles.card.border || "").trim() && styles.card.border !== DEFAULT_CONFIG.styles.card.border
       ? styles.card.border

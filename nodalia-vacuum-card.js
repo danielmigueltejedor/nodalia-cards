@@ -2576,7 +2576,7 @@
           <span>${batteryLevel}%</span>
         </span>
       ` : "";
-        const cardBackground = isTintedState ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)` : styles.card.background;
+        const cardBackground = isTintedState ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, transparent) 0%, color-mix(in srgb, ${accentColor} 10%, transparent) 52%, transparent 100%), ${styles.card.background}` : styles.card.background;
         const cardBorder = isTintedState ? `color-mix(in srgb, ${accentColor} 34%, var(--divider-color))` : styles.card.border;
         const cardShadow = isTintedState ? `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))` : styles.card.box_shadow;
         if (config.show_state_chip !== false) {

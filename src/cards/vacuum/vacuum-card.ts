@@ -2539,8 +2539,9 @@ class NodaliaVacuumCard extends HTMLElement {
         </span>
       `
       : "";
+    // Tint layered over the configured background: color-mix() would reject a gradient.
     const cardBackground = isTintedState
-      ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`
+      ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, transparent) 0%, color-mix(in srgb, ${accentColor} 10%, transparent) 52%, transparent 100%), ${styles.card.background}`
       : styles.card.background;
     const cardBorder = isTintedState
       ? `color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`

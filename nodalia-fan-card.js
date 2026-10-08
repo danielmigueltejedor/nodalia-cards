@@ -2485,7 +2485,7 @@
         if (!presetModes.length) {
           this._presetPanelOpen = false;
         }
-        const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 54%, ${styles.card.background} 100%)`;
+        const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, transparent) 0%, color-mix(in srgb, ${accentColor} 10%, transparent) 54%, transparent 100%), ${styles.card.background}`;
         const onCardBorder = `color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`;
         const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.18))`;
         const animations = this._getAnimationSettings();
@@ -3594,7 +3594,7 @@
             transform: scale(0.994);
           }
           55% {
-            background: linear-gradient(135deg, color-mix(in srgb, ${accentColor} 26%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 54%, ${styles.card.background} 100%);
+            background: linear-gradient(135deg, color-mix(in srgb, ${accentColor} 26%, transparent) 0%, color-mix(in srgb, ${accentColor} 14%, transparent) 54%, transparent 100%), ${styles.card.background};
             box-shadow: ${styles.card.box_shadow}, 0 12px 26px color-mix(in srgb, ${accentColor} 12%, rgba(0, 0, 0, 0.16));
             transform: scale(1);
           }
