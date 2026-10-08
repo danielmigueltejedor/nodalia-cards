@@ -895,8 +895,14 @@ test("Room Summary fires hold_action and suppresses the following tap", async ({
   await primary.dispatchEvent("pointerdown", { pointerId: 7, pointerType: "touch", button: 0, clientX: 10, clientY: 10 });
   await page.waitForTimeout(560);
   await primary.dispatchEvent("pointerup", { pointerId: 7, pointerType: "touch", button: 0, clientX: 10, clientY: 10 });
-  await primary.click();
+  // The release's own click follows pointerup directly, without a new pointerdown.
+  await primary.dispatchEvent("click");
   await expect.poll(() => page.evaluate(() => window.roomActions)).toEqual(["/hold"]);
+  await page.waitForTimeout(400);
+  expect(await page.evaluate(() => window.roomActions)).toEqual(["/hold"]);
+  // A new press is a deliberate tap and must run the tap action.
+  await primary.click();
+  await expect.poll(() => page.evaluate(() => window.roomActions)).toEqual(["/hold", "/tap"]);
 });
 
 test("primary surfaces activate by keyboard and dialogs restore focus", async ({ page }) => {
