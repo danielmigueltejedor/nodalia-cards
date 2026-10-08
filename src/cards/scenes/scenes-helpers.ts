@@ -233,7 +233,8 @@ export function cancelDashboardScrollRestore() {
 }
 
 export function sanitizeCssValue(value: unknown, fallback: unknown) {
-  const raw = String(value ?? "").trim();
+  // Multi-line YAML (> or |) yields line breaks; in CSS they are plain whitespace.
+  const raw = String(value ?? "").replace(/[\t\n\f\r]+/g, " ").trim();
   const safeFallback = String(fallback ?? "").trim();
   if (!raw) {
     return safeFallback;
