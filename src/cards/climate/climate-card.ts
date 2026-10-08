@@ -383,6 +383,9 @@ class NodaliaClimateCard extends HTMLElement {
               this._suppressNextClimateTap = true;
               window.NodaliaUtils?.cancelCardZoneTap?.(this);
             },
+            releaseHoldConsumedClick: () => {
+              this._suppressNextClimateTap = false;
+            },
           })
         : () => {};
     this._animateContentOnNextRender = true;

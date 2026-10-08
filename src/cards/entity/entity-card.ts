@@ -208,6 +208,9 @@ class NodaliaEntityCard extends HTMLElement {
               this._suppressNextEntityTap = true;
               window.NodaliaUtils?.cancelCardZoneTap?.(this);
             },
+            releaseHoldConsumedClick: () => {
+              this._suppressNextEntityTap = false;
+            },
           })
         : () => {};
     }

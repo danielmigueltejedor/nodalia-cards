@@ -119,6 +119,9 @@ class NodaliaRoomSummaryCard extends HTMLElement {
               this._suppressNextPrimaryClick = true;
               window.NodaliaUtils?.cancelCardZoneTap?.(this);
             },
+            releaseHoldConsumedClick: () => {
+              this._suppressNextPrimaryClick = false;
+            },
           })
         : () => {};
   }

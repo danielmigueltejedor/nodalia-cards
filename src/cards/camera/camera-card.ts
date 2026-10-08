@@ -246,6 +246,7 @@ class NodaliaCameraCard extends HTMLElement {
       shouldBeginHold: () => normalizeTextKey(this._config.hold_action || "none") !== "none",
       onHold: entityId => { this._triggerHaptic(); this._performHoldAction(entityId); },
       markHoldConsumedClick: () => { this._suppressNextPrimaryClick = true; },
+      releaseHoldConsumedClick: () => { this._suppressNextPrimaryClick = false; },
     }) || (() => {});
   }
 

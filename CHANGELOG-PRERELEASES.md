@@ -8,6 +8,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## Unreleased
+
+### Fixed
+
+- **Person, Insignia, Weather, Entity and Vacuum (and Climate, Scenes, Room Summary and Camera, which share the same hold handling):** after a long press whose release landed off the card (the finger slid away, or the hold opened a dialog over it), the next real tap did nothing. The release click that the card was waiting to ignore never arrived, so the card kept ignoring the following tap. Cards now forget it on the next press.
+
+---
+
 ## [3.0.2-alpha.1] - 2026-10-08
 
 ### Fixed

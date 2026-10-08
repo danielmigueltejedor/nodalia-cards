@@ -100,3 +100,7 @@ Firefox failing before loading any fixture is an unavailable browser, not a pass
 ### Scroll stability on interaction
 
 `tests/browser/interaction-scroll-stability.spec.mjs` uses a long Sections page with a block `ha-card`. WebKit (desktop and iPhone) runs scroll anchoring; a re-rendered query container made it scroll by roughly the card's content height (#320). HA feedback, Humidifier power/mode/slider presses at several viewport sizes and positions and keyboard activation must leave the scroll position unchanged and keep focus on the re-rendered control.
+
+### Hold release off the card
+
+A long press runs the hold action and arms a one-shot flag that swallows the click synthesized by the release. When the release lands off the card (the finger slides away, or the hold opens a dialog under it) that click never arrives. `tests/browser/hold-release-click.spec.mjs` holds Person, Insignia, Weather, Entity and Vacuum cards, releases far away from them and requires the next real tap to run its action. `bindHostPointerHoldGesture` now calls `releaseHoldConsumedClick` on the next primary press so every card clears its flag.

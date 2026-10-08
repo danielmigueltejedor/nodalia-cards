@@ -99,6 +99,9 @@ class NodaliaScenesCard extends HTMLElement {
             markHoldConsumedClick: () => {
               this._suppressNextSceneTap = true;
             },
+            releaseHoldConsumedClick: () => {
+              this._suppressNextSceneTap = false;
+            },
           })
         : () => {};
     }

@@ -162,6 +162,9 @@ class NodaliaWeatherCard extends HTMLElement {
               this._suppressNextWeatherTap = true;
               window.NodaliaUtils?.cancelCardZoneTap?.(this);
             },
+            releaseHoldConsumedClick: () => {
+              this._suppressNextWeatherTap = false;
+            },
           })
         : () => {};
     this.shadowRoot?.addEventListener("click", this._onShadowClick);

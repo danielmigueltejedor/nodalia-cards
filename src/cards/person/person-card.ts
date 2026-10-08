@@ -102,6 +102,9 @@ class NodaliaPersonCard extends HTMLElement {
               this._suppressNextPersonTap = true;
               window.NodaliaUtils?.cancelCardZoneTap?.(this);
             },
+            releaseHoldConsumedClick: () => {
+              this._suppressNextPersonTap = false;
+            },
           })
         : () => {};
     this.shadowRoot?.addEventListener("click", this._onShadowClick);

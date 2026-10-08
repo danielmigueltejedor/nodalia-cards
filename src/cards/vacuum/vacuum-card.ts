@@ -200,6 +200,9 @@ class NodaliaVacuumCard extends HTMLElement {
             markHoldConsumedClick: () => {
               this._suppressNextVacuumTap = true;
             },
+            releaseHoldConsumedClick: () => {
+              this._suppressNextVacuumTap = false;
+            },
           })
         : () => {};
     }
