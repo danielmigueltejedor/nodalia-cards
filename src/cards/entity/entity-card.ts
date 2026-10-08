@@ -208,6 +208,9 @@ class NodaliaEntityCard extends HTMLElement {
               this._suppressNextEntityTap = true;
               window.NodaliaUtils?.cancelCardZoneTap?.(this);
             },
+            releaseHoldConsumedClick: () => {
+              this._suppressNextEntityTap = false;
+            },
           })
         : () => {};
     }
@@ -3025,7 +3028,8 @@ class NodaliaEntityCard extends HTMLElement {
     const iconSize = escapeHtml(String(styles.icon?.size ?? "38px"));
     const titleSize = escapeHtml(String(styles.title_size ?? "12px"));
     const surfaceBase = styles.card.background;
-    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${surfaceBase}) 0%, color-mix(in srgb, ${accentColor} 10%, ${surfaceBase}) 52%, ${surfaceBase} 100%)`;
+    // Tint layered over the configured background: color-mix() would reject a gradient.
+    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, transparent) 0%, color-mix(in srgb, ${accentColor} 10%, transparent) 52%, transparent 100%), ${surfaceBase}`;
     const cardBackground = onCardBackground;
     const cardBorder = `1px solid color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
     const cardShadow = `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
@@ -3692,7 +3696,8 @@ class NodaliaEntityCard extends HTMLElement {
       ? resolveEntityBubbleIconGlyphColor(accentColor, state)
       : styles.icon.off_color;
     const surfaceBase = styles.card.background;
-    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${surfaceBase}) 0%, color-mix(in srgb, ${accentColor} 10%, ${surfaceBase}) 52%, ${surfaceBase} 100%)`;
+    // Tint layered over the configured background: color-mix() would reject a gradient.
+    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, transparent) 0%, color-mix(in srgb, ${accentColor} 10%, transparent) 52%, transparent 100%), ${surfaceBase}`;
     const onCardBorder = `color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
     const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
     const cardBackground = isActive

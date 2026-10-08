@@ -246,6 +246,7 @@ class NodaliaCameraCard extends HTMLElement {
       shouldBeginHold: () => normalizeTextKey(this._config.hold_action || "none") !== "none",
       onHold: entityId => { this._triggerHaptic(); this._performHoldAction(entityId); },
       markHoldConsumedClick: () => { this._suppressNextPrimaryClick = true; },
+      releaseHoldConsumedClick: () => { this._suppressNextPrimaryClick = false; },
     }) || (() => {});
   }
 
@@ -1529,10 +1530,11 @@ class NodaliaCameraCard extends HTMLElement {
     const previewRadius = feedLayout
       ? "0"
       : escapeHtml(String(styles.preview?.border_radius || DEFAULT_CONFIG.styles.preview.border_radius || "18px"));
+    // Tint layered over the configured background: color-mix() would reject a gradient.
     const cardBackground = unavailable
       ? styles.card.background
       : securityLayout
-        ? `linear-gradient(180deg, color-mix(in srgb, #ff4d6d 10%, ${styles.card.background}) 0%, ${styles.card.background} 100%)`
+        ? `linear-gradient(180deg, color-mix(in srgb, #ff4d6d 10%, transparent) 0%, transparent 100%), ${styles.card.background}`
         : styles.card.background;
     const cardBorder = securityLayout && !unavailable
       ? "1px solid color-mix(in srgb, #ff4d6d 28%, var(--divider-color))"

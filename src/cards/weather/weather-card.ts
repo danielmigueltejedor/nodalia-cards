@@ -162,6 +162,9 @@ class NodaliaWeatherCard extends HTMLElement {
               this._suppressNextWeatherTap = true;
               window.NodaliaUtils?.cancelCardZoneTap?.(this);
             },
+            releaseHoldConsumedClick: () => {
+              this._suppressNextWeatherTap = false;
+            },
           })
         : () => {};
     this.shadowRoot?.addEventListener("click", this._onShadowClick);
@@ -1497,7 +1500,8 @@ class NodaliaWeatherCard extends HTMLElement {
     const conditionIconColor = configuredIconColor && configuredIconColor !== defaultIconColor
       ? configuredIconColor
       : getConditionReadableIconColor(state?.state, accentColor);
-    const cardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 9%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`;
+    // Tint layered over the configured background: color-mix() would reject a gradient.
+    const cardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, transparent) 0%, color-mix(in srgb, ${accentColor} 9%, transparent) 56%, transparent 100%), ${styles.card.background}`;
     const cardBorder = !configuredBorder || configuredBorder === defaultBorder
       ? `1px solid color-mix(in srgb, ${accentColor} 28%, var(--divider-color))`
       : configuredBorder;

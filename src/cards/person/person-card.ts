@@ -102,6 +102,9 @@ class NodaliaPersonCard extends HTMLElement {
               this._suppressNextPersonTap = true;
               window.NodaliaUtils?.cancelCardZoneTap?.(this);
             },
+            releaseHoldConsumedClick: () => {
+              this._suppressNextPersonTap = false;
+            },
           })
         : () => {};
     this.shadowRoot?.addEventListener("click", this._onShadowClick);
@@ -955,9 +958,10 @@ class NodaliaPersonCard extends HTMLElement {
     const effectiveCardHeightPx = singleRowLayout ? Math.max(54, avatarSizePx + (singleRowPaddingY * 2)) : avatarSizePx + (singleRowPaddingY * 2);
     const effectiveContentMinHeight = `${Math.max(avatarSizePx, effectiveCardHeightPx - (singleRowPaddingY * 2))}px`;
     const isUnavailable = isUnavailableState(state);
+    // Tint layered over the configured background: color-mix() would reject a gradient.
     const cardBackground = isUnavailable
       ? styles.card.background
-      : `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 7%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`;
+      : `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, color-mix(in srgb, ${accentColor} 7%, transparent) 56%, transparent 100%), ${styles.card.background}`;
     const cardBorder = isUnavailable
       ? styles.card.border
       : `1px solid color-mix(in srgb, ${accentColor} 24%, var(--divider-color))`;

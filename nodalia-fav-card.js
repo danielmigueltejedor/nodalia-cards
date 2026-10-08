@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.1";
+  var CARD_VERSION = "3.0.2-alpha.2";
 
   // src/cards/fav/fav-constants.ts
   var CARD_TAG = "nodalia-fav-card";
@@ -1699,7 +1699,7 @@
         const chipHeightPx = Math.max(16, Math.min(parseSizeToPixels(styles.chip_height, 22), isCompactInline ? 18 : 24));
         const chipFontSizePx = Math.max(8.5, Math.min(parseSizeToPixels(styles.chip_font_size, 11), isCompactInline ? 9.5 : 12));
         const iconColor = isActive ? resolveFavBubbleIconGlyphColor(accentColor, state) : this._usesCustomOffColor() ? styles.icon.off_color : "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))";
-        const cardBackground = isActive ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)` : styles.card.background;
+        const cardBackground = isActive ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, transparent) 0%, color-mix(in srgb, ${accentColor} 10%, transparent) 52%, transparent 100%), ${styles.card.background}` : styles.card.background;
         const cardBorder = isActive ? `1px solid color-mix(in srgb, ${accentColor} 32%, var(--divider-color))` : styles.card.border;
         const cardShadow = isActive ? `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))` : styles.card.box_shadow;
         const showTitle = config.show_name !== false && !isMini;

@@ -1320,8 +1320,9 @@ class NodaliaFavCard extends HTMLElement {
       : (this._usesCustomOffColor()
         ? styles.icon.off_color
         : "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))");
+    // Tint layered over the configured background: color-mix() would reject a gradient.
     const cardBackground = isActive
-      ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`
+      ? `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, transparent) 0%, color-mix(in srgb, ${accentColor} 10%, transparent) 52%, transparent 100%), ${styles.card.background}`
       : styles.card.background;
     const cardBorder = isActive
       ? `1px solid color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`

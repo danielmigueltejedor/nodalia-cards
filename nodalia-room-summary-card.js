@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.1";
+  var CARD_VERSION = "3.0.2-alpha.2";
 
   // src/cards/room-summary/room-summary-constants.ts
   var CARD_TAG = "nodalia-room-summary-card";
@@ -653,6 +653,9 @@
           markHoldConsumedClick: () => {
             this._suppressNextPrimaryClick = true;
             window.NodaliaUtils?.cancelCardZoneTap?.(this);
+          },
+          releaseHoldConsumedClick: () => {
+            this._suppressNextPrimaryClick = false;
           }
         }) : () => {
         };

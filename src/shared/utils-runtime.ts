@@ -1558,9 +1558,11 @@ import type {NodaliaUtilsApi,CssStyleDefaults,SanitizedCssStyles,EditorFocusStat
   /**
    * Long-press on the card host (capture): `resolveZone` returns a zone string or null to ignore.
    * After `holdMs`, `onHold(zone)` runs once; `markHoldConsumedClick` should set a flag so the
-   * card's click handler can ignore the following click (synthetic after pointerup).
+   * card's click handler can ignore the following click (synthetic after pointerup). That click is
+   * never delivered when the release lands off the card, so `releaseHoldConsumedClick` runs on the
+   * next primary press and must clear the flag, otherwise it would swallow the following real tap.
    */
-  function bindHostPointerHoldGesture<Zone>(host:UtilsHost, options:{resolveZone:(event:PointerEvent)=>Zone|null;shouldBeginHold?:(zone:Zone,event:PointerEvent)=>boolean;onHold:(zone:Zone)=>void;markHoldConsumedClick?:()=>void;holdMs?:unknown;moveTolerancePx?:unknown}) {
+  function bindHostPointerHoldGesture<Zone>(host:UtilsHost, options:{resolveZone:(event:PointerEvent)=>Zone|null;shouldBeginHold?:(zone:Zone,event:PointerEvent)=>boolean;onHold:(zone:Zone)=>void;markHoldConsumedClick?:()=>void;releaseHoldConsumedClick?:()=>void;holdMs?:unknown;moveTolerancePx?:unknown}) {
     if (!isElementHost(host)) {
       return () => {};
     }
@@ -1577,7 +1579,11 @@ import type {NodaliaUtilsApi,CssStyleDefaults,SanitizedCssStyles,EditorFocusStat
     const markHoldConsumedClick = typeof options.markHoldConsumedClick === "function"
       ? options.markHoldConsumedClick
       : () => {};
+    const releaseHoldConsumedClick = typeof options.releaseHoldConsumedClick === "function"
+      ? options.releaseHoldConsumedClick
+      : () => {};
 
+    let holdClickPending = false;
     let timer:number|null = null;
     let active:{pointerId:number;x:number;y:number;zone:Zone}|null = null;
 
@@ -1625,6 +1631,10 @@ import type {NodaliaUtilsApi,CssStyleDefaults,SanitizedCssStyles,EditorFocusStat
       if (!(ev instanceof PointerEvent)) {
         return;
       }
+      if (holdClickPending && ev.isPrimary !== false) {
+        holdClickPending = false;
+        releaseHoldConsumedClick();
+      }
       if (typeof ev.button === "number" && ev.button !== 0) {
         return;
       }
@@ -1651,6 +1661,7 @@ import type {NodaliaUtilsApi,CssStyleDefaults,SanitizedCssStyles,EditorFocusStat
         const z = active.zone;
         resetTracking();
         options.onHold(z);
+        holdClickPending = true;
         markHoldConsumedClick();
       }, holdMs);
       /** Capture on `window` so `pointerup` / `pointercancel` still run if a modal stops bubbling before the default target phase reaches `window`. */
@@ -1674,6 +1685,7 @@ import type {NodaliaUtilsApi,CssStyleDefaults,SanitizedCssStyles,EditorFocusStat
         host.removeEventListener("pointerdown", onPointerDownCapture, true);
         attached = false;
       }
+      holdClickPending = false;
       resetTracking();
     };
     disconnect.reconnect = reconnect;

@@ -99,6 +99,9 @@ class NodaliaScenesCard extends HTMLElement {
             markHoldConsumedClick: () => {
               this._suppressNextSceneTap = true;
             },
+            releaseHoldConsumedClick: () => {
+              this._suppressNextSceneTap = false;
+            },
           })
         : () => {};
     }
@@ -561,7 +564,8 @@ class NodaliaScenesCard extends HTMLElement {
     const chipBorderRadius = escapeHtml(styles.chip_border_radius);
     const configuredBorder = String(styles.card.border || "").trim();
     const defaultBorder = String(DEFAULT_CONFIG.styles.card.border || "").trim();
-    const cardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 6%, ${styles.card.background}) 48%, ${styles.card.background} 100%)`;
+    // Tint layered over the configured background: color-mix() would reject a gradient.
+    const cardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 14%, transparent) 0%, color-mix(in srgb, ${accentColor} 6%, transparent) 48%, transparent 100%), ${styles.card.background}`;
     const cardBorder = !configuredBorder || configuredBorder === defaultBorder
       ? `1px solid color-mix(in srgb, ${accentColor} 20%, var(--divider-color))`
       : configuredBorder;

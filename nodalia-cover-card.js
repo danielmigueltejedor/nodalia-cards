@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.1";
+  var CARD_VERSION = "3.0.2-alpha.2";
 
   // src/shared/device-control-geometry.ts
   var CIRCULAR_LAYOUT_DIAL_START_ANGLE = 135;
@@ -1759,7 +1759,7 @@
         ${supportsTilt ? `<div class="fan-card__circular-secondary">${this._renderSlider("tilt", tTiltSlider, tilt, { variant: "stack" })}</div>` : ""}
       </div>
     `;
-        const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 54%, ${styles.card.background} 100%)`;
+        const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, transparent) 0%, color-mix(in srgb, ${accentColor} 10%, transparent) 54%, transparent 100%), ${styles.card.background}`;
         const onCardBorder = `color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`;
         const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.18))`;
         this.shadowRoot.innerHTML = `

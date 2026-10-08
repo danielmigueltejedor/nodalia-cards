@@ -32,6 +32,7 @@ export interface NodaliaUtilsApi {
     shouldBeginHold?: (zone: Zone, event: PointerEvent) => boolean;
     onHold: (zone: Zone) => void;
     markHoldConsumedClick?: () => void;
+    releaseHoldConsumedClick?: () => void;
     holdMs?: number; moveTolerancePx?: number;
   }) => HostPointerHoldBinding;
   editorStatesSignature?: (hass: HomeAssistant | null | undefined, language?: string) => string;

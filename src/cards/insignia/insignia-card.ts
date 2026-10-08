@@ -81,6 +81,9 @@ class NodaliaInsigniaCard extends HTMLElement {
             markHoldConsumedClick: () => {
               this._suppressNextInsigniaTap = true;
             },
+            releaseHoldConsumedClick: () => {
+              this._suppressNextInsigniaTap = false;
+            },
           })
         : () => {};
   }

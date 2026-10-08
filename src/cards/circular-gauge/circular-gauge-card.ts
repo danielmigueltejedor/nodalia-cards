@@ -679,10 +679,11 @@ class NodaliaCircularGaugeCard extends HTMLElement {
     const effectiveChipPadding = compactLayout ? "0 9px" : styles.chip_padding;
     const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
     const effectiveNameChipMaxWidth = `${Math.max(120, Math.min(parseSizeToPixels(styles.name_chip_max_width, 170), compactLayout ? 148 : 170))}px`;
+    // Tint layered over the configured background: color-mix() would reject a gradient.
     const cardBackground = value === null
       ? styles.card.background
       : `
-        linear-gradient(135deg, color-mix(in srgb, ${accentColor} 22%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 12%, ${styles.card.background}) 56%, ${styles.card.background} 100%)
+        linear-gradient(135deg, color-mix(in srgb, ${accentColor} 22%, transparent) 0%, color-mix(in srgb, ${accentColor} 12%, transparent) 56%, transparent 100%), ${styles.card.background}
       `.trim();
     const cardBorder = value === null
       ? styles.card.border

@@ -1354,7 +1354,8 @@ class NodaliaCoverCard extends HTMLElement {
         ${supportsTilt ? `<div class="fan-card__circular-secondary">${this._renderSlider("tilt", tTiltSlider, tilt, { variant: "stack" })}</div>` : ""}
       </div>
     `;
-    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 54%, ${styles.card.background} 100%)`;
+    // Tint layered over the configured background: color-mix() would reject a gradient.
+    const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, transparent) 0%, color-mix(in srgb, ${accentColor} 10%, transparent) 54%, transparent 100%), ${styles.card.background}`;
     const onCardBorder = `color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`;
     const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.18))`;
 

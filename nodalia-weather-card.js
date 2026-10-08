@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.1";
+  var CARD_VERSION = "3.0.2-alpha.2";
 
   // src/cards/weather/weather-constants.ts
   var CARD_TAG = "nodalia-weather-card";
@@ -791,6 +791,9 @@
           markHoldConsumedClick: () => {
             this._suppressNextWeatherTap = true;
             window.NodaliaUtils?.cancelCardZoneTap?.(this);
+          },
+          releaseHoldConsumedClick: () => {
+            this._suppressNextWeatherTap = false;
           }
         }) : () => {
         };
@@ -1931,7 +1934,7 @@
         const configuredIconColor = String(styles?.icon?.color || "").trim();
         const defaultIconColor = String(DEFAULT_CONFIG?.styles?.icon?.color || "").trim();
         const conditionIconColor = configuredIconColor && configuredIconColor !== defaultIconColor ? configuredIconColor : getConditionReadableIconColor(state?.state, accentColor);
-        const cardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 9%, ${styles.card.background}) 56%, ${styles.card.background} 100%)`;
+        const cardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, transparent) 0%, color-mix(in srgb, ${accentColor} 9%, transparent) 56%, transparent 100%), ${styles.card.background}`;
         const cardBorder = !configuredBorder || configuredBorder === defaultBorder ? `1px solid color-mix(in srgb, ${accentColor} 28%, var(--divider-color))` : configuredBorder;
         const cardShadow = `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 10%, rgba(0, 0, 0, 0.18))`;
         const forecastMarkup = this._renderForecastDetails(state, accentColor, shouldAnimateEntrance, shouldAnimateForecast);

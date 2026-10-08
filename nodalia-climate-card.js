@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.1";
+  var CARD_VERSION = "3.0.2-alpha.2";
 
   // src/cards/climate/climate-constants.ts
   var CARD_TAG = "nodalia-climate-card";
@@ -1445,6 +1445,9 @@ ${weekdayYaml}
           markHoldConsumedClick: () => {
             this._suppressNextClimateTap = true;
             window.NodaliaUtils?.cancelCardZoneTap?.(this);
+          },
+          releaseHoldConsumedClick: () => {
+            this._suppressNextClimateTap = false;
           }
         }) : () => {
         };
@@ -5083,7 +5086,7 @@ ${weekdayYaml}
         const ariaDialSemanticValue = climateFinite(targetFin) ? targetFin : dialPrimaryReadoutValue;
         const ariaDialValue = !isRangeMode && !noSetpointDial && climateFinite(ariaDialSemanticValue) ? ariaDialSemanticValue : null;
         const cardBackground = isOff ? styles.card.background : `
-        linear-gradient(135deg, color-mix(in srgb, ${accentColor} 22%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 12%, ${styles.card.background}) 56%, ${styles.card.background} 100%)
+        linear-gradient(135deg, color-mix(in srgb, ${accentColor} 22%, transparent) 0%, color-mix(in srgb, ${accentColor} 12%, transparent) 56%, transparent 100%), ${styles.card.background}
       `.trim();
         const cardBorder = isOff ? styles.card.border : `1px solid color-mix(in srgb, ${accentColor} 34%, var(--divider-color))`;
         const cardShadow = isOff ? styles.card.box_shadow : `${styles.card.box_shadow}, 0 18px 36px color-mix(in srgb, ${accentColor} 14%, rgba(0, 0, 0, 0.16))`;

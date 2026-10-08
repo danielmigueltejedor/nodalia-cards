@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.1";
+  var CARD_VERSION = "3.0.2-alpha.2";
 
   // src/cards/light/light-constants.ts
   var CARD_TAG = "nodalia-light-card";
@@ -2760,7 +2760,7 @@
         const colorProgress = currentHue / 360 * 100;
         let stateChipMarkup = "";
         let activeValueChipMarkup = "";
-        const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`;
+        const onCardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, transparent) 0%, color-mix(in srgb, ${accentColor} 10%, transparent) 52%, transparent 100%), ${styles.card.background}`;
         const onCardBorder = `color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
         const onCardShadow = `0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
         const animations = this._getAnimationSettings();
@@ -3860,7 +3860,7 @@
             transform: scale(0.994);
           }
           55% {
-            background: linear-gradient(135deg, color-mix(in srgb, ${accentColor} 26%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 14%, ${styles.card.background}) 52%, ${styles.card.background} 100%);
+            background: linear-gradient(135deg, color-mix(in srgb, ${accentColor} 26%, transparent) 0%, color-mix(in srgb, ${accentColor} 14%, transparent) 52%, transparent 100%), ${styles.card.background};
             box-shadow: ${styles.card.box_shadow}, 0 12px 26px color-mix(in srgb, ${accentColor} 12%, rgba(0, 0, 0, 0.16));
             transform: scale(1);
           }

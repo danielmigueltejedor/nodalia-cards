@@ -716,7 +716,7 @@ test("entity and fav icon bubbles match Light metrics and preserve tint contrast
   const source = read("nodalia-fav-card.js");
   const entitySource = read("nodalia-entity-card.js");
   assert.match(source, /const cardBackground = isActive[\s\S]*linear-gradient/);
-  assert.match(source, /color-mix\(in srgb, \$\{accentColor\} 10%, \$\{styles\.card\.background\}\) 52%/);
+  assert.match(source, /color-mix\(in srgb, \$\{accentColor\} 10%, transparent\) 52%, transparent 100%\), \$\{styles\.card\.background\}`/);
   assert.match(source, /0 16px 32px color-mix\(in srgb, \$\{accentColor\} 18%/);
   assert.match(source, /\.fav-card__icon \{[\s\S]*background: \$\{isActive[\s\S]*color-mix/);
   assert.match(source, /\.fav-card__icon \{[\s\S]*border-radius: 999px;/);
@@ -2704,7 +2704,7 @@ test("visual family tokens stay aligned without changing notifications", () => {
   assert.match(read("nodalia-entity-card.js"), /control:\s*\{[\s\S]*?size: "36px"/);
   assert.match(
     read("nodalia-entity-card.js"),
-    /const surfaceBase = styles\.card\.background;[\s\S]*?const onCardBackground = `linear-gradient\(135deg, color-mix\(in srgb, \$\{accentColor\} 18%, \$\{surfaceBase\}\)/,
+    /const surfaceBase = styles\.card\.background;[\s\S]*?const onCardBackground = `linear-gradient\(135deg, color-mix\(in srgb, \$\{accentColor\} 18%, transparent\)[^`]*transparent 100%\), \$\{surfaceBase\}`/,
   );
   assert.match(
     read("nodalia-entity-card.js"),

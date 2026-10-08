@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.1";
+  var CARD_VERSION = "3.0.2-alpha.2";
 
   // src/cards/graph/graph-constants.ts
   var CARD_TAG = "nodalia-graph-card";
@@ -2068,7 +2068,7 @@
         const chartBleedLeft = Math.round(padEdges.left);
         const chartBleedRight = Math.round(padEdges.right);
         const chartBleedBottom = Math.round(padEdges.bottom);
-        const cardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, ${styles.card.background}) 0%, color-mix(in srgb, ${accentColor} 10%, ${styles.card.background}) 52%, ${styles.card.background} 100%)`;
+        const cardBackground = `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 18%, transparent) 0%, color-mix(in srgb, ${accentColor} 10%, transparent) 52%, transparent 100%), ${styles.card.background}`;
         const computedCardBorder = `1px solid color-mix(in srgb, ${accentColor} 32%, var(--divider-color))`;
         const cardBorder = String(styles.card.border || "").trim() && styles.card.border !== DEFAULT_CONFIG.styles.card.border ? styles.card.border : computedCardBorder;
         const cardShadow = `${styles.card.box_shadow}, 0 16px 32px color-mix(in srgb, ${accentColor} 18%, rgba(0, 0, 0, 0.18))`;
