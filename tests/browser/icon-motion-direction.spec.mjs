@@ -20,7 +20,8 @@ for(const deviceClass of ['humidifier','dehumidifier']) test(`${deviceClass} par
 test('Rain emits below the cloud and behind the foreground icon; reduced motion stops both particle effects',async({page})=>{
   await mount(page,{device_class:'dehumidifier'});
   const weather=page.locator('.weather-card__icon--rain-motion');
-  const layers=await weather.evaluate(el=>{const drops=getComputedStyle(el,'::after'),cloud=getComputedStyle(el.querySelector('ha-icon'));return {dropZ:+drops.zIndex,cloudZ:+cloud.zIndex,origin:parseFloat(drops.top)/el.getBoundingClientRect().height,isolation:getComputedStyle(el).isolation};});
+  // Layout height: the entrance animation scales the icon, so its client rect varies by frame.
+  const layers=await weather.evaluate(el=>{const drops=getComputedStyle(el,'::after'),cloud=getComputedStyle(el.querySelector('ha-icon'));return {dropZ:+drops.zIndex,cloudZ:+cloud.zIndex,origin:parseFloat(drops.top)/el.offsetHeight,isolation:getComputedStyle(el).isolation};});
   expect(layers.cloudZ).toBeGreaterThan(layers.dropZ);expect(layers.origin).toBeGreaterThanOrEqual(.54);expect(layers.isolation).toBe('isolate');
   await page.emulateMedia({reducedMotion:'reduce'});
   for(const selector of ['.weather-card__icon--rain-motion','.humidifier-card__icon--active-motion']) {
