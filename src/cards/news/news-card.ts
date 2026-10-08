@@ -659,14 +659,10 @@ class NodaliaNewsCard extends HTMLElement {
       width: viewport.getBoundingClientRect().width || 1,
       startIndex: this._magazineIndex,
     };
+    // Capture only once a horizontal drag is recognized (pointermove). Capturing
+    // here would retarget a plain mouse click to the viewport, so "Read more" and
+    // the article would never receive it (#325).
     this._attachMagazineSwipeWindowListeners();
-    if (typeof viewport.setPointerCapture === "function") {
-      try {
-        viewport.setPointerCapture(event.pointerId);
-      } catch (_err) {
-        // Ignore capture failures on unsupported browsers.
-      }
-    }
   }
 
   _onWindowMagazinePointerMove(event: Event) {
@@ -687,6 +683,11 @@ class NodaliaNewsCard extends HTMLElement {
       if (!swipe.dragging) {
         this._cancelMagazineSwipe();
         return;
+      }
+      try {
+        swipe.viewport.setPointerCapture(event.pointerId);
+      } catch (_err) {
+        // Ignore capture failures on unsupported browsers.
       }
     }
     if (!swipe.dragging) {
