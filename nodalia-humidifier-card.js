@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.4";
+  var CARD_VERSION = "3.0.2";
 
   // src/shared/device-control-geometry.ts
   var CIRCULAR_LAYOUT_DIAL_START_ANGLE = 135;

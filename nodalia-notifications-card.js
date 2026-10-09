@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.4";
+  var CARD_VERSION = "3.0.2";
 
   // src/cards/notifications/notifications-constants.ts
   var CARD_TAG = "nodalia-notifications-card";

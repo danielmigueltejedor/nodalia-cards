@@ -8,6 +8,36 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ---
 
+## [3.0.2] - 2026-10-09
+
+Maintenance release for Nodalia Cards 3. Dashboards do much less work every time Home Assistant reports a change, News and Advanced Vacuum issues are fixed, Insignia reads its state properly, and keyboard focus frames follow the rounded cards. Existing YAML, resources and visual editors keep working unchanged.
+
+### Improved
+
+- **Faster dashboards.** Home Assistant updates that do not concern a card no longer make it serialize its whole shadow tree to learn whether it had already rendered; that was the main cost of the many updates a busy installation receives. Advanced Vacuum and Vacuum also stop rescanning every entity on each update (the saving grows with the number of entities in Home Assistant), and number and date formatting reuse shared locale formatters. Measured against the published 3.0.1 on a 25-card dashboard:
+
+| Page work, median ms (lower is better) | Chromium | WebKit | iPhone WebKit |
+|---|---:|---:|---:|
+| 120 updates that do not concern any card (25-card dashboard) | 66.4 → 32.7 (−51%) | 140 → 30 (−79%) | 140 → 30 (−79%) |
+| 120 updates that change cards (25-card dashboard) | 145 → 109.7 (−24%) | 257 → 137 (−47%) | 245 → 128 (−48%) |
+| Advanced Vacuum: 120 robot state updates | 140.2 → 91 (−35%) | 128 → 94 (−27%) | 121 → 87 (−28%) |
+| Advanced Vacuum: 120 updates to its own entity | 97.1 → 83.1 (−14%) | 93 → 78 (−16%) | 96 → 78 (−19%) |
+| Advanced Vacuum: helper discovery among 1,700 extra entities | 71.3 → 54.5 (−24%) | 69 → 56 (−19%) | 69 → 55 (−20%) |
+| Advanced Vacuum: 20 new map frames | 17.8 → 13.1 (−26%) | 22 → 19 (−14%) | 20 → 17 (−15%) |
+| Mounting the 25-card dashboard | 67.8 → 71.4 (+5%) | 79 → 82 (+4%) | 79 → 81 (+3%) |
+
+Mounting a dashboard is not faster (a few percent slower in these runs). Lock state transitions on Chromium vary too much between runs to call. Full tables for every card, engine and workload, with raw samples, are in the [benchmark report](./docs/benchmarks/3.0.2-alpha.4-vs-3.0.1.md). Chromium and WebKit only: Firefox cannot run the benchmark on the reference Mac.
+
+### Fixed
+
+- **News:** "Read more" and the article itself open the item's link again with a mouse in the default magazine layout. (#325)
+- **Advanced Vacuum:** after starting a routine, pause, modes and dock controls stay available for the whole cleaning session, and the routine list returns when it ends. (#326)
+- **Insignia:** choosing a manual tint color in the visual editor recolors the card; gradient backgrounds are kept under the tint; states are shown translated ("Away" instead of `not_home`) in the Home Assistant language; and the separator dot is neutral for an away person, an off fan or humidifier and unavailable states instead of green or blue.
+- **Gradient backgrounds:** Alarm Panel, Camera, Circular Gauge, Climate, Cover, Entity, Fan, Fav, Graph, Humidifier, Light, Person, Scenes, Vacuum and Weather keep a gradient or image `styles.card.background` when the card is active or tinted instead of losing both background and tint.
+- **Styles written as multi-line YAML** (`>` or `|`), such as long gradients, are no longer discarded and replaced by the default in any card.
+- **Taps after a long press:** if the finger slid away (or a dialog opened over the card) before releasing a long press, the next real tap did nothing on Person, Insignia, Weather, Entity, Vacuum, Climate, Scenes, Room Summary and Camera. It runs now.
+- **Keyboard focus frames** follow the rounded corners of Circular Gauge, Power Flow, Insignia and the Camera feed instead of a square that the card cut off. Light, Fan, Humidifier and Vacuum use the same 2 px primary-color frame as the other cards.
+
 ## [3.0.1] - 2026-10-06
 
 Maintenance release for Nodalia Cards 3. It fixes dashboard flicker in Masonry views, unexpected scrolling on iPhone and iPad, and taps that were ignored after using a slider. Existing YAML, resources and Engine pairing remain unchanged.
