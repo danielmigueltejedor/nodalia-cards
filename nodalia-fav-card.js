@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.2";
+  var CARD_VERSION = "3.0.2-alpha.3";
 
   // src/cards/fav/fav-constants.ts
   var CARD_TAG = "nodalia-fav-card";
@@ -764,7 +764,7 @@
           return;
         }
         const nextSignature = this._getRenderSignature(hass);
-        if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+        if (this.shadowRoot?.firstChild && nextSignature === this._lastRenderSignature) {
           return;
         }
         this._lastRenderSignature = nextSignature;
@@ -2202,7 +2202,7 @@
       }
       set hass(hass) {
         const nextSignature = this._getEntityOptionsSignature(hass);
-        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.firstChild;
         this._hass = hass;
         this._entityOptionsSignature = nextSignature;
         if (!shouldRender) {

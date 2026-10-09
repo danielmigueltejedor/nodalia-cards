@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.2";
+  var CARD_VERSION = "3.0.2-alpha.3";
 
   // src/shared/device-control-geometry.ts
   var CIRCULAR_LAYOUT_DIAL_START_ANGLE = 135;
@@ -927,7 +927,7 @@
         const hasPendingOptimistic = Boolean(this._optimisticToggle || this._optimisticVisualSettle);
         let nextSignature = this._getRenderSignature();
         const signatureUnchanged = Boolean(
-          this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature
+          this.shadowRoot?.firstChild && nextSignature === this._lastRenderSignature
         );
         if (signatureUnchanged && !hasPendingOptimistic) {
           return;
@@ -946,7 +946,7 @@
         if (signatureUnchanged && !optimisticJustConfirmed && !visualSettleChanged && this._shouldSkipRenderForUnchangedSignature()) {
           return;
         }
-        if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !optimisticJustConfirmed && !this._optimisticToggle && !visualSettleChanged) {
+        if (this.shadowRoot?.firstChild && nextSignature === this._lastRenderSignature && !optimisticJustConfirmed && !this._optimisticToggle && !visualSettleChanged) {
           return;
         }
         this._lastRenderSignature = nextSignature;
@@ -1022,7 +1022,7 @@
           mode: this._config?.compact_layout_mode,
           width,
           gridColumns: this._getConfiguredGridColumns(),
-          parentWidth: window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0
+          parentWidth: () => window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0
         });
       }
       _getState() {
@@ -1473,7 +1473,7 @@
         );
       }
       _shouldSkipRenderForUnchangedSignature() {
-        if (!this.shadowRoot?.innerHTML) {
+        if (!this.shadowRoot?.firstChild) {
           return false;
         }
         if (this._activeSliderDrag) {
@@ -2879,6 +2879,11 @@
           display: block;
         }
 
+        ha-card[data-humidifier-action="body"]:focus-visible {
+          outline: 2px solid var(--primary-color);
+          outline-offset: -3px;
+        }
+
         * {
           box-sizing: border-box;
         }
@@ -4202,7 +4207,7 @@
       }
       set hass(hass) {
         const nextSignature = this._getEntityOptionsSignature(hass);
-        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.firstChild;
         this._hass = hass;
         this._entityOptionsSignature = nextSignature;
         if (!shouldRender) {

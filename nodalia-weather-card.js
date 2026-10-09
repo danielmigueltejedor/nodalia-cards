@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.2";
+  var CARD_VERSION = "3.0.2-alpha.3";
 
   // src/cards/weather/weather-constants.ts
   var CARD_TAG = "nodalia-weather-card";
@@ -263,6 +263,23 @@
     return Number.isFinite(numeric) ? numeric : null;
   }
 
+  // src/shared/date-time-format.ts
+  var CACHE_LIMIT = 48;
+  var dateTimeFormatterCache = /* @__PURE__ */ new Map();
+  function getDateTimeFormatter(locale, options) {
+    const key = `${String(locale || "default")}|${JSON.stringify(options)}`;
+    let formatter = dateTimeFormatterCache.get(key);
+    if (!formatter) {
+      formatter = new Intl.DateTimeFormat(locale, options);
+      dateTimeFormatterCache.set(key, formatter);
+      if (dateTimeFormatterCache.size > CACHE_LIMIT) {
+        const oldest = dateTimeFormatterCache.keys().next().value;
+        if (oldest !== void 0) dateTimeFormatterCache.delete(oldest);
+      }
+    }
+    return formatter;
+  }
+
   // src/shared/weather-condition-icons.ts
   function weatherConditionIcon(value) {
     switch (String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "")) {
@@ -408,15 +425,15 @@
     }
     const localeArg = locale && locale !== "auto" ? locale : void 0;
     if (type === "hourly") {
-      return date.toLocaleTimeString(localeArg, {
+      return getDateTimeFormatter(localeArg, {
         hour: "2-digit",
         minute: "2-digit"
-      });
+      }).format(date);
     }
-    return date.toLocaleDateString(localeArg, {
+    return getDateTimeFormatter(localeArg, {
       weekday: "short",
       day: "numeric"
-    });
+    }).format(date);
   }
   function getForecastTemperatureValue(value, type) {
     const item = isObject(value) ? value : {};
@@ -489,12 +506,12 @@
     }
     const lang = window.NodaliaI18n?.resolveLanguage?.(hass, configLang ?? "auto") ?? "en";
     const tag = window.NodaliaI18n?.localeTag?.(lang) || lang;
-    return date.toLocaleString(tag, {
+    return getDateTimeFormatter(tag, {
       day: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
       month: "short"
-    });
+    }).format(date);
   }
   function translateMeteoalarmValue(value, hass, configLang) {
     if (window.NodaliaI18n?.translateMeteoalarmTerm) {
@@ -865,7 +882,7 @@
         const nextSignature = this._getRenderSignature(hass);
         this._hass = hass;
         this._ensureForecastSubscription();
-        if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+        if (this.shadowRoot?.firstChild && nextSignature === this._lastRenderSignature) {
           return;
         }
         this._lastRenderSignature = nextSignature;
@@ -3347,7 +3364,7 @@
       }
       set hass(hass) {
         const nextSignature = this._getEntityOptionsSignature(hass);
-        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.firstChild;
         this._hass = hass;
         this._entityOptionsSignature = nextSignature;
         if (!shouldRender) {

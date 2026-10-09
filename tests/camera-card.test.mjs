@@ -123,7 +123,7 @@ test("camera card loads and accepts setConfig without a preloaded stream model",
     removeEventListener() {}
     attachShadow() {
       this.shadowRoot = {
-        innerHTML: "",
+        innerHTML: "", get firstChild() { return this.innerHTML ? {} : null; },
         addEventListener() {},
         removeEventListener() {},
         querySelector() { return null; },
@@ -184,7 +184,7 @@ test("camera editor setConfig syncs tap actions without throwing", () => {
     }
     attachShadow() {
       this.shadowRoot = {
-        innerHTML: "",
+        innerHTML: "", get firstChild() { return this.innerHTML ? {} : null; },
         addEventListener() {},
         removeEventListener() {},
         querySelector() { return null; },
@@ -675,7 +675,7 @@ test("camera card expanded overlay opens, closes, and cleans up listeners", () =
   assert.match(source, /camera-card__stream-spinner/);
   assert.match(source, /conic-gradient/);
   assert.doesNotMatch(source, /data-camera-audio-unlock/);
-  assert.match(source, /this\._expandedOpen && this\.shadowRoot\?\.innerHTML[\s\S]*_updateExpandedStreamState\(\)/);
+  assert.match(source, /this\._expandedOpen && this\.shadowRoot\?\.firstChild[\s\S]*_updateExpandedStreamState\(\)/);
 });
 
 test("camera preview opens directly without a visible expand control", () => {

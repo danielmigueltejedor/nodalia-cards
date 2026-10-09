@@ -34,7 +34,7 @@ test("lazy host upgrades on first instance without compiling sibling cards", () 
       this.shadowRoot = {
         addEventListener() {},
         removeEventListener() {},
-        innerHTML: "",
+        innerHTML: "", get firstChild() { return this.innerHTML ? {} : null; },
         replaceChildren() {this.innerHTML="";},
         querySelector() { return null; },
         querySelectorAll() { return []; },

@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.2";
+  var CARD_VERSION = "3.0.2-alpha.3";
 
   // src/cards/room-summary/room-summary-constants.ts
   var CARD_TAG = "nodalia-room-summary-card";
@@ -738,7 +738,7 @@
         if (changedContext) this._bindPrimaryHold();
         if (!this.isConnected) return;
         const sig = this._getRenderSignature(hass);
-        if (prev && sig === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
+        if (prev && sig === this._lastRenderSignature && this.shadowRoot?.firstChild) {
           this._mountHubEmbeddedCards();
           return;
         }
@@ -2134,7 +2134,7 @@
       }
       set hass(hass) {
         const nextSignature = this._getEntityOptionsSignature(hass);
-        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.firstChild;
         this._hass = hass;
         this._entityOptionsSignature = nextSignature;
         if (!shouldRender) {

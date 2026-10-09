@@ -220,7 +220,7 @@ class NodaliaCoverCard extends HTMLElement {
       this._pendingRenderAfterDrag = true;
       return;
     }
-    if (this.shadowRoot?.innerHTML && signature === this._lastRenderSignature) {
+    if (this.shadowRoot?.firstChild && signature === this._lastRenderSignature) {
       return;
     }
     this._lastRenderSignature = signature;
@@ -382,7 +382,7 @@ class NodaliaCoverCard extends HTMLElement {
       mode: this._config?.compact_layout_mode,
       width: Math.round(this._cardWidth || this.clientWidth || 0),
       gridColumns: this._getConfiguredGridColumns(),
-      parentWidth: window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0,
+      parentWidth: () => window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0,
     });
   }
 

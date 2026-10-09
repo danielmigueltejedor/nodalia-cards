@@ -251,7 +251,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     this._hass = hass;
     if (!this.isConnected) return;
     const nextSignature = this._getRenderSignature(hass);
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+    if (this.shadowRoot?.firstChild && nextSignature === this._lastRenderSignature) {
       this._patchMediaVolumeControls();
       this._refreshMediaProgress();
       return;

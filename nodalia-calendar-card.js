@@ -2,7 +2,24 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.2";
+  var CARD_VERSION = "3.0.2-alpha.3";
+
+  // src/shared/date-time-format.ts
+  var CACHE_LIMIT = 48;
+  var dateTimeFormatterCache = /* @__PURE__ */ new Map();
+  function getDateTimeFormatter(locale, options) {
+    const key = `${String(locale || "default")}|${JSON.stringify(options)}`;
+    let formatter = dateTimeFormatterCache.get(key);
+    if (!formatter) {
+      formatter = new Intl.DateTimeFormat(locale, options);
+      dateTimeFormatterCache.set(key, formatter);
+      if (dateTimeFormatterCache.size > CACHE_LIMIT) {
+        const oldest = dateTimeFormatterCache.keys().next().value;
+        if (oldest !== void 0) dateTimeFormatterCache.delete(oldest);
+      }
+    }
+    return formatter;
+  }
 
   // src/cards/calendar/calendar-constants.ts
   var CARD_TAG = "nodalia-calendar-card";
@@ -20,8 +37,6 @@
   var CALENDAR_DELETE_RECURRENCE_THIS = "";
   var CALENDAR_DELETE_RECURRENCE_THIS_AND_FUTURE = "THISANDFUTURE";
   var VALID_TIME_RANGES = ["3d", "1w", "2w", "1m"];
-  var DATE_TIME_FORMATTER_CACHE_LIMIT = 48;
-  var dateTimeFormatterCache = /* @__PURE__ */ new Map();
 
   // src/shared/control-config.ts
   function normalizeControlStyles(candidate, defaults, sanitize = window.NodaliaUtils.sanitizeCssValue) {
@@ -479,19 +494,6 @@ ${metadata}` : metadata;
       return "var(--ha-card-background)";
     }
     return "var(--info-color, #71c0ff)";
-  }
-  function getDateTimeFormatter(locale, options) {
-    const key = `${String(locale || "default")}|${JSON.stringify(options)}`;
-    let formatter = dateTimeFormatterCache.get(key);
-    if (!formatter) {
-      formatter = new Intl.DateTimeFormat(locale, options);
-      dateTimeFormatterCache.set(key, formatter);
-      if (dateTimeFormatterCache.size > DATE_TIME_FORMATTER_CACHE_LIMIT) {
-        const oldest = dateTimeFormatterCache.keys().next().value;
-        if (oldest !== void 0) dateTimeFormatterCache.delete(oldest);
-      }
-    }
-    return formatter;
   }
   function formatDateLabel(date, locale) {
     return getDateTimeFormatter(locale, {
@@ -3931,7 +3933,7 @@ ${metadata}` : metadata;
       }
       set hass(hass) {
         const nextSignature = this._getEntityOptionsSignature(hass);
-        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.firstChild;
         this._hass = hass;
         this._entityOptionsSignature = nextSignature;
         if (shouldRender) {

@@ -1,5 +1,6 @@
 import type { HassEntity, HomeAssistant } from "../../core/types/home-assistant";
-import { parseFiniteNumericValue } from "../../shared/numeric-values";
+import { formatFiniteNumericValue, parseFiniteNumericValue } from "../../shared/numeric-values";
+import { getDateTimeFormatter } from "../../shared/date-time-format";
 export { parseSizeToPixels } from "../../shared/editor-entity-helpers";
 export { parseRgbColor, getRelativeLuminance } from "../../shared/color-luminance";
 export { resolveEditorColorValue, formatEditorHexChannel, formatEditorColorFromHex, getEditorColorModel } from "../../shared/editor-color";
@@ -124,7 +125,7 @@ export function formatEngineOverrideTime(value: unknown, hass: HomeAssistant | n
   if (!parsed) {
     return "";
   }
-  return parsed.toLocaleTimeString(getHassLocale(hass), { hour: "2-digit", minute: "2-digit" });
+  return getDateTimeFormatter(getHassLocale(hass), { hour: "2-digit", minute: "2-digit" }).format(parsed);
 }
 
 export function getClimateTemperatureUnit(hass: HomeAssistant | null | undefined) {
@@ -150,10 +151,7 @@ export function formatTemperature(value: unknown, step: unknown =  0.5, withUnit
   }
 
   const precision = Math.max(0, Math.min(getStepPrecision(step), 2));
-  const formatted = n.toLocaleString(getHassLocale(hass), {
-    minimumFractionDigits: precision,
-    maximumFractionDigits: precision,
-  });
+  const formatted = formatFiniteNumericValue(n, precision, getHassLocale(hass));
   const u = getClimateTemperatureUnit(hass);
   return withUnit ? `${formatted} ${u}` : formatted;
 }

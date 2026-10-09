@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.2";
+  var CARD_VERSION = "3.0.2-alpha.3";
 
   // src/cards/power-flow/power-flow-constants.ts
   var CARD_TAG = "nodalia-power-flow-card";
@@ -137,6 +137,7 @@
 
   // src/shared/numeric-values.ts
   var numberFormatters = /* @__PURE__ */ new Map();
+  var FORMATTED_RESULT_LIMIT = 256;
   function parseFiniteNumericValue(value) {
     if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
     const numeric = Number(value);
@@ -148,20 +149,31 @@
       return "--";
     }
     const digits = Number.isFinite(decimals) ? Math.min(20, Math.max(0, Math.floor(decimals))) : 0;
-    const key = JSON.stringify([locale ?? null, digits]);
-    let formatter = numberFormatters.get(key);
-    if (!formatter) {
-      formatter = new Intl.NumberFormat(locale, {
-        minimumFractionDigits: digits,
-        maximumFractionDigits: digits
-      });
+    const key = `${locale ?? ""}|${digits}`;
+    let cached = numberFormatters.get(key);
+    if (!cached) {
+      cached = {
+        formatter: new Intl.NumberFormat(locale, {
+          minimumFractionDigits: digits,
+          maximumFractionDigits: digits
+        }),
+        results: /* @__PURE__ */ new Map()
+      };
       if (numberFormatters.size >= 64) {
         const oldest = numberFormatters.keys().next().value;
         if (oldest !== void 0) numberFormatters.delete(oldest);
       }
-      numberFormatters.set(key, formatter);
+      numberFormatters.set(key, cached);
     }
-    return formatter.format(numeric);
+    const negativeZero = Object.is(numeric, -0);
+    const remembered = negativeZero ? void 0 : cached.results.get(numeric);
+    if (remembered !== void 0) return remembered;
+    const text = cached.formatter.format(numeric);
+    if (!negativeZero) {
+      if (cached.results.size >= FORMATTED_RESULT_LIMIT) cached.results.clear();
+      cached.results.set(numeric, text);
+    }
+    return text;
   }
 
   // src/shared/editor-entity-helpers.ts
@@ -1124,7 +1136,7 @@
         if (!this.isConnected) return;
         this._syncTrackedEntitiesStamp(hass);
         const nextSignature = this._getRenderSignature(hass);
-        if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+        if (this.shadowRoot?.firstChild && nextSignature === this._lastRenderSignature) {
           return;
         }
         this._lastRenderSignature = nextSignature;
@@ -3011,6 +3023,7 @@
         }
 
         .power-flow-card__content {
+          border-radius: inherit;
           flex: 0 1 auto;
           min-height: 0;
           position: relative;
@@ -3710,7 +3723,7 @@
       }
       set hass(hass) {
         const nextSignature = this._getEntityOptionsSignature(hass);
-        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.firstChild;
         this._hass = hass;
         this._entityOptionsSignature = nextSignature;
         if (!shouldRender) {

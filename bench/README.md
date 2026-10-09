@@ -66,3 +66,5 @@ published-release evidence gate or supply a Firefox result.
 The canonical configuration opts into the new profiles with the internal
 `maintenanceUpdates` flag. Historical report configurations without that flag
 keep their original workload coverage and remain verifiable.
+
+`pnpm benchmark:maintenance -- --baseline=<published version>` compares the local candidate with any published release instead of `3.0.0`. `--broad` runs every registered card's mount, unrelated and relevant profiles, the 25-card dashboard and the Advanced Vacuum map, gesture, helper and lifecycle profiles; `--iterations` and `--warmups` shorten or lengthen the run. Output is `bench/results/maintenance-<candidate>[-vs-<baseline>][-broad].json`.

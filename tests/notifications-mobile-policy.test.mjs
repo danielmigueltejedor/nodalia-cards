@@ -52,7 +52,7 @@ function loadNotificationsRuntime() {
         this.shadowRoot = {
           addEventListener() {},
           removeEventListener() {},
-          innerHTML: "",
+          innerHTML: "", get firstChild() { return this.innerHTML ? {} : null; },
           replaceChildren() {this.innerHTML = "";},
           querySelector() { return null; },
           querySelectorAll() { return []; },

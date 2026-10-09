@@ -5,6 +5,7 @@ export { resolveEditorColorValue, formatEditorHexChannel, formatEditorColorFromH
 import { clamp, isObject, normalizeTextKey } from "./weather-runtime";
 
 import { parseFiniteNumericValue as parseWeatherNumericValue } from "../../shared/numeric-values";
+import { getDateTimeFormatter } from "../../shared/date-time-format";
 export { parseFiniteNumericValue as parseWeatherNumericValue } from "../../shared/numeric-values";
 
 function dateFromUnknown(value: unknown): Date {
@@ -140,16 +141,16 @@ export function formatForecastDateTime(value: unknown, type: unknown, locale: st
   const localeArg = locale && locale !== "auto" ? locale : undefined;
 
   if (type === "hourly") {
-    return date.toLocaleTimeString(localeArg, {
+    return getDateTimeFormatter(localeArg, {
       hour: "2-digit",
       minute: "2-digit",
-    });
+    }).format(date);
   }
 
-  return date.toLocaleDateString(localeArg, {
+  return getDateTimeFormatter(localeArg, {
     weekday: "short",
     day: "numeric",
-  });
+  }).format(date);
 }
 
 export function getForecastTemperatureValue(value: unknown, type: unknown) {
@@ -235,12 +236,12 @@ export function formatMeteoalarmDate(value: unknown, hass: unknown, configLang: 
 
   const lang = window.NodaliaI18n?.resolveLanguage?.(hass, configLang ?? "auto") ?? "en";
   const tag = window.NodaliaI18n?.localeTag?.(lang) || lang;
-  return date.toLocaleString(tag, {
+  return getDateTimeFormatter(tag, {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
     month: "short",
-  });
+  }).format(date);
 }
 
 export function translateMeteoalarmValue(value: unknown, hass: unknown, configLang: string | null | undefined) {

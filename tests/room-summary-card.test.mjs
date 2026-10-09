@@ -21,7 +21,7 @@ function loadRoomSummaryHelpers() {
       this.shadowRoot = {
         addEventListener() {},
         removeEventListener() {},
-        innerHTML: "",
+        innerHTML: "", get firstChild() { return this.innerHTML ? {} : null; },
         querySelector() { return null; },
         querySelectorAll() { return []; },
       };
@@ -567,7 +567,7 @@ test("room summary editor mounts nested camera and media editors without throwin
       this.shadowRoot = {
         addEventListener() {},
         removeEventListener() {},
-        innerHTML: "",
+        innerHTML: "", get firstChild() { return this.innerHTML ? {} : null; },
         querySelector() { return null; },
         querySelectorAll(selector) {
           const key = String(selector).match(/data-mounted-control="([^"]+)"/)?.[1];

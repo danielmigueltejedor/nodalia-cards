@@ -196,7 +196,7 @@ class NodaliaNewsCard extends HTMLElement {
     this._contextAdmin = Boolean(hass?.user?.is_admin);
     this._hass = hass;
     const nextSignature = this._getRenderSignature(hass);
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+    if (this.shadowRoot?.firstChild && nextSignature === this._lastRenderSignature) {
       return;
     }
     this._lastRenderSignature = nextSignature;

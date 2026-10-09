@@ -330,7 +330,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
     }
     const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !bustSignatureCache) {
+    if (this.shadowRoot?.firstChild && nextSignature === this._lastRenderSignature && !bustSignatureCache) {
       this._syncCountdownTimer();
       return;
     }
@@ -357,7 +357,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
       mode: this._config?.compact_layout_mode,
       width,
       gridColumns: parseFiniteNumericValue(isObject(this._config.grid_options) ? this._config.grid_options.columns : undefined),
-      parentWidth: window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0,
+      parentWidth: () => window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0,
     });
   }
 

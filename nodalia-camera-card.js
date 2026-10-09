@@ -1066,7 +1066,7 @@
   }
 
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.2";
+  var CARD_VERSION = "3.0.2-alpha.3";
 
   // src/cards/camera/camera-constants.ts
   var CARD_TAG = "nodalia-camera-card";
@@ -1949,13 +1949,13 @@
           return;
         }
         const nextSignature = this._getRenderSignature(hass);
-        if (!changedContext && previousHass && this._expandedOpen && this.shadowRoot?.innerHTML) {
+        if (!changedContext && previousHass && this._expandedOpen && this.shadowRoot?.firstChild) {
           this._lastRenderSignature = nextSignature;
           this._updateExpandedCardsHass();
           this._updateExpandedStreamState();
           return;
         }
-        if (!changedContext && previousHass && nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
+        if (!changedContext && previousHass && nextSignature === this._lastRenderSignature && this.shadowRoot?.firstChild) {
           this._updateExpandedCardsHass();
           return;
         }
@@ -3221,6 +3221,11 @@
           border-radius: 0;
         }
 
+        /* The feed fills the rounded card edge to edge; its focus frame must follow the card corners. */
+        .camera-card--feed .camera-card__preview-open {
+          border-radius: ${styles.card.border_radius};
+        }
+
         .camera-card--feed ha-card::before {
           display: none;
         }
@@ -3343,6 +3348,7 @@
           appearance: none;
           background: transparent;
           border: 0;
+          border-radius: inherit;
           cursor: pointer;
           margin: 0;
           padding: 0;
@@ -3573,7 +3579,7 @@
       }
       set hass(hass) {
         const nextSignature = this._getEntityOptionsSignature(hass);
-        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.firstChild;
         this._hass = hass;
         this._entityOptionsSignature = nextSignature;
         if (!shouldRender) {

@@ -89,7 +89,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
 
   set hass(hass: HomeAssistant) {
     const nextSignature = this._getEntityOptionsSignature(hass);
-    const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+    const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.firstChild;
     this._hass = hass;
     this._entityOptionsSignature = nextSignature;
     if (!shouldRender) {

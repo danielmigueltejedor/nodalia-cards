@@ -366,7 +366,7 @@ class NodaliaHumidifierCard extends HTMLElement {
     const hasPendingOptimistic = Boolean(this._optimisticToggle || this._optimisticVisualSettle);
     let nextSignature = this._getRenderSignature();
     const signatureUnchanged = Boolean(
-      this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature,
+      this.shadowRoot?.firstChild && nextSignature === this._lastRenderSignature,
     );
 
     if (signatureUnchanged && !hasPendingOptimistic) {
@@ -396,7 +396,7 @@ class NodaliaHumidifierCard extends HTMLElement {
     }
 
     if (
-      this.shadowRoot?.innerHTML
+      this.shadowRoot?.firstChild
       && nextSignature === this._lastRenderSignature
       && !optimisticJustConfirmed
       && !this._optimisticToggle
@@ -492,7 +492,7 @@ class NodaliaHumidifierCard extends HTMLElement {
       mode: this._config?.compact_layout_mode,
       width,
       gridColumns: this._getConfiguredGridColumns(),
-      parentWidth: window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0,
+      parentWidth: () => window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0,
     });
   }
 
@@ -1068,7 +1068,7 @@ class NodaliaHumidifierCard extends HTMLElement {
   }
 
   _shouldSkipRenderForUnchangedSignature() {
-    if (!this.shadowRoot?.innerHTML) {
+    if (!this.shadowRoot?.firstChild) {
       return false;
     }
 
@@ -2768,6 +2768,11 @@ class NodaliaHumidifierCard extends HTMLElement {
         :host {
           --humidifier-card-content-duration: ${animations.enabled ? contentEntranceDuration : 0}ms;
           display: block;
+        }
+
+        ha-card[data-humidifier-action="body"]:focus-visible {
+          outline: 2px solid var(--primary-color);
+          outline-offset: -3px;
         }
 
         * {

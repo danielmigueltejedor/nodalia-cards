@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.2";
+  var CARD_VERSION = "3.0.2-alpha.3";
 
   // src/cards/advance-vacuum/advance-vacuum-constants.ts
   var CARD_TAG = "nodalia-advance-vacuum-card";
@@ -1330,6 +1330,59 @@
     }
   }
 
+  // src/shared/entity-catalog-stamp.ts
+  var FIELDS2 = 5;
+  function record2(value) {
+    return value !== null && typeof value === "object" ? value : {};
+  }
+  var EntityCatalogStamp = class {
+    constructor() {
+      /** Increases whenever a discovery-relevant field of any entity changed. */
+      this.version = 0;
+      this.snapshotRef = null;
+      this.catalog = [];
+    }
+    /**
+     * Returns the current version for the HA object, advancing it if the catalog changed.
+     * `trusted` lets a caller that already compared this exact HA object during the current
+     * synchronous pass skip the comparison. Otherwise every call compares, so dictionaries that
+     * HA or a wrapper mutates in place are still noticed.
+     */
+    update(hass, trusted = false) {
+      if (trusted && hass && hass === this.snapshotRef) return this.version;
+      const states = record2(hass?.states);
+      const registry = record2(hass?.entities);
+      const ids = Object.keys(states);
+      const catalog = this.catalog;
+      let same = catalog.length === ids.length * FIELDS2;
+      for (let index = 0; same && index < ids.length; index += 1) {
+        const id = ids[index];
+        const attributes = record2(record2(states[id]).attributes);
+        const entry = record2(registry[id]);
+        const offset = index * FIELDS2;
+        same = catalog[offset] === id && catalog[offset + 1] === attributes.friendly_name && catalog[offset + 2] === entry.device_id && catalog[offset + 3] === entry.original_name && catalog[offset + 4] === entry.translation_key;
+      }
+      if (!same) {
+        const next = [];
+        for (const id of ids) {
+          const attributes = record2(record2(states[id]).attributes);
+          const entry = record2(registry[id]);
+          next.push(id, attributes.friendly_name, entry.device_id, entry.original_name, entry.translation_key);
+        }
+        this.catalog = next;
+        this.version += 1;
+      }
+      this.snapshotRef = hass ?? null;
+      return this.version;
+    }
+    /** Forget the previous catalog, e.g. when the HA connection or user changed. */
+    reset() {
+      this.snapshotRef = null;
+      this.catalog = [];
+      this.version += 1;
+    }
+  };
+
   // src/shared/home-assistant-services.ts
   function callHassService(hass, domain, service, data = {}, target = null) {
     if (!hass?.callService) return;
@@ -1464,6 +1517,8 @@
         this._wasCleaningSessionActive = false;
         this._roomTrackingEntityCache = null;
         this._roomTrackingLookupScope = null;
+        this._catalogStamp = new EntityCatalogStamp();
+        this._discoveryMemo = { version: -1, config: "", values: /* @__PURE__ */ new Map() };
         this._lastRenderSignature = "";
         this._calibrationSignatureStamp = "";
         this._animateContentOnNextRender = true;
@@ -1657,7 +1712,7 @@
         }
         try {
           const nextSignature = this._getRenderSignature(this._hass);
-          if (nextSignature === this._lastRenderSignature && this.shadowRoot.innerHTML) {
+          if (nextSignature === this._lastRenderSignature && this.shadowRoot.firstChild) {
             return;
           }
           this._syncCalibrationIfNeeded();
@@ -1773,7 +1828,7 @@
           if (contextChanged) this._scheduleLocaleReconciliation();
           const signatures = this._getRenderSignatures(hass);
           const nextSignature = signatures.all;
-          if (nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
+          if (nextSignature === this._lastRenderSignature && this.shadowRoot?.firstChild) {
             this._lastRenderSignature = nextSignature;
             return;
           }
@@ -2665,10 +2720,7 @@
         const autoDetect = this._config?.room_tracking?.auto_detect !== false;
         const registry = vacuumRecord(hass?.entities);
         const states = hass?.states || {};
-        const catalogSignature = autoDetect && entityId ? Object.entries(states).map(([id, state]) => {
-          const entry = vacuumRecord(registry[id]);
-          return [id, state?.attributes?.friendly_name, entry.device_id, entry.original_name, entry.translation_key];
-        }) : [Boolean(states[explicitRoomEntityId]), Boolean(states[explicitActivityEntityId])];
+        const catalogSignature = autoDetect && entityId ? this._catalogStamp.update(hass, this._roomTrackingLookupScope?.hass === hass) : [Boolean(states[explicitRoomEntityId]), Boolean(states[explicitActivityEntityId])];
         const cacheKey = JSON.stringify([entityId, explicitRoomEntityId, explicitActivityEntityId, autoDetect, catalogSignature]);
         if (this._roomTrackingEntityCache?.key === cacheKey) {
           if (scope) scope.value = this._roomTrackingEntityCache;
@@ -2680,7 +2732,7 @@
           const vacuumRegistryEntry = vacuumRecord(registry[entityId]);
           const vacuumDeviceId = vacuumRegistryEntry?.device_id || "";
           const objectId = normalizeTextKey(entityId.split(".").slice(1).join("_"));
-          const vacuumObjectIds = listVacuumObjectIds(states);
+          const vacuumObjectIds = this._getVacuumObjectIds(states, hass);
           Object.keys(states).forEach((candidateId) => {
             if (candidateId === entityId) {
               return;
@@ -3376,6 +3428,29 @@
           "trayectoria_mopa"
         ];
       }
+      /**
+       * Discovery reads entity ids, friendly names and registry identity only. Its results are kept
+       * until one of those changes, so HA updates to state values never rescan the whole catalog.
+       */
+      _discoveryMemoFor(hass, sortLoc) {
+        const version = this._catalogStamp.update(hass, this._roomTrackingLookupScope?.hass === hass);
+        const memo = this._discoveryMemo;
+        const config = sortLoc === null ? memo.config : `${this._config?.entity ?? ""}|${sortLoc}`;
+        if (memo.version !== version || memo.config !== config || memo.values.size > 64) {
+          memo.version = version;
+          memo.config = config;
+          memo.values = /* @__PURE__ */ new Map();
+        }
+        return memo.values;
+      }
+      _getVacuumObjectIds(states, hass) {
+        const memo = this._discoveryMemoFor(hass, null);
+        const remembered = memo.get("vacuum-object-ids");
+        if (remembered) return remembered;
+        const ids = listVacuumObjectIds(states);
+        memo.set("vacuum-object-ids", ids);
+        return ids;
+      }
       _getEntityMatchScore(entityId, patterns) {
         const normalizedEntityId = normalizeTextKey(entityId);
         return patterns.reduce((bestScore, pattern, index) => {
@@ -3400,10 +3475,14 @@
         }
         const states = this._hass.states;
         const registry = vacuumRecord(this._hass.entities);
-        const vacuumObjectIds = listVacuumObjectIds(states);
-        const vacuumDeviceId = vacuumRecord(registry[this._config.entity]).device_id || "";
         const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
-        return Object.keys(states).filter((entityId) => entityId.startsWith(`${domain}.`)).filter((entityId) => isHelperRelatedToConfiguredVacuum({
+        const memoKey = JSON.stringify(["related", domain, patterns, excludedEntities]);
+        const memo = this._discoveryMemoFor(this._hass, sortLoc);
+        const remembered = memo.get(memoKey);
+        if (remembered) return remembered.slice();
+        const vacuumObjectIds = this._getVacuumObjectIds(states, this._hass);
+        const vacuumDeviceId = vacuumRecord(registry[this._config.entity]).device_id || "";
+        const related = Object.keys(states).filter((entityId) => entityId.startsWith(`${domain}.`)).filter((entityId) => isHelperRelatedToConfiguredVacuum({
           candidateId: entityId,
           searchable: states[entityId]?.attributes?.friendly_name || "",
           isSameDevice: Boolean(vacuumDeviceId && vacuumRecord(registry[entityId]).device_id === vacuumDeviceId),
@@ -3413,6 +3492,8 @@
           entityId,
           score: this._getEntityMatchScore(entityId, patterns)
         })).filter((candidate) => candidate.score > 0).sort((left, right) => right.score - left.score || left.entityId.localeCompare(right.entityId, sortLoc)).map((candidate) => candidate.entityId);
+        memo.set(memoKey, related);
+        return related.slice();
       }
       _guessRelatedSelectEntityByPatterns(patterns, excludedEntities = []) {
         return this._guessRelatedEntityByPatterns("select", patterns, excludedEntities);
@@ -3427,10 +3508,19 @@
         }
         const states = this._hass.states;
         const registry = vacuumRecord(this._hass.entities);
-        const objectId = normalizeTextKey(String(this._config?.entity || "").split(".").slice(1).join("_"));
-        const vacuumObjectIds = listVacuumObjectIds(states);
-        const vacuumDeviceId = vacuumRecord(registry[this._config?.entity]).device_id || "";
         const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
+        const memoKey = JSON.stringify(["global", domainList, patterns, excludedEntities]);
+        const memo = this._discoveryMemoFor(this._hass, sortLoc);
+        const remembered = memo.get(memoKey);
+        if (typeof remembered === "string") return remembered;
+        const found = this._findGlobalEntityByPatterns(states, registry, sortLoc, domainList, patterns, excludedEntities);
+        memo.set(memoKey, found);
+        return found;
+      }
+      _findGlobalEntityByPatterns(states, registry, sortLoc, domainList, patterns, excludedEntities) {
+        const objectId = normalizeTextKey(String(this._config?.entity || "").split(".").slice(1).join("_"));
+        const vacuumObjectIds = this._getVacuumObjectIds(states, this._hass);
+        const vacuumDeviceId = vacuumRecord(registry[this._config?.entity]).device_id || "";
         const candidates = Object.keys(states).filter((entityId) => domainList.some((domain) => entityId.startsWith(`${domain}.`))).filter((entityId) => !excludedEntities.includes(entityId)).map((entityId) => ({
           entityId,
           score: this._getEntityMatchScore(entityId, patterns)
@@ -5505,7 +5595,7 @@
           console.error(`Nodalia Advance Vacuum Card ${context} error`, error);
         }
         this._lastRenderSignature = "";
-        if (!this.shadowRoot || this.shadowRoot.innerHTML) {
+        if (!this.shadowRoot || this.shadowRoot.firstChild) {
           return;
         }
         const message = error instanceof Error ? escapeHtml(error.message) : "No se ha podido actualizar la tarjeta.";
@@ -7264,7 +7354,7 @@
       }
       set hass(hass) {
         const nextSignature = this._getEntityOptionsSignature(hass);
-        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.firstChild;
         this._hass = hass;
         this._entityOptionsSignature = nextSignature;
         if (!shouldRender) {

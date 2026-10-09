@@ -76,7 +76,7 @@ class NodaliaCalendarCardEditor extends HTMLElement {
     const shouldRender =
       !this._hass ||
       nextSignature !== this._entityOptionsSignature ||
-      !this.shadowRoot?.innerHTML;
+      !this.shadowRoot?.firstChild;
 
     this._hass = hass;
     this._entityOptionsSignature = nextSignature;

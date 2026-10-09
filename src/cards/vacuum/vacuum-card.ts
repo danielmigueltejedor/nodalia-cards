@@ -1,5 +1,6 @@
 import { captureHassContext, sameHassContext } from "../../shared/hass-context";
 import { createCardLayoutNotifier } from "../../shared/card-layout-notifier";
+import { EntityCatalogStamp } from "../../shared/entity-catalog-stamp";
 import {
   CARD_TAG,
   EDITOR_TAG,
@@ -34,7 +35,7 @@ import { createViewAnimationWork, scheduleViewFallback, cancelViewPanelAnimation
 type ModeKind = "suction" | "mop";
 type RoomMapping = { cleaningAreaId: string; id: string; name: string };
 type ModeDescriptor = { current: string; kind: ModeKind; label: string; options: string[]; service: string; target: string };
-type RelatedEntityCache = { objectId: string; generation: number; state: string; error: string; battery: string; roomMapping: string; suctionSelect: string; mopSelect: string };
+type RelatedEntityCache = { objectId: string; generation: number; sortLoc: string; state: string; error: string; battery: string; roomMapping: string; suctionSelect: string; mopSelect: string };
 const modeKinds: ModeKind[] = ["suction", "mop"];
 const isModeKind = (value: unknown): value is ModeKind => value === "suction" || value === "mop";
 let _lazyNodaliaVacuumCard: CustomElementConstructor | undefined;
@@ -56,7 +57,8 @@ class NodaliaVacuumCard extends HTMLElement {
   private _pendingModeSelection!: Record<ModeKind, string>;
   private _pendingModeSelectionTimers!: Record<ModeKind, number>;
   private _relatedEntityCache!: RelatedEntityCache | null;
-  private _relatedEntityCacheGeneration!: number;
+  private _catalogStamp!: EntityCatalogStamp;
+  private _catalogTrusted!: boolean;
   private _lastRenderSignature!: string;
   private _animateContentOnNextRender!: boolean;
   private _entranceAnimationResetTimer!: number;
@@ -121,7 +123,8 @@ class NodaliaVacuumCard extends HTMLElement {
       mop: 0,
     };
     this._relatedEntityCache = null;
-    this._relatedEntityCacheGeneration = 0;
+    this._catalogStamp = new EntityCatalogStamp();
+    this._catalogTrusted = false;
     this._lastRenderSignature = "";
     this._animateContentOnNextRender = true;
     this._entranceAnimationResetTimer = 0;
@@ -280,16 +283,23 @@ class NodaliaVacuumCard extends HTMLElement {
     }
     this._hassContext = context;
     this._hass = hass;
-    this._relatedEntityCacheGeneration += 1;
-    const nextSignature = this._getRenderSignature(hass);
-    const pendingChanged = this._syncPendingModeSelections();
+    // The catalog is compared once per assignment; the lookups below share that result, while
+    // later calls (events, timers) compare again and so notice in-place edits.
+    this._catalogStamp.update(hass);
+    this._catalogTrusted = true;
+    try {
+      const nextSignature = this._getRenderSignature(hass);
+      const pendingChanged = this._syncPendingModeSelections();
 
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !pendingChanged) {
-      return;
+      if (this.shadowRoot?.firstChild && nextSignature === this._lastRenderSignature && !pendingChanged) {
+        return;
+      }
+
+      this._lastRenderSignature = nextSignature;
+      this._render();
+    } finally {
+      this._catalogTrusted = false;
     }
-
-    this._lastRenderSignature = nextSignature;
-    this._render();
   }
 
   getCardSize() {
@@ -475,7 +485,7 @@ class NodaliaVacuumCard extends HTMLElement {
       mode: this._config?.compact_layout_mode,
       width,
       gridColumns: this._getConfiguredGridColumns(),
-      parentWidth: window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0,
+      parentWidth: () => window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0,
     });
   }
 
@@ -710,14 +720,18 @@ class NodaliaVacuumCard extends HTMLElement {
       return null;
     }
 
+    // Discovery reads entity ids, friendly names and registry identity, never state values:
+    // unrelated HA updates keep the previous result.
+    const catalogVersion = this._catalogStamp.update(this._hass, this._catalogTrusted);
+    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
     if (
       this._relatedEntityCache?.objectId === objectId
-      && this._relatedEntityCache?.generation === this._relatedEntityCacheGeneration
+      && this._relatedEntityCache?.generation === catalogVersion
+      && this._relatedEntityCache?.sortLoc === sortLoc
     ) {
       return this._relatedEntityCache;
     }
 
-    const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
     const candidates: Record<"state" | "error" | "battery" | "roomMapping" | "suctionSelect" | "mopSelect", string[]> = {
       state: [],
       error: [],
@@ -778,7 +792,8 @@ class NodaliaVacuumCard extends HTMLElement {
     Object.values(candidates).forEach(items => items.sort((left, right) => left.localeCompare(right, sortLoc)));
     this._relatedEntityCache = {
       objectId,
-      generation: this._relatedEntityCacheGeneration,
+      generation: catalogVersion,
+      sortLoc,
       state: candidates.state[0] || "",
       error: candidates.error[0] || "",
       battery: candidates.battery[0] || "",
@@ -2612,6 +2627,11 @@ class NodaliaVacuumCard extends HTMLElement {
 
         * {
           box-sizing: border-box;
+        }
+
+        ha-card[data-vacuum-action="body_tap"]:focus-visible {
+          outline: 2px solid var(--primary-color);
+          outline-offset: -3px;
         }
 
         ha-card {

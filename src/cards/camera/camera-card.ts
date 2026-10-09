@@ -208,13 +208,13 @@ class NodaliaCameraCard extends HTMLElement {
       return;
     }
     const nextSignature = this._getRenderSignature(hass);
-    if (!changedContext && previousHass && this._expandedOpen && this.shadowRoot?.innerHTML) {
+    if (!changedContext && previousHass && this._expandedOpen && this.shadowRoot?.firstChild) {
       this._lastRenderSignature = nextSignature;
       this._updateExpandedCardsHass();
       this._updateExpandedStreamState();
       return;
     }
-    if (!changedContext && previousHass && nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
+    if (!changedContext && previousHass && nextSignature === this._lastRenderSignature && this.shadowRoot?.firstChild) {
       this._updateExpandedCardsHass();
       return;
     }
@@ -1610,6 +1610,11 @@ class NodaliaCameraCard extends HTMLElement {
           border-radius: 0;
         }
 
+        /* The feed fills the rounded card edge to edge; its focus frame must follow the card corners. */
+        .camera-card--feed .camera-card__preview-open {
+          border-radius: ${styles.card.border_radius};
+        }
+
         .camera-card--feed ha-card::before {
           display: none;
         }
@@ -1732,6 +1737,7 @@ class NodaliaCameraCard extends HTMLElement {
           appearance: none;
           background: transparent;
           border: 0;
+          border-radius: inherit;
           cursor: pointer;
           margin: 0;
           padding: 0;

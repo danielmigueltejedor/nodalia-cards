@@ -23,7 +23,7 @@ function loadGraphEditor() {
         activeElement: null,
         addEventListener() {},
         removeEventListener() {},
-        innerHTML: "",
+        innerHTML: "", get firstChild() { return this.innerHTML ? {} : null; },
         querySelector() { return null; },
         querySelectorAll() { return []; },
       };

@@ -494,7 +494,7 @@ class NodaliaClimateCard extends HTMLElement {
     }
 
     const nextSignature = this._getRenderSignature(hass);
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+    if (this.shadowRoot?.firstChild && nextSignature === this._lastRenderSignature) {
       if (this._activeDialDrag) {
         this._pendingRenderAfterDrag = true;
       }

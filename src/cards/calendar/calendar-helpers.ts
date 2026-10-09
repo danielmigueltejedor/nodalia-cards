@@ -6,9 +6,7 @@ import { DEFAULT_CONFIG } from "./calendar-defaults";
 export { deepClone, mergeConfig } from "./calendar-runtime";
 export { resolveEditorColorValue, formatEditorHexChannel, formatEditorColorFromHex, getEditorColorModel } from "../../shared/editor-color";
 import {
-  DATE_TIME_FORMATTER_CACHE_LIMIT,
   NODALIA_EVENT_METADATA_RE,
-  dateTimeFormatterCache,
 } from "./calendar-constants";
 import { isObject } from "./calendar-runtime";
 
@@ -270,19 +268,8 @@ export function getEditorColorFallbackValue(field: unknown) {
   return "var(--info-color, #71c0ff)";
 }
 
-export function getDateTimeFormatter(locale: string | undefined, options: Intl.DateTimeFormatOptions) {
-  const key = `${String(locale || "default")}|${JSON.stringify(options)}`;
-  let formatter = dateTimeFormatterCache.get(key);
-  if (!formatter) {
-    formatter = new Intl.DateTimeFormat(locale, options);
-    dateTimeFormatterCache.set(key, formatter);
-    if (dateTimeFormatterCache.size > DATE_TIME_FORMATTER_CACHE_LIMIT) {
-      const oldest = dateTimeFormatterCache.keys().next().value;
-      if (oldest !== undefined) dateTimeFormatterCache.delete(oldest);
-    }
-  }
-  return formatter;
-}
+export { getDateTimeFormatter } from "../../shared/date-time-format";
+import { getDateTimeFormatter } from "../../shared/date-time-format";
 
 export function formatDateLabel(date: Date, locale: string | undefined) {
   return getDateTimeFormatter(locale, {

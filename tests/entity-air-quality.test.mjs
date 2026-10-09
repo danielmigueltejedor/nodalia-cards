@@ -23,7 +23,7 @@ function loadAirQualityHelpers() {
       this.shadowRoot = {
         addEventListener() {},
         removeEventListener() {},
-        innerHTML: "",
+        innerHTML: "", get firstChild() { return this.innerHTML ? {} : null; },
         querySelector() { return null; },
         querySelectorAll() { return []; },
       };

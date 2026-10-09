@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.2";
+  var CARD_VERSION = "3.0.2-alpha.3";
 
   // src/cards/climate/climate-constants.ts
   var CARD_TAG = "nodalia-climate-card";
@@ -66,10 +66,44 @@
   var normalizeTextKey = utils.normalizeTextKey.bind(utils);
 
   // src/shared/numeric-values.ts
+  var numberFormatters = /* @__PURE__ */ new Map();
+  var FORMATTED_RESULT_LIMIT = 256;
   function parseFiniteNumericValue(value) {
     if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
     const numeric = Number(value);
     return Number.isFinite(numeric) ? numeric : null;
+  }
+  function formatFiniteNumericValue(value, decimals = 0, locale = void 0) {
+    const numeric = parseFiniteNumericValue(value);
+    if (numeric === null) {
+      return "--";
+    }
+    const digits = Number.isFinite(decimals) ? Math.min(20, Math.max(0, Math.floor(decimals))) : 0;
+    const key = `${locale ?? ""}|${digits}`;
+    let cached = numberFormatters.get(key);
+    if (!cached) {
+      cached = {
+        formatter: new Intl.NumberFormat(locale, {
+          minimumFractionDigits: digits,
+          maximumFractionDigits: digits
+        }),
+        results: /* @__PURE__ */ new Map()
+      };
+      if (numberFormatters.size >= 64) {
+        const oldest = numberFormatters.keys().next().value;
+        if (oldest !== void 0) numberFormatters.delete(oldest);
+      }
+      numberFormatters.set(key, cached);
+    }
+    const negativeZero = Object.is(numeric, -0);
+    const remembered = negativeZero ? void 0 : cached.results.get(numeric);
+    if (remembered !== void 0) return remembered;
+    const text = cached.formatter.format(numeric);
+    if (!negativeZero) {
+      if (cached.results.size >= FORMATTED_RESULT_LIMIT) cached.results.clear();
+      cached.results.set(numeric, text);
+    }
+    return text;
   }
 
   // src/cards/climate/climate-schedule.ts
@@ -795,6 +829,23 @@ ${weekdayYaml}
   // src/cards/climate/climate-static-0.css
   var climate_static_0_default = "@keyframes climate-card-button-bounce{0%{transform:scale(1)}45%{transform:scale(1.1)}72%{transform:scale(1.03)}100%{transform:scale(1)}}@keyframes climate-card-fade-up{0%{opacity:0;transform:translateY(14px) scale(0.965)}100%{opacity:1;transform:translateY(0) scale(1)}}@keyframes climate-card-dial-bloom{0%{opacity:0;transform:translateZ(0) scale(0.95);box-shadow:inset 0 1px 0 color-mix(in srgb,var(--primary-text-color) 2%,transparent),0 10px 24px rgba(0,0,0,0.08)}55%{opacity:1;transform:translateZ(0) scale(1.015);box-shadow:inset 0 1px 0 color-mix(in srgb,var(--primary-text-color) 6%,transparent),0 22px 42px rgba(0,0,0,0.16)}100%{opacity:1;transform:translateZ(0) scale(1);box-shadow:inset 0 1px 0 color-mix(in srgb,var(--primary-text-color) 5%,transparent),0 18px 38px rgba(0,0,0,0.16)}}@keyframes climate-card-dial-center-bloom{0%{opacity:0;transform:scale(0.96)}100%{opacity:1;transform:scale(1)}}@keyframes climate-card-dial-thumb-pop{0%{transform:translate(-50%,-50%) scale(1)}48%{transform:translate(-50%,-50%) scale(1.24)}72%{transform:translate(-50%,-50%) scale(1.09)}100%{transform:translate(-50%,-50%) scale(1.15)}}";
 
+  // src/shared/date-time-format.ts
+  var CACHE_LIMIT = 48;
+  var dateTimeFormatterCache = /* @__PURE__ */ new Map();
+  function getDateTimeFormatter(locale, options) {
+    const key = `${String(locale || "default")}|${JSON.stringify(options)}`;
+    let formatter = dateTimeFormatterCache.get(key);
+    if (!formatter) {
+      formatter = new Intl.DateTimeFormat(locale, options);
+      dateTimeFormatterCache.set(key, formatter);
+      if (dateTimeFormatterCache.size > CACHE_LIMIT) {
+        const oldest = dateTimeFormatterCache.keys().next().value;
+        if (oldest !== void 0) dateTimeFormatterCache.delete(oldest);
+      }
+    }
+    return formatter;
+  }
+
   // src/shared/editor-color.ts
   var clamp2 = (value, max) => Math.max(0, Math.min(max, value));
   var component = (value, scale) => {
@@ -973,7 +1024,7 @@ ${weekdayYaml}
     if (!parsed) {
       return "";
     }
-    return parsed.toLocaleTimeString(getHassLocale(hass), { hour: "2-digit", minute: "2-digit" });
+    return getDateTimeFormatter(getHassLocale(hass), { hour: "2-digit", minute: "2-digit" }).format(parsed);
   }
   function getClimateTemperatureUnit(hass) {
     const raw = String(hass?.config?.unit_system?.temperature ?? "").trim();
@@ -995,10 +1046,7 @@ ${weekdayYaml}
       return withUnit ? `-- ${u2}` : "--";
     }
     const precision = Math.max(0, Math.min(getStepPrecision(step), 2));
-    const formatted = n.toLocaleString(getHassLocale(hass), {
-      minimumFractionDigits: precision,
-      maximumFractionDigits: precision
-    });
+    const formatted = formatFiniteNumericValue(n, precision, getHassLocale(hass));
     const u = getClimateTemperatureUnit(hass);
     return withUnit ? `${formatted} ${u}` : formatted;
   }
@@ -1557,7 +1605,7 @@ ${weekdayYaml}
           this._syncDraftWithState();
         }
         const nextSignature = this._getRenderSignature(hass);
-        if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+        if (this.shadowRoot?.firstChild && nextSignature === this._lastRenderSignature) {
           if (this._activeDialDrag) {
             this._pendingRenderAfterDrag = true;
           }
@@ -6610,7 +6658,7 @@ ${weekdayYaml}
           this._engineStatusSignature = "";
         }
         const nextSignature = this._getEntityOptionsSignature(hass);
-        const shouldRender = changedContext || !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+        const shouldRender = changedContext || !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.firstChild;
         this._hass = hass;
         this._entityOptionsSignature = nextSignature;
         if (!shouldRender) {

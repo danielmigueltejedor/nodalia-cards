@@ -1391,7 +1391,7 @@ class NodaliaMediaPlayer extends HTMLElement {
   }
 
   _syncVolumeControlsFromHass(hass = this._hass) {
-    if (!this.shadowRoot?.innerHTML) {
+    if (!this.shadowRoot?.firstChild) {
       return;
     }
 

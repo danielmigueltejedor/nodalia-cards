@@ -623,7 +623,7 @@ test("weather forecast dates use the resolved Home Assistant locale", () => {
   const source = read("nodalia-weather-card.js");
   assert.match(source, /function formatForecastDateTime\(value, type, locale\)/);
   assert.match(source, /const localeArg = locale && locale !== "auto" \? locale : (?:undefined|void 0)/);
-  assert.match(source, /toLocaleDateString\(localeArg/);
+  assert.match(source, /getDateTimeFormatter\(localeArg, \{\s*weekday: \"short\"/);
   assert.match(source, /const forecastLocale = window\.NodaliaI18n\?\.localeTag\?\.\(langFc\) \|\| langFc/);
   assert.match(source, /_renderForecastChart\(visibleItems, activeType, state, forecastLocale(?:, unitPrefs)?\)/);
   assert.match(source, /formatForecastDateTime\(item\?\.datetime, activeType, forecastLocale\)/);

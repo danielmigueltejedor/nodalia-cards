@@ -170,7 +170,7 @@ class NodaliaPersonCard extends HTMLElement {
     this._hass = hass;
 
     const nextSignature = this._getRenderSignature(hass);
-    if (nextSignature && nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
+    if (nextSignature && nextSignature === this._lastRenderSignature && this.shadowRoot?.firstChild) {
       return;
     }
 

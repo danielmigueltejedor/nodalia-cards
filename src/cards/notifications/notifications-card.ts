@@ -434,7 +434,7 @@ class NodaliaNotificationsCard extends HTMLElement {
         return;
       }
       const nextSignature = this._getRenderSignature();
-      if (nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
+      if (nextSignature === this._lastRenderSignature && this.shadowRoot?.firstChild) {
         fireEvent(this, "iron-resize", {});
         return;
       }
@@ -484,7 +484,7 @@ class NodaliaNotificationsCard extends HTMLElement {
     this._syncTrackedEntitiesStamp(hass);
     this._syncSharedDismissedFromHass();
     const nextSignature = this._getRenderSignature(hass);
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+    if (this.shadowRoot?.firstChild && nextSignature === this._lastRenderSignature) {
       this._scheduleBackgroundMobileSync(this._pendingBackgroundMobileSync ? 0 : 320);
       return;
     }
