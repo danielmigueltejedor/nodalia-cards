@@ -2629,6 +2629,11 @@ class NodaliaVacuumCard extends HTMLElement {
           box-sizing: border-box;
         }
 
+        ha-card[data-vacuum-action="body_tap"]:focus-visible {
+          outline: 2px solid var(--primary-color);
+          outline-offset: -3px;
+        }
+
         ha-card {
           --vacuum-card-panel-duration: ${animations.enabled ? animations.panelDuration : 0}ms;
           --vacuum-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;

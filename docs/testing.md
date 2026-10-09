@@ -112,3 +112,11 @@ Vacuum and Advanced Vacuum find their helper entities (status, battery, selects,
 ### Hot-path guards
 
 `tests/performance-hot-paths.test.mjs` pins the per-update costs that every card pays: reading `shadowRoot.innerHTML` as a "has it rendered" check serializes the whole tree on every HA update, so source files may not do it; `normalizeTextKey`, number formatting and date formatting are memoized and must match the reference output (including eviction and `-0`); the parent-width measurement behind compact layout is lazy and runs only when the decision needs it; and the catalog stamp advances exactly when a discovery-relevant field changes.
+
+### Focus frames
+
+Keyboard focus draws a frame on the card's focus target. When that target is an inner wrapper (Circular Gauge, Power Flow, Insignia) or a full-bleed preview (Camera feed) it was square, so the card's rounded corners cut the frame. `tests/browser/focus-frame-radius.spec.mjs` focuses the target of every card that has one and requires a visible frame whose corner radius equals the card's.
+
+### Insignia states
+
+`tests/browser/insignia-state-text.spec.mjs` covers translated states (English and Spanish), humanized unknown keys, untouched zone names and numbers, and the neutral separator dot for away, off and unavailable states.

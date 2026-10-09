@@ -3221,6 +3221,11 @@
           border-radius: 0;
         }
 
+        /* The feed fills the rounded card edge to edge; its focus frame must follow the card corners. */
+        .camera-card--feed .camera-card__preview-open {
+          border-radius: ${styles.card.border_radius};
+        }
+
         .camera-card--feed ha-card::before {
           display: none;
         }
@@ -3343,6 +3348,7 @@
           appearance: none;
           background: transparent;
           border: 0;
+          border-radius: inherit;
           cursor: pointer;
           margin: 0;
           padding: 0;

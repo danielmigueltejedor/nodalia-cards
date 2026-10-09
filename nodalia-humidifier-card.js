@@ -2879,6 +2879,11 @@
           display: block;
         }
 
+        ha-card[data-humidifier-action="body"]:focus-visible {
+          outline: 2px solid var(--primary-color);
+          outline-offset: -3px;
+        }
+
         * {
           box-sizing: border-box;
         }

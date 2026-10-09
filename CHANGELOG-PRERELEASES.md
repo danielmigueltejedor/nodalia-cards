@@ -17,6 +17,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Climate, Weather and Calendar:** numbers and dates are formatted with shared locale formatters instead of building one per call.
 - **Light, Fan, Humidifier, Cover, Vacuum, Entity and Alarm Panel:** the parent element is measured for the compact layout only when the width and grid columns have not already decided it, avoiding a forced layout on many renders.
 
+### Fixed
+
+- **Circular Gauge, Power Flow, Insignia and Camera (feed layout):** the keyboard focus frame is drawn around the rounded card instead of a square that the card's corners cut off. Light, Fan, Humidifier and Vacuum use the same 2 px frame in the theme's primary color instead of the browser default, so every card's frame looks alike.
+- **Insignia:** states are shown translated ("Away" instead of `not_home`) and follow the Home Assistant language; unknown snake_case keys read as plain words. The separator dot of a person who is away, a fan or humidifier that is off, and unavailable states is neutral instead of green or blue.
+
 ---
 
 ## [3.0.2-alpha.2] - 2026-10-09

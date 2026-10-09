@@ -381,6 +381,10 @@
     }
     return state.attributes?.icon || "";
   }
+  function isNumericText(value) {
+    const raw = String(value ?? "").trim();
+    return raw !== "" && Number.isFinite(Number(raw.replace(",", ".")));
+  }
   function formatNumericString(value) {
     const raw = String(value ?? "").trim();
     if (!raw) {
@@ -613,7 +617,8 @@
           this._config?.tint_auto !== false,
           visibilityCount,
           String(this._config.styles.tint.color || ""),
-          `${this._config?.tap_action || ""}|${this._config?.hold_action || ""}`
+          `${this._config?.tap_action || ""}|${this._config?.hold_action || ""}`,
+          this._resolveStateLanguage(hass)
         ];
         if (typeof joinParts === "function") {
           return joinParts([{ prefix: "insignia:", values }]);
@@ -651,7 +656,25 @@
         }
         const unit = String(state.attributes?.unit_of_measurement || "").trim();
         const formatted = formatNumericString(state.state);
+        if (!isNumericText(state.state)) {
+          return this._translateStateText(state, formatted);
+        }
         return unit ? `${formatted} ${unit}` : formatted;
+      }
+      _resolveStateLanguage(hass = this._hass) {
+        return window.NodaliaI18n?.resolveLanguage?.(hass, "auto") ?? "en";
+      }
+      /** Words such as `not_home` are Home Assistant keys, not text: show the translated state. */
+      _translateStateText(state, fallback) {
+        const key = normalizeTextKey(state.state);
+        if (!key) return fallback;
+        const hass = this._hass;
+        const language = this._resolveStateLanguage(hass);
+        const translated = window.NodaliaI18n?.translateFavState?.(language, key) || window.NodaliaI18n?.translateEntityStateChip?.(hass, "auto", key);
+        if (translated) return translated;
+        if (!/^[a-z0-9]+(?:_[a-z0-9]+)+$/.test(fallback)) return fallback;
+        const spaced = fallback.replaceAll("_", " ");
+        return spaced.charAt(0).toUpperCase() + spaced.slice(1);
       }
       _isActiveState(state) {
         const stateKey = normalizeTextKey(state?.state);
@@ -765,14 +788,15 @@
         if (domain === "light") {
           return stateKey === "on" ? "var(--warning-color, #f6b04d)" : "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))";
         }
+        const inactiveColor = "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))";
         if (domain === "fan") {
-          return "var(--info-color, #71c0ff)";
+          return stateKey === "off" ? inactiveColor : "var(--info-color, #71c0ff)";
         }
         if (domain === "humidifier") {
-          return "#7fd0c8";
+          return stateKey === "off" ? inactiveColor : "#7fd0c8";
         }
         if (domain === "person") {
-          return "#83d39c";
+          return ["not_home", "unavailable", "unknown", ""].includes(stateKey) ? inactiveColor : "#83d39c";
         }
         if (domain === "alarm_control_panel") {
           return "#b59dff";
@@ -1139,6 +1163,7 @@
 
         .insignia-card__content {
           align-items: center;
+          border-radius: inherit;
           cursor: pointer;
           display: grid;
           gap: ${styles.card.gap};

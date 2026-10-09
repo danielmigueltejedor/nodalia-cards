@@ -1168,6 +1168,7 @@
         }
 
         .gauge-card__content {
+          border-radius: inherit;
           cursor: ${this._canRunTapAction() ? "pointer" : "default"};
           display: flex;
           flex-direction: column;

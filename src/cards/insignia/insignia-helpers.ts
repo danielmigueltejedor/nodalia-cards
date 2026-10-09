@@ -114,6 +114,11 @@ export function getDynamicEntityIcon(state: HassEntity | null | undefined) {
   return state.attributes?.icon || "";
 }
 
+export function isNumericText(value: unknown) {
+  const raw = String(value ?? "").trim();
+  return raw !== "" && Number.isFinite(Number(raw.replace(",", ".")));
+}
+
 export function formatNumericString(value: unknown) {
   const raw = String(value ?? "").trim();
   if (!raw) {

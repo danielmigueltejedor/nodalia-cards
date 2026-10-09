@@ -2471,6 +2471,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__content {
+          border-radius: inherit;
           flex: 0 1 auto;
           min-height: 0;
           position: relative;

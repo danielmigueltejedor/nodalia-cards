@@ -3103,6 +3103,11 @@
           width: 100%;
         }
 
+        ha-card[data-light-action="body"]:focus-visible {
+          outline: 2px solid var(--primary-color);
+          outline-offset: -3px;
+        }
+
         * {
           box-sizing: border-box;
         }
