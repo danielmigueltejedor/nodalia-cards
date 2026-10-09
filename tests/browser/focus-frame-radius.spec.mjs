@@ -16,8 +16,21 @@ const CARDS = [
   { name: 'vacuum', tag: 'nodalia-vacuum-card', config: { entity: 'vacuum.t', tap_action: 'more-info' }, entities: { 'vacuum.t': { state: 'docked', attributes: { battery_level: 50 } } }, target: '[data-vacuum-action="body_tap"]' },
 ];
 
+// Home Assistant's ha-card renders its content through a <slot>. A slotted child's parent in the
+// flat tree is that slot, so `border-radius: inherit` there resolves to 0: the fixture must slot too.
+async function useSlottedHaCard(page) {
+  await page.route('**/tests/fixtures/browser.html', async route => {
+    const response = await route.fetch();
+    const html = await response.text();
+    await route.fulfill({ response, body: html.replace('class extends HTMLElement {}', `class extends HTMLElement {
+      constructor(){super();if(this.localName==='ha-card') this.attachShadow({mode:'open'}).innerHTML='<style>:host{display:block;box-sizing:border-box;position:relative}</style><slot></slot>';}
+    }`) });
+  });
+}
+
 for (const card of CARDS) {
   test(`${card.name} keyboard focus frame follows the card corners`, async ({ page }) => {
+    await useSlottedHaCard(page);
     await page.goto('/tests/fixtures/browser.html');
     await page.waitForFunction(tag => customElements.get(tag), card.tag);
     const result = await page.evaluate(async ({ card }) => {

@@ -785,7 +785,8 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         }
 
         .gauge-card__content {
-          border-radius: inherit;
+          /* Slotted into ha-card, whose slot is the flat-tree parent: inherit would resolve to 0. */
+          border-radius: ${styles.card.border_radius};
           cursor: ${this._canRunTapAction() ? "pointer" : "default"};
           display: flex;
           flex-direction: column;

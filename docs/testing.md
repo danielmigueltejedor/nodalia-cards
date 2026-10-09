@@ -115,7 +115,7 @@ Vacuum and Advanced Vacuum find their helper entities (status, battery, selects,
 
 ### Focus frames
 
-Keyboard focus draws a frame on the card's focus target. When that target is an inner wrapper (Circular Gauge, Power Flow, Insignia) or a full-bleed preview (Camera feed) it was square, so the card's rounded corners cut the frame. `tests/browser/focus-frame-radius.spec.mjs` focuses the target of every card that has one and requires a visible frame whose corner radius equals the card's.
+Keyboard focus draws a frame on the card's focus target. When that target is an inner wrapper (Circular Gauge, Power Flow, Insignia) or a full-bleed preview (Camera feed) it was square, so the card's rounded corners cut the frame. `tests/browser/focus-frame-radius.spec.mjs` focuses the target of every card that has one and requires a visible frame whose corner radius equals the card's. The fixture renders `ha-card` through a slot like Home Assistant does: a slotted child's flat-tree parent is the slot, so `border-radius: inherit` resolves to 0 there and only an explicit radius works.
 
 ### Insignia states
 
