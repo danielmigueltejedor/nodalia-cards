@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.3";
+  var CARD_VERSION = "3.0.2-alpha.4";
 
   // src/cards/power-flow/power-flow-constants.ts
   var CARD_TAG = "nodalia-power-flow-card";
@@ -3023,7 +3023,8 @@
         }
 
         .power-flow-card__content {
-          border-radius: inherit;
+          /* Slotted into ha-card, whose slot is the flat-tree parent: inherit would resolve to 0. */
+          border-radius: ${styles.card.border_radius};
           flex: 0 1 auto;
           min-height: 0;
           position: relative;

@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.3";
+  var CARD_VERSION = "3.0.2-alpha.4";
 
   // src/cards/circular-gauge/circular-gauge-constants.ts
   var CARD_TAG = "nodalia-circular-gauge-card";
@@ -1168,7 +1168,8 @@
         }
 
         .gauge-card__content {
-          border-radius: inherit;
+          /* Slotted into ha-card, whose slot is the flat-tree parent: inherit would resolve to 0. */
+          border-radius: ${styles.card.border_radius};
           cursor: ${this._canRunTapAction() ? "pointer" : "default"};
           display: flex;
           flex-direction: column;

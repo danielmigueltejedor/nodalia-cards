@@ -8,6 +8,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.0.2-alpha.4] - 2026-10-09
+
+### Fixed
+
+- **Circular Gauge and Power Flow:** the keyboard focus frame is now really rounded inside Home Assistant. The alpha.3 change inherited the card radius, but Home Assistant renders a card's content through a slot and the slot has no radius, so the frame stayed square and the card's corners kept cutting it off. The frame now uses the card's configured radius directly.
+
+---
+
 ## [3.0.2-alpha.3] - 2026-10-09
 
 ### Improved
