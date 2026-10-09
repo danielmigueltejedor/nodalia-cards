@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.2";
+  var CARD_VERSION = "3.0.2-alpha.3";
 
   // src/cards/entity/entity-constants.ts
   var CARD_TAG = "nodalia-entity-card";
@@ -1528,12 +1528,12 @@
         this._hass = hass;
         if (!this.isConnected) return;
         let nextSignature = this._getRenderSignature();
-        if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !this._optimisticToggle) {
+        if (this.shadowRoot?.firstChild && nextSignature === this._lastRenderSignature && !this._optimisticToggle) {
           return;
         }
         this._syncOptimisticToggleState(this._getActualState());
         nextSignature = this._getRenderSignature();
-        if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+        if (this.shadowRoot?.firstChild && nextSignature === this._lastRenderSignature) {
           return;
         }
         this._lastRenderSignature = nextSignature;
@@ -1666,7 +1666,7 @@
           mode: this._config?.compact_layout_mode,
           width,
           gridColumns: this._getConfiguredGridColumns(),
-          parentWidth: window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0
+          parentWidth: () => window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0
         });
       }
       _shouldShowCompactTitle(width) {
@@ -5243,7 +5243,7 @@
       }
       set hass(hass) {
         const nextSignature = this._getEntityOptionsSignature(hass);
-        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.firstChild;
         this._hass = hass;
         this._entityOptionsSignature = nextSignature;
         if (!shouldRender) {

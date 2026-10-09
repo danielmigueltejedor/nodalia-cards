@@ -8,6 +8,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.0.2-alpha.3] - 2026-10-09
+
+### Improved
+
+- **All cards:** Home Assistant updates that do not concern a card (the vast majority) no longer make it serialize its whole shadow tree to learn whether it had already rendered. On a 25-card dashboard, 120 unrelated updates now cost about 60% less on Chromium and about 75% less on WebKit; updates that do change cards cost about 30-45% less. The same dashboard costs less to mount as well.
+- **Vacuum and Advanced Vacuum:** the helper entities (status, battery, selects, buttons, room tracking) are discovered once per entity catalog instead of on every update. Advanced Vacuum robot updates cost about 30% less and routine/relevant updates about 15% less; the saving grows with the number of entities in Home Assistant, because the old scan visited every one of them each time.
+- **Climate, Weather and Calendar:** numbers and dates are formatted with shared locale formatters instead of building one per call.
+- **Light, Fan, Humidifier, Cover, Vacuum, Entity and Alarm Panel:** the parent element is measured for the compact layout only when the width and grid columns have not already decided it, avoiding a forced layout on many renders.
+
+---
+
 ## [3.0.2-alpha.2] - 2026-10-09
 
 ### Fixed

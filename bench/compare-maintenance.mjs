@@ -13,16 +13,21 @@ const command=(cmd,args)=>cp.execFileSync(cmd,args,{cwd:root,encoding:'utf8'}).t
 const profiles=[...['lock','humidifier','weather','advance-vacuum'].flatMap(card=>['mount','relevant','unrelated'].map(kind=>`${kind}/${card}`)),
  'states/lock/40','map-updates/advance-vacuum/robot/120','map-updates/advance-vacuum/frame/20','map-updates/advance-vacuum/selection/20',
  'gesture/advance-vacuum/pointer/80','gesture/advance-vacuum/touch/80','lifecycle/advance-vacuum/100'];
+const allCards=['light','fan','humidifier','climate','entity','fav','gauge','graph','media','vacuum','weather','calendar','power-flow','cover','alarm','lock','advance-vacuum','insignia','person','scenes','notifications','news','camera','summary','navigation'];
+// --broad: every registered card's mount, unrelated and relevant profiles plus the whole dashboard.
+const broadProfiles=[...allCards.flatMap(card=>['mount','relevant','unrelated'].map(kind=>`${kind}/${card}`)),'dashboard/mount','dashboard/unrelated','dashboard/relevant',
+ ...profiles.filter(p=>/^(states|map-updates|gesture|lifecycle)\//.test(p)),'helpers/advance-vacuum/auto','helpers/advance-vacuum/explicit','helpers/advance-vacuum/robot-switch'];
 const harnessPaths=['bench/compare-maintenance.mjs','bench/run.mjs','bench/core.mjs','bench/workloads.mjs','bench/fixtures/runtime.mjs','bench/fixture.html','bench/benchmark.config.json','tests/fixtures/hass.mjs'];
 const hashHarness=async()=>sha256(Buffer.concat(await Promise.all(harnessPaths.map(file=>fs.readFile(path.join(root,file))))));
-export async function compare({smoke=false}={}) {
- const baseline=await loadAsset('3.0.0',path.join(root,'bench/releases'));
+export async function compare({smoke=false,baselineVersion='3.0.0',broad=false,iterations,warmups}={}) {
+ const baseline=await loadAsset(baselineVersion,path.join(root,'bench/releases'));
  const pkg=JSON.parse(await fs.readFile(path.join(root,'package.json'),'utf8'));
  const candidateBytes=await fs.readFile(path.join(root,'nodalia-cards.js'));
  const candidate={version:pkg.version,provenance:'local-source-candidate',sha256:sha256(candidateBytes),rawBytes:candidateBytes.length,gzipBytes:zlib.gzipSync(candidateBytes,{level:9}).length,brotliBytes:zlib.brotliCompressSync(candidateBytes).length};
  const directory=path.join(root,'bench/releases',candidate.version);await fs.mkdir(directory,{recursive:true});await fs.writeFile(path.join(directory,'nodalia-cards.js'),candidateBytes);
- const versions=[baseline.version,candidate.version],config={...JSON.parse(await fs.readFile(path.join(root,'bench/benchmark.config.json'),'utf8')),commonCards:['lock','humidifier','weather','advance-vacuum']};delete config.quick;
- const selectedProfiles=smoke?profiles.filter(p=>p.startsWith("map-updates/")||p.startsWith("states/")):profiles;
+ const versions=[baseline.version,candidate.version],config={...JSON.parse(await fs.readFile(path.join(root,'bench/benchmark.config.json'),'utf8')),commonCards:broad?allCards:['lock','humidifier','weather','advance-vacuum']};delete config.quick;
+ if(iterations)config.iterations=iterations;if(warmups!==undefined)config.warmups=warmups;
+ const selectedProfiles=smoke?profiles.filter(p=>p.startsWith("map-updates/")||p.startsWith("states/")):broad?broadProfiles:profiles;
  if(smoke){config.iterations=1;config.warmups=0;}
  const result={schemaVersion:'maintenance-diagnostic-1',metadata:{timestamp:new Date().toISOString(),mode:smoke?'local-candidate-smoke':'local-candidate-diagnostic',commit:command('git',['rev-parse','HEAD']),workingTreeDirty:!!command('git',['status','--porcelain']),harnessFilesSha256:await hashHarness(),node:process.version,pnpm:command('pnpm',['--version']),playwright:JSON.parse(await fs.readFile(path.join(root,'node_modules/@playwright/test/package.json'),'utf8')).version,platform:os.platform(),osVersion:command('sw_vers',['-productVersion']),osRelease:os.release(),architecture:os.arch(),cpu:os.cpus()[0].model,logicalCpus:os.cpus().length,ramBytes:os.totalmem(),firefox:'excluded on this Mac by explicit owner instruction; no Firefox performance claim'},versions,assets:[baseline,candidate],config,profiles:selectedProfiles,browsers:[],samples:[],errors:[]};
  const server=await serve();
@@ -63,7 +68,8 @@ export async function compare({smoke=false}={}) {
  if(await hashHarness()!==result.metadata.harnessFilesSha256)result.errors.push({error:'Harness changed during measurement'});
  if(sha256(await fs.readFile(path.join(root,'nodalia-cards.js')))!==candidate.sha256)result.errors.push({error:'Candidate changed during measurement'});
  result.summary=summarize(result.samples);
- const output=path.join(root,`bench/results/maintenance-${candidate.version}${smoke?'-smoke':''}.json`);await fs.mkdir(path.dirname(output),{recursive:true});await fs.writeFile(output,JSON.stringify(result,null,2)+'\n');
+ const output=path.join(root,`bench/results/maintenance-${candidate.version}${baselineVersion!=='3.0.0'?`-vs-${baselineVersion}`:''}${broad?'-broad':''}${smoke?'-smoke':''}.json`);await fs.mkdir(path.dirname(output),{recursive:true});await fs.writeFile(output,JSON.stringify(result,null,2)+'\n');
  console.log(`${result.samples.length} samples; ${result.errors.length} errors; ${output}`);return result;
 }
-if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))compare({smoke:process.argv.includes('--smoke')}).then(r=>{if(r.errors.length)process.exitCode=1;}).catch(e=>{console.error(e);process.exitCode=1;});
+const argument=name=>process.argv.find(a=>a.startsWith(`--${name}=`))?.split('=')[1];
+if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))compare({smoke:process.argv.includes('--smoke'),baselineVersion:argument('baseline')||'3.0.0',broad:process.argv.includes('--broad'),iterations:argument('iterations')?Number(argument('iterations')):undefined,warmups:argument('warmups')!==undefined?Number(argument('warmups')):undefined}).then(r=>{if(r.errors.length)process.exitCode=1;}).catch(e=>{console.error(e);process.exitCode=1;});

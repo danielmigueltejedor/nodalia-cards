@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.2";
+  var CARD_VERSION = "3.0.2-alpha.3";
 
   // src/cards/vacuum/vacuum-constants.ts
   var CARD_TAG = "nodalia-vacuum-card";
@@ -346,6 +346,59 @@
     };
   }
 
+  // src/shared/entity-catalog-stamp.ts
+  var FIELDS2 = 5;
+  function record(value) {
+    return value !== null && typeof value === "object" ? value : {};
+  }
+  var EntityCatalogStamp = class {
+    constructor() {
+      /** Increases whenever a discovery-relevant field of any entity changed. */
+      this.version = 0;
+      this.snapshotRef = null;
+      this.catalog = [];
+    }
+    /**
+     * Returns the current version for the HA object, advancing it if the catalog changed.
+     * `trusted` lets a caller that already compared this exact HA object during the current
+     * synchronous pass skip the comparison. Otherwise every call compares, so dictionaries that
+     * HA or a wrapper mutates in place are still noticed.
+     */
+    update(hass, trusted = false) {
+      if (trusted && hass && hass === this.snapshotRef) return this.version;
+      const states = record(hass?.states);
+      const registry = record(hass?.entities);
+      const ids = Object.keys(states);
+      const catalog = this.catalog;
+      let same = catalog.length === ids.length * FIELDS2;
+      for (let index = 0; same && index < ids.length; index += 1) {
+        const id = ids[index];
+        const attributes = record(record(states[id]).attributes);
+        const entry = record(registry[id]);
+        const offset = index * FIELDS2;
+        same = catalog[offset] === id && catalog[offset + 1] === attributes.friendly_name && catalog[offset + 2] === entry.device_id && catalog[offset + 3] === entry.original_name && catalog[offset + 4] === entry.translation_key;
+      }
+      if (!same) {
+        const next = [];
+        for (const id of ids) {
+          const attributes = record(record(states[id]).attributes);
+          const entry = record(registry[id]);
+          next.push(id, attributes.friendly_name, entry.device_id, entry.original_name, entry.translation_key);
+        }
+        this.catalog = next;
+        this.version += 1;
+      }
+      this.snapshotRef = hass ?? null;
+      return this.version;
+    }
+    /** Forget the previous catalog, e.g. when the HA connection or user changed. */
+    reset() {
+      this.snapshotRef = null;
+      this.catalog = [];
+      this.version += 1;
+    }
+  };
+
   // src/shared/editor-entity-helpers.ts
   function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
     return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
@@ -643,7 +696,8 @@
           mop: 0
         };
         this._relatedEntityCache = null;
-        this._relatedEntityCacheGeneration = 0;
+        this._catalogStamp = new EntityCatalogStamp();
+        this._catalogTrusted = false;
         this._lastRenderSignature = "";
         this._animateContentOnNextRender = true;
         this._entranceAnimationResetTimer = 0;
@@ -783,14 +837,19 @@
         }
         this._hassContext = context;
         this._hass = hass;
-        this._relatedEntityCacheGeneration += 1;
-        const nextSignature = this._getRenderSignature(hass);
-        const pendingChanged = this._syncPendingModeSelections();
-        if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !pendingChanged) {
-          return;
+        this._catalogStamp.update(hass);
+        this._catalogTrusted = true;
+        try {
+          const nextSignature = this._getRenderSignature(hass);
+          const pendingChanged = this._syncPendingModeSelections();
+          if (this.shadowRoot?.firstChild && nextSignature === this._lastRenderSignature && !pendingChanged) {
+            return;
+          }
+          this._lastRenderSignature = nextSignature;
+          this._render();
+        } finally {
+          this._catalogTrusted = false;
         }
-        this._lastRenderSignature = nextSignature;
-        this._render();
       }
       getCardSize() {
         return this._getEstimatedCardSize();
@@ -947,7 +1006,7 @@
           mode: this._config?.compact_layout_mode,
           width,
           gridColumns: this._getConfiguredGridColumns(),
-          parentWidth: window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0
+          parentWidth: () => window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0
         });
       }
       _triggerHaptic(style = void 0) {
@@ -1138,10 +1197,11 @@
         if (!objectId) {
           return null;
         }
-        if (this._relatedEntityCache?.objectId === objectId && this._relatedEntityCache?.generation === this._relatedEntityCacheGeneration) {
+        const catalogVersion = this._catalogStamp.update(this._hass, this._catalogTrusted);
+        const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
+        if (this._relatedEntityCache?.objectId === objectId && this._relatedEntityCache?.generation === catalogVersion && this._relatedEntityCache?.sortLoc === sortLoc) {
           return this._relatedEntityCache;
         }
-        const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
         const candidates = {
           state: [],
           error: [],
@@ -1196,7 +1256,8 @@
         Object.values(candidates).forEach((items) => items.sort((left, right) => left.localeCompare(right, sortLoc)));
         this._relatedEntityCache = {
           objectId,
-          generation: this._relatedEntityCacheGeneration,
+          generation: catalogVersion,
+          sortLoc,
           state: candidates.state[0] || "",
           error: candidates.error[0] || "",
           battery: candidates.battery[0] || "",
@@ -3402,7 +3463,7 @@
       }
       set hass(hass) {
         const nextSignature = this._getEntityOptionsSignature(hass);
-        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.firstChild;
         this._hass = hass;
         this._entityOptionsSignature = nextSignature;
         if (!shouldRender) {

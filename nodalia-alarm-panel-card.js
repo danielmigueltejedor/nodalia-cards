@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.2";
+  var CARD_VERSION = "3.0.2-alpha.3";
 
   // src/cards/alarm-panel/alarm-panel-constants.ts
   var CARD_TAG = "nodalia-alarm-panel-card";
@@ -620,7 +620,7 @@
         }
         const nextSignature = this._getRenderSignature(hass);
         this._hass = hass;
-        if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !bustSignatureCache) {
+        if (this.shadowRoot?.firstChild && nextSignature === this._lastRenderSignature && !bustSignatureCache) {
           this._syncCountdownTimer();
           return;
         }
@@ -644,7 +644,7 @@
           mode: this._config?.compact_layout_mode,
           width,
           gridColumns: parseFiniteNumericValue(isObject(this._config.grid_options) ? this._config.grid_options.columns : void 0),
-          parentWidth: window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0
+          parentWidth: () => window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0
         });
       }
       _shouldShowCompactTitle(width = 0) {
@@ -1858,7 +1858,7 @@
       }
       set hass(hass) {
         const nextSignature = this._getEntityOptionsSignature(hass);
-        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.firstChild;
         this._hass = hass;
         this._entityOptionsSignature = nextSignature;
         if (!shouldRender) {

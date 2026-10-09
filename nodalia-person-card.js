@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.2";
+  var CARD_VERSION = "3.0.2-alpha.3";
 
   // src/cards/person/person-constants.ts
   var CARD_TAG = "nodalia-person-card";
@@ -489,7 +489,7 @@
         this._hassContext = context;
         this._hass = hass;
         const nextSignature = this._getRenderSignature(hass);
-        if (nextSignature && nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
+        if (nextSignature && nextSignature === this._lastRenderSignature && this.shadowRoot?.firstChild) {
           return;
         }
         this._lastRenderSignature = nextSignature;
@@ -1607,7 +1607,7 @@
       }
       set hass(hass) {
         const nextSignature = this._getEntityOptionsSignature(hass);
-        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.firstChild;
         this._hass = hass;
         this._entityOptionsSignature = nextSignature;
         if (!shouldRender) {

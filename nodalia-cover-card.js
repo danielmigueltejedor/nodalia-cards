@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.2";
+  var CARD_VERSION = "3.0.2-alpha.3";
 
   // src/shared/device-control-geometry.ts
   var CIRCULAR_LAYOUT_DIAL_START_ANGLE = 135;
@@ -764,7 +764,7 @@
           this._pendingRenderAfterDrag = true;
           return;
         }
-        if (this.shadowRoot?.innerHTML && signature === this._lastRenderSignature) {
+        if (this.shadowRoot?.firstChild && signature === this._lastRenderSignature) {
           return;
         }
         this._lastRenderSignature = signature;
@@ -903,7 +903,7 @@
           mode: this._config?.compact_layout_mode,
           width: Math.round(this._cardWidth || this.clientWidth || 0),
           gridColumns: this._getConfiguredGridColumns(),
-          parentWidth: window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0
+          parentWidth: () => window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0
         });
       }
       _shouldShowCompactTitle() {
@@ -2454,7 +2454,7 @@
       }
       set hass(hass) {
         const nextSignature = this._getEntityOptionsSignature(hass);
-        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.firstChild;
         this._hass = hass;
         this._entityOptionsSignature = nextSignature;
         if (!shouldRender) return;

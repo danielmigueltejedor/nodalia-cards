@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.2";
+  var CARD_VERSION = "3.0.2-alpha.3";
 
   // src/cards/notifications/notifications-constants.ts
   var CARD_TAG = "nodalia-notifications-card";
@@ -1614,7 +1614,7 @@
             return;
           }
           const nextSignature = this._getRenderSignature();
-          if (nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
+          if (nextSignature === this._lastRenderSignature && this.shadowRoot?.firstChild) {
             fireEvent(this, "iron-resize", {});
             return;
           }
@@ -1662,7 +1662,7 @@
         this._syncTrackedEntitiesStamp(hass);
         this._syncSharedDismissedFromHass();
         const nextSignature = this._getRenderSignature(hass);
-        if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+        if (this.shadowRoot?.firstChild && nextSignature === this._lastRenderSignature) {
           this._scheduleBackgroundMobileSync(this._pendingBackgroundMobileSync ? 0 : 320);
           return;
         }
@@ -4313,7 +4313,7 @@
           this._lastBackgroundMobileSyncSignature = "";
         }
         const nextSignature = this._getEntityOptionsSignature(hass);
-        const shouldRender = changedContext || !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+        const shouldRender = changedContext || !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.firstChild;
         this._hass = hass;
         this._entityOptionsSignature = nextSignature;
         if (shouldRender) {

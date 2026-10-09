@@ -309,9 +309,11 @@
       if (Number.isFinite(measured) && measured > 0 && measured < COMPACT_CARD_MAX_WIDTH) {
         return true;
       }
-      const parent = Number(parentWidth);
-      if (Number.isFinite(measured) && measured > 0 && Number.isFinite(parent) && parent > measured && measured / parent <= COMPACT_CARD_TILE_PARENT_RATIO && measured < 900) {
-        return true;
+      if (Number.isFinite(measured) && measured > 0 && measured < 900) {
+        const parent = Number(typeof parentWidth === "function" ? parentWidth() : parentWidth);
+        if (Number.isFinite(parent) && parent > measured && measured / parent <= COMPACT_CARD_TILE_PARENT_RATIO) {
+          return true;
+        }
       }
       return false;
     }
@@ -351,8 +353,21 @@
       node.dispatchEvent(event);
       return event;
     }
+    function computeTextKey(text) {
+      return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+    }
+    const TEXT_KEY_CACHE_LIMIT = 4096;
+    const TEXT_KEY_MAX_LENGTH = 160;
+    const textKeyCache = /* @__PURE__ */ new Map();
     function normalizeTextKey(value) {
-      return String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+      const text = typeof value === "string" ? value : String(value ?? "");
+      if (text.length > TEXT_KEY_MAX_LENGTH) return computeTextKey(text);
+      const cached = textKeyCache.get(text);
+      if (cached !== void 0) return cached;
+      const key = computeTextKey(text);
+      if (textKeyCache.size >= TEXT_KEY_CACHE_LIMIT) textKeyCache.clear();
+      textKeyCache.set(text, key);
+      return key;
     }
     function stripEqualToDefaults(config, defaults) {
       if (defaults === void 0 || defaults === null) {

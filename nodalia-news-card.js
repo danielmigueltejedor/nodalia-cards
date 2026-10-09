@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2-alpha.2";
+  var CARD_VERSION = "3.0.2-alpha.3";
 
   // src/cards/news/news-constants.ts
   var CARD_TAG = "nodalia-news-card";
@@ -961,7 +961,7 @@
         this._contextAdmin = Boolean(hass?.user?.is_admin);
         this._hass = hass;
         const nextSignature = this._getRenderSignature(hass);
-        if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+        if (this.shadowRoot?.firstChild && nextSignature === this._lastRenderSignature) {
           return;
         }
         this._lastRenderSignature = nextSignature;
@@ -2076,7 +2076,7 @@
           this._config?.language,
           (id) => id.startsWith("sensor.")
         ) || "";
-        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+        const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.firstChild;
         this._hass = hass;
         this._entityOptionsSignature = nextSignature;
         if (!shouldRender) {
