@@ -50,7 +50,7 @@ test("advance vacuum setConfig renders without missing helper imports", () => {
     constructor() { this.isConnected = true; }
     attachShadow() {
       this.shadowRoot = {
-        addEventListener() {}, removeEventListener() {}, innerHTML: "", replaceChildren() {this.innerHTML="";},
+        addEventListener() {}, removeEventListener() {}, innerHTML: "", get firstChild() { return this.innerHTML ? {} : null; }, replaceChildren() {this.innerHTML="";},
         querySelector() { return null; }, querySelectorAll() { return []; },
       };
       return this.shadowRoot;

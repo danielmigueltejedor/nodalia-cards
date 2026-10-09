@@ -218,7 +218,7 @@ function loadClimateCardClass() {
     attachShadow() {
       this.shadowRoot = {
         addEventListener() {},
-        innerHTML: "",
+        innerHTML: "", get firstChild() { return this.innerHTML ? {} : null; },
         replaceChildren() {this.innerHTML="";},
         querySelector() { return null; },
         querySelectorAll() { return []; },
@@ -275,7 +275,7 @@ function loadPowerFlowCardClass() {
     attachShadow() {
       this.shadowRoot = {
         addEventListener() {},
-        innerHTML: "",
+        innerHTML: "", get firstChild() { return this.innerHTML ? {} : null; },
         querySelector() { return null; },
         querySelectorAll() { return []; },
       };
@@ -388,7 +388,7 @@ function loadNavigationBarCardClass() {
       this.shadowRoot = {
         addEventListener() {},
         removeEventListener() {},
-        innerHTML: "",
+        innerHTML: "", get firstChild() { return this.innerHTML ? {} : null; },
         querySelector() { return null; },
         querySelectorAll() { return []; },
       };
@@ -2166,7 +2166,7 @@ test("alarm panel PIN input keeps masked text visible across themes", () => {
 
 test("calendar card reuses date/time formatters during render", () => {
   const source = read("nodalia-calendar-card.js");
-  assert.match(source, /DATE_TIME_FORMATTER_CACHE_LIMIT/);
+  assert.match(source, /dateTimeFormatterCache\.size > CACHE_LIMIT/);
   assert.match(source, /function getDateTimeFormatter\(locale, options\)/);
   assert.equal((source.match(/new Intl\.DateTimeFormat/g) || []).length, 1);
   assert.match(source, /formatDateLabel\(date, locale\)[\s\S]*getDateTimeFormatter\(locale/);

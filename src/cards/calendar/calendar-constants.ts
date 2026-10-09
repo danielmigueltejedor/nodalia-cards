@@ -17,5 +17,4 @@ export const CALENDAR_DELETE_RECURRENCE_THIS = "";
 export const CALENDAR_DELETE_RECURRENCE_THIS_AND_FUTURE = "THISANDFUTURE";
 
 export const VALID_TIME_RANGES = ["3d", "1w", "2w", "1m"];
-export const DATE_TIME_FORMATTER_CACHE_LIMIT = 48;
-export const dateTimeFormatterCache = new Map<string, Intl.DateTimeFormat>();
+export { dateTimeFormatterCache } from "../../shared/date-time-format";

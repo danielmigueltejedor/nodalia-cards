@@ -215,7 +215,7 @@ class NodaliaClimateCardEditor extends HTMLElement {
     const shouldRender = changedContext ||
       !this._hass ||
       nextSignature !== this._entityOptionsSignature ||
-      !this.shadowRoot?.innerHTML;
+      !this.shadowRoot?.firstChild;
 
     this._hass = hass;
     this._entityOptionsSignature = nextSignature;

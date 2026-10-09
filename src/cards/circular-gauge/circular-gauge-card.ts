@@ -145,7 +145,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
   set hass(hass: HomeAssistant) {
     const nextSignature = this._getRenderSignature(hass);
     this._hass = hass;
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+    if (this.shadowRoot?.firstChild && nextSignature === this._lastRenderSignature) {
       return;
     }
     this._lastRenderSignature = nextSignature;

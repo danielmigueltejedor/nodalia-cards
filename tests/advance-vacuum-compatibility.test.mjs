@@ -16,7 +16,7 @@ function loadAdvanceVacuumCard() {
         addEventListener() {},
         querySelector() { return null; },
         querySelectorAll() { return []; },
-        innerHTML: "",
+        innerHTML: "", get firstChild() { return this.innerHTML ? {} : null; },
       };
       return this.shadowRoot;
     }

@@ -322,14 +322,14 @@ class NodaliaEntityCard extends HTMLElement {
     this._hass = hass;
     if (!this.isConnected) return;
     let nextSignature = this._getRenderSignature();
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature && !this._optimisticToggle) {
+    if (this.shadowRoot?.firstChild && nextSignature === this._lastRenderSignature && !this._optimisticToggle) {
       return;
     }
 
     this._syncOptimisticToggleState(this._getActualState());
     nextSignature = this._getRenderSignature();
 
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+    if (this.shadowRoot?.firstChild && nextSignature === this._lastRenderSignature) {
       return;
     }
 
@@ -471,7 +471,7 @@ class NodaliaEntityCard extends HTMLElement {
       mode: this._config?.compact_layout_mode,
       width,
       gridColumns: this._getConfiguredGridColumns(),
-      parentWidth: window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0,
+      parentWidth: () => window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0,
     });
   }
 

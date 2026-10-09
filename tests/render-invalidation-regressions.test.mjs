@@ -49,7 +49,7 @@ test("person retries unresolved zone matches instead of caching misses forever",
 
 test("vacuum signature follows auxiliary state, battery, mapping and mode selects", () => {
   const source = read("nodalia-vacuum-card.js");
-  assert.match(source, /set hass\(hass\) \{[\s\S]*?this\._hass = hass;\n\s*this\._relatedEntityCacheGeneration \+= 1;\n\s*const nextSignature = this\._getRenderSignature\(hass\);/);
+  assert.match(source, /set hass\(hass\) \{[\s\S]*?this\._hass = hass;[\s\S]*?this\._catalogStamp\.update\(hass\);[\s\S]*?const nextSignature = this\._getRenderSignature\(hass\);/);
   const signature = renderSignature("nodalia-vacuum-card.js");
   for (const token of [
     "auxiliaryState",
@@ -62,10 +62,11 @@ test("vacuum signature follows auxiliary state, battery, mapping and mode select
     assert.match(signature, new RegExp(token), `vacuum signature should include ${token}`);
   }
   assert.match(source, /_getRelatedEntityCache\(\)/);
-  assert.match(source, /this\._relatedEntityCacheGeneration \+= 1/);
+  // Discovery results follow the entity catalog (ids, names, registry), not every HA update.
+  assert.match(source, /catalogVersion = this\._catalogStamp\.update\(this\._hass, this\._catalogTrusted\)/);
   assert.match(
     source,
-    /this\._relatedEntityCache\?\.objectId === objectId\s*&&\s*this\._relatedEntityCache\?\.generation === this\._relatedEntityCacheGeneration/,
+    /this\._relatedEntityCache\?\.objectId === objectId\s*&&\s*this\._relatedEntityCache\?\.generation === catalogVersion/,
   );
 });
 

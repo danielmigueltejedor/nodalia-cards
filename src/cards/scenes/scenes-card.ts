@@ -143,7 +143,7 @@ class NodaliaScenesCard extends HTMLElement {
   set hass(hass: HomeAssistant) {
     this._hass = hass;
     const nextSignature = this._getRenderSignature();
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+    if (this.shadowRoot?.firstChild && nextSignature === this._lastRenderSignature) {
       return;
     }
     this._lastRenderSignature = nextSignature;

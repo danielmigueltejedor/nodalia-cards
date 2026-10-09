@@ -326,7 +326,7 @@ class NodaliaFanCard extends HTMLElement {
     const hasPendingOptimistic = Boolean(this._optimisticToggle || this._optimisticVisualSettle);
     let nextSignature = this._getRenderSignature();
     const signatureUnchanged = Boolean(
-      this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature,
+      this.shadowRoot?.firstChild && nextSignature === this._lastRenderSignature,
     );
 
     if (signatureUnchanged && !hasPendingOptimistic) {
@@ -356,7 +356,7 @@ class NodaliaFanCard extends HTMLElement {
     }
 
     if (
-      this.shadowRoot?.innerHTML
+      this.shadowRoot?.firstChild
       && nextSignature === this._lastRenderSignature
       && !optimisticJustConfirmed
       && !this._optimisticToggle
@@ -438,7 +438,7 @@ class NodaliaFanCard extends HTMLElement {
       mode: this._config?.compact_layout_mode,
       width,
       gridColumns: this._getConfiguredGridColumns(),
-      parentWidth: window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0,
+      parentWidth: () => window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0,
     });
   }
 
@@ -963,7 +963,7 @@ class NodaliaFanCard extends HTMLElement {
   }
 
   _shouldSkipRenderForUnchangedSignature() {
-    if (!this.shadowRoot?.innerHTML) {
+    if (!this.shadowRoot?.firstChild) {
       return false;
     }
 

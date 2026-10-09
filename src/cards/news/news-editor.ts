@@ -70,7 +70,7 @@ class NodaliaNewsCardEditor extends HTMLElement {
       this._config?.language,
       id => id.startsWith("sensor."),
     ) || "";
-    const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+    const shouldRender = !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.firstChild;
     this._hass = hass;
     this._entityOptionsSignature = nextSignature;
     if (!shouldRender) {

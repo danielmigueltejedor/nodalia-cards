@@ -145,7 +145,7 @@ class NodaliaNotificationsCardEditor extends HTMLElement {
       this._lastBackgroundMobileSyncSignature = "";
     }
     const nextSignature = this._getEntityOptionsSignature(hass);
-    const shouldRender = changedContext || !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.innerHTML;
+    const shouldRender = changedContext || !this._hass || nextSignature !== this._entityOptionsSignature || !this.shadowRoot?.firstChild;
     this._hass = hass;
     this._entityOptionsSignature = nextSignature;
     if (shouldRender) {

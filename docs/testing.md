@@ -104,3 +104,11 @@ Firefox failing before loading any fixture is an unavailable browser, not a pass
 ### Hold release off the card
 
 A long press runs the hold action and arms a one-shot flag that swallows the click synthesized by the release. When the release lands off the card (the finger slides away, or the hold opens a dialog under it) that click never arrives. `tests/browser/hold-release-click.spec.mjs` holds Person, Insignia, Weather, Entity and Vacuum cards, releases far away from them and requires the next real tap to run its action. `bindHostPointerHoldGesture` now calls `releaseHoldConsumedClick` on the next primary press so every card clears its flag.
+
+### Entity discovery cache
+
+Vacuum and Advanced Vacuum find their helper entities (status, battery, selects, buttons, room tracking) by scanning the whole HA catalog. The result depends only on entity ids, friendly names and registry identity, so it is kept until one of those changes (`shared/entity-catalog-stamp.ts`). `tests/browser/vacuum-discovery-cache.spec.mjs` applies catalog edits (helper added, removed, renamed, registry device moved, sibling vacuum appearing) and requires a long-lived card to agree with a card that discovers from scratch on the same snapshot, and requires unrelated state updates to reuse the previous result object.
+
+### Hot-path guards
+
+`tests/performance-hot-paths.test.mjs` pins the per-update costs that every card pays: reading `shadowRoot.innerHTML` as a "has it rendered" check serializes the whole tree on every HA update, so source files may not do it; `normalizeTextKey`, number formatting and date formatting are memoized and must match the reference output (including eviction and `-0`); the parent-width measurement behind compact layout is lazy and runs only when the decision needs it; and the catalog stamp advances exactly when a discovery-relevant field changes.

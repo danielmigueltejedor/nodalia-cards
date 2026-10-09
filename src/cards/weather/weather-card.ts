@@ -238,7 +238,7 @@ class NodaliaWeatherCard extends HTMLElement {
     this._hass = hass;
     this._ensureForecastSubscription();
 
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+    if (this.shadowRoot?.firstChild && nextSignature === this._lastRenderSignature) {
       return;
     }
 

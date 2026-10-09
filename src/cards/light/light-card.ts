@@ -395,7 +395,7 @@ class NodaliaLightCard extends HTMLElement {
     let nextSignature = this._getRenderSignature();
     const hasPendingOptimistic = Boolean(this._optimisticTurnOn || this._optimisticTurnOff || this._optimisticVisualSettle);
     const signatureUnchanged = Boolean(
-      this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature,
+      this.shadowRoot?.firstChild && nextSignature === this._lastRenderSignature,
     );
 
     if (signatureUnchanged && !hasPendingOptimistic) {
@@ -584,7 +584,7 @@ class NodaliaLightCard extends HTMLElement {
       mode: this._config?.compact_layout_mode,
       width,
       gridColumns: this._getConfiguredGridColumns(),
-      parentWidth: window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0,
+      parentWidth: () => window.NodaliaUtils.resolveCompactLayoutParentWidth?.(this) || 0,
     });
   }
 

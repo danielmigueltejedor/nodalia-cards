@@ -5,6 +5,7 @@ import advanceVacuumMapSurfaceStyles from "./advance-vacuum-map-surface.css";
 import advanceVacuumMotionStyles from "./advance-vacuum-motion.css";
 import advanceVacuumUtilitiesStyles from "./advance-vacuum-utilities.css";
 import { reconcileViewChildren } from "../../shared/view-reconcile";
+import { EntityCatalogStamp } from "../../shared/entity-catalog-stamp";
 import {
   CARD_TAG,
   CLEANING_SESSION_PENDING_TIMEOUT_MS,
@@ -134,6 +135,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   declare private _lastSubmittedSharedCleaningSessionValue: string|null;
   declare private _lastSharedCleaningSessionOverflowFingerprint: string|null;
   declare private _roomTrackingEntityCache: RoomTrackingCache|null;
+  declare private _catalogStamp: EntityCatalogStamp;
+  declare private _discoveryMemo: {version:number;config:string;values:Map<string,unknown>};
   declare private _roomTrackingLookupScope: {hass:HomeAssistant|null;value:RoomTrackingCache|null}|null;
   declare private _lastNonSmartModeSelection: {suction:string;mop:string};
   declare private _localeReconciliationTimeouts: number[]|null;
@@ -244,6 +247,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._wasCleaningSessionActive = false;
     this._roomTrackingEntityCache = null;
     this._roomTrackingLookupScope = null;
+    this._catalogStamp = new EntityCatalogStamp();
+    this._discoveryMemo = {version:-1,config:"",values:new Map()};
     this._lastRenderSignature = "";
     this._calibrationSignatureStamp = "";
     this._animateContentOnNextRender = true;
@@ -384,7 +389,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
     try {
       const nextSignature = this._getRenderSignature(this._hass);
-      if (nextSignature === this._lastRenderSignature && this.shadowRoot.innerHTML) {
+      if (nextSignature === this._lastRenderSignature && this.shadowRoot.firstChild) {
         return;
       }
       this._syncCalibrationIfNeeded();
@@ -492,7 +497,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       if(contextChanged) this._scheduleLocaleReconciliation();
       const signatures = this._getRenderSignatures(hass);
       const nextSignature = signatures.all;
-      if (nextSignature === this._lastRenderSignature && this.shadowRoot?.innerHTML) {
+      if (nextSignature === this._lastRenderSignature && this.shadowRoot?.firstChild) {
         this._lastRenderSignature = nextSignature;
         return;
       }
@@ -1610,10 +1615,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     // Explicit tracking depends only on the configured helpers' availability.
     // Their live values are read by the snapshot methods, never from this cache.
     const catalogSignature = autoDetect && entityId
-      ? Object.entries(states).map(([id, state]) => {
-        const entry = vacuumRecord(registry[id]);
-        return [id, state?.attributes?.friendly_name, entry.device_id, entry.original_name, entry.translation_key];
-      })
+      ? this._catalogStamp.update(hass, this._roomTrackingLookupScope?.hass === hass)
       : [Boolean(states[explicitRoomEntityId]), Boolean(states[explicitActivityEntityId])];
     const cacheKey = JSON.stringify([entityId, explicitRoomEntityId, explicitActivityEntityId, autoDetect, catalogSignature]);
     if(this._roomTrackingEntityCache?.key === cacheKey) {
@@ -1627,7 +1629,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       const vacuumRegistryEntry = vacuumRecord(registry[entityId]);
       const vacuumDeviceId = vacuumRegistryEntry?.device_id || "";
       const objectId = normalizeTextKey(entityId.split(".").slice(1).join("_"));
-      const vacuumObjectIds = listVacuumObjectIds(states);
+      const vacuumObjectIds = this._getVacuumObjectIds(states, hass);
       Object.keys(states).forEach(candidateId => {
         if (candidateId === entityId) {
           return;
@@ -2499,6 +2501,32 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     ];
   }
 
+  /**
+   * Discovery reads entity ids, friendly names and registry identity only. Its results are kept
+   * until one of those changes, so HA updates to state values never rescan the whole catalog.
+   */
+  _discoveryMemoFor(hass:HomeAssistant|null|undefined, sortLoc:string|null) {
+    const version = this._catalogStamp.update(hass, this._roomTrackingLookupScope?.hass === hass);
+    const memo = this._discoveryMemo;
+    // `null` marks results that depend on the catalog alone, whatever the entity or locale.
+    const config = sortLoc === null ? memo.config : `${this._config?.entity ?? ""}|${sortLoc}`;
+    if (memo.version !== version || memo.config !== config || memo.values.size > 64) {
+      memo.version = version;
+      memo.config = config;
+      memo.values = new Map();
+    }
+    return memo.values;
+  }
+
+  _getVacuumObjectIds(states:unknown, hass:HomeAssistant|null|undefined) {
+    const memo = this._discoveryMemoFor(hass, null);
+    const remembered = memo.get("vacuum-object-ids");
+    if (remembered) return remembered as string[];
+    const ids = listVacuumObjectIds(states);
+    memo.set("vacuum-object-ids", ids);
+    return ids;
+  }
+
   _getEntityMatchScore(entityId:unknown, patterns:string[]) {
     const normalizedEntityId = normalizeTextKey(entityId);
     return patterns.reduce((bestScore, pattern, index) => {
@@ -2528,10 +2556,14 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     const states = this._hass.states;
     const registry = vacuumRecord(this._hass.entities);
-    const vacuumObjectIds = listVacuumObjectIds(states);
-    const vacuumDeviceId = vacuumRecord(registry[this._config.entity]).device_id || "";
     const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
-    return Object.keys(states)
+    const memoKey = JSON.stringify(["related", domain, patterns, excludedEntities]);
+    const memo = this._discoveryMemoFor(this._hass, sortLoc);
+    const remembered = memo.get(memoKey);
+    if (remembered) return (remembered as string[]).slice();
+    const vacuumObjectIds = this._getVacuumObjectIds(states, this._hass);
+    const vacuumDeviceId = vacuumRecord(registry[this._config.entity]).device_id || "";
+    const related = Object.keys(states)
       .filter(entityId => entityId.startsWith(`${domain}.`))
       .filter(entityId => isHelperRelatedToConfiguredVacuum({
         candidateId: entityId,
@@ -2548,6 +2580,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       .filter(candidate => candidate.score > 0)
       .sort((left, right) => right.score - left.score || left.entityId.localeCompare(right.entityId, sortLoc))
       .map(candidate => candidate.entityId);
+    memo.set(memoKey, related);
+    return related.slice();
   }
 
   _guessRelatedSelectEntityByPatterns(patterns:string[], excludedEntities:string[] = []) {
@@ -2567,10 +2601,20 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     const states = this._hass.states;
     const registry = vacuumRecord(this._hass.entities);
-    const objectId = normalizeTextKey(String(this._config?.entity || "").split(".").slice(1).join("_"));
-    const vacuumObjectIds = listVacuumObjectIds(states);
-    const vacuumDeviceId = vacuumRecord(registry[this._config?.entity]).device_id || "";
     const sortLoc = window.NodaliaUtils?.editorSortLocale?.(this._hass, this._config?.language ?? "auto") ?? "en";
+    const memoKey = JSON.stringify(["global", domainList, patterns, excludedEntities]);
+    const memo = this._discoveryMemoFor(this._hass, sortLoc);
+    const remembered = memo.get(memoKey);
+    if (typeof remembered === "string") return remembered;
+    const found = this._findGlobalEntityByPatterns(states, registry, sortLoc, domainList, patterns, excludedEntities);
+    memo.set(memoKey, found);
+    return found;
+  }
+
+  _findGlobalEntityByPatterns(states:HomeAssistant["states"], registry:Record<string,unknown>, sortLoc:string, domainList:string[], patterns:string[], excludedEntities:string[]) {
+    const objectId = normalizeTextKey(String(this._config?.entity || "").split(".").slice(1).join("_"));
+    const vacuumObjectIds = this._getVacuumObjectIds(states, this._hass);
+    const vacuumDeviceId = vacuumRecord(registry[this._config?.entity]).device_id || "";
     const candidates = Object.keys(states)
       .filter(entityId => domainList.some(domain => entityId.startsWith(`${domain}.`)))
       .filter(entityId => !excludedEntities.includes(entityId))
@@ -5096,7 +5140,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     this._lastRenderSignature = "";
 
-    if (!this.shadowRoot || this.shadowRoot.innerHTML) {
+    if (!this.shadowRoot || this.shadowRoot.firstChild) {
       return;
     }
 

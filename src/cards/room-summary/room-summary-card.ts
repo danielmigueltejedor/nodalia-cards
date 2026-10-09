@@ -206,7 +206,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     if (changedContext) this._bindPrimaryHold();
     if (!this.isConnected) return;
     const sig = this._getRenderSignature(hass);
-    if (prev && sig === this._lastRenderSignature && this.shadowRoot?.innerHTML) { this._mountHubEmbeddedCards(); return; }
+    if (prev && sig === this._lastRenderSignature && this.shadowRoot?.firstChild) { this._mountHubEmbeddedCards(); return; }
     this._lastRenderSignature = sig;
     if (prev && this._patchHubState()) return;
     this._render();

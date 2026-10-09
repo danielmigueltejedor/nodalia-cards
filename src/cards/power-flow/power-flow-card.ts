@@ -299,7 +299,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
     if (!this.isConnected) return;
     this._syncTrackedEntitiesStamp(hass);
     const nextSignature = this._getRenderSignature(hass);
-    if (this.shadowRoot?.innerHTML && nextSignature === this._lastRenderSignature) {
+    if (this.shadowRoot?.firstChild && nextSignature === this._lastRenderSignature) {
       return;
     }
     this._lastRenderSignature = nextSignature;

@@ -31,7 +31,7 @@ function loadLightCustomElements() {
     attachShadow() {
       this.shadowRoot = {
         addEventListener() {},
-        innerHTML: "<div></div>",
+        innerHTML: "<div></div>", get firstChild() { return this.innerHTML ? {} : null; },
         querySelector() { return null; },
         querySelectorAll() { return []; },
       };

@@ -296,6 +296,7 @@ import type {NodaliaUtilsApi,CssStyleDefaults,SanitizedCssStyles,EditorFocusStat
   const COMPACT_CARD_MAX_COLUMNS = 6;
   const COMPACT_CARD_TILE_PARENT_RATIO = 0.62;
 
+  /** `parentWidth` may be a function: measuring the parent forces layout, so it is read only when the decision needs it. */
   function shouldUseCompactCardLayout({ mode, width, gridColumns, parentWidth }:{mode?:unknown;width?:unknown;gridColumns?:unknown;parentWidth?:unknown} = {}) {
     const compactMode = String(mode || "auto").trim().toLowerCase();
     if (compactMode === "always" || compactMode === "true") {
@@ -317,16 +318,11 @@ import type {NodaliaUtilsApi,CssStyleDefaults,SanitizedCssStyles,EditorFocusStat
       return true;
     }
 
-    const parent = Number(parentWidth);
-    if (
-      Number.isFinite(measured)
-      && measured > 0
-      && Number.isFinite(parent)
-      && parent > measured
-      && measured / parent <= COMPACT_CARD_TILE_PARENT_RATIO
-      && measured < 900
-    ) {
-      return true;
+    if (Number.isFinite(measured) && measured > 0 && measured < 900) {
+      const parent = Number(typeof parentWidth === "function" ? parentWidth() : parentWidth);
+      if (Number.isFinite(parent) && parent > measured && measured / parent <= COMPACT_CARD_TILE_PARENT_RATIO) {
+        return true;
+      }
     }
 
     return false;
@@ -382,13 +378,29 @@ import type {NodaliaUtilsApi,CssStyleDefaults,SanitizedCssStyles,EditorFocusStat
     return event;
   }
 
-  function normalizeTextKey(value:unknown) {
-    return String(value ?? "")
+  function computeTextKey(text:string) {
+    return text
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "_")
       .replace(/^_+|_+$/g, "");
+  }
+
+  /** Entity ids, state values and keys repeat on every HA update; remember their keys. */
+  const TEXT_KEY_CACHE_LIMIT = 4096;
+  const TEXT_KEY_MAX_LENGTH = 160;
+  const textKeyCache = new Map<string, string>();
+
+  function normalizeTextKey(value:unknown) {
+    const text = typeof value === "string" ? value : String(value ?? "");
+    if (text.length > TEXT_KEY_MAX_LENGTH) return computeTextKey(text);
+    const cached = textKeyCache.get(text);
+    if (cached !== undefined) return cached;
+    const key = computeTextKey(text);
+    if (textKeyCache.size >= TEXT_KEY_CACHE_LIMIT) textKeyCache.clear();
+    textKeyCache.set(text, key);
+    return key;
   }
 
   function stripEqualToDefaults(config:unknown, defaults:unknown):unknown {
