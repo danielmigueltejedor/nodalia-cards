@@ -39,7 +39,7 @@ Vacuum refinements described in the [prerelease notes](./CHANGELOG-PRERELEASES.m
 Existing YAML, custom element names and the HACS resource path remain compatible.
 See [upgrading to version 3](./docs/upgrading-to-3.md). **`3.0.0` is the stable release**, promoting the validated RC runtime with unchanged card behavior, public APIs, YAML and distribution. HACS installs stable builds by default. See [the final audit](./docs/audits/rc-readiness-report.md) and [RC performance evidence](./docs/benchmarks/3.0.0-rc.1-analysis.md) for validation and limitations; measurements belong to RC and were not repeated for stable.
 
-**`3.0.1` is the current stable release.** This maintenance update fixes flicker in Masonry/Sidebar/Panel views, unexpected scrolling on Safari/iOS and taps ignored after using a slider, and adds Lock Card animations. See the [changelog](./CHANGELOG.md).
+**`3.0.2` is the current stable release.** This maintenance update makes dashboards do much less work on every Home Assistant update (about half as much on Chromium and a quarter as much on WebKit for updates that do not concern a card), fixes News links and Advanced Vacuum controls during a routine, translates Insignia states, keeps gradient backgrounds under active tints, fixes taps ignored after a long press and rounds the keyboard focus frame of every card. It builds on 3.0.1 (Masonry flicker, Safari/iOS scrolling, slider taps and Lock Card animations). See the [changelog](./CHANGELOG.md) and the [benchmark report](./docs/benchmarks/3.0.2-alpha.4-vs-3.0.1.md).
 
 ## Preview
 
