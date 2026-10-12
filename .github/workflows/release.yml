@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing unpublished version tag to validate and publish
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -15,6 +21,8 @@ permissions:
 jobs:
   quality:
     uses: ./.github/workflows/quality.yml
+    with:
+      ref: ${{ inputs.tag && format('refs/tags/{0}', inputs.tag) || github.sha }}
     permissions:
       contents: read
   build-release:
@@ -22,9 +30,23 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
 
     steps:
+      - name: Validate publication target
+        shell: bash
+        run: |
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)\.[0-9]+)?$ ]]; then
+            echo 'Publication requires a version tag.'
+            exit 1
+          fi
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]] && gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo 'Manual publication requires an unpublished tag.'
+            exit 1
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag && format('refs/tags/{0}', inputs.tag) || github.sha }}
 
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
@@ -34,7 +56,7 @@ jobs:
           cache: pnpm
 
       - name: Verify tag and package version
-        run: node -e 'const p=require("./package.json"); const tag=process.env.GITHUB_REF_NAME.replace(/^v/, ""); if (p.version !== tag) throw new Error(`Tag ${tag} does not match package ${p.version}`)'
+        run: node -e 'const p=require("./package.json"); const tag=process.env.RELEASE_TAG.replace(/^v/, ""); if (p.version !== tag) throw new Error(`Tag ${tag} does not match package ${p.version}`)'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -64,19 +86,19 @@ jobs:
         shell: bash
         run: |
           mapfile -t assets < release/release-assets.txt
-          release_title="${GITHUB_REF_NAME#v}"
-          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" "${assets[@]}" --clobber
-          elif [[ "$GITHUB_REF_NAME" == *-* ]]; then
+          release_title="${RELEASE_TAG#v}"
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" "${assets[@]}" --clobber
+          elif [[ "$RELEASE_TAG" == *-* ]]; then
             node scripts/generate-prerelease-notes.mjs "$release_title" release/release-notes.md
-            gh release create "$GITHUB_REF_NAME" "${assets[@]}" \
+            gh release create "$RELEASE_TAG" "${assets[@]}" \
               --verify-tag \
               --notes-file release/release-notes.md \
               --title "$release_title" \
               --prerelease
           else
             node scripts/generate-stable-release-notes.mjs "$release_title" release/release-notes.md
-            gh release create "$GITHUB_REF_NAME" "${assets[@]}" \
+            gh release create "$RELEASE_TAG" "${assets[@]}" \
               --verify-tag \
               --notes-file release/release-notes.md \
               --title "Nodalia Cards $release_title"

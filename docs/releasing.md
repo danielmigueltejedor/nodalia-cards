@@ -21,6 +21,12 @@
 6. Verify the release is public, the prerelease flag is correct and the uploaded
    `nodalia-cards.js` hash matches `release/SHA256SUMS`.
 
+If a tagged release is interrupted by hosted-runner shutdowns, the Release workflow
+also supports manual dispatch with an existing unpublished `tag`. The current
+workflow validates and builds that exact tag, including all four browser engines
+with one worker per runner, before publishing it. This recovery does not move the
+tag or replace an existing release.
+
 Channel progression is alpha → beta → rc → stable. The same channel increments
 its number; promotion starts at 1, stable removes the suffix, and a new preview
 from stable starts the next patch. A major/minor release is an explicit product
