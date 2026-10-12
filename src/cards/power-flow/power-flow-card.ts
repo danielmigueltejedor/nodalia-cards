@@ -2095,7 +2095,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           box-sizing: border-box;
         }
 
-        [data-card-action="primary"]:focus-visible {
+        ha-card[data-card-action="primary"]:focus-visible {
           outline: 2px solid var(--primary-color);
           outline-offset: -3px;
         }
@@ -2998,7 +2998,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         `}
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       </style>
-      <ha-card class="power-flow-card power-flow-card--${layoutPreset}">
+      <ha-card class="power-flow-card power-flow-card--${layoutPreset}" ${this._config?.tap_action === "more-info" ? `data-card-action="primary" role="button" tabindex="0" aria-label="${escapeHtml(titleText || this._powerFlowUi("energy", "Energy"))}"` : ""}>
         ${
           hasHeader
             ? `
@@ -3021,7 +3021,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
             `
             : ""
         }
-        <div class="power-flow-card__content ${shouldAnimateEntrance ? "power-flow-card__content--entering" : ""}" ${this._config?.tap_action === "more-info" ? `data-card-action="primary" role="button" tabindex="0" aria-label="${escapeHtml(titleText || this._powerFlowUi("energy", "Energy"))}"` : ""}>
+        <div class="power-flow-card__content ${shouldAnimateEntrance ? "power-flow-card__content--entering" : ""}">
           ${
             `
                 <div class="power-flow-card__surface ${shouldAnimateEntrance ? "power-flow-card__surface--entering" : ""}">
