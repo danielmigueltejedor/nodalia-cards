@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 // A card's keyboard focus frame lives on an inner element when the card body is a wrapper (gauge,
-// power flow, insignia) or a full-bleed preview (camera feed). Those elements were square, so the
+// insignia) or a full-bleed preview (camera feed). Those elements were square, so the
 // frame was clipped by the card's rounded corners. Every frame must follow the card radius.
 const CARDS = [
   { name: 'gauge', tag: 'nodalia-circular-gauge-card', config: { entity: 'sensor.t', tap_action: 'more-info' }, entities: { 'sensor.t': { state: '21', attributes: { unit_of_measurement: 'W' } } }, target: '[data-gauge-action="primary"]' },
@@ -26,6 +26,58 @@ async function useSlottedHaCard(page) {
       constructor(){super();if(this.localName==='ha-card') this.attachShadow({mode:'open'}).innerHTML='<style>:host{display:block;box-sizing:border-box;position:relative}</style><slot></slot>';}
     }`) });
   });
+}
+
+for (const width of [320, 390, 768]) {
+  for (const showHeader of [true, false]) {
+    test(`Power Flow focus encloses the whole card at ${width}px with header ${showHeader}`, async ({ page }) => {
+      await useSlottedHaCard(page);
+      await page.goto('/tests/fixtures/browser.html');
+      await page.waitForFunction(() => customElements.get('nodalia-power-flow-card'));
+      await page.evaluate(({ width, showHeader }) => {
+        const element = document.createElement('nodalia-power-flow-card');
+        element.setConfig({
+          title: 'Flujo', layout: 'compact', show_header: showHeader,
+          entities: { grid: { entity: 'sensor.grid' }, home: { entity: 'sensor.home' } },
+          tap_action: 'more-info', dashboard_link: '/energy',
+          consumption_chips: { day_entity: 'sensor.day' },
+          animations: { enabled: false }, haptics: { enabled: false },
+        });
+        element.hass = window.createHassFixture({ entities: {
+          'sensor.grid': { state: '191', attributes: { unit_of_measurement: 'W' } },
+          'sensor.home': { state: '191', attributes: { unit_of_measurement: 'W' } },
+          'sensor.day': { state: '2.83', attributes: { unit_of_measurement: 'kWh' } },
+        } });
+        element.style.cssText = `display:block;width:${width}px`;
+        document.querySelector('#fixture').append(element);
+      }, { width, showHeader });
+      const card = page.locator('nodalia-power-flow-card');
+      const frame = card.locator('[data-card-action="primary"]');
+      await expect(card.locator('.power-flow-card__node--grid')).toBeVisible();
+      await page.keyboard.press('Shift');
+      await frame.focus();
+      const geometry = await frame.evaluate(target => {
+        const shell = target.getRootNode().querySelector('ha-card');
+        const rect = node => {
+          const { x, y, width, height } = node.getBoundingClientRect();
+          return { x, y, width, height };
+        };
+        return { target: rect(target), shell: rect(shell), focusVisible: target.matches(':focus-visible') };
+      });
+      expect(geometry.focusVisible).toBe(true);
+      expect(geometry.target).toEqual(geometry.shell);
+      await expect(card.locator('.power-flow-card__header')).toHaveCount(showHeader ? 1 : 0);
+      await page.evaluate(() => {
+        window.focusActions = [];
+        document.querySelector('nodalia-power-flow-card').addEventListener('hass-more-info', event => window.focusActions.push(event.detail.entityId));
+      });
+      await frame.press('Enter');
+      expect(await page.evaluate(() => window.focusActions)).toEqual(['sensor.home']);
+      await frame.press('Space');
+      expect(await page.evaluate(() => window.focusActions)).toEqual(['sensor.home', 'sensor.home']);
+      expect(await page.evaluate(() => window.bundleErrors)).toEqual([]);
+    });
+  }
 }
 
 for (const card of CARDS) {

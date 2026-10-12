@@ -41,6 +41,6 @@ test('Power Flow ignores retired viewport/frame callbacks and releases owned pre
 
 test('Power Flow card activation resolves a split home source to its actual entity id',async({page})=>{
  const card=await mount(page,{tap_action:'more-info',entities:{home:{entity:{consumption:'sensor.home',production:'sensor.export'}}}});
- const content=card.locator('.power-flow-card__content[data-card-action="primary"]');await content.focus();await content.press('Enter');
+ const content=card.locator('ha-card[data-card-action="primary"]');await content.focus();await content.press('Enter');
  expect(await page.evaluate(()=>window.powerActions)).toEqual(['sensor.home']);expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
 });
