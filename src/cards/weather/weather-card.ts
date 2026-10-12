@@ -1,3 +1,4 @@
+import cardFocusStyles from "../../shared/card-focus.css";
 import { CARD_TAG, EDITOR_TAG, HAPTIC_PATTERNS } from "./weather-constants";
 import {
   clamp,
@@ -791,9 +792,8 @@ class NodaliaWeatherCard extends HTMLElement {
       this._render();
       return;
     }
-    const control = event.composedPath().find(weatherActionElement);
-    // Native buttons already synthesize clicks. SVG chart points need keyboard activation.
-    if (control instanceof SVGElement && (event.key === "Enter" || event.key === " ")) this._onShadowClick(event);
+    // Native buttons synthesize clicks; the card surface and SVG points do not.
+    if (window.NodaliaUtils?.isKeyboardActivationEvent?.(event)) this._onShadowClick(event);
   }
 
   _onShadowClick(event: Event) {
@@ -2805,9 +2805,10 @@ class NodaliaWeatherCard extends HTMLElement {
           transition: none !important;
         }
         `}
+      ${cardFocusStyles}
       </style>
-      <ha-card class="weather-card ${tapEnabled ? "weather-card--clickable" : ""}" style="--accent-color:${escapeHtml(accentColor)};">
-        <div class="weather-card__content" data-weather-card="root">
+      <ha-card class="weather-card ${tapEnabled ? "weather-card--clickable" : ""}" style="--accent-color:${escapeHtml(accentColor)};" data-weather-card="root" ${tapEnabled ? `role="button" tabindex="0" aria-label="${escapeHtml(title)}"` : ""}>
+        <div class="weather-card__content">
           <div class="weather-card__hero ${meteoalarmChipRowMarkup ? "" : "weather-card__hero--no-alert"} ${shouldAnimateEntrance ? "weather-card__hero--entering" : ""}">
             <div class="weather-card__topline">
               <div class="weather-card__title">${escapeHtml(title)}</div>

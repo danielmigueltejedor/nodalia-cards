@@ -1,3 +1,4 @@
+import cardFocusStyles from "../../shared/card-focus.css";
 import advanceVacuumStaticMap2Styles from "./advance-vacuum-static-map-2.css";
 import advanceVacuumStaticMap1Styles from "./advance-vacuum-static-map-1.css";
 import advanceVacuumStaticMap0Styles from "./advance-vacuum-static-map-0.css";
@@ -6953,6 +6954,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         }
 
         ${advanceVacuumMotionStyles}
+      ${cardFocusStyles}
       </style>
       <ha-card class="advance-vacuum-card ${shouldAnimateEntrance ? "advance-vacuum-card--entering" : ""}">
         <div class="advance-vacuum-card__map" data-view-key="map">

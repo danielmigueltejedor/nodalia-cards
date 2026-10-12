@@ -1,3 +1,4 @@
+import cardFocusStyles from "../../shared/card-focus.css";
 import {
   EDITOR_TAG,
   HAPTIC_PATTERNS,
@@ -2997,6 +2998,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
         `}
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
+      ${cardFocusStyles}
       </style>
       <ha-card class="power-flow-card power-flow-card--${layoutPreset}" ${this._config?.tap_action === "more-info" ? `data-card-action="primary" role="button" tabindex="0" aria-label="${escapeHtml(titleText || this._powerFlowUi("energy", "Energy"))}"` : ""}>
         ${

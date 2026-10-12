@@ -1,3 +1,4 @@
+import cardFocusStyles from "../../shared/card-focus.css";
 import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
 import {
   CARD_TAG,
@@ -597,6 +598,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
           font-size: 13px;
           line-height: 1.5;
         }
+      ${cardFocusStyles}
       </style>
       <ha-card class="gauge-card gauge-card--empty">
         <div class="gauge-card__empty-title">${title}</div>
@@ -1289,6 +1291,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
           }
         }
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
+      ${cardFocusStyles}
       </style>
       <ha-card class="gauge-card">
         <div class="gauge-card__content" ${this._canRunTapAction() ? `data-gauge-action="primary" role="button" tabindex="0" aria-label="${escapeHtml(title)}"` : ""}>

@@ -1,8 +1,9 @@
+import cardFocusStyles from "../../shared/card-focus.css";
 import { captureHassContext, sameHassContext } from "../../shared/hass-context";
 import { createCardLayoutNotifier, notifyCardLayoutChange } from "../../shared/card-layout-notifier";
 import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
 import { parseFiniteNumericValue } from "../../shared/numeric-values";
-import { parseServiceData, invokeHassService } from "../../shared/home-assistant-services";
+import { parseServiceData, invokeHassService, requestHassService } from "../../shared/home-assistant-services";
 import {
   CARD_TAG,
   COVER_SET_POSITION,
@@ -16,6 +17,7 @@ import {
   INLINE_LAYOUT_THRESHOLD,
   LOCK_LOCK,
   MINI_LAYOUT_THRESHOLD,
+  OPTIMISTIC_TOGGLE_TIMEOUT,
 } from "./fav-constants";
 import {
   deepClone,
@@ -39,6 +41,15 @@ import {
 
 type FavConfig = ReturnType<typeof normalizeConfig>;
 interface AlarmMode { key: string; label: string; icon: string; service: string; enabled: boolean; }
+interface OptimisticToggle {
+  entityId: string;
+  expectedState: "on" | "off";
+  source: HassEntity;
+  sourceState: string;
+  lastUpdated: HassEntity["last_updated"];
+  lastChanged: HassEntity["last_changed"];
+  sawDifferentState: boolean;
+}
 let _lazyNodaliaFavCard: CustomElementConstructor | undefined;
 export function loadNodaliaFavCard(): CustomElementConstructor {
   if (_lazyNodaliaFavCard) {
@@ -58,6 +69,8 @@ class NodaliaFavCard extends HTMLElement {
   private _resizeObserver!: ResizeObserver;
   private _fallbackLayoutTimers!: Set<number>;
   private _layoutFrame!: number;
+  private _optimisticToggle!: OptimisticToggle | null;
+  private _optimisticToggleTimer!: number;
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
@@ -87,6 +100,8 @@ class NodaliaFavCard extends HTMLElement {
     this._alarmCodeInput = "";
     this._fallbackLayoutTimers = new Set();
     this._layoutFrame = 0;
+    this._optimisticToggle = null;
+    this._optimisticToggleTimer = 0;
     this._lastAlarmPanelRenderedOpen = null;
     this._lastRenderSignature = "";
     this._resizeObserver = new ResizeObserver(entries => {
@@ -131,6 +146,7 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this._clearOptimisticToggle();
     this._cardLayoutNotifier?.cancel();
     this._resizeObserver?.disconnect();
     this._alarmMenuOpen = false;
@@ -145,6 +161,7 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   setConfig(config: unknown) {
+    this._clearOptimisticToggle();
     const nextConfig = normalizeConfig(config || {});
     if (this._config?.entity !== nextConfig.entity) {
       this._applyHostGridSpan(false);
@@ -164,6 +181,7 @@ class NodaliaFavCard extends HTMLElement {
   set hass(hass: HomeAssistant) {
     const context = captureHassContext(hass);
     if (this._hassContext && !sameHassContext(this._hassContext, context)) {
+      this._clearOptimisticToggle();
       this._alarmMenuOpen = false;
       this._alarmCodeInput = "";
       this._lastAlarmPanelRenderedOpen = null;
@@ -177,6 +195,7 @@ class NodaliaFavCard extends HTMLElement {
     }
     this._hassContext = context;
     this._hass = hass;
+    this._syncOptimisticToggle();
     if (!this.isConnected) {
       return;
     }
@@ -217,6 +236,7 @@ class NodaliaFavCard extends HTMLElement {
     const values = [
       entityId,
       state?.state || "",
+      this._optimisticToggle?.expectedState || "",
       attrs.friendly_name || "",
       attrs.icon || "",
       attrs.device_class || "",
@@ -291,7 +311,59 @@ class NodaliaFavCard extends HTMLElement {
   }
 
   _getState() {
+    const actual = this._getActualState();
+    const draft = this._optimisticToggle;
+    return actual && draft && actual.entity_id === draft.entityId
+      ? { ...actual, state: draft.expectedState }
+      : actual;
+  }
+
+  _getActualState() {
     return this._hass?.states?.[this._config?.entity || ""] || null;
+  }
+
+  _clearOptimisticToggle() {
+    if (this._optimisticToggleTimer) window.clearTimeout(this._optimisticToggleTimer);
+    this._optimisticToggleTimer = 0;
+    this._optimisticToggle = null;
+  }
+
+  _syncOptimisticToggle() {
+    const draft = this._optimisticToggle;
+    if (!draft) return;
+    const actual = this._getActualState();
+    if (!actual || actual.entity_id !== draft.entityId || !this._isBinaryOnOff(actual)) {
+      this._clearOptimisticToggle();
+      return;
+    }
+    // A quick second tap may request the original state. An unchanged HA reading
+    // is not confirmation of that second command; keep masking the first response.
+    if (actual.state !== draft.sourceState) draft.sawDifferentState = true;
+    const updated = draft.sawDifferentState || actual !== draft.source || actual.state !== draft.sourceState
+      || actual.last_updated !== draft.lastUpdated || actual.last_changed !== draft.lastChanged;
+    if (normalizeTextKey(actual.state) === draft.expectedState && (draft.sourceState !== draft.expectedState || updated)) {
+      this._clearOptimisticToggle();
+    }
+  }
+
+  _startOptimisticToggle(expectedState: "on" | "off", source: HassEntity) {
+    this._clearOptimisticToggle();
+    const draft: OptimisticToggle = {
+      entityId: source.entity_id, expectedState, source, sourceState: source.state,
+      lastUpdated: source.last_updated, lastChanged: source.last_changed,
+      sawDifferentState: false,
+    };
+    this._optimisticToggle = draft;
+    this._optimisticToggleTimer = window.setTimeout(() => this._rollbackOptimisticToggle(draft), OPTIMISTIC_TOGGLE_TIMEOUT);
+    this._render();
+    return draft;
+  }
+
+  _rollbackOptimisticToggle(draft: OptimisticToggle) {
+    if (this._optimisticToggle !== draft) return;
+    this._clearOptimisticToggle();
+    this._lastRenderSignature = "";
+    if (this.isConnected) this._render();
   }
 
   _getDomain(entityId = this._config?.entity) {
@@ -406,8 +478,19 @@ class NodaliaFavCard extends HTMLElement {
     }
 
     if (this._isBinaryOnOff(state)) {
-      const service = normalizeTextKey(state.state) === "on" ? "turn_off" : "turn_on";
-      this._invokeEntityService("homeassistant", service, entityId);
+      const effective = entityId === this._config?.entity ? this._getState() : state;
+      const service = normalizeTextKey(effective?.state) === "on" ? "turn_off" : "turn_on";
+      if (entityId !== this._config?.entity) {
+        this._invokeEntityService("homeassistant", service, entityId);
+        return;
+      }
+      const draft = this._startOptimisticToggle(service === "turn_on" ? "on" : "off", state);
+      void requestHassService(this, this._hass, "homeassistant", service, { entity_id: entityId }).then(result => {
+        if (result === false) this._rollbackOptimisticToggle(draft);
+      }, error => {
+        console.warn("Nodalia Fav Card: toggle failed", error);
+        this._rollbackOptimisticToggle(draft);
+      });
       return;
     }
 
@@ -1262,6 +1345,8 @@ class NodaliaFavCard extends HTMLElement {
     if (!this.shadowRoot) {
       return;
     }
+    const focused = this.shadowRoot.activeElement;
+    const restorePrimaryFocus = focused instanceof HTMLElement && focused.dataset.favAction === "primary";
 
     const config = this._config || normalizeConfig({});
 
@@ -1703,6 +1788,7 @@ class NodaliaFavCard extends HTMLElement {
         }
 
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
+      ${cardFocusStyles}
       </style>
       <ha-card
         class="fav-card ${isActive ? "is-on" : "is-off"} ${isMini ? "fav-card--mini" : "fav-card--inline"} ${isCompactInline ? "fav-card--single-row" : ""} ${isTightInline ? "fav-card--tight-inline" : ""} ${showAlarmPanel ? "fav-card--alarm-open" : ""} ${canRunPrimaryAction ? "fav-card--clickable" : ""}"
@@ -1756,6 +1842,10 @@ class NodaliaFavCard extends HTMLElement {
         </div>
       </ha-card>
     `;
+
+    if (restorePrimaryFocus) {
+      this.shadowRoot.querySelector<HTMLButtonElement>('button[data-fav-action="primary"]')?.focus({ preventScroll: true });
+    }
 
     if (isAlarmPanel && this._lastAlarmPanelRenderedOpen !== showAlarmPanel) {
       this._lastAlarmPanelRenderedOpen = showAlarmPanel;

@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2";
+  var CARD_VERSION = "3.0.3-alpha.1";
 
   // src/cards/advance-vacuum/advance-vacuum-constants.ts
   var CARD_TAG = "nodalia-advance-vacuum-card";
@@ -1259,6 +1259,9 @@
     const normalized = fields;
     return normalized;
   }
+
+  // src/shared/card-focus.css
+  var card_focus_default = ":is(ha-card,.insignia-card,.media-player-card):is(:focus-visible,:has(:focus-visible:not([data-nodalia-pointer-focus]))),:host([data-nodalia-keyboard-focus]) :is(ha-card,.insignia-card,.media-player-card){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:is(button,a[href],summary,[role=button],[role=slider],[tabindex]):focus-visible:not([data-nodalia-pointer-focus]){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:host([data-nodalia-pointer-input]) :is(ha-card,.insignia-card,.media-player-card){outline:none}";
 
   // src/cards/advance-vacuum/advance-vacuum-static-map-2.css
   var advance_vacuum_static_map_2_default = ".advance-vacuum-card--entering{animation:advance-vacuum-card-enter var(--advance-vacuum-card-content-duration) cubic-bezier(0.22,0.84,0.26,1) both}.advance-vacuum-card--entering .advance-vacuum-card__map{animation:advance-vacuum-map-enter var(--advance-vacuum-card-content-duration) cubic-bezier(0.2,0.85,0.25,1) 60ms both}.advance-vacuum-card--entering .advance-vacuum-card__footer{animation:advance-vacuum-footer-enter var(--advance-vacuum-card-content-duration) cubic-bezier(0.22,0.84,0.26,1) 100ms both}.advance-vacuum-card__footer{align-items:center;display:flex;flex-direction:column;gap:12px;width:100%}.advance-vacuum-card__header,.advance-vacuum-card__icon,.advance-vacuum-card__unavailable,.advance-vacuum-card__header-main,.advance-vacuum-card__title,.advance-vacuum-card__chips,.advance-vacuum-card__chip,.advance-vacuum-card__header-actions,.advance-vacuum-card__header-action{display:none!important}.advance-vacuum-card__control,.advance-vacuum-card__mode-button,.advance-vacuum-card__goto-marker,.advance-vacuum-card__room-marker{appearance:none;background:none;border:none;color:inherit;cursor:pointer;font:inherit;margin:0;padding:0}.advance-vacuum-card__control:hover{transform:translateY(-1px)}.advance-vacuum-card__mode-button:hover{transform:translateY(-1px)}:is(.advance-vacuum-card__control--primary,.advance-vacuum-card__mode-button,.advance-vacuum-card__map-tool,.advance-vacuum-card__room-marker,.advance-vacuum-card__goto-marker,.advance-vacuum-card__routine-button,.advance-vacuum-card__utility-option,.advance-vacuum-card__selection-chip,.advance-vacuum-card__zone-handle).is-pressing:not(.is-disabled):not(:disabled){animation:advance-vacuum-button-bounce var(--advance-vacuum-card-button-bounce-duration) cubic-bezier(0.2,0.9,0.24,1) both}.advance-vacuum-card__control.is-pressing:not(.is-disabled):not(:disabled):not(.advance-vacuum-card__control--primary){animation:advance-vacuum-button-bounce-subtle var(--advance-vacuum-card-button-bounce-duration) cubic-bezier(0.2,0.9,0.24,1) both}";
@@ -7137,6 +7140,7 @@
         }
 
         ${advance_vacuum_motion_default}
+      ${card_focus_default}
       </style>
       <ha-card class="advance-vacuum-card ${shouldAnimateEntrance ? "advance-vacuum-card--entering" : ""}">
         <div class="advance-vacuum-card__map" data-view-key="map">

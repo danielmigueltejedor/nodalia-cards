@@ -1,3 +1,4 @@
+import cardFocusStyles from "../../shared/card-focus.css";
 import {
   CALENDAR_DELETE_RECURRENCE_THIS,
   CALENDAR_DELETE_RECURRENCE_THIS_AND_FUTURE,
@@ -2198,6 +2199,7 @@ class NodaliaCalendarCard extends HTMLElement {
         ? [{ key: field.dataset.nativeField || "", value: field.value, checked: field instanceof HTMLInputElement && field.checked }]
         : []) : [];
     const active = this.shadowRoot.activeElement;
+    const closeFocused = active instanceof HTMLElement && active.dataset.action === "close-expanded";
     const focus = active instanceof HTMLInputElement || active instanceof HTMLSelectElement || active instanceof HTMLTextAreaElement
       ? { key: active.dataset.nativeField || "", start: active instanceof HTMLSelectElement ? null : active.selectionStart,
           end: active instanceof HTMLSelectElement ? null : active.selectionEnd } : null;
@@ -3139,8 +3141,9 @@ class NodaliaCalendarCard extends HTMLElement {
           }
         }
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
+      ${cardFocusStyles}
       </style>
-      <ha-card>
+      <ha-card data-calendar-action="open" role="button" tabindex="0" aria-label="${escapeHtml(config.title)}">
         <div class="calendar-card">
           <div class="calendar-header ${playEntrance ? "calendar-header--entering" : ""}">
             <span class="calendar-icon-bubble ${playEntrance ? "calendar-icon-bubble--entering" : ""}"><ha-icon icon="${escapeHtml(config.icon || DEFAULT_CONFIG.icon)}"></ha-icon></span>
@@ -3212,7 +3215,12 @@ class NodaliaCalendarCard extends HTMLElement {
     const calendarDialogs = this.shadowRoot.querySelectorAll('[role="dialog"][aria-modal="true"]');
     const activeCalendarDialog = calendarDialogs[calendarDialogs.length - 1];
     if (this._expandedOpen && activeCalendarDialog instanceof HTMLElement) {
-      window.NodaliaUtils?.bindModalFocus?.(this, activeCalendarDialog, focus?.key ? { initialFocusSelector: `[data-native-field="${CSS.escape(focus.key)}"]` } : undefined);
+      const initialFocusSelector = focus?.key ? `[data-native-field="${CSS.escape(focus.key)}"]`
+        : closeFocused || (active instanceof HTMLElement && active.dataset.calendarAction === "open") ? '[data-action="close-expanded"]' : undefined;
+      window.NodaliaUtils?.bindModalFocus?.(this, activeCalendarDialog, {
+        ...(initialFocusSelector ? { initialFocusSelector } : {}),
+        restoreFocus: () => this.shadowRoot?.querySelector<HTMLElement>('ha-card[data-calendar-action="open"]')?.focus({ preventScroll: true }),
+      });
     } else {
       window.NodaliaUtils?.releaseModalFocus?.(this);
     }
@@ -3331,6 +3339,15 @@ class NodaliaCalendarCard extends HTMLElement {
 
   _onShadowKeydown(event: Event) {
     if (!(event instanceof KeyboardEvent)) return;
+    if (!this._expandedOpen && window.NodaliaUtils?.isKeyboardActivationEvent?.(event)
+      && event.composedPath()[0] instanceof HTMLElement
+      && (event.composedPath()[0] as HTMLElement).dataset.calendarAction === "open") {
+      event.preventDefault();
+      event.stopPropagation();
+      this._openExpandedCalendar();
+      this.shadowRoot?.querySelector<HTMLElement>('[data-action="close-expanded"]')?.focus({ preventScroll: true });
+      return;
+    }
     if (!this._expandedOpen) {
       return;
     }
@@ -3366,6 +3383,7 @@ class NodaliaCalendarCard extends HTMLElement {
       this._expandedOpen = false;
       this._expandedOverlayEntrancePlayed = false;
       this._renderIfChanged(true);
+      this.shadowRoot?.querySelector<HTMLElement>('ha-card[data-calendar-action="open"]')?.focus({ preventScroll: true });
       return;
     }
     if (event.key !== "Enter" && event.key !== " ") {
@@ -3565,7 +3583,7 @@ class NodaliaCalendarCard extends HTMLElement {
     if (target?.closest?.("button")) {
       return;
     }
-    if (!target?.closest?.(".calendar-card")) {
+    if (!target?.closest?.("ha-card[data-calendar-action='open']")) {
       return;
     }
     event.preventDefault();

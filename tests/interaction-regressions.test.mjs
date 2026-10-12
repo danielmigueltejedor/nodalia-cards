@@ -1369,7 +1369,7 @@ test("scenes card scene buttons avoid focus-driven dashboard scroll jumps", () =
   assert.match(source, /(?:this\.shadowRoot|shadow)\.addEventListener\("mousedown", this\._onShadowMouseDown, true\)/);
   assert.match(source, /(?:this\.shadowRoot|shadow)\.addEventListener\("touchstart", this\._onShadowTouchStart, \{ passive: false, capture: true \}\)/);
   assert.match(source, /role="button"/);
-  assert.match(source, /tabindex="-1"/);
+  // Available scenes now support Tab; pointer interactions still preserve dashboard scroll.
   assert.match(source, /_triggerLaunchAnimation/);
   assert.match(source, /collectDashboardScrollSnapshot/);
   assert.match(source, /scheduleDashboardScrollRestore/);

@@ -9,6 +9,90 @@ async function mount(page, config, states) {
   },{config,states});
   return page.locator('nodalia-fav-card');
 }
+test('Fav updates immediately, keeps stale HA readings from flickering and reverses rapid toggles', async ({ page }) => {
+  const card = await mount(page, { entity: 'light.one', language: 'en', haptics: { enabled: false } }, { 'light.one': { state: 'off' } });
+  await page.evaluate(() => {
+    window.favCalls = [];
+    window.favHassFixture.callService = (...args) => { window.favCalls.push(args); return new Promise(() => {}); };
+  });
+  const button = card.locator('.fav-card__icon');
+  await button.click();
+  await expect(card.locator('ha-card')).toHaveClass(/is-on/);
+  expect(await page.evaluate(() => window.favHassFixture.states['light.one'].state)).toBe('off');
+  await page.evaluate(() => { window.favHassFixture.states['light.one'].attributes.friendly_name = 'Updated'; window.favCardFixture.hass = window.favHassFixture; });
+  await expect(card.locator('ha-card')).toHaveClass(/is-on/);
+  await button.click();
+  await expect(card.locator('ha-card')).toHaveClass(/is-off/);
+  expect(await page.evaluate(() => window.favCalls.map(call => call.slice(0, 2)))).toEqual([['homeassistant', 'turn_on'], ['homeassistant', 'turn_off']]);
+  await page.evaluate(() => { window.favHassFixture.states['light.one'].state = 'on'; window.favCardFixture.hass = window.favHassFixture; });
+  await expect(card.locator('ha-card')).toHaveClass(/is-off/);
+  await page.evaluate(() => { window.favHassFixture.states['light.one'].state = 'off'; window.favCardFixture.hass = window.favHassFixture; });
+  expect(await card.evaluate(card => ({ draft: card._optimisticToggle, timer: card._optimisticToggleTimer }))).toEqual({ draft: null, timer: 0 });
+});
+test('Fav rolls back rejected and timed-out commands without losing native keyboard focus', async ({ page }) => {
+  const errors = []; page.on('pageerror', error => errors.push(error.message));
+  const card = await mount(page, { entity: 'switch.one', language: 'en', haptics: { enabled: false } }, { 'switch.one': { state: 'off' } });
+  await page.evaluate(() => { window.favHassFixture.callService = () => new Promise((resolve, reject) => { window.rejectFav = reject; }); });
+  const button = card.locator('.fav-card__icon');
+  await page.keyboard.press('Shift'); await button.focus(); await button.press('Enter');
+  await expect(card.locator('ha-card')).toHaveClass(/is-on/); await expect(button).toBeFocused();
+  await page.evaluate(() => window.rejectFav(new Error('offline')));
+  await expect(card.locator('ha-card')).toHaveClass(/is-off/); await expect(button).toBeFocused();
+  await page.evaluate(() => { window.favHassFixture.callService = () => new Promise(() => {}); });
+  await page.clock.install();
+  await button.press('Space'); await expect(card.locator('ha-card')).toHaveClass(/is-on/);
+  await page.clock.fastForward(3300);
+  await expect(card.locator('ha-card')).toHaveClass(/is-off/);
+  expect(await card.evaluate(card => card._optimisticToggleTimer)).toBe(0);
+  expect(errors).toEqual([]);
+});
+test('Fav ignores an old failed command after a newer toggle and clears drafts on context changes', async ({ page }) => {
+  const card = await mount(page, { entity: 'light.one', haptics: { enabled: false } }, { 'light.one': { state: 'off' }, 'light.two': { state: 'on' } });
+  await page.evaluate(() => { window.favRejects = []; window.favHassFixture.callService = () => new Promise((resolve, reject) => window.favRejects.push(reject)); });
+  const button = card.locator('.fav-card__icon');
+  await button.click(); await button.click();
+  await page.evaluate(() => window.favRejects[0](new Error('old failure')));
+  await expect(card.locator('ha-card')).toHaveClass(/is-off/);
+  expect(await card.evaluate(card => card._optimisticToggle?.expectedState)).toBe('off');
+  for (const change of ['user', 'connection', 'entity', 'detach']) {
+    await page.evaluate(() => { window.favCardFixture.setConfig({ entity: 'light.one', haptics: { enabled: false } }); });
+    await button.click(); await expect(card.locator('ha-card')).toHaveClass(/is-on/);
+    await page.evaluate(change => {
+      const card = window.favCardFixture, hass = window.favHassFixture;
+      if (change === 'user') { hass.user = { id: 'different', is_admin: false }; card.hass = hass; }
+      if (change === 'connection') { hass.connection = {}; card.hass = hass; }
+      if (change === 'entity') card.setConfig({ entity: 'light.two' });
+      if (change === 'detach') { card.remove(); document.querySelector('#fixture').append(card); }
+    }, change);
+    expect(await card.evaluate(card => ({ draft: card._optimisticToggle, timer: card._optimisticToggleTimer }))).toEqual({ draft: null, timer: 0 });
+    await page.evaluate(() => window.favRejects.at(-1)(new Error('retired context')));
+  }
+  expect(await page.evaluate(() => window.bundleErrors)).toEqual([]);
+});
+test('Fav confirms optimistic state and immediately retires it for unavailable readings', async ({ page }) => {
+  const card = await mount(page, { entity: 'fan.one', haptics: { enabled: false } }, { 'fan.one': { state: 'off' } });
+  await page.evaluate(() => { window.favHassFixture.callService = async () => {}; });
+  const button = card.locator('.fav-card__icon'); await button.click();
+  await page.evaluate(() => { window.favHassFixture.states['fan.one'].state = 'on'; window.favCardFixture.hass = window.favHassFixture; });
+  await expect(card.locator('ha-card')).toHaveClass(/is-on/);
+  expect(await card.evaluate(card => card._optimisticToggle)).toBe(null);
+  await button.click();
+  await page.evaluate(() => { window.favHassFixture.states['fan.one'].state = 'unavailable'; window.favCardFixture.hass = window.favHassFixture; });
+  expect(await card.evaluate(card => ({ draft: card._optimisticToggle, timer: card._optimisticToggleTimer }))).toEqual({ draft: null, timer: 0 });
+  await expect(card.locator('.fav-card__unavailable-badge')).toBeVisible();
+});
+test('Fav retains pointer modality across optimistic rerenders and restores the frame with the keyboard', async ({ page }) => {
+  const card = await mount(page, { entity: 'light.one', haptics: { enabled: false } }, { 'light.one': { state: 'off' } });
+  await page.evaluate(() => { window.favHassFixture.callService = () => new Promise(() => {}); });
+  const button = card.locator('.fav-card__icon');
+  await page.keyboard.press('Shift'); await button.focus();
+  expect(await card.locator('ha-card').evaluate(node => getComputedStyle(node).outlineStyle)).toBe('solid');
+  await button.click();
+  await expect(card.locator('ha-card')).toHaveClass(/is-on/);
+  expect(await card.locator('ha-card').evaluate(node => getComputedStyle(node).outlineStyle)).toBe('none');
+  await page.keyboard.press('Shift'); await button.focus();
+  expect(await card.locator('ha-card').evaluate(node => getComputedStyle(node).outlineStyle)).toBe('solid');
+});
 test('Fav refreshes a selected attribute and light color without changing the entity state',async({page})=>{
   const card=await mount(page,{entity:'light.one',state_attribute:'battery'},{'light.one':{state:'on',attributes:{battery:20,rgb_color:[20,80,130]}}});
   await expect(card.locator('.fav-card__chip')).toHaveText('20%');

@@ -1,3 +1,4 @@
+import cardFocusStyles from "../../shared/card-focus.css";
 import { createCardLayoutNotifier } from "../../shared/card-layout-notifier";
 import {
   AIR_QUALITY_COMFORT_KEYS,
@@ -2559,6 +2560,7 @@ class NodaliaEntityCard extends HTMLElement {
           .entity-card__overview-insights { grid-column:1 / -1; justify-content:flex-start; }
           .entity-card__overview-grid { grid-template-columns:1fr; }
         }
+      ${cardFocusStyles}
       </style>
       <ha-card class="entity-card entity-card--${escapeHtml(layout)}">
         <div class="entity-card__overview${animations.enabled && this._animateContentOnNextRender ? " entity-card__content--entering" : ""}">
@@ -3533,6 +3535,7 @@ class NodaliaEntityCard extends HTMLElement {
         }
         `}
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
+      ${cardFocusStyles}
       </style>
       <ha-card
         class="entity-card entity-card--air-quality is-on ${canRunBodyTap ? "entity-card--clickable" : ""}"
@@ -4312,6 +4315,7 @@ class NodaliaEntityCard extends HTMLElement {
         }
         `}
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
+      ${cardFocusStyles}
       </style>
       <ha-card
         class="entity-card ${isActive ? "is-on" : "is-off"} ${isCompactLayout ? "entity-card--compact" : ""} ${showCopyBlock ? "entity-card--with-copy" : ""} ${singleRowLayout ? "entity-card--single-row" : ""} ${isSelectEntity ? "entity-card--select" : ""} ${canRunBodyTap ? "entity-card--clickable" : ""}"

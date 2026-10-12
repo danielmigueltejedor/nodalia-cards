@@ -1,3 +1,4 @@
+import cardFocusStyles from "../../shared/card-focus.css";
 import { captureHassContext, sameHassContext } from "../../shared/hass-context";
 import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
 import type { HostPointerHoldBinding } from "../../core/types/nodalia-utils";
@@ -668,7 +669,8 @@ class NodaliaInsigniaCard extends HTMLElement {
             font-size: 12px;
             line-height: 1.45;
           }
-        </style>
+        ${cardFocusStyles}
+      </style>
         ${this._renderEmptyState()}
       `;
       return;
@@ -919,6 +921,7 @@ class NodaliaInsigniaCard extends HTMLElement {
           width: 10px;
         }
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
+      ${cardFocusStyles}
       </style>
       <div class="insignia-card ${iconOnly ? "insignia-card--icon-only" : ""}" style="--icon-only-offset-y: ${iconOnlyOffsetY}; ${isVisible ? "" : "display:none;"}">
         <div class="insignia-card__content" data-insignia-action="primary" role="button" tabindex="0" aria-label="${escapeHtml(title)}">

@@ -1,3 +1,4 @@
+import cardFocusStyles from "../../shared/card-focus.css";
 import graphHoverStyles from "./graph-hover.css";
 import {
   CARD_TAG,
@@ -2511,6 +2512,7 @@ class NodaliaGraphCard extends HTMLElement {
           }
         }
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
+      ${cardFocusStyles}
       </style>
       <ha-card class="graph-card">
         <div class="graph-card__content ${shouldAnimateEntrance ? "graph-card__content--entering" : ""}">

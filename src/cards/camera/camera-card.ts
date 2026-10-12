@@ -1,3 +1,4 @@
+import cardFocusStyles from "../../shared/card-focus.css";
 import cameraExpandedStyles from "./camera-expanded.css";
 import {
   CARD_TAG,
@@ -1817,6 +1818,7 @@ class NodaliaCameraCard extends HTMLElement {
 
         ${cameraExpandedStyles}
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
+      ${cardFocusStyles}
       </style>
       <ha-card class="camera-card camera-card--${escapeHtml(layout)} ${feedLayout ? "camera-card--feed" : ""}">
         <div class="camera-card__content ${shouldAnimateEntrance ? "camera-card__content--entering" : ""}">

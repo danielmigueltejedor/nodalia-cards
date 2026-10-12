@@ -1,3 +1,4 @@
+import cardFocusStyles from "../../shared/card-focus.css";
 import notificationsMotionStyles from "./notifications-motion.css";
 import {
   BACKGROUND_MOBILE_NATIVE_HEALTH_TTL_MS,
@@ -3205,6 +3206,7 @@ class NodaliaNotificationsCard extends HTMLElement {
           z-index: calc(var(--stack-z, 2) - 8);
         }
         ${notificationsMotionStyles}
+      ${cardFocusStyles}
       </style>
       <ha-card
         class="notifications-card ${hasNotifications ? "notifications-card--list" : "notifications-card--empty"} ${animations.enabled ? "notifications-card--animated" : ""} ${animateEntrance ? "notifications-card--enter" : ""} ${stackTransition ? `notifications-card--stack-${stackTransition}` : ""}"

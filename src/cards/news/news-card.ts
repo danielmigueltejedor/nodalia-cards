@@ -1,3 +1,4 @@
+import cardFocusStyles from "../../shared/card-focus.css";
 import type { HomeAssistant } from "../../core/types/home-assistant";
 import type { NewsItem } from "./news-helpers";
 import {
@@ -1347,6 +1348,7 @@ class NodaliaNewsCard extends HTMLElement {
           margin: 0;
         }
 
+      ${cardFocusStyles}
       </style>
       ${bodyMarkup}
     `;

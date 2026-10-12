@@ -1730,11 +1730,33 @@ import type {NodaliaUtilsApi,CssStyleDefaults,SanitizedCssStyles,EditorFocusStat
       return true;
     }
 
-    const inlineOutlineState = new WeakMap<HTMLElement,{priority:string;value:string}>();
-    let pointerFocusedElement:HTMLElement|null = null;
+    const inlineOutlineState = new WeakMap<HTMLElement | SVGElement,{priority:string;value:string}>();
+    let pointerFocusedElement:HTMLElement | SVGElement | null = null;
+    let pointerModality = false;
+    let keyboardFocusCard: HTMLElement | null = null;
+    const isFocusElement = (element: unknown): element is HTMLElement | SVGElement =>
+      (typeof HTMLElement !== "undefined" && element instanceof HTMLElement)
+      || (typeof SVGElement !== "undefined" && element instanceof SVGElement);
+    const clearKeyboardCard = () => {
+      keyboardFocusCard?.removeAttribute("data-nodalia-keyboard-focus");
+      keyboardFocusCard = null;
+    };
+    const focusCardFromPath = (path: EventTarget[]) => path.find((node): node is HTMLElement =>
+      node instanceof HTMLElement && node.tagName.startsWith("NODALIA-") && !node.tagName.endsWith("-EDITOR"));
+    const updateKeyboardCard = (path: EventTarget[]) => {
+      clearKeyboardCard();
+      if (pointerModality) return;
+      const card = focusCardFromPath(path);
+      card?.removeAttribute("data-nodalia-pointer-input");
+      if (!path.some(node => node instanceof HTMLElement && node.matches("ha-card,.insignia-card,.media-player-card"))) return;
+      if (card) {
+        keyboardFocusCard = card;
+        card.setAttribute("data-nodalia-keyboard-focus", "");
+      }
+    };
 
     const restoreOutline = (element:unknown) => {
-      if (!(typeof HTMLElement !== "undefined" && element instanceof HTMLElement)) {
+      if (!isFocusElement(element)) {
         return;
       }
       const previous = inlineOutlineState.get(element);
@@ -1753,7 +1775,7 @@ import type {NodaliaUtilsApi,CssStyleDefaults,SanitizedCssStyles,EditorFocusStat
     };
 
     const suppressOutline = (element:unknown) => {
-      if (!(typeof HTMLElement !== "undefined" && element instanceof HTMLElement)) {
+      if (!isFocusElement(element)) {
         return;
       }
       if (pointerFocusedElement && pointerFocusedElement !== element) {
@@ -1774,7 +1796,10 @@ import type {NodaliaUtilsApi,CssStyleDefaults,SanitizedCssStyles,EditorFocusStat
       if (typeof event.button === "number" && event.button !== 0) {
         return;
       }
+      pointerModality = true;
+      clearKeyboardCard();
       const path = typeof event.composedPath === "function" ? event.composedPath() : [event.target];
+      focusCardFromPath(path.filter((node): node is EventTarget => node !== null))?.setAttribute("data-nodalia-pointer-input", "");
       const belongsToNodalia = path.some(node => (
         typeof HTMLElement !== "undefined"
         && node instanceof HTMLElement
@@ -1784,8 +1809,7 @@ import type {NodaliaUtilsApi,CssStyleDefaults,SanitizedCssStyles,EditorFocusStat
         return;
       }
       const target = path.find(node => (
-        typeof HTMLElement !== "undefined"
-        && node instanceof HTMLElement
+        isFocusElement(node)
         && typeof node.matches === "function"
         && node.matches(POINTER_FOCUSABLE_SELECTOR)
       ));
@@ -1794,16 +1818,32 @@ import type {NodaliaUtilsApi,CssStyleDefaults,SanitizedCssStyles,EditorFocusStat
       }
     }, true);
 
-    document.addEventListener("keydown", () => {
+    document.addEventListener("keydown", event => {
+      pointerModality = false;
       restoreOutline(pointerFocusedElement);
+      updateKeyboardCard(event.composedPath());
+    }, true);
+
+    // Optimistic updates may replace the focused control. Keep the new element in
+    // the same modality so a touch does not turn into a keyboard frame on rerender.
+    document.addEventListener("focusin", event => {
+      const path = event.composedPath();
+      updateKeyboardCard(path);
+      if (!pointerModality) return;
+      focusCardFromPath(path)?.setAttribute("data-nodalia-pointer-input", "");
+      if (!path.some(node => node instanceof HTMLElement && node.tagName.startsWith("NODALIA-"))) return;
+      const target = path.find(node => isFocusElement(node) && node.matches(POINTER_FOCUSABLE_SELECTOR));
+      if (target) suppressOutline(target);
     }, true);
 
     document.addEventListener("focusout", event => {
       const path = typeof event.composedPath === "function" ? event.composedPath() : [event.target];
+      if (keyboardFocusCard && path.includes(keyboardFocusCard)) clearKeyboardCard();
       if (pointerFocusedElement && path.includes(pointerFocusedElement)) {
         restoreOutline(pointerFocusedElement);
       }
     }, true);
+    window.addEventListener?.("blur", clearKeyboardCard);
 
     window.__nodaliaPointerFocusRingGuardInstalled = true;
     return true;
