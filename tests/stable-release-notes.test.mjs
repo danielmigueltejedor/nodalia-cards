@@ -72,7 +72,7 @@ test("stable notes combine curated changes with practical HACS update and suppor
 
 test("release workflow publishes curated notes from the correct release channel", () => {
   const workflow = read(".github/workflows/release.yml");
-  const previewBranch = workflow.match(/if \[\[ "\$GITHUB_REF_NAME" == \*-\* \]\]; then([\s\S]*?)else/)?.[1] || "";
+  const previewBranch = workflow.match(/if \[\[ "\$RELEASE_TAG" == \*-\* \]\]; then([\s\S]*?)else/)?.[1] || "";
   const stableBranch = workflow.match(/else([\s\S]*?)\n\s*fi/)?.[1] || "";
 
   assert.match(previewBranch, /generate-prerelease-notes\.mjs/);
