@@ -66,6 +66,10 @@ for (const width of [320, 390, 768]) {
       });
       expect(geometry.focusVisible).toBe(true);
       expect(geometry.target).toEqual(geometry.shell);
+      for (const chip of await card.locator('.power-flow-card__node--grid .power-flow-card__chip').all()) {
+        const bounds = await chip.boundingBox();
+        expect(bounds.y + bounds.height).toBeLessThanOrEqual(geometry.shell.y + geometry.shell.height - 3);
+      }
       await expect(card.locator('.power-flow-card__header')).toHaveCount(showHeader ? 1 : 0);
       await page.evaluate(() => {
         window.focusActions = [];
@@ -120,3 +124,24 @@ for (const card of CARDS) {
     expect(await page.evaluate(() => window.bundleErrors)).toEqual([]);
   });
 }
+
+test('Power Flow keeps larger grid chips inside its mobile focus frame', async ({ page }) => {
+  await useSlottedHaCard(page);
+  await page.goto('/tests/fixtures/browser.html');
+  await page.waitForFunction(() => customElements.get('nodalia-power-flow-card'));
+  await page.evaluate(() => {
+    const element = document.createElement('nodalia-power-flow-card');
+    element.setConfig({ entities: { grid: { entity: 'sensor.grid' }, home: { entity: 'sensor.home' } }, tap_action: 'more-info', styles: { chip_height: '32px', icon: { node_size: '72px' } }, animations: { enabled: false } });
+    element.hass = window.makeHass({ 'sensor.grid': { state: '191', attributes: { unit_of_measurement: 'W' } }, 'sensor.home': { state: '191', attributes: { unit_of_measurement: 'W' } } });
+    element.style.cssText = 'display:block;width:320px';
+    document.querySelector('#fixture').append(element);
+  });
+  const card = page.locator('nodalia-power-flow-card');
+  const frame = card.locator('ha-card');
+  await page.keyboard.press('Shift'); await frame.focus();
+  const bounds = await frame.boundingBox();
+  for (const chip of await card.locator('.power-flow-card__node--grid .power-flow-card__chip').all()) {
+    const rect = await chip.boundingBox();
+    expect(rect.y + rect.height).toBeLessThanOrEqual(bounds.y + bounds.height - 3);
+  }
+});

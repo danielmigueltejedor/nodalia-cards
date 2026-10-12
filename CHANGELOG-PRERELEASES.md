@@ -13,6 +13,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 - **Keyboard focus across all cards:** a shared frame follows the complete card surface and its rounded corners, including Power Flow's header and nested controls. Touch and mouse input no longer leave a keyboard frame behind after a card updates.
+- **Power Flow:** the compact grid/home layout reserves space for the grid's name and power labels, so they stay inside the card and its focus frame on mobile, including when using larger chips.
 - **Scenes, Weather and Calendar:** their main actions can now be reached and activated with the keyboard; available scenes participate in Tab navigation, and Calendar returns focus to its card after closing the expanded view.
 - **Fav Card:** on/off toggles now update the color, icon and state immediately while Home Assistant confirms the command, matching Light and Fan. Rapid toggles use the displayed state, stale readings do not flicker, and failed or unconfirmed commands revert to the actual state. Changing entity, user, connection or removing the card clears pending feedback.
 
