@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2";
+  var CARD_VERSION = "3.0.3-alpha.1";
 
   // src/cards/circular-gauge/circular-gauge-constants.ts
   var CARD_TAG = "nodalia-circular-gauge-card";
@@ -170,6 +170,9 @@
     const normalized = { ...config, ...fields };
     return normalized;
   }
+
+  // src/shared/card-focus.css
+  var card_focus_default = ":is(ha-card,.insignia-card,.media-player-card):is(:focus-visible,:has(:focus-visible:not([data-nodalia-pointer-focus]))),:host([data-nodalia-keyboard-focus]) :is(ha-card,.insignia-card,.media-player-card){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:is(button,a[href],summary,[role=button],[role=slider],[tabindex]):focus-visible:not([data-nodalia-pointer-focus]){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:host([data-nodalia-pointer-input]) :is(ha-card,.insignia-card,.media-player-card){outline:none}";
 
   // src/shared/editor-color.ts
   var clamp2 = (value, max) => Math.max(0, Math.min(max, value));
@@ -1003,6 +1006,7 @@
           font-size: 13px;
           line-height: 1.5;
         }
+      ${card_focus_default}
       </style>
       <ha-card class="gauge-card gauge-card--empty">
         <div class="gauge-card__empty-title">${title}</div>
@@ -1672,6 +1676,7 @@
           }
         }
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
+      ${card_focus_default}
       </style>
       <ha-card class="gauge-card">
         <div class="gauge-card__content" ${this._canRunTapAction() ? `data-gauge-action="primary" role="button" tabindex="0" aria-label="${escapeHtml(title)}"` : ""}>

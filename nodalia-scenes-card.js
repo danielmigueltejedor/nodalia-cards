@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2";
+  var CARD_VERSION = "3.0.3-alpha.1";
 
   // src/cards/scenes/scenes-constants.ts
   var CARD_TAG = "nodalia-scenes-card";
@@ -502,6 +502,9 @@
     };
   }
 
+  // src/shared/card-focus.css
+  var card_focus_default = ":is(ha-card,.insignia-card,.media-player-card):is(:focus-visible,:has(:focus-visible:not([data-nodalia-pointer-focus]))),:host([data-nodalia-keyboard-focus]) :is(ha-card,.insignia-card,.media-player-card){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:is(button,a[href],summary,[role=button],[role=slider],[tabindex]):focus-visible:not([data-nodalia-pointer-focus]){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:host([data-nodalia-pointer-input]) :is(ha-card,.insignia-card,.media-player-card){outline:none}";
+
   // src/cards/scenes/scenes-card.ts
   var _lazyNodaliaScenesCard;
   function loadNodaliaScenesCard() {
@@ -544,6 +547,9 @@
         this._onShadowMouseDown = this._onShadowMouseDown.bind(this);
         this._onShadowTouchStart = this._onShadowTouchStart.bind(this);
         shadow.addEventListener("click", this._onShadowClick);
+        shadow.addEventListener("keydown", (event) => {
+          if (this.isConnected && window.NodaliaUtils?.isKeyboardActivationEvent?.(event)) this._onShadowClick(event);
+        });
         shadow.addEventListener("pointerdown", this._onShadowPointerDown, true);
         shadow.addEventListener("mousedown", this._onShadowMouseDown, true);
         shadow.addEventListener("touchstart", this._onShadowTouchStart, { passive: false, capture: true });
@@ -869,7 +875,7 @@
           return;
         }
         this._rememberSceneInteractionScroll(button);
-        this._blurSceneInteractionFocus();
+        if (!(event instanceof KeyboardEvent)) this._blurSceneInteractionFocus();
         this._triggerPressAnimation(button);
         this._performTapAction(entityId);
         this._scheduleDashboardScrollRestore();
@@ -893,6 +899,7 @@
         }
         .scenes-card__empty-title { font-size: 15px; font-weight: 700; letter-spacing: -0.02em; }
         .scenes-card__empty-text { color: var(--secondary-text-color); font-size: 13px; line-height: 1.5; }
+      ${card_focus_default}
       </style>
       <ha-card class="scenes-card scenes-card--empty">
         <div class="scenes-card__empty-title">${escapeHtml(ui.emptyTitle)}</div>
@@ -938,7 +945,7 @@
         return `
       <div
         role="button"
-        tabindex="-1"
+        tabindex="${entry.unavailable ? "-1" : "0"}"
         class="${presentation.tileClass}"
         data-scene-entity="${escapeHtml(entry.entity)}"
         data-unavailable="${entry.unavailable ? "true" : "false"}"
@@ -954,6 +961,8 @@
         if (!this.shadowRoot) {
           return;
         }
+        const focused = this.shadowRoot.activeElement;
+        const focusedEntity = focused instanceof HTMLElement ? focused.dataset.sceneEntity : void 0;
         const config = this._config;
         const entries = resolveSceneEntries(config, this._hass);
         if (!entries.length) {
@@ -1466,10 +1475,11 @@
           100% { transform: scale(1); }
         }
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
+      ${card_focus_default}
       </style>
       <ha-card
         class="scenes-card ${isSingle ? `scenes-card--single ${singlePresentation?.tileClass || ""}` : ""}"
-        ${isSingle ? 'role="button" tabindex="-1"' : ""}
+        ${isSingle ? `role="button" tabindex="${singleEntry?.unavailable ? "-1" : "0"}"` : ""}
         ${singleEntry ? `data-scene-entity="${escapeHtml(singleEntry.entity)}" data-unavailable="${singleEntry.unavailable ? "true" : "false"}" aria-label="${escapeHtml(singleEntry.label)}"` : ""}
         ${singleEntry?.unavailable ? 'aria-disabled="true"' : ""}
         ${singlePresentation ? `style="${singlePresentation.style}"` : ""}
@@ -1493,6 +1503,9 @@
           `}
       </ha-card>
     `;
+        if (focusedEntity) {
+          [...this.shadowRoot.querySelectorAll("[data-scene-entity]")].find((node) => node.dataset.sceneEntity === focusedEntity && node.getAttribute("aria-disabled") !== "true")?.focus({ preventScroll: true });
+        }
         if (Date.now() < (this._sceneInteractionScrollUntil || 0)) {
           this._scheduleDashboardScrollRestore(this._interactionScrollSnapshot);
         }

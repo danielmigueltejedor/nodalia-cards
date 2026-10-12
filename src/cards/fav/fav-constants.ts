@@ -12,6 +12,7 @@ export const HAPTIC_PATTERNS = {
 };
 export const MINI_LAYOUT_THRESHOLD = 126;
 export const INLINE_LAYOUT_THRESHOLD = 340;
+export const OPTIMISTIC_TOGGLE_TIMEOUT = 3200;
 export const FEATURE_ARM_HOME = 1;
 export const FEATURE_ARM_AWAY = 2;
 export const FEATURE_ARM_NIGHT = 4;

@@ -1,3 +1,4 @@
+import cardFocusStyles from "../../shared/card-focus.css";
 import { captureHassContext, sameHassContext } from "../../shared/hass-context";
 import type { HassContext } from "../../shared/hass-context";
 import { createCardLayoutNotifier } from "../../shared/card-layout-notifier";
@@ -3720,6 +3721,7 @@ class NodaliaFanCard extends HTMLElement {
             justify-content: flex-end;
           }
         }
+      ${cardFocusStyles}
       </style>
       <ha-card
         data-fan-action="body" role="button" tabindex="0"

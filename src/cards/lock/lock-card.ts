@@ -1,3 +1,4 @@
+import cardFocusStyles from "../../shared/card-focus.css";
 import { captureHassContext, sameHassContext } from "../../shared/hass-context";
 import type { HassContext } from "../../shared/hass-context";
 import type { HomeAssistant } from "../../core/types/home-assistant";
@@ -275,7 +276,8 @@ export function loadNodaliaLockCard(): CustomElementConstructor {
             :host { --lock-icon-size:50px; }
           }
           ${window.NodaliaUtils.renderReducedMotionStyles?.() || "@media (prefers-reduced-motion:reduce) { *, *::before, *::after { transition:none!important; animation:none!important; } }"}
-        </style>
+        ${cardFocusStyles}
+      </style>
         <ha-card data-view-key="lock" data-lock-state="${window.NodaliaUtils.escapeHtml(status)}" class="${this.config.layout}${entering ? " is-entering" : ""} ${["locked", "locking"].includes(status) ? "is-locked" : ""} ${["jammed", "unknown", "unavailable"].includes(this.state) ? "is-unavailable" : ""}" aria-busy="${Boolean(this.pending) || ["locking", "unlocking", "opening"].includes(this.state)}">
           <div class="header" data-view-key="header"><span class="icon"><ha-icon icon="${icon}"></ha-icon></span><div>
             ${this.config.show_name ? `<div class="name">${name}</div>` : ""}

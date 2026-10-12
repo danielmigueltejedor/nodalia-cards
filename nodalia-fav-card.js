@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2";
+  var CARD_VERSION = "3.0.3-alpha.1";
 
   // src/cards/fav/fav-constants.ts
   var CARD_TAG = "nodalia-fav-card";
@@ -18,6 +18,7 @@
   };
   var MINI_LAYOUT_THRESHOLD = 126;
   var INLINE_LAYOUT_THRESHOLD = 340;
+  var OPTIMISTIC_TOGGLE_TIMEOUT = 3200;
   var FEATURE_ARM_HOME = 1;
   var FEATURE_ARM_AWAY = 2;
   var FEATURE_ARM_NIGHT = 4;
@@ -185,6 +186,9 @@
     return normalized;
   }
 
+  // src/shared/card-focus.css
+  var card_focus_default = ":is(ha-card,.insignia-card,.media-player-card):is(:focus-visible,:has(:focus-visible:not([data-nodalia-pointer-focus]))),:host([data-nodalia-keyboard-focus]) :is(ha-card,.insignia-card,.media-player-card){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:is(button,a[href],summary,[role=button],[role=slider],[tabindex]):focus-visible:not([data-nodalia-pointer-focus]){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:host([data-nodalia-pointer-input]) :is(ha-card,.insignia-card,.media-player-card){outline:none}";
+
   // src/shared/hass-context.ts
   var captureHassContext = (hass) => ({
     present: Boolean(hass),
@@ -287,6 +291,11 @@
     } catch (error) {
       failure(error);
     }
+  }
+  async function requestHassService(host, hass, domain, service, data = {}, target = null) {
+    if (hass?.callService) return target !== null ? hass.callService(domain, service, data, target) : hass.callService(domain, service, data);
+    const utils2 = window.NodaliaUtils;
+    return utils2?.invokeHomeAssistantService?.call(utils2, host, hass, domain, service, data, target);
   }
   function invokeHassService(host, hass, domain, service, data = {}, target = null) {
     const utils2 = window.NodaliaUtils;
@@ -680,6 +689,8 @@
         this._alarmCodeInput = "";
         this._fallbackLayoutTimers = /* @__PURE__ */ new Set();
         this._layoutFrame = 0;
+        this._optimisticToggle = null;
+        this._optimisticToggleTimer = 0;
         this._lastAlarmPanelRenderedOpen = null;
         this._lastRenderSignature = "";
         this._resizeObserver = new ResizeObserver((entries) => {
@@ -716,6 +727,7 @@
         this._render();
       }
       disconnectedCallback() {
+        this._clearOptimisticToggle();
         this._cardLayoutNotifier?.cancel();
         this._resizeObserver?.disconnect();
         this._alarmMenuOpen = false;
@@ -729,6 +741,7 @@
         this._lastAlarmPanelRenderedOpen = null;
       }
       setConfig(config) {
+        this._clearOptimisticToggle();
         const nextConfig = normalizeConfig(config || {});
         if (this._config?.entity !== nextConfig.entity) {
           this._applyHostGridSpan(false);
@@ -747,6 +760,7 @@
       set hass(hass) {
         const context = captureHassContext(hass);
         if (this._hassContext && !sameHassContext(this._hassContext, context)) {
+          this._clearOptimisticToggle();
           this._alarmMenuOpen = false;
           this._alarmCodeInput = "";
           this._lastAlarmPanelRenderedOpen = null;
@@ -760,6 +774,7 @@
         }
         this._hassContext = context;
         this._hass = hass;
+        this._syncOptimisticToggle();
         if (!this.isConnected) {
           return;
         }
@@ -794,6 +809,7 @@
         const values = [
           entityId,
           state?.state || "",
+          this._optimisticToggle?.expectedState || "",
           attrs.friendly_name || "",
           attrs.icon || "",
           attrs.device_class || "",
@@ -854,7 +870,53 @@
         return "inline";
       }
       _getState() {
+        const actual = this._getActualState();
+        const draft = this._optimisticToggle;
+        return actual && draft && actual.entity_id === draft.entityId ? { ...actual, state: draft.expectedState } : actual;
+      }
+      _getActualState() {
         return this._hass?.states?.[this._config?.entity || ""] || null;
+      }
+      _clearOptimisticToggle() {
+        if (this._optimisticToggleTimer) window.clearTimeout(this._optimisticToggleTimer);
+        this._optimisticToggleTimer = 0;
+        this._optimisticToggle = null;
+      }
+      _syncOptimisticToggle() {
+        const draft = this._optimisticToggle;
+        if (!draft) return;
+        const actual = this._getActualState();
+        if (!actual || actual.entity_id !== draft.entityId || !this._isBinaryOnOff(actual)) {
+          this._clearOptimisticToggle();
+          return;
+        }
+        if (actual.state !== draft.sourceState) draft.sawDifferentState = true;
+        const updated = draft.sawDifferentState || actual !== draft.source || actual.state !== draft.sourceState || actual.last_updated !== draft.lastUpdated || actual.last_changed !== draft.lastChanged;
+        if (normalizeTextKey(actual.state) === draft.expectedState && (draft.sourceState !== draft.expectedState || updated)) {
+          this._clearOptimisticToggle();
+        }
+      }
+      _startOptimisticToggle(expectedState, source) {
+        this._clearOptimisticToggle();
+        const draft = {
+          entityId: source.entity_id,
+          expectedState,
+          source,
+          sourceState: source.state,
+          lastUpdated: source.last_updated,
+          lastChanged: source.last_changed,
+          sawDifferentState: false
+        };
+        this._optimisticToggle = draft;
+        this._optimisticToggleTimer = window.setTimeout(() => this._rollbackOptimisticToggle(draft), OPTIMISTIC_TOGGLE_TIMEOUT);
+        this._render();
+        return draft;
+      }
+      _rollbackOptimisticToggle(draft) {
+        if (this._optimisticToggle !== draft) return;
+        this._clearOptimisticToggle();
+        this._lastRenderSignature = "";
+        if (this.isConnected) this._render();
       }
       _getDomain(entityId = this._config?.entity) {
         return String(entityId || "").split(".")[0] || "";
@@ -949,8 +1011,19 @@
           return;
         }
         if (this._isBinaryOnOff(state)) {
-          const service = normalizeTextKey(state.state) === "on" ? "turn_off" : "turn_on";
-          this._invokeEntityService("homeassistant", service, entityId);
+          const effective = entityId === this._config?.entity ? this._getState() : state;
+          const service = normalizeTextKey(effective?.state) === "on" ? "turn_off" : "turn_on";
+          if (entityId !== this._config?.entity) {
+            this._invokeEntityService("homeassistant", service, entityId);
+            return;
+          }
+          const draft = this._startOptimisticToggle(service === "turn_on" ? "on" : "off", state);
+          void requestHassService(this, this._hass, "homeassistant", service, { entity_id: entityId }).then((result) => {
+            if (result === false) this._rollbackOptimisticToggle(draft);
+          }, (error) => {
+            console.warn("Nodalia Fav Card: toggle failed", error);
+            this._rollbackOptimisticToggle(draft);
+          });
           return;
         }
         const domain = this._getDomain(entityId);
@@ -1654,6 +1727,8 @@
         if (!this.shadowRoot) {
           return;
         }
+        const focused = this.shadowRoot.activeElement;
+        const restorePrimaryFocus = focused instanceof HTMLElement && focused.dataset.favAction === "primary";
         const config = this._config || normalizeConfig({});
         const entityGuard = window.NodaliaUtils?.renderLovelaceEntityGuardCardHtml?.(
           this._hass,
@@ -2069,6 +2144,7 @@
         }
 
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
+      ${card_focus_default}
       </style>
       <ha-card
         class="fav-card ${isActive ? "is-on" : "is-off"} ${isMini ? "fav-card--mini" : "fav-card--inline"} ${isCompactInline ? "fav-card--single-row" : ""} ${isTightInline ? "fav-card--tight-inline" : ""} ${showAlarmPanel ? "fav-card--alarm-open" : ""} ${canRunPrimaryAction ? "fav-card--clickable" : ""}"
@@ -2116,6 +2192,9 @@
         </div>
       </ha-card>
     `;
+        if (restorePrimaryFocus) {
+          this.shadowRoot.querySelector('button[data-fav-action="primary"]')?.focus({ preventScroll: true });
+        }
         if (isAlarmPanel && this._lastAlarmPanelRenderedOpen !== showAlarmPanel) {
           this._lastAlarmPanelRenderedOpen = showAlarmPanel;
           if (this._layoutFrame) cancelAnimationFrame(this._layoutFrame);

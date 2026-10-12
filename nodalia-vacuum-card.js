@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2";
+  var CARD_VERSION = "3.0.3-alpha.1";
 
   // src/cards/vacuum/vacuum-constants.ts
   var CARD_TAG = "nodalia-vacuum-card";
@@ -271,6 +271,9 @@
     const normalized = { ...config, ...fields };
     return normalized;
   }
+
+  // src/shared/card-focus.css
+  var card_focus_default = ":is(ha-card,.insignia-card,.media-player-card):is(:focus-visible,:has(:focus-visible:not([data-nodalia-pointer-focus]))),:host([data-nodalia-keyboard-focus]) :is(ha-card,.insignia-card,.media-player-card){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:is(button,a[href],summary,[role=button],[role=slider],[tabindex]):focus-visible:not([data-nodalia-pointer-focus]){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:host([data-nodalia-pointer-input]) :is(ha-card,.insignia-card,.media-player-card){outline:none}";
 
   // src/shared/hass-context.ts
   var captureHassContext = (hass) => ({
@@ -2597,7 +2600,8 @@
             font-size: 13px;
             line-height: 1.5;
           }
-        </style>
+        ${card_focus_default}
+      </style>
         ${this._renderEmptyState()}
       `;
           return;
@@ -3330,6 +3334,7 @@
             width: 12px;
           }
         }
+      ${card_focus_default}
       </style>
 
       <ha-card ${canRunBodyCardTap ? 'data-vacuum-action="body_tap" role="button" tabindex="0"' : ""}>

@@ -63,7 +63,7 @@
   }
 
   // src/version.ts
-  var CARD_VERSION = "3.0.2";
+  var CARD_VERSION = "3.0.3-alpha.1";
 
   // src/cards/lock/lock-config.ts
   var CARD_TAG = "nodalia-lock-card";
@@ -87,6 +87,9 @@
       styles: normalizeLockStyles(config.styles)
     };
   }
+
+  // src/shared/card-focus.css
+  var card_focus_default = ":is(ha-card,.insignia-card,.media-player-card):is(:focus-visible,:has(:focus-visible:not([data-nodalia-pointer-focus]))),:host([data-nodalia-keyboard-focus]) :is(ha-card,.insignia-card,.media-player-card){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:is(button,a[href],summary,[role=button],[role=slider],[tabindex]):focus-visible:not([data-nodalia-pointer-focus]){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:host([data-nodalia-pointer-input]) :is(ha-card,.insignia-card,.media-player-card){outline:none}";
 
   // src/shared/hass-context.ts
   var captureHassContext = (hass) => ({
@@ -507,7 +510,8 @@
             :host { --lock-icon-size:50px; }
           }
           ${window.NodaliaUtils.renderReducedMotionStyles?.() || "@media (prefers-reduced-motion:reduce) { *, *::before, *::after { transition:none!important; animation:none!important; } }"}
-        </style>
+        ${card_focus_default}
+      </style>
         <ha-card data-view-key="lock" data-lock-state="${window.NodaliaUtils.escapeHtml(status)}" class="${this.config.layout}${entering ? " is-entering" : ""} ${["locked", "locking"].includes(status) ? "is-locked" : ""} ${["jammed", "unknown", "unavailable"].includes(this.state) ? "is-unavailable" : ""}" aria-busy="${Boolean(this.pending) || ["locking", "unlocking", "opening"].includes(this.state)}">
           <div class="header" data-view-key="header"><span class="icon"><ha-icon icon="${icon}"></ha-icon></span><div>
             ${this.config.show_name ? `<div class="name">${name}</div>` : ""}

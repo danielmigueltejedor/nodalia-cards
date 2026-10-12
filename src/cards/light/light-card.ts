@@ -1,3 +1,4 @@
+import cardFocusStyles from "../../shared/card-focus.css";
 import { captureHassContext, sameHassContext } from "../../shared/hass-context";
 import type { HassContext } from "../../shared/hass-context";
 import { createCardLayoutNotifier } from "../../shared/card-layout-notifier";
@@ -4031,6 +4032,7 @@ class NodaliaLightCard extends HTMLElement {
             width: 50px;
           }
         }
+      ${cardFocusStyles}
       </style>
       <ha-card
         class="light-card ${isOn ? "is-on" : "is-off"} ${isCompactLayout ? "light-card--compact" : ""} ${isMiniLayout ? "light-card--mini" : ""} ${showCopyBlock ? "light-card--with-copy" : ""} ${powerAnimationState ? `light-card--${powerAnimationState}` : ""}"

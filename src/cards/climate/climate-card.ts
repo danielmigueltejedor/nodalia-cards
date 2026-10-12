@@ -1,3 +1,4 @@
+import cardFocusStyles from "../../shared/card-focus.css";
 import climateStatic2Styles from "./climate-static-2.css";
 import climateStatic1Styles from "./climate-static-1.css";
 import climateStatic0Styles from "./climate-static-0.css";
@@ -6022,6 +6023,7 @@ class NodaliaClimateCard extends HTMLElement {
           }
         }
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
+      ${cardFocusStyles}
       </style>
       <ha-card class="climate-card climate-card--${escapeHtml(compactLevel)} ${isCompactCardLayout ? "climate-card--layout-compact" : "climate-card--layout-circular"}" style="--accent-color:${escapeHtml(accentColor)};">
         <div class="climate-card__content" data-climate-card="root">

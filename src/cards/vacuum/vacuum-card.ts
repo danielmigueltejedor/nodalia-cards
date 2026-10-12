@@ -1,3 +1,4 @@
+import cardFocusStyles from "../../shared/card-focus.css";
 import { captureHassContext, sameHassContext } from "../../shared/hass-context";
 import { createCardLayoutNotifier } from "../../shared/card-layout-notifier";
 import { EntityCatalogStamp } from "../../shared/entity-catalog-stamp";
@@ -2503,7 +2504,8 @@ class NodaliaVacuumCard extends HTMLElement {
             font-size: 13px;
             line-height: 1.5;
           }
-        </style>
+        ${cardFocusStyles}
+      </style>
         ${this._renderEmptyState()}
       `;
       return;
@@ -3277,6 +3279,7 @@ class NodaliaVacuumCard extends HTMLElement {
             width: 12px;
           }
         }
+      ${cardFocusStyles}
       </style>
 
       <ha-card ${canRunBodyCardTap ? 'data-vacuum-action="body_tap" role="button" tabindex="0"' : ""}>

@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2";
+  var CARD_VERSION = "3.0.3-alpha.1";
 
   // src/cards/weather/weather-constants.ts
   var CARD_TAG = "nodalia-weather-card";
@@ -171,6 +171,9 @@
     const normalized = { ...config, ...fields };
     return normalized;
   }
+
+  // src/shared/card-focus.css
+  var card_focus_default = ":is(ha-card,.insignia-card,.media-player-card):is(:focus-visible,:has(:focus-visible:not([data-nodalia-pointer-focus]))),:host([data-nodalia-keyboard-focus]) :is(ha-card,.insignia-card,.media-player-card){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:is(button,a[href],summary,[role=button],[role=slider],[tabindex]):focus-visible:not([data-nodalia-pointer-focus]){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:host([data-nodalia-pointer-input]) :is(ha-card,.insignia-card,.media-player-card){outline:none}";
 
   // src/shared/editor-entity-helpers.ts
   function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
@@ -1373,8 +1376,7 @@
           this._render();
           return;
         }
-        const control = event.composedPath().find(weatherActionElement);
-        if (control instanceof SVGElement && (event.key === "Enter" || event.key === " ")) this._onShadowClick(event);
+        if (window.NodaliaUtils?.isKeyboardActivationEvent?.(event)) this._onShadowClick(event);
       }
       _onShadowClick(event) {
         const actionButton = event.composedPath().find(weatherActionElement);
@@ -3252,9 +3254,10 @@
           transition: none !important;
         }
         `}
+      ${card_focus_default}
       </style>
-      <ha-card class="weather-card ${tapEnabled ? "weather-card--clickable" : ""}" style="--accent-color:${escapeHtml(accentColor)};">
-        <div class="weather-card__content" data-weather-card="root">
+      <ha-card class="weather-card ${tapEnabled ? "weather-card--clickable" : ""}" style="--accent-color:${escapeHtml(accentColor)};" data-weather-card="root" ${tapEnabled ? `role="button" tabindex="0" aria-label="${escapeHtml(title)}"` : ""}>
+        <div class="weather-card__content">
           <div class="weather-card__hero ${meteoalarmChipRowMarkup ? "" : "weather-card__hero--no-alert"} ${shouldAnimateEntrance ? "weather-card__hero--entering" : ""}">
             <div class="weather-card__topline">
               <div class="weather-card__title">${escapeHtml(title)}</div>

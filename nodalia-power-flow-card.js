@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2";
+  var CARD_VERSION = "3.0.3-alpha.1";
 
   // src/cards/power-flow/power-flow-constants.ts
   var CARD_TAG = "nodalia-power-flow-card";
@@ -897,6 +897,9 @@
     const normalized = { ...merged, ...fields };
     return normalized;
   }
+
+  // src/shared/card-focus.css
+  var card_focus_default = ":is(ha-card,.insignia-card,.media-player-card):is(:focus-visible,:has(:focus-visible:not([data-nodalia-pointer-focus]))),:host([data-nodalia-keyboard-focus]) :is(ha-card,.insignia-card,.media-player-card){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:is(button,a[href],summary,[role=button],[role=slider],[tabindex]):focus-visible:not([data-nodalia-pointer-focus]){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:host([data-nodalia-pointer-input]) :is(ha-card,.insignia-card,.media-player-card){outline:none}";
 
   // src/shared/view-animation-work.ts
   function createViewAnimationWork() {
@@ -2599,6 +2602,11 @@
           ),
           520
         );
+        const gridChipRows = Number(this._config?.show_labels !== false) + Number(this._config?.show_values !== false);
+        const gridChipHeight = Math.max(22, parseSizeToPixels(styles.chip_height, 24));
+        const gridBubbleHeight = Math.round(Math.max(44, parseSizeToPixels(styles.icon.node_size, 48)) * (layoutPreset === "compact" ? 0.92 : 1));
+        const gridInfoHeight = gridChipRows * gridChipHeight + Math.max(0, gridChipRows - 1) * 5 + (nodes.grid.secondary ? Math.ceil(Math.max(10, parseSizeToPixels(styles.secondary_size, 11)) * 1.4) + (gridChipRows ? 5 : 0) : 0);
+        const stripLabelOverflow = stripOnlyGridHome ? Math.max(0, Math.ceil(gridBubbleHeight / 2 + 5 + gridInfoHeight - Math.min(surfaceMinHeight, surfaceMinHeightMobile) * (1 - nodes.grid.position.y / 100))) : 0;
         const surfaceAspectCss = upperBandHubOnly ? layoutPreset === "compact" ? "1 / 0.64" : "1 / 0.58" : stripOnlyGridHome ? layoutPreset === "compact" ? "1 / 0.40" : "1 / 0.36" : "1 / 1.04";
         const flowDotViewAspect = (() => {
           const m = String(surfaceAspectCss).trim().match(/^([\d.]+)\s*\/\s*([\d.]+)/);
@@ -3027,6 +3035,7 @@
           border-radius: ${styles.card.border_radius};
           flex: 0 1 auto;
           min-height: 0;
+          padding-bottom: ${stripLabelOverflow}px;
           position: relative;
           transform-origin: center;
           z-index: 1;
@@ -3549,6 +3558,7 @@
         }
         `}
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
+      ${card_focus_default}
       </style>
       <ha-card class="power-flow-card power-flow-card--${layoutPreset}" ${this._config?.tap_action === "more-info" ? `data-card-action="primary" role="button" tabindex="0" aria-label="${escapeHtml(titleText || this._powerFlowUi("energy", "Energy"))}"` : ""}>
         ${hasHeader ? `

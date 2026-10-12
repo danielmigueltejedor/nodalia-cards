@@ -1,3 +1,4 @@
+import cardFocusStyles from "../../shared/card-focus.css";
 import {
   EDITOR_TAG,
   HAPTIC_PATTERNS,
@@ -3978,6 +3979,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
         }
         ${MEDIA_CONTROL_STYLES}
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
+      ${cardFocusStyles}
       </style>
       <div class="spacer" aria-hidden="true"></div>
       <div class="dock">

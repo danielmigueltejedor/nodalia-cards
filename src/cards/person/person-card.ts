@@ -1,3 +1,4 @@
+import cardFocusStyles from "../../shared/card-focus.css";
 import { captureHassContext, sameHassContext } from "../../shared/hass-context";
 import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
 import { parseFiniteNumericValue } from "../../shared/numeric-values";
@@ -1302,6 +1303,7 @@ class NodaliaPersonCard extends HTMLElement {
         }
         `}
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
+      ${cardFocusStyles}
       </style>
       <ha-card class="person-card ${singleRowLayout ? "person-card--single-row" : ""} ${avatarCentered ? "person-card--avatar-centered" : ""}" ${canRunPrimaryAction ? `data-person-action="primary" role="button" tabindex="0" aria-label="${escapeHtml(title)}"` : ""}>
         <div class="person-card__content ${animateWithPicture ? "person-card__content--entering" : ""}">

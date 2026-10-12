@@ -1,3 +1,4 @@
+import cardFocusStyles from "../../shared/card-focus.css";
 import { captureHassContext, sameHassContext } from "../../shared/hass-context";
 import type { HassContext } from "../../shared/hass-context";
 import { createCardLayoutNotifier } from "../../shared/card-layout-notifier";
@@ -1953,6 +1954,7 @@ class NodaliaCoverCard extends HTMLElement {
         }
         ${animations.enabled ? "" : `.fan-card, .fan-card * { animation: none !important; transition: none !important; }`}
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
+      ${cardFocusStyles}
       </style>
       <ha-card
         data-cover-action="body"

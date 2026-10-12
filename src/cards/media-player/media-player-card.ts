@@ -1,3 +1,4 @@
+import cardFocusStyles from "../../shared/card-focus.css";
 import { createCardLayoutNotifier } from "../../shared/card-layout-notifier";
 import mediaPlayerTvStyles from "./media-player-tv.css";
 import mediaPlayerMetadataStyles from "./media-player-metadata.css";
@@ -4555,6 +4556,7 @@ class NodaliaMediaPlayer extends HTMLElement {
 
         ${MEDIA_PRESENTATION_STYLES}
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
+      ${cardFocusStyles}
       </style>
       <div class="spacer" aria-hidden="true"></div>
       <div class="dock">

@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.2";
+  var CARD_VERSION = "3.0.3-alpha.1";
 
   // src/shared/date-time-format.ts
   var CACHE_LIMIT = 48;
@@ -612,6 +612,9 @@ ${metadata}` : metadata;
     const configFields = { ...normalized, ...fields };
     return configFields;
   }
+
+  // src/shared/card-focus.css
+  var card_focus_default = ":is(ha-card,.insignia-card,.media-player-card):is(:focus-visible,:has(:focus-visible:not([data-nodalia-pointer-focus]))),:host([data-nodalia-keyboard-focus]) :is(ha-card,.insignia-card,.media-player-card){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:is(button,a[href],summary,[role=button],[role=slider],[tabindex]):focus-visible:not([data-nodalia-pointer-focus]){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:host([data-nodalia-pointer-input]) :is(ha-card,.insignia-card,.media-player-card){outline:none}";
 
   // src/cards/calendar/calendar-composer.css
   var calendar_composer_default = '.calendar-composer{display:grid;inset:0;opacity:0;overflow:auto;overscroll-behavior:contain;padding:12px;pointer-events:none;place-items:center;position:absolute;touch-action:pan-y;transition:opacity 180ms ease;-webkit-overflow-scrolling:touch;z-index:3}.calendar-composer.is-open{opacity:1;pointer-events:auto}.calendar-delete-recurrence.is-open{z-index:4}.calendar-delete-recurrence__text{color:var(--secondary-text-color);font-size:13px;line-height:1.45;margin:0}.calendar-delete-recurrence__choices{display:grid;gap:8px}.calendar-delete-recurrence__choices .calendar-composer__btn{justify-self:stretch;width:100%}.calendar-delete-recurrence__error{background:color-mix(in srgb,var(--error-color, #db4437) 12%,transparent);border:1px solid color-mix(in srgb,var(--error-color, #db4437) 35%,transparent);border-radius:10px;color:var(--error-color, #db4437);font-size:13px;line-height:1.4;margin:0;padding:8px 10px}.calendar-composer__backdrop{-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);background:rgba(0,0,0,0.28);inset:0;position:absolute}.calendar-composer__panel{background:linear-gradient(180deg,color-mix(in srgb,var(--calendar-expanded-accent) 14%,rgba(255,255,255,0.06)),rgba(255,255,255,0.02)),color-mix(in srgb,var(--ha-card-background, var(--card-background-color, #fff)) 94%,rgba(255,255,255,0.03));border:1px solid color-mix(in srgb,var(--calendar-expanded-accent) 30%,color-mix(in srgb,var(--primary-text-color) 9%,transparent));border-radius:16px;box-shadow:0 18px 38px rgba(0,0,0,0.28);display:grid;gap:10px;max-height:calc(100% - 24px);max-width:min(100%,640px);overflow:auto;padding:14px;position:relative;width:min(100%,640px);z-index:1}.calendar-composer__title{font-size:var(--calendar-title-size);font-weight:800;letter-spacing:-0.02em}.calendar-composer__row{display:grid;gap:10px;grid-template-columns:repeat(2,minmax(0,1fr))}.calendar-composer__row[hidden]{display:none!important}.calendar-composer__row--middle{align-items:center}.calendar-composer__field{display:grid;gap:6px}.calendar-composer__field--color{align-items:start;justify-items:start}.calendar-composer__field>span,.calendar-composer__check>span{font-size:12px;font-weight:700}.calendar-composer__field input,.calendar-composer__field textarea,.calendar-composer__field select{appearance:none;background:color-mix(in srgb,var(--primary-text-color) 4%,transparent);border:1px solid color-mix(in srgb,var(--primary-text-color) 8%,transparent);border-radius:12px;color:var(--primary-text-color);font:inherit;min-height:38px;padding:8px 10px;width:100%}.calendar-composer__field textarea{line-height:1.35;min-height:76px;resize:vertical}.calendar-composer .editor-color-field{align-items:center;display:flex;flex-wrap:wrap;gap:10px;min-height:40px}.calendar-composer .editor-color-picker{align-items:center;background:color-mix(in srgb,var(--primary-text-color) 4%,transparent);border:1px solid color-mix(in srgb,var(--primary-text-color) 8%,transparent);border-radius:999px;cursor:pointer;display:inline-flex;flex:0 0 auto;height:40px;justify-content:center;position:relative;width:40px}.calendar-composer .editor-color-picker input{cursor:pointer;inset:0;opacity:0;position:absolute}.calendar-composer .editor-color-picker:hover,.calendar-composer .editor-color-picker:focus-within{border-color:color-mix(in srgb,var(--primary-text-color) 22%,transparent);box-shadow:inset 0 1px 0 color-mix(in srgb,var(--primary-text-color) 8%,transparent)}.calendar-composer .editor-color-swatch{--editor-swatch: #71c0ff;background:linear-gradient(var(--editor-swatch),var(--editor-swatch)),conic-gradient(from 90deg,color-mix(in srgb,var(--primary-text-color) 6%,transparent) 25%,rgba(0,0,0,0.12) 0 50%,color-mix(in srgb,var(--primary-text-color) 6%,transparent) 0 75%,rgba(0,0,0,0.12) 0);background-position:center;background-size:cover,10px 10px;border:1px solid color-mix(in srgb,var(--primary-text-color) 14%,transparent);border-radius:999px;display:block;height:22px;width:22px}.calendar-composer__check{align-items:center;display:inline-grid;gap:8px;grid-template-columns:auto minmax(0,1fr);margin-top:22px}.calendar-composer__check input{appearance:none;background:color-mix(in srgb,var(--primary-text-color) 8%,transparent);border:1px solid color-mix(in srgb,var(--primary-text-color) 12%,transparent);border-radius:999px;cursor:pointer;height:22px;margin:0;position:relative;transition:background 160ms ease,border-color 160ms ease;width:40px}.calendar-composer__check input::before{background:rgba(255,255,255,0.92);border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,0.24);content:"";height:18px;left:1px;position:absolute;top:1px;transition:transform 160ms ease;width:18px}.calendar-composer__check input:checked{background:var(--calendar-expanded-accent);border-color:var(--calendar-expanded-accent)}.calendar-composer__check input:checked::before{transform:translateX(18px)}.calendar-composer__error{align-items:center;background:color-mix(in srgb,var(--error-color, #db4437) 13%,transparent);border:1px solid color-mix(in srgb,var(--error-color, #db4437) 34%,transparent);border-radius:12px;color:var(--error-color, #db4437);display:flex;font-size:12px;font-weight:800;gap:8px;line-height:1.35;padding:9px 10px}.calendar-composer__error[hidden]{display:none}.calendar-composer__error ha-icon{flex:0 0 auto;height:18px;width:18px}.calendar-composer__actions{display:flex;gap:8px;justify-content:flex-end}.calendar-composer__btn{appearance:none;background:color-mix(in srgb,var(--primary-text-color) 7%,transparent);border:1px solid color-mix(in srgb,var(--primary-text-color) 8%,transparent);border-radius:999px;color:var(--primary-text-color);cursor:pointer;font:inherit;font-size:12px;font-weight:700;min-height:34px;padding:0 12px}.calendar-composer__btn--primary{background:color-mix(in srgb,var(--calendar-expanded-accent) 22%,transparent);border-color:color-mix(in srgb,var(--calendar-expanded-accent) 38%,var(--divider-color))}';
@@ -2538,6 +2541,7 @@ ${metadata}` : metadata;
         }
         const draft = this._nativeEventComposerOpen ? [...this.shadowRoot.querySelectorAll("[data-native-field]")].flatMap((field) => field instanceof HTMLInputElement || field instanceof HTMLSelectElement || field instanceof HTMLTextAreaElement ? [{ key: field.dataset.nativeField || "", value: field.value, checked: field instanceof HTMLInputElement && field.checked }] : []) : [];
         const active = this.shadowRoot.activeElement;
+        const closeFocused = active instanceof HTMLElement && active.dataset.action === "close-expanded";
         const focus = active instanceof HTMLInputElement || active instanceof HTMLSelectElement || active instanceof HTMLTextAreaElement ? {
           key: active.dataset.nativeField || "",
           start: active instanceof HTMLSelectElement ? null : active.selectionStart,
@@ -3461,8 +3465,9 @@ ${metadata}` : metadata;
           }
         }
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
+      ${card_focus_default}
       </style>
-      <ha-card>
+      <ha-card data-calendar-action="open" role="button" tabindex="0" aria-label="${escapeHtml(config.title)}">
         <div class="calendar-card">
           <div class="calendar-header ${playEntrance ? "calendar-header--entering" : ""}">
             <span class="calendar-icon-bubble ${playEntrance ? "calendar-icon-bubble--entering" : ""}"><ha-icon icon="${escapeHtml(config.icon || DEFAULT_CONFIG.icon)}"></ha-icon></span>
@@ -3520,7 +3525,11 @@ ${metadata}` : metadata;
         const calendarDialogs = this.shadowRoot.querySelectorAll('[role="dialog"][aria-modal="true"]');
         const activeCalendarDialog = calendarDialogs[calendarDialogs.length - 1];
         if (this._expandedOpen && activeCalendarDialog instanceof HTMLElement) {
-          window.NodaliaUtils?.bindModalFocus?.(this, activeCalendarDialog, focus?.key ? { initialFocusSelector: `[data-native-field="${CSS.escape(focus.key)}"]` } : void 0);
+          const initialFocusSelector = focus?.key ? `[data-native-field="${CSS.escape(focus.key)}"]` : closeFocused || active instanceof HTMLElement && active.dataset.calendarAction === "open" ? '[data-action="close-expanded"]' : void 0;
+          window.NodaliaUtils?.bindModalFocus?.(this, activeCalendarDialog, {
+            ...initialFocusSelector ? { initialFocusSelector } : {},
+            restoreFocus: () => this.shadowRoot?.querySelector('ha-card[data-calendar-action="open"]')?.focus({ preventScroll: true })
+          });
         } else {
           window.NodaliaUtils?.releaseModalFocus?.(this);
         }
@@ -3632,6 +3641,13 @@ ${metadata}` : metadata;
       }
       _onShadowKeydown(event) {
         if (!(event instanceof KeyboardEvent)) return;
+        if (!this._expandedOpen && window.NodaliaUtils?.isKeyboardActivationEvent?.(event) && event.composedPath()[0] instanceof HTMLElement && event.composedPath()[0].dataset.calendarAction === "open") {
+          event.preventDefault();
+          event.stopPropagation();
+          this._openExpandedCalendar();
+          this.shadowRoot?.querySelector('[data-action="close-expanded"]')?.focus({ preventScroll: true });
+          return;
+        }
         if (!this._expandedOpen) {
           return;
         }
@@ -3667,6 +3683,7 @@ ${metadata}` : metadata;
           this._expandedOpen = false;
           this._expandedOverlayEntrancePlayed = false;
           this._renderIfChanged(true);
+          this.shadowRoot?.querySelector('ha-card[data-calendar-action="open"]')?.focus({ preventScroll: true });
           return;
         }
         if (event.key !== "Enter" && event.key !== " ") {
@@ -3854,7 +3871,7 @@ ${metadata}` : metadata;
         if (target?.closest?.("button")) {
           return;
         }
-        if (!target?.closest?.(".calendar-card")) {
+        if (!target?.closest?.("ha-card[data-calendar-action='open']")) {
           return;
         }
         event.preventDefault();

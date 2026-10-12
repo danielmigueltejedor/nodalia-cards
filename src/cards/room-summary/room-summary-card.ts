@@ -1,3 +1,4 @@
+import cardFocusStyles from "../../shared/card-focus.css";
 import roomMetricStyles from "./room-summary-metrics.css";
 import {
   EDITOR_TAG,
@@ -1569,6 +1570,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
         @keyframes room-hub-slide { from { opacity:0.94; transform:translateX(-4px); } to { opacity:1; transform:none; } }
         @media (max-width:420px) { .room-hub { grid-template-columns:minmax(0,1fr) auto; } .room-hub__bubble { height:38px; width:38px; } }
         @media (prefers-reduced-motion:reduce) { .room-hub__body--enter { animation:none; } }
+      ${cardFocusStyles}
       </style>
       <ha-card class="room-summary-card room-summary-card--hub">
         <div class="room-hub">

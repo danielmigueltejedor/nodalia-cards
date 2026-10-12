@@ -1,3 +1,4 @@
+import cardFocusStyles from "../../shared/card-focus.css";
 import type { HomeAssistant } from "../../core/types/home-assistant";
 import type { HostPointerHoldBinding } from "../../core/types/nodalia-utils";
 import type { DashboardScrollSnapshot } from "./scenes-types";
@@ -79,6 +80,9 @@ class NodaliaScenesCard extends HTMLElement {
     this._onShadowMouseDown = this._onShadowMouseDown.bind(this);
     this._onShadowTouchStart = this._onShadowTouchStart.bind(this);
     shadow.addEventListener("click", this._onShadowClick);
+    shadow.addEventListener("keydown", event => {
+      if (this.isConnected && window.NodaliaUtils?.isKeyboardActivationEvent?.(event)) this._onShadowClick(event);
+    });
     shadow.addEventListener("pointerdown", this._onShadowPointerDown, true);
     shadow.addEventListener("mousedown", this._onShadowMouseDown, true);
     shadow.addEventListener("touchstart", this._onShadowTouchStart, { passive: false, capture: true });
@@ -437,7 +441,7 @@ class NodaliaScenesCard extends HTMLElement {
       return;
     }
     this._rememberSceneInteractionScroll(button);
-    this._blurSceneInteractionFocus();
+    if (!(event instanceof KeyboardEvent)) this._blurSceneInteractionFocus();
     this._triggerPressAnimation(button);
     this._performTapAction(entityId);
     this._scheduleDashboardScrollRestore();
@@ -462,6 +466,7 @@ class NodaliaScenesCard extends HTMLElement {
         }
         .scenes-card__empty-title { font-size: 15px; font-weight: 700; letter-spacing: -0.02em; }
         .scenes-card__empty-text { color: var(--secondary-text-color); font-size: 13px; line-height: 1.5; }
+      ${cardFocusStyles}
       </style>
       <ha-card class="scenes-card scenes-card--empty">
         <div class="scenes-card__empty-title">${escapeHtml(ui.emptyTitle)}</div>
@@ -520,7 +525,7 @@ class NodaliaScenesCard extends HTMLElement {
     return `
       <div
         role="button"
-        tabindex="-1"
+        tabindex="${entry.unavailable ? "-1" : "0"}"
         class="${presentation.tileClass}"
         data-scene-entity="${escapeHtml(entry.entity)}"
         data-unavailable="${entry.unavailable ? "true" : "false"}"
@@ -537,6 +542,8 @@ class NodaliaScenesCard extends HTMLElement {
     if (!this.shadowRoot) {
       return;
     }
+    const focused = this.shadowRoot.activeElement;
+    const focusedEntity = focused instanceof HTMLElement ? focused.dataset.sceneEntity : undefined;
 
     const config = this._config;
     const entries = resolveSceneEntries(config, this._hass);
@@ -1057,10 +1064,11 @@ class NodaliaScenesCard extends HTMLElement {
           100% { transform: scale(1); }
         }
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
+      ${cardFocusStyles}
       </style>
       <ha-card
         class="scenes-card ${isSingle ? `scenes-card--single ${singlePresentation?.tileClass || ""}` : ""}"
-        ${isSingle ? 'role="button" tabindex="-1"' : ""}
+        ${isSingle ? `role="button" tabindex="${singleEntry?.unavailable ? "-1" : "0"}"` : ""}
         ${singleEntry ? `data-scene-entity="${escapeHtml(singleEntry.entity)}" data-unavailable="${singleEntry.unavailable ? "true" : "false"}" aria-label="${escapeHtml(singleEntry.label)}"` : ""}
         ${singleEntry?.unavailable ? 'aria-disabled="true"' : ""}
         ${singlePresentation ? `style="${singlePresentation.style}"` : ""}
@@ -1090,6 +1098,10 @@ class NodaliaScenesCard extends HTMLElement {
           `}
       </ha-card>
     `;
+    if (focusedEntity) {
+      [...this.shadowRoot.querySelectorAll<HTMLElement>('[data-scene-entity]')]
+        .find(node => node.dataset.sceneEntity === focusedEntity && node.getAttribute('aria-disabled') !== 'true')?.focus({ preventScroll: true });
+    }
 
     if (Date.now() < (this._sceneInteractionScrollUntil || 0)) {
       this._scheduleDashboardScrollRestore(this._interactionScrollSnapshot);

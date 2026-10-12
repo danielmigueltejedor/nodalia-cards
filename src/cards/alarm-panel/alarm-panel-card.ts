@@ -1,3 +1,4 @@
+import cardFocusStyles from "../../shared/card-focus.css";
 import { captureHassContext, sameHassContext } from "../../shared/hass-context";
 import type { HassContext } from "../../shared/hass-context";
 import { createCardLayoutNotifier } from "../../shared/card-layout-notifier";
@@ -1565,6 +1566,7 @@ class NodaliaAlarmPanelCard extends HTMLElement {
           }
         }
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
+      ${cardFocusStyles}
       </style>
       <ha-card class="alarm-card ${isActive ? "is-on" : "is-off"}">
         <div class="alarm-card__content ${shouldAnimateEntrance ? "alarm-card__content--entering" : ""}">
