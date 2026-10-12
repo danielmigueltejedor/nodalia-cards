@@ -29,11 +29,15 @@ jobs:
       - name: Generated artifacts must match the commit
         run: git diff --exit-code
   browsers:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        project: [chromium, firefox, webkit, webkit-iphone]
+        include:
+          - { project: chromium, os: ubuntu-latest }
+          - { project: firefox, os: ubuntu-latest }
+          - { project: webkit, os: macos-latest }
+          - { project: webkit-iphone, os: macos-latest }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -46,7 +50,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: ~/.cache/ms-playwright
+          path: |
+            ~/.cache/ms-playwright
+            ~/Library/Caches/ms-playwright
           key: playwright-${{ runner.os }}-${{ matrix.project }}-${{ hashFiles('pnpm-lock.yaml') }}
       - name: Install browser and system dependencies
         shell: bash
