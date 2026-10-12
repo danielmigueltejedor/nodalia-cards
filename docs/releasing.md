@@ -26,6 +26,8 @@ also supports manual dispatch with an existing unpublished `tag`. The current
 workflow validates and builds that exact tag, including all four browser engines
 with one worker per runner, before publishing it. This recovery does not move the
 tag or replace an existing release.
+Chromium and Firefox run on Linux; desktop and iPhone WebKit run on native macOS
+runners. Both Safari projects retain the complete browser regression suite.
 
 Channel progression is alpha → beta → rc → stable. The same channel increments
 its number; promotion starts at 1, stable removes the suffix, and a new preview

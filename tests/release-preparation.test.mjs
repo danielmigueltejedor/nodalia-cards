@@ -41,7 +41,7 @@ test('release publishing cannot bypass the shared browser quality gate', () => {
   const quality = fs.readFileSync(new URL('../.github/workflows/quality.yml', import.meta.url), 'utf8');
   assert.match(release, /quality:\s+uses: \.\/\.github\/workflows\/quality.yml/);
   assert.match(release, /build-release:\s+needs: quality/);
-  assert.match(quality, /project: \[chromium, firefox, webkit, webkit-iphone\]/);
+  assert.deepEqual([...quality.matchAll(/project:\s*([a-z-]+)/g)].map(match => match[1]), ['chromium', 'firefox', 'webkit', 'webkit-iphone']);
   assert.match(quality, /git diff --exit-code/);
   assert.doesNotMatch(release, /continue-on-error/);
 });
