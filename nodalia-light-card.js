@@ -2,7 +2,87 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.3-alpha.1";
+  var CARD_VERSION = "3.0.3-alpha.2";
+
+  // src/shared/device-state-memory.ts
+  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  function snapshotDeviceState(state) {
+    return state ? { ...state, attributes: { ...state.attributes } } : null;
+  }
+  function readDeviceStateMemory(storageKey) {
+    if (typeof window === "undefined") return {};
+    try {
+      const parsed = JSON.parse(window.localStorage.getItem(storageKey) || "{}");
+      return isRecord(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  function readDeviceStateSnapshot(storageKey, entityId, memory) {
+    if (!entityId) return null;
+    const stored = (memory || readDeviceStateMemory(storageKey))[entityId];
+    if (!isRecord(stored) || !isRecord(stored.attributes)) return null;
+    const timestamp = typeof stored.last_changed === "string" ? stored.last_changed : (/* @__PURE__ */ new Date()).toISOString();
+    return { entity_id: entityId, state: "on", attributes: { ...stored.attributes }, last_changed: timestamp, last_updated: timestamp };
+  }
+
+  // src/shared/numeric-values.ts
+  function parseFiniteNumericValue(value) {
+    if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
+  // src/shared/light-visual-memory.ts
+  var LIGHT_MEMORY_STORAGE_KEY = "nodalia-light-card:last-visual-state:v1";
+  var OPTIMISTIC_VISUAL_SETTLE_MS = 420;
+  function hasLightColorAttributes(state) {
+    const attrs = state?.attributes || {};
+    const validChannels = (value, count, maxima) => Array.isArray(value) && value.length === count && value.every((channel, index) => {
+      const number = parseFiniteNumericValue(channel);
+      return number !== null && number >= 0 && number <= maxima[index];
+    });
+    return validChannels(attrs.rgb_color, 3, [255, 255, 255]) || validChannels(attrs.hs_color, 2, [360, 100]) || typeof attrs.color_temp_kelvin === "number" && Number.isFinite(attrs.color_temp_kelvin) && attrs.color_temp_kelvin > 0 || typeof attrs.color_temp === "number" && Number.isFinite(attrs.color_temp) && attrs.color_temp > 0;
+  }
+  function storeLightVisualState(entityId, snapshot) {
+    if (!entityId || !snapshot || typeof window === "undefined") return;
+    const attrs = snapshot.attributes || {};
+    if (!hasLightColorAttributes(snapshot) && typeof attrs.brightness !== "number") return;
+    try {
+      const memory = readDeviceStateMemory(LIGHT_MEMORY_STORAGE_KEY);
+      const previous = readDeviceStateSnapshot(LIGHT_MEMORY_STORAGE_KEY, entityId, memory);
+      const visual = withLightVisualFallback(snapshot, previous).attributes;
+      memory[entityId] = {
+        attributes: {
+          brightness: visual.brightness,
+          color_temp: visual.color_temp,
+          color_temp_kelvin: visual.color_temp_kelvin,
+          color_mode: visual.color_mode,
+          hs_color: Array.isArray(visual.hs_color) ? [...visual.hs_color] : void 0,
+          rgb_color: Array.isArray(visual.rgb_color) ? [...visual.rgb_color] : void 0
+        },
+        last_changed: snapshot.last_changed || (/* @__PURE__ */ new Date()).toISOString()
+      };
+      window.localStorage.setItem(LIGHT_MEMORY_STORAGE_KEY, JSON.stringify(memory));
+    } catch {
+    }
+  }
+  function withLightVisualFallback(actual, snapshot) {
+    if (!snapshot || hasLightColorAttributes(actual)) return actual;
+    const attrs = actual.attributes || {};
+    const previous = snapshot.attributes || {};
+    return { ...actual, attributes: {
+      ...previous,
+      ...attrs,
+      // None of the current color fields are usable (checked above). Some devices
+      // clear them to zero or malformed arrays rather than null when switching off.
+      rgb_color: previous.rgb_color,
+      hs_color: previous.hs_color,
+      color_temp_kelvin: previous.color_temp_kelvin,
+      color_temp: previous.color_temp,
+      brightness: attrs.brightness ?? previous.brightness
+    } };
+  }
 
   // src/cards/light/light-constants.ts
   var CARD_TAG = "nodalia-light-card";
@@ -18,8 +98,6 @@
   };
   var OPTIMISTIC_TURN_ON_TIMEOUT = 3200;
   var OPTIMISTIC_TURN_OFF_TIMEOUT = 3200;
-  var OPTIMISTIC_VISUAL_SETTLE_MS = 420;
-  var LIGHT_MEMORY_STORAGE_KEY = "nodalia-light-card:last-visual-state:v1";
   var COLOR_PRESETS = [
     { color: "#ffd166", hs: [42, 60], label: "Warm" },
     { color: "#fff1c1", hs: [48, 18], label: "Soft" },
@@ -33,19 +111,12 @@
     "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))"
   ];
 
-  // src/shared/numeric-values.ts
-  function parseFiniteNumericValue(value) {
-    if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
-    const numeric = Number(value);
-    return Number.isFinite(numeric) ? numeric : null;
-  }
-
   // src/shared/config-values.ts
-  var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  var isRecord2 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
   function cloneConfigValue(value) {
     const cloned = window.NodaliaUtils.deepClone(value);
     if (Array.isArray(value)) return Array.isArray(cloned) ? cloned : [];
-    if (isRecord(value)) return isRecord(cloned) ? cloned : {};
+    if (isRecord2(value)) return isRecord2(cloned) ? cloned : {};
     return cloned;
   }
 
@@ -583,7 +654,7 @@
   }
 
   // src/shared/card-focus.css
-  var card_focus_default = ":is(ha-card,.insignia-card,.media-player-card):is(:focus-visible,:has(:focus-visible:not([data-nodalia-pointer-focus]))),:host([data-nodalia-keyboard-focus]) :is(ha-card,.insignia-card,.media-player-card){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:is(button,a[href],summary,[role=button],[role=slider],[tabindex]):focus-visible:not([data-nodalia-pointer-focus]){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:host([data-nodalia-pointer-input]) :is(ha-card,.insignia-card,.media-player-card){outline:none}";
+  var card_focus_default = "[data-nodalia-card-focus-frame]{display:none;position:absolute;box-sizing:border-box;border:2px solid var(--primary-color, #71c0ff);border-radius:inherit;pointer-events:none;z-index:100}:host(:focus-within) [data-nodalia-card-focus-frame],:is(ha-card,.insignia-card,.media-player-card):focus-within>[data-nodalia-card-focus-frame]{display:block}:is(ha-card,.insignia-card,.media-player-card,[data-nodalia-focus=card]){outline:none!important}:is(button,a[href],summary,[role=button],[role=slider],[tabindex]):not(input,select,textarea){outline:none}:host([data-nodalia-keyboard-focus]) :is(button,a[href],summary,[role=button],[role=slider],[tabindex]):focus-visible:not(input,select,textarea,[data-nodalia-pointer-focus],[data-nodalia-focus=card],ha-card,.insignia-card,.media-player-card){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}";
 
   // src/shared/hass-context.ts
   var captureHassContext = (hass) => ({
@@ -657,28 +728,6 @@
       },
       cancel
     };
-  }
-
-  // src/shared/device-state-memory.ts
-  var isRecord2 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
-  function snapshotDeviceState(state) {
-    return state ? { ...state, attributes: { ...state.attributes } } : null;
-  }
-  function readDeviceStateMemory(storageKey) {
-    if (typeof window === "undefined") return {};
-    try {
-      const parsed = JSON.parse(window.localStorage.getItem(storageKey) || "{}");
-      return isRecord2(parsed) ? parsed : {};
-    } catch {
-      return {};
-    }
-  }
-  function readDeviceStateSnapshot(storageKey, entityId) {
-    if (!entityId) return null;
-    const stored = readDeviceStateMemory(storageKey)[entityId];
-    if (!isRecord2(stored) || !isRecord2(stored.attributes)) return null;
-    const timestamp = typeof stored.last_changed === "string" ? stored.last_changed : (/* @__PURE__ */ new Date()).toISOString();
-    return { entity_id: entityId, state: "on", attributes: { ...stored.attributes }, last_changed: timestamp, last_updated: timestamp };
   }
 
   // src/shared/home-assistant-services.ts
@@ -1228,29 +1277,7 @@
         return readDeviceStateMemory(LIGHT_MEMORY_STORAGE_KEY);
       }
       _storeLightMemory(entityId, snapshot) {
-        if (!entityId || !snapshot || typeof window === "undefined") {
-          return;
-        }
-        const attrs = snapshot.attributes || {};
-        const hasVisualAttrs = Array.isArray(attrs.rgb_color) || Array.isArray(attrs.hs_color) || typeof attrs.color_temp_kelvin === "number" || typeof attrs.color_temp === "number" || typeof attrs.brightness === "number";
-        if (!hasVisualAttrs) {
-          return;
-        }
-        try {
-          const memory = this._getStoredLightMemory();
-          memory[entityId] = {
-            attributes: {
-              brightness: attrs.brightness,
-              color_temp: attrs.color_temp,
-              color_temp_kelvin: attrs.color_temp_kelvin,
-              hs_color: Array.isArray(attrs.hs_color) ? [...attrs.hs_color] : void 0,
-              rgb_color: Array.isArray(attrs.rgb_color) ? [...attrs.rgb_color] : void 0
-            },
-            last_changed: snapshot.last_changed || (/* @__PURE__ */ new Date()).toISOString()
-          };
-          window.localStorage.setItem(LIGHT_MEMORY_STORAGE_KEY, JSON.stringify(memory));
-        } catch (_error) {
-        }
+        storeLightVisualState(entityId, snapshot);
       }
       _getStoredLightSnapshot(entityId) {
         return readDeviceStateSnapshot(LIGHT_MEMORY_STORAGE_KEY, entityId);
@@ -3104,11 +3131,6 @@
           --light-card-content-duration: ${animations.enabled ? contentEntranceDuration : 0}ms;
           display: block;
           width: 100%;
-        }
-
-        ha-card[data-light-action="body"]:focus-visible {
-          outline: 2px solid var(--primary-color);
-          outline-offset: -3px;
         }
 
         * {

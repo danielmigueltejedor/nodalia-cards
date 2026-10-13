@@ -13,8 +13,7 @@ export const HAPTIC_PATTERNS = {
 export const COMPACT_LAYOUT_THRESHOLD = 150;
 export const OPTIMISTIC_TURN_ON_TIMEOUT = 3200;
 export const OPTIMISTIC_TURN_OFF_TIMEOUT = 3200;
-export const OPTIMISTIC_VISUAL_SETTLE_MS = 420;
-export const LIGHT_MEMORY_STORAGE_KEY = "nodalia-light-card:last-visual-state:v1";
+export { OPTIMISTIC_VISUAL_SETTLE_MS, LIGHT_MEMORY_STORAGE_KEY } from "../../shared/light-visual-memory";
 export const COLOR_PRESETS = [
   { color: "#ffd166", hs: [42, 60], label: "Warm" },
   { color: "#fff1c1", hs: [48, 18], label: "Soft" },

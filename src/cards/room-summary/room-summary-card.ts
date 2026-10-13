@@ -1112,7 +1112,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
   }
 
   _renderHubRoomIcon(icon: string, title: string, _styles: RoomStyles) {
-    return `<button type="button" class="room-hub__room-icon" data-room-action="primary" aria-label="${escapeHtml(title)}" title="${escapeHtml(title)}">
+    return `<button type="button" class="room-hub__room-icon" data-room-action="primary" data-nodalia-focus="card" aria-label="${escapeHtml(title)}" title="${escapeHtml(title)}">
       <ha-icon icon="${escapeHtml(icon || "mdi:floor-plan")}"></ha-icon>
     </button>`;
   }

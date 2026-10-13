@@ -8,6 +8,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.0.3-alpha.2] - 2026-10-13
+
+### Fixed
+
+- **Fav Card with lights:** turning a light on immediately restores its last RGB color or color temperature, using the same remembered visual state as Light Card. The tint stays stable through an initial on/brightness-only acknowledgement, follows the reported color when it arrives, and respects custom on colors.
+- **Keyboard focus across all 25 cards:** one shared rounded frame is painted above the full card surface, so charts, slotted content and Power Flow cannot cover or thin its edges. Graph's header, value and chart no longer draw a second inner rectangle. Nested controls share the same focus styling, while native text fields retain their editing indicator.
+- **Focus visibility:** mouse and touch input, modifier keys and browser shortcuts do not create a keyboard frame. Keyboard navigation restores it, rerenders preserve the current input mode, and dialogs retain their own focus boundary.
+
+---
+
 ## [3.0.3-alpha.1] - 2026-10-12
 
 ### Fixed

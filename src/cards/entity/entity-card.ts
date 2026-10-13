@@ -2443,7 +2443,6 @@ class NodaliaEntityCard extends HTMLElement {
           transform:translateY(-1px);
         }
         .entity-card__overview-item:active { transform:scale(.975); }
-        .entity-card__overview-item:focus-visible { outline:2px solid var(--overview-accent); outline-offset:2px; }
         .entity-card__overview-item.is-unavailable { opacity:.62; }
         .entity-card__overview-item--battery { display:grid; gap:10px; grid-template-columns:48px minmax(0,1fr) auto; min-height:76px; padding:10px 12px 10px 10px; }
         .entity-card__battery-gauge {
@@ -3149,11 +3148,6 @@ class NodaliaEntityCard extends HTMLElement {
 
         * { box-sizing: border-box; }
 
-        ha-card[data-entity-action="body"]:focus-visible {
-          outline: 2px solid var(--primary-color);
-          outline-offset: -3px;
-        }
-
         ha-card {
           --nodalia-entity-surface-base: ${surfaceBase};
           background: ${cardBackground};
@@ -3307,12 +3301,6 @@ class NodaliaEntityCard extends HTMLElement {
           margin: 0;
         }
 
-        .entity-card__chip--clickable:focus-visible,
-        .entity-card__aq-bubble:focus-visible,
-        .entity-card__aq-legend-item:focus-visible {
-          outline: 2px solid var(--primary-color);
-          outline-offset: 2px;
-        }
 
         .entity-card__chip--state {
           background: color-mix(in srgb, ${accentColor} 16%, transparent);
@@ -3733,11 +3721,6 @@ class NodaliaEntityCard extends HTMLElement {
 
         * {
           box-sizing: border-box;
-        }
-
-        ha-card[data-entity-action="body"]:focus-visible {
-          outline: 2px solid var(--primary-color);
-          outline-offset: -3px;
         }
 
         ha-card {

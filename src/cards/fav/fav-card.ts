@@ -3,6 +3,7 @@ import { captureHassContext, sameHassContext } from "../../shared/hass-context";
 import { createCardLayoutNotifier, notifyCardLayoutChange } from "../../shared/card-layout-notifier";
 import type { HomeAssistant, HassEntity } from "../../core/types/home-assistant";
 import { parseFiniteNumericValue } from "../../shared/numeric-values";
+import { hasLightColorAttributes, OPTIMISTIC_VISUAL_SETTLE_MS, readLightVisualState, snapshotLightVisualState, storeLightVisualState, withLightVisualFallback } from "../../shared/light-visual-memory";
 import { parseServiceData, invokeHassService, requestHassService } from "../../shared/home-assistant-services";
 import {
   CARD_TAG,
@@ -49,6 +50,7 @@ interface OptimisticToggle {
   lastUpdated: HassEntity["last_updated"];
   lastChanged: HassEntity["last_changed"];
   sawDifferentState: boolean;
+  lightVisualState: HassEntity | null;
 }
 let _lazyNodaliaFavCard: CustomElementConstructor | undefined;
 export function loadNodaliaFavCard(): CustomElementConstructor {
@@ -71,6 +73,10 @@ class NodaliaFavCard extends HTMLElement {
   private _layoutFrame!: number;
   private _optimisticToggle!: OptimisticToggle | null;
   private _optimisticToggleTimer!: number;
+  private _lastKnownLightState!: Map<string, HassEntity>;
+  private _lightVisualMemorySignature!: string;
+  private _lightVisualSettle!: HassEntity | null;
+  private _lightVisualSettleTimer!: number;
   static async getConfigElement() {
     return document.createElement(EDITOR_TAG);
   }
@@ -102,6 +108,10 @@ class NodaliaFavCard extends HTMLElement {
     this._layoutFrame = 0;
     this._optimisticToggle = null;
     this._optimisticToggleTimer = 0;
+    this._lastKnownLightState = new Map();
+    this._lightVisualMemorySignature = "";
+    this._lightVisualSettle = null;
+    this._lightVisualSettleTimer = 0;
     this._lastAlarmPanelRenderedOpen = null;
     this._lastRenderSignature = "";
     this._resizeObserver = new ResizeObserver(entries => {
@@ -147,6 +157,7 @@ class NodaliaFavCard extends HTMLElement {
 
   disconnectedCallback() {
     this._clearOptimisticToggle();
+    this._clearLightVisualSettle();
     this._cardLayoutNotifier?.cancel();
     this._resizeObserver?.disconnect();
     this._alarmMenuOpen = false;
@@ -162,8 +173,11 @@ class NodaliaFavCard extends HTMLElement {
 
   setConfig(config: unknown) {
     this._clearOptimisticToggle();
+    this._clearLightVisualSettle();
     const nextConfig = normalizeConfig(config || {});
     if (this._config?.entity !== nextConfig.entity) {
+      this._lastKnownLightState.clear();
+      this._lightVisualMemorySignature = "";
       this._applyHostGridSpan(false);
       this._alarmMenuOpen = false;
       this._alarmCodeInput = "";
@@ -182,6 +196,9 @@ class NodaliaFavCard extends HTMLElement {
     const context = captureHassContext(hass);
     if (this._hassContext && !sameHassContext(this._hassContext, context)) {
       this._clearOptimisticToggle();
+      this._clearLightVisualSettle();
+      this._lastKnownLightState.clear();
+      this._lightVisualMemorySignature = "";
       this._alarmMenuOpen = false;
       this._alarmCodeInput = "";
       this._lastAlarmPanelRenderedOpen = null;
@@ -195,6 +212,9 @@ class NodaliaFavCard extends HTMLElement {
     }
     this._hassContext = context;
     this._hass = hass;
+    this._syncLightVisualMemory();
+    const actual = this._getActualState();
+    if (this._lightVisualSettle && (actual?.state !== "on" || hasLightColorAttributes(actual))) this._clearLightVisualSettle();
     this._syncOptimisticToggle();
     if (!this.isConnected) {
       return;
@@ -237,6 +257,7 @@ class NodaliaFavCard extends HTMLElement {
       entityId,
       state?.state || "",
       this._optimisticToggle?.expectedState || "",
+      this._lightVisualSettle ? "settling" : "",
       attrs.friendly_name || "",
       attrs.icon || "",
       attrs.device_class || "",
@@ -313,9 +334,40 @@ class NodaliaFavCard extends HTMLElement {
   _getState() {
     const actual = this._getActualState();
     const draft = this._optimisticToggle;
-    return actual && draft && actual.entity_id === draft.entityId
+    const state = actual && draft && actual.entity_id === draft.entityId
       ? { ...actual, state: draft.expectedState }
       : actual;
+    if (!state || this._getDomain() !== "light" || state.state !== "on") return state;
+    return withLightVisualFallback(state, draft?.lightVisualState || this._lightVisualSettle);
+  }
+
+  _syncLightVisualMemory() {
+    const actual = this._getActualState();
+    if (this._getDomain() !== "light" || !actual || !["on", "off"].includes(actual.state) || !hasLightColorAttributes(actual)) return;
+    const attrs = actual.attributes;
+    const signature = JSON.stringify([actual.entity_id, attrs.rgb_color, attrs.hs_color, attrs.color_temp_kelvin, attrs.color_temp, attrs.brightness, attrs.color_mode]);
+    if (signature === this._lightVisualMemorySignature) return;
+    this._lightVisualMemorySignature = signature;
+    const snapshot = snapshotLightVisualState(actual);
+    this._lastKnownLightState.set(actual.entity_id, snapshot);
+    storeLightVisualState(actual.entity_id, snapshot);
+  }
+
+  _clearLightVisualSettle() {
+    if (this._lightVisualSettleTimer) window.clearTimeout(this._lightVisualSettleTimer);
+    this._lightVisualSettleTimer = 0;
+    this._lightVisualSettle = null;
+  }
+
+  _startLightVisualSettle(snapshot: HassEntity | null) {
+    this._clearLightVisualSettle();
+    if (!snapshot || !hasLightColorAttributes(snapshot)) return;
+    this._lightVisualSettle = snapshot;
+    this._lightVisualSettleTimer = window.setTimeout(() => {
+      this._clearLightVisualSettle();
+      this._lastRenderSignature = "";
+      if (this.isConnected) this._render();
+    }, OPTIMISTIC_VISUAL_SETTLE_MS);
   }
 
   _getActualState() {
@@ -342,16 +394,22 @@ class NodaliaFavCard extends HTMLElement {
     const updated = draft.sawDifferentState || actual !== draft.source || actual.state !== draft.sourceState
       || actual.last_updated !== draft.lastUpdated || actual.last_changed !== draft.lastChanged;
     if (normalizeTextKey(actual.state) === draft.expectedState && (draft.sourceState !== draft.expectedState || updated)) {
+      if (draft.expectedState === "on" && !hasLightColorAttributes(actual)) this._startLightVisualSettle(draft.lightVisualState);
       this._clearOptimisticToggle();
     }
   }
 
   _startOptimisticToggle(expectedState: "on" | "off", source: HassEntity) {
     this._clearOptimisticToggle();
+    this._clearLightVisualSettle();
+    const lightVisualState = this._getDomain() === "light" && expectedState === "on"
+      ? snapshotLightVisualState(withLightVisualFallback(source, readLightVisualState(source.entity_id) || this._lastKnownLightState.get(source.entity_id) || null))
+      : null;
     const draft: OptimisticToggle = {
       entityId: source.entity_id, expectedState, source, sourceState: source.state,
       lastUpdated: source.last_updated, lastChanged: source.last_changed,
       sawDifferentState: false,
+      lightVisualState,
     };
     this._optimisticToggle = draft;
     this._optimisticToggleTimer = window.setTimeout(() => this._rollbackOptimisticToggle(draft), OPTIMISTIC_TOGGLE_TIMEOUT);
@@ -362,6 +420,7 @@ class NodaliaFavCard extends HTMLElement {
   _rollbackOptimisticToggle(draft: OptimisticToggle) {
     if (this._optimisticToggle !== draft) return;
     this._clearOptimisticToggle();
+    this._clearLightVisualSettle();
     this._lastRenderSignature = "";
     if (this.isConnected) this._render();
   }
@@ -567,7 +626,7 @@ class NodaliaFavCard extends HTMLElement {
       }
 
       if (kelvin > 0) {
-        return "#ffe29a";
+        return "#ffd166";
       }
     }
 
@@ -1793,14 +1852,14 @@ class NodaliaFavCard extends HTMLElement {
       <ha-card
         class="fav-card ${isActive ? "is-on" : "is-off"} ${isMini ? "fav-card--mini" : "fav-card--inline"} ${isCompactInline ? "fav-card--single-row" : ""} ${isTightInline ? "fav-card--tight-inline" : ""} ${showAlarmPanel ? "fav-card--alarm-open" : ""} ${canRunPrimaryAction ? "fav-card--clickable" : ""}"
         style="--fav-accent:${escapeHtml(accentColor)};"
-        ${canRunPrimaryAction ? 'data-fav-action="primary"' : ""}
+        ${canRunPrimaryAction ? 'data-fav-action="primary" data-nodalia-focus="card"' : ""}
       >
-        <div class="fav-card__content" ${canRunPrimaryAction ? 'data-fav-action="primary"' : ""}>
-          <div class="fav-card__hero" ${canRunPrimaryAction ? 'data-fav-action="primary"' : ""}>
+        <div class="fav-card__content" ${canRunPrimaryAction ? 'data-fav-action="primary" data-nodalia-focus="card"' : ""}>
+          <div class="fav-card__hero" ${canRunPrimaryAction ? 'data-fav-action="primary" data-nodalia-focus="card"' : ""}>
             <button
               type="button"
               class="fav-card__icon"
-              ${canRunPrimaryAction ? 'data-fav-action="primary"' : ""}
+              ${canRunPrimaryAction ? 'data-fav-action="primary" data-nodalia-focus="card"' : ""}
               aria-label="${escapeHtml(canRunPrimaryAction ? this._commonAria("primaryAction", "Primary action") : title)}"
             >
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>

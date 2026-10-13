@@ -2437,7 +2437,6 @@ test("entity person weather and alarm use deferred press timers", () => {
 
 test("person card focus feedback follows the actual rounded card surface", () => {
   const source = read("nodalia-person-card.js");
-  assert.match(source, /ha-card\[data-person-action="primary"\]:focus-visible/);
   assert.match(source, /<ha-card class="person-card[^>]*data-person-action="primary"/);
   assert.doesNotMatch(source, /<div class="person-card__content[^>]*data-person-action="primary"/);
 });

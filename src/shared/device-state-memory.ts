@@ -15,9 +15,9 @@ export function readDeviceStateMemory(storageKey: string): Record<string, unknow
   } catch { return {}; }
 }
 
-export function readDeviceStateSnapshot(storageKey: string, entityId: string): HassEntity | null {
+export function readDeviceStateSnapshot(storageKey: string, entityId: string, memory?: Record<string, unknown>): HassEntity | null {
   if (!entityId) return null;
-  const stored = readDeviceStateMemory(storageKey)[entityId];
+  const stored = (memory || readDeviceStateMemory(storageKey))[entityId];
   if (!isRecord(stored) || !isRecord(stored.attributes)) return null;
   const timestamp = typeof stored.last_changed === "string" ? stored.last_changed : new Date().toISOString();
   return { entity_id: entityId, state: "on", attributes: { ...stored.attributes }, last_changed: timestamp, last_updated: timestamp };

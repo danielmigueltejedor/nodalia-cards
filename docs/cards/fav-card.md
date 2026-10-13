@@ -17,6 +17,13 @@ light colour and alarm capability changes refresh the card even when the entity
 state stays the same. Actual zero readings remain visible. Grid rows/columns
 influence compact sizing; missing or blank sizing does not become zero.
 
+On/off actions update immediately and revert if Home Assistant rejects or does
+not confirm the command. Light favourites remember their last RGB colour or
+colour temperature in the same visual memory as Light Card, including across
+dashboard reloads. Turning on restores that tint immediately; an initial
+on/brightness-only acknowledgement keeps it briefly while the real colour
+arrives. Custom `styles.icon.on_color` still takes precedence.
+
 The visual editor includes style and action sections and retains custom YAML
 fields and a selected entity that is currently unavailable. Tap actions accept
 `auto`, `toggle`, `more-info`, `service`, `url` or `none`. Service actions use

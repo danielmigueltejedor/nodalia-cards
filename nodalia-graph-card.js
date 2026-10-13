@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.3-alpha.1";
+  var CARD_VERSION = "3.0.3-alpha.2";
 
   // src/cards/graph/graph-constants.ts
   var CARD_TAG = "nodalia-graph-card";
@@ -542,7 +542,7 @@
   }
 
   // src/shared/card-focus.css
-  var card_focus_default = ":is(ha-card,.insignia-card,.media-player-card):is(:focus-visible,:has(:focus-visible:not([data-nodalia-pointer-focus]))),:host([data-nodalia-keyboard-focus]) :is(ha-card,.insignia-card,.media-player-card){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:is(button,a[href],summary,[role=button],[role=slider],[tabindex]):focus-visible:not([data-nodalia-pointer-focus]){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:host([data-nodalia-pointer-input]) :is(ha-card,.insignia-card,.media-player-card){outline:none}";
+  var card_focus_default = "[data-nodalia-card-focus-frame]{display:none;position:absolute;box-sizing:border-box;border:2px solid var(--primary-color, #71c0ff);border-radius:inherit;pointer-events:none;z-index:100}:host(:focus-within) [data-nodalia-card-focus-frame],:is(ha-card,.insignia-card,.media-player-card):focus-within>[data-nodalia-card-focus-frame]{display:block}:is(ha-card,.insignia-card,.media-player-card,[data-nodalia-focus=card]){outline:none!important}:is(button,a[href],summary,[role=button],[role=slider],[tabindex]):not(input,select,textarea){outline:none}:host([data-nodalia-keyboard-focus]) :is(button,a[href],summary,[role=button],[role=slider],[tabindex]):focus-visible:not(input,select,textarea,[data-nodalia-pointer-focus],[data-nodalia-focus=card],ha-card,.insignia-card,.media-player-card){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}";
 
   // src/cards/graph/graph-hover.css
   var graph_hover_default = '.graph-card__hover-points-layer{bottom:0;left:0;overflow:hidden;pointer-events:none;position:absolute;right:0;top:0;z-index:2}.graph-card__chart{display:block;height:100%;inset:0;position:absolute;width:100%;z-index:1}.graph-card__hover-line{stroke:color-mix(in srgb,var(--primary-text-color) 16%,transparent);stroke-dasharray:2 4;stroke-width:0.7}.graph-card__hover-point{align-items:center;display:inline-flex;height:14px;justify-content:center;left:0;pointer-events:none;position:absolute;top:0;transform:translate(-50%,-50%);width:14px;z-index:3}.graph-card__hover-dot{background:radial-gradient(circle at 35% 35%,rgba(255,255,255,0.98) 0 35%,color-mix(in srgb,var(--dot-color) 44%,rgba(255,255,255,0.92)) 36% 100%);border-radius:999px;box-shadow:0 0 0 3px color-mix(in srgb,var(--dot-color) 14%,transparent),0 0 10px color-mix(in srgb,var(--dot-color) 20%,transparent);display:block;flex-shrink:0;height:8px;width:8px;animation:graph-card-hover-dot-pulse calc(var(--graph-card-hover-duration, 180ms) * 2.35) ease-in-out infinite alternate;transform-origin:center;will-change:transform}.graph-card__tooltip{-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);background:linear-gradient(180deg,color-mix(in srgb,var(--tooltip-tint) 20%,rgba(255,255,255,0.1)),rgba(255,255,255,0.02)),color-mix(in srgb,var(--ha-card-background, var(--card-background-color, #fff)) 94%,rgba(255,255,255,0.02));border:1px solid color-mix(in srgb,var(--tooltip-tint) 22%,color-mix(in srgb,var(--primary-text-color) 10%,transparent));border-radius:16px;box-shadow:0 10px 24px rgba(0,0,0,0.24),0 2px 6px color-mix(in srgb,var(--tooltip-tint) 14%,transparent);color:var(--primary-text-color);display:grid;gap:8px;max-width:min(260px,calc(100% - 20px));min-width:186px;padding:10px 12px 11px;pointer-events:none;position:fixed;transform:var(--graph-tooltip-transform, translate(-50%, -100%));will-change:left,top,transform;z-index:2147483001}.graph-card__tooltip::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(180deg,color-mix(in srgb,var(--tooltip-tint) 18%,rgba(255,255,255,0.09)),rgba(255,255,255,0.025)),color-mix(in srgb,var(--ha-card-background, var(--card-background-color, #fff)) 90%,transparent);box-shadow:inset 0 1px 0 color-mix(in srgb,var(--primary-text-color) 16%,transparent),inset 0 -1px 0 rgba(0,0,0,0.06);z-index:-1}.graph-card__tooltip--entering{animation:graph-card-tooltip-in var(--graph-card-hover-duration) cubic-bezier(0.22,0.84,0.26,1) both}.graph-card__tooltip-time{color:var(--secondary-text-color);font-size:10px;font-weight:800;text-transform:uppercase}.graph-card__tooltip-values{display:grid;gap:5px}.graph-card__tooltip-row{align-items:center;display:grid;gap:7px;grid-template-columns:auto minmax(0,1fr) auto;min-width:0}.graph-card__tooltip-dot{border-radius:999px;display:inline-flex;height:8px;width:8px}.graph-card__tooltip-name{color:var(--secondary-text-color);font-size:10px;font-weight:750;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.graph-card__tooltip-value{font-size:12px;font-weight:850;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.graph-card__chart-empty{align-items:center;color:var(--secondary-text-color);display:flex;font-size:13px;inset:0;justify-content:center;opacity:0.8;position:absolute}';
@@ -2091,8 +2091,8 @@
         const animations = this._getAnimationSettings();
         const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
         const shouldAnimateChart = animations.enabled && (shouldAnimateEntrance || this._animateChartOnNextRender);
-        const primaryHeaderAttr = this._canRunTapAction() && config.show_header !== false ? ' data-graph-action="primary" role="button" tabindex="0"' : "";
-        const primaryValueAttr = this._canRunTapAction() && config.show_value !== false ? ' data-graph-action="primary" role="button" tabindex="0"' : "";
+        const primaryHeaderAttr = this._canRunTapAction() && config.show_header !== false ? ' data-graph-action="primary" data-nodalia-focus="card" role="button" tabindex="0"' : "";
+        const primaryValueAttr = this._canRunTapAction() && config.show_value !== false ? ' data-graph-action="primary" data-nodalia-focus="card" role="button" tabindex="0"' : "";
         const anchorXPct = hover ? graphChartXToPercent(hover.x, chart) : 0;
         const initialTooltipStyle = this._lastTooltipViewportPosition ? `left:${this._lastTooltipViewportPosition.left}px; top:${this._lastTooltipViewportPosition.top}px; opacity:1; --graph-tooltip-transform:${this._lastTooltipViewportPosition.transform}; --tooltip-tint:${escapeHtml(tooltipTint)};` : `left:-9999px; top:-9999px; opacity:0; --tooltip-tint:${escapeHtml(tooltipTint)};`;
         const tooltipMarkup = hover ? `
@@ -2738,7 +2738,7 @@
                 </div>
               ` : ""}
 
-          <div class="graph-card__chart-wrap ${shouldAnimateChart ? "graph-card__chart-wrap--entering" : ""}" data-graph-surface="chart" tabindex="0" role="group" aria-label="${escapeHtml(title)}" data-visible-inset="${chartBleed}">
+          <div class="graph-card__chart-wrap ${shouldAnimateChart ? "graph-card__chart-wrap--entering" : ""}" data-graph-surface="chart" data-nodalia-focus="card" tabindex="0" role="group" aria-label="${escapeHtml(title)}" data-visible-inset="${chartBleed}">
             <svg class="graph-card__chart" viewBox="0 0 ${chart.width} ${chart.height}" preserveAspectRatio="none">
               <defs>
                 <filter id="graph-glow" x="-30%" y="-30%" width="160%" height="160%">

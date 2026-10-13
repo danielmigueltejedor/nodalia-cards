@@ -42,6 +42,13 @@ test('Humidifier keeps keyboard action focus across consumed state updates and r
  const body=card.locator('ha-card[data-humidifier-action="body"]');await body.focus();
  await page.evaluate(()=>{const card=window.humidifierCard;card._hass.states['humidifier.one'].attributes.humidity=60;card.hass={...card._hass};});
  await expect(body).toBeFocused();await body.press('Enter');expect(await page.evaluate(()=>window.humidifierCalls.at(-1))).toEqual(['humidifier','set_humidity',{humidity:0,entity_id:'humidifier.one'}]);
+ await body.click();
+ expect(await body.evaluate(node=>node.hasAttribute('data-nodalia-pointer-focus'))).toBe(false);
+ await page.evaluate(()=>{const card=window.humidifierCard;card._hass.states['humidifier.one'].attributes.humidity=61;card.hass={...card._hass};});
+ await expect(body).toBeFocused();
+ await expect(card.locator('[data-nodalia-card-focus-frame]')).not.toBeVisible();
+ await body.press('Enter');
+ await expect(card.locator('[data-nodalia-card-focus-frame]')).toBeVisible();
  const slider=card.locator('input[type="range"]');await slider.focus();await page.evaluate(()=>window.humidifierCard._render());await expect(slider).toBeFocused();
  const mode=card.locator('[data-humidifier-action="toggle-mode-panel"]');await mode.focus();await page.evaluate(()=>window.humidifierCard._render());await expect(mode).toBeFocused();
  expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);

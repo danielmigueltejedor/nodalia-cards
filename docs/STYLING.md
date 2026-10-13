@@ -22,6 +22,13 @@ Most “chrome” (card surface, border, shadow, main text) uses HA’s standard
 
 **Tip:** In the browser devtools, select a Nodalia card’s `<ha-card>` (inside the card’s shadow root) and inspect **computed** styles to see exactly what your theme resolves to.
 
+All 25 cards use one keyboard focus system: a 2 px frame in `--primary-color`
+follows the complete rounded surface above its content. Primary actions use that
+frame; individual controls also retain a local indicator to identify the selected
+control. Native text fields keep their editing indicator. Mouse, touch, modifier
+keys and browser shortcuts do not create a keyboard frame; dialogs keep their
+own focus boundary.
+
 ---
 
 ## 2. Layout and shape (the “Nodalia” silhouette)

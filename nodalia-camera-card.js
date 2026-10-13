@@ -1066,7 +1066,7 @@
   }
 
   // src/version.ts
-  var CARD_VERSION = "3.0.3-alpha.1";
+  var CARD_VERSION = "3.0.3-alpha.2";
 
   // src/cards/camera/camera-constants.ts
   var CARD_TAG = "nodalia-camera-card";
@@ -1777,7 +1777,7 @@
   }
 
   // src/shared/card-focus.css
-  var card_focus_default = ":is(ha-card,.insignia-card,.media-player-card):is(:focus-visible,:has(:focus-visible:not([data-nodalia-pointer-focus]))),:host([data-nodalia-keyboard-focus]) :is(ha-card,.insignia-card,.media-player-card){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:is(button,a[href],summary,[role=button],[role=slider],[tabindex]):focus-visible:not([data-nodalia-pointer-focus]){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:host([data-nodalia-pointer-input]) :is(ha-card,.insignia-card,.media-player-card){outline:none}";
+  var card_focus_default = "[data-nodalia-card-focus-frame]{display:none;position:absolute;box-sizing:border-box;border:2px solid var(--primary-color, #71c0ff);border-radius:inherit;pointer-events:none;z-index:100}:host(:focus-within) [data-nodalia-card-focus-frame],:is(ha-card,.insignia-card,.media-player-card):focus-within>[data-nodalia-card-focus-frame]{display:block}:is(ha-card,.insignia-card,.media-player-card,[data-nodalia-focus=card]){outline:none!important}:is(button,a[href],summary,[role=button],[role=slider],[tabindex]):not(input,select,textarea){outline:none}:host([data-nodalia-keyboard-focus]) :is(button,a[href],summary,[role=button],[role=slider],[tabindex]):focus-visible:not(input,select,textarea,[data-nodalia-pointer-focus],[data-nodalia-focus=card],ha-card,.insignia-card,.media-player-card){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}";
 
   // src/cards/camera/camera-expanded.css
   var camera_expanded_default = ".camera-card__expanded{display:none;inset:0;position:fixed;z-index:2147483001}.camera-card__expanded.is-open{display:block}.camera-card__expanded-backdrop{background:rgba(0,0,0,0.62);border:0;cursor:pointer;height:100%;inset:0;margin:0;padding:0;position:absolute;width:100%}.camera-card__expanded-panel{background:var(--ha-card-background, #1c1c1c);border:1px solid var(--divider-color);border-radius:24px;box-shadow:var(--ha-card-box-shadow, 0 18px 48px rgba(0, 0, 0, 0.35));display:grid;gap:12px;inset:auto;left:50%;max-height:min(88vh,920px);max-width:min(96vw,1080px);overflow:auto;padding:14px;position:absolute;top:50%;transform:translate(-50%,-50%);width:min(96vw,1080px)}.camera-card__expanded-toolbar{align-items:center;display:flex;gap:12px;justify-content:space-between}.camera-card__expanded-title{font-size:16px;font-weight:700;min-width:0}.camera-card__expanded-close{align-items:center;background:color-mix(in srgb,var(--primary-text-color) 8%,transparent);border:0;border-radius:999px;color:var(--primary-text-color);cursor:pointer;display:inline-flex;height:36px;justify-content:center;width:36px}.camera-card__expanded-stage{aspect-ratio:16 / 9;background:#000;border-radius:18px;overflow:hidden;position:relative}.camera-card__expanded-poster,.camera-card__expanded-stream,.camera-card__expanded-stream-frame{inset:0;position:absolute}.camera-card__expanded-poster{height:100%;object-fit:contain;width:100%}.camera-card__expanded-stream,.camera-card__expanded-stream>*,.camera-card__expanded-stream-frame{border:0;display:block;height:100%;width:100%}.camera-card__expanded-stream ha-camera-stream{background:#000;object-fit:contain}.camera-card__stream-status{align-items:center;backdrop-filter:blur(12px);background:color-mix(in srgb,#111 76%,transparent);border:1px solid rgba(255,255,255,0.18);border-radius:999px;bottom:14px;color:#fff;display:inline-flex;font-size:12px;font-weight:650;gap:7px;left:14px;max-width:calc(100% - 28px);padding:7px 10px;position:absolute;z-index:2}.camera-card__stream-status[hidden]{display:none}.camera-card__stream-indicator{display:grid;flex:0 0 auto;height:17px;place-items:center;width:17px}.camera-card__stream-spinner{animation:camera-card-stream-spin 760ms linear infinite;background:conic-gradient(from 0deg,transparent 0 62%,currentColor 84% 100%);border-radius:50%;height:16px;-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 0);mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 0);transform-origin:50% 50%;width:16px}.camera-card__stream-indicator ha-icon{height:17px;width:17px}.camera-card__stream-indicator ha-icon[hidden],.camera-card__stream-status.is-error .camera-card__stream-spinner{display:none}.camera-card__stream-status.is-error .camera-card__stream-indicator ha-icon{color:var(--error-color, #db4437)}.camera-card__stream-status [data-camera-stream-status-label]{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.camera-card__expanded-actions{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr))}.camera-card__expanded-card-host,.camera-card__expanded-card-host>*{display:block;min-width:0;width:100%}@keyframes camera-card-fade-up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}@keyframes camera-card-stream-spin{to{transform:rotate(360deg)}}@media(max-width:720px){.camera-card__expanded-panel{border-radius:18px 18px 0 0;bottom:0;max-height:92vh;max-height:92dvh;top:auto;transform:translateX(-50%);width:100%}}";
@@ -2619,7 +2619,7 @@
         <button
           type="button"
           class="camera-card__preview-open"
-          data-camera-action="camera-tap"
+          data-camera-action="camera-tap" data-nodalia-focus="card"
           data-camera-entity="${escapeHtml(entityId)}"
           aria-label="${escapeHtml(previewActionLabel)}"
         ></button>
@@ -3172,11 +3172,6 @@
 
         * { box-sizing: border-box; }
 
-        [data-camera-action="camera-tap"]:focus-visible {
-          outline: 2px solid var(--primary-color);
-          outline-offset: -3px;
-        }
-
         ha-card {
           background: ${cardBackground};
           border: ${cardBorder};
@@ -3357,11 +3352,6 @@
           padding: 0;
           width: 100%;
           z-index: 1;
-        }
-
-        .camera-card__preview-open:focus-visible {
-          box-shadow: inset 0 0 0 3px var(--primary-color);
-          outline: 0;
         }
 
         .camera-card__header {

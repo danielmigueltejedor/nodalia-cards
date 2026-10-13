@@ -930,20 +930,27 @@ test("primary surfaces activate by keyboard and dialogs restore focus", async ({
   expect(await personAction.evaluate(element => ({
     tagName: element.tagName,
     borderRadius: getComputedStyle(element).borderRadius,
-    outlineOffset: getComputedStyle(element).outlineOffset,
+    outlineStyle: getComputedStyle(element).outlineStyle,
   }))).toEqual({
     tagName: "HA-CARD",
     borderRadius: "28px",
-    outlineOffset: "-3px",
+    outlineStyle: "none",
   });
   await personAction.press("Enter");
   await expect.poll(() => page.evaluate(() => window.personActions)).toBe(1);
+  const personFrame = page.locator('nodalia-person-card').locator('[data-nodalia-card-focus-frame]');
+  await expect(personFrame).toHaveCount(1);
+  expect(await personFrame.evaluate(element => ({ width: getComputedStyle(element).borderTopWidth, radius: getComputedStyle(element).borderTopLeftRadius }))).toEqual({ width: '2px', radius: '28px' });
 
   const cameraAction = page.locator("nodalia-camera-card").locator('[data-camera-action="camera-tap"]').first();
   await cameraAction.focus();
   await cameraAction.click();
   const close = page.locator("nodalia-camera-card").locator(".camera-card__expanded-close");
   await expect(close).toBeFocused();
+  await close.press('Tab');
+  await close.focus();
+  expect(await close.evaluate(element => ({ style: getComputedStyle(element).outlineStyle, width: getComputedStyle(element).outlineWidth }))).toEqual({ style: 'solid', width: '2px' });
+  await expect(page.locator('nodalia-camera-card').locator('[data-nodalia-card-focus-frame]')).toHaveCount(0);
   await page.keyboard.press("Escape");
   await expect(page.locator("nodalia-camera-card").locator('.camera-card__expanded[role="dialog"]')).toHaveCount(0);
   await expect(cameraAction).toBeFocused();
@@ -1803,7 +1810,9 @@ test("pointer taps do not leave a focus outline while keyboard focus remains vis
     marker: element.hasAttribute("data-nodalia-pointer-focus"),
     outline: getComputedStyle(element).outlineStyle,
   }));
-  expect(afterTap).toEqual({ marker: true, outline: "none" });
+  // Owned controls use shared CSS instead of transient action attributes.
+  expect(afterTap).toEqual({ marker: false, outline: "none" });
+  await expect(page.locator('nodalia-entity-card').locator('[data-nodalia-card-focus-frame]')).not.toBeVisible();
 
   // Leave and return with the keyboard. Pressing Enter while still pointer-focused keeps
   // Firefox on the pointer modality, so :focus-visible stays false there.
@@ -1818,6 +1827,7 @@ test("pointer taps do not leave a focus outline while keyboard focus remains vis
   expect(afterKeyboard.marker).toBe(false);
   expect(afterKeyboard.inlineOutline).toBe("");
   expect(afterKeyboard.focusVisible).toBe(true);
+  await expect(page.locator('nodalia-entity-card').locator('[data-nodalia-card-focus-frame]')).toBeVisible();
 });
 
 test("representative interactive cards have no serious axe violations", async ({ page }) => {

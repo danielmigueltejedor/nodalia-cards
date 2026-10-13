@@ -63,7 +63,7 @@
   }
 
   // src/version.ts
-  var CARD_VERSION = "3.0.3-alpha.1";
+  var CARD_VERSION = "3.0.3-alpha.2";
 
   // src/cards/lock/lock-config.ts
   var CARD_TAG = "nodalia-lock-card";
@@ -89,7 +89,7 @@
   }
 
   // src/shared/card-focus.css
-  var card_focus_default = ":is(ha-card,.insignia-card,.media-player-card):is(:focus-visible,:has(:focus-visible:not([data-nodalia-pointer-focus]))),:host([data-nodalia-keyboard-focus]) :is(ha-card,.insignia-card,.media-player-card){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:is(button,a[href],summary,[role=button],[role=slider],[tabindex]):focus-visible:not([data-nodalia-pointer-focus]){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:host([data-nodalia-pointer-input]) :is(ha-card,.insignia-card,.media-player-card){outline:none}";
+  var card_focus_default = "[data-nodalia-card-focus-frame]{display:none;position:absolute;box-sizing:border-box;border:2px solid var(--primary-color, #71c0ff);border-radius:inherit;pointer-events:none;z-index:100}:host(:focus-within) [data-nodalia-card-focus-frame],:is(ha-card,.insignia-card,.media-player-card):focus-within>[data-nodalia-card-focus-frame]{display:block}:is(ha-card,.insignia-card,.media-player-card,[data-nodalia-focus=card]){outline:none!important}:is(button,a[href],summary,[role=button],[role=slider],[tabindex]):not(input,select,textarea){outline:none}:host([data-nodalia-keyboard-focus]) :is(button,a[href],summary,[role=button],[role=slider],[tabindex]):focus-visible:not(input,select,textarea,[data-nodalia-pointer-focus],[data-nodalia-focus=card],ha-card,.insignia-card,.media-player-card){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}";
 
   // src/shared/hass-context.ts
   var captureHassContext = (hass) => ({
@@ -493,7 +493,6 @@
             box-shadow:inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           }
           button:disabled { opacity:.5; cursor:default; }
-          :focus-visible { outline:2px solid var(--primary-color, #71c0ff); outline-offset:3px; }
           .help { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
           .slider:focus-visible + .help { position:static; width:auto; height:auto; margin:8px 4px 0; clip-path:none; white-space:normal; font-size:11px; color:var(--secondary-text-color, #aeb6c5); }
           .error { color:var(--error-color, #ff7777); font-size:12px; }

@@ -854,6 +854,7 @@ class NodaliaNewsCard extends HTMLElement {
     return `
       <div
         class="news-card__magazine"
+        data-nodalia-focus="card"
         data-news-carousel
         data-news-count="${count}"
         tabindex="0"
@@ -1086,10 +1087,6 @@ class NodaliaNewsCard extends HTMLElement {
           outline: none;
         }
 
-        .news-card__magazine:focus-visible {
-          box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 24%, transparent);
-          border-radius: calc(${styles.card.border_radius} - 6px);
-        }
 
         .news-card__carousel-viewport {
           overflow: hidden;
@@ -1200,10 +1197,6 @@ class NodaliaNewsCard extends HTMLElement {
           width: 18px;
         }
 
-        .news-card__dot:focus-visible {
-          outline: 2px solid color-mix(in srgb, var(--primary-color) 40%, transparent);
-          outline-offset: 2px;
-        }
 
         .news-card__article {
           background: color-mix(in srgb, var(--primary-text-color) 3%, transparent);
@@ -1222,8 +1215,7 @@ class NodaliaNewsCard extends HTMLElement {
           font: inherit;
         }
 
-        button.news-card__article:hover,
-        button.news-card__article:focus-visible {
+        button.news-card__article:hover {
           border-color: color-mix(in srgb, var(--primary-color) 28%, transparent);
           outline: none;
           box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 18%, transparent);
