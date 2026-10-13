@@ -1734,7 +1734,7 @@ import type {NodaliaUtilsApi,CssStyleDefaults,SanitizedCssStyles,EditorFocusStat
     const inlineOutlineState = new WeakMap<HTMLElement | SVGElement,{priority:string;value:string}>();
     let pointerFocusedElement: WeakRef<HTMLElement | SVGElement> | null = null;
     // Programmatic focus and modifier keys alone do not imply keyboard navigation.
-    let pointerModality = true;
+    let pointerModality: boolean | null = null;
     let keyboardFocusCard: WeakRef<HTMLElement> | null = null;
     let keyboardFrame: WeakRef<HTMLElement> | null = null;
     const isFocusElement = (element: unknown): element is HTMLElement | SVGElement =>
@@ -1757,7 +1757,7 @@ import type {NodaliaUtilsApi,CssStyleDefaults,SanitizedCssStyles,EditorFocusStat
     };
     const updateKeyboardCard = (path: EventTarget[]) => {
       clearKeyboardCard();
-      if (pointerModality) return;
+      if (pointerModality !== false) return;
       const card = focusCardFromPath(path);
       card?.removeAttribute("data-nodalia-pointer-input");
       const surface = path.find((node): node is HTMLElement => node instanceof HTMLElement && node.matches("ha-card,.insignia-card,.media-player-card"));
@@ -1866,7 +1866,7 @@ import type {NodaliaUtilsApi,CssStyleDefaults,SanitizedCssStyles,EditorFocusStat
     document.addEventListener("focusin", event => {
       const path = event.composedPath();
       updateKeyboardCard(path);
-      if (!pointerModality) return;
+      if (pointerModality !== true) return;
       focusCardFromPath(path)?.setAttribute("data-nodalia-pointer-input", "");
       if (!path.some(node => node instanceof HTMLElement && node.tagName.startsWith("NODALIA-"))) return;
       const target = path.find(node => isFocusElement(node) && node.matches(POINTER_FOCUSABLE_SELECTOR));

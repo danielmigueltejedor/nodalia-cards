@@ -341,10 +341,12 @@
     return { ...actual, attributes: {
       ...previous,
       ...attrs,
-      rgb_color: attrs.rgb_color ?? previous.rgb_color,
-      hs_color: attrs.hs_color ?? previous.hs_color,
-      color_temp_kelvin: attrs.color_temp_kelvin ?? previous.color_temp_kelvin,
-      color_temp: attrs.color_temp ?? previous.color_temp,
+      // None of the current color fields are usable (checked above). Some devices
+      // clear them to zero or malformed arrays rather than null when switching off.
+      rgb_color: previous.rgb_color,
+      hs_color: previous.hs_color,
+      color_temp_kelvin: previous.color_temp_kelvin,
+      color_temp: previous.color_temp,
       brightness: attrs.brightness ?? previous.brightness
     } };
   }

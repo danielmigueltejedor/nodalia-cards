@@ -35,7 +35,7 @@ for (const [name, attrs, expected] of [
 ]) {
   test(`Fav restores ${name} before the light acknowledges turn-on, including a partial confirmation`, async ({ page }) => {
     const card = await mount(page, attrs);
-    await update(page, 'off');
+    await update(page, 'off', { rgb_color: null, color_temp_kelvin: 0, color_temp: 0 });
     await page.clock.install();
     await card.locator('.fav-card__icon').click();
     expect(await accent(card)).toBe(expected);

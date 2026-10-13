@@ -1442,7 +1442,7 @@
       }
       const inlineOutlineState = /* @__PURE__ */ new WeakMap();
       let pointerFocusedElement = null;
-      let pointerModality = true;
+      let pointerModality = null;
       let keyboardFocusCard = null;
       let keyboardFrame = null;
       const isFocusElement = (element) => typeof HTMLElement !== "undefined" && element instanceof HTMLElement || typeof SVGElement !== "undefined" && element instanceof SVGElement;
@@ -1461,7 +1461,7 @@
       };
       const updateKeyboardCard = (path) => {
         clearKeyboardCard();
-        if (pointerModality) return;
+        if (pointerModality !== false) return;
         const card = focusCardFromPath(path);
         card?.removeAttribute("data-nodalia-pointer-input");
         const surface = path.find((node) => node instanceof HTMLElement && node.matches("ha-card,.insignia-card,.media-player-card"));
@@ -1549,7 +1549,7 @@
       document.addEventListener("focusin", (event) => {
         const path = event.composedPath();
         updateKeyboardCard(path);
-        if (!pointerModality) return;
+        if (pointerModality !== true) return;
         focusCardFromPath(path)?.setAttribute("data-nodalia-pointer-input", "");
         if (!path.some((node) => node instanceof HTMLElement && node.tagName.startsWith("NODALIA-"))) return;
         const target = path.find((node) => isFocusElement(node) && node.matches(POINTER_FOCUSABLE_SELECTOR));

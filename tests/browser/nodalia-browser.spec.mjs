@@ -930,14 +930,17 @@ test("primary surfaces activate by keyboard and dialogs restore focus", async ({
   expect(await personAction.evaluate(element => ({
     tagName: element.tagName,
     borderRadius: getComputedStyle(element).borderRadius,
-    outlineOffset: getComputedStyle(element).outlineOffset,
+    outlineStyle: getComputedStyle(element).outlineStyle,
   }))).toEqual({
     tagName: "HA-CARD",
     borderRadius: "28px",
-    outlineOffset: "-3px",
+    outlineStyle: "none",
   });
   await personAction.press("Enter");
   await expect.poll(() => page.evaluate(() => window.personActions)).toBe(1);
+  const personFrame = page.locator('nodalia-person-card').locator('[data-nodalia-card-focus-frame]');
+  await expect(personFrame).toHaveCount(1);
+  expect(await personFrame.evaluate(element => ({ width: getComputedStyle(element).borderTopWidth, radius: getComputedStyle(element).borderTopLeftRadius }))).toEqual({ width: '2px', radius: '28px' });
 
   const cameraAction = page.locator("nodalia-camera-card").locator('[data-camera-action="camera-tap"]').first();
   await cameraAction.focus();

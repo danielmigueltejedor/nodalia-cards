@@ -92,3 +92,14 @@ test('a retained Lock control keeps its frame through HA updates and follows a c
   await expect(card.locator('[data-nodalia-card-focus-frame]')).toHaveCount(1);
   expect(await card.locator('[data-nodalia-card-focus-frame]').evaluate(node => getComputedStyle(node).borderTopLeftRadius)).toBe('40px');
 });
+
+test('initial programmatic focus does not invent pointer metadata or a keyboard frame', async ({ page }) => {
+  const card = await mount(page, 'nodalia-graph-card');
+  const header = card.locator('[data-graph-action="primary"]').first();
+  await header.focus();
+  await expect(header).toBeFocused();
+  expect(await header.evaluate(node => ({ pointer: node.hasAttribute('data-nodalia-pointer-focus'), outline: node.style.getPropertyValue('outline') }))).toEqual({ pointer: false, outline: '' });
+  await expect(card.locator('[data-nodalia-card-focus-frame]')).toHaveCount(0);
+  await header.press('Enter');
+  await expect(card.locator('[data-nodalia-card-focus-frame]')).toHaveCount(1);
+});
