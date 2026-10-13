@@ -1757,17 +1757,19 @@ import type {NodaliaUtilsApi,CssStyleDefaults,SanitizedCssStyles,EditorFocusStat
     };
     const updateKeyboardCard = (path: EventTarget[]) => {
       clearKeyboardCard();
-      if (pointerModality !== false) return;
+      if (pointerModality === true) return;
+      // Before an input event, respect the browser's focus-visible decision
+      // (including assistive/programmatic focus) without inventing pointer metadata.
+      if (pointerModality === null && !path.some(node => isFocusElement(node) && node.matches(":focus-visible"))) return;
       const card = focusCardFromPath(path);
       card?.removeAttribute("data-nodalia-pointer-input");
       const surface = path.find((node): node is HTMLElement => node instanceof HTMLElement && node.matches("ha-card,.insignia-card,.media-player-card"));
-      if (!surface) return;
       if (card) {
         keyboardFocusCard = new WeakRef(card);
         card.setAttribute("data-nodalia-keyboard-focus", "");
         // A modal has its own controls and focus boundary, so it does not frame
         // the dashboard card behind it.
-        if (path.some(node => node instanceof HTMLElement && node.matches('[role="dialog"],[aria-modal="true"]'))) return;
+        if (!surface || path.some(node => node instanceof HTMLElement && node.matches('[role="dialog"],[aria-modal="true"]'))) return;
         const style = getComputedStyle(surface);
         if (style.position === "static") surface.style.position = "relative";
         const frame = document.createElement("span");

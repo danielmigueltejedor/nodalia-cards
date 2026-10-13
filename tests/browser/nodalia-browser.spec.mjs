@@ -947,6 +947,10 @@ test("primary surfaces activate by keyboard and dialogs restore focus", async ({
   await cameraAction.click();
   const close = page.locator("nodalia-camera-card").locator(".camera-card__expanded-close");
   await expect(close).toBeFocused();
+  await close.press('Tab');
+  await close.focus();
+  expect(await close.evaluate(element => ({ style: getComputedStyle(element).outlineStyle, width: getComputedStyle(element).outlineWidth }))).toEqual({ style: 'solid', width: '2px' });
+  await expect(page.locator('nodalia-camera-card').locator('[data-nodalia-card-focus-frame]')).toHaveCount(0);
   await page.keyboard.press("Escape");
   await expect(page.locator("nodalia-camera-card").locator('.camera-card__expanded[role="dialog"]')).toHaveCount(0);
   await expect(cameraAction).toBeFocused();
