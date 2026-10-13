@@ -2902,10 +2902,6 @@ class NodaliaNavigationBarCard extends HTMLElement {
             transform ${animations.enabled ? animations.buttonBounceDuration : 0}ms ease;
         }
 
-        .nav-item:focus-visible {
-          outline: 2px solid var(--primary-color);
-          outline-offset: 2px;
-        }
 
         .nav-item.active {
           color: var(--route-active-color);

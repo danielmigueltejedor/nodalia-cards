@@ -1,8 +1,7 @@
 import { expect, test } from '@playwright/test';
 
-// A card's keyboard focus frame lives on an inner element when the card body is a wrapper (gauge,
-// insignia) or a full-bleed preview (camera feed). Those elements were square, so the
-// frame was clipped by the card's rounded corners. Every frame must follow the card radius.
+// Every primary action uses the shared frame over the entire card surface,
+// including wrappers and full-bleed previews rendered through HA's slot.
 const CARDS = [
   { name: 'gauge', tag: 'nodalia-circular-gauge-card', config: { entity: 'sensor.t', tap_action: 'more-info' }, entities: { 'sensor.t': { state: '21', attributes: { unit_of_measurement: 'W' } } }, target: '[data-gauge-action="primary"]' },
   { name: 'power flow', tag: 'nodalia-power-flow-card', config: { solar_entity: 'sensor.t', grid_entity: 'sensor.g', home_entity: 'sensor.h', tap_action: 'more-info' }, entities: { 'sensor.t': { state: '3', attributes: { unit_of_measurement: 'W' } }, 'sensor.g': { state: '1', attributes: {} }, 'sensor.h': { state: '1', attributes: {} } }, target: '[data-card-action="primary"]' },
@@ -54,7 +53,7 @@ for (const width of [320, 390, 768]) {
       const card = page.locator('nodalia-power-flow-card');
       const frame = card.locator('[data-card-action="primary"]');
       await expect(card.locator('.power-flow-card__node--grid')).toBeVisible();
-      await page.keyboard.press('Shift');
+      await page.keyboard.press('Tab');
       await frame.focus();
       const geometry = await frame.evaluate(target => {
         const shell = target.getRootNode().querySelector('ha-card');
@@ -106,21 +105,22 @@ for (const card of CARDS) {
     expect(result.missing).toBe(false);
 
     // Keyboard modality first, so :focus-visible applies on every engine.
-    await page.keyboard.press('Shift');
+    await page.keyboard.press('Tab');
     const frame = await page.evaluate(({ card }) => {
       const element = document.querySelector(card.tag);
       const target = element.shadowRoot.querySelector(card.target);
       const shell = element.shadowRoot.querySelector(card.shell || 'ha-card');
       target.focus();
-      const style = getComputedStyle(target);
+      const layer = shell.querySelector('[data-nodalia-card-focus-frame]');
+      const style = getComputedStyle(layer);
       const radius = node => getComputedStyle(node).borderTopLeftRadius;
-      const framed = (style.outlineStyle !== 'none' && parseFloat(style.outlineWidth) > 0) || style.boxShadow !== 'none';
-      return { focusVisible: target.matches(':focus-visible'), framed, targetRadius: radius(target), cardRadius: radius(shell) };
+      const framed = style.borderTopStyle === 'solid' && style.borderTopWidth === '2px';
+      return { focusVisible: target.matches(':focus-visible'), framed, targetRadius: radius(layer), cardRadius: radius(shell), cardBorder: parseFloat(getComputedStyle(shell).borderTopWidth) };
     }, { card });
     expect(frame.focusVisible).toBe(true);
     expect(frame.framed).toBe(true);
     expect(parseFloat(frame.cardRadius)).toBeGreaterThan(0);
-    expect(frame.targetRadius).toBe(frame.cardRadius);
+    expect(parseFloat(frame.targetRadius)).toBe(Math.max(0, parseFloat(frame.cardRadius) - frame.cardBorder));
     expect(await page.evaluate(() => window.bundleErrors)).toEqual([]);
   });
 }
@@ -138,7 +138,7 @@ test('Power Flow keeps larger grid chips inside its mobile focus frame', async (
   });
   const card = page.locator('nodalia-power-flow-card');
   const frame = card.locator('ha-card');
-  await page.keyboard.press('Shift'); await frame.focus();
+  await page.keyboard.press('Tab'); await frame.focus();
   const bounds = await frame.boundingBox();
   for (const chip of await card.locator('.power-flow-card__node--grid .power-flow-card__chip').all()) {
     const rect = await chip.boundingBox();

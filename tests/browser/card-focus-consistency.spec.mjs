@@ -49,7 +49,7 @@ for (const { tag } of registry) {
     await expect.poll(() => card.evaluate(card => typeof card._cardWidth !== 'number' || card._cardWidth > 0)).toBe(true);
     await expect.poll(() => card.evaluate(card => [...card.shadowRoot.querySelectorAll('button:not(:disabled),a[href],summary,input:not(:disabled):not([type="hidden"]),select:not(:disabled),textarea:not(:disabled),[tabindex="0"]')]
       .filter(node => !node.closest('[aria-hidden="true"],[inert]') && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0).length)).toBeGreaterThan(0);
-    await page.keyboard.press('Shift');
+    await page.keyboard.press('Tab');
     const frame = await card.evaluate(card => {
       const target = [...card.shadowRoot.querySelectorAll('button:not(:disabled),a[href],summary,input:not(:disabled):not([type="hidden"]),select:not(:disabled),textarea:not(:disabled),[tabindex="0"]')]
         .find(node => !node.closest('[aria-hidden="true"],[inert]') && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0);
@@ -58,17 +58,18 @@ for (const { tag } of registry) {
       const shell = target.closest('ha-card,.insignia-card,.media-player-card') || card.shadowRoot.querySelector('ha-card,.insignia-card,.media-player-card');
       window.focusShell = shell;
       window.focusShellSelector = shell.matches('.media-player-card') ? '.media-player-card' : shell.matches('.insignia-card') ? '.insignia-card' : 'ha-card';
-      return { focused: card.shadowRoot.activeElement === target, style: getComputedStyle(shell).outlineStyle, width: getComputedStyle(shell).outlineWidth, offset: getComputedStyle(shell).outlineOffset };
+      return { focused: card.shadowRoot.activeElement === target, style: getComputedStyle(shell.querySelector('[data-nodalia-card-focus-frame]')).borderTopStyle, width: getComputedStyle(shell.querySelector('[data-nodalia-card-focus-frame]')).borderTopWidth, count: shell.querySelectorAll('[data-nodalia-card-focus-frame]').length };
     });
     expect(frame.focused).toBe(true);
     expect(frame.style).toBe('solid');
     expect(frame.width).toBe('2px');
-    expect(frame.offset).toBe('-3px');
+    expect(frame.count).toBe(1);
     // Switching modality must remove the frame without triggering an unrelated card action.
     await card.evaluate(() => window.focusTarget.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true, button: 0 })));
-    expect(await card.evaluate(card => getComputedStyle(card.shadowRoot.querySelector(window.focusShellSelector)).outlineStyle)).toBe('none');
-    await page.keyboard.press('Shift');
-    expect(await card.evaluate(card => getComputedStyle(card.shadowRoot.querySelector(window.focusShellSelector)).outlineStyle)).toBe('solid');
+    expect(await card.evaluate(card => card.shadowRoot.querySelector(window.focusShellSelector).querySelectorAll('[data-nodalia-card-focus-frame]').length)).toBe(0);
+    await page.keyboard.press('Tab');
+    await card.evaluate(() => window.focusTarget.isConnected ? window.focusTarget.focus() : window.focusCard.shadowRoot.querySelector('button,[tabindex="0"]').focus());
+    expect(await card.evaluate(card => card.shadowRoot.querySelector(window.focusShellSelector).querySelectorAll('[data-nodalia-card-focus-frame]').length)).toBe(1);
     expect(await page.evaluate(() => window.bundleErrors)).toEqual([]);
   });
 }
@@ -77,7 +78,7 @@ test('card frame follows keyboard focus inside a native HA control shadow root',
   await page.goto('/tests/fixtures/browser.html');
   await page.waitForFunction(() => customElements.get('nodalia-fav-card'));
   await page.evaluate(() => {
-    customElements.define('focus-native-control', class extends HTMLElement {
+    customElements.define('nodalia-focus-native-control', class extends HTMLElement {
       constructor() { super(); this.attachShadow({ mode: 'open' }).innerHTML = '<button>Control</button>'; }
     });
     const card = document.createElement('nodalia-fav-card');
@@ -89,18 +90,20 @@ test('card frame follows keyboard focus inside a native HA control shadow root',
   await expect.poll(() => page.evaluate(() => window.nativeFocusCard._cardWidth)).toBeGreaterThan(0);
   await page.evaluate(() => {
     const card = window.nativeFocusCard;
-    const control = document.createElement('focus-native-control');
+    const control = document.createElement('nodalia-focus-native-control');
     card.shadowRoot.querySelector('ha-card').append(control);
     window.nativeFocusButton = control.shadowRoot.querySelector('button');
     window.nativeFocusShell = card.shadowRoot.querySelector('ha-card');
   });
-  await page.keyboard.press('Shift');
+  await page.keyboard.press('Tab');
   await page.evaluate(() => window.nativeFocusButton.focus());
-  expect(await page.evaluate(() => getComputedStyle(window.nativeFocusShell).outlineStyle)).toBe('solid');
+  expect(await page.evaluate(() => window.nativeFocusCard.hasAttribute('data-nodalia-keyboard-focus'))).toBe(true);
+  expect(await page.evaluate(() => window.nativeFocusShell.querySelectorAll('[data-nodalia-card-focus-frame]').length)).toBe(1);
   await page.evaluate(() => window.nativeFocusButton.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true, button: 0 })));
-  expect(await page.evaluate(() => getComputedStyle(window.nativeFocusShell).outlineStyle)).toBe('none');
-  await page.keyboard.press('Shift');
-  expect(await page.evaluate(() => getComputedStyle(window.nativeFocusShell).outlineStyle)).toBe('solid');
+  expect(await page.evaluate(() => window.nativeFocusShell.querySelectorAll('[data-nodalia-card-focus-frame]').length)).toBe(0);
+  await page.keyboard.press('Tab');
+  await page.evaluate(() => window.nativeFocusButton.focus());
+  expect(await page.evaluate(() => window.nativeFocusShell.querySelectorAll('[data-nodalia-card-focus-frame]').length)).toBe(1);
 });
 
 test('Scenes, Weather and Calendar expose working keyboard actions on their card surfaces', async ({ page }) => {

@@ -750,11 +750,6 @@ class NodaliaInsigniaCard extends HTMLElement {
           box-sizing: border-box;
         }
 
-        [data-insignia-action="primary"]:focus-visible {
-          outline: 2px solid var(--primary-color);
-          outline-offset: 2px;
-        }
-
         .insignia-card {
           background: ${cardBackground};
           border: ${cardBorder};
@@ -924,7 +919,7 @@ class NodaliaInsigniaCard extends HTMLElement {
       ${cardFocusStyles}
       </style>
       <div class="insignia-card ${iconOnly ? "insignia-card--icon-only" : ""}" style="--icon-only-offset-y: ${iconOnlyOffsetY}; ${isVisible ? "" : "display:none;"}">
-        <div class="insignia-card__content" data-insignia-action="primary" role="button" tabindex="0" aria-label="${escapeHtml(title)}">
+        <div class="insignia-card__content" data-insignia-action="primary" data-nodalia-focus="card" role="button" tabindex="0" aria-label="${escapeHtml(title)}">
           <div class="insignia-card__icon">
             ${showPicture
               ? `<img src="${escapeHtml(pictureUrl)}" alt="${escapeHtml(title)}" />`

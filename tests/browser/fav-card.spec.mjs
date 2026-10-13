@@ -34,7 +34,7 @@ test('Fav rolls back rejected and timed-out commands without losing native keybo
   const card = await mount(page, { entity: 'switch.one', language: 'en', haptics: { enabled: false } }, { 'switch.one': { state: 'off' } });
   await page.evaluate(() => { window.favHassFixture.callService = () => new Promise((resolve, reject) => { window.rejectFav = reject; }); });
   const button = card.locator('.fav-card__icon');
-  await page.keyboard.press('Shift'); await button.focus(); await button.press('Enter');
+  await page.keyboard.press('Tab'); await button.focus(); await button.press('Enter');
   await expect(card.locator('ha-card')).toHaveClass(/is-on/); await expect(button).toBeFocused();
   await page.evaluate(() => window.rejectFav(new Error('offline')));
   await expect(card.locator('ha-card')).toHaveClass(/is-off/); await expect(button).toBeFocused();
@@ -85,13 +85,13 @@ test('Fav retains pointer modality across optimistic rerenders and restores the 
   const card = await mount(page, { entity: 'light.one', haptics: { enabled: false } }, { 'light.one': { state: 'off' } });
   await page.evaluate(() => { window.favHassFixture.callService = () => new Promise(() => {}); });
   const button = card.locator('.fav-card__icon');
-  await page.keyboard.press('Shift'); await button.focus();
-  expect(await card.locator('ha-card').evaluate(node => getComputedStyle(node).outlineStyle)).toBe('solid');
+  await page.keyboard.press('Tab'); await button.focus();
+  expect(await card.locator('ha-card').evaluate(node => node.querySelectorAll('[data-nodalia-card-focus-frame]').length)).toBe(1);
   await button.click();
   await expect(card.locator('ha-card')).toHaveClass(/is-on/);
-  expect(await card.locator('ha-card').evaluate(node => getComputedStyle(node).outlineStyle)).toBe('none');
-  await page.keyboard.press('Shift'); await button.focus();
-  expect(await card.locator('ha-card').evaluate(node => getComputedStyle(node).outlineStyle)).toBe('solid');
+  expect(await card.locator('ha-card').evaluate(node => node.querySelectorAll('[data-nodalia-card-focus-frame]').length)).toBe(0);
+  await page.keyboard.press('Tab'); await button.focus();
+  expect(await card.locator('ha-card').evaluate(node => node.querySelectorAll('[data-nodalia-card-focus-frame]').length)).toBe(1);
 });
 test('Fav refreshes a selected attribute and light color without changing the entity state',async({page})=>{
   const card=await mount(page,{entity:'light.one',state_attribute:'battery'},{'light.one':{state:'on',attributes:{battery:20,rgb_color:[20,80,130]}}});

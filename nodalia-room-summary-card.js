@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.3-alpha.1";
+  var CARD_VERSION = "3.0.3-alpha.2";
 
   // src/cards/room-summary/room-summary-constants.ts
   var CARD_TAG = "nodalia-room-summary-card";
@@ -554,7 +554,7 @@
   }
 
   // src/shared/card-focus.css
-  var card_focus_default = ":is(ha-card,.insignia-card,.media-player-card):is(:focus-visible,:has(:focus-visible:not([data-nodalia-pointer-focus]))),:host([data-nodalia-keyboard-focus]) :is(ha-card,.insignia-card,.media-player-card){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:is(button,a[href],summary,[role=button],[role=slider],[tabindex]):focus-visible:not([data-nodalia-pointer-focus]){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:host([data-nodalia-pointer-input]) :is(ha-card,.insignia-card,.media-player-card){outline:none}";
+  var card_focus_default = "[data-nodalia-card-focus-frame]{position:absolute;box-sizing:border-box;border:2px solid var(--primary-color, #71c0ff);pointer-events:none;z-index:100}:is(ha-card,.insignia-card,.media-player-card,[data-nodalia-focus=card]){outline:none!important}:is(button,a[href],summary,[role=button],[role=slider],[tabindex]):not(input,select,textarea){outline:none}:host([data-nodalia-keyboard-focus]) :is(button,a[href],summary,[role=button],[role=slider],[tabindex]):focus-visible:not(input,select,textarea,[data-nodalia-pointer-focus],[data-nodalia-focus=card],ha-card,.insignia-card,.media-player-card){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}";
 
   // src/cards/room-summary/room-summary-metrics.css
   var room_summary_metrics_default = ".room-hub__metric-bubble:active{transform:scale(0.97)}.room-hub__metric-bubble--temperature{background:color-mix(in srgb,var(--warning-color, #f6b73c) 18%,var(--ha-card-background));border-color:color-mix(in srgb,var(--warning-color, #f6b73c) 28%,transparent);color:color-mix(in srgb,var(--warning-color, #f6b73c) 88%,var(--primary-text-color))}.room-hub__metric-bubble--humidity{background:color-mix(in srgb,#5aa7ff 18%,var(--ha-card-background));border-color:color-mix(in srgb,#5aa7ff 28%,transparent);color:color-mix(in srgb,#5aa7ff 88%,var(--primary-text-color))}.room-hub__metric-bubble--presence-occupied{background:color-mix(in srgb,var(--success-color, #4caf50) 18%,var(--ha-card-background));border-color:color-mix(in srgb,var(--success-color, #4caf50) 28%,transparent);color:color-mix(in srgb,var(--success-color, #4caf50) 88%,var(--primary-text-color))}.room-hub__metric-bubble--presence-vacant{background:color-mix(in srgb,var(--primary-text-color) 8%,var(--ha-card-background));border-color:color-mix(in srgb,var(--primary-text-color) 12%,transparent);color:var(--secondary-text-color)}.room-hub__metric-bubble--power{background:color-mix(in srgb,var(--warning-color, #f6b73c) 16%,var(--ha-card-background));border-color:color-mix(in srgb,var(--warning-color, #f6b73c) 24%,transparent);color:color-mix(in srgb,var(--warning-color, #f6b73c) 86%,var(--primary-text-color))}.room-hub__metric-bubble--air{background:color-mix(in srgb,#7c9cff 16%,var(--ha-card-background));border-color:color-mix(in srgb,#7c9cff 24%,transparent);color:color-mix(in srgb,#7c9cff 86%,var(--primary-text-color))}.room-hub__metric-bubble--camera{background:color-mix(in srgb,var(--primary-text-color) 8%,var(--ha-card-background));border-color:color-mix(in srgb,var(--primary-text-color) 12%,transparent);color:var(--primary-text-color)}.room-hub__metric-bubble--camera-offline,.room-hub__metric-bubble--security{background:color-mix(in srgb,var(--warning-color,#f59e0b) 16%,var(--ha-card-background));border-color:color-mix(in srgb,var(--warning-color,#f59e0b) 26%,transparent);color:var(--warning-color,#f59e0b)}.room-hub__context-actions{display:flex;flex-wrap:wrap;gap:8px}.room-hub__context-actions[hidden]{display:none}";
@@ -1601,7 +1601,7 @@
     `).join("")}</div>`;
       }
       _renderHubRoomIcon(icon, title, _styles) {
-        return `<button type="button" class="room-hub__room-icon" data-room-action="primary" aria-label="${escapeHtml(title)}" title="${escapeHtml(title)}">
+        return `<button type="button" class="room-hub__room-icon" data-room-action="primary" data-nodalia-focus="card" aria-label="${escapeHtml(title)}" title="${escapeHtml(title)}">
       <ha-icon icon="${escapeHtml(icon || "mdi:floor-plan")}"></ha-icon>
     </button>`;
       }

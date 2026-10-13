@@ -259,7 +259,6 @@ export function loadNodaliaLockCard(): CustomElementConstructor {
             box-shadow:inset 0 1px 0 color-mix(in srgb, var(--primary-text-color) 6%, transparent);
           }
           button:disabled { opacity:.5; cursor:default; }
-          :focus-visible { outline:2px solid var(--primary-color, #71c0ff); outline-offset:3px; }
           .help { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
           .slider:focus-visible + .help { position:static; width:auto; height:auto; margin:8px 4px 0; clip-path:none; white-space:normal; font-size:11px; color:var(--secondary-text-color, #aeb6c5); }
           .error { color:var(--error-color, #ff7777); font-size:12px; }

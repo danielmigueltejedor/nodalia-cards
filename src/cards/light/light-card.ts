@@ -41,6 +41,7 @@ import type { HostPointerHoldBinding } from "../../core/types/nodalia-utils";
 import type { SliderDragGeometry } from "../../shared/device-control-geometry";
 import { parseFiniteNumericValue } from "../../shared/numeric-values";
 import { snapshotDeviceState, readDeviceStateMemory, readDeviceStateSnapshot } from "../../shared/device-state-memory";
+import { storeLightVisualState } from "../../shared/light-visual-memory";
 import { invokeHassService } from "../../shared/home-assistant-services";
 import { createViewAnimationWork, scheduleViewFallback, releaseViewAnimationWork } from "../../shared/view-animation-work";
 
@@ -650,38 +651,7 @@ class NodaliaLightCard extends HTMLElement {
   }
 
   _storeLightMemory(entityId: string, snapshot: HassEntity | null) {
-    if (!entityId || !snapshot || typeof window === "undefined") {
-      return;
-    }
-
-    const attrs = snapshot.attributes || {};
-    const hasVisualAttrs =
-      Array.isArray(attrs.rgb_color) ||
-      Array.isArray(attrs.hs_color) ||
-      typeof attrs.color_temp_kelvin === "number" ||
-      typeof attrs.color_temp === "number" ||
-      typeof attrs.brightness === "number";
-
-    if (!hasVisualAttrs) {
-      return;
-    }
-
-    try {
-      const memory = this._getStoredLightMemory();
-      memory[entityId] = {
-        attributes: {
-          brightness: attrs.brightness,
-          color_temp: attrs.color_temp,
-          color_temp_kelvin: attrs.color_temp_kelvin,
-          hs_color: Array.isArray(attrs.hs_color) ? [...attrs.hs_color] : undefined,
-          rgb_color: Array.isArray(attrs.rgb_color) ? [...attrs.rgb_color] : undefined,
-        },
-        last_changed: snapshot.last_changed || new Date().toISOString(),
-      };
-      window.localStorage.setItem(LIGHT_MEMORY_STORAGE_KEY, JSON.stringify(memory));
-    } catch (_error) {
-      // Storage may be unavailable in private mode; the in-memory cache still works.
-    }
+    storeLightVisualState(entityId, snapshot);
   }
 
   _getStoredLightSnapshot(entityId: string): HassEntity | null {
@@ -3003,11 +2973,6 @@ class NodaliaLightCard extends HTMLElement {
           --light-card-content-duration: ${animations.enabled ? contentEntranceDuration : 0}ms;
           display: block;
           width: 100%;
-        }
-
-        ha-card[data-light-action="body"]:focus-visible {
-          outline: 2px solid var(--primary-color);
-          outline-offset: -3px;
         }
 
         * {

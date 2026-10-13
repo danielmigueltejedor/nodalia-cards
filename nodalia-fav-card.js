@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.3-alpha.1";
+  var CARD_VERSION = "3.0.3-alpha.2";
 
   // src/cards/fav/fav-constants.ts
   var CARD_TAG = "nodalia-fav-card";
@@ -187,7 +187,7 @@
   }
 
   // src/shared/card-focus.css
-  var card_focus_default = ":is(ha-card,.insignia-card,.media-player-card):is(:focus-visible,:has(:focus-visible:not([data-nodalia-pointer-focus]))),:host([data-nodalia-keyboard-focus]) :is(ha-card,.insignia-card,.media-player-card){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:is(button,a[href],summary,[role=button],[role=slider],[tabindex]):focus-visible:not([data-nodalia-pointer-focus]){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:host([data-nodalia-pointer-input]) :is(ha-card,.insignia-card,.media-player-card){outline:none}";
+  var card_focus_default = "[data-nodalia-card-focus-frame]{position:absolute;box-sizing:border-box;border:2px solid var(--primary-color, #71c0ff);pointer-events:none;z-index:100}:is(ha-card,.insignia-card,.media-player-card,[data-nodalia-focus=card]){outline:none!important}:is(button,a[href],summary,[role=button],[role=slider],[tabindex]):not(input,select,textarea){outline:none}:host([data-nodalia-keyboard-focus]) :is(button,a[href],summary,[role=button],[role=slider],[tabindex]):focus-visible:not(input,select,textarea,[data-nodalia-pointer-focus],[data-nodalia-focus=card],ha-card,.insignia-card,.media-player-card){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}";
 
   // src/shared/hass-context.ts
   var captureHassContext = (hass) => ({
@@ -268,6 +268,85 @@
     if (typeof value !== "number" && typeof value !== "string" || typeof value === "string" && !value.trim()) return null;
     const numeric = Number(value);
     return Number.isFinite(numeric) ? numeric : null;
+  }
+
+  // src/shared/device-state-memory.ts
+  var isRecord2 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  function readDeviceStateMemory(storageKey) {
+    if (typeof window === "undefined") return {};
+    try {
+      const parsed = JSON.parse(window.localStorage.getItem(storageKey) || "{}");
+      return isRecord2(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  function readDeviceStateSnapshot(storageKey, entityId, memory) {
+    if (!entityId) return null;
+    const stored = (memory || readDeviceStateMemory(storageKey))[entityId];
+    if (!isRecord2(stored) || !isRecord2(stored.attributes)) return null;
+    const timestamp = typeof stored.last_changed === "string" ? stored.last_changed : (/* @__PURE__ */ new Date()).toISOString();
+    return { entity_id: entityId, state: "on", attributes: { ...stored.attributes }, last_changed: timestamp, last_updated: timestamp };
+  }
+
+  // src/shared/light-visual-memory.ts
+  var LIGHT_MEMORY_STORAGE_KEY = "nodalia-light-card:last-visual-state:v1";
+  var OPTIMISTIC_VISUAL_SETTLE_MS = 420;
+  function hasLightColorAttributes(state) {
+    const attrs = state?.attributes || {};
+    const validChannels = (value, count, maxima) => Array.isArray(value) && value.length === count && value.every((channel, index) => {
+      const number = parseFiniteNumericValue(channel);
+      return number !== null && number >= 0 && number <= maxima[index];
+    });
+    return validChannels(attrs.rgb_color, 3, [255, 255, 255]) || validChannels(attrs.hs_color, 2, [360, 100]) || typeof attrs.color_temp_kelvin === "number" && Number.isFinite(attrs.color_temp_kelvin) && attrs.color_temp_kelvin > 0 || typeof attrs.color_temp === "number" && Number.isFinite(attrs.color_temp) && attrs.color_temp > 0;
+  }
+  function snapshotLightVisualState(state) {
+    const attrs = state.attributes || {};
+    return { ...state, attributes: {
+      ...attrs,
+      rgb_color: Array.isArray(attrs.rgb_color) ? [...attrs.rgb_color] : attrs.rgb_color,
+      hs_color: Array.isArray(attrs.hs_color) ? [...attrs.hs_color] : attrs.hs_color
+    } };
+  }
+  function readLightVisualState(entityId) {
+    return readDeviceStateSnapshot(LIGHT_MEMORY_STORAGE_KEY, entityId);
+  }
+  function storeLightVisualState(entityId, snapshot) {
+    if (!entityId || !snapshot || typeof window === "undefined") return;
+    const attrs = snapshot.attributes || {};
+    if (!hasLightColorAttributes(snapshot) && typeof attrs.brightness !== "number") return;
+    try {
+      const memory = readDeviceStateMemory(LIGHT_MEMORY_STORAGE_KEY);
+      const previous = readDeviceStateSnapshot(LIGHT_MEMORY_STORAGE_KEY, entityId, memory);
+      const visual = withLightVisualFallback(snapshot, previous).attributes;
+      memory[entityId] = {
+        attributes: {
+          brightness: visual.brightness,
+          color_temp: visual.color_temp,
+          color_temp_kelvin: visual.color_temp_kelvin,
+          color_mode: visual.color_mode,
+          hs_color: Array.isArray(visual.hs_color) ? [...visual.hs_color] : void 0,
+          rgb_color: Array.isArray(visual.rgb_color) ? [...visual.rgb_color] : void 0
+        },
+        last_changed: snapshot.last_changed || (/* @__PURE__ */ new Date()).toISOString()
+      };
+      window.localStorage.setItem(LIGHT_MEMORY_STORAGE_KEY, JSON.stringify(memory));
+    } catch {
+    }
+  }
+  function withLightVisualFallback(actual, snapshot) {
+    if (!snapshot || hasLightColorAttributes(actual)) return actual;
+    const attrs = actual.attributes || {};
+    const previous = snapshot.attributes || {};
+    return { ...actual, attributes: {
+      ...previous,
+      ...attrs,
+      rgb_color: attrs.rgb_color ?? previous.rgb_color,
+      hs_color: attrs.hs_color ?? previous.hs_color,
+      color_temp_kelvin: attrs.color_temp_kelvin ?? previous.color_temp_kelvin,
+      color_temp: attrs.color_temp ?? previous.color_temp,
+      brightness: attrs.brightness ?? previous.brightness
+    } };
   }
 
   // src/shared/home-assistant-services.ts
@@ -691,6 +770,10 @@
         this._layoutFrame = 0;
         this._optimisticToggle = null;
         this._optimisticToggleTimer = 0;
+        this._lastKnownLightState = /* @__PURE__ */ new Map();
+        this._lightVisualMemorySignature = "";
+        this._lightVisualSettle = null;
+        this._lightVisualSettleTimer = 0;
         this._lastAlarmPanelRenderedOpen = null;
         this._lastRenderSignature = "";
         this._resizeObserver = new ResizeObserver((entries) => {
@@ -728,6 +811,7 @@
       }
       disconnectedCallback() {
         this._clearOptimisticToggle();
+        this._clearLightVisualSettle();
         this._cardLayoutNotifier?.cancel();
         this._resizeObserver?.disconnect();
         this._alarmMenuOpen = false;
@@ -742,8 +826,11 @@
       }
       setConfig(config) {
         this._clearOptimisticToggle();
+        this._clearLightVisualSettle();
         const nextConfig = normalizeConfig(config || {});
         if (this._config?.entity !== nextConfig.entity) {
+          this._lastKnownLightState.clear();
+          this._lightVisualMemorySignature = "";
           this._applyHostGridSpan(false);
           this._alarmMenuOpen = false;
           this._alarmCodeInput = "";
@@ -761,6 +848,9 @@
         const context = captureHassContext(hass);
         if (this._hassContext && !sameHassContext(this._hassContext, context)) {
           this._clearOptimisticToggle();
+          this._clearLightVisualSettle();
+          this._lastKnownLightState.clear();
+          this._lightVisualMemorySignature = "";
           this._alarmMenuOpen = false;
           this._alarmCodeInput = "";
           this._lastAlarmPanelRenderedOpen = null;
@@ -774,6 +864,9 @@
         }
         this._hassContext = context;
         this._hass = hass;
+        this._syncLightVisualMemory();
+        const actual = this._getActualState();
+        if (this._lightVisualSettle && (actual?.state !== "on" || hasLightColorAttributes(actual))) this._clearLightVisualSettle();
         this._syncOptimisticToggle();
         if (!this.isConnected) {
           return;
@@ -810,6 +903,7 @@
           entityId,
           state?.state || "",
           this._optimisticToggle?.expectedState || "",
+          this._lightVisualSettle ? "settling" : "",
           attrs.friendly_name || "",
           attrs.icon || "",
           attrs.device_class || "",
@@ -872,7 +966,35 @@
       _getState() {
         const actual = this._getActualState();
         const draft = this._optimisticToggle;
-        return actual && draft && actual.entity_id === draft.entityId ? { ...actual, state: draft.expectedState } : actual;
+        const state = actual && draft && actual.entity_id === draft.entityId ? { ...actual, state: draft.expectedState } : actual;
+        if (!state || this._getDomain() !== "light" || state.state !== "on") return state;
+        return withLightVisualFallback(state, draft?.lightVisualState || this._lightVisualSettle);
+      }
+      _syncLightVisualMemory() {
+        const actual = this._getActualState();
+        if (this._getDomain() !== "light" || !actual || !["on", "off"].includes(actual.state) || !hasLightColorAttributes(actual)) return;
+        const attrs = actual.attributes;
+        const signature = JSON.stringify([actual.entity_id, attrs.rgb_color, attrs.hs_color, attrs.color_temp_kelvin, attrs.color_temp, attrs.brightness, attrs.color_mode]);
+        if (signature === this._lightVisualMemorySignature) return;
+        this._lightVisualMemorySignature = signature;
+        const snapshot = snapshotLightVisualState(actual);
+        this._lastKnownLightState.set(actual.entity_id, snapshot);
+        storeLightVisualState(actual.entity_id, snapshot);
+      }
+      _clearLightVisualSettle() {
+        if (this._lightVisualSettleTimer) window.clearTimeout(this._lightVisualSettleTimer);
+        this._lightVisualSettleTimer = 0;
+        this._lightVisualSettle = null;
+      }
+      _startLightVisualSettle(snapshot) {
+        this._clearLightVisualSettle();
+        if (!snapshot || !hasLightColorAttributes(snapshot)) return;
+        this._lightVisualSettle = snapshot;
+        this._lightVisualSettleTimer = window.setTimeout(() => {
+          this._clearLightVisualSettle();
+          this._lastRenderSignature = "";
+          if (this.isConnected) this._render();
+        }, OPTIMISTIC_VISUAL_SETTLE_MS);
       }
       _getActualState() {
         return this._hass?.states?.[this._config?.entity || ""] || null;
@@ -893,11 +1015,14 @@
         if (actual.state !== draft.sourceState) draft.sawDifferentState = true;
         const updated = draft.sawDifferentState || actual !== draft.source || actual.state !== draft.sourceState || actual.last_updated !== draft.lastUpdated || actual.last_changed !== draft.lastChanged;
         if (normalizeTextKey(actual.state) === draft.expectedState && (draft.sourceState !== draft.expectedState || updated)) {
+          if (draft.expectedState === "on" && !hasLightColorAttributes(actual)) this._startLightVisualSettle(draft.lightVisualState);
           this._clearOptimisticToggle();
         }
       }
       _startOptimisticToggle(expectedState, source) {
         this._clearOptimisticToggle();
+        this._clearLightVisualSettle();
+        const lightVisualState = this._getDomain() === "light" && expectedState === "on" ? snapshotLightVisualState(withLightVisualFallback(source, readLightVisualState(source.entity_id) || this._lastKnownLightState.get(source.entity_id) || null)) : null;
         const draft = {
           entityId: source.entity_id,
           expectedState,
@@ -905,7 +1030,8 @@
           sourceState: source.state,
           lastUpdated: source.last_updated,
           lastChanged: source.last_changed,
-          sawDifferentState: false
+          sawDifferentState: false,
+          lightVisualState
         };
         this._optimisticToggle = draft;
         this._optimisticToggleTimer = window.setTimeout(() => this._rollbackOptimisticToggle(draft), OPTIMISTIC_TOGGLE_TIMEOUT);
@@ -915,6 +1041,7 @@
       _rollbackOptimisticToggle(draft) {
         if (this._optimisticToggle !== draft) return;
         this._clearOptimisticToggle();
+        this._clearLightVisualSettle();
         this._lastRenderSignature = "";
         if (this.isConnected) this._render();
       }
@@ -1082,7 +1209,7 @@
             return "#f4b55f";
           }
           if (kelvin > 0) {
-            return "#ffe29a";
+            return "#ffd166";
           }
         }
         return "var(--warning-color, #f6b73c)";
@@ -2149,14 +2276,14 @@
       <ha-card
         class="fav-card ${isActive ? "is-on" : "is-off"} ${isMini ? "fav-card--mini" : "fav-card--inline"} ${isCompactInline ? "fav-card--single-row" : ""} ${isTightInline ? "fav-card--tight-inline" : ""} ${showAlarmPanel ? "fav-card--alarm-open" : ""} ${canRunPrimaryAction ? "fav-card--clickable" : ""}"
         style="--fav-accent:${escapeHtml(accentColor)};"
-        ${canRunPrimaryAction ? 'data-fav-action="primary"' : ""}
+        ${canRunPrimaryAction ? 'data-fav-action="primary" data-nodalia-focus="card"' : ""}
       >
-        <div class="fav-card__content" ${canRunPrimaryAction ? 'data-fav-action="primary"' : ""}>
-          <div class="fav-card__hero" ${canRunPrimaryAction ? 'data-fav-action="primary"' : ""}>
+        <div class="fav-card__content" ${canRunPrimaryAction ? 'data-fav-action="primary" data-nodalia-focus="card"' : ""}>
+          <div class="fav-card__hero" ${canRunPrimaryAction ? 'data-fav-action="primary" data-nodalia-focus="card"' : ""}>
             <button
               type="button"
               class="fav-card__icon"
-              ${canRunPrimaryAction ? 'data-fav-action="primary"' : ""}
+              ${canRunPrimaryAction ? 'data-fav-action="primary" data-nodalia-focus="card"' : ""}
               aria-label="${escapeHtml(canRunPrimaryAction ? this._commonAria("primaryAction", "Primary action") : title)}"
             >
               <ha-icon icon="${escapeHtml(icon)}"></ha-icon>

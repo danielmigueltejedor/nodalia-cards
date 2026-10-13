@@ -1428,7 +1428,7 @@
       "a[href]",
       "summary",
       "[role='button']",
-      "[tabindex]:not([tabindex='-1'])"
+      "[tabindex]:not([tabindex='-1']):not(input,select,textarea,[contenteditable='true'])"
     ].join(",");
     function installPointerFocusRingGuard() {
       if (typeof window === "undefined" || typeof document === "undefined" || typeof document.addEventListener !== "function") {
@@ -1439,23 +1439,47 @@
       }
       const inlineOutlineState = /* @__PURE__ */ new WeakMap();
       let pointerFocusedElement = null;
-      let pointerModality = false;
+      let pointerModality = true;
       let keyboardFocusCard = null;
+      let keyboardFrame = null;
       const isFocusElement = (element) => typeof HTMLElement !== "undefined" && element instanceof HTMLElement || typeof SVGElement !== "undefined" && element instanceof SVGElement;
       const clearKeyboardCard = () => {
-        keyboardFocusCard?.removeAttribute("data-nodalia-keyboard-focus");
+        keyboardFocusCard?.deref()?.removeAttribute("data-nodalia-keyboard-focus");
+        keyboardFrame?.deref()?.remove();
         keyboardFocusCard = null;
+        keyboardFrame = null;
       };
-      const focusCardFromPath = (path) => path.find((node) => node instanceof HTMLElement && node.tagName.startsWith("NODALIA-") && !node.tagName.endsWith("-EDITOR"));
+      const focusCardFromPath = (path) => {
+        const isCard = (node) => node instanceof HTMLElement && node.tagName.startsWith("NODALIA-") && !node.tagName.endsWith("-EDITOR");
+        const surface = path.find((node) => node instanceof HTMLElement && node.matches("ha-card,.insignia-card,.media-player-card"));
+        const root = surface instanceof HTMLElement ? surface.getRootNode() : null;
+        if (root instanceof ShadowRoot && isCard(root.host)) return root.host;
+        return path.find(isCard);
+      };
       const updateKeyboardCard = (path) => {
         clearKeyboardCard();
         if (pointerModality) return;
         const card = focusCardFromPath(path);
         card?.removeAttribute("data-nodalia-pointer-input");
-        if (!path.some((node) => node instanceof HTMLElement && node.matches("ha-card,.insignia-card,.media-player-card"))) return;
+        const surface = path.find((node) => node instanceof HTMLElement && node.matches("ha-card,.insignia-card,.media-player-card"));
+        if (!surface) return;
         if (card) {
-          keyboardFocusCard = card;
+          keyboardFocusCard = new WeakRef(card);
           card.setAttribute("data-nodalia-keyboard-focus", "");
+          if (path.some((node) => node instanceof HTMLElement && node.matches('[role="dialog"],[aria-modal="true"]'))) return;
+          const style = getComputedStyle(surface);
+          if (style.position === "static") surface.style.position = "relative";
+          const frame = document.createElement("span");
+          frame.setAttribute("data-nodalia-card-focus-frame", "");
+          frame.setAttribute("aria-hidden", "true");
+          frame.style.inset = "0";
+          const radius = (value, border) => value.split(" ").map((part) => `max(0px, calc(${part} - ${border}))`).join(" ");
+          frame.style.borderTopLeftRadius = radius(style.borderTopLeftRadius, style.borderTopWidth);
+          frame.style.borderTopRightRadius = radius(style.borderTopRightRadius, style.borderTopWidth);
+          frame.style.borderBottomLeftRadius = radius(style.borderBottomLeftRadius, style.borderBottomWidth);
+          frame.style.borderBottomRightRadius = radius(style.borderBottomRightRadius, style.borderBottomWidth);
+          surface.append(frame);
+          keyboardFrame = new WeakRef(frame);
         }
       };
       const restoreOutline = (element) => {
@@ -1472,7 +1496,7 @@
           inlineOutlineState.delete(element);
         }
         element.removeAttribute("data-nodalia-pointer-focus");
-        if (pointerFocusedElement === element) {
+        if (pointerFocusedElement?.deref() === element) {
           pointerFocusedElement = null;
         }
       };
@@ -1480,8 +1504,9 @@
         if (!isFocusElement(element)) {
           return;
         }
-        if (pointerFocusedElement && pointerFocusedElement !== element) {
-          restoreOutline(pointerFocusedElement);
+        const previousTarget = pointerFocusedElement?.deref();
+        if (previousTarget && previousTarget !== element) {
+          restoreOutline(previousTarget);
         }
         if (!inlineOutlineState.has(element)) {
           inlineOutlineState.set(element, {
@@ -1491,7 +1516,7 @@
         }
         element.setAttribute("data-nodalia-pointer-focus", "");
         element.style.setProperty("outline", "none", "important");
-        pointerFocusedElement = element;
+        pointerFocusedElement = new WeakRef(element);
       };
       document.addEventListener("pointerdown", (event) => {
         if (typeof event.button === "number" && event.button !== 0) {
@@ -1511,8 +1536,9 @@
         }
       }, true);
       document.addEventListener("keydown", (event) => {
+        if (event.altKey || event.ctrlKey || event.metaKey || ["Shift", "Control", "Alt", "Meta", "CapsLock"].includes(event.key)) return;
         pointerModality = false;
-        restoreOutline(pointerFocusedElement);
+        restoreOutline(pointerFocusedElement?.deref());
         updateKeyboardCard(event.composedPath());
       }, true);
       document.addEventListener("focusin", (event) => {
@@ -1526,9 +1552,11 @@
       }, true);
       document.addEventListener("focusout", (event) => {
         const path = typeof event.composedPath === "function" ? event.composedPath() : [event.target];
-        if (keyboardFocusCard && path.includes(keyboardFocusCard)) clearKeyboardCard();
-        if (pointerFocusedElement && path.includes(pointerFocusedElement)) {
-          restoreOutline(pointerFocusedElement);
+        const card = keyboardFocusCard?.deref();
+        if (card && path.includes(card)) clearKeyboardCard();
+        const pointerTarget = pointerFocusedElement?.deref();
+        if (pointerTarget && path.includes(pointerTarget)) {
+          restoreOutline(pointerTarget);
         }
       }, true);
       window.addEventListener?.("blur", clearKeyboardCard);

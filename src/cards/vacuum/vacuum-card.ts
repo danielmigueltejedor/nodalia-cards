@@ -2631,11 +2631,6 @@ class NodaliaVacuumCard extends HTMLElement {
           box-sizing: border-box;
         }
 
-        ha-card[data-vacuum-action="body_tap"]:focus-visible {
-          outline: 2px solid var(--primary-color);
-          outline-offset: -3px;
-        }
-
         ha-card {
           --vacuum-card-panel-duration: ${animations.enabled ? animations.panelDuration : 0}ms;
           --vacuum-card-button-bounce-duration: ${animations.enabled ? animations.buttonBounceDuration : 0}ms;
@@ -3282,7 +3277,7 @@ class NodaliaVacuumCard extends HTMLElement {
       ${cardFocusStyles}
       </style>
 
-      <ha-card ${canRunBodyCardTap ? 'data-vacuum-action="body_tap" role="button" tabindex="0"' : ""}>
+      <ha-card ${canRunBodyCardTap ? 'data-vacuum-action="body_tap" data-nodalia-focus="card" role="button" tabindex="0"' : ""}>
         <div class="vacuum-card ${isCompactLayout ? "vacuum-card--compact" : ""} ${denseCompact ? "vacuum-card--dense" : ""} ${shouldAnimateEntrance ? "vacuum-card--entering" : ""}">
           <div class="vacuum-card__header">
             <button

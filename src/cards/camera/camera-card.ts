@@ -954,7 +954,7 @@ class NodaliaCameraCard extends HTMLElement {
         <button
           type="button"
           class="camera-card__preview-open"
-          data-camera-action="camera-tap"
+          data-camera-action="camera-tap" data-nodalia-focus="card"
           data-camera-entity="${escapeHtml(entityId)}"
           aria-label="${escapeHtml(previewActionLabel)}"
         ></button>
@@ -1559,11 +1559,6 @@ class NodaliaCameraCard extends HTMLElement {
 
         * { box-sizing: border-box; }
 
-        [data-camera-action="camera-tap"]:focus-visible {
-          outline: 2px solid var(--primary-color);
-          outline-offset: -3px;
-        }
-
         ha-card {
           background: ${cardBackground};
           border: ${cardBorder};
@@ -1744,11 +1739,6 @@ class NodaliaCameraCard extends HTMLElement {
           padding: 0;
           width: 100%;
           z-index: 1;
-        }
-
-        .camera-card__preview-open:focus-visible {
-          box-shadow: inset 0 0 0 3px var(--primary-color);
-          outline: 0;
         }
 
         .camera-card__header {

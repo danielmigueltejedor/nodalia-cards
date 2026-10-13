@@ -1,17 +1,24 @@
-/* Keep the frame on the complete card when a nested control receives keyboard focus.
-   Pointer-created focus is marked by the shared guard, including after a rerender. */
-:is(ha-card, .insignia-card, .media-player-card):is(:focus-visible, :has(:focus-visible:not([data-nodalia-pointer-focus]))),
-:host([data-nodalia-keyboard-focus]) :is(ha-card, .insignia-card, .media-player-card) {
-  outline: 2px solid var(--primary-color, #71c0ff);
-  outline-offset: -3px;
+/* The common frame is a layer above the content; an outline can be hidden by
+   slotted children and full-bleed charts. Its radius is copied from the surface. */
+[data-nodalia-card-focus-frame] {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid var(--primary-color, #71c0ff);
+  pointer-events: none;
+  z-index: 100;
 }
 
-:is(button, a[href], summary, [role="button"], [role="slider"], [tabindex]):focus-visible:not([data-nodalia-pointer-focus]) {
-  outline: 2px solid var(--primary-color, #71c0ff);
-  outline-offset: -3px;
+/* A primary action uses the complete card frame, never a second inner rectangle. */
+:is(ha-card, .insignia-card, .media-player-card, [data-nodalia-focus="card"]) {
+  outline: none !important;
 }
 
-/* Text fields intentionally retain their own native focus indicator on touch. */
-:host([data-nodalia-pointer-input]) :is(ha-card, .insignia-card, .media-player-card) {
+/* Keep individual controls identifiable while navigating with the keyboard.
+   Text fields retain native editing focus, including on touch. */
+:is(button, a[href], summary, [role="button"], [role="slider"], [tabindex]):not(input, select, textarea) {
   outline: none;
+}
+:host([data-nodalia-keyboard-focus]) :is(button, a[href], summary, [role="button"], [role="slider"], [tabindex]):focus-visible:not(input, select, textarea, [data-nodalia-pointer-focus], [data-nodalia-focus="card"], ha-card, .insignia-card, .media-player-card) {
+  outline: 2px solid var(--primary-color, #71c0ff);
+  outline-offset: -3px;
 }

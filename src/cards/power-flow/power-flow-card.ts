@@ -2107,11 +2107,6 @@ class NodaliaPowerFlowCard extends HTMLElement {
           box-sizing: border-box;
         }
 
-        ha-card[data-card-action="primary"]:focus-visible {
-          outline: 2px solid var(--primary-color);
-          outline-offset: -3px;
-        }
-
         ha-card {
           background-color: var(--ha-card-background, var(--card-background-color, #fff));
           border-radius: ${styles.card.border_radius};
@@ -3012,7 +3007,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       ${cardFocusStyles}
       </style>
-      <ha-card class="power-flow-card power-flow-card--${layoutPreset}" ${this._config?.tap_action === "more-info" ? `data-card-action="primary" role="button" tabindex="0" aria-label="${escapeHtml(titleText || this._powerFlowUi("energy", "Energy"))}"` : ""}>
+      <ha-card class="power-flow-card power-flow-card--${layoutPreset}" ${this._config?.tap_action === "more-info" ? `data-card-action="primary" data-nodalia-focus="card" role="button" tabindex="0" aria-label="${escapeHtml(titleText || this._powerFlowUi("energy", "Energy"))}"` : ""}>
         ${
           hasHeader
             ? `

@@ -3797,10 +3797,6 @@ class NodaliaMediaPlayer extends HTMLElement {
           touch-action: none;
         }
 
-        .media-player__progress.is-interactive:focus-visible {
-          outline: 2px solid ${playerStyles.progress_color};
-          outline-offset: 3px;
-        }
 
         .media-player__progress-fill {
           background: ${playerStyles.progress_color};

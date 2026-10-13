@@ -731,11 +731,6 @@ class NodaliaCircularGaugeCard extends HTMLElement {
           min-height: 0;
         }
 
-        [data-gauge-action="primary"]:focus-visible {
-          outline: 2px solid var(--primary-color);
-          outline-offset: -3px;
-        }
-
         * {
           box-sizing: border-box;
         }
@@ -1294,7 +1289,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
       ${cardFocusStyles}
       </style>
       <ha-card class="gauge-card">
-        <div class="gauge-card__content" ${this._canRunTapAction() ? `data-gauge-action="primary" role="button" tabindex="0" aria-label="${escapeHtml(title)}"` : ""}>
+        <div class="gauge-card__content" ${this._canRunTapAction() ? `data-gauge-action="primary" data-nodalia-focus="card" role="button" tabindex="0" aria-label="${escapeHtml(title)}"` : ""}>
           ${
             showHeader
               ? `

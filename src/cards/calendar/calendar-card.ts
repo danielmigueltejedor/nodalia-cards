@@ -2519,10 +2519,6 @@ class NodaliaCalendarCard extends HTMLElement {
         .calendar-event--detail-link {
           cursor: pointer;
         }
-        .calendar-event--detail-link:focus-visible {
-          outline: 2px solid color-mix(in srgb, var(--primary-color) 55%, transparent);
-          outline-offset: 2px;
-        }
         .calendar-event__time {
           color:var(--secondary-text-color);
           font-size:11px;
@@ -2972,10 +2968,6 @@ class NodaliaCalendarCard extends HTMLElement {
         .calendar-expanded__month-cell--day {
           -webkit-tap-highlight-color: transparent;
           cursor: pointer;
-        }
-        .calendar-expanded__month-cell--day:focus-visible {
-          outline: 2px solid color-mix(in srgb, var(--primary-color) 55%, transparent);
-          outline-offset: 2px;
         }
         .calendar-expanded__day-detail {
           display: flex;

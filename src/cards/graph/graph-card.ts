@@ -1899,8 +1899,8 @@ class NodaliaGraphCard extends HTMLElement {
     const animations = this._getAnimationSettings();
     const shouldAnimateEntrance = animations.enabled && this._animateContentOnNextRender;
     const shouldAnimateChart = animations.enabled && (shouldAnimateEntrance || this._animateChartOnNextRender);
-    const primaryHeaderAttr = this._canRunTapAction() && config.show_header !== false ? ' data-graph-action="primary" role="button" tabindex="0"' : "";
-    const primaryValueAttr = this._canRunTapAction() && config.show_value !== false ? ' data-graph-action="primary" role="button" tabindex="0"' : "";
+    const primaryHeaderAttr = this._canRunTapAction() && config.show_header !== false ? ' data-graph-action="primary" data-nodalia-focus="card" role="button" tabindex="0"' : "";
+    const primaryValueAttr = this._canRunTapAction() && config.show_value !== false ? ' data-graph-action="primary" data-nodalia-focus="card" role="button" tabindex="0"' : "";
     const anchorXPct = hover ? graphChartXToPercent(hover.x, chart) : 0;
     const initialTooltipStyle = this._lastTooltipViewportPosition
       ? `left:${this._lastTooltipViewportPosition.left}px; top:${this._lastTooltipViewportPosition.top}px; opacity:1; --graph-tooltip-transform:${this._lastTooltipViewportPosition.transform}; --tooltip-tint:${escapeHtml(tooltipTint)};`
@@ -2571,7 +2571,7 @@ class NodaliaGraphCard extends HTMLElement {
               : ""
           }
 
-          <div class="graph-card__chart-wrap ${shouldAnimateChart ? "graph-card__chart-wrap--entering" : ""}" data-graph-surface="chart" tabindex="0" role="group" aria-label="${escapeHtml(title)}" data-visible-inset="${chartBleed}">
+          <div class="graph-card__chart-wrap ${shouldAnimateChart ? "graph-card__chart-wrap--entering" : ""}" data-graph-surface="chart" data-nodalia-focus="card" tabindex="0" role="group" aria-label="${escapeHtml(title)}" data-visible-inset="${chartBleed}">
             <svg class="graph-card__chart" viewBox="0 0 ${chart.width} ${chart.height}" preserveAspectRatio="none">
               <defs>
                 <filter id="graph-glow" x="-30%" y="-30%" width="160%" height="160%">

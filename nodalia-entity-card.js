@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.3-alpha.1";
+  var CARD_VERSION = "3.0.3-alpha.2";
 
   // src/cards/entity/entity-constants.ts
   var CARD_TAG = "nodalia-entity-card";
@@ -1190,7 +1190,7 @@
   }
 
   // src/shared/card-focus.css
-  var card_focus_default = ":is(ha-card,.insignia-card,.media-player-card):is(:focus-visible,:has(:focus-visible:not([data-nodalia-pointer-focus]))),:host([data-nodalia-keyboard-focus]) :is(ha-card,.insignia-card,.media-player-card){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:is(button,a[href],summary,[role=button],[role=slider],[tabindex]):focus-visible:not([data-nodalia-pointer-focus]){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:host([data-nodalia-pointer-input]) :is(ha-card,.insignia-card,.media-player-card){outline:none}";
+  var card_focus_default = "[data-nodalia-card-focus-frame]{position:absolute;box-sizing:border-box;border:2px solid var(--primary-color, #71c0ff);pointer-events:none;z-index:100}:is(ha-card,.insignia-card,.media-player-card,[data-nodalia-focus=card]){outline:none!important}:is(button,a[href],summary,[role=button],[role=slider],[tabindex]):not(input,select,textarea){outline:none}:host([data-nodalia-keyboard-focus]) :is(button,a[href],summary,[role=button],[role=slider],[tabindex]):focus-visible:not(input,select,textarea,[data-nodalia-pointer-focus],[data-nodalia-focus=card],ha-card,.insignia-card,.media-player-card){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}";
 
   // src/shared/card-layout-notifier.ts
   var SECTIONS_CARD_OWNERS = /* @__PURE__ */ new Set(["hui-section", "hui-grid-section"]);
@@ -3348,7 +3348,6 @@
           transform:translateY(-1px);
         }
         .entity-card__overview-item:active { transform:scale(.975); }
-        .entity-card__overview-item:focus-visible { outline:2px solid var(--overview-accent); outline-offset:2px; }
         .entity-card__overview-item.is-unavailable { opacity:.62; }
         .entity-card__overview-item--battery { display:grid; gap:10px; grid-template-columns:48px minmax(0,1fr) auto; min-height:76px; padding:10px 12px 10px 10px; }
         .entity-card__battery-gauge {
@@ -3979,11 +3978,6 @@
 
         * { box-sizing: border-box; }
 
-        ha-card[data-entity-action="body"]:focus-visible {
-          outline: 2px solid var(--primary-color);
-          outline-offset: -3px;
-        }
-
         ha-card {
           --nodalia-entity-surface-base: ${surfaceBase};
           background: ${cardBackground};
@@ -4137,12 +4131,6 @@
           margin: 0;
         }
 
-        .entity-card__chip--clickable:focus-visible,
-        .entity-card__aq-bubble:focus-visible,
-        .entity-card__aq-legend-item:focus-visible {
-          outline: 2px solid var(--primary-color);
-          outline-offset: 2px;
-        }
 
         .entity-card__chip--state {
           background: color-mix(in srgb, ${accentColor} 16%, transparent);
@@ -4531,11 +4519,6 @@
 
         * {
           box-sizing: border-box;
-        }
-
-        ha-card[data-entity-action="body"]:focus-visible {
-          outline: 2px solid var(--primary-color);
-          outline-offset: -3px;
         }
 
         ha-card {

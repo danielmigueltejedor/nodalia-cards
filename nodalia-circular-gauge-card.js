@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.3-alpha.1";
+  var CARD_VERSION = "3.0.3-alpha.2";
 
   // src/cards/circular-gauge/circular-gauge-constants.ts
   var CARD_TAG = "nodalia-circular-gauge-card";
@@ -172,7 +172,7 @@
   }
 
   // src/shared/card-focus.css
-  var card_focus_default = ":is(ha-card,.insignia-card,.media-player-card):is(:focus-visible,:has(:focus-visible:not([data-nodalia-pointer-focus]))),:host([data-nodalia-keyboard-focus]) :is(ha-card,.insignia-card,.media-player-card){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:is(button,a[href],summary,[role=button],[role=slider],[tabindex]):focus-visible:not([data-nodalia-pointer-focus]){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:host([data-nodalia-pointer-input]) :is(ha-card,.insignia-card,.media-player-card){outline:none}";
+  var card_focus_default = "[data-nodalia-card-focus-frame]{position:absolute;box-sizing:border-box;border:2px solid var(--primary-color, #71c0ff);pointer-events:none;z-index:100}:is(ha-card,.insignia-card,.media-player-card,[data-nodalia-focus=card]){outline:none!important}:is(button,a[href],summary,[role=button],[role=slider],[tabindex]):not(input,select,textarea){outline:none}:host([data-nodalia-keyboard-focus]) :is(button,a[href],summary,[role=button],[role=slider],[tabindex]):focus-visible:not(input,select,textarea,[data-nodalia-pointer-focus],[data-nodalia-focus=card],ha-card,.insignia-card,.media-player-card){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}";
 
   // src/shared/editor-color.ts
   var clamp2 = (value, max) => Math.max(0, Math.min(max, value));
@@ -1118,11 +1118,6 @@
           min-height: 0;
         }
 
-        [data-gauge-action="primary"]:focus-visible {
-          outline: 2px solid var(--primary-color);
-          outline-offset: -3px;
-        }
-
         * {
           box-sizing: border-box;
         }
@@ -1679,7 +1674,7 @@
       ${card_focus_default}
       </style>
       <ha-card class="gauge-card">
-        <div class="gauge-card__content" ${this._canRunTapAction() ? `data-gauge-action="primary" role="button" tabindex="0" aria-label="${escapeHtml(title)}"` : ""}>
+        <div class="gauge-card__content" ${this._canRunTapAction() ? `data-gauge-action="primary" data-nodalia-focus="card" role="button" tabindex="0" aria-label="${escapeHtml(title)}"` : ""}>
           ${showHeader ? `
                 <div class="gauge-card__hero ${shouldAnimateEntrance ? "gauge-card__hero--entering" : ""}">
                   ${showIcon ? `

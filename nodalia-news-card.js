@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.3-alpha.1";
+  var CARD_VERSION = "3.0.3-alpha.2";
 
   // src/cards/news/news-constants.ts
   var CARD_TAG = "nodalia-news-card";
@@ -831,7 +831,7 @@
   }
 
   // src/shared/card-focus.css
-  var card_focus_default = ":is(ha-card,.insignia-card,.media-player-card):is(:focus-visible,:has(:focus-visible:not([data-nodalia-pointer-focus]))),:host([data-nodalia-keyboard-focus]) :is(ha-card,.insignia-card,.media-player-card){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:is(button,a[href],summary,[role=button],[role=slider],[tabindex]):focus-visible:not([data-nodalia-pointer-focus]){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}:host([data-nodalia-pointer-input]) :is(ha-card,.insignia-card,.media-player-card){outline:none}";
+  var card_focus_default = "[data-nodalia-card-focus-frame]{position:absolute;box-sizing:border-box;border:2px solid var(--primary-color, #71c0ff);pointer-events:none;z-index:100}:is(ha-card,.insignia-card,.media-player-card,[data-nodalia-focus=card]){outline:none!important}:is(button,a[href],summary,[role=button],[role=slider],[tabindex]):not(input,select,textarea){outline:none}:host([data-nodalia-keyboard-focus]) :is(button,a[href],summary,[role=button],[role=slider],[tabindex]):focus-visible:not(input,select,textarea,[data-nodalia-pointer-focus],[data-nodalia-focus=card],ha-card,.insignia-card,.media-player-card){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}";
 
   // src/cards/news/news-card.ts
   var _lazyNodaliaNewsCard;
@@ -1543,6 +1543,7 @@
         return `
       <div
         class="news-card__magazine"
+        data-nodalia-focus="card"
         data-news-carousel
         data-news-count="${count}"
         tabindex="0"
@@ -1758,10 +1759,6 @@
           outline: none;
         }
 
-        .news-card__magazine:focus-visible {
-          box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 24%, transparent);
-          border-radius: calc(${styles.card.border_radius} - 6px);
-        }
 
         .news-card__carousel-viewport {
           overflow: hidden;
@@ -1872,10 +1869,6 @@
           width: 18px;
         }
 
-        .news-card__dot:focus-visible {
-          outline: 2px solid color-mix(in srgb, var(--primary-color) 40%, transparent);
-          outline-offset: 2px;
-        }
 
         .news-card__article {
           background: color-mix(in srgb, var(--primary-text-color) 3%, transparent);
@@ -1894,8 +1887,7 @@
           font: inherit;
         }
 
-        button.news-card__article:hover,
-        button.news-card__article:focus-visible {
+        button.news-card__article:hover {
           border-color: color-mix(in srgb, var(--primary-color) 28%, transparent);
           outline: none;
           box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 18%, transparent);

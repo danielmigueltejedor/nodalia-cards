@@ -990,11 +990,6 @@ class NodaliaPersonCard extends HTMLElement {
           box-sizing: border-box;
         }
 
-        ha-card[data-person-action="primary"]:focus-visible {
-          outline: 2px solid var(--primary-color);
-          outline-offset: -3px;
-        }
-
         ha-card {
           background: ${cardBackground};
           border: ${cardBorder};
@@ -1305,7 +1300,7 @@ class NodaliaPersonCard extends HTMLElement {
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       ${cardFocusStyles}
       </style>
-      <ha-card class="person-card ${singleRowLayout ? "person-card--single-row" : ""} ${avatarCentered ? "person-card--avatar-centered" : ""}" ${canRunPrimaryAction ? `data-person-action="primary" role="button" tabindex="0" aria-label="${escapeHtml(title)}"` : ""}>
+      <ha-card class="person-card ${singleRowLayout ? "person-card--single-row" : ""} ${avatarCentered ? "person-card--avatar-centered" : ""}" ${canRunPrimaryAction ? `data-person-action="primary" data-nodalia-focus="card" role="button" tabindex="0" aria-label="${escapeHtml(title)}"` : ""}>
         <div class="person-card__content ${animateWithPicture ? "person-card__content--entering" : ""}">
           <div class="person-card__avatar-track">
             <div class="person-card__avatar ${animateWithPicture ? "person-card__avatar--entering" : ""}">
