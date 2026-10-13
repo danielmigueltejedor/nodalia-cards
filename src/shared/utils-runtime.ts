@@ -1,5 +1,6 @@
 import { normalizeCardLayoutWrapper } from "./card-layout-notifier";
 import emptyStateStyles from "./utils-empty-state.css";
+import cardFocusStyles from "./card-focus.css";
 import {compactConfig as compactConfigValue} from "./config-values";
 import reducedMotionStyles from "./utils-reduced-motion.css";
 import engineBannerStyles from "./utils-engine-banner.css";
@@ -1772,15 +1773,19 @@ import type {NodaliaUtilsApi,CssStyleDefaults,SanitizedCssStyles,EditorFocusStat
         const frame = document.createElement("span");
         frame.setAttribute("data-nodalia-card-focus-frame", "");
         frame.setAttribute("aria-hidden", "true");
-        // Keep both pixels inside overflow:hidden's padding-edge clip. A layer
-        // drawn over the original border loses one pixel to that clip in WebKit.
+        // Keep both pixels inside overflow:hidden's padding-edge clip.
         frame.style.inset = "0";
-        const radius = (value: string, border: string) => value.split(" ").map(part => `max(0px, calc(${part} - ${border}))`).join(" ");
-        frame.style.borderTopLeftRadius = radius(style.borderTopLeftRadius, style.borderTopWidth);
-        frame.style.borderTopRightRadius = radius(style.borderTopRightRadius, style.borderTopWidth);
-        frame.style.borderBottomLeftRadius = radius(style.borderBottomLeftRadius, style.borderBottomWidth);
-        frame.style.borderBottomRightRadius = radius(style.borderBottomRightRadius, style.borderBottomWidth);
-        surface.append(frame);
+        if (surface.shadowRoot) {
+          // HA renders card content through a slot. Put the layer in its own
+          // shadow root so it inherits the real radius and survives light-DOM
+          // reconciliation. The same shared stylesheet owns both variants.
+          const sheet = document.createElement("style");
+          sheet.textContent = cardFocusStyles;
+          frame.append(sheet);
+          surface.shadowRoot.append(frame);
+        } else {
+          surface.append(frame);
+        }
         keyboardFrame = new WeakRef(frame);
       }
     };

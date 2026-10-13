@@ -111,7 +111,7 @@ for (const card of CARDS) {
       const target = element.shadowRoot.querySelector(card.target);
       const shell = element.shadowRoot.querySelector(card.shell || 'ha-card');
       target.focus();
-      const layer = shell.querySelector('[data-nodalia-card-focus-frame]');
+      const layer = (shell.shadowRoot || shell).querySelector('[data-nodalia-card-focus-frame]');
       const style = getComputedStyle(layer);
       const radius = node => getComputedStyle(node).borderTopLeftRadius;
       const framed = style.borderTopStyle === 'solid' && style.borderTopWidth === '2px';
@@ -120,7 +120,7 @@ for (const card of CARDS) {
     expect(frame.focusVisible).toBe(true);
     expect(frame.framed).toBe(true);
     expect(parseFloat(frame.cardRadius)).toBeGreaterThan(0);
-    expect(parseFloat(frame.targetRadius)).toBe(Math.max(0, parseFloat(frame.cardRadius) - frame.cardBorder));
+    expect(frame.targetRadius).toBe(frame.cardRadius);
     expect(await page.evaluate(() => window.bundleErrors)).toEqual([]);
   });
 }

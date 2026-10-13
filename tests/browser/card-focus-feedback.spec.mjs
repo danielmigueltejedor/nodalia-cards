@@ -36,7 +36,7 @@ test('Graph primary header and chart show one rounded card frame without inner r
     await target.focus();
     expect(await target.evaluate(node => getComputedStyle(node).outlineStyle)).toBe('none');
     await expect(card.locator('[data-nodalia-card-focus-frame]')).toHaveCount(1);
-    expect(await card.locator('[data-nodalia-card-focus-frame]').evaluate(node => getComputedStyle(node).borderTopLeftRadius)).toBe('27px');
+    expect(await card.locator('[data-nodalia-card-focus-frame]').evaluate(node => getComputedStyle(node).borderTopLeftRadius)).toBe('28px');
     if (selector.includes('primary')) await card.screenshot({ path: testInfo.outputPath('graph-focus.png'), scale: 'css' });
   }
   await card.locator('[data-graph-action="primary"]').first().click();
@@ -63,4 +63,32 @@ test('Power Flow paints a full two-pixel frame above its content on all four str
   }, screenshot.toString('base64'));
   for (const color of edges) expect(color).toEqual([255, 152, 0]);
   await expect(card.locator('[data-nodalia-card-focus-frame]')).toHaveCount(1);
+});
+
+test('a retained Lock control keeps its frame through HA updates and follows a changed card radius', async ({ page }) => {
+  await mount(page, 'nodalia-graph-card');
+  await page.evaluate(() => {
+    const card = document.createElement('nodalia-lock-card');
+    card.setConfig({ entity: 'lock.one', animations: { enabled: false }, styles: { card: { border_radius: '28px' } } });
+    window.retainedLockHass = window.makeHass({ 'lock.one': { state: 'locked', attributes: { friendly_name: 'Lock' } } });
+    card.hass = window.retainedLockHass;
+    document.querySelector('#fixture').append(card); window.retainedLockCard = card;
+  });
+  const card = page.locator('nodalia-lock-card');
+  await page.keyboard.press('Tab');
+  const slider = card.locator('[role="slider"]');
+  await slider.focus();
+  await expect(card.locator('[data-nodalia-card-focus-frame]')).toHaveCount(1);
+  await page.evaluate(() => {
+    window.retainedLockSlider = window.retainedLockCard.shadowRoot.activeElement;
+    window.retainedLockHass.states['lock.one'].attributes.friendly_name = 'Updated';
+    window.retainedLockCard.hass = window.retainedLockHass;
+  });
+  await expect(slider).toBeFocused();
+  expect(await card.evaluate(card => card.shadowRoot.activeElement === window.retainedLockSlider)).toBe(true);
+  await expect(card.locator('[data-nodalia-card-focus-frame]')).toHaveCount(1);
+  await card.evaluate(card => card.setConfig({ entity: 'lock.one', animations: { enabled: false }, styles: { card: { border_radius: '40px' } } }));
+  await expect(slider).toBeFocused();
+  await expect(card.locator('[data-nodalia-card-focus-frame]')).toHaveCount(1);
+  expect(await card.locator('[data-nodalia-card-focus-frame]').evaluate(node => getComputedStyle(node).borderTopLeftRadius)).toBe('40px');
 });

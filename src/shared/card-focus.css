@@ -1,9 +1,11 @@
 /* The common frame is a layer above the content; an outline can be hidden by
-   slotted children and full-bleed charts. Its radius is copied from the surface. */
+   slotted children and full-bleed charts. It inherits directly from the surface,
+   outside HA's slot, so theme/configuration radius changes stay live. */
 [data-nodalia-card-focus-frame] {
   position: absolute;
   box-sizing: border-box;
   border: 2px solid var(--primary-color, #71c0ff);
+  border-radius: inherit;
   pointer-events: none;
   z-index: 100;
 }
