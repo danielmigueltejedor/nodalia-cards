@@ -8,6 +8,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.0.4-alpha.1] - 2026-10-13
+
+### Fixed
+
+- **Humidifier:** the target-humidity, mode and fan-mode chips remain visible when enabled in compact layouts, including automatic mobile layouts. The target-humidity chip no longer depends on showing the slider.
+- **Fan:** enabled speed and preset-mode chips also remain visible in compact layouts; hiding the slider no longer hides the speed chip. Active-state and entity-capability checks remain in place.
+- **Humidifier, Fan and Cover:** narrow headers wrap their enabled chips without collapsing the device name or clipping chips outside the card. Turning a chip off in the editor keeps it hidden at every card width.
+
 ## [3.0.3-alpha.2] - 2026-10-13
 
 ### Fixed

@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.3";
+  var CARD_VERSION = "3.0.4-alpha.1";
 
   // src/shared/device-control-geometry.ts
   var CIRCULAR_LAYOUT_DIAL_START_ANGLE = 135;
@@ -1869,13 +1869,14 @@
         }
         .fan-card__copy { display: grid; gap: 10px; min-width: 0; }
         .fan-card__headline {
-          align-items: start;
-          display: grid;
+          align-items: flex-start;
+          display: flex;
+          flex-wrap: wrap;
           gap: 10px;
-          grid-template-columns: minmax(0, 1fr) auto;
           min-width: 0;
         }
         .fan-card__title {
+          flex: 1 1 100px;
           font-size: ${styles.title_size};
           font-weight: 700;
           line-height: 1.15;
@@ -1886,10 +1887,12 @@
         }
         .fan-card__chips {
           display: flex;
+          flex: 0 1 auto;
           flex-wrap: wrap;
           gap: 10px;
           justify-content: flex-end;
           min-width: 0;
+          max-width: 100%;
         }
         .fan-card__chip {
           align-items: center;
@@ -1902,6 +1905,8 @@
           font-size: ${styles.chip_font_size};
           font-weight: 700;
           height: ${styles.chip_height};
+          max-width: 100%;
+          min-width: 0;
           overflow: hidden;
           padding: ${styles.chip_padding};
           text-overflow: ellipsis;

@@ -233,8 +233,7 @@ test("device and Climate layout variants render and keep their native controls",
       cards[tag] = card;
     }
     const fanCompact = document.createElement("nodalia-fan-card");
-    // Keep a state chip visible even when width-based densification hides
-    // percentage/mode chips, so compact header metrics stay comparable to Climate.
+    // Include the optional state chip when comparing shared header metrics.
     fanCompact.setConfig({ entity: "fan.test", layout: "compact", show_state: true, animations: { enabled: false } });
     fanCompact.hass = hass;
     document.querySelector("#fixture").append(fanCompact);

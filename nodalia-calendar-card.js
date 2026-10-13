@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.3";
+  var CARD_VERSION = "3.0.4-alpha.1";
 
   // src/shared/date-time-format.ts
   var CACHE_LIMIT = 48;

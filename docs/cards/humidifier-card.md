@@ -3,6 +3,12 @@
 `custom:nodalia-humidifier-card` controls a humidifier with a target-humidity
 slider, mode chips and the controls supported by the entity.
 
+`show_target_humidity_chip`, `show_mode_chip` and `show_fan_mode_chip` default to
+`true` and remain visible in compact layouts when the corresponding value is
+available. Set an option to `false` to hide its chip. `show_slider: false` hides
+only the target-humidity control, keeping the enabled humidity chip visible.
+The separate `show_state: true` option adds the on/off state chip.
+
 ```yaml
 type: custom:nodalia-humidifier-card
 entity: humidifier.salon
