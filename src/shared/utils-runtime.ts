@@ -1819,6 +1819,14 @@ import type {NodaliaUtilsApi,CssStyleDefaults,SanitizedCssStyles,EditorFocusStat
       if (previousTarget && previousTarget !== element) {
         restoreOutline(previousTarget);
       }
+      const root = element.getRootNode();
+      if (root instanceof ShadowRoot && root.host instanceof HTMLElement
+        && root.host.tagName.startsWith("NODALIA-") && !root.host.tagName.endsWith("-EDITOR")
+        && [...root.querySelectorAll("style")].some(sheet => sheet.textContent?.includes("[data-nodalia-card-focus-frame]"))) {
+        // Owned card controls already have modality-aware CSS. Keep their action
+        // attributes clean so native focus restoration selectors continue to match.
+        return;
+      }
       if (!inlineOutlineState.has(element)) {
         inlineOutlineState.set(element, {
           priority: element.style.getPropertyPriority("outline"),

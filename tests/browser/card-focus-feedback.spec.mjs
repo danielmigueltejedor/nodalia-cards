@@ -91,6 +91,12 @@ test('a retained Lock control keeps its frame through HA updates and follows a c
   await expect(slider).toBeFocused();
   await expect(card.locator('[data-nodalia-card-focus-frame]')).toHaveCount(1);
   expect(await card.locator('[data-nodalia-card-focus-frame]').evaluate(node => getComputedStyle(node).borderTopLeftRadius)).toBe('40px');
+  await page.evaluate(() => {
+    window.retainedLockHass.states['lock.one'].state = 'unlocked';
+    window.retainedLockCard.hass = window.retainedLockHass;
+  });
+  await expect(card.locator('[data-lock]')).toBeVisible();
+  await expect(card.locator('[data-nodalia-card-focus-frame]')).not.toBeVisible();
 });
 
 test('initial programmatic focus respects focus-visible without inventing pointer metadata', async ({ page }) => {

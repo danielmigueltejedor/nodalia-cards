@@ -1810,7 +1810,9 @@ test("pointer taps do not leave a focus outline while keyboard focus remains vis
     marker: element.hasAttribute("data-nodalia-pointer-focus"),
     outline: getComputedStyle(element).outlineStyle,
   }));
-  expect(afterTap).toEqual({ marker: true, outline: "none" });
+  // Owned controls use shared CSS instead of transient action attributes.
+  expect(afterTap).toEqual({ marker: false, outline: "none" });
+  await expect(page.locator('nodalia-entity-card').locator('[data-nodalia-card-focus-frame]')).not.toBeVisible();
 
   // Leave and return with the keyboard. Pressing Enter while still pointer-focused keeps
   // Firefox on the pointer modality, so :focus-visible stays false there.
@@ -1825,6 +1827,7 @@ test("pointer taps do not leave a focus outline while keyboard focus remains vis
   expect(afterKeyboard.marker).toBe(false);
   expect(afterKeyboard.inlineOutline).toBe("");
   expect(afterKeyboard.focusVisible).toBe(true);
+  await expect(page.locator('nodalia-entity-card').locator('[data-nodalia-card-focus-frame]')).toBeVisible();
 });
 
 test("representative interactive cards have no serious axe violations", async ({ page }) => {

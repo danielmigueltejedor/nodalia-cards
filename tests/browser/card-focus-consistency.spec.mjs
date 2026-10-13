@@ -58,11 +58,12 @@ for (const { tag } of registry) {
       const shell = target.closest('ha-card,.insignia-card,.media-player-card') || card.shadowRoot.querySelector('ha-card,.insignia-card,.media-player-card');
       window.focusShell = shell;
       window.focusShellSelector = shell.matches('.media-player-card') ? '.media-player-card' : shell.matches('.insignia-card') ? '.insignia-card' : 'ha-card';
-      return { focused: card.shadowRoot.activeElement === target, style: getComputedStyle((shell.shadowRoot || shell).querySelector('[data-nodalia-card-focus-frame]')).borderTopStyle, width: getComputedStyle((shell.shadowRoot || shell).querySelector('[data-nodalia-card-focus-frame]')).borderTopWidth, count: (shell.shadowRoot || shell).querySelectorAll('[data-nodalia-card-focus-frame]').length };
+      return { focused: card.shadowRoot.activeElement === target, style: getComputedStyle((shell.shadowRoot || shell).querySelector('[data-nodalia-card-focus-frame]')).borderTopStyle, width: getComputedStyle((shell.shadowRoot || shell).querySelector('[data-nodalia-card-focus-frame]')).borderTopWidth, display: getComputedStyle((shell.shadowRoot || shell).querySelector('[data-nodalia-card-focus-frame]')).display, count: (shell.shadowRoot || shell).querySelectorAll('[data-nodalia-card-focus-frame]').length };
     });
     expect(frame.focused).toBe(true);
     expect(frame.style).toBe('solid');
     expect(frame.width).toBe('2px');
+    expect(frame.display).toBe('block');
     expect(frame.count).toBe(1);
     // Switching modality must remove the frame without triggering an unrelated card action.
     await card.evaluate(() => window.focusTarget.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true, button: 0 })));

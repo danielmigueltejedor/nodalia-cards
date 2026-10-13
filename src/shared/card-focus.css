@@ -2,12 +2,20 @@
    slotted children and full-bleed charts. It inherits directly from the surface,
    outside HA's slot, so theme/configuration radius changes stay live. */
 [data-nodalia-card-focus-frame] {
+  display: none;
   position: absolute;
   box-sizing: border-box;
   border: 2px solid var(--primary-color, #71c0ff);
   border-radius: inherit;
   pointer-events: none;
   z-index: 100;
+}
+
+/* A retained HA surface can outlive its focused control during reconciliation.
+   Hide the layer as soon as focus leaves, even when no focusout event is fired. */
+:host(:focus-within) [data-nodalia-card-focus-frame],
+:is(ha-card, .insignia-card, .media-player-card):focus-within > [data-nodalia-card-focus-frame] {
+  display: block;
 }
 
 /* A primary action uses the complete card frame, never a second inner rectangle. */
