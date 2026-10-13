@@ -8,6 +8,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ---
 
+## [3.0.3] - 2026-10-13
+
+Maintenance release for Nodalia Cards 3. Fav Card responds immediately and remembers light colors, and every card uses the same rounded keyboard focus frame. Existing YAML, resource paths and Engine compatibility remain unchanged.
+
+### Fixed
+
+- **Fav Card:** on/off toggles immediately update the icon, state and tint while Home Assistant confirms the command. Rapid toggles follow the displayed state, stale readings do not flicker, and failed or unconfirmed commands return to the actual state.
+- **Fav Card with lights:** turning a light on immediately restores its last RGB color or color temperature, sharing Light Card's remembered visual state. The tint remains stable during an initial on/brightness-only acknowledgement, follows the reported color when it arrives, and respects custom on colors.
+- **Keyboard focus across all 25 cards:** one shared 2 px frame follows the complete card surface and its rounded corners. Graph no longer draws a second rectangle inside its header, value or chart; Power Flow's frame surrounds the entire card without being covered or thinned by its content. Nested controls retain meaningful focus feedback, including native text fields and dialogs.
+- **Focus visibility:** keyboard navigation shows the frame when appropriate; mouse and touch input do not leave it behind. Modifier keys and browser shortcuts do not create a frame, rerenders preserve the input mode, and losing focus removes the frame.
+- **Power Flow on mobile:** the compact grid/home layout reserves space for the grid name and power labels, keeping them inside the card and its frame even with larger chips.
+- **Scenes, Weather and Calendar:** main actions can be reached and activated with the keyboard. Available scenes participate in Tab navigation, and Calendar restores focus after closing its expanded view.
+
 ## [3.0.2] - 2026-10-09
 
 Maintenance release for Nodalia Cards 3. Dashboards do much less work every time Home Assistant reports a change, News and Advanced Vacuum issues are fixed, Insignia reads its state properly, and keyboard focus frames follow the rounded cards. Existing YAML, resources and visual editors keep working unchanged.
