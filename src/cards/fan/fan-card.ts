@@ -2224,31 +2224,31 @@ class NodaliaFanCard extends HTMLElement {
       isOn && Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph?.(state, accentColor));
     const showUnavailableBadge = isUnavailableState(state);
     const currentPercentage = this._getPercentage(state);
-    const supportsPercentage = config.show_slider !== false && this._supportsPercentage(state);
+    const canSetPercentage = this._supportsPercentage(state);
+    const supportsPercentage = config.show_slider !== false && canSetPercentage;
     const supportsOscillation = config.show_oscillation !== false && this._supportsOscillation(state);
     const presetModes = config.show_preset_modes !== false ? this._getPresetModes(state) : [];
     const currentPresetMode = this._getCurrentPresetMode(state);
     const translatedPresetMode = currentPresetMode ? translatePresetLabel(currentPresetMode) : "";
     const isCompactLayout = this._isCompactLayout;
     const hasSecondaryControls = isOn && (supportsOscillation || presetModes.length);
-    // Keep oscillation / preset toggles in compact when configured — compact only
-    // densifies chips, not the mode controls the user enabled.
+    // Compact layout preserves the chips and controls selected by the user.
     const showCompactSecondary = hasSecondaryControls;
     const chips = [];
     const showTitle = true;
     const showCopyBlock = showTitle
       || config.show_state === true
-      || (!isCompactLayout && isOn && ((config.show_percentage_chip !== false && supportsPercentage) || (config.show_mode_chip !== false && translatedPresetMode)));
+      || (isOn && ((config.show_percentage_chip !== false && canSetPercentage) || (config.show_mode_chip !== false && translatedPresetMode)));
 
     if (config.show_state === true) {
       chips.push(`<span class="fan-card__chip fan-card__chip--state">${escapeHtml(this._getStateLabel(state))}</span>`);
     }
 
-    if (!isCompactLayout && isOn && config.show_percentage_chip !== false && supportsPercentage) {
+    if (isOn && config.show_percentage_chip !== false && canSetPercentage) {
       chips.push(`<span class="fan-card__chip" data-fan-chip="percentage">${escapeHtml(`${Math.round(currentPercentage)}%`)}</span>`);
     }
 
-    if (!isCompactLayout && isOn && config.show_mode_chip !== false && translatedPresetMode) {
+    if (isOn && config.show_mode_chip !== false && translatedPresetMode) {
       chips.push(`<span class="fan-card__chip">${escapeHtml(translatedPresetMode)}</span>`);
     }
 
@@ -2805,10 +2805,10 @@ class NodaliaFanCard extends HTMLElement {
         }
 
         .fan-card__headline {
-          align-items: start;
-          display: grid;
+          align-items: flex-start;
+          display: flex;
+          flex-wrap: wrap;
           gap: 10px;
-          grid-template-columns: minmax(0, 1fr) auto;
           min-width: 0;
         }
 
@@ -2819,12 +2819,11 @@ class NodaliaFanCard extends HTMLElement {
         }
 
         .fan-card--compact .fan-card__headline {
-          grid-template-columns: minmax(0, 1fr) auto;
-          justify-items: stretch;
           width: 100%;
         }
 
         .fan-card__title {
+          flex: 1 1 100px;
           font-size: ${styles.title_size};
           font-weight: 700;
           letter-spacing: -0.01em;
@@ -2837,7 +2836,7 @@ class NodaliaFanCard extends HTMLElement {
 
         .fan-card__chips {
           display: flex;
-          flex: 0 0 auto;
+          flex: 0 1 auto;
           flex-wrap: wrap;
           gap: 10px;
           justify-content: flex-end;
@@ -2846,8 +2845,7 @@ class NodaliaFanCard extends HTMLElement {
         }
 
         .fan-card--compact .fan-card__chips {
-          justify-content: flex-end;
-          justify-self: end;
+          justify-content: flex-start;
         }
 
         .fan-card__chip {

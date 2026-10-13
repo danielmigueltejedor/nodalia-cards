@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.3";
+  var CARD_VERSION = "3.0.4-alpha.1";
 
   // src/cards/media-player/media-player-constants.ts
   var CARD_TAG = "nodalia-media-player";

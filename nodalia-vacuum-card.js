@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.3";
+  var CARD_VERSION = "3.0.4-alpha.1";
 
   // src/cards/vacuum/vacuum-constants.ts
   var CARD_TAG = "nodalia-vacuum-card";

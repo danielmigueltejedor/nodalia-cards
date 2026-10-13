@@ -21,3 +21,9 @@ require the security allowlist by default.
 Style, animation and haptic sections use the bundle controls. Translucent colours,
 custom YAML fields and focus survive updates; cleared animation numbers restore
 defaults. Malformed nested groups and native/custom picker payloads are guarded.
+
+Enabled speed (`show_percentage_chip`) and preset-mode (`show_mode_chip`) chips
+remain visible in compact layouts while the fan is on and their values are
+supported. Both options default to `true`; set one to `false` to hide that chip.
+`show_slider: false` hides the speed control without hiding the enabled speed
+chip. The optional on/off state chip uses `show_state: true`.

@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.3";
+  var CARD_VERSION = "3.0.4-alpha.1";
 
   // src/shared/device-control-geometry.ts
   var CIRCULAR_LAYOUT_DIAL_START_ANGLE = 135;
@@ -2590,7 +2590,8 @@
         const chipBorderRadius = escapeHtml(String(styles.chip_border_radius ?? "").trim() || "999px");
         const darkenBubbleIconGlyph = isOn && Boolean(window.NodaliaBubbleContrast?.shouldDarkenBubbleIconGlyph?.(state, accentColor));
         const showUnavailableBadge = isUnavailableState(state);
-        const supportsHumidity = config.show_slider !== false && this._supportsTargetHumidity(state);
+        const canSetHumidity = this._supportsTargetHumidity(state);
+        const supportsHumidity = config.show_slider !== false && canSetHumidity;
         const humidityRange = this._getHumidityRange(state);
         const currentHumidity = this._getTargetHumidity(state);
         const humidityProgress = (currentHumidity - humidityRange.min) / Math.max(humidityRange.max - humidityRange.min, 1) * 100;
@@ -2603,13 +2604,13 @@
         if (config.show_state === true) {
           chips.push(`<div class="humidifier-card__chip humidifier-card__chip--state">${escapeHtml(this._getStateLabel(state))}</div>`);
         }
-        if (!isCompactLayout && config.show_target_humidity_chip !== false && supportsHumidity) {
+        if (config.show_target_humidity_chip !== false && canSetHumidity) {
           chips.push(`<div class="humidifier-card__chip" data-humidifier-chip="humidity">${escapeHtml(`${Math.round(currentHumidity)}%`)}</div>`);
         }
-        if (!isCompactLayout && config.show_mode_chip !== false && currentMode) {
+        if (config.show_mode_chip !== false && currentMode) {
           chips.push(`<div class="humidifier-card__chip">${escapeHtml(translateModeLabel(currentMode, this._hass, config.language ?? "auto"))}</div>`);
         }
-        if (!isCompactLayout && config.show_fan_mode_chip !== false && currentFanMode) {
+        if (config.show_fan_mode_chip !== false && currentFanMode) {
           chips.push(`<div class="humidifier-card__chip">${escapeHtml(translateModeLabel(currentFanMode, this._hass, config.language ?? "auto"))}</div>`);
         }
         const showTitle = true;
@@ -3132,10 +3133,10 @@
         }
 
         .humidifier-card__headline {
-          align-items: start;
-          display: grid;
+          align-items: flex-start;
+          display: flex;
+          flex-wrap: wrap;
           gap: 10px;
-          grid-template-columns: minmax(0, 1fr) auto;
           min-width: 0;
         }
 
@@ -3147,12 +3148,11 @@
         }
 
         .humidifier-card--compact .humidifier-card__headline {
-          grid-template-columns: minmax(0, 1fr) auto;
-          justify-items: stretch;
           width: 100%;
         }
 
         .humidifier-card__title {
+          flex: 1 1 100px;
           color: var(--primary-text-color);
           display: -webkit-box;
           font-size: ${styles.title_size};
@@ -3168,7 +3168,7 @@
         .humidifier-card__chips {
           align-items: center;
           display: flex;
-          flex: 0 0 auto;
+          flex: 0 1 auto;
           flex-wrap: wrap;
           gap: 10px;
           justify-content: flex-end;
@@ -3177,8 +3177,7 @@
         }
 
         .humidifier-card--compact .humidifier-card__chips {
-          justify-content: flex-end;
-          justify-self: end;
+          justify-content: flex-start;
         }
 
         .humidifier-card--compact .humidifier-card__title {
@@ -4059,10 +4058,6 @@
         }
 
         @media (max-width: 620px) {
-          .humidifier-card:not(.humidifier-card--compact) .humidifier-card__headline {
-            grid-template-columns: minmax(0, 1fr);
-          }
-
           .humidifier-card:not(.humidifier-card--compact) .humidifier-card__chips {
             justify-content: flex-start;
           }
