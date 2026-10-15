@@ -1,184 +1,191 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/main/docs/images/nodalia-cards-logo-trimmed.png" alt="Nodalia Cards logo" width="700">
-  <p><strong>A cohesive, app-like card system for modern Home Assistant dashboards.</strong></p>
 
-  <p>
-    <a href="https://github.com/danielmigueltejedor/nodalia-cards/releases/latest"><img src="https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?label=stable&sort=semver" alt="Latest stable release"></a>
-    <a href="https://github.com/danielmigueltejedor/nodalia-cards/releases"><img src="https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?include_prereleases&label=preview" alt="Latest preview release"></a>
-    <img src="https://img.shields.io/badge/Home%20Assistant-2025.1%2B-41BDF5?logo=home-assistant&logoColor=white" alt="Home Assistant 2025.1 or newer">
-    <a href="https://github.com/hacs/default/blob/master/plugin"><img src="https://img.shields.io/badge/HACS-default%20repository-41BDF5?logo=home-assistant&logoColor=white" alt="Available in the default HACS catalogue"></a>
-    <a href="https://github.com/danielmigueltejedor/nodalia-cards/releases"><img src="https://img.shields.io/github/downloads/danielmigueltejedor/nodalia-cards/total?label=downloads" alt="Total GitHub release downloads"></a>
-    <a href="./LICENSE"><img src="https://img.shields.io/github/license/danielmigueltejedor/nodalia-cards" alt="MIT license"></a>
-  </p>
+<img src="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/main/docs/images/nodalia-cards-logo-trimmed.png" alt="Nodalia Cards" width="580">
 
-  <p>
-    <a href="#installation">Installation</a> ·
-    <a href="#included-cards">Cards</a> ·
-    <a href="#optional-companion-nodalia-cards-engine">Engine</a> ·
-    <a href="#quick-start">Quick start</a> ·
-    <a href="https://github.com/danielmigueltejedor/nodalia-cards/issues">Support</a> ·
-    <a href="https://translate.getnodalia.com">Translate on Weblate</a>
-  </p>
+<br>
+
+### A unified card experience for Home Assistant.
+
+A collection of **25 customizable cards** bringing consistency, intuitive interactions and a cohesive design to your smart home dashboards.
+
+<br>
+
+[![Release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards?style=flat-square&label=Release&labelColor=242938&color=22C55E&logo=git&logoColor=white)](https://github.com/danielmigueltejedor/nodalia-cards/releases/latest)
+[![HACS](https://img.shields.io/badge/HACS-Default-18B4F9?style=flat-square&labelColor=242938&logo=homeassistant&logoColor=white)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards&category=plugin)
+[![Downloads](https://img.shields.io/github/downloads/danielmigueltejedor/nodalia-cards/total?style=flat-square&label=Downloads&labelColor=242938&color=8B5CF6&logo=github&logoColor=white)](https://github.com/danielmigueltejedor/nodalia-cards/releases)
+[![Stars](https://img.shields.io/github/stars/danielmigueltejedor/nodalia-cards?style=flat-square&label=Stars&labelColor=242938&color=F59E0B&logo=starship&logoColor=white)](https://github.com/danielmigueltejedor/nodalia-cards/stargazers)
+[![License](https://img.shields.io/github/license/danielmigueltejedor/nodalia-cards?style=flat-square&label=License&labelColor=242938&color=14B8A6&logo=opensourceinitiative&logoColor=white)](LICENSE)
+[![Translations](https://img.shields.io/badge/Translations-Weblate-EC4899?style=flat-square&labelColor=242938&logo=weblate&logoColor=white)](https://translate.getnodalia.com)
+
+<br>
+
+[**Overview**](#overview) ·
+[**Cards**](#cards) ·
+[**Installation**](#installation) ·
+[**Documentation**](#documentation) ·
+[**Engine**](#nodalia-cards-engine) ·
+[**Contributing**](#contributing)
+
 </div>
 
 ---
 
-Nodalia Cards is a custom Home Assistant frontend card suite built as one visual system rather than a collection of unrelated components. Shared design tokens, motion, interactions and editors give Home Assistant a polished, consistent experience across mobile, tablet and desktop.
+## Overview
 
-> [!IMPORTANT]
-> Nodalia Cards is available directly from the official HACS catalogue as a **Dashboard** plugin. A custom repository is no longer required.
+**Nodalia Cards** is a custom frontend card suite for [Home Assistant](https://www.home-assistant.io/), designed as a single, cohesive interface rather than a collection of unrelated components.
 
-> [!TIP]
-> **Nodalia Cards Engine is optional.** Install it when you want background notifications, shared dismissals, a notification inbox or native Climate schedules. The cards and visual editors continue to work without it.
+Every card shares the same design language, interaction patterns and configuration experience, making it easier to build consistent dashboards across desktop, tablet and mobile.
 
-## Version 3.0.0
+The project combines modern interface design with native Home Assistant functionality, without compromising flexibility or compatibility.
 
-Version `3.0.0` completes strict TypeScript migration across all 25 cards,
-editors and shared runtimes. It includes the media-control, Lock, Summary and
-Vacuum refinements described in the [prerelease notes](./CHANGELOG-PRERELEASES.md).
-Existing YAML, custom element names and the HACS resource path remain compatible.
-See [upgrading to version 3](./docs/upgrading-to-3.md). **`3.0.0` was the first stable version 3 release**, promoting the validated RC runtime with unchanged card behavior, public APIs, YAML and distribution. HACS installs stable builds by default. See [the final audit](./docs/audits/rc-readiness-report.md) and [RC performance evidence](./docs/benchmarks/3.0.0-rc.1-analysis.md) for validation and limitations; measurements belong to RC and were not repeated for stable.
+### Highlights
 
-**`3.0.3` is the current stable release.** Fav Card now responds immediately to on/off actions and restores a light's remembered color or temperature as soon as it turns on. All 25 cards share a rounded keyboard focus frame around the full card, with Graph's inner rectangle removed and Power Flow's mobile labels kept inside the frame. Scenes, Weather and Calendar also support keyboard access to their main actions. It includes the dashboard, interaction and rendering fixes from 3.0.1 and 3.0.2. See the [changelog](./CHANGELOG.md).
+- **Unified design system** — Consistent typography, spacing, surfaces, colors and interactions.
+- **25 custom cards** — A complete collection for device control, monitoring and navigation.
+- **Visual configuration** — Built-in editors with native Home Assistant selectors.
+- **Responsive by design** — Optimized for desktop, tablet and mobile dashboards.
+- **Theme-aware styling** — Adapts to Home Assistant themes and custom design tokens.
+- **Smooth interactions** — Purposeful animations, responsive controls and tactile feedback.
+- **Native integration** — Built around Home Assistant entities, services and state management.
+- **Optional backend** — Extend functionality with Nodalia Cards Engine.
+
+All cards work independently of the Engine.
 
 ## Preview
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/main/docs/gifs/animations1.optimized.gif" alt="Nodalia Cards dashboard interactions" width="45%">
-  <img src="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/main/docs/gifs/animations2.optimized.gif" alt="Nodalia Cards animations and controls" width="45%">
-</p>
+<div align="center">
 
-## Why Nodalia
+<img src="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/main/docs/gifs/animations1.optimized.gif" alt="Nodalia Cards dashboard interactions" width="48%">
+<img src="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/main/docs/gifs/animations2.optimized.gif" alt="Nodalia Cards animations and controls" width="48%">
 
-| Design | Experience | Integration |
-|---|---|---|
-| Shared visual language | Mobile-first layouts | Native Home Assistant selectors |
-| Consistent spacing and surfaces | Smooth, purposeful motion | Integrated visual editors |
-| Theme-aware colours | Tactile controls and haptics | Minimal generated YAML |
-| Cohesive popup system | Responsive cards and dialogs | Context-aware entities and services |
+</div>
 
-The suite is designed for real daily dashboards: one interaction model, predictable configuration and a consistent finish across every card.
+## Cards
 
-## Included cards
+Nodalia includes **25 cards** covering everyday controls, monitoring, information and dashboard navigation.
 
-| Everyday controls | Insight and context | Spaces and navigation |
-|---|---|---|
-| Light | Circular Gauge | Navigation Bar |
-| Fan | Graph | Room Summary |
-| Humidifier | Power Flow | Person |
-| Cover | Weather | Scenes |
-| Climate | Calendar | Favourites |
-| Alarm Panel / Lock | Notifications | Insignia |
-| Media Player | News | Entity |
-| Vacuum | Camera | Advanced Vacuum |
+| Device Controls | Monitoring & Information | Dashboard & Navigation |
+| :--- | :--- | :--- |
+| Light | Graph | Navigation Bar |
+| Climate | Circular Gauge | Room Summary |
+| Fan | Power Flow | Favourites |
+| Humidifier | Weather | Scenes |
+| Cover | Calendar | Person |
+| Lock | News | Insignia |
+| Alarm Panel | Camera | Entity |
+| Media Player | Notifications | |
+| Vacuum | | |
+| Advanced Vacuum | | |
 
-Every card is registered with the `custom:nodalia-…` prefix. The complete set currently includes:
+All cards include a visual configuration editor and use the `custom:nodalia-` prefix.
 
 <details>
-<summary><strong>Show all custom element names</strong></summary>
+<summary><strong>Explore all 25 cards</strong></summary>
 
-- [`custom:nodalia-navigation-bar`](docs/cards/navigation-card.md)
-- [`custom:nodalia-media-player`](docs/cards/media-player-card.md)
-- [`custom:nodalia-light-card`](docs/cards/light-card.md)
-- [`custom:nodalia-fan-card`](docs/cards/fan-card.md)
-- [`custom:nodalia-humidifier-card`](docs/cards/humidifier-card.md)
-- [`custom:nodalia-circular-gauge-card`](docs/cards/circular-gauge-card.md)
-- [`custom:nodalia-graph-card`](docs/cards/graph-card.md)
-- [`custom:nodalia-power-flow-card`](docs/cards/power-flow-card.md)
-- [`custom:nodalia-cover-card`](docs/cards/cover-card.md)
-- `custom:nodalia-climate-card`
-- [`custom:nodalia-alarm-panel-card`](docs/cards/alarm-panel-card.md)
-- [`custom:nodalia-lock-card`](docs/cards/lock-card.md)
-- [`custom:nodalia-advance-vacuum-card`](docs/cards/advanced-vacuum-card.md)
-- [`custom:nodalia-entity-card`](docs/cards/entity-card.md)
-- [`custom:nodalia-fav-card`](docs/cards/fav-card.md)
-- [`custom:nodalia-insignia-card`](docs/cards/insignia-card.md)
-- [`custom:nodalia-person-card`](docs/cards/person-card.md)
-- [`custom:nodalia-scenes-card`](docs/cards/scenes-card.md)
-- [`custom:nodalia-weather-card`](docs/cards/weather-card.md)
-- [`custom:nodalia-calendar-card`](docs/cards/calendar-card.md)
-- [`custom:nodalia-notifications-card`](docs/cards/notifications-card.md)
-- [`custom:nodalia-vacuum-card`](docs/cards/vacuum-card.md)
-- [`custom:nodalia-news-card`](docs/cards/news-card.md)
-- [`custom:nodalia-camera-card`](docs/cards/camera-card.md)
-- [`custom:nodalia-room-summary-card`](docs/cards/room-summary-card.md)
+<br>
+
+| Card | Custom Element | Documentation |
+| :--- | :--- | :--- |
+| Navigation Bar | `custom:nodalia-navigation-bar` | [Guide](docs/cards/navigation-card.md) |
+| Media Player | `custom:nodalia-media-player` | [Guide](docs/cards/media-player-card.md) |
+| Light | `custom:nodalia-light-card` | [Guide](docs/cards/light-card.md) |
+| Fan | `custom:nodalia-fan-card` | [Guide](docs/cards/fan-card.md) |
+| Humidifier | `custom:nodalia-humidifier-card` | [Guide](docs/cards/humidifier-card.md) |
+| Circular Gauge | `custom:nodalia-circular-gauge-card` | [Guide](docs/cards/circular-gauge-card.md) |
+| Graph | `custom:nodalia-graph-card` | [Guide](docs/cards/graph-card.md) |
+| Power Flow | `custom:nodalia-power-flow-card` | [Guide](docs/cards/power-flow-card.md) |
+| Cover | `custom:nodalia-cover-card` | [Guide](docs/cards/cover-card.md) |
+| Climate | `custom:nodalia-climate-card` | — |
+| Alarm Panel | `custom:nodalia-alarm-panel-card` | — |
+| Lock | `custom:nodalia-lock-card` | [Guide](docs/cards/lock-card.md) |
+| Advanced Vacuum | `custom:nodalia-advance-vacuum-card` | [Guide](docs/cards/advanced-vacuum-card.md) |
+| Entity | `custom:nodalia-entity-card` | [Guide](docs/cards/entity-card.md) |
+| Favourites | `custom:nodalia-fav-card` | [Guide](docs/cards/fav-card.md) |
+| Insignia | `custom:nodalia-insignia-card` | [Guide](docs/cards/insignia-card.md) |
+| Person | `custom:nodalia-person-card` | [Guide](docs/cards/person-card.md) |
+| Scenes | `custom:nodalia-scenes-card` | [Guide](docs/cards/scenes-card.md) |
+| Weather | `custom:nodalia-weather-card` | [Guide](docs/cards/weather-card.md) |
+| Calendar | `custom:nodalia-calendar-card` | [Guide](docs/cards/calendar-card.md) |
+| Notifications | `custom:nodalia-notifications-card` | [Guide](docs/cards/notifications-card.md) |
+| Vacuum | `custom:nodalia-vacuum-card` | [Guide](docs/cards/vacuum-card.md) |
+| News | `custom:nodalia-news-card` | [Guide](docs/cards/news-card.md) |
+| Camera | `custom:nodalia-camera-card` | [Guide](docs/cards/camera-card.md) |
+| Room Summary | `custom:nodalia-room-summary-card` | [Guide](docs/cards/room-summary-card.md) |
 
 </details>
 
-## Visual editors
-
-All Nodalia cards include a visual editor designed to fit naturally into Home Assistant:
-
-- native entity selectors and colour pickers
-- compact, collapsible configuration sections
-- shared translations and editor behaviour
-- responsive previews
-- automatic removal of default values
-
-Only settings that differ from the defaults are written to YAML, keeping dashboard configuration readable and portable.
-
 ## Installation
 
-### HACS Dashboard — recommended
+Nodalia Cards is available directly from the official HACS catalog.
 
-1. Open **HACS**.
-2. Search for **Nodalia Cards** in the Dashboard category.
-3. Open it and choose **Download**.
-4. Reload your browser (or perform a hard refresh).
+**No custom repository configuration is required.**
 
-[![Open Nodalia in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards&category=plugin)
+### HACS — Recommended
 
-If a card does not appear immediately after installation or an update, perform a hard refresh or clear the Home Assistant frontend cache.
+1. Open **HACS** in Home Assistant.
+2. Search for **Nodalia Cards** under **Dashboard**.
+3. Select **Download**.
+4. Refresh your browser.
+
+[![Open in HACS](https://img.shields.io/badge/Open_in-HACS-18B4F9?style=flat-square&labelColor=242938&logo=homeassistant&logoColor=white)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards&category=plugin)
+
+HACS automatically installs the following resource:
 
 ```text
 /hacsfiles/nodalia-cards/nodalia-cards.js
 ```
 
-This is the single resource HACS installs. The repository also provides standalone card artifacts for manually configured resources. It includes both the cards and their visual editors, keeping HACS installs and updates lightweight. Existing Dashboard installations continue to work without changing card YAML or migrating to an integration.
+This single bundle contains all 25 cards and their visual editors.
 
-### Optional companion: Nodalia Cards Engine
+Existing installations continue to work without modifying their YAML configuration.
 
-Nodalia Cards Engine is a separate HACS **Integration** that runs advanced features inside Home Assistant even when no dashboard is open. Stable Engine **`3.0.0`** is the recommended companion for the Nodalia Cards `3.0.x` stable releases. Existing Cards API 1/2 commands and Engine `2.0.2` remain compatible.
+### Manual Installation
 
-[![Add Nodalia Cards Engine to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards-engine&category=integration)
-
-After opening the repository:
-
-1. Download **Nodalia Cards Engine** in HACS.
-2. Restart Home Assistant.
-3. Open **Settings → Devices & services → Add integration**.
-4. Search for **Nodalia Cards Engine**, complete setup and reload the browser once.
-
-The Engine does not replace `/hacsfiles/nodalia-cards/nodalia-cards.js` and does not require dashboard YAML changes. See the [Cards + Engine guide](./docs/nodalia-integration.md) for compatibility, migration and recovery details.
-
-### Manual installation
-
-1. Download `nodalia-cards.js` from the [latest GitHub release](https://github.com/danielmigueltejedor/nodalia-cards/releases/latest) and copy it to `/config/www/`.
-2. Add it as a Lovelace resource:
+1. Download `nodalia-cards.js` from the [latest release](https://github.com/danielmigueltejedor/nodalia-cards/releases/latest).
+2. Copy the file to `/config/www/`.
+3. Add the following Lovelace resource:
 
 ```text
 URL: /local/nodalia-cards.js
 Type: module
 ```
 
-3. Reload your browser.
+4. Refresh your browser.
 
-### Updating Nodalia Cards
+### Requirements
 
-- Update Nodalia Cards from HACS and perform a hard browser refresh so the self-contained `nodalia-cards.js` resource is replaced in the frontend cache.
-- Existing card YAML and Lovelace resources remain compatible; no Dashboard-to-Integration migration is required.
-- If you use the optional Engine, update it to stable `3.0.0`, restart Home Assistant after installing or updating it, and confirm the editor shows **Engine active**.
-- Climate `heat_cool` holds preserve both low and high setpoints, and Engine inbox dismissals now match the corresponding foreground comfort, humidity, door, window, motion, vacuum, rain, media and outdoor alerts.
+- Home Assistant **2025.1 or newer**.
+- A supported modern browser.
+- Custom dashboard resources enabled.
 
-## Quick start
+### Updating
 
-Add a card through the dashboard visual editor, or start with one of these minimal examples.
+Update Nodalia Cards through HACS and perform a browser refresh to ensure the latest frontend bundle is loaded.
+
+If the previous version remains cached, perform a hard refresh or clear the Home Assistant frontend cache.
+
+Existing card YAML, custom element names and resource paths remain compatible with the 3.x series.
+
+For major-version migration details, see the [upgrade guide](docs/upgrading-to-3.md).
+
+## Quick Start
+
+Cards can be added directly through the Home Assistant visual dashboard editor.
+
+For manual configuration, use the following examples.
 
 ### Light
 
 ```yaml
 type: custom:nodalia-light-card
 entity: light.living_room
+```
+
+### Climate
+
+```yaml
+type: custom:nodalia-climate-card
+entity: climate.living_room
 ```
 
 ### Lock
@@ -189,7 +196,9 @@ entity: lock.front_door
 layout: standard
 ```
 
-Drag the handle to the end and release to unlock. A tap never unlocks. See the [Lock Card guide](./docs/cards/lock-card.md) for keyboard controls and supported states.
+The Lock Card uses an intentional drag-to-unlock interaction rather than unlocking with a simple tap.
+
+See the [Lock Card documentation](docs/cards/lock-card.md) for details.
 
 ### Calendar
 
@@ -199,7 +208,7 @@ calendars:
   - entity: calendar.home
 ```
 
-### Advanced vacuum
+### Advanced Vacuum
 
 ```yaml
 type: custom:nodalia-advance-vacuum-card
@@ -210,9 +219,9 @@ calibration_source:
   camera: true
 ```
 
-### Compact and circular device layouts
+### Circular Device Layout
 
-Fan, Humidifier and Cover keep their compact layout by default and can use the Climate-style circular surface with `layout: circular`. Climate keeps its circular layout by default and can use the horizontal device-card surface with `layout: compact`.
+Fan, Humidifier and Cover cards support an optional circular layout.
 
 ```yaml
 type: custom:nodalia-fan-card
@@ -220,65 +229,220 @@ entity: fan.living_room
 layout: circular
 ```
 
-The layout selector is also available in each card's visual editor. Existing YAML remains unchanged; see [Device and Climate layouts](./docs/cards/device-climate-layouts.md) for controls, defaults and examples.
+Climate supports a compact layout as an alternative to its default circular interface.
 
-## Advanced guides
+Read the [device layout guide](docs/cards/device-climate-layouts.md) for additional information.
 
-| Feature | Documentation |
-|---|---|
-| Nodalia Cards Engine | [Installation, compatibility and migration](./docs/nodalia-integration.md) |
-| Climate setpoint scheduling | [Native weekly schedules](./docs/climate-setpoint-schedule.md) |
-| Advanced Vacuum compatibility | [Platforms, live room tracking and fallbacks](./docs/cards/advanced-vacuum-card.md) |
-| Power Flow Card | [Sources, units and diagram behavior](./docs/cards/power-flow-card.md) |
-| Entity Card | [Layouts, actions and configuration](./docs/cards/entity-card.md) |
-| Graph Card | [History sources and sampling](./docs/cards/graph-card.md) |
-| Lock Card | [Controls and configuration](./docs/cards/lock-card.md) |
-| News Card | [Layouts, sources and configuration](./docs/cards/news-card.md) |
-| Notifications Card | [Rules, templates and mobile delivery](./docs/cards/notifications-card.md) |
-| Device and Climate layouts | [Compact and circular variants](./docs/cards/device-climate-layouts.md) |
-| Shared styling | [Theme variables and card-mod reference](./docs/STYLING.md) |
-| Background mobile notifications | [Native delivery and legacy fallback](./docs/nodalia-integration.md#background-mobile-notifications) |
-| Translations | [Contributor guide](./docs/TRANSLATIONS.md) · [Weblate](https://translate.getnodalia.com) · [Operator setup](./docs/weblate/README.md) |
+## Visual Editors
 
-## Release channels
+Every Nodalia card includes a visual editor designed to integrate naturally with Home Assistant.
 
-| Maturity | Tag | Intended use |
-|---|---|---|
-| Stable | `vX.Y.Z` | Recommended for daily dashboards |
-| Release candidate | `vX.Y.Z-rc.N` | Final compatibility and release validation |
-| Beta | `vX.Y.Z-beta.N` | Feature-complete preview for broader testing |
-| Alpha | `vX.Y.Z-alpha.N` | Active development; breaking changes are possible |
+Features include:
 
-Reviewed changes land on `main`; the package version and Git tag identify release maturity. HACS installs the latest stable release by default. To test a prerelease, open Nodalia Cards in HACS, choose **Redownload → Need a different version?**, and select the desired alpha, beta or RC tag.
+- Native entity and device selectors.
+- Integrated color pickers.
+- Collapsible configuration sections.
+- Responsive previews.
+- Shared translation support.
+- Consistent controls and editor behavior.
+- Automatic removal of default configuration values.
 
-Stable changes are documented in the [changelog](./CHANGELOG.md). Detailed prerelease notes live in [CHANGELOG-PRERELEASES.md](./CHANGELOG-PRERELEASES.md), and longer-term work is tracked in the [roadmap](./ROADMAP.md).
+Only settings that differ from their defaults are written to YAML, keeping configurations readable, portable and easy to maintain.
+
+## Nodalia Cards Engine
+
+[![Engine](https://img.shields.io/badge/Engine-Optional-6366F1?style=flat-square&labelColor=242938&logo=homeassistant&logoColor=white)](https://github.com/danielmigueltejedor/nodalia-cards-engine)
+[![Engine Release](https://img.shields.io/github/v/release/danielmigueltejedor/nodalia-cards-engine?style=flat-square&label=Release&labelColor=242938&color=22C55E&logo=git&logoColor=white)](https://github.com/danielmigueltejedor/nodalia-cards-engine/releases/latest)
+
+**Nodalia Cards Engine** is an optional Home Assistant integration that extends Nodalia beyond the frontend.
+
+Unlike dashboard cards, the Engine can execute features in the background, even when no dashboard is open.
+
+### Features
+
+- Background notifications.
+- Persistent notification inbox.
+- Shared notification dismissals.
+- Native climate scheduling.
+- Background event processing.
+
+The Engine operates alongside Nodalia Cards without replacing its frontend resources.
+
+### Installation
+
+Install the Engine separately through HACS.
+
+[![Install Engine](https://img.shields.io/badge/Install_Engine-HACS-18B4F9?style=flat-square&labelColor=242938&logo=homeassistant&logoColor=white)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danielmigueltejedor&repository=nodalia-cards-engine&category=integration)
+
+After installation:
+
+1. Restart Home Assistant.
+2. Open **Settings → Devices & services**.
+3. Select **Add integration**.
+4. Search for **Nodalia Cards Engine**.
+5. Complete setup and refresh your browser.
+
+Engine `3.0.0` is the recommended companion for the Nodalia Cards 3.0.x series.
+
+Existing Cards API 1/2 commands and Engine `2.0.2` remain compatible.
+
+For details, see the [Cards + Engine integration guide](docs/nodalia-integration.md).
+
+## Architecture
+
+Nodalia Cards follows a shared frontend architecture built around reusable components and a consistent design system.
+
+### Frontend
+
+The 3.x series completes the migration to strict TypeScript across all 25 cards, visual editors and shared runtimes.
+
+The architecture emphasizes:
+
+- Shared design tokens and styling.
+- Reusable frontend components.
+- Consistent interaction patterns.
+- Centralized state and lifecycle handling.
+- Native Home Assistant integration.
+- Compatibility across supported browsers.
+- Modular card development.
+
+### Optional Backend
+
+Nodalia Cards Engine provides additional functionality through a separate Home Assistant integration.
+
+The frontend remains fully functional without the Engine, allowing users to choose the capabilities they need.
+
+## Documentation
+
+Detailed guides are available for individual cards, advanced configuration and integrations.
+
+| Topic | Documentation |
+| :--- | :--- |
+| Cards | [Card documentation](docs/cards/) |
+| Nodalia Cards Engine | [Integration guide](docs/nodalia-integration.md) |
+| Climate scheduling | [Native weekly schedules](docs/climate-setpoint-schedule.md) |
+| Advanced Vacuum | [Compatibility and configuration](docs/cards/advanced-vacuum-card.md) |
+| Power Flow | [Sources and diagram behavior](docs/cards/power-flow-card.md) |
+| Graph | [History sources and sampling](docs/cards/graph-card.md) |
+| Lock | [Controls and configuration](docs/cards/lock-card.md) |
+| Notifications | [Notification rules and delivery](docs/cards/notifications-card.md) |
+| Device layouts | [Compact and circular layouts](docs/cards/device-climate-layouts.md) |
+| Styling | [Theme variables and customization](docs/STYLING.md) |
+| Translations | [Translation guide](docs/TRANSLATIONS.md) |
+| Upgrading to 3.x | [Migration guide](docs/upgrading-to-3.md) |
+| Changelog | [Release history](CHANGELOG.md) |
+| Roadmap | [Planned development](ROADMAP.md) |
+
+## Releases
+
+Nodalia Cards follows semantic versioning with separate development and stable release channels.
+
+| Channel | Version Format | Purpose |
+| :--- | :--- | :--- |
+| Stable | `vX.Y.Z` | Recommended for everyday use |
+| Release Candidate | `vX.Y.Z-rc.N` | Final release validation |
+| Beta | `vX.Y.Z-beta.N` | Feature-complete testing |
+| Alpha | `vX.Y.Z-alpha.N` | Active development |
+
+Stable releases are installed by default through HACS.
+
+Prerelease versions can be selected manually through **Redownload → Need a different version?**.
+
+### Version 3
+
+The 3.x series introduces a fully TypeScript-based frontend architecture while maintaining compatibility with existing dashboard configurations.
+
+Key improvements include:
+
+- Strict TypeScript migration across all cards and editors.
+- Shared runtime and lifecycle improvements.
+- More consistent controls and interactions.
+- Improved keyboard accessibility.
+- Refined rendering and responsive layouts.
+- Visual consistency across the entire card collection.
+
+**Version 3.0.3** additionally introduces improvements to Favourites Card interactions, keyboard focus handling and dashboard rendering.
+
+For the complete history, see:
+
+- [Stable changelog](CHANGELOG.md)
+- [Prerelease changelog](CHANGELOG-PRERELEASES.md)
+- [Roadmap](ROADMAP.md)
+
+[![Latest Release](https://img.shields.io/badge/View-Latest_Release-22C55E?style=flat-square&labelColor=242938&logo=github&logoColor=white)](https://github.com/danielmigueltejedor/nodalia-cards/releases/latest)
 
 ## Translations
 
-Nodalia Cards currently includes Spanish, English, German, French, Italian, Dutch, Norwegian, Portuguese, Russian, Greek, Chinese and Romanian.
+Nodalia Cards is available in multiple languages thanks to community contributions.
 
-Community translations are curated on the self-hosted **[Weblate](https://translate.getnodalia.com)** instance. GitHub remains the source repository; locale files under `i18n/` are what the cards build from. Translation pull requests are also welcome.
+Currently supported languages include:
 
-- Translators: [translate.getnodalia.com](https://translate.getnodalia.com)
-- Developer / key workflow: [docs/TRANSLATIONS.md](./docs/TRANSLATIONS.md)
-- Weblate operators / self-host setup: [docs/weblate/README.md](./docs/weblate/README.md)
+English, Spanish, German, French, Italian, Dutch, Norwegian, Portuguese, Russian, Greek, Chinese and Romanian.
 
-## Support and contributions
+Translations are managed through a self-hosted Weblate instance.
 
-- Use [GitHub Issues](https://github.com/danielmigueltejedor/nodalia-cards/issues) for reproducible bugs and focused feature requests.
-- Use the [Engine issue tracker](https://github.com/danielmigueltejedor/nodalia-cards-engine/issues) for integration setup, background execution or Engine diagnostics problems.
-- Include the Home Assistant version, Nodalia Cards version, browser, relevant YAML and screenshots when reporting a visual problem.
-- Read [CONTRIBUTING.md](./CONTRIBUTING.md) before submitting code or translations.
-- Never publish tokens, webhook secrets or private entity data.
+[![Weblate](https://img.shields.io/badge/Translate_on-Weblate-EC4899?style=flat-square&labelColor=242938&logo=weblate&logoColor=white)](https://translate.getnodalia.com)
 
-Thanks to every tester, translator and contributor helping make the suite more useful, especially [@Sppedtech](https://github.com/Sppedtech), [@flippedcracker](https://github.com/flippedcracker), [@loicloiseau](https://github.com/loicloiseau), [@pqpxo](https://github.com/pqpxo), [@jjanssen95](https://github.com/jjanssen95), [@alfonsoluna](https://github.com/alfonsoluna), [@Scraft08YT](https://github.com/Scraft08YT) and [@ryatesKT](https://github.com/ryatesKT).
+GitHub remains the source repository, and translated locale files are included in the frontend build.
+
+Translation pull requests are also welcome.
+
+See the [translation contribution guide](docs/TRANSLATIONS.md) for more information.
+
+## Contributing
+
+Nodalia Cards is an open-source project, and contributions are welcome.
+
+Whether you're fixing bugs, improving existing cards, translating the interface or proposing new features, your contribution helps make Nodalia better.
+
+Before submitting code, please read [CONTRIBUTING.md](CONTRIBUTING.md).
+
+### Get Involved
+
+- [Report a bug](https://github.com/danielmigueltejedor/nodalia-cards/issues)
+- [Request a feature](https://github.com/danielmigueltejedor/nodalia-cards/issues)
+- [Browse pull requests](https://github.com/danielmigueltejedor/nodalia-cards/pulls)
+- [View the roadmap](ROADMAP.md)
+- [Help translate](https://translate.getnodalia.com)
+
+For Engine-specific problems, use the [Engine issue tracker](https://github.com/danielmigueltejedor/nodalia-cards-engine/issues).
+
+When reporting visual issues, include your Home Assistant version, Nodalia Cards version, browser, relevant YAML configuration and screenshots.
+
+Never include authentication tokens or sensitive entity data in public reports.
+
+### Contributors
+
+Special thanks to everyone who has contributed code, translations, testing and feedback.
+
+Including:
+
+[@Sppedtech](https://github.com/Sppedtech) ·
+[@flippedcracker](https://github.com/flippedcracker) ·
+[@loicloiseau](https://github.com/loicloiseau) ·
+[@pqpxo](https://github.com/pqpxo) ·
+[@jjanssen95](https://github.com/jjanssen95) ·
+[@alfonsoluna](https://github.com/alfonsoluna) ·
+[@Scraft08YT](https://github.com/Scraft08YT) ·
+[@ryatesKT](https://github.com/ryatesKT)
 
 ## License
 
-Nodalia Cards is released under the [MIT License](./LICENSE).
+Nodalia Cards is distributed under the [MIT License](LICENSE).
+
+---
 
 <div align="center">
-  <sub>Designed and maintained by <a href="https://github.com/danielmigueltejedor">Daniel Miguel Tejedor</a>.</sub>
-  <br><br>
-  <a href="https://buymeacoffee.com/danielmigueltejedor"><img src="https://img.shields.io/badge/Support%20the%20project-Buy%20Me%20a%20Coffee-FFDD00?logo=buymeacoffee&logoColor=000" alt="Support Nodalia Cards on Buy Me a Coffee"></a>
+
+**Nodalia Cards**
+
+Designed and maintained by [Daniel Miguel Tejedor](https://github.com/danielmigueltejedor).
+
+Built with the support of the Home Assistant community.
+
+<br>
+
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-64748B?style=flat-square&labelColor=242938&logo=github&logoColor=white)](https://github.com/danielmigueltejedor/nodalia-cards)
+[![Support](https://img.shields.io/badge/Support-Buy_Me_a_Coffee-F59E0B?style=flat-square&labelColor=242938&logo=buymeacoffee&logoColor=white)](https://buymeacoffee.com/danielmigueltejedor)
+
 </div>
