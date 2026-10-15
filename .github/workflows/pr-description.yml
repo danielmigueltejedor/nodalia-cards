@@ -1,0 +1,49 @@
+name: PR description
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  description:
+    name: PR description
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check required PR template sections
+        shell: bash
+        run: |
+          import json
+          import os
+          import re
+          import sys
+          
+          with open(os.environ["GITHUB_EVENT_PATH"], encoding="utf-8") as event_file:
+              body = json.load(event_file)["pull_request"].get("body") or ""
+          
+          headings = list(re.finditer(r"(?m)^##[ \t]+([^\r\n]+)[ \t]*$", body))
+          sections = {}
+          for index, heading in enumerate(headings):
+              section_end = headings[index + 1].start() if index + 1 < len(headings) else len(body)
+              sections[heading.group(1).strip().casefold()] = body[heading.end():section_end]
+          
+          required = ["Summary","Motivation","Testing","Compatibility and risks"]
+          errors = []
+          for title in required:
+              section = sections.get(title.casefold())
+              if section is None:
+                  errors.append(f"Missing section: ## {title}")
+                  continue
+              section = re.sub(r"<!--.*?-->", "", section, flags=re.DOTALL)
+              section = re.sub(r"(?m)^\s*-\s*\[[ xX]\]\s*.*$", "", section)
+              text = re.sub(r"[\x60*_>#]", "", section).strip()
+              if len(text) < 12 or text.casefold() in {"not applicable", "n/a", "none", "tbd", "todo"}:
+                  errors.append(f"Section ## {title} needs a substantive explanation")
+          
+          if errors:
+              for error in errors:
+                  print(f"::error::{error}")
+              sys.exit(1)
+          print("PR description includes the required, non-empty sections.")
