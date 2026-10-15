@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/main/docs/images/nodalia-cards-logo-trimmed.png" alt="Nodalia Cards" width="580">
+<img src="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/main/docs/images/nodalia-cards-logo-trimmed.png" alt="Nodalia Cards" width="480">
 
 <br>
 
