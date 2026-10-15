@@ -15,6 +15,7 @@ jobs:
       - name: Check required PR template sections
         shell: bash
         run: |
+          python3 - <<'PY'
           import json
           import os
           import re
@@ -47,3 +48,4 @@ jobs:
                   print(f"::error::{error}")
               sys.exit(1)
           print("PR description includes the required, non-empty sections.")
+          PY
