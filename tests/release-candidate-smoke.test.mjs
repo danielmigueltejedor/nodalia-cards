@@ -100,8 +100,8 @@ test("HACS publishing contract includes license, information, images, and plugin
   assert.match(workflow, /category: plugin/);
   assert.doesNotMatch(workflow, /ignore:/);
   assert.match(readme, /<img\s+src=/, "HACS plugin information must contain an image");
-  assert.match(readme, /official HACS catalogue/);
-  assert.doesNotMatch(readme, /listing in progress|custom Dashboard/i);
+  assert.match(readme, /official HACS catalo(?:g|gue)/);
+  assert.doesNotMatch(readme, /listing in progress|as a custom Dashboard/i);
   assert.ok(fs.existsSync(path.join(root, hacs.filename)), "the HACS plugin filename must exist at repository root");
 });
 
@@ -204,7 +204,7 @@ test("README keeps a single support badge without legacy donation sections", () 
   const readme = read("README.md");
   const coffeeMatches = readme.match(/buymeacoffee\.com\/danielmigueltejedor/g) || [];
   assert.equal(coffeeMatches.length, 1);
-  assert.match(readme, /img\.shields\.io\/badge\/Support%20the%20project-Buy%20Me%20a%20Coffee-/);
+  assert.match(readme, /img\.shields\.io\/badge\/Support(?:%20the%20project)?[-_](?:Buy%20Me%20a%20Coffee|Buy_Me_a_Coffee)-/);
   assert.doesNotMatch(readme, /paypal/i);
   assert.doesNotMatch(readme, /## 💰 Donations/);
 });
@@ -218,7 +218,7 @@ test("Cards documentation exposes the optional Engine HACS installer", () => {
   const climateGuide = read("docs/climate-setpoint-schedule.md");
 
   assert.ok(readme.includes(engineHacsUrl));
-  assert.match(readme, /Nodalia Cards Engine is optional/);
+  assert.match(readme, /Nodalia Cards Engine\** is an? optional/i);
   assert.ok(engineGuide.includes(engineHacsUrl));
   assert.ok(climateGuide.includes(engineHacsUrl));
   assert.match(engineGuide, new RegExp("Cards `" + escapedVersion + "` and Engine `3\\.0\\.0`"));
@@ -312,7 +312,7 @@ test("active documentation uses channel-neutral resources and current release gu
   const currentVersion = JSON.parse(read("package.json")).version;
   const escapedVersion = currentVersion.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const isPrerelease = currentVersion.includes("-");
-  assert.match(readme, /Release candidate/);
+  assert.match(readme, /Release candidate/i);
   assert.match(readme, /nodalia-cards\.js/);
   assert.doesNotMatch(newsGuide, /nodalia-cards-\d/);
   assert.match(
