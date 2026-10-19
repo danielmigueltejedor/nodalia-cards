@@ -112,6 +112,7 @@ class NodaliaMediaPlayer extends HTMLElement {
   declare private _onWindowKeyDown: (event:KeyboardEvent)=>void;
   declare private _activeArtworkUrl: string;
   declare private _activeArtworkIdle: boolean;
+  declare private _activeTvChipArtwork: boolean;
   declare private _progressTickMisses: number;
   declare private _mediaBrowserRequestToken: number;
   declare private _activePlayerIndex: number;
@@ -178,6 +179,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._configured = false;
     this._activeArtworkUrl = "";
     this._activeArtworkIdle = false;
+    this._activeTvChipArtwork = false;
     this._progressTickMisses = 0;
     this._hass = null;
     this._mediaBrowserState = null;
@@ -328,6 +330,7 @@ class NodaliaMediaPlayer extends HTMLElement {
     this._artworkStageEl = null;
     this._activeArtworkUrl = this._idleSlideshowUrl = "";
     this._activeArtworkIdle = false;
+    this._activeTvChipArtwork = false;
     this._resolvedLayoutMode = "";
     this._presentationEntityId = "";
     this._activePlayerIndex = 0;
@@ -3004,6 +3007,9 @@ class NodaliaMediaPlayer extends HTMLElement {
       .join(" ");
     this._activeArtworkUrl = backgroundArtwork;
     this._activeArtworkIdle = Boolean(useCompactIdleLayout);
+    // TV only paints the cover inside its circular chip; without an album fill
+    // nothing shows artwork behind the controls, so they keep the theme ink.
+    this._activeTvChipArtwork = isTvPlayer && !hasAlbumBackground;
 
     const volumeDownMarkup = volumeSupported
       ? `
@@ -4655,7 +4661,12 @@ class NodaliaMediaPlayer extends HTMLElement {
     chrome.innerHTML = body;
 
     const card = this.shadowRoot.querySelector(".media-player-card");
-    void applyArtworkControlTheme(card instanceof HTMLElement ? card : null, this._config?.artwork?.dynamic_colors === false ? "" : artOptions.artworkUrl || "");
+    // A TV without an album fill shows its cover only in the circular chip, so a
+    // cover-derived ink would flip pause/volume icons onto the card's own theme.
+    const controlArtworkUrl = this._activeTvChipArtwork && !artOptions.hasAlbumBackground
+      ? ""
+      : artOptions.artworkUrl || "";
+    void applyArtworkControlTheme(card instanceof HTMLElement ? card : null, this._config?.artwork?.dynamic_colors === false ? "" : controlArtworkUrl);
     if (card instanceof HTMLElement && artOptions.hasAlbumBackground) {
       const stage = previousArt instanceof HTMLElement
         ? previousArt
