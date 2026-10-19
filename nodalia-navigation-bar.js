@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.4-alpha.1";
+  var CARD_VERSION = "3.0.4-alpha.2";
 
   // src/cards/navigation/navigation-constants.ts
   var CARD_TAG = "nodalia-navigation-bar";
@@ -4248,7 +4248,7 @@
       ${mediaBrowserMarkup}
     `;
         const mediaCard = this.shadowRoot.querySelector(".media-player-card");
-        const artworkUrl = mediaCard?.querySelector(".media-player__artwork img")?.getAttribute("src") || "";
+        const artworkUrl = mediaCard?.querySelector(".media-player__album-bg") ? mediaCard.querySelector(".media-player__artwork img")?.getAttribute("src") || "" : "";
         void applyArtworkControlTheme(mediaCard instanceof HTMLElement ? mediaCard : null, artworkUrl);
         this._applyRouteRuntimeStyles(visibleRoutes, playDockEntrance);
         this._applyPopupRuntimeStyles();

@@ -3997,7 +3997,11 @@ class NodaliaNavigationBarCard extends HTMLElement {
     `;
 
     const mediaCard = this.shadowRoot.querySelector(".media-player-card");
-    const artworkUrl = mediaCard?.querySelector(".media-player__artwork img")?.getAttribute("src") || "";
+    // Without the album fill the cover only paints the circular chip, so a
+    // cover-derived ink would flip the control icons off the card's own theme.
+    const artworkUrl = mediaCard?.querySelector(".media-player__album-bg")
+      ? mediaCard.querySelector(".media-player__artwork img")?.getAttribute("src") || ""
+      : "";
     void applyArtworkControlTheme(mediaCard instanceof HTMLElement ? mediaCard : null, artworkUrl);
     this._applyRouteRuntimeStyles(visibleRoutes, playDockEntrance);
     this._applyPopupRuntimeStyles();

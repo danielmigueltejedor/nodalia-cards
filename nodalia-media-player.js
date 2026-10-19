@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.4-alpha.1";
+  var CARD_VERSION = "3.0.4-alpha.2";
 
   // src/cards/media-player/media-player-constants.ts
   var CARD_TAG = "nodalia-media-player";
@@ -1616,6 +1616,7 @@
         this._configured = false;
         this._activeArtworkUrl = "";
         this._activeArtworkIdle = false;
+        this._activeTvChipArtwork = false;
         this._progressTickMisses = 0;
         this._hass = null;
         this._mediaBrowserState = null;
@@ -1765,6 +1766,7 @@
         this._artworkStageEl = null;
         this._activeArtworkUrl = this._idleSlideshowUrl = "";
         this._activeArtworkIdle = false;
+        this._activeTvChipArtwork = false;
         this._resolvedLayoutMode = "";
         this._presentationEntityId = "";
         this._activePlayerIndex = 0;
@@ -3919,6 +3921,7 @@
         ].filter(Boolean).join(" ");
         this._activeArtworkUrl = backgroundArtwork;
         this._activeArtworkIdle = Boolean(useCompactIdleLayout);
+        this._activeTvChipArtwork = isTvPlayer && !hasAlbumBackground;
         const volumeDownMarkup = volumeSupported ? `
         <button
           type="button"
@@ -5446,7 +5449,8 @@
         }
         chrome.innerHTML = body;
         const card = this.shadowRoot.querySelector(".media-player-card");
-        void applyArtworkControlTheme(card instanceof HTMLElement ? card : null, this._config?.artwork?.dynamic_colors === false ? "" : artOptions.artworkUrl || "");
+        const controlArtworkUrl = this._activeTvChipArtwork && !artOptions.hasAlbumBackground ? "" : artOptions.artworkUrl || "";
+        void applyArtworkControlTheme(card instanceof HTMLElement ? card : null, this._config?.artwork?.dynamic_colors === false ? "" : controlArtworkUrl);
         if (card instanceof HTMLElement && artOptions.hasAlbumBackground) {
           const stage = previousArt instanceof HTMLElement ? previousArt : this._createArtworkStage();
           this._artworkStageEl = stage;
