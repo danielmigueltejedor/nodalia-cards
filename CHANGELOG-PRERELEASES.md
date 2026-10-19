@@ -8,6 +8,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.0.4-alpha.2] - 2026-10-19
+
+### Fixed
+
+- **Media Player in TV mode:** pause, volume, power and browse icons keep the card's theme text colour when the cover only fills the circular artwork chip. The cover palette now colours the controls only when the album-cover background sits behind them, and TV cards with album fill keep the dynamic artwork tint.
+- **Navigation Bar media controls:** with `album_cover_background` disabled the controls keep the card's theme text colour instead of taking it from the cover that only paints the chip. Enabling the album fill restores the artwork-derived tint.
+
+### Changed
+
+- **Release candidate smoke checks:** the suite accepts the rewritten README phrasings (HACS catalogue wording, support badge label, optional Engine note and release channel table), so `main` stays green for the release workflow.
+
 ## [3.0.4-alpha.1] - 2026-10-13
 
 ### Fixed
