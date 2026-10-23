@@ -54,6 +54,17 @@ jobs:
             ~/.cache/ms-playwright
             ~/Library/Caches/ms-playwright
           key: playwright-${{ runner.os }}-${{ matrix.project }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - name: Use the primary Ubuntu package archive
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          # The Azure mirror can stall browser dependency downloads for 20+ minutes.
+          # Keep the Ubuntu suites, signing keys and security archive unchanged.
+          for apt_source_file in /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources; do
+            if [[ -f "$apt_source_file" ]]; then
+              sudo sed -i -E 's#https?://azure\.archive\.ubuntu\.com/ubuntu#https://archive.ubuntu.com/ubuntu#g' "$apt_source_file"
+            fi
+          done
       - name: Install browser and system dependencies
         shell: bash
         run: |
