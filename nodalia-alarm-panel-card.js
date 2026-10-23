@@ -584,6 +584,9 @@
         this._config = normalizeConfig(config || {});
         if (previousEntity !== this._config.entity) this._codeInput = "";
         window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
+        this._isCompactLayout = this._shouldUseCompactLayout(
+          Math.round(this._cardWidth || this.clientWidth || 0)
+        );
         this._animateContentOnNextRender = true;
         this._lastRenderSignature = "";
         this._syncCountdownTimer();
@@ -1589,13 +1592,14 @@
           cursor: pointer;
           display: inline-flex;
           gap: 8px;
-          height: max(${styles.control.size}, 40px);
+          min-height: max(${styles.control.size}, 40px);
           justify-content: center;
           line-height: 1;
           margin: 0;
+          max-width: 100%;
           min-width: max(${styles.control.size}, 40px);
           outline: none;
-          padding: 0 14px;
+          padding: 8px 14px;
           position: relative;
         }
 
@@ -1608,6 +1612,7 @@
         .alarm-card__action ha-icon {
           --mdc-icon-size: calc(${styles.control.size} * 0.46);
           display: inline-flex;
+          flex-shrink: 0;
           height: calc(${styles.control.size} * 0.46);
           width: calc(${styles.control.size} * 0.46);
         }
@@ -1615,7 +1620,9 @@
         .alarm-card__action-label {
           font-size: 13px;
           font-weight: 700;
-          white-space: nowrap;
+          line-height: 1.25;
+          min-width: 0;
+          overflow-wrap: anywhere;
         }
 
         .alarm-card__empty-title {
@@ -1724,7 +1731,7 @@
           }
 
           .alarm-card__action {
-            padding: 0 12px;
+            padding: 8px 12px;
           }
 
           .alarm-card__action-label {
@@ -1776,7 +1783,7 @@
                       aria-label="${escapeHtml(action.label)}"
                     >
                       <ha-icon icon="${escapeHtml(action.icon)}"></ha-icon>
-                      ${isCompactLayout ? "" : `<span class="alarm-card__action-label">${escapeHtml(action.label)}</span>`}
+                      <span class="alarm-card__action-label">${escapeHtml(action.label)}</span>
                     </button>
                   `).join("")}
                 </div>

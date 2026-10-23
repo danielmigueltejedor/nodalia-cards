@@ -28,6 +28,10 @@ updates are cancelled when replacing configuration or removing the editor;
 keyboard toggles work after an abandoned pointer interaction.
 
 The card requests a minimum of four dashboard columns.
+Arm and disarm buttons keep their translated text in compact layouts, including
+automatic mobile layouts. Buttons wrap onto additional rows and long labels wrap
+inside their button to remain readable in narrow cards.
+Changing compact density in the editor applies immediately at the current width.
 
 The view refreshes pending arm modes when HA attributes change. PIN verification
 continues after a service request resolves and ends when HA confirms a state
