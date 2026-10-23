@@ -8,6 +8,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.0.4-alpha.3] - 2026-10-23
+
+### Fixed
+
+- **Alarm Panel:** arm and disarm buttons keep their translated text in compact layouts, including automatic mobile layouts and cards configured with 12 dashboard columns. Buttons and long labels wrap to remain readable in narrow cards; configured PINs, hidden code inputs and custom state colours continue to work as before.
+- **Alarm Panel editor:** changing compact density updates the existing card immediately, without requiring a resize or dashboard reload.
+
 ## [3.0.4-alpha.2] - 2026-10-19
 
 ### Fixed
