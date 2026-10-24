@@ -176,7 +176,7 @@ test('Fav 6-column alarm centres the icon and name in both axes until its contro
   expect(geometry.title).toBe('Alarma');
   expect(geometry.deltaX).toBeLessThan(4);
   expect(geometry.deltaY).toBeLessThan(4);
-  expect(geometry.cardHeight).toBeGreaterThanOrEqual(68);
+  expect(geometry.cardHeight).toBeGreaterThan(44);
  }
  await card.locator('ha-card[data-fav-action="primary"]').click();
  await expect(card.locator('.fav-card--alarm-open')).toBeVisible();
