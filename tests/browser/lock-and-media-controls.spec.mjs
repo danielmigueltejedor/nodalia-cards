@@ -22,7 +22,7 @@ async function drag(page, card, fraction = 1, release = true) {
   const track = await card.locator("[role=slider]").boundingBox();
   const x = thumb.x + thumb.width / 2, y = thumb.y + thumb.height / 2;
   await page.mouse.move(x, y); await page.mouse.down();
-  await page.mouse.move(x + (track.width - thumb.width - 10) * fraction, y, { steps: 12 });
+  await page.mouse.move(x + (track.width - thumb.width - 8) * fraction, y, { steps: 12 });
   if (release) await page.mouse.up();
 }
 for (const layout of ["standard", "compact"]) {
