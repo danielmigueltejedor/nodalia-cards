@@ -5339,6 +5339,12 @@
             grid-template-columns: 50px minmax(0, 1fr) auto;
           }
 
+          /* On phones protect the speaker title width beside Play/Browse.
+             Wider screens retain the larger 16px idle icon-to-name spacing. */
+          .media-player-card--idle:not(.media-player-card--tv) .media-player__idle-hero {
+            column-gap: 12px;
+          }
+
           .media-player__artwork--idle,
           .media-player-card--tv.media-player-card--idle .media-player__artwork--idle {
             height: 50px;

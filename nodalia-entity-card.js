@@ -5074,7 +5074,11 @@
         }
 
         @media (max-width: 420px) {
-          .entity-card__hero {
+          /* Compact selectors have higher specificity than the plain hero rule.
+             Match the grid track to the full 50px mobile icon for every layout. */
+          .entity-card__hero,
+          .entity-card--compact .entity-card__hero,
+          .entity-card--compact:not(.entity-card--with-copy) .entity-card__hero {
             gap: 10px;
             grid-template-columns: 50px minmax(0, 1fr);
           }
