@@ -511,7 +511,7 @@
             --lock-icon-size:38px;
             --lock-card-padding:10px 12px;
             --lock-card-gap:10px;
-            grid-template-columns:minmax(0, 1fr) minmax(140px, .85fr);
+            grid-template-columns:minmax(0, 1fr) minmax(168px, .85fr);
             align-items:center;
           }
           .compact .header { gap:10px; min-width:0; }
@@ -520,7 +520,7 @@
           .compact .state { margin-top:0; flex:0 0 auto; }
           .compact [data-view-key="command"] { min-width:0; width:100%; max-width:260px; justify-self:end; }
           .compact button { min-height:38px; width:100%; }
-          @container (max-width: 295px) {
+          @container (max-width: 315px) {
             .compact { grid-template-columns:minmax(0, 1fr); }
             .compact [data-view-key="command"] { max-width:none; }
           }
