@@ -32,7 +32,7 @@ for(const embedded of [false,true]){
  test(`TV name and source shadows reach the rounded boundary ${embedded?'inside Room Summary':'standalone'}`,async({page})=>{
   await load(page);
   await page.evaluate(embedded=>{
-   window.shadowHass=window.makeHass({'media_player.tv':{state:'playing',attributes:{friendly_name:'Apple TV Salón',device_class:'tv',source:'Plex',source_list:['Plex','HDMI 1'],supported_features:131074}},'media_player.second':{state:'playing',attributes:{friendly_name:'Second TV',device_class:'tv',source:'HDMI 1'}}});
+   window.shadowHass=window.makeHass({'media_player.tv':{state:'playing',attributes:{friendly_name:'Apple TV Salón',device_class:'tv',media_title:'Test programme',source:'Plex',source_list:['Plex','HDMI 1'],supported_features:131074}},'media_player.second':{state:'playing',attributes:{friendly_name:'Second TV',device_class:'tv',source:'HDMI 1'}}});
    const card=document.createElement(embedded?'nodalia-room-summary-card':'nodalia-media-player');
    card.setConfig(embedded?{name:'Living room',media_player:'media_player.tv',animations:{enabled:false}}:{players:[{entity:'media_player.tv',tv_mode:true},{entity:'media_player.second',tv_mode:true}],layout:{mode:'standard'},animations:{enabled:false}});
    card.hass=window.shadowHass;document.querySelector('#fixture').append(card);window.shadowCard=card;
