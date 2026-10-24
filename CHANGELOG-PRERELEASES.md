@@ -8,6 +8,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.0.4-alpha.7] - 2026-10-24
+
+### Fixed
+
+- **Entity Card:** remove the invisible 7–10 px icon track padding so icon-to-title spacing matches Light, Fan and Humidifier in standard and compact layouts.
+- **Media Player (speaker, idle):** add breathing room between the circular icon and device name (16 px), including phone widths, without altering TV artwork, title space or playback controls.
+
 ## [3.0.4-alpha.6] - 2026-10-24
 
 ### Fixed

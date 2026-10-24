@@ -146,3 +146,10 @@
         .media-player-card--tv .media-player__hero-copy {
           width: 100%;
         }
+
+        /* Source text on active tinted TV surfaces needs the same contrast as
+           titles: the generic secondary text color is too faint in dark mode. */
+        .media-player-card.media-player-card--tv .media-player__subtitle--tv {
+          color: color-mix(in srgb, var(--primary-text-color) 90%, transparent);
+          font-weight: 600;
+        }

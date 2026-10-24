@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.4-alpha.6";
+  var CARD_VERSION = "3.0.4";
 
   // src/shared/device-state-memory.ts
   var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);

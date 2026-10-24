@@ -1110,7 +1110,15 @@ class NodaliaMediaPlayer extends HTMLElement {
       .filter(Boolean)
       .map(value => normalizeTextKey(value));
 
-    return plexSignals.some(value => value.includes("plex"));
+    if (plexSignals.some(value => value.includes("plex"))) {
+      return true;
+    }
+
+    // YouTube provides a real programme thumbnail through Home Assistant's
+    // entity_picture. Only use it during active playback so an old thumbnail
+    // cannot remain on a powered-off or idle TV.
+    const playing = ["playing", "paused", "buffering"].includes(normalizeTextKey(state?.state));
+    return playing && plexSignals.some(value => value.includes("youtube"));
   }
 
   _getPlayerArtwork(player:Player, state:HassEntity|null|undefined) {

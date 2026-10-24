@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.4-alpha.6";
+  var CARD_VERSION = "3.0.4";
 
   // src/cards/entity/entity-constants.ts
   var CARD_TAG = "nodalia-entity-card";
@@ -4455,7 +4455,7 @@
         const effectiveGap = singleRowLayout ? "2px" : compactMetrics ? "8px" : styles.card.gap;
         const effectiveIconSizePx = Math.max(30, Math.min(parseSizeToPixels(styles.icon.size, 58), singleRowLayout ? 38 : compactMetrics ? 46 : 58));
         const effectiveIconSize = `${effectiveIconSizePx}px`;
-        const effectiveIconTrackSize = `${effectiveIconSizePx + (singleRowLayout ? 7 : 10)}px`;
+        const effectiveIconTrackSize = effectiveIconSize;
         const effectiveControlSize = `${Math.max(34, Math.min(parseSizeToPixels(styles.control.size, 40), compactMetrics ? 36 : 40))}px`;
         const effectiveTitleSize = `${Math.max(9.5, Math.min(parseSizeToPixels(styles.title_size, 14), singleRowLayout ? 10 : compactMetrics ? 12 : 14))}px`;
         const effectiveChipHeight = `${Math.max(15, Math.min(parseSizeToPixels(styles.chip_height, 24), singleRowLayout ? 16 : compactMetrics ? 22 : 24))}px`;
@@ -4592,7 +4592,7 @@
         .entity-card__hero {
           align-items: center;
           display: grid;
-          gap: ${singleRowLayout ? "6px" : narrowCard ? "10px" : "12px"};
+          gap: ${singleRowLayout || narrowCard ? "10px" : "12px"};
           grid-template-columns: ${effectiveIconTrackSize} minmax(0, 1fr);
           min-height: ${singleRowLayout ? effectiveContentMinHeight : "0px"};
           min-width: 0;

@@ -145,7 +145,7 @@ test('Fav preserves explicit service targets and false/zero data and handles fai
   expect(errors).toEqual([]);expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
 });
 
-test('Fav 6-column alarm centres the icon and name in both axes until its controls open', async ({ page }) => {
+test('Fav 6-column alarm centres vertically but preserves the wide-card horizontal layout', async ({ page }) => {
  const card = await mount(page, {
   entity: 'alarm_control_panel.casa',
   name: 'Alarma',
@@ -167,14 +167,18 @@ test('Fav 6-column alarm centres the icon and name in both axes until its contro
    const icon = root.querySelector('.fav-card__icon').getBoundingClientRect();
    const label = root.querySelector('.fav-card__title').getBoundingClientRect();
    return {
-    deltaX: Math.abs((outer.left + outer.right) / 2 - (icon.left + label.right) / 2),
+    iconOffset: icon.left - outer.left,
+    labelGap: label.left - icon.right,
     deltaY: Math.abs((outer.top + outer.bottom) / 2 - (icon.top + icon.bottom) / 2),
     title: root.querySelector('.fav-card__title').textContent,
     cardHeight: outer.height,
    };
   });
   expect(geometry.title).toBe('Alarma');
-  expect(geometry.deltaX).toBeLessThan(4);
+  expect(geometry.iconOffset).toBeGreaterThanOrEqual(8);
+  expect(geometry.iconOffset).toBeLessThanOrEqual(13);
+  expect(geometry.labelGap).toBeGreaterThanOrEqual(9);
+  expect(geometry.labelGap).toBeLessThanOrEqual(11);
   expect(geometry.deltaY).toBeLessThan(4);
   expect(geometry.cardHeight).toBeGreaterThan(44);
  }

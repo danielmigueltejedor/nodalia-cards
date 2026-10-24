@@ -8,6 +8,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ---
 
+## [3.0.4] - 2026-10-24
+
+Maintenance release **3.0.4** improves the readability and layout consistency of Nodalia Cards without changing Home Assistant YAML, resource paths or existing controls.
+
+### Fixed
+
+- **Media Player TV:** source labels such as YouTube have stronger contrast in dark mode; active YouTube programme thumbnails appear inside the circular device artwork when Home Assistant supplies a safe `entity_picture`. Off/idle TVs retain the normal icon rather than showing an old video cover.
+- **Media Player names:** TV cards show their device name when no programme is available, and programme titles use the available space before wrapping. Idle speaker titles have more separation from their icon.
+- **Entity, Light, Fan and Humidifier:** consistent spacing between icon and title without additional invisible Entity Card padding.
+- **Fav Card alarm:** tiles wider than three columns align the icon and name vertically without shifting their horizontal position; supercompact tiles of three columns or fewer remain centered in both axes, and expanded alarm controls retain their layout.
+- **Camera Lock:** related lock controls use a compact horizontal arrangement below the camera instead of obscuring the feed.
+- **Media Player TV appearance:** remove the separate dark title panel and allow two readable title lines.
+
 ## [3.0.3] - 2026-10-13
 
 Maintenance release for Nodalia Cards 3. Fav Card responds immediately and remembers light colors, and every card uses the same rounded keyboard focus frame. Existing YAML, resource paths and Engine compatibility remain unchanged.

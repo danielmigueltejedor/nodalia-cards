@@ -1568,29 +1568,20 @@ class NodaliaFavCard extends HTMLElement {
           align-content: center;
         }
 
-        /* In a 6-column mobile tile, centre the entire alarm icon/name group like
-           the mini Fav Card. Keep the full-width layout when its mode menu opens. */
+        /* The mini Fav (3 columns or less) remains centered on both axes.
+           Wider collapsed alarms only need vertical centering; preserve their
+           normal icon-and-copy grid just like other inline Fav Cards. */
         .fav-card--alarm-centered:not(.fav-card--alarm-open) .fav-card__content {
           align-content: center;
-          justify-items: center;
+          justify-items: stretch;
           height: 100%;
         }
 
         .fav-card--alarm-centered:not(.fav-card--alarm-open) .fav-card__hero {
-          display: flex;
           align-items: center;
-          justify-content: center;
-          gap: 10px;
-          height: auto;
+          height: 100%;
           min-width: 0;
           width: 100%;
-        }
-
-        .fav-card--alarm-centered:not(.fav-card--alarm-open) .fav-card__copy {
-          display: flex;
-          align-items: center;
-          flex: 0 1 auto;
-          min-width: 0;
         }
 
         .fav-card--alarm-open .fav-card__content {
