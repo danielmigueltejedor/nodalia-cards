@@ -8,7 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ---
 
-## Unreleased
+## [3.0.4] - 2026-10-24
 
 Maintenance release **3.0.4** improves the readability and layout consistency of Nodalia Cards without changing Home Assistant YAML, resource paths or existing controls.
 
