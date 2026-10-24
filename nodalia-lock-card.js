@@ -63,7 +63,7 @@
   }
 
   // src/version.ts
-  var CARD_VERSION = "3.0.4-alpha.4";
+  var CARD_VERSION = "3.0.4-alpha.5";
 
   // src/cards/lock/lock-config.ts
   var CARD_TAG = "nodalia-lock-card";
@@ -407,7 +407,7 @@
         const template = document.createElement("template");
         template.innerHTML = `
         <style>
-          :host { display:block; }
+          :host { display:block; container-type:inline-size; }
           * { box-sizing:border-box; }
           ha-card {
             --lock-content-duration: ${animations.content_duration}ms;
@@ -504,7 +504,26 @@
           @keyframes lock-fade-up { 0% { opacity:0; transform:translateY(12px) scale(.97); } 100% { opacity:1; transform:none; } }
           @keyframes lock-rise { 0% { opacity:0; transform:translateY(10px); } 100% { opacity:1; transform:none; } }
           ${animations.enabled ? "" : "ha-card, ha-card *, ha-card::before, ha-card::after { animation:none !important; transition:none !important; }"}
-          .compact { --lock-handle-default:38px; --lock-card-padding:10px 12px; --lock-card-gap:10px; }
+          /* Compact controls are one horizontal row, including when embedded below a camera.
+             Keep the slider for deliberate unlocking; never replace it with a toggle. */
+          .compact {
+            --lock-handle-default:38px;
+            --lock-icon-size:38px;
+            --lock-card-padding:10px 12px;
+            --lock-card-gap:10px;
+            grid-template-columns:minmax(0, 1fr) minmax(140px, .85fr);
+            align-items:center;
+          }
+          .compact .header { gap:10px; min-width:0; }
+          .compact .header > div { display:flex; align-items:center; gap:7px; min-width:0; }
+          .compact .name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+          .compact .state { margin-top:0; flex:0 0 auto; }
+          .compact [data-view-key="command"] { min-width:0; width:100%; max-width:260px; justify-self:end; }
+          .compact button { min-height:38px; width:100%; }
+          @container (max-width: 295px) {
+            .compact { grid-template-columns:minmax(0, 1fr); }
+            .compact [data-view-key="command"] { max-width:none; }
+          }
           @media (max-width:600px) {
             :host { --lock-icon-size:50px; }
           }
