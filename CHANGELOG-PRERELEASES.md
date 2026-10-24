@@ -8,6 +8,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.0.4-alpha.5] - 2026-10-24
+
+### Fixed
+
+- **Camera/Lock:** compact lock controls fit in a single row below the expanded camera stream instead of stacking a full-width command below the status. Unlock still requires the safe slider gesture; the narrowest widths may stack rather than overflow.
+- **Media Player (TV):** remove the detached black metadata rectangle, align programme and source with the artwork, and show up to two lines of long titles without an abrupt one-line ellipsis.
+
 ## [3.0.4-alpha.4] - 2026-10-24
 
 ### Fixed

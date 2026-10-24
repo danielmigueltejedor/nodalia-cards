@@ -78,3 +78,39 @@ test('Camera expanded lock action uses the Nodalia lock card in compact layout',
  expect(await page.evaluate(()=>window.cameraCard._expandedCardConfig({entity:'lock.front_door'}).layout)).toBe('compact');
  expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
 });
+
+test('Camera lock stays a single compact row beneath video at desktop and phone widths', async ({ page }) => {
+ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 }]) {
+  await page.setViewportSize(viewport);
+  const camera = await mount(page, { expanded: [{ entity: 'lock.front_door' }] });
+  await open(camera);
+  const dialog = camera.locator('[role="dialog"]');
+  const lock = dialog.locator('nodalia-lock-card');
+  for (const state of ['locked', 'unlocked']) {
+   await page.evaluate(state => {
+    window.cameraHass.states['lock.front_door'].state = state;
+    window.cameraCard.hass = { ...window.cameraHass };
+   }, state);
+   await expect(lock.locator(`[data-lock-state="${state}"]`)).toHaveCount(1);
+   const layout = await dialog.evaluate(node => {
+    const bounds = selector => node.querySelector(selector).getBoundingClientRect();
+    const stage = bounds('.camera-card__expanded-stage');
+    const actions = bounds('.camera-card__expanded-actions');
+    const root = node.querySelector('nodalia-lock-card').shadowRoot;
+    const header = root.querySelector('.header').getBoundingClientRect();
+    const command = root.querySelector('[data-view-key="command"]').getBoundingClientRect();
+    return {
+     gap: actions.top - stage.bottom,
+     height: actions.height,
+     centerDelta: Math.abs((header.top + header.bottom - command.top - command.bottom) / 2),
+     withinVideoWidth: actions.left >= stage.left - 1 && actions.right <= stage.right + 1,
+    };
+   });
+   expect(layout.gap).toBeGreaterThanOrEqual(0);
+   expect(layout.height).toBeLessThan(95);
+   expect(layout.centerDelta).toBeLessThan(25);
+   expect(layout.withinVideoWidth).toBe(true);
+  }
+  await page.evaluate(() => window.cameraCard.remove());
+ }
+});

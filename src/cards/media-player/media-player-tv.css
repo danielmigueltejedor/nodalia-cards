@@ -94,3 +94,43 @@
           min-height: 32px;
           padding: 0 10px;
         }
+
+        /* TV metadata belongs to the same open, left-aligned hero as the other Nodalia cards.
+           Avoid a separate dark tile and let a program title use two readable lines. */
+        .media-player-card--tv .media-player__hero-top {
+          justify-items: stretch;
+          min-width: 0;
+        }
+
+        .media-player-card--tv .media-player__info-rail,
+        .media-player-card--tv .media-player__chips-wrap {
+          justify-self: start;
+          text-align: left;
+        }
+
+        .media-player-card--tv .media-player__meta,
+        .media-player-card--tv .media-player__meta--tv {
+          justify-self: stretch;
+          justify-items: start;
+          padding-left: 0;
+          text-align: left;
+          min-width: 0;
+        }
+
+        .media-player-card--tv .media-player__title {
+          display: -webkit-box;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 2;
+          line-clamp: 2;
+          line-height: 1.3;
+          overflow: hidden;
+          overflow-wrap: anywhere;
+          text-align: left;
+          white-space: normal;
+          width: 100%;
+        }
+
+        .media-player-card--tv .media-player__subtitle--tv {
+          justify-self: start;
+          text-align: left;
+        }

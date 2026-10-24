@@ -1,0 +1,43 @@
+name: Publish alpha 5 (one-time)
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  publish:
+    # This temporary workflow runs only for the reviewed alpha.5 squash merge.
+    if: contains(github.event.head_commit.message, '3.0.4-alpha.5')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Verify version, bundled artifacts and static quality
+        run: |
+          test "$(node -p 'require("./package.json").version')" = '3.0.4-alpha.5'
+          pnpm run validate:fast
+          git diff --exit-code
+      - name: Tag the checked commit and dispatch the full release gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag='v3.0.4-alpha.5'
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" >/dev/null 2>&1; then
+            echo "Tag $tag already exists; refusing to replace it" >&2
+            exit 1
+          fi
+          gh api -X POST "repos/$GITHUB_REPOSITORY/git/refs" \
+            -f ref="refs/tags/$tag" -f sha="$GITHUB_SHA"
+          # Tags created by GITHUB_TOKEN do not trigger on:push workflows.
+          # Dispatch the standard release workflow so it still validates all browsers.
+          gh workflow run release.yml --ref main -f tag="$tag"
