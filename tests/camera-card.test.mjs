@@ -670,7 +670,8 @@ test("camera card expanded overlay opens, closes, and cleans up listeners", () =
   assert.match(source, /isMixedContentUrl/);
   assert.match(source, /data-camera-expanded-stream/);
   assert.match(source, /entityId === primaryEntity \? configuredName : ""/);
-  assert.match(source, /compact_layout_mode: domain === "lock"/);
+  assert.match(source, /lock: "nodalia-lock-card"/);
+  assert.match(source, /compact_layout_mode: domain === "switch"/);
   assert.match(source, /rows: 1/);
   assert.match(source, /camera-card__stream-spinner/);
   assert.match(source, /conic-gradient/);

@@ -8,6 +8,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.0.4-alpha.4] - 2026-10-24
+
+### Fixed
+
+- **Camera:** expanded actions and per-camera related controls for `lock` entities now render the Nodalia Lock Card in compact layout instead of the generic Entity Card.
+- **Media Player:** TV layouts keep track and artist text on the theme text colours and place the metadata on a soft blurred surface, so it stays readable over busy or light artwork.
+
 ## [3.0.4-alpha.3] - 2026-10-23
 
 ### Fixed
