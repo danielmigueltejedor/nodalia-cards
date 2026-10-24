@@ -152,6 +152,7 @@ test('Fav 6-column alarm centres the icon and name in both axes until its contro
   use_entity_icon: true,
   show_state: false,
   alarm_show_code_input: false,
+  animations: { enabled: false },
   grid_options: { columns: 6, rows: 'auto' },
   styles: { icon: { size: '52px' }, card: { border_radius: '28px' } },
  }, { 'alarm_control_panel.casa': {
