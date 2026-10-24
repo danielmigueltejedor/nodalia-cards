@@ -76,3 +76,52 @@ test('Media Player retires an in-flight cover crossfade when returning to the cu
  await page.clock.runFor(1200);expect(await page.evaluate(()=>window.mpTransition.controller.currentUrl===window.mpFirstCover)).toBe(true);expect(await page.evaluate(()=>window.mpTransition.incoming.classList.contains('is-ready'))).toBe(false);
  expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
 });
+
+test('TV title and source sit naturally beside artwork instead of inside a clipped dark tile', async ({ page }) => {
+ await page.goto('/tests/fixtures/browser.html');
+ await page.waitForFunction(() => customElements.get('nodalia-media-player'));
+ const title = 'Así funciona el contenido audiovisual con un título largo en YouTube';
+ await page.evaluate(title => {
+  const entity = 'media_player.living_room_tv';
+  const hass = window.makeHass({ [entity]: {
+   entity_id: entity, state: 'playing',
+   attributes: { friendly_name: 'Televisión del salón', media_title: title, source: 'YouTube', supported_features: 1 },
+  } });
+  const card = document.createElement('nodalia-media-player');
+  card.setConfig({ players: [{ entity, tv_mode: true, show: true }], layout: { mode: 'standard' }, animations: { enabled: false } });
+  card.hass = hass;
+  document.querySelector('#fixture').append(card);
+  window.tvCard = card;
+ }, title);
+ const card = page.locator('nodalia-media-player');
+ await expect(card.locator('.media-player-card--tv .media-player__title')).toHaveText(title);
+ await expect(card.locator('.media-player__subtitle--tv')).toHaveText('YouTube');
+ for (const width of [260, 360, 480]) {
+  await card.evaluate((node, width) => { node.style.width = `${width}px`; }, width);
+  const layout = await card.evaluate(node => {
+   const root = node.shadowRoot;
+   const meta = root.querySelector('.media-player__meta');
+   const text = root.querySelector('.media-player__title');
+   const subtitle = root.querySelector('.media-player__subtitle--tv');
+   const art = root.querySelector('.media-player__artwork');
+   const textBounds = text.getBoundingClientRect();
+   const artBounds = art.getBoundingClientRect();
+   return {
+    background: getComputedStyle(meta).backgroundColor,
+    align: getComputedStyle(text).textAlign,
+    whiteSpace: getComputedStyle(text).whiteSpace,
+    clamp: getComputedStyle(text).webkitLineClamp,
+    availableWidth: textBounds.width,
+    rightOfArt: textBounds.left >= artBounds.right - 2,
+    sourceAligned: Math.abs(subtitle.getBoundingClientRect().left - textBounds.left) <= 2,
+   };
+  });
+  expect(layout.background).toBe('rgba(0, 0, 0, 0)');
+  expect(layout.align).toBe('left');
+  expect(layout.whiteSpace).toBe('normal');
+  expect(layout.clamp).toBe('2');
+  expect(layout.availableWidth).toBeGreaterThan(95);
+  expect(layout.rightOfArt).toBe(true);
+  expect(layout.sourceAligned).toBe(true);
+ }
+});

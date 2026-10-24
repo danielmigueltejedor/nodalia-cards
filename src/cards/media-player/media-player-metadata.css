@@ -23,14 +23,6 @@
           color: var(--secondary-text-color);
         }
 
-        .media-player-card.media-player-card--tv:not(.media-player-card--idle) .media-player__meta {
-          background: color-mix(in srgb, var(--card-background-color, #000) 70%, transparent);
-          border-radius: 12px;
-          padding: 6px 10px 6px 12px;
-          -webkit-backdrop-filter: blur(6px);
-          backdrop-filter: blur(6px);
-        }
-
         .media-player__center-stack {
           display: grid;
           gap: 10px;
