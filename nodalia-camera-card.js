@@ -1066,7 +1066,7 @@
   }
 
   // src/version.ts
-  var CARD_VERSION = "3.0.4-alpha.3";
+  var CARD_VERSION = "3.0.4-alpha.4";
 
   // src/cards/camera/camera-constants.ts
   var CARD_TAG = "nodalia-camera-card";
@@ -2894,7 +2894,8 @@
           humidifier: "nodalia-humidifier-card",
           vacuum: "nodalia-vacuum-card",
           cover: "nodalia-cover-card",
-          climate: "nodalia-climate-card"
+          climate: "nodalia-climate-card",
+          lock: "nodalia-lock-card"
         };
         return tags[domain || ""] || "nodalia-entity-card";
       }
@@ -2918,7 +2919,7 @@
             content_duration: 0,
             panel_duration: 0
           },
-          compact_layout_mode: domain === "lock" || domain === "switch" || domain === "input_boolean" ? "always" : "never"
+          compact_layout_mode: domain === "switch" || domain === "input_boolean" ? "always" : "never"
         };
         ["name", "icon", "tap_service", "tap_service_data", "tap_service_target", "tap_url", "navigation_path"].forEach((key) => {
           if (action[key]) {
@@ -2968,7 +2969,13 @@
             show_stop: true,
             show_locate: true
           });
-        } else if (domain === "lock" || domain === "switch" || domain === "input_boolean") {
+        } else if (domain === "lock") {
+          Object.assign(config, {
+            layout: "compact",
+            show_name: config.name !== void 0,
+            show_state: true
+          });
+        } else if (domain === "switch" || domain === "input_boolean") {
           config.grid_options = {
             columns: 3,
             rows: 1

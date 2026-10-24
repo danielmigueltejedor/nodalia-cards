@@ -13,10 +13,22 @@
           font-weight: 600;
         }
 
-        .media-player__subtitle--tv {
-          max-width: min(100%, 420px);
-          text-align: center;
-          width: 100%;
+        .media-player-card.media-player-card--tv .media-player__title,
+        .media-player-card.media-player-card--tv .media-player__subtitle {
+          color: var(--primary-text-color);
+          text-shadow: none;
+        }
+
+        .media-player-card.media-player-card--tv .media-player__subtitle {
+          color: var(--secondary-text-color);
+        }
+
+        .media-player-card.media-player-card--tv:not(.media-player-card--idle) .media-player__meta {
+          background: color-mix(in srgb, var(--card-background-color, #000) 70%, transparent);
+          border-radius: 12px;
+          padding: 6px 10px 6px 12px;
+          -webkit-backdrop-filter: blur(6px);
+          backdrop-filter: blur(6px);
         }
 
         .media-player__center-stack {
