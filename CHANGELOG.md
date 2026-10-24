@@ -17,7 +17,7 @@ Maintenance release **3.0.4** improves the readability and layout consistency of
 - **Media Player TV:** source labels such as YouTube have stronger contrast in dark mode; active YouTube programme thumbnails appear inside the circular device artwork when Home Assistant supplies a safe `entity_picture`. Off/idle TVs retain the normal icon rather than showing an old video cover.
 - **Media Player names:** TV cards show their device name when no programme is available, and programme titles use the available space before wrapping. Idle speaker titles have more separation from their icon.
 - **Entity, Light, Fan and Humidifier:** consistent spacing between icon and title without additional invisible Entity Card padding.
-- **Fav Card alarm:** compact cards center the icon and name while preserving access to expanded arming controls.
+- **Fav Card alarm:** tiles wider than three columns align the icon and name vertically without shifting their horizontal position; supercompact tiles of three columns or fewer remain centered in both axes, and expanded alarm controls retain their layout.
 - **Camera Lock:** related lock controls use a compact horizontal arrangement below the camera instead of obscuring the feed.
 - **Media Player TV appearance:** remove the separate dark title panel and allow two readable title lines.
 
