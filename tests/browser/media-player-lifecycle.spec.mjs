@@ -125,3 +125,52 @@ test('TV title and source sit naturally beside artwork instead of inside a clipp
   expect(layout.sourceAligned).toBe(true);
  }
 });
+
+test('TV mode names idle televisions, discards stale off metadata and keeps active programmes', async ({ page }) => {
+ await page.goto('/tests/fixtures/browser.html');
+ await page.waitForFunction(() => customElements.get('nodalia-media-player'));
+ await page.evaluate(() => {
+  const entity = 'media_player.tv_salon';
+  window.tvTitleHass = window.makeHass({ [entity]: {
+   entity_id: entity, state: 'on',
+   attributes: { friendly_name: 'Televisor del salón', supported_features: 1 },
+  } });
+  window.tvTitleCard = document.createElement('nodalia-media-player');
+  window.tvTitleCard.setConfig({ players: [{ entity, tv_mode: true, show: true }], layout: { mode: 'compact' }, animations: { enabled: false } });
+  window.tvTitleCard.style.width = '240px';
+  window.tvTitleCard.hass = window.tvTitleHass;
+  document.querySelector('#fixture').append(window.tvTitleCard);
+ });
+ const card = page.locator('nodalia-media-player');
+ const states = [
+  { state: 'on', title: '', expected: 'Televisor del salón' },
+  { state: 'playing', title: 'Así Viven en...', expected: 'Así Viven en...' },
+  { state: 'paused', title: 'Programa pausado', expected: 'Programa pausado' },
+  { state: 'idle', title: 'Contenido antiguo', expected: 'Televisor del salón' },
+  { state: 'off', title: 'Contenido antiguo', expected: 'Televisor del salón' },
+ ];
+ for (const { state, title, expected } of states) {
+  await page.evaluate(({ state, title }) => {
+   const item = window.tvTitleHass.states['media_player.tv_salon'];
+   item.state = state;
+   item.attributes.media_title = title;
+   window.tvTitleCard.hass = { ...window.tvTitleHass };
+  }, { state, title });
+  const titleElement = state === 'off'
+   ? card.locator('.media-player__idle-name') : card.locator('.media-player__title');
+  await expect(titleElement).toHaveText(expected);
+  if (state === 'playing') {
+   const widthInfo = await card.evaluate(node => {
+    const root = node.shadowRoot, title = root.querySelector('.media-player__title');
+    const copy = root.querySelector('.media-player__hero-copy');
+    const lineHeight = parseFloat(getComputedStyle(title).lineHeight);
+    return { titleWidth: title.getBoundingClientRect().width, titleHeight: title.getBoundingClientRect().height, lineHeight, copyPadding: getComputedStyle(copy).paddingInlineEnd, titlePadding: getComputedStyle(title).paddingInlineEnd };
+   });
+   expect(widthInfo.copyPadding).toBe('0px');
+   expect(widthInfo.titlePadding).toBe('0px');
+   expect(widthInfo.titleWidth).toBeGreaterThan(110);
+   expect(widthInfo.titleHeight).toBeLessThanOrEqual(widthInfo.lineHeight * 1.15);
+  }
+ }
+ expect(await page.evaluate(() => window.bundleErrors)).toEqual([]);
+});

@@ -134,3 +134,15 @@
           justify-self: start;
           text-align: left;
         }
+
+        /* Compact TV thumbnails have no floating corner shortcut: unlike music cards,
+           do not reserve 36px on both the hero copy and the title. The full area
+           next to the artwork should be available before wrapping into line two. */
+        .media-player-card--tv.media-player-card--compact .media-player__hero-copy,
+        .media-player-card--tv.media-player-card--compact .media-player__title {
+          padding-inline-end: 0;
+        }
+
+        .media-player-card--tv .media-player__hero-copy {
+          width: 100%;
+        }

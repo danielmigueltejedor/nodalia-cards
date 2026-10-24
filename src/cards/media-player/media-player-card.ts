@@ -2951,8 +2951,16 @@ class NodaliaMediaPlayer extends HTMLElement {
     const isTvPlayer = deviceType === "tv";
     const playerLabel = this._getPlayerLabel(player, state);
     const sourceLabel = this._getPlayerSourceLabel(state);
-    const title = isTvPlayer
+    // An idle or powered-off TV often keeps stale media_* attributes from its last
+    // programme. Show its entity name instead; only use programme metadata while
+    // content is active (or paused) and never render an empty TV heading.
+    const tvWithoutContent = isTvPlayer && ["idle", "off", "standby", "unavailable", "unknown"]
+      .includes(normalizeTextKey(state.state));
+    const tvContentTitle = isTvPlayer && !tvWithoutContent
       ? this._getTvContentTitle(player, state)
+      : "";
+    const title = isTvPlayer
+      ? tvContentTitle || playerLabel || mediaText(player.entity)
       : this._getPlayerTitle(player, state);
     const subtitle = isTvPlayer
       ? ""
@@ -2969,11 +2977,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       : this._getPlayerChips(player, state, progress, title, subtitle);
     const showPrimaryTitle = !isTvPlayer
       ? hasActiveMediaContent && (!playerLabel || normalizeTextKey(title) !== normalizeTextKey(playerLabel))
-      : Boolean(title) && (
-          !playerLabel ||
-          normalizeTextKey(title) !== normalizeTextKey(playerLabel) ||
-          !hasActiveMediaContent
-        );
+      : Boolean(title);
     const showTopChip = this._config.show_device_chip !== false && !!playerLabel && (
       isTvPlayer
         ? !showPrimaryTitle || normalizeTextKey(playerLabel) !== normalizeTextKey(title)
