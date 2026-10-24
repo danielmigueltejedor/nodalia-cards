@@ -125,3 +125,62 @@ test('TV title and source sit naturally beside artwork instead of inside a clipp
   expect(layout.sourceAligned).toBe(true);
  }
 });
+
+test('TV falls back to the device name and uses the full compact title width', async ({page})=>{
+ await page.goto('/tests/fixtures/browser.html');
+ await page.waitForFunction(()=>customElements.get('nodalia-media-player'));
+ await page.evaluate(()=>{
+  const entity='media_player.television';
+  const hass=window.makeHass({[entity]:{entity_id:entity,state:'on',attributes:{friendly_name:'Televisión del salón',source:'HDMI 1',supported_features:1}}});
+  const card=document.createElement('nodalia-media-player');
+  card.setConfig({players:[{entity,tv_mode:true,show:true}],grid_options:{columns:6},layout:{mode:'compact'},animations:{enabled:false}});
+  card.hass=hass;document.querySelector('#fixture').append(card);
+  window.tvFallbackCard=card;window.tvFallbackHass=hass;
+ });
+ const card=page.locator('nodalia-media-player');
+ const title=card.locator('.media-player__title');
+ await expect(title).toHaveText('Televisión del salón');
+ await expect(card.locator('.media-player__chip--top')).toHaveCount(0);
+ for(const state of ['idle','off','standby']){
+  await page.evaluate(state=>{
+   window.tvFallbackHass.states['media_player.television']={
+    entity_id:'media_player.television',state,attributes:{friendly_name:'Televisión del salón',media_title:'Previous show',source:'HDMI 1',supported_features:1}
+   };
+   window.tvFallbackCard.hass={...window.tvFallbackHass};
+  },state);
+  const label=state==='off'||state==='standby'?card.locator('.media-player__idle-name'):title;
+  await expect(label).toHaveText('Televisión del salón');
+ }
+ await page.evaluate(()=>{
+  window.tvFallbackHass.states['media_player.television']={
+   entity_id:'media_player.television',state:'playing',
+   attributes:{friendly_name:'Televisión del salón',media_title:'Así Viven en...',source:'YouTube',supported_features:1}
+  };
+  window.tvFallbackCard.hass={...window.tvFallbackHass};
+ });
+ for(const width of [320,460]){
+  await card.evaluate((node,width)=>{node.style.width=width+'px';},width);
+  await expect(title).toHaveText('Así Viven en...');
+  const measured=await card.evaluate(node=>{
+   const root=node.shadowRoot;
+   const text=root.querySelector('.media-player__title');
+   const copy=root.querySelector('.media-player__hero-copy');
+   const artwork=root.querySelector('.media-player__artwork');
+   const bounds=text.getBoundingClientRect();
+   const style=getComputedStyle(text);
+   return {
+    width:bounds.width,
+    titleInset:parseFloat(style.paddingRight),
+    copyInset:parseFloat(getComputedStyle(copy).paddingRight),
+    lines:Math.round(bounds.height/parseFloat(style.lineHeight)),
+    aligned:bounds.left>=artwork.getBoundingClientRect().right,
+   };
+  });
+  expect(measured.titleInset).toBe(0);
+  expect(measured.copyInset).toBe(0);
+  expect(measured.width).toBeGreaterThan(width-140);
+  expect(measured.aligned).toBe(true);
+  if(width===460)expect(measured.lines).toBe(1);
+ }
+ expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+});

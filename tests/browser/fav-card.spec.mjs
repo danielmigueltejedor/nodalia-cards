@@ -144,3 +144,35 @@ test('Fav preserves explicit service targets and false/zero data and handles fai
   await card.locator('ha-card[data-fav-action="primary"]').click();
   expect(errors).toEqual([]);expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
 });
+
+test('Collapsed six-column alarm Fav centers the icon and title; expanded controls remain usable', async ({page})=>{
+ const card=await mount(page,{
+  entity:'alarm_control_panel.home',name:'Alarma',use_entity_icon:true,
+  show_state:false,alarm_show_code_input:false,grid_options:{columns:6,rows:'auto'},
+  styles:{icon:{size:'52px'},card:{border_radius:'28px'}}
+ },{'alarm_control_panel.home':{state:'disarmed',attributes:{friendly_name:'Home alarm',icon:'mdi:shield-home',supported_features:3,code_format:'number'}}});
+ for(const width of [230,300,430]){
+  await card.evaluate((node,width)=>{node.style.width=width+'px';},width);
+  const metrics=await card.evaluate(node=>{
+   const root=node.shadowRoot,outer=root.querySelector('ha-card');
+   const icon=root.querySelector('.fav-card__icon'),label=root.querySelector('.fav-card__title');
+   const box=outer.getBoundingClientRect(),a=icon.getBoundingClientRect(),b=label.getBoundingClientRect();
+   return {
+    centered:outer.classList.contains('fav-card--alarm-centered'),
+    horizontalDelta:Math.abs((a.left+b.right)/2-(box.left+box.right)/2),
+    verticalDelta:Math.abs((a.top+a.bottom)/2-(box.top+box.bottom)/2),
+    labelVisible:b.width>35,
+   };
+  });
+  expect(metrics.centered).toBe(true);
+  expect(metrics.horizontalDelta).toBeLessThan(3);
+  expect(metrics.verticalDelta).toBeLessThan(3);
+  expect(metrics.labelVisible).toBe(true);
+ }
+ await card.locator('ha-card[data-fav-action="primary"]').click();
+ await expect(card.locator('.fav-card--alarm-open')).toBeVisible();
+ await expect(card.locator('.fav-card--alarm-centered')).toHaveCount(0);
+ await expect(card.locator('[data-fav-alarm-action="alarm_arm_home"]')).toBeVisible();
+ await expect(card.locator('[data-fav-alarm-field="alarm-code"]')).toHaveCount(0);
+ expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+});
