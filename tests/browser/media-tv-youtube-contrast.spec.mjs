@@ -39,7 +39,8 @@ test('TV renders real YouTube artwork inside the icon while playing and removes 
   window.youtubeCard.hass={...window.youtubeHass};
  });
  await expect(card.locator('.media-player-card--tv .media-player__artwork img')).toHaveCount(0);
- await expect(card.locator('.media-player-card--tv .media-player__artwork ha-icon')).toBeVisible();
+ await expect(card.locator('.media-player-card--tv .media-player__artwork')).toBeVisible();
+ await expect(card.locator('.media-player-card--tv .media-player__artwork ha-icon')).toHaveAttribute('icon','mdi:apple');
  expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
 });
 
@@ -61,7 +62,8 @@ test('YouTube source label stays legible against the dark theme',async({page})=>
 test('YouTube image falls back to the TV glyph if Home Assistant provides no valid picture',async({page})=>{
  const card=await mountTv(page,'YouTube');
  await expect(card.locator('.media-player-card--tv .media-player__artwork img')).toHaveCount(0);
- await expect(card.locator('.media-player-card--tv .media-player__artwork ha-icon')).toBeVisible();
+ await expect(card.locator('.media-player-card--tv .media-player__artwork')).toBeVisible();
+ await expect(card.locator('.media-player-card--tv .media-player__artwork ha-icon')).toHaveAttribute('icon','mdi:apple');
  // The existing Plex picture pipeline remains compatible.
  await page.evaluate(()=>{
   const entity=window.youtubeHass.states['media_player.tv'];
@@ -69,5 +71,6 @@ test('YouTube image falls back to the TV glyph if Home Assistant provides no val
   entity.attributes.app_name='Plex';
   window.youtubeCard.hass={...window.youtubeHass};
  });
- await expect(card.locator('.media-player-card--tv .media-player__artwork ha-icon')).toBeVisible();
+ await expect(card.locator('.media-player-card--tv .media-player__artwork')).toBeVisible();
+ await expect(card.locator('.media-player-card--tv .media-player__artwork ha-icon')).toHaveAttribute('icon','mdi:apple');
 });
