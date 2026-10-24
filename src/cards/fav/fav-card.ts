@@ -1477,6 +1477,7 @@ class NodaliaFavCard extends HTMLElement {
     const showTitle = config.show_name !== false && !isMini;
     const showValue = Boolean(displayValue) && !isMini;
     const showCopy = showTitle || showValue;
+    const centerCollapsedAlarm = isAlarmPanel && isCompactInline && !showAlarmPanel && showTitle && !showValue;
 
     this._applyHostGridSpan(showAlarmPanel);
 
@@ -1566,6 +1567,28 @@ class NodaliaFavCard extends HTMLElement {
 
         .fav-card--single-row .fav-card__content {
           align-content: center;
+        }
+
+        /* Center the collapsed alarm icon+label as one group, like the mini Fav tile. */
+        .fav-card--alarm-centered .fav-card__content {
+          align-content: center;
+          justify-items: center;
+        }
+        .fav-card--alarm-centered .fav-card__hero {
+          align-items: center;
+          display: flex;
+          justify-content: center;
+          height: 100%;
+          min-width: 0;
+          width: 100%;
+        }
+        .fav-card--alarm-centered .fav-card__copy {
+          flex: 0 1 auto;
+          min-width: 0;
+          width: auto;
+        }
+        .fav-card--alarm-centered.fav-card--tight-inline:not(.fav-card--alarm-open) .fav-card__title {
+          flex: 0 1 auto;
         }
 
         .fav-card--alarm-open .fav-card__content {
@@ -1850,7 +1873,7 @@ class NodaliaFavCard extends HTMLElement {
       ${cardFocusStyles}
       </style>
       <ha-card
-        class="fav-card ${isActive ? "is-on" : "is-off"} ${isMini ? "fav-card--mini" : "fav-card--inline"} ${isCompactInline ? "fav-card--single-row" : ""} ${isTightInline ? "fav-card--tight-inline" : ""} ${showAlarmPanel ? "fav-card--alarm-open" : ""} ${canRunPrimaryAction ? "fav-card--clickable" : ""}"
+        class="fav-card ${isActive ? "is-on" : "is-off"} ${isMini ? "fav-card--mini" : "fav-card--inline"} ${isCompactInline ? "fav-card--single-row" : ""} ${isTightInline ? "fav-card--tight-inline" : ""} ${centerCollapsedAlarm ? "fav-card--alarm-centered" : ""} ${showAlarmPanel ? "fav-card--alarm-open" : ""} ${canRunPrimaryAction ? "fav-card--clickable" : ""}"
         style="--fav-accent:${escapeHtml(accentColor)};"
         ${canRunPrimaryAction ? 'data-fav-action="primary" data-nodalia-focus="card"' : ""}
       >

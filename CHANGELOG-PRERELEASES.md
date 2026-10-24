@@ -8,6 +8,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## Unreleased
+
+### Fixed
+
+- **Media Player (TV):** use the friendly entity name when no programme is available and remove unnecessary browse-button spacing from compact TV titles.
+- **Fav Card (alarm):** center the icon and label together on collapsed compact cards without moving the expanded alarm controls.
+
 ## [3.0.4-alpha.5] - 2026-10-24
 
 ### Fixed

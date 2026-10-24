@@ -66,8 +66,10 @@
           z-index: 4;
         }
 
-        .media-player-card--compact .media-player__hero-copy,
-        .media-player-card--compact .media-player__title {
+        /* Extra browse-button clearance belongs only to non-TV media tiles.
+           TV controls live elsewhere, so every pixel is available for the title. */
+        .media-player-card--compact:not(.media-player-card--tv) .media-player__hero-copy,
+        .media-player-card--compact:not(.media-player-card--tv) .media-player__title {
           padding-inline-end: 36px;
         }
 

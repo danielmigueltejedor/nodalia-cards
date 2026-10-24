@@ -1069,12 +1069,18 @@ class NodaliaMediaPlayer extends HTMLElement {
       return mediaText(player.title);
     }
 
-    return mediaText((
-      state?.attributes?.media_title ||
-      state?.attributes?.media_series_title ||
-      state?.attributes?.media_channel ||
-      ""
-    ));
+    // The previous programme can survive in attributes after idle/standby.
+    // Keep an actual custom title, but otherwise show the friendly device name.
+    const inactive = ["off", "standby", "idle", "unknown", "unavailable"]
+      .includes(normalizeTextKey(state?.state));
+    return inactive
+      ? this._getPlayerLabel(player, state)
+      : mediaText(
+          state?.attributes?.media_title ||
+          state?.attributes?.media_series_title ||
+          state?.attributes?.media_channel ||
+          this._getPlayerLabel(player, state)
+        );
   }
 
   _getPlayerSubtitle(player:Player, state:HassEntity|null|undefined) {
@@ -2967,13 +2973,9 @@ class NodaliaMediaPlayer extends HTMLElement {
     const chips = isTvPlayer
       ? this._getTvPlayerChips(player, state, progress, title, subtitle, sourceOptions)
       : this._getPlayerChips(player, state, progress, title, subtitle);
-    const showPrimaryTitle = !isTvPlayer
-      ? hasActiveMediaContent && (!playerLabel || normalizeTextKey(title) !== normalizeTextKey(playerLabel))
-      : Boolean(title) && (
-          !playerLabel ||
-          normalizeTextKey(title) !== normalizeTextKey(playerLabel) ||
-          !hasActiveMediaContent
-        );
+    const showPrimaryTitle = isTvPlayer
+      ? Boolean(title) // Show the entity label as the TV headline when no programme exists.
+      : hasActiveMediaContent && (!playerLabel || normalizeTextKey(title) !== normalizeTextKey(playerLabel));
     const showTopChip = this._config.show_device_chip !== false && !!playerLabel && (
       isTvPlayer
         ? !showPrimaryTitle || normalizeTextKey(playerLabel) !== normalizeTextKey(title)
