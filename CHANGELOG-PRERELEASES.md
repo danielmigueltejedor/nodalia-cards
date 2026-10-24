@@ -8,6 +8,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## Unreleased
+
+### Fixed
+
+- **Media Player (TV):** show the friendly entity name when a television has no current programme, including idle/on/off states, and use the available width beside the artwork before wrapping titles in compact tiles.
+- **Fav Card (Alarm):** centre the icon/name group vertically and horizontally in compact six-column mobile tiles, retaining a full-height expanded alarm menu.
+
 ## [3.0.4-alpha.5] - 2026-10-24
 
 ### Fixed

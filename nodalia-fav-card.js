@@ -1930,7 +1930,7 @@
           border-radius: ${styles.card.border_radius};
           box-shadow: ${cardShadow};
           color: var(--primary-text-color);
-          height: ${isAlarmPanel ? "auto" : usesCompactRowMetrics ? `${singleRowHeightPx}px` : "100%"};
+          height: ${showAlarmPanel ? "auto" : usesCompactRowMetrics ? `${singleRowHeightPx}px` : "100%"};
           min-height: ${usesCompactRowMetrics || isAlarmPanel ? "68px" : "0"};
           overflow: hidden;
           position: relative;
@@ -1994,6 +1994,31 @@
 
         .fav-card--single-row .fav-card__content {
           align-content: center;
+        }
+
+        /* In a 6-column mobile tile, centre the entire alarm icon/name group like
+           the mini Fav Card. Keep the full-width layout when its mode menu opens. */
+        .fav-card--alarm-centered:not(.fav-card--alarm-open) .fav-card__content {
+          align-content: center;
+          justify-items: center;
+          height: 100%;
+        }
+
+        .fav-card--alarm-centered:not(.fav-card--alarm-open) .fav-card__hero {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          height: auto;
+          min-width: 0;
+          width: 100%;
+        }
+
+        .fav-card--alarm-centered:not(.fav-card--alarm-open) .fav-card__copy {
+          display: flex;
+          align-items: center;
+          flex: 0 1 auto;
+          min-width: 0;
         }
 
         .fav-card--alarm-open .fav-card__content {
@@ -2276,7 +2301,7 @@
       ${card_focus_default}
       </style>
       <ha-card
-        class="fav-card ${isActive ? "is-on" : "is-off"} ${isMini ? "fav-card--mini" : "fav-card--inline"} ${isCompactInline ? "fav-card--single-row" : ""} ${isTightInline ? "fav-card--tight-inline" : ""} ${showAlarmPanel ? "fav-card--alarm-open" : ""} ${canRunPrimaryAction ? "fav-card--clickable" : ""}"
+        class="fav-card ${isActive ? "is-on" : "is-off"} ${isMini ? "fav-card--mini" : "fav-card--inline"} ${isCompactInline ? "fav-card--single-row" : ""} ${isTightInline ? "fav-card--tight-inline" : ""} ${isAlarmPanel && isCompactInline ? "fav-card--alarm-centered" : ""} ${showAlarmPanel ? "fav-card--alarm-open" : ""} ${canRunPrimaryAction ? "fav-card--clickable" : ""}"
         style="--fav-accent:${escapeHtml(accentColor)};"
         ${canRunPrimaryAction ? 'data-fav-action="primary" data-nodalia-focus="card"' : ""}
       >

@@ -144,3 +144,50 @@ test('Fav preserves explicit service targets and false/zero data and handles fai
   await card.locator('ha-card[data-fav-action="primary"]').click();
   expect(errors).toEqual([]);expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
 });
+
+test('Fav 6-column alarm centres the icon and name in both axes until its controls open', async ({ page }) => {
+ const card = await mount(page, {
+  entity: 'alarm_control_panel.casa',
+  name: 'Alarma',
+  use_entity_icon: true,
+  show_state: false,
+  alarm_show_code_input: false,
+  animations: { enabled: false },
+  grid_options: { columns: 6, rows: 'auto' },
+  styles: { icon: { size: '52px' }, card: { border_radius: '28px' } },
+ }, { 'alarm_control_panel.casa': {
+  state: 'disarmed', attributes: { friendly_name: 'Casa', supported_features: 3 },
+ } });
+ for (const width of [210, 290, 380]) {
+  await card.evaluate((node, width) => { node.style.width = `${width}px`; }, width);
+  await expect(card.locator('ha-card')).toHaveClass(/fav-card--alarm-centered/);
+  const geometry = await card.evaluate(node => {
+   const root = node.shadowRoot;
+   const outer = root.querySelector('ha-card').getBoundingClientRect();
+   const icon = root.querySelector('.fav-card__icon').getBoundingClientRect();
+   const label = root.querySelector('.fav-card__title').getBoundingClientRect();
+   return {
+    deltaX: Math.abs((outer.left + outer.right) / 2 - (icon.left + label.right) / 2),
+    deltaY: Math.abs((outer.top + outer.bottom) / 2 - (icon.top + icon.bottom) / 2),
+    title: root.querySelector('.fav-card__title').textContent,
+    cardHeight: outer.height,
+   };
+  });
+  expect(geometry.title).toBe('Alarma');
+  expect(geometry.deltaX).toBeLessThan(4);
+  expect(geometry.deltaY).toBeLessThan(4);
+  expect(geometry.cardHeight).toBeGreaterThan(44);
+ }
+ await card.locator('ha-card[data-fav-action="primary"]').click();
+ await expect(card.locator('.fav-card--alarm-open')).toBeVisible();
+ await expect(card.locator('[data-fav-alarm-action]')).not.toHaveCount(0);
+ const panel = await card.evaluate(node => {
+  const root = node.shadowRoot;
+  const outer = root.querySelector('ha-card').getBoundingClientRect();
+  const actions = root.querySelector('.fav-card__alarm-panel').getBoundingClientRect();
+  return { height: outer.height, fits: actions.bottom <= outer.bottom + 1 };
+ });
+ expect(panel.height).toBeGreaterThan(68);
+ expect(panel.fits).toBe(true);
+ expect(await page.evaluate(() => window.bundleErrors)).toEqual([]);
+});
