@@ -1250,6 +1250,7 @@ class NodaliaCameraCard extends HTMLElement {
       vacuum: "nodalia-vacuum-card",
       cover: "nodalia-cover-card",
       climate: "nodalia-climate-card",
+      lock: "nodalia-lock-card",
     };
     return tags[domain || ""] || "nodalia-entity-card";
   }
@@ -1274,7 +1275,7 @@ class NodaliaCameraCard extends HTMLElement {
         content_duration: 0,
         panel_duration: 0,
       },
-      compact_layout_mode: domain === "lock" || domain === "switch" || domain === "input_boolean" ? "always" : "never",
+      compact_layout_mode: domain === "switch" || domain === "input_boolean" ? "always" : "never",
     };
     (["name", "icon", "tap_service", "tap_service_data", "tap_service_target", "tap_url", "navigation_path"] as const).forEach(key => {
       if (action[key]) {
@@ -1326,7 +1327,13 @@ class NodaliaCameraCard extends HTMLElement {
         show_stop: true,
         show_locate: true,
       });
-    } else if (domain === "lock" || domain === "switch" || domain === "input_boolean") {
+    } else if (domain === "lock") {
+      Object.assign(config, {
+        layout: "compact",
+        show_name: config.name !== undefined,
+        show_state: true,
+      });
+    } else if (domain === "switch" || domain === "input_boolean") {
       config.grid_options = {
         columns: 3,
         rows: 1,

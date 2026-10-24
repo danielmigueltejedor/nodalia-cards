@@ -1,17 +1,17 @@
 import {expect,test} from '@playwright/test';
 test.use({hasTouch:true});
-async function mount(page,{provider='home_assistant',deferred=false,hold='none',image=false}={}){
+async function mount(page,{provider='home_assistant',deferred=false,hold='none',image=false,expanded=[]}={}){
  await page.route('**/api/camera_proxy/**',route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="160" height="90"><rect width="160" height="90" fill="#567"/></svg>'}));
  await page.goto('/tests/fixtures/browser.html');await page.waitForFunction(()=>customElements.get('nodalia-camera-card'));
- await page.evaluate(({provider,deferred,hold,image})=>{
+ await page.evaluate(({provider,deferred,hold,image,expanded})=>{
   window.cameraRequests=[];window.cameraActions=[];window.cameraServices=[];window.cameraPlayers=[];
   const Player=customElements.get('nodalia-go2rtc-player');
   Player.prototype.configure=function(options){this.testOptions={...options};if(!window.cameraPlayers.includes(this))window.cameraPlayers.push(this);};
   Player.prototype.connectedCallback=function(){};Player.prototype.disconnect=function(){this.testDisconnected=true;};
-  window.cameraConfig={entity:'camera.one',cameras:['camera.one'],hold_action:hold,animations:{enabled:false},camera_streams:[{camera:'camera.one',provider,stream:'one',base_url:'https://go2rtc.example',url:'https://player.example'}]};
-  const hass=window.createHassFixture({entities:{'camera.one':{state:'idle',last_changed:'2026-10-01T10:00:00Z',attributes:{friendly_name:'Front',...(image?{access_token:'initial-token'}:{})}},'camera.two':{state:'idle',attributes:{friendly_name:'Back'}}},overrides:{connection:{},user:{id:'first',is_admin:true},callWS(message){const entry={message};window.cameraRequests.push(entry);return deferred?new Promise((resolve,reject)=>Object.assign(entry,{resolve,reject})):Promise.resolve({path:'/signed/one'});},callService(domain,service,data,target){window.cameraServices.push({domain,service,data,target});return Promise.resolve();}}});
+  window.cameraConfig={entity:'camera.one',cameras:['camera.one'],hold_action:hold,expanded_actions:expanded,animations:{enabled:false},camera_streams:[{camera:'camera.one',provider,stream:'one',base_url:'https://go2rtc.example',url:'https://player.example'}]};
+  const hass=window.createHassFixture({entities:{'camera.one':{state:'idle',last_changed:'2026-10-01T10:00:00Z',attributes:{friendly_name:'Front',...(image?{access_token:'initial-token'}:{})}},'camera.two':{state:'idle',attributes:{friendly_name:'Back'}},'lock.front_door':{state:'locked',attributes:{friendly_name:'Front Door'}}},overrides:{connection:{},user:{id:'first',is_admin:true},callWS(message){const entry={message};window.cameraRequests.push(entry);return deferred?new Promise((resolve,reject)=>Object.assign(entry,{resolve,reject})):Promise.resolve({path:'/signed/one'});},callService(domain,service,data,target){window.cameraServices.push({domain,service,data,target});return Promise.resolve();}}});
   window.cameraHass=hass;const card=document.createElement('nodalia-camera-card');card.setConfig(window.cameraConfig);card.hass=hass;card.addEventListener('hass-more-info',event=>window.cameraActions.push(event.detail.entityId));document.querySelector('#fixture').append(card);window.cameraCard=card;
- },{provider,deferred,hold,image});return page.locator('nodalia-camera-card');
+ },{provider,deferred,hold,image,expanded});return page.locator('nodalia-camera-card');
 }
 const open=card=>card.locator('[data-camera-action="camera-tap"]').click();
 test('Camera native keyboard activates once, restores focus and owns hold/cancel/reconnect actions',async({page})=>{
@@ -52,9 +52,9 @@ test('Camera portal keeps readable styles, owns stream events and removes its ho
 });
 
 test('Camera remounts playback and related controls into the current Summary portal on rerender',async({page})=>{
- const card=await mount(page,{provider:'go2rtc',image:true});await page.evaluate(()=>{const container=document.createElement('nodalia-room-summary-card');container.setConfig({});document.querySelector('#fixture').append(container);container.shadowRoot.append(window.cameraCard);window.cameraCard.setConfig({...window.cameraConfig,camera_actions:[{camera:'camera.one',entity:'lock.front',name:'Door',tap_action:'more-info'}]});window.cameraHass.states['lock.front']={entity_id:'lock.front',state:'locked',attributes:{friendly_name:'Door'}};window.cameraCard.hass={...window.cameraHass};});await open(card);const portal=page.locator('[data-nodalia-overlay-portal="camera"]');await expect(portal.locator('nodalia-go2rtc-player')).toHaveCount(1);await expect(portal.locator('nodalia-entity-card')).toHaveCount(1);
- await page.evaluate(()=>{window.cameraPreviousPlayer=window.cameraPlayers.at(-1);window.cameraCard.setConfig({...window.cameraCard._config,name:'Renamed camera'});});await expect(portal.locator('.camera-card__expanded-title')).toHaveText('Renamed camera');await expect(portal.locator('nodalia-go2rtc-player')).toHaveCount(1);await expect(portal.locator('nodalia-entity-card')).toHaveCount(1);expect(await page.evaluate(()=>window.cameraPreviousPlayer.testDisconnected)).toBe(true);
- await page.evaluate(()=>{window.cameraPreviousPlayer=window.cameraPlayers.at(-1);window.cameraCard.shadowRoot.querySelector('[data-camera-image]').dispatchEvent(new Event('error'));});await expect(portal.locator('nodalia-go2rtc-player')).toHaveCount(1);await expect(portal.locator('nodalia-entity-card')).toHaveCount(1);await expect.poll(()=>page.evaluate(()=>window.cameraPlayers.at(-1).testOptions.source)).toBe('https://go2rtc.example/api/ws?src=one');expect(await page.evaluate(()=>window.cameraPreviousPlayer.testDisconnected)).toBe(true);await page.evaluate(()=>window.cameraPlayers.at(-1).dispatchEvent(new Event('nodalia-go2rtc-loaded')));await expect(portal.locator('[data-camera-stream-status]')).toBeHidden();await portal.locator('.camera-card__expanded-close').click();await expect(portal).toHaveCount(0);expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+ const card=await mount(page,{provider:'go2rtc',image:true});await page.evaluate(()=>{const container=document.createElement('nodalia-room-summary-card');container.setConfig({});document.querySelector('#fixture').append(container);container.shadowRoot.append(window.cameraCard);window.cameraCard.setConfig({...window.cameraConfig,camera_actions:[{camera:'camera.one',entity:'lock.front',name:'Door',tap_action:'more-info'}]});window.cameraHass.states['lock.front']={entity_id:'lock.front',state:'locked',attributes:{friendly_name:'Door'}};window.cameraCard.hass={...window.cameraHass};});await open(card);const portal=page.locator('[data-nodalia-overlay-portal="camera"]');await expect(portal.locator('nodalia-go2rtc-player')).toHaveCount(1);await expect(portal.locator('nodalia-lock-card')).toHaveCount(1);
+ await page.evaluate(()=>{window.cameraPreviousPlayer=window.cameraPlayers.at(-1);window.cameraCard.setConfig({...window.cameraCard._config,name:'Renamed camera'});});await expect(portal.locator('.camera-card__expanded-title')).toHaveText('Renamed camera');await expect(portal.locator('nodalia-go2rtc-player')).toHaveCount(1);await expect(portal.locator('nodalia-lock-card')).toHaveCount(1);expect(await page.evaluate(()=>window.cameraPreviousPlayer.testDisconnected)).toBe(true);
+ await page.evaluate(()=>{window.cameraPreviousPlayer=window.cameraPlayers.at(-1);window.cameraCard.shadowRoot.querySelector('[data-camera-image]').dispatchEvent(new Event('error'));});await expect(portal.locator('nodalia-go2rtc-player')).toHaveCount(1);await expect(portal.locator('nodalia-lock-card')).toHaveCount(1);await expect.poll(()=>page.evaluate(()=>window.cameraPlayers.at(-1).testOptions.source)).toBe('https://go2rtc.example/api/ws?src=one');expect(await page.evaluate(()=>window.cameraPreviousPlayer.testDisconnected)).toBe(true);await page.evaluate(()=>window.cameraPlayers.at(-1).dispatchEvent(new Event('nodalia-go2rtc-loaded')));await expect(portal.locator('[data-camera-stream-status]')).toBeHidden();await portal.locator('.camera-card__expanded-close').click();await expect(portal).toHaveCount(0);expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
 });
 
 test('Camera replaces pending signed streams after auth rotation on the same connection',async({page})=>{
@@ -65,5 +65,16 @@ test('Camera replaces pending signed streams after auth rotation on the same con
  await page.evaluate(()=>window.cameraRequests[0].resolve({path:'/signed/obsolete'}));
  await open(card);await page.evaluate(()=>window.cameraRequests[1].resolve({path:'/signed/current-auth'}));
  await expect.poll(()=>page.evaluate(()=>window.cameraPlayers.at(-1).testOptions.source)).toBe('/signed/current-auth');
+ expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+});
+test('Camera expanded lock action uses the Nodalia lock card in compact layout',async({page})=>{
+ const card=await mount(page,{expanded:[{entity:'lock.front_door'}]});await open(card);
+ const dialog=card.locator('[role="dialog"]');await expect(dialog).toBeVisible();
+ const lockCard=dialog.locator('nodalia-lock-card');
+ await expect(lockCard).toHaveCount(1);
+ await expect(dialog.locator('nodalia-entity-card')).toHaveCount(0);
+ await expect(lockCard.locator('[data-lock-state="locked"]')).toHaveCount(1);
+ await expect(lockCard.locator('[role="slider"]')).toBeVisible();
+ expect(await page.evaluate(()=>window.cameraCard._expandedCardConfig({entity:'lock.front_door'}).layout)).toBe('compact');
  expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
 });
