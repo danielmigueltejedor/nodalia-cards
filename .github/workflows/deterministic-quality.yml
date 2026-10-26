@@ -1,0 +1,37 @@
+name: Deterministic Quality Gates
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: quality
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch whitespace integrity
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            git diff --check "${{ github.event.pull_request.base.sha }}" HEAD
+          else
+            git show --format= --check HEAD
+          fi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.17.0
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Full fast validation (types, lint, i18n, bundle, tests)
+        run: pnpm run validate:fast
