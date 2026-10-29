@@ -34,6 +34,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: cadcraft -> target
+          cache-on-failure: true
       - name: Show checked out commit
         working-directory: cadcraft
         run: |
@@ -44,6 +45,7 @@ jobs:
         run: |
           cargo fmt --all
           git diff --stat
+          git diff -- crates/fonts/src/mtext/para.rs crates/ui-egui/src/canvas/grips/cache.rs | head -180
       - name: Cargo locked check
         working-directory: cadcraft
         run: cargo check --locked -p cadcraft-doc -p cadcraft-engine -p cadcraft-io -p cadcraft-ui-egui -p cadcraft
