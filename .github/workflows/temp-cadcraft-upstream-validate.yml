@@ -31,6 +31,9 @@ jobs:
           rustup toolchain install 1.95.0 --profile minimal -c rustfmt -c clippy
           rustup default 1.95.0
           rustc --version
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: cadcraft -> target
       - name: Show checked out commit
         working-directory: cadcraft
         run: |
@@ -43,10 +46,10 @@ jobs:
           git diff --stat
       - name: Cargo locked check
         working-directory: cadcraft
-        run: cargo check -p cadcraft-doc -p cadcraft-engine -p cadcraft-io -p cadcraft-ui-egui -p cadcraft
+        run: cargo check --locked -p cadcraft-doc -p cadcraft-engine -p cadcraft-io -p cadcraft-ui-egui -p cadcraft
       - name: Focused regression tests
         working-directory: cadcraft
-        run: cargo test -p cadcraft-doc -p cadcraft-io -p cadcraft-engine --lib
+        run: cargo test --locked -p cadcraft-doc -p cadcraft-io -p cadcraft-engine --lib
       - name: Diagnose Cargo.lock and patch changes
         if: always()
         working-directory: cadcraft
