@@ -936,6 +936,7 @@ class NodaliaPersonCard extends HTMLElement {
     const title = this._getTitle(state);
     const showName = config.show_name !== false;
     const subtitle = config.show_state !== false ? this._translateState(state) : "";
+        const actionLabel = [title, subtitle].filter(Boolean).join(" ");
     const desiredPicture = this._getPersonPicture(state);
     const pictureReady = !desiredPicture || this._ensurePersonPictureReady(desiredPicture);
     const picture = this._getRenderablePersonPicture(state);
@@ -1300,7 +1301,7 @@ class NodaliaPersonCard extends HTMLElement {
         ${window.NodaliaUtils?.renderReducedMotionStyles?.() || ""}
       ${cardFocusStyles}
       </style>
-      <ha-card class="person-card ${singleRowLayout ? "person-card--single-row" : ""} ${avatarCentered ? "person-card--avatar-centered" : ""}" ${canRunPrimaryAction ? `data-person-action="primary" data-nodalia-focus="card" role="button" tabindex="0" aria-label="${escapeHtml(title)}"` : ""}>
+      <ha-card class="person-card ${singleRowLayout ? "person-card--single-row" : ""} ${avatarCentered ? "person-card--avatar-centered" : ""}" ${canRunPrimaryAction ? `data-person-action="primary" data-nodalia-focus="card" role="button" tabindex="0" aria-label="${escapeHtml(actionLabel)}"` : ""}>
         <div class="person-card__content ${animateWithPicture ? "person-card__content--entering" : ""}">
           <div class="person-card__avatar-track">
             <div class="person-card__avatar ${animateWithPicture ? "person-card__avatar--entering" : ""}">
