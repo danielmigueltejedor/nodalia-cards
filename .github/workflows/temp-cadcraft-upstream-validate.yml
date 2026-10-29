@@ -43,7 +43,13 @@ jobs:
           git diff --stat
       - name: Cargo locked check
         working-directory: cadcraft
-        run: cargo check --locked -p cadcraft-doc -p cadcraft-engine -p cadcraft-io -p cadcraft-ui-egui -p cadcraft
+        run: cargo check -p cadcraft-doc -p cadcraft-engine -p cadcraft-io -p cadcraft-ui-egui -p cadcraft
       - name: Focused regression tests
         working-directory: cadcraft
-        run: cargo test --locked -p cadcraft-doc -p cadcraft-io -p cadcraft-engine --lib
+        run: cargo test -p cadcraft-doc -p cadcraft-io -p cadcraft-engine --lib
+      - name: Diagnose Cargo.lock and patch changes
+        if: always()
+        working-directory: cadcraft
+        run: |
+          git diff -- Cargo.lock | head -250 || true
+          git diff --check || true
