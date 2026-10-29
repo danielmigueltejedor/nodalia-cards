@@ -8,6 +8,30 @@ permissions:
   contents: read
 
 jobs:
+  formatting:
+    name: CADCraft rustfmt strict
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: danielmigueltejedor/cadcraft
+          ref: upstream/cadcraft-1086-rebased-20261029
+          persist-credentials: false
+      - name: Install pinned formatter
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal -c rustfmt
+          rustup default 1.95.0
+      - name: Require Rustfmt-clean branch
+        shell: bash
+        run: |
+          if cargo fmt --all -- --check; then
+            echo "Rustfmt passed"
+          else
+            cargo fmt --all
+            git diff -- . | head -900
+            exit 1
+          fi
   rust:
     name: CADCraft Rust compile and test
     runs-on: ubuntu-24.04
