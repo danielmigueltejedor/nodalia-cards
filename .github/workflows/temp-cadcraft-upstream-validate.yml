@@ -76,6 +76,12 @@ jobs:
       - name: Focused regression tests
         working-directory: cadcraft
         run: cargo test --locked -p cadcraft-doc -p cadcraft-io -p cadcraft-engine --lib
+      - name: Strict Clippy on app and Rust tests
+        working-directory: cadcraft
+        run: cargo clippy --locked -p cadcraft-doc -p cadcraft-engine -p cadcraft-io -p cadcraft-ui-egui -p cadcraft --all-targets -- -D warnings
+      - name: Enforce crate layering
+        working-directory: cadcraft
+        run: cargo xtask layers
       - name: Diagnose Cargo.lock and patch changes
         if: always()
         working-directory: cadcraft
