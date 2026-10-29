@@ -66,3 +66,9 @@
           justify-items: start;
           max-width: none;
         }
+
+        /* Match the breathing room of sibling Nodalia tiles: the regular speaker
+           name should not crowd its circular idle artwork. TV idle stays unchanged. */
+        .media-player-card--idle:not(.media-player-card--tv) .media-player__idle-hero {
+          column-gap: 16px;
+        }

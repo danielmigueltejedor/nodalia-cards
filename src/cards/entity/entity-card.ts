@@ -3645,7 +3645,9 @@ class NodaliaEntityCard extends HTMLElement {
     const effectiveGap = singleRowLayout ? "2px" : compactMetrics ? "8px" : styles.card.gap;
     const effectiveIconSizePx = Math.max(30, Math.min(parseSizeToPixels(styles.icon.size, 58), singleRowLayout ? 38 : compactMetrics ? 46 : 58));
     const effectiveIconSize = `${effectiveIconSizePx}px`;
-    const effectiveIconTrackSize = `${effectiveIconSizePx + (singleRowLayout ? 7 : 10)}px`;
+    // The hero grid gap already separates the glyph bubble from the title.
+    // Do not add an invisible 7–10 px gutter on top of that shared spacing.
+    const effectiveIconTrackSize = effectiveIconSize;
     const effectiveControlSize = `${Math.max(34, Math.min(parseSizeToPixels(styles.control.size, 40), compactMetrics ? 36 : 40))}px`;
     const effectiveTitleSize = `${Math.max(9.5, Math.min(parseSizeToPixels(styles.title_size, 14), singleRowLayout ? 10 : compactMetrics ? 12 : 14))}px`;
     const effectiveChipHeight = `${Math.max(15, Math.min(parseSizeToPixels(styles.chip_height, 24), singleRowLayout ? 16 : compactMetrics ? 22 : 24))}px`;
@@ -3794,7 +3796,7 @@ class NodaliaEntityCard extends HTMLElement {
         .entity-card__hero {
           align-items: center;
           display: grid;
-          gap: ${singleRowLayout ? "6px" : narrowCard ? "10px" : "12px"};
+          gap: ${singleRowLayout || narrowCard ? "10px" : "12px"};
           grid-template-columns: ${effectiveIconTrackSize} minmax(0, 1fr);
           min-height: ${singleRowLayout ? effectiveContentMinHeight : "0px"};
           min-width: 0;
@@ -4278,7 +4280,11 @@ class NodaliaEntityCard extends HTMLElement {
         }
 
         @media (max-width: 420px) {
-          .entity-card__hero {
+          /* Compact selectors have higher specificity than the plain hero rule.
+             Match the grid track to the full 50px mobile icon for every layout. */
+          .entity-card__hero,
+          .entity-card--compact .entity-card__hero,
+          .entity-card--compact:not(.entity-card--with-copy) .entity-card__hero {
             gap: 10px;
             grid-template-columns: 50px minmax(0, 1fr);
           }

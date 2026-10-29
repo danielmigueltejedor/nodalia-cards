@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.4-alpha.5";
+  var CARD_VERSION = "3.0.4";
 
   // src/cards/fav/fav-constants.ts
   var CARD_TAG = "nodalia-fav-card";
@@ -1930,7 +1930,7 @@
           border-radius: ${styles.card.border_radius};
           box-shadow: ${cardShadow};
           color: var(--primary-text-color);
-          height: ${isAlarmPanel ? "auto" : usesCompactRowMetrics ? `${singleRowHeightPx}px` : "100%"};
+          height: ${showAlarmPanel ? "auto" : usesCompactRowMetrics ? `${singleRowHeightPx}px` : "100%"};
           min-height: ${usesCompactRowMetrics || isAlarmPanel ? "68px" : "0"};
           overflow: hidden;
           position: relative;
@@ -1994,6 +1994,22 @@
 
         .fav-card--single-row .fav-card__content {
           align-content: center;
+        }
+
+        /* The mini Fav (3 columns or less) remains centered on both axes.
+           Wider collapsed alarms only need vertical centering; preserve their
+           normal icon-and-copy grid just like other inline Fav Cards. */
+        .fav-card--alarm-centered:not(.fav-card--alarm-open) .fav-card__content {
+          align-content: center;
+          justify-items: stretch;
+          height: 100%;
+        }
+
+        .fav-card--alarm-centered:not(.fav-card--alarm-open) .fav-card__hero {
+          align-items: center;
+          height: 100%;
+          min-width: 0;
+          width: 100%;
         }
 
         .fav-card--alarm-open .fav-card__content {
@@ -2276,7 +2292,7 @@
       ${card_focus_default}
       </style>
       <ha-card
-        class="fav-card ${isActive ? "is-on" : "is-off"} ${isMini ? "fav-card--mini" : "fav-card--inline"} ${isCompactInline ? "fav-card--single-row" : ""} ${isTightInline ? "fav-card--tight-inline" : ""} ${showAlarmPanel ? "fav-card--alarm-open" : ""} ${canRunPrimaryAction ? "fav-card--clickable" : ""}"
+        class="fav-card ${isActive ? "is-on" : "is-off"} ${isMini ? "fav-card--mini" : "fav-card--inline"} ${isCompactInline ? "fav-card--single-row" : ""} ${isTightInline ? "fav-card--tight-inline" : ""} ${isAlarmPanel && isCompactInline ? "fav-card--alarm-centered" : ""} ${showAlarmPanel ? "fav-card--alarm-open" : ""} ${canRunPrimaryAction ? "fav-card--clickable" : ""}"
         style="--fav-accent:${escapeHtml(accentColor)};"
         ${canRunPrimaryAction ? 'data-fav-action="primary" data-nodalia-focus="card"' : ""}
       >

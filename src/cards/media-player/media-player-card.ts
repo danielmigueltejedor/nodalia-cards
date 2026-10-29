@@ -1110,7 +1110,15 @@ class NodaliaMediaPlayer extends HTMLElement {
       .filter(Boolean)
       .map(value => normalizeTextKey(value));
 
-    return plexSignals.some(value => value.includes("plex"));
+    if (plexSignals.some(value => value.includes("plex"))) {
+      return true;
+    }
+
+    // YouTube provides a real programme thumbnail through Home Assistant's
+    // entity_picture. Only use it during active playback so an old thumbnail
+    // cannot remain on a powered-off or idle TV.
+    const playing = ["playing", "paused", "buffering"].includes(normalizeTextKey(state?.state));
+    return playing && plexSignals.some(value => value.includes("youtube"));
   }
 
   _getPlayerArtwork(player:Player, state:HassEntity|null|undefined) {
@@ -2951,8 +2959,16 @@ class NodaliaMediaPlayer extends HTMLElement {
     const isTvPlayer = deviceType === "tv";
     const playerLabel = this._getPlayerLabel(player, state);
     const sourceLabel = this._getPlayerSourceLabel(state);
-    const title = isTvPlayer
+    // An idle or powered-off TV often keeps stale media_* attributes from its last
+    // programme. Show its entity name instead; only use programme metadata while
+    // content is active (or paused) and never render an empty TV heading.
+    const tvWithoutContent = isTvPlayer && ["idle", "off", "standby", "unavailable", "unknown"]
+      .includes(normalizeTextKey(state.state));
+    const tvContentTitle = isTvPlayer && !tvWithoutContent
       ? this._getTvContentTitle(player, state)
+      : "";
+    const title = isTvPlayer
+      ? tvContentTitle || playerLabel || mediaText(player.entity)
       : this._getPlayerTitle(player, state);
     const subtitle = isTvPlayer
       ? ""
@@ -2969,11 +2985,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       : this._getPlayerChips(player, state, progress, title, subtitle);
     const showPrimaryTitle = !isTvPlayer
       ? hasActiveMediaContent && (!playerLabel || normalizeTextKey(title) !== normalizeTextKey(playerLabel))
-      : Boolean(title) && (
-          !playerLabel ||
-          normalizeTextKey(title) !== normalizeTextKey(playerLabel) ||
-          !hasActiveMediaContent
-        );
+      : Boolean(title);
     const showTopChip = this._config.show_device_chip !== false && !!playerLabel && (
       isTvPlayer
         ? !showPrimaryTitle || normalizeTextKey(playerLabel) !== normalizeTextKey(title)
@@ -4528,6 +4540,12 @@ class NodaliaMediaPlayer extends HTMLElement {
           .media-player-card--tv.media-player-card--idle .media-player__idle-hero--tv-off {
             gap: 12px;
             grid-template-columns: 50px minmax(0, 1fr) auto;
+          }
+
+          /* On phones protect the speaker title width beside Play/Browse.
+             Wider screens retain the larger 16px idle icon-to-name spacing. */
+          .media-player-card--idle:not(.media-player-card--tv) .media-player__idle-hero {
+            column-gap: 12px;
           }
 
           .media-player__artwork--idle,
