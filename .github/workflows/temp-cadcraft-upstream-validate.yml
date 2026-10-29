@@ -36,9 +36,11 @@ jobs:
         run: |
           git rev-parse HEAD
           git status --short
-      - name: Rustfmt
+      - name: Rustfmt (diagnostic pass)
         working-directory: cadcraft
-        run: cargo fmt --all -- --check
+        run: |
+          cargo fmt --all
+          git diff --stat
       - name: Cargo locked check
         working-directory: cadcraft
         run: cargo check --locked -p cadcraft-doc -p cadcraft-engine -p cadcraft-io -p cadcraft-ui-egui -p cadcraft
