@@ -1,0 +1,47 @@
+name: Temporary CADCraft upstream contribution validation
+
+on:
+  push:
+    branches: [ci/cadcraft-upstream-1086-validation-20261029]
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    name: CADCraft Rust compile and test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Checkout isolated public CADCraft contribution
+        uses: actions/checkout@v4
+        with:
+          repository: danielmigueltejedor/cadcraft
+          ref: upstream/cadcraft-1086-rebased-20261029
+          persist-credentials: false
+          path: cadcraft
+      - name: Install system build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libxkbcommon-dev libwayland-dev libx11-dev libxcb1-dev \
+            libxcursor-dev libxrandr-dev libxi-dev libfontconfig1-dev libfreetype-dev \
+            mesa-vulkan-drivers libgl1-mesa-dev libudev-dev libasound2-dev
+      - name: Rust toolchain
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal -c rustfmt -c clippy
+          rustup default 1.95.0
+          rustc --version
+      - name: Show checked out commit
+        working-directory: cadcraft
+        run: |
+          git rev-parse HEAD
+          git status --short
+      - name: Rustfmt
+        working-directory: cadcraft
+        run: cargo fmt --all -- --check
+      - name: Cargo locked check
+        working-directory: cadcraft
+        run: cargo check --locked -p cadcraft-doc -p cadcraft-engine -p cadcraft-io -p cadcraft-ui-egui -p cadcraft
+      - name: Focused regression tests
+        working-directory: cadcraft
+        run: cargo test --locked -p cadcraft-doc -p cadcraft-io -p cadcraft-engine --lib
