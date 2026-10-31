@@ -1839,6 +1839,12 @@ test("representative interactive cards have no serious axe violations", async ({
     });
     document.querySelector("#fixture").append(person);
   });
+  const personButton = page.locator('nodalia-person-card ha-card[role="button"]');
+  const visibleTitle = (await personButton.locator(".person-card__title").innerText()).trim();
+  const visibleStatus = (await personButton.locator(".person-card__state-chip").innerText()).trim();
+  const accessibleLabel = await personButton.getAttribute("aria-label");
+  expect(accessibleLabel).toContain(visibleTitle);
+  expect(accessibleLabel).toContain(visibleStatus);
   const results = await new AxeBuilder({ page })
     .include("nodalia-person-card")
     .disableRules(["color-contrast"])
