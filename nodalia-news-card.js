@@ -1392,10 +1392,6 @@
             this._cancelMagazineSwipe();
             return;
           }
-          try {
-            swipe.viewport.setPointerCapture(event.pointerId);
-          } catch (_err) {
-          }
         }
         if (!swipe.dragging) {
           return;
@@ -1480,7 +1476,7 @@
         }
         return `
       <div class="${className}">
-        <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.title)}" loading="lazy" decoding="async" />
+        <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.title)}" draggable="false" loading="lazy" decoding="async" />
       </div>
     `;
       }
@@ -1983,6 +1979,8 @@
           display: block;
           height: 100%;
           object-fit: cover;
+          pointer-events: none;
+          -webkit-user-drag: none;
           width: 100%;
         }
 

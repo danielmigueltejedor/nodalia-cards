@@ -660,9 +660,8 @@ class NodaliaNewsCard extends HTMLElement {
       width: viewport.getBoundingClientRect().width || 1,
       startIndex: this._magazineIndex,
     };
-    // Capture only once a horizontal drag is recognized (pointermove). Capturing
-    // here would retarget a plain mouse click to the viewport, so "Read more" and
-    // the article would never receive it (#325).
+    // Follow the gesture from window. Pointer capture would retarget the click
+    // that follows pointerup, so "Read more" and the article would miss it (#325).
     this._attachMagazineSwipeWindowListeners();
   }
 
@@ -685,11 +684,9 @@ class NodaliaNewsCard extends HTMLElement {
         this._cancelMagazineSwipe();
         return;
       }
-      try {
-        swipe.viewport.setPointerCapture(event.pointerId);
-      } catch (_err) {
-        // Ignore capture failures on unsupported browsers.
-      }
+      // Window listeners already follow the pointer. Capturing the viewport
+      // would retarget the release click away from the article, so a drift
+      // past the 10px lock but short of a swipe never opens the URL.
     }
     if (!swipe.dragging) {
       return;
@@ -777,7 +774,7 @@ class NodaliaNewsCard extends HTMLElement {
     }
     return `
       <div class="${className}">
-        <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.title)}" loading="lazy" decoding="async" />
+        <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.title)}" draggable="false" loading="lazy" decoding="async" />
       </div>
     `;
   }
@@ -1311,6 +1308,8 @@ class NodaliaNewsCard extends HTMLElement {
           display: block;
           height: 100%;
           object-fit: cover;
+          pointer-events: none;
+          -webkit-user-drag: none;
           width: 100%;
         }
 
