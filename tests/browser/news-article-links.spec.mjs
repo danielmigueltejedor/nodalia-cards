@@ -77,6 +77,25 @@ test('News magazine: each slide opens its own URL and a horizontal swipe navigat
   expect(await page.evaluate(() => window.bundleErrors)).toEqual([]);
 });
 
+test('News magazine: a short horizontal drift still opens the article under the pointer', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'Drift is driven with mouse pointer events.');
+  const card = await mountNews(page);
+  const article = card.locator('.news-card__article[data-news-action="open"]').first();
+  const url = await article.getAttribute('data-news-url');
+  const box = await article.locator('.news-card__media').boundingBox();
+  // The hero photo is the large hit target. A short drag used to become a native
+  // image drag, so pointerup never opened the article.
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + 24, y, { steps: 6 });
+  await page.mouse.up();
+  await expect.poll(() => opened(page)).toEqual([url]);
+  await expect(card.locator('.news-card__article[data-news-url="https://news.example/article-0.html"]')).toBeInViewport();
+  expect(await page.evaluate(() => window.bundleErrors)).toEqual([]);
+});
+
 test('News items without a usable URL are not interactive and never navigate', async ({ page, isMobile }) => {
   const card = await mountNews(page, { layout: 'list', items: [item(0, ''), item(1, 'javascript:alert(1)'), item(2)] });
   await expect(card.locator('.news-card__article[data-news-action="open"]')).toHaveCount(1);
