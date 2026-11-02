@@ -301,8 +301,28 @@ class NodaliaNewsCard extends HTMLElement {
       if (!this.isConnected || !this._hass) {
         return;
       }
-      if (writeNewsHistoryToHelper(this._hass, entityId, items)) {
+      if (String(this._config?.history_helper || "").trim() !== entityId) {
+        return;
+      }
+      // The helper may have been restored after this write was queued from an
+      // unknown/empty startup snapshot. Merge that copy with the latest memory
+      // so the debounced write cannot replace it with the shorter list.
+      const maxItems = this._config?.max_items;
+      const restored = mergeNewsItemHistory(
+        loadNewsHistoryFromHelper(this._hass, entityId),
+        items,
+        maxItems,
+      );
+      const merged = mergeNewsItemHistory(restored, this._newsHistory, maxItems);
+      if (buildNewsRenderStamp(merged) !== buildNewsRenderStamp(this._newsHistory)) {
+        this._newsHistory = merged;
+        this._lastRenderSignature = "";
+      }
+      if (writeNewsHistoryToHelper(this._hass, entityId, merged)) {
         this._historyHelperSignature = getNewsHistoryHelperSignature(this._hass, entityId);
+      }
+      if (this.isConnected && !this._lastRenderSignature) {
+        this._render();
       }
     }, NEWS_HISTORY_HELPER_WRITE_MS);
   }
