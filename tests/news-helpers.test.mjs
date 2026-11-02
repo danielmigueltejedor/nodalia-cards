@@ -20,6 +20,16 @@ test('News malformed identified history rows are restored safely without trustin
  const compact=api.encodeCompactNewsHistoryEntry(item());const restored=api.parseNewsHistoryFromHelperState(JSON.stringify([compact,null]));assert.equal(restored.length,1);assert.equal(restored[0].title,'Headline');assert.equal(api.fitNewsHistoryPayloadToLimit([compact,compact],255).length<=255,true);const cyclic=[];cyclic.push(cyclic);assert.equal(api.fitNewsHistoryPayloadToLimit(cyclic),'[]');
 });
 
+test('News helper keeps fitting articles when a newer entry cannot fit',()=>{
+ const kept=api.encodeCompactNewsHistoryEntry(item({title:'Kept',published:'2026-10-01T00:00:00Z',url:'https://news.example/kept'}));
+ const oversized=api.encodeCompactNewsHistoryEntry(api.normalizeNewsItem({title:'T'.repeat(80),summary:'S'.repeat(80),url:'https://news.example/'+'u'.repeat(40),image:'https://images.example/'+'i'.repeat(40),published:'2026-10-02T00:00:00Z'},{entity:'sensor.'+'n'.repeat(180)}));
+ assert.ok(JSON.stringify([oversized]).length>250);
+ const payload=api.fitNewsHistoryPayloadToLimit([oversized,kept],250);
+ assert.deepEqual(JSON.parse(payload),[JSON.parse(JSON.stringify(kept))]);
+ const hass={states:{'input_text.news':{state:JSON.stringify([kept])}},callService(){throw Error('must not wipe fitting history');}};
+ assert.equal(api.writeNewsHistoryToHelper(hass,'input_text.news',[api.normalizeNewsItem({title:'T'.repeat(80),summary:'S'.repeat(80),url:'https://news.example/'+'u'.repeat(40),image:'https://images.example/'+'i'.repeat(40),published:'2026-10-02T00:00:00Z'},{entity:'sensor.'+'n'.repeat(180)})]),true);
+});
+
 test('News helper writes keep synchronous acceptance, handle async failure and avoid unsafe targets',async()=>{
  const calls=[],hass={states:{},callService:(...args)=>{calls.push(args);return Promise.reject(Error('backend unavailable'));}};assert.equal(api.writeNewsHistoryToHelper(hass,'input_text.news',[item()]),true);assert.equal(calls[0][0],'input_text');assert.equal(calls[0][1],'set_value');assert.equal(calls[0][2].value.length<=255,true);assert.equal(api.writeNewsHistoryToHelper(hass,'light.one',[item()]),false);assert.equal(calls.length,1);await new Promise(resolve=>setImmediate(resolve));assert.equal(api.writeNewsHistoryToHelper({states:{},callService(){throw Error('sync');}},'text.news',[]),false);
 });

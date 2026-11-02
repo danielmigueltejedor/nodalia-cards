@@ -540,14 +540,27 @@ export function parseNewsHistoryFromHelperState(rawState: unknown) {
 }
 
 export function fitNewsHistoryPayloadToLimit(entries: unknown, maxChars = NEWS_HISTORY_HELPER_MAX_CHARS) {
-  let payload = Array.isArray(entries) ? entries.filter(Boolean) : [];
+  const payload: unknown[] = [];
+  for (const entry of Array.isArray(entries) ? entries : []) {
+    if (!entry) {
+      continue;
+    }
+    try {
+      // One article whose compact form cannot fit must not discard every other article.
+      if (JSON.stringify([entry]).length <= maxChars) {
+        payload.push(entry);
+      }
+    } catch (_error) {
+      // Unserializable entries cannot be stored.
+    }
+  }
   while (payload.length > 0) {
     let json: string;
     try { json = JSON.stringify(payload); } catch (_error) { return "[]"; }
     if (json.length <= maxChars) {
       return json;
     }
-    payload = payload.slice(0, -1);
+    payload.pop();
   }
   return "[]";
 }
@@ -582,6 +595,10 @@ export function writeNewsHistoryToHelper(hass: HomeAssistant | null | undefined,
     (Array.isArray(items) ? items : []).map(encodeCompactNewsHistoryEntry).filter(Boolean),
   );
   const current = String(hass.states?.[id]?.state ?? "").trim();
+  // An empty payload must not erase articles the helper already stored successfully.
+  if (payload === "[]" && parseNewsHistoryFromHelperState(current).length > 0) {
+    return true;
+  }
   if (current === payload) {
     return true;
   }
