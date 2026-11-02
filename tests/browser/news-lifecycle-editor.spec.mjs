@@ -29,6 +29,36 @@ test('News retires queued helper writes after configuration or HA context change
  expect(await page.evaluate(()=>window.newsWrites.length)).toBe(1);
  expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
 });
+test('News startup snapshot does not overwrite restored helper history',async({page})=>{
+ await page.goto('/tests/fixtures/browser.html');await page.waitForFunction(()=>customElements.get('nodalia-news-card'));await page.clock.install();
+ await page.evaluate(()=>{
+  window.newsWrites=[];
+  window.newsHass=window.makeHass({
+   'sensor.news':{state:'ready',attributes:{items:[{title:'Current',url:'https://news.example/current',published:'2026-10-01T00:00:00Z'}]}},
+   'input_text.history':{state:'unknown',attributes:{}},
+  });
+  window.newsHass.callService=(...args)=>{window.newsWrites.push(JSON.parse(JSON.stringify(args)));return Promise.resolve();};
+  const card=document.createElement('nodalia-news-card');
+  card.setConfig({entity:'sensor.news',history_helper:'input_text.history',mirror_history_local:false,max_items:8});
+  card.hass=window.newsHass;document.querySelector('#fixture').append(card);window.newsLifecycleFixture=card;
+ });
+ expect(await page.evaluate(()=>window.newsLifecycleFixture._historyHelperWriteTimer)).not.toBe(0);
+ await page.evaluate(()=>{
+  const current={t:'Current',u:'https://news.example/current',p:Date.parse('2026-10-01T00:00:00Z'),e:'sensor.news'};
+  const older={t:'Older remembered',u:'https://news.example/older',p:Date.parse('2026-09-01T00:00:00Z'),e:'sensor.news'};
+  window.newsHass.states['input_text.history']={state:JSON.stringify([current,older]),last_changed:'restored',attributes:{}};
+  window.newsLifecycleFixture.hass=window.newsHass;
+ });
+ await page.clock.runFor(600);
+ const writes=await page.evaluate(()=>window.newsWrites.map(call=>call[2].value));
+ for (const value of writes) {
+  const titles=JSON.parse(value).map(entry=>entry.t);
+  expect(titles).toContain('Older remembered');
+  expect(titles).toContain('Current');
+ }
+ expect(await page.evaluate(()=>window.newsLifecycleFixture._newsHistory.map(item=>item.title))).toEqual(['Current','Older remembered']);
+ expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+});
 test('News cancelled swipe keeps the current article and disconnection releases gesture state',async({page})=>{
  await page.goto('/tests/fixtures/browser.html');await page.waitForFunction(()=>customElements.get('nodalia-news-card'));
  await page.evaluate(()=>{const card=document.createElement('nodalia-news-card');card.setConfig({entity:'sensor.news',remember_items:false});card.hass=window.makeHass({'sensor.news':{state:'ready',attributes:{items:[{title:'One',published:'2026-10-01T00:00:00Z'},{title:'Two',published:'2026-09-30T00:00:00Z'}]}}});document.querySelector('#fixture').append(card);window.newsLifecycleFixture=card;});

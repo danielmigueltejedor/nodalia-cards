@@ -729,7 +729,18 @@
     }
   }
   function fitNewsHistoryPayloadToLimit(entries, maxChars = NEWS_HISTORY_HELPER_MAX_CHARS) {
-    let payload = Array.isArray(entries) ? entries.filter(Boolean) : [];
+    const payload = [];
+    for (const entry of Array.isArray(entries) ? entries : []) {
+      if (!entry) {
+        continue;
+      }
+      try {
+        if (JSON.stringify([entry]).length <= maxChars) {
+          payload.push(entry);
+        }
+      } catch (_error) {
+      }
+    }
     while (payload.length > 0) {
       let json;
       try {
@@ -740,7 +751,7 @@
       if (json.length <= maxChars) {
         return json;
       }
-      payload = payload.slice(0, -1);
+      payload.pop();
     }
     return "[]";
   }
@@ -772,6 +783,9 @@
       (Array.isArray(items) ? items : []).map(encodeCompactNewsHistoryEntry).filter(Boolean)
     );
     const current = String(hass.states?.[id]?.state ?? "").trim();
+    if (payload === "[]" && parseNewsHistoryFromHelperState(current).length > 0) {
+      return true;
+    }
     if (current === payload) {
       return true;
     }
@@ -1054,8 +1068,25 @@
           if (!this.isConnected || !this._hass) {
             return;
           }
-          if (writeNewsHistoryToHelper(this._hass, entityId, items)) {
+          if (String(this._config?.history_helper || "").trim() !== entityId) {
+            return;
+          }
+          const maxItems = this._config?.max_items;
+          const restored = mergeNewsItemHistory(
+            loadNewsHistoryFromHelper(this._hass, entityId),
+            items,
+            maxItems
+          );
+          const merged = mergeNewsItemHistory(restored, this._newsHistory, maxItems);
+          if (buildNewsRenderStamp(merged) !== buildNewsRenderStamp(this._newsHistory)) {
+            this._newsHistory = merged;
+            this._lastRenderSignature = "";
+          }
+          if (writeNewsHistoryToHelper(this._hass, entityId, merged)) {
             this._historyHelperSignature = getNewsHistoryHelperSignature(this._hass, entityId);
+          }
+          if (this.isConnected && !this._lastRenderSignature) {
+            this._render();
           }
         }, NEWS_HISTORY_HELPER_WRITE_MS);
       }
