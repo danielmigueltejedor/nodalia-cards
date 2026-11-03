@@ -125,10 +125,5 @@
     "eslint": "^10.13.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.72.0"
-  },
-  "pnpm": {
-    "overrides": {
-      "minimatch": "11.0.3"
-    }
   }
 }
