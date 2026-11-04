@@ -1142,7 +1142,6 @@
         if (["locking", "unlocking", "jammed", "unavailable", "unknown"].includes(stateKey)) {
           return;
         }
-        const features = entitySupportedFeatures(state);
         if (stateKey === "locked") {
           this._invokeEntityService("lock", "unlock", entityId);
           return;

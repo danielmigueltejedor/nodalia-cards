@@ -11,7 +11,6 @@ import {
   COVER_SET_POSITION,
   EDITOR_TAG,
   HAPTIC_PATTERNS,
-  LOCK_LOCK,
   OPTIMISTIC_TOGGLE_TIMEOUT
 } from "./entity-constants";
 import {
@@ -29,7 +28,6 @@ import {
   buildAirQualityChartGeometry,
   buildAirQualityInterpolatedSamples,
   coverEntityIsOpen,
-  entitySupportedFeatures,
   entitySupportsFeature,
   formatNumericValue,
   formatNumericValueWithUnit,
@@ -959,7 +957,6 @@ class NodaliaEntityCard extends HTMLElement {
       return;
     }
 
-    const features = entitySupportedFeatures(state);
     if (stateKey === "locked") {
       this._invokeEntityService("lock", "unlock", entityId);
       return;
