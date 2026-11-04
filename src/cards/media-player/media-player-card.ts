@@ -3949,7 +3949,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           z-index: 3;
         }
 
-        .media-player__artwork .media-player__unavailable-badge > ha-icon {
+        .media-player__artwork .media-player__unavailable-badge ha-icon {
           --mdc-icon-size: 11px;
           align-items: center;
           color: #fff;

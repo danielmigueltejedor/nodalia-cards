@@ -283,8 +283,11 @@
           video.style.transform = previousTransform;
           video.style.willChange = previousWillChange;
         }
-        Promise.resolve().then(() => video.play?.()).catch(() => {
-        });
+        const playback = video.play?.();
+        if (playback && typeof playback.catch === "function") {
+          playback.catch(() => {
+          });
+        }
         this._verifyVideoDisplayRecovery(video);
       };
       if (typeof window.requestAnimationFrame === "function") {
@@ -1065,7 +1068,7 @@
   }
 
   // src/version.ts
-  var CARD_VERSION = "3.0.5-alpha.1";
+  var CARD_VERSION = "3.0.5-alpha.2";
 
   // src/cards/camera/camera-constants.ts
   var CARD_TAG = "nodalia-camera-card";

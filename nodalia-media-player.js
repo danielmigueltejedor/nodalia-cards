@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.5-alpha.1";
+  var CARD_VERSION = "3.0.5-alpha.2";
 
   // src/cards/media-player/media-player-constants.ts
   var CARD_TAG = "nodalia-media-player";
@@ -4776,7 +4776,7 @@
           z-index: 3;
         }
 
-        .media-player__artwork .media-player__unavailable-badge > ha-icon {
+        .media-player__artwork .media-player__unavailable-badge ha-icon {
           --mdc-icon-size: 11px;
           align-items: center;
           color: #fff;

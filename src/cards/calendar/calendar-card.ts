@@ -1604,7 +1604,8 @@ class NodaliaCalendarCard extends HTMLElement {
     const current = () => this.isConnected && generation === this._weatherSubscriptionGeneration;
     this._weatherForecastSubscriptionKey = key;
     this._weatherForecastConnection = connection;
-    this._weatherForecastSubscription = connection.subscribeMessage(event => {
+    try {
+      this._weatherForecastSubscription = connection.subscribeMessage(event => {
         if (!current()) return;
         const value = isObject(event) && "forecast" in event ? event.forecast : event;
         if (!Array.isArray(value) && !isObject(value)) return;
@@ -1619,6 +1620,11 @@ class NodaliaCalendarCard extends HTMLElement {
           this._weatherForecastConnection = undefined;
         }
       });
+    } catch (_error) {
+      this._weatherForecastSubscription = null;
+      this._weatherForecastSubscriptionKey = "";
+      this._weatherForecastConnection = undefined;
+    }
   }
 
   _extractForecastRowsFromResponse(response: unknown, entityId: string) {

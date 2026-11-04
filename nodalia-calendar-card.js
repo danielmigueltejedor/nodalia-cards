@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.5-alpha.1";
+  var CARD_VERSION = "3.0.5-alpha.2";
 
   // src/shared/date-time-format.ts
   var CACHE_LIMIT = 48;
@@ -1994,21 +1994,27 @@ ${metadata}` : metadata;
         const current = () => this.isConnected && generation === this._weatherSubscriptionGeneration;
         this._weatherForecastSubscriptionKey = key;
         this._weatherForecastConnection = connection;
-        this._weatherForecastSubscription = connection.subscribeMessage((event) => {
-          if (!current()) return;
-          const value = isObject(event) && "forecast" in event ? event.forecast : event;
-          if (!Array.isArray(value) && !isObject(value)) return;
-          this._weatherForecastRevision += 1;
-          this._weatherForecastEvents[forecastType] = this._tagForecastRows(value, forecastType);
-          this._applyWeatherForecastRows(Object.values(this._weatherForecastEvents).flat(), { allowFallback: false });
-          this._renderIfChanged(true);
-        }, { type: "weather/subscribe_forecast", entity_id: entityId, forecast_type: forecastType }).catch(() => {
-          if (current()) {
-            this._weatherForecastSubscription = null;
-            this._weatherForecastSubscriptionKey = "";
-            this._weatherForecastConnection = void 0;
-          }
-        });
+        try {
+          this._weatherForecastSubscription = connection.subscribeMessage((event) => {
+            if (!current()) return;
+            const value = isObject(event) && "forecast" in event ? event.forecast : event;
+            if (!Array.isArray(value) && !isObject(value)) return;
+            this._weatherForecastRevision += 1;
+            this._weatherForecastEvents[forecastType] = this._tagForecastRows(value, forecastType);
+            this._applyWeatherForecastRows(Object.values(this._weatherForecastEvents).flat(), { allowFallback: false });
+            this._renderIfChanged(true);
+          }, { type: "weather/subscribe_forecast", entity_id: entityId, forecast_type: forecastType }).catch(() => {
+            if (current()) {
+              this._weatherForecastSubscription = null;
+              this._weatherForecastSubscriptionKey = "";
+              this._weatherForecastConnection = void 0;
+            }
+          });
+        } catch (_error) {
+          this._weatherForecastSubscription = null;
+          this._weatherForecastSubscriptionKey = "";
+          this._weatherForecastConnection = void 0;
+        }
       }
       _extractForecastRowsFromResponse(response, entityId) {
         const outer = isObject(response) ? response : {};

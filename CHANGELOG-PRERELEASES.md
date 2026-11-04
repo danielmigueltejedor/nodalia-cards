@@ -8,6 +8,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.0.5-alpha.2] - 2026-11-04
+
+### Fixed
+
+- The Media Player unavailable question mark stays white and centered inside its orange badge, including TV artwork.
+- Weather and Calendar still catch a forecast subscription that fails immediately, and go2rtc still resumes video after a display change.
+- Sonar reliability and security findings: number parsing, sorts, backtracking expressions, release permissions, and diagnostic paths.
+
 ## [3.0.5-alpha.1] - 2026-11-04
 
 ### Fixed

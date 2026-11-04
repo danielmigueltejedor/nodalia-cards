@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.5-alpha.1";
+  var CARD_VERSION = "3.0.5-alpha.2";
 
   // src/cards/weather/weather-constants.ts
   var CARD_TAG = "nodalia-weather-card";
@@ -1034,14 +1034,18 @@
             this._forecastConnection = null;
           }
         };
-        this._forecastSubscription = connection.subscribeMessage((event) => {
-          if (!this.isConnected || generation !== this._forecastGeneration || this._hass?.connection !== connection) return;
-          if (!isObject(event) || !Array.isArray(event.forecast)) return;
-          this._forecastEvents = { ...this._forecastEvents, [forecastType]: { forecast: forecastRows(event.forecast) } };
-          this._animateForecastOnNextRender = true;
-          this._lastRenderSignature = "";
-          this._render();
-        }, { type: "weather/subscribe_forecast", entity_id: this._config.entity, forecast_type: forecastType }).catch(onFailure);
+        try {
+          this._forecastSubscription = connection.subscribeMessage((event) => {
+            if (!this.isConnected || generation !== this._forecastGeneration || this._hass?.connection !== connection) return;
+            if (!isObject(event) || !Array.isArray(event.forecast)) return;
+            this._forecastEvents = { ...this._forecastEvents, [forecastType]: { forecast: forecastRows(event.forecast) } };
+            this._animateForecastOnNextRender = true;
+            this._lastRenderSignature = "";
+            this._render();
+          }, { type: "weather/subscribe_forecast", entity_id: this._config.entity, forecast_type: forecastType }).catch(onFailure);
+        } catch (_error) {
+          onFailure();
+        }
       }
       _getTitle(state) {
         const customName = String(this._config?.name || "").trim();
