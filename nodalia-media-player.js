@@ -1593,7 +1593,9 @@
         const variants = [
           { label: "Media Player — Compact", mode: "compact" },
           { label: "Media Player — Square", mode: "square" },
-          { label: "Media Player — Horizontal", mode: "chip" }
+          { label: "Media Player — Horizontal", mode: "chip" },
+          { label: "Media Player — Standard", mode: "standard" },
+          { label: "Media Player — Artwork", mode: "artwork" }
         ];
         return variants.map((variant) => window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
           domains: ["media_player"],
@@ -6081,7 +6083,8 @@
     `;
       }
       _horizontalLayoutAllowed() {
-        const columns = Number(isObject(this._config?.grid_options) ? this._config.grid_options.columns : NaN);
+        const grid = isObject(this._config?.grid_options) ? this._config.grid_options : void 0;
+        const columns = Number(grid && "columns" in grid ? grid.columns : void 0);
         return !(Number.isFinite(columns) && columns > 0 && columns < 7);
       }
       _renderSelectField(label, field, value, options, valueType = "string") {

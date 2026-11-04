@@ -526,7 +526,8 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
   }
 
   _horizontalLayoutAllowed() {
-    const columns = Number(isObject(this._config?.grid_options) ? this._config.grid_options.columns : NaN);
+    const grid = isObject(this._config?.grid_options) ? this._config.grid_options : undefined;
+    const columns = Number(grid && "columns" in grid ? grid.columns : undefined);
     return !(Number.isFinite(columns) && columns > 0 && columns < 7);
   }
 

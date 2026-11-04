@@ -143,6 +143,8 @@ class NodaliaMediaPlayer extends HTMLElement {
       { label: "Media Player — Compact", mode: "compact" },
       { label: "Media Player — Square", mode: "square" },
       { label: "Media Player — Horizontal", mode: "chip" },
+      { label: "Media Player — Standard", mode: "standard" },
+      { label: "Media Player — Artwork", mode: "artwork" },
     ];
     return variants
       .map(variant => window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
