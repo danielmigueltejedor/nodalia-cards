@@ -1,4 +1,5 @@
 import cardFocusStyles from "../../shared/card-focus.css";
+import { invokeSafely } from "../../shared/invoke-safely";
 import {
   CALENDAR_DELETE_RECURRENCE_THIS,
   CALENDAR_DELETE_RECURRENCE_THIS_AND_FUTURE,
@@ -1604,26 +1605,28 @@ class NodaliaCalendarCard extends HTMLElement {
     const current = () => this.isConnected && generation === this._weatherSubscriptionGeneration;
     this._weatherForecastSubscriptionKey = key;
     this._weatherForecastConnection = connection;
-    try {
-      this._weatherForecastSubscription = connection.subscribeMessage(event => {
-        if (!current()) return;
-        const value = isObject(event) && "forecast" in event ? event.forecast : event;
-        if (!Array.isArray(value) && !isObject(value)) return;
-        this._weatherForecastRevision += 1;
-        this._weatherForecastEvents[forecastType] = this._tagForecastRows(value, forecastType);
-        this._applyWeatherForecastRows(Object.values(this._weatherForecastEvents).flat(), { allowFallback: false });
-        this._renderIfChanged(true);
-      }, { type: "weather/subscribe_forecast", entity_id: entityId, forecast_type: forecastType }).catch(() => {
+    const started = invokeSafely(() => connection.subscribeMessage?.(event => {
+      if (!current()) return;
+      const value = isObject(event) && "forecast" in event ? event.forecast : event;
+      if (!Array.isArray(value) && !isObject(value)) return;
+      this._weatherForecastRevision += 1;
+      this._weatherForecastEvents[forecastType] = this._tagForecastRows(value, forecastType);
+      this._applyWeatherForecastRows(Object.values(this._weatherForecastEvents).flat(), { allowFallback: false });
+      this._renderIfChanged(true);
+    }, { type: "weather/subscribe_forecast", entity_id: entityId, forecast_type: forecastType }));
+    if (!started.ok || !started.value) {
+      this._weatherForecastSubscription = null;
+      this._weatherForecastSubscriptionKey = "";
+      this._weatherForecastConnection = undefined;
+    } else {
+      this._weatherForecastSubscription = started.value;
+      void started.value.catch(() => {
         if (current()) {
           this._weatherForecastSubscription = null;
           this._weatherForecastSubscriptionKey = "";
           this._weatherForecastConnection = undefined;
         }
       });
-    } catch (_error) {
-      this._weatherForecastSubscription = null;
-      this._weatherForecastSubscriptionKey = "";
-      this._weatherForecastConnection = undefined;
     }
   }
 

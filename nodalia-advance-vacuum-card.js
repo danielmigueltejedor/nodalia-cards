@@ -6824,7 +6824,7 @@
         const attributes = active instanceof HTMLElement ? Array.from(active.attributes).filter((item) => item.name.startsWith("data-")).map((item) => [item.name, item.value]) : [];
         this._renderView();
         if (attributes.length && active && !active.isConnected) {
-          const replacement = Array.from(this.shadowRoot.querySelectorAll("button,select")).find((node) => node.tagName === active.tagName && attributes.every(([name, value]) => typeof name === "string" && node.getAttribute(name) === value));
+          const replacement = Array.from(this.shadowRoot.querySelectorAll("button,select")).find((node) => node.tagName === active.tagName && attributes.every(([name, value]) => Object.is(node.getAttribute(String(name)), value)));
           replacement?.focus({ preventScroll: true });
         }
       }
@@ -7425,7 +7425,7 @@
         event.stopPropagation();
         const nextValue = editorControlValue(event, control);
         const nextConfig = cloneConfigValue(this._config);
-        if (nextValue === "" || nextValue == null) {
+        if (nextValue == null || typeof nextValue === "string" && nextValue.length === 0) {
           deleteByPath(nextConfig, control.dataset.field);
         } else {
           setByPath(nextConfig, control.dataset.field, nextValue);
@@ -7472,7 +7472,7 @@
         target.setCustomValidity("");
         target.removeAttribute("aria-invalid");
         this._draftValues.delete(field);
-        if (nextValue === "" || nextValue == null) {
+        if (nextValue == null || typeof nextValue === "string" && nextValue.length === 0) {
           deleteByPath(nextConfig, field);
         } else {
           setByPath(nextConfig, field, nextValue);

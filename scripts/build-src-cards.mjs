@@ -1,6 +1,7 @@
 import { embeddedStylesPlugin } from "./embedded-styles.mjs";
 import { CARD_REGISTRY } from "./card-registry.mjs";
 import { build } from "esbuild";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -10,6 +11,7 @@ export const SRC_CARD_ENTRIES = CARD_REGISTRY.map(card => ({ entry: card.standal
 
 export const RUNTIME_ENTRIES = [
   { entry: "src/shared/runtime-i18n-runtime.ts", outfile: "nodalia-i18n.js" },
+  { entry: "src/shared/runtime-i18n-runtime.ts", outfile: "tests/fixtures/nodalia-i18n-lib.mjs", format: "esm" },
   { entry: "src/shared/editor-i18n-runtime.ts", outfile: "nodalia-editor-ui.js" },
   { entry: "src/shared/utils-runtime.ts", outfile: "nodalia-utils.js" },
   { entry: "src/shared/go2rtc-player.ts", outfile: "nodalia-go2rtc-player.js", format: "esm" },
@@ -43,6 +45,11 @@ export async function buildSourceArtifact(card) {
         "const-and-let": true,
       },
     });
+  if ((card.format ?? "iife") === "esm") {
+    const filePath = path.join(root, card.outfile);
+    const source = fs.readFileSync(filePath, "utf8").replace(/^var /gm, "const ");
+    fs.writeFileSync(filePath, source);
+  }
 }
 
 export async function buildSrcCards() {
