@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.4";
+  var CARD_VERSION = "3.0.5-alpha.1";
 
   // src/shared/device-control-geometry.ts
   var CIRCULAR_LAYOUT_DIAL_START_ANGLE = 135;
@@ -389,6 +389,24 @@
     };
   }
 
+  // src/shared/entity-suggestion-presets.ts
+  function suggestionState(hass, entityId) {
+    const id = String(entityId || "").trim();
+    const state = hass?.states?.[id];
+    return state || null;
+  }
+  function suggestionIsOn(state) {
+    return String(state?.state || "").trim().toLowerCase() === "on";
+  }
+  function humidifierSupportsTarget(state) {
+    const attrs = state?.attributes || {};
+    const numeric = (value) => {
+      const parsed = Number(value);
+      return Number.isFinite(parsed);
+    };
+    return numeric(attrs.humidity) || numeric(attrs.target_humidity) || numeric(attrs.min_humidity) && numeric(attrs.max_humidity);
+  }
+
   // src/shared/editor-entity-helpers.ts
   function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
     return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
@@ -676,7 +694,47 @@
         return applyStubEntity({ ...STUB_CONFIG }, hass, ["humidifier"], entities, entitiesFallback);
       }
       static getEntitySuggestion(hass, entityId) {
-        return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, { domains: ["humidifier"] });
+        const state = suggestionState(hass, entityId);
+        const humidity = humidifierSupportsTarget(state);
+        const on = suggestionIsOn(state);
+        const suggestions = [
+          window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+            domains: ["humidifier"],
+            label: "Humidifier — Compact",
+            buildConfig: (_hass, selectedEntityId) => ({
+              entity: selectedEntityId,
+              layout: "compact",
+              compact_layout_mode: "always",
+              show_slider: false,
+              show_mode_button: false,
+              show_fan_mode_button: false
+            })
+          })
+        ];
+        if (on && humidity) {
+          suggestions.push(window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+            domains: ["humidifier"],
+            label: "Humidifier — Humidity",
+            buildConfig: (_hass, selectedEntityId) => ({
+              entity: selectedEntityId,
+              layout: "compact",
+              compact_layout_mode: "never",
+              show_slider: true
+            })
+          }));
+        }
+        if (humidity) {
+          suggestions.push(window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+            domains: ["humidifier"],
+            label: "Humidifier — Circular",
+            buildConfig: (_hass, selectedEntityId) => ({
+              entity: selectedEntityId,
+              layout: "circular",
+              show_slider: true
+            })
+          }));
+        }
+        return suggestions.filter(Boolean);
       }
       constructor() {
         super();
@@ -3039,7 +3097,7 @@
           width: ${styles.icon.size};
         }
 
-        .humidifier-card__icon ha-icon {
+        .humidifier-card__icon > ha-icon {
           --mdc-icon-size: calc(${styles.icon.size} * 0.46);
           color: ${darkenBubbleIconGlyph ? `color-mix(in srgb, var(--primary-text-color) 56%, ${accentColor})` : isOn ? styles.icon.on_color : styles.icon.off_color};
           display: inline-flex;
@@ -3053,7 +3111,7 @@
           width: calc(${styles.icon.size} * 0.46);
         }
 
-        .humidifier-card__icon--active-motion ha-icon {
+        .humidifier-card__icon--active-motion > ha-icon {
           animation: humidifier-card-icon-breathe 2.4s ease-in-out infinite;
           transform: translate3d(-50%, -50%, 0);
         }
@@ -3100,6 +3158,7 @@
         }
 
         .humidifier-card__unavailable-badge {
+          overflow: hidden;
           align-items: center;
           background: #ff9b4a;
           border: 2px solid ${styles.card.background};
@@ -4050,7 +4109,7 @@
             transition: none !important;
           }
 
-          .humidifier-card__icon--active-motion ha-icon,
+          .humidifier-card__icon--active-motion > ha-icon,
           .humidifier-card__icon--active-motion::before,
           .humidifier-card__icon--active-motion::after {
             animation: none !important;

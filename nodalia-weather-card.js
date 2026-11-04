@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.4";
+  var CARD_VERSION = "3.0.5-alpha.1";
 
   // src/cards/weather/weather-constants.ts
   var CARD_TAG = "nodalia-weather-card";
@@ -2068,7 +2068,7 @@
           animation: weather-card-bubble-bounce var(--weather-card-button-bounce-duration) cubic-bezier(0.18, 0.9, 0.22, 1.18) both;
         }
 
-        .weather-card__icon ha-icon {
+        .weather-card__icon > ha-icon {
           --mdc-icon-size: calc(${styles.icon.size} * 0.5);
           position: relative;
           z-index: 1;
@@ -2110,20 +2110,21 @@
           transform: translate3d(0, -6px, 0);
         }
 
-        .weather-card__icon--sun-motion ha-icon {
+        .weather-card__icon--sun-motion > ha-icon {
           animation: weather-card-icon-pulse 2.4s ease-in-out infinite;
         }
 
-        .weather-card__icon--wind-motion ha-icon,
-        .weather-card__icon--cloud-motion ha-icon {
+        .weather-card__icon--wind-motion > ha-icon,
+        .weather-card__icon--cloud-motion > ha-icon {
           animation: weather-card-icon-drift 2.8s ease-in-out infinite;
         }
 
-        .weather-card__icon--storm-motion ha-icon {
+        .weather-card__icon--storm-motion > ha-icon {
           animation: weather-card-icon-flash 1.6s ease-in-out infinite;
         }
 
         .weather-card__unavailable-badge {
+          overflow: hidden;
           align-items: center;
           background: #ff9b4a;
           border: 2px solid ${styles.card.background};
@@ -3239,10 +3240,10 @@
         @media (prefers-reduced-motion: reduce) {
           .weather-card__icon--rain-motion::after,
           .weather-card__icon--snow-motion::after,
-          .weather-card__icon--sun-motion ha-icon,
-          .weather-card__icon--wind-motion ha-icon,
-          .weather-card__icon--cloud-motion ha-icon,
-          .weather-card__icon--storm-motion ha-icon {
+          .weather-card__icon--sun-motion > ha-icon,
+          .weather-card__icon--wind-motion > ha-icon,
+          .weather-card__icon--cloud-motion > ha-icon,
+          .weather-card__icon--storm-motion > ha-icon {
             animation: none !important;
           }
         }

@@ -4990,7 +4990,7 @@ class NodaliaClimateCard extends HTMLElement {
           width: ${effectiveIconSize};
         }
 
-        .climate-card__icon ha-icon {
+        .climate-card__icon > ha-icon {
           --mdc-icon-size: calc(${effectiveIconSize} * 0.44);
           color: ${
             darkenBubbleIconGlyph
@@ -5016,6 +5016,7 @@ class NodaliaClimateCard extends HTMLElement {
         }
 
         .climate-card__unavailable-badge {
+          overflow: hidden;
           align-items: center;
           background: #ff9b4a;
           border: 2px solid ${styles.card.background};
@@ -6016,7 +6017,7 @@ class NodaliaClimateCard extends HTMLElement {
             width: 50px;
           }
 
-          .climate-card--layout-compact .climate-card__icon ha-icon {
+          .climate-card--layout-compact .climate-card__icon > ha-icon {
             --mdc-icon-size: 23px;
             height: 23px;
             width: 23px;

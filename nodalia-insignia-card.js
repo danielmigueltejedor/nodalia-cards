@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.4";
+  var CARD_VERSION = "3.0.5-alpha.1";
 
   // src/cards/insignia/insignia-constants.ts
   var CARD_TAG = "nodalia-insignia-card";
@@ -1204,13 +1204,13 @@
           width: 100%;
         }
 
-        .insignia-card__icon ha-icon {
+        .insignia-card__icon > ha-icon {
           --mdc-icon-size: ${Math.round(iconSizePx * 0.5)}px;
           height: ${Math.round(iconSizePx * 0.5)}px;
           width: ${Math.round(iconSizePx * 0.5)}px;
         }
 
-        .insignia-card--icon-only .insignia-card__icon ha-icon {
+        .insignia-card--icon-only .insignia-card__icon > ha-icon {
           overflow: visible;
           position: relative;
           top: var(--icon-only-offset-y);
@@ -1256,6 +1256,7 @@
         }
 
         .insignia-card__unavailable-badge {
+          overflow: hidden;
           align-items: center;
           background: #ff9b4a;
           border: 2px solid ${styles.card.background};

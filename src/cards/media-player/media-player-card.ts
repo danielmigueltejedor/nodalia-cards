@@ -140,10 +140,10 @@ class NodaliaMediaPlayer extends HTMLElement {
       label: getStubFriendlyName(hass, entityId),
     };
     const variants = [
-      { label: "Media Player — Standard", mode: "standard" },
-      { label: "Media Player — Square", mode: "square" },
       { label: "Media Player — Compact", mode: "compact" },
+      { label: "Media Player — Square", mode: "square" },
       { label: "Media Player — Horizontal", mode: "chip" },
+      { label: "Media Player — Standard", mode: "standard" },
       { label: "Media Player — Artwork", mode: "artwork" },
     ];
     return variants
@@ -505,6 +505,25 @@ class NodaliaMediaPlayer extends HTMLElement {
     return Number.isFinite(numericColumns) && numericColumns > 0 ? numericColumns : null;
   }
 
+  _getSectionColumnSpan() {
+    const configured = this._getConfiguredGridColumns();
+    if (configured) {
+      return configured;
+    }
+    let node: HTMLElement | null = this.parentElement;
+    for (let depth = 0; depth < 5 && node; depth += 1) {
+      const match = /span\s+(\d+)/i.exec(String(node.style?.gridColumn || ""));
+      if (match) {
+        const span = Number(match[1]);
+        if (span > 0) {
+          return span;
+        }
+      }
+      node = node.parentElement;
+    }
+    return null;
+  }
+
   _getPresentationMode() {
     const context = this._getActivePlayerContext();
     const entityId = String(context?.player?.entity || "");
@@ -531,7 +550,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       this._resolvedLayoutMode,
       {
         preferSquareTiles,
-        gridColumns: this._getConfiguredGridColumns(),
+        gridColumns: this._getSectionColumnSpan(),
       },
     );
   }
@@ -3895,7 +3914,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           width: 100%;
         }
 
-        .media-player__artwork ha-icon {
+        .media-player__artwork > ha-icon {
           --mdc-icon-size: calc(${playerStyles.artwork_size} * 0.46);
           align-items: center;
           color: var(--primary-text-color);
@@ -3911,6 +3930,7 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player__unavailable-badge {
+          overflow: hidden;
           align-items: center;
           background: #ff9b4a;
           border: 2px solid var(--ha-card-background, rgba(28, 28, 32, 1));
@@ -3995,7 +4015,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           width: ${tvArtworkSize};
         }
 
-        .media-player-card--tv .media-player__artwork ha-icon {
+        .media-player-card--tv .media-player__artwork > ha-icon {
           --mdc-icon-size: calc(${tvArtworkSize} * 0.46);
         }
 
@@ -4004,7 +4024,7 @@ class NodaliaMediaPlayer extends HTMLElement {
           width: 38px;
         }
 
-        .media-player-card--tv.media-player-card--idle .media-player__artwork ha-icon {
+        .media-player-card--tv.media-player-card--idle .media-player__artwork > ha-icon {
           --mdc-icon-size: 18px;
         }
 
@@ -4554,8 +4574,8 @@ class NodaliaMediaPlayer extends HTMLElement {
             width: 50px;
           }
 
-          .media-player-card--tv.media-player-card--idle .media-player__artwork ha-icon,
-          .media-player__artwork--idle ha-icon {
+          .media-player-card--tv.media-player-card--idle .media-player__artwork > ha-icon,
+          .media-player__artwork--idle > ha-icon {
             --mdc-icon-size: 23px;
             height: 23px;
             width: 23px;

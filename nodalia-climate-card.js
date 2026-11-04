@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.4";
+  var CARD_VERSION = "3.0.5-alpha.1";
 
   // src/cards/climate/climate-constants.ts
   var CARD_TAG = "nodalia-climate-card";
@@ -5373,7 +5373,7 @@ ${weekdayYaml}
           width: ${effectiveIconSize};
         }
 
-        .climate-card__icon ha-icon {
+        .climate-card__icon > ha-icon {
           --mdc-icon-size: calc(${effectiveIconSize} * 0.44);
           color: ${darkenBubbleIconGlyph ? `color-mix(in srgb, var(--primary-text-color) 56%, ${accentColor})` : isOff ? styles.icon.off_color : styles.icon.on_color};
           display: inline-flex;
@@ -5395,6 +5395,7 @@ ${weekdayYaml}
         }
 
         .climate-card__unavailable-badge {
+          overflow: hidden;
           align-items: center;
           background: #ff9b4a;
           border: 2px solid ${styles.card.background};
@@ -6393,7 +6394,7 @@ ${weekdayYaml}
             width: 50px;
           }
 
-          .climate-card--layout-compact .climate-card__icon ha-icon {
+          .climate-card--layout-compact .climate-card__icon > ha-icon {
             --mdc-icon-size: 23px;
             height: 23px;
             width: 23px;

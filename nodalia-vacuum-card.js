@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.4";
+  var CARD_VERSION = "3.0.5-alpha.1";
 
   // src/cards/vacuum/vacuum-constants.ts
   var CARD_TAG = "nodalia-vacuum-card";
@@ -402,6 +402,17 @@
     }
   };
 
+  // src/shared/entity-suggestion-presets.ts
+  function suggestionState(hass, entityId) {
+    const id = String(entityId || "").trim();
+    const state = hass?.states?.[id];
+    return state || null;
+  }
+  function vacuumHasFanSpeeds(state) {
+    const speeds = state?.attributes?.fan_speed_list;
+    return Array.isArray(speeds) && speeds.some((speed) => String(speed || "").trim());
+  }
+
   // src/shared/editor-entity-helpers.ts
   function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
     return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
@@ -655,18 +666,32 @@
         return applyStubEntity({ ...STUB_CONFIG }, hass, ["vacuum"], entities, entitiesFallback);
       }
       static getEntitySuggestion(hass, entityId) {
-        return [
+        const state = suggestionState(hass, entityId);
+        const suggestions = [
           window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
             domains: ["vacuum"],
-            label: "Vacuum — Standard",
-            buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, compact_layout_mode: "auto" })
-          }),
-          window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
-            domains: ["vacuum"],
-            label: "Vacuum — Compact",
-            buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, compact_layout_mode: "always" })
+            label: "Vacuum — Controls",
+            buildConfig: (_hass, selectedEntityId) => ({
+              entity: selectedEntityId,
+              compact_layout_mode: "always",
+              show_mode_controls: false,
+              show_fan_presets: false
+            })
           })
-        ].filter(Boolean);
+        ];
+        if (vacuumHasFanSpeeds(state)) {
+          suggestions.push(window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+            domains: ["vacuum"],
+            label: "Vacuum — Modes",
+            buildConfig: (_hass, selectedEntityId) => ({
+              entity: selectedEntityId,
+              compact_layout_mode: "never",
+              show_mode_controls: true,
+              show_fan_presets: true
+            })
+          }));
+        }
+        return suggestions.filter(Boolean);
       }
       constructor() {
         super();
@@ -2803,7 +2828,7 @@
           width: ${styles.icon.size};
         }
 
-        .vacuum-card__icon-button ha-icon {
+        .vacuum-card__icon-button > ha-icon {
           --mdc-icon-size: calc(${styles.icon.size} * 0.46);
           color: ${iconGlyphColor};
           display: inline-flex;
@@ -2818,7 +2843,7 @@
           will-change: transform;
         }
 
-        .vacuum-card__icon-button--active-motion ha-icon {
+        .vacuum-card__icon-button--active-motion > ha-icon {
           animation: vacuum-card-icon-sweep 1.45s ease-in-out infinite;
           transform-origin: 50% 70%;
         }
@@ -2834,6 +2859,7 @@
         }
 
         .vacuum-card__unavailable-badge {
+          overflow: hidden;
           align-items: center;
           background: #ff9b4a;
           border: 2px solid ${styles.card.background};
@@ -2988,7 +3014,7 @@
           width: 40px;
         }
 
-        .vacuum-card--dense .vacuum-card__icon-button ha-icon {
+        .vacuum-card--dense .vacuum-card__icon-button > ha-icon {
           --mdc-icon-size: 18px;
           height: 18px;
           width: 18px;
@@ -3293,7 +3319,7 @@
         `}
 
         @media (prefers-reduced-motion: reduce) {
-          .vacuum-card__icon-button--active-motion ha-icon {
+          .vacuum-card__icon-button--active-motion > ha-icon {
             animation: none !important;
           }
         }

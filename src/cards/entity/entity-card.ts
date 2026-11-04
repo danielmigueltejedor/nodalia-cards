@@ -123,17 +123,16 @@ class NodaliaEntityCard extends HTMLElement {
 
   static getEntitySuggestion(hass: HomeAssistant|null|undefined, entityId: string) {
     if (!hass) return [];
-    const domain = String(entityId || "").split(".")[0];
-    const suggestions = [
+    return [
       window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
-        label: "Entity — Standard",
+        label: "Entity",
+        buildConfig: (_hass, selectedEntityId) => ({
+          entity: selectedEntityId,
+          show_state: true,
+          compact_layout_mode: "auto",
+        }),
       }),
-      window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
-        label: domain === "media_player" ? "Entity Card — Compact media state" : "Entity — Compact",
-        buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, compact_layout_mode: "always" }),
-      }),
-    ];
-    return suggestions.filter(Boolean);
+    ].filter(Boolean);
   }
 
   constructor() {
@@ -3226,7 +3225,7 @@ class NodaliaEntityCard extends HTMLElement {
           width: ${iconSize};
         }
 
-        .entity-card__icon ha-icon {
+        .entity-card__icon > ha-icon {
           --mdc-icon-size: calc(${iconSize} * 0.46);
           color: ${iconGlyphColor};
           display: inline-flex;
@@ -3845,7 +3844,7 @@ class NodaliaEntityCard extends HTMLElement {
           animation: entity-card-bubble-bounce var(--entity-card-button-bounce-duration) cubic-bezier(0.18, 0.9, 0.22, 1.18) both;
         }
 
-        .entity-card__icon ha-icon {
+        .entity-card__icon > ha-icon {
           --mdc-icon-size: calc(${effectiveIconSize} * 0.46);
           color: ${entityBubbleIconGlyphColor};
           display: inline-flex;
@@ -3867,6 +3866,7 @@ class NodaliaEntityCard extends HTMLElement {
         }
 
         .entity-card__unavailable-badge {
+          overflow: hidden;
           align-items: center;
           background: #ff9b4a;
           border: 2px solid ${styles.card.background};

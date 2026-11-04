@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.4";
+  var CARD_VERSION = "3.0.5-alpha.1";
 
   // src/cards/alarm-panel/alarm-panel-constants.ts
   var CARD_TAG = "nodalia-alarm-panel-card";
@@ -1415,7 +1415,7 @@
           animation: alarm-card-bubble-bounce var(--alarm-card-button-bounce-duration) cubic-bezier(0.18, 0.9, 0.22, 1.18) both;
         }
 
-        .alarm-card__icon ha-icon {
+        .alarm-card__icon > ha-icon {
           --mdc-icon-size: calc(${styles.icon.size} * 0.44);
           display: inline-flex;
           height: calc(${styles.icon.size} * 0.44);
@@ -1436,6 +1436,7 @@
         }
 
         .alarm-card__unavailable-badge {
+          overflow: hidden;
           align-items: center;
           background: #ff9b4a;
           border: 2px solid ${styles.card.background};

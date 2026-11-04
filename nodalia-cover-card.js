@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.4";
+  var CARD_VERSION = "3.0.5-alpha.1";
 
   // src/shared/device-control-geometry.ts
   var CIRCULAR_LAYOUT_DIAL_START_ANGLE = 135;
@@ -410,6 +410,28 @@
     };
   }
 
+  // src/shared/entity-suggestion-presets.ts
+  function suggestionState(hass, entityId) {
+    const id = String(entityId || "").trim();
+    const state = hass?.states?.[id];
+    return state || null;
+  }
+  function supportsFeature(state, bit) {
+    const features = Number(state?.attributes?.supported_features);
+    return Number.isFinite(features) && Boolean(features & bit);
+  }
+  function coverSupportsPosition(state) {
+    return supportsFeature(state, 4);
+  }
+  function coverHasPositionSlider(state) {
+    const position = Number(state?.attributes?.current_position);
+    return coverSupportsPosition(state) && Number.isFinite(position);
+  }
+  function coverHasTiltSlider(state) {
+    const tilt = Number(state?.attributes?.current_tilt_position);
+    return supportsFeature(state, 128) && Number.isFinite(tilt);
+  }
+
   // src/shared/home-assistant-services.ts
   function callHassService(hass, domain, service, data = {}, target = null) {
     if (!hass?.callService) return;
@@ -625,7 +647,46 @@
         return applyStubEntity({ ...STUB_CONFIG }, hass, ["cover"], entities, entitiesFallback);
       }
       static getEntitySuggestion(hass, entityId) {
-        return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, { domains: ["cover"] });
+        const state = suggestionState(hass, entityId);
+        const position = coverHasPositionSlider(state);
+        const tilt = coverHasTiltSlider(state);
+        const suggestions = [
+          window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+            domains: ["cover"],
+            label: "Cover — Buttons",
+            buildConfig: (_hass, selectedEntityId) => ({
+              entity: selectedEntityId,
+              layout: "compact",
+              show_position_slider: false,
+              show_tilt_slider: false
+            })
+          })
+        ];
+        if (position || tilt) {
+          suggestions.push(window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+            domains: ["cover"],
+            label: tilt && !position ? "Cover — Tilt" : "Cover — Position",
+            buildConfig: (_hass, selectedEntityId) => ({
+              entity: selectedEntityId,
+              layout: "compact",
+              show_position_slider: position,
+              show_tilt_slider: tilt
+            })
+          }));
+        }
+        if (coverSupportsPosition(state)) {
+          suggestions.push(window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+            domains: ["cover"],
+            label: "Cover — Circular",
+            buildConfig: (_hass, selectedEntityId) => ({
+              entity: selectedEntityId,
+              layout: "circular",
+              show_position_slider: true,
+              show_tilt_slider: tilt
+            })
+          }));
+        }
+        return suggestions.filter(Boolean);
       }
       constructor() {
         super();
@@ -1841,12 +1902,13 @@
           position: relative;
           width: ${styles.icon.size};
         }
-        .fan-card__icon ha-icon {
+        .fan-card__icon > ha-icon {
           --mdc-icon-size: calc(${styles.icon.size} * 0.46);
           color: ${isActive ? styles.icon.on_color : styles.icon.off_color};
         }
-        .fan-card__icon--active-motion ha-icon { animation: cover-card-icon-breathe 1.15s ease-in-out infinite; }
+        .fan-card__icon--active-motion > ha-icon { animation: cover-card-icon-breathe 1.15s ease-in-out infinite; }
         .fan-card__unavailable-badge {
+          overflow: hidden;
           align-items: center;
           background: #ff9b4a;
           border: 2px solid ${styles.card.background};

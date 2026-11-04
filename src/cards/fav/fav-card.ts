@@ -1642,7 +1642,7 @@ class NodaliaFavCard extends HTMLElement {
           justify-items: center;
         }
 
-        .fav-card__icon ha-icon {
+        .fav-card__icon > ha-icon {
           --mdc-icon-size: calc(${iconSizePx}px * 0.46);
           color: ${iconColor};
           display: inline-flex;
@@ -1655,6 +1655,7 @@ class NodaliaFavCard extends HTMLElement {
         }
 
         .fav-card__unavailable-badge {
+          overflow: hidden;
           align-items: center;
           background: #ff9b4a;
           border: 2px solid ${styles.card.background};

@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.4";
+  var CARD_VERSION = "3.0.5-alpha.1";
 
   // src/cards/fav/fav-constants.ts
   var CARD_TAG = "nodalia-fav-card";
@@ -2068,7 +2068,7 @@
           justify-items: center;
         }
 
-        .fav-card__icon ha-icon {
+        .fav-card__icon > ha-icon {
           --mdc-icon-size: calc(${iconSizePx}px * 0.46);
           color: ${iconColor};
           display: inline-flex;
@@ -2081,6 +2081,7 @@
         }
 
         .fav-card__unavailable-badge {
+          overflow: hidden;
           align-items: center;
           background: #ff9b4a;
           border: 2px solid ${styles.card.background};

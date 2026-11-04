@@ -525,7 +525,13 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
     `;
   }
 
-  _renderSelectField(label: string, field: string, value: unknown, options: { value: unknown; label: string }[], valueType = "string") {
+  _horizontalLayoutAllowed() {
+    const grid = isObject(this._config?.grid_options) ? this._config.grid_options : undefined;
+    const columns = Number(grid && "columns" in grid ? grid.columns : undefined);
+    return !(Number.isFinite(columns) && columns > 0 && columns < 7);
+  }
+
+  _renderSelectField(label: string, field: string, value: unknown, options: { value: unknown; label: string; disabled?: boolean }[], valueType = "string") {
     const tLabel = this._editorLabel(label);
     return `
       <label class="editor-field">
@@ -539,7 +545,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
                 (option.value === undefined && value === undefined);
 
               return `
-                <option value="${escapeHtml(optionValue)}" ${isSelected ? "selected" : ""}>
+                <option value="${escapeHtml(optionValue)}" ${isSelected ? "selected" : ""} ${option.disabled ? "disabled" : ""}>
                   ${escapeHtml(this._editorLabel(option.label))}
                 </option>
               `;
@@ -1168,7 +1174,7 @@ class NodaliaMediaPlayerEditor extends HTMLElement {
                 { value: "auto", label: "ed.media_player.layout_auto" },
                 { value: "standard", label: "ed.media_player.layout_standard" },
                 { value: "square", label: "ed.media_player.layout_square" },
-                { value: "chip", label: "ed.media_player.layout_chip" },
+                { value: "chip", label: "ed.media_player.layout_chip", disabled: !this._horizontalLayoutAllowed() },
                 { value: "compact", label: "ed.media_player.layout_compact" },
                 { value: "artwork", label: "ed.media_player.layout_artwork" },
               ],
