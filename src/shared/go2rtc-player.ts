@@ -351,8 +351,8 @@ export class NodaliaGo2RTCPlayer extends HTMLElement {
         video.style.willChange = previousWillChange;
       }
       const playback = video.play?.();
-      if (playback && typeof playback.catch === "function") {
-        playback.catch(() => {
+      if (playback !== undefined && typeof playback.catch === "function") {
+        void playback.catch(() => {
           // Native fullscreen may transiently reject play while WebKit changes surfaces.
         });
       }
