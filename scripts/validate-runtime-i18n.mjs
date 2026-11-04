@@ -12,11 +12,11 @@ const dir = path.join(root, "i18n", "runtime");
 const enPath = path.join(dir, "en.json");
 
 function placeholders(value) {
-  return [...String(value ?? "").matchAll(/\{([^{}]+)\}/g)].map(match => match[1]).sort();
+  return [...String(value ?? "").matchAll(/\{([^{}]+)\}/g)].map(match => match[1]).sort((left, right) => left < right ? -1 : left > right ? 1 : 0);
 }
 
 function codeSpans(value) {
-  return [...String(value ?? "").matchAll(/`([^`]+)`/g)].map(match => match[1]).sort();
+  return [...String(value ?? "").matchAll(/`([^`]+)`/g)].map(match => match[1]).sort((left, right) => left < right ? -1 : left > right ? 1 : 0);
 }
 
 function assertSameShape(enNode, otherNode, pathPrefix) {

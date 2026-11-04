@@ -87,7 +87,7 @@ export function parseCameraProxyAuth(url: unknown) {
 }
 
 export function formatRelativeAge(timestamp: unknown, locale = "en", now = Date.now()) {
-  const value = (timestamp instanceof Date ? timestamp : typeof timestamp === "string" || typeof timestamp === "number" ? new Date(timestamp) : new Date(NaN)).getTime();
+  const value = (timestamp instanceof Date ? timestamp : typeof timestamp === "string" || typeof timestamp === "number" ? new Date(timestamp) : new Date(Number.NaN)).getTime();
   if (!Number.isFinite(value) || !Number.isFinite(now)) {
     return "";
   }

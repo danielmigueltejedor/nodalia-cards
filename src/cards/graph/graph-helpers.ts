@@ -65,7 +65,7 @@ export function parsePaddingEdges(value: unknown, fallback = 16) {
   if (!raw) {
     return { top: fb, right: fb, bottom: fb, left: fb };
   }
-  const parts = raw.split(/\s+/).map(token => parseSizeToPixels(token, NaN)).filter(n => Number.isFinite(n));
+  const parts = raw.split(/\s+/).map(token => parseSizeToPixels(token, Number.NaN)).filter(n => Number.isFinite(n));
   if (!parts.length) {
     return { top: fb, right: fb, bottom: fb, left: fb };
   }
@@ -133,7 +133,7 @@ export function getEditorColorFallbackValue(field: unknown) {
 }
 
 export function formatHoverTimestamp(value: unknown, locale: string | undefined = undefined) {
-  const date = value instanceof Date ? value : typeof value === "string" || typeof value === "number" ? new Date(value) : new Date(NaN);
+  const date = value instanceof Date ? value : typeof value === "string" || typeof value === "number" ? new Date(value) : new Date(Number.NaN);
   if (Number.isNaN(date.getTime())) {
     return "";
   }

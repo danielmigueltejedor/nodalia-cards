@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.5-alpha.1";
+  var CARD_VERSION = "3.0.5-alpha.2";
 
   // src/cards/climate/climate-constants.ts
   var CARD_TAG = "nodalia-climate-card";
@@ -503,7 +503,7 @@
     if (custom) {
       return custom;
     }
-    const slug = String(entityId ?? "").trim().replace(/^climate\./, "").replace(/[^a-z0-9_]+/gi, "_").replace(/^_+|_+$/g, "");
+    const slug = String(entityId ?? "").trim().replace(/^climate\./, "").replace(/[^a-z0-9_]+/gi, "_").replace(/^_+/, "").replace(/_+$/, "");
     return slug ? `input_text.nodalia_climate_schedule_${slug}` : "";
   }
   function buildClimateSetpointScheduleAutomationId(entityId, slotId) {
@@ -851,6 +851,26 @@ ${weekdayYaml}
 
   // src/shared/editor-color.ts
   var clamp2 = (value, max) => Math.max(0, Math.min(max, value));
+  function cssFunctionBody(raw, name) {
+    const head = `${name}(`;
+    if (!raw.toLowerCase().startsWith(head) || !raw.endsWith(")")) return null;
+    return raw.slice(head.length, -1);
+  }
+  function srgbFunctionBody(raw) {
+    const body = cssFunctionBody(raw, "color");
+    if (body === null) return null;
+    const inner = body.trim();
+    if (!inner.toLowerCase().startsWith("srgb")) return null;
+    const rest = inner.slice(4);
+    if (rest.length === 0 || !/\s/.test(rest.charAt(0))) return null;
+    return rest.trim();
+  }
+  function splitCssAlpha(body) {
+    const slash = body.indexOf("/");
+    if (slash < 0) return [body.trim()];
+    if (body.indexOf("/", slash + 1) >= 0) return [body, "", ""];
+    return [body.slice(0, slash).trim(), body.slice(slash + 1).trim()];
+  }
   var component = (value, scale) => {
     if (!value || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?%?$/i.test(value)) return null;
     const numeric = Number(value.replace(/%$/, ""));
@@ -861,13 +881,13 @@ ${weekdayYaml}
     const hexMatch = raw.match(/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
     if (hexMatch?.[1]) {
       const hex = hexMatch[1].length < 5 ? hexMatch[1].split("").map((channel) => channel + channel).join("") : hexMatch[1];
-      return { red: parseInt(hex.slice(0, 2), 16), green: parseInt(hex.slice(2, 4), 16), blue: parseInt(hex.slice(4, 6), 16), alpha: hex.length === 8 ? parseInt(hex.slice(6, 8), 16) / 255 : 1 };
+      return { red: Number.parseInt(hex.slice(0, 2), 16), green: Number.parseInt(hex.slice(2, 4), 16), blue: Number.parseInt(hex.slice(4, 6), 16), alpha: hex.length === 8 ? Number.parseInt(hex.slice(6, 8), 16) / 255 : 1 };
     }
-    const rgb = raw.match(/^rgba?\(([^)]+)\)$/i);
-    const srgb = raw.match(/^color\(\s*srgb\s+([^)]+)\)$/i);
-    const body = rgb?.[1] ?? srgb?.[1];
+    const rgb = cssFunctionBody(raw, "rgb") ?? cssFunctionBody(raw, "rgba");
+    const srgb = srgbFunctionBody(raw);
+    const body = rgb ?? srgb;
     if (!body) return null;
-    const sections = body.trim().split(/\s*\/\s*/);
+    const sections = splitCssAlpha(body);
     if (sections.length > 2) return null;
     const parts = sections[0]?.split(/[\s,]+/) ?? [];
     if (sections.length === 2 && parts.length !== 3 || parts.length < 3 || parts.length > 4) return null;
@@ -888,7 +908,7 @@ ${weekdayYaml}
     const numeric = Number(alpha);
     const safeAlpha = clamp2(Number.isFinite(numeric) ? numeric : 1, 1);
     if (safeAlpha >= 0.999) return `#${normalized}`;
-    const red = parseInt(normalized.slice(0, 2), 16), green = parseInt(normalized.slice(2, 4), 16), blue = parseInt(normalized.slice(4, 6), 16);
+    const red = Number.parseInt(normalized.slice(0, 2), 16), green = Number.parseInt(normalized.slice(2, 4), 16), blue = Number.parseInt(normalized.slice(4, 6), 16);
     return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
   }
   function resolveEditorColorValue(value) {
@@ -1001,7 +1021,7 @@ ${weekdayYaml}
     return text.split(".")[1]?.length ?? 0;
   }
   function parseFiniteClimateNumber(value) {
-    return parseFiniteNumericValue(value) ?? NaN;
+    return parseFiniteNumericValue(value) ?? Number.NaN;
   }
   function getHassLocale(hass) {
     const raw = hass?.locale?.language || hass?.selectedLanguage || hass?.language || (typeof navigator !== "undefined" ? navigator.language : "");
@@ -3202,7 +3222,7 @@ ${weekdayYaml}
               this._scheduleDraftReset();
             } else {
               const queuedRaw = this._temperatureCommitQueuedValue;
-              const queuedValue = queuedRaw === null || queuedRaw === void 0 ? NaN : Number(queuedRaw);
+              const queuedValue = queuedRaw === null || queuedRaw === void 0 ? Number.NaN : Number(queuedRaw);
               if (climateFinite(queuedValue) && Math.abs(queuedValue - target) > 1e-3) {
                 void this._flushQueuedTemperatureCommit();
               } else {
@@ -3877,8 +3897,8 @@ ${weekdayYaml}
           dial,
           geometry: dial.getBoundingClientRect(),
           pointerId,
-          lastLow: NaN,
-          lastHigh: NaN,
+          lastLow: Number.NaN,
+          lastHigh: Number.NaN,
           startClientX: clientX,
           startClientY: clientY,
           rangeThumbDragStarted: false,
@@ -4859,7 +4879,7 @@ ${weekdayYaml}
           if (next instanceof HTMLElement) {
             if (next instanceof HTMLInputElement && pendingValue !== null) next.value = pendingValue;
             next.focus({ preventScroll: true });
-            if (next instanceof HTMLInputElement && caret && caret[0] !== null && caret[1] !== null && caret[0] !== void 0 && caret[1] !== void 0) next.setSelectionRange(caret[0], caret[1]);
+            if (next instanceof HTMLInputElement && caret && typeof caret[0] === "number" && typeof caret[1] === "number") next.setSelectionRange(caret[0], caret[1]);
           }
         }
       }
@@ -4920,24 +4940,24 @@ ${weekdayYaml}
           }
           this._lastDualRangeModeKey = modeKey;
         }
-        const rangeBand = isRangeMode ? this._getEffectiveTargetLowHigh(state) : { low: NaN, high: NaN };
-        const hasNumericTarget = targetTemperature !== null && targetTemperature !== void 0 && climateFinite(Number(targetTemperature));
+        const rangeBand = isRangeMode ? this._getEffectiveTargetLowHigh(state) : { low: Number.NaN, high: Number.NaN };
+        const hasNumericTarget = targetTemperature !== null && climateFinite(Number(targetTemperature));
         const hasPublishedSingleTarget = !isRangeMode && supportsTargetTemperature && hasNumericTarget;
         const mainTemperaturePref = normalizeTextKey(String(config.display?.main_temperature ?? "").trim()) === "current" ? "current" : "target";
-        const currentFin = currentTemperature !== null && climateFinite(Number(currentTemperature)) ? Number(currentTemperature) : NaN;
-        const targetFin = hasPublishedSingleTarget ? Number(targetTemperature) : NaN;
-        const dialThumbValue = isRangeMode ? NaN : supportsTargetTemperature && hasNumericTarget ? Number(targetTemperature) : NaN;
+        const currentFin = currentTemperature !== null && climateFinite(Number(currentTemperature)) ? Number(currentTemperature) : Number.NaN;
+        const targetFin = hasPublishedSingleTarget ? Number(targetTemperature) : Number.NaN;
+        const dialThumbValue = isRangeMode ? Number.NaN : supportsTargetTemperature && hasNumericTarget ? Number(targetTemperature) : Number.NaN;
         let dialPrimaryReadoutValue;
         if (isRangeMode) {
-          dialPrimaryReadoutValue = currentTemperature !== null ? currentTemperature : NaN;
+          dialPrimaryReadoutValue = currentTemperature !== null ? currentTemperature : Number.NaN;
         } else if (mainTemperaturePref === "current") {
-          dialPrimaryReadoutValue = climateFinite(currentFin) ? currentFin : climateFinite(targetFin) ? targetFin : NaN;
+          dialPrimaryReadoutValue = climateFinite(currentFin) ? currentFin : climateFinite(targetFin) ? targetFin : Number.NaN;
         } else if (climateFinite(targetFin)) {
           dialPrimaryReadoutValue = targetFin;
         } else if (climateFinite(currentFin)) {
           dialPrimaryReadoutValue = currentFin;
         } else {
-          dialPrimaryReadoutValue = NaN;
+          dialPrimaryReadoutValue = Number.NaN;
         }
         const hass = this._hass ?? climateDisplayHass(window.NodaliaI18n?.resolveHass?.(null));
         const i18nLang = config.language ?? "auto";

@@ -49,7 +49,7 @@ type ForecastCoordinate = ForecastPoint & { x: number; y: number };
 type ForecastOverlay = { key: string; forecastType: ForecastType; index: number; left: string; top: string; vertical: string; series: string };
 type UnitPreferences = { sourceTemperatureUnit: string; targetTemperatureUnit: string; sourceWindUnit: string; targetWindUnit: string };
 const weatherActionElement = (node: EventTarget): node is HTMLElement | SVGElement => (node instanceof HTMLElement || node instanceof SVGElement) && Boolean(node.dataset.weatherAction);
-const forecastRows = (value: unknown): ForecastItem[] => Array.isArray(value) ? value.filter(isObject) : [];
+const forecastRows = (value: unknown): ForecastItem[] => Array.isArray(value) ? value.filter((item): item is Record<string, unknown> => isObject(item)) : [];
 let _lazyNodaliaWeatherCard: CustomElementConstructor | undefined;
 export function loadNodaliaWeatherCard(): CustomElementConstructor {
   if (_lazyNodaliaWeatherCard) {
@@ -381,7 +381,9 @@ class NodaliaWeatherCard extends HTMLElement {
         this._lastRenderSignature = "";
         this._render();
       }, { type: "weather/subscribe_forecast", entity_id: this._config.entity, forecast_type: forecastType }).catch(onFailure);
-    } catch (_error) { onFailure(); }
+    } catch (_error) {
+      onFailure();
+    }
   }
 
   _getTitle(state: HassEntity | null) {

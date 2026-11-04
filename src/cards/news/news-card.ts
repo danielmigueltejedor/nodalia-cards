@@ -646,7 +646,7 @@ class NodaliaNewsCard extends HTMLElement {
 
   _onShadowPointerDown(event: Event) {
     if (!(event instanceof PointerEvent)) return;
-    if (event.button !== undefined && event.button !== 0) {
+    if (event.button !== 0) {
       return;
     }
     const viewport = this._getMagazineCarouselViewport(event);

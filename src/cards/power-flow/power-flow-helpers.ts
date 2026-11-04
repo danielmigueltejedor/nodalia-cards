@@ -25,10 +25,55 @@ export function formatSvgMotionNumber(value: unknown) {
   return String(Number(number.toFixed(3)));
 }
 
-export const SVG_PATH_TOKEN_RE = /[AaCcHhLlMmQqSsTtVvZz]|[+-]?(?:(?:\d*\.\d+)|(?:\d+\.?))(?:[eE][+-]?\d+)?/g;
+const SVG_PATH_COMMANDS = new Set("AaCcHhLlMmQqSsTtVvZz");
 
 export function tokenizeSvgPath(pathD: unknown) {
-  return String(pathD || "").match(SVG_PATH_TOKEN_RE) || [];
+  const text = String(pathD || "");
+  const tokens: string[] = [];
+  let index = 0;
+  while (index < text.length) {
+    const char = text.charAt(index);
+    if (SVG_PATH_COMMANDS.has(char)) {
+      tokens.push(char);
+      index += 1;
+      continue;
+    }
+    if (char === " " || char === "," || char === "\n" || char === "\r" || char === "\t") {
+      index += 1;
+      continue;
+    }
+    const start = index;
+    if (char === "+" || char === "-") index += 1;
+    let sawDigit = false;
+    let sawDot = false;
+    while (index < text.length) {
+      const next = text.charAt(index);
+      if (next >= "0" && next <= "9") {
+        sawDigit = true;
+        index += 1;
+        continue;
+      }
+      if (next === "." && !sawDot) {
+        sawDot = true;
+        index += 1;
+        continue;
+      }
+      break;
+    }
+    if (!sawDigit) {
+      index = start + 1;
+      continue;
+    }
+    if (index < text.length && (text.charAt(index) === "e" || text.charAt(index) === "E")) {
+      let cursor = index + 1;
+      if (text.charAt(cursor) === "+" || text.charAt(cursor) === "-") cursor += 1;
+      const exponentStart = cursor;
+      while (cursor < text.length && text.charAt(cursor) >= "0" && text.charAt(cursor) <= "9") cursor += 1;
+      if (cursor > exponentStart) index = cursor;
+    }
+    tokens.push(text.slice(start, index));
+  }
+  return tokens;
 }
 
 export function isSvgPathCommand(token: unknown) {
@@ -59,7 +104,7 @@ export function createSvgTokenReader(tokens: string[]) {
     },
     readNumber() {
       if (index >= tokens.length || isSvgPathCommand(tokens[index])) {
-        return NaN;
+        return Number.NaN;
       }
       const value = Number(tokens[index]);
       index += 1;
@@ -67,13 +112,13 @@ export function createSvgTokenReader(tokens: string[]) {
     },
     readFlag() {
       if (index >= tokens.length || isSvgPathCommand(tokens[index])) {
-        return NaN;
+        return Number.NaN;
       }
       const raw = String(tokens[index]);
       const first = raw.charAt(0);
       if (first !== "0" && first !== "1") {
         index += 1;
-        return NaN;
+        return Number.NaN;
       }
       if (raw.length > 1) {
         tokens[index] = raw.slice(1);
@@ -332,6 +377,15 @@ export function isUnavailableState(state: HassEntity | null | undefined) {
 
 export { formatFiniteNumericValue as formatRawValue } from "../../shared/numeric-values";
 
+function trimInsignificantZeros(value: string) {
+  const mark = Math.max(value.lastIndexOf("."), value.lastIndexOf(","));
+  if (mark < 0) return value;
+  let end = value.length;
+  while (end > mark + 1 && value.charCodeAt(end - 1) === 48) end -= 1;
+  if (end === mark + 1) end = mark;
+  return value.slice(0, end);
+}
+
 export function formatDisplayValue(value: unknown, unit = "", locale: string | undefined = undefined) {
   const numeric = parseFiniteNumericValue(value);
   if (numeric === null) {
@@ -342,7 +396,7 @@ export function formatDisplayValue(value: unknown, unit = "", locale: string | u
   const key = normalizeTextKey(normalizedUnit);
   if (["w", "watt", "watts"].includes(key) && Math.abs(numeric) >= 1000) {
     return {
-      value: formatFiniteNumericValue(numeric / 1000, 2, locale).replace(/([.,]\d*?)0+$/, "$1").replace(/[.,]$/, ""),
+      value: trimInsignificantZeros(formatFiniteNumericValue(numeric / 1000, 2, locale)),
       unit: "kW",
     };
   }
@@ -394,7 +448,7 @@ export function resolveIndividualConfigs(config: unknown) {
 
 export function sanitizeIndividualEntries(config: unknown) {
   return arrayFromMaybe(isObject(config) && isObject(config.entities) ? config.entities.individual : undefined)
-    .filter(isObject)
+    .filter((item): item is Record<string, unknown> => isObject(item))
     .map((item, index) => ({
       entity: String(item.entity || "").trim(),
       name: String(item.name || "").trim(),

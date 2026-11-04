@@ -8,4 +8,4 @@ try{await page.goto(server.url+'/bench/fixture.html');await page.waitForFunction
 await page.evaluate(()=>window.bench.prepare('unrelated/gauge',{quietMs:40,settleTimeoutMs:6000,commonCards:['gauge']}));
 }catch(e){errors.push({iteration:i,error:e.message});break;}finally{await page.close();}}
 await context.close();}finally{await browser.close();await server.close();}
-await fs.writeFile('/private/tmp/nodalia-rc-import-probe.json',JSON.stringify({iterations:100,errors},null,2));console.log(JSON.stringify({iterations:100,errors}));
+await fs.writeFile(new URL('./nodalia-rc-import-probe.json', import.meta.url),JSON.stringify({iterations:100,errors},null,2));console.log(JSON.stringify({iterations:100,errors}));

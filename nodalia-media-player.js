@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.5-alpha.1";
+  var CARD_VERSION = "3.0.5-alpha.2";
 
   // src/cards/media-player/media-player-constants.ts
   var CARD_TAG = "nodalia-media-player";
@@ -565,7 +565,7 @@
         }
       ];
     }
-    const players = (Array.isArray(config.players) ? config.players.filter(isObject) : []).map((player) => {
+    const players = (Array.isArray(config.players) ? config.players.filter((item) => isObject(item)) : []).map((player) => {
       const actions = {
         power_action_off: normalizePowerActionConfig(player.power_action_off),
         power_action_on: normalizePowerActionConfig(player.power_action_on),
@@ -729,7 +729,7 @@
       };
       image.onload = () => {
         const decode = image.decode?.();
-        if (decode !== void 0 && typeof decode.then === "function") {
+        if (typeof decode?.then === "function") {
           decode.then(() => settle(true)).catch(() => settle(true));
           return;
         }
@@ -1026,6 +1026,26 @@
 
   // src/shared/editor-color.ts
   var clamp3 = (value, max) => Math.max(0, Math.min(max, value));
+  function cssFunctionBody(raw, name) {
+    const head = `${name}(`;
+    if (!raw.toLowerCase().startsWith(head) || !raw.endsWith(")")) return null;
+    return raw.slice(head.length, -1);
+  }
+  function srgbFunctionBody(raw) {
+    const body = cssFunctionBody(raw, "color");
+    if (body === null) return null;
+    const inner = body.trim();
+    if (!inner.toLowerCase().startsWith("srgb")) return null;
+    const rest = inner.slice(4);
+    if (rest.length === 0 || !/\s/.test(rest.charAt(0))) return null;
+    return rest.trim();
+  }
+  function splitCssAlpha(body) {
+    const slash = body.indexOf("/");
+    if (slash < 0) return [body.trim()];
+    if (body.indexOf("/", slash + 1) >= 0) return [body, "", ""];
+    return [body.slice(0, slash).trim(), body.slice(slash + 1).trim()];
+  }
   var component = (value, scale) => {
     if (!value || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?%?$/i.test(value)) return null;
     const numeric = Number(value.replace(/%$/, ""));
@@ -1036,13 +1056,13 @@
     const hexMatch = raw.match(/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
     if (hexMatch?.[1]) {
       const hex = hexMatch[1].length < 5 ? hexMatch[1].split("").map((channel) => channel + channel).join("") : hexMatch[1];
-      return { red: parseInt(hex.slice(0, 2), 16), green: parseInt(hex.slice(2, 4), 16), blue: parseInt(hex.slice(4, 6), 16), alpha: hex.length === 8 ? parseInt(hex.slice(6, 8), 16) / 255 : 1 };
+      return { red: Number.parseInt(hex.slice(0, 2), 16), green: Number.parseInt(hex.slice(2, 4), 16), blue: Number.parseInt(hex.slice(4, 6), 16), alpha: hex.length === 8 ? Number.parseInt(hex.slice(6, 8), 16) / 255 : 1 };
     }
-    const rgb = raw.match(/^rgba?\(([^)]+)\)$/i);
-    const srgb = raw.match(/^color\(\s*srgb\s+([^)]+)\)$/i);
-    const body = rgb?.[1] ?? srgb?.[1];
+    const rgb = cssFunctionBody(raw, "rgb") ?? cssFunctionBody(raw, "rgba");
+    const srgb = srgbFunctionBody(raw);
+    const body = rgb ?? srgb;
     if (!body) return null;
-    const sections = body.trim().split(/\s*\/\s*/);
+    const sections = splitCssAlpha(body);
     if (sections.length > 2) return null;
     const parts = sections[0]?.split(/[\s,]+/) ?? [];
     if (sections.length === 2 && parts.length !== 3 || parts.length < 3 || parts.length > 4) return null;
@@ -1063,7 +1083,7 @@
     const numeric = Number(alpha);
     const safeAlpha = clamp3(Number.isFinite(numeric) ? numeric : 1, 1);
     if (safeAlpha >= 0.999) return `#${normalized}`;
-    const red = parseInt(normalized.slice(0, 2), 16), green = parseInt(normalized.slice(2, 4), 16), blue = parseInt(normalized.slice(4, 6), 16);
+    const red = Number.parseInt(normalized.slice(0, 2), 16), green = Number.parseInt(normalized.slice(2, 4), 16), blue = Number.parseInt(normalized.slice(4, 6), 16);
     return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
   }
   function resolveEditorColorValue(value) {
@@ -3186,7 +3206,7 @@
           return;
         }
         const drag = this._activeSliderDrag;
-        if (!drag || drag.pointerId !== event.pointerId) {
+        if (!drag || !Object.is(drag.pointerId, event.pointerId)) {
           return;
         }
         event.preventDefault();
@@ -3198,7 +3218,7 @@
           return;
         }
         const drag = this._activeSliderDrag;
-        if (!drag || drag.pointerId !== event.pointerId) {
+        if (!drag || !Object.is(drag.pointerId, event.pointerId)) {
           return;
         }
         this._commitSliderDrag(event.clientX, event, event.pointerId);
@@ -4737,15 +4757,17 @@
         }
 
         .media-player__unavailable-badge {
-          overflow: hidden;
           align-items: center;
           background: #ff9b4a;
           border: 2px solid var(--ha-card-background, rgba(28, 28, 32, 1));
           border-radius: 999px;
           box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+          box-sizing: border-box;
           display: inline-flex;
           height: 18px;
           justify-content: center;
+          line-height: 0;
+          overflow: hidden;
           position: absolute;
           right: 0;
           top: 0;
@@ -4754,11 +4776,19 @@
           z-index: 3;
         }
 
-        .media-player__unavailable-badge ha-icon {
+        .media-player__artwork .media-player__unavailable-badge ha-icon {
           --mdc-icon-size: 11px;
-          color:#fff;
+          align-items: center;
+          color: #fff;
+          display: flex;
+          flex: 0 0 11px;
           height: 11px;
+          justify-content: center;
           left: auto;
+          line-height: 0;
+          margin: 0;
+          margin-top: -1px;
+          min-width: 0;
           position: static;
           top: auto;
           transform: none;

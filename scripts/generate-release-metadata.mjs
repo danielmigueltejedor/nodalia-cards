@@ -43,7 +43,7 @@ const distributedAssets = distributedFiles.map(name => {
 
 fs.mkdirSync(releaseDir, { recursive: true });
 
-const components = Object.keys(pkg.devDependencies || {}).sort().map(name => {
+const components = Object.keys(pkg.devDependencies || {}).sort((left, right) => left.localeCompare(right, "en")).map(name => {
   const packagePath = path.join(root, "node_modules", ...name.split("/"), "package.json");
   let installed;
   try {

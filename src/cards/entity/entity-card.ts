@@ -11,7 +11,6 @@ import {
   COVER_SET_POSITION,
   EDITOR_TAG,
   HAPTIC_PATTERNS,
-  LOCK_LOCK,
   OPTIMISTIC_TOGGLE_TIMEOUT
 } from "./entity-constants";
 import {
@@ -29,7 +28,6 @@ import {
   buildAirQualityChartGeometry,
   buildAirQualityInterpolatedSamples,
   coverEntityIsOpen,
-  entitySupportedFeatures,
   entitySupportsFeature,
   formatNumericValue,
   formatNumericValueWithUnit,
@@ -449,7 +447,7 @@ class NodaliaEntityCard extends HTMLElement {
       `aqh:${Number(aq.graph_hours) || 24}`,
       `aqsr:${AIR_QUALITY_METRIC_KEYS.map(key => aq.graph_series?.[key] === false ? 0 : 1).join("")}`,
       `aqcl:${AIR_QUALITY_METRIC_KEYS.map(key => String(aq.graph_colors?.[key] || "")).join(",")}`,
-      `aqv:${[...this._aqHiddenSeries].sort().join(",")}`,
+      `aqv:${[...this._aqHiddenSeries].sort((left, right) => left.localeCompare(right, "en")).join(",")}`,
       `aq:${aqParts.join(";")}`,
       `aqc:${this._aqHistoryCache ? 1 : 0}`,
       `ov:${overviewParts.join(";")}`,
@@ -959,17 +957,12 @@ class NodaliaEntityCard extends HTMLElement {
       return;
     }
 
-    const features = entitySupportedFeatures(state);
     if (stateKey === "locked") {
       this._invokeEntityService("lock", "unlock", entityId);
       return;
     }
 
-    if (features & LOCK_LOCK) {
-      this._invokeEntityService("lock", "lock", entityId);
-    } else {
-      this._invokeEntityService("lock", "lock", entityId);
-    }
+    this._invokeEntityService("lock", "lock", entityId);
   }
 
   _isBinaryOnOff(state: HassEntity|null) {
@@ -1055,7 +1048,7 @@ class NodaliaEntityCard extends HTMLElement {
         return String(value.name);
       }
 
-      const keys = Object.keys(value).sort();
+      const keys = Object.keys(value).sort((left, right) => left.localeCompare(right, "en"));
       return keys.map(key => `${key}:${String(value[key] ?? "")}`).join(", ");
     }
 

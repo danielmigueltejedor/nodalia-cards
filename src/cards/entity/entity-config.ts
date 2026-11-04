@@ -289,7 +289,7 @@ export function normalizeConfig(rawConfig: unknown = {}) {
   }
 
   const quickActions = Array.isArray(config.quick_actions)
-    ? config.quick_actions.filter(isObject).map(action => ({
+    ? config.quick_actions.filter((item): item is Record<string, unknown> => isObject(item)).map(action => ({
       icon: typeof action.icon === "string" && action.icon ? action.icon : "mdi:flash",
       type: typeof action.type === "string" && action.type ? action.type : "toggle",
       label: typeof action.label === "string" ? action.label : "",

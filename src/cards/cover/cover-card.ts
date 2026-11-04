@@ -1112,14 +1112,14 @@ class NodaliaCoverCard extends HTMLElement {
 
   _onWindowPointerMove(event: PointerEvent) {
     const drag = this._activeSliderDrag;
-    if (!drag || drag.pointerId !== event.pointerId) return;
+    if (!drag || !Object.is(drag.pointerId, event.pointerId)) return;
     event.preventDefault();
     this._queueSliderDragUpdate(event.clientX, event.clientY);
   }
 
   _onWindowPointerUp(event: PointerEvent) {
     const drag = this._activeSliderDrag;
-    if (!drag || drag.pointerId !== event.pointerId) return;
+    if (!drag || !Object.is(drag.pointerId, event.pointerId)) return;
     if (event.type === "pointercancel") {
       this._cancelSliderDrag();
       return;

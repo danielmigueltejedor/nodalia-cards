@@ -16,7 +16,6 @@ import {
   FEATURE_ARM_VACATION,
   HAPTIC_PATTERNS,
   INLINE_LAYOUT_THRESHOLD,
-  LOCK_LOCK,
   MINI_LAYOUT_THRESHOLD,
   OPTIMISTIC_TOGGLE_TIMEOUT,
 } from "./fav-constants";
@@ -31,7 +30,6 @@ import { DEFAULT_CONFIG, STUB_CONFIG, normalizeConfig } from "./fav-config";
 import {
   applyStubEntity,
   coverEntityIsOpen,
-  entitySupportedFeatures,
   entitySupportsFeature,
   getDynamicEntityIcon,
   isUnavailableState,
@@ -517,17 +515,12 @@ class NodaliaFavCard extends HTMLElement {
       return;
     }
 
-    const features = entitySupportedFeatures(state);
     if (stateKey === "locked") {
       this._invokeEntityService("lock", "unlock", entityId);
       return;
     }
 
-    if (features & LOCK_LOCK) {
-      this._invokeEntityService("lock", "lock", entityId);
-    } else {
-      this._invokeEntityService("lock", "lock", entityId);
-    }
+    this._invokeEntityService("lock", "lock", entityId);
   }
 
   _toggleEntity(entityId = this._config?.entity) {

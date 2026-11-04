@@ -1951,7 +1951,7 @@ class NodaliaFanCard extends HTMLElement {
   _onWindowPointerMove(event: Event) {
     if (!(event instanceof PointerEvent)) return;
     const drag = this._activeSliderDrag;
-    if (!drag || drag.pointerId !== event.pointerId) {
+    if (!drag || !Object.is(drag.pointerId, event.pointerId)) {
       return;
     }
 
@@ -1974,7 +1974,7 @@ class NodaliaFanCard extends HTMLElement {
   _onWindowPointerUp(event: Event) {
     if (!(event instanceof PointerEvent)) return;
     const drag = this._activeSliderDrag;
-    if (!drag || drag.pointerId !== event.pointerId) {
+    if (!drag || !Object.is(drag.pointerId, event.pointerId)) {
       return;
     }
 

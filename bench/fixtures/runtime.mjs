@@ -169,7 +169,7 @@ window.bench = {
   }
   if(parts[0]==='gesture'||parts[0]==='map-updates'){
    if(parts[2]==='touch')try{touchEvent('touchstart',document.body,[{clientX:1,clientY:1}]);state.nativeTouchAvailable=true;}catch(error){state.nativeTouchFailure=String(error.message);}
-   const card=state.cards[0];card.shadowRoot.querySelector('[data-mode-id="rooms"]')?.click();await settle(config);
+   const card=state.cards[0];if(!card) throw new Error('Map fixture has no card');card.shadowRoot.querySelector('[data-mode-id="rooms"]')?.click();await settle(config);
    const image=card.shadowRoot.querySelector('[data-map-image]');if(!image?.naturalWidth)throw new Error('Map fixture has not loaded');
   }
  },

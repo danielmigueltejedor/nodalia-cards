@@ -537,7 +537,7 @@ export function getClimateScheduleStorageEntityId(entityId: unknown, configuredH
     .trim()
     .replace(/^climate\./, "")
     .replace(/[^a-z0-9_]+/gi, "_")
-    .replace(/^_+|_+$/g, "");
+    .replace(/^_+/, "").replace(/_+$/, "");
   return slug ? `input_text.nodalia_climate_schedule_${slug}` : "";
 }
 

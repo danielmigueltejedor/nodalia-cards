@@ -2070,7 +2070,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       return;
     }
     const drag = this._activeSliderDrag;
-    if (!drag || drag.pointerId !== event.pointerId) {
+    if (!drag || !Object.is(drag.pointerId, event.pointerId)) {
       return;
     }
 
@@ -2084,7 +2084,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       return;
     }
     const drag = this._activeSliderDrag;
-    if (!drag || drag.pointerId !== event.pointerId) {
+    if (!drag || !Object.is(drag.pointerId, event.pointerId)) {
       return;
     }
 
@@ -3930,15 +3930,17 @@ class NodaliaMediaPlayer extends HTMLElement {
         }
 
         .media-player__unavailable-badge {
-          overflow: hidden;
           align-items: center;
           background: #ff9b4a;
           border: 2px solid var(--ha-card-background, rgba(28, 28, 32, 1));
           border-radius: 999px;
           box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+          box-sizing: border-box;
           display: inline-flex;
           height: 18px;
           justify-content: center;
+          line-height: 0;
+          overflow: hidden;
           position: absolute;
           right: 0;
           top: 0;
@@ -3947,11 +3949,19 @@ class NodaliaMediaPlayer extends HTMLElement {
           z-index: 3;
         }
 
-        .media-player__unavailable-badge ha-icon {
+        .media-player__artwork .media-player__unavailable-badge ha-icon {
           --mdc-icon-size: 11px;
-          color:#fff;
+          align-items: center;
+          color: #fff;
+          display: flex;
+          flex: 0 0 11px;
           height: 11px;
+          justify-content: center;
           left: auto;
+          line-height: 0;
+          margin: 0;
+          margin-top: -1px;
+          min-width: 0;
           position: static;
           top: auto;
           transform: none;

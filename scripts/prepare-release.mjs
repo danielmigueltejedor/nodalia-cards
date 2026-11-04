@@ -29,10 +29,16 @@ export function nextVersion(current, channel, requestedVersion) {
   return channel === 'stable' ? base : `${base}-${channel}.${previous === channel ? Number(count) + 1 : 1}`;
 }
 export function promoteChangelog(source, version, date) {
-  const match = /^## (?:\[Unreleased\]|Unreleased)\s*\n([\s\S]*?)(?=^## |$(?![\s\S]))/m.exec(source);
-  if (!match || !/^[-*] .+/m.test(match[1]) || !/^###\s+/m.test(match[1])) throw new Error('Add curated user-facing notes under Unreleased before preparing a release');
+  const lines = source.split("\n");
+  const start = lines.findIndex(line => line.trim() === "## Unreleased" || line.trim() === "## [Unreleased]");
+  if (start < 0) throw new Error('Add curated user-facing notes under Unreleased before preparing a release');
+  let end = lines.findIndex((line, index) => index > start && line.startsWith("## "));
+  if (end < 0) end = lines.length;
+  const body = lines.slice(start + 1, end).join("\n");
+  if (!/^[-*] .+/m.test(body) || !/^###\s+/m.test(body)) throw new Error('Add curated user-facing notes under Unreleased before preparing a release');
   if (source.includes(`## [${version}]`)) throw new Error(`Changelog already contains ${version}`);
-  return source.slice(0, match.index) + `## [${version}] - ${date}\n\n${match[1].trimStart()}` + source.slice(match.index + match[0].length);
+  const promoted = [`## [${version}] - ${date}`, "", body.trimStart().replace(/\n+$/, "")];
+  return [...lines.slice(0, start), ...promoted, ...(end < lines.length ? [""] : []), ...lines.slice(end)].join("\n");
 }
 export function updateRoadmap(source, version, channel) {
   const preview = /^## Current preview release[\s\S]*?(?=^## Current stable release)/m;

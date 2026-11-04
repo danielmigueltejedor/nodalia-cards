@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.5-alpha.1";
+  var CARD_VERSION = "3.0.5-alpha.2";
 
   // src/cards/room-summary/room-summary-constants.ts
   var CARD_TAG = "nodalia-room-summary-card";
@@ -74,6 +74,26 @@
 
   // src/shared/editor-color.ts
   var clamp2 = (value, max) => Math.max(0, Math.min(max, value));
+  function cssFunctionBody(raw, name) {
+    const head = `${name}(`;
+    if (!raw.toLowerCase().startsWith(head) || !raw.endsWith(")")) return null;
+    return raw.slice(head.length, -1);
+  }
+  function srgbFunctionBody(raw) {
+    const body = cssFunctionBody(raw, "color");
+    if (body === null) return null;
+    const inner = body.trim();
+    if (!inner.toLowerCase().startsWith("srgb")) return null;
+    const rest = inner.slice(4);
+    if (rest.length === 0 || !/\s/.test(rest.charAt(0))) return null;
+    return rest.trim();
+  }
+  function splitCssAlpha(body) {
+    const slash = body.indexOf("/");
+    if (slash < 0) return [body.trim()];
+    if (body.indexOf("/", slash + 1) >= 0) return [body, "", ""];
+    return [body.slice(0, slash).trim(), body.slice(slash + 1).trim()];
+  }
   var component = (value, scale) => {
     if (!value || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?%?$/i.test(value)) return null;
     const numeric = Number(value.replace(/%$/, ""));
@@ -84,13 +104,13 @@
     const hexMatch = raw.match(/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
     if (hexMatch?.[1]) {
       const hex = hexMatch[1].length < 5 ? hexMatch[1].split("").map((channel) => channel + channel).join("") : hexMatch[1];
-      return { red: parseInt(hex.slice(0, 2), 16), green: parseInt(hex.slice(2, 4), 16), blue: parseInt(hex.slice(4, 6), 16), alpha: hex.length === 8 ? parseInt(hex.slice(6, 8), 16) / 255 : 1 };
+      return { red: Number.parseInt(hex.slice(0, 2), 16), green: Number.parseInt(hex.slice(2, 4), 16), blue: Number.parseInt(hex.slice(4, 6), 16), alpha: hex.length === 8 ? Number.parseInt(hex.slice(6, 8), 16) / 255 : 1 };
     }
-    const rgb = raw.match(/^rgba?\(([^)]+)\)$/i);
-    const srgb = raw.match(/^color\(\s*srgb\s+([^)]+)\)$/i);
-    const body = rgb?.[1] ?? srgb?.[1];
+    const rgb = cssFunctionBody(raw, "rgb") ?? cssFunctionBody(raw, "rgba");
+    const srgb = srgbFunctionBody(raw);
+    const body = rgb ?? srgb;
     if (!body) return null;
-    const sections = body.trim().split(/\s*\/\s*/);
+    const sections = splitCssAlpha(body);
     if (sections.length > 2) return null;
     const parts = sections[0]?.split(/[\s,]+/) ?? [];
     if (sections.length === 2 && parts.length !== 3 || parts.length < 3 || parts.length > 4) return null;
@@ -111,7 +131,7 @@
     const numeric = Number(alpha);
     const safeAlpha = clamp2(Number.isFinite(numeric) ? numeric : 1, 1);
     if (safeAlpha >= 0.999) return `#${normalized}`;
-    const red = parseInt(normalized.slice(0, 2), 16), green = parseInt(normalized.slice(2, 4), 16), blue = parseInt(normalized.slice(4, 6), 16);
+    const red = Number.parseInt(normalized.slice(0, 2), 16), green = Number.parseInt(normalized.slice(2, 4), 16), blue = Number.parseInt(normalized.slice(4, 6), 16);
     return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
   }
   function resolveEditorColorValue(value) {
@@ -279,7 +299,7 @@
   function setByPath(target, path, value) {
     if (!isObject2(target) && !Array.isArray(target) || typeof path !== "string") return;
     const parts = String(path || "").split(".");
-    if (!parts.length || parts.some(isUnsafeConfigPathKey2)) return;
+    if (!parts.length || parts.some((part) => isUnsafeConfigPathKey2(part))) return;
     let cursor = target;
     for (let index = 0; index < parts.length - 1; index += 1) {
       const key = parts[index];
@@ -433,7 +453,7 @@
       }
     }
     const mediaSource = isObject(config.media_config) ? cloneConfigValue(config.media_config) : {};
-    const players = Array.isArray(mediaSource.players) ? mediaSource.players.filter(isObject).map((player) => cloneConfigValue(player)) : [];
+    const players = Array.isArray(mediaSource.players) ? mediaSource.players.filter((item) => isObject(item)).map((player) => cloneConfigValue(player)) : [];
     const mediaConfig = { ...mediaSource, players };
     const nativeMediaIds = players.map((player) => String(player.entity || "").trim()).filter(Boolean);
     const mediaPlayer = entityScalar(config.media_player, nativeMediaIds[0]);
@@ -455,7 +475,7 @@
     const rawEmbedOptions = isObject(config.embed_options) ? config.embed_options : {};
     const embedOptions = {};
     CUSTOMIZABLE_EMBED_LISTS.forEach((listKey) => {
-      const options = Array.isArray(rawEmbedOptions[listKey]) ? rawEmbedOptions[listKey].filter(isObject) : [];
+      const options = Array.isArray(rawEmbedOptions[listKey]) ? rawEmbedOptions[listKey].filter((item) => isObject(item)) : [];
       embedOptions[listKey] = lists[listKey].map((entity, index) => {
         const byEntity = options.find((option) => String(option.entity || "").trim() === entity);
         const source = byEntity || options[index] || {};
@@ -1380,7 +1400,7 @@
         const entityId = String(host?.dataset?.entity || "").trim();
         const scope = String(host?.dataset?.hubMedia || "single");
         const ids = hubMediaPlayerIds(config);
-        const nativePlayers = Array.isArray(native.players) ? native.players.filter(isObject).filter((player) => player.entity) : [];
+        const nativePlayers = Array.isArray(native.players) ? native.players.filter((item) => isObject(item)).filter((player) => player.entity) : [];
         const matchingPlayer = nativePlayers.find((player) => String(player.entity || "").trim() === entityId);
         const groupedPlayers = nativePlayers.length ? nativePlayers : ids.map((entity) => ({ entity }));
         const selectedPlayers = scope === "group" ? groupedPlayers : [matchingPlayer || { entity: entityId }];
@@ -2287,7 +2307,7 @@
         event.stopPropagation();
         const detail = this._eventDetail(event);
         const mediaConfig = isObject(detail.config) ? cloneConfigValue(detail.config) : {};
-        const players = Array.isArray(mediaConfig.players) ? mediaConfig.players.filter(isObject) : [];
+        const players = Array.isArray(mediaConfig.players) ? mediaConfig.players.filter((item) => isObject(item)) : [];
         const ids = players.map((player) => String(player.entity || "").trim()).filter(Boolean);
         mediaConfig.players = players;
         this._config.media_config = { ...mediaConfig, players };

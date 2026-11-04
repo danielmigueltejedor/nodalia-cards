@@ -1,6 +1,6 @@
 /** Shared weather icon mapping; accepts HA hyphenated condition names. */
 export function weatherConditionIcon(value: unknown) {
-  switch (String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "")) {
+  switch (String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+/, "").replace(/_+$/, "")) {
     case "clear_night":
       return "mdi:weather-night";
     case "cloudy":

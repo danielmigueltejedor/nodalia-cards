@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.5-alpha.1";
+  var CARD_VERSION = "3.0.5-alpha.2";
 
   // src/cards/vacuum/vacuum-constants.ts
   var CARD_TAG = "nodalia-vacuum-card";
@@ -427,6 +427,26 @@
 
   // src/shared/editor-color.ts
   var clamp2 = (value, max) => Math.max(0, Math.min(max, value));
+  function cssFunctionBody(raw, name) {
+    const head = `${name}(`;
+    if (!raw.toLowerCase().startsWith(head) || !raw.endsWith(")")) return null;
+    return raw.slice(head.length, -1);
+  }
+  function srgbFunctionBody(raw) {
+    const body = cssFunctionBody(raw, "color");
+    if (body === null) return null;
+    const inner = body.trim();
+    if (!inner.toLowerCase().startsWith("srgb")) return null;
+    const rest = inner.slice(4);
+    if (rest.length === 0 || !/\s/.test(rest.charAt(0))) return null;
+    return rest.trim();
+  }
+  function splitCssAlpha(body) {
+    const slash = body.indexOf("/");
+    if (slash < 0) return [body.trim()];
+    if (body.indexOf("/", slash + 1) >= 0) return [body, "", ""];
+    return [body.slice(0, slash).trim(), body.slice(slash + 1).trim()];
+  }
   var component = (value, scale) => {
     if (!value || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?%?$/i.test(value)) return null;
     const numeric = Number(value.replace(/%$/, ""));
@@ -437,13 +457,13 @@
     const hexMatch = raw.match(/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
     if (hexMatch?.[1]) {
       const hex = hexMatch[1].length < 5 ? hexMatch[1].split("").map((channel) => channel + channel).join("") : hexMatch[1];
-      return { red: parseInt(hex.slice(0, 2), 16), green: parseInt(hex.slice(2, 4), 16), blue: parseInt(hex.slice(4, 6), 16), alpha: hex.length === 8 ? parseInt(hex.slice(6, 8), 16) / 255 : 1 };
+      return { red: Number.parseInt(hex.slice(0, 2), 16), green: Number.parseInt(hex.slice(2, 4), 16), blue: Number.parseInt(hex.slice(4, 6), 16), alpha: hex.length === 8 ? Number.parseInt(hex.slice(6, 8), 16) / 255 : 1 };
     }
-    const rgb = raw.match(/^rgba?\(([^)]+)\)$/i);
-    const srgb = raw.match(/^color\(\s*srgb\s+([^)]+)\)$/i);
-    const body = rgb?.[1] ?? srgb?.[1];
+    const rgb = cssFunctionBody(raw, "rgb") ?? cssFunctionBody(raw, "rgba");
+    const srgb = srgbFunctionBody(raw);
+    const body = rgb ?? srgb;
     if (!body) return null;
-    const sections = body.trim().split(/\s*\/\s*/);
+    const sections = splitCssAlpha(body);
     if (sections.length > 2) return null;
     const parts = sections[0]?.split(/[\s,]+/) ?? [];
     if (sections.length === 2 && parts.length !== 3 || parts.length < 3 || parts.length > 4) return null;
@@ -464,7 +484,7 @@
     const numeric = Number(alpha);
     const safeAlpha = clamp2(Number.isFinite(numeric) ? numeric : 1, 1);
     if (safeAlpha >= 0.999) return `#${normalized}`;
-    const red = parseInt(normalized.slice(0, 2), 16), green = parseInt(normalized.slice(2, 4), 16), blue = parseInt(normalized.slice(4, 6), 16);
+    const red = Number.parseInt(normalized.slice(0, 2), 16), green = Number.parseInt(normalized.slice(2, 4), 16), blue = Number.parseInt(normalized.slice(4, 6), 16);
     return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
   }
   function resolveEditorColorValue(value) {
@@ -1355,14 +1375,30 @@
           return this._normalizeRoomCollection(parsed);
         } catch (_error) {
         }
-        const roomBlocks = text.split(/\n(?=-\s*id:|\s*-\s*id:)/g).map((block) => block.trim()).filter(Boolean);
+        const yamlField = (block, key) => {
+          const prefix = `${key.toLowerCase()}:`;
+          for (const line of block.split("\n")) {
+            let field = line.trim();
+            if (field.startsWith("-")) field = field.slice(1).trim();
+            if (field.toLowerCase().startsWith(prefix)) return field.slice(prefix.length).trim();
+          }
+          return "";
+        };
+        const lines = text.split("\n").map((line) => line.trim()).filter(Boolean);
+        const roomBlocks = [];
+        let current = [];
+        for (const line of lines) {
+          if (yamlField(line, "id") && current.length) {
+            roomBlocks.push(current.join("\n"));
+            current = [];
+          }
+          current.push(line);
+        }
+        if (current.length) roomBlocks.push(current.join("\n"));
         const rooms = roomBlocks.map((block) => {
-          const idMatch = block.match(/(?:^|\n)\s*-?\s*id:\s*([^\n]+)/i);
-          const nameMatch = block.match(/(?:^|\n)\s*name:\s*([^\n]+)/i);
-          const cleaningAreaMatch = block.match(/(?:^|\n)\s*cleaning_area_id:\s*([^\n]+)/i);
-          const id = idMatch?.[1]?.trim() ?? "";
-          const name = nameMatch?.[1]?.trim() ?? "";
-          const cleaningAreaId = cleaningAreaMatch?.[1]?.trim() ?? "";
+          const id = yamlField(block, "id");
+          const name = yamlField(block, "name");
+          const cleaningAreaId = yamlField(block, "cleaning_area_id");
           if (!id && !name && !cleaningAreaId) {
             return null;
           }

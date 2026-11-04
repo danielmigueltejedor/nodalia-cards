@@ -21,11 +21,11 @@ const enKeys = new Set(Object.keys(en));
 let failed = false;
 
 function placeholders(value) {
-  return [...String(value ?? "").matchAll(/\{([^{}]+)\}/g)].map(match => match[1]).sort();
+  return [...String(value ?? "").matchAll(/\{([^{}]+)\}/g)].map(match => match[1]).sort((left, right) => left < right ? -1 : left > right ? 1 : 0);
 }
 
 function codeSpans(value) {
-  return [...String(value ?? "").matchAll(/`([^`]+)`/g)].map(match => match[1]).sort();
+  return [...String(value ?? "").matchAll(/`([^`]+)`/g)].map(match => match[1]).sort((left, right) => left < right ? -1 : left > right ? 1 : 0);
 }
 
 for (const name of fs.readdirSync(dir)) {
