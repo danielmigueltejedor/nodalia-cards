@@ -2070,7 +2070,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       return;
     }
     const drag = this._activeSliderDrag;
-    if (!drag || drag.pointerId !== event.pointerId) {
+    if (!drag || !Object.is(drag.pointerId, event.pointerId)) {
       return;
     }
 
@@ -2084,7 +2084,7 @@ class NodaliaMediaPlayer extends HTMLElement {
       return;
     }
     const drag = this._activeSliderDrag;
-    if (!drag || drag.pointerId !== event.pointerId) {
+    if (!drag || !Object.is(drag.pointerId, event.pointerId)) {
       return;
     }
 

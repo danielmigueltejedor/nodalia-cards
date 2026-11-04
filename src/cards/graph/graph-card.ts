@@ -54,7 +54,7 @@ type HoverValue = { entity: string; color: string; name: string; value: string; 
 type Hover = { index: number; label: string; x: number; values: HoverValue[] };
 type TouchPress = { identifier: number; lastX: number; startX: number; startY: number; startTime: number; surface: HTMLElement };
 type PointerSession = { pointerId: number; startX: number; startY: number; startTime: number; surface: HTMLElement; holdFired: boolean };
-const graphRows = (value: unknown): Record<string, unknown>[] => Array.isArray(value) ? value.filter(isObject) : [];
+const graphRows = (value: unknown): Record<string, unknown>[] => Array.isArray(value) ? value.filter((item): item is Record<string, unknown> => isObject(item)) : [];
 const finiteSample = (item: { ts: number | null; value: number | null }): item is HistorySample => item.ts !== null && item.value !== null && Number.isFinite(item.ts) && Number.isFinite(item.value);
 const graphSeriesElement = (node: EventTarget): node is HTMLElement => node instanceof HTMLElement && Boolean(node.dataset.graphSeries);
 const graphSurfaceElement = (node: EventTarget): node is HTMLElement => node instanceof HTMLElement && node.dataset.graphSurface === "chart";
@@ -1288,7 +1288,7 @@ class NodaliaGraphCard extends HTMLElement {
       const state = this._hass?.states?.[entry.entity];
       const rows = graphRows(isObject(raw) ? raw[entry.entity] : undefined);
       const samples = rows
-        .filter(isObject)
+        .filter((item): item is Record<string, unknown> => isObject(item))
         .map(item => {
           const ts = parseHistoryTimestamp(item.start ?? item.end);
           const value = parseNumber(item.mean ?? item.state ?? item.max ?? item.min ?? item.sum);
@@ -1344,7 +1344,7 @@ class NodaliaGraphCard extends HTMLElement {
       const state = this._hass?.states?.[entry.entity];
       const rawGroup = historyByEntity.get(entry.entity) || [];
       const events = rawGroup
-        .filter(isObject)
+        .filter((item): item is Record<string, unknown> => isObject(item))
         .map(item => ({
           ts: parseHistoryTimestamp(
             item.last_changed

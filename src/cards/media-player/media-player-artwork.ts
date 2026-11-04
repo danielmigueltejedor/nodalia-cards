@@ -151,7 +151,7 @@ export function preloadArtworkUrl(url: string): Promise<boolean> {
     };
     image.onload = () => {
       const decode = image.decode?.();
-      if (decode !== undefined && typeof decode.then === "function") {
+      if (typeof decode?.then === "function") {
         decode.then(() => settle(true)).catch(() => settle(true));
         return;
       }

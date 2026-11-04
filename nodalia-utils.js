@@ -183,7 +183,7 @@
     }
     function setByPath(target, path, value) {
       const parts = String(path || "").split(".");
-      if (parts.some(isUnsafeConfigPathKey) || !isObject(target) && !Array.isArray(target)) return;
+      if (parts.some((part) => isUnsafeConfigPathKey(part)) || !isObject(target) && !Array.isArray(target)) return;
       let cursor = target;
       for (let index = 0; index < parts.length - 1; index++) {
         const key2 = parts[index], nextKey = parts[index + 1];
@@ -199,7 +199,7 @@
     }
     function deleteByPath(target, path) {
       const parts = String(path || "").split(".");
-      if (parts.some(isUnsafeConfigPathKey) || !isObject(target) && !Array.isArray(target)) return;
+      if (parts.some((part) => isUnsafeConfigPathKey(part)) || !isObject(target) && !Array.isArray(target)) return;
       let cursor = target;
       for (let index = 0; index < parts.length - 1; index++) {
         const key2 = parts[index];
@@ -278,7 +278,7 @@
     }
     function getByPath(target, path) {
       const parts = String(path || "").split(".");
-      if (parts.some(isUnsafeConfigPathKey)) {
+      if (parts.some((part) => isUnsafeConfigPathKey(part))) {
         return void 0;
       }
       let cursor = target;
@@ -357,7 +357,7 @@
       return event;
     }
     function computeTextKey(text) {
-      return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+      return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+/, "").replace(/_+$/, "");
     }
     const TEXT_KEY_CACHE_LIMIT = 4096;
     const TEXT_KEY_MAX_LENGTH = 160;

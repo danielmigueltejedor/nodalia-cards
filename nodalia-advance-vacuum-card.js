@@ -860,7 +860,7 @@
     return normalized.charAt(0).toUpperCase() + normalized.slice(1).toLowerCase();
   }
   function normalizeCustomMenuItems(items) {
-    return arrayFromMaybe(items).filter(isObject).map((item) => ({
+    return arrayFromMaybe(items).filter((item) => isObject(item)).map((item) => ({
       label: String(item.label || item.name || "").trim(),
       icon: String(item.icon || "mdi:flash").trim(),
       visible_when: String(item.visible_when || "always").trim(),
@@ -870,7 +870,7 @@
   }
   function normalizeRoutineItems(items) {
     return sortByOrder(
-      arrayFromMaybe(items).map((item) => typeof item === "string" ? { entity: item } : item).filter(isObject).map((item) => ({
+      arrayFromMaybe(items).map((item) => typeof item === "string" ? { entity: item } : item).filter((item) => isObject(item)).map((item) => ({
         order: parseFiniteNumericValue(item.order) ?? 0,
         label: String(item.label || item.name || "").trim(),
         icon: String(item.icon || "").trim(),
@@ -984,7 +984,7 @@
       this.mode = "";
       this.vacuumToMapMatrix = null;
       this.mapToVacuumMatrix = null;
-      const points = arrayFromMaybe(calibrationPoints).filter(isObject).map((point) => ({
+      const points = arrayFromMaybe(calibrationPoints).filter((item) => isObject(item)).map((point) => ({
         map: parsePoint(point?.map),
         vacuum: parsePoint(point?.vacuum)
       })).filter((point) => point.map !== null && point.vacuum !== null);
@@ -1053,11 +1053,11 @@
   }
   function resolveLegacyMode(raw, templateName) {
     const config = record(raw);
-    return arrayFromMaybe(config?.map_modes).filter(isObject).find((mode) => normalizeTextKey(mode.template) === normalizeTextKey(templateName));
+    return arrayFromMaybe(config?.map_modes).filter((item) => isObject(item)).find((mode) => normalizeTextKey(mode.template) === normalizeTextKey(templateName));
   }
   function resolveRoomsFromVacuumState(hass, entityId) {
     const vacuumState = entityId ? hass?.states?.[entityId] || null : null;
-    const maps = arrayFromMaybe(vacuumState?.attributes?.maps).filter(isObject);
+    const maps = arrayFromMaybe(vacuumState?.attributes?.maps).filter((item) => isObject(item));
     const mapWithRooms = maps.find((map) => isObject(map?.rooms) && Object.keys(map.rooms).length > 0);
     if (!mapWithRooms) {
       return [];
@@ -1113,7 +1113,7 @@
   }
   function resolveRoomSegments(raw, hass = null, entityId = "", mapEntityId = "") {
     const config = record(raw);
-    const directRooms = arrayFromMaybe(config?.room_segments).filter(isObject);
+    const directRooms = arrayFromMaybe(config?.room_segments).filter((item) => isObject(item));
     if (directRooms.length) {
       return directRooms.map((room) => {
         const outlines = parseOutlines(pickShapeSource(
@@ -1138,7 +1138,7 @@
       }).filter((room) => room.id && room.outlines.length);
     }
     const segmentMode = resolveLegacyMode(config, "vacuum_clean_segment");
-    const legacyRooms = arrayFromMaybe(segmentMode?.predefined_selections).filter(isObject).map((selection) => {
+    const legacyRooms = arrayFromMaybe(segmentMode?.predefined_selections).filter((item) => isObject(item)).map((selection) => {
       const outlines = parseOutlines(pickShapeSource(
         selection?.outlines,
         selection?.outline,
@@ -1170,7 +1170,7 @@
   }
   function resolveGotoPoints(raw) {
     const config = record(raw);
-    const directPoints = arrayFromMaybe(config?.goto_points).filter(isObject);
+    const directPoints = arrayFromMaybe(config?.goto_points).filter((item) => isObject(item));
     if (directPoints.length) {
       return directPoints.map((point) => ({
         id: String(point.id || point.label || point.name || ""),
@@ -1180,7 +1180,7 @@
       })).filter((point) => point.position);
     }
     const gotoMode = resolveLegacyMode(config, "vacuum_goto_predefined");
-    return arrayFromMaybe(gotoMode?.predefined_selections).filter(isObject).map((point) => ({
+    return arrayFromMaybe(gotoMode?.predefined_selections).filter((item) => isObject(item)).map((point) => ({
       id: String(point.id || record(point.label).text || record(point.icon).name || "goto"),
       label: String(record(point.label).text || point?.label || "").trim(),
       icon: String(record(point.icon).name || point?.icon || "mdi:map-marker").trim(),
@@ -1189,7 +1189,7 @@
   }
   function resolvePredefinedZones(raw) {
     const config = record(raw);
-    const directZones = arrayFromMaybe(config?.predefined_zones).filter(isObject);
+    const directZones = arrayFromMaybe(config?.predefined_zones).filter((item) => isObject(item));
     if (directZones.length) {
       return directZones.map((zone) => ({
         id: String(zone.id || zone.label || zone.name || ""),
@@ -1200,7 +1200,7 @@
       })).filter((zone) => zone.zones.length);
     }
     const zoneMode = resolveLegacyMode(config, "vacuum_clean_zone_predefined");
-    return arrayFromMaybe(zoneMode?.predefined_selections).filter(isObject).map((zone) => ({
+    return arrayFromMaybe(zoneMode?.predefined_selections).filter((item) => isObject(item)).map((zone) => ({
       id: String(zone.id || record(zone.label).text || record(zone.icon).name || "zone"),
       label: String(record(zone.label).text || zone?.label || "").trim(),
       icon: String(record(zone.icon).name || zone?.icon || "mdi:vector-rectangle").trim(),
@@ -1210,7 +1210,7 @@
   }
   function resolveHeaderIcons(raw) {
     const config = record(raw);
-    return sortByOrder(arrayFromMaybe(config?.icons).filter(isObject)).map((item, index) => ({
+    return sortByOrder(arrayFromMaybe(config?.icons).filter((item) => isObject(item))).map((item, index) => ({
       id: String(item.id || item.icon_id || index),
       icon: String(item.icon || "mdi:gesture-tap-button").trim(),
       tooltip: String(item.tooltip || item.label || "").trim(),
@@ -1225,6 +1225,11 @@
     name: "Roborock Qrevo S",
     vacuum_platform: "auto"
   };
+  function trimTrailingSlashes(value) {
+    let end = value.length;
+    while (end > 0 && value.charCodeAt(end - 1) === 47) end -= 1;
+    return value.slice(0, end);
+  }
   function normalizeConfig(rawConfig = {}) {
     const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
     const menu = mergeConfig(DEFAULT_CONFIG.custom_menu, config.custom_menu || {});
@@ -1252,7 +1257,7 @@
       room_tracking,
       security,
       vacuum_platform: String(config.vacuum_platform || "auto").trim() || "auto",
-      vacuum_mqtt_topic: String(config.vacuum_mqtt_topic ?? "").trim().replace(/\/+$/, ""),
+      vacuum_mqtt_topic: trimTrailingSlashes(String(config.vacuum_mqtt_topic ?? "").trim()),
       routines: normalizeRoutineItems(config.routines),
       shared_cleaning_session_webhook: String(config.shared_cleaning_session_webhook ?? "").trim()
     };
@@ -4493,9 +4498,9 @@
       _captureMapOverlayPaint(rect) {
         const nodes = Array.from(this.shadowRoot?.querySelectorAll(".advance-vacuum-card__map-overlays > button") || []);
         this._mapOverlayPaint = { rect, nodes: nodes.map((node) => {
-          const left = parseFloat(node.style.left) / 100 * rect.width, top = parseFloat(node.style.top) / 100 * rect.height;
+          const left = Number.parseFloat(node.style.left) / 100 * rect.width, top = Number.parseFloat(node.style.top) / 100 * rect.height;
           const x = (left - this._mapOffset.x) / this._mapScale, y = (top - this._mapOffset.y) / this._mapScale;
-          return { node, x, y, x2: node.style.width ? x + parseFloat(node.style.width) / 100 * rect.width / this._mapScale : null, y2: node.style.height ? y + parseFloat(node.style.height) / 100 * rect.height / this._mapScale : null };
+          return { node, x, y, x2: node.style.width ? x + Number.parseFloat(node.style.width) / 100 * rect.width / this._mapScale : null, y2: node.style.height ? y + Number.parseFloat(node.style.height) / 100 * rect.height / this._mapScale : null };
         }) };
         this.shadowRoot?.querySelector("[data-map-surface]")?.classList.add("is-pinching");
       }
@@ -5876,7 +5881,7 @@
         }
         const roomTarget = this._getRoomSelectionTarget(event);
         if (roomTarget) {
-          if (event.button !== void 0 && event.button !== 0) {
+          if (event.button !== 0) {
             return;
           }
           if (this._isRoomSelectionLocked()) {
@@ -5904,7 +5909,7 @@
         if (interactiveTarget) {
           return;
         }
-        if (event.pointerId !== void 0) {
+        if (event.pointerId >= 0) {
           this._activeMapPointers.set(event.pointerId, {
             clientX: event.clientX,
             clientY: event.clientY
@@ -5940,7 +5945,7 @@
           this._selectedManualZoneIndex = index;
           event.preventDefault();
           event.stopPropagation();
-          if (event.pointerId !== void 0) {
+          if (event.pointerId >= 0) {
             try {
               surface.setPointerCapture(event.pointerId);
             } catch (_error) {
@@ -6100,7 +6105,7 @@
           }
         }
         const surface = this.shadowRoot?.querySelector("[data-map-surface='main']");
-        if (surface && event.pointerId !== void 0) {
+        if (surface && event.pointerId >= 0) {
           try {
             surface.releasePointerCapture(event.pointerId);
           } catch (_error) {
@@ -6819,7 +6824,7 @@
         const attributes = active instanceof HTMLElement ? Array.from(active.attributes).filter((item) => item.name.startsWith("data-")).map((item) => [item.name, item.value]) : [];
         this._renderView();
         if (attributes.length && active && !active.isConnected) {
-          const replacement = Array.from(this.shadowRoot.querySelectorAll("button,select")).find((node) => node.tagName === active.tagName && attributes.every(([name, value]) => name !== void 0 && node.getAttribute(name) === value));
+          const replacement = Array.from(this.shadowRoot.querySelectorAll("button,select")).find((node) => node.tagName === active.tagName && attributes.every(([name, value]) => typeof name === "string" && node.getAttribute(name) === value));
           replacement?.focus({ preventScroll: true });
         }
       }
@@ -7420,7 +7425,7 @@
         event.stopPropagation();
         const nextValue = editorControlValue(event, control);
         const nextConfig = cloneConfigValue(this._config);
-        if (nextValue === "" || nextValue === null || nextValue === void 0) {
+        if (nextValue === "" || nextValue == null) {
           deleteByPath(nextConfig, control.dataset.field);
         } else {
           setByPath(nextConfig, control.dataset.field, nextValue);
@@ -7467,7 +7472,7 @@
         target.setCustomValidity("");
         target.removeAttribute("aria-invalid");
         this._draftValues.delete(field);
-        if (nextValue === "" || nextValue === null || nextValue === void 0) {
+        if (nextValue === "" || nextValue == null) {
           deleteByPath(nextConfig, field);
         } else {
           setByPath(nextConfig, field, nextValue);

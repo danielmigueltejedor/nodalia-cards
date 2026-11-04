@@ -616,7 +616,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
       return [];
     }
 
-    return route.popup.filter(isObject).filter(item => this._isItemVisible(item));
+    return route.popup.filter((item): item is Record<string, unknown> => isObject(item)).filter(item => this._isItemVisible(item));
   }
 
   _getRoutePath(route: NavItem) {
@@ -1882,7 +1882,7 @@ class NodaliaNavigationBarCard extends HTMLElement {
     }
   }
 
-  _patchMediaVolumeControls(entityId = "", volumeLevel = NaN) {
+  _patchMediaVolumeControls(entityId = "", volumeLevel = Number.NaN) {
     if (!this.shadowRoot) {
       return;
     }

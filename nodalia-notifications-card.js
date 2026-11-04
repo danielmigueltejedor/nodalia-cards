@@ -588,7 +588,7 @@
   function setByPath(target, path, value) {
     if (!isObject2(target) && !Array.isArray(target) || typeof path !== "string") return;
     const parts = String(path || "").split(".");
-    if (!parts.length || parts.some(isUnsafeConfigPathKey2)) return;
+    if (!parts.length || parts.some((part) => isUnsafeConfigPathKey2(part))) return;
     let cursor = target;
     for (let index = 0; index < parts.length - 1; index += 1) {
       const key = parts[index];
@@ -608,6 +608,26 @@
 
   // src/shared/editor-color.ts
   var clamp2 = (value, max) => Math.max(0, Math.min(max, value));
+  function cssFunctionBody(raw, name) {
+    const head = `${name}(`;
+    if (!raw.toLowerCase().startsWith(head) || !raw.endsWith(")")) return null;
+    return raw.slice(head.length, -1);
+  }
+  function srgbFunctionBody(raw) {
+    const body = cssFunctionBody(raw, "color");
+    if (body === null) return null;
+    const inner = body.trim();
+    if (!inner.toLowerCase().startsWith("srgb")) return null;
+    const rest = inner.slice(4);
+    if (rest.length === 0 || !/\s/.test(rest.charAt(0))) return null;
+    return rest.trim();
+  }
+  function splitCssAlpha(body) {
+    const slash = body.indexOf("/");
+    if (slash < 0) return [body.trim()];
+    if (body.indexOf("/", slash + 1) >= 0) return [body, "", ""];
+    return [body.slice(0, slash).trim(), body.slice(slash + 1).trim()];
+  }
   var component = (value, scale) => {
     if (!value || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?%?$/i.test(value)) return null;
     const numeric = Number(value.replace(/%$/, ""));
@@ -618,13 +638,13 @@
     const hexMatch = raw.match(/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
     if (hexMatch?.[1]) {
       const hex = hexMatch[1].length < 5 ? hexMatch[1].split("").map((channel) => channel + channel).join("") : hexMatch[1];
-      return { red: parseInt(hex.slice(0, 2), 16), green: parseInt(hex.slice(2, 4), 16), blue: parseInt(hex.slice(4, 6), 16), alpha: hex.length === 8 ? parseInt(hex.slice(6, 8), 16) / 255 : 1 };
+      return { red: Number.parseInt(hex.slice(0, 2), 16), green: Number.parseInt(hex.slice(2, 4), 16), blue: Number.parseInt(hex.slice(4, 6), 16), alpha: hex.length === 8 ? Number.parseInt(hex.slice(6, 8), 16) / 255 : 1 };
     }
-    const rgb = raw.match(/^rgba?\(([^)]+)\)$/i);
-    const srgb = raw.match(/^color\(\s*srgb\s+([^)]+)\)$/i);
-    const body = rgb?.[1] ?? srgb?.[1];
+    const rgb = cssFunctionBody(raw, "rgb") ?? cssFunctionBody(raw, "rgba");
+    const srgb = srgbFunctionBody(raw);
+    const body = rgb ?? srgb;
     if (!body) return null;
-    const sections = body.trim().split(/\s*\/\s*/);
+    const sections = splitCssAlpha(body);
     if (sections.length > 2) return null;
     const parts = sections[0]?.split(/[\s,]+/) ?? [];
     if (sections.length === 2 && parts.length !== 3 || parts.length < 3 || parts.length > 4) return null;
@@ -645,7 +665,7 @@
     const numeric = Number(alpha);
     const safeAlpha = clamp2(Number.isFinite(numeric) ? numeric : 1, 1);
     if (safeAlpha >= 0.999) return `#${normalized}`;
-    const red = parseInt(normalized.slice(0, 2), 16), green = parseInt(normalized.slice(2, 4), 16), blue = parseInt(normalized.slice(4, 6), 16);
+    const red = Number.parseInt(normalized.slice(0, 2), 16), green = Number.parseInt(normalized.slice(2, 4), 16), blue = Number.parseInt(normalized.slice(4, 6), 16);
     return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
   }
   function resolveEditorColorValue(value) {
@@ -752,7 +772,7 @@
   }
   function getByPath(target, path) {
     const parts = String(path || "").split(".").filter(Boolean);
-    if (parts.some(isUnsafeConfigPathKey)) return void 0;
+    if (parts.some((part) => isUnsafeConfigPathKey(part))) return void 0;
     let cursor = target;
     for (const part of parts) {
       if (Array.isArray(cursor)) {
@@ -765,7 +785,7 @@
   }
   function deleteByPath(target, path) {
     const parts = String(path || "").split(".").filter(Boolean);
-    if (!parts.length || parts.some(isUnsafeConfigPathKey)) return;
+    if (!parts.length || parts.some((part) => isUnsafeConfigPathKey(part))) return;
     const leaf = parts.pop();
     const cursor = parts.length ? getByPath(target, parts.join(".")) : target;
     if (leaf === void 0) return;
@@ -798,7 +818,7 @@
     }
     const areas = hass?.areas;
     if (Array.isArray(areas)) {
-      const area2 = areas.filter(isObject).find((item) => String(item.area_id || item.id || "") === rawId);
+      const area2 = areas.filter((item) => isObject(item)).find((item) => String(item.area_id || item.id || "") === rawId);
       return String(area2?.name || rawId).trim();
     }
     const area = isObject(areas) && isObject(areas[rawId]) ? areas[rawId] : null;
@@ -818,7 +838,7 @@
     }
     const devices = hass?.devices;
     if (Array.isArray(devices)) {
-      return devices.filter(isObject).find((item) => String(item.id || item.device_id || "") === rawId) || null;
+      return devices.filter((item) => isObject(item)).find((item) => String(item.id || item.device_id || "") === rawId) || null;
     }
     return isObject(devices) && isObject(devices[rawId]) ? devices[rawId] : null;
   }
@@ -837,7 +857,7 @@
     }
     const searchable = normalizeMatchText(`${entityId} ${friendlyName(hass, entityId)}`);
     const areas = hass?.areas;
-    const areaList = (Array.isArray(areas) ? areas : isObject(areas) ? Object.values(areas) : []).filter(isObject);
+    const areaList = (Array.isArray(areas) ? areas : isObject(areas) ? Object.values(areas) : []).filter((item) => isObject(item));
     const matched = areaList.find((area) => {
       const name = normalizeMatchText(area?.name || area?.area_id || area?.id || "");
       return name && searchable.includes(name);
@@ -1009,28 +1029,28 @@
   }
   function normalizeCalendarFetchResult(raw) {
     if (Array.isArray(raw)) {
-      return raw.filter(isObject);
+      return raw.filter((item) => isObject(item));
     }
     if (!isObject(raw)) return [];
     if (Array.isArray(raw.events)) {
-      return raw.events.filter(isObject);
+      return raw.events.filter((item) => isObject(item));
     }
     if (Array.isArray(raw?.calendar_events)) {
-      return raw.calendar_events.filter(isObject);
+      return raw.calendar_events.filter((item) => isObject(item));
     }
     return [];
   }
   function normalizeWeatherForecastResult(raw, entityId) {
     if (Array.isArray(raw)) {
-      return raw.filter(isObject);
+      return raw.filter((item) => isObject(item));
     }
     if (!isObject(raw)) return [];
     if (Array.isArray(raw.forecast)) {
-      return raw.forecast.filter(isObject);
+      return raw.forecast.filter((item) => isObject(item));
     }
     const nested = raw[entityId];
     if (isObject(nested) && Array.isArray(nested.forecast)) {
-      return nested.forecast.filter(isObject);
+      return nested.forecast.filter((item) => isObject(item));
     }
     return [];
   }
@@ -1882,7 +1902,7 @@
           const result = await backend.listNotificationInbox(hass, profileId);
           if (!this._isCurrent(generation)) return false;
           const rawInbox = notificationRecord(result).inbox;
-          const inbox = Array.isArray(rawInbox) ? rawInbox.filter(isObject) : [];
+          const inbox = Array.isArray(rawInbox) ? rawInbox.filter((item) => isObject(item)) : [];
           this._engineInbox = inbox;
           if (this._mergeNativeDismissed(inbox.filter((entry) => entry.dismissed === true).map((entry) => String(entry.alert_id || entry.id || "")).filter(Boolean))) this._renderIfChanged(true);
           return true;

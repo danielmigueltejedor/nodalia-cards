@@ -3852,9 +3852,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   _captureMapOverlayPaint(rect:DOMRect) {
     const nodes=Array.from(this.shadowRoot?.querySelectorAll<HTMLElement>(".advance-vacuum-card__map-overlays > button")||[]);
     this._mapOverlayPaint={rect,nodes:nodes.map(node=>{
-      const left=parseFloat(node.style.left)/100*rect.width,top=parseFloat(node.style.top)/100*rect.height;
+      const left=Number.parseFloat(node.style.left)/100*rect.width,top=Number.parseFloat(node.style.top)/100*rect.height;
       const x=(left-this._mapOffset.x)/this._mapScale,y=(top-this._mapOffset.y)/this._mapScale;
-      return {node,x,y,x2:node.style.width?x+parseFloat(node.style.width)/100*rect.width/this._mapScale:null,y2:node.style.height?y+parseFloat(node.style.height)/100*rect.height/this._mapScale:null};
+      return {node,x,y,x2:node.style.width?x+Number.parseFloat(node.style.width)/100*rect.width/this._mapScale:null,y2:node.style.height?y+Number.parseFloat(node.style.height)/100*rect.height/this._mapScale:null};
     })};
     this.shadowRoot?.querySelector("[data-map-surface]")?.classList.add("is-pinching");
   }
@@ -5453,7 +5453,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     const roomTarget = this._getRoomSelectionTarget(event);
     if (roomTarget) {
-      if (event.button !== undefined && event.button !== 0) {
+      if (event.button !== 0) {
         return;
       }
 
@@ -5501,7 +5501,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return;
     }
 
-    if (event.pointerId !== undefined) {
+    if (event.pointerId >= 0) {
       this._activeMapPointers.set(event.pointerId, {
         clientX: event.clientX,
         clientY: event.clientY,
@@ -5545,7 +5545,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       event.preventDefault();
       event.stopPropagation();
 
-      if (event.pointerId !== undefined) {
+      if (event.pointerId >= 0) {
         try {
           surface.setPointerCapture(event.pointerId);
         } catch (_error) {
@@ -5752,7 +5752,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     }
 
     const surface = this.shadowRoot?.querySelector("[data-map-surface='main']");
-    if (surface && event.pointerId !== undefined) {
+    if (surface && event.pointerId >= 0) {
       try {
         surface.releasePointerCapture(event.pointerId);
       } catch (_error) {
@@ -6603,7 +6603,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const attributes=active instanceof HTMLElement?Array.from(active.attributes).filter(item=>item.name.startsWith("data-")).map(item=>[item.name,item.value]):[];
     this._renderView();
     if(attributes.length && active && !active.isConnected) {
-      const replacement=Array.from(this.shadowRoot.querySelectorAll<HTMLElement>("button,select")).find(node=>node.tagName===active.tagName && attributes.every(([name,value])=>name!==undefined && node.getAttribute(name)===value));replacement?.focus({preventScroll:true});
+      const replacement=Array.from(this.shadowRoot.querySelectorAll<HTMLElement>("button,select")).find(node=>node.tagName===active.tagName && attributes.every(([name,value])=>typeof name==="string" && node.getAttribute(name)===value));replacement?.focus({preventScroll:true});
     }
   }
 

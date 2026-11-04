@@ -288,7 +288,7 @@ export function formatTimeLabel(date: Date, locale: string | undefined) {
 
 export function normalizeCalendarFetchResult(raw: unknown): Record<string, unknown>[] {
   const rows = Array.isArray(raw) ? raw : isObject(raw) && Array.isArray(raw.events) ? raw.events : [];
-  return rows.filter(isObject);
+  return rows.filter((item): item is Record<string, unknown> => isObject(item));
 }
 
 export function eventIsAllDay(value: unknown) {

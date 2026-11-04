@@ -719,7 +719,7 @@ class NodaliaNotificationsCard extends HTMLElement {
       const result = await backend.listNotificationInbox(hass,profileId);
       if (!this._isCurrent(generation)) return false;
       const rawInbox = notificationRecord(result).inbox;
-      const inbox = Array.isArray(rawInbox) ? rawInbox.filter(isObject) : [];
+      const inbox = Array.isArray(rawInbox) ? rawInbox.filter((item): item is Record<string, unknown> => isObject(item)) : [];
       this._engineInbox = inbox;
       if (this._mergeNativeDismissed(inbox.filter(entry => entry.dismissed === true).map(entry => String(entry.alert_id || entry.id || "")).filter(Boolean))) this._renderIfChanged(true);
       return true;

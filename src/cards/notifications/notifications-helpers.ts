@@ -124,7 +124,7 @@ export function setByPath(target: unknown, path: unknown, value: unknown): void 
 
 export function getByPath(target: unknown, path: unknown): unknown {
   const parts = String(path || "").split(".").filter(Boolean);
-  if (parts.some(isUnsafeConfigPathKey)) return undefined;
+  if (parts.some((part) => isUnsafeConfigPathKey(part))) return undefined;
   let cursor: unknown = target;
   for (const part of parts) {
     if (Array.isArray(cursor)) {
@@ -138,7 +138,7 @@ export function getByPath(target: unknown, path: unknown): unknown {
 
 export function deleteByPath(target: unknown, path: unknown): void {
   const parts = String(path || "").split(".").filter(Boolean);
-  if (!parts.length || parts.some(isUnsafeConfigPathKey)) return;
+  if (!parts.length || parts.some((part) => isUnsafeConfigPathKey(part))) return;
   const leaf = parts.pop();
   const cursor = parts.length ? getByPath(target, parts.join(".")) : target;
   if (leaf === undefined) return;
@@ -175,7 +175,7 @@ export function areaRecordName(hass: HomeAssistant | null | undefined, areaId: u
   }
   const areas = hass?.areas;
   if (Array.isArray(areas)) {
-    const area = areas.filter(isObject).find(item => String(item.area_id || item.id || "") === rawId);
+    const area = areas.filter((item): item is Record<string, unknown> => isObject(item)).find(item => String(item.area_id || item.id || "") === rawId);
     return String(area?.name || rawId).trim();
   }
   const area = isObject(areas) && isObject(areas[rawId]) ? areas[rawId] : null;
@@ -197,7 +197,7 @@ export function deviceRegistryEntry(hass: HomeAssistant | null | undefined, devi
   }
   const devices = hass?.devices;
   if (Array.isArray(devices)) {
-    return devices.filter(isObject).find(item => String(item.id || item.device_id || "") === rawId) || null;
+    return devices.filter((item): item is Record<string, unknown> => isObject(item)).find(item => String(item.id || item.device_id || "") === rawId) || null;
   }
   return isObject(devices) && isObject(devices[rawId]) ? devices[rawId] : null;
 }
@@ -217,7 +217,7 @@ export function entityAreaName(hass: HomeAssistant | null | undefined, entityId:
   }
   const searchable = normalizeMatchText(`${entityId} ${friendlyName(hass, entityId)}`);
   const areas = hass?.areas;
-  const areaList = (Array.isArray(areas) ? areas : isObject(areas) ? Object.values(areas) : []).filter(isObject);
+  const areaList = (Array.isArray(areas) ? areas : isObject(areas) ? Object.values(areas) : []).filter((item): item is Record<string, unknown> => isObject(item));
   const matched = areaList.find(area => {
     const name = normalizeMatchText(area?.name || area?.area_id || area?.id || "");
     return name && searchable.includes(name);
@@ -429,29 +429,29 @@ export function formatTime(date: unknown) {
 
 export function normalizeCalendarFetchResult(raw: unknown): Record<string, unknown>[] {
   if (Array.isArray(raw)) {
-    return raw.filter(isObject);
+    return raw.filter((item): item is Record<string, unknown> => isObject(item));
   }
   if (!isObject(raw)) return [];
   if (Array.isArray(raw.events)) {
-    return raw.events.filter(isObject);
+    return raw.events.filter((item): item is Record<string, unknown> => isObject(item));
   }
   if (Array.isArray(raw?.calendar_events)) {
-    return raw.calendar_events.filter(isObject);
+    return raw.calendar_events.filter((item): item is Record<string, unknown> => isObject(item));
   }
   return [];
 }
 
 export function normalizeWeatherForecastResult(raw: unknown, entityId: string): Record<string, unknown>[] {
   if (Array.isArray(raw)) {
-    return raw.filter(isObject);
+    return raw.filter((item): item is Record<string, unknown> => isObject(item));
   }
   if (!isObject(raw)) return [];
   if (Array.isArray(raw.forecast)) {
-    return raw.forecast.filter(isObject);
+    return raw.forecast.filter((item): item is Record<string, unknown> => isObject(item));
   }
   const nested = raw[entityId];
   if (isObject(nested) && Array.isArray(nested.forecast)) {
-    return nested.forecast.filter(isObject);
+    return nested.forecast.filter((item): item is Record<string, unknown> => isObject(item));
   }
   return [];
 }

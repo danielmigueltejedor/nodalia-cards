@@ -2176,7 +2176,7 @@ test("calendar card reuses date/time formatters during render", () => {
 test("power flow flow dots avoid origin flash before motion starts", () => {
   const source = read("nodalia-power-flow-card.js");
   assert.match(source, /function getSvgPathMotionStart\(pathD\)/);
-  assert.match(source, /(?:const|var) SVG_PATH_TOKEN_RE = \/\[AaCcHhLlMmQqSsTtVvZz\]/);
+  assert.match(source, /function tokenizeSvgPath/);
   assert.match(source, /function tokenizeSvgPath\(pathD\)/);
   assert.match(source, /readFlag\(\)/);
   assert.match(source, /function getSvgRelativeMotionPath\(pathD\)/);

@@ -160,7 +160,7 @@ import type {NodaliaUtilsApi,CssStyleDefaults,SanitizedCssStyles,EditorFocusStat
 
   function setByPath(target:unknown, path:string, value:unknown) {
     const parts=String(path||"").split(".");
-    if(parts.some(isUnsafeConfigPathKey)||(!isObject(target)&&!Array.isArray(target))) return;
+    if(parts.some((part) => isUnsafeConfigPathKey(part))||(!isObject(target)&&!Array.isArray(target))) return;
     let cursor:object=target;
     for(let index=0;index<parts.length-1;index++) {
       const key=parts[index],nextKey=parts[index+1];
@@ -177,7 +177,7 @@ import type {NodaliaUtilsApi,CssStyleDefaults,SanitizedCssStyles,EditorFocusStat
 
   function deleteByPath(target:unknown,path:string) {
     const parts=String(path||"").split(".");
-    if(parts.some(isUnsafeConfigPathKey)||(!isObject(target)&&!Array.isArray(target))) return;
+    if(parts.some((part) => isUnsafeConfigPathKey(part))||(!isObject(target)&&!Array.isArray(target))) return;
     let cursor:object=target;
     for(let index=0;index<parts.length-1;index++) {
       const key=parts[index];if(key===undefined) return;
@@ -271,7 +271,7 @@ import type {NodaliaUtilsApi,CssStyleDefaults,SanitizedCssStyles,EditorFocusStat
 
   function getByPath(target:unknown, path:string):unknown {
     const parts = String(path || "").split(".");
-    if (parts.some(isUnsafeConfigPathKey)) {
+    if (parts.some((part) => isUnsafeConfigPathKey(part))) {
       return undefined;
     }
     let cursor = target;
@@ -385,7 +385,7 @@ import type {NodaliaUtilsApi,CssStyleDefaults,SanitizedCssStyles,EditorFocusStat
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "_")
-      .replace(/^_+|_+$/g, "");
+      .replace(/^_+/, "").replace(/_+$/, "");
   }
 
   /** Entity ids, state values and keys repeat on every HA update; remember their keys. */

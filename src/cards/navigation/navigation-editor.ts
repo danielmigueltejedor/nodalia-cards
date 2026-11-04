@@ -167,16 +167,16 @@ class NodaliaNavigationBarEditor extends HTMLElement {
 
   _prepareEditorConfig(raw: unknown): EditorDraft {
     const config = isObject(raw) ? raw : {};
-    const routes: DraftRoute[] = (Array.isArray(config.routes) ? config.routes : []).filter(isObject).map(route => {
+    const routes: DraftRoute[] = (Array.isArray(config.routes) ? config.routes : []).filter((item): item is Record<string, unknown> => isObject(item)).map(route => {
       if (route.popup === undefined) return { ...route };
-      return { ...route, popup: (Array.isArray(route.popup) ? route.popup : []).filter(isObject) };
+      return { ...route, popup: (Array.isArray(route.popup) ? route.popup : []).filter((item): item is Record<string, unknown> => isObject(item)) };
     });
     const media = isObject(config.media_player) ? config.media_player : {};
     return { ...config, routes,
       layout: isObject(config.layout) ? config.layout : {},
       haptics: isObject(config.haptics) ? config.haptics : {},
       animations: isObject(config.animations) ? config.animations : {},
-      media_player: { ...media, players: (Array.isArray(media.players) ? media.players : []).filter(isObject) },
+      media_player: { ...media, players: (Array.isArray(media.players) ? media.players : []).filter((item): item is Record<string, unknown> => isObject(item)) },
     };
   }
 

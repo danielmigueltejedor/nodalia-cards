@@ -111,7 +111,7 @@
 
   // src/shared/weather-condition-icons.ts
   function weatherConditionIcon(value) {
-    switch (String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "")) {
+    switch (String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+/, "").replace(/_+$/, "")) {
       case "clear_night":
         return "mdi:weather-night";
       case "cloudy":
@@ -202,6 +202,26 @@
 
   // src/shared/editor-color.ts
   var clamp2 = (value, max) => Math.max(0, Math.min(max, value));
+  function cssFunctionBody(raw, name) {
+    const head = `${name}(`;
+    if (!raw.toLowerCase().startsWith(head) || !raw.endsWith(")")) return null;
+    return raw.slice(head.length, -1);
+  }
+  function srgbFunctionBody(raw) {
+    const body = cssFunctionBody(raw, "color");
+    if (body === null) return null;
+    const inner = body.trim();
+    if (!inner.toLowerCase().startsWith("srgb")) return null;
+    const rest = inner.slice(4);
+    if (rest.length === 0 || !/\s/.test(rest.charAt(0))) return null;
+    return rest.trim();
+  }
+  function splitCssAlpha(body) {
+    const slash = body.indexOf("/");
+    if (slash < 0) return [body.trim()];
+    if (body.indexOf("/", slash + 1) >= 0) return [body, "", ""];
+    return [body.slice(0, slash).trim(), body.slice(slash + 1).trim()];
+  }
   var component = (value, scale) => {
     if (!value || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?%?$/i.test(value)) return null;
     const numeric = Number(value.replace(/%$/, ""));
@@ -212,13 +232,13 @@
     const hexMatch = raw.match(/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
     if (hexMatch?.[1]) {
       const hex = hexMatch[1].length < 5 ? hexMatch[1].split("").map((channel) => channel + channel).join("") : hexMatch[1];
-      return { red: parseInt(hex.slice(0, 2), 16), green: parseInt(hex.slice(2, 4), 16), blue: parseInt(hex.slice(4, 6), 16), alpha: hex.length === 8 ? parseInt(hex.slice(6, 8), 16) / 255 : 1 };
+      return { red: Number.parseInt(hex.slice(0, 2), 16), green: Number.parseInt(hex.slice(2, 4), 16), blue: Number.parseInt(hex.slice(4, 6), 16), alpha: hex.length === 8 ? Number.parseInt(hex.slice(6, 8), 16) / 255 : 1 };
     }
-    const rgb = raw.match(/^rgba?\(([^)]+)\)$/i);
-    const srgb = raw.match(/^color\(\s*srgb\s+([^)]+)\)$/i);
-    const body = rgb?.[1] ?? srgb?.[1];
+    const rgb = cssFunctionBody(raw, "rgb") ?? cssFunctionBody(raw, "rgba");
+    const srgb = srgbFunctionBody(raw);
+    const body = rgb ?? srgb;
     if (!body) return null;
-    const sections = body.trim().split(/\s*\/\s*/);
+    const sections = splitCssAlpha(body);
     if (sections.length > 2) return null;
     const parts = sections[0]?.split(/[\s,]+/) ?? [];
     if (sections.length === 2 && parts.length !== 3 || parts.length < 3 || parts.length > 4) return null;
@@ -239,7 +259,7 @@
     const numeric = Number(alpha);
     const safeAlpha = clamp2(Number.isFinite(numeric) ? numeric : 1, 1);
     if (safeAlpha >= 0.999) return `#${normalized}`;
-    const red = parseInt(normalized.slice(0, 2), 16), green = parseInt(normalized.slice(2, 4), 16), blue = parseInt(normalized.slice(4, 6), 16);
+    const red = Number.parseInt(normalized.slice(0, 2), 16), green = Number.parseInt(normalized.slice(2, 4), 16), blue = Number.parseInt(normalized.slice(4, 6), 16);
     return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
   }
   function resolveEditorColorValue(value) {
@@ -510,7 +530,7 @@ ${metadata}` : metadata;
   }
   function normalizeCalendarFetchResult(raw) {
     const rows = Array.isArray(raw) ? raw : isObject(raw) && Array.isArray(raw.events) ? raw.events : [];
-    return rows.filter(isObject);
+    return rows.filter((item) => isObject(item));
   }
   function eventIsAllDay(value) {
     const event = isObject(value) ? value : {};
@@ -1002,7 +1022,7 @@ ${metadata}` : metadata;
         if (configured.length) {
           return configured;
         }
-        return Object.keys(this._hass?.states || {}).filter((id) => id.startsWith("calendar.")).sort();
+        return Object.keys(this._hass?.states || {}).filter((id) => id.startsWith("calendar.")).sort((left, right) => left.localeCompare(right, "en"));
       }
       _getCalendarEntry(entityId) {
         const id = String(entityId ?? "").trim();
@@ -1666,7 +1686,7 @@ ${metadata}` : metadata;
         };
         if (recurrenceId) {
           payload.recurrence_id = recurrenceId;
-          payload.recurrence_range = recurrenceRange === CALENDAR_DELETE_RECURRENCE_THIS_AND_FUTURE ? CALENDAR_DELETE_RECURRENCE_THIS_AND_FUTURE : CALENDAR_DELETE_RECURRENCE_THIS;
+          payload.recurrence_range = Object.is(recurrenceRange, CALENDAR_DELETE_RECURRENCE_THIS_AND_FUTURE) ? CALENDAR_DELETE_RECURRENCE_THIS_AND_FUTURE : CALENDAR_DELETE_RECURRENCE_THIS;
         }
         try {
           const hass = this._hass;
@@ -1905,7 +1925,7 @@ ${metadata}` : metadata;
         }
         const objectEntries = Object.entries(raw).filter(([, value]) => value && typeof value === "object");
         const nestedArrays = objectEntries.flatMap(
-          ([key, value]) => this._normalizeForecastRows(withForecastDateFromKey(key, value)).map((item) => withForecastDateFromKey(key, item)).filter(isObject)
+          ([key, value]) => this._normalizeForecastRows(withForecastDateFromKey(key, value)).map((item) => withForecastDateFromKey(key, item)).filter((item) => isObject(item))
         );
         if (nestedArrays.length) {
           return nestedArrays;
@@ -1974,27 +1994,21 @@ ${metadata}` : metadata;
         const current = () => this.isConnected && generation === this._weatherSubscriptionGeneration;
         this._weatherForecastSubscriptionKey = key;
         this._weatherForecastConnection = connection;
-        try {
-          this._weatherForecastSubscription = connection.subscribeMessage((event) => {
-            if (!current()) return;
-            const value = isObject(event) && "forecast" in event ? event.forecast : event;
-            if (!Array.isArray(value) && !isObject(value)) return;
-            this._weatherForecastRevision += 1;
-            this._weatherForecastEvents[forecastType] = this._tagForecastRows(value, forecastType);
-            this._applyWeatherForecastRows(Object.values(this._weatherForecastEvents).flat(), { allowFallback: false });
-            this._renderIfChanged(true);
-          }, { type: "weather/subscribe_forecast", entity_id: entityId, forecast_type: forecastType }).catch(() => {
-            if (current()) {
-              this._weatherForecastSubscription = null;
-              this._weatherForecastSubscriptionKey = "";
-              this._weatherForecastConnection = void 0;
-            }
-          });
-        } catch (_error) {
-          this._weatherForecastSubscription = null;
-          this._weatherForecastSubscriptionKey = "";
-          this._weatherForecastConnection = void 0;
-        }
+        this._weatherForecastSubscription = connection.subscribeMessage((event) => {
+          if (!current()) return;
+          const value = isObject(event) && "forecast" in event ? event.forecast : event;
+          if (!Array.isArray(value) && !isObject(value)) return;
+          this._weatherForecastRevision += 1;
+          this._weatherForecastEvents[forecastType] = this._tagForecastRows(value, forecastType);
+          this._applyWeatherForecastRows(Object.values(this._weatherForecastEvents).flat(), { allowFallback: false });
+          this._renderIfChanged(true);
+        }, { type: "weather/subscribe_forecast", entity_id: entityId, forecast_type: forecastType }).catch(() => {
+          if (current()) {
+            this._weatherForecastSubscription = null;
+            this._weatherForecastSubscriptionKey = "";
+            this._weatherForecastConnection = void 0;
+          }
+        });
       }
       _extractForecastRowsFromResponse(response, entityId) {
         const outer = isObject(response) ? response : {};
@@ -2139,7 +2153,7 @@ ${metadata}` : metadata;
           if (!rowKey) {
             continue;
           }
-          const [ky = NaN, km = NaN, kd = NaN] = rowKey.split("-").map(Number);
+          const [ky = Number.NaN, km = Number.NaN, kd = Number.NaN] = rowKey.split("-").map(Number);
           const rowMonth = km - 1;
           if (ky !== y || rowMonth !== m) {
             continue;

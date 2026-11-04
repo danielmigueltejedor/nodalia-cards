@@ -912,20 +912,32 @@ class NodaliaVacuumCard extends HTMLElement {
       // Fall through to YAML-like parsing.
     }
 
-    const roomBlocks = text
-      .split(/\n(?=-\s*id:|\s*-\s*id:)/g)
-      .map(block => block.trim())
-      .filter(Boolean);
+    const yamlField = (block: string, key: string) => {
+      const prefix = `${key.toLowerCase()}:`;
+      for (const line of block.split("\n")) {
+        let field = line.trim();
+        if (field.startsWith("-")) field = field.slice(1).trim();
+        if (field.toLowerCase().startsWith(prefix)) return field.slice(prefix.length).trim();
+      }
+      return "";
+    };
+    const lines = text.split("\n").map(line => line.trim()).filter(Boolean);
+    const roomBlocks: string[] = [];
+    let current: string[] = [];
+    for (const line of lines) {
+      if (yamlField(line, "id") && current.length) {
+        roomBlocks.push(current.join("\n"));
+        current = [];
+      }
+      current.push(line);
+    }
+    if (current.length) roomBlocks.push(current.join("\n"));
 
     const rooms = roomBlocks
       .map(block => {
-        const idMatch = block.match(/(?:^|\n)\s*-?\s*id:\s*([^\n]+)/i);
-        const nameMatch = block.match(/(?:^|\n)\s*name:\s*([^\n]+)/i);
-        const cleaningAreaMatch = block.match(/(?:^|\n)\s*cleaning_area_id:\s*([^\n]+)/i);
-
-        const id = idMatch?.[1]?.trim() ?? "";
-        const name = nameMatch?.[1]?.trim() ?? "";
-        const cleaningAreaId = cleaningAreaMatch?.[1]?.trim() ?? "";
+        const id = yamlField(block, "id");
+        const name = yamlField(block, "name");
+        const cleaningAreaId = yamlField(block, "cleaning_area_id");
 
         if (!id && !name && !cleaningAreaId) {
           return null;

@@ -282,11 +282,8 @@ var NodaliaGo2RTCPlayer = class extends HTMLElement {
         video.style.transform = previousTransform;
         video.style.willChange = previousWillChange;
       }
-      try {
-        Promise.resolve(video.play?.()).catch(() => {
-        });
-      } catch (_error) {
-      }
+      Promise.resolve().then(() => video.play?.()).catch(() => {
+      });
       this._verifyVideoDisplayRecovery(video);
     };
     if (typeof window.requestAnimationFrame === "function") {
@@ -912,9 +909,11 @@ var NodaliaGo2RTCPlayer = class extends HTMLElement {
       "flac",
       "opus"
     ];
-    const safari = String(window.navigator?.userAgent || "").match(/Version\/(\d+).+Safari/);
-    if (safari) {
-      const version = Number(safari[1]);
+    const agent = String(window.navigator?.userAgent || "");
+    const versionMatch = /Version\/(\d+)/.exec(agent);
+    const safari = versionMatch !== null && agent.indexOf("Safari", versionMatch.index + versionMatch[0].length) >= 0;
+    if (safari && versionMatch) {
+      const version = Number(versionMatch[1]);
       const firstUnsupported = version < 13 ? "mp4a.40.2" : version < 14 ? "flac" : "opus";
       codecs.splice(codecs.indexOf(firstUnsupported));
     }

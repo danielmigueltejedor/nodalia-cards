@@ -3,6 +3,26 @@
 (() => {
   // src/shared/editor-color.ts
   var clamp = (value, max) => Math.max(0, Math.min(max, value));
+  function cssFunctionBody(raw, name) {
+    const head = `${name}(`;
+    if (!raw.toLowerCase().startsWith(head) || !raw.endsWith(")")) return null;
+    return raw.slice(head.length, -1);
+  }
+  function srgbFunctionBody(raw) {
+    const body = cssFunctionBody(raw, "color");
+    if (body === null) return null;
+    const inner = body.trim();
+    if (!inner.toLowerCase().startsWith("srgb")) return null;
+    const rest = inner.slice(4);
+    if (rest.length === 0 || !/\s/.test(rest.charAt(0))) return null;
+    return rest.trim();
+  }
+  function splitCssAlpha(body) {
+    const slash = body.indexOf("/");
+    if (slash < 0) return [body.trim()];
+    if (body.indexOf("/", slash + 1) >= 0) return [body, "", ""];
+    return [body.slice(0, slash).trim(), body.slice(slash + 1).trim()];
+  }
   var component = (value, scale) => {
     if (!value || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?%?$/i.test(value)) return null;
     const numeric = Number(value.replace(/%$/, ""));
@@ -13,13 +33,13 @@
     const hexMatch = raw.match(/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
     if (hexMatch?.[1]) {
       const hex = hexMatch[1].length < 5 ? hexMatch[1].split("").map((channel) => channel + channel).join("") : hexMatch[1];
-      return { red: parseInt(hex.slice(0, 2), 16), green: parseInt(hex.slice(2, 4), 16), blue: parseInt(hex.slice(4, 6), 16), alpha: hex.length === 8 ? parseInt(hex.slice(6, 8), 16) / 255 : 1 };
+      return { red: Number.parseInt(hex.slice(0, 2), 16), green: Number.parseInt(hex.slice(2, 4), 16), blue: Number.parseInt(hex.slice(4, 6), 16), alpha: hex.length === 8 ? Number.parseInt(hex.slice(6, 8), 16) / 255 : 1 };
     }
-    const rgb = raw.match(/^rgba?\(([^)]+)\)$/i);
-    const srgb = raw.match(/^color\(\s*srgb\s+([^)]+)\)$/i);
-    const body = rgb?.[1] ?? srgb?.[1];
+    const rgb = cssFunctionBody(raw, "rgb") ?? cssFunctionBody(raw, "rgba");
+    const srgb = srgbFunctionBody(raw);
+    const body = rgb ?? srgb;
     if (!body) return null;
-    const sections = body.trim().split(/\s*\/\s*/);
+    const sections = splitCssAlpha(body);
     if (sections.length > 2) return null;
     const parts = sections[0]?.split(/[\s,]+/) ?? [];
     if (sections.length === 2 && parts.length !== 3 || parts.length < 3 || parts.length > 4) return null;
@@ -33,7 +53,25 @@
 
   // src/shared/bubble-contrast.ts
   function normalizeTextKey(value) {
-    return String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+    return String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+/, "").replace(/_+$/, "");
+  }
+  function cssVarFallback(raw) {
+    const lower = raw.toLowerCase();
+    let search = 0;
+    while (search < lower.length) {
+      const start = lower.indexOf("var(", search);
+      if (start < 0) return null;
+      const previous = start === 0 ? "" : lower.charAt(start - 1);
+      if (previous && /[a-z0-9_]/.test(previous)) {
+        search = start + 4;
+        continue;
+      }
+      const comma = raw.indexOf(",", start + 4);
+      const end = comma < 0 ? -1 : raw.indexOf(")", comma + 1);
+      if (comma < 0 || end < 0) return null;
+      return raw.slice(comma + 1, end).trim();
+    }
+    return null;
   }
   function getEntityDomain(state) {
     const entityId = String(state?.entity_id || "");
@@ -108,9 +146,9 @@
     if (!raw) {
       return null;
     }
-    const varFallback = /\bvar\([^,]+,\s*([^)]+)\)/i.exec(raw);
-    if (varFallback?.[1]) {
-      const nested = parseCssColorHue(varFallback[1].trim(), resolveDepth);
+    const varFallback = cssVarFallback(raw);
+    if (varFallback) {
+      const nested = parseCssColorHue(varFallback, resolveDepth);
       if (nested !== null && !Number.isNaN(nested)) {
         return nested;
       }

@@ -367,7 +367,7 @@
     const artwork = isObject(media.artwork) ? media.artwork : {};
     const artworkMode = String(artwork.mode || "").trim().toLowerCase();
     const mediaFields = {
-      players: Array.isArray(media.players) ? media.players.filter(isObject) : [],
+      players: Array.isArray(media.players) ? media.players.filter((item) => isObject(item)) : [],
       artwork: {
         mode: artworkMode === "blur" ? "blur" : "immersive"
       }
@@ -386,7 +386,7 @@
       media_player: { ...isObject(rawStyles.media_player) ? rawStyles.media_player : {}, ...projected.media_player }
     };
     const layout = { ...DEFAULT_CONFIG.layout, ...isObject(mergedConfig.layout) ? mergedConfig.layout : {} };
-    const routes = (Array.isArray(mergedConfig.routes) ? mergedConfig.routes.filter(isObject) : []).map((route) => route.popup === void 0 ? route : { ...route, popup: Array.isArray(route.popup) ? route.popup.filter(isObject) : [] });
+    const routes = (Array.isArray(mergedConfig.routes) ? mergedConfig.routes.filter((item) => isObject(item)) : []).map((route) => route.popup === void 0 ? route : { ...route, popup: Array.isArray(route.popup) ? route.popup.filter((item) => isObject(item)) : [] });
     const fields = { routes, media_player: mediaPlayer, security, styles, layout };
     const normalized = { ...mergedConfig, ...fields };
     return normalized;
@@ -435,7 +435,7 @@
   function setByPath(target, path, value) {
     if (!isObject2(target) || typeof path !== "string") return;
     const parts = path.split(".");
-    if (parts.some(isUnsafeConfigPathKey2)) {
+    if (parts.some((part) => isUnsafeConfigPathKey2(part))) {
       return;
     }
     let cursor = target;
@@ -473,7 +473,7 @@
   function deleteByPath(target, path) {
     if (!isObject2(target) || typeof path !== "string") return;
     const parts = path.split(".");
-    if (parts.some(isUnsafeConfigPathKey2)) {
+    if (parts.some((part) => isUnsafeConfigPathKey2(part))) {
       return;
     }
     let cursor = target;
@@ -536,6 +536,11 @@
   }
 
   // src/cards/navigation/navigation-helpers.ts
+  function trimTrailingSlashes(value) {
+    let end = value.length;
+    while (end > 0 && value.charCodeAt(end - 1) === 47) end -= 1;
+    return value.slice(0, end);
+  }
   function appendQueryParam(url, key, value) {
     return appendUrlQueryParam(url, key, value, true);
   }
@@ -585,9 +590,10 @@
     }
     try {
       const url = new URL(value, window.location.origin);
-      return (url.pathname || "/").replace(/\/+$/, "") || "/";
+      return trimTrailingSlashes(url.pathname || "/") || "/";
     } catch (_error) {
-      return (value.split(/[?#]/)[0] || "/").replace(/\/+$/, "") || "/";
+      const pathEnd = value.search(/[?#]/);
+      return trimTrailingSlashes((pathEnd < 0 ? value : value.slice(0, pathEnd)) || "/") || "/";
     }
   }
   function matchPath(currentPath, candidatePath, mode) {
@@ -1319,7 +1325,7 @@
         if (!route || !Array.isArray(route.popup)) {
           return [];
         }
-        return route.popup.filter(isObject).filter((item) => this._isItemVisible(item));
+        return route.popup.filter((item) => isObject(item)).filter((item) => this._isItemVisible(item));
       }
       _getRoutePath(route) {
         if (typeof route.path === "string" && route.path) {
@@ -2312,7 +2318,7 @@
           timeChip.textContent = `${formatDuration(progress.position)} / ${formatDuration(progress.duration)}`;
         }
       }
-      _patchMediaVolumeControls(entityId = "", volumeLevel = NaN) {
+      _patchMediaVolumeControls(entityId = "", volumeLevel = Number.NaN) {
         if (!this.shadowRoot) {
           return;
         }
@@ -4401,9 +4407,9 @@
       }
       _prepareEditorConfig(raw) {
         const config = isObject(raw) ? raw : {};
-        const routes = (Array.isArray(config.routes) ? config.routes : []).filter(isObject).map((route) => {
+        const routes = (Array.isArray(config.routes) ? config.routes : []).filter((item) => isObject(item)).map((route) => {
           if (route.popup === void 0) return { ...route };
-          return { ...route, popup: (Array.isArray(route.popup) ? route.popup : []).filter(isObject) };
+          return { ...route, popup: (Array.isArray(route.popup) ? route.popup : []).filter((item) => isObject(item)) };
         });
         const media = isObject(config.media_player) ? config.media_player : {};
         return {
@@ -4412,7 +4418,7 @@
           layout: isObject(config.layout) ? config.layout : {},
           haptics: isObject(config.haptics) ? config.haptics : {},
           animations: isObject(config.animations) ? config.animations : {},
-          media_player: { ...media, players: (Array.isArray(media.players) ? media.players : []).filter(isObject) }
+          media_player: { ...media, players: (Array.isArray(media.players) ? media.players : []).filter((item) => isObject(item)) }
         };
       }
       setConfig(config) {

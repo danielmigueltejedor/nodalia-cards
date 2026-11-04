@@ -11,6 +11,12 @@ export const STUB_CONFIG = {
   vacuum_platform: "auto",
 };
 
+function trimTrailingSlashes(value: string) {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 47) end -= 1;
+  return value.slice(0, end);
+}
+
 export function normalizeConfig(rawConfig: unknown = {}) {
   const config = mergeConfig(DEFAULT_CONFIG, rawConfig || {});
   const menu = mergeConfig(DEFAULT_CONFIG.custom_menu, config.custom_menu || {});
@@ -36,7 +42,7 @@ export function normalizeConfig(rawConfig: unknown = {}) {
     name: String(config.name ?? "").trim(),
     custom_menu, room_tracking, security,
     vacuum_platform: String(config.vacuum_platform || "auto").trim() || "auto",
-    vacuum_mqtt_topic: String(config.vacuum_mqtt_topic ?? "").trim().replace(/\/+$/, ""),
+    vacuum_mqtt_topic: trimTrailingSlashes(String(config.vacuum_mqtt_topic ?? "").trim()),
     routines: normalizeRoutineItems(config.routines),
     shared_cleaning_session_webhook: String(config.shared_cleaning_session_webhook ?? "").trim(),
   };

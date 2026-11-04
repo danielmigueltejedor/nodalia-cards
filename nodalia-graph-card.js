@@ -261,6 +261,26 @@
 
   // src/shared/editor-color.ts
   var clamp3 = (value, max) => Math.max(0, Math.min(max, value));
+  function cssFunctionBody(raw, name) {
+    const head = `${name}(`;
+    if (!raw.toLowerCase().startsWith(head) || !raw.endsWith(")")) return null;
+    return raw.slice(head.length, -1);
+  }
+  function srgbFunctionBody(raw) {
+    const body = cssFunctionBody(raw, "color");
+    if (body === null) return null;
+    const inner = body.trim();
+    if (!inner.toLowerCase().startsWith("srgb")) return null;
+    const rest = inner.slice(4);
+    if (rest.length === 0 || !/\s/.test(rest.charAt(0))) return null;
+    return rest.trim();
+  }
+  function splitCssAlpha(body) {
+    const slash = body.indexOf("/");
+    if (slash < 0) return [body.trim()];
+    if (body.indexOf("/", slash + 1) >= 0) return [body, "", ""];
+    return [body.slice(0, slash).trim(), body.slice(slash + 1).trim()];
+  }
   var component = (value, scale) => {
     if (!value || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?%?$/i.test(value)) return null;
     const numeric = Number(value.replace(/%$/, ""));
@@ -271,13 +291,13 @@
     const hexMatch = raw.match(/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
     if (hexMatch?.[1]) {
       const hex = hexMatch[1].length < 5 ? hexMatch[1].split("").map((channel) => channel + channel).join("") : hexMatch[1];
-      return { red: parseInt(hex.slice(0, 2), 16), green: parseInt(hex.slice(2, 4), 16), blue: parseInt(hex.slice(4, 6), 16), alpha: hex.length === 8 ? parseInt(hex.slice(6, 8), 16) / 255 : 1 };
+      return { red: Number.parseInt(hex.slice(0, 2), 16), green: Number.parseInt(hex.slice(2, 4), 16), blue: Number.parseInt(hex.slice(4, 6), 16), alpha: hex.length === 8 ? Number.parseInt(hex.slice(6, 8), 16) / 255 : 1 };
     }
-    const rgb = raw.match(/^rgba?\(([^)]+)\)$/i);
-    const srgb = raw.match(/^color\(\s*srgb\s+([^)]+)\)$/i);
-    const body = rgb?.[1] ?? srgb?.[1];
+    const rgb = cssFunctionBody(raw, "rgb") ?? cssFunctionBody(raw, "rgba");
+    const srgb = srgbFunctionBody(raw);
+    const body = rgb ?? srgb;
     if (!body) return null;
-    const sections = body.trim().split(/\s*\/\s*/);
+    const sections = splitCssAlpha(body);
     if (sections.length > 2) return null;
     const parts = sections[0]?.split(/[\s,]+/) ?? [];
     if (sections.length === 2 && parts.length !== 3 || parts.length < 3 || parts.length > 4) return null;
@@ -298,7 +318,7 @@
     const numeric = Number(alpha);
     const safeAlpha = clamp3(Number.isFinite(numeric) ? numeric : 1, 1);
     if (safeAlpha >= 0.999) return `#${normalized}`;
-    const red = parseInt(normalized.slice(0, 2), 16), green = parseInt(normalized.slice(2, 4), 16), blue = parseInt(normalized.slice(4, 6), 16);
+    const red = Number.parseInt(normalized.slice(0, 2), 16), green = Number.parseInt(normalized.slice(2, 4), 16), blue = Number.parseInt(normalized.slice(4, 6), 16);
     return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
   }
   function resolveEditorColorValue(value) {
@@ -373,7 +393,7 @@
     if (!raw) {
       return { top: fb, right: fb, bottom: fb, left: fb };
     }
-    const parts = raw.split(/\s+/).map((token) => parseSizeToPixels(token, NaN)).filter((n) => Number.isFinite(n));
+    const parts = raw.split(/\s+/).map((token) => parseSizeToPixels(token, Number.NaN)).filter((n) => Number.isFinite(n));
     if (!parts.length) {
       return { top: fb, right: fb, bottom: fb, left: fb };
     }
@@ -422,7 +442,7 @@
     return "var(--info-color, #71c0ff)";
   }
   function formatHoverTimestamp(value, locale = void 0) {
-    const date = value instanceof Date ? value : typeof value === "string" || typeof value === "number" ? new Date(value) : /* @__PURE__ */ new Date(NaN);
+    const date = value instanceof Date ? value : typeof value === "string" || typeof value === "number" ? new Date(value) : new Date(Number.NaN);
     if (Number.isNaN(date.getTime())) {
       return "";
     }
@@ -571,7 +591,7 @@
   }
 
   // src/cards/graph/graph-card.ts
-  var graphRows = (value) => Array.isArray(value) ? value.filter(isObject) : [];
+  var graphRows = (value) => Array.isArray(value) ? value.filter((item) => isObject(item)) : [];
   var finiteSample = (item) => item.ts !== null && item.value !== null && Number.isFinite(item.ts) && Number.isFinite(item.value);
   var graphSeriesElement = (node) => node instanceof HTMLElement && Boolean(node.dataset.graphSeries);
   var graphSurfaceElement = (node) => node instanceof HTMLElement && node.dataset.graphSurface === "chart";
@@ -1611,7 +1631,7 @@
         return entries.map((entry) => {
           const state = this._hass?.states?.[entry.entity];
           const rows = graphRows(isObject(raw) ? raw[entry.entity] : void 0);
-          const samples = rows.filter(isObject).map((item) => {
+          const samples = rows.filter((item) => isObject(item)).map((item) => {
             const ts = parseHistoryTimestamp(item.start ?? item.end);
             const value = parseNumber(item.mean ?? item.state ?? item.max ?? item.min ?? item.sum);
             return { ts, value };
@@ -1655,7 +1675,7 @@
         return entries.map((entry) => {
           const state = this._hass?.states?.[entry.entity];
           const rawGroup = historyByEntity.get(entry.entity) || [];
-          const events = rawGroup.filter(isObject).map((item) => ({
+          const events = rawGroup.filter((item) => isObject(item)).map((item) => ({
             ts: parseHistoryTimestamp(
               item.last_changed ?? item.last_updated ?? item.lc ?? item.lu ?? item.last_changed_ts ?? item.last_updated_ts
             ),

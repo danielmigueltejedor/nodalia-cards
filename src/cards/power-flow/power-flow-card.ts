@@ -510,9 +510,11 @@ class NodaliaPowerFlowCard extends HTMLElement {
         || "",
       ).trim();
 
-      const net = (!consumptionEntity && !productionEntity) || consumptionValue === null || productionValue === null
+      const consumptionNumber = consumptionValue ?? Number.NaN;
+      const productionNumber = productionValue ?? Number.NaN;
+      const net = (!consumptionEntity && !productionEntity) || !Number.isFinite(consumptionNumber) || !Number.isFinite(productionNumber)
         ? null
-        : kind === "battery" ? productionValue - consumptionValue : consumptionValue - productionValue;
+        : kind === "battery" ? productionNumber - consumptionNumber : consumptionNumber - productionNumber;
 
       return {
         value: net,

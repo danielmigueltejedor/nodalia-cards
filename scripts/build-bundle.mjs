@@ -91,7 +91,7 @@ async function buildParts(parts, label) {
       },
     ],
   });
-  return (result.outputFiles?.[0]?.text || "").replace(/[ \t]+$/gm, "");
+  return trimLineEndSpace(result.outputFiles?.[0]?.text || "");
 }
 
 const fullBody = await buildParts(ALL_PARTS, "full");
@@ -151,22 +151,34 @@ export const contentSha256_12 = ${JSON.stringify(fullHash)};
 export const file = ${JSON.stringify(loaderFile)};
 `;
 
+function trimLineEndSpace(text) {
+  return text.split("\n").map(line => {
+    let end = line.length;
+    while (end > 0) {
+      const code = line.charCodeAt(end - 1);
+      if (code !== 32 && code !== 9) break;
+      end -= 1;
+    }
+    return end === line.length ? line : line.slice(0, end);
+  }).join("\n");
+}
+
 function writeFileAtomic(filePath, contents) {
   const tempPath = `${filePath}.tmp-${process.pid}-${crypto.randomBytes(6).toString("hex")}`;
-  let completed = false;
+  let writeError = null;
   try {
     fs.writeFileSync(tempPath, contents, { encoding: "utf8", flag: "wx", mode: 0o644 });
     fs.renameSync(tempPath, filePath);
-    completed = true;
-  } finally {
-    if (!completed) {
-      try {
-        fs.unlinkSync(tempPath);
-      } catch (error) {
-        if (error?.code !== "ENOENT") throw error;
-      }
-    }
+    return;
+  } catch (error) {
+    writeError = error;
   }
+  try {
+    fs.unlinkSync(tempPath);
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
+  throw writeError;
 }
 
 const hacsLoaderSource = `${hacsBody}\n${editorFooter}\n${fullFooter}\n${inlineLoaderFooter(loaderFile)}\n`;

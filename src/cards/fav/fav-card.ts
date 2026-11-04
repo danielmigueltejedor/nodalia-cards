@@ -523,11 +523,7 @@ class NodaliaFavCard extends HTMLElement {
       return;
     }
 
-    if (features & LOCK_LOCK) {
-      this._invokeEntityService("lock", "lock", entityId);
-    } else {
-      this._invokeEntityService("lock", "lock", entityId);
-    }
+    this._invokeEntityService("lock", "lock", entityId);
   }
 
   _toggleEntity(entityId = this._config?.entity) {
