@@ -2,6 +2,7 @@ import cardFocusStyles from "../../shared/card-focus.css";
 import { captureHassContext, sameHassContext } from "../../shared/hass-context";
 import { createCardLayoutNotifier } from "../../shared/card-layout-notifier";
 import { EntityCatalogStamp } from "../../shared/entity-catalog-stamp";
+import { suggestionState, vacuumHasFanSpeeds } from "../../shared/entity-suggestion-presets";
 import {
   CARD_TAG,
   EDITOR_TAG,
@@ -79,18 +80,32 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   static getEntitySuggestion(hass: HomeAssistant, entityId: string) {
-    return [
+    const state = suggestionState(hass, entityId);
+    const suggestions = [
       window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
         domains: ["vacuum"],
-        label: "Vacuum — Standard",
-        buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, compact_layout_mode: "auto" }),
+        label: "Vacuum — Controls",
+        buildConfig: (_hass, selectedEntityId) => ({
+          entity: selectedEntityId,
+          compact_layout_mode: "always",
+          show_mode_controls: false,
+          show_fan_presets: false,
+        }),
       }),
-      window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+    ];
+    if (vacuumHasFanSpeeds(state)) {
+      suggestions.push(window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
         domains: ["vacuum"],
-        label: "Vacuum — Compact",
-        buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, compact_layout_mode: "always" }),
-      }),
-    ].filter(Boolean);
+        label: "Vacuum — Modes",
+        buildConfig: (_hass, selectedEntityId) => ({
+          entity: selectedEntityId,
+          compact_layout_mode: "never",
+          show_mode_controls: true,
+          show_fan_presets: true,
+        }),
+      }));
+    }
+    return suggestions.filter(Boolean);
   }
 
   constructor() {
@@ -2748,7 +2763,7 @@ class NodaliaVacuumCard extends HTMLElement {
           width: ${styles.icon.size};
         }
 
-        .vacuum-card__icon-button ha-icon {
+        .vacuum-card__icon-button > ha-icon {
           --mdc-icon-size: calc(${styles.icon.size} * 0.46);
           color: ${iconGlyphColor};
           display: inline-flex;
@@ -2763,7 +2778,7 @@ class NodaliaVacuumCard extends HTMLElement {
           will-change: transform;
         }
 
-        .vacuum-card__icon-button--active-motion ha-icon {
+        .vacuum-card__icon-button--active-motion > ha-icon {
           animation: vacuum-card-icon-sweep 1.45s ease-in-out infinite;
           transform-origin: 50% 70%;
         }
@@ -2779,6 +2794,7 @@ class NodaliaVacuumCard extends HTMLElement {
         }
 
         .vacuum-card__unavailable-badge {
+          overflow: hidden;
           align-items: center;
           background: #ff9b4a;
           border: 2px solid ${styles.card.background};
@@ -2933,7 +2949,7 @@ class NodaliaVacuumCard extends HTMLElement {
           width: 40px;
         }
 
-        .vacuum-card--dense .vacuum-card__icon-button ha-icon {
+        .vacuum-card--dense .vacuum-card__icon-button > ha-icon {
           --mdc-icon-size: 18px;
           height: 18px;
           width: 18px;
@@ -3238,7 +3254,7 @@ class NodaliaVacuumCard extends HTMLElement {
         `}
 
         @media (prefers-reduced-motion: reduce) {
-          .vacuum-card__icon-button--active-motion ha-icon {
+          .vacuum-card__icon-button--active-motion > ha-icon {
             animation: none !important;
           }
         }

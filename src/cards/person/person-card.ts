@@ -1115,11 +1115,12 @@ class NodaliaPersonCard extends HTMLElement {
           width: 100%;
         }
 
-        .person-card__avatar ha-icon {
+        .person-card__avatar > ha-icon {
           --mdc-icon-size: calc(${avatarSize} * 0.5);
         }
 
         .person-card__badge {
+          overflow: hidden;
           align-items: center;
           background: var(--badge-color);
           border: none;
@@ -1139,6 +1140,7 @@ class NodaliaPersonCard extends HTMLElement {
         }
 
         .person-card--single-row .person-card__badge {
+          overflow: hidden;
           transform: translate(20%, -14%);
         }
 

@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.4";
+  var CARD_VERSION = "3.0.5-alpha.1";
 
   // src/cards/power-flow/power-flow-constants.ts
   var CARD_TAG = "nodalia-power-flow-card";
@@ -3286,7 +3286,7 @@
           --mdc-icon-size: 18px;
         }
 
-        .power-flow-card__bubble ha-icon {
+        .power-flow-card__bubble > ha-icon {
           --mdc-icon-size: calc(var(--node-size) * 0.44);
         }
 
@@ -3413,6 +3413,7 @@
         }
 
         .power-flow-card__unavailable {
+          overflow: hidden;
           align-items: center;
           background: #ff9b4a;
           border: 2px solid ${styles.card.background};

@@ -2738,7 +2738,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           --mdc-icon-size: 18px;
         }
 
-        .power-flow-card__bubble ha-icon {
+        .power-flow-card__bubble > ha-icon {
           --mdc-icon-size: calc(var(--node-size) * 0.44);
         }
 
@@ -2865,6 +2865,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__unavailable {
+          overflow: hidden;
           align-items: center;
           background: #ff9b4a;
           border: 2px solid ${styles.card.background};

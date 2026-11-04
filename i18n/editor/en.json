@@ -582,7 +582,7 @@
   "ed.media_player.layout_auto": "Automatic",
   "ed.media_player.layout_chip": "Horizontal / long",
   "ed.media_player.layout_compact": "Compact",
-  "ed.media_player.layout_dashboard_hint": "Ideal when pinned at the top or bottom of the dashboard.",
+  "ed.media_player.layout_dashboard_hint": "Ideal when pinned at the top or bottom of the dashboard. Horizontal layout is only used when the card spans 7 or more columns.",
   "ed.media_player.layout_max_width": "Max width",
   "ed.media_player.layout_offset": "Offset",
   "ed.media_player.layout_position": "Position",

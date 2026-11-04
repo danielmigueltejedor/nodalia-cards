@@ -582,7 +582,7 @@
   "ed.media_player.layout_auto": "Automatico",
   "ed.media_player.layout_chip": "Orizzontale / lunga",
   "ed.media_player.layout_compact": "Compatto",
-  "ed.media_player.layout_dashboard_hint": "Ideale se appuntato nella parte superiore o inferiore del cruscotto.",
+  "ed.media_player.layout_dashboard_hint": "Ideale se appuntato nella parte superiore o inferiore del cruscotto. Il layout orizzontale si usa solo se la scheda occupa 7 o più colonne.",
   "ed.media_player.layout_max_width": "Larghezza massima",
   "ed.media_player.layout_offset": "Offset",
   "ed.media_player.layout_position": "Posizione",

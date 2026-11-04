@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.4";
+  var CARD_VERSION = "3.0.5-alpha.1";
 
   // src/shared/device-state-memory.ts
   var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
@@ -730,6 +730,34 @@
     };
   }
 
+  // src/shared/entity-suggestion-presets.ts
+  function suggestionState(hass, entityId) {
+    const id = String(entityId || "").trim();
+    const state = hass?.states?.[id];
+    return state || null;
+  }
+  function suggestionIsOn(state) {
+    return String(state?.state || "").trim().toLowerCase() === "on";
+  }
+  function colorModes(state) {
+    const modes = state?.attributes?.supported_color_modes;
+    return Array.isArray(modes) ? modes.map((mode) => String(mode || "")) : [];
+  }
+  function lightSupportsBrightness(state) {
+    if (typeof state?.attributes?.brightness === "number") {
+      return true;
+    }
+    return colorModes(state).some(
+      (mode) => ["brightness", "color_temp", "hs", "rgb", "rgbw", "rgbww", "xy", "white"].includes(mode)
+    );
+  }
+  function lightSupportsColor(state) {
+    return colorModes(state).some((mode) => ["hs", "rgb", "rgbw", "rgbww", "xy"].includes(mode));
+  }
+  function lightSupportsColorTemperature(state) {
+    return colorModes(state).includes("color_temp") || typeof state?.attributes?.color_temp_kelvin === "number" || typeof state?.attributes?.color_temp === "number";
+  }
+
   // src/shared/home-assistant-services.ts
   function callHassService(hass, domain, service, data = {}, target = null) {
     if (!hass?.callService) return;
@@ -792,18 +820,60 @@
         return applyStubEntity({ ...STUB_CONFIG }, hass, ["light"], entities, entitiesFallback);
       }
       static getEntitySuggestion(hass, entityId) {
-        return [
-          window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
-            domains: ["light"],
-            label: "Light — Standard",
-            buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, compact_layout_mode: "auto" })
-          }),
+        const state = suggestionState(hass, entityId);
+        const on = suggestionIsOn(state);
+        const brightness = lightSupportsBrightness(state);
+        const color = lightSupportsColor(state);
+        const temperature = lightSupportsColorTemperature(state);
+        const suggestions = [
           window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
             domains: ["light"],
             label: "Light — Compact",
-            buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, compact_layout_mode: "always" })
+            buildConfig: (_hass, selectedEntityId) => ({
+              entity: selectedEntityId,
+              compact_layout_mode: "always",
+              auto_expand: false,
+              show_brightness: false,
+              show_color_controls: false,
+              show_temperature_controls: false,
+              show_slider_mode_buttons: false,
+              show_quick_brightness: false
+            })
           })
-        ].filter(Boolean);
+        ];
+        if (on && brightness) {
+          suggestions.push(window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+            domains: ["light"],
+            label: "Light — Brightness",
+            buildConfig: (_hass, selectedEntityId) => ({
+              entity: selectedEntityId,
+              compact_layout_mode: "never",
+              auto_expand: true,
+              show_brightness: true,
+              show_color_controls: false,
+              show_temperature_controls: false,
+              show_slider_mode_buttons: false,
+              show_quick_brightness: true
+            })
+          }));
+        }
+        if (on && (color || temperature)) {
+          const label = color && temperature ? "Light — Color and temperature" : color ? "Light — Color" : "Light — Temperature";
+          suggestions.push(window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+            domains: ["light"],
+            label,
+            buildConfig: (_hass, selectedEntityId) => ({
+              entity: selectedEntityId,
+              compact_layout_mode: "never",
+              auto_expand: true,
+              show_brightness: brightness,
+              show_color_controls: color,
+              show_temperature_controls: temperature,
+              show_slider_mode_buttons: color && temperature
+            })
+          }));
+        }
+        return suggestions.filter(Boolean);
       }
       constructor() {
         super();
@@ -3301,7 +3371,7 @@
           width: min(${styles.icon.size}, calc(100vw - 48px));
         }
 
-        .light-card__icon ha-icon {
+        .light-card__icon > ha-icon {
           --mdc-icon-size: calc(${styles.icon.size} * 0.46);
           align-items: center;
           color: ${lightIconColor};
@@ -3327,6 +3397,7 @@
         }
 
         .light-card__unavailable-badge {
+          overflow: hidden;
           align-items: center;
           background: #ff9b4a;
           border: 2px solid ${styles.card.background};

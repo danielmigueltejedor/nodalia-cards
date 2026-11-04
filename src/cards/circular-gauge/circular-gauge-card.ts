@@ -832,7 +832,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
           width: ${effectiveIconSize};
         }
 
-        .gauge-card__icon ha-icon {
+        .gauge-card__icon > ha-icon {
           --mdc-icon-size: calc(${effectiveIconSize} * 0.44);
           display: inline-flex;
           height: calc(${effectiveIconSize} * 0.44);
@@ -844,6 +844,7 @@ class NodaliaCircularGaugeCard extends HTMLElement {
         }
 
         .gauge-card__unavailable-badge {
+          overflow: hidden;
           align-items: center;
           background: #ff9b4a;
           border: 2px solid ${styles.card.background};

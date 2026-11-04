@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.4";
+  var CARD_VERSION = "3.0.5-alpha.1";
 
   // src/cards/circular-gauge/circular-gauge-constants.ts
   var CARD_TAG = "nodalia-circular-gauge-card";
@@ -1217,7 +1217,7 @@
           width: ${effectiveIconSize};
         }
 
-        .gauge-card__icon ha-icon {
+        .gauge-card__icon > ha-icon {
           --mdc-icon-size: calc(${effectiveIconSize} * 0.44);
           display: inline-flex;
           height: calc(${effectiveIconSize} * 0.44);
@@ -1229,6 +1229,7 @@
         }
 
         .gauge-card__unavailable-badge {
+          overflow: hidden;
           align-items: center;
           background: #ff9b4a;
           border: 2px solid ${styles.card.background};

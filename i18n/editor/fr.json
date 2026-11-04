@@ -582,7 +582,7 @@
   "ed.media_player.layout_auto": "Automatique",
   "ed.media_player.layout_chip": "Horizontale / longue",
   "ed.media_player.layout_compact": "Compact",
-  "ed.media_player.layout_dashboard_hint": "Idéal lorsqu'il est épinglé en haut ou en bas du tableau de bord.",
+  "ed.media_player.layout_dashboard_hint": "Idéal lorsqu'il est épinglé en haut ou en bas du tableau de bord. La disposition horizontale n'est utilisée que si la carte occupe 7 colonnes ou plus.",
   "ed.media_player.layout_max_width": "Largeur maximale",
   "ed.media_player.layout_offset": "Compenser",
   "ed.media_player.layout_position": "Position",

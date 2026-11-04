@@ -582,7 +582,7 @@
   "ed.media_player.layout_auto": "Automatisch",
   "ed.media_player.layout_chip": "Horizontaal / lang",
   "ed.media_player.layout_compact": "Compact",
-  "ed.media_player.layout_dashboard_hint": "Ideaal wanneer deze aan de boven- of onderkant van het dashboard wordt vastgemaakt.",
+  "ed.media_player.layout_dashboard_hint": "Ideaal wanneer deze aan de boven- of onderkant van het dashboard wordt vastgemaakt. De horizontale indeling wordt alleen gebruikt als de kaart 7 of meer kolommen beslaat.",
   "ed.media_player.layout_max_width": "Maximale breedte",
   "ed.media_player.layout_offset": "Offset",
   "ed.media_player.layout_position": "Positie",

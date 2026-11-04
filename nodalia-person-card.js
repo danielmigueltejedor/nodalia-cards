@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.4";
+  var CARD_VERSION = "3.0.5-alpha.1";
 
   // src/cards/person/person-constants.ts
   var CARD_TAG = "nodalia-person-card";
@@ -1330,11 +1330,12 @@
           width: 100%;
         }
 
-        .person-card__avatar ha-icon {
+        .person-card__avatar > ha-icon {
           --mdc-icon-size: calc(${avatarSize} * 0.5);
         }
 
         .person-card__badge {
+          overflow: hidden;
           align-items: center;
           background: var(--badge-color);
           border: none;
@@ -1354,6 +1355,7 @@
         }
 
         .person-card--single-row .person-card__badge {
+          overflow: hidden;
           transform: translate(20%, -14%);
         }
 

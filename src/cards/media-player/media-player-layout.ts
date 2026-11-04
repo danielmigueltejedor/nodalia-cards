@@ -26,6 +26,16 @@ const SQUARE_MIN_WIDTH = 300;
  */
 const SQUARE_MAX_WIDTH = 480;
 const WIDE_GRID_COLUMNS = 6;
+/** Horizontal / long layout needs a wide section span. Narrower tiles use compact. */
+export const CHIP_MIN_COLUMNS = 7;
+
+export function isChipSpanAllowed(gridColumns: number | null | undefined): boolean {
+  const cols = Number(gridColumns);
+  if (!Number.isFinite(cols) || cols <= 0) {
+    return true;
+  }
+  return cols >= CHIP_MIN_COLUMNS;
+}
 
 export type ResolvePresentationOptions = {
   preferSquareTiles?: boolean;
@@ -152,6 +162,9 @@ export function resolvePresentationMode(
   options: ResolvePresentationOptions = {},
 ): Exclude<MediaPlayerPresentationMode, "auto"> {
   const requested = normalizePresentationMode(mode);
+  if (requested === "chip" && !isChipSpanAllowed(options.gridColumns)) {
+    return "compact";
+  }
   if (requested !== "auto") {
     return requested;
   }
@@ -174,7 +187,13 @@ export function resolvePresentationMode(
   if (isConfiguredHalfWidthSpan(gridColumns)) {
     // columns: 6 (and below) must match vacuum/light/fan row rhythm — never 1:1.
     next = "compact";
-  } else if (width >= CHIP_MIN_WIDTH && height > 0 && height <= 132 && ratio >= 2.05) {
+  } else if (
+    isChipSpanAllowed(gridColumns)
+    && width >= CHIP_MIN_WIDTH
+    && height > 0
+    && height <= 132
+    && ratio >= 2.05
+  ) {
     next = "chip";
   } else if (canAutoSquare(preferSquareTiles, width, gridColumns)) {
     next = "square";
@@ -210,7 +229,7 @@ export function presentationGridOptions(mode: Exclude<MediaPlayerPresentationMod
       // handles visual height; min_rows: 3 left empty gaps under half-width tiles.
       return { rows: "auto", columns: 6, min_rows: 2, min_columns: 3 };
     case "chip":
-      return { rows: "auto", columns: "full", min_rows: 1, min_columns: 6 };
+      return { rows: "auto", columns: "full", min_rows: 1, min_columns: CHIP_MIN_COLUMNS };
     case "compact":
       // Match Light/Fan section footprint (min_rows: 2) so narrow tiles stay
       // the same rhythm instead of collapsing shorter than sibling Nodalia cards.

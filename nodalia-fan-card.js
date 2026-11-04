@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.4";
+  var CARD_VERSION = "3.0.5-alpha.1";
 
   // src/shared/device-control-geometry.ts
   var CIRCULAR_LAYOUT_DIAL_START_ANGLE = 135;
@@ -396,6 +396,31 @@
     };
   }
 
+  // src/shared/entity-suggestion-presets.ts
+  function suggestionState(hass, entityId) {
+    const id = String(entityId || "").trim();
+    const state = hass?.states?.[id];
+    return state || null;
+  }
+  function suggestionIsOn(state) {
+    return String(state?.state || "").trim().toLowerCase() === "on";
+  }
+  function fanSupportsPercentage(state) {
+    const percentage = Number(state?.attributes?.percentage);
+    const step = Number(state?.attributes?.percentage_step);
+    return Number.isFinite(percentage) || Number.isFinite(step);
+  }
+  function fanSupportsOscillation(state) {
+    return typeof state?.attributes?.oscillating === "boolean";
+  }
+  function fanPresetModes(state) {
+    const modes = state?.attributes?.preset_modes;
+    if (!Array.isArray(modes)) {
+      return [];
+    }
+    return modes.map((mode) => String(mode || "").trim()).filter(Boolean);
+  }
+
   // src/shared/editor-entity-helpers.ts
   function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
     return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
@@ -666,18 +691,66 @@
         return applyStubEntity({ ...STUB_CONFIG }, hass, ["fan"], entities, entitiesFallback);
       }
       static getEntitySuggestion(hass, entityId) {
-        return [
-          window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
-            domains: ["fan"],
-            label: "Fan — Standard",
-            buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, compact_layout_mode: "auto" })
-          }),
+        const state = suggestionState(hass, entityId);
+        const on = suggestionIsOn(state);
+        const percentage = fanSupportsPercentage(state);
+        const oscillation = fanSupportsOscillation(state);
+        const presets = fanPresetModes(state).length > 0;
+        const suggestions = [
           window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
             domains: ["fan"],
             label: "Fan — Compact",
-            buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, compact_layout_mode: "always" })
+            buildConfig: (_hass, selectedEntityId) => ({
+              entity: selectedEntityId,
+              layout: "compact",
+              compact_layout_mode: "always",
+              show_slider: false,
+              show_oscillation: false,
+              show_preset_modes: false
+            })
           })
-        ].filter(Boolean);
+        ];
+        if (on && percentage) {
+          suggestions.push(window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+            domains: ["fan"],
+            label: "Fan — Speed",
+            buildConfig: (_hass, selectedEntityId) => ({
+              entity: selectedEntityId,
+              layout: "compact",
+              compact_layout_mode: "never",
+              show_slider: true,
+              show_oscillation: oscillation,
+              show_preset_modes: presets
+            })
+          }));
+        } else if (on && (oscillation || presets)) {
+          suggestions.push(window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+            domains: ["fan"],
+            label: "Fan — Controls",
+            buildConfig: (_hass, selectedEntityId) => ({
+              entity: selectedEntityId,
+              layout: "compact",
+              compact_layout_mode: "never",
+              show_slider: false,
+              show_oscillation: oscillation,
+              show_preset_modes: presets
+            })
+          }));
+        }
+        if (percentage) {
+          suggestions.push(window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+            domains: ["fan"],
+            label: "Fan — Circular",
+            buildConfig: (_hass, selectedEntityId) => ({
+              entity: selectedEntityId,
+              layout: "circular",
+              show_slider: true,
+              show_oscillation: oscillation,
+              show_preset_modes: presets
+            })
+          }));
+        }
+        return suggestions.filter(Boolean);
       }
       constructor() {
         super();
@@ -2885,7 +2958,7 @@
           width: ${styles.icon.size};
         }
 
-        .fan-card__icon ha-icon {
+        .fan-card__icon > ha-icon {
           --mdc-icon-size: calc(${styles.icon.size} * 0.46);
           color: ${darkenBubbleIconGlyph ? `color-mix(in srgb, var(--primary-text-color) 56%, ${accentColor})` : isOn ? styles.icon.on_color : styles.icon.off_color};
           display: inline-flex;
@@ -2900,7 +2973,7 @@
           will-change: transform;
         }
 
-        .fan-card__icon--active-motion ha-icon {
+        .fan-card__icon--active-motion > ha-icon {
           animation: fan-card-icon-spin 1.35s linear infinite;
           transform: translate3d(-50%, -50%, 0);
         }
@@ -2916,6 +2989,7 @@
         }
 
         .fan-card__unavailable-badge {
+          overflow: hidden;
           align-items: center;
           background: #ff9b4a;
           border: 2px solid ${styles.card.background};
@@ -3829,7 +3903,7 @@
             transition: none !important;
           }
 
-          .fan-card__icon--active-motion ha-icon {
+          .fan-card__icon--active-motion > ha-icon {
             animation: none !important;
           }
         }

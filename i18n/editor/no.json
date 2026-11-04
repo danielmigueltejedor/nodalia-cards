@@ -582,7 +582,7 @@
   "ed.media_player.layout_auto": "Automatisk",
   "ed.media_player.layout_chip": "Horisontal / lang",
   "ed.media_player.layout_compact": "Kompakt",
-  "ed.media_player.layout_dashboard_hint": "Ideell når den festes øverst eller nederst på dashbordet.",
+  "ed.media_player.layout_dashboard_hint": "Ideell når den festes øverst eller nederst på dashbordet. Vannrett oppsett brukes bare når kortet spenner over 7 eller flere kolonner.",
   "ed.media_player.layout_max_width": "Maks bredde",
   "ed.media_player.layout_offset": "Offset",
   "ed.media_player.layout_position": "Position",
