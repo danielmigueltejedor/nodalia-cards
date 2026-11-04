@@ -1,0 +1,42 @@
+name: SonarCloud report export
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_key:
+        description: SonarQube Cloud project key
+        required: true
+        type: string
+        default: danielmigueltejedor_nodalia-cards
+  pull_request:
+    paths:
+      - .github/workflows/sonarcloud-export.yml
+      - scripts/sonarcloud_export.py
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    name: Export SonarCloud findings
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Query SonarCloud API
+        env:
+          PROJECT_KEY: ${{ inputs.project_key || 'danielmigueltejedor_nodalia-cards' }}
+          # PR probes are always anonymous. Only manual runs can use the secret.
+          SONAR_TOKEN: ${{ github.event_name == 'workflow_dispatch' && secrets.SONAR_TOKEN || '' }}
+        run: python3 scripts/sonarcloud_export.py
+
+      - name: Upload report and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sonarcloud-report
+          path: sonarcloud-report/
+          if-no-files-found: warn
+          retention-days: 14
