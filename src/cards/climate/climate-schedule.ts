@@ -533,11 +533,15 @@ export function getClimateScheduleStorageEntityId(entityId: unknown, configuredH
     return custom;
   }
 
-  const slug = String(entityId ?? "")
+  const rawSlug = String(entityId ?? "")
     .trim()
     .replace(/^climate\./, "")
-    .replace(/[^a-z0-9_]+/gi, "_")
-    .replace(/^_+/, "").replace(/_+$/, "");
+    .replace(/[^a-z0-9_]+/gi, "_");
+  let slugStart = 0;
+  let slugEnd = rawSlug.length;
+  while (slugStart < slugEnd && rawSlug.charCodeAt(slugStart) === 95) slugStart += 1;
+  while (slugEnd > slugStart && rawSlug.charCodeAt(slugEnd - 1) === 95) slugEnd -= 1;
+  const slug = rawSlug.slice(slugStart, slugEnd);
   return slug ? `input_text.nodalia_climate_schedule_${slug}` : "";
 }
 

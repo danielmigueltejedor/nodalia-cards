@@ -503,7 +503,12 @@
     if (custom) {
       return custom;
     }
-    const slug = String(entityId ?? "").trim().replace(/^climate\./, "").replace(/[^a-z0-9_]+/gi, "_").replace(/^_+/, "").replace(/_+$/, "");
+    const rawSlug = String(entityId ?? "").trim().replace(/^climate\./, "").replace(/[^a-z0-9_]+/gi, "_");
+    let slugStart = 0;
+    let slugEnd = rawSlug.length;
+    while (slugStart < slugEnd && rawSlug.charCodeAt(slugStart) === 95) slugStart += 1;
+    while (slugEnd > slugStart && rawSlug.charCodeAt(slugEnd - 1) === 95) slugEnd -= 1;
+    const slug = rawSlug.slice(slugStart, slugEnd);
     return slug ? `input_text.nodalia_climate_schedule_${slug}` : "";
   }
   function buildClimateSetpointScheduleAutomationId(entityId, slotId) {
@@ -4875,7 +4880,7 @@ ${weekdayYaml}
         const caret = active instanceof HTMLInputElement && ["text", "search", "tel", "url", "password"].includes(active.type) ? [active.selectionStart, active.selectionEnd] : null;
         this._renderView();
         if (native && attrs.length) {
-          const next = Array.from(this.shadowRoot?.querySelectorAll(native.tagName.toLowerCase()) ?? []).find((node) => attrs.every(([key, value]) => node.getAttribute(key) === value));
+          const next = Array.from(this.shadowRoot?.querySelectorAll(native.tagName.toLowerCase()) ?? []).find((node) => attrs.every(([key, value]) => Object.is(node.getAttribute(key), value)));
           if (next instanceof HTMLElement) {
             if (next instanceof HTMLInputElement && pendingValue !== null) next.value = pendingValue;
             next.focus({ preventScroll: true });

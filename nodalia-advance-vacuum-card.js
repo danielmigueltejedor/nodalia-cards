@@ -6824,7 +6824,7 @@
         const attributes = active instanceof HTMLElement ? Array.from(active.attributes).filter((item) => item.name.startsWith("data-")).map((item) => [item.name, item.value]) : [];
         this._renderView();
         if (attributes.length && active && !active.isConnected) {
-          const replacement = Array.from(this.shadowRoot.querySelectorAll("button,select")).find((node) => node.tagName === active.tagName && attributes.every(([name, value]) => typeof name === "string" && node.getAttribute(name) === value));
+          const replacement = Array.from(this.shadowRoot.querySelectorAll("button,select")).find((node) => node.tagName === active.tagName && attributes.every(([name, value]) => typeof name === "string" && Object.is(node.getAttribute(name), value)));
           replacement?.focus({ preventScroll: true });
         }
       }

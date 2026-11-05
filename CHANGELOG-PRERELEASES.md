@@ -13,6 +13,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 - Sonar no longer treats the power-flow battery net comparison or the vacuum JSON draft check as impossible, and the release roadmap update no longer uses a backtracking expression.
+- Camera display recovery still starts playback immediately, focus restoration compares attributes without an impossible equality check, and weather and climate keys trim underscores without a backtracking expression.
 
 ## [3.0.5-alpha.2] - 2026-11-04
 

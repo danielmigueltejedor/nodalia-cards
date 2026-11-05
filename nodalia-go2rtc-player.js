@@ -282,11 +282,8 @@ var NodaliaGo2RTCPlayer = class extends HTMLElement {
         video.style.transform = previousTransform;
         video.style.willChange = previousWillChange;
       }
-      const playback = video.play?.();
-      if (playback !== void 0 && typeof playback.catch === "function") {
-        void playback.catch(() => {
-        });
-      }
+      void video.play?.()?.catch(() => {
+      });
       this._verifyVideoDisplayRecovery(video);
     };
     if (typeof window.requestAnimationFrame === "function") {
