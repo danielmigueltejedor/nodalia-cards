@@ -381,7 +381,7 @@ class NodaliaWeatherCard extends HTMLElement {
       this._lastRenderSignature = "";
       this._render();
     }, { type: "weather/subscribe_forecast", entity_id: this._config.entity, forecast_type: forecastType }));
-    if (!started.ok || !started.value) {
+    if (!started.ok || started.value === undefined) {
       onFailure();
     } else {
       this._forecastSubscription = started.value;

@@ -1614,7 +1614,7 @@ class NodaliaCalendarCard extends HTMLElement {
       this._applyWeatherForecastRows(Object.values(this._weatherForecastEvents).flat(), { allowFallback: false });
       this._renderIfChanged(true);
     }, { type: "weather/subscribe_forecast", entity_id: entityId, forecast_type: forecastType }));
-    if (!started.ok || !started.value) {
+    if (!started.ok || started.value === undefined) {
       this._weatherForecastSubscription = null;
       this._weatherForecastSubscriptionKey = "";
       this._weatherForecastConnection = undefined;
