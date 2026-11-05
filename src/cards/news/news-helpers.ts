@@ -369,7 +369,7 @@ export function getNewsHistoryStorageKey(value: unknown) {
   if (explicit) {
     return `${NEWS_HISTORY_STORAGE_PREFIX}${explicit}`;
   }
-  const sources = resolveSourceEntries(config).map(entry => entry.entity).sort().join(",");
+  const sources = resolveSourceEntries(config).map(entry => entry.entity).sort((left, right) => left.localeCompare(right, "en")).join(",");
   return `${NEWS_HISTORY_STORAGE_PREFIX}${sources || "default"}`;
 }
 

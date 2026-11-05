@@ -582,7 +582,7 @@
   "ed.media_player.layout_auto": "自动",
   "ed.media_player.layout_chip": "横向 / 长条",
   "ed.media_player.layout_compact": "紧凑",
-  "ed.media_player.layout_dashboard_hint": "适合固定在仪表盘顶部或底部使用。",
+  "ed.media_player.layout_dashboard_hint": "适合固定在仪表盘顶部或底部使用。横向布局仅在卡片占 7 列或更多列时使用。",
   "ed.media_player.layout_max_width": "最大宽度",
   "ed.media_player.layout_offset": "偏移",
   "ed.media_player.layout_position": "位置",

@@ -3,6 +3,11 @@ import { captureHassContext, sameHassContext } from "../../shared/hass-context";
 import type { HassContext } from "../../shared/hass-context";
 import { createCardLayoutNotifier } from "../../shared/card-layout-notifier";
 import {
+  humidifierSupportsTarget,
+  suggestionIsOn,
+  suggestionState,
+} from "../../shared/entity-suggestion-presets";
+import {
   CARD_TAG,
   EDITOR_TAG,
   HAPTIC_PATTERNS,
@@ -97,7 +102,47 @@ class NodaliaHumidifierCard extends HTMLElement {
   }
 
   static getEntitySuggestion(hass: HomeAssistant, entityId: string) {
-    return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, { domains: ["humidifier"] });
+    const state = suggestionState(hass, entityId);
+    const humidity = humidifierSupportsTarget(state);
+    const on = suggestionIsOn(state);
+    const suggestions = [
+      window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+        domains: ["humidifier"],
+        label: "Humidifier — Compact",
+        buildConfig: (_hass, selectedEntityId) => ({
+          entity: selectedEntityId,
+          layout: "compact",
+          compact_layout_mode: "always",
+          show_slider: false,
+          show_mode_button: false,
+          show_fan_mode_button: false,
+        }),
+      }),
+    ];
+    if (on && humidity) {
+      suggestions.push(window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+        domains: ["humidifier"],
+        label: "Humidifier — Humidity",
+        buildConfig: (_hass, selectedEntityId) => ({
+          entity: selectedEntityId,
+          layout: "compact",
+          compact_layout_mode: "never",
+          show_slider: true,
+        }),
+      }));
+    }
+    if (humidity) {
+      suggestions.push(window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+        domains: ["humidifier"],
+        label: "Humidifier — Circular",
+        buildConfig: (_hass, selectedEntityId) => ({
+          entity: selectedEntityId,
+          layout: "circular",
+          show_slider: true,
+        }),
+      }));
+    }
+    return suggestions.filter(Boolean);
   }
 
   constructor() {
@@ -2056,7 +2101,7 @@ class NodaliaHumidifierCard extends HTMLElement {
   _onWindowPointerMove(event: Event) {
     if (!(event instanceof PointerEvent)) return;
     const drag = this._activeSliderDrag;
-    if (!drag || drag.pointerId !== event.pointerId) {
+    if (!drag || !Object.is(drag.pointerId, event.pointerId)) {
       return;
     }
 
@@ -2079,7 +2124,7 @@ class NodaliaHumidifierCard extends HTMLElement {
   _onWindowPointerUp(event: Event) {
     if (!(event instanceof PointerEvent)) return;
     const drag = this._activeSliderDrag;
-    if (!drag || drag.pointerId !== event.pointerId) {
+    if (!drag || !Object.is(drag.pointerId, event.pointerId)) {
       return;
     }
 
@@ -2931,7 +2976,7 @@ class NodaliaHumidifierCard extends HTMLElement {
           width: ${styles.icon.size};
         }
 
-        .humidifier-card__icon ha-icon {
+        .humidifier-card__icon > ha-icon {
           --mdc-icon-size: calc(${styles.icon.size} * 0.46);
           color: ${
             darkenBubbleIconGlyph
@@ -2949,7 +2994,7 @@ class NodaliaHumidifierCard extends HTMLElement {
           width: calc(${styles.icon.size} * 0.46);
         }
 
-        .humidifier-card__icon--active-motion ha-icon {
+        .humidifier-card__icon--active-motion > ha-icon {
           animation: humidifier-card-icon-breathe 2.4s ease-in-out infinite;
           transform: translate3d(-50%, -50%, 0);
         }
@@ -2996,6 +3041,7 @@ class NodaliaHumidifierCard extends HTMLElement {
         }
 
         .humidifier-card__unavailable-badge {
+          overflow: hidden;
           align-items: center;
           background: #ff9b4a;
           border: 2px solid ${styles.card.background};
@@ -3950,7 +3996,7 @@ class NodaliaHumidifierCard extends HTMLElement {
             transition: none !important;
           }
 
-          .humidifier-card__icon--active-motion ha-icon,
+          .humidifier-card__icon--active-motion > ha-icon,
           .humidifier-card__icon--active-motion::before,
           .humidifier-card__icon--active-motion::after {
             animation: none !important;

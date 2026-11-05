@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.4";
+  var CARD_VERSION = "3.0.5-alpha.2";
 
   // src/shared/device-control-geometry.ts
   var CIRCULAR_LAYOUT_DIAL_START_ANGLE = 135;
@@ -410,6 +410,28 @@
     };
   }
 
+  // src/shared/entity-suggestion-presets.ts
+  function suggestionState(hass, entityId) {
+    const id = String(entityId || "").trim();
+    const state = hass?.states?.[id];
+    return state || null;
+  }
+  function supportsFeature(state, bit) {
+    const features = Number(state?.attributes?.supported_features);
+    return Number.isFinite(features) && Boolean(features & bit);
+  }
+  function coverSupportsPosition(state) {
+    return supportsFeature(state, 4);
+  }
+  function coverHasPositionSlider(state) {
+    const position = Number(state?.attributes?.current_position);
+    return coverSupportsPosition(state) && Number.isFinite(position);
+  }
+  function coverHasTiltSlider(state) {
+    const tilt = Number(state?.attributes?.current_tilt_position);
+    return supportsFeature(state, 128) && Number.isFinite(tilt);
+  }
+
   // src/shared/home-assistant-services.ts
   function callHassService(hass, domain, service, data = {}, target = null) {
     if (!hass?.callService) return;
@@ -456,6 +478,26 @@
 
   // src/shared/editor-color.ts
   var clamp2 = (value, max) => Math.max(0, Math.min(max, value));
+  function cssFunctionBody(raw, name) {
+    const head = `${name}(`;
+    if (!raw.toLowerCase().startsWith(head) || !raw.endsWith(")")) return null;
+    return raw.slice(head.length, -1);
+  }
+  function srgbFunctionBody(raw) {
+    const body = cssFunctionBody(raw, "color");
+    if (body === null) return null;
+    const inner = body.trim();
+    if (!inner.toLowerCase().startsWith("srgb")) return null;
+    const rest = inner.slice(4);
+    if (rest.length === 0 || !/\s/.test(rest.charAt(0))) return null;
+    return rest.trim();
+  }
+  function splitCssAlpha(body) {
+    const slash = body.indexOf("/");
+    if (slash < 0) return [body.trim()];
+    if (body.indexOf("/", slash + 1) >= 0) return [body, "", ""];
+    return [body.slice(0, slash).trim(), body.slice(slash + 1).trim()];
+  }
   var component = (value, scale) => {
     if (!value || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?%?$/i.test(value)) return null;
     const numeric = Number(value.replace(/%$/, ""));
@@ -466,13 +508,13 @@
     const hexMatch = raw.match(/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
     if (hexMatch?.[1]) {
       const hex = hexMatch[1].length < 5 ? hexMatch[1].split("").map((channel) => channel + channel).join("") : hexMatch[1];
-      return { red: parseInt(hex.slice(0, 2), 16), green: parseInt(hex.slice(2, 4), 16), blue: parseInt(hex.slice(4, 6), 16), alpha: hex.length === 8 ? parseInt(hex.slice(6, 8), 16) / 255 : 1 };
+      return { red: Number.parseInt(hex.slice(0, 2), 16), green: Number.parseInt(hex.slice(2, 4), 16), blue: Number.parseInt(hex.slice(4, 6), 16), alpha: hex.length === 8 ? Number.parseInt(hex.slice(6, 8), 16) / 255 : 1 };
     }
-    const rgb = raw.match(/^rgba?\(([^)]+)\)$/i);
-    const srgb = raw.match(/^color\(\s*srgb\s+([^)]+)\)$/i);
-    const body = rgb?.[1] ?? srgb?.[1];
+    const rgb = cssFunctionBody(raw, "rgb") ?? cssFunctionBody(raw, "rgba");
+    const srgb = srgbFunctionBody(raw);
+    const body = rgb ?? srgb;
     if (!body) return null;
-    const sections = body.trim().split(/\s*\/\s*/);
+    const sections = splitCssAlpha(body);
     if (sections.length > 2) return null;
     const parts = sections[0]?.split(/[\s,]+/) ?? [];
     if (sections.length === 2 && parts.length !== 3 || parts.length < 3 || parts.length > 4) return null;
@@ -493,7 +535,7 @@
     const numeric = Number(alpha);
     const safeAlpha = clamp2(Number.isFinite(numeric) ? numeric : 1, 1);
     if (safeAlpha >= 0.999) return `#${normalized}`;
-    const red = parseInt(normalized.slice(0, 2), 16), green = parseInt(normalized.slice(2, 4), 16), blue = parseInt(normalized.slice(4, 6), 16);
+    const red = Number.parseInt(normalized.slice(0, 2), 16), green = Number.parseInt(normalized.slice(2, 4), 16), blue = Number.parseInt(normalized.slice(4, 6), 16);
     return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
   }
   function resolveEditorColorValue(value) {
@@ -625,7 +667,46 @@
         return applyStubEntity({ ...STUB_CONFIG }, hass, ["cover"], entities, entitiesFallback);
       }
       static getEntitySuggestion(hass, entityId) {
-        return window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, { domains: ["cover"] });
+        const state = suggestionState(hass, entityId);
+        const position = coverHasPositionSlider(state);
+        const tilt = coverHasTiltSlider(state);
+        const suggestions = [
+          window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+            domains: ["cover"],
+            label: "Cover — Buttons",
+            buildConfig: (_hass, selectedEntityId) => ({
+              entity: selectedEntityId,
+              layout: "compact",
+              show_position_slider: false,
+              show_tilt_slider: false
+            })
+          })
+        ];
+        if (position || tilt) {
+          suggestions.push(window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+            domains: ["cover"],
+            label: tilt && !position ? "Cover — Tilt" : "Cover — Position",
+            buildConfig: (_hass, selectedEntityId) => ({
+              entity: selectedEntityId,
+              layout: "compact",
+              show_position_slider: position,
+              show_tilt_slider: tilt
+            })
+          }));
+        }
+        if (coverSupportsPosition(state)) {
+          suggestions.push(window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+            domains: ["cover"],
+            label: "Cover — Circular",
+            buildConfig: (_hass, selectedEntityId) => ({
+              entity: selectedEntityId,
+              layout: "circular",
+              show_position_slider: true,
+              show_tilt_slider: tilt
+            })
+          }));
+        }
+        return suggestions.filter(Boolean);
       }
       constructor() {
         super();
@@ -1503,13 +1584,13 @@
       }
       _onWindowPointerMove(event) {
         const drag = this._activeSliderDrag;
-        if (!drag || drag.pointerId !== event.pointerId) return;
+        if (!drag || !Object.is(drag.pointerId, event.pointerId)) return;
         event.preventDefault();
         this._queueSliderDragUpdate(event.clientX, event.clientY);
       }
       _onWindowPointerUp(event) {
         const drag = this._activeSliderDrag;
-        if (!drag || drag.pointerId !== event.pointerId) return;
+        if (!drag || !Object.is(drag.pointerId, event.pointerId)) return;
         if (event.type === "pointercancel") {
           this._cancelSliderDrag();
           return;
@@ -1841,12 +1922,13 @@
           position: relative;
           width: ${styles.icon.size};
         }
-        .fan-card__icon ha-icon {
+        .fan-card__icon > ha-icon {
           --mdc-icon-size: calc(${styles.icon.size} * 0.46);
           color: ${isActive ? styles.icon.on_color : styles.icon.off_color};
         }
-        .fan-card__icon--active-motion ha-icon { animation: cover-card-icon-breathe 1.15s ease-in-out infinite; }
+        .fan-card__icon--active-motion > ha-icon { animation: cover-card-icon-breathe 1.15s ease-in-out infinite; }
         .fan-card__unavailable-badge {
+          overflow: hidden;
           align-items: center;
           background: #ff9b4a;
           border: 2px solid ${styles.card.background};

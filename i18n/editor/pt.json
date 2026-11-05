@@ -582,7 +582,7 @@
   "ed.media_player.layout_auto": "Automático",
   "ed.media_player.layout_chip": "Horizontal / longa",
   "ed.media_player.layout_compact": "Compacto",
-  "ed.media_player.layout_dashboard_hint": "Ideal quando fixado na parte superior ou inferior do painel.",
+  "ed.media_player.layout_dashboard_hint": "Ideal quando fixado na parte superior ou inferior do painel. O layout horizontal só é usado quando o cartão ocupa 7 ou mais colunas.",
   "ed.media_player.layout_max_width": "Largura máxima",
   "ed.media_player.layout_offset": "Desvio",
   "ed.media_player.layout_position": "Posição",

@@ -29,11 +29,8 @@ export function normalizeMobilePolicy(value: unknown = undefined): MobilePolicy 
   if (isRecord(value) && value.policy !== undefined) {
     return normalizeMobilePolicy(value.policy);
   }
-  if (value === true) {
-    return "push";
-  }
-  if (value === false) {
-    return "off";
+  if (typeof value === "boolean") {
+    return value ? "push" : "off";
   }
   const normalized = String(value ?? "auto").trim().toLowerCase();
   if (normalized === "auto" || normalized === "push" || normalized === "card_only" || normalized === "off") {

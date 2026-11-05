@@ -454,7 +454,7 @@ test("light card default on icon color follows current light tint with contrast"
   assert.match(source, /const lightIconColor = isOn[\s\S]*color-mix\(in srgb, \$\{accentColor\} \$\{darkenBubbleIconGlyph \? 42 : 72\}%, var\(--primary-text-color\)\)/);
   assert.match(source, /const configuredOnIconColor = String\(styles\?\.icon\?\.on_color \?\? ""\)\.trim\(\)/);
   assert.match(source, /: styles\?\.icon\?\.off_color/);
-  assert.match(source, /\.light-card__icon ha-icon \{[\s\S]*color: \$\{lightIconColor\};/);
+  assert.match(source, /\.light-card__icon > ha-icon \{[\s\S]*color: \$\{lightIconColor\};/);
 });
 
 test("calendar runtime css sanitizer and webhook admin guard are present", () => {

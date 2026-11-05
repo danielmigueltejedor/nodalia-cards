@@ -496,7 +496,7 @@ class NodaliaCalendarCard extends HTMLElement {
     }
     return Object.keys(this._hass?.states || {})
       .filter(id => id.startsWith("calendar."))
-      .sort();
+      .sort((left, right) => left.localeCompare(right, "en"));
   }
 
   _getCalendarEntry(entityId: unknown) {
@@ -1253,7 +1253,7 @@ class NodaliaCalendarCard extends HTMLElement {
     if (recurrenceId) {
       payload.recurrence_id = recurrenceId;
       payload.recurrence_range =
-        recurrenceRange === CALENDAR_DELETE_RECURRENCE_THIS_AND_FUTURE
+        Object.is(recurrenceRange, CALENDAR_DELETE_RECURRENCE_THIS_AND_FUTURE)
           ? CALENDAR_DELETE_RECURRENCE_THIS_AND_FUTURE
           : CALENDAR_DELETE_RECURRENCE_THIS;
     }
@@ -1522,7 +1522,7 @@ class NodaliaCalendarCard extends HTMLElement {
     }
     const objectEntries = Object.entries(raw).filter(([, value]) => value && typeof value === "object");
     const nestedArrays = objectEntries.flatMap(([key, value]) =>
-      this._normalizeForecastRows(withForecastDateFromKey(key, value)).map(item => withForecastDateFromKey(key, item)).filter(isObject),
+      this._normalizeForecastRows(withForecastDateFromKey(key, value)).map(item => withForecastDateFromKey(key, item)).filter((item): item is Record<string, unknown> => isObject(item)),
     );
     if (nestedArrays.length) {
       return nestedArrays;
@@ -1771,7 +1771,7 @@ class NodaliaCalendarCard extends HTMLElement {
       if (!rowKey) {
         continue;
       }
-      const [ky = NaN, km = NaN, kd = NaN] = rowKey.split("-").map(Number);
+      const [ky = Number.NaN, km = Number.NaN, kd = Number.NaN] = rowKey.split("-").map(Number);
       const rowMonth = km - 1;
       if (ky !== y || rowMonth !== m) {
         continue;

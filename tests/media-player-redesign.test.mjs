@@ -44,6 +44,9 @@ test("media player layouts stay stable across nearby size changes", () => {
   assert.equal(api.resolvePresentationMode("auto", { width: 320, height: 160 }, "compact"), "square");
   assert.equal(api.resolvePresentationMode("auto", { width: 210, height: 160 }, "square"), "compact");
   assert.equal(api.resolvePresentationMode("auto", { width: 1000, height: 96 }), "chip");
+  assert.equal(api.resolvePresentationMode("chip", { width: 1000, height: 96 }, "", { gridColumns: 6 }), "compact");
+  assert.equal(api.resolvePresentationMode("horizontal", { width: 420, height: 80 }, "", { gridColumns: 7 }), "chip");
+  assert.equal(api.resolvePresentationMode("auto", { width: 1000, height: 96 }, "", { gridColumns: 6 }), "compact");
   // Wide / >6-column spans stay standard so the entity icon hero remains visible.
   assert.equal(api.resolvePresentationMode("auto", { width: 560, height: 200 }), "standard");
   assert.equal(

@@ -23,7 +23,7 @@ function writeNode(node: ConfigNode, key: string, value: unknown): boolean {
 export function setByPath(target: unknown, path: unknown, value: unknown): void {
   if ((!isObject(target) && !Array.isArray(target)) || typeof path !== "string") return;
   const parts = String(path || "").split(".");
-  if (!parts.length || parts.some(isUnsafeConfigPathKey)) return;
+  if (!parts.length || parts.some((part) => isUnsafeConfigPathKey(part))) return;
   let cursor = target;
   for (let index = 0; index < parts.length - 1; index += 1) {
     const key = parts[index];

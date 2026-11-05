@@ -8,7 +8,26 @@ function normalizeTextKey(value: unknown) {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
+    .replace(/^_+/, "").replace(/_+$/, "");
+}
+
+function cssVarFallback(raw: string) {
+  const lower = raw.toLowerCase();
+  let search = 0;
+  while (search < lower.length) {
+    const start = lower.indexOf("var(", search);
+    if (start < 0) return null;
+    const previous = start === 0 ? "" : lower.charAt(start - 1);
+    if (previous && /[a-z0-9_]/.test(previous)) {
+      search = start + 4;
+      continue;
+    }
+    const comma = raw.indexOf(",", start + 4);
+    const end = comma < 0 ? -1 : raw.indexOf(")", comma + 1);
+    if (comma < 0 || end < 0) return null;
+    return raw.slice(comma + 1, end).trim();
+  }
+  return null;
 }
 
 function getEntityDomain(state: BubbleTintEntity | null | undefined) {
@@ -94,9 +113,9 @@ export function parseCssColorHue(cssColor: unknown, resolveDepth = 0): number | 
     return null;
   }
 
-  const varFallback = /\bvar\([^,]+,\s*([^)]+)\)/i.exec(raw);
-  if (varFallback?.[1]) {
-    const nested = parseCssColorHue(varFallback[1].trim(), resolveDepth);
+  const varFallback = cssVarFallback(raw);
+  if (varFallback) {
+    const nested = parseCssColorHue(varFallback, resolveDepth);
     if (nested !== null && !Number.isNaN(nested)) {
       return nested;
     }

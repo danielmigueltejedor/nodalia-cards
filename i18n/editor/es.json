@@ -582,7 +582,7 @@
   "ed.media_player.layout_auto": "Automático",
   "ed.media_player.layout_chip": "Horizontal / alargada",
   "ed.media_player.layout_compact": "Compacto",
-  "ed.media_player.layout_dashboard_hint": "Ideal si quieres usarlo fijo arriba o abajo del dashboard.",
+  "ed.media_player.layout_dashboard_hint": "Ideal si quieres usarlo fijo arriba o abajo del dashboard. El formato horizontal solo se usa cuando la tarjeta ocupa 7 o más columnas.",
   "ed.media_player.layout_max_width": "Ancho máximo",
   "ed.media_player.layout_offset": "Offset",
   "ed.media_player.layout_position": "Posición",

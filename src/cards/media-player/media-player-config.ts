@@ -218,7 +218,7 @@ export function normalizeConfig(rawConfig?: unknown) {
     ];
   }
 
-  const players = (Array.isArray(config.players) ? config.players.filter(isObject) : []).map(player => {
+  const players = (Array.isArray(config.players) ? config.players.filter((item): item is Record<string, unknown> => isObject(item)) : []).map(player => {
     const actions = {
       power_action_off: normalizePowerActionConfig(player.power_action_off),
       power_action_on: normalizePowerActionConfig(player.power_action_on),

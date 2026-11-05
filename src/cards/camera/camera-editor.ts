@@ -20,7 +20,7 @@ interface FieldOptions { fullWidth?: boolean; placeholder?: string; }
 function objectRows(value: unknown): Record<string, unknown>[] {
   if (!Array.isArray(value)) return [];
   const rows: unknown[] = value;
-  return rows.filter(isObject);
+  return rows.filter((item): item is Record<string, unknown> => isObject(item));
 }
 function editorConfig(raw: unknown) {
   const config = mergeConfig(DEFAULT_CONFIG, raw);
@@ -295,7 +295,7 @@ class NodaliaCameraCardEditor extends HTMLElement {
       event.stopPropagation();
       const action = button.dataset.editorAction;
       const indexValue = button.dataset.index;
-      const index = indexValue && /^\d+$/.test(indexValue) ? Number(indexValue) : NaN;
+      const index = indexValue && /^\d+$/.test(indexValue) ? Number(indexValue) : Number.NaN;
       if (action === "add-camera") {
         if (!this._config.cameras.length) {
           this._config.cameras = this._editorCameras();
@@ -667,7 +667,7 @@ class NodaliaCameraCardEditor extends HTMLElement {
                   ${this._renderCheckboxField("ed.camera.live_controls", `${prefix}.controls`, stream.controls === true)}
                 ` : ""}
                 ${provider === "go2rtc" ? `
-                  ${this._renderTextField("ed.camera.live_base_url", `${prefix}.base_url`, stream.base_url, { placeholder: "http://frigate.local:1984", fullWidth: true })}
+                  ${this._renderTextField("ed.camera.live_base_url", `${prefix}.base_url`, stream.base_url, { placeholder: "https://frigate.local:1984", fullWidth: true })}
                   ${this._renderTextField("ed.camera.live_stream_name", `${prefix}.stream`, stream.stream || cameraStreamName(cameraId), { placeholder: cameraStreamName(cameraId), fullWidth: true })}
                   ${this._renderSelectField("ed.camera.live_mode", `${prefix}.mode`, stream.mode || "auto", [
     { value: "auto", label: "ed.camera.live_mode_auto" },

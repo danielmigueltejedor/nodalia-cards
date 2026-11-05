@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.4";
+  var CARD_VERSION = "3.0.5-alpha.2";
 
   // src/cards/entity/entity-constants.ts
   var CARD_TAG = "nodalia-entity-card";
@@ -18,7 +18,6 @@
   };
   var OPTIMISTIC_TOGGLE_TIMEOUT = 3200;
   var COVER_SET_POSITION = 4;
-  var LOCK_LOCK = 2;
   var LEGACY_ICON_OFF_COLOR_VALUES = [
     "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 50%, transparent))",
     "var(--state-inactive-color, color-mix(in srgb, var(--primary-text-color) 55%, transparent))"
@@ -457,7 +456,7 @@
     } else {
       config.state_position = config.state_chip_on_title_row === true ? "right" : "below";
     }
-    const quickActions = Array.isArray(config.quick_actions) ? config.quick_actions.filter(isObject).map((action) => ({
+    const quickActions = Array.isArray(config.quick_actions) ? config.quick_actions.filter((item) => isObject(item)).map((action) => ({
       icon: typeof action.icon === "string" && action.icon ? action.icon : "mdi:flash",
       type: typeof action.type === "string" && action.type ? action.type : "toggle",
       label: typeof action.label === "string" ? action.label : "",
@@ -697,6 +696,26 @@
 
   // src/shared/editor-color.ts
   var clamp3 = (value, max) => Math.max(0, Math.min(max, value));
+  function cssFunctionBody(raw, name) {
+    const head = `${name}(`;
+    if (!raw.toLowerCase().startsWith(head) || !raw.endsWith(")")) return null;
+    return raw.slice(head.length, -1);
+  }
+  function srgbFunctionBody(raw) {
+    const body = cssFunctionBody(raw, "color");
+    if (body === null) return null;
+    const inner = body.trim();
+    if (!inner.toLowerCase().startsWith("srgb")) return null;
+    const rest = inner.slice(4);
+    if (rest.length === 0 || !/\s/.test(rest.charAt(0))) return null;
+    return rest.trim();
+  }
+  function splitCssAlpha(body) {
+    const slash = body.indexOf("/");
+    if (slash < 0) return [body.trim()];
+    if (body.indexOf("/", slash + 1) >= 0) return [body, "", ""];
+    return [body.slice(0, slash).trim(), body.slice(slash + 1).trim()];
+  }
   var component = (value, scale) => {
     if (!value || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?%?$/i.test(value)) return null;
     const numeric = Number(value.replace(/%$/, ""));
@@ -707,13 +726,13 @@
     const hexMatch = raw.match(/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
     if (hexMatch?.[1]) {
       const hex = hexMatch[1].length < 5 ? hexMatch[1].split("").map((channel) => channel + channel).join("") : hexMatch[1];
-      return { red: parseInt(hex.slice(0, 2), 16), green: parseInt(hex.slice(2, 4), 16), blue: parseInt(hex.slice(4, 6), 16), alpha: hex.length === 8 ? parseInt(hex.slice(6, 8), 16) / 255 : 1 };
+      return { red: Number.parseInt(hex.slice(0, 2), 16), green: Number.parseInt(hex.slice(2, 4), 16), blue: Number.parseInt(hex.slice(4, 6), 16), alpha: hex.length === 8 ? Number.parseInt(hex.slice(6, 8), 16) / 255 : 1 };
     }
-    const rgb = raw.match(/^rgba?\(([^)]+)\)$/i);
-    const srgb = raw.match(/^color\(\s*srgb\s+([^)]+)\)$/i);
-    const body = rgb?.[1] ?? srgb?.[1];
+    const rgb = cssFunctionBody(raw, "rgb") ?? cssFunctionBody(raw, "rgba");
+    const srgb = srgbFunctionBody(raw);
+    const body = rgb ?? srgb;
     if (!body) return null;
-    const sections = body.trim().split(/\s*\/\s*/);
+    const sections = splitCssAlpha(body);
     if (sections.length > 2) return null;
     const parts = sections[0]?.split(/[\s,]+/) ?? [];
     if (sections.length === 2 && parts.length !== 3 || parts.length < 3 || parts.length > 4) return null;
@@ -734,7 +753,7 @@
     const numeric = Number(alpha);
     const safeAlpha = clamp3(Number.isFinite(numeric) ? numeric : 1, 1);
     if (safeAlpha >= 0.999) return `#${normalized}`;
-    const red = parseInt(normalized.slice(0, 2), 16), green = parseInt(normalized.slice(2, 4), 16), blue = parseInt(normalized.slice(4, 6), 16);
+    const red = Number.parseInt(normalized.slice(0, 2), 16), green = Number.parseInt(normalized.slice(2, 4), 16), blue = Number.parseInt(normalized.slice(4, 6), 16);
     return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
   }
   function resolveEditorColorValue(value) {
@@ -841,7 +860,7 @@
     }
     const match = String(value ?? "").trim().match(/-?\d+(?:[.,]\d+)?/);
     if (!match) {
-      return NaN;
+      return Number.NaN;
     }
     return Number(match[0].replace(",", "."));
   }
@@ -955,13 +974,21 @@
     const numericValue = Number(rawValue.replace(",", "."));
     return Number.isFinite(numericValue) ? numericValue : null;
   }
+  function trimInsignificantZeros(value) {
+    const mark = Math.max(value.lastIndexOf("."), value.lastIndexOf(","));
+    if (mark < 0) return value;
+    let end = value.length;
+    while (end > mark + 1 && value.charCodeAt(end - 1) === 48) end -= 1;
+    if (end === mark + 1) end = mark;
+    return value.slice(0, end);
+  }
   function formatNumericValue(value, maximumFractionDigits = 2) {
     const numericValue = parseNumericValue(value);
     if (numericValue === null) {
       return String(value ?? "");
     }
     const safeDigits = clamp(Math.round(parseFiniteNumericValue(maximumFractionDigits) ?? 2), 0, 6);
-    return numericValue.toFixed(safeDigits).replace(/\.0+$/, "").replace(/(\.\d*?)0+$/, "$1");
+    return trimInsignificantZeros(numericValue.toFixed(safeDigits));
   }
   function formatNumericValueWithUnit(value, unit = "", maximumFractionDigits = 2) {
     const formattedValue = formatNumericValue(value, maximumFractionDigits);
@@ -979,7 +1006,7 @@
       return `a:${value.length}|${value.map((item) => String(item ?? "")).join(",")}`;
     }
     if (isObject(value)) {
-      const keys = Object.keys(value).sort();
+      const keys = Object.keys(value).sort((left, right) => left.localeCompare(right, "en"));
       return `o:${keys.length}|${keys.map((key) => `${key}=${String(value[key] ?? "")}`).join(",")}`;
     }
     return String(value);
@@ -1346,17 +1373,16 @@
       }
       static getEntitySuggestion(hass, entityId) {
         if (!hass) return [];
-        const domain = String(entityId || "").split(".")[0];
-        const suggestions = [
+        return [
           window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
-            label: "Entity — Standard"
-          }),
-          window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
-            label: domain === "media_player" ? "Entity Card — Compact media state" : "Entity — Compact",
-            buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, compact_layout_mode: "always" })
+            label: "Entity",
+            buildConfig: (_hass, selectedEntityId) => ({
+              entity: selectedEntityId,
+              show_state: true,
+              compact_layout_mode: "auto"
+            })
           })
-        ];
-        return suggestions.filter(Boolean);
+        ].filter(Boolean);
       }
       constructor() {
         super();
@@ -1650,7 +1676,7 @@
           `aqh:${Number(aq.graph_hours) || 24}`,
           `aqsr:${AIR_QUALITY_METRIC_KEYS.map((key) => aq.graph_series?.[key] === false ? 0 : 1).join("")}`,
           `aqcl:${AIR_QUALITY_METRIC_KEYS.map((key) => String(aq.graph_colors?.[key] || "")).join(",")}`,
-          `aqv:${[...this._aqHiddenSeries].sort().join(",")}`,
+          `aqv:${[...this._aqHiddenSeries].sort((left, right) => left.localeCompare(right, "en")).join(",")}`,
           `aq:${aqParts.join(";")}`,
           `aqc:${this._aqHistoryCache ? 1 : 0}`,
           `ov:${overviewParts.join(";")}`
@@ -2084,16 +2110,11 @@
         if (["locking", "unlocking", "jammed", "unavailable", "unknown"].includes(stateKey)) {
           return;
         }
-        const features = entitySupportedFeatures(state);
         if (stateKey === "locked") {
           this._invokeEntityService("lock", "unlock", entityId);
           return;
         }
-        if (features & LOCK_LOCK) {
-          this._invokeEntityService("lock", "lock", entityId);
-        } else {
-          this._invokeEntityService("lock", "lock", entityId);
-        }
+        this._invokeEntityService("lock", "lock", entityId);
       }
       _isBinaryOnOff(state) {
         const stateKey = normalizeTextKey(state?.state);
@@ -2159,7 +2180,7 @@
           if (value.name) {
             return String(value.name);
           }
-          const keys = Object.keys(value).sort();
+          const keys = Object.keys(value).sort((left, right) => left.localeCompare(right, "en"));
           return keys.map((key2) => `${key2}:${String(value[key2] ?? "")}`).join(", ");
         }
         const numericValue = parseNumericValue(value);
@@ -4056,7 +4077,7 @@
           width: ${iconSize};
         }
 
-        .entity-card__icon ha-icon {
+        .entity-card__icon > ha-icon {
           --mdc-icon-size: calc(${iconSize} * 0.46);
           color: ${iconGlyphColor};
           display: inline-flex;
@@ -4639,7 +4660,7 @@
           animation: entity-card-bubble-bounce var(--entity-card-button-bounce-duration) cubic-bezier(0.18, 0.9, 0.22, 1.18) both;
         }
 
-        .entity-card__icon ha-icon {
+        .entity-card__icon > ha-icon {
           --mdc-icon-size: calc(${effectiveIconSize} * 0.46);
           color: ${entityBubbleIconGlyphColor};
           display: inline-flex;
@@ -4661,6 +4682,7 @@
         }
 
         .entity-card__unavailable-badge {
+          overflow: hidden;
           align-items: center;
           background: #ff9b4a;
           border: 2px solid ${styles.card.background};

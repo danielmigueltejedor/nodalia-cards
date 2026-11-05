@@ -2367,7 +2367,7 @@ class NodaliaClimateCard extends HTMLElement {
             }
             else {
                 const queuedRaw = this._temperatureCommitQueuedValue;
-                const queuedValue = queuedRaw === null || queuedRaw === undefined ? NaN : Number(queuedRaw);
+                const queuedValue = queuedRaw === null || queuedRaw === undefined ? Number.NaN : Number(queuedRaw);
                 if (climateFinite(queuedValue) && Math.abs(queuedValue - target) > 0.001) {
                     void this._flushQueuedTemperatureCommit();
                 }
@@ -3151,8 +3151,8 @@ class NodaliaClimateCard extends HTMLElement {
       dial,
       geometry: dial.getBoundingClientRect(),
       pointerId,
-      lastLow: NaN,
-      lastHigh: NaN,
+      lastLow: Number.NaN,
+      lastHigh: Number.NaN,
       startClientX: clientX,
       startClientY: clientY,
       rangeThumbDragStarted: false,
@@ -4330,7 +4330,7 @@ class NodaliaClimateCard extends HTMLElement {
     this._renderView();
     if(native&&attrs.length) {
       const next=Array.from(this.shadowRoot?.querySelectorAll(native.tagName.toLowerCase())??[]).find(node=>attrs.every(([key,value])=>node.getAttribute(key)===value));
-      if(next instanceof HTMLElement) {if(next instanceof HTMLInputElement&&pendingValue!==null) next.value=pendingValue;next.focus({preventScroll:true});if(next instanceof HTMLInputElement&&caret&&caret[0]!==null&&caret[1]!==null&&caret[0]!==undefined&&caret[1]!==undefined) next.setSelectionRange(caret[0],caret[1]);}
+      if(next instanceof HTMLElement) {if(next instanceof HTMLInputElement&&pendingValue!==null) next.value=pendingValue;next.focus({preventScroll:true});if(next instanceof HTMLInputElement&&caret&&typeof caret[0]==="number"&&typeof caret[1]==="number") next.setSelectionRange(caret[0],caret[1]);}
     }
   }
   _renderView() {
@@ -4396,31 +4396,31 @@ class NodaliaClimateCard extends HTMLElement {
       }
       this._lastDualRangeModeKey = modeKey;
     }
-    const rangeBand = isRangeMode ? this._getEffectiveTargetLowHigh(state) : { low: NaN, high: NaN };
+    const rangeBand = isRangeMode ? this._getEffectiveTargetLowHigh(state) : { low: Number.NaN, high: Number.NaN };
     const hasNumericTarget =
-      targetTemperature !== null && targetTemperature !== undefined && climateFinite(Number(targetTemperature));
+      targetTemperature !== null && climateFinite(Number(targetTemperature));
     const hasPublishedSingleTarget = !isRangeMode && supportsTargetTemperature && hasNumericTarget;
     const mainTemperaturePref =
       normalizeTextKey(String(config.display?.main_temperature ?? "").trim()) === "current" ? "current" : "target";
     const currentFin =
       currentTemperature !== null && climateFinite(Number(currentTemperature))
         ? Number(currentTemperature)
-        : NaN;
-    const targetFin = hasPublishedSingleTarget ? Number(targetTemperature) : NaN;
-    const dialThumbValue = isRangeMode ? NaN : (supportsTargetTemperature && hasNumericTarget ? Number(targetTemperature) : NaN);
+        : Number.NaN;
+    const targetFin = hasPublishedSingleTarget ? Number(targetTemperature) : Number.NaN;
+    const dialThumbValue = isRangeMode ? Number.NaN : (supportsTargetTemperature && hasNumericTarget ? Number(targetTemperature) : Number.NaN);
     let dialPrimaryReadoutValue;
     if (isRangeMode) {
-      dialPrimaryReadoutValue = currentTemperature !== null ? currentTemperature : NaN;
+      dialPrimaryReadoutValue = currentTemperature !== null ? currentTemperature : Number.NaN;
     } else if (mainTemperaturePref === "current") {
       dialPrimaryReadoutValue = climateFinite(currentFin)
         ? currentFin
-        : (climateFinite(targetFin) ? targetFin : NaN);
+        : (climateFinite(targetFin) ? targetFin : Number.NaN);
     } else if (climateFinite(targetFin)) {
       dialPrimaryReadoutValue = targetFin;
     } else if (climateFinite(currentFin)) {
       dialPrimaryReadoutValue = currentFin;
     } else {
-      dialPrimaryReadoutValue = NaN;
+      dialPrimaryReadoutValue = Number.NaN;
     }
     const hass = this._hass ?? climateDisplayHass(window.NodaliaI18n?.resolveHass?.(null));
     const i18nLang = config.language ?? "auto";
@@ -4990,7 +4990,7 @@ class NodaliaClimateCard extends HTMLElement {
           width: ${effectiveIconSize};
         }
 
-        .climate-card__icon ha-icon {
+        .climate-card__icon > ha-icon {
           --mdc-icon-size: calc(${effectiveIconSize} * 0.44);
           color: ${
             darkenBubbleIconGlyph
@@ -5016,6 +5016,7 @@ class NodaliaClimateCard extends HTMLElement {
         }
 
         .climate-card__unavailable-badge {
+          overflow: hidden;
           align-items: center;
           background: #ff9b4a;
           border: 2px solid ${styles.card.background};
@@ -6016,7 +6017,7 @@ class NodaliaClimateCard extends HTMLElement {
             width: 50px;
           }
 
-          .climate-card--layout-compact .climate-card__icon ha-icon {
+          .climate-card--layout-compact .climate-card__icon > ha-icon {
             --mdc-icon-size: 23px;
             height: 23px;
             width: 23px;

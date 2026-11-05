@@ -165,7 +165,7 @@ export function normalizeConfig(config: unknown = {}) {
   const artwork: Record<string, unknown> = isObject(media.artwork) ? media.artwork : {};
   const artworkMode = String(artwork.mode || "").trim().toLowerCase();
   const mediaFields = {
-    players: Array.isArray(media.players) ? media.players.filter(isObject) : [],
+    players: Array.isArray(media.players) ? media.players.filter((item): item is Record<string, unknown> => isObject(item)) : [],
     artwork: {
       mode: artworkMode === "blur" ? "blur" : "immersive",
     },
@@ -182,7 +182,7 @@ export function normalizeConfig(config: unknown = {}) {
     popup: { ...(isObject(rawStyles.popup) ? rawStyles.popup : {}), ...projected.popup },
     media_player: { ...(isObject(rawStyles.media_player) ? rawStyles.media_player : {}), ...projected.media_player } };
   const layout = { ...DEFAULT_CONFIG.layout, ...(isObject(mergedConfig.layout) ? mergedConfig.layout : {}) };
-  const routes = (Array.isArray(mergedConfig.routes) ? mergedConfig.routes.filter(isObject) : []).map(route => route.popup === undefined ? route : { ...route, popup: Array.isArray(route.popup) ? route.popup.filter(isObject) : [] });
+  const routes = (Array.isArray(mergedConfig.routes) ? mergedConfig.routes.filter((item): item is Record<string, unknown> => isObject(item)) : []).map(route => route.popup === undefined ? route : { ...route, popup: Array.isArray(route.popup) ? route.popup.filter((item): item is Record<string, unknown> => isObject(item)) : [] });
   const fields = { routes, media_player: mediaPlayer, security, styles, layout };
   const normalized: typeof fields & Record<string, unknown> = { ...mergedConfig, ...fields };
   return normalized;

@@ -49,7 +49,7 @@ type ForecastCoordinate = ForecastPoint & { x: number; y: number };
 type ForecastOverlay = { key: string; forecastType: ForecastType; index: number; left: string; top: string; vertical: string; series: string };
 type UnitPreferences = { sourceTemperatureUnit: string; targetTemperatureUnit: string; sourceWindUnit: string; targetWindUnit: string };
 const weatherActionElement = (node: EventTarget): node is HTMLElement | SVGElement => (node instanceof HTMLElement || node instanceof SVGElement) && Boolean(node.dataset.weatherAction);
-const forecastRows = (value: unknown): ForecastItem[] => Array.isArray(value) ? value.filter(isObject) : [];
+const forecastRows = (value: unknown): ForecastItem[] => Array.isArray(value) ? value.filter((item): item is Record<string, unknown> => isObject(item)) : [];
 let _lazyNodaliaWeatherCard: CustomElementConstructor | undefined;
 export function loadNodaliaWeatherCard(): CustomElementConstructor {
   if (_lazyNodaliaWeatherCard) {
@@ -381,7 +381,9 @@ class NodaliaWeatherCard extends HTMLElement {
         this._lastRenderSignature = "";
         this._render();
       }, { type: "weather/subscribe_forecast", entity_id: this._config.entity, forecast_type: forecastType }).catch(onFailure);
-    } catch (_error) { onFailure(); }
+    } catch (_error) {
+      onFailure();
+    }
   }
 
   _getTitle(state: HassEntity | null) {
@@ -1619,7 +1621,7 @@ class NodaliaWeatherCard extends HTMLElement {
           animation: weather-card-bubble-bounce var(--weather-card-button-bounce-duration) cubic-bezier(0.18, 0.9, 0.22, 1.18) both;
         }
 
-        .weather-card__icon ha-icon {
+        .weather-card__icon > ha-icon {
           --mdc-icon-size: calc(${styles.icon.size} * 0.5);
           position: relative;
           z-index: 1;
@@ -1661,20 +1663,21 @@ class NodaliaWeatherCard extends HTMLElement {
           transform: translate3d(0, -6px, 0);
         }
 
-        .weather-card__icon--sun-motion ha-icon {
+        .weather-card__icon--sun-motion > ha-icon {
           animation: weather-card-icon-pulse 2.4s ease-in-out infinite;
         }
 
-        .weather-card__icon--wind-motion ha-icon,
-        .weather-card__icon--cloud-motion ha-icon {
+        .weather-card__icon--wind-motion > ha-icon,
+        .weather-card__icon--cloud-motion > ha-icon {
           animation: weather-card-icon-drift 2.8s ease-in-out infinite;
         }
 
-        .weather-card__icon--storm-motion ha-icon {
+        .weather-card__icon--storm-motion > ha-icon {
           animation: weather-card-icon-flash 1.6s ease-in-out infinite;
         }
 
         .weather-card__unavailable-badge {
+          overflow: hidden;
           align-items: center;
           background: #ff9b4a;
           border: 2px solid ${styles.card.background};
@@ -2790,10 +2793,10 @@ class NodaliaWeatherCard extends HTMLElement {
         @media (prefers-reduced-motion: reduce) {
           .weather-card__icon--rain-motion::after,
           .weather-card__icon--snow-motion::after,
-          .weather-card__icon--sun-motion ha-icon,
-          .weather-card__icon--wind-motion ha-icon,
-          .weather-card__icon--cloud-motion ha-icon,
-          .weather-card__icon--storm-motion ha-icon {
+          .weather-card__icon--sun-motion > ha-icon,
+          .weather-card__icon--wind-motion > ha-icon,
+          .weather-card__icon--cloud-motion > ha-icon,
+          .weather-card__icon--storm-motion > ha-icon {
             animation: none !important;
           }
         }

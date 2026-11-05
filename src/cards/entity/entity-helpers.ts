@@ -85,7 +85,7 @@ export function parseAirQualityNumeric(value: unknown) {
   }
   const match = String(value ?? "").trim().match(/-?\d+(?:[.,]\d+)?/);
   if (!match) {
-    return NaN;
+    return Number.NaN;
   }
   return Number(match[0].replace(",", "."));
 }
@@ -208,6 +208,15 @@ export function parseNumericValue(value: unknown) {
   return Number.isFinite(numericValue) ? numericValue : null;
 }
 
+function trimInsignificantZeros(value: string) {
+  const mark = Math.max(value.lastIndexOf("."), value.lastIndexOf(","));
+  if (mark < 0) return value;
+  let end = value.length;
+  while (end > mark + 1 && value.charCodeAt(end - 1) === 48) end -= 1;
+  if (end === mark + 1) end = mark;
+  return value.slice(0, end);
+}
+
 export function formatNumericValue(value: unknown, maximumFractionDigits = 2) {
   const numericValue = parseNumericValue(value);
   if (numericValue === null) {
@@ -215,10 +224,7 @@ export function formatNumericValue(value: unknown, maximumFractionDigits = 2) {
   }
 
   const safeDigits = clamp(Math.round(parseFiniteNumericValue(maximumFractionDigits) ?? 2), 0, 6);
-  return numericValue
-    .toFixed(safeDigits)
-    .replace(/\.0+$/, "")
-    .replace(/(\.\d*?)0+$/, "$1");
+  return trimInsignificantZeros(numericValue.toFixed(safeDigits));
 }
 
 export function formatNumericValueWithUnit(value: unknown, unit: unknown = "", maximumFractionDigits = 2) {
@@ -242,7 +248,7 @@ export function getValueSignature(value: unknown) {
   }
 
   if (isObject(value)) {
-    const keys = Object.keys(value).sort();
+    const keys = Object.keys(value).sort((left, right) => left.localeCompare(right, "en"));
     return `o:${keys.length}|${keys.map(key => `${key}=${String(value[key] ?? "")}`).join(",")}`;
   }
 

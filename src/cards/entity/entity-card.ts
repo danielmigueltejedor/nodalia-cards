@@ -11,7 +11,6 @@ import {
   COVER_SET_POSITION,
   EDITOR_TAG,
   HAPTIC_PATTERNS,
-  LOCK_LOCK,
   OPTIMISTIC_TOGGLE_TIMEOUT
 } from "./entity-constants";
 import {
@@ -29,7 +28,6 @@ import {
   buildAirQualityChartGeometry,
   buildAirQualityInterpolatedSamples,
   coverEntityIsOpen,
-  entitySupportedFeatures,
   entitySupportsFeature,
   formatNumericValue,
   formatNumericValueWithUnit,
@@ -123,17 +121,16 @@ class NodaliaEntityCard extends HTMLElement {
 
   static getEntitySuggestion(hass: HomeAssistant|null|undefined, entityId: string) {
     if (!hass) return [];
-    const domain = String(entityId || "").split(".")[0];
-    const suggestions = [
+    return [
       window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
-        label: "Entity — Standard",
+        label: "Entity",
+        buildConfig: (_hass, selectedEntityId) => ({
+          entity: selectedEntityId,
+          show_state: true,
+          compact_layout_mode: "auto",
+        }),
       }),
-      window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
-        label: domain === "media_player" ? "Entity Card — Compact media state" : "Entity — Compact",
-        buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, compact_layout_mode: "always" }),
-      }),
-    ];
-    return suggestions.filter(Boolean);
+    ].filter(Boolean);
   }
 
   constructor() {
@@ -450,7 +447,7 @@ class NodaliaEntityCard extends HTMLElement {
       `aqh:${Number(aq.graph_hours) || 24}`,
       `aqsr:${AIR_QUALITY_METRIC_KEYS.map(key => aq.graph_series?.[key] === false ? 0 : 1).join("")}`,
       `aqcl:${AIR_QUALITY_METRIC_KEYS.map(key => String(aq.graph_colors?.[key] || "")).join(",")}`,
-      `aqv:${[...this._aqHiddenSeries].sort().join(",")}`,
+      `aqv:${[...this._aqHiddenSeries].sort((left, right) => left.localeCompare(right, "en")).join(",")}`,
       `aq:${aqParts.join(";")}`,
       `aqc:${this._aqHistoryCache ? 1 : 0}`,
       `ov:${overviewParts.join(";")}`,
@@ -960,17 +957,12 @@ class NodaliaEntityCard extends HTMLElement {
       return;
     }
 
-    const features = entitySupportedFeatures(state);
     if (stateKey === "locked") {
       this._invokeEntityService("lock", "unlock", entityId);
       return;
     }
 
-    if (features & LOCK_LOCK) {
-      this._invokeEntityService("lock", "lock", entityId);
-    } else {
-      this._invokeEntityService("lock", "lock", entityId);
-    }
+    this._invokeEntityService("lock", "lock", entityId);
   }
 
   _isBinaryOnOff(state: HassEntity|null) {
@@ -1056,7 +1048,7 @@ class NodaliaEntityCard extends HTMLElement {
         return String(value.name);
       }
 
-      const keys = Object.keys(value).sort();
+      const keys = Object.keys(value).sort((left, right) => left.localeCompare(right, "en"));
       return keys.map(key => `${key}:${String(value[key] ?? "")}`).join(", ");
     }
 
@@ -3226,7 +3218,7 @@ class NodaliaEntityCard extends HTMLElement {
           width: ${iconSize};
         }
 
-        .entity-card__icon ha-icon {
+        .entity-card__icon > ha-icon {
           --mdc-icon-size: calc(${iconSize} * 0.46);
           color: ${iconGlyphColor};
           display: inline-flex;
@@ -3845,7 +3837,7 @@ class NodaliaEntityCard extends HTMLElement {
           animation: entity-card-bubble-bounce var(--entity-card-button-bounce-duration) cubic-bezier(0.18, 0.9, 0.22, 1.18) both;
         }
 
-        .entity-card__icon ha-icon {
+        .entity-card__icon > ha-icon {
           --mdc-icon-size: calc(${effectiveIconSize} * 0.46);
           color: ${entityBubbleIconGlyphColor};
           display: inline-flex;
@@ -3867,6 +3859,7 @@ class NodaliaEntityCard extends HTMLElement {
         }
 
         .entity-card__unavailable-badge {
+          overflow: hidden;
           align-items: center;
           background: #ff9b4a;
           border: 2px solid ${styles.card.background};

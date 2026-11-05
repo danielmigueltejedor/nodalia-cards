@@ -5,7 +5,7 @@ const isUnsafeConfigPathKey = (key: string) => key === "__proto__" || key === "c
 export function setByPath(target: unknown, path: unknown, value: unknown) {
   if (!isObject(target) || typeof path !== "string") return;
   const parts = path.split(".");
-  if (parts.some(isUnsafeConfigPathKey)) {
+  if (parts.some((part) => isUnsafeConfigPathKey(part))) {
     return;
   }
   let cursor = target;
@@ -44,7 +44,7 @@ export function setByPath(target: unknown, path: unknown, value: unknown) {
 export function deleteByPath(target: unknown, path: unknown) {
   if (!isObject(target) || typeof path !== "string") return;
   const parts = path.split(".");
-  if (parts.some(isUnsafeConfigPathKey)) {
+  if (parts.some((part) => isUnsafeConfigPathKey(part))) {
     return;
   }
   let cursor = target;

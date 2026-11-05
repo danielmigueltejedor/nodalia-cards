@@ -13193,7 +13193,7 @@
       return template.replace(/\{([a-zA-Z0-9_]+)\}/g, (_match, key) => String(values[key] ?? ""));
     }
     function normalizeHumidifierModeKey(value) {
-      return String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+      return String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+/, "").replace(/_+$/, "");
     }
     function translateWeatherCondition(hass, configLang, value) {
       const lang = resolveLanguage(hass, configLang);
@@ -13401,7 +13401,7 @@
       return String(rawValue ?? "").trim();
     }
     function meteoalarmApiKey(value) {
-      return String(value ?? "").trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+      return String(value ?? "").trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+/, "").replace(/_+$/, "");
     }
     const METEOALARM_CANONICAL_BY_API_KEY = {
       moderate: "moderate",

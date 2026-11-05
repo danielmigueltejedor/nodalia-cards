@@ -281,7 +281,7 @@ export function createRuntimeI18n() {
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "_")
-      .replace(/^_+|_+$/g, "");
+      .replace(/^_+/, "").replace(/_+$/, "");
   }
 
   function translateWeatherCondition(hass:unknown, configLang:string, value:unknown) {
@@ -526,7 +526,7 @@ export function createRuntimeI18n() {
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "_")
-      .replace(/^_+|_+$/g, "");
+      .replace(/^_+/, "").replace(/_+$/, "");
   }
 
   /**

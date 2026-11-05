@@ -582,7 +582,7 @@
   "ed.media_player.layout_auto": "Αυτόματο",
   "ed.media_player.layout_chip": "Οριζόντια / μακριά",
   "ed.media_player.layout_compact": "Συμπαγής",
-  "ed.media_player.layout_dashboard_hint": "Ιδανικό όταν είναι καρφιτσωμένο στο επάνω ή στο κάτω μέρος του ταμπλό.",
+  "ed.media_player.layout_dashboard_hint": "Ιδανικό όταν είναι καρφιτσωμένο στο επάνω ή στο κάτω μέρος του ταμπλό. Η οριζόντια διάταξη χρησιμοποιείται μόνο όταν η κάρτα καταλαμβάνει 7 ή περισσότερες στήλες.",
   "ed.media_player.layout_max_width": "Μέγιστο πλάτος",
   "ed.media_player.layout_offset": "Οφσετ",
   "ed.media_player.layout_position": "Θέση",

@@ -179,7 +179,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     const nextValue = editorControlValue(event, control);
     const nextConfig = deepClone(this._config);
 
-    if (nextValue === "" || nextValue === null || nextValue === undefined) {
+    if (nextValue === "" || nextValue == null) {
       deleteByPath(nextConfig, control.dataset.field);
     } else {
       setByPath(nextConfig, control.dataset.field, nextValue);
@@ -250,7 +250,7 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     target.setCustomValidity("");
     target.removeAttribute("aria-invalid");
     this._draftValues.delete(field);
-    if (nextValue === "" || nextValue === null || nextValue === undefined) {
+    if (nextValue === "" || nextValue == null) {
       deleteByPath(nextConfig, field);
     } else {
       setByPath(nextConfig, field, nextValue);

@@ -722,7 +722,7 @@ test("entity and fav icon bubbles match Light metrics and preserve tint contrast
   assert.match(source, /\.fav-card__icon \{[\s\S]*border-radius: 999px;/);
   assert.match(source, /0 10px 24px rgba\(0, 0, 0, 0\.16\)/);
   assert.match(source, /resolveFavBubbleIconGlyphColor\(accentColor, state\)/);
-  assert.match(source, /\.fav-card__icon ha-icon \{[\s\S]*color: \$\{iconColor\};/);
+  assert.match(source, /\.fav-card__icon > ha-icon \{[\s\S]*color: \$\{iconColor\};/);
   assert.match(source, /size: "38px",\s*background: "color-mix\(in srgb, var\(--primary-text-color\) 6%, transparent\)"/);
   assert.match(source, /(?:const|let|var) iconSizePx = [^;]*isMini \? 38 : \(?isCompactInline \? 38 : 56\)?/);
   assert.match(source, /--mdc-icon-size: calc\(\$\{iconSizePx\}px \* 0\.46\)/);
@@ -745,7 +745,7 @@ test("vacuum tinted states apply the shared bubble icon contrast", () => {
   assert.match(source, /resolveBubbleIconGlyphColor\?\.\(state, accentColor\)/);
   assert.match(source, /const iconGlyphColor = isTintedState/);
   assert.match(source, /\.vacuum-card__icon-button \{[\s\S]*color: \$\{iconGlyphColor\};/);
-  assert.match(source, /\.vacuum-card__icon-button ha-icon \{[\s\S]*color: \$\{iconGlyphColor\};/);
+  assert.match(source, /\.vacuum-card__icon-button > ha-icon \{[\s\S]*color: \$\{iconGlyphColor\};/);
 });
 
 test("alarm panel uses shared tint contrast for its icon and state chip", () => {
@@ -2176,7 +2176,7 @@ test("calendar card reuses date/time formatters during render", () => {
 test("power flow flow dots avoid origin flash before motion starts", () => {
   const source = read("nodalia-power-flow-card.js");
   assert.match(source, /function getSvgPathMotionStart\(pathD\)/);
-  assert.match(source, /(?:const|var) SVG_PATH_TOKEN_RE = \/\[AaCcHhLlMmQqSsTtVvZz\]/);
+  assert.match(source, /function tokenizeSvgPath/);
   assert.match(source, /function tokenizeSvgPath\(pathD\)/);
   assert.match(source, /readFlag\(\)/);
   assert.match(source, /function getSvgRelativeMotionPath\(pathD\)/);

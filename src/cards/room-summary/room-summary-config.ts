@@ -78,7 +78,7 @@ function buildRoomConfig(rawConfig: unknown = {}) {
     }
   }
   const mediaSource: Record<string, unknown> = isObject(config.media_config) ? deepClone(config.media_config) : {};
-  const players = Array.isArray(mediaSource.players) ? mediaSource.players.filter(isObject).map(player => deepClone(player)) : [];
+  const players = Array.isArray(mediaSource.players) ? mediaSource.players.filter((item): item is Record<string, unknown> => isObject(item)).map(player => deepClone(player)) : [];
   const mediaConfig = { ...mediaSource, players };
   const nativeMediaIds = players.map(player => String(player.entity || "").trim()).filter(Boolean);
   const mediaPlayer = entityScalar(config.media_player, nativeMediaIds[0]);
@@ -96,7 +96,7 @@ function buildRoomConfig(rawConfig: unknown = {}) {
   const rawEmbedOptions = isObject(config.embed_options) ? config.embed_options : {};
   const embedOptions: Record<string, (Record<string, unknown> & { entity: string; name: string; icon: string })[]> = {};
   CUSTOMIZABLE_EMBED_LISTS.forEach(listKey => {
-    const options = Array.isArray(rawEmbedOptions[listKey]) ? rawEmbedOptions[listKey].filter(isObject) : [];
+    const options = Array.isArray(rawEmbedOptions[listKey]) ? rawEmbedOptions[listKey].filter((item): item is Record<string, unknown> => isObject(item)) : [];
     embedOptions[listKey] = lists[listKey].map((entity, index) => {
       const byEntity = options.find(option => String(option.entity || "").trim() === entity);
       const source = byEntity || options[index] || {};

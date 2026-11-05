@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.4";
+  var CARD_VERSION = "3.0.5-alpha.2";
 
   // src/cards/media-player/media-player-constants.ts
   var CARD_TAG = "nodalia-media-player";
@@ -212,6 +212,14 @@
   var SQUARE_MIN_WIDTH = 300;
   var SQUARE_MAX_WIDTH = 480;
   var WIDE_GRID_COLUMNS = 6;
+  var CHIP_MIN_COLUMNS = 7;
+  function isChipSpanAllowed(gridColumns) {
+    const cols = Number(gridColumns);
+    if (!Number.isFinite(cols) || cols <= 0) {
+      return true;
+    }
+    return cols >= CHIP_MIN_COLUMNS;
+  }
   function normalizePresentationMode(value) {
     const key = String(value || "").trim().toLowerCase();
     if (key === "horizontal" || key === "long" || key === "chip") {
@@ -272,6 +280,9 @@
   }
   function resolvePresentationMode(mode, size = {}, current = "", options = {}) {
     const requested = normalizePresentationMode(mode);
+    if (requested === "chip" && !isChipSpanAllowed(options.gridColumns)) {
+      return "compact";
+    }
     if (requested !== "auto") {
       return requested;
     }
@@ -289,7 +300,7 @@
     let next = "standard";
     if (isConfiguredHalfWidthSpan(gridColumns)) {
       next = "compact";
-    } else if (width >= CHIP_MIN_WIDTH && height > 0 && height <= 132 && ratio >= 2.05) {
+    } else if (isChipSpanAllowed(gridColumns) && width >= CHIP_MIN_WIDTH && height > 0 && height <= 132 && ratio >= 2.05) {
       next = "chip";
     } else if (canAutoSquare(preferSquareTiles, width, gridColumns)) {
       next = "square";
@@ -309,7 +320,7 @@
       case "artwork":
         return { rows: "auto", columns: 6, min_rows: 2, min_columns: 3 };
       case "chip":
-        return { rows: "auto", columns: "full", min_rows: 1, min_columns: 6 };
+        return { rows: "auto", columns: "full", min_rows: 1, min_columns: CHIP_MIN_COLUMNS };
       case "compact":
         return { rows: "auto", columns: 6, min_rows: 2, min_columns: 2 };
       default:
@@ -554,7 +565,7 @@
         }
       ];
     }
-    const players = (Array.isArray(config.players) ? config.players.filter(isObject) : []).map((player) => {
+    const players = (Array.isArray(config.players) ? config.players.filter((item) => isObject(item)) : []).map((player) => {
       const actions = {
         power_action_off: normalizePowerActionConfig(player.power_action_off),
         power_action_on: normalizePowerActionConfig(player.power_action_on),
@@ -718,7 +729,7 @@
       };
       image.onload = () => {
         const decode = image.decode?.();
-        if (decode !== void 0 && typeof decode.then === "function") {
+        if (typeof decode?.then === "function") {
           decode.then(() => settle(true)).catch(() => settle(true));
           return;
         }
@@ -1015,6 +1026,26 @@
 
   // src/shared/editor-color.ts
   var clamp3 = (value, max) => Math.max(0, Math.min(max, value));
+  function cssFunctionBody(raw, name) {
+    const head = `${name}(`;
+    if (!raw.toLowerCase().startsWith(head) || !raw.endsWith(")")) return null;
+    return raw.slice(head.length, -1);
+  }
+  function srgbFunctionBody(raw) {
+    const body = cssFunctionBody(raw, "color");
+    if (body === null) return null;
+    const inner = body.trim();
+    if (!inner.toLowerCase().startsWith("srgb")) return null;
+    const rest = inner.slice(4);
+    if (rest.length === 0 || !/\s/.test(rest.charAt(0))) return null;
+    return rest.trim();
+  }
+  function splitCssAlpha(body) {
+    const slash = body.indexOf("/");
+    if (slash < 0) return [body.trim()];
+    if (body.indexOf("/", slash + 1) >= 0) return [body, "", ""];
+    return [body.slice(0, slash).trim(), body.slice(slash + 1).trim()];
+  }
   var component = (value, scale) => {
     if (!value || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?%?$/i.test(value)) return null;
     const numeric = Number(value.replace(/%$/, ""));
@@ -1025,13 +1056,13 @@
     const hexMatch = raw.match(/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
     if (hexMatch?.[1]) {
       const hex = hexMatch[1].length < 5 ? hexMatch[1].split("").map((channel) => channel + channel).join("") : hexMatch[1];
-      return { red: parseInt(hex.slice(0, 2), 16), green: parseInt(hex.slice(2, 4), 16), blue: parseInt(hex.slice(4, 6), 16), alpha: hex.length === 8 ? parseInt(hex.slice(6, 8), 16) / 255 : 1 };
+      return { red: Number.parseInt(hex.slice(0, 2), 16), green: Number.parseInt(hex.slice(2, 4), 16), blue: Number.parseInt(hex.slice(4, 6), 16), alpha: hex.length === 8 ? Number.parseInt(hex.slice(6, 8), 16) / 255 : 1 };
     }
-    const rgb = raw.match(/^rgba?\(([^)]+)\)$/i);
-    const srgb = raw.match(/^color\(\s*srgb\s+([^)]+)\)$/i);
-    const body = rgb?.[1] ?? srgb?.[1];
+    const rgb = cssFunctionBody(raw, "rgb") ?? cssFunctionBody(raw, "rgba");
+    const srgb = srgbFunctionBody(raw);
+    const body = rgb ?? srgb;
     if (!body) return null;
-    const sections = body.trim().split(/\s*\/\s*/);
+    const sections = splitCssAlpha(body);
     if (sections.length > 2) return null;
     const parts = sections[0]?.split(/[\s,]+/) ?? [];
     if (sections.length === 2 && parts.length !== 3 || parts.length < 3 || parts.length > 4) return null;
@@ -1052,7 +1083,7 @@
     const numeric = Number(alpha);
     const safeAlpha = clamp3(Number.isFinite(numeric) ? numeric : 1, 1);
     if (safeAlpha >= 0.999) return `#${normalized}`;
-    const red = parseInt(normalized.slice(0, 2), 16), green = parseInt(normalized.slice(2, 4), 16), blue = parseInt(normalized.slice(4, 6), 16);
+    const red = Number.parseInt(normalized.slice(0, 2), 16), green = Number.parseInt(normalized.slice(2, 4), 16), blue = Number.parseInt(normalized.slice(4, 6), 16);
     return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
   }
   function resolveEditorColorValue(value) {
@@ -1407,7 +1438,7 @@
   var media_player_compact_default = ".media-player-card--chip{min-height:72px;padding:10px 12px 14px}.media-player-card--compact{display:flex;flex-direction:column;height:auto;justify-content:space-between;min-height:0;padding:12px;position:relative}.media-player-card--compact.media-player-card--idle{align-items:stretch;height:auto;justify-content:center;min-height:68px;padding:14px 12px}.media-player-card--compact .media-player__volume-button:not(.media-player__volume-button--browse),.media-player-card--compact .media-player__chips-wrap,.media-player-card--compact .media-player__subtitle,.media-player-card--compact .media-player__info-rail,.media-player-card--compact .media-player__chip--top,.media-player-card--compact .media-player__chip--device{display:none}.media-player-card--compact .media-player__transport-cluster{display:flex;flex-wrap:nowrap;gap:6px;grid-template-columns:none;justify-content:center;max-width:100%;min-width:0;overflow:visible;padding-inline:2px;width:100%}.media-player-card--compact .media-player__control{flex:0 0 auto;height:32px;min-width:32px;width:32px}.media-player-card--compact .media-player__control--primary{height:36px;min-width:36px;width:36px}.media-player-card--compact .media-player__volume-button--browse{height:28px;min-width:28px;position:absolute;right:8px;top:8px;width:28px;z-index:4}.media-player-card--compact .media-player__hero-copy,.media-player-card--compact .media-player__title{padding-inline-end:36px}.media-player-card--compact .media-player__title{font-size:13px}";
 
   // src/cards/media-player/media-player-presentations.css
-  var media_player_presentations_default = ".media-player-card{container-type:inline-size}.media-player-card--square,.media-player-card--artwork{align-self:start;aspect-ratio:1 / 1;display:grid;grid-template-rows:minmax(0,1fr) auto;height:auto;max-height:100%;max-width:100%;min-height:0;padding:14px 14px 12px;width:100%}.media-player-card--square.has-album-background::before,.media-player-card--artwork.has-album-background::before{background:transparent}.media-player-card--square.has-album-background::after,.media-player-card--artwork.has-album-background::after{background:linear-gradient(180deg,rgba(8,8,10,0.46) 0%,rgba(8,8,10,0.1) 24%,rgba(8,8,10,0.08) 48%,rgba(8,8,10,0.52) 74%,rgba(8,8,10,0.78) 100%)}.media-player-card--square .media-player__album-bg,.media-player-card--square .media-player__art-layer,.media-player-card--artwork .media-player__album-bg,.media-player-card--artwork .media-player__art-layer{filter:none;inset:0;opacity:1;transform:none}.media-player-card--square .media-player__art-layer.is-idle-animated,.media-player-card--artwork .media-player__art-layer.is-idle-animated{animation:none}.media-player-card--square.has-album-background .media-player__title,.media-player-card--square.has-album-background .media-player__subtitle,.media-player-card--artwork.has-album-background .media-player__title,.media-player-card--artwork.has-album-background .media-player__subtitle{color:#fff;text-shadow:0 0 1px rgba(0,0,0,0.95),0 1px 2px rgba(0,0,0,0.85),0 2px 6px rgba(0,0,0,0.65),0 8px 24px rgba(0,0,0,0.5)}.media-player-card--square.has-album-background .media-player__subtitle,.media-player-card--artwork.has-album-background .media-player__subtitle{color:rgba(255,255,255,0.94);font-weight:600}.media-player-card--square .media-player__content,.media-player-card--artwork .media-player__content{align-content:stretch;display:grid;gap:10px;grid-row:1;grid-template-rows:auto minmax(0,1fr) auto;height:100%;min-height:0;padding-top:2px;padding-bottom:0}.media-player-card--square .media-player__progress,.media-player-card--artwork .media-player__progress{grid-row:2;inset:auto;margin-top:10px;position:static;width:100%}.media-player-card--square .media-player__hero,.media-player-card--artwork .media-player__hero{grid-row:1;grid-template-columns:minmax(0,1fr)}.media-player-card--square.has-album-background .media-player__artwork,.media-player-card--artwork.has-album-background .media-player__artwork{display:none}.media-player-card--square:not(.has-album-background) .media-player__hero,.media-player-card--artwork:not(.has-album-background) .media-player__hero{grid-template-columns:48px minmax(0,1fr)}.media-player-card--square:not(.has-album-background) .media-player__artwork,.media-player-card--artwork:not(.has-album-background) .media-player__artwork{height:48px;width:48px}.media-player-card--square .media-player__hero-copy,.media-player-card--artwork .media-player__hero-copy{padding-right:44px}.media-player-card--square .media-player__hero-top,.media-player-card--artwork .media-player__hero-top{gap:8px;grid-template-columns:minmax(0,1fr)}.media-player-card--square .media-player__info-rail,.media-player-card--artwork .media-player__info-rail{justify-self:start;max-width:100%}.media-player-card--square .media-player__title{font-size:16px}.media-player-card--square .media-player__subtitle,.media-player-card--artwork .media-player__subtitle{font-size:13px}.media-player-card--square .media-player__center-stack,.media-player-card--artwork .media-player__center-stack{align-content:end;align-self:end;grid-row:3;min-width:0;width:100%}.media-player-card--square .media-player__transport-row,.media-player-card--artwork .media-player__transport-row{align-content:end;min-width:0;width:100%}@container (max-width: 260px){.media-player__idle-main:has(.media-player__volume-button--browse){gap:3px;grid-template-columns:minmax(0,1fr)}.media-player__idle-actions:has(.media-player__volume-button--browse) .media-player__control{height:32px;min-width:32px;width:32px}.media-player__info-rail{display:none}.media-player__title{font-size:14px}.media-player__subtitle{font-size:12px}.media-player-card--square .media-player__content,.media-player-card--artwork .media-player__content{gap:6px}}@container (max-width: 200px){.media-player__subtitle,.media-player__volume-button:not(.media-player__control):not(.media-player__volume-button--browse),.media-player-card--square .media-player__volume-button:not(.media-player__volume-button--browse),.media-player-card--artwork .media-player__volume-button:not(.media-player__volume-button--browse){display:none}.media-player__title{font-size:12px}}.media-player-card--square .media-player__transport-cluster,.media-player-card--artwork .media-player__transport-cluster{display:flex;flex-wrap:nowrap;gap:10px;grid-template-columns:none;justify-content:center;width:100%}.media-player-card--square .media-player__control,.media-player-card--square .media-player__volume-button:not(.media-player__volume-button--browse),.media-player-card--artwork .media-player__control,.media-player-card--artwork .media-player__volume-button:not(.media-player__volume-button--browse){aspect-ratio:auto;flex:0 0 auto;height:36px;justify-self:center;max-width:none;min-width:36px;width:36px}.media-player-card--square .media-player__control--primary,.media-player-card--artwork .media-player__control--primary{height:40px;min-width:40px;width:40px}.media-player-card--square .media-player__control ha-icon,.media-player-card--square .media-player__volume-button ha-icon,.media-player-card--artwork .media-player__control ha-icon,.media-player-card--artwork .media-player__volume-button ha-icon{--mdc-icon-size: 16px;height:16px;width:16px}.media-player-card--square .media-player__volume-button--browse,.media-player-card--artwork .media-player__volume-button--browse{height:32px;min-width:32px;position:absolute;right:10px;top:10px;width:32px;z-index:4}.media-player-card--square .media-player__info-rail,.media-player-card--artwork .media-player__info-rail,.media-player-card--square .media-player__chip--top,.media-player-card--artwork .media-player__chip--top,.media-player-card--square .media-player__chip--device,.media-player-card--artwork .media-player__chip--device{display:none}.media-player-card--chip{display:grid;padding:10px 12px 16px}.media-player-card--chip .media-player__content{align-items:center;gap:8px;grid-template-columns:minmax(0,1fr) auto;min-width:0;padding-bottom:10px}.media-player-card--chip .media-player__hero{align-items:center;grid-template-columns:44px minmax(0,1fr);min-width:0}.media-player-card--chip .media-player__artwork{height:44px;width:44px}.media-player-card--chip .media-player__center-stack,.media-player-card--chip .media-player__transport-row,.media-player-card--chip .media-player__transport-shell{justify-self:end;max-width:100%;min-width:0;width:auto}.media-player-card--chip .media-player__transport-cluster{flex-wrap:nowrap;gap:6px;justify-content:flex-end;width:auto}.media-player-card--chip .media-player__control,.media-player-card--chip .media-player__volume-button{height:28px;min-width:28px;width:28px}.media-player-card--chip .media-player__control ha-icon,.media-player-card--chip .media-player__volume-button ha-icon{--mdc-icon-size: 13px;height:13px;width:13px}.media-player-card--chip .media-player__info-rail,.media-player-card--chip .media-player__volume-button--browse{display:none}.media-player-card--compact .media-player__content{display:flex;flex:1 1 auto;flex-direction:column;gap:8px;justify-content:space-between;min-height:0;padding-bottom:0}.media-player-card--compact.media-player-card--idle .media-player__content{align-items:center;flex:1 1 auto;gap:0;justify-content:center;min-height:0;width:100%}.media-player-card--compact .media-player__transport-cluster{gap:6px;margin-top:auto}.media-player-card--compact .media-player__transport-row{margin-top:auto;max-width:100%;min-width:0;overflow:visible}.media-player-card--chip .media-player__footer,.media-player-card--square .media-player__chips-wrap,.media-player-card--artwork .media-player__chips-wrap,.media-player-card--compact .media-player__chips-wrap{display:none}.media-player-card--compact .media-player__hero{grid-template-columns:48px minmax(0,1fr)}.media-player-card--compact .media-player__artwork{height:48px;width:48px}.media-player-card--idle .media-player__volume-button--browse{position:static}@keyframes nodalia-media-kenburns{0%{transform:scale(1.04) translate3d(-1%,0,0)}100%{transform:scale(1.12) translate3d(1.2%,-1.1%,0)}}@media(prefers-reduced-motion:reduce){.media-player__art-layer.is-idle-animated{animation:none!important}}";
+  var media_player_presentations_default = ".media-player-card{container-type:inline-size}.media-player-card--square,.media-player-card--artwork{align-self:start;aspect-ratio:1 / 1;display:grid;grid-template-rows:minmax(0,1fr) auto;height:auto;max-height:100%;max-width:100%;min-height:0;padding:14px 14px 12px;width:100%}.media-player-card--square.has-album-background::before,.media-player-card--artwork.has-album-background::before{background:transparent}.media-player-card--square.has-album-background::after,.media-player-card--artwork.has-album-background::after{background:linear-gradient(180deg,rgba(8,8,10,0.46) 0%,rgba(8,8,10,0.1) 24%,rgba(8,8,10,0.08) 48%,rgba(8,8,10,0.52) 74%,rgba(8,8,10,0.78) 100%)}.media-player-card--square .media-player__album-bg,.media-player-card--square .media-player__art-layer,.media-player-card--artwork .media-player__album-bg,.media-player-card--artwork .media-player__art-layer{filter:none;inset:0;opacity:1;transform:none}.media-player-card--square .media-player__art-layer.is-idle-animated,.media-player-card--artwork .media-player__art-layer.is-idle-animated{animation:none}.media-player-card--square.has-album-background .media-player__title,.media-player-card--square.has-album-background .media-player__subtitle,.media-player-card--artwork.has-album-background .media-player__title,.media-player-card--artwork.has-album-background .media-player__subtitle{color:#fff;text-shadow:0 0 1px rgba(0,0,0,0.95),0 1px 2px rgba(0,0,0,0.85),0 2px 6px rgba(0,0,0,0.65),0 8px 24px rgba(0,0,0,0.5)}.media-player-card--square.has-album-background .media-player__subtitle,.media-player-card--artwork.has-album-background .media-player__subtitle{color:rgba(255,255,255,0.94);font-weight:600}.media-player-card--square .media-player__content,.media-player-card--artwork .media-player__content{align-content:stretch;display:grid;gap:10px;grid-row:1;grid-template-rows:auto minmax(0,1fr) auto;height:100%;min-height:0;padding-top:2px;padding-bottom:0}.media-player-card--square .media-player__progress,.media-player-card--artwork .media-player__progress{grid-row:2;inset:auto;margin-top:10px;position:static;width:100%}.media-player-card--square .media-player__hero,.media-player-card--artwork .media-player__hero{grid-row:1;grid-template-columns:minmax(0,1fr)}.media-player-card--square.has-album-background .media-player__artwork,.media-player-card--artwork.has-album-background .media-player__artwork{display:none}.media-player-card--square:not(.has-album-background) .media-player__hero,.media-player-card--artwork:not(.has-album-background) .media-player__hero{grid-template-columns:48px minmax(0,1fr)}.media-player-card--square:not(.has-album-background) .media-player__artwork,.media-player-card--artwork:not(.has-album-background) .media-player__artwork{height:48px;width:48px}.media-player-card--square .media-player__hero-copy,.media-player-card--artwork .media-player__hero-copy{padding-right:44px}.media-player-card--square .media-player__hero-top,.media-player-card--artwork .media-player__hero-top{gap:8px;grid-template-columns:minmax(0,1fr)}.media-player-card--square .media-player__info-rail,.media-player-card--artwork .media-player__info-rail{justify-self:start;max-width:100%}.media-player-card--square .media-player__title{font-size:16px}.media-player-card--square .media-player__subtitle,.media-player-card--artwork .media-player__subtitle{font-size:13px}.media-player-card--square .media-player__center-stack,.media-player-card--artwork .media-player__center-stack{align-content:end;align-self:end;grid-row:3;min-width:0;width:100%}.media-player-card--square .media-player__transport-row,.media-player-card--artwork .media-player__transport-row{align-content:end;min-width:0;width:100%}@container (max-width: 260px){.media-player__idle-main:has(.media-player__volume-button--browse){gap:3px;grid-template-columns:minmax(0,1fr)}.media-player__idle-actions:has(.media-player__volume-button--browse) .media-player__control{height:32px;min-width:32px;width:32px}.media-player__info-rail{display:none}.media-player__title{font-size:14px}.media-player__subtitle{font-size:12px}.media-player-card--square .media-player__content,.media-player-card--artwork .media-player__content{gap:6px}}@container (max-width: 200px){.media-player__subtitle,.media-player__volume-button:not(.media-player__control):not(.media-player__volume-button--browse),.media-player-card--square .media-player__volume-button:not(.media-player__volume-button--browse),.media-player-card--artwork .media-player__volume-button:not(.media-player__volume-button--browse){display:none}.media-player__title{font-size:12px}}.media-player-card--square .media-player__transport-cluster,.media-player-card--artwork .media-player__transport-cluster{display:flex;flex-wrap:nowrap;gap:10px;grid-template-columns:none;justify-content:center;width:100%}.media-player-card--square .media-player__control,.media-player-card--square .media-player__volume-button:not(.media-player__volume-button--browse),.media-player-card--artwork .media-player__control,.media-player-card--artwork .media-player__volume-button:not(.media-player__volume-button--browse){aspect-ratio:auto;flex:0 0 auto;height:36px;justify-self:center;max-width:none;min-width:36px;width:36px}.media-player-card--square .media-player__control--primary,.media-player-card--artwork .media-player__control--primary{height:40px;min-width:40px;width:40px}.media-player-card--square .media-player__control ha-icon,.media-player-card--square .media-player__volume-button ha-icon,.media-player-card--artwork .media-player__control ha-icon,.media-player-card--artwork .media-player__volume-button ha-icon{--mdc-icon-size: 16px;height:16px;width:16px}.media-player-card--square .media-player__volume-button--browse,.media-player-card--artwork .media-player__volume-button--browse{height:32px;min-width:32px;position:absolute;right:10px;top:10px;width:32px;z-index:4}.media-player-card--square .media-player__info-rail,.media-player-card--artwork .media-player__info-rail,.media-player-card--square .media-player__chip--top,.media-player-card--artwork .media-player__chip--top,.media-player-card--square .media-player__chip--device,.media-player-card--artwork .media-player__chip--device{display:none}.media-player-card--chip{display:block;padding:10px 12px 16px}.media-player-card--chip .media-player__content{align-items:center;display:flex;flex-flow:row nowrap;gap:12px;min-width:0;padding-bottom:10px}.media-player-card--chip .media-player__hero{align-items:center;flex:1 1 auto;grid-template-columns:44px minmax(0,1fr);min-width:44px}.media-player-card--chip .media-player__hero-copy{min-width:0}.media-player-card--chip .media-player__artwork{flex:0 0 44px;height:44px;width:44px;z-index:2}.media-player-card--chip .media-player__center-stack,.media-player-card--chip .media-player__transport-row,.media-player-card--chip .media-player__transport-shell{flex:0 0 auto;justify-self:auto;max-width:none;min-width:max-content;width:auto}.media-player-card--chip .media-player__transport-cluster{flex-wrap:nowrap;gap:6px;justify-content:flex-end;width:auto}.media-player-card--chip .media-player__control,.media-player-card--chip .media-player__volume-button{height:28px;min-width:28px;width:28px}.media-player-card--chip .media-player__control ha-icon,.media-player-card--chip .media-player__volume-button ha-icon{--mdc-icon-size: 13px;height:13px;width:13px}.media-player-card--chip .media-player__info-rail,.media-player-card--chip .media-player__volume-button--browse{display:none}.media-player-card--compact .media-player__content{display:flex;flex:1 1 auto;flex-direction:column;gap:8px;justify-content:space-between;min-height:0;padding-bottom:0}.media-player-card--compact.media-player-card--idle .media-player__content{align-items:center;flex:1 1 auto;gap:0;justify-content:center;min-height:0;width:100%}.media-player-card--compact .media-player__transport-cluster{gap:6px;margin-top:auto}.media-player-card--compact .media-player__transport-row{margin-top:auto;max-width:100%;min-width:0;overflow:visible}.media-player-card--chip .media-player__footer,.media-player-card--square .media-player__chips-wrap,.media-player-card--artwork .media-player__chips-wrap,.media-player-card--compact .media-player__chips-wrap{display:none}.media-player-card--compact .media-player__hero{grid-template-columns:48px minmax(0,1fr)}.media-player-card--compact .media-player__artwork{height:48px;width:48px}.media-player-card--idle .media-player__volume-button--browse{position:static}@keyframes nodalia-media-kenburns{0%{transform:scale(1.04) translate3d(-1%,0,0)}100%{transform:scale(1.12) translate3d(1.2%,-1.1%,0)}}@media(prefers-reduced-motion:reduce){.media-player__art-layer.is-idle-animated{animation:none!important}}";
 
   // src/cards/media-player/media-player-browser.css
   var media_player_browser_default = '.media-browser-panel::before{background:color-mix(in srgb,var(--ha-card-background, var(--card-background-color, #fff)) 96%,transparent);border-radius:inherit;content:"";inset:0;pointer-events:none;position:absolute;z-index:0}.media-browser-panel>*{position:relative;z-index:1}.media-browser-panel--entering{animation:media-player-browser-panel-in var(--media-player-browser-duration) cubic-bezier(0.22,0.84,0.26,1) both}.media-browser__header{align-items:center;display:grid;gap:12px;grid-template-columns:40px minmax(0,1fr) 40px}.media-browser__header-copy{min-width:0;text-align:center}.media-browser__eyebrow{color:var(--secondary-text-color);font-size:11px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase}.media-browser__title{color:var(--primary-text-color);font-size:16px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.media-browser__header-button,.media-browser__item-play{align-items:center;appearance:none;background:color-mix(in srgb,var(--primary-text-color) 5%,transparent);border:1px solid color-mix(in srgb,var(--primary-text-color) 6%,transparent);border-radius:999px;color:var(--primary-text-color);cursor:pointer;display:inline-flex;height:40px;justify-content:center;padding:0;width:40px}.media-browser__header-button ha-icon,.media-browser__item-play ha-icon{font-size:20px}.media-browser__list{display:grid;gap:10px;min-height:0;overflow:auto;padding-right:2px}.media-browser__item{align-items:center;display:grid;gap:8px;grid-template-columns:minmax(0,1fr) auto}.media-browser__item-main{align-items:center;appearance:none;background:color-mix(in srgb,var(--primary-text-color) 3%,transparent);border:1px solid color-mix(in srgb,var(--primary-text-color) 5%,transparent);border-radius:20px;color:var(--primary-text-color);cursor:pointer;display:grid;gap:12px;grid-template-columns:46px minmax(0,1fr) auto;min-height:58px;padding:8px 10px;text-align:left;width:100%}.media-browser__item-main:disabled{cursor:default;opacity:0.72}.media-browser__item-artwork{align-items:center;background:color-mix(in srgb,var(--primary-text-color) 5%,transparent);border-radius:14px;display:inline-flex;height:46px;justify-content:center;overflow:hidden;width:46px}.media-browser__item-artwork img,.media-browser__item-artwork ha-icon{height:100%;object-fit:cover;width:100%}.media-browser__item-artwork ha-icon{font-size:22px;padding:11px}.media-browser__item-copy{display:grid;gap:2px;min-width:0}.media-browser__item-title{color:var(--primary-text-color);font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.media-browser__item-chevron{color:var(--secondary-text-color);font-size:20px}.media-browser__empty{align-items:center;color:var(--secondary-text-color);display:flex;flex:1 1 auto;font-size:13px;justify-content:center;line-height:1.5;min-height:120px;padding:12px;text-align:center}@keyframes media-player-button-bounce{0%{transform:scale(1)}40%{transform:scale(1.08)}100%{transform:scale(1)}}@keyframes media-player-panel-in{0%{opacity:0;transform:translateY(-8px) scaleY(0.94)}100%{opacity:1;transform:translateY(0) scaleY(1)}}@keyframes media-player-rise-in{0%{transform:translateY(12px) scale(0.97)}100%{transform:translateY(0) scale(1)}}@keyframes media-player-browser-backdrop-in{0%{opacity:0}100%{opacity:1}}@keyframes media-player-browser-panel-in{0%{opacity:0;transform:translateY(14px) scale(0.98)}100%{opacity:1;transform:translateY(0) scale(1)}}';
@@ -1580,10 +1611,10 @@
           label: getStubFriendlyName(hass, entityId)
         };
         const variants = [
-          { label: "Media Player — Standard", mode: "standard" },
-          { label: "Media Player — Square", mode: "square" },
           { label: "Media Player — Compact", mode: "compact" },
+          { label: "Media Player — Square", mode: "square" },
           { label: "Media Player — Horizontal", mode: "chip" },
+          { label: "Media Player — Standard", mode: "standard" },
           { label: "Media Player — Artwork", mode: "artwork" }
         ];
         return variants.map((variant) => window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
@@ -1919,6 +1950,24 @@
         const numericColumns = Number(mediaRecord(this._config.grid_options).columns);
         return Number.isFinite(numericColumns) && numericColumns > 0 ? numericColumns : null;
       }
+      _getSectionColumnSpan() {
+        const configured = this._getConfiguredGridColumns();
+        if (configured) {
+          return configured;
+        }
+        let node = this.parentElement;
+        for (let depth = 0; depth < 5 && node; depth += 1) {
+          const match = /span\s+(\d+)/i.exec(String(node.style?.gridColumn || ""));
+          if (match) {
+            const span = Number(match[1]);
+            if (span > 0) {
+              return span;
+            }
+          }
+          node = node.parentElement;
+        }
+        return null;
+      }
       _getPresentationMode() {
         const context = this._getActivePlayerContext();
         const entityId = String(context?.player?.entity || "");
@@ -1941,7 +1990,7 @@
           this._resolvedLayoutMode,
           {
             preferSquareTiles,
-            gridColumns: this._getConfiguredGridColumns()
+            gridColumns: this._getSectionColumnSpan()
           }
         );
       }
@@ -3157,7 +3206,7 @@
           return;
         }
         const drag = this._activeSliderDrag;
-        if (!drag || drag.pointerId !== event.pointerId) {
+        if (!drag || !Object.is(drag.pointerId, event.pointerId)) {
           return;
         }
         event.preventDefault();
@@ -3169,7 +3218,7 @@
           return;
         }
         const drag = this._activeSliderDrag;
-        if (!drag || drag.pointerId !== event.pointerId) {
+        if (!drag || !Object.is(drag.pointerId, event.pointerId)) {
           return;
         }
         this._commitSliderDrag(event.clientX, event, event.pointerId);
@@ -4692,7 +4741,7 @@
           width: 100%;
         }
 
-        .media-player__artwork ha-icon {
+        .media-player__artwork > ha-icon {
           --mdc-icon-size: calc(${playerStyles.artwork_size} * 0.46);
           align-items: center;
           color: var(--primary-text-color);
@@ -4713,9 +4762,12 @@
           border: 2px solid var(--ha-card-background, rgba(28, 28, 32, 1));
           border-radius: 999px;
           box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+          box-sizing: border-box;
           display: inline-flex;
           height: 18px;
           justify-content: center;
+          line-height: 0;
+          overflow: hidden;
           position: absolute;
           right: 0;
           top: 0;
@@ -4724,11 +4776,19 @@
           z-index: 3;
         }
 
-        .media-player__unavailable-badge ha-icon {
+        .media-player__artwork .media-player__unavailable-badge ha-icon {
           --mdc-icon-size: 11px;
-          color:#fff;
+          align-items: center;
+          color: #fff;
+          display: flex;
+          flex: 0 0 11px;
           height: 11px;
+          justify-content: center;
           left: auto;
+          line-height: 0;
+          margin: 0;
+          margin-top: -1px;
+          min-width: 0;
           position: static;
           top: auto;
           transform: none;
@@ -4792,7 +4852,7 @@
           width: ${tvArtworkSize};
         }
 
-        .media-player-card--tv .media-player__artwork ha-icon {
+        .media-player-card--tv .media-player__artwork > ha-icon {
           --mdc-icon-size: calc(${tvArtworkSize} * 0.46);
         }
 
@@ -4801,7 +4861,7 @@
           width: 38px;
         }
 
-        .media-player-card--tv.media-player-card--idle .media-player__artwork ha-icon {
+        .media-player-card--tv.media-player-card--idle .media-player__artwork > ha-icon {
           --mdc-icon-size: 18px;
         }
 
@@ -5351,8 +5411,8 @@
             width: 50px;
           }
 
-          .media-player-card--tv.media-player-card--idle .media-player__artwork ha-icon,
-          .media-player__artwork--idle ha-icon {
+          .media-player-card--tv.media-player-card--idle .media-player__artwork > ha-icon,
+          .media-player__artwork--idle > ha-icon {
             --mdc-icon-size: 23px;
             height: 23px;
             width: 23px;
@@ -6052,6 +6112,11 @@
       </label>
     `;
       }
+      _horizontalLayoutAllowed() {
+        const grid = isObject(this._config?.grid_options) ? this._config.grid_options : void 0;
+        const columns = Number(grid && "columns" in grid ? grid.columns : void 0);
+        return !(Number.isFinite(columns) && columns > 0 && columns < 7);
+      }
       _renderSelectField(label, field, value, options, valueType = "string") {
         const tLabel = this._editorLabel(label);
         return `
@@ -6062,7 +6127,7 @@
           const optionValue = option.value === void 0 ? "auto" : String(option.value);
           const isSelected = value === option.value || option.value === void 0 && value === void 0;
           return `
-                <option value="${escapeHtml(optionValue)}" ${isSelected ? "selected" : ""}>
+                <option value="${escapeHtml(optionValue)}" ${isSelected ? "selected" : ""} ${option.disabled ? "disabled" : ""}>
                   ${escapeHtml(this._editorLabel(option.label))}
                 </option>
               `;
@@ -6660,7 +6725,7 @@
             { value: "auto", label: "ed.media_player.layout_auto" },
             { value: "standard", label: "ed.media_player.layout_standard" },
             { value: "square", label: "ed.media_player.layout_square" },
-            { value: "chip", label: "ed.media_player.layout_chip" },
+            { value: "chip", label: "ed.media_player.layout_chip", disabled: !this._horizontalLayoutAllowed() },
             { value: "compact", label: "ed.media_player.layout_compact" },
             { value: "artwork", label: "ed.media_player.layout_artwork" }
           ]

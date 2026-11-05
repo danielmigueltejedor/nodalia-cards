@@ -877,7 +877,7 @@ class NodaliaRoomSummaryCard extends HTMLElement {
     const entityId = String(host?.dataset?.entity || "").trim();
     const scope = String(host?.dataset?.hubMedia || "single");
     const ids = hubMediaPlayerIds(config);
-    const nativePlayers = Array.isArray(native.players) ? native.players.filter(isObject).filter(player => player.entity) : [];
+    const nativePlayers = Array.isArray(native.players) ? native.players.filter((item): item is Record<string, unknown> => isObject(item)).filter(player => player.entity) : [];
     const matchingPlayer = nativePlayers.find(player => String(player.entity || "").trim() === entityId);
     const groupedPlayers = nativePlayers.length
       ? nativePlayers

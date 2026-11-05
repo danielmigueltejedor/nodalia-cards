@@ -28,7 +28,7 @@ function collectVersionFiles(dir, acc = []) {
   return acc;
 }
 
-const cardFiles = collectVersionFiles(root).sort();
+const cardFiles = collectVersionFiles(root).sort((left, right) => left < right ? -1 : left > right ? 1 : 0);
 const stale = [];
 for (const name of cardFiles) {
   const filePath = path.join(root, name);

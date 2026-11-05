@@ -582,7 +582,7 @@
   "ed.media_player.layout_auto": "Automat",
   "ed.media_player.layout_chip": "Orizontal / lung",
   "ed.media_player.layout_compact": "Compact",
-  "ed.media_player.layout_dashboard_hint": "Ideal atunci când este fixat în partea de sus sau de jos a tabloului de bord.",
+  "ed.media_player.layout_dashboard_hint": "Ideal atunci când este fixat în partea de sus sau de jos a tabloului de bord. Aspectul orizontal se folosește doar când cardul ocupă 7 sau mai multe coloane.",
   "ed.media_player.layout_max_width": "Latime maxima",
   "ed.media_player.layout_offset": "Offset",
   "ed.media_player.layout_position": "Poziţie",
