@@ -1,10 +1,12 @@
 import { build } from "esbuild";
+import { mkdtemp } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
-const outfile = path.join(os.tmpdir(), "nodalia-i18n-lib.mjs");
+const tempDir = await mkdtemp(path.join(os.tmpdir(), "nodalia-i18n-"));
+const outfile = path.join(tempDir, "nodalia-i18n-lib.mjs");
 await build({
   absWorkingDir: root,
   entryPoints: ["src/shared/runtime-i18n-runtime.ts"],
