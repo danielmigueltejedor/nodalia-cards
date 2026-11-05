@@ -234,6 +234,7 @@ test("repository workflows pin audited external actions by immutable commit", ()
     "actions/attest",
     "github/codeql-action",
     "hacs/action",
+    "actions/upload-artifact",
   ]);
   const retiredPins = new Set([
     "11d5960a326750d5838078e36cf38b85af677262",
