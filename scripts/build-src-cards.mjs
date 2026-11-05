@@ -1,6 +1,7 @@
 import { embeddedStylesPlugin } from "./embedded-styles.mjs";
 import { CARD_REGISTRY } from "./card-registry.mjs";
 import { build } from "esbuild";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -43,6 +44,11 @@ export async function buildSourceArtifact(card) {
         "const-and-let": true,
       },
     });
+  if ((card.format ?? "iife") === "esm") {
+    const filePath = path.join(root, card.outfile);
+    const source = fs.readFileSync(filePath, "utf8").replace(/^var /gm, "const ");
+    fs.writeFileSync(filePath, source);
+  }
 }
 
 export async function buildSrcCards() {

@@ -356,8 +356,15 @@
       node.dispatchEvent(event);
       return event;
     }
+    function trimEdgeUnderscores(value) {
+      let start = 0;
+      let end = value.length;
+      while (start < end && value.charCodeAt(start) === 95) start += 1;
+      while (end > start && value.charCodeAt(end - 1) === 95) end -= 1;
+      return value.slice(start, end);
+    }
     function computeTextKey(text) {
-      return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+/, "").replace(/_+$/, "");
+      return trimEdgeUnderscores(text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_"));
     }
     const TEXT_KEY_CACHE_LIMIT = 4096;
     const TEXT_KEY_MAX_LENGTH = 160;
@@ -417,7 +424,7 @@
         }
         ids.push(id);
       }
-      ids.sort();
+      ids.sort((left, right) => left.localeCompare(right, "en"));
       const rows = new Array(ids.length);
       for (let index = 0; index < ids.length; index += 1) {
         const id = ids[index];

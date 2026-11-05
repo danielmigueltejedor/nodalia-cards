@@ -275,13 +275,20 @@ export function createRuntimeI18n() {
     return template.replace(/\{([a-zA-Z0-9_]+)\}/g,(_match:string,key:string)=>String(values[key]??""));
   }
 
-  function normalizeHumidifierModeKey(value:unknown) {
-    return String(value ?? "")
+  function trimEdgeUnderscores(value: string) {
+    let start = 0;
+    let end = value.length;
+    while (start < end && value.charCodeAt(start) === 95) start += 1;
+    while (end > start && value.charCodeAt(end - 1) === 95) end -= 1;
+    return value.slice(start, end);
+  }
+
+  function normalizeHumidifierModeKey(value: unknown) {
+    return trimEdgeUnderscores(String(value ?? "")
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "_")
-      .replace(/^_+/, "").replace(/_+$/, "");
+      .replace(/[^a-z0-9]+/g, "_"));
   }
 
   function translateWeatherCondition(hass:unknown, configLang:string, value:unknown) {
@@ -520,13 +527,12 @@ export function createRuntimeI18n() {
 
   /** Same normalization as `nodalia-weather-card.js` for CAP / Meteoalarm attribute strings. */
   function meteoalarmApiKey(value:unknown) {
-    return String(value ?? "")
+    return trimEdgeUnderscores(String(value ?? "")
       .trim()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "_")
-      .replace(/^_+/, "").replace(/_+$/, "");
+      .replace(/[^a-z0-9]+/g, "_"));
   }
 
   /**

@@ -22,6 +22,9 @@ test('release notes promote only curated Unreleased notes', () => {
   assert.ok(output.endsWith(old));
   assert.ok(output.includes('2026-09-30\n\n### Fixed'));
   assert.throws(() => promoteChangelog('## Unreleased\n\n', '2.3.0', '2026-09-30'), /curated/);
+  for (const bullet of ['- ', '*   ']) {
+    assert.throws(() => promoteChangelog(`## Unreleased\n\n### Fixed\n${bullet}\n`, '2.3.0', '2026-09-30'), /curated/);
+  }
 });
 test('dry-run is read-only and missing notes never partially bump a version', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'nodalia-release-test-'));

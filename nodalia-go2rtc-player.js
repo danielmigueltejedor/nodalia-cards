@@ -7,12 +7,12 @@
  * Upstream: https://github.com/AlexxIT/go2rtc/blob/master/www/video-rtc.js
  * License: MIT
  */
-var GO2RTC_RECONNECT_DELAY = 2e3;
-var GO2RTC_STARTUP_ERROR_DELAY = 3e4;
-var GO2RTC_WEBRTC_PROGRESS_TIMEOUT = 1e4;
-var GO2RTC_SOCKET_OPEN_TIMEOUT = 6500;
-var GO2RTC_MAX_MSE_QUEUE_BYTES = 8 * 1024 * 1024;
-var GO2RTC_MODE_TIMEOUTS = {
+const GO2RTC_RECONNECT_DELAY = 2e3;
+const GO2RTC_STARTUP_ERROR_DELAY = 3e4;
+const GO2RTC_WEBRTC_PROGRESS_TIMEOUT = 1e4;
+const GO2RTC_SOCKET_OPEN_TIMEOUT = 6500;
+const GO2RTC_MAX_MSE_QUEUE_BYTES = 8 * 1024 * 1024;
+const GO2RTC_MODE_TIMEOUTS = {
   webrtc: 4500,
   mse: 6500,
   hls: 6500,
@@ -33,10 +33,10 @@ function toWebSocketUrl(rawValue) {
     return "";
   }
 }
-var isGo2rtcRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
-var go2rtcRecord = (value) => isGo2rtcRecord(value) ? value : {};
-var go2rtcErrorMessage = (error) => String(go2rtcRecord(error).message ?? error ?? "");
-var NodaliaGo2RTCPlayer = class extends HTMLElement {
+const isGo2rtcRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+const go2rtcRecord = (value) => isGo2rtcRecord(value) ? value : {};
+const go2rtcErrorMessage = (error) => String(go2rtcRecord(error).message ?? error ?? "");
+const NodaliaGo2RTCPlayer = class extends HTMLElement {
   constructor() {
     super();
     this._transportGeneration = 0;
@@ -282,11 +282,8 @@ var NodaliaGo2RTCPlayer = class extends HTMLElement {
         video.style.transform = previousTransform;
         video.style.willChange = previousWillChange;
       }
-      const playback = video.play?.();
-      if (playback !== void 0 && typeof playback.catch === "function") {
-        void playback.catch(() => {
-        });
-      }
+      void video.play?.()?.catch(() => {
+      });
       this._verifyVideoDisplayRecovery(video);
     };
     if (typeof window.requestAnimationFrame === "function") {
@@ -1061,7 +1058,7 @@ var NodaliaGo2RTCPlayer = class extends HTMLElement {
     this._send({ type: "mjpeg" });
   }
 };
-var GO2RTC_PLAYER_TAG = "nodalia-go2rtc-player";
+const GO2RTC_PLAYER_TAG = "nodalia-go2rtc-player";
 if (!customElements.get(GO2RTC_PLAYER_TAG)) {
   customElements.define(GO2RTC_PLAYER_TAG, NodaliaGo2RTCPlayer);
 }
