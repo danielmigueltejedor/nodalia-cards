@@ -52,8 +52,15 @@
   }
 
   // src/shared/bubble-contrast.ts
+  function trimEdgeUnderscores(value) {
+    let start = 0;
+    let end = value.length;
+    while (start < end && value.charCodeAt(start) === 95) start += 1;
+    while (end > start && value.charCodeAt(end - 1) === 95) end -= 1;
+    return value.slice(start, end);
+  }
   function normalizeTextKey(value) {
-    return String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+/, "").replace(/_+$/, "");
+    return trimEdgeUnderscores(String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_"));
   }
   function cssVarFallback(raw) {
     const lower = raw.toLowerCase();
