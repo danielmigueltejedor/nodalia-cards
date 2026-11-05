@@ -8,21 +8,14 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 
 ## Current preview release
 
-Current preview release:
-
-```text
-3.0.5-alpha.3
-```
-
-See [the curated prerelease notes](./CHANGELOG-PRERELEASES.md) for this build.
-Stable **`3.0.4`** remains the recommended daily-driver release.
+No active preview. Stable **`3.0.5`** is the recommended release.
 
 ## Current stable release
 
 Current stable release:
 
 ```text
-3.0.4
+3.0.5
 ```
 
 Stable changes and migration notes are summarized in [CHANGELOG.md](./CHANGELOG.md).

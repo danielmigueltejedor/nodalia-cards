@@ -8,6 +8,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ---
 
+## [3.0.5] - 2026-11-05
+
+Maintenance release **3.0.5** keeps unavailable status icons inside their badges, fits the Media Player horizontal layout beside its artwork, and offers entity suggestions that match what each card shows. Existing YAML, resource paths and controls stay the same.
+
+### Fixed
+
+- Unavailable badges keep the status icon inside its bubble on every card, including dense layouts and Media Player TV artwork.
+- The Media Player horizontal layout keeps playback controls beside the artwork bubble, and that layout is only used when the card spans 7 or more columns.
+- Adding a card from an entity now previews real variants. A switch no longer offers two identical rows, and lights, fans, covers, vacuums and humidifiers suggest compact, slider, control or circular layouts only when that entity can show them.
+- Weather and Calendar still catch a forecast subscription that fails immediately, and go2rtc resumes video after a display change.
+
 ## [3.0.4] - 2026-10-24
 
 Maintenance release **3.0.4** improves the readability and layout consistency of Nodalia Cards without changing Home Assistant YAML, resource paths or existing controls.
