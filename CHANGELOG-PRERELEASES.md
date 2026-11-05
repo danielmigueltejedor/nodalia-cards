@@ -8,6 +8,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.0.5-alpha.2] - 2026-11-04
+
+### Fixed
+
+- The Media Player unavailable question mark stays white and centered inside its orange badge, including TV artwork.
+- Weather and Calendar still catch a forecast subscription that fails immediately, and go2rtc still resumes video after a display change.
+- Sonar reliability and security findings: number parsing, sorts, backtracking expressions, release permissions, and diagnostic paths.
+
+## [3.0.5-alpha.1] - 2026-11-04
+
+### Fixed
+
+- Unavailable badges keep the status icon inside its bubble on every card, including dense, compact and other state layouts.
+- The Media Player horizontal layout keeps playback controls beside the artwork bubble, and that layout is only used when the card spans 7 or more columns.
+- Adding a card from an entity now previews real variants. A switch no longer offers two identical rows, and lights, fans, covers, vacuums and humidifiers suggest compact, slider, control or circular layouts only when that entity can show them.
+
 ## [3.0.4-alpha.7] - 2026-10-24
 
 ### Fixed

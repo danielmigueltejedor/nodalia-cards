@@ -11,7 +11,7 @@ export { parseFiniteNumericValue as parseWeatherNumericValue } from "../../share
 function dateFromUnknown(value: unknown): Date {
   if (value instanceof Date) return new Date(value.getTime());
   if (typeof value === "string" || typeof value === "number") return new Date(value);
-  return new Date(NaN);
+  return new Date(Number.NaN);
 }
 
 export function getEditorColorFallbackValue(field: unknown) {

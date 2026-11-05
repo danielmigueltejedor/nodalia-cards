@@ -510,9 +510,11 @@ class NodaliaPowerFlowCard extends HTMLElement {
         || "",
       ).trim();
 
-      const net = (!consumptionEntity && !productionEntity) || consumptionValue === null || productionValue === null
+      const consumptionNumber = consumptionValue ?? Number.NaN;
+      const productionNumber = productionValue ?? Number.NaN;
+      const net = (!consumptionEntity && !productionEntity) || !Number.isFinite(consumptionNumber) || !Number.isFinite(productionNumber)
         ? null
-        : kind === "battery" ? productionValue - consumptionValue : consumptionValue - productionValue;
+        : kind === "battery" ? productionNumber - consumptionNumber : consumptionNumber - productionNumber;
 
       return {
         value: net,
@@ -2738,7 +2740,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
           --mdc-icon-size: 18px;
         }
 
-        .power-flow-card__bubble ha-icon {
+        .power-flow-card__bubble > ha-icon {
           --mdc-icon-size: calc(var(--node-size) * 0.44);
         }
 
@@ -2865,6 +2867,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
         }
 
         .power-flow-card__unavailable {
+          overflow: hidden;
           align-items: center;
           background: #ff9b4a;
           border: 2px solid ${styles.card.background};

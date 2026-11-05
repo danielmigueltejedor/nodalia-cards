@@ -39,12 +39,12 @@ for (const file of files) {
   }
   graph.set(file, dependencies);
 }
-const cycleDebt = new Set(JSON.parse(fs.readFileSync(path.join(root, 'scripts/import-cycle-debt.json'), 'utf8')).map(cycle => [...cycle].sort().join('|')));
+const cycleDebt = new Set(JSON.parse(fs.readFileSync(path.join(root, 'scripts/import-cycle-debt.json'), 'utf8')).map(cycle => [...cycle].sort((left, right) => left < right ? -1 : left > right ? 1 : 0).join('|')));
 const foundCycles = new Set();
 const done = new Set(), active = new Set();
 function visit(file, chain = []) {
   if (active.has(file)) {
-    const cycle = chain.slice(chain.indexOf(file)).map(item => path.relative(root, item)).sort().join('|');
+    const cycle = chain.slice(chain.indexOf(file)).map(item => path.relative(root, item)).sort((left, right) => left < right ? -1 : left > right ? 1 : 0).join('|');
     if (!cycleDebt.has(cycle)) throw new Error(`New runtime import cycle: ${cycle}`);
     foundCycles.add(cycle); return;
   }

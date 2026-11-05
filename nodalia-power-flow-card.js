@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.4";
+  var CARD_VERSION = "3.0.5-alpha.2";
 
   // src/cards/power-flow/power-flow-constants.ts
   var CARD_TAG = "nodalia-power-flow-card";
@@ -201,6 +201,26 @@
 
   // src/shared/editor-color.ts
   var clamp2 = (value, max) => Math.max(0, Math.min(max, value));
+  function cssFunctionBody(raw, name) {
+    const head = `${name}(`;
+    if (!raw.toLowerCase().startsWith(head) || !raw.endsWith(")")) return null;
+    return raw.slice(head.length, -1);
+  }
+  function srgbFunctionBody(raw) {
+    const body = cssFunctionBody(raw, "color");
+    if (body === null) return null;
+    const inner = body.trim();
+    if (!inner.toLowerCase().startsWith("srgb")) return null;
+    const rest = inner.slice(4);
+    if (rest.length === 0 || !/\s/.test(rest.charAt(0))) return null;
+    return rest.trim();
+  }
+  function splitCssAlpha(body) {
+    const slash = body.indexOf("/");
+    if (slash < 0) return [body.trim()];
+    if (body.indexOf("/", slash + 1) >= 0) return [body, "", ""];
+    return [body.slice(0, slash).trim(), body.slice(slash + 1).trim()];
+  }
   var component = (value, scale) => {
     if (!value || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?%?$/i.test(value)) return null;
     const numeric = Number(value.replace(/%$/, ""));
@@ -211,13 +231,13 @@
     const hexMatch = raw.match(/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
     if (hexMatch?.[1]) {
       const hex = hexMatch[1].length < 5 ? hexMatch[1].split("").map((channel) => channel + channel).join("") : hexMatch[1];
-      return { red: parseInt(hex.slice(0, 2), 16), green: parseInt(hex.slice(2, 4), 16), blue: parseInt(hex.slice(4, 6), 16), alpha: hex.length === 8 ? parseInt(hex.slice(6, 8), 16) / 255 : 1 };
+      return { red: Number.parseInt(hex.slice(0, 2), 16), green: Number.parseInt(hex.slice(2, 4), 16), blue: Number.parseInt(hex.slice(4, 6), 16), alpha: hex.length === 8 ? Number.parseInt(hex.slice(6, 8), 16) / 255 : 1 };
     }
-    const rgb = raw.match(/^rgba?\(([^)]+)\)$/i);
-    const srgb = raw.match(/^color\(\s*srgb\s+([^)]+)\)$/i);
-    const body = rgb?.[1] ?? srgb?.[1];
+    const rgb = cssFunctionBody(raw, "rgb") ?? cssFunctionBody(raw, "rgba");
+    const srgb = srgbFunctionBody(raw);
+    const body = rgb ?? srgb;
     if (!body) return null;
-    const sections = body.trim().split(/\s*\/\s*/);
+    const sections = splitCssAlpha(body);
     if (sections.length > 2) return null;
     const parts = sections[0]?.split(/[\s,]+/) ?? [];
     if (sections.length === 2 && parts.length !== 3 || parts.length < 3 || parts.length > 4) return null;
@@ -238,7 +258,7 @@
     const numeric = Number(alpha);
     const safeAlpha = clamp2(Number.isFinite(numeric) ? numeric : 1, 1);
     if (safeAlpha >= 0.999) return `#${normalized}`;
-    const red = parseInt(normalized.slice(0, 2), 16), green = parseInt(normalized.slice(2, 4), 16), blue = parseInt(normalized.slice(4, 6), 16);
+    const red = Number.parseInt(normalized.slice(0, 2), 16), green = Number.parseInt(normalized.slice(2, 4), 16), blue = Number.parseInt(normalized.slice(4, 6), 16);
     return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
   }
   function resolveEditorColorValue(value) {
@@ -366,9 +386,54 @@
     }
     return String(Number(number.toFixed(3)));
   }
-  var SVG_PATH_TOKEN_RE = /[AaCcHhLlMmQqSsTtVvZz]|[+-]?(?:(?:\d*\.\d+)|(?:\d+\.?))(?:[eE][+-]?\d+)?/g;
+  var SVG_PATH_COMMANDS = new Set("AaCcHhLlMmQqSsTtVvZz");
   function tokenizeSvgPath(pathD) {
-    return String(pathD || "").match(SVG_PATH_TOKEN_RE) || [];
+    const text = String(pathD || "");
+    const tokens = [];
+    let index = 0;
+    while (index < text.length) {
+      const char = text.charAt(index);
+      if (SVG_PATH_COMMANDS.has(char)) {
+        tokens.push(char);
+        index += 1;
+        continue;
+      }
+      if (char === " " || char === "," || char === "\n" || char === "\r" || char === "	") {
+        index += 1;
+        continue;
+      }
+      const start = index;
+      if (char === "+" || char === "-") index += 1;
+      let sawDigit = false;
+      let sawDot = false;
+      while (index < text.length) {
+        const next = text.charAt(index);
+        if (next >= "0" && next <= "9") {
+          sawDigit = true;
+          index += 1;
+          continue;
+        }
+        if (next === "." && !sawDot) {
+          sawDot = true;
+          index += 1;
+          continue;
+        }
+        break;
+      }
+      if (!sawDigit) {
+        index = start + 1;
+        continue;
+      }
+      if (index < text.length && (text.charAt(index) === "e" || text.charAt(index) === "E")) {
+        let cursor = index + 1;
+        if (text.charAt(cursor) === "+" || text.charAt(cursor) === "-") cursor += 1;
+        const exponentStart = cursor;
+        while (cursor < text.length && text.charAt(cursor) >= "0" && text.charAt(cursor) <= "9") cursor += 1;
+        if (cursor > exponentStart) index = cursor;
+      }
+      tokens.push(text.slice(start, index));
+    }
+    return tokens;
   }
   function isSvgPathCommand(token) {
     return /^[AaCcHhLlMmQqSsTtVvZz]$/.test(String(token || ""));
@@ -396,7 +461,7 @@
       },
       readNumber() {
         if (index >= tokens.length || isSvgPathCommand(tokens[index])) {
-          return NaN;
+          return Number.NaN;
         }
         const value = Number(tokens[index]);
         index += 1;
@@ -404,13 +469,13 @@
       },
       readFlag() {
         if (index >= tokens.length || isSvgPathCommand(tokens[index])) {
-          return NaN;
+          return Number.NaN;
         }
         const raw = String(tokens[index]);
         const first = raw.charAt(0);
         if (first !== "0" && first !== "1") {
           index += 1;
-          return NaN;
+          return Number.NaN;
         }
         if (raw.length > 1) {
           tokens[index] = raw.slice(1);
@@ -630,6 +695,14 @@
     const key = normalizeTextKey(state?.state);
     return key === "unavailable" || key === "unknown";
   }
+  function trimInsignificantZeros(value) {
+    const mark = Math.max(value.lastIndexOf("."), value.lastIndexOf(","));
+    if (mark < 0) return value;
+    let end = value.length;
+    while (end > mark + 1 && value.charCodeAt(end - 1) === 48) end -= 1;
+    if (end === mark + 1) end = mark;
+    return value.slice(0, end);
+  }
   function formatDisplayValue(value, unit = "", locale = void 0) {
     const numeric = parseFiniteNumericValue(value);
     if (numeric === null) {
@@ -639,7 +712,7 @@
     const key = normalizeTextKey(normalizedUnit);
     if (["w", "watt", "watts"].includes(key) && Math.abs(numeric) >= 1e3) {
       return {
-        value: formatFiniteNumericValue(numeric / 1e3, 2, locale).replace(/([.,]\d*?)0+$/, "$1").replace(/[.,]$/, ""),
+        value: trimInsignificantZeros(formatFiniteNumericValue(numeric / 1e3, 2, locale)),
         unit: "kW"
       };
     }
@@ -680,7 +753,7 @@
     return sanitizeIndividualEntries(config).filter((item) => item.entity);
   }
   function sanitizeIndividualEntries(config) {
-    return arrayFromMaybe(isObject(config) && isObject(config.entities) ? config.entities.individual : void 0).filter(isObject).map((item, index) => ({
+    return arrayFromMaybe(isObject(config) && isObject(config.entities) ? config.entities.individual : void 0).filter((item) => isObject(item)).map((item, index) => ({
       entity: String(item.entity || "").trim(),
       name: String(item.name || "").trim(),
       icon: String(item.icon || "mdi:flash").trim() || "mdi:flash",
@@ -1314,7 +1387,9 @@
           const unit = String(
             consumptionState?.attributes?.unit_of_measurement || productionState?.attributes?.unit_of_measurement || consumptionState?.attributes?.native_unit_of_measurement || productionState?.attributes?.native_unit_of_measurement || ""
           ).trim();
-          const net = !consumptionEntity && !productionEntity || consumptionValue === null || productionValue === null ? null : kind === "battery" ? productionValue - consumptionValue : consumptionValue - productionValue;
+          const consumptionNumber = consumptionValue ?? Number.NaN;
+          const productionNumber = productionValue ?? Number.NaN;
+          const net = !consumptionEntity && !productionEntity || !Number.isFinite(consumptionNumber) || !Number.isFinite(productionNumber) ? null : kind === "battery" ? productionNumber - consumptionNumber : consumptionNumber - productionNumber;
           return {
             value: net,
             unit,
@@ -3286,7 +3361,7 @@
           --mdc-icon-size: 18px;
         }
 
-        .power-flow-card__bubble ha-icon {
+        .power-flow-card__bubble > ha-icon {
           --mdc-icon-size: calc(var(--node-size) * 0.44);
         }
 
@@ -3413,6 +3488,7 @@
         }
 
         .power-flow-card__unavailable {
+          overflow: hidden;
           align-items: center;
           background: #ff9b4a;
           border: 2px solid ${styles.card.background};

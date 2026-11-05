@@ -2,6 +2,12 @@ import { appendUrlQueryParam } from "../../shared/url-query";
 import { renderSignature } from "../../shared/render-signature";
 export { setByPath, deleteByPath } from "../../shared/editor-object-paths";
 
+function trimTrailingSlashes(value: string) {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 47) end -= 1;
+  return value.slice(0, end);
+}
+
 export function appendQueryParam(url: unknown, key: unknown, value: unknown) {
   return appendUrlQueryParam(url, key, value, true);
 }
@@ -79,9 +85,10 @@ export function normalizePath(value: unknown) {
 
   try {
     const url = new URL(value, window.location.origin);
-    return (url.pathname || "/").replace(/\/+$/, "") || "/";
+    return trimTrailingSlashes(url.pathname || "/") || "/";
   } catch (_error) {
-    return (value.split(/[?#]/)[0] || "/").replace(/\/+$/, "") || "/";
+    const pathEnd = value.search(/[?#]/);
+    return trimTrailingSlashes((pathEnd < 0 ? value : value.slice(0, pathEnd)) || "/") || "/";
   }
 }
 

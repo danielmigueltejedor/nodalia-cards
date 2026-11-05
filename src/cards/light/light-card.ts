@@ -3,6 +3,13 @@ import { captureHassContext, sameHassContext } from "../../shared/hass-context";
 import type { HassContext } from "../../shared/hass-context";
 import { createCardLayoutNotifier } from "../../shared/card-layout-notifier";
 import {
+  lightSupportsBrightness,
+  lightSupportsColor,
+  lightSupportsColorTemperature,
+  suggestionIsOn,
+  suggestionState,
+} from "../../shared/entity-suggestion-presets";
+import {
   CARD_TAG,
   COLOR_PRESETS,
   EDITOR_TAG,
@@ -110,18 +117,64 @@ class NodaliaLightCard extends HTMLElement {
   }
 
   static getEntitySuggestion(hass: HomeAssistant, entityId: string) {
-    return [
-      window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
-        domains: ["light"],
-        label: "Light — Standard",
-        buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, compact_layout_mode: "auto" }),
-      }),
+    const state = suggestionState(hass, entityId);
+    const on = suggestionIsOn(state);
+    const brightness = lightSupportsBrightness(state);
+    const color = lightSupportsColor(state);
+    const temperature = lightSupportsColorTemperature(state);
+    const suggestions = [
       window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
         domains: ["light"],
         label: "Light — Compact",
-        buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, compact_layout_mode: "always" }),
+        buildConfig: (_hass, selectedEntityId) => ({
+          entity: selectedEntityId,
+          compact_layout_mode: "always",
+          auto_expand: false,
+          show_brightness: false,
+          show_color_controls: false,
+          show_temperature_controls: false,
+          show_slider_mode_buttons: false,
+          show_quick_brightness: false,
+        }),
       }),
-    ].filter(Boolean);
+    ];
+    if (on && brightness) {
+      suggestions.push(window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+        domains: ["light"],
+        label: "Light — Brightness",
+        buildConfig: (_hass, selectedEntityId) => ({
+          entity: selectedEntityId,
+          compact_layout_mode: "never",
+          auto_expand: true,
+          show_brightness: true,
+          show_color_controls: false,
+          show_temperature_controls: false,
+          show_slider_mode_buttons: false,
+          show_quick_brightness: true,
+        }),
+      }));
+    }
+    if (on && (color || temperature)) {
+      const label = color && temperature
+        ? "Light — Color and temperature"
+        : color
+          ? "Light — Color"
+          : "Light — Temperature";
+      suggestions.push(window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+        domains: ["light"],
+        label,
+        buildConfig: (_hass, selectedEntityId) => ({
+          entity: selectedEntityId,
+          compact_layout_mode: "never",
+          auto_expand: true,
+          show_brightness: brightness,
+          show_color_controls: color,
+          show_temperature_controls: temperature,
+          show_slider_mode_buttons: color && temperature,
+        }),
+      }));
+    }
+    return suggestions.filter(Boolean);
   }
 
   constructor() {
@@ -2103,7 +2156,7 @@ class NodaliaLightCard extends HTMLElement {
   _onWindowPointerMove(event: Event) {
     if (!(event instanceof PointerEvent)) return;
     const drag = this._activeSliderDrag;
-    if (!drag || drag.pointerId !== event.pointerId) {
+    if (!drag || !Object.is(drag.pointerId, event.pointerId)) {
       return;
     }
 
@@ -2126,7 +2179,7 @@ class NodaliaLightCard extends HTMLElement {
   _onWindowPointerUp(event: Event) {
     if (!(event instanceof PointerEvent)) return;
     const drag = this._activeSliderDrag;
-    if (!drag || drag.pointerId !== event.pointerId) {
+    if (!drag || !Object.is(drag.pointerId, event.pointerId)) {
       return;
     }
 
@@ -3147,7 +3200,7 @@ class NodaliaLightCard extends HTMLElement {
           width: min(${styles.icon.size}, calc(100vw - 48px));
         }
 
-        .light-card__icon ha-icon {
+        .light-card__icon > ha-icon {
           --mdc-icon-size: calc(${styles.icon.size} * 0.46);
           align-items: center;
           color: ${lightIconColor};
@@ -3173,6 +3226,7 @@ class NodaliaLightCard extends HTMLElement {
         }
 
         .light-card__unavailable-badge {
+          overflow: hidden;
           align-items: center;
           background: #ff9b4a;
           border: 2px solid ${styles.card.background};

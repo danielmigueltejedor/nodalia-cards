@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.4";
+  var CARD_VERSION = "3.0.5-alpha.2";
 
   // src/cards/news/news-constants.ts
   var CARD_TAG = "nodalia-news-card";
@@ -196,7 +196,7 @@
   function setByPath(target, path, value) {
     if (!isObject2(target) || typeof path !== "string") return;
     const parts = path.split(".");
-    if (parts.some(isUnsafeConfigPathKey2)) {
+    if (parts.some((part) => isUnsafeConfigPathKey2(part))) {
       return;
     }
     let cursor = target;
@@ -234,7 +234,7 @@
   function deleteByPath(target, path) {
     if (!isObject2(target) || typeof path !== "string") return;
     const parts = path.split(".");
-    if (parts.some(isUnsafeConfigPathKey2)) {
+    if (parts.some((part) => isUnsafeConfigPathKey2(part))) {
       return;
     }
     let cursor = target;
@@ -570,7 +570,7 @@
     if (explicit) {
       return `${NEWS_HISTORY_STORAGE_PREFIX}${explicit}`;
     }
-    const sources = resolveSourceEntries(config).map((entry) => entry.entity).sort().join(",");
+    const sources = resolveSourceEntries(config).map((entry) => entry.entity).sort((left, right) => left.localeCompare(right, "en")).join(",");
     return `${NEWS_HISTORY_STORAGE_PREFIX}${sources || "default"}`;
   }
   function compactNewsHistoryItem(item) {
@@ -1375,7 +1375,7 @@
       }
       _onShadowPointerDown(event) {
         if (!(event instanceof PointerEvent)) return;
-        if (event.button !== void 0 && event.button !== 0) {
+        if (event.button !== 0) {
           return;
         }
         const viewport = this._getMagazineCarouselViewport(event);

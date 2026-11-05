@@ -283,10 +283,10 @@
           video.style.transform = previousTransform;
           video.style.willChange = previousWillChange;
         }
-        try {
-          Promise.resolve(video.play?.()).catch(() => {
+        const playback = video.play?.();
+        if (playback !== void 0 && typeof playback.catch === "function") {
+          void playback.catch(() => {
           });
-        } catch (_error) {
         }
         this._verifyVideoDisplayRecovery(video);
       };
@@ -913,9 +913,11 @@
         "flac",
         "opus"
       ];
-      const safari = String(window.navigator?.userAgent || "").match(/Version\/(\d+).+Safari/);
-      if (safari) {
-        const version = Number(safari[1]);
+      const agent = String(window.navigator?.userAgent || "");
+      const versionMatch = /Version\/(\d+)/.exec(agent);
+      const safari = versionMatch !== null && agent.indexOf("Safari", versionMatch.index + versionMatch[0].length) >= 0;
+      if (safari && versionMatch) {
+        const version = Number(versionMatch[1]);
         const firstUnsupported = version < 13 ? "mp4a.40.2" : version < 14 ? "flac" : "opus";
         codecs.splice(codecs.indexOf(firstUnsupported));
       }
@@ -1066,7 +1068,7 @@
   }
 
   // src/version.ts
-  var CARD_VERSION = "3.0.4";
+  var CARD_VERSION = "3.0.5-alpha.2";
 
   // src/cards/camera/camera-constants.ts
   var CARD_TAG = "nodalia-camera-card";
@@ -1163,7 +1165,7 @@
   function setByPath(target, path, value) {
     if (!isObject2(target) && !Array.isArray(target) || typeof path !== "string") return;
     const parts = String(path || "").split(".");
-    if (!parts.length || parts.some(isUnsafeConfigPathKey)) return;
+    if (!parts.length || parts.some((part) => isUnsafeConfigPathKey(part))) return;
     let cursor = target;
     for (let index = 0; index < parts.length - 1; index += 1) {
       const key = parts[index];
@@ -1302,7 +1304,7 @@
     }
   }
   function formatRelativeAge(timestamp, locale = "en", now = Date.now()) {
-    const value = (timestamp instanceof Date ? timestamp : typeof timestamp === "string" || typeof timestamp === "number" ? new Date(timestamp) : /* @__PURE__ */ new Date(NaN)).getTime();
+    const value = (timestamp instanceof Date ? timestamp : typeof timestamp === "string" || typeof timestamp === "number" ? new Date(timestamp) : new Date(Number.NaN)).getTime();
     if (!Number.isFinite(value) || !Number.isFinite(now)) {
       return "";
     }
@@ -3523,7 +3525,7 @@
   function objectRows(value) {
     if (!Array.isArray(value)) return [];
     const rows = value;
-    return rows.filter(isObject);
+    return rows.filter((item) => isObject(item));
   }
   function editorConfig(raw) {
     const config = mergeConfig(DEFAULT_CONFIG, raw);
@@ -3765,7 +3767,7 @@
           event.stopPropagation();
           const action = button.dataset.editorAction;
           const indexValue = button.dataset.index;
-          const index = indexValue && /^\d+$/.test(indexValue) ? Number(indexValue) : NaN;
+          const index = indexValue && /^\d+$/.test(indexValue) ? Number(indexValue) : Number.NaN;
           if (action === "add-camera") {
             if (!this._config.cameras.length) {
               this._config.cameras = this._editorCameras();
@@ -4112,7 +4114,7 @@
                   ${this._renderCheckboxField("ed.camera.live_controls", `${prefix}.controls`, stream.controls === true)}
                 ` : ""}
                 ${provider === "go2rtc" ? `
-                  ${this._renderTextField("ed.camera.live_base_url", `${prefix}.base_url`, stream.base_url, { placeholder: "http://frigate.local:1984", fullWidth: true })}
+                  ${this._renderTextField("ed.camera.live_base_url", `${prefix}.base_url`, stream.base_url, { placeholder: "https://frigate.local:1984", fullWidth: true })}
                   ${this._renderTextField("ed.camera.live_stream_name", `${prefix}.stream`, stream.stream || cameraStreamName(cameraId), { placeholder: cameraStreamName(cameraId), fullWidth: true })}
                   ${this._renderSelectField("ed.camera.live_mode", `${prefix}.mode`, stream.mode || "auto", [
             { value: "auto", label: "ed.camera.live_mode_auto" },

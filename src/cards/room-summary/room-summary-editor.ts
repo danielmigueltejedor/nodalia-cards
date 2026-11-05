@@ -254,7 +254,7 @@ class NodaliaRoomSummaryCardEditor extends HTMLElement {
     event.stopPropagation();
     const detail = this._eventDetail(event);
     const mediaConfig = isObject(detail.config) ? deepClone(detail.config) : {};
-    const players = Array.isArray(mediaConfig.players) ? mediaConfig.players.filter(isObject) : [];
+    const players = Array.isArray(mediaConfig.players) ? mediaConfig.players.filter((item): item is Record<string, unknown> => isObject(item)) : [];
     const ids = players.map(player => String(player.entity || "").trim()).filter(Boolean);
     mediaConfig.players = players;
     this._config.media_config = { ...mediaConfig, players };

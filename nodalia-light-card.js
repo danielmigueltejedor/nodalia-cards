@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.4";
+  var CARD_VERSION = "3.0.5-alpha.2";
 
   // src/shared/device-state-memory.ts
   var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
@@ -135,6 +135,26 @@
 
   // src/shared/editor-color.ts
   var clamp2 = (value, max) => Math.max(0, Math.min(max, value));
+  function cssFunctionBody(raw, name) {
+    const head = `${name}(`;
+    if (!raw.toLowerCase().startsWith(head) || !raw.endsWith(")")) return null;
+    return raw.slice(head.length, -1);
+  }
+  function srgbFunctionBody(raw) {
+    const body = cssFunctionBody(raw, "color");
+    if (body === null) return null;
+    const inner = body.trim();
+    if (!inner.toLowerCase().startsWith("srgb")) return null;
+    const rest = inner.slice(4);
+    if (rest.length === 0 || !/\s/.test(rest.charAt(0))) return null;
+    return rest.trim();
+  }
+  function splitCssAlpha(body) {
+    const slash = body.indexOf("/");
+    if (slash < 0) return [body.trim()];
+    if (body.indexOf("/", slash + 1) >= 0) return [body, "", ""];
+    return [body.slice(0, slash).trim(), body.slice(slash + 1).trim()];
+  }
   var component = (value, scale) => {
     if (!value || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?%?$/i.test(value)) return null;
     const numeric = Number(value.replace(/%$/, ""));
@@ -145,13 +165,13 @@
     const hexMatch = raw.match(/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
     if (hexMatch?.[1]) {
       const hex = hexMatch[1].length < 5 ? hexMatch[1].split("").map((channel) => channel + channel).join("") : hexMatch[1];
-      return { red: parseInt(hex.slice(0, 2), 16), green: parseInt(hex.slice(2, 4), 16), blue: parseInt(hex.slice(4, 6), 16), alpha: hex.length === 8 ? parseInt(hex.slice(6, 8), 16) / 255 : 1 };
+      return { red: Number.parseInt(hex.slice(0, 2), 16), green: Number.parseInt(hex.slice(2, 4), 16), blue: Number.parseInt(hex.slice(4, 6), 16), alpha: hex.length === 8 ? Number.parseInt(hex.slice(6, 8), 16) / 255 : 1 };
     }
-    const rgb = raw.match(/^rgba?\(([^)]+)\)$/i);
-    const srgb = raw.match(/^color\(\s*srgb\s+([^)]+)\)$/i);
-    const body = rgb?.[1] ?? srgb?.[1];
+    const rgb = cssFunctionBody(raw, "rgb") ?? cssFunctionBody(raw, "rgba");
+    const srgb = srgbFunctionBody(raw);
+    const body = rgb ?? srgb;
     if (!body) return null;
-    const sections = body.trim().split(/\s*\/\s*/);
+    const sections = splitCssAlpha(body);
     if (sections.length > 2) return null;
     const parts = sections[0]?.split(/[\s,]+/) ?? [];
     if (sections.length === 2 && parts.length !== 3 || parts.length < 3 || parts.length > 4) return null;
@@ -172,7 +192,7 @@
     const numeric = Number(alpha);
     const safeAlpha = clamp2(Number.isFinite(numeric) ? numeric : 1, 1);
     if (safeAlpha >= 0.999) return `#${normalized}`;
-    const red = parseInt(normalized.slice(0, 2), 16), green = parseInt(normalized.slice(2, 4), 16), blue = parseInt(normalized.slice(4, 6), 16);
+    const red = Number.parseInt(normalized.slice(0, 2), 16), green = Number.parseInt(normalized.slice(2, 4), 16), blue = Number.parseInt(normalized.slice(4, 6), 16);
     return `rgba(${red}, ${green}, ${blue}, ${Number(safeAlpha.toFixed(2))})`;
   }
   function resolveEditorColorValue(value) {
@@ -730,6 +750,34 @@
     };
   }
 
+  // src/shared/entity-suggestion-presets.ts
+  function suggestionState(hass, entityId) {
+    const id = String(entityId || "").trim();
+    const state = hass?.states?.[id];
+    return state || null;
+  }
+  function suggestionIsOn(state) {
+    return String(state?.state || "").trim().toLowerCase() === "on";
+  }
+  function colorModes(state) {
+    const modes = state?.attributes?.supported_color_modes;
+    return Array.isArray(modes) ? modes.map((mode) => String(mode || "")) : [];
+  }
+  function lightSupportsBrightness(state) {
+    if (typeof state?.attributes?.brightness === "number") {
+      return true;
+    }
+    return colorModes(state).some(
+      (mode) => ["brightness", "color_temp", "hs", "rgb", "rgbw", "rgbww", "xy", "white"].includes(mode)
+    );
+  }
+  function lightSupportsColor(state) {
+    return colorModes(state).some((mode) => ["hs", "rgb", "rgbw", "rgbww", "xy"].includes(mode));
+  }
+  function lightSupportsColorTemperature(state) {
+    return colorModes(state).includes("color_temp") || typeof state?.attributes?.color_temp_kelvin === "number" || typeof state?.attributes?.color_temp === "number";
+  }
+
   // src/shared/home-assistant-services.ts
   function callHassService(hass, domain, service, data = {}, target = null) {
     if (!hass?.callService) return;
@@ -792,18 +840,60 @@
         return applyStubEntity({ ...STUB_CONFIG }, hass, ["light"], entities, entitiesFallback);
       }
       static getEntitySuggestion(hass, entityId) {
-        return [
-          window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
-            domains: ["light"],
-            label: "Light — Standard",
-            buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, compact_layout_mode: "auto" })
-          }),
+        const state = suggestionState(hass, entityId);
+        const on = suggestionIsOn(state);
+        const brightness = lightSupportsBrightness(state);
+        const color = lightSupportsColor(state);
+        const temperature = lightSupportsColorTemperature(state);
+        const suggestions = [
           window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
             domains: ["light"],
             label: "Light — Compact",
-            buildConfig: (_hass, selectedEntityId) => ({ entity: selectedEntityId, compact_layout_mode: "always" })
+            buildConfig: (_hass, selectedEntityId) => ({
+              entity: selectedEntityId,
+              compact_layout_mode: "always",
+              auto_expand: false,
+              show_brightness: false,
+              show_color_controls: false,
+              show_temperature_controls: false,
+              show_slider_mode_buttons: false,
+              show_quick_brightness: false
+            })
           })
-        ].filter(Boolean);
+        ];
+        if (on && brightness) {
+          suggestions.push(window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+            domains: ["light"],
+            label: "Light — Brightness",
+            buildConfig: (_hass, selectedEntityId) => ({
+              entity: selectedEntityId,
+              compact_layout_mode: "never",
+              auto_expand: true,
+              show_brightness: true,
+              show_color_controls: false,
+              show_temperature_controls: false,
+              show_slider_mode_buttons: false,
+              show_quick_brightness: true
+            })
+          }));
+        }
+        if (on && (color || temperature)) {
+          const label = color && temperature ? "Light — Color and temperature" : color ? "Light — Color" : "Light — Temperature";
+          suggestions.push(window.NodaliaUtils.createEntitySuggestion(CARD_TAG, hass, entityId, {
+            domains: ["light"],
+            label,
+            buildConfig: (_hass, selectedEntityId) => ({
+              entity: selectedEntityId,
+              compact_layout_mode: "never",
+              auto_expand: true,
+              show_brightness: brightness,
+              show_color_controls: color,
+              show_temperature_controls: temperature,
+              show_slider_mode_buttons: color && temperature
+            })
+          }));
+        }
+        return suggestions.filter(Boolean);
       }
       constructor() {
         super();
@@ -2451,7 +2541,7 @@
       _onWindowPointerMove(event) {
         if (!(event instanceof PointerEvent)) return;
         const drag = this._activeSliderDrag;
-        if (!drag || drag.pointerId !== event.pointerId) {
+        if (!drag || !Object.is(drag.pointerId, event.pointerId)) {
           return;
         }
         event.preventDefault();
@@ -2474,7 +2564,7 @@
       _onWindowPointerUp(event) {
         if (!(event instanceof PointerEvent)) return;
         const drag = this._activeSliderDrag;
-        if (!drag || drag.pointerId !== event.pointerId) {
+        if (!drag || !Object.is(drag.pointerId, event.pointerId)) {
           return;
         }
         if (event.type === "pointercancel") {
@@ -3301,7 +3391,7 @@
           width: min(${styles.icon.size}, calc(100vw - 48px));
         }
 
-        .light-card__icon ha-icon {
+        .light-card__icon > ha-icon {
           --mdc-icon-size: calc(${styles.icon.size} * 0.46);
           align-items: center;
           color: ${lightIconColor};
@@ -3327,6 +3417,7 @@
         }
 
         .light-card__unavailable-badge {
+          overflow: hidden;
           align-items: center;
           background: #ff9b4a;
           border: 2px solid ${styles.card.background};

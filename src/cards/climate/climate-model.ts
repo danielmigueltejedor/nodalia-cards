@@ -91,7 +91,7 @@ export function getStepPrecision(step: unknown) {
 
 /** Avoids `Number(null) === 0` / `Number("") === 0` which mis-renders many climate entities (e.g. ecobee off). */
 export function parseFiniteClimateNumber(value: unknown) {
-  return parseFiniteNumericValue(value) ?? NaN;
+  return parseFiniteNumericValue(value) ?? Number.NaN;
 }
 
 export function getHassLocale(hass: HomeAssistant | null | undefined) {

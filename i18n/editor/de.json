@@ -582,7 +582,7 @@
   "ed.media_player.layout_auto": "Automatisch",
   "ed.media_player.layout_chip": "Horizontal / lang",
   "ed.media_player.layout_compact": "Kompakt",
-  "ed.media_player.layout_dashboard_hint": "Ideal, wenn es oben oder unten am Armaturenbrett befestigt wird.",
+  "ed.media_player.layout_dashboard_hint": "Ideal, wenn es oben oder unten am Armaturenbrett befestigt wird. Das horizontale Layout wird nur verwendet, wenn die Karte 7 oder mehr Spalten einnimmt.",
   "ed.media_player.layout_max_width": "Maximale Breite",
   "ed.media_player.layout_offset": "Versatz",
   "ed.media_player.layout_position": "Position",

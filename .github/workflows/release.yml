@@ -12,11 +12,7 @@ on:
         type: string
 
 permissions:
-  contents: write
-  actions: write
-  id-token: write
-  attestations: write
-  artifact-metadata: write
+  contents: read
 
 jobs:
   quality:
@@ -28,6 +24,12 @@ jobs:
   build-release:
     needs: quality
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
     env:
       GH_TOKEN: ${{ github.token }}
       RELEASE_TAG: ${{ inputs.tag || github.ref_name }}

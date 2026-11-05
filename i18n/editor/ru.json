@@ -582,7 +582,7 @@
   "ed.media_player.layout_auto": "Автоматически",
   "ed.media_player.layout_chip": "Горизонтальная / длинная",
   "ed.media_player.layout_compact": "Компактный",
-  "ed.media_player.layout_dashboard_hint": "Идеально, если его закрепить вверху или внизу приборной панели.",
+  "ed.media_player.layout_dashboard_hint": "Идеально, если его закрепить вверху или внизу приборной панели. Горизонтальный формат используется только если карточка занимает 7 или более столбцов.",
   "ed.media_player.layout_max_width": "Максимальная ширина",
   "ed.media_player.layout_offset": "Компенсировать",
   "ed.media_player.layout_position": "Позиция",

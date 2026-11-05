@@ -561,7 +561,7 @@ export function humanizeSelectOptionLabel(value: unknown, kind = "generic", hass
 
 export function normalizeCustomMenuItems(items: unknown) {
   return arrayFromMaybe(items)
-    .filter(isObject)
+    .filter((item): item is Record<string, unknown> => isObject(item))
     .map(item => ({
       label: String(item.label || item.name || "").trim(),
       icon: String(item.icon || "mdi:flash").trim(),
@@ -576,7 +576,7 @@ export function normalizeRoutineItems(items: unknown) {
   return sortByOrder(
     arrayFromMaybe(items)
       .map(item => (typeof item === "string" ? { entity: item } : item))
-      .filter(isObject)
+      .filter((item): item is Record<string, unknown> => isObject(item))
       .map(item => ({
         order: parseFiniteNumericValue(item.order) ?? 0,
         label: String(item.label || item.name || "").trim(),
@@ -711,7 +711,7 @@ export class CoordinatesConverter {
     this.mapToVacuumMatrix = null;
 
     const points = arrayFromMaybe(calibrationPoints)
-      .filter(isObject)
+      .filter((item): item is Record<string, unknown> => isObject(item))
       .map(point => ({
         map: parsePoint(point?.map),
         vacuum: parsePoint(point?.vacuum),
@@ -798,12 +798,12 @@ export function parseCalibrationPoints(raw: unknown, hass: HomeAssistant | null 
 
 export function resolveLegacyMode(raw: unknown, templateName: unknown) {
   const config = record(raw);
-  return arrayFromMaybe(config?.map_modes).filter(isObject).find(mode => normalizeTextKey(mode.template) === normalizeTextKey(templateName));
+  return arrayFromMaybe(config?.map_modes).filter((item): item is Record<string, unknown> => isObject(item)).find(mode => normalizeTextKey(mode.template) === normalizeTextKey(templateName));
 }
 
 export function resolveRoomsFromVacuumState(hass: HomeAssistant | null | undefined, entityId: string): RoomSegment[] {
   const vacuumState = entityId ? hass?.states?.[entityId] || null : null;
-  const maps = arrayFromMaybe(vacuumState?.attributes?.maps).filter(isObject);
+  const maps = arrayFromMaybe(vacuumState?.attributes?.maps).filter((item): item is Record<string, unknown> => isObject(item));
   const mapWithRooms = maps.find(map => isObject(map?.rooms) && Object.keys(map.rooms).length > 0);
   if (!mapWithRooms) {
     return [];
@@ -870,7 +870,7 @@ export function resolveRoomsFromMapState(hass: HomeAssistant | null | undefined,
 
 export function resolveRoomSegments(raw: unknown, hass: HomeAssistant | null = null, entityId = "", mapEntityId = ""): RoomSegment[] {
   const config = record(raw);
-  const directRooms = arrayFromMaybe(config?.room_segments).filter(isObject);
+  const directRooms = arrayFromMaybe(config?.room_segments).filter((item): item is Record<string, unknown> => isObject(item));
   if (directRooms.length) {
     return directRooms.map(room => {
       const outlines = parseOutlines(pickShapeSource(
@@ -896,7 +896,7 @@ export function resolveRoomSegments(raw: unknown, hass: HomeAssistant | null = n
   }
 
   const segmentMode = resolveLegacyMode(config, "vacuum_clean_segment");
-  const legacyRooms = arrayFromMaybe(segmentMode?.predefined_selections).filter(isObject).map(selection => {
+  const legacyRooms = arrayFromMaybe(segmentMode?.predefined_selections).filter((item): item is Record<string, unknown> => isObject(item)).map(selection => {
     const outlines = parseOutlines(pickShapeSource(
       selection?.outlines,
       selection?.outline,
@@ -932,7 +932,7 @@ export function resolveRoomSegments(raw: unknown, hass: HomeAssistant | null = n
 
 export function resolveGotoPoints(raw: unknown) {
   const config = record(raw);
-  const directPoints = arrayFromMaybe(config?.goto_points).filter(isObject);
+  const directPoints = arrayFromMaybe(config?.goto_points).filter((item): item is Record<string, unknown> => isObject(item));
   if (directPoints.length) {
     return directPoints.map(point => ({
       id: String(point.id || point.label || point.name || ""),
@@ -943,7 +943,7 @@ export function resolveGotoPoints(raw: unknown) {
   }
 
   const gotoMode = resolveLegacyMode(config, "vacuum_goto_predefined");
-  return arrayFromMaybe(gotoMode?.predefined_selections).filter(isObject).map(point => ({
+  return arrayFromMaybe(gotoMode?.predefined_selections).filter((item): item is Record<string, unknown> => isObject(item)).map(point => ({
     id: String(point.id || record(point.label).text || record(point.icon).name || "goto"),
     label: String(record(point.label).text || point?.label || "").trim(),
     icon: String(record(point.icon).name || point?.icon || "mdi:map-marker").trim(),
@@ -953,7 +953,7 @@ export function resolveGotoPoints(raw: unknown) {
 
 export function resolvePredefinedZones(raw: unknown) {
   const config = record(raw);
-  const directZones = arrayFromMaybe(config?.predefined_zones).filter(isObject);
+  const directZones = arrayFromMaybe(config?.predefined_zones).filter((item): item is Record<string, unknown> => isObject(item));
   if (directZones.length) {
     return directZones.map(zone => ({
       id: String(zone.id || zone.label || zone.name || ""),
@@ -965,7 +965,7 @@ export function resolvePredefinedZones(raw: unknown) {
   }
 
   const zoneMode = resolveLegacyMode(config, "vacuum_clean_zone_predefined");
-  return arrayFromMaybe(zoneMode?.predefined_selections).filter(isObject).map(zone => ({
+  return arrayFromMaybe(zoneMode?.predefined_selections).filter((item): item is Record<string, unknown> => isObject(item)).map(zone => ({
     id: String(zone.id || record(zone.label).text || record(zone.icon).name || "zone"),
     label: String(record(zone.label).text || zone?.label || "").trim(),
     icon: String(record(zone.icon).name || zone?.icon || "mdi:vector-rectangle").trim(),
@@ -976,7 +976,7 @@ export function resolvePredefinedZones(raw: unknown) {
 
 export function resolveHeaderIcons(raw: unknown) {
   const config = record(raw);
-  return sortByOrder(arrayFromMaybe(config?.icons).filter(isObject)).map((item, index) => ({
+  return sortByOrder(arrayFromMaybe(config?.icons).filter((item): item is Record<string, unknown> => isObject(item))).map((item, index) => ({
     id: String(item.id || item.icon_id || index),
     icon: String(item.icon || "mdi:gesture-tap-button").trim(),
     tooltip: String(item.tooltip || item.label || "").trim(),
