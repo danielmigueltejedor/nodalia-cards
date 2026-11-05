@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
-import { extname, join, normalize } from "node:path";
+import { extname, join, normalize, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -23,7 +23,7 @@ build.on("exit", code => {
     const url = new URL(request.url || "/", "http://127.0.0.1");
     const relative = normalize(decodeURIComponent(url.pathname)).replace(/^[/\\]+/, "");
     const filePath = join(root, relative);
-    if (filePath !== root && !filePath.startsWith(root.endsWith("/") ? root : `${root}/`)) {
+    if (filePath !== root && !filePath.startsWith(root.endsWith(sep) ? root : `${root}${sep}`)) {
       response.writeHead(403);
       response.end();
       return;
