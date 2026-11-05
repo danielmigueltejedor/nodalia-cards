@@ -1,4 +1,5 @@
 import cardFocusStyles from "../../shared/card-focus.css";
+import { invokeSafely } from "../../shared/invoke-safely";
 import { CARD_TAG, EDITOR_TAG, HAPTIC_PATTERNS } from "./weather-constants";
 import {
   clamp,
@@ -372,17 +373,19 @@ class NodaliaWeatherCard extends HTMLElement {
         this._forecastConnection = null;
       }
     };
-    try {
-      this._forecastSubscription = connection.subscribeMessage(event => {
-        if (!this.isConnected || generation !== this._forecastGeneration || this._hass?.connection !== connection) return;
-        if (!isObject(event) || !Array.isArray(event.forecast)) return;
-        this._forecastEvents = { ...this._forecastEvents, [forecastType]: { forecast: forecastRows(event.forecast) } };
-        this._animateForecastOnNextRender = true;
-        this._lastRenderSignature = "";
-        this._render();
-      }, { type: "weather/subscribe_forecast", entity_id: this._config.entity, forecast_type: forecastType }).catch(onFailure);
-    } catch (_error) {
+    const started = invokeSafely(() => connection.subscribeMessage!(event => {
+      if (!this.isConnected || generation !== this._forecastGeneration || this._hass?.connection !== connection) return;
+      if (!isObject(event) || !Array.isArray(event.forecast)) return;
+      this._forecastEvents = { ...this._forecastEvents, [forecastType]: { forecast: forecastRows(event.forecast) } };
+      this._animateForecastOnNextRender = true;
+      this._lastRenderSignature = "";
+      this._render();
+    }, { type: "weather/subscribe_forecast", entity_id: this._config.entity, forecast_type: forecastType }));
+    if (!started.ok || started.value === undefined) {
       onFailure();
+    } else {
+      this._forecastSubscription = started.value;
+      void started.value.catch(onFailure);
     }
   }
 

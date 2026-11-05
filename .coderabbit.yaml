@@ -1,0 +1,32 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# Review configuration for public open-source pull requests.
+# Requires installation of the CodeRabbit GitHub App; this file alone does not activate reviews.
+language: "en-US"
+early_access: false
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: false
+  auto_review:
+    enabled: true
+    drafts: false
+    auto_incremental_review: true
+  path_filters:
+    - "!**/node_modules/**"
+    - "!**/.venv/**"
+    - "!**/vendor/**"
+    - "!**/build/**"
+    - "!**/dist/**"
+  path_instructions:
+    - path: "src/**"
+      instructions: |
+        Prioritize Home Assistant frontend compatibility, correct entity/state handling,
+        null/unavailable/unknown states, safe service calls, resource cleanup, and
+        accessibility. Flag potential regressions in cards, editors, translations,
+        responsive layouts, and public card APIs. Suggest focused tests for behavior changes.
+    - path: "scripts/**"
+      instructions: |
+        Check release/version synchronization, deterministic generated artifacts,
+        safe filesystem operations, and cross-platform behavior.

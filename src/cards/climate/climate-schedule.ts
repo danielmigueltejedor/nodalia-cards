@@ -527,21 +527,24 @@ export const SETPOINT_SCHEDULE_HA_WEEKDAY = {
   sun: ["sun"],
 };
 
+function trimEdgeUnderscores(value: string) {
+  let start = 0;
+  let end = value.length;
+  while (start < end && value.charCodeAt(start) === 95) start += 1;
+  while (end > start && value.charCodeAt(end - 1) === 95) end -= 1;
+  return value.slice(start, end);
+}
+
 export function getClimateScheduleStorageEntityId(entityId: unknown, configuredHelper: unknown =  "") {
   const custom = String(configuredHelper ?? "").trim();
   if (custom) {
     return custom;
   }
 
-  const rawSlug = String(entityId ?? "")
+  const slug = trimEdgeUnderscores(String(entityId ?? "")
     .trim()
     .replace(/^climate\./, "")
-    .replace(/[^a-z0-9_]+/gi, "_");
-  let slugStart = 0;
-  let slugEnd = rawSlug.length;
-  while (slugStart < slugEnd && rawSlug.charCodeAt(slugStart) === 95) slugStart += 1;
-  while (slugEnd > slugStart && rawSlug.charCodeAt(slugEnd - 1) === 95) slugEnd -= 1;
-  const slug = rawSlug.slice(slugStart, slugEnd);
+    .replace(/[^a-z0-9_]+/gi, "_"));
   return slug ? `input_text.nodalia_climate_schedule_${slug}` : "";
 }
 

@@ -175,6 +175,15 @@
   // src/shared/card-focus.css
   var card_focus_default = "[data-nodalia-card-focus-frame]{display:none;position:absolute;box-sizing:border-box;border:2px solid var(--primary-color, #71c0ff);border-radius:inherit;pointer-events:none;z-index:100}:host(:focus-within) [data-nodalia-card-focus-frame],:is(ha-card,.insignia-card,.media-player-card):focus-within>[data-nodalia-card-focus-frame]{display:block}:is(ha-card,.insignia-card,.media-player-card,[data-nodalia-focus=card]){outline:none!important}:is(button,a[href],summary,[role=button],[role=slider],[tabindex]):not(input,select,textarea){outline:none}:host([data-nodalia-keyboard-focus]) :is(button,a[href],summary,[role=button],[role=slider],[tabindex]):focus-visible:not(input,select,textarea,[data-nodalia-pointer-focus],[data-nodalia-focus=card],ha-card,.insignia-card,.media-player-card){outline:2px solid var(--primary-color, #71c0ff);outline-offset:-3px}";
 
+  // src/shared/invoke-safely.ts
+  function invokeSafely(action) {
+    try {
+      return { ok: true, value: action() };
+    } catch {
+      return { ok: false };
+    }
+  }
+
   // src/shared/editor-entity-helpers.ts
   function getStubEntityId(hass, domains = [], entities = [], entitiesFallback = []) {
     return window.NodaliaUtils.findStubEntityIds(hass, entities, entitiesFallback, domains, 1)[0] || "";
@@ -1041,17 +1050,19 @@
             this._forecastConnection = null;
           }
         };
-        try {
-          this._forecastSubscription = connection.subscribeMessage((event) => {
-            if (!this.isConnected || generation !== this._forecastGeneration || this._hass?.connection !== connection) return;
-            if (!isObject(event) || !Array.isArray(event.forecast)) return;
-            this._forecastEvents = { ...this._forecastEvents, [forecastType]: { forecast: forecastRows(event.forecast) } };
-            this._animateForecastOnNextRender = true;
-            this._lastRenderSignature = "";
-            this._render();
-          }, { type: "weather/subscribe_forecast", entity_id: this._config.entity, forecast_type: forecastType }).catch(onFailure);
-        } catch (_error) {
+        const started = invokeSafely(() => connection.subscribeMessage((event) => {
+          if (!this.isConnected || generation !== this._forecastGeneration || this._hass?.connection !== connection) return;
+          if (!isObject(event) || !Array.isArray(event.forecast)) return;
+          this._forecastEvents = { ...this._forecastEvents, [forecastType]: { forecast: forecastRows(event.forecast) } };
+          this._animateForecastOnNextRender = true;
+          this._lastRenderSignature = "";
+          this._render();
+        }, { type: "weather/subscribe_forecast", entity_id: this._config.entity, forecast_type: forecastType }));
+        if (!started.ok || started.value === void 0) {
           onFailure();
+        } else {
+          this._forecastSubscription = started.value;
+          void started.value.catch(onFailure);
         }
       }
       _getTitle(state) {

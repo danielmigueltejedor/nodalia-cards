@@ -498,17 +498,19 @@
     sat: ["sat"],
     sun: ["sun"]
   };
+  function trimEdgeUnderscores(value) {
+    let start = 0;
+    let end = value.length;
+    while (start < end && value.charCodeAt(start) === 95) start += 1;
+    while (end > start && value.charCodeAt(end - 1) === 95) end -= 1;
+    return value.slice(start, end);
+  }
   function getClimateScheduleStorageEntityId(entityId, configuredHelper = "") {
     const custom = String(configuredHelper ?? "").trim();
     if (custom) {
       return custom;
     }
-    const rawSlug = String(entityId ?? "").trim().replace(/^climate\./, "").replace(/[^a-z0-9_]+/gi, "_");
-    let slugStart = 0;
-    let slugEnd = rawSlug.length;
-    while (slugStart < slugEnd && rawSlug.charCodeAt(slugStart) === 95) slugStart += 1;
-    while (slugEnd > slugStart && rawSlug.charCodeAt(slugEnd - 1) === 95) slugEnd -= 1;
-    const slug = rawSlug.slice(slugStart, slugEnd);
+    const slug = trimEdgeUnderscores(String(entityId ?? "").trim().replace(/^climate\./, "").replace(/[^a-z0-9_]+/gi, "_"));
     return slug ? `input_text.nodalia_climate_schedule_${slug}` : "";
   }
   function buildClimateSetpointScheduleAutomationId(entityId, slotId) {
@@ -4882,7 +4884,7 @@ ${weekdayYaml}
         if (native && attrs.length) {
           const next = Array.from(this.shadowRoot?.querySelectorAll(native.tagName.toLowerCase()) ?? []).find((node) => attrs.every(([key, value]) => Object.is(node.getAttribute(key), value)));
           if (next instanceof HTMLElement) {
-            if (next instanceof HTMLInputElement && pendingValue !== null) next.value = pendingValue;
+            if (next instanceof HTMLInputElement && typeof pendingValue === "string") next.value = pendingValue;
             next.focus({ preventScroll: true });
             if (next instanceof HTMLInputElement && caret && typeof caret[0] === "number" && typeof caret[1] === "number") next.setSelectionRange(caret[0], caret[1]);
           }
