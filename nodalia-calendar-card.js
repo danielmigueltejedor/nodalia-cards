@@ -2010,7 +2010,7 @@ ${metadata}` : metadata;
         const current = () => this.isConnected && generation === this._weatherSubscriptionGeneration;
         this._weatherForecastSubscriptionKey = key;
         this._weatherForecastConnection = connection;
-        const started = invokeSafely(() => connection.subscribeMessage?.((event) => {
+        const started = invokeSafely(() => connection.subscribeMessage((event) => {
           if (!current()) return;
           const value = isObject(event) && "forecast" in event ? event.forecast : event;
           if (!Array.isArray(value) && !isObject(value)) return;

@@ -1050,7 +1050,7 @@
             this._forecastConnection = null;
           }
         };
-        const started = invokeSafely(() => connection.subscribeMessage?.((event) => {
+        const started = invokeSafely(() => connection.subscribeMessage((event) => {
           if (!this.isConnected || generation !== this._forecastGeneration || this._hass?.connection !== connection) return;
           if (!isObject(event) || !Array.isArray(event.forecast)) return;
           this._forecastEvents = { ...this._forecastEvents, [forecastType]: { forecast: forecastRows(event.forecast) } };
