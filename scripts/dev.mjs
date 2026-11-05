@@ -21,19 +21,19 @@ build.on("exit", code => {
   console.log("Preview: http://127.0.0.1:4173/tests/fixtures/browser.html (rerun build after source changes)");
   const server = createServer(async (request, response) => {
     const url = new URL(request.url || "/", "http://127.0.0.1");
-    const relative = normalize(decodeURIComponent(url.pathname)).replace(/^[/\\]+/, "");
-    const filePath = join(root, relative);
-    if (filePath !== root && !filePath.startsWith(root.endsWith(sep) ? root : `${root}${sep}`)) {
-      response.writeHead(403);
-      response.end();
-      return;
-    }
     try {
+      const relative = normalize(decodeURIComponent(url.pathname)).replace(/^[/\\]+/, "");
+      const filePath = join(root, relative);
+      if (filePath !== root && !filePath.startsWith(root.endsWith(sep) ? root : `${root}${sep}`)) {
+        response.writeHead(403);
+        response.end();
+        return;
+      }
       const body = await readFile(filePath);
       response.writeHead(200, { "content-type": contentTypes[extname(filePath)] || "application/octet-stream" });
       response.end(body);
-    } catch {
-      response.writeHead(404);
+    } catch (error) {
+      response.writeHead(error instanceof URIError ? 400 : 404);
       response.end();
     }
   });
