@@ -30,7 +30,10 @@ export function nextVersion(current, channel, requestedVersion) {
 }
 function changelogHasBullet(body) {
   for (const line of body.split("\n")) {
-    if (line.startsWith("- ") || line.startsWith("* ")) return true;
+    if (
+      (line.startsWith("- ") || line.startsWith("* ")) &&
+      line.slice(2).trim().length > 0
+    ) return true;
   }
   return false;
 }
