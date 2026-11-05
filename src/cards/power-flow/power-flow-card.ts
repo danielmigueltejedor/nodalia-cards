@@ -469,7 +469,7 @@ class NodaliaPowerFlowCard extends HTMLElement {
    * Split **battery** entities follow HA energy semantics: `production − consumption` (positive = discharge,
    * negative = charge), matching the single-sensor convention documented on `_applyDerivedHomeAndGridDisplay`.
    */
-  _resolveSourceValue(source: unknown, kind: NodeKind|null = null): SourceResult {
+  _resolveSourceValue(source: unknown, kind: NodeKind | null): SourceResult {
     if (!this._hass?.states || !source) {
       return { value: null, unit: "", state: null, entityId: "" };
     }
@@ -512,9 +512,10 @@ class NodaliaPowerFlowCard extends HTMLElement {
 
       const consumptionNumber = typeof consumptionValue === "number" ? consumptionValue : Number.NaN;
       const productionNumber = typeof productionValue === "number" ? productionValue : Number.NaN;
+      const batteryDischarge = Object.is(kind, "battery");
       const net = (!consumptionEntity && !productionEntity) || !Number.isFinite(consumptionNumber) || !Number.isFinite(productionNumber)
         ? null
-        : kind === "battery" ? productionNumber - consumptionNumber : consumptionNumber - productionNumber;
+        : batteryDischarge ? productionNumber - consumptionNumber : consumptionNumber - productionNumber;
 
       return {
         value: net,

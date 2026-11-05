@@ -243,8 +243,9 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
         .filter(Boolean);
       nextValue = values.length ? values : "";
     } else if (valueType === "json") {
-      nextValue = this._readJsonArray(target);
-      if (nextValue === null) return;
+      const parsed = this._readJsonArray(target);
+      if (!parsed.ok) return;
+      nextValue = parsed.value;
     }
 
     target.setCustomValidity("");
@@ -259,23 +260,23 @@ class NodaliaAdvanceVacuumCardEditor extends HTMLElement {
     this._notifyConfigChange(nextConfig);
   }
 
-  _readJsonArray(input: NativeEditorInput): unknown[] | undefined | null {
+  _readJsonArray(input: NativeEditorInput): { ok: true; value: unknown[] | undefined } | { ok: false } {
     if (!input.value.trim()) {
       input.setCustomValidity("");
       input.removeAttribute("aria-invalid");
-      return undefined;
+      return { ok: true, value: undefined };
     }
     try {
       const value: unknown = JSON.parse(input.value);
       if (Array.isArray(value)) {
         input.setCustomValidity("");
         input.removeAttribute("aria-invalid");
-        return value;
+        return { ok: true, value };
       }
     } catch (_error) { /* Keep the last valid config while the draft is corrected. */ }
     input.setCustomValidity(this._editorLabel("ed.advance_vacuum.invalid_json_array"));
     input.setAttribute("aria-invalid", "true");
-    return null;
+    return { ok: false };
   }
 
   _editorLabel(s: string) {

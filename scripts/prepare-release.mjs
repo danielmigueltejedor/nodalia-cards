@@ -55,19 +55,44 @@ export function promoteChangelog(source, version, date) {
   const promoted = [`## [${version}] - ${date}`, "", body.trimStart().replace(/\n+$/, "")];
   return [...lines.slice(0, start), ...promoted, ...(end < lines.length ? [""] : []), ...lines.slice(end)].join("\n");
 }
+function sectionBefore(source, startHeading, endHeading) {
+  let from = 0;
+  while (from <= source.length) {
+    const start = source.indexOf(startHeading, from);
+    if (start < 0) return null;
+    const atLineStart = start === 0 || source[start - 1] === "\n";
+    if (atLineStart) {
+      const end = source.indexOf(`\n${endHeading}`, start + startHeading.length);
+      if (end < 0) return null;
+      return { from: start, to: end + 1, text: source.slice(start, end + 1) };
+    }
+    from = start + startHeading.length;
+  }
+  return null;
+}
+function fencedVersion(section) {
+  const marker = "```text";
+  const open = section.indexOf(marker);
+  if (open < 0) return "";
+  const close = section.indexOf("```", open + marker.length);
+  if (close < 0) return "";
+  return section.slice(open + marker.length, close).trim().split(/\s+/).find(Boolean) || "";
+}
 export function updateRoadmap(source, version, channel) {
-  const preview = /^## Current preview release[\s\S]*?(?=^## Current stable release)/m;
-  const stable = /^## Current stable release[\s\S]*?(?=^The project currently includes:)/m;
-  if (!preview.test(source) || !stable.test(source)) throw new Error('ROADMAP.md release sections are missing');
-  const stableSection = source.match(stable)[0];
-  const stableVersion = stableSection.match(/```text\s+([^\s`]+)\s+```/)?.[1];
+  const preview = sectionBefore(source, "## Current preview release", "## Current stable release");
+  const stable = sectionBefore(source, "## Current stable release", "The project currently includes:");
+  if (!preview || !stable) throw new Error('ROADMAP.md release sections are missing');
+  const stableVersion = fencedVersion(stable.text);
   if (!stableVersion) throw new Error('ROADMAP.md stable version is missing');
   const nextPreview = channel === 'stable'
     ? `## Current preview release\n\nNo active preview. Stable **\`${version}\`** is the recommended release.\n\n`
     : `## Current preview release\n\nCurrent preview release:\n\n\`\`\`text\n${version}\n\`\`\`\n\nSee [the curated prerelease notes](./CHANGELOG-PRERELEASES.md) for this build.\nStable **\`${stableVersion}\`** remains the recommended daily-driver release.\n\n`;
-  let result = source.replace(preview, nextPreview);
+  let result = source.slice(0, preview.from) + nextPreview + source.slice(preview.to);
   if (channel === 'stable') {
-    result = result.replace(stable, `## Current stable release\n\nCurrent stable release:\n\n\`\`\`text\n${version}\n\`\`\`\n\nStable changes and migration notes are summarized in [CHANGELOG.md](./CHANGELOG.md).\n\n`);
+    const updatedStable = sectionBefore(result, "## Current stable release", "The project currently includes:");
+    if (!updatedStable) throw new Error('ROADMAP.md release sections are missing');
+    const nextStable = `## Current stable release\n\nCurrent stable release:\n\n\`\`\`text\n${version}\n\`\`\`\n\nStable changes and migration notes are summarized in [CHANGELOG.md](./CHANGELOG.md).\n\n`;
+    result = result.slice(0, updatedStable.from) + nextStable + result.slice(updatedStable.to);
     result = result.replace(/# 🎯 Current focus \(`[^`]+` maintenance\)/, `# 🎯 Current focus (\`${version.split('.').slice(0, 2).join('.')}.x\` maintenance)`);
     result = result.replaceAll(`stable **\`${stableVersion}\`**`, `stable **\`${version}\`**`);
   }

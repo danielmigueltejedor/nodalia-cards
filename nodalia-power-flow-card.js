@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.5-alpha.2";
+  var CARD_VERSION = "3.0.5-alpha.3";
 
   // src/cards/power-flow/power-flow-constants.ts
   var CARD_TAG = "nodalia-power-flow-card";
@@ -1354,7 +1354,7 @@
        * Split **battery** entities follow HA energy semantics: `production − consumption` (positive = discharge,
        * negative = charge), matching the single-sensor convention documented on `_applyDerivedHomeAndGridDisplay`.
        */
-      _resolveSourceValue(source, kind = null) {
+      _resolveSourceValue(source, kind) {
         if (!this._hass?.states || !source) {
           return { value: null, unit: "", state: null, entityId: "" };
         }
@@ -1389,7 +1389,8 @@
           ).trim();
           const consumptionNumber = typeof consumptionValue === "number" ? consumptionValue : Number.NaN;
           const productionNumber = typeof productionValue === "number" ? productionValue : Number.NaN;
-          const net = !consumptionEntity && !productionEntity || !Number.isFinite(consumptionNumber) || !Number.isFinite(productionNumber) ? null : kind === "battery" ? productionNumber - consumptionNumber : consumptionNumber - productionNumber;
+          const batteryDischarge = Object.is(kind, "battery");
+          const net = !consumptionEntity && !productionEntity || !Number.isFinite(consumptionNumber) || !Number.isFinite(productionNumber) ? null : batteryDischarge ? productionNumber - consumptionNumber : consumptionNumber - productionNumber;
           return {
             value: net,
             unit,
