@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.5-alpha.2";
+  var CARD_VERSION = "3.0.5-alpha.3";
 
   // src/cards/advance-vacuum/advance-vacuum-constants.ts
   var CARD_TAG = "nodalia-advance-vacuum-card";
@@ -7466,8 +7466,9 @@
           const values = String(target.value || "").split(",").map((item) => item.trim().toLowerCase()).filter(Boolean);
           nextValue = values.length ? values : "";
         } else if (valueType === "json") {
-          nextValue = this._readJsonArray(target);
-          if (nextValue === null) return;
+          const parsed = this._readJsonArray(target);
+          if (!parsed.ok) return;
+          nextValue = parsed.value;
         }
         target.setCustomValidity("");
         target.removeAttribute("aria-invalid");
@@ -7483,20 +7484,20 @@
         if (!input.value.trim()) {
           input.setCustomValidity("");
           input.removeAttribute("aria-invalid");
-          return void 0;
+          return { ok: true, value: void 0 };
         }
         try {
           const value = JSON.parse(input.value);
           if (Array.isArray(value)) {
             input.setCustomValidity("");
             input.removeAttribute("aria-invalid");
-            return value;
+            return { ok: true, value };
           }
         } catch (_error) {
         }
         input.setCustomValidity(this._editorLabel("ed.advance_vacuum.invalid_json_array"));
         input.setAttribute("aria-invalid", "true");
-        return null;
+        return { ok: false };
       }
       _editorLabel(s) {
         if (typeof s !== "string" || !window.NodaliaI18n?.editorStr) {
