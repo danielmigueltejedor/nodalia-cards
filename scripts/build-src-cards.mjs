@@ -11,7 +11,6 @@ export const SRC_CARD_ENTRIES = CARD_REGISTRY.map(card => ({ entry: card.standal
 
 export const RUNTIME_ENTRIES = [
   { entry: "src/shared/runtime-i18n-runtime.ts", outfile: "nodalia-i18n.js" },
-  { entry: "src/shared/runtime-i18n-runtime.ts", outfile: "tests/fixtures/nodalia-i18n-lib.mjs", format: "esm" },
   { entry: "src/shared/editor-i18n-runtime.ts", outfile: "nodalia-editor-ui.js" },
   { entry: "src/shared/utils-runtime.ts", outfile: "nodalia-utils.js" },
   { entry: "src/shared/go2rtc-player.ts", outfile: "nodalia-go2rtc-player.js", format: "esm" },

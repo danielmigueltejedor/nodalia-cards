@@ -1,4 +1,21 @@
-import { createRuntimeI18n } from "../fixtures/nodalia-i18n-lib.mjs";
+import { build } from "esbuild";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+const root = fileURLToPath(new URL("../..", import.meta.url));
+const outfile = path.join(os.tmpdir(), "nodalia-i18n-lib.mjs");
+await build({
+  absWorkingDir: root,
+  entryPoints: ["src/shared/runtime-i18n-runtime.ts"],
+  outfile,
+  bundle: true,
+  format: "esm",
+  platform: "neutral",
+  target: ["es2022"],
+  write: true,
+});
+const { createRuntimeI18n } = await import(`${pathToFileURL(outfile).href}?nodalia=${Date.now()}`);
 
 export function loadRuntimeI18n(overrides = {}) {
   const context = { ...overrides };
