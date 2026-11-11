@@ -58,6 +58,37 @@ All cards work independently of the Engine.
 
 <div align="center">
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/main/docs/images/readme/hero-dark.webp">
+  <img src="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/main/docs/images/readme/hero-light.webp" alt="A dashboard built with Nodalia Cards: weather, light, scenes, person, entity, climate, media player, graph, fan, cover and lock cards" width="100%">
+</picture>
+
+</div>
+
+<br>
+
+<div align="center">
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/main/docs/images/readme/devices-dark.webp">
+  <img src="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/main/docs/images/readme/devices-light.webp" alt="Device cards: light, humidifier, fan, cover, vacuum, lock and alarm panel" width="100%">
+</picture>
+
+<br><br>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/main/docs/images/readme/energy-dark.webp">
+  <img src="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/main/docs/images/readme/energy-light.webp" alt="Energy and monitoring cards: power flow, circular gauge, graph, entity and insignia" width="100%">
+</picture>
+
+</div>
+
+<sub>The cards above are rendered from this repository with demo data, in a dark and a light theme; the image follows your GitHub theme. Icons come from Home Assistant's Material Design Icons.</sub>
+
+### In motion
+
+<div align="center">
+
 <img src="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/main/docs/gifs/animations1.optimized.gif" alt="Nodalia Cards dashboard interactions" width="48%">
 <img src="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/main/docs/gifs/animations2.optimized.gif" alt="Nodalia Cards animations and controls" width="48%">
 
