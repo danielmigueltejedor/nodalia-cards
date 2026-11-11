@@ -746,10 +746,8 @@ class NodaliaMediaPlayer extends HTMLElement {
   }
 
   _scheduleEntranceAnimationReset(delay:unknown) {
-    if (this._entranceAnimationResetTimer) {
-      window.clearTimeout(this._entranceAnimationResetTimer);
-      this._entranceAnimationResetTimer = 0;
-    }
+    // State updates during the entrance must not keep extending its lifetime.
+    if (this._entranceAnimationResetTimer) return;
 
     const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3000);
     if (!safeDelay || typeof window === "undefined") {

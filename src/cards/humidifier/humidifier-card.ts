@@ -362,10 +362,8 @@ class NodaliaHumidifierCard extends HTMLElement {
   }
 
   _scheduleEntranceAnimationReset(delay: unknown) {
-    if (this._entranceAnimationResetTimer) {
-      window.clearTimeout(this._entranceAnimationResetTimer);
-      this._entranceAnimationResetTimer = 0;
-    }
+    // State updates during the entrance must not keep extending its lifetime.
+    if (this._entranceAnimationResetTimer) return;
 
     const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3000);
     if (!safeDelay || typeof window === "undefined") {
@@ -3423,7 +3421,6 @@ class NodaliaHumidifierCard extends HTMLElement {
           margin-top: var(--humidifier-card-controls-gap);
           max-height: 320px;
           overflow: visible;
-          will-change: grid-template-rows, max-height, margin-top, opacity;
         }
 
         .humidifier-card__controls-inner {
@@ -3432,7 +3429,11 @@ class NodaliaHumidifierCard extends HTMLElement {
           gap: 10px;
           min-height: 0;
           overflow: visible;
-          will-change: opacity, transform;
+        }
+
+        .humidifier-card__controls-shell--entering,
+        .humidifier-card__controls-shell--leaving {
+          will-change: grid-template-rows, max-height, margin-top, opacity;
         }
 
         .humidifier-card__controls-shell--entering {
@@ -3661,14 +3662,12 @@ class NodaliaHumidifierCard extends HTMLElement {
         .humidifier-card__panel-shell {
           backface-visibility: hidden;
           overflow: hidden;
-          will-change: max-height, opacity;
         }
 
         .humidifier-card__panel-inner {
           backface-visibility: hidden;
           display: grid;
           padding: 4px;
-          will-change: opacity, transform;
         }
 
         .humidifier-card__panel-shell--entering {

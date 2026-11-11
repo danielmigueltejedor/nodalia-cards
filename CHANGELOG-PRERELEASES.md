@@ -8,6 +8,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.0.6-alpha.1] - 2026-11-11
+
+### Fixed
+
+- Prevent frequent entity updates from repeatedly extending card entrance animations, reducing unnecessary animation work while retaining the entrance on a new dashboard view.
+- Reduce persistent rendering hints on Light, Fan, Humidifier and Vacuum controls while they are idle.
+
+### Added
+
+- Add large-dashboard and accelerated twelve-hour lifecycle diagnostics to help investigate long-session performance. The simulation does not replace testing with a real dashboard and browser.
+
 ## [3.0.5-alpha.3] - 2026-11-05
 
 ### Fixed

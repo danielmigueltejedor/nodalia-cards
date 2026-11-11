@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.5";
+  var CARD_VERSION = "3.0.6-alpha.1";
 
   // src/cards/advance-vacuum/advance-vacuum-constants.ts
   var CARD_TAG = "nodalia-advance-vacuum-card";
@@ -1892,10 +1892,7 @@
         };
       }
       _scheduleEntranceAnimationReset(delay = 0) {
-        if (this._entranceAnimationResetTimer) {
-          clearTimeout(this._entranceAnimationResetTimer);
-          this._entranceAnimationResetTimer = 0;
-        }
+        if (this._entranceAnimationResetTimer) return;
         const generation = this._generation;
         const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3e3);
         if (!safeDelay || typeof window === "undefined") {
