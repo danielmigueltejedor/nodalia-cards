@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.5";
+  var CARD_VERSION = "3.0.6-alpha.1";
 
   // src/shared/device-control-geometry.ts
   var CIRCULAR_LAYOUT_DIAL_START_ANGLE = 135;
@@ -957,10 +957,7 @@
         this._render();
       }
       _scheduleEntranceAnimationReset(delay) {
-        if (this._entranceAnimationResetTimer) {
-          window.clearTimeout(this._entranceAnimationResetTimer);
-          this._entranceAnimationResetTimer = 0;
-        }
+        if (this._entranceAnimationResetTimer) return;
         const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3e3);
         if (!safeDelay || typeof window === "undefined") {
           this._animateContentOnNextRender = false;
@@ -3560,7 +3557,6 @@
           margin-top: var(--humidifier-card-controls-gap);
           max-height: 320px;
           overflow: visible;
-          will-change: grid-template-rows, max-height, margin-top, opacity;
         }
 
         .humidifier-card__controls-inner {
@@ -3569,7 +3565,11 @@
           gap: 10px;
           min-height: 0;
           overflow: visible;
-          will-change: opacity, transform;
+        }
+
+        .humidifier-card__controls-shell--entering,
+        .humidifier-card__controls-shell--leaving {
+          will-change: grid-template-rows, max-height, margin-top, opacity;
         }
 
         .humidifier-card__controls-shell--entering {
@@ -3794,14 +3794,12 @@
         .humidifier-card__panel-shell {
           backface-visibility: hidden;
           overflow: hidden;
-          will-change: max-height, opacity;
         }
 
         .humidifier-card__panel-inner {
           backface-visibility: hidden;
           display: grid;
           padding: 4px;
-          will-change: opacity, transform;
         }
 
         .humidifier-card__panel-shell--entering {

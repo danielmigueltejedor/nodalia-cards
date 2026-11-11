@@ -376,10 +376,8 @@ class NodaliaVacuumCard extends HTMLElement {
   }
 
   _scheduleEntranceAnimationReset(delay: unknown) {
-    if (this._entranceAnimationResetTimer) {
-      window.clearTimeout(this._entranceAnimationResetTimer);
-      this._entranceAnimationResetTimer = 0;
-    }
+    // State updates during the entrance must not keep extending its lifetime.
+    if (this._entranceAnimationResetTimer) return;
 
     const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3000);
     if (!safeDelay || typeof window === "undefined") {
@@ -3156,7 +3154,6 @@ class NodaliaVacuumCard extends HTMLElement {
           min-width: 0;
           overflow: hidden;
           transform-origin: top center;
-          will-change: max-height, opacity;
           width: 100%;
         }
 
@@ -3165,7 +3162,6 @@ class NodaliaVacuumCard extends HTMLElement {
           display: grid;
           min-width: 0;
           padding: 4px;
-          will-change: opacity, transform;
         }
 
         .vacuum-card__panel-shell--entering {

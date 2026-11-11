@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.5";
+  var CARD_VERSION = "3.0.6-alpha.1";
 
   // src/cards/entity/entity-constants.ts
   var CARD_TAG = "nodalia-entity-card";
@@ -2711,10 +2711,7 @@
         this._suppressNextEntityTap = false;
       }
       _scheduleEntranceAnimationReset(delay) {
-        if (this._entranceAnimationResetTimer) {
-          window.clearTimeout(this._entranceAnimationResetTimer);
-          this._entranceAnimationResetTimer = 0;
-        }
+        if (this._entranceAnimationResetTimer) return;
         const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3e3);
         if (!safeDelay || typeof window === "undefined") {
           this._animateContentOnNextRender = false;

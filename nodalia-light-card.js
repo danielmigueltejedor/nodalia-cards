@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.5";
+  var CARD_VERSION = "3.0.6-alpha.1";
 
   // src/shared/device-state-memory.ts
   var isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
@@ -1104,10 +1104,7 @@
         this._render();
       }
       _scheduleEntranceAnimationReset(delay) {
-        if (this._entranceAnimationResetTimer) {
-          window.clearTimeout(this._entranceAnimationResetTimer);
-          this._entranceAnimationResetTimer = 0;
-        }
+        if (this._entranceAnimationResetTimer) return;
         const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3e3);
         if (!safeDelay || typeof window === "undefined") {
           this._animateContentOnNextRender = false;
@@ -3521,7 +3518,6 @@
           backface-visibility: hidden;
           display: inline-flex;
           overflow: hidden;
-          will-change: opacity, transform;
           transform-origin: right center;
         }
 
@@ -3530,7 +3526,6 @@
           display: inline-flex;
           opacity: 1;
           transform: none;
-          will-change: opacity, transform;
           transform-origin: right center;
         }
 
@@ -3554,7 +3549,6 @@
           margin-top: var(--light-card-controls-gap);
           max-height: 320px;
           overflow: visible;
-          will-change: grid-template-rows, max-height, margin-top, opacity;
         }
 
         .light-card__controls-inner {
@@ -3563,7 +3557,6 @@
           gap: 10px;
           min-height: 0;
           overflow: visible;
-          will-change: opacity, transform;
         }
 
         .light-card__mode-panel {
@@ -3572,7 +3565,6 @@
           display: grid;
           min-height: var(--light-card-mode-shell-height);
           overflow: visible;
-          will-change: opacity, transform;
           width: 100%;
         }
 
@@ -3586,7 +3578,6 @@
           display: grid;
           opacity: 1;
           transform: none;
-          will-change: opacity, transform;
           width: 100%;
         }
 
@@ -3612,6 +3603,11 @@
           animation: light-card-mode-slider-in-vertical var(--light-card-mode-duration) cubic-bezier(0.22, 0.84, 0.26, 1) both;
           pointer-events: none;
           transform-origin: center;
+        }
+
+        .light-card__controls-shell--entering,
+        .light-card__controls-shell--leaving {
+          will-change: grid-template-rows, max-height, margin-top, opacity;
         }
 
         .light-card__controls-shell--entering {

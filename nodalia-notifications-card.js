@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.5";
+  var CARD_VERSION = "3.0.6-alpha.1";
 
   // src/cards/notifications/notifications-constants.ts
   var CARD_TAG = "nodalia-notifications-card";
@@ -1524,10 +1524,7 @@
         window.removeEventListener("orientationchange", this._onViewportResize);
       }
       _scheduleEntranceAnimationReset(delay) {
-        if (this._entranceAnimationTimer) {
-          window.clearTimeout(this._entranceAnimationTimer);
-          this._entranceAnimationTimer = 0;
-        }
+        if (this._entranceAnimationTimer) return;
         const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3e3);
         if (!safeDelay || typeof window === "undefined") {
           this._animateContentOnNextRender = false;

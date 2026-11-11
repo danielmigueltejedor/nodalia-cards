@@ -68,3 +68,23 @@ The canonical configuration opts into the new profiles with the internal
 keep their original workload coverage and remain verifiable.
 
 `pnpm benchmark:maintenance -- --baseline=<published version>` compares the local candidate with any published release instead of `3.0.0`. `--broad` runs every registered card's mount, unrelated and relevant profiles, the 25-card dashboard and the Advanced Vacuum map, gesture, helper and lifecycle profiles; `--iterations` and `--warmups` shorten or lengthen the run. Output is `bench/results/maintenance-<candidate>[-vs-<baseline>][-broad].json`.
+
+## Local dashboard soak diagnostic
+
+After building the candidate (`pnpm run bundle`), export a baseline bundle from the
+revision being compared, serve the repository on port 4173, and run:
+
+```bash
+git show HEAD:nodalia-cards.js > /tmp/nodalia-baseline.js
+python3 -m http.server 4173 --bind 127.0.0.1
+# In a second terminal:
+node bench/dashboard-soak.mjs /tmp/nodalia-baseline.js > /tmp/dashboard-soak.json
+```
+
+This local WebKit diagnostic mounts 48 cards across two panels, delivers changing
+fixture states and repeatedly reconnects panels, then measures entrance frames
+and synchronous mounting before and after. The browser fixture is not Home
+Assistant itself, the rapid cycles do not represent hours of wall time, and frame
+timings include diagnostic overhead and machine load. The cleanup count covers
+only selected timers and frames, not all resources or retained heap. Raw results
+are diagnostic, not proof of a leak or a release performance claim.
