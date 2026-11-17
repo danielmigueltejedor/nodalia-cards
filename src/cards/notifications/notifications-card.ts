@@ -312,10 +312,8 @@ class NodaliaNotificationsCard extends HTMLElement {
   }
 
   _scheduleEntranceAnimationReset(delay:unknown) {
-    if (this._entranceAnimationTimer) {
-      window.clearTimeout(this._entranceAnimationTimer);
-      this._entranceAnimationTimer = 0;
-    }
+    // State updates during the entrance must not keep extending its lifetime.
+    if (this._entranceAnimationTimer) return;
 
     const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3000);
     if (!safeDelay || typeof window === "undefined") {

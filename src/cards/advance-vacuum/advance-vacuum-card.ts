@@ -564,10 +564,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _scheduleEntranceAnimationReset(delay = 0) {
-    if (this._entranceAnimationResetTimer) {
-      clearTimeout(this._entranceAnimationResetTimer);
-      this._entranceAnimationResetTimer = 0;
-    }
+    // State updates during the entrance must not keep extending its lifetime.
+    if (this._entranceAnimationResetTimer) return;
 
     const generation=this._generation;
     const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3000);
