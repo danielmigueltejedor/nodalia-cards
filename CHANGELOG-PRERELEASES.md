@@ -8,6 +8,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.0.7-alpha.2] - 2026-11-20
+
+### Fixed
+
+- **Advance Vacuum:** use the selected `map_source.image` entity's `calibration_points` when automatic camera/map calibration is enabled. Room selection bubbles can now be positioned on the map instead of permanently falling back to the list beneath it.
+- **Advance Vacuum:** recognize calibration metadata arriving after the initial map render and restore room markers without a manual reload.
+
+### Tests
+
+- Add browser regression coverage for image-entity maps with real-world Roborock coordinates, both when calibration is immediately present and when it arrives later.
+
 ## [3.0.7-alpha.1] - 2026-11-20
 
 ### Fixed
