@@ -789,7 +789,8 @@ export function parseCalibrationPoints(raw: unknown, hass: HomeAssistant | null 
   }
 
   if (calibration.camera === true) {
-    const mapEntityId = String(record(config.map_source).camera || config.map_camera || "");
+    const mapSource = record(config.map_source);
+    const mapEntityId = String(mapSource.camera || mapSource.image || config.map_camera || "");
     return arrayFromMaybe(hass?.states?.[mapEntityId]?.attributes?.calibration_points);
   }
 
