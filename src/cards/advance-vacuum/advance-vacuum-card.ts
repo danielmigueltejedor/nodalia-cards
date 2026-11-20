@@ -2188,7 +2188,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       };
     }
     if (vacuumRecord(config?.calibration_source).camera === true) {
-      const mapEntityId = String(vacuumRecord(config?.map_source).camera || config?.map_camera || "");
+      const mapEntityId = String(vacuumRecord(config?.map_source).camera || vacuumRecord(config?.map_source).image || config?.map_camera || "");
       const st = mapEntityId ? hass?.states?.[mapEntityId] : null;
       const pts = st?.attributes?.calibration_points;
       const len = Array.isArray(pts) ? pts.length : 0;
