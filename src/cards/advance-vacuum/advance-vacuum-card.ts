@@ -5989,6 +5989,16 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       && mapped.y >= 0 && mapped.y <= this._mapImageHeight;
   }
 
+  _canPlaceRoomMarker(room:RoomSegment) {
+    if (!this._mapImageDimensionsReady) return false;
+    const outline = this._getPrimaryRoomOutline(room);
+    if (outline.length < 3) return false;
+    const candidates = this._getRoomMarkerCandidatePoints(room);
+    const anchor = room.iconPoint || room.labelPoint || centroid(outline);
+    return candidates.some(point => this._isValidRoomMarkerAnchor(point))
+      || this._isValidRoomMarkerAnchor(anchor);
+  }
+
   _getRoomMarkerPlacements(rooms:RoomSegment[], markerSize:number, labelSize:number, iconSize:number) {
     const mapRect = this._getMapSurfaceRect();
     const viewportWidth = mapRect?.width || this._mapImageWidth || 1;
@@ -6092,7 +6102,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const placements = this._getRoomMarkerPlacements(rooms, markerSize, labelSize, iconSize);
 
     return rooms
-      .filter(room => this._getPrimaryRoomOutline(room).length >= 3)
+      .filter(room => this._canPlaceRoomMarker(room))
       .map(room => {
       const placement = placements.get(String(room.id));
       const primaryOutline = this._getPrimaryRoomOutline(room);
@@ -6200,7 +6210,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const state = this._getVacuumState();
     const isRoomSelectionLocked = this._isRoomSelectionLocked(state);
     const highlightedRoomIds = new Set(this._getHighlightedRoomIds(state));
-    const fallbackRooms = rooms.filter(room => room.outlines.length === 0);
+    // Until map dimensions/calibration are valid, offer room controls in a
+    // reachable list instead of trapping them at a clamped corner.
+    const fallbackRooms = rooms.filter(room => !this._canPlaceRoomMarker(room));
     if (!fallbackRooms.length) {
       return "";
     }
