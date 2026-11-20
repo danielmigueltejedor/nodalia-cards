@@ -1046,7 +1046,7 @@
       return arrayFromMaybe(hass.states[calibrationEntityId]?.attributes.calibration_points);
     }
     if (calibration.camera === true) {
-      const mapEntityId = String(record(config.map_source).camera || config.map_camera || "");
+      const mapEntityId = String(record(config.map_source).camera || record(config.map_source).image || config.map_camera || "");
       return arrayFromMaybe(hass?.states?.[mapEntityId]?.attributes?.calibration_points);
     }
     return [];
@@ -3179,7 +3179,7 @@
           };
         }
         if (vacuumRecord(config?.calibration_source).camera === true) {
-          const mapEntityId = String(vacuumRecord(config?.map_source).camera || config?.map_camera || "");
+          const mapEntityId = String(vacuumRecord(config?.map_source).camera || vacuumRecord(config?.map_source).image || config?.map_camera || "");
           const st = mapEntityId ? hass?.states?.[mapEntityId] : null;
           const pts = st?.attributes?.calibration_points;
           const len = Array.isArray(pts) ? pts.length : 0;
