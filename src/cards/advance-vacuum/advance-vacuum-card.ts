@@ -291,6 +291,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   connectedCallback() {
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
+    // hass may be assigned while disconnected; refresh calibration before the
+    // first connected paint so valid room markers are not left in the fallback list.
+    this._syncCalibrationIfNeeded();
     this._render();
     if (typeof window !== "undefined") {
       window.addEventListener("nodalia-i18n-ready", this._onNodaliaI18nReady);
