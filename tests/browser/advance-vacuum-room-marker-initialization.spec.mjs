@@ -29,25 +29,26 @@ async function mount(page, { room = { id: 'far', label: 'Far room', outline: [[1
   return card;
 }
 
-test('room markers never clamp to the bottom right while the real raster dimensions are loading', async ({ page }) => {
-  let releaseImage;
-  const heldImage = new Promise(resolve => { releaseImage = resolve; });
+test('room markers never clamp to the bottom right on first load or reload', async ({ page }) => {
+  let releaseImage = () => {};
+  let heldImage = Promise.resolve();
   await page.route('**/room-marker-map.svg*', async route => {
     await heldImage;
     await route.fulfill({ contentType: 'image/svg+xml', body: svg() });
   });
-
-  // The first render has only the default 1024x1024 size, but room coordinates
-  // refer to the real 2048x1024 image. Repeat after a page refresh.
+  // Coordinates extend beyond the temporary 1024px placeholder image width.
   for (let attempt = 0; attempt < 2; attempt++) {
-    const card = await mount(page);
-    await expect(card.locator('.advance-vacuum-card__room-marker[data-room-id="far"]')).toHaveCount(0);
-    await expect(card.locator('.advance-vacuum-card__room-chip[data-room-id="far"]')).toBeVisible();
-    if (attempt === 0) {
+    heldImage = new Promise(resolve => { releaseImage = resolve; });
+    try {
+      const card = await mount(page);
+      const mapMarker = card.locator('.advance-vacuum-card__room-marker[data-room-id="far"]');
+      const fallback = card.locator('.advance-vacuum-card__room-chip[data-room-id="far"]');
+      await expect(mapMarker).toHaveCount(0);
+      await expect(fallback).toBeVisible();
       releaseImage();
-      await expect(card.locator('.advance-vacuum-card__room-marker[data-room-id="far"]')).toBeVisible();
-      await expect(card.locator('.advance-vacuum-card__room-chip[data-room-id="far"]')).toHaveCount(0);
-      const position = await card.locator('.advance-vacuum-card__room-marker[data-room-id="far"]').evaluate(node => ({
+      await expect(mapMarker).toBeVisible();
+      await expect(fallback).toHaveCount(0);
+      const position = await mapMarker.evaluate(node => ({
         left: Number.parseFloat(node.style.left),
         top: Number.parseFloat(node.style.top),
       }));
@@ -56,7 +57,8 @@ test('room markers never clamp to the bottom right while the real raster dimensi
       expect(position.top).toBeGreaterThan(10);
       expect(position.top).toBeLessThan(90);
       expect(await page.evaluate(() => window.bundleErrors)).toEqual([]);
-      break;
+    } finally {
+      releaseImage();
     }
   }
 });
