@@ -439,7 +439,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
   setConfig(config:unknown) {
     this._releaseViewWork();
-    this._mapImageWidth=1024;this._mapImageHeight=1024;this._mapImageDimensionsReady=false;this._converter=new CoordinatesConverter([]);this._lastNonSmartModeSelection={suction:"",mop:""};this.shadowRoot?.replaceChildren();
+    this._mapImageWidth=1024;this._mapImageHeight=1024;this._mapImageDimensionsReady=false;this._converter=new CoordinatesConverter([]);this._calibrationSignatureStamp="";this._lastNonSmartModeSelection={suction:"",mop:""};this.shadowRoot?.replaceChildren();
     this._config = normalizeConfig(config || {});
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
     this._lastRenderSignature = "";
