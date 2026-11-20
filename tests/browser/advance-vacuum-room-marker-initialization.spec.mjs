@@ -119,6 +119,24 @@ const imageMapRoom = {
   labelPoint: { x: 26130, y: 24264 },
 };
 
+test('initial camera-map calibration is available before the card connects', async ({ page }) => {
+  await page.route('**/room-marker-map.svg*', route => route.fulfill({
+    contentType: 'image/svg+xml', body: svg(1640, 2276),
+  }));
+  // Home Assistant can set config and hass before attaching the custom card.
+  // This must not leave the converter uncalibrated until a later HA update.
+  const card = await mount(page, {
+    room: imageMapRoom,
+    mapSource: { camera: 'image.map' },
+    mapAttributes: { calibration_points: imageMapCalibration },
+  });
+  const marker = card.locator('.advance-vacuum-card__room-marker[data-room-id="17"]');
+  await expect(marker).toBeVisible();
+  await expect(card.locator('.advance-vacuum-card__room-chip[data-room-id="17"]')).toHaveCount(0);
+  expect(await page.evaluate(() => window.markerCard._converter.calibrated)).toBe(true);
+  expect(await page.evaluate(() => window.bundleErrors)).toEqual([]);
+});
+
 test('image map source automatically uses its calibration for real vacuum coordinates', async ({ page }) => {
   await page.route('**/room-marker-map.svg*', route => route.fulfill({
     contentType: 'image/svg+xml', body: svg(1640, 2276),
