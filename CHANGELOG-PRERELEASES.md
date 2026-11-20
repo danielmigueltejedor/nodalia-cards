@@ -13,7 +13,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 - **Advance Vacuum:** use the selected `map_source.image` entity's `calibration_points` when automatic camera/map calibration is enabled. Room selection bubbles can now be positioned on the map instead of permanently falling back to the list beneath it.
-- **Advance Vacuum:** recognize calibration metadata arriving after the initial map render and restore room markers without a manual reload.
+- **Advance Vacuum:** synchronize Home Assistant calibration before the first connected render, including when Home Assistant assigns `hass` before attaching the card; also recognize calibration metadata arriving later and restore map markers without a manual reload.
 
 ### Tests
 
