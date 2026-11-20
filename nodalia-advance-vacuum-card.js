@@ -2,7 +2,7 @@
 "use strict";
 (() => {
   // src/version.ts
-  var CARD_VERSION = "3.0.6";
+  var CARD_VERSION = "3.0.7-alpha.1";
 
   // src/cards/advance-vacuum/advance-vacuum-constants.ts
   var CARD_TAG = "nodalia-advance-vacuum-card";
@@ -1473,6 +1473,7 @@
         this._hass = null;
         this._mapImageWidth = 1024;
         this._mapImageHeight = 1024;
+        this._mapImageDimensionsReady = false;
         this._activeMode = "all";
         this._activeUtilityPanel = null;
         this._selectedRoomIds = [];
@@ -1686,6 +1687,7 @@
         this._calibrationSignatureStamp = "";
         this._mapImageWidth = 1024;
         this._mapImageHeight = 1024;
+        this._mapImageDimensionsReady = false;
         this._converter = new CoordinatesConverter([]);
         this._resetMapTransform();
         this._animateContentOnNextRender = true;
@@ -1771,6 +1773,7 @@
         this._releaseViewWork();
         this._mapImageWidth = 1024;
         this._mapImageHeight = 1024;
+        this._mapImageDimensionsReady = false;
         this._converter = new CoordinatesConverter([]);
         this._lastNonSmartModeSelection = { suction: "", mop: "" };
         this.shadowRoot?.replaceChildren();
@@ -6226,9 +6229,11 @@
         if (!image.classList.contains("is-loaded")) image.classList.add("is-loaded");
         if (width > 0 && height > 0) {
           const dimensionsChanged = width !== this._mapImageWidth || height !== this._mapImageHeight;
+          const firstValidDimensions = !this._mapImageDimensionsReady;
           this._mapImageWidth = width;
           this._mapImageHeight = height;
-          if (dimensionsChanged) {
+          this._mapImageDimensionsReady = true;
+          if (dimensionsChanged || firstValidDimensions) {
             this._render();
           }
         }
@@ -6298,6 +6303,18 @@
         ].filter((point) => point !== null && Number.isFinite(point.x) && Number.isFinite(point.y)).filter((point, index, items) => items.findIndex((item) => Math.abs(item.x - point.x) < 1 && Math.abs(item.y - point.y) < 1) === index);
         return candidates.filter((point) => this._isPointInsideRoom(point, room));
       }
+      _isValidRoomMarkerAnchor(point) {
+        const mapped = this._converter.vacuumToMap(point.x, point.y);
+        return Number.isFinite(mapped.x) && Number.isFinite(mapped.y) && mapped.x >= 0 && mapped.x <= this._mapImageWidth && mapped.y >= 0 && mapped.y <= this._mapImageHeight;
+      }
+      _canPlaceRoomMarker(room) {
+        if (!this._mapImageDimensionsReady) return false;
+        const outline = this._getPrimaryRoomOutline(room);
+        if (outline.length < 3) return false;
+        const candidates = this._getRoomMarkerCandidatePoints(room);
+        const anchor = room.iconPoint || room.labelPoint || centroid(outline);
+        return candidates.some((point) => this._isValidRoomMarkerAnchor(point)) || this._isValidRoomMarkerAnchor(anchor);
+      }
       _getRoomMarkerPlacements(rooms, markerSize, labelSize, iconSize) {
         const mapRect = this._getMapSurfaceRect();
         const viewportWidth = mapRect?.width || this._mapImageWidth || 1;
@@ -6314,9 +6331,9 @@
         }).filter((item) => item.area > 0).sort((left, right) => left.area - right.area);
         orderedRooms.forEach(({ room, preferredAnchor }) => {
           const footprint = this._estimateRoomMarkerFootprint(room, markerSize, labelSize, iconSize);
-          const candidates = this._getRoomMarkerCandidatePoints(room);
+          const candidates = this._getRoomMarkerCandidatePoints(room).filter((point) => this._isValidRoomMarkerAnchor(point));
           const fallbackAnchor = preferredAnchor && Number.isFinite(preferredAnchor.x) && Number.isFinite(preferredAnchor.y) ? preferredAnchor : this._getPrimaryRoomOutline(room).length >= 3 ? centroid(this._getPrimaryRoomOutline(room)) : null;
-          if (!candidates.length && fallbackAnchor) {
+          if (!candidates.length && fallbackAnchor && this._isValidRoomMarkerAnchor(fallbackAnchor)) {
             candidates.push(fallbackAnchor);
           }
           let bestPlacement = null;
@@ -6360,7 +6377,7 @@
         return placements;
       }
       _renderRoomMarkers(rooms) {
-        if (this._config?.show_room_markers === false) {
+        if (this._config?.show_room_markers === false || !this._mapImageDimensionsReady) {
           return "";
         }
         const isRoomSelectionLocked = this._isRoomSelectionLocked();
@@ -6370,10 +6387,11 @@
         const labelSize = Math.max(9, Math.round(parseSizeToPixels(safeStyles?.map?.label_size, 12) * 0.84));
         const iconSize = Math.max(12, Math.round(markerSize * 0.42));
         const placements = this._getRoomMarkerPlacements(rooms, markerSize, labelSize, iconSize);
-        return rooms.filter((room) => this._getPrimaryRoomOutline(room).length >= 3).map((room) => {
+        return rooms.filter((room) => this._canPlaceRoomMarker(room)).map((room) => {
           const placement = placements.get(String(room.id));
           const primaryOutline = this._getPrimaryRoomOutline(room);
           const anchor = room.iconPoint || room.labelPoint || centroid(primaryOutline);
+          if (!placement && !this._isValidRoomMarkerAnchor(anchor)) return "";
           const percent = placement || this._vacuumToViewportPercent(anchor);
           const selected = highlightedRoomIds.has(String(room.id));
           return `
@@ -6449,7 +6467,7 @@
         const state = this._getVacuumState();
         const isRoomSelectionLocked = this._isRoomSelectionLocked(state);
         const highlightedRoomIds = new Set(this._getHighlightedRoomIds(state));
-        const fallbackRooms = rooms.filter((room) => room.outlines.length === 0);
+        const fallbackRooms = rooms.filter((room) => !this._canPlaceRoomMarker(room));
         if (!fallbackRooms.length) {
           return "";
         }

@@ -143,6 +143,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   declare private _localeReconciliationTimeouts: number[]|null;
   declare private _mapImageWidth: number;
   declare private _mapImageHeight: number;
+  declare private _mapImageDimensionsReady: boolean;
   private _pendingMapImage: HTMLImageElement | null = null;
   private _lastMapIndependentSignature = "";
   declare private _activeMode: string;
@@ -199,6 +200,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._hass = null;
     this._mapImageWidth = 1024;
     this._mapImageHeight = 1024;
+    this._mapImageDimensionsReady = false;
     this._activeMode = "all";
     this._activeUtilityPanel = null;
     this._selectedRoomIds = [];
@@ -365,7 +367,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._pendingRoomCleaningResumeRoomIds=[];this._pendingRoomCleaningResumeRepeats=1;this._pendingCleaningSessionStartAt=0;
     this._hasLoadedPersistedCleaningSessionState=false;this._lastSubmittedSharedCleaningSessionValue=null;this._lastSharedCleaningSessionOverflowFingerprint=null;
     this._selectionUpdatedAt=0;this._wasCleaningSessionActive=false;this._roomTrackingEntityCache=null;this._calibrationSignatureStamp="";
-    this._mapImageWidth=1024;this._mapImageHeight=1024;this._converter=new CoordinatesConverter([]);this._resetMapTransform();
+    this._mapImageWidth=1024;this._mapImageHeight=1024;this._mapImageDimensionsReady=false;this._converter=new CoordinatesConverter([]);this._resetMapTransform();
     this._animateContentOnNextRender=true;this.shadowRoot?.replaceChildren();this._activeMode=this._getAvailableModes()[0]?.id || "all";
   }
 
@@ -437,7 +439,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
   setConfig(config:unknown) {
     this._releaseViewWork();
-    this._mapImageWidth=1024;this._mapImageHeight=1024;this._converter=new CoordinatesConverter([]);this._lastNonSmartModeSelection={suction:"",mop:""};this.shadowRoot?.replaceChildren();
+    this._mapImageWidth=1024;this._mapImageHeight=1024;this._mapImageDimensionsReady=false;this._converter=new CoordinatesConverter([]);this._lastNonSmartModeSelection={suction:"",mop:""};this.shadowRoot?.replaceChildren();
     this._config = normalizeConfig(config || {});
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
     this._lastRenderSignature = "";
@@ -5889,9 +5891,13 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     if (width > 0 && height > 0) {
       const dimensionsChanged = width !== this._mapImageWidth || height !== this._mapImageHeight;
+      const firstValidDimensions = !this._mapImageDimensionsReady;
       this._mapImageWidth = width;
       this._mapImageHeight = height;
-      if (dimensionsChanged) {
+      this._mapImageDimensionsReady = true;
+      // Geometry from the 1024px placeholder must never be committed as room
+      // marker positions. Render once even when the real image is 1024px.
+      if (dimensionsChanged || firstValidDimensions) {
         this._render();
       }
     }
@@ -5976,6 +5982,23 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     return candidates.filter(point => this._isPointInsideRoom(point, room));
   }
 
+  _isValidRoomMarkerAnchor(point:MapPoint) {
+    const mapped = this._converter.vacuumToMap(point.x, point.y);
+    return Number.isFinite(mapped.x) && Number.isFinite(mapped.y)
+      && mapped.x >= 0 && mapped.x <= this._mapImageWidth
+      && mapped.y >= 0 && mapped.y <= this._mapImageHeight;
+  }
+
+  _canPlaceRoomMarker(room:RoomSegment) {
+    if (!this._mapImageDimensionsReady) return false;
+    const outline = this._getPrimaryRoomOutline(room);
+    if (outline.length < 3) return false;
+    const candidates = this._getRoomMarkerCandidatePoints(room);
+    const anchor = room.iconPoint || room.labelPoint || centroid(outline);
+    return candidates.some(point => this._isValidRoomMarkerAnchor(point))
+      || this._isValidRoomMarkerAnchor(anchor);
+  }
+
   _getRoomMarkerPlacements(rooms:RoomSegment[], markerSize:number, labelSize:number, iconSize:number) {
     const mapRect = this._getMapSurfaceRect();
     const viewportWidth = mapRect?.width || this._mapImageWidth || 1;
@@ -5998,14 +6021,15 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     orderedRooms.forEach(({ room, preferredAnchor }) => {
       const footprint = this._estimateRoomMarkerFootprint(room, markerSize, labelSize, iconSize);
-      const candidates = this._getRoomMarkerCandidatePoints(room);
+      const candidates = this._getRoomMarkerCandidatePoints(room)
+        .filter(point => this._isValidRoomMarkerAnchor(point));
       const fallbackAnchor = preferredAnchor && Number.isFinite(preferredAnchor.x) && Number.isFinite(preferredAnchor.y)
         ? preferredAnchor
         : this._getPrimaryRoomOutline(room).length >= 3
           ? centroid(this._getPrimaryRoomOutline(room))
           : null;
 
-      if (!candidates.length && fallbackAnchor) {
+      if (!candidates.length && fallbackAnchor && this._isValidRoomMarkerAnchor(fallbackAnchor)) {
         candidates.push(fallbackAnchor);
       }
 
@@ -6063,7 +6087,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _renderRoomMarkers(rooms:RoomSegment[]) {
-    if (this._config?.show_room_markers === false) {
+    // The first raster may still be loading: 1024x1024 is only a temporary
+    // fallback and clamps real room coordinates to the bottom-right corner.
+    if (this._config?.show_room_markers === false || !this._mapImageDimensionsReady) {
       return "";
     }
 
@@ -6076,11 +6102,12 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const placements = this._getRoomMarkerPlacements(rooms, markerSize, labelSize, iconSize);
 
     return rooms
-      .filter(room => this._getPrimaryRoomOutline(room).length >= 3)
+      .filter(room => this._canPlaceRoomMarker(room))
       .map(room => {
       const placement = placements.get(String(room.id));
       const primaryOutline = this._getPrimaryRoomOutline(room);
       const anchor = room.iconPoint || room.labelPoint || centroid(primaryOutline);
+      if (!placement && !this._isValidRoomMarkerAnchor(anchor)) return "";
       const percent = placement || this._vacuumToViewportPercent(anchor);
       const selected = highlightedRoomIds.has(String(room.id));
       return `
@@ -6183,7 +6210,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const state = this._getVacuumState();
     const isRoomSelectionLocked = this._isRoomSelectionLocked(state);
     const highlightedRoomIds = new Set(this._getHighlightedRoomIds(state));
-    const fallbackRooms = rooms.filter(room => room.outlines.length === 0);
+    // Until map dimensions/calibration are valid, offer room controls in a
+    // reachable list instead of trapping them at a clamped corner.
+    const fallbackRooms = rooms.filter(room => !this._canPlaceRoomMarker(room));
     if (!fallbackRooms.length) {
       return "";
     }
