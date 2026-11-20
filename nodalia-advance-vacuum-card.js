@@ -1562,6 +1562,7 @@
       connectedCallback() {
         this._animateContentOnNextRender = true;
         this._lastRenderSignature = "";
+        this._syncCalibrationIfNeeded();
         this._render();
         if (typeof window !== "undefined") {
           window.addEventListener("nodalia-i18n-ready", this._onNodaliaI18nReady);
