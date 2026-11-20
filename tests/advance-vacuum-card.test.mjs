@@ -92,3 +92,56 @@ test("advance vacuum setConfig renders without missing helper imports", () => {
   };
   assert.ok(card.shadowRoot?.innerHTML?.length > 0);
 });
+
+test("advance vacuum setConfig keeps calibration when the card is configured again", () => {
+  const registry = new Map();
+  class FakeHTMLElement {
+    constructor() { this.isConnected = true; }
+    attachShadow() {
+      this.shadowRoot = {
+        addEventListener() {}, removeEventListener() {}, innerHTML: "", get firstChild() { return this.innerHTML ? {} : null; }, replaceChildren() {this.innerHTML="";},
+        querySelector() { return null; }, querySelectorAll() { return []; },
+      };
+      return this.shadowRoot;
+    }
+    dispatchEvent() { return true; }
+  }
+  const sandbox = {
+    console,
+    URL,
+    window: null,
+    customElements: {
+      define(name, klass) { registry.set(name, klass); },
+      get(name) { return registry.get(name); },
+    },
+    HTMLElement: FakeHTMLElement,
+    queueMicrotask,requestAnimationFrame(){return 0;},cancelAnimationFrame(){},setTimeout(){return 0;},clearTimeout(){},
+  };
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(read("nodalia-utils.js"), sandbox);
+  vm.runInContext(read("nodalia-advance-vacuum-card.js"), sandbox);
+  const Host = registry.get("nodalia-advance-vacuum-card");
+  const card = new Host();
+  card._commitPersistentVacuumShadow=markup=>{card.shadowRoot.innerHTML=markup;};
+  const config = {
+    entity: "vacuum.test",
+    calibration_source: {
+      calibration_points: [
+        { vacuum: { x: 0, y: 0 }, map: { x: 0, y: 0 } },
+        { vacuum: { x: 2000, y: 0 }, map: { x: 1000, y: 0 } },
+        { vacuum: { x: 0, y: 2000 }, map: { x: 0, y: 1000 } },
+      ],
+    },
+  };
+  const point = mapped => ({ x: mapped.x, y: mapped.y });
+  card.setConfig(config);
+  assert.equal(card._converter.calibrated, true);
+  assert.deepEqual(point(card._converter.vacuumToMap(2000, 0)), { x: 1000, y: 0 });
+  // Lovelace calls setConfig again for an unrelated edit. The stamp must not
+  // keep the discarded converter from being rebuilt.
+  card.setConfig({ ...config, name: "Renamed robot" });
+  assert.equal(card._converter.calibrated, true);
+  assert.deepEqual(point(card._converter.vacuumToMap(2000, 0)), { x: 1000, y: 0 });
+  assert.deepEqual(point(card._converter.mapToVacuum(1000, 0)), { x: 2000, y: 0 });
+});
