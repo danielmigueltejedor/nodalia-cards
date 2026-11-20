@@ -1034,6 +1034,37 @@
       return applyHomography(this.mapToVacuumMatrix, x, y);
     }
   };
+  function readReportedMapSize(attributes) {
+    const attrs = record(attributes);
+    const image = record(attrs.image);
+    const dimensions = record(attrs.dimensions || image.dimensions);
+    const size = Array.isArray(attrs.size) ? attrs.size : Array.isArray(image.size) ? image.size : Array.isArray(attrs.image_size) ? attrs.image_size : null;
+    const candidates = [
+      [attrs.image_width, attrs.image_height],
+      [attrs.map_width, attrs.map_height],
+      [image.width, image.height],
+      [image.image_width, image.image_height],
+      [dimensions.width, dimensions.height],
+      [size?.[0], size?.[1]],
+      [attrs.width, attrs.height]
+    ];
+    for (const pair of candidates) {
+      const width = parseFiniteNumericValue(pair[0]);
+      const height = parseFiniteNumericValue(pair[1]);
+      if (width !== null && height !== null && width > 0 && height > 0) {
+        return { width, height };
+      }
+    }
+    return null;
+  }
+  function firstPoint(...values) {
+    for (const value of values) {
+      if (typeof value === "string") continue;
+      const point = parsePoint(value);
+      if (point) return point;
+    }
+    return null;
+  }
   function parseCalibrationPoints(raw, hass) {
     const config = record(raw);
     const calibration = record(config.calibration_source);
@@ -1041,15 +1072,21 @@
     if (directPoints.length) {
       return directPoints;
     }
-    const calibrationEntityId = String(calibration.entity || "");
-    if (calibrationEntityId && hass?.states?.[calibrationEntityId]?.attributes?.calibration_points) {
-      return arrayFromMaybe(hass.states[calibrationEntityId]?.attributes.calibration_points);
+    const calibrationEntityId = String(calibration.entity || "").trim();
+    if (calibrationEntityId) {
+      const entityPoints = arrayFromMaybe(hass?.states?.[calibrationEntityId]?.attributes?.calibration_points);
+      if (entityPoints.length || calibration.camera === false) {
+        return entityPoints;
+      }
     }
-    if (calibration.camera === true) {
-      const mapEntityId = String(record(config.map_source).camera || config.map_camera || "");
-      return arrayFromMaybe(hass?.states?.[mapEntityId]?.attributes?.calibration_points);
+    if (calibration.camera === false) {
+      return [];
     }
-    return [];
+    const mapEntityId = String(record(config.map_source).camera || config.map_camera || "").trim();
+    if (!mapEntityId) {
+      return [];
+    }
+    return arrayFromMaybe(hass?.states?.[mapEntityId]?.attributes?.calibration_points);
   }
   function resolveLegacyMode(raw, templateName) {
     const config = record(raw);
@@ -1096,8 +1133,10 @@
         return polygon.length >= 3 ? [polygon] : [];
       })();
       const outline = flattenPolygons(outlines);
-      const centerX = parseNumber(room?.pos_x);
-      const centerY = parseNumber(room?.pos_y);
+      const explicitCenterX = parseNumber(room?.pos_x ?? room?.label_x ?? room?.icon_x);
+      const explicitCenterY = parseNumber(room?.pos_y ?? room?.label_y ?? room?.icon_y);
+      const centerX = explicitCenterX ?? (outline.length ? null : parseNumber(room?.x));
+      const centerY = explicitCenterY ?? (outline.length ? null : parseNumber(room?.y));
       const fallbackCenter = outline.length ? centroid(outline) : null;
       return {
         id: String(room?.number ?? id ?? ""),
@@ -1131,11 +1170,11 @@
           icon: String(typeof room.icon === "string" ? room.icon : record(room.icon).name || "mdi:broom"),
           outlines,
           outline: flattenPolygons(outlines),
-          iconPoint: parsePoint(room.iconPoint || room.icon || room.position),
-          labelPoint: parsePoint(room.labelPoint || room.label || room.position),
+          iconPoint: firstPoint(room.iconPoint, room.position, room.icon),
+          labelPoint: firstPoint(room.labelPoint, room.position, room.label),
           labelOffsetY: parseFiniteNumericValue(room.labelOffsetY ?? record(room.label).offset_y) ?? 0
         };
-      }).filter((room) => room.id && room.outlines.length);
+      }).filter((room) => room.id && (room.outlines.length || room.iconPoint || room.labelPoint));
     }
     const segmentMode = resolveLegacyMode(config, "vacuum_clean_segment");
     const legacyRooms = arrayFromMaybe(segmentMode?.predefined_selections).filter((item) => isObject(item)).map((selection) => {
@@ -1154,11 +1193,11 @@
         icon: String(record(selection.icon).name || selection?.icon || "mdi:broom").trim(),
         outlines,
         outline: flattenPolygons(outlines),
-        iconPoint: parsePoint(selection?.icon),
-        labelPoint: parsePoint(selection?.label),
+        iconPoint: firstPoint(selection?.position, selection?.icon),
+        labelPoint: firstPoint(selection?.position, selection?.label),
         labelOffsetY: parseFiniteNumericValue(record(selection.label).offset_y) ?? 0
       };
-    }).filter((room) => room.id && room.outlines.length);
+    }).filter((room) => room.id && (room.outlines.length || room.iconPoint || room.labelPoint));
     if (legacyRooms.length) {
       return legacyRooms;
     }
@@ -1438,6 +1477,9 @@
       constructor() {
         super();
         this._pendingMapImage = null;
+        this._decodedMapSize = null;
+        this._mapImageFailureUrl = "";
+        this._decodingMapImage = false;
         this._lastMapIndependentSignature = "";
         this._mapFrame = 0;
         this._mapGestureRect = null;
@@ -1545,6 +1587,7 @@
         this._onShadowTouchMove = this._onShadowTouchMove.bind(this);
         this._onShadowTouchEnd = this._onShadowTouchEnd.bind(this);
         this._onMapImageLoad = this._onMapImageLoad.bind(this);
+        this._onMapImageError = this._onMapImageError.bind(this);
         this._onMapBackClick = this._onMapBackClick.bind(this);
         this._onNodaliaI18nReady = this._onNodaliaI18nReady.bind(this);
         this._localeReconciliationTimeouts = null;
@@ -1580,6 +1623,7 @@
         const image = this.shadowRoot?.querySelector("[data-map-image]");
         if (image) {
           image.removeEventListener("load", this._onMapImageLoad);
+          image.removeEventListener("error", this._onMapImageError);
         }
         if (this._entranceAnimationResetTimer) {
           clearTimeout(this._entranceAnimationResetTimer);
@@ -1657,6 +1701,7 @@
         this._resumeToken = null;
         this._lastRenderSignature = "";
         this.shadowRoot?.querySelector("[data-map-image]")?.removeEventListener("load", this._onMapImageLoad);
+        this.shadowRoot?.querySelector("[data-map-image]")?.removeEventListener("error", this._onMapImageError);
       }
       _resetContext() {
         this._releaseViewWork();
@@ -1688,6 +1733,9 @@
         this._mapImageWidth = 1024;
         this._mapImageHeight = 1024;
         this._mapImageDimensionsReady = false;
+        this._decodedMapSize = null;
+        this._mapImageFailureUrl = "";
+        this._decodingMapImage = false;
         this._converter = new CoordinatesConverter([]);
         this._resetMapTransform();
         this._animateContentOnNextRender = true;
@@ -1774,6 +1822,9 @@
         this._mapImageWidth = 1024;
         this._mapImageHeight = 1024;
         this._mapImageDimensionsReady = false;
+        this._decodedMapSize = null;
+        this._mapImageFailureUrl = "";
+        this._decodingMapImage = false;
         this._converter = new CoordinatesConverter([]);
         this._lastNonSmartModeSelection = { suction: "", mop: "" };
         this.shadowRoot?.replaceChildren();
@@ -3165,32 +3216,30 @@
             fingerprint: JSON.stringify(directPoints)
           };
         }
-        const calibrationEntityId = vacuumText(vacuumRecord(config?.calibration_source).entity);
-        if (calibrationEntityId && hass?.states?.[calibrationEntityId]) {
-          const st = hass.states[calibrationEntityId];
-          if (!st) return { kind: "none", len: 0 };
-          const pts = st.attributes?.calibration_points;
-          const len = Array.isArray(pts) ? pts.length : 0;
+        const calibration = vacuumRecord(config?.calibration_source);
+        const calibrationEntityId = vacuumText(calibration.entity);
+        const entityPoints = calibrationEntityId ? hass?.states?.[calibrationEntityId]?.attributes?.calibration_points : void 0;
+        const entityLen = Array.isArray(entityPoints) ? entityPoints.length : 0;
+        if (calibrationEntityId && (entityLen || calibration.camera === false)) {
           return {
             kind: "entity",
             id: String(calibrationEntityId || ""),
-            len,
-            fingerprint: JSON.stringify(pts || [])
+            len: entityLen,
+            fingerprint: JSON.stringify(entityPoints || [])
           };
         }
-        if (vacuumRecord(config?.calibration_source).camera === true) {
-          const mapEntityId = String(vacuumRecord(config?.map_source).camera || config?.map_camera || "");
-          const st = mapEntityId ? hass?.states?.[mapEntityId] : null;
-          const pts = st?.attributes?.calibration_points;
-          const len = Array.isArray(pts) ? pts.length : 0;
-          return {
-            kind: "camera",
-            id: mapEntityId,
-            len,
-            fingerprint: JSON.stringify(pts || [])
-          };
+        if (calibration.camera === false) {
+          return { kind: "disabled", len: 0 };
         }
-        return { kind: "none", len: 0 };
+        const mapEntityId = String(vacuumRecord(config?.map_source).camera || config?.map_camera || "");
+        const mapPoints = mapEntityId ? hass?.states?.[mapEntityId]?.attributes?.calibration_points : [];
+        const mapLen = Array.isArray(mapPoints) ? mapPoints.length : 0;
+        return {
+          kind: mapEntityId ? "map" : "none",
+          id: mapEntityId,
+          len: mapLen,
+          fingerprint: JSON.stringify(mapPoints || [])
+        };
       }
       _getCalibrationSignatureStamp(hass = this._hass) {
         const fragment = this._getCalibrationSignatureFragment(hass);
@@ -3225,6 +3274,7 @@
         const sharedSessionEntityId = this._getSharedCleaningSessionEntityId();
         const sharedSessionState = sharedSessionEntityId ? hass?.states?.[sharedSessionEntityId] || null : null;
         const mapPicture = String(mapState?.attributes?.entity_picture || "");
+        const reportedMapSize = readReportedMapSize(mapState?.attributes);
         const relatedVacuumEntities = this._getRelatedVacuumEntityIds(hass);
         const roomTrackingSignature = [.../* @__PURE__ */ new Set([
           ...relatedVacuumEntities.roomIds,
@@ -3260,7 +3310,13 @@
           },
           {
             prefix: "map:",
-            values: [mapEntityId || "", mapState?.state || "", mapState?.last_updated || "", mapPicture]
+            values: [
+              mapEntityId || "",
+              mapState?.state || "",
+              mapState?.last_updated || "",
+              mapPicture,
+              reportedMapSize ? `${reportedMapSize.width}x${reportedMapSize.height}` : ""
+            ]
           },
           { prefix: "map-structure:", values: [JSON.stringify(this._getRoomSegments())] },
           {
@@ -3300,6 +3356,7 @@
               this._gotoPoint ? `${Math.round(this._gotoPoint.x)}:${Math.round(this._gotoPoint.y)}` : "",
               this._repeats || 1,
               `${this._mapImageWidth}x${this._mapImageHeight}`,
+              reportedMapSize ? `${reportedMapSize.width}x${reportedMapSize.height}` : "",
               this._getCalibrationSignatureStamp(hass),
               suctionDescriptor ? `${suctionDescriptor.service}:${suctionDescriptor.target}:${suctionDescriptor.current}:${suctionDescriptor.options.join("|")}` : "",
               mopDescriptor ? `${mopDescriptor.service}:${mopDescriptor.target}:${mopDescriptor.current}:${mopDescriptor.options.join("|")}` : "",
@@ -6221,22 +6278,84 @@
         };
         pending.src = url;
       }
+      _rememberDecodedMapSize(image) {
+        const width = Number(image.naturalWidth || 0);
+        const height = Number(image.naturalHeight || 0);
+        if (width > 0 && height > 0) this._decodedMapSize = { width, height };
+      }
+      /**
+       * Pick the coordinate space that actually contains the rooms. Reported map
+       * metadata wins when the decoded bitmap is a different resolution; the
+       * initial 1024px values are never a coordinate space.
+       */
+      _syncMapCoordinateSpace() {
+        const reported = readReportedMapSize(this._getMapState()?.attributes);
+        const image = this.shadowRoot?.querySelector("[data-map-image]");
+        if (image) this._rememberDecodedMapSize(image);
+        const choices = [reported, this._decodedMapSize].filter((space) => Boolean(space && space.width > 0 && space.height > 0));
+        if (!choices.length) return;
+        const rooms = this._getRoomSegments();
+        const fallback = choices[0];
+        const selected = choices.find((space) => rooms.some((room) => this._roomFitsSpace(room, space))) || fallback;
+        if (!selected) return;
+        this._mapImageWidth = selected.width;
+        this._mapImageHeight = selected.height;
+        this._mapImageDimensionsReady = true;
+        this._mapImageFailureUrl = "";
+      }
+      _roomFitsSpace(room, space) {
+        const explicit = this._explicitRoomPoint(room);
+        const samples = explicit ? [...this._getRoomMarkerCandidatePoints(room), explicit] : this._getRoomMarkerCandidatePoints(room);
+        return samples.some((point) => {
+          const mapped = this._converter.vacuumToMap(point.x, point.y);
+          return Number.isFinite(mapped.x) && Number.isFinite(mapped.y) && mapped.x >= 0 && mapped.y >= 0 && mapped.x <= space.width && mapped.y <= space.height;
+        });
+      }
+      _isMapGeometryPending() {
+        if (this._mapImageDimensionsReady) return false;
+        const url = this._getMapImageUrl();
+        if (!url) return false;
+        return this._mapImageFailureUrl !== url;
+      }
+      _onMapImageError(event) {
+        const image = event.currentTarget;
+        if (!this.isConnected || !(image instanceof HTMLImageElement) || image !== this.shadowRoot?.querySelector("[data-map-image]")) return;
+        const url = image.getAttribute("src") || "";
+        if (!url || this._mapImageFailureUrl === url || readReportedMapSize(this._getMapState()?.attributes) || this._decodedMapSize) return;
+        this._mapImageFailureUrl = url;
+        this._mapImageDimensionsReady = false;
+        this._render();
+      }
       _onMapImageLoad(event) {
         const image = event.currentTarget;
         if (!this.isConnected || !(image instanceof HTMLImageElement) || image !== this.shadowRoot?.querySelector("[data-map-image]")) return;
-        const width = Number(image?.naturalWidth || image?.width || 0);
-        const height = Number(image?.naturalHeight || image?.height || 0);
         if (!image.classList.contains("is-loaded")) image.classList.add("is-loaded");
+        const width = Number(image.naturalWidth || 0);
+        const height = Number(image.naturalHeight || 0);
         if (width > 0 && height > 0) {
-          const dimensionsChanged = width !== this._mapImageWidth || height !== this._mapImageHeight;
-          const firstValidDimensions = !this._mapImageDimensionsReady;
-          this._mapImageWidth = width;
-          this._mapImageHeight = height;
-          this._mapImageDimensionsReady = true;
-          if (dimensionsChanged || firstValidDimensions) {
-            this._render();
-          }
+          const previousWidth = this._mapImageWidth;
+          const previousHeight = this._mapImageHeight;
+          const wasReady = this._mapImageDimensionsReady;
+          this._rememberDecodedMapSize(image);
+          this._syncMapCoordinateSpace();
+          if (!wasReady || previousWidth !== this._mapImageWidth || previousHeight !== this._mapImageHeight) this._render();
+          return;
         }
+        const src = image.getAttribute("src") || "";
+        if (!src || this._decodingMapImage || this._mapImageFailureUrl === src) return;
+        this._decodingMapImage = true;
+        void image.decode().then(() => {
+          this._decodingMapImage = false;
+          if (image !== this.shadowRoot?.querySelector("[data-map-image]")) return;
+          if (Number(image.naturalWidth || 0) > 0 && Number(image.naturalHeight || 0) > 0) {
+            this._onMapImageLoad({ currentTarget: image });
+            return;
+          }
+          this._onMapImageError({ currentTarget: image });
+        }, () => {
+          this._decodingMapImage = false;
+          if (image === this.shadowRoot?.querySelector("[data-map-image]")) this._onMapImageError({ currentTarget: image });
+        });
       }
       _estimateRoomMarkerFootprint(room, markerSize, labelSize, iconSize) {
         if (this._config?.show_room_labels === false) {
@@ -6263,10 +6382,16 @@
         const legacyOutline = arrayFromMaybe(room?.outline);
         return legacyOutline.length >= 3 ? legacyOutline : [];
       }
+      _explicitRoomPoint(room) {
+        const point = room?.labelPoint || room?.iconPoint || null;
+        if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return null;
+        return point;
+      }
       _getRoomMarkerCandidatePoints(room) {
         const primaryOutline = this._getPrimaryRoomOutline(room);
+        const explicit = this._explicitRoomPoint(room);
         if (primaryOutline.length < 3) {
-          return [];
+          return explicit ? [explicit] : [];
         }
         const bounds = polygonBounds(primaryOutline);
         const overallCenter = centroid(primaryOutline);
@@ -6309,11 +6434,9 @@
       }
       _canPlaceRoomMarker(room) {
         if (!this._mapImageDimensionsReady) return false;
-        const outline = this._getPrimaryRoomOutline(room);
-        if (outline.length < 3) return false;
-        const candidates = this._getRoomMarkerCandidatePoints(room);
-        const anchor = room.iconPoint || room.labelPoint || centroid(outline);
-        return candidates.some((point) => this._isValidRoomMarkerAnchor(point)) || this._isValidRoomMarkerAnchor(anchor);
+        if (this._getRoomMarkerCandidatePoints(room).some((point) => this._isValidRoomMarkerAnchor(point))) return true;
+        const explicit = this._explicitRoomPoint(room);
+        return Boolean(explicit && this._isValidRoomMarkerAnchor(explicit));
       }
       _getRoomMarkerPlacements(rooms, markerSize, labelSize, iconSize) {
         const mapRect = this._getMapSurfaceRect();
@@ -6321,14 +6444,16 @@
         const viewportHeight = mapRect?.height || this._mapImageHeight || 1;
         const placements = /* @__PURE__ */ new Map();
         const placedRects = [];
-        const orderedRooms = rooms.filter((room) => this._getPrimaryRoomOutline(room).length >= 3).map((room) => {
+        const orderedRooms = rooms.filter((room) => this._canPlaceRoomMarker(room)).map((room) => {
           const primaryOutline = this._getPrimaryRoomOutline(room);
+          const explicit = this._explicitRoomPoint(room);
+          const preferredAnchor = room.labelPoint || room.iconPoint || (primaryOutline.length >= 3 ? centroid(primaryOutline) : explicit);
           return {
             room,
-            area: polygonArea(primaryOutline),
-            preferredAnchor: room.labelPoint || room.iconPoint || centroid(primaryOutline)
+            area: primaryOutline.length >= 3 ? polygonArea(primaryOutline) : 1,
+            preferredAnchor
           };
-        }).filter((item) => item.area > 0).sort((left, right) => left.area - right.area);
+        }).filter((item) => Boolean(item.preferredAnchor) && item.area > 0).sort((left, right) => left.area - right.area);
         orderedRooms.forEach(({ room, preferredAnchor }) => {
           const footprint = this._estimateRoomMarkerFootprint(room, markerSize, labelSize, iconSize);
           const candidates = this._getRoomMarkerCandidatePoints(room).filter((point) => this._isValidRoomMarkerAnchor(point));
@@ -6390,9 +6515,10 @@
         return rooms.filter((room) => this._canPlaceRoomMarker(room)).map((room) => {
           const placement = placements.get(String(room.id));
           const primaryOutline = this._getPrimaryRoomOutline(room);
-          const anchor = room.iconPoint || room.labelPoint || centroid(primaryOutline);
-          if (!placement && !this._isValidRoomMarkerAnchor(anchor)) return "";
-          const percent = placement || this._vacuumToViewportPercent(anchor);
+          const anchor = this._explicitRoomPoint(room) || (primaryOutline.length >= 3 ? centroid(primaryOutline) : null);
+          if (!placement && (!anchor || !this._isValidRoomMarkerAnchor(anchor))) return "";
+          const percent = placement || (anchor ? this._vacuumToViewportPercent(anchor) : null);
+          if (!percent) return "";
           const selected = highlightedRoomIds.has(String(room.id));
           return `
         <button
@@ -6464,6 +6590,7 @@
         if (modeId !== "rooms" || !rooms.length) {
           return "";
         }
+        if (this._isMapGeometryPending()) return "";
         const state = this._getVacuumState();
         const isRoomSelectionLocked = this._isRoomSelectionLocked(state);
         const highlightedRoomIds = new Set(this._getHighlightedRoomIds(state));
@@ -6849,6 +6976,8 @@
         }
         try {
           this._ensurePersistedCleaningSessionStateLoaded();
+          this._syncCalibrationIfNeeded();
+          this._syncMapCoordinateSpace();
           const previousImage = this.shadowRoot.querySelector("[data-map-image]");
           const previousImageSrc = previousImage?.getAttribute("src") || "";
           const config = this._config || normalizeConfig({});
@@ -7281,8 +7410,12 @@
           this._syncMapImage(mapImageUrl);
           if (image) {
             image.removeEventListener("load", this._onMapImageLoad);
+            image.removeEventListener("error", this._onMapImageError);
             image.addEventListener("load", this._onMapImageLoad);
+            image.addEventListener("error", this._onMapImageError);
             if (image.complete && Number(image.naturalWidth || 0) > 0) {
+              this._onMapImageLoad({ currentTarget: image });
+            } else if (image.complete && image.getAttribute("src") && !this._mapImageDimensionsReady && !this._decodingMapImage && this._mapImageFailureUrl !== image.getAttribute("src")) {
               this._onMapImageLoad({ currentTarget: image });
             }
           }
