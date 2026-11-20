@@ -8,6 +8,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.0.7-alpha.1] - 2026-11-20
+
+### Fixed
+
+- **Advance Vacuum:** avoid room selection controls stacking at the lower-right during a cold map load or reload. Wait for the map's real image dimensions instead of placing markers against the initial 1024 px placeholder.
+- **Advance Vacuum:** reject out-of-bounds room marker anchors; keep affected rooms selectable in a fallback list until a valid image and calibration are available, including failed image requests.
+
+### Tests
+
+- Add browser regression coverage for slow map images, reloads, failed images, and late calibration.
+
 ## [3.0.6-alpha.1] - 2026-11-11
 
 ### Fixed
