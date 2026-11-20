@@ -70,8 +70,31 @@ test('Advance Vacuum retires deferred pause and owned delay before a zone comman
  await page.evaluate(()=>window.avCalls[0].resolve());await expect.poll(()=>page.evaluate(()=>window.avCard._waits.size)).toBeGreaterThan(0);await page.evaluate(()=>{window.avCard.setConfig({...window.avConfig,entity:'vacuum.two'});window.avHass={...window.avHass,connection:{},user:{id:'second',is_admin:true}};window.avCard.hass=window.avHass;});await page.clock.runFor(1000);expect((await calls(page)).map(row=>row.service)).toEqual(['pause']);expect(await page.evaluate(()=>({waiting:window.avCard._waits.size,inFlight:window.avCard._mapActionInFlight,zones:window.avCard._manualZones.length}))).toEqual({waiting:0,inFlight:false,zones:0});expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
 });
 test('Advance Vacuum guards queued room resume and stale shared helper feedback across HA contexts',async({page})=>{
- await mount(page,{shared_cleaning_session_entity:'input_text.session'});await page.evaluate(()=>{window.avCalls=[];window.avHass.states['input_text.session']={entity_id:'input_text.session',state:'',attributes:{max:255}};window.avDefer=true;window.avCard._persistSharedCleaningSession({activeMode:'rooms',selectedRoomIds:['1']});window.avCard._setPendingRoomCleaningResume(['1'],1);window.avCard._attemptPendingRoomCleaningResume();window.avHass={...window.avHass,connection:{},user:{id:'second',is_admin:false}};window.avCard.hass=window.avHass;window.avCard._lastSubmittedSharedCleaningSessionValue='new-context';window.avCalls[0].reject(new Error('retired helper'));});
- await expect.poll(()=>page.evaluate(()=>window.avCard._roomCleaningResumeInFlight)).toBe(false);expect(await page.evaluate(()=>window.avCalls.filter(row=>row.domain==='vacuum').length)).toBe(0);expect(await page.evaluate(()=>window.avCard._lastSubmittedSharedCleaningSessionValue)).toBe('new-context');expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
+ await mount(page,{shared_cleaning_session_entity:'input_text.session'});
+ // Keep the assertions in the same browser task as the stale rejection. A late
+ // map-image load can legitimately render the new idle context and clear its
+ // shared-session marker; that must not be mistaken for the retired callback.
+ const result=await page.evaluate(async()=>{
+  window.avCalls=[];
+  window.avHass.states['input_text.session']={entity_id:'input_text.session',state:'',attributes:{max:255}};
+  window.avDefer=true;
+  window.avCard._persistSharedCleaningSession({activeMode:'rooms',selectedRoomIds:['1']});
+  window.avCard._setPendingRoomCleaningResume(['1'],1);
+  window.avCard._attemptPendingRoomCleaningResume();
+  window.avHass={...window.avHass,connection:{},user:{id:'second',is_admin:false}};
+  window.avCard.hass=window.avHass;
+  window.avCard._lastSubmittedSharedCleaningSessionValue='new-context';
+  window.avCalls[0].reject(new Error('retired helper'));
+  // Drain promise continuations without yielding to raster-load tasks.
+  for(let i=0;i<12;i++) await Promise.resolve();
+  return {
+   inFlight:window.avCard._roomCleaningResumeInFlight,
+   vacuumCalls:window.avCalls.filter(row=>row.domain==='vacuum').length,
+   submitted:window.avCard._lastSubmittedSharedCleaningSessionValue,
+   errors:[...window.bundleErrors],
+  };
+ });
+ expect(result).toEqual({inFlight:false,vacuumCalls:0,submitted:'new-context',errors:[]});
 });
 test('Advance Vacuum scopes private sessions, handles malformed snapshots and refreshes mutated registries',async({page})=>{
  await mount(page);const result=await page.evaluate(()=>{const card=window.avCard;const first=card._getCleaningSessionStorageKey();card._persistCleaningSession({activeMode:'rooms',selectedRoomIds:['1'],selectionUpdatedAt:0,repeats:Infinity,pendingStartAt:NaN});const valid=card._readStoredCleaningSession();window.avHass.user.id='second';card.hass=window.avHass;const second=card._getCleaningSessionStorageKey();const empty=card._selectedRoomIds;window.avHass.entities={'vacuum.one':{device_id:'robot'},'sensor.active_room':{device_id:'other'}};window.avHass.states['sensor.active_room']={entity_id:'sensor.active_room',state:'1',attributes:{friendly_name:'Current room'}};const before=card._getRelatedVacuumEntityIds().roomIds;window.avHass.entities['sensor.active_room'].device_id='robot';const after=card._getRelatedVacuumEntityIds().roomIds;return{different:first!==second,valid,empty,before,after};});expect(result.different).toBe(true);expect(result.valid.repeats).toBe(1);expect(result.valid.pendingStartAt).toBe(0);expect(result.valid.selectionUpdatedAt).toBe(0);expect(result.empty).toEqual([]);expect(result.before).not.toContain('sensor.active_room');expect(result.after).toContain('sensor.active_room');expect(await page.evaluate(()=>window.bundleErrors)).toEqual([]);
