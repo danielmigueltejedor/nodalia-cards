@@ -1065,7 +1065,7 @@
   }
 
   // src/version.ts
-  var CARD_VERSION = "3.0.7-alpha.1";
+  var CARD_VERSION = "3.0.7-alpha.2";
 
   // src/cards/camera/camera-constants.ts
   var CARD_TAG = "nodalia-camera-card";

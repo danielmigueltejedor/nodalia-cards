@@ -291,6 +291,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   connectedCallback() {
     this._animateContentOnNextRender = true;
     this._lastRenderSignature = "";
+    // hass may be assigned while disconnected; refresh calibration before the
+    // first connected paint so valid room markers are not left in the fallback list.
+    this._syncCalibrationIfNeeded();
     this._render();
     if (typeof window !== "undefined") {
       window.addEventListener("nodalia-i18n-ready", this._onNodaliaI18nReady);
@@ -2188,7 +2191,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       };
     }
     if (vacuumRecord(config?.calibration_source).camera === true) {
-      const mapEntityId = String(vacuumRecord(config?.map_source).camera || config?.map_camera || "");
+      const mapEntityId = String(vacuumRecord(config?.map_source).camera || vacuumRecord(config?.map_source).image || config?.map_camera || "");
       const st = mapEntityId ? hass?.states?.[mapEntityId] : null;
       const pts = st?.attributes?.calibration_points;
       const len = Array.isArray(pts) ? pts.length : 0;
