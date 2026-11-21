@@ -1826,6 +1826,7 @@
         this._mapImageFailureUrl = "";
         this._decodingMapImage = false;
         this._converter = new CoordinatesConverter([]);
+        this._calibrationSignatureStamp = "";
         this._lastNonSmartModeSelection = { suction: "", mop: "" };
         this.shadowRoot?.replaceChildren();
         this._config = normalizeConfig(config || {});
