@@ -27,6 +27,7 @@ A collection of **25 customizable cards** bringing consistency, intuitive intera
 [**Installation**](#installation) ·
 [**Documentation**](#documentation) ·
 [**Engine**](#nodalia-cards-engine) ·
+[**Community**](#community-projects) ·
 [**Contributing**](#contributing)
 
 </div>
@@ -422,6 +423,24 @@ GitHub remains the source repository, and translated locale files are included i
 Translation pull requests are also welcome.
 
 See the [translation contribution guide](docs/TRANSLATIONS.md) for more information.
+
+## Community projects
+
+### AeroMetric
+
+[AeroMetric](https://github.com/unimatrix6/AeroMetric-AirQualityMonitor) is a DIY indoor air-quality monitor by [@unimatrix6](https://github.com/unimatrix6). An ESP32 and a Sensirion SEN54 measure the room, a 3.5 inch display shows the readings on the device, and ESPHome publishes them to Home Assistant.
+
+The monitor reports humidity, PM 1.0, PM 2.5, PM 4.0, PM 10.0, temperature, VOC index and AQI. Those entities fit the Graph, Circular Gauge and Entity cards.
+
+The enclosure files are still being added. The build notes and firmware live in the repository.
+
+<div align="center">
+
+<a href="https://github.com/unimatrix6/AeroMetric-AirQualityMonitor">
+  <img src="https://github.com/user-attachments/assets/283653aa-8a29-48b6-9714-b28e95ace5cd" alt="AeroMetric, a compact indoor air-quality monitor" width="480">
+</a>
+
+</div>
 
 ## Contributing
 
