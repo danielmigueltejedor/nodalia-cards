@@ -815,6 +815,13 @@ function firstPoint(...values: unknown[]): MapPoint | null {
   return null;
 }
 
+/** The map picture, rooms and calibration all come from this one entity. */
+export function resolveMapEntityId(raw: unknown): string {
+  const config = record(raw);
+  const source = record(config.map_source);
+  return String(source.camera || source.image || config.map_camera || "").trim();
+}
+
 export function parseCalibrationPoints(raw: unknown, hass: HomeAssistant | null | undefined): unknown[] {
   const config = record(raw);
   const calibration = record(config.calibration_source);
@@ -837,7 +844,7 @@ export function parseCalibrationPoints(raw: unknown, hass: HomeAssistant | null 
     return [];
   }
 
-  const mapEntityId = String(record(config.map_source).camera || config.map_camera || "").trim();
+  const mapEntityId = resolveMapEntityId(config);
   if (!mapEntityId) {
     return [];
   }

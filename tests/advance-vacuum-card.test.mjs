@@ -92,3 +92,75 @@ test("advance vacuum setConfig renders without missing helper imports", () => {
   };
   assert.ok(card.shadowRoot?.innerHTML?.length > 0);
 });
+
+test("advance vacuum calibrates goto coordinates from map_source.image", () => {
+  const registry = new Map();
+  class FakeHTMLElement {
+    constructor() { this.isConnected = true; }
+    attachShadow() {
+      this.shadowRoot = {
+        addEventListener() {}, removeEventListener() {}, innerHTML: "", get firstChild() { return this.innerHTML ? {} : null; }, replaceChildren() {this.innerHTML="";},
+        querySelector() { return null; }, querySelectorAll() { return []; },
+      };
+      return this.shadowRoot;
+    }
+    dispatchEvent() { return true; }
+  }
+  const sandbox = {
+    console,
+    URL,
+    window: null,
+    customElements: {
+      define(name, klass) { registry.set(name, klass); },
+      get(name) { return registry.get(name); },
+    },
+    HTMLElement: FakeHTMLElement,
+    queueMicrotask,requestAnimationFrame(){return 0;},cancelAnimationFrame(){},setTimeout(){return 0;},clearTimeout(){},
+  };
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(read("nodalia-utils.js"), sandbox);
+  vm.runInContext(read("nodalia-advance-vacuum-card.js"), sandbox);
+  const Host = registry.get("nodalia-advance-vacuum-card");
+  const card = new Host();
+  card._commitPersistentVacuumShadow=markup=>{card.shadowRoot.innerHTML=markup;};
+  const points = [
+    { vacuum: [0, 0], map: [0, 0] },
+    { vacuum: [2000, 0], map: [1000, 0] },
+    { vacuum: [0, 2000], map: [0, 1000] },
+  ];
+  card.setConfig({
+    entity: "vacuum.test",
+    map_source: { image: "image.roborock_map" },
+    calibration_source: { camera: true },
+  });
+  card.hass = {
+    states: {
+      "vacuum.test": { state: "docked", attributes: { friendly_name: "Vac" } },
+      "image.roborock_map": { state: "ready", attributes: { entity_picture: "/map.png", calibration_points: points } },
+    },
+  };
+  assert.equal(card._converter.calibrated, true);
+  const mapped = card._converter.vacuumToMap(2000, 0);
+  const command = card._converter.mapToVacuum(1000, 0);
+  assert.ok(Math.abs(mapped.x - 1000) < 1e-6 && Math.abs(mapped.y) < 1e-6);
+  assert.ok(Math.abs(command.x - 2000) < 1e-6 && Math.abs(command.y) < 1e-6);
+  card.hass = {
+    states: {
+      "vacuum.test": { state: "docked", attributes: { friendly_name: "Vac" } },
+      "image.roborock_map": {
+        state: "ready",
+        attributes: {
+          entity_picture: "/map.png",
+          calibration_points: [
+            { vacuum: [0, 0], map: [0, 0] },
+            { vacuum: [4000, 0], map: [1000, 0] },
+            { vacuum: [0, 4000], map: [0, 1000] },
+          ],
+        },
+      },
+    },
+  };
+  const updated = card._converter.mapToVacuum(1000, 0);
+  assert.ok(Math.abs(updated.x - 4000) < 1e-6 && Math.abs(updated.y) < 1e-6);
+});
