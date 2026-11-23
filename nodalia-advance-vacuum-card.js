@@ -1065,6 +1065,11 @@
     }
     return null;
   }
+  function resolveMapEntityId(raw) {
+    const config = record(raw);
+    const source = record(config.map_source);
+    return String(source.camera || source.image || config.map_camera || "").trim();
+  }
   function parseCalibrationPoints(raw, hass) {
     const config = record(raw);
     const calibration = record(config.calibration_source);
@@ -1082,7 +1087,7 @@
     if (calibration.camera === false) {
       return [];
     }
-    const mapEntityId = String(record(config.map_source).camera || config.map_camera || "").trim();
+    const mapEntityId = resolveMapEntityId(config);
     if (!mapEntityId) {
       return [];
     }
@@ -2202,7 +2207,7 @@
         return null;
       }
       _getMapEntityId() {
-        return vacuumText(vacuumRecord(this._config?.map_source).camera || vacuumRecord(this._config?.map_source).image || this._config?.map_camera || "");
+        return resolveMapEntityId(this._config);
       }
       _getMapState() {
         const entityId = this._getMapEntityId();
@@ -3231,7 +3236,7 @@
         if (calibration.camera === false) {
           return { kind: "disabled", len: 0 };
         }
-        const mapEntityId = String(vacuumRecord(config?.map_source).camera || config?.map_camera || "");
+        const mapEntityId = resolveMapEntityId(config);
         const mapPoints = mapEntityId ? hass?.states?.[mapEntityId]?.attributes?.calibration_points : [];
         const mapLen = Array.isArray(mapPoints) ? mapPoints.length : 0;
         return {

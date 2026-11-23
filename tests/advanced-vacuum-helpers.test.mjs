@@ -30,6 +30,10 @@ test('Advanced Vacuum map/legacy selection records are narrowed and labels/icons
 test('Advanced Vacuum reads map calibration and centers without requiring a polygon or an explicit camera flag',()=>{
  const hass={states:{'image.map':{attributes:{calibration_points:[{vacuum:[0,0],map:[0,0]},{vacuum:[10,0],map:[100,0]},{vacuum:[0,10],map:[0,100]}],image:{width:800,height:600},rooms:{hall:{name:'Hall',x:40,y:50}}}}}};
  assert.equal(api.parseCalibrationPoints({map_source:{camera:'image.map'}},hass).length,3);
+ assert.equal(api.parseCalibrationPoints({map_source:{image:'image.map'},calibration_source:{camera:true}},hass).length,3);
+ assert.equal(api.resolveMapEntityId({map_source:{image:'image.map'}}),'image.map');
+ assert.equal(api.parseCalibrationPoints({map_source:{camera:'camera.empty',image:'image.map'}},hass).length,0);
+ assert.equal(api.parseCalibrationPoints({map_source:{image:'image.map'},calibration_source:{camera:false}},hass).length,0);
  assert.equal(api.parseCalibrationPoints({map_source:{camera:'image.map'},calibration_source:{camera:false}},hass).length,0);
  assert.equal(api.parseCalibrationPoints({map_source:{camera:'image.map'},calibration_source:{calibration_points:[{vacuum:[1,1],map:[2,2]},{vacuum:[3,1],map:[4,2]},{vacuum:[1,3],map:[2,4]}]}},hass).length,3);
  assert.deepEqual(plain(api.readReportedMapSize(hass.states['image.map'].attributes)),{width:800,height:600});

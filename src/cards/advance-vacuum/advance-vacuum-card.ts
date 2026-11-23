@@ -56,6 +56,7 @@ import {
   normalizeRoutineItems,
   parseCalibrationPoints,
   readReportedMapSize,
+  resolveMapEntityId,
   parseNumber,
   parseSizeToPixels,
   parseZoneRect,
@@ -896,7 +897,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _getMapEntityId() {
-    return vacuumText(vacuumRecord(this._config?.map_source).camera || vacuumRecord(this._config?.map_source).image || this._config?.map_camera || "");
+    return resolveMapEntityId(this._config);
   }
 
   _getMapState() {
@@ -2196,7 +2197,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     if (calibration.camera === false) {
       return { kind: "disabled", len: 0 };
     }
-    const mapEntityId = String(vacuumRecord(config?.map_source).camera || config?.map_camera || "");
+    const mapEntityId = resolveMapEntityId(config);
     const mapPoints = mapEntityId ? hass?.states?.[mapEntityId]?.attributes?.calibration_points : [];
     const mapLen = Array.isArray(mapPoints) ? mapPoints.length : 0;
     return {
