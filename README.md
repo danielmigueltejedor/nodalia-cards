@@ -1,6 +1,9 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/main/docs/images/nodalia-cards-logo-trimmed.png" alt="Nodalia Cards" width="480">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/main/docs/images/nodalia-cards-logo-white.svg">
+  <img src="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/main/docs/images/nodalia-cards-logo-black.svg" alt="Nodalia Cards" width="420">
+</picture>
 
 <br>
 
@@ -24,6 +27,7 @@ A collection of **25 customizable cards** bringing consistency, intuitive intera
 [**Installation**](#installation) ·
 [**Documentation**](#documentation) ·
 [**Engine**](#nodalia-cards-engine) ·
+[**Community**](#community-projects) ·
 [**Contributing**](#contributing)
 
 </div>
@@ -52,6 +56,37 @@ The project combines modern interface design with native Home Assistant function
 All cards work independently of the Engine.
 
 ## Preview
+
+<div align="center">
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/main/docs/images/readme/hero-dark.webp">
+  <img src="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/main/docs/images/readme/hero-light.webp" alt="A dashboard built with Nodalia Cards: weather, light, scenes, person, entity, climate, media player, graph, fan, cover and lock cards" width="100%">
+</picture>
+
+</div>
+
+<br>
+
+<div align="center">
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/main/docs/images/readme/devices-dark.webp">
+  <img src="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/main/docs/images/readme/devices-light.webp" alt="Device cards: light, humidifier, fan, cover, vacuum, lock and alarm panel" width="100%">
+</picture>
+
+<br><br>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/main/docs/images/readme/energy-dark.webp">
+  <img src="https://raw.githubusercontent.com/danielmigueltejedor/nodalia-cards/main/docs/images/readme/energy-light.webp" alt="Energy and monitoring cards: power flow, circular gauge, graph, entity and insignia" width="100%">
+</picture>
+
+</div>
+
+<sub>The cards above are rendered from this repository with demo data, in a dark and a light theme; the image follows your GitHub theme. Icons come from Home Assistant's Material Design Icons.</sub>
+
+### In motion
 
 <div align="center">
 
@@ -388,6 +423,24 @@ GitHub remains the source repository, and translated locale files are included i
 Translation pull requests are also welcome.
 
 See the [translation contribution guide](docs/TRANSLATIONS.md) for more information.
+
+## Community projects
+
+### AeroMetric
+
+[AeroMetric](https://github.com/unimatrix6/AeroMetric-AirQualityMonitor) is a DIY indoor air-quality monitor by [@unimatrix6](https://github.com/unimatrix6). An ESP32 and a Sensirion SEN54 measure the room, a 3.5 inch display shows the readings on the device, and ESPHome publishes them to Home Assistant.
+
+The monitor reports humidity, PM 1.0, PM 2.5, PM 4.0, PM 10.0, temperature, VOC index and AQI. Those entities fit the Graph, Circular Gauge and Entity cards.
+
+The enclosure files are still being added. The build notes and firmware live in the repository.
+
+<div align="center">
+
+<a href="https://github.com/unimatrix6/AeroMetric-AirQualityMonitor">
+  <img src="https://github.com/user-attachments/assets/283653aa-8a29-48b6-9714-b28e95ace5cd" alt="AeroMetric, a compact indoor air-quality monitor" width="480">
+</a>
+
+</div>
 
 ## Contributing
 

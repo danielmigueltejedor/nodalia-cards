@@ -8,6 +8,40 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.0.7-alpha.2] - 2026-11-20
+
+### Fixed
+
+- **Advance Vacuum:** place room buttons on the map when the integration already publishes calibration points, room centers and map dimensions. `v3.0.7-alpha.1` treated a differently sized bitmap, a not-yet-decoded image, or a room without a polygon as permanent failure and listed every room under the map.
+- **Advance Vacuum:** read `calibration_points` from the configured map entity unless calibration is explicitly disabled, and accept a valid room center when no outline is available.
+- **Advance Vacuum:** keep the lower room list for a settled map that still cannot place a room. A slow image stays a transient state and does not become that list.
+
+### Tests
+
+- Extend the Advance Vacuum room-marker browser coverage for an iPhone-sized first paint, a non-1024 image, automatic and late calibration, reported map dimensions, polygons, centers without polygons, reload, resize, zoom and pan, multi-select, and a failed image or genuinely invalid coordinates. The `v3.0.7-alpha.1` case asserts each button is visually inside its map region.
+
+## [3.0.7-alpha.1] - 2026-11-20
+
+### Fixed
+
+- **Advance Vacuum:** avoid room selection controls stacking at the lower-right during a cold map load or reload. Wait for the map's real image dimensions instead of placing markers against the initial 1024 px placeholder.
+- **Advance Vacuum:** reject out-of-bounds room marker anchors; keep affected rooms selectable in a fallback list until a valid image and calibration are available, including failed image requests.
+
+### Tests
+
+- Add browser regression coverage for slow map images, reloads, failed images, and late calibration.
+
+## [3.0.6-alpha.1] - 2026-11-11
+
+### Fixed
+
+- Prevent frequent entity updates from repeatedly extending card entrance animations, reducing unnecessary animation work while retaining the entrance on a new dashboard view.
+- Reduce persistent rendering hints on Light, Fan, Humidifier and Vacuum controls while they are idle.
+
+### Added
+
+- Add large-dashboard and accelerated twelve-hour lifecycle diagnostics to help investigate long-session performance. The simulation does not replace testing with a real dashboard and browser.
+
 ## [3.0.5-alpha.3] - 2026-11-05
 
 ### Fixed

@@ -1,6 +1,6 @@
 {
   "name": "nodalia-cards",
-  "version": "3.0.5",
+  "version": "3.0.7",
   "packageManager": "pnpm@11.17.0",
   "engines": {
     "node": ">=22"
@@ -124,6 +124,6 @@
     "esbuild": "^0.28.2",
     "eslint": "^10.13.0",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.72.1"
+    "typescript-eslint": "^8.73.0"
   }
 }

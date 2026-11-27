@@ -775,6 +775,46 @@ export class CoordinatesConverter {
   }
 }
 
+/** Logical map size published by the integration, independent of the decoded bitmap. */
+export function readReportedMapSize(attributes: unknown): { width: number; height: number } | null {
+  const attrs = record(attributes);
+  const image = record(attrs.image);
+  const dimensions = record(attrs.dimensions || image.dimensions);
+  const size = Array.isArray(attrs.size)
+    ? attrs.size
+    : Array.isArray(image.size)
+      ? image.size
+      : Array.isArray(attrs.image_size)
+        ? attrs.image_size
+        : null;
+  const candidates = [
+    [attrs.image_width, attrs.image_height],
+    [attrs.map_width, attrs.map_height],
+    [image.width, image.height],
+    [image.image_width, image.image_height],
+    [dimensions.width, dimensions.height],
+    [size?.[0], size?.[1]],
+    [attrs.width, attrs.height],
+  ];
+  for (const pair of candidates) {
+    const width = parseFiniteNumericValue(pair[0]);
+    const height = parseFiniteNumericValue(pair[1]);
+    if (width !== null && height !== null && width > 0 && height > 0) {
+      return { width, height };
+    }
+  }
+  return null;
+}
+
+function firstPoint(...values: unknown[]): MapPoint | null {
+  for (const value of values) {
+    if (typeof value === "string") continue;
+    const point = parsePoint(value);
+    if (point) return point;
+  }
+  return null;
+}
+
 export function parseCalibrationPoints(raw: unknown, hass: HomeAssistant | null | undefined): unknown[] {
   const config = record(raw);
   const calibration = record(config.calibration_source);
@@ -783,17 +823,25 @@ export function parseCalibrationPoints(raw: unknown, hass: HomeAssistant | null 
     return directPoints;
   }
 
-  const calibrationEntityId = String(calibration.entity || "");
-  if (calibrationEntityId && hass?.states?.[calibrationEntityId]?.attributes?.calibration_points) {
-    return arrayFromMaybe(hass.states[calibrationEntityId]?.attributes.calibration_points);
+  const calibrationEntityId = String(calibration.entity || "").trim();
+  if (calibrationEntityId) {
+    const entityPoints = arrayFromMaybe(hass?.states?.[calibrationEntityId]?.attributes?.calibration_points);
+    if (entityPoints.length || calibration.camera === false) {
+      return entityPoints;
+    }
   }
 
-  if (calibration.camera === true) {
-    const mapEntityId = String(record(config.map_source).camera || config.map_camera || "");
-    return arrayFromMaybe(hass?.states?.[mapEntityId]?.attributes?.calibration_points);
+  // `camera: false` is the only explicit opt-out. Omitted calibration still
+  // reads the points the configured map entity already publishes.
+  if (calibration.camera === false) {
+    return [];
   }
 
-  return [];
+  const mapEntityId = String(record(config.map_source).camera || config.map_camera || "").trim();
+  if (!mapEntityId) {
+    return [];
+  }
+  return arrayFromMaybe(hass?.states?.[mapEntityId]?.attributes?.calibration_points);
 }
 
 export function resolveLegacyMode(raw: unknown, templateName: unknown) {
@@ -847,8 +895,10 @@ export function resolveRoomsFromMapState(hass: HomeAssistant | null | undefined,
           return polygon.length >= 3 ? [polygon] : [];
         })();
     const outline = flattenPolygons(outlines);
-    const centerX = parseNumber(room?.pos_x);
-    const centerY = parseNumber(room?.pos_y);
+    const explicitCenterX = parseNumber(room?.pos_x ?? room?.label_x ?? room?.icon_x);
+    const explicitCenterY = parseNumber(room?.pos_y ?? room?.label_y ?? room?.icon_y);
+    const centerX = explicitCenterX ?? (outline.length ? null : parseNumber(room?.x));
+    const centerY = explicitCenterY ?? (outline.length ? null : parseNumber(room?.y));
     const fallbackCenter = outline.length ? centroid(outline) : null;
 
     return {
@@ -888,11 +938,11 @@ export function resolveRoomSegments(raw: unknown, hass: HomeAssistant | null = n
         icon: String(typeof room.icon === "string" ? room.icon : record(room.icon).name || "mdi:broom"),
         outlines,
         outline: flattenPolygons(outlines),
-        iconPoint: parsePoint(room.iconPoint || room.icon || room.position),
-        labelPoint: parsePoint(room.labelPoint || room.label || room.position),
+        iconPoint: firstPoint(room.iconPoint, room.position, room.icon),
+        labelPoint: firstPoint(room.labelPoint, room.position, room.label),
         labelOffsetY: parseFiniteNumericValue(room.labelOffsetY ?? record(room.label).offset_y) ?? 0,
       };
-    }).filter(room => room.id && room.outlines.length);
+    }).filter(room => room.id && (room.outlines.length || room.iconPoint || room.labelPoint));
   }
 
   const segmentMode = resolveLegacyMode(config, "vacuum_clean_segment");
@@ -912,11 +962,11 @@ export function resolveRoomSegments(raw: unknown, hass: HomeAssistant | null = n
       icon: String(record(selection.icon).name || selection?.icon || "mdi:broom").trim(),
       outlines,
       outline: flattenPolygons(outlines),
-      iconPoint: parsePoint(selection?.icon),
-      labelPoint: parsePoint(selection?.label),
+      iconPoint: firstPoint(selection?.position, selection?.icon),
+      labelPoint: firstPoint(selection?.position, selection?.label),
       labelOffsetY: parseFiniteNumericValue(record(selection.label).offset_y) ?? 0,
     };
-  }).filter(room => room.id && room.outlines.length);
+  }).filter(room => room.id && (room.outlines.length || room.iconPoint || room.labelPoint));
 
   if (legacyRooms.length) {
     return legacyRooms;

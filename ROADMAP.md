@@ -8,14 +8,14 @@ This roadmap is flexible and evolves based on real-world usage, testing, communi
 
 ## Current preview release
 
-No active preview. Stable **`3.0.5`** is the recommended release.
+No active preview. Stable **`3.0.7`** is the recommended release.
 
 ## Current stable release
 
 Current stable release:
 
 ```text
-3.0.5
+3.0.7
 ```
 
 Stable changes and migration notes are summarized in [CHANGELOG.md](./CHANGELOG.md).

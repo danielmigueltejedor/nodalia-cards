@@ -8,6 +8,29 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ---
 
+## [3.0.7] - 2026-11-20
+
+Maintenance release **3.0.7** places Advance Vacuum room buttons on the map when the integration already publishes calibration, room centers and map dimensions. Existing YAML, resource paths and controls stay the same.
+
+### Fixed
+
+- **Advance Vacuum:** each room button appears over its place on the map, including the first load on a phone and when the served image is a different size from the map's logical dimensions. Buttons are no longer grouped in a corner or left as a full list under the map when the map entity already has usable data.
+- **Advance Vacuum:** calibration points are read from the configured map entity unless calibration is explicitly disabled, and a valid room center is enough when the room has no polygon.
+- **Advance Vacuum:** the list under the map remains only for a room that still cannot be placed after the map has settled. A slow image stays a transient state and does not become that list.
+
+## [3.0.6] - 2026-11-17
+
+Maintenance release **3.0.6** reduces animation and rendering work when Home Assistant sends frequent entity updates, while keeping card entrances on a new dashboard view. Existing YAML, resource paths and controls stay the same.
+
+### Fixed
+
+- Frequent entity updates no longer keep extending card entrance animations after the view has already appeared.
+- Light, Fan, Humidifier and Vacuum drop idle rendering hints so idle controls do less work between interactions.
+
+### Added
+
+- Large-dashboard and accelerated twelve-hour lifecycle diagnostics help investigate long-session performance. They do not replace testing with a real dashboard and browser.
+
 ## [3.0.5] - 2026-11-05
 
 Maintenance release **3.0.5** keeps unavailable status icons inside their badges, fits the Media Player horizontal layout beside its artwork, and offers entity suggestions that match what each card shows. Existing YAML, resource paths and controls stay the same.
