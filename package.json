@@ -1,6 +1,6 @@
 {
   "name": "nodalia-cards",
-  "version": "3.0.5",
+  "version": "3.0.7",
   "packageManager": "pnpm@11.17.0",
   "engines": {
     "node": ">=22"
@@ -120,10 +120,10 @@
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",
     "@eslint/js": "^10.0.1",
-    "@playwright/test": "1.64.1",
+    "@playwright/test": "1.65.1",
     "esbuild": "^0.28.2",
     "eslint": "^10.13.0",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.72.1"
+    "typescript-eslint": "^8.73.0"
   }
 }

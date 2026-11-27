@@ -27,6 +27,17 @@ test('Advanced Vacuum session codecs keep encoded identities/zones and reject mi
 test('Advanced Vacuum map/legacy selection records are narrowed and labels/icons remain strings',()=>{
  const rooms=api.resolveRoomSegments({room_segments:[null,{id:'one',label:{text:'Kitchen',offset_y:4},icon:{name:'mdi:chef-hat',x:5,y:5},outlines:[[0,0,10,10]]}]});assert.equal(rooms[0].label,'Kitchen');assert.equal(rooms[0].icon,'mdi:chef-hat');assert.equal(rooms[0].labelOffsetY,4);const hass={states:{'camera.map':{attributes:{rooms:{one:{name:'Kitchen',outlines:[[0,0,10,10]],pos_x:'',pos_y:''},bad:null}}}}};const inferred=api.resolveRoomsFromMapState(hass,'camera.map');assert.deepEqual(plain(inferred[0].iconPoint),{x:5,y:5});assert.equal(api.resolveGotoPoints({goto_points:[null,{id:'one',position:[0,0]}]}).length,1);assert.equal(api.resolvePredefinedZones({predefined_zones:[null,{id:'bad',zones:[[null,0,10,10]]}]}).length,0);assert.equal(api.resolveHeaderIcons({icons:[null,{icon:'mdi:home'}]}).length,1);
 });
+test('Advanced Vacuum reads map calibration and centers without requiring a polygon or an explicit camera flag',()=>{
+ const hass={states:{'image.map':{attributes:{calibration_points:[{vacuum:[0,0],map:[0,0]},{vacuum:[10,0],map:[100,0]},{vacuum:[0,10],map:[0,100]}],image:{width:800,height:600},rooms:{hall:{name:'Hall',x:40,y:50}}}}}};
+ assert.equal(api.parseCalibrationPoints({map_source:{camera:'image.map'}},hass).length,3);
+ assert.equal(api.parseCalibrationPoints({map_source:{camera:'image.map'},calibration_source:{camera:false}},hass).length,0);
+ assert.equal(api.parseCalibrationPoints({map_source:{camera:'image.map'},calibration_source:{calibration_points:[{vacuum:[1,1],map:[2,2]},{vacuum:[3,1],map:[4,2]},{vacuum:[1,3],map:[2,4]}]}},hass).length,3);
+ assert.deepEqual(plain(api.readReportedMapSize(hass.states['image.map'].attributes)),{width:800,height:600});
+ const centered=api.resolveRoomSegments({room_segments:[{id:'hall',label:'Hall',icon:'mdi:broom',position:[40,60]}]});
+ assert.equal(centered.length,1);assert.equal(centered[0].outlines.length,0);assert.deepEqual(plain(centered[0].iconPoint),{x:40,y:60});
+ const fromMap=api.resolveRoomsFromMapState(hass,'image.map');
+ assert.equal(fromMap[0].outlines.length,0);assert.deepEqual(plain(fromMap[0].iconPoint),{x:40,y:50});
+});
 test('Advanced Vacuum normalized config/style/editor helpers preserve extensions and safe defaults',()=>{
  const config=configApi.normalizeConfig({room_tracking:null,custom_menu:[],security:{allow_webhooks_for_non_admin:'true'},routines:[null,'script.clean'],vacuum_mqtt_topic:'robot///',extension:{keep:true}});assert.equal(config.room_tracking.auto_detect,true);assert.equal(config.security.allow_webhooks_for_non_admin,false);assert.equal(config.routines[0].entity,'script.clean');assert.equal(config.vacuum_mqtt_topic,'robot');assert.equal(config.extension.keep,true);const styles=api.getSafeStyles({card:{padding:'1px; color: red',background:'color(display-p3 1 0 0 / .2)'}});assert.equal(styles.card.padding,'16px');assert.equal(styles.card.background,'color(display-p3 1 0 0 / .2)');assert.equal(api.getByPath(Object.create({nested:{value:1}}),'nested.value'),undefined);assert.equal(api.isHelperRelatedToConfiguredVacuum({candidateId:'sensor.roborock_s8_pro_room',objectId:'roborock_s8',vacuumObjectIds:['roborock_s8','roborock_s8_pro']}),false);
 });

@@ -55,6 +55,7 @@ import {
   normalizeCustomMenuItems,
   normalizeRoutineItems,
   parseCalibrationPoints,
+  readReportedMapSize,
   parseNumber,
   parseSizeToPixels,
   parseZoneRect,
@@ -143,7 +144,11 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   declare private _localeReconciliationTimeouts: number[]|null;
   declare private _mapImageWidth: number;
   declare private _mapImageHeight: number;
+  declare private _mapImageDimensionsReady: boolean;
   private _pendingMapImage: HTMLImageElement | null = null;
+  private _decodedMapSize: { width: number; height: number } | null = null;
+  private _mapImageFailureUrl = "";
+  private _decodingMapImage = false;
   private _lastMapIndependentSignature = "";
   declare private _activeMode: string;
   declare private _activeCleaningSessionMode: string;
@@ -199,6 +204,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._hass = null;
     this._mapImageWidth = 1024;
     this._mapImageHeight = 1024;
+    this._mapImageDimensionsReady = false;
     this._activeMode = "all";
     this._activeUtilityPanel = null;
     this._selectedRoomIds = [];
@@ -268,6 +274,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._onShadowTouchMove = this._onShadowTouchMove.bind(this);
     this._onShadowTouchEnd = this._onShadowTouchEnd.bind(this);
     this._onMapImageLoad = this._onMapImageLoad.bind(this);
+    this._onMapImageError = this._onMapImageError.bind(this);
     this._onMapBackClick = this._onMapBackClick.bind(this);
     this._onNodaliaI18nReady = this._onNodaliaI18nReady.bind(this);
 
@@ -308,6 +315,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const image = this.shadowRoot?.querySelector<HTMLImageElement>("[data-map-image]");
     if (image) {
       image.removeEventListener("load", this._onMapImageLoad);
+      image.removeEventListener("error", this._onMapImageError);
     }
     if (this._entranceAnimationResetTimer) {
       clearTimeout(this._entranceAnimationResetTimer);
@@ -353,6 +361,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     window.NodaliaUtils?.clearDeferTimers?.(this);
     this._mapActionInFlight=false;this._roomCleaningResumeInFlight=false;this._resumeToken=null;this._lastRenderSignature="";
     this.shadowRoot?.querySelector("[data-map-image]")?.removeEventListener("load",this._onMapImageLoad);
+    this.shadowRoot?.querySelector("[data-map-image]")?.removeEventListener("error",this._onMapImageError);
   }
 
   _resetContext() {
@@ -365,7 +374,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     this._pendingRoomCleaningResumeRoomIds=[];this._pendingRoomCleaningResumeRepeats=1;this._pendingCleaningSessionStartAt=0;
     this._hasLoadedPersistedCleaningSessionState=false;this._lastSubmittedSharedCleaningSessionValue=null;this._lastSharedCleaningSessionOverflowFingerprint=null;
     this._selectionUpdatedAt=0;this._wasCleaningSessionActive=false;this._roomTrackingEntityCache=null;this._calibrationSignatureStamp="";
-    this._mapImageWidth=1024;this._mapImageHeight=1024;this._converter=new CoordinatesConverter([]);this._resetMapTransform();
+    this._mapImageWidth=1024;this._mapImageHeight=1024;this._mapImageDimensionsReady=false;this._decodedMapSize=null;this._mapImageFailureUrl="";this._decodingMapImage=false;this._converter=new CoordinatesConverter([]);this._resetMapTransform();
     this._animateContentOnNextRender=true;this.shadowRoot?.replaceChildren();this._activeMode=this._getAvailableModes()[0]?.id || "all";
   }
 
@@ -437,7 +446,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
   setConfig(config:unknown) {
     this._releaseViewWork();
-    this._mapImageWidth=1024;this._mapImageHeight=1024;this._converter=new CoordinatesConverter([]);this._lastNonSmartModeSelection={suction:"",mop:""};this.shadowRoot?.replaceChildren();
+    this._mapImageWidth=1024;this._mapImageHeight=1024;this._mapImageDimensionsReady=false;this._decodedMapSize=null;this._mapImageFailureUrl="";this._decodingMapImage=false;this._converter=new CoordinatesConverter([]);this._lastNonSmartModeSelection={suction:"",mop:""};this.shadowRoot?.replaceChildren();
     this._config = normalizeConfig(config || {});
     window.NodaliaUtils?.applyDefaultConfigNameFromEntity?.(this._config, this._hass);
     this._lastRenderSignature = "";
@@ -564,10 +573,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _scheduleEntranceAnimationReset(delay = 0) {
-    if (this._entranceAnimationResetTimer) {
-      clearTimeout(this._entranceAnimationResetTimer);
-      this._entranceAnimationResetTimer = 0;
-    }
+    // State updates during the entrance must not keep extending its lifetime.
+    if (this._entranceAnimationResetTimer) return;
 
     const generation=this._generation;
     const safeDelay = clamp(Math.round(Number(delay) || 0), 0, 3000);
@@ -2174,32 +2181,30 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
         fingerprint: JSON.stringify(directPoints),
       };
     }
-    const calibrationEntityId = vacuumText(vacuumRecord(config?.calibration_source).entity);
-    if (calibrationEntityId && hass?.states?.[calibrationEntityId]) {
-      const st = hass.states[calibrationEntityId];
-      if (!st) return {kind:"none",len:0};
-      const pts = st.attributes?.calibration_points;
-      const len = Array.isArray(pts) ? pts.length : 0;
+    const calibration = vacuumRecord(config?.calibration_source);
+    const calibrationEntityId = vacuumText(calibration.entity);
+    const entityPoints = calibrationEntityId ? hass?.states?.[calibrationEntityId]?.attributes?.calibration_points : undefined;
+    const entityLen = Array.isArray(entityPoints) ? entityPoints.length : 0;
+    if (calibrationEntityId && (entityLen || calibration.camera === false)) {
       return {
         kind: "entity",
         id: String(calibrationEntityId || ""),
-        len,
-        fingerprint: JSON.stringify(pts || []),
+        len: entityLen,
+        fingerprint: JSON.stringify(entityPoints || []),
       };
     }
-    if (vacuumRecord(config?.calibration_source).camera === true) {
-      const mapEntityId = String(vacuumRecord(config?.map_source).camera || config?.map_camera || "");
-      const st = mapEntityId ? hass?.states?.[mapEntityId] : null;
-      const pts = st?.attributes?.calibration_points;
-      const len = Array.isArray(pts) ? pts.length : 0;
-      return {
-        kind: "camera",
-        id: mapEntityId,
-        len,
-        fingerprint: JSON.stringify(pts || []),
-      };
+    if (calibration.camera === false) {
+      return { kind: "disabled", len: 0 };
     }
-    return { kind: "none", len: 0 };
+    const mapEntityId = String(vacuumRecord(config?.map_source).camera || config?.map_camera || "");
+    const mapPoints = mapEntityId ? hass?.states?.[mapEntityId]?.attributes?.calibration_points : [];
+    const mapLen = Array.isArray(mapPoints) ? mapPoints.length : 0;
+    return {
+      kind: mapEntityId ? "map" : "none",
+      id: mapEntityId,
+      len: mapLen,
+      fingerprint: JSON.stringify(mapPoints || []),
+    };
   }
 
   _getCalibrationSignatureStamp(hass = this._hass) {
@@ -2238,6 +2243,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const sharedSessionEntityId = this._getSharedCleaningSessionEntityId();
     const sharedSessionState = sharedSessionEntityId ? hass?.states?.[sharedSessionEntityId] || null : null;
     const mapPicture = String(mapState?.attributes?.entity_picture || "");
+    const reportedMapSize = readReportedMapSize(mapState?.attributes);
     const relatedVacuumEntities = this._getRelatedVacuumEntityIds(hass);
     const roomTrackingSignature = [...new Set([
       ...relatedVacuumEntities.roomIds,
@@ -2281,7 +2287,13 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       },
       {
         prefix: "map:",
-        values: [mapEntityId || "", mapState?.state || "", mapState?.last_updated || "", mapPicture],
+        values: [
+          mapEntityId || "",
+          mapState?.state || "",
+          mapState?.last_updated || "",
+          mapPicture,
+          reportedMapSize ? `${reportedMapSize.width}x${reportedMapSize.height}` : "",
+        ],
       },
       { prefix: "map-structure:", values: [JSON.stringify(this._getRoomSegments())] },
       {
@@ -2321,6 +2333,7 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
           this._gotoPoint ? `${Math.round(this._gotoPoint.x)}:${Math.round(this._gotoPoint.y)}` : "",
           this._repeats || 1,
           `${this._mapImageWidth}x${this._mapImageHeight}`,
+          reportedMapSize ? `${reportedMapSize.width}x${reportedMapSize.height}` : "",
           this._getCalibrationSignatureStamp(hass),
           suctionDescriptor
             ? `${suctionDescriptor.service}:${suctionDescriptor.target}:${suctionDescriptor.current}:${suctionDescriptor.options.join("|")}`
@@ -5882,21 +5895,93 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     pending.src = url;
   }
 
-  _onMapImageLoad(event:Pick<Event,"currentTarget">) {
+  _rememberDecodedMapSize(image: HTMLImageElement) {
+    const width = Number(image.naturalWidth || 0);
+    const height = Number(image.naturalHeight || 0);
+    if (width > 0 && height > 0) this._decodedMapSize = { width, height };
+  }
+
+  /**
+   * Pick the coordinate space that actually contains the rooms. Reported map
+   * metadata wins when the decoded bitmap is a different resolution; the
+   * initial 1024px values are never a coordinate space.
+   */
+  _syncMapCoordinateSpace() {
+    const reported = readReportedMapSize(this._getMapState()?.attributes);
+    const image = this.shadowRoot?.querySelector<HTMLImageElement>("[data-map-image]");
+    if (image) this._rememberDecodedMapSize(image);
+    const choices = [reported, this._decodedMapSize].filter((space): space is { width: number; height: number } => Boolean(space && space.width > 0 && space.height > 0));
+    if (!choices.length) return;
+    const rooms = this._getRoomSegments();
+    const fallback = choices[0];
+    const selected = choices.find(space => rooms.some(room => this._roomFitsSpace(room, space))) || fallback;
+    if (!selected) return;
+    this._mapImageWidth = selected.width;
+    this._mapImageHeight = selected.height;
+    this._mapImageDimensionsReady = true;
+    this._mapImageFailureUrl = "";
+  }
+
+  _roomFitsSpace(room: RoomSegment, space: { width: number; height: number }) {
+    const explicit = this._explicitRoomPoint(room);
+    const samples = explicit
+      ? [...this._getRoomMarkerCandidatePoints(room), explicit]
+      : this._getRoomMarkerCandidatePoints(room);
+    return samples.some(point => {
+      const mapped = this._converter.vacuumToMap(point.x, point.y);
+      return Number.isFinite(mapped.x) && Number.isFinite(mapped.y)
+        && mapped.x >= 0 && mapped.y >= 0
+        && mapped.x <= space.width && mapped.y <= space.height;
+    });
+  }
+
+  _isMapGeometryPending() {
+    if (this._mapImageDimensionsReady) return false;
+    const url = this._getMapImageUrl();
+    if (!url) return false;
+    return this._mapImageFailureUrl !== url;
+  }
+
+  _onMapImageError(event: Pick<Event, "currentTarget">) {
     const image = event.currentTarget;
     if (!this.isConnected || !(image instanceof HTMLImageElement) || image !== this.shadowRoot?.querySelector("[data-map-image]")) return;
-    const width = Number(image?.naturalWidth || image?.width || 0);
-    const height = Number(image?.naturalHeight || image?.height || 0);
-    if (!image.classList.contains("is-loaded")) image.classList.add("is-loaded");
+    const url = image.getAttribute("src") || "";
+    if (!url || this._mapImageFailureUrl === url || readReportedMapSize(this._getMapState()?.attributes) || this._decodedMapSize) return;
+    this._mapImageFailureUrl = url;
+    this._mapImageDimensionsReady = false;
+    this._render();
+  }
 
+  _onMapImageLoad(event: Pick<Event, "currentTarget">) {
+    const image = event.currentTarget;
+    if (!this.isConnected || !(image instanceof HTMLImageElement) || image !== this.shadowRoot?.querySelector("[data-map-image]")) return;
+    if (!image.classList.contains("is-loaded")) image.classList.add("is-loaded");
+    const width = Number(image.naturalWidth || 0);
+    const height = Number(image.naturalHeight || 0);
     if (width > 0 && height > 0) {
-      const dimensionsChanged = width !== this._mapImageWidth || height !== this._mapImageHeight;
-      this._mapImageWidth = width;
-      this._mapImageHeight = height;
-      if (dimensionsChanged) {
-        this._render();
-      }
+      const previousWidth = this._mapImageWidth;
+      const previousHeight = this._mapImageHeight;
+      const wasReady = this._mapImageDimensionsReady;
+      this._rememberDecodedMapSize(image);
+      this._syncMapCoordinateSpace();
+      if (!wasReady || previousWidth !== this._mapImageWidth || previousHeight !== this._mapImageHeight) this._render();
+      return;
     }
+    const src = image.getAttribute("src") || "";
+    if (!src || this._decodingMapImage || this._mapImageFailureUrl === src) return;
+    this._decodingMapImage = true;
+    void image.decode().then(() => {
+      this._decodingMapImage = false;
+      if (image !== this.shadowRoot?.querySelector("[data-map-image]")) return;
+      if (Number(image.naturalWidth || 0) > 0 && Number(image.naturalHeight || 0) > 0) {
+        this._onMapImageLoad({ currentTarget: image });
+        return;
+      }
+      this._onMapImageError({ currentTarget: image });
+    }, () => {
+      this._decodingMapImage = false;
+      if (image === this.shadowRoot?.querySelector("[data-map-image]")) this._onMapImageError({ currentTarget: image });
+    });
   }
 
   _estimateRoomMarkerFootprint(room:RoomSegment, markerSize:number, labelSize:number, iconSize:number) {
@@ -5932,10 +6017,17 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     return legacyOutline.length >= 3 ? legacyOutline : [];
   }
 
+  _explicitRoomPoint(room: RoomSegment): MapPoint | null {
+    const point = room?.labelPoint || room?.iconPoint || null;
+    if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return null;
+    return point;
+  }
+
   _getRoomMarkerCandidatePoints(room:RoomSegment) {
     const primaryOutline = this._getPrimaryRoomOutline(room);
+    const explicit = this._explicitRoomPoint(room);
     if (primaryOutline.length < 3) {
-      return [];
+      return explicit ? [explicit] : [];
     }
 
     const bounds = polygonBounds(primaryOutline);
@@ -5978,6 +6070,20 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     return candidates.filter(point => this._isPointInsideRoom(point, room));
   }
 
+  _isValidRoomMarkerAnchor(point:MapPoint) {
+    const mapped = this._converter.vacuumToMap(point.x, point.y);
+    return Number.isFinite(mapped.x) && Number.isFinite(mapped.y)
+      && mapped.x >= 0 && mapped.x <= this._mapImageWidth
+      && mapped.y >= 0 && mapped.y <= this._mapImageHeight;
+  }
+
+  _canPlaceRoomMarker(room:RoomSegment) {
+    if (!this._mapImageDimensionsReady) return false;
+    if (this._getRoomMarkerCandidatePoints(room).some(point => this._isValidRoomMarkerAnchor(point))) return true;
+    const explicit = this._explicitRoomPoint(room);
+    return Boolean(explicit && this._isValidRoomMarkerAnchor(explicit));
+  }
+
   _getRoomMarkerPlacements(rooms:RoomSegment[], markerSize:number, labelSize:number, iconSize:number) {
     const mapRect = this._getMapSurfaceRect();
     const viewportWidth = mapRect?.width || this._mapImageWidth || 1;
@@ -5986,28 +6092,31 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const placedRects:MarkerRect[] = [];
 
     const orderedRooms = rooms
-      .filter(room => this._getPrimaryRoomOutline(room).length >= 3)
+      .filter(room => this._canPlaceRoomMarker(room))
       .map(room => {
         const primaryOutline = this._getPrimaryRoomOutline(room);
+        const explicit = this._explicitRoomPoint(room);
+        const preferredAnchor = room.labelPoint || room.iconPoint || (primaryOutline.length >= 3 ? centroid(primaryOutline) : explicit);
         return {
           room,
-          area: polygonArea(primaryOutline),
-          preferredAnchor: room.labelPoint || room.iconPoint || centroid(primaryOutline),
+          area: primaryOutline.length >= 3 ? polygonArea(primaryOutline) : 1,
+          preferredAnchor,
         };
       })
-      .filter(item => item.area > 0)
+      .filter((item): item is { room: RoomSegment; area: number; preferredAnchor: MapPoint } => Boolean(item.preferredAnchor) && item.area > 0)
       .sort((left, right) => left.area - right.area);
 
     orderedRooms.forEach(({ room, preferredAnchor }) => {
       const footprint = this._estimateRoomMarkerFootprint(room, markerSize, labelSize, iconSize);
-      const candidates = this._getRoomMarkerCandidatePoints(room);
+      const candidates = this._getRoomMarkerCandidatePoints(room)
+        .filter(point => this._isValidRoomMarkerAnchor(point));
       const fallbackAnchor = preferredAnchor && Number.isFinite(preferredAnchor.x) && Number.isFinite(preferredAnchor.y)
         ? preferredAnchor
         : this._getPrimaryRoomOutline(room).length >= 3
           ? centroid(this._getPrimaryRoomOutline(room))
           : null;
 
-      if (!candidates.length && fallbackAnchor) {
+      if (!candidates.length && fallbackAnchor && this._isValidRoomMarkerAnchor(fallbackAnchor)) {
         candidates.push(fallbackAnchor);
       }
 
@@ -6065,7 +6174,9 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
   }
 
   _renderRoomMarkers(rooms:RoomSegment[]) {
-    if (this._config?.show_room_markers === false) {
+    // The first raster may still be loading: 1024x1024 is only a temporary
+    // fallback and clamps real room coordinates to the bottom-right corner.
+    if (this._config?.show_room_markers === false || !this._mapImageDimensionsReady) {
       return "";
     }
 
@@ -6078,12 +6189,14 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
     const placements = this._getRoomMarkerPlacements(rooms, markerSize, labelSize, iconSize);
 
     return rooms
-      .filter(room => this._getPrimaryRoomOutline(room).length >= 3)
+      .filter(room => this._canPlaceRoomMarker(room))
       .map(room => {
       const placement = placements.get(String(room.id));
       const primaryOutline = this._getPrimaryRoomOutline(room);
-      const anchor = room.iconPoint || room.labelPoint || centroid(primaryOutline);
-      const percent = placement || this._vacuumToViewportPercent(anchor);
+      const anchor = this._explicitRoomPoint(room) || (primaryOutline.length >= 3 ? centroid(primaryOutline) : null);
+      if (!placement && (!anchor || !this._isValidRoomMarkerAnchor(anchor))) return "";
+      const percent = placement || (anchor ? this._vacuumToViewportPercent(anchor) : null);
+      if (!percent) return "";
       const selected = highlightedRoomIds.has(String(room.id));
       return `
         <button
@@ -6182,10 +6295,13 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
       return "";
     }
 
+    if (this._isMapGeometryPending()) return "";
     const state = this._getVacuumState();
     const isRoomSelectionLocked = this._isRoomSelectionLocked(state);
     const highlightedRoomIds = new Set(this._getHighlightedRoomIds(state));
-    const fallbackRooms = rooms.filter(room => room.outlines.length === 0);
+    // The list is only for rooms that still cannot be placed once the map
+    // geometry has actually settled. A slow image is not a failed placement.
+    const fallbackRooms = rooms.filter(room => !this._canPlaceRoomMarker(room));
     if (!fallbackRooms.length) {
       return "";
     }
@@ -6614,6 +6730,8 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
     try {
       this._ensurePersistedCleaningSessionStateLoaded();
+      this._syncCalibrationIfNeeded();
+      this._syncMapCoordinateSpace();
 
       const previousImage = this.shadowRoot.querySelector<HTMLImageElement>("[data-map-image]");
       const previousImageSrc = previousImage?.getAttribute("src") || "";
@@ -7105,8 +7223,18 @@ class NodaliaAdvanceVacuumCard extends HTMLElement {
 
       if (image) {
         image.removeEventListener("load", this._onMapImageLoad);
+        image.removeEventListener("error", this._onMapImageError);
         image.addEventListener("load", this._onMapImageLoad);
+        image.addEventListener("error", this._onMapImageError);
         if (image.complete && Number(image.naturalWidth || 0) > 0) {
+          this._onMapImageLoad({ currentTarget: image });
+        } else if (
+          image.complete
+          && image.getAttribute("src")
+          && !this._mapImageDimensionsReady
+          && !this._decodingMapImage
+          && this._mapImageFailureUrl !== image.getAttribute("src")
+        ) {
           this._onMapImageLoad({ currentTarget: image });
         }
       }

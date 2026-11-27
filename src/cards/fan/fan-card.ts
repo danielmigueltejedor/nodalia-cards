@@ -2935,7 +2935,6 @@ class NodaliaFanCard extends HTMLElement {
           margin-top: var(--fan-card-controls-gap);
           max-height: 320px;
           overflow: visible;
-          will-change: grid-template-rows, max-height, margin-top, opacity;
         }
 
         .fan-card__controls-inner {
@@ -2944,7 +2943,11 @@ class NodaliaFanCard extends HTMLElement {
           gap: 10px;
           min-height: 0;
           overflow: visible;
-          will-change: opacity, transform;
+        }
+
+        .fan-card__controls-shell--entering,
+        .fan-card__controls-shell--leaving {
+          will-change: grid-template-rows, max-height, margin-top, opacity;
         }
 
         .fan-card__controls-shell--entering {
@@ -3174,14 +3177,12 @@ class NodaliaFanCard extends HTMLElement {
         .fan-card__preset-panel-shell {
           backface-visibility: hidden;
           overflow: hidden;
-          will-change: max-height, opacity;
         }
 
         .fan-card__preset-panel-inner {
           backface-visibility: hidden;
           display: grid;
           padding: 4px;
-          will-change: opacity, transform;
         }
 
         .fan-card__preset-panel-shell--entering {
